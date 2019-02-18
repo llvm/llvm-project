@@ -485,7 +485,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
                    .addReg(Rt, IsStore ? 0 : RegState::Define);
 
     // Transfer memoperands.
-    MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+    MIB.setMemRefs(MI->memoperands());
 
     // Transfer MI flags.
     MIB.setMIFlags(MI->getFlags());
@@ -605,7 +605,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     MIB.add(MI->getOperand(OpNum));
 
   // Transfer memoperands.
-  MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+  MIB.setMemRefs(MI->memoperands());
 
   // Transfer MI flags.
   MIB.setMIFlags(MI->getFlags());

@@ -95,7 +95,7 @@ attributes #1 = { nounwind readnone }
 !23 = !DILocalVariable(name: "a", line: 16, scope: !14, file: !15, type: !4)
 !24 = !DILocation(line: 16, scope: !14)
 ; Manually modifed to avoid dependence on pointer size
-!25 = !DILocalVariable(name: "fptr", line: 18, scope: !14, file: !15, type: !16)
+!25 = !DILocalVariable(name: "fptr", line: 18, scope: !14, file: !15, type: !26)
 !26 = !DIDerivedType(tag: DW_TAG_pointer_type, size: 64, align: 64, baseType: !16)
 !27 = !DILocation(line: 18, scope: !14)
 !28 = !DILocation(line: 22, scope: !14)

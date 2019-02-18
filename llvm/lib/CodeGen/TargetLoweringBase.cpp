@@ -118,7 +118,7 @@ static cl::opt<int> MinPercentageForPredictableBranch(
 void TargetLoweringBase::InitLibcalls(const Triple &TT) {
 #define HANDLE_LIBCALL(code, name) \
   setLibcallName(RTLIB::code, name);
-#include "llvm/CodeGen/RuntimeLibcalls.def"
+#include "llvm/IR/RuntimeLibcalls.def"
 #undef HANDLE_LIBCALL
   // Initialize calling conventions to their default.
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
@@ -161,7 +161,8 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
     setLibcallName(RTLIB::FPROUND_F32_F16, "__gnu_f2h_ieee");
   }
 
-  if (TT.isGNUEnvironment() || TT.isOSFuchsia()) {
+  if (TT.isGNUEnvironment() || TT.isOSFuchsia() ||
+      (TT.isAndroid() && !TT.isAndroidVersionLT(9))) {
     setLibcallName(RTLIB::SINCOS_F32, "sincosf");
     setLibcallName(RTLIB::SINCOS_F64, "sincos");
     setLibcallName(RTLIB::SINCOS_F80, "sincosl");
@@ -599,14 +600,23 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::CONCAT_VECTORS, VT, Expand);
     setOperationAction(ISD::FMINNUM, VT, Expand);
     setOperationAction(ISD::FMAXNUM, VT, Expand);
-    setOperationAction(ISD::FMINNAN, VT, Expand);
-    setOperationAction(ISD::FMAXNAN, VT, Expand);
+    setOperationAction(ISD::FMINNUM_IEEE, VT, Expand);
+    setOperationAction(ISD::FMAXNUM_IEEE, VT, Expand);
+    setOperationAction(ISD::FMINIMUM, VT, Expand);
+    setOperationAction(ISD::FMAXIMUM, VT, Expand);
     setOperationAction(ISD::FMAD, VT, Expand);
     setOperationAction(ISD::SMIN, VT, Expand);
     setOperationAction(ISD::SMAX, VT, Expand);
     setOperationAction(ISD::UMIN, VT, Expand);
     setOperationAction(ISD::UMAX, VT, Expand);
     setOperationAction(ISD::ABS, VT, Expand);
+    setOperationAction(ISD::FSHL, VT, Expand);
+    setOperationAction(ISD::FSHR, VT, Expand);
+    setOperationAction(ISD::SADDSAT, VT, Expand);
+    setOperationAction(ISD::UADDSAT, VT, Expand);
+    setOperationAction(ISD::SSUBSAT, VT, Expand);
+    setOperationAction(ISD::USUBSAT, VT, Expand);
+    setOperationAction(ISD::SMULFIX, VT, Expand);
 
     // Overflow operations default to expand
     setOperationAction(ISD::SADDO, VT, Expand);
@@ -632,7 +642,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, VT, Expand);
 
     setOperationAction(ISD::BITREVERSE, VT, Expand);
-    
+
     // These library functions default to expand.
     setOperationAction(ISD::FROUND, VT, Expand);
     setOperationAction(ISD::FPOWI, VT, Expand);
@@ -666,6 +676,7 @@ void TargetLoweringBase::initActions() {
 
   // These library functions default to expand.
   for (MVT VT : {MVT::f32, MVT::f64, MVT::f128}) {
+    setOperationAction(ISD::FCBRT,      VT, Expand);
     setOperationAction(ISD::FLOG ,      VT, Expand);
     setOperationAction(ISD::FLOG2,      VT, Expand);
     setOperationAction(ISD::FLOG10,     VT, Expand);
@@ -924,7 +935,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
   // STATEPOINT Deopt Spill - live-through, read only, indirect
   // STATEPOINT Deopt Alloca - live-through, read only, direct
   // (We're currently conservative and mark the deopt slots read/write in
-  // practice.) 
+  // practice.)
   // STATEPOINT GC Spill - live-through, read/write, indirect
   // STATEPOINT GC Alloca - live-through, read/write, direct
   // The live-in vs live-through is handled already (the live through ones are
@@ -968,7 +979,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
       MIB.add(MI->getOperand(i));
 
     // Inherit previous memory operands.
-    MIB->setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+    MIB.cloneMemRefs(*MI);
     assert(MIB->mayLoad() && "Folded a stackmap use to a non-load!");
 
     // Add a new memory operand for this FI.
@@ -1096,7 +1107,7 @@ void TargetLoweringBase::computeRegisterProperties(
       LegalIntReg = IntReg;
     } else {
       RegisterTypeForVT[IntReg] = TransformToType[IntReg] =
-        (const MVT::SimpleValueType)LegalIntReg;
+        (MVT::SimpleValueType)LegalIntReg;
       ValueTypeActions.setTypeAction(IVT, TypePromoteInteger);
     }
   }
@@ -1337,7 +1348,8 @@ unsigned TargetLoweringBase::getVectorTypeBreakdown(LLVMContext &Context, EVT VT
 /// type of the given function.  This does not require a DAG or a return value,
 /// and is suitable for use before any DAGs for the function are constructed.
 /// TODO: Move this out of TargetLowering.cpp.
-void llvm::GetReturnInfo(Type *ReturnType, AttributeList attr,
+void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
+                         AttributeList attr,
                          SmallVectorImpl<ISD::OutputArg> &Outs,
                          const TargetLowering &TLI, const DataLayout &DL) {
   SmallVector<EVT, 4> ValueVTs;
@@ -1365,9 +1377,9 @@ void llvm::GetReturnInfo(Type *ReturnType, AttributeList attr,
     }
 
     unsigned NumParts =
-        TLI.getNumRegistersForCallingConv(ReturnType->getContext(), VT);
+        TLI.getNumRegistersForCallingConv(ReturnType->getContext(), CC, VT);
     MVT PartVT =
-        TLI.getRegisterTypeForCallingConv(ReturnType->getContext(), VT);
+        TLI.getRegisterTypeForCallingConv(ReturnType->getContext(), CC, VT);
 
     // 'inreg' on function refers to return value
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
@@ -1410,7 +1422,7 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
       *Fast = true;
     return true;
   }
-  
+
   // This is a misaligned access.
   return allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment, Fast);
 }
@@ -1442,6 +1454,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case CatchPad:       return 0;
   case CatchSwitch:    return 0;
   case CleanupPad:     return 0;
+  case FNeg:           return ISD::FNEG;
   case Add:            return ISD::ADD;
   case FAdd:           return ISD::FADD;
   case Sub:            return ISD::SUB;

@@ -9,11 +9,8 @@ static volatile int sink;
 __attribute__((noinline)) void Read(int *ptr) { sink = *ptr; }
 __attribute__((noinline)) void Write(int *ptr) { *ptr = 0; }
 int main(int argc, char **argv) {
-  // Writes to shadow are detected as reads from shadow gap (because of how the
-  // shadow mapping works). This is kinda hard to fix. Test a random address in
-  // the application part of the address space.
   void *volatile p =
-      mmap(nullptr, 4096, PROT_READ, MAP_PRIVATE | MAP_ANON, 0, 0);
+      mmap(nullptr, 4096, PROT_READ, MAP_PRIVATE | MAP_ANON, -1, 0);
   munmap(p, 4096);
   if (argc == 1)
     Read((int *)p);

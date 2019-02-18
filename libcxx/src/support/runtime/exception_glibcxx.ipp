@@ -22,11 +22,6 @@ bad_array_new_length::bad_array_new_length() _NOEXCEPT
 {
 }
 
-bad_array_length::bad_array_length() _NOEXCEPT
-{
-}
-
-
 bad_cast::bad_cast() _NOEXCEPT
 {
 }

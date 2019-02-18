@@ -26,8 +26,8 @@ int main()
         std::vector<bool, test_allocator<bool> > lo(test_allocator<bool>(5));
         for (int i = 1; i <= 3; ++i)
         {
-            l.push_back(i);
-            lo.push_back(i);
+            l.push_back(true);
+            lo.push_back(true);
         }
         std::vector<bool, test_allocator<bool> > l2 = std::move(l);
         assert(l2 == lo);
@@ -39,8 +39,8 @@ int main()
         std::vector<bool, other_allocator<bool> > lo(other_allocator<bool>(5));
         for (int i = 1; i <= 3; ++i)
         {
-            l.push_back(i);
-            lo.push_back(i);
+            l.push_back(true);
+            lo.push_back(true);
         }
         std::vector<bool, other_allocator<bool> > l2 = std::move(l);
         assert(l2 == lo);
@@ -52,8 +52,8 @@ int main()
         std::vector<bool, min_allocator<bool> > lo(min_allocator<bool>{});
         for (int i = 1; i <= 3; ++i)
         {
-            l.push_back(i);
-            lo.push_back(i);
+            l.push_back(true);
+            lo.push_back(true);
         }
         std::vector<bool, min_allocator<bool> > l2 = std::move(l);
         assert(l2 == lo);

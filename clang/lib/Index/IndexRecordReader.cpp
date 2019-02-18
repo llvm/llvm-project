@@ -352,6 +352,11 @@ IndexRecordReader::createWithBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer,
   Impl.Buffer = std::move(Buffer);
   llvm::BitstreamCursor Stream(*Impl.Buffer);
 
+  if (Stream.AtEndOfStream()) {
+    Error = "empty file";
+    return nullptr;
+  }
+
   // Sniff for the signature.
   if (Stream.Read(8) != 'I' ||
       Stream.Read(8) != 'D' ||

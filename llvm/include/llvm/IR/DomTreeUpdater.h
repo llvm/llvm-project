@@ -143,8 +143,9 @@ public:
   /// erased from available trees if it exists and finally get deleted.
   /// Under Eager UpdateStrategy, DelBB will be processed immediately.
   /// Under Lazy UpdateStrategy, DelBB will be queued until a flush event and
-  /// all available trees are up-to-date. When both DT and PDT are nullptrs,
-  /// DelBB will be queued until flush() is called.
+  /// all available trees are up-to-date. Assert if any instruction of DelBB is
+  /// modified while awaiting deletion. When both DT and PDT are nullptrs, DelBB
+  /// will be queued until flush() is called.
   void deleteBB(BasicBlock *DelBB);
 
   /// Delete DelBB. DelBB will be removed from its Parent and
@@ -152,16 +153,15 @@ public:
   /// be called. Finally, DelBB will be deleted.
   /// Under Eager UpdateStrategy, DelBB will be processed immediately.
   /// Under Lazy UpdateStrategy, DelBB will be queued until a flush event and
-  /// all available trees are up-to-date.
-  /// Multiple callbacks can be queued for one DelBB under Lazy UpdateStrategy.
+  /// all available trees are up-to-date. Assert if any instruction of DelBB is
+  /// modified while awaiting deletion. Multiple callbacks can be queued for one
+  /// DelBB under Lazy UpdateStrategy.
   void callbackDeleteBB(BasicBlock *DelBB,
                         std::function<void(BasicBlock *)> Callback);
 
-  /// Recalculate all available trees.
-  /// Under Lazy Strategy, available trees will only be recalculated if there
-  /// are pending updates or there is BasicBlock awaiting deletion. Returns true
-  /// if at least one tree is recalculated.
-  bool recalculate(Function &F);
+  /// Recalculate all available trees and flush all BasicBlocks
+  /// awaiting deletion immediately.
+  void recalculate(Function &F);
 
   /// Flush DomTree updates and return DomTree.
   /// It also flush out of date updates applied by all available trees

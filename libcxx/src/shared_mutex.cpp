@@ -10,7 +10,6 @@
 #include "__config"
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-#define _LIBCPP_BUILDING_SHARED_MUTEX
 #include "shared_mutex"
 
 _LIBCPP_BEGIN_NAMESPACE_STD

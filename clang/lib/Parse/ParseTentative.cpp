@@ -80,10 +80,10 @@ bool Parser::isCXXDeclarationStatement() {
 /// (if AllowForRangeDecl specified)
 /// for ( for-range-declaration : for-range-initializer ) statement
 ///
-/// for-range-declaration: 
+/// for-range-declaration:
 ///    decl-specifier-seq declarator
 ///    decl-specifier-seq ref-qualifier[opt] '[' identifier-list ']'
-/// 
+///
 /// In any of the above cases there can be a preceding attribute-specifier-seq,
 /// but the caller is expected to handle that.
 bool Parser::isCXXSimpleDeclaration(bool AllowForRangeDecl) {
@@ -132,7 +132,7 @@ bool Parser::isCXXSimpleDeclaration(bool AllowForRangeDecl) {
   // Ok, we have a simple-type-specifier/typename-specifier followed by a '(',
   // or an identifier which doesn't resolve as anything. We need tentative
   // parsing...
- 
+
   {
     RevertingTentativeParsingAction PA(*this);
     TPR = TryParseSimpleDeclaration(AllowForRangeDecl);
@@ -159,7 +159,7 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
       ConsumeToken();
       break;
     }
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case tok::kw_typeof:
   case tok::kw___attribute:
   case tok::kw___underlying_type: {
@@ -219,11 +219,11 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
 
   case tok::annot_cxxscope:
     ConsumeAnnotationToken();
-    // Fall through.
+    LLVM_FALLTHROUGH;
   default:
     ConsumeAnyToken();
 
-    if (getLangOpts().ObjC1 && Tok.is(tok::less))
+    if (getLangOpts().ObjC && Tok.is(tok::less))
       return TryParseProtocolQualifiers();
     break;
   }
@@ -236,7 +236,7 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
 ///
 /// (if AllowForRangeDecl specified)
 /// for ( for-range-declaration : for-range-initializer ) statement
-/// for-range-declaration: 
+/// for-range-declaration:
 ///    attribute-specifier-seqopt type-specifier-seq declarator
 ///
 Parser::TPResult Parser::TryParseSimpleDeclaration(bool AllowForRangeDecl) {
@@ -345,22 +345,55 @@ struct Parser::ConditionDeclarationOrInitStatementState {
   bool CanBeExpression = true;
   bool CanBeCondition = true;
   bool CanBeInitStatement;
+  bool CanBeForRangeDecl;
 
-  ConditionDeclarationOrInitStatementState(Parser &P, bool CanBeInitStatement)
-      : P(P), CanBeInitStatement(CanBeInitStatement) {}
+  ConditionDeclarationOrInitStatementState(Parser &P, bool CanBeInitStatement,
+                                           bool CanBeForRangeDecl)
+      : P(P), CanBeInitStatement(CanBeInitStatement),
+        CanBeForRangeDecl(CanBeForRangeDecl) {}
+
+  bool resolved() {
+    return CanBeExpression + CanBeCondition + CanBeInitStatement +
+               CanBeForRangeDecl < 2;
+  }
 
   void markNotExpression() {
     CanBeExpression = false;
 
-    if (CanBeCondition && CanBeInitStatement) {
+    if (!resolved()) {
       // FIXME: Unify the parsing codepaths for condition variables and
       // simple-declarations so that we don't need to eagerly figure out which
       // kind we have here. (Just parse init-declarators until we reach a
       // semicolon or right paren.)
       RevertingTentativeParsingAction PA(P);
-      P.SkipUntil(tok::r_paren, tok::semi, StopBeforeMatch);
+      if (CanBeForRangeDecl) {
+        // Skip until we hit a ')', ';', or a ':' with no matching '?'.
+        // The final case is a for range declaration, the rest are not.
+        while (true) {
+          unsigned QuestionColonDepth = 0;
+          P.SkipUntil({tok::r_paren, tok::semi, tok::question, tok::colon},
+                      StopBeforeMatch);
+          if (P.Tok.is(tok::question))
+            ++QuestionColonDepth;
+          else if (P.Tok.is(tok::colon)) {
+            if (QuestionColonDepth)
+              --QuestionColonDepth;
+            else {
+              CanBeCondition = CanBeInitStatement = false;
+              return;
+            }
+          } else {
+            CanBeForRangeDecl = false;
+            break;
+          }
+          P.ConsumeToken();
+        }
+      } else {
+        // Just skip until we hit a ')' or ';'.
+        P.SkipUntil(tok::r_paren, tok::semi, StopBeforeMatch);
+      }
       if (P.Tok.isNot(tok::r_paren))
-        CanBeCondition = false;
+        CanBeCondition = CanBeForRangeDecl = false;
       if (P.Tok.isNot(tok::semi))
         CanBeInitStatement = false;
     }
@@ -368,28 +401,36 @@ struct Parser::ConditionDeclarationOrInitStatementState {
 
   bool markNotCondition() {
     CanBeCondition = false;
-    return !CanBeInitStatement || !CanBeExpression;
+    return resolved();
+  }
+
+  bool markNotForRangeDecl() {
+    CanBeForRangeDecl = false;
+    return resolved();
   }
 
   bool update(TPResult IsDecl) {
     switch (IsDecl) {
     case TPResult::True:
       markNotExpression();
-      return true;
+      assert(resolved() && "can't continue after tentative parsing bails out");
+      break;
     case TPResult::False:
-      CanBeCondition = CanBeInitStatement = false;
-      return true;
+      CanBeCondition = CanBeInitStatement = CanBeForRangeDecl = false;
+      break;
     case TPResult::Ambiguous:
-      return false;
+      break;
     case TPResult::Error:
-      CanBeExpression = CanBeCondition = CanBeInitStatement = false;
-      return true;
+      CanBeExpression = CanBeCondition = CanBeInitStatement =
+          CanBeForRangeDecl = false;
+      break;
     }
-    llvm_unreachable("unknown tentative parse result");
+    return resolved();
   }
 
   ConditionOrInitStatement result() const {
-    assert(CanBeExpression + CanBeCondition + CanBeInitStatement < 2 &&
+    assert(CanBeExpression + CanBeCondition + CanBeInitStatement +
+                   CanBeForRangeDecl < 2 &&
            "result called but not yet resolved");
     if (CanBeExpression)
       return ConditionOrInitStatement::Expression;
@@ -397,6 +438,8 @@ struct Parser::ConditionDeclarationOrInitStatementState {
       return ConditionOrInitStatement::ConditionDecl;
     if (CanBeInitStatement)
       return ConditionOrInitStatement::InitStmtDecl;
+    if (CanBeForRangeDecl)
+      return ConditionOrInitStatement::ForRangeDecl;
     return ConditionOrInitStatement::Error;
   }
 };
@@ -419,8 +462,10 @@ struct Parser::ConditionDeclarationOrInitStatementState {
 /// to the ';' to disambiguate cases like 'int(x))' (an expression) from
 /// 'int(x);' (a simple-declaration in an init-statement).
 Parser::ConditionOrInitStatement
-Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement) {
-  ConditionDeclarationOrInitStatementState State(*this, CanBeInitStatement);
+Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement,
+                                                 bool CanBeForRangeDecl) {
+  ConditionDeclarationOrInitStatementState State(*this, CanBeInitStatement,
+                                                 CanBeForRangeDecl);
 
   if (State.update(isCXXDeclarationSpecifier()))
     return State.result();
@@ -447,9 +492,17 @@ Parser::isCXXConditionDeclarationOrInitStatement(bool CanBeInitStatement) {
       return State.result();
     }
 
+    // A colon here identifies a for-range declaration.
+    if (State.CanBeForRangeDecl && Tok.is(tok::colon))
+      return ConditionOrInitStatement::ForRangeDecl;
+
     // At this point, it can't be a condition any more, because a condition
     // must have a brace-or-equal-initializer.
     if (State.markNotCondition())
+      return State.result();
+
+    // Likewise, it can't be a for-range declaration any more.
+    if (State.markNotForRangeDecl())
       return State.result();
 
     // A parenthesized initializer could be part of an expression or a
@@ -596,7 +649,7 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
     return CAK_NotAttributeSpecifier;
 
   // No tentative parsing if we don't need to look for ']]' or a lambda.
-  if (!Disambiguate && !getLangOpts().ObjC1)
+  if (!Disambiguate && !getLangOpts().ObjC)
     return CAK_AttributeSpecifier;
 
   RevertingTentativeParsingAction PA(*this);
@@ -605,7 +658,7 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
   ConsumeBracket();
 
   // Outside Obj-C++11, treat anything with a matching ']]' as an attribute.
-  if (!getLangOpts().ObjC1) {
+  if (!getLangOpts().ObjC) {
     ConsumeBracket();
 
     bool IsAttribute = SkipUntil(tok::r_square);
@@ -964,7 +1017,7 @@ Parser::TPResult Parser::TryParseDeclarator(bool mayBeAbstract,
   return TPResult::Ambiguous;
 }
 
-Parser::TPResult 
+Parser::TPResult
 Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   switch (Kind) {
   // Obviously starts an expression.
@@ -1019,13 +1072,14 @@ Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   case tok::kw___FUNCDNAME__:
   case tok::kw___FUNCSIG__:
   case tok::kw_L__FUNCTION__:
+  case tok::kw_L__FUNCSIG__:
   case tok::kw___PRETTY_FUNCTION__:
   case tok::kw___uuidof:
 #define TYPE_TRAIT(N,Spelling,K) \
   case tok::kw_##Spelling:
 #include "clang/Basic/TokenKinds.def"
     return TPResult::True;
-      
+
   // Obviously starts a type-specifier-seq:
   case tok::kw_char:
   case tok::kw_const:
@@ -1083,7 +1137,7 @@ Parser::isExpressionOrTypeSpecifierSimple(tok::TokenKind Kind) {
   default:
     break;
   }
-  
+
   return TPResult::Ambiguous;
 }
 
@@ -1106,8 +1160,8 @@ public:
     // Reject any candidate that only resolves to instance members since they
     // aren't viable as standalone identifiers instead of member references.
     if (Candidate.isResolved() && !Candidate.isKeyword() &&
-        std::all_of(Candidate.begin(), Candidate.end(),
-                    [](NamedDecl *ND) { return ND->isCXXInstanceMember(); }))
+        llvm::all_of(Candidate,
+                     [](NamedDecl *ND) { return ND->isCXXInstanceMember(); }))
       return false;
 
     return CorrectionCandidateCallback::ValidateCandidate(Candidate);
@@ -1232,7 +1286,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
 
     const Token &Next = NextToken();
     // In 'foo bar', 'foo' is always a type name outside of Objective-C.
-    if (!getLangOpts().ObjC1 && Next.is(tok::identifier))
+    if (!getLangOpts().ObjC && Next.is(tok::identifier))
       return TPResult::True;
 
     if (Next.isNot(tok::coloncolon) && Next.isNot(tok::less)) {
@@ -1298,8 +1352,8 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     if (Next.isOneOf(tok::kw_new,       // ::new
                      tok::kw_delete))   // ::delete
       return TPResult::False;
+    LLVM_FALLTHROUGH;
   }
-    // Fall through.
   case tok::kw___super:
   case tok::kw_decltype:
     // Annotate typenames and C++ scope specifiers.  If we get one, just
@@ -1337,7 +1391,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
 
     // Debugger support
   case tok::kw___unknown_anytype:
-      
+
     // type-specifier:
     //   simple-type-specifier
     //   class-specifier
@@ -1394,7 +1448,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
     // Borland
   case tok::kw___pascal:
     return TPResult::True;
-  
+
     // AltiVec
   case tok::kw___vector:
     return TPResult::True;
@@ -1505,28 +1559,28 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::annot_typename:
   case_typename:
     // In Objective-C, we might have a protocol-qualified type.
-    if (getLangOpts().ObjC1 && NextToken().is(tok::less)) {
+    if (getLangOpts().ObjC && NextToken().is(tok::less)) {
       // Tentatively parse the protocol qualifiers.
       RevertingTentativeParsingAction PA(*this);
       ConsumeAnyToken(); // The type token
-      
+
       TPResult TPR = TryParseProtocolQualifiers();
       bool isFollowedByParen = Tok.is(tok::l_paren);
       bool isFollowedByBrace = Tok.is(tok::l_brace);
-      
+
       if (TPR == TPResult::Error)
         return TPResult::Error;
-      
+
       if (isFollowedByParen)
         return TPResult::Ambiguous;
 
       if (getLangOpts().CPlusPlus11 && isFollowedByBrace)
         return BracedCastResult;
-      
+
       return TPResult::True;
     }
     LLVM_FALLTHROUGH;
-      
+
   case tok::kw_char:
   case tok::kw_wchar_t:
   case tok::kw_char8_t:
@@ -1561,7 +1615,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
 
     if (isStartOfObjCClassMessageMissingOpenBracket())
       return TPResult::False;
-      
+
     return TPResult::True;
 
   // GNU typeof support.
@@ -1680,18 +1734,18 @@ Parser::TPResult Parser::TryParseProtocolQualifiers() {
     if (Tok.isNot(tok::identifier))
       return TPResult::Error;
     ConsumeToken();
-    
+
     if (Tok.is(tok::comma)) {
       ConsumeToken();
       continue;
     }
-    
+
     if (Tok.is(tok::greater)) {
       ConsumeToken();
       return TPResult::Ambiguous;
     }
   } while (false);
-  
+
   return TPResult::Error;
 }
 
@@ -1909,7 +1963,7 @@ Parser::TPResult Parser::TryParseFunctionDeclarator() {
   // ref-qualifier[opt]
   if (Tok.isOneOf(tok::amp, tok::ampamp))
     ConsumeToken();
-  
+
   // exception-specification
   if (Tok.is(tok::kw_throw)) {
     ConsumeToken();

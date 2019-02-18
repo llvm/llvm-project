@@ -22,13 +22,13 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Transforms/Utils/OrderedInstructions.h"
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -158,11 +158,8 @@ private:
   AssumptionCache *AC;
   SetVector<BasicBlock *> DeadBlocks;
   OptimizationRemarkEmitter *ORE;
-  // Maps a block to the topmost instruction with implicit control flow in it.
-  DenseMap<const BasicBlock *, const Instruction *>
-      FirstImplicitControlFlowInsts;
+  ImplicitControlFlowTracking *ICF;
 
-  OrderedInstructions *OI;
   ValueTable VN;
 
   /// A mapping from value numbers to lists of Value*'s that
@@ -240,7 +237,7 @@ private:
   }
 
   // List of critical edges to be split between iterations.
-  SmallVector<std::pair<TerminatorInst *, unsigned>, 4> toSplit;
+  SmallVector<std::pair<Instruction *, unsigned>, 4> toSplit;
 
   // Helper functions of redundant load elimination
   bool processLoad(LoadInst *L);

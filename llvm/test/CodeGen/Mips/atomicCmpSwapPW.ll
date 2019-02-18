@@ -32,10 +32,10 @@ define void @foo(i32 %new, i32 %old) {
 ; O32-NEXT:    nop
 ; O32-NEXT:  $BB0_3: # %entry
 ; O32-NEXT:    sync
+; O32-NEXT:    sw $1, 8($sp) # 4-byte Folded Spill
+; O32-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
 ; O32-NEXT:    sw $7, 12($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $6, 8($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; O32-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
+; O32-NEXT:    sw $6, 0($sp) # 4-byte Folded Spill
 ; O32-NEXT:    addiu $sp, $sp, 16
 ; O32-NEXT:    jr $ra
 ; O32-NEXT:    nop

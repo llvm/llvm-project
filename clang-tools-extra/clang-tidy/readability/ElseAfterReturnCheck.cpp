@@ -25,7 +25,8 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
                  expr(ignoringImplicit(cxxThrowExpr().bind("throw")))));
   Finder->addMatcher(
       compoundStmt(forEach(
-          ifStmt(hasThen(stmt(
+          ifStmt(unless(isConstexpr()),
+                 hasThen(stmt(
                      anyOf(ControlFlowInterruptorMatcher,
                            compoundStmt(has(ControlFlowInterruptorMatcher))))),
                  hasElse(stmt().bind("else")))

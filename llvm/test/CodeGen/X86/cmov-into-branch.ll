@@ -5,9 +5,9 @@
 define i32 @test1(double %a, double* nocapture %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ucomisd (%rdi), %xmm0
-; CHECK-NEXT:    cmovbel %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    ucomisd (%rdi), %xmm0
+; CHECK-NEXT:    cmovbel %edx, %eax
 ; CHECK-NEXT:    retq
   %load = load double, double* %b, align 8
   %cmp = fcmp olt double %load, %a
@@ -19,9 +19,9 @@ define i32 @test1(double %a, double* nocapture %b, i32 %x, i32 %y)  {
 define i32 @test2(double %a, double %b, i32 %x, i32 %y)  {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ucomisd %xmm1, %xmm0
-; CHECK-NEXT:    cmovbel %esi, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    ucomisd %xmm1, %xmm0
+; CHECK-NEXT:    cmovbel %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = fcmp ogt double %a, %b
   %cond = select i1 %cmp, i32 %x, i32 %y
@@ -48,10 +48,10 @@ define i32 @test4(i32 %a, i32* nocapture %b, i32 %x, i32 %y)  {
 define i32 @test5(i32 %a, i32* nocapture %b, i32 %x, i32 %y) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpl %edi, (%rsi)
-; CHECK-NEXT:    cmoval %edi, %ecx
-; CHECK-NEXT:    cmovael %edx, %ecx
 ; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    cmpl %edi, (%rsi)
+; CHECK-NEXT:    cmoval %edi, %eax
+; CHECK-NEXT:    cmovael %edx, %eax
 ; CHECK-NEXT:    retq
   %load = load i32, i32* %b, align 4
   %cmp = icmp ult i32 %load, %a
@@ -83,9 +83,9 @@ entry:
 define i32 @weighted_select1(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovnel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, i32 %a, i32 %b, !prof !0
@@ -96,12 +96,12 @@ define i32 @weighted_select1(i32 %a, i32 %b) {
 define i32 @weighted_select2(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    jne .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %select.false
-; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:  .LBB6_2: # %select.end
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, i32 %a, i32 %b, !prof !1
@@ -115,14 +115,13 @@ define i32 @weighted_select2(i32 %a, i32 %b) {
 define i32 @weighted_select3(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_select3:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %select.end
-; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB7_1: # %select.false
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, i32 %a, i32 %b, !prof !2
@@ -133,9 +132,9 @@ define i32 @weighted_select3(i32 %a, i32 %b) {
 define i32 @unweighted_select(i32 %a, i32 %b) {
 ; CHECK-LABEL: unweighted_select:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    cmovnel %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, i32 %a, i32 %b, !prof !3

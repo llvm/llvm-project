@@ -142,7 +142,6 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "gfni", true);
     setFeatureEnabledImpl(Features, "vpclmulqdq", true);
     setFeatureEnabledImpl(Features, "avx512bitalg", true);
-    setFeatureEnabledImpl(Features, "avx512vnni", true);
     setFeatureEnabledImpl(Features, "avx512vbmi2", true);
     setFeatureEnabledImpl(Features, "avx512vpopcntdq", true);
     setFeatureEnabledImpl(Features, "rdpid", true);
@@ -151,6 +150,12 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "avx512ifma", true);
     setFeatureEnabledImpl(Features, "avx512vbmi", true);
     setFeatureEnabledImpl(Features, "sha", true);
+    LLVM_FALLTHROUGH;
+  case CK_Cascadelake:
+    //Cannonlake has no VNNI feature inside while Icelake has
+    if (Kind != CK_Cannonlake)
+      // CLK inherits all SKX features plus AVX512_VNNI
+      setFeatureEnabledImpl(Features, "avx512vnni", true);
     LLVM_FALLTHROUGH;
   case CK_SkylakeServer:
     setFeatureEnabledImpl(Features, "avx512f", true);
@@ -166,10 +171,12 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsavec", true);
     setFeatureEnabledImpl(Features, "xsaves", true);
     setFeatureEnabledImpl(Features, "mpx", true);
-    if (Kind != CK_SkylakeServer) // SKX inherits all SKL features, except SGX
+    if (Kind != CK_SkylakeServer
+        && Kind != CK_Cascadelake)
+      // SKX/CLX inherits all SKL features, except SGX
       setFeatureEnabledImpl(Features, "sgx", true);
     setFeatureEnabledImpl(Features, "clflushopt", true);
-    setFeatureEnabledImpl(Features, "rtm", true);
+    setFeatureEnabledImpl(Features, "aes", true);
     LLVM_FALLTHROUGH;
   case CK_Broadwell:
     setFeatureEnabledImpl(Features, "rdseed", true);
@@ -196,7 +203,6 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "xsaveopt", true);
     LLVM_FALLTHROUGH;
   case CK_Westmere:
-    setFeatureEnabledImpl(Features, "aes", true);
     setFeatureEnabledImpl(Features, "pclmul", true);
     LLVM_FALLTHROUGH;
   case CK_Nehalem:
@@ -248,10 +254,10 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "clflushopt", true);
     setFeatureEnabledImpl(Features, "mpx", true);
     setFeatureEnabledImpl(Features, "fsgsbase", true);
+    setFeatureEnabledImpl(Features, "aes", true);
     LLVM_FALLTHROUGH;
   case CK_Silvermont:
     setFeatureEnabledImpl(Features, "rdrnd", true);
-    setFeatureEnabledImpl(Features, "aes", true);
     setFeatureEnabledImpl(Features, "pclmul", true);
     setFeatureEnabledImpl(Features, "sse4.2", true);
     setFeatureEnabledImpl(Features, "prfchw", true);
@@ -281,7 +287,6 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "lzcnt", true);
     setFeatureEnabledImpl(Features, "bmi", true);
     setFeatureEnabledImpl(Features, "bmi2", true);
-    setFeatureEnabledImpl(Features, "rtm", true);
     setFeatureEnabledImpl(Features, "fma", true);
     setFeatureEnabledImpl(Features, "rdrnd", true);
     setFeatureEnabledImpl(Features, "f16c", true);
@@ -796,8 +801,6 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCLDEMOTE = true;
     } else if (Feature == "+rdpid") {
       HasRDPID = true;
-    } else if (Feature == "+retpoline") {
-      HasRetpoline = true;
     } else if (Feature == "+retpoline-external-thunk") {
       HasRetpolineExternalThunk = true;
     } else if (Feature == "+sahf") {
@@ -862,6 +865,11 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 /// definitions for this particular subtarget.
 void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
+  std::string CodeModel = getTargetOpts().CodeModel;
+  if (CodeModel == "default")
+    CodeModel = "small";
+  Builder.defineMacro("__code_model_" + CodeModel + "_");
+
   // Target identification.
   if (getTriple().getArch() == llvm::Triple::x86_64) {
     Builder.defineMacro("__amd64__");
@@ -948,6 +956,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Broadwell:
   case CK_SkylakeClient:
   case CK_SkylakeServer:
+  case CK_Cascadelake:
   case CK_Cannonlake:
   case CK_IcelakeClient:
   case CK_IcelakeServer:
@@ -1082,6 +1091,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasMWAITX)
     Builder.defineMacro("__MWAITX__");
+
+  if (HasMOVBE)
+    Builder.defineMacro("__MOVBE__");
 
   switch (XOPLevel) {
   case XOP:
@@ -1397,7 +1409,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("rdpid", HasRDPID)
       .Case("rdrnd", HasRDRND)
       .Case("rdseed", HasRDSEED)
-      .Case("retpoline", HasRetpoline)
       .Case("retpoline-external-thunk", HasRetpolineExternalThunk)
       .Case("rtm", HasRTM)
       .Case("sahf", HasLAHFSAHF)
@@ -1482,6 +1493,38 @@ unsigned X86TargetInfo::multiVersionSortPriority(StringRef Name) const {
   // Now we know we have a feature, so get its priority and shift it a few so
   // that we have sufficient room for the CPUs (above).
   return getFeaturePriority(getFeature(Name)) << 1;
+}
+
+bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
+  return llvm::StringSwitch<bool>(Name)
+#define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, true)
+#define CPU_SPECIFIC_ALIAS(NEW_NAME, NAME) .Case(NEW_NAME, true)
+#include "clang/Basic/X86Target.def"
+      .Default(false);
+}
+
+static StringRef CPUSpecificCPUDispatchNameDealias(StringRef Name) {
+  return llvm::StringSwitch<StringRef>(Name)
+#define CPU_SPECIFIC_ALIAS(NEW_NAME, NAME) .Case(NEW_NAME, NAME)
+#include "clang/Basic/X86Target.def"
+      .Default(Name);
+}
+
+char X86TargetInfo::CPUSpecificManglingCharacter(StringRef Name) const {
+  return llvm::StringSwitch<char>(CPUSpecificCPUDispatchNameDealias(Name))
+#define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, MANGLING)
+#include "clang/Basic/X86Target.def"
+      .Default(0);
+}
+
+void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
+    StringRef Name, llvm::SmallVectorImpl<StringRef> &Features) const {
+  StringRef WholeList =
+      llvm::StringSwitch<StringRef>(CPUSpecificCPUDispatchNameDealias(Name))
+#define CPU_SPECIFIC(NAME, MANGLING, FEATURES) .Case(NAME, FEATURES)
+#include "clang/Basic/X86Target.def"
+          .Default("");
+  WholeList.split(Features, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 }
 
 std::string X86TargetInfo::getCPUKindCanonicalName(CPUKind Kind) const {
@@ -1646,6 +1689,7 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
         return false;
       break;
     }
+    LLVM_FALLTHROUGH;
   case 'v':
   case 'x':
     if (SSELevel >= AVX512F)
@@ -1725,7 +1769,7 @@ void X86TargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
 #define PROC(ENUM, STRING, IS64BIT)                                            \
   if (IS64BIT || getTriple().getArch() == llvm::Triple::x86)                   \
     Values.emplace_back(STRING);
-  // Go through CPUKind checking to ensure that the alias is de-aliased and 
+  // Go through CPUKind checking to ensure that the alias is de-aliased and
   // 64 bit-ness is checked.
 #define PROC_ALIAS(ENUM, ALIAS)                                                \
   if (checkCPUKind(getCPUKind(ALIAS)))                                         \

@@ -1,8 +1,8 @@
-; RUN: llc -O1 -mcpu=cortex-a15 -mtriple=armv7-linux-gnueabi -disable-a15-sd-optimization -verify-machineinstrs < %s  | FileCheck -check-prefix=CHECK-DISABLED %s
-; RUN: llc -O1 -mcpu=cortex-a15 -mtriple=armv7-linux-gnueabi -verify-machineinstrs < %s | FileCheck -check-prefix=CHECK-ENABLED %s
+; RUN: llc -O1 -mattr=+splat-vfp-neon -mtriple=armv7-linux-gnueabi -verify-machineinstrs -disable-a15-sd-optimization < %s | FileCheck -check-prefixes=CHECK,CHECK-DISABLED %s
+; RUN: llc -O1 -mattr=-splat-vfp-neon -mtriple=armv7-linux-gnueabi -verify-machineinstrs                              < %s | FileCheck -check-prefixes=CHECK,CHECK-DISABLED %s
+; RUN: llc -O1 -mattr=+splat-vfp-neon -mtriple=armv7-linux-gnueabi -verify-machineinstrs                              < %s | FileCheck -check-prefixes=CHECK,CHECK-ENABLED  %s
 
-; CHECK-ENABLED-LABEL: t1:
-; CHECK-DISABLED-LABEL: t1:
+; CHECK-LABEL: t1:
 define <2 x float> @t1(float %f) {
   ; CHECK-ENABLED: vdup.32 d{{[0-9]*}}, d0[0]
   ; CHECK-DISABLED-NOT: vdup.32 d{{[0-9]*}}, d0[0]
@@ -11,8 +11,7 @@ define <2 x float> @t1(float %f) {
   ret <2 x float> %i2
 }
 
-; CHECK-ENABLED-LABEL: t2:
-; CHECK-DISABLED-LABEL: t2:
+; CHECK-LABEL: t2:
 define <4 x float> @t2(float %g, float %f) {
   ; CHECK-ENABLED: vdup.32 q{{[0-9]*}}, d0[0]
   ; CHECK-DISABLED-NOT: vdup.32 d{{[0-9]*}}, d0[0]
@@ -21,8 +20,7 @@ define <4 x float> @t2(float %g, float %f) {
   ret <4 x float> %i2
 }
 
-; CHECK-ENABLED-LABEL: t3:
-; CHECK-DISABLED-LABEL: t3:
+; CHECK-LABEL: t3:
 define arm_aapcs_vfpcc <2 x float> @t3(float %f) {
   ; CHECK-ENABLED: vdup.32 d{{[0-9]*}}, d0[0] 
   ; CHECK-DISABLED-NOT: vdup.32 d{{[0-9]*}}, d0[0]
@@ -31,8 +29,7 @@ define arm_aapcs_vfpcc <2 x float> @t3(float %f) {
   ret <2 x float> %i2
 }
 
-; CHECK-ENABLED-LABEL: t4:
-; CHECK-DISABLED-LABEL: t4:
+; CHECK-LABEL: t4:
 define <2 x float> @t4(float %f) {
   ; CHECK-ENABLED: vdup.32 d{{[0-9]*}}, d0[0]
   ; CHECK-DISABLED-NOT: vdup
@@ -45,8 +42,7 @@ b:
   ret <2 x float> %i2
 }
 
-; CHECK-ENABLED-LABEL: t5:
-; CHECK-DISABLED-LABEL: t5:
+; CHECK-LABEL: t5:
 define arm_aapcs_vfpcc <4 x float> @t5(<4 x float> %q, float %f) {
   ; CHECK-ENABLED: vdup.32 d{{[0-9]*}}, d{{[0-9]*}}[0]
   ; CHECK-ENABLED: vadd.f32
@@ -58,8 +54,7 @@ define arm_aapcs_vfpcc <4 x float> @t5(<4 x float> %q, float %f) {
 }
 
 ; Test that DPair can be successfully passed as QPR.
-; CHECK-ENABLED-LABEL: test_DPair1:
-; CHECK-DISABLED-LABEL: test_DPair1:
+; CHECK-LABEL: test_DPair1:
 define void @test_DPair1(i32 %vsout, i8* nocapture %out, float %x, float %y) {
 entry:
   %0 = insertelement <4 x float> undef, float %x, i32 1
@@ -89,8 +84,7 @@ sw.epilog:                                        ; preds = %entry
   ret void
 }
 
-; CHECK-ENABLED-LABEL: test_DPair2:
-; CHECK-DISABLED-LABEL: test_DPair2:
+; CHECK-LABEL: test_DPair2:
 define void @test_DPair2(i32 %vsout, i8* nocapture %out, float %x) {
 entry:
   %0 = insertelement <4 x float> undef, float %x, i32 0

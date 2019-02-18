@@ -45,11 +45,12 @@ def InstFormatCSS    : InstFormat<10>;
 def InstFormatCIW    : InstFormat<11>;
 def InstFormatCL     : InstFormat<12>;
 def InstFormatCS     : InstFormat<13>;
-def InstFormatCB     : InstFormat<14>;
-def InstFormatCJ     : InstFormat<15>;
-def InstFormatOther  : InstFormat<16>;
+def InstFormatCA     : InstFormat<14>;
+def InstFormatCB     : InstFormat<15>;
+def InstFormatCJ     : InstFormat<16>;
+def InstFormatOther  : InstFormat<17>;
 
-// The following opcode names and match those given in Table 19.1 in the
+// The following opcode names match those given in Table 19.1 in the
 // RISC-V User-level ISA specification ("RISC-V base opcode map").
 class RISCVOpcode<bits<7> val> {
   bits<7> Value = val;

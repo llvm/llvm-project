@@ -195,21 +195,18 @@ define signext i32 @and_i32(i32 signext %a, i32 signext %b) {
 ;
 ; MIPS64-LABEL: and_i32:
 ; MIPS64:       # %bb.0: # %entry
-; MIPS64-NEXT:    and $1, $4, $5
 ; MIPS64-NEXT:    jr $ra
-; MIPS64-NEXT:    sll $2, $1, 0
+; MIPS64-NEXT:    and $2, $4, $5
 ;
 ; MIPS64R2-LABEL: and_i32:
 ; MIPS64R2:       # %bb.0: # %entry
-; MIPS64R2-NEXT:    and $1, $4, $5
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    sll $2, $1, 0
+; MIPS64R2-NEXT:    and $2, $4, $5
 ;
 ; MIPS64R6-LABEL: and_i32:
 ; MIPS64R6:       # %bb.0: # %entry
-; MIPS64R6-NEXT:    and $1, $4, $5
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    sll $2, $1, 0
+; MIPS64R6-NEXT:    and $2, $4, $5
 ;
 ; MM32R3-LABEL: and_i32:
 ; MM32R3:       # %bb.0: # %entry

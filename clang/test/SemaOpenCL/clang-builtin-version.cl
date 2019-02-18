@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fblocks -verify -pedantic-errors -fsyntax-only -ferror-limit 100
+// RUN: %clang_cc1 %s -fblocks -verify -pedantic -fsyntax-only -ferror-limit 100
 
 // Confirm CL2.0 Clang builtins are not available in earlier versions
 

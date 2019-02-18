@@ -4,6 +4,8 @@
 # RUN: python %s > %t.ll
 # RUN: llc < %t.ll -march=nvptx64 -mcpu=sm_70 -mattr=+ptx61 | FileCheck %t.ll
 
+from __future__ import print_function
+
 from itertools import product
 from string import Template
 

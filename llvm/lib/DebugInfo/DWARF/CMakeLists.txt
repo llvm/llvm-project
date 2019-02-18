@@ -6,6 +6,7 @@ add_llvm_library(LLVMDebugInfoDWARF
   DWARFContext.cpp
   DWARFDataExtractor.cpp
   DWARFDebugAbbrev.cpp
+  DWARFDebugAddr.cpp
   DWARFDebugArangeSet.cpp
   DWARFDebugAranges.cpp
   DWARFDebugFrame.cpp
@@ -20,6 +21,7 @@ add_llvm_library(LLVMDebugInfoDWARF
   DWARFExpression.cpp
   DWARFFormValue.cpp
   DWARFGdbIndex.cpp
+  DWARFListTable.cpp
   DWARFTypeUnit.cpp
   DWARFUnitIndex.cpp
   DWARFUnit.cpp

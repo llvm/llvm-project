@@ -79,7 +79,7 @@ void ValueSymbolTable::reinsertValue(Value* V) {
     // *V << "\n");
     return;
   }
-  
+
   // Otherwise, there is a naming conflict.  Rename this value.
   SmallString<256> UniqueName(V->getName().begin(), V->getName().end());
 
@@ -107,7 +107,7 @@ ValueName *ValueSymbolTable::createValueName(StringRef Name, Value *V) {
     //           << *V << "\n");
     return &*IterBool.first;
   }
-  
+
   // Otherwise, there is a naming conflict.  Rename this value.
   SmallString<256> UniqueName(Name.begin(), Name.end());
   return makeUniqueName(V, UniqueName);

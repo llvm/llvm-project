@@ -30,9 +30,10 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -102,7 +103,7 @@ struct BlockInfoType {
   BasicBlock *BB = nullptr;
 
   /// Cache of BB->getTerminator().
-  TerminatorInst *Terminator = nullptr;
+  Instruction *Terminator = nullptr;
 
   /// Post-order numbering of reverse control flow graph.
   unsigned PostOrder;
@@ -115,7 +116,7 @@ class AggressiveDeadCodeElimination {
 
   // ADCE does not use DominatorTree per se, but it updates it to preserve the
   // analysis.
-  DominatorTree &DT;
+  DominatorTree *DT;
   PostDominatorTree &PDT;
 
   /// Mapping of blocks to associated information, an element in BlockInfoVec.
@@ -190,7 +191,7 @@ class AggressiveDeadCodeElimination {
   void makeUnconditional(BasicBlock *BB, BasicBlock *Target);
 
 public:
-  AggressiveDeadCodeElimination(Function &F, DominatorTree &DT,
+  AggressiveDeadCodeElimination(Function &F, DominatorTree *DT,
                                 PostDominatorTree &PDT)
       : F(F), DT(DT), PDT(PDT) {}
 
@@ -205,7 +206,7 @@ bool AggressiveDeadCodeElimination::performDeadCodeElimination() {
   return removeDeadInstructions();
 }
 
-static bool isUnconditionalBranch(TerminatorInst *Term) {
+static bool isUnconditionalBranch(Instruction *Term) {
   auto *BR = dyn_cast<BranchInst>(Term);
   return BR && BR->isUnconditional();
 }
@@ -276,7 +277,7 @@ void AggressiveDeadCodeElimination::initialize() {
     // treat all edges to a block already seen as loop back edges
     // and mark the branch live it if there is a back edge.
     for (auto *BB: depth_first_ext(&F.getEntryBlock(), State)) {
-      TerminatorInst *Term = BB->getTerminator();
+      Instruction *Term = BB->getTerminator();
       if (isLive(Term))
         continue;
 
@@ -330,7 +331,7 @@ bool AggressiveDeadCodeElimination::isAlwaysLive(Instruction &I) {
       return false;
     return true;
   }
-  if (!isa<TerminatorInst>(I))
+  if (!I.isTerminator())
     return false;
   if (RemoveControlFlowFlag && (isa<BranchInst>(I) || isa<SwitchInst>(I)))
     return false;
@@ -507,7 +508,7 @@ bool AggressiveDeadCodeElimination::removeDeadInstructions() {
       if (isLive(&I))
         continue;
 
-      if (auto *DII = dyn_cast<DbgInfoIntrinsic>(&I)) {
+      if (auto *DII = dyn_cast<DbgVariableIntrinsic>(&I)) {
         // Check if the scope of this variable location is alive.
         if (AliveScopes.count(DII->getDebugLoc()->getScope()))
           continue;
@@ -614,8 +615,8 @@ void AggressiveDeadCodeElimination::updateDeadRegions() {
       }
     }
 
-    DT.applyUpdates(DeletedEdges);
-    PDT.applyUpdates(DeletedEdges);
+    DomTreeUpdater(DT, &PDT, DomTreeUpdater::UpdateStrategy::Eager)
+        .applyUpdates(DeletedEdges);
 
     NumBranchesRemoved += 1;
   }
@@ -642,7 +643,7 @@ void AggressiveDeadCodeElimination::computeReversePostOrder() {
 
 void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
                                                       BasicBlock *Target) {
-  TerminatorInst *PredTerm = BB->getTerminator();
+  Instruction *PredTerm = BB->getTerminator();
   // Collect the live debug info scopes attached to this instruction.
   if (const DILocation *DL = PredTerm->getDebugLoc())
     collectLiveScopes(*DL);
@@ -671,7 +672,9 @@ void AggressiveDeadCodeElimination::makeUnconditional(BasicBlock *BB,
 //
 //===----------------------------------------------------------------------===//
 PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
-  auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+  // ADCE does not need DominatorTree, but require DominatorTree here
+  // to update analysis if it is already available.
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
   if (!AggressiveDeadCodeElimination(F, DT, PDT).performDeadCodeElimination())
     return PreservedAnalyses::all();
@@ -697,15 +700,16 @@ struct ADCELegacyPass : public FunctionPass {
     if (skipFunction(F))
       return false;
 
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    // ADCE does not need DominatorTree, but require DominatorTree here
+    // to update analysis if it is already available.
+    auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+    auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
     return AggressiveDeadCodeElimination(F, DT, PDT)
         .performDeadCodeElimination();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    // We require DominatorTree here only to update and thus preserve it.
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<PostDominatorTreeWrapperPass>();
     if (!RemoveControlFlowFlag)
       AU.setPreservesCFG();
@@ -723,7 +727,6 @@ char ADCELegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ADCELegacyPass, "adce",
                       "Aggressive Dead Code Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(ADCELegacyPass, "adce", "Aggressive Dead Code Elimination",
                     false, false)

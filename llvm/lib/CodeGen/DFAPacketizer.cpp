@@ -250,8 +250,7 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
 
   LLVM_DEBUG({
     dbgs() << "Scheduling DAG of the packetize region\n";
-    for (SUnit &SU : VLIWScheduler->SUnits)
-      SU.dumpAll(VLIWScheduler);
+    VLIWScheduler->dump();
   });
 
   // Generate MI -> SU map.

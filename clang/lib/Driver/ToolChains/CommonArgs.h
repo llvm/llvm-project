@@ -32,6 +32,10 @@ void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
 
+void addSanitizerPathLibArgs(const ToolChain &TC,
+                             const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs);
+
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
                               llvm::opt::ArgStringList &CmdArgs);
 
@@ -59,7 +63,7 @@ void AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
                         const Tool &T);
 
 const char *SplitDebugName(const llvm::opt::ArgList &Args,
-                           const InputInfo &Input);
+                           const InputInfo &Output);
 
 void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
                     const JobAction &JA, const llvm::opt::ArgList &Args,

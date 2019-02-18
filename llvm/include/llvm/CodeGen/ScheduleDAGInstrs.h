@@ -327,7 +327,8 @@ namespace llvm {
     /// whole MachineFunction. By default does nothing.
     virtual void finalizeSchedule() {}
 
-    void dumpNode(const SUnit *SU) const override;
+    void dumpNode(const SUnit &SU) const override;
+    void dump() const override;
 
     /// Returns a label for a DAG node that points to an instruction.
     std::string getGraphNodeLabel(const SUnit *SU) const override;

@@ -13,12 +13,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace clang{
+using namespace llvm;
+namespace clang {
 namespace clangd {
 namespace {
-
-using llvm::Failed;
-using llvm::HasValue;
 
 MATCHER_P2(Pos, Line, Col, "") {
   return arg.line == Line && arg.character == Col;
@@ -35,6 +33,23 @@ Position position(int line, int character) {
   Pos.line = line;
   Pos.character = character;
   return Pos;
+}
+
+Range range(const std::pair<int, int> p1, const std::pair<int, int> p2) {
+  Range range;
+  range.start = position(p1.first, p1.second);
+  range.end = position(p2.first, p2.second);
+  return range;
+}
+
+TEST(SourceCodeTests, lspLength) {
+  EXPECT_EQ(lspLength(""), 0UL);
+  EXPECT_EQ(lspLength("ascii"), 5UL);
+  // BMP
+  EXPECT_EQ(lspLength("↓"), 1UL);
+  EXPECT_EQ(lspLength("¥"), 1UL);
+  // astral
+  EXPECT_EQ(lspLength("😂"), 2UL);
 }
 
 TEST(SourceCodeTests, PositionToOffset) {
@@ -117,6 +132,14 @@ TEST(SourceCodeTests, OffsetToPosition) {
   EXPECT_THAT(offsetToPosition(File, 28), Pos(2, 8)) << "end of last line";
   EXPECT_THAT(offsetToPosition(File, 29), Pos(2, 9)) << "EOF";
   EXPECT_THAT(offsetToPosition(File, 30), Pos(2, 9)) << "out of bounds";
+}
+
+TEST(SourceCodeTests, IsRangeConsecutive) {
+  EXPECT_TRUE(IsRangeConsecutive(range({2, 2}, {2, 3}), range({2, 3}, {2, 4})));
+  EXPECT_FALSE(
+      IsRangeConsecutive(range({0, 2}, {0, 3}), range({2, 3}, {2, 4})));
+  EXPECT_FALSE(
+      IsRangeConsecutive(range({2, 2}, {2, 3}), range({2, 4}, {2, 5})));
 }
 
 } // namespace

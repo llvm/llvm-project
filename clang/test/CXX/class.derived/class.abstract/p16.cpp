@@ -44,8 +44,8 @@ struct G : D {};
 // expected-error@-3 {{deleted function 'operator=' cannot override a non-deleted function}}
 // expected-note@-4 {{while declaring the implicit move assignment operator for 'G'}}
 // expected-note@-5 {{move assignment operator of 'G' is implicitly deleted because base class 'D' has an inaccessible move assignment operator}}
-struct H : D {
-  H &operator=(H&&) = default;
+struct H : D { // expected-note {{deleted because base class 'D' has an inaccessible move assignment}}
+  H &operator=(H&&) = default; // expected-warning {{implicitly deleted}}
   // expected-error@-1 {{deleted function 'operator=' cannot override a non-deleted function}}
   // expected-note@-3 {{move assignment operator of 'H' is implicitly deleted because base class 'D' has an inaccessible move assignment operator}}
   ~H();

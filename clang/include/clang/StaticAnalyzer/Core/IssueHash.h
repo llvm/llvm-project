@@ -29,7 +29,7 @@ class LangOptions;
 /// location. The bugtype and the name of the checker is also part of the hash.
 /// The last component is the string representation of the enclosing declaration
 /// of the associated location.
-/// 
+///
 /// In case a new hash is introduced, the old one should still be maintained for
 /// a while. One should not introduce a new hash for every change, it is
 /// possible to introduce experimental hashes that may change in the future.

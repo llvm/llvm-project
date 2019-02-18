@@ -248,7 +248,7 @@ void TokenLexer::ExpandFunctionArguments() {
       ActualArgs->invokedWithVariadicArgument(Macro);
 
   VAOptExpansionContext VCtx(PP);
-  
+
   for (unsigned I = 0, E = NumTokens; I != E; ++I) {
     const Token &CurTok = Tokens[I];
     // We don't want a space for the next token after a paste
@@ -268,7 +268,7 @@ void TokenLexer::ExpandFunctionArguments() {
       ++I;             // Skip the l_paren
       VCtx.sawVAOptFollowedByOpeningParens(CurTok.getLocation(),
                                            ResultToks.size());
-      
+
       continue;
     }
 
@@ -336,14 +336,14 @@ void TokenLexer::ExpandFunctionArguments() {
     }
 
     // If we found the stringify operator, get the argument stringified.  The
-    // preprocessor already verified that the following token is a macro 
+    // preprocessor already verified that the following token is a macro
     // parameter or __VA_OPT__ when the #define was lexed.
-    
+
     if (CurTok.isOneOf(tok::hash, tok::hashat)) {
       int ArgNo = Macro->getParameterNum(Tokens[I+1].getIdentifierInfo());
       assert((ArgNo != -1 || VCtx.isVAOptToken(Tokens[I + 1])) &&
              "Token following # is not an argument or __VA_OPT__!");
-      
+
       if (ArgNo == -1) {
         // Handle the __VA_OPT__ case.
         VCtx.sawHashOrHashAtBefore(NextTokGetsSpace,
@@ -706,7 +706,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   if (PP.getLangOpts().MicrosoftExt && (CurIdx >= 2) &&
       TokenStream[CurIdx - 2].is(tok::hashhash))
     LHSTok.clearFlag(Token::LeadingSpace);
-  
+
   SmallString<128> Buffer;
   const char *ResultTokStrPtr = nullptr;
   SourceLocation StartLoc = LHSTok.getLocation();
@@ -845,7 +845,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
     // Transfer properties of the LHS over the Result.
     Result.setFlagValue(Token::StartOfLine , LHSTok.isAtStartOfLine());
     Result.setFlagValue(Token::LeadingSpace, LHSTok.hasLeadingSpace());
-    
+
     // Finally, replace LHS with the result, consume the RHS, and iterate.
     ++CurIdx;
     LHSTok = Result;
@@ -868,7 +868,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
     StartLoc = SM.getImmediateExpansionRange(StartLoc).getBegin();
   while (SM.getFileID(EndLoc) != MacroFID)
     EndLoc = SM.getImmediateExpansionRange(EndLoc).getEnd();
-    
+
   LHSTok.setLocation(SM.createExpansionLoc(LHSTok.getLocation(), StartLoc, EndLoc,
                                         LHSTok.getLength()));
 
@@ -927,7 +927,7 @@ TokenLexer::getExpansionLocForMacroDefLoc(SourceLocation loc) const {
   assert(ExpandLocStart.isValid() && MacroExpansionStart.isValid() &&
          "Not appropriate for token streams");
   assert(loc.isValid() && loc.isFileID());
-  
+
   SourceManager &SM = PP.getSourceManager();
   assert(SM.isInSLocAddrSpace(loc, MacroDefStart, MacroDefLength) &&
          "Expected loc to come from the macro definition");
@@ -1019,7 +1019,7 @@ void TokenLexer::updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
 
   SourceLocation InstLoc =
       getExpansionLocForMacroDefLoc(ArgIdSpellLoc);
-  
+
   while (begin_tokens < end_tokens) {
     // If there's only one token just create a SLocEntry for it.
     if (end_tokens - begin_tokens == 1) {

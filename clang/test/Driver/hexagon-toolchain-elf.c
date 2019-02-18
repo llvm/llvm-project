@@ -59,19 +59,11 @@
 // -----------------------------------------------------------------------------
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
-// RUN:   -mcpu=hexagonv4 \
-// RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK020 %s
-// CHECK020: "-cc1" {{.*}} "-target-cpu" "hexagonv4"
-// CHECK020: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v4/crt0
-
-// RUN: %clang -### -target hexagon-unknown-elf \
-// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv5 \
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK021 %s
 // CHECK021: "-cc1" {{.*}} "-target-cpu" "hexagonv5"
-// CHECK021: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v5/crt0
+// CHECK021: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v5/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -79,7 +71,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK022 %s
 // CHECK022: "-cc1" {{.*}} "-target-cpu" "hexagonv55"
-// CHECK022: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v55/crt0
+// CHECK022: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v55/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -87,7 +79,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK023 %s
 // CHECK023: "-cc1" {{.*}} "-target-cpu" "hexagonv60"
-// CHECK023: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0
+// CHECK023: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -95,7 +87,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK024 %s
 // CHECK024: "-cc1" {{.*}} "-target-cpu" "hexagonv62"
-// CHECK024: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v62/crt0
+// CHECK024: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v62/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
@@ -103,23 +95,31 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK025 %s
 // CHECK025: "-cc1" {{.*}} "-target-cpu" "hexagonv65"
-// CHECK025: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v65/crt0
+// CHECK025: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v65/crt0
+
+// RUN: %clang -### -target hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv66 \
+// RUN:   %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK026 %s
+// CHECK026: "-cc1" {{.*}} "-target-cpu" "hexagonv66"
+// CHECK026: {{hexagon-link|ld}}{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v66/crt0
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -O3 \
 // RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK026 %s
-// CHECK026: "-ffp-contract=fast"
-// CHECK026: hexagon-link
+// RUN:   | FileCheck -check-prefix=CHECK027 %s
+// CHECK027-NOT: "-ffp-contract=fast"
+// CHECK027: {{hexagon-link|ld}}
 
 // RUN: %clang -### -target hexagon-unknown-elf \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -O3 -ffp-contract=off \
 // RUN:   %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=CHECK027 %s
-// CHECK027-NOT: "-ffp-contract=fast"
-// CHECK027: hexagon-link
+// RUN:   | FileCheck -check-prefix=CHECK028 %s
+// CHECK028-NOT: "-ffp-contract=fast"
+// CHECK028: {{hexagon-link|ld}}
 
 // -----------------------------------------------------------------------------
 // Test Linker related args
@@ -134,7 +134,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK030 %s
 // CHECK030: "-cc1"
-// CHECK030-NEXT: hexagon-link
+// CHECK030: {{hexagon-link|ld}}
 // CHECK030-NOT: "-static"
 // CHECK030-NOT: "-shared"
 // CHECK030: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
@@ -155,7 +155,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK031 %s
 // CHECK031: "-cc1"
-// CHECK031-NEXT: hexagon-link
+// CHECK031: {{hexagon-link|ld}}
 // CHECK031-NOT: "-static"
 // CHECK031-NOT: "-shared"
 // CHECK031: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
@@ -178,7 +178,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK032 %s
 // CHECK032: "-cc1"
-// CHECK032-NEXT: hexagon-link
+// CHECK032: {{hexagon-link|ld}}
 // CHECK032-NOT: "-static"
 // CHECK032-NOT: "-shared"
 // CHECK032: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
@@ -201,7 +201,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK033 %s
 // CHECK033: "-cc1"
-// CHECK033-NEXT: hexagon-link
+// CHECK033: {{hexagon-link|ld}}
 // CHECK033: "-static"
 // CHECK033: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
 // CHECK033: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0.o"
@@ -219,7 +219,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK034 %s
 // CHECK034: "-cc1"
-// CHECK034-NEXT: hexagon-link
+// CHECK034: {{hexagon-link|ld}}
 // CHECK034: "-shared" "-call_shared"
 // CHECK034-NOT: crt0_standalone.o
 // CHECK034-NOT: crt0.o
@@ -243,7 +243,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK035 %s
 // CHECK035: "-cc1"
-// CHECK035-NEXT: hexagon-link
+// CHECK035: {{hexagon-link|ld}}
 // CHECK035: "-shared" "-call_shared" "-static"
 // CHECK035-NOT: crt0_standalone.o
 // CHECK035-NOT: crt0.o
@@ -269,7 +269,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK036 %s
 // CHECK036: "-cc1"
-// CHECK036-NEXT: hexagon-link
+// CHECK036: {{hexagon-link|ld}}
 // CHECK036-NOT: crt0_standalone.o
 // CHECK036-NOT: crt0.o
 // CHECK036-NOT: init.o
@@ -292,7 +292,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK037 %s
 // CHECK037: "-cc1"
-// CHECK037-NEXT: hexagon-link
+// CHECK037: {{hexagon-link|ld}}
 // CHECK037-NOT: crt0_standalone.o
 // CHECK037-NOT: crt0.o
 // CHECK037-NOT: init.o
@@ -315,7 +315,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK038 %s
 // CHECK038: "-cc1"
-// CHECK038-NEXT: hexagon-link
+// CHECK038: {{hexagon-link|ld}}
 // CHECK038: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
 // CHECK038: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0.o"
 // CHECK038: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/init.o"
@@ -341,7 +341,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK039 %s
 // CHECK039: "-cc1"
-// CHECK039-NEXT: hexagon-link
+// CHECK039: {{hexagon-link|ld}}
 // CHECK039-NOT: "-static"
 // CHECK039-NOT: "-shared"
 // CHECK039-NOT: crt0_standalone.o
@@ -363,7 +363,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK03A %s
 // CHECK03A: "-cc1"
-// CHECK03A-NEXT: hexagon-link
+// CHECK03A: {{hexagon-link|ld}}
 // CHECK03A-NOT: "-static"
 // CHECK03A-NOT: "-shared"
 // CHECK03A: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
@@ -392,7 +392,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK03B %s
 // CHECK03B: "-cc1"
-// CHECK03B-NEXT: hexagon-link
+// CHECK03B: {{hexagon-link|ld}}
 // CHECK03B: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0_standalone.o"
 // CHECK03B: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/crt0.o"
 // CHECK03B: "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60/init.o"
@@ -416,7 +416,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK040 %s
 // CHECK040:      "-cc1"
-// CHECK040-NEXT: hexagon-link
+// CHECK040: {{hexagon-link|ld}}
 // CHECK040-NOT:  "-G{{[0-9]+}}"
 
 // RUN: %clang -### -target hexagon-unknown-elf \
@@ -435,7 +435,7 @@
 // CHECK041-NOT:  "-mrelocation-model" "static"
 // CHECK041:      "-pic-level" "{{[12]}}"
 // CHECK041:      "-mllvm" "-hexagon-small-data-threshold=0"
-// CHECK041-NEXT: hexagon-link
+// CHECK041: {{hexagon-link|ld}}
 // CHECK041:      "-G0"
 
 // RUN: %clang -### -target hexagon-unknown-elf -fno-integrated-as \
@@ -461,7 +461,7 @@
 // CHECK042:      "-mllvm" "-hexagon-small-data-threshold=8"
 // CHECK042-NEXT: llvm-mc
 // CHECK042:      "-gpsize=8"
-// CHECK042-NEXT: hexagon-link
+// CHECK042: {{hexagon-link|ld}}
 // CHECK042:      "-G8"
 
 // -----------------------------------------------------------------------------
@@ -474,7 +474,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK050 %s
 // CHECK050:      "-cc1"
-// CHECK050-NEXT: hexagon-link
+// CHECK050:      {{hexagon-link|ld}}
 // CHECK050:      "-pie"
 
 // RUN: %clang -### -target hexagon-unknown-elf \
@@ -484,7 +484,7 @@
 // RUN:   %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK051 %s
 // CHECK051:      "-cc1"
-// CHECK051-NEXT: hexagon-link
+// CHECK051       {{hexagon-link|ld}}
 // CHECK051-NOT:  "-pie"
 
 // -----------------------------------------------------------------------------
@@ -501,7 +501,7 @@
 // CHECK060:      "-cc1"
 // CHECK060-NEXT: llvm-mc
 // CHECK060:      "--noexecstack" "--trap" "--keep-locals"
-// CHECK060-NEXT: hexagon-link
+// CHECK060       {{hexagon-link|ld}}
 
 // -----------------------------------------------------------------------------
 // ffixed-r19

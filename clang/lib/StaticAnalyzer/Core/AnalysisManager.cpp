@@ -14,28 +14,33 @@ using namespace ento;
 
 void AnalysisManager::anchor() { }
 
-AnalysisManager::AnalysisManager(
-    ASTContext &ASTCtx, DiagnosticsEngine &diags, const LangOptions &lang,
-    const PathDiagnosticConsumers &PDC, StoreManagerCreator storemgr,
-    ConstraintManagerCreator constraintmgr, CheckerManager *checkerMgr,
-    AnalyzerOptions &Options, CodeInjector *injector)
-    : AnaCtxMgr(ASTCtx, Options.UnoptimizedCFG,
-                Options.includeImplicitDtorsInCFG(),
-                /*AddInitializers=*/true, Options.includeTemporaryDtorsInCFG(),
-                Options.includeLifetimeInCFG(),
-                // Adding LoopExit elements to the CFG is a requirement for loop
-                // unrolling.
-                Options.includeLoopExitInCFG() || Options.shouldUnrollLoops(),
-                Options.includeScopesInCFG(),
-                Options.shouldSynthesizeBodies(),
-                Options.shouldConditionalizeStaticInitializers(),
-                /*addCXXNewAllocator=*/true,
-                Options.includeRichConstructorsInCFG(),
-                Options.shouldElideConstructors(),
-                injector),
-      Ctx(ASTCtx), Diags(diags), LangOpts(lang), PathConsumers(PDC),
-      CreateStoreMgr(storemgr), CreateConstraintMgr(constraintmgr),
-      CheckerMgr(checkerMgr), options(Options) {
+AnalysisManager::AnalysisManager(ASTContext &ASTCtx, DiagnosticsEngine &diags,
+                                 const PathDiagnosticConsumers &PDC,
+                                 StoreManagerCreator storemgr,
+                                 ConstraintManagerCreator constraintmgr,
+                                 CheckerManager *checkerMgr,
+                                 AnalyzerOptions &Options,
+                                 CodeInjector *injector)
+    : AnaCtxMgr(
+          ASTCtx, Options.UnoptimizedCFG,
+          Options.ShouldIncludeImplicitDtorsInCFG,
+          /*AddInitializers=*/true,
+          Options.ShouldIncludeTemporaryDtorsInCFG,
+          Options.ShouldIncludeLifetimeInCFG,
+          // Adding LoopExit elements to the CFG is a requirement for loop
+          // unrolling.
+          Options.ShouldIncludeLoopExitInCFG ||
+            Options.ShouldUnrollLoops,
+          Options.ShouldIncludeScopesInCFG,
+          Options.ShouldSynthesizeBodies,
+          Options.ShouldConditionalizeStaticInitializers,
+          /*addCXXNewAllocator=*/true,
+          Options.ShouldIncludeRichConstructorsInCFG,
+          Options.ShouldElideConstructors, injector),
+      Ctx(ASTCtx), Diags(diags), LangOpts(ASTCtx.getLangOpts()),
+      PathConsumers(PDC), CreateStoreMgr(storemgr),
+      CreateConstraintMgr(constraintmgr), CheckerMgr(checkerMgr),
+      options(Options) {
   AnaCtxMgr.getCFGBuildOptions().setAllAlwaysAdd();
 }
 

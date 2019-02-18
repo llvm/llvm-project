@@ -6,12 +6,12 @@
 #
 # CHECK: ![[ARG1:.*]] = !DILocalVariable(name: "arg1"
 # CHECK: ![[ARG2:.*]] = !DILocalVariable(name: "arg2"
-# CHECK: DBG_VALUE debug-use $s0_64, debug-use $noreg, ![[ARG2]], !DIExpression(), debug-location
+# CHECK: DBG_VALUE $s0_64, $noreg, ![[ARG2]], !DIExpression(), debug-location
 # CHECK: $s1_64 = OR64 killed $s0_64, $zero_64, debug-location
-# CHECK-NEXT: DBG_VALUE debug-use $s1_64, debug-use $noreg, ![[ARG2]], !DIExpression(), debug-location
-# CHECK: DBG_VALUE debug-use $f24, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK-NEXT: DBG_VALUE $s1_64, $noreg, ![[ARG2]], !DIExpression(), debug-location
+# CHECK: DBG_VALUE $f24, $noreg, ![[ARG1]], !DIExpression(), debug-location
 # CHECK: $f26 = FMOV_S killed $f24, debug-location
-# CHECK-NEXT: DBG_VALUE debug-use $f26, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK-NEXT: DBG_VALUE $f26, $noreg, ![[ARG1]], !DIExpression(), debug-location
 
 --- |
   ; ModuleID = 'live-debug-values-reg-copy.ll'
@@ -161,11 +161,11 @@ body:             |
     CFI_INSTRUCTION offset $d24_64, -12
     CFI_INSTRUCTION offset $ra_64, -24
     CFI_INSTRUCTION offset $s0_64, -32
-    DBG_VALUE debug-use $f12, debug-use $noreg, !14, !DIExpression(), debug-location !19
-    DBG_VALUE debug-use $a1_64, debug-use $noreg, !15, !DIExpression(), debug-location !19
-    DBG_VALUE debug-use $s0, debug-use $noreg, !15, !DIExpression(), debug-location !19
-    DBG_VALUE debug-use $s0_64, debug-use $noreg, !15, !DIExpression(), debug-location !19
-    DBG_VALUE debug-use $f12, debug-use $noreg, !14, !DIExpression(), debug-location !19
+    DBG_VALUE $f12, $noreg, !14, !DIExpression(), debug-location !19
+    DBG_VALUE $a1_64, $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE $s0, $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE $s0_64, $noreg, !15, !DIExpression(), debug-location !19
+    DBG_VALUE $f12, $noreg, !14, !DIExpression(), debug-location !19
     renamable $d0_64 = CVT_D64_S renamable $f12, debug-location !19
     renamable $at_64 = LUi64 target-flags(mips-highest) %const.0
     renamable $at_64 = DADDiu killed renamable $at_64, target-flags(mips-higher) %const.0
@@ -211,7 +211,7 @@ body:             |
     renamable $at_64 = DSLL killed renamable $at_64, 16
     renamable $f0 = LWC1 killed renamable $at_64, target-flags(mips-abs-lo) %const.1, debug-location !19 :: (load 4 from constant-pool)
     renamable $f24 = FADD_S killed renamable $f12, killed renamable $f0, debug-location !19
-    DBG_VALUE debug-use $f24, debug-use $noreg, !14, !DIExpression(), debug-location !19
+    DBG_VALUE $f24, $noreg, !14, !DIExpression(), debug-location !19
     JAL @externFunc2, csr_n64, implicit-def dead $ra, implicit $f12, implicit-def $sp, implicit-def $f0, debug-location !19 {
       $f12 = FMOV_S $f24, debug-location !19
     }

@@ -65,10 +65,8 @@ bool X86CallLowering::splitToValueTypes(const ArgInfo &OrigArg,
   SmallVector<uint64_t, 4> Offsets;
   ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, &Offsets, 0);
 
-  if (SplitVTs.size() != 1) {
-    // TODO: support struct/array split
-    return false;
-  }
+  if (OrigArg.Ty->isVoidTy())
+    return true;
 
   EVT VT = SplitVTs[0];
   unsigned NumParts = TLI.getNumRegisters(Context, VT);
@@ -185,27 +183,36 @@ protected:
 
 } // end anonymous namespace
 
-bool X86CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
-                                  const Value *Val, unsigned VReg) const {
-  assert(((Val && VReg) || (!Val && !VReg)) && "Return value without a vreg");
-
+bool X86CallLowering::lowerReturn(
+    MachineIRBuilder &MIRBuilder, const Value *Val,
+    ArrayRef<unsigned> VRegs) const {
+  assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
+         "Return value without a vreg");
   auto MIB = MIRBuilder.buildInstrNoInsert(X86::RET).addImm(0);
 
-  if (VReg) {
+  if (!VRegs.empty()) {
     MachineFunction &MF = MIRBuilder.getMF();
+    const Function &F = MF.getFunction();
     MachineRegisterInfo &MRI = MF.getRegInfo();
     auto &DL = MF.getDataLayout();
-    const Function &F = MF.getFunction();
+    LLVMContext &Ctx = Val->getType()->getContext();
+    const X86TargetLowering &TLI = *getTLI<X86TargetLowering>();
 
-    ArgInfo OrigArg{VReg, Val->getType()};
-    setArgFlags(OrigArg, AttributeList::ReturnIndex, DL, F);
+    SmallVector<EVT, 4> SplitEVTs;
+    ComputeValueVTs(TLI, DL, Val->getType(), SplitEVTs);
+    assert(VRegs.size() == SplitEVTs.size() &&
+           "For each split Type there should be exactly one VReg.");
 
     SmallVector<ArgInfo, 8> SplitArgs;
-    if (!splitToValueTypes(OrigArg, SplitArgs, DL, MRI,
-                           [&](ArrayRef<unsigned> Regs) {
-                             MIRBuilder.buildUnmerge(Regs, VReg);
-                           }))
-      return false;
+    for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
+      ArgInfo CurArgInfo = ArgInfo{VRegs[i], SplitEVTs[i].getTypeForEVT(Ctx)};
+      setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
+      if (!splitToValueTypes(CurArgInfo, SplitArgs, DL, MRI,
+                             [&](ArrayRef<unsigned> Regs) {
+                               MIRBuilder.buildUnmerge(Regs, VRegs[i]);
+                             }))
+        return false;
+    }
 
     OutgoingValueHandler Handler(MIRBuilder, MRI, MIB, RetCC_X86);
     if (!handleAssignments(MIRBuilder, SplitArgs, Handler))

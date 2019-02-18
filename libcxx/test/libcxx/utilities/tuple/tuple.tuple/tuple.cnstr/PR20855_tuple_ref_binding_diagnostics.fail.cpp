@@ -46,7 +46,12 @@ void F(typename CannotDeduce<std::tuple<Args...>>::type const&) {}
 
 int main() {
 #if TEST_HAS_BUILTIN_IDENTIFIER(__reference_binds_to_temporary)
+  // Test that we emit our diagnostic from the library.
   // expected-error@tuple:* 8 {{"Attempted construction of reference element binds to a temporary whose lifetime has ended"}}
+
+  // Good news everybody! Clang now diagnoses this for us!
+  // expected-error@tuple:* 0+ {{reference member '__value_' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+
   {
     F<int, const std::string&>(std::make_tuple(1, "abc")); // expected-note 1 {{requested here}}
   }

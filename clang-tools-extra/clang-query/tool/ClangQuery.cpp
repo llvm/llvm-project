@@ -58,6 +58,29 @@ static cl::list<std::string> CommandFiles("f",
                                           cl::value_desc("file"),
                                           cl::cat(ClangQueryCategory));
 
+static cl::opt<std::string> PreloadFile(
+    "preload",
+    cl::desc("Preload commands from file and start interactive mode"),
+    cl::value_desc("file"), cl::cat(ClangQueryCategory));
+
+bool runCommandsInFile(const char *ExeName, std::string const &FileName,
+                       QuerySession &QS) {
+  std::ifstream Input(FileName.c_str());
+  if (!Input.is_open()) {
+    llvm::errs() << ExeName << ": cannot open " << FileName << "\n";
+    return 1;
+  }
+  while (Input.good()) {
+    std::string Line;
+    std::getline(Input, Line);
+
+    QueryRef Q = QueryParser::parse(Line, QS);
+    if (!Q->run(llvm::outs(), QS))
+      return true;
+  }
+  return false;
+}
+
 int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
 
@@ -68,11 +91,28 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
+  if ((!Commands.empty() || !CommandFiles.empty()) && !PreloadFile.empty()) {
+    llvm::errs() << argv[0]
+                 << ": cannot specify both -c or -f with --preload\n";
+    return 1;
+  }
+
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
-  if (Tool.buildASTs(ASTs) != 0)
+  int Status = Tool.buildASTs(ASTs);
+  int ASTStatus = 0;
+  if (Status == 1) {
+    // Building ASTs failed.
     return 1;
+  } else if (Status == 2) {
+    ASTStatus |= 1;
+    llvm::errs() << "Failed to build AST for some of the files, "
+                 << "results may be incomplete."
+                 << "\n";
+  } else {
+    assert(Status == 0 && "Unexpected status returned");
+  }
 
   QuerySession QS(ASTs);
 
@@ -84,21 +124,14 @@ int main(int argc, const char **argv) {
     }
   } else if (!CommandFiles.empty()) {
     for (auto I = CommandFiles.begin(), E = CommandFiles.end(); I != E; ++I) {
-      std::ifstream Input(I->c_str());
-      if (!Input.is_open()) {
-        llvm::errs() << argv[0] << ": cannot open " << *I << "\n";
+      if (runCommandsInFile(argv[0], *I, QS))
         return 1;
-      }
-      while (Input.good()) {
-        std::string Line;
-        std::getline(Input, Line);
-
-        QueryRef Q = QueryParser::parse(Line, QS);
-        if (!Q->run(llvm::outs(), QS))
-          return 1;
-      }
     }
   } else {
+    if (!PreloadFile.empty()) {
+      if (runCommandsInFile(argv[0], PreloadFile, QS))
+        return 1;
+    }
     LineEditor LE("clang-query");
     LE.setListCompleter([&QS](StringRef Line, size_t Pos) {
       return QueryParser::complete(Line, Pos, QS);
@@ -112,5 +145,5 @@ int main(int argc, const char **argv) {
     }
   }
 
-  return 0;
+  return ASTStatus;
 }

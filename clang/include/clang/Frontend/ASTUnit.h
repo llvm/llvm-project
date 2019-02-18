@@ -51,6 +51,11 @@ namespace llvm {
 
 class MemoryBuffer;
 
+namespace vfs {
+
+class FileSystem;
+
+} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -74,12 +79,6 @@ class Preprocessor;
 class PreprocessorOptions;
 class Sema;
 class TargetInfo;
-
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
 
 /// \brief Enumerates the available scopes for skipping function bodies.
 enum class SkipFunctionBodiesScope { None, Preamble, PreambleAndMainFile };
@@ -159,7 +158,7 @@ private:
 
   /// Whether the ASTUnit should delete the remapped buffers.
   bool OwnsRemappedFileBuffers = true;
-  
+
   /// Track the top-level decls which appeared in an ASTUnit which was loaded
   /// from a source file.
   //
@@ -176,7 +175,7 @@ private:
   /// Map from FileID to the file-level declarations that it contains.
   /// The files and decls are only local (and non-preamble) ones.
   FileDeclsTy FileDecls;
-  
+
   /// The name of the original source file used to generate this ASTUnit.
   std::string OriginalSourceFile;
 
@@ -197,7 +196,7 @@ private:
   /// Diagnostics that come from the driver are retained from one parse to
   /// the next.
   unsigned NumStoredDiagnosticsFromDriver = 0;
-  
+
   /// Counter that determines when we want to try building a
   /// precompiled preamble.
   ///
@@ -236,7 +235,7 @@ private:
   /// A list of the serialization ID numbers for each of the top-level
   /// declarations parsed within the precompiled preamble.
   std::vector<serialization::DeclID> TopLevelDeclsInPreamble;
-  
+
   /// Whether we should be caching code-completion results.
   bool ShouldCacheCodeCompletionResults : 1;
 
@@ -247,7 +246,7 @@ private:
   /// True if non-system source files should be treated as volatile
   /// (likely to change while trying to use them).
   bool UserFilesAreVolatile : 1;
- 
+
   static void ConfigureDiags(IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
                              ASTUnit &AST, bool CaptureDiagnostics);
 
@@ -265,7 +264,7 @@ public:
     /// The code-completion string corresponding to this completion
     /// result.
     CodeCompletionString *Completion;
-    
+
     /// A bitmask that indicates which code-completion contexts should
     /// contain this completion result.
     ///
@@ -274,20 +273,20 @@ public:
     /// bit, shift 1 by that number of bits. Many completions can occur in
     /// several different contexts.
     uint64_t ShowInContexts;
-    
+
     /// The priority given to this code-completion result.
     unsigned Priority;
-    
-    /// The libclang cursor kind corresponding to this code-completion 
+
+    /// The libclang cursor kind corresponding to this code-completion
     /// result.
     CXCursorKind Kind;
-    
+
     /// The availability of this code-completion result.
     CXAvailabilityKind Availability;
-    
+
     /// The simplified type class for a non-macro completion result.
     SimplifiedTypeClass TypeClass;
-    
+
     /// The type of a non-macro completion result, stored as a unique
     /// integer used by the string map of cached completion types.
     ///
@@ -296,13 +295,13 @@ public:
     /// for more information.
     unsigned Type;
   };
-  
+
   /// Retrieve the mapping from formatted type names to unique type
   /// identifiers.
   llvm::StringMap<unsigned> &getCachedCompletionTypes() {
-    return CachedCompletionTypes; 
+    return CachedCompletionTypes;
   }
-  
+
   /// Retrieve the allocator used to cache global code completions.
   std::shared_ptr<GlobalCodeCompletionAllocator>
   getCachedCompletionAllocator() {
@@ -324,29 +323,29 @@ private:
 
   /// The set of cached code-completion results.
   std::vector<CachedCodeCompletionResult> CachedCompletionResults;
-  
+
   /// A mapping from the formatted type name to a unique number for that
   /// type, which is used for type equality comparisons.
   llvm::StringMap<unsigned> CachedCompletionTypes;
-  
-  /// A string hash of the top-level declaration and macro definition 
+
+  /// A string hash of the top-level declaration and macro definition
   /// names processed the last time that we reparsed the file.
   ///
-  /// This hash value is used to determine when we need to refresh the 
+  /// This hash value is used to determine when we need to refresh the
   /// global code-completion cache.
   unsigned CompletionCacheTopLevelHashValue = 0;
 
-  /// A string hash of the top-level declaration and macro definition 
+  /// A string hash of the top-level declaration and macro definition
   /// names processed the last time that we reparsed the precompiled preamble.
   ///
-  /// This hash value is used to determine when we need to refresh the 
+  /// This hash value is used to determine when we need to refresh the
   /// global code-completion cache after a rebuild of the precompiled preamble.
   unsigned PreambleTopLevelHashValue = 0;
 
   /// The current hash value for the top-level declaration and macro
   /// definition names
   unsigned CurrentTopLevelHashValue = 0;
-  
+
   /// Bit used by CIndex to mark when a translation unit may be in an
   /// inconsistent state, and is not safe to free.
   unsigned UnsafeToFree : 1;
@@ -357,20 +356,20 @@ private:
   /// Cache any "global" code-completion results, so that we can avoid
   /// recomputing them with each completion.
   void CacheCodeCompletionResults();
-  
-  /// Clear out and deallocate 
+
+  /// Clear out and deallocate
   void ClearCachedCompletionResults();
-  
+
   explicit ASTUnit(bool MainFileIsAST);
 
   bool Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
              std::unique_ptr<llvm::MemoryBuffer> OverrideMainBuffer,
-             IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+             IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
 
   std::unique_ptr<llvm::MemoryBuffer> getMainBufferWithPrecompiledPreamble(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       CompilerInvocation &PreambleInvocationIn,
-      IntrusiveRefCntPtr<vfs::FileSystem> VFS, bool AllowRebuild = true,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, bool AllowRebuild = true,
       unsigned MaxLines = 0);
   void RealizeTopLevelDeclsFromPreamble();
 
@@ -402,9 +401,9 @@ public:
 
   class ConcurrencyCheck {
     ASTUnit &Self;
-    
+
   public:
-    explicit ConcurrencyCheck(ASTUnit &Self) : Self(Self) { 
+    explicit ConcurrencyCheck(ASTUnit &Self) : Self(Self) {
       Self.ConcurrencyCheckValue.start();
     }
 
@@ -424,7 +423,7 @@ public:
 
   const DiagnosticsEngine &getDiagnostics() const { return *Diagnostics; }
   DiagnosticsEngine &getDiagnostics() { return *Diagnostics; }
-  
+
   const SourceManager &getSourceManager() const { return *SourceMgr; }
   SourceManager &getSourceManager() { return *SourceMgr; }
 
@@ -449,7 +448,7 @@ public:
 
   bool hasSema() const { return (bool)TheSema; }
 
-  Sema &getSema() const { 
+  Sema &getSema() const {
     assert(TheSema && "ASTUnit does not have a Sema object!");
     return *TheSema;
   }
@@ -463,12 +462,12 @@ public:
     assert(HSOpts && "ASTUnit does not have header search options");
     return *HSOpts;
   }
-  
+
   const PreprocessorOptions &getPreprocessorOpts() const {
     assert(PPOpts && "ASTUnit does not have preprocessor options");
     return *PPOpts;
   }
-  
+
   const FileManager &getFileManager() const { return *FileMgr; }
   FileManager &getFileManager() { return *FileMgr; }
 
@@ -529,7 +528,7 @@ public:
 
   /// Get the decls that are contained in a file in the Offset/Length
   /// range. \p Length can be 0 to indicate a point at \p Offset instead of
-  /// a range. 
+  /// a range.
   void findFileRegionDecls(FileID File, unsigned Offset, unsigned Length,
                            SmallVectorImpl<Decl *> &Decls);
 
@@ -575,25 +574,25 @@ public:
     return SourceRange(mapLocationToPreamble(R.getBegin()),
                        mapLocationToPreamble(R.getEnd()));
   }
-  
+
   // Retrieve the diagnostics associated with this AST
   using stored_diag_iterator = StoredDiagnostic *;
   using stored_diag_const_iterator = const StoredDiagnostic *;
 
-  stored_diag_const_iterator stored_diag_begin() const { 
-    return StoredDiagnostics.begin(); 
+  stored_diag_const_iterator stored_diag_begin() const {
+    return StoredDiagnostics.begin();
   }
 
-  stored_diag_iterator stored_diag_begin() { 
-    return StoredDiagnostics.begin(); 
+  stored_diag_iterator stored_diag_begin() {
+    return StoredDiagnostics.begin();
   }
 
-  stored_diag_const_iterator stored_diag_end() const { 
-    return StoredDiagnostics.end(); 
+  stored_diag_const_iterator stored_diag_end() const {
+    return StoredDiagnostics.end();
   }
 
-  stored_diag_iterator stored_diag_end() { 
-    return StoredDiagnostics.end(); 
+  stored_diag_iterator stored_diag_end() {
+    return StoredDiagnostics.end();
   }
 
   unsigned stored_diag_size() const { return StoredDiagnostics.size(); }
@@ -601,12 +600,12 @@ public:
   stored_diag_iterator stored_diag_afterDriver_begin() {
     if (NumStoredDiagnosticsFromDriver > StoredDiagnostics.size())
       NumStoredDiagnosticsFromDriver = 0;
-    return StoredDiagnostics.begin() + NumStoredDiagnosticsFromDriver; 
+    return StoredDiagnostics.begin() + NumStoredDiagnosticsFromDriver;
   }
 
   using cached_completion_iterator =
       std::vector<CachedCodeCompletionResult>::iterator;
-  
+
   cached_completion_iterator cached_completion_begin() {
     return CachedCompletionResults.begin();
   }
@@ -615,8 +614,8 @@ public:
     return CachedCompletionResults.end();
   }
 
-  unsigned cached_completion_size() const { 
-    return CachedCompletionResults.size(); 
+  unsigned cached_completion_size() const {
+    return CachedCompletionResults.size();
   }
 
   /// Returns an iterator range for the local preprocessing entities
@@ -698,21 +697,21 @@ private:
   /// of this translation unit should be precompiled, to improve the performance
   /// of reparsing. Set to zero to disable preambles.
   ///
-  /// \param VFS - A vfs::FileSystem to be used for all file accesses. Note that
-  /// preamble is saved to a temporary directory on a RealFileSystem, so in order
-  /// for it to be loaded correctly, VFS should have access to it(i.e., be an
-  /// overlay over RealFileSystem).
+  /// \param VFS - A llvm::vfs::FileSystem to be used for all file accesses.
+  /// Note that preamble is saved to a temporary directory on a RealFileSystem,
+  /// so in order for it to be loaded correctly, VFS should have access to
+  /// it(i.e., be an overlay over RealFileSystem).
   ///
   /// \returns \c true if a catastrophic failure occurred (which means that the
   /// \c ASTUnit itself is invalid), or \c false otherwise.
   bool LoadFromCompilerInvocation(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       unsigned PrecompilePreambleAfterNParses,
-      IntrusiveRefCntPtr<vfs::FileSystem> VFS);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS);
 
 public:
   /// Create an ASTUnit from a source file, via a CompilerInvocation
-  /// object, by invoking the optionally provided ASTFrontendAction. 
+  /// object, by invoking the optionally provided ASTFrontendAction.
   ///
   /// \param CI - The compiler invocation to use; it must have exactly one input
   /// source file. The ASTUnit takes ownership of the CompilerInvocation object.
@@ -798,10 +797,11 @@ public:
   /// (e.g. because the PCH could not be loaded), this accepts the ASTUnit
   /// mainly to allow the caller to see the diagnostics.
   ///
-  /// \param VFS - A vfs::FileSystem to be used for all file accesses. Note that
-  /// preamble is saved to a temporary directory on a RealFileSystem, so in order
-  /// for it to be loaded correctly, VFS should have access to it(i.e., be an
-  /// overlay over RealFileSystem). RealFileSystem will be used if \p VFS is nullptr.
+  /// \param VFS - A llvm::vfs::FileSystem to be used for all file accesses.
+  /// Note that preamble is saved to a temporary directory on a RealFileSystem,
+  /// so in order for it to be loaded correctly, VFS should have access to
+  /// it(i.e., be an overlay over RealFileSystem). RealFileSystem will be used
+  /// if \p VFS is nullptr.
   ///
   // FIXME: Move OnlyLocalDecls, UseBumpAllocator to setters on the ASTUnit, we
   // shouldn't need to specify them at construction time.
@@ -823,22 +823,22 @@ public:
       bool ForSerialization = false,
       llvm::Optional<StringRef> ModuleFormat = llvm::None,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr,
-      IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Reparse the source files using the same command-line options that
   /// were originally used to produce this translation unit.
   ///
-  /// \param VFS - A vfs::FileSystem to be used for all file accesses. Note that
-  /// preamble is saved to a temporary directory on a RealFileSystem, so in order
-  /// for it to be loaded correctly, VFS should give an access to this(i.e. be an
-  /// overlay over RealFileSystem). FileMgr->getVirtualFileSystem() will be used if
-  /// \p VFS is nullptr.
+  /// \param VFS - A llvm::vfs::FileSystem to be used for all file accesses.
+  /// Note that preamble is saved to a temporary directory on a RealFileSystem,
+  /// so in order for it to be loaded correctly, VFS should give an access to
+  /// this(i.e. be an overlay over RealFileSystem).
+  /// FileMgr->getVirtualFileSystem() will be used if \p VFS is nullptr.
   ///
   /// \returns True if a failure occurred that causes the ASTUnit not to
   /// contain any translation-unit information, false otherwise.
   bool Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                ArrayRef<RemappedFile> RemappedFiles = None,
-               IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
+               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Free data that will be re-generated on the next parse.
   ///
@@ -854,10 +854,10 @@ public:
   ///
   /// \param Column The column at which code completion will occur.
   ///
-  /// \param IncludeMacros Whether to include macros in the code-completion 
+  /// \param IncludeMacros Whether to include macros in the code-completion
   /// results.
   ///
-  /// \param IncludeCodePatterns Whether to include code patterns (such as a 
+  /// \param IncludeCodePatterns Whether to include code patterns (such as a
   /// for loop) in the code-completion results.
   ///
   /// \param IncludeBriefComments Whether to include brief documentation within

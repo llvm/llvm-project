@@ -84,6 +84,9 @@ class TargetRegisterClass;
       // Get the High 16 bits from a 32 bit immediate for accessing the GOT.
       GotHi,
 
+      // Get the High 16 bits from a 32-bit immediate for accessing TLS.
+      TlsHi,
+
       // Handle gp_rel (small data/bss sections) relocation.
       GPRel,
 
@@ -277,22 +280,26 @@ class TargetRegisterClass;
       return MVT::i32;
     }
 
+    EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
+                            ISD::NodeType) const override;
+
     bool isCheapToSpeculateCttz() const override;
     bool isCheapToSpeculateCtlz() const override;
 
     /// Return the register type for a given MVT, ensuring vectors are treated
     /// as a series of gpr sized integers.
-    MVT getRegisterTypeForCallingConv(LLVMContext &Context,
+    MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                       EVT VT) const override;
 
     /// Return the number of registers for a given MVT, ensuring vectors are
     /// treated as a series of gpr sized integers.
     unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                           CallingConv::ID CC,
                                            EVT VT) const override;
 
     /// Break down vectors to the correct number of gpr sized integers.
     unsigned getVectorTypeBreakdownForCallingConv(
-        LLVMContext &Context, EVT VT, EVT &IntermediateVT,
+        LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
         unsigned &NumIntermediates, MVT &RegisterVT) const override;
 
     /// Return the correct alignment for the current calling convention.

@@ -4,8 +4,6 @@
 # RUN: llvm-mc -dwarf-version 4 %s -filetype=asm -o - 2>&1 | FileCheck %s --check-prefix=WARN
 # RUN: llvm-mc -dwarf-version 5 %s -filetype=obj -o - | llvm-dwarfdump -debug-line - | FileCheck %s --check-prefixes=CHECK,CHECK-5
 # RUN: llvm-mc -dwarf-version 5 %s -filetype=asm -o - | FileCheck %s --check-prefixes=ASM,ASM-5
-# Darwin is stuck on DWARF v2.
-# XFAIL: darwin
         .file 0 "/test" "root.cpp"
         .file 1 "/include" "header.h"
         .file 2 "/test" "root.cpp"

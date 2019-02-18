@@ -8,7 +8,7 @@
 # performance has not regressed by running the following benchmarks before and
 # after the breaking change to verify that the values in this file are safe to
 # update:
-# ./projects/compiler-rt/lib/tsan/tests/rtl/TsanRtlTest
+# ./projects/compiler-rt/lib/tsan/tests/rtl/TsanRtlTest-x86_64-Test
 #   --gtest_also_run_disabled_tests --gtest_filter=DISABLED_BENCH.Mop*
 
 set -u
@@ -34,16 +34,16 @@ check() {
   fi
 }
 
-for f in write1 write2 write4 write8; do
+for f in write1 write2 write4 write8 read2 read4; do
+  check $f rsp 1
+  check $f push 1
+  check $f pop 6
+done
+
+for f in read1 read8; do
   check $f rsp 1
   check $f push 2
   check $f pop 12
-done
-
-for f in read1 read2 read4 read8; do
-  check $f rsp 1
-  check $f push 3
-  check $f pop 18
 done
 
 for f in func_entry func_exit; do

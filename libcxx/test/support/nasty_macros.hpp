@@ -22,7 +22,11 @@
 #define _J NASTY_MACRO
 #define _K NASTY_MACRO
 #define _L NASTY_MACRO
+// Because FreeBSD uses _M in its <sys/types.h>, and it is hard to avoid
+// including that header, only define _M for other operating systems.
+#ifndef __FreeBSD__
 #define _M NASTY_MACRO
+#endif
 #define _N NASTY_MACRO
 #define _O NASTY_MACRO
 #define _P NASTY_MACRO
@@ -44,6 +48,9 @@
 #define _PC   NASTY_MACRO
 #define _CRPC NASTY_MACRO
 #define _CPC  NASTY_MACRO
+
+// yvals.h on MINGW defines this macro
+#define _C2 NASTY_MACRO
 
 // Test that libc++ doesn't use names reserved by WIN32 API Macros.
 // NOTE: Obviously we can only define these on non-windows platforms.

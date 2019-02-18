@@ -151,7 +151,7 @@ def report_cant(builtin):
   sys.stderr.write("%s:%d: x86 builtin %s used, too many replacements\n" % (fileinput.filename(), fileinput.filelineno(), builtin))
 
 for line in fileinput.input(inplace=1):
-  for builtin, repl in repl_map.iteritems():
+  for builtin, repl in repl_map.items():
     if builtin in line:
       line = line.replace(builtin, repl)
       report_repl(builtin, repl)

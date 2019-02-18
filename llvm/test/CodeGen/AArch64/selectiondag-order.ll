@@ -21,7 +21,7 @@ end:                                        ; preds = %body
 }
 
 ; AARCH64-CHECK: simulate:
-; AARCH64-CHECK: movi d9, #0000000000000000
+; AARCH64-CHECK: movi v0.2d, #0000000000000000
 ; AARCH64-CHECK: bl lrand48
 ; AARCH64-CHECK: mov x19, x0
 ; AARCH64-CHECK: BB0_1:
@@ -47,7 +47,7 @@ end:                                        ; preds = %body
 }
 
 ; AARCH64-CHECK: simulateWithDebugIntrinsic
-; AARCH64-CHECK: movi d9, #0000000000000000
+; AARCH64-CHECK: movi v0.2d, #0000000000000000
 ; AARCH64-CHECK: bl lrand48
 ; AARCH64-CHECK: mov x19, x0
 ; AARCH64-CHECK: BB1_1:
@@ -73,7 +73,7 @@ end:                                        ; preds = %body
 }
 
 ; AARCH64-CHECK: simulateWithDbgDeclare:
-; AARCH64-CHECK: movi d9, #0000000000000000
+; AARCH64-CHECK: movi v0.2d, #0000000000000000
 ; AARCH64-CHECK: bl lrand48
 ; AARCH64-CHECK: mov x19, x0
 ; AARCH64-CHECK: BB2_1:

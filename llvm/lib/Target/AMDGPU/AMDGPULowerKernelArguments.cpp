@@ -16,7 +16,6 @@
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -77,39 +76,28 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   const unsigned KernArgBaseAlign = 16; // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset(F);
 
+  unsigned MaxAlign;
   // FIXME: Alignment is broken broken with explicit arg offset.;
-  const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F);
+  const uint64_t TotalKernArgSize = ST.getKernArgSegmentSize(F, MaxAlign);
   if (TotalKernArgSize == 0)
     return false;
 
   CallInst *KernArgSegment =
-    Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, nullptr,
-                            F.getName() + ".kernarg.segment");
+      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {}, {},
+                              nullptr, F.getName() + ".kernarg.segment");
 
   KernArgSegment->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
   KernArgSegment->addAttribute(AttributeList::ReturnIndex,
     Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
-  unsigned MaxAlign = 1;
   uint64_t ExplicitArgOffset = 0;
 
   for (Argument &Arg : F.args()) {
     Type *ArgTy = Arg.getType();
     unsigned Align = DL.getABITypeAlignment(ArgTy);
-    MaxAlign = std::max(Align, MaxAlign);
     unsigned Size = DL.getTypeSizeInBits(ArgTy);
     unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
-
-
-    // Clover seems to always pad i8/i16 to i32, but doesn't properly align
-    // them?
-    // Make sure the struct elements have correct size and alignment for ext
-    // args. These seem to be padded up to 4-bytes but not correctly aligned.
-    bool IsExtArg = AllocSize < 32 && (Arg.hasZExtAttr() || Arg.hasSExtAttr()) &&
-                    !ST.isAmdHsaOS();
-    if (IsExtArg)
-      AllocSize = 4;
 
     uint64_t EltOffset = alignTo(ExplicitArgOffset, Align) + BaseOffset;
     ExplicitArgOffset = alignTo(ExplicitArgOffset, Align) + AllocSize;
@@ -134,14 +122,17 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
     VectorType *VT = dyn_cast<VectorType>(ArgTy);
     bool IsV3 = VT && VT->getNumElements() == 3;
+    bool DoShiftOpt = Size < 32 && !ArgTy->isAggregateType();
+
     VectorType *V4Ty = nullptr;
 
     int64_t AlignDownOffset = alignDown(EltOffset, 4);
     int64_t OffsetDiff = EltOffset - AlignDownOffset;
-    unsigned AdjustedAlign = MinAlign(KernArgBaseAlign, AlignDownOffset);
+    unsigned AdjustedAlign = MinAlign(DoShiftOpt ? AlignDownOffset : EltOffset,
+                                      KernArgBaseAlign);
 
     Value *ArgPtr;
-    if (Size < 32 && !ArgTy->isAggregateType()) { // FIXME: Handle aggregate types
+    if (DoShiftOpt) { // FIXME: Handle aggregate types
       // Since we don't have sub-dword scalar loads, avoid doing an extload by
       // loading earlier than the argument address, and extracting the relevant
       // bits.
@@ -159,13 +150,11 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
     } else {
       ArgPtr = Builder.CreateConstInBoundsGEP1_64(
         KernArgSegment,
-        AlignDownOffset,
+        EltOffset,
         Arg.getName() + ".kernarg.offset");
       ArgPtr = Builder.CreateBitCast(ArgPtr, ArgTy->getPointerTo(AS),
                                      ArgPtr->getName() + ".cast");
     }
-
-    assert((!IsExtArg || !IsV3) && "incompatible situation");
 
     if (IsV3 && Size >= 32) {
       V4Ty = VectorType::get(VT->getVectorElementType(), 4);
@@ -212,21 +201,7 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
 
     // TODO: Convert noalias arg to !noalias
 
-    if (Size < 32 && !ArgTy->isAggregateType()) {
-      if (IsExtArg && OffsetDiff == 0) {
-        Type *I32Ty = Builder.getInt32Ty();
-        bool IsSext = Arg.hasSExtAttr();
-        Metadata *LowAndHigh[] = {
-          ConstantAsMetadata::get(
-            ConstantInt::get(I32Ty, IsSext ? minIntN(Size) : 0)),
-          ConstantAsMetadata::get(
-            ConstantInt::get(I32Ty,
-                             IsSext ? maxIntN(Size) + 1 : maxUIntN(Size) + 1))
-        };
-
-        Load->setMetadata(LLVMContext::MD_range, MDNode::get(Ctx, LowAndHigh));
-      }
-
+    if (DoShiftOpt) {
       Value *ExtractBits = OffsetDiff == 0 ?
         Load : Builder.CreateLShr(Load, OffsetDiff * 8);
 

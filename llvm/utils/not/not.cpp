@@ -13,7 +13,9 @@
 //     Will return true if cmd crashes (e.g. for testing crash reporting).
 
 #include "llvm/Support/Program.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 int main(int argc, const char **argv) {
@@ -33,8 +35,8 @@ int main(int argc, const char **argv) {
 
   auto Program = sys::findProgramByName(argv[0]);
   if (!Program) {
-    errs() << "Error: Unable to find `" << argv[0]
-           << "' in PATH: " << Program.getError().message() << "\n";
+    WithColor::error() << "unable to find `" << argv[0]
+                       << "' in PATH: " << Program.getError().message() << "\n";
     return 1;
   }
 
@@ -53,7 +55,7 @@ int main(int argc, const char **argv) {
     Result = -3;
 #endif
   if (Result < 0) {
-    errs() << "Error: " << ErrMsg << "\n";
+    WithColor::error() << ErrMsg << "\n";
     if (ExpectCrash)
       return 0;
     return 1;

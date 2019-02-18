@@ -24,16 +24,23 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   NoSignedZerosFPMath(MF.getTarget().Options.NoSignedZerosFPMath),
   MemoryBound(false),
   WaveLimiter(false) {
+  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(MF);
+
   // FIXME: Should initialize KernArgSize based on ExplicitKernelArgOffset,
   // except reserved size is not correctly aligned.
+  const Function &F = MF.getFunction();
 
   if (auto *Resolver = MF.getMMI().getResolver()) {
     if (AMDGPUPerfHintAnalysis *PHA = static_cast<AMDGPUPerfHintAnalysis*>(
           Resolver->getAnalysisIfAvailable(&AMDGPUPerfHintAnalysisID, true))) {
-      MemoryBound = PHA->isMemoryBound(&MF.getFunction());
-      WaveLimiter = PHA->needsWaveLimiter(&MF.getFunction());
+      MemoryBound = PHA->isMemoryBound(&F);
+      WaveLimiter = PHA->needsWaveLimiter(&F);
     }
   }
+
+  CallingConv::ID CC = F.getCallingConv();
+  if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL)
+    ExplicitKernArgSize = ST.getExplicitKernArgSize(F, MaxKernArgAlign);
 }
 
 unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,

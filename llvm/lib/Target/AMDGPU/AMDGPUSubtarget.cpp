@@ -124,10 +124,8 @@ GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   return *this;
 }
 
-AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT,
-                                             const FeatureBitset &FeatureBits) :
+AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT) :
   TargetTriple(TT),
-  SubtargetFeatureBits(FeatureBits),
   Has16BitInsts(false),
   HasMadMixInsts(false),
   FP32Denormals(false),
@@ -136,19 +134,22 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT,
   HasVOP3PInsts(false),
   HasMulI24(true),
   HasMulU24(true),
+  HasInv2PiInlineImm(false),
   HasFminFmaxLegacy(true),
   EnablePromoteAlloca(false),
+  HasTrigReducedRange(false),
   LocalMemorySize(0),
   WavefrontSize(0)
   { }
 
 GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
-                                 const GCNTargetMachine &TM) :
+                           const GCNTargetMachine &TM) :
     AMDGPUGenSubtargetInfo(TT, GPU, FS),
-    AMDGPUSubtarget(TT, getFeatureBits()),
+    AMDGPUSubtarget(TT),
     TargetTriple(TT),
     Gen(SOUTHERN_ISLANDS),
     IsaVersion(ISAVersion0_0_0),
+    InstrItins(getInstrItineraryForCPU(GPU)),
     LDSBankCount(0),
     MaxPrivateElementSize(0),
 
@@ -170,7 +171,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     DebuggerEmitPrologue(false),
 
     EnableHugePrivateBuffer(false),
-    EnableVGPRSpilling(false),
     EnableLoadStoreOpt(false),
     EnableUnsafeDSOffsetFolding(false),
     EnableSIScheduler(false),
@@ -180,6 +180,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FP64(false),
     GCN3Encoding(false),
     CIInsts(false),
+    VIInsts(false),
     GFX9Insts(false),
     SGPRInitBug(false),
     HasSMemRealTime(false),
@@ -189,15 +190,15 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasVGPRIndexMode(false),
     HasScalarStores(false),
     HasScalarAtomics(false),
-    HasInv2PiInlineImm(false),
     HasSDWAOmod(false),
     HasSDWAScalar(false),
     HasSDWASdst(false),
     HasSDWAMac(false),
     HasSDWAOutModsVOPC(false),
     HasDPP(false),
+    HasR128A16(false),
     HasDLInsts(false),
-    D16PreservesUnusedBits(false),
+    EnableSRAMECC(false),
     FlatAddressSpace(false),
     FlatInstOffsets(false),
     FlatGlobalInsts(false),
@@ -209,9 +210,8 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
     FeatureDisable(false),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
-    TLInfo(TM, *this), 
+    TLInfo(TM, *this),
     FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0) {
-  AS = AMDGPU::getAMDGPUAS(TT);
   CallLoweringInfo.reset(new AMDGPUCallLowering(*getTargetLowering()));
   Legalizer.reset(new AMDGPULegalizerInfo(*this, TM));
   RegBankInfo.reset(new AMDGPURegisterBankInfo(*getRegisterInfo()));
@@ -406,10 +406,48 @@ bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   return true;
 }
 
+uint64_t AMDGPUSubtarget::getExplicitKernArgSize(const Function &F,
+                                                 unsigned &MaxAlign) const {
+  assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL ||
+         F.getCallingConv() == CallingConv::SPIR_KERNEL);
+
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  uint64_t ExplicitArgBytes = 0;
+  MaxAlign = 1;
+
+  for (const Argument &Arg : F.args()) {
+    Type *ArgTy = Arg.getType();
+
+    unsigned Align = DL.getABITypeAlignment(ArgTy);
+    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
+    ExplicitArgBytes = alignTo(ExplicitArgBytes, Align) + AllocSize;
+    MaxAlign = std::max(MaxAlign, Align);
+  }
+
+  return ExplicitArgBytes;
+}
+
+unsigned AMDGPUSubtarget::getKernArgSegmentSize(const Function &F,
+                                                unsigned &MaxAlign) const {
+  uint64_t ExplicitArgBytes = getExplicitKernArgSize(F, MaxAlign);
+
+  unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
+
+  uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
+  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
+  if (ImplicitBytes != 0) {
+    unsigned Alignment = getAlignmentForImplicitArgPtr();
+    TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
+  }
+
+  // Being able to dereference past the end is useful for emitting scalar loads.
+  return alignTo(TotalSize, 4);
+}
+
 R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
                              const TargetMachine &TM) :
   R600GenSubtargetInfo(TT, GPU, FS),
-  AMDGPUSubtarget(TT, getFeatureBits()),
+  AMDGPUSubtarget(TT),
   InstrInfo(*this),
   FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
   FMA(false),
@@ -422,8 +460,7 @@ R600Subtarget::R600Subtarget(const Triple &TT, StringRef GPU, StringRef FS,
   TexVTXClauseSize(0),
   Gen(R600),
   TLInfo(TM, initializeSubtargetDependencies(TT, GPU, FS)),
-  InstrItins(getInstrItineraryForCPU(GPU)),
-  AS (AMDGPU::getAMDGPUAS(TT)) { }
+  InstrItins(getInstrItineraryForCPU(GPU)) { }
 
 void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
                                       unsigned NumRegionInstrs) const {
@@ -440,44 +477,6 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Enabling ShouldTrackLaneMasks crashes the SI Machine Scheduler.
   if (!enableSIScheduler())
     Policy.ShouldTrackLaneMasks = true;
-}
-
-bool GCNSubtarget::isVGPRSpillingEnabled(const Function& F) const {
-  return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
-}
-
-uint64_t GCNSubtarget::getExplicitKernArgSize(const Function &F) const {
-  assert(F.getCallingConv() == CallingConv::AMDGPU_KERNEL);
-
-  const DataLayout &DL = F.getParent()->getDataLayout();
-  uint64_t ExplicitArgBytes = 0;
-  for (const Argument &Arg : F.args()) {
-    Type *ArgTy = Arg.getType();
-
-    unsigned Align = DL.getABITypeAlignment(ArgTy);
-    uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
-    ExplicitArgBytes = alignTo(ExplicitArgBytes, Align) + AllocSize;
-  }
-
-  return ExplicitArgBytes;
-}
-
-unsigned GCNSubtarget::getKernArgSegmentSize(const Function &F,
-                                            int64_t ExplicitArgBytes) const {
-  if (ExplicitArgBytes == -1)
-    ExplicitArgBytes = getExplicitKernArgSize(F);
-
-  unsigned ExplicitOffset = getExplicitKernelArgOffset(F);
-
-  uint64_t TotalSize = ExplicitOffset + ExplicitArgBytes;
-  unsigned ImplicitBytes = getImplicitArgNumBytes(F);
-  if (ImplicitBytes != 0) {
-    unsigned Alignment = getAlignmentForImplicitArgPtr();
-    TotalSize = alignTo(ExplicitArgBytes, Alignment) + ImplicitBytes;
-  }
-
-  // Being able to dereference past the end is useful for emitting scalar loads.
-  return alignTo(TotalSize, 4);
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {

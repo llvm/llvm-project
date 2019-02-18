@@ -114,7 +114,7 @@ namespace Mips {
     // resulting in - R_MIPS_GOT_DISP
     fixup_Mips_GOT_DISP,
 
-    // resulting in - R_MIPS_HIGHER/R_MICROMIPS_HIGHER 
+    // resulting in - R_MIPS_HIGHER/R_MICROMIPS_HIGHER
     fixup_Mips_HIGHER,
     fixup_MICROMIPS_HIGHER,
 
@@ -221,6 +221,10 @@ namespace Mips {
     // resulting in - R_MIPS_SUB/R_MICROMIPS_SUB
     fixup_Mips_SUB,
     fixup_MICROMIPS_SUB,
+
+    // resulting in - R_MIPS_JALR/R_MICROMIPS_JALR
+    fixup_Mips_JALR,
+    fixup_MICROMIPS_JALR,
 
     // Marker
     LastTargetFixupKind,

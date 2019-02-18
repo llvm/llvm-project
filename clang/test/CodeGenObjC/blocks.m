@@ -79,10 +79,9 @@ void test2(Test2 *x) {
   // Then we initialize the block, blah blah blah.
   // CHECK:      call void @test2_helper(
 
-  // Finally, kill the variable with BLOCK_FIELD_IS_BYREF.  We're not
-  // supposed to pass BLOCK_FIELD_IS_WEAK here.
+  // Finally, kill the variable with BLOCK_FIELD_IS_BYREF.
   // CHECK:      [[T0:%.*]] = bitcast [[WEAK_T]]* [[WEAKX]] to i8*
-  // CHECK:      call void @_Block_object_dispose(i8* [[T0]], i32 8)
+  // CHECK:      call void @_Block_object_dispose(i8* [[T0]], i32 24)
 
   __attribute__((objc_gc(weak))) __block Test2 *weakX = x;
   test2_helper(^{ [weakX destroy]; });

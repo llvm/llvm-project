@@ -201,7 +201,7 @@ unsigned PPCTTIImpl::getUserCost(const User *U,
     std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, U->getType());
     return LT.first * BaseT::getUserCost(U, Operands);
   }
-  
+
   return BaseT::getUserCost(U, Operands);
 }
 
@@ -473,7 +473,14 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                            unsigned Factor,
                                            ArrayRef<unsigned> Indices,
                                            unsigned Alignment,
-                                           unsigned AddressSpace) {
+                                           unsigned AddressSpace,
+                                           bool UseMaskForCond,
+                                           bool UseMaskForGaps) {
+  if (UseMaskForCond || UseMaskForGaps)
+    return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                             Alignment, AddressSpace,
+                                             UseMaskForCond, UseMaskForGaps);
+
   assert(isa<VectorType>(VecTy) &&
          "Expect a vector type for interleaved memory op");
 

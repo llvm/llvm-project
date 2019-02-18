@@ -24,6 +24,14 @@
 #ifndef LLVM_SUPPORT_GENERICDOMTREE_H
 #define LLVM_SUPPORT_GENERICDOMTREE_H
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
+#include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/CFGUpdate.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -32,13 +40,6 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 
@@ -192,42 +193,16 @@ template <typename DomTreeT>
 void Calculate(DomTreeT &DT);
 
 template <typename DomTreeT>
+void CalculateWithUpdates(DomTreeT &DT,
+                          ArrayRef<typename DomTreeT::UpdateType> Updates);
+
+template <typename DomTreeT>
 void InsertEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To);
 
 template <typename DomTreeT>
 void DeleteEdge(DomTreeT &DT, typename DomTreeT::NodePtr From,
                 typename DomTreeT::NodePtr To);
-
-// UpdateKind and Update are used by the batch update API and it's easiest to
-// define them here.
-enum class UpdateKind : unsigned char { Insert, Delete };
-
-template <typename NodePtr>
-struct Update {
-  using NodeKindPair = PointerIntPair<NodePtr, 1, UpdateKind>;
-
-  NodePtr From;
-  NodeKindPair ToAndKind;
-
-  Update(UpdateKind Kind, NodePtr From, NodePtr To)
-      : From(From), ToAndKind(To, Kind) {}
-
-  UpdateKind getKind() const { return ToAndKind.getInt(); }
-  NodePtr getFrom() const { return From; }
-  NodePtr getTo() const { return ToAndKind.getPointer(); }
-  bool operator==(const Update &RHS) const {
-    return From == RHS.From && ToAndKind == RHS.ToAndKind;
-  }
-
-  friend raw_ostream &operator<<(raw_ostream &OS, const Update &U) {
-    OS << (U.getKind() == UpdateKind::Insert ? "Insert " : "Delete ");
-    U.getFrom()->printAsOperand(OS, false);
-    OS << " -> ";
-    U.getTo()->printAsOperand(OS, false);
-    return OS;
-  }
-};
 
 template <typename DomTreeT>
 void ApplyUpdates(DomTreeT &DT,
@@ -254,8 +229,8 @@ class DominatorTreeBase {
   using ParentType = typename std::remove_pointer<ParentPtr>::type;
   static constexpr bool IsPostDominator = IsPostDom;
 
-  using UpdateType = DomTreeBuilder::Update<NodePtr>;
-  using UpdateKind = DomTreeBuilder::UpdateKind;
+  using UpdateType = cfg::Update<NodePtr>;
+  using UpdateKind = cfg::UpdateKind;
   static constexpr UpdateKind Insert = UpdateKind::Insert;
   static constexpr UpdateKind Delete = UpdateKind::Delete;
 
@@ -530,11 +505,10 @@ protected:
   /// CFG about its children and inverse children. This implies that deletions
   /// of CFG edges must not delete the CFG nodes before calling this function.
   ///
-  /// Batch updates should be generally faster when performing longer sequences
-  /// of updates than calling insertEdge/deleteEdge manually multiple times, as
-  /// it can reorder the updates and remove redundant ones internally.
-  /// The batch updater is also able to detect sequences of zero and exactly one
-  /// update -- it's optimized to do less work in these cases.
+  /// The applyUpdates function can reorder the updates and remove redundant
+  /// ones internally. The batch updater is also able to detect sequences of
+  /// zero and exactly one update -- it's optimized to do less work in these
+  /// cases.
   ///
   /// Note that for postdominators it automatically takes care of applying
   /// updates on reverse edges internally (so there's no need to swap the
@@ -760,6 +734,11 @@ public:
     DomTreeBuilder::Calculate(*this);
   }
 
+  void recalculate(ParentType &Func, ArrayRef<UpdateType> Updates) {
+    Parent = &Func;
+    DomTreeBuilder::CalculateWithUpdates(*this, Updates);
+  }
+
   /// verify - checks if the tree is correct. There are 3 level of verification:
   ///  - Full --  verifies if the tree is correct by making sure all the
   ///             properties (including the parent and the sibling property)
@@ -854,10 +833,15 @@ protected:
     assert(isReachableFromEntry(B));
     assert(isReachableFromEntry(A));
 
+    const unsigned ALevel = A->getLevel();
     const DomTreeNodeBase<NodeT> *IDom;
-    while ((IDom = B->getIDom()) != nullptr && IDom != A && IDom != B)
+
+    // Don't walk nodes above A's subtree. When we reach A's level, we must
+    // either find A or be in some other subtree not dominated by A.
+    while ((IDom = B->getIDom()) != nullptr && IDom->getLevel() >= ALevel)
       B = IDom;  // Walk up the tree
-    return IDom != nullptr;
+
+    return B == A;
   }
 
   /// Wipe this tree's state without releasing any resources.

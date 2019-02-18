@@ -40,7 +40,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "constmerge"
 
-STATISTIC(NumMerged, "Number of global constants merged");
+STATISTIC(NumIdenticalMerged, "Number of identical global constants merged");
 
 /// Find values that are marked as llvm.used.
 static void FindUsedValues(GlobalVariable *LLVMUsed,
@@ -91,6 +91,37 @@ static unsigned getAlignment(GlobalVariable *GV) {
   return GV->getParent()->getDataLayout().getPreferredAlignment(GV);
 }
 
+enum class CanMerge { No, Yes };
+static CanMerge makeMergeable(GlobalVariable *Old, GlobalVariable *New) {
+  if (!Old->hasGlobalUnnamedAddr() && !New->hasGlobalUnnamedAddr())
+    return CanMerge::No;
+  if (hasMetadataOtherThanDebugLoc(Old))
+    return CanMerge::No;
+  assert(!hasMetadataOtherThanDebugLoc(New));
+  if (!Old->hasGlobalUnnamedAddr())
+    New->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+  return CanMerge::Yes;
+}
+
+static void replace(Module &M, GlobalVariable *Old, GlobalVariable *New) {
+  Constant *NewConstant = New;
+
+  LLVM_DEBUG(dbgs() << "Replacing global: @" << Old->getName() << " -> @"
+                    << New->getName() << "\n");
+
+  // Bump the alignment if necessary.
+  if (Old->getAlignment() || New->getAlignment())
+    New->setAlignment(std::max(getAlignment(Old), getAlignment(New)));
+
+  copyDebugLocMetadata(Old, New);
+  Old->replaceAllUsesWith(NewConstant);
+
+  // Delete the global value from the module.
+  assert(Old->hasLocalLinkage() &&
+         "Refusing to delete an externally visible global variable.");
+  Old->eraseFromParent();
+}
+
 static bool mergeConstants(Module &M) {
   // Find all the globals that are marked "used".  These cannot be merged.
   SmallPtrSet<const GlobalValue*, 8> UsedGlobals;
@@ -100,17 +131,18 @@ static bool mergeConstants(Module &M) {
   // Map unique constants to globals.
   DenseMap<Constant *, GlobalVariable *> CMap;
 
-  // Replacements - This vector contains a list of replacements to perform.
-  SmallVector<std::pair<GlobalVariable*, GlobalVariable*>, 32> Replacements;
+  SmallVector<std::pair<GlobalVariable *, GlobalVariable *>, 32>
+      SameContentReplacements;
 
-  bool MadeChange = false;
+  size_t ChangesMade = 0;
+  size_t OldChangesMade = 0;
 
   // Iterate constant merging while we are still making progress.  Merging two
   // constants together may allow us to merge other constants together if the
   // second level constants have initializers which point to the globals that
   // were just merged.
   while (true) {
-    // First: Find the canonical constants others will be merged with.
+    // Find the canonical constants others will be merged with.
     for (Module::global_iterator GVI = M.global_begin(), E = M.global_end();
          GVI != E; ) {
       GlobalVariable *GV = &*GVI++;
@@ -119,6 +151,7 @@ static bool mergeConstants(Module &M) {
       GV->removeDeadConstantUsers();
       if (GV->use_empty() && GV->hasLocalLinkage()) {
         GV->eraseFromParent();
+        ++ChangesMade;
         continue;
       }
 
@@ -148,12 +181,16 @@ static bool mergeConstants(Module &M) {
       // If this is the first constant we find or if the old one is local,
       // replace with the current one. If the current is externally visible
       // it cannot be replace, but can be the canonical constant we merge with.
-      if (!Slot || IsBetterCanonical(*GV, *Slot))
+      bool FirstConstantFound = !Slot;
+      if (FirstConstantFound || IsBetterCanonical(*GV, *Slot)) {
         Slot = GV;
+        LLVM_DEBUG(dbgs() << "Cmap[" << *Init << "] = " << GV->getName()
+                          << (FirstConstantFound ? "\n" : " (updated)\n"));
+      }
     }
 
-    // Second: identify all globals that can be merged together, filling in
-    // the Replacements vector.  We cannot do the replacement in this pass
+    // Identify all globals that can be merged together, filling in the
+    // SameContentReplacements vector. We cannot do the replacement in this pass
     // because doing so may cause initializers of other globals to be rewritten,
     // invalidating the Constant* pointers in CMap.
     for (Module::global_iterator GVI = M.global_begin(), E = M.global_end();
@@ -174,54 +211,43 @@ static bool mergeConstants(Module &M) {
       Constant *Init = GV->getInitializer();
 
       // Check to see if the initializer is already known.
-      GlobalVariable *Slot = CMap[Init];
-
-      if (!Slot || Slot == GV)
+      auto Found = CMap.find(Init);
+      if (Found == CMap.end())
         continue;
 
-      if (!Slot->hasGlobalUnnamedAddr() && !GV->hasGlobalUnnamedAddr())
+      GlobalVariable *Slot = Found->second;
+      if (Slot == GV)
         continue;
 
-      if (hasMetadataOtherThanDebugLoc(GV))
+      if (makeMergeable(GV, Slot) == CanMerge::No)
         continue;
-
-      if (!GV->hasGlobalUnnamedAddr())
-        Slot->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
       // Make all uses of the duplicate constant use the canonical version.
-      Replacements.push_back(std::make_pair(GV, Slot));
+      LLVM_DEBUG(dbgs() << "Will replace: @" << GV->getName() << " -> @"
+                        << Slot->getName() << "\n");
+      SameContentReplacements.push_back(std::make_pair(GV, Slot));
     }
-
-    if (Replacements.empty())
-      return MadeChange;
-    CMap.clear();
 
     // Now that we have figured out which replacements must be made, do them all
     // now.  This avoid invalidating the pointers in CMap, which are unneeded
     // now.
-    for (unsigned i = 0, e = Replacements.size(); i != e; ++i) {
-      // Bump the alignment if necessary.
-      if (Replacements[i].first->getAlignment() ||
-          Replacements[i].second->getAlignment()) {
-        Replacements[i].second->setAlignment(
-            std::max(getAlignment(Replacements[i].first),
-                     getAlignment(Replacements[i].second)));
-      }
-
-      copyDebugLocMetadata(Replacements[i].first, Replacements[i].second);
-
-      // Eliminate any uses of the dead global.
-      Replacements[i].first->replaceAllUsesWith(Replacements[i].second);
-
-      // Delete the global value from the module.
-      assert(Replacements[i].first->hasLocalLinkage() &&
-             "Refusing to delete an externally visible global variable.");
-      Replacements[i].first->eraseFromParent();
+    for (unsigned i = 0, e = SameContentReplacements.size(); i != e; ++i) {
+      GlobalVariable *Old = SameContentReplacements[i].first;
+      GlobalVariable *New = SameContentReplacements[i].second;
+      replace(M, Old, New);
+      ++ChangesMade;
+      ++NumIdenticalMerged;
     }
 
-    NumMerged += Replacements.size();
-    Replacements.clear();
+    if (ChangesMade == OldChangesMade)
+      break;
+    OldChangesMade = ChangesMade;
+
+    SameContentReplacements.clear();
+    CMap.clear();
   }
+
+  return ChangesMade;
 }
 
 PreservedAnalyses ConstantMergePass::run(Module &M, ModuleAnalysisManager &) {

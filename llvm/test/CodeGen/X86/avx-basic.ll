@@ -76,8 +76,7 @@ define <4 x i64> @ISelCrash(<4 x i64> %a) nounwind uwtable readnone ssp {
 define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
 ; CHECK-LABEL: VMOVZQI2PQI:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; CHECK-NEXT:    vbroadcastss (%rdi), %ymm0
 ; CHECK-NEXT:    retq
   %ptrcast.i33.i = bitcast [0 x float]* %aFOO to i32*
   %val.i34.i = load i32, i32* %ptrcast.i33.i, align 4
@@ -93,7 +92,7 @@ define <8 x i32> @VMOVZQI2PQI([0 x float]* nocapture %aFOO) nounwind {
 define <16 x float> @fneg(<16 x float> %a) nounwind {
 ; CHECK-LABEL: fneg:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00,-0.000000e+00]
+; CHECK-NEXT:    vmovaps {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    vxorps %ymm2, %ymm1, %ymm1
 ; CHECK-NEXT:    retq

@@ -81,7 +81,7 @@ void arcmt::writeARCDiagsToPlist(const std::string &outPath,
 
   for (ArrayRef<StoredDiagnostic>::iterator
          DI = diags.begin(), DE = diags.end(); DI != DE; ++DI) {
-    
+
     const StoredDiagnostic &D = *DI;
 
     if (D.getLevel() == DiagnosticsEngine::Ignored)

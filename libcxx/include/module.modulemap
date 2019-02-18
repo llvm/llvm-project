@@ -228,6 +228,10 @@ module std [system] {
     header "atomic"
     export *
   }
+  module bit {
+    header "bit"
+    export *
+  }
   module bitset {
     header "bitset"
     export string
@@ -235,6 +239,10 @@ module std [system] {
     export *
   }
   // No submodule for cassert. It fundamentally needs repeated, textual inclusion.
+  module charconv {
+    header "charconv"
+    export *
+  }
   module chrono {
     header "chrono"
     export *
@@ -262,6 +270,10 @@ module std [system] {
   }
   module exception {
     header "exception"
+    export *
+  }
+  module filesystem {
+    header "filesystem"
     export *
   }
   module forward_list {
@@ -494,6 +506,7 @@ module std [system] {
   module __tree { header "__tree" export * }
   module __tuple { header "__tuple" export * }
   module __undef_macros { header "__undef_macros" export * }
+  module __node_handle { header "__node_handle" export * }
 
   module experimental {
     requires cplusplus11
@@ -509,10 +522,6 @@ module std [system] {
     }
     module deque {
       header "experimental/deque"
-      export *
-    }
-    module dynarray {
-      header "experimental/dynarray"
       export *
     }
     module filesystem {
@@ -557,6 +566,10 @@ module std [system] {
     }
     module set {
       header "experimental/set"
+      export *
+    }
+    module span {
+      header "span"
       export *
     }
     module string {

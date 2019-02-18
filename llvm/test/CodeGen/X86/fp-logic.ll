@@ -284,3 +284,144 @@ define <4 x float> @bitcast_fneg_vec(<4 x float> %x) {
   ret <4 x float> %bc2
 }
 
+define float @fadd_bitcast_fneg(float %x, float %y) {
+; CHECK-LABEL: fadd_bitcast_fneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast float %y to i32
+  %xor = xor i32 %bc1, 2147483648
+  %bc2 = bitcast i32 %xor to float
+  %fadd = fadd float %x, %bc2
+  ret float %fadd
+}
+
+define float @fsub_bitcast_fneg(float %x, float %y) {
+; CHECK-LABEL: fsub_bitcast_fneg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast float %y to i32
+  %xor = xor i32 %bc1, 2147483648
+  %bc2 = bitcast i32 %xor to float
+  %fsub = fsub float %x, %bc2
+  ret float %fsub
+}
+
+define float @nabsf(float %a) {
+; CHECK-LABEL: nabsf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %conv = bitcast float %a to i32
+  %and = or i32 %conv, -2147483648
+  %conv1 = bitcast i32 %and to float
+  ret float %conv1
+}
+
+define double @nabsd(double %a) {
+; CHECK-LABEL: nabsd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %conv = bitcast double %a to i64
+  %and = or i64 %conv, -9223372036854775808
+  %conv1 = bitcast i64 %and to double
+  ret double %conv1
+}
+
+define <4 x float> @nabsv4f32(<4 x float> %a) {
+; CHECK-LABEL: nabsv4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %conv = bitcast <4 x float> %a to <4 x i32>
+  %and = or <4 x i32> %conv, <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+  %conv1 = bitcast <4 x i32> %and to <4 x float>
+  ret <4 x float> %conv1
+}
+
+define <2 x double> @nabsv2d64(<2 x double> %a) {
+; CHECK-LABEL: nabsv2d64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    orps {{.*}}(%rip), %xmm0
+; CHECK-NEXT:    retq
+  %conv = bitcast <2 x double> %a to <2 x i64>
+  %and = or <2 x i64> %conv, <i64 -9223372036854775808, i64 -9223372036854775808>
+  %conv1 = bitcast <2 x i64> %and to <2 x double>
+  ret <2 x double> %conv1
+}
+
+define <4 x float> @fadd_bitcast_fneg_vec(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fadd_bitcast_fneg_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <4 x i32>
+  %xor = xor <4 x i32> %bc1, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %bc2 = bitcast <4 x i32> %xor to <4 x float>
+  %fadd = fadd <4 x float> %x, %bc2
+  ret <4 x float> %fadd
+}
+
+define <4 x float> @fadd_bitcast_fneg_vec_undef_elts(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fadd_bitcast_fneg_vec_undef_elts:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <4 x i32>
+  %xor = xor <4 x i32> %bc1, <i32 2147483648, i32 2147483648, i32 undef, i32 2147483648>
+  %bc2 = bitcast <4 x i32> %xor to <4 x float>
+  %fadd = fadd <4 x float> %x, %bc2
+  ret <4 x float> %fadd
+}
+
+define <4 x float> @fsub_bitcast_fneg_vec(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fsub_bitcast_fneg_vec:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <4 x i32>
+  %xor = xor <4 x i32> %bc1, <i32 2147483648, i32 2147483648, i32 2147483648, i32 2147483648>
+  %bc2 = bitcast <4 x i32> %xor to <4 x float>
+  %fsub = fsub <4 x float> %x, %bc2
+  ret <4 x float> %fsub
+}
+
+define <4 x float> @fsub_bitcast_fneg_vec_undef_elts(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fsub_bitcast_fneg_vec_undef_elts:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <4 x i32>
+  %xor = xor <4 x i32> %bc1, <i32 undef, i32 2147483648, i32 undef, i32 2147483648>
+  %bc2 = bitcast <4 x i32> %xor to <4 x float>
+  %fsub = fsub <4 x float> %x, %bc2
+  ret <4 x float> %fsub
+}
+
+define <4 x float> @fadd_bitcast_fneg_vec_width(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fadd_bitcast_fneg_vec_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    addps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <2 x i64>
+  %xor = xor <2 x i64> %bc1, <i64 -9223372034707292160, i64 -9223372034707292160>
+  %bc2 = bitcast <2 x i64> %xor to <4 x float>
+  %fadd = fadd <4 x float> %x, %bc2
+  ret <4 x float> %fadd
+}
+
+define <4 x float> @fsub_bitcast_fneg_vec_width(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: fsub_bitcast_fneg_vec_width:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorps {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    subps %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  %bc1 = bitcast <4 x float> %y to <2 x i64>
+  %xor = xor <2 x i64> %bc1, <i64 -9223372034707292160, i64 -9223372034707292160>
+  %bc2 = bitcast <2 x i64> %xor to <4 x float>
+  %fsub = fsub <4 x float> %x, %bc2
+  ret <4 x float> %fsub
+}

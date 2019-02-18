@@ -280,6 +280,8 @@ bool MipsInstrInfo::isBranchOffsetInRange(unsigned BranchOpc, int64_t BrOffset) 
   switch (BranchOpc) {
   case Mips::B:
   case Mips::BAL:
+  case Mips::BAL_BR:
+  case Mips::BAL_BR_MM:
   case Mips::BC1F:
   case Mips::BC1FL:
   case Mips::BC1T:
@@ -661,8 +663,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
   }
 
   MIB.copyImplicitOps(*I);
-
-  MIB.setMemRefs(I->memoperands_begin(), I->memoperands_end());
+  MIB.cloneMemRefs(*I);
   return MIB;
 }
 

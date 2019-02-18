@@ -3,6 +3,7 @@
 // We shouldn't have markers at -O0 or with msan.
 // RUN: %clang_cc1 -O0 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=line-tables-only %s -o - | FileCheck %s
 // RUN: %clang_cc1 -O1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=line-tables-only %s -o - -fsanitize=memory | FileCheck %s
+// RUN: %clang_cc1 -O1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=line-tables-only %s -o - -fsanitize=kernel-memory | FileCheck %s
 
 // There is no exception to handle here, lifetime.end is not a destructor,
 // so there is no need have cleanup dest slot related code

@@ -50,33 +50,33 @@ namespace {
 class ASTMaker {
 public:
   ASTMaker(ASTContext &C) : C(C) {}
-  
+
   /// Create a new BinaryOperator representing a simple assignment.
   BinaryOperator *makeAssignment(const Expr *LHS, const Expr *RHS, QualType Ty);
-  
+
   /// Create a new BinaryOperator representing a comparison.
   BinaryOperator *makeComparison(const Expr *LHS, const Expr *RHS,
                                  BinaryOperator::Opcode Op);
-  
+
   /// Create a new compound stmt using the provided statements.
   CompoundStmt *makeCompound(ArrayRef<Stmt*>);
-  
+
   /// Create a new DeclRefExpr for the referenced variable.
   DeclRefExpr *makeDeclRefExpr(const VarDecl *D,
                                bool RefersToEnclosingVariableOrCapture = false);
-  
+
   /// Create a new UnaryOperator representing a dereference.
   UnaryOperator *makeDereference(const Expr *Arg, QualType Ty);
-  
+
   /// Create an implicit cast for an integer conversion.
   Expr *makeIntegralCast(const Expr *Arg, QualType Ty);
-  
+
   /// Create an implicit cast to a builtin boolean type.
   ImplicitCastExpr *makeIntegralCastToBoolean(const Expr *Arg);
-  
+
   /// Create an implicit cast for lvalue-to-rvaluate conversions.
   ImplicitCastExpr *makeLvalueToRvalue(const Expr *Arg, QualType Ty);
-  
+
   /// Make RValue out of variable declaration, creating a temporary
   /// DeclRefExpr in the process.
   ImplicitCastExpr *
@@ -92,10 +92,10 @@ public:
 
   /// Create an Objective-C ivar reference.
   ObjCIvarRefExpr *makeObjCIvarRef(const Expr *Base, const ObjCIvarDecl *IVar);
-  
+
   /// Create a Return statement.
   ReturnStmt *makeReturn(const Expr *RetVal);
-  
+
   /// Create an integer literal expression of the given type.
   IntegerLiteral *makeIntegerLiteral(uint64_t Value, QualType Ty);
 
@@ -201,10 +201,9 @@ ObjCIvarRefExpr *ASTMaker::makeObjCIvarRef(const Expr *Base,
                                  /*arrow=*/true, /*free=*/false);
 }
 
-
 ReturnStmt *ASTMaker::makeReturn(const Expr *RetVal) {
-  return new (C) ReturnStmt(SourceLocation(), const_cast<Expr*>(RetVal),
-                            nullptr);
+  return ReturnStmt::Create(C, SourceLocation(), const_cast<Expr *>(RetVal),
+                            /* NRVOCandidate=*/nullptr);
 }
 
 IntegerLiteral *ASTMaker::makeIntegerLiteral(uint64_t Value, QualType Ty) {
@@ -270,8 +269,8 @@ static CallExpr *create_call_once_funcptr_call(ASTContext &C, ASTMaker M,
     llvm_unreachable("Unexpected state");
   }
 
-  return new (C)
-      CallExpr(C, SubExpr, CallArgs, C.VoidTy, VK_RValue, SourceLocation());
+  return CallExpr::Create(C, SubExpr, CallArgs, C.VoidTy, VK_RValue,
+                          SourceLocation());
 }
 
 static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
@@ -293,12 +292,12 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
                           /* T =*/ callOperatorDecl->getType(),
                           /* VK =*/ VK_LValue);
 
-  return new (C)
-      CXXOperatorCallExpr(/*AstContext=*/C, OO_Call, callOperatorDeclRef,
-                          /*args=*/CallArgs,
-                          /*QualType=*/C.VoidTy,
-                          /*ExprValueType=*/VK_RValue,
-                          /*SourceLocation=*/SourceLocation(), FPOptions());
+  return CXXOperatorCallExpr::Create(
+      /*AstContext=*/C, OO_Call, callOperatorDeclRef,
+      /*args=*/CallArgs,
+      /*QualType=*/C.VoidTy,
+      /*ExprValueType=*/VK_RValue,
+      /*SourceLocation=*/SourceLocation(), FPOptions());
 }
 
 /// Create a fake body for std::call_once.
@@ -342,7 +341,7 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   // Nullable pointer, non-null iff function is a CXXRecordDecl.
   CXXRecordDecl *CallbackRecordDecl = CallbackType->getAsCXXRecordDecl();
   QualType FlagType = Flag->getType().getNonReferenceType();
-  auto *FlagRecordDecl = dyn_cast_or_null<RecordDecl>(FlagType->getAsTagDecl());
+  auto *FlagRecordDecl = FlagType->getAsRecordDecl();
 
   if (!FlagRecordDecl) {
     LLVM_DEBUG(llvm::dbgs() << "Flag field is not a record: "
@@ -464,13 +463,13 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
       Deref, M.makeIntegralCast(M.makeIntegerLiteral(1, C.IntTy), DerefType),
       DerefType);
 
-  IfStmt *Out = new (C)
-      IfStmt(C, SourceLocation(),
-             /* IsConstexpr=*/ false,
-             /* init=*/ nullptr,
-             /* var=*/ nullptr,
-             /* cond=*/ FlagCheck,
-             /* then=*/ M.makeCompound({CallbackCall, FlagAssignment}));
+  auto *Out =
+      IfStmt::Create(C, SourceLocation(),
+                     /* IsConstexpr=*/false,
+                     /* init=*/nullptr,
+                     /* var=*/nullptr,
+                     /* cond=*/FlagCheck,
+                     /* then=*/M.makeCompound({CallbackCall, FlagAssignment}));
 
   return Out;
 }
@@ -506,11 +505,11 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   //    block();
   //  }
   // }
-  
+
   ASTMaker M(C);
-  
+
   // (1) Create the call.
-  CallExpr *CE = new (C) CallExpr(
+  CallExpr *CE = CallExpr::Create(
       /*ASTContext=*/C,
       /*StmtClass=*/M.makeLvalueToRvalue(/*Expr=*/Block),
       /*args=*/None,
@@ -532,11 +531,11 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
             PredicateTy),
        M.makeIntegralCast(DoneValue, PredicateTy),
        PredicateTy);
-  
+
   // (3) Create the compound statement.
   Stmt *Stmts[] = { B, CE };
   CompoundStmt *CS = M.makeCompound(Stmts);
-  
+
   // (4) Create the 'if' condition.
   ImplicitCastExpr *LValToRval =
     M.makeLvalueToRvalue(
@@ -549,12 +548,12 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
 
   Expr *GuardCondition = M.makeComparison(LValToRval, DoneValue, BO_NE);
   // (5) Create the 'if' statement.
-  IfStmt *If = new (C) IfStmt(C, SourceLocation(),
-                              /* IsConstexpr=*/ false,
-                              /* init=*/ nullptr,
-                              /* var=*/ nullptr,
-                              /* cond=*/ GuardCondition,
-                              /* then=*/ CS);
+  auto *If = IfStmt::Create(C, SourceLocation(),
+                            /* IsConstexpr=*/false,
+                            /* init=*/nullptr,
+                            /* var=*/nullptr,
+                            /* cond=*/GuardCondition,
+                            /* then=*/CS);
   return If;
 }
 
@@ -576,12 +575,12 @@ static Stmt *create_dispatch_sync(ASTContext &C, const FunctionDecl *D) {
   // void dispatch_sync(dispatch_queue_t queue, void (^block)(void)) {
   //   block();
   // }
-  //  
+  //
   ASTMaker M(C);
   DeclRefExpr *DR = M.makeDeclRefExpr(PV);
   ImplicitCastExpr *ICE = M.makeLvalueToRvalue(DR, Ty);
-  CallExpr *CE = new (C) CallExpr(C, ICE, None, C.VoidTy, VK_RValue,
-                                  SourceLocation());
+  CallExpr *CE =
+      CallExpr::Create(C, ICE, None, C.VoidTy, VK_RValue, SourceLocation());
   return CE;
 }
 
@@ -612,16 +611,16 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
 
   const ParmVarDecl *NewValue = D->getParamDecl(1);
   QualType NewValueTy = NewValue->getType();
-  
+
   assert(OldValueTy == NewValueTy);
-  
+
   const ParmVarDecl *TheValue = D->getParamDecl(2);
   QualType TheValueTy = TheValue->getType();
   const PointerType *PT = TheValueTy->getAs<PointerType>();
   if (!PT)
     return nullptr;
   QualType PointeeTy = PT->getPointeeType();
-  
+
   ASTMaker M(C);
   // Construct the comparison.
   Expr *Comparison =
@@ -643,29 +642,32 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
         PointeeTy),
       M.makeLvalueToRvalue(M.makeDeclRefExpr(NewValue), NewValueTy),
       NewValueTy);
-  
+
   Expr *BoolVal = M.makeObjCBool(true);
   Expr *RetVal = isBoolean ? M.makeIntegralCastToBoolean(BoolVal)
                            : M.makeIntegralCast(BoolVal, ResultTy);
   Stmts[1] = M.makeReturn(RetVal);
   CompoundStmt *Body = M.makeCompound(Stmts);
-  
+
   // Construct the else clause.
   BoolVal = M.makeObjCBool(false);
   RetVal = isBoolean ? M.makeIntegralCastToBoolean(BoolVal)
                      : M.makeIntegralCast(BoolVal, ResultTy);
   Stmt *Else = M.makeReturn(RetVal);
-  
-  /// Construct the If.
-  Stmt *If = new (C) IfStmt(C, SourceLocation(), false, nullptr, nullptr,
-                            Comparison, Body, SourceLocation(), Else);
 
-  return If;  
+  /// Construct the If.
+  auto *If = IfStmt::Create(C, SourceLocation(),
+                            /* IsConstexpr=*/false,
+                            /* init=*/nullptr,
+                            /* var=*/nullptr, Comparison, Body,
+                            SourceLocation(), Else);
+
+  return If;
 }
 
 Stmt *BodyFarm::getBody(const FunctionDecl *D) {
   D = D->getCanonicalDecl();
-  
+
   Optional<Stmt *> &Val = Bodies[D];
   if (Val.hasValue())
     return Val.getValue();
@@ -692,7 +694,7 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
           .Case("dispatch_once", create_dispatch_once)
           .Default(nullptr);
   }
-  
+
   if (FF) { Val = FF(C, D); }
   else if (Injector) { Val = Injector->getBody(D); }
   return Val.getValue();
@@ -804,6 +806,11 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
     return nullptr;
 
   D = D->getCanonicalDecl();
+
+  // We should not try to synthesize explicitly redefined accessors.
+  // We do not know for sure how they behave.
+  if (!D->isImplicit())
+    return nullptr;
 
   Optional<Stmt *> &Val = Bodies[D];
   if (Val.hasValue())

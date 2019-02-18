@@ -88,7 +88,7 @@ define float @f5(float %a, float %b, float *%dest) {
 ; CHECK-NEXT: bnher %r14
 ; CHECK: br %r14
 entry:
-  %cur = load float , float *%dest
+  %cur = load float, float *%dest
   %res = fsub float %a, %cur
   %cmp = fcmp ult float %res, 0.0
   br i1 %cmp, label %exit, label %store
@@ -284,8 +284,8 @@ define void @f14(fp128 *%ptr1, fp128 *%ptr2) {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %val1 = load fp128 , fp128 *%ptr1
-  %val2 = load fp128 , fp128 *%ptr2
+  %val1 = load fp128, fp128 *%ptr1
+  %val2 = load fp128, fp128 *%ptr2
   %div = fdiv fp128 %val1, %val2
   store fp128 %div, fp128 *%ptr1
   %mul = fmul fp128 %val1, %val2

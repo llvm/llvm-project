@@ -402,6 +402,8 @@ static IndexingOptions getIndexingOptionsFromCXOptions(unsigned index_options) {
   IndexingOptions IdxOpts;
   if (index_options & CXIndexOpt_IndexFunctionLocalSymbols)
     IdxOpts.IndexFunctionLocals = true;
+  if (index_options & CXIndexOpt_IndexImplicitTemplateInstantiations)
+    IdxOpts.IndexImplicitInstantiation = true;
   return IdxOpts;
 }
 

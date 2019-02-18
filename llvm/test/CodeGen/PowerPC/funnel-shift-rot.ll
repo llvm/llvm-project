@@ -40,7 +40,7 @@ define i64 @rotl_i64_const_shift(i64 %x) {
 define i16 @rotl_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotl_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subfic 5, 4, 16
+; CHECK-NEXT:    neg 5, 4
 ; CHECK-NEXT:    clrlwi 6, 3, 16
 ; CHECK-NEXT:    rlwinm 4, 4, 0, 28, 31
 ; CHECK-NEXT:    clrlwi 5, 5, 28
@@ -55,11 +55,19 @@ define i16 @rotl_i16(i16 %x, i16 %z) {
 define i32 @rotl_i32(i32 %x, i32 %z) {
 ; CHECK-LABEL: rotl_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 4, 4, 0, 27, 31
 ; CHECK-NEXT:    rlwnm 3, 3, 4, 0, 31
 ; CHECK-NEXT:    blr
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 %z)
   ret i32 %f
+}
+
+define i64 @rotl_i64(i64 %x, i64 %z) {
+; CHECK-LABEL: rotl_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    rldcl 3, 3, 4, 0
+; CHECK-NEXT:    blr
+  %f = call i64 @llvm.fshl.i64(i64 %x, i64 %x, i64 %z)
+  ret i64 %f
 }
 
 ; Vector rotate.
@@ -67,13 +75,11 @@ define i32 @rotl_i32(i32 %x, i32 %z) {
 define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK-LABEL: rotl_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI4_0@toc@l
-; CHECK-NEXT:    lvx 4, 0, 3
-; CHECK-NEXT:    vsubuwm 4, 4, 3
-; CHECK-NEXT:    vslw 3, 2, 3
-; CHECK-NEXT:    vsrw 2, 2, 4
-; CHECK-NEXT:    xxlor 34, 35, 34
+; CHECK-NEXT:    xxlxor 36, 36, 36
+; CHECK-NEXT:    vslw 5, 2, 3
+; CHECK-NEXT:    vsubuwm 3, 4, 3
+; CHECK-NEXT:    vsrw 2, 2, 3
+; CHECK-NEXT:    xxlor 34, 37, 34
 ; CHECK-NEXT:    blr
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %z)
   ret <4 x i32> %f
@@ -123,7 +129,7 @@ define i32 @rotr_i32_const_shift(i32 %x) {
 define i16 @rotr_i16(i16 %x, i16 %z) {
 ; CHECK-LABEL: rotr_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subfic 5, 4, 16
+; CHECK-NEXT:    neg 5, 4
 ; CHECK-NEXT:    clrlwi 6, 3, 16
 ; CHECK-NEXT:    rlwinm 4, 4, 0, 28, 31
 ; CHECK-NEXT:    clrlwi 5, 5, 28
@@ -135,12 +141,21 @@ define i16 @rotr_i16(i16 %x, i16 %z) {
   ret i16 %f
 }
 
+define i32 @rotr_i32(i32 %x, i32 %z) {
+; CHECK-LABEL: rotr_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    neg 4, 4
+; CHECK-NEXT:    rlwnm 3, 3, 4, 0, 31
+; CHECK-NEXT:    blr
+  %f = call i32 @llvm.fshr.i32(i32 %x, i32 %x, i32 %z)
+  ret i32 %f
+}
+
 define i64 @rotr_i64(i64 %x, i64 %z) {
 ; CHECK-LABEL: rotr_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subfic 4, 4, 64
-; CHECK-NEXT:    rlwinm 4, 4, 0, 26, 31
-; CHECK-NEXT:    rotld 3, 3, 4
+; CHECK-NEXT:    neg 4, 4
+; CHECK-NEXT:    rldcl 3, 3, 4, 0
 ; CHECK-NEXT:    blr
   %f = call i64 @llvm.fshr.i64(i64 %x, i64 %x, i64 %z)
   ret i64 %f
@@ -151,13 +166,11 @@ define i64 @rotr_i64(i64 %x, i64 %z) {
 define <4 x i32> @rotr_v4i32(<4 x i32> %x, <4 x i32> %z) {
 ; CHECK-LABEL: rotr_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addis 3, 2, .LCPI10_0@toc@ha
-; CHECK-NEXT:    addi 3, 3, .LCPI10_0@toc@l
-; CHECK-NEXT:    lvx 4, 0, 3
-; CHECK-NEXT:    vsubuwm 4, 4, 3
-; CHECK-NEXT:    vsrw 3, 2, 3
-; CHECK-NEXT:    vslw 2, 2, 4
-; CHECK-NEXT:    xxlor 34, 34, 35
+; CHECK-NEXT:    xxlxor 36, 36, 36
+; CHECK-NEXT:    vsrw 5, 2, 3
+; CHECK-NEXT:    vsubuwm 3, 4, 3
+; CHECK-NEXT:    vslw 2, 2, 3
+; CHECK-NEXT:    xxlor 34, 34, 37
 ; CHECK-NEXT:    blr
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> %z)
   ret <4 x i32> %f

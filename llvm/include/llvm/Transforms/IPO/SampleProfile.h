@@ -25,13 +25,16 @@ class Module;
 /// The sample profiler data loader pass.
 class SampleProfileLoaderPass : public PassInfoMixin<SampleProfileLoaderPass> {
 public:
-  SampleProfileLoaderPass(std::string File = "", bool IsThinLTOPreLink = false)
-      : ProfileFileName(File), IsThinLTOPreLink(IsThinLTOPreLink) {}
+  SampleProfileLoaderPass(std::string File = "", std::string RemappingFile = "",
+                          bool IsThinLTOPreLink = false)
+      : ProfileFileName(File), ProfileRemappingFileName(RemappingFile),
+        IsThinLTOPreLink(IsThinLTOPreLink) {}
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   std::string ProfileFileName;
+  std::string ProfileRemappingFileName;
   bool IsThinLTOPreLink;
 };
 

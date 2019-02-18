@@ -18,7 +18,7 @@ define void @main() {
   %7 = zext i1 %6 to i32
   %8 = load i32, i32* @g_999, align 4
   %9 = or i32 %8, %7
-; CHECK: rosbg   %r1, %r3, 63, 63, 33
+; CHECK: rosbg   {{%r[0-9]+}}, {{%r[0-9]+}}, 63, 63, 33
   store i32 %9, i32* @g_999, align 4
   ret void
 }

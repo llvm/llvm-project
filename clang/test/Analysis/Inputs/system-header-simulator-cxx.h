@@ -12,6 +12,13 @@ typedef __typeof__((char*)0-(char*)0) ptrdiff_t;
 void *memmove(void *s1, const void *s2, size_t n);
 
 namespace std {
+  typedef size_t size_type;
+#if __cplusplus >= 201103L
+  using nullptr_t = decltype(nullptr);
+#endif
+}
+
+namespace std {
   struct input_iterator_tag { };
   struct output_iterator_tag { };
   struct forward_iterator_tag : public input_iterator_tag { };
@@ -230,6 +237,13 @@ namespace std {
     return static_cast<RvalRef>(a);
   }
 
+  template <class T>
+  void swap(T &a, T &b) {
+    T c(std::move(a));
+    a = std::move(b);
+    b = std::move(c);
+  }
+
   template<typename T>
   class vector {
     typedef T value_type;
@@ -252,11 +266,37 @@ namespace std {
       return size_t(_finish - _start);
     }
 
+    vector& operator=(const vector &other);
+    vector& operator=(vector &&other);
+    vector& operator=(std::initializer_list<T> ilist);
+
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
 
     void push_back(const T &value);
     void push_back(T &&value);
+    template<class... Args>
+    void emplace_back(Args&&... args);
     void pop_back();
+
+    iterator insert(const_iterator position, const value_type &val);
+    iterator insert(const_iterator position, size_type n,
+                    const value_type &val);
+    template <typename InputIterator>
+    iterator insert(const_iterator position, InputIterator first,
+                    InputIterator last);
+    iterator insert(const_iterator position, value_type &&val);
+    iterator insert(const_iterator position, initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace(const_iterator position, Args&&... args);
+
+    iterator erase(const_iterator position);
+    iterator erase(const_iterator first, const_iterator last);
 
     T &operator[](size_t n) {
       return _start[n];
@@ -301,7 +341,39 @@ namespace std {
     list& operator=(list &&other);
     list& operator=(std::initializer_list<T> ilist);
 
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
+
+    void push_back(const T &value);
+    void push_back(T &&value);
+    template<class... Args>
+    void emplace_back(Args&&... args);
+    void pop_back();
+
+    void push_front(const T &value);
+    void push_front(T &&value);
+    template<class... Args>
+    void emplace_front(Args&&... args);
+    void pop_front();
+
+    iterator insert(const_iterator position, const value_type &val);
+    iterator insert(const_iterator position, size_type n,
+                    const value_type &val);
+    template <typename InputIterator>
+    iterator insert(const_iterator position, InputIterator first,
+                    InputIterator last);
+    iterator insert(const_iterator position, value_type &&val);
+    iterator insert(const_iterator position, initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace(const_iterator position, Args&&... args);
+
+    iterator erase(const_iterator position);
+    iterator erase(const_iterator first, const_iterator last);
 
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
@@ -338,24 +410,52 @@ namespace std {
       return size_t(_finish - _start);
     }
     
+    deque& operator=(const deque &other);
+    deque& operator=(deque &&other);
+    deque& operator=(std::initializer_list<T> ilist);
+
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
 
     void push_back(const T &value);
     void push_back(T &&value);
+    template<class... Args>
+    void emplace_back(Args&&... args);
     void pop_back();
 
     void push_front(const T &value);
     void push_front(T &&value);
+    template<class... Args>
+    void emplace_front(Args&&... args);
     void pop_front();
+
+    iterator insert(const_iterator position, const value_type &val);
+    iterator insert(const_iterator position, size_type n,
+                    const value_type &val);
+    template <typename InputIterator>
+    iterator insert(const_iterator position, InputIterator first,
+                    InputIterator last);
+    iterator insert(const_iterator position, value_type &&val);
+    iterator insert(const_iterator position, initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace(const_iterator position, Args&&... args);
+
+    iterator erase(const_iterator position);
+    iterator erase(const_iterator first, const_iterator last);
 
     T &operator[](size_t n) {
       return _start[n];
     }
-    
+
     const T &operator[](size_t n) const {
       return _start[n];
     }
-    
+
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
     const_iterator cbegin() const { return const_iterator(_start); }
@@ -367,7 +467,7 @@ namespace std {
     T& back() { return *(end() - 1); }
     const T& back() const { return *(end() - 1); }
   };
-  
+
   template<typename T>
   class forward_list {
     struct __item {
@@ -387,11 +487,38 @@ namespace std {
     forward_list(forward_list &&other);
     ~forward_list();
     
+    forward_list& operator=(const forward_list &other);
+    forward_list& operator=(forward_list &&other);
+    forward_list& operator=(std::initializer_list<T> ilist);
+
+    void assign(size_type count, const T &value);
+    template <typename InputIterator >
+    void assign(InputIterator first, InputIterator last);
+    void assign(std::initializer_list<T> ilist);
+
     void clear();
 
     void push_front(const T &value);
     void push_front(T &&value);
+    template<class... Args>
+    void emplace_front(Args&&... args);
     void pop_front();
+
+    iterator insert_after(const_iterator position, const value_type &val);
+    iterator insert_after(const_iterator position, value_type &&val);
+    iterator insert_after(const_iterator position, size_type n,
+                          const value_type &val);
+    template <typename InputIterator>
+    iterator insert_after(const_iterator position, InputIterator first,
+                          InputIterator last);
+    iterator insert_after(const_iterator position,
+                          initializer_list<value_type> il);
+
+    template <class... Args>
+    iterator emplace_after(const_iterator position, Args&&... args);
+
+    iterator erase_after(const_iterator position);
+    iterator erase_after(const_iterator first, const_iterator last);
 
     iterator begin() { return iterator(_start); }
     const_iterator begin() const { return const_iterator(_start); }
@@ -403,6 +530,42 @@ namespace std {
     T& front() { return *begin(); }
     const T& front() const { return *begin(); }
   };
+
+  template <typename CharT>
+  class basic_string {
+  public:
+    basic_string();
+    basic_string(const CharT *s);
+
+    ~basic_string();
+    void clear();
+
+    basic_string &operator=(const basic_string &str);
+    basic_string &operator+=(const basic_string &str);
+
+    const CharT *c_str() const;
+    const CharT *data() const;
+    CharT *data();
+
+    basic_string &append(size_type count, CharT ch);
+    basic_string &assign(size_type count, CharT ch);
+    basic_string &erase(size_type index, size_type count);
+    basic_string &insert(size_type index, size_type count, CharT ch);
+    basic_string &replace(size_type pos, size_type count, const basic_string &str);
+    void pop_back();
+    void push_back(CharT ch);
+    void reserve(size_type new_cap);
+    void resize(size_type count);
+    void shrink_to_fit();
+    void swap(basic_string &other);
+  };
+
+  typedef basic_string<char> string;
+  typedef basic_string<wchar_t> wstring;
+#if __cplusplus >= 201103L
+  typedef basic_string<char16_t> u16string;
+  typedef basic_string<char32_t> u32string;
+#endif
 
   class exception {
   public:
@@ -602,11 +765,33 @@ namespace std {
   template <class InputIterator, class T>
   InputIterator find(InputIterator first, InputIterator last, const T &val);
 
+  template <class ForwardIterator1, class ForwardIterator2>
+  ForwardIterator1 find_first_of(ForwardIterator1 first1,
+                                 ForwardIterator1 last1,
+                                 ForwardIterator2 first2,
+                                 ForwardIterator2 last2);
+
   template <class InputIterator, class OutputIterator>
   OutputIterator copy(InputIterator first, InputIterator last,
                       OutputIterator result);
 
 }
+
+#if __cplusplus >= 201103L
+namespace std {
+  template <typename T> // TODO: Implement the stub for deleter.
+  class unique_ptr {
+  public:
+    unique_ptr(const unique_ptr &) = delete;
+    unique_ptr(unique_ptr &&);
+
+    T *get() const;
+
+    typename std::add_lvalue_reference<T>::type operator*() const;
+    T *operator->() const;
+  };
+}
+#endif
 
 #ifdef TEST_INLINABLE_ALLOCATORS
 namespace std {

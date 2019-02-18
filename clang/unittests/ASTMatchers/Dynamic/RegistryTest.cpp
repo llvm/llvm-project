@@ -440,7 +440,8 @@ TEST_F(RegistryTest, Errors) {
       Error.get()).isNull());
   EXPECT_EQ("Incorrect type for arg 1. "
             "(Expected = Matcher<CXXRecordDecl>) != "
-            "(Actual = Matcher<CXXRecordDecl>&Matcher<MemberExpr>)",
+            "(Actual = Matcher<CXXRecordDecl>&Matcher"
+            "<MemberExpr|UnresolvedMemberExpr|CXXDependentScopeMemberExpr>)",
             Error->toString());
 }
 

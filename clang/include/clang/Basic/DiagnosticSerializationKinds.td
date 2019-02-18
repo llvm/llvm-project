@@ -49,7 +49,7 @@ def err_pch_diagopt_mismatch : Error<"%0 is currently enabled, but was not in "
   "the PCH file">;
 def err_pch_modulecache_mismatch : Error<"PCH was compiled with module cache "
   "path '%0', but the path is currently '%1'">;
-  
+
 def err_pch_version_too_old : Error<
     "PCH file uses an older PCH format that is no longer supported">;
 def err_pch_version_too_new : Error<
@@ -339,6 +339,33 @@ def note_module_odr_violation_function : Note<"but in '%0' found "
   "%ordinal2 parameter with%select{out|}3 a default argument|"
   "%ordinal2 parameter with a different default argument|"
   "a different body"
+  "}1">;
+
+def err_module_odr_violation_enum : Error<
+  "%q0 has different definitions in different modules; "
+  "%select{definition in module '%2'|defined here}1 "
+  "first difference is "
+  "%select{"
+  "enum that is %select{not scoped|scoped}4|"
+  "enum scoped with keyword %select{struct|class}4|"
+  "enum %select{without|with}4 specified type|"
+  "enum with specified type %4|"
+  "enum with %4 element%s4|"
+  "%ordinal4 element has name %5|"
+  "%ordinal4 element %5 %select{has|does not have}6 an initilizer|"
+  "%ordinal4 element %5 has an initializer|"
+  "}3">;
+
+def note_module_odr_violation_enum : Note<"but in '%0' found "
+  "%select{"
+  "enum that is %select{not scoped|scoped}2|"
+  "enum scoped with keyword %select{struct|class}2|"
+  "enum %select{without|with}2 specified type|"
+  "enum with specified type %2|"
+  "enum with %2 element%s2|"
+  "%ordinal2 element has name %3|"
+  "%ordinal2 element %3 %select{has|does not have}4 an initializer|"
+  "%ordinal2 element %3 has different initializer|"
   "}1">;
 
 def err_module_odr_violation_mismatch_decl_unknown : Error<

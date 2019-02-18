@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -79,17 +79,17 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
     const CompoundLiteralExpr *CL = CR->getLiteralExpr();
     os << "stack memory associated with a compound literal "
           "declared on line "
-       << SM.getExpansionLineNumber(CL->getLocStart()) << " returned to caller";
+       << SM.getExpansionLineNumber(CL->getBeginLoc()) << " returned to caller";
     range = CL->getSourceRange();
   } else if (const auto *AR = dyn_cast<AllocaRegion>(R)) {
     const Expr *ARE = AR->getExpr();
-    SourceLocation L = ARE->getLocStart();
+    SourceLocation L = ARE->getBeginLoc();
     range = ARE->getSourceRange();
     os << "stack memory allocated by call to alloca() on line "
        << SM.getExpansionLineNumber(L);
   } else if (const auto *BR = dyn_cast<BlockDataRegion>(R)) {
     const BlockDecl *BD = BR->getCodeRegion()->getDecl();
-    SourceLocation L = BD->getLocStart();
+    SourceLocation L = BD->getBeginLoc();
     range = BD->getSourceRange();
     os << "stack-allocated block declared on line "
        << SM.getExpansionLineNumber(L);
@@ -129,7 +129,7 @@ bool StackAddrEscapeChecker::isSemaphoreCaptured(const BlockDecl &B) const {
   for (const auto &C : B.captures()) {
     const auto *T = C.getVariable()->getType()->getAs<TypedefType>();
     if (T && T->getDecl()->getIdentifier() == dispatch_semaphore_tII)
-      return true; 
+      return true;
   }
   return false;
 }
@@ -175,9 +175,9 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
   // There is a not-too-uncommon idiom
   // where a block passed to dispatch_async captures a semaphore
   // and then the thread (which called dispatch_async) is blocked on waiting
-  // for the completion of the execution of the block 
-  // via dispatch_semaphore_wait. To avoid false-positives (for now) 
-  // we ignore all the blocks which have captured 
+  // for the completion of the execution of the block
+  // via dispatch_semaphore_wait. To avoid false-positives (for now)
+  // we ignore all the blocks which have captured
   // a variable of the type "dispatch_semaphore_t".
   if (isSemaphoreCaptured(*B.getDecl()))
     return;
@@ -263,7 +263,7 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
   if (const BlockDataRegion *B = dyn_cast<BlockDataRegion>(R))
     checkReturnedBlockCaptures(*B, C);
 
-  if (!isa<StackSpaceRegion>(R->getMemorySpace()) || 
+  if (!isa<StackSpaceRegion>(R->getMemorySpace()) ||
       isNotInCurrentFrame(R, C) || isArcManagedBlock(R, C))
     return;
 
@@ -360,11 +360,23 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   }
 }
 
-#define REGISTER_CHECKER(name) \
-  void ento::register##name(CheckerManager &Mgr) { \
-    StackAddrEscapeChecker *Chk = \
-        Mgr.registerChecker<StackAddrEscapeChecker>(); \
-    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true; \
+void ento::registerStackAddrEscapeBase(CheckerManager &mgr) {
+  mgr.registerChecker<StackAddrEscapeChecker>();
+}
+
+bool ento::shouldRegisterStackAddrEscapeBase(const LangOptions &LO) {
+  return true;
+}
+
+#define REGISTER_CHECKER(name)                                                 \
+  void ento::register##name(CheckerManager &Mgr) {                             \
+    StackAddrEscapeChecker *Chk =                                              \
+        Mgr.getChecker<StackAddrEscapeChecker>();                              \
+    Chk->ChecksEnabled[StackAddrEscapeChecker::CK_##name] = true;              \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(StackAddrEscapeChecker)

@@ -1,0 +1,108 @@
+# RUN: llc -verify-machineinstrs -start-before=ppc-pre-emit-peephole %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+
+  declare signext i32 @callee(i32 signext)
+
+  define signext i32 @func(i32 signext %v) {
+    ret i32 0
+  }
+...
+---
+name:            func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+registers:
+liveins:
+  - { reg: '$x3', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       48
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 32
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: 0, 
+      callee-saved-register: '$x30', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:
+constants:
+
+body:             |
+  bb.0:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $x3, $x30
+
+    ; bc should be converted into b
+    ; CHECK-LABEL: func
+    ; CHECK: # %bb.1
+    ; CHECK: creqv
+    ; CHECK-NOT: bc
+    ; CHECK: b .LBB0_3
+    ; CHECK: .LBB0_2
+
+    $x0 = MFLR8 implicit $lr8
+    STD killed $x0, 16, $x1
+    $x1 = STDU $x1, -48, $x1
+    STD killed $x30, 32, $x1 :: (store 8 into %fixed-stack.0, align 16)
+    $x30 = OR8 $x3, $x3
+    BL8_NOP @callee, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def $x3
+    renamable $cr0 = CMPLWI renamable $r3, 0
+    BCC 76, killed renamable $cr0, %bb.2
+
+  bb.1:
+    successors: %bb.5(0x40000000), %bb.2(0x40000000)
+    liveins: $x3
+
+    renamable $x3 = EXTSW_32_64 killed renamable $r3, implicit $x3
+    BL8_NOP @callee, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def $x3
+    renamable $cr2un = CRSET
+    $cr2gt = CROR $cr2un, $cr2un
+    $x30 = OR8 killed $x3, $x3
+    BC killed renamable $cr2un, %bb.5
+    B %bb.2
+
+  bb.4:
+    successors: %bb.5(0x80000000)
+    liveins: $x30
+
+    $x3 = LI8 0
+    BL8_NOP @callee, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
+
+  bb.5:
+    liveins: $x30, $cr0gt
+
+    renamable $x3 = EXTSW_32_64 killed renamable $r30, implicit $x30
+    $x30 = LD 32, $x1 :: (load 8 from %fixed-stack.0, align 16)
+    $x1 = ADDI8 $x1, 48
+    $x0 = LD 16, $x1
+    MTLR8 killed $x0, implicit-def $lr8
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+
+  bb.2:
+    successors: %bb.5(0x40000000), %bb.4(0x40000000)
+    liveins: $x30
+
+    renamable $cr0 = CMPWI renamable $r30, -1
+    BCn killed renamable $cr0gt, %bb.4
+    B %bb.5
+
+...

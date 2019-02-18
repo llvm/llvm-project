@@ -1,5 +1,4 @@
-XFAIL: ios
-UNSUPPORTED: aarch64
+UNSUPPORTED: aarch64, ios
 RUN: %cpp_compiler %S/CounterTest.cpp -o %t-CounterTest
 RUN: not %run %t-CounterTest  -max_len=6 -seed=1 -timeout=15 2>&1 | FileCheck %s --check-prefix=COUNTERS
 

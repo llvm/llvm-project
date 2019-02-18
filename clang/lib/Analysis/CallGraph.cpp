@@ -84,7 +84,7 @@ public:
   void VisitObjCMessageExpr(ObjCMessageExpr *ME) {
     if (ObjCInterfaceDecl *IDecl = ME->getReceiverInterface()) {
       Selector Sel = ME->getSelector();
-      
+
       // Find the callee definition within the same translation unit.
       Decl *D = nullptr;
       if (ME->isInstanceMessage())
@@ -212,7 +212,7 @@ void CallGraph::viewGraph() const {
 
 void CallGraphNode::print(raw_ostream &os) const {
   if (const NamedDecl *ND = dyn_cast_or_null<NamedDecl>(FD))
-      return ND->printName(os);
+      return ND->printQualifiedName(os);
   os << "< >";
 }
 

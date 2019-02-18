@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFRelocMap.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
@@ -273,24 +274,6 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
   return true;
 }
 
-template <typename... Ts>
-static std::string formatErrorString(char const *Fmt, const Ts &... Vals) {
-  std::string Buffer;
-  raw_string_ostream Stream(Buffer);
-  Stream << format(Fmt, Vals...);
-  return Stream.str();
-}
-
-template <typename... Ts>
-static Error createError(char const *Fmt, const Ts &... Vals) {
-  return make_error<StringError>(formatErrorString(Fmt, Vals...),
-                                 inconvertibleErrorCode());
-}
-
-static Error createError(char const *Msg) {
-  return make_error<StringError>(Msg, inconvertibleErrorCode());
-}
-
 Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
                                       uint32_t *OffsetPtr,
                                       const DWARFContext &Ctx,
@@ -303,14 +286,15 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
     FormParams.Format = dwarf::DWARF64;
     TotalLength = DebugLineData.getU64(OffsetPtr);
   } else if (TotalLength >= 0xffffff00) {
-    return createError(
+    return createStringError(errc::invalid_argument,
         "parsing line table prologue at offset 0x%8.8" PRIx64
         " unsupported reserved unit length found of value 0x%8.8" PRIx64,
         PrologueOffset, TotalLength);
   }
   FormParams.Version = DebugLineData.getU16(OffsetPtr);
   if (getVersion() < 2)
-    return createError("parsing line table prologue at offset 0x%8.8" PRIx64
+    return createStringError(errc::not_supported,
+                       "parsing line table prologue at offset 0x%8.8" PRIx64
                        " found unsupported version 0x%2.2" PRIx16,
                        PrologueOffset, getVersion());
 
@@ -342,7 +326,7 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
     if (!parseV5DirFileTables(DebugLineData, OffsetPtr, EndPrologueOffset,
                               FormParams, Ctx, U, ContentTypes,
                               IncludeDirectories, FileNames)) {
-      return createError(
+      return createStringError(errc::invalid_argument,
           "parsing line table prologue at 0x%8.8" PRIx64
           " found an invalid directory or file table description at"
           " 0x%8.8" PRIx64,
@@ -353,7 +337,8 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
                          ContentTypes, IncludeDirectories, FileNames);
 
   if (*OffsetPtr != EndPrologueOffset)
-    return createError("parsing line table prologue at 0x%8.8" PRIx64
+    return createStringError(errc::invalid_argument,
+                       "parsing line table prologue at 0x%8.8" PRIx64
                        " should have ended at 0x%8.8" PRIx64
                        " but it ended at 0x%8.8" PRIx64,
                        PrologueOffset, EndPrologueOffset, (uint64_t)*OffsetPtr);
@@ -470,7 +455,7 @@ Expected<const DWARFDebugLine::LineTable *> DWARFDebugLine::getOrParseLineTable(
     DWARFDataExtractor &DebugLineData, uint32_t Offset, const DWARFContext &Ctx,
     const DWARFUnit *U, std::function<void(Error)> RecoverableErrorCallback) {
   if (!DebugLineData.isValidOffset(Offset))
-    return createError("offset 0x%8.8" PRIx32
+    return createStringError(errc::invalid_argument, "offset 0x%8.8" PRIx32
                        " is not a valid debug line section offset",
                        Offset);
 
@@ -575,7 +560,8 @@ Error DWARFDebugLine::LineTable::parse(
         if (DebugLineData.getAddressSize() == 0)
           DebugLineData.setAddressSize(Len - 1);
         else if (DebugLineData.getAddressSize() != Len - 1) {
-          return createError("mismatching address size at offset 0x%8.8" PRIx32
+          return createStringError(errc::invalid_argument,
+                             "mismatching address size at offset 0x%8.8" PRIx32
                              " expected 0x%2.2" PRIx8 " found 0x%2.2" PRIx64,
                              ExtOffset, DebugLineData.getAddressSize(),
                              Len - 1);
@@ -640,7 +626,8 @@ Error DWARFDebugLine::LineTable::parse(
       // Make sure the stated and parsed lengths are the same.
       // Otherwise we have an unparseable line-number program.
       if (*OffsetPtr - ExtOffset != Len)
-        return createError("unexpected line op length at offset 0x%8.8" PRIx32
+        return createStringError(errc::illegal_byte_sequence,
+                           "unexpected line op length at offset 0x%8.8" PRIx32
                            " expected 0x%2.2" PRIx64 " found 0x%2.2" PRIx32,
                            ExtOffset, Len, *OffsetPtr - ExtOffset);
     } else if (Opcode < Prologue.OpcodeBase) {
@@ -847,11 +834,12 @@ Error DWARFDebugLine::LineTable::parse(
 
   if (!State.Sequence.Empty)
     RecoverableErrorCallback(
-        createError("last sequence in debug line table is not terminated!"));
+        createStringError(errc::illegal_byte_sequence,
+                    "last sequence in debug line table is not terminated!"));
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
-    llvm::sort(Sequences.begin(), Sequences.end(), Sequence::orderByLowPC);
+    llvm::sort(Sequences, Sequence::orderByLowPC);
     // Note: actually, instruction address ranges of sequences should not
     // overlap (in shared objects and executables). If they do, the address
     // lookup would still work, though, but result would be ambiguous.
@@ -1047,17 +1035,16 @@ bool DWARFDebugLine::LineTable::getFileLineInfoForAddress(
 // line-table section.
 static DWARFDebugLine::SectionParser::LineToUnitMap
 buildLineToUnitMap(DWARFDebugLine::SectionParser::cu_range CUs,
-                   DWARFDebugLine::SectionParser::tu_range TUSections) {
+                   DWARFDebugLine::SectionParser::tu_range TUs) {
   DWARFDebugLine::SectionParser::LineToUnitMap LineToUnit;
   for (const auto &CU : CUs)
     if (auto CUDIE = CU->getUnitDIE())
       if (auto StmtOffset = toSectionOffset(CUDIE.find(DW_AT_stmt_list)))
         LineToUnit.insert(std::make_pair(*StmtOffset, &*CU));
-  for (const auto &TUS : TUSections)
-    for (const auto &TU : TUS)
-      if (auto TUDIE = TU->getUnitDIE())
-        if (auto StmtOffset = toSectionOffset(TUDIE.find(DW_AT_stmt_list)))
-          LineToUnit.insert(std::make_pair(*StmtOffset, &*TU));
+  for (const auto &TU : TUs)
+    if (auto TUDIE = TU->getUnitDIE())
+      if (auto StmtOffset = toSectionOffset(TUDIE.find(DW_AT_stmt_list)))
+        LineToUnit.insert(std::make_pair(*StmtOffset, &*TU));
   return LineToUnit;
 }
 
@@ -1124,10 +1111,4 @@ void DWARFDebugLine::SectionParser::moveToNextTable(uint32_t OldOffset,
   if (!DebugLineData.isValidOffset(Offset)) {
     Done = true;
   }
-}
-
-void DWARFDebugLine::warn(Error Err) {
-  handleAllErrors(std::move(Err), [](ErrorInfoBase &Info) {
-    WithColor::warning() << Info.message() << '\n';
-  });
 }

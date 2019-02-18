@@ -84,6 +84,7 @@ void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
 // Defines symbolic names for the AArch64 instructions.
 //
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM

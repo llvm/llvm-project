@@ -38,17 +38,15 @@ define <8 x i16> @testv8i16(<8 x i16> %in) {
 define <16 x i8> @testv16i8(<16 x i8> %in) {
 ; AVX256-LABEL: testv16i8:
 ; AVX256:       # %bb.0:
-; AVX256-NEXT:    vmovdqa {{.*#+}} xmm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX256-NEXT:    vpand %xmm1, %xmm0, %xmm2
-; AVX256-NEXT:    vmovdqa {{.*#+}} xmm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; AVX256-NEXT:    vpshufb %xmm2, %xmm3, %xmm2
+; AVX256-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX256-NEXT:    vpshufb %xmm0, %xmm1, %xmm2
 ; AVX256-NEXT:    vpsrlw $4, %xmm0, %xmm0
-; AVX256-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX256-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX256-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
-; AVX256-NEXT:    vpand %xmm1, %xmm2, %xmm1
-; AVX256-NEXT:    vpshufb %xmm0, %xmm3, %xmm0
-; AVX256-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
+; AVX256-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX256-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX256-NEXT:    vpcmpeqb %xmm3, %xmm0, %xmm3
+; AVX256-NEXT:    vpand %xmm3, %xmm2, %xmm2
+; AVX256-NEXT:    vpshufb %xmm0, %xmm1, %xmm0
+; AVX256-NEXT:    vpaddb %xmm0, %xmm2, %xmm0
 ; AVX256-NEXT:    retq
 ;
 ; AVX512-LABEL: testv16i8:
@@ -93,17 +91,15 @@ define <16 x i16> @testv16i16(<16 x i16> %in) {
 define <32 x i8> @testv32i8(<32 x i8> %in) {
 ; AVX256-LABEL: testv32i8:
 ; AVX256:       # %bb.0:
-; AVX256-NEXT:    vmovdqa {{.*#+}} ymm1 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm2
-; AVX256-NEXT:    vmovdqa {{.*#+}} ymm3 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
-; AVX256-NEXT:    vpshufb %ymm2, %ymm3, %ymm2
+; AVX256-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0,4,3,2,2,1,1,1,1,0,0,0,0,0,0,0,0]
+; AVX256-NEXT:    vpshufb %ymm0, %ymm1, %ymm2
 ; AVX256-NEXT:    vpsrlw $4, %ymm0, %ymm0
-; AVX256-NEXT:    vpand %ymm1, %ymm0, %ymm0
-; AVX256-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX256-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm1
-; AVX256-NEXT:    vpand %ymm1, %ymm2, %ymm1
-; AVX256-NEXT:    vpshufb %ymm0, %ymm3, %ymm0
-; AVX256-NEXT:    vpaddb %ymm0, %ymm1, %ymm0
+; AVX256-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX256-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX256-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm3
+; AVX256-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; AVX256-NEXT:    vpshufb %ymm0, %ymm1, %ymm0
+; AVX256-NEXT:    vpaddb %ymm0, %ymm2, %ymm0
 ; AVX256-NEXT:    retq
 ;
 ; AVX512-LABEL: testv32i8:

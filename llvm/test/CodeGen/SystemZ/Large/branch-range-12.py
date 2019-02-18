@@ -87,44 +87,46 @@
 # CHECK: clgfi [[REG]], 107
 # CHECK: jgl [[LABEL]]
 
+from __future__ import print_function
+
 branch_blocks = 8
 main_size = 0xffb4
 
-print '@global = global i32 0'
+print('@global = global i32 0')
 
-print 'define void @f1(i8 *%base, i64 *%stopa, i64 *%stopb) {'
-print 'entry:'
-print '  br label %before0'
-print ''
+print('define void @f1(i8 *%base, i64 *%stopa, i64 *%stopb) {')
+print('entry:')
+print('  br label %before0')
+print('')
 
-for i in xrange(branch_blocks):
+for i in range(branch_blocks):
     next = 'before%d' % (i + 1) if i + 1 < branch_blocks else 'main'
-    print 'before%d:' % i
-    print '  %%bcur%da = load i64 , i64 *%%stopa' % i
-    print '  %%bcur%db = load i64 , i64 *%%stopb' % i
-    print '  %%bsub%d = sub i64 %%bcur%da, %%bcur%db' % (i, i, i)
-    print '  %%btest%d = icmp ult i64 %%bsub%d, %d' % (i, i, i + 50)
-    print '  br i1 %%btest%d, label %%after0, label %%%s' % (i, next)
-    print ''
+    print('before%d:' % i)
+    print('  %%bcur%da = load i64 , i64 *%%stopa' % i)
+    print('  %%bcur%db = load i64 , i64 *%%stopb' % i)
+    print('  %%bsub%d = sub i64 %%bcur%da, %%bcur%db' % (i, i, i))
+    print('  %%btest%d = icmp ult i64 %%bsub%d, %d' % (i, i, i + 50))
+    print('  br i1 %%btest%d, label %%after0, label %%%s' % (i, next))
+    print('')
 
-print '%s:' % next
+print('%s:' % next)
 a, b = 1, 1
-for i in xrange(0, main_size, 6):
+for i in range(0, main_size, 6):
     a, b = b, a + b
     offset = 4096 + b % 500000
     value = a % 256
-    print '  %%ptr%d = getelementptr i8, i8 *%%base, i64 %d' % (i, offset)
-    print '  store volatile i8 %d, i8 *%%ptr%d' % (value, i)
+    print('  %%ptr%d = getelementptr i8, i8 *%%base, i64 %d' % (i, offset))
+    print('  store volatile i8 %d, i8 *%%ptr%d' % (value, i))
 
-for i in xrange(branch_blocks):
-    print '  %%acur%da = load i64 , i64 *%%stopa' % i
-    print '  %%acur%db = load i64 , i64 *%%stopb' % i
-    print '  %%asub%d = sub i64 %%acur%da, %%acur%db' % (i, i, i)
-    print '  %%atest%d = icmp ult i64 %%asub%d, %d' % (i, i, i + 100)
-    print '  br i1 %%atest%d, label %%main, label %%after%d' % (i, i)
-    print ''
-    print 'after%d:' % i
+for i in range(branch_blocks):
+    print('  %%acur%da = load i64 , i64 *%%stopa' % i)
+    print('  %%acur%db = load i64 , i64 *%%stopb' % i)
+    print('  %%asub%d = sub i64 %%acur%da, %%acur%db' % (i, i, i))
+    print('  %%atest%d = icmp ult i64 %%asub%d, %d' % (i, i, i + 100))
+    print('  br i1 %%atest%d, label %%main, label %%after%d' % (i, i))
+    print('')
+    print('after%d:' % i)
 
-print '  %dummy = load volatile i32, i32 *@global'
-print '  ret void'
-print '}'
+print('  %dummy = load volatile i32, i32 *@global')
+print('  ret void')
+print('}')

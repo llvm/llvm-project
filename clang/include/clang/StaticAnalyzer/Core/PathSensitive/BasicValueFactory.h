@@ -155,12 +155,12 @@ public:
 
     return getValue(TargetType.convert(From));
   }
-  
+
   const llvm::APSInt &Convert(QualType T, const llvm::APSInt &From) {
     APSIntType TargetType = getAPSIntType(T);
     if (TargetType == APSIntType(From))
       return From;
-    
+
     return getValue(TargetType.convert(From));
   }
 
@@ -211,7 +211,8 @@ public:
   }
 
   const llvm::APSInt &getTruthValue(bool b, QualType T) {
-    return getValue(b ? 1 : 0, Ctx.getIntWidth(T), true);
+    return getValue(b ? 1 : 0, Ctx.getIntWidth(T),
+                    T->isUnsignedIntegerOrEnumerationType());
   }
 
   const llvm::APSInt &getTruthValue(bool b) {

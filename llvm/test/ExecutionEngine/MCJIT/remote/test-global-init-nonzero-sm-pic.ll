@@ -1,6 +1,6 @@
 ; RUN: %lli -remote-mcjit -mcjit-remote-process=lli-child-target%exeext \
 ; RUN:   -relocation-model=pic -code-model=small %s > /dev/null
-; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386, mingw32, win32
+; XFAIL: mips-, mipsel-, aarch64, arm, i686, i386, windows-gnu, windows-msvc
 ; UNSUPPORTED: powerpc64-unknown-linux-gnu
 ; Remove UNSUPPORTED for powerpc64-unknown-linux-gnu if problem caused by r266663 is fixed
 

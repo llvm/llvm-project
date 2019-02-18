@@ -186,3 +186,51 @@ namespace HugeArraysUseArrayFiller {
   // amount of time.
   struct A { int n; int arr[1000 * 1000 * 1000]; } a = {1, {2}};
 }
+
+namespace ElementDestructor {
+  // The destructor for each element of class type is potentially invoked
+  // (15.4 [class.dtor]) from the context where the aggregate initialization
+  // occurs. Produce a diagnostic if an element's destructor isn't accessible.
+
+  class X { int f; ~X(); }; // expected-note {{implicitly declared private here}}
+  struct Y { X x; };
+
+  void test0() {
+    auto *y = new Y {}; // expected-error {{temporary of type 'ElementDestructor::X' has private destructor}}
+  }
+
+  struct S0 { int f; ~S0() = delete; }; // expected-note 3 {{'~S0' has been explicitly marked deleted here}}
+  struct S1 { S0 s0; int f; };
+
+  S1 test1() {
+    auto *t = new S1 { .f = 1 }; // expected-error {{attempt to use a deleted function}}
+    return {2}; // expected-error {{attempt to use a deleted function}}
+  }
+
+  // Check if the type of an array element has a destructor.
+  struct S2 { S0 a[4]; };
+
+  void test2() {
+    auto *t = new S2 {1,2,3,4}; // expected-error {{attempt to use a deleted function}}
+  }
+
+#if __cplusplus >= 201703L
+  namespace BaseDestructor {
+     struct S0 { int f; ~S0() = delete; }; // expected-note {{'~S0' has been explicitly marked deleted here}}
+
+    // Check destructor of base class.
+    struct S3 : S0 {};
+
+    void test3() {
+      S3 s3 = {1}; // expected-error {{attempt to use a deleted function}}
+    }
+  }
+#endif
+
+  // A's destructor doesn't have to be accessible from the context of C's
+  // initialization.
+  struct A { friend struct B; private: ~A(); };
+  struct B { B(); A a; };
+  struct C { B b; };
+  C c = { B() };
+}

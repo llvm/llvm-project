@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+ <key>clang_version</key>
+<string>clang version 8.0.0 </string>
+ <key>diagnostics</key>
+ <array>
+  <dict>
+   <key>path</key>
+   <array>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>13</integer>
+      <key>col</key><integer>28</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>13</integer>
+         <key>col</key><integer>28</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>18</integer>
+         <key>col</key><integer>1</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>Similar code here</string>
+     <key>message</key>
+     <string>Similar code here</string>
+    </dict>
+    <dict>
+     <key>kind</key><string>event</string>
+     <key>location</key>
+     <dict>
+      <key>line</key><integer>6</integer>
+      <key>col</key><integer>23</integer>
+      <key>file</key><integer>0</integer>
+     </dict>
+     <key>ranges</key>
+     <array>
+       <array>
+        <dict>
+         <key>line</key><integer>6</integer>
+         <key>col</key><integer>23</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+        <dict>
+         <key>line</key><integer>11</integer>
+         <key>col</key><integer>1</integer>
+         <key>file</key><integer>0</integer>
+        </dict>
+       </array>
+     </array>
+     <key>depth</key><integer>0</integer>
+     <key>extended_message</key>
+     <string>Duplicate code detected</string>
+     <key>message</key>
+     <string>Duplicate code detected</string>
+    </dict>
+   </array>
+   <key>description</key><string>Duplicate code detected</string>
+   <key>category</key><string>Code clone</string>
+   <key>type</key><string>Exact code clone</string>
+   <key>check_name</key><string>alpha.clone.CloneChecker</string>
+   <!-- This hash is experimental and going to change! -->
+   <key>issue_hash_content_of_line_in_context</key><string>3d15184f38c5fa57e479b744fe3f5035</string>
+  <key>location</key>
+  <dict>
+   <key>line</key><integer>6</integer>
+   <key>col</key><integer>23</integer>
+   <key>file</key><integer>0</integer>
+  </dict>
+  <key>ExecutedLines</key>
+  <dict>
+   <key>0</key>
+   <array>
+    <integer>6</integer>
+    <integer>13</integer>
+   </array>
+  </dict>
+  </dict>
+ </array>
+ <key>files</key>
+ <array>
+   <string>/clang/test/Analysis/copypaste/plist-diagnostics-notes-as-events.cpp</string>
+ </array>
+</dict>
+</plist>

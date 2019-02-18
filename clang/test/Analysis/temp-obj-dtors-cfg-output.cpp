@@ -311,44 +311,48 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B1
 // CHECK:   [B1]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], [B1.3], class A)
 // CHECK:     2: [B1.1] (BindTemporary)
-// CHECK:     3: [B1.2].operator int
-// CHECK:     4: [B1.2]
-// CHECK:     5: [B1.4] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:     6: int([B1.5]) (CXXFunctionalCastExpr, NoOp, int)
-// WARNINGS:     7: B() (CXXConstructExpr, class B)
-// ANALYZER:     7: B() (CXXConstructExpr, [B1.8], class B)
-// CHECK:     8: [B1.7] (BindTemporary)
-// CHECK:     9: [B1.8].operator int
-// CHECK:    10: [B1.8]
-// CHECK:    11: [B1.10] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:    12: int([B1.11]) (CXXFunctionalCastExpr, NoOp, int)
-// CHECK:    13: [B1.6] + [B1.12]
-// CHECK:    14: int a = int(A()) + int(B());
-// CHECK:    15: ~B() (Temporary object destructor)
-// CHECK:    16: ~A() (Temporary object destructor)
-// CHECK:    17: foo
-// CHECK:    18: [B1.17] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(int))
-// WARNINGS:    19: A() (CXXConstructExpr, class A)
-// ANALYZER:    19: A() (CXXConstructExpr, [B1.20], class A)
-// CHECK:    20: [B1.19] (BindTemporary)
-// CHECK:    21: [B1.20].operator int
-// CHECK:    22: [B1.20]
-// CHECK:    23: [B1.22] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:    24: int([B1.23]) (CXXFunctionalCastExpr, NoOp, int)
-// WARNINGS:    25: B() (CXXConstructExpr, class B)
-// ANALYZER:    25: B() (CXXConstructExpr, [B1.26], class B)
-// CHECK:    26: [B1.25] (BindTemporary)
-// CHECK:    27: [B1.26].operator int
-// CHECK:    28: [B1.26]
-// CHECK:    29: [B1.28] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:    30: int([B1.29]) (CXXFunctionalCastExpr, NoOp, int)
-// CHECK:    31: [B1.24] + [B1.30]
-// CHECK:    32: [B1.18]([B1.31])
-// CHECK:    33: ~B() (Temporary object destructor)
-// CHECK:    34: ~A() (Temporary object destructor)
-// CHECK:    35: int b;
+// CHECK:     3: [B1.2]
+// CHECK:     4: [B1.3].operator int
+// CHECK:     5: [B1.3]
+// CHECK:     6: [B1.5] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:     7: int([B1.6]) (CXXFunctionalCastExpr, NoOp, int)
+// WARNINGS:     8: B() (CXXConstructExpr, class B)
+// ANALYZER:     8: B() (CXXConstructExpr, [B1.9], [B1.10], class B)
+// CHECK:     9: [B1.8] (BindTemporary)
+// CHECK:    10: [B1.9]
+// CHECK:    11: [B1.10].operator int
+// CHECK:    12: [B1.10]
+// CHECK:    13: [B1.12] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:    14: int([B1.13]) (CXXFunctionalCastExpr, NoOp, int)
+// CHECK:    15: [B1.7] + [B1.14]
+// CHECK:    16: int a = int(A()) + int(B());
+// CHECK:    17: ~B() (Temporary object destructor)
+// CHECK:    18: ~A() (Temporary object destructor)
+// CHECK:    19: foo
+// CHECK:    20: [B1.19] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(int))
+// WARNINGS:    21: A() (CXXConstructExpr, class A)
+// ANALYZER:    21: A() (CXXConstructExpr, [B1.22], [B1.23], class A)
+// CHECK:    22: [B1.21] (BindTemporary)
+// CHECK:    23: [B1.22]
+// CHECK:    24: [B1.23].operator int
+// CHECK:    25: [B1.23]
+// CHECK:    26: [B1.25] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:    27: int([B1.26]) (CXXFunctionalCastExpr, NoOp, int)
+// WARNINGS:    28: B() (CXXConstructExpr, class B)
+// ANALYZER:    28: B() (CXXConstructExpr, [B1.29], [B1.30], class B)
+// CHECK:    29: [B1.28] (BindTemporary)
+// CHECK:    30: [B1.29]
+// CHECK:    31: [B1.30].operator int
+// CHECK:    32: [B1.30]
+// CHECK:    33: [B1.32] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:    34: int([B1.33]) (CXXFunctionalCastExpr, NoOp, int)
+// CHECK:    35: [B1.27] + [B1.34]
+// CHECK:    36: [B1.20]([B1.35])
+// CHECK:    37: ~B() (Temporary object destructor)
+// CHECK:    38: ~A() (Temporary object destructor)
+// CHECK:    39: int b;
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -365,18 +369,19 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B3
 // CHECK:     Succs (1): B1
 // CHECK:   [B3]
-// CHECK:     1: [B5.8] && [B4.5]
+// CHECK:     1: [B5.9] && [B4.6]
 // CHECK:     2: [B5.3]([B3.1])
 // CHECK:     T: (Temp Dtor) [B4.2]
 // CHECK:     Preds (2): B4 B5
 // CHECK:     Succs (2): B2 B1
 // CHECK:   [B4]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B4.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B4.2], [B4.3], class B)
 // CHECK:     2: [B4.1] (BindTemporary)
-// CHECK:     3: [B4.2].operator bool
-// CHECK:     4: [B4.2]
-// CHECK:     5: [B4.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     3: [B4.2]
+// CHECK:     4: [B4.3].operator bool
+// CHECK:     5: [B4.3]
+// CHECK:     6: [B4.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
 // CHECK:     Preds (1): B5
 // CHECK:     Succs (1): B3
 // CHECK:   [B5]
@@ -384,12 +389,13 @@ const C &bar3(bool coin) {
 // CHECK:     2: foo
 // CHECK:     3: [B5.2] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(_Bool))
 // WARNINGS:     4: A() (CXXConstructExpr, class A)
-// ANALYZER:     4: A() (CXXConstructExpr, [B5.5], class A)
+// ANALYZER:     4: A() (CXXConstructExpr, [B5.5], [B5.6], class A)
 // CHECK:     5: [B5.4] (BindTemporary)
-// CHECK:     6: [B5.5].operator bool
-// CHECK:     7: [B5.5]
-// CHECK:     8: [B5.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: [B5.8] && ...
+// CHECK:     6: [B5.5]
+// CHECK:     7: [B5.6].operator bool
+// CHECK:     8: [B5.6]
+// CHECK:     9: [B5.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B5.9] && ...
 // CHECK:     Preds (2): B6 B7
 // CHECK:     Succs (2): B4 B3
 // CHECK:   [B6]
@@ -397,28 +403,30 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B7
 // CHECK:     Succs (1): B5
 // CHECK:   [B7]
-// CHECK:     1: [B9.5] && [B8.5]
+// CHECK:     1: [B9.6] && [B8.6]
 // CHECK:     2: bool a = A() && B();
 // CHECK:     T: (Temp Dtor) [B8.2]
 // CHECK:     Preds (2): B8 B9
 // CHECK:     Succs (2): B6 B5
 // CHECK:   [B8]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B8.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B8.2], [B8.3], class B)
 // CHECK:     2: [B8.1] (BindTemporary)
-// CHECK:     3: [B8.2].operator bool
-// CHECK:     4: [B8.2]
-// CHECK:     5: [B8.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     3: [B8.2]
+// CHECK:     4: [B8.3].operator bool
+// CHECK:     5: [B8.3]
+// CHECK:     6: [B8.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
 // CHECK:     Preds (1): B9
 // CHECK:     Succs (1): B7
 // CHECK:   [B9]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B9.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B9.2], [B9.3], class A)
 // CHECK:     2: [B9.1] (BindTemporary)
-// CHECK:     3: [B9.2].operator bool
-// CHECK:     4: [B9.2]
-// CHECK:     5: [B9.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: [B9.5] && ...
+// CHECK:     3: [B9.2]
+// CHECK:     4: [B9.3].operator bool
+// CHECK:     5: [B9.3]
+// CHECK:     6: [B9.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B9.6] && ...
 // CHECK:     Preds (1): B10
 // CHECK:     Succs (2): B8 B7
 // CHECK:   [B0 (EXIT)]
@@ -435,18 +443,19 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B3
 // CHECK:     Succs (1): B1
 // CHECK:   [B3]
-// CHECK:     1: [B5.8] || [B4.5]
+// CHECK:     1: [B5.9] || [B4.6]
 // CHECK:     2: [B5.3]([B3.1])
 // CHECK:     T: (Temp Dtor) [B4.2]
 // CHECK:     Preds (2): B4 B5
 // CHECK:     Succs (2): B2 B1
 // CHECK:   [B4]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B4.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B4.2], [B4.3], class B)
 // CHECK:     2: [B4.1] (BindTemporary)
-// CHECK:     3: [B4.2].operator bool
-// CHECK:     4: [B4.2]
-// CHECK:     5: [B4.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     3: [B4.2]
+// CHECK:     4: [B4.3].operator bool
+// CHECK:     5: [B4.3]
+// CHECK:     6: [B4.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
 // CHECK:     Preds (1): B5
 // CHECK:     Succs (1): B3
 // CHECK:   [B5]
@@ -454,12 +463,13 @@ const C &bar3(bool coin) {
 // CHECK:     2: foo
 // CHECK:     3: [B5.2] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(_Bool))
 // WARNINGS:     4: A() (CXXConstructExpr, class A)
-// ANALYZER:     4: A() (CXXConstructExpr, [B5.5], class A)
+// ANALYZER:     4: A() (CXXConstructExpr, [B5.5], [B5.6], class A)
 // CHECK:     5: [B5.4] (BindTemporary)
-// CHECK:     6: [B5.5].operator bool
-// CHECK:     7: [B5.5]
-// CHECK:     8: [B5.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: [B5.8] || ...
+// CHECK:     6: [B5.5]
+// CHECK:     7: [B5.6].operator bool
+// CHECK:     8: [B5.6]
+// CHECK:     9: [B5.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B5.9] || ...
 // CHECK:     Preds (2): B6 B7
 // CHECK:     Succs (2): B3 B4
 // CHECK:   [B6]
@@ -467,28 +477,30 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B7
 // CHECK:     Succs (1): B5
 // CHECK:   [B7]
-// CHECK:     1: [B9.5] || [B8.5]
+// CHECK:     1: [B9.6] || [B8.6]
 // CHECK:     2: bool a = A() || B();
 // CHECK:     T: (Temp Dtor) [B8.2]
 // CHECK:     Preds (2): B8 B9
 // CHECK:     Succs (2): B6 B5
 // CHECK:   [B8]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B8.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B8.2], [B8.3], class B)
 // CHECK:     2: [B8.1] (BindTemporary)
-// CHECK:     3: [B8.2].operator bool
-// CHECK:     4: [B8.2]
-// CHECK:     5: [B8.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     3: [B8.2]
+// CHECK:     4: [B8.3].operator bool
+// CHECK:     5: [B8.3]
+// CHECK:     6: [B8.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
 // CHECK:     Preds (1): B9
 // CHECK:     Succs (1): B7
 // CHECK:   [B9]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B9.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B9.2], [B9.3], class A)
 // CHECK:     2: [B9.1] (BindTemporary)
-// CHECK:     3: [B9.2].operator bool
-// CHECK:     4: [B9.2]
-// CHECK:     5: [B9.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: [B9.5] || ...
+// CHECK:     3: [B9.2]
+// CHECK:     4: [B9.3].operator bool
+// CHECK:     5: [B9.3]
+// CHECK:     6: [B9.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B9.6] || ...
 // CHECK:     Preds (1): B10
 // CHECK:     Succs (2): B7 B8
 // CHECK:   [B0 (EXIT)]
@@ -517,13 +529,14 @@ const C &bar3(bool coin) {
 // CHECK:   [B4]
 // CHECK:     1: ~B() (Temporary object destructor)
 // WARNINGS:     2: B() (CXXConstructExpr, class B)
-// ANALYZER:     2: B() (CXXConstructExpr, [B4.3], class B)
+// ANALYZER:     2: B() (CXXConstructExpr, [B4.3], [B4.4], class B)
 // CHECK:     3: [B4.2] (BindTemporary)
-// CHECK:     4: [B4.3].operator bool
-// CHECK:     5: [B4.3]
-// CHECK:     6: [B4.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     7: ~B() (Temporary object destructor)
-// CHECK:     T: if [B4.6]
+// CHECK:     4: [B4.3]
+// CHECK:     5: [B4.4].operator bool
+// CHECK:     6: [B4.4]
+// CHECK:     7: [B4.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     8: ~B() (Temporary object destructor)
+// CHECK:     T: if [B4.7]
 // CHECK:     Preds (2): B5 B6
 // CHECK:     Succs (2): B3 B2
 // CHECK:   [B5]
@@ -539,7 +552,7 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B7
 // CHECK:     Succs (1): B4
 // CHECK:   [B7]
-// CHECK:     1: [B10.5] ? [B8.6] : [B9.15]
+// CHECK:     1: [B10.6] ? [B8.6] : [B9.16]
 // CHECK:     2: [B7.1] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     3: [B7.2]
 // WARNINGS:     4: [B7.3] (CXXConstructExpr, class A)
@@ -561,33 +574,35 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B7
 // CHECK:   [B9]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B9.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B9.2], [B9.3], class B)
 // CHECK:     2: [B9.1] (BindTemporary)
-// CHECK:     3: [B9.2].operator A
-// CHECK:     4: [B9.2]
-// CHECK:     5: [B9.4] (ImplicitCastExpr, UserDefinedConversion, class A)
-// CHECK:     6: [B9.5] (BindTemporary)
-// CHECK:     7: [B9.6] (ImplicitCastExpr, NoOp, const class A)
-// CHECK:     8: [B9.7]
-// WARNINGS:     9: [B9.8] (CXXConstructExpr, class A)
-// ANALYZER:     9: [B9.8] (CXXConstructExpr, [B9.10], [B9.13], [B9.14], class A)
-// CHECK:    10: [B9.9] (BindTemporary)
-// CHECK:    11: A([B9.10]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
-// CHECK:    12: [B9.11] (ImplicitCastExpr, NoOp, const class A)
-// CHECK:    13: [B9.12]
-// WARNINGS:    14: [B9.13] (CXXConstructExpr, class A)
-// ANALYZER:    14: [B9.13] (CXXConstructExpr, [B9.15], [B7.3], [B7.4], class A)
-// CHECK:    15: [B9.14] (BindTemporary)
+// CHECK:     3: [B9.2]
+// CHECK:     4: [B9.3].operator A
+// CHECK:     5: [B9.3]
+// CHECK:     6: [B9.5] (ImplicitCastExpr, UserDefinedConversion, class A)
+// CHECK:     7: [B9.6] (BindTemporary)
+// CHECK:     8: [B9.7] (ImplicitCastExpr, NoOp, const class A)
+// CHECK:     9: [B9.8]
+// WARNINGS:     10: [B9.9] (CXXConstructExpr, class A)
+// ANALYZER:     10: [B9.9] (CXXConstructExpr, [B9.11], [B9.14], [B9.15], class A)
+// CHECK:    11: [B9.10] (BindTemporary)
+// CHECK:    12: A([B9.11]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
+// CHECK:    13: [B9.12] (ImplicitCastExpr, NoOp, const class A)
+// CHECK:    14: [B9.13]
+// WARNINGS:    15: [B9.14] (CXXConstructExpr, class A)
+// ANALYZER:    15: [B9.14] (CXXConstructExpr, [B9.16], [B7.3], [B7.4], class A)
+// CHECK:    16: [B9.15] (BindTemporary)
 // CHECK:     Preds (1): B10
 // CHECK:     Succs (1): B7
 // CHECK:   [B10]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B10.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B10.2], [B10.3], class B)
 // CHECK:     2: [B10.1] (BindTemporary)
-// CHECK:     3: [B10.2].operator bool
-// CHECK:     4: [B10.2]
-// CHECK:     5: [B10.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: [B10.5] ? ... : ...
+// CHECK:     3: [B10.2]
+// CHECK:     4: [B10.3].operator bool
+// CHECK:     5: [B10.3]
+// CHECK:     6: [B10.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B10.6] ? ... : ...
 // CHECK:     Preds (1): B11
 // CHECK:     Succs (2): B8 B9
 // CHECK:   [B0 (EXIT)]
@@ -650,13 +665,14 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B0
 // CHECK:   [B3]
 // WARNINGS:     1: C() (CXXConstructExpr, struct C)
-// ANALYZER:     1: C() (CXXConstructExpr, [B3.2], struct C)
+// ANALYZER:     1: C() (CXXConstructExpr, [B3.2], [B3.3], struct C)
 // CHECK:     2: [B3.1] (BindTemporary)
-// CHECK:     3: [B3.2].operator bool
-// CHECK:     4: [B3.2]
-// CHECK:     5: [B3.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     6: ~C() (Temporary object destructor)
-// CHECK:     T: if [B3.5]
+// CHECK:     3: [B3.2]
+// CHECK:     4: [B3.3].operator bool
+// CHECK:     5: [B3.3]
+// CHECK:     6: [B3.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     7: ~C() (Temporary object destructor)
+// CHECK:     T: if [B3.6]
 // CHECK:     Preds (1): B4
 // CHECK:     Succs (2): B2 B1
 // CHECK:   [B0 (EXIT)]
@@ -710,11 +726,13 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B3
 // CHECK:     Succs (1): B0
 // CHECK:   [B3]
-// CHECK:     1: D() (CXXConstructExpr, struct D)
-// CHECK:     2: [B3.1].operator bool
-// CHECK:     3: [B3.1]
-// CHECK:     4: [B3.3] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: if [B3.4]
+// WARNINGS:  1: D() (CXXConstructExpr, struct D)
+// ANALYZER:  1: D() (CXXConstructExpr, [B3.2], struct D)
+// CHECK:     2: [B3.1]
+// CHECK:     3: [B3.2].operator bool
+// CHECK:     4: [B3.2]
+// CHECK:     5: [B3.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: if [B3.5]
 // CHECK:     Preds (1): B4
 // CHECK:     Succs (2): B2 B1
 // CHECK:   [B0 (EXIT)]
@@ -780,7 +798,7 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B4
 // CHECK:     Succs (1): B1
 // CHECK:   [B4]
-// CHECK:     1: [B7.8] ? [B5.6] : [B6.15]
+// CHECK:     1: [B7.9] ? [B5.6] : [B6.16]
 // CHECK:     2: [B4.1] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     3: [B4.2]
 // CHECK:     4: [B7.3]([B4.3])
@@ -800,23 +818,24 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B4
 // CHECK:   [B6]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B6.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B6.2], [B6.3], class B)
 // CHECK:     2: [B6.1] (BindTemporary)
-// CHECK:     3: [B6.2].operator A
-// CHECK:     4: [B6.2]
-// CHECK:     5: [B6.4] (ImplicitCastExpr, UserDefinedConversion, class A)
-// CHECK:     6: [B6.5] (BindTemporary)
-// CHECK:     7: [B6.6] (ImplicitCastExpr, NoOp, const class A)
-// CHECK:     8: [B6.7]
-// WARNINGS:     9: [B6.8] (CXXConstructExpr, class A)
-// ANALYZER:     9: [B6.8] (CXXConstructExpr, [B6.10], [B6.13], [B6.14], class A)
-// CHECK:    10: [B6.9] (BindTemporary)
-// CHECK:    11: A([B6.10]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
-// CHECK:    12: [B6.11] (ImplicitCastExpr, NoOp, const class A)
-// CHECK:    13: [B6.12]
-// WARNINGS:    14: [B6.13] (CXXConstructExpr, class A)
-// ANALYZER:    14: [B6.13] (CXXConstructExpr, [B6.15], [B4.3], class A)
-// CHECK:    15: [B6.14] (BindTemporary)
+// CHECK:     3: [B6.2]
+// CHECK:     4: [B6.3].operator A
+// CHECK:     5: [B6.3]
+// CHECK:     6: [B6.5] (ImplicitCastExpr, UserDefinedConversion, class A)
+// CHECK:     7: [B6.6] (BindTemporary)
+// CHECK:     8: [B6.7] (ImplicitCastExpr, NoOp, const class A)
+// CHECK:     9: [B6.8]
+// WARNINGS:     10: [B6.9] (CXXConstructExpr, class A)
+// ANALYZER:     10: [B6.9] (CXXConstructExpr, [B6.11], [B6.14], [B6.15], class A)
+// CHECK:    11: [B6.10] (BindTemporary)
+// CHECK:    12: A([B6.11]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
+// CHECK:    13: [B6.12] (ImplicitCastExpr, NoOp, const class A)
+// CHECK:    14: [B6.13]
+// WARNINGS:    15: [B6.14] (CXXConstructExpr, class A)
+// ANALYZER:    15: [B6.14] (CXXConstructExpr, [B6.16], [B4.3], class A)
+// CHECK:    16: [B6.15] (BindTemporary)
 // CHECK:     Preds (1): B7
 // CHECK:     Succs (1): B4
 // CHECK:   [B7]
@@ -824,12 +843,13 @@ const C &bar3(bool coin) {
 // CHECK:     2: foo
 // CHECK:     3: [B7.2] (ImplicitCastExpr, FunctionToPointerDecay, void (*)(const class A &))
 // WARNINGS:     4: B() (CXXConstructExpr, class B)
-// ANALYZER:     4: B() (CXXConstructExpr, [B7.5], class B)
+// ANALYZER:     4: B() (CXXConstructExpr, [B7.5], [B7.6], class B)
 // CHECK:     5: [B7.4] (BindTemporary)
-// CHECK:     6: [B7.5].operator bool
-// CHECK:     7: [B7.5]
-// CHECK:     8: [B7.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: [B7.8] ? ... : ...
+// CHECK:     6: [B7.5]
+// CHECK:     7: [B7.6].operator bool
+// CHECK:     8: [B7.6]
+// CHECK:     9: [B7.8] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B7.9] ? ... : ...
 // CHECK:     Preds (2): B8 B9
 // CHECK:     Succs (2): B5 B6
 // CHECK:   [B8]
@@ -843,7 +863,7 @@ const C &bar3(bool coin) {
 // CHECK:     Preds (1): B10
 // CHECK:     Succs (1): B7
 // CHECK:   [B10]
-// CHECK:     1: [B13.5] ? [B11.6] : [B12.15]
+// CHECK:     1: [B13.6] ? [B11.6] : [B12.16]
 // CHECK:     2: [B10.1] (ImplicitCastExpr, NoOp, const class A)
 // CHECK:     3: [B10.2]
 // CHECK:     4: const A &a = B() ? A() : A(B());
@@ -863,33 +883,35 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B10
 // CHECK:   [B12]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B12.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B12.2], [B12.3], class B)
 // CHECK:     2: [B12.1] (BindTemporary)
-// CHECK:     3: [B12.2].operator A
-// CHECK:     4: [B12.2]
-// CHECK:     5: [B12.4] (ImplicitCastExpr, UserDefinedConversion, class A)
-// CHECK:     6: [B12.5] (BindTemporary)
-// CHECK:     7: [B12.6] (ImplicitCastExpr, NoOp, const class A)
-// CHECK:     8: [B12.7]
-// WARNINGS:     9: [B12.8] (CXXConstructExpr, class A)
-// ANALYZER:     9: [B12.8] (CXXConstructExpr, [B12.10], [B12.13], [B12.14], class A)
-// CHECK:    10: [B12.9] (BindTemporary)
-// CHECK:    11: A([B12.10]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
-// CHECK:    12: [B12.11] (ImplicitCastExpr, NoOp, const class A)
-// CHECK:    13: [B12.12]
-// WARNINGS:    14: [B12.13] (CXXConstructExpr, class A)
-// ANALYZER:    14: [B12.13] (CXXConstructExpr, [B10.3], class A)
-// CHECK:    15: [B12.14] (BindTemporary)
+// CHECK:     3: [B12.2]
+// CHECK:     4: [B12.3].operator A
+// CHECK:     5: [B12.3]
+// CHECK:     6: [B12.5] (ImplicitCastExpr, UserDefinedConversion, class A)
+// CHECK:     7: [B12.6] (BindTemporary)
+// CHECK:     8: [B12.7] (ImplicitCastExpr, NoOp, const class A)
+// CHECK:     9: [B12.8]
+// WARNINGS:     10: [B12.9] (CXXConstructExpr, class A)
+// ANALYZER:     10: [B12.9] (CXXConstructExpr, [B12.11], [B12.14], [B12.15], class A)
+// CHECK:    11: [B12.10] (BindTemporary)
+// CHECK:    12: A([B12.11]) (CXXFunctionalCastExpr, ConstructorConversion, class A)
+// CHECK:    13: [B12.12] (ImplicitCastExpr, NoOp, const class A)
+// CHECK:    14: [B12.13]
+// WARNINGS:    15: [B12.14] (CXXConstructExpr, class A)
+// ANALYZER:    15: [B12.14] (CXXConstructExpr, [B10.3], class A)
+// CHECK:    16: [B12.15] (BindTemporary)
 // CHECK:     Preds (1): B13
 // CHECK:     Succs (1): B10
 // CHECK:   [B13]
 // WARNINGS:     1: B() (CXXConstructExpr, class B)
-// ANALYZER:     1: B() (CXXConstructExpr, [B13.2], class B)
+// ANALYZER:     1: B() (CXXConstructExpr, [B13.2], [B13.3], class B)
 // CHECK:     2: [B13.1] (BindTemporary)
-// CHECK:     3: [B13.2].operator bool
-// CHECK:     4: [B13.2]
-// CHECK:     5: [B13.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CHECK:     T: [B13.5] ? ... : ...
+// CHECK:     3: [B13.2]
+// CHECK:     4: [B13.3].operator bool
+// CHECK:     5: [B13.3]
+// CHECK:     6: [B13.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B13.6] ? ... : ...
 // CHECK:     Preds (1): B14
 // CHECK:     Succs (2): B11 B12
 // CHECK:   [B0 (EXIT)]
@@ -949,15 +971,11 @@ const C &bar3(bool coin) {
 // ANALYZER-CXX98:     1: A() (CXXConstructExpr, [B7.2], [B7.3], class A)
 // ANALYZER-CXX11:     1: A() (CXXConstructExpr, [B7.2], class A)
 // CHECK:     2: [B7.1] (BindTemporary)
-// CXX98:     3: [B7.2].operator bool
-// CXX98:     4: [B7.2]
-// CXX98:     5: [B7.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX98:     T: [B7.5] ? ... : ...
-// CXX11:     3: [B7.2]
-// CXX11:     4: [B7.3].operator bool
-// CXX11:     5: [B7.3]
-// CXX11:     6: [B7.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11:     T: [B7.6] ? ... : ...
+// CHECK:     3: [B7.2]
+// CHECK:     4: [B7.3].operator bool
+// CHECK:     5: [B7.3]
+// CHECK:     6: [B7.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B7.6] ? ... : ...
 // CHECK:     Preds (1): B8
 // CHECK:     Succs (2): B5 B6
 // CHECK:   [B0 (EXIT)]
@@ -1017,15 +1035,11 @@ const C &bar3(bool coin) {
 // ANALYZER-CXX98:     3: A() (CXXConstructExpr, [B7.4], class A)
 // ANALYZER-CXX11:     3: A() (CXXConstructExpr, class A)
 // CHECK:     4: [B7.3] (BindTemporary)
-// CXX98:     5: [B7.4].operator bool
-// CXX98:     6: [B7.4]
-// CXX98:     7: [B7.6] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX98:     T: [B7.7] ? ... : ...
-// CXX11:     5: [B7.4]
-// CXX11:     6: [B7.5].operator bool
-// CXX11:     7: [B7.5]
-// CXX11:     8: [B7.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11:     T: [B7.8] ? ... : ...
+// CHECK:     5: [B7.4]
+// CHECK:     6: [B7.5].operator bool
+// CHECK:     7: [B7.5]
+// CHECK:     8: [B7.7] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B7.8] ? ... : ...
 // CHECK:     Preds (2): B8 B9
 // CHECK:     Succs (2): B5 B6
 // CHECK:   [B8]
@@ -1069,15 +1083,11 @@ const C &bar3(bool coin) {
 // ANALYZER-CXX98:     1: A() (CXXConstructExpr, [B12.2], [B12.3], class A)
 // ANALYZER-CXX11:     1: A() (CXXConstructExpr, [B12.2], class A)
 // CHECK:     2: [B12.1] (BindTemporary)
-// CXX98:     3: [B12.2].operator bool
-// CXX98:     4: [B12.2]
-// CXX98:     5: [B12.4] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX98:     T: [B12.5] ? ... : ...
-// CXX11:     3: [B12.2]
-// CXX11:     4: [B12.3].operator bool
-// CXX11:     5: [B12.3]
-// CXX11:     6: [B12.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
-// CXX11:     T: [B12.6] ? ... : ...
+// CHECK:     3: [B12.2]
+// CHECK:     4: [B12.3].operator bool
+// CHECK:     5: [B12.3]
+// CHECK:     6: [B12.5] (ImplicitCastExpr, UserDefinedConversion, _Bool)
+// CHECK:     T: [B12.6] ? ... : ...
 // CHECK:     Preds (1): B13
 // CHECK:     Succs (2): B10 B11
 // CHECK:   [B0 (EXIT)]
@@ -1177,15 +1187,16 @@ const C &bar3(bool coin) {
 // CHECK:   [B1]
 // CHECK:     1: int a;
 // WARNINGS:     2: A() (CXXConstructExpr, class A)
-// ANALYZER:     2: A() (CXXConstructExpr, [B1.3], class A)
+// ANALYZER:     2: A() (CXXConstructExpr, [B1.3], [B1.4], class A)
 // CHECK:     3: [B1.2] (BindTemporary)
-// CHECK:     4: [B1.3].operator int
-// CHECK:     5: [B1.3]
-// CHECK:     6: [B1.5] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:     7: a
-// CHECK:     8: [B1.7] = [B1.6]
-// CHECK:     9: ~A() (Temporary object destructor)
-// CHECK:    10: int b;
+// CHECK:     4: [B1.3]
+// CHECK:     5: [B1.4].operator int
+// CHECK:     6: [B1.4]
+// CHECK:     7: [B1.6] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:     8: a
+// CHECK:     9: [B1.8] = [B1.7]
+// CHECK:    10: ~A() (Temporary object destructor)
+// CHECK:    11: int b;
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]
@@ -1194,25 +1205,27 @@ const C &bar3(bool coin) {
 // CHECK:     Succs (1): B1
 // CHECK:   [B1]
 // WARNINGS:     1: A() (CXXConstructExpr, class A)
-// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], class A)
+// ANALYZER:     1: A() (CXXConstructExpr, [B1.2], [B1.3], class A)
 // CHECK:     2: [B1.1] (BindTemporary)
-// CHECK:     3: [B1.2].operator int
-// CHECK:     4: [B1.2]
-// CHECK:     5: [B1.4] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:     6: int([B1.5]) (CXXFunctionalCastExpr, NoOp, int)
-// WARNINGS:     7: B() (CXXConstructExpr, class B)
-// ANALYZER:     7: B() (CXXConstructExpr, [B1.8], class B)
-// CHECK:     8: [B1.7] (BindTemporary)
-// CHECK:     9: [B1.8].operator int
-// CHECK:    10: [B1.8]
-// CHECK:    11: [B1.10] (ImplicitCastExpr, UserDefinedConversion, int)
-// CHECK:    12: int([B1.11]) (CXXFunctionalCastExpr, NoOp, int)
-// CHECK:    13: [B1.6] + [B1.12]
-// CHECK:    14: a([B1.13]) (Member initializer)
-// CHECK:    15: ~B() (Temporary object destructor)
-// CHECK:    16: ~A() (Temporary object destructor)
-// CHECK:    17: /*implicit*/(int)0
-// CHECK:    18: b([B1.17]) (Member initializer)
+// CHECK:     3: [B1.2]
+// CHECK:     4: [B1.3].operator int
+// CHECK:     5: [B1.3]
+// CHECK:     6: [B1.5] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:     7: int([B1.6]) (CXXFunctionalCastExpr, NoOp, int)
+// WARNINGS:     8: B() (CXXConstructExpr, class B)
+// ANALYZER:     8: B() (CXXConstructExpr, [B1.9], [B1.10], class B)
+// CHECK:     9: [B1.8] (BindTemporary)
+// CHECK:    10: [B1.9]
+// CHECK:    11: [B1.10].operator int
+// CHECK:    12: [B1.10]
+// CHECK:    13: [B1.12] (ImplicitCastExpr, UserDefinedConversion, int)
+// CHECK:    14: int([B1.13]) (CXXFunctionalCastExpr, NoOp, int)
+// CHECK:    15: [B1.7] + [B1.14]
+// CHECK:    16: a([B1.15]) (Member initializer)
+// CHECK:    17: ~B() (Temporary object destructor)
+// CHECK:    18: ~A() (Temporary object destructor)
+// CHECK:    19: /*implicit*/(int)0
+// CHECK:    20: b([B1.19]) (Member initializer)
 // CHECK:     Preds (1): B2
 // CHECK:     Succs (1): B0
 // CHECK:   [B0 (EXIT)]

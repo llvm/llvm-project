@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import absolute_import, division, print_function
 import os
 import re
 import subprocess
@@ -37,7 +38,7 @@ class DeltaAlgorithm(object):
         # O(N^2) case unless user requests it.
         if not force:
             if not self.getTestResult(changes):
-                raise ValueError,'Initial test passed to delta fails.'
+                raise ValueError('Initial test passed to delta fails.')
 
         # Check empty set first to quickly find poor test functions.
         if self.getTestResult(set()):
@@ -94,7 +95,7 @@ class DeltaAlgorithm(object):
 
 ###
 
-class Token:
+class Token(object):
     def __init__(self, type, data, flags, file, line, column):
         self.type   = type
         self.data   = data
@@ -165,7 +166,7 @@ class TMBDDelta(DeltaAlgorithm):
         byFile = self.writeFiles(changes, self.tempFiles)
 
         if self.log:
-            print >>sys.stderr, 'TEST - ',
+            print('TEST - ', end=' ', file=sys.stderr)
             if self.log > 1:
                 for i,(file,_) in enumerate(self.tokenLists):
                     indices = byFile[i]
@@ -184,8 +185,8 @@ class TMBDDelta(DeltaAlgorithm):
                         sys.stderr.write(str(byFile[i][-1]))
                     sys.stderr.write('] ')
             else:
-                print >>sys.stderr, ', '.join(['%s:%d tokens' % (file, len(byFile[i]))
-                                               for i,(file,_) in enumerate(self.tokenLists)]),
+                print(', '.join(['%s:%d tokens' % (file, len(byFile[i]))
+                                               for i,(file,_) in enumerate(self.tokenLists)]), end=' ', file=sys.stderr)
 
         p = subprocess.Popen([self.testProgram] + self.tempFiles)
         res = p.wait() == 0
@@ -194,10 +195,10 @@ class TMBDDelta(DeltaAlgorithm):
             self.writeFiles(changes, self.targetFiles)
 
         if self.log:
-            print >>sys.stderr, '=> %s' % res
+            print('=> %s' % res, file=sys.stderr)
         else:
             if res:
-                print '\nSUCCESS (%d tokens)' % len(changes)
+                print('\nSUCCESS (%d tokens)' % len(changes))
             else:                
                 sys.stderr.write('.')
 
@@ -209,7 +210,7 @@ class TMBDDelta(DeltaAlgorithm):
                                           for j in range(len(tokens))])
         self.writeFiles(res, self.targetFiles)
         if not self.log:
-            print >>sys.stderr
+            print(file=sys.stderr)
         return res
 
 def tokenBasedMultiDelta(program, files, log):            
@@ -218,15 +219,15 @@ def tokenBasedMultiDelta(program, files, log):
                   for file in files]
 
     numTokens = sum([len(tokens) for _,tokens in tokenLists])
-    print "Delta on %s with %d tokens." % (', '.join(files), numTokens)
+    print("Delta on %s with %d tokens." % (', '.join(files), numTokens))
     
     tbmd = TMBDDelta(program, tokenLists, log)
 
     res = tbmd.run()
 
-    print "Finished %s with %d tokens (in %d tests)." % (', '.join(tbmd.targetFiles),
+    print("Finished %s with %d tokens (in %d tests)." % (', '.join(tbmd.targetFiles),
                                                          len(res),
-                                                         tbmd.numTests)
+                                                         tbmd.numTests))
         
 def main():
     from optparse import OptionParser, OptionGroup
@@ -247,5 +248,5 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print >>sys.stderr,'Interrupted.'
+        print('Interrupted.', file=sys.stderr)
         os._exit(1) # Avoid freeing our giant cache.

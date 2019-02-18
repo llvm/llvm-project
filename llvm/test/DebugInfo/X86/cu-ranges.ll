@@ -5,6 +5,9 @@
 ; RUN: llc -split-dwarf-file=foo.dwo -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
 ; RUN: llvm-dwarfdump -debug-abbrev %t | FileCheck --check-prefix=NO-FUNCTION-SECTIONS %s
 
+; RUN: llc -dwarf-version=5 -O0 %s -mtriple=x86_64-unknown-linux-gnu -filetype=obj -o %t
+; RUN: llvm-dwarfdump -v %t | FileCheck --check-prefix=DWARF5 %s
+
 ; From:
 ; int foo (int a) {
 ;   return a+1;
@@ -23,6 +26,14 @@
 ; NO-FUNCTION-SECTIONS-NOT: DW_AT_ranges
 ; NO-FUNCTION-SECTIONS: DW_AT_low_pc DW_FORM_addr
 ; NO-FUNCTION-SECTIONS-NOT: DW_AT_ranges
+
+; For Dwarf 5 check that we neither generate DW_AT_rnglists_base for the CU DIE nor 
+; a .debug_rnglists section. There is only 1 CU range with no scope ranges.
+;
+; DWARF5:     .debug_info contents:
+; DWARF5:     DW_TAG_compile_unit
+; DWARF5-NOT: DW_AT_rnglists_base [DW_FORM_sec_offset]   
+; DWARF5-NOT: .debug_rnglists contents:
 
 ; Function Attrs: nounwind uwtable
 define i32 @foo(i32 %a) #0 !dbg !4 {

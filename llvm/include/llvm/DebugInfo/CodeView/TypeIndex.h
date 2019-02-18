@@ -134,6 +134,8 @@ public:
     return static_cast<SimpleTypeMode>(Index & SimpleModeMask);
   }
 
+  TypeIndex makeDirect() const { return TypeIndex{getSimpleKind()}; }
+
   static TypeIndex None() { return TypeIndex(SimpleTypeKind::None); }
   static TypeIndex Void() { return TypeIndex(SimpleTypeKind::Void); }
   static TypeIndex VoidPointer32() {
@@ -141,6 +143,13 @@ public:
   }
   static TypeIndex VoidPointer64() {
     return TypeIndex(SimpleTypeKind::Void, SimpleTypeMode::NearPointer64);
+  }
+
+  static TypeIndex NullptrT() {
+    // std::nullptr_t uses the pointer mode that doesn't indicate bit-width,
+    // presumably because std::nullptr_t is intended to be compatible with any
+    // pointer type.
+    return TypeIndex(SimpleTypeKind::Void, SimpleTypeMode::NearPointer);
   }
 
   static TypeIndex SignedCharacter() {

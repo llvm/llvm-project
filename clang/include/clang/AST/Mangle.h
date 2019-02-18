@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_MANGLE_H
 #define LLVM_CLANG_AST_MANGLE_H
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/DenseMap.h"
@@ -73,7 +74,7 @@ public:
   DiagnosticsEngine &getDiags() const { return Diags; }
 
   virtual void startNewFunction() { LocalBlockIds.clear(); }
-  
+
   unsigned getBlockId(const BlockDecl *BD, bool Local) {
     llvm::DenseMap<const BlockDecl *, unsigned> &BlockIds
       = Local? LocalBlockIds : GlobalBlockIds;

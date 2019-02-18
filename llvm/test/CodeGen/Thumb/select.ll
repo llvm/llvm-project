@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=thumb-apple-darwin | FileCheck %s
-; RUN: llc < %s -mtriple=thumb-pc-linux-gnueabi | FileCheck -check-prefix=CHECK-EABI %s
+; RUN: llc < %s -mtriple=thumb-apple-darwin -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=thumb-pc-linux-gnueabi -verify-machineinstrs | FileCheck -check-prefix=CHECK-EABI %s
 
 define i32 @f1(i32 %a.s) {
 entry:
@@ -73,10 +73,31 @@ define double @f7(double %a, double %b) {
     ret double %tmp1
 }
 ; CHECK-LABEL: f7:
-; CHECK: blt
+; CHECK: {{blt|bge}}
 ; CHECK: {{blt|bge}}
 ; CHECK: __ltdf2
 ; CHECK-EABI-LABEL: f7:
 ; CHECK-EABI: __aeabi_dcmplt
-; CHECK-EABI: bne
 ; CHECK-EABI: {{bne|beq}}
+; CHECK-EABI: {{bne|beq}}
+
+define {i32, i32} @f8(i32 %a, i32 %b, i32 %c, i32 %d) {
+entry:
+    %cmp = icmp slt i32 %a, %b
+    %r1 = select i1 %cmp, i32 %c, i32 %a
+    %r2 = select i1 %cmp, i32 %d, i32 %b
+    %z = insertvalue { i32, i32 } undef, i32 %r1, 0
+    %z2 = insertvalue { i32, i32 } %z, i32 %r2, 1
+    ret { i32, i32 } %z2
+}
+
+; CHECK-LABEL: f8:
+; CHECK: cmp r0, r1
+; CHECK: blt
+; CHECK: movs
+; CHECK: cmp r0, r1
+; CHECK: blt
+; CHECK: movs
+; CHECK: movs
+; CHECK: movs
+; CHECK: bx lr

@@ -90,7 +90,6 @@ class UnmangledFuncInfo {
 
 public:
   using ID = AMDGPULibFunc::EFuncId;
-  UnmangledFuncInfo() = default;
   UnmangledFuncInfo(StringRef _Name, unsigned _NumArgs)
       : Name(_Name), NumArgs(_NumArgs) {}
   // Get index to Table by function name.
@@ -996,8 +995,10 @@ Function *AMDGPULibFunc::getOrInsertFunction(Module *M,
   } else {
     AttributeList Attr;
     LLVMContext &Ctx = M->getContext();
-    Attr.addAttribute(Ctx, AttributeList::FunctionIndex, Attribute::ReadOnly);
-    Attr.addAttribute(Ctx, AttributeList::FunctionIndex, Attribute::NoUnwind);
+    Attr = Attr.addAttribute(Ctx, AttributeList::FunctionIndex,
+                             Attribute::ReadOnly);
+    Attr = Attr.addAttribute(Ctx, AttributeList::FunctionIndex,
+                             Attribute::NoUnwind);
     C = M->getOrInsertFunction(FuncName, FuncTy, Attr);
   }
 

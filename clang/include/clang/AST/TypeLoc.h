@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_AST_TYPELOC_H
 #define LLVM_CLANG_AST_TYPELOC_H
 
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
@@ -93,8 +94,8 @@ public:
   }
 
   /// Convert to the specified TypeLoc type, returning a null TypeLoc if
-  /// this TypeLock is not of the desired type. It will consider type
-  /// adjustments from a type that wad written as a T to another type that is
+  /// this TypeLoc is not of the desired type. It will consider type
+  /// adjustments from a type that was written as a T to another type that is
   /// still canonically a T (ignores parens, attributes, elaborated types, etc).
   template <typename T>
   T getAsAdjusted() const;
@@ -151,8 +152,6 @@ public:
     return SourceRange(getBeginLoc(), getEndLoc());
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return getBeginLoc(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return getEndLoc(); }
 
   /// Get the local source range.
   SourceRange getLocalSourceRange() const {
@@ -843,16 +842,7 @@ class SubstTemplateTypeParmPackTypeLoc :
 };
 
 struct AttributedLocInfo {
-  union {
-    Expr *ExprOperand;
-
-    /// A raw SourceLocation.
-    unsigned EnumOperandLoc;
-  };
-
-  SourceRange OperandParens;
-
-  SourceLocation AttrLoc;
+  const Attr *TypeAttr;
 };
 
 /// Type source information for an attributed type.
@@ -861,22 +851,8 @@ class AttributedTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                                  AttributedType,
                                                  AttributedLocInfo> {
 public:
-  AttributedType::Kind getAttrKind() const {
+  attr::Kind getAttrKind() const {
     return getTypePtr()->getAttrKind();
-  }
-
-  bool hasAttrExprOperand() const {
-    return (getAttrKind() >= AttributedType::FirstExprOperandKind &&
-            getAttrKind() <= AttributedType::LastExprOperandKind);
-  }
-
-  bool hasAttrEnumOperand() const {
-    return (getAttrKind() >= AttributedType::FirstEnumOperandKind &&
-            getAttrKind() <= AttributedType::LastEnumOperandKind);
-  }
-
-  bool hasAttrOperand() const {
-    return hasAttrExprOperand() || hasAttrEnumOperand();
   }
 
   bool isQualifier() const {
@@ -891,51 +867,16 @@ public:
     return getInnerTypeLoc();
   }
 
-  /// The location of the attribute name, i.e.
-  ///    __attribute__((regparm(1000)))
-  ///                   ^~~~~~~
-  SourceLocation getAttrNameLoc() const {
-    return getLocalData()->AttrLoc;
+  /// The type attribute.
+  const Attr *getAttr() const {
+    return getLocalData()->TypeAttr;
   }
-  void setAttrNameLoc(SourceLocation loc) {
-    getLocalData()->AttrLoc = loc;
+  void setAttr(const Attr *A) {
+    getLocalData()->TypeAttr = A;
   }
 
-  /// The attribute's expression operand, if it has one.
-  ///    void *cur_thread __attribute__((address_space(21)))
-  ///                                                  ^~
-  Expr *getAttrExprOperand() const {
-    assert(hasAttrExprOperand());
-    return getLocalData()->ExprOperand;
-  }
-  void setAttrExprOperand(Expr *e) {
-    assert(hasAttrExprOperand());
-    getLocalData()->ExprOperand = e;
-  }
-
-  /// The location of the attribute's enumerated operand, if it has one.
-  ///    void * __attribute__((objc_gc(weak)))
-  ///                                  ^~~~
-  SourceLocation getAttrEnumOperandLoc() const {
-    assert(hasAttrEnumOperand());
-    return SourceLocation::getFromRawEncoding(getLocalData()->EnumOperandLoc);
-  }
-  void setAttrEnumOperandLoc(SourceLocation loc) {
-    assert(hasAttrEnumOperand());
-    getLocalData()->EnumOperandLoc = loc.getRawEncoding();
-  }
-
-  /// The location of the parentheses around the operand, if there is
-  /// an operand.
-  ///    void * __attribute__((objc_gc(weak)))
-  ///                                 ^    ^
-  SourceRange getAttrOperandParensRange() const {
-    assert(hasAttrOperand());
-    return getLocalData()->OperandParens;
-  }
-  void setAttrOperandParensRange(SourceRange range) {
-    assert(hasAttrOperand());
-    getLocalData()->OperandParens = range;
+  template<typename T> const T *getAttrAs() {
+    return dyn_cast_or_null<T>(getAttr());
   }
 
   SourceRange getLocalSourceRange() const {
@@ -948,21 +889,11 @@ public:
     //    ^~        ~~
     // That enclosure doesn't necessarily belong to a single attribute
     // anyway.
-    SourceRange range(getAttrNameLoc());
-    if (hasAttrOperand())
-      range.setEnd(getAttrOperandParensRange().getEnd());
-    return range;
+    return getAttr() ? getAttr()->getRange() : SourceRange();
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation loc) {
-    setAttrNameLoc(loc);
-    if (hasAttrExprOperand()) {
-      setAttrOperandParensRange(SourceRange(loc));
-      setAttrExprOperand(nullptr);
-    } else if (hasAttrEnumOperand()) {
-      setAttrOperandParensRange(SourceRange(loc));
-      setAttrEnumOperandLoc(loc);
-    }
+    setAttr(nullptr);
   }
 
   QualType getInnerType() const {
@@ -992,7 +923,7 @@ class ObjCObjectTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
     return (TypeSourceInfo**)this->getExtraLocalData();
   }
 
-  // SourceLocations are stored after the type argument information, one for 
+  // SourceLocations are stored after the type argument information, one for
   // each Protocol.
   SourceLocation *getProtocolLocArray() const {
     return (SourceLocation*)(getTypeArgLocArray() + getNumTypeArgs());
@@ -1131,11 +1062,11 @@ public:
   void setNameLoc(SourceLocation Loc) {
     getLocalData()->NameLoc = Loc;
   }
-                                                    
+
   SourceRange getLocalSourceRange() const {
     return SourceRange(getNameLoc(), getNameEndLoc());
   }
-  
+
   SourceLocation getNameEndLoc() const {
     return getLocalData()->NameEndLoc;
   }
@@ -1766,10 +1697,10 @@ public:
     return range;
   }
 
-  ///  Returns the type before the address space attribute application 
-  ///  area.   
+  ///  Returns the type before the address space attribute application
+  ///  area.
   ///    int * __attribute__((address_space(11))) *
-  ///    ^   ^          
+  ///    ^   ^
   QualType getInnerType() const {
     return this->getTypePtr()->getPointeeType();
   }

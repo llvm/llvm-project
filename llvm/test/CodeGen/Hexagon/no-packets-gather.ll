@@ -1,11 +1,32 @@
-; RUN: llc -march=hexagon -mattr=+hvxv60,hvx-length64b < %s | FileCheck %s --check-prefix=CHECK-GATHER
-; RUN: not llc -march=hexagon -mattr=+hvxv60,hvx-length64b,-packets %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: llc -march=hexagon -mattr=+hvxv60,hvx-length64b,-packets < %s | FileCheck %s
 
 target triple = "hexagon"
 
-; CHECK-GATHER-LABEL: fred:
-; CHECK-GATHER: vgather
-; CHECK-ERROR: LLVM ERROR: Support for gather requires packets, which are disabled
+; Check that the only (multi-instruction) packet is the one with vgather.
+
+; CHECK-LABEL: fred:
+; CHECK:      {
+; CHECK-NEXT:   allocframe(r29,#64):raw
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   m0 = r2
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   r29 = and(r29,#-64)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   vtmp.w = vgather(r1,m0,v0.w).w
+; CHECK-NEXT:   vmem(r0+#0) = vtmp.new
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   r0 = add(r29,#0)
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   call foo
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT:   r31:30 = dealloc_return(r30):raw
+; CHECK-NEXT: }
 
 define void @fred(i8* %p, i32 %x, i32 %y) local_unnamed_addr #0 {
 entry:

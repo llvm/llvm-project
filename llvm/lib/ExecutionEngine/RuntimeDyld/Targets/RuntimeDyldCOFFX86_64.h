@@ -37,7 +37,13 @@ private:
     if (!ImageBase) {
       ImageBase = std::numeric_limits<uint64_t>::max();
       for (const SectionEntry &Section : Sections)
-        ImageBase = std::min(ImageBase, Section.getLoadAddress());
+        // The Sections list may contain sections that weren't loaded for
+        // whatever reason: they may be debug sections, and ProcessAllSections
+        // is false, or they may be sections that contain 0 bytes. If the
+        // section isn't loaded, the load address will be 0, and it should not
+        // be included in the ImageBase calculation.
+        if (Section.getLoadAddress() != 0)
+          ImageBase = std::min(ImageBase, Section.getLoadAddress());
     }
     return ImageBase;
   }
@@ -119,6 +125,13 @@ public:
 
     case COFF::IMAGE_REL_AMD64_ADDR64: {
       writeBytesUnaligned(Value + RE.Addend, Target, 8);
+      break;
+    }
+
+    case COFF::IMAGE_REL_AMD64_SECREL: {
+      assert(static_cast<int64_t>(RE.Addend) <= INT32_MAX && "Relocation overflow");
+      assert(static_cast<int64_t>(RE.Addend) >= INT32_MIN && "Relocation underflow");
+      writeBytesUnaligned(RE.Addend, Target, 4);
       break;
     }
 

@@ -136,7 +136,7 @@ Value *RandomIRBuilder::findPointer(BasicBlock &BB,
   auto IsMatchingPtr = [&Srcs, &Pred](Instruction *Inst) {
     // Invoke instructions sometimes produce valid pointers but currently
     // we can't insert loads or stores from them
-    if (isa<TerminatorInst>(Inst))
+    if (Inst->isTerminator())
       return false;
 
     if (auto PtrTy = dyn_cast<PointerType>(Inst->getType())) {

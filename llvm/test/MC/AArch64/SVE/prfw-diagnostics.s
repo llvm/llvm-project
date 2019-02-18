@@ -154,3 +154,31 @@ prfw #0, p8, [x0]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: restricted predicate has range [0, 7].
 // CHECK-NEXT: prfw #0, p8, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z8.d, p3/z, z15.d
+prfw    #7, p3, [x13, z8.d, uxtw #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: prfw    #7, p3, [x13, z8.d, uxtw #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z8, z15
+prfw    #7, p3, [x13, z8.d, uxtw #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: prfw    #7, p3, [x13, z8.d, uxtw #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z21.d, p5/z, z28.d
+prfw    pldl3strm, p5, [x10, z21.d, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: prfw    pldl3strm, p5, [x10, z21.d, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z21, z28
+prfw    pldl3strm, p5, [x10, z21.d, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: prfw    pldl3strm, p5, [x10, z21.d, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

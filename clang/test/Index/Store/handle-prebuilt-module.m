@@ -1,5 +1,3 @@
-// XFAIL: linux
-
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: %clang -arch x86_64 -mmacosx-version-min=10.7 -fsyntax-only %s -o %t.o -index-store-path %t/idx1 -fmodules -fmodules-cache-path=%t/mcp -I %S/Inputs/module -Rindex-store 2> %t.err1

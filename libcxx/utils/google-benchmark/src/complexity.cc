@@ -73,8 +73,8 @@ std::string GetBigOString(BigO complexity) {
 //   - time          : Vector containing the times for the benchmark tests.
 //   - fitting_curve : lambda expression (e.g. [](int64_t n) {return n; };).
 
-// For a deeper explanation on the algorithm logic, look the README file at
-// http://github.com/ismaelJimenez/Minimal-Cpp-Least-Squared-Fit
+// For a deeper explanation on the algorithm logic, please refer to
+// https://en.wikipedia.org/wiki/Least_squares#Least_squares,_regression_analysis_and_statistics
 
 LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
                        const std::vector<double>& time,
@@ -182,12 +182,15 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
     result_cpu = MinimalLeastSq(n, cpu_time, reports[0].complexity);
     result_real = MinimalLeastSq(n, real_time, result_cpu.complexity);
   }
-  std::string benchmark_name =
-      reports[0].benchmark_name.substr(0, reports[0].benchmark_name.find('/'));
+
+  std::string run_name = reports[0].benchmark_name().substr(
+      0, reports[0].benchmark_name().find('/'));
 
   // Get the data from the accumulator to BenchmarkReporter::Run's.
   Run big_o;
-  big_o.benchmark_name = benchmark_name + "_BigO";
+  big_o.run_name = run_name;
+  big_o.run_type = BenchmarkReporter::Run::RT_Aggregate;
+  big_o.aggregate_name = "BigO";
   big_o.iterations = 0;
   big_o.real_accumulated_time = result_real.coef;
   big_o.cpu_accumulated_time = result_cpu.coef;
@@ -203,8 +206,10 @@ std::vector<BenchmarkReporter::Run> ComputeBigO(
 
   // Only add label to mean/stddev if it is same for all runs
   Run rms;
+  rms.run_name = run_name;
   big_o.report_label = reports[0].report_label;
-  rms.benchmark_name = benchmark_name + "_RMS";
+  rms.run_type = BenchmarkReporter::Run::RT_Aggregate;
+  rms.aggregate_name = "RMS";
   rms.report_label = big_o.report_label;
   rms.iterations = 0;
   rms.real_accumulated_time = result_real.rms / multiplier;

@@ -1,4 +1,4 @@
-//===- unittest/Format/FormatTestProto.cpp --------------------------------===//
+//===- unittest/Format/FormatTestTextProto.cpp ----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //

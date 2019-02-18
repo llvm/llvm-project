@@ -1,0 +1,131 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(VCTargetsPath)\Microsoft.CppCommon.targets" />
+
+  <PropertyGroup>
+    <!-- Set the path to clang-cl executable based on the value of the project-
+         level setting.  This has to be done in the .targets file since values
+         selected via the settings UI appear in the vcxproj (which is imported
+         before the targets file but after the props file) and we need the path
+         that the user may have overridden in the UI. -->
+    <CLToolExe Condition="$(UseClangCl)">$(ClangClExecutable)</CLToolExe>
+    <LinkToolExe Condition="$(UseLldLink)">$(LldLinkExecutable)</LinkToolExe>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PropertyPageSchema Include="$(VCTargetsPath)$(LangID)\llvm-general.xml">
+      <Context>Project</Context>
+    </PropertyPageSchema>
+  </ItemGroup>
+
+  <!-- Take any clang-specific options that the user wants to pass and stick them onto the
+       general purpose list of command line flags. -->
+  <ItemDefinitionGroup Condition="$(UseClangCl)">
+    <ClCompile>
+      <AdditionalOptions>-m$(PlatformArchitecture) $(ClangClAdditionalOptions) %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <ItemDefinitionGroup Condition="$(UseLldLink)">
+    <Link>
+      <AdditionalOptions>$(LldLinkAdditionalOptions) %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- We hook up a target to run every time ClCompile is about to run, the
+       purpose of which is to sanitize the command line before it gets passed to
+       the compiler.  Some options we silently discard, other options we warn on
+       and then discard, and other options we generate a hard error.
+
+       We try to keep hard errors to a minimum and reserve it for cases where
+       the option implies fundamentally different assumptions about the way code
+       should be compiled.  This code would probably generate an error anyway,
+       but at least this way we give the user a more useful message about what
+       the actual problem is, rather than relying on some obscure compilation
+       error.
+
+       For any options that clang-cl discards, we would prefer to not even pass
+       them in on the command line.  So if a user starts with a cl projects and
+       changes the toolset to clang, they could have set options such as /Gm
+       (minimal rebuild), /sdl (Security Checks), etc.  The ClCompile task would
+       then notice this and pass these through to clang-cl.exe.  Clang would of
+       course ignore them, but in some cases (such as /Gm), they would generate
+       -Wunused-command-line-argument warnings, so it's better if we can just
+       strip them from the command line entirely.  This also has the side
+       benefit of making command lines shorter which is always nice when trying
+       to look at the tool output.
+      -->
+  <Target Name="BeforeClCompile" BeforeTargets="ClCompile" Condition="$(UseClangCl)">
+    <!-- Error if they're trying to compile this file as managed code. -->
+    <Error Condition="('%(ClCompile.CompileAsManaged)' != 'false') AND ('%(ClCompile.CompileAsManaged)' != '')"
+           File="@(ClCompile)(0,0)"
+           Text="clang-cl does not support compiling managed code (/clr).  This file cannot be compiled."/>
+
+    <!-- Error if WinRT is being used. -->
+    <Error Condition="('%(ClCompile.CompileAsWinRT)' == 'true') OR ('%(ClCompile.WinRTNoStdLib)' == 'true')"
+           File="@(ClCompile)(0,0)"
+           Text="clang-cl does not support Windows Runtime Language Extensions (/ZW, /ZW:nostdlib).  This file cannot be compiled."/>
+
+    <!-- Error if OpenMP language extensions are enabled. -->
+    <Error Condition="'%(ClCompile.OpenMPSupport)' == 'true'"
+           File="@(ClCompile)(0,0)"
+           Text="clang-cl does not support OpenMP (/openmp).  This file cannot be compiled."/>
+
+    <!-- Error if C++ Modules are enabled.  Clang has its own notion of modules that are not compatible. -->
+    <Error Condition="'%(ClCompile.EnableModules)' == 'true'"
+           File="@(ClCompile)(0,0)"
+           Text="clang-cl does not support MSVC Modules (/experimental:module).  This file cannot be compiled."/>
+
+    <ItemGroup>
+      <ClCompile>
+        <!-- Map /ZI and /Zi to /Z7.  Clang internally does this, so if we were
+             to just pass the option through, clang would work.  The problem is
+             that MSBuild would not.  MSBuild detects /ZI and /Zi and then
+             assumes (rightly) that there will be a compiler-generated PDB (e.g.
+             vc141.pdb).  Since clang-cl will not emit this, MSBuild will always
+             think that the compiler-generated PDB needs to be re-generated from
+             scratch and trigger a full build.  The way to avoid this is to
+             always give MSBuild accurate information about how we plan to
+             generate debug info (which is to always using /Z7 semantics).
+             -->
+        <DebugInformationFormat Condition="'%(ClCompile.DebugInformationFormat)' == 'ProgramDatabase'">OldStyle</DebugInformationFormat>
+        <DebugInformationFormat Condition="'%(ClCompile.DebugInformationFormat)' == 'EditAndContinue'">OldStyle</DebugInformationFormat>
+
+        <!-- Unset any options that we either silently ignore or warn about due to compatibility.
+             Generally when an option is set to no value, that means "Don't pass an option to the
+             compiler at all."
+             -->
+        <WholeProgramOptimization/>
+        <EnableFiberSafeOptimizations/>
+        <IgnoreStandardIncludePath/>
+        <EnableParallelCodeGeneration/>
+        <ForceConformanceInForLoopScope/>
+        <TreatWChar_tAsBuiltInType/>
+        <SDLCheck/>
+        <GenerateXMLDocumentationFiles/>
+        <BrowseInformation/>
+        <EnablePREfast/>
+        <MinimalRebuild/>
+        <StringPooling/>
+        <ExpandAttributedSource/>
+        <EnforceTypeConversionRules/>
+        <ErrorReporting/>
+        <DisableLanguageExtensions/>
+        <ProgramDataBaseFileName/>
+        <DisableSpecificWarnings/>
+        <TreatSpecificWarningsAsErrors/>
+        <ForcedUsingFiles/>
+        <PREfastLog/>
+        <PREfastAdditionalOptions/>
+        <PREfastAdditionalPlugins/>
+        <MultiProcessorCompilation/>
+        <UseFullPaths/>
+        <RemoveUnreferencedCodeData/>
+
+        <!-- We can't just unset BasicRuntimeChecks, as that will pass /RTCu to the compiler.
+             We have to explicitly set it to 'Default' to avoid passing anything. -->
+        <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      </ClCompile>
+    </ItemGroup>
+  </Target>
+
+</Project>

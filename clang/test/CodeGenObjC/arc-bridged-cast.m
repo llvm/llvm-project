@@ -27,10 +27,10 @@ void bridge_transfer_from_cf(int *i) {
   // CHECK-NOT: retain
   // CHECK: store i32 13
   (void)(__bridge_transfer id)CFCreateSomething(), *i = 13;
-  // CHECK: call void @objc_release
+  // CHECK: call void @llvm.objc.release
   // CHECK: store i32 17
   *i = 17;
-  // CHECK: call void @objc_release
+  // CHECK: call void @llvm.objc.release
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: call void @llvm.lifetime.end
   // CHECK-NEXT: ret void
@@ -42,7 +42,7 @@ void bridge_from_cf(int *i) {
   *i = 7;
   // CHECK: call i8* @CFCreateSomething()
   id obj1 = (__bridge id)CFCreateSomething();
-  // CHECK: objc_retainAutoreleasedReturnValue
+  // CHECK: llvm.objc.retainAutoreleasedReturnValue
   // CHECK: store i32 11
   *i = 11;
   // CHECK: call i8* @CFCreateSomething()
@@ -51,7 +51,7 @@ void bridge_from_cf(int *i) {
   (void)(__bridge id)CFCreateSomething(), *i = 13;
   // CHECK: store i32 17
   *i = 17;
-  // CHECK: call void @objc_release
+  // CHECK: call void @llvm.objc.release
   // CHECK-NEXT: bitcast
   // CHECK-NEXT: call void @llvm.lifetime.end
   // CHECK-NEXT: ret void
@@ -62,12 +62,12 @@ void bridge_retained_of_cf(int *i) {
   *i = 7;
   // CHECK: call i8* @CreateSomething()
   CFTypeRef cf1 = (__bridge_retained CFTypeRef)CreateSomething();
-  // CHECK-NEXT: call i8* @objc_retainAutoreleasedReturnValue
+  // CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
   // CHECK: store i32 11
   *i = 11;
   // CHECK: call i8* @CreateSomething()
   (__bridge_retained CFTypeRef)CreateSomething(), *i = 13;
-  // CHECK-NEXT: call i8* @objc_retainAutoreleasedReturnValue
+  // CHECK-NEXT: call i8* @llvm.objc.retainAutoreleasedReturnValue
   // CHECK: store i32 13
   // CHECK: store i32 17
   *i = 17;
@@ -99,8 +99,8 @@ void bridge_of_cf(int *i) {
 
 // CHECK-LABEL: define %struct.__CFString* @bridge_of_paren_expr()
 CFStringRef bridge_of_paren_expr() {
-  // CHECK-NOT: call i8* @objc_retainAutoreleasedReturnValue(
-  // CHECK-NOT: call void @objc_release(
+  // CHECK-NOT: call i8* @llvm.objc.retainAutoreleasedReturnValue(
+  // CHECK-NOT: call void @llvm.objc.release(
   CFStringRef r = (__bridge CFStringRef)(CreateNSString());
   r = (__bridge CFStringRef)((NSString *)(CreateNSString()));
   return r;

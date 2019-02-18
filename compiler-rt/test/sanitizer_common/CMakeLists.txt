@@ -3,18 +3,49 @@ set(SANITIZER_COMMON_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(SANITIZER_COMMON_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
 set(SANITIZER_COMMON_TESTSUITES)
 
+# FIXME(dliew): We should switch to COMPILER_RT_SANITIZERS_TO_BUILD instead of
+# the hard coded `SUPPORTED_TOOLS_INIT` list once we know that the other
+# sanitizers work.
+set(SUPPORTED_TOOLS_INIT asan lsan msan tsan ubsan)
 set(SUPPORTED_TOOLS)
-if(CMAKE_SYSTEM_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|SunOS")
-  list(APPEND SUPPORTED_TOOLS asan)
+  foreach(SANITIZER_TOOL ${SUPPORTED_TOOLS_INIT})
+    string(TOUPPER ${SANITIZER_TOOL} SANITIZER_TOOL_UPPER)
+    if (COMPILER_RT_HAS_${SANITIZER_TOOL_UPPER})
+      list(APPEND SUPPORTED_TOOLS ${SANITIZER_TOOL})
+    endif()
+  endforeach()
+
+# FIXME(dliew): Remove this.
+# Temporary helper for https://reviews.llvm.org/D55740
+message(
+  STATUS
+  "Generated Sanitizer SUPPORTED_TOOLS list on \"${CMAKE_SYSTEM_NAME}\" is"
+  " \"${SUPPORTED_TOOLS}\"")
+
+# FIXME(dliew): These tests should be made to work on all platforms.
+# Use the legacy list for now.
+if (ANDROID OR WINDOWS)
+  set(OLD_SUPPORTED_TOOLS ${SUPPORTED_TOOLS})
+  if (ANDROID)
+    set(SUPPORTED_TOOLS asan)
+  elseif (WINDOWS)
+    set(SUPPORTED_TOOLS "")
+  else()
+    message(FATAL_ERROR "Unhandled platform")
+  endif()
+	message(
+		AUTHOR_WARNING
+    "Replacing Sanitizer SUPPORTED_TOOLS list (${OLD_SUPPORTED_TOOLS}) with "
+    "\"${SUPPORTED_TOOLS}\"")
+  unset(OLD_SUPPORTED_TOOLS)
 endif()
-if(CMAKE_SYSTEM_NAME MATCHES "NetBSD" OR (CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT ANDROID))
-  list(APPEND SUPPORTED_TOOLS tsan)
-  list(APPEND SUPPORTED_TOOLS msan)
-  list(APPEND SUPPORTED_TOOLS ubsan)
-endif()
-if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT ANDROID)
-  list(APPEND SUPPORTED_TOOLS lsan)
-endif()
+
+# FIXME(dliew): Remove this.
+# Temporary helper for https://reviews.llvm.org/D55740
+message(
+  STATUS
+  "sanitizer_common tests on \"${CMAKE_SYSTEM_NAME}\" will run against "
+  "\"${SUPPORTED_TOOLS}\"")
 
 # Create a separate config for each tool we support.
 foreach(tool ${SUPPORTED_TOOLS})
@@ -27,6 +58,8 @@ foreach(tool ${SUPPORTED_TOOLS})
     darwin_filter_host_archs(${tool_toupper}_SUPPORTED_ARCH TEST_ARCH)
   endif()
 
+  # TODO(dliew): We should iterate over the different
+  # Apple platforms, not just macOS.
   foreach(arch ${TEST_ARCH})
     set(SANITIZER_COMMON_LIT_TEST_MODE ${tool})
     set(SANITIZER_COMMON_TEST_TARGET_ARCH ${arch})
@@ -35,8 +68,14 @@ foreach(tool ${SUPPORTED_TOOLS})
     configure_lit_site_cfg(
       ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
       ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
-    list(APPEND SANITIZER_COMMON_TESTSUITES
-         ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+    # FIXME(dliew): LSan i386 on Darwin is completly broken right now.
+    # so don't run the tests by default.
+    if (NOT (CMAKE_SYSTEM_NAME MATCHES "Darwin" AND
+             ${tool} STREQUAL "lsan" AND
+             ${arch} STREQUAL "i386"))
+      list(APPEND SANITIZER_COMMON_TESTSUITES
+           ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
+    endif()
   endforeach()
 endforeach()
 

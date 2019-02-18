@@ -12,9 +12,7 @@ add_clang_executable(c-index-test
 
 set(INDEXSTORE_LIB)
 set(CINDEXTEST_LIBS)
-if(APPLE)
-  set(INDEXSTORE_LIB IndexStore)
-endif()
+set(INDEXSTORE_LIB IndexStore)
 
 if(NOT MSVC)
   set_property(

@@ -4,8 +4,9 @@ set(LLVM_LINK_COMPONENTS
   DebugInfoPDB
   )
 
-add_llvm_unittest(DebugInfoPDBTests
+add_llvm_unittest_with_input_files(DebugInfoPDBTests
   HashTableTest.cpp
+  NativeSymbolReuseTest.cpp
   StringTableBuilderTest.cpp
   PDBApiTest.cpp
   )

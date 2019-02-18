@@ -28,7 +28,14 @@
 ; CHECK:      DW_TAG_variable
 ; CHECK:      DW_AT_location [DW_FORM_sec_offset] ({{.*}}
 ; CHECK-NEXT:   [{{0x.*}}, {{0x.*}}): DW_OP_reg0 RAX
-; CHECK-NEXT:   [{{0x.*}}, {{0x.*}}): DW_OP_breg7 RSP+4, DW_OP_deref)
+;
+; Note: This is a location, so we don't want an extra DW_OP_deref at the end.
+; LLDB gets the location right without it:
+;     Variable:  ... name = "val", type = "int", location =  [rsp+4], decl = frame.c:10
+; Adding the deref actually creates an invalid location:
+;     ... [rsp+4] DW_OP_deref
+;
+; CHECK-NEXT:   [{{0x.*}}, {{0x.*}}): DW_OP_breg7 RSP+4)
 ; CHECK-NEXT: DW_AT_name {{.*}}"val"
 
 ; ModuleID = 'frame.c'

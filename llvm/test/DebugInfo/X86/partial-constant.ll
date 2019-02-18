@@ -18,7 +18,7 @@
 ; CHECK-NOT: DW_AT_const_value
 ; CHECK: .debug_loc contents:
 ; CHECK-NEXT: 0x00000000:
-; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x1, DW_OP_stack_value
+; CHECK-NEXT:   {{.*}}: DW_OP_lit1, DW_OP_stack_value
 
 source_filename = "test.ii"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

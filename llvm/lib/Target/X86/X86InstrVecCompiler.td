@@ -13,126 +13,42 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// No op bitconverts
-//===----------------------------------------------------------------------===//
-
-// Bitcasts between 128-bit vector types. Return the original type since
-// no instruction is needed for the conversion
-def : Pat<(v2i64 (bitconvert (v4i32 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v8i16 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v16i8 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v2f64 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v2i64 (bitconvert (v4f32 VR128:$src))), (v2i64 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v2i64 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v8i16 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v16i8 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v2f64 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v4i32 (bitconvert (v4f32 VR128:$src))), (v4i32 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v2i64 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v4i32 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v16i8 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v2f64 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v8i16 (bitconvert (v4f32 VR128:$src))), (v8i16 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v2i64 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v4i32 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v8i16 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v2f64 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v16i8 (bitconvert (v4f32 VR128:$src))), (v16i8 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v2i64 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v4i32 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v8i16 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v16i8 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v4f32 (bitconvert (v2f64 VR128:$src))), (v4f32 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v2i64 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v4i32 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v8i16 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v16i8 VR128:$src))), (v2f64 VR128:$src)>;
-def : Pat<(v2f64 (bitconvert (v4f32 VR128:$src))), (v2f64 VR128:$src)>;
-
-// Bitcasts between 256-bit vector types. Return the original type since
-// no instruction is needed for the conversion
-def : Pat<(v4i64  (bitconvert (v8i32  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v16i16 VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v32i8  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v8f32  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v4i64  (bitconvert (v4f64  VR256:$src))), (v4i64  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v4i64  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v16i16 VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v32i8  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v4f64  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v8i32  (bitconvert (v8f32  VR256:$src))), (v8i32  VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v4i64  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v8i32  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v32i8  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v4f64  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v16i16 (bitconvert (v8f32  VR256:$src))), (v16i16 VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v4i64  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v8i32  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v16i16 VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v4f64  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v32i8  (bitconvert (v8f32  VR256:$src))), (v32i8  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v4i64  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v8i32  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v16i16 VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v32i8  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v8f32  (bitconvert (v4f64  VR256:$src))), (v8f32  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v4i64  VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v8i32  VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v16i16 VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v32i8  VR256:$src))), (v4f64  VR256:$src)>;
-def : Pat<(v4f64  (bitconvert (v8f32  VR256:$src))), (v4f64  VR256:$src)>;
-
-// Bitcasts between 512-bit vector types. Return the original type since
-// no instruction is needed for the conversion.
-def : Pat<(v8f64  (bitconvert (v8i64  VR512:$src))), (v8f64  VR512:$src)>;
-def : Pat<(v8f64  (bitconvert (v16i32 VR512:$src))), (v8f64  VR512:$src)>;
-def : Pat<(v8f64  (bitconvert (v32i16 VR512:$src))), (v8f64  VR512:$src)>;
-def : Pat<(v8f64  (bitconvert (v64i8  VR512:$src))), (v8f64  VR512:$src)>;
-def : Pat<(v8f64  (bitconvert (v16f32 VR512:$src))), (v8f64  VR512:$src)>;
-def : Pat<(v16f32 (bitconvert (v8i64  VR512:$src))), (v16f32 VR512:$src)>;
-def : Pat<(v16f32 (bitconvert (v16i32 VR512:$src))), (v16f32 VR512:$src)>;
-def : Pat<(v16f32 (bitconvert (v32i16 VR512:$src))), (v16f32 VR512:$src)>;
-def : Pat<(v16f32 (bitconvert (v64i8  VR512:$src))), (v16f32 VR512:$src)>;
-def : Pat<(v16f32 (bitconvert (v8f64  VR512:$src))), (v16f32 VR512:$src)>;
-def : Pat<(v8i64  (bitconvert (v16i32 VR512:$src))), (v8i64  VR512:$src)>;
-def : Pat<(v8i64  (bitconvert (v32i16 VR512:$src))), (v8i64  VR512:$src)>;
-def : Pat<(v8i64  (bitconvert (v64i8  VR512:$src))), (v8i64  VR512:$src)>;
-def : Pat<(v8i64  (bitconvert (v8f64  VR512:$src))), (v8i64  VR512:$src)>;
-def : Pat<(v8i64  (bitconvert (v16f32 VR512:$src))), (v8i64  VR512:$src)>;
-def : Pat<(v16i32 (bitconvert (v8i64  VR512:$src))), (v16i32 VR512:$src)>;
-def : Pat<(v16i32 (bitconvert (v16f32 VR512:$src))), (v16i32 VR512:$src)>;
-def : Pat<(v16i32 (bitconvert (v32i16 VR512:$src))), (v16i32 VR512:$src)>;
-def : Pat<(v16i32 (bitconvert (v64i8  VR512:$src))), (v16i32 VR512:$src)>;
-def : Pat<(v16i32 (bitconvert (v8f64  VR512:$src))), (v16i32 VR512:$src)>;
-def : Pat<(v32i16 (bitconvert (v8i64  VR512:$src))), (v32i16 VR512:$src)>;
-def : Pat<(v32i16 (bitconvert (v16i32 VR512:$src))), (v32i16 VR512:$src)>;
-def : Pat<(v32i16 (bitconvert (v64i8  VR512:$src))), (v32i16 VR512:$src)>;
-def : Pat<(v32i16 (bitconvert (v8f64  VR512:$src))), (v32i16 VR512:$src)>;
-def : Pat<(v32i16 (bitconvert (v16f32 VR512:$src))), (v32i16 VR512:$src)>;
-def : Pat<(v64i8  (bitconvert (v8i64  VR512:$src))), (v64i8  VR512:$src)>;
-def : Pat<(v64i8  (bitconvert (v16i32 VR512:$src))), (v64i8  VR512:$src)>;
-def : Pat<(v64i8  (bitconvert (v32i16 VR512:$src))), (v64i8  VR512:$src)>;
-def : Pat<(v64i8  (bitconvert (v8f64  VR512:$src))), (v64i8  VR512:$src)>;
-def : Pat<(v64i8  (bitconvert (v16f32 VR512:$src))), (v64i8  VR512:$src)>;
-
-
-//===----------------------------------------------------------------------===//
 //  Non-instruction patterns
 //===----------------------------------------------------------------------===//
 
-// A vector extract of the first f32/f64 position is a subregister copy
-def : Pat<(f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
-          (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32)>;
-def : Pat<(f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
-          (COPY_TO_REGCLASS (v2f64 VR128:$src), FR64)>;
+let Predicates = [NoAVX512] in {
+  // A vector extract of the first f32/f64 position is a subregister copy
+  def : Pat<(f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32)>;
+  def : Pat<(f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v2f64 VR128:$src), FR64)>;
+}
 
-// Implicitly promote a 32-bit scalar to a vector.
-def : Pat<(v4f32 (scalar_to_vector FR32:$src)),
-          (COPY_TO_REGCLASS FR32:$src, VR128)>;
-// Implicitly promote a 64-bit scalar to a vector.
-def : Pat<(v2f64 (scalar_to_vector FR64:$src)),
-          (COPY_TO_REGCLASS FR64:$src, VR128)>;
+let Predicates = [HasAVX512] in {
+  // A vector extract of the first f32/f64 position is a subregister copy
+  def : Pat<(f32 (extractelt (v4f32 VR128X:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X)>;
+  def : Pat<(f64 (extractelt (v2f64 VR128X:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v2f64 VR128X:$src), FR64X)>;
+}
 
+let Predicates = [NoVLX] in {
+  // Implicitly promote a 32-bit scalar to a vector.
+  def : Pat<(v4f32 (scalar_to_vector FR32:$src)),
+            (COPY_TO_REGCLASS FR32:$src, VR128)>;
+  // Implicitly promote a 64-bit scalar to a vector.
+  def : Pat<(v2f64 (scalar_to_vector FR64:$src)),
+            (COPY_TO_REGCLASS FR64:$src, VR128)>;
+}
+
+let Predicates = [HasVLX] in {
+  // Implicitly promote a 32-bit scalar to a vector.
+  def : Pat<(v4f32 (scalar_to_vector FR32X:$src)),
+            (COPY_TO_REGCLASS FR32X:$src, VR128X)>;
+  // Implicitly promote a 64-bit scalar to a vector.
+  def : Pat<(v2f64 (scalar_to_vector FR64X:$src)),
+            (COPY_TO_REGCLASS FR64X:$src, VR128X)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Subvector tricks
@@ -508,4 +424,86 @@ let Predicates = [HasBWI, HasVLX] in {
                                      (v4i1 VK4:$mask), (iPTR 0))),
             (KSHIFTRQri (KSHIFTLQri (COPY_TO_REGCLASS VK4:$mask, VK64),
                                     (i8 60)), (i8 60))>;
+}
+
+//===----------------------------------------------------------------------===//
+// Extra selection patterns for f128, f128mem
+
+// movaps is shorter than movdqa. movaps is in SSE and movdqa is in SSE2.
+let Predicates = [NoAVX] in {
+def : Pat<(alignedstore (f128 VR128:$src), addr:$dst),
+          (MOVAPSmr addr:$dst, VR128:$src)>;
+def : Pat<(store (f128 VR128:$src), addr:$dst),
+          (MOVUPSmr addr:$dst, VR128:$src)>;
+
+def : Pat<(alignedloadf128 addr:$src),
+          (MOVAPSrm addr:$src)>;
+def : Pat<(loadf128 addr:$src),
+          (MOVUPSrm addr:$src)>;
+}
+
+let Predicates = [HasAVX, NoVLX] in {
+def : Pat<(alignedstore (f128 VR128:$src), addr:$dst),
+          (VMOVAPSmr addr:$dst, VR128:$src)>;
+def : Pat<(store (f128 VR128:$src), addr:$dst),
+          (VMOVUPSmr addr:$dst, VR128:$src)>;
+
+def : Pat<(alignedloadf128 addr:$src),
+          (VMOVAPSrm addr:$src)>;
+def : Pat<(loadf128 addr:$src),
+          (VMOVUPSrm addr:$src)>;
+}
+
+let Predicates = [HasVLX] in {
+def : Pat<(alignedstore (f128 VR128X:$src), addr:$dst),
+          (VMOVAPSZ128mr addr:$dst, VR128X:$src)>;
+def : Pat<(store (f128 VR128X:$src), addr:$dst),
+          (VMOVUPSZ128mr addr:$dst, VR128X:$src)>;
+
+def : Pat<(alignedloadf128 addr:$src),
+          (VMOVAPSZ128rm addr:$src)>;
+def : Pat<(loadf128 addr:$src),
+          (VMOVUPSZ128rm addr:$src)>;
+}
+
+let Predicates = [UseSSE1] in {
+// andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
+def : Pat<(f128 (X86fand VR128:$src1, (memopf128 addr:$src2))),
+          (ANDPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fand VR128:$src1, VR128:$src2)),
+          (ANDPSrr VR128:$src1, VR128:$src2)>;
+
+def : Pat<(f128 (X86for VR128:$src1, (memopf128 addr:$src2))),
+          (ORPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86for VR128:$src1, VR128:$src2)),
+          (ORPSrr VR128:$src1, VR128:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128:$src1, (memopf128 addr:$src2))),
+          (XORPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
+          (XORPSrr VR128:$src1, VR128:$src2)>;
+}
+
+let Predicates = [HasAVX] in {
+// andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
+def : Pat<(f128 (X86fand VR128:$src1, (loadf128 addr:$src2))),
+          (VANDPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fand VR128:$src1, VR128:$src2)),
+          (VANDPSrr VR128:$src1, VR128:$src2)>;
+
+def : Pat<(f128 (X86for VR128:$src1, (loadf128 addr:$src2))),
+          (VORPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86for VR128:$src1, VR128:$src2)),
+          (VORPSrr VR128:$src1, VR128:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128:$src1, (loadf128 addr:$src2))),
+          (VXORPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
+          (VXORPSrr VR128:$src1, VR128:$src2)>;
 }

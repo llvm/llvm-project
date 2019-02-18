@@ -9,6 +9,17 @@
 // COFF-DAG: @import_var = external dllimport global i32
 // COFF-DAG: declare dllimport void @import_func()
 
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=MINGW %s
+// MINGW-DAG: @bar = external global i32
+// MINGW-DAG: @weak_bar = extern_weak global i32
+// MINGW-DAG: declare dso_local void @foo()
+// MINGW-DAG: @baz = dso_local global i32 42
+// MINGW-DAG: define dso_local i32* @zed()
+// MINGW-DAG: @thread_var = external dso_local thread_local global i32
+// MINGW-DAG: @local_thread_var = dso_local thread_local global i32 42
+// MINGW-DAG: @import_var = external dllimport global i32
+// MINGW-DAG: declare dllimport void @import_func()
+
 // RUN: %clang_cc1 -triple x86_64-pc-linux -emit-llvm -mrelocation-model static %s -o - | FileCheck -allow-deprecated-dag-overlap --check-prefix=STATIC %s
 // STATIC-DAG: @bar = external dso_local global i32
 // STATIC-DAG: @weak_bar = extern_weak dso_local global i32

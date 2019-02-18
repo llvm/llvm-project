@@ -2,7 +2,9 @@
 ; RUN: llvm-as -o %t/bcsection.bc %s
 
 ; RUN: llvm-mc -I=%t -filetype=obj -triple=x86_64-unknown-unknown -o %t/bcsection.bco %p/Inputs/bcsection.s
-; RUN: llvm-nm -no-llvm-bc %t/bcsection.bco | count 0
+; RUN: llvm-nm -no-llvm-bc %t/bcsection.bco 2>&1 | FileCheck %s -check-prefix=NO-SYMBOLS
+; NO-SYMBOLS: no symbols
+
 ; RUN: %gold -r -o %t/bcsection.o -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext %t/bcsection.bco
 ; RUN: llvm-nm -no-llvm-bc %t/bcsection.o | FileCheck %s
 

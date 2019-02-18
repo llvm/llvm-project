@@ -63,8 +63,9 @@ bool isDescendantOrEqual(const Stmt *Descendant, const Stmt *Ancestor,
 }
 }
 
-ExprSequence::ExprSequence(const CFG *TheCFG, ASTContext *TheContext)
-    : Context(TheContext) {
+ExprSequence::ExprSequence(const CFG *TheCFG, const Stmt *Root,
+                           ASTContext *TheContext)
+    : Context(TheContext), Root(Root) {
   for (const auto &SyntheticStmt : TheCFG->synthetic_stmts()) {
     SyntheticStmtSourceMap[SyntheticStmt.first] = SyntheticStmt.second;
   }
@@ -99,6 +100,11 @@ bool ExprSequence::potentiallyAfter(const Stmt *After,
 
 const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
   for (const Stmt *Parent : getParentStmts(S, Context)) {
+    // If a statement has multiple parents, make sure we're using the parent
+    // that lies within the sub-tree under Root.
+    if (!isDescendantOrEqual(Parent, Root, Context))
+      continue;
+
     if (const auto *BO = dyn_cast<BinaryOperator>(Parent)) {
       // Comma operator: Right-hand side is sequenced after the left-hand side.
       if (BO->getLHS() == S && BO->getOpcode() == BO_Comma)
@@ -139,11 +145,26 @@ const Stmt *ExprSequence::getSequenceSuccessor(const Stmt *S) const {
       if (S == ForRange->getLoopVarStmt())
         return ForRange->getBody();
     } else if (const auto *TheIfStmt = dyn_cast<IfStmt>(Parent)) {
-      // If statement: If a variable is declared inside the condition, the
-      // expression used to initialize the variable is sequenced before the
-      // evaluation of the condition.
+      // If statement:
+      // - Sequence init statement before variable declaration.
+      // - Sequence variable declaration (along with the expression used to
+      //   initialize it) before the evaluation of the condition.
+      if (S == TheIfStmt->getInit())
+        return TheIfStmt->getConditionVariableDeclStmt();
       if (S == TheIfStmt->getConditionVariableDeclStmt())
         return TheIfStmt->getCond();
+    } else if (const auto *TheSwitchStmt = dyn_cast<SwitchStmt>(Parent)) {
+      // Ditto for switch statements.
+      if (S == TheSwitchStmt->getInit())
+        return TheSwitchStmt->getConditionVariableDeclStmt();
+      if (S == TheSwitchStmt->getConditionVariableDeclStmt())
+        return TheSwitchStmt->getCond();
+    } else if (const auto *TheWhileStmt = dyn_cast<WhileStmt>(Parent)) {
+      // While statement: Sequence variable declaration (along with the
+      // expression used to initialize it) before the evaluation of the
+      // condition.
+      if (S == TheWhileStmt->getConditionVariableDeclStmt())
+        return TheWhileStmt->getCond();
     }
   }
 

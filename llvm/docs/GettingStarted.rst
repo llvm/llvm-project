@@ -838,7 +838,7 @@ To configure LLVM, follow these steps:
 
    .. code-block:: console
 
-     % cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=prefix=/install/path
+     % cmake -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX=/install/path
        [other options] SRC_ROOT
 
 Compiling the LLVM Suite Source Code
@@ -1204,15 +1204,6 @@ because they are code generators for parts of the infrastructure.
   passes to it a regular expression provided on ``llvmgrep``'s command
   line. This is an efficient way of searching the source base for a
   particular regular expression.
-
-``makellvm``
-
-  Compiles all files in the current directory, then
-  compiles and links the tool that is the first argument. For example, assuming
-  you are in  ``llvm/lib/Target/Sparc``, if ``makellvm`` is in your
-  path,  running ``makellvm llc`` will make a build of the current
-  directory, switch to directory ``llvm/tools/llc`` and build it, causing a
-  re-linking of LLC.
 
 ``TableGen/``
 

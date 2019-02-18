@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(bool);
 
@@ -132,18 +132,21 @@ void testInvalidationThroughBaseRegionPointer() {
   PlainStruct s1;
   s1.x = 1;
   s1.z = 1;
+  s1.y = 1;
   clang_analyzer_eval(s1.x == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(s1.z == 1); // expected-warning{{TRUE}}
   // Not only passing a structure pointer through const pointer parameter,
   // but also passing a field pointer through const pointer parameter
   // should preserve the contents of the structure.
   useAnythingConst(&(s1.y));
+  clang_analyzer_eval(s1.y == 1); // expected-warning{{TRUE}}
   clang_analyzer_eval(s1.x == 1); // expected-warning{{TRUE}}
   // FIXME: Should say "UNKNOWN", because it is not uncommon to
   // modify a mutable member variable through const pointer.
   clang_analyzer_eval(s1.z == 1); // expected-warning{{TRUE}}
   useAnything(&(s1.y));
-  clang_analyzer_eval(s1.x == 1); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(s1.x == 1); // expected-warning{{TRUE}}
+  clang_analyzer_eval(s1.y == 1); // expected-warning{{UNKNOWN}}
 }
 
 

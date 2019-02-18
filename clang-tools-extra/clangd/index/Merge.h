@@ -1,29 +1,54 @@
-//===--- Merge.h ------------------------------------------------*- C++-*-===//
+//===--- Merge.h -------------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MERGE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MERGE_H
+
 #include "Index.h"
+
 namespace clang {
 namespace clangd {
 
 // Merge symbols L and R, preferring data from L in case of conflict.
 // The two symbols must have the same ID.
 // Returned symbol may contain data owned by either source.
-Symbol mergeSymbol(const Symbol &L, const Symbol &R, Symbol::Details *Scratch);
+Symbol mergeSymbol(const Symbol &L, const Symbol &R);
 
-// mergedIndex returns a composite index based on two provided Indexes:
+// MergedIndex is a composite index based on two provided Indexes:
 //  - the Dynamic index covers few files, but is relatively up-to-date.
 //  - the Static index covers a bigger set of files, but is relatively stale.
 // The returned index attempts to combine results, and avoid duplicates.
-std::unique_ptr<SymbolIndex> mergeIndex(const SymbolIndex *Dynamic,
-                                        const SymbolIndex *Static);
+//
+// FIXME: We don't have a mechanism in Index to track deleted symbols and
+// refs in dirty files, so the merged index may return stale symbols
+// and refs from Static index.
+class MergedIndex : public SymbolIndex {
+  const SymbolIndex *Dynamic, *Static;
+
+public:
+  // The constructor does not access the symbols.
+  // It's safe to inherit from this class and pass pointers to derived members.
+  MergedIndex(const SymbolIndex *Dynamic, const SymbolIndex *Static)
+      : Dynamic(Dynamic), Static(Static) {}
+
+  bool fuzzyFind(const FuzzyFindRequest &,
+                 llvm::function_ref<void(const Symbol &)>) const override;
+  void lookup(const LookupRequest &,
+              llvm::function_ref<void(const Symbol &)>) const override;
+  void refs(const RefsRequest &,
+            llvm::function_ref<void(const Ref &)>) const override;
+  size_t estimateMemoryUsage() const override {
+    return Dynamic->estimateMemoryUsage() + Static->estimateMemoryUsage();
+  }
+};
 
 } // namespace clangd
 } // namespace clang
-#endif
+
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MERGE_H

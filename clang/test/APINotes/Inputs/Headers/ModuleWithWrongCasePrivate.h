@@ -1,1 +1,1 @@
-extern int ModuleWithWrongCase;
+extern int ModuleWithWrongCasePrivate;

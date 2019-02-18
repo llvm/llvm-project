@@ -20,12 +20,83 @@
 namespace llvm {
 namespace orc {
 
+/// SymbolResolver is a composable interface for looking up symbol flags
+///        and addresses using the AsynchronousSymbolQuery type. It will
+///        eventually replace the LegacyJITSymbolResolver interface as the
+///        stardard ORC symbol resolver type.
+///
+/// FIXME: SymbolResolvers should go away and be replaced with VSOs with
+///        defenition generators.
+class SymbolResolver {
+public:
+  virtual ~SymbolResolver() = default;
+
+  /// Returns the subset of the given symbols that the caller is responsible for
+  /// materializing.
+  virtual SymbolNameSet getResponsibilitySet(const SymbolNameSet &Symbols) = 0;
+
+  /// For each symbol in Symbols that can be found, assigns that symbols
+  /// value in Query. Returns the set of symbols that could not be found.
+  virtual SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
+                               SymbolNameSet Symbols) = 0;
+
+private:
+  virtual void anchor();
+};
+
+/// Implements SymbolResolver with a pair of supplied function objects
+///        for convenience. See createSymbolResolver.
+template <typename GetResponsibilitySetFn, typename LookupFn>
+class LambdaSymbolResolver final : public SymbolResolver {
+public:
+  template <typename GetResponsibilitySetFnRef, typename LookupFnRef>
+  LambdaSymbolResolver(GetResponsibilitySetFnRef &&GetResponsibilitySet,
+                       LookupFnRef &&Lookup)
+      : GetResponsibilitySet(
+            std::forward<GetResponsibilitySetFnRef>(GetResponsibilitySet)),
+        Lookup(std::forward<LookupFnRef>(Lookup)) {}
+
+  SymbolNameSet getResponsibilitySet(const SymbolNameSet &Symbols) final {
+    return GetResponsibilitySet(Symbols);
+  }
+
+  SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
+                       SymbolNameSet Symbols) final {
+    return Lookup(std::move(Query), std::move(Symbols));
+  }
+
+private:
+  GetResponsibilitySetFn GetResponsibilitySet;
+  LookupFn Lookup;
+};
+
+/// Creates a SymbolResolver implementation from the pair of supplied
+///        function objects.
+template <typename GetResponsibilitySetFn, typename LookupFn>
+std::unique_ptr<LambdaSymbolResolver<
+    typename std::remove_cv<
+        typename std::remove_reference<GetResponsibilitySetFn>::type>::type,
+    typename std::remove_cv<
+        typename std::remove_reference<LookupFn>::type>::type>>
+createSymbolResolver(GetResponsibilitySetFn &&GetResponsibilitySet,
+                     LookupFn &&Lookup) {
+  using LambdaSymbolResolverImpl = LambdaSymbolResolver<
+      typename std::remove_cv<
+          typename std::remove_reference<GetResponsibilitySetFn>::type>::type,
+      typename std::remove_cv<
+          typename std::remove_reference<LookupFn>::type>::type>;
+  return llvm::make_unique<LambdaSymbolResolverImpl>(
+      std::forward<GetResponsibilitySetFn>(GetResponsibilitySet),
+      std::forward<LookupFn>(Lookup));
+}
+
+/// Legacy adapter. Remove once we kill off the old ORC layers.
 class JITSymbolResolverAdapter : public JITSymbolResolver {
 public:
   JITSymbolResolverAdapter(ExecutionSession &ES, SymbolResolver &R,
                            MaterializationResponsibility *MR);
-  Expected<LookupFlagsResult> lookupFlags(const LookupSet &Symbols) override;
-  Expected<LookupResult> lookup(const LookupSet &Symbols) override;
+  Expected<LookupSet> getResponsibilitySet(const LookupSet &Symbols) override;
+  void lookup(const LookupSet &Symbols, OnResolvedFunction OnResolved) override;
 
 private:
   ExecutionSession &ES;
@@ -34,30 +105,29 @@ private:
   MaterializationResponsibility *MR;
 };
 
-/// Use the given legacy-style FindSymbol function (i.e. a function that
-///        takes a const std::string& or StringRef and returns a JITSymbol) to
-///        find the flags for each symbol in Symbols and store their flags in
-///        SymbolFlags. If any JITSymbol returned by FindSymbol is in an error
-///        state the function returns immediately with that error, otherwise it
-///        returns the set of symbols not found.
+/// Use the given legacy-style FindSymbol function (i.e. a function that takes
+/// a const std::string& or StringRef and returns a JITSymbol) to get the
+/// subset of symbols that the caller is responsible for materializing. If any
+/// JITSymbol returned by FindSymbol is in an error state the function returns
+/// immediately with that error.
 ///
-/// Useful for implementing lookupFlags bodies that query legacy resolvers.
+/// Useful for implementing getResponsibilitySet bodies that query legacy
+/// resolvers.
 template <typename FindSymbolFn>
-Expected<SymbolNameSet> lookupFlagsWithLegacyFn(SymbolFlagsMap &SymbolFlags,
-                                                const SymbolNameSet &Symbols,
-                                                FindSymbolFn FindSymbol) {
-  SymbolNameSet SymbolsNotFound;
+Expected<SymbolNameSet>
+getResponsibilitySetWithLegacyFn(const SymbolNameSet &Symbols,
+                                 FindSymbolFn FindSymbol) {
+  SymbolNameSet Result;
 
   for (auto &S : Symbols) {
-    if (JITSymbol Sym = FindSymbol(*S))
-      SymbolFlags[S] = Sym.getFlags();
-    else if (auto Err = Sym.takeError())
+    if (JITSymbol Sym = FindSymbol(*S)) {
+      if (!Sym.getFlags().isStrong())
+        Result.insert(S);
+    } else if (auto Err = Sym.takeError())
       return std::move(Err);
-    else
-      SymbolsNotFound.insert(S);
   }
 
-  return SymbolsNotFound;
+  return Result;
 }
 
 /// Use the given legacy-style FindSymbol function (i.e. a function that
@@ -83,11 +153,11 @@ lookupWithLegacyFn(ExecutionSession &ES, AsynchronousSymbolQuery &Query,
         Query.notifySymbolReady();
         NewSymbolsResolved = true;
       } else {
-        ES.failQuery(Query, Addr.takeError());
+        ES.legacyFailQuery(Query, Addr.takeError());
         return SymbolNameSet();
       }
     } else if (auto Err = Sym.takeError()) {
-      ES.failQuery(Query, std::move(Err));
+      ES.legacyFailQuery(Query, std::move(Err));
       return SymbolNameSet();
     } else
       SymbolsNotFound.insert(S);
@@ -114,14 +184,13 @@ public:
       : ES(ES), LegacyLookup(std::move(LegacyLookup)),
         ReportError(std::move(ReportError)) {}
 
-  SymbolNameSet lookupFlags(SymbolFlagsMap &Flags,
-                            const SymbolNameSet &Symbols) final {
-    if (auto RemainingSymbols =
-            lookupFlagsWithLegacyFn(Flags, Symbols, LegacyLookup))
-      return std::move(*RemainingSymbols);
+  SymbolNameSet getResponsibilitySet(const SymbolNameSet &Symbols) final {
+    if (auto ResponsibilitySet =
+            getResponsibilitySetWithLegacyFn(Symbols, LegacyLookup))
+      return std::move(*ResponsibilitySet);
     else {
-      ReportError(RemainingSymbols.takeError());
-      return Symbols;
+      ReportError(ResponsibilitySet.takeError());
+      return SymbolNameSet();
     }
   }
 

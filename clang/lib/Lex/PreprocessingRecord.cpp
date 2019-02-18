@@ -67,7 +67,7 @@ PreprocessingRecord::getPreprocessedEntitiesInRange(SourceRange Range) {
   }
 
   std::pair<int, int> Res = getPreprocessedEntitiesInRangeSlow(Range);
-  
+
   CachedRangeQuery.Range = Range;
   CachedRangeQuery.Result = Res;
 
@@ -138,28 +138,28 @@ std::pair<int, int>
 PreprocessingRecord::getPreprocessedEntitiesInRangeSlow(SourceRange Range) {
   assert(Range.isValid());
   assert(!SourceMgr.isBeforeInTranslationUnit(Range.getEnd(),Range.getBegin()));
-  
+
   std::pair<unsigned, unsigned>
     Local = findLocalPreprocessedEntitiesInRange(Range);
-  
+
   // Check if range spans local entities.
   if (!ExternalSource || SourceMgr.isLocalSourceLocation(Range.getBegin()))
     return std::make_pair(Local.first, Local.second);
-  
+
   std::pair<unsigned, unsigned>
     Loaded = ExternalSource->findPreprocessedEntitiesInRange(Range);
-  
+
   // Check if range spans local entities.
   if (Loaded.first == Loaded.second)
     return std::make_pair(Local.first, Local.second);
-  
+
   unsigned TotalLoaded = LoadedPreprocessedEntities.size();
-  
+
   // Check if range spans loaded entities.
   if (Local.first == Local.second)
     return std::make_pair(int(Loaded.first)-TotalLoaded,
                           int(Loaded.second)-TotalLoaded);
-  
+
   // Range spands loaded and local entities.
   return std::make_pair(int(Loaded.first)-TotalLoaded, Local.second);
 }
@@ -324,26 +324,9 @@ void PreprocessingRecord::SetExternalSource(
 
 unsigned PreprocessingRecord::allocateLoadedEntities(unsigned NumEntities) {
   unsigned Result = LoadedPreprocessedEntities.size();
-  LoadedPreprocessedEntities.resize(LoadedPreprocessedEntities.size() 
+  LoadedPreprocessedEntities.resize(LoadedPreprocessedEntities.size()
                                     + NumEntities);
   return Result;
-}
-
-unsigned PreprocessingRecord::allocateSkippedRanges(unsigned NumRanges) {
-  unsigned Result = SkippedRanges.size();
-  SkippedRanges.resize(SkippedRanges.size() + NumRanges);
-  SkippedRangesAllLoaded = false;
-  return Result;
-}
-
-void PreprocessingRecord::ensureSkippedRangesLoaded() {
-  if (SkippedRangesAllLoaded || !ExternalSource)
-    return;
-  for (unsigned Index = 0; Index != SkippedRanges.size(); ++Index) {
-    if (SkippedRanges[Index].isInvalid())
-      SkippedRanges[Index] = ExternalSource->ReadSkippedRange(Index);
-  }
-  SkippedRangesAllLoaded = true;
 }
 
 void PreprocessingRecord::RegisterMacroDefinition(MacroInfo *Macro,
@@ -371,7 +354,7 @@ PreprocessedEntity *PreprocessingRecord::getPreprocessedEntity(PPEntityID PPID){
 /// Retrieve the loaded preprocessed entity at the given index.
 PreprocessedEntity *
 PreprocessingRecord::getLoadedPreprocessedEntity(unsigned Index) {
-  assert(Index < LoadedPreprocessedEntities.size() && 
+  assert(Index < LoadedPreprocessedEntities.size() &&
          "Out-of bounds loaded preprocessed entity");
   assert(ExternalSource && "No external source to load from");
   PreprocessedEntity *&Entity = LoadedPreprocessedEntities[Index];
@@ -435,7 +418,6 @@ void PreprocessingRecord::Defined(const Token &MacroNameTok,
 
 void PreprocessingRecord::SourceRangeSkipped(SourceRange Range,
                                              SourceLocation EndifLoc) {
-  assert(Range.isValid());
   SkippedRanges.emplace_back(Range.getBegin(), EndifLoc);
 }
 
@@ -471,27 +453,27 @@ void PreprocessingRecord::InclusionDirective(
     const FileEntry *File,
     StringRef SearchPath,
     StringRef RelativePath,
-    const Module *Imported, 
+    const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   InclusionDirective::InclusionKind Kind = InclusionDirective::Include;
-  
+
   switch (IncludeTok.getIdentifierInfo()->getPPKeywordID()) {
-  case tok::pp_include: 
-    Kind = InclusionDirective::Include; 
+  case tok::pp_include:
+    Kind = InclusionDirective::Include;
     break;
-    
-  case tok::pp_import: 
-    Kind = InclusionDirective::Import; 
+
+  case tok::pp_import:
+    Kind = InclusionDirective::Import;
     break;
-    
-  case tok::pp_include_next: 
-    Kind = InclusionDirective::IncludeNext; 
+
+  case tok::pp_include_next:
+    Kind = InclusionDirective::IncludeNext;
     break;
-    
-  case tok::pp___include_macros: 
+
+  case tok::pp___include_macros:
     Kind = InclusionDirective::IncludeMacros;
     break;
-    
+
   default:
     llvm_unreachable("Unknown include directive kind");
   }
@@ -516,6 +498,5 @@ size_t PreprocessingRecord::getTotalMemory() const {
   return BumpAlloc.getTotalMemory()
     + llvm::capacity_in_bytes(MacroDefinitions)
     + llvm::capacity_in_bytes(PreprocessedEntities)
-    + llvm::capacity_in_bytes(LoadedPreprocessedEntities)
-    + llvm::capacity_in_bytes(SkippedRanges);
+    + llvm::capacity_in_bytes(LoadedPreprocessedEntities);
 }

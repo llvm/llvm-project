@@ -25,6 +25,7 @@ using namespace llvm;
 // Out of line virtual method.
 void MachineModuleInfoMachO::anchor() {}
 void MachineModuleInfoELF::anchor() {}
+void MachineModuleInfoCOFF::anchor() {}
 
 using PairTy = std::pair<MCSymbol *, MachineModuleInfoImpl::StubValueTy>;
 static int SortSymbolPair(const PairTy *LHS, const PairTy *RHS) {

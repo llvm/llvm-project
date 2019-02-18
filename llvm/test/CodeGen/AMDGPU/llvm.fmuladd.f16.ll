@@ -49,7 +49,7 @@ define amdgpu_kernel void @fmuladd_f16(
 ; VI-FLUSH: v_mac_f16_e32 v[[C_F16]], 0x4200, v[[B_F16]]
 ; VI-FLUSH: buffer_store_short v[[C_F16]]
 
-; VI-DENORM: v_mov_b32_e32 [[KA:v[0-9]+]], 0x4200
+; VI-DENORM: s_movk_i32 [[KA:s[0-9]+]], 0x4200
 ; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], v[[B_F16]], [[KA]], v[[C_F16]]
 ; VI-DENORM: buffer_store_short [[RESULT]]
 
@@ -77,7 +77,7 @@ define amdgpu_kernel void @fmuladd_f16_imm_a(
 ; VI-FLUSH: v_mac_f16_e32 v[[C_F16]], 0x4200, v[[A_F16]]
 ; VI-FLUSH: buffer_store_short v[[C_F16]]
 
-; VI-DENORM: v_mov_b32_e32 [[KA:v[0-9]+]], 0x4200
+; VI-DENORM: s_movk_i32 [[KA:s[0-9]+]], 0x4200
 ; VI-DENORM: v_fma_f16 [[RESULT:v[0-9]+]], v[[A_F16]], [[KA]], v[[C_F16]]
 ; VI-DENORM buffer_store_short [[RESULT]]
 

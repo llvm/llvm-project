@@ -1,4 +1,10 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc -analyzer-store=region -verify -analyzer-config unix.Malloc:Optimistic=true %s
+// RUN: %clang_analyze_cc1 -analyzer-store=region -verify \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
+// RUN:   -analyzer-checker=alpha.core.CastSize \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true %s
+
 typedef __typeof(sizeof(int)) size_t;
 void *malloc(size_t);
 void free(void *);

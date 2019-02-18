@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=2 < %s | FileCheck %s
+; RUN: llc -march=hexagon -hexagon-initial-cfg-cleanup=0 -enable-pipeliner -pipeliner-max-stages=2 < %s | FileCheck %s
 
 ; Check that the pipelined code uses the proper address in the
 ; prolog and the kernel. The bug occurs when the address computation

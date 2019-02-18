@@ -32,6 +32,7 @@ namespace llvm {
 class LegalizerInfo;
 class Legalizer;
 class MachineRegisterInfo;
+class GISelChangeObserver;
 
 class LegalizerHelper {
 public:
@@ -48,7 +49,9 @@ public:
     UnableToLegalize,
   };
 
-  LegalizerHelper(MachineFunction &MF);
+  LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer);
+  LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
+                  GISelChangeObserver &Observer);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -112,8 +115,12 @@ private:
   void extractParts(unsigned Reg, LLT Ty, int NumParts,
                     SmallVectorImpl<unsigned> &VRegs);
 
+  LegalizeResult lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
+  /// To keep track of changes made by the LegalizerHelper.
+  GISelChangeObserver &Observer;
 };
 
 /// Helper function that creates the given libcall.

@@ -1,5 +1,14 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,unix.MismatchedDeallocator -std=c++11 -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete,cplusplus.NewDeleteLeaks,unix.MismatchedDeallocator -DLEAKS -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-checker=unix.MismatchedDeallocator
+//
+// RUN: %clang_analyze_cc1 -std=c++11 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
+// RUN:   -analyzer-checker=unix.MismatchedDeallocator
+
 // expected-no-diagnostics
 
 typedef __typeof(sizeof(int)) size_t;

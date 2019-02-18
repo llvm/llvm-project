@@ -59,11 +59,15 @@ public:
   MinGW(const Driver &D, const llvm::Triple &Triple,
         const llvm::opt::ArgList &Args);
 
+  bool HasNativeLLVMSupport() const override;
+
   bool IsIntegratedAssemblerDefault() const override;
   bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefault() const override;
   bool isPIEDefault() const override;
   bool isPICDefaultForced() const override;
+
+  SanitizerMask getSupportedSanitizers() const override;
 
   llvm::ExceptionHandling GetExceptionModel(
       const llvm::opt::ArgList &Args) const override;
@@ -97,6 +101,8 @@ private:
   void findGccLibDir();
   llvm::ErrorOr<std::string> findGcc();
   llvm::ErrorOr<std::string> findClangRelativeSysroot();
+
+  bool NativeLLVMSupport;
 };
 
 } // end namespace toolchains

@@ -8,23 +8,20 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @vt = external global [3 x i8*]
 
-; CHECK: define i32 (...)* @f0()
-define i32 (...)* @f0() {
-  ; CHECK-NEXT: load i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, inrange i64 0, i64 2) to i32 (...)**)
-  %load = load i32 (...)*, i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, inrange i64 0, i64 1) to i32 (...)**), i64 1)
-  ret i32 (...)* %load
+; CHECK: define i32 (...)** @f0()
+define i32 (...)** @f0() {
+  ; CHECK-NEXT: ret i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, inrange i64 0, i64 2) to i32 (...)**
+  ret i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, inrange i64 0, i64 1) to i32 (...)**), i64 1)
 }
 
-; CHECK: define i32 (...)* @f1()
-define i32 (...)* @f1() {
-  ; CHECK-NEXT: load i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, i64 0, i64 2) to i32 (...)**)
-  %load = load i32 (...)*, i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, i64 0, inrange i64 1) to i32 (...)**), i64 1)
-  ret i32 (...)* %load
+; CHECK: define i32 (...)** @f1()
+define i32 (...)** @f1() {
+  ; CHECK-NEXT: ret i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, i64 0, inrange i64 1) to i32 (...)**), i64 1)
+  ret i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, i64 0, inrange i64 1) to i32 (...)**), i64 1)
 }
 
-; CHECK: define i32 (...)* @f2()
-define i32 (...)* @f2() {
-  ; CHECK-NEXT: load i32 (...)*, i32 (...)** bitcast (i8** getelementptr ([3 x i8*], [3 x i8*]* @vt, i64 1, i64 1) to i32 (...)**)
-  %load = load i32 (...)*, i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, i64 0, inrange i64 1) to i32 (...)**), i64 3)
-  ret i32 (...)* %load
+; CHECK: define i32 (...)** @f2()
+define i32 (...)** @f2() {
+  ; CHECK-NEXT: ret i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, i64 0, inrange i64 1) to i32 (...)**), i64 3)
+  ret i32 (...)** getelementptr (i32 (...)*, i32 (...)** bitcast (i8** getelementptr inbounds ([3 x i8*], [3 x i8*]* @vt, i64 0, inrange i64 1) to i32 (...)**), i64 3)
 }

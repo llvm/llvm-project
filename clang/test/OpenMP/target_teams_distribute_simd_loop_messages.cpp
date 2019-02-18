@@ -108,8 +108,8 @@ int test_iteration_spaces() {
   for (int i = 0; !!i; i++)
     c[i] = a[i];
 
+// Ok
 #pragma omp target teams distribute simd
-// expected-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}}
   for (int i = 0; i != 1; i++)
     c[i] = a[i];
 

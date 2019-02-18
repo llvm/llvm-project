@@ -10,6 +10,9 @@
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
 
+// Reported deadly signal due to stack-overflow
+// XFAIL: netbsd
+
 #include <signal.h>
 #include <stdio.h>
 #include <sys/types.h>

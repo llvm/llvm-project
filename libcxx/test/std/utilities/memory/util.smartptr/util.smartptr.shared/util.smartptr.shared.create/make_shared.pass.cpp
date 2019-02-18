@@ -19,6 +19,12 @@
 #include "test_macros.h"
 #include "count_new.hpp"
 
+#if TEST_STD_VER >= 11
+#define DELETE_FUNCTION = delete
+#else
+#define DELETE_FUNCTION
+#endif
+
 struct A
 {
     static int count;
@@ -31,6 +37,9 @@ struct A
 
     int get_int() const {return int_;}
     char get_char() const {return char_;}
+
+    A* operator& () DELETE_FUNCTION;
+
 private:
     int int_;
     char char_;

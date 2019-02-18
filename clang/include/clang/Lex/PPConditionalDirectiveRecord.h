@@ -20,12 +20,12 @@
 #include <vector>
 
 namespace clang {
-  
+
 /// Records preprocessor conditional directive regions and allows
 /// querying in which region source locations belong to.
 class PPConditionalDirectiveRecord : public PPCallbacks {
   SourceManager &SourceMgr;
-  
+
   SmallVector<SourceLocation, 6> CondDirectiveStack;
 
   class CondDirectiveLoc {

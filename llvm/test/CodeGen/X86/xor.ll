@@ -44,18 +44,18 @@ define i32 @test3(i32 %a, i32 %b) nounwind  {
 ;
 ; X64-LIN-LABEL: test3:
 ; X64-LIN:       # %bb.0: # %entry
-; X64-LIN-NEXT:    notl %esi
-; X64-LIN-NEXT:    andl %edi, %esi
-; X64-LIN-NEXT:    shrl %esi
 ; X64-LIN-NEXT:    movl %esi, %eax
+; X64-LIN-NEXT:    notl %eax
+; X64-LIN-NEXT:    andl %edi, %eax
+; X64-LIN-NEXT:    shrl %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test3:
 ; X64-WIN:       # %bb.0: # %entry
-; X64-WIN-NEXT:    notl %edx
-; X64-WIN-NEXT:    andl %ecx, %edx
-; X64-WIN-NEXT:    shrl %edx
 ; X64-WIN-NEXT:    movl %edx, %eax
+; X64-WIN-NEXT:    notl %eax
+; X64-WIN-NEXT:    andl %ecx, %eax
+; X64-WIN-NEXT:    shrl %eax
 ; X64-WIN-NEXT:    retq
 entry:
   %tmp1not = xor i32 %b, -2
@@ -84,34 +84,34 @@ define i32 @test4(i32 %a, i32 %b) nounwind  {
 ;
 ; X64-LIN-LABEL: test4:
 ; X64-LIN:       # %bb.0: # %entry
+; X64-LIN-NEXT:    movl %edi, %eax
 ; X64-LIN-NEXT:    .p2align 4, 0x90
 ; X64-LIN-NEXT:  .LBB3_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-LIN-NEXT:    xorl %esi, %edi
-; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    notl %eax
-; X64-LIN-NEXT:    andl %esi, %eax
-; X64-LIN-NEXT:    addl %eax, %eax
-; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    xorl %esi, %eax
+; X64-LIN-NEXT:    movl %eax, %ecx
+; X64-LIN-NEXT:    notl %ecx
+; X64-LIN-NEXT:    andl %esi, %ecx
+; X64-LIN-NEXT:    addl %ecx, %ecx
+; X64-LIN-NEXT:    movl %ecx, %esi
 ; X64-LIN-NEXT:    jne .LBB3_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
-; X64-LIN-NEXT:    movl %edi, %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test4:
 ; X64-WIN:       # %bb.0: # %entry
+; X64-WIN-NEXT:    movl %ecx, %eax
 ; X64-WIN-NEXT:    .p2align 4, 0x90
 ; X64-WIN-NEXT:  .LBB3_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-WIN-NEXT:    xorl %edx, %ecx
-; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    notl %eax
-; X64-WIN-NEXT:    andl %edx, %eax
-; X64-WIN-NEXT:    addl %eax, %eax
-; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    xorl %edx, %eax
+; X64-WIN-NEXT:    movl %eax, %ecx
+; X64-WIN-NEXT:    notl %ecx
+; X64-WIN-NEXT:    andl %edx, %ecx
+; X64-WIN-NEXT:    addl %ecx, %ecx
+; X64-WIN-NEXT:    movl %ecx, %edx
 ; X64-WIN-NEXT:    jne .LBB3_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
-; X64-WIN-NEXT:    movl %ecx, %eax
 ; X64-WIN-NEXT:    retq
 entry:
   br label %bb
@@ -150,38 +150,39 @@ define i16 @test5(i16 %a, i16 %b) nounwind  {
 ;
 ; X64-LIN-LABEL: test5:
 ; X64-LIN:       # %bb.0: # %entry
+; X64-LIN-NEXT:    movl %edi, %eax
 ; X64-LIN-NEXT:    .p2align 4, 0x90
 ; X64-LIN-NEXT:  .LBB4_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-LIN-NEXT:    xorl %esi, %edi
-; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    notl %eax
-; X64-LIN-NEXT:    andl %esi, %eax
-; X64-LIN-NEXT:    addl %eax, %eax
-; X64-LIN-NEXT:    testw %ax, %ax
-; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    xorl %esi, %eax
+; X64-LIN-NEXT:    movl %eax, %ecx
+; X64-LIN-NEXT:    notl %ecx
+; X64-LIN-NEXT:    andl %esi, %ecx
+; X64-LIN-NEXT:    addl %ecx, %ecx
+; X64-LIN-NEXT:    testw %cx, %cx
+; X64-LIN-NEXT:    movl %ecx, %esi
 ; X64-LIN-NEXT:    jne .LBB4_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
-; X64-LIN-NEXT:    movl %edi, %eax
+; X64-LIN-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test5:
 ; X64-WIN:       # %bb.0: # %entry
 ; X64-WIN-NEXT:    # kill: def $dx killed $dx def $edx
-; X64-WIN-NEXT:    # kill: def $cx killed $cx def $ecx
+; X64-WIN-NEXT:    movl %ecx, %eax
 ; X64-WIN-NEXT:    .p2align 4, 0x90
 ; X64-WIN-NEXT:  .LBB4_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-WIN-NEXT:    xorl %edx, %ecx
-; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    notl %eax
-; X64-WIN-NEXT:    andl %edx, %eax
-; X64-WIN-NEXT:    addl %eax, %eax
-; X64-WIN-NEXT:    testw %ax, %ax
-; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    xorl %edx, %eax
+; X64-WIN-NEXT:    movl %eax, %ecx
+; X64-WIN-NEXT:    notl %ecx
+; X64-WIN-NEXT:    andl %edx, %ecx
+; X64-WIN-NEXT:    addl %ecx, %ecx
+; X64-WIN-NEXT:    testw %cx, %cx
+; X64-WIN-NEXT:    movl %ecx, %edx
 ; X64-WIN-NEXT:    jne .LBB4_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
-; X64-WIN-NEXT:    movl %ecx, %eax
+; X64-WIN-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-WIN-NEXT:    retq
 entry:
   br label %bb
@@ -218,34 +219,35 @@ define i8 @test6(i8 %a, i8 %b) nounwind  {
 ;
 ; X64-LIN-LABEL: test6:
 ; X64-LIN:       # %bb.0: # %entry
+; X64-LIN-NEXT:    movl %edi, %eax
 ; X64-LIN-NEXT:    .p2align 4, 0x90
 ; X64-LIN-NEXT:  .LBB5_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-LIN-NEXT:    xorb %sil, %dil
-; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    notb %al
-; X64-LIN-NEXT:    andb %sil, %al
-; X64-LIN-NEXT:    addb %al, %al
-; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    xorb %sil, %al
+; X64-LIN-NEXT:    movl %eax, %ecx
+; X64-LIN-NEXT:    notb %cl
+; X64-LIN-NEXT:    andb %sil, %cl
+; X64-LIN-NEXT:    addb %cl, %cl
+; X64-LIN-NEXT:    movl %ecx, %esi
 ; X64-LIN-NEXT:    jne .LBB5_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
-; X64-LIN-NEXT:    movl %edi, %eax
+; X64-LIN-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test6:
 ; X64-WIN:       # %bb.0: # %entry
+; X64-WIN-NEXT:    movl %ecx, %eax
 ; X64-WIN-NEXT:    .p2align 4, 0x90
 ; X64-WIN-NEXT:  .LBB5_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-WIN-NEXT:    xorb %dl, %cl
-; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    notb %al
-; X64-WIN-NEXT:    andb %dl, %al
-; X64-WIN-NEXT:    addb %al, %al
-; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    xorb %dl, %al
+; X64-WIN-NEXT:    movl %eax, %ecx
+; X64-WIN-NEXT:    notb %cl
+; X64-WIN-NEXT:    andb %dl, %cl
+; X64-WIN-NEXT:    addb %cl, %cl
+; X64-WIN-NEXT:    movl %ecx, %edx
 ; X64-WIN-NEXT:    jne .LBB5_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
-; X64-WIN-NEXT:    movl %ecx, %eax
 ; X64-WIN-NEXT:    retq
 entry:
   br label %bb
@@ -282,34 +284,34 @@ define i32 @test7(i32 %a, i32 %b) nounwind  {
 ;
 ; X64-LIN-LABEL: test7:
 ; X64-LIN:       # %bb.0: # %entry
+; X64-LIN-NEXT:    movl %edi, %eax
 ; X64-LIN-NEXT:    .p2align 4, 0x90
 ; X64-LIN-NEXT:  .LBB6_1: # %bb
 ; X64-LIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-LIN-NEXT:    xorl %esi, %edi
-; X64-LIN-NEXT:    movl %edi, %eax
-; X64-LIN-NEXT:    xorl $2147483646, %eax # imm = 0x7FFFFFFE
-; X64-LIN-NEXT:    andl %esi, %eax
-; X64-LIN-NEXT:    addl %eax, %eax
-; X64-LIN-NEXT:    movl %eax, %esi
+; X64-LIN-NEXT:    xorl %esi, %eax
+; X64-LIN-NEXT:    movl %eax, %ecx
+; X64-LIN-NEXT:    xorl $2147483646, %ecx # imm = 0x7FFFFFFE
+; X64-LIN-NEXT:    andl %esi, %ecx
+; X64-LIN-NEXT:    addl %ecx, %ecx
+; X64-LIN-NEXT:    movl %ecx, %esi
 ; X64-LIN-NEXT:    jne .LBB6_1
 ; X64-LIN-NEXT:  # %bb.2: # %bb12
-; X64-LIN-NEXT:    movl %edi, %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test7:
 ; X64-WIN:       # %bb.0: # %entry
+; X64-WIN-NEXT:    movl %ecx, %eax
 ; X64-WIN-NEXT:    .p2align 4, 0x90
 ; X64-WIN-NEXT:  .LBB6_1: # %bb
 ; X64-WIN-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-WIN-NEXT:    xorl %edx, %ecx
-; X64-WIN-NEXT:    movl %ecx, %eax
-; X64-WIN-NEXT:    xorl $2147483646, %eax # imm = 0x7FFFFFFE
-; X64-WIN-NEXT:    andl %edx, %eax
-; X64-WIN-NEXT:    addl %eax, %eax
-; X64-WIN-NEXT:    movl %eax, %edx
+; X64-WIN-NEXT:    xorl %edx, %eax
+; X64-WIN-NEXT:    movl %eax, %ecx
+; X64-WIN-NEXT:    xorl $2147483646, %ecx # imm = 0x7FFFFFFE
+; X64-WIN-NEXT:    andl %edx, %ecx
+; X64-WIN-NEXT:    addl %ecx, %ecx
+; X64-WIN-NEXT:    movl %ecx, %edx
 ; X64-WIN-NEXT:    jne .LBB6_1
 ; X64-WIN-NEXT:  # %bb.2: # %bb12
-; X64-WIN-NEXT:    movl %ecx, %eax
 ; X64-WIN-NEXT:    retq
 entry:
   br label %bb
@@ -336,14 +338,14 @@ define i32 @test8(i32 %a) nounwind {
 ;
 ; X64-LIN-LABEL: test8:
 ; X64-LIN:       # %bb.0: # %entry
-; X64-LIN-NEXT:    notl %edi
 ; X64-LIN-NEXT:    movl %edi, %eax
+; X64-LIN-NEXT:    notl %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test8:
 ; X64-WIN:       # %bb.0: # %entry
-; X64-WIN-NEXT:    notl %ecx
 ; X64-WIN-NEXT:    movl %ecx, %eax
+; X64-WIN-NEXT:    notl %eax
 ; X64-WIN-NEXT:    retq
 entry:
   %t1 = sub i32 0, %a
@@ -361,16 +363,16 @@ define i32 @test9(i32 %a) nounwind {
 ;
 ; X64-LIN-LABEL: test9:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    notl %edi
-; X64-LIN-NEXT:    andl $4096, %edi # imm = 0x1000
 ; X64-LIN-NEXT:    movl %edi, %eax
+; X64-LIN-NEXT:    notl %eax
+; X64-LIN-NEXT:    andl $4096, %eax # imm = 0x1000
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test9:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    notl %ecx
-; X64-WIN-NEXT:    andl $4096, %ecx # imm = 0x1000
 ; X64-WIN-NEXT:    movl %ecx, %eax
+; X64-WIN-NEXT:    notl %eax
+; X64-WIN-NEXT:    andl $4096, %eax # imm = 0x1000
 ; X64-WIN-NEXT:    retq
   %1 = and i32 %a, 4096
   %2 = xor i32 %1, 4096
@@ -418,26 +420,14 @@ define i32 @PR17487(i1 %tobool) {
 ; X64-LIN-LABEL: PR17487:
 ; X64-LIN:       # %bb.0:
 ; X64-LIN-NEXT:    movd %edi, %xmm0
-; X64-LIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X64-LIN-NEXT:    pandn {{.*}}(%rip), %xmm0
-; X64-LIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-LIN-NEXT:    movq %xmm0, %rcx
-; X64-LIN-NEXT:    xorl %eax, %eax
-; X64-LIN-NEXT:    cmpq $1, %rcx
-; X64-LIN-NEXT:    setne %al
+; X64-LIN-NEXT:    pextrw $0, %xmm0, %eax
+; X64-LIN-NEXT:    andl $1, %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: PR17487:
 ; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    andb $1, %cl
 ; X64-WIN-NEXT:    movzbl %cl, %eax
-; X64-WIN-NEXT:    movd %eax, %xmm0
-; X64-WIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X64-WIN-NEXT:    pandn __xmm@{{.*}}(%rip), %xmm0
-; X64-WIN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-WIN-NEXT:    movq %xmm0, %rcx
-; X64-WIN-NEXT:    xorl %eax, %eax
-; X64-WIN-NEXT:    cmpq $1, %rcx
-; X64-WIN-NEXT:    setne %al
 ; X64-WIN-NEXT:    retq
   %tmp = insertelement <2 x i1> undef, i1 %tobool, i32 1
   %tmp1 = zext <2 x i1> %tmp to <2 x i64>
@@ -459,8 +449,9 @@ define i32 @test11(i32 %b) {
 ;
 ; X64-LIN-LABEL: test11:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    movl $-2, %eax
 ; X64-LIN-NEXT:    movl %edi, %ecx
+; X64-LIN-NEXT:    movl $-2, %eax
+; X64-LIN-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-LIN-NEXT:    roll %cl, %eax
 ; X64-LIN-NEXT:    retq
 ;
@@ -490,18 +481,18 @@ define %struct.ref_s* @test12(%struct.ref_s* %op, i64 %osbot, i64 %intval) {
 ;
 ; X64-LIN-LABEL: test12:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    xorq $-1, %rdx
-; X64-LIN-NEXT:    shlq $32, %rdx
-; X64-LIN-NEXT:    sarq $28, %rdx
-; X64-LIN-NEXT:    leaq (%rdx,%rdi), %rax
+; X64-LIN-NEXT:    notl %edx
+; X64-LIN-NEXT:    movslq %edx, %rax
+; X64-LIN-NEXT:    shlq $4, %rax
+; X64-LIN-NEXT:    addq %rdi, %rax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test12:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    xorq $-1, %r8
-; X64-WIN-NEXT:    shlq $32, %r8
-; X64-WIN-NEXT:    sarq $28, %r8
-; X64-WIN-NEXT:    leaq (%r8,%rcx), %rax
+; X64-WIN-NEXT:    notl %r8d
+; X64-WIN-NEXT:    movslq %r8d, %rax
+; X64-WIN-NEXT:    shlq $4, %rax
+; X64-WIN-NEXT:    addq %rcx, %rax
 ; X64-WIN-NEXT:    retq
   %neg = shl i64 %intval, 32
   %sext = xor i64 %neg, -4294967296
@@ -509,3 +500,32 @@ define %struct.ref_s* @test12(%struct.ref_s* %op, i64 %osbot, i64 %intval) {
   %add.ptr = getelementptr inbounds %struct.ref_s, %struct.ref_s* %op, i64 %idx.ext
   ret %struct.ref_s* %add.ptr
 }
+
+define i32 @PR39657(i8* %p, i64 %x) {
+; X32-LABEL: PR39657:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    notl %ecx
+; X32-NEXT:    movl (%eax,%ecx,4), %eax
+; X32-NEXT:    retl
+;
+; X64-LIN-LABEL: PR39657:
+; X64-LIN:       # %bb.0:
+; X64-LIN-NEXT:    notq %rsi
+; X64-LIN-NEXT:    movl (%rdi,%rsi,4), %eax
+; X64-LIN-NEXT:    retq
+;
+; X64-WIN-LABEL: PR39657:
+; X64-WIN:       # %bb.0:
+; X64-WIN-NEXT:    notq %rdx
+; X64-WIN-NEXT:    movl (%rcx,%rdx,4), %eax
+; X64-WIN-NEXT:    retq
+  %sh = shl i64 %x, 2
+  %mul = xor i64 %sh, -4
+  %add.ptr = getelementptr inbounds i8, i8* %p, i64 %mul
+  %bc = bitcast i8* %add.ptr to i32*
+  %load = load i32, i32* %bc, align 4
+  ret i32 %load
+}
+

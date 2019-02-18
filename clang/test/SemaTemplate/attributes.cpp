@@ -55,11 +55,11 @@ namespace PR9049 {
 }
 
 // CHECK: FunctionTemplateDecl {{.*}} HasAnnotations
-// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
 // CHECK:   AnnotateAttr {{.*}} "ANNOTATE_FOO"
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
 // CHECK: FunctionDecl {{.*}} HasAnnotations
 // CHECK:   TemplateArgument type 'int'
-// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
 // CHECK:   AnnotateAttr {{.*}} "ANNOTATE_FOO"
+// CHECK:   AnnotateAttr {{.*}} "ANNOTATE_BAR"
 template<typename T> [[clang::annotate("ANNOTATE_FOO"), clang::annotate("ANNOTATE_BAR")]] void HasAnnotations();
 void UseAnnotations() { HasAnnotations<int>(); }

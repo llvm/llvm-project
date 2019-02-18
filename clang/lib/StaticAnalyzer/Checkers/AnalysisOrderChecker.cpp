@@ -14,8 +14,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Analysis/CFGStmtMap.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -37,14 +38,15 @@ class AnalysisOrderChecker
                      check::PostStmt<OffsetOfExpr>,
                      check::PreCall,
                      check::PostCall,
+                     check::EndFunction,
                      check::NewAllocator,
                      check::Bind,
                      check::RegionChanges,
                      check::LiveSymbols> {
 
   bool isCallbackEnabled(AnalyzerOptions &Opts, StringRef CallbackName) const {
-    return Opts.getBooleanOption("*", false, this) ||
-        Opts.getBooleanOption(CallbackName, false, this);
+    return Opts.getCheckerBooleanOption("*", false, this) ||
+        Opts.getCheckerBooleanOption(CallbackName, false, this);
   }
 
   bool isCallbackEnabled(CheckerContext &C, StringRef CallbackName) const {
@@ -54,7 +56,7 @@ class AnalysisOrderChecker
 
   bool isCallbackEnabled(ProgramStateRef State, StringRef CallbackName) const {
     AnalyzerOptions &Opts = State->getStateManager().getOwningEngine()
-                                 ->getAnalysisManager().getAnalyzerOptions();
+                                 .getAnalysisManager().getAnalyzerOptions();
     return isCallbackEnabled(Opts, CallbackName);
   }
 
@@ -121,6 +123,23 @@ public:
     }
   }
 
+  void checkEndFunction(const ReturnStmt *S, CheckerContext &C) const {
+    if (isCallbackEnabled(C, "EndFunction")) {
+      llvm::errs() << "EndFunction\nReturnStmt: " << (S ? "yes" : "no") << "\n";
+      if (!S)
+        return;
+
+      llvm::errs() << "CFGElement: ";
+      CFGStmtMap *Map = C.getCurrentAnalysisDeclContext()->getCFGStmtMap();
+      CFGElement LastElement = Map->getBlock(S)->back();
+
+      if (LastElement.getAs<CFGStmt>())
+        llvm::errs() << "CFGStmt\n";
+      else if (LastElement.getAs<CFGAutomaticObjDtor>())
+        llvm::errs() << "CFGAutomaticObjDtor\n";
+    }
+  }
+
   void checkNewAllocator(const CXXNewExpr *CNE, SVal Target,
                          CheckerContext &C) const {
     if (isCallbackEnabled(C, "NewAllocator"))
@@ -156,4 +175,8 @@ public:
 
 void ento::registerAnalysisOrderChecker(CheckerManager &mgr) {
   mgr.registerChecker<AnalysisOrderChecker>();
+}
+
+bool ento::shouldRegisterAnalysisOrderChecker(const LangOptions &LO) {
+  return true;
 }

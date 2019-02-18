@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals -tail-dup-placement=0 -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck -check-prefix=OPT %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -tail-dup-placement=0 -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 | FileCheck -check-prefix=OPT %s
 
 ; Test the CFG stackifier pass.
 
@@ -514,7 +514,7 @@ if.end:
 ; Test switch lowering and block placement.
 
 ; CHECK-LABEL: test4:
-; CHECK-NEXT: .param       i32{{$}}
+; CHECK-NEXT: .functype test4 (i32) -> (){{$}}
 ; CHECK:      block   {{$}}
 ; CHECK-NEXT: block   {{$}}
 ; CHECK:      br_if       0, $pop{{[0-9]+}}{{$}}
@@ -532,7 +532,7 @@ if.end:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 ; OPT-LABEL: test4:
-; OPT-NEXT: .param       i32{{$}}
+; OPT-NEXT: .functype test4 (i32) -> (){{$}}
 ; OPT:      block   {{$}}
 ; OPT-NEXT: block   {{$}}
 ; OPT:      br_if       0, $pop{{[0-9]+}}{{$}}
@@ -1146,7 +1146,7 @@ bb7:
 ; optnone to disable optimizations to test this case.
 
 ; CHECK-LABEL: test13:
-; CHECK-NEXT:  block   {{$}}
+; CHECK:       block   {{$}}
 ; CHECK-NEXT:  block   {{$}}
 ; CHECK:       br_if 0, $pop0{{$}}
 ; CHECK:       block   {{$}}
@@ -1162,7 +1162,7 @@ bb7:
 ; CHECK-NEXT:  end_block{{$}}
 ; CHECK-NEXT:  unreachable{{$}}
 ; OPT-LABEL: test13:
-; OPT-NEXT:  block   {{$}}
+; OPT:       block   {{$}}
 ; OPT-NEXT:  block   {{$}}
 ; OPT:       br_if 0, $pop0{{$}}
 ; OPT:       block   {{$}}
@@ -1198,7 +1198,7 @@ bb5:
 ; before the loop for the second.
 
 ; CHECK-LABEL: test14:
-; CHECK-NEXT: .LBB23_1:{{$}}
+; CHECK:      .LBB23_1:{{$}}
 ; CHECK-NEXT:     loop    {{$}}
 ; CHECK-NEXT:     i32.const   $push0=, 0{{$}}
 ; CHECK-NEXT:     br_if       0, $pop0{{$}}

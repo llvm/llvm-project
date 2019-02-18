@@ -32,6 +32,8 @@
 #ifndef LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 #define LLVM_ANALYSIS_INSTRUCTIONSIMPLIFY_H
 
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
 
 namespace llvm {
@@ -40,7 +42,6 @@ template <typename T, typename... TArgs> class AnalysisManager;
 template <class T> class ArrayRef;
 class AssumptionCache;
 class DominatorTree;
-class Instruction;
 class ImmutableCallSite;
 class DataLayout;
 class FastMathFlags;
@@ -50,6 +51,41 @@ class Pass;
 class TargetLibraryInfo;
 class Type;
 class Value;
+class MDNode;
+class BinaryOperator;
+
+/// InstrInfoQuery provides an interface to query additional information for
+/// instructions like metadata or keywords like nsw, which provides conservative
+/// results if the users specified it is safe to use.
+struct InstrInfoQuery {
+  InstrInfoQuery(bool UMD) : UseInstrInfo(UMD) {}
+  InstrInfoQuery() : UseInstrInfo(true) {}
+  bool UseInstrInfo = true;
+
+  MDNode *getMetadata(const Instruction *I, unsigned KindID) const {
+    if (UseInstrInfo)
+      return I->getMetadata(KindID);
+    return nullptr;
+  }
+
+  template <class InstT> bool hasNoUnsignedWrap(const InstT *Op) const {
+    if (UseInstrInfo)
+      return Op->hasNoUnsignedWrap();
+    return false;
+  }
+
+  template <class InstT> bool hasNoSignedWrap(const InstT *Op) const {
+    if (UseInstrInfo)
+      return Op->hasNoSignedWrap();
+    return false;
+  }
+
+  bool isExact(const BinaryOperator *Op) const {
+    if (UseInstrInfo && isa<PossiblyExactOperator>(Op))
+      return cast<PossiblyExactOperator>(Op)->isExact();
+    return false;
+  }
+};
 
 struct SimplifyQuery {
   const DataLayout &DL;
@@ -58,14 +94,19 @@ struct SimplifyQuery {
   AssumptionCache *AC = nullptr;
   const Instruction *CxtI = nullptr;
 
+  // Wrapper to query additional information for instructions like metadata or
+  // keywords like nsw, which provides conservative results if those cannot
+  // be safely used.
+  const InstrInfoQuery IIQ;
+
   SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
       : DL(DL), CxtI(CXTI) {}
 
   SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
                 const DominatorTree *DT = nullptr,
                 AssumptionCache *AC = nullptr,
-                const Instruction *CXTI = nullptr)
-      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI) {}
+                const Instruction *CXTI = nullptr, bool UseInstrInfo = true)
+      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo) {}
   SimplifyQuery getWithInstruction(Instruction *I) const {
     SimplifyQuery Copy(*this);
     Copy.CxtI = I;

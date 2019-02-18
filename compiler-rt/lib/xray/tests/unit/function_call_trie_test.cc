@@ -10,9 +10,9 @@
 // This file is a part of XRay, a function call tracing system.
 //
 //===----------------------------------------------------------------------===//
-#include "gtest/gtest.h"
-
 #include "xray_function_call_trie.h"
+#include "gtest/gtest.h"
+#include <cstdint>
 
 namespace __xray {
 
@@ -29,26 +29,54 @@ TEST(FunctionCallTrieTest, EnterAndExitFunction) {
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
 
-  Trie.enterFunction(1, 1);
-  Trie.exitFunction(1, 2);
-
-  // We need a way to pull the data out. At this point, until we get a data
-  // collection service implemented, we're going to export the data as a list of
-  // roots, and manually walk through the structure ourselves.
-
+  uint64_t TSC = 1;
+  uint16_t CPU = 0;
+  Trie.enterFunction(1, TSC++, CPU++);
+  Trie.exitFunction(1, TSC++, CPU++);
   const auto &R = Trie.getRoots();
 
   ASSERT_EQ(R.size(), 1u);
   ASSERT_EQ(R.front()->FId, 1);
-  ASSERT_EQ(R.front()->CallCount, 1);
+  ASSERT_EQ(R.front()->CallCount, 1u);
   ASSERT_EQ(R.front()->CumulativeLocalTime, 1u);
+}
+
+TEST(FunctionCallTrieTest, HandleTSCOverflow) {
+  profilingFlags()->setDefaults();
+  auto A = FunctionCallTrie::InitAllocators();
+  FunctionCallTrie Trie(A);
+
+  Trie.enterFunction(1, std::numeric_limits<uint64_t>::max(), 0);
+  Trie.exitFunction(1, 1, 0);
+  const auto &R = Trie.getRoots();
+
+  ASSERT_EQ(R.size(), 1u);
+  ASSERT_EQ(R.front()->FId, 1);
+  ASSERT_EQ(R.front()->CallCount, 1u);
+  ASSERT_EQ(R.front()->CumulativeLocalTime, 1u);
+}
+
+TEST(FunctionCallTrieTest, MaximalCumulativeTime) {
+  profilingFlags()->setDefaults();
+  auto A = FunctionCallTrie::InitAllocators();
+  FunctionCallTrie Trie(A);
+
+  Trie.enterFunction(1, 1, 0);
+  Trie.exitFunction(1, 0, 0);
+  const auto &R = Trie.getRoots();
+
+  ASSERT_EQ(R.size(), 1u);
+  ASSERT_EQ(R.front()->FId, 1);
+  ASSERT_EQ(R.front()->CallCount, 1u);
+  ASSERT_EQ(R.front()->CumulativeLocalTime,
+            std::numeric_limits<uint64_t>::max() - 1);
 }
 
 TEST(FunctionCallTrieTest, MissingFunctionEntry) {
   profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
-  Trie.exitFunction(1, 1);
+  Trie.exitFunction(1, 1, 0);
   const auto &R = Trie.getRoots();
 
   ASSERT_TRUE(R.empty());
@@ -58,9 +86,9 @@ TEST(FunctionCallTrieTest, NoMatchingEntersForExit) {
   profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
-  Trie.enterFunction(2, 1);
-  Trie.enterFunction(3, 3);
-  Trie.exitFunction(1, 5);
+  Trie.enterFunction(2, 1, 0);
+  Trie.enterFunction(3, 3, 0);
+  Trie.exitFunction(1, 5, 0);
   const auto &R = Trie.getRoots();
 
   ASSERT_FALSE(R.empty());
@@ -71,7 +99,7 @@ TEST(FunctionCallTrieTest, MissingFunctionExit) {
   profilingFlags()->setDefaults();
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
-  Trie.enterFunction(1, 1);
+  Trie.enterFunction(1, 1, 0);
   const auto &R = Trie.getRoots();
 
   ASSERT_FALSE(R.empty());
@@ -84,12 +112,12 @@ TEST(FunctionCallTrieTest, MultipleRoots) {
   FunctionCallTrie Trie(A);
 
   // Enter and exit FId = 1.
-  Trie.enterFunction(1, 1);
-  Trie.exitFunction(1, 2);
+  Trie.enterFunction(1, 1, 0);
+  Trie.exitFunction(1, 2, 0);
 
   // Enter and exit FId = 2.
-  Trie.enterFunction(2, 3);
-  Trie.exitFunction(2, 4);
+  Trie.enterFunction(2, 3, 0);
+  Trie.exitFunction(2, 4, 0);
 
   const auto &R = Trie.getRoots();
   ASSERT_FALSE(R.empty());
@@ -126,11 +154,11 @@ TEST(FunctionCallTrieTest, MissingIntermediaryExit) {
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
 
-  Trie.enterFunction(1, 0);
-  Trie.enterFunction(2, 100);
-  Trie.enterFunction(3, 200);
-  Trie.exitFunction(3, 300);
-  Trie.exitFunction(1, 400);
+  Trie.enterFunction(1, 0, 0);
+  Trie.enterFunction(2, 100, 0);
+  Trie.enterFunction(3, 200, 0);
+  Trie.exitFunction(3, 300, 0);
+  Trie.exitFunction(1, 400, 0);
 
   // What we should see at this point is all the functions in the trie in a
   // specific order (1 -> 2 -> 3) with the appropriate count(s) and local
@@ -153,12 +181,12 @@ TEST(FunctionCallTrieTest, MissingIntermediaryExit) {
 
   // Now that we've established the preconditions, we check for specific aspects
   // of the nodes.
-  EXPECT_EQ(F3.CallCount, 1);
-  EXPECT_EQ(F2.CallCount, 1);
-  EXPECT_EQ(F1.CallCount, 1);
-  EXPECT_EQ(F3.CumulativeLocalTime, 100);
-  EXPECT_EQ(F2.CumulativeLocalTime, 300);
-  EXPECT_EQ(F1.CumulativeLocalTime, 100);
+  EXPECT_EQ(F3.CallCount, 1u);
+  EXPECT_EQ(F2.CallCount, 1u);
+  EXPECT_EQ(F1.CallCount, 1u);
+  EXPECT_EQ(F3.CumulativeLocalTime, 100u);
+  EXPECT_EQ(F2.CumulativeLocalTime, 300u);
+  EXPECT_EQ(F1.CumulativeLocalTime, 100u);
 }
 
 TEST(FunctionCallTrieTest, DeepCallStack) {
@@ -168,8 +196,8 @@ TEST(FunctionCallTrieTest, DeepCallStack) {
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
   for (int i = 0; i < 32; ++i)
-    Trie.enterFunction(i + 1, i);
-  Trie.exitFunction(1, 33);
+    Trie.enterFunction(i + 1, i, 0);
+  Trie.exitFunction(1, 33, 0);
 
   // Here, validate that we have a 32-level deep function call path from the
   // root (1) down to the leaf (33).
@@ -178,7 +206,7 @@ TEST(FunctionCallTrieTest, DeepCallStack) {
   auto F = R[0];
   for (int i = 0; i < 32; ++i) {
     EXPECT_EQ(F->FId, i + 1);
-    EXPECT_EQ(F->CallCount, 1);
+    EXPECT_EQ(F->CallCount, 1u);
     if (F->Callees.empty() && i != 31)
       FAIL() << "Empty callees for FId " << F->FId;
     if (i != 31)
@@ -193,12 +221,12 @@ TEST(FunctionCallTrieTest, DeepCopy) {
   auto A = FunctionCallTrie::InitAllocators();
   FunctionCallTrie Trie(A);
 
-  Trie.enterFunction(1, 0);
-  Trie.enterFunction(2, 1);
-  Trie.exitFunction(2, 2);
-  Trie.enterFunction(3, 3);
-  Trie.exitFunction(3, 4);
-  Trie.exitFunction(1, 5);
+  Trie.enterFunction(1, 0, 0);
+  Trie.enterFunction(2, 1, 0);
+  Trie.exitFunction(2, 2, 0);
+  Trie.enterFunction(3, 3, 0);
+  Trie.exitFunction(3, 4, 0);
+  Trie.exitFunction(1, 5, 0);
 
   // We want to make a deep copy and compare notes.
   auto B = FunctionCallTrie::InitAllocators();
@@ -236,20 +264,20 @@ TEST(FunctionCallTrieTest, MergeInto) {
   FunctionCallTrie T1(A);
 
   // 1 -> 2 -> 3
-  T0.enterFunction(1, 0);
-  T0.enterFunction(2, 1);
-  T0.enterFunction(3, 2);
-  T0.exitFunction(3, 3);
-  T0.exitFunction(2, 4);
-  T0.exitFunction(1, 5);
+  T0.enterFunction(1, 0, 0);
+  T0.enterFunction(2, 1, 0);
+  T0.enterFunction(3, 2, 0);
+  T0.exitFunction(3, 3, 0);
+  T0.exitFunction(2, 4, 0);
+  T0.exitFunction(1, 5, 0);
 
   // 1 -> 2 -> 3
-  T1.enterFunction(1, 0);
-  T1.enterFunction(2, 1);
-  T1.enterFunction(3, 2);
-  T1.exitFunction(3, 3);
-  T1.exitFunction(2, 4);
-  T1.exitFunction(1, 5);
+  T1.enterFunction(1, 0, 0);
+  T1.enterFunction(2, 1, 0);
+  T1.enterFunction(3, 2, 0);
+  T1.exitFunction(3, 3, 0);
+  T1.exitFunction(2, 4, 0);
+  T1.exitFunction(1, 5, 0);
 
   // We use a different allocator here to make sure that we're able to transfer
   // data into a FunctionCallTrie which uses a different allocator. This
@@ -264,21 +292,51 @@ TEST(FunctionCallTrieTest, MergeInto) {
   ASSERT_EQ(Merged.getRoots().size(), 1u);
   const auto &R0 = *Merged.getRoots()[0];
   EXPECT_EQ(R0.FId, 1);
-  EXPECT_EQ(R0.CallCount, 2);
-  EXPECT_EQ(R0.CumulativeLocalTime, 10);
+  EXPECT_EQ(R0.CallCount, 2u);
+  EXPECT_EQ(R0.CumulativeLocalTime, 10u);
   EXPECT_EQ(R0.Callees.size(), 1u);
 
   const auto &F1 = *R0.Callees[0].NodePtr;
   EXPECT_EQ(F1.FId, 2);
-  EXPECT_EQ(F1.CallCount, 2);
-  EXPECT_EQ(F1.CumulativeLocalTime, 6);
+  EXPECT_EQ(F1.CallCount, 2u);
+  EXPECT_EQ(F1.CumulativeLocalTime, 6u);
   EXPECT_EQ(F1.Callees.size(), 1u);
 
   const auto &F2 = *F1.Callees[0].NodePtr;
   EXPECT_EQ(F2.FId, 3);
-  EXPECT_EQ(F2.CallCount, 2);
-  EXPECT_EQ(F2.CumulativeLocalTime, 2);
+  EXPECT_EQ(F2.CallCount, 2u);
+  EXPECT_EQ(F2.CumulativeLocalTime, 2u);
   EXPECT_EQ(F2.Callees.size(), 0u);
+}
+
+TEST(FunctionCallTrieTest, PlacementNewOnAlignedStorage) {
+  profilingFlags()->setDefaults();
+  typename std::aligned_storage<sizeof(FunctionCallTrie::Allocators),
+                                alignof(FunctionCallTrie::Allocators)>::type
+      AllocatorsStorage;
+  new (&AllocatorsStorage)
+      FunctionCallTrie::Allocators(FunctionCallTrie::InitAllocators());
+  auto *A =
+      reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage);
+
+  typename std::aligned_storage<sizeof(FunctionCallTrie),
+                                alignof(FunctionCallTrie)>::type FCTStorage;
+  new (&FCTStorage) FunctionCallTrie(*A);
+  auto *T = reinterpret_cast<FunctionCallTrie *>(&FCTStorage);
+
+  // Put some data into it.
+  T->enterFunction(1, 0, 0);
+  T->exitFunction(1, 1, 0);
+
+  // Re-initialize the objects in storage.
+  T->~FunctionCallTrie();
+  A->~Allocators();
+  new (A) FunctionCallTrie::Allocators(FunctionCallTrie::InitAllocators());
+  new (T) FunctionCallTrie(*A);
+
+  // Then put some data into it again.
+  T->enterFunction(1, 0, 0);
+  T->exitFunction(1, 1, 0);
 }
 
 } // namespace

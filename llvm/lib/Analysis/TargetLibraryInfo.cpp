@@ -413,17 +413,17 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_flsll);
   }
 
-  // The following functions are available on Linux,
-  // but Android uses bionic instead of glibc.
-  if (!T.isOSLinux() || T.isAndroid()) {
+  // The following functions are only available on GNU/Linux (using glibc).
+  // Linux variants without glibc (eg: bionic, musl) may have some subset.
+  if (!T.isOSLinux() || !T.isGNUEnvironment()) {
     TLI.setUnavailable(LibFunc_dunder_strdup);
     TLI.setUnavailable(LibFunc_dunder_strtok_r);
     TLI.setUnavailable(LibFunc_dunder_isoc99_scanf);
     TLI.setUnavailable(LibFunc_dunder_isoc99_sscanf);
     TLI.setUnavailable(LibFunc_under_IO_getc);
     TLI.setUnavailable(LibFunc_under_IO_putc);
-    // But, Android has memalign.
-    if (!T.isAndroid())
+    // But, Android and musl have memalign.
+    if (!T.isAndroid() && !T.isMusl())
       TLI.setUnavailable(LibFunc_memalign);
     TLI.setUnavailable(LibFunc_fopen64);
     TLI.setUnavailable(LibFunc_fseeko64);
@@ -613,6 +613,24 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
   unsigned NumParams = FTy.getNumParams();
 
   switch (F) {
+  case LibFunc_execl:
+  case LibFunc_execlp:
+  case LibFunc_execle:
+    return (NumParams >= 2 && FTy.getParamType(0)->isPointerTy() &&
+            FTy.getParamType(1)->isPointerTy() &&
+            FTy.getReturnType()->isIntegerTy(32));
+  case LibFunc_execv:
+  case LibFunc_execvp:
+    return (NumParams == 2 && FTy.getParamType(0)->isPointerTy() &&
+            FTy.getParamType(1)->isPointerTy() &&
+            FTy.getReturnType()->isIntegerTy(32));
+  case LibFunc_execvP:
+  case LibFunc_execvpe:
+  case LibFunc_execve:
+    return (NumParams == 3 && FTy.getParamType(0)->isPointerTy() &&
+            FTy.getParamType(1)->isPointerTy() &&
+            FTy.getParamType(2)->isPointerTy() &&
+            FTy.getReturnType()->isIntegerTy(32));
   case LibFunc_strlen:
     return (NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
             FTy.getReturnType()->isIntegerTy());
@@ -863,6 +881,8 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0)->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy());
+  case LibFunc_fork:
+    return (NumParams == 0 && FTy.getReturnType()->isIntegerTy(32));
   case LibFunc_fdopen:
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(1)->isPointerTy());
@@ -1399,10 +1419,10 @@ static bool compareWithVectorFnName(const VecDesc &LHS, StringRef S) {
 
 void TargetLibraryInfoImpl::addVectorizableFunctions(ArrayRef<VecDesc> Fns) {
   VectorDescs.insert(VectorDescs.end(), Fns.begin(), Fns.end());
-  llvm::sort(VectorDescs.begin(), VectorDescs.end(), compareByScalarFnName);
+  llvm::sort(VectorDescs, compareByScalarFnName);
 
   ScalarDescs.insert(ScalarDescs.end(), Fns.begin(), Fns.end());
-  llvm::sort(ScalarDescs.begin(), ScalarDescs.end(), compareByVectorFnName);
+  llvm::sort(ScalarDescs, compareByVectorFnName);
 }
 
 void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(

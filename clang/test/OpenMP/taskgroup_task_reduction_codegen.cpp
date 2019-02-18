@@ -43,12 +43,12 @@ int main(int argc, char **argv) {
 // CHECK:       [[A:%.+]] = alloca i32,
 // CHECK:       [[B:%.+]] = alloca float,
 // CHECK:       [[C:%.+]] = alloca [5 x %struct.S],
-// CHECK:       [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
 // CHECK:       [[RD_IN1:%.+]] = alloca [3 x [[T1:%[^,]+]]],
 // CHECK:       [[TD1:%.+]] = alloca i8*,
 // CHECK:       [[RD_IN2:%.+]] = alloca [2 x [[T2:%[^,]+]]],
 // CHECK:       [[TD2:%.+]] = alloca i8*,
 
+// CHECK:       [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(%struct.ident_t*
 // CHECK:       [[VLA:%.+]] = alloca i16, i64 [[VLA_SIZE:%[^,]+]],
 
 // CHECK:       call void @__kmpc_taskgroup(%struct.ident_t* {{[^,]+}}, i32 [[GTID]])

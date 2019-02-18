@@ -209,12 +209,13 @@ namespace impl {
   public:
     template <typename BufferTy, typename FirstData, typename... Data>
     static void emit(llvm::BitstreamWriter &out, BufferTy &buffer,
-                     unsigned abbrCode, FirstData data, Data... rest) {
+                     unsigned abbrCode, FirstData data, Data &&... rest) {
       static_assert(!First::IS_COMPOUND,
                     "arrays and blobs may not appear in the middle of a record");
       First::assertValid(data);
       buffer.push_back(data);
-      BCRecordCoding<Fields...>::emit(out, buffer, abbrCode, rest...);
+      BCRecordCoding<Fields...>::emit(out, buffer, abbrCode,
+                                      std::forward<Data>(rest)...);
     }
 
     template <typename ElementTy, typename FirstData, typename... Data>
@@ -247,7 +248,7 @@ namespace impl {
   public:
     template <typename BufferTy, typename LastData>
     static void emit(llvm::BitstreamWriter &out, BufferTy &buffer,
-                     unsigned abbrCode, LastData data) {
+                     unsigned abbrCode, const LastData &data) {
       static_assert(!Last::IS_COMPOUND,
                     "arrays and blobs need special handling");
       Last::assertValid(data);
@@ -291,7 +292,8 @@ namespace impl {
       for (auto &item : arrayData)
         EleTy::assertValid(item);
 #endif
-      buffer.reserve(buffer.size() + arrayData.size());
+      buffer.reserve(buffer.size() + std::distance(arrayData.begin(),
+                                                   arrayData.end()));
       std::copy(arrayData.begin(), arrayData.end(),
                 std::back_inserter(buffer));
       out.EmitRecordWithAbbrev(abbrCode, buffer);
@@ -418,8 +420,8 @@ public:
   ///
   /// Note that even fixed arguments must be specified here.
   template <typename BufferTy, typename... Data>
-  void emit(BufferTy &buffer, unsigned recordID, Data... data) const {
-    emitRecord(Out, buffer, AbbrevCode, recordID, data...);
+  void emit(BufferTy &buffer, unsigned recordID, Data &&... data) const {
+    emitRecord(Out, buffer, AbbrevCode, recordID, std::forward<Data>(data)...);
   }
 
   /// Registers this record's layout with the bitstream reader.
@@ -440,7 +442,8 @@ public:
   /// the special Nothing value.
   template <typename BufferTy, typename... Data>
   static void emitRecord(llvm::BitstreamWriter &out, BufferTy &buffer,
-                         unsigned abbrCode, unsigned recordID, Data... data) {
+                         unsigned abbrCode, unsigned recordID,
+                         Data &&... data) {
     static_assert(sizeof...(data) <= sizeof...(Fields) ||
                   impl::has_array<Fields...>::value,
                   "Too many record elements");
@@ -448,7 +451,8 @@ public:
                   "Too few record elements");
     buffer.clear();
     impl::BCRecordCoding<IDField, Fields...>::emit(out, buffer, abbrCode,
-                                                   recordID, data...);
+                                                   recordID,
+                                                   std::forward<Data>(data)...);
   }
 
   /// Extract record data from \p buffer into the given data fields.
@@ -497,8 +501,8 @@ public:
   ///
   /// Note that even fixed arguments must be specified here.
   template <typename BufferTy, typename... Data>
-  void emit(BufferTy &buffer, Data... data) const {
-    Base::emit(buffer, RecordCode, data...);
+  void emit(BufferTy &buffer, Data &&... data) const {
+    Base::emit(buffer, RecordCode, std::forward<Data>(data)...);
   }
 
   /// Emit a record identified by \p abbrCode to bitstream reader \p out, using
@@ -508,8 +512,9 @@ public:
   /// and blobs can only be passed as StringRefs.
   template <typename BufferTy, typename... Data>
   static void emitRecord(llvm::BitstreamWriter &out, BufferTy &buffer,
-                         unsigned abbrCode, Data... data) {
-    Base::emitRecord(out, buffer, abbrCode, RecordCode, data...);
+                         unsigned abbrCode, Data &&... data) {
+    Base::emitRecord(out, buffer, abbrCode, RecordCode,
+                     std::forward<Data>(data)...);
   }
 };
 

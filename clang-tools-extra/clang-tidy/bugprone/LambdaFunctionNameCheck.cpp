@@ -73,8 +73,8 @@ void LambdaFunctionNameCheck::registerPPCallbacks(CompilerInstance &Compiler) {
 
 void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<PredefinedExpr>("E");
-  if (E->getIdentType() != PredefinedExpr::Func &&
-      E->getIdentType() != PredefinedExpr::Function) {
+  if (E->getIdentKind() != PredefinedExpr::Func &&
+      E->getIdentKind() != PredefinedExpr::Function) {
     // We don't care about other PredefinedExprs.
     return;
   }
@@ -91,7 +91,7 @@ void LambdaFunctionNameCheck::check(const MatchFinder::MatchResult &Result) {
        "inside a lambda, '%0' expands to the name of the function call "
        "operator; consider capturing the name of the enclosing function "
        "explicitly")
-      << PredefinedExpr::getIdentTypeName(E->getIdentType());
+      << PredefinedExpr::getIdentKindName(E->getIdentKind());
 }
 
 } // namespace bugprone

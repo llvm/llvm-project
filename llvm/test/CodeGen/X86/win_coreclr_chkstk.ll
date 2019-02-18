@@ -1,4 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32-coreclr | FileCheck %s -check-prefix=WIN_X64
+; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR38376.
+; RUN: llc < %s -mtriple=x86_64-pc-win32-coreclr -verify-machineinstrs=0 | FileCheck %s -check-prefix=WIN_X64
 ; RUN: llc < %s -mtriple=x86_64-pc-linux         | FileCheck %s -check-prefix=LINUX
 
 ; By default, windows CoreCLR requires an inline prologue stack expansion check
@@ -10,8 +11,6 @@ entry:
 ; WIN_X64-LABEL:main4k:
 ; WIN_X64: # %bb.0:
 ; WIN_X64:      movl    $4096, %eax
-; WIN_X64:      movq    %rcx, 8(%rsp)
-; WIN_X64:	movq	%rdx, 16(%rsp)
 ; WIN_X64:	xorq	%rcx, %rcx
 ; WIN_X64:	movq	%rsp, %rdx
 ; WIN_X64:	subq	%rax, %rdx
@@ -27,8 +26,6 @@ entry:
 ; WIN_X64:	cmpq	%rcx, %rdx
 ; WIN_X64:	jne	.LBB0_2
 ; WIN_X64:.LBB0_3:
-; WIN_X64:	movq	8(%rsp), %rcx
-; WIN_X64:	movq	16(%rsp), %rdx
 ; WIN_X64:	subq	%rax, %rsp
 ; WIN_X64:	xorl	%eax, %eax
 ; WIN_X64:	addq	$4096, %rsp
@@ -45,7 +42,6 @@ entry:
 define i32 @main4k_frame() nounwind "no-frame-pointer-elim"="true" {
 entry:
 ; WIN_X64-LABEL:main4k_frame:
-; WIN_X64:      movq    %rcx,   16(%rsp)
 ; WIN_X64:      movq    %gs:16, %rcx
 ; LINUX-LABEL:main4k_frame:
 ; LINUX-NOT:    movq    %gs:16, %rcx
@@ -58,7 +54,6 @@ entry:
 ; Case with INT args
 define i32 @main4k_intargs(i32 %x, i32 %y) nounwind {
 entry:
-; WIN_X64:      movq    %rcx,   8(%rsp)
 ; WIN_X64:      movq    %gs:16, %rcx
 ; LINUX-NOT:    movq    %gs:16, %rcx
 ; LINUX: 	retq
@@ -71,7 +66,6 @@ entry:
 ; Case with FP regs
 define i32 @main4k_fpargs(double %x, double %y) nounwind {
 entry:
-; WIN_X64:      movq    %rcx,   8(%rsp)
 ; WIN_X64:      movq    %gs:16, %rcx
 ; LINUX-NOT:    movq    %gs:16, %rcx
 ; LINUX: 	retq

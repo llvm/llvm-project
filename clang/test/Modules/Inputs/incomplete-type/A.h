@@ -1,0 +1,1 @@
+#define __P(protos)     ()

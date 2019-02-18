@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-///  This file implements classes for searching and anlyzing source code clones.
+/// This file implements classes for searching and analyzing source code clones.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -45,8 +45,8 @@ bool StmtSequence::contains(const StmtSequence &Other) const {
   // Otherwise check if the start and end locations of the current sequence
   // surround the other sequence.
   bool StartIsInBounds =
-      SM.isBeforeInTranslationUnit(getStartLoc(), Other.getStartLoc()) ||
-      getStartLoc() == Other.getStartLoc();
+      SM.isBeforeInTranslationUnit(getBeginLoc(), Other.getBeginLoc()) ||
+      getBeginLoc() == Other.getBeginLoc();
   if (!StartIsInBounds)
     return false;
 
@@ -77,14 +77,14 @@ ASTContext &StmtSequence::getASTContext() const {
   return D->getASTContext();
 }
 
-SourceLocation StmtSequence::getStartLoc() const {
-  return front()->getLocStart();
+SourceLocation StmtSequence::getBeginLoc() const {
+  return front()->getBeginLoc();
 }
 
-SourceLocation StmtSequence::getEndLoc() const { return back()->getLocEnd(); }
+SourceLocation StmtSequence::getEndLoc() const { return back()->getEndLoc(); }
 
 SourceRange StmtSequence::getSourceRange() const {
-  return SourceRange(getStartLoc(), getEndLoc());
+  return SourceRange(getBeginLoc(), getEndLoc());
 }
 
 void CloneDetector::analyzeCodeBody(const Decl *D) {
@@ -433,7 +433,7 @@ size_t MinComplexityConstraint::calculateStmtComplexity(
 
   // Look up what macros expanded into the current statement.
   std::string MacroStack =
-      data_collection::getMacroStack(Seq.getStartLoc(), Context);
+      data_collection::getMacroStack(Seq.getBeginLoc(), Context);
 
   // First, check if ParentMacroStack is not empty which means we are currently
   // dealing with a parent statement which was expanded from a macro.
@@ -523,8 +523,7 @@ void CloneConstraint::splitCloneGroups(
       Result.push_back(PotentialGroup);
     }
 
-    assert(std::all_of(Indexes.begin(), Indexes.end(),
-                       [](char c) { return c == 1; }));
+    assert(llvm::all_of(Indexes, [](char c) { return c == 1; }));
   }
   CloneGroups = Result;
 }

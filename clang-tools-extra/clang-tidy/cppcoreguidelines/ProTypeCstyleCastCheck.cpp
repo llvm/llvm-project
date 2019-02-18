@@ -46,7 +46,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
       MatchedCast->getCastKind() == CK_IntegralToPointer ||
       MatchedCast->getCastKind() == CK_PointerToIntegral ||
       MatchedCast->getCastKind() == CK_ReinterpretMemberPointer) {
-    diag(MatchedCast->getLocStart(),
+    diag(MatchedCast->getBeginLoc(),
          "do not use C-style cast to convert between unrelated types");
     return;
   }
@@ -71,7 +71,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
           *Result.SourceManager, getLangOpts());
 
       auto diag_builder = diag(
-          MatchedCast->getLocStart(),
+          MatchedCast->getBeginLoc(),
           "do not use C-style cast to downcast from a base to a derived class; "
           "use dynamic_cast instead");
 
@@ -81,7 +81,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
       if (!isa<ParenExpr>(SubExpr)) {
         CastText.push_back('(');
         diag_builder << FixItHint::CreateInsertion(
-            Lexer::getLocForEndOfToken(SubExpr->getLocEnd(), 0,
+            Lexer::getLocForEndOfToken(SubExpr->getEndLoc(), 0,
                                        *Result.SourceManager, getLangOpts()),
             ")");
       }
@@ -90,7 +90,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
       diag_builder << FixItHint::CreateReplacement(ParenRange, CastText);
     } else {
       diag(
-          MatchedCast->getLocStart(),
+          MatchedCast->getBeginLoc(),
           "do not use C-style cast to downcast from a base to a derived class");
     }
     return;
@@ -98,7 +98,7 @@ void ProTypeCstyleCastCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (MatchedCast->getCastKind() == CK_NoOp &&
       needsConstCast(SourceType, MatchedCast->getType())) {
-    diag(MatchedCast->getLocStart(),
+    diag(MatchedCast->getBeginLoc(),
          "do not use C-style cast to cast away constness");
   }
 }

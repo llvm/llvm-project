@@ -73,6 +73,7 @@ static void eliminateDeadCode(Function &F) {
   FPM.addPass(DCEPass());
   FunctionAnalysisManager FAM;
   FAM.registerPass([&] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
   FPM.run(F, FAM);
 }
 

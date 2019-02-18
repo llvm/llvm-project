@@ -1,7 +1,9 @@
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 #include <sstream>
-double __attribute__((noinline)) istream_numbers();
+
+TEST_NOINLINE double istream_numbers();
 
 double istream_numbers() {
   const char *a[] = {

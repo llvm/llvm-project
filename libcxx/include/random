@@ -2337,7 +2337,7 @@ mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b,
         for (size_t __i = 1; __i < __n; ++__i)
             if (__x_[__i] != 0)
                 return;
-        __x_[0] = _Max;
+        __x_[0] = result_type(1) << (__w - 1);
     }
 }
 
@@ -2363,7 +2363,7 @@ mersenne_twister_engine<_UIntType, __w, __n, __m, __r, __a, __u, __d, __s, __b,
         for (size_t __i = 1; __i < __n; ++__i)
             if (__x_[__i] != 0)
                 return;
-        __x_[0] = _Max;
+        __x_[0] = result_type(1) << (__w - 1);
     }
 }
 

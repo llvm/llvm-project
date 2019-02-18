@@ -10,6 +10,7 @@
 #include "../Common/AssemblerUtils.h"
 #include "ARMInstrInfo.h"
 
+namespace llvm {
 namespace exegesis {
 namespace {
 
@@ -30,11 +31,12 @@ protected:
 };
 
 TEST_F(ARMMachineFunctionGeneratorTest, DISABLED_JitFunction) {
-  Check(llvm::MCInst(), 0x1e, 0xff, 0x2f, 0xe1);
+  Check({}, llvm::MCInst(), 0x1e, 0xff, 0x2f, 0xe1);
 }
 
 TEST_F(ARMMachineFunctionGeneratorTest, DISABLED_JitFunctionADDrr) {
-  Check(MCInstBuilder(llvm::ARM::ADDrr)
+  Check({{llvm::ARM::R0, llvm::APInt()}},
+        MCInstBuilder(llvm::ARM::ADDrr)
             .addReg(llvm::ARM::R0)
             .addReg(llvm::ARM::R0)
             .addReg(llvm::ARM::R0)
@@ -46,3 +48,4 @@ TEST_F(ARMMachineFunctionGeneratorTest, DISABLED_JitFunctionADDrr) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

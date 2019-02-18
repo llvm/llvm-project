@@ -21,7 +21,6 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
-#include "verbose_assert.h"
 
 int main()
 {

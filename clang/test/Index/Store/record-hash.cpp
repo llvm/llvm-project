@@ -1,5 +1,3 @@
-// XFAIL: linux
-
 // RUN: rm -rf %t
 // RUN: %clang_cc1 %s -index-store-path %t/idx -D THE_TYPE=long
 // RUN: %clang_cc1 %s -index-store-path %t/idx -D THE_TYPE=char

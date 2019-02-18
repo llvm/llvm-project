@@ -40,7 +40,7 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK: ![[INT:[0-9]+]] = !DIBasicType(name: "int"
 
 // A: 10
-// CHECK: ![[A_FUNC:.*]] = distinct !DISubprogram(name: "a"{{.*}}, line: [[A_LINE:[0-9]+]]{{.*}}, isDefinition: true
+// CHECK: ![[A_FUNC:.*]] = distinct !DISubprogram(name: "a"{{.*}}, line: [[A_LINE:[0-9]+]]{{.*}} DISPFlagDefinition
 
 // Back to A. -- 78
 // CHECK: ![[LAM_A:.*]] = distinct !DICompositeType(tag: DW_TAG_class_type{{.*}}, scope: ![[A_FUNC]]{{.*}}, line: [[A_LINE]],
@@ -52,7 +52,7 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK-SAME:                           DIFlagPublic
 
 // B: 14
-// CHECK: ![[B_FUNC:.*]] = distinct !DISubprogram(name: "b"{{.*}}, line: [[B_LINE:[0-9]+]]{{.*}}, isDefinition: true
+// CHECK: ![[B_FUNC:.*]] = distinct !DISubprogram(name: "b"{{.*}}, line: [[B_LINE:[0-9]+]]{{.*}} DISPFlagDefinition
 
 // Back to B. -- 67
 // CHECK: ![[LAM_B:.*]] = distinct !DICompositeType(tag: DW_TAG_class_type{{.*}}, scope: ![[B_FUNC]]{{.*}}, line: [[B_LINE]],
@@ -68,7 +68,7 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK-SAME:                           DIFlagPublic
 
 // C: 17
-// CHECK: ![[C_FUNC:.*]] = distinct !DISubprogram(name: "c"{{.*}}, line: [[C_LINE:[0-9]+]]{{.*}}, isDefinition: true
+// CHECK: ![[C_FUNC:.*]] = distinct !DISubprogram(name: "c"{{.*}}, line: [[C_LINE:[0-9]+]]{{.*}} DISPFlagDefinition
 
 // Back to C. -- 55
 // CHECK: ![[LAM_C:.*]] = distinct !DICompositeType(tag: DW_TAG_class_type{{.*}}, scope: ![[C_FUNC]]{{.*}}, line: [[C_LINE]],
@@ -85,7 +85,7 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK-SAME:                           DIFlagPublic
 
 // D: 18
-// CHECK: ![[D_FUNC:.*]] = distinct !DISubprogram(name: "d"{{.*}}, line: [[D_LINE:[0-9]+]]{{.*}}, isDefinition: true
+// CHECK: ![[D_FUNC:.*]] = distinct !DISubprogram(name: "d"{{.*}}, line: [[D_LINE:[0-9]+]]{{.*}} DISPFlagDefinition
 
 // Back to D. -- 24
 // CHECK: ![[LAM_D:.*]] = distinct !DICompositeType(tag: DW_TAG_class_type{{.*}}, scope: ![[D_FUNC]]{{.*}}, line: [[D_LINE]],

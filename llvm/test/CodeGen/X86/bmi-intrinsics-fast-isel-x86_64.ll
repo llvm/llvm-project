@@ -10,9 +10,9 @@
 define i64 @test__andn_u64(i64 %a0, i64 %a1) {
 ; X64-LABEL: test__andn_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorq $-1, %rdi
-; X64-NEXT:    andq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    xorq $-1, %rax
+; X64-NEXT:    andq %rsi, %rax
 ; X64-NEXT:    retq
   %xor = xor i64 %a0, -1
   %res = and i64 %xor, %a1
@@ -67,14 +67,11 @@ define i64 @test__blsr_u64(i64 %a0) {
 define i64 @test__tzcnt_u64(i64 %a0) {
 ; X64-LABEL: test__tzcnt_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $64, %ecx
 ; X64-NEXT:    tzcntq %rdi, %rax
-; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    retq
   %cmp = icmp ne i64 %a0, 0
-  %cttz = call i64 @llvm.cttz.i64(i64 %a0, i1 true)
-  %res = select i1 %cmp, i64 %cttz, i64 64
-  ret i64 %res
+  %cttz = call i64 @llvm.cttz.i64(i64 %a0, i1 false)
+  ret i64 %cttz
 }
 
 ;
@@ -84,9 +81,9 @@ define i64 @test__tzcnt_u64(i64 %a0) {
 define i64 @test_andn_u64(i64 %a0, i64 %a1) {
 ; X64-LABEL: test_andn_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorq $-1, %rdi
-; X64-NEXT:    andq %rsi, %rdi
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    xorq $-1, %rax
+; X64-NEXT:    andq %rsi, %rax
 ; X64-NEXT:    retq
   %xor = xor i64 %a0, -1
   %res = and i64 %xor, %a1
@@ -151,14 +148,11 @@ define i64 @test_blsr_u64(i64 %a0) {
 define i64 @test_tzcnt_u64(i64 %a0) {
 ; X64-LABEL: test_tzcnt_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $64, %ecx
 ; X64-NEXT:    tzcntq %rdi, %rax
-; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    retq
   %cmp = icmp ne i64 %a0, 0
-  %cttz = call i64 @llvm.cttz.i64(i64 %a0, i1 true)
-  %res = select i1 %cmp, i64 %cttz, i64 64
-  ret i64 %res
+  %cttz = call i64 @llvm.cttz.i64(i64 %a0, i1 false)
+  ret i64 %cttz
 }
 
 declare i64 @llvm.cttz.i64(i64, i1)

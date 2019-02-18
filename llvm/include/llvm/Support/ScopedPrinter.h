@@ -138,7 +138,7 @@ public:
       }
     }
 
-    llvm::sort(SetFlags.begin(), SetFlags.end(), &flagName<TFlag>);
+    llvm::sort(SetFlags, &flagName<TFlag>);
 
     startLine() << Label << " [ (" << hex(Value) << ")\n";
     for (const auto &Flag : SetFlags) {

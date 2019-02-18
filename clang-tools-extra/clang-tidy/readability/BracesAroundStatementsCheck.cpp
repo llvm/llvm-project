@@ -174,12 +174,12 @@ BracesAroundStatementsCheck::findRParenLoc(const IfOrWhileStmt *S,
                                            const SourceManager &SM,
                                            const ASTContext *Context) {
   // Skip macros.
-  if (S->getLocStart().isMacroID())
+  if (S->getBeginLoc().isMacroID())
     return SourceLocation();
 
-  SourceLocation CondEndLoc = S->getCond()->getLocEnd();
+  SourceLocation CondEndLoc = S->getCond()->getEndLoc();
   if (const DeclStmt *CondVar = S->getConditionVariableDeclStmt())
-    CondEndLoc = CondVar->getLocEnd();
+    CondEndLoc = CondVar->getEndLoc();
 
   if (!CondEndLoc.isValid()) {
     return SourceLocation();
@@ -232,7 +232,7 @@ bool BracesAroundStatementsCheck::checkStmt(
   // level as the start of the statement. We also need file locations for
   // Lexer::getLocForEndOfToken working properly.
   InitialLoc = Lexer::makeFileCharRange(
-                   CharSourceRange::getCharRange(InitialLoc, S->getLocStart()),
+                   CharSourceRange::getCharRange(InitialLoc, S->getBeginLoc()),
                    SM, Context->getLangOpts())
                    .getBegin();
   if (InitialLoc.isInvalid())

@@ -2,6 +2,10 @@
 // Tests for the hvx features and warnings.
 // -----------------------------------------------------------------------------
 
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX166 %s
+// CHECKHVX166: "-target-feature" "+hvxv66"
+
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv65 -mhvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECKHVX165 %s
 // CHECKHVX165: "-target-feature" "+hvxv65"
@@ -69,6 +73,9 @@
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv60 -mhvx \
 // RUN:  -mhvx-length=64B 2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-64B %s
 // CHECK-HVXLENGTH-64B: "-target-feature" "+hvx{{.*}}" "-target-feature" "+hvx-length64b"
+// The default mode on v66 and future archs is 128B.
+// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx \
+// RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-128B %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv62 -mhvx -mhvx-length=128B\
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVXLENGTH-128B %s
 // CHECK-HVXLENGTH-128B: "-target-feature" "+hvx{{.*}}" "-target-feature" "+hvx-length128b"

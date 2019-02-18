@@ -1,5 +1,7 @@
 // RUN: %clang -O0 %s -o %t && %run %t
 
+// XFAIL: i386-netbsd && asan
+
 #include <assert.h>
 #include <fcntl.h>
 #include <limits.h>

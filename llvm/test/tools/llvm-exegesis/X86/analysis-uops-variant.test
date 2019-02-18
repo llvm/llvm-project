@@ -1,0 +1,29 @@
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file="" -analysis-numpoints=1 | FileCheck %s
+
+# REQUIRES: asserts
+# (sched class name is NDEBUG only)
+
+# CHECK: cluster_id,opcode_name,config,sched_class,SBPort0,SBPort1,SBPort23,SBPort4,SBPort5,NumMicroOps
+# CHECK-NEXT: SBWriteZeroLatency
+
+---
+mode:            uops
+key:
+  instructions:
+    - 'XOR32rr EAX EAX EAX'
+  config:          ''
+  register_initial_values:
+cpu_name:        sandybridge
+llvm_triple:     x86_64-unknown-linux-gnu
+num_repetitions: 10000
+measurements:
+  - { key: SBPort0, value: 0.0012, per_snippet_value: 0.0012 }
+  - { key: SBPort1, value: 0.0021, per_snippet_value: 0.0021 }
+  - { key: SBPort23, value: 0.0013, per_snippet_value: 0.0013 }
+  - { key: SBPort4, value: 0.0018, per_snippet_value: 0.0018 }
+  - { key: SBPort5, value: 0.0012, per_snippet_value: 0.0012 }
+  - { key: NumMicroOps, value: 1.0108, per_snippet_value: 1.0108 }
+error:           ''
+info:            ''
+assembled_snippet: 31C031C031C031C031C031C031C031C031C031C031C031C031C031C031C031C0C3
+...

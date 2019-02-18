@@ -67,13 +67,16 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     OS << uint8_t(Binary);
   } else {
     assert(Binary <= UINT16_MAX && "Several-byte opcodes not supported yet");
-    OS << uint8_t(Binary >> 8)
-       << uint8_t(Binary);
+    OS << uint8_t(Binary >> 8);
+    encodeULEB128(uint8_t(Binary), OS);
   }
 
   // For br_table instructions, encode the size of the table. In the MCInst,
-  // there's an index operand, one operand for each table entry, and the
-  // default operand.
+  // there's an index operand (if not a stack instruction), one operand for
+  // each table entry, and the default operand.
+  if (MI.getOpcode() == WebAssembly::BR_TABLE_I32_S ||
+      MI.getOpcode() == WebAssembly::BR_TABLE_I64_S)
+    encodeULEB128(MI.getNumOperands() - 1, OS);
   if (MI.getOpcode() == WebAssembly::BR_TABLE_I32 ||
       MI.getOpcode() == WebAssembly::BR_TABLE_I64)
     encodeULEB128(MI.getNumOperands() - 2, OS);
@@ -83,36 +86,47 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     const MCOperand &MO = MI.getOperand(i);
     if (MO.isReg()) {
       /* nothing to encode */
+
     } else if (MO.isImm()) {
       if (i < Desc.getNumOperands()) {
-        assert(Desc.TSFlags == 0 &&
-               "WebAssembly non-variable_ops don't use TSFlags");
         const MCOperandInfo &Info = Desc.OpInfo[i];
         LLVM_DEBUG(dbgs() << "Encoding immediate: type="
                           << int(Info.OperandType) << "\n");
-        if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
+        switch (Info.OperandType) {
+        case WebAssembly::OPERAND_I32IMM:
           encodeSLEB128(int32_t(MO.getImm()), OS);
-        } else if (Info.OperandType == WebAssembly::OPERAND_OFFSET32) {
+          break;
+        case WebAssembly::OPERAND_OFFSET32:
           encodeULEB128(uint32_t(MO.getImm()), OS);
-        } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
+          break;
+        case WebAssembly::OPERAND_I64IMM:
           encodeSLEB128(int64_t(MO.getImm()), OS);
-        } else if (Info.OperandType == WebAssembly::OPERAND_GLOBAL) {
-          llvm_unreachable("wasm globals should only be accessed symbolicly");
-        } else if (Info.OperandType == WebAssembly::OPERAND_SIGNATURE) {
+          break;
+        case WebAssembly::OPERAND_SIGNATURE:
           OS << uint8_t(MO.getImm());
-        } else {
+          break;
+        case WebAssembly::OPERAND_VEC_I8IMM:
+          support::endian::write<uint8_t>(OS, MO.getImm(), support::little);
+          break;
+        case WebAssembly::OPERAND_VEC_I16IMM:
+          support::endian::write<uint16_t>(OS, MO.getImm(), support::little);
+          break;
+        case WebAssembly::OPERAND_VEC_I32IMM:
+          support::endian::write<uint32_t>(OS, MO.getImm(), support::little);
+          break;
+        case WebAssembly::OPERAND_VEC_I64IMM:
+          support::endian::write<uint64_t>(OS, MO.getImm(), support::little);
+          break;
+        case WebAssembly::OPERAND_GLOBAL:
+          llvm_unreachable("wasm globals should only be accessed symbolicly");
+        default:
           encodeULEB128(uint64_t(MO.getImm()), OS);
         }
       } else {
-        assert(Desc.TSFlags == (WebAssemblyII::VariableOpIsImmediate |
-                                WebAssemblyII::VariableOpImmediateIsLabel));
         encodeULEB128(uint64_t(MO.getImm()), OS);
       }
+
     } else if (MO.isFPImm()) {
-      assert(i < Desc.getNumOperands() &&
-             "Unexpected floating-point immediate as a non-fixed operand");
-      assert(Desc.TSFlags == 0 &&
-             "WebAssembly variable_ops floating point ops don't use TSFlags");
       const MCOperandInfo &Info = Desc.OpInfo[i];
       if (Info.OperandType == WebAssembly::OPERAND_F32IMM) {
         // TODO: MC converts all floating point immediate operands to double.
@@ -124,27 +138,31 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         double d = MO.getFPImm();
         support::endian::write<double>(OS, d, support::little);
       }
+
     } else if (MO.isExpr()) {
       const MCOperandInfo &Info = Desc.OpInfo[i];
       llvm::MCFixupKind FixupKind;
       size_t PaddedSize = 5;
-      if (Info.OperandType == WebAssembly::OPERAND_I32IMM) {
+      switch (Info.OperandType) {
+      case WebAssembly::OPERAND_I32IMM:
         FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i32);
-      } else if (Info.OperandType == WebAssembly::OPERAND_I64IMM) {
+        break;
+      case WebAssembly::OPERAND_I64IMM:
         FixupKind = MCFixupKind(WebAssembly::fixup_code_sleb128_i64);
         PaddedSize = 10;
-      } else if (Info.OperandType == WebAssembly::OPERAND_FUNCTION32 ||
-                 Info.OperandType == WebAssembly::OPERAND_OFFSET32 ||
-                 Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
+        break;
+      case WebAssembly::OPERAND_FUNCTION32:
+      case WebAssembly::OPERAND_OFFSET32:
+      case WebAssembly::OPERAND_TYPEINDEX:
+      case WebAssembly::OPERAND_GLOBAL:
+      case WebAssembly::OPERAND_EVENT:
         FixupKind = MCFixupKind(WebAssembly::fixup_code_uleb128_i32);
-      } else if (Info.OperandType == WebAssembly::OPERAND_GLOBAL) {
-        FixupKind = MCFixupKind(WebAssembly::fixup_code_global_index);
-      } else {
+        break;
+      default:
         llvm_unreachable("unexpected symbolic operand kind");
       }
-      Fixups.push_back(MCFixup::create(
-          OS.tell() - Start, MO.getExpr(),
-          FixupKind, MI.getLoc()));
+      Fixups.push_back(MCFixup::create(OS.tell() - Start, MO.getExpr(),
+                                       FixupKind, MI.getLoc()));
       ++MCNumFixups;
       encodeULEB128(0, OS, PaddedSize);
     } else {

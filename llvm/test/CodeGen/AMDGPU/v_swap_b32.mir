@@ -1,0 +1,564 @@
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-shrink-instructions -verify-machineinstrs %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: swap_phys_condensed
+# GCN: bb.0:
+# GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
+# GCN-NEXT: S_SETPC_B64_return
+---
+name:            swap_phys_condensed
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: swap_phys_sparse
+# GCN: bb.0:
+# GCN-NEXT: $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
+# GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec
+# GCN-NEXT: S_SETPC_B64_return
+---
+name:            swap_phys_sparse
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 killed $vgpr4, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr5 = V_MOV_B32_e32 killed $vgpr6, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1
+...
+
+# GCN-LABEL: name: swap_phys_liveout
+# GCN: bb.0:
+# GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr0, $vgpr1 = V_SWAP_B32 $vgpr1, $vgpr0, implicit $exec
+# GCN-NEXT: S_SETPC_B64_return
+---
+name:            swap_phys_liveout
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $sgpr30_sgpr31
+    $vgpr2 = V_MOV_B32_e32 killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr2, implicit $vgpr1
+...
+
+# GCN-LABEL: name: swap_phys_b64
+# GCN: bb.0:
+# GCN-NEXT: $vgpr0, $vgpr2 = V_SWAP_B32 $vgpr2, $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr1, $vgpr3 = V_SWAP_B32 $vgpr3, $vgpr1, implicit $exec
+---
+name:            swap_phys_b64
+body:             |
+  bb.0:
+    $vgpr4_vgpr5 = COPY killed $vgpr0_vgpr1
+    $vgpr0_vgpr1 = COPY killed $vgpr2_vgpr3
+    $vgpr2_vgpr3 = COPY killed $vgpr4_vgpr5
+...
+
+# GCN-LABEL: name: swap_phys_overlap_x
+# GCN: bb.0:
+# GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr3_vgpr4 = V_ADD_F64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $exec
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+---
+name:            swap_phys_overlap_x
+body:             |
+  bb.0:
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr3_vgpr4 = V_ADD_F64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+...
+
+# GCN-LABEL: name: swap_phys_clobber_y
+# GCN: bb.0:
+# GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+# GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+---
+name:            swap_phys_clobber_y
+body:             |
+  bb.0:
+    $vgpr2 = V_MOV_B32_e32 $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 killed $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 0, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 killed $vgpr2, implicit $exec
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_copy_condense
+# GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
+---
+name:            swap_virt_copy_condense
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1
+    %1 = COPY %2
+...
+
+# GCN-LABEL: name: swap_virt_copy_sparse
+# GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
+---
+name:            swap_virt_copy_sparse
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    S_NOP 0
+    %0 = COPY %1
+    S_NOP 0
+    %1 = COPY %2
+...
+
+# GCN-LABEL: name: swap_virt_copy_subreg
+# GCN: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
+---
+name:            swap_virt_copy_subreg
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub0 = COPY %0.sub0
+    %2.sub1 = COPY %0.sub1
+    %0.sub0 = COPY %1.sub0
+    %0.sub1 = COPY %1.sub1
+    %1.sub0 = COPY %2.sub0
+...
+
+# GCN-LABEL: name: swap_virt_mov
+# GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
+---
+name:            swap_virt_mov
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = V_MOV_B32_e32 %0, implicit $exec
+    %0 = V_MOV_B32_e32 %1, implicit $exec
+    %1 = V_MOV_B32_e32 %2, implicit $exec
+...
+
+# GCN-LABEL: name: swap_virt_read_x
+# GCN: bb.0:
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:vgpr_32 = COPY %0
+# GCN-NEXT: %3:vgpr_32 = COPY %0
+# GCN-NEXT: %0:vgpr_32 = COPY %1
+# GCN-NEXT: %1:vgpr_32 = COPY %2
+# GCN-NEXT: S_ENDPGM
+
+---
+name:            swap_virt_read_x
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %3 = COPY %0
+    %0 = COPY %1
+    %1 = COPY %2
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_read_t_twice
+# GCN: bb.0:
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:vgpr_32 = COPY %0
+# GCN-NEXT: %3:vgpr_32 = COPY %2
+# GCN-NEXT: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
+# GCN-NEXT: S_ENDPGM
+
+---
+name:            swap_virt_read_t_twice
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %3 = COPY %2
+    %0 = COPY %1
+    %1 = COPY %2
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_clobber_y
+# GCN: bb.0:
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:vgpr_32 = COPY %0
+# GCN-NEXT: %0:vgpr_32 = COPY %1
+# GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = COPY %2
+# GCN-NEXT: S_ENDPGM
+
+---
+name:            swap_virt_clobber_y
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1
+    %1 = IMPLICIT_DEF
+    %1 = COPY %2
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_clobber_x1
+# GCN: bb.0:
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:vgpr_32 = COPY %0
+# GCN-NEXT: %0:vgpr_32 = COPY %1
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = COPY %2
+# GCN-NEXT: S_ENDPGM
+
+---
+name:            swap_virt_clobber_x1
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1
+    %0 = IMPLICIT_DEF
+    %1 = COPY %2
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_clobber_x2
+# GCN: bb.0:
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:vgpr_32 = COPY %0
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %0:vgpr_32 = COPY %1
+# GCN-NEXT: %1:vgpr_32 = COPY %2
+# GCN-NEXT: S_ENDPGM
+
+---
+name:            swap_virt_clobber_x2
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = IMPLICIT_DEF
+    %0 = COPY %1
+    %1 = COPY %2
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_clobber_t
+# GCN: bb.0:
+# GCN-NEXT: %0:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:vgpr_32 = COPY %0
+# GCN-NEXT: %0:vgpr_32 = COPY %1
+# GCN-NEXT: %2:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:vgpr_32 = COPY %2
+# GCN-NEXT: S_ENDPGM
+
+---
+name:            swap_virt_clobber_t
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1
+    %2 = IMPLICIT_DEF
+    %1 = COPY %2
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_copy_subreg_overlap_x_full
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %2.sub0:vreg_64 = COPY %0.sub0
+# GCN-NEXT: %3:vreg_64 = COPY %0
+# GCN-NEXT: %0.sub0:vreg_64 = COPY %1.sub0
+# GCN-NEXT: %1.sub0:vreg_64 = COPY %2.sub0
+---
+name:            swap_virt_copy_subreg_overlap_x_full
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+  - { id: 3, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub0 = COPY %0.sub0
+    %3 = COPY %0
+    %0.sub0 = COPY %1.sub0
+    %1.sub0 = COPY %2.sub0
+...
+
+# GCN-LABEL: name: swap_virt_copy_subreg_overlap_x_part
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %2.sub0:vreg_64 = COPY %0.sub0
+# GCN-NEXT: %3:vreg_64 = COPY %0.sub0_sub1
+# GCN-NEXT: %0.sub0:vreg_128 = COPY %1.sub0
+# GCN-NEXT: %1.sub0:vreg_64 = COPY %2.sub0
+---
+name:            swap_virt_copy_subreg_overlap_x_part
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+  - { id: 3, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub0 = COPY %0.sub0
+    %3 = COPY %0.sub0_sub1
+    %0.sub0 = COPY %1.sub0
+    %1.sub0 = COPY %2.sub0
+...
+
+# GCN-LABEL: name: swap_virt_copy_subreg_wide_y
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %2.sub0:vreg_64 = COPY %0.sub0
+# GCN-NEXT: %0.sub0:vreg_64 = COPY %1.sub0
+# GCN-NEXT: %1:vreg_64 = COPY %2
+---
+name:            swap_virt_copy_subreg_wide_y
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub0 = COPY %0.sub0
+    %0.sub0 = COPY %1.sub0
+    %1 = COPY %2
+...
+
+# GCN-LABEL: name: swap_virt_b64
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
+# GCN-NEXT: %0.sub1:vreg_64, %1.sub1:vreg_64 = V_SWAP_B32 %1.sub1, %0.sub1, implicit $exec
+---
+name:            swap_virt_b64
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1
+    %1 = COPY %2
+...
+
+# GCN-LABEL: name: swap_virt_b128
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %0.sub0:vreg_128, %1.sub0:vreg_128 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
+# GCN-NEXT: %0.sub1:vreg_128, %1.sub1:vreg_128 = V_SWAP_B32 %1.sub1, %0.sub1, implicit $exec
+# GCN-NEXT: %0.sub2:vreg_128, %1.sub2:vreg_128 = V_SWAP_B32 %1.sub2, %0.sub2, implicit $exec
+# GCN-NEXT: %0.sub3:vreg_128, %1.sub3:vreg_128 = V_SWAP_B32 %1.sub3, %0.sub3, implicit $exec
+---
+name:            swap_virt_b128
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1
+    %1 = COPY %2
+...
+
+# GCN-LABEL: name: swap_virt_b128_sub0_1
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %0.sub0:vreg_128, %1.sub0:vreg_128 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
+# GCN-NEXT: %0.sub1:vreg_128, %1.sub1:vreg_128 = V_SWAP_B32 %1.sub1, %0.sub1, implicit $exec
+# GCN-NEXT: S_ENDPGM
+---
+name:            swap_virt_b128_sub0_1
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub0_sub1 = COPY %0.sub0_sub1
+    %0.sub0_sub1 = COPY %1.sub0_sub1
+    %1.sub0_sub1 = COPY %2.sub0_sub1
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: swap_virt_b128_sub2_3
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_128 = IMPLICIT_DEF
+# GCN-NEXT: %0.sub2:vreg_128, %1.sub2:vreg_128 = V_SWAP_B32 %1.sub2, %0.sub2, implicit $exec
+# GCN-NEXT: %0.sub3:vreg_128, %1.sub3:vreg_128 = V_SWAP_B32 %1.sub3, %0.sub3, implicit $exec
+# GCN-NEXT: S_ENDPGM
+---
+name:            swap_virt_b128_sub2_3
+registers:
+  - { id: 0, class: vreg_128 }
+  - { id: 1, class: vreg_128 }
+  - { id: 2, class: vreg_128 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub2_sub3 = COPY %0.sub2_sub3
+    %0.sub2_sub3 = COPY %1.sub2_sub3
+    %1.sub2_sub3 = COPY %2.sub2_sub3
+    S_ENDPGM
+...
+
+
+# GCN-LABEL: name: swap_virt_s_to_s
+# GCN: bb.0:
+# GCN-NEXT: %0:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %1:sgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %2:sgpr_32 = COPY %0
+# GCN-NEXT: %0:sgpr_32 = COPY %1
+# GCN-NEXT: %1:sgpr_32 = COPY %2
+---
+name:            swap_virt_s_to_s
+registers:
+  - { id: 0, class: sgpr_32 }
+  - { id: 1, class: sgpr_32 }
+  - { id: 2, class: sgpr_32 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = COPY %0
+    %0 = COPY %1
+    %1 = COPY %2
+...
+
+# GCN-LABEL: name: swap_virt_copy_subreg_impdef_super
+# GCN: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
+---
+name:            swap_virt_copy_subreg_impdef_super
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub0 = COPY %0.sub0, implicit-def %2, implicit $exec
+    %2.sub1 = COPY %0.sub1
+    %0.sub0 = COPY %1.sub0
+    %0.sub1 = COPY %1.sub1
+    %1.sub0 = COPY %2.sub0
+...
+
+# GCN-LABEL: name: swap_virt_copy_subreg_impuse_x
+# GCN: bb.0:
+# GCN-NEXT: %0:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %1:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %2.sub0:vreg_64 = COPY %0.sub0
+# GCN-NEXT: %2.sub1:vreg_64 = COPY %0.sub1
+# GCN-NEXT: %0.sub0:vreg_64 = COPY %1.sub0, implicit %0
+# GCN-NEXT: %0.sub1:vreg_64 = COPY %1.sub1
+# GCN-NEXT: %1.sub0:vreg_64 = COPY %2.sub0
+# GCN-NEXT: S_ENDPGM
+---
+name:            swap_virt_copy_subreg_impuse_x
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vreg_64 }
+  - { id: 2, class: vreg_64 }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2.sub0 = COPY %0.sub0
+    %2.sub1 = COPY %0.sub1
+    %0.sub0 = COPY %1.sub0, implicit %0
+    %0.sub1 = COPY %1.sub1
+    %1.sub0 = COPY %2.sub0
+    S_ENDPGM
+...

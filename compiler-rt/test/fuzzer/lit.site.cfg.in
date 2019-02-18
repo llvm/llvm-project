@@ -1,7 +1,5 @@
 @LIT_SITE_CFG_IN_HEADER@
 
-config.test_exec_root = "@CMAKE_CURRENT_BINARY_DIR@"
-
 config.cpp_compiler = "@LIBFUZZER_TEST_COMPILER@"
 config.target_flags = "@LIBFUZZER_TEST_FLAGS@"
 config.c_compiler = "@LIBFUZZER_TEST_COMPILER@"

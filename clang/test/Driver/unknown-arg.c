@@ -14,7 +14,7 @@
 // RUN: FileCheck %s --check-prefix=CL-ERROR-DID-YOU-MEAN
 // RUN: %clang_cl -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -c -Wno-unknown-argument -### -- %s 2>&1 | \
 // RUN: FileCheck %s --check-prefix=SILENT
-// RUN: not %clang -cc1as -hell --version -debug-info-macros 2>&1 | \
+// RUN: not %clang -cc1as -hell --version 2>&1 | \
 // RUN: FileCheck %s --check-prefix=CC1AS-DID-YOU-MEAN
 // RUN: not %clang -cc1asphalt -help 2>&1 | \
 // RUN: FileCheck %s --check-prefix=UNKNOWN-INTEGRATED

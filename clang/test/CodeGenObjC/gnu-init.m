@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-freebsd -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-NEW
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -S -emit-llvm -fobjc-runtime=gnustep-2.0 -o - %s | FileCheck %s -check-prefix=CHECK-WIN
 // RUN: %clang_cc1 -triple x86_64-unknown-freebsd -S -emit-llvm -fobjc-runtime=gnustep-1.8 -o - %s | FileCheck %s -check-prefix=CHECK-OLD
 
 // Almost minimal Objective-C file, check that it emits calls to the correct
@@ -49,9 +50,9 @@
 // CHECK-NEW: @.objc_null_class_alias = linkonce_odr hidden global { i8*, i8* } zeroinitializer, section "__objc_class_aliases", comdat, align 8
 // CHECK-NEW: @.objc_null_constant_string = linkonce_odr hidden global { i8*, i32, i32, i32, i32, i8* } zeroinitializer, section "__objc_constant_string", comdat, align 8
 // Make sure that the null symbols are not going to be removed, even by linking.
-// CHECK-NEW: @llvm.used = appending global [7 x i8*] [i8* bitcast ({ { i8*, i8*, i8*, i64, i64, i64, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i64, i8* }*, i8*, i8*, i64, i64, i64, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i64, i8* }** @._OBJC_INIT_CLASS_X to i8*), i8* bitcast ({ i8*, i8* }* @.objc_null_selector to i8*), i8* bitcast ({ i8*, i8*, i8*, i8*, i8*, i8*, i8* }* @.objc_null_category to i8*), i8* bitcast ({ i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8* }* @.objc_null_protocol to i8*), i8* bitcast ({ i8* }* @.objc_null_protocol_ref to i8*), i8* bitcast ({ i8*, i8* }* @.objc_null_class_alias to i8*), i8* bitcast ({ i8*, i32, i32, i32, i32, i8* }* @.objc_null_constant_string to i8*)], section "llvm.metadata"
+// CHECK-NEW: @llvm.used = appending global [8 x i8*] [i8* bitcast ({ { i8*, i8*, i8*, i64, i64, i64, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i64, i8* }*, i8*, i8*, i64, i64, i64, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i64, i8* }** @._OBJC_INIT_CLASS_X to i8*), i8* bitcast (void ()** @.objc_ctor to i8*), i8* bitcast ({ i8*, i8* }* @.objc_null_selector to i8*), i8* bitcast ({ i8*, i8*, i8*, i8*, i8*, i8*, i8* }* @.objc_null_category to i8*), i8* bitcast ({ i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8* }* @.objc_null_protocol to i8*), i8* bitcast ({ i8* }* @.objc_null_protocol_ref to i8*), i8* bitcast ({ i8*, i8* }* @.objc_null_class_alias to i8*), i8* bitcast ({ i8*, i32, i32, i32, i32, i8* }* @.objc_null_constant_string to i8*)], section "llvm.metadata"
 // Make sure that the load function and the reference to it are marked as used.
-// CHECK-NEW: @llvm.compiler.used = appending global [2 x i8*] [i8* bitcast (void ()* @.objcv2_load_function to i8*), i8* bitcast (void ()** @.objc_ctor to i8*)], section "llvm.metadata"
+// CHECK-NEW: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (void ()* @.objcv2_load_function to i8*)], section "llvm.metadata"
 
 // Check that we emit the load function in a comdat and that it does the right thing.
 // CHECK-NEW: define linkonce_odr hidden void @.objcv2_load_function() comdat {
@@ -66,4 +67,38 @@
 // CHECK-OLD: define internal void @.objc_load_function() {
 // CHECK-OLD-NEXT: entry:
 // CHECK-OLD-NEXT: call void ({ i64, i64, i8*, { i64, { i8*, i8* }*, i16, i16, [4 x i8*] }* }*, ...) @__objc_exec_class({ i64, i64, i8*, { i64, { i8*, i8* }*, i16, i16, [4 x i8*] }* }* @4)
+
+
+
+// Make sure all of our section boundary variables are emitted correctly.
+// CHECK-WIN-DAG: @__start___objc_selectors = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_selectors$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_selectors = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_selectors$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_classes = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_classes$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_classes = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_classes$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_class_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_refs$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_class_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_refs$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_cats = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_cats$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_cats = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_cats$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_protocols = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocols$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_protocols = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocols$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_protocol_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocol_refs$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_protocol_refs = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_protocol_refs$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_class_aliases = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_aliases$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_class_aliases = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_class_aliases$z", comdat, align 1
+// CHECK-WIN-DAG: @__start___objc_constant_string = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_constant_string$a", comdat, align 1
+// CHECK-WIN-DAG: @__stop__objc_constant_string = linkonce_odr hidden global %.objc_section_sentinel zeroinitializer, section "__objc_constant_string$z", comdat, align 1
+// CHECK-WIN: @.objc_init = linkonce_odr hidden global { i64, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel*, %.objc_section_sentinel* } { i64 0, %.objc_section_sentinel* @__start___objc_selectors, %.objc_section_sentinel* @__stop__objc_selectors, %.objc_section_sentinel* @__start___objc_classes, %.objc_section_sentinel* @__stop__objc_classes, %.objc_section_sentinel* @__start___objc_class_refs, %.objc_section_sentinel* @__stop__objc_class_refs, %.objc_section_sentinel* @__start___objc_cats, %.objc_section_sentinel* @__stop__objc_cats, %.objc_section_sentinel* @__start___objc_protocols, %.objc_section_sentinel* @__stop__objc_protocols, %.objc_section_sentinel* @__start___objc_protocol_refs, %.objc_section_sentinel* @__stop__objc_protocol_refs, %.objc_section_sentinel* @__start___objc_class_aliases, %.objc_section_sentinel* @__stop__objc_class_aliases, %.objc_section_sentinel* @__start___objc_constant_string, %.objc_section_sentinel* @__stop__objc_constant_string }, comdat, align 8
+
+// Make sure our init variable is in the correct section for late library init.
+// CHECK-WIN: @.objc_ctor = linkonce hidden constant void ()* @.objcv2_load_function, section ".CRT$XCLz", comdat
+
+// We shouldn't have emitted any null placeholders on Windows.
+// CHECK-WIN: @llvm.used = appending global [2 x i8*] [i8* bitcast ({ { i8*, i8*, i8*, i32, i32, i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i32, i8* }*, i8*, i8*, i32, i32, i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i32, i8* }** @._OBJC_INIT_CLASS_X to i8*), i8* bitcast (void ()** @.objc_ctor to i8*)], section "llvm.metadata"
+// CHECK-WIN: @llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (void ()* @.objcv2_load_function to i8*)], section "llvm.metadata"
+
+// Check our load function is in a comdat.
+// CHECK-WIN: define linkonce_odr hidden void @.objcv2_load_function() comdat {
+
+// Make sure we have dllimport on the load function
+// CHECK-WIN: declare dllimport void @__objc_load
 

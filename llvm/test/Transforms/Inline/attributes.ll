@@ -26,6 +26,10 @@ define i32 @safestack_callee(i32 %i) safestack {
   ret i32 %i
 }
 
+define i32 @slh_callee(i32 %i) speculative_load_hardening {
+  ret i32 %i
+}
+
 define i32 @alwaysinline_callee(i32 %i) alwaysinline {
   ret i32 %i
 }
@@ -159,6 +163,28 @@ define i32 @test_safestack(i32 %arg) safestack {
 ; CHECK-LABEL: @test_safestack(
 ; CHECK-NEXT: @noattr_callee
 ; CHECK-NEXT: ret i32
+}
+
+; Can inline a normal function into an SLH'ed function.
+define i32 @test_caller_slh(i32 %i) speculative_load_hardening {
+; CHECK-LABEL: @test_caller_slh(
+; CHECK-SAME: ) [[SLH:.*]] {
+; CHECK-NOT: call
+; CHECK: ret i32
+entry:
+  %callee = call i32 @noattr_callee(i32 %i)
+  ret i32 %callee
+}
+
+; Can inline a SLH'ed function into a normal one, propagating SLH.
+define i32 @test_callee_slh(i32 %i) {
+; CHECK-LABEL: @test_callee_slh(
+; CHECK-SAME: ) [[SLH:.*]] {
+; CHECK-NOT: call
+; CHECK: ret i32
+entry:
+  %callee = call i32 @slh_callee(i32 %i)
+  ret i32 %callee
 }
 
 ; Check that a function doesn't get inlined if target-cpu strings don't match
@@ -333,9 +359,10 @@ define i32 @test_no-use-jump-tables3(i32 %i) "no-jump-tables"="true" {
 ; CHECK-NEXT: ret i32
 }
 
-; Calle with "null-pointer-is-valid"="true" attribute should not be inlined
-; into a caller without this attribute. Exception: alwaysinline callee
-; can still be inlined.
+; Callee with "null-pointer-is-valid"="true" attribute should not be inlined
+; into a caller without this attribute.
+; Exception: alwaysinline callee can still be inlined but
+; "null-pointer-is-valid"="true" should get copied to caller.
 
 define i32 @null-pointer-is-valid_callee0(i32 %i) "null-pointer-is-valid"="true" {
   ret i32 %i
@@ -355,6 +382,7 @@ define i32 @null-pointer-is-valid_callee2(i32 %i)  {
 ; CHECK-NEXT: ret i32
 }
 
+; No inlining since caller does not have "null-pointer-is-valid"="true" attribute.
 define i32 @test_null-pointer-is-valid0(i32 %i) {
   %1 = call i32 @null-pointer-is-valid_callee0(i32 %i)
   ret i32 %1
@@ -363,21 +391,28 @@ define i32 @test_null-pointer-is-valid0(i32 %i) {
 ; CHECK-NEXT: ret i32
 }
 
-define i32 @test_null-pointer-is-valid1(i32 %i) {
+; alwaysinline should force inlining even when caller does not have
+; "null-pointer-is-valid"="true" attribute. However, the attribute should be
+; copied to caller.
+define i32 @test_null-pointer-is-valid1(i32 %i) "null-pointer-is-valid"="false" {
   %1 = call i32 @null-pointer-is-valid_callee1(i32 %i)
   ret i32 %1
-; CHECK: @test_null-pointer-is-valid1(
+; CHECK: @test_null-pointer-is-valid1(i32 %i) [[NULLPOINTERISVALID:#[0-9]+]] {
 ; CHECK-NEXT: ret i32
 }
 
+; Can inline since both caller and callee have "null-pointer-is-valid"="true"
+; attribute.
 define i32 @test_null-pointer-is-valid2(i32 %i) "null-pointer-is-valid"="true" {
   %1 = call i32 @null-pointer-is-valid_callee2(i32 %i)
   ret i32 %1
-; CHECK: @test_null-pointer-is-valid2(
+; CHECK: @test_null-pointer-is-valid2(i32 %i) [[NULLPOINTERISVALID]] {
 ; CHECK-NEXT: ret i32
 }
 
+; CHECK: attributes [[SLH]] = { speculative_load_hardening }
 ; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
 ; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }
 ; CHECK: attributes [[NOIMPLICITFLOAT]] = { noimplicitfloat }
 ; CHECK: attributes [[NOUSEJUMPTABLES]] = { "no-jump-tables"="true" }
+; CHECK: attributes [[NULLPOINTERISVALID]] = { "null-pointer-is-valid"="true" }

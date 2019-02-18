@@ -1,0 +1,23 @@
+LLVM notes
+----------
+
+This directory contains the Google Benchmark source code. Currently, the checked
+Benchmark library version is v1.4.1.
+
+This directory is under a different license than LLVM.
+
+Changes:
+
+* Bazel BUILD files are removed from the library
+* https://github.com/google/benchmark/commit/f85304e4e3a0e4e1bf15b91720df4a19e90b589f
+  is applied on top of the v1.4.1 to silence compiler warnings
+* https://github.com/google/benchmark/commit/505be96ab23056580a3a2315abba048f4428b04e
+  is applied to comply with the LLVM's required CMake version
+* https://github.com/google/benchmark/commit/f0901417c89d123474e6b91365029cfe32cf89dc
+  is applied to fix 32-bit build failure on macOS
+* https://github.com/google/benchmark/commit/52613079824ac58d06c070aa9fbbb186a5859e2c
+  is applied to fix cross compilation with MinGW headers
+* https://github.com/google/benchmark/commit/439d6b1c2a6da5cb6adc4c4dfc555af235722396
+  is applied to fix building with MinGW headers for ARM
+* https://github.com/google/benchmark/commit/a9b31c51b1ee7ec7b31438c647123c2cbac5d956
+  is applied to disable exceptions in Microsoft STL when exceptions are disabled

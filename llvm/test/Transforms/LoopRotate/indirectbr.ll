@@ -1,4 +1,5 @@
 ; RUN: opt < %s -S -loop-rotate -o - -verify-loop-info -verify-dom-info | FileCheck %s
+; RUN: opt < %s -S -loop-rotate -o - -verify-loop-info -verify-dom-info -enable-mssa-loop-dependency=true -verify-memoryssa | FileCheck %s
 
 ; PR5502
 define void @z80_do_opcodes() nounwind {

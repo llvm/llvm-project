@@ -1,19 +1,21 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; CHECK: += mpyi
 
-define void @foo(i32 %acc, i32 %num, i32 %num2) nounwind {
-entry:
-  %acc.addr = alloca i32, align 4
-  %num.addr = alloca i32, align 4
-  %num2.addr = alloca i32, align 4
-  store i32 %acc, i32* %acc.addr, align 4
-  store i32 %num, i32* %num.addr, align 4
-  store i32 %num2, i32* %num2.addr, align 4
-  %0 = load i32, i32* %num.addr, align 4
-  %1 = load i32, i32* %acc.addr, align 4
-  %mul = mul nsw i32 %0, %1
-  %2 = load i32, i32* %num2.addr, align 4
-  %add = add nsw i32 %mul, %2
-  store i32 %add, i32* %num.addr, align 4
+define void @f0(i32 %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = alloca i32, align 4
+  %v1 = alloca i32, align 4
+  %v2 = alloca i32, align 4
+  store i32 %a0, i32* %v0, align 4
+  store i32 %a1, i32* %v1, align 4
+  store i32 %a2, i32* %v2, align 4
+  %v3 = load i32, i32* %v1, align 4
+  %v4 = load i32, i32* %v0, align 4
+  %v5 = mul nsw i32 %v3, %v4
+  %v6 = load i32, i32* %v2, align 4
+  %v7 = add nsw i32 %v5, %v6
+  store i32 %v7, i32* %v1, align 4
   ret void
 }
+
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }

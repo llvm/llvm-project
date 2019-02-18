@@ -180,6 +180,18 @@ static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
     return;
   }
 
+  // Given a struct type, recursively traverse the elements with custom ComputePTXValueVTs.
+  if (StructType *STy = dyn_cast<StructType>(Ty)) {
+    auto const *SL = DL.getStructLayout(STy);
+    auto ElementNum = 0;
+    for(auto *EI : STy->elements()) {
+      ComputePTXValueVTs(TLI, DL, EI, ValueVTs, Offsets,
+                         StartingOffset + SL->getElementOffset(ElementNum));
+      ++ElementNum;
+    }
+    return;
+  }
+
   ComputeValueVTs(TLI, DL, Ty, TempVTs, &TempOffsets, StartingOffset);
   for (unsigned i = 0, e = TempVTs.size(); i != e; ++i) {
     EVT VT = TempVTs[i];
@@ -560,8 +572,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   }
   setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
   setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMINNAN, MVT::f16, Promote);
-  setOperationAction(ISD::FMAXNAN, MVT::f16, Promote);
+  setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
+  setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
 
   // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
   // No FPOW or FREM in PTX.
@@ -651,6 +663,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     return "NVPTXISD::CallSeqEnd";
   case NVPTXISD::CallPrototype:
     return "NVPTXISD::CallPrototype";
+  case NVPTXISD::ProxyReg:
+    return "NVPTXISD::ProxyReg";
   case NVPTXISD::LoadV2:
     return "NVPTXISD::LoadV2";
   case NVPTXISD::LoadV4:
@@ -1170,7 +1184,7 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
 }
 
 TargetLoweringBase::LegalizeTypeAction
-NVPTXTargetLowering::getPreferredVectorAction(EVT VT) const {
+NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (VT.getVectorNumElements() != 1 && VT.getScalarType() == MVT::i1)
     return TypeSplitVector;
   if (VT == MVT::v2f16)
@@ -1649,7 +1663,24 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-  if (!Func) {
+  // Both indirect calls and libcalls have nullptr Func. In order to distinguish
+  // between them we must rely on the call site value which is valid for
+  // indirect calls but is always null for libcalls.
+  bool isIndirectCall = !Func && CS;
+
+  if (isa<ExternalSymbolSDNode>(Callee)) {
+    Function* CalleeFunc = nullptr;
+
+    // Try to find the callee in the current module.
+    Callee = DAG.getSymbolFunctionGlobalAddress(Callee, &CalleeFunc);
+    assert(CalleeFunc != nullptr && "Libcall callee must be set.");
+
+    // Set the "libcall callee" attribute to indicate that the function
+    // must always have a declaration.
+    CalleeFunc->addFnAttr("nvptx-libcall-callee", "true");
+  }
+
+  if (isIndirectCall) {
     // This is indirect function call case : PTX requires a prototype of the
     // form
     // proto_0 : .callprototype(.param .b32 _) _ (.param .b32 _);
@@ -1673,7 +1704,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain, DAG.getConstant((Ins.size() == 0) ? 0 : 1, dl, MVT::i32), InFlag
   };
   // We model convergent calls as separate opcodes.
-  unsigned Opcode = Func ? NVPTXISD::PrintCallUni : NVPTXISD::PrintCall;
+  unsigned Opcode = isIndirectCall ? NVPTXISD::PrintCall : NVPTXISD::PrintCallUni;
   if (CLI.IsConvergent)
     Opcode = Opcode == NVPTXISD::PrintCallUni ? NVPTXISD::PrintConvergentCallUni
                                               : NVPTXISD::PrintConvergentCall;
@@ -1707,12 +1738,12 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
   SDVTList CallArgEndVTs = DAG.getVTList(MVT::Other, MVT::Glue);
   SDValue CallArgEndOps[] = { Chain,
-                              DAG.getConstant(Func ? 1 : 0, dl, MVT::i32),
+                              DAG.getConstant(isIndirectCall ? 0 : 1, dl, MVT::i32),
                               InFlag };
   Chain = DAG.getNode(NVPTXISD::CallArgEnd, dl, CallArgEndVTs, CallArgEndOps);
   InFlag = Chain.getValue(1);
 
-  if (!Func) {
+  if (isIndirectCall) {
     SDVTList PrototypeVTs = DAG.getVTList(MVT::Other, MVT::Glue);
     SDValue PrototypeOps[] = { Chain,
                                DAG.getConstant(uniqueCallSite, dl, MVT::i32),
@@ -1720,6 +1751,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(NVPTXISD::Prototype, dl, PrototypeVTs, PrototypeOps);
     InFlag = Chain.getValue(1);
   }
+
+  SmallVector<SDValue, 16> ProxyRegOps;
+  SmallVector<Optional<MVT>, 16> ProxyRegTruncates;
 
   // Generate loads from param memory/moves from registers for result
   if (Ins.size() > 0) {
@@ -1791,11 +1825,14 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
             MachineMemOperand::MOLoad);
 
         for (unsigned j = 0; j < NumElts; ++j) {
-          SDValue Ret = RetVal.getValue(j);
+          ProxyRegOps.push_back(RetVal.getValue(j));
+
           if (needTruncate)
-            Ret = DAG.getNode(ISD::TRUNCATE, dl, Ins[VecIdx + j].VT, Ret);
-          InVals.push_back(Ret);
+            ProxyRegTruncates.push_back(Optional<MVT>(Ins[VecIdx + j].VT));
+          else
+            ProxyRegTruncates.push_back(Optional<MVT>());
         }
+
         Chain = RetVal.getValue(NumElts);
         InFlag = RetVal.getValue(NumElts + 1);
 
@@ -1811,7 +1848,28 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                              DAG.getIntPtrConstant(uniqueCallSite + 1, dl,
                                                    true),
                              InFlag, dl);
+  InFlag = Chain.getValue(1);
   uniqueCallSite++;
+
+  // Append ProxyReg instructions to the chain to make sure that `callseq_end`
+  // will not get lost. Otherwise, during libcalls expansion, the nodes can become
+  // dangling.
+  for (unsigned i = 0; i < ProxyRegOps.size(); ++i) {
+    SDValue Ret = DAG.getNode(
+      NVPTXISD::ProxyReg, dl,
+      DAG.getVTList(ProxyRegOps[i].getSimpleValueType(), MVT::Other, MVT::Glue),
+      { Chain, ProxyRegOps[i], InFlag }
+    );
+
+    Chain = Ret.getValue(1);
+    InFlag = Ret.getValue(2);
+
+    if (ProxyRegTruncates[i].hasValue()) {
+      Ret = DAG.getNode(ISD::TRUNCATE, dl, ProxyRegTruncates[i].getValue(), Ret);
+    }
+
+    InVals.push_back(Ret);
+  }
 
   // set isTailCall to false for now, until we figure out how to express
   // tail call optimization in PTX

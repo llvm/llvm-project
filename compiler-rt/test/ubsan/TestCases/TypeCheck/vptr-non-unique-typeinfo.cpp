@@ -3,7 +3,8 @@
 // RUN: %run %t
 //
 // REQUIRES: cxxabi
-// UNSUPPORTED: win32
+// UNSUPPORTED: windows-msvc
+// XFAIL: i386-netbsd
 
 struct X {
   virtual ~X() {}

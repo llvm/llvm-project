@@ -75,7 +75,7 @@ public:
         return true;
 
       if (pointee.getObjCLifetime() > Qualifiers::OCL_ExplicitNone)
-        Pass.TA.report(parm->getLocStart(),
+        Pass.TA.report(parm->getBeginLoc(),
                        diag::err_arcmt_nsinvocation_ownership,
                        parm->getSourceRange())
             << selName;

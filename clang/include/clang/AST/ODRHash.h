@@ -13,6 +13,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_AST_ODRHASH_H
+#define LLVM_CLANG_AST_ODRHASH_H
+
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
@@ -58,6 +61,10 @@ public:
   // hash as if the function has no body.
   void AddFunctionDecl(const FunctionDecl *Function, bool SkipBody = false);
 
+  // Use this for ODR checking enums between modules.  This method compares
+  // more information than the AddDecl class.
+  void AddEnumDecl(const EnumDecl *Enum);
+
   // Process SubDecls of the main Decl.  This method calls the DeclVisitor
   // while AddDecl does not.
   void AddSubDecl(const Decl *D);
@@ -76,14 +83,19 @@ public:
   void AddIdentifierInfo(const IdentifierInfo *II);
   void AddNestedNameSpecifier(const NestedNameSpecifier *NNS);
   void AddTemplateName(TemplateName Name);
-  void AddDeclarationName(DeclarationName Name);
+  void AddDeclarationName(DeclarationName Name, bool TreatAsDecl = false);
   void AddTemplateArgument(TemplateArgument TA);
   void AddTemplateParameterList(const TemplateParameterList *TPL);
 
   // Save booleans until the end to lower the size of data to process.
   void AddBoolean(bool value);
 
-  static bool isWhitelistedDecl(const Decl* D, const CXXRecordDecl *Record);
+  static bool isWhitelistedDecl(const Decl* D, const DeclContext *Parent);
+
+private:
+  void AddDeclarationNameImpl(DeclarationName Name);
 };
 
 }  // end namespace clang
+
+#endif

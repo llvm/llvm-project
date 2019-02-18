@@ -96,6 +96,11 @@ cl::opt<double> NumCountersPerValueSite(
     // is usually smaller than 2.
     cl::init(1.0));
 
+cl::opt<bool> AtomicCounterUpdateAll(
+    "instrprof-atomic-counter-update-all", cl::ZeroOrMore,
+    cl::desc("Make all profile counter updates atomic (for testing only)"),
+    cl::init(false));
+
 cl::opt<bool> AtomicCounterUpdatePromoted(
     "atomic-counter-update-promoted", cl::ZeroOrMore,
     cl::desc("Do counter update using atomic fetch add "
@@ -597,12 +602,17 @@ void InstrProfiling::lowerIncrement(InstrProfIncrementInst *Inc) {
   IRBuilder<> Builder(Inc);
   uint64_t Index = Inc->getIndex()->getZExtValue();
   Value *Addr = Builder.CreateConstInBoundsGEP2_64(Counters, 0, Index);
-  Value *Load = Builder.CreateLoad(Addr, "pgocount");
-  auto *Count = Builder.CreateAdd(Load, Inc->getStep());
-  auto *Store = Builder.CreateStore(Count, Addr);
-  Inc->replaceAllUsesWith(Store);
-  if (isCounterPromotionEnabled())
-    PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
+
+  if (Options.Atomic || AtomicCounterUpdateAll) {
+    Builder.CreateAtomicRMW(AtomicRMWInst::Add, Addr, Inc->getStep(),
+                            AtomicOrdering::Monotonic);
+  } else {
+    Value *Load = Builder.CreateLoad(Addr, "pgocount");
+    auto *Count = Builder.CreateAdd(Load, Inc->getStep());
+    auto *Store = Builder.CreateStore(Count, Addr);
+    if (isCounterPromotionEnabled())
+      PromotionCandidates.emplace_back(cast<Instruction>(Load), Store);
+  }
   Inc->eraseFromParent();
 }
 
@@ -669,7 +679,8 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
 }
 
 static inline Comdat *getOrCreateProfileComdat(Module &M, Function &F,
-                                               InstrProfIncrementInst *Inc) {
+                                               InstrProfIncrementInst *Inc,
+                                               const Triple &TT) {
   if (!needsComdatForCounter(F, M))
     return nullptr;
 
@@ -677,21 +688,20 @@ static inline Comdat *getOrCreateProfileComdat(Module &M, Function &F,
   // name. The linker targeting COFF also requires that the COMDAT
   // a section is associated to must precede the associating section. For this
   // reason, we must choose the counter var's name as the name of the comdat.
-  StringRef ComdatPrefix = (Triple(M.getTargetTriple()).isOSBinFormatCOFF()
-                                ? getInstrProfCountersVarPrefix()
-                                : getInstrProfComdatPrefix());
+  StringRef ComdatPrefix =
+      (TT.isOSBinFormatCOFF() ? getInstrProfCountersVarPrefix()
+                              : getInstrProfComdatPrefix());
   return M.getOrInsertComdat(StringRef(getVarName(Inc, ComdatPrefix)));
 }
 
-static bool needsRuntimeRegistrationOfSectionRange(const Module &M) {
+static bool needsRuntimeRegistrationOfSectionRange(const Triple &TT) {
   // Don't do this for Darwin.  compiler-rt uses linker magic.
-  if (Triple(M.getTargetTriple()).isOSDarwin())
+  if (TT.isOSDarwin())
     return false;
 
   // Use linker script magic to get data/cnts/name start/end.
-  if (Triple(M.getTargetTriple()).isOSLinux() ||
-      Triple(M.getTargetTriple()).isOSFreeBSD() ||
-      Triple(M.getTargetTriple()).isPS4CPU())
+  if (TT.isOSLinux() || TT.isOSFreeBSD() || TT.isOSNetBSD() ||
+      TT.isOSFuchsia() || TT.isPS4CPU())
     return false;
 
   return true;
@@ -714,7 +724,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // linking.
   Function *Fn = Inc->getParent()->getParent();
   Comdat *ProfileVarsComdat = nullptr;
-  ProfileVarsComdat = getOrCreateProfileComdat(*M, *Fn, Inc);
+  ProfileVarsComdat = getOrCreateProfileComdat(*M, *Fn, Inc, TT);
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
   LLVMContext &Ctx = M->getContext();
@@ -735,7 +745,7 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   // Allocate statically the array of pointers to value profile nodes for
   // the current function.
   Constant *ValuesPtrExpr = ConstantPointerNull::get(Int8PtrTy);
-  if (ValueProfileStaticAlloc && !needsRuntimeRegistrationOfSectionRange(*M)) {
+  if (ValueProfileStaticAlloc && !needsRuntimeRegistrationOfSectionRange(TT)) {
     uint64_t NS = 0;
     for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
       NS += PD.NumValueSites[Kind];
@@ -808,7 +818,7 @@ void InstrProfiling::emitVNodes() {
   // For now only support this on platforms that do
   // not require runtime registration to discover
   // named section start/end.
-  if (needsRuntimeRegistrationOfSectionRange(*M))
+  if (needsRuntimeRegistrationOfSectionRange(TT))
     return;
 
   size_t TotalNS = 0;
@@ -876,7 +886,7 @@ void InstrProfiling::emitNameData() {
 }
 
 void InstrProfiling::emitRegistration() {
-  if (!needsRuntimeRegistrationOfSectionRange(*M))
+  if (!needsRuntimeRegistrationOfSectionRange(TT))
     return;
 
   // Construct the function.
@@ -897,7 +907,7 @@ void InstrProfiling::emitRegistration() {
 
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", RegisterF));
   for (Value *Data : UsedVars)
-    if (Data != NamesVar)
+    if (Data != NamesVar && !isa<Function>(Data))
       IRB.CreateCall(RuntimeRegisterF, IRB.CreateBitCast(Data, VoidPtrTy));
 
   if (NamesVar) {
@@ -917,7 +927,7 @@ void InstrProfiling::emitRegistration() {
 bool InstrProfiling::emitRuntimeHook() {
   // We expect the linker to be invoked with -u<hook_var> flag for linux,
   // for which case there is no need to emit the user function.
-  if (Triple(M->getTargetTriple()).isOSLinux())
+  if (TT.isOSLinux())
     return false;
 
   // If the module's provided its own runtime, we don't need to do anything.
@@ -938,7 +948,7 @@ bool InstrProfiling::emitRuntimeHook() {
   if (Options.NoRedZone)
     User->addFnAttr(Attribute::NoRedZone);
   User->setVisibility(GlobalValue::HiddenVisibility);
-  if (Triple(M->getTargetTriple()).supportsCOMDAT())
+  if (TT.supportsCOMDAT())
     User->setComdat(M->getOrInsertComdat(User->getName()));
 
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", User));

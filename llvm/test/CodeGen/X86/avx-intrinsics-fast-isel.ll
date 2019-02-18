@@ -85,7 +85,10 @@ define <4 x double> @test_mm256_andnot_pd(<4 x double> %a0, <4 x double> %a1) no
 define <8 x float> @test_mm256_andnot_ps(<8 x float> %a0, <8 x float> %a1) nounwind {
 ; CHECK-LABEL: test_mm256_andnot_ps:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vandnps %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmptrueps %ymm2, %ymm2, %ymm2
+; CHECK-NEXT:    vxorps %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = bitcast <8 x float> %a0 to <8 x i32>
   %2 = bitcast <8 x float> %a1 to <8 x i32>
@@ -1953,12 +1956,9 @@ define <4 x i64> @test_mm256_set1_epi32(i32 %a0) nounwind {
 define <4 x i64> @test_mm256_set1_epi64x(i64 %a0) nounwind {
 ; X86-LABEL: test_mm256_set1_epi64x:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
-; X86-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X86-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;

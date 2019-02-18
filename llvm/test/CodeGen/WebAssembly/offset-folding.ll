@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck %s
 
 ; Test that constant offsets can be folded into global addresses.
 
@@ -11,7 +11,7 @@ target triple = "wasm32-unknown-unknown"
 ; Test basic constant offsets of both defined and external symbols.
 
 ; CHECK-LABEL: test0:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype test0 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x+188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
 define i32* @test0() {
@@ -19,7 +19,7 @@ define i32* @test0() {
 }
 
 ; CHECK-LABEL: test1:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype test1 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y+188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
 define i32* @test1() {
@@ -29,7 +29,7 @@ define i32* @test1() {
 ; Test zero offsets.
 
 ; CHECK-LABEL: test2:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype test2 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
 define i32* @test2() {
@@ -37,7 +37,7 @@ define i32* @test2() {
 }
 
 ; CHECK-LABEL: test3:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype test3 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
 define i32* @test3() {
@@ -47,7 +47,7 @@ define i32* @test3() {
 ; Test negative offsets.
 
 ; CHECK-LABEL: test4:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype test4 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, x-188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
 define i32* @test4() {
@@ -55,7 +55,7 @@ define i32* @test4() {
 }
 
 ; CHECK-LABEL: test5:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype test5 () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, y-188{{$}}
 ; CHECK=NEXT: return $pop0{{$}}
 define i32* @test5() {

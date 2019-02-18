@@ -213,7 +213,8 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
   FunctionType *NFTy = FunctionType::get(RetTy, Params, FTy->isVarArg());
 
   // Create the new function body and insert it into the module.
-  Function *NF = Function::Create(NFTy, F->getLinkage(), F->getName());
+  Function *NF = Function::Create(NFTy, F->getLinkage(), F->getAddressSpace(),
+                                  F->getName());
   NF->copyAttributesFrom(F);
 
   // Patch the pointer to LLVM function in debug info descriptor.

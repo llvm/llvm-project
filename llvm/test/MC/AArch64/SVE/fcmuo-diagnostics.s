@@ -9,3 +9,19 @@ fcmuo   p0.s, p0/z, z0.s, #0.0
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: unexpected floating point literal
 // CHECK-NEXT: fcmuo   p0.s, p0/z, z0.s, #0.0
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+fcmuo   p0.d, p0/z, z0.d, z1.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: fcmuo   p0.d, p0/z, z0.d, z1.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+fcmuo   p0.d, p0/z, z0.d, z1.d
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: fcmuo   p0.d, p0/z, z0.d, z1.d
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

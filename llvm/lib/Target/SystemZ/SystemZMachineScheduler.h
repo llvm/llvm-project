@@ -26,7 +26,7 @@
 using namespace llvm;
 
 namespace llvm {
-  
+
 /// A MachineSchedStrategy implementation for SystemZ post RA scheduling.
 class SystemZPostRASchedStrategy : public MachineSchedStrategy {
 
@@ -37,7 +37,7 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
   // non-scheduled instructions, so it would not always be possible to call
   // DAG->getSchedClass(SU).
   TargetSchedModel SchedModel;
-  
+
   /// A candidate during instruction evaluation.
   struct Candidate {
     SUnit *SU = nullptr;

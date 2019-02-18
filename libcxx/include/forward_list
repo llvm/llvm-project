@@ -167,6 +167,11 @@ template <class T, class Allocator>
     void swap(forward_list<T, Allocator>& x, forward_list<T, Allocator>& y)
          noexcept(noexcept(x.swap(y)));
 
+template <class T, class Allocator, class U>
+    void erase(forward_list<T, Allocator>& c, const U& value);       // C++20
+template <class T, class Allocator, class Predicate>
+    void erase_if(forward_list<T, Allocator>& c, Predicate pred);    // C++20
+
 }  // std
 
 */
@@ -177,6 +182,7 @@ template <class T, class Allocator>
 #include <limits>
 #include <iterator>
 #include <algorithm>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -1742,6 +1748,18 @@ swap(forward_list<_Tp, _Alloc>& __x, forward_list<_Tp, _Alloc>& __y)
 {
     __x.swap(__y);
 }
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(forward_list<_Tp, _Allocator>& __c, _Predicate __pred)
+{ __c.remove_if(__pred); }
+
+template <class _Tp, class _Allocator, class _Up>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase(forward_list<_Tp, _Allocator>& __c, const _Up& __v)
+{ _VSTD::erase_if(__c, [&](auto& __elem) { return __elem == __v; }); }
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

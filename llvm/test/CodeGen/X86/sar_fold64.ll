@@ -56,9 +56,10 @@ define i32 @shl56sar57(i64 %a) #0 {
 define i8 @all_sign_bit_ashr(i8 %x) {
 ; CHECK-LABEL: all_sign_bit_ashr:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andb $1, %dil
-; CHECK-NEXT:    negb %dil
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andb $1, %al
+; CHECK-NEXT:    negb %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %and = and i8 %x, 1
   %neg = sub i8 0, %and

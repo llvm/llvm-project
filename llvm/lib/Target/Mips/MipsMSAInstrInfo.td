@@ -107,6 +107,18 @@ class vfsetcc_type<ValueType ResTy, ValueType OpTy, CondCode CC> :
           (ResTy (vfsetcc (OpTy node:$lhs), (OpTy node:$rhs), CC))>;
 
 // ISD::SETFALSE cannot occur
+def vfseteq_v4f32 : vfsetcc_type<v4i32, v4f32, SETEQ>;
+def vfseteq_v2f64 : vfsetcc_type<v2i64, v2f64, SETEQ>;
+def vfsetge_v4f32 : vfsetcc_type<v4i32, v4f32, SETGE>;
+def vfsetge_v2f64 : vfsetcc_type<v2i64, v2f64, SETGE>;
+def vfsetgt_v4f32 : vfsetcc_type<v4i32, v4f32, SETGT>;
+def vfsetgt_v2f64 : vfsetcc_type<v2i64, v2f64, SETGT>;
+def vfsetle_v4f32 : vfsetcc_type<v4i32, v4f32, SETLE>;
+def vfsetle_v2f64 : vfsetcc_type<v2i64, v2f64, SETLE>;
+def vfsetlt_v4f32 : vfsetcc_type<v4i32, v4f32, SETLT>;
+def vfsetlt_v2f64 : vfsetcc_type<v2i64, v2f64, SETLT>;
+def vfsetne_v4f32 : vfsetcc_type<v4i32, v4f32, SETNE>;
+def vfsetne_v2f64 : vfsetcc_type<v2i64, v2f64, SETNE>;
 def vfsetoeq_v4f32 : vfsetcc_type<v4i32, v4f32, SETOEQ>;
 def vfsetoeq_v2f64 : vfsetcc_type<v2i64, v2f64, SETOEQ>;
 def vfsetoge_v4f32 : vfsetcc_type<v4i32, v4f32, SETOGE>;
@@ -4038,3 +4050,20 @@ def : MSAPat<
          (SPLAT_D v2f64:$ws,
            (COPY_TO_REGCLASS (i32 (EXTRACT_SUBREG i64:$idx, sub_32)), GPR32)),
          sub_64))>;
+
+def : MSAPat<(vfseteq_v4f32 MSA128WOpnd:$a, MSA128WOpnd:$b),
+             (FCEQ_W MSA128WOpnd:$a, MSA128WOpnd:$b)>;
+def : MSAPat<(vfseteq_v2f64 MSA128DOpnd:$a, MSA128DOpnd:$b),
+             (FCEQ_D MSA128DOpnd:$a, MSA128DOpnd:$b)>;
+def : MSAPat<(vfsetle_v4f32 MSA128WOpnd:$a, MSA128WOpnd:$b),
+             (FCLE_W MSA128WOpnd:$a, MSA128WOpnd:$b)>;
+def : MSAPat<(vfsetle_v2f64 MSA128DOpnd:$a, MSA128DOpnd:$b),
+             (FCLE_D MSA128DOpnd:$a, MSA128DOpnd:$b)>;
+def : MSAPat<(vfsetlt_v4f32 MSA128WOpnd:$a, MSA128WOpnd:$b),
+             (FCLT_W MSA128WOpnd:$a, MSA128WOpnd:$b)>;
+def : MSAPat<(vfsetlt_v2f64 MSA128DOpnd:$a, MSA128DOpnd:$b),
+             (FCLT_D MSA128DOpnd:$a, MSA128DOpnd:$b)>;
+def : MSAPat<(vfsetne_v4f32 MSA128WOpnd:$a, MSA128WOpnd:$b),
+             (FCNE_W MSA128WOpnd:$a, MSA128WOpnd:$b)>;
+def : MSAPat<(vfsetne_v2f64 MSA128DOpnd:$a, MSA128DOpnd:$b),
+             (FCNE_D MSA128DOpnd:$a, MSA128DOpnd:$b)>;

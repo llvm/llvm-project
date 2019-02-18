@@ -23,7 +23,7 @@ git clang-format -h
 Requires Python 2.7 or Python 3                                                  
 """               
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 import argparse
 import collections
 import contextlib

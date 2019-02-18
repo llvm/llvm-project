@@ -4,7 +4,7 @@
 declare i32 @llvm.amdgcn.sad.u8(i32, i32, i32) #0
 
 ; GCN-LABEL: {{^}}v_sad_u8:
-; GCN: v_sad_u8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GCN: v_sad_u8 v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 define amdgpu_kernel void @v_sad_u8(i32 addrspace(1)* %out, i32 %src) {
   %result= call i32 @llvm.amdgcn.sad.u8(i32 %src, i32 100, i32 100) #0
   store i32 %result, i32 addrspace(1)* %out, align 4

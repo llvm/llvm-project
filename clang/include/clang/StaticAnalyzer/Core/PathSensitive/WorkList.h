@@ -20,7 +20,7 @@
 #include <cassert>
 
 namespace clang {
-  
+
 class CFGBlock;
 
 namespace ento {
@@ -47,13 +47,13 @@ public:
 
   /// Returns the node associated with the worklist unit.
   ExplodedNode *getNode() const { return node; }
-  
+
   /// Returns the block counter map associated with the worklist unit.
   BlockCounter getBlockCounter() const { return counter; }
 
   /// Returns the CFGblock associated with the worklist unit.
   const CFGBlock *getBlock() const { return block; }
-  
+
   /// Return the index within the CFGBlock for the worklist unit.
   unsigned getIndex() const { return blockIdx; }
 };
@@ -85,6 +85,7 @@ public:
   static std::unique_ptr<WorkList> makeBFSBlockDFSContents();
   static std::unique_ptr<WorkList> makeUnexploredFirst();
   static std::unique_ptr<WorkList> makeUnexploredFirstPriorityQueue();
+  static std::unique_ptr<WorkList> makeUnexploredFirstPriorityLocationQueue();
 };
 
 } // end ento namespace

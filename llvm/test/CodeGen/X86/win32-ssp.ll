@@ -9,9 +9,10 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
 define dso_local void @func() sspstrong {
 entry:
 ; MINGW-LABEL: func:
-; MINGW: mov{{l|q}}  __stack_chk_guard
+; MINGW: mov{{l|q}}  .refptr.__stack_chk_guard(%rip), [[REG:%[a-z]+]]
+; MINGW: mov{{l|q}}  ([[REG]])
 ; MINGW: callq other
-; MINGW: mov{{l|q}}  __stack_chk_guard
+; MINGW: mov{{l|q}}  ([[REG]])
 ; MINGW: callq __stack_chk_fail
 ; MINGW: .seh_endproc
 

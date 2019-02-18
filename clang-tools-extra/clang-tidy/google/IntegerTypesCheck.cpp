@@ -72,7 +72,7 @@ void IntegerTypesCheck::registerMatchers(MatchFinder *Finder) {
 
 void IntegerTypesCheck::check(const MatchFinder::MatchResult &Result) {
   auto TL = *Result.Nodes.getNodeAs<TypeLoc>("tl");
-  SourceLocation Loc = TL.getLocStart();
+  SourceLocation Loc = TL.getBeginLoc();
 
   if (Loc.isInvalid() || Loc.isMacroID())
     return;

@@ -18,9 +18,12 @@
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 
@@ -495,15 +498,16 @@ static bool buildMUBUFOffsetLoadStore(const SIInstrInfo *TII,
     return false;
 
   const MachineOperand *Reg = TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
-  MachineInstrBuilder NewMI = BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
-    .add(*Reg)
-    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
-    .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
-    .addImm(Offset)
-    .addImm(0) // glc
-    .addImm(0) // slc
-    .addImm(0) // tfe
-    .setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+  MachineInstrBuilder NewMI =
+      BuildMI(*MBB, MI, DL, TII->get(LoadStoreOp))
+          .add(*Reg)
+          .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::srsrc))
+          .add(*TII->getNamedOperand(*MI, AMDGPU::OpName::soffset))
+          .addImm(Offset)
+          .addImm(0) // glc
+          .addImm(0) // slc
+          .addImm(0) // tfe
+          .cloneMemRefs(*MI);
 
   const MachineOperand *VDataIn = TII->getNamedOperand(*MI,
                                                        AMDGPU::OpName::vdata_in);
@@ -532,21 +536,28 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
   const DebugLoc &DL = MI->getDebugLoc();
   bool IsStore = Desc.mayStore();
 
-  bool RanOutOfSGPRs = false;
   bool Scavenged = false;
   unsigned SOffset = ScratchOffsetReg;
 
+  const unsigned EltSize = 4;
   const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
-  unsigned NumSubRegs = AMDGPU::getRegBitWidth(RC->getID()) / 32;
-  unsigned Size = NumSubRegs * 4;
+  unsigned NumSubRegs = AMDGPU::getRegBitWidth(RC->getID()) / (EltSize * CHAR_BIT);
+  unsigned Size = NumSubRegs * EltSize;
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
-  const int64_t OriginalImmOffset = Offset;
+  int64_t ScratchOffsetRegDelta = 0;
 
   unsigned Align = MFI.getObjectAlignment(Index);
   const MachinePointerInfo &BasePtrInfo = MMO->getPointerInfo();
 
-  if (!isUInt<12>(Offset + Size)) {
+  assert((Offset % EltSize) == 0 && "unexpected VGPR spill offset");
+
+  if (!isUInt<12>(Offset + Size - EltSize)) {
     SOffset = AMDGPU::NoRegister;
+
+    // We currently only support spilling VGPRs to EltSize boundaries, meaning
+    // we can simplify the adjustment of Offset here to just scale with
+    // WavefrontSize.
+    Offset *= ST.getWavefrontSize();
 
     // We don't have access to the register scavenger if this function is called
     // during  PEI::scavengeFrameVirtualRegs().
@@ -561,8 +572,8 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       // add the offset directly to the ScratchOffset register, and then
       // subtract the offset after the spill to return ScratchOffset to it's
       // original value.
-      RanOutOfSGPRs = true;
       SOffset = ScratchOffsetReg;
+      ScratchOffsetRegDelta = Offset;
     } else {
       Scavenged = true;
     }
@@ -573,8 +584,6 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
 
     Offset = 0;
   }
-
-  const unsigned EltSize = 4;
 
   for (unsigned i = 0, e = NumSubRegs; i != e; ++i, Offset += EltSize) {
     unsigned SubReg = NumSubRegs == 1 ?
@@ -607,11 +616,11 @@ void SIRegisterInfo::buildSpillLoadStore(MachineBasicBlock::iterator MI,
       MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
   }
 
-  if (RanOutOfSGPRs) {
+  if (ScratchOffsetRegDelta != 0) {
     // Subtract the offset we added to the ScratchOffset register.
     BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_SUB_U32), ScratchOffsetReg)
-      .addReg(ScratchOffsetReg)
-      .addImm(OriginalImmOffset);
+        .addReg(ScratchOffsetReg)
+        .addImm(ScratchOffsetRegDelta);
   }
 }
 
@@ -895,7 +904,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
         .addImm(0)                        // glc
         .addMemOperand(MMO);
 
-      if (NumSubRegs > 1)
+      if (NumSubRegs > 1 && i == 0)
         MIB.addReg(SuperReg, RegState::ImplicitDefine);
 
       continue;
@@ -909,7 +918,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
         .addReg(Spill.VGPR)
         .addImm(Spill.Lane);
 
-      if (NumSubRegs > 1)
+      if (NumSubRegs > 1 && i == 0)
         MIB.addReg(SuperReg, RegState::ImplicitDefine);
     } else {
       if (OnlyToVGPR)
@@ -1592,4 +1601,58 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
   default:
     llvm_unreachable("not implemented");
   }
+}
+
+// Find reaching register definition
+MachineInstr *SIRegisterInfo::findReachingDef(unsigned Reg, unsigned SubReg,
+                                              MachineInstr &Use,
+                                              MachineRegisterInfo &MRI,
+                                              LiveIntervals *LIS) const {
+  auto &MDT = LIS->getAnalysis<MachineDominatorTree>();
+  SlotIndex UseIdx = LIS->getInstructionIndex(Use);
+  SlotIndex DefIdx;
+
+  if (TargetRegisterInfo::isVirtualRegister(Reg)) {
+    if (!LIS->hasInterval(Reg))
+      return nullptr;
+    LiveInterval &LI = LIS->getInterval(Reg);
+    LaneBitmask SubLanes = SubReg ? getSubRegIndexLaneMask(SubReg)
+                                  : MRI.getMaxLaneMaskForVReg(Reg);
+    VNInfo *V = nullptr;
+    if (LI.hasSubRanges()) {
+      for (auto &S : LI.subranges()) {
+        if ((S.LaneMask & SubLanes) == SubLanes) {
+          V = S.getVNInfoAt(UseIdx);
+          break;
+        }
+      }
+    } else {
+      V = LI.getVNInfoAt(UseIdx);
+    }
+    if (!V)
+      return nullptr;
+    DefIdx = V->def;
+  } else {
+    // Find last def.
+    for (MCRegUnitIterator Units(Reg, this); Units.isValid(); ++Units) {
+      LiveRange &LR = LIS->getRegUnit(*Units);
+      if (VNInfo *V = LR.getVNInfoAt(UseIdx)) {
+        if (!DefIdx.isValid() ||
+            MDT.dominates(LIS->getInstructionFromIndex(DefIdx),
+                          LIS->getInstructionFromIndex(V->def)))
+          DefIdx = V->def;
+      } else {
+        return nullptr;
+      }
+    }
+  }
+
+  MachineInstr *Def = LIS->getInstructionFromIndex(DefIdx);
+
+  if (!Def || !MDT.dominates(Def, &Use))
+    return nullptr;
+
+  assert(Def->modifiesRegister(Reg, this));
+
+  return Def;
 }

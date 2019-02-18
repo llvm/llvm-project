@@ -32,7 +32,8 @@
 // CHECK-ATTR: test_namespace
 // CHECK-ATTR-NEXT: FieldDecl{{.*}}n
 // CHECK-ATTR-NEXT:   AlignedAttr
-// CHECK-ATTR-NEXT:     BinaryOperator
+// CHECK-ATTR-NEXT:     ConstantExpr
+// CHECK-ATTR-NEXT:       BinaryOperator
 //
 // RUN: clang-check -ast-dump -ast-dump-filter test_namespace::AfterNullNode "%s" -- 2>&1 | FileCheck -check-prefix CHECK-AFTER-NULL %s
 // CHECK-AFTER-NULL: class AfterNullNode

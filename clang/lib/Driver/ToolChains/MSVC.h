@@ -11,6 +11,7 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_MSVC_H
 
 #include "Cuda.h"
+#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
@@ -77,6 +78,18 @@ public:
   bool isPICDefault() const override;
   bool isPIEDefault() const override;
   bool isPICDefaultForced() const override;
+
+  /// Set CodeView as the default debug info format. Users can use -gcodeview
+  /// and -gdwarf to override the default.
+  codegenoptions::DebugInfoFormat getDefaultDebugFormat() const override {
+    return codegenoptions::DIF_CodeView;
+  }
+
+  /// Set the debugger tuning to "default", since we're definitely not tuning
+  /// for GDB.
+  llvm::DebuggerKind getDefaultDebuggerTuning() const override {
+    return llvm::DebuggerKind::Default;
+  }
 
   enum class SubDirectoryType {
     Bin,

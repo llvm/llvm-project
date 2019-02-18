@@ -20,7 +20,7 @@
 
 // CHECK-WINDOWS: "-fno-use-cxa-atexit"
 // CHECK-SOLARIS: "-fno-use-cxa-atexit"
-// CHECK-HEXAGON: "-fno-use-cxa-atexit"
+// CHECK-HEXAGON-NOT: "-fno-use-cxa-atexit"
 // CHECK-XCORE: "-fno-use-cxa-atexit"
 // CHECK-MTI: "-fno-use-cxa-atexit"
 // CHECK-MIPS-NOT: "-fno-use-cxa-atexit"

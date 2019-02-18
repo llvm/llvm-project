@@ -8,6 +8,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -print-schedule -mcpu=broadwell | FileCheck %s --check-prefix=CHECK --check-prefix=BROADWELL
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -print-schedule -mcpu=skylake | FileCheck %s --check-prefix=CHECK --check-prefix=SKYLAKE
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -print-schedule -mcpu=skx | FileCheck %s --check-prefix=CHECK --check-prefix=SKX
+; RUN: llc < %s -mtriple=i686-unknown-unknown -print-schedule -mcpu=bdver2 | FileCheck %s --check-prefix=CHECK --check-prefix=BDVER2
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -print-schedule -mcpu=btver2 | FileCheck %s --check-prefix=CHECK --check-prefix=BTVER2
 ; RUN: llc < %s -mtriple=i686-unknown-unknown -print-schedule -mcpu=znver1 | FileCheck %s --check-prefix=CHECK --check-prefix=ZNVER1
 
@@ -67,6 +68,13 @@ define void @test_f2xm1() optsize {
 ; SKX-NEXT:    f2xm1 # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_f2xm1:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    f2xm1 # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_f2xm1:
 ; BTVER2:       # %bb.0:
@@ -141,6 +149,13 @@ define void @test_fabs() optsize {
 ; SKX-NEXT:    fabs # sched: [1:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fabs:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fabs # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fabs:
 ; BTVER2:       # %bb.0:
@@ -255,6 +270,18 @@ define void @test_fadd(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    faddl (%eax) # sched: [10:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fadd:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fadd %st(0), %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    fadd %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fadds (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    faddl (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fadd:
 ; BTVER2:       # %bb.0:
@@ -380,6 +407,18 @@ define void @test_faddp_fiadd(i16 *%a0, i32 *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_faddp_fiadd:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    faddp %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    faddp %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fiadds (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    fiaddl (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_faddp_fiadd:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -480,6 +519,15 @@ define void @test_fbld_fbstp(i8* %a0) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fbld_fbstp:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fbld (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    fbstp (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fbld_fbstp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -557,6 +605,13 @@ define void @test_fchs() optsize {
 ; SKX-NEXT:    fchs # sched: [1:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fchs:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fchs # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fchs:
 ; BTVER2:       # %bb.0:
@@ -640,6 +695,14 @@ define void @test_fclex() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fclex:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    wait # sched: [100:0.50]
+; BDVER2-NEXT:    fnclex # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fclex:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -715,6 +778,13 @@ define void @test_fnclex() optsize {
 ; SKX-NEXT:    fnclex # sched: [4:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fnclex:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fnclex # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fnclex:
 ; BTVER2:       # %bb.0:
@@ -846,6 +916,20 @@ define void @test_fcmov() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fcmov:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fcmovb %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    fcmovbe %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    fcmove %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    fcmovnb %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    fcmovnbe %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    fcmovne %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    fcmovnu %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    fcmovu %st(1), %st(0) # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fcmov:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -973,6 +1057,18 @@ define void @test_fcom(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    fcoml (%eax) # sched: [8:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fcom:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fcom %st(1) # sched: [1:1.00]
+; BDVER2-NEXT:    fcom %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    fcoms (%ecx) # sched: [6:1.00]
+; BDVER2-NEXT:    fcoml (%eax) # sched: [6:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fcom:
 ; BTVER2:       # %bb.0:
@@ -1106,6 +1202,19 @@ define void @test_fcomp_fcompp(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fcomp_fcompp:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fcomp %st(1) # sched: [1:1.00]
+; BDVER2-NEXT:    fcomp %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    fcomps (%ecx) # sched: [6:1.00]
+; BDVER2-NEXT:    fcompl (%eax) # sched: [6:1.00]
+; BDVER2-NEXT:    fcompp # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fcomp_fcompp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -1200,6 +1309,14 @@ define void @test_fcomi_fcomip() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fcomi_fcomip:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fcomi %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    fcompi %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fcomi_fcomip:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -1276,6 +1393,13 @@ define void @test_fcos() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fcos:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fcos # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fcos:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -1349,6 +1473,13 @@ define void @test_fdecstp() optsize {
 ; SKX-NEXT:    fdecstp # sched: [2:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fdecstp:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fdecstp # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fdecstp:
 ; BTVER2:       # %bb.0:
@@ -1463,6 +1594,18 @@ define void @test_fdiv(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    fdivl (%eax) # sched: [22:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fdiv:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fdiv %st(0), %st(1) # sched: [9:9.50]
+; BDVER2-NEXT:    fdiv %st(2) # sched: [9:9.50]
+; BDVER2-NEXT:    fdivs (%ecx) # sched: [14:9.50]
+; BDVER2-NEXT:    fdivl (%eax) # sched: [14:9.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fdiv:
 ; BTVER2:       # %bb.0:
@@ -1588,6 +1731,18 @@ define void @test_fdivp_fidiv(i16 *%a0, i32 *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fdivp_fidiv:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fdivp %st(1) # sched: [9:9.50]
+; BDVER2-NEXT:    fdivp %st(2) # sched: [9:9.50]
+; BDVER2-NEXT:    fidivs (%ecx) # sched: [14:9.50]
+; BDVER2-NEXT:    fidivl (%eax) # sched: [14:9.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fdivp_fidiv:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -1711,6 +1866,18 @@ define void @test_fdivr(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    fdivrl (%eax) # sched: [27:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fdivr:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fdivr %st(0), %st(1) # sched: [9:9.50]
+; BDVER2-NEXT:    fdivr %st(2) # sched: [9:9.50]
+; BDVER2-NEXT:    fdivrs (%ecx) # sched: [14:9.50]
+; BDVER2-NEXT:    fdivrl (%eax) # sched: [14:9.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fdivr:
 ; BTVER2:       # %bb.0:
@@ -1836,6 +2003,18 @@ define void @test_fdivrp_fidivr(i16 *%a0, i32 *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fdivrp_fidivr:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fdivrp %st(1) # sched: [9:9.50]
+; BDVER2-NEXT:    fdivrp %st(2) # sched: [9:9.50]
+; BDVER2-NEXT:    fidivrs (%ecx) # sched: [14:9.50]
+; BDVER2-NEXT:    fidivrl (%eax) # sched: [14:9.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fdivrp_fidivr:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -1919,6 +2098,13 @@ define void @test_ffree() optsize {
 ; SKX-NEXT:    ffree %st(0) # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_ffree:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    ffree %st(0) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_ffree:
 ; BTVER2:       # %bb.0:
@@ -2033,6 +2219,18 @@ define void @test_ficom(i16 *%a0, i32 *%a1) optsize {
 ; SKX-NEXT:    ficompl (%eax) # sched: [11:2.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_ficom:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    ficoms (%ecx) # sched: [6:1.00]
+; BDVER2-NEXT:    ficoml (%eax) # sched: [6:1.00]
+; BDVER2-NEXT:    ficomps (%ecx) # sched: [6:1.00]
+; BDVER2-NEXT:    ficompl (%eax) # sched: [6:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_ficom:
 ; BTVER2:       # %bb.0:
@@ -2158,6 +2356,18 @@ define void @test_fild(i16 *%a0, i32 *%a1, i64 *%a2) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fild:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    filds (%edx) # sched: [5:0.50]
+; BDVER2-NEXT:    fildl (%ecx) # sched: [5:0.50]
+; BDVER2-NEXT:    fildll (%eax) # sched: [5:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fild:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -2242,6 +2452,13 @@ define void @test_fincstp() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fincstp:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fincstp # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fincstp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -2324,6 +2541,14 @@ define void @test_finit() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_finit:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    wait # sched: [100:0.50]
+; BDVER2-NEXT:    fninit # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_finit:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -2399,6 +2624,13 @@ define void @test_fninit() optsize {
 ; SKX-NEXT:    fninit # sched: [75:6.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fninit:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fninit # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fninit:
 ; BTVER2:       # %bb.0:
@@ -2554,6 +2786,23 @@ define void @test_fist_fistp_fisttp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fist_fistp_fisttp:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fists (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistps (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistpl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistpll (%eax) # sched: [1:1.00]
+; BDVER2-NEXT:    fisttps (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fisttpl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fisttpll (%eax) # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fist_fistp_fisttp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -2696,6 +2945,19 @@ define void @test_fld(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fld:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fld %st(0) # sched: [1:0.50]
+; BDVER2-NEXT:    flds (%edx) # sched: [5:0.50]
+; BDVER2-NEXT:    fldl (%ecx) # sched: [5:0.50]
+; BDVER2-NEXT:    fldt (%eax) # sched: [5:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fld:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -2797,6 +3059,15 @@ define void @test_fldcw_fldenv(i8* %a0) optsize {
 ; SKX-NEXT:    fldenv (%eax) # sched: [62:14.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fldcw_fldenv:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fldcw (%eax) # sched: [5:0.50]
+; BDVER2-NEXT:    fldenv (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fldcw_fldenv:
 ; BTVER2:       # %bb.0:
@@ -2924,6 +3195,19 @@ define void @test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fld1 # sched: [3:1.00]
+; BDVER2-NEXT:    fldl2e # sched: [3:1.00]
+; BDVER2-NEXT:    fldl2t # sched: [3:1.00]
+; BDVER2-NEXT:    fldlg2 # sched: [3:1.00]
+; BDVER2-NEXT:    fldln2 # sched: [3:1.00]
+; BDVER2-NEXT:    fldpi # sched: [3:1.00]
+; BDVER2-NEXT:    fldz # sched: [3:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fld1_fldl2e_fldl2t_fldlg2_fldln2_fldpi_fldz:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -3050,6 +3334,18 @@ define void @test_fmul(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fmul:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fmul %st(0), %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    fmul %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fmuls (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    fmull (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fmul:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -3174,6 +3470,18 @@ define void @test_fmulp_fimul(i16 *%a0, i32 *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fmulp_fimul:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fmulp %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    fmulp %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fimuls (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    fimull (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fmulp_fimul:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -3258,6 +3566,13 @@ define void @test_fnop() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fnop:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fnop # sched: [1:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fnop:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -3331,6 +3646,13 @@ define void @test_fpatan() optsize {
 ; SKX-NEXT:    fpatan # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fpatan:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fpatan # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fpatan:
 ; BTVER2:       # %bb.0:
@@ -3414,6 +3736,14 @@ define void @test_fprem_fprem1() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fprem_fprem1:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fprem # sched: [100:0.50]
+; BDVER2-NEXT:    fprem1 # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fprem_fprem1:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -3490,6 +3820,13 @@ define void @test_fptan() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fptan:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fptan # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fptan:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -3563,6 +3900,13 @@ define void @test_frndint() optsize {
 ; SKX-NEXT:    frndint # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_frndint:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    frndint # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_frndint:
 ; BTVER2:       # %bb.0:
@@ -3645,6 +3989,14 @@ define void @test_frstor(i8* %a0) optsize {
 ; SKX-NEXT:    frstor (%eax) # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_frstor:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    frstor (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_frstor:
 ; BTVER2:       # %bb.0:
@@ -3738,6 +4090,15 @@ define void @test_fsave(i8* %a0) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fsave:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    wait # sched: [100:0.50]
+; BDVER2-NEXT:    fnsave (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fsave:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -3824,6 +4185,14 @@ define void @test_fnsave(i8* %a0) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fnsave:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fnsave (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fnsave:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -3900,6 +4269,13 @@ define void @test_fscale() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fscale:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fscale # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fscale:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -3973,6 +4349,13 @@ define void @test_fsin() optsize {
 ; SKX-NEXT:    fsin # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fsin:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fsin # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fsin:
 ; BTVER2:       # %bb.0:
@@ -4048,6 +4431,13 @@ define void @test_fsincos() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fsincos:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fsincos # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fsincos:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -4121,6 +4511,13 @@ define void @test_fsqrt() optsize {
 ; SKX-NEXT:    fsqrt # sched: [21:7.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fsqrt:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fsqrt # sched: [1:17.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fsqrt:
 ; BTVER2:       # %bb.0:
@@ -4268,6 +4665,22 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fst_fstp:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fst %st(0) # sched: [1:0.50]
+; BDVER2-NEXT:    fsts (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fstl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fstp %st(0) # sched: [1:0.50]
+; BDVER2-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fstpt (%eax) # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fst_fstp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -4408,6 +4821,19 @@ define void @test_fstcw_fstenv_fstsw(i8* %a0) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fstcw_fstenv_fstsw:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    wait # sched: [100:0.50]
+; BDVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
+; BDVER2-NEXT:    wait # sched: [100:0.50]
+; BDVER2-NEXT:    fnstenv (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    wait # sched: [100:0.50]
+; BDVER2-NEXT:    fnstsw (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fstcw_fstenv_fstsw:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -4517,6 +4943,16 @@ define void @test_fnstcw_fnstenv_fnstsw(i8* %a0) optsize {
 ; SKX-NEXT:    fnstsw (%eax) # sched: [3:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fnstcw_fnstenv_fnstsw:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fnstcw (%eax) # sched: [1:0.50]
+; BDVER2-NEXT:    fnstenv (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    fnstsw (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fnstcw_fnstenv_fnstsw:
 ; BTVER2:       # %bb.0:
@@ -4637,6 +5073,18 @@ define void @test_fsub(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    fsubl (%eax) # sched: [10:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fsub:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fsub %st(0), %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    fsub %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fsubs (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    fsubl (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fsub:
 ; BTVER2:       # %bb.0:
@@ -4762,6 +5210,18 @@ define void @test_fsubp_fisub(i16 *%a0, i32 *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fsubp_fisub:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fsubp %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    fsubp %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fisubs (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    fisubl (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fsubp_fisub:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -4885,6 +5345,18 @@ define void @test_fsubr(float *%a0, double *%a1) optsize {
 ; SKX-NEXT:    fsubrl (%eax) # sched: [10:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fsubr:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fsubr %st(0), %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    fsubr %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fsubrs (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    fsubrl (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fsubr:
 ; BTVER2:       # %bb.0:
@@ -5010,6 +5482,18 @@ define void @test_fsubrp_fisubr(i16 *%a0, i32 *%a1) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fsubrp_fisubr:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fsubrp %st(1) # sched: [5:1.00]
+; BDVER2-NEXT:    fsubrp %st(2) # sched: [5:1.00]
+; BDVER2-NEXT:    fisubrs (%ecx) # sched: [10:1.00]
+; BDVER2-NEXT:    fisubrl (%eax) # sched: [10:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fsubrp_fisubr:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -5093,6 +5577,13 @@ define void @test_ftst() optsize {
 ; SKX-NEXT:    ftst # sched: [2:1.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_ftst:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    ftst # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_ftst:
 ; BTVER2:       # %bb.0:
@@ -5200,6 +5691,17 @@ define void @test_fucom_fucomp_fucompp() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fucom_fucomp_fucompp:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fucom %st(1) # sched: [1:1.00]
+; BDVER2-NEXT:    fucom %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    fucomp %st(1) # sched: [1:1.00]
+; BDVER2-NEXT:    fucomp %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    fucompp # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fucom_fucomp_fucompp:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -5290,6 +5792,14 @@ define void @test_fucomi_fucomip() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fucomi_fucomip:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fucomi %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    fucompi %st(3) # sched: [1:1.00]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fucomi_fucomip:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -5366,6 +5876,13 @@ define void @test_fwait() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fwait:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    wait # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fwait:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -5439,6 +5956,13 @@ define void @test_fxam() optsize {
 ; SKX-NEXT:    fxam # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fxam:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fxam # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fxam:
 ; BTVER2:       # %bb.0:
@@ -5521,6 +6045,14 @@ define void @test_fxch() optsize {
 ; SKX-NEXT:    fxch %st(3) # sched: [17:4.00]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fxch:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fxch %st(1) # sched: [1:0.50]
+; BDVER2-NEXT:    fxch %st(3) # sched: [1:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fxch:
 ; BTVER2:       # %bb.0:
@@ -5614,6 +6146,15 @@ define void @test_fxrstor_fxsave(i8* %a0) optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fxrstor_fxsave:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fxrstor (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    fxsave (%eax) # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fxrstor_fxsave:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax # sched: [5:1.00]
@@ -5692,6 +6233,13 @@ define void @test_fxtract() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fxtract:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fxtract # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fxtract:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -5766,6 +6314,13 @@ define void @test_fyl2x() optsize {
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
 ;
+; BDVER2-LABEL: test_fyl2x:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fyl2x # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
+;
 ; BTVER2-LABEL: test_fyl2x:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    #APP
@@ -5839,6 +6394,13 @@ define void @test_fyl2xp1() optsize {
 ; SKX-NEXT:    fyl2xp1 # sched: [100:0.25]
 ; SKX-NEXT:    #NO_APP
 ; SKX-NEXT:    retl # sched: [6:0.50]
+;
+; BDVER2-LABEL: test_fyl2xp1:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    #APP
+; BDVER2-NEXT:    fyl2xp1 # sched: [100:0.50]
+; BDVER2-NEXT:    #NO_APP
+; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_fyl2xp1:
 ; BTVER2:       # %bb.0:

@@ -153,7 +153,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N, unsigned ResNo) {
   // of Endianness. LLVM's APFloat representation is not Endian sensitive,
   // and so always converts into a 128-bit APInt in a non-Endian-sensitive
   // way. However, APInt's are serialized in an Endian-sensitive fashion,
-  // so on big-Endian targets, the two doubles are output in the wrong 
+  // so on big-Endian targets, the two doubles are output in the wrong
   // order. Fix this by manually flipping the order of the high 64 bits
   // and the low 64 bits here.
   if (DAG.getDataLayout().isBigEndian() &&
@@ -815,7 +815,7 @@ bool DAGTypeLegalizer::CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo) {
 
   switch (N->getOpcode()) {
     case ISD::ConstantFP:  // Leaf node.
-    case ISD::CopyFromReg: // Operand is a register that we know to be left 
+    case ISD::CopyFromReg: // Operand is a register that we know to be left
                            // unchanged by SoftenFloatResult().
     case ISD::Register:    // Leaf node.
       return true;
@@ -838,7 +838,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_COPY_TO_REG(SDNode *N) {
   if (N->getNumOperands() == 3)
     return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op1, Op2), 0);
 
-  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op1, Op2, 
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Op1, Op2,
                                         N->getOperand(3)),
                  0);
 }
@@ -1750,6 +1750,11 @@ static ISD::NodeType GetPromotionOpcode(EVT OpVT, EVT RetVT) {
 bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
   SDValue R = SDValue();
 
+  if (CustomLowerNode(N, N->getOperand(OpNo).getValueType(), false)) {
+    LLVM_DEBUG(dbgs() << "Node has been custom lowered, done\n");
+    return false;
+  }
+
   // Nodes that use a promotion-requiring floating point operand, but doesn't
   // produce a promotion-requiring floating point result, need to be legalized
   // to use the promoted float operand.  Nodes that produce at least one
@@ -1778,15 +1783,16 @@ SDValue DAGTypeLegalizer::PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo) {
   SDValue Op = N->getOperand(0);
   EVT OpVT = Op->getValueType(0);
 
-  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
-  assert (IVT == N->getValueType(0) && "Bitcast to type of different size");
-
   SDValue Promoted = GetPromotedFloat(N->getOperand(0));
   EVT PromotedVT = Promoted->getValueType(0);
 
   // Convert the promoted float value to the desired IVT.
-  return DAG.getNode(GetPromotionOpcode(PromotedVT, OpVT), SDLoc(N), IVT,
-                     Promoted);
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), OpVT.getSizeInBits());
+  SDValue Convert = DAG.getNode(GetPromotionOpcode(PromotedVT, OpVT), SDLoc(N),
+                                IVT, Promoted);
+  // The final result type might not be an scalar so we need a bitcast. The
+  // bitcast will be further legalized if needed.
+  return DAG.getBitcast(N->getValueType(0), Convert);
 }
 
 // Promote Operand 1 of FCOPYSIGN.  Operand 0 ought to be handled by
@@ -1898,13 +1904,14 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FROUND:
     case ISD::FSIN:
     case ISD::FSQRT:
-    case ISD::FTRUNC:     R = PromoteFloatRes_UnaryOp(N); break;
+    case ISD::FTRUNC:
+    case ISD::FCANONICALIZE: R = PromoteFloatRes_UnaryOp(N); break;
 
     // Binary FP Operations
     case ISD::FADD:
     case ISD::FDIV:
-    case ISD::FMAXNAN:
-    case ISD::FMINNAN:
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM:
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
     case ISD::FMUL:
@@ -1940,8 +1947,12 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 SDValue DAGTypeLegalizer::PromoteFloatRes_BITCAST(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT,
-                     N->getOperand(0));
+  // Input type isn't guaranteed to be a scalar int so bitcast if not. The
+  // bitcast will be legalized further if necessary.
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(),
+                              N->getOperand(0).getValueType().getSizeInBits());
+  SDValue Cast = DAG.getBitcast(IVT, N->getOperand(0));
+  return DAG.getNode(GetPromotionOpcode(VT, NVT), SDLoc(N), NVT, Cast);
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_ConstantFP(SDNode *N) {

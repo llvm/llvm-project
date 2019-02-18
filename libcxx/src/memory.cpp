@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _LIBCPP_BUILDING_MEMORY
 #include "memory"
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include "mutex"

@@ -28,9 +28,10 @@ XRay consists of three main parts:
 - A runtime library for enabling/disabling tracing at runtime.
 - A suite of tools for analysing the traces.
 
-  **NOTE:** As of February 27, 2017 , XRay is only available for the following
+  **NOTE:** As of July 25, 2018 , XRay is only available for the following
   architectures running Linux: x86_64, arm7 (no thumb), aarch64, powerpc64le,
-  mips, mipsel, mips64, mips64el.
+  mips, mipsel, mips64, mips64el, NetBSD: x86_64, FreeBSD: x86_64 and
+  OpenBSD: x86_64.
 
 The compiler-inserted instrumentation points come in the form of nop-sleds in
 the final generated binary, and an ELF section named ``xray_instr_map`` which

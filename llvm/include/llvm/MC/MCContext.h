@@ -298,10 +298,6 @@ namespace llvm {
 
     CodeViewContext &getCVContext();
 
-    /// Clear the current cv_loc, if there is one. Avoids lazily creating a
-    /// CodeViewContext if none is needed.
-    void clearCVLocSeen();
-
     void setAllowTemporaryLabels(bool Value) { AllowTemporaryLabels = Value; }
     void setUseNamesOnTempLabels(bool Value) { UseNamesOnTempLabels = Value; }
 

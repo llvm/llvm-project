@@ -70,10 +70,10 @@ define amdgpu_kernel void @test_no_dx10_clamp_vi(float addrspace(1)* %out0, doub
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="kaveri" }
-attributes #1 = { nounwind "target-cpu"="fiji" }
-attributes #2 = { nounwind "target-features"="-fp32-denormals,+fp64-fp16-denormals" }
-attributes #3 = { nounwind "target-features"="+fp32-denormals,-fp64-fp16-denormals" }
-attributes #4 = { nounwind "target-features"="+fp32-denormals,+fp64-fp16-denormals" }
-attributes #5 = { nounwind "target-features"="-fp32-denormals,-fp64-fp16-denormals" }
-attributes #6 = { nounwind "target-cpu"="fiji" "target-features"="-dx10-clamp" }
+attributes #0 = { nounwind "target-cpu"="kaveri" "target-features"="-code-object-v3" }
+attributes #1 = { nounwind "target-cpu"="fiji" "target-features"="-code-object-v3" }
+attributes #2 = { nounwind "target-features"="-code-object-v3,-fp32-denormals,+fp64-fp16-denormals" }
+attributes #3 = { nounwind "target-features"="-code-object-v3,+fp32-denormals,-fp64-fp16-denormals" }
+attributes #4 = { nounwind "target-features"="-code-object-v3,+fp32-denormals,+fp64-fp16-denormals" }
+attributes #5 = { nounwind "target-features"="-code-object-v3,-fp32-denormals,-fp64-fp16-denormals" }
+attributes #6 = { nounwind "target-cpu"="fiji" "target-features"="-code-object-v3,-dx10-clamp" }

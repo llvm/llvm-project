@@ -13,6 +13,17 @@
 
 using namespace llvm;
 
+TEST(StringExtrasTest, isPrint) {
+  EXPECT_FALSE(isPrint('\0'));
+  EXPECT_FALSE(isPrint('\t'));
+  EXPECT_TRUE(isPrint('0'));
+  EXPECT_TRUE(isPrint('a'));
+  EXPECT_TRUE(isPrint('A'));
+  EXPECT_TRUE(isPrint(' '));
+  EXPECT_TRUE(isPrint('~'));
+  EXPECT_TRUE(isPrint('?'));
+}
+
 TEST(StringExtrasTest, Join) {
   std::vector<std::string> Items;
   EXPECT_EQ("", join(Items.begin(), Items.end(), " <sep> "));
@@ -59,6 +70,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
                     OddBytes.size());
   EXPECT_EQ(OddStr, toHex(OddData));
   EXPECT_EQ(OddData, fromHex(StringRef(OddStr).drop_front()));
+  EXPECT_EQ(StringRef(OddStr).lower(), toHex(OddData, true));
 
   std::vector<uint8_t> EvenBytes = {0xA5, 0xBD, 0x0D, 0x3E, 0xCD};
   std::string EvenStr = "A5BD0D3ECD";
@@ -66,6 +78,7 @@ TEST(StringExtrasTest, ToAndFromHex) {
                      EvenBytes.size());
   EXPECT_EQ(EvenStr, toHex(EvenData));
   EXPECT_EQ(EvenData, fromHex(EvenStr));
+  EXPECT_EQ(StringRef(EvenStr).lower(), toHex(EvenData, true));
 }
 
 TEST(StringExtrasTest, to_float) {
@@ -91,6 +104,13 @@ TEST(StringExtrasTest, printLowerCase) {
   raw_string_ostream OS(str);
   printLowerCase("ABCdefg01234.,&!~`'}\"", OS);
   EXPECT_EQ("abcdefg01234.,&!~`'}\"", OS.str());
+}
+
+TEST(StringExtrasTest, printEscapedString) {
+  std::string str;
+  raw_string_ostream OS(str);
+  printEscapedString("ABCdef123&<>\\\"'\t", OS);
+  EXPECT_EQ("ABCdef123&<>\\5C\\22'\\09", OS.str());
 }
 
 TEST(StringExtrasTest, printHTMLEscaped) {

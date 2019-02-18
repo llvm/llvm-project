@@ -118,7 +118,7 @@ void ScheduleDAGVLIW::releaseSucc(SUnit *SU, const SDep &D) {
 #ifndef NDEBUG
   if (SuccSU->NumPredsLeft == 0) {
     dbgs() << "*** Scheduling failed! ***\n";
-    SuccSU->dump(this);
+    dumpNode(*SuccSU);
     dbgs() << " has been released too many times!\n";
     llvm_unreachable(nullptr);
   }
@@ -152,7 +152,7 @@ void ScheduleDAGVLIW::releaseSuccessors(SUnit *SU) {
 /// the Available queue.
 void ScheduleDAGVLIW::scheduleNodeTopDown(SUnit *SU, unsigned CurCycle) {
   LLVM_DEBUG(dbgs() << "*** Scheduling [" << CurCycle << "]: ");
-  LLVM_DEBUG(SU->dump(this));
+  LLVM_DEBUG(dumpNode(*SU));
 
   Sequence.push_back(SU);
   assert(CurCycle >= SU->getDepth() && "Node scheduled above its depth!");

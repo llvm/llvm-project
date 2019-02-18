@@ -26,10 +26,10 @@ namespace performance {
 // const references, and const pointers to const.
 class UnnecessaryCopyInitialization : public ClangTidyCheck {
 public:
-  UnnecessaryCopyInitialization(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UnnecessaryCopyInitialization(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
 private:
   void handleCopyFromMethodReturn(const VarDecl &Var, const Stmt &BlockStmt,
@@ -38,6 +38,7 @@ private:
   void handleCopyFromLocalVar(const VarDecl &NewVar, const VarDecl &OldVar,
                               const Stmt &BlockStmt, bool IssueFix,
                               ASTContext &Context);
+  const std::vector<std::string> AllowedTypes;
 };
 
 } // namespace performance

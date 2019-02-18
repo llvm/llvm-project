@@ -38,3 +38,15 @@ int n; = 3; // expected-warning {{treating Unicode character <U+037E> as identi
 int *n꞉꞉v = &n;; // expected-warning 2{{treating Unicode character <U+A789> as identifier character rather than as ':' symbol}}
                  // expected-warning@-1 {{treating Unicode character <U+037E> as identifier character rather than as ';' symbol}}
 int v＝［＝］（auto）｛return～x；｝（）; // expected-warning 12{{treating Unicode character}}
+
+int ⁠x﻿x‍;
+// expected-warning@-1 {{identifier contains Unicode character <U+2060> that is invisible in some environments}}
+// expected-warning@-2 {{identifier contains Unicode character <U+FEFF> that is invisible in some environments}}
+// expected-warning@-3 {{identifier contains Unicode character <U+200D> that is invisible in some environments}}
+int foo​bar = 0; // expected-warning {{identifier contains Unicode character <U+200B> that is invisible in some environments}}
+int x = foobar; // expected-error {{undeclared identifier}}
+
+int ∣foo; // expected-error {{non-ASCII character}}
+#ifndef PP_ONLY
+#define ∶ x // expected-error {{macro name must be an identifier}}
+#endif

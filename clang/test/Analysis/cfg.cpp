@@ -1,6 +1,6 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -fheinous-gnu-extensions -std=c++11 -analyzer-config cfg-rich-constructors=false %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,WARNINGS %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG -triple x86_64-apple-darwin12 -fheinous-gnu-extensions -std=c++11 -analyzer-config cfg-rich-constructors=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t -check-prefixes=CHECK,ANALYZER %s
 
 // This file tests how we construct two different flavors of the Clang CFG -
@@ -83,6 +83,24 @@ void checkDeclStmts() {
 
   static_assert(1, "abc");
 }
+
+
+// CHECK-LABEL: void checkGCCAsmRValueOutput()
+// CHECK: [B2 (ENTRY)]
+// CHECK-NEXT: Succs (1): B1
+// CHECK: [B1]
+// CHECK-NEXT:   1: int arg
+// CHECK-NEXT:   2: arg
+// CHECK-NEXT:   3: (int)[B1.2] (CStyleCastExpr, NoOp, int)
+// CHECK-NEXT:   4: asm ("" : "=r" ([B1.3]));
+// CHECK-NEXT:   5: arg
+// CHECK-NEXT:   6: asm ("" : "=r" ([B1.5]));
+void checkGCCAsmRValueOutput() {
+  int arg;
+  __asm__("" : "=r"((int)arg));  // rvalue output operand
+  __asm__("" : "=r"(arg));       // lvalue output operand
+}
+
 
 // CHECK-LABEL: void F(EmptyE e)
 // CHECK: ENTRY
@@ -448,6 +466,37 @@ void test_lifetime_extended_temporaries() {
   // FIXME: Add tests for lifetime extension via subobject
   // references (LifetimeExtend().some_member).
 }
+
+
+// FIXME: The destructor for 'a' shouldn't be there because it's deleted
+// in the union.
+// CHECK-LABEL: void foo()
+// CHECK:  [B2 (ENTRY)]
+// CHECK-NEXT:    Succs (1): B1
+// CHECK:  [B1]
+// WARNINGS-NEXT:    1:  (CXXConstructExpr, struct pr37688_deleted_union_destructor::A)
+// ANALYZER-NEXT:    1:  (CXXConstructExpr, [B1.2], struct pr37688_deleted_union_destructor::A)
+// CHECK-NEXT:    2: pr37688_deleted_union_destructor::A a;
+// CHECK-NEXT:    3: [B1.2].~A() (Implicit destructor)
+// CHECK-NEXT:    Preds (1): B2
+// CHECK-NEXT:    Succs (1): B0
+// CHECK:  [B0 (EXIT)]
+// CHECK-NEXT:    Preds (1): B1
+
+namespace pr37688_deleted_union_destructor {
+struct S { ~S(); };
+struct A {
+  ~A() noexcept {}
+  union {
+    struct {
+      S s;
+    } ss;
+  };
+};
+void foo() {
+  A a;
+}
+} // end namespace pr37688_deleted_union_destructor
 
 
 // CHECK-LABEL: template<> int *PR18472<int>()

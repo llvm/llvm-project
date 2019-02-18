@@ -1,4 +1,4 @@
-//===--- Sparc.h - Declare Sparc target feature support -------------------===//
+//===--- Sparc.h - declare sparc target feature support ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -199,7 +199,7 @@ public:
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
 
     // OpenBSD uses long long for int64_t and intmax_t.
-    if (getTriple().getOS() == llvm::Triple::OpenBSD)
+    if (getTriple().isOSOpenBSD())
       IntMaxType = SignedLongLong;
     else
       IntMaxType = SignedLong;

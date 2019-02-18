@@ -685,7 +685,7 @@ bool DiagnosticIDs::ProcessDiag(DiagnosticsEngine &Diag) const {
       ++Diag.NumErrors;
     }
 
-    // If we've emitted a lot of errors, emit a fatal error instead of it to 
+    // If we've emitted a lot of errors, emit a fatal error instead of it to
     // stop a flood of bogus errors.
     if (Diag.ErrorLimit && Diag.NumErrors > Diag.ErrorLimit &&
         DiagLevel == DiagnosticIDs::Error) {

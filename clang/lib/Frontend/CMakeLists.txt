@@ -16,10 +16,8 @@ add_clang_library(clangFrontend
   ASTConsumers.cpp
   ASTMerge.cpp
   ASTUnit.cpp
-  CacheTokens.cpp
   ChainedDiagnosticConsumer.cpp
   ChainedIncludesSource.cpp
-  CodeGenOptions.cpp
   CompilerInstance.cpp
   CompilerInvocation.cpp
   CreateInvocationFromCommandLine.cpp
@@ -38,7 +36,6 @@ add_clang_library(clangFrontend
   LogDiagnosticPrinter.cpp
   ModuleDependencyCollector.cpp
   MultiplexConsumer.cpp
-  PCHContainerOperations.cpp
   PrecompiledPreamble.cpp
   PrintPreprocessedOutput.cpp
   SerializedDiagnosticPrinter.cpp

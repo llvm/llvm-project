@@ -13,7 +13,8 @@ foreach(entry ${entries})
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/parallel-libs) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/openmp) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests))
-      add_subdirectory(${entry})
+      get_filename_component(entry_name "${entry}" NAME)
+      add_llvm_external_project(${entry_name})
     endif()
   endif()
 endforeach(entry)
@@ -30,6 +31,7 @@ if(${LLVM_BUILD_RUNTIME})
     # dependent projects can see the target names of their dependencies.
     add_llvm_external_project(libunwind)
     add_llvm_external_project(libcxxabi)
+    add_llvm_external_project(pstl)
     add_llvm_external_project(libcxx)
   endif()
   if(NOT LLVM_BUILD_EXTERNAL_COMPILER_RT)

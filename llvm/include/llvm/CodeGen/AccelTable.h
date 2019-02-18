@@ -323,7 +323,7 @@ void emitDWARF5AccelTable(
 /// with just a DIE reference.
 class AppleAccelTableOffsetData : public AppleAccelTableData {
 public:
-  AppleAccelTableOffsetData(const DIE *D) : Die(D) {}
+  AppleAccelTableOffsetData(const DIE &D) : Die(D) {}
 
   void emit(AsmPrinter *Asm) const override;
 
@@ -340,15 +340,15 @@ public:
   void print(raw_ostream &OS) const override;
 #endif
 protected:
-  uint64_t order() const override { return Die->getOffset(); }
+  uint64_t order() const override { return Die.getOffset(); }
 
-  const DIE *Die;
+  const DIE &Die;
 };
 
 /// Accelerator table data implementation for Apple type accelerator tables.
 class AppleAccelTableTypeData : public AppleAccelTableOffsetData {
 public:
-  AppleAccelTableTypeData(const DIE *D) : AppleAccelTableOffsetData(D) {}
+  AppleAccelTableTypeData(const DIE &D) : AppleAccelTableOffsetData(D) {}
 
   void emit(AsmPrinter *Asm) const override;
 

@@ -22,6 +22,7 @@ int main() {
   memset(array, (int)sizeof(array), (0)); // no warning
   memset(array, (int)sizeof(array), 32); // no warning
   memset(array, 32, (0)); // no warning
+  memset(array, 0, 0); // no warning
 
   bzero(ptr, 0); // expected-warning{{'size' argument to bzero is '0'}} expected-note{{parenthesize the second argument to silence}}
   real_bzero(ptr, 0); // expected-warning{{'size' argument to bzero is '0'}} expected-note{{parenthesize the second argument to silence}}
@@ -55,6 +56,6 @@ void macros() {
 
   __builtin_memset(array, 0, ZERO); // no warning
   __builtin_bzero(array, ZERO);
-  __builtin_memset(array, 0, 0); // expected-warning{{'size' argument to memset}} // expected-note{{parenthesize}}
+  __builtin_memset(array, 1, 0); // expected-warning{{'size' argument to memset}} // expected-note{{parenthesize}}
   __builtin_bzero(array, 0); // expected-warning{{'size' argument to bzero}} // expected-note{{parenthesize}}
 }

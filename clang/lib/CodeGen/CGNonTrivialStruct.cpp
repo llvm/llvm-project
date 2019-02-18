@@ -187,6 +187,7 @@ template <class Derived> struct GenFuncNameBase {
     if (!FK)
       return asDerived().visitTrivial(QualType(AT, 0), FD, CurStructOffset);
 
+    asDerived().flushTrivialFields();
     CharUnits FieldOffset = CurStructOffset + asDerived().getFieldOffset(FD);
     ASTContext &Ctx = asDerived().getContext();
     const ConstantArrayType *CAT = cast<ConstantArrayType>(AT);
@@ -283,8 +284,9 @@ struct GenDefaultInitializeFuncName
 struct GenDestructorFuncName : GenUnaryFuncName<GenDestructorFuncName>,
                                DestructedTypeVisitor<GenDestructorFuncName> {
   using Super = DestructedTypeVisitor<GenDestructorFuncName>;
-  GenDestructorFuncName(CharUnits DstAlignment, ASTContext &Ctx)
-      : GenUnaryFuncName<GenDestructorFuncName>("__destructor_", DstAlignment,
+  GenDestructorFuncName(const char *Prefix, CharUnits DstAlignment,
+                        ASTContext &Ctx)
+      : GenUnaryFuncName<GenDestructorFuncName>(Prefix, DstAlignment,
                                                 Ctx) {}
   void visitWithKind(QualType::DestructionKind DK, QualType FT,
                      const FieldDecl *FD, CharUnits CurStructOffset) {
@@ -335,6 +337,7 @@ template <class Derived> struct GenFuncBase {
       return asDerived().visitTrivial(QualType(AT, 0), FD, CurStackOffset,
                                       Addrs);
 
+    asDerived().flushTrivialFields(Addrs);
     CodeGenFunction &CGF = *this->CGF;
     ASTContext &Ctx = CGF.getContext();
 
@@ -455,12 +458,13 @@ template <class Derived> struct GenFuncBase {
         llvm::Function::Create(FuncTy, llvm::GlobalValue::LinkOnceODRLinkage,
                                FuncName, &CGM.getModule());
     F->setVisibility(llvm::GlobalValue::HiddenVisibility);
-    CGM.SetLLVMFunctionAttributes(nullptr, FI, F);
+    CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, F);
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, F);
     IdentifierInfo *II = &Ctx.Idents.get(FuncName);
     FunctionDecl *FD = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        II, Ctx.VoidTy, nullptr, SC_PrivateExtern, false, false);
+        II, Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {}), nullptr,
+        SC_PrivateExtern, false, false);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
     CGF->StartFunction(FD, Ctx.VoidTy, F, FI, Args);
@@ -824,11 +828,28 @@ void CodeGenFunction::callCStructDefaultConstructor(LValue Dst) {
                       IsVolatile, *this, std::array<Address, 1>({{DstPtr}}));
 }
 
+std::string
+CodeGenFunction::getNonTrivialCopyConstructorStr(QualType QT,
+                                                 CharUnits Alignment,
+                                                 bool IsVolatile,
+                                                 ASTContext &Ctx) {
+  GenBinaryFuncName<false> GenName("", Alignment, Alignment, Ctx);
+  return GenName.getName(QT, IsVolatile);
+}
+
+std::string
+CodeGenFunction::getNonTrivialDestructorStr(QualType QT, CharUnits Alignment,
+                                            bool IsVolatile, ASTContext &Ctx) {
+  GenDestructorFuncName GenName("", Alignment, Ctx);
+  return GenName.getName(QT, IsVolatile);
+}
+
 void CodeGenFunction::callCStructDestructor(LValue Dst) {
   bool IsVolatile = Dst.isVolatile();
   Address DstPtr = Dst.getAddress();
   QualType QT = Dst.getType();
-  GenDestructorFuncName GenName(DstPtr.getAlignment(), getContext());
+  GenDestructorFuncName GenName("__destructor_", DstPtr.getAlignment(),
+                                getContext());
   std::string FuncName = GenName.getName(QT, IsVolatile);
   callSpecialFunction(GenDestructor(getContext()), FuncName, QT, IsVolatile,
                       *this, std::array<Address, 1>({{DstPtr}}));

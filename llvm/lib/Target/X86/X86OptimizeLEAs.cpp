@@ -510,12 +510,16 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
 
     MemOpNo += X86II::getOperandBias(Desc);
 
+    // Do not call chooseBestLEA if there was no matching LEA
+    auto Insns = LEAs.find(getMemOpKey(MI, MemOpNo));
+    if (Insns == LEAs.end())
+      continue;
+
     // Get the best LEA instruction to replace address calculation.
     MachineInstr *DefMI;
     int64_t AddrDispShift;
     int Dist;
-    if (!chooseBestLEA(LEAs[getMemOpKey(MI, MemOpNo)], MI, DefMI, AddrDispShift,
-                       Dist))
+    if (!chooseBestLEA(Insns->second, MI, DefMI, AddrDispShift, Dist))
       continue;
 
     // If LEA occurs before current instruction, we can freely replace

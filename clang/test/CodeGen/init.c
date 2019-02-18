@@ -81,6 +81,21 @@ struct Huge {
   int arr[1000 * 1000 * 1000];
 } huge_struct = {1, {2, 0, 0, 0}};
 
+// CHECK-DAG: @large_array_with_zeroes = constant <{ [21 x i8], [979 x i8] }> <{ [21 x i8] c"abc\01\02\03xyzzy\00\00\00\00\00\00\00\00\00q", [979 x i8] zeroinitializer }>
+const char large_array_with_zeroes[1000] = {
+  'a', 'b', 'c', 1, 2, 3, 'x', 'y', 'z', 'z', 'y', [20] = 'q'
+};
+
+char global;
+
+// CHECK-DAG: @large_array_with_zeroes_2 = global <{ [10 x i8*], [90 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [90 x i8*] zeroinitializer }>
+const void *large_array_with_zeroes_2[100] = {
+  [9] = &global
+};
+// CHECK-DAG: @large_array_with_zeroes_3 = global <{ [10 x i8*], [990 x i8*] }> <{ [10 x i8*] [i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* null, i8* @global], [990 x i8*] zeroinitializer }>
+const void *large_array_with_zeroes_3[1000] = {
+  [9] = &global
+};
 
 // PR279 comment #3
 char test8(int X) {
@@ -125,6 +140,72 @@ void test10(int X) {
   // CHECK: call void @bar
 }
 
+void nonzeroMemseti8() {
+  char arr[33] = { 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, 42, };
+  // CHECK-LABEL: @nonzeroMemseti8(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 42, i32 33, i1 false)
+}
+
+void nonzeroMemseti16() {
+  unsigned short arr[17] = { 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, 0x4242, };
+  // CHECK-LABEL: @nonzeroMemseti16(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 66, i32 34, i1 false)
+}
+
+void nonzeroMemseti32() {
+  unsigned arr[9] = { 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, 0xF0F0F0F0, };
+  // CHECK-LABEL: @nonzeroMemseti32(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
+}
+
+void nonzeroMemseti64() {
+  unsigned long long arr[7] = { 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA, 0xAAAAAAAAAAAAAAAA,  0xAAAAAAAAAAAAAAAA,  0xAAAAAAAAAAAAAAAA,  };
+  // CHECK-LABEL: @nonzeroMemseti64(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -86, i32 56, i1 false)
+}
+
+void nonzeroMemsetf32() {
+  float arr[9] = { 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, 0x1.cacacap+75, };
+  // CHECK-LABEL: @nonzeroMemsetf32(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 101, i32 36, i1 false)
+}
+
+void nonzeroMemsetf64() {
+  double arr[7] = { 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, 0x1.4444444444444p+69, };
+  // CHECK-LABEL: @nonzeroMemsetf64(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 68, i32 56, i1 false)
+}
+
+void nonzeroPaddedUnionMemset() {
+  union U { char c; int i; };
+  union U arr[9] = { 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, 0xF0, };
+  // CHECK-LABEL: @nonzeroPaddedUnionMemset(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 36, i1 false)
+}
+
+void nonzeroNestedMemset() {
+  union U { char c; int i; };
+  struct S { union U u; short i; };
+  struct S arr[5] = { { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, { {0xF0}, 0xF0F0 }, };
+  // CHECK-LABEL: @nonzeroNestedMemset(
+  // CHECK-NOT: store
+  // CHECK-NOT: memcpy
+  // CHECK: call void @llvm.memset.p0i8.i32(i8* {{.*}}, i8 -16, i32 40, i1 false)
+}
 
 // PR9257
 struct test11S {

@@ -592,7 +592,7 @@ bool MCContext::isValidDwarfFileNumber(unsigned FileNumber, unsigned CUID) {
   return !LineTable.getMCDwarfFiles()[FileNumber].Name.empty();
 }
 
-/// Remove empty sections from SectionStartEndSyms, to avoid generating
+/// Remove empty sections from SectionsForRanges, to avoid generating
 /// useless debug info for them.
 void MCContext::finalizeDwarfSections(MCStreamer &MCOS) {
   SectionsForRanges.remove_if(
@@ -603,11 +603,6 @@ CodeViewContext &MCContext::getCVContext() {
   if (!CVContext.get())
     CVContext.reset(new CodeViewContext);
   return *CVContext.get();
-}
-
-void MCContext::clearCVLocSeen() {
-  if (CVContext)
-    CVContext->clearCVLocSeen();
 }
 
 //===----------------------------------------------------------------------===//

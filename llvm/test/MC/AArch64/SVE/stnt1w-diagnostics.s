@@ -64,3 +64,19 @@ stnt1w { v0.2d }, p0, [x1, #1, MUL VL]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: stnt1w { v0.2d }, p0, [x1, #1, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.s, p0/z, z7.s
+stnt1w  { z0.s }, p0, [x0, x0, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: stnt1w  { z0.s }, p0, [x0, x0, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+stnt1w  { z0.s }, p0, [x0, x0, lsl #2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: stnt1w  { z0.s }, p0, [x0, x0, lsl #2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

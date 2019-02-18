@@ -94,10 +94,12 @@ static rlim_t getlim(int res) {
 }
 
 static void setlim(int res, rlim_t lim) {
-  // The following magic is to prevent clang from replacing it with memset.
-  volatile struct rlimit rlim;
+  struct rlimit rlim;
+  if (getrlimit(res, const_cast<struct rlimit *>(&rlim))) {
+    Report("ERROR: %s getrlimit() failed %d\n", SanitizerToolName, errno);
+    Die();
+  }
   rlim.rlim_cur = lim;
-  rlim.rlim_max = lim;
   if (setrlimit(res, const_cast<struct rlimit *>(&rlim))) {
     Report("ERROR: %s setrlimit() failed %d\n", SanitizerToolName, errno);
     Die();
@@ -328,7 +330,7 @@ int GetNamedMappingFd(const char *name, uptr size) {
 }
 #endif
 
-void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
+bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   int fd = name ? GetNamedMappingFd(name, size) : -1;
   unsigned flags = MAP_PRIVATE | MAP_FIXED | MAP_NORESERVE;
   if (fd == -1) flags |= MAP_ANON;
@@ -338,12 +340,14 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
                          RoundUpTo(size, PageSize), PROT_READ | PROT_WRITE,
                          flags, fd, 0);
   int reserrno;
-  if (internal_iserror(p, &reserrno))
+  if (internal_iserror(p, &reserrno)) {
     Report("ERROR: %s failed to "
            "allocate 0x%zx (%zd) bytes at address %zx (errno: %d)\n",
            SanitizerToolName, size, size, fixed_addr, reserrno);
+    return false;
+  }
   IncreaseTotalMmap(size);
-  return (void *)p;
+  return true;
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {

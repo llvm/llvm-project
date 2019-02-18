@@ -207,7 +207,7 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
                              const llvm::APSInt& V1, const llvm::APSInt& V2) {
   switch (Op) {
     default:
-      assert(false && "Invalid Opcode.");
+      llvm_unreachable("Invalid Opcode.");
 
     case BO_Mul:
       return &getValue( V1 * V2 );

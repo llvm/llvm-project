@@ -21,7 +21,7 @@
 .end_amdhsa_kernel
 
 .amdhsa_kernel foo
-  // NOT-AMDHSA: error: directive only supported for amdhsa OS
+  // NOT-AMDHSA: error: unknown directive
 .end_amdhsa_kernel
 
 .amdhsa_kernel foo

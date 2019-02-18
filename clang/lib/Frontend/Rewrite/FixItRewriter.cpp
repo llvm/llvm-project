@@ -184,7 +184,7 @@ void FixItRewriter::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     }
     return;
   }
-  
+
   if (!Editor.commit(commit)) {
     ++NumFailures;
     Diag(Info.getLocation(), diag::note_fixit_failed);

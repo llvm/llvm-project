@@ -462,6 +462,48 @@ TEST_F(LibclangParseTest, AllSkippedRanges) {
   clang_disposeSourceRangeList(Ranges);
 }
 
+TEST_F(LibclangParseTest, EvaluateChildExpression) {
+  std::string Main = "main.m";
+  WriteFile(Main, "#define kFOO @\"foo\"\n"
+                  "void foobar(void) {\n"
+                  " {kFOO;}\n"
+                  "}\n");
+  ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0, nullptr,
+                                       0, TUFlags);
+
+  CXCursor C = clang_getTranslationUnitCursor(ClangTU);
+  clang_visitChildren(
+      C,
+      [](CXCursor cursor, CXCursor parent,
+         CXClientData client_data) -> CXChildVisitResult {
+        if (clang_getCursorKind(cursor) == CXCursor_FunctionDecl) {
+          int numberedStmt = 0;
+          clang_visitChildren(
+              cursor,
+              [](CXCursor cursor, CXCursor parent,
+                 CXClientData client_data) -> CXChildVisitResult {
+                int &numberedStmt = *((int *)client_data);
+                if (clang_getCursorKind(cursor) == CXCursor_CompoundStmt) {
+                  if (numberedStmt) {
+                    CXEvalResult RE = clang_Cursor_Evaluate(cursor);
+                    EXPECT_NE(RE, nullptr);
+                    EXPECT_EQ(clang_EvalResult_getKind(RE),
+                              CXEval_ObjCStrLiteral);
+                    clang_EvalResult_dispose(RE);
+                    return CXChildVisit_Break;
+                  }
+                  numberedStmt++;
+                }
+                return CXChildVisit_Recurse;
+              },
+              &numberedStmt);
+          EXPECT_EQ(numberedStmt, 1);
+        }
+        return CXChildVisit_Continue;
+      },
+      nullptr);
+}
+
 class LibclangReparseTest : public LibclangParseTest {
 public:
   void DisplayDiagnostics() {
@@ -687,87 +729,6 @@ TEST_F(LibclangPrintingPolicyTest, SetAndGetProperties) {
       clang_PrintingPolicy_setProperty(Policy, Property, Value);
       EXPECT_EQ(Value, clang_PrintingPolicy_getProperty(Policy, Property));
     }
-  }
-}
-
-TEST_F(LibclangReparseTest, PreprocessorSkippedRanges) {
-  std::string Header = "header.h", Main = "main.cpp";
-  WriteFile(Header,
-    "#ifdef MANGOS\n"
-    "printf(\"mmm\");\n"
-    "#endif");
-  WriteFile(Main,
-    "#include \"header.h\"\n"
-    "#ifdef GUAVA\n"
-    "#endif\n"
-    "#ifdef KIWIS\n"
-    "printf(\"mmm!!\");\n"
-    "#endif");
-
-  for (int i = 0; i != 3; ++i) {
-    unsigned flags = TUFlags | CXTranslationUnit_PrecompiledPreamble;
-    if (i == 2)
-      flags |= CXTranslationUnit_CreatePreambleOnFirstParse;
-
-    if (i != 0)
-       clang_disposeTranslationUnit(ClangTU);  // dispose from previous iter
-
-    // parse once
-    ClangTU = clang_parseTranslationUnit(Index, Main.c_str(), nullptr, 0,
-                                         nullptr, 0, flags);
-    if (i != 0) {
-      // reparse
-      ASSERT_TRUE(ReparseTU(0, nullptr /* No unsaved files. */));
-    }
-
-    // Check all ranges are there
-    CXSourceRangeList *Ranges = clang_getAllSkippedRanges(ClangTU);
-    EXPECT_EQ(3U, Ranges->count);
-
-    CXSourceLocation cxl;
-    unsigned line;
-    cxl = clang_getRangeStart(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(1U, line);
-    cxl = clang_getRangeEnd(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(3U, line);
-
-    cxl = clang_getRangeStart(Ranges->ranges[1]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(2U, line);
-    cxl = clang_getRangeEnd(Ranges->ranges[1]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(3U, line);
-
-    cxl = clang_getRangeStart(Ranges->ranges[2]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(4U, line);
-    cxl = clang_getRangeEnd(Ranges->ranges[2]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(6U, line);
-
-    clang_disposeSourceRangeList(Ranges);
-
-    // Check obtaining ranges by each file works
-    CXFile cxf = clang_getFile(ClangTU, Header.c_str());
-    Ranges = clang_getSkippedRanges(ClangTU, cxf);
-    EXPECT_EQ(1U, Ranges->count);
-    cxl = clang_getRangeStart(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(1U, line);
-    clang_disposeSourceRangeList(Ranges);
-
-    cxf = clang_getFile(ClangTU, Main.c_str());
-    Ranges = clang_getSkippedRanges(ClangTU, cxf);
-    EXPECT_EQ(2U, Ranges->count);
-    cxl = clang_getRangeStart(Ranges->ranges[0]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(2U, line);
-    cxl = clang_getRangeStart(Ranges->ranges[1]);
-    clang_getSpellingLocation(cxl, nullptr, &line, nullptr, nullptr);
-    EXPECT_EQ(4U, line);
-    clang_disposeSourceRangeList(Ranges);
   }
 }
 

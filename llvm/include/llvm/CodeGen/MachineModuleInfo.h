@@ -46,10 +46,10 @@ namespace llvm {
 class BasicBlock;
 class CallInst;
 class Function;
-class MachineFunction;
+class LLVMTargetMachine;
 class MMIAddrLabelMap;
+class MachineFunction;
 class Module;
-class TargetMachine;
 
 //===----------------------------------------------------------------------===//
 /// This class can be derived from and used by targets to hold private
@@ -76,7 +76,7 @@ protected:
 /// for specific use.
 ///
 class MachineModuleInfo : public ImmutablePass {
-  const TargetMachine &TM;
+  const LLVMTargetMachine &TM;
 
   /// This is the MCContext used for the entire code generator.
   MCContext Context;
@@ -105,7 +105,7 @@ class MachineModuleInfo : public ImmutablePass {
   /// basic block's address of label.
   MMIAddrLabelMap *AddrLabelSymbols;
 
-  // TODO: Ideally, what we'd like is to have a switch that allows emitting 
+  // TODO: Ideally, what we'd like is to have a switch that allows emitting
   // synchronous (precise at call-sites only) CFA into .eh_frame. However,
   // even under this switch, we'd like .debug_frame to be precise when using
   // -g. At this moment, there's no way to specify that some CFI directives
@@ -145,7 +145,7 @@ class MachineModuleInfo : public ImmutablePass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit MachineModuleInfo(const TargetMachine *TM = nullptr);
+  explicit MachineModuleInfo(const LLVMTargetMachine *TM = nullptr);
   ~MachineModuleInfo() override;
 
   // Initialization and Finalization

@@ -13,8 +13,120 @@ Afterwards the ABI list should be updated to include the new changes.
 New entries should be added directly below the "Version" header.
 
 -----------
+Version 8.0
+-----------
+
+* rXXXXX - Remove std::bad_array_length
+
+  The change removes the definition of std::bad_array_length (which never made
+  it into the standard) from the headers and the dylib. This is technically an
+  ABI break because the symbols are shipped starting with mac OSX 10.13, however
+  users couldn't be relying on the functionality because it is marked as being
+  unavailable using Clang's availability attribute.
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  Symbol removed: __ZNKSt16bad_array_length4whatEv
+  Symbol removed: __ZNKSt16bad_array_length4whatEv
+  Symbol removed: __ZNSt16bad_array_lengthC1Ev
+  Symbol removed: __ZNSt16bad_array_lengthC1Ev
+  Symbol removed: __ZNSt16bad_array_lengthC2Ev
+  Symbol removed: __ZNSt16bad_array_lengthC2Ev
+  Symbol removed: __ZNSt16bad_array_lengthD0Ev
+  Symbol removed: __ZNSt16bad_array_lengthD0Ev
+  Symbol removed: __ZNSt16bad_array_lengthD1Ev
+  Symbol removed: __ZNSt16bad_array_lengthD1Ev
+  Symbol removed: __ZNSt16bad_array_lengthD2Ev
+  Symbol removed: __ZNSt16bad_array_lengthD2Ev
+  Symbol removed: __ZTISt16bad_array_length
+  Symbol removed: __ZTISt16bad_array_length
+  Symbol removed: __ZTSSt16bad_array_length
+  Symbol removed: __ZTSSt16bad_array_length
+  Symbol removed: __ZTVSt16bad_array_length
+  Symbol removed: __ZTVSt16bad_array_length
+
+* r347395 - Making libc++ build under -fvisibility=hidden on Linux
+
+  The change marks several function templates as hidden. This removes symbols
+  from the shared library, but this is not an ABI break because it's impossible
+  for programs linking against libc++.so to actually depend on that symbol.
+  The reason is that the symbol is exported from the shared library through
+  an implicit instantiation present in the shared object itself only. Furthermore,
+  if a user's shared object was implicitly instantiating one of these functions,
+  marking that symbol as hidden would not be an ABI break for them because none
+  of their users could actually be using the symbol in their dylib (because
+  it's an implicit instantiation).
+
+  x86_64-linux-gnu
+  ----------------
+  Symbol removed: _ZNSt3__125__num_get_signed_integralIlEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__125__num_get_signed_integralIxEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralIjEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralImEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralItEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralIyEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIaaEEPaEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIccEEPcEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIddEEPdEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIffEEPfEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIhhEEPhEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIiiEEPiEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIjjEEPjEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIllEEPlEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessImmEEPmEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIssEEPsEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIttEEPtEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIwwEEPwEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIxxEEPxEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIyyEEPyEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__1plIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EERKS9_PKS6_
+  Symbol removed: _ZSt18make_exception_ptrINSt3__112future_errorEESt13exception_ptrT_
+
+* r345260 - Making libc++ build under -fvisibility=hidden on Mac OS
+
+  The change marks __thread_specific_ptr<__thread_struct>::__at_thread_exit(void*)
+  with hidden visibility. This removes a symbol from the shared libraries,
+  however this is not an ABI break because it's impossible for programs linking
+  against libc++.dylib to actually depend on that symbol. The reason is that
+  the symbol is exported from the shared library through an implicit
+  instantiation present in the dylib itself only. Furthermore, if a user's
+  dylib was implicitly instantiating __thread_specific_ptr<T>::__at_thread_exit
+  (because it's defined in the headers), marking that symbol as hidden would
+  not be an ABI break for them because none of their users could actually be
+  using the symbol in their dylib (because it's an implicit instantiation).
+
+  This change also marks __start_std_streams as hidden -- this variable is
+  only required to initialize the streams, and nobody should depend on it
+  from outside the dylib.
+
+  x86_64-linux-gnu
+  ----------------
+  Symbol removed: _ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
+  Symbol removed: _ZNSt3__119__start_std_streamsE
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  Symbol removed: __ZNSt3__221__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
+  Symbol removed: __ZNSt3__119__start_std_streamsE
+
+-----------
 Version 7.0
 -----------
+
+* r338479 - Elementary string conversions for integral types
+
+  The change emits __u64toa and __u32toa under std::__1::__itoa.
+
+  x86_64-linux-gnu
+  ----------------
+  Symbol added: _ZNSt3__16__itoa8__u64toaEmPc
+  Symbol added: _ZNSt3__16__itoa8__u32toaEjPc
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  Symbol added: __ZNSt3__16__itoa8__u64toaEyPc
+  Symbol added: __ZNSt3__16__itoa8__u32toaEjPc
+
 
 * r333467 - Fix embarrasing typo in uncaught_exceptions.
 

@@ -81,8 +81,10 @@ ProgramStateRef getWidenedLoopState(ProgramStateRef PrevState,
 
   // 'this' pointer is not an lvalue, we should not invalidate it. If the loop
   // is located in a method, constructor or destructor, the value of 'this'
-  // pointer shoule remain unchanged.
-  if (const CXXMethodDecl *CXXMD = dyn_cast<CXXMethodDecl>(STC->getDecl())) {
+  // pointer should remain unchanged.  Ignore static methods, since they do not
+  // have 'this' pointers.
+  const CXXMethodDecl *CXXMD = dyn_cast<CXXMethodDecl>(STC->getDecl());
+  if (CXXMD && !CXXMD->isStatic()) {
     const CXXThisRegion *ThisR = MRMgr.getCXXThisRegion(
         CXXMD->getThisType(STC->getAnalysisDeclContext()->getASTContext()),
         STC);

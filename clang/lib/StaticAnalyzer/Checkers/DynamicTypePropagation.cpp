@@ -21,7 +21,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -85,7 +85,6 @@ class DynamicTypePropagation:
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -122,11 +121,6 @@ void DynamicTypePropagation::checkDeadSymbols(SymbolReaper &SR,
     if (!SR.isLiveRegion(I->first)) {
       State = State->remove<DynamicTypeMap>(I->first);
     }
-  }
-
-  if (!SR.hasDeadSymbols()) {
-    C.addTransition(State);
-    return;
   }
 
   MostSpecializedTypeArgsMapTy TyArgMap =
@@ -937,11 +931,10 @@ void DynamicTypePropagation::reportGenericsBug(
 
 std::shared_ptr<PathDiagnosticPiece>
 DynamicTypePropagation::GenericsBugVisitor::VisitNode(const ExplodedNode *N,
-                                                      const ExplodedNode *PrevN,
                                                       BugReporterContext &BRC,
                                                       BugReport &BR) {
   ProgramStateRef state = N->getState();
-  ProgramStateRef statePrev = PrevN->getState();
+  ProgramStateRef statePrev = N->getFirstPred()->getState();
 
   const ObjCObjectPointerType *const *TrackedType =
       state->get<MostSpecializedTypeArgsMap>(Sym);
@@ -995,11 +988,18 @@ DynamicTypePropagation::GenericsBugVisitor::VisitNode(const ExplodedNode *N,
 
 /// Register checkers.
 void ento::registerObjCGenericsChecker(CheckerManager &mgr) {
-  DynamicTypePropagation *checker =
-      mgr.registerChecker<DynamicTypePropagation>();
+  DynamicTypePropagation *checker = mgr.getChecker<DynamicTypePropagation>();
   checker->CheckGenerics = true;
+}
+
+bool ento::shouldRegisterObjCGenericsChecker(const LangOptions &LO) {
+  return true;
 }
 
 void ento::registerDynamicTypePropagation(CheckerManager &mgr) {
   mgr.registerChecker<DynamicTypePropagation>();
+}
+
+bool ento::shouldRegisterDynamicTypePropagation(const LangOptions &LO) {
+  return true;
 }

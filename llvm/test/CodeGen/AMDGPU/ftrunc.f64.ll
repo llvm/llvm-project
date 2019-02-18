@@ -27,8 +27,7 @@ define amdgpu_kernel void @v_ftrunc_f64(double addrspace(1)* %out, double addrsp
 ; SI-DAG: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80000000
 ; SI-DAG: s_add_i32 [[SEXP1:s[0-9]+]], [[SEXP]], 0xfffffc01
 ; SI-DAG: s_lshr_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], [[SEXP1]]
-; SI-DAG: s_not_b64
-; SI-DAG: s_and_b64
+; SI-DAG: s_andn2_b64
 ; SI-DAG: cmp_gt_i32
 ; SI-DAG: cndmask_b32
 ; SI-DAG: cndmask_b32

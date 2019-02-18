@@ -27,7 +27,7 @@ define i32 @f3(i8 *%src) {
 ; CHECK-LABEL: f3:
 ; CHECK: lb %r2, 0(%r2)
 ; CHECK: br %r14
-  %byte = load i8 , i8 *%src
+  %byte = load i8, i8 *%src
   %ext = sext i8 %byte to i32
   ret i32 %ext
 }
@@ -38,7 +38,7 @@ define i32 @f4(i8 *%src) {
 ; CHECK: lb %r2, 524287(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 524287
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %ext = sext i8 %byte to i32
   ret i32 %ext
 }
@@ -51,7 +51,7 @@ define i32 @f5(i8 *%src) {
 ; CHECK: lb %r2, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 524288
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %ext = sext i8 %byte to i32
   ret i32 %ext
 }
@@ -62,7 +62,7 @@ define i32 @f6(i8 *%src) {
 ; CHECK: lb %r2, -1(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 -1
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %ext = sext i8 %byte to i32
   ret i32 %ext
 }
@@ -73,7 +73,7 @@ define i32 @f7(i8 *%src) {
 ; CHECK: lb %r2, -524288(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 -524288
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %ext = sext i8 %byte to i32
   ret i32 %ext
 }
@@ -86,7 +86,7 @@ define i32 @f8(i8 *%src) {
 ; CHECK: lb %r2, 0(%r2)
 ; CHECK: br %r14
   %ptr = getelementptr i8, i8 *%src, i64 -524289
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %ext = sext i8 %byte to i32
   ret i32 %ext
 }
@@ -99,7 +99,7 @@ define i32 @f9(i64 %src, i64 %index) {
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
   %ptr = inttoptr i64 %add2 to i8 *
-  %byte = load i8 , i8 *%ptr
+  %byte = load i8, i8 *%ptr
   %ext = sext i8 %byte to i32
   ret i32 %ext
 }
@@ -110,22 +110,22 @@ define void @f10(i32 *%ptr) {
 ; CHECK-LABEL: f10:
 ; CHECK: lb {{%r[0-9]+}}, 16{{[37]}}(%r15)
 ; CHECK: br %r14
-  %val0 = load volatile i32 , i32 *%ptr
-  %val1 = load volatile i32 , i32 *%ptr
-  %val2 = load volatile i32 , i32 *%ptr
-  %val3 = load volatile i32 , i32 *%ptr
-  %val4 = load volatile i32 , i32 *%ptr
-  %val5 = load volatile i32 , i32 *%ptr
-  %val6 = load volatile i32 , i32 *%ptr
-  %val7 = load volatile i32 , i32 *%ptr
-  %val8 = load volatile i32 , i32 *%ptr
-  %val9 = load volatile i32 , i32 *%ptr
-  %val10 = load volatile i32 , i32 *%ptr
-  %val11 = load volatile i32 , i32 *%ptr
-  %val12 = load volatile i32 , i32 *%ptr
-  %val13 = load volatile i32 , i32 *%ptr
-  %val14 = load volatile i32 , i32 *%ptr
-  %val15 = load volatile i32 , i32 *%ptr
+  %val0 = load volatile i32, i32 *%ptr
+  %val1 = load volatile i32, i32 *%ptr
+  %val2 = load volatile i32, i32 *%ptr
+  %val3 = load volatile i32, i32 *%ptr
+  %val4 = load volatile i32, i32 *%ptr
+  %val5 = load volatile i32, i32 *%ptr
+  %val6 = load volatile i32, i32 *%ptr
+  %val7 = load volatile i32, i32 *%ptr
+  %val8 = load volatile i32, i32 *%ptr
+  %val9 = load volatile i32, i32 *%ptr
+  %val10 = load volatile i32, i32 *%ptr
+  %val11 = load volatile i32, i32 *%ptr
+  %val12 = load volatile i32, i32 *%ptr
+  %val13 = load volatile i32, i32 *%ptr
+  %val14 = load volatile i32, i32 *%ptr
+  %val15 = load volatile i32, i32 *%ptr
 
   %trunc0 = trunc i32 %val0 to i8
   %trunc1 = trunc i32 %val1 to i8

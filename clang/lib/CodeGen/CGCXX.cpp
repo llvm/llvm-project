@@ -23,7 +23,7 @@
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtCXX.h"
-#include "clang/Frontend/CodeGenOptions.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 using namespace clang;
 using namespace CodeGen;
@@ -276,7 +276,7 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc =
     CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.PointerAlignInBytes);
-  CGCallee Callee(GD.getDecl()->getCanonicalDecl(), VFunc);
+  CGCallee Callee(GD, VFunc);
   return Callee;
 }
 
@@ -284,12 +284,12 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
 /// indirect call to virtual functions. It makes the call through indexing
 /// into the vtable.
 CGCallee
-CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD, 
+CodeGenFunction::BuildAppleKextVirtualCall(const CXXMethodDecl *MD,
                                            NestedNameSpecifier *Qual,
                                            llvm::Type *Ty) {
   assert((Qual->getKind() == NestedNameSpecifier::TypeSpec) &&
          "BuildAppleKextVirtualCall - bad Qual kind");
-  
+
   const Type *QTy = Qual->getAsType();
   QualType T = QualType(QTy, 0);
   const RecordType *RT = T->getAs<RecordType>();

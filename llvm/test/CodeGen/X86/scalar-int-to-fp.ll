@@ -636,7 +636,8 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE2_32-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; SSE2_32-NEXT:    subpd {{\.LCPI.*}}, %xmm0
-; SSE2_32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
+; SSE2_32-NEXT:    movapd %xmm0, %xmm1
+; SSE2_32-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; SSE2_32-NEXT:    addpd %xmm0, %xmm1
 ; SSE2_32-NEXT:    movlpd %xmm1, (%esp)
 ; SSE2_32-NEXT:    fldl (%esp)
@@ -649,7 +650,8 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_64-NEXT:    movq %rdi, %xmm1
 ; SSE2_64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
 ; SSE2_64-NEXT:    subpd {{.*}}(%rip), %xmm1
-; SSE2_64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,0,1]
+; SSE2_64-NEXT:    movapd %xmm1, %xmm0
+; SSE2_64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; SSE2_64-NEXT:    addpd %xmm1, %xmm0
 ; SSE2_64-NEXT:    retq
 ;

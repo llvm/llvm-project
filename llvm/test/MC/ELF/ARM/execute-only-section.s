@@ -20,8 +20,9 @@ foo:
 // CHECK:      Section {
 // CHECK:        Name: .text (16)
 // CHECK-NEXT:   Type: SHT_PROGBITS (0x1)
-// CHECK-NEXT:   Flags [ (0x6)
+// CHECK-NEXT:   Flags [ (0x20000006)
 // CHECK-NEXT:     SHF_ALLOC (0x2)
+// CHECK-NEXT:     SHF_ARM_PURECODE (0x20000000)
 // CHECK-NEXT:     SHF_EXECINSTR (0x4)
 // CHECK-NEXT:   ]
 // CHECK:        Size: 0

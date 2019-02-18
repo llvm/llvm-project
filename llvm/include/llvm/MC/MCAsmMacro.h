@@ -52,7 +52,7 @@ public:
     Pipe, PipePipe, Caret,
     Amp, AmpAmp, Exclaim, ExclaimEqual, Percent, Hash,
     Less, LessEqual, LessLess, LessGreater,
-    Greater, GreaterEqual, GreaterGreater, At,
+    Greater, GreaterEqual, GreaterGreater, At, MinusGreater,
 
     // MIPS unary expression operators such as %neg.
     PercentCall16, PercentCall_Hi, PercentCall_Lo, PercentDtprel_Hi,

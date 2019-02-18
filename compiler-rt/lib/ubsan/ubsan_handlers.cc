@@ -119,7 +119,9 @@ static void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle LHS,
   if (ignoreReport(Loc, Opts, ET))
     return;
 
-  if (!IsSigned && flags()->silence_unsigned_overflow)
+  // If this is an unsigned overflow in non-fatal mode, potentially ignore it.
+  if (!IsSigned && !Opts.FromUnrecoverableHandler &&
+      flags()->silence_unsigned_overflow)
     return;
 
   ScopedReport R(Opts, Loc, ET);
@@ -448,6 +450,72 @@ void __ubsan::__ubsan_handle_load_invalid_value_abort(InvalidValueData *Data,
                                                       ValueHandle Val) {
   GET_REPORT_OPTIONS(true);
   handleLoadInvalidValue(Data, Val, Opts);
+  Die();
+}
+
+static void handleImplicitConversion(ImplicitConversionData *Data,
+                                     ReportOptions Opts, ValueHandle Src,
+                                     ValueHandle Dst) {
+  SourceLocation Loc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::GenericUB;
+
+  const TypeDescriptor &SrcTy = Data->FromType;
+  const TypeDescriptor &DstTy = Data->ToType;
+
+  bool SrcSigned = SrcTy.isSignedIntegerTy();
+  bool DstSigned = DstTy.isSignedIntegerTy();
+
+  switch (Data->Kind) {
+  case ICCK_IntegerTruncation: { // Legacy, no longer used.
+    // Let's figure out what it should be as per the new types, and upgrade.
+    // If both types are unsigned, then it's an unsigned truncation.
+    // Else, it is a signed truncation.
+    if (!SrcSigned && !DstSigned) {
+      ET = ErrorType::ImplicitUnsignedIntegerTruncation;
+    } else {
+      ET = ErrorType::ImplicitSignedIntegerTruncation;
+    }
+    break;
+  }
+  case ICCK_UnsignedIntegerTruncation:
+    ET = ErrorType::ImplicitUnsignedIntegerTruncation;
+    break;
+  case ICCK_SignedIntegerTruncation:
+    ET = ErrorType::ImplicitSignedIntegerTruncation;
+    break;
+  case ICCK_IntegerSignChange:
+    ET = ErrorType::ImplicitIntegerSignChange;
+    break;
+  case ICCK_SignedIntegerTruncationOrSignChange:
+    ET = ErrorType::ImplicitSignedIntegerTruncationOrSignChange;
+    break;
+  }
+
+  if (ignoreReport(Loc, Opts, ET))
+    return;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  // FIXME: is it possible to dump the values as hex with fixed width?
+
+  Diag(Loc, DL_Error, ET,
+       "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
+       "type %4 changed the value to %5 (%6-bit, %7signed)")
+      << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+      << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+      << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
+}
+
+void __ubsan::__ubsan_handle_implicit_conversion(ImplicitConversionData *Data,
+                                                 ValueHandle Src,
+                                                 ValueHandle Dst) {
+  GET_REPORT_OPTIONS(false);
+  handleImplicitConversion(Data, Opts, Src, Dst);
+}
+void __ubsan::__ubsan_handle_implicit_conversion_abort(
+    ImplicitConversionData *Data, ValueHandle Src, ValueHandle Dst) {
+  GET_REPORT_OPTIONS(true);
+  handleImplicitConversion(Data, Opts, Src, Dst);
   Die();
 }
 

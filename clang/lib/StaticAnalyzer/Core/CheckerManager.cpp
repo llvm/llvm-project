@@ -441,14 +441,13 @@ void CheckerManager::runCheckersForEndFunction(NodeBuilderContext &BC,
                                                ExplodedNode *Pred,
                                                ExprEngine &Eng,
                                                const ReturnStmt *RS) {
-  // We define the builder outside of the loop bacause if at least one checkers
-  // creates a sucsessor for Pred, we do not need to generate an
+  // We define the builder outside of the loop because if at least one checker
+  // creates a successor for Pred, we do not need to generate an
   // autotransition for it.
   NodeBuilder Bldr(Pred, Dst, BC);
   for (const auto checkFn : EndFunctionCheckers) {
-    const ProgramPoint &L = BlockEntrance(BC.Block,
-                                          Pred->getLocationContext(),
-                                          checkFn.Checker);
+    const ProgramPoint &L =
+        FunctionExitPoint(RS, Pred->getLocationContext(), checkFn.Checker);
     CheckerContext C(Bldr, Eng, Pred, L);
     checkFn(RS, C);
   }

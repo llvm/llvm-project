@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=x86_64-unknown-linux -start-before=x86-flags-copy-lowering -o - %s | FileCheck %s
+#
+# Test the emission of pre- and post-instruction labels.
+
+--- |
+  declare void @f(i32 %x) nounwind
+
+  declare void @g(i32 %x) nounwind
+
+  declare void @h(i32 %x) nounwind
+
+  define i64 @test(i32 %x) nounwind {
+  entry:
+    call void @f(i32 %x)
+    call void @g(i32 %x)
+    call void @h(i32 %x)
+    ret i64 undef
+  }
+
+...
+---
+name: test
+# CHECK-LABEL: {{^}}test:
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0.entry:
+    liveins: $edi
+
+    %0:gr32 = COPY $edi
+    %1:gr32 = COPY killed %0
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %1
+
+    CALL64pcrel32 @f, csr_64, implicit $rsp, implicit $ssp, implicit $edi, pre-instr-symbol <mcsymbol .Lpre_f>, post-instr-symbol <mcsymbol .Lpost_f>
+  ; CHECK:      .Lpre_f:
+  ; CHECK-NEXT:   callq f
+  ; CHECK-NEXT: .Lpost_f:
+
+    ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %1
+
+    CALL64pcrel32 @g, csr_64, implicit $rsp, implicit $ssp, implicit $edi, pre-instr-symbol <mcsymbol .Lpre_g>
+  ; CHECK:      .Lpre_g:
+  ; CHECK-NEXT:   callq g
+
+    ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+    $edi = COPY %1
+
+    CALL64pcrel32 @h, csr_64, implicit $rsp, implicit $ssp, implicit $edi, post-instr-symbol <mcsymbol .Lpost_h>
+  ; CHECK:        callq h
+  ; CHECK-NEXT: .Lpost_h:
+
+    ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+
+    %2:gr64 = MOV64ri32 <mcsymbol .Lpre_f>
+    %3:gr64 = MOV64ri32 <mcsymbol .Lpost_f>
+    %4:gr64 = MOV64ri32 <mcsymbol .Lpre_g>
+    %5:gr64 = MOV64ri32 <mcsymbol .Lpost_h>
+  ; CHECK:        movq $.Lpre_f, %{{.*}}
+  ; CHECK-NEXT:   movq $.Lpost_f, %{{.*}}
+  ; CHECK-NEXT:   movq $.Lpre_g, %{{.*}}
+  ; CHECK-NEXT:   movq $.Lpost_h, %{{.*}}
+
+    %6:gr64 = ADD64rr killed %2, killed %3, implicit-def $eflags
+    %7:gr64 = ADD64rr killed %4, killed %5, implicit-def $eflags
+    %8:gr64 = ADD64rr killed %6, killed %7, implicit-def $eflags
+    $rax = COPY %8
+    RETQ implicit $rax
+
+...

@@ -6,7 +6,10 @@ vadd.f32 s0, s2, s2
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
 # CHECK-NEXT: Total Cycles:      105
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        100
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.95
 # CHECK-NEXT: IPC:               0.95
 # CHECK-NEXT: Block RThroughput: 1.0
 

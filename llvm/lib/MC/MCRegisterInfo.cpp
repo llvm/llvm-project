@@ -13,6 +13,7 @@
 
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 #include <cassert>
@@ -127,6 +128,8 @@ int MCRegisterInfo::getCodeViewRegNum(unsigned RegNum) const {
     report_fatal_error("target does not implement codeview register mapping");
   const DenseMap<unsigned, int>::const_iterator I = L2CVRegs.find(RegNum);
   if (I == L2CVRegs.end())
-    report_fatal_error("unknown codeview register");
+    report_fatal_error("unknown codeview register " + (RegNum < getNumRegs()
+                                                           ? getName(RegNum)
+                                                           : Twine(RegNum)));
   return I->second;
 }

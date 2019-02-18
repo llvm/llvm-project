@@ -14,7 +14,7 @@
 #define LLVM_CLANG_DIRECTORYWATCHER_DIRECTORYWATCHER_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Index/IndexDataStore.h"
+#include "llvm/Support/Chrono.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -25,7 +25,34 @@ namespace clang {
 ///
 /// Guarantees that the first time the directory is processed, the receiver will
 /// be invoked even if the directory is empty.
-class DirectoryWatcher : public index::AbstractDirectoryWatcher {
+class DirectoryWatcher {
+public:
+  enum class EventKind {
+    /// A file was added.
+    Added,
+    /// A file was removed.
+    Removed,
+    /// A file was modified.
+    Modified,
+    /// The watched directory got deleted. No more events will follow.
+    DirectoryDeleted,
+  };
+
+  struct Event {
+    EventKind Kind;
+    std::string Filename;
+    llvm::sys::TimePoint<> ModTime;
+  };
+
+  typedef std::function<void(ArrayRef<Event> Events, bool isInitial)> EventReceiver;
+
+  ~DirectoryWatcher();
+
+  static std::unique_ptr<DirectoryWatcher>
+    create(StringRef Path, EventReceiver Receiver, bool waitInitialSync,
+           std::string &Error);
+
+private:
   struct Implementation;
   Implementation &Impl;
 
@@ -33,13 +60,6 @@ class DirectoryWatcher : public index::AbstractDirectoryWatcher {
 
   DirectoryWatcher(const DirectoryWatcher&) = delete;
   DirectoryWatcher &operator =(const DirectoryWatcher&) = delete;
-
-public:
-  ~DirectoryWatcher();
-
-  static std::unique_ptr<DirectoryWatcher>
-    create(StringRef Path, EventReceiver Receiver, bool waitInitialSync,
-           std::string &Error);
 };
 
 } // namespace clang

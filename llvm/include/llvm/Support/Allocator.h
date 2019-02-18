@@ -21,6 +21,7 @@
 #ifndef LLVM_SUPPORT_ALLOCATOR_H
 #define LLVM_SUPPORT_ALLOCATOR_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -282,6 +283,60 @@ public:
   using AllocatorBase<BumpPtrAllocatorImpl>::Deallocate;
 
   size_t GetNumSlabs() const { return Slabs.size() + CustomSizedSlabs.size(); }
+
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator.
+  /// The returned value is negative iff the object is inside a custom-size
+  /// slab.
+  /// Returns an empty optional if the pointer is not found in the allocator.
+  llvm::Optional<int64_t> identifyObject(const void *Ptr) {
+    const char *P = static_cast<const char *>(Ptr);
+    int64_t InSlabIdx = 0;
+    for (size_t Idx = 0, E = Slabs.size(); Idx < E; Idx++) {
+      const char *S = static_cast<const char *>(Slabs[Idx]);
+      if (P >= S && P < S + computeSlabSize(Idx))
+        return InSlabIdx + static_cast<int64_t>(P - S);
+      InSlabIdx += static_cast<int64_t>(computeSlabSize(Idx));
+    }
+
+    // Use negative index to denote custom sized slabs.
+    int64_t InCustomSizedSlabIdx = -1;
+    for (size_t Idx = 0, E = CustomSizedSlabs.size(); Idx < E; Idx++) {
+      const char *S = static_cast<const char *>(CustomSizedSlabs[Idx].first);
+      size_t Size = CustomSizedSlabs[Idx].second;
+      if (P >= S && P < S + Size)
+        return InCustomSizedSlabIdx - static_cast<int64_t>(P - S);
+      InCustomSizedSlabIdx -= static_cast<int64_t>(Size);
+    }
+    return None;
+  }
+
+  /// A wrapper around identifyObject that additionally asserts that
+  /// the object is indeed within the allocator.
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator.
+  int64_t identifyKnownObject(const void *Ptr) {
+    Optional<int64_t> Out = identifyObject(Ptr);
+    assert(Out && "Wrong allocator used");
+    return *Out;
+  }
+
+  /// A wrapper around identifyKnownObject. Accepts type information
+  /// about the object and produces a smaller identifier by relying on
+  /// the alignment information. Note that sub-classes may have different
+  /// alignment, so the most base class should be passed as template parameter
+  /// in order to obtain correct results. For that reason automatic template
+  /// parameter deduction is disabled.
+  /// \return An index uniquely and reproducibly identifying
+  /// an input pointer \p Ptr in the given allocator. This identifier is
+  /// different from the ones produced by identifyObject and
+  /// identifyAlignedObject.
+  template <typename T>
+  int64_t identifyKnownAlignedObject(const void *Ptr) {
+    int64_t Out = identifyKnownObject(Ptr);
+    assert(Out % alignof(T) == 0 && "Wrong alignment information");
+    return Out / alignof(T);
+  }
 
   size_t getTotalMemory() const {
     size_t TotalMemory = 0;

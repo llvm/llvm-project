@@ -144,7 +144,13 @@ def PPCE500Itineraries : ProcessorItineraries<
                                   InstrStage<1, [E500_LSU_0]>],
                                  [6, 1], // Latency = 3
                                  [NoBypass, E500_GPR_Bypass]>,
-  InstrItinData<IIC_LdStStoreUpd,[InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
+  InstrItinData<IIC_LdStSTU,     [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
+                                  InstrStage<1, [E500_SU0, E500_SU1], 0>,
+                                  InstrStage<1, [E500_LSU_0]>],
+                                 [6, 1], // Latency = 3
+                                 [NoBypass, E500_GPR_Bypass],
+                                 2>, // 2 micro-ops
+  InstrItinData<IIC_LdStSTUX,    [InstrStage<1, [E500_DIS0, E500_DIS1], 0>,
                                   InstrStage<1, [E500_SU0, E500_SU1], 0>,
                                   InstrStage<1, [E500_LSU_0]>],
                                  [6, 1], // Latency = 3

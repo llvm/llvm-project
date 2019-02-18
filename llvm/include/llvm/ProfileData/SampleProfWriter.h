@@ -42,7 +42,7 @@ public:
   /// Write all the sample profiles in the given map of samples.
   ///
   /// \returns status code of the file update operation.
-  std::error_code write(const StringMap<FunctionSamples> &ProfileMap);
+  virtual std::error_code write(const StringMap<FunctionSamples> &ProfileMap);
 
   raw_ostream &getOutputStream() { return *OutputStream; }
 
@@ -103,14 +103,15 @@ private:
 /// Sample-based profile writer (binary format).
 class SampleProfileWriterBinary : public SampleProfileWriter {
 public:
-  std::error_code write(const FunctionSamples &S) override;
+  virtual std::error_code write(const FunctionSamples &S) override;
   SampleProfileWriterBinary(std::unique_ptr<raw_ostream> &OS)
       : SampleProfileWriter(OS) {}
 
 protected:
   virtual std::error_code writeNameTable() = 0;
   virtual std::error_code writeMagicIdent() = 0;
-  std::error_code writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  virtual std::error_code
+  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
   std::error_code writeSummary();
   std::error_code writeNameIdx(StringRef FName);
   std::error_code writeBody(const FunctionSamples &S);
@@ -135,12 +136,56 @@ protected:
   virtual std::error_code writeMagicIdent() override;
 };
 
+// CompactBinary is a compact format of binary profile which both reduces
+// the profile size and the load time needed when compiling. It has two
+// major difference with Binary format.
+// 1. It represents all the strings in name table using md5 hash.
+// 2. It saves a function offset table which maps function name index to
+// the offset of its function profile to the start of the binary profile,
+// so by using the function offset table, for those function profiles which
+// will not be needed when compiling a module, the profile reader does't
+// have to read them and it saves compile time if the profile size is huge.
+// The layout of the compact format is shown as follows:
+//
+//    Part1: Profile header, the same as binary format, containing magic
+//           number, version, summary, name table...
+//    Part2: Function Offset Table Offset, which saves the position of
+//           Part4.
+//    Part3: Function profile collection
+//             function1 profile start
+//                 ....
+//             function2 profile start
+//                 ....
+//             function3 profile start
+//                 ....
+//                ......
+//    Part4: Function Offset Table
+//             function1 name index --> function1 profile start
+//             function2 name index --> function2 profile start
+//             function3 name index --> function3 profile start
+//
+// We need Part2 because profile reader can use it to find out and read
+// function offset table without reading Part3 first.
 class SampleProfileWriterCompactBinary : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
 
+public:
+  virtual std::error_code write(const FunctionSamples &S) override;
+  virtual std::error_code
+  write(const StringMap<FunctionSamples> &ProfileMap) override;
+
 protected:
+  /// The table mapping from function name to the offset of its FunctionSample
+  /// towards profile start.
+  MapVector<StringRef, uint64_t> FuncOffsetTable;
+  /// The offset of the slot to be filled with the offset of FuncOffsetTable
+  /// towards profile start.
+  uint64_t TableOffset;
   virtual std::error_code writeNameTable() override;
   virtual std::error_code writeMagicIdent() override;
+  virtual std::error_code
+  writeHeader(const StringMap<FunctionSamples> &ProfileMap) override;
+  std::error_code writeFuncOffsetTable();
 };
 
 } // end namespace sampleprof

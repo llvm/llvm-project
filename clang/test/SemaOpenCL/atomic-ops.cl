@@ -58,7 +58,8 @@ void f(atomic_int *i, const atomic_int *ci,
   __opencl_atomic_load(i, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_load(p, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_load(d, memory_order_seq_cst, memory_scope_work_group);
-  __opencl_atomic_load(ci, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const __generic atomic_int *' (aka 'const __generic _Atomic(int) *') invalid)}}
+  __opencl_atomic_load(ci, memory_order_seq_cst, memory_scope_work_group);
+  __opencl_atomic_load(i_c, memory_order_seq_cst, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to non-constant _Atomic type ('__constant atomic_int *' (aka '__constant _Atomic(int) *') invalid)}}
 
   __opencl_atomic_store(i, 1, memory_order_seq_cst, memory_scope_work_group);
   __opencl_atomic_store(p, 1, memory_order_seq_cst, memory_scope_work_group);
@@ -94,7 +95,7 @@ void f(atomic_int *i, const atomic_int *ci,
 
   __opencl_atomic_init(ci, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const __generic atomic_int *' (aka 'const __generic _Atomic(int) *') invalid)}}
   __opencl_atomic_store(ci, 0, memory_order_release, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const __generic atomic_int *' (aka 'const __generic _Atomic(int) *') invalid)}}
-  __opencl_atomic_load(ci, memory_order_acquire, memory_scope_work_group); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const __generic atomic_int *' (aka 'const __generic _Atomic(int) *') invalid)}}
+  __opencl_atomic_load(ci, memory_order_acquire, memory_scope_work_group);
 
   __opencl_atomic_init(&gn, 456);
   __opencl_atomic_init(&gn, (void*)0); // expected-warning{{incompatible pointer to integer conversion passing '__generic void *' to parameter of type 'int'}}

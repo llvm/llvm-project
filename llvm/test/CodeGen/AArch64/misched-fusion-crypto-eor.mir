@@ -1,0 +1,75 @@
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-- -mattr=-fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,NOFUSE
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-- -mattr=+fuse-aes,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSEAES
+# RUN: llc -o /dev/null %s -run-pass=machine-scheduler -mtriple aarch64-- -mattr=+fuse-aes,+fuse-crypto-eor,+crypto -misched-print-dags 2>&1 | FileCheck %s --check-prefixes=CHECK,FUSEAES,FUSECRYPTO
+# REQUIRES: asserts
+
+name: func
+body: |
+  bb.0:
+    ; CHECK: SU(0): %0:fpr128 = AESErr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES:    SU(1): Ord  Latency=0 Cluster
+    ; CHECK: SU(1): %1:fpr128 = AESMCrrTied %0:fpr128
+    %0:fpr128 = AESErr undef $q0, undef $q1
+    %1:fpr128 = AESMCrrTied %0
+
+    ; CHECK: SU(2): %2:fpr128 = AESErr undef $q2(tied-def 0), undef $q3
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES:    SU(3): Ord  Latency=0 Cluster
+    ; CHECK: SU(3): dead %3:fpr128 = AESMCrr %2:fpr128
+    %2:fpr128 = AESErr undef $q2, undef $q3
+    %3:fpr128 = AESMCrr %2
+
+    ; CHECK: SU(4): %4:fpr128 = AESErr %1:fpr128(tied-def 0), undef $q4
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES-NOT: SU({{.*}}): Ord
+    ; FUSECRYPTO: SU(5): Ord  Latency=0 Cluster
+    ; CHECK: SU(5): dead %5:fpr128 = EORv16i8 %4:fpr128, undef $q5
+    %4:fpr128 = AESErr %1, undef $q4
+    %5:fpr128 = EORv16i8 %4, undef $q5
+
+    ; CHECK: SU(6): %6:fpr128 = AESDrr undef $q0(tied-def 0), undef $q1
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES:    SU(7): Ord  Latency=0 Cluster
+    ; CHECK: SU(7): %7:fpr128 = AESIMCrrTied %6:fpr128
+    %6:fpr128 = AESDrr undef $q0, undef $q1
+    %7:fpr128 = AESIMCrrTied %6
+
+    ; CHECK: SU(8): %8:fpr128 = AESDrr undef $q2(tied-def 0), undef $q3
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES:    SU(9): Ord  Latency=0 Cluster
+    ; CHECK: SU(9): dead %9:fpr128 = AESIMCrr %8:fpr128
+    %8:fpr128 = AESDrr undef $q2, undef $q3
+    %9:fpr128 = AESIMCrr %8
+
+    ; CHECK: SU(10): %10:fpr128 = AESDrr %7:fpr128(tied-def 0), undef $q0
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES-NOT: SU({{.*}}): Ord
+    ; FUSECRYPTO: SU(11): Ord  Latency=0 Cluster
+    ; CHECK: SU(11): dead %11:fpr128 = EORv16i8 %10:fpr128, undef $q1
+    %10:fpr128 = AESDrr %7, undef $q0
+    %11:fpr128 = EORv16i8 %10, undef $q1
+
+    ; CHECK: SU(12): %12:fpr128 = PMULLv16i8 undef $q0, undef $q1
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES-NOT: SU({{.*}}): Ord
+    ; FUSECRYPTO: SU(13): Ord  Latency=0 Cluster
+    ; CHECK: SU(13): dead %13:fpr128 = EORv16i8 %12:fpr128, undef $q2
+    %12:fpr128 = PMULLv16i8 undef $q0, undef $q1
+    %13:fpr128 = EORv16i8 %12, undef $q2
+
+    ; CHECK: SU(14): %14:fpr128 = PMULLv8i8 undef $d0, undef $d1
+    ; CHECK: Successors:
+    ; NOFUSE-NOT: SU({{.*}}): Ord
+    ; FUSEAES-NOT: SU({{.*}}): Ord
+    ; FUSECRYPTO: SU(15): Ord  Latency=0 Cluster
+    ; CHECK: SU(15): dead %15:fpr128 = EORv16i8 %14:fpr128, undef $q3
+    %14:fpr128 = PMULLv8i8 undef $d0, undef $d1
+    %15:fpr128 = EORv16i8 %14, undef $q3

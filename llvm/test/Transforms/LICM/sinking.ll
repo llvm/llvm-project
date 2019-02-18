@@ -40,6 +40,39 @@ Out:		; preds = %Loop
 ; CHECK-NEXT: ret double %A
 }
 
+; FIXME: Should be able to sink this case
+define i32 @test2b(i32 %X) {
+	br label %Loop
+
+Loop:		; preds = %Loop, %0
+	call void @foo( )
+	%A = sdiv i32 10, %X
+	br i1 true, label %Loop, label %Out
+
+Out:		; preds = %Loop
+	ret i32 %A
+; CHECK-LABEL: @test2b(
+; CHECK: Out:
+; CHECK-NEXT: sdiv
+; CHECK-NEXT: ret i32 %A
+}
+
+define double @test2c(double* %P) {
+	br label %Loop
+
+Loop:		; preds = %Loop, %0
+	call void @foo( )
+	%A = load double, double* %P, !invariant.load !{}
+	br i1 true, label %Loop, label %Out
+
+Out:		; preds = %Loop
+	ret double %A
+; CHECK-LABEL: @test2c(
+; CHECK: Out:
+; CHECK-NEXT: load double
+; CHECK-NEXT: ret double %A
+}
+
 ; This testcase checks to make sure the sinker does not cause problems with
 ; critical edges.
 define void @test3() {

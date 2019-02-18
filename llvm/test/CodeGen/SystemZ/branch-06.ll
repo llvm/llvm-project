@@ -100,7 +100,7 @@ define void @f7(i8 *%targetptr) {
   br label %loop
 loop:
   %val = call i32 @foo()
-  %byte = load i8 , i8 *%targetptr
+  %byte = load i8, i8 *%targetptr
   %target = zext i8 %byte to i32
   %cond = icmp eq i32 %val, %target
   br i1 %cond, label %loop, label %exit
@@ -118,7 +118,7 @@ define void @f8(i16 *%targetptr) {
   br label %loop
 loop:
   %val = call i32 @foo()
-  %half = load i16 , i16 *%targetptr
+  %half = load i16, i16 *%targetptr
   %target = zext i16 %half to i32
   %cond = icmp eq i32 %val, %target
   br i1 %cond, label %loop, label %exit
@@ -136,7 +136,7 @@ define void @f9(i16 *%targetptr) {
   br label %loop
 loop:
   %val = call i32 @foo()
-  %half = load i16 , i16 *@g1
+  %half = load i16, i16 *@g1
   %target = zext i16 %half to i32
   %cond = icmp eq i32 %val, %target
   br i1 %cond, label %loop, label %exit
@@ -157,8 +157,8 @@ define void @f10(i8 *%targetptr1) {
 loop:
   %val = call i32 @foo()
   %targetptr2 = getelementptr i8, i8 *%targetptr1, i64 1
-  %byte1 = load i8 , i8 *%targetptr1
-  %byte2 = load i8 , i8 *%targetptr2
+  %byte1 = load i8, i8 *%targetptr1
+  %byte2 = load i8, i8 *%targetptr2
   %ext1 = zext i8 %byte1 to i32
   %ext2 = zext i8 %byte2 to i32
   %cond = icmp ult i32 %ext1, %ext2
@@ -179,8 +179,8 @@ define void @f11(i16 *%targetptr1) {
 loop:
   %val = call i32 @foo()
   %targetptr2 = getelementptr i16, i16 *%targetptr1, i64 1
-  %half1 = load i16 , i16 *%targetptr1
-  %half2 = load i16 , i16 *%targetptr2
+  %half1 = load i16, i16 *%targetptr1
+  %half2 = load i16, i16 *%targetptr2
   %ext1 = zext i16 %half1 to i32
   %ext2 = zext i16 %half2 to i32
   %cond = icmp ult i32 %ext1, %ext2

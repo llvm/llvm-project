@@ -40,7 +40,7 @@ inline bool isGenericLambdaCallOperatorSpecialization(const CXXMethodDecl *MD) {
   if (!MD) return false;
   const CXXRecordDecl *LambdaClass = MD->getParent();
   if (LambdaClass && LambdaClass->isGenericLambda())
-    return isLambdaCallOperator(MD) && 
+    return isLambdaCallOperator(MD) &&
                     MD->isFunctionTemplateSpecialization();
   return false;
 }
@@ -51,11 +51,11 @@ inline bool isLambdaConversionOperator(CXXConversionDecl *C) {
 
 inline bool isLambdaConversionOperator(Decl *D) {
   if (!D) return false;
-  if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(D)) 
-    return isLambdaConversionOperator(Conv);  
-  if (FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(D)) 
-    if (CXXConversionDecl *Conv = 
-        dyn_cast_or_null<CXXConversionDecl>(F->getTemplatedDecl())) 
+  if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(D))
+    return isLambdaConversionOperator(Conv);
+  if (FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(D))
+    if (CXXConversionDecl *Conv =
+        dyn_cast_or_null<CXXConversionDecl>(F->getTemplatedDecl()))
       return isLambdaConversionOperator(Conv);
   return false;
 }
@@ -71,7 +71,7 @@ inline bool isGenericLambdaCallOperatorSpecialization(DeclContext *DC) {
 inline DeclContext *getLambdaAwareParentOfDeclContext(DeclContext *DC) {
   if (isLambdaCallOperator(DC))
     return DC->getParent()->getParent();
-  else 
+  else
     return DC->getParent();
 }
 

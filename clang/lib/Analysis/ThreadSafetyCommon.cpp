@@ -128,7 +128,8 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   // Hack to handle constructors, where self cannot be recovered from
   // the expression.
   if (SelfDecl && !Ctx.SelfArg) {
-    DeclRefExpr SelfDRE(SelfDecl, false, SelfDecl->getType(), VK_LValue,
+    DeclRefExpr SelfDRE(SelfDecl->getASTContext(), SelfDecl, false,
+                        SelfDecl->getType(), VK_LValue,
                         SelfDecl->getLocation());
     Ctx.SelfArg = &SelfDRE;
 
@@ -211,6 +212,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
     return translateCXXThisExpr(cast<CXXThisExpr>(S), Ctx);
   case Stmt::MemberExprClass:
     return translateMemberExpr(cast<MemberExpr>(S), Ctx);
+  case Stmt::ObjCIvarRefExprClass:
+    return translateObjCIVarRefExpr(cast<ObjCIvarRefExpr>(S), Ctx);
   case Stmt::CallExprClass:
     return translateCallExpr(cast<CallExpr>(S), Ctx);
   case Stmt::CXXMemberCallExprClass:
@@ -233,6 +236,8 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
              cast<BinaryConditionalOperator>(S), Ctx);
 
   // We treat these as no-ops
+  case Stmt::ConstantExprClass:
+    return translate(cast<ConstantExpr>(S)->getSubExpr(), Ctx);
   case Stmt::ParenExprClass:
     return translate(cast<ParenExpr>(S)->getSubExpr(), Ctx);
   case Stmt::ExprWithCleanupsClass:
@@ -311,9 +316,9 @@ static const ValueDecl *getValueDeclFromSExpr(const til::SExpr *E) {
   return nullptr;
 }
 
-static bool hasCppPointerType(const til::SExpr *E) {
+static bool hasAnyPointerType(const til::SExpr *E) {
   auto *VD = getValueDeclFromSExpr(E);
-  if (VD && VD->getType()->isPointerType())
+  if (VD && VD->getType()->isAnyPointerType())
     return true;
   if (const auto *C = dyn_cast<til::Cast>(E))
     return C->castOpcode() == til::CAST_objToPtr;
@@ -344,7 +349,20 @@ til::SExpr *SExprBuilder::translateMemberExpr(const MemberExpr *ME,
     D = getFirstVirtualDecl(VD);
 
   til::Project *P = new (Arena) til::Project(E, D);
-  if (hasCppPointerType(BE))
+  if (hasAnyPointerType(BE))
+    P->setArrow(true);
+  return P;
+}
+
+til::SExpr *SExprBuilder::translateObjCIVarRefExpr(const ObjCIvarRefExpr *IVRE,
+                                                   CallingContext *Ctx) {
+  til::SExpr *BE = translate(IVRE->getBase(), Ctx);
+  til::SExpr *E = new (Arena) til::SApply(BE);
+
+  const auto *D = cast<ObjCIvarDecl>(IVRE->getDecl()->getCanonicalDecl());
+
+  til::Project *P = new (Arena) til::Project(E, D);
+  if (hasAnyPointerType(BE))
     P->setArrow(true);
   return P;
 }
@@ -354,15 +372,17 @@ til::SExpr *SExprBuilder::translateCallExpr(const CallExpr *CE,
                                             const Expr *SelfE) {
   if (CapabilityExprMode) {
     // Handle LOCK_RETURNED
-    const FunctionDecl *FD = CE->getDirectCallee()->getMostRecentDecl();
-    if (LockReturnedAttr* At = FD->getAttr<LockReturnedAttr>()) {
-      CallingContext LRCallCtx(Ctx);
-      LRCallCtx.AttrDecl = CE->getDirectCallee();
-      LRCallCtx.SelfArg  = SelfE;
-      LRCallCtx.NumArgs  = CE->getNumArgs();
-      LRCallCtx.FunArgs  = CE->getArgs();
-      return const_cast<til::SExpr *>(
-          translateAttrExpr(At->getArg(), &LRCallCtx).sexpr());
+    if (const FunctionDecl *FD = CE->getDirectCallee()) {
+      FD = FD->getMostRecentDecl();
+      if (LockReturnedAttr *At = FD->getAttr<LockReturnedAttr>()) {
+        CallingContext LRCallCtx(Ctx);
+        LRCallCtx.AttrDecl = CE->getDirectCallee();
+        LRCallCtx.SelfArg = SelfE;
+        LRCallCtx.NumArgs = CE->getNumArgs();
+        LRCallCtx.FunArgs = CE->getArgs();
+        return const_cast<til::SExpr *>(
+            translateAttrExpr(At->getArg(), &LRCallCtx).sexpr());
+      }
     }
   }
 
@@ -927,6 +947,16 @@ void SExprBuilder::exitCFG(const CFGBlock *Last) {
 }
 
 /*
+namespace {
+
+class TILPrinter :
+    public til::PrettyPrinter<TILPrinter, llvm::raw_ostream> {};
+
+} // namespace
+
+namespace clang {
+namespace threadSafety {
+
 void printSCFG(CFGWalker &Walker) {
   llvm::BumpPtrAllocator Bpa;
   til::MemRegionRef Arena(&Bpa);
@@ -934,4 +964,7 @@ void printSCFG(CFGWalker &Walker) {
   til::SCFG *Scfg = SxBuilder.buildCFG(Walker);
   TILPrinter::print(Scfg, llvm::errs());
 }
+
+} // namespace threadSafety
+} // namespace clang
 */

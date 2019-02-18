@@ -1,0 +1,288 @@
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_trunc_and_zext_s1() { ret void }
+  define void @test_trunc_and_sext_s1() { ret void }
+  define void @test_trunc_and_anyext_s1() { ret void }
+
+  define void @test_trunc_and_zext_s8() { ret void }
+  define void @test_trunc_and_sext_s8() { ret void }
+  define void @test_trunc_and_anyext_s8() { ret void }
+
+  define void @test_trunc_and_zext_s16() { ret void }
+  define void @test_trunc_and_sext_s16() { ret void }
+  define void @test_trunc_and_anyext_s16() { ret void }
+...
+---
+name:            test_trunc_and_zext_s1
+# CHECK-LABEL: name: test_trunc_and_zext_s1
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s1) = G_TRUNC %0(s32)
+
+    %2(s32) = G_ZEXT %1(s1)
+    ; CHECK: [[RVREG:%[0-9]+]]:rgpr = COPY [[VREG]]
+    ; CHECK: [[VREGEXT:%[0-9]+]]:rgpr = t2ANDri [[RVREG]], 1, 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_sext_s1
+# CHECK-LABEL: name: test_trunc_and_sext_s1
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s1) = G_TRUNC %0(s32)
+
+    %2(s32) = G_SEXT %1(s1)
+    ; CHECK: [[RVREG:%[0-9]+]]:rgpr = COPY [[VREG]]
+    ; CHECK: [[VREGAND:%[0-9]+]]:rgpr = t2ANDri [[RVREG]], 1, 14, $noreg, $noreg
+    ; CHECK: [[VREGEXT:%[0-9]+]]:rgpr = t2RSBri [[VREGAND]], 0, 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_anyext_s1
+# CHECK-LABEL: name: test_trunc_and_anyext_s1
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s1) = G_TRUNC %0(s32)
+
+    %2(s32) = G_ANYEXT %1(s1)
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREG]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_zext_s8
+# CHECK-LABEL: name: test_trunc_and_zext_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s8) = G_TRUNC %0(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:rgpr = COPY [[VREG]]
+
+    %2(s32) = G_ZEXT %1(s8)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:rgpr = t2UXTB [[VREGTRUNC]], 0, 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_sext_s8
+# CHECK-LABEL: name: test_trunc_and_sext_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s8) = G_TRUNC %0(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:rgpr = COPY [[VREG]]
+
+    %2(s32) = G_SEXT %1(s8)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:rgpr = t2SXTB [[VREGTRUNC]], 0, 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_anyext_s8
+# CHECK-LABEL: name: test_trunc_and_anyext_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s8) = G_TRUNC %0(s32)
+
+    %2(s32) = G_ANYEXT %1(s8)
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREG]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_zext_s16
+# CHECK-LABEL: name: test_trunc_and_zext_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s16) = G_TRUNC %0(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:rgpr = COPY [[VREG]]
+
+    %2(s32) = G_ZEXT %1(s16)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:rgpr = t2UXTH [[VREGTRUNC]], 0, 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_sext_s16
+# CHECK-LABEL: name: test_trunc_and_sext_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s16) = G_TRUNC %0(s32)
+    ; CHECK: [[VREGTRUNC:%[0-9]+]]:rgpr = COPY [[VREG]]
+
+    %2(s32) = G_SEXT %1(s16)
+    ; CHECK: [[VREGEXT:%[0-9]+]]:rgpr = t2SXTH [[VREGTRUNC]], 0, 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGEXT]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_trunc_and_anyext_s16
+# CHECK-LABEL: name: test_trunc_and_anyext_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREG:%[0-9]+]]:gpr = COPY $r0
+
+    %1(s16) = G_TRUNC %0(s32)
+
+    %2(s32) = G_ANYEXT %1(s16)
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREG]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...

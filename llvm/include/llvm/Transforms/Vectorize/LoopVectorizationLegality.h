@@ -95,7 +95,7 @@ public:
     FK_Enabled = 1,    ///< Forcing enabled.
   };
 
-  LoopVectorizeHints(const Loop *L, bool DisableInterleaving,
+  LoopVectorizeHints(const Loop *L, bool InterleaveOnlyWhenForced,
                      OptimizationRemarkEmitter &ORE);
 
   /// Mark the loop L as already vectorized by setting the width to 1.
@@ -105,7 +105,8 @@ public:
     writeHintsToMetadata(Hints);
   }
 
-  bool allowVectorization(Function *F, Loop *L, bool AlwaysVectorize) const;
+  bool allowVectorization(Function *F, Loop *L,
+                          bool VectorizeOnlyWhenForced) const;
 
   /// Dumps all the hint information.
   void emitRemarkWithHints() const;
@@ -113,7 +114,12 @@ public:
   unsigned getWidth() const { return Width.Value; }
   unsigned getInterleave() const { return Interleave.Value; }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
-  enum ForceKind getForce() const { return (ForceKind)Force.Value; }
+  enum ForceKind getForce() const {
+    if ((ForceKind)Force.Value == FK_Undefined &&
+        hasDisableAllTransformsHint(TheLoop))
+      return FK_Disabled;
+    return (ForceKind)Force.Value;
+  }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
   /// pass name to force the frontend to print the diagnostic.
@@ -241,6 +247,10 @@ public:
   /// If false, good old LV code.
   bool canVectorize(bool UseVPlanNativePath);
 
+  /// Return true if we can vectorize this loop while folding its tail by
+  /// masking.
+  bool canFoldTailByMasking();
+
   /// Returns the primary induction variable.
   PHINode *getPrimaryInduction() { return PrimaryInduction; }
 
@@ -331,6 +341,11 @@ private:
   /// (should be functional for inner loop vectorization) based on VPlan.
   /// If false, good old LV code.
   bool canVectorizeLoopNestCFG(Loop *Lp, bool UseVPlanNativePath);
+
+  /// Set up outer loop inductions by checking Phis in outer loop header for
+  /// supported inductions (int inductions). Return false if any of these Phis
+  /// is not a supported induction or if we fail to find an induction.
+  bool setupOuterLoopInductions();
 
   /// Return true if the pre-header, exiting and latch blocks of \p Lp
   /// (non-recursive) are considered legal for vectorization.

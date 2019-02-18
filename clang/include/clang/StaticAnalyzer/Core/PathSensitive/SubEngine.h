@@ -29,7 +29,7 @@ class CrossTranslationUnitContext;
 }
 
 namespace ento {
-  
+
 struct NodeBuilderContext;
 class AnalysisManager;
 class ExplodedNodeSet;
@@ -72,7 +72,7 @@ public:
 
   /// Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a branch condition.
-  virtual void processBranch(const Stmt *Condition, const Stmt *Term,
+  virtual void processBranch(const Stmt *Condition,
                              NodeBuilderContext& BuilderCtx,
                              ExplodedNode *Pred,
                              ExplodedNodeSet &Dst,
@@ -133,7 +133,7 @@ public:
 
   /// processRegionChanges - Called by ProgramStateManager whenever a change is
   /// made to the store. Used to update checkers that track region values.
-  virtual ProgramStateRef 
+  virtual ProgramStateRef
   processRegionChanges(ProgramStateRef state,
                        const InvalidatedSymbols *invalidated,
                        ArrayRef<const MemRegion *> ExplicitRegions,
@@ -142,7 +142,7 @@ public:
                        const CallEvent *Call) = 0;
 
 
-  inline ProgramStateRef 
+  inline ProgramStateRef
   processRegionChange(ProgramStateRef state,
                       const MemRegion* MR,
                       const LocationContext *LCtx) {
@@ -156,7 +156,6 @@ public:
   notifyCheckersOfPointerEscape(ProgramStateRef State,
                            const InvalidatedSymbols *Invalidated,
                            ArrayRef<const MemRegion *> ExplicitRegions,
-                           ArrayRef<const MemRegion *> Regions,
                            const CallEvent *Call,
                            RegionAndSymbolInvalidationTraits &HTraits) = 0;
 
@@ -167,7 +166,7 @@ public:
 
   /// Called by CoreEngine when the analysis worklist is either empty or the
   //  maximum number of analysis steps have been reached.
-  virtual void processEndWorklist(bool hasWorkRemaining) = 0;
+  virtual void processEndWorklist() = 0;
 };
 
 } // end GR namespace

@@ -46,6 +46,13 @@ size_t FileSize(const std::string &Path) {
   return St.st_size;
 }
 
+std::string Basename(const std::string &Path) {
+  size_t Pos = Path.rfind(GetSeparator());
+  if (Pos == std::string::npos) return Path;
+  assert(Pos < Path.size());
+  return Path.substr(Pos + 1);
+}
+
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              Vector<std::string> *V, bool TopDir) {
   auto E = GetEpoch(Dir);

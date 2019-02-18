@@ -129,7 +129,7 @@ SystemZPostRASchedStrategy::
 SystemZPostRASchedStrategy(const MachineSchedContext *C)
   : MLI(C->MLI),
     TII(static_cast<const SystemZInstrInfo *>
-        (C->MF->getSubtarget().getInstrInfo())), 
+        (C->MF->getSubtarget().getInstrInfo())),
     MBB(nullptr), HazardRec(nullptr) {
   const TargetSubtargetInfo *ST = &C->MF->getSubtarget();
   SchedModel.init(ST);
@@ -169,8 +169,7 @@ SUnit *SystemZPostRASchedStrategy::pickNode(bool &IsTopNode) {
     return *Available.begin();
   }
 
-  // All nodes that are possible to schedule are stored by in the
-  // Available set.
+  // All nodes that are possible to schedule are stored in the Available set.
   LLVM_DEBUG(dbgs() << "** Available: "; Available.dump(*HazardRec););
 
   Candidate Best;

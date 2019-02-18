@@ -23,17 +23,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolTypeUDT : public PDBSymbol {
-public:
-  PDBSymbolTypeUDT(const IPDBSession &PDBSession,
-                   std::unique_ptr<IPDBRawSymbol> UDTSymbol);
-
-  std::unique_ptr<PDBSymbolTypeUDT> clone() const {
-    return getSession().getConcreteSymbolById<PDBSymbolTypeUDT>(
-        getSymIndexId());
-  }
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::UDT)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_ID_METHOD(getClassParent)

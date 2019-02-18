@@ -158,23 +158,6 @@ public:
 
 } // end anonymous namespace
 
-/// stripRegisterPrefix - This method strips the character prefix from a
-/// register name so that only the number is left.  Used by for linux asm.
-static const char *stripRegisterPrefix(const char *RegName) {
-  switch (RegName[0]) {
-    case 'r':
-    case 'f':
-    case 'q': // for QPX
-    case 'v':
-      if (RegName[1] == 's')
-        return RegName + 2;
-      return RegName + 1;
-    case 'c': if (RegName[1] == 'r') return RegName + 2;
-  }
-
-  return RegName;
-}
-
 void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
                                  raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
@@ -182,27 +165,15 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register: {
-    unsigned Reg = MO.getReg();
+    unsigned Reg = PPCInstrInfo::getRegNumForOperand(MI->getDesc(),
+                                                     MO.getReg(), OpNo);
 
-    // There are VSX instructions that use VSX register numbering (vs0 - vs63)
-    // as well as those that use VMX register numbering (v0 - v31 which
-    // correspond to vs32 - vs63). If we have an instruction that uses VSX
-    // numbering, we need to convert the VMX registers to VSX registers.
-    // Namely, we print 32-63 when the instruction operates on one of the
-    // VMX registers.
-    // (Please synchronize with PPCInstPrinter::printOperand)
-    if (MI->getDesc().TSFlags & PPCII::UseVSXReg) {
-      if (PPCInstrInfo::isVRRegister(Reg))
-        Reg = PPC::VSX32 + (Reg - PPC::V0);
-      else if (PPCInstrInfo::isVFRegister(Reg))
-        Reg = PPC::VSX32 + (Reg - PPC::VF0);
-    }
     const char *RegName = PPCInstPrinter::getRegisterName(Reg);
 
     // Linux assembler (Others?) does not take register mnemonics.
     // FIXME - What about special registers used in mfspr/mtspr?
     if (!Subtarget->isDarwin())
-      RegName = stripRegisterPrefix(RegName);
+      RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
     O << RegName;
     return;
   }
@@ -279,6 +250,21 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       if (MI->getOperand(OpNo).isImm())
         O << "i";
       return false;
+    case 'x':
+      if(!MI->getOperand(OpNo).isReg())
+        return true;
+      // This operand uses VSX numbering.
+      // If the operand is a VMX register, convert it to a VSX register.
+      unsigned Reg = MI->getOperand(OpNo).getReg();
+      if (PPCInstrInfo::isVRRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::V0);
+      else if (PPCInstrInfo::isVFRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::VF0);
+      const char *RegName;
+      RegName = PPCInstPrinter::getRegisterName(Reg);
+      RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
+      O << RegName;
+      return false;
     }
   }
 
@@ -303,7 +289,7 @@ bool PPCAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
       {
         const char *RegName = "r0";
         if (!Subtarget->isDarwin())
-          RegName = stripRegisterPrefix(RegName);
+          RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
         O << RegName << ", ";
         printOperand(MI, OpNo, O);
         return false;
@@ -341,7 +327,7 @@ MCSymbol *PPCAsmPrinter::lookUpOrCreateTOCEntry(MCSymbol *Sym) {
 }
 
 void PPCAsmPrinter::EmitEndOfAsmFile(Module &M) {
-  SM.serializeToStackMapSection();
+  emitStackMaps(SM);
 }
 
 void PPCAsmPrinter::LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI) {

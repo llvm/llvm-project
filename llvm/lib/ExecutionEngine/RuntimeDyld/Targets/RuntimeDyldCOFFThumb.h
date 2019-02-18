@@ -28,7 +28,7 @@ static bool isThumbFunc(symbol_iterator Symbol, const ObjectFile &Obj,
   if (!SymTypeOrErr) {
     std::string Buf;
     raw_string_ostream OS(Buf);
-    logAllUnhandledErrors(SymTypeOrErr.takeError(), OS, "");
+    logAllUnhandledErrors(SymTypeOrErr.takeError(), OS);
     OS.flush();
     report_fatal_error(Buf);
   }

@@ -23,6 +23,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Config/config.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -34,8 +35,10 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Rewrite/Frontend/FixItRewriter.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
+#if CLANG_ENABLE_STATIC_ANALYZER
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
+#endif // CLANG_ENABLE_STATIC_ANALYZER
 #include "clang/Tooling/DiagnosticsYaml.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/ReplacementsYaml.h"
@@ -56,6 +59,7 @@ namespace clang {
 namespace tidy {
 
 namespace {
+#if CLANG_ENABLE_STATIC_ANALYZER
 static const char *AnalyzerCheckNamePrefix = "clang-analyzer-";
 
 class AnalyzerDiagnosticConsumer : public ento::PathDiagnosticConsumer {
@@ -87,11 +91,12 @@ public:
 private:
   ClangTidyContext &Context;
 };
+#endif // CLANG_ENABLE_STATIC_ANALYZER
 
 class ErrorReporter {
 public:
   ErrorReporter(ClangTidyContext &Context, bool ApplyFixes,
-                llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS)
+                llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS)
       : Files(FileSystemOptions(), BaseFS), DiagOpts(new DiagnosticOptions()),
         DiagPrinter(new TextDiagnosticPrinter(llvm::outs(), &*DiagOpts)),
         Diags(IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts,
@@ -122,10 +127,6 @@ public:
                   << Message.Message << Name;
       for (const auto &FileAndReplacements : Error.Fix) {
         for (const auto &Repl : FileAndReplacements.second) {
-          // Retrieve the source range for applicable fixes. Macro definitions
-          // on the command line have locations in a virtual buffer and don't
-          // have valid file paths and are therefore not applicable.
-          SourceRange Range;
           SourceLocation FixLoc;
           ++TotalFixes;
           bool CanBeApplied = false;
@@ -166,7 +167,11 @@ public:
             FixLoc = getLocation(FixAbsoluteFilePath, Repl.getOffset());
             SourceLocation FixEndLoc =
                 FixLoc.getLocWithOffset(Repl.getLength());
-            Range = SourceRange(FixLoc, FixEndLoc);
+            // Retrieve the source range for applicable fixes. Macro definitions
+            // on the command line have locations in a virtual buffer and don't
+            // have valid file paths and are therefore not applicable.
+            CharSourceRange Range =
+                CharSourceRange::getCharRange(SourceRange(FixLoc, FixEndLoc));
             Diag << FixItHint::CreateReplacement(Range,
                                                  Repl.getReplacementText());
           }
@@ -296,6 +301,7 @@ ClangTidyASTConsumerFactory::ClangTidyASTConsumerFactory(
   }
 }
 
+#if CLANG_ENABLE_STATIC_ANALYZER
 static void setStaticAnalyzerCheckerOpts(const ClangTidyOptions &Opts,
                                          AnalyzerOptionsRef AnalyzerOptions) {
   StringRef AnalyzerPrefix(AnalyzerCheckNamePrefix);
@@ -339,6 +345,7 @@ static CheckersList getCheckersControlList(ClangTidyContext &Context,
   }
   return List;
 }
+#endif // CLANG_ENABLE_STATIC_ANALYZER
 
 std::unique_ptr<clang::ASTConsumer>
 ClangTidyASTConsumerFactory::CreateASTConsumer(
@@ -380,6 +387,7 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
   if (!Checks.empty())
     Consumers.push_back(Finder->newASTConsumer());
 
+#if CLANG_ENABLE_STATIC_ANALYZER
   AnalyzerOptionsRef AnalyzerOptions = Compiler.getAnalyzerOpts();
   AnalyzerOptions->CheckersControlList =
       getCheckersControlList(Context, Context.canEnableAnalyzerAlphaCheckers());
@@ -395,6 +403,7 @@ ClangTidyASTConsumerFactory::CreateASTConsumer(
         new AnalyzerDiagnosticConsumer(Context));
     Consumers.push_back(std::move(AnalysisConsumer));
   }
+#endif // CLANG_ENABLE_STATIC_ANALYZER
   return llvm::make_unique<ClangTidyASTConsumer>(
       std::move(Consumers), std::move(Profiling), std::move(Finder),
       std::move(Checks));
@@ -407,9 +416,11 @@ std::vector<std::string> ClangTidyASTConsumerFactory::getCheckNames() {
       CheckNames.push_back(CheckFactory.first);
   }
 
+#if CLANG_ENABLE_STATIC_ANALYZER
   for (const auto &AnalyzerCheck : getCheckersControlList(
            Context, Context.canEnableAnalyzerAlphaCheckers()))
     CheckNames.push_back(AnalyzerCheckNamePrefix + AnalyzerCheck.first);
+#endif // CLANG_ENABLE_STATIC_ANALYZER
 
   std::sort(CheckNames.begin(), CheckNames.end());
   return CheckNames;
@@ -430,7 +441,9 @@ DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc, StringRef Message,
 }
 
 void ClangTidyCheck::run(const ast_matchers::MatchFinder::MatchResult &Result) {
-  Context->setSourceManager(Result.SourceManager);
+  // For historical reasons, checks don't implement the MatchFinder run()
+  // callback directly. We keep the run()/check() distinction to avoid interface
+  // churn, and to allow us to add cross-cutting logic in the future.
   check(Result);
 }
 
@@ -489,11 +502,12 @@ getCheckOptions(const ClangTidyOptions &Options,
   return Factory.getCheckOptions();
 }
 
-void runClangTidy(clang::tidy::ClangTidyContext &Context,
-                  const CompilationDatabase &Compilations,
-                  ArrayRef<std::string> InputFiles,
-                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS,
-                  bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
+std::vector<ClangTidyError>
+runClangTidy(clang::tidy::ClangTidyContext &Context,
+             const CompilationDatabase &Compilations,
+             ArrayRef<std::string> InputFiles,
+             llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+             bool EnableCheckProfile, llvm::StringRef StoreCheckProfile) {
   ClangTool Tool(Compilations, InputFiles,
                  std::make_shared<PCHContainerOperations>(), BaseFS);
 
@@ -537,7 +551,9 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
   Context.setProfileStoragePrefix(StoreCheckProfile);
 
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
-
+  DiagnosticsEngine DE(new DiagnosticIDs(), new DiagnosticOptions(),
+                       &DiagConsumer, /*ShouldOwnClient=*/false);
+  Context.setDiagnosticsEngine(&DE);
   Tool.setDiagnosticConsumer(&DiagConsumer);
 
   class ActionFactory : public FrontendActionFactory {
@@ -575,19 +591,21 @@ void runClangTidy(clang::tidy::ClangTidyContext &Context,
 
   ActionFactory Factory(Context);
   Tool.run(&Factory);
+  return DiagConsumer.take();
 }
 
-void handleErrors(ClangTidyContext &Context, bool Fix,
+void handleErrors(llvm::ArrayRef<ClangTidyError> Errors,
+                  ClangTidyContext &Context, bool Fix,
                   unsigned &WarningsAsErrorsCount,
-                  llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
+                  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   ErrorReporter Reporter(Context, Fix, BaseFS);
-  vfs::FileSystem &FileSystem =
+  llvm::vfs::FileSystem &FileSystem =
       *Reporter.getSourceManager().getFileManager().getVirtualFileSystem();
   auto InitialWorkingDir = FileSystem.getCurrentWorkingDirectory();
   if (!InitialWorkingDir)
     llvm::report_fatal_error("Cannot get current working path.");
 
-  for (const ClangTidyError &Error : Context.getErrors()) {
+  for (const ClangTidyError &Error : Errors) {
     if (!Error.BuildDirectory.empty()) {
       // By default, the working directory of file system is the current
       // clang-tidy running directory.

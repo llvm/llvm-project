@@ -53,7 +53,7 @@ def ext_multi_line_line_comment : Extension<"multi-line // comment">,
 def ext_line_comment : Extension<
   "// comments are not allowed in this language">,
   InGroup<Comment>;
-def ext_no_newline_eof : Extension<"no newline at end of file">, 
+def ext_no_newline_eof : Extension<"no newline at end of file">,
   InGroup<NewlineEOF>;
 def warn_no_newline_eof : Warning<"no newline at end of file">,
   InGroup<NewlineEOF>, DefaultIgnore;
@@ -122,6 +122,9 @@ def ext_unicode_whitespace : ExtWarn<
 def warn_utf8_symbol_homoglyph : Warning<
   "treating Unicode character <U+%0> as identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
+def warn_utf8_symbol_zero_width : Warning<
+  "identifier contains Unicode character <U+%0> that is invisible in "
+  "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;
@@ -255,13 +258,6 @@ def warn_bad_character_encoding : ExtWarn<
 def err_lexing_string : Error<"failure when lexing a string">;
 def err_placeholder_in_source : Error<"editor placeholder in source file">;
 
-
-//===----------------------------------------------------------------------===//
-// PTH Diagnostics
-//===----------------------------------------------------------------------===//
-def err_invalid_pth_file : Error<
-    "invalid or corrupt PTH file '%0'">;
-
 //===----------------------------------------------------------------------===//
 // Preprocessor Diagnostics
 //===----------------------------------------------------------------------===//
@@ -294,7 +290,7 @@ def pp_nonportable_path : NonportablePath,
   InGroup<DiagGroup<"nonportable-include-path">>;
 def pp_nonportable_system_path : NonportablePath, DefaultIgnore,
   InGroup<DiagGroup<"nonportable-system-include-path">>;
-  
+
 def pp_pragma_once_in_main_file : Warning<"#pragma once in main file">,
   InGroup<DiagGroup<"pragma-once-outside-header">>;
 def pp_pragma_sysheader_in_main_file : Warning<
@@ -353,7 +349,7 @@ def ext_pp_warning_directive : Extension<"#warning is a language extension">;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
-  
+
 def ext_pp_comma_expr : Extension<"comma operator in operand of #if">;
 def ext_pp_bad_vaargs_use : Extension<
   "__VA_ARGS__ can only appear in the expansion of a C99 variadic macro">;
@@ -409,11 +405,22 @@ def err_pp_through_header_not_found : Error<
 def err_pp_through_header_not_seen : Error<
   "#include of '%0' not seen while attempting to "
   "%select{create|use}1 precompiled header">, DefaultFatal;
+def err_pp_pragma_hdrstop_not_seen : Error<
+  "#pragma hdrstop not seen while attempting to use precompiled header">,
+  DefaultFatal;
 def warn_pp_macro_def_mismatch_with_pch : Warning<
   "definition of macro %0 does not match definition in precompiled header">,
   InGroup<ClangClPch>;
-def err_pp_file_not_found_not_fatal : Error<
+def warn_pp_hdrstop_filename_ignored : Warning<
+  "#pragma hdrstop filename not supported, "
+  "/Fp can be used to specify precompiled header filename">,
+  InGroup<ClangClPch>;
+def err_pp_file_not_found_angled_include_not_fatal : Error<
   "'%0' file not found with <angled> include; use \"quotes\" instead">;
+def err_pp_file_not_found_typo_not_fatal
+    : Error<"'%0' file not found, did you mean '%1'?">;
+def note_pp_framework_without_header : Note<
+  "did not find header '%0' in framework '%1' (loaded from '%2')">;
 def err_pp_error_opening_file : Error<
   "error opening file '%0': %1">, DefaultFatal;
 def err_pp_empty_filename : Error<"empty filename">;
@@ -558,8 +565,6 @@ def err_pp_module_end_without_module_begin : Error<
   "'#pragma clang module end'">;
 def note_pp_module_begin_here : Note<
   "entering module '%0' due to this pragma">;
-def err_pp_module_build_pth : Error<
-  "'#pragma clang module build' not supported in pretokenized header">;
 def err_pp_module_build_missing_end : Error<
   "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 
@@ -594,7 +599,7 @@ def err_pp_illegal_floating_literal : Error<
 def err_pp_line_requires_integer : Error<
   "#line directive requires a positive integer argument">;
 def ext_pp_line_zero : Extension<
-  "#line directive with zero argument is a GNU extension">, 
+  "#line directive with zero argument is a GNU extension">,
   InGroup<GNUZeroLineDirective>;
 def err_pp_line_invalid_filename : Error<
   "invalid filename for #line directive">;
@@ -728,7 +733,7 @@ def warn_quoted_include_in_framework_header : Warning<
   >, InGroup<FrameworkHdrQuotedInclude>, DefaultIgnore;
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
-  >, InGroup<FrameworkIncludePrivateFromPublic>;
+  >, InGroup<FrameworkIncludePrivateFromPublic>, DefaultIgnore;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
@@ -736,7 +741,7 @@ def warn_auto_module_import : Warning<
 def note_implicit_top_level_module_import_here : Note<
   "submodule of top-level module '%0' implicitly imported here">;
 def warn_uncovered_module_header : Warning<
-  "umbrella header for module '%0' does not include header '%1'">, 
+  "umbrella header for module '%0' does not include header '%1'">,
   InGroup<IncompleteUmbrella>;
 def warn_mmap_umbrella_dir_not_found : Warning<
   "umbrella directory '%0' not found">,
@@ -755,7 +760,7 @@ def warn_non_modular_include_in_module : Warning<
   "include of non-modular header inside module '%0': '%1'">,
   InGroup<NonModularIncludeInModule>, DefaultIgnore;
 def warn_module_conflict : Warning<
-  "module '%0' conflicts with already-imported module '%1': %2">, 
+  "module '%0' conflicts with already-imported module '%1': %2">,
   InGroup<ModuleConflict>;
 
 def warn_header_guard : Warning<

@@ -55,8 +55,8 @@ struct AATestPass : FunctionPass {
 
     for (Value *P1 : Pointers)
       for (Value *P2 : Pointers)
-        (void)AA.alias(P1, MemoryLocation::UnknownSize, P2,
-                       MemoryLocation::UnknownSize);
+        (void)AA.alias(P1, LocationSize::unknown(), P2,
+                       LocationSize::unknown());
 
     return false;
   }

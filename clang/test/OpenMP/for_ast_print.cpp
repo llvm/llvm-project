@@ -145,8 +145,8 @@ int main(int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
 // CHECK: static int a;
-#pragma omp for schedule(guided, argc)
-  // CHECK-NEXT: #pragma omp for schedule(guided, argc)
+#pragma omp for schedule(guided, argc) reduction(+:argv[0][:1])
+  // CHECK-NEXT: #pragma omp for schedule(guided, argc) reduction(+: argv[0][:1])
   for (int i = 0; i < 2; ++i)
     a = 2;
 // CHECK-NEXT: for (int i = 0; i < 2; ++i)

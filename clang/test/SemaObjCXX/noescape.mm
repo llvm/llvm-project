@@ -8,6 +8,7 @@ struct S {
   void m();
 };
 
+void escapingFunc0(BlockTy);
 void noescapeFunc0(id, __attribute__((noescape)) BlockTy);
 void noescapeFunc1(id, [[clang::noescape]] BlockTy);
 void noescapeFunc2(__attribute__((noescape)) int *); // expected-note {{previous declaration is here}}
@@ -87,4 +88,67 @@ void test0() {
 #endif
 
   S5<&noescapeFunc2> ne1;
+}
+
+@protocol NoescapeProt
+-(void) m0:(int*)__attribute__((noescape)) p; // expected-note 2 {{parameter of overridden method is annotated with __attribute__((noescape))}}
++(void) m1:(int*)__attribute__((noescape)) p;
+-(void) m1:(int*) p;
+@end
+
+__attribute__((objc_root_class))
+@interface C3
+-(void) m0:(int*) p;
++(void) m1:(int*)__attribute__((noescape)) p;
+-(void) m1:(int*) p;
+@end
+
+@interface C3 () <NoescapeProt> // expected-note {{class extension conforms to protocol 'NoescapeProt' which defines method 'm0:'}}
+@end
+
+@implementation C3
+-(void) m0:(int*) p { // expected-warning {{parameter of overriding method should be annotated with __attribute__((noescape))}}
+}
++(void) m1:(int*)__attribute__((noescape)) p {
+}
+-(void) m1:(int*) p {
+}
+@end
+
+__attribute__((objc_root_class))
+@interface C4 <NoescapeProt>
+-(void) m0:(int*) p; // expected-warning {{parameter of overriding method should be annotated with __attribute__((noescape))}}
+@end
+
+@implementation C4
+-(void) m0:(int*) p {
+}
++(void) m1:(int*)__attribute__((noescape)) p {
+}
+-(void) m1:(int*) p {
+}
+@end
+
+struct S6 {
+  S6();
+  S6(const S6 &) = delete; // expected-note 3 {{'S6' has been explicitly marked deleted here}}
+  int f;
+};
+
+void test1() {
+  id a;
+  // __block variables that are not captured by escaping blocks don't
+  // necessitate having accessible copy constructors.
+  __block S6 b0;
+  __block S6 b1; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b2; // expected-error {{call to deleted constructor of 'S6'}}
+  __block S6 b3; // expected-error {{call to deleted constructor of 'S6'}}
+
+  noescapeFunc0(a, ^{ (void)b0; });
+  escapingFunc0(^{ (void)b1; });
+  {
+    noescapeFunc0(a, ^{ (void)b0; (void)b1; });
+  }
+  noescapeFunc0(a, ^{ escapingFunc0(^{ (void)b2; }); });
+  escapingFunc0(^{ noescapeFunc0(a, ^{ (void)b3; }); });
 }

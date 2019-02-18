@@ -37,6 +37,8 @@
 namespace clang {
 namespace tooling {
 
+extern llvm::cl::opt<std::string> ExecutorName;
+
 /// An abstraction for the result of a tool execution. For example, the
 /// underlying result can be in-memory or on-disk.
 ///
@@ -57,7 +59,7 @@ public:
 /// set of different results, or a large set of duplicated results.
 class InMemoryToolResults : public ToolResults {
 public:
-  InMemoryToolResults() : StringsPool(Arena) {}
+  InMemoryToolResults() : Strings(Arena) {}
   void addResult(StringRef Key, StringRef Value) override;
   std::vector<std::pair<llvm::StringRef, llvm::StringRef>>
   AllKVResults() override;
@@ -66,8 +68,7 @@ public:
 
 private:
   llvm::BumpPtrAllocator Arena;
-  llvm::StringSaver StringsPool;
-  llvm::DenseSet<llvm::StringRef> Strings;
+  llvm::UniqueStringSaver Strings;
 
   std::vector<std::pair<llvm::StringRef, llvm::StringRef>> KVResults;
 };
@@ -114,6 +115,13 @@ public:
 
   /// Returns the name of a specific executor.
   virtual StringRef getExecutorName() const = 0;
+
+  /// Should return true iff executor runs all actions in a single process.
+  /// Clients can use this signal to find out if they can collect results
+  /// in-memory (e.g. to avoid serialization costs of using ToolResults).
+  /// The single-process executors can still run multiple threads, but all
+  /// executions are guaranteed to share the same memory.
+  virtual bool isSingleProcess() const = 0;
 
   /// Executes each action with a corresponding arguments adjuster.
   virtual llvm::Error

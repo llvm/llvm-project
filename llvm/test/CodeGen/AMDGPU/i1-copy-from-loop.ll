@@ -1,19 +1,25 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}i1_copy_from_loop:
 ;
-; Cannot use an SGPR mask to copy %cc out of the loop, since the mask would
-; only contain the lanes that were active during the last loop iteration.
-;
 ; SI: ; %for.body
-; SI:      v_cmp_gt_u32_e64 [[SREG:s\[[0-9]+:[0-9]+\]]], 4,
-; SI:      v_cndmask_b32_e64 [[VREG:v[0-9]+]], 0, -1, [[SREG]]
-; SI-NEXT: s_cbranch_vccnz [[ENDIF:BB[0-9_]+]]
-; SI:      [[ENDIF]]:
-; SI-NOT:  [[VREG]]
-; SI:      ; %for.end
-; SI:      v_cmp_ne_u32_e32 vcc, 0, [[VREG]]
+; SI:      v_cmp_gt_u32_e64  [[CC_SREG:s\[[0-9]+:[0-9]+\]]], 4,
+; SI-DAG:  s_andn2_b64       [[CC_ACCUM:s\[[0-9]+:[0-9]+\]]], [[CC_ACCUM]], exec
+; SI-DAG:  s_and_b64         [[CC_MASK:s\[[0-9]+:[0-9]+\]]], [[CC_SREG]], exec
+; SI:      s_or_b64          [[CC_ACCUM]], [[CC_ACCUM]], [[CC_MASK]]
+
+; SI: ; %Flow1
+; SI:      s_or_b64          [[CC_ACCUM]], [[CC_ACCUM]], exec
+
+; SI: ; %Flow
+; SI-DAG:  s_andn2_b64       [[LCSSA_ACCUM:s\[[0-9]+:[0-9]+\]]], [[LCSSA_ACCUM]], exec
+; SI-DAG:  s_and_b64         [[CC_MASK2:s\[[0-9]+:[0-9]+\]]], [[CC_ACCUM]], exec
+; SI:      s_or_b64          [[LCSSA_ACCUM]], [[LCSSA_ACCUM]], [[CC_MASK2]]
+
+; SI: ; %for.end
+; SI:      s_and_saveexec_b64 {{s\[[0-9]+:[0-9]+\]}}, [[LCSSA_ACCUM]]
+
 define amdgpu_ps void @i1_copy_from_loop(<4 x i32> inreg %rsrc, i32 %tid) {
 entry:
   br label %for.body

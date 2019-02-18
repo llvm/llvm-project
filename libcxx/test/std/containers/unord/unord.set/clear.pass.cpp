@@ -13,11 +13,12 @@
 //           class Alloc = allocator<Value>>
 // class unordered_set
 
-// void clear()
+// void clear() noexcept;
 
 #include <unordered_set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -35,6 +36,7 @@ int main()
             P(2)
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(c.size() == 0);
     }
@@ -52,6 +54,7 @@ int main()
             P(2)
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
+        ASSERT_NOEXCEPT(c.clear());
         c.clear();
         assert(c.size() == 0);
     }

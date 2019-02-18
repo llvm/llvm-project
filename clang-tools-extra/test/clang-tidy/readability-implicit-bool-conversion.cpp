@@ -437,3 +437,37 @@ void useOfUserConversion() {
 }
 
 } // namespace ignoreUserDefinedConversionOperator
+
+namespace ignore_1bit_bitfields {
+
+struct S {
+  int a;
+  int b : 1;
+  int c : 2;
+
+  S(bool a, bool b, bool c) : a(a), b(b), c(c) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: implicit conversion bool -> 'int'
+  // CHECK-MESSAGES: :[[@LINE-2]]:45: warning: implicit conversion bool -> 'int'
+  // CHECK-FIXES: S(bool a, bool b, bool c) : a(static_cast<int>(a)), b(b), c(static_cast<int>(c)) {}
+};
+
+bool f(S& s) {
+  functionTaking<bool>(s.a);
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> bool
+  // CHECK-FIXES: functionTaking<bool>(s.a != 0);
+  functionTaking<bool>(s.b);
+  // CHECK-FIXES: functionTaking<bool>(s.b);
+  s.a = true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: implicit conversion bool -> 'int'
+  // CHECK-FIXES: s.a = 1;
+  s.b = true;
+  // CHECK-FIXES: s.b = true;
+  s.c = true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: implicit conversion bool -> 'int'
+  // CHECK-FIXES: s.c = 1;
+  functionTaking<bool>(s.c);
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: implicit conversion 'int' -> bool
+  // CHECK-FIXES: functionTaking<bool>(s.c != 0);
+}
+
+} // namespace ignore_1bit_bitfields

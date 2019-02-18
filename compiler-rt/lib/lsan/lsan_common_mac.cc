@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_libc.h"
 #include "lsan_common.h"
 
 #if CAN_SANITIZE_LEAKS && SANITIZER_MAC
@@ -116,7 +117,8 @@ static const char *kSkippedSecNames[] = {
 
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {
-  for (auto name : kSkippedSecNames) CHECK(ARRAY_SIZE(name) < kMaxSegName);
+  for (auto name : kSkippedSecNames)
+    CHECK(internal_strnlen(name, kMaxSegName + 1) <= kMaxSegName);
 
   MemoryMappingLayout memory_mapping(false);
   InternalMmapVector<LoadedModule> modules;
@@ -142,12 +144,6 @@ void ProcessGlobalRegions(Frontier *frontier) {
 }
 
 void ProcessPlatformSpecificAllocations(Frontier *frontier) {
-  mach_port_name_t port;
-  if (task_for_pid(mach_task_self(), internal_getpid(), &port)
-      != KERN_SUCCESS) {
-    return;
-  }
-
   unsigned depth = 1;
   vm_size_t size = 0;
   vm_address_t address = 0;
@@ -158,7 +154,7 @@ void ProcessPlatformSpecificAllocations(Frontier *frontier) {
 
   while (err == KERN_SUCCESS) {
     struct vm_region_submap_info_64 info;
-    err = vm_region_recurse_64(port, &address, &size, &depth,
+    err = vm_region_recurse_64(mach_task_self(), &address, &size, &depth,
                                (vm_region_info_t)&info, &count);
 
     uptr end_address = address + size;

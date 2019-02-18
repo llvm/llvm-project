@@ -53,7 +53,7 @@ entry:
 
 define i32 @test.objectsize() {
 ; CHECK-LABEL: @test.objectsize(
-; CHECK: @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false)
+; CHECK: @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false, i1 false)
   %s = call i32 @llvm.objectsize.i32(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false)
   ret i32 %s
 }
@@ -61,11 +61,10 @@ define i32 @test.objectsize() {
 declare i64 @llvm.objectsize.i64.p0i8(i8*, i1) nounwind readonly
 define i64 @test.objectsize.2() {
 ; CHECK-LABEL: @test.objectsize.2(
-; CHECK: @llvm.objectsize.i64.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false)
+; CHECK: @llvm.objectsize.i64.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false, i1 false)
   %s = call i64 @llvm.objectsize.i64.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false)
   ret i64 %s
 }
-
 
 declare <2 x double> @llvm.masked.load.v2f64(<2 x double>* %ptrs, i32, <2 x i1> %mask, <2 x double> %src0)
 

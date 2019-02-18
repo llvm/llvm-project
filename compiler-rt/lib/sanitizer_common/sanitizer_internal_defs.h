@@ -105,8 +105,8 @@
 //
 // FIXME: do we have anything like this on Mac?
 #ifndef SANITIZER_CAN_USE_PREINIT_ARRAY
-#if ((SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_OPENBSD) && \
-    !defined(PIC)
+#if ((SANITIZER_LINUX && !SANITIZER_ANDROID) || SANITIZER_OPENBSD || \
+     SANITIZER_FUCHSIA) && !defined(PIC)
 #define SANITIZER_CAN_USE_PREINIT_ARRAY 1
 // Before Solaris 11.4, .preinit_array is fully supported only with GNU ld.
 // FIXME: Check for those conditions.
@@ -120,6 +120,11 @@
 // GCC does not understand __has_feature
 #if !defined(__has_feature)
 # define __has_feature(x) 0
+#endif
+
+// Older GCCs do not understand __has_attribute.
+#if !defined(__has_attribute)
+# define __has_attribute(x) 0
 #endif
 
 // For portability reasons we do not include stddef.h, stdint.h or any other
@@ -167,6 +172,7 @@ typedef int pid_t;
 
 #if SANITIZER_FREEBSD || SANITIZER_NETBSD || \
     SANITIZER_OPENBSD || SANITIZER_MAC || \
+    (SANITIZER_SOLARIS && (defined(_LP64) || _FILE_OFFSET_BITS == 64)) || \
     (SANITIZER_LINUX && defined(__x86_64__))
 typedef u64 OFF_T;
 #else
@@ -191,7 +197,9 @@ typedef u64 tid_t;
 // This header should NOT include any other headers to avoid portability issues.
 
 // Common defs.
+#ifndef INLINE
 #define INLINE inline
+#endif
 #define INTERFACE_ATTRIBUTE SANITIZER_INTERFACE_ATTRIBUTE
 #define SANITIZER_WEAK_DEFAULT_IMPL \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE NOINLINE
@@ -211,6 +219,7 @@ typedef u64 tid_t;
 # define LIKELY(x) (x)
 # define UNLIKELY(x) (x)
 # define PREFETCH(x) /* _mm_prefetch(x, _MM_HINT_NTA) */ (void)0
+# define WARN_UNUSED_RESULT
 #else  // _MSC_VER
 # define ALWAYS_INLINE inline __attribute__((always_inline))
 # define ALIAS(x) __attribute__((alias(x)))
@@ -229,6 +238,7 @@ typedef u64 tid_t;
 # else
 #  define PREFETCH(x) __builtin_prefetch(x)
 # endif
+# define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #endif  // _MSC_VER
 
 #if !defined(_MSC_VER) || defined(__clang__)
@@ -268,8 +278,6 @@ typedef thread_return_t (THREAD_CALLING_CONV *thread_callback_t)(void* arg);
 // NOTE: Functions below must be defined in each run-time.
 void NORETURN Die();
 
-// FIXME: No, this shouldn't be in the sanitizer interface.
-SANITIZER_INTERFACE_ATTRIBUTE
 void NORETURN CheckFailed(const char *file, int line, const char *cond,
                           u64 v1, u64 v2);
 
@@ -424,6 +432,7 @@ namespace __scudo { using namespace __sanitizer; }  // NOLINT
 namespace __ubsan { using namespace __sanitizer; }  // NOLINT
 namespace __xray  { using namespace __sanitizer; }  // NOLINT
 namespace __interception  { using namespace __sanitizer; }  // NOLINT
+namespace __hwasan  { using namespace __sanitizer; }  // NOLINT
 
 
 #endif  // SANITIZER_DEFS_H

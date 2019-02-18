@@ -167,7 +167,7 @@ public:
 ///  SubRegion::getExtent instead -- the value returned may not be a symbol.
 class SymbolExtent : public SymbolData {
   const SubRegion *R;
-  
+
 public:
   SymbolExtent(SymbolID sym, const SubRegion *r)
       : SymbolData(SymbolExtentKind, sym), R(r) {
@@ -300,7 +300,7 @@ public:
   }
 };
 
-/// Represents a symbolic expression involving a binary operator 
+/// Represents a symbolic expression involving a binary operator
 class BinarySymExpr : public SymExpr {
   BinaryOperator::Opcode Op;
   QualType T;
@@ -309,7 +309,10 @@ protected:
   BinarySymExpr(Kind k, BinaryOperator::Opcode op, QualType t)
       : SymExpr(k), Op(op), T(t) {
     assert(classof(this));
-    assert(isValidTypeForSymbol(t));
+    // Binary expressions are results of arithmetic. Pointer arithmetic is not
+    // handled by binary expressions, but it is instead handled by applying
+    // sub-regions to regions.
+    assert(isValidTypeForSymbol(t) && !Loc::isLocType(t));
   }
 
 public:
@@ -555,10 +558,9 @@ class SymbolReaper {
 
   SymbolMapTy TheLiving;
   SymbolSetTy MetadataInUse;
-  SymbolSetTy TheDead;
 
   RegionSetTy RegionRoots;
-  
+
   const StackFrameContext *LCtx;
   const Stmt *Loc;
   SymbolManager& SymMgr;
@@ -600,21 +602,6 @@ public:
   /// symbol marking has occurred, i.e. in the MarkLiveSymbols callback.
   void markInUse(SymbolRef sym);
 
-  /// If a symbol is known to be live, marks the symbol as live.
-  ///
-  ///  Otherwise, if the symbol cannot be proven live, it is marked as dead.
-  ///  Returns true if the symbol is dead, false if live.
-  bool maybeDead(SymbolRef sym);
-
-  using dead_iterator = SymbolSetTy::const_iterator;
-
-  dead_iterator dead_begin() const { return TheDead.begin(); }
-  dead_iterator dead_end() const { return TheDead.end(); }
-
-  bool hasDeadSymbols() const {
-    return !TheDead.empty();
-  }
-  
   using region_iterator = RegionSetTy::const_iterator;
 
   region_iterator region_begin() const { return RegionRoots.begin(); }
@@ -623,14 +610,14 @@ public:
   /// Returns whether or not a symbol has been confirmed dead.
   ///
   /// This should only be called once all marking of dead symbols has completed.
-  /// (For checkers, this means only in the evalDeadSymbols callback.)
-  bool isDead(SymbolRef sym) const {
-    return TheDead.count(sym);
+  /// (For checkers, this means only in the checkDeadSymbols callback.)
+  bool isDead(SymbolRef sym) {
+    return !isLive(sym);
   }
-  
+
   void markLive(const MemRegion *region);
   void markElementIndicesLive(const MemRegion *region);
-  
+
   /// Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.
   void setReapedStore(StoreRef st) { reapedStore = st; }
@@ -654,7 +641,7 @@ public:
   /// The method returns \c true if symbols should continue be scanned and \c
   /// false otherwise.
   virtual bool VisitSymbol(SymbolRef sym) = 0;
-  virtual bool VisitMemRegion(const MemRegion *region) { return true; }
+  virtual bool VisitMemRegion(const MemRegion *) { return true; }
 };
 
 } // namespace ento

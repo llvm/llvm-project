@@ -28,13 +28,12 @@
 
 namespace llvm {
 class Triple;
-}
-
-namespace clang {
-
 namespace vfs {
 class FileSystem;
 }
+} // namespace llvm
+
+namespace clang {
 
 namespace driver {
 
@@ -61,7 +60,7 @@ class Driver {
 
   DiagnosticsEngine &Diags;
 
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 
   enum DriverMode {
     GCCMode,
@@ -228,9 +227,6 @@ private:
   unsigned CheckInputsExist : 1;
 
 public:
-  /// Use lazy precompiled headers for PCH support.
-  unsigned CCCUsePCH : 1;
-
   /// Force clang to emit reproducer for driver invocation. This is enabled
   /// indirectly by setting FORCE_CLANG_DIAGNOSTICS_CRASH environment variable
   /// or when using the -gen-reproducer driver flag.
@@ -256,7 +252,7 @@ private:
   llvm::opt::DerivedArgList *
   TranslateInputArgs(const llvm::opt::InputArgList &Args) const;
 
-  // getFinalPhase - Determine which compilation mode we are in and record 
+  // getFinalPhase - Determine which compilation mode we are in and record
   // which option we used to determine the final phase.
   phases::ID getFinalPhase(const llvm::opt::DerivedArgList &DAL,
                            llvm::opt::Arg **FinalPhaseArg = nullptr) const;
@@ -284,7 +280,7 @@ private:
 public:
   Driver(StringRef ClangExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags,
-         IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
+         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// @name Accessors
   /// @{
@@ -298,7 +294,7 @@ public:
 
   const DiagnosticsEngine &getDiags() const { return Diags; }
 
-  vfs::FileSystem &getVFS() const { return *VFS; }
+  llvm::vfs::FileSystem &getVFS() const { return *VFS; }
 
   bool getCheckInputsExist() const { return CheckInputsExist; }
 
@@ -363,14 +359,15 @@ public:
   /// ParseArgStrings - Parse the given list of strings into an
   /// ArgList.
   llvm::opt::InputArgList ParseArgStrings(ArrayRef<const char *> Args,
+                                          bool IsClCompatMode,
                                           bool &ContainsError);
 
-  /// BuildInputs - Construct the list of inputs and their types from 
+  /// BuildInputs - Construct the list of inputs and their types from
   /// the given arguments.
   ///
   /// \param TC - The default host tool chain.
   /// \param Args - The input arguments.
-  /// \param Inputs - The list to store the resulting compilation 
+  /// \param Inputs - The list to store the resulting compilation
   /// inputs onto.
   void BuildInputs(const ToolChain &TC, llvm::opt::DerivedArgList &Args,
                    InputList &Inputs) const;
@@ -493,7 +490,7 @@ public:
   /// \param JA - The action of interest.
   /// \param BaseInput - The original input file that this action was
   /// triggered by.
-  /// \param BoundArch - The bound architecture. 
+  /// \param BoundArch - The bound architecture.
   /// \param AtTopLevel - Whether this is a "top-level" action.
   /// \param MultipleArchs - Whether multiple -arch options were supplied.
   /// \param NormalizedTriple - The normalized triple of the relevant target.
@@ -502,11 +499,15 @@ public:
                                  bool AtTopLevel, bool MultipleArchs,
                                  StringRef NormalizedTriple) const;
 
-  /// GetTemporaryPath - Return the pathname of a temporary file to use 
+  /// GetTemporaryPath - Return the pathname of a temporary file to use
   /// as part of compilation; the file will have the given prefix and suffix.
   ///
   /// GCC goes to extra lengths here to be a bit more robust.
   std::string GetTemporaryPath(StringRef Prefix, StringRef Suffix) const;
+
+  /// GetTemporaryDirectory - Return the pathname of a temporary directory to
+  /// use as part of compilation; the directory will have the given prefix.
+  std::string GetTemporaryDirectory(StringRef Prefix) const;
 
   /// Return the pathname of the pch file in clang-cl mode.
   std::string GetClPchPath(Compilation &C, StringRef BaseName) const;
@@ -553,7 +554,7 @@ private:
 
   /// Get bitmasks for which option flags to include and exclude based on
   /// the driver mode.
-  std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks() const;
+  std::pair<unsigned, unsigned> getIncludeExcludeOptionFlagMasks(bool IsClCompatMode) const;
 
   /// Helper used in BuildJobsForAction.  Doesn't use the cache when building
   /// jobs specifically for the given action, but will use the cache when

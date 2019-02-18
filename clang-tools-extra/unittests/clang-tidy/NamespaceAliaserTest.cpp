@@ -36,13 +36,11 @@ public:
     auto Hint = Aliaser->createAlias(*Result.Context, *Call, "::foo::bar",
                                      {"b", "some_alias"});
     if (Hint.hasValue())
-      diag(Call->getLocStart(), "Fix for testing") << Hint.getValue();
+      diag(Call->getBeginLoc(), "Fix for testing") << Hint.getValue();
 
-    diag(Call->getLocStart(), "insert call")
-        << FixItHint::CreateInsertion(
-               Call->getLocStart(),
-               Aliaser->getNamespaceName(*Result.Context, *Call, "::foo::bar") +
-                   "::");
+    diag(Call->getBeginLoc(), "insert call") << FixItHint::CreateInsertion(
+        Call->getBeginLoc(),
+        Aliaser->getNamespaceName(*Result.Context, *Call, "::foo::bar") + "::");
   }
 
 private:

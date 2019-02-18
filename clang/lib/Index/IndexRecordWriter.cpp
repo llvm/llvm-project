@@ -138,6 +138,7 @@ static void writeDecls(BitstreamWriter &Stream, ArrayRef<DeclInfo> Decls,
 
 #ifndef NDEBUG
   StringSet<> USRSet;
+  bool enableValidation = getenv("CLANG_INDEX_VALIDATION_CHECKS") != nullptr;
 #endif
 
   RecordData Record;
@@ -157,10 +158,12 @@ static void writeDecls(BitstreamWriter &Stream, ArrayRef<DeclInfo> Decls,
     Blob += SymInfo.CodeGenName;
 
 #ifndef NDEBUG
-    bool IsNew = USRSet.insert(SymInfo.USR).second;
-    if (!IsNew) {
-      llvm::errs() << "Index: Duplicate USR! " << SymInfo.USR << "\n";
-      // FIXME: print more information so it's easier to find the declaration.
+    if (enableValidation) {
+      bool IsNew = USRSet.insert(SymInfo.USR).second;
+      if (!IsNew) {
+        llvm::errs() << "Index: Duplicate USR! " << SymInfo.USR << "\n";
+        // FIXME: print more information so it's easier to find the declaration.
+      }
     }
 #endif
 
@@ -319,6 +322,13 @@ IndexRecordWriter::endRecord(std::string &Error,
   raw_fd_ostream OS(TempFD, /*shouldClose=*/true);
   OS.write(State.Buffer.data(), State.Buffer.size());
   OS.close();
+
+  if (OS.has_error()) {
+    llvm::raw_string_ostream Err(Error);
+    Err << "failed to write '" << TempPath << "': " << OS.error().message();
+    OS.clear_error();
+    return Result::Failure;
+  }
 
   // Atomically move the unique file into place.
   if (std::error_code EC =

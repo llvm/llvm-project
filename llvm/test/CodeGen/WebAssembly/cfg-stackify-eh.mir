@@ -1,0 +1,322 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -exception-model=wasm -run-pass wasm-cfg-stackify %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+  target triple = "wasm32-unknown-unknown"
+
+  @__wasm_lpad_context = external global { i32, i8*, i32 }
+
+  declare void @may_throw()
+  ; Function Attrs: nounwind
+  declare void @dont_throw() #0
+  declare i8* @__cxa_begin_catch(i8*)
+  declare void @__cxa_end_catch()
+  declare void @__cxa_rethrow()
+  ; Function Attrs: nounwind
+  declare i32 @__gxx_wasm_personality_v0(...)
+  declare i32 @_Unwind_CallPersonality(i8*) #0
+
+  define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    unreachable
+  }
+  define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    unreachable
+  }
+  define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    unreachable
+  }
+  define void @test3() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+    unreachable
+  }
+
+  attributes #0 = { nounwind }
+
+---
+# Simplest try-catch
+# try {
+#   may_throw();
+# } catch (...) {
+# }
+name: test0
+# CHECK-LABEL: name: test0
+liveins:
+  - { reg: '$arguments', reg: '$value_stack' }
+body: |
+  bb.0:
+    successors: %bb.2, %bb.1
+
+    CALL_VOID @may_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.2, implicit-def $arguments
+  ; CHECK-LABEL: bb.0:
+    ; CHECK: TRY
+    ; CHECK-NEXT: CALL_VOID @may_throw
+
+  bb.1 (landing-pad):
+  ; predecessors: %bb.0
+    successors: %bb.2
+
+    %2:i32 = CATCH_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %3:i32 = CALL_I32 @__cxa_begin_catch, %2:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def $value_stack, implicit $value_stack
+    DROP_I32 killed %3:i32, implicit-def $arguments
+    CALL_VOID @__cxa_end_catch, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+
+  bb.2:
+  ; predecessors: %bb.0, %bb.1
+
+    RETURN_VOID implicit-def dead $arguments
+  ; CHECK-LABEL: bb.2:
+    ; CHECK-NEXT: END_TRY
+    ; CHECK: RETURN_VOID
+...
+---
+
+# Nested try-catch inside another catch
+#  try {
+#    may_throw();
+#  } catch (int n) {
+#    try {
+#      may_throw();
+#    } catch (int n) {
+#    }
+#  }
+name: test1
+# CHECK-LABEL: name: test1
+liveins:
+  - { reg: '$arguments', reg: '$value_stack' }
+body: |
+  bb.0:
+    successors: %bb.9, %bb.1
+
+    CALL_VOID @may_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.9, implicit-def $arguments
+  ; CHECK-LABEL: bb.0:
+    ; CHECK: TRY
+    ; CHECK-NEXT: CALL_VOID @may_throw
+
+  bb.1 (landing-pad):
+  ; predecessors: %bb.0
+    successors: %bb.2, %bb.7
+
+    %30:i32 = CATCH_I32 0, implicit-def dead $arguments
+    SET_LOCAL_I32 0, %30:i32, implicit-def $arguments
+    %16:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %27:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    STORE_I32 2, @__wasm_lpad_context + 4, %16:i32, %27:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (store 4 into `i8** getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 1)`)
+    %26:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %25:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    STORE_I32 2, @__wasm_lpad_context, %26:i32, %25:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (store 4 into `i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)`)
+    %32:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %31:i32 = CALL_I32 @_Unwind_CallPersonality, %32:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    DROP_I32 killed %31:i32, implicit-def $arguments
+    %24:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %17:i32 = LOAD_I32 2, @__wasm_lpad_context + 8, %24:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (dereferenceable load 4 from `i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 2)`)
+    %18:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %19:i32 = NE_I32 %17:i32, %18:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    BR_IF %bb.7, %19:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+
+  bb.2:
+  ; predecessors: %bb.1
+    successors: %bb.8, %bb.3, %bb.6
+
+    %34:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %33:i32 = CALL_I32 @__cxa_begin_catch, %34:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    DROP_I32 killed %33:i32, implicit-def $arguments
+    CALL_VOID @may_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.8, implicit-def $arguments
+  ; CHECK-LABEL: bb.2:
+    ; CHECK: DROP_I32
+    ; CHECK-NEXT: TRY
+    ; CHECK-NEXT: TRY
+    ; CHECK-NEXT: CALL_VOID @may_throw
+
+  bb.3 (landing-pad):
+  ; predecessors: %bb.2
+    successors: %bb.4, %bb.5
+
+    %35:i32 = CATCH_I32 0, implicit-def dead $arguments
+    SET_LOCAL_I32 0, %35:i32, implicit-def $arguments
+    %21:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %20:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    STORE_I32 2, @__wasm_lpad_context, %21:i32, %20:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (store 4 into `i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)`)
+    %37:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %36:i32 = CALL_I32 @_Unwind_CallPersonality, %37:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    DROP_I32 killed %36:i32, implicit-def $arguments
+    %29:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %22:i32 = LOAD_I32 2, @__wasm_lpad_context + 8, %29:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack :: (dereferenceable load 4 from `i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 2)`)
+    %28:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %23:i32 = NE_I32 %22:i32, %28:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    BR_IF %bb.5, %23:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+
+  bb.4:
+  ; predecessors: %bb.3
+    successors: %bb.8
+
+    %39:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %38:i32 = CALL_I32 @__cxa_begin_catch, %39:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    DROP_I32 killed %38:i32, implicit-def $arguments
+    CALL_VOID @__cxa_end_catch, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.8, implicit-def $arguments
+
+  bb.5:
+  ; predecessors: %bb.3
+    successors: %bb.6
+
+    CALL_VOID @__cxa_rethrow, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    RETHROW %bb.6, implicit-def $arguments
+
+  bb.6 (landing-pad):
+  ; predecessors: %bb.2, %bb.5
+
+    CATCH_ALL implicit-def $arguments
+    CALL_VOID @__cxa_end_catch, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    RETHROW_TO_CALLER implicit-def $arguments
+  ; CHECK-LABEL: bb.6 (landing-pad):
+    ; CHECK-NEXT: END_TRY
+
+  bb.7:
+  ; predecessors: %bb.1
+
+    CALL_VOID @__cxa_rethrow, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    RETHROW_TO_CALLER implicit-def $arguments
+  ; CHECK-LABEL: bb.7:
+    ; CHECK-NEXT: END_TRY
+    ; CHECK: RETHROW 0
+
+  bb.8:
+  ; predecessors: %bb.2, %bb.4
+    successors: %bb.9
+
+    CALL_VOID @__cxa_end_catch, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+
+  bb.9:
+  ; predecessors: %bb.0, %bb.8
+
+    RETURN_VOID implicit-def dead $arguments
+  ; CHECK-LABEL: bb.9:
+    ; CHECK-NEXT: END_TRY
+...
+---
+
+# A loop within a try.
+#  try {
+#    for (int i = 0; i < n; ++i)
+#      may_throw();
+#  } catch (...) {
+#  }
+name: test2
+# CHECK-LABEL: name: test2
+liveins:
+  - { reg: '$arguments', reg: '$value_stack' }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.4
+
+    %18:i32 = CONST_I32 0, implicit-def dead $arguments
+    SET_LOCAL_I32 1, %18:i32, implicit-def $arguments
+    %14:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %19:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %9:i32 = GE_S_I32 %14:i32, %19:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    BR_IF %bb.4, %9:i32, implicit-def $arguments
+
+  bb.1:
+  ; predecessors: %bb.0, %bb.3
+    successors: %bb.3, %bb.2
+
+    CALL_VOID @may_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.3, implicit-def $arguments
+  ; CHECK-LABEL: bb.1:
+    ; CHECK: LOOP
+    ; CHECK: TRY
+    ; CHECK-NEXT: CALL_VOID @may_throw
+
+  bb.2 (landing-pad):
+  ; predecessors: %bb.1
+    successors: %bb.4
+
+    %11:i32 = CATCH_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %22:i32 = CALL_I32 @__cxa_begin_catch, %11:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def $value_stack, implicit $value_stack
+    DROP_I32 killed %22:i32, implicit-def $arguments
+    CALL_VOID @__cxa_end_catch, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.4, implicit-def $arguments
+
+  bb.3:
+  ; predecessors: %bb.1
+    successors: %bb.1, %bb.4
+
+    %20:i32 = GET_LOCAL_I32 1, implicit-def $arguments
+    %17:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %16:i32 = ADD_I32 %20:i32, %17:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %15:i32 = TEE_LOCAL_I32 1, %16:i32, implicit-def $arguments
+    %21:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %10:i32 = GE_S_I32 %15:i32, %21:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    BR_UNLESS %bb.1, %10:i32, implicit-def $arguments
+  ; CHECK-LABEL: bb.3:
+    ; CHECK: END_TRY
+
+  bb.4:
+  ; predecessors: %bb.2, %bb.0, %bb.3
+
+    RETURN_VOID implicit-def dead $arguments
+...
+---
+
+# A loop within a catch
+#  try {
+#    may_throw();
+#  } catch (...) {
+#    for (int i = 0; i < n; ++i)
+#      dont_throw();
+#  }
+name: test3
+# CHECK-LABEL: name: test3
+liveins:
+  - { reg: '$arguments', reg: '$value_stack' }
+body: |
+  bb.0:
+    successors: %bb.4, %bb.1
+
+    CALL_VOID @may_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    BR %bb.4, implicit-def $arguments
+  ; CHECK-LABEL: bb.0:
+    ; CHECK: TRY
+    ; CHECK-NEXT: CALL_VOID @may_throw
+
+  bb.1 (landing-pad):
+  ; predecessors: %bb.0
+    successors: %bb.2, %bb.3
+
+    %9:i32 = CATCH_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %18:i32 = CALL_I32 @__cxa_begin_catch, %9:i32, implicit-def dead $arguments, implicit $sp32, implicit $sp64, implicit-def $value_stack, implicit $value_stack
+    DROP_I32 killed %18:i32, implicit-def $arguments
+    %19:i32 = CONST_I32 0, implicit-def dead $arguments
+    SET_LOCAL_I32 1, %19:i32, implicit-def $arguments
+    %14:i32 = CONST_I32 0, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %20:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %10:i32 = GE_S_I32 %14:i32, %20:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    BR_IF %bb.3, %10:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+
+  bb.2:
+  ; predecessors: %bb.1, %bb.2
+    successors: %bb.2, %bb.3
+
+    CALL_VOID @dont_throw, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+    %21:i32 = GET_LOCAL_I32 1, implicit-def $arguments
+    %17:i32 = CONST_I32 1, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %16:i32 = ADD_I32 %21:i32, %17:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    %15:i32 = TEE_LOCAL_I32 1, %16:i32, implicit-def $arguments
+    %22:i32 = GET_LOCAL_I32 0, implicit-def $arguments
+    %11:i32 = GE_S_I32 %15:i32, %22:i32, implicit-def dead $arguments, implicit-def $value_stack, implicit $value_stack
+    BR_UNLESS %bb.2, %11:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+
+  bb.3:
+  ; predecessors: %bb.1, %bb.2
+    successors: %bb.4
+
+    CALL_VOID @__cxa_end_catch, implicit-def dead $arguments, implicit $sp32, implicit $sp64
+
+  bb.4:
+  ; predecessors: %bb.0, %bb.3
+
+    RETURN_VOID implicit-def dead $arguments
+  ; CHECK-LABEL: bb.4:
+    ; CHECK: END_TRY

@@ -210,47 +210,91 @@ macro(load_llvm_config)
     find_program(LLVM_CONFIG_PATH "llvm-config"
                  DOC "Path to llvm-config binary")
     if (NOT LLVM_CONFIG_PATH)
-      message(FATAL_ERROR "llvm-config not found: specify LLVM_CONFIG_PATH")
+      message(WARNING "UNSUPPORTED COMPILER-RT CONFIGURATION DETECTED: "
+                      "llvm-config not found.\n"
+                      "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config.")
     endif()
   endif()
-  execute_process(
-    COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root"
-    RESULT_VARIABLE HAD_ERROR
-    OUTPUT_VARIABLE CONFIG_OUTPUT)
-  if (HAD_ERROR)
-    message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
+  if (LLVM_CONFIG_PATH)
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root" "--includedir"
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if (HAD_ERROR)
+      message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
+    endif()
+    string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
+    list(GET CONFIG_OUTPUT 0 BINARY_DIR)
+    list(GET CONFIG_OUTPUT 1 TOOLS_BINARY_DIR)
+    list(GET CONFIG_OUTPUT 2 LIBRARY_DIR)
+    list(GET CONFIG_OUTPUT 3 MAIN_SRC_DIR)
+    list(GET CONFIG_OUTPUT 4 INCLUDE_DIR)
+
+    set(LLVM_BINARY_DIR ${BINARY_DIR} CACHE PATH "Path to LLVM build tree")
+    set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
+    set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+    set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
+    set(LLVM_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Paths to LLVM headers")
+
+    # Detect if we have the LLVMXRay and TestingSupport library installed and
+    # available from llvm-config.
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} "--ldflags" "--libs" "xray"
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if (HAD_ERROR)
+      message(WARNING "llvm-config finding xray failed with status ${HAD_ERROR}")
+      set(COMPILER_RT_HAS_LLVMXRAY FALSE)
+    else()
+      string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
+      list(GET CONFIG_OUTPUT 0 LDFLAGS)
+      list(GET CONFIG_OUTPUT 1 LIBLIST)
+      set(LLVM_XRAY_LDFLAGS ${LDFLAGS} CACHE STRING "Linker flags for LLVMXRay library")
+      set(LLVM_XRAY_LIBLIST ${LIBLIST} CACHE STRING "Library list for LLVMXRay")
+      set(COMPILER_RT_HAS_LLVMXRAY TRUE)
+    endif()
+
+    set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT FALSE)
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} "--ldflags" "--libs" "testingsupport"
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if (HAD_ERROR)
+      message(WARNING "llvm-config finding testingsupport failed with status ${HAD_ERROR}")
+    else()
+      string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
+      list(GET CONFIG_OUTPUT 0 LDFLAGS)
+      list(GET CONFIG_OUTPUT 1 LIBLIST)
+      if (LIBLIST STREQUAL "")
+        message(WARNING "testingsupport library not installed, some tests will be skipped")
+      else()
+        set(LLVM_TESTINGSUPPORT_LDFLAGS ${LDFLAGS} CACHE STRING "Linker flags for LLVMTestingSupport library")
+        set(LLVM_TESTINGSUPPORT_LIBLIST ${LIBLIST} CACHE STRING "Library list for LLVMTestingSupport")
+        set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT TRUE)
+      endif()
+    endif()
+
+    # Make use of LLVM CMake modules.
+    # --cmakedir is supported since llvm r291218 (4.0 release)
+    execute_process(
+      COMMAND ${LLVM_CONFIG_PATH} --cmakedir
+      RESULT_VARIABLE HAD_ERROR
+      OUTPUT_VARIABLE CONFIG_OUTPUT)
+    if(NOT HAD_ERROR)
+      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH_FROM_LLVM_CONFIG)
+      file(TO_CMAKE_PATH ${LLVM_CMAKE_PATH_FROM_LLVM_CONFIG} LLVM_CMAKE_PATH)
+    else()
+      file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
+      set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+    endif()
+
+    list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
+    # Get some LLVM variables from LLVMConfig.
+    include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
+
+    set(LLVM_LIBRARY_OUTPUT_INTDIR
+      ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
-  string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
-  list(GET CONFIG_OUTPUT 0 BINARY_DIR)
-  list(GET CONFIG_OUTPUT 1 TOOLS_BINARY_DIR)
-  list(GET CONFIG_OUTPUT 2 LIBRARY_DIR)
-  list(GET CONFIG_OUTPUT 3 MAIN_SRC_DIR)
-
-  set(LLVM_BINARY_DIR ${BINARY_DIR} CACHE PATH "Path to LLVM build tree")
-  set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
-  set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
-  set(LLVM_MAIN_SRC_DIR ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
-
-  # Make use of LLVM CMake modules.
-  # --cmakedir is supported since llvm r291218 (4.0 release)
-  execute_process(
-    COMMAND ${LLVM_CONFIG_PATH} --cmakedir
-    RESULT_VARIABLE HAD_ERROR
-    OUTPUT_VARIABLE CONFIG_OUTPUT)
-  if(NOT HAD_ERROR)
-    string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_PATH_FROM_LLVM_CONFIG)
-    file(TO_CMAKE_PATH ${LLVM_CMAKE_PATH_FROM_LLVM_CONFIG} LLVM_CMAKE_PATH)
-  else()
-    file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
-    set(LLVM_CMAKE_PATH "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
-  endif()
-
-  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
-  # Get some LLVM variables from LLVMConfig.
-  include("${LLVM_CMAKE_PATH}/LLVMConfig.cmake")
-
-  set(LLVM_LIBRARY_OUTPUT_INTDIR
-    ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
 endmacro()
 
 macro(construct_compiler_rt_default_triple)
@@ -272,11 +316,6 @@ macro(construct_compiler_rt_default_triple)
 
   string(REPLACE "-" ";" TARGET_TRIPLE_LIST ${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
   list(GET TARGET_TRIPLE_LIST 0 COMPILER_RT_DEFAULT_TARGET_ARCH)
-  list(GET TARGET_TRIPLE_LIST 1 COMPILER_RT_DEFAULT_TARGET_OS)
-  list(LENGTH TARGET_TRIPLE_LIST TARGET_TRIPLE_LIST_LENGTH)
-  if(TARGET_TRIPLE_LIST_LENGTH GREATER 2)
-    list(GET TARGET_TRIPLE_LIST 2 COMPILER_RT_DEFAULT_TARGET_ABI)
-  endif()
   # Determine if test target triple is specified explicitly, and doesn't match the
   # default.
   if(NOT COMPILER_RT_DEFAULT_TARGET_TRIPLE STREQUAL TARGET_TRIPLE)
@@ -316,13 +355,15 @@ function(filter_builtin_sources output_var exclude_or_include excluded_list)
 endfunction()
 
 function(get_compiler_rt_target arch variable)
-  if(ANDROID AND ${arch} STREQUAL "i386")
-    set(target "i686${COMPILER_RT_OS_SUFFIX}-${COMPILER_RT_DEFAULT_TARGET_OS}")
+  string(FIND ${COMPILER_RT_DEFAULT_TARGET_TRIPLE} "-" dash_index)
+  string(SUBSTRING ${COMPILER_RT_DEFAULT_TARGET_TRIPLE} ${dash_index} -1 triple_suffix)
+  if(COMPILER_RT_DEFAULT_TARGET_ONLY)
+    # Use exact spelling when building only for the target specified to CMake.
+    set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
+  elseif(ANDROID AND ${arch} STREQUAL "i386")
+    set(target "i686${COMPILER_RT_OS_SUFFIX}${triple_suffix}")
   else()
-    set(target "${arch}-${COMPILER_RT_DEFAULT_TARGET_OS}")
-  endif()
-  if(COMPILER_RT_DEFAULT_TARGET_ABI)
-    set(target "${target}-${COMPILER_RT_DEFAULT_TARGET_ABI}")
+    set(target "${arch}${triple_suffix}")
   endif()
   set(${variable} ${target} PARENT_SCOPE)
 endfunction()

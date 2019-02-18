@@ -15,7 +15,8 @@
 #ifndef LLVM_LIB_TARGET_RISCV_RISCV_H
 #define LLVM_LIB_TARGET_RISCV_RISCV_H
 
-#include "MCTargetDesc/RISCVBaseInfo.h"
+#include "Utils/RISCVBaseInfo.h"
+#include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
 class RISCVTargetMachine;
@@ -36,6 +37,9 @@ FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM);
 
 FunctionPass *createRISCVMergeBaseOffsetOptPass();
 void initializeRISCVMergeBaseOffsetOptPass(PassRegistry &);
+
+FunctionPass *createRISCVExpandPseudoPass();
+void initializeRISCVExpandPseudoPass(PassRegistry &);
 }
 
 #endif

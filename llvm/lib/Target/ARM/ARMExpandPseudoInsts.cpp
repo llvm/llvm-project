@@ -570,7 +570,7 @@ void ARMExpandPseudo::ExpandVLD(MachineBasicBlock::iterator &MBBI) {
   TransferImpOps(MI, MIB, MIB);
 
   // Transfer memoperands.
-  MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIB.cloneMemRefs(MI);
 
   MI.eraseFromParent();
 }
@@ -645,7 +645,7 @@ void ARMExpandPseudo::ExpandVST(MachineBasicBlock::iterator &MBBI) {
   TransferImpOps(MI, MIB, MIB);
 
   // Transfer memoperands.
-  MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIB.cloneMemRefs(MI);
 
   MI.eraseFromParent();
 }
@@ -735,7 +735,7 @@ void ARMExpandPseudo::ExpandLaneOp(MachineBasicBlock::iterator &MBBI) {
     MIB.addReg(DstReg, RegState::ImplicitDefine | getDeadRegState(DstIsDead));
   TransferImpOps(MI, MIB, MIB);
   // Transfer memoperands.
-  MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  MIB.cloneMemRefs(MI);
   MI.eraseFromParent();
 }
 
@@ -848,8 +848,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
     unsigned SOImmValV2 = ARM_AM::getSOImmTwoPartSecond(ImmVal);
     LO16 = LO16.addImm(SOImmValV1);
     HI16 = HI16.addImm(SOImmValV2);
-    LO16->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-    HI16->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+    LO16.cloneMemRefs(MI);
+    HI16.cloneMemRefs(MI);
     LO16.addImm(Pred).addReg(PredReg).add(condCodeOp());
     HI16.addImm(Pred).addReg(PredReg).add(condCodeOp());
     if (isCC)
@@ -899,8 +899,8 @@ void ARMExpandPseudo::ExpandMOV32BitImm(MachineBasicBlock &MBB,
   }
   }
 
-  LO16->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
-  HI16->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+  LO16.cloneMemRefs(MI);
+  HI16.cloneMemRefs(MI);
   LO16.addImm(Pred).addReg(PredReg);
   HI16.addImm(Pred).addReg(PredReg);
 
@@ -1030,10 +1030,10 @@ static void addExclusiveRegPair(MachineInstrBuilder &MIB, MachineOperand &Reg,
   if (IsThumb) {
     unsigned RegLo = TRI->getSubReg(Reg.getReg(), ARM::gsub_0);
     unsigned RegHi = TRI->getSubReg(Reg.getReg(), ARM::gsub_1);
-    MIB.addReg(RegLo, Flags | getKillRegState(Reg.isDead()));
-    MIB.addReg(RegHi, Flags | getKillRegState(Reg.isDead()));
+    MIB.addReg(RegLo, Flags);
+    MIB.addReg(RegHi, Flags);
   } else
-    MIB.addReg(Reg.getReg(), Flags | getKillRegState(Reg.isDead()));
+    MIB.addReg(Reg.getReg(), Flags);
 }
 
 /// Expand a 64-bit CMP_SWAP to an ldrexd/strexd loop.
@@ -1103,7 +1103,8 @@ bool ARMExpandPseudo::ExpandCMP_SWAP_64(MachineBasicBlock &MBB,
   //     bne .Lloadcmp
   unsigned STREXD = IsThumb ? ARM::t2STREXD : ARM::STREXD;
   MIB = BuildMI(StoreBB, DL, TII->get(STREXD), TempReg);
-  addExclusiveRegPair(MIB, New, 0, IsThumb, TRI);
+  unsigned Flags = getKillRegState(New.isDead());
+  addExclusiveRegPair(MIB, New, Flags, IsThumb, TRI);
   MIB.addReg(AddrReg).add(predOps(ARMCC::AL));
 
   unsigned CMPri = IsThumb ? ARM::t2CMPri : ARM::CMPri;
@@ -1425,7 +1426,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         MIB.addExternalSymbol("__aeabi_read_tp", 0);
       }
 
-      MIB->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+      MIB.cloneMemRefs(MI);
       TransferImpOps(MI, MIB, MIB);
       MI.eraseFromParent();
       return true;
@@ -1440,7 +1441,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(NewLdOpc), DstReg)
               .add(MI.getOperand(1))
               .add(predOps(ARMCC::AL));
-      MIB1->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+      MIB1.cloneMemRefs(MI);
       MachineInstrBuilder MIB2 =
           BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(ARM::tPICADD))
               .addReg(DstReg, RegState::Define | getDeadRegState(DstIsDead))
@@ -1544,7 +1545,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       if (isARM) {
         MIB3.add(predOps(ARMCC::AL));
         if (Opcode == ARM::MOV_ga_pcrel_ldr)
-          MIB3->setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+          MIB3.cloneMemRefs(MI);
       }
       TransferImpOps(MI, MIB1, MIB3);
       MI.eraseFromParent();
@@ -1596,7 +1597,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Add an implicit def for the super-register.
       MIB.addReg(DstReg, RegState::ImplicitDefine | getDeadRegState(DstIsDead));
       TransferImpOps(MI, MIB, MIB);
-      MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+      MIB.cloneMemRefs(MI);
       MI.eraseFromParent();
       return true;
     }
@@ -1629,7 +1630,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         MIB->addRegisterKilled(SrcReg, TRI, true);
 
       TransferImpOps(MI, MIB, MIB);
-      MIB.setMemRefs(MI.memoperands_begin(), MI.memoperands_end());
+      MIB.cloneMemRefs(MI);
       MI.eraseFromParent();
       return true;
     }

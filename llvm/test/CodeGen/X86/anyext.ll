@@ -41,8 +41,9 @@ define i32 @bar(i32 %p, i16 zeroext %x) nounwind {
 ;
 ; X64-LABEL: bar:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divw %si
 ; X64-NEXT:    # kill: def $ax killed $ax def $eax
 ; X64-NEXT:    andl $1, %eax

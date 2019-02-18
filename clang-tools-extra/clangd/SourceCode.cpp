@@ -16,9 +16,9 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
 
 // Here be dragons. LSP positions use columns measured in *UTF-16 code units*!
 // Clangd uses UTF-8 and byte-offsets internally, so conversion is nontrivial.
@@ -67,36 +67,35 @@ static size_t measureUTF16(StringRef U8, int U16Units, bool &Valid) {
   return std::min(Result, U8.size());
 }
 
-// Counts the number of UTF-16 code units needed to represent a string.
 // Like most strings in clangd, the input is UTF-8 encoded.
-static size_t utf16Len(StringRef U8) {
+size_t lspLength(StringRef Code) {
   // A codepoint takes two UTF-16 code unit if it's astral (outside BMP).
   // Astral codepoints are encoded as 4 bytes in UTF-8, starting with 11110xxx.
   size_t Count = 0;
-  iterateCodepoints(U8, [&](int U8Len, int U16Len) {
+  iterateCodepoints(Code, [&](int U8Len, int U16Len) {
     Count += U16Len;
     return false;
   });
   return Count;
 }
 
-llvm::Expected<size_t> positionToOffset(StringRef Code, Position P,
-                                        bool AllowColumnsBeyondLineLength) {
+Expected<size_t> positionToOffset(StringRef Code, Position P,
+                                  bool AllowColumnsBeyondLineLength) {
   if (P.line < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Line value can't be negative ({0})", P.line),
-        llvm::errc::invalid_argument);
+    return make_error<StringError>(
+        formatv("Line value can't be negative ({0})", P.line),
+        errc::invalid_argument);
   if (P.character < 0)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Character value can't be negative ({0})", P.character),
-        llvm::errc::invalid_argument);
+    return make_error<StringError>(
+        formatv("Character value can't be negative ({0})", P.character),
+        errc::invalid_argument);
   size_t StartOfLine = 0;
   for (int I = 0; I != P.line; ++I) {
     size_t NextNL = Code.find('\n', StartOfLine);
     if (NextNL == StringRef::npos)
-      return llvm::make_error<llvm::StringError>(
-          llvm::formatv("Line value is out of range ({0})", P.line),
-          llvm::errc::invalid_argument);
+      return make_error<StringError>(
+          formatv("Line value is out of range ({0})", P.line),
+          errc::invalid_argument);
     StartOfLine = NextNL + 1;
   }
 
@@ -108,10 +107,10 @@ llvm::Expected<size_t> positionToOffset(StringRef Code, Position P,
   size_t ByteOffsetInLine = measureUTF16(
       Code.substr(StartOfLine, NextNL - StartOfLine), P.character, Valid);
   if (!Valid && !AllowColumnsBeyondLineLength)
-    return llvm::make_error<llvm::StringError>(
-        llvm::formatv("UTF-16 offset {0} is invalid for line {1}", P.character,
-                      P.line),
-        llvm::errc::invalid_argument);
+    return make_error<StringError>(
+        formatv("UTF-16 offset {0} is invalid for line {1}", P.character,
+                P.line),
+        errc::invalid_argument);
   return StartOfLine + ByteOffsetInLine;
 }
 
@@ -123,7 +122,7 @@ Position offsetToPosition(StringRef Code, size_t Offset) {
   size_t StartOfLine = (PrevNL == StringRef::npos) ? 0 : (PrevNL + 1);
   Position Pos;
   Pos.line = Lines;
-  Pos.character = utf16Len(Before.substr(StartOfLine));
+  Pos.character = lspLength(Before.substr(StartOfLine));
   return Pos;
 }
 
@@ -139,7 +138,7 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   if (!Invalid) {
     auto ColumnInBytes = SM.getColumnNumber(FID, Offset) - 1;
     auto LineSoFar = Code.substr(Offset - ColumnInBytes, ColumnInBytes);
-    P.character = utf16Len(LineSoFar);
+    P.character = lspLength(LineSoFar);
   }
   return P;
 }
@@ -162,10 +161,9 @@ std::pair<size_t, size_t> offsetToClangLineColumn(StringRef Code,
   return {Lines + 1, Offset - StartOfLine + 1};
 }
 
-std::pair<llvm::StringRef, llvm::StringRef>
-splitQualifiedName(llvm::StringRef QName) {
+std::pair<StringRef, StringRef> splitQualifiedName(StringRef QName) {
   size_t Pos = QName.rfind("::");
-  if (Pos == llvm::StringRef::npos)
+  if (Pos == StringRef::npos)
     return {StringRef(), QName};
   return {QName.substr(0, Pos + 2), QName.substr(Pos + 2)};
 }
@@ -185,18 +183,68 @@ std::vector<TextEdit> replacementsToEdits(StringRef Code,
   return Edits;
 }
 
-llvm::Optional<std::string>
-getAbsoluteFilePath(const FileEntry *F, const SourceManager &SourceMgr) {
-  SmallString<64> FilePath = F->tryGetRealPathName();
-  if (FilePath.empty())
-    FilePath = F->getName();
-  if (!llvm::sys::path::is_absolute(FilePath)) {
-    if (!SourceMgr.getFileManager().makeAbsolutePath(FilePath)) {
-      log("Could not turn relative path to absolute: {0}", FilePath);
-      return llvm::None;
+Optional<std::string> getCanonicalPath(const FileEntry *F,
+                                       const SourceManager &SourceMgr) {
+  if (!F)
+    return None;
+
+  SmallString<128> FilePath = F->getName();
+  if (!sys::path::is_absolute(FilePath)) {
+    if (auto EC =
+            SourceMgr.getFileManager().getVirtualFileSystem()->makeAbsolute(
+                FilePath)) {
+      elog("Could not turn relative path '{0}' to absolute: {1}", FilePath,
+           EC.message());
+      return None;
     }
   }
+
+  // Handle the symbolic link path case where the current working directory
+  // (getCurrentWorkingDirectory) is a symlink./ We always want to the real
+  // file path (instead of the symlink path) for the  C++ symbols.
+  //
+  // Consider the following example:
+  //
+  //   src dir: /project/src/foo.h
+  //   current working directory (symlink): /tmp/build -> /project/src/
+  //
+  //  The file path of Symbol is "/project/src/foo.h" instead of
+  //  "/tmp/build/foo.h"
+  if (const DirectoryEntry *Dir = SourceMgr.getFileManager().getDirectory(
+          sys::path::parent_path(FilePath))) {
+    SmallString<128> RealPath;
+    StringRef DirName = SourceMgr.getFileManager().getCanonicalName(Dir);
+    sys::path::append(RealPath, DirName, sys::path::filename(FilePath));
+    return RealPath.str().str();
+  }
+
   return FilePath.str().str();
+}
+
+TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
+                    const LangOptions &L) {
+  TextEdit Result;
+  Result.range =
+      halfOpenToRange(M, Lexer::makeFileCharRange(FixIt.RemoveRange, M, L));
+  Result.newText = FixIt.CodeToInsert;
+  return Result;
+}
+
+bool IsRangeConsecutive(const Range &Left, const Range &Right) {
+  return Left.end.line == Right.start.line &&
+         Left.end.character == Right.start.character;
+}
+
+FileDigest digest(StringRef Content) {
+  return llvm::SHA1::hash({(const uint8_t *)Content.data(), Content.size()});
+}
+
+Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
+  bool Invalid = false;
+  StringRef Content = SM.getBufferData(FID, &Invalid);
+  if (Invalid)
+    return None;
+  return digest(Content);
 }
 
 } // namespace clangd

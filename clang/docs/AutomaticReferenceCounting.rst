@@ -974,28 +974,66 @@ It is undefined behavior to access an ownership-qualified object through an
 lvalue of a differently-qualified type, except that any non-``__weak`` object
 may be read through an ``__unsafe_unretained`` lvalue.
 
-It is undefined behavior if a managed operation is performed on a ``__strong``
-or ``__weak`` object without a guarantee that it contains a primitive zero
-bit-pattern, or if the storage for such an object is freed or reused without the
-object being first assigned a null pointer.
+It is undefined behavior if the storage of a ``__strong`` or ``__weak``
+object is not properly initialized before the first managed operation
+is performed on the object, or if the storage of such an object is freed
+or reused before the object has been properly deinitialized.  Storage for
+a ``__strong`` or ``__weak`` object may be properly initialized by filling
+it with the representation of a null pointer, e.g. by acquiring the memory
+with ``calloc`` or using ``bzero`` to zero it out.  A ``__strong`` or
+``__weak`` object may be properly deinitialized by assigning a null pointer
+into it.  A ``__strong`` object may also be properly initialized
+by copying into it (e.g. with ``memcpy``) the representation of a
+different ``__strong`` object whose storage has been properly initialized;
+doing this properly deinitializes the source object and causes its storage
+to no longer be properly initialized.  A ``__weak`` object may not be
+representation-copied in this way.
+
+These requirements are followed automatically for objects whose
+initialization and deinitialization are under the control of ARC:
+
+* objects of static, automatic, and temporary storage duration
+* instance variables of Objective-C objects
+* elements of arrays where the array object's initialization and
+  deinitialization are under the control of ARC
+* fields of Objective-C struct types where the struct object's
+  initialization and deinitialization are under the control of ARC
+* non-static data members of Objective-C++ non-union class types
+* Objective-C++ objects and arrays of dynamic storage duration created
+  with the ``new`` or ``new[]`` operators and destroyed with the
+  corresponding ``delete`` or ``delete[]`` operator
+
+They are not followed automatically for these objects:
+
+* objects of dynamic storage duration created in other memory, such as
+  that returned by ``malloc``
+* union members
 
 .. admonition:: Rationale
 
-  ARC cannot differentiate between an assignment operator which is intended to
-  "initialize" dynamic memory and one which is intended to potentially replace
-  a value.  Therefore the object's pointer must be valid before letting ARC at
-  it.  Similarly, C and Objective-C do not provide any language hooks for
-  destroying objects held in dynamic memory, so it is the programmer's
-  responsibility to avoid leaks (``__strong`` objects) and consistency errors
-  (``__weak`` objects).
+  ARC must perform special operations when initializing an object and
+  when destroying it.  In many common situations, ARC knows when an
+  object is created and when it is destroyed and can ensure that these
+  operations are performed correctly.  Otherwise, however, ARC requires
+  programmer cooperation to establish its initialization invariants
+  because it is infeasible for ARC to dynamically infer whether they
+  are intact.  For example, there is no syntactic difference in C between
+  an assignment that is intended by the programmer to initialize a variable
+  and one that is intended to replace the existing value stored there,
+  but ARC must perform one operation or the other.  ARC chooses to always
+  assume that objects are initialized (except when it is in charge of
+  initializing them) because the only workable alternative would be to
+  ban all code patterns that could potentially be used to access
+  uninitialized memory, and that would be too limiting.  In practice,
+  this is rarely a problem because programmers do not generally need to
+  work with objects for which the requirements are not handled
+  automatically.
 
-These requirements are followed automatically in Objective-C++ when creating
-objects of retainable object owner type with ``new`` or ``new[]`` and destroying
-them with ``delete``, ``delete[]``, or a pseudo-destructor expression.  Note
-that arrays of nontrivially-ownership-qualified type are not ABI compatible with
-non-ARC code because the element type is non-POD: such arrays that are
-``new[]``'d in ARC translation units cannot be ``delete[]``'d in non-ARC
-translation units and vice-versa.
+Note that dynamically-allocated Objective-C++ arrays of
+nontrivially-ownership-qualified type are not ABI-compatible with non-ARC
+code because the non-ARC code will consider the element type to be POD.
+Such arrays that are ``new[]``'d in ARC translation units cannot be
+``delete[]``'d in non-ARC translation units and vice-versa.
 
 .. _arc.ownership.restrictions.pass_by_writeback:
 
@@ -1696,20 +1734,78 @@ A program is ill-formed if it refers to the ``NSAutoreleasePool`` class.
   rest of the language.  Not draining the pool during an unwind is apparently
   required by the Objective-C exceptions implementation.
 
+.. _arc.misc.externally_retained:
+
+Externally-Retained Variables
+-----------------------------
+
+In some situations, variables with strong ownership are considered
+externally-retained by the implementation. This means that the variable is
+retained elsewhere, and therefore the implementation can elide retaining and
+releasing its value. Such a variable is implicitly ``const`` for safety. In
+contrast with ``__unsafe_unretained``, an externally-retained variable still
+behaves as a strong variable outside of initialization and destruction. For
+instance, when an externally-retained variable is captured in a block the value
+of the variable is retained and released on block capture and destruction. It
+also affects C++ features such as lambda capture, ``decltype``, and template
+argument deduction.
+
+Implicitly, the implementation assumes that the :ref:`self parameter in a
+non-init method <arc.misc.self>` and the :ref:`variable in a for-in loop
+<arc.misc.enumeration>` are externally-retained.
+
+Externally-retained semantics can also be opted into with the
+``objc_externally_retained`` attribute. This attribute can apply to strong local
+variables, functions, methods, or blocks:
+
+.. code-block:: objc
+
+  @class WobbleAmount;
+
+  @interface Widget : NSObject
+  -(void)wobble:(WobbleAmount *)amount;
+  @end
+
+  @implementation Widget
+
+  -(void)wobble:(WobbleAmount *)amount
+           __attribute__((objc_externally_retained)) {
+    // 'amount' and 'alias' aren't retained on entry, nor released on exit.
+    __attribute__((objc_externally_retained)) WobbleAmount *alias = amount;
+  }
+  @end
+
+Annotating a function with this attribute makes every parameter with strong
+retainable object pointer type externally-retained, unless the variable was
+explicitly qualified with ``__strong``. For instance, ``first_param`` is
+externally-retained (and therefore ``const``) below, but not ``second_param``:
+
+.. code-block:: objc
+
+  __attribute__((objc_externally_retained))
+  void f(NSArray *first_param, __strong NSArray *second_param) {
+    // ...
+  }
+
+You can test if your compiler has support for ``objc_externally_retained`` with
+``__has_attribute``:
+
+.. code-block:: objc
+
+  #if __has_attribute(objc_externally_retained)
+  // Use externally retained...
+  #endif
+
 .. _arc.misc.self:
 
 ``self``
 --------
 
-The ``self`` parameter variable of an Objective-C method is never actually
-retained by the implementation.  It is undefined behavior, or at least
-dangerous, to cause an object to be deallocated during a message send to that
-object.
-
-To make this safe, for Objective-C instance methods ``self`` is implicitly
-``const`` unless the method is in the :ref:`init family
-<arc.family.semantics.init>`.  Further, ``self`` is **always** implicitly
-``const`` within a class method.
+The ``self`` parameter variable of an non-init Objective-C method is considered
+:ref:`externally-retained <arc.misc.externally_retained>` by the implementation.
+It is undefined behavior, or at least dangerous, to cause an object to be
+deallocated during a message send to that object.  In an init method, ``self``
+follows the :ref:``init family rules <arc.family.semantics.init>``.
 
 .. admonition:: Rationale
 
@@ -1720,9 +1816,9 @@ To make this safe, for Objective-C instance methods ``self`` is implicitly
   without this retain and release.  Since it's extremely uncommon to actually
   do so, even unintentionally, and since there's no natural way for the
   programmer to remove this retain/release pair otherwise (as there is for
-  other parameters by, say, making the variable ``__unsafe_unretained``), we
-  chose to make this optimizing assumption and shift some amount of risk to the
-  user.
+  other parameters by, say, making the variable ``objc_externally_retained`` or
+  qualifying it with ``__unsafe_unretained``), we chose to make this optimizing
+  assumption and shift some amount of risk to the user.
 
 .. _arc.misc.enumeration:
 
@@ -1731,8 +1827,9 @@ Fast enumeration iteration variables
 
 If a variable is declared in the condition of an Objective-C fast enumeration
 loop, and the variable has no explicit ownership qualifier, then it is
-qualified with ``const __strong`` and objects encountered during the
-enumeration are not actually retained.
+implicitly :ref:`externally-retained <arc.misc.externally_retained>` so that
+objects encountered during the enumeration are not actually retained and
+released.
 
 .. admonition:: Rationale
 
@@ -2246,8 +2343,8 @@ block exactly as if it had been sent the ``retain`` message.
 
 .. _arc.runtime.objc_storeStrong:
 
-``id objc_storeStrong(id *object, id value);``
-----------------------------------------------
+``void objc_storeStrong(id *object, id value);``
+------------------------------------------------
 
 *Precondition:* ``object`` is a valid pointer to a ``__strong`` object which is
 adequately aligned for a pointer.  ``value`` is null or a pointer to a valid

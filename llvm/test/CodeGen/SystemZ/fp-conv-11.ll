@@ -27,7 +27,7 @@ define i64 @f3(fp128 *%src) {
 ; CHECK: ld %f2, 8(%r2)
 ; CHECK: cgxbr %r2, 5, %f0
 ; CHECK: br %r14
-  %f = load fp128 , fp128 *%src
+  %f = load fp128, fp128 *%src
   %conv = fptosi fp128 %f to i64
   ret i64 %conv
 }

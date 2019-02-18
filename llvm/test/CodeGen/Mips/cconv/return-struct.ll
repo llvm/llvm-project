@@ -1,14 +1,22 @@
-; RUN: llc -mtriple=mips-linux-gnu -relocation-model=static < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32,O32-BE %s
-; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=static < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,O32,O32-LE %s
+; RUN: llc -mtriple=mips-linux-gnu -relocation-model=static < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,O32,O32-BE %s
+; RUN: llc -mtriple=mipsel-linux-gnu -relocation-model=static < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,O32,O32-LE %s
 
-; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi o32 < %s \
+; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi o32 < %s \
+; RUN-TODO:   | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32,N32-BE %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N32,N32-LE %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N32,N32-BE %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n32 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N32,N32-LE %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64,N64-BE %s
-; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap --check-prefixes=ALL,N64,N64-LE %s
+; RUN: llc -mtriple=mips64-linux-gnu -relocation-model=static -target-abi n64 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N64,N64-BE %s
+; RUN: llc -mtriple=mips64el-linux-gnu -relocation-model=static -target-abi n64 < %s \
+; RUN:   | FileCheck --check-prefixes=ALL,N64,N64-LE %s
 
 ; Test struct returns for all ABI's and byte orders.
 
@@ -137,7 +145,7 @@ entry:
 ; N64-BE-DAG:        dsll [[R2:\$[0-9]+]], [[R1]], 16
 ; N64-BE-DAG:        lhu [[R3:\$[0-9]+]], 4([[PTR]])
 ; N64-BE-DAG:        or [[R4:\$[0-9]+]], [[R3]], [[R2]]
-; N32-BE-DAG:        dsll $2, [[R4]], 16
+; N64-BE-DAG:        dsll $2, [[R4]], 16
 
 ; Ensure that large structures (>128-bit) are returned indirectly.
 ; We pick an extremely large structure so we don't have to match inlined memcpy's.

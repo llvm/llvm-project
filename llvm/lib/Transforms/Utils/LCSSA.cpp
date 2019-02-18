@@ -10,7 +10,7 @@
 // This pass transforms loops by placing phi nodes at the end of the loops for
 // all values that are live across the loop boundary.  For example, it turns
 // the left into the right code:
-// 
+//
 // for (...)                for (...)
 //   if (c)                   if (c)
 //     X1 = ...                 X1 = ...
@@ -21,8 +21,8 @@
 //                          ... = X4 + 4
 //
 // This is still valid LLVM; the extra phi nodes are purely redundant, and will
-// be trivially eliminated by InstCombine.  The major benefit of this 
-// transformation is that it makes many other loop optimizations, such as 
+// be trivially eliminated by InstCombine.  The major benefit of this
+// transformation is that it makes many other loop optimizations, such as
 // LoopUnswitching, simpler.
 //
 //===----------------------------------------------------------------------===//
@@ -41,6 +41,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils.h"
@@ -144,7 +145,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
       PHINode *PN = PHINode::Create(I->getType(), PredCache.size(ExitBB),
                                     I->getName() + ".lcssa", &ExitBB->front());
-
+      // Get the debug location from the original instruction.
+      PN->setDebugLoc(I->getDebugLoc());
       // Add inputs from inside the loop for this PHI.
       for (BasicBlock *Pred : PredCache.get(ExitBB)) {
         PN->addIncoming(I, Pred);
@@ -198,6 +200,21 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
       // Otherwise, do full PHI insertion.
       SSAUpdate.RewriteUse(*UseToRewrite);
+    }
+
+    SmallVector<DbgValueInst *, 4> DbgValues;
+    llvm::findDbgValues(DbgValues, I);
+
+    // Update pre-existing debug value uses that reside outside the loop.
+    auto &Ctx = I->getContext();
+    for (auto DVI : DbgValues) {
+      BasicBlock *UserBB = DVI->getParent();
+      if (InstBB == UserBB || L->contains(UserBB))
+        continue;
+      // We currently only handle debug values residing in blocks where we have
+      // inserted a PHI instruction.
+      if (Value *V = SSAUpdate.FindValueForBlock(UserBB))
+        DVI->setOperand(0, MetadataAsValue::get(Ctx, ValueAsMetadata::get(V)));
     }
 
     // SSAUpdater might have inserted phi-nodes inside other loops. We'll need

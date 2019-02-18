@@ -46,21 +46,21 @@ class CGCalleeInfo {
   /// The function prototype of the callee.
   const FunctionProtoType *CalleeProtoTy;
   /// The function declaration of the callee.
-  const Decl *CalleeDecl;
+  GlobalDecl CalleeDecl;
 
 public:
-  explicit CGCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl(nullptr) {}
-  CGCalleeInfo(const FunctionProtoType *calleeProtoTy, const Decl *calleeDecl)
+  explicit CGCalleeInfo() : CalleeProtoTy(nullptr), CalleeDecl() {}
+  CGCalleeInfo(const FunctionProtoType *calleeProtoTy, GlobalDecl calleeDecl)
       : CalleeProtoTy(calleeProtoTy), CalleeDecl(calleeDecl) {}
   CGCalleeInfo(const FunctionProtoType *calleeProtoTy)
-      : CalleeProtoTy(calleeProtoTy), CalleeDecl(nullptr) {}
-  CGCalleeInfo(const Decl *calleeDecl)
+      : CalleeProtoTy(calleeProtoTy), CalleeDecl() {}
+  CGCalleeInfo(GlobalDecl calleeDecl)
       : CalleeProtoTy(nullptr), CalleeDecl(calleeDecl) {}
 
   const FunctionProtoType *getCalleeFunctionProtoType() const {
     return CalleeProtoTy;
   }
-  const Decl *getCalleeDecl() const { return CalleeDecl; }
+  const GlobalDecl getCalleeDecl() const { return CalleeDecl; }
   };
 
   /// All available information about a concrete callee.
@@ -171,7 +171,7 @@ public:
     }
     CGCalleeInfo getAbstractInfo() const {
       if (isVirtual())
-        return VirtualInfo.MD.getDecl();
+        return VirtualInfo.MD;
       assert(isOrdinary());
       return AbstractInfo;
     }
@@ -356,7 +356,7 @@ public:
   class FunctionArgList : public SmallVector<const VarDecl*, 16> {
   };
 
-  /// ReturnValueSlot - Contains the address where the return value of a 
+  /// ReturnValueSlot - Contains the address where the return value of a
   /// function can be stored, and whether the address is volatile or not.
   class ReturnValueSlot {
     llvm::PointerIntPair<llvm::Value *, 2, unsigned int> Value;
@@ -381,7 +381,7 @@ public:
     Address getValue() const { return Address(Value.getPointer(), Alignment); }
     bool isUnused() const { return Value.getInt() & IS_UNUSED; }
   };
-  
+
 }  // end namespace CodeGen
 }  // end namespace clang
 

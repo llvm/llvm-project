@@ -1,4 +1,5 @@
 ; RUN: opt -loop-unswitch -S - < %s | FileCheck %s
+; RUN: opt -loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S - < %s | FileCheck %s
 
 ;CHECK-LABEL: @b
 ;CHECK: [[Loop1:for\.end.*]]:                              ; preds = %for.cond.us

@@ -25,5 +25,5 @@ UBSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
 UBSAN_FLAG(bool, report_error_type, false,
         "Print specific error type instead of 'undefined-behavior' in summary.")
 UBSAN_FLAG(bool, silence_unsigned_overflow, false,
-	"Do not print error reports for unsigned integer overflow. "
-	"Used to provide fuzzing signal without blowing up logs.")
+        "Do not print non-fatal error reports for unsigned integer overflow. "
+        "Used to provide fuzzing signal without blowing up logs.")

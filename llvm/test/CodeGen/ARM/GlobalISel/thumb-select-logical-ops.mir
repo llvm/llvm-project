@@ -1,0 +1,219 @@
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_and_regs() { ret void }
+  define void @test_and_imm() { ret void }
+
+  define void @test_bfc() { ret void }
+  define void @test_no_bfc_bad_mask() { ret void }
+
+  define void @test_mvn() { ret void }
+  define void @test_bic() { ret void }
+  define void @test_orn() { ret void }
+...
+---
+name:            test_and_regs
+# CHECK-LABEL: name: test_and_regs
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = COPY $r1
+    ; CHECK: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = G_AND %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2ANDrr [[VREGX]], [[VREGY]], 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_and_imm
+# CHECK-LABEL: name: test_and_imm
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 786444 ; 0x000c000c
+    %2(s32) = G_AND %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2ANDri [[VREGX]], 786444, 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_bfc
+# CHECK-LABEL: name: test_bfc
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 -65529 ; 0xFFFF0007
+    %2(s32) = G_AND %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2BFC [[VREGX]], -65529, 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_no_bfc_bad_mask
+# CHECK-LABEL: name: test_no_bfc_bad_mask
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 786444 ; 0x000c000c
+    %2(s32) = G_AND %0, %1
+    ; CHECK-NOT: t2BFC
+
+    $r0 = COPY %2(s32)
+
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_mvn
+# CHECK-LABEL: name: test_mvn
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    ; CHECK: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+
+    %1(s32) = G_CONSTANT i32 -1
+    %2(s32) = G_XOR %0, %1
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2MVNr [[VREGX]], 14, $noreg, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_bic
+# CHECK-LABEL: name: test_bic
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %1, %2
+
+    %4(s32) = G_AND %0, %3
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2BICrr [[VREGX]], [[VREGY]], 14, $noreg, $noreg
+
+    $r0 = COPY %4(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_orn
+# CHECK-LABEL: name: test_orn
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+  - { id: 3, class: gprb }
+  - { id: 4, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %0(s32) = COPY $r0
+    %1(s32) = COPY $r1
+    ; CHECK-DAG: [[VREGX:%[0-9]+]]:rgpr = COPY $r0
+    ; CHECK-DAG: [[VREGY:%[0-9]+]]:rgpr = COPY $r1
+
+    %2(s32) = G_CONSTANT i32 -1
+    %3(s32) = G_XOR %1, %2
+
+    %4(s32) = G_OR %0, %3
+    ; CHECK: [[VREGRES:%[0-9]+]]:rgpr = t2ORNrr [[VREGX]], [[VREGY]], 14, $noreg, $noreg
+
+    $r0 = COPY %4(s32)
+    ; CHECK: $r0 = COPY [[VREGRES]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...

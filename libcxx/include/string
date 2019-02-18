@@ -437,6 +437,11 @@ template<class charT, class traits, class Allocator>
 basic_istream<charT, traits>&
 getline(basic_istream<charT, traits>& is, basic_string<charT, traits, Allocator>& str);
 
+template<class charT, class traits, class Allocator, class U>
+void erase(basic_string<charT, traits, Allocator>& c, const U& value); // C++20
+template<class charT, class traits, class Allocator, class Predicate>
+void erase_if(basic_string<charT, traits, Allocator>& c, Predicate pred); // C++20
+
 typedef basic_string<char>    string;
 typedef basic_string<wchar_t> wstring;
 typedef basic_string<char16_t> u16string;
@@ -510,6 +515,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <type_traits>
 #include <initializer_list>
 #include <__functional_base>
+#include <version>
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 #include <cstdint>
 #endif
@@ -579,6 +585,7 @@ basic_string<_CharT, _Traits, _Allocator>
 operator+(_CharT __x, const basic_string<_CharT,_Traits,_Allocator>& __y);
 
 template<class _CharT, class _Traits, class _Allocator>
+inline _LIBCPP_INLINE_VISIBILITY
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, const _CharT* __y);
 
@@ -806,7 +813,9 @@ public:
     basic_string(basic_string&& __str, const allocator_type& __a);
 #endif  // _LIBCPP_CXX03_LANG
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
+#endif
     _LIBCPP_INLINE_VISIBILITY
     basic_string(const _CharT* __s) {
       _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*) detected nullptr");
@@ -816,7 +825,9 @@ public:
 #   endif
     }
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
+#endif
         _LIBCPP_INLINE_VISIBILITY
         basic_string(const _CharT* __s, const _Allocator& __a);
 
@@ -827,7 +838,9 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_string(size_type __n, _CharT __c);
 
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
+#endif
         _LIBCPP_INLINE_VISIBILITY
         basic_string(size_type __n, _CharT __c, const _Allocator& __a);
 
@@ -948,7 +961,11 @@ public:
     void resize(size_type __n, value_type __c);
     _LIBCPP_INLINE_VISIBILITY void resize(size_type __n) {resize(__n, value_type());}
 
-    void reserve(size_type __res_arg = 0);
+    void reserve(size_type __res_arg);
+    _LIBCPP_INLINE_VISIBILITY void __resize_default_init(size_type __n);
+
+    _LIBCPP_INLINE_VISIBILITY
+    void reserve() _NOEXCEPT {reserve(0);}
     _LIBCPP_INLINE_VISIBILITY
     void shrink_to_fit() _NOEXCEPT {reserve();}
     _LIBCPP_INLINE_VISIBILITY
@@ -1002,6 +1019,10 @@ public:
     basic_string& append(const value_type* __s, size_type __n);
     basic_string& append(const value_type* __s);
     basic_string& append(size_type __n, value_type __c);
+
+    _LIBCPP_INLINE_VISIBILITY
+    void __append_default_init(size_type __n);
+
     template <class _ForwardIterator>
     _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
     basic_string& __append_forward_unsafe(_ForwardIterator, _ForwardIterator);
@@ -1664,7 +1685,7 @@ basic_string(basic_string_view<_CharT, _Traits>, _Sz, _Sz, const _Allocator& = _
 
                   
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__invalidate_all_iterators()
 {
@@ -1674,7 +1695,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invalidate_all_iterators()
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__invalidate_iterators_past(size_type
 #if _LIBCPP_DEBUG_LEVEL >= 2
@@ -1704,7 +1725,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invalidate_iterators_past(size_type
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string()
     _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
 {
@@ -1715,7 +1736,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string()
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const allocator_type& __a)
 #if _LIBCPP_STD_VER <= 14
         _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
@@ -1780,7 +1801,9 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
 }
 
 template <class _CharT, class _Traits, class _Allocator>
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template <class>
+#endif
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, const _Allocator& __a)
     : __r_(__second_tag(), __a)
 {
@@ -1792,7 +1815,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, const
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_type __n)
 {
     _LIBCPP_ASSERT(__n == 0 || __s != nullptr, "basic_string(const char*, n) detected nullptr");
@@ -1803,7 +1826,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, size_type __n, const _Allocator& __a)
     : __r_(__second_tag(), __a)
 {
@@ -1844,7 +1867,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str)
 #if _LIBCPP_STD_VER <= 14
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
@@ -1862,7 +1885,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(basic_string&& __str, const allocator_type& __a)
     : __r_(__second_tag(), __a)
 {
@@ -1907,7 +1930,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(size_type __n, value_type __c)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __c)
 {
     __init(__n, __c);
@@ -1917,7 +1940,9 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __
 }
 
 template <class _CharT, class _Traits, class _Allocator>
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template <class>
+#endif
 basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __c, const _Allocator& __a)
     : __r_(__second_tag(), __a)
 {
@@ -1943,7 +1968,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __st
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const basic_string& __str, size_type __pos,
                                                         const _Allocator& __a)
     : __r_(__second_tag(), __a)
@@ -2054,7 +2079,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(_ForwardIterator __first, _For
 
 template <class _CharT, class _Traits, class _Allocator>
 template<class _InputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, _InputIterator __last)
 {
     __init(__first, __last);
@@ -2065,7 +2090,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, 
 
 template <class _CharT, class _Traits, class _Allocator>
 template<class _InputIterator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, _InputIterator __last,
                                                         const allocator_type& __a)
     : __r_(__second_tag(), __a)
@@ -2079,7 +2104,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(_InputIterator __first, 
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>::basic_string(
     initializer_list<_CharT> __il)
 {
@@ -2090,7 +2115,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 
 basic_string<_CharT, _Traits, _Allocator>::basic_string(
     initializer_list<_CharT> __il, const _Allocator& __a)
@@ -2254,7 +2279,7 @@ basic_string<_CharT, _Traits, _Allocator>::operator=(const basic_string& __str)
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, false_type)
     _NOEXCEPT_(__alloc_traits::is_always_equal::value)
@@ -2266,7 +2291,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, fa
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, true_type)
 #if _LIBCPP_STD_VER > 14
@@ -2282,7 +2307,7 @@ basic_string<_CharT, _Traits, _Allocator>::__move_assign(basic_string& __str, tr
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::operator=(basic_string&& __str)
     _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value))
@@ -2416,6 +2441,23 @@ basic_string<_CharT, _Traits, _Allocator>::append(size_type __n, value_type __c)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
+inline void
+basic_string<_CharT, _Traits, _Allocator>::__append_default_init(size_type __n)
+{
+    if (__n)
+    {
+        size_type __cap = capacity();
+        size_type __sz = size();
+        if (__cap - __sz < __n)
+            __grow_by(__cap, __sz + __n - __cap, __sz, __sz, 0);
+        pointer __p = __get_pointer();
+        __sz += __n;
+        __set_size(__sz);
+        traits_type::assign(__p[__sz], value_type());
+    }
+}
+
+template <class _CharT, class _Traits, class _Allocator>
 void
 basic_string<_CharT, _Traits, _Allocator>::push_back(value_type __c)
 {
@@ -2499,7 +2541,7 @@ basic_string<_CharT, _Traits, _Allocator>::__append_forward_unsafe(
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::append(const basic_string& __str)
 {
@@ -2676,7 +2718,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, _Forward
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::insert(size_type __pos1, const basic_string& __str)
 {
@@ -2746,7 +2788,7 @@ basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, value_ty
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::insert(const_iterator __pos, size_type __n, value_type __c)
 {
@@ -2866,7 +2908,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos1, size_type __n1, const basic_string& __str)
 {
@@ -2910,7 +2952,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(size_type __pos, size_type __
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, const basic_string& __str)
 {
@@ -2919,7 +2961,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, const value_type* __s, size_type __n)
 {
@@ -2927,7 +2969,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, const value_type* __s)
 {
@@ -2935,7 +2977,7 @@ basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_it
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::replace(const_iterator __i1, const_iterator __i2, size_type __n, value_type __c)
 {
@@ -2967,7 +3009,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(size_type __pos, size_type __n)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos)
 {
@@ -2985,7 +3027,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __pos)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::iterator
 basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_iterator __last)
 {
@@ -3002,7 +3044,7 @@ basic_string<_CharT, _Traits, _Allocator>::erase(const_iterator __first, const_i
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::pop_back()
 {
@@ -3024,7 +3066,7 @@ basic_string<_CharT, _Traits, _Allocator>::pop_back()
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::clear() _NOEXCEPT
 {
@@ -3042,7 +3084,7 @@ basic_string<_CharT, _Traits, _Allocator>::clear() _NOEXCEPT
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::__erase_to_end(size_type __pos)
 {
@@ -3071,7 +3113,18 @@ basic_string<_CharT, _Traits, _Allocator>::resize(size_type __n, value_type __c)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline void
+basic_string<_CharT, _Traits, _Allocator>::__resize_default_init(size_type __n)
+{
+    size_type __sz = size();
+    if (__n > __sz) {
+       __append_default_init(__n - __sz);
+    } else
+        __erase_to_end(__n);
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::max_size() const _NOEXCEPT
 {
@@ -3147,7 +3200,7 @@ basic_string<_CharT, _Traits, _Allocator>::reserve(size_type __res_arg)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::const_reference
 basic_string<_CharT, _Traits, _Allocator>::operator[](size_type __pos) const _NOEXCEPT
 {
@@ -3156,7 +3209,7 @@ basic_string<_CharT, _Traits, _Allocator>::operator[](size_type __pos) const _NO
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::reference
 basic_string<_CharT, _Traits, _Allocator>::operator[](size_type __pos) _NOEXCEPT
 {
@@ -3183,7 +3236,7 @@ basic_string<_CharT, _Traits, _Allocator>::at(size_type __n)
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::reference
 basic_string<_CharT, _Traits, _Allocator>::front()
 {
@@ -3192,7 +3245,7 @@ basic_string<_CharT, _Traits, _Allocator>::front()
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::const_reference
 basic_string<_CharT, _Traits, _Allocator>::front() const
 {
@@ -3201,7 +3254,7 @@ basic_string<_CharT, _Traits, _Allocator>::front() const
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::reference
 basic_string<_CharT, _Traits, _Allocator>::back()
 {
@@ -3210,7 +3263,7 @@ basic_string<_CharT, _Traits, _Allocator>::back()
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::const_reference
 basic_string<_CharT, _Traits, _Allocator>::back() const
 {
@@ -3231,7 +3284,7 @@ basic_string<_CharT, _Traits, _Allocator>::copy(value_type* __s, size_type __n, 
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 basic_string<_CharT, _Traits, _Allocator>
 basic_string<_CharT, _Traits, _Allocator>::substr(size_type __pos, size_type __n) const
 {
@@ -3239,7 +3292,7 @@ basic_string<_CharT, _Traits, _Allocator>::substr(size_type __pos, size_type __n
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void
 basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
 #if _LIBCPP_STD_VER >= 14
@@ -3287,7 +3340,7 @@ basic_string<_CharT, _Traits, _Allocator>::find(const value_type* __s,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find(const basic_string& __str,
                                                 size_type __pos) const _NOEXCEPT
@@ -3312,7 +3365,7 @@ basic_string<_CharT, _Traits, _Allocator>::find(const _Tp &__t,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find(const value_type* __s,
                                                 size_type __pos) const _NOEXCEPT
@@ -3345,7 +3398,7 @@ basic_string<_CharT, _Traits, _Allocator>::rfind(const value_type* __s,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::rfind(const basic_string& __str,
                                                  size_type __pos) const _NOEXCEPT
@@ -3370,7 +3423,7 @@ basic_string<_CharT, _Traits, _Allocator>::rfind(const _Tp& __t,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::rfind(const value_type* __s,
                                                  size_type __pos) const _NOEXCEPT
@@ -3403,7 +3456,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_of(const value_type* __s,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_of(const basic_string& __str,
                                                          size_type __pos) const _NOEXCEPT
@@ -3428,7 +3481,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_of(const _Tp& __t,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_of(const value_type* __s,
                                                          size_type __pos) const _NOEXCEPT
@@ -3439,7 +3492,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_of(const value_type* __s,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_of(value_type __c,
                                                          size_type __pos) const _NOEXCEPT
@@ -3461,7 +3514,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_of(const value_type* __s,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_of(const basic_string& __str,
                                                         size_type __pos) const _NOEXCEPT
@@ -3486,7 +3539,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_of(const _Tp& __t,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_of(const value_type* __s,
                                                         size_type __pos) const _NOEXCEPT
@@ -3497,7 +3550,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_of(const value_type* __s,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_of(value_type __c,
                                                         size_type __pos) const _NOEXCEPT
@@ -3519,7 +3572,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const value_type* _
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const basic_string& __str,
                                                              size_type __pos) const _NOEXCEPT
@@ -3544,7 +3597,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const _Tp& __t,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const value_type* __s,
                                                              size_type __pos) const _NOEXCEPT
@@ -3555,7 +3608,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(const value_type* _
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_first_not_of(value_type __c,
                                                              size_type __pos) const _NOEXCEPT
@@ -3578,7 +3631,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const value_type* __
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const basic_string& __str,
                                                             size_type __pos) const _NOEXCEPT
@@ -3603,7 +3656,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const _Tp& __t,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const value_type* __s,
                                                             size_type __pos) const _NOEXCEPT
@@ -3614,7 +3667,7 @@ basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(const value_type* __
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 typename basic_string<_CharT, _Traits, _Allocator>::size_type
 basic_string<_CharT, _Traits, _Allocator>::find_last_not_of(value_type __c,
                                                             size_type __pos) const _NOEXCEPT
@@ -3649,7 +3702,7 @@ basic_string<_CharT, _Traits, _Allocator>::compare(const _Tp& __t) const
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 int
 basic_string<_CharT, _Traits, _Allocator>::compare(const basic_string& __str) const _NOEXCEPT
 {
@@ -3695,7 +3748,7 @@ basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 int
 basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
                                                    size_type __n1,
@@ -3753,7 +3806,7 @@ basic_string<_CharT, _Traits, _Allocator>::compare(size_type __pos1,
 // __invariants
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 bool
 basic_string<_CharT, _Traits, _Allocator>::__invariants() const
 {
@@ -3771,7 +3824,7 @@ basic_string<_CharT, _Traits, _Allocator>::__invariants() const
 // __clear_and_shrink
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void 
 basic_string<_CharT, _Traits, _Allocator>::__clear_and_shrink() _NOEXCEPT
 {
@@ -4025,6 +4078,7 @@ operator+(_CharT __lhs, const basic_string<_CharT,_Traits,_Allocator>& __rhs)
 }
 
 template<class _CharT, class _Traits, class _Allocator>
+inline
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* __rhs)
 {
@@ -4121,11 +4175,13 @@ swap(basic_string<_CharT, _Traits, _Allocator>& __lhs,
     __lhs.swap(__rhs);
 }
 
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+typedef basic_string<char8_t> u8string;
+#endif
 
+#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 typedef basic_string<char16_t> u16string;
 typedef basic_string<char32_t> u32string;
-
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
 
 _LIBCPP_FUNC_VIS int                stoi  (const string& __str, size_t* __idx = 0, int __base = 10);
@@ -4225,6 +4281,18 @@ getline(basic_istream<_CharT, _Traits>&& __is,
 
 #endif  // _LIBCPP_CXX03_LANG
 
+#if _LIBCPP_STD_VER > 17
+template<class _CharT, class _Traits, class _Allocator, class _Up>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase(basic_string<_CharT, _Traits, _Allocator>& __str, const _Up& __v)
+{ __str.erase(_VSTD::remove(__str.begin(), __str.end(), __v), __str.end()); }
+
+template<class _CharT, class _Traits, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(basic_string<_CharT, _Traits, _Allocator>& __str, _Predicate __pred)
+{ __str.erase(_VSTD::remove_if(__str.begin(), __str.end(), __pred), __str.end()); }
+#endif
+
 #if _LIBCPP_DEBUG_LEVEL >= 2
 
 template<class _CharT, class _Traits, class _Allocator>
@@ -4281,6 +4349,14 @@ inline namespace literals
     {
         return basic_string<wchar_t> (__str, __len);
     }
+
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+    inline _LIBCPP_INLINE_VISIBILITY
+    basic_string<char8_t> operator "" s(const char8_t *__str, size_t __len) _NOEXCEPT
+    {
+        return basic_string<char8_t> (__str, __len);
+    }
+#endif
 
     inline _LIBCPP_INLINE_VISIBILITY
     basic_string<char16_t> operator "" s( const char16_t *__str, size_t __len )

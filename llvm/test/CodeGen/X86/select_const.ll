@@ -43,8 +43,8 @@ define i32 @select_0_or_1_signext(i1 signext %cond) {
 define i32 @select_1_or_0(i1 %cond) {
 ; CHECK-LABEL: select_1_or_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
@@ -62,8 +62,8 @@ define i32 @select_1_or_0_zeroext(i1 zeroext %cond) {
 define i32 @select_1_or_0_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_1_or_0_signext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 1, i32 0
   ret i32 %sel
@@ -95,8 +95,8 @@ define i32 @select_0_or_neg1_zeroext(i1 zeroext %cond) {
 define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_0_or_neg1_signext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 0, i32 -1
   ret i32 %sel
@@ -107,9 +107,9 @@ define i32 @select_0_or_neg1_signext(i1 signext %cond) {
 define i32 @select_neg1_or_0(i1 %cond) {
 ; CHECK-LABEL: select_neg1_or_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -118,8 +118,8 @@ define i32 @select_neg1_or_0(i1 %cond) {
 define i32 @select_neg1_or_0_zeroext(i1 zeroext %cond) {
 ; CHECK-LABEL: select_neg1_or_0_zeroext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    negl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
@@ -329,9 +329,10 @@ define i32 @sel_neg1_1_32(i32 %x) {
 define i8 @select_pow2_diff(i1 zeroext %cond) {
 ; CHECK-LABEL: select_pow2_diff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shlb $4, %dil
-; CHECK-NEXT:    orb $3, %dil
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shlb $4, %al
+; CHECK-NEXT:    orb $3, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i8 19, i8 3
   ret i8 %sel
@@ -467,10 +468,10 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB37_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.188300e+02,3.454000e+01]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.1883E+2,3.4539999999999999E+1]
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB37_1:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-2.040000e+01,3.768000e+01]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-2.0399999999999999E+1,3.768E+1]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, <2 x double> <double -4.0, double 12.0>, <2 x double> <double 23.3, double 11.0>
   %bo = fmul <2 x double> %sel, <double 5.1, double 3.14>
@@ -484,9 +485,9 @@ define i64 @opaque_constant(i1 %cond, i64 %x) {
 ; CHECK-LABEL: opaque_constant:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $23, %ecx
-; CHECK-NEXT:    movq $-4, %rax
-; CHECK-NEXT:    cmoveq %rcx, %rax
+; CHECK-NEXT:    movq $-4, %rcx
+; CHECK-NEXT:    movl $23, %eax
+; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
 ; CHECK-NEXT:    andq %rcx, %rax
 ; CHECK-NEXT:    xorl %edx, %edx
@@ -500,5 +501,14 @@ define i64 @opaque_constant(i1 %cond, i64 %x) {
   %sext = sext i1 %cmp to i64
   %add = add i64 %bo, %sext
   ret i64 %add
+}
+
+define float @select_undef_fp(float %x) {
+; CHECK-LABEL: select_undef_fp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    retq
+  %f = select i1 undef, float 4.0, float %x
+  ret float %f
 }
 

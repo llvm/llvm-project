@@ -64,11 +64,29 @@ include "MSP430InstrInfo.td"
 
 def MSP430InstrInfo : InstrInfo;
 
+//===---------------------------------------------------------------------===//
+// Assembly Printers
+//===---------------------------------------------------------------------===//
+
+def MSP430AsmWriter : AsmWriter {
+  string AsmWriterClassName = "InstPrinter";
+}
+
+//===---------------------------------------------------------------------===//
+// Assembly Parsers
+//===---------------------------------------------------------------------===//
+
+def MSP430AsmParser : AsmParser {
+  let AllowDuplicateRegisterNames = 1;
+  let ShouldEmitMatchRegisterAltName = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Target Declaration
 //===----------------------------------------------------------------------===//
 
 def MSP430 : Target {
   let InstructionSet = MSP430InstrInfo;
+  let AssemblyParsers = [MSP430AsmParser];
 }
 

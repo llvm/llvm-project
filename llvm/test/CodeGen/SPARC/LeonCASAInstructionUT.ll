@@ -19,7 +19,9 @@
 ; RUN: llc %s -O0 -march=sparc -mcpu=ma2x8x -o - | FileCheck %s
 
 ; CHECK-LABEL: casa_test
-; CHECK:       casa [%o0] 10, %o3, %o2
+; CHECK-DAG:   mov 1, [[R0:%[a-z0-9]+]]
+; CHECK-DAG:   mov %g0, [[R1:%[a-z0-9]+]]
+; CHECK:       casa [{{%[a-z0-9]+}}] 10, [[R1]], [[R0]]
 define void @casa_test(i32* %ptr) {
   %pair = cmpxchg i32* %ptr, i32 0, i32 1 monotonic monotonic
   %r = extractvalue { i32, i1 } %pair, 0

@@ -11,23 +11,13 @@
 #define LLVM_CLANG_AST_ASTDIAGNOSTIC_H
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticAST.h"
 
 namespace clang {
-  namespace diag {
-    enum {
-#define DIAG(ENUM,FLAGS,DEFAULT_MAPPING,DESC,GROUP,\
-             SFINAE,NOWERROR,SHOWINSYSHEADER,CATEGORY) ENUM,
-#define ASTSTART
-#include "clang/Basic/DiagnosticASTKinds.inc"
-#undef DIAG
-      NUM_BUILTIN_AST_DIAGNOSTICS
-    };
-  }  // end namespace diag
-  
   /// DiagnosticsEngine argument formatting function for diagnostics that
   /// involve AST nodes.
   ///
-  /// This function formats diagnostic arguments for various AST nodes, 
+  /// This function formats diagnostic arguments for various AST nodes,
   /// including types, declaration names, nested name specifiers, and
   /// declaration contexts, into strings that can be printed as part of
   /// diagnostics. It is meant to be used as the argument to

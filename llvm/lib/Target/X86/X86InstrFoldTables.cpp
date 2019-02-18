@@ -340,6 +340,8 @@ static const X86MemoryFoldTableEntry MemoryFoldTable0[] = {
   { X86::TAILJMPr,            X86::TAILJMPm,            TB_FOLDED_LOAD },
   { X86::TAILJMPr64,          X86::TAILJMPm64,          TB_FOLDED_LOAD },
   { X86::TAILJMPr64_REX,      X86::TAILJMPm64_REX,      TB_FOLDED_LOAD },
+  { X86::TCRETURNri,          X86::TCRETURNmi,          TB_FOLDED_LOAD | TB_NO_FORWARD },
+  { X86::TCRETURNri64,        X86::TCRETURNmi64,        TB_FOLDED_LOAD | TB_NO_FORWARD },
   { X86::TEST16ri,            X86::TEST16mi,            TB_FOLDED_LOAD },
   { X86::TEST16rr,            X86::TEST16mr,            TB_FOLDED_LOAD },
   { X86::TEST32ri,            X86::TEST32mi,            TB_FOLDED_LOAD },
@@ -1574,7 +1576,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable2[] = {
   { X86::SUBSDrr_Int,              X86::SUBSDrm_Int,              TB_NO_REVERSE },
   { X86::SUBSSrr,                  X86::SUBSSrm,                  0 },
   { X86::SUBSSrr_Int,              X86::SUBSSrm_Int,              TB_NO_REVERSE },
-  // FIXME: TEST*rr -> swapped      operand of TEST      *mr.     
+  // FIXME: TEST*rr -> swapped      operand of TEST      *mr.
   { X86::UNPCKHPDrr,               X86::UNPCKHPDrm,               TB_ALIGN_16 },
   { X86::UNPCKHPSrr,               X86::UNPCKHPSrm,               TB_ALIGN_16 },
   { X86::UNPCKLPDrr,               X86::UNPCKLPDrm,               TB_ALIGN_16 },

@@ -12,12 +12,24 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <limits>
 #include <unordered_set>
 #include <vector>
 
+namespace llvm {
 namespace exegesis {
 
 static const char kCsvSep = ',';
+
+static unsigned resolveSchedClassId(const llvm::MCSubtargetInfo &STI,
+                                    unsigned SchedClassId,
+                                    const llvm::MCInst &MCI) {
+  const auto &SM = STI.getSchedModel();
+  while (SchedClassId && SM.getSchedClassDesc(SchedClassId)->isVariant())
+    SchedClassId =
+        STI.resolveVariantSchedClass(SchedClassId, &MCI, SM.getProcessorID());
+  return SchedClassId;
+}
 
 namespace {
 
@@ -84,7 +96,21 @@ writeClusterId(llvm::raw_ostream &OS,
 
 template <EscapeTag Tag>
 static void writeMeasurementValue(llvm::raw_ostream &OS, const double Value) {
-  writeEscaped<Tag>(OS, llvm::formatv("{0:F}", Value).str());
+  // Given Value, if we wanted to serialize it to a string,
+  // how many base-10 digits will we need to store, max?
+  static constexpr auto MaxDigitCount =
+      std::numeric_limits<decltype(Value)>::max_digits10;
+  // Also, we will need a decimal separator.
+  static constexpr auto DecimalSeparatorLen = 1; // '.' e.g.
+  // So how long of a string will the serialization produce, max?
+  static constexpr auto SerializationLen = MaxDigitCount + DecimalSeparatorLen;
+
+  // WARNING: when changing the format, also adjust the small-size estimate ^.
+  static constexpr StringLiteral SimpleFloatFormat = StringLiteral("{0:F}");
+
+  writeEscaped<Tag>(
+      OS,
+      llvm::formatv(SimpleFloatFormat.data(), Value).sstr<SerializationLen>());
 }
 
 template <typename EscapeTag, EscapeTag Tag>
@@ -103,13 +129,11 @@ void Analysis::writeSnippet(llvm::raw_ostream &OS,
       writeEscaped<Tag>(OS, "[error decoding asm snippet]");
       return;
     }
-    Lines.emplace_back();
-    std::string &Line = Lines.back();
-    llvm::raw_string_ostream OSS(Line);
+    llvm::SmallString<128> InstPrinterStr; // FIXME: magic number.
+    llvm::raw_svector_ostream OSS(InstPrinterStr);
     InstPrinter_->printInst(&MI, OSS, "", *SubtargetInfo_);
     Bytes = Bytes.drop_front(MISize);
-    OSS.flush();
-    Line = llvm::StringRef(Line).trim().str();
+    Lines.emplace_back(llvm::StringRef(InstPrinterStr).trim());
   }
   writeEscaped<Tag>(OS, llvm::join(Lines, Separator));
 }
@@ -126,20 +150,20 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   writeEscaped<kEscapeCsv>(OS, Point.Key.Config);
   OS << kCsvSep;
   assert(!Point.Key.Instructions.empty());
-  // FIXME: Resolve variant classes.
-  const unsigned SchedClassId =
-      InstrInfo_->get(Point.Key.Instructions[0].getOpcode()).getSchedClass();
+  const llvm::MCInst &MCI = Point.Key.Instructions[0];
+  const unsigned SchedClassId = resolveSchedClassId(
+      *SubtargetInfo_, InstrInfo_->get(MCI.getOpcode()).getSchedClass(), MCI);
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const auto &SchedModel = SubtargetInfo_->getSchedModel();
   const llvm::MCSchedClassDesc *const SCDesc =
-      SchedModel.getSchedClassDesc(SchedClassId);
+      SubtargetInfo_->getSchedModel().getSchedClassDesc(SchedClassId);
   writeEscaped<kEscapeCsv>(OS, SCDesc->Name);
 #else
   OS << SchedClassId;
 #endif
   for (const auto &Measurement : Point.Measurements) {
     OS << kCsvSep;
-    writeMeasurementValue<kEscapeCsv>(OS, Measurement.Value);
+    writeMeasurementValue<kEscapeCsv>(OS, Measurement.PerInstructionValue);
   }
   OS << "\n";
 }
@@ -193,21 +217,43 @@ Analysis::run<Analysis::PrintClusters>(llvm::raw_ostream &OS) const {
   return llvm::Error::success();
 }
 
-std::unordered_map<unsigned, std::vector<size_t>>
+Analysis::ResolvedSchedClassAndPoints::ResolvedSchedClassAndPoints(
+    ResolvedSchedClass &&RSC)
+    : RSC(std::move(RSC)) {}
+
+std::vector<Analysis::ResolvedSchedClassAndPoints>
 Analysis::makePointsPerSchedClass() const {
-  std::unordered_map<unsigned, std::vector<size_t>> PointsPerSchedClass;
+  std::vector<ResolvedSchedClassAndPoints> Entries;
+  // Maps SchedClassIds to index in result.
+  std::unordered_map<unsigned, size_t> SchedClassIdToIndex;
   const auto &Points = Clustering_.getPoints();
   for (size_t PointId = 0, E = Points.size(); PointId < E; ++PointId) {
     const InstructionBenchmark &Point = Points[PointId];
     if (!Point.Error.empty())
       continue;
     assert(!Point.Key.Instructions.empty());
-    const auto Opcode = Point.Key.Instructions[0].getOpcode();
-    // FIXME: Resolve variant classes.
-    PointsPerSchedClass[InstrInfo_->get(Opcode).getSchedClass()].push_back(
-        PointId);
+    // FIXME: we should be using the tuple of classes for instructions in the
+    // snippet as key.
+    const llvm::MCInst &MCI = Point.Key.Instructions[0];
+    unsigned SchedClassId = InstrInfo_->get(MCI.getOpcode()).getSchedClass();
+    const bool WasVariant = SchedClassId && SubtargetInfo_->getSchedModel()
+                                                .getSchedClassDesc(SchedClassId)
+                                                ->isVariant();
+    SchedClassId = resolveSchedClassId(*SubtargetInfo_, SchedClassId, MCI);
+    const auto IndexIt = SchedClassIdToIndex.find(SchedClassId);
+    if (IndexIt == SchedClassIdToIndex.end()) {
+      // Create a new entry.
+      SchedClassIdToIndex.emplace(SchedClassId, Entries.size());
+      ResolvedSchedClassAndPoints Entry(
+          ResolvedSchedClass(*SubtargetInfo_, SchedClassId, WasVariant));
+      Entry.PointIds.push_back(PointId);
+      Entries.push_back(std::move(Entry));
+    } else {
+      // Append to the existing entry.
+      Entries[IndexIt->second].PointIds.push_back(PointId);
+    }
   }
-  return PointsPerSchedClass;
+  return Entries;
 }
 
 // Uops repeat the same opcode over again. Just show this opcode and show the
@@ -239,8 +285,8 @@ writeLatencySnippetHtml(llvm::raw_ostream &OS,
 }
 
 void Analysis::printSchedClassClustersHtml(
-    const std::vector<SchedClassCluster> &Clusters, const SchedClass &SC,
-    llvm::raw_ostream &OS) const {
+    const std::vector<SchedClassCluster> &Clusters,
+    const ResolvedSchedClass &RSC, llvm::raw_ostream &OS) const {
   const auto &Points = Clustering_.getPoints();
   OS << "<table class=\"sched-class-clusters\">";
   OS << "<tr><th>ClusterId</th><th>Opcode/Config</th>";
@@ -248,16 +294,13 @@ void Analysis::printSchedClassClustersHtml(
   for (const auto &Measurement :
        Points[Clusters[0].getPointIds()[0]].Measurements) {
     OS << "<th>";
-    if (Measurement.DebugString.empty())
-      writeEscaped<kEscapeHtml>(OS, Measurement.Key);
-    else
-      writeEscaped<kEscapeHtml>(OS, Measurement.DebugString);
+    writeEscaped<kEscapeHtml>(OS, Measurement.Key);
     OS << "</th>";
   }
   OS << "</tr>";
   for (const SchedClassCluster &Cluster : Clusters) {
     OS << "<tr class=\""
-       << (Cluster.measurementsMatch(*SubtargetInfo_, SC, Clustering_)
+       << (Cluster.measurementsMatch(*SubtargetInfo_, RSC, Clustering_)
                ? "good-cluster"
                : "bad-cluster")
        << "\"><td>";
@@ -372,12 +415,17 @@ getNonRedundantWriteProcRes(const llvm::MCSchedClassDesc &SCDesc,
   return Result;
 }
 
-Analysis::SchedClass::SchedClass(const llvm::MCSchedClassDesc &SD,
-                                 const llvm::MCSubtargetInfo &STI)
-    : SCDesc(&SD),
-      NonRedundantWriteProcRes(getNonRedundantWriteProcRes(SD, STI)),
+Analysis::ResolvedSchedClass::ResolvedSchedClass(
+    const llvm::MCSubtargetInfo &STI, unsigned ResolvedSchedClassId,
+    bool WasVariant)
+    : SchedClassId(ResolvedSchedClassId), SCDesc(STI.getSchedModel().getSchedClassDesc(ResolvedSchedClassId)),
+      WasVariant(WasVariant),
+      NonRedundantWriteProcRes(getNonRedundantWriteProcRes(*SCDesc, STI)),
       IdealizedProcResPressure(computeIdealizedProcResPressure(
-          STI.getSchedModel(), NonRedundantWriteProcRes)) {}
+          STI.getSchedModel(), NonRedundantWriteProcRes)) {
+  assert((SCDesc == nullptr || !SCDesc->isVariant()) &&
+         "ResolvedSchedClass should never be variant");
+}
 
 void Analysis::SchedClassCluster::addPoint(
     size_t PointId, const InstructionBenchmarkClustering &Clustering) {
@@ -393,8 +441,24 @@ void Analysis::SchedClassCluster::addPoint(
   assert(ClusterId == Clustering.getClusterIdForPoint(PointId));
 }
 
+// Returns a ProxResIdx by id or name.
+static unsigned findProcResIdx(const llvm::MCSubtargetInfo &STI,
+                               const llvm::StringRef NameOrId) {
+  // Interpret the key as an ProcResIdx.
+  unsigned ProcResIdx = 0;
+  if (llvm::to_integer(NameOrId, ProcResIdx, 10))
+    return ProcResIdx;
+  // Interpret the key as a ProcRes name.
+  const auto &SchedModel = STI.getSchedModel();
+  for (int I = 0, E = SchedModel.getNumProcResourceKinds(); I < E; ++I) {
+    if (NameOrId == SchedModel.getProcResource(I)->Name)
+      return I;
+  }
+  return 0;
+}
+
 bool Analysis::SchedClassCluster::measurementsMatch(
-    const llvm::MCSubtargetInfo &STI, const SchedClass &SC,
+    const llvm::MCSubtargetInfo &STI, const ResolvedSchedClass &RSC,
     const InstructionBenchmarkClustering &Clustering) const {
   const size_t NumMeasurements = Representative.size();
   std::vector<BenchmarkMeasure> ClusterCenterPoint(NumMeasurements);
@@ -410,34 +474,39 @@ bool Analysis::SchedClassCluster::measurementsMatch(
       return false;
     }
     // Find the latency.
-    SchedClassPoint[0].Value = 0.0;
-    for (unsigned I = 0; I < SC.SCDesc->NumWriteLatencyEntries; ++I) {
+    SchedClassPoint[0].PerInstructionValue = 0.0;
+    for (unsigned I = 0; I < RSC.SCDesc->NumWriteLatencyEntries; ++I) {
       const llvm::MCWriteLatencyEntry *const WLE =
-          STI.getWriteLatencyEntry(SC.SCDesc, I);
-      SchedClassPoint[0].Value =
-          std::max<double>(SchedClassPoint[0].Value, WLE->Cycles);
+          STI.getWriteLatencyEntry(RSC.SCDesc, I);
+      SchedClassPoint[0].PerInstructionValue =
+          std::max<double>(SchedClassPoint[0].PerInstructionValue, WLE->Cycles);
     }
-    ClusterCenterPoint[0].Value = Representative[0].avg();
+    ClusterCenterPoint[0].PerInstructionValue = Representative[0].avg();
   } else if (Mode == InstructionBenchmark::Uops) {
     for (int I = 0, E = Representative.size(); I < E; ++I) {
-      // Find the pressure on ProcResIdx `Key`.
-      uint16_t ProcResIdx = 0;
-      if (!llvm::to_integer(Representative[I].key(), ProcResIdx, 10)) {
-        llvm::errs() << "expected ProcResIdx key, got "
-                     << Representative[I].key() << "\n";
+      const auto Key = Representative[I].key();
+      uint16_t ProcResIdx = findProcResIdx(STI, Key);
+      if (ProcResIdx > 0) {
+        // Find the pressure on ProcResIdx `Key`.
+        const auto ProcResPressureIt =
+            std::find_if(RSC.IdealizedProcResPressure.begin(),
+                         RSC.IdealizedProcResPressure.end(),
+                         [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
+                           return WPR.first == ProcResIdx;
+                         });
+        SchedClassPoint[I].PerInstructionValue =
+            ProcResPressureIt == RSC.IdealizedProcResPressure.end()
+                ? 0.0
+                : ProcResPressureIt->second;
+      } else if (Key == "NumMicroOps") {
+        SchedClassPoint[I].PerInstructionValue = RSC.SCDesc->NumMicroOps;
+      } else {
+        llvm::errs() << "expected `key` to be either a ProcResIdx or a ProcRes "
+                        "name, got "
+                     << Key << "\n";
         return false;
       }
-      const auto ProcResPressureIt =
-          std::find_if(SC.IdealizedProcResPressure.begin(),
-                       SC.IdealizedProcResPressure.end(),
-                       [ProcResIdx](const std::pair<uint16_t, float> &WPR) {
-                         return WPR.first == ProcResIdx;
-                       });
-      SchedClassPoint[I].Value =
-          ProcResPressureIt == SC.IdealizedProcResPressure.end()
-              ? 0.0
-              : ProcResPressureIt->second;
-      ClusterCenterPoint[I].Value = Representative[I].avg();
+      ClusterCenterPoint[I].PerInstructionValue = Representative[I].avg();
     }
   } else {
     llvm::errs() << "unimplemented measurement matching for mode " << Mode
@@ -447,26 +516,25 @@ bool Analysis::SchedClassCluster::measurementsMatch(
   return Clustering.isNeighbour(ClusterCenterPoint, SchedClassPoint);
 }
 
-void Analysis::printSchedClassDescHtml(const SchedClass &SC,
+void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
                                        llvm::raw_ostream &OS) const {
   OS << "<table class=\"sched-class-desc\">";
-  OS << "<tr><th>Valid</th><th>Variant</th><th>uOps</th><th>Latency</"
+  OS << "<tr><th>Valid</th><th>Variant</th><th>NumMicroOps</th><th>Latency</"
         "th><th>WriteProcRes</th><th title=\"This is the idealized unit "
         "resource (port) pressure assuming ideal distribution\">Idealized "
         "Resource Pressure</th></tr>";
-  if (SC.SCDesc->isValid()) {
+  if (RSC.SCDesc->isValid()) {
     const auto &SM = SubtargetInfo_->getSchedModel();
     OS << "<tr><td>&#10004;</td>";
-    OS << "<td>" << (SC.SCDesc->isVariant() ? "&#10004;" : "&#10005;")
-       << "</td>";
-    OS << "<td>" << SC.SCDesc->NumMicroOps << "</td>";
+    OS << "<td>" << (RSC.WasVariant ? "&#10004;" : "&#10005;") << "</td>";
+    OS << "<td>" << RSC.SCDesc->NumMicroOps << "</td>";
     // Latencies.
     OS << "<td><ul>";
-    for (int I = 0, E = SC.SCDesc->NumWriteLatencyEntries; I < E; ++I) {
+    for (int I = 0, E = RSC.SCDesc->NumWriteLatencyEntries; I < E; ++I) {
       const auto *const Entry =
-          SubtargetInfo_->getWriteLatencyEntry(SC.SCDesc, I);
+          SubtargetInfo_->getWriteLatencyEntry(RSC.SCDesc, I);
       OS << "<li>" << Entry->Cycles;
-      if (SC.SCDesc->NumWriteLatencyEntries > 1) {
+      if (RSC.SCDesc->NumWriteLatencyEntries > 1) {
         // Dismabiguate if more than 1 latency.
         OS << " (WriteResourceID " << Entry->WriteResourceID << ")";
       }
@@ -475,7 +543,7 @@ void Analysis::printSchedClassDescHtml(const SchedClass &SC,
     OS << "</ul></td>";
     // WriteProcRes.
     OS << "<td><ul>";
-    for (const auto &WPR : SC.NonRedundantWriteProcRes) {
+    for (const auto &WPR : RSC.NonRedundantWriteProcRes) {
       OS << "<li><span class=\"mono\">";
       writeEscaped<kEscapeHtml>(OS,
                                 SM.getProcResource(WPR.ProcResourceIdx)->Name);
@@ -484,7 +552,7 @@ void Analysis::printSchedClassDescHtml(const SchedClass &SC,
     OS << "</ul></td>";
     // Idealized port pressure.
     OS << "<td><ul>";
-    for (const auto &Pressure : SC.IdealizedProcResPressure) {
+    for (const auto &Pressure : RSC.IdealizedProcResPressure) {
       OS << "<li><span class=\"mono\">";
       writeEscaped<kEscapeHtml>(OS, SubtargetInfo_->getSchedModel()
                                         .getProcResource(Pressure.first)
@@ -580,19 +648,12 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
   writeEscaped<kEscapeHtml>(OS, FirstPoint.CpuName);
   OS << "</span></h3>";
 
-  for (const auto &SchedClassAndPoints : makePointsPerSchedClass()) {
-    const auto SchedClassId = SchedClassAndPoints.first;
-    const std::vector<size_t> &SchedClassPoints = SchedClassAndPoints.second;
-    const auto &SchedModel = SubtargetInfo_->getSchedModel();
-    const llvm::MCSchedClassDesc *const SCDesc =
-        SchedModel.getSchedClassDesc(SchedClassId);
-    if (!SCDesc)
+  for (const auto &RSCAndPoints : makePointsPerSchedClass()) {
+    if (!RSCAndPoints.RSC.SCDesc)
       continue;
-    const SchedClass SC(*SCDesc, *SubtargetInfo_);
-
     // Bucket sched class points into sched class clusters.
     std::vector<SchedClassCluster> SchedClassClusters;
-    for (const size_t PointId : SchedClassPoints) {
+    for (const size_t PointId : RSCAndPoints.PointIds) {
       const auto &ClusterId = Clustering_.getClusterIdForPoint(PointId);
       if (!ClusterId.isValid())
         continue; // Ignore noise and errors. FIXME: take noise into account ?
@@ -610,25 +671,25 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
 
     // Print any scheduling class that has at least one cluster that does not
     // match the checked-in data.
-    if (std::all_of(SchedClassClusters.begin(), SchedClassClusters.end(),
-                    [this, &SC](const SchedClassCluster &C) {
-                      return C.measurementsMatch(*SubtargetInfo_, SC,
-                                                 Clustering_);
-                    }))
+    if (llvm::all_of(SchedClassClusters,
+                     [this, &RSCAndPoints](const SchedClassCluster &C) {
+                       return C.measurementsMatch(
+                           *SubtargetInfo_, RSCAndPoints.RSC, Clustering_);
+                     }))
       continue; // Nothing weird.
 
     OS << "<div class=\"inconsistency\"><p>Sched Class <span "
           "class=\"sched-class-name\">";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    writeEscaped<kEscapeHtml>(OS, SCDesc->Name);
+    writeEscaped<kEscapeHtml>(OS, RSCAndPoints.RSC.SCDesc->Name);
 #else
-    OS << SchedClassId;
+    OS << RSCAndPoints.RSC.SchedClassId;
 #endif
     OS << "</span> contains instructions whose performance characteristics do"
           " not match that of LLVM:</p>";
-    printSchedClassClustersHtml(SchedClassClusters, SC, OS);
+    printSchedClassClustersHtml(SchedClassClusters, RSCAndPoints.RSC, OS);
     OS << "<p>llvm SchedModel data:</p>";
-    printSchedClassDescHtml(SC, OS);
+    printSchedClassDescHtml(RSCAndPoints.RSC, OS);
     OS << "</div>";
   }
 
@@ -671,10 +732,9 @@ void distributePressure(float RemainingPressure,
                         llvm::SmallVector<float, 32> &DensePressure) {
   // Find the number of subunits with minimal pressure (they are at the
   // front).
-  llvm::sort(Subunits.begin(), Subunits.end(),
-             [&DensePressure](const uint16_t A, const uint16_t B) {
-               return DensePressure[A] < DensePressure[B];
-             });
+  llvm::sort(Subunits, [&DensePressure](const uint16_t A, const uint16_t B) {
+    return DensePressure[A] < DensePressure[B];
+  });
   const auto getPressureForSubunit = [&DensePressure,
                                       &Subunits](size_t I) -> float & {
     return DensePressure[Subunits[I]];
@@ -721,11 +781,10 @@ std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
     llvm::SmallVector<llvm::MCWriteProcResEntry, 8> WPRS) {
   // DensePressure[I] is the port pressure for Proc Resource I.
   llvm::SmallVector<float, 32> DensePressure(SM.getNumProcResourceKinds());
-  llvm::sort(WPRS.begin(), WPRS.end(),
-             [](const llvm::MCWriteProcResEntry &A,
-                const llvm::MCWriteProcResEntry &B) {
-               return A.ProcResourceIdx < B.ProcResourceIdx;
-             });
+  llvm::sort(WPRS, [](const llvm::MCWriteProcResEntry &A,
+                      const llvm::MCWriteProcResEntry &B) {
+    return A.ProcResourceIdx < B.ProcResourceIdx;
+  });
   for (const llvm::MCWriteProcResEntry &WPR : WPRS) {
     // Get units for the entry.
     const llvm::MCProcResourceDesc *const ProcResDesc =
@@ -751,3 +810,4 @@ std::vector<std::pair<uint16_t, float>> computeIdealizedProcResPressure(
 }
 
 } // namespace exegesis
+} // namespace llvm

@@ -88,7 +88,7 @@ public:
   ///                       for 'unsigned char' (u8).
   RangeTestResultKind testInRange(const llvm::APSInt &Val,
                                   bool AllowMixedSign) const LLVM_READONLY;
-  
+
   bool operator==(const APSIntType &Other) const {
     return BitWidth == Other.BitWidth && IsUnsigned == Other.IsUnsigned;
   }
@@ -102,7 +102,7 @@ public:
            std::tie(Other.BitWidth, Other.IsUnsigned);
   }
 };
-    
+
 } // end ento namespace
 } // end clang namespace
 

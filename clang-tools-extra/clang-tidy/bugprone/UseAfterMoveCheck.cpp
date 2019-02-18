@@ -102,8 +102,9 @@ bool UseAfterMoveFinder::find(Stmt *FunctionBody, const Expr *MovingCall,
   if (!TheCFG)
     return false;
 
-  Sequence.reset(new ExprSequence(TheCFG.get(), Context));
-  BlockMap.reset(new StmtToBlockMap(TheCFG.get(), Context));
+  Sequence =
+      llvm::make_unique<ExprSequence>(TheCFG.get(), FunctionBody, Context);
+  BlockMap = llvm::make_unique<StmtToBlockMap>(TheCFG.get(), Context);
   Visited.clear();
 
   const CFGBlock *Block = BlockMap->blockContainingStmt(MovingCall);
@@ -297,7 +298,7 @@ void UseAfterMoveFinder::getReinits(
                declStmt(hasDescendant(equalsNode(MovedVariable))),
                // clear() and assign() on standard containers.
                cxxMemberCallExpr(
-                   on(allOf(DeclRefMatcher, StandardContainerTypeMatcher)),
+                   on(expr(DeclRefMatcher, StandardContainerTypeMatcher)),
                    // To keep the matcher simple, we check for assign() calls
                    // on all standard containers, even though only vector,
                    // deque, forward_list and list have assign(). If assign()
@@ -306,8 +307,12 @@ void UseAfterMoveFinder::getReinits(
                    callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
                // reset() on standard smart pointers.
                cxxMemberCallExpr(
-                   on(allOf(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
+                   on(expr(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
                    callee(cxxMethodDecl(hasName("reset")))),
+               // Methods that have the [[clang::reinitializes]] attribute.
+               cxxMemberCallExpr(
+                   on(DeclRefMatcher),
+                   callee(cxxMethodDecl(hasAttr(clang::attr::Reinitializes)))),
                // Passing variable to a function as a non-const pointer.
                callExpr(forEachArgumentWithParam(
                    unaryOperator(hasOperatorName("&"),

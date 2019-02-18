@@ -19,9 +19,18 @@
 #include "lldb/Symbol/CompilerType.h"
 
 #include "swift/AST/Decl.h"
-#include "swift/AST/Identifier.h"
-#include "swift/AST/Stmt.h"
+#include "swift/Basic/SourceLoc.h"
 #include "llvm/ADT/SmallVector.h"
+
+namespace swift {
+class CatchStmt;
+class DoCatchStmt;
+class ExtensionDecl;
+class FuncDecl;
+class RepeatWhileStmt;
+class ReturnStmt;
+class VarDecl;
+} // namespace swift
 
 namespace lldb_private {
 

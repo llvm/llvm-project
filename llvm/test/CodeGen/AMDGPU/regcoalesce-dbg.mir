@@ -5,7 +5,7 @@
 # a slot index.
 
 # CHECK: %13.sub2:sgpr_128 = S_MOV_B32 0
-# CHECK: DBG_VALUE{{.*}}debug-use %13.sub2
+# CHECK: DBG_VALUE{{.*}} %13.sub2
 
 --- |
   define amdgpu_kernel void @test(i32 addrspace(1)* %out) { ret void }
@@ -56,8 +56,8 @@ body:             |
 
     %3 = COPY killed $vgpr0
     %0 = COPY killed $sgpr0_sgpr1
-    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %5 = S_LOAD_DWORD_IMM killed %0, 13, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %0, 9, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %5 = S_LOAD_DWORD_IMM killed %0, 13, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     %18 = V_ASHRREV_I32_e32 31, %3, implicit $exec
     undef %19.sub0 = COPY killed %3
     %19.sub1 = COPY killed %18

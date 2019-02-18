@@ -11,6 +11,8 @@
 
 #include <cfloat>
 
+#include "test_macros.h"
+
 #ifndef FLT_ROUNDS
 #error FLT_ROUNDS not defined
 #endif
@@ -21,6 +23,20 @@
 
 #ifndef FLT_RADIX
 #error FLT_RADIX not defined
+#endif
+
+#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES) && 0
+#ifndef FLT_HAS_SUBNORM
+#error FLT_HAS_SUBNORM not defined
+#endif
+
+#ifndef DBL_HAS_SUBNORM
+#error DBL_HAS_SUBNORM not defined
+#endif
+
+#ifndef LDBL_HAS_SUBNORM
+#error LDBL_HAS_SUBNORM not defined
+#endif
 #endif
 
 #ifndef FLT_MANT_DIG
@@ -37,6 +53,20 @@
 
 #ifndef DECIMAL_DIG
 #error DECIMAL_DIG not defined
+#endif
+
+#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES) && 0
+#ifndef FLT_DECIMAL_DIG
+#error FLT_DECIMAL_DIG not defined
+#endif
+
+#ifndef DBL_DECIMAL_DIG
+#error DBL_DECIMAL_DIG not defined
+#endif
+
+#ifndef LDBL_DECIMAL_DIG
+#error LDBL_DECIMAL_DIG not defined
+#endif
 #endif
 
 #ifndef FLT_DIG
@@ -133,6 +163,20 @@
 
 #ifndef LDBL_MIN
 #error LDBL_MIN not defined
+#endif
+
+#if TEST_STD_VER > 14 && defined(TEST_HAS_C11_FEATURES) && 0
+#ifndef FLT_TRUE_MIN
+#error FLT_TRUE_MIN not defined
+#endif
+
+#ifndef DBL_TRUE_MIN
+#error DBL_TRUE_MIN not defined
+#endif
+
+#ifndef LDBL_TRUE_MIN
+#error LDBL_TRUE_MIN not defined
+#endif
 #endif
 
 int main()

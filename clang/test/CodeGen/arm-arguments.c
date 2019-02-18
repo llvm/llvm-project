@@ -211,10 +211,13 @@ float32x4_t f35(int i, s35_with_align s1, s35_with_align s2) {
 // APCS-GNU: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align {{[0-9]+}} %[[b]], i8* align {{[0-9]+}} %[[c]]
 // APCS-GNU: %[[d:.*]] = bitcast %struct.s35* %[[a]] to <4 x float>*
 // APCS-GNU: load <4 x float>, <4 x float>* %[[d]], align 16
-// AAPCS-LABEL: define arm_aapcscc <4 x float> @f35(i32 %i, %struct.s35* byval align 8, %struct.s35* byval align 8)
-// AAPCS: %[[a:.*]] = alloca %struct.s35, align 16
-// AAPCS: %[[b:.*]] = bitcast %struct.s35* %[[a]] to i8*
-// AAPCS: %[[c:.*]] = bitcast %struct.s35* %0 to i8*
-// AAPCS: call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 16 %[[b]], i8* align 8 %[[c]]
-// AAPCS: %[[d:.*]] = bitcast %struct.s35* %[[a]] to <4 x float>*
-// AAPCS: load <4 x float>, <4 x float>* %[[d]], align 16
+
+// AAPCS-LABEL: define arm_aapcscc <4 x float> @f35(i32 %i, %struct.s35* byval align 4 %s1, %struct.s35* byval align 4 %s2)
+// AAPCS: %[[a_addr:.*]] = alloca <4 x float>, align 16
+// AAPCS: %[[b_addr:.*]] = alloca <4 x float>, align 16
+// AAPCS: %[[p1:.*]] = bitcast %struct.s35* %s1 to <4 x float>*
+// AAPCS: %[[a:.*]] = load <4 x float>, <4 x float>* %[[p1]], align 4
+// AAPCS: %[[p2:.*]] = bitcast %struct.s35* %s2 to <4 x float>*
+// AAPCS: %[[b:.*]] = load <4 x float>, <4 x float>* %[[p2]], align 4
+// AAPCS: store <4 x float> %[[a]], <4 x float>* %[[a_addr]], align 16
+// AAPCS: store <4 x float> %[[b]], <4 x float>* %[[b_addr]], align 16

@@ -1,8 +1,8 @@
 ; RUN: opt < %s -loop-accesses -analyze | FileCheck %s
 ; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
-; Test to confirm LAA will find store to invariant address.
-; Inner loop has a store to invariant address.
+; Inner loop has a store to invariant address, but LAA does not need to identify
+; the store to invariant address, since it is a single store.
 ;
 ;  for(; i < itr; i++) {
 ;    for(; j < itr; j++) {
@@ -10,7 +10,7 @@
 ;    }
 ;  }
 
-; CHECK: Store to invariant address was found in loop.
+; CHECK: Non vectorizable stores to invariant address were not found in loop.
 
 define void @foo(i32* nocapture %var1, i32* nocapture %var2, i32 %itr) #0 {
 entry:

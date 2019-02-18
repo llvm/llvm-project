@@ -1,0 +1,12 @@
+static_library("Linker") {
+  output_name = "LLVMLinker"
+  deps = [
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+    "//llvm/lib/Transforms/Utils",
+  ]
+  sources = [
+    "IRMover.cpp",
+    "LinkModules.cpp",
+  ]
+}

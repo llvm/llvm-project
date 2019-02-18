@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- fixsfti_test.c - Test __fixsfti -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

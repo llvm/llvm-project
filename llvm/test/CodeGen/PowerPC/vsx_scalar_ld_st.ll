@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu \
+; RUN: llc -relocation-model=pic -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc -relocation-model=pic -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-direct-move | FileCheck %s -check-prefix=CHECK-P9
@@ -124,7 +124,7 @@ entry:
   ret void
 ; CHECK-LABEL: @dblToFloat
 ; CHECK: lfdx [[REGLD5:[0-9]+]],
-; CHECK: stfsx [[REGLD5]],
+; CHECK: stfs [[REGLD5]],
 ; CHECK-P9-LABEL: @dblToFloat
 ; CHECK-P9: lfd [[REGLD5:[0-9]+]],
 ; CHECK-P9: stfs [[REGLD5]],
@@ -140,7 +140,7 @@ entry:
   ret void
 ; CHECK-LABEL: @floatToDbl
 ; CHECK: lfsx [[REGLD5:[0-9]+]],
-; CHECK: stfdx [[REGLD5]],
+; CHECK: stfd [[REGLD5]],
 ; CHECK-P9-LABEL: @floatToDbl
 ; CHECK-P9: lfs [[REGLD5:[0-9]+]],
 ; CHECK-P9: stfd [[REGLD5]],

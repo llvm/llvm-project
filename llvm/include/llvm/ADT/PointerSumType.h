@@ -10,6 +10,7 @@
 #ifndef LLVM_ADT_POINTERSUMTYPE_H
 #define LLVM_ADT_POINTERSUMTYPE_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 #include <cassert>
@@ -58,56 +59,142 @@ template <typename TagT, typename... MemberTs> struct PointerSumTypeHelper;
 /// and may be desirable to set to a state that is particularly desirable to
 /// default construct.
 ///
+/// Having a supported zero-valued tag also enables getting the address of a
+/// pointer stored with that tag provided it is stored in its natural bit
+/// representation. This works because in the case of a zero-valued tag, the
+/// pointer's value is directly stored into this object and we can expose the
+/// address of that internal storage. This is especially useful when building an
+/// `ArrayRef` of a single pointer stored in a sum type.
+///
 /// There is no support for constructing or accessing with a dynamic tag as
 /// that would fundamentally violate the type safety provided by the sum type.
 template <typename TagT, typename... MemberTs> class PointerSumType {
-  uintptr_t Value = 0;
-
   using HelperT = detail::PointerSumTypeHelper<TagT, MemberTs...>;
+
+  // We keep both the raw value and the min tag value's pointer in a union. When
+  // the minimum tag value is zero, this allows code below to cleanly expose the
+  // address of the zero-tag pointer instead of just the zero-tag pointer
+  // itself. This is especially useful when building `ArrayRef`s out of a single
+  // pointer. However, we have to carefully access the union due to the active
+  // member potentially changing. When we *store* a new value, we directly
+  // access the union to allow us to store using the obvious types. However,
+  // when we *read* a value, we copy the underlying storage out to avoid relying
+  // on one member or the other being active.
+  union StorageT {
+    // Ensure we get a null default constructed value. We don't use a member
+    // initializer because some compilers seem to not implement those correctly
+    // for a union.
+    StorageT() : Value(0) {}
+
+    uintptr_t Value;
+
+    typename HelperT::template Lookup<HelperT::MinTag>::PointerT MinTagPointer;
+  };
+
+  StorageT Storage;
 
 public:
   constexpr PointerSumType() = default;
+
+  /// A typed setter to a given tagged member of the sum type.
+  template <TagT N>
+  void set(typename HelperT::template Lookup<N>::PointerT Pointer) {
+    void *V = HelperT::template Lookup<N>::TraitsT::getAsVoidPointer(Pointer);
+    assert((reinterpret_cast<uintptr_t>(V) & HelperT::TagMask) == 0 &&
+           "Pointer is insufficiently aligned to store the discriminant!");
+    Storage.Value = reinterpret_cast<uintptr_t>(V) | N;
+  }
 
   /// A typed constructor for a specific tagged member of the sum type.
   template <TagT N>
   static PointerSumType
   create(typename HelperT::template Lookup<N>::PointerT Pointer) {
     PointerSumType Result;
-    void *V = HelperT::template Lookup<N>::TraitsT::getAsVoidPointer(Pointer);
-    assert((reinterpret_cast<uintptr_t>(V) & HelperT::TagMask) == 0 &&
-           "Pointer is insufficiently aligned to store the discriminant!");
-    Result.Value = reinterpret_cast<uintptr_t>(V) | N;
+    Result.set<N>(Pointer);
     return Result;
   }
 
-  TagT getTag() const { return static_cast<TagT>(Value & HelperT::TagMask); }
+  /// Clear the value to null with the min tag type.
+  void clear() { set<HelperT::MinTag>(nullptr); }
+
+  TagT getTag() const {
+    return static_cast<TagT>(getOpaqueValue() & HelperT::TagMask);
+  }
 
   template <TagT N> bool is() const { return N == getTag(); }
 
   template <TagT N> typename HelperT::template Lookup<N>::PointerT get() const {
-    void *P = is<N>() ? getImpl() : nullptr;
+    void *P = is<N>() ? getVoidPtr() : nullptr;
     return HelperT::template Lookup<N>::TraitsT::getFromVoidPointer(P);
   }
 
   template <TagT N>
   typename HelperT::template Lookup<N>::PointerT cast() const {
     assert(is<N>() && "This instance has a different active member.");
-    return HelperT::template Lookup<N>::TraitsT::getFromVoidPointer(getImpl());
+    return HelperT::template Lookup<N>::TraitsT::getFromVoidPointer(
+        getVoidPtr());
   }
 
-  explicit operator bool() const { return Value & HelperT::PointerMask; }
-  bool operator==(const PointerSumType &R) const { return Value == R.Value; }
-  bool operator!=(const PointerSumType &R) const { return Value != R.Value; }
-  bool operator<(const PointerSumType &R) const { return Value < R.Value; }
-  bool operator>(const PointerSumType &R) const { return Value > R.Value; }
-  bool operator<=(const PointerSumType &R) const { return Value <= R.Value; }
-  bool operator>=(const PointerSumType &R) const { return Value >= R.Value; }
+  /// If the tag is zero and the pointer's value isn't changed when being
+  /// stored, get the address of the stored value type-punned to the zero-tag's
+  /// pointer type.
+  typename HelperT::template Lookup<HelperT::MinTag>::PointerT const *
+  getAddrOfZeroTagPointer() const {
+    return const_cast<PointerSumType *>(this)->getAddrOfZeroTagPointer();
+  }
 
-  uintptr_t getOpaqueValue() const { return Value; }
+  /// If the tag is zero and the pointer's value isn't changed when being
+  /// stored, get the address of the stored value type-punned to the zero-tag's
+  /// pointer type.
+  typename HelperT::template Lookup<HelperT::MinTag>::PointerT *
+  getAddrOfZeroTagPointer() {
+    static_assert(HelperT::MinTag == 0, "Non-zero minimum tag value!");
+    assert(is<HelperT::MinTag>() && "The active tag is not zero!");
+    // Store the initial value of the pointer when read out of our storage.
+    auto InitialPtr = get<HelperT::MinTag>();
+    // Now update the active member of the union to be the actual pointer-typed
+    // member so that accessing it indirectly through the returned address is
+    // valid.
+    Storage.MinTagPointer = InitialPtr;
+    // Finally, validate that this was a no-op as expected by reading it back
+    // out using the same underlying-storage read as above.
+    assert(InitialPtr == get<HelperT::MinTag>() &&
+           "Switching to typed storage changed the pointer returned!");
+    // Now we can correctly return an address to typed storage.
+    return &Storage.MinTagPointer;
+  }
+
+  explicit operator bool() const {
+    return getOpaqueValue() & HelperT::PointerMask;
+  }
+  bool operator==(const PointerSumType &R) const {
+    return getOpaqueValue() == R.getOpaqueValue();
+  }
+  bool operator!=(const PointerSumType &R) const {
+    return getOpaqueValue() != R.getOpaqueValue();
+  }
+  bool operator<(const PointerSumType &R) const {
+    return getOpaqueValue() < R.getOpaqueValue();
+  }
+  bool operator>(const PointerSumType &R) const {
+    return getOpaqueValue() > R.getOpaqueValue();
+  }
+  bool operator<=(const PointerSumType &R) const {
+    return getOpaqueValue() <= R.getOpaqueValue();
+  }
+  bool operator>=(const PointerSumType &R) const {
+    return getOpaqueValue() >= R.getOpaqueValue();
+  }
+
+  uintptr_t getOpaqueValue() const {
+    // Read the underlying storage of the union, regardless of the active
+    // member.
+    return bit_cast<uintptr_t>(Storage);
+  }
 
 protected:
-  void *getImpl() const {
-    return reinterpret_cast<void *>(Value & HelperT::PointerMask);
+  void *getVoidPtr() const {
+    return reinterpret_cast<void *>(getOpaqueValue() & HelperT::PointerMask);
   }
 };
 
@@ -151,8 +238,9 @@ struct PointerSumTypeHelper : MemberTs... {
   enum { NumTagBits = Min<MemberTs::TraitsT::NumLowBitsAvailable...>::value };
 
   // Also compute the smallest discriminant and various masks for convenience.
+  constexpr static TagT MinTag =
+      static_cast<TagT>(Min<MemberTs::Tag...>::value);
   enum : uint64_t {
-    MinTag = Min<MemberTs::Tag...>::value,
     PointerMask = static_cast<uint64_t>(-1) << NumTagBits,
     TagMask = ~PointerMask
   };

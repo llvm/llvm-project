@@ -16,7 +16,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = Interpreter MCJIT RuntimeDyld IntelJITEvents OProfileJIT Orc
+subdirectories = Interpreter MCJIT RuntimeDyld IntelJITEvents OProfileJIT Orc PerfJITEvents
 
 [component_0]
 type = Library

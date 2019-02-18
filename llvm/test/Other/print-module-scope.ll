@@ -7,10 +7,16 @@
 ; RUN: 	   -simplifycfg -print-after=simplifycfg -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=CFG
 ; RUN: opt < %s 2>&1 -disable-output \
+; RUN: 	   -passes=simplify-cfg -print-after-all -print-module-scope \
+; RUN:	   | FileCheck %s -check-prefix=CFG
+; RUN: opt < %s 2>&1 -disable-output \
 ; RUN: 	   -simplifycfg -print-after=simplifycfg -filter-print-funcs=foo -print-module-scope \
 ; RUN:	   | FileCheck %s -check-prefix=FOO
+; RUN: opt < %s 2>&1 -disable-output \
+; RUN: 	   -passes=simplify-cfg -print-after-all -filter-print-funcs=foo -print-module-scope \
+; RUN:	   | FileCheck %s -check-prefix=FOO
 
-; CFG:      IR Dump After
+; CFG:      IR Dump After {{Simplify the CFG|SimplifyCFGPass}}
 ; CFG-SAME:   function: foo
 ; CFG-NEXT: ModuleID =
 ; CFG: define void @foo
@@ -23,7 +29,7 @@
 ; CFG: define void @bar
 ; CFG: declare void @baz
 
-; FOO:      IR Dump After
+; FOO:      IR Dump After {{Simplify the CFG|SimplifyCFGPass}}
 ; FOO-NOT:    function: bar
 ; FOO-SAME:   function: foo
 ; FOO-NEXT: ModuleID =
@@ -52,4 +58,4 @@ attributes #1 = { nounwind readnone ssp "use-soft-float"="false" }
 
 ; FOO: attributes #{{[0-9]}} = { nounwind readnone ssp "use-soft-float"="false" }
 
-; FOO-NOT: IR Dump
+; FOO-NOT: IR Dump After {{Simplify the CFG|SimplifyCFGPass}}

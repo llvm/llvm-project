@@ -1,0 +1,15 @@
+# RUN: echo abcd > %t.txt
+
+# Preserve input to verify it is not modified
+# RUN: cp %t.txt %t-copy.txt
+
+# -I binary -O binary preserves payload through in-memory representation
+# RUN: llvm-objcopy -I binary -B i386:x86-64 -O binary %t.txt %t.2.txt
+# RUN: cmp %t.txt %t.2.txt
+# RUN: cmp %t.txt %t-copy.txt
+
+# -I binary -O binary preserves payload through an intermediate object file
+# RUN: llvm-objcopy -I binary -B i386:x86-64 %t.txt %t.o
+# RUN: llvm-objcopy -O binary %t.o %t.3.txt
+# RUN: cmp %t.txt %t.3.txt
+# RUN: cmp %t.txt %t-copy.txt

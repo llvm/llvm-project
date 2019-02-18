@@ -16,14 +16,15 @@
 #include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtCXX.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
@@ -655,7 +656,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
       // the constructor.
       QualType::DestructionKind dtorKind = FieldType.isDestructedType();
       if (CGF.needsEHCleanup(dtorKind))
-        CGF.pushEHDestroy(dtorKind, LHS.getAddress(), FieldType); 
+        CGF.pushEHDestroy(dtorKind, LHS.getAddress(), FieldType);
       return;
     }
   }
@@ -685,7 +686,10 @@ void CodeGenFunction::EmitInitializerForField(FieldDecl *Field, LValue LHS,
             AggValueSlot::IsDestructed,
             AggValueSlot::DoesNotNeedGCBarriers,
             AggValueSlot::IsNotAliased,
-            overlapForFieldInit(Field));
+            overlapForFieldInit(Field),
+            AggValueSlot::IsNotZeroed,
+            // Checks are made by the code that calls constructor.
+            AggValueSlot::IsSanitizerChecked);
     EmitAggExpr(Init, Slot);
     break;
   }
@@ -826,7 +830,7 @@ void CodeGenFunction::EmitConstructorBody(FunctionArgList &Args) {
   // delegation optimization.
   if (CtorType == Ctor_Complete && IsConstructorDelegationValid(Ctor) &&
       CGM.getTarget().getCXXABI().hasConstructorVariants()) {
-    EmitDelegateCXXConstructorCall(Ctor, Ctor_Base, Args, Ctor->getLocEnd());
+    EmitDelegateCXXConstructorCall(Ctor, Ctor_Base, Args, Ctor->getEndLoc());
     return;
   }
 
@@ -887,7 +891,7 @@ namespace {
     SanitizerSet OldSanOpts;
   };
 } // end anonymous namespace
- 
+
 namespace {
   class FieldMemcpyizer {
   public:
@@ -1869,12 +1873,14 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
 ///   zero-initialized before it is constructed
 void CodeGenFunction::EmitCXXAggrConstructorCall(
     const CXXConstructorDecl *ctor, const ArrayType *arrayType,
-    Address arrayBegin, const CXXConstructExpr *E, bool zeroInitialize) {
+    Address arrayBegin, const CXXConstructExpr *E, bool NewPointerIsChecked,
+    bool zeroInitialize) {
   QualType elementType;
   llvm::Value *numElements =
     emitArrayLength(arrayType, elementType, arrayBegin);
 
-  EmitCXXAggrConstructorCall(ctor, numElements, arrayBegin, E, zeroInitialize);
+  EmitCXXAggrConstructorCall(ctor, numElements, arrayBegin, E,
+                             NewPointerIsChecked, zeroInitialize);
 }
 
 /// EmitCXXAggrConstructorCall - Emit a loop to call a particular
@@ -1890,6 +1896,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
                                                  llvm::Value *numElements,
                                                  Address arrayBase,
                                                  const CXXConstructExpr *E,
+                                                 bool NewPointerIsChecked,
                                                  bool zeroInitialize) {
   // It's legal for numElements to be zero.  This can happen both
   // dynamically, because x can be zero in 'new A[x]', and statically,
@@ -1931,7 +1938,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
   // The alignment of the base, adjusted by the size of a single element,
   // provides a conservative estimate of the alignment of every element.
   // (This assumes we never start tracking offsetted alignments.)
-  // 
+  //
   // Note that these are complete objects and so we don't need to
   // use the non-virtual size or alignment.
   QualType type = getContext().getTypeDeclType(ctor->getParent());
@@ -1966,7 +1973,7 @@ void CodeGenFunction::EmitCXXAggrConstructorCall(const CXXConstructorDecl *ctor,
 
     EmitCXXConstructorCall(ctor, Ctor_Complete, /*ForVirtualBase=*/false,
                            /*Delegating=*/false, curAddr, E,
-                           AggValueSlot::DoesNotOverlap);
+                           AggValueSlot::DoesNotOverlap, NewPointerIsChecked);
   }
 
   // Go to the next element.
@@ -2002,11 +2009,23 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              bool ForVirtualBase,
                                              bool Delegating, Address This,
                                              const CXXConstructExpr *E,
-                                             AggValueSlot::Overlap_t Overlap) {
+                                             AggValueSlot::Overlap_t Overlap,
+                                             bool NewPointerIsChecked) {
   CallArgList Args;
 
+  LangAS SlotAS = E->getType().getAddressSpace();
+  QualType ThisType = D->getThisType(getContext());
+  LangAS ThisAS = ThisType.getTypePtr()->getPointeeType().getAddressSpace();
+  llvm::Value *ThisPtr = This.getPointer();
+  if (SlotAS != ThisAS) {
+    unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
+    llvm::Type *NewType =
+        ThisPtr->getType()->getPointerElementType()->getPointerTo(TargetThisAS);
+    ThisPtr = getTargetHooks().performAddrSpaceCast(*this, This.getPointer(),
+                                                    ThisAS, SlotAS, NewType);
+  }
   // Push the this ptr.
-  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
+  Args.add(RValue::get(ThisPtr), D->getThisType(getContext()));
 
   // If this is a trivial constructor, emit a memcpy now before we lose
   // the alignment information on the argument.
@@ -2031,7 +2050,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                /*ParamsToSkip*/ 0, Order);
 
   EmitCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args,
-                         Overlap, E->getExprLoc());
+                         Overlap, E->getExprLoc(), NewPointerIsChecked);
 }
 
 static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
@@ -2065,14 +2084,13 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              Address This,
                                              CallArgList &Args,
                                              AggValueSlot::Overlap_t Overlap,
-                                             SourceLocation Loc) {
+                                             SourceLocation Loc,
+                                             bool NewPointerIsChecked) {
   const CXXRecordDecl *ClassDecl = D->getParent();
 
-  // C++11 [class.mfct.non-static]p2:
-  //   If a non-static member function of a class X is called for an object that
-  //   is not of type X, or of a type derived from X, the behavior is undefined.
-  EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall, Loc,
-                This.getPointer(), getContext().getRecordType(ClassDecl));
+  if (!NewPointerIsChecked)
+    EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall, Loc, This.getPointer(),
+                  getContext().getRecordType(ClassDecl), CharUnits::Zero());
 
   if (D->isTrivial() && D->isDefaultConstructor()) {
     assert(Args.size() == 1 && "trivial default ctor with args");
@@ -2116,7 +2134,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
     CGM.getAddrOfCXXStructor(D, getFromCtorType(Type));
   const CGFunctionInfo &Info = CGM.getTypes().arrangeCXXConstructorCall(
       Args, D, Type, ExtraArgs.Prefix, ExtraArgs.Suffix, PassPrototypeArgs);
-  CGCallee Callee = CGCallee::forDirect(CalleePtr, D);
+  CGCallee Callee = CGCallee::forDirect(CalleePtr, GlobalDecl(D, Type));
   EmitCall(Info, Callee, ReturnValueSlot(), Args);
 
   // Generate vtable assumptions if we're constructing a complete object
@@ -2181,7 +2199,7 @@ void CodeGenFunction::EmitInheritedCXXConstructorCall(
 
   EmitCXXConstructorCall(D, Ctor_Base, ForVirtualBase, /*Delegating*/false,
                          This, Args, AggValueSlot::MayOverlap,
-                         E->getLocation());
+                         E->getLocation(), /*NewPointerIsChecked*/true);
 }
 
 void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
@@ -2190,6 +2208,7 @@ void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
   GlobalDecl GD(Ctor, CtorType);
   InlinedInheritingConstructorScope Scope(*this, GD);
   ApplyInlineDebugLocation DebugScope(*this, GD);
+  RunCleanupsScope RunCleanups(*this);
 
   // Save the arguments to be passed to the inherited constructor.
   CXXInheritedCtorInitExprArgs = Args;
@@ -2277,8 +2296,10 @@ CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
   EmitCallArgs(Args, FPT, drop_begin(E->arguments(), 1), E->getConstructor(),
                /*ParamsToSkip*/ 1);
 
-  EmitCXXConstructorCall(D, Ctor_Complete, false, false, This, Args,
-                         AggValueSlot::MayOverlap, E->getExprLoc());
+  EmitCXXConstructorCall(D, Ctor_Complete, /*ForVirtualBase*/false,
+                         /*Delegating*/false, This, Args,
+                         AggValueSlot::MayOverlap, E->getExprLoc(),
+                         /*NewPointerIsChecked*/false);
 }
 
 void
@@ -2314,7 +2335,8 @@ CodeGenFunction::EmitDelegateCXXConstructorCall(const CXXConstructorDecl *Ctor,
 
   EmitCXXConstructorCall(Ctor, CtorType, /*ForVirtualBase=*/false,
                          /*Delegating=*/true, This, DelegateArgs,
-                         AggValueSlot::MayOverlap, Loc);
+                         AggValueSlot::MayOverlap, Loc,
+                         /*NewPointerIsChecked=*/true);
 }
 
 namespace {
@@ -2346,7 +2368,10 @@ CodeGenFunction::EmitDelegatingCXXConstructorCall(const CXXConstructorDecl *Ctor
                           AggValueSlot::IsDestructed,
                           AggValueSlot::DoesNotNeedGCBarriers,
                           AggValueSlot::IsNotAliased,
-                          AggValueSlot::MayOverlap);
+                          AggValueSlot::MayOverlap,
+                          AggValueSlot::IsNotZeroed,
+                          // Checks are made by the code that calls constructor.
+                          AggValueSlot::IsSanitizerChecked);
 
   EmitAggExpr(Ctor->init_begin()[0]->getInit(), AggSlot);
 
@@ -2796,7 +2821,7 @@ void CodeGenFunction::EmitForwardingCallToLambda(
   // variadic arguments.
 
   // Now emit our call.
-  auto callee = CGCallee::forDirect(calleePtr, callOperator);
+  auto callee = CGCallee::forDirect(calleePtr, GlobalDecl(callOperator));
   RValue RV = EmitCall(calleeFnInfo, callee, returnSlot, callArgs);
 
   // If necessary, copy the returned value into the slot.
@@ -2827,12 +2852,12 @@ void CodeGenFunction::EmitLambdaBlockInvokeBody() {
   CallArgList CallArgs;
 
   QualType ThisType = getContext().getPointerType(getContext().getRecordType(Lambda));
-  Address ThisPtr = GetAddrOfBlockDecl(variable, false);
+  Address ThisPtr = GetAddrOfBlockDecl(variable);
   CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
 
   // Add the rest of the parameters.
   for (auto param : BD->parameters())
-    EmitDelegateCallArg(CallArgs, param, param->getLocStart());
+    EmitDelegateCallArg(CallArgs, param, param->getBeginLoc());
 
   assert(!Lambda->isGenericLambda() &&
             "generic lambda interconversion to block not implemented");
@@ -2851,7 +2876,7 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
 
   // Add the rest of the parameters.
   for (auto Param : MD->parameters())
-    EmitDelegateCallArg(CallArgs, Param, Param->getLocStart());
+    EmitDelegateCallArg(CallArgs, Param, Param->getBeginLoc());
 
   const CXXMethodDecl *CallOp = Lambda->getLambdaCallOperator();
   // For a generic lambda, find the corresponding call operator specialization

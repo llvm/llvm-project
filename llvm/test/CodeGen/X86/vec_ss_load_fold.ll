@@ -247,22 +247,22 @@ define <4 x float> @test4(<4 x float> %A, float *%b, i32 %C) nounwind {
 define  <2 x double> @test5() nounwind uwtable readnone noinline {
 ; X32-LABEL: test5:
 ; X32:       ## %bb.0: ## %entry
-; X32-NEXT:    movaps {{.*#+}} xmm0 = [1.280000e+02,1.233210e+02]
+; X32-NEXT:    movaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test5:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    movaps {{.*#+}} xmm0 = [1.280000e+02,1.233210e+02]
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X64-NEXT:    retq
 ;
 ; X32_AVX-LABEL: test5:
 ; X32_AVX:       ## %bb.0: ## %entry
-; X32_AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1.280000e+02,1.233210e+02]
+; X32_AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X32_AVX-NEXT:    retl
 ;
 ; X64_AVX-LABEL: test5:
 ; X64_AVX:       ## %bb.0: ## %entry
-; X64_AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1.280000e+02,1.233210e+02]
+; X64_AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1.28E+2,1.23321E+2]
 ; X64_AVX-NEXT:    retq
 entry:
   %0 = tail call <2 x double> @llvm.x86.sse2.cvtsi2sd(<2 x double> <double 4.569870e+02, double 1.233210e+02>, i32 128) nounwind readnone

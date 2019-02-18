@@ -11,7 +11,7 @@
 define void @globalfunc1() #0 {
 entry:
   call void @funcwithpersonality()
-  call void (...) @variadic()
+  call void (...) @variadic_va_start()
   ret void
 }
 
@@ -147,8 +147,19 @@ entry:
   ret void
 }
 
-; Variadic function should not be imported because inliner doesn't handle it.
-define void @variadic(...) {
+; Variadic function without va_start can be imported because inliner
+; can handle it.
+define void @variadic_no_va_start(...) {
     ret void
 }
 
+; Variadic function with va_start should not be imported because inliner
+; doesn't handle it.
+define void @variadic_va_start(...) {
+    %ap = alloca i8*, align 8
+    %ap.0 = bitcast i8** %ap to i8*
+    call void @llvm.va_start(i8* %ap.0)
+    ret void
+}
+
+declare void @llvm.va_start(i8*) nounwind

@@ -258,7 +258,7 @@ GCNMinRegScheduler::schedule(ArrayRef<const SUnit*> TopRoots,
     assert(C);
     RQ.remove(*C);
     auto SU = C->SU;
-    LLVM_DEBUG(dbgs() << "Selected "; SU->dump(&DAG));
+    LLVM_DEBUG(dbgs() << "Selected "; DAG.dumpNode(*SU));
 
     releaseSuccessors(SU, StepNo);
     Schedule.push_back(SU);

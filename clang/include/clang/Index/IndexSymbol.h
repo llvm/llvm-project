@@ -1,4 +1,4 @@
-//===--- IndexSymbol.h - Types and functions for indexing symbols ---------===//
+//===- IndexSymbol.h - Types and functions for indexing symbols -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -82,6 +82,8 @@ enum class SymbolSubKind : uint8_t {
   SwiftAccessorDidSet,
   SwiftAccessorAddressor,
   SwiftAccessorMutableAddressor,
+  SwiftAccessorRead,
+  SwiftAccessorModify,
 
   SwiftExtensionOfStruct,
   SwiftExtensionOfClass,
@@ -97,7 +99,7 @@ enum class SymbolSubKind : uint8_t {
   SwiftGenericTypeParam,
 };
 
-typedef uint8_t SymbolPropertySet;
+typedef uint16_t SymbolPropertySet;
 /// Set of properties that provide additional info about a symbol.
 enum class SymbolProperty : SymbolPropertySet {
   Generic                       = 1 << 0,
@@ -108,8 +110,10 @@ enum class SymbolProperty : SymbolPropertySet {
   IBOutletCollection            = 1 << 5,
   GKInspectable                 = 1 << 6,
   Local                         = 1 << 7,
+  /// Symbol is part of a protocol interface.
+  ProtocolInterface             = 1 << 8,
 };
-static const unsigned SymbolPropertyBitNum = 8;
+static const unsigned SymbolPropertyBitNum = 9;
 
 /// Set of roles that are attributed to symbol occurrences.
 ///

@@ -1,5 +1,5 @@
-# RUN: llc -run-pass ppc-mi-peepholes -ppc-convert-rr-to-ri %s -o - | FileCheck %s
-# RUN: llc -start-after ppc-mi-peepholes -ppc-late-peephole %s -o - | FileCheck %s --check-prefix=CHECK-LATE
+# RUN: llc -run-pass ppc-mi-peepholes -ppc-convert-rr-to-ri %s -o - -verify-machineinstrs | FileCheck %s
+# RUN: llc -start-after ppc-mi-peepholes -ppc-late-peephole %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-LATE
 
 --- |
   ; ModuleID = 'convert-rr-to-ri-instrs.ll'
@@ -3265,15 +3265,15 @@ body:             |
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 100
     %7 = LXSDX %0, killed %6, implicit $rm :: (load 8 from %ir.arrayidx, !tbaa !12)
-    ; CHECK: LXSD 100, %0
-    ; CHECK-LATE: lxsd 0, 100(3)
+    ; CHECK: DFLOADf64 100, %0
+    ; CHECK-LATE: lfd 0, 100(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -120
     %12 = LXSDX %0, killed %11, implicit $rm :: (load 8 from %ir.arrayidx3, !tbaa !12)
-    ; CHECK: LXSD -120, %0
-    ; CHECK-LATE: lxsd 1, -120(3)
+    ; CHECK: DFLOADf64 -120, %0
+    ; CHECK-LATE: lfd 1, -120(3)
     %13 = XSADDDP killed %7, killed %12, implicit $rm
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
@@ -3338,15 +3338,15 @@ body:             |
     %4 = INSERT_SUBREG %5, killed %3, 1
     %6 = LI8 96
     %7 = LXSSPX %0, killed %6 :: (load 4 from %ir.arrayidx, !tbaa !14)
-    ; CHECK: LXSSP 96, %0
-    ; CHECK-LATE: lxssp 0, 96(3)
+    ; CHECK: DFLOADf32 96, %0
+    ; CHECK-LATE: lfs 0, 96(3)
     %8 = ADDI %2, 2
     %10 = IMPLICIT_DEF
     %9 = INSERT_SUBREG %10, killed %8, 1
     %11 = LI8 -92
     %12 = LXSSPX %0, killed %11 :: (load 4 from %ir.arrayidx3, !tbaa !14)
-    ; CHECK: LXSSP -92, %0
-    ; CHECK-LATE: lxssp 1, -92(3)
+    ; CHECK: DFLOADf32 -92, %0
+    ; CHECK-LATE: lfs 1, -92(3)
     %13 = XSADDSP killed %7, killed %12
     $f1 = COPY %13
     BLR8 implicit $lr8, implicit $rm, implicit $f1
@@ -6031,8 +6031,8 @@ body:             |
     %0 = COPY $x3
     %3 = LI8 444
     STXSSPX %1, %0, killed %3 :: (store 4 into %ir.arrayidx, !tbaa !14)
-    ; CHECK: STXSSP %1, 444, %0
-    ; CHECK-LATE: stxssp 1, 444(3)
+    ; CHECK: DFSTOREf32 %1, 444, %0
+    ; CHECK-LATE: stfs 1, 444(3)
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -6083,8 +6083,8 @@ body:             |
     %0 = COPY $x3
     %3 = LI8 4
     STXSDX %1, %0, killed %3, implicit $rm :: (store 8 into %ir.arrayidx, !tbaa !12)
-    ; CHECK: STXSD %1, 4, %0
-    ; CHECK-LATE: stxsd 1, 4(3)
+    ; CHECK: DFSTOREf64 %1, 4, %0
+    ; CHECK-LATE: stfd 1, 4(3)
     BLR8 implicit $lr8, implicit $rm
 
 ...

@@ -1,9 +1,6 @@
 # RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
 
 --- |
-  ; ModuleID = 'memory-legalizer-multiple-mem-operands.ll'
-  source_filename = "memory-legalizer-multiple-mem-operands.ll"
-  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-A5"
 
   define amdgpu_kernel void @multiple_mem_operands(i32 addrspace(1)* %out, i32 %cond, i32 %if_offset, i32 %else_offset) #0 {
   entry:
@@ -31,27 +28,6 @@
     store i32 %value, i32 addrspace(1)* %out
     ret void
   }
-
-  ; Function Attrs: convergent nounwind
-  declare { i1, i64 } @llvm.amdgcn.if(i1) #1
-
-  ; Function Attrs: convergent nounwind
-  declare { i1, i64 } @llvm.amdgcn.else(i64) #1
-
-  ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.break(i64) #2
-
-  ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.if.break(i1, i64) #2
-
-  ; Function Attrs: convergent nounwind readnone
-  declare i64 @llvm.amdgcn.else.break(i64, i64) #2
-
-  ; Function Attrs: convergent nounwind
-  declare i1 @llvm.amdgcn.loop(i64) #1
-
-  ; Function Attrs: convergent nounwind
-  declare void @llvm.amdgcn.end.cf(i64) #1
 
   attributes #0 = { "target-cpu"="gfx803" }
   attributes #1 = { convergent nounwind }
@@ -114,9 +90,9 @@ body:             |
     successors: %bb.1.if(0x30000000), %bb.2.else(0x50000000)
     liveins: $sgpr0_sgpr1, $sgpr3
 
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     $sgpr8 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $sgpr9 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $sgpr10 = S_MOV_B32 4294967295, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $sgpr11 = S_MOV_B32 15204352, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
@@ -134,7 +110,7 @@ body:             |
     successors: %bb.3.done(0x80000000)
     liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 32772, implicit $exec
     S_BRANCH %bb.3.done
@@ -143,7 +119,7 @@ body:             |
     successors: %bb.3.done(0x80000000)
     liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
 

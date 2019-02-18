@@ -105,9 +105,9 @@ llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
   if (Buffer.getPointer() || !ContentsEntry) {
     if (Invalid)
       *Invalid = isBufferInvalid();
-    
+
     return Buffer.getPointer();
-  }    
+  }
 
   bool isVolatile = SM.userFilesAreVolatile() && !IsSystemFile;
   auto BufferOrError =
@@ -141,7 +141,7 @@ llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
           << ContentsEntry->getName() << BufferOrError.getError().message();
 
     Buffer.setInt(Buffer.getInt() | InvalidFlag);
-    
+
     if (Invalid) *Invalid = true;
     return Buffer.getPointer();
   }
@@ -187,16 +187,15 @@ llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
       << InvalidBOM << ContentsEntry->getName();
     Buffer.setInt(Buffer.getInt() | InvalidFlag);
   }
-  
+
   if (Invalid)
     *Invalid = isBufferInvalid();
-  
+
   return Buffer.getPointer();
 }
 
 unsigned LineTableInfo::getLineTableFilenameID(StringRef Name) {
-  auto IterBool =
-      FilenameIDs.insert(std::make_pair(Name, FilenamesByID.size()));
+  auto IterBool = FilenameIDs.try_emplace(Name, FilenamesByID.size());
   if (IterBool.second)
     FilenamesByID.push_back(&*IterBool.first);
   return IterBool.first->second;
@@ -672,7 +671,7 @@ StringRef SourceManager::getBufferData(FileID FID, bool *Invalid) const {
   bool MyInvalid = false;
   const SLocEntry &SLoc = getSLocEntry(FID, &MyInvalid);
   if (!SLoc.isFile() || MyInvalid) {
-    if (Invalid) 
+    if (Invalid)
       *Invalid = true;
     return "<<<<<INVALID SOURCE LOCATION>>>>>";
   }
@@ -684,7 +683,7 @@ StringRef SourceManager::getBufferData(FileID FID, bool *Invalid) const {
 
   if (MyInvalid)
     return "<<<<<INVALID SOURCE LOCATION>>>>>";
-  
+
   return Buf->getBuffer();
 }
 
@@ -770,7 +769,7 @@ FileID SourceManager::getFileIDLocal(unsigned SLocOffset) const {
     unsigned MidOffset = getLocalSLocEntry(MiddleIndex, &Invalid).getOffset();
     if (Invalid)
       return FileID::get(0);
-    
+
     ++NumProbes;
 
     // If the offset of the midpoint is too large, chop the high side of the
@@ -1104,7 +1103,7 @@ const char *SourceManager::getCharacterData(SourceLocation SL,
   if (CharDataInvalid || !Entry.isFile()) {
     if (Invalid)
       *Invalid = true;
-    
+
     return "<<<<INVALID BUFFER>>>>";
   }
   llvm::MemoryBuffer *Buffer = Entry.getFile().getContentCache()->getBuffer(
@@ -1217,65 +1216,22 @@ static void ComputeLineNumbers(DiagnosticsEngine &Diag, ContentCache *FI,
 
   const unsigned char *Buf = (const unsigned char *)Buffer->getBufferStart();
   const unsigned char *End = (const unsigned char *)Buffer->getBufferEnd();
-  unsigned Offs = 0;
+  unsigned I = 0;
   while (true) {
     // Skip over the contents of the line.
-    const unsigned char *NextBuf = (const unsigned char *)Buf;
+    while (Buf[I] != '\n' && Buf[I] != '\r' && Buf[I] != '\0')
+      ++I;
 
-#ifdef __SSE2__
-    // Try to skip to the next newline using SSE instructions. This is very
-    // performance sensitive for programs with lots of diagnostics and in -E
-    // mode.
-    __m128i CRs = _mm_set1_epi8('\r');
-    __m128i LFs = _mm_set1_epi8('\n');
-
-    // First fix up the alignment to 16 bytes.
-    while (((uintptr_t)NextBuf & 0xF) != 0) {
-      if (*NextBuf == '\n' || *NextBuf == '\r' || *NextBuf == '\0')
-        goto FoundSpecialChar;
-      ++NextBuf;
-    }
-
-    // Scan 16 byte chunks for '\r' and '\n'. Ignore '\0'.
-    while (NextBuf+16 <= End) {
-      const __m128i Chunk = *(const __m128i*)NextBuf;
-      __m128i Cmp = _mm_or_si128(_mm_cmpeq_epi8(Chunk, CRs),
-                                 _mm_cmpeq_epi8(Chunk, LFs));
-      unsigned Mask = _mm_movemask_epi8(Cmp);
-
-      // If we found a newline, adjust the pointer and jump to the handling code.
-      if (Mask != 0) {
-        NextBuf += llvm::countTrailingZeros(Mask);
-        goto FoundSpecialChar;
-      }
-      NextBuf += 16;
-    }
-#endif
-
-    while (*NextBuf != '\n' && *NextBuf != '\r' && *NextBuf != '\0')
-      ++NextBuf;
-
-#ifdef __SSE2__
-FoundSpecialChar:
-#endif
-    Offs += NextBuf-Buf;
-    Buf = NextBuf;
-
-    if (Buf[0] == '\n' || Buf[0] == '\r') {
-      // If this is \n\r or \r\n, skip both characters.
-      if ((Buf[1] == '\n' || Buf[1] == '\r') && Buf[0] != Buf[1]) {
-        ++Offs;
-        ++Buf;
-      }
-      ++Offs;
-      ++Buf;
-      LineOffsets.push_back(Offs);
+    if (Buf[I] == '\n' || Buf[I] == '\r') {
+      // If this is \r\n, skip both characters.
+      if (Buf[I] == '\r' && Buf[I+1] == '\n')
+        ++I;
+      ++I;
+      LineOffsets.push_back(I);
     } else {
-      // Otherwise, this is a null.  If end of file, exit.
-      if (Buf == End) break;
-      // Otherwise, skip the null.
-      ++Offs;
-      ++Buf;
+      // Otherwise, this is a NUL. If end of file, exit.
+      if (Buf+I == End) break;
+      ++I;
     }
   }
 
@@ -1289,7 +1245,7 @@ FoundSpecialChar:
 /// for the position indicated.  This requires building and caching a table of
 /// line offsets for the MemoryBuffer, so this is not cheap: use only when
 /// about to emit a diagnostic.
-unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos, 
+unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
                                       bool *Invalid) const {
   if (FID.isInvalid()) {
     if (Invalid)
@@ -1308,10 +1264,10 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
         *Invalid = true;
       return 1;
     }
-    
+
     Content = const_cast<ContentCache*>(Entry.getFile().getContentCache());
   }
-  
+
   // If this is the first use of line information for this buffer, compute the
   /// SourceLineCache for it on demand.
   if (!Content->SourceLineCache) {
@@ -1383,7 +1339,7 @@ unsigned SourceManager::getLineNumber(FileID FID, unsigned FilePos,
   return LineNo;
 }
 
-unsigned SourceManager::getSpellingLineNumber(SourceLocation Loc, 
+unsigned SourceManager::getSpellingLineNumber(SourceLocation Loc,
                                               bool *Invalid) const {
   if (isInvalid(Loc, Invalid)) return 0;
   std::pair<FileID, unsigned> LocInfo = getDecomposedSpellingLoc(Loc);
@@ -1418,7 +1374,7 @@ SourceManager::getFileCharacteristic(SourceLocation Loc) const {
   const SLocEntry &SEntry = getSLocEntry(LocInfo.first, &Invalid);
   if (Invalid || !SEntry.isFile())
     return C_User;
-  
+
   const SrcMgr::FileInfo &FI = SEntry.getFile();
 
   // If there are no #line directives in this file, just return the whole-file
@@ -1466,7 +1422,7 @@ PresumedLoc SourceManager::getPresumedLoc(SourceLocation Loc,
   const SLocEntry &Entry = getSLocEntry(LocInfo.first, &Invalid);
   if (Invalid || !Entry.isFile())
     return PresumedLoc();
-  
+
   const SrcMgr::FileInfo &FI = Entry.getFile();
   const SrcMgr::ContentCache *C = FI.getContentCache();
 
@@ -1485,7 +1441,7 @@ PresumedLoc SourceManager::getPresumedLoc(SourceLocation Loc,
   unsigned ColNo  = getColumnNumber(LocInfo.first, LocInfo.second, &Invalid);
   if (Invalid)
     return PresumedLoc();
-  
+
   SourceLocation IncludeLoc = FI.getIncludeLoc();
 
   // If we have #line directives in this file, update and overwrite the physical
@@ -1621,7 +1577,7 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
     const SLocEntry &MainSLoc = getSLocEntry(MainFileID, &Invalid);
     if (Invalid)
       return FileID();
-    
+
     if (MainSLoc.isFile()) {
       const ContentCache *MainContentCache
         = MainSLoc.getFile().getContentCache();
@@ -1658,8 +1614,8 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
       const SLocEntry &SLoc = getLocalSLocEntry(I, &Invalid);
       if (Invalid)
         return FileID();
-      
-      if (SLoc.isFile() && 
+
+      if (SLoc.isFile() &&
           SLoc.getFile().getContentCache() &&
           SLoc.getFile().getContentCache()->OrigEntry == SourceFile) {
         FirstFID = FileID::get(I);
@@ -1670,7 +1626,7 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
     if (FirstFID.isInvalid()) {
       for (unsigned I = 0, N = loaded_sloc_entry_size(); I != N; ++I) {
         const SLocEntry &SLoc = getLoadedSLocEntry(I);
-        if (SLoc.isFile() && 
+        if (SLoc.isFile() &&
             SLoc.getFile().getContentCache() &&
             SLoc.getFile().getContentCache()->OrigEntry == SourceFile) {
           FirstFID = FileID::get(-int(I) - 2);
@@ -1681,7 +1637,7 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
   }
 
   // If we haven't found what we want yet, try again, but this time stat()
-  // each of the files in case the files have changed since we originally 
+  // each of the files in case the files have changed since we originally
   // parsed the file.
   if (FirstFID.isInvalid() &&
       (SourceFileName ||
@@ -1694,13 +1650,13 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
       const SLocEntry &SLoc = getSLocEntry(IFileID, &Invalid);
       if (Invalid)
         return FileID();
-      
-      if (SLoc.isFile()) { 
-        const ContentCache *FileContentCache 
+
+      if (SLoc.isFile()) {
+        const ContentCache *FileContentCache
           = SLoc.getFile().getContentCache();
         const FileEntry *Entry = FileContentCache ? FileContentCache->OrigEntry
                                                   : nullptr;
-        if (Entry && 
+        if (Entry &&
             *SourceFileName == llvm::sys::path::filename(Entry->getName())) {
           if (Optional<llvm::sys::fs::UniqueID> EntryUID =
                   getActualFileUID(Entry)) {
@@ -1712,9 +1668,9 @@ FileID SourceManager::translateFile(const FileEntry *SourceFile) const {
           }
         }
       }
-    }      
+    }
   }
-  
+
   (void) SourceFile;
   return FirstFID;
 }
@@ -1948,7 +1904,7 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   assert(!MacroArgsCache->empty());
   MacroArgsMap::iterator I = MacroArgsCache->upper_bound(Offset);
   --I;
-  
+
   unsigned MacroArgBeginOffs = I->first;
   SourceLocation MacroArgExpandedLoc = I->second;
   if (MacroArgExpandedLoc.isValid())
@@ -1965,9 +1921,7 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
   // Uses IncludedLocMap to retrieve/cache the decomposed loc.
 
   using DecompTy = std::pair<FileID, unsigned>;
-  using MapTy = llvm::DenseMap<FileID, DecompTy>;
-  std::pair<MapTy::iterator, bool>
-    InsertOp = IncludedLocMap.insert(std::make_pair(FID, DecompTy()));
+  auto InsertOp = IncludedLocMap.try_emplace(FID);
   DecompTy &DecompLoc = InsertOp.first->second;
   if (!InsertOp.second)
     return DecompLoc; // already in map.
@@ -2151,7 +2105,7 @@ void SourceManager::PrintStats() const {
                << " loaded SLocEntries allocated, "
                << MaxLoadedOffset - CurrentLoadedOffset
                << "B of Sloc address space used.\n";
-  
+
   unsigned NumLineNumsComputed = 0;
   unsigned NumFileBytesMapped = 0;
   for (fileinfo_iterator I = fileinfo_begin(), E = fileinfo_end(); I != E; ++I){
@@ -2231,7 +2185,7 @@ ExternalSLocEntrySource::~ExternalSLocEntrySource() = default;
 SourceManager::MemoryBufferSizes SourceManager::getMemoryBufferSizes() const {
   size_t malloc_bytes = 0;
   size_t mmap_bytes = 0;
-  
+
   for (unsigned i = 0, e = MemBufferInfos.size(); i != e; ++i)
     if (size_t sized_mapped = MemBufferInfos[i]->getSizeBytesMapped())
       switch (MemBufferInfos[i]->getMemoryBufferKind()) {
@@ -2242,7 +2196,7 @@ SourceManager::MemoryBufferSizes SourceManager::getMemoryBufferSizes() const {
           malloc_bytes += sized_mapped;
           break;
       }
-  
+
   return MemoryBufferSizes(malloc_bytes, mmap_bytes);
 }
 
@@ -2252,7 +2206,7 @@ size_t SourceManager::getDataStructureSizes() const {
     + llvm::capacity_in_bytes(LoadedSLocEntryTable)
     + llvm::capacity_in_bytes(SLocEntryLoaded)
     + llvm::capacity_in_bytes(FileInfos);
-  
+
   if (OverriddenFilesInfo)
     size += llvm::capacity_in_bytes(OverriddenFilesInfo->OverriddenFiles);
 
@@ -2263,8 +2217,8 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
   // This is referenced by `FileMgr` and will be released by `FileMgr` when it
   // is deleted.
-  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,

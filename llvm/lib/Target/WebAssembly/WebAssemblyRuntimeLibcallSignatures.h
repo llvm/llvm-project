@@ -23,14 +23,15 @@ namespace llvm {
 
 class WebAssemblySubtarget;
 
-extern void GetSignature(const WebAssemblySubtarget &Subtarget,
-                         RTLIB::Libcall LC,
-                         SmallVectorImpl<wasm::ValType> &Rets,
-                         SmallVectorImpl<wasm::ValType> &Params);
+extern void GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
+                                RTLIB::Libcall LC,
+                                SmallVectorImpl<wasm::ValType> &Rets,
+                                SmallVectorImpl<wasm::ValType> &Params);
 
-extern void GetSignature(const WebAssemblySubtarget &Subtarget,
-                         const char *Name, SmallVectorImpl<wasm::ValType> &Rets,
-                         SmallVectorImpl<wasm::ValType> &Params);
+extern void GetLibcallSignature(const WebAssemblySubtarget &Subtarget,
+                                const char *Name,
+                                SmallVectorImpl<wasm::ValType> &Rets,
+                                SmallVectorImpl<wasm::ValType> &Params);
 
 } // end namespace llvm
 

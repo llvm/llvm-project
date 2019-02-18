@@ -270,6 +270,11 @@ bool IndexUnitReaderImpl::init(std::unique_ptr<MemoryBuffer> Buf,
   this->MemBuf = std::move(Buf);
   llvm::BitstreamCursor Stream(*MemBuf);
 
+  if (Stream.AtEndOfStream()) {
+    Error = "empty file";
+    return true;
+  }
+
   // Sniff for the signature.
   if (Stream.Read(8) != 'I' ||
       Stream.Read(8) != 'D' ||
@@ -294,8 +299,8 @@ bool IndexUnitReaderImpl::foreachDependency(DependencyReceiver Receiver) {
     bool IsSystem = Record[I++];
     int PathIndex = (int)Record[I++] - 1;
     int ModuleIndex = (int)Record[I++] - 1;
-    time_t ModTime = (time_t)Record[I++];
-    size_t FileSize = Record[I++];
+    I++; // Reserved field.
+    I++; // Reserved field.
     StringRef Name = Blob;
 
     IndexUnitReader::DependencyKind DepKind;
@@ -313,7 +318,7 @@ bool IndexUnitReaderImpl::foreachDependency(DependencyReceiver Receiver) {
     StringRef ModuleName = this->getModuleName(ModuleIndex);
 
     return Receiver(IndexUnitReader::DependencyInfo{DepKind, IsSystem, Name,
-      PathBuf.str(), ModuleName, FileSize, ModTime});
+      PathBuf.str(), ModuleName});
   });
 
   std::string Error;

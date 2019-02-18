@@ -88,7 +88,7 @@ void RewriteBuffer::RemoveText(unsigned OrigOffset, unsigned Size,
       }
       ++posI;
     }
-  
+
     unsigned lineSize = 0;
     posI = curLineStart;
     while (posI != end() && isWhitespaceExceptNL(*posI)) {
@@ -353,10 +353,10 @@ bool Rewriter::IncreaseIndentation(CharSourceRange range,
   unsigned parentLineNo = SourceMgr->getLineNumber(FID, parentOff) - 1;
   unsigned startLineNo = SourceMgr->getLineNumber(FID, StartOff) - 1;
   unsigned endLineNo = SourceMgr->getLineNumber(FID, EndOff) - 1;
-  
+
   const SrcMgr::ContentCache *
       Content = SourceMgr->getSLocEntry(FID).getFile().getContentCache();
-  
+
   // Find where the lines start.
   unsigned parentLineOffs = Content->SourceLineCache[parentLineNo];
   unsigned startLineOffs = Content->SourceLineCache[startLineNo];

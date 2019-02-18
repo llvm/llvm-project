@@ -2415,10 +2415,9 @@ static void emitOperandMatchErrorDiagStrings(AsmMatcherInfo &Info, raw_ostream &
 static void emitRegisterMatchErrorFunc(AsmMatcherInfo &Info, raw_ostream &OS) {
   OS << "static unsigned getDiagKindFromRegisterClass(MatchClassKind "
         "RegisterClass) {\n";
-  if (std::none_of(Info.Classes.begin(), Info.Classes.end(),
-                   [](const ClassInfo &CI) {
-                     return CI.isRegisterClass() && !CI.DiagnosticType.empty();
-                   })) {
+  if (none_of(Info.Classes, [](const ClassInfo &CI) {
+        return CI.isRegisterClass() && !CI.DiagnosticType.empty();
+      })) {
     OS << "  return MCTargetAsmParser::Match_InvalidOperand;\n";
   } else {
     OS << "  switch (RegisterClass) {\n";

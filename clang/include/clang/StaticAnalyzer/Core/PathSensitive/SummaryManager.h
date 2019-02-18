@@ -21,9 +21,9 @@ namespace ento {
 
 namespace summMgr {
 
-  
+
 /* Key kinds:
- 
+
  - C functions
  - C++ functions (name + parameter types)
  - ObjC methods:
@@ -34,21 +34,21 @@ namespace summMgr {
  - C++ methods
   - Class, function name + parameter types + const
  */
-  
+
 class SummaryKey {
-  
+
 };
 
 } // end namespace clang::summMgr
-  
+
 class SummaryManagerImpl {
-  
+
 };
 
-  
+
 template <typename T>
 class SummaryManager : SummaryManagerImpl {
-  
+
 };
 
 } // end GR namespace

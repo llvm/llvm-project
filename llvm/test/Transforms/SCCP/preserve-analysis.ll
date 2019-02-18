@@ -7,11 +7,9 @@
 ; CHECK: Globals Alias Analysis
 ; CHECK: Dominator Tree Construction
 ; CHECK: Natural Loop Information
-; CHECK: Basic Alias Analysis (stateless AA impl)
 ; CHECK: Sparse Conditional Constant Propagation
 ; CHECK-NOT: Dominator Tree Construction
 ; CHECK-NOT: Natural Loop Information
-; CHECK-NOT: Basic Alias Analysis (stateless AA impl)
 ; CHECK-NOT: Globals Alias Analysis
 ; CHECK: Loop Vectorization
 

@@ -185,3 +185,9 @@ protected:
   DISALLOW_COPY_AND_ASSIGN(ProtectedDeletedMacro2);
 };
 
+// This resulted in a warning by default.
+#define MACRO(type) void operator=(type const &)
+class C {
+private:
+  MACRO(C);
+};

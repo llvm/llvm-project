@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _LIBCPP_BUILDING_MUTEX
 #include "mutex"
 #include "limits"
 #include "system_error"

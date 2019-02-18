@@ -155,7 +155,7 @@ namespace SrcMgr {
     ContentCache(const FileEntry *Ent, const FileEntry *contentEnt)
       : Buffer(nullptr, false), OrigEntry(Ent), ContentsEntry(contentEnt),
         BufferOverridden(false), IsSystemFile(false), IsTransient(false) {}
-    
+
     /// The copy ctor does not allow copies where source object has either
     /// a non-NULL Buffer or SourceLineCache.  Ownership of allocated memory
     /// is not transferred, so this is a logical error.
@@ -449,7 +449,7 @@ namespace SrcMgr {
     }
 
     static SLocEntry get(unsigned Offset, const FileInfo &FI) {
-      assert(!(Offset & (1 << 31)) && "Offset is too large");
+      assert(!(Offset & (1u << 31)) && "Offset is too large");
       SLocEntry E;
       E.Offset = Offset;
       E.IsExpansion = false;
@@ -458,7 +458,7 @@ namespace SrcMgr {
     }
 
     static SLocEntry get(unsigned Offset, const ExpansionInfo &Expansion) {
-      assert(!(Offset & (1 << 31)) && "Offset is too large");
+      assert(!(Offset & (1u << 31)) && "Offset is too large");
       SLocEntry E;
       E.Offset = Offset;
       E.IsExpansion = true;
@@ -1024,13 +1024,14 @@ public:
 
   /// Set the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
-  void setNumCreatedFIDsForFileID(FileID FID, unsigned NumFIDs) const {
+  void setNumCreatedFIDsForFileID(FileID FID, unsigned NumFIDs,
+                                  bool Force = false) const {
     bool Invalid = false;
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
     if (Invalid || !Entry.isFile())
       return;
 
-    assert(Entry.getFile().NumCreatedFIDs == 0 && "Already set!");
+    assert((Force || Entry.getFile().NumCreatedFIDs == 0) && "Already set!");
     const_cast<SrcMgr::FileInfo &>(Entry.getFile()).NumCreatedFIDs = NumFIDs;
   }
 
@@ -1072,7 +1073,7 @@ public:
     unsigned FileOffset = Entry.getOffset();
     return SourceLocation::getFileLoc(FileOffset);
   }
-  
+
   /// Return the source location corresponding to the last byte of the
   /// specified file.
   SourceLocation getLocForEndOfFile(FileID FID) const {
@@ -1080,7 +1081,7 @@ public:
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
     if (Invalid || !Entry.isFile())
       return SourceLocation();
-    
+
     unsigned FileOffset = Entry.getOffset();
     return SourceLocation::getFileLoc(FileOffset + getFileIDSize(FID));
   }
@@ -1403,7 +1404,7 @@ public:
   PresumedLoc getPresumedLoc(SourceLocation Loc,
                              bool UseLineDirectives = true) const;
 
-  /// Returns whether the PresumedLoc for a given SourceLocation is 
+  /// Returns whether the PresumedLoc for a given SourceLocation is
   /// in the main file.
   ///
   /// This computes the "presumed" location for a SourceLocation, then checks
@@ -1426,6 +1427,18 @@ public:
   /// This check ignores line marker directives.
   bool isWrittenInMainFile(SourceLocation Loc) const {
     return getFileID(Loc) == getMainFileID();
+  }
+
+  /// Returns whether \p Loc is located in a <built-in> file.
+  bool isWrittenInBuiltinFile(SourceLocation Loc) const {
+    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    return Filename.equals("<built-in>");
+  }
+
+  /// Returns whether \p Loc is located in a <command line> file.
+  bool isWrittenInCommandLineFile(SourceLocation Loc) const {
+    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    return Filename.equals("<command line>");
   }
 
   /// Returns if a SourceLocation is in a system header.

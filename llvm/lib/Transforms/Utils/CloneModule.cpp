@@ -61,7 +61,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   //
   for (Module::const_global_iterator I = M.global_begin(), E = M.global_end();
        I != E; ++I) {
-    GlobalVariable *GV = new GlobalVariable(*New, 
+    GlobalVariable *GV = new GlobalVariable(*New,
                                             I->getValueType(),
                                             I->isConstant(), I->getLinkage(),
                                             (Constant*) nullptr, I->getName(),
@@ -74,8 +74,9 @@ std::unique_ptr<Module> llvm::CloneModule(
 
   // Loop over the functions in the module, making external functions as before
   for (const Function &I : M) {
-    Function *NF = Function::Create(cast<FunctionType>(I.getValueType()),
-                                    I.getLinkage(), I.getName(), New.get());
+    Function *NF =
+        Function::Create(cast<FunctionType>(I.getValueType()), I.getLinkage(),
+                         I.getAddressSpace(), I.getName(), New.get());
     NF->copyAttributesFrom(&I);
     VMap[&I] = NF;
   }
@@ -91,8 +92,8 @@ std::unique_ptr<Module> llvm::CloneModule(
       GlobalValue *GV;
       if (I->getValueType()->isFunctionTy())
         GV = Function::Create(cast<FunctionType>(I->getValueType()),
-                              GlobalValue::ExternalLinkage, I->getName(),
-                              New.get());
+                              GlobalValue::ExternalLinkage,
+                              I->getAddressSpace(), I->getName(), New.get());
       else
         GV = new GlobalVariable(
             *New, I->getValueType(), false, GlobalValue::ExternalLinkage,
@@ -110,7 +111,7 @@ std::unique_ptr<Module> llvm::CloneModule(
     GA->copyAttributesFrom(&*I);
     VMap[&*I] = GA;
   }
-  
+
   // Now that all of the things that global variable initializer can refer to
   // have been created, loop through and copy the global variable referrers
   // over...  We also set the attributes on the global now.

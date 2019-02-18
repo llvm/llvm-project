@@ -20,6 +20,7 @@
 
 #include <string>
 #include <cassert>
+#include <stdexcept>
 
 #include "min_allocator.h"
 

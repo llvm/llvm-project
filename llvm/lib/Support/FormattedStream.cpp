@@ -65,7 +65,7 @@ void formatted_raw_ostream::ComputePosition(const char *Ptr, size_t Size) {
 ///
 /// \param NewCol - The column to move to.
 ///
-formatted_raw_ostream &formatted_raw_ostream::PadToColumn(unsigned NewCol) { 
+formatted_raw_ostream &formatted_raw_ostream::PadToColumn(unsigned NewCol) {
   // Figure out what's in the buffer and add it to the column count.
   ComputePosition(getBufferStart(), GetNumBytesInBuffer());
 

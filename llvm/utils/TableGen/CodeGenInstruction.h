@@ -57,6 +57,17 @@ template <typename T> class ArrayRef;
         assert(isTied());
         return OtherTiedOperand;
       }
+
+      bool operator==(const ConstraintInfo &RHS) const {
+        if (Kind != RHS.Kind)
+          return false;
+        if (Kind == Tied && OtherTiedOperand != RHS.OtherTiedOperand)
+          return false;
+        return true;
+      }
+      bool operator!=(const ConstraintInfo &RHS) const {
+        return !(*this == RHS);
+      }
     };
 
     /// OperandInfo - The information we keep track of for each operand in the
@@ -222,6 +233,7 @@ template <typename T> class ArrayRef;
 
     // Various boolean values we track for the instruction.
     bool isReturn : 1;
+    bool isEHScopeReturn : 1;
     bool isBranch : 1;
     bool isIndirectBranch : 1;
     bool isCompare : 1;
@@ -263,6 +275,7 @@ template <typename T> class ArrayRef;
     bool FastISelShouldIgnore : 1;
     bool hasChain : 1;
     bool hasChain_Inferred : 1;
+    bool variadicOpsAreDefs : 1;
 
     std::string DeprecatedReason;
     bool HasComplexDeprecationPredicate;

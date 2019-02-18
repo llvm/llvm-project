@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -module-syms -globals -types %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=NO_FILTER %s
 
@@ -13,7 +15,7 @@
 
 ; RUN: llvm-pdbutil pretty -types -module-syms -globals -exclude-symbols="MemberVar|GlobalVar" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck --check-prefix=EXCLUDE_VARS %s
-; RUN: llvm-pdbutil pretty -types -exclude-types="FilterTestClass" \
+; RUN: llvm-pdbutil pretty -classes -exclude-types="FilterTestClass" \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_WHOLE_CLASS %s
 ; RUN: llvm-pdbutil pretty -module-syms -globals -exclude-compilands="FilterTest.obj"  \
 ; RUN:    %p/Inputs/FilterTest.pdb | FileCheck  --check-prefix=EXCLUDE_COMPILAND %s
@@ -68,10 +70,6 @@
 
 ; EXCLUDE_WHOLE_CLASS: ---TYPES---
 ; EXCLUDE_WHOLE_CLASS-NOT: class FilterTestClass
-; EXCLUDE_WHOLE_CLASS-NOT: typedef int NestedTypedef
-; EXCLUDE_WHOLE_CLASS-NOT: enum NestedEnum
-; EXCLUDE_WHOLE_CLASS-NOT: int IntMemberVar
-; EXCLUDE_WHOLE_CLASS-NOT: double DoubleMemberVar
 
 ; EXCLUDE_COMPILAND: ---SYMBOLS---
 ; EXCLUDE_COMPILAND-NOT: FilterTest.obj

@@ -1,0 +1,138 @@
+import("//llvm/lib/Target/targets.gni")
+import("//llvm/utils/gn/build/buildflags.gni")
+import("//llvm/utils/gn/build/libs/pthread/enable.gni")
+import("//llvm/utils/gn/build/libs/terminfo/enable.gni")
+import("//llvm/utils/gn/build/libs/xml/enable.gni")
+import("//llvm/utils/gn/build/libs/zlib/enable.gni")
+import("//llvm/version.gni")
+
+enable_targets = ""
+foreach(target, llvm_targets_to_build) {
+  if (enable_targets != "") {
+    enable_targets += " "
+  }
+  enable_targets += target
+}
+
+action("BuildVariables.inc") {
+  script = "//llvm/utils/gn/build/write_cmake_config.py"
+
+  sources = [
+    "BuildVariables.inc.in",
+  ]
+  outputs = [
+    "$target_gen_dir/BuildVariables.inc",
+  ]
+
+  if (is_debug) {
+    build_mode = "debug"
+  } else {
+    build_mode = "release"
+  }
+
+  # FIXME: Why doesn't llvm-config do this, why is this done in
+  # llvm-config/CMakeLists.txt?
+  if (host_os == "win") {
+    l = ""
+    lib = ".lib"
+  } else {
+    l = "-l"
+    lib = ""
+  }
+
+  # Windows doesn't use any of libxml2,terminfo, zlib by default.
+  # Make GN not warn about these variables being unused.
+  not_needed([
+               "l",
+               "lib",
+             ])
+
+  system_libs = ""
+  if (host_os == "win") {
+    # libuuid required for FOLDERID_Profile usage in
+    # lib/Support/Windows/Path.inc.
+    # advapi32 required for CryptAcquireContextW in
+    # lib/Support/Windows/Path.inc
+    system_libs = "psapi.lib shell32.lib ole32.lib uuid.lib advapi32"
+  } else {
+    system_libs += "-lm"
+    if (host_os == "linux") {
+      system_libs += " -lrt -ldl"
+    }
+    if (llvm_enable_threads) {
+      system_libs += " -llibpthreads"
+      if (host_os == "linux") {
+        system_libs += " -latomic"
+      }
+    }
+  }
+  if (llvm_enable_libxml2) {
+    system_libs += " ${l}xml2${lib}"
+  }
+  if (llvm_enable_terminfo) {
+    system_libs += " ${l}ncurses${lib}"
+  }
+  if (llvm_enable_zlib) {
+    system_libs += " ${l}z${lib}"
+  }
+
+  args = [
+    "-o",
+    rebase_path(outputs[0], root_out_dir),
+    rebase_path(sources[0], root_out_dir),
+
+    "LLVM_SRC_ROOT=" + rebase_path("//llvm"),
+    "LLVM_OBJ_ROOT=" + rebase_path(root_out_dir),
+
+    # FIXME: Only the bits needed to run LLVM's test are implemented.
+    "LLVM_CPPFLAGS=.",  # FIXME
+    "LLVM_CFLAGS=.",  # FIXME
+    "LLVM_LDFLAGS=.",  # FIXME
+    "LLVM_CXXFLAGS=.",  # FIXME
+    "LLVM_BUILDMODE=$build_mode",
+    "LLVM_LIBDIR_SUFFIX=",
+    "LLVM_TARGETS_BUILT=$enable_targets",
+    "LLVM_SYSTEM_LIBS=$system_libs",
+    "LLVM_BUILD_SYSTEM=gn",
+    "LLVM_HAS_RTTI=0",
+    "LLVM_BUILD_LLVM_DYLIB=0",
+    "LLVM_LINK_LLVM_DYLIB=0",
+    "BUILD_SHARED_LIBS=0",
+    "LLVM_DYLIB_COMPONENTS=all",
+    "LLVM_DYLIB_VERSION=${llvm_version_major}svn",
+    "LLVM_HAS_GLOBAL_ISEL=1",
+    "LLVM_TOOLS_INSTALL_DIR=",
+  ]
+}
+
+# FIXME: It'd be nice to not depend on llvm-build on this, Depending on all the
+# LLVMBuild.txt files just for this seems a bit overkill.  `gn desc` should
+# have all this information too and could be called at build time.
+action("LibraryDependencies.inc") {
+  script = "//llvm/utils/llvm-build/llvm-build"
+  output = "$target_gen_dir/LibraryDependencies.inc"
+  args = [
+    "--native-target=$native_target",
+    "--enable-targets=$enable_targets",
+    "--write-library-table=" + rebase_path(output, root_out_dir),
+  ]
+  outputs = [
+    output,
+  ]
+}
+
+executable("llvm-config") {
+  deps = [
+    ":BuildVariables.inc",
+    ":LibraryDependencies.inc",
+    "//llvm/include/llvm/Config:config",
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Support",
+  ]
+
+  # To pick up the generated inc files.
+  include_dirs = [ "$target_gen_dir" ]
+  sources = [
+    "llvm-config.cpp",
+  ]
+}

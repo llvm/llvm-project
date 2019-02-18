@@ -4,7 +4,7 @@ include "llvm/Option/OptParser.td"
 // These options seem to be important for the tool
 // and should be implemented.
 
-def FILEOUT : Separate<[ "/", "-" ], "FO">,
+def FILEOUT : JoinedOrSeparate<[ "/", "-" ], "FO">,
               HelpText<"Change the output file location.">;
 
 def DEFINE : Separate<[ "/", "-" ], "D">,

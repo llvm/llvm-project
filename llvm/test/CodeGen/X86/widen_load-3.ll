@@ -30,37 +30,37 @@ define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    vmovaps (%ecx), %ymm0
-; X86-AVX-NEXT:    vmovaps 32(%ecx), %ymm1
-; X86-AVX-NEXT:    vmovaps %ymm0, (%eax)
-; X86-AVX-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; X86-AVX-NEXT:    vextractps $1, %xmm0, 52(%eax)
-; X86-AVX-NEXT:    vmovss %xmm0, 48(%eax)
+; X86-AVX-NEXT:    vmovaps 48(%ecx), %xmm1
+; X86-AVX-NEXT:    vextractps $1, %xmm1, 52(%eax)
+; X86-AVX-NEXT:    vmovss %xmm1, 48(%eax)
+; X86-AVX-NEXT:    vmovaps 32(%ecx), %xmm1
 ; X86-AVX-NEXT:    vmovaps %xmm1, 32(%eax)
+; X86-AVX-NEXT:    vmovaps %ymm0, (%eax)
 ; X86-AVX-NEXT:    vzeroupper
 ; X86-AVX-NEXT:    retl $4
 ;
 ; X64-SSE-LABEL: load7_aligned:
 ; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movq %rdi, %rax
 ; X64-SSE-NEXT:    movaps (%rsi), %xmm0
 ; X64-SSE-NEXT:    movaps 16(%rsi), %xmm1
 ; X64-SSE-NEXT:    movaps 32(%rsi), %xmm2
-; X64-SSE-NEXT:    movq 48(%rsi), %rax
-; X64-SSE-NEXT:    movq %rax, 48(%rdi)
+; X64-SSE-NEXT:    movq 48(%rsi), %rcx
+; X64-SSE-NEXT:    movq %rcx, 48(%rdi)
 ; X64-SSE-NEXT:    movaps %xmm2, 32(%rdi)
 ; X64-SSE-NEXT:    movaps %xmm1, 16(%rdi)
 ; X64-SSE-NEXT:    movaps %xmm0, (%rdi)
-; X64-SSE-NEXT:    movq %rdi, %rax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load7_aligned:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps (%rsi), %ymm0
-; X64-AVX-NEXT:    vmovaps 32(%rsi), %ymm1
-; X64-AVX-NEXT:    vmovaps %ymm0, (%rdi)
-; X64-AVX-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; X64-AVX-NEXT:    vmovlps %xmm0, 48(%rdi)
-; X64-AVX-NEXT:    vmovaps %xmm1, 32(%rdi)
 ; X64-AVX-NEXT:    movq %rdi, %rax
+; X64-AVX-NEXT:    vmovaps (%rsi), %ymm0
+; X64-AVX-NEXT:    movq 48(%rsi), %rcx
+; X64-AVX-NEXT:    movq %rcx, 48(%rdi)
+; X64-AVX-NEXT:    vmovaps 32(%rsi), %xmm1
+; X64-AVX-NEXT:    vmovaps %xmm1, 32(%rdi)
+; X64-AVX-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
   %x1 = load <7 x i64>, <7 x i64>* %x
@@ -101,26 +101,26 @@ define <7 x i64> @load7_unaligned(<7 x i64>* %x) {
 ;
 ; X64-SSE-LABEL: load7_unaligned:
 ; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movq %rdi, %rax
 ; X64-SSE-NEXT:    movups (%rsi), %xmm0
 ; X64-SSE-NEXT:    movups 16(%rsi), %xmm1
 ; X64-SSE-NEXT:    movups 32(%rsi), %xmm2
-; X64-SSE-NEXT:    movq 48(%rsi), %rax
-; X64-SSE-NEXT:    movq %rax, 48(%rdi)
+; X64-SSE-NEXT:    movq 48(%rsi), %rcx
+; X64-SSE-NEXT:    movq %rcx, 48(%rdi)
 ; X64-SSE-NEXT:    movaps %xmm2, 32(%rdi)
 ; X64-SSE-NEXT:    movaps %xmm1, 16(%rdi)
 ; X64-SSE-NEXT:    movaps %xmm0, (%rdi)
-; X64-SSE-NEXT:    movq %rdi, %rax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load7_unaligned:
 ; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    movq %rdi, %rax
 ; X64-AVX-NEXT:    vmovups (%rsi), %ymm0
 ; X64-AVX-NEXT:    vmovups 32(%rsi), %xmm1
-; X64-AVX-NEXT:    movq 48(%rsi), %rax
-; X64-AVX-NEXT:    movq %rax, 48(%rdi)
+; X64-AVX-NEXT:    movq 48(%rsi), %rcx
+; X64-AVX-NEXT:    movq %rcx, 48(%rdi)
 ; X64-AVX-NEXT:    vmovaps %xmm1, 32(%rdi)
 ; X64-AVX-NEXT:    vmovaps %ymm0, (%rdi)
-; X64-AVX-NEXT:    movq %rdi, %rax
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
   %x1 = load <7 x i64>, <7 x i64>* %x, align 1

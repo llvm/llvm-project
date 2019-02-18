@@ -67,8 +67,8 @@ static bool fuseInstructionPair(ScheduleDAGMI &DAG, SUnit &FirstSU,
       SI.setLatency(0);
 
   LLVM_DEBUG(
-      dbgs() << "Macro fuse: "; FirstSU.print(dbgs(), &DAG); dbgs() << " - ";
-      SecondSU.print(dbgs(), &DAG); dbgs() << " /  ";
+      dbgs() << "Macro fuse: "; DAG.dumpNodeName(FirstSU); dbgs() << " - ";
+      DAG.dumpNodeName(SecondSU); dbgs() << " /  ";
       dbgs() << DAG.TII->getName(FirstSU.getInstr()->getOpcode()) << " - "
              << DAG.TII->getName(SecondSU.getInstr()->getOpcode()) << '\n';);
 
@@ -80,22 +80,32 @@ static bool fuseInstructionPair(ScheduleDAGMI &DAG, SUnit &FirstSU,
       if (SI.isWeak() || isHazard(SI) ||
           SU == &DAG.ExitSU || SU == &SecondSU || SU->isPred(&SecondSU))
         continue;
-      LLVM_DEBUG(dbgs() << "  Bind "; SecondSU.print(dbgs(), &DAG);
-                 dbgs() << " - "; SU->print(dbgs(), &DAG); dbgs() << '\n';);
+      LLVM_DEBUG(dbgs() << "  Bind "; DAG.dumpNodeName(SecondSU);
+                 dbgs() << " - "; DAG.dumpNodeName(*SU); dbgs() << '\n';);
       DAG.addEdge(SU, SDep(&SecondSU, SDep::Artificial));
     }
 
   // Make the FirstSU also dependent on the dependencies of the SecondSU to
   // prevent them from being scheduled between the FirstSU and the SecondSU.
-  if (&FirstSU != &DAG.EntrySU)
+  if (&FirstSU != &DAG.EntrySU) {
     for (const SDep &SI : SecondSU.Preds) {
       SUnit *SU = SI.getSUnit();
       if (SI.isWeak() || isHazard(SI) || &FirstSU == SU || FirstSU.isSucc(SU))
         continue;
-      LLVM_DEBUG(dbgs() << "  Bind "; SU->print(dbgs(), &DAG); dbgs() << " - ";
-                 FirstSU.print(dbgs(), &DAG); dbgs() << '\n';);
+      LLVM_DEBUG(dbgs() << "  Bind "; DAG.dumpNodeName(*SU); dbgs() << " - ";
+                 DAG.dumpNodeName(FirstSU); dbgs() << '\n';);
       DAG.addEdge(&FirstSU, SDep(SU, SDep::Artificial));
     }
+    // ExitSU comes last by design, which acts like an implicit dependency
+    // between ExitSU and any bottom root in the graph. We should transfer
+    // this to FirstSU as well.
+    if (&SecondSU == &DAG.ExitSU) {
+      for (SUnit &SU : DAG.SUnits) {
+        if (SU.Succs.empty())
+          DAG.addEdge(&FirstSU, SDep(&SU, SDep::Artificial));
+      }
+    }
+  }
 
   ++NumFused;
   return true;

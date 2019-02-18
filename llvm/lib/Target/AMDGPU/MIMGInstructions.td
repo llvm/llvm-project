@@ -66,6 +66,22 @@ def MIMGDimInfoTable : GenericTable {
   let PrimaryKeyName = "getMIMGDimInfo";
 }
 
+class MIMGLZMapping<MIMGBaseOpcode l, MIMGBaseOpcode lz> {
+  MIMGBaseOpcode L = l;
+  MIMGBaseOpcode LZ = lz;
+}
+
+def MIMGLZMappingTable : GenericTable {
+  let FilterClass = "MIMGLZMapping";
+  let CppTypeName = "MIMGLZMappingInfo";
+  let Fields = ["L", "LZ"];
+  GenericEnum TypeOf_L = MIMGBaseOpcode;
+  GenericEnum TypeOf_LZ = MIMGBaseOpcode;
+
+  let PrimaryKey = ["L"];
+  let PrimaryKeyName = "getMIMGLZMappingInfo";
+}
+
 class mimg <bits<7> si, bits<7> vi = si> {
   field bits<7> SI = si;
   field bits<7> VI = vi;
@@ -125,7 +141,7 @@ class MIMG_NoSampler_Helper <bits<7> op, string asm,
 
   let InOperandList = !con((ins addr_rc:$vaddr, SReg_256:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                                R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
+                                R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
                       #!if(BaseOpcode.HasD16, "$d16", "");
@@ -183,7 +199,7 @@ class MIMG_Store_Helper <bits<7> op, string asm,
 
   let InOperandList = !con((ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                                R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
+                                R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
                       #!if(BaseOpcode.HasD16, "$d16", "");
@@ -236,7 +252,7 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
 
   let InOperandList = (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
                            DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                           R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da);
+                           R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da);
   let AsmString = asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da";
 }
 
@@ -300,7 +316,7 @@ class MIMG_Sampler_Helper <bits<7> op, string asm, RegisterClass dst_rc,
 
   let InOperandList = !con((ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                                R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
+                                R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da"
                       #!if(BaseOpcode.HasD16, "$d16", "");
@@ -547,3 +563,13 @@ foreach intr = !listconcat(AMDGPUImageDimIntrinsics,
                            AMDGPUImageDimAtomicIntrinsics) in {
   def : ImageDimIntrinsicInfo<intr>;
 }
+
+// L to LZ Optimization Mapping
+def : MIMGLZMapping<IMAGE_SAMPLE_L, IMAGE_SAMPLE_LZ>;
+def : MIMGLZMapping<IMAGE_SAMPLE_C_L, IMAGE_SAMPLE_C_LZ>;
+def : MIMGLZMapping<IMAGE_SAMPLE_L_O, IMAGE_SAMPLE_LZ_O>;
+def : MIMGLZMapping<IMAGE_SAMPLE_C_L_O, IMAGE_SAMPLE_C_LZ_O>;
+def : MIMGLZMapping<IMAGE_GATHER4_L, IMAGE_GATHER4_LZ>;
+def : MIMGLZMapping<IMAGE_GATHER4_C_L, IMAGE_GATHER4_C_LZ>;
+def : MIMGLZMapping<IMAGE_GATHER4_L_O, IMAGE_GATHER4_LZ_O>;
+def : MIMGLZMapping<IMAGE_GATHER4_C_L_O, IMAGE_GATHER4_C_LZ_O>;

@@ -569,6 +569,12 @@ public:
     return !empty() && back().isReturn();
   }
 
+  /// Convenience function that returns true if the bock ends in a EH scope
+  /// return instruction.
+  bool isEHScopeReturnBlock() const {
+    return !empty() && back().isEHScopeReturn();
+  }
+
   /// Split the critical edge from this block to the given successor block, and
   /// return the newly created block, or null if splitting is not possible.
   ///

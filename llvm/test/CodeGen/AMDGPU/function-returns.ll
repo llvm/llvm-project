@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs < %s | FileCheck  -enable-var-scope -check-prefixes=GCN,CI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX89,GFX9 %s
 
 ; GCN-LABEL: {{^}}i1_func_void:
 ; GCN: buffer_load_ubyte v0, off
@@ -317,13 +317,13 @@ define <4 x half> @v4f16_func_void() #0 {
   ret <4 x half> %val
 }
 
+; FIXME: Mixing buffer and global
 ; FIXME: Should not scalarize
 ; GCN-LABEL: {{^}}v5i16_func_void:
 ; GFX9: buffer_load_dwordx2 v[0:1]
-; GFX9: buffer_load_ushort v4
-; GFX9: v_lshrrev_b32_e32 v5, 16, v0
-; GFX9: v_lshrrev_b32_e32 v3, 16, v1
-; GCN: s_setpc_b64
+; GFX9-NEXT: global_load_short_d16 v2
+; GFX9-NEXT: s_waitcnt
+; GFX9-NEXT: s_setpc_b64
 define <5 x i16> @v5i16_func_void() #0 {
   %ptr = load volatile <5 x i16> addrspace(1)*, <5 x i16> addrspace(1)* addrspace(4)* undef
   %val = load <5 x i16>, <5 x i16> addrspace(1)* %ptr
@@ -529,6 +529,45 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
   %ptr = load volatile { i32, <32 x i32> } addrspace(1)*, { i32, <32 x i32> } addrspace(1)* addrspace(4)* undef
   %val = load { i32, <32 x i32> }, { i32, <32 x i32> } addrspace(1)* %ptr
   ret { i32, <32 x i32> }%val
+}
+
+; Make sure the last struct component is returned in v3, not v4.
+; GCN-LABEL: {{^}}v3i32_struct_func_void_wasted_reg:
+; GCN: ds_read_b32 v0,
+; GCN: ds_read_b32 v1,
+; GCN: ds_read_b32 v2,
+; GCN: ds_read_b32 v3,
+define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
+  %load0 = load volatile i32, i32 addrspace(3)* undef
+  %load1 = load volatile i32, i32 addrspace(3)* undef
+  %load2 = load volatile i32, i32 addrspace(3)* undef
+  %load3 = load volatile i32, i32 addrspace(3)* undef
+
+  %insert.0 = insertelement <3 x i32> undef, i32 %load0, i32 0
+  %insert.1 = insertelement <3 x i32> %insert.0, i32 %load1, i32 1
+  %insert.2 = insertelement <3 x i32> %insert.1, i32 %load2, i32 2
+  %insert.3 = insertvalue { <3 x i32>, i32 } undef, <3 x i32> %insert.2, 0
+  %insert.4 = insertvalue { <3 x i32>, i32 } %insert.3, i32 %load3, 1
+  ret { <3 x i32>, i32 } %insert.4
+}
+
+; GCN-LABEL: {{^}}v3f32_struct_func_void_wasted_reg:
+; GCN: ds_read_b32 v0,
+; GCN: ds_read_b32 v1,
+; GCN: ds_read_b32 v2,
+; GCN: ds_read_b32 v3,
+define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
+  %load0 = load volatile float, float addrspace(3)* undef
+  %load1 = load volatile float, float addrspace(3)* undef
+  %load2 = load volatile float, float addrspace(3)* undef
+  %load3 = load volatile i32, i32 addrspace(3)* undef
+
+  %insert.0 = insertelement <3 x float> undef, float %load0, i32 0
+  %insert.1 = insertelement <3 x float> %insert.0, float %load1, i32 1
+  %insert.2 = insertelement <3 x float> %insert.1, float %load2, i32 2
+  %insert.3 = insertvalue { <3 x float>, i32 } undef, <3 x float> %insert.2, 0
+  %insert.4 = insertvalue { <3 x float>, i32 } %insert.3, i32 %load3, 1
+  ret { <3 x float>, i32 } %insert.4
 }
 
 attributes #0 = { nounwind }

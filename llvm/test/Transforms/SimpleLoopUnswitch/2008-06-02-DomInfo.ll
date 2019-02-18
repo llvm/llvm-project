@@ -1,4 +1,5 @@
 ; RUN: opt < %s -simple-loop-unswitch -instcombine -gvn -disable-output
+; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -instcombine -gvn -disable-output
 ; PR2372
 target triple = "i386-pc-linux-gnu"
 

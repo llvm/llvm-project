@@ -11,13 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_UNITTESTS_ADT_TEST_GRAPH_H
+#define LLVM_UNITTESTS_ADT_TEST_GRAPH_H
+
 #include "llvm/ADT/GraphTraits.h"
 #include <cassert>
 #include <climits>
 #include <utility>
-
-#ifndef LLVM_UNITTESTS_ADT_TEST_GRAPH_H
-#define LLVM_UNITTESTS_ADT_TEST_GRAPH_H
 
 namespace llvm {
 

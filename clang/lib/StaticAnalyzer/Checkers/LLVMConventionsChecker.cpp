@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -32,8 +32,7 @@ static bool IsLLVMStringRef(QualType T) {
   if (!RT)
     return false;
 
-  return StringRef(QualType(RT, 0).getAsString()) ==
-          "class StringRef";
+  return StringRef(QualType(RT, 0).getAsString()) == "class StringRef";
 }
 
 /// Check whether the declaration is semantically inside the top-level
@@ -314,4 +313,8 @@ public:
 
 void ento::registerLLVMConventionsChecker(CheckerManager &mgr) {
   mgr.registerChecker<LLVMConventionsChecker>();
+}
+
+bool ento::shouldRegisterLLVMConventionsChecker(const LangOptions &LO) {
+  return true;
 }

@@ -224,3 +224,23 @@ int useindirectingstruct() {
   return s.x; // expected-warning{{Undefined or garbage value returned to caller}}
               // expected-note@-1{{Undefined or garbage value returned to caller}}
 }
+
+typedef struct {
+  int *x;
+} D;
+
+void initializeMaybeInStruct(D* pD) {
+  if (coin()) // expected-note{{Assuming the condition is false}}
+              // expected-note@-1{{Taking false branch}}
+    *pD->x = 120;
+} // expected-note{{Returning without writing to 'pD->x'}}
+
+int useInitializeMaybeInStruct() {
+  int z; // expected-note{{'z' declared without an initial value}}
+  D d;
+  d.x = &z;
+  initializeMaybeInStruct(&d); // expected-note{{Calling 'initializeMaybeInStruct'}}
+                               // expected-note@-1{{Returning from 'initializeMaybeInStruct'}}
+  return z; // expected-warning{{Undefined or garbage value returned to caller}}
+            // expected-note@-1{{Undefined or garbage value returned to caller}}
+}

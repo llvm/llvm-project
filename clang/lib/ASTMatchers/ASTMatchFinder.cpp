@@ -635,10 +635,6 @@ private:
   bool memoizedMatchesAncestorOfRecursively(
       const ast_type_traits::DynTypedNode &Node, const DynTypedMatcher &Matcher,
       BoundNodesTreeBuilder *Builder, AncestorMatchMode MatchMode) {
-    if (Node.get<TranslationUnitDecl>() ==
-        ActiveASTContext->getTranslationUnitDecl())
-      return false;
-
     // For AST-nodes that don't have an identity, we can't memoize.
     if (!Builder->isComparable())
       return matchesAncestorOfRecursively(Node, Matcher, Builder, MatchMode);
@@ -673,7 +669,22 @@ private:
                                     BoundNodesTreeBuilder *Builder,
                                     AncestorMatchMode MatchMode) {
     const auto &Parents = ActiveASTContext->getParents(Node);
-    assert(!Parents.empty() && "Found node that is not in the parent map.");
+    if (Parents.empty()) {
+      // Nodes may have no parents if:
+      //  a) the node is the TranslationUnitDecl
+      //  b) we have a limited traversal scope that excludes the parent edges
+      //  c) there is a bug in the AST, and the node is not reachable
+      // Usually the traversal scope is the whole AST, which precludes b.
+      // Bugs are common enough that it's worthwhile asserting when we can.
+      assert((Node.get<TranslationUnitDecl>() ||
+              /* Traversal scope is limited if none of the bounds are the TU */
+              llvm::none_of(ActiveASTContext->getTraversalScope(),
+                            [](Decl *D) {
+                              return D->getKind() == Decl::TranslationUnit;
+                            })) &&
+             "Found node that is not in the complete parent map!");
+      return false;
+    }
     if (Parents.size() == 1) {
       // Only one parent - do recursive memoization.
       const ast_type_traits::DynTypedNode Parent = Parents[0];
@@ -1019,7 +1030,7 @@ void MatchFinder::matchAST(ASTContext &Context) {
   internal::MatchASTVisitor Visitor(&Matchers, Options);
   Visitor.set_active_ast_context(&Context);
   Visitor.onStartOfTranslationUnit();
-  Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+  Visitor.TraverseAST(Context);
   Visitor.onEndOfTranslationUnit();
 }
 

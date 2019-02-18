@@ -1,5 +1,6 @@
 ; RUN: opt -mtriple=armv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-A
 ; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a57 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-A
+; RUN: opt -mtriple=thumbv7 -mcpu=cortex-a72 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-A
 ; RUN: opt -mtriple=thumbv8m -mcpu=cortex-m23 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-T1
 ; RUN: opt -mtriple=thumbv8m.main -mcpu=cortex-m33 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-T2
 ; RUN: opt -mtriple=thumbv7em -mcpu=cortex-m7 -loop-unroll -S %s -o - | FileCheck %s --check-prefix=CHECK-UNROLL-T2

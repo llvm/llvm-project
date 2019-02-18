@@ -293,14 +293,14 @@ define <4 x i16> @fix_double_to_i16(<4 x double> %in) {
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r12]
 ; CHECK-NEXT:    vmov d19, r2, r3
 ; CHECK-NEXT:    vadd.f64 d18, d18, d18
-; CHECK-NEXT:    vcvt.u32.f64 s0, d18
+; CHECK-NEXT:    vcvt.s32.f64 s0, d18
 ; CHECK-NEXT:    vmov r0, s0
 ; CHECK-NEXT:    vadd.f64 d20, d16, d16
 ; CHECK-NEXT:    vadd.f64 d19, d19, d19
 ; CHECK-NEXT:    vadd.f64 d16, d17, d17
-; CHECK-NEXT:    vcvt.u32.f64 s2, d20
-; CHECK-NEXT:    vcvt.u32.f64 s4, d19
-; CHECK-NEXT:    vcvt.u32.f64 s6, d16
+; CHECK-NEXT:    vcvt.s32.f64 s2, d20
+; CHECK-NEXT:    vcvt.s32.f64 s4, d19
+; CHECK-NEXT:    vcvt.s32.f64 s6, d16
 ; CHECK-NEXT:    vmov.32 d16[0], r0
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vmov.32 d17[0], r0
@@ -308,7 +308,7 @@ define <4 x i16> @fix_double_to_i16(<4 x double> %in) {
 ; CHECK-NEXT:    vmov.32 d16[1], r0
 ; CHECK-NEXT:    vmov r0, s6
 ; CHECK-NEXT:    vmov.32 d17[1], r0
-; CHECK-NEXT:    vmovn.i32 d16, q8
+; CHECK-NEXT:    vuzp.16 d16, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
 

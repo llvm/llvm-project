@@ -40,9 +40,9 @@ def SIEncodingFamily {
 
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
-def SIload_constant : SDNode<"AMDGPUISD::LOAD_CONSTANT",
-  SDTypeProfile<1, 2, [SDTCisVT<0, f32>, SDTCisVT<1, v4i32>, SDTCisVT<2, i32>]>,
-                      [SDNPMayLoad, SDNPMemOperand]
+def SIsbuffer_load : SDNode<"AMDGPUISD::SBUFFER_LOAD",
+  SDTypeProfile<1, 3, [SDTCisVT<1, v4i32>, SDTCisVT<2, i32>, SDTCisVT<3, i1>]>,
+  [SDNPMayLoad, SDNPMemOperand]
 >;
 
 def SIatomic_inc : SDNode<"AMDGPUISD::ATOMIC_INC", SDTAtomic2,
@@ -69,36 +69,34 @@ def SIatomic_fmax : SDNode<"AMDGPUISD::ATOMIC_LOAD_FMAX", SDTAtomic2_f32,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;
 
-def SDTbuffer_load : SDTypeProfile<1, 9,
+def SDTtbuffer_load : SDTypeProfile<1, 8,
   [                     // vdata
    SDTCisVT<1, v4i32>,  // rsrc
    SDTCisVT<2, i32>,    // vindex(VGPR)
    SDTCisVT<3, i32>,    // voffset(VGPR)
    SDTCisVT<4, i32>,    // soffset(SGPR)
    SDTCisVT<5, i32>,    // offset(imm)
-   SDTCisVT<6, i32>,    // dfmt(imm)
-   SDTCisVT<7, i32>,    // nfmt(imm)
-   SDTCisVT<8, i32>,    // glc(imm)
-   SDTCisVT<9, i32>     // slc(imm)
+   SDTCisVT<6, i32>,    // format(imm)
+   SDTCisVT<7, i32>,    // cachecontrol(imm)
+   SDTCisVT<8, i1>      // idxen(imm)
   ]>;
 
-def SItbuffer_load :   SDNode<"AMDGPUISD::TBUFFER_LOAD_FORMAT", SDTbuffer_load,
+def SItbuffer_load :   SDNode<"AMDGPUISD::TBUFFER_LOAD_FORMAT", SDTtbuffer_load,
                               [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 def SItbuffer_load_d16 : SDNode<"AMDGPUISD::TBUFFER_LOAD_FORMAT_D16",
-                                SDTbuffer_load,
+                                SDTtbuffer_load,
                                 [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]>;
 
-def SDTtbuffer_store : SDTypeProfile<0, 10,
+def SDTtbuffer_store : SDTypeProfile<0, 9,
     [                     // vdata
      SDTCisVT<1, v4i32>,  // rsrc
      SDTCisVT<2, i32>,    // vindex(VGPR)
      SDTCisVT<3, i32>,    // voffset(VGPR)
      SDTCisVT<4, i32>,    // soffset(SGPR)
      SDTCisVT<5, i32>,    // offset(imm)
-     SDTCisVT<6, i32>,    // dfmt(imm)
-     SDTCisVT<7, i32>,    // nfmt(imm)
-     SDTCisVT<8, i32>,    // glc(imm)
-     SDTCisVT<9, i32>     // slc(imm)
+     SDTCisVT<6, i32>,    // format(imm)
+     SDTCisVT<7, i32>,    // cachecontrol(imm)
+     SDTCisVT<8, i1>      // idxen(imm)
     ]>;
 
 def SItbuffer_store : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT", SDTtbuffer_store,
@@ -110,13 +108,15 @@ def SItbuffer_store_d16 : SDNode<"AMDGPUISD::TBUFFER_STORE_FORMAT_D16",
                                 SDTtbuffer_store,
                                 [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
-def SDTBufferLoad : SDTypeProfile<1, 5,
+def SDTBufferLoad : SDTypeProfile<1, 7,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc
-     SDTCisVT<2, i32>,   // vindex
-     SDTCisVT<3, i32>,   // offset
-     SDTCisVT<4, i1>,    // glc
-     SDTCisVT<5, i1>]>;  // slc
+     SDTCisVT<2, i32>,   // vindex(VGPR)
+     SDTCisVT<3, i32>,   // voffset(VGPR)
+     SDTCisVT<4, i32>,   // soffset(SGPR)
+     SDTCisVT<5, i32>,   // offset(imm)
+     SDTCisVT<6, i32>,   // cachepolicy(imm)
+     SDTCisVT<7, i1>]>;  // idxen(imm)
 
 def SIbuffer_load : SDNode <"AMDGPUISD::BUFFER_LOAD", SDTBufferLoad,
                             [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
@@ -126,13 +126,15 @@ def SIbuffer_load_format_d16 : SDNode <"AMDGPUISD::BUFFER_LOAD_FORMAT_D16",
                                 SDTBufferLoad,
                                 [SDNPMemOperand, SDNPHasChain, SDNPMayLoad]>;
 
-def SDTBufferStore : SDTypeProfile<0, 6,
+def SDTBufferStore : SDTypeProfile<0, 8,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc
-     SDTCisVT<2, i32>,   // vindex
-     SDTCisVT<3, i32>,   // offset
-     SDTCisVT<4, i1>,    // glc
-     SDTCisVT<5, i1>]>;  // slc
+     SDTCisVT<2, i32>,   // vindex(VGPR)
+     SDTCisVT<3, i32>,   // voffset(VGPR)
+     SDTCisVT<4, i32>,   // soffset(SGPR)
+     SDTCisVT<5, i32>,   // offset(imm)
+     SDTCisVT<6, i32>,   // cachepolicy(imm)
+     SDTCisVT<7, i1>]>;  // idxen(imm)
 
 def SIbuffer_store : SDNode <"AMDGPUISD::BUFFER_STORE", SDTBufferStore,
                              [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
@@ -144,13 +146,16 @@ def SIbuffer_store_format_d16 : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT_D16",
                             [SDNPMayStore, SDNPMemOperand, SDNPHasChain]>;
 
 class SDBufferAtomic<string opcode> : SDNode <opcode,
-  SDTypeProfile<1, 5,
+  SDTypeProfile<1, 8,
       [SDTCisVT<0, i32>,   // dst
        SDTCisVT<1, i32>,   // vdata
        SDTCisVT<2, v4i32>, // rsrc
-       SDTCisVT<3, i32>,   // vindex
-       SDTCisVT<4, i32>,   // offset
-       SDTCisVT<5, i1>]>,  // slc
+       SDTCisVT<3, i32>,   // vindex(VGPR)
+       SDTCisVT<4, i32>,   // voffset(VGPR)
+       SDTCisVT<5, i32>,   // soffset(SGPR)
+       SDTCisVT<6, i32>,   // offset(imm)
+       SDTCisVT<7, i32>,   // cachepolicy(imm)
+       SDTCisVT<8, i1>]>,  // idxen(imm)
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
@@ -166,14 +171,17 @@ def SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
 def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
-  SDTypeProfile<1, 6,
+  SDTypeProfile<1, 9,
     [SDTCisVT<0, i32>,   // dst
      SDTCisVT<1, i32>,   // src
      SDTCisVT<2, i32>,   // cmp
      SDTCisVT<3, v4i32>, // rsrc
-     SDTCisVT<4, i32>,   // vindex
-     SDTCisVT<5, i32>,   // offset
-     SDTCisVT<6, i1>]>,  // slc
+     SDTCisVT<4, i32>,   // vindex(VGPR)
+     SDTCisVT<5, i32>,   // voffset(VGPR)
+     SDTCisVT<6, i32>,   // soffset(SGPR)
+     SDTCisVT<7, i32>,   // offset(imm)
+     SDTCisVT<8, i32>,   // cachepolicy(imm)
+     SDTCisVT<9, i1>]>,  // idxen(imm)
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
@@ -487,24 +495,7 @@ class InlineFPImm <ValueType vt> : PatLeaf <(vt fpimm), [{
 }]>;
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
-  if (Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS) {
-    return false;
-  }
-  const SIRegisterInfo *SIRI =
-      static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
-  unsigned Limit = 0;
-  for (SDNode::use_iterator U = N->use_begin(), E = SDNode::use_end();
-         Limit < 10 && U != E; ++U, ++Limit) {
-    const TargetRegisterClass *RC = getOperandRegClass(*U, U.getOperandNo());
-
-    // If the register class is unknown, it could be an unknown
-    // register class that needs to be an SGPR, e.g. an inline asm
-    // constraint
-    if (!RC || SIRI->isSGPRClass(RC))
-      return false;
-  }
-
-  return Limit < 10;
+  return isVGPRImm(N);
 }]>;
 
 def NegateImm : SDNodeXForm<imm, [{
@@ -746,14 +737,13 @@ def SLC : NamedOperandBit<"SLC", NamedMatchClass<"SLC">>;
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
 def UNorm : NamedOperandBit<"UNorm", NamedMatchClass<"UNorm">>;
 def DA : NamedOperandBit<"DA", NamedMatchClass<"DA">>;
-def R128 : NamedOperandBit<"R128", NamedMatchClass<"R128">>;
+def R128A16 : NamedOperandBit<"R128A16", NamedMatchClass<"R128A16">>;
 def D16 : NamedOperandBit<"D16", NamedMatchClass<"D16">>;
 def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 
-def DFMT : NamedOperandU8<"DFMT", NamedMatchClass<"DFMT">>;
-def NFMT : NamedOperandU8<"NFMT", NamedMatchClass<"NFMT">>;
+def FORMAT : NamedOperandU8<"FORMAT", NamedMatchClass<"FORMAT">>;
 
 def DMask : NamedOperandU16<"DMask", NamedMatchClass<"DMask">>;
 
@@ -1632,7 +1622,7 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                     0, // 64-bit dst - No DPP or SDWA for 64-bit operands
                     !if(!eq(Src0VT.Size, 64),
                         0, // 64-bit src0
-                        !if(!eq(Src0VT.Size, 64),
+                        !if(!eq(Src1VT.Size, 64),
                             0, // 64-bit src2
                             1
                         )
@@ -1641,12 +1631,23 @@ class getHasExt <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
             );
 }
 
+class getHasDPP <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
+                 ValueType Src1VT = i32> {
+  bit ret = !if(!eq(NumSrcArgs, 0), 0,
+                getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret);
+}
+
 class BitOr<bit a, bit b> {
   bit ret = !if(a, 1, !if(b, 1, 0));
 }
 
 class BitAnd<bit a, bit b> {
   bit ret = !if(a, !if(b, 1, 0), 0);
+}
+
+def PatGenMode {
+  int NoPattern = 0;
+  int Pattern   = 1;
 }
 
 class VOPProfile <list<ValueType> _ArgVT> {
@@ -1715,7 +1716,10 @@ class VOPProfile <list<ValueType> _ArgVT> {
   field bit HasSDWAOMod = isFloatType<DstVT>.ret;
 
   field bit HasExt = getHasExt<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
-  field bit HasSDWA9 = HasExt;
+  field bit HasExtDPP = getHasDPP<NumSrcArgs, DstVT, Src0VT, Src1VT>.ret;
+  field bit HasExtSDWA = HasExt;
+  field bit HasExtSDWA9 = HasExt;
+  field int NeedPatGen = PatGenMode.NoPattern;
 
   field Operand Src0PackedMod = !if(HasSrc0FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src1PackedMod = !if(HasSrc1FloatMods, PackedF16InputMods, PackedI16InputMods);
@@ -1743,8 +1747,10 @@ class VOPProfile <list<ValueType> _ArgVT> {
                                            getOpSelMod<Src0VT>.ret,
                                            getOpSelMod<Src1VT>.ret,
                                            getOpSelMod<Src2VT>.ret>.ret;
-  field dag InsDPP = getInsDPP<DstRCDPP, Src0DPP, Src1DPP, NumSrcArgs,
-                               HasModifiers, Src0ModDPP, Src1ModDPP>.ret;
+  field dag InsDPP = !if(HasExtDPP,
+                         getInsDPP<DstRCDPP, Src0DPP, Src1DPP, NumSrcArgs,
+                                   HasModifiers, Src0ModDPP, Src1ModDPP>.ret,
+                         (ins));
   field dag InsSDWA = getInsSDWA<Src0SDWA, Src1SDWA, NumSrcArgs,
                                  HasSDWAOMod, Src0ModSDWA, Src1ModSDWA,
                                  DstVT>.ret;
@@ -1758,14 +1764,21 @@ class VOPProfile <list<ValueType> _ArgVT> {
                                               HasSrc0FloatMods,
                                               HasSrc1FloatMods,
                                               HasSrc2FloatMods>.ret;
-  field string AsmDPP = getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret;
+  field string AsmDPP = !if(HasExtDPP,
+                            getAsmDPP<HasDst, NumSrcArgs, HasModifiers, DstVT>.ret, "");
   field string AsmSDWA = getAsmSDWA<HasDst, NumSrcArgs, DstVT>.ret;
   field string AsmSDWA9 = getAsmSDWA9<HasDst, HasSDWAOMod, NumSrcArgs, DstVT>.ret;
 }
 
 class VOP_NO_EXT <VOPProfile p> : VOPProfile <p.ArgVT> {
   let HasExt = 0;
-  let HasSDWA9 = 0;
+  let HasExtDPP = 0;
+  let HasExtSDWA = 0;
+  let HasExtSDWA9 = 0;
+}
+
+class VOP_PAT_GEN <VOPProfile p, int mode=PatGenMode.Pattern> : VOPProfile <p.ArgVT> {
+  let NeedPatGen = mode;
 }
 
 def VOP_F16_F16 : VOPProfile <[f16, f16, untyped, untyped]>;
@@ -1788,6 +1801,8 @@ def VOP_B32_F16_F16 : VOPProfile <[i32, f16, f16, untyped]>;
 
 def VOP_V2F16_V2F16_V2F16_V2F16 : VOPProfile <[v2f16, v2f16, v2f16, v2f16]>;
 def VOP_V2I16_V2I16_V2I16_V2I16 : VOPProfile <[v2i16, v2i16, v2i16, v2i16]>;
+def VOP_V2I16_F32_F32 : VOPProfile <[v2i16, f32, f32, untyped]>;
+def VOP_V2I16_I32_I32 : VOPProfile <[v2i16, i32, i32, untyped]>;
 
 def VOP_F32_V2F16_V2F16_V2F16 : VOPProfile <[f32, v2f16, v2f16, v2f16]>;
 
@@ -1925,6 +1940,15 @@ def getBasicFromSDWAOp : InstrMapping {
   let ValueCols = [["Default"]];
 }
 
+// Maps ordinary instructions to their DPP counterparts
+def getDPPOp32 : InstrMapping {
+  let FilterClass = "VOP";
+  let RowFields = ["OpName"];
+  let ColFields = ["AsmVariantName"];
+  let KeyCol = ["Default"];
+  let ValueCols = [["DPP"]];
+}
+
 // Maps an commuted opcode to its original version
 def getCommuteOrig : InstrMapping {
   let FilterClass = "Commutable_REV";
@@ -1977,6 +2001,14 @@ def getAddr64Inst : InstrMapping {
   let ValueCols = [["1"]];
 }
 
+def getIfAddr64Inst : InstrMapping {
+  let FilterClass = "MUBUFAddr64Table";
+  let RowFields = ["OpName"];
+  let ColFields = ["IsAddr64"];
+  let KeyCol = ["1"];
+  let ValueCols = [["1"]];
+}
+
 def getMUBUFNoLdsInst : InstrMapping {
   let FilterClass = "MUBUFLdsTable";
   let RowFields = ["OpName"];
@@ -2001,6 +2033,15 @@ def getAtomicNoRetOp : InstrMapping {
   let ColFields = ["IsRet"];
   let KeyCol = ["1"];
   let ValueCols = [["0"]];
+}
+
+// Maps a GLOBAL to its SADDR form.
+def getGlobalSaddrOp : InstrMapping {
+  let FilterClass = "GlobalSaddrTable";
+  let RowFields = ["SaddrOp"];
+  let ColFields = ["IsSaddr"];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
 }
 
 include "SIInstructions.td"

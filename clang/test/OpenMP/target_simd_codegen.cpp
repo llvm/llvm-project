@@ -82,8 +82,8 @@
 // Check if offloading descriptor is created.
 // CHECK: [[ENTBEGIN:@.+]] = external constant [[ENTTY]]
 // CHECK: [[ENTEND:@.+]] = external constant [[ENTTY]]
-// CHECK: [[DEVBEGIN:@.+]] = external constant i8
-// CHECK: [[DEVEND:@.+]] = external constant i8
+// CHECK: [[DEVBEGIN:@.+]] = extern_weak constant i8
+// CHECK: [[DEVEND:@.+]] = extern_weak constant i8
 // CHECK: [[IMAGES:@.+]] = internal unnamed_addr constant [1 x [[DEVTY]]] [{{.+}} { i8* [[DEVBEGIN]], i8* [[DEVEND]], [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }], comdat($[[REGFN]])
 // CHECK: [[DESC:@.+]] = internal constant [[DSCTY]] { i32 1, [[DEVTY]]* getelementptr inbounds ([1 x [[DEVTY]]], [1 x [[DEVTY]]]* [[IMAGES]], i32 0, i32 0), [[ENTTY]]* [[ENTBEGIN]], [[ENTTY]]* [[ENTEND]] }, comdat($[[REGFN]])
 
@@ -342,7 +342,7 @@ int foo(int n) {
 // CHECK-64:    [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i32*
 // CHECK-64:    [[AA:%.+]] = load i32, i32* [[AA_CADDR]], align
 // CHECK-32:    [[AA:%.+]] = load i32, i32* [[AA_ADDR]], align
-// CHECK:       !llvm.mem.parallel_loop_access
+// CHECK:       !llvm.access.group
 // CHECK:       !llvm.loop
 // CHECK:       ret void
 // CHECK-NEXT:  }

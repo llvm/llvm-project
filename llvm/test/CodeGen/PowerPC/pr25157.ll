@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck \
+; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck \
 ; RUN:   --check-prefix=CHECK-P9 %s
 
 ; Verify correct generation of an lxsspx rather than an invalid optimization
@@ -57,6 +57,6 @@ L.LB38_2452:
 }
 
 ; CHECK-LABEL: @aercalc_
-; CHECK: lfsx
+; CHECK: lfs
 ; CHECK-P9-LABEL: @aercalc_
 ; CHECK-P9: lfs

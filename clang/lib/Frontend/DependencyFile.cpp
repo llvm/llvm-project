@@ -17,7 +17,6 @@
 #include "clang/Frontend/DependencyOutputOptions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/DirectoryLookup.h"
-#include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -200,6 +199,10 @@ public:
                           const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
 
+  void HasInclude(SourceLocation Loc, StringRef SpelledFilename, bool IsAngled,
+                  const FileEntry *File,
+                  SrcMgr::CharacteristicKind FileType) override;
+
   void EndOfMainFile() override {
     OutputDependencyFile();
   }
@@ -318,7 +321,7 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
                                  const FileEntry *File,
                                  StringRef SearchPath,
                                  StringRef RelativePath,
-                                 const Module *Imported, 
+                                 const Module *Imported,
                                  SrcMgr::CharacteristicKind FileType) {
   if (!File) {
     if (AddMissingHeaderDeps)
@@ -326,6 +329,17 @@ void DFGImpl::InclusionDirective(SourceLocation HashLoc,
     else
       SeenMissingHeader = true;
   }
+}
+
+void DFGImpl::HasInclude(SourceLocation Loc, StringRef SpelledFilename,
+                         bool IsAngled, const FileEntry *File,
+                         SrcMgr::CharacteristicKind FileType) {
+  if (!File)
+    return;
+  StringRef Filename = File->getName();
+  if (!FileMatchesDepCriteria(Filename.data(), FileType))
+    return;
+  AddFilename(llvm::sys::path::remove_leading_dotslash(Filename));
 }
 
 bool DFGImpl::AddFilename(StringRef Filename) {
@@ -386,28 +400,32 @@ bool DFGImpl::AddFilename(StringRef Filename) {
 /// for Windows file-naming info.
 static void PrintFilename(raw_ostream &OS, StringRef Filename,
                           DependencyOutputFormat OutputFormat) {
+  // Convert filename to platform native path
+  llvm::SmallString<256> NativePath;
+  llvm::sys::path::native(Filename.str(), NativePath);
+
   if (OutputFormat == DependencyOutputFormat::NMake) {
     // Add quotes if needed. These are the characters listed as "special" to
     // NMake, that are legal in a Windows filespec, and that could cause
     // misinterpretation of the dependency string.
-    if (Filename.find_first_of(" #${}^!") != StringRef::npos)
-      OS << '\"' << Filename << '\"';
+    if (NativePath.find_first_of(" #${}^!") != StringRef::npos)
+      OS << '\"' << NativePath << '\"';
     else
-      OS << Filename;
+      OS << NativePath;
     return;
   }
   assert(OutputFormat == DependencyOutputFormat::Make);
-  for (unsigned i = 0, e = Filename.size(); i != e; ++i) {
-    if (Filename[i] == '#') // Handle '#' the broken gcc way.
+  for (unsigned i = 0, e = NativePath.size(); i != e; ++i) {
+    if (NativePath[i] == '#') // Handle '#' the broken gcc way.
       OS << '\\';
-    else if (Filename[i] == ' ') { // Handle space correctly.
+    else if (NativePath[i] == ' ') { // Handle space correctly.
       OS << '\\';
       unsigned j = i;
-      while (j > 0 && Filename[--j] == '\\')
+      while (j > 0 && NativePath[--j] == '\\')
         OS << '\\';
-    } else if (Filename[i] == '$') // $ is escaped by $$.
+    } else if (NativePath[i] == '$') // $ is escaped by $$.
       OS << '$';
-    OS << Filename[i];
+    OS << NativePath[i];
   }
 }
 

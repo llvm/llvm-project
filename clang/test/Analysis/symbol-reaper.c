@@ -85,8 +85,7 @@ void test_loc_as_integer_element_index_lifetime() {
     x = (int)&(s->field);
     ptr = &arr[x];
     if (s) {}
-  // FIXME: Should not warn. The symbol is still alive within the ptr's index.
-  } while (0); // expected-warning{{SYMBOL DEAD}}
+  } while (0);
 }
 
 // Test below checks lifetime of SymbolRegionValue in certain conditions.

@@ -150,7 +150,7 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
   /// Display the raw branch weights from PGO.
   std::string getEdgeAttributes(const BasicBlock *Node, succ_const_iterator I,
                                 const Function *F) {
-    const TerminatorInst *TI = Node->getTerminator();
+    const Instruction *TI = Node->getTerminator();
     if (TI->getNumSuccessors() == 1)
       return "";
 
@@ -172,8 +172,7 @@ struct DOTGraphTraits<const Function*> : public DefaultDOTGraphTraits {
 
     // Prepend a 'W' to indicate that this is a weight rather than the actual
     // profile count (due to scaling).
-    Twine Attrs = "label=\"W:" + Twine(Weight->getZExtValue()) + "\"";
-    return Attrs.str();
+    return ("label=\"W:" + Twine(Weight->getZExtValue()) + "\"").str();
   }
 };
 } // End llvm namespace

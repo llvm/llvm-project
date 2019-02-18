@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config ipa=dynamic-bifurcate -verify -Wno-reinterpret-base-class %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -analyzer-config ipa=dynamic-bifurcate -verify -Wno-reinterpret-base-class -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(bool);
 

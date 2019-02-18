@@ -55,14 +55,16 @@ class Value;
                         AssumptionCache *AC = nullptr,
                         const Instruction *CxtI = nullptr,
                         const DominatorTree *DT = nullptr,
-                        OptimizationRemarkEmitter *ORE = nullptr);
+                        OptimizationRemarkEmitter *ORE = nullptr,
+                        bool UseInstrInfo = true);
 
   /// Returns the known bits rather than passing by reference.
   KnownBits computeKnownBits(const Value *V, const DataLayout &DL,
                              unsigned Depth = 0, AssumptionCache *AC = nullptr,
                              const Instruction *CxtI = nullptr,
                              const DominatorTree *DT = nullptr,
-                             OptimizationRemarkEmitter *ORE = nullptr);
+                             OptimizationRemarkEmitter *ORE = nullptr,
+                             bool UseInstrInfo = true);
 
   /// Compute known bits from the range metadata.
   /// \p KnownZero the set of bits that are known to be zero
@@ -75,7 +77,8 @@ class Value;
                            const DataLayout &DL,
                            AssumptionCache *AC = nullptr,
                            const Instruction *CxtI = nullptr,
-                           const DominatorTree *DT = nullptr);
+                           const DominatorTree *DT = nullptr,
+                           bool UseInstrInfo = true);
 
   /// Return true if the given value is known to have exactly one bit set when
   /// defined. For vectors return true if every element is known to be a power
@@ -86,7 +89,8 @@ class Value;
                               bool OrZero = false, unsigned Depth = 0,
                               AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,
-                              const DominatorTree *DT = nullptr);
+                              const DominatorTree *DT = nullptr,
+                              bool UseInstrInfo = true);
 
   bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 
@@ -99,38 +103,46 @@ class Value;
   bool isKnownNonZero(const Value *V, const DataLayout &DL, unsigned Depth = 0,
                       AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
-                      const DominatorTree *DT = nullptr);
+                      const DominatorTree *DT = nullptr,
+                      bool UseInstrInfo = true);
 
   /// Return true if the two given values are negation.
-  bool isKnownNegation(const Value *X, const Value *Y);
+  /// Currently can recoginze Value pair:
+  /// 1: <X, Y> if X = sub (0, Y) or Y = sub (0, X)
+  /// 2: <X, Y> if X = sub (A, B) and Y = sub (B, A)
+  bool isKnownNegation(const Value *X, const Value *Y, bool NeedNSW = false);
 
   /// Returns true if the give value is known to be non-negative.
   bool isKnownNonNegative(const Value *V, const DataLayout &DL,
                           unsigned Depth = 0,
                           AssumptionCache *AC = nullptr,
                           const Instruction *CxtI = nullptr,
-                          const DominatorTree *DT = nullptr);
+                          const DominatorTree *DT = nullptr,
+                          bool UseInstrInfo = true);
 
   /// Returns true if the given value is known be positive (i.e. non-negative
   /// and non-zero).
   bool isKnownPositive(const Value *V, const DataLayout &DL, unsigned Depth = 0,
                        AssumptionCache *AC = nullptr,
                        const Instruction *CxtI = nullptr,
-                       const DominatorTree *DT = nullptr);
+                       const DominatorTree *DT = nullptr,
+                       bool UseInstrInfo = true);
 
   /// Returns true if the given value is known be negative (i.e. non-positive
   /// and non-zero).
   bool isKnownNegative(const Value *V, const DataLayout &DL, unsigned Depth = 0,
                        AssumptionCache *AC = nullptr,
                        const Instruction *CxtI = nullptr,
-                       const DominatorTree *DT = nullptr);
+                       const DominatorTree *DT = nullptr,
+                       bool UseInstrInfo = true);
 
   /// Return true if the given values are known to be non-equal when defined.
   /// Supports scalar integer types only.
   bool isKnownNonEqual(const Value *V1, const Value *V2, const DataLayout &DL,
-                      AssumptionCache *AC = nullptr,
-                      const Instruction *CxtI = nullptr,
-                      const DominatorTree *DT = nullptr);
+                       AssumptionCache *AC = nullptr,
+                       const Instruction *CxtI = nullptr,
+                       const DominatorTree *DT = nullptr,
+                       bool UseInstrInfo = true);
 
   /// Return true if 'V & Mask' is known to be zero. We use this predicate to
   /// simplify operations downstream. Mask is known to be zero for bits that V
@@ -145,7 +157,8 @@ class Value;
                          const DataLayout &DL,
                          unsigned Depth = 0, AssumptionCache *AC = nullptr,
                          const Instruction *CxtI = nullptr,
-                         const DominatorTree *DT = nullptr);
+                         const DominatorTree *DT = nullptr,
+                         bool UseInstrInfo = true);
 
   /// Return the number of times the sign bit of the register is replicated into
   /// the other bits. We know that at least 1 bit is always equal to the sign
@@ -157,7 +170,8 @@ class Value;
   unsigned ComputeNumSignBits(const Value *Op, const DataLayout &DL,
                               unsigned Depth = 0, AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,
-                              const DominatorTree *DT = nullptr);
+                              const DominatorTree *DT = nullptr,
+                              bool UseInstrInfo = true);
 
   /// This function computes the integer multiple of Base that equals V. If
   /// successful, it returns true and returns the multiple in Multiple. If
@@ -191,7 +205,8 @@ class Value;
   /// Return true if the floating-point scalar value is not a NaN or if the
   /// floating-point vector value has no NaN elements. Return false if a value
   /// could ever be NaN.
-  bool isKnownNeverNaN(const Value *V);
+  bool isKnownNeverNaN(const Value *V, const TargetLibraryInfo *TLI,
+                       unsigned Depth = 0);
 
   /// Return true if we can prove that the specified FP value's sign bit is 0.
   ///
@@ -206,7 +221,8 @@ class Value;
   /// return the i8 value that it is represented with. This is true for all i8
   /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
   /// 0.0 etc. If the value can't be handled with a repeated byte store (e.g.
-  /// i16 0x1234), return null.
+  /// i16 0x1234), return null. If the value is entirely undef and padding,
+  /// return undef.
   Value *isBytewiseValue(Value *V);
 
   /// Given an aggregrate and an sequence of indices, see if the scalar value
@@ -402,18 +418,21 @@ class Value;
                                                const DataLayout &DL,
                                                AssumptionCache *AC,
                                                const Instruction *CxtI,
-                                               const DominatorTree *DT);
+                                               const DominatorTree *DT,
+                                               bool UseInstrInfo = true);
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                              const DataLayout &DL,
                                              AssumptionCache *AC,
                                              const Instruction *CxtI,
-                                             const DominatorTree *DT);
+                                             const DominatorTree *DT,
+                                             bool UseInstrInfo = true);
   OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
                                                const Value *RHS,
                                                const DataLayout &DL,
                                                AssumptionCache *AC,
                                                const Instruction *CxtI,
-                                               const DominatorTree *DT);
+                                               const DominatorTree *DT,
+                                               bool UseInstrInfo = true);
   OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
                                              const DataLayout &DL,
                                              AssumptionCache *AC = nullptr,
@@ -461,7 +480,7 @@ class Value;
   /// This is equivelent to saying that all instructions within the basic block
   /// are guaranteed to transfer execution to their successor within the basic
   /// block. This has the same assumptions w.r.t. undefined behavior as the
-  /// instruction variant of this function. 
+  /// instruction variant of this function.
   bool isGuaranteedToTransferExecutionToSuccessor(const BasicBlock *BB);
 
   /// Return true if this function can prove that the instruction I
@@ -591,6 +610,12 @@ class Value;
   Optional<bool> isImpliedCondition(const Value *LHS, const Value *RHS,
                                     const DataLayout &DL, bool LHSIsTrue = true,
                                     unsigned Depth = 0);
+
+  /// Return the boolean condition value in the context of the given instruction
+  /// if it is known based on dominating conditions.
+  Optional<bool> isImpliedByDomCondition(const Value *Cond,
+                                         const Instruction *ContextI,
+                                         const DataLayout &DL);
 } // end namespace llvm
 
 #endif // LLVM_ANALYSIS_VALUETRACKING_H

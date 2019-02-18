@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstddef>
 #include <cassert>
+#include <climits>
 
 #include "test_macros.h"
 
@@ -130,6 +131,59 @@ public:
     friend bool operator==(malloc_allocator, malloc_allocator) {return true;}
     friend bool operator!=(malloc_allocator x, malloc_allocator y) {return !(x == y);}
 };
+
+template <class T>
+struct cpp03_allocator : bare_allocator<T>
+{
+    typedef T value_type;
+    typedef value_type* pointer;
+
+    static bool construct_called;
+
+    // Returned value is not used but it's not prohibited.
+    pointer construct(pointer p, const value_type& val)
+    {
+        ::new(p) value_type(val);
+        construct_called = true;
+        return p;
+    }
+
+    std::size_t max_size() const
+    {
+        return UINT_MAX / sizeof(T);
+    }
+};
+template <class T> bool cpp03_allocator<T>::construct_called = false;
+
+template <class T>
+struct cpp03_overload_allocator : bare_allocator<T>
+{
+    typedef T value_type;
+    typedef value_type* pointer;
+
+    static bool construct_called;
+
+    void construct(pointer p, const value_type& val)
+    {
+        construct(p, val, std::is_class<T>());
+    }
+    void construct(pointer p, const value_type& val, std::true_type)
+    {
+        ::new(p) value_type(val);
+        construct_called = true;
+    }
+    void construct(pointer p, const value_type& val, std::false_type)
+    {
+        ::new(p) value_type(val);
+        construct_called = true;
+    }
+
+    std::size_t max_size() const
+    {
+        return UINT_MAX / sizeof(T);
+    }
+};
+template <class T> bool cpp03_overload_allocator<T>::construct_called = false;
 
 
 #if TEST_STD_VER >= 11

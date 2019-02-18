@@ -1,0 +1,38 @@
+RUN: dsymutil -accelerator=Dwarf -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.dwarf.dSYM
+RUN: dsymutil -accelerator=Apple -oso-prepend-path=%p/.. %p/../Inputs/basic.macho.x86_64 -o %t.apple.dSYM
+
+RUN: llvm-dwarfdump -verify %t.dwarf.dSYM
+RUN: llvm-dwarfdump -verify %t.apple.dSYM
+
+RUN: llvm-dwarfdump -debug-names %t.dwarf.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=DWARF
+RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.apple.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=APPLE
+
+RUN: dsymutil -update -accelerator=Dwarf %t.apple.dSYM
+RUN: dsymutil -update -accelerator=Apple %t.dwarf.dSYM
+
+RUN: llvm-dwarfdump -verify %t.dwarf.dSYM
+RUN: llvm-dwarfdump -verify %t.apple.dSYM
+
+RUN: llvm-dwarfdump -debug-names %t.apple.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=DWARF
+RUN: llvm-dwarfdump -apple-names -apple-namespaces -apple-types %t.dwarf.dSYM | FileCheck %s -check-prefix=NAMES -check-prefix=APPLE
+
+DWARF: .debug_names contents:
+DWARF: Compilation Unit offsets [
+DWARF:   CU[0]
+DWARF:   CU[1]
+DWARF:   CU[2]
+DWARF: ]
+
+APPLE-DAG: .apple_names contents:
+APPLE-DAG: .apple_types contents:
+APPLE-DAG: .apple_namespaces contents:
+
+NAMES-DAG: "private_int"
+NAMES-DAG: "baz"
+NAMES-DAG: "int"
+NAMES-DAG: "bar"
+NAMES-DAG: "foo"
+NAMES-DAG: "inc"
+NAMES-DAG: "val"
+NAMES-DAG: "main"
+NAMES-DAG: "char"

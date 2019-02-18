@@ -1,11 +1,42 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -DTEST_INLINABLE_ALLOCATORS -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -DTEST_INLINABLE_ALLOCATORS -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDelete -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -DTEST_INLINABLE_ALLOCATORS -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,cplusplus.NewDeleteLeaks -DLEAKS -std=c++11 -fblocks -analyzer-config c++-allocator-inlining=true -DTEST_INLINABLE_ALLOCATORS -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete
+//
+// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
+//
+// RUN: %clang_analyze_cc1 -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-config c++-allocator-inlining=true
+//
+// RUN: %clang_analyze_cc1 -DLEAKS -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
+// RUN:   -analyzer-config c++-allocator-inlining=true
+//
+// RUN: %clang_analyze_cc1 -DTEST_INLINABLE_ALLOCATORS \
+// RUN:   -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete
+//
+// RUN: %clang_analyze_cc1 -DLEAKS -DTEST_INLINABLE_ALLOCATORS \
+// RUN:   -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks
+//
+// RUN: %clang_analyze_cc1 -DTEST_INLINABLE_ALLOCATORS \
+// RUN:   -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDelete \
+// RUN:   -analyzer-config c++-allocator-inlining=true
+//
+// RUN: %clang_analyze_cc1 -DLEAKS -DTEST_INLINABLE_ALLOCATORS \
+// RUN:   -std=c++11 -fblocks -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=cplusplus.NewDeleteLeaks \
+// RUN:   -analyzer-config c++-allocator-inlining=true
 
 #include "Inputs/system-header-simulator-cxx.h"
 

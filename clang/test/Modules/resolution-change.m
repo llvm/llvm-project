@@ -21,6 +21,8 @@
 // RUN: not %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/modules-with-same-name/DependsOnA -I %S/Inputs/modules-with-same-name/path2/A -include-pch %t-A.pch %s -fsyntax-only 2>&1 | FileCheck -check-prefix=CHECK-WRONGA %s
 // CHECK-WRONGA: module 'A' was built in directory '{{.*Inputs.modules-with-same-name.path1.A}}' but now resides in directory '{{.*Inputs.modules-with-same-name.path2.A}}'
 
+// RUN: %clang_cc1 -fno-validate-pch -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs/modules-with-same-name/DependsOnA -I %S/Inputs/modules-with-same-name/path2/A -include-pch %t-A.pch %s -fsyntax-only
+
 #ifndef HEADER
 #define HEADER
 @import DependsOnA;

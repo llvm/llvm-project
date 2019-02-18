@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
@@ -75,13 +76,17 @@ ModulePass *llvm::createGlobalDCEPass() {
   return new GlobalDCELegacyPass();
 }
 
-/// Returns true if F contains only a single "ret" instruction.
+/// Returns true if F is effectively empty.
 static bool isEmptyFunction(Function *F) {
   BasicBlock &Entry = F->getEntryBlock();
-  if (Entry.size() != 1 || !isa<ReturnInst>(Entry.front()))
-    return false;
-  ReturnInst &RI = cast<ReturnInst>(Entry.front());
-  return RI.getReturnValue() == nullptr;
+  for (auto &I : Entry) {
+    if (isa<DbgInfoIntrinsic>(I))
+      continue;
+    if (auto *RI = dyn_cast<ReturnInst>(&I))
+      return !RI->getReturnValue();
+    break;
+  }
+  return false;
 }
 
 /// Compute the set of GlobalValue that depends from V.
@@ -165,7 +170,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     // Functions with external linkage are needed if they have a body.
     // Externally visible & appending globals are needed, if they have an
     // initializer.
-    if (!GO.isDeclaration() && !GO.hasAvailableExternallyLinkage())
+    if (!GO.isDeclaration())
       if (!GO.isDiscardableIfUnused())
         MarkLive(GO);
 

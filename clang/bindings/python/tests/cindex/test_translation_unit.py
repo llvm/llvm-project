@@ -1,6 +1,12 @@
+import os
+from clang.cindex import Config
+if 'CLANG_LIBRARY_PATH' in os.environ:
+    Config.set_library_path(os.environ['CLANG_LIBRARY_PATH'])
+
 from contextlib import contextmanager
 import gc
 import os
+import sys
 import tempfile
 import unittest
 
@@ -15,6 +21,8 @@ from clang.cindex import TranslationUnitLoadError
 from clang.cindex import TranslationUnit
 from .util import get_cursor
 from .util import get_tu
+from .util import skip_if_no_fspath
+from .util import str_to_path
 
 
 kInputsDir = os.path.join(os.path.dirname(__file__), 'INPUTS')
@@ -28,6 +36,17 @@ def save_tu(tu):
     """
     with tempfile.NamedTemporaryFile() as t:
         tu.save(t.name)
+        yield t.name
+
+
+@contextmanager
+def save_tu_pathlike(tu):
+    """Convenience API to save a TranslationUnit to a file.
+
+    Returns the filename it was saved to.
+    """
+    with tempfile.NamedTemporaryFile() as t:
+        tu.save(str_to_path(t.name))
         yield t.name
 
 
@@ -75,14 +94,30 @@ int SOME_DEFINE;
         self.assertEqual(spellings[-1], 'y')
 
     def test_unsaved_files_2(self):
-        try:
-            from StringIO import StringIO
-        except:
+        if sys.version_info.major >= 3:
             from io import StringIO
+        else:
+            from io import BytesIO as StringIO
         tu = TranslationUnit.from_source('fake.c', unsaved_files = [
                 ('fake.c', StringIO('int x;'))])
         spellings = [c.spelling for c in tu.cursor.get_children()]
         self.assertEqual(spellings[-1], 'x')
+
+    @skip_if_no_fspath
+    def test_from_source_accepts_pathlike(self):
+        tu = TranslationUnit.from_source(str_to_path('fake.c'), ['-Iincludes'], unsaved_files = [
+                (str_to_path('fake.c'), """
+#include "fake.h"
+    int x;
+    int SOME_DEFINE;
+    """),
+                    (str_to_path('includes/fake.h'), """
+#define SOME_DEFINE y
+    """)
+                ])
+        spellings = [c.spelling for c in tu.cursor.get_children()]
+        self.assertEqual(spellings[-2], 'x')
+        self.assertEqual(spellings[-1], 'y')
 
     def assert_normpaths_equal(self, path1, path2):
         """ Compares two paths for equality after normalizing them with
@@ -130,6 +165,16 @@ int SOME_DEFINE;
             self.assertTrue(os.path.exists(path))
             self.assertGreater(os.path.getsize(path), 0)
 
+    @skip_if_no_fspath
+    def test_save_pathlike(self):
+        """Ensure TranslationUnit.save() works with PathLike filename."""
+
+        tu = get_tu('int foo();')
+
+        with save_tu_pathlike(tu) as path:
+            self.assertTrue(os.path.exists(path))
+            self.assertGreater(os.path.getsize(path), 0)
+
     def test_save_translation_errors(self):
         """Ensure that saving to an invalid directory raises."""
 
@@ -162,6 +207,22 @@ int SOME_DEFINE;
             # Just in case there is an open file descriptor somewhere.
             del tu2
 
+    @skip_if_no_fspath
+    def test_load_pathlike(self):
+        """Ensure TranslationUnits can be constructed from saved files -
+        PathLike variant."""
+        tu = get_tu('int foo();')
+        self.assertEqual(len(tu.diagnostics), 0)
+        with save_tu(tu) as path:
+            tu2 = TranslationUnit.from_ast_file(filename=str_to_path(path))
+            self.assertEqual(len(tu2.diagnostics), 0)
+
+            foo = get_cursor(tu2, 'foo')
+            self.assertIsNotNone(foo)
+
+            # Just in case there is an open file descriptor somewhere.
+            del tu2
+
     def test_index_parse(self):
         path = os.path.join(kInputsDir, 'hello.cpp')
         index = Index.create()
@@ -179,6 +240,19 @@ int SOME_DEFINE;
 
         with self.assertRaises(Exception):
             f = tu.get_file('foobar.cpp')
+
+    @skip_if_no_fspath
+    def test_get_file_pathlike(self):
+        """Ensure tu.get_file() works appropriately with PathLike filenames."""
+
+        tu = get_tu('int foo();')
+
+        f = tu.get_file(str_to_path('t.c'))
+        self.assertIsInstance(f, File)
+        self.assertEqual(f.name, 't.c')
+
+        with self.assertRaises(Exception):
+            f = tu.get_file(str_to_path('foobar.cpp'))
 
     def test_get_source_location(self):
         """Ensure tu.get_source_location() works."""

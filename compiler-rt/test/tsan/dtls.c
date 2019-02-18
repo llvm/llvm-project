@@ -1,6 +1,7 @@
 // RUN: %clang_tsan %s -o %t
 // RUN: %clang_tsan %s -DBUILD_SO -fPIC -o %t-so.so -shared
 // RUN: %run %t 2>&1 | FileCheck %s
+// XFAIL: netbsd
 
 // Test that tsan cleans up dynamic TLS memory between reuse.
 

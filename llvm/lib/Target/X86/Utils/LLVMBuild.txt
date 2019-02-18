@@ -19,5 +19,5 @@
 type = Library
 name = X86Utils
 parent = X86
-required_libraries = Core Support
+required_libraries = Support
 add_to_library_groups = X86

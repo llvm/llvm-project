@@ -101,6 +101,7 @@
 
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
@@ -963,6 +964,7 @@ public:
 
 private:
   // The root data is either a RootLeaf or a RootBranchData instance.
+  LLVM_ALIGNAS(RootLeaf) LLVM_ALIGNAS(RootBranchData)
   AlignedCharArrayUnion<RootLeaf, RootBranchData> data;
 
   // Tree height.
@@ -977,15 +979,10 @@ private:
   // Allocator used for creating external nodes.
   Allocator &allocator;
 
-  /// dataAs - Represent data as a node type without breaking aliasing rules.
+  /// Represent data as a node type without breaking aliasing rules.
   template <typename T>
   T &dataAs() const {
-    union {
-      const char *d;
-      T *t;
-    } u;
-    u.d = data.buffer;
-    return *u.t;
+    return *bit_cast<T *>(const_cast<char *>(data.buffer));
   }
 
   const RootLeaf &rootLeaf() const {
@@ -1136,6 +1133,19 @@ public:
     iterator I(*this);
     I.find(x);
     return I;
+  }
+
+  /// overlaps(a, b) - Return true if the intervals in this map overlap with the
+  /// interval [a;b].
+  bool overlaps(KeyT a, KeyT b) {
+    assert(Traits::nonEmpty(a, b));
+    const_iterator I = find(a);
+    if (!I.valid())
+      return false;
+    // [a;b] and [x;y] overlap iff x<=b and a<=y. The find() call guarantees the
+    // second part (y = find(a).stop()), so it is sufficient to check the first
+    // one.
+    return !Traits::stopLess(b, I.start());
   }
 };
 

@@ -17,6 +17,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/DirectoryLookup.h"
+#include "clang/Lex/HeaderMap.h"
 #include "clang/Lex/ModuleMap.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
@@ -38,7 +39,6 @@ class DirectoryEntry;
 class ExternalPreprocessorSource;
 class FileEntry;
 class FileManager;
-class HeaderMap;
 class HeaderSearchOptions;
 class IdentifierInfo;
 class LangOptions;
@@ -55,7 +55,7 @@ struct HeaderFileInfo {
   /// True if this is a \#pragma once file.
   unsigned isPragmaOnce : 1;
 
-  /// DirInfo - Keep track of whether this is a system header, and if so,
+  /// Keep track of whether this is a system header, and if so,
   /// whether it is C++ clean or not.  This can be set by the include paths or
   /// by \#pragma gcc system_header.  This is an instance of
   /// SrcMgr::CharacteristicKind.
@@ -74,9 +74,9 @@ struct HeaderFileInfo {
   /// Whether this structure is considered to already have been
   /// "resolved", meaning that it was loaded from the external source.
   unsigned Resolved : 1;
-  
+
   /// Whether this is a header inside a framework that is currently
-  /// being built. 
+  /// being built.
   ///
   /// When a framework is being built, the headers have not yet been placed
   /// into the appropriate framework subdirectories, and therefore are
@@ -86,7 +86,7 @@ struct HeaderFileInfo {
 
   /// Whether this file has been looked up as a header.
   unsigned IsValid : 1;
-  
+
   /// The number of times the file has been included already.
   unsigned short NumIncludes = 0;
 
@@ -110,9 +110,9 @@ struct HeaderFileInfo {
   /// If this header came from a framework include, this is the name
   /// of the framework.
   StringRef Framework;
-  
+
   HeaderFileInfo()
-      : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User), 
+      : isImport(false), isPragmaOnce(false), DirInfo(SrcMgr::C_User),
         External(false), isModuleHeader(false), isCompilingModuleHeader(false),
         Resolved(false), IndexHeaderMapHeader(false), IsValid(false)  {}
 
@@ -124,7 +124,7 @@ struct HeaderFileInfo {
   /// Determine whether this is a non-default header file info, e.g.,
   /// it corresponds to an actual header we've included or tried to include.
   bool isNonDefault() const {
-    return isImport || isPragmaOnce || NumIncludes || ControllingMacro || 
+    return isImport || isPragmaOnce || NumIncludes || ControllingMacro ||
       ControllingMacroID;
   }
 };
@@ -134,30 +134,30 @@ struct HeaderFileInfo {
 class ExternalHeaderFileInfoSource {
 public:
   virtual ~ExternalHeaderFileInfoSource();
-  
+
   /// Retrieve the header file information for the given file entry.
   ///
   /// \returns Header file information for the given file entry, with the
-  /// \c External bit set. If the file entry is not known, return a 
+  /// \c External bit set. If the file entry is not known, return a
   /// default-constructed \c HeaderFileInfo.
   virtual HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) = 0;
 };
-  
+
+/// This structure is used to record entries in our framework cache.
+struct FrameworkCacheEntry {
+  /// The directory entry which should be used for the cached framework.
+  const DirectoryEntry *Directory;
+
+  /// Whether this framework has been "user-specified" to be treated as if it
+  /// were a system framework (even if it was found outside a system framework
+  /// directory).
+  bool IsUserSpecifiedSystemFramework;
+};
+
 /// Encapsulates the information needed to find the file referenced
 /// by a \#include or \#include_next, (sub-)framework lookup, etc.
 class HeaderSearch {
   friend class DirectoryLookup;
-
-  /// This structure is used to record entries in our framework cache.
-  struct FrameworkCacheEntry {
-    /// The directory entry which should be used for the cached framework.
-    const DirectoryEntry *Directory;
-
-    /// Whether this framework has been "user-specified" to be treated as if it
-    /// were a system framework (even if it was found outside a system framework
-    /// directory).
-    bool IsUserSpecifiedSystemFramework;
-  };
 
   /// Header-search options used to initialize this header search.
   std::shared_ptr<HeaderSearchOptions> HSOpts;
@@ -186,7 +186,7 @@ class HeaderSearch {
 
   /// The path to the module cache.
   std::string ModuleCachePath;
-  
+
   /// All of the preprocessor-specific data about files that are
   /// included, indexed by the FileEntry's UID.
   mutable std::vector<HeaderFileInfo> FileInfo;
@@ -219,20 +219,19 @@ class HeaderSearch {
   /// name like "Carbon" to the Carbon.framework directory.
   llvm::StringMap<FrameworkCacheEntry, llvm::BumpPtrAllocator> FrameworkMap;
 
-  /// IncludeAliases - maps include file names (including the quotes or
+  /// Maps include file names (including the quotes or
   /// angle brackets) to other include file names.  This is used to support the
   /// include_alias pragma for Microsoft compatibility.
   using IncludeAliasMap =
       llvm::StringMap<std::string, llvm::BumpPtrAllocator>;
   std::unique_ptr<IncludeAliasMap> IncludeAliases;
 
-  /// HeaderMaps - This is a mapping from FileEntry -> HeaderMap, uniquing
-  /// headermaps.  This vector owns the headermap.
-  std::vector<std::pair<const FileEntry *, const HeaderMap *>> HeaderMaps;
+  /// This is a mapping from FileEntry -> HeaderMap, uniquing headermaps.
+  std::vector<std::pair<const FileEntry *, std::unique_ptr<HeaderMap>>> HeaderMaps;
 
   /// The mapping between modules and headers.
   mutable ModuleMap ModMap;
-  
+
   /// Describes whether a given directory has a module map in it.
   llvm::DenseMap<const DirectoryEntry *, bool> DirectoryHasModuleMap;
 
@@ -240,10 +239,10 @@ class HeaderSearch {
   /// whether they were valid or not.
   llvm::DenseMap<const FileEntry *, bool> LoadedModuleMaps;
 
-  /// Uniqued set of framework names, which is used to track which 
+  /// Uniqued set of framework names, which is used to track which
   /// headers were included as framework headers.
   llvm::StringSet<llvm::BumpPtrAllocator> FrameworkNames;
-  
+
   /// Entity used to resolve the identifier IDs of controlling
   /// macros into IdentifierInfo pointers, and keep the identifire up to date,
   /// as needed.
@@ -251,7 +250,7 @@ class HeaderSearch {
 
   /// Entity used to look up stored header file information.
   ExternalHeaderFileInfoSource *ExternalSource = nullptr;
-  
+
   // Various statistics we track for performance analysis.
   unsigned NumIncluded = 0;
   unsigned NumMultiIncludeFileOptzn = 0;
@@ -264,12 +263,11 @@ public:
                const LangOptions &LangOpts, const TargetInfo *Target);
   HeaderSearch(const HeaderSearch &) = delete;
   HeaderSearch &operator=(const HeaderSearch &) = delete;
-  ~HeaderSearch();
 
   /// Retrieve the header-search options with which this header search
   /// was initialized.
   HeaderSearchOptions &getHeaderSearchOpts() const { return *HSOpts; }
-  
+
   FileManager &getFileMgr() const { return FileMgr; }
 
   DiagnosticsEngine &getDiags() const { return Diags; }
@@ -306,7 +304,7 @@ public:
 
   /// Map the source include name to the dest include name.
   ///
-  /// The Source should include the angle brackets or quotes, the dest 
+  /// The Source should include the angle brackets or quotes, the dest
   /// should not.  This allows for distinction between <> and "" headers.
   void AddIncludeAlias(StringRef Source, StringRef Dest) {
     if (!IncludeAliases)
@@ -314,7 +312,7 @@ public:
     (*IncludeAliases)[Source] = Dest;
   }
 
-  /// MapHeaderToIncludeAlias - Maps one header file name to a different header
+  /// Maps one header file name to a different header
   /// file name, for use with the include_alias pragma.  Note that the source
   /// file name should include the angle brackets or quotes.  Returns StringRef
   /// as null if the header cannot be mapped.
@@ -332,7 +330,7 @@ public:
   void setModuleCachePath(StringRef CachePath) {
     ModuleCachePath = CachePath;
   }
-  
+
   /// Retrieve the path to the module cache.
   StringRef getModuleCachePath() const { return ModuleCachePath; }
 
@@ -340,7 +338,7 @@ public:
   void setDirectoryHasModuleMap(const DirectoryEntry* Dir) {
     DirectoryHasModuleMap[Dir] = true;
   }
-  
+
   /// Forget everything we know about headers so far.
   void ClearFileInfo() {
     FileInfo.clear();
@@ -353,16 +351,16 @@ public:
   ExternalPreprocessorSource *getExternalLookup() const {
     return ExternalLookup;
   }
-  
+
   /// Set the external source of header information.
   void SetExternalSource(ExternalHeaderFileInfoSource *ES) {
     ExternalSource = ES;
   }
-  
+
   /// Set the target information for the header search, if not
   /// already known.
   void setTarget(const TargetInfo &Target);
-  
+
   /// Given a "foo" or \<foo> reference, look up the indicated file,
   /// return null on failure.
   ///
@@ -393,13 +391,18 @@ public:
   ///
   /// \param IsMapped If non-null, and the search involved header maps, set to
   /// true.
+  ///
+  /// \param IsFrameworkFound If non-null, will be set to true if a framework is
+  /// found in any of searched SearchDirs. Doesn't guarantee the requested file
+  /// is found.
   const FileEntry *LookupFile(
       StringRef Filename, SourceLocation IncludeLoc, bool isAngled,
       const DirectoryLookup *FromDir, const DirectoryLookup *&CurDir,
       ArrayRef<std::pair<const FileEntry *, const DirectoryEntry *>> Includers,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
-      bool *IsMapped, bool SkipCache = false, bool BuildSystemModule = false);
+      bool *IsMapped, bool *IsFrameworkFound, bool SkipCache = false,
+      bool BuildSystemModule = false);
 
   /// Look up a subframework for the specified \#include file.
   ///
@@ -408,7 +411,7 @@ public:
   /// HIToolbox is a subframework within Carbon.framework.  If so, return
   /// the FileEntry for the designated file, otherwise return null.
   const FileEntry *LookupSubframeworkHeader(
-      StringRef Filename, const FileEntry *RelativeFileEnt,
+      StringRef Filename, const FileEntry *ContextFileEnt,
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule);
 
@@ -425,7 +428,7 @@ public:
   /// if we should include it.
   bool ShouldEnterIncludeFile(Preprocessor &PP, const FileEntry *File,
                               bool isImport, bool ModulesEnabled,
-                              Module *CorrespondingModule);
+                              Module *M);
 
   /// Return whether the specified file is a normal header,
   /// a system header, or a C++ friendly system header.
@@ -448,9 +451,9 @@ public:
   }
 
   /// Mark the specified file as part of a module.
-  void MarkFileModuleHeader(const FileEntry *File,
+  void MarkFileModuleHeader(const FileEntry *FE,
                             ModuleMap::ModuleHeaderRole Role,
-                            bool IsCompiledModuleHeader);
+                            bool isCompilingModuleHeader);
 
   /// Increment the count for the number of times the specified
   /// FileEntry has been entered.
@@ -479,7 +482,7 @@ public:
   /// This routine does not consider the effect of \#import
   bool isFileMultipleIncludeGuarded(const FileEntry *File);
 
-  /// CreateHeaderMap - This method returns a HeaderMap for the specified
+  /// This method returns a HeaderMap for the specified
   /// FileEntry, uniquing them through the 'HeaderMaps' datastructure.
   const HeaderMap *CreateHeaderMap(const FileEntry *FE);
 
@@ -540,7 +543,7 @@ public:
   /// \c nullptr if none is found.
   const FileEntry *lookupModuleMapFile(const DirectoryEntry *Dir,
                                        bool IsFramework);
-  
+
   void IncrementFrameworkLookupCount() { ++NumFrameworkLookups; }
 
   /// Determine whether there is a module map that may map the header
@@ -556,7 +559,7 @@ public:
   /// header directories.
   bool hasModuleMap(StringRef Filename, const DirectoryEntry *Root,
                     bool IsSystem);
-  
+
   /// Retrieve the module that corresponds to the given file, if any.
   ///
   /// \param File The header that we wish to map to a module.
@@ -617,7 +620,7 @@ private:
   /// frameworks.
   ///
   /// \returns The module, if found; otherwise, null.
-  Module *loadFrameworkModule(StringRef Name, 
+  Module *loadFrameworkModule(StringRef Name,
                               const DirectoryEntry *Dir,
                               bool IsSystem);
 
@@ -641,7 +644,7 @@ private:
   /// \return \c true if the file can be used, \c false if we are not permitted to
   ///         find this file due to requirements from \p RequestingModule.
   bool findUsableModuleForFrameworkHeader(
-      const FileEntry *File, StringRef FrameworkDir, Module *RequestingModule,
+      const FileEntry *File, StringRef FrameworkName, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule, bool IsSystemFramework);
 
   /// Look up the file with the specified name and determine its owning
@@ -655,10 +658,10 @@ private:
 public:
   /// Retrieve the module map.
   ModuleMap &getModuleMap() { return ModMap; }
-  
+
   /// Retrieve the module map.
   const ModuleMap &getModuleMap() const { return ModMap; }
-  
+
   unsigned header_file_size() const { return FileInfo.size(); }
 
   /// Return the HeaderFileInfo structure for the specified FileEntry,
@@ -722,7 +725,7 @@ public:
                                               bool *IsSystem = nullptr);
 
   void PrintStats();
-  
+
   size_t getTotalMemory() const;
 
 private:

@@ -13,7 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Analysis/CloneDetection.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -42,7 +42,7 @@ public:
   void reportClones(BugReporter &BR, AnalysisManager &Mgr,
                     std::vector<CloneDetector::CloneGroup> &CloneGroups) const;
 
-  /// Reports only suspicious clones to the user along with informaton
+  /// Reports only suspicious clones to the user along with information
   /// that explain why they are suspicious.
   void reportSuspiciousClones(
       BugReporter &BR, AnalysisManager &Mgr,
@@ -63,18 +63,18 @@ void CloneChecker::checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
   // At this point, every statement in the translation unit has been analyzed by
   // the CloneDetector. The only thing left to do is to report the found clones.
 
-  int MinComplexity = Mgr.getAnalyzerOptions().getOptionAsInteger(
+  int MinComplexity = Mgr.getAnalyzerOptions().getCheckerIntegerOption(
       "MinimumCloneComplexity", 50, this);
   assert(MinComplexity >= 0);
 
-  bool ReportSuspiciousClones = Mgr.getAnalyzerOptions().getBooleanOption(
-      "ReportSuspiciousClones", true, this);
+  bool ReportSuspiciousClones = Mgr.getAnalyzerOptions()
+    .getCheckerBooleanOption("ReportSuspiciousClones", true, this);
 
-  bool ReportNormalClones = Mgr.getAnalyzerOptions().getBooleanOption(
+  bool ReportNormalClones = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
       "ReportNormalClones", true, this);
 
-  StringRef IgnoredFilesPattern = Mgr.getAnalyzerOptions().getOptionAsString(
-      "IgnoredFilesPattern", "", this);
+  StringRef IgnoredFilesPattern = Mgr.getAnalyzerOptions()
+    .getCheckerStringOption("IgnoredFilesPattern", "", this);
 
   // Let the CloneDetector create a list of clones from all the analyzed
   // statements. We don't filter for matching variable patterns at this point
@@ -201,4 +201,8 @@ void CloneChecker::reportSuspiciousClones(
 
 void ento::registerCloneChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<CloneChecker>();
+}
+
+bool ento::shouldRegisterCloneChecker(const LangOptions &LO) {
+  return true;
 }

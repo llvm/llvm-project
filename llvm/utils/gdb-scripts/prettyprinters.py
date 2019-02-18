@@ -1,12 +1,15 @@
+from __future__ import print_function
+import sys
+
 import gdb.printing
 
 class Iterator:
   def __iter__(self):
     return self
 
-  # Python 2 compatibility
-  def next(self):
-    return self.__next__()
+  if sys.version_info.major == 2:
+      def next(self):
+        return self.__next__()
 
   def children(self):
     return self
@@ -22,8 +25,7 @@ class SmallStringPrinter:
 
   def to_string(self):
     begin = self.val['BeginX']
-    end = self.val['EndX']
-    return escape_bytes(begin.cast(gdb.lookup_type('char').pointer()), end - begin)
+    return escape_bytes(begin.cast(gdb.lookup_type('char').pointer()), self.val['Size'])
 
 class StringRefPrinter:
   """Print an llvm::StringRef object."""
@@ -34,44 +36,25 @@ class StringRefPrinter:
   def to_string(self):
     return escape_bytes(self.val['Data'], self.val['Length'])
 
-class SmallVectorPrinter:
+class SmallVectorPrinter(Iterator):
   """Print an llvm::SmallVector object."""
-
-  class _iterator:
-    def __init__(self, begin, end):
-      self.cur = begin
-      self.end = end
-      self.count = 0
-
-    def __iter__(self):
-      return self
-
-    def next(self):
-      if self.cur == self.end:
-        raise StopIteration
-      count = self.count
-      self.count = self.count + 1
-      cur = self.cur
-      self.cur = self.cur + 1
-      return '[%d]' % count, cur.dereference()
-
-    __next__ = next
 
   def __init__(self, val):
     self.val = val
+    t = val.type.template_argument(0).pointer()
+    self.begin = val['BeginX'].cast(t)
+    self.size = val['Size']
+    self.i = 0
 
-  def children(self):
-    t = self.val.type.template_argument(0).pointer()
-    begin = self.val['BeginX'].cast(t)
-    end = self.val['EndX'].cast(t)
-    return self._iterator(begin, end)
+  def __next__(self):
+    if self.i == self.size:
+      raise StopIteration
+    ret = '[{}]'.format(self.i), (self.begin+self.i).dereference()
+    self.i += 1
+    return ret
 
   def to_string(self):
-    t = self.val.type.template_argument(0).pointer()
-    begin = self.val['BeginX'].cast(t)
-    end = self.val['EndX'].cast(t)
-    capacity = self.val['CapacityX'].cast(t)
-    return 'llvm::SmallVector of length %d, capacity %d' % (end - begin, capacity - begin)
+    return 'llvm::SmallVector of Size {}, Capacity {}'.format(self.size, self.val['Capacity'])
 
   def display_hint (self):
     return 'array'
@@ -88,7 +71,7 @@ class ArrayRefPrinter:
     def __iter__(self):
       return self
 
-    def next(self):
+    def __next__(self):
       if self.cur == self.end:
         raise StopIteration
       count = self.count
@@ -97,12 +80,11 @@ class ArrayRefPrinter:
       self.cur = self.cur + 1
       return '[%d]' % count, cur.dereference()
 
-    __next__ = next
+    if sys.version_info.major == 2:
+        next = __next__
 
   def __init__(self, val):
     self.val = val
-
-    __next__ = next
 
   def children(self):
     data = self.val['Data']
@@ -187,7 +169,7 @@ class DenseMapPrinter:
       while self.cur != self.end and (is_equal(self.cur.dereference()['first'], empty) or is_equal(self.cur.dereference()['first'], tombstone)):
         self.cur = self.cur + 1
 
-    def next(self):
+    def __next__(self):
       if self.cur == self.end:
         raise StopIteration
       cur = self.cur
@@ -200,7 +182,8 @@ class DenseMapPrinter:
         self.first = False
       return 'x', v
 
-    __next__ = next
+    if sys.version_info.major == 2:
+        next = __next__
 
   def __init__(self, val):
     self.val = val

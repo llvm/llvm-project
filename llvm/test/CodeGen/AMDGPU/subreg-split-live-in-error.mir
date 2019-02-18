@@ -102,6 +102,13 @@ body: |
 
   bb.7:
     successors: %bb.13(0x80000000)
+
+    ; In reality we are checking that this code doesn't assert when splitting
+    ; and inserting a spill. Here we just check that the point where the error
+    ; occurs we see a correctly generated spill.
+    ; GCN-LABEL: bb.7:
+    ; GCN: SI_SPILL_V128_SAVE %{{[0-9]+}}, %stack.1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, implicit $exec
+
     undef %15.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
     %15.sub1:vreg_128 = COPY %15.sub0
     %15.sub2:vreg_128 = COPY %15.sub0
@@ -114,6 +121,10 @@ body: |
 
   bb.9:
     successors: %bb.12(0x80000000)
+
+    ; GCN-LABEL: bb.9:
+    ; GCN: SI_SPILL_V128_SAVE %{{[0-9]+}}, %stack.1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, implicit $exec
+
     undef %15.sub0:vreg_128 = V_MOV_B32_e32 0, implicit $exec
     %15.sub1:vreg_128 = COPY %15.sub0
     %15.sub2:vreg_128 = COPY %15.sub0
@@ -121,6 +132,10 @@ body: |
 
   bb.10:
     successors: %bb.12(0x80000000)
+
+    ; GCN-LABEL: bb.10:
+    ; GCN: SI_SPILL_V128_SAVE %{{[0-9]+}}, %stack.1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, implicit $exec
+
     undef %15.sub0:vreg_128 = V_MOV_B32_e32 2143289344, implicit $exec
     %15.sub1:vreg_128 = COPY %15.sub0
     %15.sub2:vreg_128 = COPY %15.sub0
@@ -142,12 +157,6 @@ body: |
 
   bb.13:
     successors: %bb.15(0x40000000), %bb.14(0x40000000)
-
-    ; In reality we are checking that this code doesn't assert when splitting
-    ; and inserting a spill. Here we just check that the point where the error
-    ; occurs we see a correctly generated spill.
-    ; GCN-LABEL: bb.13:
-    ; GCN: SI_SPILL_V128_SAVE %{{[0-9]+}}, %stack.1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr5, 0, implicit $exec
 
     %18:vgpr_32 = V_MAD_F32 0, %10.sub0, 0, target-flags(amdgpu-gotprel) 1073741824, 0, -1082130432, 0, 0, implicit $exec
     %19:vgpr_32 = V_MAD_F32 0, %12.sub0, 0, target-flags(amdgpu-gotprel) 0, 0, 0, 0, 0, implicit $exec
@@ -267,7 +276,7 @@ body: |
 
   bb.24:
     %68:vgpr_32 = V_MUL_F32_e32 0, %4, implicit $exec
-    %69:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, undef %70:vgpr_32, 0, %68, 0, implicit $exec
+    %69:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, undef %70:vgpr_32, 0, %68, 0, 0, implicit $exec
     EXP 0, undef %71:vgpr_32, %69, undef %72:vgpr_32, undef %73:vgpr_32, -1, -1, 15, implicit $exec
     S_ENDPGM
 ...

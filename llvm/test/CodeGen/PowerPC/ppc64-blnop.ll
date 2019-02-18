@@ -1,11 +1,11 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s
-; RUN: llc < %s -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s
 ; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
-; RUN: llc < %s -function-sections -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-FS
+; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s
+; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 | FileCheck %s
+; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s
+; RUN: llc < %s -relocation-model=pic -function-sections -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-FS
 ; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s
-; RUN: llc < %s -function-sections -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-FS
-; RUN: llc < %s -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc < %s -relocation-model=pic -function-sections -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu | FileCheck %s -check-prefix=CHECK-FS
+; RUN: llc < %s -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN: -code-model=small -mcpu=pwr8 | FileCheck %s -check-prefix=SCM
 
 %class.T = type { [2 x i8] }

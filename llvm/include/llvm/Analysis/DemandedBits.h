@@ -44,10 +44,21 @@ public:
     F(F), AC(AC), DT(DT) {}
 
   /// Return the bits demanded from instruction I.
+  ///
+  /// For vector instructions individual vector elements are not distinguished:
+  /// A bit is demanded if it is demanded for any of the vector elements. The
+  /// size of the return value corresponds to the type size in bits of the
+  /// scalar type.
+  ///
+  /// Instructions that do not have integer or vector of integer type are
+  /// accepted, but will always produce a mask with all bits set.
   APInt getDemandedBits(Instruction *I);
 
   /// Return true if, during analysis, I could not be reached.
   bool isInstructionDead(Instruction *I);
+
+  /// Return whether this use is dead by means of not having any demanded bits.
+  bool isUseDead(Use *U);
 
   void print(raw_ostream &OS);
 
@@ -67,6 +78,9 @@ private:
   // The set of visited instructions (non-integer-typed only).
   SmallPtrSet<Instruction*, 32> Visited;
   DenseMap<Instruction *, APInt> AliveBits;
+  // Uses with no demanded bits. If the user also has no demanded bits, the use
+  // might not be stored explicitly in this map, to save memory during analysis.
+  SmallPtrSet<Use *, 16> DeadUses;
 };
 
 class DemandedBitsWrapperPass : public FunctionPass {

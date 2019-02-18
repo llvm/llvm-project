@@ -99,8 +99,6 @@ namespace DefaultedFnExceptionSpec {
 
   Error<char> c; // expected-note 2{{instantiation of}}
   struct DelayImplicit {
-    // FIXME: The location of this note is terrible. The instantiation was
-    // triggered by the uses of the functions in the decltype expressions below.
     Error<int> e; // expected-note 6{{instantiation of}}
   };
   Error<float> *e;
@@ -109,9 +107,9 @@ namespace DefaultedFnExceptionSpec {
   // a defaulted special member function that calls the function is needed.
   // Use in an unevaluated operand still results in the exception spec being
   // needed.
-  void test1(decltype(declval<DelayImplicit>() = DelayImplicit(DelayImplicit())));
-  void test2(decltype(declval<DelayImplicit>() = declval<const DelayImplicit>()));
-  void test3(decltype(DelayImplicit(declval<const DelayImplicit>())));
+  void test1(decltype(declval<DelayImplicit>() = DelayImplicit(DelayImplicit()))); // expected-note 4{{in evaluation of exception specification}}
+  void test2(decltype(declval<DelayImplicit>() = declval<const DelayImplicit>())); // expected-note {{in evaluation of exception specification}}
+  void test3(decltype(DelayImplicit(declval<const DelayImplicit>()))); // expected-note {{in evaluation of exception specification}}
 
   // Any odr-use needs the exception specification.
   void f(Error<double> *p) {

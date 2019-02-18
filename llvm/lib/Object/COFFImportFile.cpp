@@ -546,7 +546,12 @@ NewArchiveMember ObjectFactory::createWeakExternal(StringRef Sym,
        u16(0),
        IMAGE_SYM_CLASS_WEAK_EXTERNAL,
        1},
-      {{{2, 0, 0, 0, 3, 0, 0, 0}}, u32(0), u16(0), u16(0), uint8_t(0), 0},
+      {{{2, 0, 0, 0, IMAGE_WEAK_EXTERN_SEARCH_ALIAS, 0, 0, 0}},
+       u32(0),
+       u16(0),
+       u16(0),
+       IMAGE_SYM_CLASS_NULL,
+       0},
   };
   SymbolTable[2].Name.Offset.Offset = sizeof(uint32_t);
 

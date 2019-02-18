@@ -1,4 +1,4 @@
-; RUN: opt  -mtriple amdgcn-unknown-amdhsa -analyze -divergence %s | FileCheck %s
+; RUN: opt  -mtriple amdgcn-unknown-amdhsa -analyze -divergence -use-gpu-divergence-analysis %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.workitem.id.y() #0

@@ -123,3 +123,28 @@ char CrashOnTooManyCUs::ID = 0;
 static RegisterPass<CrashOnTooManyCUs>
     A("bugpoint-crash-too-many-cus",
       "BugPoint Test Pass - Intentionally crash on too many CUs");
+
+namespace {
+class CrashOnFunctionAttribute : public FunctionPass {
+public:
+  static char ID; // Pass ID, replacement for typeid
+  CrashOnFunctionAttribute() : FunctionPass(ID) {}
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
+
+  bool runOnFunction(Function &F) override {
+    AttributeSet A = F.getAttributes().getFnAttributes();
+    if (A.hasAttribute("bugpoint-crash"))
+      abort();
+    return false;
+  }
+};
+} // namespace
+
+char CrashOnFunctionAttribute::ID = 0;
+static RegisterPass<CrashOnFunctionAttribute>
+    B("bugpoint-crashfuncattr", "BugPoint Test Pass - Intentionally crash on "
+                                "function attribute 'bugpoint-crash'");

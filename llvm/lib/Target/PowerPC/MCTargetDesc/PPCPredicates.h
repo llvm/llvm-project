@@ -58,7 +58,7 @@ namespace PPC {
     PRED_BIT_SET =   1024,
     PRED_BIT_UNSET = 1025
   };
-  
+
   // Bit for branch taken (plus) or not-taken (minus) hint
   enum BranchHintBit {
     BR_NO_HINT       = 0x0,

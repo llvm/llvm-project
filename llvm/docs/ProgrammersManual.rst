@@ -1435,7 +1435,7 @@ order (so you can do pointer arithmetic between elements), supports efficient
 push_back/pop_back operations, supports efficient random access to its elements,
 etc.
 
-The advantage of SmallVector is that it allocates space for some number of
+The main advantage of SmallVector is that it allocates space for some number of
 elements (N) **in the object itself**.  Because of this, if the SmallVector is
 dynamically smaller than N, no malloc is performed.  This can be a big win in
 cases where the malloc/free call is far more expensive than the code that
@@ -1449,6 +1449,21 @@ SmallVectors are most useful when on the stack.
 
 SmallVector also provides a nice portable and efficient replacement for
 ``alloca``.
+
+SmallVector has grown a few other minor advantages over std::vector, causing
+``SmallVector<Type, 0>`` to be preferred over ``std::vector<Type>``.
+
+#. std::vector is exception-safe, and some implementations have pessimizations
+   that copy elements when SmallVector would move them.
+
+#. SmallVector understands ``isPodLike<Type>`` and uses realloc aggressively.
+
+#. Many LLVM APIs take a SmallVectorImpl as an out parameter (see the note
+   below).
+
+#. SmallVector with N equal to 0 is smaller than std::vector on 64-bit
+   platforms, since it uses ``unsigned`` (instead of ``void*``) for its size
+   and capacity.
 
 .. note::
 
@@ -1482,12 +1497,10 @@ SmallVector also provides a nice portable and efficient replacement for
 <vector>
 ^^^^^^^^
 
-``std::vector`` is well loved and respected.  It is useful when SmallVector
-isn't: when the size of the vector is often large (thus the small optimization
-will rarely be a benefit) or if you will be allocating many instances of the
-vector itself (which would waste space for elements that aren't in the
-container).  vector is also useful when interfacing with code that expects
-vectors :).
+``std::vector<T>`` is well loved and respected.  However, ``SmallVector<T, 0>``
+is often a better option due to the advantages listed above.  std::vector is
+still useful when you need to store more than ``UINT32_MAX`` elements or when
+interfacing with code that expects vectors :).
 
 One worthwhile note about std::vector: avoid code like this:
 
@@ -1859,9 +1872,7 @@ to :ref:`std::set <dss_set>`, but for pointers it uses something far better,
 :ref:`SmallPtrSet <dss_smallptrset>`.
 
 The magic of this class is that it handles small sets extremely efficiently, but
-gracefully handles extremely large sets without loss of efficiency.  The
-drawback is that the interface is quite small: it supports insertion, queries
-and erasing, but does not support iteration.
+gracefully handles extremely large sets without loss of efficiency.
 
 .. _dss_smallptrset:
 
@@ -1869,11 +1880,11 @@ llvm/ADT/SmallPtrSet.h
 ^^^^^^^^^^^^^^^^^^^^^^
 
 ``SmallPtrSet`` has all the advantages of ``SmallSet`` (and a ``SmallSet`` of
-pointers is transparently implemented with a ``SmallPtrSet``), but also supports
-iterators.  If more than N insertions are performed, a single quadratically
-probed hash table is allocated and grows as needed, providing extremely
-efficient access (constant time insertion/deleting/queries with low constant
-factors) and is very stingy with malloc traffic.
+pointers is transparently implemented with a ``SmallPtrSet``). If more than N
+insertions are performed, a single quadratically probed hash table is allocated
+and grows as needed, providing extremely efficient access (constant time
+insertion/deleting/queries with low constant factors) and is very stingy with
+malloc traffic.
 
 Note that, unlike :ref:`std::set <dss_set>`, the iterators of ``SmallPtrSet``
 are invalidated whenever an insertion occurs.  Also, the values visited by the
@@ -3725,13 +3736,6 @@ Important Subclasses of the ``Instruction`` class
   `ICmpInst <LangRef.html#i_icmp>`_ (integer opreands), and
   `FCmpInst <LangRef.html#i_fcmp>`_ (floating point operands).
 
-.. _TerminatorInst:
-
-* ``TerminatorInst``
-
-  This subclass is the parent of all terminator instructions (those which can
-  terminate a block).
-
 .. _m_Instruction:
 
 Important Public Members of the ``Instruction`` class
@@ -4057,7 +4061,7 @@ This class represents a single entry single exit section of the code, commonly
 known as a basic block by the compiler community.  The ``BasicBlock`` class
 maintains a list of Instruction_\ s, which form the body of the block.  Matching
 the language definition, the last element of this list of instructions is always
-a terminator instruction (a subclass of the TerminatorInst_ class).
+a terminator instruction.
 
 In addition to tracking the list of instructions that make up the block, the
 ``BasicBlock`` class also keeps track of the :ref:`Function <c_Function>` that
@@ -4108,7 +4112,7 @@ Important Public Members of the ``BasicBlock`` class
   Returns a pointer to :ref:`Function <c_Function>` the block is embedded into,
   or a null pointer if it is homeless.
 
-* ``TerminatorInst *getTerminator()``
+* ``Instruction *getTerminator()``
 
   Returns a pointer to the terminator instruction that appears at the end of the
   ``BasicBlock``.  If there is no terminator instruction, or if the last

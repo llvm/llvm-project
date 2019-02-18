@@ -10,6 +10,7 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBENUMCHILDREN_H
 #define LLVM_DEBUGINFO_PDB_IPDBENUMCHILDREN_H
 
+#include <cassert>
 #include <cstdint>
 #include <memory>
 
@@ -27,7 +28,19 @@ public:
   virtual ChildTypePtr getChildAtIndex(uint32_t Index) const = 0;
   virtual ChildTypePtr getNext() = 0;
   virtual void reset() = 0;
-  virtual MyType *clone() const = 0;
+};
+
+template <typename ChildType>
+class NullEnumerator : public IPDBEnumChildren<ChildType> {
+  virtual uint32_t getChildCount() const override { return 0; }
+  virtual std::unique_ptr<ChildType>
+  getChildAtIndex(uint32_t Index) const override {
+    return nullptr;
+  }
+  virtual std::unique_ptr<ChildType> getNext() override {
+    return nullptr;
+  }
+  virtual void reset() override {}
 };
 
 } // end namespace pdb

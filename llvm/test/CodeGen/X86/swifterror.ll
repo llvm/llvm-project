@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=CHECK-APPLE %s
-; RUN: llc -verify-machineinstrs -O0 < %s -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=CHECK-O0 %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=i386-apple-darwin | FileCheck --check-prefix=CHECK-i386 %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-apple-darwin | FileCheck --check-prefix=CHECK-APPLE %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-apple-darwin -O0 | FileCheck --check-prefix=CHECK-O0 %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=i386-apple-darwin | FileCheck --check-prefix=CHECK-i386 %s
 
 declare i8* @malloc(i64)
 declare void @free(i8*)
@@ -37,8 +37,7 @@ define float @caller(i8* %error_ref) {
 ; CHECK-APPLE: testq %r12, %r12
 ; CHECK-APPLE: jne
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: movb 8(%r12)
-; CHECK-APPLE: movq %r12, %rdi
+; CHECK-APPLE: movb 8(%rdi)
 ; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller:
@@ -250,9 +249,8 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-APPLE: testq %r12, %r12
 ; CHECK-APPLE: jne
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: movb 8(%r12),
+; CHECK-APPLE: movb 8(%rdi),
 ; CHECK-APPLE: movb %{{.*}},
-; CHECK-APPLE: movq %r12, %rdi
 ; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller3:
@@ -300,8 +298,7 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-APPLE: testq %r12, %r12
 ; CHECK-APPLE: jne
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: movb 8(%r12)
-; CHECK-APPLE: movq %r12, %rdi
+; CHECK-APPLE: movb 8(%rdi)
 ; CHECK-APPLE: callq {{.*}}free
 
 ; The second swifterror value:
@@ -310,8 +307,7 @@ define float @caller_with_multiple_swifterror_values(i8* %error_ref, i8* %error_
 ; CHECK-APPLE: testq %r12, %r12
 ; CHECK-APPLE: jne
 ; Access part of the error object and save it to error_ref
-; CHECK-APPLE: movb 8(%r12)
-; CHECK-APPLE: movq %r12, %rdi
+; CHECK-APPLE: movb 8(%rdi)
 ; CHECK-APPLE: callq {{.*}}free
 
 ; CHECK-O0-LABEL: caller_with_multiple_swifterror_values:
@@ -488,8 +484,8 @@ entry:
 ; CHECK-i386:  retl
 ; CHECK-APPLE-LABEL: empty_swiftcc:
 ; CHECK-APPLE:  movl    %edx, %ecx
-; CHECK-APPLE:  movl    %edi, %eax
-; CHECK-APPLE:  movl    %esi, %edx
+; CHECK-APPLE-DAG:  movl    %edi, %eax
+; CHECK-APPLE-DAG:  movl    %esi, %edx
 ; CHECK-APPLE:  retq
 define swiftcc {i32, i32, i32} @empty_swiftcc({i32, i32, i32} , %swift_error** swifterror %error_ptr_ref) {
 entry:

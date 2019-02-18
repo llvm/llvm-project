@@ -250,8 +250,6 @@ static bool hasAnyDirectChildrenWithKind(const SelectedASTNode &Node,
 
 namespace {
 struct SelectedNodeWithParents {
-  SelectedNodeWithParents(SelectedNodeWithParents &&) = default;
-  SelectedNodeWithParents &operator=(SelectedNodeWithParents &&) = default;
   SelectedASTNode::ReferenceType Node;
   llvm::SmallVector<SelectedASTNode::ReferenceType, 8> Parents;
 

@@ -1,27 +1,27 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv4 -O2 < %s | FileCheck %s
-; ModuleID = 'hwloop-const.c'
-target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
+; RUN: llc -march=hexagon < %s | FileCheck %s
+; CHECK: endloop
+
 target triple = "hexagon-unknown-linux-gnu"
 
-@b = common global [25000 x i32] zeroinitializer, align 8
-@a = common global [25000 x i32] zeroinitializer, align 8
-@c = common global [25000 x i32] zeroinitializer, align 8
+@g0 = common global [25000 x i32] zeroinitializer, align 8
+@g1 = common global [25000 x i32] zeroinitializer, align 8
 
-define i32 @hwloop_bug() nounwind {
-entry:
-  br label %for.body
+define i32 @f0() #0 {
+b0:
+  br label %b1
 
-; CHECK: endloop
-for.body:                                         ; preds = %for.body, %entry
-  %i.02 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds [25000 x i32], [25000 x i32]* @b, i32 0, i32 %i.02
-  store i32 %i.02, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [25000 x i32], [25000 x i32]* @a, i32 0, i32 %i.02
-  store i32 %i.02, i32* %arrayidx1, align 4
-  %inc = add nsw i32 %i.02, 1
-  %exitcond = icmp eq i32 %inc, 25000
-  br i1 %exitcond, label %for.end, label %for.body
+b1:                                               ; preds = %b1, %b0
+  %v0 = phi i32 [ 0, %b0 ], [ %v3, %b1 ]
+  %v1 = getelementptr inbounds [25000 x i32], [25000 x i32]* @g0, i32 0, i32 %v0
+  store i32 %v0, i32* %v1, align 4
+  %v2 = getelementptr inbounds [25000 x i32], [25000 x i32]* @g1, i32 0, i32 %v0
+  store i32 %v0, i32* %v2, align 4
+  %v3 = add nsw i32 %v0, 1
+  %v4 = icmp eq i32 %v3, 25000
+  br i1 %v4, label %b2, label %b1
 
-for.end:                                          ; preds = %for.body
+b2:                                               ; preds = %b1
   ret i32 0
 }
+
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }

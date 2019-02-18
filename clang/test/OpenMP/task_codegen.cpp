@@ -107,6 +107,7 @@ int main() {
 // CHECK: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i8* [[ORIG_TASK_PTR]])
 #pragma omp task untied
   {
+#pragma omp critical
     a = 1;
   }
 // CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 0, i64 40, i64 1,
@@ -278,5 +279,18 @@ int main() {
 // CHECK: load i32*, i32** %
 // CHECK: store i32 4, i32* %
 // CHECK: call i32 @__kmpc_omp_task(%
+
+struct S1 {
+  int a;
+  S1() { taskinit(); }
+  void taskinit() {
+#pragma omp task
+    a = 0;
+  }
+} s1;
+
+// CHECK-LABEL: taskinit
+// CHECK: call i8* @__kmpc_omp_task_alloc(
+
 #endif
 

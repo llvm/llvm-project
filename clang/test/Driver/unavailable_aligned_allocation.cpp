@@ -1,4 +1,4 @@
-// RUN: %clang -target x86_64-apple-macosx10.12 -c -### %s 2>&1 \
+// RUN: %clang -target x86_64-apple-macosx10.13 -c -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=UNAVAILABLE
 //
 // RUN: %clang -target arm64-apple-ios10 -c -### %s 2>&1 \
@@ -24,7 +24,7 @@
 //
 // UNAVAILABLE: "-faligned-alloc-unavailable"
 
-// RUN: %clang -target x86_64-apple-macosx10.13 -c -### %s 2>&1 \
+// RUN: %clang -target x86_64-apple-macosx10.14 -c -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=AVAILABLE
 //
 // RUN: %clang -target arm64-apple-ios11 -c -### %s 2>&1 \
@@ -51,4 +51,13 @@
 // RUN: -c -### %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=AVAILABLE
 //
+// Check that passing -faligned-allocation or -fno-aligned-allocation stops the
+// driver from passing -faligned-alloc-unavailable to cc1.
+//
+// RUN: %clang -target x86_64-apple-macosx10.13 -faligned-allocation -c -### %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=AVAILABLE
+//
+// RUN: %clang -target x86_64-apple-macosx10.13 -fno-aligned-allocation -c -### %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=AVAILABLE
+
 // AVAILABLE-NOT: "-faligned-alloc-unavailable"

@@ -400,6 +400,76 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
                        MachinePointerInfo::getConstantPool(MF), Align);
   }
 
+  // A special case is a situation where the vector is built entirely from
+  // elements extracted from another vector. This could be done via a shuffle
+  // more efficiently, but typically, the size of the source vector will not
+  // match the size of the vector being built (which precludes the use of a
+  // shuffle directly).
+  // This only handles a single source vector, and the vector being built
+  // should be of a sub-vector type of the source vector type.
+  auto IsBuildFromExtracts = [this,&Values] (SDValue &SrcVec,
+                                             SmallVectorImpl<int> &SrcIdx) {
+    SDValue Vec;
+    for (SDValue V : Values) {
+      if (isUndef(V)) {
+        SrcIdx.push_back(-1);
+        continue;
+      }
+      if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+        return false;
+      // All extracts should come from the same vector.
+      SDValue T = V.getOperand(0);
+      if (Vec.getNode() != nullptr && T.getNode() != Vec.getNode())
+        return false;
+      Vec = T;
+      ConstantSDNode *C = dyn_cast<ConstantSDNode>(V.getOperand(1));
+      if (C == nullptr)
+        return false;
+      int I = C->getSExtValue();
+      assert(I >= 0 && "Negative element index");
+      SrcIdx.push_back(I);
+    }
+    SrcVec = Vec;
+    return true;
+  };
+
+  SmallVector<int,128> ExtIdx;
+  SDValue ExtVec;
+  if (IsBuildFromExtracts(ExtVec, ExtIdx)) {
+    MVT ExtTy = ty(ExtVec);
+    unsigned ExtLen = ExtTy.getVectorNumElements();
+    if (ExtLen == VecLen || ExtLen == 2*VecLen) {
+      // Construct a new shuffle mask that will produce a vector with the same
+      // number of elements as the input vector, and such that the vector we
+      // want will be the initial subvector of it.
+      SmallVector<int,128> Mask;
+      BitVector Used(ExtLen);
+
+      for (int M : ExtIdx) {
+        Mask.push_back(M);
+        if (M >= 0)
+          Used.set(M);
+      }
+      // Fill the rest of the mask with the unused elements of ExtVec in hopes
+      // that it will result in a permutation of ExtVec's elements. It's still
+      // fine if it doesn't (e.g. if undefs are present, or elements are
+      // repeated), but permutations can always be done efficiently via vdelta
+      // and vrdelta.
+      for (unsigned I = 0; I != ExtLen; ++I) {
+        if (Mask.size() == ExtLen)
+          break;
+        if (!Used.test(I))
+          Mask.push_back(I);
+      }
+
+      SDValue S = DAG.getVectorShuffle(ExtTy, dl, ExtVec,
+                                       DAG.getUNDEF(ExtTy), Mask);
+      if (ExtLen == VecLen)
+        return S;
+      return DAG.getTargetExtractSubreg(Hexagon::vsub_lo, dl, VecTy, S);
+    }
+  }
+
   // Construct two halves in parallel, then or them together.
   assert(4*Words.size() == Subtarget.getVectorLength());
   SDValue HalfV0 = getInstr(Hexagon::V6_vd0, dl, VecTy, {}, DAG);
@@ -1356,7 +1426,8 @@ SDValue
 HexagonTargetLowering::LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const {
   // Sign- and zero-extends are legal.
   assert(Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG);
-  return DAG.getZeroExtendVectorInReg(Op.getOperand(0), SDLoc(Op), ty(Op));
+  return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(Op), ty(Op),
+                     Op.getOperand(0));
 }
 
 SDValue

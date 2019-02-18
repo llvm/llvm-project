@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- floattidf.c - Test __floattidf ------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

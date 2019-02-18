@@ -30,11 +30,8 @@ define <8 x i1> @test2(<2 x i1> %a) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovq2m %xmm0, %k0
-; CHECK-NEXT:    vpmovm2d %k0, %ymm0
-; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
-; CHECK-NEXT:    vpmovd2m %ymm0, %k0
+; CHECK-NEXT:    kshiftlb $4, %k0, %k0
 ; CHECK-NEXT:    vpmovm2w %k0, %xmm0
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %res = shufflevector <2 x i1> %a, <2 x i1> zeroinitializer, <8 x i32> <i32 3, i32 3, i32 undef, i32 undef, i32 0, i32 1, i32 undef, i32 undef>
   ret <8 x i1> %res
@@ -76,7 +73,7 @@ define <4 x i1> @test5(<2 x i1> %a, <2 x i1>%b) {
 ; CHECK-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovq2m %xmm0, %k1
 ; CHECK-NEXT:    kshiftlb $2, %k0, %k0
-; CHECK-NEXT:    korb %k0, %k1, %k0
+; CHECK-NEXT:    korw %k0, %k1, %k0
 ; CHECK-NEXT:    vpmovm2d %k0, %xmm0
 ; CHECK-NEXT:    retq
 
@@ -92,7 +89,7 @@ define <16 x i1> @test6(<2 x i1> %a, <2 x i1>%b) {
 ; CHECK-NEXT:    vpsllq $63, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovq2m %xmm0, %k1
 ; CHECK-NEXT:    kshiftlb $2, %k0, %k0
-; CHECK-NEXT:    korb %k0, %k1, %k0
+; CHECK-NEXT:    korw %k0, %k1, %k0
 ; CHECK-NEXT:    vpmovm2b %k0, %xmm0
 ; CHECK-NEXT:    retq
 

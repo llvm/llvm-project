@@ -13,15 +13,33 @@
 
 #include <assert.h>
 #include <elf.h>
+
+#include "sanitizer_common/sanitizer_common.h"
+#if SANITIZER_FREEBSD
+#include <sys/link_elf.h>
+#endif
 #include <link.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 
+#if SANITIZER_LINUX
 typedef ElfW(Phdr) Elf_Phdr;
 typedef ElfW(Ehdr) Elf_Ehdr;
+typedef ElfW(Addr) Elf_Addr;
+typedef ElfW(Sym) Elf_Sym;
+typedef ElfW(Dyn) Elf_Dyn;
+#elif SANITIZER_FREEBSD
+#if SANITIZER_WORDSIZE == 64
+#define ElfW64_Dyn Elf_Dyn
+#define ElfW64_Sym Elf_Sym
+#else
+#define ElfW32_Dyn Elf_Dyn
+#define ElfW32_Sym Elf_Sym
+#endif
+#endif
 
 #include "interception/interception.h"
-#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "ubsan/ubsan_init.h"
 #include "ubsan/ubsan_flags.h"
@@ -154,15 +172,25 @@ void ShadowBuilder::Add(uptr begin, uptr end, uptr cfi_check) {
     *s = sv;
 }
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_NETBSD
 void ShadowBuilder::Install() {
   MprotectReadOnly(shadow_, GetShadowSize());
   uptr main_shadow = GetShadow();
   if (main_shadow) {
     // Update.
+#if SANITIZER_LINUX
     void *res = mremap((void *)shadow_, GetShadowSize(), GetShadowSize(),
                        MREMAP_MAYMOVE | MREMAP_FIXED, (void *)main_shadow);
     CHECK(res != MAP_FAILED);
+#elif SANITIZER_NETBSD
+    void *res = mremap((void *)shadow_, GetShadowSize(), (void *)main_shadow,
+                       GetShadowSize(), MAP_FIXED);
+    CHECK(res != MAP_FAILED);
+#else
+    void *res = MmapFixedOrDie(shadow_, GetShadowSize());
+    CHECK(res != MAP_FAILED);
+    ::memcpy(&shadow_, &main_shadow, GetShadowSize());
+#endif
   } else {
     // Initial setup.
     CHECK_EQ(kCfiShadowLimitsStorageSize, GetPageSizeCached());
@@ -183,17 +211,17 @@ void ShadowBuilder::Install() {
 //    dlopen(RTLD_NOLOAD | RTLD_LAZY)
 //    dlsym("__cfi_check").
 uptr find_cfi_check_in_dso(dl_phdr_info *info) {
-  const ElfW(Dyn) *dynamic = nullptr;
+  const Elf_Dyn *dynamic = nullptr;
   for (int i = 0; i < info->dlpi_phnum; ++i) {
     if (info->dlpi_phdr[i].p_type == PT_DYNAMIC) {
       dynamic =
-          (const ElfW(Dyn) *)(info->dlpi_addr + info->dlpi_phdr[i].p_vaddr);
+          (const Elf_Dyn *)(info->dlpi_addr + info->dlpi_phdr[i].p_vaddr);
       break;
     }
   }
   if (!dynamic) return 0;
   uptr strtab = 0, symtab = 0, strsz = 0;
-  for (const ElfW(Dyn) *p = dynamic; p->d_tag != PT_NULL; ++p) {
+  for (const Elf_Dyn *p = dynamic; p->d_tag != PT_NULL; ++p) {
     if (p->d_tag == DT_SYMTAB)
       symtab = p->d_un.d_ptr;
     else if (p->d_tag == DT_STRTAB)
@@ -227,7 +255,7 @@ uptr find_cfi_check_in_dso(dl_phdr_info *info) {
     return 0;
   }
 
-  for (const ElfW(Sym) *p = (const ElfW(Sym) *)symtab; (ElfW(Addr))p < strtab;
+  for (const Elf_Sym *p = (const Elf_Sym *)symtab; (Elf_Addr)p < strtab;
        ++p) {
     // There is no reliable way to find the end of the symbol table. In
     // lld-produces files, there are other sections between symtab and strtab.

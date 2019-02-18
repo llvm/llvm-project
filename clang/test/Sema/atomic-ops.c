@@ -115,7 +115,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
   __c11_atomic_load(i, memory_order_seq_cst);
   __c11_atomic_load(p, memory_order_seq_cst);
   __c11_atomic_load(d, memory_order_seq_cst);
-  __c11_atomic_load(ci, memory_order_seq_cst); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
+  __c11_atomic_load(ci, memory_order_seq_cst);
 
   int load_n_1 = __atomic_load_n(I, memory_order_relaxed);
   int *load_n_2 = __atomic_load_n(P, memory_order_relaxed);
@@ -222,7 +222,7 @@ void f(_Atomic(int) *i, const _Atomic(int) *ci,
 
   __c11_atomic_init(ci, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
   __c11_atomic_store(ci, 0, memory_order_release); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
-  __c11_atomic_load(ci, memory_order_acquire); // expected-error {{address argument to atomic operation must be a pointer to non-const _Atomic type ('const _Atomic(int) *' invalid)}}
+  __c11_atomic_load(ci, memory_order_acquire);
 
   // Ensure the <stdatomic.h> macros behave appropriately.
   atomic_int n = ATOMIC_VAR_INIT(123);

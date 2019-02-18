@@ -29,17 +29,17 @@ void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
   const auto BadUse =
       callExpr(callee(StrLenFunc),
                hasAnyArgument(ignoringImpCasts(
-                   binaryOperator(allOf(hasOperatorName("+"),
-                                        hasRHS(ignoringParenImpCasts(
-                                            integerLiteral(equals(1))))))
+                   binaryOperator(
+                       hasOperatorName("+"),
+                       hasRHS(ignoringParenImpCasts(integerLiteral(equals(1)))))
                        .bind("BinOp"))))
           .bind("StrLen");
 
   const auto BadArg = anyOf(
-      allOf(hasDescendant(BadUse),
-            unless(binaryOperator(allOf(
+      allOf(unless(binaryOperator(
                 hasOperatorName("+"), hasLHS(BadUse),
-                hasRHS(ignoringParenImpCasts(integerLiteral(equals(1)))))))),
+                hasRHS(ignoringParenImpCasts(integerLiteral(equals(1)))))),
+            hasDescendant(BadUse)),
       BadUse);
 
   const auto Alloc0Func =
@@ -102,9 +102,10 @@ void MisplacedOperatorInStrlenInAllocCheck::check(
       StrLen->getSourceRange(),
       (StrLenBegin + LHSText + StrLenEnd + " + " + RHSText).str());
 
-  diag(Alloc->getLocStart(),
+  diag(Alloc->getBeginLoc(),
        "addition operator is applied to the argument of %0 instead of its "
-       "result") << StrLen->getDirectCallee()->getName() << Hint;
+       "result")
+      << StrLen->getDirectCallee()->getName() << Hint;
 }
 
 } // namespace bugprone

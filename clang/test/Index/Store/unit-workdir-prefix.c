@@ -1,5 +1,3 @@
-// XFAIL: linux
-
 #include "header.h"
 
 void foo(void) {

@@ -7,6 +7,7 @@ config.target_cflags = "@UBSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@UBSAN_TEST_TARGET_ARCH@"
 config.use_lld = @UBSAN_TEST_USE_LLD@
 config.use_thinlto = @UBSAN_TEST_USE_THINLTO@
+config.apple_platform = "@UBSAN_TEST_APPLE_PLATFORM@"
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")

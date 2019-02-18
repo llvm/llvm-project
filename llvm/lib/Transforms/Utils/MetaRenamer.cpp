@@ -68,7 +68,7 @@ namespace {
 
     PRNG prng;
   };
-  
+
   struct MetaRenamer : public ModulePass {
     // Pass identification, replacement for typeid
     static char ID;

@@ -1,4 +1,6 @@
-UNSUPPORTED: darwin
+# FIXME: Disabled on Windows for now because of reliance on posix only features
+# (eg: export, "&", pkill).
+UNSUPPORTED: darwin, windows
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
 RUN: rm -rf %t
 RUN: mkdir -p %t

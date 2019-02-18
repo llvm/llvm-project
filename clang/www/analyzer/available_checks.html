@@ -52,11 +52,11 @@ Experimental (Alpha) Checkers</a>.
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.CallAndMessage"><div class="namedescr expandable"><span class="name">
 core.CallAndMessage</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
 Check for logical errors for function calls and Objective-C message expressions
-(e.g., uninitialized arguments, null function pointers).</div></div></td>
+(e.g., uninitialized arguments, null function pointers).</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // C
@@ -153,10 +153,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.DivideZero"><div class="namedescr expandable"><span class="name">
 core.DivideZero</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
-Check for division by zero.</div></div></td>
+Check for division by zero.</div></div></a>co</td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(int z) {
@@ -172,11 +172,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.NonNullParamChecker"><div class="namedescr expandable"><span class="name">
 core.NonNullParamChecker</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
 Check for null pointers passed as arguments to a function whose arguments are
-marked with the <code>nonnull</code> attribute.</div></div></td>
+marked with the <code>nonnull</code> attribute.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 int f(int *p) __attribute__((nonnull));
@@ -188,10 +188,10 @@ void test(int *p) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.NullDereference"><div class="namedescr expandable"><span class="name">
 core.NullDereference</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
-Check for dereferences of null pointers.</div></div></td>
+Check for dereferences of null pointers.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // C
@@ -236,10 +236,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.StackAddressEscape"><div class="namedescr expandable"><span class="name">
 core.StackAddressEscape</span><span class="lang">
 (C)</span><div class="descr">
-Check that addresses of stack memory do not escape the function.</div></div></td>
+Check that addresses of stack memory do not escape the function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 char const *p;
@@ -263,10 +263,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.UndefinedBinaryOperatorResult"><div class="namedescr expandable"><span class="name">
 core.UndefinedBinaryOperatorResult</span><span class="lang">
 (C)</span><div class="descr">
-Check for undefined results of binary operators.</div></div></td>
+Check for undefined results of binary operators.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -276,10 +276,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.VLASize"><div class="namedescr expandable"><span class="name">
 core.VLASize</span><span class="lang">
 (C)</span><div class="descr">
-Check for declarations of VLA of undefined or zero size.</div></div></td>
+Check for declarations of VLA of undefined or zero size.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -295,10 +295,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.uninitialized.ArraySubscript"><div class="namedescr expandable"><span class="name">
 core.uninitialized.ArraySubscript</span><span class="lang">
 (C)</span><div class="descr">
-Check for uninitialized values used as array subscripts.</div></div></td>
+Check for uninitialized values used as array subscripts.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -308,10 +308,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.uninitialized.Assign"><div class="namedescr expandable"><span class="name">
 core.uninitialized.Assign</span><span class="lang">
 (C)</span><div class="descr">
-Check for assigning uninitialized values.</div></div></td>
+Check for assigning uninitialized values.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -321,10 +321,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.uninitialized.Branch"><div class="namedescr expandable"><span class="name">
 core.uninitialized.Branch</span><span class="lang">
 (C)</span><div class="descr">
-Check for uninitialized values used as branch conditions.</div></div></td>
+Check for uninitialized values used as branch conditions.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -335,10 +335,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.uninitialized.CapturedBlockVariable"><div class="namedescr expandable"><span class="name">
 core.uninitialized.CapturedBlockVariable</span><span class="lang">
 (C)</span><div class="descr">
-Check for blocks that capture uninitialized values.</div></div></td>
+Check for blocks that capture uninitialized values.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -348,10 +348,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="core.uninitialized.UndefReturn"><div class="namedescr expandable"><span class="name">
 core.uninitialized.UndefReturn</span><span class="lang">
 (C)</span><div class="descr">
-Check for uninitialized values being returned to the caller.</div></div></td>
+Check for uninitialized values being returned to the caller.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 int test() {
@@ -369,11 +369,11 @@ int test() {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="cplusplus.NewDelete"><div class="namedescr expandable"><span class="name">
 cplusplus.NewDelete</span><span class="lang">
 (C++)</span><div class="descr">
 Check for double-free, use-after-free and offset problems involving C++ <code>
-delete</code>.</div></div></td>
+delete</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void f(int *p);
@@ -423,11 +423,11 @@ void test() {
 }
 </pre></div></div></td></tr>
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="cplusplus.NewDeleteLeaks"><div class="namedescr expandable"><span class="name">
 cplusplus.NewDeleteLeaks</span><span class="lang">
 (C++)</span><div class="descr">
 Check for memory leaks. Traces memory managed by <code>new</code>/<code>
-delete</code>.</div></div></td>
+delete</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -444,10 +444,10 @@ void test() {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="deadcode.DeadStores"><div class="namedescr expandable"><span class="name">
 deadcode.DeadStores</span><span class="lang">
 (C)</span><div class="descr">
-Check for values stored to variables that are never read afterwards.</div></div></td>
+Check for values stored to variables that are never read afterwards.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -465,11 +465,11 @@ void test() {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="nullability.NullPassedToNonnull"><div class="namedescr expandable"><span class="name">
 nullability.NullPassedToNonnull</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warns when a null pointer is passed to a pointer which has a 
-_Nonnull type.</div></div></td>
+Warns when a null pointer is passed to a pointer which has a
+_Nonnull type.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 if (name != nil)
@@ -479,11 +479,11 @@ NSString *greeting = [@"Hello " stringByAppendingString:name];
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="nullability.NullReturnedFromNonnull"><div class="namedescr expandable"><span class="name">
 nullability.NullReturnedFromNonnull</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warns when a null pointer is returned from a function that has 
-_Nonnull return type.</div></div></td>
+Warns when a null pointer is returned from a function that has
+_Nonnull return type.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 - (nonnull id)firstChild {
@@ -491,17 +491,17 @@ _Nonnull return type.</div></div></td>
   if ([_children count] > 0)
     result = _children[0];
 
-  // Warning: nil returned from a method that is expected 
+  // Warning: nil returned from a method that is expected
   // to return a non-null value
   return result;
 }
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="nullability.NullableDereferenced"><div class="namedescr expandable"><span class="name">
 nullability.NullableDereferenced</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warns when a nullable pointer is dereferenced.</div></div></td>
+Warns when a nullable pointer is dereferenced.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 struct LinkedList {
@@ -519,10 +519,10 @@ void updateNextData(struct LinkedList *list, int newData) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="nullability.NullablePassedToNonnull"><div class="namedescr expandable"><span class="name">
 nullability.NullablePassedToNonnull</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warns when a nullable pointer is passed to a pointer which has a _Nonnull type.</div></div></td>
+Warns when a nullable pointer is passed to a pointer which has a _Nonnull type.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 typedef struct Dummy { int val; } Dummy;
@@ -543,17 +543,44 @@ void test() {
 <colgroup><col class="namedescr"><col class="example"></colgroup>
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
+
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="optin.cplusplus.VirtualCall"><div class="namedescr expandable"><span class="name">
+optin.cplusplus.VirtualCall</span><span class="lang">
+(C++)</span><div class="descr">
+Check virtual member function calls during construction or
+destruction.</div></div></a></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+class A {
+public:
+  A() {
+    f(); // warn
+  }
+  virtual void f();
+};
+</pre></div><div class="separator"></div>
+<div class="example"><pre>
+class A {
+public:
+  ~A() {
+    this-&gt;f(); // warn
+  }
+  virtual void f();
+};
+</pre></div></div></td></tr>
+
+
+<tr><td><a id="optin.mpi.MPI-Checker"><div class="namedescr expandable"><span class="name">
 optin.mpi.MPI-Checker</span><span class="lang">
 (C)</span><div class="descr">
-Checks MPI code</div></div></td>
+Checks MPI code</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
   double buf = 0;
   MPI_Request sendReq1;
-  MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM, 
+  MPI_Ireduce(MPI_IN_PLACE, &buf, 1, MPI_DOUBLE, MPI_SUM,
       0, MPI_COMM_WORLD, &sendReq1);
 } // warn: request 'sendReq1' has no matching wait.
 </pre></div><div class="separator"></div>
@@ -577,10 +604,10 @@ void missingNonBlocking() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="optin.osx.cocoa.localizability.EmptyLocalizationContextChecker"><div class="namedescr expandable"><span class="name">
 optin.osx.cocoa.localizability.EmptyLocalizationContextChecker</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check that NSLocalizedString macros include a comment for context.</div></div></td>
+Check that NSLocalizedString macros include a comment for context.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 - (void)test {
@@ -592,14 +619,14 @@ Check that NSLocalizedString macros include a comment for context.</div></div></
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="optin.osx.cocoa.localizability.NonLocalizedStringChecker"><div class="namedescr expandable"><span class="name">
 optin.osx.cocoa.localizability.NonLocalizedStringChecker</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warns about uses of non-localized NSStrings passed to UI methods 
-expecting localized NSStrings</div></div></td>
+Warns about uses of non-localized NSStrings passed to UI methods
+expecting localized NSStrings</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
-NSString *alarmText = 
+NSString *alarmText =
   NSLocalizedString(@"Enabled", @"Indicates alarm is turned on");
 if (!isEnabled) {
   alarmText = @"Disabled";
@@ -619,11 +646,11 @@ UILabel *alarmStateLabel = [[UILabel alloc] init];
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.API"><div class="namedescr expandable"><span class="name">
 osx.API</span><span class="lang">
 (C)</span><div class="descr">
 Check for proper uses of various Apple APIs:<div class=functions>
-dispatch_once</div></div></div></td>
+dispatch_once</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -633,15 +660,15 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.NumberObjectConversion"><div class="namedescr expandable"><span class="name">
 osx.NumberObjectConversion</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
-Check for erroneous conversions of objects representing numbers 
-into numbers</div></div></td>
+Check for erroneous conversions of objects representing numbers
+into numbers</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 NSNumber *photoCount = [albumDescriptor objectForKey:@"PhotoCount"];
-// Warning: Comparing a pointer value of type 'NSNumber *' 
+// Warning: Comparing a pointer value of type 'NSNumber *'
 // to a scalar integer value
 if (photoCount > 0) {
   [self displayPhotos];
@@ -649,7 +676,7 @@ if (photoCount > 0) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.SecKeychainAPI"><div class="namedescr expandable"><span class="name">
 osx.SecKeychainAPI</span><span class="lang">
 (C)</span><div class="descr">
 Check for improper uses of the Security framework's Keychain APIs:<div class=functions>
@@ -658,7 +685,7 @@ SecKeychainFindGenericPassword<br>
 SecKeychainFindInternetPassword<br>
 SecKeychainItemFreeContent<br>
 SecKeychainItemCopyAttributesAndData<br>
-SecKeychainItemFreeAttributesAndData</div></div></div></td>
+SecKeychainItemFreeAttributesAndData</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -729,10 +756,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.AtSync"><div class="namedescr expandable"><span class="name">
 osx.cocoa.AtSync</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check for nil pointers used as mutexes for <code>@synchronized</code>.</div></div></td>
+Check for nil pointers used as mutexes for <code>@synchronized</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(id x) {
@@ -748,11 +775,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.ClassRelease"><div class="namedescr expandable"><span class="name">
 osx.cocoa.ClassRelease</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check for sending <code>retain</code>, <code>release</code>, or <code>
-autorelease</code> directly to a class.</div></div></td>
+autorelease</code> directly to a class.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface MyClass : NSObject
@@ -764,16 +791,16 @@ void test(void) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.Dealloc"><div class="namedescr expandable"><span class="name">
 osx.cocoa.Dealloc</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warn about Objective-C classes that lack a correct implementation 
+Warn about Objective-C classes that lack a correct implementation
 of <code>-dealloc</code>.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface MyObject : NSObject {
-  id _myproperty;  
+  id _myproperty;
 }
 @end
 
@@ -824,10 +851,10 @@ of <code>-dealloc</code>.
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.IncompatibleMethodTypes"><div class="namedescr expandable"><span class="name">
 osx.cocoa.IncompatibleMethodTypes</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check for an incompatible type signature when overriding an Objective-C method.</div></div></td>
+Check for an incompatible type signature when overriding an Objective-C method.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface MyClass1 : NSObject
@@ -848,13 +875,13 @@ Check for an incompatible type signature when overriding an Objective-C method.<
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
-alpha.osx.cocoa.MissingSuperCall</span><span class="lang">
+<tr><td><a id="osx.cocoa.MissingSuperCall"><div class="namedescr expandable"><span class="name">
+osx.cocoa.MissingSuperCall</span><span class="lang">
 (ObjC)</span><div class="descr">
 Warn about Objective-C methods that lack a necessary call to super. (Note: The
 compiler now has a warning for methods annotated with <code>objc_requires_super</code>
 attribute. The checker exists to check methods in the Cocoa frameworks
-that haven't yet adopted this attribute.)</div></div></td>
+that haven't yet adopted this attribute.)</div></div></a></td>
 <td><div class="example"><pre>
 @interface Test : UIViewController
 @end
@@ -864,11 +891,11 @@ that haven't yet adopted this attribute.)</div></div></td>
 </pre></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.NSAutoreleasePool"><div class="namedescr expandable"><span class="name">
 osx.cocoa.NSAutoreleasePool</span><span class="lang">
 (ObjC)</span><div class="descr">
 Warn for suboptimal uses of NSAutoreleasePool in Objective-C
-GC mode (<code>-fobjc-gc</code> compiler option).</div></div></td>
+GC mode (<code>-fobjc-gc</code> compiler option).</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -878,10 +905,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.NSError"><div class="namedescr expandable"><span class="name">
 osx.cocoa.NSError</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check usage of <code>NSError**</code> parameters.</div></div></td>
+Check usage of <code>NSError**</code> parameters.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface A : NSObject
@@ -909,7 +936,7 @@ Check usage of <code>NSError**</code> parameters.</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.NilArg"><div class="namedescr expandable"><span class="name">
 osx.cocoa.NilArg</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check for prohibited nil arguments in specific Objective-C method calls:<div class=functions>
@@ -919,7 +946,7 @@ Check for prohibited nil arguments in specific Objective-C method calls:<div cla
 - compare:options:range:<br>
 - compare:options:range:locale:<br>
 - componentsSeparatedByCharactersInSet:<br>
-- initWithFormat:</div></div></div></td>
+- initWithFormat:</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 NSComparisonResult test(NSString *s) {
@@ -931,25 +958,25 @@ NSComparisonResult test(NSString *s) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.ObjCGenerics"><div class="namedescr expandable"><span class="name">
 osx.cocoa.ObjCGenerics</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check for type errors when using Objective-C generics</div></div></td>
+Check for type errors when using Objective-C generics</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 NSMutableArray<NSString *> *names = [NSMutableArray array];
 NSMutableArray *birthDates = names;
 
-// Warning: Conversion from value of type 'NSDate *' 
+// Warning: Conversion from value of type 'NSDate *'
 // to incompatible type 'NSString *'
 [birthDates addObject: [NSDate date]];
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.RetainCount"><div class="namedescr expandable"><span class="name">
 osx.cocoa.RetainCount</span><span class="lang">
 (ObjC)</span><div class="descr">
-Check for leaks and violations of the Cocoa Memory Management rules.</div></div></td>
+Check for leaks and violations of the Cocoa Memory Management rules.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -964,11 +991,11 @@ CFStringRef test(char *bytes) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.SelfInit"><div class="namedescr expandable"><span class="name">
 osx.cocoa.SelfInit</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check that <code>self</code> is properly initialized inside an initializer
-method.</div></div></td>
+method.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface MyObj : NSObject {
@@ -1000,10 +1027,10 @@ method.</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.SuperDealloc"><div class="namedescr expandable"><span class="name">
 osx.cocoa.SuperDealloc</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warn about improper use of '[super dealloc]' in Objective-C</div></div></td>
+Warn about improper use of '[super dealloc]' in Objective-C</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface SuperDeallocThenReleaseIvarClass : NSObject {
@@ -1020,10 +1047,10 @@ Warn about improper use of '[super dealloc]' in Objective-C</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.UnusedIvars"><div class="namedescr expandable"><span class="name">
 osx.cocoa.UnusedIvars</span><span class="lang">
 (ObjC)</span><div class="descr">
-Warn about private ivars that are never used.</div></div></td>
+Warn about private ivars that are never used.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 @interface MyObj : NSObject {
@@ -1037,11 +1064,11 @@ Warn about private ivars that are never used.</div></div></td>
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.cocoa.VariadicMethodTypes"><div class="namedescr expandable"><span class="name">
 osx.cocoa.VariadicMethodTypes</span><span class="lang">
 (ObjC)</span><div class="descr">
 Check for passing non-Objective-C types to variadic collection initialization
-methods that expect only Objective-C types.</div></div></td>
+methods that expect only Objective-C types.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1051,10 +1078,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.coreFoundation.CFError"><div class="namedescr expandable"><span class="name">
 osx.coreFoundation.CFError</span><span class="lang">
 (C)</span><div class="descr">
-Check usage of <code>CFErrorRef*</code> parameters.</div></div></td>
+Check usage of <code>CFErrorRef*</code> parameters.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(CFErrorRef *error) {
@@ -1070,10 +1097,10 @@ int foo(CFErrorRef *error) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.coreFoundation.CFNumber"><div class="namedescr expandable"><span class="name">
 osx.coreFoundation.CFNumber</span><span class="lang">
 (C)</span><div class="descr">
-Check for improper uses of <code>CFNumberCreate</code>.</div></div></td>
+Check for improper uses of <code>CFNumberCreate</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 CFNumberRef test(unsigned char x) {
@@ -1083,11 +1110,11 @@ CFNumberRef test(unsigned char x) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.coreFoundation.CFRetainRelease"><div class="namedescr expandable"><span class="name">
 osx.coreFoundation.CFRetainRelease</span><span class="lang">
 (C)</span><div class="descr">
 Check for null arguments to <code>CFRetain</code>, <code>CFRelease</code>,
-<code>CFMakeCollectable</code>.</div></div></td>
+<code>CFMakeCollectable</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test(CFTypeRef p) {
@@ -1105,10 +1132,10 @@ void test(int x, CFTypeRef p) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.coreFoundation.containers.OutOfBounds"><div class="namedescr expandable"><span class="name">
 osx.coreFoundation.containers.OutOfBounds</span><span class="lang">
 (C)</span><div class="descr">
-Checks for index out-of-bounds when using <code>CFArray</code> API.</div></div></td>
+Checks for index out-of-bounds when using <code>CFArray</code> API.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1118,11 +1145,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="osx.coreFoundation.containers.PointerSizedValues"><div class="namedescr expandable"><span class="name">
 osx.coreFoundation.containers.PointerSizedValues</span><span class="lang">
 (C)</span><div class="descr">
 Warns if <code>CFArray</code>, <code>CFDictionary</code>, <code>CFSet</code> are
-created with non-pointer-size values.</div></div></td>
+created with non-pointer-size values.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1141,11 +1168,11 @@ void test() {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.FloatLoopCounter"><div class="namedescr expandable"><span class="name">
 security.FloatLoopCounter</span><span class="lang">
 (C)</span><div class="descr">
 Warn on using a floating point value as a loop counter (CERT: FLP30-C,
-FLP30-CPP).</div></div></td>
+FLP30-CPP).</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1154,7 +1181,7 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.UncheckedReturn"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.UncheckedReturn</span><span class="lang">
 (C)</span><div class="descr">
 Warn on uses of functions whose return values must be always checked:<div class=functions>
@@ -1163,7 +1190,7 @@ setgid<br>
 seteuid<br>
 setegid<br>
 setreuid<br>
-setregid</div></div></div></td>
+setregid</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1172,10 +1199,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.bcmp"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.bcmp</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>bcmp</code> function.</div></div></td>
+Warn on uses of the <code>bcmp</code> function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1183,10 +1210,10 @@ void test() {
 }
 </pre></div></div></td></tr>
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.bcopy"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.bcopy</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>bcopy</code> function.</div></div></td>
+Warn on uses of the <code>bcopy</code> function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1194,10 +1221,10 @@ void test() {
 }
 </pre></div></div></td></tr>
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.bzero"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.bzero</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>bzero</code> function.</div></div></td>
+Warn on uses of the <code>bzero</code> function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1206,10 +1233,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.getpw"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.getpw</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>getpw</code> function.</div></div></td>
+Warn on uses of the <code>getpw</code> function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1219,10 +1246,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.gets"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.gets</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>gets</code> function.</div></div></td>
+Warn on uses of the <code>gets</code> function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1232,12 +1259,12 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.mkstemp"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.mkstemp</span><span class="lang">
 (C)</span><div class="descr">
 Warn when <code>mktemp</code>, <code>mkstemp</code>, <code>mkstemps</code> or
 <code>mkdtemp</code> is passed fewer than 6
-X's in the format string.</div></div></td>
+X's in the format string.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1246,10 +1273,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.mktemp"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.mktemp</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>mktemp</code> function.</div></div></td>
+Warn on uses of the <code>mktemp</code> function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1258,7 +1285,7 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.rand"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.rand</span><span class="lang">
 (C)</span><div class="descr">
 Warn on uses of inferior random number generating functions (only if <code>arc4random</code>
@@ -1271,7 +1298,7 @@ lrand48<br>
 mrand48<br>
 nrand48<br>
 random<br>
-rand_r</div></div></div></td>
+rand_r</div></div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1280,10 +1307,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.strcpy"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.strcpy</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>strcpy</code> and <code>strcat</code> functions.</div></div></td>
+Warn on uses of the <code>strcpy</code> and <code>strcat</code> functions.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1295,10 +1322,10 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="security.insecureAPI.vfork"><div class="namedescr expandable"><span class="name">
 security.insecureAPI.vfork</span><span class="lang">
 (C)</span><div class="descr">
-Warn on uses of the <code>vfork</code> function.</div></div></td>
+Warn on uses of the <code>vfork</code> function.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1315,7 +1342,7 @@ void test() {
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
 
 <tbody>
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="unix.API"><div class="namedescr expandable"><span class="name">
 unix.API</span><span class="lang">
 (C)</span><div class="descr">
 Check calls to various UNIX/POSIX functions:<div class=functions>
@@ -1324,7 +1351,7 @@ pthread_once<br>
 calloc<br>
 malloc<br>
 realloc<br>
-alloca<br>
+alloca<br></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // Currently the check is performed for apple targets only.
@@ -1371,11 +1398,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="unix.Malloc"><div class="namedescr expandable"><span class="name">
 unix.Malloc</span><span class="lang">
 (C)</span><div class="descr">
 Check for memory leaks, double free, and use-after-free and offset problems
-involving <code>malloc</code>.</div></div></td>
+involving <code>malloc</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1413,11 +1440,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="unix.MallocSizeof"><div class="namedescr expandable"><span class="name">
 unix.MallocSizeof</span><span class="lang">
 (C)</span><div class="descr">
 Check for dubious <code>malloc</code>, <code>calloc</code> or
-<code>realloc</code> arguments involving <code>sizeof</code>.</div></div></td>
+<code>realloc</code> arguments involving <code>sizeof</code>.</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1429,11 +1456,11 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="unix.MismatchedDeallocator"><div class="namedescr expandable"><span class="name">
 unix.MismatchedDeallocator</span><span class="lang">
 (C, C++, ObjC)</span><div class="descr">
 Check for mismatched deallocators (e.g. passing a pointer allocating
-with <code>new</code> to <code>free()</code>).</div></div></td>
+with <code>new</code> to <code>free()</code>).</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 // C, C++
@@ -1500,10 +1527,10 @@ void test(NSUInteger dataLength) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="unix.Vfork"><div class="namedescr expandable"><span class="name">
 unix.Vfork</span><span class="lang">
 (C)</span><div class="descr">
-Check for proper usage of vfork</div></div></td>
+Check for proper usage of vfork</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 int test(int x) {
@@ -1532,13 +1559,13 @@ int test(int x) {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="unix.cstring.BadSizeArg"><div class="namedescr expandable"><span class="name">
 unix.cstring.BadSizeArg</span><span class="lang">
 (C)</span><div class="descr">
 Check the size argument passed to <code>strncat</code> for common erroneous
 patterns. Use <code>-Wno-strncat-size</code> compiler option to mute other
 <code>strncat</code>-related compiler warnings.
-</div></div></td>
+</div></div></a></td>
 <td><div class="exampleContainer expandable">
 <div class="example"><pre>
 void test() {
@@ -1549,7 +1576,7 @@ void test() {
 </pre></div></div></td></tr>
 
 
-<tr><td><div class="namedescr expandable"><span class="name">
+<tr><td><a id="unix.cstring.NullArg"><div class="namedescr expandable"><span class="name">
 unix.cstring.NullArg</span><span class="lang">
 (C)</span><div class="descr">
 Check for null pointers being passed as arguments to C string functions:<div class=functions>
@@ -1562,7 +1589,7 @@ strncat<br>
 strcmp<br>
 strncmp<br>
 strcasecmp<br>
-strncasecmp</div></div></div></td>
+strncasecmp</div></div></div></a></td>
 <td><div class="example"><pre>
 int test() {
   return strlen(0); // warn

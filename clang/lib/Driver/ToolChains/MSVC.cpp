@@ -355,6 +355,15 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT__SLASH_Zd))
     CmdArgs.push_back("-debug");
 
+  // Pass on /Brepro if it was passed to the compiler.
+  // Note that /Brepro maps to -mno-incremental-linker-compatible.
+  bool DefaultIncrementalLinkerCompatible =
+      C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment();
+  if (!Args.hasFlag(options::OPT_mincremental_linker_compatible,
+                    options::OPT_mno_incremental_linker_compatible,
+                    DefaultIncrementalLinkerCompatible))
+    CmdArgs.push_back("-Brepro");
+
   bool DLL = Args.hasArg(options::OPT__SLASH_LD, options::OPT__SLASH_LDd,
                          options::OPT_shared);
   if (DLL) {
@@ -363,6 +372,17 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     SmallString<128> ImplibName(Output.getFilename());
     llvm::sys::path::replace_extension(ImplibName, "lib");
     CmdArgs.push_back(Args.MakeArgString(std::string("-implib:") + ImplibName));
+  }
+
+  if (TC.getSanitizerArgs().needsFuzzer()) {
+    if (!Args.hasArg(options::OPT_shared))
+      CmdArgs.push_back(
+          Args.MakeArgString(std::string("-wholearchive:") +
+                             TC.getCompilerRTArgString(Args, "fuzzer", false)));
+    CmdArgs.push_back(Args.MakeArgString("-debug"));
+    // Prevent the linker from padding sections we use for instrumentation
+    // arrays.
+    CmdArgs.push_back(Args.MakeArgString("-incremental:no"));
   }
 
   if (TC.getSanitizerArgs().needsAsanRt()) {
@@ -702,15 +722,15 @@ bool MSVCToolChain::IsIntegratedAssemblerDefault() const {
 }
 
 bool MSVCToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
-  // Emit unwind tables by default on Win64. All non-x86_32 Windows platforms
-  // such as ARM and PPC actually require unwind tables, but LLVM doesn't know
-  // how to generate them yet.
-
   // Don't emit unwind tables by default for MachO targets.
   if (getTriple().isOSBinFormatMachO())
     return false;
 
-  return getArch() == llvm::Triple::x86_64;
+  // All non-x86_32 Windows targets require unwind tables. However, LLVM
+  // doesn't know how to generate them for all targets, so only enable
+  // the ones that are actually implemented.
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 bool MSVCToolChain::isPICDefault() const {
@@ -1266,7 +1286,7 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
   if (MSVT.empty() &&
       Args.hasFlag(options::OPT_fms_extensions, options::OPT_fno_ms_extensions,
                    IsWindowsMSVC)) {
-    // -fms-compatibility-version=19.11 is default, aka 2017
+    // -fms-compatibility-version=19.11 is default, aka 2017, 15.3
     MSVT = VersionTuple(19, 11);
   }
   return MSVT;
@@ -1298,6 +1318,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
 SanitizerMask MSVCToolChain::getSupportedSanitizers() const {
   SanitizerMask Res = ToolChain::getSupportedSanitizers();
   Res |= SanitizerKind::Address;
+  Res |= SanitizerKind::Fuzzer;
+  Res |= SanitizerKind::FuzzerNoLink;
   Res &= ~SanitizerKind::CFIMFCall;
   return Res;
 }
@@ -1356,6 +1378,7 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
       }
       break;
     case 'g':
+      A->claim();
       break;
     case 'i':
       if (I + 1 != E && OptStr[I + 1] == '-') {

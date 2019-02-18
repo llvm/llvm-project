@@ -13,13 +13,17 @@
 #include "PrettyBuiltinDumper.h"
 #include "PrettyClassDefinitionDumper.h"
 #include "PrettyEnumDumper.h"
+#include "PrettyFunctionDumper.h"
 #include "PrettyTypedefDumper.h"
 #include "llvm-pdbutil.h"
 
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeArray.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeEnum.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
+#include "llvm/DebugInfo/PDB/PDBSymbolTypePointer.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
@@ -128,36 +132,85 @@ filterAndSortClassDefs(LinePrinter &Printer, Enumerator &E,
   }
 
   if (Comp)
-    llvm::sort(Filtered.begin(), Filtered.end(), Comp);
+    llvm::sort(Filtered, Comp);
   return Filtered;
 }
 
 TypeDumper::TypeDumper(LinePrinter &P) : PDBSymDumper(true), Printer(P) {}
 
-void TypeDumper::start(const PDBSymbolExe &Exe) {
-  if (opts::pretty::Enums) {
-    if (auto Enums = Exe.findAllChildren<PDBSymbolTypeEnum>()) {
-      Printer.NewLine();
-      WithColor(Printer, PDB_ColorItem::Identifier).get() << "Enums";
-      Printer << ": (" << Enums->getChildCount() << " items)";
-      Printer.Indent();
-      while (auto Enum = Enums->getNext())
-        Enum->dump(*this);
-      Printer.Unindent();
-    }
-  }
+template <typename T>
+static bool isTypeExcluded(LinePrinter &Printer, const T &Symbol) {
+  return false;
+}
 
-  if (opts::pretty::Typedefs) {
-    if (auto Typedefs = Exe.findAllChildren<PDBSymbolTypeTypedef>()) {
+static bool isTypeExcluded(LinePrinter &Printer,
+                           const PDBSymbolTypeEnum &Enum) {
+  if (Printer.IsTypeExcluded(Enum.getName(), Enum.getLength()))
+    return true;
+  // Dump member enums when dumping their class definition.
+  if (nullptr != Enum.getClassParent())
+    return true;
+  return false;
+}
+
+static bool isTypeExcluded(LinePrinter &Printer,
+                           const PDBSymbolTypeTypedef &Typedef) {
+  return Printer.IsTypeExcluded(Typedef.getName(), Typedef.getLength());
+}
+
+template <typename SymbolT>
+static void dumpSymbolCategory(LinePrinter &Printer, const PDBSymbolExe &Exe,
+                               TypeDumper &TD, StringRef Label) {
+  if (auto Children = Exe.findAllChildren<SymbolT>()) {
+    Printer.NewLine();
+    WithColor(Printer, PDB_ColorItem::Identifier).get() << Label;
+    Printer << ": (" << Children->getChildCount() << " items)";
+    Printer.Indent();
+    while (auto Child = Children->getNext()) {
+      if (isTypeExcluded(Printer, *Child))
+        continue;
+
       Printer.NewLine();
-      WithColor(Printer, PDB_ColorItem::Identifier).get() << "Typedefs";
-      Printer << ": (" << Typedefs->getChildCount() << " items)";
-      Printer.Indent();
-      while (auto Typedef = Typedefs->getNext())
-        Typedef->dump(*this);
-      Printer.Unindent();
+      Child->dump(TD);
     }
+    Printer.Unindent();
   }
+}
+
+static void printClassDecl(LinePrinter &Printer,
+                           const PDBSymbolTypeUDT &Class) {
+  if (Class.getUnmodifiedTypeId() != 0) {
+    if (Class.isConstType())
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << "const ";
+    if (Class.isVolatileType())
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << "volatile ";
+    if (Class.isUnalignedType())
+      WithColor(Printer, PDB_ColorItem::Keyword).get() << "unaligned ";
+  }
+  WithColor(Printer, PDB_ColorItem::Keyword).get() << Class.getUdtKind() << " ";
+  WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();
+}
+
+void TypeDumper::start(const PDBSymbolExe &Exe) {
+  if (opts::pretty::Enums)
+    dumpSymbolCategory<PDBSymbolTypeEnum>(Printer, Exe, *this, "Enums");
+
+  if (opts::pretty::Funcsigs)
+    dumpSymbolCategory<PDBSymbolTypeFunctionSig>(Printer, Exe, *this,
+                                                 "Function Signatures");
+
+  if (opts::pretty::Typedefs)
+    dumpSymbolCategory<PDBSymbolTypeTypedef>(Printer, Exe, *this, "Typedefs");
+
+  if (opts::pretty::Arrays)
+    dumpSymbolCategory<PDBSymbolTypeArray>(Printer, Exe, *this, "Arrays");
+
+  if (opts::pretty::Pointers)
+    dumpSymbolCategory<PDBSymbolTypePointer>(Printer, Exe, *this, "Pointers");
+
+  if (opts::pretty::VTShapes)
+    dumpSymbolCategory<PDBSymbolTypeVTableShape>(Printer, Exe, *this,
+                                                 "VFTable Shapes");
 
   if (opts::pretty::Classes) {
     if (auto Classes = Exe.findAllChildren<PDBSymbolTypeUDT>()) {
@@ -196,11 +249,16 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
           dumpClassLayout(*Class);
       } else {
         while (auto Class = Classes->getNext()) {
-          if (Class->getUnmodifiedTypeId() != 0)
-            continue;
-
           if (Printer.IsTypeExcluded(Class->getName(), Class->getLength()))
             continue;
+
+          // No point duplicating a full class layout.  Just print the modified
+          // declaration and continue.
+          if (Class->getUnmodifiedTypeId() != 0) {
+            Printer.NewLine();
+            printClassDecl(Printer, *Class);
+            continue;
+          }
 
           auto Layout = llvm::make_unique<ClassLayout>(std::move(Class));
           if (Layout->deepPaddingSize() < opts::pretty::PaddingThreshold)
@@ -218,35 +276,83 @@ void TypeDumper::start(const PDBSymbolExe &Exe) {
 void TypeDumper::dump(const PDBSymbolTypeEnum &Symbol) {
   assert(opts::pretty::Enums);
 
-  if (Printer.IsTypeExcluded(Symbol.getName(), Symbol.getLength()))
-    return;
-  // Dump member enums when dumping their class definition.
-  if (nullptr != Symbol.getClassParent())
-    return;
-
-  Printer.NewLine();
   EnumDumper Dumper(Printer);
   Dumper.start(Symbol);
+}
+
+void TypeDumper::dump(const PDBSymbolTypeBuiltin &Symbol) {
+  BuiltinDumper BD(Printer);
+  BD.start(Symbol);
+}
+
+void TypeDumper::dump(const PDBSymbolTypeUDT &Symbol) {
+  printClassDecl(Printer, Symbol);
 }
 
 void TypeDumper::dump(const PDBSymbolTypeTypedef &Symbol) {
   assert(opts::pretty::Typedefs);
 
-  if (Printer.IsTypeExcluded(Symbol.getName(), Symbol.getLength()))
-    return;
-
-  Printer.NewLine();
   TypedefDumper Dumper(Printer);
   Dumper.start(Symbol);
+}
+
+void TypeDumper::dump(const PDBSymbolTypeArray &Symbol) {
+  auto ElementType = Symbol.getElementType();
+
+  ElementType->dump(*this);
+  Printer << "[";
+  WithColor(Printer, PDB_ColorItem::LiteralValue).get() << Symbol.getCount();
+  Printer << "]";
+}
+
+void TypeDumper::dump(const PDBSymbolTypeFunctionSig &Symbol) {
+  FunctionDumper Dumper(Printer);
+  Dumper.start(Symbol, nullptr, FunctionDumper::PointerType::None);
+}
+
+void TypeDumper::dump(const PDBSymbolTypePointer &Symbol) {
+  std::unique_ptr<PDBSymbol> P = Symbol.getPointeeType();
+
+  if (auto *FS = dyn_cast<PDBSymbolTypeFunctionSig>(P.get())) {
+    FunctionDumper Dumper(Printer);
+    FunctionDumper::PointerType PT =
+        Symbol.isReference() ? FunctionDumper::PointerType::Reference
+                             : FunctionDumper::PointerType::Pointer;
+    Dumper.start(*FS, nullptr, PT);
+    return;
+  }
+
+  if (auto *UDT = dyn_cast<PDBSymbolTypeUDT>(P.get())) {
+    printClassDecl(Printer, *UDT);
+  } else if (P) {
+    P->dump(*this);
+  }
+
+  if (auto Parent = Symbol.getClassParent()) {
+    auto UDT = llvm::unique_dyn_cast<PDBSymbolTypeUDT>(std::move(Parent));
+    if (UDT)
+      Printer << " " << UDT->getName() << "::";
+  }
+
+  if (Symbol.isReference())
+    Printer << "&";
+  else if (Symbol.isRValueReference())
+    Printer << "&&";
+  else
+    Printer << "*";
+}
+
+void TypeDumper::dump(const PDBSymbolTypeVTableShape &Symbol) {
+  Printer.format("<vtshape ({0} methods)>", Symbol.getCount());
 }
 
 void TypeDumper::dumpClassLayout(const ClassLayout &Class) {
   assert(opts::pretty::Classes);
 
   if (opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::None) {
-    Printer.NewLine();
-    WithColor(Printer, PDB_ColorItem::Keyword).get() << "class ";
-    WithColor(Printer, PDB_ColorItem::Identifier).get() << Class.getName();
+    WithColor(Printer, PDB_ColorItem::Keyword).get()
+        << Class.getClass().getUdtKind() << " ";
+    WithColor(Printer, PDB_ColorItem::Type).get() << Class.getName();
   } else {
     ClassDefinitionDumper Dumper(Printer);
     Dumper.start(Class);

@@ -402,7 +402,7 @@ namespace UnemittedTemporaryDecl {
 
 // CHECK: @_ZZN12LocalVarInit3aggEvE1a = internal constant {{.*}} i32 101
 // CHECK: @_ZZN12LocalVarInit4ctorEvE1a = internal constant {{.*}} i32 102
-// CHECK: @_ZZN12LocalVarInit8mutable_EvE1a = private unnamed_addr constant {{.*}} i32 103
+// CHECK: @__const._ZN12LocalVarInit8mutable_Ev.a = private unnamed_addr constant {{.*}} i32 103
 // CHECK: @_ZGRN33ClassTemplateWithStaticDataMember1SIvE1aE_ = linkonce_odr constant i32 5, comdat
 // CHECK: @_ZN33ClassTemplateWithStaticDataMember3useE = constant i32* @_ZGRN33ClassTemplateWithStaticDataMember1SIvE1aE_
 // CHECK: @_ZGRN39ClassTemplateWithHiddenStaticDataMember1SIvE1aE_ = linkonce_odr hidden constant i32 5, comdat
@@ -461,7 +461,7 @@ namespace LocalVarInit {
 
   // CHECK: define {{.*}} @_ZN12LocalVarInit8mutable_Ev
   // CHECK-NOT: call
-  // CHECK: call {{.*}}memcpy{{.*}} @_ZZN12LocalVarInit8mutable_EvE1a
+  // CHECK: call {{.*}}memcpy{{.*}} @__const._ZN12LocalVarInit8mutable_Ev.a
   // CHECK-NOT: call
   // Can't fold return value due to 'mutable'.
   // CHECK-NOT: ret i32 103

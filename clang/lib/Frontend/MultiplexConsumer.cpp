@@ -107,7 +107,7 @@ public:
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
-  void AddedAttributeToRecord(const Attr *Attr, 
+  void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
 
 private:
@@ -219,9 +219,9 @@ void MultiplexASTMutationListener::RedefinedHiddenDefinition(const NamedDecl *D,
   for (auto *L : Listeners)
     L->RedefinedHiddenDefinition(D, M);
 }
-  
+
 void MultiplexASTMutationListener::AddedAttributeToRecord(
-                                                    const Attr *Attr, 
+                                                    const Attr *Attr,
                                                     const RecordDecl *Record) {
   for (auto *L : Listeners)
     L->AddedAttributeToRecord(Attr, Record);

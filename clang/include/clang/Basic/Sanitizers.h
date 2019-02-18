@@ -66,7 +66,7 @@ struct SanitizerSet {
   /// Disable the sanitizers specified in \p K.
   void clear(SanitizerMask K = SanitizerKind::All) { Mask &= ~K; }
 
-  /// Returns true if at least one sanitizer is enabled.
+  /// Returns true if no sanitizers are enabled.
   bool empty() const { return Mask == 0; }
 
   /// Bitmask of enabled sanitizers.
@@ -84,7 +84,8 @@ SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);
 /// Return the sanitizers which do not affect preprocessing.
 inline SanitizerMask getPPTransparentSanitizers() {
   return SanitizerKind::CFI | SanitizerKind::Integer |
-         SanitizerKind::Nullability | SanitizerKind::Undefined;
+         SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
+         SanitizerKind::Undefined;
 }
 
 } // namespace clang

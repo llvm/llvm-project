@@ -1,4 +1,4 @@
-; RUN: llc < %s -mattr=+atomics -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -mattr=+atomics -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test loads and stores with custom alignment values.
 
@@ -10,8 +10,7 @@ target triple = "wasm32-unknown-unknown"
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: ldi64_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64_a1 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64_a1(i64 *%p) {
@@ -20,8 +19,7 @@ define i64 @ldi64_a1(i64 *%p) {
 }
 
 ; CHECK-LABEL: ldi64_a2:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64_a2 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($0):p2align=1{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64_a2(i64 *%p) {
@@ -30,8 +28,7 @@ define i64 @ldi64_a2(i64 *%p) {
 }
 
 ; CHECK-LABEL: ldi64_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64_a4 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64_a4(i64 *%p) {
@@ -42,8 +39,7 @@ define i64 @ldi64_a4(i64 *%p) {
 ; 8 is the default alignment for i64 so no attribute is needed.
 
 ; CHECK-LABEL: ldi64_a8:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64_a8 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64_a8(i64 *%p) {
@@ -54,8 +50,7 @@ define i64 @ldi64_a8(i64 *%p) {
 ; The default alignment in LLVM is the same as the defualt alignment in wasm.
 
 ; CHECK-LABEL: ldi64:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64(i64 *%p) {
@@ -66,8 +61,7 @@ define i64 @ldi64(i64 *%p) {
 ; 16 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: ldi64_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64_a16 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64_a16(i64 *%p) {
@@ -80,8 +74,7 @@ define i64 @ldi64_a16(i64 *%p) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: ldi8_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi8_a1 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load8_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi8_a1(i8 *%p) {
@@ -91,8 +84,7 @@ define i64 @ldi8_a1(i8 *%p) {
 }
 
 ; CHECK-LABEL: ldi8_a2:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi8_a2 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load8_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi8_a2(i8 *%p) {
@@ -102,8 +94,7 @@ define i64 @ldi8_a2(i8 *%p) {
 }
 
 ; CHECK-LABEL: ldi16_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi16_a1 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load16_u $push[[NUM:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi16_a1(i16 *%p) {
@@ -113,8 +104,7 @@ define i64 @ldi16_a1(i16 *%p) {
 }
 
 ; CHECK-LABEL: ldi16_a2:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi16_a2 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load16_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi16_a2(i16 *%p) {
@@ -124,8 +114,7 @@ define i64 @ldi16_a2(i16 *%p) {
 }
 
 ; CHECK-LABEL: ldi16_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi16_a4 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load16_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi16_a4(i16 *%p) {
@@ -135,8 +124,7 @@ define i64 @ldi16_a4(i16 *%p) {
 }
 
 ; CHECK-LABEL: ldi32_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi32_a1 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load32_u $push[[NUM:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi32_a1(i32 *%p) {
@@ -146,8 +134,7 @@ define i64 @ldi32_a1(i32 *%p) {
 }
 
 ; CHECK-LABEL: ldi32_a2:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi32_a2 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load32_u $push[[NUM:[0-9]+]]=, 0($0):p2align=1{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi32_a2(i32 *%p) {
@@ -157,8 +144,7 @@ define i64 @ldi32_a2(i32 *%p) {
 }
 
 ; CHECK-LABEL: ldi32_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi32_a4 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load32_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi32_a4(i32 *%p) {
@@ -168,8 +154,7 @@ define i64 @ldi32_a4(i32 *%p) {
 }
 
 ; CHECK-LABEL: ldi32_a8:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi32_a8 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.load32_u $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi32_a8(i32 *%p) {
@@ -183,7 +168,7 @@ define i64 @ldi32_a8(i32 *%p) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: sti64_a1:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64_a1 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64_a1(i64 *%p, i64 %v) {
@@ -192,7 +177,7 @@ define void @sti64_a1(i64 *%p, i64 %v) {
 }
 
 ; CHECK-LABEL: sti64_a2:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64_a2 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store 0($0):p2align=1, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64_a2(i64 *%p, i64 %v) {
@@ -201,7 +186,7 @@ define void @sti64_a2(i64 *%p, i64 %v) {
 }
 
 ; CHECK-LABEL: sti64_a4:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64_a4 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store 0($0):p2align=2, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64_a4(i64 *%p, i64 %v) {
@@ -212,7 +197,7 @@ define void @sti64_a4(i64 *%p, i64 %v) {
 ; 8 is the default alignment for i32 so no attribute is needed.
 
 ; CHECK-LABEL: sti64_a8:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64_a8 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64_a8(i64 *%p, i64 %v) {
@@ -223,7 +208,7 @@ define void @sti64_a8(i64 *%p, i64 %v) {
 ; The default alignment in LLVM is the same as the defualt alignment in wasm.
 
 ; CHECK-LABEL: sti64:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64(i64 *%p, i64 %v) {
@@ -232,7 +217,7 @@ define void @sti64(i64 *%p, i64 %v) {
 }
 
 ; CHECK-LABEL: sti64_a16:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64_a16 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64_a16(i64 *%p, i64 %v) {
@@ -245,7 +230,7 @@ define void @sti64_a16(i64 *%p, i64 %v) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: sti8_a1:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti8_a1 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti8_a1(i8 *%p, i64 %w) {
@@ -255,7 +240,7 @@ define void @sti8_a1(i8 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti8_a2:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti8_a2 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store8 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti8_a2(i8 *%p, i64 %w) {
@@ -265,7 +250,7 @@ define void @sti8_a2(i8 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti16_a1:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti16_a1 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store16 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a1(i16 *%p, i64 %w) {
@@ -275,7 +260,7 @@ define void @sti16_a1(i16 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti16_a2:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti16_a2 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a2(i16 *%p, i64 %w) {
@@ -285,7 +270,7 @@ define void @sti16_a2(i16 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti16_a4:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti16_a4 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store16 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti16_a4(i16 *%p, i64 %w) {
@@ -295,7 +280,7 @@ define void @sti16_a4(i16 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti32_a1:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti32_a1 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store32 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a1(i32 *%p, i64 %w) {
@@ -305,7 +290,7 @@ define void @sti32_a1(i32 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti32_a2:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti32_a2 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store32 0($0):p2align=1, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a2(i32 *%p, i64 %w) {
@@ -315,7 +300,7 @@ define void @sti32_a2(i32 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti32_a4:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti32_a4 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store32 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a4(i32 *%p, i64 %w) {
@@ -325,7 +310,7 @@ define void @sti32_a4(i32 *%p, i64 %w) {
 }
 
 ; CHECK-LABEL: sti32_a8:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti32_a8 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.store32 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti32_a8(i32 *%p, i64 %w) {
@@ -342,8 +327,7 @@ define void @sti32_a8(i32 *%p, i64 %w) {
 ; natural alignment.
 
 ; CHECK-LABEL: ldi64_atomic_a8:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64_atomic_a8 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64_atomic_a8(i64 *%p) {
@@ -354,8 +338,7 @@ define i64 @ldi64_atomic_a8(i64 *%p) {
 ; 16 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: ldi64_atomic_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype ldi64_atomic_a16 (i32) -> (i64){{$}}
 ; CHECK-NEXT: i64.atomic.load $push[[NUM:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @ldi64_atomic_a16(i64 *%p) {
@@ -368,7 +351,7 @@ define i64 @ldi64_atomic_a16(i64 *%p) {
 ;===----------------------------------------------------------------------------
 
 ; CHECK-LABEL: sti64_atomic_a4:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64_atomic_a4 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64_atomic_a4(i64 *%p, i64 %v) {
@@ -379,7 +362,7 @@ define void @sti64_atomic_a4(i64 *%p, i64 %v) {
 ; 16 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: sti64_atomic_a8:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype sti64_atomic_a8 (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @sti64_atomic_a8(i64 *%p, i64 %v) {

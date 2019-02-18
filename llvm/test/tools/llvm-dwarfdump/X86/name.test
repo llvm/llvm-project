@@ -67,3 +67,8 @@ RUN: llvm-mc %S/brief.s -filetype obj -triple x86_64-apple-darwin -o - \
 RUN:   | llvm-dwarfdump -name="brief.c" - | FileCheck %s -check-prefix=NOCHILDREN
 NOCHILDREN: DW_AT_name ("brief.c")
 NOCHILDREN-NOT: DW_TAG
+
+Test that --name also searches in DW_AT_linkage_name.
+RUN: llc -O0 %S/statistics.ll -filetype obj -o - \
+RUN:   | llvm-dwarfdump -name=_Z4cubei - | FileCheck %s --check-prefix=LINKAGE
+LINKAGE: DW_AT_name	("cube")

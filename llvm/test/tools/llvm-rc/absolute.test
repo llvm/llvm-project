@@ -1,0 +1,3 @@
+; RUN: touch %t.manifest
+; RUN: echo "1 24 \"%t.manifest\"" > %t.rc
+; RUN: llvm-rc %t.rc

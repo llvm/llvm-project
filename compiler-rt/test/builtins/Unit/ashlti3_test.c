@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- ashlti3_test.c - Test __ashlti3 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

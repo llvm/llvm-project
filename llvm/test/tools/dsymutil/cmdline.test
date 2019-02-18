@@ -5,6 +5,7 @@ HELP-NOT: -reverse-iterate
 HELP: Color Options
 HELP: -color
 HELP: Specific Options:
+HELP: -accelerator
 HELP: -arch=<arch>
 HELP: -dump-debug-map
 HELP: -flat
@@ -16,6 +17,7 @@ HELP: -num-threads=<n>
 HELP: -o=<filename>
 HELP: -oso-prepend-path=<path>
 HELP: -papertrail
+HELP: -symbol-map
 HELP: -symtab
 HELP: -toolchain
 HELP: -update

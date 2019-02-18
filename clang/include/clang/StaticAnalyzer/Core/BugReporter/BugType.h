@@ -38,12 +38,14 @@ private:
   virtual void anchor();
 
 public:
-  BugType(CheckName Check, StringRef Name, StringRef Cat)
+  BugType(CheckName Check, StringRef Name, StringRef Cat,
+          bool SuppressOnSink=false)
       : Check(Check), Name(Name), Category(Cat), Checker(nullptr),
-        SuppressOnSink(false) {}
-  BugType(const CheckerBase *Checker, StringRef Name, StringRef Cat)
+        SuppressOnSink(SuppressOnSink) {}
+  BugType(const CheckerBase *Checker, StringRef Name, StringRef Cat,
+          bool SuppressOnSink=false)
       : Check(Checker->getCheckName()), Name(Name), Category(Cat),
-        Checker(Checker), SuppressOnSink(false) {}
+        Checker(Checker), SuppressOnSink(SuppressOnSink) {}
   virtual ~BugType() = default;
 
   StringRef getName() const { return Name; }
@@ -52,7 +54,7 @@ public:
     // FIXME: This is a workaround to ensure that the correct check name is used
     // The check names are set after the constructors are run.
     // In case the BugType object is initialized in the checker's ctor
-    // the Check field will be empty. To circumvent this problem we use 
+    // the Check field will be empty. To circumvent this problem we use
     // CheckerBase whenever it is possible.
     StringRef CheckName =
         Checker ? Checker->getCheckName().getName() : Check.getName();
@@ -64,9 +66,6 @@ public:
   ///  type should be suppressed if the end node of the report is post-dominated
   ///  by a sink node.
   bool isSuppressOnSink() const { return SuppressOnSink; }
-  void setSuppressOnSink(bool x) { SuppressOnSink = x; }
-
-  virtual void FlushReports(BugReporter& BR);
 };
 
 class BuiltinBug : public BugType {

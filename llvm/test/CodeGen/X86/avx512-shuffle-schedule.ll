@@ -9114,12 +9114,12 @@ define <8 x float> @test_8xfloat_zero_masked_shuff_mem_mask3(<8 x float> %vec1, 
 define <16 x float> @test_16xfloat_shuff_mask0(<16 x float> %vec1, <16 x float> %vec2, <16 x i32> %mask) {
 ; GENERIC-LABEL: test_16xfloat_shuff_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[12,13,14,15,0,1,2,3],zmm1[4,5,6,7,12,13,14,15] sched: [1:1.00]
+; GENERIC-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[6,7,0,1],zmm1[2,3,6,7] sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_shuff_mask0:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[12,13,14,15,0,1,2,3],zmm1[4,5,6,7,12,13,14,15] sched: [3:1.00]
+; SKX-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[6,7,0,1],zmm1[2,3,6,7] sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
   ret <16 x float> %res
@@ -9238,12 +9238,12 @@ define <16 x float> @test_16xfloat_zero_masked_shuff_mask2(<16 x float> %vec1, <
 define <16 x float> @test_16xfloat_shuff_mask3(<16 x float> %vec1, <16 x float> %vec2) {
 ; GENERIC-LABEL: test_16xfloat_shuff_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[8,9,10,11,12,13,14,15],zmm1[0,1,2,3,8,9,10,11] sched: [1:1.00]
+; GENERIC-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[4,5,6,7],zmm1[0,1,4,5] sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_shuff_mask3:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[8,9,10,11,12,13,14,15],zmm1[0,1,2,3,8,9,10,11] sched: [3:1.00]
+; SKX-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[4,5,6,7],zmm1[0,1,4,5] sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
   ret <16 x float> %res
@@ -9288,12 +9288,12 @@ define <16 x float> @test_16xfloat_zero_masked_shuff_mask3(<16 x float> %vec1, <
 define <16 x float> @test_16xfloat_shuff_mem_mask0(<16 x float> %vec1, <16 x float>* %vec2p) {
 ; GENERIC-LABEL: test_16xfloat_shuff_mem_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[12,13,14,15,8,9,10,11],mem[8,9,10,11,4,5,6,7] sched: [8:1.00]
+; GENERIC-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[6,7,4,5],mem[4,5,2,3] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_shuff_mem_mask0:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[12,13,14,15,8,9,10,11],mem[8,9,10,11,4,5,6,7] sched: [10:1.00]
+; SKX-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[6,7,4,5],mem[4,5,2,3] sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
@@ -9422,12 +9422,12 @@ define <16 x float> @test_16xfloat_zero_masked_shuff_mem_mask2(<16 x float> %vec
 define <16 x float> @test_16xfloat_shuff_mem_mask3(<16 x float> %vec1, <16 x float>* %vec2p) {
 ; GENERIC-LABEL: test_16xfloat_shuff_mem_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,0,1,2,3],mem[12,13,14,15,12,13,14,15] sched: [8:1.00]
+; GENERIC-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[2,3,0,1],mem[6,7,6,7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xfloat_shuff_mem_mask3:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,0,1,2,3],mem[12,13,14,15,12,13,14,15] sched: [10:1.00]
+; SKX-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[2,3,0,1],mem[6,7,6,7] sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x float>, <16 x float>* %vec2p
   %res = shufflevector <16 x float> %vec1, <16 x float> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 28, i32 29, i32 30, i32 31, i32 28, i32 29, i32 30, i32 31>
@@ -10562,12 +10562,12 @@ define <8 x i32> @test_8xi32_zero_masked_shuff_mem_mask3(<8 x i32> %vec1, <8 x i
 define <16 x i32> @test_16xi32_shuff_mask0(<16 x i32> %vec1, <16 x i32> %vec2) {
 ; GENERIC-LABEL: test_16xi32_shuff_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,4,5,6,7],zmm1[4,5,6,7,12,13,14,15] sched: [1:1.00]
+; GENERIC-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[2,3,2,3],zmm1[2,3,6,7] sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xi32_shuff_mask0:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,4,5,6,7],zmm1[4,5,6,7,12,13,14,15] sched: [3:1.00]
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[2,3,2,3],zmm1[2,3,6,7] sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i32> %res
@@ -10686,12 +10686,12 @@ define <16 x i32> @test_16xi32_zero_masked_shuff_mask2(<16 x i32> %vec1, <16 x i
 define <16 x i32> @test_16xi32_shuff_mask3(<16 x i32> %vec1, <16 x i32> %vec2) {
 ; GENERIC-LABEL: test_16xi32_shuff_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,0,1,2,3],zmm1[8,9,10,11,4,5,6,7] sched: [1:1.00]
+; GENERIC-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[2,3,0,1],zmm1[4,5,2,3] sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xi32_shuff_mask3:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,0,1,2,3],zmm1[8,9,10,11,4,5,6,7] sched: [3:1.00]
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[2,3,0,1],zmm1[4,5,2,3] sched: [3:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 24, i32 25, i32 26, i32 27, i32 20, i32 21, i32 22, i32 23>
   ret <16 x i32> %res
@@ -10736,12 +10736,12 @@ define <16 x i32> @test_16xi32_zero_masked_shuff_mask3(<16 x i32> %vec1, <16 x i
 define <16 x i32> @test_16xi32_shuff_mem_mask0(<16 x i32> %vec1, <16 x i32>* %vec2p) {
 ; GENERIC-LABEL: test_16xi32_shuff_mem_mask0:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[8,9,10,11,4,5,6,7],mem[8,9,10,11,0,1,2,3] sched: [8:1.00]
+; GENERIC-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[4,5,2,3],mem[4,5,0,1] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xi32_shuff_mem_mask0:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[8,9,10,11,4,5,6,7],mem[8,9,10,11,0,1,2,3] sched: [10:1.00]
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[4,5,2,3],mem[4,5,0,1] sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 16, i32 17, i32 18, i32 19>
@@ -10870,12 +10870,12 @@ define <16 x i32> @test_16xi32_zero_masked_shuff_mem_mask2(<16 x i32> %vec1, <16
 define <16 x i32> @test_16xi32_shuff_mem_mask3(<16 x i32> %vec1, <16 x i32>* %vec2p) {
 ; GENERIC-LABEL: test_16xi32_shuff_mem_mask3:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,4,5,6,7],mem[4,5,6,7,12,13,14,15] sched: [8:1.00]
+; GENERIC-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[2,3,2,3],mem[2,3,6,7] sched: [8:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_16xi32_shuff_mem_mask3:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[4,5,6,7,4,5,6,7],mem[4,5,6,7,12,13,14,15] sched: [10:1.00]
+; SKX-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[2,3,2,3],mem[2,3,6,7] sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vec2 = load <16 x i32>, <16 x i32>* %vec2p
   %res = shufflevector <16 x i32> %vec1, <16 x i32> %vec2, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 20, i32 21, i32 22, i32 23, i32 28, i32 29, i32 30, i32 31>

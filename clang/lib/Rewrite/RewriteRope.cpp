@@ -59,7 +59,7 @@ using namespace clang;
 ///
 ///     RopePieceBTreeLeaf - Directly manages up to '2*WidthFactor' RopePiece
 ///          nodes.  This directly represents a chunk of the string with those
-///          RopePieces contatenated.
+///          RopePieces concatenated.
 ///     RopePieceBTreeInterior - An interior node in the B+ Tree, which manages
 ///          up to '2*WidthFactor' other nodes in the tree.
 
@@ -128,7 +128,7 @@ namespace {
 
   /// RopePieceBTreeLeaf - Directly manages up to '2*WidthFactor' RopePiece
   /// nodes.  This directly represents a chunk of the string with those
-  /// RopePieces contatenated.  Since this is a B+Tree, all values (in this case
+  /// RopePieces concatenated.  Since this is a B+Tree, all values (in this case
   /// instances of RopePiece) are stored in leaves like this.  To make iteration
   /// over the leaves efficient, they maintain a singly linked list through the
   /// NextLeaf field.  This allows the B+Tree forward iterator to be constant

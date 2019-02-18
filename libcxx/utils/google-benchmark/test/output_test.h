@@ -60,6 +60,13 @@ int SetSubstitutions(
 // Run all output tests.
 void RunOutputTests(int argc, char* argv[]);
 
+// Count the number of 'pat' substrings in the 'haystack' string.
+int SubstrCnt(const std::string& haystack, const std::string& pat);
+
+// Run registered benchmarks with file reporter enabled, and return the content
+// outputted by the file reporter.
+std::string GetFileReporterOutput(int argc, char* argv[]);
+
 // ========================================================================= //
 // ------------------------- Results checking ------------------------------ //
 // ========================================================================= //

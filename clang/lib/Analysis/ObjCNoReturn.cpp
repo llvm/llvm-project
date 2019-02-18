@@ -32,13 +32,13 @@ ObjCNoReturn::ObjCNoReturn(ASTContext &C)
 {
   // Generate selectors.
   SmallVector<IdentifierInfo*, 3> II;
-  
+
   // raise:format:
   II.push_back(&C.Idents.get("raise"));
   II.push_back(&C.Idents.get("format"));
   NSExceptionInstanceRaiseSelectors[0] =
     C.Selectors.getSelector(II.size(), &II[0]);
-    
+
   // raise:format:arguments:
   II.push_back(&C.Idents.get("arguments"));
   NSExceptionInstanceRaiseSelectors[1] =
@@ -48,7 +48,7 @@ ObjCNoReturn::ObjCNoReturn(ASTContext &C)
 
 bool ObjCNoReturn::isImplicitNoReturn(const ObjCMessageExpr *ME) {
   Selector S = ME->getSelector();
-  
+
   if (ME->isInstanceMessage()) {
     // Check for the "raise" message.
     return S == RaiseSel;
@@ -62,6 +62,6 @@ bool ObjCNoReturn::isImplicitNoReturn(const ObjCMessageExpr *ME) {
       }
     }
   }
-  
+
   return false;
 }

@@ -29,7 +29,7 @@ namespace clang {
   /// and ")" next to each other is safe.
   ///
   class TokenConcatenation {
-    Preprocessor &PP;
+    const Preprocessor &PP;
 
     enum AvoidConcatInfo {
       /// By default, a token never needs to avoid concatenation.  Most tokens
@@ -56,10 +56,10 @@ namespace clang {
     /// method.
     char TokenInfo[tok::NUM_TOKENS];
   public:
-    TokenConcatenation(Preprocessor &PP);
+    TokenConcatenation(const Preprocessor &PP);
 
-    bool AvoidConcat(const Token &PrevPrevTok, 
-                     const Token &PrevTok, 
+    bool AvoidConcat(const Token &PrevPrevTok,
+                     const Token &PrevTok,
                      const Token &Tok) const;
 
   private:

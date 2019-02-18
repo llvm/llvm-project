@@ -14,12 +14,14 @@
 #ifndef LLVM_CODEGEN_WASMEHFUNCINFO_H
 #define LLVM_CODEGEN_WASMEHFUNCINFO_H
 
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/IR/BasicBlock.h"
 
 namespace llvm {
+
+enum EventTag { CPP_EXCEPTION = 0, C_LONGJMP = 1 };
 
 using BBOrMBB = PointerUnion<const BasicBlock *, MachineBasicBlock *>;
 

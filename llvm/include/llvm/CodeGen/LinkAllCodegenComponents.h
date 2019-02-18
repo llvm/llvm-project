@@ -15,7 +15,7 @@
 #ifndef LLVM_CODEGEN_LINKALLCODEGENCOMPONENTS_H
 #define LLVM_CODEGEN_LINKALLCODEGENCOMPONENTS_H
 
-#include "llvm/CodeGen/GCs.h"
+#include "llvm/CodeGen/BuiltinGCs.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/SchedulerRegistry.h"
 #include "llvm/Target/TargetMachine.h"
@@ -36,11 +36,7 @@ namespace {
       (void) llvm::createGreedyRegisterAllocator();
       (void) llvm::createDefaultPBQPRegisterAllocator();
 
-      llvm::linkCoreCLRGC();
-      llvm::linkOcamlGC();
-      llvm::linkErlangGC();
-      llvm::linkShadowStackGC();
-      llvm::linkStatepointExampleGC();
+      llvm::linkAllBuiltinGCs();
 
       (void) llvm::createBURRListDAGScheduler(nullptr,
                                               llvm::CodeGenOpt::Default);

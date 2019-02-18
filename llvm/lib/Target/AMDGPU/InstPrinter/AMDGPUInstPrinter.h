@@ -80,7 +80,7 @@ private:
                   raw_ostream &O);
   void printDA(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                raw_ostream &O);
-  void printR128(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+  void printR128A16(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                  raw_ostream &O);
   void printLWE(const MCInst *MI, unsigned OpNo,
                 const MCSubtargetInfo &STI, raw_ostream &O);
@@ -90,10 +90,8 @@ private:
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpVM(const MCInst *MI, unsigned OpNo,
                   const MCSubtargetInfo &STI, raw_ostream &O);
-  void printDFMT(const MCInst *MI, unsigned OpNo,
-                 const MCSubtargetInfo &STI, raw_ostream &O);
-  void printNFMT(const MCInst *MI, unsigned OpNo,
-                 const MCSubtargetInfo &STI, raw_ostream &O);
+  void printFORMAT(const MCInst *MI, unsigned OpNo,
+                   const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printRegOperand(unsigned RegNo, raw_ostream &O);
   void printVOPDst(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

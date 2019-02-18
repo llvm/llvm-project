@@ -12,12 +12,17 @@ ThreadSanitizer is about **5x-10x**.
 How to build
 ------------
 
-Build LLVM/Clang with `CMake <http://llvm.org/docs/CMake.html>`_.
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_.
 
 Supported Platforms
 -------------------
 
-ThreadSanitizer is supported on Linux x86_64 (tested on Ubuntu 12.04).
+ThreadSanitizer is supported on the following OS:
+
+* Linux
+* NetBSD
+* FreeBSD
+
 Support for other 64-bit architectures is possible, contributions are welcome.
 Support for 32-bit platforms is problematic and is not planned.
 

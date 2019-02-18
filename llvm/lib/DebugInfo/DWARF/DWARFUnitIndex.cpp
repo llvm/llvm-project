@@ -164,14 +164,27 @@ DWARFUnitIndex::Entry::getOffset() const {
 
 const DWARFUnitIndex::Entry *
 DWARFUnitIndex::getFromOffset(uint32_t Offset) const {
-  for (uint32_t i = 0; i != Header.NumBuckets; ++i)
-    if (const auto &Contribs = Rows[i].Contributions) {
-      const auto &InfoContrib = Contribs[InfoColumn];
-      if (InfoContrib.Offset <= Offset &&
-          Offset < (InfoContrib.Offset + InfoContrib.Length))
-        return &Rows[i];
-    }
-  return nullptr;
+  if (OffsetLookup.empty()) {
+    for (uint32_t i = 0; i != Header.NumBuckets; ++i)
+      if (Rows[i].Contributions)
+        OffsetLookup.push_back(&Rows[i]);
+    llvm::sort(OffsetLookup, [&](Entry *E1, Entry *E2) {
+      return E1->Contributions[InfoColumn].Offset <
+             E2->Contributions[InfoColumn].Offset;
+    });
+  }
+  auto I =
+      llvm::upper_bound(OffsetLookup, Offset, [&](uint32_t Offset, Entry *E2) {
+        return Offset < E2->Contributions[InfoColumn].Offset;
+      });
+  if (I == OffsetLookup.begin())
+    return nullptr;
+  --I;
+  const auto *E = *I;
+  const auto &InfoContrib = E->Contributions[InfoColumn];
+  if ((InfoContrib.Offset + InfoContrib.Length) <= Offset)
+    return nullptr;
+  return E;
 }
 
 const DWARFUnitIndex::Entry *DWARFUnitIndex::getFromHash(uint64_t S) const {

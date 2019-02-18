@@ -13,7 +13,10 @@ xor %bx, %dx
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      4500
 # CHECK-NEXT: Total Cycles:      4503
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        4500
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    1.00
 # CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 1.5
 

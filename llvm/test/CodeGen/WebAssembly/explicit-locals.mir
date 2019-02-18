@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-explicit-locals %s -o - | FileCheck %s
+# RUN: llc -mtriple=wasm32-unknown-unknown -run-pass wasm-explicit-locals -wasm-keep-registers %s -o - | FileCheck %s
 
 # When a drop instruction is inserted to drop a dead register operand, the
 # original operand should be marked not dead anymore because it is now used by

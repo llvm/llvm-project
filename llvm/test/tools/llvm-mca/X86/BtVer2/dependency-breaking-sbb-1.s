@@ -13,7 +13,10 @@ sbb %eax, %eax
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      3000
 # CHECK-NEXT: Total Cycles:      3003
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        3000
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    1.00
 # CHECK-NEXT: IPC:               1.00
 # CHECK-NEXT: Block RThroughput: 2.0
 

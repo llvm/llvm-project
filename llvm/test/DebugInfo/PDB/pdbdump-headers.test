@@ -1,7 +1,9 @@
-; RUN: llvm-pdbutil dump -all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
+; RUN: llvm-pdbutil dump -all -dont-resolve-forward-refs %p/Inputs/empty.pdb \
+; RUN:   | FileCheck -check-prefix=ALL %s
 ; RUN: llvm-pdbutil dump -summary -modules -files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
-; RUN: not llvm-pdbutil dump -summary %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
+; RUN: not llvm-pdbutil dump -summary %p/Inputs/bad-block-size.pdb 2>&1 \
+; RUN:   | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
 ALL:                                Summary
 ALL-NEXT: ============================================================
@@ -487,6 +489,7 @@ ALL-NEXT:          type = `0x1001 (int ())`, debug start = 3, debug end = 8, fla
 ALL-NEXT:    164 | S_FRAMEPROC [size = 32]
 ALL-NEXT:          size = 0, padding size = 0, offset to padding = 0
 ALL-NEXT:          bytes of callee saved registers = 0, exception handler addr = 0000:0000
+ALL-NEXT:          local fp reg = EBP, param fp reg = EBP
 ALL-NEXT:          flags = has async eh | opt speed
 ALL-NEXT:    196 | S_END [size = 4]
 ALL-NEXT:    200 | S_BUILDINFO [size = 8] BuildId = `0x100E`
@@ -1167,4 +1170,4 @@ BIG-NEXT:   Mod 0045 | `Import:api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:   Mod 0046 | `api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:   Mod 0047 | `* Linker *`:
 
-BAD-BLOCK-SIZE: Native PDB Error: The PDB file is corrupt. Does not contain superblock
+BAD-BLOCK-SIZE: The PDB file is corrupt. MSF superblock is missing

@@ -19,16 +19,17 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifier.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -416,7 +417,7 @@ private:
   /// The set of Objective-C class that have categories we
   /// should serialize.
   llvm::SetVector<ObjCInterfaceDecl *> ObjCClassesWithCategories;
-                    
+
   /// The set of declarations that may have redeclaration chains that
   /// need to be serialized.
   llvm::SmallVector<const Decl *, 16> Redeclarations;
@@ -424,7 +425,7 @@ private:
   /// A cache of the first local declaration for "interesting"
   /// redeclaration chains.
   llvm::DenseMap<const Decl *, const Decl *> FirstLocalDeclCache;
-                                      
+
   /// Mapping from SwitchCase statements to IDs.
   llvm::DenseMap<SwitchCase *, unsigned> SwitchCaseIDs;
 
@@ -475,7 +476,7 @@ private:
   void WriteHeaderSearch(const HeaderSearch &HS);
   void WritePreprocessorDetail(PreprocessingRecord &PPRec);
   void WriteSubmodules(Module *WritingModule);
-                                        
+
   void WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
                                      bool isModule);
 
@@ -955,6 +956,9 @@ public:
     return Writer->AddVersionTuple(Version, *Record);
   }
 
+  // Emit an attribute.
+  void AddAttr(const Attr *A);
+
   /// Emit a list of attributes.
   void AddAttributes(ArrayRef<const Attr*> Attrs);
 };
@@ -988,6 +992,18 @@ public:
   ASTMutationListener *GetASTMutationListener() override;
   ASTDeserializationListener *GetASTDeserializationListener() override;
   bool hasEmittedPCH() const { return Buffer->IsComplete; }
+};
+
+class OMPClauseWriter : public OMPClauseVisitor<OMPClauseWriter> {
+  ASTRecordWriter &Record;
+
+public:
+  OMPClauseWriter(ASTRecordWriter &Record) : Record(Record) {}
+#define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
+#include "clang/Basic/OpenMPKinds.def"
+  void writeClause(OMPClause *C);
+  void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
+  void VisitOMPClauseWithPostUpdate(OMPClauseWithPostUpdate *C);
 };
 
 } // namespace clang

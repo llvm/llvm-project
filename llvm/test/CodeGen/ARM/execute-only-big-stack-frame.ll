@@ -2,6 +2,8 @@
 ; RUN:  | FileCheck --check-prefix=CHECK-SUBW-ADDW %s
 ; RUN: llc < %s -mtriple=thumbv8m.base -mattr=+execute-only -O0 %s -o - \
 ; RUN:  | FileCheck --check-prefix=CHECK-MOVW-MOVT-ADD %s
+; RUN: llc < %s -mtriple=thumbv8m.base -mcpu=cortex-m23 -mattr=+execute-only -O0 %s -o - \
+; RUN:  | FileCheck --check-prefix=CHECK-MOVW-MOVT-ADD %s
 ; RUN: llc < %s -mtriple=thumbv8m.main -mattr=+execute-only -O0 %s -o - \
 ; RUN:  | FileCheck --check-prefix=CHECK-SUBW-ADDW %s
 

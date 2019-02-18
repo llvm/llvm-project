@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -49,7 +49,7 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
                                             "for @synchronized"));
       auto report =
           llvm::make_unique<BugReport>(*BT_undef, BT_undef->getDescription(), N);
-      bugreporter::trackNullOrUndefValue(N, Ex, *report);
+      bugreporter::trackExpressionValue(N, Ex, *report);
       C.emitReport(std::move(report));
     }
     return;
@@ -73,7 +73,7 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
                     "(no synchronization will occur)"));
         auto report =
             llvm::make_unique<BugReport>(*BT_null, BT_null->getDescription(), N);
-        bugreporter::trackNullOrUndefValue(N, Ex, *report);
+        bugreporter::trackExpressionValue(N, Ex, *report);
 
         C.emitReport(std::move(report));
         return;
@@ -89,6 +89,9 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
 }
 
 void ento::registerObjCAtSyncChecker(CheckerManager &mgr) {
-  if (mgr.getLangOpts().ObjC2)
-    mgr.registerChecker<ObjCAtSyncChecker>();
+  mgr.registerChecker<ObjCAtSyncChecker>();
+}
+
+bool ento::shouldRegisterObjCAtSyncChecker(const LangOptions &LO) {
+  return LO.ObjC;
 }

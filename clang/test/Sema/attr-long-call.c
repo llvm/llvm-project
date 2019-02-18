@@ -19,8 +19,8 @@ __attribute((near)) void foo6();
 __attribute((long_call, far)) void foo7();
 __attribute((short_call, near)) void foo11();
 
-__attribute((far, near)) void foo8(); // expected-error {{'far' and 'near' attributes are not compatible}} \
+__attribute((far, near)) void foo8(); // expected-error {{'near' and 'far' attributes are not compatible}} \
                                       // expected-note {{conflicting attribute is here}}
 
-__attribute((short_call, long_call)) void foo12(); // expected-error {{'short_call' and 'long_call' attributes are not compatible}} \
+__attribute((short_call, long_call)) void foo12(); // expected-error {{'long_call' and 'short_call' attributes are not compatible}} \
                                                    // expected-note {{conflicting attribute is here}}

@@ -21,6 +21,7 @@
 #include "tsan_interface_ann.h"
 
 #include <libkern/OSAtomic.h>
+#include <objc/objc-sync.h>
 
 #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 #include <xpc/xpc.h>
@@ -294,17 +295,49 @@ TSAN_INTERCEPTOR(void, xpc_connection_cancel, xpc_connection_t connection) {
 
 #endif  // #if defined(__has_include) && __has_include(<xpc/xpc.h>)
 
-TSAN_INTERCEPTOR(int, objc_sync_enter, void *obj) {
+// Is the Obj-C object a tagged pointer (i.e. isn't really a valid pointer and
+// contains data in the pointers bits instead)?
+static bool IsTaggedObjCPointer(void *obj) {
+  const uptr kPossibleTaggedBits = 0x8000000000000001ull;
+  return ((uptr)obj & kPossibleTaggedBits) != 0;
+}
+
+// Return an address on which we can synchronize (Acquire and Release) for a
+// Obj-C tagged pointer (which is not a valid pointer). Ideally should be a
+// derived address from 'obj', but for now just return the same global address.
+// TODO(kubamracek): Return different address for different pointers.
+static uptr SyncAddressForTaggedPointer(void *obj) {
+  (void)obj;
+  static u64 addr;
+  return (uptr)&addr;
+}
+
+// Address on which we can synchronize for an Objective-C object. Supports
+// tagged pointers.
+static uptr SyncAddressForObjCObject(void *obj) {
+  if (IsTaggedObjCPointer(obj)) return SyncAddressForTaggedPointer(obj);
+  return (uptr)obj;
+}
+
+TSAN_INTERCEPTOR(int, objc_sync_enter, id obj) {
   SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
+  if (!obj) return REAL(objc_sync_enter)(obj);
+  uptr addr = SyncAddressForObjCObject(obj);
+  MutexPreLock(thr, pc, addr, MutexFlagWriteReentrant);
   int result = REAL(objc_sync_enter)(obj);
-  if (obj) Acquire(thr, pc, (uptr)obj);
+  CHECK_EQ(result, OBJC_SYNC_SUCCESS);
+  MutexPostLock(thr, pc, addr, MutexFlagWriteReentrant);
   return result;
 }
 
-TSAN_INTERCEPTOR(int, objc_sync_exit, void *obj) {
-  SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
-  if (obj) Release(thr, pc, (uptr)obj);
-  return REAL(objc_sync_exit)(obj);
+TSAN_INTERCEPTOR(int, objc_sync_exit, id obj) {
+  SCOPED_TSAN_INTERCEPTOR(objc_sync_exit, obj);
+  if (!obj) return REAL(objc_sync_exit)(obj);
+  uptr addr = SyncAddressForObjCObject(obj);
+  MutexUnlock(thr, pc, addr);
+  int result = REAL(objc_sync_exit)(obj);
+  if (result != OBJC_SYNC_SUCCESS) MutexInvalidAccess(thr, pc, addr);
+  return result;
 }
 
 // On macOS, libc++ is always linked dynamically, so intercepting works the

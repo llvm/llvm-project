@@ -151,13 +151,13 @@ let Predicates = [FeatureVector] in {
   def VLLEZH : UnaryVRX<"vllezh", 0xE704, z_vllezi16, v128h, 2, 1>;
   def VLLEZF : UnaryVRX<"vllezf", 0xE704, z_vllezi32, v128f, 4, 2>;
   def VLLEZG : UnaryVRX<"vllezg", 0xE704, z_vllezi64, v128g, 8, 3>;
-  def : Pat<(v4f32 (z_vllezf32 bdxaddr12only:$addr)),
+  def : Pat<(z_vllezf32 bdxaddr12only:$addr),
             (VLLEZF bdxaddr12only:$addr)>;
-  def : Pat<(v2f64 (z_vllezf64 bdxaddr12only:$addr)),
+  def : Pat<(z_vllezf64 bdxaddr12only:$addr),
             (VLLEZG bdxaddr12only:$addr)>;
   let Predicates = [FeatureVectorEnhancements1] in {
     def VLLEZLF : UnaryVRX<"vllezlf", 0xE704, z_vllezli32, v128f, 4, 6>;
-    def : Pat<(v4f32 (z_vllezlf32 bdxaddr12only:$addr)),
+    def : Pat<(z_vllezlf32 bdxaddr12only:$addr),
               (VLLEZLF bdxaddr12only:$addr)>;
   }
 
@@ -1031,7 +1031,7 @@ let Predicates = [FeatureVector] in {
   // Maximum.
   multiclass VectorMax<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, fmaxnum, tr, 4>;
-    def : FPMinMax<insn, fmaxnan, tr, 1>;
+    def : FPMinMax<insn, fmaximum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     def VFMAX   : TernaryVRRcFloatGeneric<"vfmax", 0xE7EF>;
@@ -1055,7 +1055,7 @@ let Predicates = [FeatureVector] in {
   // Minimum.
   multiclass VectorMin<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, fminnum, tr, 4>;
-    def : FPMinMax<insn, fminnan, tr, 1>;
+    def : FPMinMax<insn, fminimum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     def VFMIN   : TernaryVRRcFloatGeneric<"vfmin", 0xE7EE>;
@@ -1405,8 +1405,8 @@ multiclass ScalarToVectorFP<Instruction vrep, ValueType vt, RegisterOperand cls,
             (vrep (INSERT_SUBREG (vt (IMPLICIT_DEF)), cls:$scalar,
                                  subreg), 0)>;
 }
-defm : ScalarToVectorFP<VREPF, v4f32, FP32, subreg_r32>;
-defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_r64>;
+defm : ScalarToVectorFP<VREPF, v4f32, FP32, subreg_h32>;
+defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_h64>;
 
 // Match v2f64 insertions.  The AddedComplexity counters the 3 added by
 // TableGen for the base register operand in VLVG-based integer insertions
@@ -1414,10 +1414,10 @@ defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_r64>;
 let AddedComplexity = 4 in {
   def : Pat<(z_vector_insert (v2f64 VR128:$vec), FP64:$elt, 0),
             (VPDI (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FP64:$elt,
-                                 subreg_r64), VR128:$vec, 1)>;
+                                 subreg_h64), VR128:$vec, 1)>;
   def : Pat<(z_vector_insert (v2f64 VR128:$vec), FP64:$elt, 1),
             (VPDI VR128:$vec, (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), FP64:$elt,
-                                             subreg_r64), 0)>;
+                                             subreg_h64), 0)>;
 }
 
 // We extract floating-point element X by replicating (for elements other
@@ -1426,14 +1426,14 @@ let AddedComplexity = 4 in {
 // extractions and ensures that this version is strictly better.
 let AddedComplexity = 4 in {
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), 0)),
-            (EXTRACT_SUBREG VR128:$vec, subreg_r32)>;
+            (EXTRACT_SUBREG VR128:$vec, subreg_h32)>;
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), imm32zx2:$index)),
-            (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index), subreg_r32)>;
+            (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index), subreg_h32)>;
 
   def : Pat<(f64 (z_vector_extract (v2f64 VR128:$vec), 0)),
-            (EXTRACT_SUBREG VR128:$vec, subreg_r64)>;
+            (EXTRACT_SUBREG VR128:$vec, subreg_h64)>;
   def : Pat<(f64 (z_vector_extract (v2f64 VR128:$vec), imm32zx1:$index)),
-            (EXTRACT_SUBREG (VREPG VR128:$vec, imm32zx1:$index), subreg_r64)>;
+            (EXTRACT_SUBREG (VREPG VR128:$vec, imm32zx1:$index), subreg_h64)>;
 }
 
 //===----------------------------------------------------------------------===//

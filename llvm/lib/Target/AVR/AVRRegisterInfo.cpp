@@ -152,6 +152,7 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (MI.getOpcode() == AVR::FRMIDX) {
     MI.setDesc(TII.get(AVR::MOVWRdRr));
     MI.getOperand(FIOperandNum).ChangeToRegister(AVR::R29R28, false);
+    MI.RemoveOperand(2);
 
     assert(Offset > 0 && "Invalid offset");
 

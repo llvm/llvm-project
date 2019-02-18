@@ -25,16 +25,18 @@ namespace utils {
 /// \brief Produces fixes to insert specified includes to source files, if not
 /// yet present.
 ///
-/// ``IncludeInserter`` can be used by ``ClangTidyCheck`` in the following
-/// fashion:
+/// ``IncludeInserter`` can be used in clang-tidy checks in the following way:
 /// \code
+/// #include "../utils/IncludeInserter.h"
+/// #include "clang/Frontend/CompilerInstance.h"
+///
 /// class MyCheck : public ClangTidyCheck {
 ///  public:
 ///   void registerPPCallbacks(CompilerInstance& Compiler) override {
-///     Inserter.reset(new IncludeInserter(&Compiler.getSourceManager(),
-///                                        &Compiler.getLangOpts()));
+///     Inserter = llvm::make_unique<IncludeInserter>(&Compiler.getSourceManager(),
+///                                                   &Compiler.getLangOpts());
 ///     Compiler.getPreprocessor().addPPCallbacks(
-///         Inserter->CreatePPCallback());
+///         Inserter->CreatePPCallbacks());
 ///   }
 ///
 ///   void registerMatchers(ast_matchers::MatchFinder* Finder) override { ... }
@@ -49,7 +51,7 @@ namespace utils {
 ///   }
 ///
 ///  private:
-///   std::unique_ptr<IncludeInserter> Inserter;
+///   std::unique_ptr<clang::tidy::utils::IncludeInserter> Inserter;
 /// };
 /// \endcode
 class IncludeInserter {

@@ -408,9 +408,9 @@ define <4 x double> @test_broadcast2_vaddpd_256(<4 x double> %i, double* %j) nou
 define <4 x double> @test_mask_broadcast_vaddpd_256(<4 x double> %dst, <4 x double> %i, double* %j, <4 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_mask_broadcast_vaddpd_256:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vptestmq %ymm2, %ymm2, %k1 ## encoding: [0x62,0xf2,0xed,0x28,0x27,0xca]
-; CHECK-NEXT:    vaddpd (%rdi){1to4}, %ymm1, %ymm1 {%k1} ## encoding: [0x62,0xf1,0xf5,0x39,0x58,0x0f]
 ; CHECK-NEXT:    vmovapd %ymm1, %ymm0 ## EVEX TO VEX Compression encoding: [0xc5,0xfd,0x28,0xc1]
+; CHECK-NEXT:    vptestmq %ymm2, %ymm2, %k1 ## encoding: [0x62,0xf2,0xed,0x28,0x27,0xca]
+; CHECK-NEXT:    vaddpd (%rdi){1to4}, %ymm1, %ymm0 {%k1} ## encoding: [0x62,0xf1,0xf5,0x39,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <4 x i64> %mask1, zeroinitializer
   %tmp = load double, double* %j
@@ -835,9 +835,9 @@ define <2 x double> @test_broadcast2_vaddpd_128(<2 x double> %i, double* %j) nou
 define <2 x double> @test_mask_broadcast_vaddpd_128(<2 x double> %dst, <2 x double> %i, double* %j, <2 x i64> %mask1) nounwind {
 ; CHECK-LABEL: test_mask_broadcast_vaddpd_128:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vptestmq %xmm2, %xmm2, %k1 ## encoding: [0x62,0xf2,0xed,0x08,0x27,0xca]
-; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm1, %xmm1 {%k1} ## encoding: [0x62,0xf1,0xf5,0x19,0x58,0x0f]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x28,0xc1]
+; CHECK-NEXT:    vptestmq %xmm2, %xmm2, %k1 ## encoding: [0x62,0xf2,0xed,0x08,0x27,0xca]
+; CHECK-NEXT:    vaddpd (%rdi){1to2}, %xmm1, %xmm0 {%k1} ## encoding: [0x62,0xf1,0xf5,0x19,0x58,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %mask = icmp ne <2 x i64> %mask1, zeroinitializer
   %tmp = load double, double* %j

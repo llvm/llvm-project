@@ -181,7 +181,7 @@ define i64 @f14(i64 %a, i64 *%ptr) {
 ; CHECK: l %r1, 4(%r3)
 ; CHECK: rllg %r2, %r2, 0(%r1)
 ; CHECK: br %r14
-  %amt = load i64 , i64 *%ptr
+  %amt = load i64, i64 *%ptr
   %amtb = sub i64 64, %amt
   %parta = shl i64 %a, %amt
   %partb = lshr i64 %a, %amtb

@@ -372,9 +372,9 @@ public:
     SemaCallback = Callback;
   }
 
-  // Target-specific parsing of assembler-level variable assignment.
-  virtual bool parseAssignmentExpression(const MCExpr *&Res, SMLoc &EndLoc) {
-    return getParser().parseExpression(Res, EndLoc);
+  // Target-specific parsing of expression.
+  virtual bool parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
+    return getParser().parsePrimaryExpr(Res, EndLoc);
   }
 
   virtual bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
@@ -476,6 +476,9 @@ public:
     return nullptr;
   }
 
+  // For actions that have to be performed before a label is emitted
+  virtual void doBeforeLabelEmit(MCSymbol *Symbol) {}
+  
   virtual void onLabelParsed(MCSymbol *Symbol) {}
 
   /// Ensure that all previously parsed instructions have been emitted to the
@@ -487,6 +490,9 @@ public:
                                               MCContext &Ctx) {
     return nullptr;
   }
+
+  // For any checks or cleanups at the end of parsing.
+  virtual void onEndOfFile() {}
 };
 
 } // end namespace llvm

@@ -269,3 +269,42 @@ define i64 @test16.3() {
 ; BE-LABEL: @test16.3(
 ; BE: ret i64 0
 }
+
+@g7 = constant {[0 x i32], [0 x i8], {}*} { [0 x i32] undef, [0 x i8] undef, {}* null }
+
+define i64* @test_leading_zero_size_elems() {
+  %v = load i64*, i64** bitcast ({[0 x i32], [0 x i8], {}*}* @g7 to i64**)
+  ret i64* %v
+
+; LE-LABEL: @test_leading_zero_size_elems(
+; LE: ret i64* null
+
+; BE-LABEL: @test_leading_zero_size_elems(
+; BE: ret i64* null
+}
+
+@g8 = constant {[4294967295 x [0 x i32]], i64} { [4294967295 x [0 x i32]] undef, i64 123 }
+
+define i64 @test_leading_zero_size_elems_big() {
+  %v = load i64, i64* bitcast ({[4294967295 x [0 x i32]], i64}* @g8 to i64*)
+  ret i64 %v
+
+; LE-LABEL: @test_leading_zero_size_elems_big(
+; LE: ret i64 123
+
+; BE-LABEL: @test_leading_zero_size_elems_big(
+; BE: ret i64 123
+}
+
+@g9 = constant [4294967295 x [0 x i32]] zeroinitializer
+
+define i64 @test_array_of_zero_size_array() {
+  %v = load i64, i64* bitcast ([4294967295 x [0 x i32]]* @g9 to i64*)
+  ret i64 %v
+
+; LE-LABEL: @test_array_of_zero_size_array(
+; LE: ret i64 0
+
+; BE-LABEL: @test_array_of_zero_size_array(
+; BE: ret i64 0
+}

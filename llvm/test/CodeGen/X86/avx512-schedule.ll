@@ -947,16 +947,16 @@ define <8 x double> @test_broadcast_vaddpd(<8 x double> %i, double* %j) nounwind
 define <8 x double> @test_mask_broadcast_vaddpd(<8 x double> %dst, <8 x double> %i, double* %j, <8 x i64> %mask1) nounwind {
 ; GENERIC-LABEL: test_mask_broadcast_vaddpd:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
-; GENERIC-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm1 {%k1} # sched: [10:1.00]
 ; GENERIC-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:1.00]
+; GENERIC-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [1:0.33]
+; GENERIC-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm0 {%k1} # sched: [10:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_mask_broadcast_vaddpd:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [3:1.00]
-; SKX-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm1 {%k1} # sched: [11:0.50]
 ; SKX-NEXT:    vmovapd %zmm1, %zmm0 # sched: [1:0.33]
+; SKX-NEXT:    vptestmq %zmm2, %zmm2, %k1 # sched: [3:1.00]
+; SKX-NEXT:    vaddpd (%rdi){1to8}, %zmm1, %zmm0 {%k1} # sched: [11:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask = icmp ne <8 x i64> %mask1, zeroinitializer
   %tmp = load double, double* %j
@@ -1141,16 +1141,17 @@ define i32 @test3(float %a, float %b) {
 define float @test5(float %p) #0 {
 ; GENERIC-LABEL: test5:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vucomiss %xmm1, %xmm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    jne .LBB67_1 # sched: [1:1.00]
 ; GENERIC-NEXT:    jp .LBB67_1 # sched: [1:1.00]
 ; GENERIC-NEXT:  # %bb.2: # %return
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ; GENERIC-NEXT:  .LBB67_1: # %if.end
-; GENERIC-NEXT:    seta %al # sched: [2:1.00]
-; GENERIC-NEXT:    movzbl %al, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    vcmpltss %xmm0, %xmm1, %k1 # sched: [3:1.00]
+; GENERIC-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [6:0.50]
 ; GENERIC-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [6:0.50]
+; GENERIC-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1} # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test5:
@@ -1162,9 +1163,10 @@ define float @test5(float %p) #0 {
 ; SKX-NEXT:  # %bb.2: # %return
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ; SKX-NEXT:  .LBB67_1: # %if.end
-; SKX-NEXT:    seta %al # sched: [2:1.00]
-; SKX-NEXT:    movzbl %al, %eax # sched: [1:0.25]
+; SKX-NEXT:    vcmpltss %xmm0, %xmm1, %k1 # sched: [3:1.00]
+; SKX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:0.50]
+; SKX-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1} # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   %cmp = fcmp oeq float %p, 0.000000e+00
@@ -1183,7 +1185,7 @@ return:                                           ; preds = %if.end, %entry
 define i32 @test6(i32 %a, i32 %b) {
 ; GENERIC-LABEL: test6:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; GENERIC-NEXT:    cmpl %esi, %edi # sched: [1:0.33]
 ; GENERIC-NEXT:    sete %al # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1202,7 +1204,7 @@ define i32 @test6(i32 %a, i32 %b) {
 define i32 @test7(double %x, double %y) #2 {
 ; GENERIC-LABEL: test7:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    xorl %eax, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %eax, %eax # sched: [0:0.25]
 ; GENERIC-NEXT:    vucomisd %xmm1, %xmm0 # sched: [2:1.00]
 ; GENERIC-NEXT:    setne %al # sched: [1:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -1447,13 +1449,13 @@ define <4 x float> @slto4f32(<4 x i64> %a) {
 ; GENERIC-LABEL: slto4f32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtqq2ps %ymm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: slto4f32:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtqq2ps %ymm0, %xmm0 # sched: [7:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %b = sitofp <4 x i64> %a to <4 x float>
   ret <4 x float> %b
@@ -1463,13 +1465,13 @@ define <4 x float> @ulto4f32(<4 x i64> %a) {
 ; GENERIC-LABEL: ulto4f32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtuqq2ps %ymm0, %xmm0 # sched: [3:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: ulto4f32:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtuqq2ps %ymm0, %xmm0 # sched: [7:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %b = uitofp <4 x i64> %a to <4 x float>
   ret <4 x float> %b
@@ -1538,14 +1540,14 @@ define <16 x i8> @f32to16uc(<16 x float> %f) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvttps2dq %zmm0, %zmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovdb %zmm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f32to16uc:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvttps2dq %zmm0, %zmm0 # sched: [4:0.50]
 ; SKX-NEXT:    vpmovdb %zmm0, %xmm0 # sched: [4:2.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %res = fptoui <16 x float> %f to <16 x i8>
   ret <16 x i8> %res
@@ -1614,14 +1616,14 @@ define <8 x i16> @f64to8us(<8 x double> %f) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvttpd2dq %zmm0, %ymm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    vpmovdw %ymm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f64to8us:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvttpd2dq %zmm0, %ymm0 # sched: [7:1.00]
 ; SKX-NEXT:    vpmovdw %ymm0, %xmm0 # sched: [4:2.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %res = fptoui <8 x double> %f to <8 x i16>
   ret <8 x i16> %res
@@ -1632,14 +1634,14 @@ define <8 x i8> @f64to8uc(<8 x double> %f) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvttpd2dq %zmm0, %ymm0 # sched: [4:1.00]
 ; GENERIC-NEXT:    vpmovdw %ymm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f64to8uc:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvttpd2dq %zmm0, %ymm0 # sched: [7:1.00]
 ; SKX-NEXT:    vpmovdw %ymm0, %xmm0 # sched: [4:2.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %res = fptoui <8 x double> %f to <8 x i8>
   ret <8 x i8> %res
@@ -1649,13 +1651,13 @@ define <4 x i32> @f64to4ui(<4 x double> %a) nounwind {
 ; GENERIC-LABEL: f64to4ui:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvttpd2udq %ymm0, %xmm0 # sched: [4:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f64to4ui:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvttpd2udq %ymm0, %xmm0 # sched: [7:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %b = fptoui <4 x double> %a to <4 x i32>
   ret <4 x i32> %b
@@ -1737,13 +1739,13 @@ define <4 x i32> @f64to4si(<4 x double> %a) {
 ; GENERIC-LABEL: f64to4si:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [4:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f64to4si:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvttpd2dq %ymm0, %xmm0 # sched: [7:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %b = fptosi <4 x double> %a to <4 x i32>
   ret <4 x i32> %b
@@ -1771,13 +1773,13 @@ define <4 x float> @f64to4f32(<4 x double> %b) {
 ; GENERIC-LABEL: f64to4f32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [4:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f64to4f32:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vcvtpd2ps %ymm0, %xmm0 # sched: [7:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %a = fptrunc <4 x double> %b to <4 x float>
   ret <4 x float> %a
@@ -1789,7 +1791,7 @@ define <4 x float> @f64to4f32_mask(<4 x double> %b, <4 x i1> %mask) {
 ; GENERIC-NEXT:    vpslld $31, %xmm1, %xmm1 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovd2m %xmm1, %k1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vcvtpd2ps %ymm0, %xmm0 {%k1} {z} # sched: [4:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: f64to4f32_mask:
@@ -1797,7 +1799,7 @@ define <4 x float> @f64to4f32_mask(<4 x double> %b, <4 x i1> %mask) {
 ; SKX-NEXT:    vpslld $31, %xmm1, %xmm1 # sched: [1:0.50]
 ; SKX-NEXT:    vpmovd2m %xmm1, %k1 # sched: [1:1.00]
 ; SKX-NEXT:    vcvtpd2ps %ymm0, %xmm0 {%k1} {z} # sched: [7:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %a = fptrunc <4 x double> %b to <4 x float>
   %c = select <4 x i1>%mask, <4 x float>%a, <4 x float> zeroinitializer
@@ -2424,7 +2426,7 @@ define <16 x double> @scto16f64(<16 x i8> %a) {
 define <16 x double> @sbto16f64(<16 x double> %a) {
 ; GENERIC-LABEL: sbto16f64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpltpd %zmm0, %zmm2, %k0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcmpltpd %zmm1, %zmm2, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    kunpckbw %k0, %k1, %k0 # sched: [1:1.00]
@@ -2453,7 +2455,7 @@ define <16 x double> @sbto16f64(<16 x double> %a) {
 define <8 x double> @sbto8f64(<8 x double> %a) {
 ; GENERIC-LABEL: sbto8f64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpltpd %zmm0, %zmm1, %k0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovm2d %k0, %ymm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vcvtdq2pd %ymm0, %zmm0 # sched: [4:1.00]
@@ -2474,7 +2476,7 @@ define <8 x double> @sbto8f64(<8 x double> %a) {
 define <8 x float> @sbto8f32(<8 x float> %a) {
 ; GENERIC-LABEL: sbto8f32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpltps %ymm0, %ymm1, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvtdq2ps %ymm0, %ymm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2493,7 +2495,7 @@ define <8 x float> @sbto8f32(<8 x float> %a) {
 define <4 x float> @sbto4f32(<4 x float> %a) {
 ; GENERIC-LABEL: sbto4f32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvtdq2ps %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2512,7 +2514,7 @@ define <4 x float> @sbto4f32(<4 x float> %a) {
 define <4 x double> @sbto4f64(<4 x double> %a) {
 ; GENERIC-LABEL: sbto4f64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpltpd %ymm0, %ymm1, %k0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [4:1.00]
@@ -2533,7 +2535,7 @@ define <4 x double> @sbto4f64(<4 x double> %a) {
 define <2 x float> @sbto2f32(<2 x float> %a) {
 ; GENERIC-LABEL: sbto2f32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpltps %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvtdq2ps %xmm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2552,7 +2554,7 @@ define <2 x float> @sbto2f32(<2 x float> %a) {
 define <2 x double> @sbto2f64(<2 x double> %a) {
 ; GENERIC-LABEL: sbto2f64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3] sched: [1:1.00]
 ; GENERIC-NEXT:    vcvtdq2pd %xmm0, %xmm0 # sched: [4:1.00]
@@ -2827,7 +2829,7 @@ define <16 x double> @ubto16f64(<16 x i32> %a) {
 define <8 x float> @ubto8f32(<8 x i32> %a) {
 ; GENERIC-LABEL: ubto8f32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpandd {{.*}}(%rip){1to8}, %ymm0, %ymm0 # sched: [8:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2846,7 +2848,7 @@ define <8 x float> @ubto8f32(<8 x i32> %a) {
 define <8 x double> @ubto8f64(<8 x i32> %a) {
 ; GENERIC-LABEL: ubto8f64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vpcmpgtd %ymm0, %ymm1, %ymm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpsrld $31, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vcvtdq2pd %ymm0, %zmm0 # sched: [4:1.00]
@@ -2867,7 +2869,7 @@ define <8 x double> @ubto8f64(<8 x i32> %a) {
 define <4 x float> @ubto4f32(<4 x i32> %a) {
 ; GENERIC-LABEL: ubto4f32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0 # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -2886,7 +2888,7 @@ define <4 x float> @ubto4f32(<4 x i32> %a) {
 define <4 x double> @ubto4f64(<4 x i32> %a) {
 ; GENERIC-LABEL: ubto4f64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpsrld $31, %xmm0, %xmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vcvtdq2pd %xmm0, %ymm0 # sched: [4:1.00]
@@ -2907,7 +2909,7 @@ define <4 x double> @ubto4f64(<4 x i32> %a) {
 define <2 x float> @ubto2f32(<2 x i32> %a) {
 ; GENERIC-LABEL: ubto2f32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3] sched: [1:0.50]
 ; GENERIC-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpandn {{.*}}(%rip), %xmm0, %xmm0 # sched: [7:0.50]
@@ -2930,7 +2932,7 @@ define <2 x float> @ubto2f32(<2 x i32> %a) {
 define <2 x double> @ubto2f64(<2 x i32> %a) {
 ; GENERIC-LABEL: ubto2f64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3] sched: [1:0.50]
 ; GENERIC-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpandn {{.*}}(%rip), %xmm0, %xmm0 # sched: [7:0.50]
@@ -4307,7 +4309,7 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; GENERIC-NEXT:    vpmovd2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: trunc_16i32_to_16i1:
@@ -4316,7 +4318,7 @@ define i16 @trunc_16i32_to_16i1(<16 x i32> %a) {
 ; SKX-NEXT:    vpmovd2m %zmm0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %mask_b = trunc <16 x i32>%a to <16 x i1>
   %mask = bitcast <16 x i1> %mask_b to i16
@@ -4422,14 +4424,14 @@ define <8 x i16> @sext_8i1_8i16(<8 x i32> %a1, <8 x i32> %a2) nounwind {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpmovm2w %k0, %xmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: sext_8i1_8i16:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpcmpgtd %ymm0, %ymm1, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpmovm2w %k0, %xmm0 # sched: [1:0.25]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %x = icmp slt <8 x i32> %a1, %a2
   %y = sext <8 x i1> %x to <8 x i16>
@@ -4475,14 +4477,14 @@ define void @extload_v8i64(<8 x i8>* %a, <8 x i64>* %res) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vpmovsxbq (%rdi), %zmm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vmovdqa64 %zmm0, (%rsi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: extload_v8i64:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vpmovsxbq (%rdi), %zmm0 # sched: [10:1.00]
 ; SKX-NEXT:    vmovdqa64 %zmm0, (%rsi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %sign_load = load <8 x i8>, <8 x i8>* %a
   %c = sext <8 x i8> %sign_load to <8 x i64>
@@ -4711,7 +4713,7 @@ define <32 x i8> @zext_32xi1_to_32xi8(<32 x i16> %x, <32 x i16> %y) #0 {
 define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 ; GENERIC-LABEL: zext_4xi1_to_4x32:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0] sched: [6:0.50]
+; GENERIC-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [255,255,255,255] sched: [7:0.50]
 ; GENERIC-NEXT:    vpand %xmm2, %xmm1, %xmm1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpand %xmm2, %xmm0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
@@ -4720,7 +4722,7 @@ define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 ;
 ; SKX-LABEL: zext_4xi1_to_4x32:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0] sched: [6:0.50]
+; SKX-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [255,255,255,255] sched: [6:0.50]
 ; SKX-NEXT:    vpand %xmm2, %xmm1, %xmm1 # sched: [1:0.33]
 ; SKX-NEXT:    vpand %xmm2, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
@@ -4734,7 +4736,7 @@ define <4 x i32> @zext_4xi1_to_4x32(<4 x i8> %x, <4 x i8> %y) #0 {
 define <2 x i64> @zext_2xi1_to_2xi64(<2 x i8> %x, <2 x i8> %y) #0 {
 ; GENERIC-LABEL: zext_2xi1_to_2xi64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0] sched: [6:0.50]
+; GENERIC-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [255,255] sched: [7:0.50]
 ; GENERIC-NEXT:    vpand %xmm2, %xmm1, %xmm1 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpand %xmm2, %xmm0, %xmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
@@ -4743,7 +4745,7 @@ define <2 x i64> @zext_2xi1_to_2xi64(<2 x i8> %x, <2 x i8> %y) #0 {
 ;
 ; SKX-LABEL: zext_2xi1_to_2xi64:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0] sched: [6:0.50]
+; SKX-NEXT:    vpbroadcastq {{.*#+}} xmm2 = [255,255] sched: [6:0.50]
 ; SKX-NEXT:    vpand %xmm2, %xmm1, %xmm1 # sched: [1:0.33]
 ; SKX-NEXT:    vpand %xmm2, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0 # sched: [1:0.50]
@@ -5029,13 +5031,13 @@ define <16 x i32> @vpandd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; GENERIC-LABEL: vpandd:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vpandq %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpandd %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpandd:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vpandq %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpandd %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.
@@ -5049,13 +5051,13 @@ define <16 x i32> @vpandnd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readno
 ; GENERIC-LABEL: vpandnd:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vpandnq %zmm0, %zmm1, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpandnd %zmm0, %zmm1, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpandnd:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vpandnq %zmm0, %zmm1, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpandnd %zmm0, %zmm1, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.
@@ -5071,13 +5073,13 @@ define <16 x i32> @vpord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnone
 ; GENERIC-LABEL: vpord:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vporq %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpord %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpord:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vporq %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpord %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.
@@ -5091,13 +5093,13 @@ define <16 x i32> @vpxord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; GENERIC-LABEL: vpxord:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxord %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpxord:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpxord %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.
@@ -6124,13 +6126,13 @@ define void @mov_test18(i8 * %addr, <8 x i64> %data) {
 ; GENERIC-LABEL: mov_test18:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test18:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <8 x i64>*
   store <8 x i64>%data, <8 x i64>* %vaddr, align 64
@@ -6141,13 +6143,13 @@ define void @mov_test19(i8 * %addr, <16 x i32> %data) {
 ; GENERIC-LABEL: mov_test19:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test19:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <16 x i32>*
   store <16 x i32>%data, <16 x i32>* %vaddr, align 1
@@ -6158,13 +6160,13 @@ define void @mov_test20(i8 * %addr, <16 x i32> %data) {
 ; GENERIC-LABEL: mov_test20:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test20:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <16 x i32>*
   store <16 x i32>%data, <16 x i32>* %vaddr, align 64
@@ -6190,13 +6192,13 @@ define void @mov_test22(i8 * %addr, <8 x i64> %data) {
 ; GENERIC-LABEL: mov_test22:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test22:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <8 x i64>*
   store <8 x i64>%data, <8 x i64>* %vaddr, align 1
@@ -6222,13 +6224,13 @@ define void @mov_test24(i8 * %addr, <8 x double> %data) {
 ; GENERIC-LABEL: mov_test24:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test24:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <8 x double>*
   store <8 x double>%data, <8 x double>* %vaddr, align 64
@@ -6254,13 +6256,13 @@ define void @mov_test26(i8 * %addr, <16 x float> %data) {
 ; GENERIC-LABEL: mov_test26:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test26:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <16 x float>*
   store <16 x float>%data, <16 x float>* %vaddr, align 64
@@ -6286,13 +6288,13 @@ define void @mov_test28(i8 * %addr, <8 x double> %data) {
 ; GENERIC-LABEL: mov_test28:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test28:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <8 x double>*
   store <8 x double>%data, <8 x double>* %vaddr, align 1
@@ -6318,13 +6320,13 @@ define void @mov_test30(i8 * %addr, <16 x float> %data) {
 ; GENERIC-LABEL: mov_test30:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mov_test30:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovups %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %vaddr = bitcast i8* %addr to <16 x float>*
   store <16 x float>%data, <16 x float>* %vaddr, align 1
@@ -6501,7 +6503,7 @@ define <8 x i64> @mov_test39(i8 * %addr, <8 x i64> %mask1) {
 define <16 x float> @mov_test40(i8 * %addr, <16 x float> %old, <16 x float> %mask1) {
 ; GENERIC-LABEL: mov_test40:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorps %xmm2, %xmm2, %xmm2 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm2, %xmm2, %xmm2 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqps %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovaps (%rdi), %zmm0 {%k1} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6522,7 +6524,7 @@ define <16 x float> @mov_test40(i8 * %addr, <16 x float> %old, <16 x float> %mas
 define <16 x float> @mov_test41(i8 * %addr, <16 x float> %old, <16 x float> %mask1) {
 ; GENERIC-LABEL: mov_test41:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorps %xmm2, %xmm2, %xmm2 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm2, %xmm2, %xmm2 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqps %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovups (%rdi), %zmm0 {%k1} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6543,7 +6545,7 @@ define <16 x float> @mov_test41(i8 * %addr, <16 x float> %old, <16 x float> %mas
 define <16 x float> @mov_test42(i8 * %addr, <16 x float> %mask1) {
 ; GENERIC-LABEL: mov_test42:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqps %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovaps (%rdi), %zmm0 {%k1} {z} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6564,7 +6566,7 @@ define <16 x float> @mov_test42(i8 * %addr, <16 x float> %mask1) {
 define <16 x float> @mov_test43(i8 * %addr, <16 x float> %mask1) {
 ; GENERIC-LABEL: mov_test43:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqps %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6585,7 +6587,7 @@ define <16 x float> @mov_test43(i8 * %addr, <16 x float> %mask1) {
 define <8 x double> @mov_test44(i8 * %addr, <8 x double> %old, <8 x double> %mask1) {
 ; GENERIC-LABEL: mov_test44:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqpd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovapd (%rdi), %zmm0 {%k1} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6606,7 +6608,7 @@ define <8 x double> @mov_test44(i8 * %addr, <8 x double> %old, <8 x double> %mas
 define <8 x double> @mov_test45(i8 * %addr, <8 x double> %old, <8 x double> %mask1) {
 ; GENERIC-LABEL: mov_test45:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm2, %xmm2, %xmm2 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqpd %zmm2, %zmm1, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovupd (%rdi), %zmm0 {%k1} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6627,7 +6629,7 @@ define <8 x double> @mov_test45(i8 * %addr, <8 x double> %old, <8 x double> %mas
 define <8 x double> @mov_test46(i8 * %addr, <8 x double> %mask1) {
 ; GENERIC-LABEL: mov_test46:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqpd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovapd (%rdi), %zmm0 {%k1} {z} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6648,7 +6650,7 @@ define <8 x double> @mov_test46(i8 * %addr, <8 x double> %mask1) {
 define <8 x double> @mov_test47(i8 * %addr, <8 x double> %mask1) {
 ; GENERIC-LABEL: mov_test47:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpneq_oqpd %zmm1, %zmm0, %k1 # sched: [3:1.00]
 ; GENERIC-NEXT:    vmovupd (%rdi), %zmm0 {%k1} {z} # sched: [7:0.50]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6669,14 +6671,16 @@ define <8 x double> @mov_test47(i8 * %addr, <8 x double> %mask1) {
 define i16 @mask16(i16 %x) {
 ; GENERIC-LABEL: mask16:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    notl %edi # sched: [1:0.33]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    notl %eax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask16:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    notl %edi # sched: [1:0.25]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
+; SKX-NEXT:    notl %eax # sched: [1:0.25]
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -6706,14 +6710,16 @@ define i32 @mask16_zext(i16 %x) {
 define i8 @mask8(i8 %x) {
 ; GENERIC-LABEL: mask8:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    notb %dil # sched: [1:0.33]
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    notb %al # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $al killed $al killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mask8:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    notb %dil # sched: [1:0.25]
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
+; SKX-NEXT:    notb %al # sched: [1:0.25]
+; SKX-NEXT:    # kill: def $al killed $al killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -6788,19 +6794,21 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; GENERIC-LABEL: mand16:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    movl %edi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    andl %esi, %ecx # sched: [1:0.33]
 ; GENERIC-NEXT:    xorl %esi, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    andl %esi, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    orl %eax, %edi # sched: [1:0.33]
-; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: mand16:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
+; SKX-NEXT:    movl %edi, %ecx # sched: [1:0.25]
+; SKX-NEXT:    andl %esi, %ecx # sched: [1:0.25]
 ; SKX-NEXT:    xorl %esi, %eax # sched: [1:0.25]
-; SKX-NEXT:    andl %esi, %edi # sched: [1:0.25]
-; SKX-NEXT:    orl %eax, %edi # sched: [1:0.25]
-; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
+; SKX-NEXT:    orl %ecx, %eax # sched: [1:0.25]
+; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %ma = bitcast i16 %x to <16 x i1>
   %mb = bitcast i16 %y to <16 x i1>
@@ -6871,7 +6879,7 @@ define i32 @zext_test1(<16 x i32> %a, <16 x i32> %b) {
 ; GENERIC-NEXT:    kshiftrw $5, %k0, %k0 # sched: [1:1.00]
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    andl $1, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: zext_test1:
@@ -6880,7 +6888,7 @@ define i32 @zext_test1(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-NEXT:    kshiftrw $5, %k0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    andl $1, %eax # sched: [1:0.25]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %cmp_res = icmp ugt <16 x i32> %a, %b
   %cmp_res.i1 = extractelement <16 x i1> %cmp_res, i32 5
@@ -6896,7 +6904,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    andl $1, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: zext_test2:
@@ -6906,7 +6914,7 @@ define i16 @zext_test2(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    andl $1, %eax # sched: [1:0.25]
 ; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %cmp_res = icmp ugt <16 x i32> %a, %b
   %cmp_res.i1 = extractelement <16 x i1> %cmp_res, i32 5
@@ -6922,7 +6930,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; GENERIC-NEXT:    kmovd %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    andb $1, %al # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: def $al killed $al killed $eax
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: zext_test3:
@@ -6932,7 +6940,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; SKX-NEXT:    kmovd %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    andb $1, %al # sched: [1:0.25]
 ; SKX-NEXT:    # kill: def $al killed $al killed $eax
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %cmp_res = icmp ugt <16 x i32> %a, %b
   %cmp_res.i1 = extractelement <16 x i1> %cmp_res, i32 5
@@ -6970,7 +6978,7 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ; GENERIC-NEXT:    vpcmpleq %ymm1, %ymm0, %k1 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpcmpgtq %ymm3, %ymm2, %k0 {%k1} # sched: [1:0.50]
 ; GENERIC-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test4:
@@ -6978,7 +6986,7 @@ define <4 x i32> @test4(<4 x i64> %x, <4 x i64> %y, <4 x i64> %x1, <4 x i64> %y1
 ; SKX-NEXT:    vpcmpleq %ymm1, %ymm0, %k1 # sched: [3:1.00]
 ; SKX-NEXT:    vpcmpgtq %ymm3, %ymm2, %k0 {%k1} # sched: [3:1.00]
 ; SKX-NEXT:    vpmovm2d %k0, %xmm0 # sched: [1:0.25]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %x_gt_y = icmp sgt <4 x i64> %x, %y
   %x1_gt_y1 = icmp sgt <4 x i64> %x1, %y1
@@ -7055,13 +7063,13 @@ define <16 x i8> @vcmp_test8(<16 x i32>%a, <16 x i32>%b, i32 %a1, i32 %b1) {
 ; GENERIC-NEXT:  # %bb.2:
 ; GENERIC-NEXT:    kxorw %k0, %k0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ; GENERIC-NEXT:  .LBB386_1:
-; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [0:0.25]
 ; GENERIC-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 # sched: [1:0.50]
 ; GENERIC-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.33]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vcmp_test8:
@@ -7071,13 +7079,13 @@ define <16 x i8> @vcmp_test8(<16 x i32>%a, <16 x i32>%b, i32 %a1, i32 %b1) {
 ; SKX-NEXT:  # %bb.2:
 ; SKX-NEXT:    kxorw %k0, %k0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.25]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ; SKX-NEXT:  .LBB386_1:
 ; SKX-NEXT:    vpxor %xmm1, %xmm1, %xmm1 # sched: [1:0.33]
 ; SKX-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    vpmovm2b %k0, %xmm0 # sched: [1:0.25]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %cond = icmp sgt i32 %a1, %b1
   %cmp1 = icmp sgt <16 x i32> %a, zeroinitializer
@@ -7611,11 +7619,11 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; GENERIC-NEXT:    je .LBB410_2 # sched: [1:1.00]
 ; GENERIC-NEXT:  # %bb.1: # %L1
 ; GENERIC-NEXT:    vmovapd %zmm0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ; GENERIC-NEXT:  .LBB410_2: # %L2
 ; GENERIC-NEXT:    vmovapd %zmm0, 8(%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: ktest_1:
@@ -7628,11 +7636,11 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; SKX-NEXT:    je .LBB410_2 # sched: [1:0.50]
 ; SKX-NEXT:  # %bb.1: # %L1
 ; SKX-NEXT:    vmovapd %zmm0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ; SKX-NEXT:  .LBB410_2: # %L2
 ; SKX-NEXT:    vmovapd %zmm0, 8(%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %addr1 = getelementptr double, double * %base, i64 0
   %addr2 = getelementptr double, double * %base, i64 1
@@ -7680,12 +7688,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; GENERIC-NEXT:  # %bb.1: # %L1
 ; GENERIC-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, 64(%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ; GENERIC-NEXT:  .LBB411_2: # %L2
 ; GENERIC-NEXT:    vmovaps %zmm0, 4(%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vmovaps %zmm1, 68(%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: ktest_2:
@@ -7705,12 +7713,12 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; SKX-NEXT:  # %bb.1: # %L1
 ; SKX-NEXT:    vmovaps %zmm0, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    vmovaps %zmm1, 64(%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ; SKX-NEXT:  .LBB411_2: # %L2
 ; SKX-NEXT:    vmovaps %zmm0, 4(%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    vmovaps %zmm1, 68(%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %addr1 = getelementptr float, float * %base, i64 0
   %addr2 = getelementptr float, float * %base, i64 1
@@ -7902,7 +7910,7 @@ define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
 ; GENERIC-NEXT:    vpsllw $7, %ymm0, %ymm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %ymm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovd %k0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_32i1:
@@ -7910,7 +7918,7 @@ define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0 # sched: [1:0.50]
 ; SKX-NEXT:    vpmovb2m %ymm0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   store <32 x i1> %v, <32 x i1>* %a
   ret void
@@ -7922,7 +7930,7 @@ define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
 ; GENERIC-NEXT:    vpsllw $15, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovw2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovd %k0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_32i1_1:
@@ -7930,7 +7938,7 @@ define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
 ; SKX-NEXT:    vpsllw $15, %zmm0, %zmm0 # sched: [1:1.00]
 ; SKX-NEXT:    vpmovw2m %zmm0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovd %k0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   %v1 = trunc <32 x i16> %v to <32 x i1>
   store <32 x i1> %v1, <32 x i1>* %a
@@ -7945,7 +7953,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; GENERIC-NEXT:    vpsllw $7, %zmm0, %zmm0 # sched: [1:1.00]
 ; GENERIC-NEXT:    vpmovb2m %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovq %k0, (%rdi) # sched: [1:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: store_64i1:
@@ -7953,7 +7961,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; SKX-NEXT:    vpsllw $7, %zmm0, %zmm0 # sched: [1:1.00]
 ; SKX-NEXT:    vpmovb2m %zmm0, %k0 # sched: [1:1.00]
 ; SKX-NEXT:    kmovq %k0, (%rdi) # sched: [1:1.00]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
   store <64 x i1> %v, <64 x i1>* %a
   ret void
@@ -7965,7 +7973,7 @@ define i32 @test_bitcast_v8i1_zext(<16 x i32> %a) {
 ; GENERIC-NEXT:    vptestnmd %zmm0, %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovb %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    addl %eax, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_bitcast_v8i1_zext:
@@ -7973,7 +7981,7 @@ define i32 @test_bitcast_v8i1_zext(<16 x i32> %a) {
 ; SKX-NEXT:    vptestnmd %zmm0, %zmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    kmovb %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    addl %eax, %eax # sched: [1:0.25]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %v1 = icmp eq <16 x i32> %a, zeroinitializer
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -7989,7 +7997,7 @@ define i32 @test_bitcast_v16i1_zext(<16 x i32> %a) {
 ; GENERIC-NEXT:    vptestnmd %zmm0, %zmm0, %k0 # sched: [1:0.33]
 ; GENERIC-NEXT:    kmovw %k0, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    addl %eax, %eax # sched: [1:0.33]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test_bitcast_v16i1_zext:
@@ -7997,7 +8005,7 @@ define i32 @test_bitcast_v16i1_zext(<16 x i32> %a) {
 ; SKX-NEXT:    vptestnmd %zmm0, %zmm0, %k0 # sched: [3:1.00]
 ; SKX-NEXT:    kmovw %k0, %eax # sched: [3:1.00]
 ; SKX-NEXT:    addl %eax, %eax # sched: [1:0.25]
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
    %v1 = icmp eq <16 x i32> %a, zeroinitializer
    %mask1 = bitcast <16 x i1> %v1 to i16
@@ -8453,7 +8461,7 @@ define   <16 x float> @_xmm16xfloat(<16 x float> %a) {
 define <16 x i32> @test_vbroadcast() {
 ; GENERIC-LABEL: test_vbroadcast:
 ; GENERIC:       # %bb.0: # %entry
-; GENERIC-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [1:1.00]
+; GENERIC-NEXT:    vxorps %xmm0, %xmm0, %xmm0 # sched: [0:0.25]
 ; GENERIC-NEXT:    vcmpunordps %zmm0, %zmm0, %k0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vpmovm2d %k0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    knotw %k0, %k1 # sched: [1:0.33]

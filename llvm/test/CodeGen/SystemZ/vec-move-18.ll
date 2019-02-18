@@ -22,3 +22,15 @@ define <4 x float> @f2(float *%ptr) {
   ret <4 x float> %ret
 }
 
+; Test VLLEZLF with a float when the result is stored to memory.
+define void @f3(float *%ptr, <4 x float> *%res) {
+; CHECK-LABEL: f3:
+; CHECK: vllezlf [[REG:%v[0-9]+]], 0(%r2)
+; CHECK: vst [[REG]], 0(%r3)
+; CHECK: br %r14
+  %val = load float, float *%ptr
+  %ret = insertelement <4 x float> zeroinitializer, float %val, i32 0
+  store <4 x float> %ret, <4 x float> *%res
+  ret void
+}
+

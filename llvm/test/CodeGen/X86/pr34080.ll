@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse2 | FileCheck %s --check-prefix=SSE2
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse2 -mcpu=x86-64 | FileCheck %s --check-prefix=SSE2-SCHEDULE
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse3 | FileCheck %s --check-prefix=SSE3
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse3 -mcpu=prescott | FileCheck %s --check-prefix=SSE3
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+sse3 -mcpu=nocona | FileCheck %s --check-prefix=SSE3
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx | FileCheck %s --check-prefix=AVX
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin -mattr=+avx -mcpu=sandybridge | FileCheck %s --check-prefix=AVX
 

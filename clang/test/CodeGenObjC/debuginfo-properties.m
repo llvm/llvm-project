@@ -13,16 +13,16 @@
 @property (nonatomic, retain) Selection* selection;
 // CHECK: !DISubprogram(name: "-[MyClass selection]"
 // CHECK-SAME:          line: [[@LINE-2]]
-// CHECK-SAME:          isLocal: true, isDefinition: true
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK: !DISubprogram(name: "-[MyClass setSelection:]"
 // CHECK-SAME:          line: [[@LINE-5]]
-// CHECK-SAME:          isLocal: true, isDefinition: true
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK: !DISubprogram(name: "-[OtherClass selection]"
 // CHECK-SAME:          line: [[@LINE-8]]
-// CHECK-SAME:          isLocal: true, isDefinition: true
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK: !DISubprogram(name: "-[OtherClass setSelection:]"
 // CHECK-SAME:          line: [[@LINE-11]]
-// CHECK-SAME:          isLocal: true, isDefinition: true
+// CHECK-SAME:          DISPFlagLocalToUnit | DISPFlagDefinition
 
 @end
 

@@ -135,7 +135,7 @@ public:
   ///
   /// If the sequence parsed is not lexically legal, emit a diagnostic and
   /// return a result EOD token.
-  void LexIncludeFilename(Token &Result);
+  void LexIncludeFilename(Token &FilenameTok);
 
   /// Inform the lexer whether or not we are currently lexing a
   /// preprocessor directive.
@@ -169,12 +169,12 @@ public:
   using conditional_iterator =
       SmallVectorImpl<PPConditionalInfo>::const_iterator;
 
-  conditional_iterator conditional_begin() const { 
-    return ConditionalStack.begin(); 
+  conditional_iterator conditional_begin() const {
+    return ConditionalStack.begin();
   }
 
-  conditional_iterator conditional_end() const { 
-    return ConditionalStack.end(); 
+  conditional_iterator conditional_end() const {
+    return ConditionalStack.end();
   }
 
   void setConditionalLevels(ArrayRef<PPConditionalInfo> CL) {

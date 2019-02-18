@@ -1,39 +1,27 @@
-// Metadata section
-// CHECK: {"version":"{{[0-9]\.[0-9]\.[0-9]}}","type":"llvm.coverage.json.export","data":[
-
-// Open Export
-// CHECK-SAME: {"files":[
-
-// File Object
-// CHECK-SAME: {"filename":"{{[^"]+}}binary-formats.c",
-// CHECK-SAME: "segments":[
-// CHECK-SAME: [4,40,100,1,1],[4,42,0,0,0]],
-// CHECK-SAME: "expansions":[],
-
-// Verify the Summary Section for the first file
-// CHECK-SAME: "summary":{
-// CHECK-SAME: "lines":{"count":1,"covered":1,"percent":100},
-// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
-// CHECK-SAME: "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
-
-// Close Files Array
-// CHECK-SAME: ],
-
-// Functions List
-// CHECK-SAME: "functions":[
-// CHECK-SAME: {"name":"main","count":100,"regions":[
-// CHECK-SAME: [4,40,4,42,100,0,0,0]
-// CHECK-SAME: ],
-// CHECK-SAME: "filenames":["{{[^"]+}}binary-formats.c"]
-// CHECK-SAME: }],
-
-
-// Full Export Summary
-// CHECK-SAME: "totals":{
-// CHECK-SAME: "lines":{"count":1,"covered":1,"percent":100},
-// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
-// CHECK-SAME: "instantiations":{"count":1,"covered":1,"percent":100},
-// CHECK-SAME: "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}
-
-// Close the export object, data array, and root object
-// CHECK-SAME: }]}
+CHECK: {"data":
+CHECK-SAME: [{
+CHECK-SAME:  "files":[
+CHECK-SAME:    {"expansions":[],
+CHECK-SAME:     "filename":"/tmp/binary-formats.c",
+CHECK-SAME:     "segments":
+CHECK-SAME:        4,40,100,true,true
+CHECK-SAME:        4,42,0,false,false
+CHECK-SAME:     "summary":{"functions":{"count":1,"covered":1,"percent":100},
+CHECK-SAME:                "instantiations":{"count":1,"covered":1,"percent":100},
+CHECK-SAME:                "lines":{"count":1,"covered":1,"percent":100},
+CHECK-SAME:                "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
+CHECK-SAME:  ],
+CHECK-SAME:  "functions":[
+CHECK-SAME:    {"count":100,"filenames":["/tmp/binary-formats.c"],"name":"main",
+CHECK-SAME:     "regions":
+CHECK-SAME:        4,40,4,42,100,0,0,0
+CHECK-SAME:    }
+CHECK-SAME:  ],
+CHECK-SAME:  "totals":
+CHECK-SAME:    {"functions":{"count":1,"covered":1,"percent":100},
+CHECK-SAME:     "instantiations":{"count":1,"covered":1,"percent":100},
+CHECK-SAME:     "lines":{"count":1,"covered":1,"percent":100},
+CHECK-SAME:     "regions":{"count":1,"covered":1,"notcovered":0,"percent":100}}}
+CHECK-SAME: ],
+CHECK-SAME: "type":"llvm.coverage.json.export"
+CHECK-SAME: "version":"2.0.0"

@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 
 namespace llvm {
 namespace outliner {
@@ -31,37 +32,6 @@ namespace outliner {
 /// \p Invisible instructions are instructions which can be outlined, but
 /// shouldn't actually impact the outlining result.
 enum InstrType { Legal, LegalTerminator, Illegal, Invisible };
-
-/// Describes the number of instructions that it will take to call and
-/// construct a frame for a given outlining candidate.
-struct TargetCostInfo {
-  /// Represents the size of a sequence in bytes. (Some instructions vary
-  /// widely in size, so just counting the instructions isn't very useful.)
-  unsigned SequenceSize;
-
-  /// Number of instructions to call an outlined function for this candidate.
-  unsigned CallOverhead;
-
-  /// Number of instructions to construct an outlined function frame
-  /// for this candidate.
-  unsigned FrameOverhead;
-
-  /// Represents the specific instructions that must be emitted to
-  /// construct a call to this candidate.
-  unsigned CallConstructionID;
-
-  /// Represents the specific instructions that must be emitted to
-  /// construct a frame for this candidate's outlined function.
-  unsigned FrameConstructionID;
-
-  TargetCostInfo() {}
-  TargetCostInfo(unsigned SequenceSize, unsigned CallOverhead,
-                 unsigned FrameOverhead, unsigned CallConstructionID,
-                 unsigned FrameConstructionID)
-      : SequenceSize(SequenceSize), CallOverhead(CallOverhead),
-        FrameOverhead(FrameOverhead), CallConstructionID(CallConstructionID),
-        FrameConstructionID(FrameConstructionID) {}
-};
 
 /// An individual sequence of instructions to be replaced with a call to
 /// an outlined function.
@@ -82,16 +52,18 @@ private:
   // The basic block that contains this Candidate.
   MachineBasicBlock *MBB;
 
+  /// Cost of calling an outlined function from this point as defined by the
+  /// target.
+  unsigned CallOverhead;
+
 public:
   /// The index of this \p Candidate's \p OutlinedFunction in the list of
   /// \p OutlinedFunctions.
   unsigned FunctionIdx;
 
-  /// Set to false if the candidate overlapped with another candidate.
-  bool InCandidateList = true;
-
-  /// Contains all target-specific information for this \p Candidate.
-  TargetCostInfo TCI;
+  /// Identifier denoting the instructions to emit to call an outlined function
+  /// from this point. Defined by the target.
+  unsigned CallConstructionID;
 
   /// Contains physical register liveness information for the MBB containing
   /// this \p Candidate.
@@ -99,6 +71,19 @@ public:
   /// This is optionally used by the target to calculate more fine-grained
   /// cost model information.
   LiveRegUnits LRU;
+
+  /// Contains the accumulated register liveness information for the
+  /// instructions in this \p Candidate.
+  ///
+  /// This is optionally used by the target to determine which registers have
+  /// been used across the sequence.
+  LiveRegUnits UsedInSequence;
+
+  /// Target-specific flags for this Candidate's MBB.
+  unsigned Flags = 0x0;
+
+  /// True if initLRU has been called on this Candidate.
+  bool LRUWasSet = false;
 
   /// Return the number of instructions in this Candidate.
   unsigned getLength() const { return Len; }
@@ -108,6 +93,16 @@ public:
 
   /// Return the end index of this candidate.
   unsigned getEndIdx() const { return StartIdx + Len - 1; }
+
+  /// Set the CallConstructionID and CallOverhead of this candidate to CID and
+  /// CO respectively.
+  void setCallInfo(unsigned CID, unsigned CO) {
+    CallConstructionID = CID;
+    CallOverhead = CO;
+  }
+
+  /// Returns the call overhead of this candidate if it is in the list.
+  unsigned getCallOverhead() const { return CallOverhead; }
 
   MachineBasicBlock::iterator &front() { return FirstInst; }
   MachineBasicBlock::iterator &back() { return LastInst; }
@@ -126,9 +121,9 @@ public:
   Candidate(unsigned StartIdx, unsigned Len,
             MachineBasicBlock::iterator &FirstInst,
             MachineBasicBlock::iterator &LastInst, MachineBasicBlock *MBB,
-            unsigned FunctionIdx)
+            unsigned FunctionIdx, unsigned Flags)
       : StartIdx(StartIdx), Len(Len), FirstInst(FirstInst), LastInst(LastInst),
-        MBB(MBB), FunctionIdx(FunctionIdx) {}
+        MBB(MBB), FunctionIdx(FunctionIdx), Flags(Flags) {}
   Candidate() {}
 
   /// Used to ensure that \p Candidates are outlined in an order that
@@ -144,6 +139,10 @@ public:
   void initLRU(const TargetRegisterInfo &TRI) {
     assert(MBB->getParent()->getRegInfo().tracksLiveness() &&
            "Candidate's Machine Function must track liveness");
+    // Only initialize once.
+    if (LRUWasSet)
+      return;
+    LRUWasSet = true;
     LRU.init(TRI);
     LRU.addLiveOuts(*MBB);
 
@@ -151,6 +150,12 @@ public:
     // outlining candidate.
     std::for_each(MBB->rbegin(), (MachineBasicBlock::reverse_iterator)front(),
                   [this](MachineInstr &MI) { LRU.stepBackward(MI); });
+
+    // Walk over the sequence itself and figure out which registers were used
+    // in the sequence.
+    UsedInSequence.init(TRI);
+    std::for_each(front(), std::next(back()),
+                  [this](MachineInstr &MI) { UsedInSequence.accumulate(MI); });
   }
 };
 
@@ -158,61 +163,62 @@ public:
 /// class of candidate.
 struct OutlinedFunction {
 
-private:
-  /// The number of candidates for this \p OutlinedFunction.
-  unsigned OccurrenceCount = 0;
-
 public:
-  std::vector<std::shared_ptr<Candidate>> Candidates;
+  std::vector<Candidate> Candidates;
 
   /// The actual outlined function created.
   /// This is initialized after we go through and create the actual function.
   MachineFunction *MF = nullptr;
 
-  /// A number assigned to this function which appears at the end of its name.
-  unsigned Name;
+  /// Represents the size of a sequence in bytes. (Some instructions vary
+  /// widely in size, so just counting the instructions isn't very useful.)
+  unsigned SequenceSize;
 
-  /// The sequence of integers corresponding to the instructions in this
-  /// function.
-  std::vector<unsigned> Sequence;
+  /// Target-defined overhead of constructing a frame for this function.
+  unsigned FrameOverhead;
 
-  /// Contains all target-specific information for this \p OutlinedFunction.
-  TargetCostInfo TCI;
+  /// Target-defined identifier for constructing a frame for this function.
+  unsigned FrameConstructionID;
 
   /// Return the number of candidates for this \p OutlinedFunction.
-  unsigned getOccurrenceCount() { return OccurrenceCount; }
-
-  /// Decrement the occurrence count of this OutlinedFunction and return the
-  /// new count.
-  unsigned decrement() {
-    assert(OccurrenceCount > 0 && "Can't decrement an empty function!");
-    OccurrenceCount--;
-    return getOccurrenceCount();
-  }
+  unsigned getOccurrenceCount() const { return Candidates.size(); }
 
   /// Return the number of bytes it would take to outline this
   /// function.
-  unsigned getOutliningCost() {
-    return (OccurrenceCount * TCI.CallOverhead) + TCI.SequenceSize +
-           TCI.FrameOverhead;
+  unsigned getOutliningCost() const {
+    unsigned CallOverhead = 0;
+    for (const Candidate &C : Candidates)
+      CallOverhead += C.getCallOverhead();
+    return CallOverhead + SequenceSize + FrameOverhead;
   }
 
   /// Return the size in bytes of the unoutlined sequences.
-  unsigned getNotOutlinedCost() { return OccurrenceCount * TCI.SequenceSize; }
+  unsigned getNotOutlinedCost() const {
+    return getOccurrenceCount() * SequenceSize;
+  }
 
   /// Return the number of instructions that would be saved by outlining
   /// this function.
-  unsigned getBenefit() {
+  unsigned getBenefit() const {
     unsigned NotOutlinedCost = getNotOutlinedCost();
     unsigned OutlinedCost = getOutliningCost();
     return (NotOutlinedCost < OutlinedCost) ? 0
                                             : NotOutlinedCost - OutlinedCost;
   }
 
-  OutlinedFunction(unsigned Name, unsigned OccurrenceCount,
-                   const std::vector<unsigned> &Sequence, TargetCostInfo &TCI)
-      : OccurrenceCount(OccurrenceCount), Name(Name), Sequence(Sequence),
-        TCI(TCI) {}
+  /// Return the number of instructions in this sequence.
+  unsigned getNumInstrs() const { return Candidates[0].getLength(); }
+
+  OutlinedFunction(std::vector<Candidate> &Candidates, unsigned SequenceSize,
+                   unsigned FrameOverhead, unsigned FrameConstructionID)
+      : Candidates(Candidates), SequenceSize(SequenceSize),
+        FrameOverhead(FrameOverhead), FrameConstructionID(FrameConstructionID) {
+    const unsigned B = getBenefit();
+    for (Candidate &C : Candidates)
+      C.Benefit = B;
+  }
+
+  OutlinedFunction() {}
 };
 } // namespace outliner
 } // namespace llvm

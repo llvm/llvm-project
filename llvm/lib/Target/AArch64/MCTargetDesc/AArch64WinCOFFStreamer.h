@@ -17,20 +17,6 @@
 #include "AArch64TargetStreamer.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 
-namespace {
-class AArch64WinCOFFStreamer;
-
-class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
-private:
-  AArch64WinCOFFStreamer &getStreamer();
-
-public:
-  AArch64TargetWinCOFFStreamer(llvm::MCStreamer &S)
-    : AArch64TargetStreamer(S) {}
-};
-
-} // end anonymous namespace
-
 namespace llvm {
 
 MCWinCOFFStreamer *createAArch64WinCOFFStreamer(

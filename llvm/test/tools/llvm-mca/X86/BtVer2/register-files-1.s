@@ -7,7 +7,10 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK:      Iterations:        5
 # CHECK-NEXT: Instructions:      10
 # CHECK-NEXT: Total Cycles:      28
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        10
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.36
 # CHECK-NEXT: IPC:               0.36
 # CHECK-NEXT: Block RThroughput: 1.0
 
@@ -19,7 +22,7 @@ vmulps %xmm0, %xmm0, %xmm0
 # CHECK-NEXT: SQ      - Store queue full:                          0
 # CHECK-NEXT: GROUP   - Static restrictions on the dispatch group: 0
 
-# CHECK:      Dispatch Logic - number of cycles where we saw N instructions dispatched:
+# CHECK:      Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # CHECK-NEXT: [# dispatched], [# cycles]
 # CHECK-NEXT:  0,              23  (82.1%)
 # CHECK-NEXT:  2,              5  (17.9%)

@@ -56,27 +56,29 @@
 # CHECK: c %r4, 1036(%r3)
 # CHECK: jge [[LABEL]]
 
+from __future__ import print_function
+
 blocks = 256 + 4
 
-print 'define void @f1(i8 *%base, i32 *%stop, i32 %limit) {'
-print 'entry:'
-print '  br label %b0'
-print ''
+print('define void @f1(i8 *%base, i32 *%stop, i32 %limit) {')
+print('entry:')
+print('  br label %b0')
+print('')
 
 a, b = 1, 1
-for i in xrange(blocks):
+for i in range(blocks):
     a, b = b, a + b
     value = a % 256
     next = 'b%d' % (i + 1) if i + 1 < blocks else 'end'
     other = 'end' if 2 * i < blocks else 'b0'
-    print 'b%d:' % i
-    print '  store volatile i8 %d, i8 *%%base' % value
-    print '  %%astop%d = getelementptr i32, i32 *%%stop, i64 %d' % (i, i)
-    print '  %%acur%d = load i32 , i32 *%%astop%d' % (i, i)
-    print '  %%atest%d = icmp eq i32 %%limit, %%acur%d' % (i, i)
-    print '  br i1 %%atest%d, label %%%s, label %%%s' % (i, other, next)
+    print('b%d:' % i)
+    print('  store volatile i8 %d, i8 *%%base' % value)
+    print('  %%astop%d = getelementptr i32, i32 *%%stop, i64 %d' % (i, i))
+    print('  %%acur%d = load i32 , i32 *%%astop%d' % (i, i))
+    print('  %%atest%d = icmp eq i32 %%limit, %%acur%d' % (i, i))
+    print('  br i1 %%atest%d, label %%%s, label %%%s' % (i, other, next))
 
-print ''
-print '%s:' % next
-print '  ret void'
-print '}'
+print('')
+print('%s:' % next)
+print('  ret void')
+print('}')

@@ -254,9 +254,10 @@ void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns)
 int __libcpp_tls_create(__libcpp_tls_key* __key,
                         void(_LIBCPP_TLS_DESTRUCTOR_CC* __at_exit)(void*))
 {
-  *__key = FlsAlloc(__at_exit);
-  if (*__key == FLS_OUT_OF_INDEXES)
+  DWORD index = FlsAlloc(__at_exit);
+  if (index == FLS_OUT_OF_INDEXES)
     return GetLastError();
+  *__key = index;
   return 0;
 }
 

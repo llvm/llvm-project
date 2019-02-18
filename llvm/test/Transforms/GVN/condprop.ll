@@ -297,3 +297,75 @@ ret:
 ; CHECK: %res = phi i32 [ 0, %cond_true ], [ %x, %cond_false ]
   ret i32 %res
 }
+
+; On the path from entry->if->end we know that ptr1==ptr2, so we can determine
+; that gep2 does not alias ptr1 on that path (as it would require that
+; ptr2==ptr2+2), so we can perform PRE of the load.
+; CHECK-LABEL: @test13
+define i32 @test13(i32* %ptr1, i32* %ptr2) {
+; CHECK-LABEL: entry:
+entry:
+  %gep1 = getelementptr i32, i32* %ptr2, i32 1
+  %gep2 = getelementptr i32, i32* %ptr2, i32 2
+  %cmp = icmp eq i32* %ptr1, %ptr2
+  br i1 %cmp, label %if, label %end
+
+; CHECK: [[CRIT_EDGE:.*]]:
+; CHECK: %[[PRE:.*]] = load i32, i32* %gep2, align 4
+
+; CHECK-LABEL: if:
+if:
+  %val1 = load i32, i32* %gep2, align 4
+  br label %end
+
+; CHECK-LABEL: end:
+; CHECK: %val2 = phi i32 [ %val1, %if ], [ %[[PRE]], %[[CRIT_EDGE]] ]
+; CHECK-NOT: load
+end:
+  %phi1 = phi i32* [ %ptr1, %if ], [ %gep1, %entry ]
+  %phi2 = phi i32 [ %val1, %if ], [ 0, %entry ]
+  store i32 0, i32* %phi1, align 4
+  %val2 = load i32, i32* %gep2, align 4
+  %ret = add i32 %phi2, %val2
+  ret i32 %ret
+}
+
+; CHECK-LABEL: @test14
+define void @test14(i32* %ptr1, i32* noalias %ptr2) {
+entry:
+  %gep1 = getelementptr inbounds i32, i32* %ptr1, i32 1
+  %gep2 = getelementptr inbounds i32, i32* %ptr1, i32 2
+  br label %loop
+
+; CHECK-LABEL: loop:
+loop:
+  %phi1 = phi i32* [ %gep3, %loop.end ], [ %gep1, %entry ]
+  br i1 undef, label %if1, label %then
+
+; CHECK: [[CRIT_EDGE:.*]]:
+; CHECK: %[[PRE:.*]] = load i32, i32* %gep2, align 4
+
+; CHECK-LABEL: if1:
+; CHECK: %val2 = phi i32 [ %[[PRE]], %[[CRIT_EDGE]] ], [ %val3, %loop.end ]
+; CHECK-NOT: load
+if1:
+  %val2 = load i32, i32* %gep2, align 4
+  store i32 %val2, i32* %gep2, align 4
+  store i32 0, i32* %phi1, align 4
+  br label %then
+
+; CHECK-LABEL: then:
+then:
+  %cmp = icmp eq i32* %gep2, %ptr2
+  br i1 %cmp, label %loop.end, label %if2
+
+if2:
+  br label %loop.end
+
+loop.end:
+  %phi3 = phi i32* [ %gep2, %then ], [ %ptr1, %if2 ]
+  %val3 = load i32, i32* %gep2, align 4
+  store i32 %val3, i32* %phi3, align 4
+  %gep3 = getelementptr inbounds i32, i32* %ptr1, i32 1
+  br i1 undef, label %loop, label %if1
+}

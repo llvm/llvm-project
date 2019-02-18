@@ -47,14 +47,14 @@ declare i32 @foo(i32* %arg)
 define i32 @dummy_caller(i32* %arg) local_unnamed_addr {
 ; CHECK-LABEL: @dummy_caller
   %tmp = call i32 @outline_region_notlikely(i32* %arg)
-; CHECK:  call void @outline_region_notlikely.2_bb1
+; CHECK:  call void @outline_region_notlikely.2.bb1
   %tmp2 = tail call i32 @outline_region_likely(i32* %arg)
 ; CHECK: %tmp2 = tail call i32 @outline_region_likely(i32* %arg)
   ret i32 %tmp
 
 }
 
-; CHECK-LABEL: define internal void @outline_region_notlikely.2_bb1(i32* %arg) {
+; CHECK-LABEL: define internal void @outline_region_notlikely.2.bb1(i32* %arg) {
 ; CHECK-NEXT: newFuncRoot:
 
 !llvm.module.flags = !{!0}

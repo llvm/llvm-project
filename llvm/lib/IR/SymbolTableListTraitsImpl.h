@@ -33,17 +33,17 @@ void SymbolTableListTraits<ValueSubClass>::setSymTabObject(TPtr *Dest,
 
   // Do it.
   *Dest = Src;
-  
+
   // Get the new SymTab object.
   ValueSymbolTable *NewST = getSymTab(getListOwner());
-  
+
   // If there is nothing to do, quick exit.
   if (OldST == NewST) return;
-  
+
   // Move all the elements from the old symtab to the new one.
   ListTy &ItemList = getList(getListOwner());
   if (ItemList.empty()) return;
-  
+
   if (OldST) {
     // Remove all entries from the previous symtab.
     for (auto I = ItemList.begin(); I != ItemList.end(); ++I)
@@ -57,7 +57,7 @@ void SymbolTableListTraits<ValueSubClass>::setSymTabObject(TPtr *Dest,
       if (I->hasName())
         NewST->reinsertValue(&*I);
   }
-  
+
 }
 
 template <typename ValueSubClass>

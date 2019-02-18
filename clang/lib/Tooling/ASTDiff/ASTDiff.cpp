@@ -741,7 +741,7 @@ public:
       List.pop();
     }
     // TODO this is here to get a stable output, not a good heuristic
-    llvm::sort(Result.begin(), Result.end());
+    llvm::sort(Result);
     return Result;
   }
   int peekMax() const {
@@ -845,9 +845,8 @@ void ASTDiff::Impl::matchBottomUp(Mapping &M) const {
     }
     bool Matched = M.hasSrc(Id1);
     const Node &N1 = T1.getNode(Id1);
-    bool MatchedChildren =
-        std::any_of(N1.Children.begin(), N1.Children.end(),
-                    [&](NodeId Child) { return M.hasSrc(Child); });
+    bool MatchedChildren = llvm::any_of(
+        N1.Children, [&](NodeId Child) { return M.hasSrc(Child); });
     if (Matched || !MatchedChildren)
       continue;
     NodeId Id2 = findCandidate(M, Id1);

@@ -79,7 +79,7 @@ INTERCEPTOR_ATTRIBUTE size_t malloc_usable_size(void *ptr) {
 
 #if SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 INTERCEPTOR_ATTRIBUTE int mallopt(int cmd, int value) {
-  return -1;
+  return 0;
 }
 #endif
 }  // extern "C"

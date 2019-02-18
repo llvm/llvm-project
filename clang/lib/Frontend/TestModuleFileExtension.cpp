@@ -91,7 +91,7 @@ llvm::hash_code TestModuleFileExtension::hashExtension(
     Code = llvm::hash_combine(Code, MinorVersion);
     Code = llvm::hash_combine(Code, UserInfo);
   }
-  
+
   return Code;
 }
 

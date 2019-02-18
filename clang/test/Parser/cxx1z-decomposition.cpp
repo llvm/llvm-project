@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z %s -verify -fcxx-exceptions
+// RUN: not %clang_cc1 -std=c++1z %s -emit-llvm-only -fcxx-exceptions
 
 struct S { int a, b, c; };
 

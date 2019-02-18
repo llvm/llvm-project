@@ -145,27 +145,23 @@ define <16 x i16> @test_vpmullw(<16 x i16> %i, <16 x i16> %j) nounwind readnone 
 define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 ; X32-LABEL: mul_v16i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpmovsxbw %xmm1, %ymm1
-; X32-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X32-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; X32-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X32-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
+; X32-NEXT:    vpand {{\.LCPI.*}}, %ymm0, %ymm0
 ; X32-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; X32-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; X32-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mul_v16i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovsxbw %xmm1, %ymm1
-; X64-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X64-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
+; X64-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; X64-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; X64-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; X64-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   %x = mul <16 x i8> %i, %j
@@ -175,46 +171,30 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind readnone {
 define <32 x i8> @mul_v32i8(<32 x i8> %i, <32 x i8> %j) nounwind readnone {
 ; X32-LABEL: mul_v32i8:
 ; X32:       # %bb.0:
-; X32-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; X32-NEXT:    vpmovsxbw %xmm2, %ymm2
-; X32-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; X32-NEXT:    vpmovsxbw %xmm3, %ymm3
+; X32-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; X32-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; X32-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; X32-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; X32-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; X32-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
-; X32-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X32-NEXT:    vpmovsxbw %xmm1, %ymm1
-; X32-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X32-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; X32-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; X32-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[16],ymm0[16],ymm1[17],ymm0[17],ymm1[18],ymm0[18],ymm1[19],ymm0[19],ymm1[20],ymm0[20],ymm1[21],ymm0[21],ymm1[22],ymm0[22],ymm1[23],ymm0[23]
+; X32-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; X32-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X32-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; X32-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; X32-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X32-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; X32-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; X32-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: mul_v32i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; X64-NEXT:    vpmovsxbw %xmm2, %ymm2
-; X64-NEXT:    vextracti128 $1, %ymm0, %xmm3
-; X64-NEXT:    vpmovsxbw %xmm3, %ymm3
+; X64-NEXT:    vpunpckhbw {{.*#+}} ymm2 = ymm1[8],ymm0[8],ymm1[9],ymm0[9],ymm1[10],ymm0[10],ymm1[11],ymm0[11],ymm1[12],ymm0[12],ymm1[13],ymm0[13],ymm1[14],ymm0[14],ymm1[15],ymm0[15],ymm1[24],ymm0[24],ymm1[25],ymm0[25],ymm1[26],ymm0[26],ymm1[27],ymm0[27],ymm1[28],ymm0[28],ymm1[29],ymm0[29],ymm1[30],ymm0[30],ymm1[31],ymm0[31]
+; X64-NEXT:    vpunpckhbw {{.*#+}} ymm3 = ymm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15,24,24,25,25,26,26,27,27,28,28,29,29,30,30,31,31]
 ; X64-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
-; X64-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; X64-NEXT:    vmovdqa {{.*#+}} xmm4 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; X64-NEXT:    vpshufb %xmm4, %xmm3, %xmm3
-; X64-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X64-NEXT:    vpmovsxbw %xmm1, %ymm1
-; X64-NEXT:    vpmovsxbw %xmm0, %ymm0
+; X64-NEXT:    vmovdqa {{.*#+}} ymm3 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; X64-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; X64-NEXT:    vpunpcklbw {{.*#+}} ymm1 = ymm1[0],ymm0[0],ymm1[1],ymm0[1],ymm1[2],ymm0[2],ymm1[3],ymm0[3],ymm1[4],ymm0[4],ymm1[5],ymm0[5],ymm1[6],ymm0[6],ymm1[7],ymm0[7],ymm1[16],ymm0[16],ymm1[17],ymm0[17],ymm1[18],ymm0[18],ymm1[19],ymm0[19],ymm1[20],ymm0[20],ymm1[21],ymm0[21],ymm1[22],ymm0[22],ymm1[23],ymm0[23]
+; X64-NEXT:    vpunpcklbw {{.*#+}} ymm0 = ymm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,23]
 ; X64-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; X64-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
-; X64-NEXT:    vpshufb %xmm4, %xmm0, %xmm0
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X64-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; X64-NEXT:    vpand %ymm3, %ymm0, %ymm0
+; X64-NEXT:    vpackuswb %ymm2, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %x = mul <32 x i8> %i, %j
   ret <32 x i8> %x

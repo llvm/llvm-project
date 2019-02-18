@@ -27,7 +27,7 @@ TEST(Finder, DynamicOnlyAcceptsSomeMatchers) {
                                        nullptr));
 
   // Do not accept non-toplevel matchers.
-  EXPECT_FALSE(Finder.addDynamicMatcher(isArrow(), nullptr));
+  EXPECT_FALSE(Finder.addDynamicMatcher(isMain(), nullptr));
   EXPECT_FALSE(Finder.addDynamicMatcher(hasName("x"), nullptr));
 }
 
@@ -197,6 +197,40 @@ TEST(Matcher, UnresolvedLookupExpr) {
                                    unresolvedLookupExpr(),
                                    /*ExpectMatch=*/true,
                                    "-fno-delayed-template-parsing"));
+}
+
+TEST(Matcher, ADLCall) {
+  StatementMatcher ADLMatch = callExpr(usesADL());
+  StatementMatcher ADLMatchOper = cxxOperatorCallExpr(usesADL());
+  auto NS_Str = R"cpp(
+  namespace NS {
+    struct X {};
+    void f(X);
+    void operator+(X, X);
+  }
+  struct MyX {};
+  void f(...);
+  void operator+(MyX, MyX);
+)cpp";
+
+  auto MkStr = [&](std::string Body) -> std::string {
+    std::string S = NS_Str;
+    S += "void test_fn() { " + Body + " }";
+    return S;
+  };
+
+  EXPECT_TRUE(matches(MkStr("NS::X x; f(x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("NS::X x; NS::f(x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("MyX x; f(x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("NS::X x; using NS::f; f(x);"), ADLMatch));
+
+  // Operator call expressions
+  EXPECT_TRUE(matches(MkStr("NS::X x; x + x;"), ADLMatch));
+  EXPECT_TRUE(matches(MkStr("NS::X x; x + x;"), ADLMatchOper));
+  EXPECT_TRUE(notMatches(MkStr("MyX x; x + x;"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("MyX x; x + x;"), ADLMatchOper));
+  EXPECT_TRUE(matches(MkStr("NS::X x; operator+(x, x);"), ADLMatch));
+  EXPECT_TRUE(notMatches(MkStr("NS::X x; NS::operator+(x, x);"), ADLMatch));
 }
 
 TEST(Matcher, Call) {
@@ -422,10 +456,17 @@ TEST(UnaryExprOrTypeTraitExpr, MatchesSizeOfAndAlignOf) {
 
 TEST(MemberExpression, DoesNotMatchClasses) {
   EXPECT_TRUE(notMatches("class Y { void x() {} };", memberExpr()));
+  EXPECT_TRUE(notMatches("class Y { void x() {} };", unresolvedMemberExpr()));
+  EXPECT_TRUE(
+      notMatches("class Y { void x() {} };", cxxDependentScopeMemberExpr()));
 }
 
 TEST(MemberExpression, MatchesMemberFunctionCall) {
   EXPECT_TRUE(matches("class Y { void x() { x(); } };", memberExpr()));
+  EXPECT_TRUE(matches("class Y { template <class T> void x() { x<T>(); } };",
+                      unresolvedMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> void x() { T t; t.f(); }",
+                      cxxDependentScopeMemberExpr()));
 }
 
 TEST(MemberExpression, MatchesVariable) {
@@ -435,6 +476,13 @@ TEST(MemberExpression, MatchesVariable) {
     matches("class Y { void x() { y; } int y; };", memberExpr()));
   EXPECT_TRUE(
     matches("class Y { void x() { Y y; y.y; } int y; };", memberExpr()));
+  EXPECT_TRUE(matches("template <class T>"
+                      "class X : T { void f() { this->T::v; } };",
+                      cxxDependentScopeMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> class X : T { void f() { T::v; } };",
+                      cxxDependentScopeMemberExpr()));
+  EXPECT_TRUE(matches("template <class T> void x() { T t; t.v; }",
+                      cxxDependentScopeMemberExpr()));
 }
 
 TEST(MemberExpression, MatchesStaticVariable) {
@@ -746,23 +794,23 @@ TEST(Matcher, Initializers) {
                                has(
                                  designatedInitExpr(
                                    designatorCountIs(2),
-                                   has(floatLiteral(
+                                   hasDescendant(floatLiteral(
                                      equals(1.0))),
-                                   has(integerLiteral(
+                                   hasDescendant(integerLiteral(
                                      equals(2))))),
                                has(
                                  designatedInitExpr(
                                    designatorCountIs(2),
-                                   has(floatLiteral(
+                                   hasDescendant(floatLiteral(
                                      equals(2.0))),
-                                   has(integerLiteral(
+                                   hasDescendant(integerLiteral(
                                      equals(2))))),
                                has(
                                  designatedInitExpr(
                                    designatorCountIs(2),
-                                   has(floatLiteral(
+                                   hasDescendant(floatLiteral(
                                      equals(1.0))),
-                                   has(integerLiteral(
+                                   hasDescendant(integerLiteral(
                                      equals(0)))))
                              )))));
 }
@@ -1133,6 +1181,14 @@ TEST(ParenExpression, SimpleCases) {
                          parenExpr()));
 }
 
+TEST(ParenExpression, IgnoringParens) {
+  EXPECT_FALSE(matches("const char* str = (\"my-string\");",
+                       implicitCastExpr(hasSourceExpression(stringLiteral()))));
+  EXPECT_TRUE(matches(
+      "const char* str = (\"my-string\");",
+      implicitCastExpr(hasSourceExpression(ignoringParens(stringLiteral())))));
+}
+
 TEST(TypeMatching, MatchesTypes) {
   EXPECT_TRUE(matches("struct S {};", qualType().bind("loc")));
 }
@@ -1204,6 +1260,12 @@ TEST(TypeMatching, MatchesAutoTypes) {
   //                    autoType(hasDeducedType(isInteger()))));
   //EXPECT_TRUE(notMatches("auto b = 2.0;",
   //                       autoType(hasDeducedType(isInteger()))));
+}
+
+TEST(TypeMatching, MatchesDeclTypes) {
+  EXPECT_TRUE(matches("decltype(1 + 1) sum = 1 + 1;", decltypeType()));
+  EXPECT_TRUE(matches("decltype(1 + 1) sum = 1 + 1;",
+                      decltypeType(hasUnderlyingType(isInteger()))));
 }
 
 TEST(TypeMatching, MatchesFunctionTypes) {

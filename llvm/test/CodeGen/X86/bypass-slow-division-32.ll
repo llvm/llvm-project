@@ -97,8 +97,8 @@ define i32 @Test_use_div_and_idiv(i32 %a, i32 %b) nounwind {
 ; CHECK-NEXT:    testl $-256, %edi
 ; CHECK-NEXT:    je .LBB3_4
 ; CHECK-NEXT:  .LBB3_5:
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %ebx
 ; CHECK-NEXT:    jmp .LBB3_6
 ; CHECK-NEXT:  .LBB3_1:

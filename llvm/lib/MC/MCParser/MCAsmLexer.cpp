@@ -15,7 +15,7 @@
 
 using namespace llvm;
 
-MCAsmLexer::MCAsmLexer() : AltMacroMode(false) {
+MCAsmLexer::MCAsmLexer() {
   CurTok.emplace_back(AsmToken::Space, StringRef());
 }
 
@@ -85,6 +85,7 @@ void AsmToken::dump(raw_ostream &OS) const {
   case AsmToken::LessGreater:        OS << "LessGreater"; break;
   case AsmToken::LessLess:           OS << "LessLess"; break;
   case AsmToken::Minus:              OS << "Minus"; break;
+  case AsmToken::MinusGreater:       OS << "MinusGreater"; break;
   case AsmToken::Percent:            OS << "Percent"; break;
   case AsmToken::Pipe:               OS << "Pipe"; break;
   case AsmToken::PipePipe:           OS << "PipePipe"; break;

@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Defines the classes clang::DelayedDiagnostic and 
+/// Defines the classes clang::DelayedDiagnostic and
 /// clang::AccessedEntity.
 ///
 /// DelayedDiangostic is used to record diagnostics that are being

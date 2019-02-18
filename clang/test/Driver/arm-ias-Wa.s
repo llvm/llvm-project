@@ -71,7 +71,7 @@
 
 // RUN: %clang -target armv7r-none-eabi -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-R-PROFILE %s
-// CHECK-R-PROFILE: "-triple" "armv7r-none--eabi"
+// CHECK-R-PROFILE: "-triple" "armv7r-none-unknown-eabi"
 
 // RUN: %clang -target armv7m-none-eabi -c %s -### 2>&1 \
 // RUN: %clang -target thumbv7m-none-eabi -c %s -### 2>&1 \

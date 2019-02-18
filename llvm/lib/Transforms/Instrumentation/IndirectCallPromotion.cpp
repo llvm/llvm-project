@@ -269,7 +269,8 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
       LLVM_DEBUG(dbgs() << " Not promote: Cannot find the target\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE, "UnableToFindTarget", Inst)
-               << "Cannot promote indirect call: target not found";
+               << "Cannot promote indirect call: target with md5sum "
+               << ore::NV("target md5sum", Target) << " not found";
       });
       break;
     }
@@ -426,7 +427,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
 
 bool PGOIndirectCallPromotionLegacyPass::runOnModule(Module &M) {
   ProfileSummaryInfo *PSI =
-      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
   // Command-line option has the priority for InLTO.
   return promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,

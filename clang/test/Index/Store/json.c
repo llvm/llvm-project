@@ -6,5 +6,3 @@
 // RUN: c-index-test core -aggregate-json %t.idx -o %t.json
 // RUN: sed -e "s:%S::g" -e "s:%t.o::g" %t.json > %t.final.json
 // RUN: diff -u %S/Inputs/json.c.json %t.final.json
-
-// XFAIL: linux

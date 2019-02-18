@@ -128,6 +128,7 @@ struct MBBInfo {
   uint64_t Size = 0;
   bool HasLongBranch = false;
   MachineInstr *Br = nullptr;
+  uint64_t Offset = 0;
   MBBInfo() = default;
 };
 
@@ -154,8 +155,11 @@ private:
   void splitMBB(MachineBasicBlock *MBB);
   void initMBBInfo();
   int64_t computeOffset(const MachineInstr *Br);
+  uint64_t computeOffsetFromTheBeginning(int MBB);
   void replaceBranch(MachineBasicBlock &MBB, Iter Br, const DebugLoc &DL,
                      MachineBasicBlock *MBBOpnd);
+  bool buildProperJumpMI(MachineBasicBlock *MBB,
+                         MachineBasicBlock::iterator Pos, DebugLoc DL);
   void expandToLongBranch(MBBInfo &Info);
   bool handleForbiddenSlot();
   bool handlePossibleLongBranch();
@@ -167,7 +171,6 @@ private:
   SmallVector<MBBInfo, 16> MBBInfos;
   bool IsPIC;
   MipsABIInfo ABI;
-  unsigned LongBranchSeqSize;
   bool ForceLongBranchFirstPass = false;
 };
 
@@ -176,7 +179,7 @@ private:
 char MipsBranchExpansion::ID = 0;
 
 INITIALIZE_PASS(MipsBranchExpansion, DEBUG_TYPE,
-                "Expand out of range branch instructions and prevent forbidden"
+                "Expand out of range branch instructions and fix forbidden"
                 " slot hazards",
                 false, false)
 
@@ -268,7 +271,8 @@ void MipsBranchExpansion::splitMBB(MachineBasicBlock *MBB) {
   // Insert NewMBB and fix control flow.
   MachineBasicBlock *Tgt = getTargetMBB(*FirstBr);
   NewMBB->transferSuccessors(MBB);
-  NewMBB->removeSuccessor(Tgt, true);
+  if (Tgt != getTargetMBB(*LastBr))
+    NewMBB->removeSuccessor(Tgt, true);
   MBB->addSuccessor(NewMBB);
   MBB->addSuccessor(Tgt);
   MFp->insert(std::next(MachineFunction::iterator(MBB)), NewMBB);
@@ -294,14 +298,6 @@ void MipsBranchExpansion::initMBBInfo() {
     for (MachineBasicBlock::instr_iterator MI = MBB->instr_begin();
          MI != MBB->instr_end(); ++MI)
       MBBInfos[I].Size += TII->getInstSizeInBytes(*MI);
-
-    // Search for MBB's branch instruction.
-    ReverseIter End = MBB->rend();
-    ReverseIter Br = getNonDebugInstr(MBB->rbegin(), End);
-
-    if ((Br != End) && !Br->isIndirectBranch() &&
-        (Br->isConditionalBranch() || (Br->isUnconditionalBranch() && IsPIC)))
-      MBBInfos[I].Br = &*Br;
   }
 }
 
@@ -324,6 +320,14 @@ int64_t MipsBranchExpansion::computeOffset(const MachineInstr *Br) {
     Offset += MBBInfos[N].Size;
 
   return -Offset + 4;
+}
+
+// Returns the distance in bytes up until MBB
+uint64_t MipsBranchExpansion::computeOffsetFromTheBeginning(int MBB) {
+  uint64_t Offset = 0;
+  for (int N = 0; N < MBB; ++N)
+    Offset += MBBInfos[N].Size;
+  return Offset;
 }
 
 // Replace Br with a branch which has the opposite condition code and a
@@ -357,6 +361,35 @@ void MipsBranchExpansion::replaceBranch(MachineBasicBlock &MBB, Iter Br,
     MIBundleBuilder(&*MIB).append((++II)->removeFromBundle());
   }
   Br->eraseFromParent();
+}
+
+bool MipsBranchExpansion::buildProperJumpMI(MachineBasicBlock *MBB,
+                                            MachineBasicBlock::iterator Pos,
+                                            DebugLoc DL) {
+  bool HasR6 = ABI.IsN64() ? STI->hasMips64r6() : STI->hasMips32r6();
+  bool AddImm = HasR6 && !STI->useIndirectJumpsHazard();
+
+  unsigned JR = ABI.IsN64() ? Mips::JR64 : Mips::JR;
+  unsigned JIC = ABI.IsN64() ? Mips::JIC64 : Mips::JIC;
+  unsigned JR_HB = ABI.IsN64() ? Mips::JR_HB64 : Mips::JR_HB;
+  unsigned JR_HB_R6 = ABI.IsN64() ? Mips::JR_HB64_R6 : Mips::JR_HB_R6;
+
+  unsigned JumpOp;
+  if (STI->useIndirectJumpsHazard())
+    JumpOp = HasR6 ? JR_HB_R6 : JR_HB;
+  else
+    JumpOp = HasR6 ? JIC : JR;
+
+  if (JumpOp == Mips::JIC && STI->inMicroMipsMode())
+    JumpOp = Mips::JIC_MMR6;
+
+  unsigned ATReg = ABI.IsN64() ? Mips::AT_64 : Mips::AT;
+  MachineInstrBuilder Instr =
+      BuildMI(*MBB, Pos, DL, TII->get(JumpOp)).addReg(ATReg);
+  if (AddImm)
+    Instr.addImm(0);
+
+  return !AddImm;
 }
 
 // Expand branch instructions to long branches.
@@ -479,33 +512,21 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
 
       // In NaCl, modifying the sp is not allowed in branch delay slot.
       // For MIPS32R6, we can skip using a delay slot branch.
-      if (STI->isTargetNaCl() ||
-          (STI->hasMips32r6() && !STI->useIndirectJumpsHazard()))
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::ADDiu), Mips::SP)
+      bool hasDelaySlot = buildProperJumpMI(BalTgtMBB, Pos, DL);
+
+      if (STI->isTargetNaCl() || !hasDelaySlot) {
+        BuildMI(*BalTgtMBB, std::prev(Pos), DL, TII->get(Mips::ADDiu), Mips::SP)
             .addReg(Mips::SP)
             .addImm(8);
-
-      if (STI->hasMips32r6() && !STI->useIndirectJumpsHazard()) {
-        const unsigned JICOp =
-            STI->inMicroMipsMode() ? Mips::JIC_MMR6 : Mips::JIC;
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(JICOp))
-            .addReg(Mips::AT)
-            .addImm(0);
-
-      } else {
-        unsigned JROp =
-            STI->useIndirectJumpsHazard()
-                ? (STI->hasMips32r6() ? Mips::JR_HB_R6 : Mips::JR_HB)
-                : Mips::JR;
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(JROp)).addReg(Mips::AT);
-
+      }
+      if (hasDelaySlot) {
         if (STI->isTargetNaCl()) {
           BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::NOP));
-        } else
+        } else {
           BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::ADDiu), Mips::SP)
               .addReg(Mips::SP)
               .addImm(8);
-
+        }
         BalTgtMBB->rbegin()->bundleWithPred();
       }
     } else {
@@ -597,46 +618,94 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
           .addReg(Mips::SP_64)
           .addImm(0);
 
-      if (STI->hasMips64r6() && !STI->useIndirectJumpsHazard()) {
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::DADDiu), Mips::SP_64)
+      bool hasDelaySlot = buildProperJumpMI(BalTgtMBB, Pos, DL);
+      // If there is no delay slot, Insert stack adjustment before
+      if (!hasDelaySlot) {
+        BuildMI(*BalTgtMBB, std::prev(Pos), DL, TII->get(Mips::DADDiu),
+                Mips::SP_64)
             .addReg(Mips::SP_64)
             .addImm(16);
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::JIC64))
-            .addReg(Mips::AT_64)
-            .addImm(0);
       } else {
-        unsigned JROp =
-            STI->useIndirectJumpsHazard()
-                ? (STI->hasMips32r6() ? Mips::JR_HB64_R6 : Mips::JR_HB64)
-                : Mips::JR64;
-        BuildMI(*BalTgtMBB, Pos, DL, TII->get(JROp)).addReg(Mips::AT_64);
         BuildMI(*BalTgtMBB, Pos, DL, TII->get(Mips::DADDiu), Mips::SP_64)
             .addReg(Mips::SP_64)
             .addImm(16);
         BalTgtMBB->rbegin()->bundleWithPred();
       }
     }
-
-    assert(LongBrMBB->size() + BalTgtMBB->size() == LongBranchSeqSize);
-  } else {
-    // Pre R6:                  R6:
-    // $longbr:                 $longbr:
-    //  j $tgt                   bc $tgt
-    //  nop                     $fallthrough
-    // $fallthrough:
-    //
+  } else { // Not PIC
     Pos = LongBrMBB->begin();
     LongBrMBB->addSuccessor(TgtMBB);
-    if (STI->hasMips32r6())
+
+    // Compute the position of the potentiall jump instruction (basic blocks
+    // before + 4 for the instruction)
+    uint64_t JOffset = computeOffsetFromTheBeginning(MBB->getNumber()) +
+                       MBBInfos[MBB->getNumber()].Size + 4;
+    uint64_t TgtMBBOffset = computeOffsetFromTheBeginning(TgtMBB->getNumber());
+    // If it's a forward jump, then TgtMBBOffset will be shifted by two
+    // instructions
+    if (JOffset < TgtMBBOffset)
+      TgtMBBOffset += 2 * 4;
+    // Compare 4 upper bits to check if it's the same segment
+    bool SameSegmentJump = JOffset >> 28 == TgtMBBOffset >> 28;
+
+    if (STI->hasMips32r6() && TII->isBranchOffsetInRange(Mips::BC, I.Offset)) {
+      // R6:
+      // $longbr:
+      //  bc $tgt
+      // $fallthrough:
+      //
       BuildMI(*LongBrMBB, Pos, DL,
               TII->get(STI->inMicroMipsMode() ? Mips::BC_MMR6 : Mips::BC))
           .addMBB(TgtMBB);
-    else
+    } else if (SameSegmentJump) {
+      // Pre R6:
+      // $longbr:
+      //  j $tgt
+      //  nop
+      // $fallthrough:
+      //
       MIBundleBuilder(*LongBrMBB, Pos)
           .append(BuildMI(*MFp, DL, TII->get(Mips::J)).addMBB(TgtMBB))
           .append(BuildMI(*MFp, DL, TII->get(Mips::NOP)));
-
-    assert(LongBrMBB->size() == LongBranchSeqSize);
+    } else {
+      // At this point, offset where we need to branch does not fit into
+      // immediate field of the branch instruction and is not in the same
+      // segment as jump instruction. Therefore we will break it into couple
+      // instructions, where we first load the offset into register, and then we
+      // do branch register.
+      if (ABI.IsN64()) {
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi2Op_64),
+                Mips::AT_64)
+            .addMBB(TgtMBB, MipsII::MO_HIGHEST);
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
+                Mips::AT_64)
+            .addReg(Mips::AT_64)
+            .addMBB(TgtMBB, MipsII::MO_HIGHER);
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::AT_64)
+            .addReg(Mips::AT_64)
+            .addImm(16);
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
+                Mips::AT_64)
+            .addReg(Mips::AT_64)
+            .addMBB(TgtMBB, MipsII::MO_ABS_HI);
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::AT_64)
+            .addReg(Mips::AT_64)
+            .addImm(16);
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
+                Mips::AT_64)
+            .addReg(Mips::AT_64)
+            .addMBB(TgtMBB, MipsII::MO_ABS_LO);
+      } else {
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi2Op),
+                Mips::AT)
+            .addMBB(TgtMBB, MipsII::MO_ABS_HI);
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_ADDiu2Op),
+                Mips::AT)
+            .addReg(Mips::AT)
+            .addMBB(TgtMBB, MipsII::MO_ABS_LO);
+      }
+      buildProperJumpMI(LongBrMBB, Pos, DL);
+    }
   }
 
   if (I.Br->isUnconditionalBranch()) {
@@ -665,8 +734,6 @@ bool MipsBranchExpansion::handleForbiddenSlot() {
   // Forbidden slot hazards are only defined for MIPSR6 but not microMIPSR6.
   if (!STI->hasMips32r6() || STI->inMicroMipsMode())
     return false;
-
-  const MipsInstrInfo *TII = STI->getInstrInfo();
 
   bool Changed = false;
 
@@ -704,66 +771,65 @@ bool MipsBranchExpansion::handleForbiddenSlot() {
 }
 
 bool MipsBranchExpansion::handlePossibleLongBranch() {
-
-  LongBranchSeqSize = IsPIC ? ((ABI.IsN64() || STI->isTargetNaCl()) ? 10 : 9)
-                            : (STI->hasMips32r6() ? 1 : 2);
-
   if (STI->inMips16Mode() || !STI->enableLongBranchPass())
     return false;
 
   if (SkipLongBranch)
     return false;
 
-  initMBBInfo();
-
-  SmallVectorImpl<MBBInfo>::iterator I, E = MBBInfos.end();
   bool EverMadeChange = false, MadeChange = true;
 
   while (MadeChange) {
     MadeChange = false;
 
+    initMBBInfo();
+
+    for (unsigned I = 0, E = MBBInfos.size(); I < E; ++I) {
+      MachineBasicBlock *MBB = MFp->getBlockNumbered(I);
+      // Search for MBB's branch instruction.
+      ReverseIter End = MBB->rend();
+      ReverseIter Br = getNonDebugInstr(MBB->rbegin(), End);
+
+      if ((Br != End) && Br->isBranch() && !Br->isIndirectBranch() &&
+          (Br->isConditionalBranch() ||
+           (Br->isUnconditionalBranch() && IsPIC))) {
+        int64_t Offset = computeOffset(&*Br);
+
+        if (STI->isTargetNaCl()) {
+          // The offset calculation does not include sandboxing instructions
+          // that will be added later in the MC layer.  Since at this point we
+          // don't know the exact amount of code that "sandboxing" will add, we
+          // conservatively estimate that code will not grow more than 100%.
+          Offset *= 2;
+        }
+
+        if (ForceLongBranchFirstPass ||
+            !TII->isBranchOffsetInRange(Br->getOpcode(), Offset)) {
+          MBBInfos[I].Offset = Offset;
+          MBBInfos[I].Br = &*Br;
+        }
+      }
+    } // End for
+
+    ForceLongBranchFirstPass = false;
+
+    SmallVectorImpl<MBBInfo>::iterator I, E = MBBInfos.end();
+
     for (I = MBBInfos.begin(); I != E; ++I) {
       // Skip if this MBB doesn't have a branch or the branch has already been
       // converted to a long branch.
-      if (!I->Br || I->HasLongBranch)
+      if (!I->Br)
         continue;
 
-      int64_t Offset = computeOffset(I->Br);
-
-      if (STI->isTargetNaCl()) {
-        // The offset calculation does not include sandboxing instructions
-        // that will be added later in the MC layer.  Since at this point we
-        // don't know the exact amount of code that "sandboxing" will add, we
-        // conservatively estimate that code will not grow more than 100%.
-        Offset *= 2;
-      }
-
-      // Check if offset fits into the immediate field of the branch.
-      if (!ForceLongBranchFirstPass &&
-          TII->isBranchOffsetInRange(I->Br->getOpcode(), Offset))
-        continue;
-
-      I->HasLongBranch = true;
-      I->Size += LongBranchSeqSize * 4;
+      expandToLongBranch(*I);
       ++LongBranches;
       EverMadeChange = MadeChange = true;
     }
+
+    MFp->RenumberBlocks();
   }
 
-  ForceLongBranchFirstPass = false;
-
-  if (!EverMadeChange)
-    return false;
-
-  // Do the expansion.
-  for (I = MBBInfos.begin(); I != E; ++I)
-    if (I->HasLongBranch) {
-      expandToLongBranch(*I);
-    }
-
-  MFp->RenumberBlocks();
-
-  return true;
+  return EverMadeChange;
 }
 
 bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {

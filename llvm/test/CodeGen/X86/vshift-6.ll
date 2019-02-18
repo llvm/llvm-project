@@ -50,8 +50,8 @@ define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
 ; X32-NEXT:    movdqa %xmm2, %xmm4
 ; X32-NEXT:    pandn %xmm0, %xmm4
 ; X32-NEXT:    psllw $2, %xmm0
-; X32-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    pand %xmm2, %xmm0
+; X32-NEXT:    pand {{\.LCPI.*}}, %xmm0
 ; X32-NEXT:    por %xmm4, %xmm0
 ; X32-NEXT:    paddb %xmm1, %xmm1
 ; X32-NEXT:    pcmpgtb %xmm1, %xmm3
@@ -85,8 +85,8 @@ define <16 x i8> @do_not_crash(i8*, i32*, i64*, i32, i64, i8) {
 ; X64-NEXT:    movdqa %xmm2, %xmm4
 ; X64-NEXT:    pandn %xmm0, %xmm4
 ; X64-NEXT:    psllw $2, %xmm0
-; X64-NEXT:    pand {{.*}}(%rip), %xmm0
 ; X64-NEXT:    pand %xmm2, %xmm0
+; X64-NEXT:    pand {{.*}}(%rip), %xmm0
 ; X64-NEXT:    por %xmm4, %xmm0
 ; X64-NEXT:    paddb %xmm1, %xmm1
 ; X64-NEXT:    pcmpgtb %xmm1, %xmm3

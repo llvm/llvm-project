@@ -775,8 +775,33 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
   if (CnVal == 7) {
     switch (CmVal) {
     default: return false;
+    // Maybe IC, maybe Prediction Restriction
+    case 1:
+      switch (Op1Val) {
+      default: return false;
+      case 0: goto Search_IC;
+      case 3: goto Search_PRCTX;
+      }
+    // Prediction Restriction aliases
+    case 3: {
+      Search_PRCTX:
+      const AArch64PRCTX::PRCTX *PRCTX = AArch64PRCTX::lookupPRCTXByEncoding(Encoding >> 3);
+      if (!PRCTX || !PRCTX->haveFeatures(STI.getFeatureBits()))
+        return false;
+
+      NeedsReg = PRCTX->NeedsReg;
+      switch (Op2Val) {
+      default: return false;
+      case 4: Ins = "cfp\t"; break;
+      case 5: Ins = "dvp\t"; break;
+      case 7: Ins = "cpp\t"; break;
+      }
+      Name = std::string(PRCTX->Name);
+    }
+    break;
     // IC aliases
-    case 1: case 5: {
+    case 5: {
+      Search_IC:
       const AArch64IC::IC *IC = AArch64IC::lookupICByEncoding(Encoding);
       if (!IC || !IC->haveFeatures(STI.getFeatureBits()))
         return false;
@@ -787,7 +812,7 @@ bool AArch64InstPrinter::printSysAlias(const MCInst *MI,
     }
     break;
     // DC aliases
-    case 4: case 6: case 10: case 11: case 12: case 14:
+    case 4: case 6: case 10: case 11: case 12: case 13: case 14:
     {
       const AArch64DC::DC *DC = AArch64DC::lookupDCByEncoding(Encoding);
       if (!DC || !DC->haveFeatures(STI.getFeatureBits()))
@@ -1095,6 +1120,17 @@ void AArch64InstPrinter::printPSBHintOp(const MCInst *MI, unsigned OpNum,
     O << PSB->Name;
   else
     O << '#' << formatImm(psbhintop);
+}
+
+void AArch64InstPrinter::printBTIHintOp(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned btihintop = (MI->getOperand(OpNum).getImm() ^ 32) >> 1;
+  auto BTI = AArch64BTIHint::lookupBTIByEncoding(btihintop);
+  if (BTI)
+    O << BTI->Name;
+  else
+    O << '#' << formatImm(btihintop);
 }
 
 void AArch64InstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,

@@ -3,6 +3,8 @@
 // REQUIRES: stable-runtime
 
 // XFAIL: ubsan
+// FIXME(dliew): Make this test work on Darwin with LSan
+// XFAIL: darwin && lsan
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

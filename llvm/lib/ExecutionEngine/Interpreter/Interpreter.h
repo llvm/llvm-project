@@ -132,8 +132,8 @@ public:
   void visitLoadInst(LoadInst &I);
   void visitStoreInst(StoreInst &I);
   void visitGetElementPtrInst(GetElementPtrInst &I);
-  void visitPHINode(PHINode &PN) { 
-    llvm_unreachable("PHI nodes already handled!"); 
+  void visitPHINode(PHINode &PN) {
+    llvm_unreachable("PHI nodes already handled!");
   }
   void visitTruncInst(TruncInst &I);
   void visitZExtInst(ZExtInst &I);
@@ -224,7 +224,7 @@ private:  // Helper functions
                                    ExecutionContext &SF);
   GenericValue executeBitCastInst(Value *SrcVal, Type *DstTy,
                                   ExecutionContext &SF);
-  GenericValue executeCastOperation(Instruction::CastOps opcode, Value *SrcVal, 
+  GenericValue executeCastOperation(Instruction::CastOps opcode, Value *SrcVal,
                                     Type *Ty, ExecutionContext &SF);
   void popStackAndReturnValueToCaller(Type *RetTy, GenericValue Result);
 

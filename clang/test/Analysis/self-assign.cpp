@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,unix.Malloc,debug.ExprInspection %s -verify -analyzer-output=text
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,cplusplus,unix.Malloc,debug.ExprInspection -analyzer-config eagerly-assume=false %s -verify -analyzer-output=text
 
 extern "C" char *strdup(const char* s);
 extern "C" void free(void* ptr);
@@ -32,13 +32,14 @@ StringUsed& StringUsed::operator=(const StringUsed &rhs) { // expected-note{{Ass
   clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}} expected-warning{{UNKNOWN}} expected-note{{TRUE}} expected-note{{UNKNOWN}}
   free(str); // expected-note{{Memory is released}}
   str = strdup(rhs.str); // expected-warning{{Use of memory after it is freed}}  expected-note{{Use of memory after it is freed}}
+// expected-note@-1{{Memory is allocated}}
   return *this;
 }
 
 StringUsed& StringUsed::operator=(StringUsed &&rhs) { // expected-note{{Assuming rhs == *this}} expected-note{{Assuming rhs != *this}}
   clang_analyzer_eval(*this == rhs); // expected-warning{{TRUE}} expected-warning{{UNKNOWN}} expected-note{{TRUE}} expected-note{{UNKNOWN}}
   str = rhs.str;
-  rhs.str = nullptr; // FIXME: An improved leak checker should warn here
+  rhs.str = nullptr; // expected-warning{{Potential memory leak}} expected-note{{Potential memory leak}}
   return *this;
 }
 
@@ -83,7 +84,7 @@ StringUnused::operator const char*() const {
 
 int main() {
   StringUsed s1 ("test"), s2;
-  s2 = s1;
-  s2 = std::move(s1);
+  s2 = s1; // expected-note{{Calling copy assignment operator for 'StringUsed'}} // expected-note{{Returned allocated memory}}
+  s2 = std::move(s1); // expected-note{{Calling move assignment operator for 'StringUsed'}}
   return 0;
 }

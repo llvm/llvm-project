@@ -440,9 +440,9 @@ define void @trunc_dw_128_mem(<4 x i32> %i, <4 x i16>* %res) #0 {
 define <32 x i8> @trunc_wb_512(<32 x i16> %i) #0 {
 ; KNL-LABEL: trunc_wb_512:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
-; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; KNL-NEXT:    vpmovdb %zmm1, %xmm1
 ; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; KNL-NEXT:    retq
@@ -458,9 +458,9 @@ define <32 x i8> @trunc_wb_512(<32 x i16> %i) #0 {
 define void @trunc_wb_512_mem(<32 x i16> %i, <32 x i8>* %res) #0 {
 ; KNL-LABEL: trunc_wb_512_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
-; KNL-NEXT:    vpmovsxwd %ymm1, %zmm1
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
 ; KNL-NEXT:    vpmovdb %zmm1, %xmm1
 ; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; KNL-NEXT:    vmovdqa %ymm0, (%rdi)
@@ -480,7 +480,7 @@ define void @trunc_wb_512_mem(<32 x i16> %i, <32 x i8>* %res) #0 {
 define <16 x i8> @trunc_wb_256(<16 x i16> %i) #0 {
 ; KNL-LABEL: trunc_wb_256:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -497,7 +497,7 @@ define <16 x i8> @trunc_wb_256(<16 x i16> %i) #0 {
 define void @trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) #0 {
 ; KNL-LABEL: trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -541,7 +541,7 @@ define void @usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>* %res) {
 ; KNL-LABEL: usat_trunc_wb_256_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpminuw {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -562,7 +562,7 @@ define <16 x i8> @usat_trunc_wb_256(<16 x i16> %i) {
 ; KNL-LABEL: usat_trunc_wb_256:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpminuw {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -650,23 +650,12 @@ define void @usat_trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) {
 }
 
 define <32 x i8> @usat_trunc_db_1024(<32 x i32> %i) {
-; KNL-LABEL: usat_trunc_db_1024:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovusdb %zmm0, %xmm0
-; KNL-NEXT:    vpmovusdb %zmm1, %xmm1
-; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: usat_trunc_db_1024:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SKX-NEXT:    vpminud %zmm2, %zmm1, %zmm1
-; SKX-NEXT:    vpminud %zmm2, %zmm0, %zmm0
-; SKX-NEXT:    vpmovdw %zmm0, %ymm0
-; SKX-NEXT:    vpmovdw %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; SKX-NEXT:    vpmovwb %zmm0, %ymm0
-; SKX-NEXT:    retq
+; ALL-LABEL: usat_trunc_db_1024:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpmovusdb %zmm0, %xmm0
+; ALL-NEXT:    vpmovusdb %zmm1, %xmm1
+; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    retq
   %x3 = icmp ult <32 x i32> %i, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x5 = select <32 x i1> %x3, <32 x i32> %i, <32 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x6 = trunc <32 x i32> %x5 to <32 x i8>
@@ -674,26 +663,14 @@ define <32 x i8> @usat_trunc_db_1024(<32 x i32> %i) {
 }
 
 define void @usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
-; KNL-LABEL: usat_trunc_db_1024_mem:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovusdb %zmm0, %xmm0
-; KNL-NEXT:    vpmovusdb %zmm1, %xmm1
-; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; KNL-NEXT:    vmovdqu %ymm0, (%rdi)
-; KNL-NEXT:    vzeroupper
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: usat_trunc_db_1024_mem:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SKX-NEXT:    vpminud %zmm2, %zmm1, %zmm1
-; SKX-NEXT:    vpminud %zmm2, %zmm0, %zmm0
-; SKX-NEXT:    vpmovdw %zmm0, %ymm0
-; SKX-NEXT:    vpmovdw %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; SKX-NEXT:    vpmovwb %zmm0, (%rdi)
-; SKX-NEXT:    vzeroupper
-; SKX-NEXT:    retq
+; ALL-LABEL: usat_trunc_db_1024_mem:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpmovusdb %zmm0, %xmm0
+; ALL-NEXT:    vpmovusdb %zmm1, %xmm1
+; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vmovdqu %ymm0, (%rdi)
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
   %x3 = icmp ult <32 x i32> %i, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x5 = select <32 x i1> %x3, <32 x i32> %i, <32 x i32> <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
   %x6 = trunc <32 x i32> %x5 to <32 x i8>
@@ -726,13 +703,9 @@ define <8 x i8> @usat_trunc_wb_128(<8 x i16> %i) {
 define <16 x i16> @usat_trunc_qw_1024(<16 x i64> %i) {
 ; ALL-LABEL: usat_trunc_qw_1024:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [65535,65535,65535,65535,65535,65535,65535,65535]
-; ALL-NEXT:    vpminuq %zmm2, %zmm1, %zmm1
-; ALL-NEXT:    vpminuq %zmm2, %zmm0, %zmm0
-; ALL-NEXT:    vpmovqd %zmm0, %ymm0
-; ALL-NEXT:    vpmovqd %zmm1, %ymm1
-; ALL-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; ALL-NEXT:    vpmovdw %zmm0, %ymm0
+; ALL-NEXT:    vpmovusqw %zmm0, %xmm0
+; ALL-NEXT:    vpmovusqw %zmm1, %xmm1
+; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; ALL-NEXT:    retq
   %x3 = icmp ult <16 x i64> %i, <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
   %x5 = select <16 x i1> %x3, <16 x i64> %i, <16 x i64> <i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535, i64 65535>
@@ -781,7 +754,7 @@ define void @smax_usat_trunc_wb_256_mem1(<16 x i16> %i, <16 x i8>* %res) {
 ; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpminsw {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -809,7 +782,7 @@ define void @smax_usat_trunc_wb_256_mem2(<16 x i16> %i, <16 x i8>* %res) {
 ; KNL-NEXT:    vpminsw {{.*}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -836,7 +809,7 @@ define <16 x i8> @smax_usat_trunc_wb_256(<16 x i16> %i) {
 ; KNL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; KNL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpminsw {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -950,29 +923,15 @@ define void @smax_usat_trunc_qw_512_mem(<8 x i64> %i, <8 x i16>* %res) {
 }
 
 define <32 x i8> @smax_usat_trunc_db_1024(<32 x i32> %i) {
-; KNL-LABEL: smax_usat_trunc_db_1024:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
-; KNL-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; KNL-NEXT:    vpmovusdb %zmm0, %xmm0
-; KNL-NEXT:    vpmovusdb %zmm1, %xmm1
-; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: smax_usat_trunc_db_1024:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; SKX-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SKX-NEXT:    vpminsd %zmm2, %zmm1, %zmm1
-; SKX-NEXT:    vpminsd %zmm2, %zmm0, %zmm0
-; SKX-NEXT:    vpmovdw %zmm0, %ymm0
-; SKX-NEXT:    vpmovdw %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; SKX-NEXT:    vpmovwb %zmm0, %ymm0
-; SKX-NEXT:    retq
+; ALL-LABEL: smax_usat_trunc_db_1024:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
+; ALL-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
+; ALL-NEXT:    vpmovusdb %zmm0, %xmm0
+; ALL-NEXT:    vpmovusdb %zmm1, %xmm1
+; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    retq
   %x1 = icmp sgt <32 x i32> %i, <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %x2 = select <32 x i1> %x1, <32 x i32> %i, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %x3 = icmp slt <32 x i32> %x2, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
@@ -982,32 +941,17 @@ define <32 x i8> @smax_usat_trunc_db_1024(<32 x i32> %i) {
 }
 
 define void @smax_usat_trunc_db_1024_mem(<32 x i32> %i, <32 x i8>* %p) {
-; KNL-LABEL: smax_usat_trunc_db_1024_mem:
-; KNL:       ## %bb.0:
-; KNL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; KNL-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
-; KNL-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; KNL-NEXT:    vpmovusdb %zmm0, %xmm0
-; KNL-NEXT:    vpmovusdb %zmm1, %xmm1
-; KNL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; KNL-NEXT:    vmovdqu %ymm0, (%rdi)
-; KNL-NEXT:    vzeroupper
-; KNL-NEXT:    retq
-;
-; SKX-LABEL: smax_usat_trunc_db_1024_mem:
-; SKX:       ## %bb.0:
-; SKX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; SKX-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
-; SKX-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm2 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
-; SKX-NEXT:    vpminsd %zmm2, %zmm1, %zmm1
-; SKX-NEXT:    vpminsd %zmm2, %zmm0, %zmm0
-; SKX-NEXT:    vpmovdw %zmm0, %ymm0
-; SKX-NEXT:    vpmovdw %zmm1, %ymm1
-; SKX-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; SKX-NEXT:    vpmovwb %zmm0, (%rdi)
-; SKX-NEXT:    vzeroupper
-; SKX-NEXT:    retq
+; ALL-LABEL: smax_usat_trunc_db_1024_mem:
+; ALL:       ## %bb.0:
+; ALL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; ALL-NEXT:    vpmaxsd %zmm2, %zmm1, %zmm1
+; ALL-NEXT:    vpmaxsd %zmm2, %zmm0, %zmm0
+; ALL-NEXT:    vpmovusdb %zmm0, %xmm0
+; ALL-NEXT:    vpmovusdb %zmm1, %xmm1
+; ALL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vmovdqu %ymm0, (%rdi)
+; ALL-NEXT:    vzeroupper
+; ALL-NEXT:    retq
   %x1 = icmp sgt <32 x i32> %i, <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %x2 = select <32 x i1> %x1, <32 x i32> %i, <32 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %x3 = icmp slt <32 x i32> %x2, <i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255, i32 255>
@@ -1039,7 +983,7 @@ define void @negative_test1_smax_usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>*
 ; KNL-NEXT:    vpmaxsw %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
 ; KNL-NEXT:    vpminsw %ymm1, %ymm0, %ymm0
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
@@ -1067,7 +1011,7 @@ define void @negative_test2_smax_usat_trunc_wb_256_mem(<16 x i16> %i, <16 x i8>*
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmaxsw {{.*}}(%rip), %ymm0, %ymm0
 ; KNL-NEXT:    vpminsw {{.*}}(%rip), %ymm0, %ymm0
-; KNL-NEXT:    vpmovsxwd %ymm0, %zmm0
+; KNL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; KNL-NEXT:    vpmovdb %zmm0, (%rdi)
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq

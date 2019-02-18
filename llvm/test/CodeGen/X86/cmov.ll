@@ -81,7 +81,7 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    movsbl {{.*}}(%rip), %edx
 ; CHECK-NEXT:    movzbl %dl, %ecx
 ; CHECK-NEXT:    shrl $7, %ecx
-; CHECK-NEXT:    xorl $1, %ecx
+; CHECK-NEXT:    xorb $1, %cl
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %edx
 ; CHECK-NEXT:    movb {{.*}}(%rip), %al
@@ -194,11 +194,14 @@ define i8 @test7(i1 inreg %c, i8 inreg %a, i8 inreg %b) nounwind {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB6_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:  .LBB6_2:
+; CHECK-NEXT:    jne .LBB6_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB6_1:
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %d = select i1 %c, i8 %a, i8 %b
   ret i8 %d

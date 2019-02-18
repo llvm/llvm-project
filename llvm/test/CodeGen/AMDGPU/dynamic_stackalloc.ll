@@ -1,6 +1,6 @@
-; RUN: not llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tahiti -mattr=+promote-alloca -verify-machineinstrs < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=r600 -mtriple=r600---amdgiz -mcpu=cypress < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tahiti -mattr=+promote-alloca -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=r600 -mtriple=r600-- -mcpu=cypress < %s 2>&1 | FileCheck %s
 target datalayout = "A5"
 
 ; CHECK: in function test_dynamic_stackalloc{{.*}}: unsupported dynamic alloca

@@ -1,0 +1,27 @@
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=si-fold-operands,dead-mi-elimination %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: fold_vgpr_copy
+# GCN:      %0:vreg_64 = IMPLICIT_DEF
+# GCN-NEXT: %4:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: %3:vgpr_32 = IMPLICIT_DEF
+# GCN-NEXT: DS_WRITE2_B32_gfx9 %0.sub0, killed %4, killed %3, 0, 1, 0, implicit $exec
+
+---
+name:            fold_vgpr_copy
+registers:
+  - { id: 0, class: vreg_64 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+body:             |
+  bb.0:
+
+    %0:vreg_64 = IMPLICIT_DEF
+    %4 = IMPLICIT_DEF
+    %3 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0.sub0
+    %2:vgpr_32 = COPY %1
+    DS_WRITE2_B32_gfx9 %2, killed %4, killed %3, 0, 1, 0, implicit $exec
+
+...

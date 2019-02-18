@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection,core.builtin -analyzer-config aggressive-relational-comparison-simplification=true -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.ExprInspection,core.builtin -analyzer-config aggressive-binary-operation-simplification=true -verify %s
 
 void clang_analyzer_eval(int);
 

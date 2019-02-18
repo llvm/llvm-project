@@ -355,6 +355,15 @@ between different iterations.
 ``ScalarEvolution`` has a more complete understanding of pointer arithmetic
 than ``BasicAliasAnalysis``' collection of ad-hoc analyses.
 
+``-stack-safety``: Stack Safety Analysis
+------------------------------------------------
+
+The ``StackSafety`` analysis can be used to determine if stack allocated
+variables can be considered safe from memory access bugs.
+
+This analysis' primary purpose is to be used by sanitizers to avoid unnecessary
+instrumentation of safe variables.
+
 ``-targetdata``: Target Data Layout
 -----------------------------------
 
@@ -1215,3 +1224,8 @@ Displays the post dominator tree using the GraphViz tool.
 Displays the post dominator tree using the GraphViz tool, but omitting function
 bodies.
 
+``-transform-warning``: Report missed forced transformations
+------------------------------------------------------------
+
+Emits warnings about not yet applied forced transformations (e.g. from
+``#pragma omp simd``).

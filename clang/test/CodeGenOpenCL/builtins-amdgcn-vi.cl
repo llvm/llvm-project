@@ -82,11 +82,25 @@ void test_s_memrealtime(global ulong* out)
   *out = __builtin_amdgcn_s_memrealtime();
 }
 
+// CHECK-LABEL: @test_s_dcache_wb()
+// CHECK: call void @llvm.amdgcn.s.dcache.wb()
+void test_s_dcache_wb()
+{
+  __builtin_amdgcn_s_dcache_wb();
+}
+
 // CHECK-LABEL: @test_mov_dpp
-// CHECK: call i32 @llvm.amdgcn.mov.dpp.i32(i32 %src, i32 0, i32 0, i32 0, i1 false)
+// CHECK: call i32 @llvm.amdgcn.update.dpp.i32(i32 undef, i32 %src, i32 0, i32 0, i32 0, i1 false)
 void test_mov_dpp(global int* out, int src)
 {
   *out = __builtin_amdgcn_mov_dpp(src, 0, 0, 0, false);
+}
+
+// CHECK-LABEL: @test_update_dpp
+// CHECK: call i32 @llvm.amdgcn.update.dpp.i32(i32 %arg1, i32 %arg2, i32 0, i32 0, i32 0, i1 false)
+void test_update_dpp(global int* out, int arg1, int arg2)
+{
+  *out = __builtin_amdgcn_update_dpp(arg1, arg2, 0, 0, 0, false);
 }
 
 // CHECK-LABEL: @test_ds_fadd

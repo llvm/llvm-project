@@ -65,7 +65,7 @@ public:
     template <class U1, class U2>
         tuple& operator=(const pair<U1, U2>&); // iff sizeof...(T) == 2
     template <class U1, class U2>
-        tuple& operator=(pair<U1, U2>&&); //iffsizeof...(T) == 2
+        tuple& operator=(pair<U1, U2>&&); // iff sizeof...(T) == 2
 
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));
 };
@@ -141,6 +141,7 @@ template <class... Types>
 #include <type_traits>
 #include <__functional_base>
 #include <utility>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -1077,30 +1078,12 @@ namespace {
   _LIBCPP_INLINE_VAR constexpr __ignore_t<unsigned char> ignore = __ignore_t<unsigned char>();
 }
 
-template <class _Tp>
-struct __make_tuple_return_impl
-{
-    typedef _Tp type;
-};
-
-template <class _Tp>
-struct __make_tuple_return_impl<reference_wrapper<_Tp> >
-{
-    typedef _Tp& type;
-};
-
-template <class _Tp>
-struct __make_tuple_return
-{
-    typedef typename __make_tuple_return_impl<typename decay<_Tp>::type>::type type;
-};
-
 template <class... _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-tuple<typename __make_tuple_return<_Tp>::type...>
+tuple<typename __unwrap_ref_decay<_Tp>::type...>
 make_tuple(_Tp&&... __t)
 {
-    return tuple<typename __make_tuple_return<_Tp>::type...>(_VSTD::forward<_Tp>(__t)...);
+    return tuple<typename __unwrap_ref_decay<_Tp>::type...>(_VSTD::forward<_Tp>(__t)...);
 }
 
 template <class... _Tp>

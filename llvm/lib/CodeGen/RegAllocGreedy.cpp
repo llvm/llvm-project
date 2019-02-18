@@ -449,8 +449,8 @@ private:
 
   BlockFrequency calcSpillCost();
   bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency&);
-  void addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
-  void growRegion(GlobalSplitCandidate &Cand);
+  bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
+  bool growRegion(GlobalSplitCandidate &Cand);
   bool splitCanCauseEvictionChain(unsigned Evictee, GlobalSplitCandidate &Cand,
                                   unsigned BBNumber,
                                   const AllocationOrder &Order);
@@ -1183,7 +1183,10 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
     BC.Number = BI.MBB->getNumber();
     Intf.moveToBlock(BC.Number);
     BC.Entry = BI.LiveIn ? SpillPlacement::PrefReg : SpillPlacement::DontCare;
-    BC.Exit = BI.LiveOut ? SpillPlacement::PrefReg : SpillPlacement::DontCare;
+    BC.Exit = (BI.LiveOut &&
+               !LIS->getInstructionFromIndex(BI.LastInstr)->isImplicitDef())
+                  ? SpillPlacement::PrefReg
+                  : SpillPlacement::DontCare;
     BC.ChangesValue = BI.FirstDef.isValid();
 
     if (!Intf.hasInterference())
@@ -1203,6 +1206,13 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
       } else if (Intf.first() < BI.LastInstr) {
         ++Ins;
       }
+
+      // Abort if the spill cannot be inserted at the MBB' start
+      if (((BC.Entry == SpillPlacement::MustSpill) ||
+           (BC.Entry == SpillPlacement::PrefSpill)) &&
+          SlotIndex::isEarlierInstr(BI.FirstInstr,
+                                    SA->getFirstSplitPoint(BC.Number)))
+        return false;
     }
 
     // Interference for the live-out value.
@@ -1232,7 +1242,7 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
 
 /// addThroughConstraints - Add constraints and links to SpillPlacer from the
 /// live-through blocks in Blocks.
-void RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
+bool RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
                                      ArrayRef<unsigned> Blocks) {
   const unsigned GroupSize = 8;
   SpillPlacement::BlockConstraint BCS[GroupSize];
@@ -1256,6 +1266,12 @@ void RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
     assert(B < GroupSize && "Array overflow");
     BCS[B].Number = Number;
 
+    // Abort if the spill cannot be inserted at the MBB' start
+    MachineBasicBlock *MBB = MF->getBlockNumbered(Number);
+    if (!MBB->empty() &&
+        SlotIndex::isEarlierInstr(LIS->getInstructionIndex(MBB->instr_front()),
+                                  SA->getFirstSplitPoint(Number)))
+      return false;
     // Interference for the live-in value.
     if (Intf.first() <= Indexes->getMBBStartIdx(Number))
       BCS[B].Entry = SpillPlacement::MustSpill;
@@ -1276,9 +1292,10 @@ void RAGreedy::addThroughConstraints(InterferenceCache::Cursor Intf,
 
   SpillPlacer->addConstraints(makeArrayRef(BCS, B));
   SpillPlacer->addLinks(makeArrayRef(TBS, T));
+  return true;
 }
 
-void RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
+bool RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
   // Keep track of through blocks that have not been added to SpillPlacer.
   BitVector Todo = SA->getThroughBlocks();
   SmallVectorImpl<unsigned> &ActiveBlocks = Cand.ActiveBlocks;
@@ -1314,9 +1331,10 @@ void RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
     // Compute through constraints from the interference, or assume that all
     // through blocks prefer spilling when forming compact regions.
     auto NewBlocks = makeArrayRef(ActiveBlocks).slice(AddedTo);
-    if (Cand.PhysReg)
-      addThroughConstraints(Cand.Intf, NewBlocks);
-    else
+    if (Cand.PhysReg) {
+      if (!addThroughConstraints(Cand.Intf, NewBlocks))
+        return false;
+    } else
       // Provide a strong negative bias on through blocks to prevent unwanted
       // liveness on loop backedges.
       SpillPlacer->addPrefSpill(NewBlocks, /* Strong= */ true);
@@ -1326,6 +1344,7 @@ void RAGreedy::growRegion(GlobalSplitCandidate &Cand) {
     SpillPlacer->iterate();
   }
   LLVM_DEBUG(dbgs() << ", v=" << Visited);
+  return true;
 }
 
 /// calcCompactRegion - Compute the set of edge bundles that should be live
@@ -1356,7 +1375,11 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
     return false;
   }
 
-  growRegion(Cand);
+  if (!growRegion(Cand)) {
+    LLVM_DEBUG(dbgs() << ", cannot spill all interferences.\n");
+    return false;
+  }
+
   SpillPlacer->finish();
 
   if (!Cand.LiveBundles.any()) {
@@ -1886,7 +1909,10 @@ unsigned RAGreedy::calculateRegionSplitCost(LiveInterval &VirtReg,
       });
       continue;
     }
-    growRegion(Cand);
+    if (!growRegion(Cand)) {
+      LLVM_DEBUG(dbgs() << ", cannot spill all interferences.\n");
+      continue;
+    }
 
     SpillPlacer->finish();
 
@@ -2188,7 +2214,11 @@ void RAGreedy::calcGapWeights(unsigned PhysReg,
 ///
 unsigned RAGreedy::tryLocalSplit(LiveInterval &VirtReg, AllocationOrder &Order,
                                  SmallVectorImpl<unsigned> &NewVRegs) {
-  assert(SA->getUseBlocks().size() == 1 && "Not a local interval");
+  // TODO: the function currently only handles a single UseBlock; it should be
+  // possible to generalize.
+  if (SA->getUseBlocks().size() != 1)
+    return 0;
+
   const SplitAnalysis::BlockInfo &BI = SA->getUseBlocks().front();
 
   // Note that it is possible to have an interval that is live-in or live-out
@@ -3120,18 +3150,23 @@ void RAGreedy::reportNumberOfSplillsReloads(MachineLoop *L, unsigned &Reloads,
     // Handle blocks that were not included in subloops.
     if (Loops->getLoopFor(MBB) == L)
       for (MachineInstr &MI : *MBB) {
-        const MachineMemOperand *MMO;
+        SmallVector<const MachineMemOperand *, 2> Accesses;
+        auto isSpillSlotAccess = [&MFI](const MachineMemOperand *A) {
+          return MFI.isSpillSlotObjectIndex(
+              cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
+                  ->getFrameIndex());
+        };
 
         if (TII->isLoadFromStackSlot(MI, FI) && MFI.isSpillSlotObjectIndex(FI))
           ++Reloads;
-        else if (TII->hasLoadFromStackSlot(MI, MMO, FI) &&
-                 MFI.isSpillSlotObjectIndex(FI))
+        else if (TII->hasLoadFromStackSlot(MI, Accesses) &&
+                 llvm::any_of(Accesses, isSpillSlotAccess))
           ++FoldedReloads;
         else if (TII->isStoreToStackSlot(MI, FI) &&
                  MFI.isSpillSlotObjectIndex(FI))
           ++Spills;
-        else if (TII->hasStoreToStackSlot(MI, MMO, FI) &&
-                 MFI.isSpillSlotObjectIndex(FI))
+        else if (TII->hasStoreToStackSlot(MI, Accesses) &&
+                 llvm::any_of(Accesses, isSpillSlotAccess))
           ++FoldedSpills;
       }
 

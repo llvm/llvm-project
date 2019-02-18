@@ -18,9 +18,9 @@
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DBG2:[0-9]+]]
 //
-// CHECK: !DISubprogram(name: "-[I p1]",{{.*}} line: [[@LINE+4]],{{.*}} isLocal: true, isDefinition: true
+// CHECK: !DISubprogram(name: "-[I p1]",{{.*}} line: [[@LINE+4]],{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK: ![[DBG1]] = !DILocation(line: [[@LINE+3]],
-// CHECK: !DISubprogram(name: "-[I setP1:]",{{.*}} line: [[@LINE+2]],{{.*}} isLocal: true, isDefinition: true
+// CHECK: !DISubprogram(name: "-[I setP1:]",{{.*}} line: [[@LINE+2]],{{.*}} DISPFlagLocalToUnit | DISPFlagDefinition
 // CHECK: ![[DBG2]] = !DILocation(line: [[@LINE+1]],
 @property int p1;
 @end

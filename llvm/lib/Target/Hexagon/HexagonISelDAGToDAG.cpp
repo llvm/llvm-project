@@ -127,8 +127,7 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   }
 
   SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = LD->getMemOperand();
+  MachineMemOperand *MemOp = LD->getMemOperand();
 
   auto getExt64 = [this,ExtType] (MachineSDNode *N, const SDLoc &dl)
         -> MachineSDNode* {
@@ -159,7 +158,7 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
     MachineSDNode *L = CurDAG->getMachineNode(Opcode, dl, ValueVT,
                                               MVT::i32, MVT::Other, Base,
                                               IncV, Chain);
-    L->setMemRefs(MemOp, MemOp+1);
+    CurDAG->setNodeMemRefs(L, {MemOp});
     To[1] = SDValue(L, 1); // Next address.
     To[2] = SDValue(L, 2); // Chain.
     // Handle special case for extension to i64.
@@ -170,7 +169,7 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
     SDValue Zero = CurDAG->getTargetConstant(0, dl, MVT::i32);
     MachineSDNode *L = CurDAG->getMachineNode(Opcode, dl, ValueVT, MVT::Other,
                                               Base, Zero, Chain);
-    L->setMemRefs(MemOp, MemOp+1);
+    CurDAG->setNodeMemRefs(L, {MemOp});
     To[2] = SDValue(L, 1); // Chain.
     MachineSDNode *A = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
                                               Base, IncV);
@@ -344,9 +343,8 @@ bool HexagonDAGToDAGISel::SelectBrevLdIntrinsic(SDNode *IntN) {
         FLI->second, dl, RTys,
         {IntN->getOperand(2), IntN->getOperand(3), IntN->getOperand(0)});
 
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-    MemOp[0] = cast<MemIntrinsicSDNode>(IntN)->getMemOperand();
-    Res->setMemRefs(MemOp, MemOp + 1);
+    MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(IntN)->getMemOperand();
+    CurDAG->setNodeMemRefs(Res, {MemOp});
 
     ReplaceUses(SDValue(IntN, 0), SDValue(Res, 0));
     ReplaceUses(SDValue(IntN, 1), SDValue(Res, 1));
@@ -525,8 +523,7 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
   }
 
   SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = ST->getMemOperand();
+  MachineMemOperand *MemOp = ST->getMemOperand();
 
   //                  Next address   Chain
   SDValue From[2] = { SDValue(ST,0), SDValue(ST,1) };
@@ -537,14 +534,14 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
     SDValue Ops[] = { Base, IncV, Value, Chain };
     MachineSDNode *S = CurDAG->getMachineNode(Opcode, dl, MVT::i32, MVT::Other,
                                               Ops);
-    S->setMemRefs(MemOp, MemOp + 1);
+    CurDAG->setNodeMemRefs(S, {MemOp});
     To[0] = SDValue(S, 0);
     To[1] = SDValue(S, 1);
   } else {
     SDValue Zero = CurDAG->getTargetConstant(0, dl, MVT::i32);
     SDValue Ops[] = { Base, Zero, Value, Chain };
     MachineSDNode *S = CurDAG->getMachineNode(Opcode, dl, MVT::Other, Ops);
-    S->setMemRefs(MemOp, MemOp + 1);
+    CurDAG->setNodeMemRefs(S, {MemOp});
     To[1] = SDValue(S, 0);
     MachineSDNode *A = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
                                               Base, IncV);
@@ -1550,6 +1547,7 @@ bool HexagonDAGToDAGISel::keepsLowBits(const SDValue &Val, unsigned NumBits,
         return true;
       }
     }
+    break;
   }
   default:
     break;

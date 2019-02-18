@@ -13,10 +13,10 @@
 ;      return 0;
 ;    }
 ;
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 16), debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 48, 16), debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !{{[0-9]+}}
-; CHECK-DAG: DBG_VALUE debug-use $r{{[0-9]+}}, debug-use $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE $r{{[0-9]+}}, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 32, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE $r{{[0-9]+}}, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 48, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE $r{{[0-9]+}}, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 0, 16), debug-location !{{[0-9]+}}
+; CHECK-DAG: DBG_VALUE $r{{[0-9]+}}, $noreg, !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_fragment, 16, 16), debug-location !{{[0-9]+}}
 
 ; ModuleID = 'sdagsplit-1.c'
 target datalayout = "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16"
@@ -25,11 +25,11 @@ target triple = "msp430"
 ; Function Attrs: nounwind readnone
 define i64 @foo(i64 %a, i64 %b) local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.value(metadata i64 %a, metadata !12, metadata !15), !dbg !16
-  tail call void @llvm.dbg.value(metadata i64 %b, metadata !13, metadata !15), !dbg !17
-  tail call void @llvm.dbg.value(metadata i64 %add, metadata !14, metadata !15), !dbg !18
+  call void @llvm.dbg.value(metadata i64 %a, metadata !12, metadata !15), !dbg !16
+  call void @llvm.dbg.value(metadata i64 %b, metadata !13, metadata !15), !dbg !17
   %cmp = icmp eq i64 %a, %b, !dbg !19
   %add = add nsw i64 %b, 1, !dbg !21
+  call void @llvm.dbg.value(metadata i64 %add, metadata !14, metadata !15), !dbg !18
   %retval.0 = select i1 %cmp, i64 %add, i64 0, !dbg !22
   ret i64 %retval.0, !dbg !23
 }

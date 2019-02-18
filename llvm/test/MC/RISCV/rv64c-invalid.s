@@ -20,6 +20,9 @@ c.srai a0, 0  # CHECK: :[[@LINE]]:12: error: immediate must be an integer in the
 ## simm6
 c.addiw t0, -33 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-32, 31]
 c.addiw t0, 32 # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-32, 31]
+c.addiw t0, foo # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-32, 31]
+c.addiw t0, %lo(foo) # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-32, 31]
+c.addiw t0, %hi(foo) # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [-32, 31]
 
 ## uimm9_lsb000
 c.ldsp  ra, 512(sp) # CHECK: :[[@LINE]]:13: error: immediate must be a multiple of 8 bytes in the range [0, 504]

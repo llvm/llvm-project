@@ -47,7 +47,10 @@ volatile int buffer_counter = 0;
   f0();
   assert(__xray_log_process_buffers(process_buffer) ==
          XRayLogFlushStatus::XRAY_LOG_FLUSHED);
-  assert(buffer_counter == 1);
+  // There's always at least one buffer, containing the profile file header. We
+  // assert that we have two, to indicate that we're expecting exactly one
+  // thread's worth of data.
+  assert(buffer_counter == 2);
   assert(__xray_log_flushLog() == XRayLogFlushStatus::XRAY_LOG_FLUSHED);
 
   // Let's reset the counter.
@@ -60,6 +63,6 @@ volatile int buffer_counter = 0;
   f0();
   assert(__xray_log_process_buffers(process_buffer) ==
          XRayLogFlushStatus::XRAY_LOG_FLUSHED);
-  assert(buffer_counter == 1);
+  assert(buffer_counter == 2);
   assert(__xray_log_flushLog() == XRayLogFlushStatus::XRAY_LOG_FLUSHED);
 }

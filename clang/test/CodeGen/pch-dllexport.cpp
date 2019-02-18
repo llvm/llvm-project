@@ -57,6 +57,13 @@ extern template void explicitInstantiationDefAfterDecl<int>(int);
 template <typename T> T __declspec(dllexport) variableTemplate;
 extern template int variableTemplate<int>;
 
+namespace pr38934 {
+template <typename T> struct S {};
+extern template struct S<int>;
+// The use here causes the S<int>::operator= decl to go into the PCH.
+inline void use(S<int> *a, S<int> *b) { *a = *b; };
+}
+
 #else
 
 void use() {
@@ -80,5 +87,10 @@ template void __declspec(dllexport) explicitInstantiationDefAfterDecl<int>(int);
 
 template int __declspec(dllexport) variableTemplate<int>;
 // PCHWITHOBJVARS: @"??$variableTemplate@H@@3HA" = weak_odr dso_local dllexport global
+
+// PR38934: Make sure S<int>::operator= gets emitted. While it itself isn't a
+// template specialization, its parent is.
+template struct __declspec(dllexport) pr38934::S<int>;
+// PCHWITHOBJ: define weak_odr dso_local dllexport x86_thiscallcc dereferenceable(1) %"struct.pr38934::S"* @"??4?$S@H@pr38934@@QAEAAU01@ABU01@@Z"
 
 #endif

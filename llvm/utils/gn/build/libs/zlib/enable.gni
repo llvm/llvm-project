@@ -1,0 +1,4 @@
+declare_args() {
+  # Whether to include code that links against zlib.
+  llvm_enable_zlib = host_os != "win"
+}

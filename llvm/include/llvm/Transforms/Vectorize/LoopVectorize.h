@@ -78,12 +78,13 @@ class TargetTransformInfo;
 
 /// The LoopVectorize Pass.
 struct LoopVectorizePass : public PassInfoMixin<LoopVectorizePass> {
-  bool DisableUnrolling = false;
+  /// If false, consider all loops for interleaving.
+  /// If true, only loops that explicitly request interleaving are considered.
+  bool InterleaveOnlyWhenForced = false;
 
-  /// If true, consider all loops for vectorization.
-  /// If false, only loops that explicitly request vectorization are
-  /// considered.
-  bool AlwaysVectorize = true;
+  /// If false, consider all loops for vectorization.
+  /// If true, only loops that explicitly request vectorization are considered.
+  bool VectorizeOnlyWhenForced = false;
 
   ScalarEvolution *SE;
   LoopInfo *LI;

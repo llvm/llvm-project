@@ -125,11 +125,11 @@ ret:
 ; GCN: s_cbranch_scc1
 
 ; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80004
-; VI: s_and_b32 s{{[0-9]+}}, [[BFE]], 0xff
+; VI: v_mov_b32_e32 v{{[0-9]+}}, 0xff
 
 ; GCN: BB2_2:
 ; SI: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x70004
-; VI: s_and_b32 s{{[0-9]+}}, [[BFE]], 0x7f
+; VI: v_mov_b32_e32 v{{[0-9]+}}, 0x7f
 
 ; GCN: BB2_3:
 ; GCN: buffer_store_short

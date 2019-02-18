@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -72,7 +72,6 @@ public:
         Satisfied(false) {}
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 const ExplodedNode *Pred,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 
@@ -247,8 +246,7 @@ ObjCSuperDeallocChecker::isSuperDeallocMessage(const ObjCMethodCall &M) const {
 
 std::shared_ptr<PathDiagnosticPiece>
 SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
-                                 const ExplodedNode *Pred,
-                                 BugReporterContext &BRC, BugReport &BR) {
+                                 BugReporterContext &BRC, BugReport &) {
   if (Satisfied)
     return nullptr;
 
@@ -257,7 +255,8 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
   bool CalledNow =
       Succ->getState()->contains<CalledSuperDealloc>(ReceiverSymbol);
   bool CalledBefore =
-      Pred->getState()->contains<CalledSuperDealloc>(ReceiverSymbol);
+      Succ->getFirstPred()->getState()->contains<CalledSuperDealloc>(
+          ReceiverSymbol);
 
   // Is Succ the node on which the analyzer noted that [super dealloc] was
   // called on ReceiverSymbol?
@@ -283,8 +282,9 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
 //===----------------------------------------------------------------------===//
 
 void ento::registerObjCSuperDeallocChecker(CheckerManager &Mgr) {
-  const LangOptions &LangOpts = Mgr.getLangOpts();
-  if (LangOpts.getGC() == LangOptions::GCOnly || LangOpts.ObjCAutoRefCount)
-    return;
   Mgr.registerChecker<ObjCSuperDeallocChecker>();
+}
+
+bool ento::shouldRegisterObjCSuperDeallocChecker(const LangOptions &LO) {
+  return true;
 }

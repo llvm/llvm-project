@@ -3,7 +3,7 @@
 // FIXME: Canonicalizing paths to remove relative traversal components
 // currenty fails a unittest on windows and is disable by default.
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: mingw32
+// XFAIL: windows-gnu
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/i %t/m %t

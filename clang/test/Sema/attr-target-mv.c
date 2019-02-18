@@ -65,10 +65,9 @@ int __attribute__((target("sse4.2,arch=sandybridge"))) mangle(void) { return 1; 
 //expected-note@-2 {{previous declaration is here}}
 int __attribute__((target("arch=sandybridge,sse4.2")))  mangle(void) { return 2; }
 
+// allow this, since we want to treat the 1st one as fwd-decl of the sandybridge version.
 int prev_no_target(void);
 int __attribute__((target("arch=sandybridge")))  prev_no_target(void) { return 2; }
-// expected-error@-2 {{function declaration is missing 'target' attribute in a multiversioned function}}
-// expected-note@+1 {{function multiversioning caused by this declaration}}
 int __attribute__((target("arch=ivybridge")))  prev_no_target(void) { return 2; }
 
 int __attribute__((target("arch=sandybridge")))  prev_no_target2(void);

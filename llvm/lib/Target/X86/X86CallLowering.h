@@ -29,8 +29,8 @@ class X86CallLowering : public CallLowering {
 public:
   X86CallLowering(const X86TargetLowering &TLI);
 
-  bool lowerReturn(MachineIRBuilder &MIRBuiler, const Value *Val,
-                   unsigned VReg) const override;
+  bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
+                   ArrayRef<unsigned> VRegs) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<unsigned> VRegs) const override;

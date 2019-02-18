@@ -29,7 +29,7 @@ define i8 *@f2(i8 *%src, i8 *%charptr, i64 %len) {
 ; CHECK-NOT: %r0
 ; CHECK: srst %r2, [[RES1]]
 ; CHECK: br %r14
-  %char = load volatile i8 , i8 *%charptr
+  %char = load volatile i8, i8 *%charptr
   %charext = zext i8 %char to i32
   %res1 = call i8 *@memchr(i8 *%src, i32 %charext, i64 %len)
   %res2 = call i8 *@memchr(i8 *%res1, i32 %charext, i64 %len)
@@ -48,7 +48,7 @@ define i8 *@f3(i8 *%src, i8 *%charptr, i64 %len) {
 ; CHECK: lr %r0, [[CHAR]]
 ; CHECK: srst %r2, [[RES1]]
 ; CHECK: br %r14
-  %char = load volatile i8 , i8 *%charptr
+  %char = load volatile i8, i8 *%charptr
   %charext = zext i8 %char to i32
   %res1 = call i8 *@memchr(i8 *%src, i32 %charext, i64 %len)
   call void asm sideeffect "blah $0", "{r0}" (i32 0)

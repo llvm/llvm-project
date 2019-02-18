@@ -39,6 +39,9 @@ private:
 
   int64_t evaluateAsInt64(int64_t Value) const;
 
+  bool evaluatePCRelLo(MCValue &Res, const MCAsmLayout *Layout,
+                       const MCFixup *Fixup) const;
+
   explicit RISCVMCExpr(const MCExpr *Expr, VariantKind Kind)
       : Expr(Expr), Kind(Kind) {}
 
@@ -49,6 +52,13 @@ public:
   VariantKind getKind() const { return Kind; }
 
   const MCExpr *getSubExpr() const { return Expr; }
+
+  /// Get the MCExpr of the VK_RISCV_PCREL_HI Fixup that the
+  /// VK_RISCV_PCREL_LO points to.
+  ///
+  /// \returns nullptr if this isn't a VK_RISCV_PCREL_LO pointing to a
+  /// VK_RISCV_PCREL_HI.
+  const MCFixup *getPCRelHiFixup() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAsmLayout *Layout,

@@ -9,7 +9,7 @@ Subtract ImageBase from all the offsets and run the test again with
 --relative-address.
 
 RUN: grep '^ADDR:' %s | sed -s 's/ADDR: //' \
-RUN: 	| "%python" -c 'import sys;print("\n".join([hex(int(x, 16) - 0x400000) for x in sys.stdin]))' \
+RUN: 	| %python -c 'import sys;print("\n".join([hex(int(x, 16) - 0x400000) for x in sys.stdin]))' \
 RUN:	| llvm-symbolizer -obj="%p/Inputs/test.exe" -demangle=false --relative-address \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
 

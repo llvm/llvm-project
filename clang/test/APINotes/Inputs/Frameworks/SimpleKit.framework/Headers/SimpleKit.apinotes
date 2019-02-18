@@ -31,6 +31,12 @@ Functions:
   Parameters:
   - Position: 0
     RetainCountConvention: CFReturnsNotRetained
+- Name: getCFAuditedToUnowned_DUMP
+  RetainCountConvention: CFReturnsNotRetained
+- Name: getCFAuditedToOwned_DUMP
+  RetainCountConvention: CFReturnsRetained
+- Name: getCFAuditedToNone_DUMP
+  RetainCountConvention: none
 Classes:
 - Name: MethodTest
   Methods:

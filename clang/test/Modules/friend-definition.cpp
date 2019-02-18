@@ -7,6 +7,7 @@ module A {}
 #pragma clang module begin A
 template<typename T> struct A {
   friend A operator+(const A&, const A&) { return {}; }
+  template<typename T2> friend void func_1(const A&, const T2 &) {}
 };
 #pragma clang module end
 #pragma clang module endbuild
@@ -36,4 +37,5 @@ inline void g() { A<int> a; }
 void h() {
   A<int> a;
   a + a;
+  func_1(a, 0);
 }

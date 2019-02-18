@@ -443,7 +443,7 @@ bool PPCVSXSwapRemoval::gatherVectorInstructions() {
         // We can handle STXSDX and STXSSPX similarly to LXSDX and LXSSPX,
         // by adding special handling for narrowing copies as well as
         // widening ones.  However, I've experimented with this, and in
-        // practice we currently do not appear to use STXSDX fed by 
+        // practice we currently do not appear to use STXSDX fed by
         // a narrowing copy from a full vector register.  Since I can't
         // generate any useful test cases, I've left this alone for now.
       case PPC::STXSDX:

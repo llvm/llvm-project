@@ -127,7 +127,7 @@ TypeLoc TypeLoc::getNextTypeLocImpl(TypeLoc TL) {
 /// Initializes a type location, and all of its children
 /// recursively, as if the entire tree had been written in the
 /// given location.
-void TypeLoc::initializeImpl(ASTContext &Context, TypeLoc TL, 
+void TypeLoc::initializeImpl(ASTContext &Context, TypeLoc TL,
                              SourceLocation Loc) {
   while (true) {
     switch (TL.getTypeLocClass()) {
@@ -254,7 +254,7 @@ SourceLocation TypeLoc::getEndLoc() const {
     case RValueReference:
     case PackExpansion:
       if (!Last)
-	Last = Cur;
+        Last = Cur;
       break;
     case Qualified:
     case Elaborated:
@@ -370,7 +370,7 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::SatULongFract:
     llvm_unreachable("Builtin type needs extra local data!");
     // Fall through, if the impossible happens.
-      
+
   case BuiltinType::NullPtr:
   case BuiltinType::Overload:
   case BuiltinType::Dependent:
@@ -384,6 +384,9 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  case BuiltinType::Id:
+#include "clang/Basic/OpenCLExtensionTypes.def"
   case BuiltinType::OCLSampler:
   case BuiltinType::OCLEvent:
   case BuiltinType::OCLClkEvent:
@@ -404,11 +407,11 @@ TypeLoc TypeLoc::IgnoreParensImpl(TypeLoc TL) {
 }
 
 SourceLocation TypeLoc::findNullabilityLoc() const {
-  if (auto attributedLoc = getAs<AttributedTypeLoc>()) {
-    if (attributedLoc.getAttrKind() == AttributedType::attr_nullable ||
-        attributedLoc.getAttrKind() == AttributedType::attr_nonnull ||
-        attributedLoc.getAttrKind() == AttributedType::attr_null_unspecified)
-      return attributedLoc.getAttrNameLoc();
+  if (auto ATL = getAs<AttributedTypeLoc>()) {
+    const Attr *A = ATL.getAttr();
+    if (A && (isa<TypeNullableAttr>(A) || isa<TypeNonNullAttr>(A) ||
+              isa<TypeNullUnspecifiedAttr>(A)))
+      return A->getLocation();
   }
 
   return {};
@@ -446,13 +449,13 @@ void ObjCTypeParamTypeLoc::initializeLocal(ASTContext &Context,
     setProtocolLoc(i, Loc);
 }
 
-void ObjCObjectTypeLoc::initializeLocal(ASTContext &Context, 
+void ObjCObjectTypeLoc::initializeLocal(ASTContext &Context,
                                         SourceLocation Loc) {
   setHasBaseTypeAsWritten(true);
   setTypeArgsLAngleLoc(Loc);
   setTypeArgsRAngleLoc(Loc);
   for (unsigned i = 0, e = getNumTypeArgs(); i != e; ++i) {
-    setTypeArgTInfo(i, 
+    setTypeArgTInfo(i,
                    Context.getTrivialTypeSourceInfo(
                      getTypePtr()->getTypeArgsAsWritten()[i], Loc));
   }
@@ -479,7 +482,7 @@ void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,
         Context.getTrivialTypeSourceInfo(getTypePtr()->getBaseType(), Loc));
 }
 
-void ElaboratedTypeLoc::initializeLocal(ASTContext &Context, 
+void ElaboratedTypeLoc::initializeLocal(ASTContext &Context,
                                         SourceLocation Loc) {
   setElaboratedKeywordLoc(Loc);
   NestedNameSpecifierLocBuilder Builder;
@@ -487,7 +490,7 @@ void ElaboratedTypeLoc::initializeLocal(ASTContext &Context,
   setQualifierLoc(Builder.getWithLocInContext(Context));
 }
 
-void DependentNameTypeLoc::initializeLocal(ASTContext &Context, 
+void DependentNameTypeLoc::initializeLocal(ASTContext &Context,
                                            SourceLocation Loc) {
   setElaboratedKeywordLoc(Loc);
   NestedNameSpecifierLocBuilder Builder;
@@ -516,14 +519,14 @@ DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
                                                    getArgInfos(), Loc);
 }
 
-void TemplateSpecializationTypeLoc::initializeArgLocs(ASTContext &Context, 
+void TemplateSpecializationTypeLoc::initializeArgLocs(ASTContext &Context,
                                                       unsigned NumArgs,
                                                   const TemplateArgument *Args,
                                               TemplateArgumentLocInfo *ArgInfos,
                                                       SourceLocation Loc) {
   for (unsigned i = 0, e = NumArgs; i != e; ++i) {
     switch (Args[i].getKind()) {
-    case TemplateArgument::Null: 
+    case TemplateArgument::Null:
       llvm_unreachable("Impossible TemplateArgument");
 
     case TemplateArgument::Integral:
@@ -535,10 +538,10 @@ void TemplateSpecializationTypeLoc::initializeArgLocs(ASTContext &Context,
     case TemplateArgument::Expression:
       ArgInfos[i] = TemplateArgumentLocInfo(Args[i].getAsExpr());
       break;
-      
+
     case TemplateArgument::Type:
       ArgInfos[i] = TemplateArgumentLocInfo(
-                          Context.getTrivialTypeSourceInfo(Args[i].getAsType(), 
+                          Context.getTrivialTypeSourceInfo(Args[i].getAsType(),
                                                            Loc));
       break;
 

@@ -80,3 +80,90 @@ define <4 x i32> @do_not_use_256bit_op(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c,
   ret <4 x i32> %sub
 }
 
+; When extracting from a vector binop, the source width should be a multiple of the destination width.
+; https://bugs.llvm.org/show_bug.cgi?id=39511
+
+define <3 x float> @PR39511(<4 x float> %t0, <3 x float>* %b) {
+; SSE-LABEL: PR39511:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addps {{.*}}(%rip), %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR39511:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %add = fadd <4 x float> %t0, <float 1.0, float 2.0, float 3.0, float 4.0>
+  %ext = shufflevector <4 x float> %add, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  ret <3 x float> %ext
+}
+
+; When extracting from a vector binop, we need to be extracting
+; by a width of at least 1 of the original vector elements.
+; https://bugs.llvm.org/show_bug.cgi?id=39893
+
+define <2 x i8> @PR39893(<2 x i32> %x, <8 x i8> %y) {
+; SSE-LABEL: PR39893:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pxor %xmm2, %xmm2
+; SSE-NEXT:    psubd %xmm0, %xmm2
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
+; SSE-NEXT:    psrld $16, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
+; SSE-NEXT:    movapd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR39893:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX1-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR39893:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR39893:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512-NEXT:    vpsubd %xmm0, %xmm2, %xmm0
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512-NEXT:    retq
+  %sub = sub <2 x i32> <i32 0, i32 undef>, %x
+  %bc = bitcast <2 x i32> %sub to <8 x i8>
+  %shuffle = shufflevector <8 x i8> %y, <8 x i8> %bc, <2 x i32> <i32 10, i32 4>
+  ret <2 x i8> %shuffle
+}
+
+define <2 x i8> @PR39893_2(<2 x float> %x) {
+; SSE-LABEL: PR39893_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    subps %xmm0, %xmm1
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,1,1,3]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR39893_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vsubps %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    retq
+  %fsub = fsub <2 x float> zeroinitializer, %x
+  %bc = bitcast <2 x float> %fsub to <8 x i8>
+  %shuffle = shufflevector <8 x i8> %bc, <8 x i8> undef, <2 x i32> <i32 0, i32 1>
+  ret <2 x i8> %shuffle
+}
+

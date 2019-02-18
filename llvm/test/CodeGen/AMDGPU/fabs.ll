@@ -11,7 +11,8 @@
 ; R600-NOT: AND
 ; R600: |PV.{{[XYZW]}}|
 
-; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
+; SI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
+; VI: s_bitset0_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @s_fabs_fn_free(float addrspace(1)* %out, i32 %in) {
   %bc= bitcast i32 %in to float
   %fabs = call float @fabs(float %bc)
@@ -23,7 +24,8 @@ define amdgpu_kernel void @s_fabs_fn_free(float addrspace(1)* %out, i32 %in) {
 ; R600-NOT: AND
 ; R600: |PV.{{[XYZW]}}|
 
-; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
+; SI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
+; VI: s_bitset0_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @s_fabs_free(float addrspace(1)* %out, i32 %in) {
   %bc= bitcast i32 %in to float
   %fabs = call float @llvm.fabs.f32(float %bc)
@@ -34,7 +36,8 @@ define amdgpu_kernel void @s_fabs_free(float addrspace(1)* %out, i32 %in) {
 ; FUNC-LABEL: {{^}}s_fabs_f32:
 ; R600: |{{(PV|T[0-9])\.[XYZW]}}|
 
-; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
+; SI: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x7fffffff
+; VI: s_bitset0_b32 s{{[0-9]+}}, 31
 define amdgpu_kernel void @s_fabs_f32(float addrspace(1)* %out, float %in) {
   %fabs = call float @llvm.fabs.f32(float %in)
   store float %fabs, float addrspace(1)* %out

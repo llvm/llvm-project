@@ -59,8 +59,6 @@ public:
     StringRef UnitOrRecordName;
     StringRef FilePath;
     StringRef ModuleName;
-    size_t FileSize;
-    time_t ModTime;
   };
   struct IncludeInfo {
     StringRef SourcePath;

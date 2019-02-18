@@ -24,7 +24,9 @@
 // RUN: not clang-tidy -checks='-*,clang-diagnostic-*,google-explicit-constructor' %T/diagnostics/input.cpp 2>&1 | FileCheck -check-prefix=CHECK5 -implicit-check-not='{{warning:|error:}}' %s
 // RUN: not clang-tidy -checks='-*,modernize-use-override' %T/diagnostics/input.cpp -- -DCOMPILATION_ERROR 2>&1 | FileCheck -check-prefix=CHECK6 -implicit-check-not='{{warning:|error:}}' %s
 
-// CHECK1: error: error reading '{{.*}}nonexistent.cpp' [clang-diagnostic-error]
+// CHECK1: error: no input files [clang-diagnostic-error]
+// CHECK1: error: no such file or directory: '{{.*}}nonexistent.cpp' [clang-diagnostic-error]
+// CHECK1: error: unable to handle compilation{{.*}} [clang-diagnostic-error]
 // CHECK2: error: unknown argument: '-fan-unknown-option' [clang-diagnostic-error]
 // CHECK3: error: unknown argument: '-fan-unknown-option' [clang-diagnostic-error]
 // CHECK5: error: unknown argument: '-fan-option-from-compilation-database' [clang-diagnostic-error]

@@ -1,10 +1,17 @@
-; RUN: llc -march=mips -mcpu=mips32   < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,32
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,32
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,32R6
-; RUN: llc -march=mips -mcpu=mips32 -mattr=dsp < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefix=DSP
-; RUN: llc -march=mips -mcpu=mips64   -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,64
-; RUN: llc -march=mips -mcpu=mips64r2 -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,64
-; RUN: llc -march=mips -mcpu=mips64r6 -target-abi n64 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,64R6
+; RUN: llc -march=mips -mcpu=mips32 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,32
+; RUN: llc -march=mips -mcpu=mips32r2 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,32
+; RUN: llc -march=mips -mcpu=mips32r6 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,32R6
+; RUN: llc -march=mips -mcpu=mips32r2 -mattr=dsp < %s \
+; RUN:   | FileCheck %s -check-prefix=DSP
+; RUN: llc -march=mips -mcpu=mips64   -target-abi n64 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,64
+; RUN: llc -march=mips -mcpu=mips64r2 -target-abi n64 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,64
+; RUN: llc -march=mips -mcpu=mips64r6 -target-abi n64 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,64R6
 
 ; FIXME: The MIPS16 test should check its output
 ; RUN: llc -march=mips -mattr=mips16 < %s
@@ -238,8 +245,8 @@ entry:
 ; 32-DAG:        [[m]]fhi $2
 ; 32-DAG:        [[m]]flo $3
 
-; DSP-DAG:       addiu $[[T0:[0-9]+]], $zero, 0
-; DSP-DAG:       mtlo $6, $[[AC:ac[0-3]+]]
+; DSP-DAG:       mtlo $7, $[[AC:ac[0-3]+]]
+; DSP-DAG:       mthi $6, $[[AC]]
 ; DSP-DAG:       msub $[[AC]], ${{[45]}}, ${{[45]}}
 ; DSP-DAG:       mfhi $2, $[[AC]]
 ; DSP-DAG:       mflo $3, $[[AC]]

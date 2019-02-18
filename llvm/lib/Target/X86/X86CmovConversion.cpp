@@ -81,12 +81,6 @@ STATISTIC(NumOfCmovGroupCandidate, "Number of CMOV-group candidates");
 STATISTIC(NumOfLoopCandidate, "Number of CMOV-conversion profitable loops");
 STATISTIC(NumOfOptimizedCmovGroups, "Number of optimized CMOV-groups");
 
-namespace llvm {
-
-void initializeX86CmovConverterPassPass(PassRegistry &);
-
-} // end namespace llvm
-
 // This internal switch can be used to turn off the cmov/branch optimization.
 static cl::opt<bool>
     EnableCmovConverter("x86-cmov-converter",
@@ -622,7 +616,7 @@ void X86CmovConverterPass::convertCmovInstsToBranches(
 
   // If the CMOV group is not packed, e.g., there are debug instructions between
   // first CMOV and last CMOV, then pack the group and make the CMOV instruction
-  // consecutive by moving the debug instructions to after the last CMOV. 
+  // consecutive by moving the debug instructions to after the last CMOV.
   packCmovGroup(Group.front(), Group.back());
 
   // To convert a CMOVcc instruction, we actually have to insert the diamond

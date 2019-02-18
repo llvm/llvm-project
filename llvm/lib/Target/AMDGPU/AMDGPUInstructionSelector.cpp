@@ -55,7 +55,6 @@ AMDGPUInstructionSelector::AMDGPUInstructionSelector(
 #define GET_GLOBALISEL_TEMPORARIES_INIT
 #include "AMDGPUGenGlobalISel.inc"
 #undef GET_GLOBALISEL_TEMPORARIES_INIT
-      ,AMDGPUASI(STI.getAMDGPUAS())
 {
 }
 
@@ -506,8 +505,8 @@ bool AMDGPUInstructionSelector::selectSMRD(MachineInstr &I,
   if (!I.hasOneMemOperand())
     return false;
 
-  if ((*I.memoperands_begin())->getAddrSpace() != AMDGPUASI.CONSTANT_ADDRESS &&
-      (*I.memoperands_begin())->getAddrSpace() != AMDGPUASI.CONSTANT_ADDRESS_32BIT)
+  if ((*I.memoperands_begin())->getAddrSpace() != AMDGPUAS::CONSTANT_ADDRESS &&
+      (*I.memoperands_begin())->getAddrSpace() != AMDGPUAS::CONSTANT_ADDRESS_32BIT)
     return false;
 
   if (!isInstrUniform(I))
@@ -631,6 +630,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
     return selectImpl(I, CoverageInfo);
   case TargetOpcode::G_ADD:
     return selectG_ADD(I);
+  case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_BITCAST:
     return selectCOPY(I);
   case TargetOpcode::G_CONSTANT:

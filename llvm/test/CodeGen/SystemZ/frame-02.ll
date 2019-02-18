@@ -37,22 +37,22 @@ define void @f1(float *%ptr) {
 ; CHECK: ld %f15, 160(%r15)
 ; CHECK: aghi %r15, 224
 ; CHECK: br %r14
-  %l0 = load volatile float , float *%ptr
-  %l1 = load volatile float , float *%ptr
-  %l2 = load volatile float , float *%ptr
-  %l3 = load volatile float , float *%ptr
-  %l4 = load volatile float , float *%ptr
-  %l5 = load volatile float , float *%ptr
-  %l6 = load volatile float , float *%ptr
-  %l7 = load volatile float , float *%ptr
-  %l8 = load volatile float , float *%ptr
-  %l9 = load volatile float , float *%ptr
-  %l10 = load volatile float , float *%ptr
-  %l11 = load volatile float , float *%ptr
-  %l12 = load volatile float , float *%ptr
-  %l13 = load volatile float , float *%ptr
-  %l14 = load volatile float , float *%ptr
-  %l15 = load volatile float , float *%ptr
+  %l0 = load volatile float, float *%ptr
+  %l1 = load volatile float, float *%ptr
+  %l2 = load volatile float, float *%ptr
+  %l3 = load volatile float, float *%ptr
+  %l4 = load volatile float, float *%ptr
+  %l5 = load volatile float, float *%ptr
+  %l6 = load volatile float, float *%ptr
+  %l7 = load volatile float, float *%ptr
+  %l8 = load volatile float, float *%ptr
+  %l9 = load volatile float, float *%ptr
+  %l10 = load volatile float, float *%ptr
+  %l11 = load volatile float, float *%ptr
+  %l12 = load volatile float, float *%ptr
+  %l13 = load volatile float, float *%ptr
+  %l14 = load volatile float, float *%ptr
+  %l15 = load volatile float, float *%ptr
   %add0 = fadd float %l0, %l0
   %add1 = fadd float %l1, %add0
   %add2 = fadd float %l2, %add1
@@ -119,21 +119,21 @@ define void @f2(float *%ptr) {
 ; CHECK: ld %f14, 160(%r15)
 ; CHECK: aghi %r15, 216
 ; CHECK: br %r14
-  %l0 = load volatile float , float *%ptr
-  %l1 = load volatile float , float *%ptr
-  %l2 = load volatile float , float *%ptr
-  %l3 = load volatile float , float *%ptr
-  %l4 = load volatile float , float *%ptr
-  %l5 = load volatile float , float *%ptr
-  %l6 = load volatile float , float *%ptr
-  %l7 = load volatile float , float *%ptr
-  %l8 = load volatile float , float *%ptr
-  %l9 = load volatile float , float *%ptr
-  %l10 = load volatile float , float *%ptr
-  %l11 = load volatile float , float *%ptr
-  %l12 = load volatile float , float *%ptr
-  %l13 = load volatile float , float *%ptr
-  %l14 = load volatile float , float *%ptr
+  %l0 = load volatile float, float *%ptr
+  %l1 = load volatile float, float *%ptr
+  %l2 = load volatile float, float *%ptr
+  %l3 = load volatile float, float *%ptr
+  %l4 = load volatile float, float *%ptr
+  %l5 = load volatile float, float *%ptr
+  %l6 = load volatile float, float *%ptr
+  %l7 = load volatile float, float *%ptr
+  %l8 = load volatile float, float *%ptr
+  %l9 = load volatile float, float *%ptr
+  %l10 = load volatile float, float *%ptr
+  %l11 = load volatile float, float *%ptr
+  %l12 = load volatile float, float *%ptr
+  %l13 = load volatile float, float *%ptr
+  %l14 = load volatile float, float *%ptr
   %add0 = fadd float %l0, %l0
   %add1 = fadd float %l1, %add0
   %add2 = fadd float %l2, %add1
@@ -185,15 +185,15 @@ define void @f3(float *%ptr) {
 ; CHECK: ld %f8, 160(%r15)
 ; CHECK: aghi %r15, 168
 ; CHECK: br %r14
-  %l0 = load volatile float , float *%ptr
-  %l1 = load volatile float , float *%ptr
-  %l2 = load volatile float , float *%ptr
-  %l3 = load volatile float , float *%ptr
-  %l4 = load volatile float , float *%ptr
-  %l5 = load volatile float , float *%ptr
-  %l6 = load volatile float , float *%ptr
-  %l7 = load volatile float , float *%ptr
-  %l8 = load volatile float , float *%ptr
+  %l0 = load volatile float, float *%ptr
+  %l1 = load volatile float, float *%ptr
+  %l2 = load volatile float, float *%ptr
+  %l3 = load volatile float, float *%ptr
+  %l4 = load volatile float, float *%ptr
+  %l5 = load volatile float, float *%ptr
+  %l6 = load volatile float, float *%ptr
+  %l7 = load volatile float, float *%ptr
+  %l8 = load volatile float, float *%ptr
   %add0 = fadd float %l0, %l0
   %add1 = fadd float %l1, %add0
   %add2 = fadd float %l2, %add1
@@ -229,14 +229,14 @@ define void @f4(float *%ptr) {
 ; CHECK-NOT: %f14
 ; CHECK-NOT: %f15
 ; CHECK: br %r14
-  %l0 = load volatile float , float *%ptr
-  %l1 = load volatile float , float *%ptr
-  %l2 = load volatile float , float *%ptr
-  %l3 = load volatile float , float *%ptr
-  %l4 = load volatile float , float *%ptr
-  %l5 = load volatile float , float *%ptr
-  %l6 = load volatile float , float *%ptr
-  %l7 = load volatile float , float *%ptr
+  %l0 = load volatile float, float *%ptr
+  %l1 = load volatile float, float *%ptr
+  %l2 = load volatile float, float *%ptr
+  %l3 = load volatile float, float *%ptr
+  %l4 = load volatile float, float *%ptr
+  %l5 = load volatile float, float *%ptr
+  %l6 = load volatile float, float *%ptr
+  %l7 = load volatile float, float *%ptr
   %add0 = fadd float %l0, %l0
   %add1 = fadd float %l1, %add0
   %add2 = fadd float %l2, %add1

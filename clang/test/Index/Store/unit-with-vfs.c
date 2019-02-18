@@ -7,6 +7,4 @@
 // RUN: %clang_cc1 %s -index-store-path %t.idx -I %t -ivfsoverlay %t.yaml
 // RUN: c-index-test core -print-unit %t.idx | FileCheck %s
 
-// XFAIL: linux
-
 // CHECK: Record | user | {{.*}}test/Index/Store/Inputs/using-overlay.h

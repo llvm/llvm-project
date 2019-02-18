@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfStreamer.h"
+#include "CompileUnit.h"
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "llvm/ADT/Triple.h"
@@ -123,11 +124,11 @@ bool DwarfStreamer::init(Triple TheTriple) {
   return true;
 }
 
-bool DwarfStreamer::finish(const DebugMap &DM) {
+bool DwarfStreamer::finish(const DebugMap &DM, SymbolMapTranslator &T) {
   bool Result = true;
   if (DM.getTriple().isOSDarwin() && !DM.getBinaryPath().empty() &&
       Options.FileType == OutputFileType::Object)
-    Result = MachOUtils::generateDsymCompanion(DM, *MS, OutFile);
+    Result = MachOUtils::generateDsymCompanion(DM, T, *MS, OutFile);
   else
     MS->Finish();
   return Result;
@@ -165,6 +166,9 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit) {
   // start of the section.
   Asm->emitInt32(0);
   Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
+
+  // Remember this CU.
+  EmittedUnits.push_back({Unit.getUniqueID(), Unit.getLabelBegin()});
 }
 
 /// Emit the \p Abbrevs array as the shared abbreviation table
@@ -186,15 +190,36 @@ void DwarfStreamer::emitDIE(DIE &Die) {
 /// Emit the debug_str section stored in \p Pool.
 void DwarfStreamer::emitStrings(const NonRelocatableStringpool &Pool) {
   Asm->OutStreamer->SwitchSection(MOFI->getDwarfStrSection());
-  std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntries();
+  std::vector<DwarfStringPoolEntryRef> Entries = Pool.getEntriesForEmission();
   for (auto Entry : Entries) {
-    if (Entry.getIndex() == -1U)
-      break;
     // Emit the string itself.
     Asm->OutStreamer->EmitBytes(Entry.getString());
     // Emit a null terminator.
     Asm->emitInt8(0);
   }
+}
+
+void DwarfStreamer::emitDebugNames(
+    AccelTable<DWARF5AccelTableStaticData> &Table) {
+  if (EmittedUnits.empty())
+    return;
+
+  // Build up data structures needed to emit this section.
+  std::vector<MCSymbol *> CompUnits;
+  DenseMap<unsigned, size_t> UniqueIdToCuMap;
+  unsigned Id = 0;
+  for (auto &CU : EmittedUnits) {
+    CompUnits.push_back(CU.LabelBegin);
+    // We might be omitting CUs, so we need to remap them.
+    UniqueIdToCuMap[CU.ID] = Id++;
+  }
+
+  Asm->OutStreamer->SwitchSection(MOFI->getDwarfDebugNamesSection());
+  emitDWARF5AccelTable(
+      Asm.get(), Table, CompUnits,
+      [&UniqueIdToCuMap](const DWARF5AccelTableStaticData &Entry) {
+        return UniqueIdToCuMap[Entry.getCUIndex()];
+      });
 }
 
 void DwarfStreamer::emitAppleNamespaces(
@@ -295,7 +320,7 @@ void DwarfStreamer::emitUnitRangesEntries(CompileUnit &Unit,
 
   // The object addresses where sorted, but again, the linked
   // addresses might end up in a different order.
-  llvm::sort(Ranges.begin(), Ranges.end());
+  llvm::sort(Ranges);
 
   if (!Ranges.empty()) {
     MS->SwitchSection(MC->getObjectFileInfo()->getDwarfARangesSection());
@@ -552,6 +577,89 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
   MS->EmitLabel(LineEndSym);
 }
 
+/// Copy the debug_line over to the updated binary while unobfuscating the file
+/// names and directories.
+void DwarfStreamer::translateLineTable(DataExtractor Data, uint32_t Offset,
+                                       LinkOptions &Options) {
+  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
+  StringRef Contents = Data.getData();
+
+  // We have to deconstruct the line table header, because it contains to
+  // length fields that will need to be updated when we change the length of
+  // the files and directories in there.
+  unsigned UnitLength = Data.getU32(&Offset);
+  unsigned UnitEnd = Offset + UnitLength;
+  MCSymbol *BeginLabel = MC->createTempSymbol();
+  MCSymbol *EndLabel = MC->createTempSymbol();
+  unsigned Version = Data.getU16(&Offset);
+
+  if (Version > 5) {
+    warn("Unsupported line table version: dropping contents and not "
+         "unobfsucating line table.");
+    return;
+  }
+
+  Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
+  Asm->OutStreamer->EmitLabel(BeginLabel);
+  Asm->emitInt16(Version);
+  LineSectionSize += 6;
+
+  MCSymbol *HeaderBeginLabel = MC->createTempSymbol();
+  MCSymbol *HeaderEndLabel = MC->createTempSymbol();
+  Asm->EmitLabelDifference(HeaderEndLabel, HeaderBeginLabel, 4);
+  Asm->OutStreamer->EmitLabel(HeaderBeginLabel);
+  Offset += 4;
+  LineSectionSize += 4;
+
+  uint32_t AfterHeaderLengthOffset = Offset;
+  // Skip to the directories.
+  Offset += (Version >= 4) ? 5 : 4;
+  unsigned OpcodeBase = Data.getU8(&Offset);
+  Offset += OpcodeBase - 1;
+  Asm->OutStreamer->EmitBytes(Contents.slice(AfterHeaderLengthOffset, Offset));
+  LineSectionSize += Offset - AfterHeaderLengthOffset;
+
+  // Offset points to the first directory.
+  while (const char *Dir = Data.getCStr(&Offset)) {
+    if (Dir[0] == 0)
+      break;
+
+    StringRef Translated = Options.Translator(Dir);
+    Asm->OutStreamer->EmitBytes(Translated);
+    Asm->emitInt8(0);
+    LineSectionSize += Translated.size() + 1;
+  }
+  Asm->emitInt8(0);
+  LineSectionSize += 1;
+
+  while (const char *File = Data.getCStr(&Offset)) {
+    if (File[0] == 0)
+      break;
+
+    StringRef Translated = Options.Translator(File);
+    Asm->OutStreamer->EmitBytes(Translated);
+    Asm->emitInt8(0);
+    LineSectionSize += Translated.size() + 1;
+
+    uint32_t OffsetBeforeLEBs = Offset;
+    Asm->EmitULEB128(Data.getULEB128(&Offset));
+    Asm->EmitULEB128(Data.getULEB128(&Offset));
+    Asm->EmitULEB128(Data.getULEB128(&Offset));
+    LineSectionSize += Offset - OffsetBeforeLEBs;
+  }
+  Asm->emitInt8(0);
+  LineSectionSize += 1;
+
+  Asm->OutStreamer->EmitLabel(HeaderEndLabel);
+
+  // Copy the actual line table program over.
+  Asm->OutStreamer->EmitBytes(Contents.slice(Offset, UnitEnd));
+  LineSectionSize += UnitEnd - Offset;
+
+  Asm->OutStreamer->EmitLabel(EndLabel);
+  Offset = UnitEnd;
+}
+
 static void emitSectionContents(const object::ObjectFile &Obj,
                                 StringRef SecName, MCStreamer *MS) {
   StringRef Contents;
@@ -561,8 +669,10 @@ static void emitSectionContents(const object::ObjectFile &Obj,
 }
 
 void DwarfStreamer::copyInvariantDebugSection(const object::ObjectFile &Obj) {
-  MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
-  emitSectionContents(Obj, "debug_line", MS);
+  if (!Options.Translator) {
+    MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLineSection());
+    emitSectionContents(Obj, "debug_line", MS);
+  }
 
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfLocSection());
   emitSectionContents(Obj, "debug_loc", MS);

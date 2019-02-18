@@ -17,7 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -49,7 +49,6 @@ class DynamicTypeChecker : public Checker<check::PostStmt<ImplicitCastExpr>> {
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
-                                                   const ExplodedNode *PrevN,
                                                    BugReporterContext &BRC,
                                                    BugReport &BR) override;
 
@@ -92,11 +91,10 @@ void DynamicTypeChecker::reportTypeError(QualType DynamicType,
 
 std::shared_ptr<PathDiagnosticPiece>
 DynamicTypeChecker::DynamicTypeBugVisitor::VisitNode(const ExplodedNode *N,
-                                                     const ExplodedNode *PrevN,
                                                      BugReporterContext &BRC,
-                                                     BugReport &BR) {
+                                                     BugReport &) {
   ProgramStateRef State = N->getState();
-  ProgramStateRef StatePrev = PrevN->getState();
+  ProgramStateRef StatePrev = N->getFirstPred()->getState();
 
   DynamicTypeInfo TrackedType = getDynamicTypeInfo(State, Reg);
   DynamicTypeInfo TrackedTypePrev = getDynamicTypeInfo(StatePrev, Reg);
@@ -207,4 +205,8 @@ void DynamicTypeChecker::checkPostStmt(const ImplicitCastExpr *CE,
 
 void ento::registerDynamicTypeChecker(CheckerManager &mgr) {
   mgr.registerChecker<DynamicTypeChecker>();
+}
+
+bool ento::shouldRegisterDynamicTypeChecker(const LangOptions &LO) {
+  return true;
 }

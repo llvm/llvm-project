@@ -98,14 +98,14 @@ public:
   bool isFunctionEntryCold(const Function *F);
   /// Returns true if \p F contains only cold code.
   bool isFunctionColdInCallGraph(const Function *F, BlockFrequencyInfo &BFI);
-  /// Returns true if \p F is a hot function.
+  /// Returns true if count \p C is considered hot.
   bool isHotCount(uint64_t C);
   /// Returns true if count \p C is considered cold.
   bool isColdCount(uint64_t C);
-  /// Returns true if BasicBlock \p B is considered hot.
-  bool isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI);
-  /// Returns true if BasicBlock \p B is considered cold.
-  bool isColdBB(const BasicBlock *B, BlockFrequencyInfo *BFI);
+  /// Returns true if BasicBlock \p BB is considered hot.
+  bool isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI);
+  /// Returns true if BasicBlock \p BB is considered cold.
+  bool isColdBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI);
   /// Returns true if CallSite \p CS is considered hot.
   bool isHotCallSite(const CallSite &CS, BlockFrequencyInfo *BFI);
   /// Returns true if Callsite \p CS is considered cold.
@@ -134,9 +134,8 @@ public:
   static char ID;
   ProfileSummaryInfoWrapperPass();
 
-  ProfileSummaryInfo *getPSI() {
-    return &*PSI;
-  }
+  ProfileSummaryInfo &getPSI() { return *PSI; }
+  const ProfileSummaryInfo &getPSI() const { return *PSI; }
 
   bool doInitialization(Module &M) override;
   bool doFinalization(Module &M) override;

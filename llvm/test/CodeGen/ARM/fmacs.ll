@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a8 %s -o - | FileCheck %s -check-prefix=A8
 ; RUN: llc -mtriple=arm-eabi -mcpu=cortex-a9 %s -o - | FileCheck %s -check-prefix=A9
 ; RUN: llc -mtriple=arm-linux-gnueabi -mcpu=cortex-a9 -float-abi=hard %s -o - | FileCheck %s -check-prefix=HARD
+; RUN: llc -mtriple=arm-linux-gnueabi -mcpu=cortex-m4 -float-abi=hard %s -o - | FileCheck %s -check-prefix=VMLA
+; RUN: llc -mtriple=arm-linux-gnueabi -mcpu=cortex-m33 -float-abi=hard %s -o - | FileCheck %s -check-prefix=VMLA
 
 define float @t1(float %acc, float %a, float %b) {
 entry:
@@ -15,6 +17,22 @@ entry:
 ; A8-LABEL: t1:
 ; A8: vmul.f32
 ; A8: vadd.f32
+
+; VMLA-LABEL: t1:
+; VMLA:       vmul.f32
+; VMLA-NEXT:  vadd.f32
+
+  %0 = fmul float %a, %b
+  %1 = fadd float %acc, %0
+	ret float %1
+}
+
+define float @vmla_minsize(float %acc, float %a, float %b) #0 {
+entry:
+; VMLA-LABEL: vmla_minsize:
+; VMLA:       vmla.f32  s0, s1, s2
+; VMLA-NEXT:  bx  lr
+
   %0 = fmul float %a, %b
   %1 = fadd float %acc, %0
 	ret float %1
@@ -102,3 +120,5 @@ entry:
   %3 = fadd float %1, %2
   ret float %3
 }
+
+attributes #0 = { minsize nounwind optsize }

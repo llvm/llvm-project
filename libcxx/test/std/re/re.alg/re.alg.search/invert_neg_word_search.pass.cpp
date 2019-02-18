@@ -18,7 +18,7 @@
 
 #include <regex>
 #include <cassert>
-#include "test_macros.h"
+
 
 // PR34310
 int main()

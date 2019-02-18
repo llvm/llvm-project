@@ -103,7 +103,7 @@ public:
 
   explicit MigrationContext(MigrationPass &pass) : Pass(pass) {}
   ~MigrationContext();
-  
+
   typedef std::vector<ASTTraverser *>::iterator traverser_iterator;
   traverser_iterator traversers_begin() { return Traversers.begin(); }
   traverser_iterator traversers_end() { return Traversers.end(); }

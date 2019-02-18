@@ -78,8 +78,9 @@ end:
 define i8 @foo8(i1 zeroext %i) #0 {
 ; CHECK-LABEL: foo8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orb $-2, %dil
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orb $-2, %al
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   br label %bb
 

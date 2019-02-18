@@ -7,7 +7,10 @@ add  %rsi, %rsi
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      2
 # CHECK-NEXT: Total Cycles:      10
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        2
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.20
 # CHECK-NEXT: IPC:               0.20
 # CHECK-NEXT: Block RThroughput: 1.0
 
@@ -29,9 +32,15 @@ add  %rsi, %rsi
 # CHECK-NEXT:  2,          1  (10.0%)
 
 # CHECK:      Scheduler's queue usage:
-# CHECK-NEXT: JALU01,  1/20
-# CHECK-NEXT: JFPU01,  1/18
-# CHECK-NEXT: JLSAGU,  1/12
+# CHECK-NEXT: [1] Resource name.
+# CHECK-NEXT: [2] Average number of used buffer entries.
+# CHECK-NEXT: [3] Maximum number of used buffer entries.
+# CHECK-NEXT: [4] Total number of buffer entries.
+
+# CHECK:       [1]            [2]        [3]        [4]
+# CHECK-NEXT: JALU01           0          1          20
+# CHECK-NEXT: JFPU01           0          1          18
+# CHECK-NEXT: JLSAGU           0          1          12
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0

@@ -112,7 +112,7 @@ protected:
   uint64_t OffsetInBits = 0;
   unsigned DwarfVersion;
 
-  /// Sometimes we need to add a DW_OP_bit_piece to describe a subregister. 
+  /// Sometimes we need to add a DW_OP_bit_piece to describe a subregister.
   unsigned SubRegisterSizeInBits = 0;
   unsigned SubRegisterOffsetInBits = 0;
 
@@ -137,6 +137,9 @@ protected:
 
   /// Emit a raw unsigned value.
   virtual void emitUnsigned(uint64_t Value) = 0;
+
+  /// Emit a normalized unsigned constant.
+  void emitConstu(uint64_t Value);
 
   /// Return whether the given machine register is the frame register in the
   /// current function.
@@ -187,7 +190,7 @@ protected:
   /// DW_OP_stack_value.  Unfortunately, DW_OP_stack_value was not available
   /// until DWARF 4, so we will continue to generate DW_OP_constu <const> for
   /// DWARF 2 and DWARF 3. Technically, this is incorrect since DW_OP_const
-  /// <const> actually describes a value at a constant addess, not a constant
+  /// <const> actually describes a value at a constant address, not a constant
   /// value.  However, in the past there was no better way to describe a
   /// constant value, so the producers and consumers started to rely on
   /// heuristics to disambiguate the value vs. location status of the

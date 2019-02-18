@@ -103,7 +103,7 @@ int main(int Argc, const char **Argv) {
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (InputArgs.hasArg(OPT_HELP)) {
-    T.PrintHelp(outs(), "cvtres", "Resource Converter", false);
+    T.PrintHelp(outs(), "llvm-cvtres [options] file...", "Resource Converter", false);
     return 0;
   }
 

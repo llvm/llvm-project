@@ -16,10 +16,8 @@
 define i32 @t0() {
 entry:
 ; CHECK-LABEL: t0:
-; CHECK: ldrb [[REG0:w[0-9]+]], [x[[BASEREG:[0-9]+]], #10]
-; CHECK: strb [[REG0]], [x[[BASEREG2:[0-9]+]], #10]
-; CHECK: ldrh [[REG1:w[0-9]+]], [x[[BASEREG]], #8]
-; CHECK: strh [[REG1]], [x[[BASEREG2]], #8]
+; CHECK: ldur [[REG0:w[0-9]+]], [x[[BASEREG:[0-9]+]], #7]
+; CHECK: stur [[REG0]], [x[[BASEREG2:[0-9]+]], #7]
 ; CHECK: ldr [[REG2:x[0-9]+]],
 ; CHECK: str [[REG2]],
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @dst, i32 0, i32 0), i8* align 8 getelementptr inbounds (%struct.x, %struct.x* @src, i32 0, i32 0), i32 11, i1 false)
@@ -74,9 +72,9 @@ entry:
 define void @t5(i8* nocapture %C) nounwind {
 entry:
 ; CHECK-LABEL: t5:
-; CHECK: strb wzr, [x0, #6]
-; CHECK: mov [[REG7:w[0-9]+]], #21587
-; CHECK: strh [[REG7]], [x0, #4]
+; CHECK: mov [[REG7:w[0-9]+]], #21337
+; CHECK: movk [[REG7]],
+; CHECK: stur [[REG7]], [x0, #3]
 ; CHECK: mov [[REG8:w[0-9]+]],
 ; CHECK: movk [[REG8]],
 ; CHECK: str [[REG8]], [x0]

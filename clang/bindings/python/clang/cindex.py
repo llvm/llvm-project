@@ -44,6 +44,7 @@ The major indexing objects are:
 Most object information is exposed using properties, when the underlying API
 call is efficient.
 """
+from __future__ import absolute_import, division, print_function
 
 # TODO
 # ====
@@ -67,6 +68,7 @@ import collections
 
 import clang.enumerations
 
+import os
 import sys
 if sys.version_info[0] == 3:
     # Python 3 strings are unicode, translate them to/from utf8 for C-interop.
@@ -108,8 +110,6 @@ if sys.version_info[0] == 3:
             return x
         return x.encode('utf8')
 
-    xrange = range
-
 elif sys.version_info[0] == 2:
     # Python 2 strings are utf8 byte strings, no translation is needed for
     # C-interop.
@@ -123,6 +123,14 @@ elif sys.version_info[0] == 2:
     def b(x):
         return x
 
+# We only support PathLike objects on Python version with os.fspath present
+# to be consistent with the Python standard library. On older Python versions
+# we only support strings and we have dummy fspath to just pass them through.
+try:
+    fspath = os.fspath
+except AttributeError:
+    def fspath(x):
+        return x
 
 # ctypes doesn't implicitly convert c_void_p to the appropriate wrapper
 # object. This is a problem, because it means that from_parameter will see an
@@ -391,7 +399,7 @@ class Diagnostic(object):
 
     @property
     def ranges(self):
-        class RangeIterator:
+        class RangeIterator(object):
             def __init__(self, diag):
                 self.diag = diag
 
@@ -407,7 +415,7 @@ class Diagnostic(object):
 
     @property
     def fixits(self):
-        class FixItIterator:
+        class FixItIterator(object):
             def __init__(self, diag):
                 self.diag = diag
 
@@ -427,7 +435,7 @@ class Diagnostic(object):
 
     @property
     def children(self):
-        class ChildDiagnosticsIterator:
+        class ChildDiagnosticsIterator(object):
             def __init__(self, diag):
                 self.diag_set = conf.lib.clang_getChildDiagnostics(diag)
 
@@ -547,7 +555,7 @@ class TokenGroup(object):
 
         token_group = TokenGroup(tu, tokens_memory, tokens_count)
 
-        for i in xrange(0, count):
+        for i in range(0, count):
             token = Token()
             token.int_data = tokens_array[i].int_data
             token.ptr_data = tokens_array[i].ptr_data
@@ -2254,6 +2262,12 @@ class Type(Structure):
 
         return res
 
+    def get_num_template_arguments(self):
+        return conf.lib.clang_Type_getNumTemplateArguments(self)
+
+    def get_template_argument_type(self, num):
+        return conf.lib.clang_Type_getTemplateArgumentAsType(self, num)
+
     def get_canonical(self):
         """
         Return the canonical type for a Type.
@@ -2460,8 +2474,8 @@ SpellingCache = {
             # 20: CompletionChunk.Kind("VerticalSpace")
 }
 
-class CompletionChunk:
-    class Kind:
+class CompletionChunk(object):
+    class Kind(object):
         def __init__(self, name):
             self.name = name
 
@@ -2548,7 +2562,7 @@ completionChunkKindMap = {
             20: CompletionChunk.Kind("VerticalSpace")}
 
 class CompletionString(ClangObject):
-    class Availability:
+    class Availability(object):
         def __init__(self, name):
             self.name = name
 
@@ -2641,7 +2655,7 @@ class CodeCompletionResults(ClangObject):
 
     @property
     def diagnostics(self):
-        class DiagnosticsItr:
+        class DiagnosticsItr(object):
             def __init__(self, ccr):
                 self.ccr= ccr
 
@@ -2746,11 +2760,11 @@ class TranslationUnit(ClangObject):
         etc. e.g. ["-Wall", "-I/path/to/include"].
 
         In-memory file content can be provided via unsaved_files. This is an
-        iterable of 2-tuples. The first element is the str filename. The
-        second element defines the content. Content can be provided as str
-        source code or as file objects (anything with a read() method). If
-        a file object is being used, content will be read until EOF and the
-        read cursor will not be reset to its original position.
+        iterable of 2-tuples. The first element is the filename (str or
+        PathLike). The second element defines the content. Content can be
+        provided as str source code or as file objects (anything with a read()
+        method). If a file object is being used, content will be read until EOF
+        and the read cursor will not be reset to its original position.
 
         options is a bitwise or of TranslationUnit.PARSE_XXX flags which will
         control parsing behavior.
@@ -2795,11 +2809,13 @@ class TranslationUnit(ClangObject):
                 if hasattr(contents, "read"):
                     contents = contents.read()
 
-                unsaved_array[i].name = b(name)
+                unsaved_array[i].name = b(fspath(name))
                 unsaved_array[i].contents = b(contents)
                 unsaved_array[i].length = len(contents)
 
-        ptr = conf.lib.clang_parseTranslationUnit(index, filename, args_array,
+        ptr = conf.lib.clang_parseTranslationUnit(index,
+                                    fspath(filename) if filename is not None else None,
+                                    args_array,
                                     len(args), unsaved_array,
                                     len(unsaved_files), options)
 
@@ -2820,11 +2836,13 @@ class TranslationUnit(ClangObject):
 
         index is optional and is the Index instance to use. If not provided,
         a default Index will be created.
+
+        filename can be str or PathLike.
         """
         if index is None:
             index = Index.create()
 
-        ptr = conf.lib.clang_createTranslationUnit(index, filename)
+        ptr = conf.lib.clang_createTranslationUnit(index, fspath(filename))
         if not ptr:
             raise TranslationUnitLoadError(filename)
 
@@ -2939,7 +2957,7 @@ class TranslationUnit(ClangObject):
         """
         Return an iterable (and indexable) object containing the diagnostics.
         """
-        class DiagIterator:
+        class DiagIterator(object):
             def __init__(self, tu):
                 self.tu = tu
 
@@ -2977,7 +2995,7 @@ class TranslationUnit(ClangObject):
                     print(value)
                 if not isinstance(value, str):
                     raise TypeError('Unexpected unsaved file contents.')
-                unsaved_files_array[i].name = name
+                unsaved_files_array[i].name = fspath(name)
                 unsaved_files_array[i].contents = value
                 unsaved_files_array[i].length = len(value)
         ptr = conf.lib.clang_reparseTranslationUnit(self, len(unsaved_files),
@@ -2996,10 +3014,10 @@ class TranslationUnit(ClangObject):
         case, the reason(s) why should be available via
         TranslationUnit.diagnostics().
 
-        filename -- The path to save the translation unit to.
+        filename -- The path to save the translation unit to (str or PathLike).
         """
         options = conf.lib.clang_defaultSaveOptions(self)
-        result = int(conf.lib.clang_saveTranslationUnit(self, filename,
+        result = int(conf.lib.clang_saveTranslationUnit(self, fspath(filename),
                                                         options))
         if result != 0:
             raise TranslationUnitSaveError(result,
@@ -3041,10 +3059,10 @@ class TranslationUnit(ClangObject):
                     print(value)
                 if not isinstance(value, str):
                     raise TypeError('Unexpected unsaved file contents.')
-                unsaved_files_array[i].name = b(name)
+                unsaved_files_array[i].name = b(fspath(name))
                 unsaved_files_array[i].contents = b(value)
                 unsaved_files_array[i].length = len(value)
-        ptr = conf.lib.clang_codeCompleteAt(self, path, line, column,
+        ptr = conf.lib.clang_codeCompleteAt(self, fspath(path), line, column,
                 unsaved_files_array, len(unsaved_files), options)
         if ptr:
             return CodeCompletionResults(ptr)
@@ -3072,7 +3090,7 @@ class File(ClangObject):
     @staticmethod
     def from_name(translation_unit, file_name):
         """Retrieve a file handle within the given translation unit."""
-        return File(conf.lib.clang_getFile(translation_unit, file_name))
+        return File(conf.lib.clang_getFile(translation_unit, fspath(file_name)))
 
     @property
     def name(self):
@@ -3171,7 +3189,7 @@ class CompileCommand(object):
         Invariant : the first argument is the compiler executable
         """
         length = conf.lib.clang_CompileCommand_getNumArgs(self.cmd)
-        for i in xrange(length):
+        for i in range(length):
             yield conf.lib.clang_CompileCommand_getArg(self.cmd, i)
 
 class CompileCommands(object):
@@ -3223,7 +3241,7 @@ class CompilationDatabase(ClangObject):
         """Builds a CompilationDatabase from the database found in buildDir"""
         errorCode = c_uint()
         try:
-            cdb = conf.lib.clang_CompilationDatabase_fromDirectory(buildDir,
+            cdb = conf.lib.clang_CompilationDatabase_fromDirectory(fspath(buildDir),
                 byref(errorCode))
         except CompilationDatabaseError as e:
             raise CompilationDatabaseError(int(errorCode.value),
@@ -3236,7 +3254,7 @@ class CompilationDatabase(ClangObject):
         build filename. Returns None if filename is not found in the database.
         """
         return conf.lib.clang_CompilationDatabase_getCompileCommands(self,
-                                                                     filename)
+                                                                     fspath(filename))
 
     def getAllCompileCommands(self):
         """
@@ -3999,6 +4017,15 @@ functionList = [
    Type,
    Type.from_result),
 
+  ("clang_Type_getNumTemplateArguments",
+   [Type],
+   c_int),
+
+  ("clang_Type_getTemplateArgumentAsType",
+   [Type, c_uint],
+   Type,
+   Type.from_result),
+
   ("clang_Type_getOffsetOf",
    [Type, c_interop_string],
    c_longlong),
@@ -4062,7 +4089,7 @@ def register_functions(lib, ignore_errors):
     for f in functionList:
         register(f)
 
-class Config:
+class Config(object):
     library_path = None
     library_file = None
     compatibility_check = True
@@ -4075,7 +4102,7 @@ class Config:
             raise Exception("library path must be set before before using " \
                             "any other functionalities in libclang.")
 
-        Config.library_path = path
+        Config.library_path = fspath(path)
 
     @staticmethod
     def set_library_file(filename):
@@ -4084,7 +4111,7 @@ class Config:
             raise Exception("library file must be set before before using " \
                             "any other functionalities in libclang.")
 
-        Config.library_file = filename
+        Config.library_file = fspath(filename)
 
     @staticmethod
     def set_compatibility_check(check_status):

@@ -307,6 +307,9 @@ static int getSymbolNameOffset(CVSymbol Sym) {
   // See BPRelativeSym
   case SymbolKind::S_BPREL32:
     return 8;
+  // See UsingNamespaceSym
+  case SymbolKind::S_UNAMESPACE:
+    return 0;
   default:
     return -1;
   }

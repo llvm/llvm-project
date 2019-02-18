@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 
 """Check CFC - Check Compile Flow Consistency
 
@@ -47,7 +47,7 @@ To add a new check:
  subclass.
 """
 
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import imp
 import os
@@ -56,7 +56,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
-import ConfigParser
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 import io
 
 import obj_diff
@@ -95,8 +98,8 @@ def remove_dir_from_path(path_var, directory):
     PATH"""
     pathlist = path_var.split(os.pathsep)
     norm_directory = os.path.normpath(os.path.normcase(directory))
-    pathlist = filter(lambda x: os.path.normpath(
-        os.path.normcase(x)) != norm_directory, pathlist)
+    pathlist = [x for x in pathlist if os.path.normpath(
+        os.path.normcase(x)) != norm_directory]
     return os.pathsep.join(pathlist)
 
 def path_without_wrapper():
@@ -318,7 +321,7 @@ if __name__ == '__main__':
     for c in checks:
         default_config += "{} = false\n".format(c)
 
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.readfp(io.BytesIO(default_config))
     scriptdir = get_main_dir()
     config_path = os.path.join(scriptdir, 'check_cfc.cfg')

@@ -10,10 +10,12 @@
 #include "MinGW.h"
 #include "InputInfo.h"
 #include "CommonArgs.h"
+#include "clang/Config/config.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
+#include "clang/Driver/SanitizerArgs.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -52,7 +54,7 @@ void tools::MinGW::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_gsplit_dwarf))
     SplitDebugInfo(getToolChain(), C, *this, JA, Args, Output,
-                   SplitDebugName(Args, Inputs[0]));
+                   SplitDebugName(Args, Output));
 }
 
 void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
@@ -95,7 +97,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                         const char *LinkingOutput) const {
   const ToolChain &TC = getToolChain();
   const Driver &D = TC.getDriver();
-  // const SanitizerArgs &Sanitize = TC.getSanitizerArgs();
+  const SanitizerArgs &Sanitize = TC.getSanitizerArgs();
 
   ArgStringList CmdArgs;
 
@@ -187,8 +189,6 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   TC.AddFilePathLibArgs(Args, CmdArgs);
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
-  // TODO: Add ASan stuff here
-
   // TODO: Add profile stuff here
 
   if (TC.ShouldLinkCXXStdlib(Args)) {
@@ -220,8 +220,24 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lssp_nonshared");
         CmdArgs.push_back("-lssp");
       }
-      if (Args.hasArg(options::OPT_fopenmp))
-        CmdArgs.push_back("-lgomp");
+
+      if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
+                       options::OPT_fno_openmp, false)) {
+        switch (TC.getDriver().getOpenMPRuntime(Args)) {
+        case Driver::OMPRT_OMP:
+          CmdArgs.push_back("-lomp");
+          break;
+        case Driver::OMPRT_IOMP5:
+          CmdArgs.push_back("-liomp5md");
+          break;
+        case Driver::OMPRT_GOMP:
+          CmdArgs.push_back("-lgomp");
+          break;
+        case Driver::OMPRT_Unknown:
+          // Already diagnosed.
+          break;
+        }
+      }
 
       AddLibGCC(Args, CmdArgs);
 
@@ -230,6 +246,24 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasArg(options::OPT_pthread))
         CmdArgs.push_back("-lpthread");
+
+      if (Sanitize.needsAsanRt()) {
+        // MinGW always links against a shared MSVCRT.
+        CmdArgs.push_back(
+            TC.getCompilerRTArgString(Args, "asan_dynamic", true));
+        CmdArgs.push_back(
+            TC.getCompilerRTArgString(Args, "asan_dynamic_runtime_thunk"));
+        CmdArgs.push_back(Args.MakeArgString("--require-defined"));
+        CmdArgs.push_back(Args.MakeArgString(TC.getArch() == llvm::Triple::x86
+                                                 ? "___asan_seh_interceptor"
+                                                 : "__asan_seh_interceptor"));
+        // Make sure the linker consider all object files from the dynamic
+        // runtime thunk.
+        CmdArgs.push_back(Args.MakeArgString("--whole-archive"));
+        CmdArgs.push_back(Args.MakeArgString(
+            TC.getCompilerRT(Args, "asan_dynamic_runtime_thunk")));
+        CmdArgs.push_back(Args.MakeArgString("--no-whole-archive"));
+      }
 
       if (!HasWindowsApp) {
         // Add system libraries. If linking to libwindowsapp.a, that import
@@ -359,6 +393,10 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
   getFilePaths().push_back(Base + "lib");
   // openSUSE
   getFilePaths().push_back(Base + Arch + "/sys-root/mingw/lib");
+
+  NativeLLVMSupport =
+      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
+          .equals_lower("lld");
 }
 
 bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
@@ -386,7 +424,17 @@ Tool *toolchains::MinGW::buildLinker() const {
   return new tools::MinGW::Linker(*this);
 }
 
+bool toolchains::MinGW::HasNativeLLVMSupport() const {
+  return NativeLLVMSupport;
+}
+
 bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {
+  Arg *ExceptionArg = Args.getLastArg(options::OPT_fsjlj_exceptions,
+                                      options::OPT_fseh_exceptions,
+                                      options::OPT_fdwarf_exceptions);
+  if (ExceptionArg &&
+      ExceptionArg->getOption().matches(options::OPT_fseh_exceptions))
+    return true;
   return getArch() == llvm::Triple::x86_64;
 }
 
@@ -405,6 +453,12 @@ toolchains::MinGW::GetExceptionModel(const ArgList &Args) const {
   if (getArch() == llvm::Triple::x86_64)
     return llvm::ExceptionHandling::WinEH;
   return llvm::ExceptionHandling::DwarfCFI;
+}
+
+SanitizerMask toolchains::MinGW::getSupportedSanitizers() const {
+  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+  Res |= SanitizerKind::Address;
+  return Res;
 }
 
 void toolchains::MinGW::AddCudaIncludeArgs(const ArgList &DriverArgs,

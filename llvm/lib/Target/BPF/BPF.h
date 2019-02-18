@@ -19,9 +19,11 @@ class BPFTargetMachine;
 FunctionPass *createBPFISelDag(BPFTargetMachine &TM);
 FunctionPass *createBPFMIPeepholePass();
 FunctionPass *createBPFMIPreEmitPeepholePass();
+FunctionPass *createBPFMIPreEmitCheckingPass();
 
 void initializeBPFMIPeepholePass(PassRegistry&);
 void initializeBPFMIPreEmitPeepholePass(PassRegistry&);
+void initializeBPFMIPreEmitCheckingPass(PassRegistry&);
 }
 
 #endif

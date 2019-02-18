@@ -41,7 +41,7 @@ define void @foo() local_unnamed_addr {
 ; X86-NEXT:    movl %ebx, %edi
 ; X86-NEXT:    subl %esi, %edi
 ; X86-NEXT:    imull %edi, %ecx
-; X86-NEXT:    addl $-1437483407, %ecx # imm = 0xAA51BE71
+; X86-NEXT:    addb $113, %cl
 ; X86-NEXT:    movl $9, %esi
 ; X86-NEXT:    xorl %ebp, %ebp
 ; X86-NEXT:    shldl %cl, %esi, %ebp
@@ -80,7 +80,7 @@ define void @foo() local_unnamed_addr {
 ; X64-NEXT:    movl %edi, %esi
 ; X64-NEXT:    subl %r8d, %esi
 ; X64-NEXT:    imull %esi, %ecx
-; X64-NEXT:    addl $-1437483407, %ecx # imm = 0xAA51BE71
+; X64-NEXT:    addb $113, %cl
 ; X64-NEXT:    movl $9, %edx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    shlq %cl, %rdx

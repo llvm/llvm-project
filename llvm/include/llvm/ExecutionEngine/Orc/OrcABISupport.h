@@ -238,7 +238,78 @@ public:
                                       unsigned MinStubs, void *InitialPtrVal);
 };
 
-} // end namespace orc
-} // end namespace llvm
+// @brief Mips32 support.
+//
+// Mips32 supports lazy JITing.
+class OrcMips32_Base {
+public:
+  static const unsigned PointerSize = 4;
+  static const unsigned TrampolineSize = 20;
+  static const unsigned ResolverCodeSize = 0xf8;
+  using IndirectStubsInfo = GenericIndirectStubsInfo<16>;
 
+  using JITReentryFn = JITTargetAddress (*)(void *CallbackMgr,
+                                            void *TrampolineId);
+  /// @brief Write the requsted number of trampolines into the given memory,
+  ///        which must be big enough to hold 1 pointer, plus NumTrampolines
+  ///        trampolines.
+  static void writeTrampolines(uint8_t *TrampolineMem, void *ResolverAddr,unsigned NumTrampolines);
+
+  /// @brief Write the resolver code into the given memory. The user is be
+  ///        responsible for allocating the memory and setting permissions.
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,void *CallbackMgr, bool isBigEndian);
+  /// @brief Emit at least MinStubs worth of indirect call stubs, rounded out to
+  ///        the nearest page size.
+  ///
+  ///   E.g. Asking for 4 stubs on Mips32, where stubs are 8-bytes, with 4k
+  /// pages will return a block of 512 stubs (4096 / 8 = 512). Asking for 513
+  /// will return a block of 1024 (2-pages worth).
+  static Error emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,unsigned MinStubs, void *InitialPtrVal);
+};
+
+
+class OrcMips32Le : public OrcMips32_Base {
+public:
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,void *CallbackMgr)
+  { OrcMips32_Base::writeResolverCode(ResolveMem, Reentry, CallbackMgr, false); }
+};
+
+class OrcMips32Be : public OrcMips32_Base {
+public:
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,void *CallbackMgr)
+  { OrcMips32_Base::writeResolverCode(ResolveMem, Reentry, CallbackMgr, true); }
+};
+
+// @brief Mips64 support.
+//
+// Mips64 supports lazy JITing.
+class OrcMips64 {
+public:
+  static const unsigned PointerSize = 8;
+  static const unsigned TrampolineSize = 40;
+  static const unsigned ResolverCodeSize = 0x11C;
+
+  using IndirectStubsInfo = GenericIndirectStubsInfo<32>;
+  using JITReentryFn = JITTargetAddress (*)(void *CallbackMgr,
+                                            void *TrampolineId);
+  /// @brief Write the resolver code into the given memory. The user is be
+  ///        responsible for allocating the memory and setting permissions.
+  static void writeResolverCode(uint8_t *ResolveMem, JITReentryFn Reentry,void *CallbackMgr);
+
+  /// @brief Write the requsted number of trampolines into the given memory,
+  ///        which must be big enough to hold 1 pointer, plus NumTrampolines
+  ///        trampolines.
+  static void writeTrampolines(uint8_t *TrampolineMem, void *ResolverAddr,unsigned NumTrampolines);
+
+  /// @brief Emit at least MinStubs worth of indirect call stubs, rounded out to
+  ///        the nearest page size.
+  ///
+  ///   E.g. Asking for 4 stubs on Mips64, where stubs are 8-bytes, with 4k
+  /// pages will return a block of 512 stubs (4096 / 8 = 512). Asking for 513
+  /// will return a block of 1024 (2-pages worth).
+  static Error emitIndirectStubsBlock(IndirectStubsInfo &StubsInfo,unsigned MinStubs, void *InitialPtrVal);
+};
+
+ } // end namespace orc
+ } // end namespace llvm
 #endif // LLVM_EXECUTIONENGINE_ORC_ORCABISUPPORT_H

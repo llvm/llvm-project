@@ -94,10 +94,8 @@ define <4 x i32> @undef_splatmask4(<4 x i32> %v, <4 x i32>* %p) nounwind {
 define <4 x i32> @undef_splatmask5(<4 x i32> %v, <4 x i32>* %p) nounwind {
 ; AVX2-LABEL: undef_splatmask5:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm1
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa %xmm0, (%rdi)
-; AVX2-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX2-NEXT:    vbroadcastss %xmm0, %xmm0
+; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX2-NEXT:    retq
   %res = shufflevector <4 x i32> %v, <4 x i32> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 undef>
   %res1 = shufflevector <4 x i32> %res, <4 x i32> undef, <4 x i32> <i32 0, i32 2, i32 undef, i32 3>

@@ -2,8 +2,6 @@
 // RUN: %clang -arch x86_64 -mmacosx-version-min=10.7 -c %s -o %t.o -index-store-path %t.idx -fmodules -fmodules-cache-path=%t.mcp -Xclang -fdisable-module-hash -I %S/Inputs/module
 // RUN: c-index-test core -print-unit %t.idx | FileCheck %s
 
-// XFAIL: linux
-
 @import ModDep;
 @import ModSystem;
 
@@ -41,7 +39,7 @@
 // CHECK: DEPEND START
 // CHECK: Record | user | ModTop | {{.*}}/Inputs/module/ModTop.h | ModTop.h
 // CHECK: Record | user | ModTop.Sub1 | {{.*}}/Inputs/module/ModTopSub1.h | ModTopSub1.h
-// CHECK: File | user | ModTop.Sub2 | {{.*}}/Inputs/module/ModTopSub2.h | | {{[0-9]*$}}
+// CHECK: File | user | ModTop.Sub2 | {{.*}}/Inputs/module/ModTopSub2.h{{$}}
 // CHECK: DEPEND END (3)
 
 // CHECK: print-units-with-modules.m.tmp.o
@@ -54,6 +52,6 @@
 // CHECK: DEPEND START
 // CHECK: Unit | user | ModDep | {{.*}}/ModDep.pcm | ModDep.pcm
 // CHECK: Unit | system | ModSystem | {{.*}}/ModSystem.pcm | ModSystem.pcm
-// CHECK: File | user | {{.*}}/print-units-with-modules.m | | {{[0-9]*$}}
-// CHECK: File | user | {{.*}}/Inputs/module/module.modulemap | | {{[0-9]*$}}
+// CHECK: File | user | {{.*}}/print-units-with-modules.m{{$}}
+// CHECK: File | user | {{.*}}/Inputs/module/module.modulemap{{$}}
 // CHECK: DEPEND END (4)

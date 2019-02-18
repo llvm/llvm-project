@@ -133,6 +133,19 @@
 #define LLVM_NODISCARD
 #endif
 
+// Indicate that a non-static, non-const C++ member function reinitializes
+// the entire object to a known state, independent of the previous state of
+// the object.
+//
+// The clang-tidy check bugprone-use-after-move recognizes this attribute as a
+// marker that a moved-from object has left the indeterminate state and can be
+// reused.
+#if __has_cpp_attribute(clang::reinitializes)
+#define LLVM_ATTRIBUTE_REINITIALIZES [[clang::reinitializes]]
+#else
+#define LLVM_ATTRIBUTE_REINITIALIZES
+#endif
+
 // Some compilers warn about unused functions. When a function is sometimes
 // used or not depending on build settings (e.g. a function only called from
 // within "assert"), this attribute can be used to suppress such warnings.
@@ -519,7 +532,7 @@ namespace llvm {
 /// reduced default alignment.
 inline void *allocate_buffer(size_t Size, size_t Alignment) {
   return ::operator new(Size
-#if __cpp_aligned_new
+#ifdef __cpp_aligned_new
                         ,
                         std::align_val_t(Alignment)
 #endif
@@ -535,11 +548,11 @@ inline void *allocate_buffer(size_t Size, size_t Alignment) {
 /// most likely using the above helper.
 inline void deallocate_buffer(void *Ptr, size_t Size, size_t Alignment) {
   ::operator delete(Ptr
-#if __cpp_sized_deallocation
+#ifdef __cpp_sized_deallocation
                     ,
                     Size
 #endif
-#if __cpp_aligned_new
+#ifdef __cpp_aligned_new
                     ,
                     std::align_val_t(Alignment)
 #endif

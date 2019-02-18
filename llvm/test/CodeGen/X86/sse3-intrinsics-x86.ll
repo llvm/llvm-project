@@ -143,8 +143,8 @@ define void @monitor(i8* %P, i32 %E, i32 %H) nounwind {
 ;
 ; X64-LABEL: monitor:
 ; X64:       ## %bb.0:
-; X64-NEXT:    leaq (%rdi), %rax ## encoding: [0x48,0x8d,0x07]
 ; X64-NEXT:    movl %esi, %ecx ## encoding: [0x89,0xf1]
+; X64-NEXT:    leaq (%rdi), %rax ## encoding: [0x48,0x8d,0x07]
 ; X64-NEXT:    monitor ## encoding: [0x0f,0x01,0xc8]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   tail call void @llvm.x86.sse3.monitor(i8* %P, i32 %E, i32 %H)
@@ -162,8 +162,8 @@ define void @mwait(i32 %E, i32 %H) nounwind {
 ;
 ; X64-LABEL: mwait:
 ; X64:       ## %bb.0:
-; X64-NEXT:    movl %edi, %ecx ## encoding: [0x89,0xf9]
 ; X64-NEXT:    movl %esi, %eax ## encoding: [0x89,0xf0]
+; X64-NEXT:    movl %edi, %ecx ## encoding: [0x89,0xf9]
 ; X64-NEXT:    mwait ## encoding: [0x0f,0x01,0xc9]
 ; X64-NEXT:    retq ## encoding: [0xc3]
   tail call void @llvm.x86.sse3.mwait(i32 %E, i32 %H)

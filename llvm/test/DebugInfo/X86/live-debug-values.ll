@@ -33,7 +33,7 @@
 ; CHECK-NEXT:  #DEBUG_VALUE: main:n <- $ebx
 ;   Other register values have been clobbered.
 ; CHECK-NOT:   #DEBUG_VALUE:
-; CHECK:         movl    %ecx, m(%rip)
+; CHECK:         movl    %e{{..}}, m(%rip)
 
 ; ModuleID = 'LiveDebugValues.c'
 source_filename = "test/DebugInfo/X86/live-debug-values.ll"

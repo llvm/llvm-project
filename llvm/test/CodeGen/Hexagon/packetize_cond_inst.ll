@@ -1,10 +1,8 @@
-; RUN: llc -mcpu=hexagonv4 -tail-dup-size=1 < %s | FileCheck %s
+; RUN: llc -march=hexagon -tail-dup-size=1 < %s | FileCheck %s
 
-target datalayout = "e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:32:32-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a0:0-n16:32"
 target triple = "hexagon-unknown--elf"
 
 ; Make sure we put the two conditionally executed adds in a packet.
-; ifcnv_add:
 ;     {
 ;       p0 = cmp.gt(r2, r1)
 ;       if (!p0.new) r0 = add(r2, r1)
@@ -13,20 +11,23 @@ target triple = "hexagon-unknown--elf"
 ; CHECK: cmp
 ; CHECK-NEXT: add
 ; CHECK-NEXT: add
-define i32 @ifcnv_add(i32, i32, i32) nounwind readnone {
-  %4 = icmp sgt i32 %2, %1
-  br i1 %4, label %5, label %7
+define i32 @f0(i32 %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sgt i32 %a2, %a1
+  br i1 %v0, label %b1, label %b2
 
-; <label>:5                                       ; preds = %3
-  %6 = add nsw i32 %0, 10
-  br label %9
+b1:                                               ; preds = %b0
+  %v1 = add nsw i32 %a0, 10
+  br label %b3
 
-; <label>:7                                       ; preds = %3
-  %8 = add nsw i32 %2, %1
-  br label %9
+b2:                                               ; preds = %b0
+  %v2 = add nsw i32 %a2, %a1
+  br label %b3
 
-; <label>:9                                       ; preds = %7, %5
-  %10 = phi i32 [ %6, %5 ], [ %8, %7 ]
-  %11 = add nsw i32 %10, 1
-  ret i32 %11
+b3:                                               ; preds = %b2, %b1
+  %v3 = phi i32 [ %v1, %b1 ], [ %v2, %b2 ]
+  %v4 = add nsw i32 %v3, 1
+  ret i32 %v4
 }
+
+attributes #0 = { nounwind readnone "target-cpu"="hexagonv5" }

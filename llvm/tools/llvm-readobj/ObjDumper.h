@@ -33,7 +33,7 @@ public:
   virtual ~ObjDumper();
 
   virtual void printFileHeaders() = 0;
-  virtual void printSections() = 0;
+  virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
   virtual void printSymbols() = 0;
   virtual void printDynamicSymbols() = 0;
@@ -89,10 +89,10 @@ public:
   virtual void printStackMap() const = 0;
 
   void printSectionAsString(const object::ObjectFile *Obj, StringRef SecName);
+  void printSectionAsHex(const object::ObjectFile *Obj, StringRef SecName);
 
 protected:
   ScopedPrinter &W;
-  void SectionHexDump(StringRef SecName, const uint8_t *Section, size_t Size);
 };
 
 std::error_code createCOFFDumper(const object::ObjectFile *Obj,

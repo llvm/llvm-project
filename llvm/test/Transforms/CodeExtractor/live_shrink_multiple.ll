@@ -42,7 +42,7 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: define internal void @_Z3foov.1_
+; CHECK-LABEL: define internal void @_Z3foov.1.
 ; CHECK: newFuncRoot:
 ; CHECK-NEXT:  alloca 
 ; CHECK-NEXT:  bitcast 

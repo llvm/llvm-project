@@ -27,19 +27,22 @@ public:
   using CompileFunction = JITCompileCallbackManager::CompileFunction;
 
   CompileCallbackMaterializationUnit(SymbolStringPtr Name,
-                                     CompileFunction Compile)
-      : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}})),
+                                     CompileFunction Compile, VModuleKey K)
+      : MaterializationUnit(SymbolFlagsMap({{Name, JITSymbolFlags::Exported}}),
+                            std::move(K)),
         Name(std::move(Name)), Compile(std::move(Compile)) {}
 
+  StringRef getName() const override { return "<Compile Callbacks>"; }
+
 private:
-  void materialize(MaterializationResponsibility R) {
+  void materialize(MaterializationResponsibility R) override {
     SymbolMap Result;
     Result[Name] = JITEvaluatedSymbol(Compile(), JITSymbolFlags::Exported);
     R.resolve(Result);
-    R.finalize();
+    R.emit();
   }
 
-  void discard(const VSO &V, SymbolStringPtr Name) {
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override {
     llvm_unreachable("Discard should never occur on a LMU?");
   }
 
@@ -52,20 +55,21 @@ private:
 namespace llvm {
 namespace orc {
 
-void JITCompileCallbackManager::anchor() {}
 void IndirectStubsManager::anchor() {}
+void TrampolinePool::anchor() {}
 
 Expected<JITTargetAddress>
 JITCompileCallbackManager::getCompileCallback(CompileFunction Compile) {
-  if (auto TrampolineAddr = getAvailableTrampolineAddr()) {
-    auto CallbackName = ES.getSymbolStringPool().intern(
-        std::string("cc") + std::to_string(++NextCallbackId));
+  if (auto TrampolineAddr = TP->getTrampoline()) {
+    auto CallbackName =
+        ES.intern(std::string("cc") + std::to_string(++NextCallbackId));
 
     std::lock_guard<std::mutex> Lock(CCMgrMutex);
     AddrToSymbol[*TrampolineAddr] = CallbackName;
-    cantFail(CallbacksVSO.define(
+    cantFail(CallbacksJD.define(
         llvm::make_unique<CompileCallbackMaterializationUnit>(
-            std::move(CallbackName), std::move(Compile))));
+            std::move(CallbackName), std::move(Compile),
+            ES.allocateVModule())));
     return *TrampolineAddr;
   } else
     return TrampolineAddr.takeError();
@@ -88,7 +92,7 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
       {
         raw_string_ostream ErrMsgStream(ErrMsg);
         ErrMsgStream << "No compile callback for trampoline at "
-                     << format("0x%016x", TrampolineAddr);
+                     << format("0x%016" PRIx64, TrampolineAddr);
       }
       ES.reportError(
           make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode()));
@@ -97,9 +101,10 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
       Name = I->second;
   }
 
-  if (auto Sym = lookup({&CallbacksVSO}, Name))
+  if (auto Sym = ES.lookup(JITDylibSearchList({{&CallbacksJD, true}}), Name))
     return Sym->getAddress();
   else {
+    llvm::dbgs() << "Didn't find callback.\n";
     // If anything goes wrong materializing Sym then report it to the session
     // and return the ErrorHandlerAddress;
     ES.reportError(Sym.takeError());
@@ -107,29 +112,46 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
   }
 }
 
-std::unique_ptr<JITCompileCallbackManager>
+Expected<std::unique_ptr<JITCompileCallbackManager>>
 createLocalCompileCallbackManager(const Triple &T, ExecutionSession &ES,
                                   JITTargetAddress ErrorHandlerAddress) {
   switch (T.getArch()) {
-    default: return nullptr;
-
-    case Triple::aarch64: {
-      typedef orc::LocalJITCompileCallbackManager<orc::OrcAArch64> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+  default:
+    return make_error<StringError>(
+        std::string("No callback manager available for ") + T.str(),
+        inconvertibleErrorCode());
+  case Triple::aarch64: {
+    typedef orc::LocalJITCompileCallbackManager<orc::OrcAArch64> CCMgrT;
+    return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
 
     case Triple::x86: {
       typedef orc::LocalJITCompileCallbackManager<orc::OrcI386> CCMgrT;
-      return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
+    }
+
+    case Triple::mips: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Be> CCMgrT;
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
+    }
+    case Triple::mipsel: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips32Le> CCMgrT;
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
+    }
+
+    case Triple::mips64:
+    case Triple::mips64el: {
+      typedef orc::LocalJITCompileCallbackManager<orc::OrcMips64> CCMgrT;
+      return CCMgrT::Create(ES, ErrorHandlerAddress);
     }
 
     case Triple::x86_64: {
       if ( T.getOS() == Triple::OSType::Win32 ) {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_Win32> CCMgrT;
-        return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+        return CCMgrT::Create(ES, ErrorHandlerAddress);
       } else {
         typedef orc::LocalJITCompileCallbackManager<orc::OrcX86_64_SysV> CCMgrT;
-        return llvm::make_unique<CCMgrT>(ES, ErrorHandlerAddress);
+        return CCMgrT::Create(ES, ErrorHandlerAddress);
       }
     }
 
@@ -157,6 +179,25 @@ createLocalIndirectStubsManagerBuilder(const Triple &T) {
                        orc::LocalIndirectStubsManager<orc::OrcI386>>();
       };
 
+    case Triple::mips:
+      return [](){
+          return llvm::make_unique<
+                      orc::LocalIndirectStubsManager<orc::OrcMips32Be>>();
+      };
+
+    case Triple::mipsel:
+      return [](){
+          return llvm::make_unique<
+                      orc::LocalIndirectStubsManager<orc::OrcMips32Le>>();
+      };
+
+    case Triple::mips64:
+    case Triple::mips64el:
+      return [](){
+          return llvm::make_unique<
+                      orc::LocalIndirectStubsManager<orc::OrcMips64>>();
+      };
+      
     case Triple::x86_64:
       if (T.getOS() == Triple::OSType::Win32) {
         return [](){
@@ -210,57 +251,34 @@ void makeStub(Function &F, Value &ImplPointer) {
     Builder.CreateRet(Call);
 }
 
-// Utility class for renaming global values and functions during partitioning.
-class GlobalRenamer {
-public:
+std::vector<GlobalValue *> SymbolLinkagePromoter::operator()(Module &M) {
+  std::vector<GlobalValue *> PromotedGlobals;
 
-  static bool needsRenaming(const Value &New) {
-    return !New.hasName() || New.getName().startswith("\01L");
-  }
+  for (auto &GV : M.global_values()) {
+    bool Promoted = true;
 
-  const std::string& getRename(const Value &Orig) {
-    // See if we have a name for this global.
-    {
-      auto I = Names.find(&Orig);
-      if (I != Names.end())
-        return I->second;
+    // Rename if necessary.
+    if (!GV.hasName())
+      GV.setName("__orc_anon." + Twine(NextId++));
+    else if (GV.getName().startswith("\01L"))
+      GV.setName("__" + GV.getName().substr(1) + "." + Twine(NextId++));
+    else if (GV.hasLocalLinkage())
+      GV.setName("__orc_lcl." + GV.getName() + "." + Twine(NextId++));
+    else
+      Promoted = false;
+
+    if (GV.hasLocalLinkage()) {
+      GV.setLinkage(GlobalValue::ExternalLinkage);
+      GV.setVisibility(GlobalValue::HiddenVisibility);
+      Promoted = true;
     }
+    GV.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
-    // Nope. Create a new one.
-    // FIXME: Use a more robust uniquing scheme. (This may blow up if the user
-    //        writes a "__orc_anon[[:digit:]]* method).
-    unsigned ID = Names.size();
-    std::ostringstream NameStream;
-    NameStream << "__orc_anon" << ID++;
-    auto I = Names.insert(std::make_pair(&Orig, NameStream.str()));
-    return I.first->second;
+    if (Promoted)
+      PromotedGlobals.push_back(&GV);
   }
-private:
-  DenseMap<const Value*, std::string> Names;
-};
 
-static void raiseVisibilityOnValue(GlobalValue &V, GlobalRenamer &R) {
-  if (V.hasLocalLinkage()) {
-    if (R.needsRenaming(V))
-      V.setName(R.getRename(V));
-    V.setLinkage(GlobalValue::ExternalLinkage);
-    V.setVisibility(GlobalValue::HiddenVisibility);
-  }
-  V.setUnnamedAddr(GlobalValue::UnnamedAddr::None);
-  assert(!R.needsRenaming(V) && "Invalid global name.");
-}
-
-void makeAllSymbolsExternallyAccessible(Module &M) {
-  GlobalRenamer Renamer;
-
-  for (auto &F : M)
-    raiseVisibilityOnValue(F, Renamer);
-
-  for (auto &GV : M.globals())
-    raiseVisibilityOnValue(GV, Renamer);
-
-  for (auto &A : M.aliases())
-    raiseVisibilityOnValue(A, Renamer);
+  return PromotedGlobals;
 }
 
 Function* cloneFunctionDecl(Module &Dst, const Function &F,

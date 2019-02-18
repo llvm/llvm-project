@@ -6,12 +6,8 @@ define <4 x i64> @A(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: A:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl 4(%eax), %eax
-; X32-NEXT:    vmovd %ecx, %xmm0
-; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
@@ -31,17 +27,19 @@ entry:
 define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-LABEL: A2:
 ; X32:       ## %bb.0: ## %entry
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    .cfi_offset %esi, -8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
-; X32-NEXT:    movl 4(%ecx), %ecx
-; X32-NEXT:    movl %ecx, 4(%eax)
+; X32-NEXT:    movl 4(%ecx), %esi
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    vmovd %edx, %xmm0
-; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: A2:
@@ -316,12 +314,12 @@ entry:
 define <4 x float> @_e2(float* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: _e2:
 ; X32:       ## %bb.0: ## %entry
-; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.812500e-03,-7.812500e-03,-7.812500e-03,-7.812500e-03]
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: _e2:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.812500e-03,-7.812500e-03,-7.812500e-03,-7.812500e-03]
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [-7.8125E-3,-7.8125E-3,-7.8125E-3,-7.8125E-3]
 ; X64-NEXT:    retq
 entry:
    %vecinit.i = insertelement <4 x float> undef, float       0xbf80000000000000, i32 0
@@ -592,12 +590,8 @@ define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: G:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl (%eax), %ecx
-; X32-NEXT:    movl 4(%eax), %eax
-; X32-NEXT:    vmovd %ecx, %xmm0
-; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: G:
@@ -615,16 +609,18 @@ entry:
 define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-LABEL: G2:
 ; X32:       ## %bb.0: ## %entry
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    .cfi_offset %esi, -8
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
-; X32-NEXT:    movl 4(%ecx), %ecx
-; X32-NEXT:    movl %ecx, 4(%eax)
+; X32-NEXT:    movl 4(%ecx), %esi
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    movl %edx, (%eax)
-; X32-NEXT:    vmovd %edx, %xmm0
-; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, %ecx, %xmm0, %xmm0
+; X32-NEXT:    movl %esi, 4(%eax)
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: G2:
@@ -879,11 +875,11 @@ define float @broadcast_lifetime() nounwind {
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _gfunc
 ; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp) ## 4-byte Spill
+; X32-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; X32-NEXT:    movl %esi, (%esp)
 ; X32-NEXT:    calll _gfunc
 ; X32-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32-NEXT:    vsubss {{[0-9]+}}(%esp), %xmm0, %xmm0 ## 4-byte Folded Reload
+; X32-NEXT:    vsubss {{[-0-9]+}}(%e{{[sb]}}p), %xmm0, %xmm0 ## 4-byte Folded Reload
 ; X32-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    flds {{[0-9]+}}(%esp)
 ; X32-NEXT:    addl $40, %esp
@@ -896,11 +892,11 @@ define float @broadcast_lifetime() nounwind {
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq _gfunc
 ; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) ## 4-byte Spill
+; X64-NEXT:    vmovss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq _gfunc
 ; X64-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    vsubss {{[0-9]+}}(%rsp), %xmm0, %xmm0 ## 4-byte Folded Reload
+; X64-NEXT:    vsubss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 ## 4-byte Folded Reload
 ; X64-NEXT:    addq $40, %rsp
 ; X64-NEXT:    retq
   %1 = alloca <4 x float>, align 16

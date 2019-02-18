@@ -1,10 +1,15 @@
+; RUN: opt < %s -msan-check-access-address=0 -S -passes=msan 2>&1 | FileCheck  \
+; RUN: -allow-deprecated-dag-overlap %s
 ; RUN: opt < %s -msan -msan-check-access-address=0 -S | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=1 -S          \
+; RUN: -passes=msan 2>&1 | FileCheck -allow-deprecated-dag-overlap             \
+; RUN: -check-prefix=CHECK -check-prefix=CHECK-ORIGINS %s
 ; RUN: opt < %s -msan -msan-check-access-address=0 -msan-track-origins=1 -S | FileCheck -allow-deprecated-dag-overlap -check-prefix=CHECK -check-prefix=CHECK-ORIGINS %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @llvm.global_ctors {{.*}} { i32 0, void ()* @msan.module_ctor, i8* null }
+; CHECK: @llvm.global_ctors {{.*}} { i32 0, void ()* @__msan_init, i8* null }
 
 ; Check the presence and the linkage type of __msan_track_origins and
 ; other interface symbols.
@@ -915,6 +920,26 @@ entry:
 ; CHECK: call void (i32, ...) @VAArgStructFn
 ; CHECK: ret void
 
+; Same code compiled without SSE (see attributes below).
+; The register save area is only 48 bytes instead of 176.
+define void @VAArgStructNoSSE(%struct.StructByVal* nocapture %s) sanitize_memory #0 {
+entry:
+  %agg.tmp2 = alloca %struct.StructByVal, align 8
+  %0 = bitcast %struct.StructByVal* %s to i8*
+  %agg.tmp.sroa.0.0..sroa_cast = bitcast %struct.StructByVal* %s to i64*
+  %agg.tmp.sroa.0.0.copyload = load i64, i64* %agg.tmp.sroa.0.0..sroa_cast, align 4
+  %agg.tmp.sroa.2.0..sroa_idx = getelementptr inbounds %struct.StructByVal, %struct.StructByVal* %s, i64 0, i32 2
+  %agg.tmp.sroa.2.0..sroa_cast = bitcast i32* %agg.tmp.sroa.2.0..sroa_idx to i64*
+  %agg.tmp.sroa.2.0.copyload = load i64, i64* %agg.tmp.sroa.2.0..sroa_cast, align 4
+  %1 = bitcast %struct.StructByVal* %agg.tmp2 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %1, i8* align 4 %0, i64 16, i1 false)
+  call void (i32, ...) @VAArgStructFn(i32 undef, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, i64 %agg.tmp.sroa.0.0.copyload, i64 %agg.tmp.sroa.2.0.copyload, %struct.StructByVal* byval align 8 %agg.tmp2)
+  ret void
+}
+
+attributes #0 = { "target-features"="+fxsr,+x87,-sse" }
+
+; CHECK: bitcast { i32, i32, i32, i32 }* {{.*}}@__msan_va_arg_tls {{.*}}, i64 48
 
 declare i32 @InnerTailCall(i32 %a)
 
@@ -966,5 +991,4 @@ define i8* @MismatchingCallMustTailCall(i32 %a) sanitize_memory {
 ; CHECK-NEXT: ret i8*
 
 
-; CHECK-LABEL: define internal void @msan.module_ctor() {
-; CHECK: call void @__msan_init()
+; CHECK: declare void @__msan_init()

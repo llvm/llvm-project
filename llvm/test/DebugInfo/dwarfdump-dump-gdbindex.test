@@ -10,7 +10,7 @@ RUN: llvm-dwarfdump -gdb-index %p/Inputs/dwarfdump-gdbindex-v7.elf-x86-64 | File
 ; gcc version 5.3.1 20160413, GNU gold (GNU Binutils for Ubuntu 2.26) 1.11
 ; Info about gdb-index: https://sourceware.org/gdb/onlinedocs/gdb/Index-Section-Format.html
 
-; CHECK-LABEL: .gnu_index contents:
+; CHECK-LABEL: .gdb_index contents:
 ; CHECK: Version = 7
 
 ; CHECK:      CU list offset = 0x18, has 2 entries:

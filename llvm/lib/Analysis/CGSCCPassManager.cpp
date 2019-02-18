@@ -54,6 +54,11 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
             CGSCCUpdateResult &>::run(LazyCallGraph::SCC &InitialC,
                                       CGSCCAnalysisManager &AM,
                                       LazyCallGraph &G, CGSCCUpdateResult &UR) {
+  // Request PassInstrumentation from analysis manager, will use it to run
+  // instrumenting callbacks for the passes later.
+  PassInstrumentation PI =
+      AM.getResult<PassInstrumentationAnalysis>(InitialC, G);
+
   PreservedAnalyses PA = PreservedAnalyses::all();
 
   if (DebugLogging)
@@ -67,7 +72,17 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     if (DebugLogging)
       dbgs() << "Running pass: " << Pass->name() << " on " << *C << "\n";
 
+    // Check the PassInstrumentation's BeforePass callbacks before running the
+    // pass, skip its execution completely if asked to (callback returns false).
+    if (!PI.runBeforePass(*Pass, *C))
+      continue;
+
     PreservedAnalyses PassPA = Pass->run(*C, AM, G, UR);
+
+    if (UR.InvalidatedSCCs.count(C))
+      PI.runAfterPassInvalidated<LazyCallGraph::SCC>(*Pass);
+    else
+      PI.runAfterPass<LazyCallGraph::SCC>(*Pass, *C);
 
     // Update the SCC if necessary.
     C = UR.UpdatedC ? UR.UpdatedC : C;

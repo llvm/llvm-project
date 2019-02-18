@@ -28,9 +28,14 @@ class AllocaInst;
 
 /// The CalleeSavedInfo class tracks the information need to locate where a
 /// callee saved register is in the current frame.
+/// Callee saved reg can also be saved to a different register rather than
+/// on the stack by setting DstReg instead of FrameIdx.
 class CalleeSavedInfo {
   unsigned Reg;
-  int FrameIdx;
+  union {
+    int FrameIdx;
+    unsigned DstReg;
+  };
   /// Flag indicating whether the register is actually restored in the epilog.
   /// In most cases, if a register is saved, it is also restored. There are
   /// some situations, though, when this is not the case. For example, the
@@ -44,17 +49,29 @@ class CalleeSavedInfo {
   /// by implicit uses on the return instructions, however, the required
   /// changes in the ARM backend would be quite extensive.
   bool Restored;
+  /// Flag indicating whether the register is spilled to stack or another
+  /// register.
+  bool SpilledToReg;
 
 public:
   explicit CalleeSavedInfo(unsigned R, int FI = 0)
-  : Reg(R), FrameIdx(FI), Restored(true) {}
+  : Reg(R), FrameIdx(FI), Restored(true), SpilledToReg(false) {}
 
   // Accessors.
   unsigned getReg()                        const { return Reg; }
   int getFrameIdx()                        const { return FrameIdx; }
-  void setFrameIdx(int FI)                       { FrameIdx = FI; }
+  unsigned getDstReg()                     const { return DstReg; }
+  void setFrameIdx(int FI) {
+    FrameIdx = FI;
+    SpilledToReg = false;
+  }
+  void setDstReg(unsigned SpillReg) {
+    DstReg = SpillReg;
+    SpilledToReg = true;
+  }
   bool isRestored()                        const { return Restored; }
   void setRestored(bool R)                       { Restored = R; }
+  bool isSpilledToReg()                    const { return SpilledToReg; }
 };
 
 /// The MachineFrameInfo class represents an abstract stack frame until
@@ -266,10 +283,14 @@ private:
   /// It is only valid during and after prolog/epilog code insertion.
   unsigned MaxCallFrameSize = ~0u;
 
+  /// The number of bytes of callee saved registers that the target wants to
+  /// report for the current function in the CodeView S_FRAMEPROC record.
+  unsigned CVBytesOfCalleeSavedRegisters = 0;
+
   /// The prolog/epilog code inserter fills in this vector with each
-  /// callee saved register saved in the frame.  Beyond its use by the prolog/
-  /// epilog code inserter, this data used for debug info and exception
-  /// handling.
+  /// callee saved register saved in either the frame or a different
+  /// register.  Beyond its use by the prolog/ epilog code inserter,
+  /// this data is used for debug info and exception handling.
   std::vector<CalleeSavedInfo> CSInfo;
 
   /// Has CSInfo been set yet?
@@ -602,6 +623,15 @@ public:
     return MaxCallFrameSize != ~0u;
   }
   void setMaxCallFrameSize(unsigned S) { MaxCallFrameSize = S; }
+
+  /// Returns how many bytes of callee-saved registers the target pushed in the
+  /// prologue. Only used for debug info.
+  unsigned getCVBytesOfCalleeSavedRegisters() const {
+    return CVBytesOfCalleeSavedRegisters;
+  }
+  void setCVBytesOfCalleeSavedRegisters(unsigned S) {
+    CVBytesOfCalleeSavedRegisters = S;
+  }
 
   /// Create a new object at a fixed location on the stack.
   /// All fixed objects should be created before other objects are created for

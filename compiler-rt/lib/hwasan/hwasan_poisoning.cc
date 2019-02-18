@@ -1,4 +1,4 @@
-//===-- hwasan_poisoning.cc ---------------------------------------*- C++ -*-===//
+//===-- hwasan_poisoning.cc -------------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -22,8 +22,8 @@ namespace __hwasan {
 uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
   CHECK(IsAligned(p, kShadowAlignment));
   CHECK(IsAligned(size, kShadowAlignment));
-  uptr shadow_start = MEM_TO_SHADOW(p);
-  uptr shadow_size = MEM_TO_SHADOW_SIZE(size);
+  uptr shadow_start = MemToShadow(p);
+  uptr shadow_size = MemToShadowSize(size);
   internal_memset((void *)shadow_start, tag, shadow_size);
   return AddTagToPointer(p, tag);
 }

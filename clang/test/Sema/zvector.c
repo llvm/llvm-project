@@ -37,6 +37,49 @@ unsigned long ul_scalar;
 
 double fd_scalar;
 
+// Verify that __vector is also recognized
+__vector signed char sc3;
+__vector unsigned char uc3;
+__vector bool char bc3;
+__vector signed short ss3;
+__vector unsigned short us3;
+__vector bool short bs3;
+__vector signed int si3;
+__vector unsigned int ui3;
+__vector bool int bi3;
+__vector signed long long sl3;
+__vector unsigned long long ul3;
+__vector bool long long bl3;
+__vector double fd3;
+__vector long ll3; // expected-error {{cannot use 'long' with '__vector'}}
+__vector float ff3; // expected-error {{cannot use 'float' with '__vector'}}
+
+// Likewise for __bool
+vector __bool char bc4;
+vector __bool short bs4;
+vector __bool int bi4;
+vector __bool long long bl4;
+__vector __bool char bc5;
+__vector __bool short bs5;
+__vector __bool int bi5;
+__vector __bool long long bl5;
+
+// Verify operation of vec_step
+int res_sc[vec_step(sc) == 16 ? 1 : -1];
+int res_uc[vec_step(uc) == 16 ? 1 : -1];
+int res_bc[vec_step(bc) == 16 ? 1 : -1];
+int res_ss[vec_step(ss) == 8 ? 1 : -1];
+int res_us[vec_step(us) == 8 ? 1 : -1];
+int res_bs[vec_step(bs) == 8 ? 1 : -1];
+int res_si[vec_step(si) == 4 ? 1 : -1];
+int res_ui[vec_step(ui) == 4 ? 1 : -1];
+int res_bi[vec_step(bi) == 4 ? 1 : -1];
+int res_sl[vec_step(sl) == 2 ? 1 : -1];
+int res_ul[vec_step(ul) == 2 ? 1 : -1];
+int res_bl[vec_step(bl) == 2 ? 1 : -1];
+int res_fd[vec_step(fd) == 2 ? 1 : -1];
+
+
 void foo(void)
 {
   // -------------------------------------------------------------------------

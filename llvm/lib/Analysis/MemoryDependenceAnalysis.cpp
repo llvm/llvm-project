@@ -26,6 +26,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/OrderedBasicBlock.h"
 #include "llvm/Analysis/PHITransAddr.h"
+#include "llvm/Analysis/PhiValues.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Attributes.h"
@@ -806,7 +807,7 @@ MemoryDependenceResults::getNonLocalCallDependency(CallSite QueryCS) {
         DirtyBlocks.push_back(Entry.getBB());
 
     // Sort the cache so that we can do fast binary search lookups below.
-    llvm::sort(Cache.begin(), Cache.end());
+    llvm::sort(Cache);
 
     ++NumCacheDirtyNonLocal;
     // cerr << "CACHED CASE: " << DirtyBlocks.size() << " dirty: "
@@ -1069,7 +1070,7 @@ SortNonLocalDepInfoCache(MemoryDependenceResults::NonLocalDepInfo &Cache,
     break;
   default:
     // Added many values, do a full scale sort.
-    llvm::sort(Cache.begin(), Cache.end());
+    llvm::sort(Cache);
     break;
   }
 }
@@ -1112,21 +1113,36 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // If we already have a cache entry for this CacheKey, we may need to do some
   // work to reconcile the cache entry and the current query.
   if (!Pair.second) {
-    if (CacheInfo->Size < Loc.Size) {
-      // The query's Size is greater than the cached one. Throw out the
-      // cached data and proceed with the query at the greater size.
-      CacheInfo->Pair = BBSkipFirstBlockPair();
-      CacheInfo->Size = Loc.Size;
-      for (auto &Entry : CacheInfo->NonLocalDeps)
-        if (Instruction *Inst = Entry.getResult().getInst())
-          RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
-      CacheInfo->NonLocalDeps.clear();
-    } else if (CacheInfo->Size > Loc.Size) {
-      // This query's Size is less than the cached one. Conservatively restart
-      // the query using the greater size.
-      return getNonLocalPointerDepFromBB(
-          QueryInst, Pointer, Loc.getWithNewSize(CacheInfo->Size), isLoad,
-          StartBB, Result, Visited, SkipFirstBlock);
+    if (CacheInfo->Size != Loc.Size) {
+      bool ThrowOutEverything;
+      if (CacheInfo->Size.hasValue() && Loc.Size.hasValue()) {
+        // FIXME: We may be able to do better in the face of results with mixed
+        // precision. We don't appear to get them in practice, though, so just
+        // be conservative.
+        ThrowOutEverything =
+            CacheInfo->Size.isPrecise() != Loc.Size.isPrecise() ||
+            CacheInfo->Size.getValue() < Loc.Size.getValue();
+      } else {
+        // For our purposes, unknown size > all others.
+        ThrowOutEverything = !Loc.Size.hasValue();
+      }
+
+      if (ThrowOutEverything) {
+        // The query's Size is greater than the cached one. Throw out the
+        // cached data and proceed with the query at the greater size.
+        CacheInfo->Pair = BBSkipFirstBlockPair();
+        CacheInfo->Size = Loc.Size;
+        for (auto &Entry : CacheInfo->NonLocalDeps)
+          if (Instruction *Inst = Entry.getResult().getInst())
+            RemoveFromReverseMap(ReverseNonLocalPtrDeps, Inst, CacheKey);
+        CacheInfo->NonLocalDeps.clear();
+      } else {
+        // This query's Size is less than the cached one. Conservatively restart
+        // the query using the greater size.
+        return getNonLocalPointerDepFromBB(
+            QueryInst, Pointer, Loc.getWithNewSize(CacheInfo->Size), isLoad,
+            StartBB, Result, Visited, SkipFirstBlock);
+      }
     }
 
     // If the query's AATags are inconsistent with the cached one,
@@ -1513,6 +1529,8 @@ void MemoryDependenceResults::invalidateCachedPointerInfo(Value *Ptr) {
   RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, false));
   // Flush load info for the pointer.
   RemoveCachedNonLocalPointerDependencies(ValueIsLoadPair(Ptr, true));
+  // Invalidate phis that use the pointer.
+  PV.invalidateValue(Ptr);
 }
 
 void MemoryDependenceResults::invalidateCachedPredecessors() {
@@ -1569,7 +1587,7 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
   ReverseDepMapType::iterator ReverseDepIt = ReverseLocalDeps.find(RemInst);
   if (ReverseDepIt != ReverseLocalDeps.end()) {
     // RemInst can't be the terminator if it has local stuff depending on it.
-    assert(!ReverseDepIt->second.empty() && !isa<TerminatorInst>(RemInst) &&
+    assert(!ReverseDepIt->second.empty() && !RemInst->isTerminator() &&
            "Nothing can locally depend on a terminator");
 
     for (Instruction *InstDependingOnRemInst : ReverseDepIt->second) {
@@ -1659,7 +1677,7 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
 
       // Re-sort the NonLocalDepInfo.  Changing the dirty entry to its
       // subsequent value may invalidate the sortedness.
-      llvm::sort(NLPDI.begin(), NLPDI.end());
+      llvm::sort(NLPDI);
     }
 
     ReverseNonLocalPtrDeps.erase(ReversePtrDepIt);
@@ -1670,6 +1688,9 @@ void MemoryDependenceResults::removeInstruction(Instruction *RemInst) {
       ReversePtrDepsToAdd.pop_back();
     }
   }
+
+  // Invalidate phis that use the removed instruction.
+  PV.invalidateValue(RemInst);
 
   assert(!NonLocalDeps.count(RemInst) && "RemInst got reinserted?");
   LLVM_DEBUG(verifyRemoved(RemInst));
@@ -1730,7 +1751,8 @@ MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  return MemoryDependenceResults(AA, AC, TLI, DT);
+  auto &PV = AM.getResult<PhiValuesAnalysis>(F);
+  return MemoryDependenceResults(AA, AC, TLI, DT, PV);
 }
 
 char MemoryDependenceWrapperPass::ID = 0;
@@ -1741,6 +1763,7 @@ INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(PhiValuesWrapperPass)
 INITIALIZE_PASS_END(MemoryDependenceWrapperPass, "memdep",
                     "Memory Dependence Analysis", false, true)
 
@@ -1758,6 +1781,7 @@ void MemoryDependenceWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<AssumptionCacheTracker>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<PhiValuesWrapperPass>();
   AU.addRequiredTransitive<AAResultsWrapperPass>();
   AU.addRequiredTransitive<TargetLibraryInfoWrapperPass>();
 }
@@ -1773,7 +1797,8 @@ bool MemoryDependenceResults::invalidate(Function &F, const PreservedAnalyses &P
   // Check whether the analyses we depend on became invalid for any reason.
   if (Inv.invalidate<AAManager>(F, PA) ||
       Inv.invalidate<AssumptionAnalysis>(F, PA) ||
-      Inv.invalidate<DominatorTreeAnalysis>(F, PA))
+      Inv.invalidate<DominatorTreeAnalysis>(F, PA) ||
+      Inv.invalidate<PhiValuesAnalysis>(F, PA))
     return true;
 
   // Otherwise this analysis result remains valid.
@@ -1789,6 +1814,7 @@ bool MemoryDependenceWrapperPass::runOnFunction(Function &F) {
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  MemDep.emplace(AA, AC, TLI, DT);
+  auto &PV = getAnalysis<PhiValuesWrapperPass>().getResult();
+  MemDep.emplace(AA, AC, TLI, DT, PV);
   return false;
 }

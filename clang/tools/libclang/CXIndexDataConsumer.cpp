@@ -222,9 +222,11 @@ bool CXIndexDataConsumer::handleDeclOccurence(
 }
 
 bool CXIndexDataConsumer::handleModuleOccurence(const ImportDecl *ImportD,
+                                                const Module *Mod,
                                                 SymbolRoleSet Roles,
                                                 SourceLocation Loc) {
-  IndexingDeclVisitor(*this, SourceLocation(), nullptr).Visit(ImportD);
+  if (Roles & (SymbolRoleSet)SymbolRole::Declaration)
+    IndexingDeclVisitor(*this, SourceLocation(), nullptr).Visit(ImportD);
   return !shouldAbort();
 }
 
@@ -307,7 +309,7 @@ AttrListInfo::AttrListInfo(const Decl *D, CXIndexDataConsumer &IdxCtx)
     const IBOutletCollectionAttr *
       IBAttr = cast<IBOutletCollectionAttr>(IBInfo.A);
     SourceLocation InterfaceLocStart =
-        IBAttr->getInterfaceLoc()->getTypeLoc().getLocStart();
+        IBAttr->getInterfaceLoc()->getTypeLoc().getBeginLoc();
     IBInfo.IBCollInfo.attrInfo = &IBInfo;
     IBInfo.IBCollInfo.classLoc = IdxCtx.getIndexLoc(InterfaceLocStart);
     IBInfo.IBCollInfo.objcClass = nullptr;

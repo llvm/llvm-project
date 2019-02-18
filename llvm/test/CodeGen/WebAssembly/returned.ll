@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test that the "returned" attribute is optimized effectively.
 
@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: _Z3foov:
-; CHECK-NEXT: .result   i32{{$}}
+; CHECK-NEXT: .functype _Z3foov () -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push0=, 1{{$}}
 ; CHECK-NEXT: {{^}} i32.call      $push1=, _Znwm@FUNCTION, $pop0{{$}}
 ; CHECK-NEXT: {{^}} i32.call      $push2=, _ZN5AppleC1Ev@FUNCTION, $pop1{{$}}
@@ -23,8 +23,7 @@ entry:
 }
 
 ; CHECK-LABEL: _Z3barPvS_l:
-; CHECK-NEXT: .param   i32, i32, i32{{$}}
-; CHECK-NEXT: .result  i32{{$}}
+; CHECK-NEXT: .functype _Z3barPvS_l (i32, i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: {{^}} i32.call     $push0=, memcpy@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 declare i8* @memcpy(i8* returned, i8*, i32)
@@ -37,7 +36,7 @@ entry:
 ; Test that the optimization isn't performed on constant arguments.
 
 ; CHECK-LABEL: test_constant_arg:
-; CHECK-NEXT: i32.const   $push0=, global{{$}}
+; CHECK:      i32.const   $push0=, global{{$}}
 ; CHECK-NEXT: {{^}} i32.call        $drop=, returns_arg@FUNCTION, $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 @global = external global i32
@@ -52,7 +51,7 @@ declare i32* @returns_arg(i32* returned)
 ; "returned" attribute.
 
 ; CHECK-LABEL: test_other_skipped:
-; CHECK-NEXT: .param   i32, i32, f64{{$}}
+; CHECK-NEXT: .functype test_other_skipped (i32, i32, f64) -> (){{$}}
 ; CHECK-NEXT: {{^}} i32.call     $drop=, do_something@FUNCTION, $0, $1, $2{{$}}
 ; CHECK-NEXT: {{^}} call     do_something_with_i32@FUNCTION, $1{{$}}
 ; CHECK-NEXT: {{^}} call     do_something_with_double@FUNCTION, $2{{$}}
@@ -69,8 +68,7 @@ define void @test_other_skipped(i32 %a, i32 %b, double %c) {
 ; Test that the optimization is performed on arguments other than the first.
 
 ; CHECK-LABEL: test_second_arg:
-; CHECK-NEXT: .param   i32, i32{{$}}
-; CHECK-NEXT: .result  i32{{$}}
+; CHECK-NEXT: .functype test_second_arg (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: {{^}} i32.call     $push0=, do_something_else@FUNCTION, $0, $1{{$}}
 ; CHECK-NEXT: return   $pop0{{$}}
 declare i32 @do_something_else(i32, i32 returned)

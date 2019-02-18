@@ -41,7 +41,7 @@ class FileRemapper {
 public:
   FileRemapper();
   ~FileRemapper();
-  
+
   bool initFromDisk(StringRef outputDir, DiagnosticsEngine &Diag,
                     bool ignoreIfFilesChanged);
   bool initFromFile(StringRef filePath, DiagnosticsEngine &Diag,

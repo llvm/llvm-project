@@ -217,8 +217,6 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     // { RTLIB::NEG_F64,  "__mspabi_negd", ISD::SETCC_INVALID },
     // { RTLIB::NEG_F32,  "__mspabi_negf", ISD::SETCC_INVALID },
 
-    // TODO: SLL/SRA/SRL are in libgcc, RLL isn't
-
     // Universal Integer Operations - EABI Table 9
     { RTLIB::SDIV_I16,   "__mspabi_divi", ISD::SETCC_INVALID },
     { RTLIB::SDIV_I32,   "__mspabi_divli", ISD::SETCC_INVALID },
@@ -232,6 +230,13 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     { RTLIB::UREM_I16,   "__mspabi_remu", ISD::SETCC_INVALID },
     { RTLIB::UREM_I32,   "__mspabi_remul", ISD::SETCC_INVALID },
     { RTLIB::UREM_I64,   "__mspabi_remull", ISD::SETCC_INVALID },
+
+    // Bitwise Operations - EABI Table 10
+    // TODO: __mspabi_[srli/srai/slli] ARE implemented in libgcc
+    { RTLIB::SRL_I32,    "__mspabi_srll", ISD::SETCC_INVALID },
+    { RTLIB::SRA_I32,    "__mspabi_sral", ISD::SETCC_INVALID },
+    { RTLIB::SHL_I32,    "__mspabi_slll", ISD::SETCC_INVALID },
+    // __mspabi_[srlll/srall/sllll/rlli/rlll] are NOT implemented in libgcc
 
   };
 
@@ -940,30 +945,29 @@ SDValue MSP430TargetLowering::LowerShifts(SDValue Op,
 
   // Expand non-constant shifts to loops:
   if (!isa<ConstantSDNode>(N->getOperand(1)))
-    switch (Opc) {
-    default: llvm_unreachable("Invalid shift opcode!");
-    case ISD::SHL:
-      return DAG.getNode(MSP430ISD::SHL, dl,
-                         VT, N->getOperand(0), N->getOperand(1));
-    case ISD::SRA:
-      return DAG.getNode(MSP430ISD::SRA, dl,
-                         VT, N->getOperand(0), N->getOperand(1));
-    case ISD::SRL:
-      return DAG.getNode(MSP430ISD::SRL, dl,
-                         VT, N->getOperand(0), N->getOperand(1));
-    }
+    return Op;
 
   uint64_t ShiftAmount = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
   // Expand the stuff into sequence of shifts.
-  // FIXME: for some shift amounts this might be done better!
-  // E.g.: foo >> (8 + N) => sxt(swpb(foo)) >> N
   SDValue Victim = N->getOperand(0);
+
+  if ((Opc == ISD::SRA || Opc == ISD::SRL) && ShiftAmount >= 8) {
+    // foo >> (8 + N) => sxt(swpb(foo)) >> N
+    assert(VT == MVT::i16 && "Can not shift i8 by 8 and more");
+    Victim = DAG.getNode(ISD::BSWAP, dl, VT, Victim);
+    if (Opc == ISD::SRA)
+      Victim = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Victim,
+                           DAG.getValueType(MVT::i8));
+    else
+      Victim = DAG.getZeroExtendInReg(Victim, dl, MVT::i8);
+    ShiftAmount -= 8;
+  }
 
   if (Opc == ISD::SRL && ShiftAmount) {
     // Emit a special goodness here:
     // srl A, 1 => clrc; rrc A
-    Victim = DAG.getNode(MSP430ISD::RRC, dl, VT, Victim);
+    Victim = DAG.getNode(MSP430ISD::RRCL, dl, VT, Victim);
     ShiftAmount -= 1;
   }
 
@@ -1342,15 +1346,14 @@ const char *MSP430TargetLowering::getTargetNodeName(unsigned Opcode) const {
   case MSP430ISD::RRA:                return "MSP430ISD::RRA";
   case MSP430ISD::RLA:                return "MSP430ISD::RLA";
   case MSP430ISD::RRC:                return "MSP430ISD::RRC";
+  case MSP430ISD::RRCL:               return "MSP430ISD::RRCL";
   case MSP430ISD::CALL:               return "MSP430ISD::CALL";
   case MSP430ISD::Wrapper:            return "MSP430ISD::Wrapper";
   case MSP430ISD::BR_CC:              return "MSP430ISD::BR_CC";
   case MSP430ISD::CMP:                return "MSP430ISD::CMP";
   case MSP430ISD::SETCC:              return "MSP430ISD::SETCC";
   case MSP430ISD::SELECT_CC:          return "MSP430ISD::SELECT_CC";
-  case MSP430ISD::SHL:                return "MSP430ISD::SHL";
-  case MSP430ISD::SRA:                return "MSP430ISD::SRA";
-  case MSP430ISD::SRL:                return "MSP430ISD::SRL";
+  case MSP430ISD::DADD:               return "MSP430ISD::DADD";
   }
   return nullptr;
 }
@@ -1397,33 +1400,49 @@ MSP430TargetLowering::EmitShiftInstr(MachineInstr &MI,
   const TargetInstrInfo &TII = *F->getSubtarget().getInstrInfo();
 
   unsigned Opc;
+  bool ClearCarry = false;
   const TargetRegisterClass * RC;
   switch (MI.getOpcode()) {
   default: llvm_unreachable("Invalid shift opcode!");
   case MSP430::Shl8:
-   Opc = MSP430::SHL8r1;
-   RC = &MSP430::GR8RegClass;
-   break;
+    Opc = MSP430::ADD8rr;
+    RC = &MSP430::GR8RegClass;
+    break;
   case MSP430::Shl16:
-   Opc = MSP430::SHL16r1;
-   RC = &MSP430::GR16RegClass;
-   break;
+    Opc = MSP430::ADD16rr;
+    RC = &MSP430::GR16RegClass;
+    break;
   case MSP430::Sra8:
-   Opc = MSP430::SAR8r1;
-   RC = &MSP430::GR8RegClass;
-   break;
+    Opc = MSP430::RRA8r;
+    RC = &MSP430::GR8RegClass;
+    break;
   case MSP430::Sra16:
-   Opc = MSP430::SAR16r1;
-   RC = &MSP430::GR16RegClass;
-   break;
+    Opc = MSP430::RRA16r;
+    RC = &MSP430::GR16RegClass;
+    break;
   case MSP430::Srl8:
-   Opc = MSP430::SAR8r1c;
-   RC = &MSP430::GR8RegClass;
-   break;
+    ClearCarry = true;
+    Opc = MSP430::RRC8r;
+    RC = &MSP430::GR8RegClass;
+    break;
   case MSP430::Srl16:
-   Opc = MSP430::SAR16r1c;
-   RC = &MSP430::GR16RegClass;
-   break;
+    ClearCarry = true;
+    Opc = MSP430::RRC16r;
+    RC = &MSP430::GR16RegClass;
+    break;
+  case MSP430::Rrcl8:
+  case MSP430::Rrcl16: {
+    BuildMI(*BB, MI, dl, TII.get(MSP430::BIC16rc), MSP430::SR)
+      .addReg(MSP430::SR).addImm(1);
+    unsigned SrcReg = MI.getOperand(1).getReg();
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned RrcOpc = MI.getOpcode() == MSP430::Rrcl16
+                    ? MSP430::RRC16r : MSP430::RRC8r;
+    BuildMI(*BB, MI, dl, TII.get(RrcOpc), DstReg)
+      .addReg(SrcReg);
+    MI.eraseFromParent(); // The pseudo instruction is gone now.
+    return BB;
+  }
   }
 
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
@@ -1476,8 +1495,16 @@ MSP430TargetLowering::EmitShiftInstr(MachineInstr &MI,
   BuildMI(LoopBB, dl, TII.get(MSP430::PHI), ShiftAmtReg)
     .addReg(ShiftAmtSrcReg).addMBB(BB)
     .addReg(ShiftAmtReg2).addMBB(LoopBB);
-  BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2)
-    .addReg(ShiftReg);
+  if (ClearCarry)
+    BuildMI(LoopBB, dl, TII.get(MSP430::BIC16rc), MSP430::SR)
+      .addReg(MSP430::SR).addImm(1);
+  if (Opc == MSP430::ADD8rr || Opc == MSP430::ADD16rr)
+    BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2)
+      .addReg(ShiftReg)
+      .addReg(ShiftReg);
+  else
+    BuildMI(LoopBB, dl, TII.get(Opc), ShiftReg2)
+      .addReg(ShiftReg);
   BuildMI(LoopBB, dl, TII.get(MSP430::SUB8ri), ShiftAmtReg2)
     .addReg(ShiftAmtReg).addImm(1);
   BuildMI(LoopBB, dl, TII.get(MSP430::JCC))
@@ -1499,9 +1526,10 @@ MSP430TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                   MachineBasicBlock *BB) const {
   unsigned Opc = MI.getOpcode();
 
-  if (Opc == MSP430::Shl8 || Opc == MSP430::Shl16 ||
-      Opc == MSP430::Sra8 || Opc == MSP430::Sra16 ||
-      Opc == MSP430::Srl8 || Opc == MSP430::Srl16)
+  if (Opc == MSP430::Shl8  || Opc == MSP430::Shl16 ||
+      Opc == MSP430::Sra8  || Opc == MSP430::Sra16 ||
+      Opc == MSP430::Srl8  || Opc == MSP430::Srl16 ||
+      Opc == MSP430::Rrcl8 || Opc == MSP430::Rrcl16)
     return EmitShiftInstr(MI, BB);
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();

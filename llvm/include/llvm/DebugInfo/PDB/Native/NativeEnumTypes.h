@@ -26,23 +26,20 @@ class NativeEnumTypes : public IPDBEnumChildren<PDBSymbol> {
 public:
   NativeEnumTypes(NativeSession &Session,
                   codeview::LazyRandomTypeCollection &TypeCollection,
-                  codeview::TypeLeafKind Kind);
+                  std::vector<codeview::TypeLeafKind> Kinds);
+
+  NativeEnumTypes(NativeSession &Session,
+                  std::vector<codeview::TypeIndex> Indices);
 
   uint32_t getChildCount() const override;
   std::unique_ptr<PDBSymbol> getChildAtIndex(uint32_t Index) const override;
   std::unique_ptr<PDBSymbol> getNext() override;
   void reset() override;
-  NativeEnumTypes *clone() const override;
 
 private:
-  NativeEnumTypes(NativeSession &Session,
-                  const std::vector<codeview::TypeIndex> &Matches,
-                  codeview::TypeLeafKind Kind);
-
   std::vector<codeview::TypeIndex> Matches;
   uint32_t Index;
   NativeSession &Session;
-  codeview::TypeLeafKind Kind;
 };
 
 } // namespace pdb

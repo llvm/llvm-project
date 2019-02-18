@@ -119,14 +119,31 @@ struct OrderGlobalInits {
 struct ObjCEntrypoints {
   ObjCEntrypoints() { memset(this, 0, sizeof(*this)); }
 
-    /// void objc_autoreleasePoolPop(void*);
+  /// void objc_alloc(id);
+  llvm::Constant *objc_alloc;
+
+  /// void objc_allocWithZone(id);
+  llvm::Constant *objc_allocWithZone;
+
+  /// void objc_alloc_init(id);
+  llvm::Constant *objc_alloc_init;
+
+  /// void objc_autoreleasePoolPop(void*);
   llvm::Constant *objc_autoreleasePoolPop;
+
+  /// void objc_autoreleasePoolPop(void*);
+  /// Note this method is used when we are using exception handling
+  llvm::Constant *objc_autoreleasePoolPopInvoke;
 
   /// void *objc_autoreleasePoolPush(void);
   llvm::Constant *objc_autoreleasePoolPush;
 
   /// id objc_autorelease(id);
   llvm::Constant *objc_autorelease;
+
+  /// id objc_autorelease(id);
+  /// Note this is the runtime method not the intrinsic.
+  llvm::Constant *objc_autoreleaseRuntimeFunction;
 
   /// id objc_autoreleaseReturnValue(id);
   llvm::Constant *objc_autoreleaseReturnValue;
@@ -152,6 +169,10 @@ struct ObjCEntrypoints {
   /// id objc_retain(id);
   llvm::Constant *objc_retain;
 
+  /// id objc_retain(id);
+  /// Note this is the runtime method not the intrinsic.
+  llvm::Constant *objc_retainRuntimeFunction;
+
   /// id objc_retainAutorelease(id);
   llvm::Constant *objc_retainAutorelease;
 
@@ -166,6 +187,10 @@ struct ObjCEntrypoints {
 
   /// void objc_release(id);
   llvm::Constant *objc_release;
+
+  /// void objc_release(id);
+  /// Note this is the runtime method not the intrinsic.
+  llvm::Constant *objc_releaseRuntimeFunction;
 
   /// void objc_storeStrong(id*, id);
   llvm::Constant *objc_storeStrong;
@@ -280,14 +305,14 @@ private:
   llvm::LLVMContext &VMContext;
 
   std::unique_ptr<CodeGenTBAA> TBAA;
-  
+
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
-  
+
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized and also checks
   // if TheTargetCodeGenInfo is NULL
   CodeGenTypes Types;
- 
+
   /// Holds information about C++ vtables.
   CodeGenVTables VTables;
 
@@ -366,6 +391,13 @@ private:
   llvm::MapVector<GlobalDecl, StringRef> MangledDeclNames;
   llvm::StringMap<GlobalDecl, llvm::BumpPtrAllocator> Manglings;
 
+  // An ordered map of canonical GlobalDecls paired with the cpu-index for
+  // cpu-specific name manglings.
+  llvm::MapVector<std::pair<GlobalDecl, unsigned>, StringRef>
+      CPUSpecificMangledDeclNames;
+  llvm::StringMap<std::pair<GlobalDecl, unsigned>, llvm::BumpPtrAllocator>
+      CPUSpecificManglings;
+
   /// Global annotations.
   std::vector<llvm::Constant*> Annotations;
 
@@ -408,7 +440,7 @@ private:
   /// order. Once the decl is emitted, the index is replaced with ~0U to ensure
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
-  
+
   typedef std::pair<OrderGlobalInits, llvm::Function*> GlobalInitData;
 
   struct GlobalInitPriorityCmp {
@@ -445,7 +477,7 @@ private:
   /// The type used to describe the state of a fast enumeration in
   /// Objective-C's for..in loop.
   QualType ObjCFastEnumerationStateType;
-  
+
   /// @}
 
   /// Lazily create the Objective-C runtime
@@ -569,7 +601,7 @@ public:
   llvm::Constant *getStaticLocalDeclAddress(const VarDecl *D) {
     return StaticLocalDeclMap[D];
   }
-  void setStaticLocalDeclAddress(const VarDecl *D, 
+  void setStaticLocalDeclAddress(const VarDecl *D,
                                  llvm::Constant *C) {
     StaticLocalDeclMap[D] = C;
   }
@@ -581,7 +613,7 @@ public:
   llvm::GlobalVariable *getStaticLocalDeclGuardAddress(const VarDecl *D) {
     return StaticLocalDeclGuardMap[D];
   }
-  void setStaticLocalDeclGuardAddress(const VarDecl *D, 
+  void setStaticLocalDeclGuardAddress(const VarDecl *D,
                                       llvm::GlobalVariable *C) {
     StaticLocalDeclGuardMap[D] = C;
   }
@@ -642,10 +674,10 @@ public:
 
   bool shouldUseTBAA() const { return TBAA != nullptr; }
 
-  const TargetCodeGenInfo &getTargetCodeGenInfo(); 
-  
+  const TargetCodeGenInfo &getTargetCodeGenInfo();
+
   CodeGenTypes &getTypes() { return Types; }
- 
+
   CodeGenVTables &getVTables() { return VTables; }
 
   ItaniumVTableContext &getItaniumVTableContext() {
@@ -757,7 +789,8 @@ public:
   /// bitcast to the new variable.
   llvm::GlobalVariable *
   CreateOrReplaceCXXRuntimeVariable(StringRef Name, llvm::Type *Ty,
-                                    llvm::GlobalValue::LinkageTypes Linkage);
+                                    llvm::GlobalValue::LinkageTypes Linkage,
+                                    unsigned Alignment);
 
   llvm::Function *
   CreateGlobalInitOrDestructFunction(llvm::FunctionType *ty, const Twine &name,
@@ -845,7 +878,7 @@ public:
 
   /// Fetches the global unique block count.
   int getUniqueBlockCount() { return ++Block.GlobalUniqueCount; }
-  
+
   /// Fetches the type of a generic block descriptor.
   llvm::Type *getBlockDescriptorType();
 
@@ -864,7 +897,7 @@ public:
   /// Notes that BE's global block is available via Addr. Asserts that BE
   /// isn't already emitted.
   void setAddrOfGlobalBlock(const BlockExpr *BE, llvm::Constant *Addr);
-  
+
   /// Return a pointer to a constant CFString object for the given string.
   ConstantAddress GetAddrOfConstantCFString(const StringLiteral *Literal);
 
@@ -1035,8 +1068,7 @@ public:
                                      const CGFunctionInfo &FI);
 
   /// Set the LLVM function attributes (sext, zext, etc).
-  void SetLLVMFunctionAttributes(const Decl *D,
-                                 const CGFunctionInfo &Info,
+  void SetLLVMFunctionAttributes(GlobalDecl GD, const CGFunctionInfo &Info,
                                  llvm::Function *F);
 
   /// Set the LLVM function attributes which only apply to a function
@@ -1096,8 +1128,7 @@ public:
 
   // Fills in the supplied string map with the set of target features for the
   // passed in function.
-  void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
-                             const FunctionDecl *FD);
+  void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap, GlobalDecl GD);
 
   StringRef getMangledName(GlobalDecl GD);
   StringRef getBlockMangledName(GlobalDecl GD, const BlockDecl *BD);
@@ -1132,7 +1163,7 @@ public:
 
   /// Return the store size, in character units, of the given LLVM type.
   CharUnits GetTargetTypeStoreSize(llvm::Type *Ty) const;
-  
+
   /// Returns LLVM linkage for a declarator.
   llvm::GlobalValue::LinkageTypes
   getLLVMLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,
@@ -1216,6 +1247,10 @@ public:
   void EmitOMPDeclareReduction(const OMPDeclareReductionDecl *D,
                                CodeGenFunction *CGF = nullptr);
 
+  /// Emit a code for requires directive.
+  /// \param D Requires declaration
+  void EmitOMPRequiresDecl(const OMPRequiresDecl *D);
+
   /// Returns whether the given record has hidden LTO visibility and therefore
   /// may participate in (single-module) CFI and whole-program vtable
   /// optimization.
@@ -1281,10 +1316,9 @@ private:
       llvm::AttributeList ExtraAttrs = llvm::AttributeList(),
       ForDefinition_t IsForDefinition = NotForDefinition);
 
-  llvm::Constant *GetOrCreateMultiVersionIFunc(GlobalDecl GD,
-                                               llvm::Type *DeclTy,
-                                               StringRef MangledName,
-                                               const FunctionDecl *FD);
+  llvm::Constant *GetOrCreateMultiVersionResolver(GlobalDecl GD,
+                                                  llvm::Type *DeclTy,
+                                                  const FunctionDecl *FD);
   void UpdateMultiVersionNames(GlobalDecl GD, const FunctionDecl *FD);
 
   llvm::Constant *GetOrCreateLLVMGlobal(StringRef MangledName,
@@ -1293,7 +1327,7 @@ private:
                                         ForDefinition_t IsForDefinition
                                           = NotForDefinition);
 
-  bool GetCPUAndFeaturesAttributes(const Decl *D,
+  bool GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                    llvm::AttrBuilder &AttrBuilder);
   void setNonAliasAttributes(GlobalDecl GD, llvm::GlobalObject *GO);
 
@@ -1304,12 +1338,15 @@ private:
   void EmitGlobalDefinition(GlobalDecl D, llvm::GlobalValue *GV = nullptr);
 
   void EmitGlobalFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
+  void EmitMultiVersionFunctionDefinition(GlobalDecl GD, llvm::GlobalValue *GV);
+
   void EmitGlobalVarDefinition(const VarDecl *D, bool IsTentative = false);
   void EmitAliasDefinition(GlobalDecl GD);
   void emitIFuncDefinition(GlobalDecl GD);
+  void emitCPUDispatchDefinition(GlobalDecl GD);
   void EmitObjCPropertyImplementations(const ObjCImplementationDecl *D);
   void EmitObjCIvarInitializations(ObjCImplementationDecl *D);
-  
+
   // C++ related functions.
 
   void EmitDeclContext(const DeclContext *DC);
@@ -1389,6 +1426,9 @@ private:
 
   /// Emit the Clang version as llvm.ident metadata.
   void EmitVersionIdentMetadata();
+
+  /// Emit the Clang commandline as llvm.commandline metadata.
+  void EmitCommandLineMetadata();
 
   /// Emits target specific Metadata for global declarations.
   void EmitTargetMetadata();

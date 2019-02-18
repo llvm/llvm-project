@@ -78,7 +78,7 @@ USEVAR(GlobalRedecl2c)
 // NB: MSC issues a warning and makes GlobalRedecl3 dllexport. We follow GCC
 // and drop the dllimport with a warning.
 // MSC-DAG: @"?GlobalRedecl3@@3HA" = external dso_local global i32
-// GNU-DAG: @GlobalRedecl3            = external dso_local global i32
+// GNU-DAG: @GlobalRedecl3            = external global i32
 __declspec(dllimport) extern int GlobalRedecl3;
                       extern int GlobalRedecl3; // dllimport ignored
 USEVAR(GlobalRedecl3)
@@ -137,7 +137,7 @@ template<typename T> __declspec(dllimport) int VarTmplRedecl2;
 USEVAR(VarTmplRedecl2<ImplicitInst_Imported>)
 
 // MSC-DAG: @"??$VarTmplRedecl3@UImplicitInst_Imported@@@@3HA" = external dso_local global i32
-// GNU-DAG: @_Z14VarTmplRedecl3I21ImplicitInst_ImportedE          = external dso_local global i32
+// GNU-DAG: @_Z14VarTmplRedecl3I21ImplicitInst_ImportedE          = external global i32
 template<typename T> __declspec(dllimport) extern int VarTmplRedecl3;
 template<typename T>                       extern int VarTmplRedecl3; // dllimport ignored
 USEVAR(VarTmplRedecl3<ImplicitInst_Imported>)
@@ -996,3 +996,26 @@ template struct __declspec(dllexport) ExplicitInstantiationDeclTemplateBase2<int
 USEMEMFUNC(ExplicitInstantiationDeclTemplateBase2<int>, func)
 // M32-DAG: declare dllimport x86_thiscallcc void @"?func@?$ExplicitInstantiationDeclTemplateBase2@H@@QAEXXZ"
 // G32-DAG: define weak_odr dso_local x86_thiscallcc void @_ZN38ExplicitInstantiationDeclTemplateBase2IiE4funcEv
+
+namespace pr39496 {
+// Make sure dll attribute are inherited by static locals also in template
+// specializations.
+template <typename> struct __declspec(dllimport) S { int foo() { static int x; return x++; } };
+int foo() { S<int> s; return s.foo(); }
+// MO1-DAG: @"?x@?{{1|2}}??foo@?$S@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = available_externally dllimport global i32 0, align 4
+
+template <typename> struct T { int foo() { static int x; return x++; } };
+extern template struct __declspec(dllimport) T<int>;
+int bar() { T<int> t; return t.foo(); }
+// MO1-DAG: @"?x@?{{1|2}}??foo@?$T@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = available_externally dllimport global i32 0, align 4
+
+template <typename T> struct __declspec(dllimport) U {
+  void foo() {
+    // Don't inherit dllimport to src before attaching the initializer.
+    static constexpr char src[] = {"hello"};
+    T arr[sizeof(src)];
+  }
+};
+void baz() { U<int> u; u.foo(); } // No diagnostic.
+
+}

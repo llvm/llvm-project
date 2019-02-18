@@ -18,6 +18,7 @@
     SANITIZER_OPENBSD || SANITIZER_SOLARIS
 #include "sanitizer_common.h"
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform_limits_freebsd.h"
 #include "sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_platform_limits_openbsd.h"
 #include "sanitizer_platform_limits_posix.h"
@@ -69,6 +70,8 @@ void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
                     int *parent_tidptr, void *newtls, int *child_tidptr);
 #endif
+#elif SANITIZER_FREEBSD
+void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
 #endif  // SANITIZER_LINUX
 
 // This class reads thread IDs from /proc/<pid>/task using only syscalls.

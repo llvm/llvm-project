@@ -29,6 +29,10 @@
 #include "sanitizer_placement_new.h"
 #include "sanitizer_win_defs.h"
 
+#if defined(PSAPI_VERSION) && PSAPI_VERSION == 1
+#pragma comment(lib, "psapi")
+#endif
+
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in
 // code that is called when terminating the process, the expansion of the
@@ -202,7 +206,7 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
   return (void *)mapped_addr;
 }
 
-void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
+bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   // FIXME: is this really "NoReserve"? On Win32 this does not matter much,
   // but on Win64 it does.
   (void)name;  // unsupported
@@ -215,11 +219,13 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   void *p = VirtualAlloc((LPVOID)fixed_addr, size, MEM_RESERVE | MEM_COMMIT,
                          PAGE_READWRITE);
 #endif
-  if (p == 0)
+  if (p == 0) {
     Report("ERROR: %s failed to "
            "allocate %p (%zd) bytes at %p (error code: %d)\n",
            SanitizerToolName, size, size, fixed_addr, GetLastError());
-  return p;
+    return false;
+  }
+  return true;
 }
 
 // Memory space mapped by 'MmapFixedOrDie' must have been reserved by
@@ -731,10 +737,6 @@ bool WriteToFile(fd_t fd, const void *buff, uptr buff_size, uptr *bytes_written,
   }
 }
 
-bool RenameFile(const char *oldpath, const char *newpath, error_t *error_p) {
-  UNIMPLEMENTED();
-}
-
 uptr internal_sched_yield() {
   Sleep(0);
   return 0;
@@ -765,43 +767,22 @@ void *internal_start_thread(void (*func)(void *arg), void *arg) { return 0; }
 void internal_join_thread(void *th) { }
 
 // ---------------------- BlockingMutex ---------------- {{{1
-const uptr LOCK_UNINITIALIZED = 0;
-const uptr LOCK_READY = (uptr)-1;
-
-BlockingMutex::BlockingMutex(LinkerInitialized li) {
-  // FIXME: see comments in BlockingMutex::Lock() for the details.
-  CHECK(li == LINKER_INITIALIZED || owner_ == LOCK_UNINITIALIZED);
-
-  CHECK(sizeof(CRITICAL_SECTION) <= sizeof(opaque_storage_));
-  InitializeCriticalSection((LPCRITICAL_SECTION)opaque_storage_);
-  owner_ = LOCK_READY;
-}
 
 BlockingMutex::BlockingMutex() {
-  CHECK(sizeof(CRITICAL_SECTION) <= sizeof(opaque_storage_));
-  InitializeCriticalSection((LPCRITICAL_SECTION)opaque_storage_);
-  owner_ = LOCK_READY;
+  CHECK(sizeof(SRWLOCK) <= sizeof(opaque_storage_));
+  internal_memset(this, 0, sizeof(*this));
 }
 
 void BlockingMutex::Lock() {
-  if (owner_ == LOCK_UNINITIALIZED) {
-    // FIXME: hm, global BlockingMutex objects are not initialized?!?
-    // This might be a side effect of the clang+cl+link Frankenbuild...
-    new(this) BlockingMutex((LinkerInitialized)(LINKER_INITIALIZED + 1));
-
-    // FIXME: If it turns out the linker doesn't invoke our
-    // constructors, we should probably manually Lock/Unlock all the global
-    // locks while we're starting in one thread to avoid double-init races.
-  }
-  EnterCriticalSection((LPCRITICAL_SECTION)opaque_storage_);
-  CHECK_EQ(owner_, LOCK_READY);
+  AcquireSRWLockExclusive((PSRWLOCK)opaque_storage_);
+  CHECK_EQ(owner_, 0);
   owner_ = GetThreadSelf();
 }
 
 void BlockingMutex::Unlock() {
-  CHECK_EQ(owner_, GetThreadSelf());
-  owner_ = LOCK_READY;
-  LeaveCriticalSection((LPCRITICAL_SECTION)opaque_storage_);
+  CheckLocked();
+  owner_ = 0;
+  ReleaseSRWLockExclusive((PSRWLOCK)opaque_storage_);
 }
 
 void BlockingMutex::CheckLocked() {
@@ -1023,6 +1004,10 @@ void CheckVMASize() {
   // Do nothing.
 }
 
+void InitializePlatformEarly() {
+  // Do nothing.
+}
+
 void MaybeReexec() {
   // No need to re-exec on Windows.
 }
@@ -1031,7 +1016,16 @@ void CheckASLR() {
   // Do nothing
 }
 
+void CheckMPROTECT() {
+  // Do nothing
+}
+
 char **GetArgv() {
+  // FIXME: Actually implement this function.
+  return 0;
+}
+
+char **GetEnviron() {
   // FIXME: Actually implement this function.
   return 0;
 }

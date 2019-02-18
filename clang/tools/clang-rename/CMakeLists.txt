@@ -12,6 +12,7 @@ target_link_libraries(clang-rename
   clangBasic
   clangFrontend
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   clangToolingRefactor

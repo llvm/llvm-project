@@ -850,7 +850,8 @@ define <4  x float> @test42(<4  x float> %x, <4  x float> %x1, float* %ptr) noun
 define <8 x double> @test43(<8 x double> %x, <8 x double> %x1, double* %ptr,<8 x i1> %mask_in) nounwind {
 ; KNL-LABEL: test43:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxwq %xmm2, %zmm2 ## encoding: [0x62,0xf2,0x7d,0x48,0x24,0xd2]
+; KNL-NEXT:    vpmovzxwq %xmm2, %zmm2 ## encoding: [0x62,0xf2,0x7d,0x48,0x34,0xd2]
+; KNL-NEXT:    ## zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero
 ; KNL-NEXT:    vpsllq $63, %zmm2, %zmm2 ## encoding: [0x62,0xf1,0xed,0x48,0x73,0xf2,0x3f]
 ; KNL-NEXT:    vptestmq %zmm2, %zmm2, %k1 ## encoding: [0x62,0xf2,0xed,0x48,0x27,0xca]
 ; KNL-NEXT:    vcmpltpd (%rdi){1to8}, %zmm0, %k1 {%k1} ## encoding: [0x62,0xf1,0xfd,0x59,0xc2,0x0f,0x01]

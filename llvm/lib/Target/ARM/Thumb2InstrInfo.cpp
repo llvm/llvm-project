@@ -146,9 +146,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
       MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
 
-  if (RC == &ARM::GPRRegClass   || RC == &ARM::tGPRRegClass ||
-      RC == &ARM::tcGPRRegClass || RC == &ARM::rGPRRegClass ||
-      RC == &ARM::GPRnopcRegClass) {
+  if (ARM::GPRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(ARM::t2STRi12))
         .addReg(SrcReg, getKillRegState(isKill))
         .addFrameIndex(FI)
@@ -190,9 +188,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
-  if (RC == &ARM::GPRRegClass   || RC == &ARM::tGPRRegClass ||
-      RC == &ARM::tcGPRRegClass || RC == &ARM::rGPRRegClass ||
-      RC == &ARM::GPRnopcRegClass) {
+  if (ARM::GPRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(ARM::t2LDRi12), DestReg)
         .addFrameIndex(FI)
         .addImm(0)
@@ -620,6 +616,11 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       NumBits = 10; // 8 bits scaled by 4
       // MCInst operand expects already scaled value.
       Scale = 1;
+      assert((Offset & 3) == 0 && "Can't encode this offset!");
+    } else if (AddrMode == ARMII::AddrModeT2_ldrex) {
+      Offset += MI.getOperand(FrameRegIdx + 1).getImm() * 4;
+      NumBits = 8; // 8 bits scaled by 4
+      Scale = 4;
       assert((Offset & 3) == 0 && "Can't encode this offset!");
     } else {
       llvm_unreachable("Unsupported addressing mode!");

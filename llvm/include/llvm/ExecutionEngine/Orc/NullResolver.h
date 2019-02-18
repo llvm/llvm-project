@@ -15,7 +15,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_NULLRESOLVER_H
 #define LLVM_EXECUTIONENGINE_ORC_NULLRESOLVER_H
 
-#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Legacy.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 
 namespace llvm {
@@ -23,11 +23,10 @@ namespace orc {
 
 class NullResolver : public SymbolResolver {
 public:
-  SymbolNameSet lookupFlags(SymbolFlagsMap &Flags,
-                            const SymbolNameSet &Symbols) override;
+  SymbolNameSet getResponsibilitySet(const SymbolNameSet &Symbols) final;
 
   SymbolNameSet lookup(std::shared_ptr<AsynchronousSymbolQuery> Query,
-                       SymbolNameSet Symbols) override;
+                       SymbolNameSet Symbols) final;
 };
 
 /// SymbolResolver impliementation that rejects all resolution requests.

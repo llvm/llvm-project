@@ -209,6 +209,11 @@ getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
+bool ARMBaseRegisterInfo::
+isAsmClobberable(const MachineFunction &MF, unsigned PhysReg) const {
+  return !getReservedRegs(MF).test(PhysReg);
+}
+
 const TargetRegisterClass *
 ARMBaseRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                                const MachineFunction &) const {
@@ -584,7 +589,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // don't know for sure yet whether we'll need that, so we guess based
   // on whether there are any local variables that would trigger it.
   unsigned StackAlign = TFI->getStackAlignment();
-  if (TFI->hasFP(MF) && 
+  if (TFI->hasFP(MF) &&
       !((MFI.getLocalFrameMaxAlign() > StackAlign) && canRealignStack(MF))) {
     if (isFrameOffsetLegal(MI, getFrameRegister(MF), FPOffset))
       return false;

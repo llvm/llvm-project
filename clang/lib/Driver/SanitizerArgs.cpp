@@ -27,26 +27,27 @@ using namespace clang::driver;
 using namespace llvm::opt;
 
 enum : SanitizerMask {
-  NeedsUbsanRt = Undefined | Integer | Nullability | CFI,
+  NeedsUbsanRt = Undefined | Integer | ImplicitConversion | Nullability | CFI,
   NeedsUbsanCxxRt = Vptr | CFI,
   NotAllowedWithTrap = Vptr,
   NotAllowedWithMinimalRuntime = Vptr,
   RequiresPIE = DataFlow | HWAddress | Scudo,
   NeedsUnwindTables = Address | HWAddress | Thread | Memory | DataFlow,
   SupportsCoverage = Address | HWAddress | KernelAddress | KernelHWAddress |
-                     Memory | Leak | Undefined | Integer | Nullability |
-                     DataFlow | Fuzzer | FuzzerNoLink,
-  RecoverableByDefault = Undefined | Integer | Nullability,
+                     Memory | KernelMemory | Leak | Undefined | Integer |
+                     ImplicitConversion | Nullability | DataFlow | Fuzzer |
+                     FuzzerNoLink,
+  RecoverableByDefault = Undefined | Integer | ImplicitConversion | Nullability,
   Unrecoverable = Unreachable | Return,
   AlwaysRecoverable = KernelAddress | KernelHWAddress,
   LegacyFsanitizeRecoverMask = Undefined | Integer,
   NeedsLTO = CFI,
   TrappingSupported = (Undefined & ~Vptr) | UnsignedIntegerOverflow |
-                      Nullability | LocalBounds | CFI,
+                      ImplicitConversion | Nullability | LocalBounds | CFI,
   TrappingDefault = CFI,
   CFIClasses =
       CFIVCall | CFINVCall | CFIMFCall | CFIDerivedCast | CFIUnrelatedCast,
-  CompatibleWithMinimalRuntime = TrappingSupported | Scudo,
+  CompatibleWithMinimalRuntime = TrappingSupported | Scudo | ShadowCallStack,
 };
 
 enum CoverageFeature {
@@ -321,7 +322,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           D.Diag(diag::err_drv_argument_not_allowed_with)
               << "-fsanitize=vptr" << NoRTTIArg->getAsString(Args);
         } else {
-          // The vptr sanitizer requires RTTI, but RTTI is disabled (by 
+          // The vptr sanitizer requires RTTI, but RTTI is disabled (by
           // default). Warn that the vptr sanitizer is being disabled.
           D.Diag(diag::warn_drv_disabling_vptr_no_rtti_default);
         }
@@ -375,13 +376,12 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 KernelAddress | Efficiency),
       std::make_pair(SafeStack, Address | HWAddress | Leak | Thread | Memory |
                                     KernelAddress | Efficiency),
-      std::make_pair(ShadowCallStack, Address | HWAddress | Leak | Thread |
-                                          Memory | KernelAddress | Efficiency |
-                                          SafeStack),
       std::make_pair(KernelHWAddress, Address | HWAddress | Leak | Thread |
                                           Memory | KernelAddress | Efficiency |
-                                          SafeStack | ShadowCallStack)};
-
+                                          SafeStack),
+      std::make_pair(KernelMemory, Address | HWAddress | Leak | Thread |
+                                       Memory | KernelAddress | Efficiency |
+                                       Scudo | SafeStack)};
   // Enable toolchain specific default sanitizers if not explicitly disabled.
   SanitizerMask Default = TC.getDefaultSanitizers() & ~AllRemove;
 
@@ -721,12 +721,22 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fsanitize_address_use_after_scope,
         options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
 
+    AsanPoisonCustomArrayCookie = Args.hasFlag(
+        options::OPT_fsanitize_address_poison_custom_array_cookie,
+        options::OPT_fno_sanitize_address_poison_custom_array_cookie,
+        AsanPoisonCustomArrayCookie);
+
     // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
     // globals in ASan is disabled by default on ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
     AsanGlobalsDeadStripping =
         !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
         Args.hasArg(options::OPT_fsanitize_address_globals_dead_stripping);
+
+    AsanUseOdrIndicator =
+        Args.hasFlag(options::OPT_fsanitize_address_use_odr_indicator,
+                     options::OPT_fno_sanitize_address_use_odr_indicator,
+                     AsanUseOdrIndicator);
   } else {
     AsanUseAfterScope = false;
   }
@@ -894,8 +904,14 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanUseAfterScope)
     CmdArgs.push_back("-fsanitize-address-use-after-scope");
 
+  if (AsanPoisonCustomArrayCookie)
+    CmdArgs.push_back("-fsanitize-address-poison-custom-array-cookie");
+
   if (AsanGlobalsDeadStripping)
     CmdArgs.push_back("-fsanitize-address-globals-dead-stripping");
+
+  if (AsanUseOdrIndicator)
+    CmdArgs.push_back("-fsanitize-address-use-odr-indicator");
 
   // MSan: Workaround for PR16386.
   // ASan: This is mainly to help LSan with cases such as

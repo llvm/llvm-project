@@ -620,7 +620,7 @@ ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
   // assume a predicate of AL.
   unsigned CC;
   CC = ITBlock.getITCC();
-  if (CC == 0xF) 
+  if (CC == 0xF)
     CC = ARMCC::AL;
   if (ITBlock.instrInITBlock())
     ITBlock.advanceITState();
@@ -888,7 +888,7 @@ DecodeGPRnopcRegisterClass(MCInst &Inst, unsigned RegNo,
                            uint64_t Address, const void *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
 
-  if (RegNo == 15) 
+  if (RegNo == 15)
     S = MCDisassembler::SoftFail;
 
   Check(S, DecodeGPRRegisterClass(Inst, RegNo, Address, Decoder));
@@ -2171,7 +2171,7 @@ static DecodeStatus DecodeSETPANInstruction(MCInst &Inst, unsigned Insn,
   const MCDisassembler *Dis = static_cast<const MCDisassembler*>(Decoder);
   const FeatureBitset &FeatureBits = Dis->getSubtargetInfo().getFeatureBits();
 
-  if (!FeatureBits[ARM::HasV8_1aOps] || 
+  if (!FeatureBits[ARM::HasV8_1aOps] ||
       !FeatureBits[ARM::HasV8Ops])
     return MCDisassembler::Fail;
 
@@ -4467,7 +4467,7 @@ static DecodeStatus DecodeVST1LN(MCInst &Inst, unsigned Insn,
       index = fieldFromInstruction(Insn, 7, 1);
 
       switch (fieldFromInstruction(Insn, 4, 2)) {
-        case 0: 
+        case 0:
           align = 0; break;
         case 3:
           align = 4; break;
@@ -5279,7 +5279,7 @@ static DecodeStatus DecodeLDR(MCInst &Inst, unsigned Val,
     return MCDisassembler::Fail;
   if (!Check(S, DecodeGPRnopcRegisterClass(Inst, Rn, Address, Decoder)))
     return MCDisassembler::Fail;
-  if (!Check(S, DecodeAddrMode7Operand(Inst, Rn, Address, Decoder))) 
+  if (!Check(S, DecodeAddrMode7Operand(Inst, Rn, Address, Decoder)))
     return MCDisassembler::Fail;
   if (!Check(S, DecodePostIdxReg(Inst, Rm, Address, Decoder)))
     return MCDisassembler::Fail;

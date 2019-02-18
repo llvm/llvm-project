@@ -16,7 +16,7 @@ Typical slowdown introduced by MemorySanitizer is **3x**.
 How to build
 ============
 
-Build LLVM/Clang with `CMake <http://llvm.org/docs/CMake.html>`_.
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_.
 
 Usage
 =====
@@ -185,7 +185,11 @@ self-built instrumented libc++ (as a replacement for libstdc++).
 Supported Platforms
 ===================
 
-MemorySanitizer is supported on Linux x86\_64/MIPS64/AArch64.
+MemorySanitizer is supported on the following OS:
+
+* Linux
+* NetBSD
+* FreeBSD
 
 Limitations
 ===========

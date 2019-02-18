@@ -1,148 +1,148 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+a -riscv-no-aliases -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+a -riscv-no-aliases -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+a < %s \
-# RUN:     | llvm-objdump -mattr=+a -riscv-no-aliases -d - \
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv64 -mattr=+a < %s \
-# RUN:     | llvm-objdump -mattr=+a -riscv-no-aliases -d - \
-# RUN:     | FileCheck -check-prefix=CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+a < %s \
+# RUN:     | llvm-objdump -mattr=+a -riscv-no-aliases -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+a < %s \
+# RUN:     | llvm-objdump -mattr=+a -riscv-no-aliases -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
-# CHECK-INST: lr.w t0, (t1)
-# CHECK: encoding: [0xaf,0x22,0x03,0x10]
+# CHECK-ASM-AND-OBJ: lr.w t0, (t1)
+# CHECK-ASM: encoding: [0xaf,0x22,0x03,0x10]
 lr.w t0, (t1)
-# CHECK-INST: lr.w.aq t1, (t2)
-# CHECK: encoding: [0x2f,0xa3,0x03,0x14]
+# CHECK-ASM-AND-OBJ: lr.w.aq t1, (t2)
+# CHECK-ASM: encoding: [0x2f,0xa3,0x03,0x14]
 lr.w.aq t1, (t2)
-# CHECK-INST: lr.w.rl t2, (t3)
-# CHECK: encoding: [0xaf,0x23,0x0e,0x12]
+# CHECK-ASM-AND-OBJ: lr.w.rl t2, (t3)
+# CHECK-ASM: encoding: [0xaf,0x23,0x0e,0x12]
 lr.w.rl t2, (t3)
-# CHECK-INST: lr.w.aqrl t3, (t4)
-# CHECK: encoding: [0x2f,0xae,0x0e,0x16]
+# CHECK-ASM-AND-OBJ: lr.w.aqrl t3, (t4)
+# CHECK-ASM: encoding: [0x2f,0xae,0x0e,0x16]
 lr.w.aqrl t3, (t4)
 
-# CHECK-INST: sc.w t6, t5, (t4)
-# CHECK: encoding: [0xaf,0xaf,0xee,0x19]
+# CHECK-ASM-AND-OBJ: sc.w t6, t5, (t4)
+# CHECK-ASM: encoding: [0xaf,0xaf,0xee,0x19]
 sc.w t6, t5, (t4)
-# CHECK-INST: sc.w.aq t5, t4, (t3)
-# CHECK: encoding: [0x2f,0x2f,0xde,0x1d]
+# CHECK-ASM-AND-OBJ: sc.w.aq t5, t4, (t3)
+# CHECK-ASM: encoding: [0x2f,0x2f,0xde,0x1d]
 sc.w.aq t5, t4, (t3)
-# CHECK-INST: sc.w.rl t4, t3, (t2)
-# CHECK: encoding: [0xaf,0xae,0xc3,0x1b]
+# CHECK-ASM-AND-OBJ: sc.w.rl t4, t3, (t2)
+# CHECK-ASM: encoding: [0xaf,0xae,0xc3,0x1b]
 sc.w.rl t4, t3, (t2)
-# CHECK-INST: sc.w.aqrl t3, t2, (t1)
-# CHECK: encoding: [0x2f,0x2e,0x73,0x1e]
+# CHECK-ASM-AND-OBJ: sc.w.aqrl t3, t2, (t1)
+# CHECK-ASM: encoding: [0x2f,0x2e,0x73,0x1e]
 sc.w.aqrl t3, t2, (t1)
 
-# CHECK-INST: amoswap.w a4, ra, (s0)
-# CHECK: encoding: [0x2f,0x27,0x14,0x08]
+# CHECK-ASM-AND-OBJ: amoswap.w a4, ra, (s0)
+# CHECK-ASM: encoding: [0x2f,0x27,0x14,0x08]
 amoswap.w a4, ra, (s0)
-# CHECK-INST: amoadd.w a1, a2, (a3)
-# CHECK: encoding: [0xaf,0xa5,0xc6,0x00]
+# CHECK-ASM-AND-OBJ: amoadd.w a1, a2, (a3)
+# CHECK-ASM: encoding: [0xaf,0xa5,0xc6,0x00]
 amoadd.w a1, a2, (a3)
-# CHECK-INST: amoxor.w a2, a3, (a4)
-# CHECK: encoding: [0x2f,0x26,0xd7,0x20]
+# CHECK-ASM-AND-OBJ: amoxor.w a2, a3, (a4)
+# CHECK-ASM: encoding: [0x2f,0x26,0xd7,0x20]
 amoxor.w a2, a3, (a4)
-# CHECK-INST: amoand.w a3, a4, (a5)
-# CHECK: encoding: [0xaf,0xa6,0xe7,0x60]
+# CHECK-ASM-AND-OBJ: amoand.w a3, a4, (a5)
+# CHECK-ASM: encoding: [0xaf,0xa6,0xe7,0x60]
 amoand.w a3, a4, (a5)
-# CHECK-INST: amoor.w a4, a5, (a6)
-# CHECK: encoding: [0x2f,0x27,0xf8,0x40]
+# CHECK-ASM-AND-OBJ: amoor.w a4, a5, (a6)
+# CHECK-ASM: encoding: [0x2f,0x27,0xf8,0x40]
 amoor.w a4, a5, (a6)
-# CHECK-INST: amomin.w a5, a6, (a7)
-# CHECK: encoding: [0xaf,0xa7,0x08,0x81]
+# CHECK-ASM-AND-OBJ: amomin.w a5, a6, (a7)
+# CHECK-ASM: encoding: [0xaf,0xa7,0x08,0x81]
 amomin.w a5, a6, (a7)
-# CHECK-INST: amomax.w s7, s6, (s5)
-# CHECK: encoding: [0xaf,0xab,0x6a,0xa1]
+# CHECK-ASM-AND-OBJ: amomax.w s7, s6, (s5)
+# CHECK-ASM: encoding: [0xaf,0xab,0x6a,0xa1]
 amomax.w s7, s6, (s5)
-# CHECK-INST: amominu.w s6, s5, (s4)
-# CHECK: encoding: [0x2f,0x2b,0x5a,0xc1]
+# CHECK-ASM-AND-OBJ: amominu.w s6, s5, (s4)
+# CHECK-ASM: encoding: [0x2f,0x2b,0x5a,0xc1]
 amominu.w s6, s5, (s4)
-# CHECK-INST: amomaxu.w s5, s4, (s3)
-# CHECK: encoding: [0xaf,0xaa,0x49,0xe1]
+# CHECK-ASM-AND-OBJ: amomaxu.w s5, s4, (s3)
+# CHECK-ASM: encoding: [0xaf,0xaa,0x49,0xe1]
 amomaxu.w s5, s4, (s3)
 
-# CHECK-INST: amoswap.w.aq a4, ra, (s0)
-# CHECK: encoding: [0x2f,0x27,0x14,0x0c]
+# CHECK-ASM-AND-OBJ: amoswap.w.aq a4, ra, (s0)
+# CHECK-ASM: encoding: [0x2f,0x27,0x14,0x0c]
 amoswap.w.aq a4, ra, (s0)
-# CHECK-INST: amoadd.w.aq a1, a2, (a3)
-# CHECK: encoding: [0xaf,0xa5,0xc6,0x04]
+# CHECK-ASM-AND-OBJ: amoadd.w.aq a1, a2, (a3)
+# CHECK-ASM: encoding: [0xaf,0xa5,0xc6,0x04]
 amoadd.w.aq a1, a2, (a3)
-# CHECK-INST: amoxor.w.aq a2, a3, (a4)
-# CHECK: encoding: [0x2f,0x26,0xd7,0x24]
+# CHECK-ASM-AND-OBJ: amoxor.w.aq a2, a3, (a4)
+# CHECK-ASM: encoding: [0x2f,0x26,0xd7,0x24]
 amoxor.w.aq a2, a3, (a4)
-# CHECK-INST: amoand.w.aq a3, a4, (a5)
-# CHECK: encoding: [0xaf,0xa6,0xe7,0x64]
+# CHECK-ASM-AND-OBJ: amoand.w.aq a3, a4, (a5)
+# CHECK-ASM: encoding: [0xaf,0xa6,0xe7,0x64]
 amoand.w.aq a3, a4, (a5)
-# CHECK-INST: amoor.w.aq a4, a5, (a6)
-# CHECK: encoding: [0x2f,0x27,0xf8,0x44]
+# CHECK-ASM-AND-OBJ: amoor.w.aq a4, a5, (a6)
+# CHECK-ASM: encoding: [0x2f,0x27,0xf8,0x44]
 amoor.w.aq a4, a5, (a6)
-# CHECK-INST: amomin.w.aq a5, a6, (a7)
-# CHECK: encoding: [0xaf,0xa7,0x08,0x85]
+# CHECK-ASM-AND-OBJ: amomin.w.aq a5, a6, (a7)
+# CHECK-ASM: encoding: [0xaf,0xa7,0x08,0x85]
 amomin.w.aq a5, a6, (a7)
-# CHECK-INST: amomax.w.aq s7, s6, (s5)
-# CHECK: encoding: [0xaf,0xab,0x6a,0xa5]
+# CHECK-ASM-AND-OBJ: amomax.w.aq s7, s6, (s5)
+# CHECK-ASM: encoding: [0xaf,0xab,0x6a,0xa5]
 amomax.w.aq s7, s6, (s5)
-# CHECK-INST: amominu.w.aq s6, s5, (s4)
-# CHECK: encoding: [0x2f,0x2b,0x5a,0xc5]
+# CHECK-ASM-AND-OBJ: amominu.w.aq s6, s5, (s4)
+# CHECK-ASM: encoding: [0x2f,0x2b,0x5a,0xc5]
 amominu.w.aq s6, s5, (s4)
-# CHECK-INST: amomaxu.w.aq s5, s4, (s3)
-# CHECK: encoding: [0xaf,0xaa,0x49,0xe5]
+# CHECK-ASM-AND-OBJ: amomaxu.w.aq s5, s4, (s3)
+# CHECK-ASM: encoding: [0xaf,0xaa,0x49,0xe5]
 amomaxu.w.aq s5, s4, (s3)
 
-# CHECK-INST: amoswap.w.rl a4, ra, (s0)
-# CHECK: encoding: [0x2f,0x27,0x14,0x0a]
+# CHECK-ASM-AND-OBJ: amoswap.w.rl a4, ra, (s0)
+# CHECK-ASM: encoding: [0x2f,0x27,0x14,0x0a]
 amoswap.w.rl a4, ra, (s0)
-# CHECK-INST: amoadd.w.rl a1, a2, (a3)
-# CHECK: encoding: [0xaf,0xa5,0xc6,0x02]
+# CHECK-ASM-AND-OBJ: amoadd.w.rl a1, a2, (a3)
+# CHECK-ASM: encoding: [0xaf,0xa5,0xc6,0x02]
 amoadd.w.rl a1, a2, (a3)
-# CHECK-INST: amoxor.w.rl a2, a3, (a4)
-# CHECK: encoding: [0x2f,0x26,0xd7,0x22]
+# CHECK-ASM-AND-OBJ: amoxor.w.rl a2, a3, (a4)
+# CHECK-ASM: encoding: [0x2f,0x26,0xd7,0x22]
 amoxor.w.rl a2, a3, (a4)
-# CHECK-INST: amoand.w.rl a3, a4, (a5)
-# CHECK: encoding: [0xaf,0xa6,0xe7,0x62]
+# CHECK-ASM-AND-OBJ: amoand.w.rl a3, a4, (a5)
+# CHECK-ASM: encoding: [0xaf,0xa6,0xe7,0x62]
 amoand.w.rl a3, a4, (a5)
-# CHECK-INST: amoor.w.rl a4, a5, (a6)
-# CHECK: encoding: [0x2f,0x27,0xf8,0x42]
+# CHECK-ASM-AND-OBJ: amoor.w.rl a4, a5, (a6)
+# CHECK-ASM: encoding: [0x2f,0x27,0xf8,0x42]
 amoor.w.rl a4, a5, (a6)
-# CHECK-INST: amomin.w.rl a5, a6, (a7)
-# CHECK: encoding: [0xaf,0xa7,0x08,0x83]
+# CHECK-ASM-AND-OBJ: amomin.w.rl a5, a6, (a7)
+# CHECK-ASM: encoding: [0xaf,0xa7,0x08,0x83]
 amomin.w.rl a5, a6, (a7)
-# CHECK-INST: amomax.w.rl s7, s6, (s5)
-# CHECK: encoding: [0xaf,0xab,0x6a,0xa3]
+# CHECK-ASM-AND-OBJ: amomax.w.rl s7, s6, (s5)
+# CHECK-ASM: encoding: [0xaf,0xab,0x6a,0xa3]
 amomax.w.rl s7, s6, (s5)
-# CHECK-INST: amominu.w.rl s6, s5, (s4)
-# CHECK: encoding: [0x2f,0x2b,0x5a,0xc3]
+# CHECK-ASM-AND-OBJ: amominu.w.rl s6, s5, (s4)
+# CHECK-ASM: encoding: [0x2f,0x2b,0x5a,0xc3]
 amominu.w.rl s6, s5, (s4)
-# CHECK-INST: amomaxu.w.rl s5, s4, (s3)
-# CHECK: encoding: [0xaf,0xaa,0x49,0xe3]
+# CHECK-ASM-AND-OBJ: amomaxu.w.rl s5, s4, (s3)
+# CHECK-ASM: encoding: [0xaf,0xaa,0x49,0xe3]
 amomaxu.w.rl s5, s4, (s3)
 
-# CHECK-INST: amoswap.w.aqrl a4, ra, (s0)
-# CHECK: encoding: [0x2f,0x27,0x14,0x0e]
+# CHECK-ASM-AND-OBJ: amoswap.w.aqrl a4, ra, (s0)
+# CHECK-ASM: encoding: [0x2f,0x27,0x14,0x0e]
 amoswap.w.aqrl a4, ra, (s0)
-# CHECK-INST: amoadd.w.aqrl a1, a2, (a3)
-# CHECK: encoding: [0xaf,0xa5,0xc6,0x06]
+# CHECK-ASM-AND-OBJ: amoadd.w.aqrl a1, a2, (a3)
+# CHECK-ASM: encoding: [0xaf,0xa5,0xc6,0x06]
 amoadd.w.aqrl a1, a2, (a3)
-# CHECK-INST: amoxor.w.aqrl a2, a3, (a4)
-# CHECK: encoding: [0x2f,0x26,0xd7,0x26]
+# CHECK-ASM-AND-OBJ: amoxor.w.aqrl a2, a3, (a4)
+# CHECK-ASM: encoding: [0x2f,0x26,0xd7,0x26]
 amoxor.w.aqrl a2, a3, (a4)
-# CHECK-INST: amoand.w.aqrl a3, a4, (a5)
-# CHECK: encoding: [0xaf,0xa6,0xe7,0x66]
+# CHECK-ASM-AND-OBJ: amoand.w.aqrl a3, a4, (a5)
+# CHECK-ASM: encoding: [0xaf,0xa6,0xe7,0x66]
 amoand.w.aqrl a3, a4, (a5)
-# CHECK-INST: amoor.w.aqrl a4, a5, (a6)
-# CHECK: encoding: [0x2f,0x27,0xf8,0x46]
+# CHECK-ASM-AND-OBJ: amoor.w.aqrl a4, a5, (a6)
+# CHECK-ASM: encoding: [0x2f,0x27,0xf8,0x46]
 amoor.w.aqrl a4, a5, (a6)
-# CHECK-INST: amomin.w.aqrl a5, a6, (a7)
-# CHECK: encoding: [0xaf,0xa7,0x08,0x87]
+# CHECK-ASM-AND-OBJ: amomin.w.aqrl a5, a6, (a7)
+# CHECK-ASM: encoding: [0xaf,0xa7,0x08,0x87]
 amomin.w.aqrl a5, a6, (a7)
-# CHECK-INST: amomax.w.aqrl s7, s6, (s5)
-# CHECK: encoding: [0xaf,0xab,0x6a,0xa7]
+# CHECK-ASM-AND-OBJ: amomax.w.aqrl s7, s6, (s5)
+# CHECK-ASM: encoding: [0xaf,0xab,0x6a,0xa7]
 amomax.w.aqrl s7, s6, (s5)
-# CHECK-INST: amominu.w.aqrl s6, s5, (s4)
-# CHECK: encoding: [0x2f,0x2b,0x5a,0xc7]
+# CHECK-ASM-AND-OBJ: amominu.w.aqrl s6, s5, (s4)
+# CHECK-ASM: encoding: [0x2f,0x2b,0x5a,0xc7]
 amominu.w.aqrl s6, s5, (s4)
-# CHECK-INST: amomaxu.w.aqrl s5, s4, (s3)
-# CHECK: encoding: [0xaf,0xaa,0x49,0xe7]
+# CHECK-ASM-AND-OBJ: amomaxu.w.aqrl s5, s4, (s3)
+# CHECK-ASM: encoding: [0xaf,0xaa,0x49,0xe7]
 amomaxu.w.aqrl s5, s4, (s3)

@@ -5,7 +5,7 @@ clang_compiler_add_cxx_check()
 # FIXME: use SANITIZER_COMMON_SUPPORTED_ARCH here
 filter_available_targets(SANITIZER_UNITTEST_SUPPORTED_ARCH x86_64 i386 mips64 mips64el)
 if(APPLE)
-  darwin_filter_host_archs(SANITIZER_UNITTEST_SUPPORTED_ARCH SANITIZER_COMMON_SUPPORTED_ARCH)
+  darwin_filter_host_archs(SANITIZER_UNITTEST_SUPPORTED_ARCH SANITIZER_UNITTEST_SUPPORTED_ARCH)
 endif()
 
 set(SANITIZER_UNITTESTS
@@ -26,6 +26,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_posix_test.cc
   sanitizer_printf_test.cc
   sanitizer_procmaps_test.cc
+  sanitizer_ring_buffer_test.cc
   sanitizer_quarantine_test.cc
   sanitizer_stackdepot_test.cc
   sanitizer_stacktrace_printer_test.cc
@@ -35,6 +36,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_symbolizer_test.cc
   sanitizer_test_main.cc
   sanitizer_thread_registry_test.cc
+  sanitizer_type_traits_test.cc
   sanitizer_vector_test.cc)
 
 set(SANITIZER_TEST_HEADERS
@@ -56,11 +58,6 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -Werror=sign-compare
   -Wno-non-virtual-dtor
   -Wno-gnu-zero-variadic-macro-arguments)
-
-if(MSVC)
-  # Disable exceptions on Windows until they work reliably.
-  list(APPEND SANITIZER_TEST_CFLAGS_COMMON -fno-exceptions -DGTEST_HAS_SEH=0)
-endif()
 
 # -gline-tables-only must be enough for these tests, so use it if possible.
 if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")

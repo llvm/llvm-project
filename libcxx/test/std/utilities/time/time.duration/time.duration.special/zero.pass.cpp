@@ -11,7 +11,7 @@
 
 // duration
 
-// static constexpr duration zero();
+// static constexpr duration zero(); // noexcept after C++17
 
 #include <chrono>
 #include <cassert>
@@ -22,6 +22,10 @@
 template <class D>
 void test()
 {
+    LIBCPP_ASSERT_NOEXCEPT(std::chrono::duration_values<typename D::rep>::zero());
+#if TEST_STD_VER > 17
+    ASSERT_NOEXCEPT(       std::chrono::duration_values<typename D::rep>::zero());
+#endif
     {
     typedef typename D::rep Rep;
     Rep zero_rep = std::chrono::duration_values<Rep>::zero();

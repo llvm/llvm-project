@@ -473,12 +473,12 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::str(const string_type& __s)
         {
             while (__sz > INT_MAX)
             {
-            	this->pbump(INT_MAX);
-            	__sz -= INT_MAX;
+                this->pbump(INT_MAX);
+                __sz -= INT_MAX;
             }
             if (__sz > 0)
-            	this->pbump(__sz);
-    	}
+                this->pbump(__sz);
+        }
     }
 }
 

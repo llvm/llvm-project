@@ -529,7 +529,9 @@ struct ConstantExprKeyType {
   ConstantExpr *create(TypeClass *Ty) const {
     switch (Opcode) {
     default:
-      if (Instruction::isCast(Opcode))
+      if (Instruction::isCast(Opcode) ||
+          (Opcode >= Instruction::UnaryOpsBegin &&
+           Opcode < Instruction::UnaryOpsEnd))
         return new UnaryConstantExpr(Opcode, Ops[0], Ty);
       if ((Opcode >= Instruction::BinaryOpsBegin &&
            Opcode < Instruction::BinaryOpsEnd))

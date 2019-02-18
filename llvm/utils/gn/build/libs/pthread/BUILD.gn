@@ -1,0 +1,12 @@
+import("//llvm/utils/gn/build/libs/pthread/enable.gni")
+
+config("pthread_config") {
+  visibility = [ ":pthread" ]
+  libs = [ "pthread" ]
+}
+
+group("pthread") {
+  if (llvm_enable_threads && host_os != "win") {
+    public_configs = [ ":pthread_config" ]
+  }
+}

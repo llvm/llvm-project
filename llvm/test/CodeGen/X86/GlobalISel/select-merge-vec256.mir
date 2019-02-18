@@ -33,7 +33,7 @@ body:             |
     ; AVX512VL: $ymm0 = COPY [[VINSERTF32x4Z256rr]]
     ; AVX512VL: RET 0, implicit $ymm0
     %0(<4 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = G_MERGE_VALUES %0(<4 x s32>), %0(<4 x s32>)
+    %1(<8 x s32>) = G_CONCAT_VECTORS %0(<4 x s32>), %0(<4 x s32>)
     $ymm0 = COPY %1(<8 x s32>)
     RET 0, implicit $ymm0
 

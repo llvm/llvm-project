@@ -54,6 +54,16 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
   Occupancy = getMaxWavesPerEU();
   limitOccupancy(MF);
+  CallingConv::ID CC = F.getCallingConv();
+
+  if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
+    if (!F.arg_empty())
+      KernargSegmentPtr = true;
+    WorkGroupIDX = true;
+    WorkItemIDX = true;
+  } else if (CC == CallingConv::AMDGPU_PS) {
+    PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
+  }
 
   if (!isEntryFunction()) {
     // Non-entry functions have no special inputs for now, other registers
@@ -73,19 +83,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   } else {
     if (F.hasFnAttribute("amdgpu-implicitarg-ptr")) {
       KernargSegmentPtr = true;
-      assert(MaxKernArgAlign == 0);
-      MaxKernArgAlign =  ST.getAlignmentForImplicitArgPtr();
+      MaxKernArgAlign = std::max(ST.getAlignmentForImplicitArgPtr(),
+                                 MaxKernArgAlign);
     }
-  }
-
-  CallingConv::ID CC = F.getCallingConv();
-  if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL) {
-    if (!F.arg_empty())
-      KernargSegmentPtr = true;
-    WorkGroupIDX = true;
-    WorkItemIDX = true;
-  } else if (CC == CallingConv::AMDGPU_PS) {
-    PSInputAddr = AMDGPU::getInitialPSInputAddr(F);
   }
 
   if (ST.debuggerEmitPrologue()) {
@@ -117,7 +117,6 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   }
 
   const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  bool MaySpill = ST.isVGPRSpillingEnabled(F);
   bool HasStackObjects = FrameInfo.hasStackObjects();
 
   if (isEntryFunction()) {
@@ -126,21 +125,18 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (WorkItemIDZ)
       WorkItemIDY = true;
 
-    if (HasStackObjects || MaySpill) {
-      PrivateSegmentWaveByteOffset = true;
+    PrivateSegmentWaveByteOffset = true;
 
     // HS and GS always have the scratch wave offset in SGPR5 on GFX9.
     if (ST.getGeneration() >= AMDGPUSubtarget::GFX9 &&
         (CC == CallingConv::AMDGPU_HS || CC == CallingConv::AMDGPU_GS))
-      ArgInfo.PrivateSegmentWaveByteOffset
-        = ArgDescriptor::createRegister(AMDGPU::SGPR5);
-    }
+      ArgInfo.PrivateSegmentWaveByteOffset =
+          ArgDescriptor::createRegister(AMDGPU::SGPR5);
   }
 
-  bool IsCOV2 = ST.isAmdCodeObjectV2(F);
-  if (IsCOV2) {
-    if (HasStackObjects || MaySpill)
-      PrivateSegmentBuffer = true;
+  bool isAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
+  if (isAmdHsaOrMesa) {
+    PrivateSegmentBuffer = true;
 
     if (F.hasFnAttribute("amdgpu-dispatch-ptr"))
       DispatchPtr = true;
@@ -151,14 +147,13 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     if (F.hasFnAttribute("amdgpu-dispatch-id"))
       DispatchID = true;
   } else if (ST.isMesaGfxShader(F)) {
-    if (HasStackObjects || MaySpill)
-      ImplicitBufferPtr = true;
+    ImplicitBufferPtr = true;
   }
 
   if (F.hasFnAttribute("amdgpu-kernarg-segment-ptr"))
     KernargSegmentPtr = true;
 
-  if (ST.hasFlatAddressSpace() && isEntryFunction() && IsCOV2) {
+  if (ST.hasFlatAddressSpace() && isEntryFunction() && isAmdHsaOrMesa) {
     // TODO: This could be refined a lot. The attribute is a poor way of
     // detecting calls that may require it before argument lowering.
     if (HasStackObjects || F.hasFnAttribute("amdgpu-flat-scratch"))

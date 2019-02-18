@@ -1,23 +1,24 @@
-//===--- Annotations.cpp - Annotated source code for unit tests -*- C++-*-===//
+//===--- Annotations.cpp - Annotated source code for unit tests --*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #include "Annotations.h"
 #include "SourceCode.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-using namespace llvm;
 
 // Crash if the assertion fails, printing the message and testcase.
 // More elegant error handling isn't needed for unit tests.
-static void require(bool Assertion, const char *Msg, llvm::StringRef Code) {
+static void require(bool Assertion, const char *Msg, StringRef Code) {
   if (!Assertion) {
-    llvm::errs() << "Annotated testcase: " << Msg << "\n" << Code << "\n";
+    errs() << "Annotated testcase: " << Msg << "\n" << Code << "\n";
     llvm_unreachable("Annotated testcase assertion failed!");
   }
 }
@@ -51,7 +52,7 @@ Annotations::Annotations(StringRef Text) {
       continue;
     }
     if (Text.consume_front("$")) {
-      Name = Text.take_while(llvm::isAlnum);
+      Name = Text.take_while(isAlnum);
       Text = Text.drop_front(Name->size());
       continue;
     }
@@ -62,23 +63,23 @@ Annotations::Annotations(StringRef Text) {
   Require(OpenRanges.empty(), "unmatched [[");
 }
 
-Position Annotations::point(llvm::StringRef Name) const {
+Position Annotations::point(StringRef Name) const {
   auto I = Points.find(Name);
   require(I != Points.end() && I->getValue().size() == 1,
           "expected exactly one point", Code);
   return I->getValue()[0];
 }
-std::vector<Position> Annotations::points(llvm::StringRef Name) const {
+std::vector<Position> Annotations::points(StringRef Name) const {
   auto P = Points.lookup(Name);
   return {P.begin(), P.end()};
 }
-Range Annotations::range(llvm::StringRef Name) const {
+Range Annotations::range(StringRef Name) const {
   auto I = Ranges.find(Name);
   require(I != Ranges.end() && I->getValue().size() == 1,
           "expected exactly one range", Code);
   return I->getValue()[0];
 }
-std::vector<Range> Annotations::ranges(llvm::StringRef Name) const {
+std::vector<Range> Annotations::ranges(StringRef Name) const {
   auto R = Ranges.lookup(Name);
   return {R.begin(), R.end()};
 }

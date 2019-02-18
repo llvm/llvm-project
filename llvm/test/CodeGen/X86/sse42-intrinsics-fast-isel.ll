@@ -35,22 +35,22 @@ define i32 @test_mm_cmpestra(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ;
 ; X64-SSE-LABEL: test_mm_cmpestra:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorl %r8d, %r8d
-; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    movl %esi, %edx
+; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    xorl %esi, %esi
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0
-; X64-SSE-NEXT:    seta %r8b
-; X64-SSE-NEXT:    movl %r8d, %eax
+; X64-SSE-NEXT:    seta %sil
+; X64-SSE-NEXT:    movl %esi, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_cmpestra:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    xorl %r8d, %r8d
-; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    movl %esi, %edx
+; X64-AVX-NEXT:    movl %edi, %eax
+; X64-AVX-NEXT:    xorl %esi, %esi
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; X64-AVX-NEXT:    seta %r8b
-; X64-AVX-NEXT:    movl %r8d, %eax
+; X64-AVX-NEXT:    seta %sil
+; X64-AVX-NEXT:    movl %esi, %eax
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg2 = bitcast <2 x i64> %a2 to <16 x i8>
@@ -86,22 +86,22 @@ define i32 @test_mm_cmpestrc(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ;
 ; X64-SSE-LABEL: test_mm_cmpestrc:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorl %r8d, %r8d
-; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    movl %esi, %edx
+; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    xorl %esi, %esi
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0
-; X64-SSE-NEXT:    setb %r8b
-; X64-SSE-NEXT:    movl %r8d, %eax
+; X64-SSE-NEXT:    setb %sil
+; X64-SSE-NEXT:    movl %esi, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_cmpestrc:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    xorl %r8d, %r8d
-; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    movl %esi, %edx
+; X64-AVX-NEXT:    movl %edi, %eax
+; X64-AVX-NEXT:    xorl %esi, %esi
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; X64-AVX-NEXT:    setb %r8b
-; X64-AVX-NEXT:    movl %r8d, %eax
+; X64-AVX-NEXT:    setb %sil
+; X64-AVX-NEXT:    movl %esi, %eax
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg2 = bitcast <2 x i64> %a2 to <16 x i8>
@@ -129,16 +129,16 @@ define i32 @test_mm_cmpestri(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) {
 ;
 ; X64-SSE-LABEL: test_mm_cmpestri:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    movl %esi, %edx
+; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0
 ; X64-SSE-NEXT:    movl %ecx, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_cmpestri:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    movl %esi, %edx
+; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
 ; X64-AVX-NEXT:    movl %ecx, %eax
 ; X64-AVX-NEXT:    retq
@@ -166,15 +166,15 @@ define <2 x i64> @test_mm_cmpestrm(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a
 ;
 ; X64-SSE-LABEL: test_mm_cmpestrm:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    movl %esi, %edx
+; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    pcmpestrm $7, %xmm1, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_cmpestrm:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    movl %esi, %edx
+; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    vpcmpestrm $7, %xmm1, %xmm0
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
@@ -212,22 +212,22 @@ define i32 @test_mm_cmpestro(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ;
 ; X64-SSE-LABEL: test_mm_cmpestro:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorl %r8d, %r8d
-; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    movl %esi, %edx
+; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    xorl %esi, %esi
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0
-; X64-SSE-NEXT:    seto %r8b
-; X64-SSE-NEXT:    movl %r8d, %eax
+; X64-SSE-NEXT:    seto %sil
+; X64-SSE-NEXT:    movl %esi, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_cmpestro:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    xorl %r8d, %r8d
-; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    movl %esi, %edx
+; X64-AVX-NEXT:    movl %edi, %eax
+; X64-AVX-NEXT:    xorl %esi, %esi
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; X64-AVX-NEXT:    seto %r8b
-; X64-AVX-NEXT:    movl %r8d, %eax
+; X64-AVX-NEXT:    seto %sil
+; X64-AVX-NEXT:    movl %esi, %eax
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg2 = bitcast <2 x i64> %a2 to <16 x i8>
@@ -263,22 +263,22 @@ define i32 @test_mm_cmpestrs(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ;
 ; X64-SSE-LABEL: test_mm_cmpestrs:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorl %r8d, %r8d
-; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    movl %esi, %edx
+; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    xorl %esi, %esi
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0
-; X64-SSE-NEXT:    sets %r8b
-; X64-SSE-NEXT:    movl %r8d, %eax
+; X64-SSE-NEXT:    sets %sil
+; X64-SSE-NEXT:    movl %esi, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_cmpestrs:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    xorl %r8d, %r8d
-; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    movl %esi, %edx
+; X64-AVX-NEXT:    movl %edi, %eax
+; X64-AVX-NEXT:    xorl %esi, %esi
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; X64-AVX-NEXT:    sets %r8b
-; X64-AVX-NEXT:    movl %r8d, %eax
+; X64-AVX-NEXT:    sets %sil
+; X64-AVX-NEXT:    movl %esi, %eax
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg2 = bitcast <2 x i64> %a2 to <16 x i8>
@@ -314,22 +314,22 @@ define i32 @test_mm_cmpestrz(<2 x i64> %a0, i32 %a1, <2 x i64> %a2, i32 %a3) nou
 ;
 ; X64-SSE-LABEL: test_mm_cmpestrz:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    xorl %r8d, %r8d
-; X64-SSE-NEXT:    movl %edi, %eax
 ; X64-SSE-NEXT:    movl %esi, %edx
+; X64-SSE-NEXT:    movl %edi, %eax
+; X64-SSE-NEXT:    xorl %esi, %esi
 ; X64-SSE-NEXT:    pcmpestri $7, %xmm1, %xmm0
-; X64-SSE-NEXT:    sete %r8b
-; X64-SSE-NEXT:    movl %r8d, %eax
+; X64-SSE-NEXT:    sete %sil
+; X64-SSE-NEXT:    movl %esi, %eax
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test_mm_cmpestrz:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    xorl %r8d, %r8d
-; X64-AVX-NEXT:    movl %edi, %eax
 ; X64-AVX-NEXT:    movl %esi, %edx
+; X64-AVX-NEXT:    movl %edi, %eax
+; X64-AVX-NEXT:    xorl %esi, %esi
 ; X64-AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; X64-AVX-NEXT:    sete %r8b
-; X64-AVX-NEXT:    movl %r8d, %eax
+; X64-AVX-NEXT:    sete %sil
+; X64-AVX-NEXT:    movl %esi, %eax
 ; X64-AVX-NEXT:    retq
   %arg0 = bitcast <2 x i64> %a0 to <16 x i8>
   %arg2 = bitcast <2 x i64> %a2 to <16 x i8>
@@ -510,8 +510,8 @@ define i32 @test_mm_crc32_u8(i32 %a0, i8 %a1) {
 ;
 ; X64-LABEL: test_mm_crc32_u8:
 ; X64:       # %bb.0:
-; X64-NEXT:    crc32b %sil, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    crc32b %sil, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse42.crc32.32.8(i32 %a0, i8 %a1)
   ret i32 %res
@@ -527,8 +527,8 @@ define i32 @test_mm_crc32_u16(i32 %a0, i16 %a1) {
 ;
 ; X64-LABEL: test_mm_crc32_u16:
 ; X64:       # %bb.0:
-; X64-NEXT:    crc32w %si, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    crc32w %si, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse42.crc32.32.16(i32 %a0, i16 %a1)
   ret i32 %res
@@ -544,8 +544,8 @@ define i32 @test_mm_crc32_u32(i32 %a0, i32 %a1) {
 ;
 ; X64-LABEL: test_mm_crc32_u32:
 ; X64:       # %bb.0:
-; X64-NEXT:    crc32l %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    crc32l %esi, %eax
 ; X64-NEXT:    retq
   %res = call i32 @llvm.x86.sse42.crc32.32.32(i32 %a0, i32 %a1)
   ret i32 %res

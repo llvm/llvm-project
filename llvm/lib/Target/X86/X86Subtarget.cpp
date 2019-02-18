@@ -68,14 +68,38 @@ X86Subtarget::classifyGlobalReference(const GlobalValue *GV) const {
 
 unsigned char
 X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
-  // 64 bits can use %rip addressing for anything local.
-  if (is64Bit())
-    return X86II::MO_NO_FLAG;
-
-  // If this is for a position dependent executable, the static linker can
-  // figure it out.
+  // If we're not PIC, it's not very interesting.
   if (!isPositionIndependent())
     return X86II::MO_NO_FLAG;
+
+  if (is64Bit()) {
+    // 64-bit ELF PIC local references may use GOTOFF relocations.
+    if (isTargetELF()) {
+      switch (TM.getCodeModel()) {
+      // 64-bit small code model is simple: All rip-relative.
+      case CodeModel::Tiny:
+        llvm_unreachable("Tiny codesize model not supported on X86");
+      case CodeModel::Small:
+      case CodeModel::Kernel:
+        return X86II::MO_NO_FLAG;
+
+      // The large PIC code model uses GOTOFF.
+      case CodeModel::Large:
+        return X86II::MO_GOTOFF;
+
+      // Medium is a hybrid: RIP-rel for code, GOTOFF for DSO local data.
+      case CodeModel::Medium:
+        if (isa<Function>(GV))
+          return X86II::MO_NO_FLAG; // All code is RIP-relative
+        return X86II::MO_GOTOFF;    // Local symbols use GOTOFF.
+      }
+      llvm_unreachable("invalid code model");
+    }
+
+    // Otherwise, this is either a RIP-relative reference or a 64-bit movabsq,
+    // both of which use MO_NO_FLAG.
+    return X86II::MO_NO_FLAG;
+  }
 
   // The COFF dynamic linker just patches the executable sections.
   if (isTargetCOFF())
@@ -97,8 +121,8 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
 
 unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
                                                     const Module &M) const {
-  // Large model never uses stubs.
-  if (TM.getCodeModel() == CodeModel::Large)
+  // The static large model never uses stubs.
+  if (TM.getCodeModel() == CodeModel::Large && !isPositionIndependent())
     return X86II::MO_NO_FLAG;
 
   // Absolute symbols can be referenced directly.
@@ -117,11 +141,20 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
   if (TM.shouldAssumeDSOLocal(M, GV))
     return classifyLocalReference(GV);
 
-  if (isTargetCOFF())
-    return X86II::MO_DLLIMPORT;
+  if (isTargetCOFF()) {
+    if (GV->hasDLLImportStorageClass())
+      return X86II::MO_DLLIMPORT;
+    return X86II::MO_COFFSTUB;
+  }
 
-  if (is64Bit())
+  if (is64Bit()) {
+    // ELF supports a large, truly PIC code model with non-PC relative GOT
+    // references. Other object file formats do not. Use the no-flag, 64-bit
+    // reference for them.
+    if (TM.getCodeModel() == CodeModel::Large)
+      return isTargetELF() ? X86II::MO_GOT : X86II::MO_NO_FLAG;
     return X86II::MO_GOTPCREL;
+  }
 
   if (isTargetDarwin()) {
     if (!isPositionIndependent())
@@ -192,14 +225,22 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (CPUName.empty())
     CPUName = "generic";
 
-  // Make sure 64-bit features are available in 64-bit mode. (But make sure
-  // SSE2 can be turned off explicitly.)
   std::string FullFS = FS;
   if (In64BitMode) {
+    // SSE2 should default to enabled in 64-bit mode, but can be turned off
+    // explicitly.
     if (!FullFS.empty())
-      FullFS = "+64bit,+sse2," + FullFS;
+      FullFS = "+sse2," + FullFS;
     else
-      FullFS = "+64bit,+sse2";
+      FullFS = "+sse2";
+
+    // If no CPU was specified, enable 64bit feature to satisy later check.
+    if (CPUName == "generic") {
+      if (!FullFS.empty())
+        FullFS = "+64bit," + FullFS;
+      else
+        FullFS = "+64bit";
+    }
   }
 
   // LAHF/SAHF are always supported in non-64-bit mode.
@@ -234,8 +275,9 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   LLVM_DEBUG(dbgs() << "Subtarget features: SSELevel " << X86SSELevel
                     << ", 3DNowLevel " << X863DNowLevel << ", 64bit "
                     << HasX86_64 << "\n");
-  assert((!In64BitMode || HasX86_64) &&
-         "64-bit code requested on a subtarget that doesn't support it!");
+  if (In64BitMode && !HasX86_64)
+    report_fatal_error("64-bit code requested on a subtarget that doesn't "
+                       "support it!");
 
   // Stack alignment is 16 bytes on Darwin, Linux, kFreeBSD and Solaris (both
   // 32 and 64 bit) and for all 64-bit targets.

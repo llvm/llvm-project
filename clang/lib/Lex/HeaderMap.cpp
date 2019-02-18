@@ -48,7 +48,8 @@ static inline unsigned HashHMapKey(StringRef Str) {
 /// map.  If it doesn't look like a HeaderMap, it gives up and returns null.
 /// If it looks like a HeaderMap but is obviously corrupted, it puts a reason
 /// into the string error argument and returns null.
-const HeaderMap *HeaderMap::Create(const FileEntry *FE, FileManager &FM) {
+std::unique_ptr<HeaderMap> HeaderMap::Create(const FileEntry *FE,
+                                             FileManager &FM) {
   // If the file is too small to be a header map, ignore it.
   unsigned FileSize = FE->getSize();
   if (FileSize <= sizeof(HMapHeader)) return nullptr;
@@ -59,7 +60,7 @@ const HeaderMap *HeaderMap::Create(const FileEntry *FE, FileManager &FM) {
   bool NeedsByteSwap;
   if (!checkHeader(**FileBuffer, NeedsByteSwap))
     return nullptr;
-  return new HeaderMap(std::move(*FileBuffer), NeedsByteSwap);
+  return std::unique_ptr<HeaderMap>(new HeaderMap(std::move(*FileBuffer), NeedsByteSwap));
 }
 
 bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,

@@ -49,14 +49,14 @@ getNumDecoderSlots(SUnit *SU) const {
   if (!SC->isValid())
     return 0; // IMPLICIT_DEF / KILL -- will not make impact in output.
 
-  if (SC->BeginGroup) {
-    if (!SC->EndGroup)
-      return 2; // Cracked instruction
-    else
-      return 3; // Expanded/group-alone instruction
-  }
-    
-  return 1; // Normal instruction
+  assert((SC->NumMicroOps != 2 || (SC->BeginGroup && !SC->EndGroup)) &&
+         "Only cracked instruction can have 2 uops.");
+  assert((SC->NumMicroOps < 3 || (SC->BeginGroup && SC->EndGroup)) &&
+         "Expanded instructions always group alone.");
+  assert((SC->NumMicroOps < 3 || (SC->NumMicroOps % 3 == 0)) &&
+         "Expanded instructions fill the group(s).");
+
+  return SC->NumMicroOps;
 }
 
 unsigned SystemZHazardRecognizer::getCurrCycleIdx(SUnit *SU) const {
@@ -81,6 +81,7 @@ getHazardType(SUnit *m, int Stalls) {
 
 void SystemZHazardRecognizer::Reset() {
   CurrGroupSize = 0;
+  CurrGroupHas4RegOps = false;
   clearProcResCounters();
   GrpCount = 0;
   LastFPdOpCycleIdx = UINT_MAX;
@@ -99,6 +100,12 @@ SystemZHazardRecognizer::fitsIntoCurrentGroup(SUnit *SU) const {
   if (SC->BeginGroup)
     return (CurrGroupSize == 0);
 
+  // An instruction with 4 register operands will not fit in last slot.
+  assert ((CurrGroupSize < 2 || !CurrGroupHas4RegOps) &&
+          "Current decoder group is already full!");
+  if (CurrGroupSize == 2 && has4RegOps(SU->getInstr()))
+    return false;
+
   // Since a full group is handled immediately in EmitInstruction(),
   // SU should fit into current group. NumSlots should be 1 or 0,
   // since it is not a cracked or expanded instruction.
@@ -108,6 +115,23 @@ SystemZHazardRecognizer::fitsIntoCurrentGroup(SUnit *SU) const {
   return true;
 }
 
+bool SystemZHazardRecognizer::has4RegOps(const MachineInstr *MI) const {
+  const MachineFunction &MF = *MI->getParent()->getParent();
+  const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
+  const MCInstrDesc &MID = MI->getDesc();
+  unsigned Count = 0;
+  for (unsigned OpIdx = 0; OpIdx < MID.getNumOperands(); OpIdx++) {
+    const TargetRegisterClass *RC = TII->getRegClass(MID, OpIdx, TRI, MF);
+    if (RC == nullptr)
+      continue;
+    if (OpIdx >= MID.getNumDefs() &&
+        MID.getOperandConstraint(OpIdx, MCOI::TIED_TO) != -1)
+      continue;
+    Count++;
+  }
+  return Count >= 4;
+}
+
 void SystemZHazardRecognizer::nextGroup() {
   if (CurrGroupSize == 0)
     return;
@@ -115,15 +139,21 @@ void SystemZHazardRecognizer::nextGroup() {
   LLVM_DEBUG(dumpCurrGroup("Completed decode group"));
   LLVM_DEBUG(CurGroupDbg = "";);
 
-  GrpCount++;
+  int NumGroups = ((CurrGroupSize > 3) ? (CurrGroupSize / 3) : 1);
+  assert((CurrGroupSize <= 3 || CurrGroupSize % 3 == 0) &&
+         "Current decoder group bad.");
 
   // Reset counter for next group.
   CurrGroupSize = 0;
+  CurrGroupHas4RegOps = false;
 
-  // Decrease counters for execution units by one.
+  GrpCount += ((unsigned) NumGroups);
+
+  // Decrease counters for execution units.
   for (unsigned i = 0; i < SchedModel->getNumProcResourceKinds(); ++i)
-    if (ProcResourceCounters[i] > 0)
-      ProcResourceCounters[i]--;
+    ProcResourceCounters[i] = ((ProcResourceCounters[i] > NumGroups)
+                                   ? (ProcResourceCounters[i] - NumGroups)
+                                   : 0);
 
   // Clear CriticalResourceIdx if it is now below the threshold.
   if (CriticalResourceIdx != UINT_MAX &&
@@ -142,7 +172,7 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
   const MCSchedClassDesc *SC = getSchedClass(SU);
   if (!SC->isValid())
     return;
-  
+
   for (TargetSchedModel::ProcResIter
          PI = SchedModel->getWriteProcResBegin(SC),
          PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
@@ -151,7 +181,11 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
     std::string FU(PRD.Name);
     // trim e.g. Z13_FXaUnit -> FXa
     FU = FU.substr(FU.find("_") + 1);
-    FU.resize(FU.find("Unit"));
+    size_t Pos = FU.find("Unit");
+    if (Pos != std::string::npos)
+      FU.resize(Pos);
+    if (FU == "LS") // LSUnit -> LSU
+      FU = "LSU";
     OS << "/" << FU;
 
     if (PI->Cycles > 1)
@@ -168,6 +202,8 @@ void SystemZHazardRecognizer::dumpSU(SUnit *SU, raw_ostream &OS) const {
     OS << "/EndsGroup";
   if (SU->isUnbuffered)
     OS << "/Unbuffered";
+  if (has4RegOps(SU->getInstr()))
+    OS << "/4RegOps";
 }
 
 void SystemZHazardRecognizer::dumpCurrGroup(std::string Msg) const {
@@ -180,6 +216,7 @@ void SystemZHazardRecognizer::dumpCurrGroup(std::string Msg) const {
     dbgs() << "{ " << CurGroupDbg << " }";
     dbgs() << " (" << CurrGroupSize << " decoder slot"
            << (CurrGroupSize > 1 ? "s":"")
+           << (CurrGroupHas4RegOps ? ", 4RegOps" : "")
            << ")\n";
   }
 }
@@ -290,11 +327,14 @@ EmitInstruction(SUnit *SU) {
   // Insert SU into current group by increasing number of slots used
   // in current group.
   CurrGroupSize += getNumDecoderSlots(SU);
-  assert (CurrGroupSize <= 3);
+  CurrGroupHas4RegOps |= has4RegOps(SU->getInstr());
+  unsigned GroupLim = (CurrGroupHas4RegOps ? 2 : 3);
+  assert((CurrGroupSize <= GroupLim || CurrGroupSize == getNumDecoderSlots(SU))
+         && "SU does not fit into decoder group!");
 
   // Check if current group is now full/ended. If so, move on to next
   // group to be ready to evaluate more candidates.
-  if (CurrGroupSize == 3 || SC->EndGroup)
+  if (CurrGroupSize >= GroupLim || SC->EndGroup)
     nextGroup();
 }
 
@@ -302,7 +342,7 @@ int SystemZHazardRecognizer::groupingCost(SUnit *SU) const {
   const MCSchedClassDesc *SC = getSchedClass(SU);
   if (!SC->isValid())
     return 0;
-  
+
   // If SU begins new group, it can either break a current group early
   // or fit naturally if current group is empty (negative cost).
   if (SC->BeginGroup) {
@@ -320,6 +360,10 @@ int SystemZHazardRecognizer::groupingCost(SUnit *SU) const {
       return (3 - resultingGroupSize);
     return -1;
   }
+
+  // An instruction with 4 register operands will not fit in last slot.
+  if (CurrGroupSize == 2 && has4RegOps(SU->getInstr()))
+    return 1;
 
   // Most instructions can be placed in any decoder slot.
   return 0;

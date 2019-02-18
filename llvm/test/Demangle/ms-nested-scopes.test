@@ -1,0 +1,146 @@
+; RUN: llvm-undname < %s | FileCheck %s
+
+; CHECK-NOT: Invalid mangled name
+
+; Test demangling of function local scope discriminator IDs.
+?M@?@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`0'::M
+
+?M@?0??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`1'::M
+
+?M@?1??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`2'::M
+
+?M@?2??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`3'::M
+
+?M@?3??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`4'::M
+
+?M@?4??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`5'::M
+
+?M@?5??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`6'::M
+
+?M@?6??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`7'::M
+
+?M@?7??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`8'::M
+
+?M@?8??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`9'::M
+
+?M@?9??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`10'::M
+
+?M@?L@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`11'::M
+
+?M@?M@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`12'::M
+
+?M@?N@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`13'::M
+
+?M@?O@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`14'::M
+
+?M@?P@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`15'::M
+
+?M@?BA@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`16'::M
+
+?M@?BB@??L@@YAHXZ@4HA
+; CHECK: int `int __cdecl L(void)'::`17'::M
+
+?j@?1??L@@YAHXZ@4UJ@@A
+; CHECK: struct J `int __cdecl L(void)'::`2'::j
+
+; Test demangling of name back-references
+?NN@0XX@@3HA
+; CHECK: int XX::NN::NN
+
+?MM@0NN@XX@@3HA
+; CHECK: int XX::NN::MM::MM
+
+?NN@MM@0XX@@3HA
+; CHECK: int XX::NN::MM::NN
+
+?OO@0NN@01XX@@3HA
+; CHECK: int XX::NN::OO::NN::OO::OO
+
+?NN@OO@010XX@@3HA
+; CHECK: int XX::NN::OO::NN::OO::NN
+
+; Test demangling of name back-references combined with function local scopes.
+?M@?1??0@YAHXZ@4HA
+; CHECK: int `int __cdecl M(void)'::`2'::M
+
+?L@?2??M@0?2??0@YAHXZ@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl `int __cdecl L(void)'::`3'::L::M(void)'::`3'::L
+
+?M@?2??0L@?2??1@YAHXZ@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl `int __cdecl L(void)'::`3'::L::M(void)'::`3'::M
+
+; Function local scopes of template functions
+?M@?1???$L@H@@YAHXZ@4HA
+; CHECK: int `int __cdecl L<int>(void)'::`2'::M
+
+; And member functions of template classes
+?SN@?$NS@H@NS@@QEAAHXZ
+; CHECK: int __cdecl NS::NS<int>::SN(void)
+
+?NS@?1??SN@?$NS@H@0@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl NS::NS<int>::SN(void)'::`2'::NS
+
+?SN@?1??0?$NS@H@NS@@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl NS::NS<int>::SN(void)'::`2'::SN
+
+?NS@?1??SN@?$NS@H@10@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl NS::SN::NS<int>::SN(void)'::`2'::NS
+
+?SN@?1??0?$NS@H@0NS@@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl NS::SN::NS<int>::SN(void)'::`2'::SN
+
+; Make sure instantiated templates participate in back-referencing.
+; In the next 3 examples there should be 3 back-references:
+; 0 = X (right most name)
+; 1 = C<int> (second from right)
+; 2 = C (third from right)
+; Make sure all 3 work as expected by having the 4th component take each value
+; from 0-2 and confirming it is the right component.
+?X@?$C@H@C@0@2HB
+; CHECK: static int const X::C::C<int>::X
+
+?X@?$C@H@C@1@2HB
+; CHECK: static int const C<int>::C::C<int>::X
+
+?X@?$C@H@C@2@2HB
+; CHECK: static int const C::C::C<int>::X
+
+; Putting everything together.
+
+; namespace A { namespace B { namespace C { namespace B { namespace C {
+;   template<typename T>
+;   struct C {
+;     int B() {
+;       static C<int> C;
+;       static int B = 7;
+;       static int A = 7;
+;       return C.B() + B + A;
+;     }
+;   };
+; } } } } }
+
+?C@?1??B@?$C@H@0101A@@QEAAHXZ@4U201013@A
+; CHECK: struct A::B::C::B::C::C<int> `public: int __cdecl A::B::C::B::C::C<int>::B(void)'::`2'::C
+
+?B@?1??0?$C@H@C@020A@@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl A::B::C::B::C::C<int>::B(void)'::`2'::B
+
+?A@?1??B@?$C@H@C@1310@QEAAHXZ@4HA
+; CHECK: int `public: int __cdecl A::B::C::B::C::C<int>::B(void)'::`2'::A

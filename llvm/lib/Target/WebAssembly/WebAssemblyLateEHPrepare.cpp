@@ -31,6 +31,7 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
+  bool removeUnnecessaryUnreachables(MachineFunction &MF);
   bool replaceFuncletReturns(MachineFunction &MF);
   bool hoistCatches(MachineFunction &MF);
   bool addCatchAlls(MachineFunction &MF);
@@ -47,7 +48,7 @@ public:
 
 char WebAssemblyLateEHPrepare::ID = 0;
 INITIALIZE_PASS(WebAssemblyLateEHPrepare, DEBUG_TYPE,
-                "WebAssembly Exception Preparation", false, false)
+                "WebAssembly Late Exception Preparation", false, false)
 
 FunctionPass *llvm::createWebAssemblyLateEHPrepare() {
   return new WebAssemblyLateEHPrepare();
@@ -59,7 +60,7 @@ FunctionPass *llvm::createWebAssemblyLateEHPrepare() {
 // possible search paths should be the same.
 // Returns nullptr in case it does not find any EH pad in the search, or finds
 // multiple different EH pads.
-MachineBasicBlock *GetMatchingEHPad(MachineInstr *MI) {
+static MachineBasicBlock *getMatchingEHPad(MachineInstr *MI) {
   MachineFunction *MF = MI->getParent()->getParent();
   SmallVector<MachineBasicBlock *, 2> WL;
   SmallPtrSet<MachineBasicBlock *, 2> Visited;
@@ -83,19 +84,20 @@ MachineBasicBlock *GetMatchingEHPad(MachineInstr *MI) {
   return EHPad;
 }
 
-// Erases the given BB and all its children from the function. If other BBs have
-// this BB as a successor, the successor relationships will be deleted as well.
-static void EraseBBAndChildren(MachineBasicBlock *MBB) {
-  SmallVector<MachineBasicBlock *, 8> WL;
-  WL.push_back(MBB);
+// Erase the specified BBs if the BB does not have any remaining predecessors,
+// and also all its dead children.
+template <typename Container>
+static void eraseDeadBBsAndChildren(const Container &MBBs) {
+  SmallVector<MachineBasicBlock *, 8> WL(MBBs.begin(), MBBs.end());
   while (!WL.empty()) {
     MachineBasicBlock *MBB = WL.pop_back_val();
-    for (auto *Pred : MBB->predecessors())
-      Pred->removeSuccessor(MBB);
-    for (auto *Succ : MBB->successors()) {
-      WL.push_back(Succ);
+    if (!MBB->pred_empty())
+      continue;
+    SmallVector<MachineBasicBlock *, 4> Succs(MBB->succ_begin(),
+                                              MBB->succ_end());
+    WL.append(MBB->succ_begin(), MBB->succ_end());
+    for (auto *Succ : Succs)
       MBB->removeSuccessor(Succ);
-    }
     MBB->eraseFromParent();
   }
 }
@@ -106,6 +108,7 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   bool Changed = false;
+  Changed |= removeUnnecessaryUnreachables(MF);
   Changed |= addRethrows(MF);
   if (!MF.getFunction().hasPersonalityFn())
     return Changed;
@@ -115,6 +118,31 @@ bool WebAssemblyLateEHPrepare::runOnMachineFunction(MachineFunction &MF) {
   Changed |= ensureSingleBBTermPads(MF);
   Changed |= mergeTerminatePads(MF);
   Changed |= addCatchAllTerminatePads(MF);
+  return Changed;
+}
+
+bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
+    MachineFunction &MF) {
+  bool Changed = false;
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (!WebAssembly::isThrow(MI))
+        continue;
+      Changed = true;
+
+      // The instruction after the throw should be an unreachable or a branch to
+      // another BB that should eventually lead to an unreachable. Delete it
+      // because throw itself is a terminator, and also delete successors if
+      // any.
+      MBB.erase(std::next(MachineBasicBlock::iterator(MI)), MBB.end());
+      SmallVector<MachineBasicBlock *, 8> Succs(MBB.succ_begin(),
+                                                MBB.succ_end());
+      for (auto *Succ : Succs)
+        MBB.removeSuccessor(Succ);
+      eraseDeadBBsAndChildren(Succs);
+    }
+  }
+
   return Changed;
 }
 
@@ -179,7 +207,7 @@ bool WebAssemblyLateEHPrepare::hoistCatches(MachineFunction &MF) {
         Catches.push_back(&MI);
 
   for (auto *Catch : Catches) {
-    MachineBasicBlock *EHPad = GetMatchingEHPad(Catch);
+    MachineBasicBlock *EHPad = getMatchingEHPad(Catch);
     assert(EHPad && "No matching EH pad for catch");
     if (EHPad->begin() == Catch)
       continue;
@@ -238,14 +266,18 @@ bool WebAssemblyLateEHPrepare::addRethrows(MachineFunction &MF) {
         Rethrow = BuildMI(MBB, InsertPt, MI.getDebugLoc(),
                           TII.get(WebAssembly::RETHROW_TO_CALLER));
 
-      // Becasue __cxa_rethrow does not return, the instruction after the
+      // Because __cxa_rethrow does not return, the instruction after the
       // rethrow should be an unreachable or a branch to another BB that should
       // eventually lead to an unreachable. Delete it because rethrow itself is
       // a terminator, and also delete non-EH pad successors if any.
       MBB.erase(std::next(MachineBasicBlock::iterator(Rethrow)), MBB.end());
+      SmallVector<MachineBasicBlock *, 8> NonPadSuccessors;
       for (auto *Succ : MBB.successors())
         if (!Succ->isEHPad())
-          EraseBBAndChildren(Succ);
+          NonPadSuccessors.push_back(Succ);
+      for (auto *Succ : NonPadSuccessors)
+        MBB.removeSuccessor(Succ);
+      eraseDeadBBsAndChildren(NonPadSuccessors);
     }
   return Changed;
 }
@@ -277,7 +309,7 @@ bool WebAssemblyLateEHPrepare::ensureSingleBBTermPads(MachineFunction &MF) {
 
   bool Changed = false;
   for (auto *Call : ClangCallTerminateCalls) {
-    MachineBasicBlock *EHPad = GetMatchingEHPad(Call);
+    MachineBasicBlock *EHPad = getMatchingEHPad(Call);
     assert(EHPad && "No matching EH pad for catch");
 
     // If it is already the form we want, skip it
@@ -302,8 +334,11 @@ bool WebAssemblyLateEHPrepare::ensureSingleBBTermPads(MachineFunction &MF) {
     BuildMI(*EHPad, InsertPos, Call->getDebugLoc(),
             TII.get(WebAssembly::UNREACHABLE));
     EHPad->erase(InsertPos, EHPad->end());
-    for (auto *Succ : EHPad->successors())
-      EraseBBAndChildren(Succ);
+    SmallVector<MachineBasicBlock *, 8> Succs(EHPad->succ_begin(),
+                                              EHPad->succ_end());
+    for (auto *Succ : Succs)
+      EHPad->removeSuccessor(Succ);
+    eraseDeadBBsAndChildren(Succs);
   }
   return Changed;
 }

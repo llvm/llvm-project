@@ -248,7 +248,7 @@ protected:
 
 private:
   bool GlobalsEmitted;
-  
+
   // This is specific per MachineFunction.
   const MachineRegisterInfo *MRI;
   // The contents are specific for each
@@ -257,9 +257,6 @@ private:
   typedef DenseMap<unsigned, unsigned> VRegMap;
   typedef DenseMap<const TargetRegisterClass *, VRegMap> VRegRCMap;
   VRegRCMap VRegMapping;
-
-  // Cache the subtarget here.
-  const NVPTXSubtarget *nvptxSubtarget;
 
   // List of variables demoted to a function scope.
   std::map<const Function *, std::vector<const GlobalVariable *>> localDecls;
@@ -310,6 +307,8 @@ public:
   }
 
   std::string getVirtualRegisterName(unsigned) const;
+
+  const MCSymbol *getFunctionFrameSymbol() const override;
 };
 
 } // end namespace llvm

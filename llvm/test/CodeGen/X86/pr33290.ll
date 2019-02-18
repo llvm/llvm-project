@@ -14,8 +14,8 @@ define void @e() {
 ; X86-NEXT:  .LBB0_1: # %for.cond
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movzbl c, %ecx
-; X86-NEXT:    leal a+2(%ecx), %ecx
 ; X86-NEXT:    movb $0, c
+; X86-NEXT:    leal a+2(%ecx), %ecx
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    jmp .LBB0_1
 ;

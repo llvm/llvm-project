@@ -1,6 +1,16 @@
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin -mcpu=cortex-a53 -enable-misched=false < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -enable-linkonceodr-outlining -mtriple=aarch64-apple-darwin < %s | FileCheck %s -check-prefix=ODR
+; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple=aarch64-apple-darwin -stop-after=machine-outliner < %s | FileCheck %s -check-prefix=TARGET_FEATURES
+
+; Make sure that we inherit target features from functions and make sure we have
+; the right function attributes.
+; TARGET_FEATURES: define internal void @OUTLINED_FUNCTION_{{[0-9]+}}()
+; TARGET_FEATURES-SAME: #[[ATTR_NUM:[0-9]+]]
+; TARGET_FEATURES-DAG: attributes #[[ATTR_NUM]] = {
+; TARGET_FEATURES-SAME: minsize
+; TARGET_FEATURES-SAME: optsize
+; TARGET_FEATURES-SAME: "target-features"="+sse"
 
 define linkonce_odr void @fish() #0 {
   ; CHECK-LABEL: _fish:
@@ -82,17 +92,18 @@ define void @dog() #0 {
 ; CHECK: .p2align 2
 ; CHECK-NEXT: [[OUTLINED]]:
 ; CHECK: orr     w8, wzr, #0x1
-; CHECK-NEXT: str     w8, [sp, #44]
-; CHECK-NEXT: orr     w8, wzr, #0x2
-; CHECK-NEXT: str     w8, [sp, #40]
-; CHECK-NEXT: orr     w8, wzr, #0x3
-; CHECK-NEXT: str     w8, [sp, #36]
-; CHECK-NEXT: orr     w8, wzr, #0x4
-; CHECK-NEXT: str     w8, [sp, #32]
-; CHECK-NEXT: mov     w8, #5
 ; CHECK-NEXT: str     w8, [sp, #28]
-; CHECK-NEXT: orr     w8, wzr, #0x6
+; CHECK-NEXT: orr     w8, wzr, #0x2
 ; CHECK-NEXT: str     w8, [sp, #24]
+; CHECK-NEXT: orr     w8, wzr, #0x3
+; CHECK-NEXT: str     w8, [sp, #20]
+; CHECK-NEXT: orr     w8, wzr, #0x4
+; CHECK-NEXT: str     w8, [sp, #16]
+; CHECK-NEXT: mov     w8, #5
+; CHECK-NEXT: str     w8, [sp, #12]
+; CHECK-NEXT: orr     w8, wzr, #0x6
+; CHECK-NEXT: str     w8, [sp, #8]
+; CHECK-NEXT: add     sp, sp, #32
 ; CHECK-NEXT: ret
 
-attributes #0 = { noredzone "target-cpu"="cyclone" }
+attributes #0 = { noredzone "target-cpu"="cyclone" "target-features"="+sse" }

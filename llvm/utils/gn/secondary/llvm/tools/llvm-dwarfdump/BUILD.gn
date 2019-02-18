@@ -1,0 +1,14 @@
+executable("llvm-dwarfdump") {
+  deps = [
+    "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsDescs",
+    "//llvm/lib/Target:AllTargetsInfos",
+  ]
+  sources = [
+    "Statistics.cpp",
+    "llvm-dwarfdump.cpp",
+  ]
+}

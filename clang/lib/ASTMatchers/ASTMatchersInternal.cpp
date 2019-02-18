@@ -144,10 +144,10 @@ DynTypedMatcher DynTypedMatcher::constructVariadic(
     ast_type_traits::ASTNodeKind SupportedKind,
     std::vector<DynTypedMatcher> InnerMatchers) {
   assert(!InnerMatchers.empty() && "Array must not be empty.");
-  assert(std::all_of(InnerMatchers.begin(), InnerMatchers.end(),
-                     [SupportedKind](const DynTypedMatcher &M) {
-                       return M.canConvertTo(SupportedKind);
-                     }) &&
+  assert(llvm::all_of(InnerMatchers,
+                      [SupportedKind](const DynTypedMatcher &M) {
+                        return M.canConvertTo(SupportedKind);
+                      }) &&
          "InnerMatchers must be convertible to SupportedKind!");
 
   // We must relax the restrict kind here.
@@ -449,7 +449,7 @@ bool HasNameMatcher::matchesNodeUnqualified(const NamedDecl &Node) const {
   assert(UseUnqualifiedMatch);
   llvm::SmallString<128> Scratch;
   StringRef NodeName = getNodeName(Node, Scratch);
-  return std::any_of(Names.begin(), Names.end(), [&](StringRef Name) {
+  return llvm::any_of(Names, [&](StringRef Name) {
     return consumeNameSuffix(Name, NodeName) && Name.empty();
   });
 }
@@ -573,6 +573,9 @@ const internal::VariadicDynCastAllOfMatcher<Decl, ClassTemplateDecl>
 const internal::VariadicDynCastAllOfMatcher<Decl,
                                             ClassTemplateSpecializationDecl>
     classTemplateSpecializationDecl;
+const internal::VariadicDynCastAllOfMatcher<
+    Decl, ClassTemplatePartialSpecializationDecl>
+    classTemplatePartialSpecializationDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, DeclaratorDecl>
     declaratorDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, ParmVarDecl> parmVarDecl;
@@ -603,6 +606,8 @@ const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
+    indirectFieldDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FunctionDecl> functionDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FunctionTemplateDecl>
     functionTemplateDecl;
@@ -610,6 +615,10 @@ const internal::VariadicDynCastAllOfMatcher<Decl, FriendDecl> friendDecl;
 const internal::VariadicAllOfMatcher<Stmt> stmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclStmt> declStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, MemberExpr> memberExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, UnresolvedMemberExpr>
+    unresolvedMemberExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDependentScopeMemberExpr>
+    cxxDependentScopeMemberExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CallExpr> callExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, LambdaExpr> lambdaExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXMemberCallExpr>
@@ -659,6 +668,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingValueDecl>
     unresolvedUsingValueDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingTypenameDecl>
     unresolvedUsingTypenameDecl;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ConstantExpr> constantExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ParenExpr> parenExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstructExpr>
     cxxConstructExpr;
@@ -679,6 +689,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>
     cxxOperatorCallExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, Expr> expr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DeclRefExpr> declRefExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ObjCIvarRefExpr> objcIvarRefExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, BlockExpr> blockExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, IfStmt> ifStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ForStmt> forStmt;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXForRangeStmt>
@@ -709,6 +721,7 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CharacterLiteral>
 const internal::VariadicDynCastAllOfMatcher<Stmt, IntegerLiteral>
     integerLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, FloatingLiteral> floatLiteral;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ImaginaryLiteral> imaginaryLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, UserDefinedLiteral>
     userDefinedLiteral;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
@@ -800,6 +813,7 @@ const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
 const AstTypeMatcher<VariableArrayType> variableArrayType;
 const AstTypeMatcher<AtomicType> atomicType;
 const AstTypeMatcher<AutoType> autoType;
+const AstTypeMatcher<DecltypeType> decltypeType;
 const AstTypeMatcher<FunctionType> functionType;
 const AstTypeMatcher<FunctionProtoType> functionProtoType;
 const AstTypeMatcher<ParenType> parenType;

@@ -20,6 +20,7 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_MCINSTRDESCVIEW_H
 
 #include <random>
+#include <unordered_map>
 
 #include "RegisterAliasing.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,24 +29,31 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 
+namespace llvm {
 namespace exegesis {
-
-struct Operand; // forward declaration.
 
 // A variable represents the value associated to an Operand or a set of Operands
 // if they are tied together.
 struct Variable {
+  // Returns the index of this Variable inside Instruction's Variable.
+  unsigned getIndex() const;
+
+  // Returns the index of the Operand linked to this Variable.
+  unsigned getPrimaryOperandIndex() const;
+
+  // Returns whether this Variable has more than one Operand linked to it.
+  bool hasTiedOperands() const;
+
   // The indices of the operands tied to this Variable.
   llvm::SmallVector<unsigned, 2> TiedOperands;
-  llvm::MCOperand AssignedValue;
+
   // The index of this Variable in Instruction.Variables and its associated
-  // Value in InstructionInstance.VariableValues.
-  unsigned Index = -1;
+  // Value in InstructionBuilder.VariableValues.
+  int Index = -1;
 };
 
 // MCOperandInfo can only represents Explicit operands. This object gives a
 // uniform view of Implicit and Explicit Operands.
-//
 // - Index: can be used to refer to MCInstrDesc::operands for Explicit operands.
 // - Tracker: is set for Register Operands and is used to keep track of possible
 // registers and the registers reachable from them (aliasing registers).
@@ -56,9 +64,26 @@ struct Variable {
 // - VariableIndex: the index of the Variable holding the value for this Operand
 // or -1 if this operand is implicit.
 struct Operand {
-  unsigned Index = 0;
+  bool isExplicit() const;
+  bool isImplicit() const;
+  bool isImplicitReg() const;
+  bool isDef() const;
+  bool isUse() const;
+  bool isReg() const;
+  bool isTied() const;
+  bool isVariable() const;
+  bool isMemory() const;
+  bool isImmediate() const;
+  unsigned getIndex() const;
+  unsigned getTiedToIndex() const;
+  unsigned getVariableIndex() const;
+  unsigned getImplicitReg() const;
+  const RegisterAliasingTracker &getRegisterAliasing() const;
+  const llvm::MCOperandInfo &getExplicitOperandInfo() const;
+
+  // Please use the accessors above and not the following fields.
+  int Index = -1;
   bool IsDef = false;
-  bool IsExplicit = false;
   const RegisterAliasingTracker *Tracker = nullptr; // Set for Register Op.
   const llvm::MCOperandInfo *Info = nullptr;        // Set for Explicit Op.
   int TiedToIndex = -1;                             // Set for Reg&Explicit Op.
@@ -69,63 +94,72 @@ struct Operand {
 // A view over an MCInstrDesc offering a convenient interface to compute
 // Register aliasing.
 struct Instruction {
-  Instruction(const llvm::MCInstrDesc &MCInstrDesc,
-              const RegisterAliasingTrackerCache &ATC);
+  Instruction(const llvm::MCInstrInfo &InstrInfo,
+              const RegisterAliasingTrackerCache &RATC, unsigned Opcode);
+
+  // Returns the Operand linked to this Variable.
+  // In case the Variable is tied, the primary (i.e. Def) Operand is returned.
+  const Operand &getPrimaryOperand(const Variable &Var) const;
+
+  // Whether this instruction is self aliasing through its tied registers.
+  // Repeating this instruction is guaranteed to executes sequentially.
+  bool hasTiedRegisters() const;
+
+  // Whether this instruction is self aliasing through its implicit registers.
+  // Repeating this instruction is guaranteed to executes sequentially.
+  bool hasAliasingImplicitRegisters() const;
+
+  // Whether this instruction is self aliasing through some registers.
+  // Repeating this instruction may execute sequentially by picking aliasing
+  // Use and Def registers. It may also execute in parallel by picking non
+  // aliasing Use and Def registers.
+  bool hasAliasingRegisters() const;
+
+  // Whether this instruction's implicit registers alias with OtherInstr's
+  // implicit registers.
+  bool hasAliasingImplicitRegistersThrough(const Instruction &OtherInstr) const;
+
+  // Whether this instruction's registers alias with OtherInstr's registers.
+  bool hasAliasingRegistersThrough(const Instruction &OtherInstr) const;
+
+  // Returns whether this instruction has Memory Operands.
+  // Repeating this instruction executes sequentially with an instruction that
+  // reads or write the same memory region.
+  bool hasMemoryOperands() const;
+
+  // Returns whether this instruction as at least one use or one def.
+  // Repeating this instruction may execute sequentially by adding an
+  // instruction that aliases one of these.
+  bool hasOneUseOrOneDef() const;
+
+  // Convenient function to help with debugging.
+  void dump(const llvm::MCRegisterInfo &RegInfo,
+            llvm::raw_ostream &Stream) const;
 
   const llvm::MCInstrDesc *Description; // Never nullptr.
+  llvm::StringRef Name;                 // The name of this instruction.
   llvm::SmallVector<Operand, 8> Operands;
   llvm::SmallVector<Variable, 4> Variables;
-  llvm::BitVector DefRegisters; // The union of the aliased def registers.
-  llvm::BitVector UseRegisters; // The union of the aliased use registers.
+  llvm::BitVector ImplDefRegs; // The set of aliased implicit def registers.
+  llvm::BitVector ImplUseRegs; // The set of aliased implicit use registers.
+  llvm::BitVector AllDefRegs;  // The set of all aliased def registers.
+  llvm::BitVector AllUseRegs;  // The set of all aliased use registers.
 };
 
-// An instance of an Instruction holding values for each of its Variables.
-struct InstructionInstance {
-  InstructionInstance(const Instruction &Instr);
+// Instructions are expensive to instantiate. This class provides a cache of
+// Instructions with lazy construction.
+struct InstructionsCache {
+  InstructionsCache(const llvm::MCInstrInfo &InstrInfo,
+                    const RegisterAliasingTrackerCache &RATC);
 
-  // No copy.
-  InstructionInstance(const InstructionInstance &) = delete;
-  InstructionInstance &operator=(const InstructionInstance &) = delete;
+  // Returns the Instruction object corresponding to this Opcode.
+  const Instruction &getInstr(unsigned Opcode) const;
 
-  // Moving is OK.
-  InstructionInstance(InstructionInstance &&);
-  InstructionInstance &operator=(InstructionInstance &&);
-
-  unsigned getOpcode() const;
-  llvm::MCOperand &getValueFor(const Variable &Var);
-  const llvm::MCOperand &getValueFor(const Variable &Var) const;
-  llvm::MCOperand &getValueFor(const Operand &Op);
-  const llvm::MCOperand &getValueFor(const Operand &Op) const;
-  bool hasImmediateVariables() const;
-
-  // Assigns a Random Value to all Variables that are still Invalid.
-  void randomizeUnsetVariables();
-
-  // Returns the instance as an llvm::MCInst. The InstructionInstance must be
-  // fully allocated (no invalid variables).
-  llvm::MCInst build() const;
-
-  Instruction Instr;
-  llvm::SmallVector<llvm::MCOperand, 4> VariableValues;
-};
-
-// A prototype is a set of InstructionInstances with an explanation of how
-// it's been built. The prototype can then be randomized to exercice several
-// immediate values. It is also used to gather the used registers and define
-// their initial values.
-struct SnippetPrototype {
-  SnippetPrototype() = default;
-
-  // No copy.
-  SnippetPrototype(const SnippetPrototype &) = delete;
-  SnippetPrototype &operator=(const SnippetPrototype &) = delete;
-
-  // Moving is OK.
-  SnippetPrototype(SnippetPrototype &&);
-  SnippetPrototype &operator=(SnippetPrototype &&);
-
-  std::string Explanation;
-  std::vector<InstructionInstance> Snippet;
+private:
+  const llvm::MCInstrInfo &InstrInfo;
+  const RegisterAliasingTrackerCache &RATC;
+  mutable std::unordered_map<unsigned, std::unique_ptr<Instruction>>
+      Instructions;
 };
 
 // Represents the assignment of a Register to an Operand.
@@ -163,26 +197,9 @@ struct AliasingConfigurations {
 
   bool empty() const; // True if no aliasing configuration is found.
   bool hasImplicitAliasing() const;
-  void setExplicitAliasing() const;
 
-  const Instruction &DefInstruction;
-  const Instruction &UseInstruction;
   llvm::SmallVector<AliasingRegisterOperands, 32> Configurations;
 };
-
-// A global Random Number Generator to randomize configurations.
-// FIXME: Move random number generation into an object and make it seedable for
-// unit tests.
-std::mt19937 &randomGenerator();
-
-// Picks a random bit among the bits set in Vector and returns its index.
-// Precondition: Vector must have at least one bit set.
-size_t randomBit(const llvm::BitVector &Vector);
-
-// Picks a random configuration, then selects a random def and a random use from
-// it and finally set the selected values in the provided InstructionInstances.
-void setRandomAliasing(const AliasingConfigurations &AliasingConfigurations,
-                       InstructionInstance &DefII, InstructionInstance &UseII);
 
 // Writes MCInst to OS.
 // This is not assembly but the internal LLVM's name for instructions and
@@ -192,5 +209,6 @@ void DumpMCInst(const llvm::MCRegisterInfo &MCRegisterInfo,
                 const llvm::MCInst &MCInst, llvm::raw_ostream &OS);
 
 } // namespace exegesis
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_EXEGESIS_MCINSTRDESCVIEW_H

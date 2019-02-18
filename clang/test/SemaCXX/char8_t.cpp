@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fchar8_t -std=c++2a -verify %s
+// RUN: %clang_cc1 -fchar8_t -std=c++17 -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s
 
 char8_t a = u8'a';
 char8_t b[] = u8"foo";
@@ -6,7 +7,12 @@ char8_t c = 'a';
 char8_t d[] = "foo"; // expected-error {{initializing 'char8_t' array with plain string literal}} expected-note {{add 'u8' prefix}}
 
 char e = u8'a';
-char f[] = u8"foo"; // expected-error {{initialization of char array with UTF-8 string literal is not permitted by '-fchar8_t'}}
+char f[] = u8"foo";
+#if __cplusplus <= 201703L
+// expected-error@-2 {{initialization of char array with UTF-8 string literal is not permitted by '-fchar8_t'}}
+#else
+// expected-error@-4 {{ISO C++20 does not permit initialization of char array with UTF-8 string literal}}
+#endif
 char g = 'a';
 char h[] = "foo";
 

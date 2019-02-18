@@ -13,12 +13,12 @@
 // RUN: %clang_cc1 \
 // RUN:   -iquote %t/z.hmap -iquote %t/a.hmap -ivfsoverlay %t/z.yaml \
 // RUN:   -F%S/Inputs/framework-public-includes-private \
-// RUN:   -fsyntax-only %s -verify
+// RUN:   -fsyntax-only -Wframework-include-private-from-public %s -verify
 
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache \
 // RUN:   -iquote %t/z.hmap -iquote %t/a.hmap -ivfsoverlay %t/z.yaml \
 // RUN:   -F%S/Inputs/framework-public-includes-private \
-// RUN:   -fsyntax-only %s \
+// RUN:   -fsyntax-only -Wframework-include-private-from-public %s \
 // RUN:   2>%t/stderr
 
 // The same warnings show up when modules is on but -verify doesn't get it

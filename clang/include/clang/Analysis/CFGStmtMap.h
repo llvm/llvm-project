@@ -19,20 +19,18 @@
 
 namespace clang {
 
-class CFG;
-class CFGBlock;
 class ParentMap;
 class Stmt;
 
 class CFGStmtMap {
   ParentMap *PM;
   void *M;
-  
+
   CFGStmtMap(ParentMap *pm, void *m) : PM(pm), M(m) {}
-  
+
 public:
   ~CFGStmtMap();
-  
+
   /// Returns a new CFGMap for the given CFG.  It is the caller's
   /// responsibility to 'delete' this object when done using it.
   static CFGStmtMap *Build(CFG* C, ParentMap *PM);

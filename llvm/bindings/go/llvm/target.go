@@ -62,6 +62,7 @@ const (
 const (
 	CodeModelDefault    CodeModel = C.LLVMCodeModelDefault
 	CodeModelJITDefault CodeModel = C.LLVMCodeModelJITDefault
+	CodeModelTiny       CodeModel = C.LLVMCodeModelTiny
 	CodeModelSmall      CodeModel = C.LLVMCodeModelSmall
 	CodeModelKernel     CodeModel = C.LLVMCodeModelKernel
 	CodeModelMedium     CodeModel = C.LLVMCodeModelMedium

@@ -25,11 +25,11 @@ body: |
 
     ; CHECK-LABEL: test_lddwrdptrq
 
-    ; CHECK:      ldd [[SCRATCH:r[0-9]+]], Z+10
+    ; CHECK:      ldd [[SCRATCH:r[0-9]+]], Y+10
     ; CHECK-NEXT: push [[SCRATCH]]
-    ; CHECK-NEXT: ldd [[SCRATCH]], Z+11
-    ; CHECK-NEXT: mov r31, [[SCRATCH]]
-    ; CHECK-NEXT: pop r30
+    ; CHECK-NEXT: ldd [[SCRATCH]], Y+11
+    ; CHECK-NEXT: mov r29, [[SCRATCH]]
+    ; CHECK-NEXT: pop r28
 
-    early-clobber $r31r30 = LDDWRdPtrQ undef $r31r30, 10
+    early-clobber $r29r28 = LDDWRdPtrQ undef $r29r28, 10
 ...

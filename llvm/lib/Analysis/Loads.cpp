@@ -345,7 +345,7 @@ Value *llvm::FindAvailablePtrLoadStore(Value *Ptr, Type *AccessTy,
   const DataLayout &DL = ScanBB->getModule()->getDataLayout();
 
   // Try to get the store size for the type.
-  uint64_t AccessSize = DL.getTypeStoreSize(AccessTy);
+  auto AccessSize = LocationSize::precise(DL.getTypeStoreSize(AccessTy));
 
   Value *StrippedPtr = Ptr->stripPointerCasts();
 

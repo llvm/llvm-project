@@ -12,6 +12,9 @@
 #include <cwctype>
 #include <type_traits>
 
+#include "test_macros.h"
+
+
 #ifndef WEOF
 #error WEOF not defined
 #endif
@@ -91,24 +94,24 @@
 int main()
 {
     std::wint_t w = 0;
-    std::wctrans_t wctr = 0;
-    std::wctype_t wct = 0;
-    static_assert((std::is_same<decltype(std::iswalnum(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswalpha(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswblank(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswcntrl(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswdigit(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswgraph(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswlower(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswprint(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswpunct(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswspace(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswupper(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswxdigit(w)), int>::value), "");
-    static_assert((std::is_same<decltype(std::iswctype(w, wct)), int>::value), "");
-    static_assert((std::is_same<decltype(std::wctype("")), std::wctype_t>::value), "");
-    static_assert((std::is_same<decltype(std::towlower(w)), std::wint_t>::value), "");
-    static_assert((std::is_same<decltype(std::towupper(w)), std::wint_t>::value), "");
-    static_assert((std::is_same<decltype(std::towctrans(w, wctr)), std::wint_t>::value), "");
-    static_assert((std::is_same<decltype(std::wctrans("")), std::wctrans_t>::value), "");
+    ASSERT_SAME_TYPE(int, decltype(std::iswalnum(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswalpha(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswblank(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswcntrl(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswdigit(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswgraph(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswlower(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswprint(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswpunct(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswspace(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswupper(w)));
+    ASSERT_SAME_TYPE(int, decltype(std::iswxdigit(w)));
+
+    ASSERT_SAME_TYPE(int, decltype(std::iswctype(w, std::wctype_t())));
+    
+    ASSERT_SAME_TYPE(std::wctype_t,  decltype(std::wctype("")));
+    ASSERT_SAME_TYPE(std::wint_t,    decltype(std::towlower(w)));
+    ASSERT_SAME_TYPE(std::wint_t,    decltype(std::towupper(w)));
+    ASSERT_SAME_TYPE(std::wint_t,    decltype(std::towctrans(w, std::wctrans_t())));
+    ASSERT_SAME_TYPE(std::wctrans_t, decltype(std::wctrans("")));
 }

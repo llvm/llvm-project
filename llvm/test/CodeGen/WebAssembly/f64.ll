@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck %s
 
 ; Test that basic 64-bit floating-point operations assemble as expected.
 
@@ -16,8 +16,7 @@ declare double @llvm.rint.f64(double)
 declare double @llvm.fma.f64(double, double, double)
 
 ; CHECK-LABEL: fadd64:
-; CHECK-NEXT: .param f64, f64{{$}}
-; CHECK-NEXT: .result f64{{$}}
+; CHECK-NEXT: .functype fadd64 (f64, f64) -> (f64){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f64.add $push[[LR:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -123,12 +122,6 @@ define double @nearest64_via_rint(double %x) {
   ret double %a
 }
 
-; Min and max tests. LLVM currently only forms fminnan and fmaxnan nodes in
-; cases where there's a single fcmp with a select and it can prove that one
-; of the arms is never NaN, so we only test that case. In the future if LLVM
-; learns to form fminnan/fmaxnan in more cases, we can write more general
-; tests.
-
 ; CHECK-LABEL: fmin64:
 ; CHECK: f64.min $push1=, $pop{{[0-9]+}}, $pop[[LR]]{{$}}
 ; CHECK-NEXT: return $pop1{{$}}
@@ -145,6 +138,24 @@ define double @fmax64(double %x) {
   %a = fcmp ugt double %x, 0.0
   %b = select i1 %a, double %x, double 0.0
   ret double %b
+}
+
+; CHECK-LABEL: fmin64_intrinsic:
+; CHECK: f64.min $push0=, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+declare double @llvm.minimum.f64(double, double)
+define double @fmin64_intrinsic(double %x, double %y) {
+  %a = call double @llvm.minimum.f64(double %x, double %y)
+  ret double %a
+}
+
+; CHECK-LABEL: fmax64_intrinsic:
+; CHECK: f64.max $push0=, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+declare double @llvm.maximum.f64(double, double)
+define double @fmax64_intrinsic(double %x, double %y) {
+  %a = call double @llvm.maximum.f64(double %x, double %y)
+  ret double %a
 }
 
 ; CHECK-LABEL: fma64:

@@ -89,6 +89,14 @@ DiagnosticsEngine::~DiagnosticsEngine() {
   setClient(nullptr);
 }
 
+void DiagnosticsEngine::dump() const {
+  DiagStatesByLoc.dump(*SourceMgr);
+}
+
+void DiagnosticsEngine::dump(StringRef DiagName) const {
+  DiagStatesByLoc.dump(*SourceMgr, DiagName);
+}
+
 void DiagnosticsEngine::setClient(DiagnosticConsumer *client,
                                   bool ShouldOwnClient) {
   Owner.reset(ShouldOwnClient ? client : nullptr);
@@ -116,12 +124,12 @@ void DiagnosticsEngine::Reset() {
   UncompilableErrorOccurred = false;
   FatalErrorOccurred = false;
   UnrecoverableErrorOccurred = false;
-  
+
   NumWarnings = 0;
   NumErrors = 0;
   TrapNumErrorsOccurred = 0;
   TrapNumUnrecoverableErrorsOccurred = 0;
-  
+
   CurDiagID = std::numeric_limits<unsigned>::max();
   LastDiagLevel = DiagnosticIDs::Ignored;
   DelayedDiagID = 0;
@@ -239,7 +247,7 @@ DiagnosticsEngine::DiagStateMap::getFile(SourceManager &SrcMgr,
 void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
                                            StringRef DiagName) const {
   llvm::errs() << "diagnostic state at ";
-  CurDiagStateLoc.dump(SrcMgr);
+  CurDiagStateLoc.print(llvm::errs(), SrcMgr);
   llvm::errs() << ": " << CurDiagState << "\n";
 
   for (auto &F : Files) {
@@ -261,7 +269,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
                      << Decomp.first.getHashValue() << "> ";
         SrcMgr.getLocForStartOfFile(Decomp.first)
               .getLocWithOffset(Decomp.second)
-              .dump(SrcMgr);
+              .print(llvm::errs(), SrcMgr);
       }
       if (File.HasLocalTransitions)
         llvm::errs() << " has_local_transitions";
@@ -281,7 +289,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
         llvm::errs() << "  ";
         SrcMgr.getLocForStartOfFile(ID)
               .getLocWithOffset(Transition.Offset)
-              .dump(SrcMgr);
+              .print(llvm::errs(), SrcMgr);
         llvm::errs() << ": state " << Transition.State << ":\n";
       };
 
@@ -759,7 +767,7 @@ FormatDiagnostic(SmallVectorImpl<char> &OutStr) const {
     return;
   }
 
-  StringRef Diag = 
+  StringRef Diag =
     getDiags()->getDiagnosticIDs()->getDescription(getID());
 
   FormatDiagnostic(Diag.begin(), Diag.end(), OutStr);
@@ -880,7 +888,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
         continue;
       }
     }
-    
+
     switch (Kind) {
     // ---- STRINGS ----
     case DiagnosticsEngine::ak_std_string: {
@@ -1056,7 +1064,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
       break;
     }
     }
-    
+
     // Remember this argument info for subsequent formatting operations.  Turn
     // std::strings into a null terminated string to make it be the same case as
     // all the other ones.
@@ -1077,7 +1085,7 @@ StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, unsigned ID,
                                    StringRef Message)
     : ID(ID), Level(Level), Message(Message) {}
 
-StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level, 
+StoredDiagnostic::StoredDiagnostic(DiagnosticsEngine::Level Level,
                                    const Diagnostic &Info)
     : ID(Info.getID()), Level(Level) {
   assert((Info.getLocation().isInvalid() || Info.hasSourceManager()) &&

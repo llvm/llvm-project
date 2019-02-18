@@ -12,10 +12,11 @@ we welcome any feedback.
 Chapter 2 Introduction
 ======================
 
-**Warning: This text is currently out of date due to ORC API updates.**
+**Warning: This tutorial is currently being updated to account for ORC API
+changes. Only Chapters 1 and 2 are up-to-date.**
 
-**The example code has been updated and can be used. The text will be updated
-once the API churn dies down.**
+**Example code from Chapters 3 to 5 will compile and run, but has not been
+updated**
 
 Welcome to Chapter 2 of the "Building an ORC-based JIT in LLVM" tutorial. In
 `Chapter 1 <BuildingAJIT1.html>`_ of this series we examined a basic JIT
@@ -42,67 +43,49 @@ added to it. In this Chapter we will make optimization a phase of our JIT
 instead. For now this will provide us a motivation to learn more about ORC
 layers, but in the long term making optimization part of our JIT will yield an
 important benefit: When we begin lazily compiling code (i.e. deferring
-compilation of each function until the first time it's run), having
+compilation of each function until the first time it's run) having
 optimization managed by our JIT will allow us to optimize lazily too, rather
 than having to do all our optimization up-front.
 
 To add optimization support to our JIT we will take the KaleidoscopeJIT from
 Chapter 1 and compose an ORC *IRTransformLayer* on top. We will look at how the
 IRTransformLayer works in more detail below, but the interface is simple: the
-constructor for this layer takes a reference to the layer below (as all layers
-do) plus an *IR optimization function* that it will apply to each Module that
-is added via addModule:
+constructor for this layer takes a reference to the execution session and the
+layer below (as all layers do) plus an *IR optimization function* that it will
+apply to each Module that is added via addModule:
 
 .. code-block:: c++
 
   class KaleidoscopeJIT {
   private:
-    std::unique_ptr<TargetMachine> TM;
-    const DataLayout DL;
-    RTDyldObjectLinkingLayer<> ObjectLayer;
-    IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
+    ExecutionSession ES;
+    RTDyldObjectLinkingLayer ObjectLayer;
+    IRCompileLayer CompileLayer;
+    IRTransformLayer TransformLayer;
 
-    using OptimizeFunction =
-        std::function<std::shared_ptr<Module>(std::shared_ptr<Module>)>;
-
-    IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
+    DataLayout DL;
+    MangleAndInterner Mangle;
+    ThreadSafeContext Ctx;
 
   public:
-    using ModuleHandle = decltype(OptimizeLayer)::ModuleHandleT;
 
-    KaleidoscopeJIT()
-        : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-          ObjectLayer([]() { return std::make_shared<SectionMemoryManager>(); }),
-          CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
-          OptimizeLayer(CompileLayer,
-                        [this](std::unique_ptr<Module> M) {
-                          return optimizeModule(std::move(M));
-                        }) {
-      llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+    KaleidoscopeJIT(JITTargetMachineBuilder JTMB, DataLayout DL)
+        : ObjectLayer(ES,
+                      []() { return llvm::make_unique<SectionMemoryManager>(); }),
+          CompileLayer(ES, ObjectLayer, ConcurrentIRCompiler(std::move(JTMB))),
+          TransformLayer(ES, CompileLayer, optimizeModule),
+          DL(std::move(DL)), Mangle(ES, this->DL),
+          Ctx(llvm::make_unique<LLVMContext>()) {
+      ES.getMainJITDylib().setGenerator(
+          cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(DL)));
     }
 
 Our extended KaleidoscopeJIT class starts out the same as it did in Chapter 1,
-but after the CompileLayer we introduce a typedef for our optimization function.
-In this case we use a std::function (a handy wrapper for "function-like" things)
-from a single unique_ptr<Module> input to a std::unique_ptr<Module> output. With
-our optimization function typedef in place we can declare our OptimizeLayer,
-which sits on top of our CompileLayer.
-
-To initialize our OptimizeLayer we pass it a reference to the CompileLayer
-below (standard practice for layers), and we initialize the OptimizeFunction
-using a lambda that calls out to an "optimizeModule" function that we will
-define below.
-
-.. code-block:: c++
-
-  // ...
-  auto Resolver = createLambdaResolver(
-      [&](const std::string &Name) {
-        if (auto Sym = OptimizeLayer.findSymbol(Name, false))
-          return Sym;
-        return JITSymbol(nullptr);
-      },
-  // ...
+but after the CompileLayer we introduce a new member, TransformLayer, which sits
+on top of our CompileLayer. We initialize our OptimizeLayer with a reference to
+the ExecutionSession and output layer (standard practice for layers), along with
+a *transform function*. For our transform function we supply our classes
+optimizeModule static method.
 
 .. code-block:: c++
 
@@ -111,26 +94,13 @@ define below.
                                           std::move(Resolver)));
   // ...
 
-.. code-block:: c++
-
-  // ...
-  return OptimizeLayer.findSymbol(MangledNameStream.str(), true);
-  // ...
+Next we need to update our addModule method to replace the call to
+``CompileLayer::add`` with a call to ``OptimizeLayer::add`` instead.
 
 .. code-block:: c++
 
-  // ...
-  cantFail(OptimizeLayer.removeModule(H));
-  // ...
-
-Next we need to replace references to 'CompileLayer' with references to
-OptimizeLayer in our key methods: addModule, findSymbol, and removeModule. In
-addModule we need to be careful to replace both references: the findSymbol call
-inside our resolver, and the call through to addModule.
-
-.. code-block:: c++
-
-  std::shared_ptr<Module> optimizeModule(std::shared_ptr<Module> M) {
+  static Expected<ThreadSafeModule>
+  optimizeModule(ThreadSafeModule M, const MaterializationResponsibility &R) {
     // Create a function pass manager.
     auto FPM = llvm::make_unique<legacy::FunctionPassManager>(M.get());
 
@@ -150,12 +120,18 @@ inside our resolver, and the call through to addModule.
   }
 
 At the bottom of our JIT we add a private method to do the actual optimization:
-*optimizeModule*. This function sets up a FunctionPassManager, adds some passes
-to it, runs it over every function in the module, and then returns the mutated
-module. The specific optimizations are the same ones used in
-`Chapter 4 <LangImpl04.html>`_ of the "Implementing a language with LLVM"
-tutorial series. Readers may visit that chapter for a more in-depth
-discussion of these, and of IR optimization in general.
+*optimizeModule*. This function takes the module to be transformed as input (as
+a ThreadSafeModule) along with a reference to a reference to a new class:
+``MaterializationResponsibility``. The MaterializationResponsibility argument
+can be used to query JIT state for the module being transformed, such as the set
+of definitions in the module that JIT'd code is actively trying to call/access.
+For now we will ignore this argument and use a standard optimization
+pipeline. To do this we set up a FunctionPassManager, add some passes to it, run
+it over every function in the module, and then return the mutated module. The
+specific optimizations are the same ones used in `Chapter 4 <LangImpl04.html>`_
+of the "Implementing a language with LLVM" tutorial series. Readers may visit
+that chapter for a more in-depth discussion of these, and of IR optimization in
+general.
 
 And that's it in terms of changes to KaleidoscopeJIT: When a module is added via
 addModule the OptimizeLayer will call our optimizeModule function before passing
@@ -163,148 +139,122 @@ the transformed module on to the CompileLayer below. Of course, we could have
 called optimizeModule directly in our addModule function and not gone to the
 bother of using the IRTransformLayer, but doing so gives us another opportunity
 to see how layers compose. It also provides a neat entry point to the *layer*
-concept itself, because IRTransformLayer turns out to be one of the simplest
-implementations of the layer concept that can be devised:
+concept itself, because IRTransformLayer is one of the simplest layers that
+can be implemented.
 
 .. code-block:: c++
 
-  template <typename BaseLayerT, typename TransformFtor>
-  class IRTransformLayer {
+  // From IRTransformLayer.h:
+  class IRTransformLayer : public IRLayer {
   public:
-    using ModuleHandleT = typename BaseLayerT::ModuleHandleT;
+    using TransformFunction = std::function<Expected<ThreadSafeModule>(
+        ThreadSafeModule, const MaterializationResponsibility &R)>;
 
-    IRTransformLayer(BaseLayerT &BaseLayer,
-                     TransformFtor Transform = TransformFtor())
-      : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
+    IRTransformLayer(ExecutionSession &ES, IRLayer &BaseLayer,
+                     TransformFunction Transform = identityTransform);
 
-    Expected<ModuleHandleT>
-    addModule(std::shared_ptr<Module> M,
-              std::shared_ptr<JITSymbolResolver> Resolver) {
-      return BaseLayer.addModule(Transform(std::move(M)), std::move(Resolver));
+    void setTransform(TransformFunction Transform) {
+      this->Transform = std::move(Transform);
     }
 
-    void removeModule(ModuleHandleT H) { BaseLayer.removeModule(H); }
-
-    JITSymbol findSymbol(const std::string &Name, bool ExportedSymbolsOnly) {
-      return BaseLayer.findSymbol(Name, ExportedSymbolsOnly);
+    static ThreadSafeModule
+    identityTransform(ThreadSafeModule TSM,
+                      const MaterializationResponsibility &R) {
+      return TSM;
     }
 
-    JITSymbol findSymbolIn(ModuleHandleT H, const std::string &Name,
-                           bool ExportedSymbolsOnly) {
-      return BaseLayer.findSymbolIn(H, Name, ExportedSymbolsOnly);
-    }
-
-    void emitAndFinalize(ModuleHandleT H) {
-      BaseLayer.emitAndFinalize(H);
-    }
-
-    TransformFtor& getTransform() { return Transform; }
-
-    const TransformFtor& getTransform() const { return Transform; }
+    void emit(MaterializationResponsibility R, ThreadSafeModule TSM) override;
 
   private:
-    BaseLayerT &BaseLayer;
-    TransformFtor Transform;
+    IRLayer &BaseLayer;
+    TransformFunction Transform;
   };
 
+  // From IRTransfomrLayer.cpp:
+
+  IRTransformLayer::IRTransformLayer(ExecutionSession &ES,
+                                     IRLayer &BaseLayer,
+                                     TransformFunction Transform)
+      : IRLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
+
+  void IRTransformLayer::emit(MaterializationResponsibility R,
+                              ThreadSafeModule TSM) {
+    assert(TSM.getModule() && "Module must not be null");
+
+    if (auto TransformedTSM = Transform(std::move(TSM), R))
+      BaseLayer.emit(std::move(R), std::move(*TransformedTSM));
+    else {
+      R.failMaterialization();
+      getExecutionSession().reportError(TransformedTSM.takeError());
+    }
+  }
+
 This is the whole definition of IRTransformLayer, from
-``llvm/include/llvm/ExecutionEngine/Orc/IRTransformLayer.h``, stripped of its
-comments. It is a template class with two template arguments: ``BaesLayerT`` and
-``TransformFtor`` that provide the type of the base layer and the type of the
-"transform functor" (in our case a std::function) respectively. This class is
-concerned with two very simple jobs: (1) Running every IR Module that is added
-with addModule through the transform functor, and (2) conforming to the ORC
-layer interface. The interface consists of one typedef and five methods:
+``llvm/include/llvm/ExecutionEngine/Orc/IRTransformLayer.h`` and
+``llvm/lib/ExecutionEngine/Orc/IRTransformLayer.cpp``.  This class is concerned
+with two very simple jobs: (1) Running every IR Module that is emitted via this
+layer through the transform function object, and (2) implementing the ORC
+``IRLayer`` interface (which itself conforms to the general ORC Layer concept,
+more on that below). Most of the class is straightforward: a typedef for the
+transform function, a constructor to initialize the members, a setter for the
+transform function value, and a default no-op transform. The most important
+method is ``emit`` as this is half of our IRLayer interface. The emit method
+applies our transform to each module that it is called on and, if the transform
+succeeds, passes the transformed module to the base layer. If the transform
+fails, our emit function calls
+``MaterializationResponsibility::failMaterialization`` (this JIT clients who
+may be waiting on other threads know that the code they were waiting for has
+failed to compile) and logs the error with the execution session before bailing
+out.
 
-+------------------+-----------------------------------------------------------+
-|     Interface    |                         Description                       |
-+==================+===========================================================+
-|                  | Provides a handle that can be used to identify a module   |
-| ModuleHandleT    | set when calling findSymbolIn, removeModule, or           |
-|                  | emitAndFinalize.                                          |
-+------------------+-----------------------------------------------------------+
-|                  | Takes a given set of Modules and makes them "available    |
-|                  | for execution". This means that symbols in those modules  |
-|                  | should be searchable via findSymbol and findSymbolIn, and |
-|                  | the address of the symbols should be read/writable (for   |
-|                  | data symbols), or executable (for function symbols) after |
-|                  | JITSymbol::getAddress() is called. Note: This means that  |
-|   addModule      | addModule doesn't have to compile (or do any other        |
-|                  | work) up-front. It *can*, like IRCompileLayer, act        |
-|                  | eagerly, but it can also simply record the module and     |
-|                  | take no further action until somebody calls               |
-|                  | JITSymbol::getAddress(). In IRTransformLayer's case       |
-|                  | addModule eagerly applies the transform functor to        |
-|                  | each module in the set, then passes the resulting set     |
-|                  | of mutated modules down to the layer below.               |
-+------------------+-----------------------------------------------------------+
-|                  | Removes a set of modules from the JIT. Code or data       |
-|  removeModule    | defined in these modules will no longer be available, and |
-|                  | the memory holding the JIT'd definitions will be freed.   |
-+------------------+-----------------------------------------------------------+
-|                  | Searches for the named symbol in all modules that have    |
-|                  | previously been added via addModule (and not yet          |
-|    findSymbol    | removed by a call to removeModule). In                    |
-|                  | IRTransformLayer we just pass the query on to the layer   |
-|                  | below. In our REPL this is our default way to search for  |
-|                  | function definitions.                                     |
-+------------------+-----------------------------------------------------------+
-|                  | Searches for the named symbol in the module set indicated |
-|                  | by the given ModuleHandleT. This is just an optimized     |
-|                  | search, better for lookup-speed when you know exactly     |
-|                  | a symbol definition should be found. In IRTransformLayer  |
-|   findSymbolIn   | we just pass this query on to the layer below. In our     |
-|                  | REPL we use this method to search for functions           |
-|                  | representing top-level expressions, since we know exactly |
-|                  | where we'll find them: in the top-level expression module |
-|                  | we just added.                                            |
-+------------------+-----------------------------------------------------------+
-|                  | Forces all of the actions required to make the code and   |
-|                  | data in a module set (represented by a ModuleHandleT)     |
-|                  | accessible. Behaves as if some symbol in the set had been |
-|                  | searched for and JITSymbol::getSymbolAddress called. This |
-| emitAndFinalize  | is rarely needed, but can be useful when dealing with     |
-|                  | layers that usually behave lazily if the user wants to    |
-|                  | trigger early compilation (for example, to use idle CPU   |
-|                  | time to eagerly compile code in the background).          |
-+------------------+-----------------------------------------------------------+
+The other half of the IRLayer interface we inherit unmodified from the IRLayer
+class:
 
-This interface attempts to capture the natural operations of a JIT (with some
-wrinkles like emitAndFinalize for performance), similar to the basic JIT API
-operations we identified in Chapter 1. Conforming to the layer concept allows
-classes to compose neatly by implementing their behaviors in terms of the these
-same operations, carried out on the layer below. For example, an eager layer
-(like IRTransformLayer) can implement addModule by running each module in the
-set through its transform up-front and immediately passing the result to the
-layer below. A lazy layer, by contrast, could implement addModule by
-squirreling away the modules doing no other up-front work, but applying the
-transform (and calling addModule on the layer below) when the client calls
-findSymbol instead. The JIT'd program behavior will be the same either way, but
-these choices will have different performance characteristics: Doing work
-eagerly means the JIT takes longer up-front, but proceeds smoothly once this is
-done. Deferring work allows the JIT to get up-and-running quickly, but will
-force the JIT to pause and wait whenever some code or data is needed that hasn't
-already been processed.
+.. code-block:: c++
 
-Our current REPL is eager: Each function definition is optimized and compiled as
-soon as it's typed in. If we were to make the transform layer lazy (but not
-change things otherwise) we could defer optimization until the first time we
-reference a function in a top-level expression (see if you can figure out why,
-then check out the answer below [1]_). In the next chapter, however we'll
-introduce fully lazy compilation, in which function's aren't compiled until
-they're first called at run-time. At this point the trade-offs get much more
+  Error IRLayer::add(JITDylib &JD, ThreadSafeModule TSM, VModuleKey K) {
+    return JD.define(llvm::make_unique<BasicIRLayerMaterializationUnit>(
+        *this, std::move(K), std::move(TSM)));
+  }
+
+This code, from ``llvm/lib/ExecutionEngine/Orc/Layer.cpp``, adds a
+ThreadSafeModule to a given JITDylib by wrapping it up in a
+``MaterializationUnit`` (in this case a ``BasicIRLayerMaterializationUnit``).
+Most layers that derived from IRLayer can rely on this default implementation
+of the ``add`` method.
+
+These two operations, ``add`` and ``emit``, together constitute the layer
+concept: A layer is a way to wrap a portion of a compiler pipeline (in this case
+the "opt" phase of an LLVM compiler) whose API is is opaque to ORC in an
+interface that allows ORC to invoke it when needed. The add method takes an
+module in some input program representation (in this case an LLVM IR module) and
+stores it in the target JITDylib, arranging for it to be passed back to the
+Layer's emit method when any symbol defined by that module is requested. Layers
+can compose neatly by calling the 'emit' method of a base layer to complete
+their work. For example, in this tutorial our IRTransformLayer calls through to
+our IRCompileLayer to compile the transformed IR, and our IRCompileLayer in turn
+calls our ObjectLayer to link the object file produced by our compiler.
+
+
+So far we have learned how to optimize and compile our LLVM IR, but we have not
+focused on when compilation happens. Our current REPL is eager: Each function
+definition is optimized and compiled as soon as it is referenced by any other
+code, regardless of whether it is ever called at runtime. In the next chapter we
+will introduce fully lazy compilation, in which functions are not compiled until
+they are first called at run-time. At this point the trade-offs get much more
 interesting: the lazier we are, the quicker we can start executing the first
-function, but the more often we'll have to pause to compile newly encountered
-functions. If we only code-gen lazily, but optimize eagerly, we'll have a slow
-startup (which everything is optimized) but relatively short pauses as each
-function just passes through code-gen. If we both optimize and code-gen lazily
-we can start executing the first function more quickly, but we'll have longer
-pauses as each function has to be both optimized and code-gen'd when it's first
-executed. Things become even more interesting if we consider interproceedural
-optimizations like inlining, which must be performed eagerly. These are
-complex trade-offs, and there is no one-size-fits all solution to them, but by
-providing composable layers we leave the decisions to the person implementing
-the JIT, and make it easy for them to experiment with different configurations.
+function, but the more often we will have to pause to compile newly encountered
+functions. If we only code-gen lazily, but optimize eagerly, we will have a
+longer startup time (as everything is optimized) but relatively short pauses as
+each function just passes through code-gen. If we both optimize and code-gen
+lazily we can start executing the first function more quickly, but we will have
+longer pauses as each function has to be both optimized and code-gen'd when it
+is first executed. Things become even more interesting if we consider
+interproceedural optimizations like inlining, which must be performed eagerly.
+These are complex trade-offs, and there is no one-size-fits all solution to
+them, but by providing composable layers we leave the decisions to the person
+implementing the JIT, and make it easy for them to experiment with different
+configurations.
 
 `Next: Adding Per-function Lazy Compilation <BuildingAJIT3.html>`_
 
@@ -325,10 +275,3 @@ Here is the code:
 
 .. literalinclude:: ../../examples/Kaleidoscope/BuildingAJIT/Chapter2/KaleidoscopeJIT.h
    :language: c++
-
-.. [1] When we add our top-level expression to the JIT, any calls to functions
-       that we defined earlier will appear to the RTDyldObjectLinkingLayer as
-       external symbols. The RTDyldObjectLinkingLayer will call the SymbolResolver
-       that we defined in addModule, which in turn calls findSymbol on the
-       OptimizeLayer, at which point even a lazy transform layer will have to
-       do its work.

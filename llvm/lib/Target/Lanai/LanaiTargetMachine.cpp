@@ -53,12 +53,6 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return *RM;
 }
 
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
-  if (CM)
-    return *CM;
-  return CodeModel::Medium;
-}
-
 LanaiTargetMachine::LanaiTargetMachine(const Target &T, const Triple &TT,
                                        StringRef Cpu, StringRef FeatureString,
                                        const TargetOptions &Options,
@@ -67,7 +61,8 @@ LanaiTargetMachine::LanaiTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOpt::Level OptLevel, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(), TT, Cpu, FeatureString, Options,
                         getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CodeModel), OptLevel),
+                        getEffectiveCodeModel(CodeModel, CodeModel::Medium),
+                        OptLevel),
       Subtarget(TT, Cpu, FeatureString, *this, Options, getCodeModel(),
                 OptLevel),
       TLOF(new LanaiTargetObjectFile()) {

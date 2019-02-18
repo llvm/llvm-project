@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IFD %s
 
+; These tests are each targeted at a particular RISC-V FPU instruction. Most
+; other files in this folder exercise LLVM IR instructions that don't directly
+; match a RISC-V instruction.
+
 define double @fadd_d(double %a, double %b) nounwind {
 ; RV32IFD-LABEL: fadd_d:
 ; RV32IFD:       # %bb.0:
@@ -276,4 +280,119 @@ define i32 @fle_d(double %a, double %b) nounwind {
   %1 = fcmp ole double %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
+}
+
+declare double @llvm.fma.f64(double, double, double)
+
+define double @fmadd_d(double %a, double %b, double %c) nounwind {
+; RV32IFD-LABEL: fmadd_d:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a4, 8(sp)
+; RV32IFD-NEXT:    sw a5, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft2, 8(sp)
+; RV32IFD-NEXT:    fmadd.d ft0, ft2, ft1, ft0
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+  %1 = call double @llvm.fma.f64(double %a, double %b, double %c)
+  ret double %1
+}
+
+define double @fmsub_d(double %a, double %b, double %c) nounwind {
+; RV32IFD-LABEL: fmsub_d:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    sw a4, 8(sp)
+; RV32IFD-NEXT:    sw a5, 12(sp)
+; RV32IFD-NEXT:    fld ft2, 8(sp)
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI15_0)
+; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI15_0)
+; RV32IFD-NEXT:    fld ft3, 0(a0)
+; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
+; RV32IFD-NEXT:    fmsub.d ft0, ft1, ft0, ft2
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+  %c_ = fadd double 0.0, %c ; avoid negation using xor
+  %negc = fsub double -0.0, %c_
+  %1 = call double @llvm.fma.f64(double %a, double %b, double %negc)
+  ret double %1
+}
+
+define double @fnmadd_d(double %a, double %b, double %c) nounwind {
+; RV32IFD-LABEL: fnmadd_d:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    sw a4, 8(sp)
+; RV32IFD-NEXT:    sw a5, 12(sp)
+; RV32IFD-NEXT:    fld ft2, 8(sp)
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI16_0)
+; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI16_0)
+; RV32IFD-NEXT:    fld ft3, 0(a0)
+; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
+; RV32IFD-NEXT:    fadd.d ft1, ft1, ft3
+; RV32IFD-NEXT:    fnmadd.d ft0, ft1, ft0, ft2
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+  %a_ = fadd double 0.0, %a
+  %c_ = fadd double 0.0, %c
+  %nega = fsub double -0.0, %a_
+  %negc = fsub double -0.0, %c_
+  %1 = call double @llvm.fma.f64(double %nega, double %b, double %negc)
+  ret double %1
+}
+
+define double @fnmsub_d(double %a, double %b, double %c) nounwind {
+; RV32IFD-LABEL: fnmsub_d:
+; RV32IFD:       # %bb.0:
+; RV32IFD-NEXT:    addi sp, sp, -16
+; RV32IFD-NEXT:    sw a4, 8(sp)
+; RV32IFD-NEXT:    sw a5, 12(sp)
+; RV32IFD-NEXT:    fld ft0, 8(sp)
+; RV32IFD-NEXT:    sw a2, 8(sp)
+; RV32IFD-NEXT:    sw a3, 12(sp)
+; RV32IFD-NEXT:    fld ft1, 8(sp)
+; RV32IFD-NEXT:    sw a0, 8(sp)
+; RV32IFD-NEXT:    sw a1, 12(sp)
+; RV32IFD-NEXT:    fld ft2, 8(sp)
+; RV32IFD-NEXT:    lui a0, %hi(.LCPI17_0)
+; RV32IFD-NEXT:    addi a0, a0, %lo(.LCPI17_0)
+; RV32IFD-NEXT:    fld ft3, 0(a0)
+; RV32IFD-NEXT:    fadd.d ft2, ft2, ft3
+; RV32IFD-NEXT:    fnmsub.d ft0, ft2, ft1, ft0
+; RV32IFD-NEXT:    fsd ft0, 8(sp)
+; RV32IFD-NEXT:    lw a0, 8(sp)
+; RV32IFD-NEXT:    lw a1, 12(sp)
+; RV32IFD-NEXT:    addi sp, sp, 16
+; RV32IFD-NEXT:    ret
+  %a_ = fadd double 0.0, %a
+  %nega = fsub double -0.0, %a_
+  %1 = call double @llvm.fma.f64(double %nega, double %b, double %c)
+  ret double %1
 }

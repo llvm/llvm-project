@@ -340,7 +340,7 @@ static hash_code computeHash(const TemplateArgument &Arg,
 
   case TemplateArgument::TemplateExpansion:
     COMBINE_HASH('P'); // pack expansion of...
-    // Fall through
+    LLVM_FALLTHROUGH;
   case TemplateArgument::Template:
     COMBINE_HASH(computeHash(Arg.getAsTemplateOrTemplatePattern(), Hasher));
     break;
@@ -431,6 +431,7 @@ hash_code IndexRecordHasher::hashImpl(DeclarationName Name) {
       break;
     case DeclarationName::CXXLiteralOperatorName:
       COMBINE_HASH(computeHash(Name.getCXXLiteralIdentifier()));
+      break;
     case DeclarationName::CXXUsingDirective:
       break;
     case DeclarationName::CXXDeductionGuideName:

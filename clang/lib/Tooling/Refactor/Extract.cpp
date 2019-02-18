@@ -252,11 +252,11 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
     if (isMultipleCandidateBinOp(BinOp->getOpcode()) &&
         (!Stmts.containsSelectionRangeStart ||
          getPreciseTokenLocEnd(
-             BinOp->getLHS()->getLocEnd(), Context.getSourceManager(),
+             BinOp->getLHS()->getEndLoc(), Context.getSourceManager(),
              Context.getLangOpts()) == SelectionRange.getBegin()) &&
         Stmts.containsSelectionRangeEnd) {
       SourceRange FirstCandidateRange =
-          SourceRange(SelectionRange.getBegin(), BinOp->getLocEnd());
+          SourceRange(SelectionRange.getBegin(), BinOp->getEndLoc());
       if (FirstCandidateRange.getEnd().isMacroID())
         FirstCandidateRange.setEnd(Context.getSourceManager().getExpansionLoc(
             FirstCandidateRange.getEnd()));
@@ -288,8 +288,8 @@ initiateAnyExtractOperation(ASTSlice &Slice, ASTContext &Context,
   auto &CandidateExtractionInfo = Operation->CandidateExtractionInfo;
   SourceRange Range;
   if (ExtractedStmtRange)
-    Range = SourceRange(ExtractedStmtRange->getFirst()->getLocStart(),
-                        ExtractedStmtRange->getLast()->getLocEnd());
+    Range = SourceRange(ExtractedStmtRange->getFirst()->getBeginLoc(),
+                        ExtractedStmtRange->getLast()->getEndLoc());
   else
     Range = Selected->getSourceRange();
   bool IsBeginMacroArgument = false;
@@ -474,7 +474,7 @@ static bool isImplicitInitializer(const VarDecl *VD) {
     return false;
   const auto *Construct = dyn_cast<CXXConstructExpr>(E);
   if (!Construct)
-    return E->getLocStart() == VD->getLocation();
+    return E->getBeginLoc() == VD->getLocation();
   return Construct->getParenOrBraceRange().isInvalid();
 }
 
@@ -828,7 +828,7 @@ public:
 
   bool VisitReturnStmt(const ReturnStmt *S) {
     SourceRewriter.InsertText(
-        getPreciseTokenLocEnd(S->getLocEnd(), SourceRewriter.getSourceMgr(),
+        getPreciseTokenLocEnd(S->getEndLoc(), SourceRewriter.getSourceMgr(),
                               SourceRewriter.getLangOpts()),
         Text);
     return true;
@@ -891,7 +891,7 @@ public:
   /// while still preserving the original initializer expressions when we
   /// can.
   void rewriteAllVariableDeclarationsToAssignments(const DeclStmt *S) {
-    SourceLocation StartLoc = S->getLocStart();
+    SourceLocation StartLoc = S->getBeginLoc();
     for (const Decl *D : S->decls()) {
       const auto *VD = dyn_cast<VarDecl>(D);
       if (!VD || !VariablesUsedAfterExtraction.count(VD))
@@ -901,13 +901,13 @@ public:
         // This can affect the semantics of the program if the implicit
         // initialization expression has side effects.
         SourceRange Range = SourceRange(
-            StartLoc, S->isSingleDecl() ? S->getLocEnd() : VD->getLocation());
+            StartLoc, S->isSingleDecl() ? S->getEndLoc() : VD->getLocation());
         SourceRewriter.RemoveText(Range);
         continue;
       }
       std::string Str;
       llvm::raw_string_ostream OS(Str);
-      if (StartLoc != S->getLocStart())
+      if (StartLoc != S->getBeginLoc())
         OS << "; ";
       const ASTContext &Ctx = D->getASTContext();
       // Dereference the variable unless the source uses C++.
@@ -915,7 +915,7 @@ public:
         OS << '*';
       OS << VD->getName() << " = ";
       const Expr *Init = getInitializerExprWithLexicalRange(VD->getInit());
-      SourceLocation End = Init->getLocStart();
+      SourceLocation End = Init->getBeginLoc();
       if (const auto *Construct = dyn_cast<CXXConstructExpr>(Init)) {
         SourceRange SubRange = Construct->getParenOrBraceRange();
         if (SubRange.isValid()) {
@@ -928,7 +928,7 @@ public:
       auto Range = CharSourceRange::getCharRange(StartLoc, End);
       SourceRewriter.ReplaceText(StartLoc, SourceRewriter.getRangeSize(Range),
                                  OS.str());
-      StartLoc = getPreciseTokenLocEnd(D->getLocEnd(), Ctx.getSourceManager(),
+      StartLoc = getPreciseTokenLocEnd(D->getEndLoc(), Ctx.getSourceManager(),
                                        Ctx.getLangOpts());
     }
   }
@@ -1057,10 +1057,10 @@ public:
   }
 
   void dereferenceTargetVar(const Expr *E, bool WrapInParens = false) {
-    SourceRewriter.InsertTextBefore(E->getLocStart(),
+    SourceRewriter.InsertTextBefore(E->getBeginLoc(),
                                     WrapInParens ? "(*" : "*");
     if (WrapInParens)
-      SourceRewriter.InsertTextAfterToken(E->getLocEnd(), ")");
+      SourceRewriter.InsertTextAfterToken(E->getEndLoc(), ")");
   }
 
   bool VisitDeclRefExpr(const DeclRefExpr *E) {
@@ -1078,7 +1078,7 @@ public:
       if (VD == TargetVD) {
         // Remove the '&' as the variable is now a pointer.
         SourceRewriter.RemoveText(
-            CharSourceRange::getTokenRange(E->getLocStart(), E->getLocStart()));
+            CharSourceRange::getTokenRange(E->getBeginLoc(), E->getBeginLoc()));
         return true;
       }
     }
@@ -1120,9 +1120,9 @@ public:
   void rewriteThis(const CXXThisExpr *E) {
     RewrittenExpressions.insert(E);
     if (!E->isImplicit())
-      SourceRewriter.ReplaceText(E->getLocStart(), 4, "object");
+      SourceRewriter.ReplaceText(E->getBeginLoc(), 4, "object");
     else
-      SourceRewriter.InsertText(E->getLocStart(), "object");
+      SourceRewriter.InsertText(E->getBeginLoc(), "object");
   }
 
   bool VisitMemberExpr(const MemberExpr *E) {
@@ -1133,7 +1133,7 @@ public:
       if (!This->isImplicit() && E->isArrow())
         SourceRewriter.ReplaceText(E->getOperatorLoc(), 2, ".");
       else
-        SourceRewriter.InsertText(E->getBase()->getLocEnd(), ".");
+        SourceRewriter.InsertText(E->getBase()->getEndLoc(), ".");
     }
     return true;
   }
@@ -1153,7 +1153,7 @@ public:
         RewrittenExpressions(RewrittenExpressions) {}
 
   void replace(const CXXThisExpr *E, StringRef Text) {
-    SourceRewriter.ReplaceText(E->getLocStart(), 4, Text);
+    SourceRewriter.ReplaceText(E->getBeginLoc(), 4, Text);
   }
 
   bool VisitCXXThisExpr(const CXXThisExpr *E) {
@@ -1170,7 +1170,7 @@ public:
       if (!This->isImplicit()) {
         // Remove the '*' as the variable is now a reference.
         SourceRewriter.RemoveText(
-            CharSourceRange::getTokenRange(E->getLocStart(), E->getLocStart()));
+            CharSourceRange::getTokenRange(E->getBeginLoc(), E->getBeginLoc()));
         replace(This, "object");
         return true;
       }
@@ -1195,9 +1195,9 @@ public:
     const VarDecl *VD = dyn_cast<VarDecl>(E->getDecl());
     if (!VD || VD != SelfDecl)
       return true;
-    if (E->getLocStart().isInvalid())
+    if (E->getBeginLoc().isInvalid())
       return true;
-    SourceRewriter.ReplaceText(E->getLocStart(), 4, "object");
+    SourceRewriter.ReplaceText(E->getBeginLoc(), 4, "object");
     return true;
   }
 
@@ -1207,14 +1207,14 @@ public:
     if (!DRE)
       return;
     const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl());
-    if (!VD || VD != SelfDecl || DRE->getLocStart().isValid())
+    if (!VD || VD != SelfDecl || DRE->getBeginLoc().isValid())
       return;
     SourceRewriter.InsertText(Loc, Text);
   }
 
   bool VisitObjCIvarRefExpr(const ObjCIvarRefExpr *E) {
     insertObjectForImplicitSelf(E->getBase()->IgnoreImpCasts(),
-                                E->getLocStart(), "object->");
+                                E->getBeginLoc(), "object->");
     return true;
   }
 };
@@ -1238,9 +1238,9 @@ public:
 
   bool VisitDeclRefExpr(const DeclRefExpr *E) {
     const VarDecl *VD = dyn_cast<VarDecl>(E->getDecl());
-    if (!VD || VD != SelfDecl || E->getLocStart().isInvalid())
+    if (!VD || VD != SelfDecl || E->getBeginLoc().isInvalid())
       return true;
-    SourceRewriter.ReplaceText(E->getLocStart(), 4, ClassName);
+    SourceRewriter.ReplaceText(E->getBeginLoc(), 4, ClassName);
     return true;
   }
 };
@@ -1380,7 +1380,7 @@ computeFunctionExtractionLocation(const Decl *D, bool IsMethodExtraction) {
     while (const auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalDeclContext()))
       D = RD;
   }
-  return D->getLocStart();
+  return D->getBeginLoc();
 }
 
 namespace {
@@ -1453,10 +1453,10 @@ computeAppropriateExtractionLocationForMethodDeclaration(
   for (const CXXMethodDecl *M : RD->methods()) {
     if (M->isImplicit())
       continue;
-    Loc = M->getLocEnd();
+    Loc = M->getEndLoc();
   }
   return Loc.isValid() ? std::make_pair(Loc, MethodDeclarationPlacement::After)
-                       : std::make_pair(RD->getLocEnd(),
+                       : std::make_pair(RD->getEndLoc(),
                                         MethodDeclarationPlacement::Before);
 }
 

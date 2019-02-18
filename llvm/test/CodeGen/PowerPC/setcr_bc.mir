@@ -1,0 +1,132 @@
+# RUN: llc -verify-machineinstrs -start-before=ppc-pre-emit-peephole %s -o - | FileCheck %s
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64"
+  target triple = "powerpc64le-unknown-linux-gnu"
+  
+  declare signext i32 @callee(i32 signext) local_unnamed_addr #1
+
+  define signext i32 @func(i32 signext %v) local_unnamed_addr #0 {
+  entry:
+    %call.i = tail call signext i32 @callee(i32 signext %v)
+    %tobool.i = icmp eq i32 %call.i, 0
+    br i1 %tobool.i, label %if.else.i, label %if.then.i
+  
+  if.then.i:                                        ; preds = %entry
+    %call2.i = tail call signext i32 @callee(i32 signext %call.i)
+    br label %_Z6calleei.exit
+  
+  if.else.i:                                        ; preds = %entry
+    %phitmp = icmp sgt i32 %v, -1
+    br label %_Z6calleei.exit
+  
+  _Z6calleei.exit:                                  ; preds = %if.else.i, %if.then.i
+    %call2.i.sink = phi i32 [ %call2.i, %if.then.i ], [ %v, %if.else.i ]
+    %.sink = phi i1 [ false, %if.then.i ], [ %phitmp, %if.else.i ]
+    br i1 %.sink, label %if.end, label %if.then
+  
+  if.then:                                          ; preds = %_Z6calleei.exit
+    %call1 = tail call signext i32 @callee(i32 signext 0)
+    br label %if.end
+  
+  if.end:                                           ; preds = %if.then, %_Z6calleei.exit
+    ret i32 %call2.i.sink
+  }
+  
+  attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector,-qpx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector,-qpx" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
+...
+---
+name:            func
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+registers:       
+liveins:         
+  - { reg: '$x3', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       48
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 32
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: 0, 
+      callee-saved-register: '$x30', callee-saved-restored: true, debug-info-variable: '', 
+      debug-info-expression: '', debug-info-location: '' }
+stack:           
+constants:       
+
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x30000000), %bb.1(0x50000000)
+    liveins: $x3, $x30
+
+    ; bc and crxor (CRUNSET) should be removed.
+    ; CHECK-LABEL: func
+    ; CHECK: # %bb.1
+    ; CHECK-NOT: crxor
+    ; CHECK-NOT: bc
+    ; CHECK: .LBB0_2
+
+    $x0 = MFLR8 implicit $lr8
+    STD killed $x0, 16, $x1
+    $x1 = STDU $x1, -48, $x1
+    STD killed $x30, 32, $x1 :: (store 8 into %fixed-stack.0, align 16)
+    $x30 = OR8 $x3, $x3
+    BL8_NOP @callee, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def $x3
+    renamable $cr0 = CMPLWI renamable $r3, 0
+    BCC 76, killed renamable $cr0, %bb.2
+  
+  bb.1.if.then.i:
+    successors: %bb.5(0x40000000), %bb.4(0x40000000)
+    liveins: $x3
+  
+    renamable $x3 = EXTSW_32_64 killed renamable $r3, implicit $x3
+    BL8_NOP @callee, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def $x3
+    renamable $cr0gt = CRUNSET implicit-def $cr0
+    $x30 = OR8 killed $x3, $x3
+    BC killed renamable $cr0gt, %bb.5
+  
+  bb.4.if.then:
+    successors: %bb.5(0x80000000)
+    liveins: $x30
+  
+    $x3 = LI8 0
+    BL8_NOP @callee, csr_svr464_altivec, implicit-def dead $lr8, implicit $rm, implicit killed $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
+  
+  bb.5.if.end:
+    liveins: $x30
+  
+    renamable $x3 = EXTSW_32_64 killed renamable $r30, implicit $x30
+    $x30 = LD 32, $x1 :: (load 8 from %fixed-stack.0, align 16)
+    $x1 = ADDI8 $x1, 48
+    $x0 = LD 16, $x1
+    MTLR8 killed $x0, implicit-def $lr8
+    BLR8 implicit $lr8, implicit $rm, implicit killed $x3
+  
+  bb.2.if.else.i:
+    successors: %bb.5(0x40000000), %bb.4(0x40000000)
+    liveins: $x30
+  
+    renamable $cr0 = CMPWI renamable $r30, -1
+    BCn killed renamable $cr0gt, %bb.4
+    B %bb.5
+
+...

@@ -126,9 +126,9 @@ int test_iteration_spaces() {
   for (int i = 0; !!i; i++)
     c[i] = a[i];
 
+// Ok
 #pragma omp target
 #pragma omp teams distribute parallel for
-// expected-error@+1 {{condition of OpenMP for loop must be a relational comparison ('<', '<=', '>', or '>=') of loop variable 'i'}}
   for (int i = 0; i != 1; i++)
     c[i] = a[i];
 
@@ -412,7 +412,7 @@ int test_with_random_access_iterator() {
   Iter0 begin0, end0;
 #pragma omp target
 #pragma omp teams distribute parallel for
-  for (GoodIter I = begin; I < end; ++I)
+  for (GoodIter I = begin; I < end; ++I) // expected-warning 2 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
@@ -421,31 +421,31 @@ int test_with_random_access_iterator() {
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
-  for (GoodIter I = begin; I >= end; --I)
+  for (GoodIter I = begin; I >= end; --I) // expected-warning 2 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
 // expected-warning@+1 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
-  for (GoodIter I(begin); I < end; ++I)
+  for (GoodIter I(begin); I < end; ++I) // expected-warning 2 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
 // expected-warning@+1 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
-  for (GoodIter I(nullptr); I < end; ++I)
+  for (GoodIter I(nullptr); I < end; ++I) // expected-warning {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
 // expected-warning@+1 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
-  for (GoodIter I(0); I < end; ++I)
+  for (GoodIter I(0); I < end; ++I) // expected-warning {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
 // expected-warning@+1 {{initialization clause of OpenMP for loop is not in canonical form ('var = init' or 'T var = init')}}
-  for (GoodIter I(1, 2); I < end; ++I)
+  for (GoodIter I(1, 2); I < end; ++I) // expected-warning {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
-  for (begin = GoodIter(0); begin < end; ++begin)
+  for (begin = GoodIter(0); begin < end; ++begin) // expected-warning {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++begin;
 #pragma omp target
 #pragma omp teams distribute parallel for
@@ -460,7 +460,7 @@ int test_with_random_access_iterator() {
     ++begin;
 #pragma omp target
 #pragma omp teams distribute parallel for
-  for (begin = end; begin < end; ++begin)
+  for (begin = end; begin < end; ++begin) // expected-warning {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++begin;
 #pragma omp target
 #pragma omp teams distribute parallel for
@@ -485,7 +485,7 @@ int test_with_random_access_iterator() {
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
-  for (GoodIter I = begin; I >= end; I = I - 1)
+  for (GoodIter I = begin; I >= end; I = I - 1) // expected-warning 2 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
 #pragma omp target
 #pragma omp teams distribute parallel for
@@ -547,19 +547,19 @@ public:
 #pragma omp teams distribute parallel for
 // expected-note@+2 {{loop step is expected to be positive due to this condition}}
 // expected-error@+1 {{increment expression must cause 'I' to increase on each iteration of OpenMP for loop}}
-    for (IT I = begin; I < end; I = I + ST) {
+    for (IT I = begin; I < end; I = I + ST) { // expected-warning 2 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
       ++I;
     }
 #pragma omp target
 #pragma omp teams distribute parallel for
 // expected-note@+2 {{loop step is expected to be positive due to this condition}}
 // expected-error@+1 {{increment expression must cause 'I' to increase on each iteration of OpenMP for loop}}
-    for (IT I = begin; I <= end; I += ST) {
+    for (IT I = begin; I <= end; I += ST) { // expected-warning 2 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
       ++I;
     }
 #pragma omp target
 #pragma omp teams distribute parallel for
-    for (IT I = begin; I < end; ++I) {
+    for (IT I = begin; I < end; ++I) { // expected-warning 4 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
       ++I;
     }
   }
@@ -595,7 +595,7 @@ int dotest_gt(IT begin, IT end) {
 
 #pragma omp target
 #pragma omp teams distribute parallel for
-  for (IT I = begin; I < end; I += TC<int, ST>::step()) {
+  for (IT I = begin; I < end; I += TC<int, ST>::step()) { // expected-warning 2 {{Non-trivial type 'GoodIter' is mapped, only trivial types are guaranteed to be mapped correctly}}
     ++I;
   }
 }
@@ -604,7 +604,7 @@ void test_with_template() {
   GoodIter begin, end;
   TC<GoodIter, 100> t1;
   TC<GoodIter, -100> t2;
-  t1.dotest_lt(begin, end);
+  t1.dotest_lt(begin, end);         // expected-note {{in instantiation of member function 'TC<GoodIter, 100>::dotest_lt' requested here}}
   t2.dotest_lt(begin, end);         // expected-note {{in instantiation of member function 'TC<GoodIter, -100>::dotest_lt' requested here}}
   dotest_gt(begin, end);            // expected-note {{in instantiation of function template specialization 'dotest_gt<GoodIter, 0>' requested here}}
   dotest_gt<unsigned, 10>(0, 100);  // expected-note {{in instantiation of function template specialization 'dotest_gt<unsigned int, 10>' requested here}}

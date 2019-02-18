@@ -15,7 +15,7 @@
 
 namespace llvm {
 
-/// An auxiliary type to facilitate extraction of 3-byte entities. 
+/// An auxiliary type to facilitate extraction of 3-byte entities.
 struct Uint24 {
   uint8_t Bytes[3];
   Uint24(uint8_t U) {

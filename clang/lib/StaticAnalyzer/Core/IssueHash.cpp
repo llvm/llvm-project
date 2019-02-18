@@ -26,7 +26,7 @@
 
 using namespace clang;
 
-// Get a string representation of the parts of the signature that can be 
+// Get a string representation of the parts of the signature that can be
 // overloaded on.
 static std::string GetSignature(const FunctionDecl *Target) {
   if (!Target)

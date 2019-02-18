@@ -40,7 +40,6 @@ class ImplicitParamDecl;
 class LocationContext;
 class LocationContextManager;
 class ParentMap;
-class PseudoConstantAnalysis;
 class StackFrameContext;
 class Stmt;
 class VarDecl;
@@ -84,7 +83,6 @@ class AnalysisDeclContext {
   bool builtCFG = false;
   bool builtCompleteCFG = false;
   std::unique_ptr<ParentMap> PM;
-  std::unique_ptr<PseudoConstantAnalysis> PCA;
   std::unique_ptr<CFGReverseBlockReachabilityAnalysis> CFA;
 
   llvm::BumpPtrAllocator A;
@@ -111,7 +109,7 @@ public:
   AnalysisDeclContextManager *getManager() const {
     return Manager;
   }
-  
+
   /// Return the build options used to construct the CFG.
   CFG::BuildOptions &getCFGBuildOptions() {
     return cfgBuildOptions;
@@ -175,7 +173,6 @@ public:
   bool isCFGBuilt() const { return builtCFG; }
 
   ParentMap &getParentMap();
-  PseudoConstantAnalysis *getPseudoConstantAnalysis();
 
   using referenced_decls_iterator = const VarDecl * const *;
 
@@ -190,7 +187,7 @@ public:
                                          const Stmt *S,
                                          const CFGBlock *Blk,
                                          unsigned Idx);
-  
+
   const BlockInvocationContext *
   getBlockInvocationContext(const LocationContext *parent,
                             const BlockDecl *BD,
@@ -230,16 +227,22 @@ private:
   AnalysisDeclContext *Ctx;
 
   const LocationContext *Parent;
+  int64_t ID;
 
 protected:
   LocationContext(ContextKind k, AnalysisDeclContext *ctx,
-                  const LocationContext *parent)
-      : Kind(k), Ctx(ctx), Parent(parent) {}
+                  const LocationContext *parent,
+                  int64_t ID)
+      : Kind(k), Ctx(ctx), Parent(parent), ID(ID) {}
 
 public:
   virtual ~LocationContext();
 
   ContextKind getKind() const { return Kind; }
+
+  int64_t getID() const {
+    return ID;
+  }
 
   AnalysisDeclContext *getAnalysisDeclContext() const { return Ctx; }
 
@@ -300,8 +303,9 @@ class StackFrameContext : public LocationContext {
 
   StackFrameContext(AnalysisDeclContext *ctx, const LocationContext *parent,
                     const Stmt *s, const CFGBlock *blk,
-                    unsigned idx)
-      : LocationContext(StackFrame, ctx, parent), CallSite(s),
+                    unsigned idx,
+                    int64_t ID)
+      : LocationContext(StackFrame, ctx, parent, ID), CallSite(s),
         Block(blk), Index(idx) {}
 
 public:
@@ -337,8 +341,8 @@ class ScopeContext : public LocationContext {
   const Stmt *Enter;
 
   ScopeContext(AnalysisDeclContext *ctx, const LocationContext *parent,
-               const Stmt *s)
-      : LocationContext(Scope, ctx, parent), Enter(s) {}
+               const Stmt *s, int64_t ID)
+      : LocationContext(Scope, ctx, parent, ID), Enter(s) {}
 
 public:
   ~ScopeContext() override = default;
@@ -359,20 +363,21 @@ class BlockInvocationContext : public LocationContext {
   friend class LocationContextManager;
 
   const BlockDecl *BD;
-  
+
   // FIXME: Come up with a more type-safe way to model context-sensitivity.
   const void *ContextData;
 
   BlockInvocationContext(AnalysisDeclContext *ctx,
-                         const LocationContext *parent,
-                         const BlockDecl *bd, const void *contextData)
-      : LocationContext(Block, ctx, parent), BD(bd), ContextData(contextData) {}
+                         const LocationContext *parent, const BlockDecl *bd,
+                         const void *contextData, int64_t ID)
+      : LocationContext(Block, ctx, parent, ID), BD(bd),
+        ContextData(contextData) {}
 
 public:
   ~BlockInvocationContext() override = default;
 
   const BlockDecl *getBlockDecl() const { return BD; }
-  
+
   const void *getContextData() const { return ContextData; }
 
   void Profile(llvm::FoldingSetNodeID &ID) override;
@@ -392,6 +397,9 @@ public:
 class LocationContextManager {
   llvm::FoldingSet<LocationContext> Contexts;
 
+  /// ID used for generating a new location context.
+  int64_t NewID = 0;
+
 public:
   ~LocationContextManager();
 
@@ -403,7 +411,7 @@ public:
   const ScopeContext *getScope(AnalysisDeclContext *ctx,
                                const LocationContext *parent,
                                const Stmt *s);
-  
+
   const BlockInvocationContext *
   getBlockInvocationContext(AnalysisDeclContext *ctx,
                             const LocationContext *parent,
@@ -463,7 +471,7 @@ public:
   CFG::BuildOptions &getCFGBuildOptions() {
     return cfgBuildOptions;
   }
-  
+
   /// Return true if faux bodies should be synthesized for well-known
   /// functions.
   bool synthesizeBodies() const { return SynthesizeBodies; }

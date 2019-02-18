@@ -238,6 +238,18 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
       case Mips::WRDSP:
         addDSPCtrlRegOperands(true, MI, MF);
         break;
+      case Mips::BuildPairF64_64:
+      case Mips::ExtractElementF64_64:
+        if (!Subtarget->useOddSPReg()) {
+          MI.addOperand(MachineOperand::CreateReg(Mips::SP, false, true));
+          break;
+        }
+        LLVM_FALLTHROUGH;
+      case Mips::BuildPairF64:
+      case Mips::ExtractElementF64:
+        if (Subtarget->isABI_FPXX() && !Subtarget->hasMTHC1())
+          MI.addOperand(MachineOperand::CreateReg(Mips::SP, false, true));
+        break;
       default:
         replaceUsesWithZeroReg(MRI, MI);
       }

@@ -594,7 +594,7 @@ int rename(CXTranslationUnit TU, CXIndex CIdx, ArrayRef<const char *> Args) {
 
     // FIXME: This is a hack
     LangOptions LangOpts;
-    LangOpts.ObjC1 = true;
+    LangOpts.ObjC = true;
     tooling::OldSymbolName NewSymbolName(opts::rename::NewName, LangOpts);
 
     if (ExpectedReplacements.empty()) {
@@ -729,7 +729,7 @@ int renameIndexedFile(CXIndex CIdx, ArrayRef<const char *> Args) {
     PrintFilenames = true;
 
   LangOptions LangOpts;
-  LangOpts.ObjC1 = true;
+  LangOpts.ObjC = true;
   tooling::OldSymbolName ExpectedReplacementStrings(
       opts::rename::IndexedNewNames[0], LangOpts);
 
@@ -750,7 +750,7 @@ int renameIndexedFile(CXIndex CIdx, ArrayRef<const char *> Args) {
                                             : SymbolIndex]
               .c_str();
       LangOptions LangOpts;
-      LangOpts.ObjC1 = true;
+      LangOpts.ObjC = true;
       tooling::OldSymbolName NewSymbolName(NewName, LangOpts);
 
       outs() << occurrenceToString(FileResult.Occurrences[I], /*IsLocal*/ false,

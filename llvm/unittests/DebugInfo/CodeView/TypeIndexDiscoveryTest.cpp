@@ -555,7 +555,7 @@ TEST_F(TypeIndexIteratorTest, DataSym) {
 TEST_F(TypeIndexIteratorTest, RegisterSym) {
   RegisterSym Reg(SymbolRecordKind::RegisterSym);
   Reg.Index = TypeIndex::UInt32();
-  Reg.Register = RegisterId::CVRegEAX;
+  Reg.Register = RegisterId::EAX;
   Reg.Name = "Target";
   writeSymbolRecords(Reg);
   checkTypeReferences(0, Reg.Index);
@@ -600,4 +600,11 @@ TEST_F(TypeIndexIteratorTest, VariableSizeIntegers) {
   BaseClassRecord BaseClass2(MemberAccess::Public, TypeIndex(48), 1);
   writeFieldList(BaseClass1, BaseClass2);
   checkTypeReferences(0, TypeIndex(47), TypeIndex(48));
+}
+
+TEST_F(TypeIndexIteratorTest, UsingNamespace) {
+  UsingNamespaceSym UN(SymbolRecordKind::UsingNamespaceSym);
+  UN.Name = "std";
+  writeSymbolRecords(UN);
+  checkTypeReferences(0);
 }

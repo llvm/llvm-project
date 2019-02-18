@@ -136,11 +136,25 @@ function(generate_winsdk_lib_symlinks winsdk_um_lib_dir output_dir)
   execute_process(COMMAND "${CMAKE_COMMAND}" -E make_directory "${output_dir}")
   file(GLOB libraries RELATIVE "${winsdk_um_lib_dir}" "${winsdk_um_lib_dir}/*")
   foreach(library ${libraries})
-    string(TOLOWER "${library}" symlink_name)
-    execute_process(COMMAND "${CMAKE_COMMAND}"
-                            -E create_symlink
-                            "${winsdk_um_lib_dir}/${library}"
-                            "${output_dir}/${symlink_name}")
+    string(TOLOWER "${library}" all_lowercase_symlink_name)
+    if(NOT library STREQUAL all_lowercase_symlink_name)
+      execute_process(COMMAND "${CMAKE_COMMAND}"
+                              -E create_symlink
+                              "${winsdk_um_lib_dir}/${library}"
+                              "${output_dir}/${all_lowercase_symlink_name}")
+    endif()
+
+    get_filename_component(name_we "${library}" NAME_WE)
+    get_filename_component(ext "${library}" EXT)
+    string(TOLOWER "${ext}" lowercase_ext)
+    set(lowercase_ext_symlink_name "${name_we}${lowercase_ext}")
+    if(NOT library STREQUAL lowercase_ext_symlink_name AND
+       NOT all_lowercase_symlink_name STREQUAL lowercase_ext_symlink_name)
+      execute_process(COMMAND "${CMAKE_COMMAND}"
+                              -E create_symlink
+                              "${winsdk_um_lib_dir}/${library}"
+                              "${output_dir}/${lowercase_ext_symlink_name}")
+    endif()
   endforeach()
 endfunction()
 

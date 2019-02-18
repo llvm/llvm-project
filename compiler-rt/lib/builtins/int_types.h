@@ -60,8 +60,17 @@ typedef union
     }s;
 } udwords;
 
-#if (defined(__LP64__) || defined(__wasm__) || defined(__mips64)) || defined(__riscv)
+#if defined(__LP64__) || defined(__wasm__) || defined(__mips64) ||             \
+    defined(__riscv) || defined(_WIN64)
 #define CRT_HAS_128BIT
+#endif
+
+/* MSVC doesn't have a working 128bit integer type. Users should really compile
+ * compiler-rt with clang, but if they happen to be doing a standalone build for
+ * asan or something else, disable the 128 bit parts so things sort of work.
+ */
+#if defined(_MSC_VER) && !defined(__clang__)
+#undef CRT_HAS_128BIT
 #endif
 
 #ifdef CRT_HAS_128BIT
@@ -136,6 +145,18 @@ typedef struct
     udwords low;
 #endif /* _YUGA_LITTLE_ENDIAN */
 } uqwords;
+
+/* Check if the target supports 80 bit extended precision long doubles.
+ * Notably, on x86 Windows, MSVC only provides a 64-bit long double, but GCC
+ * still makes it 80 bits. Clang will match whatever compiler it is trying to
+ * be compatible with.
+ */
+#if ((defined(__i386__) || defined(__x86_64__)) && !defined(_MSC_VER)) || \
+    defined(__m68k__) || defined(__ia64__)
+#define HAS_80_BIT_LONG_DOUBLE 1
+#else
+#define HAS_80_BIT_LONG_DOUBLE 0
+#endif
 
 typedef union
 {

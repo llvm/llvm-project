@@ -456,7 +456,7 @@ public:
   /// stack frame offset. The first register is closest to the incoming stack
   /// pointer if stack grows down, and vice versa.
   /// Notice: This function does not take into account disabled CSRs.
-  ///         In most cases you will want to use instead the function 
+  ///         In most cases you will want to use instead the function
   ///         getCalleeSavedRegs that is implemented in MachineRegisterInfo.
   virtual const MCPhysReg*
   getCalleeSavedRegs(const MachineFunction *MF) const = 0;
@@ -510,6 +510,13 @@ public:
   /// markSuperRegs() and checkAllSuperRegsMarked() in this case.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
 
+  /// Returns false if we can't guarantee that Physreg, specified as an IR asm
+  /// clobber constraint, will be preserved across the statement.
+  virtual bool isAsmClobberable(const MachineFunction &MF,
+                               unsigned PhysReg) const {
+    return true;
+  }
+
   /// Returns true if PhysReg is unallocatable and constant throughout the
   /// function.  Used by MachineRegisterInfo::isConstantPhysReg().
   virtual bool isConstantPhysReg(unsigned PhysReg) const { return false; }
@@ -518,7 +525,7 @@ public:
   /// guaranteed to be restored before any uses. This is useful for targets that
   /// have call sequences where a GOT register may be updated by the caller
   /// prior to a call and is guaranteed to be restored (also by the caller)
-  /// after the call. 
+  /// after the call.
   virtual bool isCallerPreservedPhysReg(unsigned PhysReg,
                                         const MachineFunction &MF) const {
     return false;
@@ -816,13 +823,6 @@ public:
                                   MachineFunction &MF) const {
     // Do nothing.
   }
-
-  /// The creation of multiple copy hints have been implemented in
-  /// weightCalcHelper(), but since this affects so many tests for many
-  /// targets, this is temporarily disabled per default. THIS SHOULD BE
-  /// "GENERAL GOODNESS" and hopefully all targets will update their tests
-  /// and enable this soon. This hook should then be removed.
-  virtual bool enableMultipleCopyHints() const { return false; }
 
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with

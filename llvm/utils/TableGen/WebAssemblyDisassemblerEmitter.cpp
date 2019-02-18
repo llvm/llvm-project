@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+static constexpr int WebAssemblyInstructionTableSize = 256;
+
 void emitWebAssemblyDisassemblerTables(
     raw_ostream &OS,
     const ArrayRef<const CodeGenInstruction *> &NumberedInstructions) {
@@ -42,36 +44,41 @@ void emitWebAssemblyDisassemblerTables(
     auto Prefix = Opc >> 8;
     Opc = Opc & 0xFF;
     auto &CGIP = OpcodeTable[Prefix][Opc];
-    if (!CGIP.second ||
-        // Make sure we store the variant with the least amount of operands,
-        // which is the one without explicit registers. Only few instructions
-        // have these currently, would be good to have for all of them.
-        // FIXME: this picks the first of many typed variants, which is
-        // currently the except_ref one, though this shouldn't matter for
-        // disassembly purposes.
-        CGIP.second->Operands.OperandList.size() >
-            CGI.Operands.OperandList.size()) {
+    // All wasm instructions have a StackBased field of type string, we only
+    // want the instructions for which this is "true".
+    auto StackString =
+        Def.getValue("StackBased")->getValue()->getCastTo(StringRecTy::get());
+    auto IsStackBased =
+        StackString &&
+        reinterpret_cast<const StringInit *>(StackString)->getValue() == "true";
+    if (IsStackBased && !CGIP.second) {
+      // this picks the first of many typed variants, which is
+      // currently the except_ref one, though this shouldn't matter for
+      // disassembly purposes.
       CGIP = std::make_pair(I, &CGI);
     }
   }
   OS << "#include \"MCTargetDesc/WebAssemblyMCTargetDesc.h\"\n";
   OS << "\n";
   OS << "namespace llvm {\n\n";
+  OS << "static constexpr int WebAssemblyInstructionTableSize = ";
+  OS << WebAssemblyInstructionTableSize << ";\n\n";
   OS << "enum EntryType : uint8_t { ";
   OS << "ET_Unused, ET_Prefix, ET_Instruction };\n\n";
   OS << "struct WebAssemblyInstruction {\n";
   OS << "  uint16_t Opcode;\n";
   OS << "  EntryType ET;\n";
   OS << "  uint8_t NumOperands;\n";
-  OS << "  uint8_t Operands[4];\n";
+  OS << "  uint16_t OperandStart;\n";
   OS << "};\n\n";
+  std::vector<std::string> OperandTable, CurOperandList;
   // Output one table per prefix.
   for (auto &PrefixPair : OpcodeTable) {
     if (PrefixPair.second.empty())
       continue;
     OS << "WebAssemblyInstruction InstructionTable" << PrefixPair.first;
     OS << "[] = {\n";
-    for (unsigned I = 0; I <= 0xFF; I++) {
+    for (unsigned I = 0; I < WebAssemblyInstructionTableSize; I++) {
       auto InstIt = PrefixPair.second.find(I);
       if (InstIt != PrefixPair.second.end()) {
         // Regular instruction.
@@ -81,24 +88,54 @@ void emitWebAssemblyDisassemblerTables(
         OS.write_hex(static_cast<unsigned long long>(I));
         OS << ": " << CGI.AsmString << "\n";
         OS << "  { " << InstIt->second.first << ", ET_Instruction, ";
-        OS << CGI.Operands.OperandList.size() << ", {\n";
+        OS << CGI.Operands.OperandList.size() << ", ";
+        // Collect operand types for storage in a shared list.
+        CurOperandList.clear();
         for (auto &Op : CGI.Operands.OperandList) {
-          OS << "      " << Op.OperandType << ",\n";
+          assert(Op.OperandType != "MCOI::OPERAND_UNKNOWN");
+          CurOperandList.push_back(Op.OperandType);
         }
-        OS << "    }\n";
+        // See if we already have stored this sequence before. This is not
+        // strictly necessary but makes the table really small.
+        size_t OperandStart = OperandTable.size();
+        if (CurOperandList.size() <= OperandTable.size()) {
+          for (size_t J = 0; J <= OperandTable.size() - CurOperandList.size();
+               ++J) {
+            size_t K = 0;
+            for (; K < CurOperandList.size(); ++K) {
+              if (OperandTable[J + K] != CurOperandList[K]) break;
+            }
+            if (K == CurOperandList.size()) {
+              OperandStart = J;
+              break;
+            }
+          }
+        }
+        // Store operands if no prior occurrence.
+        if (OperandStart == OperandTable.size()) {
+          OperandTable.insert(OperandTable.end(), CurOperandList.begin(),
+                              CurOperandList.end());
+        }
+        OS << OperandStart;
       } else {
         auto PrefixIt = OpcodeTable.find(I);
         // If we have a non-empty table for it that's not 0, this is a prefix.
         if (PrefixIt != OpcodeTable.end() && I && !PrefixPair.first) {
-          OS << "  { 0, ET_Prefix, 0, {}";
+          OS << "  { 0, ET_Prefix, 0, 0";
         } else {
-          OS << "  { 0, ET_Unused, 0, {}";
+          OS << "  { 0, ET_Unused, 0, 0";
         }
       }
       OS << "  },\n";
     }
     OS << "};\n\n";
   }
+  // Create a table of all operands:
+  OS << "const uint8_t OperandTable[] = {\n";
+  for (auto &Op : OperandTable) {
+    OS << "  " << Op << ",\n";
+  }
+  OS << "};\n\n";
   // Create a table of all extension tables:
   OS << "struct { uint8_t Prefix; const WebAssemblyInstruction *Table; }\n";
   OS << "PrefixTable[] = {\n";

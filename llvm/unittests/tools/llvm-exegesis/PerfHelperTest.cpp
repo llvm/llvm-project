@@ -12,6 +12,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 namespace pfm {
 namespace {
@@ -45,3 +46,4 @@ TEST(PerfHelperTest, FunctionalTest) {
 } // namespace
 } // namespace pfm
 } // namespace exegesis
+} // namespace llvm

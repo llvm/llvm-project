@@ -1,9 +1,7 @@
 # RUN: yaml2obj %s > %t
 # RUN: llvm-objdump -d -C %t | FileCheck --check-prefix=DEMANGLE %s
-# RUN: llvm-objdump -d --demangle=itanium %t | FileCheck --check-prefix=DEMANGLE %s
+# RUN: llvm-objdump -d --demangle %t | FileCheck --check-prefix=DEMANGLE %s
 # RUN: llvm-objdump -d %t | FileCheck --check-prefix=NO-DEMANGLE %s
-# RUN: llvm-objdump -d --demangle=none %t | FileCheck --check-prefix=NO-DEMANGLE %s
-# RUN: llvm-objdump -d -C=wrong-style %t 2>&1 | FileCheck --check-prefix=BAD-STYLE %s
 
 !ELF
 FileHeader:
@@ -41,7 +39,3 @@ Symbols:
 
 # NO-DEMANGLE: _Z3fooi
 # NO-DEMANGLE: _Z3foov
-
-# BAD-STYLE: warning: Unsupported demangling style.
-# BAD-STYLE: _Z3fooi
-# BAD-STYLE: _Z3foov

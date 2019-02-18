@@ -32,8 +32,7 @@ ATTRIBUTE_INTERFACE
 uintptr_t __sancov_trace_pc_pcs[fuzzer::TracePC::kNumPCs];
 
 // Used by -fsanitize-coverage=stack-depth to track stack depth
-ATTRIBUTE_INTERFACE __attribute__((tls_model("initial-exec")))
-thread_local uintptr_t __sancov_lowest_stack;
+ATTRIBUTES_INTERFACE_TLS_INITIAL_EXEC uintptr_t __sancov_lowest_stack;
 
 namespace fuzzer {
 
@@ -75,17 +74,39 @@ void TracePC::IterateInline8bitCounters(CallBack CB) const {
 // counters.
 void TracePC::InitializeUnstableCounters() {
   IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    if (UnstableCounters[UnstableIdx] != kUnstableCounter)
-      UnstableCounters[UnstableIdx] = ModuleCounters[i].Start[j];
+    UnstableCounters[UnstableIdx].Counter = ModuleCounters[i].Start[j];
   });
 }
 
 // Compares the current counters with counters from previous runs
 // and records differences as unstable edges.
-void TracePC::UpdateUnstableCounters() {
+bool TracePC::UpdateUnstableCounters(int UnstableMode) {
+  bool Updated = false;
   IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
-    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx])
-      UnstableCounters[UnstableIdx] = kUnstableCounter;
+    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter) {
+      Updated = true;
+      UnstableCounters[UnstableIdx].IsUnstable = true;
+      if (UnstableMode == ZeroUnstable)
+        UnstableCounters[UnstableIdx].Counter = 0;
+      else if (UnstableMode == MinUnstable)
+        UnstableCounters[UnstableIdx].Counter = std::min(
+            ModuleCounters[i].Start[j], UnstableCounters[UnstableIdx].Counter);
+    }
+  });
+  return Updated;
+}
+
+// Updates and applies unstable counters to ModuleCounters in single iteration
+void TracePC::UpdateAndApplyUnstableCounters(int UnstableMode) {
+  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
+    if (ModuleCounters[i].Start[j] != UnstableCounters[UnstableIdx].Counter) {
+      UnstableCounters[UnstableIdx].IsUnstable = true;
+      if (UnstableMode == ZeroUnstable)
+        ModuleCounters[i].Start[j] = 0;
+      else if (UnstableMode == MinUnstable)
+        ModuleCounters[i].Start[j] = std::min(
+            ModuleCounters[i].Start[j], UnstableCounters[UnstableIdx].Counter);
+    }
   });
 }
 
@@ -173,18 +194,49 @@ void TracePC::HandleCallerCallee(uintptr_t Caller, uintptr_t Callee) {
   ValueProfileMap.AddValueModPrime(Idx);
 }
 
+/// \return the address of the previous instruction.
+/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.h`
+inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
+#if defined(__arm__)
+  // T32 (Thumb) branch instructions might be 16 or 32 bit long,
+  // so we return (pc-2) in that case in order to be safe.
+  // For A32 mode we return (pc-4) because all instructions are 32 bit long.
+  return (PC - 3) & (~1);
+#elif defined(__powerpc__) || defined(__powerpc64__) || defined(__aarch64__)
+  // PCs are always 4 byte aligned.
+  return PC - 4;
+#elif defined(__sparc__) || defined(__mips__)
+  return PC - 8;
+#else
+  return PC - 1;
+#endif
+}
+
+/// \return the address of the next instruction.
+/// Note: the logic is copied from `sanitizer_common/sanitizer_stacktrace.cc`
+inline ALWAYS_INLINE uintptr_t GetNextInstructionPc(uintptr_t PC) {
+#if defined(__mips__)
+  return PC + 8;
+#elif defined(__powerpc__) || defined(__sparc__) || defined(__arm__) || \
+    defined(__aarch64__)
+  return PC + 4;
+#else
+  return PC + 1;
+#endif
+}
+
 void TracePC::UpdateObservedPCs() {
   Vector<uintptr_t> CoveredFuncs;
   auto ObservePC = [&](uintptr_t PC) {
     if (ObservedPCs.insert(PC).second && DoPrintNewPCs) {
-      PrintPC("\tNEW_PC: %p %F %L", "\tNEW_PC: %p", PC + 1);
+      PrintPC("\tNEW_PC: %p %F %L", "\tNEW_PC: %p", GetNextInstructionPc(PC));
       Printf("\n");
     }
   };
 
   auto Observe = [&](const PCTableEntry &TE) {
     if (TE.PCFlags & 1)
-      if (ObservedFuncs.insert(TE.PC).second && NumPrintNewFuncs)
+      if (++ObservedFuncs[TE.PC] == 1 && NumPrintNewFuncs)
         CoveredFuncs.push_back(TE.PC);
     ObservePC(TE.PC);
   };
@@ -209,24 +261,14 @@ void TracePC::UpdateObservedPCs() {
     }
   }
 
-  for (size_t i = 0, N = Min(CoveredFuncs.size(), NumPrintNewFuncs); i < N; i++) {
+  for (size_t i = 0, N = Min(CoveredFuncs.size(), NumPrintNewFuncs); i < N;
+       i++) {
     Printf("\tNEW_FUNC[%zd/%zd]: ", i + 1, CoveredFuncs.size());
-    PrintPC("%p %F %L", "%p", CoveredFuncs[i] + 1);
+    PrintPC("%p %F %L", "%p", GetNextInstructionPc(CoveredFuncs[i]));
     Printf("\n");
   }
 }
 
-inline ALWAYS_INLINE uintptr_t GetPreviousInstructionPc(uintptr_t PC) {
-  // TODO: this implementation is x86 only.
-  // see sanitizer_common GetPreviousInstructionPc for full implementation.
-  return PC - 1;
-}
-
-inline ALWAYS_INLINE uintptr_t GetNextInstructionPc(uintptr_t PC) {
-  // TODO: this implementation is x86 only.
-  // see sanitizer_common GetPreviousInstructionPc for full implementation.
-  return PC + 1;
-}
 
 static std::string GetModuleName(uintptr_t PC) {
   char ModulePathRaw[4096] = "";  // What's PATH_MAX in portable C++?
@@ -251,7 +293,7 @@ void TracePC::IterateCoveredFunctions(CallBack CB) {
         NextFE++;
       } while (NextFE < M.Stop && !(NextFE->PCFlags & 1));
       if (ObservedFuncs.count(FE->PC))
-        CB(FE, NextFE);
+        CB(FE, NextFE, ObservedFuncs[FE->PC]);
     }
   }
 }
@@ -298,28 +340,30 @@ void TracePC::PrintCoverage() {
     return;
   }
   Printf("COVERAGE:\n");
-  auto CoveredFunctionCallback = [&](const PCTableEntry *First, const PCTableEntry *Last) {
+  auto CoveredFunctionCallback = [&](const PCTableEntry *First,
+                                     const PCTableEntry *Last,
+                                     uintptr_t Counter) {
     assert(First < Last);
     auto VisualizePC = GetNextInstructionPc(First->PC);
     std::string FileStr = DescribePC("%s", VisualizePC);
-    if (!IsInterestingCoverageFile(FileStr)) return;
+    if (!IsInterestingCoverageFile(FileStr))
+      return;
     std::string FunctionStr = DescribePC("%F", VisualizePC);
+    if (FunctionStr.find("in ") == 0)
+      FunctionStr = FunctionStr.substr(3);
     std::string LineStr = DescribePC("%l", VisualizePC);
     size_t Line = std::stoul(LineStr);
+    size_t NumEdges = Last - First;
     Vector<uintptr_t> UncoveredPCs;
     for (auto TE = First; TE < Last; TE++)
       if (!ObservedPCs.count(TE->PC))
         UncoveredPCs.push_back(TE->PC);
-    Printf("COVERED_FUNC: ");
-    UncoveredPCs.empty()
-        ? Printf("all")
-        : Printf("%zd/%zd", (Last - First) - UncoveredPCs.size(), Last - First);
-    Printf(" PCs covered %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(),
-           Line);
-    for (auto PC: UncoveredPCs) {
+    Printf("COVERED_FUNC: hits: %zd", Counter);
+    Printf(" edges: %zd/%zd", NumEdges - UncoveredPCs.size(), NumEdges);
+    Printf(" %s %s:%zd\n", FunctionStr.c_str(), FileStr.c_str(), Line);
+    for (auto PC: UncoveredPCs)
       Printf("  UNCOVERED_PC: %s\n",
              DescribePC("%s:%l", GetNextInstructionPc(PC)).c_str());
-    }
   };
 
   IterateCoveredFunctions(CoveredFunctionCallback);
@@ -336,9 +380,21 @@ void TracePC::DumpCoverage() {
 
 void TracePC::PrintUnstableStats() {
   size_t count = 0;
-  for (size_t i = 0; i < NumInline8bitCounters; i++)
-    if (UnstableCounters[i] == kUnstableCounter)
+  Printf("UNSTABLE_FUNCTIONS:\n");
+  IterateInline8bitCounters([&](int i, int j, int UnstableIdx) {
+    const PCTableEntry &TE = ModulePCTable[i].Start[j];
+    if (UnstableCounters[UnstableIdx].IsUnstable) {
       count++;
+      if (ObservedFuncs.count(TE.PC)) {
+        auto VisualizePC = GetNextInstructionPc(TE.PC);
+        std::string FunctionStr = DescribePC("%F", VisualizePC);
+        if (FunctionStr.find("in ") == 0)
+          FunctionStr = FunctionStr.substr(3);
+        Printf("%s\n", FunctionStr.c_str());
+      }
+    }
+  });
+
   Printf("stat::stability_rate: %.2f\n",
          100 - static_cast<float>(count * 100) / NumInline8bitCounters);
 }
@@ -386,20 +442,15 @@ ATTRIBUTE_TARGET_POPCNT ALWAYS_INLINE
 ATTRIBUTE_NO_SANITIZE_ALL
 void TracePC::HandleCmp(uintptr_t PC, T Arg1, T Arg2) {
   uint64_t ArgXor = Arg1 ^ Arg2;
-  uint64_t ArgDistance = __builtin_popcountll(ArgXor) + 1; // [1,65]
-  uintptr_t Idx = ((PC & 4095) + 1) * ArgDistance;
   if (sizeof(T) == 4)
       TORC4.Insert(ArgXor, Arg1, Arg2);
   else if (sizeof(T) == 8)
       TORC8.Insert(ArgXor, Arg1, Arg2);
-  // TODO: remove these flags and instead use all metrics at once.
-  if (UseValueProfileMask & 1)
-    ValueProfileMap.AddValue(Idx);
-  if (UseValueProfileMask & 2)
-    ValueProfileMap.AddValue(
-        PC * 64 + (Arg1 == Arg2 ? 0 : __builtin_clzll(Arg1 - Arg2) + 1));
-  if (UseValueProfileMask & 4)  // alternative way to use the hamming distance
-    ValueProfileMap.AddValue(PC * 64 + ArgDistance);
+  uint64_t HammingDistance = __builtin_popcountll(ArgXor); // [0,64]
+  uint64_t AbsoluteDistance =
+      (Arg1 == Arg2 ? 0 : __builtin_clzll(Arg1 - Arg2) + 1);
+  ValueProfileMap.AddValue(PC * 128 + HammingDistance);
+  ValueProfileMap.AddValue(PC * 128 + 64 + AbsoluteDistance);
 }
 
 static size_t InternalStrnlen(const char *S, size_t MaxLen) {

@@ -7,33 +7,52 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements HandleLLVM for use by the Clang fuzzers. Mimics the llc tool to
-// compile an LLVM IR file to X86_64 assembly.
+// Implements HandleLLVM for use by the Clang fuzzers. First runs a loop
+// vectorizer optimization pass over the given IR code. Then mimics lli on both
+// versions to JIT the generated code and execute it. Currently, functions are 
+// executed on dummy inputs.
 //
 //===----------------------------------------------------------------------===//
 
 #include "handle_llvm.h"
+#include "input_arrays.h"
 
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CommandFlags.inc"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/ExecutionEngine/JITEventListener.h"
+#include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
+#include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
-
-#include <cstdlib>
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
 
+// Define a type for the functions that are compiled and executed
+typedef void (*LLVMFunc)(int*, int*, int*, int);
+
+// Helper function to parse command line args and find the optimization level
 static void getOptLevel(const std::vector<const char *> &ExtraArgs,
                               CodeGenOpt::Level &OLvl) {
   // Find the optimization level from the command line args
@@ -53,59 +72,150 @@ static void getOptLevel(const std::vector<const char *> &ExtraArgs,
   }
 }
 
-void clang_fuzzer::HandleLLVM(const std::string &S,
+static void ErrorAndExit(std::string message) {
+  errs()<< "ERROR: " << message << "\n";
+  std::exit(1);
+}
+
+// Helper function to add optimization passes to the TargetMachine at the 
+// specified optimization level, OptLevel
+static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
+                                  CodeGenOpt::Level OptLevel,
+                                  unsigned SizeLevel) {
+  // Create and initialize a PassManagerBuilder
+  PassManagerBuilder Builder;
+  Builder.OptLevel = OptLevel;
+  Builder.SizeLevel = SizeLevel;
+  Builder.Inliner = createFunctionInliningPass(OptLevel, SizeLevel, false);
+  Builder.LoopVectorize = true;
+  Builder.populateModulePassManager(MPM);
+}
+
+// Mimics the opt tool to run an optimization pass over the provided IR
+static std::string OptLLVM(const std::string &IR, CodeGenOpt::Level OLvl) {
+  // Create a module that will run the optimization passes
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseIR(MemoryBufferRef(IR, "IR"), Err, Context);
+  if (!M || verifyModule(*M, &errs()))
+    ErrorAndExit("Could not parse IR");
+
+  Triple ModuleTriple(M->getTargetTriple());
+  const TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+  std::string E;
+  const Target *TheTarget = TargetRegistry::lookupTarget(MArch, ModuleTriple, E);
+  TargetMachine *Machine =
+      TheTarget->createTargetMachine(M->getTargetTriple(), getCPUStr(),
+                                     getFeaturesStr(), Options, getRelocModel(),
+                                     getCodeModel(), OLvl);
+  std::unique_ptr<TargetMachine> TM(Machine);
+  setFunctionAttributes(getCPUStr(), getFeaturesStr(), *M);
+
+  legacy::PassManager Passes;
+  
+  Passes.add(new TargetLibraryInfoWrapperPass(ModuleTriple));
+  Passes.add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
+
+  LLVMTargetMachine &LTM = static_cast<LLVMTargetMachine &>(*TM);
+  Passes.add(LTM.createPassConfig(Passes));
+
+  Passes.add(createVerifierPass());
+
+  AddOptimizationPasses(Passes, OLvl, 0);
+
+  // Add a pass that writes the optimized IR to an output stream
+  std::string outString;
+  raw_string_ostream OS(outString);
+  Passes.add(createPrintModulePass(OS, "", false));
+
+  Passes.run(*M);
+
+  return OS.str();
+}
+
+// Takes a function and runs it on a set of inputs
+// First determines whether f is the optimized or unoptimized function
+static void RunFuncOnInputs(LLVMFunc f, int Arr[kNumArrays][kArraySize]) {
+  for (int i = 0; i < kNumArrays / 3; i++)
+    f(Arr[i], Arr[i + (kNumArrays / 3)], Arr[i + (2 * kNumArrays / 3)],
+      kArraySize);
+}
+
+// Takes a string of IR and compiles it using LLVM's JIT Engine
+static void CreateAndRunJITFunc(const std::string &IR, CodeGenOpt::Level OLvl) {
+  SMDiagnostic Err;
+  LLVMContext Context;
+  std::unique_ptr<Module> M = parseIR(MemoryBufferRef(IR, "IR"), Err, Context);
+  if (!M)
+    ErrorAndExit("Could not parse IR");
+
+  Function *EntryFunc = M->getFunction("foo");
+  if (!EntryFunc)
+    ErrorAndExit("Function not found in module");
+
+  std::string ErrorMsg;
+  EngineBuilder builder(std::move(M));
+  builder.setMArch(MArch);
+  builder.setMCPU(getCPUStr());
+  builder.setMAttrs(getFeatureList());
+  builder.setErrorStr(&ErrorMsg);
+  builder.setEngineKind(EngineKind::JIT);
+  builder.setUseOrcMCJITReplacement(false);
+  builder.setMCJITMemoryManager(make_unique<SectionMemoryManager>());
+  builder.setOptLevel(OLvl);
+  builder.setTargetOptions(InitTargetOptionsFromCodeGenFlags());
+
+  std::unique_ptr<ExecutionEngine> EE(builder.create());
+  if (!EE)
+    ErrorAndExit("Could not create execution engine");
+
+  EE->finalizeObject();
+  EE->runStaticConstructorsDestructors(false);
+
+#if defined(__GNUC__) && !defined(__clang) &&                                  \
+    ((__GNUC__ == 4) && (__GNUC_MINOR__ < 9))
+// Silence
+//
+//   warning: ISO C++ forbids casting between pointer-to-function and
+//   pointer-to-object [-Wpedantic]
+//
+// Since C++11 this casting is conditionally supported and GCC versions
+// starting from 4.9.0 don't warn about the cast.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+  LLVMFunc f = reinterpret_cast<LLVMFunc>(EE->getPointerToFunction(EntryFunc));
+#if defined(__GNUC__) && !defined(__clang) &&                                  \
+    ((__GNUC__ == 4) && (__GNUC_MINOR__ < 9))
+#pragma GCC diagnostic pop
+#endif
+
+  // Figure out if we are running the optimized func or the unoptimized func
+  RunFuncOnInputs(f, (OLvl == CodeGenOpt::None) ? UnoptArrays : OptArrays);
+
+  EE->runStaticConstructorsDestructors(true);
+}
+
+// Main fuzz target called by ExampleClangLLVMProtoFuzzer.cpp
+// Mimics the lli tool to JIT the LLVM IR code and execute it
+void clang_fuzzer::HandleLLVM(const std::string &IR,
                               const std::vector<const char *> &ExtraArgs) {
+  // Populate OptArrays and UnoptArrays with the arrays from InputArrays
+  memcpy(OptArrays, InputArrays, kTotalSize);
+  memcpy(UnoptArrays, InputArrays, kTotalSize);
+
   // Parse ExtraArgs to set the optimization level
   CodeGenOpt::Level OLvl;
   getOptLevel(ExtraArgs, OLvl);
 
-  // Set the Module to include the the IR code to be compiled
-  SMDiagnostic Err;
+  // First we optimize the IR by running a loop vectorizer pass
+  std::string OptIR = OptLLVM(IR, OLvl);
 
-  LLVMContext Context;
-  std::unique_ptr<Module> M = parseIR(MemoryBufferRef(S, "IR"), Err, Context);
-  if (!M) {
-    errs() << "error: could not parse IR!\n";
-    std::exit(1);
-  }
+  CreateAndRunJITFunc(OptIR, OLvl);
+  CreateAndRunJITFunc(IR, CodeGenOpt::None);
 
-  // Create a new Target
-  std::string Error;
-  const Target *TheTarget = TargetRegistry::lookupTarget(
-      sys::getDefaultTargetTriple(), Error);
-  if (!TheTarget) {
-    errs() << Error;
-    std::exit(1);
-  }
-
-  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
-
-  // Create a new Machine
-  std::string CPUStr = getCPUStr();
-  std::string FeaturesStr = getFeaturesStr();
-  std::unique_ptr<TargetMachine> Target(TheTarget->createTargetMachine(
-      sys::getDefaultTargetTriple(), CPUStr, FeaturesStr, Options,
-      getRelocModel(), getCodeModel(), OLvl));
-
-  // Create a new PassManager
-  legacy::PassManager PM;
-  TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
-  PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  M->setDataLayout(Target->createDataLayout());
- 
-  // Make sure the Module has no errors
-  if (verifyModule(*M, &errs())) {
-    errs() << "error: input module is broken!\n";
-    std::exit(1);
-  } 
-
-  setFunctionAttributes(CPUStr, FeaturesStr, *M);
-  
-  raw_null_ostream OS;
-  Target->addPassesToEmitFile(PM, OS, nullptr, TargetMachine::CGFT_ObjectFile,
-                              false);
-  PM.run(*M);
+  if (memcmp(OptArrays, UnoptArrays, kTotalSize))
+    ErrorAndExit("!!!BUG!!!");
 
   return;
 }
-

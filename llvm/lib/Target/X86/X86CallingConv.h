@@ -66,7 +66,7 @@ inline bool CC_X86_32_MCUInReg(unsigned &ValNo, MVT &ValVT,
   // not to split i64 and double between a register and stack
   static const MCPhysReg RegList[] = {X86::EAX, X86::EDX, X86::ECX};
   static const unsigned NumRegs = sizeof(RegList)/sizeof(RegList[0]);
-  
+
   SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
 
   // If this is the first part of an double/i64/i128, or if we're already

@@ -835,36 +835,55 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
   }
 
   case AArch64::LOADgot: {
-    // Expand into ADRP + LDR.
+    MachineFunction *MF = MBB.getParent();
     unsigned DstReg = MI.getOperand(0).getReg();
     const MachineOperand &MO1 = MI.getOperand(1);
     unsigned Flags = MO1.getTargetFlags();
-    MachineInstrBuilder MIB1 =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg);
-    MachineInstrBuilder MIB2 =
-        BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRXui))
-            .add(MI.getOperand(0))
-            .addReg(DstReg);
 
-    if (MO1.isGlobal()) {
-      MIB1.addGlobalAddress(MO1.getGlobal(), 0, Flags | AArch64II::MO_PAGE);
-      MIB2.addGlobalAddress(MO1.getGlobal(), 0,
-                            Flags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
-    } else if (MO1.isSymbol()) {
-      MIB1.addExternalSymbol(MO1.getSymbolName(), Flags | AArch64II::MO_PAGE);
-      MIB2.addExternalSymbol(MO1.getSymbolName(),
-                             Flags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+    if (MF->getTarget().getCodeModel() == CodeModel::Tiny) {
+      // Tiny codemodel expand to LDR
+      MachineInstrBuilder MIB = BuildMI(MBB, MBBI, MI.getDebugLoc(),
+                                        TII->get(AArch64::LDRXl), DstReg);
+
+      if (MO1.isGlobal()) {
+        MIB.addGlobalAddress(MO1.getGlobal(), 0, Flags);
+      } else if (MO1.isSymbol()) {
+        MIB.addExternalSymbol(MO1.getSymbolName(), Flags);
+      } else {
+        assert(MO1.isCPI() &&
+               "Only expect globals, externalsymbols, or constant pools");
+        MIB.addConstantPoolIndex(MO1.getIndex(), MO1.getOffset(), Flags);
+      }
     } else {
-      assert(MO1.isCPI() &&
-             "Only expect globals, externalsymbols, or constant pools");
-      MIB1.addConstantPoolIndex(MO1.getIndex(), MO1.getOffset(),
-                                Flags | AArch64II::MO_PAGE);
-      MIB2.addConstantPoolIndex(MO1.getIndex(), MO1.getOffset(),
-                                Flags | AArch64II::MO_PAGEOFF |
-                                    AArch64II::MO_NC);
-    }
+      // Small codemodel expand into ADRP + LDR.
+      MachineInstrBuilder MIB1 =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADRP), DstReg);
+      MachineInstrBuilder MIB2 =
+          BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRXui))
+              .add(MI.getOperand(0))
+              .addReg(DstReg);
 
-    transferImpOps(MI, MIB1, MIB2);
+      if (MO1.isGlobal()) {
+        MIB1.addGlobalAddress(MO1.getGlobal(), 0, Flags | AArch64II::MO_PAGE);
+        MIB2.addGlobalAddress(MO1.getGlobal(), 0,
+                              Flags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+      } else if (MO1.isSymbol()) {
+        MIB1.addExternalSymbol(MO1.getSymbolName(), Flags | AArch64II::MO_PAGE);
+        MIB2.addExternalSymbol(MO1.getSymbolName(), Flags |
+                                                        AArch64II::MO_PAGEOFF |
+                                                        AArch64II::MO_NC);
+      } else {
+        assert(MO1.isCPI() &&
+               "Only expect globals, externalsymbols, or constant pools");
+        MIB1.addConstantPoolIndex(MO1.getIndex(), MO1.getOffset(),
+                                  Flags | AArch64II::MO_PAGE);
+        MIB2.addConstantPoolIndex(MO1.getIndex(), MO1.getOffset(),
+                                  Flags | AArch64II::MO_PAGEOFF |
+                                      AArch64II::MO_NC);
+      }
+
+      transferImpOps(MI, MIB1, MIB2);
+    }
     MI.eraseFromParent();
     return true;
   }

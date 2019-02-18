@@ -160,7 +160,7 @@ public:
   }
   bool MoveToLine(unsigned LineNo);
 
-  bool AvoidConcat(const Token &PrevPrevTok, const Token &PrevTok, 
+  bool AvoidConcat(const Token &PrevPrevTok, const Token &PrevTok,
                    const Token &Tok) {
     return ConcatInfo.AvoidConcat(PrevPrevTok, PrevTok, Tok);
   }
@@ -248,7 +248,7 @@ PrintPPOutputPPCallbacks::startNewLineIfNeeded(bool ShouldUpdateCurrentLine) {
       ++CurLine;
     return true;
   }
-  
+
   return false;
 }
 
@@ -262,11 +262,11 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
   // Unless we are exiting a #include, make sure to skip ahead to the line the
   // #include directive was at.
   SourceManager &SourceMgr = SM;
-  
+
   PresumedLoc UserLoc = SourceMgr.getPresumedLoc(Loc);
   if (UserLoc.isInvalid())
     return;
-  
+
   unsigned NewLine = UserLoc.getLine();
 
   if (Reason == PPCallbacks::EnterFile) {
@@ -281,7 +281,7 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
     // off by one. We can do better by simply incrementing NewLine here.
     NewLine += 1;
   }
-  
+
   CurLine = NewLine;
 
   CurFilename.clear();
@@ -292,7 +292,7 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
     startNewLineIfNeeded(/*ShouldUpdateCurrentLine=*/false);
     return;
   }
-  
+
   if (!Initialized) {
     WriteLineInfo(CurLine);
     Initialized = true;
@@ -748,6 +748,11 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     } else if (Tok.is(tok::annot_module_end)) {
       Callbacks->EndModule(
           reinterpret_cast<Module *>(Tok.getAnnotationValue()));
+      PP.Lex(Tok);
+      continue;
+    } else if (Tok.isAnnotation()) {
+      // Ignore annotation tokens created by pragmas - the pragmas themselves
+      // will be reproduced in the preprocessed output.
       PP.Lex(Tok);
       continue;
     } else if (IdentifierInfo *II = Tok.getIdentifierInfo()) {

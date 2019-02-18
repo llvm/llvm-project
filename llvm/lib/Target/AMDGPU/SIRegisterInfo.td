@@ -435,7 +435,7 @@ def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   let AllocationPriority = 7;
 }
 
-def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32, (add SGPR_64Regs)> {
+def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, v4i16, v4f16], 32, (add SGPR_64Regs)> {
   let CopyCost = 1;
   let AllocationPriority = 8;
 }
@@ -444,13 +444,13 @@ def TTMP_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, v4i16, v4f16], 32, (add 
   let isAllocatable = 0;
 }
 
-def SReg_64_XEXEC : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1, v4i16, v4f16], 32,
+def SReg_64_XEXEC : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16], 32,
   (add SGPR_64, VCC, FLAT_SCR, XNACK_MASK, TTMP_64, TBA, TMA)> {
   let CopyCost = 1;
   let AllocationPriority = 8;
 }
 
-def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1, v4i16, v4f16], 32,
+def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, i1, v4i16, v4f16], 32,
   (add SReg_64_XEXEC, EXEC)> {
   let CopyCost = 1;
   let AllocationPriority = 8;
@@ -459,15 +459,15 @@ def SReg_64 : RegisterClass<"AMDGPU", [v2i32, i64, f64, i1, v4i16, v4f16], 32,
 // Requires 2 s_mov_b64 to copy
 let CopyCost = 2 in {
 
-def SGPR_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add SGPR_128Regs)> {
+def SGPR_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v16i8, v2i64], 32, (add SGPR_128Regs)> {
   let AllocationPriority = 10;
 }
 
-def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64], 32, (add TTMP_128Regs)> {
+def TTMP_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v16i8, v2i64], 32, (add TTMP_128Regs)> {
   let isAllocatable = 0;
 }
 
-def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v16i8, v2i64, v2f64], 32,
+def SReg_128 : RegisterClass<"AMDGPU", [v4i32, v4f32, v16i8, v2i64, v2f64], 32,
   (add SGPR_128, TTMP_128)> {
   let AllocationPriority = 10;
 }

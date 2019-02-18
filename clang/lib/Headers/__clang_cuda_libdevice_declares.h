@@ -372,6 +372,7 @@ __device__ unsigned int __nv_umulhi(unsigned int __a, unsigned int __b);
 __device__ unsigned int __nv_urhadd(unsigned int __a, unsigned int __b);
 __device__ unsigned int __nv_usad(unsigned int __a, unsigned int __b,
                                   unsigned int __c);
+#if CUDA_VERSION >= 9000 && CUDA_VERSION < 9020
 __device__ int __nv_vabs2(int __a);
 __device__ int __nv_vabs4(int __a);
 __device__ int __nv_vabsdiffs2(int __a, int __b);
@@ -454,12 +455,12 @@ __device__ int __nv_vsubss2(int __a, int __b);
 __device__ int __nv_vsubss4(int __a, int __b);
 __device__ int __nv_vsubus2(int __a, int __b);
 __device__ int __nv_vsubus4(int __a, int __b);
+#endif  // CUDA_VERSION
 __device__ double __nv_y0(double __a);
 __device__ float __nv_y0f(float __a);
 __device__ double __nv_y1(double __a);
 __device__ float __nv_y1f(float __a);
 __device__ float __nv_ynf(int __a, float __b);
 __device__ double __nv_yn(int __a, double __b);
-
 } // extern "C"
 #endif // __CLANG_CUDA_LIBDEVICE_DECLARES_H__

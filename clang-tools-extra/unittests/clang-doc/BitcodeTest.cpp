@@ -1,0 +1,274 @@
+//===-- clang-doc/BitcodeTest.cpp -----------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+#include "BitcodeReader.h"
+#include "BitcodeWriter.h"
+#include "ClangDocTest.h"
+#include "Representation.h"
+#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Bitcode/BitstreamWriter.h"
+#include "gtest/gtest.h"
+
+namespace clang {
+namespace doc {
+
+template <typename T> static std::string writeInfo(T &I) {
+  SmallString<2048> Buffer;
+  llvm::BitstreamWriter Stream(Buffer);
+  ClangDocBitcodeWriter Writer(Stream);
+  Writer.emitBlock(I);
+  return Buffer.str().str();
+}
+
+std::string writeInfo(Info *I) {
+  switch (I->IT) {
+  case InfoType::IT_namespace:
+    return writeInfo(*static_cast<NamespaceInfo *>(I));
+  case InfoType::IT_record:
+    return writeInfo(*static_cast<RecordInfo *>(I));
+  case InfoType::IT_enum:
+    return writeInfo(*static_cast<EnumInfo *>(I));
+  case InfoType::IT_function:
+    return writeInfo(*static_cast<FunctionInfo *>(I));
+  default:
+    return "";
+  }
+}
+
+std::vector<std::unique_ptr<Info>> readInfo(StringRef Bitcode,
+                                            size_t NumInfos) {
+  llvm::BitstreamCursor Stream(Bitcode);
+  doc::ClangDocBitcodeReader Reader(Stream);
+  auto Infos = Reader.readBitcode();
+
+  // Check that there was no error in the read.
+  assert(Infos);
+  EXPECT_EQ(Infos.get().size(), NumInfos);
+  return std::move(Infos.get());
+}
+
+TEST(BitcodeTest, emitNamespaceInfoBitcode) {
+  NamespaceInfo I;
+  I.Name = "r";
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+
+  I.ChildNamespaces.emplace_back(EmptySID, "ChildNamespace",
+                                 InfoType::IT_namespace);
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.ChildFunctions.emplace_back();
+  I.ChildEnums.emplace_back();
+
+  std::string WriteResult = writeInfo(&I);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+
+  CheckNamespaceInfo(&I, InfoAsNamespace(ReadResults[0].get()));
+}
+
+TEST(BitcodeTest, emitRecordInfoBitcode) {
+  RecordInfo I;
+  I.Name = "r";
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+
+  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+
+  I.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  I.TagType = TagTypeKind::TTK_Class;
+  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
+  I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
+
+  I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
+  I.ChildFunctions.emplace_back();
+  I.ChildEnums.emplace_back();
+
+  std::string WriteResult = writeInfo(&I);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+
+  CheckRecordInfo(&I, InfoAsRecord(ReadResults[0].get()));
+}
+
+TEST(BitcodeTest, emitFunctionInfoBitcode) {
+  FunctionInfo I;
+  I.Name = "f";
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+
+  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+
+  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  I.Params.emplace_back("int", "P");
+
+  std::string WriteResult = writeInfo(&I);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+
+  CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
+}
+
+TEST(BitcodeTest, emitMethodInfoBitcode) {
+  FunctionInfo I;
+  I.Name = "f";
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+
+  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+
+  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  I.Params.emplace_back("int", "P");
+  I.IsMethod = true;
+  I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
+
+  // TODO: fix access
+  // I.Access = AccessSpecifier::AS_private;
+
+  std::string WriteResult = writeInfo(&I);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+
+  CheckFunctionInfo(&I, InfoAsFunction(ReadResults[0].get()));
+}
+
+TEST(BitcodeTest, emitEnumInfoBitcode) {
+  EnumInfo I;
+  I.Name = "e";
+  I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
+
+  I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
+  I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
+
+  I.Members.emplace_back("X");
+  I.Scoped = true;
+
+  std::string WriteResult = writeInfo(&I);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+
+  CheckEnumInfo(&I, InfoAsEnum(ReadResults[0].get()));
+}
+
+TEST(SerializeTest, emitInfoWithCommentBitcode) {
+  FunctionInfo F;
+  F.Name = "F";
+  F.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  F.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  F.Params.emplace_back("int", "I");
+
+  CommentInfo Top;
+  Top.Kind = "FullComment";
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *BlankLine = Top.Children.back().get();
+  BlankLine->Kind = "ParagraphComment";
+  BlankLine->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  BlankLine->Children.back()->Kind = "TextComment";
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *Brief = Top.Children.back().get();
+  Brief->Kind = "ParagraphComment";
+  Brief->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Name = "ParagraphComment";
+  Brief->Children.back()->Text = " Brief description.";
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *Extended = Top.Children.back().get();
+  Extended->Kind = "ParagraphComment";
+  Extended->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Extended->Children.back()->Kind = "TextComment";
+  Extended->Children.back()->Text = " Extended description that";
+  Extended->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Extended->Children.back()->Kind = "TextComment";
+  Extended->Children.back()->Text = " continues onto the next line.";
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *HTML = Top.Children.back().get();
+  HTML->Kind = "ParagraphComment";
+  HTML->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  HTML->Children.back()->Kind = "TextComment";
+  HTML->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  HTML->Children.back()->Kind = "HTMLStartTagComment";
+  HTML->Children.back()->Name = "ul";
+  HTML->Children.back()->AttrKeys.emplace_back("class");
+  HTML->Children.back()->AttrValues.emplace_back("test");
+  HTML->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  HTML->Children.back()->Kind = "HTMLStartTagComment";
+  HTML->Children.back()->Name = "li";
+  HTML->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  HTML->Children.back()->Kind = "TextComment";
+  HTML->Children.back()->Text = " Testing.";
+  HTML->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  HTML->Children.back()->Kind = "HTMLEndTagComment";
+  HTML->Children.back()->Name = "ul";
+  HTML->Children.back()->SelfClosing = true;
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *Verbatim = Top.Children.back().get();
+  Verbatim->Kind = "VerbatimBlockComment";
+  Verbatim->Name = "verbatim";
+  Verbatim->CloseName = "endverbatim";
+  Verbatim->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Verbatim->Children.back()->Kind = "VerbatimBlockLineComment";
+  Verbatim->Children.back()->Text = " The description continues.";
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *ParamOut = Top.Children.back().get();
+  ParamOut->Kind = "ParamCommandComment";
+  ParamOut->Direction = "[out]";
+  ParamOut->ParamName = "I";
+  ParamOut->Explicit = true;
+  ParamOut->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  ParamOut->Children.back()->Kind = "ParagraphComment";
+  ParamOut->Children.back()->Children.emplace_back(
+      llvm::make_unique<CommentInfo>());
+  ParamOut->Children.back()->Children.back()->Kind = "TextComment";
+  ParamOut->Children.back()->Children.emplace_back(
+      llvm::make_unique<CommentInfo>());
+  ParamOut->Children.back()->Children.back()->Kind = "TextComment";
+  ParamOut->Children.back()->Children.back()->Text = " is a parameter.";
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *ParamIn = Top.Children.back().get();
+  ParamIn->Kind = "ParamCommandComment";
+  ParamIn->Direction = "[in]";
+  ParamIn->ParamName = "J";
+  ParamIn->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  ParamIn->Children.back()->Kind = "ParagraphComment";
+  ParamIn->Children.back()->Children.emplace_back(
+      llvm::make_unique<CommentInfo>());
+  ParamIn->Children.back()->Children.back()->Kind = "TextComment";
+  ParamIn->Children.back()->Children.back()->Text = " is a parameter.";
+  ParamIn->Children.back()->Children.emplace_back(
+      llvm::make_unique<CommentInfo>());
+  ParamIn->Children.back()->Children.back()->Kind = "TextComment";
+
+  Top.Children.emplace_back(llvm::make_unique<CommentInfo>());
+  CommentInfo *Return = Top.Children.back().get();
+  Return->Kind = "BlockCommandComment";
+  Return->Name = "return";
+  Return->Explicit = true;
+  Return->Children.emplace_back(llvm::make_unique<CommentInfo>());
+  Return->Children.back()->Kind = "ParagraphComment";
+  Return->Children.back()->Children.emplace_back(
+      llvm::make_unique<CommentInfo>());
+  Return->Children.back()->Children.back()->Kind = "TextComment";
+  Return->Children.back()->Children.back()->Text = "void";
+
+  F.Description.emplace_back(std::move(Top));
+
+  std::string WriteResult = writeInfo(&F);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
+
+  CheckFunctionInfo(&F, InfoAsFunction(ReadResults[0].get()));
+}
+
+} // namespace doc
+} // namespace clang

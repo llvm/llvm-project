@@ -66,7 +66,7 @@ namespace LargeChunk {
   }
 }  // namespace LargeChunk
 
-class ScudoLargeMmapAllocator {
+class LargeMmapAllocator {
  public:
   void Init() {
     internal_memset(this, 0, sizeof(*this));

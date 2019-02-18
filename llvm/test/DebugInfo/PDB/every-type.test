@@ -8,254 +8,254 @@ we claim to understand.  We then test this in two ways:
      hasn't changed.
 
 
-RUN: llvm-pdbutil dump -type-index=0x1018,0x102A,0x103B,0x1093,0x1095,0x1096,0x1098 \
-RUN:   -dependents %p/Inputs/every-type.pdb | FileCheck --check-prefix=TYPES %s
+RUN: llvm-pdbutil dump -type-index=0x101A,0x102C,0x103D,0x104D,0x1098,0x10AA,0x10AC \
+RUN:   -dont-resolve-forward-refs -dependents %p/Inputs/every-type.pdb \
+RUN:   | FileCheck --check-prefix=TYPES %s
 
 RUN: llvm-pdbutil pdb2yaml -tpi-stream -ipi-stream %p/Inputs/every-type.pdb > %t.pdb.yaml
 RUN: llvm-pdbutil yaml2pdb -pdb=%t.yaml.pdb %t.pdb.yaml
-RUN: llvm-pdbutil dump -type-index=0x1018,0x102A,0x103B,0x1093,0x1095,0x1096,0x1098 \
-RUN:   -dependents %t.yaml.pdb | FileCheck --check-prefix=TYPES %s
+RUN: llvm-pdbutil dump -type-index=0x101A,0x102C,0x103D,0x104D,0x1098,0x10AA,0x10AC \
+RUN:   -dependents -dont-resolve-forward-refs %t.yaml.pdb \
+RUN:   | FileCheck --check-prefix=TYPES %s
 
 TYPES:                           Types (TPI Stream)
 TYPES-NEXT: ============================================================
-TYPES-NEXT:   Showing 7 records and their dependents (73 records total)
-TYPES-NEXT:   0x1005 | LF_MODIFIER [size = 12]
+TYPES-NEXT:   Showing 7 records and their dependents (72 records total)
+TYPES-NEXT:   0x1007 | LF_MODIFIER [size = 12]
 TYPES-NEXT:            referent = 0x0074 (int), modifiers = const
-TYPES-NEXT:   0x1006 | LF_CLASS [size = 48] `FooClass`
+TYPES-NEXT:   0x1008 | LF_CLASS [size = 48] `FooClass`
 TYPES-NEXT:            unique name: `.?AVFooClass@@`
 TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
-TYPES-NEXT:            options: forward ref | has unique name
-TYPES-NEXT:   0x1007 | LF_VTSHAPE [size = 8]
-TYPES-NEXT:   0x1008 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x1007, mode = pointer, opts = None, kind = ptr32
-TYPES-NEXT:   0x1009 | LF_CLASS [size = 44] `Inherit`
-TYPES-NEXT:            unique name: `.?AVInherit@@`
-TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
-TYPES-NEXT:            options: forward ref | has unique name
+TYPES-NEXT:            options: forward ref | has unique name, sizeof 0
+TYPES-NEXT:   0x1009 | LF_VTSHAPE [size = 8]
 TYPES-NEXT:   0x100A | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x1009, mode = pointer, opts = const, kind = ptr32
-TYPES-NEXT:   0x100B | LF_ARGLIST [size = 8]
-TYPES-NEXT:   0x100C | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100B
-TYPES-NEXT:            class type = 0x1009, this type = 0x100A, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x100D | LF_MODIFIER [size = 12]
-TYPES-NEXT:            referent = 0x1009, modifiers = const
-TYPES-NEXT:   0x100E | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x100D, mode = ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x100F | LF_ARGLIST [size = 12]
-TYPES-NEXT:            0x100E: `const Inherit&`
-TYPES-NEXT:   0x1010 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x100F
-TYPES-NEXT:            class type = 0x1009, this type = 0x100A, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor
-TYPES-NEXT:   0x1011 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100B
-TYPES-NEXT:            class type = 0x1009, this type = 0x100A, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor
-TYPES-NEXT:   0x1012 | LF_METHODLIST [size = 20]
-TYPES-NEXT:            - Method [type = 0x1010, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:            - Method [type = 0x1011, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:   0x1013 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x1009, mode = ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x1014 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x1013, # args = 1, param list = 0x100F
-TYPES-NEXT:            class type = 0x1009, this type = 0x100A, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x1015 | LF_ARGLIST [size = 12]
-TYPES-NEXT:            0x0075 (unsigned): `unsigned`
-TYPES-NEXT:   0x1016 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0403 (void*), # args = 1, param list = 0x1015
-TYPES-NEXT:            class type = 0x1009, this type = 0x100A, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x1017 | LF_FIELDLIST [size = 152]
-TYPES-NEXT:            - LF_BCLASS
-TYPES-NEXT:              type = 0x1006, offset = 4, attrs = public
-TYPES-NEXT:            - LF_VFUNCTAB type = 0x1008
-TYPES-NEXT:            - LF_ONEMETHOD [name = `~Inherit`]
-TYPES-NEXT:              type = 0x100C, vftable offset = 0, attrs = public intro virtual
-TYPES-NEXT:            - LF_METHOD [name = `Inherit`, # overloads = 2, overload list = 0x1012]
-TYPES-NEXT:            - LF_ONEMETHOD [name = `operator=`]
-TYPES-NEXT:              type = 0x1014, vftable offset = -1, attrs = public compiler-generated
-TYPES-NEXT:            - LF_ONEMETHOD [name = `__local_vftable_ctor_closure`]
-TYPES-NEXT:              type = 0x100C, vftable offset = -1, attrs = public compiler-generated
-TYPES-NEXT:            - LF_ONEMETHOD [name = `__vecDelDtor`]
-TYPES-NEXT:              type = 0x1016, vftable offset = 0, attrs = public intro virtual compiler-generated
-TYPES-NEXT:   0x1018 | LF_CLASS [size = 44] `Inherit`
+TYPES-NEXT:            referent = 0x1009, mode = pointer, opts = None, kind = ptr64
+TYPES-NEXT:   0x100B | LF_CLASS [size = 44] `Inherit`
 TYPES-NEXT:            unique name: `.?AVInherit@@`
-TYPES-NEXT:            vtable: 0x1007, base list: <no type>, field list: 0x1017
-TYPES-NEXT:            options: has ctor / dtor | has unique name | overloaded operator | overloaded operator=
-TYPES-NEXT:   0x1019 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x1005, mode = pointer, opts = None, kind = ptr32
-TYPES-NEXT:   0x101A | LF_CLASS [size = 48] `VInherit`
-TYPES-NEXT:            unique name: `.?AVVInherit@@`
 TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
-TYPES-NEXT:            options: forward ref | has unique name
-TYPES-NEXT:   0x101B | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x101A, mode = pointer, opts = const, kind = ptr32
-TYPES-NEXT:   0x101C | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x101A, mode = rvalue ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x101D | LF_ARGLIST [size = 12]
-TYPES-NEXT:            0x101C: `VInherit&&`
-TYPES-NEXT:   0x101E | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x101D
-TYPES-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor with virtual bases | constructor
-TYPES-NEXT:   0x101F | LF_MODIFIER [size = 12]
-TYPES-NEXT:            referent = 0x101A, modifiers = const
-TYPES-NEXT:   0x1020 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x101F, mode = ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x1021 | LF_ARGLIST [size = 12]
-TYPES-NEXT:            0x1020: `const VInherit&`
-TYPES-NEXT:   0x1022 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1021
-TYPES-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor with virtual bases | constructor
-TYPES-NEXT:   0x1023 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100B
-TYPES-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor with virtual bases | constructor
-TYPES-NEXT:   0x1024 | LF_METHODLIST [size = 28]
-TYPES-NEXT:            - Method [type = 0x101E, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:            - Method [type = 0x1022, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:            - Method [type = 0x1023, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:   0x1025 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x101A, mode = ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x1026 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x1025, # args = 1, param list = 0x101D
-TYPES-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x1027 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x1025, # args = 1, param list = 0x1021
-TYPES-NEXT:            class type = 0x101A, this type = 0x101B, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x1028 | LF_METHODLIST [size = 20]
-TYPES-NEXT:            - Method [type = 0x1026, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:            - Method [type = 0x1027, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:   0x1029 | LF_FIELDLIST [size = 60]
-TYPES-NEXT:            - LF_VBCLASS
-TYPES-NEXT:              base = 0x1006, vbptr = 0x1019, vbptr offset = 0, vtable index = 1
-TYPES-NEXT:              attrs = public
-TYPES-NEXT:            - LF_METHOD [name = `VInherit`, # overloads = 3, overload list = 0x1024]
-TYPES-NEXT:            - LF_METHOD [name = `operator=`, # overloads = 2, overload list = 0x1028]
-TYPES-NEXT:   0x102A | LF_CLASS [size = 48] `VInherit`
-TYPES-NEXT:            unique name: `.?AVVInherit@@`
-TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1029
-TYPES-NEXT:            options: has ctor / dtor | has unique name | overloaded operator | overloaded operator=
-TYPES-NEXT:   0x102B | LF_CLASS [size = 48] `IVInherit`
-TYPES-NEXT:            unique name: `.?AVIVInherit@@`
-TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
-TYPES-NEXT:            options: forward ref | has unique name
-TYPES-NEXT:   0x102C | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x102B, mode = pointer, opts = const, kind = ptr32
-TYPES-NEXT:   0x102D | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x102B, mode = rvalue ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x102E | LF_ARGLIST [size = 12]
-TYPES-NEXT:            0x102D: `IVInherit&&`
-TYPES-NEXT:   0x102F | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x102E
-TYPES-NEXT:            class type = 0x102B, this type = 0x102C, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor with virtual bases | constructor
-TYPES-NEXT:   0x1030 | LF_MODIFIER [size = 12]
-TYPES-NEXT:            referent = 0x102B, modifiers = const
-TYPES-NEXT:   0x1031 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x1030, mode = ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x1032 | LF_ARGLIST [size = 12]
-TYPES-NEXT:            0x1031: `const IVInherit&`
-TYPES-NEXT:   0x1033 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1032
-TYPES-NEXT:            class type = 0x102B, this type = 0x102C, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor with virtual bases | constructor
-TYPES-NEXT:   0x1034 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100B
-TYPES-NEXT:            class type = 0x102B, this type = 0x102C, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = constructor with virtual bases | constructor
-TYPES-NEXT:   0x1035 | LF_METHODLIST [size = 28]
-TYPES-NEXT:            - Method [type = 0x102F, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:            - Method [type = 0x1033, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:            - Method [type = 0x1034, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:   0x1036 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x102B, mode = ref, opts = None, kind = ptr32
-TYPES-NEXT:   0x1037 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x1036, # args = 1, param list = 0x102E
-TYPES-NEXT:            class type = 0x102B, this type = 0x102C, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x1038 | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x1036, # args = 1, param list = 0x1032
-TYPES-NEXT:            class type = 0x102B, this type = 0x102C, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x1039 | LF_METHODLIST [size = 20]
-TYPES-NEXT:            - Method [type = 0x1037, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:            - Method [type = 0x1038, vftable offset = -1, attrs = public compiler-generated]
-TYPES-NEXT:   0x103A | LF_FIELDLIST [size = 72]
+TYPES-NEXT:            options: forward ref | has unique name, sizeof 0
+TYPES-NEXT:   0x100C | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x100B, mode = pointer, opts = const, kind = ptr64
+TYPES-NEXT:   0x100D | LF_ARGLIST [size = 8]
+TYPES-NEXT:   0x100E | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100D
+TYPES-NEXT:            class type = 0x100B, this type = 0x100C, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x100F | LF_MODIFIER [size = 12]
+TYPES-NEXT:            referent = 0x100B, modifiers = const
+TYPES-NEXT:   0x1010 | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x100F, mode = ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x1011 | LF_ARGLIST [size = 12]
+TYPES-NEXT:            0x1010: `const Inherit&`
+TYPES-NEXT:   0x1012 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1011
+TYPES-NEXT:            class type = 0x100B, this type = 0x100C, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor
+TYPES-NEXT:   0x1013 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100D
+TYPES-NEXT:            class type = 0x100B, this type = 0x100C, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor
+TYPES-NEXT:   0x1014 | LF_METHODLIST [size = 20]
+TYPES-NEXT:            - Method [type = 0x1012, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:            - Method [type = 0x1013, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:   0x1015 | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x100B, mode = ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x1016 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x1015, # args = 1, param list = 0x1011
+TYPES-NEXT:            class type = 0x100B, this type = 0x100C, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x1017 | LF_ARGLIST [size = 12]
+TYPES-NEXT:            0x0075 (unsigned): `unsigned`
+TYPES-NEXT:   0x1018 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0603 (void*), # args = 1, param list = 0x1017
+TYPES-NEXT:            class type = 0x100B, this type = 0x100C, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x1019 | LF_FIELDLIST [size = 152]
 TYPES-NEXT:            - LF_BCLASS
-TYPES-NEXT:              type = 0x101A, offset = 0, attrs = public
-TYPES-NEXT:            - LF_IVBCLASS
-TYPES-NEXT:              base = 0x1006, vbptr = 0x1019, vbptr offset = 0, vtable index = 1
+TYPES-NEXT:              type = 0x1008, offset = 8, attrs = public
+TYPES-NEXT:            - LF_VFUNCTAB type = 0x100A
+TYPES-NEXT:            - LF_ONEMETHOD [name = `~Inherit`]
+TYPES-NEXT:              type = 0x100E, vftable offset = 0, attrs = public intro virtual
+TYPES-NEXT:            - LF_METHOD [name = `Inherit`, # overloads = 2, overload list = 0x1014]
+TYPES-NEXT:            - LF_ONEMETHOD [name = `operator=`]
+TYPES-NEXT:              type = 0x1016, vftable offset = -1, attrs = public compiler-generated
+TYPES-NEXT:            - LF_ONEMETHOD [name = `__local_vftable_ctor_closure`]
+TYPES-NEXT:              type = 0x100E, vftable offset = -1, attrs = public compiler-generated
+TYPES-NEXT:            - LF_ONEMETHOD [name = `__vecDelDtor`]
+TYPES-NEXT:              type = 0x1018, vftable offset = 0, attrs = public intro virtual compiler-generated
+TYPES-NEXT:   0x101A | LF_CLASS [size = 44] `Inherit`
+TYPES-NEXT:            unique name: `.?AVInherit@@`
+TYPES-NEXT:            vtable: 0x1009, base list: <no type>, field list: 0x1019
+TYPES-NEXT:            options: has ctor / dtor | has unique name | overloaded operator | overloaded operator=, sizeof 16
+TYPES-NEXT:   0x101B | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x1007, mode = pointer, opts = None, kind = ptr64
+TYPES-NEXT:   0x101C | LF_CLASS [size = 48] `VInherit`
+TYPES-NEXT:            unique name: `.?AVVInherit@@`
+TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+TYPES-NEXT:            options: forward ref | has unique name, sizeof 0
+TYPES-NEXT:   0x101D | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x101C, mode = pointer, opts = const, kind = ptr64
+TYPES-NEXT:   0x101E | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x101C, mode = rvalue ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x101F | LF_ARGLIST [size = 12]
+TYPES-NEXT:            0x101E: `VInherit&&`
+TYPES-NEXT:   0x1020 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x101F
+TYPES-NEXT:            class type = 0x101C, this type = 0x101D, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor with virtual bases | constructor
+TYPES-NEXT:   0x1021 | LF_MODIFIER [size = 12]
+TYPES-NEXT:            referent = 0x101C, modifiers = const
+TYPES-NEXT:   0x1022 | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x1021, mode = ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x1023 | LF_ARGLIST [size = 12]
+TYPES-NEXT:            0x1022: `const VInherit&`
+TYPES-NEXT:   0x1024 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1023
+TYPES-NEXT:            class type = 0x101C, this type = 0x101D, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor with virtual bases | constructor
+TYPES-NEXT:   0x1025 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100D
+TYPES-NEXT:            class type = 0x101C, this type = 0x101D, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor with virtual bases | constructor
+TYPES-NEXT:   0x1026 | LF_METHODLIST [size = 28]
+TYPES-NEXT:            - Method [type = 0x1020, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:            - Method [type = 0x1024, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:            - Method [type = 0x1025, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:   0x1027 | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x101C, mode = ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x1028 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x1027, # args = 1, param list = 0x101F
+TYPES-NEXT:            class type = 0x101C, this type = 0x101D, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x1029 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x1027, # args = 1, param list = 0x1023
+TYPES-NEXT:            class type = 0x101C, this type = 0x101D, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x102A | LF_METHODLIST [size = 20]
+TYPES-NEXT:            - Method [type = 0x1028, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:            - Method [type = 0x1029, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:   0x102B | LF_FIELDLIST [size = 60]
+TYPES-NEXT:            - LF_VBCLASS
+TYPES-NEXT:              base = 0x1008, vbptr = 0x101B, vbptr offset = 0, vtable index = 1
 TYPES-NEXT:              attrs = public
-TYPES-NEXT:            - LF_METHOD [name = `IVInherit`, # overloads = 3, overload list = 0x1035]
-TYPES-NEXT:            - LF_METHOD [name = `operator=`, # overloads = 2, overload list = 0x1039]
-TYPES-NEXT:   0x103B | LF_CLASS [size = 48] `IVInherit`
+TYPES-NEXT:            - LF_METHOD [name = `VInherit`, # overloads = 3, overload list = 0x1026]
+TYPES-NEXT:            - LF_METHOD [name = `operator=`, # overloads = 2, overload list = 0x102A]
+TYPES-NEXT:   0x102C | LF_CLASS [size = 48] `VInherit`
+TYPES-NEXT:            unique name: `.?AVVInherit@@`
+TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x102B
+TYPES-NEXT:            options: has ctor / dtor | has unique name | overloaded operator | overloaded operator=, sizeof 16
+TYPES-NEXT:   0x102D | LF_CLASS [size = 48] `IVInherit`
 TYPES-NEXT:            unique name: `.?AVIVInherit@@`
-TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x103A
-TYPES-NEXT:            options: has ctor / dtor | has unique name | overloaded operator | overloaded operator=
-TYPES-NEXT:   0x1087 | LF_FIELDLIST [size = 28]
+TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: <no type>
+TYPES-NEXT:            options: forward ref | has unique name, sizeof 0
+TYPES-NEXT:   0x102E | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x102D, mode = pointer, opts = const, kind = ptr64
+TYPES-NEXT:   0x102F | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x102D, mode = rvalue ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x1030 | LF_ARGLIST [size = 12]
+TYPES-NEXT:            0x102F: `IVInherit&&`
+TYPES-NEXT:   0x1031 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1030
+TYPES-NEXT:            class type = 0x102D, this type = 0x102E, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor with virtual bases | constructor
+TYPES-NEXT:   0x1032 | LF_MODIFIER [size = 12]
+TYPES-NEXT:            referent = 0x102D, modifiers = const
+TYPES-NEXT:   0x1033 | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x1032, mode = ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x1034 | LF_ARGLIST [size = 12]
+TYPES-NEXT:            0x1033: `const IVInherit&`
+TYPES-NEXT:   0x1035 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1034
+TYPES-NEXT:            class type = 0x102D, this type = 0x102E, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor with virtual bases | constructor
+TYPES-NEXT:   0x1036 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100D
+TYPES-NEXT:            class type = 0x102D, this type = 0x102E, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = constructor with virtual bases | constructor
+TYPES-NEXT:   0x1037 | LF_METHODLIST [size = 28]
+TYPES-NEXT:            - Method [type = 0x1031, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:            - Method [type = 0x1035, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:            - Method [type = 0x1036, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:   0x1038 | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x102D, mode = ref, opts = None, kind = ptr64
+TYPES-NEXT:   0x1039 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x1038, # args = 1, param list = 0x1030
+TYPES-NEXT:            class type = 0x102D, this type = 0x102E, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x103A | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x1038, # args = 1, param list = 0x1034
+TYPES-NEXT:            class type = 0x102D, this type = 0x102E, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x103B | LF_METHODLIST [size = 20]
+TYPES-NEXT:            - Method [type = 0x1039, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:            - Method [type = 0x103A, vftable offset = -1, attrs = public compiler-generated]
+TYPES-NEXT:   0x103C | LF_FIELDLIST [size = 72]
+TYPES-NEXT:            - LF_BCLASS
+TYPES-NEXT:              type = 0x101C, offset = 0, attrs = public
+TYPES-NEXT:            - LF_IVBCLASS
+TYPES-NEXT:              base = 0x1008, vbptr = 0x101B, vbptr offset = 0, vtable index = 1
+TYPES-NEXT:              attrs = public
+TYPES-NEXT:            - LF_METHOD [name = `IVInherit`, # overloads = 3, overload list = 0x1037]
+TYPES-NEXT:            - LF_METHOD [name = `operator=`, # overloads = 2, overload list = 0x103B]
+TYPES-NEXT:   0x103D | LF_CLASS [size = 48] `IVInherit`
+TYPES-NEXT:            unique name: `.?AVIVInherit@@`
+TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x103C
+TYPES-NEXT:            options: has ctor / dtor | has unique name | overloaded operator | overloaded operator=, sizeof 16
+TYPES-NEXT:   0x1041 | LF_FIELDLIST [size = 28]
 TYPES-NEXT:            - LF_ENUMERATE [A = 0]
 TYPES-NEXT:            - LF_ENUMERATE [B = 1]
 TYPES-NEXT:            - LF_ENUMERATE [C = 2]
-TYPES-NEXT:   0x1088 | LF_ENUM [size = 64] `FooClass::NestedEnum`
+TYPES-NEXT:   0x1042 | LF_ENUM [size = 64] `FooClass::NestedEnum`
 TYPES-NEXT:            unique name: `.?AW4NestedEnum@FooClass@@`
-TYPES-NEXT:            field list: 0x1087, underlying type: 0x0074 (int)
+TYPES-NEXT:            field list: 0x1041, underlying type: 0x0074 (int)
 TYPES-NEXT:            options: has unique name | is nested
-TYPES-NEXT:   0x1089 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x1006, mode = pointer, opts = const, kind = ptr32
-TYPES-NEXT:   0x108A | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100B
-TYPES-NEXT:            class type = 0x1006, this type = 0x1089, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x108B | LF_ARGLIST [size = 16]
-TYPES-NEXT:            0x0074 (int): `int`
-TYPES-NEXT:            0x0074 (int): `int`
-TYPES-NEXT:   0x108C | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 2, param list = 0x108B
-TYPES-NEXT:            class type = 0x1006, this type = 0x1089, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x108D | LF_ARGLIST [size = 12]
-TYPES-NEXT:            0x0074 (int): `int`
-TYPES-NEXT:   0x108E | LF_MFUNCTION [size = 28]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x108D
-TYPES-NEXT:            class type = 0x1006, this type = 0x1089, this adjust = 0
-TYPES-NEXT:            calling conv = thiscall, options = None
-TYPES-NEXT:   0x108F | LF_METHODLIST [size = 20]
-TYPES-NEXT:            - Method [type = 0x108C, vftable offset = -1, attrs = private]
-TYPES-NEXT:            - Method [type = 0x108E, vftable offset = -1, attrs = private]
-TYPES-NEXT:   0x1090 | LF_BITFIELD [size = 12]
-TYPES-NEXT:            type = 0x0074 (int), bit offset = 0, # bits = 4
-TYPES-NEXT:   0x1091 | LF_BITFIELD [size = 12]
-TYPES-NEXT:            type = 0x0074 (int), bit offset = 4, # bits = 4
-TYPES-NEXT:   0x1092 | LF_FIELDLIST [size = 164]
-TYPES-NEXT:            - LF_NESTTYPE [name = `NestedEnum`, parent = 0x1088]
-TYPES-NEXT:            - LF_ONEMETHOD [name = `RegularMethod`]
-TYPES-NEXT:              type = 0x108A, vftable offset = -1, attrs = private
-TYPES-NEXT:            - LF_METHOD [name = `OverloadedMethod`, # overloads = 2, overload list = 0x108F]
-TYPES-NEXT:            - LF_MEMBER [name = `HiNibble`, Type = 0x1090, offset = 0, attrs = private]
-TYPES-NEXT:            - LF_MEMBER [name = `LoNibble`, Type = 0x1091, offset = 0, attrs = private]
-TYPES-NEXT:            - LF_MEMBER [name = `EnumVariable`, Type = 0x1088, offset = 4, attrs = private]
-TYPES-NEXT:            - LF_STMEMBER [name = `StaticMember`, type = 0x0403 (void*), attrs = private]
-TYPES-NEXT:   0x1093 | LF_CLASS [size = 48] `FooClass`
-TYPES-NEXT:            unique name: `.?AVFooClass@@`
-TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x1092
-TYPES-NEXT:            options: contains nested class | has unique name
-TYPES-NEXT:   0x1094 | LF_FIELDLIST [size = 16]
-TYPES-NEXT:            - LF_MEMBER [name = `X`, Type = 0x0074 (int), offset = 0, attrs = public]
-TYPES-NEXT:   0x1095 | LF_UNION [size = 40] `TheUnion`
-TYPES-NEXT:            unique name: `.?ATTheUnion@@`
-TYPES-NEXT:            field list: 0x1094
-TYPES-NEXT:            options: has unique name | sealed
-TYPES-NEXT:   0x1096 | LF_PROCEDURE [size = 16]
-TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100B
+TYPES-NEXT:   0x1043 | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x1008, mode = pointer, opts = const, kind = ptr64
+TYPES-NEXT:   0x1044 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100D
+TYPES-NEXT:            class type = 0x1008, this type = 0x1043, this adjust = 0
 TYPES-NEXT:            calling conv = cdecl, options = None
-TYPES-NEXT:   0x1097 | LF_POINTER [size = 12]
-TYPES-NEXT:            referent = 0x1096, mode = pointer, opts = const, kind = ptr32
-TYPES-NEXT:   0x1098 | LF_ARRAY [size = 16]
-TYPES-NEXT:            size: 4, index type: 0x0022 (unsigned long), element type: 0x1097
+TYPES-NEXT:   0x1045 | LF_ARGLIST [size = 16]
+TYPES-NEXT:            0x0074 (int): `int`
+TYPES-NEXT:            0x0074 (int): `int`
+TYPES-NEXT:   0x1046 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 2, param list = 0x1045
+TYPES-NEXT:            class type = 0x1008, this type = 0x1043, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x1047 | LF_ARGLIST [size = 12]
+TYPES-NEXT:            0x0074 (int): `int`
+TYPES-NEXT:   0x1048 | LF_MFUNCTION [size = 28]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 1, param list = 0x1047
+TYPES-NEXT:            class type = 0x1008, this type = 0x1043, this adjust = 0
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x1049 | LF_METHODLIST [size = 20]
+TYPES-NEXT:            - Method [type = 0x1046, vftable offset = -1, attrs = public]
+TYPES-NEXT:            - Method [type = 0x1048, vftable offset = -1, attrs = public]
+TYPES-NEXT:   0x104A | LF_BITFIELD [size = 12]
+TYPES-NEXT:            type = 0x0074 (int), bit offset = 0, # bits = 4
+TYPES-NEXT:   0x104B | LF_BITFIELD [size = 12]
+TYPES-NEXT:            type = 0x0074 (int), bit offset = 4, # bits = 4
+TYPES-NEXT:   0x104C | LF_FIELDLIST [size = 164]
+TYPES-NEXT:            - LF_NESTTYPE [name = `NestedEnum`, parent = 0x1042]
+TYPES-NEXT:            - LF_ONEMETHOD [name = `RegularMethod`]
+TYPES-NEXT:              type = 0x1044, vftable offset = -1, attrs = public
+TYPES-NEXT:            - LF_METHOD [name = `OverloadedMethod`, # overloads = 2, overload list = 0x1049]
+TYPES-NEXT:            - LF_MEMBER [name = `HiNibble`, Type = 0x104A, offset = 0, attrs = public]
+TYPES-NEXT:            - LF_MEMBER [name = `LoNibble`, Type = 0x104B, offset = 0, attrs = public]
+TYPES-NEXT:            - LF_MEMBER [name = `EnumVariable`, Type = 0x1042, offset = 4, attrs = public]
+TYPES-NEXT:            - LF_STMEMBER [name = `StaticMember`, type = 0x0603 (void*), attrs = public]
+TYPES-NEXT:   0x104D | LF_CLASS [size = 48] `FooClass`
+TYPES-NEXT:            unique name: `.?AVFooClass@@`
+TYPES-NEXT:            vtable: <no type>, base list: <no type>, field list: 0x104C
+TYPES-NEXT:            options: contains nested class | has unique name, sizeof 8
+TYPES-NEXT:   0x1098 | LF_UNION [size = 40] `TheUnion`
+TYPES-NEXT:            unique name: `.?ATTheUnion@@`
+TYPES-NEXT:            field list: <no type>
+TYPES-NEXT:            options: forward ref | has unique name, sizeof 0
+TYPES-NEXT:   0x10AA | LF_PROCEDURE [size = 16]
+TYPES-NEXT:            return type = 0x0003 (void), # args = 0, param list = 0x100D
+TYPES-NEXT:            calling conv = cdecl, options = None
+TYPES-NEXT:   0x10AB | LF_POINTER [size = 12]
+TYPES-NEXT:            referent = 0x10AA, mode = pointer, opts = const, kind = ptr64
+TYPES-NEXT:   0x10AC | LF_ARRAY [size = 16]
+TYPES-NEXT:            size: 8, index type: 0x0023 (unsigned __int64), element type: 0x10AB

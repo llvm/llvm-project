@@ -51,14 +51,15 @@ private:
   bool hasBlocksRuntime() const override;
   bool SupportsProfiling() const override;
   bool HasNativeLLVMSupport() const override;
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
-  void AddClangSystemIncludeArgs(
-      const llvm::opt::ArgList &DriverArgs,
-      llvm::opt::ArgStringList &CC1Args) const override;
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
@@ -66,9 +67,7 @@ private:
                            llvm::opt::ArgStringList &CmdArgs) const override;
   std::string getThreadModel() const override;
 
-  const char *getDefaultLinker() const override {
-    return "lld";
-  }
+  const char *getDefaultLinker() const override { return "wasm-ld"; }
 
   Tool *buildLinker() const override;
 };

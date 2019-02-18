@@ -18,6 +18,6 @@ int main(int argc, char **argv) {
 
 #pragma omp task default(none)
 #pragma omp task default(shared)
-  ++argc;
+  ++argc; // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
   return 0;
 }

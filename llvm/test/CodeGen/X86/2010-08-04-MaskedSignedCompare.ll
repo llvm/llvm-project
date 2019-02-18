@@ -11,9 +11,8 @@ define i32 @main() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq {{.*}}(%rip), %rax
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    andl $150, %eax
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    sbbb %al, %al
+; CHECK-NEXT:    testb $-106, %al
 ; CHECK-NEXT:    jle .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    movl $1, {{.*}}(%rip)

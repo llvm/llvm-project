@@ -80,6 +80,7 @@ public:
 
 private:
   lldb::SwiftASTContextSP m_swift_ast_sp;
+  bool m_completion_module_initialized = false;
 };
 }
 

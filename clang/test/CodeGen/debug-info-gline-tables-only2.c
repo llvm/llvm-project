@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -debug-info-kind=line-tables-only -S -emit-llvm -o - | FileCheck %s
-// Checks that clang with "-gline-tables-only" emits metadata for
+// RUN: %clang_cc1 %s -debug-info-kind=line-directives-only -S -emit-llvm -o - | FileCheck %s
+// Checks that clang with "-gline-tables-only" or "-gline-directives-only" emits metadata for
 // compile unit, subprogram and file.
 
 int main() {

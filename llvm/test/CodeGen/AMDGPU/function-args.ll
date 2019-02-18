@@ -314,8 +314,17 @@ define void @void_func_v4i16(<4 x i16> %arg0) #0 {
 }
 
 ; GCN-LABEL: {{^}}void_func_v5i16:
-; GCN-DAG: buffer_store_short v4, off,
-; GCN-DAG: buffer_store_dwordx2 v[1:2], off
+; CI: v_lshlrev_b32
+; CI: v_and_b32
+; CI: v_lshlrev_b32
+; CI: v_or_b32
+; CI: v_or_b32
+; CI-DAG: buffer_store_short v
+; CI-DAG: buffer_store_dwordx2 v
+
+; GFX89-DAG: buffer_store_short v2, off,
+; GFX89-DAG: buffer_store_dwordx2 v[0:1], off
+
 define void @void_func_v5i16(<5 x i16> %arg0) #0 {
   store <5 x i16> %arg0, <5 x i16> addrspace(1)* undef
   ret void
@@ -736,6 +745,45 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
   store volatile <32 x i32> %arg0, <32 x i32> addrspace(1)* undef
   store volatile <16 x i32> %arg1, <16 x i32> addrspace(1)* undef
   store volatile <16 x float> %arg2, <16 x float> addrspace(1)* undef
+  ret void
+}
+
+; Make sure v3 isn't a wasted register because of v3 types being promoted to v4
+; GCN-LABEL: {{^}}void_func_v3f32_wasted_reg:
+; GCN: s_waitcnt
+; GCN: ds_write_b32 v{{[0-9]+}}, v0
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v1
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v2
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v3
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
+  %arg0.0 = extractelement <3 x float> %arg0, i32 0
+  %arg0.1 = extractelement <3 x float> %arg0, i32 1
+  %arg0.2 = extractelement <3 x float> %arg0, i32 2
+  store volatile float %arg0.0, float addrspace(3)* undef
+  store volatile float %arg0.1, float addrspace(3)* undef
+  store volatile float %arg0.2, float addrspace(3)* undef
+  store volatile i32 %arg1, i32 addrspace(3)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}void_func_v3i32_wasted_reg:
+; GCN: s_waitcnt
+; GCN: ds_write_b32 v{{[0-9]+}}, v0
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v1
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v2
+; GCN-NEXT: ds_write_b32 v{{[0-9]+}}, v3
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: s_setpc_b64
+define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
+  %arg0.0 = extractelement <3 x i32> %arg0, i32 0
+  %arg0.1 = extractelement <3 x i32> %arg0, i32 1
+  %arg0.2 = extractelement <3 x i32> %arg0, i32 2
+  store volatile i32 %arg0.0, i32 addrspace(3)* undef
+  store volatile i32 %arg0.1, i32 addrspace(3)* undef
+  store volatile i32 %arg0.2, i32 addrspace(3)* undef
+  store volatile i32 %arg1, i32 addrspace(3)* undef
   ret void
 }
 

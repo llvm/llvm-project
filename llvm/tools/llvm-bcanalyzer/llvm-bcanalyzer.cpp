@@ -247,6 +247,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(CST_CODE, CE_CMP)
       STRINGIFY_CODE(CST_CODE, INLINEASM)
       STRINGIFY_CODE(CST_CODE, CE_SHUFVEC_EX)
+      STRINGIFY_CODE(CST_CODE, CE_UNOP)
     case bitc::CST_CODE_BLOCKADDRESS:    return "CST_CODE_BLOCKADDRESS";
       STRINGIFY_CODE(CST_CODE, DATA)
     }
@@ -267,6 +268,7 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FUNC_CODE, INST_BR)
       STRINGIFY_CODE(FUNC_CODE, INST_SWITCH)
       STRINGIFY_CODE(FUNC_CODE, INST_INVOKE)
+      STRINGIFY_CODE(FUNC_CODE, INST_UNOP)
       STRINGIFY_CODE(FUNC_CODE, INST_UNREACHABLE)
       STRINGIFY_CODE(FUNC_CODE, INST_CLEANUPRET)
       STRINGIFY_CODE(FUNC_CODE, INST_CATCHRET)
@@ -285,6 +287,11 @@ static const char *GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FUNC_CODE, DEBUG_LOC)
       STRINGIFY_CODE(FUNC_CODE, INST_GEP)
       STRINGIFY_CODE(FUNC_CODE, OPERAND_BUNDLE)
+      STRINGIFY_CODE(FUNC_CODE, INST_FENCE)
+      STRINGIFY_CODE(FUNC_CODE, INST_ATOMICRMW)
+      STRINGIFY_CODE(FUNC_CODE, INST_LOADATOMIC)
+      STRINGIFY_CODE(FUNC_CODE, INST_STOREATOMIC)
+      STRINGIFY_CODE(FUNC_CODE, INST_CMPXCHG)
     }
   case bitc::VALUE_SYMTAB_BLOCK_ID:
     switch (CodeID) {
@@ -699,7 +706,7 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
           std::string Str;
           bool ArrayIsPrintable = true;
           for (unsigned j = i - 1, je = Record.size(); j != je; ++j) {
-            if (!isprint(static_cast<unsigned char>(Record[j]))) {
+            if (!isPrint(static_cast<unsigned char>(Record[j]))) {
               ArrayIsPrintable = false;
               break;
             }
@@ -719,7 +726,7 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
         } else {
           bool BlobIsPrintable = true;
           for (unsigned i = 0, e = Blob.size(); i != e; ++i)
-            if (!isprint(static_cast<unsigned char>(Blob[i]))) {
+            if (!isPrint(static_cast<unsigned char>(Blob[i]))) {
               BlobIsPrintable = false;
               break;
             }

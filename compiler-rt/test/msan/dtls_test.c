@@ -6,8 +6,11 @@
    see https://sourceware.org/bugzilla/show_bug.cgi?id=16291
    and https://github.com/google/sanitizers/issues/547
 
-   XFAIL: freebsd
+   XFAIL: FreeBSD
    UNSUPPORTED: powerpc
+
+   // Reports use-of-uninitialized-value, not analyzed
+   XFAIL: netbsd
 */
 
 #ifndef BUILD_SO

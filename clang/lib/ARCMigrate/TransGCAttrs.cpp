@@ -48,7 +48,7 @@ public:
       return true;
 
     SaveAndRestore<bool> Save(FullyMigratable, isMigratable(D));
-    
+
     if (ObjCPropertyDecl *PropD = dyn_cast<ObjCPropertyDecl>(D)) {
       lookForAttribute(PropD, PropD->getTypeSourceInfo());
       AllProps.push_back(PropD);
@@ -81,10 +81,11 @@ public:
   }
 
   bool handleAttr(AttributedTypeLoc TL, Decl *D = nullptr) {
-    if (TL.getAttrKind() != AttributedType::attr_objc_ownership)
+    auto *OwnershipAttr = TL.getAttrAs<ObjCOwnershipAttr>();
+    if (!OwnershipAttr)
       return false;
 
-    SourceLocation Loc = TL.getAttrNameLoc();
+    SourceLocation Loc = OwnershipAttr->getLocation();
     unsigned RawLoc = Loc.getRawEncoding();
     if (MigrateCtx.AttrSet.count(RawLoc))
       return true;
@@ -93,13 +94,7 @@ public:
     SourceManager &SM = Ctx.getSourceManager();
     if (Loc.isMacroID())
       Loc = SM.getImmediateExpansionRange(Loc).getBegin();
-    SmallString<32> Buf;
-    bool Invalid = false;
-    StringRef Spell = Lexer::getSpelling(
-                                  SM.getSpellingLoc(TL.getAttrEnumOperandLoc()),
-                                  Buf, SM, Ctx.getLangOpts(), &Invalid);
-    if (Invalid)
-      return false;
+    StringRef Spell = OwnershipAttr->getKind()->getName();
     MigrationContext::GCAttrOccurrence::AttrKind Kind;
     if (Spell == "strong")
       Kind = MigrationContext::GCAttrOccurrence::Strong;
@@ -107,7 +102,7 @@ public:
       Kind = MigrationContext::GCAttrOccurrence::Weak;
     else
       return false;
- 
+
     MigrateCtx.AttrSet.insert(RawLoc);
     MigrateCtx.GCAttrs.push_back(MigrationContext::GCAttrOccurrence());
     MigrationContext::GCAttrOccurrence &Attr = MigrateCtx.GCAttrs.back();
@@ -164,7 +159,7 @@ public:
     for (auto I : D->redecls())
       if (!isInMainFile(I->getLocation()))
         return false;
-    
+
     return true;
   }
 
@@ -284,7 +279,7 @@ static void checkAllAtProps(MigrationContext &MigrateCtx,
   }
 
   for (unsigned i = 0, e = ATLs.size(); i != e; ++i) {
-    SourceLocation Loc = ATLs[i].first.getAttrNameLoc();
+    SourceLocation Loc = ATLs[i].first.getAttr()->getLocation();
     if (Loc.isMacroID())
       Loc = MigrateCtx.Pass.Ctx.getSourceManager()
                 .getImmediateExpansionRange(Loc)
@@ -340,7 +335,7 @@ void MigrationContext::dumpGCAttrs() {
     llvm::errs() << "KIND: "
         << (Attr.Kind == GCAttrOccurrence::Strong ? "strong" : "weak");
     llvm::errs() << "\nLOC: ";
-    Attr.Loc.dump(Pass.Ctx.getSourceManager());
+    Attr.Loc.print(llvm::errs(), Pass.Ctx.getSourceManager());
     llvm::errs() << "\nTYPE: ";
     Attr.ModifiedType.dump();
     if (Attr.Dcl) {

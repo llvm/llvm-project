@@ -933,6 +933,17 @@ class SDBBP_FM_MM : MMArch {
   let Inst{5-0}   = 0x3c;
 }
 
+class SIGRIE_FM_MM : MMArch {
+  bits<16> code_;
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0x0;
+  let Inst{25-22} = 0x0;
+  let Inst{21-6} = code_;
+  let Inst{5-0} = 0b111111;
+}
+
 class RDHWR_FM_MM : MMArch {
   bits<5> rt;
   bits<5> rd;

@@ -175,3 +175,19 @@ st1b z0.d, p0, [z0.d, #32]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 31].
 // CHECK-NEXT: st1b z0.d, p0, [z0.d, #32]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p7/z, z6.d
+st1b    { z31.d }, p7, [z31.d, #31]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st1b    { z31.d }, p7, [z31.d, #31]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z31, z6
+st1b    { z31.d }, p7, [z31.d, #31]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: st1b    { z31.d }, p7, [z31.d, #31]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

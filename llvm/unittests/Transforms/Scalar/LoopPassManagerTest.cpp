@@ -308,6 +308,11 @@ public:
     FAM.registerPass([&] { return TargetLibraryAnalysis(); });
     FAM.registerPass([&] { return TargetIRAnalysis(); });
 
+    // Register required pass instrumentation analysis.
+    LAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+    FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+    MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+
     // Cross-register proxies.
     LAM.registerPass([&] { return FunctionAnalysisManagerLoopProxy(FAM); });
     FAM.registerPass([&] { return LoopAnalysisManagerFunctionProxy(LAM); });

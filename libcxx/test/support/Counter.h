@@ -23,7 +23,7 @@ public:
     Counter() : data_()                             { ++gConstructed; }
     Counter(const T &data) : data_(data)            { ++gConstructed; }
     Counter(const Counter& rhs) : data_(rhs.data_)  { ++gConstructed; }
-    Counter& operator=(const Counter& rhs)          { ++gConstructed; data_ = rhs.data_; return *this; }
+    Counter& operator=(const Counter& rhs)          { data_ = rhs.data_; return *this; }
 #if TEST_STD_VER >= 11
     Counter(Counter&& rhs) : data_(std::move(rhs.data_))  { ++gConstructed; }
     Counter& operator=(Counter&& rhs) { ++gConstructed; data_ = std::move(rhs.data_); return *this; }
@@ -49,7 +49,7 @@ struct hash<Counter<T> >
     typedef Counter<T> argument_type;
     typedef std::size_t result_type;
 
-    std::size_t operator()(const Counter<T>& x) const {return std::hash<T>(x.get());}
+    std::size_t operator()(const Counter<T>& x) const {return std::hash<T>()(x.get());}
 };
 }
 

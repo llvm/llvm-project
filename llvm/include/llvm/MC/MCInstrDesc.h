@@ -120,6 +120,7 @@ enum Flag {
   HasOptionalDef,
   Pseudo,
   Return,
+  EHScopeReturn,
   Call,
   Barrier,
   Terminator,
@@ -150,7 +151,8 @@ enum Flag {
   InsertSubreg,
   Convergent,
   Add,
-  Trap
+  Trap,
+  VariadicOpsAreDefs,
 };
 }
 
@@ -381,6 +383,11 @@ public:
   /// Convergent instructions may not be made control-dependent on any
   /// additional values.
   bool isConvergent() const { return Flags & (1ULL << MCID::Convergent); }
+
+  /// Return true if variadic operands of this instruction are definitions.
+  bool variadicOpsAreDefs() const {
+    return Flags & (1ULL << MCID::VariadicOpsAreDefs);
+  }
 
   //===--------------------------------------------------------------------===//
   // Side Effect Analysis

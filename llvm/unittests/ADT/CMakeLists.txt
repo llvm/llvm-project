@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(ADTTests
+  AnyTest.cpp
   APFloatTest.cpp
   APIntTest.cpp
   APSIntTest.cpp
@@ -27,6 +28,7 @@ add_llvm_unittest(ADTTests
   IListNodeTest.cpp
   IListSentinelTest.cpp
   IListTest.cpp
+  ImmutableListTest.cpp
   ImmutableMapTest.cpp
   ImmutableSetTest.cpp
   IntEqClassesTest.cpp

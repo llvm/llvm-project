@@ -97,9 +97,11 @@ else:                                             ; preds = %postinvoke
 }
 
 ; CHECK-LABEL: define void @test3(
-; CHECK:      catchswitch within none
+; CHECK-LABEL: forbody.preheader:
 ; CHECK:      store i32 1, i32* %bc, align 4
 ; CHECK:      store i32 2, i32* %bc2, align 4
+; CHECK:      catchswitch within none
+; CHECK-LABEL: forbody:
 
 declare void @may_throw()
 

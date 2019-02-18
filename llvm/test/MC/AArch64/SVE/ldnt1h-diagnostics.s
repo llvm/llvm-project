@@ -59,3 +59,19 @@ ldnt1h { v0.2d }, p0/z, [x1, #1, MUL VL]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: ldnt1h { v0.2d }, p0/z, [x1, #1, MUL VL]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.h, p0/z, z7.h
+ldnt1h  { z0.h }, p0/z, [x0, x0, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: ldnt1h  { z0.h }, p0/z, [x0, x0, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+ldnt1h  { z0.h }, p0/z, [x0, x0, lsl #1]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: ldnt1h  { z0.h }, p0/z, [x0, x0, lsl #1]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

@@ -24,7 +24,7 @@ static SMap *AsMap(void *m) { return (SMap*) m; }
 
 CFGStmtMap::~CFGStmtMap() { delete AsMap(M); }
 
-CFGBlock *CFGStmtMap::getBlock(Stmt *S) {  
+CFGBlock *CFGStmtMap::getBlock(Stmt *S) {
   SMap *SM = AsMap(M);
   Stmt *X = S;
 
@@ -53,17 +53,17 @@ static void Accumulate(SMap &SM, CFGBlock *B) {
     Optional<CFGStmt> CS = CE.getAs<CFGStmt>();
     if (!CS)
       continue;
-    
+
     CFGBlock *&Entry = SM[CS->getStmt()];
     // If 'Entry' is already initialized (e.g., a terminator was already),
     // skip.
     if (Entry)
       continue;
-      
+
     Entry = B;
-    
+
   }
-  
+
   // Look at the label of the block.
   if (Stmt *Label = B->getLabel())
     SM[Label] = B;
@@ -82,7 +82,7 @@ CFGStmtMap *CFGStmtMap::Build(CFG *C, ParentMap *PM) {
   SMap *SM = new SMap();
 
   // Walk all blocks, accumulating the block-level expressions, labels,
-  // and terminators.  
+  // and terminators.
   for (CFG::iterator I = C->begin(), E = C->end(); I != E; ++I)
     Accumulate(*SM, *I);
 

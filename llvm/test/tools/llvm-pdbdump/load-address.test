@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -externals %p/Inputs/LoadAddressTest.pdb \
 ; RUN:    | FileCheck --check-prefix=RVA %s
 ; RUN: llvm-pdbutil pretty -externals -load-address=0x40000000 \

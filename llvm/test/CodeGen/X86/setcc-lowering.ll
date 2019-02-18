@@ -45,19 +45,17 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; AVX-LABEL: pr26232:
 ; AVX:       # %bb.0: # %allocas
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX-NEXT:    .p2align 4, 0x90
 ; AVX-NEXT:  .LBB1_1: # %for_loop599
 ; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    cmpq $65536, %rdi # imm = 0x10000
 ; AVX-NEXT:    setl %al
-; AVX-NEXT:    vmovd %eax, %xmm3
-; AVX-NEXT:    vpshufb %xmm1, %xmm3, %xmm3
-; AVX-NEXT:    vpand %xmm0, %xmm3, %xmm3
-; AVX-NEXT:    vpsllw $7, %xmm3, %xmm3
-; AVX-NEXT:    vpand %xmm2, %xmm3, %xmm3
-; AVX-NEXT:    vpmovmskb %xmm3, %eax
+; AVX-NEXT:    vmovd %eax, %xmm2
+; AVX-NEXT:    vpshufb %xmm1, %xmm2, %xmm2
+; AVX-NEXT:    vpand %xmm0, %xmm2, %xmm2
+; AVX-NEXT:    vpsllw $7, %xmm2, %xmm2
+; AVX-NEXT:    vpmovmskb %xmm2, %eax
 ; AVX-NEXT:    testw %ax, %ax
 ; AVX-NEXT:    jne .LBB1_1
 ; AVX-NEXT:  # %bb.2: # %for_exit600
@@ -68,7 +66,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    pushl %esi
 ; KNL-32-NEXT:    .cfi_def_cfa_offset 8
 ; KNL-32-NEXT:    .cfi_offset %esi, -8
-; KNL-32-NEXT:    vpmovsxbd %xmm0, %zmm0
+; KNL-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; KNL-32-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-32-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %eax

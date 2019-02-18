@@ -1,4 +1,5 @@
 ; RUN: opt %s -scalarizer -scalarize-load-store -dce -S | FileCheck %s
+; RUN: opt %s -passes='function(scalarizer,dce)' -scalarize-load-store -S | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
 declare <4 x float> @ext(<4 x float>)
@@ -205,17 +206,17 @@ define void @f4(<4 x i32> *%src, <4 x i32> *%dst) {
   ret void
 }
 
-; Check that llvm.mem.parallel_loop_access information is preserved.
+; Check that llvm.access.group information is preserved.
 define void @f5(i32 %count, <4 x i32> *%src, <4 x i32> *%dst) {
 ; CHECK-LABEL: @f5(
-; CHECK: %val.i0 = load i32, i32* %this_src.i0, align 16, !llvm.mem.parallel_loop_access ![[TAG:[0-9]*]]
-; CHECK: %val.i1 = load i32, i32* %this_src.i1, align 4, !llvm.mem.parallel_loop_access ![[TAG]]
-; CHECK: %val.i2 = load i32, i32* %this_src.i2, align 8, !llvm.mem.parallel_loop_access ![[TAG]]
-; CHECK: %val.i3 = load i32, i32* %this_src.i3, align 4, !llvm.mem.parallel_loop_access ![[TAG]]
-; CHECK: store i32 %add.i0, i32* %this_dst.i0, align 16, !llvm.mem.parallel_loop_access ![[TAG]]
-; CHECK: store i32 %add.i1, i32* %this_dst.i1, align 4, !llvm.mem.parallel_loop_access ![[TAG]]
-; CHECK: store i32 %add.i2, i32* %this_dst.i2, align 8, !llvm.mem.parallel_loop_access ![[TAG]]
-; CHECK: store i32 %add.i3, i32* %this_dst.i3, align 4, !llvm.mem.parallel_loop_access ![[TAG]]
+; CHECK: %val.i0 = load i32, i32* %this_src.i0, align 16, !llvm.access.group ![[TAG:[0-9]*]]
+; CHECK: %val.i1 = load i32, i32* %this_src.i1, align 4, !llvm.access.group ![[TAG]]
+; CHECK: %val.i2 = load i32, i32* %this_src.i2, align 8, !llvm.access.group ![[TAG]]
+; CHECK: %val.i3 = load i32, i32* %this_src.i3, align 4, !llvm.access.group ![[TAG]]
+; CHECK: store i32 %add.i0, i32* %this_dst.i0, align 16, !llvm.access.group ![[TAG]]
+; CHECK: store i32 %add.i1, i32* %this_dst.i1, align 4, !llvm.access.group ![[TAG]]
+; CHECK: store i32 %add.i2, i32* %this_dst.i2, align 8, !llvm.access.group ![[TAG]]
+; CHECK: store i32 %add.i3, i32* %this_dst.i3, align 4, !llvm.access.group ![[TAG]]
 ; CHECK: ret void
 entry:
   br label %loop
@@ -224,9 +225,9 @@ loop:
   %index = phi i32 [ 0, %entry ], [ %next_index, %loop ]
   %this_src = getelementptr <4 x i32>, <4 x i32> *%src, i32 %index
   %this_dst = getelementptr <4 x i32>, <4 x i32> *%dst, i32 %index
-  %val = load <4 x i32> , <4 x i32> *%this_src, !llvm.mem.parallel_loop_access !3
+  %val = load <4 x i32> , <4 x i32> *%this_src, !llvm.access.group !13
   %add = add <4 x i32> %val, %val
-  store <4 x i32> %add, <4 x i32> *%this_dst, !llvm.mem.parallel_loop_access !3
+  store <4 x i32> %add, <4 x i32> *%this_dst, !llvm.access.group !13
   %next_index = add i32 %index, -1
   %continue = icmp ne i32 %next_index, %count
   br i1 %continue, label %loop, label %end, !llvm.loop !3
@@ -446,6 +447,7 @@ exit:
 !0 = !{ !"root" }
 !1 = !{ !"set1", !0 }
 !2 = !{ !"set2", !0 }
-!3 = !{ !3 }
+!3 = !{ !3, !{!"llvm.loop.parallel_accesses", !13} }
 !4 = !{ float 4.0 }
 !5 = !{ i64 0, i64 8, null }
+!13 = distinct !{}

@@ -1015,7 +1015,7 @@ StringRef Lexer::getImmediateMacroName(SourceLocation Loc,
 StringRef Lexer::getImmediateMacroNameForDiagnostics(
     SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
   assert(Loc.isMacroID() && "Only reasonable to call this on macros");
-  // Walk past macro argument expanions.
+  // Walk past macro argument expansions.
   while (SM.isMacroArgExpansion(Loc))
     Loc = SM.getImmediateExpansionRange(Loc).getBegin();
 
@@ -1539,8 +1539,17 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
     bool operator<(HomoglyphPair R) const { return Character < R.Character; }
   };
   static constexpr HomoglyphPair SortedHomoglyphs[] = {
+    {U'\u00ad', 0},   // SOFT HYPHEN
     {U'\u01c3', '!'}, // LATIN LETTER RETROFLEX CLICK
     {U'\u037e', ';'}, // GREEK QUESTION MARK
+    {U'\u200b', 0},   // ZERO WIDTH SPACE
+    {U'\u200c', 0},   // ZERO WIDTH NON-JOINER
+    {U'\u200d', 0},   // ZERO WIDTH JOINER
+    {U'\u2060', 0},   // WORD JOINER
+    {U'\u2061', 0},   // FUNCTION APPLICATION
+    {U'\u2062', 0},   // INVISIBLE TIMES
+    {U'\u2063', 0},   // INVISIBLE SEPARATOR
+    {U'\u2064', 0},   // INVISIBLE PLUS
     {U'\u2212', '-'}, // MINUS SIGN
     {U'\u2215', '/'}, // DIVISION SLASH
     {U'\u2216', '\\'}, // SET MINUS
@@ -1550,6 +1559,7 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
     {U'\u2236', ':'}, // RATIO
     {U'\u223c', '~'}, // TILDE OPERATOR
     {U'\ua789', ':'}, // MODIFIER LETTER COLON
+    {U'\ufeff', 0},   // ZERO WIDTH NO-BREAK SPACE
     {U'\uff01', '!'}, // FULLWIDTH EXCLAMATION MARK
     {U'\uff03', '#'}, // FULLWIDTH NUMBER SIGN
     {U'\uff04', '$'}, // FULLWIDTH DOLLAR SIGN
@@ -1589,9 +1599,14 @@ static void maybeDiagnoseUTF8Homoglyph(DiagnosticsEngine &Diags, uint32_t C,
       llvm::raw_svector_ostream CharOS(CharBuf);
       llvm::write_hex(CharOS, C, llvm::HexPrintStyle::Upper, 4);
     }
-    const char LooksLikeStr[] = {Homoglyph->LooksLike, 0};
-    Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_homoglyph)
-        << Range << CharBuf << LooksLikeStr;
+    if (Homoglyph->LooksLike) {
+      const char LooksLikeStr[] = {Homoglyph->LooksLike, 0};
+      Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_homoglyph)
+          << Range << CharBuf << LooksLikeStr;
+    } else {
+      Diags.Report(Range.getBegin(), diag::warn_utf8_symbol_zero_width)
+          << Range << CharBuf;
+    }
   }
 }
 
@@ -1910,6 +1925,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
 /// either " or L" or u8" or u" or U".
 bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
                              tok::TokenKind Kind) {
+  const char *AfterQuote = CurPtr;
   // Does this string contain the \0 character?
   const char *NulCharacter = nullptr;
 
@@ -1938,8 +1954,11 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
 
     if (C == 0) {
       if (isCodeCompletionPoint(CurPtr-1)) {
-        PP->CodeCompleteNaturalLanguage();
-        FormTokenWithChars(Result, CurPtr-1, tok::unknown);
+        if (ParsingFilename)
+          codeCompleteIncludedFile(AfterQuote, CurPtr - 1, /*IsAngled=*/false);
+        else
+          PP->CodeCompleteNaturalLanguage();
+        FormTokenWithChars(Result, CurPtr - 1, tok::unknown);
         cutOffLexing();
         return true;
       }
@@ -2057,9 +2076,8 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
     if (C == '\\')
       C = getAndAdvanceChar(CurPtr, Result);
 
-    if (C == '\n' || C == '\r' ||             // Newline.
-        (C == 0 && (CurPtr-1 == BufferEnd ||  // End of file.
-                    isCodeCompletionPoint(CurPtr-1)))) {
+    if (C == '\n' || C == '\r' ||                // Newline.
+        (C == 0 && (CurPtr - 1 == BufferEnd))) { // End of file.
       // If the filename is unterminated, then it must just be a lone <
       // character.  Return this as such.
       FormTokenWithChars(Result, AfterLessPos, tok::less);
@@ -2067,6 +2085,12 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
     }
 
     if (C == 0) {
+      if (isCodeCompletionPoint(CurPtr - 1)) {
+        codeCompleteIncludedFile(AfterLessPos, CurPtr - 1, /*IsAngled=*/true);
+        cutOffLexing();
+        FormTokenWithChars(Result, CurPtr - 1, tok::unknown);
+        return true;
+      }
       NulCharacter = CurPtr-1;
     }
     C = getAndAdvanceChar(CurPtr, Result);
@@ -2081,6 +2105,34 @@ bool Lexer::LexAngledStringLiteral(Token &Result, const char *CurPtr) {
   FormTokenWithChars(Result, CurPtr, tok::angle_string_literal);
   Result.setLiteralData(TokStart);
   return true;
+}
+
+void Lexer::codeCompleteIncludedFile(const char *PathStart,
+                                     const char *CompletionPoint,
+                                     bool IsAngled) {
+  // Completion only applies to the filename, after the last slash.
+  StringRef PartialPath(PathStart, CompletionPoint - PathStart);
+  auto Slash = PartialPath.find_last_of(LangOpts.MSVCCompat ? "/\\" : "/");
+  StringRef Dir =
+      (Slash == StringRef::npos) ? "" : PartialPath.take_front(Slash);
+  const char *StartOfFilename =
+      (Slash == StringRef::npos) ? PathStart : PathStart + Slash + 1;
+  // Code completion filter range is the filename only, up to completion point.
+  PP->setCodeCompletionIdentifierInfo(&PP->getIdentifierTable().get(
+      StringRef(StartOfFilename, CompletionPoint - StartOfFilename)));
+  // We should replace the characters up to the closing quote, if any.
+  while (CompletionPoint < BufferEnd) {
+    char Next = *(CompletionPoint + 1);
+    if (Next == 0 || Next == '\r' || Next == '\n')
+      break;
+    ++CompletionPoint;
+    if (Next == (IsAngled ? '>' : '"'))
+      break;
+  }
+  PP->setCodeCompletionTokenRange(
+      FileLoc.getLocWithOffset(StartOfFilename - BufferStart),
+      FileLoc.getLocWithOffset(CompletionPoint - BufferStart));
+  PP->CodeCompleteIncludedFile(Dir, IsAngled);
 }
 
 /// LexCharConstant - Lex the remainder of a character constant, after having
@@ -3062,6 +3114,8 @@ bool Lexer::LexUnicode(Token &Result, uint32_t C, const char *CurPtr) {
       maybeDiagnoseIDCharCompat(PP->getDiagnostics(), C,
                                 makeCharRange(*this, BufferPtr, CurPtr),
                                 /*IsFirst=*/true);
+      maybeDiagnoseUTF8Homoglyph(PP->getDiagnostics(), C,
+                                 makeCharRange(*this, BufferPtr, CurPtr));
     }
 
     MIOpt.ReadToken();
@@ -3819,7 +3873,7 @@ LexNextToken:
 
   case '@':
     // Objective C support.
-    if (CurPtr[-1] == '@' && LangOpts.ObjC1)
+    if (CurPtr[-1] == '@' && LangOpts.ObjC)
       Kind = tok::at;
     else
       Kind = tok::unknown;
@@ -3856,7 +3910,6 @@ LexNextToken:
     // We can't just reset CurPtr to BufferPtr because BufferPtr may point to
     // an escaped newline.
     --CurPtr;
-    const char *UTF8StartPtr = CurPtr;
     llvm::ConversionResult Status =
         llvm::convertUTF8Sequence((const llvm::UTF8 **)&CurPtr,
                                   (const llvm::UTF8 *)BufferEnd,
@@ -3871,9 +3924,6 @@ LexNextToken:
         // (We manually eliminate the tail call to avoid recursion.)
         goto LexNextToken;
       }
-      if (!isLexingRawMode())
-        maybeDiagnoseUTF8Homoglyph(PP->getDiagnostics(), CodePoint,
-                                   makeCharRange(*this, UTF8StartPtr, CurPtr));
       return LexUnicode(Result, CodePoint, CurPtr);
     }
 

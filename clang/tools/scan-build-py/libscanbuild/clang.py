@@ -156,12 +156,12 @@ def get_checkers(clang, plugins):
     return checkers
 
 
-def is_ctu_capable(func_map_cmd):
-    """ Detects if the current (or given) clang and function mapping
+def is_ctu_capable(extdef_map_cmd):
+    """ Detects if the current (or given) clang and external definition mapping
     executables are CTU compatible. """
 
     try:
-        run_command([func_map_cmd, '-version'])
+        run_command([extdef_map_cmd, '-version'])
     except (OSError, subprocess.CalledProcessError):
         return False
     return True

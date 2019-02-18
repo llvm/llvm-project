@@ -48,6 +48,7 @@ struct SizeClassAllocator32FlagMasks {  //  Bit masks.
 template <class Params>
 class SizeClassAllocator32 {
  public:
+  using AddressSpaceView = typename Params::AddressSpaceView;
   static const uptr kSpaceBeg = Params::kSpaceBeg;
   static const u64 kSpaceSize = Params::kSpaceSize;
   static const uptr kMetadataSize = Params::kMetadataSize;
@@ -55,6 +56,10 @@ class SizeClassAllocator32 {
   static const uptr kRegionSizeLog = Params::kRegionSizeLog;
   typedef typename Params::ByteMap ByteMap;
   typedef typename Params::MapUnmapCallback MapUnmapCallback;
+
+  static_assert(
+      is_same<typename ByteMap::AddressSpaceView, AddressSpaceView>::value,
+      "AddressSpaceView type mismatch");
 
   static const bool kRandomShuffleChunks = Params::kFlags &
       SizeClassAllocator32FlagMasks::kRandomShuffleChunks;

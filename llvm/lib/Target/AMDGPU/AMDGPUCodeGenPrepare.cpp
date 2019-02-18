@@ -17,7 +17,8 @@
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Analysis/DivergenceAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
@@ -58,10 +59,10 @@ static cl::opt<bool> WidenLoads(
 class AMDGPUCodeGenPrepare : public FunctionPass,
                              public InstVisitor<AMDGPUCodeGenPrepare, bool> {
   const GCNSubtarget *ST = nullptr;
-  DivergenceAnalysis *DA = nullptr;
+  AssumptionCache *AC = nullptr;
+  LegacyDivergenceAnalysis *DA = nullptr;
   Module *Mod = nullptr;
   bool HasUnsafeFPMath = false;
-  AMDGPUAS AMDGPUASI;
 
   /// Copies exact/nsw/nuw flags (if any) from binary operation \p I to
   /// binary operation \p V.
@@ -134,11 +135,12 @@ class AMDGPUCodeGenPrepare : public FunctionPass,
   bool promoteUniformBitreverseToI32(IntrinsicInst &I) const;
 
   /// Expands 24 bit div or rem.
-  Value* expandDivRem24(IRBuilder<> &Builder, Value *Num, Value *Den,
+  Value* expandDivRem24(IRBuilder<> &Builder, BinaryOperator &I,
+                        Value *Num, Value *Den,
                         bool IsDiv, bool IsSigned) const;
 
   /// Expands 32 bit div or rem.
-  Value* expandDivRem32(IRBuilder<> &Builder, Instruction::BinaryOps Opc,
+  Value* expandDivRem32(IRBuilder<> &Builder, BinaryOperator &I,
                         Value *Num, Value *Den) const;
 
   /// Widen a scalar load.
@@ -173,7 +175,8 @@ public:
   StringRef getPassName() const override { return "AMDGPU IR optimizations"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DivergenceAnalysis>();
+    AU.addRequired<AssumptionCacheTracker>();
+    AU.addRequired<LegacyDivergenceAnalysis>();
     AU.setPreservesAll();
  }
 };
@@ -500,16 +503,17 @@ static Value* getMulHu(IRBuilder<> &Builder, Value *LHS, Value *RHS) {
 // The fractional part of a float is enough to accurately represent up to
 // a 24-bit signed integer.
 Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
+                                            BinaryOperator &I,
                                             Value *Num, Value *Den,
                                             bool IsDiv, bool IsSigned) const {
   assert(Num->getType()->isIntegerTy(32));
 
   const DataLayout &DL = Mod->getDataLayout();
-  unsigned LHSSignBits = ComputeNumSignBits(Num, DL);
+  unsigned LHSSignBits = ComputeNumSignBits(Num, DL, 0, AC, &I);
   if (LHSSignBits < 9)
     return nullptr;
 
-  unsigned RHSSignBits = ComputeNumSignBits(Den, DL);
+  unsigned RHSSignBits = ComputeNumSignBits(Den, DL, 0, AC, &I);
   if (RHSSignBits < 9)
     return nullptr;
 
@@ -554,7 +558,7 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
-  CallInst* FQ = Builder.CreateIntrinsic(Intrinsic::trunc, { FQM });
+  CallInst *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
   FQ->copyFastMathFlags(Builder.getFastMathFlags());
 
   // float fqneg = -fq;
@@ -562,17 +566,17 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
 
   // float fr = mad(fqneg, fb, fa);
   Value *FR = Builder.CreateIntrinsic(Intrinsic::amdgcn_fmad_ftz,
-                                      { FQNeg, FB, FA }, FQ);
+                                      {FQNeg->getType()}, {FQNeg, FB, FA}, FQ);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
   // fr = fabs(fr);
-  FR = Builder.CreateIntrinsic(Intrinsic::fabs, { FR }, FQ);
+  FR = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FR, FQ);
 
   // fb = fabs(fb);
-  FB = Builder.CreateIntrinsic(Intrinsic::fabs, { FB }, FQ);
+  FB = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, FB, FQ);
 
   // int cv = fr >= fb;
   Value *CV = Builder.CreateFCmpOGE(FR, FB);
@@ -603,8 +607,9 @@ Value* AMDGPUCodeGenPrepare::expandDivRem24(IRBuilder<> &Builder,
 }
 
 Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
-                                            Instruction::BinaryOps Opc,
+                                            BinaryOperator &I,
                                             Value *Num, Value *Den) const {
+  Instruction::BinaryOps Opc = I.getOpcode();
   assert(Opc == Instruction::URem || Opc == Instruction::UDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SDiv);
 
@@ -632,7 +637,7 @@ Value* AMDGPUCodeGenPrepare::expandDivRem32(IRBuilder<> &Builder,
     }
   }
 
-  if (Value *Res = expandDivRem24(Builder, Num, Den, IsDiv, IsSigned)) {
+  if (Value *Res = expandDivRem24(Builder, I, Num, Den, IsDiv, IsSigned)) {
     Res = Builder.CreateTrunc(Res, Ty);
     return Res;
   }
@@ -767,16 +772,16 @@ bool AMDGPUCodeGenPrepare::visitBinaryOperator(BinaryOperator &I) {
     if (VectorType *VT = dyn_cast<VectorType>(Ty)) {
       NewDiv = UndefValue::get(VT);
 
-      for (unsigned I = 0, E = VT->getNumElements(); I != E; ++I) {
-        Value *NumEltI = Builder.CreateExtractElement(Num, I);
-        Value *DenEltI = Builder.CreateExtractElement(Den, I);
-        Value *NewElt = expandDivRem32(Builder, Opc, NumEltI, DenEltI);
+      for (unsigned N = 0, E = VT->getNumElements(); N != E; ++N) {
+        Value *NumEltN = Builder.CreateExtractElement(Num, N);
+        Value *DenEltN = Builder.CreateExtractElement(Den, N);
+        Value *NewElt = expandDivRem32(Builder, I, NumEltN, DenEltN);
         if (!NewElt)
-          NewElt = Builder.CreateBinOp(Opc, NumEltI, DenEltI);
-        NewDiv = Builder.CreateInsertElement(NewDiv, NewElt, I);
+          NewElt = Builder.CreateBinOp(Opc, NumEltN, DenEltN);
+        NewDiv = Builder.CreateInsertElement(NewDiv, NewElt, N);
       }
     } else {
-      NewDiv = expandDivRem32(Builder, Opc, Num, Den);
+      NewDiv = expandDivRem32(Builder, I, Num, Den);
     }
 
     if (NewDiv) {
@@ -793,8 +798,8 @@ bool AMDGPUCodeGenPrepare::visitLoadInst(LoadInst &I) {
   if (!WidenLoads)
     return false;
 
-  if ((I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS ||
-       I.getPointerAddressSpace() == AMDGPUASI.CONSTANT_ADDRESS_32BIT) &&
+  if ((I.getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+       I.getPointerAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
       canWidenScalarExtLoad(I)) {
     IRBuilder<> Builder(&I);
     Builder.SetCurrentDebugLocation(I.getDebugLoc());
@@ -891,9 +896,9 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 
   const AMDGPUTargetMachine &TM = TPC->getTM<AMDGPUTargetMachine>();
   ST = &TM.getSubtarget<GCNSubtarget>(F);
-  DA = &getAnalysis<DivergenceAnalysis>();
+  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+  DA = &getAnalysis<LegacyDivergenceAnalysis>();
   HasUnsafeFPMath = hasUnsafeFPMath(F);
-  AMDGPUASI = TM.getAMDGPUAS();
 
   bool MadeChange = false;
 
@@ -910,7 +915,8 @@ bool AMDGPUCodeGenPrepare::runOnFunction(Function &F) {
 
 INITIALIZE_PASS_BEGIN(AMDGPUCodeGenPrepare, DEBUG_TYPE,
                       "AMDGPU IR optimizations", false, false)
-INITIALIZE_PASS_DEPENDENCY(DivergenceAnalysis)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
 INITIALIZE_PASS_END(AMDGPUCodeGenPrepare, DEBUG_TYPE, "AMDGPU IR optimizations",
                     false, false)
 

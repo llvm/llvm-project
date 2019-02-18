@@ -1,5 +1,5 @@
 ; ModuleID = 'bugpoint-reduced-instructions.bc'
-; RUN: llc -O2 -o - %s | FileCheck %s
+; RUN: llc -O2 -o - %s -verify-machineinstrs | FileCheck %s
 source_filename = "bugpoint-output-9ad75f8.bc"
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"

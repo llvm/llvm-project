@@ -13,7 +13,7 @@
 // CHECK-ERROR-NEXT:        ^
 
         pmull v0.1q, v1.1d, v2.1d
-// CHECK-ERROR: error: instruction requires: crypto
+// CHECK-ERROR: error: instruction requires: aes
 // CHECK-ERROR-NEXT:        pmull v0.1q, v1.1d, v2.1d
 // CHECK-ERROR-NEXT:        ^
 

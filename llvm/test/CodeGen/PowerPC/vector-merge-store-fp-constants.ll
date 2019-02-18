@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs -mtriple=ppc64-apple-darwin < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s
 
-; CHECK-LABEL: {{^}}_merge_8_float_zero_stores:
-; CHECK: li [[ZEROREG:r[0-9]+]], 0
-; CHECK-DAG: std [[ZEROREG]], 0([[PTR:r[0-9]+]])
+; CHECK-LABEL: {{^}}merge_8_float_zero_stores:
+; CHECK: li [[ZEROREG:[0-9]+]], 0
+; CHECK-DAG: std [[ZEROREG]], 0([[PTR:[0-9]+]])
 ; CHECK-DAG: std [[ZEROREG]], 8([[PTR]])
 ; CHECK-DAG: std [[ZEROREG]], 16([[PTR]])
 ; CHECK-DAG: std [[ZEROREG]], 24([[PTR]])

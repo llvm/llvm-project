@@ -13,20 +13,20 @@
 ; CHECK: }{{[ \t]*}}:endloop0
 
 ; Function Attrs: nounwind
-define void @f0(i32 %a0, i32 %a1) local_unnamed_addr #0 {
+define void @f0(i32 %a0, i32 %a1, i8* %a2, <16 x i32>* %a3) #0 {
 b0:
   %v0 = shl nsw i32 %a0, 1
   %v1 = sub i32 0, %v0
   %v2 = sub i32 0, %a0
-  %v3 = getelementptr inbounds i8, i8* undef, i32 %v1
-  %v4 = getelementptr inbounds i8, i8* undef, i32 %v2
-  %v5 = getelementptr inbounds i8, i8* undef, i32 %a0
-  %v6 = getelementptr inbounds i8, i8* undef, i32 %v0
+  %v3 = getelementptr inbounds i8, i8* %a2, i32 %v1
+  %v4 = getelementptr inbounds i8, i8* %a2, i32 %v2
+  %v5 = getelementptr inbounds i8, i8* %a2, i32 %a0
+  %v6 = getelementptr inbounds i8, i8* %a2, i32 %v0
   %v7 = getelementptr inbounds i8, i8* %v6, i32 64
   %v8 = bitcast i8* %v7 to <16 x i32>*
   %v9 = getelementptr inbounds i8, i8* %v5, i32 64
   %v10 = bitcast i8* %v9 to <16 x i32>*
-  %v11 = getelementptr inbounds i8, i8* undef, i32 64
+  %v11 = getelementptr inbounds i8, i8* %a2, i32 64
   %v12 = bitcast i8* %v11 to <16 x i32>*
   %v13 = getelementptr inbounds i8, i8* %v4, i32 64
   %v14 = bitcast i8* %v13 to <16 x i32>*
@@ -35,7 +35,7 @@ b0:
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
-  %v17 = phi <16 x i32>* [ %v59, %b1 ], [ undef, %b0 ]
+  %v17 = phi <16 x i32>* [ %v59, %b1 ], [ %a3, %b0 ]
   %v18 = phi <16 x i32>* [ %v34, %b1 ], [ %v8, %b0 ]
   %v19 = phi <16 x i32>* [ %v32, %b1 ], [ %v10, %b0 ]
   %v20 = phi <16 x i32>* [ %v30, %b1 ], [ %v12, %b0 ]

@@ -158,6 +158,15 @@ else()
         VERBATIM)
     elseif(arch STREQUAL "aarch64")
       add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_aarch64.S)
+      # Sanity check for Go runtime.
+      set(BUILDGO_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/go/buildgo.sh)
+      add_custom_target(GotsanRuntimeCheck
+	COMMAND env "CC=${CMAKE_C_COMPILER} ${CMAKE_C_COMPILER_ARG1}"
+		IN_TMPDIR=1 SILENT=1 ${BUILDGO_SCRIPT}
+	DEPENDS clang_rt.tsan-${arch} ${BUILDGO_SCRIPT}
+	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/go
+	COMMENT "Checking TSan Go runtime..."
+	VERBATIM)
     elseif(arch MATCHES "powerpc64|powerpc64le")
       add_asm_sources(TSAN_ASM_SOURCES rtl/tsan_rtl_ppc64.S)
       # Sanity check for Go runtime.
@@ -211,11 +220,12 @@ else()
 endif()
 
 # Make sure that non-platform-specific files don't include any system headers.
-# FreeBSD does not install a number of Clang-provided headers for the compiler
-# in the base system due to incompatibilities between FreeBSD's and Clang's
-# versions. As a workaround do not use --sysroot=. on FreeBSD until this is
-# addressed.
-if(COMPILER_RT_HAS_SYSROOT_FLAG AND NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
+# FreeBSD/NetBSD do not install a number of Clang-provided headers for the
+# compiler in the base system due to incompatibilities between FreeBSD/NetBSD's
+# and Clang's versions. As a workaround do not use --sysroot=. on FreeBSD/NetBSD
+# until this is addressed.
+if(COMPILER_RT_HAS_SYSROOT_FLAG AND NOT CMAKE_SYSTEM_NAME MATCHES "FreeBSD"
+   AND NOT CMAKE_SYSTEM_NAME MATCHES "NetBSD")
   file(GLOB _tsan_generic_sources rtl/tsan*)
   file(GLOB _tsan_platform_sources rtl/tsan*posix* rtl/tsan*mac*
                                    rtl/tsan*linux*)

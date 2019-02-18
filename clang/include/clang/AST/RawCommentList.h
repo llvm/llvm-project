@@ -101,8 +101,8 @@ public:
   }
 
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
   const char *getBriefText(const ASTContext &Context) const {
     if (BriefTextValid)
@@ -180,7 +180,7 @@ public:
   explicit BeforeThanCompare(const SourceManager &SM) : SM(SM) { }
 
   bool operator()(const RawComment &LHS, const RawComment &RHS) {
-    return SM.isBeforeInTranslationUnit(LHS.getLocStart(), RHS.getLocStart());
+    return SM.isBeforeInTranslationUnit(LHS.getBeginLoc(), RHS.getBeginLoc());
   }
 
   bool operator()(const RawComment *LHS, const RawComment *RHS) {

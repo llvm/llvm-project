@@ -16,12 +16,11 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/MemoryBufferCache.h"
-#include "clang/Basic/VirtualFileSystem.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/Module.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -33,6 +32,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -150,7 +150,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
 
   if (NewModule->Kind == MK_ImplicitModule) {
     std::string TimestampFilename = NewModule->getTimestampFilename();
-    vfs::Status Status;
+    llvm::vfs::Status Status;
     // A cached stat value would be fine as well.
     if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))
       NewModule->InputFilesValidationTimestamp =
@@ -161,21 +161,28 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
     NewModule->Buffer = &PCMCache->addBuffer(FileName, std::move(Buffer));
+    // Since the cached buffer is reused, it is safe to close the file
+    // descriptor that was opened while stat()ing the PCM in
+    // lookupModuleFile() above, it won't be needed any longer.
+    Entry->closeFile();
   } else if (llvm::MemoryBuffer *Buffer = PCMCache->lookupBuffer(FileName)) {
     NewModule->Buffer = Buffer;
+    // As above, the file descriptor is no longer needed.
+    Entry->closeFile();
   } else {
     // Open the AST file.
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf((std::error_code()));
     if (FileName == "-") {
       Buf = llvm::MemoryBuffer::getSTDIN();
     } else {
-      // Leave the FileEntry open so if it gets read again by another
-      // ModuleManager it must be the same underlying file.
-      // FIXME: Because FileManager::getFile() doesn't guarantee that it will
-      // give us an open file, this may not be 100% reliable.
+      // Get a buffer of the file and close the file descriptor when done. Use
+      // IsVolatile=true since PCMs with same signature can have different sizes
+      // due to different content in the unhashed control block (e.g. diagnostic
+      // options). Tha said, concurrent creation & access of the same PCM
+      // filename can lead to reading past the buffer size otherwise.
       Buf = FileMgr.getBufferForFile(NewModule->File,
-                                     /*IsVolatile=*/false,
-                                     /*ShouldClose=*/false);
+                                     /*IsVolatile=*/true,
+                                     /*ShouldClose=*/true);
     }
 
     if (!Buf) {
@@ -340,7 +347,7 @@ void ModuleManager::visit(llvm::function_ref<bool(ModuleFile &M)> Visitor,
     unsigned N = size();
     VisitOrder.clear();
     VisitOrder.reserve(N);
-    
+
     // Record the number of incoming edges for each module. When we
     // encounter a module with no incoming edges, push it into the queue
     // to seed the queue.
@@ -477,21 +484,21 @@ namespace llvm {
     static ChildIteratorType child_end(NodeRef Node) {
       return Node->Imports.end();
     }
-    
+
     static nodes_iterator nodes_begin(const ModuleManager &Manager) {
       return nodes_iterator(Manager.begin());
     }
-    
+
     static nodes_iterator nodes_end(const ModuleManager &Manager) {
       return nodes_iterator(Manager.end());
     }
   };
-  
+
   template<>
   struct DOTGraphTraits<ModuleManager> : public DefaultDOTGraphTraits {
     explicit DOTGraphTraits(bool IsSimple = false)
         : DefaultDOTGraphTraits(IsSimple) {}
-    
+
     static bool renderGraphFromBottomUp() { return true; }
 
     std::string getNodeLabel(ModuleFile *M, const ModuleManager&) {

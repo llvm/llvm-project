@@ -11,7 +11,7 @@
 // 'CFDictionary', 'CFSet' APIs.
 //
 //===----------------------------------------------------------------------===//
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
@@ -171,4 +171,8 @@ public:
 
 void ento::registerObjCContainersASTChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersASTChecker>();
+}
+
+bool ento::shouldRegisterObjCContainersASTChecker(const LangOptions &LO) {
+  return true;
 }

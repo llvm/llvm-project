@@ -11,7 +11,7 @@ The check implements the following rule of the
   You may not use a using-directive to make all names from a namespace
   available.
 
-  .. code-block:: c++
+.. code-block:: c++
 
     // Forbidden -- This pollutes the namespace.
     using namespace foo;

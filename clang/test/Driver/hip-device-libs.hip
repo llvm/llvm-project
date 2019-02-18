@@ -21,7 +21,8 @@
 
 
 // COM: [[LLVM_LINK:"*.llvm-link"]]
-// COM-SAME: {{.*}} "{{.*}}ocml.amdgcn.bc" "{{.*}}ockl.amdgcn.bc" "{{.*}}irif.amdgcn.bc"
+// COM-SAME: "{{.*}}hip.amdgcn.bc" "{{.*}}opencl.amdgcn.bc"
+// COM-SAME: "{{.*}}ocml.amdgcn.bc" "{{.*}}ockl.amdgcn.bc"
 // FLUSHD-SAME: {{.*}} "{{.*}}oclc_daz_opt_on.amdgcn.bc"
 // NOFLUSHD-SAME: {{.*}} "{{.*}}oclc_daz_opt_off.amdgcn.bc"
 // COM-SAME: {{.*}} "-o" "{{.*}}-gfx900-linked-{{.*bc}}"

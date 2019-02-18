@@ -25,6 +25,13 @@ namespace llvm {
 // GraphTraits - This class should be specialized by different graph types...
 // which is why the default version is empty.
 //
+// This template evolved from supporting `BasicBlock` to also later supporting
+// more complex types (e.g. CFG and DomTree).
+//
+// GraphTraits can be used to create a view over a graph interpreting it
+// differently without requiring a copy of the original graph. This could
+// be achieved by carrying more data in NodeRef. See LoopBodyTraits for one
+// example.
 template<class GraphType>
 struct GraphTraits {
   // Elements to provide:

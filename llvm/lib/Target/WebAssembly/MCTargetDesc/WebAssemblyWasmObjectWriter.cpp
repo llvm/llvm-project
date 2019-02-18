@@ -81,16 +81,23 @@ static const MCSection *GetFixupSection(const MCExpr *Expr) {
   return nullptr;
 }
 
-unsigned
-WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
-                                          const MCFixup &Fixup) const {
+static bool IsGlobalType(const MCValue &Target) {
+  const MCSymbolRefExpr *RefA = Target.getSymA();
+  return RefA && RefA->getKind() == MCSymbolRefExpr::VK_WebAssembly_GLOBAL;
+}
+
+static bool IsEventType(const MCValue &Target) {
+  const MCSymbolRefExpr *RefA = Target.getSymA();
+  return RefA && RefA->getKind() == MCSymbolRefExpr::VK_WebAssembly_EVENT;
+}
+
+unsigned WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
+                                                   const MCFixup &Fixup) const {
   // WebAssembly functions are not allocated in the data address space. To
   // resolve a pointer to a function, we must use a special relocation type.
   bool IsFunction = IsFunctionExpr(Fixup.getValue());
 
   switch (unsigned(Fixup.getKind())) {
-  case WebAssembly::fixup_code_global_index:
-    return wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB;
   case WebAssembly::fixup_code_sleb128_i32:
     if (IsFunction)
       return wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB;
@@ -98,10 +105,14 @@ WebAssemblyWasmObjectWriter::getRelocType(const MCValue &Target,
   case WebAssembly::fixup_code_sleb128_i64:
     llvm_unreachable("fixup_sleb128_i64 not implemented yet");
   case WebAssembly::fixup_code_uleb128_i32:
+    if (IsGlobalType(Target))
+      return wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB;
     if (IsFunctionType(Target))
       return wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB;
     if (IsFunction)
       return wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB;
+    if (IsEventType(Target))
+      return wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB;
     return wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB;
   case FK_Data_4:
     if (IsFunction)

@@ -12,3 +12,10 @@ int _php_stream_free1() {
 int _php_stream_free2() {
   return (1 ? _efree(0) : free(0));  // expected-error {{returning 'void' from a function with incompatible result type 'int'}}
 }
+
+void pr39809() {
+  _Generic(0 ? (int const *)0 : (void *)0, int const *: (void)0);
+  _Generic(0 ? (int const *)0 : (void *)1, void const *: (void)0);
+  _Generic(0 ? (int volatile*)0 : (void const*)1, void volatile const*: (void)0);
+  _Generic(0 ? (int volatile*)0 : (void const*)0, void volatile const*: (void)0);
+}

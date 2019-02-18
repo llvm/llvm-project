@@ -12,12 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/XRay/InstrumentationMap.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
@@ -46,19 +48,21 @@ Optional<uint64_t> InstrumentationMap::getFunctionAddr(int32_t FuncId) const {
   return None;
 }
 
+using RelocMap = DenseMap<uint64_t, uint64_t>;
+
 static Error
-loadELF64(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
+loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
           InstrumentationMap::SledContainer &Sleds,
           InstrumentationMap::FunctionAddressMap &FunctionAddresses,
           InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
   InstrumentationMap Map;
 
   // Find the section named "xray_instr_map".
-  if (!ObjFile.getBinary()->isELF() ||
+  if ((!ObjFile.getBinary()->isELF() && !ObjFile.getBinary()->isMachO()) ||
       !(ObjFile.getBinary()->getArch() == Triple::x86_64 ||
         ObjFile.getBinary()->getArch() == Triple::ppc64le))
     return make_error<StringError>(
-        "File format not supported (only does ELF little endian 64-bit).",
+        "File format not supported (only does ELF and Mach-O little endian 64-bit).",
         std::make_error_code(std::errc::not_supported));
 
   StringRef Contents = "";
@@ -79,6 +83,31 @@ loadELF64(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
     return errorCodeToError(
         std::make_error_code(std::errc::executable_format_error));
 
+  RelocMap Relocs;
+  if (ObjFile.getBinary()->isELF()) {
+    uint32_t RelativeRelocation = [](object::ObjectFile *ObjFile) {
+      if (const auto *ELFObj = dyn_cast<object::ELF32LEObjectFile>(ObjFile))
+        return ELFObj->getELFFile()->getRelativeRelocationType();
+      else if (const auto *ELFObj = dyn_cast<object::ELF32BEObjectFile>(ObjFile))
+        return ELFObj->getELFFile()->getRelativeRelocationType();
+      else if (const auto *ELFObj = dyn_cast<object::ELF64LEObjectFile>(ObjFile))
+        return ELFObj->getELFFile()->getRelativeRelocationType();
+      else if (const auto *ELFObj = dyn_cast<object::ELF64BEObjectFile>(ObjFile))
+        return ELFObj->getELFFile()->getRelativeRelocationType();
+      else
+        return static_cast<uint32_t>(0);
+    }(ObjFile.getBinary());
+
+    for (const object::SectionRef &Section : Sections) {
+      for (const object::RelocationRef &Reloc : Section.relocations()) {
+        if (Reloc.getType() != RelativeRelocation)
+          continue;
+        if (auto AddendOrErr = object::ELFRelocationRef(Reloc).getAddend())
+          Relocs.insert({Reloc.getOffset(), *AddendOrErr});
+      }
+    }
+  }
+
   // Copy the instrumentation map data into the Sleds data structure.
   auto C = Contents.bytes_begin();
   static constexpr size_t ELF64SledEntrySize = 32;
@@ -89,6 +118,16 @@ loadELF64(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
               "an XRay sled entry in ELF64."),
         std::make_error_code(std::errc::executable_format_error));
 
+  auto RelocateOrElse = [&](uint32_t Offset, uint64_t Address) {
+    if (!Address) {
+      uint64_t A = I->getAddress() + C - Contents.bytes_begin() + Offset;
+      RelocMap::const_iterator R = Relocs.find(A);
+      if (R != Relocs.end())
+        return R->second;
+    }
+    return Address;
+  };
+
   int32_t FuncId = 1;
   uint64_t CurFn = 0;
   for (; C != Contents.bytes_end(); C += ELF64SledEntrySize) {
@@ -98,8 +137,10 @@ loadELF64(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
     Sleds.push_back({});
     auto &Entry = Sleds.back();
     uint32_t OffsetPtr = 0;
-    Entry.Address = Extractor.getU64(&OffsetPtr);
-    Entry.Function = Extractor.getU64(&OffsetPtr);
+    uint32_t AddrOff = OffsetPtr;
+    Entry.Address = RelocateOrElse(AddrOff, Extractor.getU64(&OffsetPtr));
+    uint32_t FuncOff = OffsetPtr;
+    Entry.Function = RelocateOrElse(FuncOff, Extractor.getU64(&OffsetPtr));
     auto Kind = Extractor.getU8(&OffsetPtr);
     static constexpr SledEntry::FunctionKinds Kinds[] = {
         SledEntry::FunctionKinds::ENTRY, SledEntry::FunctionKinds::EXIT,
@@ -191,7 +232,7 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
     if (auto E = loadYAML(Fd, FileSize, Filename, Map.Sleds,
                           Map.FunctionAddresses, Map.FunctionIds))
       return std::move(E);
-  } else if (auto E = loadELF64(Filename, *ObjectFileOrError, Map.Sleds,
+  } else if (auto E = loadObj(Filename, *ObjectFileOrError, Map.Sleds,
                                 Map.FunctionAddresses, Map.FunctionIds)) {
     return std::move(E);
   }

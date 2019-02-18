@@ -4,8 +4,9 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 -mcpu=bdver4 | FileCheck %s -check-prefix=WIN64
 
 ; CHECK-LABEL: foo:
-; CHECK: leaq    (%rdi), %rax
-; CHECK-NEXT: movl    %esi, %ecx
+; CHECK-LABEL: # %bb.0:
+; CHECK-DAG: leaq    (%rdi), %rax
+; CHECK-DAG: movl    %esi, %ecx
 ; CHECK-NEXT: monitorx
 ; WIN64-LABEL: foo:
 ; WIN64:      leaq    (%rcx), %rax
@@ -21,13 +22,15 @@ entry:
 declare void @llvm.x86.monitorx(i8*, i32, i32) nounwind
 
 ; CHECK-LABEL: bar:
-; CHECK: movl    %edi, %ecx
-; CHECK-NEXT: movl    %esi, %eax
-; CHECK-NEXT: movl    %edx, %ebx
+; CHECK: pushq
+; CHECK-DAG: movl    %edi, %ecx
+; CHECK-DAG: movl    %esi, %eax
+; CHECK-DAG: movl    %edx, %ebx
 ; CHECK-NEXT: mwaitx
 ; WIN64-LABEL: bar:
-; WIN64:      movl    %edx, %eax
-; WIN64:      movl    %r8d, %ebx
+; WIN64: pushq
+; WIN64-DAG:      movl    %edx, %eax
+; WIN64-DAG:      movl    %r8d, %ebx
 ; WIN64-NEXT: mwaitx
 define void @bar(i32 %E, i32 %H, i32 %C) nounwind {
 entry:

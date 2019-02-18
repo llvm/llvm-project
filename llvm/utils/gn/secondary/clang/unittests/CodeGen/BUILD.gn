@@ -1,0 +1,21 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("ClangCodeGenTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/CodeGen",
+    "//clang/lib/Frontend",
+    "//clang/lib/Lex",
+    "//clang/lib/Parse",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "BufferSourceTest.cpp",
+    "CodeGenExternalTest.cpp",
+    "IncrementalProcessingTest.cpp",
+    "TBAAMetadataTest.cpp",
+  ]
+}

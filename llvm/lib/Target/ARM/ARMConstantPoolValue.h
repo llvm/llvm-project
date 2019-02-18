@@ -113,7 +113,7 @@ public:
   bool isLSDA() const { return Kind == ARMCP::CPLSDA; }
   bool isMachineBasicBlock() const{ return Kind == ARMCP::CPMachineBasicBlock; }
   bool isPromotedGlobal() const{ return Kind == ARMCP::CPPromotedGlobal; }
-  
+
   int getExistingMachineCPValue(MachineConstantPool *CP,
                                 unsigned Alignment) override;
 

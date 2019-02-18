@@ -58,7 +58,8 @@ TEST(FileDistanceTests, BadSource) {
   EXPECT_EQ(D.distance("b/b/b/c"), 17u); // a+up+down+down+down+down, not b+down
 }
 
-auto UseUnittestScheme = UnittestSchemeAnchorSource;
+// Force the unittest URI scheme to be linked,
+static int LLVM_ATTRIBUTE_UNUSED UseUnittestScheme = UnittestSchemeAnchorSource;
 
 TEST(FileDistanceTests, URI) {
   FileDistanceOptions Opts;
@@ -92,6 +93,30 @@ TEST(FileDistance, LimitUpTraversals) {
   EXPECT_EQ(D.distance("/a/z"), 102u);
   EXPECT_EQ(D.distance("/a/b"), 1u);
   EXPECT_EQ(D.distance("/a/b/z"), 2u);
+}
+
+TEST(FileDistance, DisallowDownTraversalsFromRoot) {
+  FileDistanceOptions Opts;
+  Opts.UpCost = Opts.DownCost = 1;
+  Opts.AllowDownTraversalFromRoot = false;
+  SourceParams CostLots;
+  CostLots.Cost = 100;
+
+  FileDistance D({{"/", SourceParams()}, {"/a/b/c", CostLots}}, Opts);
+  EXPECT_EQ(D.distance("/"), 0u);
+  EXPECT_EQ(D.distance("/a"), 102u);
+  EXPECT_EQ(D.distance("/a/b"), 101u);
+  EXPECT_EQ(D.distance("/x"), FileDistance::Unreachable);
+}
+
+TEST(ScopeDistance, Smoke) {
+  ScopeDistance D({"x::y::z", "x::", "", "a::"});
+  EXPECT_EQ(D.distance("x::y::z::"), 0u);
+  EXPECT_GT(D.distance("x::y::"), D.distance("x::y::z::"));
+  EXPECT_GT(D.distance("x::"), D.distance("x::y::"));
+  EXPECT_GT(D.distance("x::y::z::down::"), D.distance("x::y::"));
+  EXPECT_GT(D.distance(""), D.distance("a::"));
+  EXPECT_GT(D.distance("x::"), D.distance("a::"));
 }
 
 } // namespace

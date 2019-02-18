@@ -1,10 +1,20 @@
 set(LLVM_LINK_COMPONENTS
+  Analysis
+  CodeGen
   Core
+  ExecutionEngine
+  IPO
   IRReader
   MC
+  MCJIT
+  Object
+  RuntimeDyld
+  SelectionDAG
   Support
-  Analysis
-  )
+  Target
+  TransformUtils
+  native
+)
 
 # Depend on LLVM IR intrinsic generation.
 set(handle_llvm_deps intrinsics_gen)

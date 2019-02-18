@@ -19,5 +19,5 @@
 // CHECK-DAG: "-fcuda-is-device"
 // CHECK-NOT: "-stack-protector"
 // CHECK-NOT: "-stack-protector-buffer-size"
-// CHECK-DAG: "-triple" "x86_64--linux-gnu"
+// CHECK-DAG: "-triple" "x86_64-unknown-linux-gnu"
 // CHECK: "-stack-protector"

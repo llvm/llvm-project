@@ -84,11 +84,10 @@ protected: // Can only create subclasses.
   CodeGenOpt::Level OptLevel = CodeGenOpt::Default;
 
   /// Contains target specific asm information.
-  const MCAsmInfo *AsmInfo;
-
-  const MCRegisterInfo *MRI;
-  const MCInstrInfo *MII;
-  const MCSubtargetInfo *STI;
+  std::unique_ptr<const MCAsmInfo> AsmInfo;
+  std::unique_ptr<const MCRegisterInfo> MRI;
+  std::unique_ptr<const MCInstrInfo> MII;
+  std::unique_ptr<const MCSubtargetInfo> STI;
 
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
@@ -160,11 +159,11 @@ public:
   void resetTargetOptions(const Function &F) const;
 
   /// Return target specific asm information.
-  const MCAsmInfo *getMCAsmInfo() const { return AsmInfo; }
+  const MCAsmInfo *getMCAsmInfo() const { return AsmInfo.get(); }
 
-  const MCRegisterInfo *getMCRegisterInfo() const { return MRI; }
-  const MCInstrInfo *getMCInstrInfo() const { return MII; }
-  const MCSubtargetInfo *getMCSubtargetInfo() const { return STI; }
+  const MCRegisterInfo *getMCRegisterInfo() const { return MRI.get(); }
+  const MCInstrInfo *getMCInstrInfo() const { return MII.get(); }
+  const MCSubtargetInfo *getMCSubtargetInfo() const { return STI.get(); }
 
   /// If intrinsic information is available, return it.  If not, return null.
   virtual const TargetIntrinsicInfo *getIntrinsicInfo() const {
@@ -202,6 +201,9 @@ public:
   bool getO0WantsFastISel() { return O0WantsFastISel; }
   void setO0WantsFastISel(bool Enable) { O0WantsFastISel = Enable; }
   void setGlobalISel(bool Enable) { Options.EnableGlobalISel = Enable; }
+  void setGlobalISelAbort(GlobalISelAbortMode Mode) {
+    Options.GlobalISelAbort = Mode;
+  }
   void setMachineOutliner(bool Enable) {
     Options.EnableMachineOutliner = Enable;
   }
@@ -285,18 +287,6 @@ public:
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
   MCSymbol *getSymbol(const GlobalValue *GV) const;
-
-  /// True if the target uses physical regs at Prolog/Epilog insertion
-  /// time. If true (most machines), all vregs must be allocated before
-  /// PEI. If false (virtual-register machines), then callee-save register
-  /// spilling and scavenging are not needed or used.
-  virtual bool usesPhysRegsForPEI() const { return true; }
-
-  /// True if the target wants to use interprocedural register allocation by
-  /// default. The -enable-ipra flag can be used to override this.
-  virtual bool useIPRA() const {
-    return false;
-  }
 };
 
 /// This class describes a target machine that is implemented with the LLVM
@@ -350,7 +340,36 @@ public:
   bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
                      raw_pwrite_stream *DwoOut, CodeGenFileType FileTYpe,
                      MCContext &Context);
+
+  /// True if the target uses physical regs at Prolog/Epilog insertion
+  /// time. If true (most machines), all vregs must be allocated before
+  /// PEI. If false (virtual-register machines), then callee-save register
+  /// spilling and scavenging are not needed or used.
+  virtual bool usesPhysRegsForPEI() const { return true; }
+
+  /// True if the target wants to use interprocedural register allocation by
+  /// default. The -enable-ipra flag can be used to override this.
+  virtual bool useIPRA() const {
+    return false;
+  }
 };
+
+/// Helper method for getting the code model, returning Default if
+/// CM does not have a value. The tiny and kernel models will produce
+/// an error, so targets that support them or require more complex codemodel
+/// selection logic should implement and call their own getEffectiveCodeModel.
+inline CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
+                                              CodeModel::Model Default) {
+  if (CM) {
+    // By default, targets do not support the tiny and kernel models.
+    if (*CM == CodeModel::Tiny)
+      report_fatal_error("Target does not support the tiny CodeModel");
+    if (*CM == CodeModel::Kernel)
+      report_fatal_error("Target does not support the kernel CodeModel");
+    return *CM;
+  }
+  return Default;
+}
 
 } // end namespace llvm
 

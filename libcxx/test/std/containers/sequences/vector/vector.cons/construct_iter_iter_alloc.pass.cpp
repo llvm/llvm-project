@@ -134,7 +134,6 @@ void test_ctor_under_alloc() {
   int arr2[] = {1, 101, 42};
   {
     using C = TCT::vector<>;
-    using T = typename C::value_type;
     using It = forward_iterator<int*>;
     using Alloc = typename C::allocator_type;
     Alloc a;
@@ -149,7 +148,6 @@ void test_ctor_under_alloc() {
   }
   {
     using C = TCT::vector<>;
-    using T = typename C::value_type;
     using It = input_iterator<int*>;
     using Alloc = typename C::allocator_type;
     Alloc a;

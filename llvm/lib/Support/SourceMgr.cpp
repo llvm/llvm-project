@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -175,14 +176,14 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
   std::pair<unsigned, unsigned> LineAndCol;
   StringRef BufferID = "<unknown>";
   std::string LineStr;
-  
+
   if (Loc.isValid()) {
     unsigned CurBuf = FindBufferContainingLoc(Loc);
     assert(CurBuf && "Invalid or unspecified location!");
 
     const MemoryBuffer *CurMB = getMemoryBuffer(CurBuf);
     BufferID = CurMB->getBufferIdentifier();
-    
+
     // Scan backward to find the start of the line.
     const char *LineStart = Loc.getPointer();
     const char *BufStart = CurMB->getBufferStart();
@@ -202,17 +203,17 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
     for (unsigned i = 0, e = Ranges.size(); i != e; ++i) {
       SMRange R = Ranges[i];
       if (!R.isValid()) continue;
-      
+
       // If the line doesn't contain any part of the range, then ignore it.
       if (R.Start.getPointer() > LineEnd || R.End.getPointer() < LineStart)
         continue;
-     
+
       // Ignore pieces of the range that go onto other lines.
       if (R.Start.getPointer() < LineStart)
         R.Start = SMLoc::getFromPointer(LineStart);
       if (R.End.getPointer() > LineEnd)
         R.End = SMLoc::getFromPointer(LineEnd);
-      
+
       // Translate from SMLoc ranges to column ranges.
       // FIXME: Handle multibyte characters.
       ColRanges.push_back(std::make_pair(R.Start.getPointer()-LineStart,
@@ -221,7 +222,7 @@ SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
 
     LineAndCol = getLineAndColumn(Loc, CurBuf);
   }
-    
+
   return SMDiagnostic(*this, Loc, BufferID, LineAndCol.first,
                       LineAndCol.second-1, Kind, Msg.str(),
                       LineStr, ColRanges, FixIts);
@@ -269,7 +270,7 @@ SMDiagnostic::SMDiagnostic(const SourceMgr &sm, SMLoc L, StringRef FN,
   : SM(&sm), Loc(L), Filename(FN), LineNo(Line), ColumnNo(Col), Kind(Kind),
     Message(Msg), LineContents(LineStr), Ranges(Ranges.vec()),
     FixIts(Hints.begin(), Hints.end()) {
-  llvm::sort(FixIts.begin(), FixIts.end());
+  llvm::sort(FixIts);
 }
 
 static void buildFixItLine(std::string &CaretLine, std::string &FixItLine,
@@ -345,11 +346,17 @@ static void buildFixItLine(std::string &CaretLine, std::string &FixItLine,
 static void printSourceLine(raw_ostream &S, StringRef LineContents) {
   // Print out the source line one character at a time, so we can expand tabs.
   for (unsigned i = 0, e = LineContents.size(), OutCol = 0; i != e; ++i) {
-    if (LineContents[i] != '\t') {
-      S << LineContents[i];
-      ++OutCol;
-      continue;
+    size_t NextTab = LineContents.find('\t', i);
+    // If there were no tabs left, print the rest, we are done.
+    if (NextTab == StringRef::npos) {
+      S << LineContents.drop_front(i);
+      break;
     }
+
+    // Otherwise, print from i to NextTab.
+    S << LineContents.slice(i, NextTab);
+    OutCol += NextTab - i;
+    i = NextTab;
 
     // If we have a tab, emit at least one space, then round up to 8 columns.
     do {
@@ -364,65 +371,48 @@ static bool isNonASCII(char c) {
   return c & 0x80;
 }
 
-void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
-                         bool ShowKindLabel) const {
-  // Display colors only if OS supports colors.
-  ShowColors &= S.has_colors();
+void SMDiagnostic::print(const char *ProgName, raw_ostream &OS,
+                         bool ShowColors, bool ShowKindLabel) const {
+  {
+    WithColor S(OS, raw_ostream::SAVEDCOLOR, true, false, !ShowColors);
 
-  if (ShowColors)
-    S.changeColor(raw_ostream::SAVEDCOLOR, true);
+    if (ProgName && ProgName[0])
+      S << ProgName << ": ";
 
-  if (ProgName && ProgName[0])
-    S << ProgName << ": ";
+    if (!Filename.empty()) {
+      if (Filename == "-")
+        S << "<stdin>";
+      else
+        S << Filename;
 
-  if (!Filename.empty()) {
-    if (Filename == "-")
-      S << "<stdin>";
-    else
-      S << Filename;
-
-    if (LineNo != -1) {
-      S << ':' << LineNo;
-      if (ColumnNo != -1)
-        S << ':' << (ColumnNo+1);
+      if (LineNo != -1) {
+        S << ':' << LineNo;
+        if (ColumnNo != -1)
+          S << ':' << (ColumnNo + 1);
+      }
+      S << ": ";
     }
-    S << ": ";
   }
 
   if (ShowKindLabel) {
     switch (Kind) {
     case SourceMgr::DK_Error:
-      if (ShowColors)
-        S.changeColor(raw_ostream::RED, true);
-      S << "error: ";
+      WithColor::error(OS, "", !ShowColors);
       break;
     case SourceMgr::DK_Warning:
-      if (ShowColors)
-        S.changeColor(raw_ostream::MAGENTA, true);
-      S << "warning: ";
+      WithColor::warning(OS, "", !ShowColors);
       break;
     case SourceMgr::DK_Note:
-      if (ShowColors)
-        S.changeColor(raw_ostream::BLACK, true);
-      S << "note: ";
+      WithColor::note(OS, "", !ShowColors);
       break;
     case SourceMgr::DK_Remark:
-      if (ShowColors)
-        S.changeColor(raw_ostream::BLUE, true);
-      S << "remark: ";
+      WithColor::remark(OS, "", !ShowColors);
       break;
-    }
-
-    if (ShowColors) {
-      S.resetColor();
-      S.changeColor(raw_ostream::SAVEDCOLOR, true);
     }
   }
 
-  S << Message << '\n';
-
-  if (ShowColors)
-    S.resetColor();
+  WithColor(OS, raw_ostream::SAVEDCOLOR, true, false, !ShowColors)
+      << Message << '\n';
 
   if (LineNo == -1 || ColumnNo == -1)
     return;
@@ -433,14 +423,14 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
   // expanding them later, and bail out rather than show incorrect ranges and
   // misaligned fixits for any other odd characters.
   if (find_if(LineContents, isNonASCII) != LineContents.end()) {
-    printSourceLine(S, LineContents);
+    printSourceLine(OS, LineContents);
     return;
   }
   size_t NumColumns = LineContents.size();
 
   // Build the line with the caret and ranges.
   std::string CaretLine(NumColumns+1, ' ');
-  
+
   // Expand any ranges.
   for (unsigned r = 0, e = Ranges.size(); r != e; ++r) {
     std::pair<unsigned, unsigned> R = Ranges[r];
@@ -459,52 +449,50 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
   // Finally, plop on the caret.
   if (unsigned(ColumnNo) <= NumColumns)
     CaretLine[ColumnNo] = '^';
-  else 
+  else
     CaretLine[NumColumns] = '^';
-  
+
   // ... and remove trailing whitespace so the output doesn't wrap for it.  We
   // know that the line isn't completely empty because it has the caret in it at
   // least.
   CaretLine.erase(CaretLine.find_last_not_of(' ')+1);
-  
-  printSourceLine(S, LineContents);
 
-  if (ShowColors)
-    S.changeColor(raw_ostream::GREEN, true);
+  printSourceLine(OS, LineContents);
 
-  // Print out the caret line, matching tabs in the source line.
-  for (unsigned i = 0, e = CaretLine.size(), OutCol = 0; i != e; ++i) {
-    if (i >= LineContents.size() || LineContents[i] != '\t') {
-      S << CaretLine[i];
-      ++OutCol;
-      continue;
+  {
+    WithColor S(OS, raw_ostream::GREEN, true, false, !ShowColors);
+
+    // Print out the caret line, matching tabs in the source line.
+    for (unsigned i = 0, e = CaretLine.size(), OutCol = 0; i != e; ++i) {
+      if (i >= LineContents.size() || LineContents[i] != '\t') {
+        S << CaretLine[i];
+        ++OutCol;
+        continue;
+      }
+
+      // Okay, we have a tab.  Insert the appropriate number of characters.
+      do {
+        S << CaretLine[i];
+        ++OutCol;
+      } while ((OutCol % TabStop) != 0);
     }
-    
-    // Okay, we have a tab.  Insert the appropriate number of characters.
-    do {
-      S << CaretLine[i];
-      ++OutCol;
-    } while ((OutCol % TabStop) != 0);
+    S << '\n';
   }
-  S << '\n';
-
-  if (ShowColors)
-    S.resetColor();
 
   // Print out the replacement line, matching tabs in the source line.
   if (FixItInsertionLine.empty())
     return;
-  
+
   for (size_t i = 0, e = FixItInsertionLine.size(), OutCol = 0; i < e; ++i) {
     if (i >= LineContents.size() || LineContents[i] != '\t') {
-      S << FixItInsertionLine[i];
+      OS << FixItInsertionLine[i];
       ++OutCol;
       continue;
     }
 
     // Okay, we have a tab.  Insert the appropriate number of characters.
     do {
-      S << FixItInsertionLine[i];
+      OS << FixItInsertionLine[i];
       // FIXME: This is trying not to break up replacements, but then to re-sync
       // with the tabs between replacements. This will fail, though, if two
       // fix-it replacements are exactly adjacent, or if a fix-it contains a
@@ -515,5 +503,5 @@ void SMDiagnostic::print(const char *ProgName, raw_ostream &S, bool ShowColors,
       ++OutCol;
     } while (((OutCol % TabStop) != 0) && i != e);
   }
-  S << '\n';
+  OS << '\n';
 }

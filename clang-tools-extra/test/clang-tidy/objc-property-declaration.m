@@ -1,7 +1,11 @@
 // RUN: %check_clang_tidy %s objc-property-declaration %t
+@class CIColor;
+@class NSArray;
 @class NSData;
 @class NSString;
 @class UIViewController;
+
+typedef void *CGColorRef;
 
 @interface Foo
 @property(assign, nonatomic) int NotCamelCase;
@@ -23,6 +27,9 @@
 @property(assign, nonatomic) int enableGLAcceleration;
 @property(assign, nonatomic) int ID;
 @property(assign, nonatomic) int hasADog;
+@property(nonatomic, readonly) CGColorRef CGColor;
+@property(nonatomic, readonly) CIColor *CIColor;
+@property(nonatomic, copy) NSArray *IDs;
 @end
 
 @interface Foo (Bar)
@@ -38,6 +45,7 @@
 // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: property name 'wrongFormat_' not using lowerCamelCase style or not prefixed in a category, according to the Apple Coding Guidelines [objc-property-declaration]
 @property(strong, nonatomic) NSString *URLStr;
 @property(assign, nonatomic) int abc_camelCase;
+@property(strong, nonatomic) NSString *abc_URL;
 @end
 
 @interface Foo ()

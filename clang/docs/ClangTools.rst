@@ -19,12 +19,12 @@ LLVM/Clang checkout:
 -  With Subversion:
 
    -  ``cd llvm/tools/clang/tools``
-   -  ``svn co http://llvm.org/svn/llvm-project/clang-tools-extra/trunk extra``
+   -  ``svn co https://llvm.org/svn/llvm-project/clang-tools-extra/trunk extra``
 
 -  Or with Git:
 
    -  ``cd llvm/tools/clang/tools``
-   -  ``git clone http://llvm.org/git/clang-tools-extra.git extra``
+   -  ``git clone https://llvm.org/git/clang-tools-extra.git extra``
 
 This document describes a high-level overview of the organization of
 Clang Tools within the project as well as giving an introduction to some
@@ -105,7 +105,7 @@ provide its own user-focused documentation.
 ``clang-tidy``
 --------------
 
-`clang-tidy <http://clang.llvm.org/extra/clang-tidy/>`_ is a clang-based C++
+`clang-tidy <https://clang.llvm.org/extra/clang-tidy/>`_ is a clang-based C++
 linter tool. It provides an extensible framework for building compiler-based
 static analyses detecting and fixing bug-prone patterns, performance,
 portability and maintainability issues.

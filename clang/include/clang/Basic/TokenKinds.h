@@ -39,8 +39,7 @@ enum PPKeywordKind {
 /// Provides a namespace for Objective-C keywords which start with
 /// an '@'.
 enum ObjCKeywordKind {
-#define OBJC1_AT_KEYWORD(X) objc_##X,
-#define OBJC2_AT_KEYWORD(X) objc_##X,
+#define OBJC_AT_KEYWORD(X) objc_##X,
 #include "clang/Basic/TokenKinds.def"
   NUM_OBJC_KEYWORDS
 };

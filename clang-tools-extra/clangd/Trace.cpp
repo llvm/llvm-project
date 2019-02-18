@@ -19,10 +19,10 @@
 #include <atomic>
 #include <mutex>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace trace {
-using namespace llvm;
 
 namespace {
 // The current implementation is naive: each thread writes to Out guarded by Mu.
@@ -49,7 +49,7 @@ public:
 
   // We stash a Span object in the context. It will record the start/end,
   // and this also allows us to look up the parent Span's information.
-  Context beginSpan(llvm::StringRef Name, json::Object *Args) override {
+  Context beginSpan(StringRef Name, json::Object *Args) override {
     return Context::current().derive(
         SpanKey, llvm::make_unique<JSONSpan>(this, Name, Args));
   }
@@ -62,7 +62,7 @@ public:
     Context::current().getExisting(SpanKey)->markEnded();
   }
 
-  void instant(llvm::StringRef Name, json::Object &&Args) override {
+  void instant(StringRef Name, json::Object &&Args) override {
     captureThreadMetadata();
     jsonEvent("i", json::Object{{"name", Name}, {"args", std::move(Args)}});
   }
@@ -80,7 +80,7 @@ public:
 private:
   class JSONSpan {
   public:
-    JSONSpan(JSONTracer *Tracer, llvm::StringRef Name, json::Object *Args)
+    JSONSpan(JSONTracer *Tracer, StringRef Name, json::Object *Args)
         : StartTime(Tracer->timestamp()), EndTime(0), Name(Name),
           TID(get_threadid()), Tracer(Tracer), Args(Args) {
       // ~JSONSpan() may run in a different thread, so we need to capture now.
@@ -124,9 +124,7 @@ private:
     }
 
     // May be called by any thread.
-    void markEnded() {
-      EndTime = Tracer->timestamp();
-    }
+    void markEnded() { EndTime = Tracer->timestamp(); }
 
   private:
     static int64_t nextID() {
@@ -195,8 +193,7 @@ Session::Session(EventTracer &Tracer) {
 
 Session::~Session() { T = nullptr; }
 
-std::unique_ptr<EventTracer> createJSONTracer(llvm::raw_ostream &OS,
-                                              bool Pretty) {
+std::unique_ptr<EventTracer> createJSONTracer(raw_ostream &OS, bool Pretty) {
   return llvm::make_unique<JSONTracer>(OS, Pretty);
 }
 
@@ -207,19 +204,19 @@ void log(const Twine &Message) {
 }
 
 // Returned context owns Args.
-static Context makeSpanContext(llvm::Twine Name, json::Object *Args) {
+static Context makeSpanContext(Twine Name, json::Object *Args) {
   if (!T)
     return Context::current().clone();
   WithContextValue WithArgs{std::unique_ptr<json::Object>(Args)};
   return T->beginSpan(Name.isSingleStringRef() ? Name.getSingleStringRef()
-                                               : llvm::StringRef(Name.str()),
+                                               : StringRef(Name.str()),
                       Args);
 }
 
 // Span keeps a non-owning pointer to the args, which is how users access them.
 // The args are owned by the context though. They stick around until the
 // beginSpan() context is destroyed, when the tracing engine will consume them.
-Span::Span(llvm::Twine Name)
+Span::Span(Twine Name)
     : Args(T ? new json::Object() : nullptr),
       RestoreCtx(makeSpanContext(Name, Args)) {}
 

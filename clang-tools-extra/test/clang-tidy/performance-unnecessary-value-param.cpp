@@ -15,6 +15,20 @@ void mutate(ExpensiveToCopyType *);
 void useAsConstReference(const ExpensiveToCopyType &);
 void useByValue(ExpensiveToCopyType);
 
+template <class T> class Vector {
+ public:
+  using iterator = T*;
+  using const_iterator = const T*;
+
+  Vector(const Vector&);
+  Vector& operator=(const Vector&);
+
+  iterator begin();
+  iterator end();
+  const_iterator begin() const;
+  const_iterator end() const;
+};
+
 // This class simulates std::pair<>. It is trivially copy constructible
 // and trivially destructible, but not trivially copy assignable.
 class SomewhatTrivial {
@@ -57,6 +71,14 @@ void positiveExpensiveValue(ExpensiveToCopyType Obj) {
   useAsConstReference(Obj);
   auto Copy = Obj;
   useByValue(Obj);
+}
+
+void positiveVector(Vector<ExpensiveToCopyType> V) {
+  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'V' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  // CHECK-FIXES: void positiveVector(const Vector<ExpensiveToCopyType>& V) {
+  for (const auto& Obj : V) {
+    useByValue(Obj);
+  }
 }
 
 void positiveWithComment(const ExpensiveToCopyType /* important */ S);

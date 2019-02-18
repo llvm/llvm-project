@@ -78,3 +78,19 @@ clastb   z0.d, p7, z0.d, z31.d
 // CHECK-ENCODING: [0xe0,0x9f,0xe9,0x05]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: e0 9f e9 05 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z0, z7
+// CHECK-INST: movprfx	z0, z7
+// CHECK-ENCODING: [0xe0,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 bc 20 04 <unknown>
+
+clastb   z0.d, p7, z0.d, z31.d
+// CHECK-INST: clastb	z0.d, p7, z0.d, z31.d
+// CHECK-ENCODING: [0xe0,0x9f,0xe9,0x05]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: e0 9f e9 05 <unknown>

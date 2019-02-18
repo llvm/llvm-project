@@ -1,4 +1,4 @@
-; RUN: llc < %s -O0 -fast-isel -mattr=+vsx -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 | FileCheck %s --check-prefix=ELF64VSX
+; RUN: llc < %s -O0 -fast-isel -mattr=+vsx -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -ppc-late-peephole=false | FileCheck %s --check-prefix=ELF64VSX
 
 ;; The semantics of VSX stores for when R0 is used is different depending on
 ;; whether it is used as base or offset. If used as base, the effective

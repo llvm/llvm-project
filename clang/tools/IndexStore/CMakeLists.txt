@@ -9,13 +9,12 @@ set(SOURCES
   )
 
 set(LIBS
-  clangDirectoryWatcher
-  clangIndex
+  clangIndexDataStore
 )
 
-set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/IndexStore.exports)
-
-set(ENABLE_SHARED SHARED)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL Windows)
+  set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/IndexStore.exports)
+endif()
 
 if(WIN32)
   set(output_name "libIndexStore")
@@ -23,10 +22,7 @@ else()
   set(output_name "IndexStore")
 endif()
 
-# FIXME: needs to be ported to non-Apple platforms.
-if(APPLE)
-
-add_clang_library(IndexStore ${ENABLE_SHARED} ${ENABLE_STATIC}
+add_clang_library(IndexStore SHARED
   OUTPUT_NAME ${output_name}
   ${SOURCES}
 
@@ -39,31 +35,19 @@ add_clang_library(IndexStore ${ENABLE_SHARED} ${ENABLE_STATIC}
   Support
   )
 
-set(INDEXSTORE_LIBRARY_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+if(APPLE)
+  set(INDEXSTORE_LIBRARY_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
 
-if(ENABLE_SHARED)
-  if(WIN32)
-    set_target_properties(IndexStore
-      PROPERTIES
-      VERSION ${INDEXSTORE_LIBRARY_VERSION}
-      DEFINE_SYMBOL _CINDEX_LIB_)
-  elseif(APPLE)
-    set(INDEXSTORE_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
-    set(INDEXSTORE_LINK_FLAGS "${INDEXSTORE_LINK_FLAGS} -Wl,-current_version -Wl,${INDEXSTORE_LIBRARY_VERSION}")
+  set(INDEXSTORE_LINK_FLAGS " -Wl,-compatibility_version -Wl,1")
+  set(INDEXSTORE_LINK_FLAGS "${INDEXSTORE_LINK_FLAGS} -Wl,-current_version -Wl,${INDEXSTORE_LIBRARY_VERSION}")
 
-    check_include_files("CoreServices/CoreServices.h" HAVE_CORESERVICES_H)
-    if(HAVE_CORESERVICES_H)
-      set(INDEXSTORE_LINK_FLAGS "${INDEXSTORE_LINK_FLAGS} -framework CoreServices")
-    endif()
-
-    set_property(TARGET IndexStore APPEND_STRING PROPERTY
-                 LINK_FLAGS ${INDEXSTORE_LINK_FLAGS})
-  else()
-    set_target_properties(IndexStore
-      PROPERTIES
-      VERSION ${INDEXSTORE_LIBRARY_VERSION}
-      DEFINE_SYMBOL _CINDEX_LIB_)
+  check_include_files("CoreServices/CoreServices.h" HAVE_CORESERVICES_H)
+  if(HAVE_CORESERVICES_H)
+    set(INDEXSTORE_LINK_FLAGS "${INDEXSTORE_LINK_FLAGS} -framework CoreServices")
   endif()
+
+  set_property(TARGET IndexStore APPEND_STRING PROPERTY
+               LINK_FLAGS ${INDEXSTORE_LINK_FLAGS})
 endif()
 
 if (LLVM_INSTALL_TOOLCHAIN_ONLY)
@@ -89,4 +73,3 @@ install(DIRECTORY ../../include/indexstore
   PATTERN "*.h"
   PATTERN ".svn" EXCLUDE
   )
-endif()

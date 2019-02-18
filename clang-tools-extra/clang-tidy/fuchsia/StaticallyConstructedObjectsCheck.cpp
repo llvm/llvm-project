@@ -34,24 +34,23 @@ void StaticallyConstructedObjectsCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
     return;
 
-  Finder->addMatcher(
-      varDecl(allOf(
-                  // Match global, statically stored objects...
-                  isGlobalStatic(),
-                  // ... that have C++ constructors...
-                  hasDescendant(cxxConstructExpr(unless(allOf(
-                      // ... unless it is constexpr ...
-                      hasDeclaration(cxxConstructorDecl(isConstexpr())),
-                      // ... and is statically initialized.
-                      isConstantInitializer()))))))
-          .bind("decl"),
-      this);
+  Finder->addMatcher(varDecl(
+                         // Match global, statically stored objects...
+                         isGlobalStatic(),
+                         // ... that have C++ constructors...
+                         hasDescendant(cxxConstructExpr(unless(allOf(
+                             // ... unless it is constexpr ...
+                             hasDeclaration(cxxConstructorDecl(isConstexpr())),
+                             // ... and is statically initialized.
+                             isConstantInitializer())))))
+                         .bind("decl"),
+                     this);
 }
 
 void StaticallyConstructedObjectsCheck::check(
     const MatchFinder::MatchResult &Result) {
   if (const auto *D = Result.Nodes.getNodeAs<VarDecl>("decl"))
-    diag(D->getLocStart(), "static objects are disallowed; if possible, use a "
+    diag(D->getBeginLoc(), "static objects are disallowed; if possible, use a "
                            "constexpr constructor instead");
 }
 

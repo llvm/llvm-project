@@ -531,3 +531,34 @@ bb6:                                              ; preds = %bb4, %bb1
 bb7:                                             ; preds = %bb6
   ret void
 }
+
+; Show that we can turn signed comparison to unsigned and use zext while
+; comparing non-negative values.
+define void @test_12(i32* %p) {
+; CHECK-LABEL: @test_12(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[P:%.*]], !range !0
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[IV_NEXT]], [[ZEXT]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n = load i32, i32* %p, !range !0
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %narrow.iv = trunc i64 %iv.next to i32
+  %cmp = icmp slt i32 %narrow.iv, %n
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+!0 = !{i32 0, i32 1000}

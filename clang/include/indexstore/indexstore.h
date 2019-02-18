@@ -14,9 +14,10 @@
 #ifndef LLVM_CLANG_C_INDEXSTORE_INDEXSTORE_H
 #define LLVM_CLANG_C_INDEXSTORE_INDEXSTORE_H
 
-#include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
-#include <ctime>
+#include <stdint.h>
+#include <time.h>
 
 /**
  * \brief The version constants for the Index Store C API.
@@ -24,7 +25,7 @@
  * INDEXSTORE_VERSION_MAJOR is intended for "major" source/ABI breaking changes.
  */
 #define INDEXSTORE_VERSION_MAJOR 0
-#define INDEXSTORE_VERSION_MINOR 9
+#define INDEXSTORE_VERSION_MINOR 11
 
 #define INDEXSTORE_VERSION_ENCODE(major, minor) ( \
       ((major) * 10000)                           \
@@ -52,8 +53,12 @@
 #endif
 
 #ifndef INDEXSTORE_PUBLIC
-# if defined (_MSC_VER)
-#  define INDEXSTORE_PUBLIC __declspec(dllimport)
+# ifdef _WIN32
+#  ifdef IndexStore_EXPORTS
+#    define INDEXSTORE_PUBLIC __declspec(dllexport)
+#  else
+#    define INDEXSTORE_PUBLIC __declspec(dllimport)
+#  endif
 # else
 #  define INDEXSTORE_PUBLIC
 # endif
@@ -101,6 +106,11 @@ indexstore_store_units_apply(indexstore_t, unsigned sorted,
                              bool(^applier)(indexstore_string_ref_t unit_name));
 #endif
 
+INDEXSTORE_PUBLIC bool
+indexstore_store_units_apply_f(indexstore_t, unsigned sorted,
+                               void *context,
+              bool(*applier)(void *context, indexstore_string_ref_t unit_name));
+
 typedef void *indexstore_unit_event_notification_t;
 typedef void *indexstore_unit_event_t;
 
@@ -126,7 +136,7 @@ indexstore_unit_event_get_kind(indexstore_unit_event_t);
 INDEXSTORE_PUBLIC indexstore_string_ref_t
 indexstore_unit_event_get_unit_name(indexstore_unit_event_t);
 
-INDEXSTORE_PUBLIC timespec
+INDEXSTORE_PUBLIC struct timespec
 indexstore_unit_event_get_modification_time(indexstore_unit_event_t);
 
 #if INDEXSTORE_HAS_BLOCKS
@@ -136,6 +146,11 @@ INDEXSTORE_PUBLIC void
 indexstore_store_set_unit_event_handler(indexstore_t,
                                         indexstore_unit_event_handler_t handler);
 #endif
+
+INDEXSTORE_PUBLIC void
+indexstore_store_set_unit_event_handler_f(indexstore_t, void *context,
+            void(*handler)(void *context, indexstore_unit_event_notification_t),
+                                          void(*finalizer)(void *context));
 
 typedef struct {
   /// If true, \c indexstore_store_start_unit_event_listening will block until
@@ -237,6 +252,8 @@ typedef enum {
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTSUBSCRIPT = 1011,
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTASSOCIATEDTYPE = 1012,
   INDEXSTORE_SYMBOL_SUBKIND_SWIFTGENERICTYPEPARAM = 1013,
+  INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORREAD = 1014,
+  INDEXSTORE_SYMBOL_SUBKIND_SWIFTACCESSORMODIFY = 1015,
 } indexstore_symbol_subkind_t;
 
 typedef enum {
@@ -248,6 +265,7 @@ typedef enum {
   INDEXSTORE_SYMBOL_PROPERTY_IBOUTLETCOLLECTION               = 1 << 5,
   INDEXSTORE_SYMBOL_PROPERTY_GKINSPECTABLE                    = 1 << 6,
   INDEXSTORE_SYMBOL_PROPERTY_LOCAL                            = 1 << 7,
+  INDEXSTORE_SYMBOL_PROPERTY_PROTOCOL_INTERFACE               = 1 << 8,
 } indexstore_symbol_property_t;
 
 typedef enum {
@@ -259,28 +277,28 @@ typedef enum {
 } indexstore_symbol_language_t;
 
 typedef enum {
-  INDEXSTORE_SYMBOL_ROLE_DECLARATION = 1 << 0,
-  INDEXSTORE_SYMBOL_ROLE_DEFINITION  = 1 << 1,
-  INDEXSTORE_SYMBOL_ROLE_REFERENCE   = 1 << 2,
-  INDEXSTORE_SYMBOL_ROLE_READ        = 1 << 3,
-  INDEXSTORE_SYMBOL_ROLE_WRITE       = 1 << 4,
-  INDEXSTORE_SYMBOL_ROLE_CALL        = 1 << 5,
-  INDEXSTORE_SYMBOL_ROLE_DYNAMIC     = 1 << 6,
-  INDEXSTORE_SYMBOL_ROLE_ADDRESSOF   = 1 << 7,
-  INDEXSTORE_SYMBOL_ROLE_IMPLICIT    = 1 << 8,
-  INDEXSTORE_SYMBOL_ROLE_UNDEFINED   = 1 << 9,
+  INDEXSTORE_SYMBOL_ROLE_DECLARATION  = 1 << 0,
+  INDEXSTORE_SYMBOL_ROLE_DEFINITION   = 1 << 1,
+  INDEXSTORE_SYMBOL_ROLE_REFERENCE    = 1 << 2,
+  INDEXSTORE_SYMBOL_ROLE_READ         = 1 << 3,
+  INDEXSTORE_SYMBOL_ROLE_WRITE        = 1 << 4,
+  INDEXSTORE_SYMBOL_ROLE_CALL         = 1 << 5,
+  INDEXSTORE_SYMBOL_ROLE_DYNAMIC      = 1 << 6,
+  INDEXSTORE_SYMBOL_ROLE_ADDRESSOF    = 1 << 7,
+  INDEXSTORE_SYMBOL_ROLE_IMPLICIT     = 1 << 8,
+  INDEXSTORE_SYMBOL_ROLE_UNDEFINITION = 1 << 19,
 
   // Relation roles.
-  INDEXSTORE_SYMBOL_ROLE_REL_CHILDOF     = 1 << 10,
-  INDEXSTORE_SYMBOL_ROLE_REL_BASEOF      = 1 << 11,
-  INDEXSTORE_SYMBOL_ROLE_REL_OVERRIDEOF  = 1 << 12,
-  INDEXSTORE_SYMBOL_ROLE_REL_RECEIVEDBY  = 1 << 13,
-  INDEXSTORE_SYMBOL_ROLE_REL_CALLEDBY    = 1 << 14,
-  INDEXSTORE_SYMBOL_ROLE_REL_EXTENDEDBY  = 1 << 15,
-  INDEXSTORE_SYMBOL_ROLE_REL_ACCESSOROF  = 1 << 16,
-  INDEXSTORE_SYMBOL_ROLE_REL_CONTAINEDBY = 1 << 17,
-  INDEXSTORE_SYMBOL_ROLE_REL_IBTYPEOF    = 1 << 18,
-  INDEXSTORE_SYMBOL_ROLE_REL_SPECIALIZATIONOF = 1 << 19,
+  INDEXSTORE_SYMBOL_ROLE_REL_CHILDOF     = 1 << 9,
+  INDEXSTORE_SYMBOL_ROLE_REL_BASEOF      = 1 << 10,
+  INDEXSTORE_SYMBOL_ROLE_REL_OVERRIDEOF  = 1 << 11,
+  INDEXSTORE_SYMBOL_ROLE_REL_RECEIVEDBY  = 1 << 12,
+  INDEXSTORE_SYMBOL_ROLE_REL_CALLEDBY    = 1 << 13,
+  INDEXSTORE_SYMBOL_ROLE_REL_EXTENDEDBY  = 1 << 14,
+  INDEXSTORE_SYMBOL_ROLE_REL_ACCESSOROF  = 1 << 15,
+  INDEXSTORE_SYMBOL_ROLE_REL_CONTAINEDBY = 1 << 16,
+  INDEXSTORE_SYMBOL_ROLE_REL_IBTYPEOF    = 1 << 17,
+  INDEXSTORE_SYMBOL_ROLE_REL_SPECIALIZATIONOF = 1 << 18,
 } indexstore_symbol_role_t;
 
 INDEXSTORE_PUBLIC indexstore_symbol_language_t
@@ -328,6 +346,11 @@ INDEXSTORE_PUBLIC bool
 indexstore_occurrence_relations_apply(indexstore_occurrence_t,
                       bool(^applier)(indexstore_symbol_relation_t symbol_rel));
 #endif
+
+INDEXSTORE_PUBLIC bool
+indexstore_occurrence_relations_apply_f(indexstore_occurrence_t,
+                                        void *context,
+        bool(*applier)(void *context, indexstore_symbol_relation_t symbol_rel));
 
 INDEXSTORE_PUBLIC uint64_t
 indexstore_occurrence_get_roles(indexstore_occurrence_t);
@@ -385,6 +408,37 @@ indexstore_record_reader_occurrences_of_symbols_apply(indexstore_record_reader_t
         bool(^applier)(indexstore_occurrence_t occur));
 #endif
 
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_search_symbols_f(indexstore_record_reader_t,
+                                          void *filter_ctx,
+    bool(*filter)(void *filter_ctx, indexstore_symbol_t symbol, bool *stop),
+                                          void *receiver_ctx,
+    void(*receiver)(void *receiver_ctx, indexstore_symbol_t symbol));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_symbols_apply_f(indexstore_record_reader_t,
+                                         bool nocache,
+                                         void *context,
+                     bool(*applier)(void *context, indexstore_symbol_t symbol));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_apply_f(indexstore_record_reader_t,
+                                             void *context,
+                  bool(*applier)(void *context, indexstore_occurrence_t occur));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_in_line_range_apply_f(indexstore_record_reader_t,
+                                                           unsigned line_start,
+                                                           unsigned line_count,
+                                                           void *context,
+                  bool(*applier)(void *context, indexstore_occurrence_t occur));
+
+INDEXSTORE_PUBLIC bool
+indexstore_record_reader_occurrences_of_symbols_apply_f(indexstore_record_reader_t,
+        indexstore_symbol_t *symbols, size_t symbols_count,
+        indexstore_symbol_t *related_symbols, size_t related_symbols_count,
+        void *context,
+        bool(*applier)(void *context, indexstore_occurrence_t occur));
 
 typedef void *indexstore_unit_reader_t;
 
@@ -460,12 +514,6 @@ indexstore_unit_dependency_get_modulename(indexstore_unit_dependency_t);
 INDEXSTORE_PUBLIC indexstore_string_ref_t
 indexstore_unit_dependency_get_name(indexstore_unit_dependency_t);
 
-INDEXSTORE_PUBLIC time_t
-indexstore_unit_dependency_get_modification_time(indexstore_unit_dependency_t);
-
-INDEXSTORE_PUBLIC size_t
-indexstore_unit_dependency_get_file_size(indexstore_unit_dependency_t);
-
 INDEXSTORE_PUBLIC indexstore_string_ref_t
 indexstore_unit_include_get_source_path(indexstore_unit_include_t);
 
@@ -483,8 +531,17 @@ indexstore_unit_reader_dependencies_apply(indexstore_unit_reader_t,
 INDEXSTORE_PUBLIC bool
 indexstore_unit_reader_includes_apply(indexstore_unit_reader_t,
                              bool(^applier)(indexstore_unit_include_t));
-
 #endif
+
+INDEXSTORE_PUBLIC bool
+indexstore_unit_reader_dependencies_apply_f(indexstore_unit_reader_t,
+                                            void *context,
+                   bool(*applier)(void *context, indexstore_unit_dependency_t));
+
+INDEXSTORE_PUBLIC bool
+indexstore_unit_reader_includes_apply_f(indexstore_unit_reader_t,
+                                        void *context,
+                      bool(*applier)(void *context, indexstore_unit_include_t));
 
 INDEXSTORE_END_DECLS
 

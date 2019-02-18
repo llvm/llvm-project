@@ -36,7 +36,8 @@ public:
   unsigned IncludeBriefComments : 1;
 
   /// Hint whether to load data from the external AST to provide full results.
-  /// If false, namespace-level declarations from the preamble may be omitted.
+  /// If false, namespace-level declarations and macros from the preamble may be
+  /// omitted.
   unsigned LoadExternal : 1;
 
   /// Include results after corrections (small fix-its), e.g. change '.' to '->'

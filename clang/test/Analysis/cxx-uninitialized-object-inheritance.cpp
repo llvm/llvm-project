@@ -1,4 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -std=c++11 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UninitializedObject \
+// RUN: -analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true -DPEDANTIC \
+// RUN: -analyzer-config alpha.cplusplus.UninitializedObject:CheckPointeeInitialization=true \
+// RUN: -std=c++11 -verify  %s
 
 //===----------------------------------------------------------------------===//
 // Non-polymorphic inheritance tests
@@ -32,7 +35,7 @@ void fNonPolymorphicInheritanceTest1() {
 }
 
 class NonPolymorphicBaseClass2 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass2::x'}}
 protected:
   int y;
 
@@ -59,7 +62,7 @@ class NonPolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->NonPolymorphicBaseClass3::y'}}
 public:
   NonPolymorphicBaseClass3() = default;
   NonPolymorphicBaseClass3(int) : x(7) {}
@@ -137,7 +140,7 @@ void fPolymorphicInheritanceTest1() {
 }
 
 class PolymorphicRight1 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->PolymorphicRight1::x'}}
 protected:
   int y;
 
@@ -165,7 +168,7 @@ class PolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->PolymorphicBaseClass3::y'}}
 public:
   virtual ~PolymorphicBaseClass3() = default;
   PolymorphicBaseClass3() = default;
@@ -245,7 +248,7 @@ void fVirtualInheritanceTest1() {
 }
 
 class VirtualPolymorphicRight1 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualPolymorphicRight1::x'}}
 protected:
   int y;
 
@@ -273,7 +276,7 @@ class VirtualPolymorphicBaseClass3 {
   int x;
 
 protected:
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->VirtualPolymorphicBaseClass3::y'}}
 public:
   virtual ~VirtualPolymorphicBaseClass3() = default;
   VirtualPolymorphicBaseClass3() = default;
@@ -355,7 +358,7 @@ struct Left2 {
   Left2(int) : x(36) {}
 };
 struct Right2 {
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->Right2::y'}}
   Right2() = default;
   Right2(int) : y(37) {}
 };
@@ -375,7 +378,7 @@ void fMultipleInheritanceTest2() {
 }
 
 struct Left3 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->Left3::x'}}
   Left3() = default;
   Left3(int) : x(39) {}
 };
@@ -430,7 +433,7 @@ struct Left5 {
   Left5(int) : x(44) {}
 };
 struct Right5 {
-  int y; // expected-note{{uninitialized field 'this->y'}}
+  int y; // expected-note{{uninitialized field 'this->Right5::y'}}
   Right5() = default;
   Right5(int) : y(45) {}
 };
@@ -511,7 +514,7 @@ void fNonVirtualDiamondInheritanceTest1() {
 }
 
 struct NonVirtualBase2 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase2::x'}}
   NonVirtualBase2() = default;
   NonVirtualBase2(int) : x(52) {}
 };
@@ -539,7 +542,7 @@ void fNonVirtualDiamondInheritanceTest2() {
 }
 
 struct NonVirtualBase3 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase3::x'}}
   NonVirtualBase3() = default;
   NonVirtualBase3(int) : x(54) {}
 };
@@ -567,8 +570,8 @@ void fNonVirtualDiamondInheritanceTest3() {
 }
 
 struct NonVirtualBase4 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
-  // expected-note@-1{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase4::x'}}
+  // expected-note@-1{{uninitialized field 'this->NonVirtualBase4::x'}}
   NonVirtualBase4() = default;
   NonVirtualBase4(int) : x(56) {}
 };
@@ -623,7 +626,7 @@ void fNonVirtualDiamondInheritanceTest5() {
 }
 
 struct NonVirtualBase6 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->NonVirtualBase6::x'}}
   NonVirtualBase6() = default;
   NonVirtualBase6(int) : x(59) {}
 };
@@ -709,7 +712,7 @@ void fVirtualDiamondInheritanceTest1() {
 }
 
 struct VirtualBase2 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualBase2::x'}}
   VirtualBase2() = default;
   VirtualBase2(int) : x(63) {}
 };
@@ -748,7 +751,7 @@ void fVirtualDiamondInheritanceTest2() {
 }
 
 struct VirtualBase3 {
-  int x; // expected-note{{uninitialized field 'this->x'}}
+  int x; // expected-note{{uninitialized field 'this->VirtualBase3::x'}}
   VirtualBase3() = default;
   VirtualBase3(int) : x(66) {}
 };
@@ -772,4 +775,59 @@ public:
 
 void fVirtualDiamondInheritanceTest3() {
   VirtualDiamondInheritanceTest3();
+}
+
+//===----------------------------------------------------------------------===//
+// Dynamic type test.
+//===----------------------------------------------------------------------===//
+
+struct DynTBase1 {};
+struct DynTDerived1 : DynTBase1 {
+  int y; // expected-note{{uninitialized field 'static_cast<struct DynTDerived1 *>(this->bptr)->y'}}
+};
+
+struct DynamicTypeTest1 {
+  DynTBase1 *bptr;
+  int i = 0;
+
+  DynamicTypeTest1(DynTBase1 *bptr) : bptr(bptr) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fDynamicTypeTest1() {
+  DynTDerived1 d;
+  DynamicTypeTest1 t(&d);
+};
+
+struct DynTBase2 {
+  int x; // expected-note{{uninitialized field 'static_cast<struct DynTDerived2 *>(this->bptr)->DynTBase2::x'}}
+};
+struct DynTDerived2 : DynTBase2 {
+  int y; // expected-note{{uninitialized field 'static_cast<struct DynTDerived2 *>(this->bptr)->y'}}
+};
+
+struct DynamicTypeTest2 {
+  DynTBase2 *bptr;
+  int i = 0;
+
+  DynamicTypeTest2(DynTBase2 *bptr) : bptr(bptr) {} // expected-warning{{2 uninitialized fields}}
+};
+
+void fDynamicTypeTest2() {
+  DynTDerived2 d;
+  DynamicTypeTest2 t(&d);
+}
+
+struct SymbolicSuperRegionBase {
+  SymbolicSuperRegionBase() {}
+};
+
+struct SymbolicSuperRegionDerived : SymbolicSuperRegionBase {
+  SymbolicSuperRegionBase *bptr; // no-crash
+  SymbolicSuperRegionDerived(SymbolicSuperRegionBase *bptr) : bptr(bptr) {}
+};
+
+SymbolicSuperRegionDerived *getSymbolicRegion();
+
+void fSymbolicSuperRegionTest() {
+  SymbolicSuperRegionDerived test(getSymbolicRegion());
 }

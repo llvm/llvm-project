@@ -200,6 +200,8 @@ static const EnumEntry<uint32_t> FrameProcSymFlagNames[] = {
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, Inlined),
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, StrictSecurityChecks),
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, SafeBuffers),
+    CV_ENUM_CLASS_ENT(FrameProcedureOptions, EncodedLocalBasePointerMask),
+    CV_ENUM_CLASS_ENT(FrameProcedureOptions, EncodedParamBasePointerMask),
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, ProfileGuidedOptimization),
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, ValidProfileCounts),
     CV_ENUM_CLASS_ENT(FrameProcedureOptions, OptimizedForSpeed),

@@ -34,6 +34,7 @@ namespace clang {
 /// a VarDecl, a FunctionDecl or a BlockDecl.
 class GlobalDecl {
   llvm::PointerIntPair<const Decl *, 2> Value;
+  unsigned MultiVersionIndex = 0;
 
   void Init(const Decl *D) {
     assert(!isa<CXXConstructorDecl>(D) && "Use other ctor with ctor decls!");
@@ -45,7 +46,10 @@ class GlobalDecl {
 public:
   GlobalDecl() = default;
   GlobalDecl(const VarDecl *D) { Init(D);}
-  GlobalDecl(const FunctionDecl *D) { Init(D); }
+  GlobalDecl(const FunctionDecl *D, unsigned MVIndex = 0)
+      : MultiVersionIndex(MVIndex) {
+    Init(D);
+  }
   GlobalDecl(const BlockDecl *D) { Init(D); }
   GlobalDecl(const CapturedDecl *D) { Init(D); }
   GlobalDecl(const ObjCMethodDecl *D) { Init(D); }
@@ -57,7 +61,8 @@ public:
     GlobalDecl CanonGD;
     CanonGD.Value.setPointer(Value.getPointer()->getCanonicalDecl());
     CanonGD.Value.setInt(Value.getInt());
-    
+    CanonGD.MultiVersionIndex = MultiVersionIndex;
+
     return CanonGD;
   }
 
@@ -72,11 +77,20 @@ public:
     assert(isa<CXXDestructorDecl>(getDecl()) && "Decl is not a dtor!");
     return static_cast<CXXDtorType>(Value.getInt());
   }
-  
-  friend bool operator==(const GlobalDecl &LHS, const GlobalDecl &RHS) {
-    return LHS.Value == RHS.Value;
+
+  unsigned getMultiVersionIndex() const {
+    assert(isa<FunctionDecl>(getDecl()) &&
+           !isa<CXXConstructorDecl>(getDecl()) &&
+           !isa<CXXDestructorDecl>(getDecl()) &&
+           "Decl is not a plain FunctionDecl!");
+    return MultiVersionIndex;
   }
-  
+
+  friend bool operator==(const GlobalDecl &LHS, const GlobalDecl &RHS) {
+    return LHS.Value == RHS.Value &&
+           LHS.MultiVersionIndex == RHS.MultiVersionIndex;
+  }
+
   void *getAsOpaquePtr() const { return Value.getOpaqueValue(); }
 
   static GlobalDecl getFromOpaquePtr(void *P) {
@@ -84,10 +98,20 @@ public:
     GD.Value.setFromOpaqueValue(P);
     return GD;
   }
-  
+
   GlobalDecl getWithDecl(const Decl *D) {
     GlobalDecl Result(*this);
     Result.Value.setPointer(D);
+    return Result;
+  }
+
+  GlobalDecl getWithMultiVersionIndex(unsigned Index) {
+    assert(isa<FunctionDecl>(getDecl()) &&
+           !isa<CXXConstructorDecl>(getDecl()) &&
+           !isa<CXXDestructorDecl>(getDecl()) &&
+           "Decl is not a plain FunctionDecl!");
+    GlobalDecl Result(*this);
+    Result.MultiVersionIndex = Index;
     return Result;
   }
 };
@@ -100,7 +124,7 @@ namespace llvm {
     static inline clang::GlobalDecl getEmptyKey() {
       return clang::GlobalDecl();
     }
-  
+
     static inline clang::GlobalDecl getTombstoneKey() {
       return clang::GlobalDecl::
         getFromOpaquePtr(reinterpret_cast<void*>(-1));
@@ -109,13 +133,13 @@ namespace llvm {
     static unsigned getHashValue(clang::GlobalDecl GD) {
       return DenseMapInfo<void*>::getHashValue(GD.getAsOpaquePtr());
     }
-    
-    static bool isEqual(clang::GlobalDecl LHS, 
+
+    static bool isEqual(clang::GlobalDecl LHS,
                         clang::GlobalDecl RHS) {
       return LHS == RHS;
     }
   };
-  
+
   // GlobalDecl isn't *technically* a POD type. However, its copy constructor,
   // copy assignment operator, and destructor are all trivial.
   template <>

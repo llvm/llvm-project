@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <cassert>
+#include <cstddef>       // for std::max_align_t
 #include <iostream>
 
 #include "test_macros.h"

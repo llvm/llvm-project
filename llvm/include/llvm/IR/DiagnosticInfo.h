@@ -101,6 +101,7 @@ private:
   /// Severity gives the severity of the diagnostic.
   const DiagnosticSeverity Severity;
 
+  virtual void anchor();
 public:
   DiagnosticInfo(/* DiagnosticKind */ int Kind, DiagnosticSeverity Severity)
       : Kind(Kind), Severity(Severity) {}
@@ -210,6 +211,7 @@ public:
 };
 
 class DiagnosticInfoStackSize : public DiagnosticInfoResourceLimit {
+  virtual void anchor() override;
 public:
   DiagnosticInfoStackSize(const Function &Fn, uint64_t StackSize,
                           DiagnosticSeverity Severity = DS_Warning,
@@ -340,7 +342,7 @@ private:
 };
 
 class DiagnosticLocation {
-  StringRef Filename;
+  DIFile *File = nullptr;
   unsigned Line = 0;
   unsigned Column = 0;
 
@@ -349,14 +351,18 @@ public:
   DiagnosticLocation(const DebugLoc &DL);
   DiagnosticLocation(const DISubprogram *SP);
 
-  bool isValid() const { return !Filename.empty(); }
-  StringRef getFilename() const { return Filename; }
+  bool isValid() const { return File; }
+  /// Return the full path to the file.
+  std::string getAbsolutePath() const;
+  /// Return the file name relative to the compilation directory.
+  StringRef getRelativePath() const;
   unsigned getLine() const { return Line; }
   unsigned getColumn() const { return Column; }
 };
 
 /// Common features for diagnostics with an associated location.
 class DiagnosticInfoWithLocationBase : public DiagnosticInfo {
+  virtual void anchor() override;
 public:
   /// \p Fn is the function where the diagnostic is being emitted. \p Loc is
   /// the location information to use in the diagnostic.
@@ -375,9 +381,13 @@ public:
   const std::string getLocationStr() const;
 
   /// Return location information for this diagnostic in three parts:
-  /// the source file name, line number and column.
-  void getLocation(StringRef *Filename, unsigned *Line, unsigned *Column) const;
+  /// the relative source file path, line number and column.
+  void getLocation(StringRef &RelativePath, unsigned &Line,
+                   unsigned &Column) const;
 
+  /// Return the absolute path tot the file.
+  std::string getAbsolutePath() const;
+  
   const Function &getFunction() const { return Fn; }
   DiagnosticLocation getLocation() const { return Loc; }
 
@@ -414,6 +424,7 @@ public:
     Argument(StringRef Key, const Value *V);
     Argument(StringRef Key, const Type *T);
     Argument(StringRef Key, StringRef S);
+    Argument(StringRef Key, const char *S) : Argument(Key, StringRef(S)) {};
     Argument(StringRef Key, int N);
     Argument(StringRef Key, float N);
     Argument(StringRef Key, long N);
@@ -590,6 +601,7 @@ operator<<(RemarkT &R,
 /// Common features for diagnostics dealing with optimization remarks
 /// that are used by IR passes.
 class DiagnosticInfoIROptimization : public DiagnosticInfoOptimizationBase {
+  virtual void anchor() override;
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. \p
   /// RemarkName is a textual identifier for the remark (single-word,
@@ -810,6 +822,7 @@ private:
 /// Diagnostic information for optimization analysis remarks related to
 /// floating-point non-commutativity.
 class OptimizationRemarkAnalysisFPCommute : public OptimizationRemarkAnalysis {
+  virtual void anchor();
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the
@@ -851,6 +864,7 @@ private:
 /// Diagnostic information for optimization analysis remarks related to
 /// pointer aliasing.
 class OptimizationRemarkAnalysisAliasing : public OptimizationRemarkAnalysis {
+  virtual void anchor();
 public:
   /// \p PassName is the name of the pass emitting this diagnostic. If this name
   /// matches the regular expression given in -Rpass-analysis=, then the

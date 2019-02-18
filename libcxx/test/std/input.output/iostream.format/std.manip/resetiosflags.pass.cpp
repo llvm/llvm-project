@@ -12,6 +12,8 @@
 // T1 resetiosflags(ios_base::fmtflags mask);
 
 #include <iomanip>
+#include <istream>
+#include <ostream>
 #include <cassert>
 
 template <class CharT>

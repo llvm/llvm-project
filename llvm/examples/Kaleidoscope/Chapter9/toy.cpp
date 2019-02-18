@@ -1245,9 +1245,8 @@ Function *FunctionAST::codegen() {
   unsigned ScopeLine = LineNo;
   DISubprogram *SP = DBuilder->createFunction(
       FContext, P.getName(), StringRef(), Unit, LineNo,
-      CreateFunctionType(TheFunction->arg_size(), Unit),
-      false /* internal linkage */, true /* definition */, ScopeLine,
-      DINode::FlagPrototyped, false);
+      CreateFunctionType(TheFunction->arg_size(), Unit), ScopeLine,
+      DINode::FlagPrototyped, DISubprogram::SPFlagDefinition);
   TheFunction->setSubprogram(SP);
 
   // Push the current scope.

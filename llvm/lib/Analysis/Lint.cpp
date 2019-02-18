@@ -330,12 +330,12 @@ void Lint::visitCallSite(CallSite CS) {
       // Check that the memcpy arguments don't overlap. The AliasAnalysis API
       // isn't expressive enough for what we really want to do. Known partial
       // overlap is not distinguished from the case where nothing is known.
-      uint64_t Size = 0;
+      auto Size = LocationSize::unknown();
       if (const ConstantInt *Len =
               dyn_cast<ConstantInt>(findValue(MCI->getLength(),
                                               /*OffsetOk=*/false)))
         if (Len->getValue().isIntN(32))
-          Size = Len->getValue().getZExtValue();
+          Size = LocationSize::precise(Len->getValue().getZExtValue());
       Assert(AA->alias(MCI->getSource(), Size, MCI->getDest(), Size) !=
                  MustAlias,
              "Undefined behavior: memcpy source and destination overlap", &I);

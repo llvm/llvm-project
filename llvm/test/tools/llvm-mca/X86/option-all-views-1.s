@@ -11,7 +11,10 @@ add %eax, %eax
 # DEFAULTREPORT:      Iterations:        100
 # DEFAULTREPORT-NEXT: Instructions:      100
 # DEFAULTREPORT-NEXT: Total Cycles:      103
-# DEFAULTREPORT-NEXT: Dispatch Width:    2
+# DEFAULTREPORT-NEXT: Total uOps:        100
+
+# DEFAULTREPORT:      Dispatch Width:    2
+# DEFAULTREPORT-NEXT: uOps Per Cycle:    0.97
 # DEFAULTREPORT-NEXT: IPC:               0.97
 # DEFAULTREPORT-NEXT: Block RThroughput: 0.5
 
@@ -29,12 +32,12 @@ add %eax, %eax
 # FULLREPORT:         Dynamic Dispatch Stall Cycles:
 # FULLREPORT-NEXT:    RAT     - Register unavailable:                      0
 # FULLREPORT-NEXT:    RCU     - Retire tokens unavailable:                 0
-# FULLREPORT-NEXT:    SCHEDQ  - Scheduler full:                            61
+# FULLREPORT-NEXT:    SCHEDQ  - Scheduler full:                            61  (59.2%)
 # FULLREPORT-NEXT:    LQ      - Load queue full:                           0
 # FULLREPORT-NEXT:    SQ      - Store queue full:                          0
 # FULLREPORT-NEXT:    GROUP   - Static restrictions on the dispatch group: 0
 
-# FULLREPORT:         Dispatch Logic - number of cycles where we saw N instructions dispatched:
+# FULLREPORT:         Dispatch Logic - number of cycles where we saw N micro opcodes dispatched:
 # FULLREPORT-NEXT:    [# dispatched], [# cycles]
 # FULLREPORT-NEXT:     0,              22  (21.4%)
 # FULLREPORT-NEXT:     1,              62  (60.2%)
@@ -46,14 +49,24 @@ add %eax, %eax
 # FULLREPORT-NEXT:     1,          100  (97.1%)
 
 # FULLREPORT:         Scheduler's queue usage:
-# FULLREPORT-NEXT:    JALU01,  20/20
-# FULLREPORT-NEXT:    JFPU01,  0/18
-# FULLREPORT-NEXT:    JLSAGU,  0/12
+# FULLREPORT-NEXT:    [1] Resource name.
+# FULLREPORT-NEXT:    [2] Average number of used buffer entries.
+# FULLREPORT-NEXT:    [3] Maximum number of used buffer entries.
+# FULLREPORT-NEXT:    [4] Total number of buffer entries.
+
+# FULLREPORT:          [1]            [2]        [3]        [4]
+# FULLREPORT-NEXT:    JALU01           15         20         20
+# FULLREPORT-NEXT:    JFPU01           0          0          18
+# FULLREPORT-NEXT:    JLSAGU           0          0          12
 
 # FULLREPORT:         Retire Control Unit - number of cycles where we saw N instructions retired:
 # FULLREPORT-NEXT:    [# retired], [# cycles]
 # FULLREPORT-NEXT:     0,           3  (2.9%)
 # FULLREPORT-NEXT:     1,           100  (97.1%)
+
+# FULLREPORT:         Total ROB Entries:                64
+# FULLREPORT-NEXT:    Max Used ROB Entries:             22  ( 34.4% )
+# FULLREPORT-NEXT:    Average Used ROB Entries per cy:  17  ( 26.6% )
 
 # FULLREPORT:         Register File statistics:
 # FULLREPORT-NEXT:    Total number of mappings created:    200
@@ -69,29 +82,29 @@ add %eax, %eax
 # FULLREPORT-NEXT:       Total number of mappings created: 200
 # FULLREPORT-NEXT:       Max number of mappings used:      44
 
-# FULLREPORT:         Resources:
-# FULLREPORT-NEXT:    [0]   - JALU0
-# FULLREPORT-NEXT:    [1]   - JALU1
-# FULLREPORT-NEXT:    [2]   - JDiv
-# FULLREPORT-NEXT:    [3]   - JFPA
-# FULLREPORT-NEXT:    [4]   - JFPM
-# FULLREPORT-NEXT:    [5]   - JFPU0
-# FULLREPORT-NEXT:    [6]   - JFPU1
-# FULLREPORT-NEXT:    [7]   - JLAGU
-# FULLREPORT-NEXT:    [8]   - JMul
-# FULLREPORT-NEXT:    [9]   - JSAGU
-# FULLREPORT-NEXT:    [10]  - JSTC
-# FULLREPORT-NEXT:    [11]  - JVALU0
-# FULLREPORT-NEXT:    [12]  - JVALU1
-# FULLREPORT-NEXT:    [13]  - JVIMUL
+# DEFAULTREPORT:      Resources:
+# DEFAULTREPORT-NEXT: [0]   - JALU0
+# DEFAULTREPORT-NEXT: [1]   - JALU1
+# DEFAULTREPORT-NEXT: [2]   - JDiv
+# DEFAULTREPORT-NEXT: [3]   - JFPA
+# DEFAULTREPORT-NEXT: [4]   - JFPM
+# DEFAULTREPORT-NEXT: [5]   - JFPU0
+# DEFAULTREPORT-NEXT: [6]   - JFPU1
+# DEFAULTREPORT-NEXT: [7]   - JLAGU
+# DEFAULTREPORT-NEXT: [8]   - JMul
+# DEFAULTREPORT-NEXT: [9]   - JSAGU
+# DEFAULTREPORT-NEXT: [10]  - JSTC
+# DEFAULTREPORT-NEXT: [11]  - JVALU0
+# DEFAULTREPORT-NEXT: [12]  - JVALU1
+# DEFAULTREPORT-NEXT: [13]  - JVIMUL
 
-# FULLREPORT:         Resource pressure per iteration:
-# FULLREPORT-NEXT:    [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# FULLREPORT-NEXT:    0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -
+# DEFAULTREPORT:      Resource pressure per iteration:
+# DEFAULTREPORT-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
+# DEFAULTREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -
 
-# FULLREPORT:         Resource pressure by instruction:
-# FULLREPORT-NEXT:    [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
-# FULLREPORT-NEXT:    0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax
+# DEFAULTREPORT:      Resource pressure by instruction:
+# DEFAULTREPORT-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
+# DEFAULTREPORT-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -     addl	%eax, %eax
 
 # FULLREPORT:         Timeline view:
 # FULLREPORT-NEXT:                        012

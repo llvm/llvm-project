@@ -16,13 +16,13 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/VirtualFileSystem.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Option/OptSpecifier.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -134,7 +134,7 @@ class ModuleDependencyCollector : public DependencyCollector {
   std::string DestDir;
   bool HasErrors = false;
   llvm::StringSet<> Seen;
-  vfs::YAMLVFSWriter VFSWriter;
+  llvm::vfs::YAMLVFSWriter VFSWriter;
   llvm::StringMap<std::string> SymLinkMap;
 
   bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
@@ -183,9 +183,6 @@ void AttachHeaderIncludeGen(Preprocessor &PP,
                             StringRef OutputPath = {},
                             bool ShowDepth = true, bool MSStyle = false);
 
-/// Cache tokens for use with PCH. Note that this requires a seekable stream.
-void CacheTokens(Preprocessor &PP, raw_pwrite_stream *OS);
-
 /// The ChainedIncludesSource class converts headers to chained PCHs in
 /// memory, mainly for testing.
 IntrusiveRefCntPtr<ExternalSemaSource>
@@ -201,7 +198,7 @@ std::unique_ptr<CompilerInvocation> createInvocationFromCommandLine(
     ArrayRef<const char *> Args,
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
         IntrusiveRefCntPtr<DiagnosticsEngine>(),
-    IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
 /// Return the value of the last argument as an integer, or a default. If Diags
 /// is non-null, emits an error if the argument is given, but non-integral.
@@ -224,14 +221,6 @@ inline uint64_t getLastArgUInt64Value(const llvm::opt::ArgList &Args,
                                       uint64_t Default,
                                       DiagnosticsEngine &Diags) {
   return getLastArgUInt64Value(Args, Id, Default, &Diags);
-}
-
-// When Clang->getFrontendOpts().DisableFree is set we don't delete some of the
-// global objects, but we don't want LeakDetectors to complain, so we bury them
-// in a globally visible array.
-void BuryPointer(const void *Ptr);
-template <typename T> void BuryPointer(std::unique_ptr<T> Ptr) {
-  BuryPointer(Ptr.release());
 }
 
 // Frontend timing utils

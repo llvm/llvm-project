@@ -11,7 +11,7 @@ struct S0 {
 
 struct S1; // expected-note 6 {{forward declaration}}
 extern S1 s1;
-const int test3 = __alignof__(s1); // expected-error {{invalid application of 'alignof' to an incomplete type 'S1'}}
+const int test3 = __alignof__(s1); // expected-error {{invalid application of '__alignof' to an incomplete type 'S1'}}
 
 struct S2 {
   S2();
@@ -19,11 +19,11 @@ struct S2 {
   int x;
 
   int test4 = __alignof__(x); // ok
-  int test5 = __alignof__(s); // expected-error {{invalid application of 'alignof' to an incomplete type 'S1'}}
+  int test5 = __alignof__(s); // expected-error {{invalid application of '__alignof' to an incomplete type 'S1'}}
 };
 
 const int test6 = __alignof__(S2::x);
-const int test7 = __alignof__(S2::s); // expected-error {{invalid application of 'alignof' to an incomplete type 'S1'}}
+const int test7 = __alignof__(S2::s); // expected-error {{invalid application of '__alignof' to an incomplete type 'S1'}}
 
 // Arguably, these should fail like the S1 cases do: the alignment of
 // 's2.x' should depend on the alignment of both x-within-S2 and
@@ -34,10 +34,10 @@ struct S3 {
   S2 s2;
 
   static const int test8 = __alignof__(s2.x);
-  static const int test9 = __alignof__(s2.s); // expected-error {{invalid application of 'alignof' to an incomplete type 'S1'}}
+  static const int test9 = __alignof__(s2.s); // expected-error {{invalid application of '__alignof' to an incomplete type 'S1'}}
   auto test10() -> char(&)[__alignof__(s2.x)];
   static const int test11 = __alignof__(S3::s2.x);
-  static const int test12 = __alignof__(S3::s2.s); // expected-error {{invalid application of 'alignof' to an incomplete type 'S1'}}
+  static const int test12 = __alignof__(S3::s2.s); // expected-error {{invalid application of '__alignof' to an incomplete type 'S1'}}
   auto test13() -> char(&)[__alignof__(s2.x)];
 };
 
@@ -59,9 +59,9 @@ struct S5 {
 };
 const int test8 = __alignof__(S5::x);
 
-long long int test14[2];
+int test14[2];
 
-static_assert(alignof(test14) == 8, "foo"); // expected-warning {{'alignof' applied to an expression is a GNU extension}}
+static_assert(alignof(test14) == 4, "foo"); // expected-warning {{'alignof' applied to an expression is a GNU extension}}
 
 // PR19992
 static_assert(alignof(int[]) == alignof(int), ""); // ok
@@ -97,3 +97,8 @@ struct S {
   typedef __attribute__((aligned(N))) int Field[sizeof(N)]; // expected-error {{requested alignment is dependent but declaration is not dependent}}
 };
 }
+
+typedef int __attribute__((aligned(16))) aligned_int;
+template <typename>
+using template_alias = aligned_int;
+static_assert(alignof(template_alias<void>) == 16, "Expected alignment of 16" );

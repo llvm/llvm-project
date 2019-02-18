@@ -1,15 +1,20 @@
 #include "cpuid.h"
 #include "sanitizer_common/sanitizer_common.h"
+#if !SANITIZER_FUCHSIA
+#include "sanitizer_common/sanitizer_posix.h"
+#endif
 #include "xray_defs.h"
 #include "xray_interface_internal.h"
 
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD || SANITIZER_MAC
 #include <sys/types.h>
 #if SANITIZER_OPENBSD
 #include <sys/time.h>
 #include <machine/cpu.h>
 #endif
 #include <sys/sysctl.h>
+#elif SANITIZER_FUCHSIA
+#include <zircon/syscalls.h>
 #endif
 
 #include <atomic>
@@ -81,17 +86,20 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
   }
   return TSCFrequency == -1 ? 0 : static_cast<uint64_t>(TSCFrequency);
 }
-#elif SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD
+#elif SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD || SANITIZER_MAC
 uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     long long TSCFrequency = -1;
     size_t tscfreqsz = sizeof(TSCFrequency);
 #if SANITIZER_OPENBSD
     int Mib[2] = { CTL_MACHDEP, CPU_TSCFREQ };
-    if (sysctl(Mib, 2, &TSCFrequency, &tscfreqsz, NULL, 0) != -1) {
+    if (internal_sysctl(Mib, 2, &TSCFrequency, &tscfreqsz, NULL, 0) != -1) {
+#elif SANITIZER_MAC
+    if (internal_sysctlbyname("machdep.tsc.frequency", &TSCFrequency,
+                              &tscfreqsz, NULL, 0) != -1) {
 
 #else
-    if (sysctlbyname("machdep.tsc_freq", &TSCFrequency, &tscfreqsz,
-        NULL, 0) != -1) {
+    if (internal_sysctlbyname("machdep.tsc_freq", &TSCFrequency, &tscfreqsz,
+                              NULL, 0) != -1) {
 #endif
         return static_cast<uint64_t>(TSCFrequency);
     } else {
@@ -100,7 +108,7 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
 
     return 0;
 }
-#else
+#elif !SANITIZER_FUCHSIA
 uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     /* Not supported */
     return 0;
@@ -317,6 +325,7 @@ bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
   return false;
 }
 
+#if !SANITIZER_FUCHSIA
 // We determine whether the CPU we're running on has the correct features we
 // need. In x86_64 this will be rdtscp support.
 bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
@@ -339,5 +348,6 @@ bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
   }
   return true;
 }
+#endif
 
 } // namespace __xray

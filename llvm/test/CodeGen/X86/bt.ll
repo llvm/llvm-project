@@ -1067,7 +1067,7 @@ define zeroext i1 @extend(i32 %bit, i64 %bits) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
@@ -1112,16 +1112,16 @@ define void @demanded_i32(i32* nocapture readonly, i32* nocapture, i32) nounwind
 ;
 ; X64-LABEL: demanded_i32:
 ; X64:       # %bb.0:
+; X64-NEXT:    movl %edx, %ecx
 ; X64-NEXT:    movl %edx, %eax
 ; X64-NEXT:    shrl $5, %eax
-; X64-NEXT:    movl (%rdi,%rax,4), %r8d
-; X64-NEXT:    movl $1, %edi
-; X64-NEXT:    movl %edx, %ecx
-; X64-NEXT:    shll %cl, %edi
-; X64-NEXT:    btl %edx, %r8d
+; X64-NEXT:    movl (%rdi,%rax,4), %edi
+; X64-NEXT:    movl $1, %edx
+; X64-NEXT:    shll %cl, %edx
+; X64-NEXT:    btl %ecx, %edi
 ; X64-NEXT:    jae .LBB30_2
 ; X64-NEXT:  # %bb.1:
-; X64-NEXT:    orl %edi, (%rsi,%rax,4)
+; X64-NEXT:    orl %edx, (%rsi,%rax,4)
 ; X64-NEXT:  .LBB30_2:
 ; X64-NEXT:    retq
   %4 = lshr i32 %2, 5

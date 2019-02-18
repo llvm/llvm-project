@@ -27,7 +27,7 @@ define i32 @f3(fp128 *%src) {
 ; CHECK-DAG: ld %f2, 8(%r2)
 ; CHECK: clfxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128 , fp128 *%src
+  %f = load fp128, fp128 *%src
   %conv = fptoui fp128 %f to i32
   ret i32 %conv
 }
@@ -57,7 +57,7 @@ define i64 @f6(fp128 *%src) {
 ; CHECK-DAG: ld %f2, 8(%r2)
 ; CHECK: clgxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128 , fp128 *%src
+  %f = load fp128, fp128 *%src
   %conv = fptoui fp128 %f to i64
   ret i64 %conv
 }

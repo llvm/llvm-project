@@ -2463,6 +2463,7 @@ APInt HexagonConstEvaluator::getCmpImm(unsigned Opc, unsigned OpX,
     case Hexagon::A4_cmpheqi:    // s8
     case Hexagon::C4_cmpneqi:   // s8
       Signed = true;
+      break;
     case Hexagon::A4_cmpbeqi:    // u8
       break;
     case Hexagon::C2_cmpgtui:      // u9

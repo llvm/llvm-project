@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "Clustering.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include <string>
-#include <unordered_set>
 
+namespace llvm {
 namespace exegesis {
 
 // The clustering problem has the following characteristics:
@@ -31,9 +33,10 @@ namespace exegesis {
 
 // Finds the points at distance less than sqrt(EpsilonSquared) of Q (not
 // including Q).
-std::vector<size_t>
-InstructionBenchmarkClustering::rangeQuery(const size_t Q) const {
-  std::vector<size_t> Neighbors;
+void InstructionBenchmarkClustering::rangeQuery(
+    const size_t Q, std::vector<size_t> &Neighbors) const {
+  Neighbors.clear();
+  Neighbors.reserve(Points_.size() - 1); // The Q itself isn't a neighbor.
   const auto &QMeasurements = Points_[Q].Measurements;
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (P == Q)
@@ -45,18 +48,6 @@ InstructionBenchmarkClustering::rangeQuery(const size_t Q) const {
       Neighbors.push_back(P);
     }
   }
-  return Neighbors;
-}
-
-bool InstructionBenchmarkClustering::isNeighbour(
-    const std::vector<BenchmarkMeasure> &P,
-    const std::vector<BenchmarkMeasure> &Q) const {
-  double DistanceSquared = 0.0;
-  for (size_t I = 0, E = P.size(); I < E; ++I) {
-    const auto Diff = P[I].Value - Q[I].Value;
-    DistanceSquared += Diff * Diff;
-  }
-  return DistanceSquared <= EpsilonSquared_;
 }
 
 InstructionBenchmarkClustering::InstructionBenchmarkClustering(
@@ -101,10 +92,11 @@ llvm::Error InstructionBenchmarkClustering::validateAndSetup() {
 }
 
 void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
+  std::vector<size_t> Neighbors; // Persistent buffer to avoid allocs.
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
     if (!ClusterIdForPoint_[P].isUndef())
       continue; // Previously processed in inner loop.
-    const auto Neighbors = rangeQuery(P);
+    rangeQuery(P, Neighbors);
     if (Neighbors.size() + 1 < MinPts) { // Density check.
       // The region around P is not dense enough to create a new cluster, mark
       // as noise for now.
@@ -119,11 +111,12 @@ void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
     CurrentCluster.PointIndices.push_back(P);
 
     // Process P's neighbors.
-    std::unordered_set<size_t> ToProcess(Neighbors.begin(), Neighbors.end());
+    llvm::SetVector<size_t, std::deque<size_t>> ToProcess;
+    ToProcess.insert(Neighbors.begin(), Neighbors.end());
     while (!ToProcess.empty()) {
       // Retrieve a point from the set.
       const size_t Q = *ToProcess.begin();
-      ToProcess.erase(Q);
+      ToProcess.erase(ToProcess.begin());
 
       if (ClusterIdForPoint_[Q].isNoise()) {
         // Change noise point to border point.
@@ -138,12 +131,14 @@ void InstructionBenchmarkClustering::dbScan(const size_t MinPts) {
       ClusterIdForPoint_[Q] = CurrentCluster.Id;
       CurrentCluster.PointIndices.push_back(Q);
       // And extend to the neighbors of Q if the region is dense enough.
-      const auto Neighbors = rangeQuery(Q);
+      rangeQuery(Q, Neighbors);
       if (Neighbors.size() + 1 >= MinPts) {
         ToProcess.insert(Neighbors.begin(), Neighbors.end());
       }
     }
   }
+  // assert(Neighbors.capacity() == (Points_.size() - 1));
+  // ^ True, but it is not quaranteed to be true in all the cases.
 
   // Add noisy points to noise cluster.
   for (size_t P = 0, NumPoints = Points_.size(); P < NumPoints; ++P) {
@@ -170,3 +165,4 @@ InstructionBenchmarkClustering::create(
 }
 
 } // namespace exegesis
+} // namespace llvm

@@ -27,6 +27,27 @@ namespace llvm {
 namespace dsymutil {
 namespace MachOUtils {
 
+llvm::Error ArchAndFile::createTempFile() {
+  llvm::SmallString<128> TmpModel;
+  llvm::sys::path::system_temp_directory(true, TmpModel);
+  llvm::sys::path::append(TmpModel, "dsym.tmp%%%%%.dwarf");
+  Expected<sys::fs::TempFile> T = sys::fs::TempFile::create(TmpModel);
+
+  if (!T)
+    return T.takeError();
+
+  File = llvm::Optional<sys::fs::TempFile>(std::move(*T));
+  return Error::success();
+}
+
+llvm::StringRef ArchAndFile::path() const { return File->TmpName; }
+
+ArchAndFile::~ArchAndFile() {
+  if (File)
+    if (auto E = File->discard())
+      llvm::consumeError(std::move(E));
+}
+
 std::string getArchName(StringRef Arch) {
   if (Arch.startswith("thumb"))
     return (llvm::Twine("arm") + Arch.drop_front(5)).str();
@@ -53,21 +74,16 @@ static bool runLipo(StringRef SDKPath, SmallVectorImpl<StringRef> &Args) {
   return true;
 }
 
-bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
+bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName,
                              const LinkOptions &Options, StringRef SDKPath) {
-  // No need to merge one file into a universal fat binary. First, try
-  // to move it (rename) to the final location. If that fails because
-  // of cross-device link issues then copy and delete.
+  // No need to merge one file into a universal fat binary.
   if (ArchFiles.size() == 1) {
-    StringRef From(ArchFiles.front().Path);
-    if (sys::fs::rename(From, OutputFileName)) {
-      if (std::error_code EC = sys::fs::copy_file(From, OutputFileName)) {
-        WithColor::error() << "while copying " << From << " to "
-                           << OutputFileName << ": " << EC.message() << "\n";
-        return false;
-      }
-      sys::fs::remove(From);
+    if (auto E = ArchFiles.front().File->keep(OutputFileName)) {
+      WithColor::error() << "while keeping " << ArchFiles.front().path()
+                         << " as " << OutputFileName << ": "
+                         << toString(std::move(E)) << "\n";
+      return false;
     }
     return true;
   }
@@ -77,7 +93,7 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFilename> &ArchFiles,
   Args.push_back("-create");
 
   for (auto &Thin : ArchFiles)
-    Args.push_back(Thin.Path);
+    Args.push_back(Thin.path());
 
   // Align segments to match dsymutil-classic alignment
   for (auto &Thin : ArchFiles) {
@@ -317,8 +333,8 @@ static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
 // Stream a dSYM companion binary file corresponding to the binary referenced
 // by \a DM to \a OutFile. The passed \a MS MCStreamer is setup to write to
 // \a OutFile and it must be using a MachObjectWriter object to do so.
-bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
-                           raw_fd_ostream &OutFile) {
+bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
+                           MCStreamer &MS, raw_fd_ostream &OutFile) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
@@ -352,25 +368,37 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   bool Is64Bit = Writer.is64Bit();
   MachO::symtab_command SymtabCmd = InputBinary.getSymtabLoadCommand();
 
-  // Get UUID.
-  MachO::uuid_command UUIDCmd;
-  memset(&UUIDCmd, 0, sizeof(UUIDCmd));
-  UUIDCmd.cmd = MachO::LC_UUID;
-  UUIDCmd.cmdsize = sizeof(MachO::uuid_command);
-  for (auto &LCI : InputBinary.load_commands()) {
-    if (LCI.C.cmd == MachO::LC_UUID) {
-      UUIDCmd = InputBinary.getUuidCommand(LCI);
-      break;
-    }
-  }
-
   // Compute the number of load commands we will need.
   unsigned LoadCommandSize = 0;
   unsigned NumLoadCommands = 0;
-  // We will copy the UUID if there is one.
-  if (UUIDCmd.cmd != 0) {
-    ++NumLoadCommands;
-    LoadCommandSize += sizeof(MachO::uuid_command);
+
+  // Get LC_UUID and LC_BUILD_VERSION.
+  MachO::uuid_command UUIDCmd;
+  SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
+  memset(&UUIDCmd, 0, sizeof(UUIDCmd));
+  for (auto &LCI : InputBinary.load_commands()) {
+    switch (LCI.C.cmd) {
+    case MachO::LC_UUID:
+      if (UUIDCmd.cmd)
+        return error("Binary contains more than one UUID");
+      UUIDCmd = InputBinary.getUuidCommand(LCI);
+      ++NumLoadCommands;
+      LoadCommandSize += sizeof(UUIDCmd);
+      break;
+   case MachO::LC_BUILD_VERSION: {
+      MachO::build_version_command Cmd;
+      memset(&Cmd, 0, sizeof(Cmd));
+      Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
+      ++NumLoadCommands;
+      LoadCommandSize += sizeof(Cmd);
+      // LLDB doesn't care about the build tools for now.
+      Cmd.ntools = 0;
+      BuildVersionCmd.push_back(Cmd);
+      break;
+    }
+    default:
+      break;
+    }
   }
 
   // If we have a valid symtab to copy, do it.
@@ -415,7 +443,7 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   }
 
   SmallString<0> NewSymtab;
-  NonRelocatableStringpool NewStrings;
+  NonRelocatableStringpool NewStrings(Translator);
   unsigned NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   unsigned NumSyms = 0;
   uint64_t NewStringsSize = 0;
@@ -436,9 +464,17 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   assert(OutFile.tell() == HeaderSize);
   if (UUIDCmd.cmd != 0) {
     Writer.W.write<uint32_t>(UUIDCmd.cmd);
-    Writer.W.write<uint32_t>(UUIDCmd.cmdsize);
+    Writer.W.write<uint32_t>(sizeof(UUIDCmd));
     OutFile.write(reinterpret_cast<const char *>(UUIDCmd.uuid), 16);
     assert(OutFile.tell() == HeaderSize + sizeof(UUIDCmd));
+  }
+  for (auto Cmd : BuildVersionCmd) {
+    Writer.W.write<uint32_t>(Cmd.cmd);
+    Writer.W.write<uint32_t>(sizeof(Cmd));
+    Writer.W.write<uint32_t>(Cmd.platform);
+    Writer.W.write<uint32_t>(Cmd.minos);
+    Writer.W.write<uint32_t>(Cmd.sdk);
+    Writer.W.write<uint32_t>(Cmd.ntools);
   }
 
   assert(SymtabCmd.cmd && "No symbol table.");
@@ -498,10 +534,9 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
     // Reproduce that behavior for now (there is corresponding code in
     // transferSymbol).
     OutFile << '\0';
-    std::vector<DwarfStringPoolEntryRef> Strings = NewStrings.getEntries();
+    std::vector<DwarfStringPoolEntryRef> Strings =
+        NewStrings.getEntriesForEmission();
     for (auto EntryRef : Strings) {
-      if (EntryRef.getIndex() == -1U)
-        break;
       OutFile.write(EntryRef.getString().data(),
                     EntryRef.getString().size() + 1);
     }

@@ -1,0 +1,77 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- The general order of executing an MSBuild file is roughly:
+       1) vcxproj file
+       2) ├─ Import Microsoft.Cpp.props
+       3) │  └─ Import Toolset specific props (e.g. $(VCTargets)Platforms\Win32\PlatformToolsets\llvm\Toolset.props)
+       4) │     └─ Import This File (LLVM.Cpp.Common.props)
+       5) │─ Core logic of vcxproj (define files, override properties, etc)
+       6) └─ Import Microsoft.Cpp.targets
+       7)    │─ Import Toolset specific targets file (e.g. $(VCTargets)Platforms\Win32\PlatformToolsets\llvm\Toolset.targets)
+       8)    └─ Run the compiler.
+       The important thing is that we have hooks at 3, 4, and 7.  3 and 4 give
+       us the ability to provide initial values for toolchain settings (where
+       is the compiler, what values are considered "default" for a given
+       setting, etc), 7 gives us the ability to act on anything that the user
+       has overridden (such as warning or erroring on incompatible settings,
+       mapping settings to other settings, etc).
+       -->
+
+  <PropertyGroup>
+    <!-- This initializes the values in Properties > General > Output Directory.
+       Builds will fail without this. -->
+    <OutDirWasSpecified Condition=" '$(OutDir)'!='' AND '$(OutDirWasSpecified)'=='' ">true</OutDirWasSpecified>
+    <OutDirWasSpecified Condition=" '$(OutDir)'=='' AND '$(OutDirWasSpecified)'=='' ">false</OutDirWasSpecified>
+
+    <IntDir Condition="'$(IntDir)'=='' AND '$(IntermediateOutputPath)'!=''">$(IntermediateOutputPath)</IntDir>
+    <IntDir Condition="'$(IntDir)'=='' AND '$(IntermediateOutputPath)'==''">$(Configuration)\</IntDir>
+    <OutDir Condition="'$(OutDir)'=='' AND '$(SolutionDir)' != ''">$(SolutionDir)$(Configuration)\</OutDir>
+    <OutDir Condition="'$(OutDir)'=='' AND '$(SolutionDir)' == ''">$(IntDir)</OutDir>
+    <DebuggerFlavor Condition="'$(DebuggerFlavor)'==''">WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Short names for platform toolsets (added to project name in Solution Explorer) -->
+    <_PlatformToolsetShortNameFor_llvm>LLVM</_PlatformToolsetShortNameFor_llvm>
+    <_PlatformToolsetFriendlyNameFor_llvm>LLVM</_PlatformToolsetFriendlyNameFor_llvm>
+  </PropertyGroup>
+
+  <!-- Find an installed LLVM and set up our paths. -->
+  <PropertyGroup>
+    <LLVMInstallDir>$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\LLVM\LLVM)</LLVMInstallDir>
+    <LLVMInstallDir Condition="'$(LLVMInstallDir)' == ''">$(Registry:HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\LLVM\LLVM)</LLVMInstallDir>
+    <LLVMInstallDir Condition="'$(LLVMInstallDir)' != ''">$(LLVMInstallDir)\</LLVMInstallDir>
+    <ClangClExecutable>$(LLVMInstallDir)bin\clang-cl.exe</ClangClExecutable>
+    <LldLinkExecutable>$(LLVMInstallDir)bin\lld-link.exe</LldLinkExecutable>
+    <UseClangCl>true</UseClangCl>
+    <UseLldLink>true</UseLldLink>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.WindowsSDK.props" Condition="Exists('$(VCTargetsPath)\Microsoft.Cpp.WindowsSDK.props')"/>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Common.props" />
+
+  <PropertyGroup>
+    <!-- Set some paths (such as include paths) that are common to all platforms.  This is the same as what
+         the default paths for cl will use.
+         -->
+    <IncludePath Condition="'$(IncludePath)' == ''">$(IncludePath);$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryWPath Condition="'$(LibraryWPath)' == ''">$(WindowsSDK_MetadataPath);</LibraryWPath>
+    <SourcePath Condition="'$(SourcePath)' == ''">$(VC_SourcePath);</SourcePath>
+  </PropertyGroup>
+
+
+  <!-- Set values which are reflected in the property UI by default.  The user can override these
+       by editing the vcxproj file (or making changes via the UI, which has the same effect).
+       -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- Set this to "Default" (which means not passing any /RTC option) so that any other value will
+           be treated as having been overridden by the user.  This Serves as a hint to the user that
+           Default is the value we support, and other values will generate a warning.  It also means
+           that if the user simply creates a new project in MSVC (which uses /RTCu by default), then
+           switches the toolset to Clang, we will still treat the value as default (which for us is to
+           not pass the option).  Only if the user explicitly overrode this setting in a project to use
+           /RTCu would we see the warning. -->
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

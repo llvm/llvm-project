@@ -212,7 +212,7 @@ int foo(CFTypeRef keychainOrArray, SecProtocolType protocol,
     if (st == noErr)
       SecKeychainItemFreeContent(ptr, outData[3]);
   }
-  if (length) { // TODO: We do not report a warning here since the symbol is no longer live, but it's not marked as dead.
+  if (length) { // expected-warning{{Allocated data is not released: missing a call to 'SecKeychainItemFreeContent'}}
     length++;
   }
   return 0;
@@ -447,6 +447,18 @@ int radar_19196494() {
     UInt32 passwordLength;
     void *passwordData = 0;
     OSStatus err = SecKeychainFindGenericPassword(0, 0, "", 0, "", (UInt32 *)&login_password.length, (void**)&login_password.data, 0);
+    cb.SetContextVal(&login_password);
+    if (err == noErr) {
+      SecKeychainItemFreeContent(0, login_password.data);
+    }
+  }
+  return 0;
+}
+int radar_19196494_v2() {
+  @autoreleasepool {
+    AuthorizationValue login_password = {};
+    OSStatus err = SecKeychainFindGenericPassword(0, 0, "", 0, "", (UInt32 *)&login_password.length, (void**)&login_password.data, 0);
+    if (!login_password.data) return 0;
     cb.SetContextVal(&login_password);
     if (err == noErr) {
       SecKeychainItemFreeContent(0, login_password.data);

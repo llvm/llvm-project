@@ -72,10 +72,43 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
   for (BasicBlock *BB : ForeBlocks) {
     if (BB == SubLoopPreHeader)
       continue;
-    TerminatorInst *TI = BB->getTerminator();
+    Instruction *TI = BB->getTerminator();
     for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
       if (!ForeBlocks.count(TI->getSuccessor(i)))
         return false;
+  }
+
+  return true;
+}
+
+// Looks at the phi nodes in Header for values coming from Latch. For these
+// instructions and all their operands calls Visit on them, keeping going for
+// all the operands in AftBlocks. Returns false if Visit returns false,
+// otherwise returns true. This is used to process the instructions in the
+// Aft blocks that need to be moved before the subloop. It is used in two
+// places. One to check that the required set of instructions can be moved
+// before the loop. Then to collect the instructions to actually move in
+// moveHeaderPhiOperandsToForeBlocks.
+template <typename T>
+static bool processHeaderPhiOperands(BasicBlock *Header, BasicBlock *Latch,
+                                     BasicBlockSet &AftBlocks, T Visit) {
+  SmallVector<Instruction *, 8> Worklist;
+  for (auto &Phi : Header->phis()) {
+    Value *V = Phi.getIncomingValueForBlock(Latch);
+    if (Instruction *I = dyn_cast<Instruction>(V))
+      Worklist.push_back(I);
+  }
+
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.back();
+    Worklist.pop_back();
+    if (!Visit(I))
+      return false;
+
+    if (AftBlocks.count(I->getParent()))
+      for (auto &U : I->operands())
+        if (Instruction *II = dyn_cast<Instruction>(U))
+          Worklist.push_back(II);
   }
 
   return true;
@@ -88,25 +121,13 @@ static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
                                               BasicBlockSet &AftBlocks) {
   // We need to ensure we move the instructions in the correct order,
   // starting with the earliest required instruction and moving forward.
-  std::vector<Instruction *> Worklist;
   std::vector<Instruction *> Visited;
-  for (auto &Phi : Header->phis()) {
-    Value *V = Phi.getIncomingValueForBlock(Latch);
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      Worklist.push_back(I);
-  }
-
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.back();
-    Worklist.pop_back();
-    if (!AftBlocks.count(I->getParent()))
-      continue;
-
-    Visited.push_back(I);
-    for (auto &U : I->operands())
-      if (Instruction *II = dyn_cast<Instruction>(U))
-        Worklist.push_back(II);
-  }
+  processHeaderPhiOperands(Header, Latch, AftBlocks,
+                           [&Visited, &AftBlocks](Instruction *I) {
+                             if (AftBlocks.count(I->getParent()))
+                               Visited.push_back(I);
+                             return true;
+                           });
 
   // Move all instructions in program order to before the InsertLoc
   BasicBlock *InsertLocBB = InsertLoc->getParent();
@@ -146,12 +167,14 @@ static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
 
   isSafeToUnrollAndJam should be used prior to calling this to make sure the
   unrolling will be valid. Checking profitablility is also advisable.
+
+  If EpilogueLoop is non-null, it receives the epilogue loop (if it was
+  necessary to create one and not fully unrolled).
 */
-LoopUnrollResult
-llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
-                       unsigned TripMultiple, bool UnrollRemainder,
-                       LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-                       AssumptionCache *AC, OptimizationRemarkEmitter *ORE) {
+LoopUnrollResult llvm::UnrollAndJamLoop(
+    Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,
+    bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+    AssumptionCache *AC, OptimizationRemarkEmitter *ORE, Loop **EpilogueLoop) {
 
   // When we enter here we should have already checked that it is safe
   BasicBlock *Header = L->getHeader();
@@ -160,7 +183,7 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
 
   // Don't enter the unroll code if there is nothing to do.
   if (TripCount == 0 && Count < 2) {
-    LLVM_DEBUG(dbgs() << "Won't unroll; almost nothing to do\n");
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; almost nothing to do\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -175,7 +198,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   if (TripMultiple == 1 || TripMultiple % Count != 0) {
     if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
                                     /*UseEpilogRemainder*/ true,
-                                    UnrollRemainder, LI, SE, DT, AC, true)) {
+                                    UnrollRemainder, LI, SE, DT, AC, true,
+                                    EpilogueLoop)) {
       LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;
@@ -276,8 +300,15 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
     for (BasicBlock *BB : L->getBlocks())
       for (Instruction &I : *BB)
         if (!isa<DbgInfoIntrinsic>(&I))
-          if (const DILocation *DIL = I.getDebugLoc())
-            I.setDebugLoc(DIL->cloneWithDuplicationFactor(Count));
+          if (const DILocation *DIL = I.getDebugLoc()) {
+            auto NewDIL = DIL->cloneWithDuplicationFactor(Count);
+            if (NewDIL)
+              I.setDebugLoc(NewDIL.getValue());
+            else
+              LLVM_DEBUG(dbgs()
+                         << "Failed to create new discriminator: "
+                         << DIL->getFilename() << " Line: " << DIL->getLine());
+          }
 
   // Copy all blocks
   for (unsigned It = 1; It != Count; ++It) {
@@ -598,16 +629,28 @@ static bool checkDependencies(SmallVector<Value *, 4> &Earlier,
       if (auto D = DI.depends(Src, Dst, true)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
 
-        if (D->isConfused())
+        if (D->isConfused()) {
+          LLVM_DEBUG(dbgs() << "  Confused dependency between:\n"
+                            << "  " << *Src << "\n"
+                            << "  " << *Dst << "\n");
           return false;
+        }
         if (!InnerLoop) {
-          if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT)
+          if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT) {
+            LLVM_DEBUG(dbgs() << "  > dependency between:\n"
+                              << "  " << *Src << "\n"
+                              << "  " << *Dst << "\n");
             return false;
+          }
         } else {
           assert(LoopDepth + 1 <= D->getLevels());
           if (D->getDirection(LoopDepth) & Dependence::DVEntry::GT &&
-              D->getDirection(LoopDepth + 1) & Dependence::DVEntry::LT)
+              D->getDirection(LoopDepth + 1) & Dependence::DVEntry::LT) {
+            LLVM_DEBUG(dbgs() << "  < > dependency between:\n"
+                              << "  " << *Src << "\n"
+                              << "  " << *Dst << "\n");
             return false;
+          }
         }
       }
     }
@@ -695,38 +738,45 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   if (SubLoopLatch != SubLoopExit)
     return false;
 
-  if (Header->hasAddressTaken() || SubLoopHeader->hasAddressTaken())
+  if (Header->hasAddressTaken() || SubLoopHeader->hasAddressTaken()) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Address taken\n");
     return false;
+  }
 
   // Split blocks into Fore/SubLoop/Aft based on dominators
   BasicBlockSet SubLoopBlocks;
   BasicBlockSet ForeBlocks;
   BasicBlockSet AftBlocks;
   if (!partitionOuterLoopBlocks(L, SubLoop, ForeBlocks, SubLoopBlocks,
-                                AftBlocks, &DT))
+                                AftBlocks, &DT)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Incompatible loop layout\n");
     return false;
+  }
 
   // Aft blocks may need to move instructions to fore blocks, which becomes more
   // difficult if there are multiple (potentially conditionally executed)
   // blocks. For now we just exclude loops with multiple aft blocks.
-  if (AftBlocks.size() != 1)
+  if (AftBlocks.size() != 1) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Can't currently handle "
+                         "multiple blocks after the loop\n");
     return false;
+  }
 
-  // Check inner loop IV is consistent between all iterations
-  const SCEV *SubLoopBECountSC = SE.getExitCount(SubLoop, SubLoopLatch);
-  if (isa<SCEVCouldNotCompute>(SubLoopBECountSC) ||
-      !SubLoopBECountSC->getType()->isIntegerTy())
+  // Check inner loop backedge count is consistent on all iterations of the
+  // outer loop
+  if (!hasIterationCountInvariantInParent(SubLoop, SE)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Inner loop iteration count is "
+                         "not consistent on each iteration\n");
     return false;
-  ScalarEvolution::LoopDisposition LD =
-      SE.getLoopDisposition(SubLoopBECountSC, L);
-  if (LD != ScalarEvolution::LoopInvariant)
-    return false;
+  }
 
   // Check the loop safety info for exceptions.
-  LoopSafetyInfo LSI;
-  computeLoopSafetyInfo(&LSI, L);
-  if (LSI.MayThrow)
+  SimpleLoopSafetyInfo LSI;
+  LSI.computeLoopSafetyInfo(L);
+  if (LSI.anyBlockMayThrow()) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; Something may throw\n");
     return false;
+  }
 
   // We've ruled out the easy stuff and now need to check that there are no
   // interdependencies which may prevent us from moving the:
@@ -735,37 +785,35 @@ bool llvm::isSafeToUnrollAndJam(Loop *L, ScalarEvolution &SE, DominatorTree &DT,
   //  ForeBlock phi operands before the subloop
 
   // Make sure we can move all instructions we need to before the subloop
-  SmallVector<Instruction *, 8> Worklist;
-  SmallPtrSet<Instruction *, 8> Visited;
-  for (auto &Phi : Header->phis()) {
-    Value *V = Phi.getIncomingValueForBlock(Latch);
-    if (Instruction *I = dyn_cast<Instruction>(V))
-      Worklist.push_back(I);
-  }
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.back();
-    Worklist.pop_back();
-    if (Visited.insert(I).second) {
-      if (SubLoop->contains(I->getParent()))
-        return false;
-      if (AftBlocks.count(I->getParent())) {
-        // If we hit a phi node in afts we know we are done (probably LCSSA)
-        if (isa<PHINode>(I))
-          return false;
-        if (I->mayHaveSideEffects() || I->mayReadOrWriteMemory())
-          return false;
-        for (auto &U : I->operands())
-          if (Instruction *II = dyn_cast<Instruction>(U))
-            Worklist.push_back(II);
-      }
-    }
+  if (!processHeaderPhiOperands(
+          Header, Latch, AftBlocks, [&AftBlocks, &SubLoop](Instruction *I) {
+            if (SubLoop->contains(I->getParent()))
+              return false;
+            if (AftBlocks.count(I->getParent())) {
+              // If we hit a phi node in afts we know we are done (probably
+              // LCSSA)
+              if (isa<PHINode>(I))
+                return false;
+              // Can't move instructions with side effects or memory
+              // reads/writes
+              if (I->mayHaveSideEffects() || I->mayReadOrWriteMemory())
+                return false;
+            }
+            // Keep going
+            return true;
+          })) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; can't move required "
+                         "instructions after subloop to before it\n");
+    return false;
   }
 
   // Check for memory dependencies which prohibit the unrolling we are doing.
   // Because of the way we are unrolling Fore/Sub/Aft blocks, we need to check
   // there are no dependencies between Fore-Sub, Fore-Aft, Sub-Aft and Sub-Sub.
-  if (!checkDependencies(L, ForeBlocks, SubLoopBlocks, AftBlocks, DI))
+  if (!checkDependencies(L, ForeBlocks, SubLoopBlocks, AftBlocks, DI)) {
+    LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; failed dependency check\n");
     return false;
+  }
 
   return true;
 }

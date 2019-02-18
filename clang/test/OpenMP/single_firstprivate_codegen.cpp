@@ -63,7 +63,7 @@ int vec[] = {1, 2};
 S<float> s_arr[] = {1, 2};
 // CHECK-DAG: [[VAR:@.+]] = global [[S_FLOAT_TY]] zeroinitializer,
 S<float> var(3);
-// CHECK-DAG: [[SINGLE_BARRIER_LOC:@.+]] = private unnamed_addr constant %{{.+}} { i32 0, i32 322, i32 0, i32 0, i8*
+// CHECK-DAG: [[SINGLE_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 322, i32 0, i32 0, i8*
 
 // CHECK: call {{.*}} [[S_FLOAT_TY_DEF_CONSTR:@.+]]([[S_FLOAT_TY]]* [[TEST]])
 // CHECK: ([[S_FLOAT_TY]]*)* [[S_FLOAT_TY_DESTR:@[^ ]+]] {{[^,]+}}, {{.+}}([[S_FLOAT_TY]]* [[TEST]]
@@ -178,13 +178,13 @@ int main() {
 
 // CHECK: define {{.*}}i{{[0-9]+}} @main()
 // CHECK: alloca i{{[0-9]+}},
-// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 // CHECK: [[T_VAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 // CHECK: [[VEC_PRIV:%.+]] = alloca [2 x i{{[0-9]+}}],
 // CHECK: [[S_ARR_PRIV:%.+]] = alloca [2 x [[S_FLOAT_TY]]],
 // CHECK: [[VAR_PRIV:%.+]] = alloca [[S_FLOAT_TY]],
 // CHECK: [[SIVAR_PRIV:%.+]] = alloca i{{[0-9]+}},
 
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(
 // CHECK: call i32 @__kmpc_single(
 // firstprivate t_var(t_var)
 // CHECK: [[T_VAR_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[T_VAR]],

@@ -7,7 +7,7 @@ target triple = "wasm32-unknown-unknown"
 
 define void @foo(i32* nocapture %a, i32 %w, i32 %h) {
 ; CHECK-LABEL: foo:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype foo (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: .local i32, i32, i32, i32, i32, i32{{$}}
 entry:
   %cmp.19 = icmp sgt i32 %h, 0

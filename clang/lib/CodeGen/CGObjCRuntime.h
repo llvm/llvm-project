@@ -17,6 +17,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGOBJCRUNTIME_H
 #include "CGBuilder.h"
 #include "CGCall.h"
+#include "CGCleanup.h"
 #include "CGValue.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h" // Selector
@@ -141,9 +142,11 @@ public:
   /// error to Sema.
   virtual llvm::Constant *GetEHType(QualType T) = 0;
 
+  virtual CatchTypeInfo getCatchAllTypeInfo() { return { nullptr, 0 }; }
+
   /// Generate a constant string object.
   virtual ConstantAddress GenerateConstantString(const StringLiteral *) = 0;
-  
+
   /// Generate a category.  A category contains a list of methods (and
   /// accompanying metadata) and a list of protocols.
   virtual void GenerateCategory(const ObjCCategoryImplDecl *OCD) = 0;
@@ -211,7 +214,7 @@ public:
   virtual llvm::Constant *GetPropertySetFunction() = 0;
 
   /// Return the runtime function for optimized setting properties.
-  virtual llvm::Constant *GetOptimizedPropertySetFunction(bool atomic, 
+  virtual llvm::Constant *GetOptimizedPropertySetFunction(bool atomic,
                                                           bool copy) = 0;
 
   // API for atomic copying of qualified aggregates in getter.
@@ -224,17 +227,17 @@ public:
   /// API for atomic copying of qualified aggregates with non-trivial copy
   /// assignment (c++) in getter.
   virtual llvm::Constant *GetCppAtomicObjectGetFunction() = 0;
-  
+
   /// GetClass - Return a reference to the class for the given
   /// interface decl.
   virtual llvm::Value *GetClass(CodeGenFunction &CGF,
                                 const ObjCInterfaceDecl *OID) = 0;
-  
-  
+
+
   virtual llvm::Value *EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) {
     llvm_unreachable("autoreleasepool unsupported in this ABI");
   }
-  
+
   /// EnumerationMutationFunction - Return the function that's called by the
   /// compiler when a mutation is detected during foreach iteration.
   virtual llvm::Constant *EnumerationMutationFunction() = 0;
@@ -275,6 +278,10 @@ public:
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
   virtual llvm::Constant *BuildRCBlockLayout(CodeGen::CodeGenModule &CGM,
                                   const CodeGen::CGBlockInfo &blockInfo) = 0;
+  virtual std::string getRCBlockLayoutStr(CodeGen::CodeGenModule &CGM,
+                                          const CGBlockInfo &blockInfo) {
+    return {};
+  }
 
   /// Returns an i8* which points to the byref layout information.
   virtual llvm::Constant *BuildByrefLayout(CodeGen::CodeGenModule &CGM,

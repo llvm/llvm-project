@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #===-- tag.sh - Tag the LLVM release candidates ----------------------------===#
 #
 #                     The LLVM Compiler Infrastructure
@@ -17,7 +17,8 @@ set -e
 release=""
 rc=""
 rebranch="no"
-projects="llvm cfe test-suite compiler-rt libcxx libcxxabi clang-tools-extra polly lldb lld openmp libunwind"
+# All the projects that make it into the monorepo, plus test-suite.
+projects="monorepo-root cfe clang-tools-extra compiler-rt debuginfo-tests libclc libcxx libcxxabi libunwind lld lldb llgo llvm openmp parallel-libs polly pstl test-suite"
 dryrun=""
 revision="HEAD"
 
@@ -36,35 +37,50 @@ usage() {
 }
 
 tag_version() {
+    local remove_args=()
+    local create_args=()
+    local message_prefix
     set -x
-    for proj in  $projects; do
+    for proj in $projects; do
         if svn ls $base_url/$proj/branches/release_$branch_release > /dev/null 2>&1 ; then
             if [ $rebranch = "no" ]; then
                 continue
             fi
-            ${dryrun} svn remove -m "Removing old release_$branch_release branch for rebranching." \
-                $base_url/$proj/branches/release_$branch_release
+            remove_args+=(rm "$proj/branches/release_$branch_release")
         fi
-        ${dryrun} svn copy -m "Creating release_$branch_release branch off revision ${revision}" \
-            -r ${revision} \
-            $base_url/$proj/trunk \
-            $base_url/$proj/branches/release_$branch_release
+        create_args+=(cp ${revision} "$proj/trunk" "$proj/branches/release_$branch_release")
     done
+    if [[ ${#remove_args[@]} -gt 0 ]]; then
+        message_prefix="Removing and recreating"
+    else
+        message_prefix="Creating"
+    fi
+    if [[ ${#create_args[@]} -gt 0 ]]; then
+        ${dryrun} svnmucc --root-url "$base_url" \
+            -m "$message_prefix release_$branch_release branch off revision ${revision}" \
+            "${remove_args[@]}" "${create_args[@]}"
+    fi
     set +x
 }
 
 tag_release_candidate() {
+    local create_args=()
     set -x
     for proj in $projects ; do
         if ! svn ls $base_url/$proj/tags/RELEASE_$tag_release > /dev/null 2>&1 ; then
-            ${dryrun} svn mkdir -m "Creating release directory for release_$tag_release." $base_url/$proj/tags/RELEASE_$tag_release
+            create_args+=(mkdir "$proj/tags/RELEASE_$tag_release")
         fi
         if ! svn ls $base_url/$proj/tags/RELEASE_$tag_release/$rc > /dev/null 2>&1 ; then
-            ${dryrun} svn copy -m "Creating release candidate $rc from release_$tag_release branch" \
-                $base_url/$proj/branches/release_$branch_release \
-                $base_url/$proj/tags/RELEASE_$tag_release/$rc
+            create_args+=(cp HEAD
+                          "$proj/branches/release_$branch_release"
+                          "$proj/tags/RELEASE_$tag_release/$rc")
         fi
     done
+    if [[ ${#create_args[@]} -gt 0 ]]; then
+        ${dryrun} svnmucc --root-url "$base_url" \
+            -m "Creating release candidate $rc from release_$tag_release branch" \
+            "${create_args[@]}"
+    fi
     set +x
 }
 
@@ -104,7 +120,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-if [ "x$release" = "x" ]; then
+if [ "$release" = "" ]; then
     echo "error: need to specify a release version"
     echo
     usage
@@ -114,7 +130,7 @@ fi
 branch_release=`echo $release | sed -e 's,\([0-9]*\.[0-9]*\).*,\1,' | sed -e 's,\.,,g'`
 tag_release=`echo $release | sed -e 's,\.,,g'`
 
-if [ "x$rc" = "x" ]; then
+if [ "$rc" = "" ]; then
     tag_version
 else
     if [ "$revision" != "HEAD" ]; then

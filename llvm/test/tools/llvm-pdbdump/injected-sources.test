@@ -1,6 +1,8 @@
 ; The PDB committed to the repo does not seem to be recognized by older
 ; versions of DIA SDK, so we xfail the test temporarily until we can
 ; figure out how to get a PDB that makes all versions of MSVC happy.
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -injected-sources -injected-source-content \
 ; RUN:   %p/Inputs/InjectedSource.pdb | FileCheck %s
 ; RUN: llvm-pdbutil pretty -injected-sources -injected-source-content \

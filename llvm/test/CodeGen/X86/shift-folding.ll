@@ -71,3 +71,15 @@ define i64 @test5(i16 %i, i32* %arr) {
   %sum = add i64 %val.zext, %index.zext
   ret i64 %sum
 }
+
+; We should not crash because an undef shift was created.
+
+define i32 @overshift(i32 %a) {
+; CHECK-LABEL: overshift:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    retl
+  %shr = lshr i32 %a, 33
+  %xor = xor i32 1, %shr
+  ret i32 %xor
+}
+

@@ -10,7 +10,6 @@ add_clang_library(clangIndex
   CommentToXML.cpp
   FileIndexRecord.cpp
   IndexBody.cpp
-  IndexDataStore.cpp
   IndexDataStoreUtils.cpp
   IndexDecl.cpp
   IndexingAction.cpp

@@ -85,6 +85,12 @@ class VSRL<FPR SubReg, string n> : PPCReg<n> {
   let SubRegIndices = [sub_64];
 }
 
+// VSXReg - One of the VSX registers in the range vs32-vs63 with numbering
+// and encoding to match.
+class VSXReg<bits<6> num, string n> : PPCReg<n> {
+  let HWEncoding{5-0} = num;
+}
+
 // CR - One of the 8 4-bit condition registers
 class CR<bits<3> num, string n, list<Register> subregs> : PPCReg<n> {
   let HWEncoding{2-0} = num;
@@ -148,7 +154,7 @@ foreach Index = 0-31 in {
 // Dummy VSX registers, this defines string: "vs32"-"vs63", and is only used for
 // asm printing.
 foreach Index = 32-63 in {
-  def VSX#Index : PPCReg<"vs"#Index>;
+  def VSX#Index : VSXReg<Index, "vs"#Index>;
 }
 
 // The reprsentation of r0 when treated as the constant 0.

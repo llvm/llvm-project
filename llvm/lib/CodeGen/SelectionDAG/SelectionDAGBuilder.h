@@ -854,6 +854,9 @@ private:
   void visitInvoke(const InvokeInst &I);
   void visitResume(const ResumeInst &I);
 
+  void visitUnary(const User &I, unsigned Opcode);
+  void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
+
   void visitBinary(const User &I, unsigned Opcode);
   void visitShift(const User &I, unsigned Opcode);
   void visitAdd(const User &I)  { visitBinary(I, ISD::ADD); }
@@ -1015,14 +1018,18 @@ struct RegsForValue {
 
   /// Records if this value needs to be treated in an ABI dependant manner,
   /// different to normal type legalization.
-  bool IsABIMangled = false;
+  Optional<CallingConv::ID> CallConv;
 
   RegsForValue() = default;
   RegsForValue(const SmallVector<unsigned, 4> &regs, MVT regvt, EVT valuevt,
-               bool IsABIMangledValue = false);
+               Optional<CallingConv::ID> CC = None);
   RegsForValue(LLVMContext &Context, const TargetLowering &TLI,
                const DataLayout &DL, unsigned Reg, Type *Ty,
-               bool IsABIMangledValue = false);
+               Optional<CallingConv::ID> CC);
+
+  bool isABIMangled() const {
+    return CallConv.hasValue();
+  }
 
   /// Add the specified values to this one.
   void append(const RegsForValue &RHS) {

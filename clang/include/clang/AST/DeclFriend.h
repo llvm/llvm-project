@@ -158,7 +158,7 @@ public:
         if (DD->getOuterLocStart() != DD->getInnerLocStart())
           return DD->getSourceRange();
       }
-      return SourceRange(getFriendLoc(), ND->getLocEnd());
+      return SourceRange(getFriendLoc(), ND->getEndLoc());
     }
     else if (TypeSourceInfo *TInfo = getFriendType()) {
       SourceLocation StartL =
@@ -254,7 +254,7 @@ inline void CXXRecordDecl::pushFriendDecl(FriendDecl *FD) {
   FD->NextFriend = data().FirstFriend;
   data().FirstFriend = FD;
 }
-  
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_DECLFRIEND_H

@@ -179,8 +179,25 @@ define amdgpu_kernel void @test1_fabs_scalar_fma_v2f16(half addrspace(3)* %a, ha
   ret void
 }
 
+; GCN-LABEL: @canonicalize_v2f16
+; GFX9: load <2 x half>
+; GFX9: call <2 x half> @llvm.canonicalize.v2f16(
+; GFX9: store <2 x half>
+define amdgpu_kernel void @canonicalize_v2f16(half addrspace(3)* %a, half addrspace(3)* %c) {
+  %i0 = load half, half addrspace(3)* %a, align 2
+  %canonicalize0 = call half @llvm.canonicalize.f16(half %i0)
+  %arrayidx3 = getelementptr inbounds half, half addrspace(3)* %a, i64 1
+  %i3 = load half, half addrspace(3)* %arrayidx3, align 2
+  %canonicalize1 = call half @llvm.canonicalize.f16(half %i3)
+  store half %canonicalize0, half addrspace(3)* %c, align 2
+  %arrayidx5 = getelementptr inbounds half, half addrspace(3)* %c, i64 1
+  store half %canonicalize1, half addrspace(3)* %arrayidx5, align 2
+  ret void
+}
+
 declare half @llvm.fabs.f16(half) #1
 declare half @llvm.fma.f16(half, half, half) #1
+declare half @llvm.canonicalize.f16(half) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

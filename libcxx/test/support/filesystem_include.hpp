@@ -1,18 +1,13 @@
 #ifndef TEST_SUPPORT_FILESYSTEM_INCLUDE_HPP
 #define TEST_SUPPORT_FILESYSTEM_INCLUDE_HPP
 
-#include <ciso646>
-// Test against std::filesystem for STL's other than libc++
-#ifndef _LIBCPP_VERSION
-#define TEST_INCLUDE_STD_FILESYSTEM
-#endif
-
-#ifdef TEST_INCLUDE_STD_FILESYSTEM
 #include <filesystem>
-namespace fs = std::filesystem;
+#include "test_macros.h"
+
+#if defined(_LIBCPP_VERSION) && TEST_STD_VER < 17
+namespace fs = std::__fs::filesystem;
 #else
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 #endif
 
 #endif

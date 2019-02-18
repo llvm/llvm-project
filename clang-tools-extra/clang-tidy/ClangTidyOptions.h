@@ -10,12 +10,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CLANGTIDYOPTIONS_H
 
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/ErrorOr.h"
-#include "clang/Basic/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <functional>
 #include <map>
 #include <string>
@@ -218,10 +218,11 @@ public:
   ///
   /// If any of the \param OverrideOptions fields are set, they will override
   /// whatever options are read from the configuration file.
-  FileOptionsProvider(const ClangTidyGlobalOptions &GlobalOptions,
-                      const ClangTidyOptions &DefaultOptions,
-                      const ClangTidyOptions &OverrideOptions,
-                      llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS = nullptr);
+  FileOptionsProvider(
+      const ClangTidyGlobalOptions &GlobalOptions,
+      const ClangTidyOptions &DefaultOptions,
+      const ClangTidyOptions &OverrideOptions,
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
 
   /// \brief Initializes the \c FileOptionsProvider instance with a custom set
   /// of configuration file handlers.
@@ -255,7 +256,7 @@ protected:
   llvm::StringMap<OptionsSource> CachedOptions;
   ClangTidyOptions OverrideOptions;
   ConfigFileHandlers ConfigHandlers;
-  llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 };
 
 /// \brief Parses LineFilter from JSON and stores it to the \p Options.

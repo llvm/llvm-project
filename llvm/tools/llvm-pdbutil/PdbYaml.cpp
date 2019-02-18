@@ -110,6 +110,7 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("DbiStream", Obj.DbiStream);
   IO.mapOptional("TpiStream", Obj.TpiStream);
   IO.mapOptional("IpiStream", Obj.IpiStream);
+  IO.mapOptional("PublicsStream", Obj.PublicsStream);
 }
 
 void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {
@@ -161,6 +162,11 @@ void MappingTraits<PdbTpiStream>::mapping(IO &IO,
                                           pdb::yaml::PdbTpiStream &Obj) {
   IO.mapOptional("Version", Obj.Version, PdbTpiV80);
   IO.mapRequired("Records", Obj.Records);
+}
+
+void MappingTraits<PdbPublicsStream>::mapping(
+    IO &IO, pdb::yaml::PdbPublicsStream &Obj) {
+  IO.mapRequired("Records", Obj.PubSyms);
 }
 
 void MappingTraits<NamedStreamMapping>::mapping(IO &IO,

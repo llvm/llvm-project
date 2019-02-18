@@ -592,17 +592,17 @@ isProfitableToCommute(unsigned regA, unsigned regB, unsigned regC,
   // the two-address register.
   // e.g.
   // %reg1028 = EXTRACT_SUBREG killed %reg1027, 1
-  // %reg1029 = MOV8rr %reg1028
+  // %reg1029 = COPY %reg1028
   // %reg1029 = SHR8ri %reg1029, 7, implicit dead %eflags
-  // insert => %reg1030 = MOV8rr %reg1028
+  // insert => %reg1030 = COPY %reg1028
   // %reg1030 = ADD8rr killed %reg1028, killed %reg1029, implicit dead %eflags
-  // In this case, it might not be possible to coalesce the second MOV8rr
+  // In this case, it might not be possible to coalesce the second COPY
   // instruction if the first one is coalesced. So it would be profitable to
   // commute it:
   // %reg1028 = EXTRACT_SUBREG killed %reg1027, 1
-  // %reg1029 = MOV8rr %reg1028
+  // %reg1029 = COPY %reg1028
   // %reg1029 = SHR8ri %reg1029, 7, implicit dead %eflags
-  // insert => %reg1030 = MOV8rr %reg1029
+  // insert => %reg1030 = COPY %reg1029
   // %reg1030 = ADD8rr killed %reg1029, killed %reg1028, implicit dead %eflags
 
   if (!isPlainlyKilled(MI, regC, LIS))
@@ -929,9 +929,12 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   MachineBasicBlock::iterator Begin = MI;
   MachineBasicBlock::iterator AfterMI = std::next(Begin);
   MachineBasicBlock::iterator End = AfterMI;
-  while (End->isCopy() &&
-         regOverlapsSet(Defs, End->getOperand(1).getReg(), TRI)) {
-    Defs.push_back(End->getOperand(0).getReg());
+  while (End != MBB->end()) {
+    End = skipDebugInstructionsForward(End, MBB->end());
+    if (End->isCopy() && regOverlapsSet(Defs, End->getOperand(1).getReg(), TRI))
+      Defs.push_back(End->getOperand(0).getReg());
+    else
+      break;
     ++End;
   }
 
@@ -1608,23 +1611,28 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
   }
 
   if (AllUsesCopied) {
+    bool ReplacedAllUntiedUses = true;
     if (!IsEarlyClobber) {
       // Replace other (un-tied) uses of regB with LastCopiedReg.
       for (MachineOperand &MO : MI->operands()) {
-        if (MO.isReg() && MO.getReg() == RegB &&
-            MO.isUse()) {
-          if (MO.isKill()) {
-            MO.setIsKill(false);
-            RemovedKillFlag = true;
+        if (MO.isReg() && MO.getReg() == RegB && MO.isUse()) {
+          if (MO.getSubReg() == SubRegB) {
+            if (MO.isKill()) {
+              MO.setIsKill(false);
+              RemovedKillFlag = true;
+            }
+            MO.setReg(LastCopiedReg);
+            MO.setSubReg(0);
+          } else {
+            ReplacedAllUntiedUses = false;
           }
-          MO.setReg(LastCopiedReg);
-          MO.setSubReg(MO.getSubReg());
         }
       }
     }
 
     // Update live variables for regB.
-    if (RemovedKillFlag && LV && LV->getVarInfo(RegB).removeKill(*MI)) {
+    if (RemovedKillFlag && ReplacedAllUntiedUses &&
+        LV && LV->getVarInfo(RegB).removeKill(*MI)) {
       MachineBasicBlock::iterator PrevMI = MI;
       --PrevMI;
       LV->addVirtualRegisterKilled(RegB, *PrevMI);

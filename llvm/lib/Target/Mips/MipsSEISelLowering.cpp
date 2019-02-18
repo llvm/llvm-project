@@ -158,8 +158,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FTRUNC, MVT::f16, Promote);
     setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMINNAN, MVT::f16, Promote);
-    setOperationAction(ISD::FMAXNAN, MVT::f16, Promote);
+    setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
+    setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
 
     setTargetDAGCombine(ISD::AND);
     setTargetDAGCombine(ISD::OR);
@@ -2360,24 +2360,6 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
-/// Check if the given BuildVectorSDNode is a splat.
-/// This method currently relies on DAG nodes being reused when equivalent,
-/// so it's possible for this to return false even when isConstantSplat returns
-/// true.
-static bool isSplatVector(const BuildVectorSDNode *N) {
-  unsigned int nOps = N->getNumOperands();
-  assert(nOps > 1 && "isSplatVector has 0 or 1 sized build vector");
-
-  SDValue Operand0 = N->getOperand(0);
-
-  for (unsigned int i = 1; i < nOps; ++i) {
-    if (N->getOperand(i) != Operand0)
-      return false;
-  }
-
-  return true;
-}
-
 // Lower ISD::EXTRACT_VECTOR_ELT into MipsISD::VEXTRACT_SEXT_ELT.
 //
 // The non-value bits resulting from ISD::EXTRACT_VECTOR_ELT are undefined. We
@@ -2488,7 +2470,7 @@ SDValue MipsSETargetLowering::lowerBUILD_VECTOR(SDValue Op,
       Result = DAG.getNode(ISD::BITCAST, SDLoc(Node), ResTy, Result);
 
     return Result;
-  } else if (isSplatVector(Node))
+  } else if (DAG.isSplatValue(Op, /* AllowUndefs */ false))
     return Op;
   else if (!isConstantOrUndefBUILD_VECTOR(Node)) {
     // Use INSERT_VECTOR_ELT operations rather than expand to stores.

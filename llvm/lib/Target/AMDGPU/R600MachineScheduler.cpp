@@ -127,13 +127,13 @@ SUnit* R600SchedStrategy::pickNode(bool &IsTopNode) {
 
   LLVM_DEBUG(if (SU) {
     dbgs() << " ** Pick node **\n";
-    SU->dump(DAG);
+    DAG->dumpNode(*SU);
   } else {
     dbgs() << "NO NODE \n";
     for (unsigned i = 0; i < DAG->SUnits.size(); i++) {
       const SUnit &S = DAG->SUnits[i];
       if (!S.isScheduled)
-        S.dump(DAG);
+        DAG->dumpNode(S);
     }
   });
 
@@ -188,11 +188,11 @@ isPhysicalRegCopy(MachineInstr *MI) {
 }
 
 void R600SchedStrategy::releaseTopNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Top Releasing "; SU->dump(DAG););
+  LLVM_DEBUG(dbgs() << "Top Releasing "; DAG->dumpNode(*SU));
 }
 
 void R600SchedStrategy::releaseBottomNode(SUnit *SU) {
-  LLVM_DEBUG(dbgs() << "Bottom Releasing "; SU->dump(DAG););
+  LLVM_DEBUG(dbgs() << "Bottom Releasing "; DAG->dumpNode(*SU));
   if (isPhysicalRegCopy(SU->getInstr())) {
     PhysicalRegCopy.push_back(SU);
     return;
@@ -236,6 +236,7 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
       // MI will become a KILL, don't considers it in scheduling
       return AluDiscarded;
     }
+    break;
   default:
     break;
   }

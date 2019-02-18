@@ -233,12 +233,12 @@ public:
 
   /// Retrieves the source range that contains the entire base specifier.
   SourceRange getSourceRange() const LLVM_READONLY { return Range; }
-  SourceLocation getLocStart() const LLVM_READONLY { return Range.getBegin(); }
-  SourceLocation getLocEnd() const LLVM_READONLY { return Range.getEnd(); }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return Range.getBegin(); }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Range.getEnd(); }
 
   /// Get the location at which the base class type was written.
   SourceLocation getBaseTypeLoc() const LLVM_READONLY {
-    return BaseTypeInfo->getTypeLoc().getLocStart();
+    return BaseTypeInfo->getTypeLoc().getBeginLoc();
   }
 
   /// Determines whether the base class is a virtual base class (or not).
@@ -264,7 +264,7 @@ public:
     return EllipsisLoc;
   }
 
-  /// Returns the access specifier for this base specifier. 
+  /// Returns the access specifier for this base specifier.
   ///
   /// This is the actual base specifier as used for semantic analysis, so
   /// the result can never be AS_none. To retrieve the access specifier as
@@ -564,7 +564,7 @@ class CXXRecordDecl : public RecordDecl {
     CXXRecordDecl *Definition;
 
     /// The first friend declaration in this class, or null if there
-    /// aren't any. 
+    /// aren't any.
     ///
     /// This is actually currently stored in reverse order.
     LazyDeclPtr FirstFriend;
@@ -606,14 +606,14 @@ class CXXRecordDecl : public RecordDecl {
 
     /// Whether this lambda is known to be dependent, even if its
     /// context isn't dependent.
-    /// 
+    ///
     /// A lambda with a non-dependent context can be dependent if it occurs
     /// within the default argument of a function template, because the
     /// lambda will have been created with the enclosing context as its
     /// declaration context, rather than function. This is an unfortunate
-    /// artifact of having to parse the default arguments before. 
+    /// artifact of having to parse the default arguments before.
     unsigned Dependent : 1;
-    
+
     /// Whether this lambda is a generic lambda.
     unsigned IsGenericLambda : 1;
 
@@ -626,28 +626,28 @@ class CXXRecordDecl : public RecordDecl {
     /// The number of explicit captures in this lambda.
     unsigned NumExplicitCaptures : 13;
 
-    /// The number used to indicate this lambda expression for name 
+    /// The number used to indicate this lambda expression for name
     /// mangling in the Itanium C++ ABI.
     unsigned ManglingNumber = 0;
-    
+
     /// The declaration that provides context for this lambda, if the
     /// actual DeclContext does not suffice. This is used for lambdas that
     /// occur within default arguments of function parameters within the class
     /// or within a data member initializer.
     LazyDeclPtr ContextDecl;
-    
-    /// The list of captures, both explicit and implicit, for this 
+
+    /// The list of captures, both explicit and implicit, for this
     /// lambda.
     Capture *Captures = nullptr;
 
     /// The type of the call method.
     TypeSourceInfo *MethodTyInfo;
 
-    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info, 
-                         bool Dependent, bool IsGeneric, 
-                         LambdaCaptureDefault CaptureDefault) 
-      : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric), 
-        CaptureDefault(CaptureDefault), NumCaptures(0), NumExplicitCaptures(0), 
+    LambdaDefinitionData(CXXRecordDecl *D, TypeSourceInfo *Info,
+                         bool Dependent, bool IsGeneric,
+                         LambdaCaptureDefault CaptureDefault)
+      : DefinitionData(D), Dependent(Dependent), IsGenericLambda(IsGeneric),
+        CaptureDefault(CaptureDefault), NumCaptures(0), NumExplicitCaptures(0),
         MethodTyInfo(Info) {
       IsLambda = true;
 
@@ -974,10 +974,7 @@ public:
   bool needsImplicitDefaultConstructor() const {
     return !data().UserDeclaredConstructor &&
            !(data().DeclaredSpecialMembers & SMF_DefaultConstructor) &&
-           // C++14 [expr.prim.lambda]p20:
-           //   The closure type associated with a lambda-expression has no
-           //   default constructor.
-           !isLambda();
+           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
   }
 
   /// Determine whether this class has any user-declared constructors.
@@ -1167,10 +1164,7 @@ public:
            !hasUserDeclaredCopyAssignment() &&
            !hasUserDeclaredMoveConstructor() &&
            !hasUserDeclaredDestructor() &&
-           // C++1z [expr.prim.lambda]p21: "the closure type has a deleted copy
-           // assignment operator". The intent is that this counts as a user
-           // declared copy assignment, but we do not model it that way.
-           !isLambda();
+           (!isLambda() || lambdaIsDefaultConstructibleAndAssignable());
   }
 
   /// Determine whether we need to eagerly declare a move assignment
@@ -1205,22 +1199,26 @@ public:
     return DD && DD->IsLambda;
   }
 
-  /// Determine whether this class describes a generic 
+  /// Determine whether this class describes a generic
   /// lambda function object (i.e. function call operator is
-  /// a template). 
-  bool isGenericLambda() const; 
+  /// a template).
+  bool isGenericLambda() const;
+
+  /// Determine whether this lambda should have an implicit default constructor
+  /// and copy and move assignment operators.
+  bool lambdaIsDefaultConstructibleAndAssignable() const;
 
   /// Retrieve the lambda call operator of the closure type
   /// if this is a closure type.
-  CXXMethodDecl *getLambdaCallOperator() const; 
+  CXXMethodDecl *getLambdaCallOperator() const;
 
   /// Retrieve the lambda static invoker, the address of which
   /// is returned by the conversion operator, and the body of which
-  /// is forwarded to the lambda call operator. 
-  CXXMethodDecl *getLambdaStaticInvoker() const; 
+  /// is forwarded to the lambda call operator.
+  CXXMethodDecl *getLambdaStaticInvoker() const;
 
   /// Retrieve the generic lambda's template parameter list.
-  /// Returns null if the class does not represent a lambda or a generic 
+  /// Returns null if the class does not represent a lambda or a generic
   /// lambda.
   TemplateParameterList *getGenericLambdaTemplateParameterList() const;
 
@@ -1345,11 +1343,11 @@ public:
   /// not overridden.
   bool isAbstract() const { return data().Abstract; }
 
-  /// Determine whether this class is standard-layout per 
+  /// Determine whether this class is standard-layout per
   /// C++ [class]p7.
   bool isStandardLayout() const { return data().IsStandardLayout; }
 
-  /// Determine whether this class was standard-layout per 
+  /// Determine whether this class was standard-layout per
   /// C++11 [class]p7, specifically using the C++11 rules without any DRs.
   bool isCXX11StandardLayout() const { return data().IsCXX11StandardLayout; }
 
@@ -1543,7 +1541,7 @@ public:
   ///
   /// C++11 [class]p6:
   ///    "A trivial class is a class that has a trivial default constructor and
-  ///    is trivially copiable."
+  ///    is trivially copyable."
   bool isTrivial() const {
     return isTriviallyCopyable() && hasTrivialDefaultConstructor();
   }
@@ -1900,25 +1898,25 @@ public:
   /// If this is the closure type of a lambda expression, retrieve the
   /// number to be used for name mangling in the Itanium C++ ABI.
   ///
-  /// Zero indicates that this closure type has internal linkage, so the 
+  /// Zero indicates that this closure type has internal linkage, so the
   /// mangling number does not matter, while a non-zero value indicates which
   /// lambda expression this is in this particular context.
   unsigned getLambdaManglingNumber() const {
     assert(isLambda() && "Not a lambda closure type!");
     return getLambdaData().ManglingNumber;
   }
-  
-  /// Retrieve the declaration that provides additional context for a 
+
+  /// Retrieve the declaration that provides additional context for a
   /// lambda, when the normal declaration context is not specific enough.
   ///
-  /// Certain contexts (default arguments of in-class function parameters and 
+  /// Certain contexts (default arguments of in-class function parameters and
   /// the initializers of data members) have separate name mangling rules for
   /// lambdas within the Itanium C++ ABI. For these cases, this routine provides
-  /// the declaration in which the lambda occurs, e.g., the function parameter 
+  /// the declaration in which the lambda occurs, e.g., the function parameter
   /// or the non-static data member. Otherwise, it returns NULL to imply that
   /// the declaration context suffices.
   Decl *getLambdaContextDecl() const;
-  
+
   /// Set the mangling number and context declaration for a lambda
   /// class.
   void setLambdaMangling(unsigned ManglingNumber, Decl *ContextDecl) {
@@ -1999,7 +1997,8 @@ private:
                      SC_None, false, false) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
-    IsExplicitSpecified = IsExplicit;
+    setExplicitSpecified(IsExplicit);
+    setIsCopyDeductionCandidate(false);
   }
 
 public:
@@ -2015,21 +2014,20 @@ public:
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   /// Whether this deduction guide is explicit.
-  bool isExplicit() const { return IsExplicitSpecified; }
-
-  /// Whether this deduction guide was declared with the 'explicit' specifier.
-  bool isExplicitSpecified() const { return IsExplicitSpecified; }
+  bool isExplicit() const { return isExplicitSpecified(); }
 
   /// Get the template for which this guide performs deduction.
   TemplateDecl *getDeducedTemplate() const {
     return getDeclName().getCXXDeductionGuideTemplate();
   }
 
-  void setIsCopyDeductionCandidate() {
-    IsCopyDeductionCandidate = true;
+  void setIsCopyDeductionCandidate(bool isCDC = true) {
+    FunctionDeclBits.IsCopyDeductionCandidate = isCDC;
   }
 
-  bool isCopyDeductionCandidate() const { return IsCopyDeductionCandidate; }
+  bool isCopyDeductionCandidate() const {
+    return FunctionDeclBits.IsCopyDeductionCandidate;
+  }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2109,10 +2107,15 @@ public:
         Base, IsAppleKext);
   }
 
-  /// Determine whether this is a usual deallocation function
-  /// (C++ [basic.stc.dynamic.deallocation]p2), which is an overloaded
-  /// delete or delete[] operator with a particular signature.
-  bool isUsualDeallocationFunction() const;
+  /// Determine whether this is a usual deallocation function (C++
+  /// [basic.stc.dynamic.deallocation]p2), which is an overloaded delete or
+  /// delete[] operator with a particular signature. Populates \p PreventedBy
+  /// with the declarations of the functions of the same kind if they were the
+  /// reason for this function returning false. This is used by
+  /// Sema::isUsualDeallocationFunction to reconsider the answer based on the
+  /// context.
+  bool isUsualDeallocationFunction(
+      SmallVectorImpl<const FunctionDecl *> &PreventedBy) const;
 
   /// Determine whether this is a copy-assignment operator, regardless
   /// of whether it was declared implicitly or explicitly.
@@ -2179,7 +2182,10 @@ public:
   /// 'this' type.
   QualType getThisType(ASTContext &C) const;
 
-  unsigned getTypeQualifiers() const {
+  static QualType getThisType(const FunctionProtoType *FPT,
+                              const CXXRecordDecl *Decl);
+
+  Qualifiers getTypeQualifiers() const {
     return getType()->getAs<FunctionProtoType>()->getTypeQuals();
   }
 
@@ -2311,6 +2317,9 @@ public:
   explicit
   CXXCtorInitializer(ASTContext &Context, TypeSourceInfo *TInfo,
                      SourceLocation L, Expr *Init, SourceLocation R);
+
+  /// \return Unique reproducible object identifier.
+  int64_t getID(const ASTContext &Context) const;
 
   /// Determine whether this initializer is initializing a base class.
   bool isBaseInitializer() const {
@@ -2475,31 +2484,20 @@ public:
 class CXXConstructorDecl final
     : public CXXMethodDecl,
       private llvm::TrailingObjects<CXXConstructorDecl, InheritedConstructor> {
+  // This class stores some data in DeclContext::CXXConstructorDeclBits
+  // to save some space. Use the provided accessors to access it.
+
   /// \name Support for base and member initializers.
   /// \{
   /// The arguments used to initialize the base or member.
   LazyCXXCtorInitializersPtr CtorInitializers;
-  unsigned NumCtorInitializers : 31;
-  /// \}
-
-  /// Whether this constructor declaration is an implicitly-declared
-  /// inheriting constructor.
-  unsigned IsInheritingConstructor : 1;
 
   CXXConstructorDecl(ASTContext &C, CXXRecordDecl *RD, SourceLocation StartLoc,
                      const DeclarationNameInfo &NameInfo,
                      QualType T, TypeSourceInfo *TInfo,
                      bool isExplicitSpecified, bool isInline,
                      bool isImplicitlyDeclared, bool isConstexpr,
-                     InheritedConstructor Inherited)
-    : CXXMethodDecl(CXXConstructor, C, RD, StartLoc, NameInfo, T, TInfo,
-                    SC_None, isInline, isConstexpr, SourceLocation()),
-      NumCtorInitializers(0), IsInheritingConstructor((bool)Inherited) {
-    setImplicit(isImplicitlyDeclared);
-    if (Inherited)
-      *getTrailingObjects<InheritedConstructor>() = Inherited;
-    IsExplicitSpecified = isExplicitSpecified;
-  }
+                     InheritedConstructor Inherited);
 
   void anchor() override;
 
@@ -2542,12 +2540,12 @@ public:
 
   /// Retrieve an iterator past the last initializer.
   init_iterator       init_end()       {
-    return init_begin() + NumCtorInitializers;
+    return init_begin() + getNumCtorInitializers();
   }
 
   /// Retrieve an iterator past the last initializer.
   init_const_iterator init_end() const {
-    return init_begin() + NumCtorInitializers;
+    return init_begin() + getNumCtorInitializers();
   }
 
   using init_reverse_iterator = std::reverse_iterator<init_iterator>;
@@ -2571,19 +2569,21 @@ public:
   /// Determine the number of arguments used to initialize the member
   /// or base.
   unsigned getNumCtorInitializers() const {
-      return NumCtorInitializers;
+      return CXXConstructorDeclBits.NumCtorInitializers;
   }
 
   void setNumCtorInitializers(unsigned numCtorInitializers) {
-    NumCtorInitializers = numCtorInitializers;
+    CXXConstructorDeclBits.NumCtorInitializers = numCtorInitializers;
+    // This assert added because NumCtorInitializers is stored
+    // in CXXConstructorDeclBits as a bitfield and its width has
+    // been shrunk from 32 bits to fit into CXXConstructorDeclBitfields.
+    assert(CXXConstructorDeclBits.NumCtorInitializers ==
+           numCtorInitializers && "NumCtorInitializers overflow!");
   }
 
   void setCtorInitializers(CXXCtorInitializer **Initializers) {
     CtorInitializers = Initializers;
   }
-
-  /// Whether this function is marked as explicit explicitly.
-  bool isExplicitSpecified() const { return IsExplicitSpecified; }
 
   /// Whether this function is explicit.
   bool isExplicit() const {
@@ -2665,12 +2665,20 @@ public:
 
   /// Determine whether this is an implicit constructor synthesized to
   /// model a call to a constructor inherited from a base class.
-  bool isInheritingConstructor() const { return IsInheritingConstructor; }
+  bool isInheritingConstructor() const {
+    return CXXConstructorDeclBits.IsInheritingConstructor;
+  }
+
+  /// State that this is an implicit constructor synthesized to
+  /// model a call to a constructor inherited from a base class.
+  void setInheritingConstructor(bool isIC = true) {
+    CXXConstructorDeclBits.IsInheritingConstructor = isIC;
+  }
 
   /// Get the constructor that this inheriting constructor is based on.
   InheritedConstructor getInheritedConstructor() const {
-    return IsInheritingConstructor ? *getTrailingObjects<InheritedConstructor>()
-                                   : InheritedConstructor();
+    return isInheritingConstructor() ?
+      *getTrailingObjects<InheritedConstructor>() : InheritedConstructor();
   }
 
   CXXConstructorDecl *getCanonicalDecl() override {
@@ -2765,7 +2773,7 @@ class CXXConversionDecl : public CXXMethodDecl {
                     SourceLocation EndLocation)
       : CXXMethodDecl(CXXConversion, C, RD, StartLoc, NameInfo, T, TInfo,
                       SC_None, isInline, isConstexpr, EndLocation) {
-    IsExplicitSpecified = isExplicitSpecified;
+    setExplicitSpecified(isExplicitSpecified);
   }
 
   void anchor() override;
@@ -2783,9 +2791,6 @@ public:
                                    SourceLocation EndLocation);
   static CXXConversionDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
-  /// Whether this function is marked as explicit explicitly.
-  bool isExplicitSpecified() const { return IsExplicitSpecified; }
-
   /// Whether this function is explicit.
   bool isExplicit() const {
     return getCanonicalDecl()->isExplicitSpecified();
@@ -2799,7 +2804,7 @@ public:
   /// Determine whether this conversion function is a conversion from
   /// a lambda closure type to a block pointer.
   bool isLambdaToBlockPointerConversion() const;
-  
+
   CXXConversionDecl *getCanonicalDecl() override {
     return cast<CXXConversionDecl>(FunctionDecl::getCanonicalDecl());
   }
@@ -2812,7 +2817,7 @@ public:
   static bool classofKind(Kind K) { return K == CXXConversion; }
 };
 
-/// Represents a linkage specification. 
+/// Represents a linkage specification.
 ///
 /// For example:
 /// \code
@@ -2820,7 +2825,8 @@ public:
 /// \endcode
 class LinkageSpecDecl : public Decl, public DeclContext {
   virtual void anchor();
-
+  // This class stores some data in DeclContext::LinkageSpecDeclBits to save
+  // some space. Use the provided accessors to access it.
 public:
   /// Represents the language in a linkage specification.
   ///
@@ -2834,16 +2840,6 @@ public:
   };
 
 private:
-  /// The language for this linkage specification.
-  unsigned Language : 3;
-
-  /// True if this linkage spec has braces.
-  ///
-  /// This is needed so that hasBraces() returns the correct result while the
-  /// linkage spec body is being parsed.  Once RBraceLoc has been set this is
-  /// not used, so it doesn't need to be serialized.
-  unsigned HasBraces : 1;
-
   /// The source location for the extern keyword.
   SourceLocation ExternLoc;
 
@@ -2851,10 +2847,7 @@ private:
   SourceLocation RBraceLoc;
 
   LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
-                  SourceLocation LangLoc, LanguageIDs lang, bool HasBraces)
-      : Decl(LinkageSpec, DC, LangLoc), DeclContext(LinkageSpec),
-        Language(lang), HasBraces(HasBraces), ExternLoc(ExternLoc),
-        RBraceLoc(SourceLocation()) {}
+                  SourceLocation LangLoc, LanguageIDs lang, bool HasBraces);
 
 public:
   static LinkageSpecDecl *Create(ASTContext &C, DeclContext *DC,
@@ -2862,18 +2855,20 @@ public:
                                  SourceLocation LangLoc, LanguageIDs Lang,
                                  bool HasBraces);
   static LinkageSpecDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   /// Return the language specified by this linkage specification.
-  LanguageIDs getLanguage() const { return LanguageIDs(Language); }
+  LanguageIDs getLanguage() const {
+    return static_cast<LanguageIDs>(LinkageSpecDeclBits.Language);
+  }
 
   /// Set the language specified by this linkage specification.
-  void setLanguage(LanguageIDs L) { Language = L; }
+  void setLanguage(LanguageIDs L) { LinkageSpecDeclBits.Language = L; }
 
   /// Determines whether this linkage specification had braces in
   /// its syntactic form.
   bool hasBraces() const {
-    assert(!RBraceLoc.isValid() || HasBraces);
-    return HasBraces;
+    assert(!RBraceLoc.isValid() || LinkageSpecDeclBits.HasBraces);
+    return LinkageSpecDeclBits.HasBraces;
   }
 
   SourceLocation getExternLoc() const { return ExternLoc; }
@@ -2881,19 +2876,19 @@ public:
   void setExternLoc(SourceLocation L) { ExternLoc = L; }
   void setRBraceLoc(SourceLocation L) {
     RBraceLoc = L;
-    HasBraces = RBraceLoc.isValid();
+    LinkageSpecDeclBits.HasBraces = RBraceLoc.isValid();
   }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
+  SourceLocation getEndLoc() const LLVM_READONLY {
     if (hasBraces())
       return getRBraceLoc();
     // No braces: get the end location of the (only) declaration in context
     // (if present).
-    return decls_empty() ? getLocation() : decls_begin()->getLocEnd();
+    return decls_empty() ? getLocation() : decls_begin()->getEndLoc();
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY {
-    return SourceRange(ExternLoc, getLocEnd());
+    return SourceRange(ExternLoc, getEndLoc());
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -3698,7 +3693,7 @@ class UnresolvedUsingTypenameDecl
 
 public:
   /// Returns the source location of the 'using' keyword.
-  SourceLocation getUsingLoc() const { return getLocStart(); }
+  SourceLocation getUsingLoc() const { return getBeginLoc(); }
 
   /// Returns the source location of the 'typename' keyword.
   SourceLocation getTypenameLoc() const { return TypenameLocation; }
@@ -3770,7 +3765,7 @@ public:
                                   Expr *AssertExpr, StringLiteral *Message,
                                   SourceLocation RParenLoc, bool Failed);
   static StaticAssertDecl *CreateDeserialized(ASTContext &C, unsigned ID);
-  
+
   Expr *getAssertExpr() { return AssertExprAndFailed.getPointer(); }
   const Expr *getAssertExpr() const { return AssertExprAndFailed.getPointer(); }
 
@@ -3923,6 +3918,7 @@ class MSPropertyDecl : public DeclaratorDecl {
       : DeclaratorDecl(MSProperty, DC, L, N, T, TInfo, StartL),
         GetterId(Getter), SetterId(Setter) {}
 
+  void anchor() override;
 public:
   friend class ASTDeclReader;
 

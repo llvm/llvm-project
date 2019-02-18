@@ -112,15 +112,24 @@ public:
                     FileID FID, const FileEntry *Entry, const char *declName);
 
   // Rewrite the file specified by FID with HTML formatting.
-  void RewriteFile(Rewriter &R, const SourceManager& SMgr,
-                   const PathPieces& path, FileID FID);
+  void RewriteFile(Rewriter &R, const PathPieces& path, FileID FID);
 
-  /// \return Javascript for navigating the HTML report using j/k keys.
-  std::string generateKeyboardNavigationJavascript();
 
 private:
   /// \return Javascript for displaying shortcuts help;
-  std::string showHelpJavascript();
+  StringRef showHelpJavascript();
+
+  /// \return Javascript for navigating the HTML report using j/k keys.
+  StringRef generateKeyboardNavigationJavascript();
+
+  /// \return JavaScript for an option to only show relevant lines.
+  std::string showRelevantLinesJavascript(
+    const PathDiagnostic &D, const PathPieces &path);
+
+  /// Write executed lines from \p D in JSON format into \p os.
+  void dumpCoverageData(const PathDiagnostic &D,
+                        const PathPieces &path,
+                        llvm::raw_string_ostream &os);
 };
 
 } // namespace
@@ -194,7 +203,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
           FullSourceLoc L(
               SMgr.getExpansionLoc(path.back()->getLocation().asLocation()),
               SMgr);
-          FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getLocStart()), SMgr);
+          FullSourceLoc FunL(SMgr.getExpansionLoc(Body->getBeginLoc()), SMgr);
           offsetDecl = L.getExpansionLineNumber() - FunL.getExpansionLineNumber();
       }
   }
@@ -209,7 +218,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
   int FD;
   SmallString<128> Model, ResultPath;
 
-  if (!AnalyzerOpts.shouldWriteStableReportFilename()) {
+  if (!AnalyzerOpts.ShouldWriteStableReportFilename) {
       llvm::sys::path::append(Model, Directory, "report-%%%%%%.html");
       if (std::error_code EC =
           llvm::sys::fs::make_absolute(Model)) {
@@ -269,7 +278,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
       continue;
 
     FileIDs.push_back(FID);
-    RewriteFile(R, SMgr, path, FID);
+    RewriteFile(R, path, FID);
   }
 
   if (SupportsCrossFileDiagnostics && FileIDs.size() > 1) {
@@ -332,28 +341,12 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   return os.str();
 }
 
-/// Write executed lines from \p D in JSON format into \p os.
-static void serializeExecutedLines(
+void HTMLDiagnostics::dumpCoverageData(
     const PathDiagnostic &D,
     const PathPieces &path,
     llvm::raw_string_ostream &os) {
-  // Copy executed lines from path diagnostics.
-  std::map<unsigned, std::set<unsigned>> ExecutedLines;
-  for (auto I = D.executedLines_begin(),
-            E = D.executedLines_end(); I != E; ++I) {
-    std::set<unsigned> &LinesInFile = ExecutedLines[I->first];
-    for (unsigned LineNo : I->second) {
-      LinesInFile.insert(LineNo);
-    }
-  }
 
-  // We need to include all lines for which any kind of diagnostics appears.
-  for (const auto &P : path) {
-    FullSourceLoc Loc = P->getLocation().asLocation().getExpansionLoc();
-    FileID FID = Loc.getFileID();
-    unsigned LineNo = Loc.getLineNumber();
-    ExecutedLines[FID.getHashValue()].insert(LineNo);
-  }
+  const FilesToLineNumsMap &ExecutedLines = D.getExecutedLines();
 
   os << "var relevant_lines = {";
   for (auto I = ExecutedLines.begin(),
@@ -361,7 +354,7 @@ static void serializeExecutedLines(
     if (I != ExecutedLines.begin())
       os << ", ";
 
-    os << "\"" << I->first << "\": {";
+    os << "\"" << I->first.getHashValue() << "\": {";
     for (unsigned LineNo : I->second) {
       if (LineNo != *(I->second.begin()))
         os << ", ";
@@ -374,13 +367,12 @@ static void serializeExecutedLines(
   os << "};";
 }
 
-/// \return JavaScript for an option to only show relevant lines.
-static std::string showRelevantLinesJavascript(
+std::string HTMLDiagnostics::showRelevantLinesJavascript(
       const PathDiagnostic &D, const PathPieces &path) {
   std::string s;
   llvm::raw_string_ostream os(s);
   os << "<script type='text/javascript'>\n";
-  serializeExecutedLines(D, path, os);
+  dumpCoverageData(D, path, os);
   os << R"<<<(
 
 var filterCounterexample = function (hide) {
@@ -586,7 +578,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
   html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
 }
 
-std::string HTMLDiagnostics::showHelpJavascript() {
+StringRef HTMLDiagnostics::showHelpJavascript() {
   return R"<<<(
 <script type='text/javascript'>
 
@@ -614,8 +606,8 @@ window.addEventListener("keydown", function (event) {
 )<<<";
 }
 
-void HTMLDiagnostics::RewriteFile(Rewriter &R, const SourceManager& SMgr,
-    const PathPieces& path, FileID FID) {
+void HTMLDiagnostics::RewriteFile(Rewriter &R,
+                                  const PathPieces& path, FileID FID) {
   // Process the path.
   // Maintain the counts of extra note pieces separately.
   unsigned TotalPieces = path.size();
@@ -944,7 +936,7 @@ void HTMLDiagnostics::HighlightRange(Rewriter& R, FileID BugFileID,
   html::HighlightRange(R, InstantiationStart, E, HighlightStart, HighlightEnd);
 }
 
-std::string HTMLDiagnostics::generateKeyboardNavigationJavascript() {
+StringRef HTMLDiagnostics::generateKeyboardNavigationJavascript() {
   return R"<<<(
 <script type='text/javascript'>
 var digitMatcher = new RegExp("[0-9]+");
@@ -997,7 +989,8 @@ var numToId = function(num) {
 };
 
 var navigateTo = function(up) {
-  var numItems = document.querySelectorAll(".line > .msg").length;
+  var numItems = document.querySelectorAll(
+      ".line > .msgEvent, .line > .msgControl").length;
   var currentSelected = findNum();
   var newSelected = move(currentSelected, up, numItems);
   var newEl = numToId(newSelected, numItems);

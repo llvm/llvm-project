@@ -342,6 +342,7 @@ enum ConstantsCodes {
   CST_CODE_INLINEASM = 23,       // INLINEASM:     [sideeffect|alignstack|
                                  //                 asmdialect,asmstr,conststr]
   CST_CODE_CE_GEP_WITH_INRANGE_INDEX = 24, //      [opty, flags, n x operands]
+  CST_CODE_CE_UNOP = 25,         // CE_UNOP:      [opcode, opval]
 };
 
 /// CastOpcodes - These are values used in the bitcode files to encode which
@@ -362,6 +363,14 @@ enum CastOpcodes {
   CAST_INTTOPTR = 10,
   CAST_BITCAST = 11,
   CAST_ADDRSPACECAST = 12
+};
+
+/// UnaryOpcodes - These are values used in the bitcode files to encode which
+/// unop a CST_CODE_CE_UNOP or a XXX refers to.  The values of these enums
+/// have no fixed relation to the LLVM IR enum values.  Changing these will
+/// break compatibility with old files.
+enum UnaryOpcodes {
+  UNOP_NEG = 0
 };
 
 /// BinaryOpcodes - These are values used in the bitcode files to encode which
@@ -524,6 +533,7 @@ enum FunctionCodes {
   // 53 is unused.
   // 54 is unused.
   FUNC_CODE_OPERAND_BUNDLE = 55, // OPERAND_BUNDLE: [tag#, value...]
+  FUNC_CODE_INST_UNOP = 56,      // UNOP:       [opcode, ty, opval]
 };
 
 enum UseListCodes {
@@ -591,6 +601,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NOCF_CHECK = 56,
   ATTR_KIND_OPT_FOR_FUZZING = 57,
   ATTR_KIND_SHADOWCALLSTACK = 58,
+  ATTR_KIND_SPECULATIVE_LOAD_HARDENING = 59,
 };
 
 enum ComdatSelectionKindCodes {

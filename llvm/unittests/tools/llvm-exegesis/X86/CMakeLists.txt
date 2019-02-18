@@ -16,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(LLVMExegesisX86Tests
   AssemblerTest.cpp
   AnalysisTest.cpp
+  BenchmarkResultTest.cpp
   SnippetGeneratorTest.cpp
   RegisterAliasingTest.cpp
   TargetTest.cpp

@@ -78,8 +78,9 @@ entry:
 ; ARM_32-NEXT:   .long 0
 
 ; WIN-LABEL:  get_external_x:
-; WIN:        movw r0, :lower16:__emutls_v.external_x
-; WIN:        movt r0, :upper16:__emutls_v.external_x
+; WIN:        movw r0, :lower16:.refptr.__emutls_v.external_x
+; WIN:        movt r0, :upper16:.refptr.__emutls_v.external_x
+; WIN:        ldr  r0, [r0]
 ; WIN:        bl __emutls_get_address
 ; WIN-LABEL:  get_external_y:
 ; WIN:        movw r0, :lower16:__emutls_v.external_y

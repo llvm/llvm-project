@@ -992,13 +992,11 @@ define double @sel_constants_frem_constant(i1 %cond) {
 ; ALL-NEXT:    bc 12, 1, .LBB48_2
 ; ALL-NEXT:  # %bb.1:
 ; ALL-NEXT:    addis 3, 2, .LCPI48_0@toc@ha
-; ALL-NEXT:    addi 3, 3, .LCPI48_0@toc@l
-; ALL-NEXT:    lfdx 1, 0, 3
+; ALL-NEXT:    lfd 1, .LCPI48_0@toc@l(3)
 ; ALL-NEXT:    blr
 ; ALL-NEXT:  .LBB48_2:
 ; ALL-NEXT:    addis 3, 2, .LCPI48_1@toc@ha
-; ALL-NEXT:    addi 3, 3, .LCPI48_1@toc@l
-; ALL-NEXT:    lfsx 1, 0, 3
+; ALL-NEXT:    lfs 1, .LCPI48_1@toc@l(3)
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double %sel, 5.1

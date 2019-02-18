@@ -336,14 +336,14 @@ define i32 @test_cmov_memoperand(i32 %a, i32 %b, i32 %x, i32* %y) #0 {
 ; CHECK-LABEL: test_cmov_memoperand:
 entry:
   %cond = icmp ugt i32 %a, %b
+; CHECK:         movl %edx, %eax
 ; CHECK:         cmpl
   %load = load i32, i32* %y
   %z = select i1 %cond, i32 %x, i32 %load
 ; CHECK-NOT:     cmov
 ; CHECK:         ja [[FALSE_BB:.*]]
-; CHECK:         movl (%r{{..}}), %[[R:.*]]
+; CHECK:         movl (%rcx), %eax
 ; CHECK:       [[FALSE_BB]]:
-; CHECK:         movl %[[R]], %
   ret i32 %z
 }
 
@@ -353,6 +353,7 @@ define i32 @test_cmov_memoperand_in_group(i32 %a, i32 %b, i32 %x, i32* %y.ptr) #
 ; CHECK-LABEL: test_cmov_memoperand_in_group:
 entry:
   %cond = icmp ugt i32 %a, %b
+; CHECK:         movl %edx, %eax
 ; CHECK:         cmpl
   %y = load i32, i32* %y.ptr
   %z1 = select i1 %cond, i32 %x, i32 %a
@@ -362,17 +363,16 @@ entry:
 ; CHECK:         ja [[FALSE_BB:.*]]
 ; CHECK-DAG:     movl %{{.*}}, %[[R1:.*]]
 ; CHECK-DAG:     movl (%r{{..}}), %[[R2:.*]]
-; CHECK-DAG:     movl %{{.*}} %[[R3:.*]]
+; CHECK-DAG:     movl %{{.*}} %eax
 ; CHECK:       [[FALSE_BB]]:
 ; CHECK:         addl
 ; CHECK-DAG:       %[[R1]]
 ; CHECK-DAG:       ,
-; CHECK-DAG:       %[[R3]]
+; CHECK-DAG:       %eax
 ; CHECK-DAG:     addl
 ; CHECK-DAG:       %[[R2]]
 ; CHECK-DAG:       ,
-; CHECK-DAG:       %[[R3]]
-; CHECK:         movl %[[R3]], %eax
+; CHECK-DAG:       %eax
 ; CHECK:         retq
   %s1 = add i32 %z1, %z2
   %s2 = add i32 %s1, %z3
@@ -384,6 +384,7 @@ define i32 @test_cmov_memoperand_in_group2(i32 %a, i32 %b, i32 %x, i32* %y.ptr) 
 ; CHECK-LABEL: test_cmov_memoperand_in_group2:
 entry:
   %cond = icmp ugt i32 %a, %b
+; CHECK:         movl %edx, %eax
 ; CHECK:         cmpl
   %y = load i32, i32* %y.ptr
   %z2 = select i1 %cond, i32 %a, i32 %x
@@ -393,17 +394,16 @@ entry:
 ; CHECK:         jbe [[FALSE_BB:.*]]
 ; CHECK-DAG:     movl %{{.*}}, %[[R1:.*]]
 ; CHECK-DAG:     movl (%r{{..}}), %[[R2:.*]]
-; CHECK-DAG:     movl %{{.*}} %[[R3:.*]]
+; CHECK-DAG:     movl %{{.*}} %eax
 ; CHECK:       [[FALSE_BB]]:
 ; CHECK:         addl
 ; CHECK-DAG:       %[[R1]]
 ; CHECK-DAG:       ,
-; CHECK-DAG:       %[[R3]]
+; CHECK-DAG:       %eax
 ; CHECK-DAG:     addl
 ; CHECK-DAG:       %[[R2]]
 ; CHECK-DAG:       ,
-; CHECK-DAG:       %[[R3]]
-; CHECK:         movl %[[R3]], %eax
+; CHECK-DAG:       %eax
 ; CHECK:         retq
   %s1 = add i32 %z1, %z2
   %s2 = add i32 %s1, %z3
@@ -434,15 +434,15 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr(i32 %a, i32 %b, i32* %x
 ; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr:
 entry:
   %cond = icmp ugt i32 %a, %b
+; CHECK:         movl %edi, %eax
 ; CHECK:         cmpl
   %p = select i1 %cond, i32* %x, i32* %y
   %load = load i32, i32* %p
   %z = select i1 %cond, i32 %a, i32 %load
 ; CHECK-NOT:     cmov
 ; CHECK:         ja [[FALSE_BB:.*]]
-; CHECK:         movl (%r{{..}}), %[[R:.*]]
+; CHECK:         movl (%r{{..}}), %eax
 ; CHECK:       [[FALSE_BB]]:
-; CHECK:         movl %[[R]], %eax
 ; CHECK:         retq
   ret i32 %z
 }
@@ -453,6 +453,7 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr2(i32 %a, i32 %b, i32* %
 ; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr2:
 entry:
   %cond = icmp ugt i32 %a, %b
+; CHECK:         movl %edi, %eax
 ; CHECK:         cmpl
   %load1 = load i32*, i32** %y
   %p = select i1 %cond, i32* %x, i32* %load1
@@ -461,9 +462,8 @@ entry:
 ; CHECK-NOT:     cmov
 ; CHECK:         ja [[FALSE_BB:.*]]
 ; CHECK:         movq (%r{{..}}), %[[R1:.*]]
-; CHECK:         movl (%[[R1]]), %[[R2:.*]]
+; CHECK:         movl (%[[R1]]), %eax
 ; CHECK:       [[FALSE_BB]]:
-; CHECK:         movl %[[R2]], %eax
 ; CHECK:         retq
   ret i32 %z
 }
@@ -475,6 +475,7 @@ define i32 @test_cmov_memoperand_in_group_reuse_for_addr3(i32 %a, i32 %b, i32* %
 ; CHECK-LABEL: test_cmov_memoperand_in_group_reuse_for_addr3:
 entry:
   %cond = icmp ugt i32 %a, %b
+; CHECK:         movl %edi, %eax
 ; CHECK:         cmpl
   %p = select i1 %cond, i32* %x, i32* %y
   %p2 = select i1 %cond, i32* %z, i32* %p
@@ -482,9 +483,8 @@ entry:
   %r = select i1 %cond, i32 %a, i32 %load
 ; CHECK-NOT:     cmov
 ; CHECK:         ja [[FALSE_BB:.*]]
-; CHECK:         movl (%r{{..}}), %[[R:.*]]
+; CHECK:         movl (%r{{..}}), %eax
 ; CHECK:       [[FALSE_BB]]:
-; CHECK:         movl %[[R]], %eax
 ; CHECK:         retq
   ret i32 %r
 }

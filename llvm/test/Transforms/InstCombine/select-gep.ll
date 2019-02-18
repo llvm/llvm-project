@@ -136,3 +136,17 @@ define i32* @test4(i32* %p, i32* %q, i64 %x, i64 %y) {
   ret i32* %select
 }
 
+; We cannot create a select with a vector condition but scalar operands.
+
+define <2 x i64*> @test5(i64* %p1, i64* %p2, <2 x i64> %idx, <2 x i1> %cc) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, i64* %p1, <2 x i64> %idx
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i64, i64* %p2, <2 x i64> %idx
+; CHECK-NEXT:    [[SELECT:%.*]] = select <2 x i1> %cc, <2 x i64*> [[GEP1]], <2 x i64*> [[GEP2]]
+; CHECK-NEXT:    ret <2 x i64*> [[SELECT]]
+;
+  %gep1 = getelementptr i64, i64* %p1, <2 x i64> %idx
+  %gep2 = getelementptr i64, i64* %p2, <2 x i64> %idx
+  %select = select <2 x i1> %cc, <2 x i64*> %gep1, <2 x i64*> %gep2
+  ret <2 x i64*> %select
+}

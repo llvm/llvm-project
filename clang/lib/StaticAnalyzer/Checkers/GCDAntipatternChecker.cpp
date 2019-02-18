@@ -29,7 +29,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -222,8 +222,12 @@ void GCDAntipatternChecker::checkASTCodeBody(const Decl *D,
     emitDiagnostics(Match, "group", BR, ADC, this);
 }
 
-}
+} // end of anonymous namespace
 
 void ento::registerGCDAntipattern(CheckerManager &Mgr) {
   Mgr.registerChecker<GCDAntipatternChecker>();
+}
+
+bool ento::shouldRegisterGCDAntipattern(const LangOptions &LO) {
+  return true;
 }

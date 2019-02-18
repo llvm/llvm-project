@@ -96,8 +96,44 @@ entry:
   ret double %0
 ; CHECK-LABEL: testTruncOdd
 ; CHECK: xscvqpdpo v2, v2
-; CHECK: xxlor f1, v2, v2
+; CHECK: xscpsgndp f1, v2, v2
 ; CHECK: blr
 }
 
 declare double @llvm.ppc.truncf128.round.to.odd(fp128)
+
+; Function Attrs: noinline nounwind optnone
+define fp128 @insert_exp_qp(i64 %b) {
+entry:
+  %b.addr = alloca i64, align 8
+  store i64 %b, i64* %b.addr, align 8
+  %0 = load fp128, fp128* @A, align 16
+  %1 = load i64, i64* %b.addr, align 8
+  %2 = call fp128 @llvm.ppc.scalar.insert.exp.qp(fp128 %0, i64 %1)
+  ret fp128 %2
+; CHECK-LABEL: insert_exp_qp
+; CHECK-DAG: mtvsrd [[FPREG:f[0-9]+]], r3
+; CHECK-DAG: lxvx [[VECREG:v[0-9]+]]
+; CHECK: xsiexpqp v2, [[VECREG]], [[FPREG]]
+; CHECK: blr
+}
+
+; Function Attrs: nounwind readnone
+declare fp128 @llvm.ppc.scalar.insert.exp.qp(fp128, i64)
+
+; Function Attrs: noinline nounwind optnone
+define i64 @extract_exp() {
+entry:
+  %0 = load fp128, fp128* @A, align 16
+  %1 = call i64 @llvm.ppc.scalar.extract.expq(fp128 %0)
+  ret i64 %1
+; CHECK-LABEL: extract_exp
+; CHECK: lxvx [[VECIN:v[0-9]+]]
+; CHECK: xsxexpqp [[VECOUT:v[0-9]+]], [[VECIN]]
+; CHECK: mfvsrd r3, [[VECOUT]]
+; CHECK: blr
+}
+
+; Function Attrs: nounwind readnone
+declare i64 @llvm.ppc.scalar.extract.expq(fp128)
+

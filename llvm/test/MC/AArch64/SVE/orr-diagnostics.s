@@ -92,3 +92,37 @@ orr p0.b, p0/m, p1.b, p2.b
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand
 // CHECK-NEXT: orr p0.b, p0/m, p1.b, p2.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z0.d, p0/z, z7.d
+orr     z0.d, z0.d, #0x6
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: orr     z0.d, z0.d, #0x6
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23.d, p0/z, z30.d
+orr     z23.d, z13.d, z8.d  // should not use mov-alias
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: orr     z23.d, z13.d, z8.d  // should not use mov-alias
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z23, z30
+orr     z23.d, z13.d, z8.d  // should not use mov-alias
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: orr     z23.d, z13.d, z8.d  // should not use mov-alias
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0.d, p0/z, z7.d
+orr     z0.d, z0.d, z0.d    // should use mov-alias
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: orr     z0.d, z0.d, z0.d    // should use mov-alias
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movprfx z0, z7
+orr     z0.d, z0.d, z0.d    // should use mov-alias
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a movprfx, suggest replacing movprfx with mov
+// CHECK-NEXT: orr     z0.d, z0.d, z0.d    // should use mov-alias
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

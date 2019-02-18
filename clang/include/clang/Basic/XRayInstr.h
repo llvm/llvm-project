@@ -60,6 +60,8 @@ struct XRayInstrSet {
 
   bool empty() const { return Mask == 0; }
 
+  bool full() const { return Mask == XRayInstrKind::All; }
+
   XRayInstrMask Mask = 0;
 };
 

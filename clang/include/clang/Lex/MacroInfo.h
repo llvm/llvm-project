@@ -174,7 +174,7 @@ public:
     std::copy(List.begin(), List.end(), ParameterList);
   }
 
-  /// Parameters - The list of parameters for a function-like macro.  This can 
+  /// Parameters - The list of parameters for a function-like macro.  This can
   /// be empty, for, e.g. "#define X()".
   using param_iterator = IdentifierInfo *const *;
   bool param_empty() const { return NumParameters == 0; }
@@ -395,7 +395,8 @@ public:
 
   /// Find macro definition active in the specified source location. If
   /// this macro was not defined there, return NULL.
-  const DefInfo findDirectiveAtLoc(SourceLocation L, SourceManager &SM) const;
+  const DefInfo findDirectiveAtLoc(SourceLocation L,
+                                   const SourceManager &SM) const;
 
   void dump() const;
 

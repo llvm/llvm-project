@@ -20,11 +20,18 @@ Macros:
     FLT_EVAL_METHOD     // C99
     FLT_RADIX
 
+    FLT_HAS_SUBNORM     // C11
+    DBL_HAS_SUBNORM     // C11
+    LDBL_HAS_SUBNORM    // C11
+
     FLT_MANT_DIG
     DBL_MANT_DIG
     LDBL_MANT_DIG
 
     DECIMAL_DIG         // C99
+    FLT_DECIMAL_DIG     // C11
+    DBL_DECIMAL_DIG     // C11
+    LDBL_DECIMAL_DIG    // C11
 
     FLT_DIG
     DBL_DIG
@@ -58,6 +65,9 @@ Macros:
     DBL_MIN
     LDBL_MIN
 
+    FLT_TRUE_MIN        // C11
+    DBL_TRUE_MIN        // C11
+    LDBL_TRUE_MIN       // C11
 */
 
 #include <__config>

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -fblocks -o - %s | FileCheck %s
 
 struct S {
   int a[4];
@@ -64,4 +64,33 @@ typedef void (*NoEscapeFunc)(__attribute__((noescape)) int *);
 
 void test3(NoEscapeFunc f, int *p) {
   f(p);
+}
+
+namespace TestByref {
+
+struct S {
+  S();
+  ~S();
+  S(const S &);
+  int a;
+};
+
+typedef void (^BlockTy)(void);
+S &getS();
+void noescapefunc(__attribute__((noescape)) BlockTy);
+
+// Check that __block variables with reference types are handled correctly.
+
+// CHECK: define void @_ZN9TestByref4testEv(
+// CHECK: %[[X:.*]] = alloca %[[STRUCT_TESTBYREF:.*]]*, align 8
+// CHECK: %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %{{.*}}*, %[[STRUCT_TESTBYREF]]* }>, align 8
+// CHECK: %[[BLOCK_CAPTURED:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %{{.*}}*, %[[STRUCT_TESTBYREF]]* }>, <{ i8*, i32, i32, i8*, %{{.*}}*, %[[STRUCT_TESTBYREF]]* }>* %[[BLOCK]], i32 0, i32 5
+// CHECK: %[[V0:.*]] = load %[[STRUCT_TESTBYREF]]*, %[[STRUCT_TESTBYREF]]** %[[X]], align 8
+// CHECK: store %[[STRUCT_TESTBYREF]]* %[[V0]], %[[STRUCT_TESTBYREF]]** %[[BLOCK_CAPTURED]], align 8
+
+void test() {
+  __block S &x = getS();
+  noescapefunc(^{ (void)x; });
+}
+
 }

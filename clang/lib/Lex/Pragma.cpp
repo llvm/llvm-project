@@ -31,7 +31,6 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorLexer.h"
-#include "clang/Lex/PTHLexer.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -64,7 +63,7 @@ PragmaHandler::~PragmaHandler() = default;
 
 EmptyPragmaHandler::EmptyPragmaHandler(StringRef Name) : PragmaHandler(Name) {}
 
-void EmptyPragmaHandler::HandlePragma(Preprocessor &PP, 
+void EmptyPragmaHandler::HandlePragma(Preprocessor &PP,
                                       PragmaIntroducerKind Introducer,
                                       Token &FirstToken) {}
 
@@ -99,7 +98,7 @@ void PragmaNamespace::RemovePragmaHandler(PragmaHandler *Handler) {
   Handlers.erase(Handler->getName());
 }
 
-void PragmaNamespace::HandlePragma(Preprocessor &PP, 
+void PragmaNamespace::HandlePragma(Preprocessor &PP,
                                    PragmaIntroducerKind Introducer,
                                    Token &Tok) {
   // Read the 'namespace' that the directive is in, e.g. STDC.  Do not macro
@@ -141,7 +140,7 @@ void Preprocessor::HandlePragmaDirective(SourceLocation IntroducerLoc,
   PragmaHandlers->HandlePragma(*this, Introducer, Tok);
 
   // If the pragma handler didn't read the rest of the line, consume it now.
-  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective()) 
+  if ((CurTokenLexer && CurTokenLexer->isParsingPreprocessorDirective())
    || (CurPPLexer && CurPPLexer->ParsingPreprocessorDirective))
     DiscardUntilEndOfDirective();
 }
@@ -404,10 +403,7 @@ void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
 
 void Preprocessor::HandlePragmaMark() {
   assert(CurPPLexer && "No current lexer?");
-  if (CurLexer)
-    CurLexer->ReadToEndOfLine();
-  else
-    CurPTHLexer->DiscardToEndOfLine();
+  CurLexer->ReadToEndOfLine();
 }
 
 /// HandlePragmaPoison - Handle \#pragma GCC poison.  PoisonTok is the 'poison'.
@@ -468,7 +464,7 @@ void Preprocessor::HandlePragmaSystemHeader(Token &SysHeaderTok) {
   PresumedLoc PLoc = SourceMgr.getPresumedLoc(SysHeaderTok.getLocation());
   if (PLoc.isInvalid())
     return;
-  
+
   unsigned FilenameID = SourceMgr.getLineTableFilenameID(PLoc.getFilename());
 
   // Notify the client, if desired, that we are in a new source file.
@@ -511,7 +507,7 @@ void Preprocessor::HandlePragmaDependency(Token &DependencyTok) {
   const DirectoryLookup *CurDir;
   const FileEntry *File =
       LookupFile(FilenameTok.getLocation(), Filename, isAngled, nullptr,
-                 nullptr, CurDir, nullptr, nullptr, nullptr, nullptr);
+                 nullptr, CurDir, nullptr, nullptr, nullptr, nullptr, nullptr);
   if (!File) {
     if (!SuppressIncludeNotFoundError)
       Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
@@ -601,7 +597,7 @@ void Preprocessor::HandlePragmaPushMacro(Token &PushMacroTok) {
 
   // Get the MacroInfo associated with IdentInfo.
   MacroInfo *MI = getMacroInfo(IdentInfo);
- 
+
   if (MI) {
     // Allow the original MacroInfo to be redefined later.
     MI->setIsAllowRedefinitionsWithoutWarning(true);
@@ -653,7 +649,7 @@ void Preprocessor::HandlePragmaPopMacro(Token &PopMacroTok) {
 }
 
 void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
-  // We will either get a quoted filename or a bracketed filename, and we 
+  // We will either get a quoted filename or a bracketed filename, and we
   // have to track which we got.  The first filename is the source name,
   // and the second name is the mapped filename.  If the first is quoted,
   // the second must be as well (cannot mix and match quotes and brackets).
@@ -675,7 +671,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
 
   StringRef SourceFileName;
   SmallString<128> FileNameBuffer;
-  if (SourceFilenameTok.is(tok::string_literal) || 
+  if (SourceFilenameTok.is(tok::string_literal) ||
       SourceFilenameTok.is(tok::angle_string_literal)) {
     SourceFileName = getSpelling(SourceFilenameTok, FileNameBuffer);
   } else if (SourceFilenameTok.is(tok::less)) {
@@ -706,7 +702,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   }
 
   StringRef ReplaceFileName;
-  if (ReplaceFilenameTok.is(tok::string_literal) || 
+  if (ReplaceFilenameTok.is(tok::string_literal) ||
       ReplaceFilenameTok.is(tok::angle_string_literal)) {
     ReplaceFileName = getSpelling(ReplaceFilenameTok, FileNameBuffer);
   } else if (ReplaceFilenameTok.is(tok::less)) {
@@ -732,8 +728,8 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
   // they're both of the same type (angled vs non-angled)
   StringRef OriginalSource = SourceFileName;
 
-  bool SourceIsAngled = 
-    GetIncludeFilenameSpelling(SourceFilenameTok.getLocation(), 
+  bool SourceIsAngled =
+    GetIncludeFilenameSpelling(SourceFilenameTok.getLocation(),
                                 SourceFileName);
   bool ReplaceIsAngled =
     GetIncludeFilenameSpelling(ReplaceFilenameTok.getLocation(),
@@ -747,7 +743,7 @@ void Preprocessor::HandlePragmaIncludeAlias(Token &Tok) {
       DiagID = diag::warn_pragma_include_alias_mismatch_quote;
 
     Diag(SourceFilenameTok.getLocation(), DiagID)
-      << SourceFileName 
+      << SourceFileName
       << ReplaceFileName;
 
     return;
@@ -810,12 +806,6 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
     DiscardUntilEndOfDirective();
   }
 
-  if (CurPTHLexer) {
-    // FIXME: Support this somehow?
-    Diag(Loc, diag::err_pp_module_build_pth);
-    return;
-  }
-
   CurLexer->LexingRawMode = true;
 
   auto TryConsumeIdentifier = [&](StringRef Ident) -> bool {
@@ -874,6 +864,37 @@ void Preprocessor::HandlePragmaModuleBuild(Token &Tok) {
          "module source range not contained within same file buffer");
   TheModuleLoader.loadModuleFromSource(Loc, ModuleName->getName(),
                                        StringRef(Start, End - Start));
+}
+
+void Preprocessor::HandlePragmaHdrstop(Token &Tok) {
+  Lex(Tok);
+  if (Tok.is(tok::l_paren)) {
+    Diag(Tok.getLocation(), diag::warn_pp_hdrstop_filename_ignored);
+
+    std::string FileName;
+    if (!LexStringLiteral(Tok, FileName, "pragma hdrstop", false))
+      return;
+
+    if (Tok.isNot(tok::r_paren)) {
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+      return;
+    }
+    Lex(Tok);
+  }
+  if (Tok.isNot(tok::eod))
+    Diag(Tok.getLocation(), diag::ext_pp_extra_tokens_at_eol)
+        << "pragma hdrstop";
+
+  if (creatingPCHWithPragmaHdrStop() &&
+      SourceMgr.isInMainFile(Tok.getLocation())) {
+    assert(CurLexer && "no lexer for #pragma hdrstop processing");
+    Token &Result = Tok;
+    Result.startToken();
+    CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+    CurLexer->cutOffLexing();
+  }
+  if (usingPCHWithPragmaHdrStop())
+    SkippingUntilPragmaHdrStop = false;
 }
 
 /// AddPragmaHandler - Add the specified pragma handler to the preprocessor.
@@ -1099,10 +1120,6 @@ struct PragmaDebugHandler : public PragmaHandler {
   }
 
   void HandleCaptured(Preprocessor &PP) {
-    // Skip if emitting preprocessed output.
-    if (PP.isPreprocessedOutput())
-      return;
-
     Token Tok;
     PP.LexUnexpandedToken(Tok);
 
@@ -1217,6 +1234,15 @@ public:
         << WarningName;
     else if (Callbacks)
       Callbacks->PragmaDiagnostic(DiagLoc, Namespace, SV, WarningName);
+  }
+};
+
+/// "\#pragma hdrstop [<header-name-string>]"
+struct PragmaHdrstopHandler : public PragmaHandler {
+  PragmaHdrstopHandler() : PragmaHandler("hdrstop") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducerKind Introducer,
+                    Token &DepToken) override {
+    PP.HandlePragmaHdrstop(DepToken);
   }
 };
 
@@ -1615,7 +1641,7 @@ struct PragmaPopMacroHandler : public PragmaHandler {
   }
 };
 
-/// PragmaARCCFCodeAuditedHandler - 
+/// PragmaARCCFCodeAuditedHandler -
 ///   \#pragma clang arc_cf_code_audited begin/end
 struct PragmaARCCFCodeAuditedHandler : public PragmaHandler {
   PragmaARCCFCodeAuditedHandler() : PragmaHandler("arc_cf_code_audited") {}
@@ -1790,7 +1816,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   ModuleHandler->AddPragma(new PragmaModuleEndHandler());
   ModuleHandler->AddPragma(new PragmaModuleBuildHandler());
   ModuleHandler->AddPragma(new PragmaModuleLoadHandler());
-    
+
   // Add region pragmas.
   AddPragmaHandler(new PragmaRegionHandler("region"));
   AddPragmaHandler(new PragmaRegionHandler("endregion"));
@@ -1799,6 +1825,7 @@ void Preprocessor::RegisterBuiltinPragmas() {
   if (LangOpts.MicrosoftExt) {
     AddPragmaHandler(new PragmaWarningHandler());
     AddPragmaHandler(new PragmaIncludeAliasHandler());
+    AddPragmaHandler(new PragmaHdrstopHandler());
   }
 
   // Pragmas added by plugins

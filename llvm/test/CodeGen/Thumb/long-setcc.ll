@@ -9,8 +9,7 @@ define i1 @t1(i64 %x) {
 
 define i1 @t2(i64 %x) {
 ; CHECK-LABEL: t2:
-; CHECK: movs  r0, #0
-; CHECK: subs  r0, r0, r1
+; CHECK: rsbs  r0, r1, #0
 ; CHECK: adcs  r0, r1
   %tmp = icmp ult i64 %x, 4294967296
   ret i1 %tmp

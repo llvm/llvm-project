@@ -36,5 +36,5 @@ entry:
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind uwtable "target-cpu"="x86-64" "target-features"="+sse4.1" }
 
-; CHECK: define {{.*}} @inlinedFunc.1_if.then{{.*}} [[COUNT1:#[0-9]+]]
+; CHECK: define {{.*}} @inlinedFunc.1.if.then{{.*}} [[COUNT1:#[0-9]+]]
 ; CHECK: [[COUNT1]] = { {{.*}} "target-cpu"="x86-64" "target-features"="+sse4.1" }

@@ -49,7 +49,7 @@ bb:
 ; CHECK: br i1
 ; CHECK: br i1
 ; CHECK: br i1
-; CHECK: call void @bar.1_
+; CHECK: call void @bar.1.
 ; LIMIT-LABEL: @dummy_caller
 ; LIMIT-NOT: br i1
 ; LIMIT: call i32 @bar

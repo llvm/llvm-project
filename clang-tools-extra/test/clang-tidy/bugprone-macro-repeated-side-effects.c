@@ -3,21 +3,29 @@
 #define badA(x,y)  ((x)+((x)+(y))+(y))
 void bad(int ret, int a, int b) {
   ret = badA(a++, b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x' are repeated in macro expansion [bugprone-macro-repeated-side-effects]
+  // CHECK-NOTES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x' are repeated in macro expansion [bugprone-macro-repeated-side-effects]
+  // CHECK-NOTES: :[[@LINE-4]]:9: note: macro 'badA' defined here
   ret = badA(++a, b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-7]]:9: note: macro 'badA' defined here
   ret = badA(a--, b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-10]]:9: note: macro 'badA' defined here
   ret = badA(--a, b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-1]]:14: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-13]]:9: note: macro 'badA' defined here
   ret = badA(a, b++);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-16]]:9: note: macro 'badA' defined here
   ret = badA(a, ++b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-19]]:9: note: macro 'badA' defined here
   ret = badA(a, b--);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-22]]:9: note: macro 'badA' defined here
   ret = badA(a, --b);
-  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-1]]:17: warning: side effects in the 2nd macro argument 'y'
+  // CHECK-NOTES: :[[@LINE-25]]:9: note: macro 'badA' defined here
 }
 
 
@@ -25,15 +33,20 @@ void bad(int ret, int a, int b) {
 #define LIMIT(X,A,B) ((X) < (A) ? (A) : ((X) > (B) ? (B) : (X)))    // two ?:
 void question(int x) {
   MIN(x++, 12);
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: side effects in the 1st macro argument 'A'
+  // CHECK-NOTES: :[[@LINE-1]]:7: warning: side effects in the 1st macro argument 'A'
+  // CHECK-NOTES: :[[@LINE-5]]:9: note: macro 'MIN' defined here
   MIN(34, x++);
-  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: side effects in the 2nd macro argument 'B'
+  // CHECK-NOTES: :[[@LINE-1]]:11: warning: side effects in the 2nd macro argument 'B'
+  // CHECK-NOTES: :[[@LINE-8]]:9: note: macro 'MIN' defined here
   LIMIT(x++, 0, 100);
-  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: side effects in the 1st macro argument 'X'
+  // CHECK-NOTES: :[[@LINE-1]]:9: warning: side effects in the 1st macro argument 'X'
+  // CHECK-NOTES: :[[@LINE-10]]:9: note: macro 'LIMIT' defined here
   LIMIT(20, x++, 100);
-  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: side effects in the 2nd macro argument 'A'
+  // CHECK-NOTES: :[[@LINE-1]]:13: warning: side effects in the 2nd macro argument 'A'
+  // CHECK-NOTES: :[[@LINE-13]]:9: note: macro 'LIMIT' defined here
   LIMIT(20, 0, x++);
-  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: side effects in the 3rd macro argument 'B'
+  // CHECK-NOTES: :[[@LINE-1]]:16: warning: side effects in the 3rd macro argument 'B'
+  // CHECK-NOTES: :[[@LINE-16]]:9: note: macro 'LIMIT' defined here
 }
 
 // False positive: Repeated side effects is intentional.
@@ -41,7 +54,8 @@ void question(int x) {
 #define UNROLL(A)    {A A}
 void fp1(int i) {
   UNROLL({ i++; });
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: side effects in the 1st macro argument 'A'
+  // CHECK-NOTES: :[[@LINE-1]]:10: warning: side effects in the 1st macro argument 'A'
+  // CHECK-NOTES: :[[@LINE-4]]:9: note: macro 'UNROLL' defined here
 }
 
 // Do not produce a false positive on a strchr() macro. Explanation; Currently the '?'
@@ -66,11 +80,14 @@ void pass(char* pstr, char ch) {
    (v) + (v) + (x) + (x) + (y) + (y) + (z) + (z))
 void large(int a) {
   largeA(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a++, 0, 0, 0, 0, 0, 0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:64: warning: side effects in the 19th macro argument 's'
+  // CHECK-NOTES: :[[@LINE-1]]:64: warning: side effects in the 19th macro argument 's'
+  // CHECK-NOTES: :[[@LINE-8]]:9: note: macro 'largeA' defined here
   largeA(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a++, 0, 0, 0, 0, 0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:67: warning: side effects in the 20th macro argument 't'
+  // CHECK-NOTES: :[[@LINE-1]]:67: warning: side effects in the 20th macro argument 't'
+  // CHECK-NOTES: :[[@LINE-11]]:9: note: macro 'largeA' defined here
   largeA(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, a++, 0, 0, 0, 0);
-  // CHECK-MESSAGES: :[[@LINE-1]]:70: warning: side effects in the 21st macro argument 'u'
+  // CHECK-NOTES: :[[@LINE-1]]:70: warning: side effects in the 21st macro argument 'u'
+  // CHECK-NOTES: :[[@LINE-14]]:9: note: macro 'largeA' defined here
 }
 
 // Passing macro argument as argument to __builtin_constant_p and macros.
@@ -81,13 +98,15 @@ void large(int a) {
 #define macrogood(x)       (builtingood1(x) + (x))
 void builtins(int ret, int a) {
   ret += builtinbad(a++);
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-1]]:21: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-8]]:9: note: macro 'builtinbad' defined here
 
   ret += builtingood1(a++);
   ret += builtingood2(a++);
 
   ret += macrobad(a++);
-  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-1]]:19: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-12]]:9: note: macro 'macrobad' defined here
 
   ret += macrogood(a++);
 }

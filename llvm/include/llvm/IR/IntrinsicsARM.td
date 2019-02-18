@@ -275,7 +275,7 @@ def int_arm_stc : GCCBuiltin<"__builtin_arm_stc">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
 def int_arm_stcl : GCCBuiltin<"__builtin_arm_stcl">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
-def int_arm_stc2 : GCCBuiltin<"__builtin_arm_stc2">, 
+def int_arm_stc2 : GCCBuiltin<"__builtin_arm_stc2">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;
 def int_arm_stc2l : GCCBuiltin<"__builtin_arm_stc2l">,
    Intrinsic<[], [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty], []>;

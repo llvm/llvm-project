@@ -9,5 +9,5 @@
 
 ---
 
-{"jsonrpc":"2.0","id":3,"method":"exit"}
+{"jsonrpc":"2.0","method":"exit"}
 # CHECK-NOT: JSON parse error

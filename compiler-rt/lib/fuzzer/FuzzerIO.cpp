@@ -31,7 +31,7 @@ long GetEpoch(const std::string &Path) {
 }
 
 Unit FileToVector(const std::string &Path, size_t MaxSize, bool ExitOnError) {
-  std::ifstream T(Path);
+  std::ifstream T(Path, std::ios::binary);
   if (ExitOnError && !T) {
     Printf("No such directory: %s; exiting\n", Path.c_str());
     exit(1);
@@ -51,7 +51,7 @@ Unit FileToVector(const std::string &Path, size_t MaxSize, bool ExitOnError) {
 }
 
 std::string FileToString(const std::string &Path) {
-  std::ifstream T(Path);
+  std::ifstream T(Path, std::ios::binary);
   return std::string((std::istreambuf_iterator<char>(T)),
                      std::istreambuf_iterator<char>());
 }
@@ -98,14 +98,6 @@ void GetSizedFilesFromDir(const std::string &Dir, Vector<SizedFile> *V) {
 std::string DirPlusFile(const std::string &DirPath,
                         const std::string &FileName) {
   return DirPath + GetSeparator() + FileName;
-}
-
-std::string Basename(const std::string &Path, char Separator) {
-  size_t Pos = Path.rfind(Separator);
-  if (Pos == std::string::npos)
-    return Path;
-  assert(Pos < Path.size());
-  return Path.substr(Pos + 1);
 }
 
 void DupAndCloseStderr() {

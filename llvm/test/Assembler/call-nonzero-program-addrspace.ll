@@ -1,13 +1,23 @@
-; RUN: llvm-as %s -data-layout=P200 -o /dev/null
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as %s -data-layout=P42 -o - | llvm-dis - -o - | FileCheck %s -check-prefix PROGAS42
 
-; Check that variables in a nonzero program address space 200 can be used in a call instruction
+; Check that variables in a nonzero program address space 42 can be used in a call instruction
 
-define i8 @test(i8(i32)* %fnptr0, i8(i32) addrspace(200)* %fnptr200) {
-  %first = call i8 %fnptr0(i32 0) ; this is fine
-  %second = call i8 %fnptr200(i32 0) ; this is also fine if it's the program AS
-  ; CHECK: call-nonzero-program-addrspace.ll:[[@LINE-1]]:21: error: '%fnptr200' defined with type 'i8 (i32) addrspace(200)*'
+define i8 @test(i8(i32)* %fnptr0, i8(i32) addrspace(42)* %fnptr42) {
+  %explicit_as_0 = call addrspace(0) i8 %fnptr0(i32 0)
+  %explicit_as_42 = call addrspace(42) i8 %fnptr42(i32 0)
+  ; Calling %fnptr42 without an explicit addrspace() in the call instruction is only okay if the program AS is 42
+  %call_no_as = call i8 %fnptr42(i32 0)
+  ; CHECK: call-nonzero-program-addrspace.ll:[[@LINE-1]]:25: error: '%fnptr42' defined with type 'i8 (i32) addrspace(42)*' but expected 'i8 (i32)*'
   ret i8 0
 }
 
-declare i32 @__gxx_personality_v0(...)
+; PROGAS42:       target datalayout = "P42"
+; PROGAS42:       define i8 @test(i8 (i32)* %fnptr0, i8 (i32) addrspace(42)* %fnptr42) addrspace(42) {
+; Print addrspace(0) since the program address space is non-zero:
+; PROGAS42-NEXT:    %explicit_as_0 = call addrspace(0) i8 %fnptr0(i32 0)
+; Also print addrspace(42) since we always print non-zero addrspace:
+; PROGAS42-NEXT:    %explicit_as_42 = call addrspace(42) i8 %fnptr42(i32 0)
+; PROGAS42-NEXT:    %call_no_as = call addrspace(42) i8 %fnptr42(i32 0)
+; PROGAS42-NEXT:    ret i8 0
+; PROGAS42-NEXT:  }

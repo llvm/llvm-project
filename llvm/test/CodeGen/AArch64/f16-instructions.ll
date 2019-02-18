@@ -1,6 +1,17 @@
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -disable-fp-elim | FileCheck %s --check-prefix=CHECK-CVT --check-prefix=CHECK-COMMON
 ; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fullfp16 -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra -disable-fp-elim | FileCheck %s --check-prefix=CHECK-COMMON --check-prefix=CHECK-FP16
 
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -aarch64-neon-syntax=apple \
+; RUN: -asm-verbose=false -disable-post-ra -disable-fp-elim -global-isel \
+; RUN: -global-isel-abort=2 -pass-remarks-missed=gisel-* 2>&1 | FileCheck %s \
+; RUN: --check-prefixes=FALLBACK,GISEL-CVT
+
+; RUN: llc < %s -mtriple aarch64-unknown-unknown -mattr=+fullfp16 \
+; RUN: -aarch64-neon-syntax=apple -asm-verbose=false -disable-post-ra \
+; RUN: -disable-fp-elim -global-isel -global-isel-abort=2 \
+; RUN: -pass-remarks-missed=gisel-* 2>&1 | FileCheck %s \
+; RUN: --check-prefixes=FALLBACK-FP16,GISEL-FP16
+
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-CVT-LABEL: test_fadd:
@@ -454,6 +465,36 @@ define i1 @test_fcmp_ole(half %a, half %b) #0 {
 define i1 @test_fcmp_ord(half %a, half %b) #0 {
   %r = fcmp ord half %a, %b
   ret i1 %r
+}
+
+; CHECK-COMMON-LABEL: test_fccmp:
+; CHECK-CVT:      fcvt  s0, h0
+; CHECK-CVT-NEXT: fmov  s1, #8.00000000
+; CHECK-CVT-NEXT: fmov  s2, #5.00000000
+; CHECK-CVT-NEXT: fcmp  s0, s1
+; CHECK-CVT-NEXT: cset  w8, gt
+; CHECK-CVT-NEXT: fcmp  s0, s2
+; CHECK-CVT-NEXT: cset  w9, mi
+; CHECK-CVT-NEXT: tst   w8, w9
+; CHECK-CVT-NEXT: fcsel s0, s0, s2, ne
+; CHECK-CVT-NEXT: fcvt  h0, s0
+; CHECK-CVT-NEXT: str   h0, [x0]
+; CHECK-CVT-NEXT: ret
+; CHECK-FP16:      fmov  h1, #5.00000000
+; CHECK-FP16-NEXT: fcmp  h0, h1
+; CHECK-FP16-NEXT: fmov  h2, #8.00000000
+; CHECK-FP16-NEXT: fccmp h0, h2, #4, mi
+; CHECK-FP16-NEXT: fcsel h0, h0, h1, gt
+; CHECK-FP16-NEXT: str   h0, [x0]
+; CHECK-FP16-NEXT: ret
+
+define void @test_fccmp(half %in, half* %out) {
+  %cmp1 = fcmp ogt half %in, 0xH4800
+  %cmp2 = fcmp olt half %in, 0xH4500
+  %cond = and i1 %cmp1, %cmp2
+  %result = select i1 %cond, half %in, half 0xH4500
+  store half %result, half* %out
+  ret void
 }
 
 ; CHECK-CVT-LABEL: test_br_cc:
@@ -1041,6 +1082,18 @@ define half @test_floor(half %a) #0 {
 ; CHECK-FP16-NEXT: frintp h0, h0
 ; CHECK-FP16-NEXT: ret
 
+; FALLBACK-NOT: remark:{{.*}}test_ceil
+; FALLBACK-FP16-NOT: remark:{{.*}}test_ceil
+
+; GISEL-CVT-LABEL: test_ceil:
+; GISEL-CVT-NEXT: fcvt [[FLOAT32:s[0-9]+]], h0
+; GISEL-CVT-NEXT: frintp [[INT32:s[0-9]+]], [[FLOAT32]]
+; GISEL-CVT-NEXT: fcvt h0, [[INT32]]
+; GISEL-CVT-NEXT: ret
+
+; GISEL-FP16-LABEL: test_ceil:
+; GISEL-FP16-NEXT: frintp h0, h0
+; GISEL-FP16-NEXT: ret
 define half @test_ceil(half %a) #0 {
   %r = call half @llvm.ceil.f16(half %a)
   ret half %r

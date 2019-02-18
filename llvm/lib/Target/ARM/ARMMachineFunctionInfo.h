@@ -126,7 +126,7 @@ class ARMFunctionInfo : public MachineFunctionInfo {
 
   /// The amount the literal pool has been increasedby due to promoted globals.
   int PromotedGlobalsIncrease = 0;
-  
+
 public:
   ARMFunctionInfo() = default;
 

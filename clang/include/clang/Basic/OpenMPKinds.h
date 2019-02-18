@@ -96,6 +96,15 @@ enum OpenMPMapClauseKind {
   OMPC_MAP_unknown
 };
 
+/// OpenMP modifier kind for 'map' clause.
+enum OpenMPMapModifierKind {
+  OMPC_MAP_MODIFIER_unknown = OMPC_MAP_unknown,
+#define OPENMP_MAP_MODIFIER_KIND(Name) \
+  OMPC_MAP_MODIFIER_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_MAP_MODIFIER_last
+};
+
 /// OpenMP attributes for 'dist_schedule' clause.
 enum OpenMPDistScheduleClauseKind {
 #define OPENMP_DIST_SCHEDULE_KIND(Name) OMPC_DIST_SCHEDULE_##Name,
@@ -118,6 +127,14 @@ enum OpenMPDefaultmapClauseModifier {
   OMPC_DEFAULTMAP_MODIFIER_##Name,
 #include "clang/Basic/OpenMPKinds.def"
   OMPC_DEFAULTMAP_MODIFIER_last
+};
+
+/// OpenMP attributes for 'atomic_default_mem_order' clause.
+enum OpenMPAtomicDefaultMemOrderClauseKind {
+#define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)  \
+  OMPC_ATOMIC_DEFAULT_MEM_ORDER_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown
 };
 
 /// Scheduling data for loop-based OpenMP directives.

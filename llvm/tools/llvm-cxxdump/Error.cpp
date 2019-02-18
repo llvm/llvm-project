@@ -1,4 +1,4 @@
-//===- Error.cxx - system_error extensions for llvm-cxxdump -----*- C++ -*-===//
+//===- Error.cpp - system_error extensions for llvm-cxxdump -----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

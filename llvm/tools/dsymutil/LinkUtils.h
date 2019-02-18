@@ -10,8 +10,11 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 #define LLVM_TOOLS_DSYMUTIL_LINKOPTIONS_H
 
+#include "SymbolMap.h"
+
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/WithColor.h"
+
 #include <string>
 
 namespace llvm {
@@ -20,6 +23,13 @@ namespace dsymutil {
 enum class OutputFileType {
   Object,
   Assembly,
+};
+
+/// The kind of accelerator tables we should emit.
+enum class AccelTableKind {
+  Apple,   ///< .apple_names, .apple_namespaces, .apple_types, .apple_objc.
+  Dwarf,   ///< DWARF v5 .debug_names.
+  Default, ///< Dwarf for DWARF5 or later, Apple otherwise.
 };
 
 struct LinkOptions {
@@ -47,8 +57,14 @@ struct LinkOptions {
   // Output file type.
   OutputFileType FileType = OutputFileType::Object;
 
+  /// The accelerator table kind
+  AccelTableKind TheAccelTableKind;
+
   /// -oso-prepend-path
   std::string PrependPath;
+
+  /// Symbol map translator.
+  SymbolMapTranslator Translator;
 
   LinkOptions() = default;
 };

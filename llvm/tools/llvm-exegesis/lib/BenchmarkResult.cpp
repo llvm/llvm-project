@@ -8,7 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "BenchmarkResult.h"
+#include "BenchmarkRunner.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ObjectYAML/YAML.h"
 #include "llvm/Support/FileOutputBuffer.h"
@@ -16,81 +18,145 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
-static constexpr const char kIntegerFormat[] = "i_0x%" PRId64 "x";
-static constexpr const char kDoubleFormat[] = "f_%la";
+static constexpr const char kIntegerPrefix[] = "i_0x";
+static constexpr const char kDoublePrefix[] = "f_";
+static constexpr const char kInvalidOperand[] = "INVALID";
 
-static void serialize(const exegesis::BenchmarkResultContext &Context,
-                      const llvm::MCOperand &MCOperand, llvm::raw_ostream &OS) {
-  if (MCOperand.isReg()) {
-    OS << Context.getRegName(MCOperand.getReg());
-  } else if (MCOperand.isImm()) {
-    OS << llvm::format(kIntegerFormat, MCOperand.getImm());
-  } else if (MCOperand.isFPImm()) {
-    OS << llvm::format(kDoubleFormat, MCOperand.getFPImm());
-  } else {
-    OS << "INVALID";
-  }
-}
+namespace llvm {
 
-static void serialize(const exegesis::BenchmarkResultContext &Context,
-                      const llvm::MCInst &MCInst, llvm::raw_ostream &OS) {
-  OS << Context.getInstrName(MCInst.getOpcode());
-  for (const auto &Op : MCInst) {
-    OS << ' ';
-    serialize(Context, Op, OS);
-  }
-}
+namespace {
 
-static llvm::MCOperand
-deserialize(const exegesis::BenchmarkResultContext &Context,
-            llvm::StringRef String) {
-  assert(!String.empty());
-  int64_t IntValue = 0;
-  double DoubleValue = 0;
-  if (sscanf(String.data(), kIntegerFormat, &IntValue) == 1)
-    return llvm::MCOperand::createImm(IntValue);
-  if (sscanf(String.data(), kDoubleFormat, &DoubleValue) == 1)
-    return llvm::MCOperand::createFPImm(DoubleValue);
-  if (unsigned RegNo = Context.getRegNo(String)) // Returns 0 if invalid.
-    return llvm::MCOperand::createReg(RegNo);
-  return {};
-}
+// A mutable struct holding an LLVMState that can be passed through the
+// serialization process to encode/decode registers and instructions.
+struct YamlContext {
+  YamlContext(const exegesis::LLVMState &State)
+      : State(&State), ErrorStream(LastError) {}
 
-static llvm::StringRef
-deserialize(const exegesis::BenchmarkResultContext &Context,
-            llvm::StringRef String, llvm::MCInst &Value) {
-  llvm::SmallVector<llvm::StringRef, 8> Pieces;
-  String.split(Pieces, " ");
-  if (Pieces.empty())
-    return "Invalid Instruction";
-  bool ProcessOpcode = true;
-  for (llvm::StringRef Piece : Pieces) {
-    if (ProcessOpcode) {
-      ProcessOpcode = false;
-      Value.setOpcode(Context.getInstrOpcode(Piece));
-      if (Value.getOpcode() == 0)
-        return "Unknown Opcode Name";
-    } else {
-      Value.addOperand(deserialize(Context, Piece));
+  void serializeMCInst(const llvm::MCInst &MCInst, llvm::raw_ostream &OS) {
+    OS << getInstrName(MCInst.getOpcode());
+    for (const auto &Op : MCInst) {
+      OS << ' ';
+      serializeMCOperand(Op, OS);
     }
   }
-  return {};
-}
 
-// YAML IO requires a mutable pointer to Context but we guarantee to not
-// modify it.
-static void *getUntypedContext(const exegesis::BenchmarkResultContext &Ctx) {
-  return const_cast<exegesis::BenchmarkResultContext *>(&Ctx);
-}
+  void deserializeMCInst(llvm::StringRef String, llvm::MCInst &Value) {
+    llvm::SmallVector<llvm::StringRef, 8> Pieces;
+    String.split(Pieces, " ", /* MaxSplit */ -1, /* KeepEmpty */ false);
+    if (Pieces.empty()) {
+      ErrorStream << "Unknown Instruction: '" << String << "'";
+      return;
+    }
+    bool ProcessOpcode = true;
+    for (llvm::StringRef Piece : Pieces) {
+      if (ProcessOpcode)
+        Value.setOpcode(getInstrOpcode(Piece));
+      else
+        Value.addOperand(deserializeMCOperand(Piece));
+      ProcessOpcode = false;
+    }
+  }
 
-static const exegesis::BenchmarkResultContext &getTypedContext(void *Ctx) {
-  assert(Ctx);
-  return *static_cast<const exegesis::BenchmarkResultContext *>(Ctx);
-}
+  std::string &getLastError() { return ErrorStream.str(); }
+
+  llvm::raw_string_ostream &getErrorStream() { return ErrorStream; }
+
+  llvm::StringRef getRegName(unsigned RegNo) {
+    const llvm::StringRef RegName = State->getRegInfo().getName(RegNo);
+    if (RegName.empty())
+      ErrorStream << "No register with enum value" << RegNo;
+    return RegName;
+  }
+
+  unsigned getRegNo(llvm::StringRef RegName) {
+    const llvm::MCRegisterInfo &RegInfo = State->getRegInfo();
+    for (unsigned E = RegInfo.getNumRegs(), I = 0; I < E; ++I)
+      if (RegInfo.getName(I) == RegName)
+        return I;
+    ErrorStream << "No register with name " << RegName;
+    return 0;
+  }
+
+private:
+  void serializeIntegerOperand(llvm::raw_ostream &OS, int64_t Value) {
+    OS << kIntegerPrefix;
+    OS.write_hex(llvm::bit_cast<uint64_t>(Value));
+  }
+
+  bool tryDeserializeIntegerOperand(llvm::StringRef String, int64_t &Value) {
+    if (!String.consume_front(kIntegerPrefix))
+      return false;
+    return !String.consumeInteger(16, Value);
+  }
+
+  void serializeFPOperand(llvm::raw_ostream &OS, double Value) {
+    OS << kDoublePrefix << llvm::format("%la", Value);
+  }
+
+  bool tryDeserializeFPOperand(llvm::StringRef String, double &Value) {
+    if (!String.consume_front(kDoublePrefix))
+      return false;
+    char *EndPointer = nullptr;
+    Value = strtod(String.begin(), &EndPointer);
+    return EndPointer == String.end();
+  }
+
+  void serializeMCOperand(const llvm::MCOperand &MCOperand,
+                          llvm::raw_ostream &OS) {
+    if (MCOperand.isReg()) {
+      OS << getRegName(MCOperand.getReg());
+    } else if (MCOperand.isImm()) {
+      serializeIntegerOperand(OS, MCOperand.getImm());
+    } else if (MCOperand.isFPImm()) {
+      serializeFPOperand(OS, MCOperand.getFPImm());
+    } else {
+      OS << kInvalidOperand;
+    }
+  }
+
+  llvm::MCOperand deserializeMCOperand(llvm::StringRef String) {
+    assert(!String.empty());
+    int64_t IntValue = 0;
+    double DoubleValue = 0;
+    if (tryDeserializeIntegerOperand(String, IntValue))
+      return llvm::MCOperand::createImm(IntValue);
+    if (tryDeserializeFPOperand(String, DoubleValue))
+      return llvm::MCOperand::createFPImm(DoubleValue);
+    if (unsigned RegNo = getRegNo(String))
+      return llvm::MCOperand::createReg(RegNo);
+    if (String != kInvalidOperand)
+      ErrorStream << "Unknown Operand: '" << String << "'";
+    return {};
+  }
+
+  llvm::StringRef getInstrName(unsigned InstrNo) {
+    const llvm::StringRef InstrName = State->getInstrInfo().getName(InstrNo);
+    if (InstrName.empty())
+      ErrorStream << "No opcode with enum value" << InstrNo;
+    return InstrName;
+  }
+
+  unsigned getInstrOpcode(llvm::StringRef InstrName) {
+    const llvm::MCInstrInfo &InstrInfo = State->getInstrInfo();
+    for (unsigned E = InstrInfo.getNumOpcodes(), I = 0; I < E; ++I)
+      if (InstrInfo.getName(I) == InstrName)
+        return I;
+    ErrorStream << "No opcode with name " << InstrName;
+    return 0;
+  }
+
+  const llvm::exegesis::LLVMState *State;
+  std::string LastError;
+  llvm::raw_string_ostream ErrorStream;
+};
+} // namespace
 
 // Defining YAML traits for IO.
-namespace llvm {
 namespace yaml {
+
+static YamlContext &getTypedContext(void *Ctx) {
+  return *reinterpret_cast<YamlContext *>(Ctx);
+}
 
 // std::vector<llvm::MCInst> will be rendered as a list.
 template <> struct SequenceElementTraits<llvm::MCInst> {
@@ -101,13 +167,17 @@ template <> struct ScalarTraits<llvm::MCInst> {
 
   static void output(const llvm::MCInst &Value, void *Ctx,
                      llvm::raw_ostream &Out) {
-    serialize(getTypedContext(Ctx), Value, Out);
+    getTypedContext(Ctx).serializeMCInst(Value, Out);
   }
 
   static StringRef input(StringRef Scalar, void *Ctx, llvm::MCInst &Value) {
-    return deserialize(getTypedContext(Ctx), Scalar, Value);
+    YamlContext &Context = getTypedContext(Ctx);
+    Context.deserializeMCInst(Scalar, Value);
+    return Context.getLastError();
   }
 
+  // By default strings are quoted only when necessary.
+  // We force the use of single quotes for uniformity.
   static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
 
   static const bool flow = true;
@@ -123,8 +193,12 @@ template <> struct SequenceElementTraits<exegesis::BenchmarkMeasure> {
 template <> struct MappingTraits<exegesis::BenchmarkMeasure> {
   static void mapping(IO &Io, exegesis::BenchmarkMeasure &Obj) {
     Io.mapRequired("key", Obj.Key);
-    Io.mapRequired("value", Obj.Value);
-    Io.mapOptional("debug_string", Obj.DebugString);
+    if (!Io.outputting()) {
+      // For backward compatibility, interpret debug_string as a key.
+      Io.mapOptional("debug_string", Obj.Key);
+    }
+    Io.mapRequired("value", Obj.PerInstructionValue);
+    Io.mapOptional("per_snippet_value", Obj.PerSnippetValue);
   }
   static const bool flow = true;
 };
@@ -139,16 +213,58 @@ struct ScalarEnumerationTraits<exegesis::InstructionBenchmark::ModeE> {
   }
 };
 
-template <> struct MappingTraits<exegesis::InstructionBenchmarkKey> {
-  static void mapping(IO &Io, exegesis::InstructionBenchmarkKey &Obj) {
+// std::vector<exegesis::RegisterValue> will be rendered as a list.
+template <> struct SequenceElementTraits<exegesis::RegisterValue> {
+  static const bool flow = false;
+};
+
+template <> struct ScalarTraits<exegesis::RegisterValue> {
+  static constexpr const unsigned kRadix = 16;
+  static constexpr const bool kSigned = false;
+
+  static void output(const exegesis::RegisterValue &RV, void *Ctx,
+                     llvm::raw_ostream &Out) {
+    YamlContext &Context = getTypedContext(Ctx);
+    Out << Context.getRegName(RV.Register) << "=0x"
+        << RV.Value.toString(kRadix, kSigned);
+  }
+
+  static StringRef input(StringRef String, void *Ctx,
+                         exegesis::RegisterValue &RV) {
+    llvm::SmallVector<llvm::StringRef, 2> Pieces;
+    String.split(Pieces, "=0x", /* MaxSplit */ -1,
+                 /* KeepEmpty */ false);
+    YamlContext &Context = getTypedContext(Ctx);
+    if (Pieces.size() == 2) {
+      RV.Register = Context.getRegNo(Pieces[0]);
+      const unsigned BitsNeeded = llvm::APInt::getBitsNeeded(Pieces[1], kRadix);
+      RV.Value = llvm::APInt(BitsNeeded, Pieces[1], kRadix);
+    } else {
+      Context.getErrorStream()
+          << "Unknown initial register value: '" << String << "'";
+    }
+    return Context.getLastError();
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::Single; }
+
+  static const bool flow = true;
+};
+
+template <>
+struct MappingContextTraits<exegesis::InstructionBenchmarkKey, YamlContext> {
+  static void mapping(IO &Io, exegesis::InstructionBenchmarkKey &Obj,
+                      YamlContext &Context) {
+    Io.setContext(&Context);
     Io.mapRequired("instructions", Obj.Instructions);
     Io.mapOptional("config", Obj.Config);
+    Io.mapRequired("register_initial_values", Obj.RegisterInitialValues);
   }
 };
 
-template <> struct MappingTraits<exegesis::InstructionBenchmark> {
-  class NormalizedBinary {
-  public:
+template <>
+struct MappingContextTraits<exegesis::InstructionBenchmark, YamlContext> {
+  struct NormalizedBinary {
     NormalizedBinary(IO &io) {}
     NormalizedBinary(IO &, std::vector<uint8_t> &Data) : Binary(Data) {}
     std::vector<uint8_t> denormalize(IO &) {
@@ -164,9 +280,10 @@ template <> struct MappingTraits<exegesis::InstructionBenchmark> {
     BinaryRef Binary;
   };
 
-  static void mapping(IO &Io, exegesis::InstructionBenchmark &Obj) {
+  static void mapping(IO &Io, exegesis::InstructionBenchmark &Obj,
+                      YamlContext &Context) {
     Io.mapRequired("mode", Obj.Mode);
-    Io.mapRequired("key", Obj.Key);
+    Io.mapRequired("key", Obj.Key, Context);
     Io.mapRequired("cpu_name", Obj.CpuName);
     Io.mapRequired("llvm_triple", Obj.LLVMTriple);
     Io.mapRequired("num_repetitions", Obj.NumRepetitions);
@@ -181,101 +298,71 @@ template <> struct MappingTraits<exegesis::InstructionBenchmark> {
 };
 
 } // namespace yaml
-} // namespace llvm
-
-LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(exegesis::InstructionBenchmark)
 
 namespace exegesis {
 
-void BenchmarkResultContext::addRegEntry(unsigned RegNo, llvm::StringRef Name) {
-  assert(RegNoToName.find(RegNo) == RegNoToName.end());
-  assert(RegNameToNo.find(Name) == RegNameToNo.end());
-  RegNoToName[RegNo] = Name;
-  RegNameToNo[Name] = RegNo;
-}
-
-llvm::StringRef BenchmarkResultContext::getRegName(unsigned RegNo) const {
-  const auto Itr = RegNoToName.find(RegNo);
-  if (Itr != RegNoToName.end())
-    return Itr->second;
-  return {};
-}
-
-unsigned BenchmarkResultContext::getRegNo(llvm::StringRef Name) const {
-  const auto Itr = RegNameToNo.find(Name);
-  if (Itr != RegNameToNo.end())
-    return Itr->second;
-  return 0;
-}
-
-void BenchmarkResultContext::addInstrEntry(unsigned Opcode,
-                                           llvm::StringRef Name) {
-  assert(InstrOpcodeToName.find(Opcode) == InstrOpcodeToName.end());
-  assert(InstrNameToOpcode.find(Name) == InstrNameToOpcode.end());
-  InstrOpcodeToName[Opcode] = Name;
-  InstrNameToOpcode[Name] = Opcode;
-}
-
-llvm::StringRef BenchmarkResultContext::getInstrName(unsigned Opcode) const {
-  const auto Itr = InstrOpcodeToName.find(Opcode);
-  if (Itr != InstrOpcodeToName.end())
-    return Itr->second;
-  return {};
-}
-
-unsigned BenchmarkResultContext::getInstrOpcode(llvm::StringRef Name) const {
-  const auto Itr = InstrNameToOpcode.find(Name);
-  if (Itr != InstrNameToOpcode.end())
-    return Itr->second;
-  return 0;
-}
-
-template <typename ObjectOrList>
-static llvm::Expected<ObjectOrList>
-readYamlCommon(const BenchmarkResultContext &Context,
-               llvm::StringRef Filename) {
+llvm::Expected<InstructionBenchmark>
+InstructionBenchmark::readYaml(const LLVMState &State,
+                               llvm::StringRef Filename) {
   if (auto ExpectedMemoryBuffer =
           llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(Filename))) {
-    std::unique_ptr<llvm::MemoryBuffer> MemoryBuffer =
-        std::move(ExpectedMemoryBuffer.get());
-    llvm::yaml::Input Yin(*MemoryBuffer, getUntypedContext(Context));
-    ObjectOrList Benchmark;
-    Yin >> Benchmark;
+    llvm::yaml::Input Yin(*ExpectedMemoryBuffer.get());
+    YamlContext Context(State);
+    InstructionBenchmark Benchmark;
+    if (Yin.setCurrentDocument())
+      llvm::yaml::yamlize(Yin, Benchmark, /*unused*/ true, Context);
+    if (!Context.getLastError().empty())
+      return llvm::make_error<BenchmarkFailure>(Context.getLastError());
     return Benchmark;
   } else {
     return ExpectedMemoryBuffer.takeError();
   }
 }
 
-llvm::Expected<InstructionBenchmark>
-InstructionBenchmark::readYaml(const BenchmarkResultContext &Context,
-                               llvm::StringRef Filename) {
-  return readYamlCommon<InstructionBenchmark>(Context, Filename);
-}
-
 llvm::Expected<std::vector<InstructionBenchmark>>
-InstructionBenchmark::readYamls(const BenchmarkResultContext &Context,
+InstructionBenchmark::readYamls(const LLVMState &State,
                                 llvm::StringRef Filename) {
-  return readYamlCommon<std::vector<InstructionBenchmark>>(Context, Filename);
+  if (auto ExpectedMemoryBuffer =
+          llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(Filename))) {
+    llvm::yaml::Input Yin(*ExpectedMemoryBuffer.get());
+    YamlContext Context(State);
+    std::vector<InstructionBenchmark> Benchmarks;
+    while (Yin.setCurrentDocument()) {
+      Benchmarks.emplace_back();
+      yamlize(Yin, Benchmarks.back(), /*unused*/ true, Context);
+      if (Yin.error())
+        return llvm::errorCodeToError(Yin.error());
+      if (!Context.getLastError().empty())
+        return llvm::make_error<BenchmarkFailure>(Context.getLastError());
+      Yin.nextDocument();
+    }
+    return Benchmarks;
+  } else {
+    return ExpectedMemoryBuffer.takeError();
+  }
 }
 
-void InstructionBenchmark::writeYamlTo(const BenchmarkResultContext &Context,
+void InstructionBenchmark::writeYamlTo(const LLVMState &State,
                                        llvm::raw_ostream &OS) {
-  llvm::yaml::Output Yout(OS, getUntypedContext(Context));
-  Yout << *this;
+  llvm::yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
+  YamlContext Context(State);
+  Yout.beginDocuments();
+  llvm::yaml::yamlize(Yout, *this, /*unused*/ true, Context);
+  Yout.endDocuments();
 }
 
-void InstructionBenchmark::readYamlFrom(const BenchmarkResultContext &Context,
+void InstructionBenchmark::readYamlFrom(const LLVMState &State,
                                         llvm::StringRef InputContent) {
-  llvm::yaml::Input Yin(InputContent, getUntypedContext(Context));
-  Yin >> *this;
+  llvm::yaml::Input Yin(InputContent);
+  YamlContext Context(State);
+  if (Yin.setCurrentDocument())
+    llvm::yaml::yamlize(Yin, *this, /*unused*/ true, Context);
 }
 
-llvm::Error
-InstructionBenchmark::writeYaml(const BenchmarkResultContext &Context,
-                                const llvm::StringRef Filename) {
+llvm::Error InstructionBenchmark::writeYaml(const LLVMState &State,
+                                            const llvm::StringRef Filename) {
   if (Filename == "-") {
-    writeYamlTo(Context, llvm::outs());
+    writeYamlTo(State, llvm::outs());
   } else {
     int ResultFD = 0;
     if (auto E = llvm::errorCodeToError(
@@ -284,19 +371,20 @@ InstructionBenchmark::writeYaml(const BenchmarkResultContext &Context,
       return E;
     }
     llvm::raw_fd_ostream Ostr(ResultFD, true /*shouldClose*/);
-    writeYamlTo(Context, Ostr);
+    writeYamlTo(State, Ostr);
   }
   return llvm::Error::success();
 }
 
-void BenchmarkMeasureStats::push(const BenchmarkMeasure &BM) {
+void PerInstructionStats::push(const BenchmarkMeasure &BM) {
   if (Key.empty())
     Key = BM.Key;
   assert(Key == BM.Key);
   ++NumValues;
-  SumValues += BM.Value;
-  MaxValue = std::max(MaxValue, BM.Value);
-  MinValue = std::min(MinValue, BM.Value);
+  SumValues += BM.PerInstructionValue;
+  MaxValue = std::max(MaxValue, BM.PerInstructionValue);
+  MinValue = std::min(MinValue, BM.PerInstructionValue);
 }
 
 } // namespace exegesis
+} // namespace llvm

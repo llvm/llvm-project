@@ -38,6 +38,29 @@ __attribute__((always_inline)) void optnone3() { } // expected-warning {{'always
 
 #pragma clang attribute pop
 
+#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes one argument}}
+#pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes one argument}}
+
+void fun(); // expected-note 2 {{when applied to this declaration}}
+
+#pragma clang attribute pop
+#pragma clang attribute pop // expected-error{{'#pragma clang attribute pop' with no matching '#pragma clang attribute push'}}
+
+
+#pragma clang attribute push
+#pragma clang attribute (__attribute__((annotate())), apply_to = function) // expected-error 2 {{'annotate' attribute takes one argument}}
+
+void fun2(); // expected-note {{when applied to this declaration}}
+
+#pragma clang attribute push (__attribute__((annotate())), apply_to = function) // expected-error{{'annotate' attribute takes one argument}}
+void fun3(); // expected-note 2 {{when applied to this declaration}}
+#pragma clang attribute pop
+
+#pragma clang attribute pop
+#pragma clang attribute pop // expected-error{{'#pragma clang attribute pop' with no matching '#pragma clang attribute push'}}
+
+#pragma clang attribute (__attribute__((annotate)), apply_to = function) // expected-error{{'#pragma clang attribute' attribute with no matching '#pragma clang attribute push}}
+
 #pragma clang attribute push ([[]], apply_to = function) // A noop
 
 #pragma clang attribute pop // expected-error {{'#pragma clang attribute pop' with no matching '#pragma clang attribute push'}}

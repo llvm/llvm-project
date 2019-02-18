@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mattr=-code-object-v3 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,HSA,ALL %s
 ; RUN: llc -mtriple=amdgcn-mesa-mesa3d -verify-machineinstrs < %s | FileCheck -check-prefixes=CO-V2,OS-MESA3D,MESA,ALL %s
 ; RUN: llc -mtriple=amdgcn-mesa-unknown -verify-machineinstrs < %s | FileCheck -check-prefixes=OS-UNKNOWN,MESA,ALL %s
 
@@ -79,7 +79,7 @@ define amdgpu_kernel void @opencl_test_implicit_alignment(i32 addrspace(1)* %out
 ; CO-V2: enable_sgpr_kernarg_segment_ptr = 1
 ; HSA: kernarg_segment_byte_size = 0
 ; OS-MESA3D: kernarg_segment_byte_size = 16
-; CO-V2: kernarg_segment_alignment = 32
+; CO-V2: kernarg_segment_alignment = 4
 
 ; HSA: s_load_dword s{{[0-9]+}}, s[4:5]
 define amdgpu_kernel void @test_no_kernargs() #1 {

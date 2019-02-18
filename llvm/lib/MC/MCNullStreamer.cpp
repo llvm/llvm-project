@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
@@ -21,6 +22,9 @@ namespace {
 
     /// @name MCStreamer Interface
     /// @{
+
+    bool hasRawTextSupport() const override { return true; }
+    void EmitRawTextImpl(StringRef String) override {}
 
     bool EmitSymbolAttribute(MCSymbol *Symbol,
                              MCSymbolAttr Attribute) override {

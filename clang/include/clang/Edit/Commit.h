@@ -57,7 +57,7 @@ private:
 
   bool IsCommitable = true;
   SmallVector<Edit, 8> CachedEdits;
-  
+
   llvm::BumpPtrAllocator StrAlloc;
 
 public:

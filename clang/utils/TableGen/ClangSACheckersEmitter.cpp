@@ -11,33 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <map>
 #include <string>
+
 using namespace llvm;
 
 //===----------------------------------------------------------------------===//
 // Static Analyzer Checkers Tables generation
 //===----------------------------------------------------------------------===//
-
-/// True if it is specified hidden or a parent package is specified
-/// as hidden, otherwise false.
-static bool isHidden(const Record &R) {
-  if (R.getValueAsBit("Hidden"))
-    return true;
-  // Not declared as hidden, check the parent package if it is hidden.
-  if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("ParentPackage")))
-    return isHidden(*DI->getDef());
-
-  return false;
-}
-
-static bool isCheckerNamed(const Record *R) {
-  return !R->getValueAsString("CheckerName").empty();
-}
 
 static std::string getPackageFullName(const Record *R);
 
@@ -50,17 +35,19 @@ static std::string getParentPackageFullName(const Record *R) {
 
 static std::string getPackageFullName(const Record *R) {
   std::string name = getParentPackageFullName(R);
-  if (!name.empty()) name += ".";
+  if (!name.empty())
+    name += ".";
+  assert(!R->getValueAsString("PackageName").empty());
   name += R->getValueAsString("PackageName");
   return name;
 }
 
 static std::string getCheckerFullName(const Record *R) {
   std::string name = getParentPackageFullName(R);
-  if (isCheckerNamed(R)) {
-    if (!name.empty()) name += ".";
-    name += R->getValueAsString("CheckerName");
-  }
+  if (!name.empty())
+    name += ".";
+  assert(!R->getValueAsString("CheckerName").empty());
+  name += R->getValueAsString("CheckerName");
   return name;
 }
 
@@ -70,131 +57,67 @@ static std::string getStringValue(const Record &R, StringRef field) {
   return std::string();
 }
 
-namespace {
-struct GroupInfo {
-  llvm::DenseSet<const Record*> Checkers;
-  llvm::DenseSet<const Record *> SubGroups;
-  bool Hidden;
-  unsigned Index;
+// Calculates the integer value representing the BitsInit object
+static inline uint64_t getValueFromBitsInit(const BitsInit *B, const Record &R) {
+  assert(B->getNumBits() <= sizeof(uint64_t) * 8 && "BitInits' too long!");
 
-  GroupInfo() : Hidden(false) { }
-};
+  uint64_t Value = 0;
+  for (unsigned i = 0, e = B->getNumBits(); i != e; ++i) {
+    const auto *Bit = dyn_cast<BitInit>(B->getBit(i));
+    if (Bit)
+      Value |= uint64_t(Bit->getValue()) << i;
+    else
+      PrintFatalError(R.getLoc(),
+                      "missing Documentation for " + getCheckerFullName(&R));
+  }
+  return Value;
 }
 
-static void addPackageToCheckerGroup(const Record *package, const Record *group,
-                  llvm::DenseMap<const Record *, GroupInfo *> &recordGroupMap) {
-  llvm::DenseSet<const Record *> &checkers = recordGroupMap[package]->Checkers;
-  for (llvm::DenseSet<const Record *>::iterator
-         I = checkers.begin(), E = checkers.end(); I != E; ++I)
-    recordGroupMap[group]->Checkers.insert(*I);
+static std::string getCheckerDocs(const Record &R) {
+  StringRef LandingPage;
+  if (BitsInit *BI = R.getValueAsBitsInit("Documentation")) {
+    uint64_t V = getValueFromBitsInit(BI, R);
+    if (V == 1)
+      LandingPage = "available_checks.html";
+    else if (V == 2)
+      LandingPage = "alpha_checks.html";
+  }
+  
+  if (LandingPage.empty())
+    return "";
 
-  llvm::DenseSet<const Record *> &subGroups = recordGroupMap[package]->SubGroups;
-  for (llvm::DenseSet<const Record *>::iterator
-         I = subGroups.begin(), E = subGroups.end(); I != E; ++I)
-    addPackageToCheckerGroup(*I, group, recordGroupMap);
+  return (llvm::Twine("https://clang-analyzer.llvm.org/") + LandingPage + "#" +
+          getCheckerFullName(&R))
+      .str();
+}
+
+static void printChecker(llvm::raw_ostream &OS, const Record &R) {
+    OS << "CHECKER(" << "\"";
+    OS.write_escaped(getCheckerFullName(&R)) << "\", ";
+    OS << R.getName() << ", ";
+    OS << "\"";
+    OS.write_escaped(getStringValue(R, "HelpText")) << "\", ";
+    OS << "\"";
+    OS.write_escaped(getCheckerDocs(R));
+    OS << "\"";
 }
 
 namespace clang {
 void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
   std::vector<Record*> checkers = Records.getAllDerivedDefinitions("Checker");
-  llvm::DenseMap<const Record *, unsigned> checkerRecIndexMap;
-  for (unsigned i = 0, e = checkers.size(); i != e; ++i)
-    checkerRecIndexMap[checkers[i]] = i;
-
-  // Invert the mapping of checkers to package/group into a one to many
-  // mapping of packages/groups to checkers.
-  std::map<std::string, GroupInfo> groupInfoByName;
-  llvm::DenseMap<const Record *, GroupInfo *> recordGroupMap;
-
   std::vector<Record*> packages = Records.getAllDerivedDefinitions("Package");
-  for (unsigned i = 0, e = packages.size(); i != e; ++i) {
-    Record *R = packages[i];
-    std::string fullName = getPackageFullName(R);
-    if (!fullName.empty()) {
-      GroupInfo &info = groupInfoByName[fullName];
-      info.Hidden = isHidden(*R);
-      recordGroupMap[R] = &info;
-    }
-  }
 
-  std::vector<Record*>
-      checkerGroups = Records.getAllDerivedDefinitions("CheckerGroup");
-  for (unsigned i = 0, e = checkerGroups.size(); i != e; ++i) {
-    Record *R = checkerGroups[i];
-    std::string name = R->getValueAsString("GroupName");
-    if (!name.empty()) {
-      GroupInfo &info = groupInfoByName[name];
-      recordGroupMap[R] = &info;
-    }
-  }
+  using SortedRecords = llvm::StringMap<const Record *>;
 
-  for (unsigned i = 0, e = checkers.size(); i != e; ++i) {
-    Record *R = checkers[i];
-    Record *package = nullptr;
-    if (DefInit *
-          DI = dyn_cast<DefInit>(R->getValueInit("ParentPackage")))
-      package = DI->getDef();
-    if (!isCheckerNamed(R) && !package)
-      PrintFatalError(R->getLoc(), "Checker '" + R->getName() +
-                      "' is neither named, nor in a package!");
+  OS << "// This file is automatically generated. Do not edit this file by "
+        "hand.\n";
 
-    if (isCheckerNamed(R)) {
-      // Create a pseudo-group to hold this checker.
-      std::string fullName = getCheckerFullName(R);
-      GroupInfo &info = groupInfoByName[fullName];
-      info.Hidden = R->getValueAsBit("Hidden");
-      recordGroupMap[R] = &info;
-      info.Checkers.insert(R);
-    } else {
-      recordGroupMap[package]->Checkers.insert(R);
-    }
-
-    Record *currR = isCheckerNamed(R) ? R : package;
-    // Insert the checker and its parent packages into the subgroups set of
-    // the corresponding parent package.
-    while (DefInit *DI
-             = dyn_cast<DefInit>(currR->getValueInit("ParentPackage"))) {
-      Record *parentPackage = DI->getDef();
-      recordGroupMap[parentPackage]->SubGroups.insert(currR);
-      currR = parentPackage;
-    }
-    // Insert the checker into the set of its group.
-    if (DefInit *DI = dyn_cast<DefInit>(R->getValueInit("Group")))
-      recordGroupMap[DI->getDef()]->Checkers.insert(R);
-  }
-
-  // If a package is in group, add all its checkers and its sub-packages
-  // checkers into the group.
-  for (unsigned i = 0, e = packages.size(); i != e; ++i)
-    if (DefInit *DI = dyn_cast<DefInit>(packages[i]->getValueInit("Group")))
-      addPackageToCheckerGroup(packages[i], DI->getDef(), recordGroupMap);
-
-  typedef std::map<std::string, const Record *> SortedRecords;
-  typedef llvm::DenseMap<const Record *, unsigned> RecToSortIndex;
-
-  SortedRecords sortedGroups;
-  RecToSortIndex groupToSortIndex;
-  OS << "\n#ifdef GET_GROUPS\n";
-  {
-    for (unsigned i = 0, e = checkerGroups.size(); i != e; ++i)
-      sortedGroups[checkerGroups[i]->getValueAsString("GroupName")]
-                   = checkerGroups[i];
-
-    unsigned sortIndex = 0;
-    for (SortedRecords::iterator
-           I = sortedGroups.begin(), E = sortedGroups.end(); I != E; ++I) {
-      const Record *R = I->second;
-  
-      OS << "GROUP(" << "\"";
-      OS.write_escaped(R->getValueAsString("GroupName")) << "\"";
-      OS << ")\n";
-
-      groupToSortIndex[R] = sortIndex++;
-    }
-  }
-  OS << "#endif // GET_GROUPS\n\n";
-
-  OS << "\n#ifdef GET_PACKAGES\n";
+  // Emit packages.
+  //
+  // PACKAGE(PACKAGENAME)
+  //   - PACKAGENAME: The name of the package.
+  OS << "\n"
+        "#ifdef GET_PACKAGES\n";
   {
     SortedRecords sortedPackages;
     for (unsigned i = 0, e = packages.size(); i != e; ++i)
@@ -205,119 +128,54 @@ void EmitClangSACheckers(RecordKeeper &Records, raw_ostream &OS) {
       const Record &R = *I->second;
   
       OS << "PACKAGE(" << "\"";
-      OS.write_escaped(getPackageFullName(&R)) << "\", ";
-      // Group index
-      if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
-        OS << groupToSortIndex[DI->getDef()] << ", ";
-      else
-        OS << "-1, ";
-      // Hidden bit
-      if (isHidden(R))
-        OS << "true";
-      else
-        OS << "false";
+      OS.write_escaped(getPackageFullName(&R)) << '\"';
       OS << ")\n";
     }
   }
-  OS << "#endif // GET_PACKAGES\n\n";
-  
-  OS << "\n#ifdef GET_CHECKERS\n";
-  for (unsigned i = 0, e = checkers.size(); i != e; ++i) {
-    const Record &R = *checkers[i];
+  OS << "#endif // GET_PACKAGES\n"
+        "\n";
 
-    OS << "CHECKER(" << "\"";
-    std::string name;
-    if (isCheckerNamed(&R))
-      name = getCheckerFullName(&R);
-    OS.write_escaped(name) << "\", ";
-    OS << R.getName() << ", ";
-    OS << getStringValue(R, "DescFile") << ", ";
-    OS << "\"";
-    OS.write_escaped(getStringValue(R, "HelpText")) << "\", ";
-    // Group index
-    if (DefInit *DI = dyn_cast<DefInit>(R.getValueInit("Group")))
-      OS << groupToSortIndex[DI->getDef()] << ", ";
-    else
-      OS << "-1, ";
-    // Hidden bit
-    if (isHidden(R))
-      OS << "true";
-    else
-      OS << "false";
+  // Emit checkers.
+  //
+  // CHECKER(FULLNAME, CLASS, HELPTEXT)
+  //   - FULLNAME: The full name of the checker, including packages, e.g.:
+  //               alpha.cplusplus.UninitializedObject
+  //   - CLASS: The name of the checker, with "Checker" appended, e.g.:
+  //            UninitializedObjectChecker
+  //   - HELPTEXT: The description of the checker.
+  OS << "\n"
+        "#ifdef GET_CHECKERS\n"
+        "\n";
+  for (const Record *checker : checkers) {
+    printChecker(OS, *checker);
     OS << ")\n";
   }
-  OS << "#endif // GET_CHECKERS\n\n";
+  OS << "\n"
+        "#endif // GET_CHECKERS\n"
+        "\n";
 
-  unsigned index = 0;
-  for (std::map<std::string, GroupInfo>::iterator
-         I = groupInfoByName.begin(), E = groupInfoByName.end(); I != E; ++I)
-    I->second.Index = index++;
+  // Emit dependencies.
+  //
+  // CHECKER_DEPENDENCY(FULLNAME, DEPENDENCY)
+  //   - FULLNAME: The full name of the checker that depends on another checker.
+  //   - DEPENDENCY: The full name of the checker FULLNAME depends on.
+  OS << "\n"
+        "#ifdef GET_CHECKER_DEPENDENCIES\n";
+  for (const Record *checker : checkers) {
+    if (checker->isValueUnset("Dependencies"))
+      continue;
 
-  // Walk through the packages/groups/checkers emitting an array for each
-  // set of checkers and an array for each set of subpackages.
-
-  OS << "\n#ifdef GET_MEMBER_ARRAYS\n";
-  unsigned maxLen = 0;
-  for (std::map<std::string, GroupInfo>::iterator
-         I = groupInfoByName.begin(), E = groupInfoByName.end(); I != E; ++I) {
-    maxLen = std::max(maxLen, (unsigned)I->first.size());
-
-    llvm::DenseSet<const Record *> &checkers = I->second.Checkers;
-    if (!checkers.empty()) {
-      OS << "static const short CheckerArray" << I->second.Index << "[] = { ";
-      // Make the output order deterministic.
-      std::map<int, const Record *> sorted;
-      for (llvm::DenseSet<const Record *>::iterator
-             I = checkers.begin(), E = checkers.end(); I != E; ++I)
-        sorted[(*I)->getID()] = *I;
-
-      for (std::map<int, const Record *>::iterator
-             I = sorted.begin(), E = sorted.end(); I != E; ++I)
-        OS << checkerRecIndexMap[I->second] << ", ";
-      OS << "-1 };\n";
-    }
-    
-    llvm::DenseSet<const Record *> &subGroups = I->second.SubGroups;
-    if (!subGroups.empty()) {
-      OS << "static const short SubPackageArray" << I->second.Index << "[] = { ";
-      // Make the output order deterministic.
-      std::map<int, const Record *> sorted;
-      for (llvm::DenseSet<const Record *>::iterator
-             I = subGroups.begin(), E = subGroups.end(); I != E; ++I)
-        sorted[(*I)->getID()] = *I;
-
-      for (std::map<int, const Record *>::iterator
-             I = sorted.begin(), E = sorted.end(); I != E; ++I) {
-        OS << recordGroupMap[I->second]->Index << ", ";
-      }
-      OS << "-1 };\n";
+    for (const Record *Dependency :
+                            checker->getValueAsListOfDefs("Dependencies")) {
+      OS << "CHECKER_DEPENDENCY(";
+      OS << '\"';
+      OS.write_escaped(getCheckerFullName(checker)) << "\", ";
+      OS << '\"';
+      OS.write_escaped(getCheckerFullName(Dependency)) << '\"';
+      OS << ")\n";
     }
   }
-  OS << "#endif // GET_MEMBER_ARRAYS\n\n";
-
-  OS << "\n#ifdef GET_CHECKNAME_TABLE\n";
-  for (std::map<std::string, GroupInfo>::iterator
-         I = groupInfoByName.begin(), E = groupInfoByName.end(); I != E; ++I) {
-    // Group option string.
-    OS << "  { \"";
-    OS.write_escaped(I->first) << "\","
-                               << std::string(maxLen-I->first.size()+1, ' ');
-    
-    if (I->second.Checkers.empty())
-      OS << "0, ";
-    else
-      OS << "CheckerArray" << I->second.Index << ", ";
-    
-    // Subgroups.
-    if (I->second.SubGroups.empty())
-      OS << "0, ";
-    else
-      OS << "SubPackageArray" << I->second.Index << ", ";
-
-    OS << (I->second.Hidden ? "true" : "false");
-
-    OS << " },\n";
-  }
-  OS << "#endif // GET_CHECKNAME_TABLE\n\n";
+  OS << "\n"
+        "#endif // GET_CHECKER_DEPENDENCIES\n";
 }
 } // end namespace clang

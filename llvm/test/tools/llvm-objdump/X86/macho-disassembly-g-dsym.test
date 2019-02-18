@@ -1,0 +1,4 @@
+// RUN: dsymutil -f -oso-prepend-path=%p/../../dsymutil/ %p/../../dsymutil/Inputs/basic.macho.x86_64 -o %t1.dSYM
+// RUN: llvm-objdump -d -g -dsym=%t1.dSYM %p/../../dsymutil/Inputs/basic.macho.x86_64 | FileCheck %s
+
+CHECK: Disassembly of section __TEXT,__text:

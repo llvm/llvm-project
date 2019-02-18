@@ -5,7 +5,7 @@
 // RUN:     Assertion{{.*}}failed
 
 // ASan instrumentation can't insert red-zones around inalloca parameters.
-// XFAIL: win32 && asan-32-bits
+// XFAIL: windows-msvc && asan-32-bits
 
 #include <cassert>
 

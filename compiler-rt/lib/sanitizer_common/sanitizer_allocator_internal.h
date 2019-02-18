@@ -37,7 +37,8 @@ struct AP32 {
   static const uptr kMetadataSize = 0;
   typedef InternalSizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = kInternalAllocatorRegionSizeLog;
-  typedef __sanitizer::ByteMap ByteMap;
+  using AddressSpaceView = LocalAddressSpaceView;
+  using ByteMap = __sanitizer::ByteMap;
   typedef NoOpMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };

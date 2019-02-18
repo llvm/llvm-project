@@ -23,6 +23,7 @@ void test1() {
 void test2_helper();
 void test2() {
   __block int x = 10;
+  ^{ (void)x; };
   test2_helper(5, 6, 7);
 }
 void test2_helper(int x, int y) {

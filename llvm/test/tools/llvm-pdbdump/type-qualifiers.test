@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -all -class-recurse-depth=1 \
 ; RUN:   %p/Inputs/TypeQualifiersTest.pdb > %t
 ; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBALS_FUNC
@@ -16,7 +18,7 @@
 ; GLOBALS_DATA-DAG: static volatile int* __restrict NS::p_data_member
 
 ; QUALS: ---TYPES---
-; QUALS-DAG: typedef RankNArray
+; QUALS-DAG: typedef volatile int*[100][10] RankNArray
 ; QUALS-DAG: typedef long* __restrict RestrictTypedef
 ; QUALS: union Union
 ; QUALS-DAG: int* __restrict x_member

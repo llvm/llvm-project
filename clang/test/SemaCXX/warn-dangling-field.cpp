@@ -49,3 +49,8 @@ struct S6 {
 struct S7 : S5 {
   S7() : S5 { 0 } {} // expected-error {{reference member 'x' binds to a temporary}}
 };
+
+struct S8 {
+  int *p;
+  S8(int *a) : p(&a[0]) {}
+};

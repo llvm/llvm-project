@@ -150,6 +150,11 @@ template <class T, class Allocator>
     void swap(deque<T,Allocator>& x, deque<T,Allocator>& y)
          noexcept(noexcept(x.swap(y)));
 
+template <class T, class Allocator, class U>
+    void erase(deque<T, Allocator>& c, const U& value);       // C++20
+template <class T, class Allocator, class Predicate>
+    void erase_if(deque<T, Allocator>& c, Predicate pred);    // C++20
+
 }  // std
 
 */
@@ -161,6 +166,7 @@ template <class T, class Allocator>
 #include <iterator>
 #include <algorithm>
 #include <stdexcept>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -986,7 +992,7 @@ public:
 #if _LIBCPP_STD_VER >= 14
         _NOEXCEPT;
 #else
-        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
 protected:
@@ -1155,7 +1161,7 @@ __deque_base<_Tp, _Allocator>::swap(__deque_base& __c)
 #if _LIBCPP_STD_VER >= 14
         _NOEXCEPT
 #else
-        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
@@ -2341,7 +2347,7 @@ deque<_Tp, _Allocator>::__add_front_capacity()
                 _Dp(__a, __base::__block_size));
         __buf.push_back(__hold.get());
         __hold.release();
-    
+
         for (typename __base::__map_pointer __i = __base::__map_.begin();
                 __i != __base::__map_.end(); ++__i)
             __buf.push_back(*__i);
@@ -2603,6 +2609,7 @@ template <class _Tp, class _Allocator>
 void
 deque<_Tp, _Allocator>::pop_back()
 {
+    _LIBCPP_ASSERT(!empty(), "deque::pop_back called for empty deque");
     allocator_type& __a = __base::__alloc();
     size_type __p = __base::size() + __base::__start_ - 1;
     __alloc_traits::destroy(__a, __to_raw_pointer(*(__base::__map_.begin() +
@@ -2853,7 +2860,7 @@ deque<_Tp, _Allocator>::swap(deque& __c)
 #if _LIBCPP_STD_VER >= 14
         _NOEXCEPT
 #else
-        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || 
+        _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value)
 #endif
 {
@@ -2925,6 +2932,19 @@ swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y)
 {
     __x.swap(__y);
 }
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp, class _Allocator, class _Up>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase(deque<_Tp, _Allocator>& __c, const _Up& __v)
+{ __c.erase(_VSTD::remove(__c.begin(), __c.end(), __v), __c.end()); }
+
+template <class _Tp, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(deque<_Tp, _Allocator>& __c, _Predicate __pred)
+{ __c.erase(_VSTD::remove_if(__c.begin(), __c.end(), __pred), __c.end()); }
+#endif
+
 
 _LIBCPP_END_NAMESPACE_STD
 

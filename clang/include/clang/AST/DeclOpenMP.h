@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -100,6 +101,8 @@ public:
 ///
 /// Here 'omp_out += omp_in' is a combiner and 'omp_priv = 0' is an initializer.
 class OMPDeclareReductionDecl final : public ValueDecl, public DeclContext {
+  // This class stores some data in DeclContext::OMPDeclareReductionDeclBits
+  // to save some space. Use the provided accessors to access it.
 public:
   enum InitKind {
     CallInit,   // Initialized by function call.
@@ -110,11 +113,17 @@ public:
 private:
   friend class ASTDeclReader;
   /// Combiner for declare reduction construct.
-  Expr *Combiner;
+  Expr *Combiner = nullptr;
   /// Initializer for declare reduction construct.
-  Expr *Initializer;
-  /// Kind of initializer - function call or omp_priv<init_expr> initializtion.
-  InitKind InitializerKind = CallInit;
+  Expr *Initializer = nullptr;
+  /// In parameter of the combiner.
+  Expr *In = nullptr;
+  /// Out parameter of the combiner.
+  Expr *Out = nullptr;
+  /// Priv parameter of the initializer.
+  Expr *Priv = nullptr;
+  /// Orig parameter of the initializer.
+  Expr *Orig = nullptr;
 
   /// Reference to the previous declare reduction construct in the same
   /// scope with the same name. Required for proper templates instantiation if
@@ -125,10 +134,7 @@ private:
 
   OMPDeclareReductionDecl(Kind DK, DeclContext *DC, SourceLocation L,
                           DeclarationName Name, QualType Ty,
-                          OMPDeclareReductionDecl *PrevDeclInScope)
-      : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
-        Initializer(nullptr), InitializerKind(CallInit),
-        PrevDeclInScope(PrevDeclInScope) {}
+                          OMPDeclareReductionDecl *PrevDeclInScope);
 
   void setPrevDeclInScope(OMPDeclareReductionDecl *Prev) {
     PrevDeclInScope = Prev;
@@ -146,19 +152,43 @@ public:
   /// Get combiner expression of the declare reduction construct.
   Expr *getCombiner() { return Combiner; }
   const Expr *getCombiner() const { return Combiner; }
+  /// Get In variable of the combiner.
+  Expr *getCombinerIn() { return In; }
+  const Expr *getCombinerIn() const { return In; }
+  /// Get Out variable of the combiner.
+  Expr *getCombinerOut() { return Out; }
+  const Expr *getCombinerOut() const { return Out; }
   /// Set combiner expression for the declare reduction construct.
   void setCombiner(Expr *E) { Combiner = E; }
+  /// Set combiner In and Out vars.
+  void setCombinerData(Expr *InE, Expr *OutE) {
+    In = InE;
+    Out = OutE;
+  }
 
   /// Get initializer expression (if specified) of the declare reduction
   /// construct.
   Expr *getInitializer() { return Initializer; }
   const Expr *getInitializer() const { return Initializer; }
   /// Get initializer kind.
-  InitKind getInitializerKind() const { return InitializerKind; }
+  InitKind getInitializerKind() const {
+    return static_cast<InitKind>(OMPDeclareReductionDeclBits.InitializerKind);
+  }
+  /// Get Orig variable of the initializer.
+  Expr *getInitOrig() { return Orig; }
+  const Expr *getInitOrig() const { return Orig; }
+  /// Get Priv variable of the initializer.
+  Expr *getInitPriv() { return Priv; }
+  const Expr *getInitPriv() const { return Priv; }
   /// Set initializer expression for the declare reduction construct.
   void setInitializer(Expr *E, InitKind IK) {
     Initializer = E;
-    InitializerKind = IK;
+    OMPDeclareReductionDeclBits.InitializerKind = IK;
+  }
+  /// Set initializer Orig and Priv vars.
+  void setInitializerData(Expr *OrigE, Expr *PrivE) {
+    Orig = OrigE;
+    Priv = PrivE;
   }
 
   /// Get reference to previous declare reduction construct in the same
@@ -210,6 +240,76 @@ public:
   static bool classofKind(Kind K) { return K == OMPCapturedExpr; }
 };
 
+/// This represents '#pragma omp requires...' directive.
+/// For example
+///
+/// \code
+/// #pragma omp requires unified_address
+/// \endcode
+///
+class OMPRequiresDecl final
+    : public Decl,
+      private llvm::TrailingObjects<OMPRequiresDecl, OMPClause *> {
+  friend class ASTDeclReader;
+  friend TrailingObjects;
+
+  // Number of clauses associated with this requires declaration
+  unsigned NumClauses = 0;
+
+  virtual void anchor();
+
+  OMPRequiresDecl(Kind DK, DeclContext *DC, SourceLocation L)
+      : Decl(DK, DC, L), NumClauses(0) {}
+
+  /// Returns an array of immutable clauses associated with this requires
+  /// declaration
+  ArrayRef<const OMPClause *> getClauses() const {
+    return llvm::makeArrayRef(getTrailingObjects<OMPClause *>(), NumClauses);
+  }
+
+  /// Returns an array of clauses associated with this requires declaration
+  MutableArrayRef<OMPClause *> getClauses() {
+    return MutableArrayRef<OMPClause *>(getTrailingObjects<OMPClause *>(),
+                                        NumClauses);
+  }
+
+  /// Sets an array of clauses to this requires declaration
+  void setClauses(ArrayRef<OMPClause *> CL);
+
+public:
+  /// Create requires node.
+  static OMPRequiresDecl *Create(ASTContext &C, DeclContext *DC,
+                                 SourceLocation L, ArrayRef<OMPClause *> CL);
+  /// Create deserialized requires node.
+  static OMPRequiresDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+                                             unsigned N);
+
+  using clauselist_iterator = MutableArrayRef<OMPClause *>::iterator;
+  using clauselist_const_iterator = ArrayRef<const OMPClause *>::iterator;
+  using clauselist_range = llvm::iterator_range<clauselist_iterator>;
+  using clauselist_const_range = llvm::iterator_range<clauselist_const_iterator>;
+
+  unsigned clauselist_size() const { return NumClauses; }
+  bool clauselist_empty() const { return NumClauses == 0; }
+
+  clauselist_range clauselists() {
+    return clauselist_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_const_range clauselists() const {
+    return clauselist_const_range(clauselist_begin(), clauselist_end());
+  }
+  clauselist_iterator clauselist_begin() { return getClauses().begin(); }
+  clauselist_iterator clauselist_end() { return getClauses().end(); }
+  clauselist_const_iterator clauselist_begin() const {
+    return getClauses().begin();
+  }
+  clauselist_const_iterator clauselist_end() const {
+    return getClauses().end();
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == OMPRequires; }
+};
 } // end namespace clang
 
 #endif

@@ -356,17 +356,6 @@ protected:
 /// This is the storage for the -time-passes option.
 extern bool TimePassesIsEnabled;
 
-/// isFunctionInPrintList - returns true if a function should be printed via
-//  debugging options like -print-after-all/-print-before-all.
-//  Tells if the function IR should be printed by PrinterPass.
-extern bool isFunctionInPrintList(StringRef FunctionName);
-
-/// forcePrintModuleIR - returns true if IR printing passes should
-//  be printing module IR (even for local-pass printers e.g. function-pass)
-//  to provide more context, as enabled by debugging option -print-module-scope
-//  Tells if IR printer should be printing module IR
-extern bool forcePrintModuleIR();
-
 } // end namespace llvm
 
 // Include support files that contain important APIs commonly used by Passes,

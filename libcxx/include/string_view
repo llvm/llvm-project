@@ -178,6 +178,7 @@ namespace std {
 #include <iterator>
 #include <limits>
 #include <stdexcept>
+#include <version>
 #include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -768,6 +769,9 @@ bool operator>=(typename common_type<basic_string_view<_CharT, _Traits> >::type 
 }
 
 typedef basic_string_view<char>     string_view;
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+typedef basic_string_view<char8_t>  u8string_view;
+#endif
 typedef basic_string_view<char16_t> u16string_view;
 typedef basic_string_view<char32_t> u32string_view;
 typedef basic_string_view<wchar_t>  wstring_view;
@@ -777,16 +781,11 @@ template<class _CharT, class _Traits>
 struct _LIBCPP_TEMPLATE_VIS hash<basic_string_view<_CharT, _Traits> >
     : public unary_function<basic_string_view<_CharT, _Traits>, size_t>
 {
-    size_t operator()(const basic_string_view<_CharT, _Traits> __val) const _NOEXCEPT;
+    _LIBCPP_INLINE_VISIBILITY
+    size_t operator()(const basic_string_view<_CharT, _Traits> __val) const _NOEXCEPT {
+        return __do_string_hash(__val.data(), __val.data() + __val.size());
+    }
 };
-
-template<class _CharT, class _Traits>
-size_t
-hash<basic_string_view<_CharT, _Traits> >::operator()(
-        const basic_string_view<_CharT, _Traits> __val) const _NOEXCEPT
-{
-    return __do_string_hash(__val.data(), __val.data() + __val.size());
-}
 
 
 #if _LIBCPP_STD_VER > 11 
@@ -805,6 +804,14 @@ inline namespace literals
     {
         return basic_string_view<wchar_t> (__str, __len);
     }
+
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+    inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+    basic_string_view<char8_t> operator "" sv(const char8_t *__str, size_t __len) _NOEXCEPT
+    {
+        return basic_string_view<char8_t> (__str, __len);
+    }
+#endif
 
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     basic_string_view<char16_t> operator "" sv(const char16_t *__str, size_t __len) _NOEXCEPT

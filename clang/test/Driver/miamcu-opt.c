@@ -14,7 +14,7 @@
 
 // DYNAMIC: error: invalid argument '-dynamic' not allowed with '-static'
 
-// NOT-X86: error: unsupported option '-miamcu' for target 'armv8---eabi'
+// NOT-X86: error: unsupported option '-miamcu' for target 'armv8-unknown-unknown-eabi'
 
 // MNOIAMCU-NOT: "-triple" "i586-intel-elfiamcu"
 

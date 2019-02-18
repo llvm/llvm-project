@@ -344,7 +344,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
 /// Update the branch weights of the latch of a peeled-off loop
 /// iteration.
 /// This sets the branch weights for the latch of the recently peeled off loop
-/// iteration correctly. 
+/// iteration correctly.
 /// Our goal is to make sure that:
 /// a) The total weight of all the copies of the loop body is preserved.
 /// b) The total weight of the loop exit is preserved.
@@ -544,7 +544,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   //
   // Each following iteration will split the current bottom anchor in two,
   // and put the new copy of the loop body between these two blocks. That is,
-  // after peeling another iteration from the example above, we'll split 
+  // after peeling another iteration from the example above, we'll split
   // InsertBot, and get:
   //
   // InsertTop:
@@ -615,11 +615,17 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
       // the original loop body.
       if (Iter == 0)
         DT->changeImmediateDominator(Exit, cast<BasicBlock>(LVMap[Latch]));
+#ifdef EXPENSIVE_CHECKS
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+#endif
     }
 
-    updateBranchWeights(InsertBot, cast<BranchInst>(VMap[LatchBR]), Iter,
+    auto *LatchBRCopy = cast<BranchInst>(VMap[LatchBR]);
+    updateBranchWeights(InsertBot, LatchBRCopy, Iter,
                         PeelCount, ExitWeight);
+    // Remove Loop metadata from the latch branch instruction
+    // because it is not the Loop's latch branch anymore.
+    LatchBRCopy->setMetadata(LLVMContext::MD_loop, nullptr);
 
     InsertTop = InsertBot;
     InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), DT, LI);

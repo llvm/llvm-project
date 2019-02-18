@@ -15,10 +15,10 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Parse/LoopHint.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
-#include "clang/Sema/LoopHint.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/StringSwitch.h"
 using namespace clang;
@@ -106,8 +106,19 @@ struct PragmaSTDC_FENV_ACCESSHandler : public PragmaHandler {
     tok::OnOffSwitch OOS;
     if (PP.LexOnOffSwitch(OOS))
      return;
-    if (OOS == tok::OOS_ON)
+    if (OOS == tok::OOS_ON) {
       PP.Diag(Tok, diag::warn_stdc_fenv_access_not_supported);
+    }
+
+    MutableArrayRef<Token> Toks(PP.getPreprocessorAllocator().Allocate<Token>(1),
+                                1);
+    Toks[0].startToken();
+    Toks[0].setKind(tok::annot_pragma_fenv_access);
+    Toks[0].setLocation(Tok.getLocation());
+    Toks[0].setAnnotationEndLoc(Tok.getLocation());
+    Toks[0].setAnnotationValue(reinterpret_cast<void*>(
+                               static_cast<uintptr_t>(OOS)));
+    PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
   }
 };
 
@@ -250,112 +261,122 @@ struct PragmaAttributeHandler : public PragmaHandler {
 }  // end namespace
 
 void Parser::initializePragmaHandlers() {
-  AlignHandler.reset(new PragmaAlignHandler());
+  AlignHandler = llvm::make_unique<PragmaAlignHandler>();
   PP.AddPragmaHandler(AlignHandler.get());
 
-  GCCVisibilityHandler.reset(new PragmaGCCVisibilityHandler());
+  GCCVisibilityHandler = llvm::make_unique<PragmaGCCVisibilityHandler>();
   PP.AddPragmaHandler("GCC", GCCVisibilityHandler.get());
 
-  OptionsHandler.reset(new PragmaOptionsHandler());
+  OptionsHandler = llvm::make_unique<PragmaOptionsHandler>();
   PP.AddPragmaHandler(OptionsHandler.get());
 
-  PackHandler.reset(new PragmaPackHandler());
+  PackHandler = llvm::make_unique<PragmaPackHandler>();
   PP.AddPragmaHandler(PackHandler.get());
 
-  MSStructHandler.reset(new PragmaMSStructHandler());
+  MSStructHandler = llvm::make_unique<PragmaMSStructHandler>();
   PP.AddPragmaHandler(MSStructHandler.get());
 
-  UnusedHandler.reset(new PragmaUnusedHandler());
+  UnusedHandler = llvm::make_unique<PragmaUnusedHandler>();
   PP.AddPragmaHandler(UnusedHandler.get());
 
-  WeakHandler.reset(new PragmaWeakHandler());
+  WeakHandler = llvm::make_unique<PragmaWeakHandler>();
   PP.AddPragmaHandler(WeakHandler.get());
 
-  RedefineExtnameHandler.reset(new PragmaRedefineExtnameHandler());
+  RedefineExtnameHandler = llvm::make_unique<PragmaRedefineExtnameHandler>();
   PP.AddPragmaHandler(RedefineExtnameHandler.get());
 
-  FPContractHandler.reset(new PragmaFPContractHandler());
+  FPContractHandler = llvm::make_unique<PragmaFPContractHandler>();
   PP.AddPragmaHandler("STDC", FPContractHandler.get());
 
-  STDCFENVHandler.reset(new PragmaSTDC_FENV_ACCESSHandler());
+  STDCFENVHandler = llvm::make_unique<PragmaSTDC_FENV_ACCESSHandler>();
   PP.AddPragmaHandler("STDC", STDCFENVHandler.get());
 
-  STDCCXLIMITHandler.reset(new PragmaSTDC_CX_LIMITED_RANGEHandler());
+  STDCCXLIMITHandler = llvm::make_unique<PragmaSTDC_CX_LIMITED_RANGEHandler>();
   PP.AddPragmaHandler("STDC", STDCCXLIMITHandler.get());
 
-  STDCUnknownHandler.reset(new PragmaSTDC_UnknownHandler());
+  STDCUnknownHandler = llvm::make_unique<PragmaSTDC_UnknownHandler>();
   PP.AddPragmaHandler("STDC", STDCUnknownHandler.get());
 
-  PCSectionHandler.reset(new PragmaClangSectionHandler(Actions));
+  PCSectionHandler = llvm::make_unique<PragmaClangSectionHandler>(Actions);
   PP.AddPragmaHandler("clang", PCSectionHandler.get());
 
   if (getLangOpts().OpenCL) {
-    OpenCLExtensionHandler.reset(new PragmaOpenCLExtensionHandler());
+    OpenCLExtensionHandler = llvm::make_unique<PragmaOpenCLExtensionHandler>();
     PP.AddPragmaHandler("OPENCL", OpenCLExtensionHandler.get());
 
     PP.AddPragmaHandler("OPENCL", FPContractHandler.get());
   }
   if (getLangOpts().OpenMP)
-    OpenMPHandler.reset(new PragmaOpenMPHandler());
+    OpenMPHandler = llvm::make_unique<PragmaOpenMPHandler>();
   else
-    OpenMPHandler.reset(new PragmaNoOpenMPHandler());
+    OpenMPHandler = llvm::make_unique<PragmaNoOpenMPHandler>();
   PP.AddPragmaHandler(OpenMPHandler.get());
 
   if (getLangOpts().MicrosoftExt ||
       getTargetInfo().getTriple().isOSBinFormatELF()) {
-    MSCommentHandler.reset(new PragmaCommentHandler(Actions));
+    MSCommentHandler = llvm::make_unique<PragmaCommentHandler>(Actions);
     PP.AddPragmaHandler(MSCommentHandler.get());
   }
 
   if (getLangOpts().MicrosoftExt) {
-    MSDetectMismatchHandler.reset(new PragmaDetectMismatchHandler(Actions));
+    MSDetectMismatchHandler =
+        llvm::make_unique<PragmaDetectMismatchHandler>(Actions);
     PP.AddPragmaHandler(MSDetectMismatchHandler.get());
-    MSPointersToMembers.reset(new PragmaMSPointersToMembers());
+    MSPointersToMembers = llvm::make_unique<PragmaMSPointersToMembers>();
     PP.AddPragmaHandler(MSPointersToMembers.get());
-    MSVtorDisp.reset(new PragmaMSVtorDisp());
+    MSVtorDisp = llvm::make_unique<PragmaMSVtorDisp>();
     PP.AddPragmaHandler(MSVtorDisp.get());
-    MSInitSeg.reset(new PragmaMSPragma("init_seg"));
+    MSInitSeg = llvm::make_unique<PragmaMSPragma>("init_seg");
     PP.AddPragmaHandler(MSInitSeg.get());
-    MSDataSeg.reset(new PragmaMSPragma("data_seg"));
+    MSDataSeg = llvm::make_unique<PragmaMSPragma>("data_seg");
     PP.AddPragmaHandler(MSDataSeg.get());
-    MSBSSSeg.reset(new PragmaMSPragma("bss_seg"));
+    MSBSSSeg = llvm::make_unique<PragmaMSPragma>("bss_seg");
     PP.AddPragmaHandler(MSBSSSeg.get());
-    MSConstSeg.reset(new PragmaMSPragma("const_seg"));
+    MSConstSeg = llvm::make_unique<PragmaMSPragma>("const_seg");
     PP.AddPragmaHandler(MSConstSeg.get());
-    MSCodeSeg.reset(new PragmaMSPragma("code_seg"));
+    MSCodeSeg = llvm::make_unique<PragmaMSPragma>("code_seg");
     PP.AddPragmaHandler(MSCodeSeg.get());
-    MSSection.reset(new PragmaMSPragma("section"));
+    MSSection = llvm::make_unique<PragmaMSPragma>("section");
     PP.AddPragmaHandler(MSSection.get());
-    MSRuntimeChecks.reset(new PragmaMSRuntimeChecksHandler());
+    MSRuntimeChecks = llvm::make_unique<PragmaMSRuntimeChecksHandler>();
     PP.AddPragmaHandler(MSRuntimeChecks.get());
-    MSIntrinsic.reset(new PragmaMSIntrinsicHandler());
+    MSIntrinsic = llvm::make_unique<PragmaMSIntrinsicHandler>();
     PP.AddPragmaHandler(MSIntrinsic.get());
-    MSOptimize.reset(new PragmaMSOptimizeHandler());
+    MSOptimize = llvm::make_unique<PragmaMSOptimizeHandler>();
     PP.AddPragmaHandler(MSOptimize.get());
   }
 
   if (getLangOpts().CUDA) {
-    CUDAForceHostDeviceHandler.reset(
-        new PragmaForceCUDAHostDeviceHandler(Actions));
+    CUDAForceHostDeviceHandler =
+        llvm::make_unique<PragmaForceCUDAHostDeviceHandler>(Actions);
     PP.AddPragmaHandler("clang", CUDAForceHostDeviceHandler.get());
   }
 
-  OptimizeHandler.reset(new PragmaOptimizeHandler(Actions));
+  OptimizeHandler = llvm::make_unique<PragmaOptimizeHandler>(Actions);
   PP.AddPragmaHandler("clang", OptimizeHandler.get());
 
-  LoopHintHandler.reset(new PragmaLoopHintHandler());
+  LoopHintHandler = llvm::make_unique<PragmaLoopHintHandler>();
   PP.AddPragmaHandler("clang", LoopHintHandler.get());
 
-  UnrollHintHandler.reset(new PragmaUnrollHintHandler("unroll"));
+  UnrollHintHandler = llvm::make_unique<PragmaUnrollHintHandler>("unroll");
   PP.AddPragmaHandler(UnrollHintHandler.get());
 
-  NoUnrollHintHandler.reset(new PragmaUnrollHintHandler("nounroll"));
+  NoUnrollHintHandler = llvm::make_unique<PragmaUnrollHintHandler>("nounroll");
   PP.AddPragmaHandler(NoUnrollHintHandler.get());
 
-  FPHandler.reset(new PragmaFPHandler());
+  UnrollAndJamHintHandler =
+      llvm::make_unique<PragmaUnrollHintHandler>("unroll_and_jam");
+  PP.AddPragmaHandler(UnrollAndJamHintHandler.get());
+
+  NoUnrollAndJamHintHandler =
+      llvm::make_unique<PragmaUnrollHintHandler>("nounroll_and_jam");
+  PP.AddPragmaHandler(NoUnrollAndJamHintHandler.get());
+
+  FPHandler = llvm::make_unique<PragmaFPHandler>();
   PP.AddPragmaHandler("clang", FPHandler.get());
 
-  AttributePragmaHandler.reset(new PragmaAttributeHandler(AttrFactory));
+  AttributePragmaHandler =
+      llvm::make_unique<PragmaAttributeHandler>(AttrFactory);
   PP.AddPragmaHandler("clang", AttributePragmaHandler.get());
 }
 
@@ -450,6 +471,12 @@ void Parser::resetPragmaHandlers() {
 
   PP.RemovePragmaHandler(NoUnrollHintHandler.get());
   NoUnrollHintHandler.reset();
+
+  PP.RemovePragmaHandler(UnrollAndJamHintHandler.get());
+  UnrollAndJamHintHandler.reset();
+
+  PP.RemovePragmaHandler(NoUnrollAndJamHintHandler.get());
+  NoUnrollAndJamHintHandler.reset();
 
   PP.RemovePragmaHandler("clang", FPHandler.get());
   FPHandler.reset();
@@ -590,6 +617,30 @@ void Parser::HandlePragmaFPContract() {
   Actions.ActOnPragmaFPContract(FPC);
   ConsumeAnnotationToken();
 }
+
+void Parser::HandlePragmaFEnvAccess() {
+  assert(Tok.is(tok::annot_pragma_fenv_access));
+  tok::OnOffSwitch OOS =
+    static_cast<tok::OnOffSwitch>(
+    reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
+
+  LangOptions::FEnvAccessModeKind FPC;
+  switch (OOS) {
+  case tok::OOS_ON:
+    FPC = LangOptions::FEA_On;
+    break;
+  case tok::OOS_OFF:
+    FPC = LangOptions::FEA_Off;
+    break;
+  case tok::OOS_DEFAULT: // FIXME: Add this cli option when it makes sense.
+    FPC = LangOptions::FEA_Off;
+    break;
+  }
+
+  Actions.ActOnPragmaFEnvAccess(FPC);
+  ConsumeAnnotationToken();
+}
+
 
 StmtResult Parser::HandlePragmaCaptured()
 {
@@ -955,6 +1006,8 @@ static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
   if (PragmaName.getIdentifierInfo()->getName() == "loop") {
     PragmaString = "clang loop ";
     PragmaString += Option.getIdentifierInfo()->getName();
+  } else if (PragmaName.getIdentifierInfo()->getName() == "unroll_and_jam") {
+    PragmaString = "unroll_and_jam";
   } else {
     assert(PragmaName.getIdentifierInfo()->getName() == "unroll" &&
            "Unexpected pragma name");
@@ -986,7 +1039,10 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   // without an argument.
   bool PragmaUnroll = PragmaNameInfo->getName() == "unroll";
   bool PragmaNoUnroll = PragmaNameInfo->getName() == "nounroll";
-  if (Toks.empty() && (PragmaUnroll || PragmaNoUnroll)) {
+  bool PragmaUnrollAndJam = PragmaNameInfo->getName() == "unroll_and_jam";
+  bool PragmaNoUnrollAndJam = PragmaNameInfo->getName() == "nounroll_and_jam";
+  if (Toks.empty() && (PragmaUnroll || PragmaNoUnroll || PragmaUnrollAndJam ||
+                       PragmaNoUnrollAndJam)) {
     ConsumeAnnotationToken();
     Hint.Range = Info->PragmaName.getLocation();
     return true;
@@ -999,24 +1055,28 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
   // If no option is specified the argument is assumed to be a constant expr.
   bool OptionUnroll = false;
+  bool OptionUnrollAndJam = false;
   bool OptionDistribute = false;
   bool StateOption = false;
   if (OptionInfo) { // Pragma Unroll does not specify an option.
     OptionUnroll = OptionInfo->isStr("unroll");
+    OptionUnrollAndJam = OptionInfo->isStr("unroll_and_jam");
     OptionDistribute = OptionInfo->isStr("distribute");
     StateOption = llvm::StringSwitch<bool>(OptionInfo->getName())
                       .Case("vectorize", true)
                       .Case("interleave", true)
                       .Default(false) ||
-                  OptionUnroll || OptionDistribute;
+                  OptionUnroll || OptionUnrollAndJam || OptionDistribute;
   }
 
-  bool AssumeSafetyArg = !OptionUnroll && !OptionDistribute;
+  bool AssumeSafetyArg =
+      !OptionUnroll && !OptionUnrollAndJam && !OptionDistribute;
   // Verify loop hint has an argument.
   if (Toks[0].is(tok::eof)) {
     ConsumeAnnotationToken();
     Diag(Toks[0].getLocation(), diag::err_pragma_loop_missing_argument)
-        << /*StateArgument=*/StateOption << /*FullKeyword=*/OptionUnroll
+        << /*StateArgument=*/StateOption
+        << /*FullKeyword=*/(OptionUnroll || OptionUnrollAndJam)
         << /*AssumeSafetyKeyword=*/AssumeSafetyArg;
     return false;
   }
@@ -1027,15 +1087,15 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     SourceLocation StateLoc = Toks[0].getLocation();
     IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
 
-    bool Valid = StateInfo &&
-                 llvm::StringSwitch<bool>(StateInfo->getName())
-                     .Cases("enable", "disable", true)
-                     .Case("full", OptionUnroll)
-                     .Case("assume_safety", AssumeSafetyArg)
-                     .Default(false);
+    bool Valid =
+        StateInfo && llvm::StringSwitch<bool>(StateInfo->getName())
+                         .Cases("enable", "disable", true)
+                         .Case("full", OptionUnroll || OptionUnrollAndJam)
+                         .Case("assume_safety", AssumeSafetyArg)
+                         .Default(false);
     if (!Valid) {
       Diag(Toks[0].getLocation(), diag::err_pragma_invalid_keyword)
-          << /*FullKeyword=*/OptionUnroll
+          << /*FullKeyword=*/(OptionUnroll || OptionUnrollAndJam)
           << /*AssumeSafetyKeyword=*/AssumeSafetyArg;
       return false;
     }
@@ -1076,9 +1136,10 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
 namespace {
 struct PragmaAttributeInfo {
-  enum ActionType { Push, Pop };
+  enum ActionType { Push, Pop, Attribute };
   ParsedAttributes &Attributes;
   ActionType Action;
+  const IdentifierInfo *Namespace = nullptr;
   ArrayRef<Token> Tokens;
 
   PragmaAttributeInfo(ParsedAttributes &Attributes) : Attributes(Attributes) {}
@@ -1333,12 +1394,20 @@ void Parser::HandlePragmaAttribute() {
   auto *Info = static_cast<PragmaAttributeInfo *>(Tok.getAnnotationValue());
   if (Info->Action == PragmaAttributeInfo::Pop) {
     ConsumeAnnotationToken();
-    Actions.ActOnPragmaAttributePop(PragmaLoc);
+    Actions.ActOnPragmaAttributePop(PragmaLoc, Info->Namespace);
     return;
   }
   // Parse the actual attribute with its arguments.
-  assert(Info->Action == PragmaAttributeInfo::Push &&
+  assert((Info->Action == PragmaAttributeInfo::Push ||
+          Info->Action == PragmaAttributeInfo::Attribute) &&
          "Unexpected #pragma attribute command");
+
+  if (Info->Action == PragmaAttributeInfo::Push && Info->Tokens.empty()) {
+    ConsumeAnnotationToken();
+    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc, Info->Namespace);
+    return;
+  }
+
   PP.EnterTokenStream(Info->Tokens, /*DisableMacroExpansion=*/false);
   ConsumeAnnotationToken();
 
@@ -1485,14 +1554,18 @@ void Parser::HandlePragmaAttribute() {
   // Consume the eof terminator token.
   ConsumeToken();
 
-  Actions.ActOnPragmaAttributePush(Attribute, PragmaLoc,
-                                   std::move(SubjectMatchRules));
+  // Handle a mixed push/attribute by desurging to a push, then an attribute.
+  if (Info->Action == PragmaAttributeInfo::Push)
+    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc, Info->Namespace);
+
+  Actions.ActOnPragmaAttributeAttribute(Attribute, PragmaLoc,
+                                        std::move(SubjectMatchRules));
 }
 
 // #pragma GCC visibility comes in two variants:
 //   'push' '(' [visibility] ')'
 //   'pop'
-void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP, 
+void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
                                               PragmaIntroducerKind Introducer,
                                               Token &VisTok) {
   SourceLocation VisLoc = VisTok.getLocation();
@@ -1552,7 +1625,7 @@ void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
 //   pack '(' [integer] ')'
 //   pack '(' 'show' ')'
 //   pack '(' ('push' | 'pop') [',' identifier] [, integer] ')'
-void PragmaPackHandler::HandlePragma(Preprocessor &PP, 
+void PragmaPackHandler::HandlePragma(Preprocessor &PP,
                                      PragmaIntroducerKind Introducer,
                                      Token &PackTok) {
   SourceLocation PackLoc = PackTok.getLocation();
@@ -1663,7 +1736,7 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
 
 // #pragma ms_struct on
 // #pragma ms_struct off
-void PragmaMSStructHandler::HandlePragma(Preprocessor &PP, 
+void PragmaMSStructHandler::HandlePragma(Preprocessor &PP,
                                          PragmaIntroducerKind Introducer,
                                          Token &MSStructTok) {
   PragmaMSStructKind Kind = PMSST_OFF;
@@ -1686,7 +1759,7 @@ void PragmaMSStructHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::warn_pragma_ms_struct);
     return;
   }
-  
+
   if (Tok.isNot(tok::eod)) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
       << "ms_struct";
@@ -1817,20 +1890,20 @@ static void ParseAlignPragma(Preprocessor &PP, Token &FirstTok,
   PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
 }
 
-void PragmaAlignHandler::HandlePragma(Preprocessor &PP, 
+void PragmaAlignHandler::HandlePragma(Preprocessor &PP,
                                       PragmaIntroducerKind Introducer,
                                       Token &AlignTok) {
   ParseAlignPragma(PP, AlignTok, /*IsOptions=*/false);
 }
 
-void PragmaOptionsHandler::HandlePragma(Preprocessor &PP, 
+void PragmaOptionsHandler::HandlePragma(Preprocessor &PP,
                                         PragmaIntroducerKind Introducer,
                                         Token &OptionsTok) {
   ParseAlignPragma(PP, OptionsTok, /*IsOptions=*/true);
 }
 
 // #pragma unused(identifier)
-void PragmaUnusedHandler::HandlePragma(Preprocessor &PP, 
+void PragmaUnusedHandler::HandlePragma(Preprocessor &PP,
                                        PragmaIntroducerKind Introducer,
                                        Token &UnusedTok) {
   // FIXME: Should we be expanding macros here? My guess is no.
@@ -1911,7 +1984,7 @@ void PragmaUnusedHandler::HandlePragma(Preprocessor &PP,
 
 // #pragma weak identifier
 // #pragma weak identifier '=' identifier
-void PragmaWeakHandler::HandlePragma(Preprocessor &PP, 
+void PragmaWeakHandler::HandlePragma(Preprocessor &PP,
                                      PragmaIntroducerKind Introducer,
                                      Token &WeakTok) {
   SourceLocation WeakLoc = WeakTok.getLocation();
@@ -1970,7 +2043,7 @@ void PragmaWeakHandler::HandlePragma(Preprocessor &PP,
 }
 
 // #pragma redefine_extname identifier identifier
-void PragmaRedefineExtnameHandler::HandlePragma(Preprocessor &PP, 
+void PragmaRedefineExtnameHandler::HandlePragma(Preprocessor &PP,
                                                PragmaIntroducerKind Introducer,
                                                 Token &RedefToken) {
   SourceLocation RedefLoc = RedefToken.getLocation();
@@ -2015,7 +2088,7 @@ void PragmaRedefineExtnameHandler::HandlePragma(Preprocessor &PP,
 
 
 void
-PragmaFPContractHandler::HandlePragma(Preprocessor &PP, 
+PragmaFPContractHandler::HandlePragma(Preprocessor &PP,
                                       PragmaIntroducerKind Introducer,
                                       Token &Tok) {
   tok::OnOffSwitch OOS;
@@ -2033,8 +2106,8 @@ PragmaFPContractHandler::HandlePragma(Preprocessor &PP,
   PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
 }
 
-void 
-PragmaOpenCLExtensionHandler::HandlePragma(Preprocessor &PP, 
+void
+PragmaOpenCLExtensionHandler::HandlePragma(Preprocessor &PP,
                                            PragmaIntroducerKind Introducer,
                                            Token &Tok) {
   PP.LexUnexpandedToken(Tok);
@@ -2095,7 +2168,7 @@ PragmaOpenCLExtensionHandler::HandlePragma(Preprocessor &PP,
   PP.EnterTokenStream(Toks, /*DisableMacroExpansion=*/true);
 
   if (PP.getPPCallbacks())
-    PP.getPPCallbacks()->PragmaOpenCLExtension(NameLoc, Ext, 
+    PP.getPPCallbacks()->PragmaOpenCLExtension(NameLoc, Ext,
                                                StateLoc, State);
 }
 
@@ -2523,7 +2596,7 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
 
 // #pragma clang optimize off
 // #pragma clang optimize on
-void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP, 
+void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
                                         PragmaIntroducerKind Introducer,
                                         Token &FirstToken) {
   Token Tok;
@@ -2549,7 +2622,7 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
     return;
   }
   PP.Lex(Tok);
-  
+
   if (Tok.isNot(tok::eod)) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_optimize_extra_argument)
       << PP.getSpelling(Tok);
@@ -2844,6 +2917,10 @@ void PragmaLoopHintHandler::HandlePragma(Preprocessor &PP,
 ///  #pragma unroll unroll-hint-value
 ///  #pragma unroll '(' unroll-hint-value ')'
 ///  #pragma nounroll
+///  #pragma unroll_and_jam
+///  #pragma unroll_and_jam unroll-hint-value
+///  #pragma unroll_and_jam '(' unroll-hint-value ')'
+///  #pragma nounroll_and_jam
 ///
 ///  unroll-hint-value:
 ///    constant-expression
@@ -2868,9 +2945,10 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
     // nounroll or unroll pragma without an argument.
     Info->PragmaName = PragmaName;
     Info->Option.startToken();
-  } else if (PragmaName.getIdentifierInfo()->getName() == "nounroll") {
+  } else if (PragmaName.getIdentifierInfo()->getName() == "nounroll" ||
+             PragmaName.getIdentifierInfo()->getName() == "nounroll_and_jam") {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
-        << "nounroll";
+        << PragmaName.getIdentifierInfo()->getName();
     return;
   } else {
     // Unroll pragma with an argument: "#pragma unroll N" or
@@ -3041,8 +3119,20 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
 ///
 /// The syntax is:
 /// \code
-///  #pragma clang attribute push(attribute, subject-set)
+///  #pragma clang attribute push (attribute, subject-set)
+///  #pragma clang attribute push
+///  #pragma clang attribute (attribute, subject-set)
 ///  #pragma clang attribute pop
+/// \endcode
+///
+/// There are also 'namespace' variants of push and pop directives. The bare
+/// '#pragma clang attribute (attribute, subject-set)' version doesn't require a
+/// namespace, since it always applies attributes to the most recently pushed
+/// group, regardless of namespace.
+/// \code
+///  #pragma clang attribute namespace.push (attribute, subject-set)
+///  #pragma clang attribute namespace.push
+///  #pragma clang attribute namespace.pop
 /// \endcode
 ///
 /// The subject-set clause defines the set of declarations which receive the
@@ -3060,25 +3150,56 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
   auto *Info = new (PP.getPreprocessorAllocator())
       PragmaAttributeInfo(AttributesForPragmaAttribute);
 
-  // Parse the 'push' or 'pop'.
-  if (Tok.isNot(tok::identifier)) {
-    PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_expected_push_pop);
+  // Parse the optional namespace followed by a period.
+  if (Tok.is(tok::identifier)) {
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    if (!II->isStr("push") && !II->isStr("pop")) {
+      Info->Namespace = II;
+      PP.Lex(Tok);
+
+      if (!Tok.is(tok::period)) {
+        PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_expected_period)
+            << II;
+        return;
+      }
+      PP.Lex(Tok);
+    }
+  }
+
+  if (!Tok.isOneOf(tok::identifier, tok::l_paren)) {
+    PP.Diag(Tok.getLocation(),
+            diag::err_pragma_attribute_expected_push_pop_paren);
     return;
   }
-  const auto *II = Tok.getIdentifierInfo();
-  if (II->isStr("push"))
-    Info->Action = PragmaAttributeInfo::Push;
-  else if (II->isStr("pop"))
-    Info->Action = PragmaAttributeInfo::Pop;
-  else {
-    PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_invalid_argument)
-        << PP.getSpelling(Tok);
-    return;
+
+  // Determine what action this pragma clang attribute represents.
+  if (Tok.is(tok::l_paren)) {
+    if (Info->Namespace) {
+      PP.Diag(Tok.getLocation(),
+              diag::err_pragma_attribute_namespace_on_attribute);
+      PP.Diag(Tok.getLocation(),
+              diag::note_pragma_attribute_namespace_on_attribute);
+      return;
+    }
+    Info->Action = PragmaAttributeInfo::Attribute;
+  } else {
+    const IdentifierInfo *II = Tok.getIdentifierInfo();
+    if (II->isStr("push"))
+      Info->Action = PragmaAttributeInfo::Push;
+    else if (II->isStr("pop"))
+      Info->Action = PragmaAttributeInfo::Pop;
+    else {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_invalid_argument)
+          << PP.getSpelling(Tok);
+      return;
+    }
+
+    PP.Lex(Tok);
   }
-  PP.Lex(Tok);
 
   // Parse the actual attribute.
-  if (Info->Action == PragmaAttributeInfo::Push) {
+  if ((Info->Action == PragmaAttributeInfo::Push && Tok.isNot(tok::eod)) ||
+      Info->Action == PragmaAttributeInfo::Attribute) {
     if (Tok.isNot(tok::l_paren)) {
       PP.Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
       return;

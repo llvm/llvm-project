@@ -26,8 +26,8 @@ historical interest at this point with one exception - its implementation of
 shadow stacks has been used successfully by a number of language frontends and
 is still supported.  
 
-Overview
-========
+Overview & Core Concepts
+========================
 
 To collect dead objects, garbage collectors must be able to identify
 any references to objects contained within executing code, and,
@@ -93,7 +93,10 @@ the collector must be able to:
 
 This document describes the mechanism by which an LLVM based compiler
 can provide this information to a language runtime/collector, and
-ensure that all pointers can be read and updated if desired.  
+ensure that all pointers can be read and updated if desired.
+
+Abstract Machine Model
+^^^^^^^^^^^^^^^^^^^^^^^
 
 At a high level, LLVM has been extended to support compiling to an abstract 
 machine which extends the actual target with a non-integral pointer type 
@@ -103,10 +106,16 @@ integer representation.  This semantic quirk allows the runtime to pick a
 integer mapping for each point in the program allowing relocations of objects 
 without visible effects.
 
-Warning: Non-Integral Pointer Types are a newly added concept in LLVM IR.  
-It's possible that we've missed disabling some of the optimizations which 
-assume an integral value for pointers.  If you find such a case, please 
-file a bug or share a patch.
+This high level abstract machine model is used for most of the optimizer.  As
+a result, transform passes do not need to be extended to look through explicit
+relocation sequence.  Before starting code generation, we switch
+representations to an explicit form.  The exact location chosen for lowering
+is an implementation detail.
+
+Note that most of the value of the abstract machine model comes for collectors
+which need to model potentially relocatable objects.  For a compiler which
+supports only a non-relocating collector, you may wish to consider starting
+with the fully explicit form.  
 
 Warning: There is one currently known semantic hole in the definition of 
 non-integral pointers which has not been addressed upstream.  To work around
@@ -116,10 +125,13 @@ not safe to speculate a load if doing causes a non-integral pointer value to
 be loaded as any other type or vice versa.  In practice, this restriction is 
 well isolated to isSafeToSpeculate in ValueTracking.cpp.
 
-This high level abstract machine model is used for most of the LLVM optimizer.
-Before starting code generation, we switch representations to an explicit form.
-In theory, a frontend could directly generate this low level explicit form, but 
-doing so is likely to inhibit optimization.  
+Explicit Representation
+^^^^^^^^^^^^^^^^^^^^^^^
+
+A frontend could directly generate this low level explicit form, but 
+doing so may inhibit optimization.  Instead, it is recommended that
+compilers with relocating collectors target the abstract machine model just
+described.  
 
 The heart of the explicit approach is to construct (or rewrite) the IR in a 
 manner where the possible updates performed by the garbage collector are
@@ -242,6 +254,56 @@ following command.
 
   opt -rewrite-statepoints-for-gc test/Transforms/RewriteStatepointsForGC/basics.ll -S | llc -debug-only=stackmaps
 
+Simplifications for Non-Relocating GCs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some of the complexity in the previous example is unnecessary for a
+non-relocating collector.  While a non-relocating collector still needs the
+information about which location contain live references, it doesn't need to
+represent explicit relocations.  As such, the previously described explicit
+lowering can be simplified to remove all of the ``gc.relocate`` intrinsic
+calls and leave uses in terms of the original reference value.  
+
+Here's the explicit lowering for the previous example for a non-relocating
+collector:
+
+.. code-block:: llvm
+
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+         gc "statepoint-example" {
+    call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
+    ret i8 addrspace(1)* %obj
+  }
+
+Recording On Stack Regions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to the explicit relocation form previously described, the
+statepoint infrastructure also allows the listing of allocas within the gc
+pointer list.  Allocas can be listed with or without additional explicit gc
+pointer values and relocations.
+
+An alloca in the gc region of the statepoint operand list will cause the
+address of the stack region to be listed in the stackmap for the statepoint.
+
+This mechanism can be used to describe explicit spill slots if desired.  It
+then becomes the generator's responsibility to ensure that values are
+spill/filled to/from the alloca as needed on either side of the safepoint.
+Note that there is no way to indicate a corresponding base pointer for such
+an explicitly specified spill slot, so usage is restricted to values for
+which the associated collector can derive the object base from the pointer
+itself.
+
+This mechanism can be used to describe on stack objects containing
+references provided that the collector can map from the location on the
+stack to a heap map describing the internal layout of the references the
+collector needs to process.
+
+WARNING: At the moment, this alternate form is not well exercised.  It is
+recommended to use this with caution and expect to have to fix a few bugs.
+In particular, the RewriteStatepointsForGC utility pass does not do
+anything for allocas today.
+  
 Base & Derived Pointers
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -590,8 +652,15 @@ Stack Map Format
 ================
 
 Locations for each pointer value which may need read and/or updated by
-the runtime or collector are provided via the :ref:`Stack Map format
-<stackmap-format>` specified in the PatchPoint documentation.
+the runtime or collector are provided in a separate section of the
+generated object file as specified in the PatchPoint documentation.
+This special section is encoded per the
+:ref:`Stack Map format <stackmap-format>`.
+
+The general expectation is that a JIT compiler will parse and discard this
+format; it is not particularly memory efficient.  If you need an alternate
+format (e.g. for an ahead of time compiler), see discussion under
+:ref: `open work items <OpenWork>` below.
 
 Each statepoint generates the following Locations:
 
@@ -831,35 +900,73 @@ Supported Architectures
 =======================
 
 Support for statepoint generation requires some code for each backend.
-Today, only X86_64 is supported.  
+Today, only X86_64 is supported.
 
-Problem Areas and Active Work
-=============================
+.. _OpenWork:
 
-#. Support for languages which allow unmanaged pointers to garbage collected
-   objects (i.e. pass a pointer to an object to a C routine) via pinning.
+Limitations and Half Baked Ideas
+================================
 
-#. Support for garbage collected objects allocated on the stack.  Specifically,
-   allocas are always assumed to be in address space 0 and we need a
-   cast/promotion operator to let rewriting identify them.
+Mixing References and Raw Pointers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#. The current statepoint lowering is known to be somewhat poor.  In the very
-   long term, we'd like to integrate statepoints with the register allocator;
-   in the near term this is unlikely to happen.  We've found the quality of
-   lowering to be relatively unimportant as hot-statepoints are almost always
-   inliner bugs.
+Support for languages which allow unmanaged pointers to garbage collected
+objects (i.e. pass a pointer to an object to a C routine) in the abstract
+machine model.  At the moment, the best idea on how to approach this
+involves an intrinsic or opaque function which hides the connection between
+the reference value and the raw pointer.  The problem is that having a
+ptrtoint or inttoptr cast (which is common for such use cases) breaks the
+rules used for inferring base pointers for arbitrary references when
+lowering out of the abstract model to the explicit physical model.  Note
+that a frontend which lowers directly to the physical model doesn't have
+any problems here.
 
-#. Concerns have been raised that the statepoint representation results in a
-   large amount of IR being produced for some examples and that this
-   contributes to higher than expected memory usage and compile times.  There's
-   no immediate plans to make changes due to this, but alternate models may be
-   explored in the future.
+Objects on the Stack
+^^^^^^^^^^^^^^^^^^^^
 
-#. Relocations along exceptional paths are currently broken in ToT.  In
-   particular, there is current no way to represent a rethrow on a path which
-   also has relocations.  See `this llvm-dev discussion
-   <https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
-   detail.
+As noted above, the explicit lowering supports objects allocated on the
+stack provided the collector can find a heap map given the stack address.
+
+The missing pieces are a) integration with rewriting (RS4GC) from the
+abstract machine model and b) support for optionally decomposing on stack
+objects so as not to require heap maps for them.  The later is required
+for ease of integration with some collectors.  
+
+Lowering Quality and Representation Overhead
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The current statepoint lowering is known to be somewhat poor.  In the very
+long term, we'd like to integrate statepoints with the register allocator;
+in the near term this is unlikely to happen.  We've found the quality of
+lowering to be relatively unimportant as hot-statepoints are almost always
+inliner bugs.
+
+Concerns have been raised that the statepoint representation results in a
+large amount of IR being produced for some examples and that this
+contributes to higher than expected memory usage and compile times.  There's
+no immediate plans to make changes due to this, but alternate models may be
+explored in the future.
+
+Relocations Along Exceptional Edges
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Relocations along exceptional paths are currently broken in ToT.  In
+particular, there is current no way to represent a rethrow on a path which
+also has relocations.  See `this llvm-dev discussion
+<https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
+detail.
+
+Support for alternate stackmap formats
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For some use cases, it is
+desirable to directly encode a final memory efficient stackmap format for
+use by the runtime.  This is particularly relevant for ahead of time
+compilers which wish to directly link object files without the need for
+post processing of each individual object file.  While not implemented
+today for statepoints, there is precedent for a GCStrategy to be able to
+select a customer GCMetataPrinter for this purpose.  Patches to enable
+this functionality upstream are welcome.   
 
 Bugs and Enhancements
 =====================

@@ -616,6 +616,11 @@ public:
     return Contents.RegMask;
   }
 
+  /// Returns number of elements needed for a regmask array.
+  static unsigned getRegMaskSize(unsigned NumRegs) {
+    return (NumRegs + 31) / 32;
+  }
+
   /// getRegLiveOut - Returns a bit mask of live-out registers.
   const uint32_t *getRegLiveOut() const {
     assert(isRegLiveOut() && "Wrong MachineOperand accessor");

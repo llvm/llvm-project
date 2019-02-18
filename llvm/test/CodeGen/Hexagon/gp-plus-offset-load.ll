@@ -1,51 +1,57 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
+; RUN: llc -march=hexagon < %s | FileCheck %s
 ; Check that we generate load instructions with global + offset
 
-%struct.struc = type { i8, i8, i16, i32 }
 
-@foo = common global %struct.struc zeroinitializer, align 4
+%s.0 = type { i8, i8, i16, i32 }
 
-define void @loadWord(i32 %val1, i32 %val2, i32* nocapture %ival) nounwind {
-; CHECK: r{{[0-9]+}} = memw(##foo+4)
-entry:
-  %cmp = icmp sgt i32 %val1, %val2
-  br i1 %cmp, label %if.then, label %if.end
+@g0 = common global %s.0 zeroinitializer, align 4
 
-if.then:                                          ; preds = %entry
-  %0 = load i32, i32* getelementptr inbounds (%struct.struc, %struct.struc* @foo, i32 0, i32 3), align 4
-  store i32 %0, i32* %ival, align 4
-  br label %if.end
+; CHECK-LABEL: f0:
+; CHECK: r{{[0-9]+}} = memw(##g0+4)
+define void @f0(i32 %a0, i32 %a1, i32* nocapture %a2) #0 {
+b0:
+  %v0 = icmp sgt i32 %a0, %a1
+  br i1 %v0, label %b1, label %b2
 
-if.end:                                           ; preds = %if.then, %entry
+b1:                                               ; preds = %b0
+  %v1 = load i32, i32* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 3), align 4
+  store i32 %v1, i32* %a2, align 4
+  br label %b2
+
+b2:                                               ; preds = %b1, %b0
   ret void
 }
 
-define void @loadByte(i32 %val1, i32 %val2, i8* nocapture %ival) nounwind {
-; CHECK: r{{[0-9]+}} = memub(##foo+1)
-entry:
-  %cmp = icmp sgt i32 %val1, %val2
-  br i1 %cmp, label %if.then, label %if.end
+; CHECK-LABEL: f1:
+; CHECK: r{{[0-9]+}} = memub(##g0+1)
+define void @f1(i32 %a0, i32 %a1, i8* nocapture %a2) #0 {
+b0:
+  %v0 = icmp sgt i32 %a0, %a1
+  br i1 %v0, label %b1, label %b2
 
-if.then:                                          ; preds = %entry
-  %0 = load i8, i8* getelementptr inbounds (%struct.struc, %struct.struc* @foo, i32 0, i32 1), align 1
-  store i8 %0, i8* %ival, align 1
-  br label %if.end
+b1:                                               ; preds = %b0
+  %v1 = load i8, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 1), align 1
+  store i8 %v1, i8* %a2, align 1
+  br label %b2
 
-if.end:                                           ; preds = %if.then, %entry
+b2:                                               ; preds = %b1, %b0
   ret void
 }
 
-define void @loadHWord(i32 %val1, i32 %val2, i16* %ival) nounwind {
-; CHECK: r{{[0-9]+}} = memuh(##foo+2)
-entry:
-  %cmp = icmp sgt i32 %val1, %val2
-  br i1 %cmp, label %if.then, label %if.end
+; CHECK-LABEL: f2:
+; CHECK: r{{[0-9]+}} = memuh(##g0+2)
+define void @f2(i32 %a0, i32 %a1, i16* %a2) #0 {
+b0:
+  %v0 = icmp sgt i32 %a0, %a1
+  br i1 %v0, label %b1, label %b2
 
-if.then:                                          ; preds = %entry
-  %0 = load i16, i16* getelementptr inbounds (%struct.struc, %struct.struc* @foo, i32 0, i32 2), align 2
-  store i16 %0, i16* %ival, align 2
-  br label %if.end
+b1:                                               ; preds = %b0
+  %v1 = load i16, i16* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 2), align 2
+  store i16 %v1, i16* %a2, align 2
+  br label %b2
 
-if.end:                                           ; preds = %if.then, %entry
+b2:                                               ; preds = %b1, %b0
   ret void
 }
+
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }

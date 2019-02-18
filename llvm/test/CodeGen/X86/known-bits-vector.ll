@@ -5,14 +5,14 @@
 define i32 @knownbits_mask_extract_sext(<8 x i16> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_extract_sext:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpextrw $0, %xmm0, %eax
+; X32-NEXT:    vmovd %xmm0, %eax
+; X32-NEXT:    andl $15, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_extract_sext:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpextrw $0, %xmm0, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    retq
   %1 = and <8 x i16> %a0, <i16 15, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
   %2 = extractelement <8 x i16> %1, i32 0
@@ -34,8 +34,8 @@ define float @knownbits_mask_extract_uitofp(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: knownbits_mask_extract_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-NEXT:    vmovq %xmm0, %rax
+; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = and <2 x i64> %a0, <i64 65535, i64 -1>
@@ -158,20 +158,12 @@ define <4 x float> @knownbits_mask_shuffle_uitofp(<4 x i32> %a0) nounwind {
 define <4 x float> @knownbits_mask_or_shuffle_uitofp(<4 x i32> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_or_shuffle_uitofp:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpor {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,6,6]
-; X32-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X32-NEXT:    vmovaps {{.*#+}} xmm0 = [6.5535E+4,6.5535E+4,6.5535E+4,6.5535E+4]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_or_shuffle_uitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpor {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,6,6]
-; X64-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; X64-NEXT:    vcvtdq2ps %xmm0, %xmm0
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [6.5535E+4,6.5535E+4,6.5535E+4,6.5535E+4]
 ; X64-NEXT:    retq
   %1 = and <4 x i32> %a0, <i32 -1, i32 -1, i32 255, i32 4085>
   %2 = or <4 x i32> %1, <i32 65535, i32 65535, i32 65535, i32 65535>
@@ -497,14 +489,12 @@ declare <4 x i32> @llvm.x86.sse41.pminud(<4 x i32>, <4 x i32>) nounwind readnone
 define <4 x i32> @knownbits_umax_shuffle_ashr(<4 x i32> %a0) {
 ; X32-LABEL: knownbits_umax_shuffle_ashr:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpmaxud {{\.LCPI.*}}, %xmm0, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
+; X32-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_umax_shuffle_ashr:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmaxud {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,2,2]
+; X64-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = call <4 x i32> @llvm.x86.sse41.pmaxud(<4 x i32> %a0, <4 x i32> <i32 65535, i32 -1, i32 -1, i32 262143>)
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 2>

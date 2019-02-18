@@ -201,7 +201,8 @@ namespace ARMII {
     AddrModeT2_pc   = 14, // +/- i12 for pc relative data
     AddrModeT2_i8s4 = 15, // i8 * 4
     AddrMode_i12    = 16,
-    AddrMode5FP16   = 17  // i8 * 2
+    AddrMode5FP16   = 17,  // i8 * 2
+    AddrModeT2_ldrex = 18, // i8 * 4, with unscaled offset in MCInst
   };
 
   inline static const char *AddrModeToString(AddrMode addrmode) {
@@ -224,6 +225,7 @@ namespace ARMII {
     case AddrModeT2_pc:   return "AddrModeT2_pc";
     case AddrModeT2_i8s4: return "AddrModeT2_i8s4";
     case AddrMode_i12:    return "AddrMode_i12";
+    case AddrModeT2_ldrex:return "AddrModeT2_ldrex";
     }
   }
 
@@ -245,6 +247,11 @@ namespace ARMII {
     /// MO_OPTION_MASK - Most flags are mutually exclusive; this mask selects
     /// just that part of the flag set.
     MO_OPTION_MASK = 0x3,
+
+    /// MO_COFFSTUB - On a symbol operand "FOO", this indicates that the
+    /// reference is actually to the ".refptrp.FOO" symbol.  This is used for
+    /// stub symbols on windows.
+    MO_COFFSTUB = 0x4,
 
     /// MO_GOT - On a symbol operand, this represents a GOT relative relocation.
     MO_GOT = 0x8,

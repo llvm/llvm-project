@@ -38,14 +38,14 @@ define void @f1(fp128 *%ptr) {
 ; CHECK: ld %f15, 160(%r15)
 ; CHECK: aghi %r15, 224
 ; CHECK: br %r14
-  %l0 = load volatile fp128 , fp128 *%ptr
-  %l1 = load volatile fp128 , fp128 *%ptr
-  %l4 = load volatile fp128 , fp128 *%ptr
-  %l5 = load volatile fp128 , fp128 *%ptr
-  %l8 = load volatile fp128 , fp128 *%ptr
-  %l9 = load volatile fp128 , fp128 *%ptr
-  %l12 = load volatile fp128 , fp128 *%ptr
-  %l13 = load volatile fp128 , fp128 *%ptr
+  %l0 = load volatile fp128, fp128 *%ptr
+  %l1 = load volatile fp128, fp128 *%ptr
+  %l4 = load volatile fp128, fp128 *%ptr
+  %l5 = load volatile fp128, fp128 *%ptr
+  %l8 = load volatile fp128, fp128 *%ptr
+  %l9 = load volatile fp128, fp128 *%ptr
+  %l12 = load volatile fp128, fp128 *%ptr
+  %l13 = load volatile fp128, fp128 *%ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1
@@ -94,13 +94,13 @@ define void @f2(fp128 *%ptr) {
 ; CHECK: ld %f14, 160(%r15)
 ; CHECK: aghi %r15, 208
 ; CHECK: br %r14
-  %l0 = load volatile fp128 , fp128 *%ptr
-  %l1 = load volatile fp128 , fp128 *%ptr
-  %l4 = load volatile fp128 , fp128 *%ptr
-  %l5 = load volatile fp128 , fp128 *%ptr
-  %l8 = load volatile fp128 , fp128 *%ptr
-  %l9 = load volatile fp128 , fp128 *%ptr
-  %l12 = load volatile fp128 , fp128 *%ptr
+  %l0 = load volatile fp128, fp128 *%ptr
+  %l1 = load volatile fp128, fp128 *%ptr
+  %l4 = load volatile fp128, fp128 *%ptr
+  %l5 = load volatile fp128, fp128 *%ptr
+  %l8 = load volatile fp128, fp128 *%ptr
+  %l9 = load volatile fp128, fp128 *%ptr
+  %l12 = load volatile fp128, fp128 *%ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1
@@ -139,11 +139,11 @@ define void @f3(fp128 *%ptr) {
 ; CHECK: ld %f10, 160(%r15)
 ; CHECK: aghi %r15, 176
 ; CHECK: br %r14
-  %l0 = load volatile fp128 , fp128 *%ptr
-  %l1 = load volatile fp128 , fp128 *%ptr
-  %l4 = load volatile fp128 , fp128 *%ptr
-  %l5 = load volatile fp128 , fp128 *%ptr
-  %l8 = load volatile fp128 , fp128 *%ptr
+  %l0 = load volatile fp128, fp128 *%ptr
+  %l1 = load volatile fp128, fp128 *%ptr
+  %l4 = load volatile fp128, fp128 *%ptr
+  %l5 = load volatile fp128, fp128 *%ptr
+  %l8 = load volatile fp128, fp128 *%ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1
@@ -171,10 +171,10 @@ define void @f4(fp128 *%ptr) {
 ; CHECK-NOT: %f14
 ; CHECK-NOT: %f15
 ; CHECK: br %r14
-  %l0 = load volatile fp128 , fp128 *%ptr
-  %l1 = load volatile fp128 , fp128 *%ptr
-  %l4 = load volatile fp128 , fp128 *%ptr
-  %l5 = load volatile fp128 , fp128 *%ptr
+  %l0 = load volatile fp128, fp128 *%ptr
+  %l1 = load volatile fp128, fp128 *%ptr
+  %l4 = load volatile fp128, fp128 *%ptr
+  %l5 = load volatile fp128, fp128 *%ptr
   %add0 = fadd fp128 %l0, %l0
   %add1 = fadd fp128 %l1, %add0
   %add4 = fadd fp128 %l4, %add1

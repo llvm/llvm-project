@@ -8,7 +8,7 @@ functors, the type does not need to be repeated. The code is easier to read,
 maintain and less prone to errors. It is not possible to introduce unwanted
 conversions.
 
-  .. code-block:: c++
+.. code-block:: c++
 
     // Non-transparent functor
     std::map<int, std::string, std::greater<int>> s;
@@ -22,7 +22,7 @@ conversions.
 It is not always a safe transformation though. The following case will be
 untouched to preserve the semantics.
 
-  .. code-block:: c++
+.. code-block:: c++
 
     // Non-transparent functor
     std::map<const char *, std::string, std::greater<std::string>> s;

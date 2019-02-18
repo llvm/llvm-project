@@ -136,6 +136,13 @@ bool DomTreeUpdater::forceFlushDeletedBB() {
     return false;
 
   for (auto *BB : DeletedBBs) {
+    // After calling deleteBB or callbackDeleteBB under Lazy UpdateStrategy,
+    // validateDeleteBB() removes all instructions of DelBB and adds an
+    // UnreachableInst as its terminator. So we check whether the BasicBlock to
+    // delete only has an UnreachableInst inside.
+    assert(BB->getInstList().size() == 1 &&
+           isa<UnreachableInst>(BB->getTerminator()) &&
+           "DelBB has been modified while awaiting deletion.");
     BB->removeFromParent();
     eraseDelBBNode(BB);
     delete BB;
@@ -145,39 +152,34 @@ bool DomTreeUpdater::forceFlushDeletedBB() {
   return true;
 }
 
-bool DomTreeUpdater::recalculate(Function &F) {
-  if (!DT && !PDT)
-    return false;
+void DomTreeUpdater::recalculate(Function &F) {
 
   if (Strategy == UpdateStrategy::Eager) {
     if (DT)
       DT->recalculate(F);
     if (PDT)
       PDT->recalculate(F);
-    return true;
+    return;
   }
+
+  // There is little performance gain if we pend the recalculation under
+  // Lazy UpdateStrategy so we recalculate available trees immediately.
 
   // Prevent forceFlushDeletedBB() from erasing DomTree or PostDomTree nodes.
   IsRecalculatingDomTree = IsRecalculatingPostDomTree = true;
 
   // Because all trees are going to be up-to-date after recalculation,
   // flush awaiting deleted BasicBlocks.
-  if (forceFlushDeletedBB() || hasPendingUpdates()) {
-    if (DT)
-      DT->recalculate(F);
-    if (PDT)
-      PDT->recalculate(F);
-
-    // Resume forceFlushDeletedBB() to erase DomTree or PostDomTree nodes.
-    IsRecalculatingDomTree = IsRecalculatingPostDomTree = false;
-    PendDTUpdateIndex = PendPDTUpdateIndex = PendUpdates.size();
-    dropOutOfDateUpdates();
-    return true;
-  }
+  forceFlushDeletedBB();
+  if (DT)
+    DT->recalculate(F);
+  if (PDT)
+    PDT->recalculate(F);
 
   // Resume forceFlushDeletedBB() to erase DomTree or PostDomTree nodes.
   IsRecalculatingDomTree = IsRecalculatingPostDomTree = false;
-  return false;
+  PendDTUpdateIndex = PendPDTUpdateIndex = PendUpdates.size();
+  dropOutOfDateUpdates();
 }
 
 bool DomTreeUpdater::hasPendingUpdates() const {

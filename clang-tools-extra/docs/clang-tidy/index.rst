@@ -55,6 +55,7 @@ There are currently the following groups of checks:
 ====================== =========================================================
 Name prefix            Description
 ====================== =========================================================
+``abseil-``            Checks related to Abseil library.
 ``android-``           Checks related to Android.
 ``boost-``             Checks related to Boost library.
 ``bugprone-``          Checks that target bugprone code constructs.
@@ -254,16 +255,19 @@ An overview of all the command-line options:
           value:           'some value'
       ...
 
+Suppressing Undesired Diagnostics
+=================================
+
 :program:`clang-tidy` diagnostics are intended to call out code that does
 not adhere to a coding standard, or is otherwise problematic in some way.
 However, if it is known that the code is correct, the check-specific ways
-to silence the diagnostics could be used, if they are available (e.g. 
-bugprone-use-after-move can be silenced by re-initializing the variable after 
-it has been moved out, misc-string-integer-assignment can be suppressed by 
-explicitly casting the integer to char, readability-implicit-bool-conversion
-can also be suppressed by using explicit casts, etc.). If they are not 
-available or if changing the semantics of the code is not desired, 
-the ``NOLINT`` or ``NOLINTNEXTLINE`` comments can be used instead. For example:
+to silence the diagnostics could be used, if they are available (e.g.
+bugprone-use-after-move can be silenced by re-initializing the variable after it
+has been moved out, bugprone-string-integer-assignment can be suppressed by
+explicitly casting the integer to char, readability-implicit-bool-conversion can
+also be suppressed by using explicit casts, etc.). If they are not available or
+if changing the semantics of the code is not desired, the ``NOLINT`` or
+``NOLINTNEXTLINE`` comments can be used instead. For example:
 
 .. code-block:: c++
 
@@ -335,6 +339,10 @@ There are a few tools particularly useful when developing clang-tidy checks:
     matchers and exploration of the Clang AST;
   * `clang-check`_ with the ``-ast-dump`` (and optionally ``-ast-dump-filter``)
     provides a convenient way to dump AST of a C++ program.
+
+If CMake is configured with ``CLANG_ENABLE_STATIC_ANALYZER``,
+:program:`clang-tidy` will not be built with support for the 
+``clang-analyzer-*`` checks or the ``mpi-*`` checks.
 
 
 .. _AST Matchers: http://clang.llvm.org/docs/LibASTMatchers.html
@@ -650,7 +658,8 @@ clang-tidy tests.
 
 An additional check enabled by ``check_clang_tidy.py`` ensures that
 if `CHECK-MESSAGES:` is used in a file then every warning or error
-must have an associated CHECK in that file.
+must have an associated CHECK in that file. Or, you can use ``CHECK-NOTES:``
+instead, if you want to **also** ensure that all the notes are checked.
 
 To use the ``check_clang_tidy.py`` script, put a .cpp file with the
 appropriate ``RUN`` line in the ``test/clang-tidy`` directory. Use
@@ -674,9 +683,10 @@ source code is at `test/clang-tidy/google-readability-casting.cpp`_):
     // CHECK-FIXES: int b = a;
   }
 
-To check more than one scenario in the same test file use 
-``-check-suffix=SUFFIX-NAME`` on ``check_clang_tidy.py`` command line.
-With ``-check-suffix=SUFFIX-NAME`` you need to replace your ``CHECK-*`` 
+To check more than one scenario in the same test file use
+``-check-suffix=SUFFIX-NAME`` on ``check_clang_tidy.py`` command line or
+``-check-suffixes=SUFFIX-NAME-1,SUFFIX-NAME-2,...``.
+With ``-check-suffix[es]=SUFFIX-NAME`` you need to replace your ``CHECK-*``
 directives with ``CHECK-MESSAGES-SUFFIX-NAME`` and ``CHECK-FIXES-SUFFIX-NAME``.
 
 Here's an example:

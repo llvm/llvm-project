@@ -35,6 +35,7 @@ add_clang_library(clangTidyBugproneModule
   SwappedArgumentsCheck.cpp
   TerminatingContinueCheck.cpp
   ThrowKeywordMissingCheck.cpp
+  TooSmallLoopVariableCheck.cpp
   UndefinedMemoryManipulationCheck.cpp
   UndelegatedConstructorCheck.cpp
   UnusedRaiiCheck.cpp

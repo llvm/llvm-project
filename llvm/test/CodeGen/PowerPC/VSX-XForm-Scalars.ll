@@ -1,35 +1,46 @@
 ; RUN: llc < %s -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-P8
+; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs \
+; RUN:   | FileCheck %s --check-prefix=CHECK-P8
 ; RUN: llc < %s -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
-; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=CHECK-P9
+; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs \
+; RUN:   | FileCheck %s --check-prefix=CHECK-P9
 
 @a = external local_unnamed_addr global <4 x i32>, align 16
 @pb = external local_unnamed_addr global float*, align 8
 
 define void @testExpandPostRAPseudo(i32* nocapture readonly %ptr) {
-; CHECK-P8-LABEL:     testExpandPostRAPseudo:
-; CHECK-P8:           lxsiwax 34, 0, 3
-; CHECK-P8-NEXT:      xxspltw 34, 34, 1
-; CHECK-P8-NEXT:      stvx 2, 0, 4
-; CHECK-P8:           #APP
-; CHECK-P8-NEXT:      #Clobber Rigisters
-; CHECK-P8-NEXT:      #NO_APP
-; CHECK-P8-NEXT:      lis 4, 1024
-; CHECK-P8-NEXT:      lfiwax 0, 0, 3
-; CHECK-P8:           stfsx 0, 3, 4
-; CHECK-P8-NEXT:      blr
-
-; CHECK-P9-LABEL:     testExpandPostRAPseudo:
-; CHECK-P9:           lxvwsx 0, 0, 3
-; CHECK-P9:           stxvx 0, 0, 4
-; CHECK-P9:           #APP
-; CHECK-P9-NEXT:      #Clobber Rigisters
-; CHECK-P9-NEXT:      #NO_APP
-; CHECK-P9-NEXT:      lis 4, 1024
-; CHECK-P9-NEXT:      lfiwax 0, 0, 3
-; CHECK-P9:           stfsx 0, 3, 4
-; CHECK-P9-NEXT:      blr
-
+; CHECK-P8-LABEL: testExpandPostRAPseudo:
+; CHECK-P8:  # %bb.0: # %entry
+; CHECK-P8:    lfiwzx f0, 0, r3
+; CHECK-P8:    ld r4, .LC0@toc@l(r4)
+; CHECK-P8:    xxpermdi vs0, f0, f0, 2
+; CHECK-P8:    xxspltw v2, vs0, 3
+; CHECK-P8:    stvx v2, 0, r4
+; CHECK-P8:    lis r4, 1024
+; CHECK-P8:    lfiwax f0, 0, r3
+; CHECK-P8:    addis r3, r2, .LC1@toc@ha
+; CHECK-P8:    ld r3, .LC1@toc@l(r3)
+; CHECK-P8:    xscvsxdsp f0, f0
+; CHECK-P8:    ld r3, 0(r3)
+; CHECK-P8:    stfsx f0, r3, r4
+; CHECK-P8:    blr
+;
+; CHECK-P9-LABEL: testExpandPostRAPseudo:
+; CHECK-P9:  # %bb.0: # %entry
+; CHECK-P9:    lfiwzx f0, 0, r3
+; CHECK-P9:    addis r4, r2, .LC0@toc@ha
+; CHECK-P9:    ld r4, .LC0@toc@l(r4)
+; CHECK-P9:    xxpermdi vs0, f0, f0, 2
+; CHECK-P9:    xxspltw vs0, vs0, 3
+; CHECK-P9:    stxvx vs0, 0, r4
+; CHECK-P9:    lfiwax f0, 0, r3
+; CHECK-P9:    addis r3, r2, .LC1@toc@ha
+; CHECK-P9:    ld r3, .LC1@toc@l(r3)
+; CHECK-P9:    xscvsxdsp f0, f0
+; CHECK-P9:    ld r3, 0(r3)
+; CHECK-P9:    lis r4, 1024
+; CHECK-P9:    stfsx f0, r3, r4
+; CHECK-P9:    blr
 entry:
   %0 = load i32, i32* %ptr, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0

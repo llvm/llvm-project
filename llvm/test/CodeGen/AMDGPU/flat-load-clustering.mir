@@ -4,15 +4,15 @@
 # GCN:      FLAT_LOAD_DWORD
 # GCN-NEXT: FLAT_LOAD_DWORD
 --- |
-  define amdgpu_kernel void @flat_load_clustering(i32 addrspace(1)* nocapture %arg, i32 addrspace(2)* nocapture readonly %arg1) {
+  define amdgpu_kernel void @flat_load_clustering(i32 addrspace(1)* nocapture %arg, i32 addrspace(4)* nocapture readonly %arg1) {
   bb:
     %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
     %idxprom = sext i32 %tid to i64
-    %gep1 = getelementptr inbounds i32, i32 addrspace(2)* %arg1, i64 %idxprom
-    %load1 = load i32, i32 addrspace(2)* %gep1, align 4
+    %gep1 = getelementptr inbounds i32, i32 addrspace(4)* %arg1, i64 %idxprom
+    %load1 = load i32, i32 addrspace(4)* %gep1, align 4
     %gep2 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 %idxprom
-    %gep34 = getelementptr inbounds i32, i32 addrspace(2)* %gep1, i64 4
-    %load2 = load i32, i32 addrspace(2)* %gep34, align 4
+    %gep34 = getelementptr inbounds i32, i32 addrspace(4)* %gep1, i64 4
+    %load2 = load i32, i32 addrspace(4)* %gep34, align 4
     %gep4 = getelementptr inbounds i32, i32 addrspace(1)* %gep2, i64 4
     store i32 %load1, i32 addrspace(1)* %gep2, align 4
     store i32 %load2, i32 addrspace(1)* %gep4, align 4
@@ -54,8 +54,8 @@ body:             |
 
     %1 = COPY $sgpr4_sgpr5
     %0 = COPY $vgpr0
-    %3 = S_LOAD_DWORDX2_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
-    %4 = S_LOAD_DWORDX2_IMM %1, 8, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    %3 = S_LOAD_DWORDX2_IMM %1, 0, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
+    %4 = S_LOAD_DWORDX2_IMM %1, 8, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     %7 = V_LSHLREV_B32_e32 2, %0, implicit $exec
     %2 = V_MOV_B32_e32 0, implicit $exec
     undef %12.sub0 = V_ADD_I32_e32 %4.sub0, %7, implicit-def $vcc, implicit $exec

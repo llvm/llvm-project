@@ -1,0 +1,37 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN %s
+
+# GCN-LABEL: name: test{{$}}
+# GCN: S_WAITCNT -16257
+# GGN: DS_READ2_B32
+# GGN: DS_READ2_B32
+# GCN: S_WAITCNT 383{{$}}
+# GCN-NEXT: $vgpr1 = V_ADD_U32_e32 1, killed $vgpr1, implicit $exec
+# GCN-NEXT: $vgpr1 = V_MAX_U32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+# GCN-NEXT: S_WAITCNT 127{{$}}
+# GCN-NEXT: $vgpr1 = V_MAX_U32_e32 killed $vgpr2, killed $vgpr1, implicit $exec
+--- |
+  define amdgpu_cs void @test() {
+    ret void
+  }
+...
+---
+name:            test
+body:             |
+  bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0
+
+    renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX8_IMM renamable $sgpr0_sgpr1, 480, 0
+    renamable $vgpr13 = V_LSHLREV_B32_e32 2, killed $vgpr0, implicit $exec
+    S_WAITCNT -16257
+    renamable $vgpr0_vgpr1 = DS_READ2_B32 renamable $vgpr13, 0, 1, 0, implicit $m0, implicit $exec
+    renamable $vgpr2_vgpr3 = DS_READ2_B32 renamable $vgpr13, 2, 3, 0, implicit $m0, implicit $exec
+    renamable $vgpr1 = V_ADD_U32_e32 1, killed $vgpr1, implicit $exec
+    renamable $vgpr1 = V_MAX_U32_e32 killed $vgpr0, killed $vgpr1, implicit $exec
+    renamable $vgpr1 = V_MAX_U32_e32 killed $vgpr2, killed $vgpr1, implicit $exec
+    renamable $vgpr1 = V_MAX_U32_e32 killed $vgpr3, killed $vgpr1, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
+    $vgpr2 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr1, implicit $exec, implicit $exec
+    IMAGE_STORE_V4_V2 killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, killed renamable $vgpr0_vgpr1, killed renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 15, -1, 1, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM
+...

@@ -162,3 +162,28 @@
 // RUN:        -march=unknown 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ARCH-UNKNOWN %s
 // MIPS-ARCH-UNKNOWN: error: unknown target CPU 'unknown'
+
+// Check adjusting of target triple accordingly to `-mabi` option.
+// RUN: %clang -target mips64-linux-gnuabi64 -mabi=32 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=TARGET-O32 %s
+// TARGET-O32: "-triple" "mips-unknown-linux-gnu"
+// TARGET-O32: "-target-cpu" "mips32r2"
+// TARGET-O32: "-target-abi" "o32"
+// TARGET-O32: ld{{(.exe)?}}"
+// TARGET-O32: "-m" "elf32btsmip"
+
+// RUN: %clang -target mips-linux-gnu -mabi=n32 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=TARGET-N32 %s
+// TARGET-N32: "-triple" "mips64-unknown-linux-gnuabin32"
+// TARGET-N32: "-target-cpu" "mips64r2"
+// TARGET-N32: "-target-abi" "n32"
+// TARGET-N32: ld{{(.exe)?}}"
+// TARGET-N32: "-m" "elf32btsmipn32"
+
+// RUN: %clang -target mips-linux-gnu -mabi=64 -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=TARGET-N64 %s
+// TARGET-N64: "-triple" "mips64-unknown-linux-gnuabi64"
+// TARGET-N64: "-target-cpu" "mips64r2"
+// TARGET-N64: "-target-abi" "n64"
+// TARGET-N64: ld{{(.exe)?}}"
+// TARGET-N64: "-m" "elf64btsmip"

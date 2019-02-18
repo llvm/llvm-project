@@ -28,26 +28,6 @@ void DwarfFile::addUnit(std::unique_ptr<DwarfCompileUnit> U) {
   CUs.push_back(std::move(U));
 }
 
-void DwarfFile::emitStringOffsetsTableHeader(MCSection *Section) {
-  if (StrPool.empty())
-    return;
-  Asm->OutStreamer->SwitchSection(Section);
-  unsigned EntrySize = 4;
-  // FIXME: DWARF64
-  // We are emitting the header for a contribution to the string offsets
-  // table. The header consists of an entry with the contribution's
-  // size (not including the size of the length field), the DWARF version and
-  // 2 bytes of padding.
-  Asm->emitInt32(StrPool.size() * EntrySize + 4);
-  Asm->emitInt16(Asm->getDwarfVersion());
-  Asm->emitInt16(0);
-  // Define the symbol that marks the start of the contribution. It is
-  // referenced by most unit headers via DW_AT_str_offsets_base.
-  // Split units do not use the attribute.
-  if (StringOffsetsStartSym)
-    Asm->OutStreamer->EmitLabel(StringOffsetsStartSym);
-}
-
 // Emit the various dwarf units to the unit section USection with
 // the abbreviations going into ASection.
 void DwarfFile::emitUnits(bool UseOffsets) {
@@ -56,13 +36,20 @@ void DwarfFile::emitUnits(bool UseOffsets) {
 }
 
 void DwarfFile::emitUnit(DwarfUnit *TheU, bool UseOffsets) {
-  DIE &Die = TheU->getUnitDie();
-  MCSection *USection = TheU->getSection();
-  Asm->OutStreamer->SwitchSection(USection);
+  if (TheU->getCUNode()->isDebugDirectivesOnly())
+    return;
 
+  MCSection *S = TheU->getSection();
+
+  if (!S)
+    return;
+
+  Asm->OutStreamer->SwitchSection(S);
   TheU->emitHeader(UseOffsets);
+  Asm->emitDwarfDIE(TheU->getUnitDie());
 
-  Asm->emitDwarfDIE(Die);
+  if (MCSymbol *EndLabel = TheU->getEndLabel())
+    Asm->OutStreamer->EmitLabel(EndLabel);
 }
 
 // Compute the size and offset for each DIE.
@@ -73,6 +60,9 @@ void DwarfFile::computeSizeAndOffsets() {
   // Iterate over each compile unit and set the size and offsets for each
   // DIE within each compile unit. All offsets are CU relative.
   for (const auto &TheU : CUs) {
+    if (TheU->getCUNode()->isDebugDirectivesOnly())
+      continue;
+
     TheU->setDebugSectionOffset(SecOffset);
     SecOffset += computeSizeAndOffsetsForUnit(TheU.get());
   }
@@ -115,6 +105,18 @@ bool DwarfFile::addScopeVariable(LexicalScope *LS, DbgVariable *Var) {
     }
   } else {
     ScopeVars.Locals.push_back(Var);
-  }    
+  }
   return true;
+}
+
+void DwarfFile::addScopeLabel(LexicalScope *LS, DbgLabel *Label) {
+  SmallVectorImpl<DbgLabel *> &Labels = ScopeLabels[LS];
+  Labels.push_back(Label);
+}
+
+std::pair<uint32_t, RangeSpanList *>
+DwarfFile::addRange(const DwarfCompileUnit &CU, SmallVector<RangeSpan, 2> R) {
+  CURangeLists.push_back(
+      RangeSpanList(Asm->createTempSymbol("debug_ranges"), CU, std::move(R)));
+  return std::make_pair(CURangeLists.size() - 1, &CURangeLists.back());
 }

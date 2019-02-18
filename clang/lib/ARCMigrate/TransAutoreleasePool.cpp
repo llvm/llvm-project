@@ -80,7 +80,7 @@ public:
     Body = body;
     TraverseStmt(body);
   }
-  
+
   ~AutoreleasePoolRewriter() {
     SmallVector<VarDecl *, 8> VarsToHandle;
 
@@ -128,21 +128,21 @@ public:
           Pass.TA.removeStmt(*scope.End);
           Stmt::child_iterator retI = scope.End;
           ++retI;
-          SourceLocation afterSemi = findLocationAfterSemi((*retI)->getLocEnd(),
-                                                           Pass.Ctx);
+          SourceLocation afterSemi =
+              findLocationAfterSemi((*retI)->getEndLoc(), Pass.Ctx);
           assert(afterSemi.isValid() &&
                  "Didn't we check before setting IsFollowedBySimpleReturnStmt "
                  "to true?");
           Pass.TA.insertAfterToken(afterSemi, "\n}");
           Pass.TA.increaseIndentation(
-                                SourceRange(scope.getIndentedRange().getBegin(),
-                                            (*retI)->getLocEnd()),
-                                      scope.CompoundParent->getLocStart());
+              SourceRange(scope.getIndentedRange().getBegin(),
+                          (*retI)->getEndLoc()),
+              scope.CompoundParent->getBeginLoc());
         } else {
           Pass.TA.replaceStmt(*scope.Begin, "@autoreleasepool {");
           Pass.TA.replaceStmt(*scope.End, "}");
           Pass.TA.increaseIndentation(scope.getIndentedRange(),
-                                      scope.CompoundParent->getLocStart());
+                                      scope.CompoundParent->getBeginLoc());
         }
       }
 
@@ -174,7 +174,7 @@ public:
               PoolVarInfo &info = PoolVars[VD];
               info.Dcl = DclS;
               collectRefs(VD, S, info.Refs);
-              // Does this statement follow the pattern:  
+              // Does this statement follow the pattern:
               // NSAutoreleasePool * pool = [NSAutoreleasePool  new];
               if (isPoolCreation(VD->getInit())) {
                 Scopes.push_back(PoolScope());
@@ -188,7 +188,7 @@ public:
       } else if (BinaryOperator *bop = dyn_cast<BinaryOperator>(child)) {
         if (DeclRefExpr *dref = dyn_cast<DeclRefExpr>(bop->getLHS())) {
           if (VarDecl *VD = dyn_cast<VarDecl>(dref->getDecl())) {
-            // Does this statement follow the pattern:  
+            // Does this statement follow the pattern:
             // pool = [NSAutoreleasePool  new];
             if (isNSAutoreleasePool(VD->getType()) &&
                 isPoolCreation(bop->getRHS())) {
@@ -241,7 +241,7 @@ private:
       Stmt::child_iterator rangeE = Begin;
       for (Stmt::child_iterator I = rangeS; I != End; ++I)
         ++rangeE;
-      return SourceRange((*rangeS)->getLocStart(), (*rangeE)->getLocEnd());
+      return SourceRange((*rangeS)->getBeginLoc(), (*rangeE)->getEndLoc());
     }
   };
 
@@ -256,8 +256,8 @@ private:
                          SourceLocation &declarationLoc)
       : Ctx(ctx), referenceLoc(referenceLoc),
         declarationLoc(declarationLoc) {
-      ScopeRange = SourceRange((*scope.Begin)->getLocStart(),
-                               (*scope.End)->getLocStart());
+      ScopeRange = SourceRange((*scope.Begin)->getBeginLoc(),
+                               (*scope.End)->getBeginLoc());
     }
 
     bool VisitDeclRefExpr(DeclRefExpr *E) {
@@ -307,11 +307,11 @@ private:
         if (ReturnStmt *retS = dyn_cast<ReturnStmt>(*SI))
           if ((retS->getRetValue() == nullptr ||
                isa<DeclRefExpr>(retS->getRetValue()->IgnoreParenCasts())) &&
-              findLocationAfterSemi(retS->getLocEnd(), Pass.Ctx).isValid()) {
+              findLocationAfterSemi(retS->getEndLoc(), Pass.Ctx).isValid()) {
             scope.IsFollowedBySimpleReturnStmt = true;
             ++SI; // the return will be included in scope, don't check it.
           }
-      
+
       for (; SI != SE; ++SI) {
         nameUsedOutsideScope = !NameReferenceChecker(Pass.Ctx, scope,
                                                      referenceLoc,
@@ -328,9 +328,9 @@ private:
             "NSAutoreleasePool scope that it was declared in", referenceLoc);
         Pass.TA.reportNote("name declared here", declarationLoc);
         Pass.TA.reportNote("intended @autoreleasepool scope begins here",
-                           (*scope.Begin)->getLocStart());
+                           (*scope.Begin)->getBeginLoc());
         Pass.TA.reportNote("intended @autoreleasepool scope ends here",
-                           (*scope.End)->getLocStart());
+                           (*scope.End)->getBeginLoc());
         return;
       }
     }
@@ -403,8 +403,8 @@ private:
     return cast<Expr>(getEssential((Stmt*)E));
   }
   static Stmt *getEssential(Stmt *S) {
-    if (ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(S))
-      S = EWC->getSubExpr();
+    if (FullExpr *FE = dyn_cast<FullExpr>(S))
+      S = FE->getSubExpr();
     if (Expr *E = dyn_cast<Expr>(S))
       S = E->IgnoreParenCasts();
     return S;
@@ -415,7 +415,7 @@ private:
 
   IdentifierInfo *PoolII;
   Selector DrainSel;
-  
+
   struct PoolVarInfo {
     DeclStmt *Dcl;
     ExprSet Refs;

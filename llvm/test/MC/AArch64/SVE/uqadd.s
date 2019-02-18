@@ -115,3 +115,19 @@ uqadd     z31.d, z31.d, #65280
 // CHECK-ENCODING: [0xff,0xff,0xe5,0x25]
 // CHECK-ERROR: instruction requires: sve
 // CHECK-UNKNOWN: ff ff e5 25 <unknown>
+
+
+// --------------------------------------------------------------------------//
+// Test compatibility with MOVPRFX instruction.
+
+movprfx z31, z6
+// CHECK-INST: movprfx	z31, z6
+// CHECK-ENCODING: [0xdf,0xbc,0x20,0x04]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: df bc 20 04 <unknown>
+
+uqadd     z31.d, z31.d, #65280
+// CHECK-INST: uqadd	z31.d, z31.d, #65280
+// CHECK-ENCODING: [0xff,0xff,0xe5,0x25]
+// CHECK-ERROR: instruction requires: sve
+// CHECK-UNKNOWN: ff ff e5 25 <unknown>

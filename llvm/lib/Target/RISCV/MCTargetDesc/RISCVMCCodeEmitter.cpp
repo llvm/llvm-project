@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/RISCVBaseInfo.h"
 #include "MCTargetDesc/RISCVFixupKinds.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "Utils/RISCVBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -196,7 +196,7 @@ unsigned RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
   MCInstrDesc const &Desc = MCII.get(MI.getOpcode());
   unsigned MIFrm = Desc.TSFlags & RISCVII::InstFormatMask;
 
-  // If the destination is an immediate, there is nothing to do
+  // If the destination is an immediate, there is nothing to do.
   if (MO.isImm())
     return MO.getImm();
 

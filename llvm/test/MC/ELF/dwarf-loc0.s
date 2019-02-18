@@ -1,8 +1,6 @@
 # REQUIRES: default_triple
 # RUN: llvm-mc -dwarf-version 5 %s -filetype=obj -o - | llvm-dwarfdump -debug-line - | FileCheck %s
 # RUN: not llvm-mc -dwarf-version 4 %s -filetype=asm -o - 2>&1 | FileCheck %s -check-prefix=ERR
-# Darwin line table is stuck on DWARF v2.
-# XFAIL: darwin
 # Show that ".loc 0" works in DWARF v5, gets an error for earlier versions.
         .file 0 "root.cpp"
         .file 1 "header.h"

@@ -1,0 +1,41 @@
+import("//llvm/lib/Target/targets.gni")
+
+static_library("lib") {
+  output_name = "LLVMExegesis"
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/ExecutionEngine",
+    "//llvm/lib/ExecutionEngine/MCJIT",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/ObjectYAML",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "Analysis.cpp",
+    "Assembler.cpp",
+    "BenchmarkResult.cpp",
+    "BenchmarkRunner.cpp",
+    "Clustering.cpp",
+    "CodeTemplate.cpp",
+    "Latency.cpp",
+    "LlvmState.cpp",
+    "MCInstrDescView.cpp",
+    "PerfHelper.cpp",
+    "RegisterAliasing.cpp",
+    "RegisterValue.cpp",
+    "SnippetGenerator.cpp",
+    "Target.cpp",
+    "Uops.cpp",
+  ]
+
+  # FIXME: Add this once llvm/lib/Target/AArch64 exists.
+  #if (llvm_build_AArch64) {
+  #  deps += [ "AArch64" ]
+  #}
+  if (llvm_build_X86) {
+    deps += [ "X86" ]
+  }
+}

@@ -83,20 +83,6 @@ int uncaught_exceptions() _NOEXCEPT {
     return __uncaught_exceptions();
 }
 
-bad_array_length::bad_array_length() _NOEXCEPT
-{
-}
-
-bad_array_length::~bad_array_length() _NOEXCEPT
-{
-}
-
-const char*
-bad_array_length::what() const _NOEXCEPT
-{
-    return "bad_array_length";
-}
-
 #if defined(_LIBCPP_NO_VCRUNTIME)
 bad_cast::bad_cast() _NOEXCEPT
 {

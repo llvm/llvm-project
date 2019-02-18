@@ -32,8 +32,8 @@ loop:
 ; SI: s_cbranch_execz [[RET:BB[0-9]+_[0-9]+]]
 
 ; SI: v_mov_b32_e32 [[REG:v[0-9]+]], 0x3e7
-; SI: [[LOOP:BB[0-9]+_[0-9]+]]:  ; %loop
 ; SI: s_and_b64 vcc, exec, -1
+; SI: [[LOOP:BB[0-9]+_[0-9]+]]:  ; %loop
 ; SI: s_waitcnt lgkmcnt(0)
 ; SI: buffer_store_dword [[REG]]
 ; SI: s_cbranch_vccnz [[LOOP]]

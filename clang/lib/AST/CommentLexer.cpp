@@ -21,7 +21,7 @@ namespace comments {
 
 void Token::dump(const Lexer &L, const SourceManager &SM) const {
   llvm::errs() << "comments::Token Kind=" << Kind << " ";
-  Loc.dump(SM);
+  Loc.print(llvm::errs(), SM);
   llvm::errs() << " " << Length << " \"" << L.getSpelling(*this, SM) << "\"\n";
 }
 
@@ -274,7 +274,7 @@ const char *findCCommentEnd(const char *BufferPtr, const char *BufferEnd) {
   }
   llvm_unreachable("buffer end hit before '*/' was seen");
 }
-    
+
 } // end anonymous namespace
 
 void Lexer::formTokenWithChars(Token &Result, const char *TokEnd,

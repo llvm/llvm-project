@@ -17,6 +17,12 @@ int indirectGetCFUnownedToOwned(void **out __attribute__((cf_returns_not_retaine
 int indirectGetCFOwnedToNone(void **out __attribute__((cf_returns_retained)));
 int indirectGetCFNoneToOwned(void **out);
 
+#pragma clang arc_cf_code_audited begin
+void *getCFAuditedToUnowned_DUMP(void);
+void *getCFAuditedToOwned_DUMP(void);
+void *getCFAuditedToNone_DUMP(void);
+#pragma clang arc_cf_code_audited end
+
 @interface MethodTest
 - (id)getOwnedToUnowned __attribute__((ns_returns_retained));
 - (id)getUnownedToOwned __attribute__((ns_returns_not_retained));

@@ -33,14 +33,14 @@ protected:
     DeclGroupMode = 0x2,
     Flags = 0x3
   };
-  
+
   union {
     Stmt **stmt;
     Decl **DGI;
   };
   uintptr_t RawVAPtr = 0;
   Decl **DGE;
-  
+
   StmtIteratorBase(Stmt **s) : stmt(s) {}
   StmtIteratorBase(const VariableArrayType *t);
   StmtIteratorBase(Decl **dgi, Decl **dge);

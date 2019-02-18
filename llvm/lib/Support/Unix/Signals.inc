@@ -47,6 +47,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <string>
+#include <sysexits.h>
 #ifdef HAVE_BACKTRACE
 # include BACKTRACE_HEADER         // For backtrace().
 #endif
@@ -333,6 +334,10 @@ static RETSIGTYPE SignalHandler(int Sig) {
         != std::end(IntSigs)) {
       if (auto OldInterruptFunction = InterruptFunction.exchange(nullptr))
         return OldInterruptFunction();
+
+      // Send a special return code that drivers can check for, from sysexits.h.
+      if (Sig == SIGPIPE)
+        exit(EX_IOERR);
 
       raise(Sig);   // Execute the default handler.
       return;

@@ -26,25 +26,28 @@ class Constant;
 class MVT;
 
 /// Decode a PSHUFB mask from an IR-level vector constant.
-void DecodePSHUFBMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask);
+void DecodePSHUFBMask(const Constant *C, unsigned Width,
+                      SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a VPERMILP variable mask from an IR-level vector constant.
-void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
+void DecodeVPERMILPMask(const Constant *C, unsigned ElSize, unsigned Width,
                         SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a VPERMILP2 variable mask from an IR-level vector constant.
 void DecodeVPERMIL2PMask(const Constant *C, unsigned MatchImm, unsigned ElSize,
+                         unsigned Width,
                          SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a VPPERM variable mask from an IR-level vector constant.
-void DecodeVPPERMMask(const Constant *C, SmallVectorImpl<int> &ShuffleMask);
+void DecodeVPPERMMask(const Constant *C, unsigned Width,
+                      SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a VPERM W/D/Q/PS/PD mask from an IR-level vector constant.
-void DecodeVPERMVMask(const Constant *C, unsigned ElSize,
+void DecodeVPERMVMask(const Constant *C, unsigned ElSize, unsigned Width,
                       SmallVectorImpl<int> &ShuffleMask);
 
 /// Decode a VPERMT2 W/D/Q/PS/PD mask from an IR-level vector constant.
-void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize,
+void DecodeVPERMV3Mask(const Constant *C, unsigned ElSize, unsigned Width,
                        SmallVectorImpl<int> &ShuffleMask);
 
 } // llvm namespace

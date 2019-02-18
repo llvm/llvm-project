@@ -45,22 +45,20 @@ class AnalysisManager : public BugReporterData {
 
 public:
   AnalyzerOptions &options;
-  
-  AnalysisManager(ASTContext &ctx,DiagnosticsEngine &diags,
-                  const LangOptions &lang,
+
+  AnalysisManager(ASTContext &ctx, DiagnosticsEngine &diags,
                   const PathDiagnosticConsumers &Consumers,
                   StoreManagerCreator storemgr,
-                  ConstraintManagerCreator constraintmgr, 
-                  CheckerManager *checkerMgr,
-                  AnalyzerOptions &Options,
-                  CodeInjector* injector = nullptr);
+                  ConstraintManagerCreator constraintmgr,
+                  CheckerManager *checkerMgr, AnalyzerOptions &Options,
+                  CodeInjector *injector = nullptr);
 
   ~AnalysisManager() override;
 
   void ClearContexts() {
     AnaCtxMgr.clear();
   }
-  
+
   AnalysisDeclContextManager& getAnalysisDeclContextManager() {
     return AnaCtxMgr;
   }
@@ -102,8 +100,7 @@ public:
   void FlushDiagnostics();
 
   bool shouldVisualize() const {
-    return options.visualizeExplodedGraphWithGraphViz ||
-           options.visualizeExplodedGraphWithUbiGraph;
+    return options.visualizeExplodedGraphWithGraphViz;
   }
 
   bool shouldInlineCall() const {

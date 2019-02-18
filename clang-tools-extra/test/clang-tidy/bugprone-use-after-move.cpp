@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-use-after-move %t -- -- -std=c++11 -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s bugprone-use-after-move %t -- -- -std=c++17 -fno-delayed-template-parsing
 
 typedef decltype(nullptr) nullptr_t;
 
@@ -107,6 +107,15 @@ public:
   int i;
 };
 
+template <class T>
+class AnnotatedContainer {
+public:
+  AnnotatedContainer();
+
+  void foo() const;
+  [[clang::reinitializes]] void clear();
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // General tests.
 
@@ -116,8 +125,8 @@ void simple() {
   a.foo();
   A other_a = std::move(a);
   a.foo();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:15: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:15: note: move occurred here
 }
 
 // A warning should only be emitted for one use-after-move.
@@ -126,8 +135,8 @@ void onlyFlagOneUseAfterMove() {
   a.foo();
   A other_a = std::move(a);
   a.foo();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:15: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:15: note: move occurred here
   a.foo();
 }
 
@@ -137,8 +146,8 @@ void moveAfterMove() {
     A a;
     std::move(a);
     std::move(a);
-    // CHECK-MESSAGES: [[@LINE-1]]:15: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:15: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // This is also true if the move itself turns into the use on the second loop
   // iteration.
@@ -146,9 +155,9 @@ void moveAfterMove() {
     A a;
     for (int i = 0; i < 10; ++i) {
       std::move(a);
-      // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE-2]]:7: note: move occurred here
-      // CHECK-MESSAGES: [[@LINE-3]]:17: note: the use happens in a later loop
+      // CHECK-NOTES: [[@LINE-1]]:17: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-2]]:7: note: move occurred here
+      // CHECK-NOTES: [[@LINE-3]]:17: note: the use happens in a later loop
     }
   }
 }
@@ -157,8 +166,8 @@ void moveAfterMove() {
 void parameters(A a) {
   std::move(a);
   a.foo();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:3: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
 }
 
 void standardSmartPtr() {
@@ -171,22 +180,22 @@ void standardSmartPtr() {
     ptr.get();
     static_cast<bool>(ptr);
     *ptr;
-    // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-5]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-5]]:5: note: move occurred here
   }
   {
     std::unique_ptr<A> ptr;
     std::move(ptr);
     ptr->foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     std::unique_ptr<A> ptr;
     std::move(ptr);
     ptr[0];
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     std::shared_ptr<A> ptr;
@@ -194,15 +203,15 @@ void standardSmartPtr() {
     ptr.get();
     static_cast<bool>(ptr);
     *ptr;
-    // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-5]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:6: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-5]]:5: note: move occurred here
   }
   {
     std::shared_ptr<A> ptr;
     std::move(ptr);
     ptr->foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     // std::weak_ptr<> cannot be dereferenced directly, so we only check that
@@ -243,8 +252,8 @@ void standardSmartPtr() {
     } ptr;
     std::move(ptr);
     ptr.get();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'ptr' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
 }
 
@@ -254,8 +263,8 @@ class Container {
     A a;
     std::move(a);
     a.foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
 };
 
@@ -264,8 +273,8 @@ void moveInDeclaration() {
   A a;
   A another_a(std::move(a));
   a.foo();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
 }
 
 // We see the std::move if it's inside an initializer list. Initializer lists
@@ -281,8 +290,8 @@ void moveInInitList() {
   A a;
   S s{std::move(a)};
   a.foo();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:7: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:7: note: move occurred here
 }
 
 void lambdas() {
@@ -292,8 +301,8 @@ void lambdas() {
     auto lambda = [a] {
       std::move(a);
       a.foo();
-      // CHECK-MESSAGES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE-3]]:7: note: move occurred here
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-3]]:7: note: move occurred here
     };
   }
   // This is just as true if the variable was declared inside the lambda.
@@ -302,8 +311,8 @@ void lambdas() {
       A a;
       std::move(a);
       a.foo();
-      // CHECK-MESSAGES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE-3]]:7: note: move occurred here
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-3]]:7: note: move occurred here
     };
   }
   // But don't warn if the move happened inside the lambda but the use happened
@@ -322,31 +331,31 @@ void lambdas() {
     A a;
     std::move(a);
     auto lambda = [a]() { a.foo(); };
-    // CHECK-MESSAGES: [[@LINE-1]]:20: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:20: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // ...even if the capture was implicit.
   {
     A a;
     std::move(a);
     auto lambda = [=]() { a.foo(); };
-    // CHECK-MESSAGES: [[@LINE-1]]:27: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:20: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // Same tests but for capture by reference.
   {
     A a;
     std::move(a);
     auto lambda = [&a]() { a.foo(); };
-    // CHECK-MESSAGES: [[@LINE-1]]:21: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:21: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     A a;
     std::move(a);
     auto lambda = [&]() { a.foo(); };
-    // CHECK-MESSAGES: [[@LINE-1]]:27: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:20: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // But don't warn if the move happened after the capture.
   {
@@ -381,8 +390,8 @@ void movedTypeIsNotDependentType() {
   A a;
   std::move(a);
   a.foo();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:3: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
 }
 
 // And if the moved type is a dependent type, the use-after-move is detected if
@@ -392,8 +401,8 @@ void movedTypeIsDependentType() {
   T t;
   std::move(t);
   t.foo();
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 't' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:3: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 't' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
 }
 template void movedTypeIsDependentType<A>();
 
@@ -408,8 +417,8 @@ void implicitConversionOperator() {
   Convertible convertible;
   takeA(std::move(convertible));
   convertible;
-  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: 'convertible' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:9: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:3: warning: 'convertible' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:9: note: move occurred here
 }
 
 // Using decltype on an expression is not a use.
@@ -471,9 +480,9 @@ void useAndMoveInLoop() {
     A a;
     for (int i = 0; i < 10; ++i) {
       a.foo();
-      // CHECK-MESSAGES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE+2]]:7: note: move occurred here
-      // CHECK-MESSAGES: [[@LINE-3]]:7: note: the use happens in a later loop
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE+2]]:7: note: move occurred here
+      // CHECK-NOTES: [[@LINE-3]]:7: note: the use happens in a later loop
       std::move(a);
     }
   }
@@ -550,8 +559,8 @@ void differentBranches(int i) {
       std::move(a);
     case 2:
       a.foo();
-      // CHECK-MESSAGES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE-4]]:7: note: move occurred here
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-4]]:7: note: move occurred here
       break;
     }
   }
@@ -566,8 +575,8 @@ void mutuallyExclusiveBranchesFalsePositive(bool b) {
   }
   if (!b) {
     a.foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-5]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-5]]:5: note: move occurred here
   }
 }
 
@@ -649,8 +658,8 @@ void assignments(int i) {
     a = A();
     std::move(a);
     a.foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // Report a use-after-move if we can't be sure that the variable was assigned
   // to.
@@ -662,8 +671,8 @@ void assignments(int i) {
     }
     if (i > 5) {
       a.foo();
-      // CHECK-MESSAGES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE-7]]:5: note: move occurred here
+      // CHECK-NOTES: [[@LINE-1]]:7: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-7]]:5: note: move occurred here
     }
   }
 }
@@ -699,14 +708,14 @@ void passByConstPointerIsUse() {
     const A a;
     std::move(a);
     passByConstPointer(&a);
-    // CHECK-MESSAGES: [[@LINE-1]]:25: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:25: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   const A a;
   std::move(a);
   passByConstReference(a);
-  // CHECK-MESSAGES: [[@LINE-1]]:24: warning: 'a' used after it was moved
-  // CHECK-MESSAGES: [[@LINE-3]]:3: note: move occurred here
+  // CHECK-NOTES: [[@LINE-1]]:24: warning: 'a' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:3: note: move occurred here
 }
 
 // Clearing a standard container using clear() is treated as a
@@ -811,8 +820,8 @@ void standardContainerClearIsReinit() {
     } container;
     std::move(container);
     container.clear();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'container' used after it was
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'container' used after it was
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // An intervening clear() on a different container does not reinitialize.
   {
@@ -820,8 +829,8 @@ void standardContainerClearIsReinit() {
     std::move(container1);
     container2.clear();
     container1.empty();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'container1' used after it was
-    // CHECK-MESSAGES: [[@LINE-4]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'container1' used after it was
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
 }
 
@@ -866,8 +875,8 @@ void standardContainerAssignIsReinit() {
     } container;
     std::move(container);
     container.assign(0, 0);
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'container' used after it was
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'container' used after it was
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   // An intervening assign() on a different container does not reinitialize.
   {
@@ -875,8 +884,8 @@ void standardContainerAssignIsReinit() {
     std::move(container1);
     container2.assign(0, 0);
     container1.empty();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'container1' used after it was
-    // CHECK-MESSAGES: [[@LINE-4]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'container1' used after it was
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
 }
 
@@ -895,6 +904,32 @@ void standardSmartPointerResetIsReinit() {
     std::move(ptr);
     ptr.reset(new A);
     *ptr;
+  }
+}
+
+void reinitAnnotation() {
+  {
+    AnnotatedContainer<int> obj;
+    std::move(obj);
+    obj.foo();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'obj' used after it was
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
+  }
+  {
+    AnnotatedContainer<int> obj;
+    std::move(obj);
+    obj.clear();
+    obj.foo();
+  }
+  {
+    // Calling clear() on a different object to the one that was moved is not
+    // considered a reinitialization.
+    AnnotatedContainer<int> obj1, obj2;
+    std::move(obj1);
+    obj2.clear();
+    obj1.foo();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'obj1' used after it was
+    // CHECK-NOTES: [[@LINE-4]]:5: note: move occurred here
   }
 }
 
@@ -927,27 +962,27 @@ void sequencingOfMoveAndUse() {
   {
     A a;
     passByValue(a.getInt(), std::move(a));
-    // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-2]]:29: note: move occurred here
-    // CHECK-MESSAGES: [[@LINE-3]]:17: note: the use and move are unsequenced
+    // CHECK-NOTES: [[@LINE-1]]:17: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:29: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:17: note: the use and move are unsequenced
   }
   {
     A a;
     passByValue(std::move(a), a.getInt());
-    // CHECK-MESSAGES: [[@LINE-1]]:31: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-2]]:17: note: move occurred here
-    // CHECK-MESSAGES: [[@LINE-3]]:31: note: the use and move are unsequenced
+    // CHECK-NOTES: [[@LINE-1]]:31: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:17: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:31: note: the use and move are unsequenced
   }
   // An even more convoluted example.
   {
     A a;
     g(g(a, std::move(a)), g(a, std::move(a)));
-    // CHECK-MESSAGES: [[@LINE-1]]:9: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-2]]:27: note: move occurred here
-    // CHECK-MESSAGES: [[@LINE-3]]:9: note: the use and move are unsequenced
-    // CHECK-MESSAGES: [[@LINE-4]]:29: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-5]]:7: note: move occurred here
-    // CHECK-MESSAGES: [[@LINE-6]]:29: note: the use and move are unsequenced
+    // CHECK-NOTES: [[@LINE-1]]:9: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:27: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:9: note: the use and move are unsequenced
+    // CHECK-NOTES: [[@LINE-4]]:29: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-5]]:7: note: move occurred here
+    // CHECK-NOTES: [[@LINE-6]]:29: note: the use and move are unsequenced
   }
   // This case is fine because the actual move only happens inside the call to
   // operator=(). a.getInt(), by necessity, is evaluated before that call.
@@ -962,17 +997,17 @@ void sequencingOfMoveAndUse() {
     A a;
     int v[3];
     v[a.getInt()] = intFromA(std::move(a));
-    // CHECK-MESSAGES: [[@LINE-1]]:7: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-2]]:21: note: move occurred here
-    // CHECK-MESSAGES: [[@LINE-3]]:7: note: the use and move are unsequenced
+    // CHECK-NOTES: [[@LINE-1]]:7: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:21: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:7: note: the use and move are unsequenced
   }
   {
     A a;
     int v[3];
     v[intFromA(std::move(a))] = intFromInt(a.i);
-    // CHECK-MESSAGES: [[@LINE-1]]:44: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-2]]:7: note: move occurred here
-    // CHECK-MESSAGES: [[@LINE-3]]:44: note: the use and move are unsequenced
+    // CHECK-NOTES: [[@LINE-1]]:44: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:7: note: move occurred here
+    // CHECK-NOTES: [[@LINE-3]]:44: note: the use and move are unsequenced
   }
 }
 
@@ -988,15 +1023,15 @@ void sequencingOfMoveAndReinit() {
     A a;
     passByValue(std::move(a), (a = A()));
     a.foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:17: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:17: note: move occurred here
   }
   {
     A a;
     passByValue((a = A()), std::move(a));
     a.foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:28: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:28: note: move occurred here
   }
   // Common usage pattern: Move the object to a function that mutates it in some
   // way, then reassign the result to the object. This pattern is fine.
@@ -1018,15 +1053,15 @@ void sequencingOfReinitAndUse() {
     A a;
     std::move(a);
     passByValue(a.getInt(), (a = A()));
-    // CHECK-MESSAGES: [[@LINE-1]]:17: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:17: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
   {
     A a;
     std::move(a);
     passByValue((a = A()), a.getInt());
-    // CHECK-MESSAGES: [[@LINE-1]]:28: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:5: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:28: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
   }
 }
 
@@ -1042,8 +1077,8 @@ void commaOperatorSequences() {
     A a;
     (a = A()), A(std::move(a));
     a.foo();
-    // CHECK-MESSAGES: [[@LINE-1]]:5: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-3]]:16: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:16: note: move occurred here
   }
 }
 
@@ -1064,8 +1099,8 @@ void initializerListSequences() {
     };
     A a;
     S2 s2{std::move(a), a.getInt()};
-    // CHECK-MESSAGES: [[@LINE-1]]:25: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-2]]:11: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:25: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
   }
 }
 
@@ -1079,8 +1114,8 @@ void declarationSequences() {
   {
     A a;
     A a1 = std::move(a), a2 = a;
-    // CHECK-MESSAGES: [[@LINE-1]]:31: warning: 'a' used after it was moved
-    // CHECK-MESSAGES: [[@LINE-2]]:12: note: move occurred here
+    // CHECK-NOTES: [[@LINE-1]]:31: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:12: note: move occurred here
   }
 }
 
@@ -1103,8 +1138,8 @@ void logicalOperatorsSequence() {
   {
     A a;
     if (A(std::move(a)).getInt() > 0 && a.getInt() > 0) {
-      // CHECK-MESSAGES: [[@LINE-1]]:41: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE-2]]:9: note: move occurred here
+      // CHECK-NOTES: [[@LINE-1]]:41: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-2]]:9: note: move occurred here
       A().foo();
     }
   }
@@ -1117,8 +1152,8 @@ void logicalOperatorsSequence() {
   {
     A a;
     if (A(std::move(a)).getInt() > 0 || a.getInt() > 0) {
-      // CHECK-MESSAGES: [[@LINE-1]]:41: warning: 'a' used after it was moved
-      // CHECK-MESSAGES: [[@LINE-2]]:9: note: move occurred here
+      // CHECK-NOTES: [[@LINE-1]]:41: warning: 'a' used after it was moved
+      // CHECK-NOTES: [[@LINE-2]]:9: note: move occurred here
       A().foo();
     }
   }
@@ -1132,16 +1167,45 @@ void forRangeSequences() {
   }
 }
 
-// If a variable is declared in an if statement, the declaration of the variable
-// (which is treated like a reinitialization by the check) is sequenced before
-// the evaluation of the condition (which constitutes a use).
-void ifStmtSequencesDeclAndCondition() {
+// If a variable is declared in an if, while or switch statement, the init
+// statement (for if and switch) is sequenced before the variable declaration,
+// which in turn is sequenced before the evaluation of the condition.
+void ifWhileAndSwitchSequenceInitDeclAndCondition() {
   for (int i = 0; i < 10; ++i) {
-    if (A a = A()) {
-      std::move(a);
+    A a1;
+    if (A a2 = std::move(a1)) {
+      std::move(a2);
+    }
+  }
+  for (int i = 0; i < 10; ++i) {
+    A a1;
+    if (A a2 = std::move(a1); A a3 = std::move(a2)) {
+      std::move(a3);
+    }
+  }
+  while (A a = A()) {
+    std::move(a);
+  }
+  for (int i = 0; i < 10; ++i) {
+    A a1;
+    switch (A a2 = a1; A a3 = std::move(a2)) {
+      case true:
+        std::move(a3);
     }
   }
 }
+
+// Some statements in templates (e.g. null, break and continue statements) may
+// be shared between the uninstantiated and instantiated versions of the
+// template and therefore have multiple parents. Make sure the sequencing code
+// handles this correctly.
+template <class> void nullStatementSequencesInTemplate() {
+  int c = 0;
+  (void)c;
+  ;
+  std::move(c);
+}
+template void nullStatementSequencesInTemplate<int>();
 
 namespace PR33020 {
 class D {

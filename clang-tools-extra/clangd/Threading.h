@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <vector>
 
 namespace clang {
@@ -41,6 +42,7 @@ class Semaphore {
 public:
   Semaphore(std::size_t MaxLocks);
 
+  bool try_lock();
   void lock();
   void unlock();
 
@@ -108,13 +110,24 @@ public:
   void wait() const { (void)wait(Deadline::infinity()); }
   LLVM_NODISCARD bool wait(Deadline D) const;
   // The name is used for tracing and debugging (e.g. to name a spawned thread).
-  void runAsync(llvm::Twine Name, llvm::unique_function<void()> Action);
+  void runAsync(const llvm::Twine &Name, llvm::unique_function<void()> Action);
 
 private:
   mutable std::mutex Mutex;
   mutable std::condition_variable TasksReachedZero;
   std::size_t InFlightTasks = 0;
 };
+
+enum class ThreadPriority {
+  Low = 0,
+  Normal = 1,
+};
+void setCurrentThreadPriority(ThreadPriority Priority);
+// Avoid the use of scheduler policies that may starve low-priority threads.
+// This prevents tests from timing out on loaded systems.
+// Affects subsequent setThreadPriority() calls.
+void preventThreadStarvationInTests();
+
 } // namespace clangd
 } // namespace clang
 #endif

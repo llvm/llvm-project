@@ -25,12 +25,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define MANGLE_CHECKER 0
-
-#if MANGLE_CHECKER
-#include <cxxabi.h>
-#endif
-
 using namespace clang;
 
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
@@ -44,7 +38,7 @@ static void mangleFunctionBlock(MangleContext &Context,
   if (discriminator == 0)
     Out << "__" << Outer << "_block_invoke";
   else
-    Out << "__" << Outer << "_block_invoke_" << discriminator+1; 
+    Out << "__" << Outer << "_block_invoke_" << discriminator+1;
 }
 
 void MangleContext::anchor() { }

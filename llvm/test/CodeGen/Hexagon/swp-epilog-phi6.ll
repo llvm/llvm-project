@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 -debug-only=pipeliner < %s -o - 2>&1 > /dev/null | FileCheck %s
+; RUN: llc -march=hexagon -O2 -debug-only=pipeliner -hexagon-initial-cfg-cleanup=0 < %s -o - 2>&1 > /dev/null | FileCheck %s
 ; REQUIRES: asserts
 
 ; Test that the phi in the first epilog block is getter the correct
@@ -9,7 +9,7 @@
 
 ; CHECK: New block
 ; CHECK: %[[REG:([0-9]+)]]:intregs = PHI %{{.*}}, %[[REG1:([0-9]+)]]
-; CHECK: %[[REG1]]:intregs = A2_addi
+; CHECK: %[[REG1]]:intregs = nuw A2_addi
 ; CHECK: epilog:
 ; CHECK: %{{[0-9]+}}:intregs = PHI %{{.*}}, %[[REG]]
 

@@ -36,3 +36,13 @@ decp x0, p0.q
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid predicate register
 // CHECK-NEXT: decp x0, p0.q
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
+// --------------------------------------------------------------------------//
+// Negative tests for instructions that are incompatible with movprfx
+
+movprfx z31.d, p7/z, z6.d
+decp    z31.d, p7
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: instruction is unpredictable when following a predicated movprfx, suggest using unpredicated movprfx
+// CHECK-NEXT: decp    z31.d, p7
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

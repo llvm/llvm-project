@@ -11,17 +11,15 @@
 define <16 x i8> @testv16i16_trunc_v16i8(<16 x i16> %x) {
 ; AVX256NOBW-LABEL: testv16i16_trunc_v16i8:
 ; AVX256NOBW:       # %bb.0:
+; AVX256NOBW-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX256NOBW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256NOBW-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX256NOBW-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX256NOBW-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX256NOBW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX256NOBW-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX256NOBW-NEXT:    vzeroupper
 ; AVX256NOBW-NEXT:    retq
 ;
 ; AVX512NOBW-LABEL: testv16i16_trunc_v16i8:
 ; AVX512NOBW:       # %bb.0:
-; AVX512NOBW-NEXT:    vpmovsxwd %ymm0, %zmm0
+; AVX512NOBW-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512NOBW-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512NOBW-NEXT:    vzeroupper
 ; AVX512NOBW-NEXT:    retq

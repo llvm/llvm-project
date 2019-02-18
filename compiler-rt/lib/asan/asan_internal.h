@@ -111,6 +111,11 @@ void *AsanDlSymNext(const char *sym);
 
 void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name);
 
+// Returns `true` iff most of ASan init process should be skipped due to the
+// ASan library being loaded via `dlopen()`. Platforms may perform any
+// `dlopen()` specific initialization inside this function.
+bool HandleDlopenInit();
+
 // Add convenient macro for interface functions that may be represented as
 // weak hooks.
 #define ASAN_MALLOC_HOOK(ptr, size)                                   \

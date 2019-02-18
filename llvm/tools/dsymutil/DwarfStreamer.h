@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+#define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+
 #include "CompileUnit.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
@@ -27,12 +30,10 @@
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-
-#ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
-#define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
 
 namespace llvm {
 namespace dsymutil {
@@ -49,7 +50,7 @@ public:
   bool init(Triple TheTriple);
 
   /// Dump the file to the disk.
-  bool finish(const DebugMap &);
+  bool finish(const DebugMap &, SymbolMapTranslator &T);
 
   AsmPrinter &getAsmPrinter() const { return *Asm; }
 
@@ -103,6 +104,11 @@ public:
                             std::vector<DWARFDebugLine::Row> &Rows,
                             unsigned AdddressSize);
 
+  /// Copy the debug_line over to the updated binary while unobfuscating the
+  /// file names and directories.
+  void translateLineTable(DataExtractor LineData, uint32_t Offset,
+                          LinkOptions &Options);
+
   /// Copy over the debug sections that are not modified when updating.
   void copyInvariantDebugSection(const object::ObjectFile &Obj);
 
@@ -120,6 +126,9 @@ public:
   /// Emit an FDE with data \p Bytes.
   void emitFDE(uint32_t CIEOffset, uint32_t AddreSize, uint32_t Address,
                StringRef Bytes);
+
+  /// Emit DWARF debug names.
+  void emitDebugNames(AccelTable<DWARF5AccelTableStaticData> &Table);
 
   /// Emit Apple namespaces accelerator table.
   void emitAppleNamespaces(AccelTable<AppleAccelTableStaticOffsetData> &Table);
@@ -161,6 +170,13 @@ private:
   uint32_t LocSectionSize;
   uint32_t LineSectionSize;
   uint32_t FrameSectionSize;
+
+  /// Keep track of emitted CUs and their Unique ID.
+  struct EmittedUnit {
+    unsigned ID;
+    MCSymbol *LabelBegin;
+  };
+  std::vector<EmittedUnit> EmittedUnits;
 
   /// Emit the pubnames or pubtypes section contribution for \p
   /// Unit into \p Sec. The data is provided in \p Names.

@@ -16,7 +16,7 @@ struct ReceivesPragma { };
 #include "pragma-pack2.h"
 
 #ifdef SET_SECOND_HEADER
-// expected-warning@-3 {{the current #pragma pack aligment value is modified in the included file}}
+// expected-warning@-3 {{the current #pragma pack alignment value is modified in the included file}}
 #endif
 
 #ifdef PUSH_POP_FIRST_HEADER

@@ -90,6 +90,10 @@ static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
   return new WebAssemblyTargetAsmStreamer(S, OS);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new WebAssemblyTargetNullStreamer(S);
+}
+
 // Force static initialization.
 extern "C" void LLVMInitializeWebAssemblyTargetMC() {
   for (Target *T :
@@ -120,16 +124,31 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
                                                  createObjectTargetStreamer);
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createAsmTargetStreamer);
+    // Register the null target streamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
   }
 }
 
 wasm::ValType WebAssembly::toValType(const MVT &Ty) {
   switch (Ty.SimpleTy) {
-  case MVT::i32: return wasm::ValType::I32;
-  case MVT::i64: return wasm::ValType::I64;
-  case MVT::f32: return wasm::ValType::F32;
-  case MVT::f64: return wasm::ValType::F64;
-  case MVT::ExceptRef: return wasm::ValType::EXCEPT_REF;
-  default: llvm_unreachable("unexpected type");
+  case MVT::i32:
+    return wasm::ValType::I32;
+  case MVT::i64:
+    return wasm::ValType::I64;
+  case MVT::f32:
+    return wasm::ValType::F32;
+  case MVT::f64:
+    return wasm::ValType::F64;
+  case MVT::v16i8:
+  case MVT::v8i16:
+  case MVT::v4i32:
+  case MVT::v2i64:
+  case MVT::v4f32:
+  case MVT::v2f64:
+    return wasm::ValType::V128;
+  case MVT::ExceptRef:
+    return wasm::ValType::EXCEPT_REF;
+  default:
+    llvm_unreachable("unexpected type");
   }
 }

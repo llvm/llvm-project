@@ -25,7 +25,7 @@ void SetSoftRssLimitExceededCallback(void (*Callback)(bool exceeded)) {
   SoftRssLimitExceededCallback = Callback;
 }
 
-#if SANITIZER_LINUX && !SANITIZER_GO
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && !SANITIZER_GO
 // Weak default implementation for when sanitizer_stackdepot is not linked in.
 SANITIZER_WEAK_ATTRIBUTE StackDepotStats *StackDepotGetStats() {
   return nullptr;
@@ -100,18 +100,21 @@ void WriteToSyslog(const char *msg) {
 
   // Print one line at a time.
   // syslog, at least on Android, has an implicit message length limit.
-  do {
-    q = internal_strchr(p, '\n');
-    if (q)
-      *q = '\0';
+  while ((q = internal_strchr(p, '\n'))) {
+    *q = '\0';
     WriteOneLineToSyslog(p);
-    if (q)
-      p = q + 1;
-  } while (q);
+    p = q + 1;
+  }
+  // Print remaining characters, if there are any.
+  // Note that this will add an extra newline at the end.
+  // FIXME: buffer extra output. This would need a thread-local buffer, which
+  // on Android requires plugging into the tools (ex. ASan's) Thread class.
+  if (*p)
+    WriteOneLineToSyslog(p);
 }
 
 void MaybeStartBackgroudThread() {
-#if SANITIZER_LINUX && \
+#if (SANITIZER_LINUX || SANITIZER_NETBSD) && \
     !SANITIZER_GO  // Need to implement/test on other platforms.
   // Start the background thread if one of the rss limits is given.
   if (!common_flags()->hard_rss_limit_mb &&

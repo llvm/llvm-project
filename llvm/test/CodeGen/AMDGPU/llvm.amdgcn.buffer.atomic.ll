@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
+;RUN: llc < %s -march=amdgcn -mcpu=verde -amdgpu-atomic-optimizations=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=SICI
+;RUN: llc < %s -march=amdgcn -mcpu=tonga -amdgpu-atomic-optimizations=false -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=VI
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt

@@ -130,3 +130,16 @@ entry:
   tail call void asm sideeffect "faddd $0,$1,$2", "{f20},{f20},{f20}"(double 9.0, double 10.0, double 11.0)
   ret void
 }
+
+; CHECK-LABEL: test_constraint_f_e_i32_i64:
+; CHECK: ld [%o0+%lo(.LCPI13_0)], %f0
+; CHECK: ldd [%o0+%lo(.LCPI13_1)], %f2
+; CHECK: fadds %f0, %f0, %f0
+; CHECK: faddd %f2, %f2, %f0
+
+define void @test_constraint_f_e_i32_i64() {
+entry:
+  %0 = call float asm sideeffect "fadds $1, $2, $0", "=f,f,e"(i32 0, i32 0)
+  %1 = call double asm sideeffect "faddd $1, $2, $0", "=f,f,e"(i64 0, i64 0)
+  ret void
+}

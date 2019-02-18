@@ -155,6 +155,54 @@ TEST_F(SourceManagerTest, getColumnNumber) {
   EXPECT_EQ(1U, SourceMgr.getColumnNumber(MainFileID, 0, nullptr));
 }
 
+TEST_F(SourceManagerTest, locationPrintTest) {
+  const char *header = "#define IDENTITY(x) x\n";
+
+  const char *Source = "int x;\n"
+                       "include \"test-header.h\"\n"
+                       "IDENTITY(int y);\n"
+                       "int z;";
+
+  std::unique_ptr<llvm::MemoryBuffer> HeaderBuf =
+      llvm::MemoryBuffer::getMemBuffer(header);
+  std::unique_ptr<llvm::MemoryBuffer> Buf =
+      llvm::MemoryBuffer::getMemBuffer(Source);
+
+  const FileEntry *SourceFile =
+      FileMgr.getVirtualFile("/mainFile.cpp", Buf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(SourceFile, std::move(Buf));
+
+  const FileEntry *HeaderFile =
+      FileMgr.getVirtualFile("/test-header.h", HeaderBuf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(HeaderFile, std::move(HeaderBuf));
+
+  FileID MainFileID = SourceMgr.getOrCreateFileID(SourceFile, SrcMgr::C_User);
+  FileID HeaderFileID = SourceMgr.getOrCreateFileID(HeaderFile, SrcMgr::C_User);
+  SourceMgr.setMainFileID(MainFileID);
+
+  auto BeginLoc = SourceMgr.getLocForStartOfFile(MainFileID);
+  auto EndLoc = SourceMgr.getLocForEndOfFile(MainFileID);
+
+  auto BeginEOLLoc = SourceMgr.translateLineCol(MainFileID, 1, 7);
+
+  auto HeaderLoc = SourceMgr.getLocForStartOfFile(HeaderFileID);
+
+  EXPECT_EQ(BeginLoc.printToString(SourceMgr), "/mainFile.cpp:1:1");
+  EXPECT_EQ(EndLoc.printToString(SourceMgr), "/mainFile.cpp:4:7");
+
+  EXPECT_EQ(BeginEOLLoc.printToString(SourceMgr), "/mainFile.cpp:1:7");
+  EXPECT_EQ(HeaderLoc.printToString(SourceMgr), "/test-header.h:1:1");
+
+  EXPECT_EQ(SourceRange(BeginLoc, BeginLoc).printToString(SourceMgr),
+            "</mainFile.cpp:1:1>");
+  EXPECT_EQ(SourceRange(BeginLoc, BeginEOLLoc).printToString(SourceMgr),
+            "</mainFile.cpp:1:1, col:7>");
+  EXPECT_EQ(SourceRange(BeginLoc, EndLoc).printToString(SourceMgr),
+            "</mainFile.cpp:1:1, line:4:7>");
+  EXPECT_EQ(SourceRange(BeginLoc, HeaderLoc).printToString(SourceMgr),
+            "</mainFile.cpp:1:1, /test-header.h:1:1>");
+}
+
 #if defined(LLVM_ON_UNIX)
 
 TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {

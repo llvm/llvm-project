@@ -68,14 +68,14 @@ void StringLiteralWithEmbeddedNulCheck::check(
           SL->getCodeUnit(Offset + 1) == 'x' &&
           isDigit(SL->getCodeUnit(Offset + 2)) &&
           isDigit(SL->getCodeUnit(Offset + 3))) {
-        diag(SL->getLocStart(), "suspicious embedded NUL character");
+        diag(SL->getBeginLoc(), "suspicious embedded NUL character");
         return;
       }
     }
   }
 
   if (const auto *SL = Result.Nodes.getNodeAs<StringLiteral>("truncated")) {
-    diag(SL->getLocStart(),
+    diag(SL->getBeginLoc(),
          "truncated string literal with embedded NUL character");
   }
 }

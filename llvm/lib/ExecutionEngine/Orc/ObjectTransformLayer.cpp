@@ -13,17 +13,17 @@
 namespace llvm {
 namespace orc {
 
-ObjectTransformLayer2::ObjectTransformLayer2(ExecutionSession &ES,
-                                             ObjectLayer &BaseLayer,
-                                             TransformFunction Transform)
+ObjectTransformLayer::ObjectTransformLayer(ExecutionSession &ES,
+                                            ObjectLayer &BaseLayer,
+                                            TransformFunction Transform)
     : ObjectLayer(ES), BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
-void ObjectTransformLayer2::emit(MaterializationResponsibility R, VModuleKey K,
-                                 std::unique_ptr<MemoryBuffer> O) {
+void ObjectTransformLayer::emit(MaterializationResponsibility R,
+                                std::unique_ptr<MemoryBuffer> O) {
   assert(O && "Module must not be null");
 
   if (auto TransformedObj = Transform(std::move(O)))
-    BaseLayer.emit(std::move(R), std::move(K), std::move(*TransformedObj));
+    BaseLayer.emit(std::move(R), std::move(*TransformedObj));
   else {
     R.failMaterialization();
     getExecutionSession().reportError(TransformedObj.takeError());

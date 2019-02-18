@@ -95,6 +95,161 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                                              const TargetMachine &TgtM) {
   TargetLoweringObjectFile::Initialize(Ctx, TgtM);
   TM = &TgtM;
+
+  CodeModel::Model CM = TgtM.getCodeModel();
+
+  switch (TgtM.getTargetTriple().getArch()) {
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+    if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
+      break;
+    // Fallthrough if not using EHABI
+    LLVM_FALLTHROUGH;
+  case Triple::ppc:
+  case Triple::x86:
+    PersonalityEncoding = isPositionIndependent()
+                              ? dwarf::DW_EH_PE_indirect |
+                                    dwarf::DW_EH_PE_pcrel |
+                                    dwarf::DW_EH_PE_sdata4
+                              : dwarf::DW_EH_PE_absptr;
+    LSDAEncoding = isPositionIndependent()
+                       ? dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4
+                       : dwarf::DW_EH_PE_absptr;
+    TTypeEncoding = isPositionIndependent()
+                        ? dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+                              dwarf::DW_EH_PE_sdata4
+                        : dwarf::DW_EH_PE_absptr;
+    break;
+  case Triple::x86_64:
+    if (isPositionIndependent()) {
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        ((CM == CodeModel::Small || CM == CodeModel::Medium)
+         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel |
+        (CM == CodeModel::Small
+         ? dwarf::DW_EH_PE_sdata4 : dwarf::DW_EH_PE_sdata8);
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        ((CM == CodeModel::Small || CM == CodeModel::Medium)
+         ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
+    } else {
+      PersonalityEncoding =
+        (CM == CodeModel::Small || CM == CodeModel::Medium)
+        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = (CM == CodeModel::Small)
+        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = (CM == CodeModel::Small)
+        ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  case Triple::hexagon:
+    PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+    LSDAEncoding = dwarf::DW_EH_PE_absptr;
+    TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    if (isPositionIndependent()) {
+      PersonalityEncoding |= dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel;
+      LSDAEncoding |= dwarf::DW_EH_PE_pcrel;
+      TTypeEncoding |= dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel;
+    }
+    break;
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+    // The small model guarantees static code/data size < 4GB, but not where it
+    // will be in memory. Most of these could end up >2GB away so even a signed
+    // pc-relative 32-bit address is insufficient, theoretically.
+    if (isPositionIndependent()) {
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata8;
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata8;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata8;
+    } else {
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  case Triple::lanai:
+    LSDAEncoding = dwarf::DW_EH_PE_absptr;
+    PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+    TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    break;
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
+    // MIPS uses indirect pointer to refer personality functions and types, so
+    // that the eh_frame section can be read-only. DW.ref.personality will be
+    // generated for relocation.
+    PersonalityEncoding = dwarf::DW_EH_PE_indirect;
+    // FIXME: The N64 ABI probably ought to use DW_EH_PE_sdata8 but we can't
+    //        identify N64 from just a triple.
+    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+                    dwarf::DW_EH_PE_sdata4;
+    // We don't support PC-relative LSDA references in GAS so we use the default
+    // DW_EH_PE_absptr for those.
+
+    // FreeBSD must be explicit about the data size and using pcrel since it's
+    // assembler/linker won't do the automatic conversion that the Linux tools
+    // do.
+    if (TgtM.getTargetTriple().isOSFreeBSD()) {
+      PersonalityEncoding |= dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    }
+    break;
+  case Triple::ppc64:
+  case Triple::ppc64le:
+    PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_udata8;
+    LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_udata8;
+    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+      dwarf::DW_EH_PE_udata8;
+    break;
+  case Triple::sparcel:
+  case Triple::sparc:
+    if (isPositionIndependent()) {
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+    } else {
+      LSDAEncoding = dwarf::DW_EH_PE_absptr;
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  case Triple::sparcv9:
+    LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+    if (isPositionIndependent()) {
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+    } else {
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  case Triple::systemz:
+    // All currently-defined code models guarantee that 4-byte PC-relative
+    // values will be in range.
+    if (isPositionIndependent()) {
+      PersonalityEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+      LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+      TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
+        dwarf::DW_EH_PE_sdata4;
+    } else {
+      PersonalityEncoding = dwarf::DW_EH_PE_absptr;
+      LSDAEncoding = dwarf::DW_EH_PE_absptr;
+      TTypeEncoding = dwarf::DW_EH_PE_absptr;
+    }
+    break;
+  default:
+    break;
+  }
 }
 
 void TargetLoweringObjectFileELF::emitModuleMetadata(MCStreamer &Streamer,
@@ -351,6 +506,30 @@ static const MCSymbolELF *getAssociatedSymbol(const GlobalObject *GO,
   return OtherGO ? dyn_cast<MCSymbolELF>(TM.getSymbol(OtherGO)) : nullptr;
 }
 
+static unsigned getEntrySizeForKind(SectionKind Kind) {
+  if (Kind.isMergeable1ByteCString())
+    return 1;
+  else if (Kind.isMergeable2ByteCString())
+    return 2;
+  else if (Kind.isMergeable4ByteCString())
+    return 4;
+  else if (Kind.isMergeableConst4())
+    return 4;
+  else if (Kind.isMergeableConst8())
+    return 8;
+  else if (Kind.isMergeableConst16())
+    return 16;
+  else if (Kind.isMergeableConst32())
+    return 32;
+  else {
+    // We shouldn't have mergeable C strings or mergeable constants that we
+    // didn't handle above.
+    assert(!Kind.isMergeableCString() && "unknown string width");
+    assert(!Kind.isMergeableConst() && "unknown data width");
+    return 0;
+  }
+}
+
 MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   StringRef SectionName = GO->getSection();
@@ -395,7 +574,7 @@ MCSection *TargetLoweringObjectFileELF::getExplicitSectionGlobal(
 
   MCSectionELF *Section = getContext().getELFSection(
       SectionName, getELFSectionType(SectionName, Kind), Flags,
-      /*EntrySize=*/0, Group, UniqueID, AssociatedSymbol);
+      getEntrySizeForKind(Kind), Group, UniqueID, AssociatedSymbol);
   // Make sure that we did not get some other section with incompatible sh_link.
   // This should not be possible due to UniqueID code above.
   assert(Section->getAssociatedSymbol() == AssociatedSymbol &&
@@ -426,28 +605,6 @@ static MCSectionELF *selectELFSectionForGlobal(
     MCContext &Ctx, const GlobalObject *GO, SectionKind Kind, Mangler &Mang,
     const TargetMachine &TM, bool EmitUniqueSection, unsigned Flags,
     unsigned *NextUniqueID, const MCSymbolELF *AssociatedSymbol) {
-  unsigned EntrySize = 0;
-  if (Kind.isMergeableCString()) {
-    if (Kind.isMergeable2ByteCString()) {
-      EntrySize = 2;
-    } else if (Kind.isMergeable4ByteCString()) {
-      EntrySize = 4;
-    } else {
-      EntrySize = 1;
-      assert(Kind.isMergeable1ByteCString() && "unknown string width");
-    }
-  } else if (Kind.isMergeableConst()) {
-    if (Kind.isMergeableConst4()) {
-      EntrySize = 4;
-    } else if (Kind.isMergeableConst8()) {
-      EntrySize = 8;
-    } else if (Kind.isMergeableConst16()) {
-      EntrySize = 16;
-    } else {
-      assert(Kind.isMergeableConst32() && "unknown data width");
-      EntrySize = 32;
-    }
-  }
 
   StringRef Group = "";
   if (const Comdat *C = getELFComdat(GO)) {
@@ -455,7 +612,9 @@ static MCSectionELF *selectELFSectionForGlobal(
     Group = C->getName();
   }
 
-  bool UniqueSectionNames = TM.getUniqueSectionNames();
+  // Get the section entry size based on the kind.
+  unsigned EntrySize = getEntrySizeForKind(Kind);
+
   SmallString<128> Name;
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
@@ -479,16 +638,17 @@ static MCSectionELF *selectELFSectionForGlobal(
       Name += *OptionalPrefix;
   }
 
-  if (EmitUniqueSection && UniqueSectionNames) {
-    Name.push_back('.');
-    TM.getNameWithPrefix(Name, GO, Mang, true);
-  }
   unsigned UniqueID = MCContext::GenericSectionID;
-  if (EmitUniqueSection && !UniqueSectionNames) {
-    UniqueID = *NextUniqueID;
-    (*NextUniqueID)++;
+  if (EmitUniqueSection) {
+    if (TM.getUniqueSectionNames()) {
+      Name.push_back('.');
+      TM.getNameWithPrefix(Name, GO, Mang, true /*MayAlwaysUsePrivate*/);
+    } else {
+      UniqueID = *NextUniqueID;
+      (*NextUniqueID)++;
+    }
   }
-  // Use 0 as the unique ID for execute-only text
+  // Use 0 as the unique ID for execute-only text.
   if (Kind.isExecuteOnly())
     UniqueID = 0;
   return Ctx.getELFSection(Name, getELFSectionType(Name, Kind), Flags,
@@ -635,6 +795,14 @@ const MCExpr *TargetLoweringObjectFileELF::lowerRelativeReference(
       MCSymbolRefExpr::create(TM.getSymbol(RHS), getContext()), getContext());
 }
 
+MCSection *TargetLoweringObjectFileELF::getSectionForCommandLines() const {
+  // Use ".GCC.command.line" since this feature is to support clang's
+  // -frecord-gcc-switches which in turn attempts to mimic GCC's switch of the
+  // same name.
+  return getContext().getELFSection(".GCC.command.line", ELF::SHT_PROGBITS,
+                                    ELF::SHF_MERGE | ELF::SHF_STRINGS, 1, "");
+}
+
 void
 TargetLoweringObjectFileELF::InitializeELF(bool UseInitArray_) {
   UseInitArray = UseInitArray_;
@@ -679,6 +847,12 @@ void TargetLoweringObjectFileMachO::Initialize(MCContext &Ctx,
                                             MachO::S_MOD_TERM_FUNC_POINTERS,
                                             SectionKind::getData());
   }
+
+  PersonalityEncoding =
+      dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
+  LSDAEncoding = dwarf::DW_EH_PE_pcrel;
+  TTypeEncoding =
+      dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;
 }
 
 void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
@@ -934,6 +1108,22 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   //       .indirect_symbol        _extfoo
   //       .long   0
   //
+  // The indirect symbol table (and sections of non_lazy_symbol_pointers type)
+  // may point to both local (same translation unit) and global (other
+  // translation units) symbols. Example:
+  //
+  // .section __DATA,__pointers,non_lazy_symbol_pointers
+  // L1:
+  //    .indirect_symbol _myGlobal
+  //    .long 0
+  // L2:
+  //    .indirect_symbol _myLocal
+  //    .long _myLocal
+  //
+  // If the symbol is local, instead of the symbol's index, the assembler
+  // places the constant INDIRECT_SYMBOL_LOCAL into the indirect symbol table.
+  // Then the linker will notice the constant in the table and will look at the
+  // content of the symbol.
   MachineModuleInfoMachO &MachOMMI =
     MMI->getObjFileInfo<MachineModuleInfoMachO>();
   MCContext &Ctx = getContext();
@@ -953,9 +1143,12 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   MCSymbol *Stub = Ctx.getOrCreateSymbol(Name);
 
   MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(Stub);
-  if (!StubSym.getPointer())
-    StubSym = MachineModuleInfoImpl::
-      StubValueTy(const_cast<MCSymbol *>(Sym), true /* access indirectly */);
+  if (!StubSym.getPointer()) {
+    bool IsIndirectLocal = Sym->isDefined() && !Sym->isExternal();
+    // With the assumption that IsIndirectLocal == GV->hasLocalLinkage().
+    StubSym = MachineModuleInfoImpl::StubValueTy(const_cast<MCSymbol *>(Sym),
+                                                 !IsIndirectLocal);
+  }
 
   const MCExpr *BSymExpr =
     MCSymbolRefExpr::create(BaseSym, MCSymbolRefExpr::VK_None, Ctx);
@@ -1151,10 +1344,11 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       MCSymbol *Sym = TM.getSymbol(ComdatGV);
       StringRef COMDATSymName = Sym->getName();
 
-      // Append "$symbol" to the section name when targetting mingw. The ld.bfd
+      // Append "$symbol" to the section name *before* IR-level mangling is
+      // applied when targetting mingw. This is what GCC does, and the ld.bfd
       // COFF linker will not properly handle comdats otherwise.
       if (getTargetTriple().isWindowsGNUEnvironment())
-        raw_svector_ostream(Name) << '$' << COMDATSymName;
+        raw_svector_ostream(Name) << '$' << ComdatGV->getName();
 
       return getContext().getCOFFSection(Name, Characteristics, Kind,
                                          COMDATSymName, Selection, UniqueID);
@@ -1290,8 +1484,25 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
                                                    unsigned Priority,
                                                    const MCSymbol *KeySym,
                                                    MCSectionCOFF *Default) {
-  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment())
-    return Ctx.getAssociativeCOFFSection(Default, KeySym, 0);
+  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
+    // If the priority is the default, use .CRT$XCU, possibly associative.
+    if (Priority == 65535)
+      return Ctx.getAssociativeCOFFSection(Default, KeySym, 0);
+
+    // Otherwise, we need to compute a new section name. Low priorities should
+    // run earlier. The linker will sort sections ASCII-betically, and we need a
+    // string that sorts between .CRT$XCA and .CRT$XCU. In the general case, we
+    // make a name like ".CRT$XCT12345", since that runs before .CRT$XCU. Really
+    // low priorities need to sort before 'L', since the CRT uses that
+    // internally, so we use ".CRT$XCA00001" for them.
+    SmallString<24> Name;
+    raw_svector_ostream OS(Name);
+    OS << ".CRT$XC" << (Priority < 200 ? 'A' : 'T') << format("%05u", Priority);
+    MCSectionCOFF *Sec = Ctx.getCOFFSection(
+        Name, COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ,
+        SectionKind::getReadOnly());
+    return Ctx.getAssociativeCOFFSection(Sec, KeySym, 0);
+  }
 
   std::string Name = IsCtor ? ".ctors" : ".dtors";
   if (Priority != 65535)
@@ -1397,9 +1608,11 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForConstant(
     const DataLayout &DL, SectionKind Kind, const Constant *C,
     unsigned &Align) const {
   if (Kind.isMergeableConst() && C &&
-      getContext().getAsmInfo()->hasCOFFAssociativeComdats()) {
-    // GNU binutils doesn't support the kind of symbol with a null
-    // storage class that this generates.
+      getContext().getAsmInfo()->hasCOFFComdatConstants()) {
+    // This creates comdat sections with the given symbol name, but unless
+    // AsmPrinter::GetCPISymbol actually makes the symbol global, the symbol
+    // will be created with a null storage class, which makes GNU binutils
+    // error out.
     const unsigned Characteristics = COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                      COFF::IMAGE_SCN_MEM_READ |
                                      COFF::IMAGE_SCN_LNK_COMDAT;
@@ -1563,6 +1776,10 @@ const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
 void TargetLoweringObjectFileWasm::InitializeWasm() {
   StaticCtorSection =
       getContext().getWasmSection(".init_array", SectionKind::getData());
+
+  // We don't use PersonalityEncoding and LSDAEncoding because we don't emit
+  // .cfi directives. We use TTypeEncoding to encode typeinfo global variables.
+  TTypeEncoding = dwarf::DW_EH_PE_absptr;
 }
 
 MCSection *TargetLoweringObjectFileWasm::getStaticCtorSection(

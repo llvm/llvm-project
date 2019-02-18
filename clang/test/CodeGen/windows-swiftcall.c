@@ -5,7 +5,7 @@
 #define ERROR __attribute__((swift_error_result))
 #define CONTEXT __attribute__((swift_context))
 
-// CHECK: [[STRUCT2_RESULT:@.*]] = private {{.*}} constant [[STRUCT2_TYPE:%.*]] { i32 0, i8 0, i8 undef, i8 0, float 0.000000e+00, float 0.000000e+00 }
+// CHECK: [[STRUCT2_RESULT:@.*]] = private {{.*}} constant [[STRUCT2_TYPE:%.*]] { i32 0, i8 0, i8 undef, i8 0, i32 0, i32 0 }
 
 /*****************************************************************************/
 /****************************** PARAMETER ABIS *******************************/
@@ -93,8 +93,8 @@ typedef struct {
   int x;
   char c0;
   char c1;
-  float f0;
-  float f1;
+  int f0;
+  int f1;
 } struct_1;
 TEST(struct_1);
 // CHECK-LABEL: define dso_local swiftcc { i64, i64 } @return_struct_1() {{.*}}{
@@ -141,8 +141,8 @@ typedef struct {
   int x;
   char c0;
   __attribute__((aligned(2))) char c1;
-  float f0;
-  float f1;
+  int f0;
+  int f1;
 } struct_2;
 TEST(struct_2);
 // CHECK-LABEL: define dso_local swiftcc { i64, i64 } @return_struct_2() {{.*}}{
@@ -299,20 +299,30 @@ typedef union {
 TEST(union_hom_fp_partial)
 // CHECK: define dso_local void @test_union_hom_fp_partial()
 // CHECK:   [[AGG:%.*]] = alloca [[UNION:%.*]], align 16
-// CHECK:   [[CALL:%.*]] = call swiftcc { i64, i64 } @return_union_hom_fp_partial()
-// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { i64, i64 }*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 0
-// CHECK:   [[T1:%.*]] = extractvalue { i64, i64 } [[CALL]], 0
-// CHECK:   store i64 [[T1]], i64* [[T0]], align 16
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 1
-// CHECK:   [[T1:%.*]] = extractvalue { i64, i64 } [[CALL]], 1
-// CHECK:   store i64 [[T1]], i64* [[T0]], align 8
-// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { i64, i64 }*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 0
-// CHECK:   [[V0:%.*]] = load i64, i64* [[T0]], align 16
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 1
-// CHECK:   [[V1:%.*]] = load i64, i64* [[T0]], align 8
-// CHECK:   call swiftcc void @take_union_hom_fp_partial(i64 [[V0]], i64 [[V1]])
+// CHECK:   [[CALL:%.*]] = call swiftcc { float, float, float, float } @return_union_hom_fp_partial()
+// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { float, float, float, float }*
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 0
+// CHECK:   [[T1:%.*]] = extractvalue { float, float, float, float } [[CALL]], 0
+// CHECK:   store float [[T1]], float* [[T0]], align 16
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 1
+// CHECK:   [[T1:%.*]] = extractvalue { float, float, float, float } [[CALL]], 1
+// CHECK:   store float [[T1]], float* [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 2
+// CHECK:   [[T1:%.*]] = extractvalue { float, float, float, float } [[CALL]], 2
+// CHECK:   store float [[T1]], float* [[T0]], align 8
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 3
+// CHECK:   [[T1:%.*]] = extractvalue { float, float, float, float } [[CALL]], 3
+// CHECK:   store float [[T1]], float* [[T0]], align 4
+// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { float, float, float, float }*
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 0
+// CHECK:   [[V0:%.*]] = load float, float* [[T0]], align 16
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 1
+// CHECK:   [[V1:%.*]] = load float, float* [[T0]], align 4
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 2
+// CHECK:   [[V2:%.*]] = load float, float* [[T0]], align 8
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { float, float, float, float }, { float, float, float, float }* [[CAST]], i32 0, i32 3
+// CHECK:   [[V3:%.*]] = load float, float* [[T0]], align 4
+// CHECK:   call swiftcc void @take_union_hom_fp_partial(float [[V0]], float [[V1]], float [[V2]], float [[V3]])
 // CHECK:   ret void
 // CHECK: }
 
@@ -323,20 +333,25 @@ typedef union {
 TEST(union_het_fpv_partial)
 // CHECK-LABEL: define dso_local void @test_union_het_fpv_partial()
 // CHECK:   [[AGG:%.*]] = alloca [[UNION:%.*]], align 16
-// CHECK:   [[CALL:%.*]] = call swiftcc { i64, i64 } @return_union_het_fpv_partial()
-// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { i64, i64 }*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 0
-// CHECK:   [[T1:%.*]] = extractvalue { i64, i64 } [[CALL]], 0
+// CHECK:   [[CALL:%.*]] = call swiftcc { i64, float, float } @return_union_het_fpv_partial()
+// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { i64, float, float }*
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, float, float }, { i64, float, float }* [[CAST]], i32 0, i32 0
+// CHECK:   [[T1:%.*]] = extractvalue { i64, float, float } [[CALL]], 0
 // CHECK:   store i64 [[T1]], i64* [[T0]], align 16
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 1
-// CHECK:   [[T1:%.*]] = extractvalue { i64, i64 } [[CALL]], 1
-// CHECK:   store i64 [[T1]], i64* [[T0]], align 8
-// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { i64, i64 }*
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 0
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, float, float }, { i64, float, float }* [[CAST]], i32 0, i32 1
+// CHECK:   [[T1:%.*]] = extractvalue { i64, float, float } [[CALL]], 1
+// CHECK:   store float [[T1]], float* [[T0]], align 8
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, float, float }, { i64, float, float }* [[CAST]], i32 0, i32 2
+// CHECK:   [[T1:%.*]] = extractvalue { i64, float, float } [[CALL]], 2
+// CHECK:   store float [[T1]], float* [[T0]], align 4
+// CHECK:   [[CAST:%.*]] = bitcast [[UNION]]* [[AGG]] to { i64, float, float }*
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, float, float }, { i64, float, float }* [[CAST]], i32 0, i32 0
 // CHECK:   [[V0:%.*]] = load i64, i64* [[T0]], align 16
-// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, i64 }, { i64, i64 }* [[CAST]], i32 0, i32 1
-// CHECK:   [[V1:%.*]] = load i64, i64* [[T0]], align 8
-// CHECK:   call swiftcc void @take_union_het_fpv_partial(i64 [[V0]], i64 [[V1]])
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, float, float }, { i64, float, float }* [[CAST]], i32 0, i32 1
+// CHECK:   [[V1:%.*]] = load float, float* [[T0]], align 8
+// CHECK:   [[T0:%.*]] = getelementptr inbounds { i64, float, float }, { i64, float, float }* [[CAST]], i32 0, i32 2
+// CHECK:   [[V2:%.*]] = load float, float* [[T0]], align 4
+// CHECK:   call swiftcc void @take_union_het_fpv_partial(i64 [[V0]], float [[V1]], float [[V2]])
 // CHECK:   ret void
 // CHECK: }
 

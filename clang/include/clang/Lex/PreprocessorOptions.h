@@ -13,7 +13,7 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include <memory> 
+#include <memory>
 #include <set>
 #include <string>
 #include <utility>
@@ -27,7 +27,7 @@ class MemoryBuffer;
 
 namespace clang {
 
-/// Enumerate the kinds of standard library that 
+/// Enumerate the kinds of standard library that
 enum ObjCXXARCStandardLibraryKind {
   ARCXX_nolib,
 
@@ -37,7 +37,7 @@ enum ObjCXXARCStandardLibraryKind {
   /// libstdc++
   ARCXX_libstdcxx
 };
-  
+
 /// PreprocessorOptions - This class is used for passing the various options
 /// used in preprocessor initialization to InitializePreprocessor().
 class PreprocessorOptions {
@@ -53,6 +53,16 @@ public:
   /// Whether we should maintain a detailed record of all macro
   /// definitions and expansions.
   bool DetailedRecord = false;
+
+  /// When true, we are creating or using a PCH where a #pragma hdrstop is
+  /// expected to indicate the beginning or end of the PCH.
+  bool PCHWithHdrStop = false;
+
+  /// When true, we are creating a PCH or creating the PCH object while
+  /// expecting a #pragma hdrstop to separate the two.  Allow for a
+  /// missing #pragma hdrstop, which generates a PCH for the whole file,
+  /// and creates an empty PCH object.
+  bool PCHWithHdrStopCreate = false;
 
   /// If non-empty, the filename used in an #include directive in the primary
   /// source file (or command-line preinclude) that is used to implement
@@ -100,13 +110,6 @@ public:
   /// clients don't use them.
   bool WriteCommentListToPCH = true;
 
-  /// The implicit PTH input included at the start of the translation unit, or
-  /// empty.
-  std::string ImplicitPTHInclude;
-
-  /// If given, a PTH cache file to use for speeding up header parsing.
-  std::string TokenCache;
-
   /// When enabled, preprocessor is in a mode for parsing a single file only.
   ///
   /// Disables #includes of other files and if there are unresolved identifiers
@@ -136,15 +139,15 @@ public:
   /// the buffers associated with remapped files.
   ///
   /// This flag defaults to false; it can be set true only through direct
-  /// manipulation of the compiler invocation object, in cases where the 
+  /// manipulation of the compiler invocation object, in cases where the
   /// compiler invocation and its buffers will be reused.
   bool RetainRemappedFileBuffers = false;
-  
+
   /// The Objective-C++ ARC standard library that we should support,
   /// by providing appropriate definitions to retrofit the standard library
   /// with support for lifetime-qualified pointers.
   ObjCXXARCStandardLibraryKind ObjCXXARCStandardLibrary = ARCXX_nolib;
-    
+
   /// Records the set of modules
   class FailedModulesSet {
     llvm::StringSet<> Failed;
@@ -158,7 +161,7 @@ public:
       Failed.insert(module);
     }
   };
-  
+
   /// The set of modules that failed to build.
   ///
   /// This pointer will be shared among all of the compiler instances created
@@ -185,7 +188,7 @@ public:
     RemappedFiles.clear();
     RemappedFileBuffers.clear();
   }
-  
+
   /// Reset any options that are not considered when building a
   /// module.
   void resetNonModularOptions() {
@@ -194,8 +197,6 @@ public:
     ChainedIncludes.clear();
     DumpDeserializedPCHDecls = false;
     ImplicitPCHInclude.clear();
-    ImplicitPTHInclude.clear();
-    TokenCache.clear();
     SingleFileParseMode = false;
     LexEditorPlaceholders = true;
     RetainRemappedFileBuffers = true;

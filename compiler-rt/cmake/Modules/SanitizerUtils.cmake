@@ -51,7 +51,15 @@ endmacro()
 # This function is only used on Darwin, where undefined symbols must be specified
 # in the linker invocation.
 function(add_weak_symbols libname link_flags)
-  file(STRINGS "${COMPILER_RT_SOURCE_DIR}/lib/${libname}/weak_symbols.txt" WEAK_SYMBOLS)
+  set(weak_symbols_file "${COMPILER_RT_SOURCE_DIR}/lib/${libname}/weak_symbols.txt")
+  file(STRINGS  "${weak_symbols_file}" WEAK_SYMBOLS)
+  # Add this file as a configure-time dependency so that changes to this
+  # file trigger a re-configure. This is necessary so that `${link_flags}`
+  # is changed when appropriate.
+  set_property(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    APPEND
+    PROPERTY CMAKE_CONFIGURE_DEPENDS "${weak_symbols_file}")
   set(local_link_flags ${${link_flags}})
   foreach(SYMBOL ${WEAK_SYMBOLS})
     set(local_link_flags ${local_link_flags} -Wl,-U,${SYMBOL})

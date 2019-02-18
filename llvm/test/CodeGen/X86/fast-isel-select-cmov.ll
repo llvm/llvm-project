@@ -31,9 +31,9 @@ define zeroext i16 @select_cmp_cmov_i16(i16 zeroext %a, i16 zeroext %b) {
 define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 ; CHECK-LABEL: select_cmov_i32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    cmovel %edx, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmovel %edx, %eax
 ; CHECK-NEXT:    retq
   %1 = select i1 %cond, i32 %a, i32 %b
   ret i32 %1
@@ -42,9 +42,9 @@ define i32 @select_cmov_i32(i1 zeroext %cond, i32 %a, i32 %b) {
 define i32 @select_cmp_cmov_i32(i32 %a, i32 %b) {
 ; CHECK-LABEL: select_cmp_cmov_i32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    cmpl %esi, %edi
-; CHECK-NEXT:    cmovbl %edi, %esi
 ; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = icmp ult i32 %a, %b
   %2 = select i1 %1, i32 %a, i32 %b
@@ -54,9 +54,9 @@ define i32 @select_cmp_cmov_i32(i32 %a, i32 %b) {
 define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 ; CHECK-LABEL: select_cmov_i64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    cmoveq %rdx, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    cmoveq %rdx, %rax
 ; CHECK-NEXT:    retq
   %1 = select i1 %cond, i64 %a, i64 %b
   ret i64 %1
@@ -65,9 +65,9 @@ define i64 @select_cmov_i64(i1 zeroext %cond, i64 %a, i64 %b) {
 define i64 @select_cmp_cmov_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: select_cmp_cmov_i64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    cmpq %rsi, %rdi
-; CHECK-NEXT:    cmovbq %rdi, %rsi
 ; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    retq
   %1 = icmp ult i64 %a, %b
   %2 = select i1 %1, i64 %a, i64 %b

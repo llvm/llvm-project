@@ -14,9 +14,12 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 
 # CHECK:      Iterations:        1500
 # CHECK-NEXT: Instructions:      6000
-# CHECK-NEXT: Total Cycles:      6003
-# CHECK-NEXT: Dispatch Width:    2
-# CHECK-NEXT: IPC:               1.00
+# CHECK-NEXT: Total Cycles:      3003
+# CHECK-NEXT: Total uOps:        6000
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    2.00
+# CHECK-NEXT: IPC:               2.00
 # CHECK-NEXT: Block RThroughput: 2.0
 
 # CHECK:      Instruction Info:
@@ -61,21 +64,20 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -     vpcmpeqq	%xmm3, %xmm3, %xmm0
 
 # CHECK:      Timeline view:
-# CHECK-NEXT:                     01234
-# CHECK-NEXT: Index     0123456789
+# CHECK-NEXT: Index     012345678
 
-# CHECK:      [0,0]     DeER .    .   .   vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [0,1]     D=eER.    .   .   vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: [0,2]     .D=eER    .   .   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [0,3]     .D==eER   .   .   vpcmpeqq	%xmm3, %xmm3, %xmm0
-# CHECK-NEXT: [1,0]     . D==eER  .   .   vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [1,1]     . D===eER .   .   vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: [1,2]     .  D===eER.   .   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [1,3]     .  D====eER   .   vpcmpeqq	%xmm3, %xmm3, %xmm0
-# CHECK-NEXT: [2,0]     .   D====eER  .   vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: [2,1]     .   D=====eER .   vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: [2,2]     .    D=====eER.   vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: [2,3]     .    D======eER   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK:      [0,0]     DeER .  .   vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [0,1]     DeER .  .   vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [0,2]     .DeER.  .   vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [0,3]     .DeER.  .   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: [1,0]     . DeER  .   vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [1,1]     . DeER  .   vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [1,2]     .  DeER .   vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [1,3]     .  DeER .   vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: [2,0]     .   DeER.   vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: [2,1]     .   DeER.   vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: [2,2]     .    DeER   vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: [2,3]     .    DeER   vpcmpeqq	%xmm3, %xmm3, %xmm0
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions
@@ -84,7 +86,7 @@ vpcmpeqq %xmm3, %xmm3, %xmm0
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     3     3.0    0.3    0.0       vpcmpeqb	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT: 1.     3     4.0    0.0    0.0       vpcmpeqw	%xmm1, %xmm1, %xmm2
-# CHECK-NEXT: 2.     3     4.0    0.0    0.0       vpcmpeqd	%xmm2, %xmm2, %xmm3
-# CHECK-NEXT: 3.     3     5.0    0.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm0
+# CHECK-NEXT: 0.     3     1.0    1.0    0.0       vpcmpeqb	%xmm0, %xmm0, %xmm1
+# CHECK-NEXT: 1.     3     1.0    1.0    0.0       vpcmpeqw	%xmm1, %xmm1, %xmm2
+# CHECK-NEXT: 2.     3     1.0    1.0    0.0       vpcmpeqd	%xmm2, %xmm2, %xmm3
+# CHECK-NEXT: 3.     3     1.0    1.0    0.0       vpcmpeqq	%xmm3, %xmm3, %xmm0

@@ -152,3 +152,5 @@ formatv_object_base::parseFormatString(StringRef Fmt) {
   }
   return Replacements;
 }
+
+void detail::format_adapter::anchor() { }

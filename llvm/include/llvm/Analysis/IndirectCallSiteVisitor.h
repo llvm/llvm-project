@@ -10,6 +10,9 @@
 // This file implements defines a visitor class and a helper function that find
 // all indirect call-sites in a function.
 
+#ifndef LLVM_ANALYSIS_INDIRECTCALLSITEVISITOR_H
+#define LLVM_ANALYSIS_INDIRECTCALLSITEVISITOR_H
+
 #include "llvm/IR/InstVisitor.h"
 #include <vector>
 
@@ -33,3 +36,5 @@ inline std::vector<Instruction *> findIndirectCallSites(Function &F) {
   return ICV.IndirectCallInsts;
 }
 }
+
+#endif

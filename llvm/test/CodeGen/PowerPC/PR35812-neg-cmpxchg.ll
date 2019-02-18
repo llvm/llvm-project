@@ -2,7 +2,7 @@
 ; Make sure that a negative value for the compare-and-swap is zero extended
 ; from i8/i16 to i32 since it will be compared for equality.
 ; RUN: llc -mtriple=powerpc64le-linux-gnu -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=powerpc64le-linux-gnu -mcpu=pwr7 < %s | FileCheck %s --check-prefix=CHECK-P7
+; RUN: llc -mtriple=powerpc64le-linux-gnu -mcpu=pwr7 -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-P7
 
 @str = private unnamed_addr constant [46 x i8] c"FAILED: __atomic_compare_exchange_n() failed.\00"
 @str.1 = private unnamed_addr constant [59 x i8] c"FAILED: __atomic_compare_exchange_n() set the wrong value.\00"
@@ -33,24 +33,24 @@ define signext i32 @main() {
 ;
 ; CHECK-P7-LABEL: main:
 ; CHECK-P7:    li 3, -32477
-; CHECK-P7:    lis 4, 0
+; CHECK-P7:    lis 5, 0
 ; CHECK-P7:    li 7, 0
-; CHECK-P7:    li 5, 234
 ; CHECK-P7:    sth 3, 46(1)
-; CHECK-P7:    ori 4, 4, 33059
-; CHECK-P7:    rlwinm 3, 6, 3, 27, 27
+; CHECK-P7:    li 6, 234
+; CHECK-P7:    ori 5, 5, 33059
+; CHECK-P7:    rlwinm 3, 4, 3, 27, 27
 ; CHECK-P7:    ori 7, 7, 65535
 ; CHECK-P7:    sync
+; CHECK-P7:    slw 6, 6, 3
 ; CHECK-P7:    slw 8, 5, 3
-; CHECK-P7:    slw 9, 4, 3
-; CHECK-P7:    rldicr 4, 6, 0, 61
 ; CHECK-P7:    slw 5, 7, 3
-; CHECK-P7:    and 7, 8, 5
-; CHECK-P7:    and 8, 9, 5
+; CHECK-P7:    rldicr 4, 4, 0, 61
+; CHECK-P7:    and 7, 6, 5
+; CHECK-P7:    and 8, 8, 5
 ; CHECK-P7:  .LBB0_1: # %L.entry
 ; CHECK-P7:    lwarx 9, 0, 4
 ; CHECK-P7:    and 6, 9, 5
-; CHECK-P7:    cmpw 0, 6, 8
+; CHECK-P7:    cmpw 6, 8
 ; CHECK-P7:    bne 0, .LBB0_3
 ; CHECK-P7:    andc 9, 9, 5
 ; CHECK-P7:    or 9, 9, 7

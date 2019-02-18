@@ -483,9 +483,9 @@ CAMLprim value llvm_struct_set_body(LLVMTypeRef Ty,
 CAMLprim value llvm_struct_name(LLVMTypeRef Ty)
 {
   CAMLparam0();
+  CAMLlocal1(result);
   const char *C = LLVMGetStructName(Ty);
   if (C) {
-    CAMLlocal1(result);
     result = caml_alloc_small(1, 0);
     Store_field(result, 0, caml_copy_string(C));
     CAMLreturn(result);
@@ -508,6 +508,11 @@ CAMLprim value llvm_is_packed(LLVMTypeRef StructTy) {
 /* lltype -> bool */
 CAMLprim value llvm_is_opaque(LLVMTypeRef StructTy) {
   return Val_bool(LLVMIsOpaqueStruct(StructTy));
+}
+
+/* lltype -> bool */
+CAMLprim value llvm_is_literal(LLVMTypeRef StructTy) {
+  return Val_bool(LLVMIsLiteralStruct(StructTy));
 }
 
 /*--... Operations on array, pointer, and vector types .....................--*/
@@ -619,6 +624,7 @@ enum ValueKind {
   ConstantVector,
   Function,
   GlobalAlias,
+  GlobalIFunc,
   GlobalVariable,
   UndefValue,
   Instruction
@@ -630,6 +636,7 @@ enum ValueKind {
 
 CAMLprim value llvm_classify_value(LLVMValueRef Val) {
   CAMLparam0();
+  CAMLlocal1(result);
   if (!Val)
     CAMLreturn(Val_int(NullValue));
   if (LLVMIsAConstant(Val)) {
@@ -646,7 +653,6 @@ CAMLprim value llvm_classify_value(LLVMValueRef Val) {
     DEFINE_CASE(Val, ConstantVector);
   }
   if (LLVMIsAInstruction(Val)) {
-    CAMLlocal1(result);
     result = caml_alloc_small(1, 0);
     Store_field(result, 0, Val_int(LLVMGetInstructionOpcode(Val)));
     CAMLreturn(result);
@@ -654,6 +660,7 @@ CAMLprim value llvm_classify_value(LLVMValueRef Val) {
   if (LLVMIsAGlobalValue(Val)) {
     DEFINE_CASE(Val, Function);
     DEFINE_CASE(Val, GlobalAlias);
+    DEFINE_CASE(Val, GlobalIFunc);
     DEFINE_CASE(Val, GlobalVariable);
   }
   DEFINE_CASE(Val, Argument);
@@ -723,6 +730,19 @@ CAMLprim value llvm_set_operand(LLVMValueRef U, value I, LLVMValueRef V) {
 /* llvalue -> int */
 CAMLprim value llvm_num_operands(LLVMValueRef V) {
   return Val_int(LLVMGetNumOperands(V));
+}
+
+/* llvalue -> int array */
+CAMLprim value llvm_indices(LLVMValueRef Instr) {
+  CAMLparam0();
+  CAMLlocal1(indices);
+  unsigned n = LLVMGetNumIndices(Instr);
+  const unsigned *Indices = LLVMGetIndices(Instr);
+  indices = caml_alloc(n, 0);
+  for (unsigned i = 0; i < n; i++) {
+    Op_val(indices)[i] = Val_int(Indices[i]);
+  }
+  CAMLreturn(indices);
 }
 
 /*--... Operations on constants of (mostly) any type .......................--*/
@@ -802,12 +822,11 @@ CAMLprim LLVMValueRef llvm_mdnull(LLVMContextRef C) {
 /* llvalue -> string option */
 CAMLprim value llvm_get_mdstring(LLVMValueRef V) {
   CAMLparam0();
+  CAMLlocal2(Option, Str);
   const char *S;
   unsigned Len;
 
   if ((S = LLVMGetMDString(V, &Len))) {
-    CAMLlocal2(Option, Str);
-
     Str = caml_alloc_string(Len);
     memcpy(String_val(Str), S, Len);
     Option = alloc(1,0);
@@ -1515,7 +1534,7 @@ CAMLprim value llvm_instr_get_opcode(LLVMValueRef Inst) {
   if (!LLVMIsAInstruction(Inst))
       failwith("Not an instruction");
   o = LLVMGetInstructionOpcode(Inst);
-  assert (o <= LLVMLandingPad);
+  assert (o <= LLVMCatchSwitch);
   return Val_int(o);
 }
 
@@ -1596,6 +1615,11 @@ CAMLprim value llvm_remove_string_call_site_attr(LLVMValueRef F, value Kind,
 }
 
 /*--... Operations on call instructions (only) .............................--*/
+
+/* llvalue -> int */
+CAMLprim value llvm_num_arg_operands(LLVMValueRef V) {
+  return Val_int(LLVMGetNumArgOperands(V));
+}
 
 /* llvalue -> bool */
 CAMLprim value llvm_is_tail_call(LLVMValueRef CallInst) {
@@ -1902,6 +1926,11 @@ CAMLprim value llvm_add_clause(LLVMValueRef LandingPadInst, LLVMValueRef ClauseV
     return Val_unit;
 }
 
+/* llvalue -> bool */
+CAMLprim value llvm_is_cleanup(LLVMValueRef LandingPadInst)
+{
+    return Val_bool(LLVMIsCleanup(LandingPadInst));
+}
 
 /* llvalue -> bool -> unit */
 CAMLprim value llvm_set_cleanup(LLVMValueRef LandingPadInst, value flag)

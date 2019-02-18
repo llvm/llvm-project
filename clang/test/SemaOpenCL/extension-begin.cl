@@ -1,37 +1,29 @@
 // Test this without pch.
-// RUN: %clang_cc1 %s -DHEADER -DHEADER_USER -triple spir-unknown-unknown -verify -pedantic -fsyntax-only
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -verify -pedantic -fsyntax-only
 
 // Test with pch.
-// RUN: %clang_cc1 %s -DHEADER -triple spir-unknown-unknown -emit-pch -o %t -verify -pedantic
-// RUN: %clang_cc1 %s -DHEADER_USER -triple spir-unknown-unknown -include-pch %t -fsyntax-only -verify -pedantic
+// RUN: %clang_cc1 -x cl %S/extension-begin.h -triple spir-unknown-unknown -emit-pch -o %t.pch -pedantic
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -include-pch %t.pch -DIMPLICIT_INCLUDE -DUSE_PCH -fsyntax-only -verify -pedantic
 
-#if defined(HEADER) && !defined(INCLUDED)
-#define INCLUDED 
+// Test with modules
+// RUN: rm -rf %t.modules
+// RUN: mkdir -p %t.modules
+//
+// RUN: %clang_cc1 -cl-std=CL1.2 -DIMPLICIT_INCLUDE -include %S/extension-begin.h -triple spir-unknown-unknown -O0 -emit-llvm -o - -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.modules %s -verify -pedantic
+//
+// RUN: rm -rf %t.modules
+// RUN: mkdir -p %t.modules
+//
+// RUN: %clang_cc1 -cl-std=CL2.0 -DIMPLICIT_INCLUDE -include %S/extension-begin.h -triple spir-unknown-unknown -O0 -emit-llvm -o - -fmodules -fimplicit-module-maps -fmodules-cache-path=%t.modules %s -verify -pedantic
 
-#pragma OPENCL EXTENSION all : begin // expected-warning {{expected 'disable' - ignoring}}
-#pragma OPENCL EXTENSION all : end // expected-warning {{expected 'disable' - ignoring}}
-
-#pragma OPENCL EXTENSION my_ext : begin 
-
-struct A {
-  int a;
-};
-
-typedef struct A TypedefOfA;
-typedef const TypedefOfA* PointerOfA;
-
-void f(void);
-
-__attribute__((overloadable)) void g(long x);
-
-#pragma OPENCL EXTENSION my_ext : end
-#pragma OPENCL EXTENSION my_ext : end // expected-warning {{OpenCL extension end directive mismatches begin directive - ignoring}}
-
-__attribute__((overloadable)) void g(void);
-
-#endif // defined(HEADER) && !defined(INCLUDED)
-
-#ifdef HEADER_USER
+#ifndef IMPLICIT_INCLUDE
+#include "extension-begin.h"
+#endif // IMPLICIT_INCLUDE
+#ifndef USE_PCH
+// expected-warning@extension-begin.h:4 {{expected 'disable' - ignoring}}
+// expected-warning@extension-begin.h:5 {{expected 'disable' - ignoring}}
+// expected-warning@extension-begin.h:21 {{OpenCL extension end directive mismatches begin directive - ignoring}}
+#endif // USE_PCH
 
 #pragma OPENCL EXTENSION my_ext : enable
 void test_f1(void) {
@@ -48,9 +40,7 @@ void test_f2(void) {
   PointerOfA test_A_pointer; // expected-error {{use of type 'PointerOfA' (aka 'const struct A *') requires my_ext extension to be enabled}}
   f(); // expected-error {{use of declaration 'f' requires my_ext extension to be enabled}}
   g(0); // expected-error {{no matching function for call to 'g'}}
-        // expected-note@-26 {{candidate disabled due to OpenCL extension}}
-        // expected-note@-22 {{candidate function not viable: requires 0 arguments, but 1 was provided}}
+        // expected-note@extension-begin.h:18 {{candidate unavailable as it requires OpenCL extension 'my_ext' to be enabled}}
+        // expected-note@extension-begin.h:23 {{candidate function not viable: requires 0 arguments, but 1 was provided}}
 }
-
-#endif // HEADER_USER
 

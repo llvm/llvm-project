@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_IPDBRAWSYMBOL_H
 
 #include "PDBTypes.h"
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -21,8 +22,25 @@ class raw_ostream;
 
 namespace pdb {
 
+class IPDBSession;
 class PDBSymbolTypeVTable;
 class PDBSymbolTypeVTableShape;
+
+enum class PdbSymbolIdField : uint32_t {
+  None = 0,
+  SymIndexId = 1 << 0,
+  LexicalParent = 1 << 1,
+  ClassParent = 1 << 2,
+  Type = 1 << 3,
+  UnmodifiedType = 1 << 4,
+  All = 0xFFFFFFFF,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ All)
+};
+
+void dumpSymbolIdField(raw_ostream &OS, StringRef Name, SymIndexId Value,
+                       int Indent, const IPDBSession &Session,
+                       PdbSymbolIdField FieldId, PdbSymbolIdField ShowFlags,
+                       PdbSymbolIdField RecurseFlags);
 
 /// IPDBRawSymbol defines an interface used to represent an arbitrary symbol.
 /// It exposes a monolithic interface consisting of accessors for the union of
@@ -33,7 +51,8 @@ class IPDBRawSymbol {
 public:
   virtual ~IPDBRawSymbol();
 
-  virtual void dump(raw_ostream &OS, int Indent) const = 0;
+  virtual void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
+                    PdbSymbolIdField RecurseIdFields) const = 0;
 
   virtual std::unique_ptr<IPDBEnumSymbols>
   findChildren(PDB_SymType Type) const = 0;
@@ -74,26 +93,26 @@ public:
   virtual uint32_t getAddressOffset() const = 0;
   virtual uint32_t getAddressSection() const = 0;
   virtual uint32_t getAge() const = 0;
-  virtual uint32_t getArrayIndexTypeId() const = 0;
+  virtual SymIndexId getArrayIndexTypeId() const = 0;
   virtual uint32_t getBaseDataOffset() const = 0;
   virtual uint32_t getBaseDataSlot() const = 0;
-  virtual uint32_t getBaseSymbolId() const = 0;
+  virtual SymIndexId getBaseSymbolId() const = 0;
   virtual PDB_BuiltinType getBuiltinType() const = 0;
   virtual uint32_t getBitPosition() const = 0;
   virtual PDB_CallingConv getCallingConvention() const = 0;
-  virtual uint32_t getClassParentId() const = 0;
+  virtual SymIndexId getClassParentId() const = 0;
   virtual std::string getCompilerName() const = 0;
   virtual uint32_t getCount() const = 0;
   virtual uint32_t getCountLiveRanges() const = 0;
   virtual void getFrontEndVersion(VersionInfo &Version) const = 0;
   virtual PDB_Lang getLanguage() const = 0;
-  virtual uint32_t getLexicalParentId() const = 0;
+  virtual SymIndexId getLexicalParentId() const = 0;
   virtual std::string getLibraryName() const = 0;
   virtual uint32_t getLiveRangeStartAddressOffset() const = 0;
   virtual uint32_t getLiveRangeStartAddressSection() const = 0;
   virtual uint32_t getLiveRangeStartRelativeVirtualAddress() const = 0;
   virtual codeview::RegisterId getLocalBasePointerRegisterId() const = 0;
-  virtual uint32_t getLowerBoundId() const = 0;
+  virtual SymIndexId getLowerBoundId() const = 0;
   virtual uint32_t getMemorySpaceKind() const = 0;
   virtual std::string getName() const = 0;
   virtual uint32_t getNumberOfAcceleratorPointerTags() const = 0;
@@ -103,7 +122,7 @@ public:
   virtual uint32_t getNumberOfRows() const = 0;
   virtual std::string getObjectFileName() const = 0;
   virtual uint32_t getOemId() const = 0;
-  virtual uint32_t getOemSymbolId() const = 0;
+  virtual SymIndexId getOemSymbolId() const = 0;
   virtual uint32_t getOffsetInUdt() const = 0;
   virtual PDB_Cpu getPlatform() const = 0;
   virtual uint32_t getRank() const = 0;
@@ -118,9 +137,9 @@ public:
   virtual std::unique_ptr<IPDBLineNumber>
   getSrcLineOnTypeDefn() const = 0;
   virtual uint32_t getStride() const = 0;
-  virtual uint32_t getSubTypeId() const = 0;
+  virtual SymIndexId getSubTypeId() const = 0;
   virtual std::string getSymbolsFileName() const = 0;
-  virtual uint32_t getSymIndexId() const = 0;
+  virtual SymIndexId getSymIndexId() const = 0;
   virtual uint32_t getTargetOffset() const = 0;
   virtual uint32_t getTargetRelativeVirtualAddress() const = 0;
   virtual uint64_t getTargetVirtualAddress() const = 0;
@@ -128,18 +147,18 @@ public:
   virtual uint32_t getTextureSlot() const = 0;
   virtual uint32_t getTimeStamp() const = 0;
   virtual uint32_t getToken() const = 0;
-  virtual uint32_t getTypeId() const = 0;
+  virtual SymIndexId getTypeId() const = 0;
   virtual uint32_t getUavSlot() const = 0;
   virtual std::string getUndecoratedName() const = 0;
   virtual std::string getUndecoratedNameEx(PDB_UndnameFlags Flags) const = 0;
-  virtual uint32_t getUnmodifiedTypeId() const = 0;
-  virtual uint32_t getUpperBoundId() const = 0;
+  virtual SymIndexId getUnmodifiedTypeId() const = 0;
+  virtual SymIndexId getUpperBoundId() const = 0;
   virtual Variant getValue() const = 0;
   virtual uint32_t getVirtualBaseDispIndex() const = 0;
   virtual uint32_t getVirtualBaseOffset() const = 0;
   virtual std::unique_ptr<PDBSymbolTypeBuiltin>
   getVirtualBaseTableType() const = 0;
-  virtual uint32_t getVirtualTableShapeId() const = 0;
+  virtual SymIndexId getVirtualTableShapeId() const = 0;
   virtual PDB_DataKind getDataKind() const = 0;
   virtual PDB_SymType getSymTag() const = 0;
   virtual codeview::GUID getGuid() const = 0;
@@ -236,6 +255,8 @@ public:
   virtual bool wasInlined() const = 0;
   virtual std::string getUnused() const = 0;
 };
+
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 } // namespace pdb
 } // namespace llvm

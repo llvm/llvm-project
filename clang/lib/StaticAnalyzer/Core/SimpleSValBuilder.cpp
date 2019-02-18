@@ -440,7 +440,7 @@ static bool shouldRearrange(ProgramStateRef State, BinaryOperator::Opcode Op,
                             SymbolRef Sym, llvm::APSInt Int, QualType Ty) {
   return Sym->getType() == Ty &&
     (!BinaryOperator::isComparisonOp(Op) ||
-     (isWithinConstantOverflowBounds(Sym, State) && 
+     (isWithinConstantOverflowBounds(Sym, State) &&
       isWithinConstantOverflowBounds(Int)));
 }
 
@@ -454,16 +454,19 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
   QualType SingleTy;
 
   auto &Opts =
-    StateMgr.getOwningEngine()->getAnalysisManager().getAnalyzerOptions();
+    StateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions();
+
+  // FIXME: After putting complexity threshold to the symbols we can always
+  //        rearrange additive operations but rearrange comparisons only if
+  //        option is set.
+  if(!Opts.ShouldAggressivelySimplifyBinaryOperation)
+    return None;
 
   SymbolRef LSym = Lhs.getAsSymbol();
   if (!LSym)
     return None;
 
-  // Always rearrange additive operations but rearrange comparisons only if
-  // option is set.
-  if (BinaryOperator::isComparisonOp(Op) &&
-      Opts.shouldAggressivelySimplifyRelationalComparison()) {
+  if (BinaryOperator::isComparisonOp(Op)) {
     SingleTy = LSym->getType();
     if (ResultTy != SVB.getConditionType())
       return None;
@@ -472,15 +475,16 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
     SingleTy = ResultTy;
     if (LSym->getType() != SingleTy)
       return None;
-    // Substracting unsigned integers is a nightmare.
-    if (!SingleTy->isSignedIntegerOrEnumerationType())
-      return None;
   } else {
     // Don't rearrange other operations.
     return None;
   }
 
   assert(!SingleTy.isNull() && "We should have figured out the type by now!");
+
+  // Rearrange signed symbolic expressions only
+  if (!SingleTy->isSignedIntegerOrEnumerationType())
+    return None;
 
   SymbolRef RSym = Rhs.getAsSymbol();
   if (!RSym || RSym->getType() != SingleTy)
@@ -531,7 +535,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
   while (1) {
     switch (lhs.getSubKind()) {
     default:
-      return makeSymExprValNN(state, op, lhs, rhs, resultTy);
+      return makeSymExprValNN(op, lhs, rhs, resultTy);
     case nonloc::PointerToMemberKind: {
       assert(rhs.getSubKind() == nonloc::PointerToMemberKind &&
              "Both SVals should have pointer-to-member-type");
@@ -579,7 +583,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
               return makeTruthVal(true, resultTy);
             default:
               // This case also handles pointer arithmetic.
-              return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+              return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
           }
       }
     }
@@ -621,7 +625,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       case BO_LE:
       case BO_GE:
         op = BinaryOperator::reverseComparisonOp(op);
-        // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       case BO_EQ:
       case BO_NE:
       case BO_Add:
@@ -635,14 +639,14 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         // (~0)>>a
         if (LHSValue.isAllOnesValue() && LHSValue.isSigned())
           return evalCastFromNonLoc(lhs, resultTy);
-        // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       case BO_Shl:
         // 0<<a and 0>>a
         if (LHSValue == 0)
           return evalCastFromNonLoc(lhs, resultTy);
-        return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
       default:
-        return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+        return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
       }
     }
     case nonloc::SymbolValKind: {
@@ -754,7 +758,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         return *V;
 
       // Give up -- this is not a symbolic expression we can handle.
-      return makeSymExprValNN(state, op, InputLHS, InputRHS, resultTy);
+      return makeSymExprValNN(op, InputLHS, InputRHS, resultTy);
     }
     }
   }
@@ -1198,6 +1202,7 @@ SVal SimpleSValBuilder::evalBinOpLN(ProgramStateRef state,
 
 const llvm::APSInt *SimpleSValBuilder::getKnownValue(ProgramStateRef state,
                                                    SVal V) {
+  V = simplifySVal(state, V);
   if (V.isUnknownOrUndef())
     return nullptr;
 
@@ -1233,11 +1238,21 @@ SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
       return Sym == Val.getAsSymbol();
     }
 
+    SVal cache(SymbolRef Sym, SVal V) {
+      Cached[Sym] = V;
+      return V;
+    }
+
+    SVal skip(SymbolRef Sym) {
+      return cache(Sym, SVB.makeSymbolVal(Sym));
+    }
+
   public:
     Simplifier(ProgramStateRef State)
         : State(State), SVB(State->getStateManager().getSValBuilder()) {}
 
     SVal VisitSymbolData(const SymbolData *S) {
+      // No cache here.
       if (const llvm::APSInt *I =
               SVB.getKnownValue(State, SVB.makeSymbolVal(S)))
         return Loc::isLocType(S->getType()) ? (SVal)SVB.makeIntLocVal(*I)
@@ -1254,11 +1269,9 @@ SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
         return I->second;
 
       SVal LHS = Visit(S->getLHS());
-      if (isUnchanged(S->getLHS(), LHS)) {
-        SVal V = SVB.makeSymbolVal(S);
-        Cached[S] = V;
-        return V;
-      }
+      if (isUnchanged(S->getLHS(), LHS))
+        return skip(S);
+
       SVal RHS;
       // By looking at the APSInt in the right-hand side of S, we cannot
       // figure out if it should be treated as a Loc or as a NonLoc.
@@ -1278,9 +1291,8 @@ SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
         RHS = SVB.makeIntVal(S->getRHS());
       }
 
-      SVal V = SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType());
-      Cached[S] = V;
-      return V;
+      return cache(
+          S, SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType()));
     }
 
     SVal VisitSymSymExpr(const SymSymExpr *S) {
@@ -1288,16 +1300,21 @@ SVal SimpleSValBuilder::simplifySVal(ProgramStateRef State, SVal V) {
       if (I != Cached.end())
         return I->second;
 
+      // For now don't try to simplify mixed Loc/NonLoc expressions
+      // because they often appear from LocAsInteger operations
+      // and we don't know how to combine a LocAsInteger
+      // with a concrete value.
+      if (Loc::isLocType(S->getLHS()->getType()) !=
+          Loc::isLocType(S->getRHS()->getType()))
+        return skip(S);
+
       SVal LHS = Visit(S->getLHS());
       SVal RHS = Visit(S->getRHS());
-      if (isUnchanged(S->getLHS(), LHS) && isUnchanged(S->getRHS(), RHS)) {
-        SVal V = SVB.makeSymbolVal(S);
-        Cached[S] = V;
-        return V;
-      }
-      SVal V = SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType());
-      Cached[S] = V;
-      return V;
+      if (isUnchanged(S->getLHS(), LHS) && isUnchanged(S->getRHS(), RHS))
+        return skip(S);
+
+      return cache(
+          S, SVB.evalBinOp(State, S->getOpcode(), LHS, RHS, S->getType()));
     }
 
     SVal VisitSymExpr(SymbolRef S) { return nonloc::SymbolVal(S); }

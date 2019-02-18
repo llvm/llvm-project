@@ -34,8 +34,8 @@ define amdgpu_kernel void @commute_ne_64_i32(i32 addrspace(1)* %out, i32 addrspa
 
 ; FIXME: Why isn't this being folded as a constant?
 ; GCN-LABEL: {{^}}commute_ne_litk_i32:
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x3039
-; GCN: v_cmp_ne_u32_e32 vcc, v{{[0-9]+}}, [[K]]
+; GCN: s_movk_i32 [[K:s[0-9]+]], 0x3039
+; GCN: v_cmp_ne_u32_e32 vcc, [[K]], v{{[0-9]+}}
 define amdgpu_kernel void @commute_ne_litk_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid
@@ -100,8 +100,8 @@ define amdgpu_kernel void @commute_ule_63_i32(i32 addrspace(1)* %out, i32 addrsp
 }
 
 ; GCN-LABEL: {{^}}commute_ule_64_i32:
-; GCN: v_mov_b32_e32 [[K:v[0-9]+]], 0x41{{$}}
-; GCN: v_cmp_lt_u32_e32 vcc, v{{[0-9]+}}, [[K]]
+; GCN: s_movk_i32 [[K:s[0-9]+]], 0x41{{$}}
+; GCN: v_cmp_gt_u32_e32 vcc, [[K]], v{{[0-9]+}}
 define amdgpu_kernel void @commute_ule_64_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
   %gep.in = getelementptr i32, i32 addrspace(1)* %in, i32 %tid

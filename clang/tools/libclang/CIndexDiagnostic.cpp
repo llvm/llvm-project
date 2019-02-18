@@ -19,7 +19,6 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/DiagnosticRenderer.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 

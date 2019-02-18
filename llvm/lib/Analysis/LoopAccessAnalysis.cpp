@@ -176,8 +176,8 @@ const SCEV *llvm::replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 
 /// Calculate Start and End points of memory access.
 /// Let's assume A is the first access and B is a memory access on N-th loop
-/// iteration. Then B is calculated as:  
-///   B = A + Step*N . 
+/// iteration. Then B is calculated as:
+///   B = A + Step*N .
 /// Step value may be positive or negative.
 /// N is a calculated back-edge taken count:
 ///     N = (TripCount > 0) ? RoundDown(TripCount -1 , VF) : 0
@@ -342,7 +342,7 @@ void RuntimePointerChecking::groupChecks(
   //
   // The above case requires that we have an UnknownDependence between
   // accesses to the same underlying object. This cannot happen unless
-  // ShouldRetryWithRuntimeCheck is set, and therefore UseDependencies
+  // FoundNonConstantDistanceDependence is set, and therefore UseDependencies
   // is also false. In this case we will use the fallback path and create
   // separate checking groups for all pointers.
 
@@ -420,7 +420,7 @@ void RuntimePointerChecking::groupChecks(
 
     // We've computed the grouped checks for this partition.
     // Save the results and continue with the next one.
-    std::copy(Groups.begin(), Groups.end(), std::back_inserter(CheckingGroups));
+    llvm::copy(Groups, std::back_inserter(CheckingGroups));
   }
 }
 
@@ -509,7 +509,7 @@ public:
   /// Register a load  and whether it is only read from.
   void addLoad(MemoryLocation &Loc, bool IsReadOnly) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, MemoryLocation::UnknownSize, Loc.AATags);
+    AST.add(Ptr, LocationSize::unknown(), Loc.AATags);
     Accesses.insert(MemAccessInfo(Ptr, false));
     if (IsReadOnly)
       ReadOnlyPtr.insert(Ptr);
@@ -518,7 +518,7 @@ public:
   /// Register a store.
   void addStore(MemoryLocation &Loc) {
     Value *Ptr = const_cast<Value*>(Loc.Ptr);
-    AST.add(Ptr, MemoryLocation::UnknownSize, Loc.AATags);
+    AST.add(Ptr, LocationSize::unknown(), Loc.AATags);
     Accesses.insert(MemAccessInfo(Ptr, true));
   }
 
@@ -556,7 +556,7 @@ public:
   /// perform dependency checking.
   ///
   /// Note that this can later be cleared if we retry memcheck analysis without
-  /// dependency checking (i.e. ShouldRetryWithRuntimeCheck).
+  /// dependency checking (i.e. FoundNonConstantDistanceDependence).
   bool isDependencyCheckNeeded() { return !CheckDeps.empty(); }
 
   /// We decided that no dependence analysis would be used.  Reset the state.
@@ -604,8 +604,8 @@ private:
   ///
   /// Note that, this is different from isDependencyCheckNeeded.  When we retry
   /// memcheck analysis without dependency checking
-  /// (i.e. ShouldRetryWithRuntimeCheck), isDependencyCheckNeeded is cleared
-  /// while this remains set if we have potentially dependent accesses.
+  /// (i.e. FoundNonConstantDistanceDependence), isDependencyCheckNeeded is
+  /// cleared while this remains set if we have potentially dependent accesses.
   bool IsRTCheckAnalysisNeeded;
 
   /// The SCEV predicate containing all the SCEV-related assumptions.
@@ -1221,18 +1221,20 @@ bool llvm::isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
   return X == PtrSCEVB;
 }
 
-bool MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
+MemoryDepChecker::VectorizationSafetyStatus
+MemoryDepChecker::Dependence::isSafeForVectorization(DepType Type) {
   switch (Type) {
   case NoDep:
   case Forward:
   case BackwardVectorizable:
-    return true;
+    return VectorizationSafetyStatus::Safe;
 
   case Unknown:
+    return VectorizationSafetyStatus::PossiblySafeWithRtChecks;
   case ForwardButPreventsForwarding:
   case Backward:
   case BackwardVectorizableButPreventsForwarding:
-    return false;
+    return VectorizationSafetyStatus::Unsafe;
   }
   llvm_unreachable("unexpected DepType!");
 }
@@ -1317,7 +1319,12 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   return false;
 }
 
-/// Given a non-constant (unknown) dependence-distance \p Dist between two 
+void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
+  if (Status < S)
+    Status = S;
+}
+
+/// Given a non-constant (unknown) dependence-distance \p Dist between two
 /// memory accesses, that have the same stride whose absolute value is given
 /// in \p Stride, and that have the same type size \p TypeByteSize,
 /// in a loop whose takenCount is \p BackedgeTakenCount, check if it is
@@ -1336,19 +1343,19 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
 
   // If we can prove that
   //      (**) |Dist| > BackedgeTakenCount * Step
-  // where Step is the absolute stride of the memory accesses in bytes, 
+  // where Step is the absolute stride of the memory accesses in bytes,
   // then there is no dependence.
   //
-  // Ratioanle: 
-  // We basically want to check if the absolute distance (|Dist/Step|) 
-  // is >= the loop iteration count (or > BackedgeTakenCount). 
-  // This is equivalent to the Strong SIV Test (Practical Dependence Testing, 
-  // Section 4.2.1); Note, that for vectorization it is sufficient to prove 
+  // Ratioanle:
+  // We basically want to check if the absolute distance (|Dist/Step|)
+  // is >= the loop iteration count (or > BackedgeTakenCount).
+  // This is equivalent to the Strong SIV Test (Practical Dependence Testing,
+  // Section 4.2.1); Note, that for vectorization it is sufficient to prove
   // that the dependence distance is >= VF; This is checked elsewhere.
-  // But in some cases we can prune unknown dependence distances early, and 
-  // even before selecting the VF, and without a runtime test, by comparing 
-  // the distance against the loop iteration count. Since the vectorized code 
-  // will be executed only if LoopCount >= VF, proving distance >= LoopCount 
+  // But in some cases we can prune unknown dependence distances early, and
+  // even before selecting the VF, and without a runtime test, by comparing
+  // the distance against the loop iteration count. Since the vectorized code
+  // will be executed only if LoopCount >= VF, proving distance >= LoopCount
   // also guarantees that distance >= VF.
   //
   const uint64_t ByteStride = Stride * TypeByteSize;
@@ -1360,8 +1367,8 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   uint64_t DistTypeSize = DL.getTypeAllocSize(Dist.getType());
   uint64_t ProductTypeSize = DL.getTypeAllocSize(Product->getType());
 
-  // The dependence distance can be positive/negative, so we sign extend Dist; 
-  // The multiplication of the absolute stride in bytes and the 
+  // The dependence distance can be positive/negative, so we sign extend Dist;
+  // The multiplication of the absolute stride in bytes and the
   // backdgeTakenCount is non-negative, so we zero extend Product.
   if (DistTypeSize > ProductTypeSize)
     CastedProduct = SE.getZeroExtendExpr(Product, Dist.getType());
@@ -1485,7 +1492,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       return Dependence::NoDep;
 
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
-    ShouldRetryWithRuntimeCheck = true;
+    FoundNonConstantDistanceDependence = true;
     return Dependence::Unknown;
   }
 
@@ -1652,7 +1659,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
 
             Dependence::DepType Type =
                 isDependent(*A.first, A.second, *B.first, B.second, Strides);
-            SafeForVectorization &= Dependence::isSafeForVectorization(Type);
+            mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated MaxDependences
             // dependences.  In that case return as soon as we find the first
@@ -1669,7 +1676,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
                            << "Too many dependences, stopped recording\n");
               }
             }
-            if (!RecordDependences && !SafeForVectorization)
+            if (!RecordDependences && !isSafeForVectorization())
               return false;
           }
         ++OI;
@@ -1679,7 +1686,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
   }
 
   LLVM_DEBUG(dbgs() << "Total Dependences: " << Dependences.size() << "\n");
-  return SafeForVectorization;
+  return isSafeForVectorization();
 }
 
 SmallVector<Instruction *, 4>
@@ -1862,10 +1869,17 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
   // writes and between reads and writes, but not between reads and reads.
   ValueSet Seen;
 
+  // Record uniform store addresses to identify if we have multiple stores
+  // to the same address.
+  ValueSet UniformStores;
+
   for (StoreInst *ST : Stores) {
     Value *Ptr = ST->getPointerOperand();
-    // Check for store to loop invariant address.
-    StoreToLoopInvariantAddress |= isUniform(Ptr);
+
+    if (isUniform(Ptr))
+      HasDependenceInvolvingLoopInvariantAddress |=
+          !UniformStores.insert(Ptr).second;
+
     // If we did *not* see this pointer before, insert it to  the read-write
     // list. At this phase it is only a 'write' list.
     if (Seen.insert(Ptr).second) {
@@ -1905,6 +1919,14 @@ void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
         !getPtrStride(*PSE, Ptr, TheLoop, SymbolicStrides)) {
       ++NumReads;
       IsReadOnlyPtr = true;
+    }
+
+    // See if there is an unsafe dependency between a load to a uniform address and
+    // store to the same uniform address.
+    if (UniformStores.count(Ptr)) {
+      LLVM_DEBUG(dbgs() << "LAA: Found an unsafe dependency between a uniform "
+                           "load and uniform store to the same address!\n");
+      HasDependenceInvolvingLoopInvariantAddress = true;
     }
 
     MemoryLocation Loc = MemoryLocation::get(LD);
@@ -2212,24 +2234,24 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
                        "versioning:");
   LLVM_DEBUG(dbgs() << "  Ptr: " << *Ptr << " Stride: " << *Stride << "\n");
 
-  // Avoid adding the "Stride == 1" predicate when we know that 
+  // Avoid adding the "Stride == 1" predicate when we know that
   // Stride >= Trip-Count. Such a predicate will effectively optimize a single
   // or zero iteration loop, as Trip-Count <= Stride == 1.
-  // 
+  //
   // TODO: We are currently not making a very informed decision on when it is
   // beneficial to apply stride versioning. It might make more sense that the
-  // users of this analysis (such as the vectorizer) will trigger it, based on 
-  // their specific cost considerations; For example, in cases where stride 
+  // users of this analysis (such as the vectorizer) will trigger it, based on
+  // their specific cost considerations; For example, in cases where stride
   // versioning does  not help resolving memory accesses/dependences, the
-  // vectorizer should evaluate the cost of the runtime test, and the benefit 
-  // of various possible stride specializations, considering the alternatives 
-  // of using gather/scatters (if available). 
-  
+  // vectorizer should evaluate the cost of the runtime test, and the benefit
+  // of various possible stride specializations, considering the alternatives
+  // of using gather/scatters (if available).
+
   const SCEV *StrideExpr = PSE->getSCEV(Stride);
-  const SCEV *BETakenCount = PSE->getBackedgeTakenCount();  
+  const SCEV *BETakenCount = PSE->getBackedgeTakenCount();
 
   // Match the types so we can compare the stride and the BETakenCount.
-  // The Stride can be positive/negative, so we sign extend Stride; 
+  // The Stride can be positive/negative, so we sign extend Stride;
   // The backdgeTakenCount is non-negative, so we zero extend BETakenCount.
   const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
   uint64_t StrideTypeSize = DL.getTypeAllocSize(StrideExpr->getType());
@@ -2243,7 +2265,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
     CastedBECount = SE->getZeroExtendExpr(BETakenCount, StrideExpr->getType());
   const SCEV *StrideMinusBETaken = SE->getMinusSCEV(CastedStride, CastedBECount);
   // Since TripCount == BackEdgeTakenCount + 1, checking:
-  // "Stride >= TripCount" is equivalent to checking: 
+  // "Stride >= TripCount" is equivalent to checking:
   // Stride - BETakenCount > 0
   if (SE->isKnownPositive(StrideMinusBETaken)) {
     LLVM_DEBUG(
@@ -2265,7 +2287,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
       PtrRtChecking(llvm::make_unique<RuntimePointerChecking>(SE)),
       DepChecker(llvm::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L),
       NumLoads(0), NumStores(0), MaxSafeDepDistBytes(-1), CanVecMem(false),
-      StoreToLoopInvariantAddress(false) {
+      HasDependenceInvolvingLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
     analyzeLoop(AA, LI, TLI, DT);
 }
@@ -2297,8 +2319,8 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PtrRtChecking->print(OS, Depth);
   OS << "\n";
 
-  OS.indent(Depth) << "Store to invariant address was "
-                   << (StoreToLoopInvariantAddress ? "" : "not ")
+  OS.indent(Depth) << "Non vectorizable stores to invariant address were "
+                   << (HasDependenceInvolvingLoopInvariantAddress ? "" : "not ")
                    << "found in loop.\n";
 
   OS.indent(Depth) << "SCEV assumptions:\n";

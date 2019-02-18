@@ -12,7 +12,8 @@
 ; ModuleID = 'debuginfo-stackarg.c'
 source_filename = "debuginfo-stackarg.c"
 target datalayout = "E-m:o-p:32:32-f64:32:64-n32"
-target triple = "powerpc-apple-macosx10.5.0"
+;;;target triple = "powerpc-apple-macosx10.5.0"
+target triple = "powerpc-unknown-linux-gnu"
 
 ; Function Attrs: nounwind readnone ssp uwtable
 define i64 @foo(i64 %bar1, i64 %bar2, i64 %bar3, i64 %bar4, i64 %bar5) local_unnamed_addr #0 !dbg !8 {
@@ -24,8 +25,8 @@ define i64 @foo(i64 %bar1, i64 %bar2, i64 %bar3, i64 %bar4, i64 %bar5) local_unn
 ;
 ; Now check that we got two entries on the fixed stack with "expected" offsets.
 ; CHECK-LABEL: fixedStack:
-; CHECK: id: 0, type: default, offset: 60, size: 4
-; CHECK: id: 1, type: default, offset: 56, size: 4
+; CHECK: id: 0, type: default, offset: 12, size: 4
+; CHECK: id: 1, type: default, offset: 8, size: 4
 ; CHECK-NOT: id: 2
 ; CHECK-LABEL: stack:
 ;
@@ -33,7 +34,7 @@ define i64 @foo(i64 %bar1, i64 %bar2, i64 %bar3, i64 %bar4, i64 %bar5) local_unn
 ; We expect to find a DBG_VALUE refering to the metadata id for bar5, using the lowest
 ; of the two fixed stack offsets found earlier.
 ; CHECK-LABEL: body:
-; CHECK: DBG_VALUE debug-use $r1, 0, !17, !DIExpression(DW_OP_plus_uconst, 56)
+; CHECK: DBG_VALUE $r1, 0, !17, !DIExpression(DW_OP_plus_uconst, 8)
 entry:
   tail call void @llvm.dbg.value(metadata i64 %bar1, metadata !13, metadata !DIExpression()), !dbg !18
   tail call void @llvm.dbg.value(metadata i64 %bar2, metadata !14, metadata !DIExpression()), !dbg !19

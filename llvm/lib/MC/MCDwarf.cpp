@@ -463,10 +463,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
                MakeStartMinusEndExpr(*MCOS, *LineStartSym, *LineEndSym, 4), 4);
 
   // Next 2 bytes is the Version.
-  // FIXME: On Darwin we still default to V2.
   unsigned LineTableVersion = context.getDwarfVersion();
-  if (context.getObjectFileInfo()->getTargetTriple().isOSDarwin())
-    LineTableVersion = 2;
   MCOS->EmitIntValue(LineTableVersion, 2);
 
   // Keep track of the bytes between the very start and where the header length
@@ -492,7 +489,7 @@ MCDwarfLineTableHeader::Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 
   // Parameters of the state machine, are next.
   MCOS->EmitIntValue(context.getAsmInfo()->getMinInstAlignment(), 1);
-  // maximum_operations_per_instruction 
+  // maximum_operations_per_instruction
   // For non-VLIW architectures this field is always 1.
   // FIXME: VLIW architectures need to update this field accordingly.
   if (LineTableVersion >= 4)
@@ -729,6 +726,57 @@ void MCDwarfLineAddr::Encode(MCContext &Context, MCDwarfLineTableParams Params,
     assert(Temp <= 255 && "Buggy special opcode encoding.");
     OS << char(Temp);
   }
+}
+
+bool MCDwarfLineAddr::FixedEncode(MCContext &Context,
+                                  MCDwarfLineTableParams Params,
+                                  int64_t LineDelta, uint64_t AddrDelta,
+                                  raw_ostream &OS,
+                                  uint32_t *Offset, uint32_t *Size) {
+  if (LineDelta != INT64_MAX) {
+    OS << char(dwarf::DW_LNS_advance_line);
+    encodeSLEB128(LineDelta, OS);
+  }
+
+  // Use address delta to adjust address or use absolute address to adjust
+  // address.
+  bool SetDelta;
+  // According to DWARF spec., the DW_LNS_fixed_advance_pc opcode takes a
+  // single uhalf (unencoded) operand. So, the maximum value of AddrDelta
+  // is 65535. We set a conservative upper bound for it for relaxation.
+  if (AddrDelta > 60000) {
+    const MCAsmInfo *asmInfo = Context.getAsmInfo();
+    unsigned AddrSize = asmInfo->getCodePointerSize();
+
+    OS << char(dwarf::DW_LNS_extended_op);
+    encodeULEB128(1 + AddrSize, OS);
+    OS << char(dwarf::DW_LNE_set_address);
+    // Generate fixup for the address.
+    *Offset = OS.tell();
+    *Size = AddrSize;
+    SetDelta = false;
+    std::vector<uint8_t> FillData;
+    FillData.insert(FillData.begin(), AddrSize, 0);
+    OS.write(reinterpret_cast<char *>(FillData.data()), AddrSize);
+  } else {
+    OS << char(dwarf::DW_LNS_fixed_advance_pc);
+    // Generate fixup for 2-bytes address delta.
+    *Offset = OS.tell();
+    *Size = 2;
+    SetDelta = true;
+    OS << char(0);
+    OS << char(0);
+  }
+
+  if (LineDelta == INT64_MAX) {
+    OS << char(dwarf::DW_LNS_extended_op);
+    OS << char(1);
+    OS << char(dwarf::DW_LNE_end_sequence);
+  } else {
+    OS << char(dwarf::DW_LNS_copy);
+  }
+
+  return SetDelta;
 }
 
 // Utility function to write a tuple for .debug_abbrev.
@@ -1284,6 +1332,10 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.EmitIntValue(dwarf::DW_CFA_GNU_window_save, 1);
     return;
 
+  case MCCFIInstruction::OpNegateRAState:
+    Streamer.EmitIntValue(dwarf::DW_CFA_AARCH64_negate_ra_state, 1);
+    return;
+
   case MCCFIInstruction::OpUndefined: {
     unsigned Reg = Instr.getRegister();
     Streamer.EmitIntValue(dwarf::DW_CFA_undefined, 1);
@@ -1370,7 +1422,12 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
-    Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
+    if (Reg < 64) {
+      Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
+    } else {
+      Streamer.EmitIntValue(dwarf::DW_CFA_restore_extended, 1);
+      Streamer.EmitULEB128IntValue(Reg);
+    }
     return;
   }
   case MCCFIInstruction::OpGnuArgsSize:
@@ -1508,9 +1565,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
   uint8_t CIEVersion = getCIEVersion(IsEH, context.getDwarfVersion());
   Streamer.EmitIntValue(CIEVersion, 1);
 
-  // Augmentation String
-  SmallString<8> Augmentation;
   if (IsEH) {
+    SmallString<8> Augmentation;
     Augmentation += "z";
     if (Frame.Personality)
       Augmentation += "P";
@@ -1519,6 +1575,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
     Augmentation += "R";
     if (Frame.IsSignalFrame)
       Augmentation += "S";
+    if (Frame.IsBKeyFrame)
+      Augmentation += "B";
     Streamer.EmitBytes(Augmentation);
   }
   Streamer.EmitIntValue(0, 1);
@@ -1673,25 +1731,28 @@ namespace {
 
 struct CIEKey {
   static const CIEKey getEmptyKey() {
-    return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX));
+    return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX),
+                  false);
   }
 
   static const CIEKey getTombstoneKey() {
-    return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX));
+    return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX),
+                  false);
   }
 
   CIEKey(const MCSymbol *Personality, unsigned PersonalityEncoding,
          unsigned LSDAEncoding, bool IsSignalFrame, bool IsSimple,
-         unsigned RAReg)
+         unsigned RAReg, bool IsBKeyFrame)
       : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
         LsdaEncoding(LSDAEncoding), IsSignalFrame(IsSignalFrame),
-        IsSimple(IsSimple), RAReg(RAReg) {}
+        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame) {}
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
         PersonalityEncoding(Frame.PersonalityEncoding),
         LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
-        IsSimple(Frame.IsSimple), RAReg(Frame.RAReg) {}
+        IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
+        IsBKeyFrame(Frame.IsBKeyFrame) {}
 
   const MCSymbol *Personality;
   unsigned PersonalityEncoding;
@@ -1699,6 +1760,7 @@ struct CIEKey {
   bool IsSignalFrame;
   bool IsSimple;
   unsigned RAReg;
+  bool IsBKeyFrame;
 };
 
 } // end anonymous namespace
@@ -1710,9 +1772,9 @@ template <> struct DenseMapInfo<CIEKey> {
   static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
 
   static unsigned getHashValue(const CIEKey &Key) {
-    return static_cast<unsigned>(
-        hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
-                     Key.IsSignalFrame, Key.IsSimple, Key.RAReg));
+    return static_cast<unsigned>(hash_combine(
+        Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
+        Key.IsSignalFrame, Key.IsSimple, Key.RAReg, Key.IsBKeyFrame));
   }
 
   static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
@@ -1720,8 +1782,8 @@ template <> struct DenseMapInfo<CIEKey> {
            LHS.PersonalityEncoding == RHS.PersonalityEncoding &&
            LHS.LsdaEncoding == RHS.LsdaEncoding &&
            LHS.IsSignalFrame == RHS.IsSignalFrame &&
-           LHS.IsSimple == RHS.IsSimple &&
-           LHS.RAReg == RHS.RAReg;
+           LHS.IsSimple == RHS.IsSimple && LHS.RAReg == RHS.RAReg &&
+           LHS.IsBKeyFrame == RHS.IsBKeyFrame;
   }
 };
 

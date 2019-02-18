@@ -21,8 +21,10 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/WasmEHFuncInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
@@ -35,6 +37,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-lower"
 
+// Emit proposed instructions that may not have been implemented in engines
+cl::opt<bool> EnableUnimplementedWasmSIMDInstrs(
+    "wasm-enable-unimplemented-simd",
+    cl::desc("Emit potentially-unimplemented WebAssembly SIMD instructions"),
+    cl::init(false));
+
 WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     const TargetMachine &TM, const WebAssemblySubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -42,6 +50,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
   // Booleans always contain 0 or 1.
   setBooleanContents(ZeroOrOneBooleanContent);
+  // Except in SIMD vectors
+  setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
   // WebAssembly does not produce floating-point exceptions on normal floating
   // point operations.
   setHasFloatingPointExceptions(false);
@@ -60,6 +70,10 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     addRegisterClass(MVT::v8i16, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4i32, &WebAssembly::V128RegClass);
     addRegisterClass(MVT::v4f32, &WebAssembly::V128RegClass);
+    if (EnableUnimplementedWasmSIMDInstrs) {
+      addRegisterClass(MVT::v2i64, &WebAssembly::V128RegClass);
+      addRegisterClass(MVT::v2f64, &WebAssembly::V128RegClass);
+    }
   }
   // Compute derived properties from the register classes.
   computeRegisterProperties(Subtarget->getRegisterInfo());
@@ -77,7 +91,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   setOperationAction(ISD::VACOPY, MVT::Other, Expand);
   setOperationAction(ISD::VAEND, MVT::Other, Expand);
 
-  for (auto T : {MVT::f32, MVT::f64}) {
+  for (auto T : {MVT::f32, MVT::f64, MVT::v4f32, MVT::v2f64}) {
     // Don't expand the floating-point types to constant pools.
     setOperationAction(ISD::ConstantFP, T, Legal);
     // Expand floating-point comparisons.
@@ -85,17 +99,17 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                     ISD::SETULT, ISD::SETULE, ISD::SETUGT, ISD::SETUGE})
       setCondCodeAction(CC, T, Expand);
     // Expand floating-point library function operators.
-    for (auto Op : {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM,
-                    ISD::FMA})
+    for (auto Op :
+         {ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FREM, ISD::FMA})
       setOperationAction(Op, T, Expand);
     // Note supported floating-point library function operators that otherwise
     // default to expand.
     for (auto Op :
          {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT, ISD::FRINT})
       setOperationAction(Op, T, Legal);
-    // Support minnan and maxnan, which otherwise default to expand.
-    setOperationAction(ISD::FMINNAN, T, Legal);
-    setOperationAction(ISD::FMAXNAN, T, Legal);
+    // Support minimum and maximum, which otherwise default to expand.
+    setOperationAction(ISD::FMINIMUM, T, Legal);
+    setOperationAction(ISD::FMAXIMUM, T, Legal);
     // WebAssembly currently has no builtin f16 support.
     setOperationAction(ISD::FP16_TO_FP, T, Expand);
     setOperationAction(ISD::FP_TO_FP16, T, Expand);
@@ -103,16 +117,63 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTruncStoreAction(T, MVT::f16, Expand);
   }
 
-  for (auto T : {MVT::i32, MVT::i64}) {
-    // Expand unavailable integer operations.
-    for (auto Op :
-         {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI,
-          ISD::MULHS, ISD::MULHU, ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS,
-          ISD::SRA_PARTS, ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC,
-          ISD::SUBE}) {
+  // Support saturating add for i8x16 and i16x8
+  if (Subtarget->hasSIMD128())
+    for (auto T : {MVT::v16i8, MVT::v8i16})
+      for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
+        setOperationAction(Op, T, Legal);
+
+  // Expand unavailable integer operations.
+  for (auto Op :
+       {ISD::BSWAP, ISD::SMUL_LOHI, ISD::UMUL_LOHI, ISD::MULHS, ISD::MULHU,
+        ISD::SDIVREM, ISD::UDIVREM, ISD::SHL_PARTS, ISD::SRA_PARTS,
+        ISD::SRL_PARTS, ISD::ADDC, ISD::ADDE, ISD::SUBC, ISD::SUBE}) {
+    for (auto T : {MVT::i32, MVT::i64}) {
       setOperationAction(Op, T, Expand);
     }
+    if (Subtarget->hasSIMD128()) {
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32}) {
+        setOperationAction(Op, T, Expand);
+      }
+      if (EnableUnimplementedWasmSIMDInstrs) {
+        setOperationAction(Op, MVT::v2i64, Expand);
+      }
+    }
   }
+
+  // There is no i64x2.mul instruction
+  setOperationAction(ISD::MUL, MVT::v2i64, Expand);
+
+  // We have custom shuffle lowering to expose the shuffle mask
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32}) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
+    }
+    if (EnableUnimplementedWasmSIMDInstrs) {
+      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2i64, Custom);
+      setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v2f64, Custom);
+    }
+  }
+
+  // Custom lowering since wasm shifts must have a scalar shift amount
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+      for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
+        setOperationAction(Op, T, Custom);
+    if (EnableUnimplementedWasmSIMDInstrs)
+      for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
+        setOperationAction(Op, MVT::v2i64, Custom);
+  }
+
+  // There are no select instructions for vectors
+  if (Subtarget->hasSIMD128())
+    for (auto Op : {ISD::VSELECT, ISD::SELECT_CC, ISD::SELECT}) {
+      for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32})
+        setOperationAction(Op, T, Expand);
+      if (EnableUnimplementedWasmSIMDInstrs)
+        for (auto T : {MVT::v2i64, MVT::v2f64})
+          setOperationAction(Op, T, Expand);
+    }
 
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
@@ -121,6 +182,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto T : {MVT::i8, MVT::i16, MVT::i32})
       setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
   }
+  for (auto T : MVT::integer_vector_valuetypes())
+    setOperationAction(ISD::SIGN_EXTEND_INREG, T, Expand);
 
   // Dynamic stack allocation: use the default expansion.
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
@@ -142,19 +205,70 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   //  - Floating-point extending loads.
   //  - Floating-point truncating stores.
   //  - i1 extending loads.
+  //  - extending/truncating SIMD loads/stores
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   for (auto T : MVT::integer_valuetypes())
     for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
       setLoadExtAction(Ext, T, MVT::i1, Promote);
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v4f32,
+                   MVT::v2f64}) {
+      for (auto MemT : MVT::vector_valuetypes()) {
+        if (MVT(T) != MemT) {
+          setTruncStoreAction(T, MemT, Expand);
+          for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
+            setLoadExtAction(Ext, T, MemT, Expand);
+        }
+      }
+    }
+  }
+
+  // Expand additional SIMD ops that V8 hasn't implemented yet
+  if (Subtarget->hasSIMD128() && !EnableUnimplementedWasmSIMDInstrs) {
+    setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
+    setOperationAction(ISD::FDIV, MVT::v4f32, Expand);
+  }
+
+  // Custom lower lane accesses to expand out variable indices
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32}) {
+      setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, T, Custom);
+    }
+    if (EnableUnimplementedWasmSIMDInstrs) {
+      for (auto T : {MVT::v2i64, MVT::v2f64}) {
+        setOperationAction(ISD::EXTRACT_VECTOR_ELT, T, Custom);
+        setOperationAction(ISD::INSERT_VECTOR_ELT, T, Custom);
+      }
+    }
+  }
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
   // Exception handling intrinsics
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
   setMaxAtomicSizeInBitsSupported(64);
+}
+
+TargetLowering::AtomicExpansionKind
+WebAssemblyTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  // We have wasm instructions for these
+  switch (AI->getOperation()) {
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::And:
+  case AtomicRMWInst::Or:
+  case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Xchg:
+    return AtomicExpansionKind::None;
+  default:
+    break;
+  }
+  return AtomicExpansionKind::CmpXChg;
 }
 
 FastISel *WebAssemblyTargetLowering::createFastISel(
@@ -171,7 +285,8 @@ bool WebAssemblyTargetLowering::isOffsetFoldingLegal(
 MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
                                                       EVT VT) const {
   unsigned BitWidth = NextPowerOf2(VT.getSizeInBits() - 1);
-  if (BitWidth > 1 && BitWidth < 8) BitWidth = 8;
+  if (BitWidth > 1 && BitWidth < 8)
+    BitWidth = 8;
 
   if (BitWidth > 64) {
     // The shift will be lowered to a libcall, and compiler-rt libcalls expect
@@ -190,17 +305,11 @@ MVT WebAssemblyTargetLowering::getScalarShiftAmountTy(const DataLayout & /*DL*/,
 // Lower an fp-to-int conversion operator from the LLVM opcode, which has an
 // undefined result on invalid/overflow, to the WebAssembly opcode, which
 // traps on invalid/overflow.
-static MachineBasicBlock *
-LowerFPToInt(
-    MachineInstr &MI,
-    DebugLoc DL,
-    MachineBasicBlock *BB,
-    const TargetInstrInfo &TII,
-    bool IsUnsigned,
-    bool Int64,
-    bool Float64,
-    unsigned LoweredOpcode
-) {
+static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
+                                       MachineBasicBlock *BB,
+                                       const TargetInstrInfo &TII,
+                                       bool IsUnsigned, bool Int64,
+                                       bool Float64, unsigned LoweredOpcode) {
   MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
 
   unsigned OutReg = MI.getOperand(0).getReg();
@@ -232,8 +341,7 @@ LowerFPToInt(
 
   // Transfer the remainder of BB and its successor edges to DoneMBB.
   DoneMBB->splice(DoneMBB->begin(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)),
-                  BB->end());
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
   DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   BB->addSuccessor(TrueMBB);
@@ -255,45 +363,33 @@ LowerFPToInt(
   if (IsUnsigned) {
     Tmp0 = InReg;
   } else {
-    BuildMI(BB, DL, TII.get(Abs), Tmp0)
-        .addReg(InReg);
+    BuildMI(BB, DL, TII.get(Abs), Tmp0).addReg(InReg);
   }
   BuildMI(BB, DL, TII.get(FConst), Tmp1)
       .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, CmpVal)));
-  BuildMI(BB, DL, TII.get(LT), CmpReg)
-      .addReg(Tmp0)
-      .addReg(Tmp1);
+  BuildMI(BB, DL, TII.get(LT), CmpReg).addReg(Tmp0).addReg(Tmp1);
 
   // For unsigned numbers, we have to do a separate comparison with zero.
   if (IsUnsigned) {
     Tmp1 = MRI.createVirtualRegister(MRI.getRegClass(InReg));
-    unsigned SecondCmpReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
+    unsigned SecondCmpReg =
+        MRI.createVirtualRegister(&WebAssembly::I32RegClass);
     unsigned AndReg = MRI.createVirtualRegister(&WebAssembly::I32RegClass);
     BuildMI(BB, DL, TII.get(FConst), Tmp1)
         .addFPImm(cast<ConstantFP>(ConstantFP::get(Ty, 0.0)));
-    BuildMI(BB, DL, TII.get(GE), SecondCmpReg)
-        .addReg(Tmp0)
-        .addReg(Tmp1);
-    BuildMI(BB, DL, TII.get(And), AndReg)
-        .addReg(CmpReg)
-        .addReg(SecondCmpReg);
+    BuildMI(BB, DL, TII.get(GE), SecondCmpReg).addReg(Tmp0).addReg(Tmp1);
+    BuildMI(BB, DL, TII.get(And), AndReg).addReg(CmpReg).addReg(SecondCmpReg);
     CmpReg = AndReg;
   }
 
-  BuildMI(BB, DL, TII.get(Eqz), EqzReg)
-      .addReg(CmpReg);
+  BuildMI(BB, DL, TII.get(Eqz), EqzReg).addReg(CmpReg);
 
   // Create the CFG diamond to select between doing the conversion or using
   // the substitute value.
-  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF))
-      .addMBB(TrueMBB)
-      .addReg(EqzReg);
-  BuildMI(FalseMBB, DL, TII.get(LoweredOpcode), FalseReg)
-      .addReg(InReg);
-  BuildMI(FalseMBB, DL, TII.get(WebAssembly::BR))
-      .addMBB(DoneMBB);
-  BuildMI(TrueMBB, DL, TII.get(IConst), TrueReg)
-      .addImm(Substitute);
+  BuildMI(BB, DL, TII.get(WebAssembly::BR_IF)).addMBB(TrueMBB).addReg(EqzReg);
+  BuildMI(FalseMBB, DL, TII.get(LoweredOpcode), FalseReg).addReg(InReg);
+  BuildMI(FalseMBB, DL, TII.get(WebAssembly::BR)).addMBB(DoneMBB);
+  BuildMI(TrueMBB, DL, TII.get(IConst), TrueReg).addImm(Substitute);
   BuildMI(*DoneMBB, DoneMBB->begin(), DL, TII.get(TargetOpcode::PHI), OutReg)
       .addReg(FalseReg)
       .addMBB(FalseMBB)
@@ -303,16 +399,14 @@ LowerFPToInt(
   return DoneMBB;
 }
 
-MachineBasicBlock *
-WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
-    MachineInstr &MI,
-    MachineBasicBlock *BB
-) const {
+MachineBasicBlock *WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
   const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unexpected instr type to insert");
+  default:
+    llvm_unreachable("Unexpected instr type to insert");
   case WebAssembly::FP_TO_SINT_I32_F32:
     return LowerFPToInt(MI, DL, BB, TII, false, false, false,
                         WebAssembly::I32_TRUNC_S_F32);
@@ -337,17 +431,17 @@ WebAssemblyTargetLowering::EmitInstrWithCustomInserter(
   case WebAssembly::FP_TO_UINT_I64_F64:
     return LowerFPToInt(MI, DL, BB, TII, true, true, true,
                         WebAssembly::I64_TRUNC_U_F64);
-  llvm_unreachable("Unexpected instruction to emit with custom inserter");
+    llvm_unreachable("Unexpected instruction to emit with custom inserter");
   }
 }
 
-const char *WebAssemblyTargetLowering::getTargetNodeName(
-    unsigned Opcode) const {
+const char *
+WebAssemblyTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<WebAssemblyISD::NodeType>(Opcode)) {
-    case WebAssemblyISD::FIRST_NUMBER:
-      break;
-#define HANDLE_NODETYPE(NODE) \
-  case WebAssemblyISD::NODE:  \
+  case WebAssemblyISD::FIRST_NUMBER:
+    break;
+#define HANDLE_NODETYPE(NODE)                                                  \
+  case WebAssemblyISD::NODE:                                                   \
     return "WebAssemblyISD::" #NODE;
 #include "WebAssemblyISD.def"
 #undef HANDLE_NODETYPE
@@ -362,21 +456,21 @@ WebAssemblyTargetLowering::getRegForInlineAsmConstraint(
   // WebAssembly register class.
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
-      case 'r':
-        assert(VT != MVT::iPTR && "Pointer MVT not expected here");
-        if (Subtarget->hasSIMD128() && VT.isVector()) {
-          if (VT.getSizeInBits() == 128)
-            return std::make_pair(0U, &WebAssembly::V128RegClass);
-        }
-        if (VT.isInteger() && !VT.isVector()) {
-          if (VT.getSizeInBits() <= 32)
-            return std::make_pair(0U, &WebAssembly::I32RegClass);
-          if (VT.getSizeInBits() <= 64)
-            return std::make_pair(0U, &WebAssembly::I64RegClass);
-        }
-        break;
-      default:
-        break;
+    case 'r':
+      assert(VT != MVT::iPTR && "Pointer MVT not expected here");
+      if (Subtarget->hasSIMD128() && VT.isVector()) {
+        if (VT.getSizeInBits() == 128)
+          return std::make_pair(0U, &WebAssembly::V128RegClass);
+      }
+      if (VT.isInteger() && !VT.isVector()) {
+        if (VT.getSizeInBits() <= 32)
+          return std::make_pair(0U, &WebAssembly::I32RegClass);
+        if (VT.getSizeInBits() <= 64)
+          return std::make_pair(0U, &WebAssembly::I64RegClass);
+      }
+      break;
+    default:
+      break;
     }
   }
 
@@ -395,16 +489,17 @@ bool WebAssemblyTargetLowering::isCheapToSpeculateCtlz() const {
 
 bool WebAssemblyTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                                       const AddrMode &AM,
-                                                      Type *Ty,
-                                                      unsigned AS,
+                                                      Type *Ty, unsigned AS,
                                                       Instruction *I) const {
   // WebAssembly offsets are added as unsigned without wrapping. The
   // isLegalAddressingMode gives us no way to determine if wrapping could be
   // happening, so we approximate this by accepting only non-negative offsets.
-  if (AM.BaseOffs < 0) return false;
+  if (AM.BaseOffs < 0)
+    return false;
 
   // WebAssembly has no scale register operands.
-  if (AM.Scale != 0) return false;
+  if (AM.Scale != 0)
+    return false;
 
   // Everything else is legal.
   return true;
@@ -418,7 +513,8 @@ bool WebAssemblyTargetLowering::allowsMisalignedMemoryAccesses(
   // for the kinds of things that LLVM uses this for (merging adjacent stores
   // of constants, etc.), WebAssembly implementations will either want the
   // unaligned access or they'll split anyway.
-  if (Fast) *Fast = true;
+  if (Fast)
+    *Fast = true;
   return true;
 }
 
@@ -436,6 +532,46 @@ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
     return VT.changeVectorElementTypeToInteger();
 
   return TargetLowering::getSetCCResultType(DL, C, VT);
+}
+
+bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
+                                                   const CallInst &I,
+                                                   MachineFunction &MF,
+                                                   unsigned Intrinsic) const {
+  switch (Intrinsic) {
+  case Intrinsic::wasm_atomic_notify:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 4;
+    // atomic.notify instruction does not really load the memory specified with
+    // this argument, but MachineMemOperand should either be load or store, so
+    // we set this to a load.
+    // FIXME Volatile isn't really correct, but currently all LLVM atomic
+    // instructions are treated as volatiles in the backend, so we should be
+    // consistent. The same applies for wasm_atomic_wait intrinsics too.
+    Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::wasm_atomic_wait_i32:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 4;
+    Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
+    return true;
+  case Intrinsic::wasm_atomic_wait_i64:
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    Info.memVT = MVT::i64;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.align = 8;
+    Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
+    return true;
+  default:
+    return false;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -465,8 +601,9 @@ static bool CallingConvSupported(CallingConv::ID CallConv) {
          CallConv == CallingConv::CXX_FAST_TLS;
 }
 
-SDValue WebAssemblyTargetLowering::LowerCall(
-    CallLoweringInfo &CLI, SmallVectorImpl<SDValue> &InVals) const {
+SDValue
+WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
+                                     SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc DL = CLI.DL;
   SDValue Chain = CLI.Chain;
@@ -568,9 +705,9 @@ SDValue WebAssemblyTargetLowering::LowerCall(
       FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
       SDValue Add = DAG.getNode(ISD::ADD, DL, PtrVT, FINode,
                                 DAG.getConstant(Offset, DL, PtrVT));
-      Chains.push_back(DAG.getStore(
-          Chain, DL, Arg, Add,
-          MachinePointerInfo::getFixedStack(MF, FI, Offset), 0));
+      Chains.push_back(
+          DAG.getStore(Chain, DL, Arg, Add,
+                       MachinePointerInfo::getFixedStack(MF, FI, Offset), 0));
     }
     if (!Chains.empty())
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
@@ -588,7 +725,8 @@ SDValue WebAssemblyTargetLowering::LowerCall(
   Ops.append(OutVals.begin(),
              IsVarArg ? OutVals.begin() + NumFixedArgs : OutVals.end());
   // Add a pointer to the vararg buffer.
-  if (IsVarArg) Ops.push_back(FINode);
+  if (IsVarArg)
+    Ops.push_back(FINode);
 
   SmallVector<EVT, 8> InTys;
   for (const auto &In : Ins) {
@@ -682,11 +820,10 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs last arguments");
     // Ignore In.getOrigAlign() because all our arguments are passed in
     // registers.
-    InVals.push_back(
-        In.Used
-            ? DAG.getNode(WebAssemblyISD::ARGUMENT, DL, In.VT,
-                          DAG.getTargetConstant(InVals.size(), DL, MVT::i32))
-            : DAG.getUNDEF(In.VT));
+    InVals.push_back(In.Used ? DAG.getNode(WebAssemblyISD::ARGUMENT, DL, In.VT,
+                                           DAG.getTargetConstant(InVals.size(),
+                                                                 DL, MVT::i32))
+                             : DAG.getUNDEF(In.VT));
 
     // Record the number and types of arguments.
     MFI->addParam(In.VT);
@@ -706,12 +843,18 @@ SDValue WebAssemblyTargetLowering::LowerFormalArguments(
     MFI->addParam(PtrVT);
   }
 
-  // Record the number and types of results.
+  // Record the number and types of arguments and results.
   SmallVector<MVT, 4> Params;
   SmallVector<MVT, 4> Results;
-  ComputeSignatureVTs(MF.getFunction(), DAG.getTarget(), Params, Results);
+  ComputeSignatureVTs(MF.getFunction().getFunctionType(), MF.getFunction(),
+                      DAG.getTarget(), Params, Results);
   for (MVT VT : Results)
     MFI->addResult(VT);
+  // TODO: Use signatures in WebAssemblyMachineFunctionInfo too and unify
+  // the param logic here with ComputeSignatureVTs
+  assert(MFI->getParams().size() == Params.size() &&
+         std::equal(MFI->getParams().begin(), MFI->getParams().end(),
+                    Params.begin()));
 
   return Chain;
 }
@@ -724,34 +867,45 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
                                                   SelectionDAG &DAG) const {
   SDLoc DL(Op);
   switch (Op.getOpcode()) {
-    default:
-      llvm_unreachable("unimplemented operation lowering");
-      return SDValue();
-    case ISD::FrameIndex:
-      return LowerFrameIndex(Op, DAG);
-    case ISD::GlobalAddress:
-      return LowerGlobalAddress(Op, DAG);
-    case ISD::ExternalSymbol:
-      return LowerExternalSymbol(Op, DAG);
-    case ISD::JumpTable:
-      return LowerJumpTable(Op, DAG);
-    case ISD::BR_JT:
-      return LowerBR_JT(Op, DAG);
-    case ISD::VASTART:
-      return LowerVASTART(Op, DAG);
-    case ISD::BlockAddress:
-    case ISD::BRIND:
-      fail(DL, DAG, "WebAssembly hasn't implemented computed gotos");
-      return SDValue();
-    case ISD::RETURNADDR: // Probably nothing meaningful can be returned here.
-      fail(DL, DAG, "WebAssembly hasn't implemented __builtin_return_address");
-      return SDValue();
-    case ISD::FRAMEADDR:
-      return LowerFRAMEADDR(Op, DAG);
-    case ISD::CopyToReg:
-      return LowerCopyToReg(Op, DAG);
-    case ISD::INTRINSIC_WO_CHAIN:
-      return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  default:
+    llvm_unreachable("unimplemented operation lowering");
+    return SDValue();
+  case ISD::FrameIndex:
+    return LowerFrameIndex(Op, DAG);
+  case ISD::GlobalAddress:
+    return LowerGlobalAddress(Op, DAG);
+  case ISD::ExternalSymbol:
+    return LowerExternalSymbol(Op, DAG);
+  case ISD::JumpTable:
+    return LowerJumpTable(Op, DAG);
+  case ISD::BR_JT:
+    return LowerBR_JT(Op, DAG);
+  case ISD::VASTART:
+    return LowerVASTART(Op, DAG);
+  case ISD::BlockAddress:
+  case ISD::BRIND:
+    fail(DL, DAG, "WebAssembly hasn't implemented computed gotos");
+    return SDValue();
+  case ISD::RETURNADDR: // Probably nothing meaningful can be returned here.
+    fail(DL, DAG, "WebAssembly hasn't implemented __builtin_return_address");
+    return SDValue();
+  case ISD::FRAMEADDR:
+    return LowerFRAMEADDR(Op, DAG);
+  case ISD::CopyToReg:
+    return LowerCopyToReg(Op, DAG);
+  case ISD::INTRINSIC_WO_CHAIN:
+    return LowerINTRINSIC_WO_CHAIN(Op, DAG);
+  case ISD::EXTRACT_VECTOR_ELT:
+  case ISD::INSERT_VECTOR_ELT:
+    return LowerAccessVectorElement(Op, DAG);
+  case ISD::INTRINSIC_VOID:
+    return LowerINTRINSIC_VOID(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return LowerVECTOR_SHUFFLE(Op, DAG);
+  case ISD::SHL:
+  case ISD::SRA:
+  case ISD::SRL:
+    return LowerShift(Op, DAG);
   }
 }
 
@@ -768,16 +922,15 @@ SDValue WebAssemblyTargetLowering::LowerCopyToReg(SDValue Op,
     SDLoc DL(Op);
     unsigned Reg = cast<RegisterSDNode>(Op.getOperand(1))->getReg();
     EVT VT = Src.getValueType();
-    SDValue Copy(
-        DAG.getMachineNode(VT == MVT::i32 ? WebAssembly::COPY_I32
-                                          : WebAssembly::COPY_I64,
-                           DL, VT, Src),
-        0);
+    SDValue Copy(DAG.getMachineNode(VT == MVT::i32 ? WebAssembly::COPY_I32
+                                                   : WebAssembly::COPY_I64,
+                                    DL, VT, Src),
+                 0);
     return Op.getNode()->getNumValues() == 1
                ? DAG.getCopyToReg(Chain, DL, Reg, Copy)
-               : DAG.getCopyToReg(Chain, DL, Reg, Copy, Op.getNumOperands() == 4
-                                                            ? Op.getOperand(3)
-                                                            : SDValue());
+               : DAG.getCopyToReg(Chain, DL, Reg, Copy,
+                                  Op.getNumOperands() == 4 ? Op.getOperand(3)
+                                                           : SDValue());
   }
   return SDValue();
 }
@@ -817,8 +970,9 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
       DAG.getTargetGlobalAddress(GA->getGlobal(), DL, VT, GA->getOffset()));
 }
 
-SDValue WebAssemblyTargetLowering::LowerExternalSymbol(
-    SDValue Op, SelectionDAG &DAG) const {
+SDValue
+WebAssemblyTargetLowering::LowerExternalSymbol(SDValue Op,
+                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
   const auto *ES = cast<ExternalSymbolSDNode>(Op);
   EVT VT = Op.getValueType();
@@ -829,9 +983,10 @@ SDValue WebAssemblyTargetLowering::LowerExternalSymbol(
   // we don't know anything about the symbol other than its name, because all
   // external symbols used in target-independent SelectionDAG code are for
   // functions.
-  return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
-                     DAG.getTargetExternalSymbol(ES->getSymbol(), VT,
-                                                 /*TargetFlags=*/0x1));
+  return DAG.getNode(
+      WebAssemblyISD::Wrapper, DL, VT,
+      DAG.getTargetExternalSymbol(ES->getSymbol(), VT,
+                                  WebAssemblyII::MO_SYMBOL_FUNCTION));
 }
 
 SDValue WebAssemblyTargetLowering::LowerJumpTable(SDValue Op,
@@ -860,7 +1015,8 @@ SDValue WebAssemblyTargetLowering::LowerBR_JT(SDValue Op,
   const auto &MBBs = MJTI->getJumpTables()[JT->getIndex()].MBBs;
 
   // Add an operand for each case.
-  for (auto MBB : MBBs) Ops.push_back(DAG.getBasicBlock(MBB));
+  for (auto MBB : MBBs)
+    Ops.push_back(DAG.getBasicBlock(MBB));
 
   // TODO: For now, we just pick something arbitrary for a default case for now.
   // We really want to sniff out the guard and put in the real default case (and
@@ -893,10 +1049,135 @@ WebAssemblyTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   default:
     return {}; // Don't custom lower most intrinsics.
 
-  case Intrinsic::wasm_lsda:
-    // TODO For now, just return 0 not to crash
-    return DAG.getConstant(0, DL, Op.getValueType());
+  case Intrinsic::wasm_lsda: {
+    MachineFunction &MF = DAG.getMachineFunction();
+    EVT VT = Op.getValueType();
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+    auto &Context = MF.getMMI().getContext();
+    MCSymbol *S = Context.getOrCreateSymbol(Twine("GCC_except_table") +
+                                            Twine(MF.getFunctionNumber()));
+    return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
+                       DAG.getMCSymbol(S, PtrVT));
   }
+  }
+}
+
+SDValue
+WebAssemblyTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
+  SDLoc DL(Op);
+
+  switch (IntNo) {
+  default:
+    return {}; // Don't custom lower most intrinsics.
+
+  case Intrinsic::wasm_throw: {
+    int Tag = cast<ConstantSDNode>(Op.getOperand(2).getNode())->getZExtValue();
+    switch (Tag) {
+    case CPP_EXCEPTION: {
+      const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+      MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+      const char *SymName = MF.createExternalSymbolName("__cpp_exception");
+      SDValue SymNode =
+          DAG.getNode(WebAssemblyISD::Wrapper, DL, PtrVT,
+                      DAG.getTargetExternalSymbol(
+                          SymName, PtrVT, WebAssemblyII::MO_SYMBOL_EVENT));
+      return DAG.getNode(WebAssemblyISD::THROW, DL,
+                         MVT::Other, // outchain type
+                         {
+                             Op.getOperand(0), // inchain
+                             SymNode,          // exception symbol
+                             Op.getOperand(3)  // thrown value
+                         });
+    }
+    default:
+      llvm_unreachable("Invalid tag!");
+    }
+    break;
+  }
+  }
+}
+
+SDValue
+WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(Op.getNode())->getMask();
+  MVT VecType = Op.getOperand(0).getSimpleValueType();
+  assert(VecType.is128BitVector() && "Unexpected shuffle vector type");
+  size_t LaneBytes = VecType.getVectorElementType().getSizeInBits() / 8;
+
+  // Space for two vector args and sixteen mask indices
+  SDValue Ops[18];
+  size_t OpIdx = 0;
+  Ops[OpIdx++] = Op.getOperand(0);
+  Ops[OpIdx++] = Op.getOperand(1);
+
+  // Expand mask indices to byte indices and materialize them as operands
+  for (size_t I = 0, Lanes = Mask.size(); I < Lanes; ++I) {
+    for (size_t J = 0; J < LaneBytes; ++J) {
+      // Lower undefs (represented by -1 in mask) to zero
+      uint64_t ByteIndex =
+          Mask[I] == -1 ? 0 : (uint64_t)Mask[I] * LaneBytes + J;
+      Ops[OpIdx++] = DAG.getConstant(ByteIndex, DL, MVT::i32);
+    }
+  }
+
+  return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
+}
+
+SDValue
+WebAssemblyTargetLowering::LowerAccessVectorElement(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  // Allow constant lane indices, expand variable lane indices
+  SDNode *IdxNode = Op.getOperand(Op.getNumOperands() - 1).getNode();
+  if (isa<ConstantSDNode>(IdxNode) || IdxNode->isUndef())
+    return Op;
+  else
+    // Perform default expansion
+    return SDValue();
+}
+
+SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  // Only manually lower vector shifts
+  assert(Op.getSimpleValueType().isVector());
+
+  // Unroll non-splat vector shifts
+  BuildVectorSDNode *ShiftVec;
+  SDValue SplatVal;
+  if (!(ShiftVec = dyn_cast<BuildVectorSDNode>(Op.getOperand(1).getNode())) ||
+      !(SplatVal = ShiftVec->getSplatValue()))
+    return DAG.UnrollVectorOp(Op.getNode());
+
+  // All splats except i64x2 const splats are handled by patterns
+  ConstantSDNode *SplatConst = dyn_cast<ConstantSDNode>(SplatVal);
+  if (!SplatConst || Op.getSimpleValueType() != MVT::v2i64)
+    return Op;
+
+  // i64x2 const splats are custom lowered to avoid unnecessary wraps
+  unsigned Opcode;
+  switch (Op.getOpcode()) {
+  case ISD::SHL:
+    Opcode = WebAssemblyISD::VEC_SHL;
+    break;
+  case ISD::SRA:
+    Opcode = WebAssemblyISD::VEC_SHR_S;
+    break;
+  case ISD::SRL:
+    Opcode = WebAssemblyISD::VEC_SHR_U;
+    break;
+  default:
+    llvm_unreachable("unexpected opcode");
+  }
+  APInt Shift = SplatConst->getAPIntValue().zextOrTrunc(32);
+  return DAG.getNode(Opcode, DL, Op.getValueType(), Op.getOperand(0),
+                     DAG.getConstant(Shift, DL, MVT::i32));
 }
 
 //===----------------------------------------------------------------------===//

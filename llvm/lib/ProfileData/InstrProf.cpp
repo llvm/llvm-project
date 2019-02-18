@@ -926,8 +926,7 @@ bool needsComdatForCounter(const Function &F, const Module &M) {
   if (F.hasComdat())
     return true;
 
-  Triple TT(M.getTargetTriple());
-  if (!TT.isOSBinFormatELF() && !TT.isOSBinFormatWasm())
+  if (!Triple(M.getTargetTriple()).supportsCOMDAT())
     return false;
 
   // See createPGOFuncNameVar for more details. To avoid link errors, profile

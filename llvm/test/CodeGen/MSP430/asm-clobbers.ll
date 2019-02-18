@@ -6,8 +6,8 @@ target triple = "msp430---elf"
 define void @test() {
 entry:
 ; CHECK-LABEL: test:
-; CHECK: push.w r10
+; CHECK: push r10
   call void asm sideeffect "", "~{r10}"()
-; CHECK: pop.w r10
+; CHECK: pop r10
   ret void
 }

@@ -141,14 +141,16 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   // iterate over the worklist, and run the full (n^2)/2 disambiguations
   for (SetVector<Value *>::iterator I1 = Pointers.begin(), E = Pointers.end();
        I1 != E; ++I1) {
-    uint64_t I1Size = MemoryLocation::UnknownSize;
+    auto I1Size = LocationSize::unknown();
     Type *I1ElTy = cast<PointerType>((*I1)->getType())->getElementType();
-    if (I1ElTy->isSized()) I1Size = DL.getTypeStoreSize(I1ElTy);
+    if (I1ElTy->isSized())
+      I1Size = LocationSize::precise(DL.getTypeStoreSize(I1ElTy));
 
     for (SetVector<Value *>::iterator I2 = Pointers.begin(); I2 != I1; ++I2) {
-      uint64_t I2Size = MemoryLocation::UnknownSize;
-      Type *I2ElTy =cast<PointerType>((*I2)->getType())->getElementType();
-      if (I2ElTy->isSized()) I2Size = DL.getTypeStoreSize(I2ElTy);
+      auto I2Size = LocationSize::unknown();
+      Type *I2ElTy = cast<PointerType>((*I2)->getType())->getElementType();
+      if (I2ElTy->isSized())
+        I2Size = LocationSize::precise(DL.getTypeStoreSize(I2ElTy));
 
       AliasResult AR = AA.alias(*I1, I1Size, *I2, I2Size);
       switch (AR) {
@@ -232,9 +234,10 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
     Instruction *I = C.getInstruction();
 
     for (auto Pointer : Pointers) {
-      uint64_t Size = MemoryLocation::UnknownSize;
+      auto Size = LocationSize::unknown();
       Type *ElTy = cast<PointerType>(Pointer->getType())->getElementType();
-      if (ElTy->isSized()) Size = DL.getTypeStoreSize(ElTy);
+      if (ElTy->isSized())
+        Size = LocationSize::precise(DL.getTypeStoreSize(ElTy));
 
       switch (AA.getModRefInfo(C, Pointer, Size)) {
       case ModRefInfo::NoModRef:

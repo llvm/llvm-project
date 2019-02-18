@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Rule
+      Name="LLVMGeneral"
+      DisplayName="LLVM"
+      PageTemplate="generic"
+      Description="LLVM"
+      xmlns="http://schemas.microsoft.com/build/2009/properties">
+  <Rule.Categories>
+    <Category Name="General" DisplayName="General" Description="General" />
+  </Rule.Categories>
+  <Rule.DataSource>
+    <DataSource Persistence="ProjectFile" Label="LLVM" />
+  </Rule.DataSource>
+
+  <BoolProperty Name="UseClangCl" 
+                DisplayName="Use clang-cl" 
+                Description="Use clang-cl for compiling.  If this option is disabled, the Microsoft compiler (cl.exe) will be used instead." 
+                Category="General" 
+                Default="true">
+  </BoolProperty>
+  <StringProperty Name="ClangClExecutable"
+                  DisplayName="clang-cl Executable"
+                  Description="Specifies the path to clang-cl.exe."
+                  Category="General"
+                  Default="$(LLVMInstallDir)bin\clang-cl.exe"
+                  Subtype="file">
+  </StringProperty>
+
+  <StringProperty Name="ClangClAdditionalOptions"
+                  DisplayName="Additional Compiler Options"
+                  Description="Additional options to pass to clang.  This is essentially the same as C/C++ > Command Line > Additional Options, except that it is safe to put options here that will be rejected by cl.exe in case you switch toolchains back and forth."
+                  Category="General">
+  </StringProperty>
+
+  <BoolProperty Name="UseLldLink"
+                DisplayName="Use lld-link"
+                Description="Use lld-link for linking.  If this option is disabled, the Microsoft linker (link.exe) will be used instead."
+                Category="General"
+                Default="true">
+  </BoolProperty>
+  <StringProperty Name="LldLinkExecutable"
+                  DisplayName="lld-link Executable"
+                  Description="Specifies the path to lld-link.exe."
+                  Category="General"
+                  Default="$(LLVMInstallDir)bin\lld-link.exe"
+                  Subtype="file">
+  </StringProperty>
+
+  <StringProperty Name="LldLinkAdditionalOptions"
+                  DisplayName="Additional Linker Options"
+                  Description="Additional options to pass to lld-link.  This is essentially the same as General > Linker > Command Line > Additional Options, except that it is safe to put options here that will be rejected by link.exe in case you switch toolchains back and forth."
+                  Category="General">
+  </StringProperty>
+
+</Rule>

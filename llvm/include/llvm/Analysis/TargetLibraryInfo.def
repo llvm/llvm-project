@@ -565,6 +565,30 @@ TLI_DEFINE_STRING_INTERNAL("cosl")
 /// char *ctermid(char *s);
 TLI_DEFINE_ENUM_INTERNAL(ctermid)
 TLI_DEFINE_STRING_INTERNAL("ctermid")
+/// int execl(const char *path, const char *arg, ...);
+TLI_DEFINE_ENUM_INTERNAL(execl)
+TLI_DEFINE_STRING_INTERNAL("execl")
+/// int execle(const char *file, const char *arg, ..., char * const envp[]);
+TLI_DEFINE_ENUM_INTERNAL(execle)
+TLI_DEFINE_STRING_INTERNAL("execle")
+/// int execlp(const char *file, const char *arg, ...);
+TLI_DEFINE_ENUM_INTERNAL(execlp)
+TLI_DEFINE_STRING_INTERNAL("execlp")
+/// int execv(const char *path, char *const argv[]);
+TLI_DEFINE_ENUM_INTERNAL(execv)
+TLI_DEFINE_STRING_INTERNAL("execv")
+/// int execvP(const char *file, const char *search_path, char *const argv[]);
+TLI_DEFINE_ENUM_INTERNAL(execvP)
+TLI_DEFINE_STRING_INTERNAL("execvP")
+/// int execve(const char *filename, char *const argv[], char *const envp[]);
+TLI_DEFINE_ENUM_INTERNAL(execve)
+TLI_DEFINE_STRING_INTERNAL("execve")
+/// int execvp(const char *file, char *const argv[]);
+TLI_DEFINE_ENUM_INTERNAL(execvp)
+TLI_DEFINE_STRING_INTERNAL("execvp")
+/// int execvpe(const char *file, char *const argv[], char *const envp[]);
+TLI_DEFINE_ENUM_INTERNAL(execvpe)
+TLI_DEFINE_STRING_INTERNAL("execvpe")
 /// double exp(double x);
 TLI_DEFINE_ENUM_INTERNAL(exp)
 TLI_DEFINE_STRING_INTERNAL("exp")
@@ -709,6 +733,9 @@ TLI_DEFINE_STRING_INTERNAL("fopen")
 /// FILE *fopen64(const char *filename, const char *opentype)
 TLI_DEFINE_ENUM_INTERNAL(fopen64)
 TLI_DEFINE_STRING_INTERNAL("fopen64")
+/// int fork();
+TLI_DEFINE_ENUM_INTERNAL(fork)
+TLI_DEFINE_STRING_INTERNAL("fork")
 /// int fprintf(FILE *stream, const char *format, ...);
 TLI_DEFINE_ENUM_INTERNAL(fprintf)
 TLI_DEFINE_STRING_INTERNAL("fprintf")

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -68,6 +69,10 @@ ProgramState::~ProgramState() {
     stateMgr->getStoreManager().decrementReferenceCount(store);
 }
 
+int64_t ProgramState::getID() const {
+  return getStateManager().Alloc.identifyKnownAlignedObject<ProgramState>(this);
+}
+
 ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
                                          StoreManagerCreator CreateSMgr,
                                          ConstraintManagerCreator CreateCMgr,
@@ -120,8 +125,8 @@ ProgramStateRef ProgramState::bindLoc(Loc LV,
   ProgramStateRef newState = makeWithStore(Mgr.StoreMgr->Bind(getStore(),
                                                              LV, V));
   const MemRegion *MR = LV.getAsRegion();
-  if (MR && Mgr.getOwningEngine() && notifyChanges)
-    return Mgr.getOwningEngine()->processRegionChange(newState, MR, LCtx);
+  if (MR && notifyChanges)
+    return Mgr.getOwningEngine().processRegionChange(newState, MR, LCtx);
 
   return newState;
 }
@@ -133,9 +138,7 @@ ProgramState::bindDefaultInitial(SVal loc, SVal V,
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   const StoreRef &newStore = Mgr.StoreMgr->BindDefaultInitial(getStore(), R, V);
   ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine()
-             ? Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx)
-             : new_state;
+  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
 }
 
 ProgramStateRef
@@ -144,9 +147,7 @@ ProgramState::bindDefaultZero(SVal loc, const LocationContext *LCtx) const {
   const MemRegion *R = loc.castAs<loc::MemRegionVal>().getRegion();
   const StoreRef &newStore = Mgr.StoreMgr->BindDefaultZero(getStore(), R);
   ProgramStateRef new_state = makeWithStore(newStore);
-  return Mgr.getOwningEngine()
-             ? Mgr.getOwningEngine()->processRegionChange(new_state, R, LCtx)
-             : new_state;
+  return Mgr.getOwningEngine().processRegionChange(new_state, R, LCtx);
 }
 
 typedef ArrayRef<const MemRegion *> RegionList;
@@ -191,41 +192,34 @@ ProgramState::invalidateRegionsImpl(ValueList Values,
                                     RegionAndSymbolInvalidationTraits *ITraits,
                                     const CallEvent *Call) const {
   ProgramStateManager &Mgr = getStateManager();
-  SubEngine* Eng = Mgr.getOwningEngine();
+  SubEngine &Eng = Mgr.getOwningEngine();
 
-  InvalidatedSymbols Invalidated;
+  InvalidatedSymbols InvalidatedSyms;
   if (!IS)
-    IS = &Invalidated;
+    IS = &InvalidatedSyms;
 
   RegionAndSymbolInvalidationTraits ITraitsLocal;
   if (!ITraits)
     ITraits = &ITraitsLocal;
 
-  if (Eng) {
-    StoreManager::InvalidatedRegions TopLevelInvalidated;
-    StoreManager::InvalidatedRegions Invalidated;
-    const StoreRef &newStore
-    = Mgr.StoreMgr->invalidateRegions(getStore(), Values, E, Count, LCtx, Call,
-                                      *IS, *ITraits, &TopLevelInvalidated,
-                                      &Invalidated);
+  StoreManager::InvalidatedRegions TopLevelInvalidated;
+  StoreManager::InvalidatedRegions Invalidated;
+  const StoreRef &newStore
+  = Mgr.StoreMgr->invalidateRegions(getStore(), Values, E, Count, LCtx, Call,
+                                    *IS, *ITraits, &TopLevelInvalidated,
+                                    &Invalidated);
 
-    ProgramStateRef newState = makeWithStore(newStore);
+  ProgramStateRef newState = makeWithStore(newStore);
 
-    if (CausedByPointerEscape) {
-      newState = Eng->notifyCheckersOfPointerEscape(newState, IS,
-                                                    TopLevelInvalidated,
-                                                    Invalidated, Call,
-                                                    *ITraits);
-    }
-
-    return Eng->processRegionChanges(newState, IS, TopLevelInvalidated,
-                                     Invalidated, LCtx, Call);
+  if (CausedByPointerEscape) {
+    newState = Eng.notifyCheckersOfPointerEscape(newState, IS,
+                                                 TopLevelInvalidated,
+                                                 Call,
+                                                 *ITraits);
   }
 
-  const StoreRef &newStore =
-  Mgr.StoreMgr->invalidateRegions(getStore(), Values, E, Count, LCtx, Call,
-                                  *IS, *ITraits, nullptr, nullptr);
-  return makeWithStore(newStore);
+  return Eng.processRegionChanges(newState, IS, TopLevelInvalidated,
+                                  Invalidated, LCtx, Call);
 }
 
 ProgramStateRef ProgramState::killBinding(Loc LV) const {
@@ -448,14 +442,16 @@ void ProgramState::setStore(const StoreRef &newStore) {
 //  State pretty-printing.
 //===----------------------------------------------------------------------===//
 
-void ProgramState::print(raw_ostream &Out, const char *NL, const char *Sep,
+void ProgramState::print(raw_ostream &Out,
+                         const char *NL, const char *Sep,
                          const LocationContext *LC) const {
   // Print the store.
   ProgramStateManager &Mgr = getStateManager();
-  Mgr.getStoreManager().print(getStore(), Out, NL, Sep);
+  const ASTContext &Context = getStateManager().getContext();
+  Mgr.getStoreManager().print(getStore(), Out, NL);
 
   // Print out the environment.
-  Env.print(Out, NL, Sep, LC);
+  Env.print(Out, NL, Sep, Context, LC);
 
   // Print out the constraints.
   Mgr.getConstraintManager().print(this, Out, NL, Sep);
@@ -464,13 +460,14 @@ void ProgramState::print(raw_ostream &Out, const char *NL, const char *Sep,
   printDynamicTypeInfo(this, Out, NL, Sep);
 
   // Print out tainted symbols.
-  printTaint(Out, NL, Sep);
+  printTaint(Out, NL);
 
   // Print checker-specific data.
-  Mgr.getOwningEngine()->printState(Out, this, NL, Sep, LC);
+  Mgr.getOwningEngine().printState(Out, this, NL, Sep, LC);
 }
 
-void ProgramState::printDOT(raw_ostream &Out, const LocationContext *LC) const {
+void ProgramState::printDOT(raw_ostream &Out,
+                            const LocationContext *LC) const {
   print(Out, "\\l", "\\|", LC);
 }
 
@@ -479,7 +476,7 @@ LLVM_DUMP_METHOD void ProgramState::dump() const {
 }
 
 void ProgramState::printTaint(raw_ostream &Out,
-                              const char *NL, const char *Sep) const {
+                              const char *NL) const {
   TaintMapImpl TM = get<TaintMap>();
 
   if (!TM.isEmpty())
@@ -492,6 +489,10 @@ void ProgramState::printTaint(raw_ostream &Out,
 
 void ProgramState::dumpTaint() const {
   printTaint(llvm::errs());
+}
+
+AnalysisManager& ProgramState::getAnalysisManager() const {
+  return stateMgr->getOwningEngine().getAnalysisManager();
 }
 
 //===----------------------------------------------------------------------===//
@@ -647,22 +648,12 @@ bool ProgramState::scanReachableSymbols(SVal val, SymbolVisitor& visitor) const 
   return S.scan(val);
 }
 
-bool ProgramState::scanReachableSymbols(const SVal *I, const SVal *E,
-                                   SymbolVisitor &visitor) const {
+bool ProgramState::scanReachableSymbols(
+    llvm::iterator_range<region_iterator> Reachable,
+    SymbolVisitor &visitor) const {
   ScanReachableSymbols S(this, visitor);
-  for ( ; I != E; ++I) {
-    if (!S.scan(*I))
-      return false;
-  }
-  return true;
-}
-
-bool ProgramState::scanReachableSymbols(const MemRegion * const *I,
-                                   const MemRegion * const *E,
-                                   SymbolVisitor &visitor) const {
-  ScanReachableSymbols S(this, visitor);
-  for ( ; I != E; ++I) {
-    if (!S.scan(*I))
+  for (const MemRegion *R : Reachable) {
+    if (!S.scan(R))
       return false;
   }
   return true;
@@ -830,4 +821,3 @@ bool ProgramState::isTainted(SymbolRef Sym, TaintTagType Kind) const {
 
   return false;
 }
-

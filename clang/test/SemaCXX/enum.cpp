@@ -109,6 +109,8 @@ enum { overflow = 123456 * 234567 };
 #if __cplusplus >= 201103L
 // expected-warning@-2 {{not an integral constant expression}}
 // expected-note@-3 {{value 28958703552 is outside the range of representable values}}
+#else 
+// expected-warning@-5 {{overflow in expression; result is -1106067520 with type 'int'}}
 #endif
 
 // PR28903

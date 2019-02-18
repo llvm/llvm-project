@@ -134,7 +134,7 @@ public:
 private:
   void loadAndParseMapFiles();
 
-  SymbolRewriter::RewriteDescriptorList Descriptors;  
+  SymbolRewriter::RewriteDescriptorList Descriptors;
 };
 
 } // end namespace llvm

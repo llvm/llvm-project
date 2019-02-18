@@ -59,3 +59,15 @@ void rdar8883302() {
 void test8() {
   int bob; // expected-warning {{declaration shadows a variable in the global scope}}
 }
+
+enum PR24718_1{pr24718}; // expected-note {{previous declaration is here}}
+void PR24718(void) {
+  enum PR24718_2{pr24718}; // expected-warning {{declaration shadows a variable in the global scope}}
+}
+
+struct PR24718_3;
+struct PR24718_4 {
+  enum {
+    PR24718_3 // Does not shadow a type.
+  };
+};

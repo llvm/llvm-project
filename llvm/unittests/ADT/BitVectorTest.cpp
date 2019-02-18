@@ -182,13 +182,8 @@ TYPED_TEST(BitVectorTest, TrivialOperation) {
   EXPECT_TRUE(Vec.empty());
 }
 
-TYPED_TEST(BitVectorTest, SimpleFindOps) {
-  // Test finding in an empty BitVector.
+TYPED_TEST(BitVectorTest, SimpleFindOpsMultiWord) {
   TypeParam A;
-  EXPECT_EQ(-1, A.find_first());
-  EXPECT_EQ(-1, A.find_last());
-  EXPECT_EQ(-1, A.find_first_unset());
-  EXPECT_EQ(-1, A.find_last_unset());
 
   // Test finding next set and unset bits in a BitVector with multiple words
   A.resize(100);
@@ -232,12 +227,33 @@ TYPED_TEST(BitVectorTest, SimpleFindOps) {
   EXPECT_EQ(0, A.find_first_unset());
   EXPECT_EQ(99, A.find_last_unset());
   EXPECT_EQ(99, A.find_next_unset(98));
+}
 
-  // Also test with a vector that is small enough to fit in 1 word.
+// Check if a SmallBitVector is in small mode. This check is used in tests
+// that run for both SmallBitVector and BitVector. This check doesn't apply
+// to BitVector so we provide an overload that returns true to get the tests
+// to compile.
+static bool SmallBitVectorIsSmallMode(const SmallBitVector &bv) {
+  return bv.isSmall();
+}
+static bool SmallBitVectorIsSmallMode(const BitVector &) { return true; }
+
+// These tests are intended to exercise the single-word case of BitVector
+// and the small-mode case of SmallBitVector.
+TYPED_TEST(BitVectorTest, SimpleFindOpsSingleWord) {
+  // Test finding in an empty BitVector.
+  TypeParam A;
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
+  EXPECT_EQ(-1, A.find_first());
+  EXPECT_EQ(-1, A.find_last());
+  EXPECT_EQ(-1, A.find_first_unset());
+  EXPECT_EQ(-1, A.find_last_unset());
+
   A.resize(20);
   A.set(3);
   A.set(4);
   A.set(16);
+  ASSERT_TRUE(SmallBitVectorIsSmallMode(A));
   EXPECT_EQ(16, A.find_last());
   EXPECT_EQ(3, A.find_first());
   EXPECT_EQ(3, A.find_next(1));
@@ -431,6 +447,8 @@ TYPED_TEST(BitVectorTest, CompoundAssignment) {
   A &= B;
   EXPECT_FALSE(A.test(2));
   EXPECT_FALSE(A.test(7));
+  EXPECT_TRUE(A.test(4));
+  EXPECT_TRUE(A.test(5));
   EXPECT_EQ(2U, A.count());
   EXPECT_EQ(50U, A.size());
 
@@ -442,6 +460,242 @@ TYPED_TEST(BitVectorTest, CompoundAssignment) {
   EXPECT_TRUE(A.test(7));
   EXPECT_EQ(98U, A.count());
   EXPECT_EQ(100U, A.size());
+}
+
+// Test SmallBitVector operations with mixed big/small representations
+TYPED_TEST(BitVectorTest, MixedBigSmall) {
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Small &= Big;
+    EXPECT_TRUE(Small.test(0));
+    EXPECT_EQ(1u, Small.count());
+    // FIXME BitVector and SmallBitVector behave differently here.
+    // SmallBitVector resizes the LHS to max(LHS.size(), RHS.size())
+    // but BitVector does not.
+    // EXPECT_EQ(20u, Small.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Big &= Small;
+    EXPECT_TRUE(Big.test(0));
+    EXPECT_EQ(1u, Big.count());
+    // FIXME BitVector and SmallBitVector behave differently here.
+    // SmallBitVector resizes the LHS to max(LHS.size(), RHS.size())
+    // but BitVector does not.
+    // EXPECT_EQ(20u, Big.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Small |= Big;
+    EXPECT_TRUE(Small.test(0));
+    EXPECT_TRUE(Small.test(1));
+    EXPECT_TRUE(Small.test(2));
+    EXPECT_TRUE(Small.test(16));
+    EXPECT_EQ(4u, Small.count());
+    EXPECT_EQ(20u, Small.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Big |= Small;
+    EXPECT_TRUE(Big.test(0));
+    EXPECT_TRUE(Big.test(1));
+    EXPECT_TRUE(Big.test(2));
+    EXPECT_TRUE(Big.test(16));
+    EXPECT_EQ(4u, Big.count());
+    EXPECT_EQ(20u, Big.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Small ^= Big;
+    EXPECT_TRUE(Small.test(1));
+    EXPECT_TRUE(Small.test(2));
+    EXPECT_TRUE(Small.test(16));
+    EXPECT_EQ(3u, Small.count());
+    EXPECT_EQ(20u, Small.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Big ^= Small;
+    EXPECT_TRUE(Big.test(1));
+    EXPECT_TRUE(Big.test(2));
+    EXPECT_TRUE(Big.test(16));
+    EXPECT_EQ(3u, Big.count());
+    EXPECT_EQ(20u, Big.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Small.reset(Big);
+    EXPECT_TRUE(Small.test(1));
+    EXPECT_EQ(1u, Small.count());
+    EXPECT_EQ(10u, Small.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+    Big.set(2);
+    Big.set(16);
+
+    Big.reset(Small);
+    EXPECT_TRUE(Big.test(2));
+    EXPECT_TRUE(Big.test(16));
+    EXPECT_EQ(2u, Big.count());
+    EXPECT_EQ(20u, Big.size());
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(10);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+
+    EXPECT_FALSE(Big == Small);
+    EXPECT_FALSE(Small == Big);
+    Big.set(1);
+    EXPECT_TRUE(Big == Small);
+    EXPECT_TRUE(Small == Big);
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(20);
+    Small.resize(10);
+
+    Small.set(0);
+    Big.set(1);
+
+    EXPECT_FALSE(Small.anyCommon(Big));
+    EXPECT_FALSE(Big.anyCommon(Small));
+    Big.set(0);
+    EXPECT_TRUE(Small.anyCommon(Big));
+    EXPECT_TRUE(Big.anyCommon(Small));
+  }
+
+  {
+    TypeParam Big;
+    TypeParam Small;
+
+    Big.reserve(100);
+    Big.resize(10);
+    Small.resize(10);
+
+    Small.set(0);
+    Small.set(1);
+    Big.set(0);
+
+    EXPECT_TRUE(Small.test(Big));
+    EXPECT_FALSE(Big.test(Small));
+    Big.set(1);
+    EXPECT_FALSE(Small.test(Big));
+    EXPECT_FALSE(Big.test(Small));
+  }
 }
 
 TYPED_TEST(BitVectorTest, ProxyIndex) {
@@ -835,6 +1089,37 @@ TYPED_TEST(BitVectorTest, Iterators) {
   unsigned i = 0;
   for (unsigned Bit : ToFill.set_bits())
     EXPECT_EQ(List[i++], Bit);
+}
+
+TYPED_TEST(BitVectorTest, PushBack) {
+  TypeParam Vec(10, false);
+  EXPECT_EQ(-1, Vec.find_first());
+  EXPECT_EQ(10U, Vec.size());
+  EXPECT_EQ(0U, Vec.count());
+
+  Vec.push_back(true);
+  EXPECT_EQ(10, Vec.find_first());
+  EXPECT_EQ(11U, Vec.size());
+  EXPECT_EQ(1U, Vec.count());
+
+  Vec.push_back(false);
+  EXPECT_EQ(10, Vec.find_first());
+  EXPECT_EQ(12U, Vec.size());
+  EXPECT_EQ(1U, Vec.count());
+
+  Vec.push_back(true);
+  EXPECT_EQ(10, Vec.find_first());
+  EXPECT_EQ(13U, Vec.size());
+  EXPECT_EQ(2U, Vec.count());
+
+  // Add a lot of values to cause reallocation.
+  for (int i = 0; i != 100; ++i) {
+    Vec.push_back(true);
+    Vec.push_back(false);
+  }
+  EXPECT_EQ(10, Vec.find_first());
+  EXPECT_EQ(213U, Vec.size());
+  EXPECT_EQ(102U, Vec.count());
 }
 }
 #endif

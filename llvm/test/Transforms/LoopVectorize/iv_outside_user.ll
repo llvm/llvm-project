@@ -23,11 +23,10 @@ for.end:
 ; CHECK-LABEL: @preinc
 ; CHECK-LABEL: middle.block:
 ; CHECK: %[[v3:.+]] = sub i32 %n.vec, 1
-; CHECK: %ind.escape = add i32 0, %[[v3]]
 ; CHECK-LABEL: scalar.ph:
 ; CHECK: %bc.resume.val = phi i32 [ %n.vec, %middle.block ], [ 0, %entry ]
 ; CHECK-LABEL: for.end:
-; CHECK: %[[RET:.*]] = phi i32 [ {{.*}}, %for.body ], [ %ind.escape, %middle.block ]
+; CHECK: %[[RET:.*]] = phi i32 [ {{.*}}, %for.body ], [ %[[v3]], %middle.block ]
 ; CHECK: ret i32 %[[RET]]
 define i32 @preinc(i32 %k)  {
 entry:
@@ -135,16 +134,13 @@ for.end:
 }
 
 ; CHECK-LABEL: @PR30742
+; CHECK:   %[[T15:.+]] = add nsw i32 %tmp03, -7
 ; CHECK: vector.ph
 ; CHECK:   %[[N_MOD_VF:.+]] = urem i32 %[[T5:.+]], 2
 ; CHECK:   %[[N_VEC:.+]] = sub i32 %[[T5]], %[[N_MOD_VF]]
 ; CHECK: middle.block
 ; CHECK:   %[[CMP:.+]] = icmp eq i32 %[[T5]], %[[N_VEC]]
-; CHECK:   %[[T15:.+]] = add i32 %tmp03, -7
-; CHECK:   %[[T16:.+]] = shl i32 %[[N_MOD_VF]], 3
-; CHECK:   %[[T17:.+]] = add i32 %[[T15]], %[[T16]]
-; CHECK:   %[[T18:.+]] = shl i32 {{.*}}, 3
-; CHECK:   %ind.escape = sub i32 %[[T17]], %[[T18]]
+; CHECK:   %ind.escape = add i32 %[[T15]],
 ; CHECK:   br i1 %[[CMP]], label %BB3, label %scalar.ph
 define void @PR30742() {
 BB0:

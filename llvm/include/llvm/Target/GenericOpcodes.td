@@ -120,6 +120,36 @@ def G_VAARG : GenericInstruction {
   let mayStore = 1;
 }
 
+def G_CTLZ : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_CTLZ_ZERO_UNDEF : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_CTTZ : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_CTTZ_ZERO_UNDEF : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
+def G_CTPOP : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src);
+  let hasSideEffects = 0;
+}
+
 def G_BSWAP : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src);
@@ -131,6 +161,13 @@ def G_ADDRSPACE_CAST : GenericInstruction {
   let InOperandList = (ins type1:$src);
   let hasSideEffects = 0;
 }
+
+def G_BLOCK_ADDR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$ba);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
@@ -274,6 +311,14 @@ def G_PTR_MASK : GenericInstruction {
 // Overflow ops
 //------------------------------------------------------------------------------
 
+// Generic unsigned addition producing a carry flag.
+def G_UADDO : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
 // Generic unsigned addition consuming and producing a carry flag.
 def G_UADDE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
@@ -289,6 +334,19 @@ def G_SADDO : GenericInstruction {
   let isCommutable = 1;
 }
 
+// Generic signed addition consuming and producing a carry flag.
+def G_SADDE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
+  let hasSideEffects = 0;
+}
+
+// Generic unsigned subtraction producing a carry flag.
+def G_USUBO : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
 // Generic unsigned subtraction consuming and producing a carry flag.
 def G_USUBE : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
@@ -296,10 +354,17 @@ def G_USUBE : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-// Generic unsigned subtraction producing a carry flag.
+// Generic signed subtraction producing a carry flag.
 def G_SSUBO : GenericInstruction {
   let OutOperandList = (outs type0:$dst, type1:$carry_out);
   let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+}
+
+// Generic signed subtraction consuming and producing a carry flag.
+def G_SSUBE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst, type1:$carry_out);
+  let InOperandList = (ins type0:$src1, type0:$src2, type1:$carry_in);
   let hasSideEffects = 0;
 }
 
@@ -475,6 +540,35 @@ def G_FLOG2 : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Floating point base-10 logarithm of a value.
+def G_FLOG10 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+// Floating point ceiling of a value.
+def G_FCEIL : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+//------------------------------------------------------------------------------
+// Opcodes for LLVM Intrinsics
+//------------------------------------------------------------------------------
+def G_INTRINSIC_TRUNC : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
+def G_INTRINSIC_ROUND : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Memory ops
 //------------------------------------------------------------------------------
@@ -569,6 +663,9 @@ def G_EXTRACT : GenericInstruction {
 // Extract multiple registers specified size, starting from blocks given by
 // indexes. This will almost certainly be mapped to sub-register COPYs after
 // register banks have been selected.
+// The output operands are always ordered from lowest bits to highest:
+//   %bits_0_7:(s8), %bits_8_15:(s8),
+//       %bits_16_23:(s8), %bits_24_31:(s8) = G_UNMERGE_VALUES %0:(s32)
 def G_UNMERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst0, variable_ops);
   let InOperandList = (ins type1:$src);
@@ -582,8 +679,33 @@ def G_INSERT : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-/// Concatenate multiple registers of the same size into a wider register.
+// Concatenate multiple registers of the same size into a wider register.
+// The input operands are always ordered from lowest bits to highest:
+//   %0:(s32) = G_MERGE_VALUES %bits_0_7:(s8), %bits_8_15:(s8),
+//                             %bits_16_23:(s8), %bits_24_31:(s8)
 def G_MERGE_VALUES : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, variable_ops);
+  let hasSideEffects = 0;
+}
+
+/// Create a vector from multiple scalar registers.
+def G_BUILD_VECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, variable_ops);
+  let hasSideEffects = 0;
+}
+
+/// Like G_BUILD_VECTOR, but truncates the larger operand types to fit the
+/// destination vector elt type.
+def G_BUILD_VECTOR_TRUNC : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, variable_ops);
+  let hasSideEffects = 0;
+}
+
+/// Create a vector by concatenating vectors together.
+def G_CONCAT_VECTORS : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);
   let hasSideEffects = 0;

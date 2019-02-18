@@ -75,7 +75,7 @@ void UndelegatedConstructorCheck::registerMatchers(MatchFinder *Finder) {
 void UndelegatedConstructorCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *E = Result.Nodes.getNodeAs<CXXConstructExpr>("construct");
-  diag(E->getLocStart(), "did you intend to call a delegated constructor? "
+  diag(E->getBeginLoc(), "did you intend to call a delegated constructor? "
                          "A temporary object is created here instead");
 }
 

@@ -1254,6 +1254,12 @@ TEST_F(FormatTestComments, SplitsLongLinesInComments) {
                    " */",
                    getLLVMStyleWithColumns(20)));
 
+  // This reproduces a crashing bug where both adaptStartOfLine and
+  // getCommentSplit were trying to wrap after the "/**".
+  EXPECT_EQ("/** multilineblockcommentwithnowrapopportunity */",
+            format("/** multilineblockcommentwithnowrapopportunity */",
+                   getLLVMStyleWithColumns(20)));
+
   EXPECT_EQ("/*\n"
             "\n"
             "\n"
@@ -3103,6 +3109,106 @@ TEST_F(FormatTestComments, ReflowBackslashCrash) {
 "// rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr \\\n"
 "// <log_file> -- --output_directory=\"<output_directory>\""));
 // clang-format on
+}
+
+TEST_F(FormatTestComments, IndentsLongJavadocAnnotatedLines) {
+  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Java);
+  Style.ColumnLimit = 60;
+  FormatStyle Style20 = getGoogleStyle(FormatStyle::LK_Java);
+  Style20.ColumnLimit = 20;
+  EXPECT_EQ(
+      "/**\n"
+      " * @param x long long long long long long long long long\n"
+      " *     long\n"
+      " */\n",
+      format("/**\n"
+             " * @param x long long long long long long long long long long\n"
+             " */\n",
+             Style));
+  EXPECT_EQ("/**\n"
+            " * @param x long long long long long long long long long\n"
+            " *     long long long long long long long long long long\n"
+            " */\n",
+            format("/**\n"
+                   " * @param x long long long long long long long long long "
+                   "long long long long long long long long long long\n"
+                   " */\n",
+                   Style));
+  EXPECT_EQ("/**\n"
+            " * @param x long long long long long long long long long\n"
+            " *     long long long long long long long long long long\n"
+            " *     long\n"
+            " */\n",
+            format("/**\n"
+                   " * @param x long long long long long long long long long "
+                   "long long long long long long long long long long long\n"
+                   " */\n",
+                   Style));
+  EXPECT_EQ(
+      "/**\n"
+      " * Sentence that\n"
+      " * should be broken.\n"
+      " * @param short\n"
+      " * keep indentation\n"
+      " */\n", format(
+          "/**\n"
+          " * Sentence that should be broken.\n"
+          " * @param short\n"
+          " * keep indentation\n"
+          " */\n", Style20));
+
+  EXPECT_EQ("/**\n"
+            " * @param l1 long1\n"
+            " *     to break\n"
+            " * @param l2 long2\n"
+            " *     to break\n"
+            " */\n",
+            format("/**\n"
+                   " * @param l1 long1 to break\n"
+                   " * @param l2 long2 to break\n"
+                   " */\n",
+                   Style20));
+
+  EXPECT_EQ("/**\n"
+            " * @param xx to\n"
+            " *     break\n"
+            " * no reflow\n"
+            " */\n",
+            format("/**\n"
+                   " * @param xx to break\n"
+                   " * no reflow\n"
+                   " */\n",
+                   Style20));
+
+  EXPECT_EQ("/**\n"
+            " * @param xx to\n"
+            " *     break yes\n"
+            " *     reflow\n"
+            " */\n",
+            format("/**\n"
+                   " * @param xx to break\n"
+                   " *     yes reflow\n"
+                   " */\n",
+                   Style20));
+
+  FormatStyle JSStyle20 = getGoogleStyle(FormatStyle::LK_JavaScript);
+  JSStyle20.ColumnLimit = 20;
+  EXPECT_EQ("/**\n"
+            " * @param l1 long1\n"
+            " *     to break\n"
+            " */\n",
+            format("/**\n"
+                   " * @param l1 long1 to break\n"
+                   " */\n",
+                   JSStyle20));
+  EXPECT_EQ("/**\n"
+            " * @param {l1 long1\n"
+            " *     to break}\n"
+            " */\n",
+            format("/**\n"
+                   " * @param {l1 long1 to break}\n"
+                   " */\n",
+                   JSStyle20));
 }
 
 } // end namespace

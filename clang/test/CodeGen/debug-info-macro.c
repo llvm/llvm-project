@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-tables-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=line-directives-only -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited          -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
 // RUN: %clang_cc1 -emit-llvm -debug-info-kind=standalone       -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=CHECK,NO_PCH %s 
 // RUN: %clang_cc1 -emit-llvm                                   -debug-info-macro %s -o - "-DC1(x)=( x  + 5 )" -DA -include %S/Inputs/debug-info-macro.h -UC1 | FileCheck -check-prefixes=NO_MACRO %s 
@@ -23,7 +24,7 @@
 // NO_MACRO-NOT: DIMacro
 // NO_MACRO-NOT: DIMacroFile
 
-// CHECK:  !DICompileUnit({{.*}} macros: [[Macros:![0-9]+]])
+// CHECK:  !DICompileUnit({{.*}} macros: [[Macros:![0-9]+]]
 // CHECK:  [[EmptyMD:![0-9]+]] = !{}
 
 // NO_PCH: [[Macros]] = !{[[MainMacroFile:![0-9]+]], [[BuiltinMacro:![0-9]+]], {{.*}}, [[DefineC1:![0-9]+]], [[DefineA:![0-9]+]], [[UndefC1:![0-9]+]]}

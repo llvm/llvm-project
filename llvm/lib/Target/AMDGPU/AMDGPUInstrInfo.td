@@ -62,16 +62,8 @@ def AMDGPULoopOp : SDTypeProfile<0, 2,
   [SDTCisVT<0, i64>, SDTCisVT<1, OtherVT>]
 >;
 
-def AMDGPUBreakOp : SDTypeProfile<1, 1,
-  [SDTCisVT<0, i64>, SDTCisVT<1, i64>]
->;
-
 def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
   [SDTCisVT<0, i64>, SDTCisVT<1, i1>, SDTCisVT<2, i64>]
->;
-
-def AMDGPUElseBreakOp : SDTypeProfile<1, 2,
-  [SDTCisVT<0, i64>, SDTCisVT<1, i64>, SDTCisVT<2, i64>]
 >;
 
 def AMDGPUAddeSubeOp : SDTypeProfile<2, 3,
@@ -342,8 +334,9 @@ def AMDGPUumed3 : SDNode<"AMDGPUISD::UMED3", AMDGPUDTIntTernaryOp,
 def AMDGPUfmed3 : SDNode<"AMDGPUISD::FMED3", SDTFPTernaryOp, []>;
 
 def AMDGPUfdot2 : SDNode<"AMDGPUISD::FDOT2",
-                  SDTypeProfile<1, 3, [SDTCisSameAs<0, 3>, SDTCisSameAs<1, 2>,
-                                       SDTCisFP<0>, SDTCisVec<1>]>,
+                  SDTypeProfile<1, 4, [SDTCisSameAs<0, 3>, SDTCisSameAs<1, 2>,
+                                       SDTCisFP<0>, SDTCisVec<1>,
+                                       SDTCisInt<4>]>,
                   []>;
 
 def AMDGPUperm : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;

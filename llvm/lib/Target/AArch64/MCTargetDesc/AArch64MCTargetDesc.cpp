@@ -16,6 +16,7 @@
 #include "AArch64MCAsmInfo.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "InstPrinter/AArch64InstPrinter.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -24,12 +25,14 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetRegistry.h"
 
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define GET_INSTRINFO_MC_HELPERS
 #include "AArch64GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -152,6 +155,31 @@ public:
       }
     }
     return false;
+  }
+
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 uint64_t GotPltSectionVA,
+                 const Triple &TargetTriple) const override {
+    // Do a lightweight parsing of PLT entries.
+    std::vector<std::pair<uint64_t, uint64_t>> Result;
+    for (uint64_t Byte = 0, End = PltContents.size(); Byte + 7 < End;
+         Byte += 4) {
+      uint32_t Insn = support::endian::read32le(PltContents.data() + Byte);
+      // Check for adrp.
+      if ((Insn & 0x9f000000) != 0x90000000)
+        continue;
+      uint64_t Imm = (((PltSectionVA + Byte) >> 12) << 12) +
+            (((Insn >> 29) & 3) << 12) + (((Insn >> 5) & 0x3ffff) << 14);
+      uint32_t Insn2 = support::endian::read32le(PltContents.data() + Byte + 4);
+      // Check for: ldr Xt, [Xn, #pimm].
+      if (Insn2 >> 22 == 0x3e5) {
+        Imm += ((Insn2 >> 10) & 0xfff) << 3;
+        Result.push_back(std::make_pair(PltSectionVA + Byte, Imm));
+        Byte += 4;
+      }
+    }
+    return Result;
   }
 };
 

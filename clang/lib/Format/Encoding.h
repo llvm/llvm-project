@@ -1,4 +1,4 @@
-//===--- Encoding.h - Format C++ code -------------------------------------===//
+//===--- Encoding.h - Format C++ code ---------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

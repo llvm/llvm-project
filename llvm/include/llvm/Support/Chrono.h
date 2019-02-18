@@ -47,6 +47,14 @@ toTimePoint(std::time_t T) {
   return time_point_cast<seconds>(system_clock::from_time_t(T));
 }
 
+/// Convert a std::time_t + nanoseconds to a TimePoint
+LLVM_ATTRIBUTE_ALWAYS_INLINE inline TimePoint<>
+toTimePoint(std::time_t T, uint32_t nsec) {
+  using namespace std::chrono;
+  return time_point_cast<nanoseconds>(system_clock::from_time_t(T))
+    + nanoseconds(nsec);
+}
+
 } // namespace sys
 
 raw_ostream &operator<<(raw_ostream &OS, sys::TimePoint<> TP);

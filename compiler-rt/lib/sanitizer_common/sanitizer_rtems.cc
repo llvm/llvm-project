@@ -95,8 +95,10 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
   *tls_addr = *tls_size = 0;
 }
 
+void InitializePlatformEarly() {}
 void MaybeReexec() {}
 void CheckASLR() {}
+void CheckMPROTECT() {}
 void DisableCoreDumperIfNecessary() {}
 void InstallDeadlySignalHandlers(SignalHandlerType handler) {}
 void SetAlternateSignalStack() {}
@@ -226,11 +228,6 @@ bool WriteToFile(fd_t fd, const void *buff, uptr buff_size, uptr *bytes_written,
   return true;
 }
 
-bool RenameFile(const char *oldpath, const char *newpath, error_t *error_p) {
-  uptr res = rename(oldpath, newpath);
-  return !internal_iserror(res, error_p);
-}
-
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {}
 void DumpProcessMap() {}
 
@@ -240,6 +237,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
 }
 
 char **GetArgv() { return nullptr; }
+char **GetEnviron() { return nullptr; }
 
 const char *GetEnv(const char *name) {
   return getenv(name);

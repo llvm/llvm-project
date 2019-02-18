@@ -178,7 +178,6 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
     Result = clearRef(Result);
 
   if (onlyAccessesArgPointees(MRB) || onlyAccessesInaccessibleOrArgMem(MRB)) {
-    bool DoesAlias = false;
     bool IsMustAlias = true;
     ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
     if (doesAccessArgPointees(MRB)) {
@@ -191,7 +190,6 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
         AliasResult ArgAlias = alias(ArgLoc, Loc);
         if (ArgAlias != NoAlias) {
           ModRefInfo ArgMask = getArgModRefInfo(CS, ArgIdx);
-          DoesAlias = true;
           AllArgsMask = unionModRef(AllArgsMask, ArgMask);
         }
         // Conservatively clear IsMustAlias unless only MustAlias is found.
@@ -199,7 +197,7 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
       }
     }
     // Return NoModRef if no alias found with any argument.
-    if (!DoesAlias)
+    if (isNoModRef(AllArgsMask))
       return ModRefInfo::NoModRef;
     // Logical & between other AA analyses and argument analysis.
     Result = intersectModRef(Result, AllArgsMask);
@@ -642,28 +640,6 @@ AnalysisKey AAManager::Key;
 
 namespace {
 
-/// A wrapper pass for external alias analyses. This just squirrels away the
-/// callback used to run any analyses and register their results.
-struct ExternalAAWrapperPass : ImmutablePass {
-  using CallbackT = std::function<void(Pass &, Function &, AAResults &)>;
-
-  CallbackT CB;
-
-  static char ID;
-
-  ExternalAAWrapperPass() : ImmutablePass(ID) {
-    initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  explicit ExternalAAWrapperPass(CallbackT CB)
-      : ImmutablePass(ID), CB(std::move(CB)) {
-    initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-};
 
 } // end anonymous namespace
 

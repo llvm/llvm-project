@@ -61,26 +61,24 @@ int llvm_test_dibuilder(void) {
 
   LLVMMetadataRef ClassTy = declare_objc_class(DIB, File);
   LLVMMetadataRef GlobalClassValueExpr =
-    LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "globalClass", 11,
-                                              "", 0, File, 1, ClassTy,
-                                              true, GlobalClassValueExpr,
-                                              NULL, 0);
+      LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(
+      DIB, Module, "globalClass", 11, "", 0, File, 1, ClassTy, true,
+      GlobalClassValueExpr, NULL, 0);
 
   LLVMMetadataRef Int64Ty =
-    LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0);
+      LLVMDIBuilderCreateBasicType(DIB, "Int64", 5, 64, 0, LLVMDIFlagZero);
   LLVMMetadataRef Int64TypeDef =
     LLVMDIBuilderCreateTypedef(DIB, Int64Ty, "int64_t", 7, File, 42, File);
 
   LLVMMetadataRef GlobalVarValueExpr =
-    LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
-  LLVMDIBuilderCreateGlobalVariableExpression(DIB, Module, "global", 6,
-                                              "", 0, File, 1, Int64TypeDef,
-                                              true, GlobalVarValueExpr,
-                                              NULL, 0);
+      LLVMDIBuilderCreateConstantValueExpression(DIB, 0);
+  LLVMDIBuilderCreateGlobalVariableExpression(
+      DIB, Module, "global", 6, "", 0, File, 1, Int64TypeDef, true,
+      GlobalVarValueExpr, NULL, 0);
 
   LLVMMetadataRef NameSpace =
-    LLVMDIBuilderCreateNameSpace(DIB, Module, "NameSpace", 9, false);
+      LLVMDIBuilderCreateNameSpace(DIB, Module, "NameSpace", 9, false);
 
   LLVMMetadataRef StructDbgElts[] = {Int64Ty, Int64Ty, Int64Ty};
   LLVMMetadataRef StructDbgTy =

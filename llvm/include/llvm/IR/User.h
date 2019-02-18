@@ -101,10 +101,10 @@ public:
   void operator delete(void *Usr);
   /// Placement delete - required by std, called if the ctor throws.
   void operator delete(void *Usr, unsigned) {
-    // Note: If a subclass manipulates the information which is required to calculate the 
-    // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has 
+    // Note: If a subclass manipulates the information which is required to calculate the
+    // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
     // to restore the changed information to the original value, since the dtor of that class
-    // is not called if the ctor fails.  
+    // is not called if the ctor fails.
     User::operator delete(Usr);
 
 #ifndef LLVM_ENABLE_EXCEPTIONS
@@ -113,10 +113,10 @@ public:
   }
   /// Placement delete - required by std, called if the ctor throws.
   void operator delete(void *Usr, unsigned, bool) {
-    // Note: If a subclass manipulates the information which is required to calculate the 
-    // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has 
+    // Note: If a subclass manipulates the information which is required to calculate the
+    // Usr memory pointer, e.g. NumUserOperands, the operator delete of that subclass has
     // to restore the changed information to the original value, since the dtor of that class
-    // is not called if the ctor fails.  
+    // is not called if the ctor fails.
     User::operator delete(Usr);
 
 #ifndef LLVM_ENABLE_EXCEPTIONS

@@ -3,7 +3,7 @@
 // At the moment the whole of the destination array content is invalidated.
 // If a.s1 region has a symbolic offset, the whole region of 'a' is invalidated.
 // Specific triple set to test structures of size 0.
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -analyzer-store=region -verify -analyzer-config eagerly-assume=false %s
 
 typedef __typeof(sizeof(int)) size_t;
 
@@ -585,7 +585,7 @@ int f28(int i, int j, int k, int l) {
   m28[j].s3[k] = 1;
   struct ll * l28 = (struct ll*)(&m28[1]);
   l28->s1[l] = 2;
-  char input[] = {'a', 'b', 'c', 'd'};
+  char input[] = {'a', 'b', 'c', 'd'}; // expected-warning{{Potential leak of memory pointed to by field 's4'}}
   memcpy(l28->s1, input, 4);
   clang_analyzer_eval(m28[0].s3[0] == 1); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(m28[0].s3[1] == 1); // expected-warning{{UNKNOWN}}

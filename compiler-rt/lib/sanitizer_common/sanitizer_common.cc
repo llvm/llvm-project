@@ -339,11 +339,6 @@ int __sanitizer_acquire_crash_state() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __sanitizer_set_death_callback(void (*callback)(void)) {
-  SetUserDieCallback(callback);
-}
-
-SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_install_malloc_and_free_hooks(void (*malloc_hook)(const void *,
                                                                   uptr),
                                               void (*free_hook)(const void *)) {

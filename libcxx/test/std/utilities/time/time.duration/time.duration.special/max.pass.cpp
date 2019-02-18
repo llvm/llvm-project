@@ -11,7 +11,7 @@
 
 // duration
 
-// static constexpr duration max();
+// static constexpr duration max(); // noexcept after C++17
 
 #include <chrono>
 #include <limits>
@@ -23,6 +23,10 @@
 template <class D>
 void test()
 {
+    LIBCPP_ASSERT_NOEXCEPT(std::chrono::duration_values<typename D::rep>::max());
+#if TEST_STD_VER > 17
+    ASSERT_NOEXCEPT(       std::chrono::duration_values<typename D::rep>::max());
+#endif
     {
     typedef typename D::rep Rep;
     Rep max_rep = std::chrono::duration_values<Rep>::max();

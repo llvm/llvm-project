@@ -1,4 +1,8 @@
 ; RUN: llc < %s -mtriple=armv7-eabi -mattr=+neon,+vfp4 -fp-contract=fast | FileCheck %s
+; RUN: llc < %s -mtriple=arm-arm-eabi -mcpu=cortex-m7  -fp-contract=fast | FileCheck %s
+; RUN: llc < %s -mtriple=arm-arm-eabi -mcpu=cortex-m4  -fp-contract=fast | FileCheck %s -check-prefix=DONT-FUSE
+; RUN: llc < %s -mtriple=arm-arm-eabi -mcpu=cortex-m33 -fp-contract=fast | FileCheck %s -check-prefix=DONT-FUSE
+
 ; Check generated fused MAC and MLS.
 
 define double @fusedMACTest1(double %d1, double %d2, double %d3) {
@@ -12,6 +16,11 @@ define double @fusedMACTest1(double %d1, double %d2, double %d3) {
 define float @fusedMACTest2(float %f1, float %f2, float %f3) {
 ;CHECK-LABEL: fusedMACTest2:
 ;CHECK: vfma.f32
+
+;DONT-FUSE-LABEL: fusedMACTest2:
+;DONT-FUSE:       vmul.f32
+;DONT-FUSE-NEXT:  vadd.f32
+
   %1 = fmul float %f1, %f2
   %2 = fadd float %1, %f3
   ret float %2

@@ -87,13 +87,14 @@ namespace std {
 #include <typeinfo>
 #include <type_traits>
 #include <cstdlib>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
 #endif
 
 namespace std {
-class _LIBCPP_EXCEPTION_ABI bad_any_cast : public bad_cast
+class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_ANY_CAST bad_any_cast : public bad_cast
 {
 public:
     virtual const char* what() const _NOEXCEPT;
@@ -105,12 +106,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER > 14
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 void __throw_bad_any_cast()
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
     throw bad_any_cast();
 #else
-	_VSTD::abort();
+    _VSTD::abort();
 #endif
 }
 
@@ -576,6 +578,7 @@ any make_any(initializer_list<_Up> __il, _Args&&... __args) {
 
 template <class _ValueType>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 _ValueType any_cast(any const & __v)
 {
     using _RawValueType = __uncvref_t<_ValueType>;
@@ -590,6 +593,7 @@ _ValueType any_cast(any const & __v)
 
 template <class _ValueType>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 _ValueType any_cast(any & __v)
 {
     using _RawValueType = __uncvref_t<_ValueType>;
@@ -604,6 +608,7 @@ _ValueType any_cast(any & __v)
 
 template <class _ValueType>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 _ValueType any_cast(any && __v)
 {
     using _RawValueType = __uncvref_t<_ValueType>;

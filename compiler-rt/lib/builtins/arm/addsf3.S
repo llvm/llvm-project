@@ -178,7 +178,7 @@ LOCAL_LABEL(do_substraction):
 
   push {r0, r1, r2, r3}
   movs r0, r4
-  bl   __clzsi2
+  bl   SYMBOL_NAME(__clzsi2)
   movs r5, r0
   pop {r0, r1, r2, r3}
   // shift = rep_clz(aSignificand) - rep_clz(implicitBit << 3);

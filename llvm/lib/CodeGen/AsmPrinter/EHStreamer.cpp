@@ -99,7 +99,7 @@ void EHStreamer::computeActionsTable(
   FirstActions.reserve(LandingPads.size());
 
   int FirstAction = 0;
-  unsigned SizeActions = 0;
+  unsigned SizeActions = 0; // Total size of all action entries for a function
   const LandingPadInfo *PrevLPI = nullptr;
 
   for (SmallVectorImpl<const LandingPadInfo *>::const_iterator
@@ -107,23 +107,24 @@ void EHStreamer::computeActionsTable(
     const LandingPadInfo *LPI = *I;
     const std::vector<int> &TypeIds = LPI->TypeIds;
     unsigned NumShared = PrevLPI ? sharedTypeIDs(LPI, PrevLPI) : 0;
-    unsigned SizeSiteActions = 0;
+    unsigned SizeSiteActions = 0; // Total size of all entries for a landingpad
 
     if (NumShared < TypeIds.size()) {
-      unsigned SizeAction = 0;
+      // Size of one action entry (typeid + next action)
+      unsigned SizeActionEntry = 0;
       unsigned PrevAction = (unsigned)-1;
 
       if (NumShared) {
         unsigned SizePrevIds = PrevLPI->TypeIds.size();
         assert(Actions.size());
         PrevAction = Actions.size() - 1;
-        SizeAction = getSLEB128Size(Actions[PrevAction].NextAction) +
-                     getSLEB128Size(Actions[PrevAction].ValueForTypeID);
+        SizeActionEntry = getSLEB128Size(Actions[PrevAction].NextAction) +
+                          getSLEB128Size(Actions[PrevAction].ValueForTypeID);
 
         for (unsigned j = NumShared; j != SizePrevIds; ++j) {
           assert(PrevAction != (unsigned)-1 && "PrevAction is invalid!");
-          SizeAction -= getSLEB128Size(Actions[PrevAction].ValueForTypeID);
-          SizeAction += -Actions[PrevAction].NextAction;
+          SizeActionEntry -= getSLEB128Size(Actions[PrevAction].ValueForTypeID);
+          SizeActionEntry += -Actions[PrevAction].NextAction;
           PrevAction = Actions[PrevAction].Previous;
         }
       }
@@ -136,9 +137,9 @@ void EHStreamer::computeActionsTable(
             isFilterEHSelector(TypeID) ? FilterOffsets[-1 - TypeID] : TypeID;
         unsigned SizeTypeID = getSLEB128Size(ValueForTypeID);
 
-        int NextAction = SizeAction ? -(SizeAction + SizeTypeID) : 0;
-        SizeAction = SizeTypeID + getSLEB128Size(NextAction);
-        SizeSiteActions += SizeAction;
+        int NextAction = SizeActionEntry ? -(SizeActionEntry + SizeTypeID) : 0;
+        SizeActionEntry = SizeTypeID + getSLEB128Size(NextAction);
+        SizeSiteActions += SizeActionEntry;
 
         ActionEntry Action = { ValueForTypeID, NextAction, PrevAction };
         Actions.push_back(Action);
@@ -146,7 +147,7 @@ void EHStreamer::computeActionsTable(
       }
 
       // Record the first action of the landing pad site.
-      FirstAction = SizeActions + SizeSiteActions - SizeAction + 1;
+      FirstAction = SizeActions + SizeSiteActions - SizeActionEntry + 1;
     } // else identical - re-use previous FirstAction
 
     // Information used when creating the call-site table. The action record
@@ -344,7 +345,9 @@ computeCallSiteTable(SmallVectorImpl<CallSiteEntry> &CallSites,
 ///     unwound and handling continues.
 ///  3. Type ID table contains references to all the C++ typeinfo for all
 ///     catches in the function.  This tables is reverse indexed base 1.
-void EHStreamer::emitExceptionTable() {
+///
+/// Returns the starting symbol of an exception table.
+MCSymbol *EHStreamer::emitExceptionTable() {
   const MachineFunction *MF = Asm->MF;
   const std::vector<const GlobalValue *> &TypeInfos = MF->getTypeInfos();
   const std::vector<unsigned> &FilterIds = MF->getFilterIds();
@@ -359,9 +362,9 @@ void EHStreamer::emitExceptionTable() {
     LandingPads.push_back(&PadInfos[i]);
 
   // Order landing pads lexicographically by type id.
-  llvm::sort(LandingPads.begin(), LandingPads.end(),
-             [](const LandingPadInfo *L,
-                const LandingPadInfo *R) { return L->TypeIds < R->TypeIds; });
+  llvm::sort(LandingPads, [](const LandingPadInfo *L, const LandingPadInfo *R) {
+    return L->TypeIds < R->TypeIds;
+  });
 
   // Compute the actions table and gather the first action index for each
   // landing pad site.
@@ -374,6 +377,7 @@ void EHStreamer::emitExceptionTable() {
   computeCallSiteTable(CallSites, LandingPads, FirstActions);
 
   bool IsSJLJ = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::SjLj;
+  bool IsWasm = Asm->MAI->getExceptionHandlingType() == ExceptionHandling::Wasm;
   unsigned CallSiteEncoding =
       IsSJLJ ? dwarf::DW_EH_PE_udata4 : dwarf::DW_EH_PE_uleb128;
   bool HaveTTData = !TypeInfos.empty() || !FilterIds.empty();
@@ -456,8 +460,8 @@ void EHStreamer::emitExceptionTable() {
   Asm->EmitLabelDifferenceAsULEB128(CstEndLabel, CstBeginLabel);
   Asm->OutStreamer->EmitLabel(CstBeginLabel);
 
-  // SjLj Exception handling
-  if (IsSJLJ) {
+  // SjLj / Wasm Exception handling
+  if (IsSJLJ || IsWasm) {
     unsigned idx = 0;
     for (SmallVectorImpl<CallSiteEntry>::const_iterator
          I = CallSites.begin(), E = CallSites.end(); I != E; ++I, ++idx) {
@@ -603,6 +607,7 @@ void EHStreamer::emitExceptionTable() {
   }
 
   Asm->EmitAlignment(2);
+  return GCCETSym;
 }
 
 void EHStreamer::emitTypeInfos(unsigned TTypeEncoding, MCSymbol *TTBaseLabel) {

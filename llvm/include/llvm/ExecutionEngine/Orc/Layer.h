@@ -15,7 +15,9 @@
 #define LLVM_EXECUTIONENGINE_ORC_LAYER_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 namespace llvm {
 namespace orc {
@@ -29,14 +31,32 @@ public:
   /// Returns the ExecutionSession for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
 
-  /// Adds a MaterializationUnit representing the given IR to the given VSO.
-  virtual Error add(VSO &V, VModuleKey K, std::unique_ptr<Module> M);
+  /// Sets the CloneToNewContextOnEmit flag (false by default).
+  ///
+  /// When set, IR modules added to this layer will be cloned on to a new
+  /// context before emit is called. This can be used by clients who want
+  /// to load all IR using one LLVMContext (to save memory via type and
+  /// constant uniquing), but want to move Modules to fresh contexts before
+  /// compiling them to enable concurrent compilation.
+  /// Single threaded clients, or clients who load every module on a new
+  /// context, need not set this.
+  void setCloneToNewContextOnEmit(bool CloneToNewContextOnEmit) {
+    this->CloneToNewContextOnEmit = CloneToNewContextOnEmit;
+  }
+
+  /// Returns the current value of the CloneToNewContextOnEmit flag.
+  bool getCloneToNewContextOnEmit() const { return CloneToNewContextOnEmit; }
+
+  /// Adds a MaterializationUnit representing the given IR to the given
+  /// JITDylib.
+  virtual Error add(JITDylib &JD, ThreadSafeModule TSM,
+                    VModuleKey K = VModuleKey());
 
   /// Emit should materialize the given IR.
-  virtual void emit(MaterializationResponsibility R, VModuleKey K,
-                    std::unique_ptr<Module> M) = 0;
+  virtual void emit(MaterializationResponsibility R, ThreadSafeModule TSM) = 0;
 
 private:
+  bool CloneToNewContextOnEmit = false;
   ExecutionSession &ES;
 };
 
@@ -50,22 +70,29 @@ public:
 
   /// Create an IRMaterializationLayer. Scans the module to build the
   /// SymbolFlags and SymbolToDefinition maps.
-  IRMaterializationUnit(ExecutionSession &ES, std::unique_ptr<Module> M);
+  IRMaterializationUnit(ExecutionSession &ES, ThreadSafeModule TSM,
+                        VModuleKey K);
 
   /// Create an IRMaterializationLayer from a module, and pre-existing
   /// SymbolFlags and SymbolToDefinition maps. The maps must provide
   /// entries for each definition in M.
   /// This constructor is useful for delegating work from one
   /// IRMaterializationUnit to another.
-  IRMaterializationUnit(std::unique_ptr<Module> M, SymbolFlagsMap SymbolFlags,
+  IRMaterializationUnit(ThreadSafeModule TSM, VModuleKey K,
+                        SymbolFlagsMap SymbolFlags,
                         SymbolNameToDefinitionMap SymbolToDefinition);
 
+  /// Return the ModuleIdentifier as the name for this MaterializationUnit.
+  StringRef getName() const override;
+
+  const ThreadSafeModule &getModule() const { return TSM; }
+
 protected:
-  std::unique_ptr<Module> M;
+  ThreadSafeModule TSM;
   SymbolNameToDefinitionMap SymbolToDefinition;
 
 private:
-  void discard(const VSO &V, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
 };
 
 /// MaterializationUnit that materializes modules by calling the 'emit' method
@@ -73,7 +100,8 @@ private:
 class BasicIRLayerMaterializationUnit : public IRMaterializationUnit {
 public:
   BasicIRLayerMaterializationUnit(IRLayer &L, VModuleKey K,
-                                  std::unique_ptr<Module> M);
+                                  ThreadSafeModule TSM);
+
 private:
 
   void materialize(MaterializationResponsibility R) override;
@@ -91,11 +119,13 @@ public:
   /// Returns the execution session for this layer.
   ExecutionSession &getExecutionSession() { return ES; }
 
-  /// Adds a MaterializationUnit representing the given IR to the given VSO.
-  virtual Error add(VSO &V, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
+  /// Adds a MaterializationUnit representing the given IR to the given
+  /// JITDylib.
+  virtual Error add(JITDylib &JD, std::unique_ptr<MemoryBuffer> O,
+                    VModuleKey K = VModuleKey());
 
   /// Emit should materialize the given IR.
-  virtual void emit(MaterializationResponsibility R, VModuleKey K,
+  virtual void emit(MaterializationResponsibility R,
                     std::unique_ptr<MemoryBuffer> O) = 0;
 
 private:
@@ -106,22 +136,30 @@ private:
 /// instance) by calling 'emit' on the given ObjectLayer.
 class BasicObjectLayerMaterializationUnit : public MaterializationUnit {
 public:
+  static Expected<std::unique_ptr<BasicObjectLayerMaterializationUnit>>
+  Create(ObjectLayer &L, VModuleKey K, std::unique_ptr<MemoryBuffer> O);
 
-
-  /// The MemoryBuffer should represent a valid object file.
-  /// If there is any chance that the file is invalid it should be validated
-  /// prior to constructing a BasicObjectLayerMaterializationUnit.
   BasicObjectLayerMaterializationUnit(ObjectLayer &L, VModuleKey K,
-                                      std::unique_ptr<MemoryBuffer> O);
+                                      std::unique_ptr<MemoryBuffer> O,
+                                      SymbolFlagsMap SymbolFlags);
+
+  /// Return the buffer's identifier as the name for this MaterializationUnit.
+  StringRef getName() const override;
 
 private:
+
   void materialize(MaterializationResponsibility R) override;
-  void discard(const VSO &V, SymbolStringPtr Name) override;
+  void discard(const JITDylib &JD, const SymbolStringPtr &Name) override;
 
   ObjectLayer &L;
-  VModuleKey K;
   std::unique_ptr<MemoryBuffer> O;
 };
+
+/// Returns a SymbolFlagsMap for the object file represented by the given
+/// buffer, or an error if the buffer does not contain a valid object file.
+// FIXME: Maybe move to Core.h?
+Expected<SymbolFlagsMap> getObjectSymbolFlags(ExecutionSession &ES,
+                                              MemoryBufferRef ObjBuffer);
 
 } // End namespace orc
 } // End namespace llvm

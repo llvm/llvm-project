@@ -36,7 +36,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -436,4 +436,8 @@ static bool isInitMessage(const ObjCMethodCall &Call) {
 
 void ento::registerObjCSelfInitChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCSelfInitChecker>();
+}
+
+bool ento::shouldRegisterObjCSelfInitChecker(const LangOptions &LO) {
+  return true;
 }

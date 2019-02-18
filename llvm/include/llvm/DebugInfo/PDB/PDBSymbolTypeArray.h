@@ -19,12 +19,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolTypeArray : public PDBSymbol {
-public:
-  PDBSymbolTypeArray(const IPDBSession &PDBSession,
-                     std::unique_ptr<IPDBRawSymbol> ArrayTypeSymbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::ArrayType)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
   void dumpRight(PDBSymDumper &Dumper) const override;
 

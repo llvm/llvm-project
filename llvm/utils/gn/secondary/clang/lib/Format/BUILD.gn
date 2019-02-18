@@ -1,0 +1,27 @@
+static_library("Format") {
+  output_name = "clangFormat"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//clang/lib/Lex",
+    "//clang/lib/Tooling/Core",
+    "//clang/lib/Tooling/Inclusions",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "AffectedRangeManager.cpp",
+    "BreakableToken.cpp",
+    "ContinuationIndenter.cpp",
+    "Format.cpp",
+    "FormatToken.cpp",
+    "FormatTokenLexer.cpp",
+    "NamespaceEndCommentsFixer.cpp",
+    "SortJavaScriptImports.cpp",
+    "TokenAnalyzer.cpp",
+    "TokenAnnotator.cpp",
+    "UnwrappedLineFormatter.cpp",
+    "UnwrappedLineParser.cpp",
+    "UsingDeclarationsSorter.cpp",
+    "WhitespaceManager.cpp",
+  ]
+}

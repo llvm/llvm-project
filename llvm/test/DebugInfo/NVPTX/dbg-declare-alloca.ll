@@ -51,6 +51,8 @@
 ; CHECK: // .b8 1                                // DW_FORM_addr
 ; CHECK: // .b8 18                               // DW_AT_high_pc
 ; CHECK: // .b8 1                                // DW_FORM_addr
+; CHECK: // .b8 64                               // DW_AT_frame_base
+; CHECK: // .b8 10                               // DW_FORM_block1
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 58                               // DW_AT_decl_file
@@ -121,87 +123,64 @@
 ; CHECK: // }
 ; CHECK: // .section .debug_info
 ; CHECK: // {
-; CHECK: // .b32 124                             // Length of Unit
+; CHECK: // .b32 135                             // Length of Unit
 ; CHECK: // .b8 2                                // DWARF version number
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK: // .b8 8                                // Address Size (in bytes)
-; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x75 DW_TAG_compile_unit
-; CHECK: // .b8 99                               // DW_AT_producer
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 103
+; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x80 DW_TAG_compile_unit
+; CHECK: // .b8 99,108,97,110,103                // DW_AT_producer
 ; CHECK: // .b8 0
 ; CHECK: // .b8 12                               // DW_AT_language
 ; CHECK: // .b8 0
-; CHECK: // .b8 116                              // DW_AT_name
-; CHECK: // .b8 46
-; CHECK: // .b8 99
+; CHECK: // .b8 116,46,99                        // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK: // .b8 116                              // DW_AT_comp_dir
-; CHECK: // .b8 101
-; CHECK: // .b8 115
-; CHECK: // .b8 116
+; CHECK: // .b8 116,101,115,116                  // DW_AT_comp_dir
 ; CHECK: // .b8 0
 ; CHECK: // .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end0                      // DW_AT_high_pc
-; CHECK: // .b8 2                                // Abbrev [2] 0x31:0x32 DW_TAG_subprogram
+; CHECK: // .b8 2                                // Abbrev [2] 0x31:0x3d DW_TAG_subprogram
 ; CHECK: // .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end0                      // DW_AT_high_pc
-; CHECK: // .b8 117                              // DW_AT_name
-; CHECK: // .b8 115
-; CHECK: // .b8 101
-; CHECK: // .b8 95
-; CHECK: // .b8 100
-; CHECK: // .b8 98
-; CHECK: // .b8 103
-; CHECK: // .b8 95
-; CHECK: // .b8 100
-; CHECK: // .b8 101
-; CHECK: // .b8 99
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 114
-; CHECK: // .b8 101
+; CHECK: // .b8 1                                // DW_AT_frame_base
+; CHECK: // .b8 156
+; CHECK: // .b8 117,115,101,95,100,98,103,95,100,101,99,108,97,114,101 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 3                                // DW_AT_decl_line
 ; CHECK: // .b8 1                                // DW_AT_prototyped
 ; CHECK: // .b8 1                                // DW_AT_external
-; CHECK: // .b8 3                                // Abbrev [3] 0x56:0xc DW_TAG_variable
-; CHECK: // .b8 2                                // DW_AT_location
+; CHECK: // .b8 3                                // Abbrev [3] 0x58:0x15 DW_TAG_variable
+; CHECK: // .b8 11                               // DW_AT_location
+; CHECK: // .b8 3
+; CHECK: // .b64 __local_depot0
 ; CHECK: // .b8 35
-; CHECK: // .b8 8
+; CHECK: // .b8 0
 ; CHECK: // .b8 111                              // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 4                                // DW_AT_decl_line
-; CHECK: // .b32 99                              // DW_AT_type
+; CHECK: // .b32 110                             // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK: // .b8 4                                // Abbrev [4] 0x63:0x15 DW_TAG_structure_type
-; CHECK: // .b8 70                               // DW_AT_name
-; CHECK: // .b8 111
-; CHECK: // .b8 111
+; CHECK: // .b8 4                                // Abbrev [4] 0x6e:0x15 DW_TAG_structure_type
+; CHECK: // .b8 70,111,111                       // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_byte_size
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 1                                // DW_AT_decl_line
-; CHECK: // .b8 5                                // Abbrev [5] 0x6b:0xc DW_TAG_member
+; CHECK: // .b8 5                                // Abbrev [5] 0x76:0xc DW_TAG_member
 ; CHECK: // .b8 120                              // DW_AT_name
 ; CHECK: // .b8 0
-; CHECK: // .b32 120                             // DW_AT_type
+; CHECK: // .b32 131                             // DW_AT_type
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 1                                // DW_AT_decl_line
 ; CHECK: // .b8 2                                // DW_AT_data_member_location
 ; CHECK: // .b8 35
 ; CHECK: // .b8 0
 ; CHECK: // .b8 0                                // End Of Children Mark
-; CHECK: // .b8 6                                // Abbrev [6] 0x78:0x7 DW_TAG_base_type
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 6                                // Abbrev [6] 0x83:0x7 DW_TAG_base_type
+; CHECK: // .b8 105,110,116                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_encoding
 ; CHECK: // .b8 4                                // DW_AT_byte_size
@@ -231,7 +210,7 @@ attributes #1 = { nounwind readnone speculatable }
 !llvm.module.flags = !{!3, !4, !5}
 !llvm.ident = !{!6}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
 !1 = !DIFile(filename: "t.c", directory: "test")
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 2}

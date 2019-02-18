@@ -122,17 +122,18 @@ public:
 private:
   MCTargetAsmParser *TargetParser = nullptr;
 
-  unsigned ShowParsedOperands : 1;
-
 protected: // Can only create subclasses.
   MCAsmParser();
 
+  SmallVector<MCPendingError, 0> PendingErrors;
+
   /// Flag tracking whether any errors have been encountered.
   bool HadError = false;
+
   /// Enable print [latency:throughput] in output file.
   bool EnablePrintSchedInfo = false;
 
-  SmallVector<MCPendingError, 1> PendingErrors;
+  bool ShowParsedOperands = false;
 
 public:
   MCAsmParser(const MCAsmParser &) = delete;
@@ -166,7 +167,7 @@ public:
   void setShowParsedOperands(bool Value) { ShowParsedOperands = Value; }
 
   void setEnablePrintSchedInfo(bool Value) { EnablePrintSchedInfo = Value; }
-  bool shouldPrintSchedInfo() { return EnablePrintSchedInfo; }
+  bool shouldPrintSchedInfo() const { return EnablePrintSchedInfo; }
 
   /// Run the parser on the input source buffer.
   virtual bool Run(bool NoInitialTextSection, bool NoFinalize = false) = 0;

@@ -42,6 +42,7 @@ WinException::WinException(AsmPrinter *A) : EHStreamer(A) {
   // MSVC's EH tables are always composed of 32-bit words.  All known 64-bit
   // platforms use an imagerel32 relocation to refer to symbols.
   useImageRel32 = (A->getDataLayout().getPointerSizeInBits() == 64);
+  isAArch64 = Asm->TM.getTargetTriple().isAArch64();
 }
 
 WinException::~WinException() {}
@@ -242,6 +243,17 @@ void WinException::endFunclet() {
     if (F.hasPersonalityFn())
       Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
+    // On funclet exit, we emit a fake "function" end marker, so that the call
+    // to EmitWinEHHandlerData below can calculate the size of the funclet or
+    // function.
+    if (isAArch64) {
+      Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
+      Asm->OutStreamer->EmitWinCFIFuncletOrFuncEnd();
+      MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
+          Asm->OutStreamer->getCurrentSectionOnly());
+      Asm->OutStreamer->SwitchSection(XData);
+    }
+
     // Emit an UNWIND_INFO struct describing the prologue.
     Asm->OutStreamer->EmitWinEHHandlerData();
 
@@ -286,7 +298,10 @@ const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {
   return create32bitRef(Asm->getSymbol(GV));
 }
 
-const MCExpr *WinException::getLabelPlusOne(const MCSymbol *Label) {
+const MCExpr *WinException::getLabel(const MCSymbol *Label) {
+  if (isAArch64)
+    return MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_COFF_IMGREL32,
+                                   Asm->OutContext);
   return MCBinaryExpr::createAdd(create32bitRef(Label),
                                  MCConstantExpr::create(1, Asm->OutContext),
                                  Asm->OutContext);
@@ -588,7 +603,6 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
                                           const MCSymbol *EndLabel, int State) {
   auto &OS = *Asm->OutStreamer;
   MCContext &Ctx = Asm->OutContext;
-
   bool VerboseAsm = OS.isVerboseAsm();
   auto AddComment = [&](const Twine &Comment) {
     if (VerboseAsm)
@@ -613,9 +627,9 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
     }
 
     AddComment("LabelStart");
-    OS.EmitValue(getLabelPlusOne(BeginLabel), 4);
+    OS.EmitValue(getLabel(BeginLabel), 4);
     AddComment("LabelEnd");
-    OS.EmitValue(getLabelPlusOne(EndLabel), 4);
+    OS.EmitValue(getLabel(EndLabel), 4);
     AddComment(UME.IsFinally ? "FinallyFunclet" : UME.Filter ? "FilterFunction"
                                                              : "CatchAll");
     OS.EmitValue(FilterOrFinally, 4);
@@ -799,7 +813,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
       //   TypeDescriptor *Type;
       //   int32_t         CatchObjOffset;
       //   void          (*Handler)();
-      //   int32_t         ParentFrameOffset; // x64 only
+      //   int32_t         ParentFrameOffset; // x64 and AArch64 only
       // };
       OS.EmitLabel(HandlerMapXData);
       for (const WinEHHandlerType &HT : TBME.HandlerArray) {
@@ -901,7 +915,7 @@ void WinException::computeIP2StateTable(
         ChangeLabel = StateChange.PreviousEndLabel;
       // Emit an entry indicating that PCs after 'Label' have this EH state.
       IPToStateTable.push_back(
-          std::make_pair(getLabelPlusOne(ChangeLabel), StateChange.NewState));
+          std::make_pair(getLabel(ChangeLabel), StateChange.NewState));
       // FIXME: assert that NewState is between CatchLow and CatchHigh.
     }
   }

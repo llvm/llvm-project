@@ -57,6 +57,7 @@ std::string _object_error_category::message(int EV) const {
                    "defined.");
 }
 
+void BinaryError::anchor() {}
 char BinaryError::ID = 0;
 char GenericBinaryError::ID = 0;
 

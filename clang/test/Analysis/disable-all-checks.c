@@ -1,9 +1,18 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-disable-all-checks -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-disable-all-checks -analyzer-checker=core -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region \
+// RUN:   -analyzer-disable-all-checks -verify %s
+//
+// RUN: %clang_analyze_cc1 -analyzer-disable-all-checks -analyzer-checker=core \
+// RUN:   -analyzer-store=region -verify %s
+//
 // RUN: %clang_analyze_cc1 -analyzer-disable-all-checks -verify %s
-// RUN: not %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region -analyzer-disable-checker -verify %s 2>&1 | FileCheck %s
+//
+// RUN: not %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region \
+// RUN:   -analyzer-disable-checker non.existant.Checker -verify %s 2>&1 \
+// RUN:   | FileCheck %s
+//
 // expected-no-diagnostics
 
+// CHECK: no analyzer checkers are associated with 'non.existant.Checker'
 // CHECK: use -analyzer-disable-all-checks to disable all static analyzer checkers
 int buggy() {
   int x = 0;

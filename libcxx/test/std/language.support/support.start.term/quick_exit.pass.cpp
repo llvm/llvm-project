@@ -6,7 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
+// UNSUPPORTED: c++98, c++03
 
 // test quick_exit and at_quick_exit
 

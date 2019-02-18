@@ -100,9 +100,9 @@ void SIMDIntrinsicsCheck::registerMatchers(MatchFinder *Finder) {
   if (Std.empty())
     Std = getLangOpts().CPlusPlus2a ? "std" : "std::experimental";
 
-  Finder->addMatcher(callExpr(callee(functionDecl(allOf(
+  Finder->addMatcher(callExpr(callee(functionDecl(
                                   matchesName("^::(_mm_|_mm256_|_mm512_|vec_)"),
-                                  isVectorFunction()))),
+                                  isVectorFunction())),
                               unless(isExpansionInSystemHeader()))
                          .bind("call"),
                      this);

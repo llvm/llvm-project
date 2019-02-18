@@ -52,6 +52,7 @@ ASM_FUNCTION_MIPS_RE = re.compile(
 
 ASM_FUNCTION_PPC_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
+    r'.*?'
     r'\.Lfunc_begin[0-9]+:\n'
     r'(?:[ \t]+.cfi_startproc\n)?'
     r'(?:\.Lfunc_[gl]ep[0-9]+:\n(?:[ \t]+.*?\n)*)*'
@@ -110,8 +111,9 @@ def scrub_asm_x86(asm, args):
   asm = SCRUB_X86_SPILL_RELOAD_RE.sub(r'{{[-0-9]+}}(%\1{{[sb]}}p)\2', asm)
   # Generically match the stack offset of a memory operand.
   asm = SCRUB_X86_SP_RE.sub(r'{{[0-9]+}}(%\1)', asm)
-  # Generically match a RIP-relative memory operand.
-  asm = SCRUB_X86_RIP_RE.sub(r'{{.*}}(%rip)', asm)
+  if getattr(args, 'x86_scrub_rip', False):
+    # Generically match a RIP-relative memory operand.
+    asm = SCRUB_X86_RIP_RE.sub(r'{{.*}}(%rip)', asm)
   # Generically match a LCP symbol.
   asm = SCRUB_X86_LCP_RE.sub(r'{{\.LCPI.*}}', asm)
   if getattr(args, 'extra_scrub', False):

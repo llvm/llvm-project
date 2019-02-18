@@ -17,8 +17,8 @@
 #include <vector>
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/XRay/XRayRecord.h"
 
 namespace llvm {
@@ -46,24 +46,34 @@ namespace xray {
 ///
 class Trace {
   XRayFileHeader FileHeader;
-  std::vector<XRayRecord> Records;
+  using RecordVector = std::vector<XRayRecord>;
+  RecordVector Records;
 
   typedef std::vector<XRayRecord>::const_iterator citerator;
 
-  friend Expected<Trace> loadTraceFile(StringRef, bool);
+  friend Expected<Trace> loadTrace(const DataExtractor &, bool);
 
 public:
+  using size_type = RecordVector::size_type;
+  using value_type = RecordVector::value_type;
+  using const_iterator = RecordVector::const_iterator;
+
   /// Provides access to the loaded XRay trace file header.
   const XRayFileHeader &getFileHeader() const { return FileHeader; }
 
-  citerator begin() const { return Records.begin(); }
-  citerator end() const { return Records.end(); }
-  size_t size() const { return Records.size(); }
+  const_iterator begin() const { return Records.begin(); }
+  const_iterator end() const { return Records.end(); }
+  bool empty() const { return Records.empty(); }
+  size_type size() const { return Records.size(); }
 };
 
 /// This function will attempt to load XRay trace records from the provided
 /// |Filename|.
 Expected<Trace> loadTraceFile(StringRef Filename, bool Sort = false);
+
+/// This function will attempt to load XRay trace records from the provided
+/// DataExtractor.
+Expected<Trace> loadTrace(const DataExtractor &Extractor, bool Sort = false);
 
 } // namespace xray
 } // namespace llvm

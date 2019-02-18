@@ -9,10 +9,11 @@
 ///
 /// \file
 ///  This file describes a subset of C++ as a protobuf. It is used to
-///  more easily find interesting inputs for fuzzing Clang. This subset
-///  differs from the one defined in cxx_proto.proto by eliminating while
-///  loops and conditionals. The goal is that the C++ code generated will be
-///  more likely to stress the LLVM loop vectorizer.
+///  more easily find interesting inputs for fuzzing LLVM's vectorizer.
+///  This subset differs from the one defined in cxx_proto.proto by eliminating
+///  while loops and conditionals. The goal is that the C++ code generated will
+///  be more likely to stress the LLVM loop vectorizer. The code generated will
+///  contain either a single loop or two nested loops.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -74,7 +75,8 @@ message StatementSeq {
 }
 
 message LoopFunction {
-  required StatementSeq statements = 1;
+  optional StatementSeq inner_statements = 1;
+  required StatementSeq outer_statements = 2;
 }
 
 package clang_fuzzer;

@@ -34,13 +34,14 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const auto *Semicolon = Result.Nodes.getNodeAs<NullStmt>("semi");
-  SourceLocation LocStart = Semicolon->getLocStart();
+  SourceLocation LocStart = Semicolon->getBeginLoc();
 
   if (LocStart.isMacroID())
     return;
 
   ASTContext &Ctxt = *Result.Context;
-  auto Token = utils::lexer::getPreviousToken(Ctxt, LocStart);
+  auto Token = utils::lexer::getPreviousToken(LocStart, Ctxt.getSourceManager(),
+                                              Ctxt.getLangOpts());
   auto &SM = *Result.SourceManager;
   unsigned SemicolonLine = SM.getSpellingLineNumber(LocStart);
 
@@ -51,7 +52,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
       SM.getSpellingLineNumber(Token.getLocation()) != SemicolonLine)
     return;
 
-  SourceLocation LocEnd = Semicolon->getLocEnd();
+  SourceLocation LocEnd = Semicolon->getEndLoc();
   FileID FID = SM.getFileID(LocEnd);
   llvm::MemoryBuffer *Buffer = SM.getBuffer(FID, LocEnd);
   Lexer Lexer(SM.getLocForStartOfFile(FID), Ctxt.getLangOpts(),
@@ -60,7 +61,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
   if (Lexer.LexFromRawLexer(Token))
     return;
 
-  unsigned BaseIndent = SM.getSpellingColumnNumber(Statement->getLocStart());
+  unsigned BaseIndent = SM.getSpellingColumnNumber(Statement->getBeginLoc());
   unsigned NewTokenIndent = SM.getSpellingColumnNumber(Token.getLocation());
   unsigned NewTokenLine = SM.getSpellingLineNumber(Token.getLocation());
 

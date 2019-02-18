@@ -25,18 +25,14 @@ QualType CXXCatchStmt::getCaughtType() const {
 
 CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, SourceLocation tryLoc,
                                Stmt *tryBlock, ArrayRef<Stmt *> handlers) {
-  std::size_t Size = sizeof(CXXTryStmt);
-  Size += ((handlers.size() + 1) * sizeof(Stmt *));
-
+  const size_t Size = totalSizeToAlloc<Stmt *>(handlers.size() + 1);
   void *Mem = C.Allocate(Size, alignof(CXXTryStmt));
   return new (Mem) CXXTryStmt(tryLoc, tryBlock, handlers);
 }
 
 CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, EmptyShell Empty,
                                unsigned numHandlers) {
-  std::size_t Size = sizeof(CXXTryStmt);
-  Size += ((numHandlers + 1) * sizeof(Stmt *));
-
+  const size_t Size = totalSizeToAlloc<Stmt *>(numHandlers + 1);
   void *Mem = C.Allocate(Size, alignof(CXXTryStmt));
   return new (Mem) CXXTryStmt(Empty, numHandlers);
 }
@@ -44,12 +40,12 @@ CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, EmptyShell Empty,
 CXXTryStmt::CXXTryStmt(SourceLocation tryLoc, Stmt *tryBlock,
                        ArrayRef<Stmt *> handlers)
     : Stmt(CXXTryStmtClass), TryLoc(tryLoc), NumHandlers(handlers.size()) {
-  Stmt **Stmts = reinterpret_cast<Stmt **>(this + 1);
+  Stmt **Stmts = getStmts();
   Stmts[0] = tryBlock;
   std::copy(handlers.begin(), handlers.end(), Stmts + 1);
 }
 
-CXXForRangeStmt::CXXForRangeStmt(DeclStmt *Range,
+CXXForRangeStmt::CXXForRangeStmt(Stmt *Init, DeclStmt *Range,
                                  DeclStmt *BeginStmt, DeclStmt *EndStmt,
                                  Expr *Cond, Expr *Inc, DeclStmt *LoopVar,
                                  Stmt *Body, SourceLocation FL,
@@ -57,6 +53,7 @@ CXXForRangeStmt::CXXForRangeStmt(DeclStmt *Range,
                                  SourceLocation RPL)
     : Stmt(CXXForRangeStmtClass), ForLoc(FL), CoawaitLoc(CAL), ColonLoc(CL),
       RParenLoc(RPL) {
+  SubExprs[INIT] = Init;
   SubExprs[RANGE] = Range;
   SubExprs[BEGINSTMT] = BeginStmt;
   SubExprs[ENDSTMT] = EndStmt;

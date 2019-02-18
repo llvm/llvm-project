@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _LIBCPP_BUILDING_BIND
 #include "functional"
 
 _LIBCPP_BEGIN_NAMESPACE_STD

@@ -97,6 +97,7 @@ public:
 
 private:
   MachineRegisterInfo *MRI;
+  const X86Subtarget *Subtarget;
   const X86InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const TargetRegisterClass *PromoteRC;
@@ -346,10 +347,10 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()
                     << " **********\n");
 
-  auto &Subtarget = MF.getSubtarget<X86Subtarget>();
+  Subtarget = &MF.getSubtarget<X86Subtarget>();
   MRI = &MF.getRegInfo();
-  TII = Subtarget.getInstrInfo();
-  TRI = Subtarget.getRegisterInfo();
+  TII = Subtarget->getInstrInfo();
+  TRI = Subtarget->getRegisterInfo();
   MDT = &getAnalysis<MachineDominatorTree>();
   PromoteRC = &X86::GR8RegClass;
 
@@ -730,9 +731,12 @@ CondRegArray X86FlagsCopyLoweringPass::collectCondsInRegs(
   for (MachineInstr &MI :
        llvm::reverse(llvm::make_range(MBB.begin(), TestPos))) {
     X86::CondCode Cond = X86::getCondFromSETOpc(MI.getOpcode());
-    if (Cond != X86::COND_INVALID && MI.getOperand(0).isReg() &&
-        TRI->isVirtualRegister(MI.getOperand(0).getReg()))
+    if (Cond != X86::COND_INVALID && !MI.mayStore() && MI.getOperand(0).isReg() &&
+        TRI->isVirtualRegister(MI.getOperand(0).getReg())) {
+      assert(MI.getOperand(0).isDef() &&
+             "A non-storing SETcc should always define a register!");
       CondRegs[Cond] = MI.getOperand(0).getReg();
+    }
 
     // Stop scanning when we see the first definition of the EFLAGS as prior to
     // this we would potentially capture the wrong flag state.
@@ -957,10 +961,14 @@ void X86FlagsCopyLoweringPass::rewriteSetCarryExtended(
           .addReg(Reg)
           .addImm(SubRegIdx[OrigRegSize]);
     } else if (OrigRegSize > TargetRegSize) {
-      BuildMI(MBB, SetPos, SetLoc, TII->get(TargetOpcode::EXTRACT_SUBREG),
+      if (TargetRegSize == 1 && !Subtarget->is64Bit()) {
+        // Need to constrain the register class.
+        MRI->constrainRegClass(Reg, &X86::GR32_ABCDRegClass);
+      }
+
+      BuildMI(MBB, SetPos, SetLoc, TII->get(TargetOpcode::COPY),
               NewReg)
-          .addReg(Reg)
-          .addImm(SubRegIdx[TargetRegSize]);
+          .addReg(Reg, 0, SubRegIdx[TargetRegSize]);
     } else {
       BuildMI(MBB, SetPos, SetLoc, TII->get(TargetOpcode::COPY), NewReg)
           .addReg(Reg);
@@ -1045,7 +1053,7 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &TestMBB,
 
   MIB.addReg(CondReg);
 
-  MIB->setMemRefs(SetCCI.memoperands_begin(), SetCCI.memoperands_end());
+  MIB.setMemRefs(SetCCI.memoperands());
 
   SetCCI.eraseFromParent();
   return;

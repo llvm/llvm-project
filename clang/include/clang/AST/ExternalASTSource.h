@@ -270,10 +270,10 @@ public:
   ///
   /// The default implementation of this method is a no-op.
   virtual void PrintStats();
-  
+
   /// Perform layout on the given record.
   ///
-  /// This routine allows the external AST source to provide an specific 
+  /// This routine allows the external AST source to provide an specific
   /// layout for a record, overriding the layout that would normally be
   /// constructed. It is intended for clients who receive specific layout
   /// details rather than source code (such as LLDB). The client is expected
@@ -290,13 +290,13 @@ public:
   /// expressed in bits. All of the fields must be provided with offsets.
   ///
   /// \param BaseOffsets The offset of each of the direct, non-virtual base
-  /// classes. If any bases are not given offsets, the bases will be laid 
+  /// classes. If any bases are not given offsets, the bases will be laid
   /// out according to the ABI.
   ///
   /// \param VirtualBaseOffsets The offset of each of the virtual base classes
-  /// (either direct or not). If any bases are not given offsets, the bases will be laid 
+  /// (either direct or not). If any bases are not given offsets, the bases will be laid
   /// out according to the ABI.
-  /// 
+  ///
   /// \returns true if the record layout was provided, false otherwise.
   virtual bool layoutRecordType(
       const RecordDecl *Record, uint64_t &Size, uint64_t &Alignment,
@@ -307,15 +307,15 @@ public:
   //===--------------------------------------------------------------------===//
   // Queries for performance analysis.
   //===--------------------------------------------------------------------===//
-  
+
   struct MemoryBufferSizes {
     size_t malloc_bytes;
     size_t mmap_bytes;
-    
+
     MemoryBufferSizes(size_t malloc_bytes, size_t mmap_bytes)
         : malloc_bytes(malloc_bytes), mmap_bytes(mmap_bytes) {}
   };
-  
+
   /// Return the amount of memory used by memory buffers, breaking down
   /// by heap-backed versus mmap'ed memory.
   MemoryBufferSizes getMemoryBufferSizes() const {
@@ -512,10 +512,10 @@ namespace clang {
 /// Represents a lazily-loaded vector of data.
 ///
 /// The lazily-loaded vector of data contains data that is partially loaded
-/// from an external source and partially added by local translation. The 
+/// from an external source and partially added by local translation. The
 /// items loaded from the external source are loaded lazily, when needed for
 /// iteration over the complete vector.
-template<typename T, typename Source, 
+template<typename T, typename Source,
          void (Source::*Loader)(SmallVectorImpl<T>&),
          unsigned LoadedStorage = 2, unsigned LocalStorage = 4>
 class LazyVector {
@@ -564,20 +564,20 @@ public:
   iterator begin(Source *source, bool LocalOnly = false) {
     if (LocalOnly)
       return iterator(this, 0);
-    
+
     if (source)
       (source->*Loader)(Loaded);
     return iterator(this, -(int)Loaded.size());
   }
-  
+
   iterator end() {
     return iterator(this, Local.size());
   }
-  
+
   void push_back(const T& LocalValue) {
     Local.push_back(LocalValue);
   }
-  
+
   void erase(iterator From, iterator To) {
     if (From.isLoaded() && To.isLoaded()) {
       Loaded.erase(&*From, &*To);

@@ -1,0 +1,9 @@
+# RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+sb -disassemble < %s      | FileCheck %s
+# RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=+v8.5a    -disassemble < %s      | FileCheck %s
+# RUN: llvm-mc -triple=aarch64-none-linux-gnu -mattr=-sb -disassemble < %s 2>&1 | FileCheck %s --check-prefix=NOSB
+
+# New reg
+0xff 0x30 0x03 0xd5
+
+# CHECK: sb
+# NOSB:  msr S0_3_C3_C0_7, xzr

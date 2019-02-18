@@ -33,15 +33,15 @@
 namespace llvm {
 
 template<class Graph> class GraphWriter;
+class LLVMTargetMachine;
 class MachineFunction;
 class MachineRegisterInfo;
 class MCInstrDesc;
 struct MCSchedClassDesc;
-class ScheduleDAG;
 class SDNode;
 class SUnit;
+class ScheduleDAG;
 class TargetInstrInfo;
-class TargetMachine;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 
@@ -236,8 +236,7 @@ class TargetRegisterInfo;
       Contents.Reg = Reg;
     }
 
-    raw_ostream &print(raw_ostream &O,
-                       const TargetRegisterInfo *TRI = nullptr) const;
+    void dump(const TargetRegisterInfo *TRI = nullptr) const;
   };
 
   template <>
@@ -252,7 +251,7 @@ class TargetRegisterInfo;
     MachineInstr *Instr = nullptr; ///< Alternatively, a MachineInstr.
 
   public:
-    SUnit *OrigNode = nullptr; ///< If not this, the node from which this node 
+    SUnit *OrigNode = nullptr; ///< If not this, the node from which this node
                                /// was cloned. (SD scheduling only)
 
     const MCSchedClassDesc *SchedClass =
@@ -459,12 +458,7 @@ class TargetRegisterInfo;
     /// edge occurs first.
     void biasCriticalPath();
 
-    void dump(const ScheduleDAG *G) const;
-    void dumpAll(const ScheduleDAG *G) const;
-    raw_ostream &print(raw_ostream &O,
-                       const SUnit *Entry = nullptr,
-                       const SUnit *Exit = nullptr) const;
-    raw_ostream &print(raw_ostream &O, const ScheduleDAG *G) const;
+    void dumpAttributes() const;
 
   private:
     void ComputeDepth();
@@ -564,7 +558,7 @@ class TargetRegisterInfo;
 
   class ScheduleDAG {
   public:
-    const TargetMachine &TM;            ///< Target processor
+    const LLVMTargetMachine &TM;        ///< Target processor
     const TargetInstrInfo *TII;         ///< Target instruction information
     const TargetRegisterInfo *TRI;      ///< Target processor register info
     MachineFunction &MF;                ///< Machine function
@@ -597,7 +591,9 @@ class TargetRegisterInfo;
     virtual void viewGraph(const Twine &Name, const Twine &Title);
     virtual void viewGraph();
 
-    virtual void dumpNode(const SUnit *SU) const = 0;
+    virtual void dumpNode(const SUnit &SU) const = 0;
+    virtual void dump() const = 0;
+    void dumpNodeName(const SUnit &SU) const;
 
     /// Returns a label for an SUnit node in a visualization of the ScheduleDAG.
     virtual std::string getGraphNodeLabel(const SUnit *SU) const = 0;
@@ -613,6 +609,9 @@ class TargetRegisterInfo;
     /// consistent. Returns the number of scheduled SUnits.
     unsigned VerifyScheduledDAG(bool isBottomUp);
 #endif
+
+  protected:
+    void dumpNodeAll(const SUnit &SU) const;
 
   private:
     /// Returns the MCInstrDesc of this SDNode or NULL.

@@ -79,7 +79,7 @@ void foo() {
   U u;
 }
 
-// The second CU contents depend on wether we disabled ODR uniquing or
+// The second CU contents depend on whether we disabled ODR uniquing or
 // not.
 
 // CHECK: TAG_compile_unit

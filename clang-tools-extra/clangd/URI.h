@@ -45,6 +45,10 @@ public:
   static llvm::Expected<URI> create(llvm::StringRef AbsolutePath,
                                     llvm::StringRef Scheme);
 
+  // Similar to above except this picks a registered scheme that works. If none
+  // works, this falls back to "file" scheme.
+  static URI create(llvm::StringRef AbsolutePath);
+
   /// This creates a file:// URI for \p AbsolutePath. The path must be absolute.
   static URI createFile(llvm::StringRef AbsolutePath);
 
@@ -59,6 +63,13 @@ public:
   /// which can help disambiguate when the same file exists in many workspaces.
   static llvm::Expected<std::string> resolve(const URI &U,
                                              llvm::StringRef HintPath = "");
+
+  /// Resolves \p AbsPath into a canonical path of its URI, by converting
+  /// \p AbsPath to URI and resolving the URI to get th canonical path.
+  /// This ensures that paths with the same URI are resolved into consistent
+  /// file path.
+  static llvm::Expected<std::string> resolvePath(llvm::StringRef AbsPath,
+                                                 llvm::StringRef HintPath = "");
 
   /// Gets the preferred spelling of this file for #include, if there is one,
   /// e.g. <system_header.h>, "path/to/x.h".

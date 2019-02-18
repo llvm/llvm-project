@@ -180,26 +180,6 @@ template <typename T> serialize_numeric_impl<T> serialize_numeric(T &Item) {
   return serialize_numeric_impl<T>(Item);
 }
 
-// This field is only present in the byte record if the condition is true.  The
-// condition is evaluated lazily, so it can depend on items that were
-// deserialized
-// earlier.
-#define CV_CONDITIONAL_FIELD(I, C)                                             \
-  serialize_conditional(I, [&]() { return !!(C); })
-
-// This is an array of N items, where N is evaluated lazily, so it can refer
-// to a field deserialized earlier.
-#define CV_ARRAY_FIELD_N(I, N) serialize_array(I, [&]() { return N; })
-
-// This is an array that exhausts the remainder of the input buffer.
-#define CV_ARRAY_FIELD_TAIL(I) serialize_array_tail(I)
-
-// This is an array that consumes null terminated strings until a double null
-// is encountered.
-#define CV_STRING_ARRAY_NULL_TERM(I) serialize_null_term_string_array(I)
-
-#define CV_NUMERIC_FIELD(I) serialize_numeric(I)
-
 template <typename T, typename U>
 Error consume(BinaryStreamReader &Reader,
               const serialize_conditional_impl<T, U> &Item) {
@@ -242,9 +222,6 @@ Error consume(BinaryStreamReader &Reader, T &&X, U &&Y, Args &&... Rest) {
   return consume(Reader, Y, std::forward<Args>(Rest)...);
 }
 
-#define CV_DESERIALIZE(...)                                                    \
-  if (auto EC = consume(__VA_ARGS__))                                          \
-    return std::move(EC);
 }
 }
 

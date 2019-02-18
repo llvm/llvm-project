@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX8_9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX9,GFX8_9 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone
@@ -8,8 +8,10 @@ declare float @llvm.fabs.f32(float) nounwind readnone
 ; GCN-LABEL: {{^}}madak_f32:
 ; GFX6:   buffer_load_dword [[VA:v[0-9]+]]
 ; GFX6:   buffer_load_dword [[VB:v[0-9]+]]
-; GFX8_9: {{flat|global}}_load_dword [[VB:v[0-9]+]]
-; GFX8_9: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX8: {{flat|global}}_load_dword [[VB:v[0-9]+]]
+; GFX8: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX9: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX9: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GCN:    v_madak_f32 {{v[0-9]+}}, [[VA]], [[VB]], 0x41200000
 define amdgpu_kernel void @madak_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
@@ -88,8 +90,10 @@ define amdgpu_kernel void @madak_m_inline_imm_f32(float addrspace(1)* noalias %o
 ; GCN-LABEL: {{^}}madak_inline_imm_f32:
 ; GFX6:   buffer_load_dword [[VA:v[0-9]+]]
 ; GFX6:   buffer_load_dword [[VB:v[0-9]+]]
-; GFX8_9: {{flat|global}}_load_dword [[VB:v[0-9]+]]
-; GFX8_9: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX8: {{flat|global}}_load_dword [[VB:v[0-9]+]]
+; GFX8: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX9: {{flat|global}}_load_dword [[VA:v[0-9]+]]
+; GFX9: {{flat|global}}_load_dword [[VB:v[0-9]+]]
 ; GCN:    v_mad_f32 {{v[0-9]+}}, [[VA]], [[VB]], 4.0
 define amdgpu_kernel void @madak_inline_imm_f32(float addrspace(1)* noalias %out, float addrspace(1)* noalias %in.a, float addrspace(1)* noalias %in.b) nounwind {
   %tid = tail call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

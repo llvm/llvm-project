@@ -1,8 +1,13 @@
-; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
-; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+nooddspreg < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,NOODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64 < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64,+nooddspreg < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,NOODDSPREG
-; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fpxx,-nooddspreg < %s | FileCheck -allow-deprecated-dag-overlap %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-EMIT
+; RUN: llc -march=mipsel -mcpu=mips32 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
+; RUN: llc -march=mipsel -mcpu=mips32 -mattr=+nooddspreg < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,NOODDSPREG
+; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64 < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-NO-EMIT
+; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fp64,+nooddspreg < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,NOODDSPREG
+; RUN: llc -march=mipsel -mcpu=mips32r6 -mattr=fpxx,-nooddspreg < %s \
+; RUN:   | FileCheck %s -check-prefixes=ALL,ODDSPREG,ODDSPREG-EMIT
 
 ; We don't emit a directive unless we need to. This is to support versions of
 ; GAS which do not support the directive.
@@ -55,7 +60,7 @@ entry:
 
 ; ALL-LABEL: two_doubles:
 ; ALL-DAG:        add.d $[[T0:f[0-9]+]], $f12, ${{f[0-9]+}}
-; ALL-DAG:        add.d $f0, $f12, $[[T0]]
+; ALL-DAG:        add.d ${{f[0-9]+}}, $f12, $[[T0]]
 
 
 ; INVALID: -mattr=+nooddspreg is not currently permitted for a 32-bit FPU register file (FR=0 mode).

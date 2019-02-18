@@ -16,6 +16,7 @@
 // ----------- ATTENTION -------------
 // This header should NOT include any other headers from sanitizer runtime.
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform_limits_freebsd.h"
 #include "sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_platform_limits_openbsd.h"
 #include "sanitizer_platform_limits_posix.h"
@@ -48,6 +49,7 @@ uptr internal_filesize(fd_t fd);  // -1 on error.
 uptr internal_stat(const char *path, void *buf);
 uptr internal_lstat(const char *path, void *buf);
 uptr internal_fstat(fd_t fd, void *buf);
+uptr internal_dup(int oldfd);
 uptr internal_dup2(int oldfd, int newfd);
 uptr internal_readlink(const char *path, char *buf, uptr bufsize);
 uptr internal_unlink(const char *path);
@@ -59,6 +61,11 @@ uptr internal_waitpid(int pid, int *status, int options);
 
 int internal_fork();
 int internal_forkpty(int *amaster);
+
+int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
+                    uptr *oldlenp, const void *newp, uptr newlen);
+int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
+                          const void *newp, uptr newlen);
 
 // These functions call appropriate pthread_ functions directly, bypassing
 // the interceptor. They are weak and may not be present in some tools.
@@ -92,6 +99,9 @@ uptr internal_execve(const char *filename, char *const argv[],
                      char *const envp[]);
 
 bool IsStateDetached(int state);
+
+// Move the fd out of {0, 1, 2} range.
+fd_t ReserveStandardFds(fd_t fd);
 
 }  // namespace __sanitizer
 

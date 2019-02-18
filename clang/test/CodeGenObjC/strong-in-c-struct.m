@@ -125,7 +125,7 @@ void func(Strong *);
 // CHECK: %[[V1:.*]] = bitcast i8** %[[V0]] to i8*
 // CHECK: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 24
 // CHECK: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
-// CHECK: call void @objc_storeStrong(i8** %[[V3]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V3]], i8* null)
 // CHECK: ret void
 
 // CHECK: define linkonce_odr hidden void @__destructor_8_s16(i8** %[[DST:.*]])
@@ -135,7 +135,7 @@ void func(Strong *);
 // CHECK: %[[V1:.*]] = bitcast i8** %[[V0]] to i8*
 // CHECK: %[[V2:.*]] = getelementptr inbounds i8, i8* %[[V1]], i64 16
 // CHECK: %[[V3:.*]] = bitcast i8* %[[V2]] to i8**
-// CHECK: call void @objc_storeStrong(i8** %[[V3]], i8* null)
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V3]], i8* null)
 // CHECK: ret void
 
 void test_constructor_destructor_StrongOuter(void) {
@@ -169,7 +169,7 @@ void test_constructor_destructor_StrongOuter(void) {
 // CHECK: %[[V6:.*]] = getelementptr inbounds i8, i8* %[[V5]], i64 24
 // CHECK: %[[V7:.*]] = bitcast i8* %[[V6]] to i8**
 // CHECK: %[[V8:.*]] = load i8*, i8** %[[V7]], align 8
-// CHECK: %[[V9:.*]] = call i8* @objc_retain(i8* %[[V8]])
+// CHECK: %[[V9:.*]] = call i8* @llvm.objc.retain(i8* %[[V8]])
 // CHECK: store i8* %[[V9]], i8** %[[V4]], align 8
 // CHECK: %[[V10:.*]] = bitcast i8** %[[V0]] to i8*
 // CHECK: %[[V11:.*]] = getelementptr inbounds i8, i8* %[[V10]], i64 32
@@ -200,7 +200,7 @@ void test_constructor_destructor_StrongOuter(void) {
 // CHECK: %[[V8:.*]] = getelementptr inbounds i8, i8* %[[V7]], i64 16
 // CHECK: %[[V9:.*]] = bitcast i8* %[[V8]] to i8**
 // CHECK: %[[V10:.*]] = load i8*, i8** %[[V9]], align 8
-// CHECK: %[[V11:.*]] = call i8* @objc_retain(i8* %[[V10]])
+// CHECK: %[[V11:.*]] = call i8* @llvm.objc.retain(i8* %[[V10]])
 // CHECK: store i8* %[[V11]], i8** %[[V6]], align 8
 // CHECK: ret void
 
@@ -222,7 +222,7 @@ void test_copy_constructor_StrongOuter(StrongOuter *s) {
 // CHECK: %[[V6:.*]] = getelementptr inbounds i8, i8* %[[V5]], i64 24
 // CHECK: %[[V7:.*]] = bitcast i8* %[[V6]] to i8**
 // CHECK: %[[V8:.*]] = load i8*, i8** %[[V7]], align 8
-// CHECK: call void @objc_storeStrong(i8** %[[V4]], i8* %[[V8]])
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V4]], i8* %[[V8]])
 
 void test_copy_assignment_StrongOuter(StrongOuter *d, StrongOuter *s) {
   *d = *s;
@@ -283,7 +283,7 @@ void test_move_constructor_StrongOuter(void) {
 // CHECK: store i8* null, i8** %[[V7]], align 8
 // CHECK: %[[V9:.*]] = load i8*, i8** %[[V4]], align 8
 // CHECK: store i8* %[[V8]], i8** %[[V4]], align 8
-// CHECK: call void @objc_release(i8* %[[V9]])
+// CHECK: call void @llvm.objc.release(i8* %[[V9]])
 
 void test_move_assignment_StrongOuter(StrongOuter *p) {
   *p = getStrongOuter();
@@ -363,7 +363,7 @@ void test_destructor_ignored_result(void) {
 // CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
 // CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
 // CHECK: %[[V2:.*]] = load i8*, i8** %[[V1]], align 8
-// CHECK: %[[V3:.*]] = call i8* @objc_retainBlock(i8* %[[V2]])
+// CHECK: %[[V3:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V2]])
 // CHECK: store i8* %[[V3]], i8** %[[V0]], align 8
 // CHECK: ret void
 
@@ -382,10 +382,10 @@ void test_copy_constructor_StrongBlock(StrongBlock *s) {
 // CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
 // CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
 // CHECK: %[[V2:.*]] = load i8*, i8** %[[V1]], align 8
-// CHECK: %[[V3:.*]] = call i8* @objc_retainBlock(i8* %[[V2]])
+// CHECK: %[[V3:.*]] = call i8* @llvm.objc.retainBlock(i8* %[[V2]])
 // CHECK: %[[V4:.*]] = load i8*, i8** %[[V0]], align 8
 // CHECK: store i8* %[[V3]], i8** %[[V0]], align 8
-// CHECK: call void @objc_release(i8* %[[V4]])
+// CHECK: call void @llvm.objc.release(i8* %[[V4]])
 // CHECK: ret void
 
 void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
@@ -398,7 +398,7 @@ void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
 
 // CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w4_sv8(
 // CHECK: %[[V8:.*]] = load volatile i8*, i8** %{{.*}}, align 8
-// CHECK: %[[V9:.*]] = call i8* @objc_retain(i8* %[[V8]])
+// CHECK: %[[V9:.*]] = call i8* @llvm.objc.retain(i8* %[[V8]])
 // CHECK: store volatile i8* %[[V9]], i8** %{{.*}}, align 8
 
 void test_copy_constructor_StrongVolatile0(StrongVolatile *s) {
@@ -419,11 +419,11 @@ void test_copy_constructor_StrongVolatile1(Strong *s) {
 // CHECK: call void @__destructor_8_s16(
 // CHECK: ret void
 
-// CHECK: define internal void @__copy_helper_block_.1(i8*, i8*)
+// CHECK: define linkonce_odr hidden void @__copy_helper_block_8_32n13_8_8_t0w16_s16(i8*, i8*)
 // CHECK: call void @__copy_constructor_8_8_t0w16_s16(
 // CHECK: ret void
 
-// CHECK: define internal void @__destroy_helper_block_.2(
+// CHECK: define linkonce_odr hidden void @__destroy_helper_block_8_32n5_8_s16(
 // CHECK: call void @__destructor_8_s16(
 // CHECK: ret void
 
@@ -485,7 +485,38 @@ void test_constructor_destructor_StructArray(void) {
   StructArray t;
 }
 
+// Test that StructArray's field 'd' is copied before entering the loop.
+
+// CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_t0w8_AB8s24n4_t8w16_s24_AE(i8** %[[DST:.*]], i8** %[[SRC:.*]])
+// CHECK: entry:
+// CHECK: %[[DST_ADDR:.*]] = alloca i8**, align 8
+// CHECK: %[[SRC_ADDR:.*]] = alloca i8**, align 8
+// CHECK: store i8** %[[DST]], i8*** %[[DST_ADDR]], align 8
+// CHECK: store i8** %[[SRC]], i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V0:.*]] = load i8**, i8*** %[[DST_ADDR]], align 8
+// CHECK: %[[V1:.*]] = load i8**, i8*** %[[SRC_ADDR]], align 8
+// CHECK: %[[V2:.*]] = bitcast i8** %[[V0]] to i64*
+// CHECK: %[[V3:.*]] = bitcast i8** %[[V1]] to i64*
+// CHECK: %[[V4:.*]] = load i64, i64* %[[V3]], align 8
+// CHECK: store i64 %[[V4]], i64* %[[V2]], align 8
+
+// CHECK: phi i8**
+// CHECK: phi i8**
+
+// CHECK: phi i8**
+// CHECK: phi i8**
+
+// CHECK-NOT: load i64, i64* %
+// CHECK-NOT: store i64 %
+// CHECK: call void @__copy_constructor_8_8_t0w16_s16(
+
+void test_copy_constructor_StructArray(StructArray a) {
+  StructArray t = a;
+}
+
 // Check that IRGen copies the 9-bit bitfield emitting i16 load and store.
+
+// CHECK: define void @test_copy_constructor_Bitfield0(
 
 // CHECK: define linkonce_odr hidden void @__copy_constructor_8_8_s0_t8w2(
 // CHECK: %[[V4:.*]] = bitcast i8** %{{.*}} to i8*

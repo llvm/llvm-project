@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
-#include "AArch64RegisterInfo.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
+#include "MCTargetDesc/AArch64MCExpr.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -19,6 +19,7 @@
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCValue.h"
@@ -109,11 +110,11 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   case FK_Data_1:
     return 1;
 
-  case AArch64::fixup_aarch64_movw:
   case FK_Data_2:
   case FK_SecRel_2:
     return 2;
 
+  case AArch64::fixup_aarch64_movw:
   case AArch64::fixup_aarch64_pcrel_branch14:
   case AArch64::fixup_aarch64_add_imm12:
   case AArch64::fixup_aarch64_ldst_imm12_scale1:
@@ -144,9 +145,9 @@ static unsigned AdrImmBits(unsigned Value) {
   return (hi19 << 5) | (lo2 << 29);
 }
 
-static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
-                                 MCContext &Ctx, const Triple &TheTriple,
-                                 bool IsResolved) {
+static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
+                                 uint64_t Value, MCContext &Ctx,
+                                 const Triple &TheTriple, bool IsResolved) {
   unsigned Kind = Fixup.getKind();
   int64_t SignedValue = static_cast<int64_t>(Value);
   switch (Kind) {
@@ -214,10 +215,51 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     if (Value & 0xf)
       Ctx.reportError(Fixup.getLoc(), "fixup must be 16-byte aligned");
     return Value >> 4;
-  case AArch64::fixup_aarch64_movw:
-    Ctx.reportError(Fixup.getLoc(),
-                    "no resolvable MOVZ/MOVK fixups supported yet");
+  case AArch64::fixup_aarch64_movw: {
+    AArch64MCExpr::VariantKind RefKind =
+        static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+    if (AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_ABS) {
+      if (AArch64MCExpr::getSymbolLoc(RefKind) != AArch64MCExpr::VK_SABS) {
+        // VK_GOTTPREL, VK_TPREL, VK_DTPREL are movw fixups, but they can't
+        // ever be resolved in the assembler.
+        Ctx.reportError(Fixup.getLoc(),
+                        "relocation for a thread-local variable points to an "
+                        "absolute symbol");
+        return Value;
+      }
+      Ctx.reportError(Fixup.getLoc(),
+                      "resolvable R_AARCH64_MOVW_SABS_G* fixups are not "
+                       "yet implemented");
+      return Value;
+    }
+    if (!IsResolved) {
+      // FIXME: Figure out when this can actually happen, and verify our
+      // behavior.
+      Ctx.reportError(Fixup.getLoc(), "unresolved movw fixup not yet "
+                                      "implemented");
+      return Value;
+    }
+    switch (AArch64MCExpr::getAddressFrag(RefKind)) {
+    case AArch64MCExpr::VK_G0:
+      break;
+    case AArch64MCExpr::VK_G1:
+      Value = Value >> 16;
+      break;
+    case AArch64MCExpr::VK_G2:
+      Value = Value >> 32;
+      break;
+    case AArch64MCExpr::VK_G3:
+      Value = Value >> 48;
+      break;
+    default:
+      llvm_unreachable("Variant kind doesn't correspond to fixup");
+    }
+    if (RefKind & AArch64MCExpr::VK_NC)
+      Value &= 0xFFFF;
+    else if (Value > 0xFFFF)
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     return Value;
+  }
   case AArch64::fixup_aarch64_pcrel_branch14:
     // Signed 16-bit immediate
     if (SignedValue > 32767 || SignedValue < -32768)
@@ -295,7 +337,7 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   MCFixupKindInfo Info = getFixupKindInfo(Fixup.getKind());
   MCContext &Ctx = Asm.getContext();
   // Apply any target-specific value adjustments.
-  Value = adjustFixupValue(Fixup, Value, Ctx, TheTriple, IsResolved);
+  Value = adjustFixupValue(Fixup, Target, Value, Ctx, TheTriple, IsResolved);
 
   // Shift the value into position.
   Value <<= Info.TargetOffset;
@@ -375,6 +417,14 @@ bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   // section isn't 0x1000-aligned, we therefore need to delegate this decision
   // to the linker -- a relocation!
   if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21)
+    return true;
+
+  AArch64MCExpr::VariantKind RefKind =
+      static_cast<AArch64MCExpr::VariantKind>(Target.getRefKind());
+  AArch64MCExpr::VariantKind SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
+  // LDR GOT relocations need a relocation
+  if ((uint32_t)Fixup.getKind() == AArch64::fixup_aarch64_ldr_pcrel_imm19 &&
+      SymLoc == AArch64MCExpr::VK_GOT)
     return true;
   return false;
 }

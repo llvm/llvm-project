@@ -92,7 +92,7 @@
 # CHECK_SWIFT: Latency    : 5
 # CHECK_R52:   Latency    : 4
 #
-# CHECK:       SU(18):   %19:rgpr, %20:rgpr = t2UMLAL %12:rgpr, %12:rgpr, %19:rgpr, %20:rgpr, 14, $noreg
+# CHECK:       SU(18):   %19:rgpr, %20:rgpr = t2UMLAL %12:rgpr, %12:rgpr, %19:rgpr(tied-def 0), %20:rgpr(tied-def 1), 14, $noreg
 # CHECK_A9:    Latency    : 3
 # CHECK_SWIFT: Latency    : 7
 # CHECK_R52:   Latency    : 4

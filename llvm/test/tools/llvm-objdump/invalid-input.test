@@ -4,3 +4,12 @@ NO_SUCH_FILE: '{{.*}}missing-file':
 
 RUN: not llvm-objdump -t %s 2>&1 | FileCheck %s -check-prefix=UNKNOWN_FILE_TYPE
 UNKNOWN_FILE_TYPE: '{{.*}}invalid-input.test': The file was not recognized as a valid object file
+
+RUN: not llvm-objdump -macho -disassemble -g -dsym=%s %p/Inputs/bind.macho-x86_64 2>&1 | FileCheck %s -check-prefix=UNKNOWN_FILE_TYPE_DSYM
+UNKNOWN_FILE_TYPE_DSYM: error:
+
+RUN: not llvm-objdump -macho -disassemble -g -dsym=%p/missing-dsym %p/Inputs/bind.macho-x86_64 2>&1 | FileCheck %s -check-prefix=NO_SUCH_FILE_DSYM
+NO_SUCH_FILE_DSYM: error: '{{.*}}missing-dsym':
+
+RUN: not llvm-objdump -macho -disassemble -g -dsym=%s %p/Inputs/bind.macho-x86_64 2>&1 | FileCheck %s -check-prefix=UNKNOWN_FILE_TYPE_DSYM_MSG
+UNKNOWN_FILE_TYPE_DSYM_MSG: error: '{{.*}}.test'

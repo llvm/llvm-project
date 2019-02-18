@@ -9,7 +9,7 @@ define void @f1(fp128 *%x) {
 ; CHECK: vlr
 ; CHECK: vleig
 ; CHECK: br %r14
-  %val = load volatile fp128 , fp128 *%x
+  %val = load volatile fp128, fp128 *%x
   %t1 = bitcast fp128 %val to <2 x i64>
   %t2 = insertelement <2 x i64> %t1, i64 0, i32 0
   %res = bitcast <2 x i64> %t2 to fp128
@@ -25,7 +25,7 @@ define void @f2(fp128 *%a, i128 *%b) {
 ; CHECK: vl
 ; CHECK: vst
 ; CHECK: br %r14
-  %val = load i128 , i128 *%b
+  %val = load i128, i128 *%b
   %res = bitcast i128 %val to fp128
   store fp128 %res, fp128 *%a
   ret void
@@ -36,7 +36,7 @@ define void @f3(fp128 *%a, i128 *%b) {
 ; CHECK-LABEL: f3:
 ; CHECK: vl
 ; CHECK: vst
-  %val = load fp128 , fp128 *%a
+  %val = load fp128, fp128 *%a
   %res = bitcast fp128 %val to i128
   store i128 %res, i128 *%b
   ret void

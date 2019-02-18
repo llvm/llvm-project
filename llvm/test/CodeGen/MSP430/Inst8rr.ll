@@ -4,7 +4,7 @@ target triple = "msp430-generic-generic"
 
 define i8 @mov(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: mov:
-; CHECK: mov.{{[bw]}} r13, r12
+; CHECK: mov r13, r12
 	ret i8 %b
 }
 
@@ -17,14 +17,14 @@ define i8 @add(i8 %a, i8 %b) nounwind {
 
 define i8 @and(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: and:
-; CHECK: and.w	r13, r12
+; CHECK: and	r13, r12
 	%1 = and i8 %a, %b
 	ret i8 %1
 }
 
 define i8 @bis(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: bis:
-; CHECK: bis.w	r13, r12
+; CHECK: bis	r13, r12
 	%1 = or i8 %a, %b
 	ret i8 %1
 }
@@ -39,7 +39,7 @@ define i8 @bic(i8 %a, i8 %b) nounwind {
 
 define i8 @xor(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: xor:
-; CHECK: xor.w	r13, r12
+; CHECK: xor	r13, r12
 	%1 = xor i8 %a, %b
 	ret i8 %1
 }

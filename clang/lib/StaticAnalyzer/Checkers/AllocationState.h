@@ -23,8 +23,13 @@ ProgramStateRef markReleased(ProgramStateRef State, SymbolRef Sym,
 
 /// This function provides an additional visitor that augments the bug report
 /// with information relevant to memory errors caused by the misuse of
-/// AF_InternalBuffer symbols.
-std::unique_ptr<BugReporterVisitor> getDanglingBufferBRVisitor(SymbolRef Sym);
+/// AF_InnerBuffer symbols.
+std::unique_ptr<BugReporterVisitor> getInnerPointerBRVisitor(SymbolRef Sym);
+
+/// 'Sym' represents a pointer to the inner buffer of a container object.
+/// This function looks up the memory region of that object in
+/// DanglingInternalBufferChecker's program state map.
+const MemRegion *getContainerObjRegion(ProgramStateRef State, SymbolRef Sym);
 
 } // end namespace allocation_state
 

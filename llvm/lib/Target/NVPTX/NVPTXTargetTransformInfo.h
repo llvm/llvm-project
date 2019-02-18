@@ -49,6 +49,19 @@ public:
     return AddressSpace::ADDRESS_SPACE_GENERIC;
   }
 
+  // Loads and stores can be vectorized if the alignment is at least as big as
+  // the load/store we want to vectorize.
+  bool isLegalToVectorizeLoadChain(unsigned ChainSizeInBytes,
+                                   unsigned Alignment,
+                                   unsigned AddrSpace) const {
+    return Alignment >= ChainSizeInBytes;
+  }
+  bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes,
+                                    unsigned Alignment,
+                                    unsigned AddrSpace) const {
+    return isLegalToVectorizeLoadChain(ChainSizeInBytes, Alignment, AddrSpace);
+  }
+
   // NVPTX has infinite registers of all kinds, but the actual machine doesn't.
   // We conservatively return 1 here which is just enough to enable the
   // vectorizers but disables heuristics based on the number of registers.

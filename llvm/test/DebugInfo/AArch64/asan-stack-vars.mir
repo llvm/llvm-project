@@ -1,0 +1,682 @@
+# RUN: llc -O0 -start-before=livedebugvalues -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
+#
+# Derived from (clang -O0 -g -fsanitize=address -fobjc-arc)
+#   @protocol NSObject
+#   @end
+#   @interface NSObject<NSObject>{}
+#   + (instancetype)alloc;
+#   @end
+#   struct CGSize {
+#     double width;
+#     double height;
+#   };
+#   typedef struct CGSize CGSize;
+#   @interface Object : NSObject
+#   - (instancetype)initWithSize:(CGSize)size;
+#   - (id)aMessage;
+#   @end
+#   @implementation MyObject
+#   + (id)doWithSize:(CGSize)imageSize andObject:(id)object {
+#     return [object aMessage];
+#   }
+#   @end
+#
+# CHECK: .debug_info contents:
+# CHECK: DW_TAG_subprogram
+# CHECK-NEXT:   DW_AT_low_pc [DW_FORM_addr]     (0x0000000000000000)
+# CHECK-NEXT:   DW_AT_high_pc [DW_FORM_addr]    ([[FN_END:.*]])
+# CHECK: "_cmd"
+# CHECK: DW_TAG_formal_parameter
+# CHECK-NEXT: DW_AT_location
+# CHECK-NEXT:   [0x{{0*}}, 0x{{.*}}):
+# CHECK-NOT:    DW_AT_
+# CHECK:        [0x{{.*}}, [[FN_END]]):
+# CHECK-NEXT: DW_AT_name {{.*}}"imageSize"
+--- |
+  ; ModuleID = 'test/DebugInfo/AArch64/asan-stack-vars.ll'
+  source_filename = "m.m"
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "arm64-apple-ios"
+  
+  %0 = type opaque
+  %struct._class_t = type { %struct._class_t*, %struct._class_t*, %struct._objc_cache*, i8* (i8*, i8*)**, %struct._class_ro_t* }
+  %struct._objc_cache = type opaque
+  %struct._class_ro_t = type { i32, i32, i32, i8*, i8*, %struct.__method_list_t*, %struct._objc_protocol_list*, %struct._ivar_list_t*, i8*, %struct._prop_list_t* }
+  %struct.__method_list_t = type { i32, i32, [0 x %struct._objc_method] }
+  %struct._objc_method = type { i8*, i8*, i8* }
+  %struct._objc_protocol_list = type { i64, [0 x %struct._protocol_t*] }
+  %struct._protocol_t = type { i8*, i8*, %struct._objc_protocol_list*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct._prop_list_t*, i32, i32, i8**, i8*, %struct._prop_list_t* }
+  %struct._ivar_list_t = type { i32, i32, [0 x %struct._ivar_t] }
+  %struct._ivar_t = type { i32*, i8*, i8*, i32, i32 }
+  %struct._prop_list_t = type { i32, i32, [0 x %struct._prop_t] }
+  %struct._prop_t = type { i8*, i8* }
+  %struct.CGSize = type { double, double }
+  
+  @"OBJC_CLASS_$_Object" = external global %struct._class_t
+  @"OBJC_CLASSLIST_REFERENCES_$_" = private global %struct._class_t* @"OBJC_CLASS_$_Object", section "__DATA, __objc_classrefs, regular, no_dead_strip", align 8
+  @OBJC_METH_VAR_NAME_ = private unnamed_addr constant [6 x i8] c"alloc\00", section "__TEXT,__objc_methname,cstring_literals", align 1
+  @OBJC_SELECTOR_REFERENCES_ = private externally_initialized global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
+  @OBJC_METH_VAR_NAME_.1 = private unnamed_addr constant [14 x i8] c"initWithSize:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
+  @OBJC_SELECTOR_REFERENCES_.2 = private externally_initialized global i8* getelementptr inbounds ([14 x i8], [14 x i8]* @OBJC_METH_VAR_NAME_.1, i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
+  @OBJC_METH_VAR_NAME_.3 = private unnamed_addr constant [9 x i8] c"aMessage\00", section "__TEXT,__objc_methname,cstring_literals", align 1
+  @OBJC_SELECTOR_REFERENCES_.4 = private externally_initialized global i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_METH_VAR_NAME_.3, i32 0, i32 0), section "__DATA, __objc_selrefs, literal_pointers, no_dead_strip", align 8
+  @_objc_empty_cache = external global %struct._objc_cache
+  @"OBJC_CLASS_$_MyObject" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_MyObject", %struct._class_t* null, %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** null, %struct._class_ro_t* @"\01l_OBJC_CLASS_RO_$_MyObject" }, section "__DATA, __objc_data", align 8
+  @"OBJC_METACLASS_$_MyObject" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_MyObject", %struct._class_t* @"OBJC_CLASS_$_MyObject", %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** null, %struct._class_ro_t* @"\01l_OBJC_METACLASS_RO_$_MyObject" }, section "__DATA, __objc_data", align 8
+  @OBJC_CLASS_NAME_ = private unnamed_addr constant [9 x i8] c"MyObject\00", section "__TEXT,__objc_classname,cstring_literals", align 1
+  @OBJC_METH_VAR_NAME_.5 = private unnamed_addr constant [12 x i8] c"doWithSize:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
+  @OBJC_METH_VAR_TYPE_ = private unnamed_addr constant [21 x i8] c"@32@0:8{CGSize=dd}16\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
+  @"\01l_OBJC_$_CLASS_METHODS_MyObject" = private global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { i8* getelementptr inbounds ([12 x i8], [12 x i8]* @OBJC_METH_VAR_NAME_.5, i32 0, i32 0), i8* getelementptr inbounds ([21 x i8], [21 x i8]* @OBJC_METH_VAR_TYPE_, i32 0, i32 0), i8* bitcast (i8* (i8*, i8*, [2 x double])* @"\01+[MyObject doWithSize:]" to i8*) }] }, section "__DATA, __objc_const", align 8
+  @"\01l_OBJC_METACLASS_RO_$_MyObject" = private global %struct._class_ro_t { i32 131, i32 40, i32 40, i8* null, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), %struct.__method_list_t* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_CLASS_METHODS_MyObject" to %struct.__method_list_t*), %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* null }, section "__DATA, __objc_const", align 8
+  @"\01l_OBJC_CLASS_RO_$_MyObject" = private global %struct._class_ro_t { i32 130, i32 0, i32 0, i8* null, i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), %struct.__method_list_t* null, %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* null }, section "__DATA, __objc_const", align 8
+  @"OBJC_LABEL_CLASS_$" = private global [1 x i8*] [i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_MyObject" to i8*)], section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
+  @llvm.compiler.used = appending global [12 x i8*] [i8* bitcast (%struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_" to i8*), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_ to i8*), i8* getelementptr inbounds ([14 x i8], [14 x i8]* @OBJC_METH_VAR_NAME_.1, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_.2 to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_METH_VAR_NAME_.3, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_.4 to i8*), i8* getelementptr inbounds ([9 x i8], [9 x i8]* @OBJC_CLASS_NAME_, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @OBJC_METH_VAR_NAME_.5, i32 0, i32 0), i8* getelementptr inbounds ([21 x i8], [21 x i8]* @OBJC_METH_VAR_TYPE_, i32 0, i32 0), i8* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_CLASS_METHODS_MyObject" to i8*), i8* bitcast ([1 x i8*]* @"OBJC_LABEL_CLASS_$" to i8*)], section "llvm.metadata"
+  @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 1, void ()* @asan.module_ctor, i8* null }]
+  @__asan_shadow_memory_dynamic_address = external global i64
+  @___asan_gen_ = private unnamed_addr constant [34 x i8] c"2 32 16 9 imageSize 64 8 6 object\00", align 1
+  @__stack_chk_guard = external global i8*
+  
+  ; Function Attrs: noinline sanitize_address ssp uwtable
+  define internal i8* @"\01+[MyObject doWithSize:]"(i8* %self, i8* %_cmd, [2 x double] %imageSize.coerce) #0 !dbg !14 {
+  entry:
+    %StackGuardSlot = alloca i8*
+    %0 = call i8* @llvm.stackguard()
+    call void @llvm.stackprotector(i8* %0, i8** %StackGuardSlot)
+    %1 = load i64, i64* @__asan_shadow_memory_dynamic_address
+    %self.addr = alloca i8*, align 8
+    %_cmd.addr = alloca i8*, align 8
+    %MyAlloca = alloca [96 x i8], align 32, !dbg !35
+    %2 = ptrtoint [96 x i8]* %MyAlloca to i64, !dbg !35
+    %3 = add i64 %2, 32, !dbg !35
+    %4 = inttoptr i64 %3 to %struct.CGSize*, !dbg !35
+    %5 = add i64 %2, 64, !dbg !35
+    %6 = inttoptr i64 %5 to %0**, !dbg !35
+    %7 = inttoptr i64 %2 to i64*, !dbg !35
+    store i64 1102416563, i64* %7, !dbg !35
+    %8 = add i64 %2, 8, !dbg !35
+    %9 = inttoptr i64 %8 to i64*, !dbg !35
+    store i64 ptrtoint ([34 x i8]* @___asan_gen_ to i64), i64* %9, !dbg !35
+    %10 = add i64 %2, 16, !dbg !35
+    %11 = inttoptr i64 %10 to i64*, !dbg !35
+    store i64 ptrtoint (i8* (i8*, i8*, [2 x double])* @"\01+[MyObject doWithSize:]" to i64), i64* %11, !dbg !35
+    %12 = lshr i64 %2, 3, !dbg !35
+    %13 = add i64 %12, %1, !dbg !35
+    %14 = add i64 %13, 0, !dbg !35
+    %15 = inttoptr i64 %14 to i64*, !dbg !35
+    store i64 -940689368107847183, i64* %15, align 1, !dbg !35
+    %16 = add i64 %13, 9, !dbg !35
+    %17 = inttoptr i64 %16 to i16*, !dbg !35
+    store i16 -3085, i16* %17, align 1, !dbg !35
+    %18 = add i64 %13, 11, !dbg !35
+    %19 = inttoptr i64 %18 to i8*, !dbg !35
+    store i8 -13, i8* %19, align 1, !dbg !35
+    call void @llvm.dbg.declare(metadata %struct.CGSize* %4, metadata !36, metadata !DIExpression(DW_OP_deref)), !dbg !37
+    call void @llvm.dbg.declare(metadata %0** %6, metadata !38, metadata !DIExpression(DW_OP_deref)), !dbg !44
+    %20 = bitcast %struct.CGSize* %4 to [2 x double]*
+    %21 = ptrtoint [2 x double]* %20 to i64
+    %22 = lshr i64 %21, 3
+    %23 = add i64 %22, %1
+    %24 = inttoptr i64 %23 to i16*
+    %25 = load i16, i16* %24
+    %26 = icmp ne i16 %25, 0
+    br i1 %26, label %27, label %28
+  
+  ; <label>:27:                                     ; preds = %entry
+    call void @__asan_report_store16(i64 %21)
+    call void asm sideeffect "", ""()
+    unreachable
+  
+  ; <label>:28:                                     ; preds = %entry
+    store [2 x double] %imageSize.coerce, [2 x double]* %20, align 8
+    store i8* %self, i8** %self.addr, align 8
+    call void @llvm.dbg.declare(metadata i8** %self.addr, metadata !45, metadata !DIExpression()), !dbg !47
+    store i8* %_cmd, i8** %_cmd.addr, align 8
+    call void @llvm.dbg.declare(metadata i8** %_cmd.addr, metadata !48, metadata !DIExpression()), !dbg !47
+    %29 = load %struct._class_t*, %struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_", align 8, !dbg !50
+    %30 = add i64 lshr (i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_ to i64), i64 3), %1, !dbg !50
+    %31 = inttoptr i64 %30 to i8*, !dbg !50
+    %32 = load i8, i8* %31, !dbg !50
+    %33 = icmp ne i8 %32, 0, !dbg !50
+    br i1 %33, label %34, label %35, !dbg !50
+  
+  ; <label>:34:                                     ; preds = %28
+    call void @__asan_report_load8(i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_ to i64)), !dbg !50
+    call void asm sideeffect "", ""(), !dbg !50
+    unreachable, !dbg !50
+  
+  ; <label>:35:                                     ; preds = %28
+    %36 = load i8*, i8** @OBJC_SELECTOR_REFERENCES_, align 8, !dbg !50, !invariant.load !2
+    %37 = bitcast %struct._class_t* %29 to i8*, !dbg !50
+    %call = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %37, i8* %36), !dbg !50
+    %38 = bitcast i8* %call to %0*, !dbg !50
+    %39 = add i64 lshr (i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.2 to i64), i64 3), %1, !dbg !51
+    %40 = inttoptr i64 %39 to i8*, !dbg !51
+    %41 = load i8, i8* %40, !dbg !51
+    %42 = icmp ne i8 %41, 0, !dbg !51
+    br i1 %42, label %43, label %44, !dbg !51
+  
+  ; <label>:43:                                     ; preds = %35
+    call void @__asan_report_load8(i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.2 to i64)), !dbg !51
+    call void asm sideeffect "", ""(), !dbg !51
+    unreachable, !dbg !51
+  
+  ; <label>:44:                                     ; preds = %35
+    %45 = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.2, align 8, !dbg !51, !invariant.load !2
+    %46 = bitcast %0* %38 to i8*, !dbg !51
+    %47 = bitcast %struct.CGSize* %4 to [2 x double]*, !dbg !51
+    %48 = ptrtoint [2 x double]* %47 to i64, !dbg !51
+    %49 = lshr i64 %48, 3, !dbg !51
+    %50 = add i64 %49, %1, !dbg !51
+    %51 = inttoptr i64 %50 to i16*, !dbg !51
+    %52 = load i16, i16* %51, !dbg !51
+    %53 = icmp ne i16 %52, 0, !dbg !51
+    br i1 %53, label %54, label %55, !dbg !51
+  
+  ; <label>:54:                                     ; preds = %44
+    call void @__asan_report_load16(i64 %48), !dbg !51
+    call void asm sideeffect "", ""(), !dbg !51
+    unreachable, !dbg !51
+  
+  ; <label>:55:                                     ; preds = %44
+    %56 = load [2 x double], [2 x double]* %47, align 8, !dbg !51
+    %call1 = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*, [2 x double])*)(i8* %46, i8* %45, [2 x double] %56), !dbg !51
+    %57 = bitcast i8* %call1 to %0*, !dbg !51
+    %58 = ptrtoint %0** %6 to i64, !dbg !44
+    %59 = lshr i64 %58, 3, !dbg !44
+    %60 = add i64 %59, %1, !dbg !44
+    %61 = inttoptr i64 %60 to i8*, !dbg !44
+    %62 = load i8, i8* %61, !dbg !44
+    %63 = icmp ne i8 %62, 0, !dbg !44
+    br i1 %63, label %64, label %65, !dbg !44
+  
+  ; <label>:64:                                     ; preds = %55
+    call void @__asan_report_store8(i64 %58), !dbg !44
+    call void asm sideeffect "", ""(), !dbg !44
+    unreachable, !dbg !44
+  
+  ; <label>:65:                                     ; preds = %55
+    store %0* %57, %0** %6, align 8, !dbg !44
+    %66 = load %0*, %0** %6, align 8, !dbg !52
+    %67 = add i64 lshr (i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.4 to i64), i64 3), %1, !dbg !53
+    %68 = inttoptr i64 %67 to i8*, !dbg !53
+    %69 = load i8, i8* %68, !dbg !53
+    %70 = icmp ne i8 %69, 0, !dbg !53
+    br i1 %70, label %71, label %72, !dbg !53
+  
+  ; <label>:71:                                     ; preds = %65
+    call void @__asan_report_load8(i64 ptrtoint (i8** @OBJC_SELECTOR_REFERENCES_.4 to i64)), !dbg !53
+    call void asm sideeffect "", ""(), !dbg !53
+    unreachable, !dbg !53
+  
+  ; <label>:72:                                     ; preds = %65
+    %73 = load i8*, i8** @OBJC_SELECTOR_REFERENCES_.4, align 8, !dbg !53, !invariant.load !2
+    %74 = bitcast %0* %66 to i8*, !dbg !53
+    %call2 = call i8* bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to i8* (i8*, i8*)*)(i8* %74, i8* %73), !dbg !53
+    call void asm sideeffect "mov\09fp, fp\09\09; marker for objc_retainAutoreleaseReturnValue", ""(), !dbg !53
+    %75 = call i8* @objc_retainAutoreleasedReturnValue(i8* %call2) #3, !dbg !53
+    %76 = bitcast %0** %6 to i8**, !dbg !54
+    call void @objc_storeStrong(i8** %76, i8* null) #3, !dbg !54
+    %77 = tail call i8* @objc_autoreleaseReturnValue(i8* %75) #3, !dbg !54
+    store i64 1172321806, i64* %7, !dbg !54
+    %78 = add i64 %13, 0, !dbg !54
+    %79 = inttoptr i64 %78 to i64*, !dbg !54
+    store i64 0, i64* %79, align 1, !dbg !54
+    %80 = add i64 %13, 9, !dbg !54
+    %81 = inttoptr i64 %80 to i16*, !dbg !54
+    store i16 0, i16* %81, align 1, !dbg !54
+    %82 = add i64 %13, 11, !dbg !54
+    %83 = inttoptr i64 %82 to i8*, !dbg !54
+    store i8 0, i8* %83, align 1, !dbg !54
+    %84 = call i8* @llvm.stackguard()
+    %85 = load volatile i8*, i8** %StackGuardSlot
+    %86 = icmp eq i8* %84, %85
+    br i1 %86, label %SP_return, label %CallStackCheckFailBlk, !prof !55
+  
+  SP_return:                                        ; preds = %72
+    ret i8* %77, !dbg !54
+  
+  CallStackCheckFailBlk:                            ; preds = %72
+    call void @__stack_chk_fail(), !dbg !47
+    unreachable, !dbg !47
+  }
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+  
+  ; Function Attrs: nonlazybind
+  declare i8* @objc_msgSend(i8*, i8*, ...) #2
+  
+  declare i8* @objc_retainAutoreleasedReturnValue(i8* returned)
+  
+  declare void @objc_storeStrong(i8**, i8*)
+  
+  declare i8* @objc_autoreleaseReturnValue(i8* returned)
+  
+  define internal void @asan.module_ctor() {
+    call void @__asan_init()
+    call void @__asan_version_mismatch_check_v8()
+    ret void
+  }
+  
+  declare void @__asan_init()
+  
+  declare void @__asan_version_mismatch_check_v8()
+  
+  declare void @__asan_report_load8(i64)
+  
+  declare void @__asan_report_load16(i64)
+  
+  declare void @__asan_report_store8(i64)
+  
+  declare void @__asan_report_store16(i64)
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #3
+  
+  ; Function Attrs: nounwind
+  declare i8* @llvm.stackguard() #3
+  
+  declare void @__stack_chk_fail()
+  
+  attributes #0 = { noinline sanitize_address ssp uwtable }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { nonlazybind }
+  attributes #3 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!5, !6, !7, !8, !9, !10, !11, !12}
+  !llvm.ident = !{!13}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_ObjC, file: !1, producer: "clang version 5.0.0 (trunk 295779) (llvm/trunk 295777)", isOptimized: false, runtimeVersion: 2, emissionKind: FullDebug, enums: !2, retainedTypes: !3)
+  !1 = !DIFile(filename: "m.m", directory: "/")
+  !2 = !{}
+  !3 = !{!4}
+  !4 = !DICompositeType(tag: DW_TAG_structure_type, name: "MyObject", scope: !1, file: !1, line: 15, flags: DIFlagObjcClassComplete, elements: !2, runtimeLang: DW_LANG_ObjC)
+  !5 = !{i32 1, !"Objective-C Version", i32 2}
+  !6 = !{i32 1, !"Objective-C Image Info Version", i32 0}
+  !7 = !{i32 1, !"Objective-C Image Info Section", !"__DATA,__objc_imageinfo,regular,no_dead_strip"}
+  !8 = !{i32 4, !"Objective-C Garbage Collection", i32 0}
+  !9 = !{i32 1, !"Objective-C Class Properties", i32 64}
+  !10 = !{i32 2, !"Dwarf Version", i32 2}
+  !11 = !{i32 2, !"Debug Info Version", i32 3}
+  !12 = !{i32 7, !"PIC Level", i32 2}
+  !13 = !{!"clang version 5.0.0 (trunk 295779) (llvm/trunk 295777)"}
+  !14 = distinct !DISubprogram(name: "+[MyObject doWithSize:]", scope: !1, file: !1, line: 16, type: !15, isLocal: true, isDefinition: true, scopeLine: 16, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+  !15 = !DISubroutineType(types: !16)
+  !16 = !{!17, !24, !26, !29}
+  !17 = !DIDerivedType(tag: DW_TAG_typedef, name: "id", file: !1, baseType: !18)
+  !18 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !19, size: 64)
+  !19 = !DICompositeType(tag: DW_TAG_structure_type, name: "objc_object", file: !1, elements: !20)
+  !20 = !{!21}
+  !21 = !DIDerivedType(tag: DW_TAG_member, name: "isa", scope: !19, file: !1, baseType: !22, size: 64)
+  !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !23, size: 64)
+  !23 = !DICompositeType(tag: DW_TAG_structure_type, name: "objc_class", file: !1, flags: DIFlagFwdDecl)
+  !24 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !25, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !25 = !DIDerivedType(tag: DW_TAG_typedef, name: "Class", file: !1, baseType: !22)
+  !26 = !DIDerivedType(tag: DW_TAG_typedef, name: "SEL", file: !1, baseType: !27, flags: DIFlagArtificial)
+  !27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !28, size: 64)
+  !28 = !DICompositeType(tag: DW_TAG_structure_type, name: "objc_selector", file: !1, flags: DIFlagFwdDecl)
+  !29 = !DIDerivedType(tag: DW_TAG_typedef, name: "CGSize", file: !1, line: 10, baseType: !30)
+  !30 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CGSize", file: !1, line: 6, size: 128, elements: !31)
+  !31 = !{!32, !34}
+  !32 = !DIDerivedType(tag: DW_TAG_member, name: "width", scope: !30, file: !1, line: 7, baseType: !33, size: 64)
+  !33 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
+  !34 = !DIDerivedType(tag: DW_TAG_member, name: "height", scope: !30, file: !1, line: 8, baseType: !33, size: 64, offset: 64)
+  !35 = !DILocation(line: 16, scope: !14)
+  !36 = !DILocalVariable(name: "imageSize", arg: 3, scope: !14, file: !1, line: 16, type: !29)
+  !37 = !DILocation(line: 16, column: 26, scope: !14)
+  !38 = !DILocalVariable(name: "object", scope: !14, file: !1, line: 17, type: !39)
+  !39 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !40, size: 64)
+  !40 = !DICompositeType(tag: DW_TAG_structure_type, name: "Object", scope: !1, file: !1, line: 11, elements: !41, runtimeLang: DW_LANG_ObjC)
+  !41 = !{!42}
+  !42 = !DIDerivedType(tag: DW_TAG_inheritance, scope: !40, baseType: !43)
+  !43 = !DICompositeType(tag: DW_TAG_structure_type, name: "NSObject", scope: !1, file: !1, line: 3, elements: !2, runtimeLang: DW_LANG_ObjC)
+  !44 = !DILocation(line: 17, column: 11, scope: !14)
+  !45 = !DILocalVariable(name: "self", arg: 1, scope: !14, type: !46, flags: DIFlagArtificial | DIFlagObjectPointer)
+  !46 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !25)
+  !47 = !DILocation(line: 0, scope: !14)
+  !48 = !DILocalVariable(name: "_cmd", arg: 2, scope: !14, type: !49, flags: DIFlagArtificial)
+  !49 = !DIDerivedType(tag: DW_TAG_typedef, name: "SEL", file: !1, baseType: !27)
+  !50 = !DILocation(line: 17, column: 21, scope: !14)
+  !51 = !DILocation(line: 17, column: 20, scope: !14)
+  !52 = !DILocation(line: 18, column: 11, scope: !14)
+  !53 = !DILocation(line: 18, column: 10, scope: !14)
+  !54 = !DILocation(line: 19, column: 1, scope: !14)
+  !55 = !{!"branch_weights", i32 2147481600, i32 2048}
+
+...
+---
+name:            "\x01+[MyObject doWithSize:]"
+alignment:       2
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+  - { reg: '$d0' }
+  - { reg: '$d1' }
+frameInfo:       
+  stackSize:       352
+  maxAlignment:    32
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  '%stack.0.StackGuardSlot'
+  maxCallFrameSize: 0
+  localFrameSize:  144
+stack:           
+  - { id: 0, name: StackGuardSlot, offset: -40, size: 8, alignment: 8, 
+      stack-id: 0, local-offset: -8 }
+  - { id: 1, name: self.addr, offset: -168, size: 8, alignment: 8, stack-id: 0, 
+      local-offset: -136, debug-info-variable: '!45', debug-info-expression: '!DIExpression()', 
+      debug-info-location: '!47' }
+  - { id: 2, name: _cmd.addr, offset: -176, size: 8, alignment: 8, stack-id: 0, 
+      local-offset: -144, debug-info-variable: '!48', debug-info-expression: '!DIExpression()', 
+      debug-info-location: '!47' }
+  - { id: 3, name: MyAlloca, offset: -160, size: 96, alignment: 32, stack-id: 0, 
+      local-offset: -128 }
+  - { id: 4, type: spill-slot, offset: -184, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 5, type: spill-slot, offset: -192, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 6, type: spill-slot, offset: -200, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 7, type: spill-slot, offset: -208, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 8, type: spill-slot, offset: -216, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 9, type: spill-slot, offset: -224, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 10, type: spill-slot, offset: -232, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 11, type: spill-slot, offset: -240, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 12, type: spill-slot, offset: -248, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 13, type: spill-slot, offset: -256, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 14, type: spill-slot, offset: -264, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 15, type: spill-slot, offset: -272, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 16, type: spill-slot, offset: -280, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 17, type: spill-slot, offset: -288, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 18, type: spill-slot, offset: -296, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 19, type: spill-slot, offset: -304, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 20, type: spill-slot, offset: -312, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 21, type: spill-slot, offset: -320, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 22, type: spill-slot, offset: -328, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 23, type: spill-slot, offset: -336, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 24, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: 0, 
+      callee-saved-register: '$lr' }
+  - { id: 25, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: 0, 
+      callee-saved-register: '$fp' }
+  - { id: 26, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: 0, 
+      callee-saved-register: '$x27' }
+  - { id: 27, type: spill-slot, offset: -32, size: 8, alignment: 8, stack-id: 0, 
+      callee-saved-register: '$x28' }
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $d0, $d1, $x27, $x28, $lr
+  
+    early-clobber $sp = frame-setup STPXpre killed $x28, killed $x27, $sp, -4 :: (store 8 into %stack.27), (store 8 into %stack.26)
+    frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store 8 into %stack.25), (store 8 into %stack.24)
+    $fp = frame-setup ADDXri $sp, 16, 0
+    $x9 = frame-setup SUBXri $sp, 320, 0
+    $sp = ANDXri killed $x9, 7930
+    frame-setup CFI_INSTRUCTION def_cfa $w29, 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    frame-setup CFI_INSTRUCTION offset $w27, -24
+    frame-setup CFI_INSTRUCTION offset $w28, -32
+    renamable $x8 = ADRP target-flags(aarch64-page) @"\01+[MyObject doWithSize:]"
+    renamable $x8 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @"\01+[MyObject doWithSize:]", 0
+    renamable $x9 = ADRP target-flags(aarch64-page) @___asan_gen_
+    renamable $x9 = ADDXri killed renamable $x9, target-flags(aarch64-pageoff, aarch64-nc) @___asan_gen_, 0
+    $x10 = ADDXri $sp, 192, 0
+    renamable $x11 = ADRP target-flags(aarch64-page, aarch64-got) @__asan_shadow_memory_dynamic_address
+    renamable $x11 = LDRXui killed renamable $x11, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__asan_shadow_memory_dynamic_address
+    $x12 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $x12 = LDRXui $x12, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $x12 = LDRXui killed $x12, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    $x13 = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $x13 = LDRXui $x13, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $x13 = LDRXui killed $x13, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    STRXui killed renamable $x13, $sp, 39 :: (volatile store 8 into %stack.0.StackGuardSlot)
+    renamable $x11 = LDRXui killed renamable $x11, 0 :: (load 8 from @__asan_shadow_memory_dynamic_address)
+    renamable $x13 = ADDXri renamable $x10, 32, 0, debug-location !35
+    renamable $x14 = ADDXri renamable $x10, 64, 0, debug-location !35
+    $x15 = MOVZXi 35507, 0, debug-location !35
+    $x15 = MOVKXi $x15, 16821, 16, debug-location !35
+    STRXui killed renamable $x15, $sp, 24, debug-location !35 :: (store 96 into %stack.3.MyAlloca, align 32)
+    STRXui killed renamable $x9, $sp, 25, debug-location !35 :: (store 96 into %stack.3.MyAlloca + 1, align 32)
+    STRXui killed renamable $x8, $sp, 26, debug-location !35 :: (store 96 into %stack.3.MyAlloca + 2, align 32)
+    renamable $x8 = UBFMXri renamable $x10, 3, 63, debug-location !35
+    renamable $x9 = ADDXrs renamable $x11, renamable $x10, 67, debug-location !35
+    $x15 = MOVZXi 61937, 0, debug-location !35
+    $x15 = MOVKXi $x15, 61937, 16, debug-location !35
+    $x15 = MOVKXi $x15, 62194, 48, debug-location !35
+    STRXroX killed renamable $x15, renamable $x8, renamable $x11, 0, 0, debug-location !35 :: (store 8 into %ir.15, align 1)
+    renamable $x15 = ADDXrs renamable $x8, renamable $x11, 0, debug-location !35
+    $w16 = MOVZWi 62451, 0, debug-location !35
+    STURHHi killed renamable $w16, killed renamable $x15, 9, debug-location !35 :: (store 2 into %ir.17, align 1)
+    renamable $x8 = ADDXrs killed renamable $x8, renamable $x11, 0, debug-location !35
+    $w16 = MOVZWi 243, 0, debug-location !35
+    STRBBui killed renamable $w16, killed renamable $x8, 11, debug-location !35 :: (store 1 into %ir.19)
+    DBG_VALUE renamable $x13, 0, !36, !DIExpression(DW_OP_deref), debug-location !37
+    DBG_VALUE renamable $x14, 0, !38, !DIExpression(DW_OP_deref), debug-location !44
+    $x8 = ORRXrs $xzr, $x13, 0
+    renamable $x15 = UBFMXri renamable $x8, 3, 63
+    renamable $w16 = LDRHHroX killed renamable $x15, renamable $x11, 0, 0 :: (load 2 from %ir.24)
+    renamable $w16 = UBFMWri killed renamable $w16, 0, 15
+    STRXui killed $x1, $sp, 21 :: (store 8 into %stack.4)
+    STRDui killed $d1, $sp, 20 :: (store 8 into %stack.5)
+    STRDui killed $d0, $sp, 19 :: (store 8 into %stack.6)
+    STRXui killed $x0, $sp, 18 :: (store 8 into %stack.7)
+    STRXui killed $x13, $sp, 17 :: (store 8 into %stack.8)
+    DBG_VALUE $sp, 0, !36, !DIExpression(DW_OP_plus_uconst, 136, DW_OP_deref, DW_OP_deref), debug-location !37
+    STRXui killed $x14, $sp, 16 :: (store 8 into %stack.9)
+    DBG_VALUE $sp, 0, !38, !DIExpression(DW_OP_plus_uconst, 128, DW_OP_deref, DW_OP_deref), debug-location !44
+    STRXui killed $x10, $sp, 15 :: (store 8 into %stack.10)
+    STRXui killed $x12, $sp, 14 :: (store 8 into %stack.11)
+    STRXui killed $x11, $sp, 13 :: (store 8 into %stack.12)
+    STRXui killed $x9, $sp, 12 :: (store 8 into %stack.13)
+    STRXui killed $x8, $sp, 11 :: (store 8 into %stack.14)
+    CBZW killed renamable $w16, %bb.2
+  
+  bb.1 (%ir-block.27):
+    successors: 
+  
+    $x0 = LDRXui $sp, 11 :: (load 8 from %stack.14)
+    BL @__asan_report_store16, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp
+    INLINEASM &"", 1
+    BRK 1
+  
+  bb.2 (%ir-block.28):
+    renamable $x8 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_
+    renamable $x8 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_, 0
+    renamable $x9 = ORRXri $xzr, 4097
+    renamable $x8 = LSRVXr killed renamable $x8, killed renamable $x9
+    renamable $x9 = ADRP target-flags(aarch64-page) @"OBJC_CLASSLIST_REFERENCES_$_"
+    renamable $x9 = ADDXri killed renamable $x9, target-flags(aarch64-pageoff, aarch64-nc) @"OBJC_CLASSLIST_REFERENCES_$_", 0
+    $d0 = LDRDui $sp, 19 :: (load 8 from %stack.6)
+    $x10 = LDRXui $sp, 11 :: (load 8 from %stack.14)
+    STRDui killed renamable $d0, renamable $x10, 0 :: (store 8 into %ir.20)
+    $d1 = LDRDui $sp, 20 :: (load 8 from %stack.5)
+    STRDui killed renamable $d1, killed renamable $x10, 1 :: (store 8 into %ir.20 + 8)
+    $x11 = LDRXui $sp, 18 :: (load 8 from %stack.7)
+    STRXui killed renamable $x11, $sp, 23 :: (store 8 into %stack.1.self.addr)
+    $x12 = LDRXui $sp, 21 :: (load 8 from %stack.4)
+    STRXui killed renamable $x12, $sp, 22 :: (store 8 into %stack.2._cmd.addr)
+    renamable $x9 = LDRXui killed renamable $x9, 0, debug-location !50 :: (load 8 from @"OBJC_CLASSLIST_REFERENCES_$_")
+    $x13 = LDRXui $sp, 13 :: (load 8 from %stack.12)
+    renamable $w14 = LDRBBroX killed renamable $x8, killed renamable $x13, 0, 0, debug-location !50 :: (load 1 from %ir.31)
+    renamable $w14 = UBFMWri killed renamable $w14, 0, 7, debug-location !50
+    STRXui killed $x9, $sp, 10 :: (store 8 into %stack.15)
+    CBZW killed renamable $w14, %bb.4, debug-location !50
+  
+  bb.3 (%ir-block.34):
+    successors: 
+  
+    $x0 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_, debug-location !50
+    renamable $x0 = ADDXri $x0, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_, 0, debug-location !50
+    BL @__asan_report_load8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !50
+    INLINEASM &"", 1, debug-location !50
+    BRK 1, debug-location !50
+  
+  bb.4 (%ir-block.35):
+    renamable $x8 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_
+    renamable $x8 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_, 0
+    renamable $x1 = LDRXui killed renamable $x8, 0, debug-location !50 :: (invariant load 8 from @OBJC_SELECTOR_REFERENCES_)
+    $x8 = LDRXui $sp, 10 :: (load 8 from %stack.15)
+    $x0 = ORRXrs $xzr, killed $x8, 0, debug-location !50
+    BL @objc_msgSend, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, implicit-def $x0, debug-location !50
+    renamable $x8 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_.2
+    renamable $x8 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_.2, 0
+    renamable $x1 = ORRXri $xzr, 4097
+    renamable $x8 = LSRVXr killed renamable $x8, killed renamable $x1
+    $x1 = LDRXui $sp, 13 :: (load 8 from %stack.12)
+    renamable $w9 = LDRBBroX killed renamable $x8, killed renamable $x1, 0, 0, debug-location !51 :: (load 1 from %ir.40)
+    renamable $w9 = UBFMWri killed renamable $w9, 0, 7, debug-location !51
+    STRXui killed $x0, $sp, 9 :: (store 8 into %stack.16)
+    CBZW killed renamable $w9, %bb.6, debug-location !51
+  
+  bb.5 (%ir-block.43):
+    successors: 
+  
+    $x0 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_.2, debug-location !51
+    renamable $x0 = ADDXri $x0, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_.2, 0, debug-location !51
+    BL @__asan_report_load8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !51
+    INLINEASM &"", 1, debug-location !51
+    BRK 1, debug-location !51
+  
+  bb.6 (%ir-block.44):
+    renamable $x8 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_.2
+    renamable $x8 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_.2, 0
+    renamable $x1 = LDRXui killed renamable $x8, 0, debug-location !51 :: (invariant load 8 from @OBJC_SELECTOR_REFERENCES_.2)
+    $x8 = LDRXui $sp, 9 :: (load 8 from %stack.16)
+    $x9 = LDRXui $sp, 17 :: (load 8 from %stack.8)
+    renamable $x10 = UBFMXri renamable $x9, 3, 63, debug-location !51
+    $x11 = LDRXui $sp, 13 :: (load 8 from %stack.12)
+    renamable $w12 = LDRHHroX killed renamable $x10, killed renamable $x11, 0, 0, debug-location !51 :: (load 2 from %ir.51)
+    renamable $w12 = UBFMWri killed renamable $w12, 0, 15, debug-location !51
+    STRXui killed $x1, $sp, 8 :: (store 8 into %stack.17)
+    STRXui killed $x8, $sp, 7 :: (store 8 into %stack.18)
+    STRXui killed $x9, $sp, 6 :: (store 8 into %stack.19)
+    CBZW killed renamable $w12, %bb.8, debug-location !51
+  
+  bb.7 (%ir-block.54):
+    successors: 
+  
+    $x0 = LDRXui $sp, 6 :: (load 8 from %stack.19)
+    BL @__asan_report_load16, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !51
+    INLINEASM &"", 1, debug-location !51
+    BRK 1, debug-location !51
+  
+  bb.8 (%ir-block.55):
+    $x8 = LDRXui $sp, 6 :: (load 8 from %stack.19)
+    renamable $d1 = LDRDui renamable $x8, 1, debug-location !51 :: (load 8 from %ir.47 + 8)
+    renamable $d0 = LDRDui killed renamable $x8, 0, debug-location !51 :: (load 8 from %ir.47)
+    $x0 = LDRXui $sp, 7 :: (load 8 from %stack.18)
+    $x1 = LDRXui $sp, 8 :: (load 8 from %stack.17)
+    BL @objc_msgSend, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, implicit killed $d0, implicit killed $d1, implicit-def $sp, implicit-def $x0, debug-location !51
+    $x8 = LDRXui $sp, 16 :: (load 8 from %stack.9)
+    renamable $x1 = UBFMXri killed renamable $x8, 3, 63, debug-location !44
+    $lr = LDRXui $sp, 13 :: (load 8 from %stack.12)
+    renamable $w9 = LDRBBroX killed renamable $x1, killed renamable $lr, 0, 0, debug-location !44 :: (load 1 from %ir.61)
+    renamable $w9 = UBFMWri killed renamable $w9, 0, 7, debug-location !44
+    STRXui killed $x0, $sp, 5 :: (store 8 into %stack.20)
+    CBZW killed renamable $w9, %bb.10, debug-location !44
+  
+  bb.9 (%ir-block.64):
+    successors: 
+  
+    $x0 = LDRXui $sp, 16 :: (load 8 from %stack.9)
+    BL @__asan_report_store8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !44
+    INLINEASM &"", 1, debug-location !44
+    BRK 1, debug-location !44
+  
+  bb.10 (%ir-block.65):
+    renamable $x8 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_.4
+    renamable $x8 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_.4, 0
+    renamable $x9 = ORRXri $xzr, 4097
+    renamable $x8 = LSRVXr killed renamable $x8, killed renamable $x9
+    $x9 = LDRXui $sp, 5 :: (load 8 from %stack.20)
+    $x10 = LDRXui $sp, 16 :: (load 8 from %stack.9)
+    STRXui killed renamable $x9, renamable $x10, 0, debug-location !44 :: (store 8 into %ir.6)
+    renamable $x11 = LDRXui killed renamable $x10, 0, debug-location !52 :: (load 8 from %ir.6)
+    $x12 = LDRXui $sp, 13 :: (load 8 from %stack.12)
+    renamable $w13 = LDRBBroX killed renamable $x8, killed renamable $x12, 0, 0, debug-location !53 :: (load 1 from %ir.68)
+    renamable $w13 = UBFMWri killed renamable $w13, 0, 7, debug-location !53
+    STRXui killed $x11, $sp, 4 :: (store 8 into %stack.21)
+    CBZW killed renamable $w13, %bb.12, debug-location !53
+  
+  bb.11 (%ir-block.71):
+    successors: 
+  
+    $x0 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_.4, debug-location !53
+    renamable $x0 = ADDXri $x0, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_.4, 0, debug-location !53
+    BL @__asan_report_load8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $sp, debug-location !53
+    INLINEASM &"", 1, debug-location !53
+    BRK 1, debug-location !53
+  
+  bb.12 (%ir-block.72):
+    renamable $x8 = ADRP target-flags(aarch64-page) @OBJC_SELECTOR_REFERENCES_.4
+    renamable $x8 = ADDXri killed renamable $x8, target-flags(aarch64-pageoff, aarch64-nc) @OBJC_SELECTOR_REFERENCES_.4, 0
+    renamable $x1 = LDRXui killed renamable $x8, 0, debug-location !53 :: (invariant load 8 from @OBJC_SELECTOR_REFERENCES_.4)
+    $x8 = LDRXui $sp, 4 :: (load 8 from %stack.21)
+    $x0 = ORRXrs $xzr, killed $x8, 0, debug-location !53
+    BL @objc_msgSend, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, implicit-def $x0, debug-location !53
+    INLINEASM &"mov\09fp, fp\09\09; marker for objc_retainAutoreleaseReturnValue", 1, debug-location !53
+    BL @objc_retainAutoreleasedReturnValue, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $x0, debug-location !53
+    $x8 = LDRXui $sp, 16 :: (load 8 from %stack.9)
+    STRXui killed $x0, $sp, 3 :: (store 8 into %stack.22)
+    $x0 = ORRXrs $xzr, killed $x8, 0, debug-location !54
+    $x8 = ORRXrs $xzr, killed $xzr, 0, debug-location !54
+    $x1 = ORRXrs $xzr, killed $x8, 0, debug-location !54
+    BL @objc_storeStrong, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit killed $x1, debug-location !54
+    $x0 = LDRXui $sp, 3 :: (load 8 from %stack.22)
+    BL @objc_autoreleaseReturnValue, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $x0, implicit-def $x0, debug-location !54
+    $x8 = MOVZXi 13838, 0, debug-location !54
+    $x8 = MOVKXi $x8, 17888, 16, debug-location !54
+    $x1 = LDRXui $sp, 15 :: (load 8 from %stack.10)
+    STRXui killed renamable $x8, killed renamable $x1, 0, debug-location !54 :: (store 8 into %ir.7)
+    $x8 = LDRXui $sp, 12 :: (load 8 from %stack.13)
+    STRXui $xzr, renamable $x8, 0, debug-location !54 :: (store 8 into %ir.79, align 1)
+    STURHHi $wzr, renamable $x8, 9, debug-location !54 :: (store 2 into %ir.81, align 1)
+    STRBBui $wzr, killed renamable $x8, 11, debug-location !54 :: (store 1 into %ir.83)
+    $lr = ADRP target-flags(aarch64-page, aarch64-got) @__stack_chk_guard
+    $lr = LDRXui $lr, target-flags(aarch64-pageoff, aarch64-got, aarch64-nc) @__stack_chk_guard
+    $lr = LDRXui killed $lr, 0 :: (dereferenceable invariant load 8 from @__stack_chk_guard)
+    renamable $x9 = LDRXui $sp, 39 :: (load 8 from %stack.0.StackGuardSlot)
+    $xzr = SUBSXrs killed renamable $lr, killed renamable $x9, 0, implicit-def $nzcv, implicit-def $nzcv
+    STRXui killed $x0, $sp, 2 :: (store 8 into %stack.23)
+    Bcc 1, %bb.14, implicit $nzcv
+  
+  bb.13.SP_return:
+    $x0 = LDRXui $sp, 2 :: (load 8 from %stack.23)
+    $sp = frame-destroy SUBXri $fp, 16, 0, debug-location !54
+    $fp, $lr = frame-destroy LDPXi $sp, 2, debug-location !54 :: (load 8 from %stack.25), (load 8 from %stack.24)
+    early-clobber $sp, $x28, $x27 = frame-destroy LDPXpost $sp, 4, debug-location !54 :: (load 8 from %stack.27), (load 8 from %stack.26)
+    RET undef $lr, implicit killed $x0, debug-location !54
+  
+  bb.14.CallStackCheckFailBlk:
+    BL @__stack_chk_fail, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, debug-location !47
+    BRK 1, debug-location !47
+
+...
+---
+name:            asan.module_ctor
+alignment:       2
+tracksRegLiveness: true
+frameInfo:       
+  stackSize:       16
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+stack:           
+  - { id: 0, type: spill-slot, offset: -8, size: 8, alignment: 8, stack-id: 0, 
+      callee-saved-register: '$lr' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 8, stack-id: 0, 
+      callee-saved-register: '$fp' }
+body:             |
+  bb.0 (%ir-block.0):
+    liveins: $lr
+  
+    early-clobber $sp = frame-setup STPXpre killed $fp, killed $lr, $sp, -2 :: (store 8 into %stack.1), (store 8 into %stack.0)
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $w30, -8
+    frame-setup CFI_INSTRUCTION offset $w29, -16
+    BL @__asan_init, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    BL @__asan_version_mismatch_check_v8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp
+    early-clobber $sp, $fp, $lr = frame-destroy LDPXpost $sp, 2 :: (load 8 from %stack.1), (load 8 from %stack.0)
+    RET undef $lr
+
+...

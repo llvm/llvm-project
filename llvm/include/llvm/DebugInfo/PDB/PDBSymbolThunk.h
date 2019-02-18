@@ -19,12 +19,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolThunk : public PDBSymbol {
-public:
-  PDBSymbolThunk(const IPDBSession &PDBSession,
-                 std::unique_ptr<IPDBRawSymbol> ThunkSymbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Thunk)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_METHOD(getAccess)

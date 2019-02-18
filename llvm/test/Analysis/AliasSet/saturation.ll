@@ -2,10 +2,10 @@
 ; RUN: opt -basicaa -print-alias-sets -alias-set-saturation-threshold=1 -S -o - < %s 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=SAT
 
 ; CHECK-LABEL: 'allmust'
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %a, 4)
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %b, 4)
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %c, 4)
-; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %d, 4)
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %a, LocationSize::precise(4))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %b, LocationSize::precise(4))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %c, LocationSize::precise(4))
+; CHECK: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %d, LocationSize::precise(4))
 define void @allmust() {
   %a = alloca i32
   %b = alloca i32
@@ -19,11 +19,11 @@ define void @allmust() {
 }
 
 ; CHECK-LABEL :'mergemay'
-; NOSAT: AliasSet[{{.*}}, 2] may alias, Mod Pointers: (i32* %a, 4), (i32* %a1, 4)
-; NOSAT: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %b, 4)
+; NOSAT: AliasSet[{{.*}}, 2] may alias, Mod Pointers: (i32* %a, LocationSize::precise(4)), (i32* %a1, LocationSize::precise(4))
+; NOSAT: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %b, LocationSize::precise(4))
 ; SAT: AliasSet[{{.*}}, 2] may alias, Mod forwarding to 0x[[FWD:[0-9a-f]*]]
 ; SAT: AliasSet[{{.*}}, 1] must alias, Mod forwarding to 0x[[FWD]]
-; SAT: AliasSet[0x[[FWD]], 2] may alias, Mod/Ref Pointers: (i32* %a, 4), (i32* %a1, 4), (i32* %b, 4)
+; SAT: AliasSet[0x[[FWD]], 2] may alias, Mod/Ref Pointers: (i32* %a, LocationSize::precise(4)), (i32* %a1, LocationSize::precise(4)), (i32* %b, LocationSize::precise(4))
 define void @mergemay(i32 %k) {
   %a = alloca i32
   %b = alloca i32
@@ -35,13 +35,13 @@ define void @mergemay(i32 %k) {
 }
 
 ; CHECK-LABEL: 'mergemust'
-; NOSAT: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %a, 4)
-; NOSAT: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %b, 4)
-; NOSAT: AliasSet[{{.*}}, 2] may alias,  Mod Pointers: (i32* %c, 4), (i32* %d, 4)
+; NOSAT: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %a, LocationSize::precise(4))
+; NOSAT: AliasSet[{{.*}}, 1] must alias, Mod Pointers: (i32* %b, LocationSize::precise(4))
+; NOSAT: AliasSet[{{.*}}, 2] may alias,  Mod Pointers: (i32* %c, LocationSize::precise(4)), (i32* %d, LocationSize::precise(4))
 ; SAT: AliasSet[{{.*}}, 1] must alias, Mod forwarding to 0x[[FWD:[0-9a-f]*]]
 ; SAT: AliasSet[{{.*}}, 1] must alias, Mod forwarding to 0x[[FWD]]
 ; SAT: AliasSet[{{.*}}, 2] may alias,  Mod forwarding to 0x[[FWD]]
-; SAT: AliasSet[0x[[FWD]], 3] may alias, Mod/Ref Pointers: (i32* %a, 4), (i32* %b, 4), (i32* %c, 4), (i32* %d, 4)
+; SAT: AliasSet[0x[[FWD]], 3] may alias, Mod/Ref Pointers: (i32* %a, LocationSize::precise(4)), (i32* %b, LocationSize::precise(4)), (i32* %c, LocationSize::precise(4)), (i32* %d, LocationSize::precise(4))
 define void @mergemust(i32* %c, i32* %d) {
   %a = alloca i32
   %b = alloca i32

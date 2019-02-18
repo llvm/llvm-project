@@ -44,6 +44,7 @@ class Instruction;
 class LoadInst;
 class PHITransAddr;
 class TargetLibraryInfo;
+class PhiValues;
 class Value;
 
 /// A memory dependence query can return one of three different answers.
@@ -303,7 +304,7 @@ private:
     /// The maximum size of the dereferences of the pointer.
     ///
     /// May be UnknownSize if the sizes are unknown.
-    LocationSize Size = MemoryLocation::UnknownSize;
+    LocationSize Size = LocationSize::unknown();
     /// The AA tags associated with dereferences of the pointer.
     ///
     /// The members may be null if there are no tags or conflicting tags.
@@ -360,13 +361,14 @@ private:
   AssumptionCache &AC;
   const TargetLibraryInfo &TLI;
   DominatorTree &DT;
+  PhiValues &PV;
   PredIteratorCache PredCache;
 
 public:
   MemoryDependenceResults(AliasAnalysis &AA, AssumptionCache &AC,
                           const TargetLibraryInfo &TLI,
-                          DominatorTree &DT)
-      : AA(AA), AC(AC), TLI(TLI), DT(DT) {}
+                          DominatorTree &DT, PhiValues &PV)
+      : AA(AA), AC(AC), TLI(TLI), DT(DT), PV(PV) {}
 
   /// Handle invalidation in the new PM.
   bool invalidate(Function &F, const PreservedAnalyses &PA,

@@ -45,4 +45,3 @@ int main() {
 }
 
 // RUN: llvm-cov show %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata -format html -dump -path-equivalence=/tmp,%S %s 2>&1 | FileCheck %s -check-prefixes=HTML,SHARED
-// RUN: llvm-cov export %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata 2>&1 | FileCheck %S/Inputs/highlightedRanges.json

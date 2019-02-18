@@ -15,12 +15,13 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGOPENMPRUNTIME_H
 
 #include "CGValue.h"
+#include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 
@@ -278,12 +279,39 @@ protected:
   /// stored.
   virtual Address emitThreadIDAddress(CodeGenFunction &CGF, SourceLocation Loc);
 
+  void setLocThreadIdInsertPt(CodeGenFunction &CGF,
+                              bool AtCurrentPoint = false);
+  void clearLocThreadIdInsertPt(CodeGenFunction &CGF);
+
+  /// Check if the default location must be constant.
+  /// Default is false to support OMPT/OMPD.
+  virtual bool isDefaultLocationConstant() const { return false; }
+
+  /// Returns additional flags that can be stored in reserved_2 field of the
+  /// default location.
+  virtual unsigned getDefaultLocationReserved2Flags() const { return 0; }
+
+  /// Returns default flags for the barriers depending on the directive, for
+  /// which this barier is going to be emitted.
+  static unsigned getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind);
+
+  /// Get the LLVM type for the critical name.
+  llvm::ArrayType *getKmpCriticalNameTy() const {return KmpCriticalNameTy;}
+
+  /// Returns corresponding lock object for the specified critical region
+  /// name. If the lock object does not exist it is created, otherwise the
+  /// reference to the existing copy is returned.
+  /// \param CriticalName Name of the critical region.
+  ///
+  llvm::Value *getCriticalRegionLock(StringRef CriticalName);
+
 private:
   /// Default const ident_t object used for initialization of all other
   /// ident_t objects.
   llvm::Constant *DefaultOpenMPPSource = nullptr;
+  using FlagsTy = std::pair<unsigned, unsigned>;
   /// Map of flags and corresponding default locations.
-  typedef llvm::DenseMap<unsigned, llvm::Value *> OpenMPDefaultLocMapTy;
+  using OpenMPDefaultLocMapTy = llvm::DenseMap<FlagsTy, llvm::Value *>;
   OpenMPDefaultLocMapTy OpenMPDefaultLocMap;
   Address getOrCreateDefaultLocation(unsigned Flags);
 
@@ -300,6 +328,8 @@ private:
   struct DebugLocThreadIdTy {
     llvm::Value *DebugLoc;
     llvm::Value *ThreadID;
+    /// Insert point for the service instructions.
+    llvm::AssertingVH<llvm::Instruction> ServiceInsertPt = nullptr;
   };
   /// Map of local debug location, ThreadId and functions.
   typedef llvm::DenseMap<llvm::Function *, DebugLocThreadIdTy>
@@ -315,10 +345,6 @@ private:
                          SmallVector<const OMPDeclareReductionDecl *, 4>>
       FunctionUDRMapTy;
   FunctionUDRMapTy FunctionUDRMap;
-  IdentifierInfo *In = nullptr;
-  IdentifierInfo *Out = nullptr;
-  IdentifierInfo *Priv = nullptr;
-  IdentifierInfo *Orig = nullptr;
   /// Type kmp_critical_name, originally defined as typedef kmp_int32
   /// kmp_critical_name[8];
   llvm::ArrayType *KmpCriticalNameTy;
@@ -600,7 +626,15 @@ private:
   OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
 
   bool ShouldMarkAsGlobal = true;
-  llvm::SmallDenseSet<const FunctionDecl *> AlreadyEmittedTargetFunctions;
+  /// List of the emitted functions.
+  llvm::StringSet<> AlreadyEmittedTargetFunctions;
+  /// List of the global variables with their addresses that should not be
+  /// emitted for the target.
+  llvm::StringMap<llvm::WeakTrackingVH> EmittedNonTargetVariables;
+
+  /// List of variables that can become declare target implicitly and, thus,
+  /// must be emitted.
+  llvm::SmallDenseSet<const VarDecl *> DeferredGlobalVariables;
 
   /// Creates and registers offloading binary descriptor for the current
   /// compilation unit. The function that does the registration is returned.
@@ -673,10 +707,10 @@ private:
                                               const llvm::Twine &Name);
 
   /// Set of threadprivate variables with the generated initializer.
-  llvm::SmallPtrSet<const VarDecl *, 4> ThreadPrivateWithDefinition;
+  llvm::StringSet<> ThreadPrivateWithDefinition;
 
   /// Set of declare target variables with the generated initializer.
-  llvm::SmallPtrSet<const VarDecl *, 4> DeclareTargetWithDefinition;
+  llvm::StringSet<> DeclareTargetWithDefinition;
 
   /// Emits initialization code for the threadprivate variables.
   /// \param VDAddr Address of the global variable \a VD.
@@ -687,13 +721,6 @@ private:
   void emitThreadPrivateVarInit(CodeGenFunction &CGF, Address VDAddr,
                                 llvm::Value *Ctor, llvm::Value *CopyCtor,
                                 llvm::Value *Dtor, SourceLocation Loc);
-
-  /// Returns corresponding lock object for the specified critical region
-  /// name. If the lock object does not exist it is created, otherwise the
-  /// reference to the existing copy is returned.
-  /// \param CriticalName Name of the critical region.
-  ///
-  llvm::Value *getCriticalRegionLock(StringRef CriticalName);
 
   struct TaskResultTy {
     llvm::Value *NewTask = nullptr;
@@ -883,6 +910,20 @@ public:
   ///
   virtual bool isStaticNonchunked(OpenMPDistScheduleClauseKind ScheduleKind,
                                   bool Chunked) const;
+
+  /// Check if the specified \a ScheduleKind is static chunked.
+  /// \param ScheduleKind Schedule kind specified in the 'schedule' clause.
+  /// \param Chunked True if chunk is specified in the clause.
+  ///
+  virtual bool isStaticChunked(OpenMPScheduleClauseKind ScheduleKind,
+                               bool Chunked) const;
+
+  /// Check if the specified \a ScheduleKind is static non-chunked.
+  /// \param ScheduleKind Schedule kind specified in the 'dist_schedule' clause.
+  /// \param Chunked True if chunk is specified in the clause.
+  ///
+  virtual bool isStaticChunked(OpenMPDistScheduleClauseKind ScheduleKind,
+                               bool Chunked) const;
 
   /// Check if the specified \a ScheduleKind is dynamic.
   /// This kind of worksharing directive is emitted without outer loop.
@@ -1465,8 +1506,8 @@ public:
 
   /// Emit initialization for doacross loop nesting support.
   /// \param D Loop-based construct used in doacross nesting construct.
-  virtual void emitDoacrossInit(CodeGenFunction &CGF,
-                                const OMPLoopDirective &D);
+  virtual void emitDoacrossInit(CodeGenFunction &CGF, const OMPLoopDirective &D,
+                                ArrayRef<Expr *> NumIterations);
 
   /// Emit code for doacross ordered directive with 'depend' clause.
   /// \param C 'depend' clause with 'sink|source' dependency kind.
@@ -1490,6 +1531,18 @@ public:
                                       const VarDecl *NativeParam,
                                       const VarDecl *TargetParam) const;
 
+  /// Choose default schedule type and chunk value for the
+  /// dist_schedule clause.
+  virtual void getDefaultDistScheduleAndChunk(CodeGenFunction &CGF,
+      const OMPLoopDirective &S, OpenMPDistScheduleClauseKind &ScheduleKind,
+      llvm::Value *&Chunk) const {}
+
+  /// Choose default schedule type and chunk value for the
+  /// schedule clause.
+  virtual void getDefaultScheduleAndChunk(CodeGenFunction &CGF,
+      const OMPLoopDirective &S, OpenMPScheduleClauseKind &ScheduleKind,
+      const Expr *&ChunkExpr) const {}
+
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.
   virtual void
@@ -1505,10 +1558,23 @@ public:
   virtual Address getAddressOfLocalVariable(CodeGenFunction &CGF,
                                             const VarDecl *VD);
 
-  /// Marks the declaration as alread emitted for the device code and returns
+  /// Marks the declaration as already emitted for the device code and returns
   /// true, if it was marked already, and false, otherwise.
   bool markAsGlobalTarget(GlobalDecl GD);
 
+  /// Emit deferred declare target variables marked for deferred emission.
+  void emitDeferredTargetDecls() const;
+
+  /// Adjust some parameters for the target-based directives, like addresses of
+  /// the variables captured by reference in lambdas.
+  virtual void
+  adjustTargetSpecificDataForLambdas(CodeGenFunction &CGF,
+                                     const OMPExecutableDirective &D) const;
+
+  /// Perform check on requires decl to ensure that target architecture
+  /// supports unified addressing
+  virtual void checkArchForUnifiedAddressing(CodeGenModule &CGM,
+                                             const OMPRequiresDecl *D) const {}
 };
 
 /// Class supports emissionof SIMD-only code.
@@ -2051,8 +2117,8 @@ public:
 
   /// Emit initialization for doacross loop nesting support.
   /// \param D Loop-based construct used in doacross nesting construct.
-  void emitDoacrossInit(CodeGenFunction &CGF,
-                        const OMPLoopDirective &D) override;
+  void emitDoacrossInit(CodeGenFunction &CGF, const OMPLoopDirective &D,
+                        ArrayRef<Expr *> NumIterations) override;
 
   /// Emit code for doacross ordered directive with 'depend' clause.
   /// \param C 'depend' clause with 'sink|source' dependency kind.

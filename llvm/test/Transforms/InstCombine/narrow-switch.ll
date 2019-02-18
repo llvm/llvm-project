@@ -3,9 +3,6 @@
 ; RUN: opt < %s -instcombine -S -data-layout=n32    | FileCheck %s --check-prefix=ALL --check-prefix=CHECK32
 ; RUN: opt < %s -instcombine -S -data-layout=n32:64 | FileCheck %s --check-prefix=ALL --check-prefix=CHECK64
 
-; In all cases, the data-layout is irrelevant. We should shrink as much as possible in InstCombine
-; and allow the backend to expand as much as needed to ensure optimal codegen for any target.
-
 define i32 @positive1(i64 %a) {
 ; ALL-LABEL: @positive1(
 ; ALL:         switch i32
@@ -102,13 +99,19 @@ return:
 ; Make sure to avoid assertion crashes and use the type before
 ; truncation to generate the sub constant expressions that leads
 ; to the recomputed condition.
+; We allow to truncate from i64 to i59 if in 32-bit mode,
+; because both are illegal.
 
 define void @trunc64to59(i64 %a) {
 ; ALL-LABEL: @trunc64to59(
-; ALL:         switch i59
-; ALL-NEXT:    i59 0, label %sw.bb1
-; ALL-NEXT:    i59 18717182647723699, label %sw.bb2
-; ALL-NEXT:    ]
+; ALL-CHECK32:         switch i59
+; ALL-CHECK32-NEXT:    i59 0, label %sw.bb1
+; ALL-CHECK32-NEXT:    i59 18717182647723699, label %sw.bb2
+; ALL-CHECK32-NEXT:    ]
+; ALL-CHECK64:         switch i64
+; ALL-CHECK64-NEXT:    i64 0, label %sw.bb1
+; ALL-CHECK64-NEXT:    i64 18717182647723699, label %sw.bb2
+; ALL-CHECK64-NEXT:    ]
 ;
 entry:
   %tmp0 = and i64 %a, 15
@@ -204,5 +207,56 @@ sw.epilog:                                        ; preds = %entry
 return:                                           ; preds = %sw.epilog, %sw.bb2,
   %rval = load i32, i32* %retval, align 4
   ret i32 %rval
+}
+
+; https://llvm.org/bugs/show_bug.cgi?id=29009
+
+@a = global i32 0, align 4
+@njob = global i32 0, align 4
+
+declare i32 @goo()
+
+; Make sure we do not shrink to illegal types (i3 in this case)
+; if original type is legal (i32 in this case)
+
+define void @PR29009() {
+; ALL-LABEL: @PR29009(
+; ALL:         switch i32
+; ALL-NEXT:    i32 0, label
+; ALL-NEXT:    i32 3, label
+; ALL-NEXT:    ]
+;
+  br label %1
+
+; <label>:1:                                      ; preds = %10, %0
+  %2 = load volatile i32, i32* @njob, align 4
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %4, label %11
+
+; <label>:4:                                      ; preds = %1
+  %5 = call i32 @goo()
+  %6 = and i32 %5, 7
+  switch i32 %6, label %7 [
+    i32 0, label %8
+    i32 3, label %9
+  ]
+
+; <label>:7:                                      ; preds = %4
+  store i32 6, i32* @a, align 4
+  br label %10
+
+; <label>:8:                                      ; preds = %4
+  store i32 1, i32* @a, align 4
+  br label %10
+
+; <label>:9:                                      ; preds = %4
+  store i32 2, i32* @a, align 4
+  br label %10
+
+; <label>:10:                                     ; preds = %13, %12, %11, %10, %9, %8, %7
+  br label %1
+
+; <label>:11:                                     ; preds = %1
+  ret void
 }
 

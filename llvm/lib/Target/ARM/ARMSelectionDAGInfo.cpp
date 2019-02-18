@@ -49,7 +49,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
   case RTLIB::MEMMOVE:
     AEABILibcall = AEABI_MEMMOVE;
     break;
-  case RTLIB::MEMSET: 
+  case RTLIB::MEMSET:
     AEABILibcall = AEABI_MEMSET;
     if (ConstantSDNode *ConstantSrc = dyn_cast<ConstantSDNode>(Src))
       if (ConstantSrc->getZExtValue() == 0)
@@ -93,14 +93,14 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
     else if (Src.getValueType().bitsLT(MVT::i32))
       Src = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Src);
 
-    Entry.Node = Src; 
+    Entry.Node = Src;
     Entry.Ty = Type::getInt32Ty(*DAG.getContext());
     Entry.IsSExt = false;
     Args.push_back(Entry);
   } else {
     Entry.Node = Src;
     Args.push_back(Entry);
-    
+
     Entry.Node = Size;
     Args.push_back(Entry);
   }
@@ -121,7 +121,7 @@ SDValue ARMSelectionDAGInfo::EmitSpecializedLibcall(
           std::move(Args))
       .setDiscardResult();
   std::pair<SDValue,SDValue> CallResult = TLI->LowerCallTo(CLI);
-  
+
   return CallResult.second;
 }
 

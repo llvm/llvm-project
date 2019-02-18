@@ -1,14 +1,16 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
-; CHECK: foo_empty
+; RUN: llc -march=hexagon < %s | FileCheck %s
+; CHECK: f0
 ; CHECK-NOT: allocframe
 ; CHECK-NOT: memd(r29
-; CHECK: jump bar_empty
+; CHECK: jump f1
 
-define void @foo_empty(i32 %h) nounwind {
-entry:
-  %add = add nsw i32 %h, 3
-  %call = tail call i32 bitcast (i32 (...)* @bar_empty to i32 (i32)*)(i32 %add) nounwind
+define void @f0(i32 %a0) #0 {
+b0:
+  %v0 = add nsw i32 %a0, 3
+  %v1 = tail call i32 bitcast (i32 (...)* @f1 to i32 (i32)*)(i32 %v0) #0
   ret void
 }
 
-declare i32 @bar_empty(...)
+declare i32 @f1(...) #0
+
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }

@@ -6,14 +6,14 @@ target triple = "thumbv7m--linux-gnu"
 @.str = private unnamed_addr constant [4 x i8] c"abc\00", align 1
 
 ; CHECK-LABEL: fn1
-; CHECK: .str:
+; CHECK: .long .L.str
 define arm_aapcscc i8* @fn1() local_unnamed_addr #0 !dbg !8 {
 entry:
   ret i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), !dbg !14
 }
 
 ; CHECK-LABEL: fn2
-; CHECK-NOT: .str:
+; CHECK: .long .L.str
 define arm_aapcscc i8* @fn2() local_unnamed_addr #0 !dbg !15 {
 entry:
   ret i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 1), !dbg !16

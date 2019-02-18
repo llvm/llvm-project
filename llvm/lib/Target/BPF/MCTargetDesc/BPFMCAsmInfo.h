@@ -30,8 +30,8 @@ public:
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;
-    HasSingleParameterDotFile = false;
-    HasDotTypeDotSizeDirective = false;
+    HasSingleParameterDotFile = true;
+    HasDotTypeDotSizeDirective = true;
 
     SupportsDebugInformation = true;
     ExceptionsType = ExceptionHandling::DwarfCFI;

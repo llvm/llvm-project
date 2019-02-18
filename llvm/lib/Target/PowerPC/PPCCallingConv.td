@@ -338,7 +338,7 @@ def CSR_NoRegs : CalleeSavedRegs<(add)>;
 // coldcc calling convection marks most registers as non-volatile.
 // Do not include r1 since the stack pointer is never considered a CSR.
 // Do not include r2, since it is the TOC register and is added depending
-// on wether or not the function uses the TOC and is a non-leaf.
+// on whether or not the function uses the TOC and is a non-leaf.
 // Do not include r0,r11,r13 as they are optional in functional linkage
 // and value may be altered by inter-library calls.
 // Do not include r12 as it is used as a scratch register.

@@ -1,3 +1,4 @@
+; REQUIRES: diasdk
 ; RUN: llvm-pdbutil pretty -lines %p/Inputs/PrettyFuncDumperTest.pdb > %t
 
 ; CHECK: ---COMPILANDS---

@@ -34,4 +34,79 @@ BUILTIN(__builtin_wasm_grow_memory, "zz", "n")
 BUILTIN(__builtin_wasm_throw, "vUiv*", "r")
 BUILTIN(__builtin_wasm_rethrow, "v", "r")
 
+// Atomic wait and notify.
+BUILTIN(__builtin_wasm_atomic_wait_i32, "ii*iLLi", "n")
+BUILTIN(__builtin_wasm_atomic_wait_i64, "iLLi*LLiLLi", "n")
+BUILTIN(__builtin_wasm_atomic_notify, "Uii*Ui", "n")
+
+// Saturating fp-to-int conversions
+BUILTIN(__builtin_wasm_trunc_saturate_s_i32_f32, "if", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_u_i32_f32, "if", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_s_i32_f64, "id", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_u_i32_f64, "id", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_s_i64_f32, "LLif", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_u_i64_f32, "LLif", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_s_i64_f64, "LLid", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_u_i64_f64, "LLid", "nc")
+
+// Floating point min/max
+BUILTIN(__builtin_wasm_min_f32, "fff", "nc")
+BUILTIN(__builtin_wasm_max_f32, "fff", "nc")
+BUILTIN(__builtin_wasm_min_f64, "ddd", "nc")
+BUILTIN(__builtin_wasm_max_f64, "ddd", "nc")
+
+// SIMD builtins
+BUILTIN(__builtin_wasm_extract_lane_s_i8x16, "iV16cIi", "nc")
+BUILTIN(__builtin_wasm_extract_lane_u_i8x16, "iV16cIi", "nc")
+BUILTIN(__builtin_wasm_extract_lane_s_i16x8, "iV8sIi", "nc")
+BUILTIN(__builtin_wasm_extract_lane_u_i16x8, "iV8sIi", "nc")
+BUILTIN(__builtin_wasm_extract_lane_i32x4, "iV4iIi", "nc")
+BUILTIN(__builtin_wasm_extract_lane_i64x2, "LLiV2LLiIi", "nc")
+BUILTIN(__builtin_wasm_extract_lane_f32x4, "fV4fIi", "nc")
+BUILTIN(__builtin_wasm_extract_lane_f64x2, "dV2dIi", "nc")
+
+BUILTIN(__builtin_wasm_replace_lane_i8x16, "V16cV16cIii", "nc")
+BUILTIN(__builtin_wasm_replace_lane_i16x8, "V8sV8sIii", "nc")
+BUILTIN(__builtin_wasm_replace_lane_i32x4, "V4iV4iIii", "nc")
+BUILTIN(__builtin_wasm_replace_lane_i64x2, "V2LLiV2LLiIiLLi", "nc")
+BUILTIN(__builtin_wasm_replace_lane_f32x4, "V4fV4fIif", "nc")
+BUILTIN(__builtin_wasm_replace_lane_f64x2, "V2dV2dIid", "nc")
+
+BUILTIN(__builtin_wasm_add_saturate_s_i8x16, "V16cV16cV16c", "nc")
+BUILTIN(__builtin_wasm_add_saturate_u_i8x16, "V16cV16cV16c", "nc")
+BUILTIN(__builtin_wasm_add_saturate_s_i16x8, "V8sV8sV8s", "nc")
+BUILTIN(__builtin_wasm_add_saturate_u_i16x8, "V8sV8sV8s", "nc")
+
+BUILTIN(__builtin_wasm_sub_saturate_s_i8x16, "V16cV16cV16c", "nc")
+BUILTIN(__builtin_wasm_sub_saturate_u_i8x16, "V16cV16cV16c", "nc")
+BUILTIN(__builtin_wasm_sub_saturate_s_i16x8, "V8sV8sV8s", "nc")
+BUILTIN(__builtin_wasm_sub_saturate_u_i16x8, "V8sV8sV8s", "nc")
+
+BUILTIN(__builtin_wasm_bitselect, "V4iV4iV4iV4i", "nc")
+
+BUILTIN(__builtin_wasm_any_true_i8x16, "iV16c", "nc")
+BUILTIN(__builtin_wasm_any_true_i16x8, "iV8s", "nc")
+BUILTIN(__builtin_wasm_any_true_i32x4, "iV4i", "nc")
+BUILTIN(__builtin_wasm_any_true_i64x2, "iV2LLi", "nc")
+BUILTIN(__builtin_wasm_all_true_i8x16, "iV16c", "nc")
+BUILTIN(__builtin_wasm_all_true_i16x8, "iV8s", "nc")
+BUILTIN(__builtin_wasm_all_true_i32x4, "iV4i", "nc")
+BUILTIN(__builtin_wasm_all_true_i64x2, "iV2LLi", "nc")
+
+BUILTIN(__builtin_wasm_abs_f32x4, "V4fV4f", "nc")
+BUILTIN(__builtin_wasm_abs_f64x2, "V2dV2d", "nc")
+
+BUILTIN(__builtin_wasm_min_f32x4, "V4fV4fV4f", "nc")
+BUILTIN(__builtin_wasm_max_f32x4, "V4fV4fV4f", "nc")
+BUILTIN(__builtin_wasm_min_f64x2, "V2dV2dV2d", "nc")
+BUILTIN(__builtin_wasm_max_f64x2, "V2dV2dV2d", "nc")
+
+BUILTIN(__builtin_wasm_sqrt_f32x4, "V4fV4f", "nc")
+BUILTIN(__builtin_wasm_sqrt_f64x2, "V2dV2d", "nc")
+
+BUILTIN(__builtin_wasm_trunc_saturate_s_i32x4_f32x4, "V4iV4f", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_u_i32x4_f32x4, "V4iV4f", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_s_i64x2_f64x2, "V2LLiV2d", "nc")
+BUILTIN(__builtin_wasm_trunc_saturate_u_i64x2_f64x2, "V2LLiV2d", "nc")
+
 #undef BUILTIN

@@ -16,9 +16,9 @@ body:             |
     successors: %bb.1(0x30000000), %bb.2(0x50000000)
     liveins: $sgpr0_sgpr1, $sgpr3
 
-    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_sgpr1, 44, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     $sgpr8 = S_MOV_B32 &SCRATCH_RSRC_DWORD0, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 36, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $sgpr9 = S_MOV_B32 &SCRATCH_RSRC_DWORD1, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $sgpr10 = S_MOV_B32 4294967295, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
     $sgpr11 = S_MOV_B32 15204352, implicit-def $sgpr8_sgpr9_sgpr10_sgpr11
@@ -36,7 +36,7 @@ body:             |
     successors: %bb.3(0x80000000)
     liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 52, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 32772, implicit $exec
     S_BRANCH %bb.3
@@ -45,7 +45,7 @@ body:             |
     successors: %bb.3(0x80000000)
     liveins: $sgpr0_sgpr1, $sgpr4_sgpr5, $sgpr3, $sgpr8_sgpr9_sgpr10_sgpr11
 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 48, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     S_WAITCNT 3855
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
 

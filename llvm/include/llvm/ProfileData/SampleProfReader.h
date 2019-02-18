@@ -222,6 +222,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SymbolRemappingReader.h"
 #include <algorithm>
 #include <cstdint>
 #include <memory>
@@ -279,6 +280,8 @@ public:
   /// Print the profile for \p FName on stream \p OS.
   void dumpFunctionProfile(StringRef FName, raw_ostream &OS = dbgs());
 
+  virtual void collectFuncsToUse(const Module &M) {}
+
   /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
 
@@ -287,11 +290,16 @@ public:
     // The function name may have been updated by adding suffix. In sample
     // profile, the function names are all stripped, so we need to strip
     // the function name suffix before matching with profile.
-    StringRef Fname = F.getName().split('.').first;
+    return getSamplesFor(F.getName().split('.').first);
+  }
+
+  /// Return the samples collected for function \p F.
+  virtual FunctionSamples *getSamplesFor(StringRef Fname) {
     std::string FGUID;
     Fname = getRepInFormat(Fname, getFormat(), FGUID);
-    if (Profiles.count(Fname))
-      return &Profiles[Fname];
+    auto It = Profiles.find(Fname);
+    if (It != Profiles.end())
+      return &It->second;
     return nullptr;
   }
 
@@ -335,6 +343,12 @@ protected:
   /// Profile summary information.
   std::unique_ptr<ProfileSummary> Summary;
 
+  /// Take ownership of the summary of this reader.
+  static std::unique_ptr<ProfileSummary>
+  takeSummary(SampleProfileReader &Reader) {
+    return std::move(Reader.Summary);
+  }
+
   /// Compute summary for this profile.
   void computeSummary();
 
@@ -364,7 +378,7 @@ public:
       : SampleProfileReader(std::move(B), C, Format) {}
 
   /// Read and validate the file header.
-  std::error_code readHeader() override;
+  virtual std::error_code readHeader() override;
 
   /// Read sample profiles from the associated file.
   std::error_code read() override;
@@ -377,6 +391,10 @@ protected:
   ///
   /// \returns the read value.
   template <typename T> ErrorOr<T> readNumber();
+
+  /// Read a numeric value of type T from the profile. The value is saved
+  /// without encoded.
+  template <typename T> ErrorOr<T> readUnencodedNumber();
 
   /// Read a string from the profile.
   ///
@@ -391,6 +409,9 @@ protected:
 
   /// Return true if we've reached the end of file.
   bool at_eof() const { return Data >= End; }
+
+  /// Read the next function profile instance.
+  std::error_code readFuncProfile();
 
   /// Read the contents of the given profile instance.
   std::error_code readProfile(FunctionSamples &FProfile);
@@ -436,10 +457,17 @@ class SampleProfileReaderCompactBinary : public SampleProfileReaderBinary {
 private:
   /// Function name table.
   std::vector<std::string> NameTable;
+  /// The table mapping from function name to the offset of its FunctionSample
+  /// towards file start.
+  DenseMap<StringRef, uint64_t> FuncOffsetTable;
+  /// The set containing the functions to use when compiling a module.
+  DenseSet<StringRef> FuncsToUse;
   virtual std::error_code verifySPMagic(uint64_t Magic) override;
   virtual std::error_code readNameTable() override;
   /// Read a string indirectly via the name table.
   virtual ErrorOr<StringRef> readStringFromTable() override;
+  virtual std::error_code readHeader() override;
+  std::error_code readFuncOffsetTable();
 
 public:
   SampleProfileReaderCompactBinary(std::unique_ptr<MemoryBuffer> B,
@@ -448,6 +476,12 @@ public:
 
   /// \brief Return true if \p Buffer is in the format supported by this class.
   static bool hasFormat(const MemoryBuffer &Buffer);
+
+  /// Read samples only for functions to use.
+  std::error_code read() override;
+
+  /// Collect functions to be used when compiling Module \p M.
+  void collectFuncsToUse(const Module &M) override;
 };
 
 using InlineCallStack = SmallVector<FunctionSamples *, 10>;
@@ -501,6 +535,44 @@ protected:
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
   static const uint32_t GCOVTagAFDOFunction = 0xac000000;
+};
+
+/// A profile data reader proxy that remaps the profile data from another
+/// sample profile data reader, by applying a provided set of equivalences
+/// between components of the symbol names in the profile.
+class SampleProfileReaderItaniumRemapper : public SampleProfileReader {
+public:
+  SampleProfileReaderItaniumRemapper(
+      std::unique_ptr<MemoryBuffer> B, LLVMContext &C,
+      std::unique_ptr<SampleProfileReader> Underlying)
+      : SampleProfileReader(std::move(B), C, Underlying->getFormat()) {
+    Profiles = std::move(Underlying->getProfiles());
+    Summary = takeSummary(*Underlying);
+    // Keep the underlying reader alive; the profile data may contain
+    // StringRefs referencing names in its name table.
+    UnderlyingReader = std::move(Underlying);
+  }
+
+  /// Create a remapped sample profile from the given remapping file and
+  /// underlying samples.
+  static ErrorOr<std::unique_ptr<SampleProfileReader>>
+  create(const Twine &Filename, LLVMContext &C,
+         std::unique_ptr<SampleProfileReader> Underlying);
+
+  /// Read and validate the file header.
+  std::error_code readHeader() override { return sampleprof_error::success; }
+
+  /// Read remapping file and apply it to the sample profile.
+  std::error_code read() override;
+
+  /// Return the samples collected for function \p F.
+  FunctionSamples *getSamplesFor(StringRef FunctionName) override;
+  using SampleProfileReader::getSamplesFor;
+
+private:
+  SymbolRemappingReader Remappings;
+  DenseMap<SymbolRemappingReader::Key, FunctionSamples*> SampleMap;
+  std::unique_ptr<SampleProfileReader> UnderlyingReader;
 };
 
 } // end namespace sampleprof

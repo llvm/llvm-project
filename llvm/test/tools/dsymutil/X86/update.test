@@ -1,6 +1,3 @@
-UNSUPPORTED: system-windows
-Remove UNSUPPORTED once we figure out why this fails on Windows.
-
 RUN: rm -rf %t.dir
 RUN: mkdir -p %t.dir
 RUN: cat %p/../Inputs/basic.macho.x86_64 > %t.dir/basic

@@ -118,9 +118,8 @@ define i32 @foo(i32 signext %a) {
 ; SHRINK-WRAP-64-STATIC-NEXT:    .cfi_def_cfa_offset 16
 ; SHRINK-WRAP-64-STATIC-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; SHRINK-WRAP-64-STATIC-NEXT:    .cfi_offset 31, -8
-; SHRINK-WRAP-64-STATIC-NEXT:    addiu $1, $4, 1
 ; SHRINK-WRAP-64-STATIC-NEXT:    jal f
-; SHRINK-WRAP-64-STATIC-NEXT:    sll $4, $1, 0
+; SHRINK-WRAP-64-STATIC-NEXT:    addiu $4, $4, 1
 ; SHRINK-WRAP-64-STATIC-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SHRINK-WRAP-64-STATIC-NEXT:    daddiu $sp, $sp, 16
 ; SHRINK-WRAP-64-STATIC-NEXT:  .LBB0_2: # %return
@@ -136,9 +135,8 @@ define i32 @foo(i32 signext %a) {
 ; NO-SHRINK-WRAP-64-STATIC-NEXT:    beqz $4, .LBB0_2
 ; NO-SHRINK-WRAP-64-STATIC-NEXT:    nop
 ; NO-SHRINK-WRAP-64-STATIC-NEXT:  # %bb.1: # %if.end
-; NO-SHRINK-WRAP-64-STATIC-NEXT:    addiu $1, $4, 1
 ; NO-SHRINK-WRAP-64-STATIC-NEXT:    jal f
-; NO-SHRINK-WRAP-64-STATIC-NEXT:    sll $4, $1, 0
+; NO-SHRINK-WRAP-64-STATIC-NEXT:    addiu $4, $4, 1
 ; NO-SHRINK-WRAP-64-STATIC-NEXT:  .LBB0_2: # %return
 ; NO-SHRINK-WRAP-64-STATIC-NEXT:    addiu $2, $zero, 0
 ; NO-SHRINK-WRAP-64-STATIC-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
@@ -158,10 +156,9 @@ define i32 @foo(i32 signext %a) {
 ; SHRINK-WRAP-64-PIC-NEXT:    .cfi_offset 31, -8
 ; SHRINK-WRAP-64-PIC-NEXT:    .cfi_offset 28, -16
 ; SHRINK-WRAP-64-PIC-NEXT:    daddiu $gp, $2, %lo(%neg(%gp_rel(foo)))
-; SHRINK-WRAP-64-PIC-NEXT:    addiu $1, $4, 1
 ; SHRINK-WRAP-64-PIC-NEXT:    ld $25, %call16(f)($gp)
 ; SHRINK-WRAP-64-PIC-NEXT:    jalr $25
-; SHRINK-WRAP-64-PIC-NEXT:    sll $4, $1, 0
+; SHRINK-WRAP-64-PIC-NEXT:    addiu $4, $4, 1
 ; SHRINK-WRAP-64-PIC-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload
 ; SHRINK-WRAP-64-PIC-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; SHRINK-WRAP-64-PIC-NEXT:    daddiu $sp, $sp, 16
@@ -182,10 +179,9 @@ define i32 @foo(i32 signext %a) {
 ; NO-SHRINK-WRAP-64-PIC-NEXT:    daddu $2, $1, $25
 ; NO-SHRINK-WRAP-64-PIC-NEXT:  # %bb.1: # %if.end
 ; NO-SHRINK-WRAP-64-PIC-NEXT:    daddiu $gp, $2, %lo(%neg(%gp_rel(foo)))
-; NO-SHRINK-WRAP-64-PIC-NEXT:    addiu $1, $4, 1
 ; NO-SHRINK-WRAP-64-PIC-NEXT:    ld $25, %call16(f)($gp)
 ; NO-SHRINK-WRAP-64-PIC-NEXT:    jalr $25
-; NO-SHRINK-WRAP-64-PIC-NEXT:    sll $4, $1, 0
+; NO-SHRINK-WRAP-64-PIC-NEXT:    addiu $4, $4, 1
 ; NO-SHRINK-WRAP-64-PIC-NEXT:  .LBB0_2: # %return
 ; NO-SHRINK-WRAP-64-PIC-NEXT:    addiu $2, $zero, 0
 ; NO-SHRINK-WRAP-64-PIC-NEXT:    ld $gp, 0($sp) # 8-byte Folded Reload

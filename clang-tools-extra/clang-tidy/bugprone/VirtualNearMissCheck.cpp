@@ -257,7 +257,7 @@ void VirtualNearMissCheck::check(const MatchFinder::MatchResult &Result) {
             bool ApplyFix = !BaseMD->isTemplateInstantiation() &&
                             !DerivedMD->isTemplateInstantiation();
             auto Diag =
-                diag(DerivedMD->getLocStart(),
+                diag(DerivedMD->getBeginLoc(),
                      "method '%0' has a similar name and the same signature as "
                      "virtual method '%1'; did you mean to override it?")
                 << DerivedMD->getQualifiedNameAsString()

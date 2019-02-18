@@ -61,7 +61,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   CommentString = "#";
 
   // Uses '.section' before '.bss' directive
-  UsesELFSectionDirectiveForBSS = true;  
+  UsesELFSectionDirectiveForBSS = true;
 
   // Debug Information
   SupportsDebugInformation = true;
@@ -73,7 +73,7 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
 
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
-    
+
   ZeroDirective = "\t.space\t";
   Data64bitsDirective = is64Bit ? "\t.quad\t" : nullptr;
   AssemblerDialect = 1;           // New-Style mnemonics.

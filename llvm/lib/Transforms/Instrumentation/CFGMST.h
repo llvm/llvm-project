@@ -119,7 +119,7 @@ public:
     static const uint32_t CriticalEdgeMultiplier = 1000;
 
     for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
-      TerminatorInst *TI = BB->getTerminator();
+      Instruction *TI = BB->getTerminator();
       uint64_t BBWeight =
           (BFI != nullptr ? BFI->getBlockFreq(&*BB).getFrequency() : 2);
       uint64_t Weight = 2;

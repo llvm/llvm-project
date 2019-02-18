@@ -1709,7 +1709,7 @@ define double @test_mask3_vfmsub_sd_1(<2 x double> %a, <2 x double> %b, <2 x dou
 
 define <4 x float> @test_mask3_vfnmsub_ss(<4 x float> %a, <4 x float> %b, <4 x float> %c, i8 %mask) {
 ; CHECK-LABEL: @test_mask3_vfnmsub_ss(
-; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; CHECK-NEXT:    [[DOTRHS:%.*]] = extractelement <4 x float> [[A:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub float -0.000000e+00, [[DOTRHS]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[DOTRHS1:%.*]] = extractelement <4 x float> [[C:%.*]], i64 0

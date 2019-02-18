@@ -1,10 +1,13 @@
 ; RUN: opt -S -scalarizer %s | FileCheck %s
+; RUN: opt -S -passes='function(scalarizer)' %s | FileCheck %s
 
 ; Unary fp
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)
 
 ; Binary fp
 declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>)
+declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
+declare <2 x float> @llvm.maximum.v2f32(<2 x float>, <2 x float>)
 
 ; Ternary fp
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
@@ -38,6 +41,28 @@ define <2 x float> @scalarize_sqrt_v2f32(<2 x float> %x) #0 {
 define <2 x float> @scalarize_minnum_v2f32(<2 x float> %x, <2 x float> %y) #0 {
   %minnum = call <2 x float> @llvm.minnum.v2f32(<2 x float> %x, <2 x float> %y)
   ret <2 x float> %minnum
+}
+
+; CHECK-LABEL: @scalarize_minimum_v2f32(
+; CHECK: %minimum.i0 = call float @llvm.minimum.f32(float %x.i0, float %y.i0)
+; CHECK: %minimum.i1 = call float @llvm.minimum.f32(float %x.i1, float %y.i1)
+; CHECK: %minimum.upto0 = insertelement <2 x float> undef, float %minimum.i0, i32 0
+; CHECK: %minimum = insertelement <2 x float> %minimum.upto0, float %minimum.i1, i32 1
+; CHECK: ret <2 x float> %minimum
+define <2 x float> @scalarize_minimum_v2f32(<2 x float> %x, <2 x float> %y) #0 {
+  %minimum = call <2 x float> @llvm.minimum.v2f32(<2 x float> %x, <2 x float> %y)
+  ret <2 x float> %minimum
+}
+
+; CHECK-LABEL: @scalarize_maximum_v2f32(
+; CHECK: %maximum.i0 = call float @llvm.maximum.f32(float %x.i0, float %y.i0)
+; CHECK: %maximum.i1 = call float @llvm.maximum.f32(float %x.i1, float %y.i1)
+; CHECK: %maximum.upto0 = insertelement <2 x float> undef, float %maximum.i0, i32 0
+; CHECK: %maximum = insertelement <2 x float> %maximum.upto0, float %maximum.i1, i32 1
+; CHECK: ret <2 x float> %maximum
+define <2 x float> @scalarize_maximum_v2f32(<2 x float> %x, <2 x float> %y) #0 {
+  %maximum = call <2 x float> @llvm.maximum.v2f32(<2 x float> %x, <2 x float> %y)
+  ret <2 x float> %maximum
 }
 
 ; CHECK-LABEL: @scalarize_fma_v2f32(

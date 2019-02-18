@@ -48,7 +48,7 @@ void IntegerDivisionCheck::registerMatchers(MatchFinder *Finder) {
 
 void IntegerDivisionCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *IntDiv = Result.Nodes.getNodeAs<BinaryOperator>("IntDiv");
-  diag(IntDiv->getLocStart(), "result of integer division used in a floating "
+  diag(IntDiv->getBeginLoc(), "result of integer division used in a floating "
                               "point context; possible loss of precision");
 }
 

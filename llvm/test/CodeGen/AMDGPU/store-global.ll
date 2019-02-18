@@ -1,8 +1,8 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mtriple=r600---amdgiz -mcpu=cayman -verify-machineinstrs < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=SIVI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GFX9 -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mtriple=r600-- -mcpu=redwood -verify-machineinstrs < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mtriple=r600-- -mcpu=cayman -verify-machineinstrs < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}store_i1:
 ; EG: MEM_RAT MSKOR
@@ -24,23 +24,12 @@ entry:
 ; EG: MEM_RAT MSKOR T[[RW_GPR:[0-9]]].XW, T{{[0-9]}}.X
 ; EG-NOT: MEM_RAT MSKOR
 
-; IG 0: Get the byte index and truncate the value
-; EG: AND_INT * T{{[0-9]}}.[[BI_CHAN:[XYZW]]], KC0[2].Y, literal.x
-; EG: LSHL T{{[0-9]}}.[[SHIFT_CHAN:[XYZW]]], PV.[[BI_CHAN]], literal.x
-; EG: AND_INT * T{{[0-9]}}.[[TRUNC_CHAN:[XYZW]]], KC0[2].Z, literal.y
-; EG-NEXT: 3(4.203895e-45), 255(3.573311e-43)
-
-
-; IG 1: Truncate the calculated the shift amount for the mask
-
-; IG 2: Shift the value and the mask
-; EG: LSHL T[[RW_GPR]].X, PS, PV.[[SHIFT_CHAN]]
-; EG: LSHL * T[[RW_GPR]].W, literal.x, PV.[[SHIFT_CHAN]]
-; EG-NEXT: 255
-; IG 3: Initialize the Y and Z channels to zero
-;       XXX: An optimal scheduler should merge this into one of the prevous IGs.
-; EG: MOV T[[RW_GPR]].Y, 0.0
-; EG: MOV * T[[RW_GPR]].Z, 0.0
+; EG: VTX_READ_8
+; EG: AND_INT
+; EG: AND_INT
+; EG: LSHL
+; EG: LSHL
+; EG: LSHL
 
 ; SIVI: buffer_store_byte
 ; GFX9: global_store_byte
@@ -55,26 +44,13 @@ entry:
 ; EG: MEM_RAT MSKOR T[[RW_GPR:[0-9]]].XW, T{{[0-9]}}.X
 ; EG-NOT: MEM_RAT MSKOR
 
-; IG 0: Get the byte index and truncate the value
+; EG: VTX_READ_16
+; EG: AND_INT
+; EG: AND_INT
+; EG: LSHL
+; EG: LSHL
+; EG: LSHL
 
-
-; EG: AND_INT * T{{[0-9]}}.[[BI_CHAN:[XYZW]]], KC0[2].Y, literal.x
-; EG-NEXT: 3(4.203895e-45),
-
-; EG: LSHL T{{[0-9]}}.[[SHIFT_CHAN:[XYZW]]], PV.[[BI_CHAN]], literal.x
-; EG: AND_INT * T{{[0-9]}}.[[TRUNC_CHAN:[XYZW]]], KC0[2].Z, literal.y
-
-; EG-NEXT: 3(4.203895e-45), 65535(9.183409e-41)
-; IG 1: Truncate the calculated the shift amount for the mask
-
-; IG 2: Shift the value and the mask
-; EG: LSHL T[[RW_GPR]].X, PS, PV.[[SHIFT_CHAN]]
-; EG: LSHL * T[[RW_GPR]].W, literal.x, PV.[[SHIFT_CHAN]]
-; EG-NEXT: 65535
-; IG 3: Initialize the Y and Z channels to zero
-;       XXX: An optimal scheduler should merge this into one of the prevous IGs.
-; EG: MOV T[[RW_GPR]].Y, 0.0
-; EG: MOV * T[[RW_GPR]].Z, 0.0
 
 ; SIVI: buffer_store_short
 ; GFX9: global_store_short
@@ -297,8 +273,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v3i32:
-; SIVI-DAG: buffer_store_dwordx2
-; SIVI-DAG: buffer_store_dword v
+; SIVI-DAG: buffer_store_dwordx3
 
 ; GFX9-DAG: global_store_dwordx2
 ; GFX9-DAG: global_store_dword v

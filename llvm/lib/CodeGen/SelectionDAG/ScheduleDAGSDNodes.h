@@ -122,8 +122,8 @@ class InstrItineraryData;
     virtual MachineBasicBlock*
     EmitSchedule(MachineBasicBlock::iterator &InsertPos);
 
-    void dumpNode(const SUnit *SU) const override;
-
+    void dumpNode(const SUnit &SU) const override;
+    void dump() const override;
     void dumpSchedule() const;
 
     std::string getGraphNodeLabel(const SUnit *SU) const override;

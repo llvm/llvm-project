@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -71,7 +71,6 @@ public:
   }
 
   std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *Succ,
-                                                 const ExplodedNode *Pred,
                                                  BugReporterContext &BRC,
                                                  BugReport &BR) override;
 };
@@ -95,7 +94,7 @@ public:
 REGISTER_SET_WITH_PROGRAMSTATE(DivZeroMap, ZeroState)
 
 std::shared_ptr<PathDiagnosticPiece>
-DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, const ExplodedNode *Pred,
+DivisionBRVisitor::VisitNode(const ExplodedNode *Succ, 
                              BugReporterContext &BRC, BugReport &BR) {
   if (Satisfied)
     return nullptr;
@@ -180,7 +179,7 @@ void TestAfterDivZeroChecker::reportBug(SVal Val, CheckerContext &C) const {
   }
 }
 
-void TestAfterDivZeroChecker::checkEndFunction(const ReturnStmt *RS,
+void TestAfterDivZeroChecker::checkEndFunction(const ReturnStmt *,
                                                CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
@@ -261,4 +260,8 @@ void TestAfterDivZeroChecker::checkBranchCondition(const Stmt *Condition,
 
 void ento::registerTestAfterDivZeroChecker(CheckerManager &mgr) {
   mgr.registerChecker<TestAfterDivZeroChecker>();
+}
+
+bool ento::shouldRegisterTestAfterDivZeroChecker(const LangOptions &LO) {
+  return true;
 }

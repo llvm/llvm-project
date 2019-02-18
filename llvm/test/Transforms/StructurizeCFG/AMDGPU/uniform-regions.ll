@@ -22,7 +22,7 @@ end:
   ret void
 }
 
-define amdgpu_cs void @nonuniform(i32 addrspace(2)* %ptr) {
+define amdgpu_cs void @nonuniform(i32 addrspace(4)* %ptr) {
 ; CHECK-LABEL: @nonuniform(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]

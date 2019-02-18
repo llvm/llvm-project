@@ -98,3 +98,15 @@ entry:
   %call = tail call i32 (i32, ...) @variadic(i32 %y, i64 %z, i64 %z)
   ret void
 }
+
+; Check that NonNull attributes don't inhibit tailcalls.
+
+declare nonnull i8* @nonnull_callee(i8* %p, i32 %val)
+define i8* @nonnull_caller(i8* %p, i32 %val) {
+; CHECK-LABEL: nonnull_caller:
+; CHECK-TAIL: b nonnull_callee
+; CHECK-NO-TAIL: bl nonnull_callee
+entry:
+  %call = tail call i8* @nonnull_callee(i8* %p, i32 %val)
+  ret i8* %call
+}

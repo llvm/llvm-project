@@ -8,7 +8,7 @@ ADDR: 0x401001
 
 llvm-symbolizer should print one error and two unknown line info records.
 
-ERROR: LLVMSymbolizer: error reading file: PDB Error: Unable to load PDB.  Make sure the file exists and is readable.
+ERROR: LLVMSymbolizer: error reading file: {{.*}}: {{N|n}}o such file or directory
 ERROR-NOT: error reading file
 
 CHECK: ??

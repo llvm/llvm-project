@@ -6,11 +6,9 @@
 
 A library to support the benchmarking of functions, similar to unit-tests.
 
-Discussion group: https://groups.google.com/d/forum/benchmark-discuss
+[Discussion group](https://groups.google.com/d/forum/benchmark-discuss)
 
-IRC channel: https://freenode.net #googlebenchmark
-
-[Known issues and common problems](#known-issues)
+IRC channel: [freenode](https://freenode.net) #googlebenchmark
 
 [Additional Tooling Documentation](docs/tools.md)
 
@@ -47,11 +45,10 @@ to `CMAKE_ARGS`.
 
 For Ubuntu and Debian Based System
 
-First make sure you have git and cmake installed (If not please install it)
+First make sure you have git and cmake installed (If not please install them)
 
 ```
-sudo apt-get install git
-sudo apt-get install cmake
+sudo apt-get install git cmake
 ```
 
 Now, let's clone the repository and build it
@@ -59,21 +56,19 @@ Now, let's clone the repository and build it
 ```
 git clone https://github.com/google/benchmark.git
 cd benchmark
-git clone https://github.com/google/googletest.git
+# If you want to build tests and don't use BENCHMARK_DOWNLOAD_DEPENDENCIES, then
+# git clone https://github.com/google/googletest.git
 mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=RELEASE
 make
 ```
 
-We need to install the library globally now
+If you need to install the library globally
 
 ```
 sudo make install
 ```
-
-Now you have google/benchmark installed in your machine
-Note: Don't forget to link to pthread library while building
 
 ## Stable and Experimental Library Versions
 
@@ -87,15 +82,16 @@ to use, test, and provide feedback on the new features are encouraged to try
 this branch. However, this branch provides no stability guarantees and reserves
 the right to change and break the API at any time.
 
-## Prerequisite knowledge
+## Further knowledge
 
-Before attempting to understand this framework one should ideally have some familiarity with the structure and format of the Google Test framework, upon which it is based. Documentation for Google Test, including a "Getting Started" (primer) guide, is available here:
-https://github.com/google/googletest/blob/master/googletest/docs/primer.md
-
+It may help to read the [Google Test documentation](https://github.com/google/googletest/blob/master/googletest/docs/primer.md)
+as some of the structural aspects of the APIs are similar.
 
 ## Example usage
 ### Basic usage
-Define a function that executes the code to be measured.
+Define a function that executes the code to be measured, register it as a
+benchmark function using the `BENCHMARK` macro, and ensure an appropriate `main`
+function is available:
 
 ```c++
 #include <benchmark/benchmark.h>
@@ -123,7 +119,23 @@ Don't forget to inform your linker to add benchmark library e.g. through
 `BENCHMARK_MAIN();` at the end of the source file and link against 
 `-lbenchmark_main` to get the same default behavior.
 
-The benchmark library will reporting the timing for the code within the `for(...)` loop.
+The benchmark library will measure and report the timing for code within the
+`for(...)` loop.
+
+#### Platform-specific libraries
+When the library is built using GCC it is necessary to link with the pthread
+library due to how GCC implements `std::thread`. Failing to link to pthread will
+lead to runtime exceptions (unless you're using libc++), not linker errors. See
+[issue #67](https://github.com/google/benchmark/issues/67) for more details. You
+can link to pthread by adding `-pthread` to your linker command. Note, you can
+also use `-lpthread`, but there are potential issues with ordering of command
+line parameters if you use that.
+
+If you're running benchmarks on Windows, the shlwapi library (`-lshlwapi`) is
+also required.
+
+If you're running benchmarks on solaris, you'll want the kstat library linked in
+too (`-lkstat`).
 
 ### Passing arguments
 Sometimes a family of benchmarks can be implemented with just one routine that
@@ -243,7 +255,7 @@ that might be used to customize high-order term calculation.
 
 ```c++
 BENCHMARK(BM_StringCompare)->RangeMultiplier(2)
-    ->Range(1<<10, 1<<18)->Complexity([](int n)->double{return n; });
+    ->Range(1<<10, 1<<18)->Complexity([](int64_t n)->double{return n; });
 ```
 
 ### Templated benchmarks
@@ -252,7 +264,7 @@ messages of size `sizeof(v)` `range_x` times. It also outputs throughput in the
 absence of multiprogramming.
 
 ```c++
-template <class Q> int BM_Sequential(benchmark::State& state) {
+template <class Q> void BM_Sequential(benchmark::State& state) {
   Q q;
   typename Q::value_type v;
   for (auto _ : state) {
@@ -416,6 +428,26 @@ BENCHMARK(BM_test)->Range(8, 8<<10)->UseRealTime();
 
 Without `UseRealTime`, CPU time is used by default.
 
+## Controlling timers
+Normally, the entire duration of the work loop (`for (auto _ : state) {}`)
+is measured. But sometimes, it is nessesary to do some work inside of
+that loop, every iteration, but without counting that time to the benchmark time.
+That is possible, althought it is not recommended, since it has high overhead.
+
+```c++
+static void BM_SetInsert_With_Timer_Control(benchmark::State& state) {
+  std::set<int> data;
+  for (auto _ : state) {
+    state.PauseTiming(); // Stop timers. They will not count until they are resumed.
+    data = ConstructRandomSet(state.range(0)); // Do something that should not be measured
+    state.ResumeTiming(); // And resume timers. They are now counting again.
+    // The rest will be measured.
+    for (int j = 0; j < state.range(1); ++j)
+      data.insert(RandomNumber());
+  }
+}
+BENCHMARK(BM_SetInsert_With_Timer_Control)->Ranges({{1<<10, 8<<10}, {128, 512}});
+```
 
 ## Manual timing
 For benchmarking something for which neither CPU time nor real-time are
@@ -522,15 +554,7 @@ order to manually set the time unit, you can specify it manually:
 BENCHMARK(BM_test)->Unit(benchmark::kMillisecond);
 ```
 
-## Controlling number of iterations
-In all cases, the number of iterations for which the benchmark is run is
-governed by the amount of time the benchmark takes. Concretely, the number of
-iterations is at least one, not more than 1e9, until CPU time is greater than
-the minimum time, or the wallclock time is 5x minimum time. The minimum time is
-set as a flag `--benchmark_min_time` or per benchmark by calling `MinTime` on
-the registered benchmark object.
-
-## Reporting the mean, median and standard deviation by repeated benchmarks
+### Reporting the mean, median and standard deviation by repeated benchmarks
 By default each benchmark is run once and that single result is reported.
 However benchmarks are often noisy and a single result may not be representative
 of the overall behavior. For this reason it's possible to repeatedly rerun the
@@ -541,12 +565,20 @@ The number of runs of each benchmark is specified globally by the
 `Repetitions` on the registered benchmark object. When a benchmark is run more
 than once the mean, median and standard deviation of the runs will be reported.
 
-Additionally the `--benchmark_report_aggregates_only={true|false}` flag or
-`ReportAggregatesOnly(bool)` function can be used to change how repeated tests
-are reported. By default the result of each repeated run is reported. When this
-option is `true` only the mean, median and standard deviation of the runs is reported.
-Calling `ReportAggregatesOnly(bool)` on a registered benchmark object overrides
-the value of the flag for that benchmark.
+Additionally the `--benchmark_report_aggregates_only={true|false}`,
+`--benchmark_display_aggregates_only={true|false}` flags or
+`ReportAggregatesOnly(bool)`, `DisplayAggregatesOnly(bool)` functions can be
+used to change how repeated tests are reported. By default the result of each
+repeated run is reported. When `report aggregates only` option is `true`,
+only the aggregates (i.e. mean, median and standard deviation, maybe complexity
+measurements if they were requested) of the runs is reported, to both the
+reporters - standard output (console), and the file.
+However when only the `display aggregates only` option is `true`,
+only the aggregates are displayed in the standard output, while the file
+output still contains everything.
+Calling `ReportAggregatesOnly(bool)` / `DisplayAggregatesOnly(bool)` on a
+registered benchmark object overrides the value of the appropriate flag for that
+benchmark.
 
 ## User-defined statistics for repeated benchmarks
 While having mean, median and standard deviation is nice, this may not be
@@ -653,9 +685,12 @@ In multithreaded benchmarks, each counter is set on the calling thread only.
 When the benchmark finishes, the counters from each thread will be summed;
 the resulting sum is the value which will be shown for the benchmark.
 
-The `Counter` constructor accepts two parameters: the value as a `double`
-and a bit flag which allows you to show counters as rates and/or as
-per-thread averages:
+The `Counter` constructor accepts three parameters: the value as a `double`
+; a bit flag which allows you to show counters as rates, and/or as per-thread
+iteration, and/or as per-thread averages, and/or iteration invariants;
+and a flag specifying the 'unit' - i.e. is 1k a 1000 (default,
+`benchmark::Counter::OneK::kIs1000`), or 1024
+(`benchmark::Counter::OneK::kIs1024`)?
 
 ```c++
   // sets a simple counter
@@ -671,6 +706,9 @@ per-thread averages:
 
   // There's also a combined flag:
   state.counters["FooAvgRate"] = Counter(numFoos,benchmark::Counter::kAvgThreadsRate);
+
+  // This says that we process with the rate of state.range(0) bytes every iteration:
+  state.counters["BytesProcessed"] = Counter(state.range(0), benchmark::Counter::kIsIterationInvariantRate, benchmark::Counter::OneK::kIs1024);
 ```
 
 When you're compiling in C++11 mode or later you can use `insert()` with
@@ -810,8 +848,29 @@ BM_memcpy/32          12 ns         12 ns   54687500
 BM_memcpy/32k       1834 ns       1837 ns     357143
 ```
 
+## Runtime and reporting considerations
+When the benchmark binary is executed, each benchmark function is run serially.
+The number of iterations to run is determined dynamically by running the
+benchmark a few times and measuring the time taken and ensuring that the
+ultimate result will be statistically stable. As such, faster benchmark
+functions will be run for more iterations than slower benchmark functions, and
+the number of iterations is thus reported.
 
-## Output Formats
+In all cases, the number of iterations for which the benchmark is run is
+governed by the amount of time the benchmark takes. Concretely, the number of
+iterations is at least one, not more than 1e9, until CPU time is greater than
+the minimum time, or the wallclock time is 5x minimum time. The minimum time is
+set per benchmark by calling `MinTime` on the registered benchmark object.
+
+Average timings are then reported over the iterations run. If multiple
+repetitions are requested using the `--benchmark_repetitions` command-line
+option, or at registration time, the benchmark function will be run several
+times and statistical results across these repetitions will also be reported.
+
+As well as the per-benchmark entries, a preamble in the report will include
+information about the machine on which the benchmarks are run.
+
+### Output Formats
 The library supports multiple output formats. Use the
 `--benchmark_format=<console|json|csv>` flag to set the format type. `console`
 is the default format.
@@ -879,14 +938,19 @@ name,iterations,real_time,cpu_time,bytes_per_second,items_per_second,label
 "BM_SetInsert/1024/10",106365,17238.4,8421.53,4.74973e+06,1.18743e+06,
 ```
 
-## Output Files
+### Output Files
 The library supports writing the output of the benchmark to a file specified
 by `--benchmark_out=<filename>`. The format of the output can be specified
 using `--benchmark_out_format={json|console|csv}`. Specifying
 `--benchmark_out` does not suppress the console output.
 
+## Result comparison
+
+It is possible to compare the benchmarking results. See [Additional Tooling Documentation](docs/tools.md)
+
 ## Debug vs Release
-By default, benchmark builds as a debug library. You will see a warning in the output when this is the case. To build it as a release library instead, use:
+By default, benchmark builds as a debug library. You will see a warning in the
+output when this is the case. To build it as a release library instead, use:
 
 ```
 cmake -DCMAKE_BUILD_TYPE=Release
@@ -898,16 +962,11 @@ To enable link-time optimisation, use
 cmake -DCMAKE_BUILD_TYPE=Release -DBENCHMARK_ENABLE_LTO=true
 ```
 
-If you are using gcc, you might need to set `GCC_AR` and `GCC_RANLIB` cmake cache variables, if autodetection fails.
-If you are using clang, you may need to set `LLVMAR_EXECUTABLE`, `LLVMNM_EXECUTABLE` and `LLVMRANLIB_EXECUTABLE` cmake cache variables.
+If you are using gcc, you might need to set `GCC_AR` and `GCC_RANLIB` cmake
+cache variables, if autodetection fails.
 
-## Linking against the library
-
-When the library is built using GCC it is necessary to link with `-pthread`,
-due to how GCC implements `std::thread`.
-
-For GCC 4.x failing to link to pthreads will lead to runtime exceptions, not linker errors.
-See [issue #67](https://github.com/google/benchmark/issues/67) for more details.
+If you are using clang, you may need to set `LLVMAR_EXECUTABLE`,
+`LLVMNM_EXECUTABLE` and `LLVMRANLIB_EXECUTABLE` cmake cache variables.
 
 ## Compiler Support
 
@@ -937,14 +996,3 @@ sudo cpupower frequency-set --governor performance
 ./mybench
 sudo cpupower frequency-set --governor powersave
 ```
-
-# Known Issues
-
-### Windows with CMake
-
-* Users must manually link `shlwapi.lib`. Failure to do so may result
-in unresolved symbols.
-
-### Solaris
-
-* Users must explicitly link with kstat library (-lkstat compilation flag).

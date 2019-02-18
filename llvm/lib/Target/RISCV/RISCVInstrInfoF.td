@@ -27,7 +27,7 @@ def FRMArg : AsmOperandClass {
 def frmarg : Operand<XLenVT> {
   let ParserMatchClass = FRMArg;
   let PrintMethod = "printFRMArg";
-  let DecoderMethod = "decodeUImmOperand<3>";
+  let DecoderMethod = "decodeFRMArg";
 }
 
 //===----------------------------------------------------------------------===//
@@ -252,13 +252,8 @@ let Predicates = [HasStdExtF] in {
 def : Pat<(bitconvert GPR:$rs1), (FMV_W_X GPR:$rs1)>;
 def : Pat<(bitconvert FPR32:$rs1), (FMV_X_W FPR32:$rs1)>;
 
-// FP->[u]int. Round-to-zero must be used
-def : Pat<(fp_to_sint FPR32:$rs1), (FCVT_W_S $rs1, 0b001)>;
-def : Pat<(fp_to_uint FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
-
-// [u]int->fp. Match GCC and default to using dynamic rounding mode.
-def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_W $rs1, 0b111)>;
-def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
+// [u]int32<->float conversion patterns must be gated on IsRV32 or IsRV64, so
+// are defined later.
 
 /// Float arithmetic operations
 
@@ -274,6 +269,22 @@ def : Pat<(fabs FPR32:$rs1), (FSGNJX_S $rs1, $rs1)>;
 
 def : PatFpr32Fpr32<fcopysign, FSGNJ_S>;
 def : Pat<(fcopysign FPR32:$rs1, (fneg FPR32:$rs2)), (FSGNJN_S $rs1, $rs2)>;
+
+// fmadd: rs1 * rs2 + rs3
+def : Pat<(fma FPR32:$rs1, FPR32:$rs2, FPR32:$rs3),
+          (FMADD_S $rs1, $rs2, $rs3, 0b111)>;
+
+// fmsub: rs1 * rs2 - rs3
+def : Pat<(fma FPR32:$rs1, FPR32:$rs2, (fneg FPR32:$rs3)),
+          (FMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
+
+// fnmsub: -rs1 * rs2 + rs3
+def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, FPR32:$rs3),
+          (FNMSUB_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
+
+// fnmadd: -rs1 * rs2 - rs3
+def : Pat<(fma (fneg FPR32:$rs1), FPR32:$rs2, (fneg FPR32:$rs3)),
+          (FNMADD_S FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 // The RISC-V 2.2 user-level ISA spec defines fmin and fmax as returning the
 // canonical NaN when given a signaling NaN. This doesn't match the LLVM
@@ -313,3 +324,13 @@ defm : LdPat<load, FLW>;
 defm : StPat<store, FSW, FPR32>;
 
 } // Predicates = [HasStdExtF]
+
+let Predicates = [HasStdExtF, IsRV32] in {
+// float->[u]int. Round-to-zero must be used.
+def : Pat<(fp_to_sint FPR32:$rs1), (FCVT_W_S $rs1, 0b001)>;
+def : Pat<(fp_to_uint FPR32:$rs1), (FCVT_WU_S $rs1, 0b001)>;
+
+// [u]int->float. Match GCC and default to using dynamic rounding mode.
+def : Pat<(sint_to_fp GPR:$rs1), (FCVT_S_W $rs1, 0b111)>;
+def : Pat<(uint_to_fp GPR:$rs1), (FCVT_S_WU $rs1, 0b111)>;
+} // Predicates = [HasStdExtF, IsRV32]

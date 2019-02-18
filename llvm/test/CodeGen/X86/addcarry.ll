@@ -4,9 +4,9 @@
 define i128 @add128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: add128:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq %rdx, %rdi
-; CHECK-NEXT:    adcq %rcx, %rsi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    adcq %rcx, %rsi
 ; CHECK-NEXT:    movq %rsi, %rdx
 ; CHECK-NEXT:    retq
 entry:
@@ -14,9 +14,36 @@ entry:
   ret i128 %0
 }
 
+define void @add128_rmw(i128* %a, i128 %b) nounwind {
+; CHECK-LABEL: add128_rmw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq %rsi, (%rdi)
+; CHECK-NEXT:    adcq %rdx, 8(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i128, i128* %a
+  %1 = add i128 %0, %b
+  store i128 %1, i128* %a
+  ret void
+}
+
+define void @add128_rmw2(i128 %a, i128* %b) nounwind {
+; CHECK-LABEL: add128_rmw2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq %rdi, (%rdx)
+; CHECK-NEXT:    adcq %rsi, 8(%rdx)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i128, i128* %b
+  %1 = add i128 %a, %0
+  store i128 %1, i128* %b
+  ret void
+}
+
 define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: add256:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    addq %r9, %rsi
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
@@ -25,11 +52,40 @@ define i256 @add256(i256 %a, i256 %b) nounwind {
 ; CHECK-NEXT:    movq %rsi, (%rdi)
 ; CHECK-NEXT:    movq %rcx, 16(%rdi)
 ; CHECK-NEXT:    movq %r8, 24(%rdi)
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = add i256 %a, %b
   ret i256 %0
+}
+
+define void @add256_rmw(i256* %a, i256 %b) nounwind {
+; CHECK-LABEL: add256_rmw:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq %rsi, (%rdi)
+; CHECK-NEXT:    adcq %rdx, 8(%rdi)
+; CHECK-NEXT:    adcq %rcx, 16(%rdi)
+; CHECK-NEXT:    adcq %r8, 24(%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i256, i256* %a
+  %1 = add i256 %0, %b
+  store i256 %1, i256* %a
+  ret void
+}
+
+define void @add256_rmw2(i256 %a, i256* %b) nounwind {
+; CHECK-LABEL: add256_rmw2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addq %rdi, (%r8)
+; CHECK-NEXT:    adcq %rsi, 8(%r8)
+; CHECK-NEXT:    adcq %rdx, 16(%r8)
+; CHECK-NEXT:    adcq %rcx, 24(%r8)
+; CHECK-NEXT:    retq
+entry:
+  %0 = load i256, i256* %b
+  %1 = add i256 %a, %0
+  store i256 %1, i256* %b
+  ret void
 }
 
 define void @a(i64* nocapture %s, i64* nocapture %t, i64 %a, i64 %b, i64 %c) nounwind {
@@ -141,6 +197,7 @@ define i8 @e(i32* nocapture %a, i32 %b) nounwind {
 define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) {
 ; CHECK-LABEL: pr31719:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    addq (%rsi), %rdx
 ; CHECK-NEXT:    adcq 8(%rsi), %rcx
 ; CHECK-NEXT:    adcq 16(%rsi), %r8
@@ -149,7 +206,6 @@ define %scalar @pr31719(%scalar* nocapture readonly %this, %scalar %arg.b) {
 ; CHECK-NEXT:    movq %rcx, 8(%rdi)
 ; CHECK-NEXT:    movq %r8, 16(%rdi)
 ; CHECK-NEXT:    movq %r9, 24(%rdi)
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractvalue %scalar %arg.b, 0
@@ -236,9 +292,9 @@ entry:
 define i64 @shiftadd(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-LABEL: shiftadd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addq %rsi, %rdi
-; CHECK-NEXT:    adcq %rcx, %rdx
 ; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    adcq %rcx, %rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = zext i64 %a to i128
@@ -256,23 +312,23 @@ entry:
 define %S @readd(%S* nocapture readonly %this, %S %arg.b) {
 ; CHECK-LABEL: readd:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    addq (%rsi), %rdx
-; CHECK-NEXT:    movq 8(%rsi), %r10
-; CHECK-NEXT:    adcq $0, %r10
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    addq %rcx, %r10
-; CHECK-NEXT:    adcq 16(%rsi), %rax
+; CHECK-NEXT:    movq 8(%rsi), %r11
+; CHECK-NEXT:    adcq $0, %r11
+; CHECK-NEXT:    setb %r10b
+; CHECK-NEXT:    movzbl %r10b, %edi
+; CHECK-NEXT:    addq %rcx, %r11
+; CHECK-NEXT:    adcq 16(%rsi), %rdi
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movzbl %cl, %ecx
-; CHECK-NEXT:    addq %r8, %rax
+; CHECK-NEXT:    addq %r8, %rdi
 ; CHECK-NEXT:    adcq 24(%rsi), %rcx
 ; CHECK-NEXT:    addq %r9, %rcx
-; CHECK-NEXT:    movq %rdx, (%rdi)
-; CHECK-NEXT:    movq %r10, 8(%rdi)
-; CHECK-NEXT:    movq %rax, 16(%rdi)
-; CHECK-NEXT:    movq %rcx, 24(%rdi)
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movq %rdx, (%rax)
+; CHECK-NEXT:    movq %r11, 8(%rax)
+; CHECK-NEXT:    movq %rdi, 16(%rax)
+; CHECK-NEXT:    movq %rcx, 24(%rax)
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractvalue %S %arg.b, 0
@@ -321,10 +377,10 @@ entry:
 define i128 @addcarry1_not(i128 %n) {
 ; CHECK-LABEL: addcarry1_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    negq %rdi
-; CHECK-NEXT:    sbbq %rsi, %rdx
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    negq %rax
+; CHECK-NEXT:    sbbq %rsi, %rdx
 ; CHECK-NEXT:    retq
   %1 = xor i128 %n, -1
   %2 = add i128 %1, 1

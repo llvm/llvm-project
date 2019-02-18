@@ -26,12 +26,20 @@ define internal i32 @j(i32* %m) {
   ret i32 %v
 }
 
+define internal i32 @inalloca(i32* inalloca %p) {
+; CHECK-LABEL: define internal i32 @inalloca(i32* inalloca %p)
+  %rv = load i32, i32* %p
+  ret i32 %rv
+}
+
 define void @call_things() {
   %m = alloca i32
   call i32 @f(i32* %m)
   call x86_thiscallcc i32 @g(i32* %m)
   call coldcc i32 @h(i32* %m)
   call i32 @j(i32* %m)
+  %args = alloca inalloca i32
+  call i32 @inalloca(i32* inalloca %args)
   ret void
 }
 
@@ -44,3 +52,4 @@ define void @call_things() {
 ; CHECK: call fastcc i32 @g
 ; CHECK: call coldcc i32 @h
 ; CHECK: call i32 @j
+; CHECK: call i32 @inalloca(i32* inalloca %args)

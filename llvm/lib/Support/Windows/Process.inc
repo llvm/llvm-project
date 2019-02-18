@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WindowsError.h"
 #include <malloc.h>
 
@@ -140,73 +142,59 @@ Optional<std::string> Process::GetEnv(StringRef Name) {
   return std::string(Res.data());
 }
 
-static const char *AllocateString(const SmallVectorImpl<char> &S,
-                                  BumpPtrAllocator &Alloc) {
-  char *Buf = reinterpret_cast<char *>(Alloc.Allocate(S.size() + 1, 1));
-  ::memcpy(Buf, S.data(), S.size());
-  Buf[S.size()] = '\0';
-  return Buf;
-}
-
-/// Convert Arg from UTF-16 to UTF-8 and push it onto Args.
-static std::error_code ConvertAndPushArg(const wchar_t *Arg,
-                                         SmallVectorImpl<const char *> &Args,
-                                         BumpPtrAllocator &Alloc) {
-  SmallVector<char, MAX_PATH> ArgString;
-  if (std::error_code ec = windows::UTF16ToUTF8(Arg, wcslen(Arg), ArgString))
-    return ec;
-  Args.push_back(AllocateString(ArgString, Alloc));
-  return std::error_code();
-}
-
-/// Perform wildcard expansion of Arg, or just push it into Args if it
-/// doesn't have wildcards or doesn't match any files.
-static std::error_code WildcardExpand(const wchar_t *Arg,
+/// Perform wildcard expansion of Arg, or just push it into Args if it doesn't
+/// have wildcards or doesn't match any files.
+static std::error_code WildcardExpand(StringRef Arg,
                                       SmallVectorImpl<const char *> &Args,
-                                      BumpPtrAllocator &Alloc) {
-  if (!wcspbrk(Arg, L"*?")) {
-    // Arg does not contain any wildcard characters. This is the common case.
-    return ConvertAndPushArg(Arg, Args, Alloc);
+                                      StringSaver &Saver) {
+  std::error_code EC;
+
+  // Don't expand Arg if it does not contain any wildcard characters. This is
+  // the common case. Also don't wildcard expand /?. Always treat it as an
+  // option.
+  if (Arg.find_first_of("*?") == StringRef::npos || Arg == "/?" ||
+      Arg == "-?") {
+    Args.push_back(Arg.data());
+    return EC;
   }
 
-  if (wcscmp(Arg, L"/?") == 0 || wcscmp(Arg, L"-?") == 0) {
-    // Don't wildcard expand /?. Always treat it as an option.
-    return ConvertAndPushArg(Arg, Args, Alloc);
-  }
-
-  // Extract any directory part of the argument.
-  SmallVector<char, MAX_PATH> Dir;
-  if (std::error_code ec = windows::UTF16ToUTF8(Arg, wcslen(Arg), Dir))
-    return ec;
-  sys::path::remove_filename(Dir);
-  const int DirSize = Dir.size();
+  // Convert back to UTF-16 so we can call FindFirstFileW.
+  SmallVector<wchar_t, MAX_PATH> ArgW;
+  EC = windows::UTF8ToUTF16(Arg, ArgW);
+  if (EC)
+    return EC;
 
   // Search for matching files.
   // FIXME:  This assumes the wildcard is only in the file name and not in the
   // directory portion of the file path.  For example, it doesn't handle
   // "*\foo.c" nor "s?c\bar.cpp".
   WIN32_FIND_DATAW FileData;
-  HANDLE FindHandle = FindFirstFileW(Arg, &FileData);
+  HANDLE FindHandle = FindFirstFileW(ArgW.data(), &FileData);
   if (FindHandle == INVALID_HANDLE_VALUE) {
-    return ConvertAndPushArg(Arg, Args, Alloc);
+    Args.push_back(Arg.data());
+    return EC;
   }
 
-  std::error_code ec;
+  // Extract any directory part of the argument.
+  SmallString<MAX_PATH> Dir = Arg;
+  sys::path::remove_filename(Dir);
+  const int DirSize = Dir.size();
+
   do {
-    SmallVector<char, MAX_PATH> FileName;
-    ec = windows::UTF16ToUTF8(FileData.cFileName, wcslen(FileData.cFileName),
+    SmallString<MAX_PATH> FileName;
+    EC = windows::UTF16ToUTF8(FileData.cFileName, wcslen(FileData.cFileName),
                               FileName);
-    if (ec)
+    if (EC)
       break;
 
     // Append FileName to Dir, and remove it afterwards.
-    llvm::sys::path::append(Dir, StringRef(FileName.data(), FileName.size()));
-    Args.push_back(AllocateString(Dir, Alloc));
+    llvm::sys::path::append(Dir, FileName);
+    Args.push_back(Saver.save(StringRef(Dir)).data());
     Dir.resize(DirSize);
   } while (FindNextFileW(FindHandle, &FileData));
 
   FindClose(FindHandle);
-  return ec;
+  return EC;
 }
 
 static std::error_code GetExecutableName(SmallVectorImpl<char> &Filename) {
@@ -243,18 +231,20 @@ static std::error_code GetExecutableName(SmallVectorImpl<char> &Filename) {
 std::error_code
 windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
                                  BumpPtrAllocator &Alloc) {
-  int ArgCount;
-  std::unique_ptr<wchar_t *[], decltype(&LocalFree)> UnicodeCommandLine{
-    CommandLineToArgvW(GetCommandLineW(), &ArgCount), &LocalFree};
-  if (!UnicodeCommandLine)
-    return mapWindowsError(::GetLastError());
-
+  const wchar_t *CmdW = GetCommandLineW();
+  assert(CmdW);
   std::error_code EC;
+  SmallString<MAX_PATH> Cmd;
+  EC = windows::UTF16ToUTF8(CmdW, wcslen(CmdW), Cmd);
+  if (EC)
+    return EC;
 
-  Args.reserve(ArgCount);
+  SmallVector<const char *, 20> TmpArgs;
+  StringSaver Saver(Alloc);
+  cl::TokenizeWindowsCommandLine(Cmd, Saver, TmpArgs, /*MarkEOLs=*/false);
 
-  for (int I = 0; I < ArgCount; ++I) {
-    EC = WildcardExpand(UnicodeCommandLine[I], Args, Alloc);
+  for (const char *Arg : TmpArgs) {
+    EC = WildcardExpand(Arg, Args, Saver);
     if (EC)
       return EC;
   }
@@ -266,7 +256,7 @@ windows::GetCommandLineArguments(SmallVectorImpl<const char *> &Args,
   if (EC)
     return EC;
   sys::path::append(Arg0, Filename);
-  Args[0] = AllocateString(Arg0, Alloc);
+  Args[0] = Saver.save(Arg0).data();
   return std::error_code();
 }
 
@@ -328,6 +318,15 @@ bool Process::StandardErrHasColors() {
 
 static bool UseANSI = false;
 void Process::UseANSIEscapeCodes(bool enable) {
+#if defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+  if (enable) {
+    HANDLE Console = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD Mode;
+    GetConsoleMode(Console, &Mode);
+    Mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(Console, Mode);
+  }
+#endif
   UseANSI = enable;
 }
 
@@ -460,4 +459,28 @@ unsigned Process::GetRandomNumber() {
                         reinterpret_cast<BYTE *>(&Ret)))
     ReportLastErrorFatal("Could not generate a random number");
   return Ret;
+}
+
+typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
+
+llvm::VersionTuple llvm::GetWindowsOSVersion() {
+  HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
+  if (hMod) {
+    auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+    if (getVer) {
+      RTL_OSVERSIONINFOEXW info{};
+      info.dwOSVersionInfoSize = sizeof(info);
+      if (getVer((PRTL_OSVERSIONINFOW)&info) == STATUS_SUCCESS) {
+        return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
+                                  info.dwBuildNumber);
+      }
+    }
+  }
+  return llvm::VersionTuple(0, 0, 0, 0);
+}
+
+bool llvm::RunningWindows8OrGreater() {
+  // Windows 8 is version 6.2, service pack 0.
+  return GetWindowsOSVersion() >= llvm::VersionTuple(6, 2, 0, 0);
 }

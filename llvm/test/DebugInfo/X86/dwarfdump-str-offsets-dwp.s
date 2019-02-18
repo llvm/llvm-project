@@ -291,33 +291,33 @@ TU2_5_end:
 # CHECK:      Compile Unit
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_compile_unit
-# CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_1")
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU1")
+# CHECK-NEXT: DW_AT_producer [DW_FORM_strx] (indexed (00000000) string = "Handmade DWARF producer")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "Compile_Unit_1")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000002) string = "/home/test/CU1")
 # CHECK-NOT:  NULL
 
 # CHECK:      Compile Unit
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_compile_unit
-# CHECK-NEXT: DW_AT_producer [DW_FORM_strx] ( indexed (00000000) string = "Handmade DWARF producer")
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000001) string = "Compile_Unit_2")
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000002) string = "/home/test/CU2")
+# CHECK-NEXT: DW_AT_producer [DW_FORM_strx] (indexed (00000000) string = "Handmade DWARF producer")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000001) string = "Compile_Unit_2")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000002) string = "/home/test/CU2")
 # 
 # CHECK:      Type Unit
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_type_unit
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000003) string = "Type_Unit_1")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000003) string = "Type_Unit_1")
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_structure_type
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000004) string = "MyStruct_1")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000004) string = "MyStruct_1")
 #
 # CHECK:      Type Unit
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_type_unit
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000003) string = "Type_Unit_2")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000003) string = "Type_Unit_2")
 # CHECK-NOT:  NULL
 # CHECK:      DW_TAG_structure_type
-# CHECK-NEXT: DW_AT_name [DW_FORM_strx] ( indexed (00000004) string = "MyStruct_2")
+# CHECK-NEXT: DW_AT_name [DW_FORM_strx] (indexed (00000004) string = "MyStruct_2")
 
 # Verify the correct offets of the compile and type units contributions in the
 # index tables.

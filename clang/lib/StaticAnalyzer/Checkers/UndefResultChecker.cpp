@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -69,6 +69,7 @@ static bool isLeftShiftResultUnrepresentable(const BinaryOperator *B,
   ProgramStateRef State = C.getState();
   const llvm::APSInt *LHS = SB.getKnownValue(State, C.getSVal(B->getLHS()));
   const llvm::APSInt *RHS = SB.getKnownValue(State, C.getSVal(B->getRHS()));
+  assert(LHS && RHS && "Values unknown, inconsistent state");
   return (unsigned)RHS->getZExtValue() > LHS->countLeadingZeros();
 }
 
@@ -122,6 +123,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
            << ((B->getOpcode() == BinaryOperatorKind::BO_Shl) ? "left"
                                                               : "right")
            << " shift is undefined because the right operand is negative";
+        Ex = B->getRHS();
       } else if ((B->getOpcode() == BinaryOperatorKind::BO_Shl ||
                   B->getOpcode() == BinaryOperatorKind::BO_Shr) &&
                  isShiftOverflow(B, C)) {
@@ -130,6 +132,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
            << ((B->getOpcode() == BinaryOperatorKind::BO_Shl) ? "left"
                                                               : "right")
            << " shift is undefined due to shifting by ";
+        Ex = B->getRHS();
 
         SValBuilder &SB = C.getSValBuilder();
         const llvm::APSInt *I =
@@ -147,6 +150,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
                  C.isNegative(B->getLHS())) {
         OS << "The result of the left shift is undefined because the left "
               "operand is negative";
+        Ex = B->getLHS();
       } else if (B->getOpcode() == BinaryOperatorKind::BO_Shl &&
                  isLeftShiftResultUnrepresentable(B, C)) {
         ProgramStateRef State = C.getState();
@@ -160,6 +164,7 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
            << "\', which is unrepresentable in the unsigned version of "
            << "the return type \'" << B->getLHS()->getType().getAsString()
            << "\'";
+        Ex = B->getLHS();
       } else {
         OS << "The result of the '"
            << BinaryOperator::getOpcodeStr(B->getOpcode())
@@ -169,10 +174,10 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
     auto report = llvm::make_unique<BugReport>(*BT, OS.str(), N);
     if (Ex) {
       report->addRange(Ex->getSourceRange());
-      bugreporter::trackNullOrUndefValue(N, Ex, *report);
+      bugreporter::trackExpressionValue(N, Ex, *report);
     }
     else
-      bugreporter::trackNullOrUndefValue(N, B, *report);
+      bugreporter::trackExpressionValue(N, B, *report);
 
     C.emitReport(std::move(report));
   }
@@ -180,4 +185,8 @@ void UndefResultChecker::checkPostStmt(const BinaryOperator *B,
 
 void ento::registerUndefResultChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefResultChecker>();
+}
+
+bool ento::shouldRegisterUndefResultChecker(const LangOptions &LO) {
+  return true;
 }
