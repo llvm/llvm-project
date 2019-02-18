@@ -923,7 +923,8 @@ SelectorTable *ClangASTContext::getSelectorTable() {
 clang::FileManager *ClangASTContext::getFileManager() {
   if (m_file_manager_up == nullptr) {
     clang::FileSystemOptions file_system_options;
-    m_file_manager_up.reset(new clang::FileManager(file_system_options));
+    m_file_manager_up.reset(new clang::FileManager(
+        file_system_options, FileSystem::Instance().GetVirtualFileSystem()));
   }
   return m_file_manager_up.get();
 }

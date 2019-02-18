@@ -1,0 +1,26 @@
+# Test that we can attach breakpad symbols to the "placeholder" modules created
+# for minidump files.
+#
+# The minidump input for this test taken from packages/Python/lldbsuite/test/functionalities/postmortem/minidump-new
+
+# RUN: %lldb -c %S/Inputs/linux-x86_64.dmp \
+# RUN:   -o "target symbols add -s /tmp/test/linux-x86_64 %S/Inputs/linux-x86_64.syms" \
+# RUN:   -s %s -o exit | FileCheck %s
+
+image list
+# CHECK-LABEL: image list
+# CHECK: E35C283B-C327-C287-62DB-788BF5A4078B-E2351448 0x0000000000400000 /tmp/test/linux-x86_64
+
+image dump symtab /tmp/test/linux-x86_64
+# CHECK-LABEL: image dump symtab /tmp/test/linux-x86_64
+# CHECK: Symtab, file = /tmp/test/linux-x86_64, num_symbols = 2:
+# CHECK: [    0]      0   X Code            0x00000000004003d0 0x00000000004003d0 0x0000000000000018 0x00000000 crash()
+# CHECK: [    1]      0   X Code            0x00000000004003f0 0x00000000004003f0 0x0000000000000010 0x00000000 _start
+
+image lookup -a 0x4003f3
+# CHECK-LABEL: image lookup -a 0x4003f3
+# CHECK: Summary: linux-x86_64`_start + 3
+
+image dump objfile /tmp/test/linux-x86_64
+# CHECK-LABEL: image dump objfile /tmp/test/linux-x86_64
+# CHECK: Placeholder object file for /tmp/test/linux-x86_64 loaded at [0x400000-0x401000)
