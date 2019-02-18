@@ -3927,7 +3927,8 @@ void MachProcess::CalculateBoardStatus()
       found_app_flavor = true;
       m_flags |= eMachProcessFlagsUsingFBS;
     }
-#elif defined(WITH_BKS)
+#endif
+#if defined(WITH_BKS)
     if (!found_app_flavor && IsBKSProcess(m_pid)) {
       found_app_flavor = true;
       m_flags |= eMachProcessFlagsUsingBKS;
