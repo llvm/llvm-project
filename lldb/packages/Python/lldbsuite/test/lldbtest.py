@@ -438,26 +438,12 @@ def system(commands, **kwargs):
             stdout=PIPE,
             stderr=PIPE,
             shell=True,
-            universal_newlines=True,
+            #encoding="utf-8",
+            #universal_newlines=True,
             **kwargs)
         pid = process.pid
         this_output, this_error = process.communicate()
         retcode = process.poll()
-
-        # Enable trace on failure return while tracking down FreeBSD buildbot
-        # issues
-        trace = traceAlways
-        if not trace and retcode and sys.platform.startswith("freebsd"):
-            trace = True
-
-        with recording(test, trace) as sbuf:
-            print(file=sbuf)
-            print("os command:", shellCommand, file=sbuf)
-            print("with pid:", pid, file=sbuf)
-            print("stdout:", this_output, file=sbuf)
-            print("stderr:", this_error, file=sbuf)
-            print("retcode:", retcode, file=sbuf)
-            print(file=sbuf)
 
         if retcode:
             cmd = kwargs.get("args")
@@ -471,8 +457,8 @@ def system(commands, **kwargs):
                 "command": shellCommand
             }
             raise cpe
-        output = output + this_output
-        error = error + this_error
+        output = output + this_output.decode("utf-8")
+        error = error + this_error.decode("utf-8")
     return (output, error)
 
 
