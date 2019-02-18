@@ -362,17 +362,21 @@ TEST_F(FileManagerTest, getFileDontOpenRealPath) {
   FileSystemOptions Opts;
   FileManager Manager(Opts, FS);
 
+  // Inject fake files into the file system.
   auto statCache = llvm::make_unique<FakeStatCache>();
-  statCache->InjectDirectory("/tmp/abc", 42);
-  SmallString<64> Path("/tmp/abc/foo.cpp");
-  statCache->InjectFile(Path.str().str().c_str(), 43);
-  manager.setStatCache(std::move(statCache));
+  statCache->InjectDirectory("/tmp", 42);
+  statCache->InjectFile("/tmp/test", 43);
 
-  const FileEntry *file = manager.getFile(Path, /*openFile=*/false);
+  Manager.setStatCache(std::move(statCache));
 
+  // Check for real path.
+  const FileEntry *file = Manager.getFile("/tmp/test", /*OpenFile=*/false);
   ASSERT_TRUE(file != nullptr);
+  ASSERT_TRUE(file->isValid());
+  SmallString<64> ExpectedResult = CustomWorkingDir;
 
-  ASSERT_EQ(file->tryGetRealPathName(), Path);
+  llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  EXPECT_EQ(file->tryGetRealPathName(), ExpectedResult);
 }
 
 } // anonymous namespace
