@@ -90,6 +90,25 @@ static void removeBlockFromLoops(BasicBlock *BB, Loop *FirstLoop,
     Current->removeBlockFromLoop(BB);
 }
 
+/// Find innermost loop that contains at least one block from \p BBs and
+/// contains the header of loop \p L.
+static Loop *getInnermostLoopFor(SmallPtrSetImpl<BasicBlock *> &BBs,
+                                 Loop &L, LoopInfo &LI) {
+  Loop *Innermost = nullptr;
+  for (BasicBlock *BB : BBs) {
+    Loop *BBL = LI.getLoopFor(BB);
+    while (BBL && !BBL->contains(L.getHeader()))
+      BBL = BBL->getParentLoop();
+    if (BBL == &L)
+      BBL = BBL->getParentLoop();
+    if (!BBL)
+      continue;
+    if (!Innermost || BBL->getLoopDepth() > Innermost->getLoopDepth())
+      Innermost = BBL;
+  }
+  return Innermost;
+}
+
 namespace {
 /// Helper class that can turn branches and switches with constant conditions
 /// into unconditional branches.
@@ -369,14 +388,7 @@ private:
       // the current loop. We need to fix loop info accordingly. For this, we
       // find the most nested loop that still contains L and remove L from all
       // loops that are inside of it.
-      Loop *StillReachable = nullptr;
-      for (BasicBlock *BB : LiveExitBlocks) {
-        Loop *BBL = LI.getLoopFor(BB);
-        if (BBL && BBL->contains(L.getHeader()))
-          if (!StillReachable ||
-              BBL->getLoopDepth() > StillReachable->getLoopDepth())
-            StillReachable = BBL;
-      }
+      Loop *StillReachable = getInnermostLoopFor(LiveExitBlocks, L, LI);
 
       // Okay, our loop is no longer in the outer loop (and maybe not in some of
       // its parents as well). Make the fixup.

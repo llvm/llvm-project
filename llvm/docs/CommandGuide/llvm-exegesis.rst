@@ -219,7 +219,7 @@ OPTIONS
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode).
 
-.. option:: -analysis-espilon=<dbscan epsilon parameter>
+.. option:: -analysis-epsilon=<dbscan epsilon parameter>
 
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode).
