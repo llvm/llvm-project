@@ -134,6 +134,18 @@ Changes to the X86 Target
 * Machine model for AMD bdver2 (Piledriver) CPU was added. It is used to support
   instruction scheduling and other instruction cost heuristics.
 
+* New AVX512F gather and scatter intrinsics were added that take a <X x i1> mask
+  instead of a scalar integer. This removes the need for a bitcast in IR. The
+  new intrinsics are named like the old intrinsics with ``llvm.avx512.``
+  replaced with ``llvm.avx512.mask.``. The old intrinsics will be removed in a
+  future release.
+
+* Added ``cascadelake`` as a CPU name for -march. This is ``skylake-avx512``
+  with the addition of the ``avx512vnni`` instruction set.
+
+* ADCX instruction will no longer be emitted. This instruction is rarely better
+  than the legacy ADC instruction and just increased code size.
+
 Changes to the AMDGPU Target
 -----------------------------
 
@@ -156,6 +168,10 @@ use for it will be to add support for returning small structs as multiple
 return values, once the underlying WebAssembly platform itself supports it.
 Additionally, multithreading support is not yet included in the stable ABI.
 
+Changes to the Nios2 Target
+---------------------------
+
+* The Nios2 target was removed from this release.
 
 Changes to the OCaml bindings
 -----------------------------
