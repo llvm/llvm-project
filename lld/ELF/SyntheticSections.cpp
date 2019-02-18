@@ -2011,6 +2011,11 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       ESym->setVisibility(Sym->Visibility);
     }
 
+    // The 3 most significant bits of st_other are used by OpenPOWER ABI.
+    // See getPPC64GlobalEntryToLocalEntryOffset() for more details.
+    if (Config->EMachine == EM_PPC64)
+      ESym->st_other |= Sym->StOther & 0xe0;
+
     ESym->st_name = Ent.StrTabOffset;
     ESym->st_shndx = getSymSectionIndex(Ent.Sym);
 

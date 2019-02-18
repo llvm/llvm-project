@@ -181,7 +181,7 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
 }
 
 void SymbolFilePDB::InitializeObject() {
-  lldb::addr_t obj_load_address = m_obj_file->GetFileOffset();
+  lldb::addr_t obj_load_address = m_obj_file->GetBaseAddress().GetFileAddress();
   lldbassert(obj_load_address && obj_load_address != LLDB_INVALID_ADDRESS);
   m_session_up->setLoadAddress(obj_load_address);
   if (!m_global_scope_up)
