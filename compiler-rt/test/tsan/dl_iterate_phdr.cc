@@ -1,5 +1,5 @@
 // RUN: %clangxx_tsan -O1 %s -DBUILD_SO -fPIC -shared -o %t-so.so
-// RUN: %clangxx_tsan -O1 %s -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_tsan -O1 %s %link_libcxx_tsan -o %t && %run %t 2>&1 | FileCheck %s
 
 // dl_iterate_phdr doesn't exist on OS X.
 // UNSUPPORTED: darwin

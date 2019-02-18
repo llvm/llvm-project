@@ -1184,6 +1184,7 @@ struct SubstObjCTypeArgsVisitor
       return Ctx.getObjCObjectPointerType(resultTy);
       }
     }
+    llvm_unreachable("Unexpected ObjCSubstitutionContext!");
   }
 
   QualType VisitFunctionType(const FunctionType *funcType) {

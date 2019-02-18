@@ -94,15 +94,19 @@ static void removeBlockFromLoops(BasicBlock *BB, Loop *FirstLoop,
 /// contains the header of loop \p L.
 static Loop *getInnermostLoopFor(SmallPtrSetImpl<BasicBlock *> &BBs,
                                  Loop &L, LoopInfo &LI) {
-  Loop *StillReachable = nullptr;
+  Loop *Innermost = nullptr;
   for (BasicBlock *BB : BBs) {
     Loop *BBL = LI.getLoopFor(BB);
-    if (BBL && BBL->contains(L.getHeader()))
-      if (!StillReachable ||
-          BBL->getLoopDepth() > StillReachable->getLoopDepth())
-        StillReachable = BBL;
+    while (BBL && !BBL->contains(L.getHeader()))
+      BBL = BBL->getParentLoop();
+    if (BBL == &L)
+      BBL = BBL->getParentLoop();
+    if (!BBL)
+      continue;
+    if (!Innermost || BBL->getLoopDepth() > Innermost->getLoopDepth())
+      Innermost = BBL;
   }
-  return StillReachable;
+  return Innermost;
 }
 
 namespace {
