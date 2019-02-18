@@ -190,8 +190,8 @@ define <2 x i16> @cvt_v2f32_v2u16(<2 x float> %src) {
 define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $68, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 72
+; CHECK-NEXT:    subl $36, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 40
 ; CHECK-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm2
@@ -199,8 +199,8 @@ define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ; CHECK-NEXT:  ## %bb.1:
 ; CHECK-NEXT:    vsubss %xmm1, %xmm2, %xmm2
 ; CHECK-NEXT:  LBB11_2:
-; CHECK-NEXT:    vmovss %xmm2, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-NEXT:    vmovss %xmm2, (%esp)
+; CHECK-NEXT:    flds (%esp)
 ; CHECK-NEXT:    fisttpll (%esp)
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    movzbl %al, %eax
@@ -222,7 +222,7 @@ define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    addl $68, %esp
+; CHECK-NEXT:    addl $36, %esp
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2u32:

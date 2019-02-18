@@ -677,13 +677,23 @@ static Value *canonicalizeSaturatedSubtract(const ICmpInst *ICI,
 
 static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
                                        InstCombiner::BuilderTy &Builder) {
-  if (!Cmp->hasOneUse() || Cmp->getPredicate() != ICmpInst::ICMP_ULT)
+  if (!Cmp->hasOneUse())
+    return nullptr;
+
+  // Canonicalize to 'ULT' to simplify matching below.
+  Value *Cmp0 = Cmp->getOperand(0);
+  Value *Cmp1 = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (Pred == ICmpInst::ICMP_UGT) {
+    Pred = ICmpInst::ICMP_ULT;
+    std::swap(Cmp0, Cmp1);
+  }
+
+  if (Pred != ICmpInst::ICMP_ULT)
     return nullptr;
 
   // Match unsigned saturated add of 2 variables with an unnecessary 'not'.
   // TODO: There are more variations of this pattern.
-  Value *Cmp0 = Cmp->getOperand(0);
-  Value *Cmp1 = Cmp->getOperand(1);
   Value *X, *Y;
   if (match(TVal, m_AllOnes()) && match(Cmp0, m_Not(m_Value(X))) &&
       match(FVal, m_c_Add(m_Specific(X), m_Value(Y))) && Y == Cmp1) {
