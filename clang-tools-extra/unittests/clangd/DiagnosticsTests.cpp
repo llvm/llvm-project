@@ -449,6 +449,44 @@ TEST(IncludeFixerTest, NoCrashMemebrAccess) {
       UnorderedElementsAre(Diag(Test.range(), "no member named 'xy' in 'X'")));
 }
 
+TEST(IncludeFixerTest, UseCachedIndexResults) {
+  // As index results for the identical request are cached, more than 5 fixes
+  // are generated.
+  Annotations Test(R"cpp(
+$insert[[]]void foo() {
+  $x1[[X]] x;
+  $x2[[X]] x;
+  $x3[[X]] x;
+  $x4[[X]] x;
+  $x5[[X]] x;
+  $x6[[X]] x;
+  $x7[[X]] x;
+}
+
+class X;
+void bar(X *x) {
+  x$a1[[->]]f();
+  x$a2[[->]]f();
+  x$a3[[->]]f();
+  x$a4[[->]]f();
+  x$a5[[->]]f();
+  x$a6[[->]]f();
+  x$a7[[->]]f();
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index =
+      buildIndexWithSymbol(SymbolWithHeader{"X", "unittest:///a.h", "\"a.h\""});
+  TU.ExternalIndex = Index.get();
+
+  auto Parsed = TU.build();
+  for (const auto &D : Parsed.getDiagnostics()) {
+    EXPECT_EQ(D.Fixes.size(), 1u);
+    EXPECT_EQ(D.Fixes[0].Message,
+              std::string("Add include \"a.h\" for symbol X"));
+  }
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -27,6 +27,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -57,8 +58,6 @@ private:
 
 std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
                                    const clang::Diagnostic &Info) const {
-  if (IndexRequestCount >= IndexRequestLimit)
-    return {}; // Avoid querying index too many times in a single parse.
   switch (Info.getID()) {
   case diag::err_incomplete_type:
   case diag::err_incomplete_member_access:
@@ -118,26 +117,21 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
   auto ID = getSymbolID(TD);
   if (!ID)
     return {};
-  ++IndexRequestCount;
-  // FIXME: consider batching the requests for all diagnostics.
-  // FIXME: consider caching the lookup results.
-  LookupRequest Req;
-  Req.IDs.insert(*ID);
-  llvm::Optional<Symbol> Matched;
-  Index.lookup(Req, [&](const Symbol &Sym) {
-    if (Matched)
-      return;
-    Matched = Sym;
-  });
-
-  if (!Matched || Matched->IncludeHeaders.empty() || !Matched->Definition ||
-      Matched->CanonicalDeclaration.FileURI != Matched->Definition.FileURI)
+  llvm::Optional<const SymbolSlab *> Symbols = lookupCached(*ID);
+  if (!Symbols)
     return {};
-  return fixesForSymbols({*Matched});
+  const SymbolSlab &Syms = **Symbols;
+  std::vector<Fix> Fixes;
+  if (!Syms.empty()) {
+    auto &Matched = *Syms.begin();
+    if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
+        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
+      Fixes = fixesForSymbols(Syms);
+  }
+  return Fixes;
 }
 
-std::vector<Fix>
-IncludeFixer::fixesForSymbols(llvm::ArrayRef<Symbol> Syms) const {
+std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
   auto Inserted = [&](const Symbol &Sym, llvm::StringRef Header)
       -> llvm::Expected<std::pair<std::string, bool>> {
     auto ResolvedDeclaring =
@@ -289,6 +283,24 @@ std::vector<Fix> IncludeFixer::fixUnresolvedName() const {
   Req.RestrictForCodeCompletion = true;
   Req.Limit = 100;
 
+  if (llvm::Optional<const SymbolSlab *> Syms = fuzzyFindCached(Req))
+    return fixesForSymbols(**Syms);
+
+  return {};
+}
+
+
+llvm::Optional<const SymbolSlab *>
+IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {
+  auto ReqStr = llvm::formatv("{0}", toJSON(Req)).str();
+  auto I = FuzzyFindCache.find(ReqStr);
+  if (I != FuzzyFindCache.end())
+    return &I->second;
+
+  if (IndexRequestCount >= IndexRequestLimit)
+    return llvm::None;
+  IndexRequestCount++;
+
   SymbolSlab::Builder Matches;
   Index.fuzzyFind(Req, [&](const Symbol &Sym) {
     if (Sym.Name != Req.Query)
@@ -297,7 +309,37 @@ std::vector<Fix> IncludeFixer::fixUnresolvedName() const {
       Matches.insert(Sym);
   });
   auto Syms = std::move(Matches).build();
-  return fixesForSymbols(std::vector<Symbol>(Syms.begin(), Syms.end()));
+  auto E = FuzzyFindCache.try_emplace(ReqStr, std::move(Syms));
+  return &E.first->second;
+}
+
+llvm::Optional<const SymbolSlab *>
+IncludeFixer::lookupCached(const SymbolID &ID) const {
+  LookupRequest Req;
+  Req.IDs.insert(ID);
+
+  auto I = LookupCache.find(ID);
+  if (I != LookupCache.end())
+    return &I->second;
+
+  if (IndexRequestCount >= IndexRequestLimit)
+    return llvm::None;
+  IndexRequestCount++;
+
+  // FIXME: consider batching the requests for all diagnostics.
+  SymbolSlab::Builder Matches;
+  Index.lookup(Req, [&](const Symbol &Sym) { Matches.insert(Sym); });
+  auto Syms = std::move(Matches).build();
+
+  std::vector<Fix> Fixes;
+  if (!Syms.empty()) {
+    auto &Matched = *Syms.begin();
+    if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
+        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
+      Fixes = fixesForSymbols(Syms);
+  }
+  auto E = LookupCache.try_emplace(ID, std::move(Syms));
+  return &E.first->second;
 }
 
 } // namespace clangd
