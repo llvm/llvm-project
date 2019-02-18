@@ -1628,9 +1628,9 @@ def fplt : Flag<["-"], "fplt">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Use the PLT to make function calls">;
 def fno_plt : Flag<["-"], "fno-plt">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Do not use the PLT to make function calls">;
-def fropi : Flag<["-"], "fropi">, Group<f_Group>;
+def fropi : Flag<["-"], "fropi">, Group<f_Group>, Flags<[CC1Option]>;
 def fno_ropi : Flag<["-"], "fno-ropi">, Group<f_Group>;
-def frwpi : Flag<["-"], "frwpi">, Group<f_Group>;
+def frwpi : Flag<["-"], "frwpi">, Group<f_Group>, Flags<[CC1Option]>;
 def fno_rwpi : Flag<["-"], "fno-rwpi">, Group<f_Group>;
 def fplugin_EQ : Joined<["-"], "fplugin=">, Group<f_Group>, Flags<[DriverOption]>, MetaVarName<"<dsopath>">,
   HelpText<"Load the named plugin (dynamic shared object)">;

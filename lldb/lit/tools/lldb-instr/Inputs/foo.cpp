@@ -1,15 +1,6 @@
-struct Foo {
-  Foo();
-  Foo(int i);
+#include "foo.h"
 
-  void A();
-  void B(int i);
-  int C(int i);
-  int D(bool b) const;
-  static void E();
-  static int F(int i);
-};
-
+Foo::Foo() {}
 void Foo::A() {}
 void Foo::B(int i) {}
 int Foo::C(int i) { return i; }
