@@ -247,7 +247,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                      object_type.getPointer());
 
           // Handle weak self.
-          if (auto *ref_type = swift::dyn_cast<swift::ReferenceStorageType>(
+          if (auto *ref_type = llvm::dyn_cast<swift::ReferenceStorageType>(
                   GetSwiftType(self_type).getPointer())) {
             if (ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
               m_language_flags |= eLanguageFlagIsClass;
