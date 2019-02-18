@@ -814,28 +814,28 @@ RATTR float4
 OCKL_MANGLE_T(image_gather4r,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32(0x1, c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
+    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_r(c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_gather4g,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32(0x2, c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
+    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_g(c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_gather4b,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32(0x4, c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
+    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_b(c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
 RATTR float4
 OCKL_MANGLE_T(image_gather4a,2D)(TSHARP i, SSHARP s, float2 c)
 {
     ADJUST_XY(c, i, s);
-    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32(0x8, c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
+    return __llvm_amdgcn_image_gather4_lz_2d_v4f32_f32_a(c.x, c.y, LOAD_TSHARP(i), LOAD_SSHARP(s));
 }
 
 // We rely on the fact that the runtime allocates 12 words for the T# or V#
