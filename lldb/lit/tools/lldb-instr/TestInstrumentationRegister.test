@@ -1,5 +1,8 @@
-# RUN: cp %p/Inputs/foo.cpp %t.cpp
-# RUN: lldb-instr %t.cpp | FileCheck %s
+# RUN: mkdir -p %t.dir
+# RUN: cp %p/Inputs/foo.cpp %t.dir/foo.cpp
+# RUN: cp %p/Inputs/foo.h %t.dir/foo.h
+
+# RUN: lldb-instr %t.dir/foo.cpp | FileCheck %s
 
 # CHECK: LLDB_REGISTER_METHOD(void, Foo, A, ());
 # CHECK: LLDB_REGISTER_METHOD(void, Foo, B, (int));

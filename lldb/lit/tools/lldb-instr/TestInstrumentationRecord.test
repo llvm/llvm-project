@@ -1,7 +1,11 @@
-# RUN: cp %p/Inputs/foo.cpp %t.cpp
-# RUN: lldb-instr %t.cpp
-# RUN: cat %t.cpp | FileCheck %s
+# RUN: mkdir -p %t.dir
+# RUN: cp %p/Inputs/foo.cpp %t.dir/foo.cpp
+# RUN: cp %p/Inputs/foo.h %t.dir/foo.h
 
+# RUN: lldb-instr %t.dir/foo.cpp
+# RUN: cat %t.dir/foo.cpp | FileCheck %s
+
+# CHECK: LLDB_RECORD_CONSTRUCTOR_NO_ARGS(Foo);
 # CHECK: LLDB_RECORD_METHOD_NO_ARGS(void, Foo, A);
 # CHECK: LLDB_RECORD_METHOD(void, Foo, B, (int), i);
 # CHECK: LLDB_RECORD_METHOD(int, Foo, C, (int), i);
