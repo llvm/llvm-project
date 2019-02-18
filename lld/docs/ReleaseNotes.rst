@@ -29,6 +29,9 @@ ELF Improvements
 COFF Improvements
 -----------------
 
+* lld-link now correctly reports duplicate symbol errors for obj files
+  that were compiled with /Gy.
+
 * ...
 
 MinGW Improvements

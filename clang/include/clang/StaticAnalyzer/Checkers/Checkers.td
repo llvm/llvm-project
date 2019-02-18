@@ -508,6 +508,7 @@ def ValistBase : Checker<"ValistBase">,
 
 def UninitializedChecker : Checker<"Uninitialized">,
   HelpText<"Check for usages of uninitialized (or already released) va_lists.">,
+  Dependencies<[ValistBase]>,
   Documentation<NotDocumented>;
 
 def UnterminatedChecker : Checker<"Unterminated">,
