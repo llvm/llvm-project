@@ -346,4 +346,33 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   EXPECT_EQ(file->tryGetRealPathName(), ExpectedResult);
 }
 
+TEST_F(FileManagerTest, getFileDontOpenRealPath) {
+  SmallString<64> CustomWorkingDir;
+#ifdef _WIN32
+  CustomWorkingDir = "C:/";
+#else
+  CustomWorkingDir = "/";
+#endif
+
+  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
+      new llvm::vfs::InMemoryFileSystem);
+  // setCurrentworkingdirectory must finish without error.
+  ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
+
+  FileSystemOptions Opts;
+  FileManager Manager(Opts, FS);
+
+  auto statCache = llvm::make_unique<FakeStatCache>();
+  statCache->InjectDirectory("/tmp/abc", 42);
+  SmallString<64> Path("/tmp/abc/foo.cpp");
+  statCache->InjectFile(Path.str().str().c_str(), 43);
+  manager.setStatCache(std::move(statCache));
+
+  const FileEntry *file = manager.getFile(Path, /*openFile=*/false);
+
+  ASSERT_TRUE(file != nullptr);
+
+  ASSERT_EQ(file->tryGetRealPathName(), Path);
+}
+
 } // anonymous namespace
