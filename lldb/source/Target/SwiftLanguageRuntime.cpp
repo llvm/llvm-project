@@ -2678,6 +2678,9 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
     case llvm::Triple::ArchType::systemz:
       addr &= ~SWIFT_ABI_S390X_SWIFT_SPARE_BITS_MASK;
       break;
+    case llvm::Triple::ArchType::ppc64le:
+      addr &= ~SWIFT_ABI_POWERPC64_SWIFT_SPARE_BITS_MASK;
+      break;
     default:
       break;
     }
