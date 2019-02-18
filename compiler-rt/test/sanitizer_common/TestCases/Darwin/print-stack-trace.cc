@@ -1,8 +1,8 @@
 // RUN: %clangxx -O0 %s -o %t && %env_tool_opts=stack_trace_format=DEFAULT %run %t 2>&1 | FileCheck %s
 // RUN: %env_tool_opts=stack_trace_format='"frame:%n lineno:%l"' %run %t 2>&1 | FileCheck %s --check-prefix=CUSTOM
 
-// FIXME(dliew): Make this test work with other sanitizers
-// XFAIL: darwin && (lsan || tsan || ubsan)
+// FIXME(dliew): Make this test work on Darwin with LSan
+// XFAIL: darwin && lsan
 
 #include <sanitizer/common_interface_defs.h>
 

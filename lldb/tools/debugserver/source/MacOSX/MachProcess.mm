@@ -50,12 +50,6 @@
 #include <SpringBoardServices/SBSWatchdogAssertion.h>
 #include <SpringBoardServices/SpringBoardServer.h>
 
-static bool IsSBProcess(nub_process_t pid) {
-  CFReleaser<CFArrayRef> appIdsForPID(
-      ::SBSCopyDisplayIdentifiersForProcessID(pid));
-  return appIdsForPID.get() != NULL;
-}
-
 #endif // WITH_SPRINGBOARD
 
 #if defined(WITH_SPRINGBOARD) || defined(WITH_BKS) || defined(WITH_FBS)
@@ -333,7 +327,7 @@ static bool IsFBSProcess(nub_process_t pid) {
 #else
 static bool IsFBSProcess(nub_process_t pid) {
   // FIXME: What is the FBS equivalent of BKSApplicationStateMonitor
-  return true;
+  return false;
 }
 #endif
 
@@ -3918,18 +3912,23 @@ void MachProcess::CalculateBoardStatus()
   if (m_pid == 0)
     return;
 
+#if defined (WITH_FBS) || defined (WITH_BKS)
     bool found_app_flavor = false;
+#endif
+
 #if defined(WITH_FBS)
     if (!found_app_flavor && IsFBSProcess(m_pid)) {
       found_app_flavor = true;
       m_flags |= eMachProcessFlagsUsingFBS;
     }
-#elif defined(WITH_BKS)
+#endif
+#if defined(WITH_BKS)
     if (!found_app_flavor && IsBKSProcess(m_pid)) {
       found_app_flavor = true;
       m_flags |= eMachProcessFlagsUsingBKS;
     }
 #endif
+
     m_flags |= eMachProcessFlagsBoardCalculated;
 }
 

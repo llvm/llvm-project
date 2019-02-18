@@ -3,7 +3,7 @@
 // REQUIRES: stable-runtime
 
 // XFAIL: ubsan
-// FIXME(dliew): Make this test work on Darwin with LSan
+// FIXME: On Darwin, LSAn detects the leak, but does not invoke the death_callback.
 // XFAIL: darwin && lsan
 
 #include <sanitizer/common_interface_defs.h>
