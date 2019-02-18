@@ -3918,7 +3918,10 @@ void MachProcess::CalculateBoardStatus()
   if (m_pid == 0)
     return;
 
+#if defined (WITH_FBS) || defined (WITH_BKS)
     bool found_app_flavor = false;
+#endif
+
 #if defined(WITH_FBS)
     if (!found_app_flavor && IsFBSProcess(m_pid)) {
       found_app_flavor = true;
@@ -3930,6 +3933,7 @@ void MachProcess::CalculateBoardStatus()
       m_flags |= eMachProcessFlagsUsingBKS;
     }
 #endif
+
     m_flags |= eMachProcessFlagsBoardCalculated;
 }
 
