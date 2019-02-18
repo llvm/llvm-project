@@ -2,7 +2,7 @@
 Test basics of linux core file debugging.
 """
 
-from __future__ import print_function
+from __future__ import division, print_function
 
 import shutil
 import struct
@@ -190,7 +190,7 @@ class LinuxCoreTestCase(TestBase):
         values["xmm6"] = "{0xf8 0xf1 0x8b 0x4f 0xf8 0xf1 0x8b 0x4f 0xf8 0xf1 0x8b 0x4f 0xf8 0xf1 0x8b 0x4f}"
         values["xmm7"] = "{0x13 0xf1 0x30 0xcd 0x13 0xf1 0x30 0xcd 0x13 0xf1 0x30 0xcd 0x13 0xf1 0x30 0xcd}"
 
-        for regname, value in values.iteritems():
+        for regname, value in values.items():
             self.expect("register read {}".format(regname), substrs=["{} = {}".format(regname, value)])
 
 
@@ -201,7 +201,7 @@ class LinuxCoreTestCase(TestBase):
 
         values["fioff"] = "0x080480cc"
 
-        for regname, value in values.iteritems():
+        for regname, value in values.items():
             self.expect("register read {}".format(regname), substrs=["{} = {}".format(regname, value)])
 
     @expectedFailureAll(bugnumber="llvm.org/pr37371", hostoslist=["windows"])
@@ -260,7 +260,7 @@ class LinuxCoreTestCase(TestBase):
             # Test an address in the middle of a region returns it's enclosing
             # region.
             middle_address = (region.GetRegionBase() +
-                              region.GetRegionEnd()) / 2
+                              region.GetRegionEnd()) // 2
             region_at_middle = lldb.SBMemoryRegionInfo()
             error = process.GetMemoryRegionInfo(
                 middle_address, region_at_middle)
