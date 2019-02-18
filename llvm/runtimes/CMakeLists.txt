@@ -389,11 +389,9 @@ else() # if this is included from LLVM's CMake
     endforeach()
 
     foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
-      if(NOT "${target_name}:${target_name}-${component}" IN_LIST extra_targets)
-        list(APPEND ${name}_extra_targets
-          "${target_name}:${target_name}-${component}"
-          "${target_name}:${target_name}-install-${component}")
-      endif()
+      set(${component}-${name} ${component})
+      set(install-${component}-${name} ${component})
+      list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name})
     endforeach()
 
     if(LLVM_INCLUDE_TESTS)

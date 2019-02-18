@@ -2858,11 +2858,10 @@ public:
 
   /// Returns a pair of (return value, chain).
   /// It is an error to pass RTLIB::UNKNOWN_LIBCALL as \p LC.
-  std::pair<SDValue, SDValue> makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC,
-                                          EVT RetVT, ArrayRef<SDValue> Ops,
-                                          bool isSigned, const SDLoc &dl,
-                                          bool doesNotReturn = false,
-                                          bool isReturnValueUsed = true) const;
+  std::pair<SDValue, SDValue> makeLibCall(
+      SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT, ArrayRef<SDValue> Ops,
+      bool isSigned, const SDLoc &dl, bool doesNotReturn = false,
+      bool isReturnValueUsed = true, bool isPostTypeLegalization = false) const;
 
   /// Check whether parameters to a call that are passed in callee saved
   /// registers are the same as from the calling function.  This needs to be
@@ -3871,6 +3870,10 @@ public:
   /// Method for building the DAG expansion of ISD::SMULFIX. This method accepts
   /// integers as its arguments.
   SDValue expandFixedPointMul(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::[US]MULO, returning the two
+  /// result values as a pair.
+  std::pair<SDValue, SDValue> expandMULO(SDNode *Node, SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

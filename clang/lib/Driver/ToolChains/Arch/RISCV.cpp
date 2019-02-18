@@ -364,6 +364,18 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const ArgList &Args,
     getExtensionFeatures(D, Args, Features, MArch, OtherExts);
   }
 
+  // -mrelax is default, unless -mno-relax is specified.
+  bool Relax = true;
+  if (auto *A = Args.getLastArg(options::OPT_mrelax, options::OPT_mno_relax)) {
+    if (A->getOption().matches(options::OPT_mno_relax)) {
+      Relax = false;
+      Features.push_back("-relax");
+    }
+  }
+
+  if (Relax)
+    Features.push_back("+relax");
+
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_riscv_Features_Group);

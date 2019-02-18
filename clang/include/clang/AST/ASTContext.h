@@ -2501,6 +2501,11 @@ public:
   /// \p LHS < \p RHS, return -1.
   int getFloatingTypeOrder(QualType LHS, QualType RHS) const;
 
+  /// Compare the rank of two floating point types as above, but compare equal
+  /// if both types have the same floating-point semantics on the target (i.e.
+  /// long double and double on AArch64 will return 0).
+  int getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const;
+
   /// Return a real floating point or a complex type (based on
   /// \p typeDomain/\p typeSize).
   ///
