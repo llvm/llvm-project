@@ -5,10 +5,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -3160,9 +3159,9 @@ extern kmp_global_t __kmp_global; /* global status */
 
 extern kmp_info_t __kmp_monitor;
 // For Debugging Support Library
-extern std::atomic<kmp_uint32> __kmp_team_counter;
+extern std::atomic<kmp_int32> __kmp_team_counter;
 // For Debugging Support Library
-extern std::atomic<kmp_uint32> __kmp_task_counter;
+extern std::atomic<kmp_int32> __kmp_task_counter;
 
 #if USE_DEBUGGER
 #define _KMP_GEN_ID(counter)                                                   \
@@ -3466,6 +3465,10 @@ extern void __kmp_reap_monitor(kmp_info_t *th);
 #endif
 extern void __kmp_reap_worker(kmp_info_t *th);
 extern void __kmp_terminate_thread(int gtid);
+
+extern int __kmp_try_suspend_mx(kmp_info_t *th);
+extern void __kmp_lock_suspend_mx(kmp_info_t *th);
+extern void __kmp_unlock_suspend_mx(kmp_info_t *th);
 
 extern void __kmp_suspend_32(int th_gtid, kmp_flag_32 *flag);
 extern void __kmp_suspend_64(int th_gtid, kmp_flag_64 *flag);
@@ -4006,6 +4009,33 @@ extern int __kmpc_get_target_offload();
 #define KMP_HOST_DEVICE -10 // This is what it is in libomptarget, go figure.
 #define KMP_DEVICE_ALL -11 // This is libomptarget's "all devices".
 #endif // OMP_40_ENABLED
+
+#if OMP_50_ENABLED
+// OMP Pause Resource
+
+// The following enum is used both to set the status in __kmp_pause_status, and
+// as the internal equivalent of the externally-visible omp_pause_resource_t.
+typedef enum kmp_pause_status_t {
+  kmp_not_paused = 0, // status is not paused, or, requesting resume
+  kmp_soft_paused = 1, // status is soft-paused, or, requesting soft pause
+  kmp_hard_paused = 2 // status is hard-paused, or, requesting hard pause
+} kmp_pause_status_t;
+
+// This stores the pause state of the runtime
+extern kmp_pause_status_t __kmp_pause_status;
+extern int __kmpc_pause_resource(kmp_pause_status_t level);
+extern int __kmp_pause_resource(kmp_pause_status_t level);
+// Soft resume sets __kmp_pause_status, and wakes up all threads.
+extern void __kmp_resume_if_soft_paused();
+// Hard resume simply resets the status to not paused. Library will appear to
+// be uninitialized after hard pause. Let OMP constructs trigger required
+// initializations.
+static inline void __kmp_resume_if_hard_paused() {
+  if (__kmp_pause_status == kmp_hard_paused) {
+    __kmp_pause_status = kmp_not_paused;
+  }
+}
+#endif // OMP_50_ENABLED
 
 #ifdef __cplusplus
 }

@@ -1,9 +1,8 @@
 //===- InputFiles.h ---------------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -114,6 +113,16 @@ public:
   // True if this is an argument for --just-symbols. Usually false.
   bool JustSymbols = false;
 
+  // On PPC64 we need to keep track of which files contain small code model
+  // relocations. To minimize the chance of a relocation overflow files that do
+  // contain small code model relocations should have their .toc sections sorted
+  // closer to the .got section than files that do not contain any small code
+  // model relocations. Thats because the toc-pointer is defined to point at
+  // .got + 0x8000 and the instructions used with small code model relocations
+  // support immediates in the range [-0x8000, 0x7FFC], making the addressable
+  // range relative to the toc pointer [.got, .got + 0xFFFC].
+  bool PPC64SmallCodeModelRelocs = false;
+
   // GroupId is used for --warn-backrefs which is an optional error
   // checking feature. All files within the same --{start,end}-group or
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
@@ -175,7 +184,6 @@ template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
 
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
                                  const Elf_Shdr &Sec);
-  ArrayRef<Elf_Word> getShtGroupEntries(const Elf_Shdr &Sec);
 
 public:
   static bool classof(const InputFile *F) { return F->kind() == Base::ObjKind; }

@@ -136,7 +136,7 @@ attributes #0 = { norecurse nounwind "disable-tail-calls"="false" "less-precise-
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 1, !"min_enum_size", i32 4}
-!2 = !{!"clang version 3.9.0 (http://llvm.org/git/clang.git 24028ac5d033be4c1e87ce65affb4ea61deb1897) (http://llvm.org/git/llvm.git b88337289681d6ede5bba5da77007c83509e54ae)"}
+!2 = !{!"clang version 3.9.0"}
 !3 = !{!4, !4, i64 0}
 !4 = !{!"int", !5, i64 0}
 !5 = !{!"omnipotent char", !6, i64 0}

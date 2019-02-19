@@ -7,7 +7,7 @@
 ## Check we produce DT_PLTREL/DT_JMPREL/DT_PLTGOT and DT_PLTRELSZ tags
 ## when there are no other relocations except R_*_IRELATIVE.
 
-# CHECK:  Name          Size      Address
+# CHECK:  Name          Size   VMA
 # CHECK:  .rela.plt   00000030 0000000000000210
 # CHECK:  .got.plt    00000010 0000000000002000
 

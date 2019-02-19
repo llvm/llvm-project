@@ -48,7 +48,7 @@ SECTIONS {
 # CHECK-NEXT:   }
 
 # SECTIONS:      Sections:
-# SECTIONS-NEXT: Idx Name          Size      Address
+# SECTIONS-NEXT: Idx Name          Size     VMA
 # SECTIONS-NEXT:   0               00000000 0000000000000000
 # SECTIONS-NEXT:   1 .foo1         00000008 0000000000002000
 # SECTIONS-NEXT:   2 .foo2         00000008 0000000000002008

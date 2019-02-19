@@ -47,7 +47,7 @@ version history is the standard approach to identify the commit that introduced
 the regression.
 
 LLVM has a single repository that contains all projects. It can be cloned at:
-`<https://github.com/llvm-project/llvm-project-20170507>`_. How to bisect on a
+`<https://github.com/llvm/llvm-project>`_. How to bisect on a
 git repository is explained here
 `<https://www.metaltoad.com/blog/beginners-guide-git-bisect-process-elimination>`_.
 The bisect process can also be automated as explained here:

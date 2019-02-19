@@ -1,5 +1,5 @@
-includedir=@CMAKE_INSTALL_PREFIX@/include
-libexecdir=@CMAKE_INSTALL_PREFIX@/lib/clc
+includedir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_INCLUDEDIR@
+libexecdir=@CMAKE_INSTALL_PREFIX@/@CMAKE_INSTALL_DATADIR@/clc
 
 Name: libclc
 Description: Library requirements of the OpenCL C programming language

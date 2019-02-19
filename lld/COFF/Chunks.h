@@ -1,9 +1,8 @@
 //===- Chunks.h -------------------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -224,6 +223,9 @@ public:
   // The COMDAT leader symbol if this is a COMDAT chunk.
   DefinedRegular *Sym = nullptr;
 
+  // The COMDAT selection if this is a COMDAT chunk.
+  llvm::COFF::COMDATType Selection = (llvm::COFF::COMDATType)0;
+
   ArrayRef<coff_relocation> Relocs;
 
   // Used by the garbage collector.
@@ -311,7 +313,7 @@ static const uint8_t ImportThunkARM64[] = {
 };
 
 // Windows-specific.
-// A chunk for DLL import jump table entry. In a final output, it's
+// A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
 class ImportThunkChunkX64 : public Chunk {
 public:

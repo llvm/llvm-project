@@ -4,10 +4,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -858,9 +857,6 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_PARTITION_NUM_PLACES)(void) {
   }
   if (!KMP_AFFINITY_CAPABLE())
     return 0;
-  if (KMP_AFFINITY_NON_PROC_BIND) {
-    return 1;
-  }
   gtid = __kmp_entry_gtid();
   thread = __kmp_thread_from_gtid(gtid);
   first_place = thread->th.th_first_place;
@@ -889,10 +885,6 @@ void
     return;
   gtid = __kmp_entry_gtid();
   thread = __kmp_thread_from_gtid(gtid);
-  if (KMP_AFFINITY_NON_PROC_BIND) {
-    place_nums[0] = thread->th.th_current_place;
-    return;
-  }
   first_place = thread->th.th_first_place;
   last_place = thread->th.th_last_place;
   if (first_place < 0 || last_place < 0)
@@ -1339,6 +1331,42 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_TASK_PRIORITY)(void) {
 // Compiler/libomptarget will handle this if called inside target.
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) KMP_WEAK_ATTRIBUTE;
 int FTN_STDCALL FTN_GET_DEVICE_NUM(void) { return KMP_HOST_DEVICE; }
+
+// Compiler will ensure that this is only called from host in sequential region
+int FTN_STDCALL FTN_PAUSE_RESOURCE(kmp_pause_status_t kind, int device_num) {
+#ifdef KMP_STUB
+  return 1; // just fail
+#else
+  if (device_num == KMP_HOST_DEVICE)
+    return __kmpc_pause_resource(kind);
+  else {
+#if !KMP_OS_WINDOWS
+    int (*fptr)(kmp_pause_status_t, int);
+    if ((*(void **)(&fptr) = dlsym(RTLD_DEFAULT, "tgt_pause_resource")))
+      return (*fptr)(kind, device_num);
+    else
+#endif
+      return 1; // just fail if there is no libomptarget
+  }
+#endif
+}
+
+// Compiler will ensure that this is only called from host in sequential region
+int FTN_STDCALL FTN_PAUSE_RESOURCE_ALL(kmp_pause_status_t kind) {
+#ifdef KMP_STUB
+  return 1; // just fail
+#else
+  int fails = 0;
+#if !KMP_OS_WINDOWS
+  int (*fptr)(kmp_pause_status_t, int);
+  if ((*(void **)(&fptr) = dlsym(RTLD_DEFAULT, "tgt_pause_resource")))
+    fails = (*fptr)(kind, KMP_DEVICE_ALL); // pause devices
+#endif
+  fails += __kmpc_pause_resource(kind); // pause host
+  return fails;
+#endif
+}
+
 #endif // OMP_50_ENABLED
 
 // GCC compatibility (versioned symbols)
@@ -1442,6 +1470,8 @@ KMP_VERSION_SYMBOL(FTN_GET_PARTITION_PLACE_NUMS, 45, "OMP_4.5");
 #if OMP_50_ENABLED
 // OMP_5.0 versioned symbols
 // KMP_VERSION_SYMBOL(FTN_GET_DEVICE_NUM, 50, "OMP_5.0");
+// KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE, 50, "OMP_5.0");
+// KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE_ALL, 50, "OMP_5.0");
 #endif
 
 #endif // KMP_USE_VERSION_SYMBOLS

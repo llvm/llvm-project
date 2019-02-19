@@ -1,9 +1,8 @@
 //===- InputFiles.cpp -----------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -320,17 +319,6 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
   return Signature;
 }
 
-template <class ELFT>
-ArrayRef<typename ObjFile<ELFT>::Elf_Word>
-ObjFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
-  const ELFFile<ELFT> &Obj = this->getObj();
-  ArrayRef<Elf_Word> Entries =
-      CHECK(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec), this);
-  if (Entries.empty() || Entries[0] != GRP_COMDAT)
-    fatal(toString(this) + ": unsupported SHT_GROUP format");
-  return Entries.slice(1);
-}
-
 template <class ELFT> bool ObjFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // On a regular link we don't merge sections if -O0 (default is -O1). This
   // sometimes makes the linker significantly faster, although the output will
@@ -413,9 +401,8 @@ void ObjFile<ELFT>::initializeSections(
     const Elf_Shdr &Sec = ObjSections[I];
 
     if (Sec.sh_type == ELF::SHT_LLVM_CALL_GRAPH_PROFILE)
-      CGProfile = check(
-          this->getObj().template getSectionContentsAsArray<Elf_CGProfile>(
-              &Sec));
+      CGProfile =
+          check(Obj.template getSectionContentsAsArray<Elf_CGProfile>(&Sec));
 
     // SHF_EXCLUDE'ed sections are discarded by the linker. However,
     // if -r is given, we'll let the final link discard such sections.
@@ -440,18 +427,25 @@ void ObjFile<ELFT>::initializeSections(
     case SHT_GROUP: {
       // De-duplicate section groups by their signatures.
       StringRef Signature = getShtGroupSignature(ObjSections, Sec);
-      bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
       this->Sections[I] = &InputSection::Discarded;
 
-      // We only support GRP_COMDAT type of group. Get the all entries of the
-      // section here to let getShtGroupEntries to check the type early for us.
-      ArrayRef<Elf_Word> Entries = getShtGroupEntries(Sec);
 
-      // If it is a new section group, we want to keep group members.
-      // Group leader sections, which contain indices of group members, are
-      // discarded because they are useless beyond this point. The only
-      // exception is the -r option because in order to produce re-linkable
-      // object files, we want to pass through basically everything.
+      ArrayRef<Elf_Word> Entries =
+          CHECK(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec), this);
+      if (Entries.empty())
+        fatal(toString(this) + ": empty SHT_GROUP");
+
+      // The first word of a SHT_GROUP section contains flags. Currently,
+      // the standard defines only "GRP_COMDAT" flag for the COMDAT group.
+      // An group with the empty flag doesn't define anything; such sections
+      // are just skipped.
+      if (Entries[0] == 0)
+        continue;
+
+      if (Entries[0] != GRP_COMDAT)
+        fatal(toString(this) + ": unsupported SHT_GROUP format");
+
+      bool IsNew = ComdatGroups.insert(CachedHashStringRef(Signature)).second;
       if (IsNew) {
         if (Config->Relocatable)
           this->Sections[I] = createInputSection(Sec);
@@ -459,7 +453,7 @@ void ObjFile<ELFT>::initializeSections(
       }
 
       // Otherwise, discard group members.
-      for (uint32_t SecIndex : Entries) {
+      for (uint32_t SecIndex : Entries.slice(1)) {
         if (SecIndex >= Size)
           fatal(toString(this) +
                 ": invalid section index in group: " + Twine(SecIndex));
@@ -739,7 +733,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   // sections. Drop those sections to avoid duplicate symbol errors.
   // FIXME: This is glibc PR20543, we should remove this hack once that has been
   // fixed for a while.
-  if (Name.startswith(".gnu.linkonce."))
+  if (Name == ".gnu.linkonce.t.__x86.get_pc_thunk.bx" ||
+      Name == ".gnu.linkonce.t.__i686.get_pc_thunk.bx")
     return &InputSection::Discarded;
 
   // If we are creating a new .build-id section, strip existing .build-id
@@ -1081,6 +1076,8 @@ static uint8_t getBitcodeMachineKind(StringRef Path, const Triple &T) {
   case Triple::mips64:
   case Triple::mips64el:
     return EM_MIPS;
+  case Triple::msp430:
+    return EM_MSP430;
   case Triple::ppc:
     return EM_PPC;
   case Triple::ppc64:

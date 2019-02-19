@@ -88,7 +88,7 @@ attributes #0 = { argmemonly nounwind }
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 7, !"PIC Level", i32 2}
-!2 = !{!"clang version 6.0.0 (http://llvm.org/git/clang.git 6660f0d30ef23b3142a6b08f9f41aad3d47c084f) (http://llvm.org/git/llvm.git 052dd78cb30f77a05dc8bb06b851402c4b6c6587)"}
+!2 = !{!"clang version 6.0.0"}
 !3 = !{!4, !4, i64 0}
 !4 = !{!"int", !5, i64 0}
 !5 = !{!"omnipotent char", !6, i64 0}

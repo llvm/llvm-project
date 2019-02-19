@@ -38,7 +38,7 @@
 # CHECK-NEXT:   40100d: 8b 80 {{.*}} movl -4(%eax), %eax
 # CHECK-NEXT:   401013: 8b 83 {{.*}} movl -4(%ebx), %eax
 # CHECK: Sections:
-# CHECK:  Name Size     Address
+# CHECK:  Name Size     VMA
 # CHECK:  .got 00000004 0000000000403000
 
 # RUN: not ld.lld %S/Inputs/i386-got32x-baseless.elf -o %t1 -pie 2>&1 | \

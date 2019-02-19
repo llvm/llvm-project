@@ -22,7 +22,7 @@
 # must take responsibility to make sure this does not happen.
 
 # CHECK:      Sections:
-# CHECK-NEXT: Idx Name          Size      Address          Type
+# CHECK-NEXT: Idx Name          Size     VMA              Type
 # CHECK-NEXT:   0               00000000 0000000000000000
 # CHECK-NEXT:   1 .data         00000008 0000000000004000
 # CHECK-NEXT:   2 .dynamic      00000060 0000000000004008
