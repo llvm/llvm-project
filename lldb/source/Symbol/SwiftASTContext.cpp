@@ -2987,7 +2987,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       GetDiagnosticEngine().addConsumer(
           *new swift::PrintingDiagnosticConsumer());
     }
-    // Install the serialized module loader
+    // Install the serialized module loader.
     std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
         swift::SerializedModuleLoader::create(*m_ast_context_ap));
 
@@ -2997,7 +2997,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
     }
 
-    // Install the parseable interface module loader
+    // Install the parseable interface module loader.
     std::string ModuleCachePath = GetClangImporterOptions().ModuleCachePath;
     StringRef PrebuiltModuleCachePath =
       GetCompilerInvocation().getFrontendOptions().PrebuiltModuleCachePath;
