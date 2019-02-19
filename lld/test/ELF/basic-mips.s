@@ -291,16 +291,16 @@ __start:
 # CHECK-NEXT:     Alignment: 65536
 # CHECK-NEXT:   }
 # CHECK-NEXT:   ProgramHeader {
-# CHECK-NEXT:    Type: PT_GNU_STACK
-# CHECK-NEXT:    Offset: 0x0
-# CHECK-NEXT:    VirtualAddress: 0x0
-# CHECK-NEXT:    PhysicalAddress: 0x0
-# CHECK-NEXT:    FileSize: 0
-# CHECK-NEXT:    MemSize: 0
-# CHECK-NEXT:    Flags [
-# CHECK-NEXT:      PF_R
-# CHECK-NEXT:      PF_W
-# CHECK-NEXT:    ]
-# CHECK-NEXT:    Alignment: 0
-# CHECK-NEXT:  }
-# CHECK-NEXT:]
+# CHECK-NEXT:     Type: PT_GNU_STACK
+# CHECK-NEXT:     Offset: 0x0
+# CHECK-NEXT:     VirtualAddress: 0x0
+# CHECK-NEXT:     PhysicalAddress: 0x0
+# CHECK-NEXT:     FileSize: 0
+# CHECK-NEXT:     MemSize: 0
+# CHECK-NEXT:     Flags [
+# CHECK-NEXT:       PF_R
+# CHECK-NEXT:       PF_W
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Alignment: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT: ]

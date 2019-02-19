@@ -120,6 +120,33 @@ static std::string GetRegisterMethodMacro(StringRef Result, StringRef Class,
   return OS.str();
 }
 
+class SBReturnVisitor : public RecursiveASTVisitor<SBReturnVisitor> {
+public:
+  SBReturnVisitor(Rewriter &R) : MyRewriter(R) {}
+
+  bool VisitReturnStmt(ReturnStmt *Stmt) {
+    Expr *E = Stmt->getRetValue();
+
+    if (E->getBeginLoc().isMacroID())
+      return false;
+
+    SourceRange R(E->getBeginLoc(), E->getEndLoc());
+
+    StringRef WrittenExpr = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(R), MyRewriter.getSourceMgr(),
+        MyRewriter.getLangOpts());
+
+    std::string ReplacementText =
+        "LLDB_RECORD_RESULT(" + WrittenExpr.str() + ")";
+    MyRewriter.ReplaceText(R, ReplacementText);
+
+    return true;
+  }
+
+private:
+  Rewriter &MyRewriter;
+};
+
 class SBVisitor : public RecursiveASTVisitor<SBVisitor> {
 public:
   SBVisitor(Rewriter &R, ASTContext &Context)
@@ -200,6 +227,13 @@ public:
         MyRewriter.getLangOpts());
     MyRewriter.InsertTextAfter(InsertLoc, Macro);
 
+    // If the function returns a class or struct, we need to wrap its return
+    // statement(s).
+    if (ReturnType->isStructureOrClassType()) {
+      SBReturnVisitor Visitor(MyRewriter);
+      Visitor.TraverseDecl(Decl);
+    }
+
     return true;
   }
 
@@ -210,8 +244,9 @@ private:
   ///  1. Decls outside the main source file,
   ///  2. Decls that are only present in the source file,
   ///  3. Decls that are not definitions,
-  ///  4. Non-public decls,
-  ///  5. Destructors.
+  ///  4. Non-public methods,
+  ///  5. Variadic methods.
+  ///  6. Destructors.
   bool ShouldSkip(CXXMethodDecl *Decl) {
     // Skip anything outside the main file.
     if (!MyRewriter.getSourceMgr().isInMainFile(Decl->getBeginLoc()))
@@ -228,9 +263,13 @@ private:
     if (!Body)
       return true;
 
-    // Skip non-public decls.
+    // Skip non-public methods.
     AccessSpecifier AS = Decl->getAccess();
     if (AS != AccessSpecifier::AS_public)
+      return true;
+
+    // Skip variadic methods.
+    if (Decl->isVariadic())
       return true;
 
     // Skip destructors.

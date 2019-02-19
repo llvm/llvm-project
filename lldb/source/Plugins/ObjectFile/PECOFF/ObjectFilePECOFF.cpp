@@ -457,7 +457,6 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
           m_coff_header_opt.data_dirs[i].vmsize = m_data.GetU32(offset_ptr);
         }
 
-        m_file_offset = m_coff_header_opt.image_base;
         m_image_base = m_coff_header_opt.image_base;
       }
     }
@@ -925,6 +924,10 @@ lldb_private::Address ObjectFilePECOFF::GetEntryPointAddress() {
   else
     m_entry_point_address.ResolveAddressUsingFileSections(file_addr, section_list);
   return m_entry_point_address;
+}
+
+Address ObjectFilePECOFF::GetBaseAddress() {
+  return Address(GetSectionList()->GetSectionAtIndex(0), 0);
 }
 
 //----------------------------------------------------------------------

@@ -93,10 +93,7 @@ macro(configure_out_of_tree_llvm)
     endif()
   endif()
   if (LLVM_FOUND)
-    # Enable warnings, otherwise -w gets added to the cflags by HandleLLVMOptions.
-    set(LLVM_ENABLE_WARNINGS ON)
     include(AddLLVM OPTIONAL)
-    include(HandleLLVMOptions OPTIONAL)
   endif()
 
   # LLVM Options --------------------------------------------------------------

@@ -46,6 +46,7 @@ source_set("sources") {
     "hwasan_interceptors.cc",
     "hwasan_interface_internal.h",
     "hwasan_linux.cc",
+    "hwasan_malloc_bisect.h",
     "hwasan_mapping.h",
     "hwasan_memintrinsics.cc",
     "hwasan_poisoning.cc",

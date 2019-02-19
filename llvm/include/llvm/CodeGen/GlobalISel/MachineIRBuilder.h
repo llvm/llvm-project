@@ -237,6 +237,10 @@ public:
     return *State.MF;
   }
 
+  const DataLayout &getDataLayout() const {
+    return getMF().getFunction().getParent()->getDataLayout();
+  }
+
   /// Getter for DebugLoc
   const DebugLoc &getDL() { return State.DL; }
 
@@ -465,6 +469,11 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildSExt(const DstOp &Res, const SrcOp &Op);
 
+  /// Build and insert a G_PTRTOINT instruction.
+  MachineInstrBuilder buildPtrToInt(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_PTRTOINT, {Dst}, {Src});
+  }
+
   /// \return The opcode of the extension the target wants to use for boolean
   /// values.
   unsigned getBoolExtOp(bool IsVec, bool IsFP) const;
@@ -655,7 +664,7 @@ public:
   /// \pre \p Res and \p Src must be generic virtual registers.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildExtract(unsigned Res, unsigned Src, uint64_t Index);
+  MachineInstrBuilder buildExtract(const DstOp &Res, const SrcOp &Src, uint64_t Index);
 
   /// Build and insert \p Res = IMPLICIT_DEF.
   MachineInstrBuilder buildUndef(const DstOp &Res);

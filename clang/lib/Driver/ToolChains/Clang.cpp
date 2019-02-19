@@ -3810,6 +3810,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-pic-is-pie");
   }
 
+  if (RelocationModel == llvm::Reloc::ROPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    CmdArgs.push_back("-fropi");
+  if (RelocationModel == llvm::Reloc::RWPI ||
+      RelocationModel == llvm::Reloc::ROPI_RWPI)
+    CmdArgs.push_back("-frwpi");
+
   if (Arg *A = Args.getLastArg(options::OPT_meabi)) {
     CmdArgs.push_back("-meabi");
     CmdArgs.push_back(A->getValue());

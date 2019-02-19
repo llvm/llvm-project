@@ -74,7 +74,7 @@ void Scheduler::issueInstructionImpl(
 
   // Notify the instruction that it started executing.
   // This updates the internal state of each write.
-  IS->execute();
+  IS->execute(IR.getSourceIndex());
 
   if (IS->isExecuting())
     IssuedSet.emplace_back(IR);

@@ -516,9 +516,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
       .widenScalarIf(
           [=](const LegalityQuery &Query) {
             const LLT Ty1 = Query.Types[1];
-            return (Ty1.getScalarSizeInBits() < 16);
+            return Ty1.isVector() && Ty1.getScalarSizeInBits() < 16;
           },
-          LegalizeMutations::widenScalarOrEltToNextPow2(1, 16));
+          LegalizeMutations::widenScalarOrEltToNextPow2(1, 16))
+    .clampScalar(0, S16, S256);
 
   // TODO: vectors of pointers
   getActionDefinitionsBuilder(G_BUILD_VECTOR)

@@ -22,7 +22,7 @@ void __sanitizer_print_stack_trace() {
   uptr top = 0;
   uptr bottom = 0;
   bool request_fast_unwind = common_flags()->fast_unwind_on_fatal;
-  if (request_fast_unwind)
+  if (__sanitizer::StackTrace::WillUseFastUnwind(request_fast_unwind))
     __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
 
   GET_CURRENT_PC_BP_SP;

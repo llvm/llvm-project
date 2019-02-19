@@ -350,6 +350,58 @@ TEST(LocateSymbol, All) {
          FF();
          void f() { T^est a; }
       )cpp",
+
+      R"cpp(// explicit template specialization
+        template <typename T>
+        struct Foo { void bar() {} };
+
+        template <>
+        struct [[Foo]]<int> { void bar() {} };
+
+        void foo() {
+          Foo<char> abc;
+          Fo^o<int> b;
+        }
+      )cpp",
+
+      R"cpp(// implicit template specialization
+        template <typename T>
+        struct [[Foo]] { void bar() {} };
+        template <>
+        struct Foo<int> { void bar() {} };
+        void foo() {
+          Fo^o<char> abc;
+          Foo<int> b;
+        }
+      )cpp",
+
+      R"cpp(// partial template specialization
+        template <typename T>
+        struct Foo { void bar() {} };
+        template <typename T>
+        struct [[Foo]]<T*> { void bar() {} };
+        ^Foo<int*> x;
+      )cpp",
+
+      R"cpp(// function template specializations
+        template <class T>
+        void foo(T) {}
+        template <>
+        void [[foo]](int) {}
+        void bar() {
+          fo^o(10);
+        }
+      )cpp",
+
+      R"cpp(// variable template decls
+        template <class T>
+        T var = T();
+
+        template <>
+        double [[var]]<int> = 10;
+
+        double y = va^r<int>;
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);

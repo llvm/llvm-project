@@ -49,6 +49,7 @@ void BufferedStackTrace::Init(const uptr *pcs, uptr cnt, uptr extra_top_pc) {
 static inline uhwptr *GetCanonicFrame(uptr bp,
                                       uptr stack_top,
                                       uptr stack_bottom) {
+  CHECK_GT(stack_top, stack_bottom);
 #ifdef __arm__
   if (!IsValidFrame(bp, stack_top, stack_bottom)) return 0;
   uhwptr *bp_prev = (uhwptr *)bp;
