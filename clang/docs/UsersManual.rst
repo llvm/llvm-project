@@ -1799,6 +1799,8 @@ In these cases, you can use the flag ``-fno-profile-instr-generate`` (or
 Note that these flags should appear after the corresponding profile
 flags to have an effect.
 
+.. _profile_remapping:
+
 Profile remapping
 ^^^^^^^^^^^^^^^^^
 

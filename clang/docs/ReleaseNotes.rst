@@ -1,18 +1,12 @@
-=======================================
-Clang 8.0.0 (In-Progress) Release Notes
-=======================================
+=========================
+Clang 8.0.0 Release Notes
+=========================
 
 .. contents::
    :local:
    :depth: 2
 
 Written by the `LLVM Team <https://llvm.org/>`_
-
-.. warning::
-
-   These are in-progress notes for the upcoming Clang 8 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 Introduction
 ============
@@ -30,11 +24,6 @@ For more information about Clang or LLVM, including information about the
 latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
 `LLVM Web Site <https://llvm.org>`_.
 
-Note that if you are reading this file from a Subversion checkout or the
-main Clang web page, this document applies to the *next* release, not
-the current one. To see the release notes for a specific release, please
-see the `releases page <https://llvm.org/releases/>`_.
-
 What's New in Clang 8.0.0?
 ==========================
 
@@ -50,7 +39,7 @@ Major New Features
   profile data captured for one version of a program to be applied
   when building another version where symbols have changed (for
   example, due to renaming a class or namespace).
-  See the :doc:`UsersManual` for details.
+  See the :ref:`UsersManual <profile_remapping>` for details.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -138,7 +127,7 @@ New Compiler Flags
 
   Clang has now options to filter or exclude some files when
   instrumenting for gcov-based profiling.
-  See the :doc:`UsersManual` for details.
+  See the `UsersManual <UsersManual.html#cmdoption-fprofile-filter-files>`_ for details.
 
 - When using a custom stack alignment, the ``stackrealign`` attribute is now
   implicitly set on the main function.
