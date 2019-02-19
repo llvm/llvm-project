@@ -1,6 +1,6 @@
 LEVEL = ../../make
 SWIFT_OBJC_INTEROP := 1
-LLDB=$(shell echo $(LLDB_LIB_DIR)/lldb)
+LLDB=$(shell echo $(BUILDDIR)/../../../../[bC]*/lldb)
 # This Makefile overwrites the default rules.
 EXE := a.out
 
