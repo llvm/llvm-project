@@ -2,9 +2,8 @@
 
 set(LIBUNWIND_CXX_SOURCES
     libunwind.cpp
-    Unwind-EHABI.cpp
-    Unwind-seh.cpp)
-unwind_append_if(LIBUNWIND_CXX_SOURCES APPLE Unwind_AppleExtras.cpp)
+    Unwind-EHABI.cpp)
+append_if(LIBUNWIND_CXX_SOURCES APPLE Unwind_AppleExtras.cpp)
 
 set(LIBUNWIND_C_SOURCES
     UnwindLevel1.c
@@ -36,7 +35,7 @@ set(LIBUNWIND_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/libunwind.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/unwind.h)
 
-unwind_append_if(LIBUNWIND_HEADERS APPLE
+append_if(LIBUNWIND_HEADERS APPLE
           "${CMAKE_CURRENT_SOURCE_DIR}/../include/mach-o/compact_unwind_encoding.h")
 
 if (MSVC_IDE)
@@ -51,26 +50,17 @@ set(LIBUNWIND_SOURCES
     ${LIBUNWIND_ASM_SOURCES})
 
 # Generate library list.
-set(libraries)
-unwind_append_if(libraries LIBUNWIND_HAS_C_LIB c)
-if (LIBUNWIND_USE_COMPILER_RT)
-  list(APPEND libraries "${LIBUNWIND_BUILTINS_LIBRARY}")
-else()
-  unwind_append_if(libraries LIBUNWIND_HAS_GCC_S_LIB gcc_s)
-  unwind_append_if(libraries LIBUNWIND_HAS_GCC_LIB gcc)
-endif()
-unwind_append_if(libraries LIBUNWIND_HAS_DL_LIB dl)
+set(libraries ${LIBUNWINDCXX_ABI_LIBRARIES})
+append_if(libraries LIBUNWIND_HAS_C_LIB c)
+append_if(libraries LIBUNWIND_HAS_DL_LIB dl)
 if (LIBUNWIND_ENABLE_THREADS)
-  unwind_append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)
+  append_if(libraries LIBUNWIND_HAS_PTHREAD_LIB pthread)
 endif()
 
 # Setup flags.
-unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_NO_RTTI_FLAG -fno-rtti)
+append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_NO_RTTI_FLAG -fno-rtti)
 
-unwind_append_if(LIBUNWIND_LINK_FLAGS LIBUNWIND_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs)
-
-# MINGW_LIBRARIES is defined in config-ix.cmake
-unwind_append_if(libraries MINGW "${MINGW_LIBRARIES}")
+append_if(LIBUNWIND_LINK_FLAGS LIBUNWIND_HAS_NODEFAULTLIBS_FLAG -nodefaultlibs)
 
 if (LIBUNWIND_HAS_NO_EXCEPTIONS_FLAG AND LIBUNWIND_HAS_FUNWIND_TABLES)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -fno-exceptions)

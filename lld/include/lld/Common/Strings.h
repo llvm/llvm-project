@@ -41,6 +41,9 @@ private:
   std::vector<llvm::GlobPattern> Patterns;
 };
 
+inline llvm::ArrayRef<uint8_t> toArrayRef(llvm::StringRef S) {
+  return {reinterpret_cast<const uint8_t *>(S.data()), S.size()};
+}
 } // namespace lld
 
 #endif

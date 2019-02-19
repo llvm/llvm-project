@@ -3,11 +3,7 @@
 
 #include <iostream>
 #include <thread>
-#if !defined(__NetBSD__)
 #include <alloca.h>
-#else
-#include <cstdlib>
-#endif
 
 #include "callback.h"
 #include "omp.h"

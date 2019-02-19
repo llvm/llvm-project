@@ -15,7 +15,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
@@ -123,11 +122,8 @@ public:
     return Symbols[SymbolIndex];
   }
 
-  // Returns the underlying COFF file.
+  // Returns the underying COFF file.
   COFFObjectFile *getCOFFObj() { return COFFObj.get(); }
-
-  // Whether the object was already merged into the final PDB or not
-  bool wasProcessedForPDB() const { return !!ModuleDBI; }
 
   static std::vector<ObjFile *> Instances;
 
@@ -148,13 +144,6 @@ public:
   // source files and section contributions are also recorded here. Will be null
   // if we are not producing a PDB.
   llvm::pdb::DbiModuleDescriptorBuilder *ModuleDBI = nullptr;
-
-  const coff_section *AddrsigSec = nullptr;
-
-  // When using Microsoft precompiled headers, this is the PCH's key.
-  // The same key is used by both the precompiled object, and objects using the
-  // precompiled object. Any difference indicates out-of-date objects.
-  llvm::Optional<llvm::codeview::EndPrecompRecord> EndPrecomp;
 
 private:
   void initializeChunks();

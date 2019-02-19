@@ -42,7 +42,7 @@ public:
   bool        validVectorRegister(int) const { return false; }
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86; }
 
@@ -248,7 +248,7 @@ public:
   bool        validVectorRegister(int) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86_64; }
 
@@ -517,7 +517,6 @@ inline bool Registers_x86_64::validVectorRegister(int regNum) const {
     return false;
   return true;
 #else
-  (void)regNum; // suppress unused parameter warning
   return false;
 #endif
 }
@@ -527,7 +526,6 @@ inline v128 Registers_x86_64::getVectorRegister(int regNum) const {
   assert(validVectorRegister(regNum));
   return _xmm[regNum - UNW_X86_64_XMM0];
 #else
-  (void)regNum; // suppress unused parameter warning
   _LIBUNWIND_ABORT("no x86_64 vector registers");
 #endif
 }
@@ -537,7 +535,6 @@ inline void Registers_x86_64::setVectorRegister(int regNum, v128 value) {
   assert(validVectorRegister(regNum));
   _xmm[regNum - UNW_X86_64_XMM0] = value;
 #else
-  (void)regNum; (void)value; // suppress unused parameter warnings
   _LIBUNWIND_ABORT("no x86_64 vector registers");
 #endif
 }
@@ -561,7 +558,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC; }
 
@@ -1126,7 +1123,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC64; }
 
@@ -1768,7 +1765,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64; }
 
@@ -1786,7 +1783,7 @@ private:
     uint64_t __lr;    // Link register x30
     uint64_t __sp;    // Stack pointer x31
     uint64_t __pc;    // Program counter
-    uint64_t __ra_sign_state; // RA sign state register
+    uint64_t padding; // 16-byte align
   };
 
   GPRs    _registers;
@@ -1822,8 +1819,6 @@ inline bool Registers_arm64::validRegister(int regNum) const {
     return false;
   if (regNum > 95)
     return false;
-  if (regNum == UNW_ARM64_RA_SIGN_STATE)
-    return true;
   if ((regNum > 31) && (regNum < 64))
     return false;
   return true;
@@ -1834,8 +1829,6 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
     return _registers.__pc;
   if (regNum == UNW_REG_SP)
     return _registers.__sp;
-  if (regNum == UNW_ARM64_RA_SIGN_STATE)
-    return _registers.__ra_sign_state;
   if ((regNum >= 0) && (regNum < 32))
     return _registers.__x[regNum];
   _LIBUNWIND_ABORT("unsupported arm64 register");
@@ -1846,8 +1839,6 @@ inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
     _registers.__pc = value;
   else if (regNum == UNW_REG_SP)
     _registers.__sp = value;
-  else if (regNum == UNW_ARM64_RA_SIGN_STATE)
-    _registers.__ra_sign_state = value;
   else if ((regNum >= 0) && (regNum < 32))
     _registers.__x[regNum] = value;
   else
@@ -2044,7 +2035,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto() {
     restoreSavedFloatRegisters();
     restoreCoreAndJumpTo();
@@ -2158,7 +2149,7 @@ inline Registers_arm::Registers_arm()
   memset(&_vfp_d16_d31, 0, sizeof(_vfp_d16_d31));
 #if defined(__ARM_WMMX)
   _saved_iwmmx = false;
-  _saved_iwmmx_control = false;
+  _saved_iwmmx_control = false;  
   memset(&_iwmmx, 0, sizeof(_iwmmx));
   memset(&_iwmmx_control, 0, sizeof(_iwmmx_control));
 #endif
@@ -2524,7 +2515,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_OR1K; }
 
@@ -2720,7 +2711,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS; }
 
@@ -2768,12 +2759,10 @@ inline bool Registers_mips_o32::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_MIPS_R31)
     return true;
-#if __mips_isa_rev != 6
   if (regNum == UNW_MIPS_HI)
     return true;
   if (regNum == UNW_MIPS_LO)
     return true;
-#endif
 #if defined(__mips_hard_float) && __mips_fpr == 32
   if (regNum >= UNW_MIPS_F0 && regNum <= UNW_MIPS_F31)
     return true;
@@ -3041,7 +3030,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  static const char *getRegisterName(int num);
+  const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS; }
 
@@ -3084,12 +3073,10 @@ inline bool Registers_mips_newabi::validRegister(int regNum) const {
     return false;
   if (regNum <= UNW_MIPS_R31)
     return true;
-#if __mips_isa_rev != 6
   if (regNum == UNW_MIPS_HI)
     return true;
   if (regNum == UNW_MIPS_LO)
     return true;
-#endif
   // FIXME: Hard float, DSP accumulator registers, MSA registers
   return false;
 }

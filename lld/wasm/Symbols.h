@@ -15,17 +15,21 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
 
+using llvm::object::Archive;
+using llvm::object::WasmSymbol;
+using llvm::wasm::WasmGlobal;
+using llvm::wasm::WasmGlobalType;
+using llvm::wasm::WasmSignature;
+using llvm::wasm::WasmSymbolType;
+
 namespace lld {
 namespace wasm {
-
-using llvm::wasm::WasmSymbolType;
 
 class InputFile;
 class InputChunk;
 class InputSegment;
 class InputFunction;
 class InputGlobal;
-class InputEvent;
 class InputSection;
 
 #define INVALID_INDEX UINT32_MAX
@@ -37,7 +41,6 @@ public:
     DefinedFunctionKind,
     DefinedDataKind,
     DefinedGlobalKind,
-    DefinedEventKind,
     SectionKind,
     UndefinedFunctionKind,
     UndefinedDataKind,
@@ -49,8 +52,7 @@ public:
 
   bool isDefined() const {
     return SymbolKind == DefinedFunctionKind || SymbolKind == DefinedDataKind ||
-           SymbolKind == DefinedGlobalKind || SymbolKind == DefinedEventKind ||
-           SymbolKind == SectionKind;
+           SymbolKind == DefinedGlobalKind || SymbolKind == SectionKind;
   }
 
   bool isUndefined() const {
@@ -124,12 +126,12 @@ public:
   void setFunctionIndex(uint32_t Index);
   bool hasFunctionIndex() const;
 
-  const WasmSignature *Signature;
+  const WasmSignature *FunctionType;
 
 protected:
   FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
-                 const WasmSignature *Sig)
-      : Symbol(Name, K, Flags, F), Signature(Sig) {}
+                 const WasmSignature *Type)
+      : Symbol(Name, K, Flags, F), FunctionType(Type) {}
 
   uint32_t TableIndex = INVALID_INDEX;
   uint32_t FunctionIndex = INVALID_INDEX;
@@ -243,6 +245,8 @@ protected:
                const WasmGlobalType *GlobalType)
       : Symbol(Name, K, Flags, F), GlobalType(GlobalType) {}
 
+  // Explicit function type, needed for undefined or synthetic functions only.
+  // For regular defined globals this information comes from the InputChunk.
   const WasmGlobalType *GlobalType;
   uint32_t GlobalIndex = INVALID_INDEX;
 };
@@ -270,61 +274,16 @@ public:
   }
 };
 
-// Wasm events are features that suspend the current execution and transfer the
-// control flow to a corresponding handler. Currently the only supported event
-// kind is exceptions.
-//
-// Event tags are values to distinguish different events. For exceptions, they
-// can be used to distinguish different language's exceptions, i.e., all C++
-// exceptions have the same tag. Wasm can generate code capable of doing
-// different handling actions based on the tag of caught exceptions.
-//
-// A single EventSymbol object represents a single tag. C++ exception event
-// symbol is a weak symbol generated in every object file in which exceptions
-// are used, and has name '__cpp_exception' for linking.
-class EventSymbol : public Symbol {
-public:
-  static bool classof(const Symbol *S) { return S->kind() == DefinedEventKind; }
-
-  const WasmEventType *getEventType() const { return EventType; }
-
-  // Get/set the event index
-  uint32_t getEventIndex() const;
-  void setEventIndex(uint32_t Index);
-  bool hasEventIndex() const;
-
-  const WasmSignature *Signature;
-
-protected:
-  EventSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
-              const WasmEventType *EventType, const WasmSignature *Sig)
-      : Symbol(Name, K, Flags, F), Signature(Sig), EventType(EventType) {}
-
-  const WasmEventType *EventType;
-  uint32_t EventIndex = INVALID_INDEX;
-};
-
-class DefinedEvent : public EventSymbol {
-public:
-  DefinedEvent(StringRef Name, uint32_t Flags, InputFile *File,
-               InputEvent *Event);
-
-  static bool classof(const Symbol *S) { return S->kind() == DefinedEventKind; }
-
-  InputEvent *Event;
-};
-
 class LazySymbol : public Symbol {
 public:
-  LazySymbol(StringRef Name, InputFile *File,
-             const llvm::object::Archive::Symbol &Sym)
+  LazySymbol(StringRef Name, InputFile *File, const Archive::Symbol &Sym)
       : Symbol(Name, LazyKind, 0, File), ArchiveSymbol(Sym) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyKind; }
   void fetch();
 
 private:
-  llvm::object::Archive::Symbol ArchiveSymbol;
+  Archive::Symbol ArchiveSymbol;
 };
 
 // linker-generated symbols
@@ -332,7 +291,7 @@ struct WasmSym {
   // __stack_pointer
   // Global that holds the address of the top of the explicit value stack in
   // linear memory.
-  static GlobalSymbol *StackPointer;
+  static DefinedGlobal *StackPointer;
 
   // __data_end
   // Symbol marking the end of the data and bss.
@@ -351,14 +310,6 @@ struct WasmSym {
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL
   static DefinedData *DsoHandle;
-
-  // __table_base
-  // Used in PIC code for offset of indirect function table
-  static UndefinedGlobal *TableBase;
-
-  // __memory_base
-  // Used in PIC code for offset of global data
-  static UndefinedGlobal *MemoryBase;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived
@@ -368,11 +319,10 @@ union SymbolUnion {
   alignas(DefinedFunction) char A[sizeof(DefinedFunction)];
   alignas(DefinedData) char B[sizeof(DefinedData)];
   alignas(DefinedGlobal) char C[sizeof(DefinedGlobal)];
-  alignas(DefinedEvent) char D[sizeof(DefinedEvent)];
-  alignas(LazySymbol) char E[sizeof(LazySymbol)];
-  alignas(UndefinedFunction) char F[sizeof(UndefinedFunction)];
-  alignas(UndefinedData) char G[sizeof(UndefinedData)];
-  alignas(UndefinedGlobal) char H[sizeof(UndefinedGlobal)];
+  alignas(LazySymbol) char D[sizeof(LazySymbol)];
+  alignas(UndefinedFunction) char E[sizeof(UndefinedFunction)];
+  alignas(UndefinedData) char F[sizeof(UndefinedData)];
+  alignas(UndefinedGlobal) char G[sizeof(UndefinedGlobal)];
   alignas(SectionSymbol) char I[sizeof(SectionSymbol)];
 };
 
@@ -380,7 +330,7 @@ template <typename T, typename... ArgT>
 T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
-  static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
+  static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
@@ -399,7 +349,6 @@ T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
 // Returns a symbol name for an error message.
 std::string toString(const wasm::Symbol &Sym);
 std::string toString(wasm::Symbol::Kind Kind);
-std::string maybeDemangleSymbol(StringRef Name);
 
 } // namespace lld
 

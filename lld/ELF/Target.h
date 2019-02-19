@@ -13,8 +13,6 @@
 #include "InputSection.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
-#include "llvm/Support/MathExtras.h"
-#include <array>
 
 namespace lld {
 std::string toString(elf::RelType Type);
@@ -45,6 +43,10 @@ public:
   virtual void addPltHeaderSymbols(InputSection &IS) const {}
   virtual void addPltSymbols(InputSection &IS, uint64_t Off) const {}
 
+  unsigned getPltEntryOffset(unsigned Index) const {
+    return Index * PltEntrySize + PltHeaderSize;
+  }
+
   // Returns true if a relocation only uses the low bits of a value such that
   // all those bits are in the same page. For example, if the relocation
   // only uses the low 12 bits in a system with 4k pages. If this is true, the
@@ -58,18 +60,11 @@ public:
                           const InputFile *File, uint64_t BranchAddr,
                           const Symbol &S) const;
 
-  // On systems with range extensions we place collections of Thunks at
-  // regular spacings that enable the majority of branches reach the Thunks.
-  // a value of 0 means range extension thunks are not supported.
-  virtual uint32_t getThunkSectionSpacing() const { return 0; }
-
   // The function with a prologue starting at Loc was compiled with
   // -fsplit-stack and it calls a function compiled without. Adjust the prologue
   // to do the right thing. See https://gcc.gnu.org/wiki/SplitStacks.
-  // The symbols st_other flags are needed on PowerPC64 for determining the
-  // offset to the split-stack prologue.
-  virtual bool adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
-                                                uint8_t StOther) const;
+  virtual bool adjustPrologueForCrossSplitStack(uint8_t *Loc,
+                                                uint8_t *End) const;
 
   // Return true if we can reach Dst from Src with Relocation RelocType
   virtual bool inBranchRange(RelType Type, uint64_t Src,
@@ -92,9 +87,12 @@ public:
   // True if _GLOBAL_OFFSET_TABLE_ is relative to .got.plt, false if .got.
   bool GotBaseSymInGotPlt = true;
 
+  // On systems with range extensions we place collections of Thunks at
+  // regular spacings that enable the majority of branches reach the Thunks.
+  uint32_t ThunkSectionSpacing = 0;
+
   RelType CopyRel;
   RelType GotRel;
-  RelType NoneRel;
   RelType PltRel;
   RelType RelativeRel;
   RelType IRelativeRel;
@@ -114,16 +112,20 @@ public:
   // On PPC ELF V2 abi, the first entry in the .got is the .TOC.
   unsigned GotHeaderEntriesNum = 0;
 
+  // For TLS variant 1, the TCB is a fixed size specified by the Target.
+  // For variant 2, the TCB is an unspecified size.
+  // Set to 0 for variant 2.
+  unsigned TcbSize = 0;
+
+  // Set to the offset (in bytes) that the thread pointer is initialized to
+  // point to, relative to the start of the thread local storage.
+  unsigned TlsTpOffset = 0;
+
   bool NeedsThunks = false;
 
   // A 4-byte field corresponding to one or more trap instructions, used to pad
   // executable OutputSections.
-  std::array<uint8_t, 4> TrapInstr;
-
-  // If a target needs to rewrite calls to __morestack to instead call
-  // __morestack_non_split when a split-stack enabled caller calls a
-  // non-split-stack callee this will return true. Otherwise returns false.
-  bool NeedsMoreStackNonSplit = true;
+  uint32_t TrapInstr = 0;
 
   virtual RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                                   RelExpr Expr) const;
@@ -148,7 +150,6 @@ TargetInfo *getAVRTargetInfo();
 TargetInfo *getHexagonTargetInfo();
 TargetInfo *getPPC64TargetInfo();
 TargetInfo *getPPCTargetInfo();
-TargetInfo *getRISCVTargetInfo();
 TargetInfo *getSPARCV9TargetInfo();
 TargetInfo *getX32TargetInfo();
 TargetInfo *getX86TargetInfo();
@@ -167,15 +168,6 @@ static inline std::string getErrorLocation(const uint8_t *Loc) {
   return getErrorPlace(Loc).Loc;
 }
 
-// In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first is
-// a global entry point (GEP) which typically is used to intiailzie the TOC
-// pointer in general purpose register 2.  The second is a local entry
-// point (LEP) which bypasses the TOC pointer initialization code. The
-// offset between GEP and LEP is encoded in a function's st_other flags.
-// This function will return the offset (in bytes) from the global entry-point
-// to the local entry-point.
-unsigned getPPC64GlobalEntryToLocalEntryOffset(uint8_t StOther);
-
 uint64_t getPPC64TocBase();
 uint64_t getAArch64Page(uint64_t Expr);
 
@@ -192,18 +184,19 @@ static inline void reportRangeError(uint8_t *Loc, RelType Type, const Twine &V,
     Hint = "; consider recompiling with -fdebug-types-section to reduce size "
            "of debug sections";
 
-  errorOrWarn(ErrPlace.Loc + "relocation " + lld::toString(Type) +
-              " out of range: " + V.str() + " is not in [" + Twine(Min).str() +
-              ", " + Twine(Max).str() + "]" + Hint);
+  error(ErrPlace.Loc + "relocation " + lld::toString(Type) +
+        " out of range: " + V.str() + " is not in [" + Twine(Min).str() + ", " +
+        Twine(Max).str() + "]" + Hint);
 }
 
-inline unsigned getPltEntryOffset(unsigned Idx) {
-  return Target->PltHeaderSize + Target->PltEntrySize * Idx;
+// Sign-extend Nth bit all the way to MSB.
+inline int64_t signExtend(uint64_t V, int N) {
+  return int64_t(V << (64 - N)) >> (64 - N);
 }
 
 // Make sure that V can be represented as an N bit signed integer.
 inline void checkInt(uint8_t *Loc, int64_t V, int N, RelType Type) {
-  if (V != llvm::SignExtend64(V, N))
+  if (V != signExtend(V, N))
     reportRangeError(Loc, Type, Twine(V), llvm::minIntN(N), llvm::maxIntN(N));
 }
 
@@ -217,7 +210,7 @@ inline void checkUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
 inline void checkIntUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
   // For the error message we should cast V to a signed integer so that error
   // messages show a small negative value rather than an extremely large one
-  if (V != (uint64_t)llvm::SignExtend64(V, N) && (V >> N) != 0)
+  if (V != (uint64_t)signExtend(V, N) && (V >> N) != 0)
     reportRangeError(Loc, Type, Twine((int64_t)V), llvm::minIntN(N),
                      llvm::maxIntN(N));
 }

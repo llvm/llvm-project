@@ -11,11 +11,10 @@
 # CHECK:     Number: 2
 # CHECK-LABEL:     Name: .rdata (2E 72 64 61 74 61 00 00)
 #             This is the critical check to show that only *one* definition of
-#             .xdata$foo was retained. This *must* be 0x24 (0x4 for the .xdata
-#             section and 0x20 for the .ctors/.dtors headers/ends).
+#             .xdata$foo was retained. This *must* be 4.
 #             Make sure that no other .xdata sections get included, which would
 #             increase the size here.
-# CHECK-NEXT:     VirtualSize: 0x24
+# CHECK-NEXT:     VirtualSize: 0x4
 
         .text
         .def            main;

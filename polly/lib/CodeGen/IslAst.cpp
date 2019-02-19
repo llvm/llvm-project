@@ -119,9 +119,6 @@ struct AstBuildUserInfo {
   /// Flag to indicate that we are inside a parallel for node.
   bool InParallelFor = false;
 
-  /// Flag to indicate that we are inside an SIMD node.
-  bool InSIMD = false;
-
   /// The last iterator id created for the current SCoP.
   isl_id *LastForNodeId = nullptr;
 };
@@ -134,6 +131,7 @@ static void freeIslAstUserPayload(void *Ptr) {
 
 IslAstInfo::IslAstUserPayload::~IslAstUserPayload() {
   isl_ast_build_free(Build);
+  isl_pw_aff_free(MinimalDependenceDistance);
 }
 
 /// Print a string @p str in a single line using @p Printer.
@@ -228,10 +226,7 @@ static bool astScheduleDimIsParallel(__isl_keep isl_ast_build *Build,
         D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_WAW |
                           Dependences::TYPE_WAR | Dependences::TYPE_TC_RED)
             .release();
-    isl_pw_aff *MinimalDependenceDistance = nullptr;
-    D->isParallel(Schedule, DepsAll, &MinimalDependenceDistance);
-    NodeInfo->MinimalDependenceDistance =
-        isl::manage(MinimalDependenceDistance);
+    D->isParallel(Schedule, DepsAll, &NodeInfo->MinimalDependenceDistance);
     isl_union_map_free(Schedule);
     return false;
   }
@@ -273,13 +268,10 @@ static __isl_give isl_id *astBuildBeforeFor(__isl_keep isl_ast_build *Build,
   Id = isl_id_set_free_user(Id, freeIslAstUserPayload);
   BuildInfo->LastForNodeId = Id;
 
-  Payload->IsParallel =
-      astScheduleDimIsParallel(Build, BuildInfo->Deps, Payload);
-
   // Test for parallelism only if we are not already inside a parallel loop
-  if (!BuildInfo->InParallelFor && !BuildInfo->InSIMD)
+  if (!BuildInfo->InParallelFor)
     BuildInfo->InParallelFor = Payload->IsOutermostParallel =
-        Payload->IsParallel;
+        astScheduleDimIsParallel(Build, BuildInfo->Deps, Payload);
 
   return Id;
 }
@@ -304,8 +296,18 @@ astBuildAfterFor(__isl_take isl_ast_node *Node, __isl_keep isl_ast_build *Build,
   Payload->Build = isl_ast_build_copy(Build);
   Payload->IsInnermost = (Id == BuildInfo->LastForNodeId);
 
-  Payload->IsInnermostParallel =
-      Payload->IsInnermost && (BuildInfo->InSIMD || Payload->IsParallel);
+  // Innermost loops that are surrounded by parallel loops have not yet been
+  // tested for parallelism. Test them here to ensure we check all innermost
+  // loops for parallelism.
+  if (Payload->IsInnermost && BuildInfo->InParallelFor) {
+    if (Payload->IsOutermostParallel) {
+      Payload->IsInnermostParallel = true;
+    } else {
+      if (PollyVectorizerChoice == VECTORIZER_NONE)
+        Payload->IsInnermostParallel =
+            astScheduleDimIsParallel(Build, BuildInfo->Deps, Payload);
+    }
+  }
   if (Payload->IsOutermostParallel)
     BuildInfo->InParallelFor = false;
 
@@ -321,7 +323,7 @@ static isl_stat astBuildBeforeMark(__isl_keep isl_id *MarkId,
 
   AstBuildUserInfo *BuildInfo = (AstBuildUserInfo *)User;
   if (strcmp(isl_id_get_name(MarkId), "SIMD") == 0)
-    BuildInfo->InSIMD = true;
+    BuildInfo->InParallelFor = true;
 
   return isl_stat_ok;
 }
@@ -333,7 +335,7 @@ astBuildAfterMark(__isl_take isl_ast_node *Node,
   AstBuildUserInfo *BuildInfo = (AstBuildUserInfo *)User;
   auto *Id = isl_ast_node_mark_get_id(Node);
   if (strcmp(isl_id_get_name(Id), "SIMD") == 0)
-    BuildInfo->InSIMD = false;
+    BuildInfo->InParallelFor = false;
   isl_id_free(Id);
   return Node;
 }
@@ -563,7 +565,6 @@ void IslAst::init(const Dependences &D) {
   if (PerformParallelTest) {
     BuildInfo.Deps = &D;
     BuildInfo.InParallelFor = false;
-    BuildInfo.InSIMD = false;
 
     Build = isl_ast_build_set_before_each_for(Build, &astBuildBeforeFor,
                                               &BuildInfo);
@@ -663,7 +664,8 @@ IslAstInfo::getSchedule(__isl_keep isl_ast_node *Node) {
 __isl_give isl_pw_aff *
 IslAstInfo::getMinimalDependenceDistance(__isl_keep isl_ast_node *Node) {
   IslAstUserPayload *Payload = getNodePayload(Node);
-  return Payload ? Payload->MinimalDependenceDistance.copy() : nullptr;
+  return Payload ? isl_pw_aff_copy(Payload->MinimalDependenceDistance)
+                 : nullptr;
 }
 
 IslAstInfo::MemoryAccessSet *

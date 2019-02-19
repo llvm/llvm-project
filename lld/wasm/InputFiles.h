@@ -20,6 +20,21 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
+using llvm::object::Archive;
+using llvm::object::WasmObjectFile;
+using llvm::object::WasmSection;
+using llvm::object::WasmSymbol;
+using llvm::wasm::WasmGlobal;
+using llvm::wasm::WasmImport;
+using llvm::wasm::WasmRelocation;
+using llvm::wasm::WasmSignature;
+
+namespace llvm {
+namespace lto {
+class InputFile;
+}
+} // namespace llvm
+
 namespace lld {
 namespace wasm {
 
@@ -27,7 +42,6 @@ class InputChunk;
 class InputFunction;
 class InputSegment;
 class InputGlobal;
-class InputEvent;
 class InputSection;
 
 class InputFile {
@@ -70,12 +84,12 @@ public:
   explicit ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
 
-  void addMember(const llvm::object::Archive::Symbol *Sym);
+  void addMember(const Archive::Symbol *Sym);
 
   void parse() override;
 
 private:
-  std::unique_ptr<llvm::object::Archive> File;
+  std::unique_ptr<Archive> File;
   llvm::DenseSet<uint64_t> Seen;
 };
 
@@ -109,7 +123,6 @@ public:
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
   std::vector<InputGlobal *> Globals;
-  std::vector<InputEvent *> Events;
   std::vector<InputSection *> CustomSections;
   llvm::DenseMap<uint32_t, InputSection *> CustomSectionsByIndex;
 
@@ -118,7 +131,6 @@ public:
   DataSymbol *getDataSymbol(uint32_t Index) const;
   GlobalSymbol *getGlobalSymbol(uint32_t Index) const;
   SectionSymbol *getSectionSymbol(uint32_t Index) const;
-  EventSymbol *getEventSymbol(uint32_t Index) const;
 
 private:
   Symbol *createDefined(const WasmSymbol &Sym);

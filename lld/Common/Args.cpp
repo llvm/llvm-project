@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/Path.h"
 
 using namespace llvm;
 using namespace lld;
@@ -41,7 +40,7 @@ std::vector<StringRef> lld::args::getStrings(opt::InputArgList &Args, int Id) {
 
 uint64_t lld::args::getZOptionValue(opt::InputArgList &Args, int Id,
                                     StringRef Key, uint64_t Default) {
-  for (auto *Arg : Args.filtered_reverse(Id)) {
+  for (auto *Arg : Args.filtered(Id)) {
     std::pair<StringRef, StringRef> KV = StringRef(Arg->getValue()).split('=');
     if (KV.first == Key) {
       uint64_t Result = Default;
@@ -64,10 +63,4 @@ std::vector<StringRef> lld::args::getLines(MemoryBufferRef MB) {
       Ret.push_back(S);
   }
   return Ret;
-}
-
-StringRef lld::args::getFilenameWithoutExe(StringRef Path) {
-  if (Path.endswith_lower(".exe"))
-    return sys::path::stem(Path);
-  return sys::path::filename(Path);
 }

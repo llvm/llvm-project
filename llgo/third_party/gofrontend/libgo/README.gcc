@@ -1,7 +1,0 @@
-The files in this directory are mirrored from the gofrontend project
-hosted at http://code.google.com/p/gofrontend.  These files are the
-ones in the libgo subdirectory of that project.
-
-By default, the networking tests are not run.  In order to run all the
-libgo tests, you need to define the environment variable
-GCCGO_RUN_ALL_TESTS to a non-empty string.
