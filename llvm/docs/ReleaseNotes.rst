@@ -20,11 +20,6 @@ have questions or comments, the `LLVM Developer's Mailing List
 <https://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
-Note that if you are reading this file from a Subversion checkout or the main
-LLVM web page, this document applies to the *next* release, not the current
-one.  To see the release notes for a specific release, please see the `releases
-page <https://llvm.org/releases/>`_.
-
 Minimum Required Compiler Version
 =================================
 As `discussed on the mailing list
