@@ -1,9 +1,8 @@
 //===- Chunks.cpp ---------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -199,6 +198,7 @@ void SectionChunk::applyRelARM(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM_BLX23T:    applyBranch24T(Off, SX - P - 4); break;
   case IMAGE_REL_ARM_SECTION:   applySecIdx(Off, OS); break;
   case IMAGE_REL_ARM_SECREL:    applySecRel(this, Off, OS, S); break;
+  case IMAGE_REL_ARM_REL32:     add32(Off, SX - P - 4); break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));
@@ -310,6 +310,7 @@ void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   case IMAGE_REL_ARM64_SECREL_HIGH12A: applySecRelHigh12A(this, Off, OS, S); break;
   case IMAGE_REL_ARM64_SECREL_LOW12L:  applySecRelLdr(this, Off, OS, S); break;
   case IMAGE_REL_ARM64_SECTION:        applySecIdx(Off, OS); break;
+  case IMAGE_REL_ARM64_REL32:          add32(Off, S - P - 4); break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(Type) + " in " +
           toString(File));

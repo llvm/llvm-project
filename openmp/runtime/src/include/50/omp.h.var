@@ -5,10 +5,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -248,6 +247,15 @@
     extern size_t __KAI_KMPC_CONVENTION omp_get_affinity_format(char *, size_t);
     extern void __KAI_KMPC_CONVENTION omp_display_affinity(char const *);
     extern size_t __KAI_KMPC_CONVENTION omp_capture_affinity(char *, size_t, char const *);
+
+    /* OpenMP 5.0 Pause Resources */
+    typedef enum omp_pause_resource_t {
+      omp_pause_resume = 0,
+      omp_pause_soft = 1,
+      omp_pause_hard = 2
+    } omp_pause_resource_t;
+    extern int __KAI_KMPC_CONVENTION omp_pause_resource(omp_pause_resource_t, int);
+    extern int __KAI_KMPC_CONVENTION omp_pause_resource_all(omp_pause_resource_t);
 
 #   undef __KAI_KMPC_CONVENTION
 #   undef __KMP_IMP

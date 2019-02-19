@@ -66,13 +66,18 @@ def wholearchive_file : P<"wholearchive", "Include all object files from this ar
 
 def disallowlib : Joined<["/", "-", "-?"], "disallowlib:">, Alias<nodefaultlib>;
 
-def manifest : F<"manifest">;
-def manifest_colon : P<"manifest", "Create manifest file">;
+def manifest : F<"manifest">, HelpText<"Create .manifest file">;
+def manifest_colon : P<
+    "manifest",
+    "NO disables manifest output; EMBED[,ID=#] embeds manifest as resource in the image">;
 def manifestuac : P<"manifestuac", "User access control">;
-def manifestfile : P<"manifestfile", "Manifest file path">;
-def manifestdependency : P<"manifestdependency",
-                           "Attributes for <dependency> in manifest file">;
-def manifestinput : P<"manifestinput", "Specify manifest file">;
+def manifestfile : P<"manifestfile", "Manifest output path, with /manifest">;
+def manifestdependency : P<
+    "manifestdependency",
+    "Attributes for <dependency> element in manifest file; implies /manifest">;
+def manifestinput : P<
+    "manifestinput",
+    "Additional manifest inputs; only valid with /manifest:embed">;
 
 // We cannot use multiclass P because class name "incl" is different
 // from its command line option name. We do this because "include" is
@@ -89,10 +94,13 @@ def debug_opt : P<"debug", "Embed a symbol table in the image with option">;
 def debugtype : P<"debugtype", "Debug Info Options">;
 def dll : F<"dll">, HelpText<"Create a DLL">;
 def driver : P<"driver", "Generate a Windows NT Kernel Mode Driver">;
-def nodefaultlib_all : F<"nodefaultlib">;
-def noentry : F<"noentry">;
+def nodefaultlib_all : F<"nodefaultlib">,
+    HelpText<"Remove all default libraries">;
+def noentry : F<"noentry">,
+    HelpText<"Don't add reference to DllMainCRTStartup; only valid with /dll">;
 def profile : F<"profile">;
-def repro : F<"Brepro">, HelpText<"Use a hash of the executable as the PE header timestamp">;
+def repro : F<"Brepro">,
+    HelpText<"Use a hash of the executable as the PE header timestamp">;
 def swaprun_cd : F<"swaprun:cd">;
 def swaprun_net : F<"swaprun:net">;
 def verbose : F<"verbose">;

@@ -4,13 +4,22 @@
 
 # RUN: yaml2obj %s -o %t1.obj
 # RUN: yaml2obj %p/Inputs/pdb-type-server-missing-2.yaml -o %t2.obj
-# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s
+# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main 2>&1 | FileCheck %s -check-prefix=WARN
+# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /ignore:4099 2>&1 | FileCheck %s -check-prefix=IGNORE -allow-empty
+# RUN: not lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /WX 2>&1 | FileCheck %s -check-prefix=ERR
+# RUN: lld-link %t1.obj %t2.obj -out:%t.exe -debug -pdb:%t.pdb -nodefaultlib -entry:main /ignore:4099 /WX 2>&1 | FileCheck %s -check-prefix=IGNORE-ERR -allow-empty
 
-# CHECK: warning: Cannot use debug info for {{.*}}.obj
-# CHECK-NEXT: {{N|n}}o such file or directory
+# WARN: warning: Cannot use debug info for '{{.*}}.obj' [LNK4099]
+# WARN-NEXT: {{N|n}}o such file or directory
 
-# CHECK: warning: Cannot use debug info for {{.*}}.obj
-# CHECK-NEXT: {{N|n}}o such file or directory
+# IGNORE-NOT: warning: Cannot use debug info for '{{.*}}.obj' [LNK4099]
+# IGNORE-NOT: {{N|n}}o such file or directory
+
+# ERR: error: Cannot use debug info for '{{.*}}.obj' [LNK4099]
+# ERR-NEXT: {{N|n}}o such file or directory
+
+# IGNORE-ERR-NOT: error: Cannot use debug info for '{{.*}}.obj' [LNK4099]
+# IGNORE-ERR-NOT: {{N|n}}o such file or directory
 
 --- !COFF
 header:

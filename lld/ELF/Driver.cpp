@@ -1,9 +1,8 @@
 //===- Driver.cpp ---------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -757,6 +756,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false) ||
       hasZOption(Args, "muldefs");
+  Config->AllowShlibUndefined = Args.hasFlag(
+      OPT_allow_shlib_undefined, OPT_no_allow_shlib_undefined, true);
   Config->AuxiliaryList = args::getStrings(Args, OPT_auxiliary);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
@@ -1006,6 +1007,7 @@ static void setConfigs(opt::InputArgList &Args) {
   Config->Endianness = Config->IsLE ? endianness::little : endianness::big;
   Config->IsMips64EL = (K == ELF64LEKind && M == EM_MIPS);
   Config->Pic = Config->Pie || Config->Shared;
+  Config->PicThunk = Args.hasArg(OPT_pic_veneer, Config->Pic);
   Config->Wordsize = Config->Is64 ? 8 : 4;
 
   // ELF defines two different ways to store relocation addends as shown below:

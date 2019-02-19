@@ -1,9 +1,8 @@
 //===- LTO.cpp ------------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
@@ -41,7 +41,7 @@ using namespace lld::wasm;
 
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config C;
-  C.Options = InitTargetOptionsFromCodeGenFlags();
+  C.Options = initTargetOptionsFromCodeGenFlags();
 
   // Always emit a section per function/data with LTO.
   C.Options.FunctionSections = true;
@@ -53,7 +53,8 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.DisableVerify = Config->DisableVerify;
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
-  C.MAttrs = GetMAttrs();
+  C.MAttrs = getMAttrs();
+  C.CGOptLevel = args::getCGOptLevel(Config->LTOO);
 
   if (Config->Relocatable)
     C.RelocModel = None;
@@ -79,8 +80,8 @@ BitcodeCompiler::~BitcodeCompiler() = default;
 
 static void undefine(Symbol *S) {
   if (auto F = dyn_cast<DefinedFunction>(S))
-    replaceSymbol<UndefinedFunction>(F, F->getName(), 0, F->getFile(),
-                                     F->Signature);
+    replaceSymbol<UndefinedFunction>(F, F->getName(), kDefaultModule, 0,
+                                     F->getFile(), F->Signature);
   else if (isa<DefinedData>(S))
     replaceSymbol<UndefinedData>(S, S->getName(), 0, S->getFile());
   else

@@ -51,7 +51,7 @@ int main()
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[IMPLICIT_TASK_ID]], second_task_id=[[MAIN_TASK]], prior_task_status=ompt_task_yield=2
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[MAIN_TASK]], second_task_id=[[IMPLICIT_TASK_ID]], prior_task_status=ompt_task_complete=1
 
-  // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_task_schedule: first_task_id={{[0-9]+}}, second_task_id=[[WORKER_TASK]], prior_task_status=ompt_task_others=4
+  // CHECK: {{^}}[[THREAD_ID:[0-9]+]]: ompt_event_task_schedule: first_task_id={{[0-9]+}}, second_task_id=[[WORKER_TASK]], prior_task_status=ompt_task_switch=7
   // CHECK: {{^}}[[THREAD_ID]]: ompt_event_task_schedule: first_task_id=[[WORKER_TASK]], second_task_id={{[0-9]+}}, prior_task_status=ompt_task_complete=1
 
 

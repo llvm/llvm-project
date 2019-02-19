@@ -25,8 +25,7 @@
     <a href="http://lists.llvm.org/mailman/listinfo/openmp-dev">openmp-dev</a>
     <a href="http://lists.llvm.org/mailman/listinfo/openmp-commits">openmp-commits</a>
     <a href="http://llvm.org/bugs/">Bug Reports</a>
-    <a href="http://llvm.org/svn/llvm-project/openmp/trunk/">Browse SVN</a>
-    <a href="http://llvm.org/viewvc/llvm-project/openmp/trunk/">Browse ViewVC</a>
+    <a href="https://github.com/llvm/llvm-project/openmp">Browse Sources</a>
   </div>
 </div>
 
@@ -154,30 +153,22 @@
   <p>To check out the code, use:</p>
 
   <ul>
-  <li><code>svn co http://llvm.org/svn/llvm-project/openmp/trunk openmp</code></li>
+  <li><code>git clone https://github.com/llvm/llvm-project.git</code></li>
   </ul>
-
-  <p>
-     Note that for an in-tree build, you should check out openmp to llvm/projects.
-  </p>
 
   <p>In-tree build:</p>
   <ul>
-    <li><code>cd where-you-want-to-live</code></li>
-    <li>Check out openmp into llvm/projects</li>
-    <li><code>cd where-you-want-to-build</code></li>
+    <li><code>cd llvm-project</code></li>
     <li><code>mkdir build &amp;&amp; cd build</code></li>
-    <li><code>cmake path/to/llvm -DCMAKE_C_COMPILER=&lt;C compiler&gt; -DCMAKE_CXX_COMPILER=&lt;C++ compiler&gt;</code></li>
+    <li><code>cmake ../llvm -DLLVM_ENABLE_PROJECTS=openmp -DCMAKE_C_COMPILER=&lt;C compiler&gt; -DCMAKE_CXX_COMPILER=&lt;C++ compiler&gt;</code></li>
     <li><code>make omp</code></li>
   </ul>
 
   <p>Out-of-tree build:</p>
   <ul>
-    <li><code>cd where-you-want-to-live</code></li>
-    <li>Check out openmp</li>
-    <li><code>cd where-you-want-to-live/openmp</code></li>
-    <li><code>mkdir build &amp;&amp; cd build</code></li>
-    <li><code>cmake path/to/openmp -DCMAKE_C_COMPILER=&lt;C compiler&gt; -DCMAKE_CXX_COMPILER=&lt;C++ compiler&gt;</code></li>
+    <li><code>cd llvm-project</code></li>
+    <li><code>mkdir build-openmp &amp;&amp; cd build-openmp</code></li>
+    <li><code>cmake ../openmp -DCMAKE_C_COMPILER=&lt;C compiler&gt; -DCMAKE_CXX_COMPILER=&lt;C++ compiler&gt;</code></li>
     <li><code>make</code></li>
   </ul>
 

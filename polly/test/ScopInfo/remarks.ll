@@ -185,7 +185,7 @@ attributes #3 = { nounwind }
 !llvm.module.flags = !{!20, !21}
 !llvm.ident = !{!22}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0 (http://llvm.org/git/clang.git 65eeefc97d2eee4d075ec7d9ed56b5f0786b6421)", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 3.8.0", isOptimized: false, runtimeVersion: 0, emissionKind: 1, enums: !2)
 !1 = !DIFile(filename: "test/ScopInfo/remarks.c", directory: "/home/johannes/repos/llvm-polly/tools/polly")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "valid", scope: !1, file: !1, line: 3, type: !5, isLocal: false, isDefinition: true, scopeLine: 3, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
@@ -206,7 +206,7 @@ attributes #3 = { nounwind }
 !19 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64)
 !20 = !{i32 2, !"Dwarf Version", i32 4}
 !21 = !{i32 2, !"Debug Info Version", i32 3}
-!22 = !{!"clang version 3.8.0 (http://llvm.org/git/clang.git 65eeefc97d2eee4d075ec7d9ed56b5f0786b6421)"}
+!22 = !{!"clang version 3.8.0"}
 !23 = !DILocalVariable(name: "A", arg: 1, scope: !4, file: !1, line: 3, type: !7)
 !24 = !DIExpression()
 !25 = !DILocation(line: 3, column: 17, scope: !4)

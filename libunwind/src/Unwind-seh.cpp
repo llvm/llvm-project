@@ -1,9 +1,8 @@
 //===--------------------------- Unwind-seh.cpp ---------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -50,9 +49,14 @@ using namespace libunwind;
 /// Class of foreign exceptions based on unrecognized SEH exceptions.
 static const uint64_t kSEHExceptionClass = 0x434C4E4753454800; // CLNGSEH\0
 
+// libunwind does not and should not depend on C++ library which means that we
+// need our own declaration of global placement new.
+void *operator new(size_t, void*);
+
 /// Exception cleanup routine used by \c _GCC_specific_handler to
 /// free foreign exceptions.
 static void seh_exc_cleanup(_Unwind_Reason_Code urc, _Unwind_Exception *exc) {
+  (void)urc;
   if (exc->exception_class != kSEHExceptionClass)
     _LIBUNWIND_ABORT("SEH cleanup called on non-SEH exception");
   free(exc);
@@ -69,7 +73,6 @@ static void _unw_seh_set_disp_ctx(unw_cursor_t *cursor, DISPATCHER_CONTEXT *disp
 _LIBUNWIND_EXPORT EXCEPTION_DISPOSITION
 _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
                       DISPATCHER_CONTEXT *disp, __personality_routine pers) {
-  unw_context_t uc;
   unw_cursor_t cursor;
   _Unwind_Exception *exc;
   _Unwind_Action action;
@@ -78,7 +81,9 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
   uintptr_t retval, target;
   bool ours = false;
 
-  _LIBUNWIND_TRACE_UNWINDING("_GCC_specific_handler(%#010x(%x), %p)", ms_exc->ExceptionCode, ms_exc->ExceptionFlags, frame);
+  _LIBUNWIND_TRACE_UNWINDING("_GCC_specific_handler(%#010lx(%lx), %p)",
+                             ms_exc->ExceptionCode, ms_exc->ExceptionFlags,
+                             (void *)frame);
   if (ms_exc->ExceptionCode == STATUS_GCC_UNWIND) {
     if (IS_TARGET_UNWIND(ms_exc->ExceptionFlags)) {
       // Set up the upper return value (the lower one and the target PC
@@ -130,7 +135,10 @@ _GCC_specific_handler(PEXCEPTION_RECORD ms_exc, PVOID frame, PCONTEXT ms_ctx,
     }
   }
 
-  _LIBUNWIND_TRACE_UNWINDING("_GCC_specific_handler() calling personality function %p(1, %d, %llx, %p, %p)", pers, action, exc->exception_class, exc, ctx);
+  _LIBUNWIND_TRACE_UNWINDING("_GCC_specific_handler() calling personality "
+                             "function %p(1, %d, %llx, %p, %p)",
+                             (void *)pers, action, exc->exception_class,
+                             (void *)exc, (void *)ctx);
   urc = pers(1, action, exc->exception_class, exc, ctx);
   _LIBUNWIND_TRACE_UNWINDING("_GCC_specific_handler() personality returned %d", urc);
   switch (urc) {
@@ -207,6 +215,8 @@ extern "C" _Unwind_Reason_Code
 __libunwind_seh_personality(int version, _Unwind_Action state,
                             uint64_t klass, _Unwind_Exception *exc,
                             struct _Unwind_Context *context) {
+  (void)version;
+  (void)klass;
   EXCEPTION_RECORD ms_exc;
   bool phase2 = (state & (_UA_SEARCH_PHASE|_UA_CLEANUP_PHASE)) == _UA_CLEANUP_PHASE;
   ms_exc.ExceptionCode = STATUS_GCC_THROW;

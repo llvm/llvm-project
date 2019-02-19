@@ -28,7 +28,7 @@
 #ifdef CODE
 #include "stdio.h"
 #include "omp.h"
-#include "ompt.h"
+#include "omp-tools.h"
 
 int main()
 {
@@ -56,7 +56,7 @@ int main()
 
 #ifdef TOOL
 
-#include <ompt.h>
+#include <omp-tools.h>
 #include "stdio.h"
 
 ompt_start_tool_result_t* ompt_start_tool(

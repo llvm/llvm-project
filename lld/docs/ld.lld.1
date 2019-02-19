@@ -1,5 +1,6 @@
-.\" This file is distributed under the University of Illinois Open Source
-.\" License. See LICENSE.TXT for details.
+.\" Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+.\" See https://llvm.org/LICENSE.txt for license information.
+.\" SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
@@ -311,6 +312,8 @@ Write optimization remarks in YAML format to
 .Ar file .
 .It Fl -opt-remarks-with-hotness
 Include hotness information in the optimization remarks file.
+.It Fl -pic-veneer
+Always generate position independent thunks.
 .It Fl -pie
 Create a position independent executable.
 .It Fl -print-gc-sections

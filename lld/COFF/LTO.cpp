@@ -1,9 +1,8 @@
 //===- LTO.cpp ------------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
+#include "lld/Common/Args.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Strings.h"
 #include "lld/Common/TargetOptionsCommandFlags.h"
@@ -43,7 +43,7 @@ using namespace lld::coff;
 
 static std::unique_ptr<lto::LTO> createLTO() {
   lto::Config C;
-  C.Options = InitTargetOptionsFromCodeGenFlags();
+  C.Options = initTargetOptionsFromCodeGenFlags();
 
   // Always emit a section per function/datum with LTO. LLVM LTO should get most
   // of the benefit of linker GC, but there are still opportunities for ICF.
@@ -60,8 +60,9 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.DisableVerify = true;
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
-  C.CPU = GetCPUStr();
-  C.MAttrs = GetMAttrs();
+  C.CPU = getCPUStr();
+  C.MAttrs = getMAttrs();
+  C.CGOptLevel = args::getCGOptLevel(Config->LTOO);
 
   if (Config->SaveTemps)
     checkError(C.addSaveTemps(std::string(Config->OutputFile) + ".",

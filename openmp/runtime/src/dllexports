@@ -1,10 +1,9 @@
 #
 #//===----------------------------------------------------------------------===//
 #//
-#//                     The LLVM Compiler Infrastructure
-#//
-#// This file is dual licensed under the MIT and the University of Illinois Open
-#// Source Licenses. See LICENSE.txt for details.
+#// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+#// See https://llvm.org/LICENSE.txt for license information.
+#// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #//
 #//===----------------------------------------------------------------------===//
 #
@@ -406,6 +405,7 @@ kmpc_set_disp_num_buffers                   267
 # USED FOR 4.5 __kmpc_critical_with_hint    270
         __kmpc_get_target_offload           271
 	__kmpc_omp_reg_task_with_affinity   272
+	__kmpc_pause_resource               273
     %endif
 %endif
 
@@ -554,6 +554,8 @@ kmp_set_disp_num_buffers                    890
     ompc_get_affinity_format                753
     ompc_display_affinity                   754
     ompc_capture_affinity                   755
+    omp_pause_resource                      756
+    omp_pause_resource_all                  757
 
     OMP_NULL_ALLOCATOR                     DATA
     omp_default_mem_alloc                  DATA

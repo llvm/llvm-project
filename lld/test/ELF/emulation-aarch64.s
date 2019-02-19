@@ -30,5 +30,28 @@
 # AARCH64-NEXT:   Flags [ (0x0)
 # AARCH64-NEXT:   ]
 
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %taarch64fbsd
+# RUN: echo 'OUTPUT_FORMAT(elf64-aarch64-freebsd)' > %taarch64fbsd.script
+# RUN: ld.lld %taarch64fbsd.script %taarch64fbsd -o %t2aarch64fbsd
+# RUN: llvm-readobj -file-headers %t2aarch64fbsd | FileCheck --check-prefix=AARCH64-FBSD %s
+# AARCH64-FBSD:      ElfHeader {
+# AARCH64-FBSD-NEXT:   Ident {
+# AARCH64-FBSD-NEXT:     Magic: (7F 45 4C 46)
+# AARCH64-FBSD-NEXT:     Class: 64-bit (0x2)
+# AARCH64-FBSD-NEXT:     DataEncoding: LittleEndian (0x1)
+# AARCH64-FBSD-NEXT:     FileVersion: 1
+# AARCH64-FBSD-NEXT:     OS/ABI: FreeBSD (0x9)
+# AARCH64-FBSD-NEXT:     ABIVersion: 0
+# AARCH64-FBSD-NEXT:     Unused: (00 00 00 00 00 00 00)
+# AARCH64-FBSD-NEXT:   }
+# AARCH64-FBSD-NEXT:   Type: Executable (0x2)
+# AARCH64-FBSD-NEXT:   Machine: EM_AARCH64 (0xB7)
+# AARCH64-FBSD-NEXT:   Version: 1
+# AARCH64-FBSD-NEXT:   Entry:
+# AARCH64-FBSD-NEXT:   ProgramHeaderOffset: 0x40
+# AARCH64-FBSD-NEXT:   SectionHeaderOffset:
+# AARCH64-FBSD-NEXT:   Flags [ (0x0)
+# AARCH64-FBSD-NEXT:   ]
+
 .globl _start
 _start:

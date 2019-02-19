@@ -1,9 +1,8 @@
 //===- InputFiles.cpp -----------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -127,6 +126,13 @@ void ObjFile::parse() {
   initializeSymbols();
 }
 
+const coff_section* ObjFile::getSection(uint32_t I) {
+  const coff_section *Sec;
+  if (auto EC = COFFObj->getSection(I, Sec))
+    fatal("getSection failed: #" + Twine(I) + ": " + EC.message());
+  return Sec;
+}
+
 // We set SectionChunk pointers in the SparseChunks vector to this value
 // temporarily to mark comdat sections as having an unknown resolution. As we
 // walk the object file's symbol table, once we visit either a leader symbol or
@@ -140,10 +146,7 @@ void ObjFile::initializeChunks() {
   Chunks.reserve(NumSections);
   SparseChunks.resize(NumSections + 1);
   for (uint32_t I = 1; I < NumSections + 1; ++I) {
-    const coff_section *Sec;
-    if (auto EC = COFFObj->getSection(I, Sec))
-      fatal("getSection failed: #" + Twine(I) + ": " + EC.message());
-
+    const coff_section *Sec = getSection(I);
     if (Sec->Characteristics & IMAGE_SCN_LNK_COMDAT)
       SparseChunks[I] = PendingComdat;
     else
@@ -154,10 +157,9 @@ void ObjFile::initializeChunks() {
 SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
                                    const coff_aux_section_definition *Def,
                                    StringRef LeaderName) {
-  const coff_section *Sec;
+  const coff_section *Sec = getSection(SectionNumber);
+
   StringRef Name;
-  if (auto EC = COFFObj->getSection(SectionNumber, Sec))
-    fatal("getSection failed: #" + Twine(SectionNumber) + ": " + EC.message());
   if (auto EC = COFFObj->getSectionName(Sec, Name))
     fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
           EC.message());
@@ -181,8 +183,8 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   // of the linker; they are just a data section containing relocations.
   // We can just link them to complete debug info.
   //
-  // CodeView needs a linker support. We need to interpret and debug
-  // info, and then write it to a separate .pdb file.
+  // CodeView needs linker support. We need to interpret debug info,
+  // and then write it to a separate .pdb file.
 
   // Ignore DWARF debug info unless /debug is given.
   if (!Config->Debug && Name.startswith(".debug_"))
@@ -223,22 +225,38 @@ void ObjFile::readAssociativeDefinition(
 
 void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
                                         const coff_aux_section_definition *Def,
-                                        uint32_t ParentSection) {
-  SectionChunk *Parent = SparseChunks[ParentSection];
+                                        uint32_t ParentIndex) {
+  SectionChunk *Parent = SparseChunks[ParentIndex];
+  int32_t SectionNumber = Sym.getSectionNumber();
 
-  // If the parent is pending, it probably means that its section definition
-  // appears after us in the symbol table. Leave the associated section as
-  // pending; we will handle it during the second pass in initializeSymbols().
-  if (Parent == PendingComdat)
+  auto Diag = [&]() {
+    StringRef Name, ParentName;
+    COFFObj->getSymbolName(Sym, Name);
+
+    const coff_section *ParentSec = getSection(ParentIndex);
+    COFFObj->getSectionName(ParentSec, ParentName);
+    error(toString(this) + ": associative comdat " + Name + " (sec " +
+          Twine(SectionNumber) + ") has invalid reference to section " +
+          ParentName + " (sec " + Twine(ParentIndex) + ")");
+  };
+
+  if (Parent == PendingComdat) {
+    // This can happen if an associative comdat refers to another associative
+    // comdat that appears after it (invalid per COFF spec) or to a section
+    // without any symbols.
+    Diag();
     return;
+  }
 
   // Check whether the parent is prevailing. If it is, so are we, and we read
   // the section; otherwise mark it as discarded.
-  int32_t SectionNumber = Sym.getSectionNumber();
   if (Parent) {
-    SparseChunks[SectionNumber] = readSection(SectionNumber, Def, "");
-    if (SparseChunks[SectionNumber])
-      Parent->addAssociative(SparseChunks[SectionNumber]);
+    SectionChunk *C = readSection(SectionNumber, Def, "");
+    SparseChunks[SectionNumber] = C;
+    if (C) {
+      C->Selection = IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+      Parent->addAssociative(C);
+    }
   } else {
     SparseChunks[SectionNumber] = nullptr;
   }
@@ -290,7 +308,7 @@ Symbol *ObjFile::createRegular(COFFSymbolRef Sym) {
     return Symtab->addUndefined(Name, this, false);
   }
   if (SC)
-    return make<DefinedRegular>(this, /*Name*/ "", false,
+    return make<DefinedRegular>(this, /*Name*/ "", /*IsCOMDAT*/ false,
                                 /*IsExternal*/ false, Sym.getGeneric(), SC);
   return nullptr;
 }
@@ -326,8 +344,7 @@ void ObjFile::initializeSymbols() {
       // was pending at the point when the symbol was read. This can happen in
       // two cases:
       // 1) section definition symbol for a comdat leader;
-      // 2) symbol belongs to a comdat section associated with a section whose
-      //    section definition symbol appears later in the symbol table.
+      // 2) symbol belongs to a comdat section associated with another section.
       // In both of these cases, we can expect the section to be resolved by
       // the time we finish visiting the remaining symbols in the symbol
       // table. So we postpone the handling of this symbol until that time.
@@ -338,7 +355,7 @@ void ObjFile::initializeSymbols() {
 
   for (uint32_t I : PendingIndexes) {
     COFFSymbolRef Sym = check(COFFObj->getSymbol(I));
-    if (auto *Def = Sym.getSectionDefinition()) {
+    if (const coff_aux_section_definition *Def = Sym.getSectionDefinition()) {
       if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         readAssociativeDefinition(Sym, Def);
       else if (Config->MinGW)
@@ -413,23 +430,143 @@ Optional<Symbol *> ObjFile::createDefined(
     fatal(toString(this) + ": " + GetName() +
           " should not refer to non-existent section " + Twine(SectionNumber));
 
-  // Handle comdat leader symbols.
+  // Comdat handling.
+  // A comdat symbol consists of two symbol table entries.
+  // The first symbol entry has the name of the section (e.g. .text), fixed
+  // values for the other fields, and one auxilliary record.
+  // The second symbol entry has the name of the comdat symbol, called the
+  // "comdat leader".
+  // When this function is called for the first symbol entry of a comdat,
+  // it sets ComdatDefs and returns None, and when it's called for the second
+  // symbol entry it reads ComdatDefs and then sets it back to nullptr.
+
+  // Handle comdat leader.
   if (const coff_aux_section_definition *Def = ComdatDefs[SectionNumber]) {
     ComdatDefs[SectionNumber] = nullptr;
-    Symbol *Leader;
+    DefinedRegular *Leader;
+
     if (Sym.isExternal()) {
       std::tie(Leader, Prevailing) =
           Symtab->addComdat(this, GetName(), Sym.getGeneric());
     } else {
-      Leader = make<DefinedRegular>(this, /*Name*/ "", false,
+      Leader = make<DefinedRegular>(this, /*Name*/ "", /*IsCOMDAT*/ false,
                                     /*IsExternal*/ false, Sym.getGeneric());
       Prevailing = true;
+    }
+
+    if (Def->Selection < (int)IMAGE_COMDAT_SELECT_NODUPLICATES ||
+        // Intentionally ends at IMAGE_COMDAT_SELECT_LARGEST: link.exe
+        // doesn't understand IMAGE_COMDAT_SELECT_NEWEST either.
+        Def->Selection > (int)IMAGE_COMDAT_SELECT_LARGEST) {
+      fatal("unknown comdat type " + std::to_string((int)Def->Selection) +
+            " for " + GetName() + " in " + toString(this));
+    }
+    COMDATType Selection = (COMDATType)Def->Selection;
+
+    if (!Prevailing && Leader->isCOMDAT()) {
+      // There's already an existing comdat for this symbol: `Leader`.
+      // Use the comdats's selection field to determine if the new
+      // symbol in `Sym` should be discarded, produce a duplicate symbol
+      // error, etc.
+
+      SectionChunk *LeaderChunk = nullptr;
+      COMDATType LeaderSelection = IMAGE_COMDAT_SELECT_ANY;
+
+      if (Leader->Data) {
+        LeaderChunk = Leader->getChunk();
+        LeaderSelection = LeaderChunk->Selection;
+      } else {
+        // FIXME: comdats from LTO files don't know their selection; treat them
+        // as "any".
+        Selection = LeaderSelection;
+      }
+
+      if ((Selection == IMAGE_COMDAT_SELECT_ANY &&
+           LeaderSelection == IMAGE_COMDAT_SELECT_LARGEST) ||
+          (Selection == IMAGE_COMDAT_SELECT_LARGEST &&
+           LeaderSelection == IMAGE_COMDAT_SELECT_ANY)) {
+        // cl.exe picks "any" for vftables when building with /GR- and
+        // "largest" when building with /GR. To be able to link object files
+        // compiled with each flag, "any" and "largest" are merged as "largest".
+        LeaderSelection = Selection = IMAGE_COMDAT_SELECT_LARGEST;
+      }
+
+      // Other than that, comdat selections must match.  This is a bit more
+      // strict than link.exe which allows merging "any" and "largest" if "any"
+      // is the first symbol the linker sees, and it allows merging "largest"
+      // with everything (!) if "largest" is the first symbol the linker sees.
+      // Making this symmetric independent of which selection is seen first
+      // seems better though.
+      // (This behavior matches ModuleLinker::getComdatResult().)
+      if (Selection != LeaderSelection) {
+        std::string Msg = ("conflicting comdat type for " + toString(*Leader) +
+                           ": " + Twine((int)LeaderSelection) + " in " +
+                           toString(Leader->getFile()) + " and " +
+                           Twine((int)Selection) + " in " + toString(this))
+                              .str();
+        if (Config->ForceMultiple)
+          warn(Msg);
+        else
+          error(Msg);
+      }
+
+      switch (Selection) {
+      case IMAGE_COMDAT_SELECT_NODUPLICATES:
+        Symtab->reportDuplicate(Leader, this);
+        break;
+
+      case IMAGE_COMDAT_SELECT_ANY:
+        // Nothing to do.
+        break;
+
+      case IMAGE_COMDAT_SELECT_SAME_SIZE:
+        if (LeaderChunk->getSize() != getSection(SectionNumber)->SizeOfRawData)
+          Symtab->reportDuplicate(Leader, this);
+        break;
+
+      case IMAGE_COMDAT_SELECT_EXACT_MATCH: {
+        SectionChunk NewChunk(this, getSection(SectionNumber));
+        // link.exe only compares section contents here and doesn't complain
+        // if the two comdat sections have e.g. different alignment.
+        // Match that.
+        if (LeaderChunk->getContents() != NewChunk.getContents())
+          Symtab->reportDuplicate(Leader, this);
+        break;
+      }
+
+      case IMAGE_COMDAT_SELECT_ASSOCIATIVE:
+        // createDefined() is never called for IMAGE_COMDAT_SELECT_ASSOCIATIVE.
+        // (This means lld-link doesn't produce duplicate symbol errors for
+        // associative comdats while link.exe does, but associate comdats
+        // are never extern in practice.)
+        llvm_unreachable("createDefined not called for associative comdats");
+
+      case IMAGE_COMDAT_SELECT_LARGEST:
+        if (LeaderChunk->getSize() < getSection(SectionNumber)->SizeOfRawData) {
+          // Replace the existing comdat symbol with the new one.
+          // FIXME: This is incorrect: With /opt:noref, the previous sections
+          // make it into the final executable as well. Correct handling would
+          // be to undo reading of the whole old section that's being replaced,
+          // or doing one pass that determines what the final largest comdat
+          // is for all IMAGE_COMDAT_SELECT_LARGEST comdats and then reading
+          // only the largest one.
+          replaceSymbol<DefinedRegular>(
+              Leader, this, GetName(), /*IsCOMDAT*/ true,
+              /*IsExternal*/ true, Sym.getGeneric(), nullptr);
+          Prevailing = true;
+        }
+        break;
+
+      case IMAGE_COMDAT_SELECT_NEWEST:
+        llvm_unreachable("should have been rejected earlier");
+      }
     }
 
     if (Prevailing) {
       SectionChunk *C = readSection(SectionNumber, Def, GetName());
       SparseChunks[SectionNumber] = C;
       C->Sym = cast<DefinedRegular>(Leader);
+      C->Selection = Selection;
       cast<DefinedRegular>(Leader)->Data = &C->Repl;
     } else {
       SparseChunks[SectionNumber] = nullptr;
@@ -437,20 +574,16 @@ Optional<Symbol *> ObjFile::createDefined(
     return Leader;
   }
 
-  // Read associative section definitions and prepare to handle the comdat
-  // leader symbol by setting the section's ComdatDefs pointer if we encounter a
-  // non-associative comdat.
+  // Prepare to handle the comdat leader symbol by setting the section's
+  // ComdatDefs pointer if we encounter a non-associative comdat.
   if (SparseChunks[SectionNumber] == PendingComdat) {
-    if (auto *Def = Sym.getSectionDefinition()) {
-      if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
-        readAssociativeDefinition(Sym, Def);
-      else
+    if (const coff_aux_section_definition *Def = Sym.getSectionDefinition()) {
+      if (Def->Selection != IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         ComdatDefs[SectionNumber] = Def;
     }
+    return None;
   }
 
-  if (SparseChunks[SectionNumber] == PendingComdat)
-    return None;
   return createRegular(Sym);
 }
 
@@ -522,6 +655,8 @@ void BitcodeFile::parse() {
       MB.getBuffer(), Saver.save(ParentName + MB.getBufferIdentifier()))));
   std::vector<std::pair<Symbol *, bool>> Comdat(Obj->getComdatTable().size());
   for (size_t I = 0; I != Obj->getComdatTable().size(); ++I)
+    // FIXME: lto::InputFile doesn't keep enough data to do correct comdat
+    // selection handling.
     Comdat[I] = Symtab->addComdat(this, Saver.save(Obj->getComdatTable()[I]));
   for (const lto::InputFile::Symbol &ObjSym : Obj->symbols()) {
     StringRef SymName = Saver.save(ObjSym.getName());

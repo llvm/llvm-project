@@ -1,9 +1,8 @@
 //===- Driver.cpp ---------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -298,22 +297,31 @@ static const uint8_t UnreachableFn[] = {
 // the call instruction that passes Wasm validation.
 static void handleWeakUndefines() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (!Sym->isUndefined() || !Sym->isWeak())
-      continue;
-    auto *FuncSym = dyn_cast<FunctionSymbol>(Sym);
-    if (!FuncSym)
+    if (!Sym->isUndefWeak())
       continue;
 
-    // It is possible for undefined functions not to have a signature (eg. if
-    // added via "--undefined"), but weak undefined ones do have a signature.
-    assert(FuncSym->Signature);
-    const WasmSignature &Sig = *FuncSym->Signature;
+    const WasmSignature *Sig = nullptr;
+
+    if (auto *FuncSym = dyn_cast<FunctionSymbol>(Sym)) {
+      // It is possible for undefined functions not to have a signature (eg. if
+      // added via "--undefined"), but weak undefined ones do have a signature.
+      assert(FuncSym->Signature);
+      Sig = FuncSym->Signature;
+    } else if (auto *LazySym = dyn_cast<LazySymbol>(Sym)) {
+      // Lazy symbols may not be functions and therefore can have a null
+      // signature.
+      Sig = LazySym->Signature;
+    }
+
+    if (!Sig)
+      continue;
+
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
     std::string SymName = toString(*Sym);
     StringRef DebugName = Saver.save("undefined function " + SymName);
-    auto *Func = make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
+    auto *Func = make<SyntheticFunction>(*Sig, Sym->getName(), DebugName);
     Func->setBody(UnreachableFn);
     // Ensure it compares equal to the null pointer, and so that table relocs
     // don't pull in the stub body (only call-operand relocs should do that).
@@ -579,9 +587,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
-    // Add synthetic dummies for weak undefined functions.
-    handleWeakUndefines();
-
     if (!Config->Shared && !Config->Entry.empty()) {
       EntrySym = handleUndefined(Config->Entry);
       if (EntrySym && EntrySym->isDefined())
@@ -604,6 +609,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Symtab->addCombinedLTOObject();
   if (errorCount())
     return;
+
+  // Add synthetic dummies for weak undefined functions.  Must happen
+  // after LTO otherwise functions may not yet have signatures.
+  if (!Config->Relocatable)
+    handleWeakUndefines();
 
   if (EntrySym)
     EntrySym->setHidden(false);

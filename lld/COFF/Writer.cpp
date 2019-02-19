@@ -1,9 +1,8 @@
 //===- Writer.cpp ---------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -157,6 +156,33 @@ public:
   mutable codeview::DebugInfo *BuildId = nullptr;
 };
 
+// PartialSection represents a group of chunks that contribute to an
+// OutputSection. Collating a collection of PartialSections of same name and
+// characteristics constitutes the OutputSection.
+class PartialSection {
+public:
+  PartialSection(StringRef N, uint32_t Chars)
+      : Name(N), Characteristics(Chars) {}
+  StringRef Name;
+  unsigned Characteristics;
+  std::vector<Chunk *> Chunks;
+
+  bool operator<(const PartialSection &Other) const {
+    int C = Name.compare(Other.Name);
+    if (C == 1)
+      return false;
+    if (C == 0)
+      return Characteristics < Other.Characteristics;
+    return true;
+  }
+};
+
+struct PartialLess {
+  bool operator()(PartialSection *L, PartialSection *R) const {
+    return *L < *R;
+  }
+};
+
 // The writer writes a SymbolTable result to a file.
 class Writer {
 public:
@@ -168,8 +194,7 @@ private:
   void createMiscChunks();
   void createImportTables();
   void appendImportThunks();
-  void locateImportTables(
-      std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> &Map);
+  void locateImportTables();
   void createExportTable();
   void mergeSections();
   void readRelocTargets();
@@ -194,6 +219,10 @@ private:
   void writeBuildId();
   void sortExceptionTable();
   void sortCRTSectionChunks(std::vector<Chunk *> &Chunks);
+  void addSyntheticIdata();
+  bool fixGnuImportChunks();
+  PartialSection *createPartialSection(StringRef Name, uint32_t OutChars);
+  PartialSection *findPartialSection(StringRef Name, uint32_t OutChars);
 
   llvm::Optional<coff_symbol16> createSymbol(Defined *D);
   size_t addEntryToStringTable(StringRef Str);
@@ -203,9 +232,9 @@ private:
   void addBaserelBlocks(std::vector<Baserel> &V);
 
   uint32_t getSizeOfInitializedData();
-  std::map<StringRef, std::vector<DefinedImportData *>> binImports();
 
   std::unique_ptr<FileOutputBuffer> &Buffer;
+  std::set<PartialSection *, PartialLess> PartialSections;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
   std::vector<llvm::object::coff_symbol16> OutputSymtab;
@@ -568,34 +597,30 @@ static void sortBySectionOrder(std::vector<Chunk *> &Chunks) {
 // be formed correctly, the section chunks within each .idata$* section need
 // to be grouped by library, and sorted alphabetically within each library
 // (which makes sure the header comes first and the trailer last).
-static bool fixGnuImportChunks(
-    std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> &Map) {
+bool Writer::fixGnuImportChunks() {
   uint32_t RDATA = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
 
   // Make sure all .idata$* section chunks are mapped as RDATA in order to
   // be sorted into the same sections as our own synthesized .idata chunks.
-  for (auto &Pair : Map) {
-    StringRef SectionName = Pair.first.first;
-    uint32_t OutChars = Pair.first.second;
-    if (!SectionName.startswith(".idata"))
+  for (PartialSection *PSec : PartialSections) {
+    if (!PSec->Name.startswith(".idata"))
       continue;
-    if (OutChars == RDATA)
+    if (PSec->Characteristics == RDATA)
       continue;
-    std::vector<Chunk *> &SrcVect = Pair.second;
-    std::vector<Chunk *> &DestVect = Map[{SectionName, RDATA}];
-    DestVect.insert(DestVect.end(), SrcVect.begin(), SrcVect.end());
-    SrcVect.clear();
+    PartialSection *RDataSec = createPartialSection(PSec->Name, RDATA);
+    RDataSec->Chunks.insert(RDataSec->Chunks.end(), PSec->Chunks.begin(),
+                            PSec->Chunks.end());
+    PSec->Chunks.clear();
   }
 
   bool HasIdata = false;
   // Sort all .idata$* chunks, grouping chunks from the same library,
   // with alphabetical ordering of the object fils within a library.
-  for (auto &Pair : Map) {
-    StringRef SectionName = Pair.first.first;
-    if (!SectionName.startswith(".idata"))
+  for (PartialSection *PSec : PartialSections) {
+    if (!PSec->Name.startswith(".idata"))
       continue;
 
-    std::vector<Chunk *> &Chunks = Pair.second;
+    std::vector<Chunk *> &Chunks = PSec->Chunks;
     if (!Chunks.empty())
       HasIdata = true;
     std::stable_sort(Chunks.begin(), Chunks.end(), [&](Chunk *S, Chunk *T) {
@@ -621,9 +646,7 @@ static bool fixGnuImportChunks(
 
 // Add generated idata chunks, for imported symbols and DLLs, and a
 // terminator in .idata$2.
-static void addSyntheticIdata(
-    IdataContents &Idata,
-    std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> &Map) {
+void Writer::addSyntheticIdata() {
   uint32_t RDATA = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
   Idata.create();
 
@@ -631,8 +654,8 @@ static void addSyntheticIdata(
   // chunks from other linked in object files to be grouped together.
   // See Microsoft PE/COFF spec 5.4 for details.
   auto Add = [&](StringRef N, std::vector<Chunk *> &V) {
-    std::vector<Chunk *> &DestVect = Map[{N, RDATA}];
-    DestVect.insert(DestVect.end(), V.begin(), V.end());
+    PartialSection *PSec = createPartialSection(N, RDATA);
+    PSec->Chunks.insert(PSec->Chunks.end(), V.begin(), V.end());
   };
 
   // The loader assumes a specific order of data.
@@ -646,20 +669,22 @@ static void addSyntheticIdata(
 
 // Locate the first Chunk and size of the import directory list and the
 // IAT.
-void Writer::locateImportTables(
-    std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> &Map) {
+void Writer::locateImportTables() {
   uint32_t RDATA = IMAGE_SCN_CNT_INITIALIZED_DATA | IMAGE_SCN_MEM_READ;
-  std::vector<Chunk *> &ImportTables = Map[{".idata$2", RDATA}];
-  if (!ImportTables.empty())
-    ImportTableStart = ImportTables.front();
-  for (Chunk *C : ImportTables)
-    ImportTableSize += C->getSize();
 
-  std::vector<Chunk *> &IAT = Map[{".idata$5", RDATA}];
-  if (!IAT.empty())
-    IATStart = IAT.front();
-  for (Chunk *C : IAT)
-    IATSize += C->getSize();
+  if (PartialSection *ImportDirs = findPartialSection(".idata$2", RDATA)) {
+    if (!ImportDirs->Chunks.empty())
+      ImportTableStart = ImportDirs->Chunks.front();
+    for (Chunk *C : ImportDirs->Chunks)
+      ImportTableSize += C->getSize();
+  }
+
+  if (PartialSection *ImportAddresses = findPartialSection(".idata$5", RDATA)) {
+    if (!ImportAddresses->Chunks.empty())
+      IATStart = ImportAddresses->Chunks.front();
+    for (Chunk *C : ImportAddresses->Chunks)
+      IATSize += C->getSize();
+  }
 }
 
 // Create output section objects and add them to OutputSections.
@@ -699,7 +724,6 @@ void Writer::createSections() {
   DtorsSec = CreateSection(".dtors", DATA | R | W);
 
   // Then bin chunks by name and output characteristics.
-  std::map<std::pair<StringRef, uint32_t>, std::vector<Chunk *>> Map;
   for (Chunk *C : Symtab->getChunks()) {
     auto *SC = dyn_cast<SectionChunk>(C);
     if (SC && !SC->Live) {
@@ -707,33 +731,35 @@ void Writer::createSections() {
         SC->printDiscardedMessage();
       continue;
     }
-    Map[{C->getSectionName(), C->getOutputCharacteristics()}].push_back(C);
+    PartialSection *PSec = createPartialSection(C->getSectionName(),
+                                                C->getOutputCharacteristics());
+    PSec->Chunks.push_back(C);
   }
 
   // Even in non MinGW cases, we might need to link against GNU import
   // libraries.
-  bool HasIdata = fixGnuImportChunks(Map);
+  bool HasIdata = fixGnuImportChunks();
   if (!Idata.empty())
     HasIdata = true;
 
   if (HasIdata)
-    addSyntheticIdata(Idata, Map);
+    addSyntheticIdata();
 
   // Process an /order option.
   if (!Config->Order.empty())
-    for (auto &Pair : Map)
-      sortBySectionOrder(Pair.second);
+    for (PartialSection *PSec : PartialSections)
+      sortBySectionOrder(PSec->Chunks);
 
   if (HasIdata)
-    locateImportTables(Map);
+    locateImportTables();
 
   // Then create an OutputSection for each section.
   // '$' and all following characters in input section names are
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
-  for (auto &Pair : Map) {
-    StringRef Name = getOutputSectionName(Pair.first.first);
-    uint32_t OutChars = Pair.first.second;
+  for (PartialSection *PSec : PartialSections) {
+    StringRef Name = getOutputSectionName(PSec->Name);
+    uint32_t OutChars = PSec->Characteristics;
 
     if (Name == ".CRT") {
       // In link.exe, there is a special case for the I386 target where .CRT
@@ -742,14 +768,13 @@ void Writer::createSections() {
       // special case for all architectures.
       OutChars = DATA | R;
 
-      log("Processing section " + Pair.first.first + " -> " + Name);
+      log("Processing section " + PSec->Name + " -> " + Name);
 
-      sortCRTSectionChunks(Pair.second);
+      sortCRTSectionChunks(PSec->Chunks);
     }
 
     OutputSection *Sec = CreateSection(Name, OutChars);
-    std::vector<Chunk *> &Chunks = Pair.second;
-    for (Chunk *C : Chunks)
+    for (Chunk *C : PSec->Chunks)
       Sec->addChunk(C);
   }
 
@@ -1716,4 +1741,23 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &V) {
   if (I == J)
     return;
   RelocSec->addChunk(make<BaserelChunk>(Page, &V[I], &V[0] + J));
+}
+
+PartialSection *Writer::createPartialSection(StringRef Name,
+                                             uint32_t OutChars) {
+  PartialSection *PSec = findPartialSection(Name, OutChars);
+  if (PSec)
+    return PSec;
+  PSec = make<PartialSection>(Name, OutChars);
+  PartialSections.insert(PSec);
+  return PSec;
+}
+
+PartialSection *Writer::findPartialSection(StringRef Name, uint32_t OutChars) {
+  auto It = find_if(PartialSections, [&](PartialSection *P) {
+    return P->Name == Name && P->Characteristics == OutChars;
+  });
+  if (It != PartialSections.end())
+    return *It;
+  return nullptr;
 }

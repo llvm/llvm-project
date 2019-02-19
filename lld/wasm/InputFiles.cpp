@@ -1,9 +1,8 @@
 //===- InputFiles.cpp -----------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -240,6 +239,8 @@ void ObjFile::parse() {
       CustomSections.emplace_back(make<InputSection>(Section, this));
       CustomSections.back()->setRelocations(Section.Relocations);
       CustomSectionsByIndex[SectionIndex] = CustomSections.back();
+      if (Section.Name == "producers")
+        ProducersSection = &Section;
     }
     SectionIndex++;
   }
@@ -377,7 +378,8 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
 
   switch (Sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION:
-    return Symtab->addUndefinedFunction(Name, Flags, this, Sym.Signature);
+    return Symtab->addUndefinedFunction(Name, Sym.Info.Module, Flags, this,
+                                        Sym.Signature);
   case WASM_SYMBOL_TYPE_DATA:
     return Symtab->addUndefinedData(Name, Flags, this);
   case WASM_SYMBOL_TYPE_GLOBAL:
@@ -445,7 +447,7 @@ static Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &ObjSym,
 
   if (ObjSym.isUndefined()) {
     if (ObjSym.isExecutable())
-      return Symtab->addUndefinedFunction(Name, Flags, &F, nullptr);
+      return Symtab->addUndefinedFunction(Name, kDefaultModule, Flags, &F, nullptr);
     return Symtab->addUndefinedData(Name, Flags, &F);
   }
 
