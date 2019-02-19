@@ -3931,12 +3931,10 @@ public:
                 m_debugger.GetSourceManager().GetFile(m_sc.line_entry.file);
             if (m_file_sp) {
               const size_t num_lines = m_file_sp->GetNumLines();
-              int m_line_width = 1;
+              m_line_width = 1;
               for (size_t n = num_lines; n >= 10; n = n / 10)
                 ++m_line_width;
 
-              snprintf(m_line_format, sizeof(m_line_format), " %%%iu ",
-                       m_line_width);
               if (num_lines < num_visible_lines ||
                   m_selected_line < num_visible_lines)
                 m_first_visible_line = 0;
@@ -4053,7 +4051,7 @@ public:
           if (bp_attr)
             window.AttributeOn(bp_attr);
 
-          window.Printf(m_line_format, curr_line + 1);
+          window.Printf(" %*u ", m_line_width, curr_line + 1);
 
           if (bp_attr)
             window.AttributeOff(bp_attr);
@@ -4479,7 +4477,6 @@ protected:
   AddressRange m_disassembly_range;
   StreamString m_title;
   lldb::user_id_t m_tid;
-  char m_line_format[8];
   int m_line_width;
   uint32_t m_selected_line; // The selected line
   uint32_t m_pc_line;       // The line with the PC
