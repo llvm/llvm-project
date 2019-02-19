@@ -20,6 +20,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
+using testing::_;
 using testing::ElementsAre;
 using testing::Field;
 using testing::IsEmpty;
@@ -369,6 +370,8 @@ TEST(IncludeFixerTest, Typo) {
 $insert[[]]namespace ns {
 void foo() {
   $unqualified1[[X]] x;
+  // No fix if the unresolved type is used as specifier. (ns::)X::Nested will be
+  // considered the unresolved type.
   $unqualified2[[X]]::Nested n;
 }
 }
@@ -391,10 +394,7 @@ void bar() {
           AllOf(Diag(Test.range("unqualified1"), "unknown type name 'X'"),
                 WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
                             "Add include \"x.h\" for symbol ns::X"))),
-          AllOf(Diag(Test.range("unqualified2"),
-                     "use of undeclared identifier 'X'"),
-                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
-                            "Add include \"x.h\" for symbol ns::X"))),
+          Diag(Test.range("unqualified2"), "use of undeclared identifier 'X'"),
           AllOf(Diag(Test.range("qualified1"),
                      "no type named 'X' in namespace 'ns'"),
                 WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
@@ -485,6 +485,88 @@ void bar(X *x) {
     EXPECT_EQ(D.Fixes[0].Message,
               std::string("Add include \"a.h\" for symbol X"));
   }
+}
+
+TEST(IncludeFixerTest, UnresolvedNameAsSpecifier) {
+  Annotations Test(R"cpp(
+$insert[[]]namespace ns {
+}
+void g() {  ns::$[[scope]]::X_Y();  }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"ns::scope::X_Y", "unittest:///x.h", "\"x.h\""});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(AllOf(
+          Diag(Test.range(), "no member named 'scope' in namespace 'ns'"),
+          WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                      "Add include \"x.h\" for symbol ns::scope::X_Y")))));
+}
+
+TEST(IncludeFixerTest, UnresolvedSpecifierWithSemaCorrection) {
+  Annotations Test(R"cpp(
+$insert[[]]namespace clang {
+void f() {
+  // "clangd::" will be corrected to "clang::" by Sema.
+  $q1[[clangd]]::$x[[X]] x;
+  $q2[[clangd]]::$ns[[ns]]::Y y;
+}
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      {SymbolWithHeader{"clang::clangd::X", "unittest:///x.h", "\"x.h\""},
+       SymbolWithHeader{"clang::clangd::ns::Y", "unittest:///y.h", "\"y.h\""}});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(
+          AllOf(
+              Diag(Test.range("q1"), "use of undeclared identifier 'clangd'; "
+                                     "did you mean 'clang'?"),
+              WithFix(_, // change clangd to clang
+                      Fix(Test.range("insert"), "#include \"x.h\"\n",
+                          "Add include \"x.h\" for symbol clang::clangd::X"))),
+          AllOf(
+              Diag(Test.range("x"), "no type named 'X' in namespace 'clang'"),
+              WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                          "Add include \"x.h\" for symbol clang::clangd::X"))),
+          AllOf(
+              Diag(Test.range("q2"), "use of undeclared identifier 'clangd'; "
+                                     "did you mean 'clang'?"),
+              WithFix(
+                  _, // change clangd to clangd
+                  Fix(Test.range("insert"), "#include \"y.h\"\n",
+                      "Add include \"y.h\" for symbol clang::clangd::ns::Y"))),
+          AllOf(Diag(Test.range("ns"),
+                     "no member named 'ns' in namespace 'clang'"),
+                WithFix(Fix(
+                    Test.range("insert"), "#include \"y.h\"\n",
+                    "Add include \"y.h\" for symbol clang::clangd::ns::Y")))));
+}
+
+TEST(IncludeFixerTest, SpecifiedScopeIsNamespaceAlias) {
+  Annotations Test(R"cpp(
+$insert[[]]namespace a {}
+namespace b = a;
+namespace c {
+  b::$[[X]] x;
+}
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  auto Index = buildIndexWithSymbol(
+      SymbolWithHeader{"a::X", "unittest:///x.h", "\"x.h\""});
+  TU.ExternalIndex = Index.get();
+
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              UnorderedElementsAre(AllOf(
+                  Diag(Test.range(), "no type named 'X' in namespace 'a'"),
+                  WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                              "Add include \"x.h\" for symbol a::X")))));
 }
 
 } // namespace
