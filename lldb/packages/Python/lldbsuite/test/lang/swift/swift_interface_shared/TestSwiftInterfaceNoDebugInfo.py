@@ -10,10 +10,10 @@
 #
 # -----------------------------------------------------------------------------
 """
-Test that we load and handle modules that only have textual .swiftinterface
-files -- i.e. no associated .swiftmodule file -- and no debug info. The module
-loader should generate the .swiftmodule for any .swiftinterface it finds unless
-it is already in the module cache.
+Test that we load and handle swift modules that only have textual
+.swiftinterface files -- i.e. no associated .swiftmodule file -- and no debug
+info. The module loader should generate the .swiftmodule for any
+.swiftinterface it finds unless it is already in the module cache.
 """
 
 import commands
@@ -40,28 +40,26 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
 
     def do_test(self):
         # The custom module cache location
-        mod_cache = self.getBuildArtifact("MCP")
+        swift_mod_cache = self.getBuildArtifact("MCP")
 
         # Clear the module cache (populated by the Makefile build)
-        shutil.rmtree(mod_cache)
-        self.assertFalse(os.path.isdir(mod_cache),
+        shutil.rmtree(swift_mod_cache)
+        self.assertFalse(os.path.isdir(swift_mod_cache),
                          "module cache should not exist")
 
         # Update the settings to use the custom module cache location
-        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % mod_cache)
+        self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % swift_mod_cache)
 
         # Set a breakpoint in and launch the main executable
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                "break here", self.main_source_spec,
+                "break here", lldb.SBFileSpec(self.main_source),
                 exe_name="main")
 
         self.frame = thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
 
         # Check we are able to access the public fields of variables whose
         # types are from the .swiftinterface-only dylibs
@@ -79,12 +77,12 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         lldbutil.check_expression(self, self.frame, "y.magnitudeSquared", "404", use_summary=False)
         lldbutil.check_expression(self, self.frame, "MyPoint(x: 1, y: 2).magnitudeSquared", "5", use_summary=False)
 
-        # Check the module cache was populated with the .swiftmodule files of
-        # the loaded modules
-        self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
-        a_modules = glob.glob(os.path.join(mod_cache, 'AA-*.swiftmodule'))
-        b_modules = glob.glob(os.path.join(mod_cache, 'BB-*.swiftmodule'))
-        c_modules = glob.glob(os.path.join(mod_cache, 'CC-*.swiftmodule'))
+        # Check the swift module cache was populated with the .swiftmodule
+        # files of the loaded modules
+        self.assertTrue(os.path.isdir(swift_mod_cache), "module cache exists")
+        a_modules = glob.glob(os.path.join(swift_mod_cache, 'AA-*.swiftmodule'))
+        b_modules = glob.glob(os.path.join(swift_mod_cache, 'BB-*.swiftmodule'))
+        c_modules = glob.glob(os.path.join(swift_mod_cache, 'CC-*.swiftmodule'))
         self.assertEqual(len(a_modules), 1)
         self.assertEqual(len(b_modules), 1)
         self.assertEqual(len(c_modules), 0)
@@ -104,9 +102,9 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
         # Check we still have a single .swiftmodule in the cache for A and B
         # and that there is now one for C too
-        a_modules = glob.glob(os.path.join(mod_cache, 'AA-*.swiftmodule'))
-        b_modules = glob.glob(os.path.join(mod_cache, 'BB-*.swiftmodule'))
-        c_modules = glob.glob(os.path.join(mod_cache, 'CC-*.swiftmodule'))
+        a_modules = glob.glob(os.path.join(swift_mod_cache, 'AA-*.swiftmodule'))
+        b_modules = glob.glob(os.path.join(swift_mod_cache, 'BB-*.swiftmodule'))
+        c_modules = glob.glob(os.path.join(swift_mod_cache, 'CC-*.swiftmodule'))
         self.assertEqual(len(a_modules), 1, "unexpected number of swiftmodules for A.swift")
         self.assertEqual(len(b_modules), 1, "unexpected number of swiftmodules for B.swift")
         self.assertEqual(len(c_modules), 1, "unexpected number of swiftmodules for C.swift")
