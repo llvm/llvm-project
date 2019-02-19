@@ -93,10 +93,8 @@
 // Include alloca() declaration.
 #if KMP_OS_WINDOWS
 #include <malloc.h> // Windows* OS: _alloca() declared in "malloc.h".
-#if KMP_MSVC_COMPAT
 #define alloca _alloca // Allow to use alloca() with no underscore.
-#endif
-#elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD
+#elif KMP_OS_FREEBSD || KMP_OS_NETBSD
 // Declared in "stdlib.h".
 #elif KMP_OS_UNIX
 #include <alloca.h> // Linux* OS and OS X*: alloc() declared in "alloca".

@@ -29,7 +29,6 @@ public:
 } // namespace
 
 PPC::PPC() {
-  NoneRel = R_PPC_NONE;
   GotBaseSymOff = 0x8000;
   GotBaseSymInGotPlt = false;
 }
@@ -37,7 +36,6 @@ PPC::PPC() {
 RelExpr PPC::getRelExpr(RelType Type, const Symbol &S,
                         const uint8_t *Loc) const {
   switch (Type) {
-  case R_PPC_REL14:
   case R_PPC_REL24:
   case R_PPC_REL32:
     return R_PC;
@@ -62,9 +60,6 @@ void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC_ADDR32:
   case R_PPC_REL32:
     write32be(Loc, Val);
-    break;
-  case R_PPC_REL14:
-    write32be(Loc, read32be(Loc) | (Val & 0xFFFC));
     break;
   case R_PPC_PLTREL24:
   case R_PPC_REL24:

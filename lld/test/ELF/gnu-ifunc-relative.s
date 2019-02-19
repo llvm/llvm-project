@@ -1,9 +1,7 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-// RUN: ld.lld --strip-all %t.o -o %t
-// RUN: llvm-readobj -r %t | FileCheck %s
-// RUN: ld.lld %t.o -o %t
-// RUN: llvm-readobj -r -t %t | FileCheck %s --check-prefixes=CHECK,SYM
+// RUN: ld.lld -static %t.o -o %tout
+// RUN: llvm-readobj -r -t %tout | FileCheck %s
 
 .type foo STT_GNU_IFUNC
 .globl foo
@@ -18,8 +16,8 @@ _start:
 // CHECK-NEXT:   R_X86_64_IRELATIVE - 0x[[ADDR:.*]]
 // CHECK-NEXT: }
 
-// SYM:      Name: foo
-// SYM-NEXT: Value: 0x[[ADDR]]
-// SYM-NEXT: Size: 0
-// SYM-NEXT: Binding: Global
-// SYM-NEXT: Type: GNU_IFunc
+// CHECK:      Name: foo
+// CHECK-NEXT: Value: 0x[[ADDR]]
+// CHECK-NEXT: Size: 0
+// CHECK-NEXT: Binding: Global
+// CHECK-NEXT: Type: GNU_IFunc

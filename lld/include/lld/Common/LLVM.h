@@ -22,69 +22,53 @@
 #include <utility>
 
 namespace llvm {
-// ADT's.
-class raw_ostream;
-class Error;
-class StringRef;
-class Twine;
-class MemoryBuffer;
-class MemoryBufferRef;
-template <typename T> class ArrayRef;
-template <unsigned InternalLen> class SmallString;
-template <typename T, unsigned N> class SmallVector;
-template <typename T> class ErrorOr;
-template <typename T> class Expected;
+  // ADT's.
+  class Error;
+  class StringRef;
+  class Twine;
+  class MemoryBuffer;
+  class MemoryBufferRef;
+  template<typename T> class ArrayRef;
+  template<unsigned InternalLen> class SmallString;
+  template<typename T, unsigned N> class SmallVector;
+  template<typename T> class SmallVectorImpl;
 
-namespace object {
-class WasmObjectFile;
-struct WasmSection;
-struct WasmSegment;
-class WasmSymbol;
-} // namespace object
+  template<typename T>
+  struct SaveAndRestore;
 
-namespace wasm {
-struct WasmEvent;
-struct WasmEventType;
-struct WasmFunction;
-struct WasmGlobal;
-struct WasmGlobalType;
-struct WasmRelocation;
-struct WasmSignature;
-} // namespace wasm
-} // namespace llvm
+  template<typename T>
+  class ErrorOr;
+
+  template<typename T>
+  class Expected;
+
+  class raw_ostream;
+  // TODO: DenseMap, ...
+}
 
 namespace lld {
-// Casting operators.
-using llvm::cast;
-using llvm::cast_or_null;
-using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
-using llvm::isa;
+  // Casting operators.
+  using llvm::isa;
+  using llvm::cast;
+  using llvm::dyn_cast;
+  using llvm::dyn_cast_or_null;
+  using llvm::cast_or_null;
 
-// ADT's.
-using llvm::ArrayRef;
-using llvm::Error;
-using llvm::ErrorOr;
-using llvm::Expected;
-using llvm::MemoryBuffer;
-using llvm::MemoryBufferRef;
-using llvm::raw_ostream;
-using llvm::SmallString;
-using llvm::SmallVector;
-using llvm::StringRef;
-using llvm::Twine;
+  // ADT's.
+  using llvm::Error;
+  using llvm::StringRef;
+  using llvm::Twine;
+  using llvm::MemoryBuffer;
+  using llvm::MemoryBufferRef;
+  using llvm::ArrayRef;
+  using llvm::SmallString;
+  using llvm::SmallVector;
+  using llvm::SmallVectorImpl;
+  using llvm::SaveAndRestore;
+  using llvm::ErrorOr;
+  using llvm::Expected;
 
-using llvm::object::WasmObjectFile;
-using llvm::object::WasmSection;
-using llvm::object::WasmSegment;
-using llvm::object::WasmSymbol;
-using llvm::wasm::WasmEvent;
-using llvm::wasm::WasmEventType;
-using llvm::wasm::WasmFunction;
-using llvm::wasm::WasmGlobal;
-using llvm::wasm::WasmGlobalType;
-using llvm::wasm::WasmRelocation;
-using llvm::wasm::WasmSignature;
+  using llvm::raw_ostream;
 } // end namespace lld.
 
 namespace std {
@@ -94,6 +78,6 @@ public:
     return llvm::hash_value(s);
   }
 };
-} // namespace std
+}
 
 #endif

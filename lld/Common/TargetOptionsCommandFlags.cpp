@@ -32,4 +32,3 @@ llvm::Optional<llvm::CodeModel::Model> lld::GetCodeModelFromCMModel() {
 }
 
 std::string lld::GetCPUStr() { return ::getCPUStr(); }
-std::vector<std::string> lld::GetMAttrs() { return ::MAttrs; }

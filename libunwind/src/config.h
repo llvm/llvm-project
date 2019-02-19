@@ -38,11 +38,7 @@
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND   1
   #endif
 #elif defined(_WIN32)
-  #ifdef __SEH__
-    #define _LIBUNWIND_SUPPORT_SEH_UNWIND 1
-  #else
-    #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
-  #endif
+  #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1
 #else
   #if defined(__ARM_DWARF_EH__) || !defined(__arm__)
     #define _LIBUNWIND_SUPPORT_DWARF_UNWIND 1

@@ -67,10 +67,9 @@ static std::string getThinLTOOutputFile(StringRef ModulePath) {
 static lto::Config createConfig() {
   lto::Config C;
 
-  // LLD supports the new relocations and address-significance tables.
+  // LLD supports the new relocations.
   C.Options = InitTargetOptionsFromCodeGenFlags();
   C.Options.RelaxELFRelocations = true;
-  C.Options.EmitAddrsig = true;
 
   // Always emit a section per function/datum with LTO.
   C.Options.FunctionSections = true;
@@ -88,7 +87,6 @@ static lto::Config createConfig() {
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
   C.CPU = GetCPUStr();
-  C.MAttrs = GetMAttrs();
 
   // Set up a custom pipeline if we've been asked to.
   C.OptPipeline = Config->LTONewPmPasses;
@@ -103,14 +101,6 @@ static lto::Config createConfig() {
   C.DebugPassManager = Config->LTODebugPassManager;
   C.DwoDir = Config->DwoDir;
 
-  if (Config->EmitLLVM) {
-    C.PostInternalizeModuleHook = [](size_t Task, const Module &M) {
-      if (std::unique_ptr<raw_fd_ostream> OS = openFile(Config->OutputFile))
-        WriteBitcodeToFile(M, *OS, false);
-      return false;
-    };
-  }
-
   if (Config->SaveTemps)
     checkError(C.addSaveTemps(Config->OutputFile.str() + ".",
                               /*UseInputModulePath*/ true));
@@ -118,14 +108,18 @@ static lto::Config createConfig() {
 }
 
 BitcodeCompiler::BitcodeCompiler() {
-  // Initialize IndexFile.
-  if (!Config->ThinLTOIndexOnlyArg.empty())
-    IndexFile = openFile(Config->ThinLTOIndexOnlyArg);
-
   // Initialize LTOObj.
   lto::ThinBackend Backend;
+
   if (Config->ThinLTOIndexOnly) {
-    auto OnIndexWrite = [&](StringRef S) { ThinIndices.erase(S); };
+    StringRef Path = Config->ThinLTOIndexOnlyArg;
+    if (!Path.empty())
+      IndexFile = openFile(Path);
+
+    auto OnIndexWrite = [&](const std::string &Identifier) {
+      ObjectToIndexFileState[Identifier] = true;
+    };
+
     Backend = lto::createWriteIndexesThinBackend(
         Config->ThinLTOPrefixReplace.first, Config->ThinLTOPrefixReplace.second,
         Config->ThinLTOEmitImportsFiles, IndexFile.get(), OnIndexWrite);
@@ -138,10 +132,10 @@ BitcodeCompiler::BitcodeCompiler() {
 
   // Initialize UsedStartStop.
   for (Symbol *Sym : Symtab->getSymbols()) {
-    StringRef S = Sym->getName();
+    StringRef Name = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
-      if (S.startswith(Prefix))
-        UsedStartStop.insert(S.substr(Prefix.size()));
+      if (Name.startswith(Prefix))
+        UsedStartStop.insert(Name.substr(Prefix.size()));
   }
 }
 
@@ -157,7 +151,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   bool IsExec = !Config->Shared && !Config->Relocatable;
 
   if (Config->ThinLTOIndexOnly)
-    ThinIndices.insert(Obj.getName());
+    ObjectToIndexFileState.insert({Obj.getName(), false});
 
   ArrayRef<Symbol *> Syms = F.getSymbols();
   ArrayRef<lto::InputFile::Symbol> ObjSyms = Obj.symbols();
@@ -246,11 +240,15 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
       Cache));
 
   // Emit empty index files for non-indexed files
-  for (StringRef S : ThinIndices) {
-    std::string Path = getThinLTOOutputFile(S);
-    openFile(Path + ".thinlto.bc");
-    if (Config->ThinLTOEmitImportsFiles)
-      openFile(Path + ".imports");
+  if (Config->ThinLTOIndexOnly) {
+    for (auto &Identifier : ObjectToIndexFileState)
+      if (!Identifier.getValue()) {
+        std::string Path = getThinLTOOutputFile(Identifier.getKey());
+        openFile(Path + ".thinlto.bc");
+
+        if (Config->ThinLTOEmitImportsFiles)
+          openFile(Path + ".imports");
+      }
   }
 
   // If LazyObjFile has not been added to link, emit empty index files.

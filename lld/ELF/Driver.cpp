@@ -63,7 +63,6 @@ using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::object;
 using namespace llvm::sys;
-using namespace llvm::support;
 
 using namespace lld;
 using namespace lld::elf;
@@ -75,7 +74,7 @@ static void setConfigs(opt::InputArgList &Args);
 
 bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
                raw_ostream &Error) {
-  errorHandler().LogName = args::getFilenameWithoutExe(Args[0]);
+  errorHandler().LogName = sys::path::filename(Args[0]);
   errorHandler().ErrorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "-error-limit=0 to see all errors)";
@@ -85,6 +84,7 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
 
   InputSections.clear();
   OutputSections.clear();
+  Tar = nullptr;
   BinaryFiles.clear();
   BitcodeFiles.clear();
   ObjectFiles.clear();
@@ -94,10 +94,6 @@ bool elf::link(ArrayRef<const char *> Args, bool CanExitEarly,
   Driver = make<LinkerDriver>();
   Script = make<LinkerScript>();
   Symtab = make<SymbolTable>();
-
-  Tar = nullptr;
-  memset(&In, 0, sizeof(In));
-
   Config->ProgName = Args[0];
 
   Driver->main(Args);
@@ -129,11 +125,9 @@ static std::tuple<ELFKind, uint16_t, uint8_t> parseEmulation(StringRef Emul) {
           .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Cases("elf32btsmip", "elf32btsmipn32", {ELF32BEKind, EM_MIPS})
           .Cases("elf32ltsmip", "elf32ltsmipn32", {ELF32LEKind, EM_MIPS})
-          .Case("elf32lriscv", {ELF32LEKind, EM_RISCV})
           .Case("elf32ppc", {ELF32BEKind, EM_PPC})
           .Case("elf64btsmip", {ELF64BEKind, EM_MIPS})
           .Case("elf64ltsmip", {ELF64LEKind, EM_MIPS})
-          .Case("elf64lriscv", {ELF64LEKind, EM_RISCV})
           .Case("elf64ppc", {ELF64BEKind, EM_PPC64})
           .Case("elf64lppc", {ELF64LEKind, EM_PPC64})
           .Cases("elf_amd64", "elf_x86_64", {ELF64LEKind, EM_X86_64})
@@ -189,7 +183,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   MemoryBufferRef MBRef = *Buffer;
 
-  if (Config->FormatBinary) {
+  if (InBinary) {
     Files.push_back(make<BinaryFile>(MBRef));
     return;
   }
@@ -224,7 +218,7 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
     return;
   }
   case file_magic::elf_shared_object:
-    if (Config->Static || Config->Relocatable) {
+    if (Config->Relocatable) {
       error("attempted static link of dynamic object " + Path);
       return;
     }
@@ -275,17 +269,14 @@ static void initLLVM() {
 
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
-static void checkOptions() {
+static void checkOptions(opt::InputArgList &Args) {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
-    error("the .gnu.hash section is not compatible with the MIPS target");
+    error("the .gnu.hash section is not compatible with the MIPS target.");
 
   if (Config->FixCortexA53Errata843419 && Config->EMachine != EM_AARCH64)
-    error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
-
-  if (Config->TocOptimize && Config->EMachine != EM_PPC64)
-    error("--toc-optimize is only supported on the PowerPC64 target");
+    error("--fix-cortex-a53-843419 is only supported on AArch64 targets.");
 
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
@@ -345,13 +336,12 @@ static bool getZFlag(opt::InputArgList &Args, StringRef K1, StringRef K2,
   return Default;
 }
 
-static bool isKnownZFlag(StringRef S) {
+static bool isKnown(StringRef S) {
   return S == "combreloc" || S == "copyreloc" || S == "defs" ||
-         S == "execstack" || S == "global" || S == "hazardplt" ||
-         S == "initfirst" || S == "interpose" ||
+         S == "execstack" || S == "hazardplt" || S == "initfirst" ||
          S == "keep-text-section-prefix" || S == "lazy" || S == "muldefs" ||
-         S == "nocombreloc" || S == "nocopyreloc" || S == "nodefaultlib" ||
-         S == "nodelete" || S == "nodlopen" || S == "noexecstack" ||
+         S == "nocombreloc" || S == "nocopyreloc" || S == "nodelete" ||
+         S == "nodlopen" || S == "noexecstack" ||
          S == "nokeep-text-section-prefix" || S == "norelro" || S == "notext" ||
          S == "now" || S == "origin" || S == "relro" || S == "retpolineplt" ||
          S == "rodynamic" || S == "text" || S == "wxneeded" ||
@@ -361,7 +351,7 @@ static bool isKnownZFlag(StringRef S) {
 // Report an error for an unknown -z option.
 static void checkZOptions(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_z))
-    if (!isKnownZFlag(Arg->getValue()))
+    if (!isKnown(Arg->getValue()))
       error("unknown -z value: " + StringRef(Arg->getValue()));
 }
 
@@ -396,23 +386,6 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_v) || Args.hasArg(OPT_version))
     message(getLLDVersion() + " (compatible with GNU linkers)");
 
-  if (const char *Path = getReproduceOption(Args)) {
-    // Note that --reproduce is a debug option so you can ignore it
-    // if you are trying to understand the whole picture of the code.
-    Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
-        TarWriter::create(Path, path::stem(Path));
-    if (ErrOrWriter) {
-      Tar = std::move(*ErrOrWriter);
-      Tar->append("response.txt", createResponseFile(Args));
-      Tar->append("version.txt", getLLDVersion() + "\n");
-    } else {
-      error("--reproduce: " + toString(ErrOrWriter.takeError()));
-    }
-  }
-
-  readConfigs(Args);
-  checkZOptions(Args);
-
   // The behavior of -v or --version is a bit strange, but this is
   // needed for compatibility with GNU linkers.
   if (Args.hasArg(OPT_v) && !Args.hasArg(OPT_INPUT))
@@ -420,6 +393,24 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   if (Args.hasArg(OPT_version))
     return;
 
+  if (const char *Path = getReproduceOption(Args)) {
+    // Note that --reproduce is a debug option so you can ignore it
+    // if you are trying to understand the whole picture of the code.
+    Expected<std::unique_ptr<TarWriter>> ErrOrWriter =
+        TarWriter::create(Path, path::stem(Path));
+    if (ErrOrWriter) {
+      Tar = ErrOrWriter->get();
+      Tar->append("response.txt", createResponseFile(Args));
+      Tar->append("version.txt", getLLDVersion() + "\n");
+      make<std::unique_ptr<TarWriter>>(std::move(*ErrOrWriter));
+    } else {
+      error(Twine("--reproduce: failed to open ") + Path + ": " +
+            toString(ErrOrWriter.takeError()));
+    }
+  }
+
+  readConfigs(Args);
+  checkZOptions(Args);
   initLLVM();
   createFiles(Args);
   if (errorCount())
@@ -427,7 +418,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   inferMachineType();
   setConfigs(Args);
-  checkOptions();
+  checkOptions(Args);
   if (errorCount())
     return;
 
@@ -457,6 +448,9 @@ static std::string getRpath(opt::InputArgList &Args) {
 // Determines what we should do if there are remaining unresolved
 // symbols after the name resolution.
 static UnresolvedPolicy getUnresolvedSymbolPolicy(opt::InputArgList &Args) {
+  if (Args.hasArg(OPT_relocatable))
+    return UnresolvedPolicy::IgnoreAll;
+
   UnresolvedPolicy ErrorOrWarn = Args.hasFlag(OPT_error_unresolved_symbols,
                                               OPT_warn_unresolved_symbols, true)
                                      ? UnresolvedPolicy::ReportError
@@ -503,11 +497,14 @@ static Target2Policy getTarget2(opt::InputArgList &Args) {
 }
 
 static bool isOutputFormatBinary(opt::InputArgList &Args) {
-  StringRef S = Args.getLastArgValue(OPT_oformat, "elf");
-  if (S == "binary")
-    return true;
-  if (!S.startswith("elf"))
+  if (auto *Arg = Args.getLastArg(OPT_oformat)) {
+    StringRef S = Arg->getValue();
+    if (S == "binary")
+      return true;
+    if (S.startswith("elf"))
+      return false;
     error("unknown --oformat value: " + S);
+  }
   return false;
 }
 
@@ -648,56 +645,38 @@ static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &Args) {
 
 static void readCallGraph(MemoryBufferRef MB) {
   // Build a map from symbol name to section
-  DenseMap<StringRef, Symbol *> Map;
+  DenseMap<StringRef, const Symbol *> SymbolNameToSymbol;
   for (InputFile *File : ObjectFiles)
     for (Symbol *Sym : File->getSymbols())
-      Map[Sym->getName()] = Sym;
+      SymbolNameToSymbol[Sym->getName()] = Sym;
 
-  auto FindSection = [&](StringRef Name) -> InputSectionBase * {
-    Symbol *Sym = Map.lookup(Name);
-    if (!Sym) {
-      if (Config->WarnSymbolOrdering)
-        warn(MB.getBufferIdentifier() + ": no such symbol: " + Name);
-      return nullptr;
-    }
-    maybeWarnUnorderableSymbol(Sym);
-
-    if (Defined *DR = dyn_cast_or_null<Defined>(Sym))
-      return dyn_cast_or_null<InputSectionBase>(DR->Section);
-    return nullptr;
-  };
-
-  for (StringRef Line : args::getLines(MB)) {
+  for (StringRef L : args::getLines(MB)) {
     SmallVector<StringRef, 3> Fields;
-    Line.split(Fields, ' ');
+    L.split(Fields, ' ');
     uint64_t Count;
-
-    if (Fields.size() != 3 || !to_integer(Fields[2], Count)) {
-      error(MB.getBufferIdentifier() + ": parse error");
-      return;
+    if (Fields.size() != 3 || !to_integer(Fields[2], Count))
+      fatal(MB.getBufferIdentifier() + ": parse error");
+    const Symbol *FromSym = SymbolNameToSymbol.lookup(Fields[0]);
+    const Symbol *ToSym = SymbolNameToSymbol.lookup(Fields[1]);
+    if (Config->WarnSymbolOrdering) {
+      if (!FromSym)
+        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[0]);
+      if (!ToSym)
+        warn(MB.getBufferIdentifier() + ": no such symbol: " + Fields[1]);
     }
-
-    if (InputSectionBase *From = FindSection(Fields[0]))
-      if (InputSectionBase *To = FindSection(Fields[1]))
-        Config->CallGraphProfile[std::make_pair(From, To)] += Count;
-  }
-}
-
-template <class ELFT> static void readCallGraphsFromObjectFiles() {
-  for (auto File : ObjectFiles) {
-    auto *Obj = cast<ObjFile<ELFT>>(File);
-
-    for (const Elf_CGProfile_Impl<ELFT> &CGPE : Obj->CGProfile) {
-      auto *FromSym = dyn_cast<Defined>(&Obj->getSymbol(CGPE.cgp_from));
-      auto *ToSym = dyn_cast<Defined>(&Obj->getSymbol(CGPE.cgp_to));
-      if (!FromSym || !ToSym)
-        continue;
-
-      auto *From = dyn_cast_or_null<InputSectionBase>(FromSym->Section);
-      auto *To = dyn_cast_or_null<InputSectionBase>(ToSym->Section);
-      if (From && To)
-        Config->CallGraphProfile[{From, To}] += CGPE.cgp_weight;
-    }
+    if (!FromSym || !ToSym || Count == 0)
+      continue;
+    warnUnorderableSymbol(FromSym);
+    warnUnorderableSymbol(ToSym);
+    const Defined *FromSymD = dyn_cast<Defined>(FromSym);
+    const Defined *ToSymD = dyn_cast<Defined>(ToSym);
+    if (!FromSymD || !ToSymD)
+      continue;
+    const auto *FromSB = dyn_cast_or_null<InputSectionBase>(FromSymD->Section);
+    const auto *ToSB = dyn_cast_or_null<InputSectionBase>(ToSymD->Section);
+    if (!FromSB || !ToSB)
+      continue;
+    Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
   }
 }
 
@@ -774,10 +753,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->DynamicLinker = getDynamicLinker(Args);
   Config->EhFrameHdr =
       Args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
-  Config->EmitLLVM = Args.hasArg(OPT_plugin_opt_emit_llvm, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
-  Config->CallGraphProfileSort = Args.hasFlag(
-      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   Config->EnableNewDtags =
       Args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   Config->Entry = Args.getLastArgValue(OPT_entry);
@@ -832,7 +808,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->SingleRoRx = Args.hasArg(OPT_no_rosegment);
   Config->SoName = Args.getLastArgValue(OPT_soname);
   Config->SortSection = getSortSection(Args);
-  Config->SplitStackAdjustSize = args::getInteger(Args, OPT_split_stack_adjust_size, 16384);
   Config->Strip = getStrip(Args);
   Config->Sysroot = Args.getLastArgValue(OPT_sysroot);
   Config->Target1Rel = Args.hasFlag(OPT_target1_rel, OPT_target1_abs, false);
@@ -862,20 +837,15 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->WarnBackrefs =
       Args.hasFlag(OPT_warn_backrefs, OPT_no_warn_backrefs, false);
   Config->WarnCommon = Args.hasFlag(OPT_warn_common, OPT_no_warn_common, false);
-  Config->WarnIfuncTextrel =
-      Args.hasFlag(OPT_warn_ifunc_textrel, OPT_no_warn_ifunc_textrel, false);
   Config->WarnSymbolOrdering =
       Args.hasFlag(OPT_warn_symbol_ordering, OPT_no_warn_symbol_ordering, true);
   Config->ZCombreloc = getZFlag(Args, "combreloc", "nocombreloc", true);
   Config->ZCopyreloc = getZFlag(Args, "copyreloc", "nocopyreloc", true);
   Config->ZExecstack = getZFlag(Args, "execstack", "noexecstack", false);
-  Config->ZGlobal = hasZOption(Args, "global");
   Config->ZHazardplt = hasZOption(Args, "hazardplt");
   Config->ZInitfirst = hasZOption(Args, "initfirst");
-  Config->ZInterpose = hasZOption(Args, "interpose");
   Config->ZKeepTextSectionPrefix = getZFlag(
       Args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
-  Config->ZNodefaultlib = hasZOption(Args, "nodefaultlib");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNodlopen = hasZOption(Args, "nodlopen");
   Config->ZNow = getZFlag(Args, "now", "lazy", false);
@@ -905,9 +875,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     error("--lto-partitions: number of threads must be > 0");
   if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
-
-  if (Config->SplitStackAdjustSize < 0)
-    error("--split-stack-adjust-size: size must be >= 0");
 
   // Parse ELF{32,64}{LE,BE} and CPU type.
   if (auto *Arg = Args.getLastArg(OPT_m)) {
@@ -997,16 +964,21 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 // This function initialize such members. See Config.h for the details
 // of these values.
 static void setConfigs(opt::InputArgList &Args) {
-  ELFKind K = Config->EKind;
-  uint16_t M = Config->EMachine;
+  ELFKind Kind = Config->EKind;
+  uint16_t Machine = Config->EMachine;
 
   Config->CopyRelocs = (Config->Relocatable || Config->EmitRelocs);
-  Config->Is64 = (K == ELF64LEKind || K == ELF64BEKind);
-  Config->IsLE = (K == ELF32LEKind || K == ELF64LEKind);
-  Config->Endianness = Config->IsLE ? endianness::little : endianness::big;
-  Config->IsMips64EL = (K == ELF64LEKind && M == EM_MIPS);
+  Config->Is64 = (Kind == ELF64LEKind || Kind == ELF64BEKind);
+  Config->IsLE = (Kind == ELF32LEKind || Kind == ELF64LEKind);
+  Config->Endianness =
+      Config->IsLE ? support::endianness::little : support::endianness::big;
+  Config->IsMips64EL = (Kind == ELF64LEKind && Machine == EM_MIPS);
   Config->Pic = Config->Pie || Config->Shared;
   Config->Wordsize = Config->Is64 ? 8 : 4;
+
+  // There is an ILP32 ABI for x86-64, although it's not very popular.
+  // It is called the x32 ABI.
+  bool IsX32 = (Kind == ELF32LEKind && Machine == EM_X86_64);
 
   // ELF defines two different ways to store relocation addends as shown below:
   //
@@ -1021,9 +993,8 @@ static void setConfigs(opt::InputArgList &Args) {
   // You cannot choose which one, Rel or Rela, you want to use. Instead each
   // ABI defines which one you need to use. The following expression expresses
   // that.
-  Config->IsRela = M == EM_AARCH64 || M == EM_AMDGPU || M == EM_HEXAGON ||
-                   M == EM_PPC || M == EM_PPC64 || M == EM_RISCV ||
-                   M == EM_X86_64;
+  Config->IsRela =
+      (Config->Is64 || IsX32 || Machine == EM_PPC) && Machine != EM_MIPS;
 
   // If the output uses REL relocations we must store the dynamic relocation
   // addends to the output sections. We also store addends for RELA relocations
@@ -1033,13 +1004,10 @@ static void setConfigs(opt::InputArgList &Args) {
   Config->WriteAddends = Args.hasFlag(OPT_apply_dynamic_relocs,
                                       OPT_no_apply_dynamic_relocs, false) ||
                          !Config->IsRela;
-
-  Config->TocOptimize =
-      Args.hasFlag(OPT_toc_optimize, OPT_no_toc_optimize, M == EM_PPC64);
 }
 
 // Returns a value of "-format" option.
-static bool isFormatBinary(StringRef S) {
+static bool getBinaryOption(StringRef S) {
   if (S == "binary")
     return true;
   if (S == "elf" || S == "default")
@@ -1066,10 +1034,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       StringRef From;
       StringRef To;
       std::tie(From, To) = StringRef(Arg->getValue()).split('=');
-      if (From.empty() || To.empty())
-        error("-defsym: syntax error: " + StringRef(Arg->getValue()));
-      else
-        readDefsym(From, MemoryBufferRef(To, "-defsym"));
+      readDefsym(From, MemoryBufferRef(To, "-defsym"));
       break;
     }
     case OPT_script:
@@ -1084,7 +1049,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
       Config->AsNeeded = true;
       break;
     case OPT_format:
-      Config->FormatBinary = isFormatBinary(Arg->getValue());
+      InBinary = getBinaryOption(Arg->getValue());
       break;
     case OPT_no_as_needed:
       Config->AsNeeded = false;
@@ -1255,34 +1220,33 @@ template <class ELFT> static void handleUndefined(StringRef Name) {
     Symtab->fetchLazy<ELFT>(Sym);
 }
 
-template <class ELFT> static void handleLibcall(StringRef Name) {
-  Symbol *Sym = Symtab->find(Name);
-  if (!Sym || !Sym->isLazy())
-    return;
+template <class ELFT> static bool shouldDemote(Symbol &Sym) {
+  // If all references to a DSO happen to be weak, the DSO is not added to
+  // DT_NEEDED. If that happens, we need to eliminate shared symbols created
+  // from the DSO. Otherwise, they become dangling references that point to a
+  // non-existent DSO.
+  if (auto *S = dyn_cast<SharedSymbol>(&Sym))
+    return !S->getFile<ELFT>().IsNeeded;
 
-  MemoryBufferRef MB;
-  if (auto *LO = dyn_cast<LazyObject>(Sym))
-    MB = LO->File->MB;
-  else
-    MB = cast<LazyArchive>(Sym)->getMemberBuffer();
-
-  if (isBitcode(MB))
-    Symtab->fetchLazy<ELFT>(Sym);
+  // We are done processing archives, so lazy symbols that were used but not
+  // found can be converted to undefined. We could also just delete the other
+  // lazy symbols, but that seems to be more work than it is worth.
+  return Sym.isLazy() && Sym.IsUsedInRegularObj;
 }
 
-// If all references to a DSO happen to be weak, the DSO is not added
-// to DT_NEEDED. If that happens, we need to eliminate shared symbols
-// created from the DSO. Otherwise, they become dangling references
-// that point to a non-existent DSO.
-template <class ELFT> static void demoteSharedSymbols() {
+// Some files, such as .so or files between -{start,end}-lib may be removed
+// after their symbols are added to the symbol table. If that happens, we
+// need to remove symbols that refer files that no longer exist, so that
+// they won't appear in the symbol table of the output file.
+//
+// We remove symbols by demoting them to undefined symbol.
+template <class ELFT> static void demoteSymbols() {
   for (Symbol *Sym : Symtab->getSymbols()) {
-    if (auto *S = dyn_cast<SharedSymbol>(Sym)) {
-      if (!S->getFile<ELFT>().IsNeeded) {
-        bool Used = S->Used;
-        replaceSymbol<Undefined>(S, nullptr, S->getName(), STB_WEAK, S->StOther,
-                                 S->Type);
-        S->Used = Used;
-      }
+    if (shouldDemote<ELFT>(*Sym)) {
+      bool Used = Sym->Used;
+      replaceSymbol<Undefined>(Sym, nullptr, Sym->getName(), Sym->Binding,
+                               Sym->StOther, Sym->Type);
+      Sym->Used = Used;
     }
   }
 }
@@ -1351,85 +1315,6 @@ static void findKeepUniqueSections(opt::InputArgList &Args) {
   }
 }
 
-template <class ELFT> static Symbol *addUndefined(StringRef Name) {
-  return Symtab->addUndefined<ELFT>(Name, STB_GLOBAL, STV_DEFAULT, 0, false,
-                                    nullptr);
-}
-
-// The --wrap option is a feature to rename symbols so that you can write
-// wrappers for existing functions. If you pass `-wrap=foo`, all
-// occurrences of symbol `foo` are resolved to `wrap_foo` (so, you are
-// expected to write `wrap_foo` function as a wrapper). The original
-// symbol becomes accessible as `real_foo`, so you can call that from your
-// wrapper.
-//
-// This data structure is instantiated for each -wrap option.
-struct WrappedSymbol {
-  Symbol *Sym;
-  Symbol *Real;
-  Symbol *Wrap;
-};
-
-// Handles -wrap option.
-//
-// This function instantiates wrapper symbols. At this point, they seem
-// like they are not being used at all, so we explicitly set some flags so
-// that LTO won't eliminate them.
-template <class ELFT>
-static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &Args) {
-  std::vector<WrappedSymbol> V;
-  DenseSet<StringRef> Seen;
-
-  for (auto *Arg : Args.filtered(OPT_wrap)) {
-    StringRef Name = Arg->getValue();
-    if (!Seen.insert(Name).second)
-      continue;
-
-    Symbol *Sym = Symtab->find(Name);
-    if (!Sym)
-      continue;
-
-    Symbol *Real = addUndefined<ELFT>(Saver.save("__real_" + Name));
-    Symbol *Wrap = addUndefined<ELFT>(Saver.save("__wrap_" + Name));
-    V.push_back({Sym, Real, Wrap});
-
-    // We want to tell LTO not to inline symbols to be overwritten
-    // because LTO doesn't know the final symbol contents after renaming.
-    Real->CanInline = false;
-    Sym->CanInline = false;
-
-    // Tell LTO not to eliminate these symbols.
-    Sym->IsUsedInRegularObj = true;
-    Wrap->IsUsedInRegularObj = true;
-  }
-  return V;
-}
-
-// Do renaming for -wrap by updating pointers to symbols.
-//
-// When this function is executed, only InputFiles and symbol table
-// contain pointers to symbol objects. We visit them to replace pointers,
-// so that wrapped symbols are swapped as instructed by the command line.
-template <class ELFT> static void wrapSymbols(ArrayRef<WrappedSymbol> Wrapped) {
-  DenseMap<Symbol *, Symbol *> Map;
-  for (const WrappedSymbol &W : Wrapped) {
-    Map[W.Sym] = W.Wrap;
-    Map[W.Real] = W.Sym;
-  }
-
-  // Update pointers in input files.
-  parallelForEach(ObjectFiles, [&](InputFile *File) {
-    std::vector<Symbol *> &Syms = File->getMutableSymbols();
-    for (size_t I = 0, E = Syms.size(); I != E; ++I)
-      if (Symbol *S = Map.lookup(Syms[I]))
-        Syms[I] = S;
-  });
-
-  // Update pointers in the symbol table.
-  for (const WrappedSymbol &W : Wrapped)
-    Symtab->wrap(W.Sym, W.Real, W.Wrap);
-}
-
 static const char *LibcallRoutineNames[] = {
 #define HANDLE_LIBCALL(code, name) name,
 #include "llvm/IR/RuntimeLibcalls.def"
@@ -1440,8 +1325,6 @@ static const char *LibcallRoutineNames[] = {
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Target = getTarget();
-  InX<ELFT>::VerSym = nullptr;
-  InX<ELFT>::VerNeed = nullptr;
 
   Config->MaxPageSize = getMaxPageSize(Args);
   Config->ImageBase = getImageBase(Args);
@@ -1497,8 +1380,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   // Some symbols (such as __ehdr_start) are defined lazily only when there
   // are undefined symbols for them, so we add these to trigger that logic.
-  for (StringRef Name : Script->ReferencedSymbols)
-    addUndefined<ELFT>(Name);
+  for (StringRef Sym : Script->ReferencedSymbols)
+    Symtab->addUndefined<ELFT>(Sym);
 
   // Handle the `--undefined <sym>` options.
   for (StringRef S : Config->Undefined)
@@ -1513,20 +1396,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   // in a bitcode file in an archive member, we need to arrange to use LTO to
   // compile those archive members by adding them to the link beforehand.
   //
-  // However, adding all libcall symbols to the link can have undesired
-  // consequences. For example, the libgcc implementation of
-  // __sync_val_compare_and_swap_8 on 32-bit ARM pulls in an .init_array entry
-  // that aborts the program if the Linux kernel does not support 64-bit
-  // atomics, which would prevent the program from running even if it does not
-  // use 64-bit atomics.
-  //
-  // Therefore, we only add libcall symbols to the link before LTO if we have
-  // to, i.e. if the symbol's definition is in bitcode. Any other required
-  // libcall symbols will be added to the link after LTO when we add the LTO
-  // object file to the link.
+  // With this the symbol table should be complete. After this, no new names
+  // except a few linker-synthesized ones will be added to the symbol table.
   if (!BitcodeFiles.empty())
     for (const char *S : LibcallRoutineNames)
-      handleLibcall<ELFT>(S);
+      handleUndefined<ELFT>(S);
 
   // Return if there were name resolution errors.
   if (errorCount())
@@ -1550,9 +1424,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Out::ElfHeader = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ElfHeader->Size = sizeof(typename ELFT::Ehdr);
 
-  // Create wrapped symbols for -wrap option.
-  std::vector<WrappedSymbol> Wrapped = addWrappedSymbols<ELFT>(Args);
-
   // We need to create some reserved symbols such as _end. Create them.
   if (!Config->Relocatable)
     addReservedSymbols();
@@ -1565,11 +1436,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (!Config->Relocatable)
     Symtab->scanVersionScript();
 
+  // Create wrapped symbols for -wrap option.
+  for (auto *Arg : Args.filtered(OPT_wrap))
+    Symtab->addSymbolWrap<ELFT>(Arg->getValue());
+
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
-  //
-  // With this the symbol table should be complete. After this, no new names
-  // except a few linker-synthesized ones will be added to the symbol table.
   Symtab->addCombinedLTOObject<ELFT>();
   if (errorCount())
     return;
@@ -1580,15 +1452,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (Config->ThinLTOIndexOnly)
     return;
 
-  // Likewise, --plugin-opt=emit-llvm is an option to make LTO create
-  // an output file in bitcode and exit, so that you can just get a
-  // combined bitcode file.
-  if (Config->EmitLLVM)
-    return;
-
   // Apply symbol renames for -wrap.
-  if (!Wrapped.empty())
-    wrapSymbols<ELFT>(Wrapped);
+  Symtab->applySymbolWrap();
 
   // Now that we have a complete list of input files.
   // Beyond this point, no new files are added.
@@ -1616,19 +1481,27 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // supports them.
     if (Config->ARMHasBlx == false)
       warn("lld uses blx instruction, no object with architecture supporting "
-           "feature detected");
+           "feature detected.");
+    if (Config->ARMJ1J2BranchEncoding == false)
+      warn("lld uses extended branch encoding, no object with architecture "
+           "supporting feature detected.");
+    if (Config->ARMHasMovtMovw == false)
+      warn("lld may use movt/movw, no object with architecture supporting "
+           "feature detected.");
   }
 
   // This adds a .comment section containing a version string. We have to add it
-  // before mergeSections because the .comment section is a mergeable section.
+  // before decompressAndMergeSections because the .comment section is a
+  // mergeable section.
   if (!Config->Relocatable)
     InputSections.push_back(createCommentSection());
 
   // Do size optimizations: garbage collection, merging of SHF_MERGE sections
   // and identical code folding.
+  decompressSections();
   splitSections<ELFT>();
   markLive<ELFT>();
-  demoteSharedSymbols<ELFT>();
+  demoteSymbols<ELFT>();
   mergeSections();
   if (Config->ICF != ICFLevel::None) {
     findKeepUniqueSections<ELFT>(Args);
@@ -1636,12 +1509,9 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   }
 
   // Read the callgraph now that we know what was gced or icfed
-  if (Config->CallGraphProfileSort) {
-    if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
-      if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-        readCallGraph(*Buffer);
-    readCallGraphsFromObjectFiles<ELFT>();
-  }
+  if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
+    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+      readCallGraph(*Buffer);
 
   // Write the result to the file.
   writeResult<ELFT>();

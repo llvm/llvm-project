@@ -18,13 +18,20 @@
  *       is the largest value __kmp_nth may take, 1 is the smallest.
  */
 
+// Need to raise Win version from XP to Vista here for support of
+// InterlockedExchange64
+#if defined(_WIN32_WINNT) && defined(_M_IX86)
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0502
+#endif
+
 #include "kmp.h"
 #include "kmp_error.h"
 #include "kmp_i18n.h"
 #include "kmp_itt.h"
 #include "kmp_stats.h"
 #include "kmp_str.h"
-#if KMP_USE_X87CONTROL
+#if KMP_OS_WINDOWS && KMP_ARCH_X86
 #include <float.h>
 #endif
 #include "kmp_lock.h"
@@ -90,6 +97,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
                                    typename traits_t<T>::signed_t chunk,
                                    T nproc, T tid) {
   typedef typename traits_t<T>::unsigned_t UT;
+  typedef typename traits_t<T>::signed_t ST;
   typedef typename traits_t<T>::floating_t DBL;
 
   int active;
@@ -98,7 +106,6 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   kmp_team_t *team;
 
 #ifdef KMP_DEBUG
-  typedef typename traits_t<T>::signed_t ST;
   {
     char *buff;
     // create format specifiers before the debug output
@@ -478,7 +485,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         /* commonly used term: (2 nproc - 1)/(2 nproc) */
         DBL x;
 
-#if KMP_USE_X87CONTROL
+#if KMP_OS_WINDOWS && KMP_ARCH_X86
         /* Linux* OS already has 64-bit computation by default for long double,
            and on Windows* OS on Intel(R) 64, /Qlong_double doesn't work. On
            Windows* OS on IA-32 architecture, we need to set precision to 64-bit
@@ -573,7 +580,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         pr->u.p.count = tc - __kmp_dispatch_guided_remaining(
                                  tc, GUIDED_ANALYTICAL_WORKAROUND, cross) -
                         cross * chunk;
-#if KMP_USE_X87CONTROL
+#if KMP_OS_WINDOWS && KMP_ARCH_X86
         // restore FPCW
         _control87(oldFpcw, _MCW_PC);
 #endif
@@ -724,6 +731,8 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
                     T ub, typename traits_t<T>::signed_t st,
                     typename traits_t<T>::signed_t chunk, int push_ws) {
   typedef typename traits_t<T>::unsigned_t UT;
+  typedef typename traits_t<T>::signed_t ST;
+  typedef typename traits_t<T>::floating_t DBL;
 
   int active;
   kmp_info_t *th;
@@ -744,7 +753,6 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
   SSC_MARK_DISPATCH_INIT();
 #endif
 #ifdef KMP_DEBUG
-  typedef typename traits_t<T>::signed_t ST;
   {
     char *buff;
     // create format specifiers before the debug output
@@ -1625,7 +1633,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
   case kmp_sch_guided_analytical_chunked: {
     T chunkspec = pr->u.p.parm1;
     UT chunkIdx;
-#if KMP_USE_X87CONTROL
+#if KMP_OS_WINDOWS && KMP_ARCH_X86
     /* for storing original FPCW value for Windows* OS on
        IA-32 architecture 8-byte version */
     unsigned int oldFpcw;
@@ -1662,7 +1670,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
    Windows* OS.
    This check works around the possible effect that init != 0 for chunkIdx == 0.
  */
-#if KMP_USE_X87CONTROL
+#if KMP_OS_WINDOWS && KMP_ARCH_X86
         /* If we haven't already done so, save original
            FPCW and set precision to 64-bit, as Windows* OS
            on IA-32 architecture defaults to 53-bit */
@@ -1690,7 +1698,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
         } // if
       } // if
     } // while (1)
-#if KMP_USE_X87CONTROL
+#if KMP_OS_WINDOWS && KMP_ARCH_X86
     /* restore FPCW if necessary
        AC: check fpcwSet flag first because oldFpcw can be uninitialized here
     */
@@ -1859,6 +1867,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
 
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
+  typedef typename traits_t<T>::floating_t DBL;
   // This is potentially slightly misleading, schedule(runtime) will appear here
   // even if the actual runtme schedule is static. (Which points out a
   // disadavantage of schedule(runtime): even when static scheduling is used it
@@ -2114,6 +2123,7 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
                                   kmp_int32 *plastiter, T *plower, T *pupper,
                                   typename traits_t<T>::signed_t incr) {
   typedef typename traits_t<T>::unsigned_t UT;
+  typedef typename traits_t<T>::signed_t ST;
   kmp_uint32 team_id;
   kmp_uint32 nteams;
   UT trip_count;
@@ -2123,7 +2133,6 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
   KMP_DEBUG_ASSERT(plastiter && plower && pupper);
   KE_TRACE(10, ("__kmpc_dist_get_bounds called (%d)\n", gtid));
 #ifdef KMP_DEBUG
-  typedef typename traits_t<T>::signed_t ST;
   {
     char *buff;
     // create format specifiers before the debug output
@@ -2161,7 +2170,7 @@ static void __kmp_dist_get_bounds(ident_t *loc, kmp_int32 gtid,
   nteams = th->th.th_teams_size.nteams;
 #endif
   team_id = team->t.t_master_tid;
-  KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
+  KMP_DEBUG_ASSERT(nteams == team->t.t_parent->t.t_nproc);
 
   // compute global trip count
   if (incr == 1) {

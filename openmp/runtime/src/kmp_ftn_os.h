@@ -47,7 +47,7 @@
 #define FTN_ALIGNED_MALLOC kmp_aligned_malloc
 #define FTN_CALLOC kmp_calloc
 #define FTN_REALLOC kmp_realloc
-#define FTN_KFREE kmp_free
+#define FTN_FREE kmp_free
 
 #define FTN_GET_NUM_KNOWN_THREADS kmp_get_num_known_threads
 
@@ -100,7 +100,9 @@
 #define FTN_GET_WTICK omp_get_wtick
 
 #if OMP_40_ENABLED
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 #define FTN_GET_NUM_DEVICES omp_get_num_devices
+#endif
 #define FTN_GET_DEFAULT_DEVICE omp_get_default_device
 #define FTN_SET_DEFAULT_DEVICE omp_set_default_device
 #define FTN_IS_INITIAL_DEVICE omp_is_initial_device
@@ -119,8 +121,8 @@
 #define FTN_GET_PLACE_NUM omp_get_place_num
 #define FTN_GET_PARTITION_NUM_PLACES omp_get_partition_num_places
 #define FTN_GET_PARTITION_PLACE_NUMS omp_get_partition_place_nums
-#define FTN_GET_INITIAL_DEVICE omp_get_initial_device
 #ifdef KMP_STUB
+#define FTN_GET_INITIAL_DEVICE omp_get_initial_device
 #define FTN_TARGET_ALLOC omp_target_alloc
 #define FTN_TARGET_FREE omp_target_free
 #define FTN_TARGET_IS_PRESENT omp_target_is_present
@@ -133,15 +135,6 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL omp_control_tool
-#define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator
-#define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator
-#define FTN_ALLOC omp_alloc
-#define FTN_FREE omp_free
-#define FTN_GET_DEVICE_NUM omp_get_device_num
-#define FTN_SET_AFFINITY_FORMAT omp_set_affinity_format
-#define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format
-#define FTN_DISPLAY_AFFINITY omp_display_affinity
-#define FTN_CAPTURE_AFFINITY omp_capture_affinity
 #endif
 
 #endif /* KMP_FTN_PLAIN */
@@ -176,7 +169,7 @@
 #define FTN_ALIGNED_MALLOC kmp_aligned_malloc_
 #define FTN_CALLOC kmp_calloc_
 #define FTN_REALLOC kmp_realloc_
-#define FTN_KFREE kmp_free_
+#define FTN_FREE kmp_free_
 
 #define FTN_GET_NUM_KNOWN_THREADS kmp_get_num_known_threads_
 
@@ -229,7 +222,9 @@
 #define FTN_GET_WTICK omp_get_wtick_
 
 #if OMP_40_ENABLED
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 #define FTN_GET_NUM_DEVICES omp_get_num_devices_
+#endif
 #define FTN_GET_DEFAULT_DEVICE omp_get_default_device_
 #define FTN_SET_DEFAULT_DEVICE omp_set_default_device_
 #define FTN_IS_INITIAL_DEVICE omp_is_initial_device_
@@ -248,8 +243,8 @@
 #define FTN_GET_PLACE_NUM omp_get_place_num_
 #define FTN_GET_PARTITION_NUM_PLACES omp_get_partition_num_places_
 #define FTN_GET_PARTITION_PLACE_NUMS omp_get_partition_place_nums_
-#define FTN_GET_INITIAL_DEVICE omp_get_initial_device_
 #ifdef KMP_STUB
+#define FTN_GET_INITIAL_DEVICE omp_get_initial_device_
 #define FTN_TARGET_ALLOC omp_target_alloc_
 #define FTN_TARGET_FREE omp_target_free_
 #define FTN_TARGET_IS_PRESENT omp_target_is_present_
@@ -261,16 +256,7 @@
 #endif
 
 #if OMP_50_ENABLED
-#define FTN_CONTROL_TOOL omp_control_tool_
-#define FTN_SET_DEFAULT_ALLOCATOR omp_set_default_allocator_
-#define FTN_GET_DEFAULT_ALLOCATOR omp_get_default_allocator_
-#define FTN_ALLOC omp_alloc_
-#define FTN_FREE omp_free_
-#define FTN_GET_DEVICE_NUM omp_get_device_num_
-#define FTN_SET_AFFINITY_FORMAT omp_set_affinity_format_
-#define FTN_GET_AFFINITY_FORMAT omp_get_affinity_format_
-#define FTN_DISPLAY_AFFINITY omp_display_affinity_
-#define FTN_CAPTURE_AFFINITY omp_capture_affinity_
+#define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
 #endif
 
 #endif /* KMP_FTN_APPEND */
@@ -305,7 +291,7 @@
 #define FTN_ALIGNED_MALLOC KMP_ALIGNED_MALLOC
 #define FTN_CALLOC KMP_CALLOC
 #define FTN_REALLOC KMP_REALLOC
-#define FTN_KFREE KMP_FREE
+#define FTN_FREE KMP_FREE
 
 #define FTN_GET_NUM_KNOWN_THREADS KMP_GET_NUM_KNOWN_THREADS
 
@@ -358,7 +344,9 @@
 #define FTN_GET_WTICK OMP_GET_WTICK
 
 #if OMP_40_ENABLED
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 #define FTN_GET_NUM_DEVICES OMP_GET_NUM_DEVICES
+#endif
 #define FTN_GET_DEFAULT_DEVICE OMP_GET_DEFAULT_DEVICE
 #define FTN_SET_DEFAULT_DEVICE OMP_SET_DEFAULT_DEVICE
 #define FTN_IS_INITIAL_DEVICE OMP_IS_INITIAL_DEVICE
@@ -377,8 +365,8 @@
 #define FTN_GET_PLACE_NUM OMP_GET_PLACE_NUM
 #define FTN_GET_PARTITION_NUM_PLACES OMP_GET_PARTITION_NUM_PLACES
 #define FTN_GET_PARTITION_PLACE_NUMS OMP_GET_PARTITION_PLACE_NUMS
-#define FTN_GET_INITIAL_DEVICE OMP_GET_INITIAL_DEVICE
 #ifdef KMP_STUB
+#define FTN_GET_INITIAL_DEVICE OMP_GET_INITIAL_DEVICE
 #define FTN_TARGET_ALLOC OMP_TARGET_ALLOC
 #define FTN_TARGET_FREE OMP_TARGET_FREE
 #define FTN_TARGET_IS_PRESENT OMP_TARGET_IS_PRESENT
@@ -391,15 +379,6 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL OMP_CONTROL_TOOL
-#define FTN_SET_DEFAULT_ALLOCATOR OMP_SET_DEFAULT_ALLOCATOR
-#define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR
-#define FTN_ALLOC OMP_ALLOC
-#define FTN_FREE OMP_FREE
-#define FTN_GET_DEVICE_NUM OMP_GET_DEVICE_NUM
-#define FTN_SET_AFFINITY_FORMAT OMP_SET_AFFINITY_FORMAT
-#define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT
-#define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY
-#define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY
 #endif
 
 #endif /* KMP_FTN_UPPER */
@@ -434,7 +413,7 @@
 #define FTN_ALIGNED_MALLOC KMP_ALIGNED_MALLOC_
 #define FTN_CALLOC KMP_CALLOC_
 #define FTN_REALLOC KMP_REALLOC_
-#define FTN_KFREE KMP_FREE_
+#define FTN_FREE KMP_FREE_
 
 #define FTN_GET_NUM_KNOWN_THREADS KMP_GET_NUM_KNOWN_THREADS_
 
@@ -487,7 +466,9 @@
 #define FTN_GET_WTICK OMP_GET_WTICK_
 
 #if OMP_40_ENABLED
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
 #define FTN_GET_NUM_DEVICES OMP_GET_NUM_DEVICES_
+#endif
 #define FTN_GET_DEFAULT_DEVICE OMP_GET_DEFAULT_DEVICE_
 #define FTN_SET_DEFAULT_DEVICE OMP_SET_DEFAULT_DEVICE_
 #define FTN_IS_INITIAL_DEVICE OMP_IS_INITIAL_DEVICE_
@@ -506,8 +487,8 @@
 #define FTN_GET_PLACE_NUM OMP_GET_PLACE_NUM_
 #define FTN_GET_PARTITION_NUM_PLACES OMP_GET_PARTITION_NUM_PLACES_
 #define FTN_GET_PARTITION_PLACE_NUMS OMP_GET_PARTITION_PLACE_NUMS_
-#define FTN_GET_INITIAL_DEVICE OMP_GET_INITIAL_DEVICE_
 #ifdef KMP_STUB
+#define FTN_GET_INITIAL_DEVICE OMP_GET_INITIAL_DEVICE_
 #define FTN_TARGET_ALLOC OMP_TARGET_ALLOC_
 #define FTN_TARGET_FREE OMP_TARGET_FREE_
 #define FTN_TARGET_IS_PRESENT OMP_TARGET_IS_PRESENT_
@@ -520,15 +501,6 @@
 
 #if OMP_50_ENABLED
 #define FTN_CONTROL_TOOL OMP_CONTROL_TOOL_
-#define FTN_SET_DEFAULT_ALLOCATOR OMP_SET_DEFAULT_ALLOCATOR_
-#define FTN_GET_DEFAULT_ALLOCATOR OMP_GET_DEFAULT_ALLOCATOR_
-#define FTN_ALLOC OMP_ALLOC_
-#define FTN_FREE OMP_FREE_
-#define FTN_GET_DEVICE_NUM OMP_GET_DEVICE_NUM_
-#define FTN_SET_AFFINITY_FORMAT OMP_SET_AFFINITY_FORMAT_
-#define FTN_GET_AFFINITY_FORMAT OMP_GET_AFFINITY_FORMAT_
-#define FTN_DISPLAY_AFFINITY OMP_DISPLAY_AFFINITY_
-#define FTN_CAPTURE_AFFINITY OMP_CAPTURE_AFFINITY_
 #endif
 
 #endif /* KMP_FTN_UAPPEND */

@@ -103,10 +103,6 @@ public:
     /// Cleanup all isl structs on destruction.
     ~IslAstUserPayload();
 
-    /// Does the dependence analysis determine that there are no loop-carried
-    /// dependencies?
-    bool IsParallel = false;
-
     /// Flag to mark innermost loops.
     bool IsInnermost = false;
 
@@ -120,7 +116,7 @@ public:
     bool IsReductionParallel = false;
 
     /// The minimal dependence distance for non parallel loops.
-    isl::pw_aff MinimalDependenceDistance;
+    isl_pw_aff *MinimalDependenceDistance = nullptr;
 
     /// The build environment at the time this node was constructed.
     isl_ast_build *Build = nullptr;

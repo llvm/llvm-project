@@ -110,14 +110,12 @@ sub process(\%) {
         if ( not $entries->{ $entry }->{ obsolete } ) {
             my $ordinal = $entries->{ $entry }->{ ordinal };
             if ( $entry =~ m{\A[ok]mp_} ) {
-                if ( not defined( $ordinal ) ) {
+                if ( not defined( $ordinal ) or $ordinal eq "DATA" ) {
                     runtime_error(
                         "Bad entry \"$entry\": ordinal number is not specified."
                     );
                 }; # if
-                if ( $ordinal ne "DATA" ) {
-                    $entries->{ uc( $entry ) } = { ordinal => 1000 + $ordinal };
-                }
+                $entries->{ uc( $entry ) } = { ordinal => 1000 + $ordinal };
             }; # if
         }; # if
     }; # foreach

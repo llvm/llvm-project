@@ -50,7 +50,7 @@ class Symbol;
 
 // If -reproduce option is given, all input files are written
 // to this tar archive.
-extern std::unique_ptr<llvm::TarWriter> Tar;
+extern llvm::TarWriter *Tar;
 
 // Opens a given file.
 llvm::Optional<MemoryBufferRef> readFile(StringRef Path);
@@ -86,9 +86,7 @@ public:
 
   // Returns object file symbols. It is a runtime error to call this
   // function on files of other types.
-  ArrayRef<Symbol *> getSymbols() { return getMutableSymbols(); }
-
-  std::vector<Symbol *> &getMutableSymbols() {
+  ArrayRef<Symbol *> getSymbols() {
     assert(FileKind == BinaryKind || FileKind == ObjKind ||
            FileKind == BitcodeKind);
     return Symbols;
@@ -171,7 +169,6 @@ template <class ELFT> class ObjFile : public ELFFileBase<ELFT> {
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::Word Elf_Word;
-  typedef typename ELFT::CGProfile Elf_CGProfile;
 
   StringRef getShtGroupSignature(ArrayRef<Elf_Shdr> Sections,
                                  const Elf_Shdr &Sec);
@@ -220,9 +217,6 @@ public:
 
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *AddrsigSec = nullptr;
-
-  // SHT_LLVM_CALL_GRAPH_PROFILE table
-  ArrayRef<Elf_CGProfile> CGProfile;
 
 private:
   void
@@ -278,6 +272,8 @@ public:
   bool AddedToLink = false;
 
 private:
+  template <class ELFT> void addElfSymbols();
+
   uint64_t OffsetInArchive;
 };
 

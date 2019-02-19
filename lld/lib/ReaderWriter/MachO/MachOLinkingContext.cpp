@@ -262,7 +262,6 @@ void MachOLinkingContext::configure(HeaderFileType type, Arch arch, OS os,
   case llvm::MachO::MH_OBJECT:
     _printRemainingUndefines = false;
     _allowRemainingUndefines = true;
-    break;
   default:
     break;
   }
