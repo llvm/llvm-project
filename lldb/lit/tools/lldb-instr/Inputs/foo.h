@@ -8,5 +8,6 @@ struct Foo {
   int D(bool b) const;
   static void E();
   static int F(int i);
-  int G() { return 0; }
+  void G(const char* fmt...);
+  static Foo H();
 };

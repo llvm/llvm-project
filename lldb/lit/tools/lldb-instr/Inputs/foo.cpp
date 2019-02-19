@@ -7,3 +7,5 @@ int Foo::C(int i) { return i; }
 int Foo::D(bool b) const { return 1; }
 void Foo::E() {}
 int Foo::F(int i) { return i; }
+void Foo::G(const char *fmt...) {}
+Foo Foo::H() { return Foo(); }
