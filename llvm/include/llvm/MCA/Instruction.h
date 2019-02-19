@@ -150,9 +150,17 @@ public:
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
   unsigned getLatency() const { return WD->Latency; }
+  const WriteState *getDependentWrite() const { return DependentWrite; }
 
-  void addUser(ReadState *Use, int ReadAdvance);
-  void addUser(WriteState *Use);
+  // This method adds Use to the set of data dependent reads. IID is the
+  // instruction identifier associated with this write. ReadAdvance is the
+  // number of cycles to subtract from the latency of this data dependency.
+  // Use is in a RAW dependency with this write.
+  void addUser(unsigned IID, ReadState *Use, int ReadAdvance);
+
+  // Use is a younger register write that is in a false dependency with this
+  // write. IID is the instruction identifier associated with this write.
+  void addUser(unsigned IID, WriteState *Use);
 
   unsigned getDependentWriteCyclesLeft() const {
     return DependentWriteCyclesLeft;
@@ -170,7 +178,7 @@ public:
   bool isEliminated() const { return IsEliminated; }
 
   bool isReady() const {
-    if (getDependentWrite())
+    if (DependentWrite)
       return false;
     unsigned CyclesLeft = getDependentWriteCyclesLeft();
     return !CyclesLeft || CyclesLeft < getLatency();
@@ -180,9 +188,8 @@ public:
     return CyclesLeft != UNKNOWN_CYCLES && CyclesLeft <= 0;
   }
 
-  const WriteState *getDependentWrite() const { return DependentWrite; }
-  void setDependentWrite(WriteState *Other) { DependentWrite = Other; }
-  void writeStartEvent(unsigned Cycles) {
+  void setDependentWrite(const WriteState *Other) { DependentWrite = Other; }
+  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
     DependentWriteCyclesLeft = Cycles;
     DependentWrite = nullptr;
   }
@@ -198,7 +205,7 @@ public:
 
   // On every cycle, update CyclesLeft and notify dependent users.
   void cycleEvent();
-  void onInstructionIssued();
+  void onInstructionIssued(unsigned IID);
 
 #ifndef NDEBUG
   void dump() const;
@@ -255,7 +262,7 @@ public:
   void setIndependentFromDef() { IndependentFromDef = true; }
 
   void cycleEvent();
-  void writeStartEvent(unsigned Cycles);
+  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles);
   void setDependentWrites(unsigned Writes) {
     DependentWrites = Writes;
     IsReady = !Writes;
@@ -454,8 +461,8 @@ public:
   void dispatch(unsigned RCUTokenID);
 
   // Instruction issued. Transition to the IS_EXECUTING state, and update
-  // all the definitions.
-  void execute();
+  // all the register definitions.
+  void execute(unsigned IID);
 
   // Force a transition from the IS_DISPATCHED state to the IS_READY or
   // IS_PENDING state. State transitions normally occur either at the beginning
@@ -556,7 +563,7 @@ public:
     return !WS || WS->isExecuted();
   }
 
-  bool isValid() const { return Data.first != INVALID_IID && Data.second; }
+  bool isValid() const { return Data.second && Data.first != INVALID_IID; }
   bool operator==(const WriteRef &Other) const { return Data == Other.Data; }
 
 #ifndef NDEBUG

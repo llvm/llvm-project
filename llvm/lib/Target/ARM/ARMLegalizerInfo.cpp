@@ -138,6 +138,11 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
               {s32, p0, 32, 8},
               {p0, p0, 32, 8}});
 
+  auto &PhiBuilder =
+      getActionDefinitionsBuilder(G_PHI)
+          .legalFor({s32, p0})
+          .minScalar(0, s32);
+
   getActionDefinitionsBuilder(G_GEP).legalFor({{p0, s32}});
 
   getActionDefinitionsBuilder(G_BRCOND).legalFor({s1});
@@ -171,11 +176,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
         .clampScalar(1, s32, s32)
         .clampScalar(0, s32, s32);
   }
-
-  // We're keeping these builders around because we'll want to add support for
-  // floating point to them.
-  auto &PhiBuilder =
-      getActionDefinitionsBuilder(G_PHI).legalFor({s32, p0}).minScalar(0, s32);
 
   if (!ST.useSoftFloat() && ST.hasVFP2()) {
     getActionDefinitionsBuilder(

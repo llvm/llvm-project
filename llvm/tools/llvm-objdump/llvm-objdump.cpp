@@ -863,10 +863,6 @@ static void addPltEntries(const ObjectFile *Obj,
 // returns the number of zero bytes that can be skipped when dumping the
 // disassembly of the instructions in Buf.
 static size_t countSkippableZeroBytes(ArrayRef<uint8_t> Buf) {
-  // When -z or --disassemble-zeroes are given we always dissasemble them.
-  if (DisassembleZeroes)
-    return 0;
-
   // Find the number of leading zeroes.
   size_t N = 0;
   while (N < Buf.size() && !Buf[N])
@@ -1284,12 +1280,22 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         if (Index >= End)
           break;
 
-        if (size_t N =
-                countSkippableZeroBytes(Bytes.slice(Index, End - Index))) {
-          outs() << "\t\t..." << '\n';
-          Index += N;
-          if (Index >= End)
-            break;
+        // When -z or --disassemble-zeroes are given we always dissasemble them.
+        // Otherwise we might want to skip zero bytes we see.
+        if (!DisassembleZeroes) {
+          uint64_t MaxOffset = End - Index;
+          // For -reloc: print zero blocks patched by relocations, so that
+          // relocations can be shown in the dump.
+          if (RelCur != RelEnd)
+            MaxOffset = RelCur->getOffset() - Index;
+
+          if (size_t N =
+                  countSkippableZeroBytes(Bytes.slice(Index, MaxOffset))) {
+            outs() << "\t\t..." << '\n';
+            Index += N;
+            if (Index >= End)
+              break;
+          }
         }
 
         // Disassemble a real instruction or a data when disassemble all is

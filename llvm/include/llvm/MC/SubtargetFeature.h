@@ -52,7 +52,7 @@ public:
 struct SubtargetFeatureKV {
   const char *Key;                      ///< K-V key string
   const char *Desc;                     ///< Help descriptor
-  FeatureBitset Value;                  ///< K-V integer value
+  unsigned Value;                       ///< K-V integer value
   FeatureBitset Implies;                ///< K-V bit mask
 
   /// Compare routine for std::lower_bound

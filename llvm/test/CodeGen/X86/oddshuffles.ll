@@ -621,16 +621,16 @@ define void @v12i32(<8 x i32> %a, <8 x i32> %b, <12 x i32>* %p) nounwind {
 ;
 ; AVX2-SLOW-LABEL: v12i32:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm3 = ymm0[3,3,2,3,7,7,6,7]
-; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[0,2,2,3]
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm3[1,2],xmm2[3]
-; AVX2-SLOW-NEXT:    vmovaps {{.*#+}} ymm3 = <0,4,u,1,5,u,2,6>
-; AVX2-SLOW-NEXT:    vpermps %ymm0, %ymm3, %ymm0
-; AVX2-SLOW-NEXT:    vbroadcastsd %xmm1, %ymm1
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
-; AVX2-SLOW-NEXT:    vmovaps %ymm0, (%rdi)
-; AVX2-SLOW-NEXT:    vmovaps %xmm2, 32(%rdi)
+; AVX2-SLOW-NEXT:    vmovaps {{.*#+}} ymm2 = <0,4,u,1,5,u,2,6>
+; AVX2-SLOW-NEXT:    vpermps %ymm0, %ymm2, %ymm2
+; AVX2-SLOW-NEXT:    vbroadcastsd %xmm1, %ymm3
+; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm3[2],ymm2[3,4],ymm3[5],ymm2[6,7]
+; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,3],xmm3[3,3]
+; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX2-SLOW-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2],xmm1[3]
+; AVX2-SLOW-NEXT:    vmovaps %xmm0, 32(%rdi)
+; AVX2-SLOW-NEXT:    vmovaps %ymm2, (%rdi)
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;

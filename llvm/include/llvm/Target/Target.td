@@ -908,7 +908,7 @@ class InstrInfo {
 }
 
 // Standard Pseudo Instructions.
-// This list must match TargetOpcodes.h and CodeGenTarget.cpp.
+// This list must match TargetOpcodes.def.
 // Only these instructions are allowed in the TargetOpcode namespace.
 // Ensure mayLoad and mayStore have a default value, so as not to break
 // targets that set guessInstructionProperties=0. Any local definition of

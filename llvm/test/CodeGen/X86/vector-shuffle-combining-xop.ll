@@ -219,23 +219,13 @@ define <4 x i32> @combine_vpperm_10zz32BA(<4 x i32> %a0, <4 x i32> %a1) {
   ret <4 x i32> %res3
 }
 
-; FIXME: Duplicated load in i686
 define void @buildvector_v4f32_0404(float %a, float %b, <4 x float>* %ptr) {
-; X86-AVX-LABEL: buildvector_v4f32_0404:
-; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
-; X86-AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
-; X86-AVX-NEXT:    vmovaps %xmm0, (%eax)
-; X86-AVX-NEXT:    retl
-;
-; X86-AVX2-LABEL: buildvector_v4f32_0404:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
-; X86-AVX2-NEXT:    vmovaps %xmm0, (%eax)
-; X86-AVX2-NEXT:    retl
+; X86-LABEL: buildvector_v4f32_0404:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
+; X86-NEXT:    vmovaps %xmm0, (%eax)
+; X86-NEXT:    retl
 ;
 ; X64-AVX-LABEL: buildvector_v4f32_0404:
 ; X64-AVX:       # %bb.0:

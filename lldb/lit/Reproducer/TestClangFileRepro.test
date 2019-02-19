@@ -1,8 +1,0 @@
-# REQUIRES: system-darwin
-#
-# This tests that modules files from clang end up in the reproducer.
-#
-# RUN: %lldb -x -b -s %S/Inputs/ModuleCapture.in --capture %t.repro
-# cat %t.repro/files.yaml | FileCheck %s
-#
-# CHECK: Cocoa.h

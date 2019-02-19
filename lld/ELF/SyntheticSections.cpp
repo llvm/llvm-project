@@ -1038,11 +1038,8 @@ void MipsGotSection::writeTo(uint8_t *Buf) {
   for (const FileGot &G : Gots) {
     auto Write = [&](size_t I, const Symbol *S, int64_t A) {
       uint64_t VA = A;
-      if (S) {
+      if (S)
         VA = S->getVA(A);
-        if (S->StOther & STO_MIPS_MICROMIPS)
-          VA |= 1;
-      }
       writeUint(Buf + I * Config->Wordsize, VA);
     };
     // Write 'page address' entries to the local part of the GOT.
@@ -2052,14 +2049,17 @@ template <class ELFT> void SymbolTableSection<ELFT>::writeTo(uint8_t *Buf) {
       if (Sym->isInPlt() && Sym->NeedsPltAddr)
         ESym->st_other |= STO_MIPS_PLT;
       if (isMicroMips()) {
-        // Set STO_MIPS_MICROMIPS flag and less-significant bit for
-        // a defined microMIPS symbol and symbol should point to its
-        // PLT entry (in case of microMIPS, PLT entries always contain
-        // microMIPS code).
+        // We already set the less-significant bit for symbols
+        // marked by the `STO_MIPS_MICROMIPS` flag and for microMIPS PLT
+        // records. That allows us to distinguish such symbols in
+        // the `MIPS<ELFT>::relocateOne()` routine. Now we should
+        // clear that bit for non-dynamic symbol table, so tools
+        // like `objdump` will be able to deal with a correct
+        // symbol position.
         if (Sym->isDefined() &&
             ((Sym->StOther & STO_MIPS_MICROMIPS) || Sym->NeedsPltAddr)) {
-          if (StrTabSec.isDynamic())
-            ESym->st_value |= 1;
+          if (!StrTabSec.isDynamic())
+            ESym->st_value &= ~1;
           ESym->st_other |= STO_MIPS_MICROMIPS;
         }
       }
