@@ -1071,6 +1071,11 @@ namespace llvm {
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
 
+    /// Overflow nodes should get combined/lowered to optimal instructions
+    /// (they should allow eliminating explicit compares by getting flags from
+    /// math ops).
+    bool shouldFormOverflowOp(unsigned Opcode, EVT VT) const override;
+
     bool storeOfVectorConstantIsCheap(EVT MemVT, unsigned NumElem,
                                       unsigned AddrSpace) const override {
       // If we can replace more than 2 scalar stores, there will be a reduction

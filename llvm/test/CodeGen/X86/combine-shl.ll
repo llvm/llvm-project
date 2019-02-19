@@ -138,9 +138,9 @@ define <4 x i32> @combine_vec_shl_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ;
 ; AVX-SLOW-LABEL: combine_vec_shl_trunc_and:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
-; AVX-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
-; AVX-SLOW-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX-SLOW-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
 ; AVX-SLOW-NEXT:    vpsllvd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq

@@ -5,11 +5,7 @@
 
   define void @test_constants_s64() { ret void }
 
-
-  define void @test_phi_s32() { ret void }
-  define void @test_phi_p0() { ret void }
   define void @test_phi_s64() #0 { ret void }
-  define void @test_phi_s8() { ret void }
 
   @a_global = global i32 42
   define void @test_global_variable() { ret void }
@@ -104,80 +100,6 @@ body:             |
     BX_RET 14, $noreg
 ...
 ---
-name:            test_phi_s32
-# CHECK-LABEL: name: test_phi_s32
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $r1, $r2
-
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-
-    %2(s32) = COPY $r1
-    %3(s32) = COPY $r2
-
-    G_BRCOND %1(s1), %bb.1
-    G_BR %bb.2
-
-  bb.1:
-    G_BR %bb.2
-
-  bb.2:
-    %4(s32) = G_PHI %2(s32), %bb.0, %3(s32), %bb.1
-    ; G_PHI with s32 is legal, so we should find it unchanged in the output
-    ; CHECK: G_PHI {{%[0-9]+}}(s32), %bb.0, {{%[0-9]+}}(s32), %bb.1
-    $r0 = COPY %4(s32)
-    BX_RET 14, $noreg, implicit $r0
-...
----
-name:            test_phi_p0
-# CHECK-LABEL: name: test_phi_p0
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $r1, $r2
-
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-
-    %2(p0) = COPY $r1
-    %3(p0) = COPY $r2
-
-    G_BRCOND %1(s1), %bb.1
-    G_BR %bb.2
-
-  bb.1:
-    G_BR %bb.2
-
-  bb.2:
-    %4(p0) = G_PHI %2(p0), %bb.0, %3(p0), %bb.1
-    ; G_PHI with p0 is legal, so we should find it unchanged in the output
-    ; CHECK: G_PHI {{%[0-9]+}}(p0), %bb.0, {{%[0-9]+}}(p0), %bb.1
-    $r0 = COPY %4(p0)
-    BX_RET 14, $noreg, implicit $r0
-...
----
 name:            test_phi_s64
 # CHECK-LABEL: name: test_phi_s64
 legalized:       false
@@ -214,59 +136,6 @@ body:             |
     ; CHECK: G_PHI {{%[0-9]+}}(s64), %bb.0, {{%[0-9]+}}(s64), %bb.1
     $d0 = COPY %4(s64)
     BX_RET 14, $noreg, implicit $d0
-...
----
-name:            test_phi_s8
-# CHECK-LABEL: name: test_phi_s8
-legalized:       false
-# CHECK: legalized: true
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
-  - { id: 4, class: _ }
-  - { id: 5, class: _ }
-  - { id: 6, class: _ }
-  - { id: 7, class: _ }
-body:             |
-  bb.0:
-    liveins: $r0, $r1, $r2
-
-    %0(s32) = COPY $r0
-    %1(s1) = G_TRUNC %0(s32)
-
-    %2(s32) = COPY $r1
-    %3(s8) = G_TRUNC %2(s32)
-    ; CHECK: [[R1:%[0-9]+]]:_(s32) = COPY $r1
-
-    %4(s32) = COPY $r2
-    %5(s8) = G_TRUNC %4(s32)
-    ; CHECK: [[R2:%[0-9]+]]:_(s32) = COPY $r2
-
-    ; CHECK: [[V1:%[0-9]+]]:_(s32) = COPY [[R1]]
-
-    G_BRCOND %1(s1), %bb.1
-    G_BR %bb.2
-
-  bb.1:
-    ; CHECK: [[V2:%[0-9]+]]:_(s32) = COPY [[R2]]
-    G_BR %bb.2
-
-  bb.2:
-    %6(s8) = G_PHI %3(s8), %bb.0, %5(s8), %bb.1
-    ; G_PHI with s8 should widen, and all the truncs and exts should be combined
-    ; away into a bunch of redundant copies
-    ; CHECK: [[V:%[0-9]+]]:_(s32) = G_PHI [[V1]](s32), %bb.0, [[V2]](s32), %bb.1
-
-    %7(s32) = G_ANYEXT %6(s8)
-    $r0 = COPY %7(s32)
-    ; CHECK: [[R:%[0-9]+]]:_(s32) = COPY [[V]]
-    ; CHECK: $r0 = COPY [[R]](s32)
-    BX_RET 14, $noreg, implicit $r0
 ...
 ---
 name:            test_global_variable

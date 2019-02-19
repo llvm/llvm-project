@@ -619,20 +619,19 @@ struct SemiNCAInfo {
 
   // Helper struct used during edge insertions.
   struct InsertionInfo {
-    using BucketElementTy = std::pair<unsigned, TreeNodePtr>;
-    struct DecreasingLevel {
-      bool operator()(const BucketElementTy &First,
-                      const BucketElementTy &Second) const {
-        return First.first > Second.first;
+    struct Compare {
+      bool operator()(TreeNodePtr LHS, TreeNodePtr RHS) const {
+        return LHS->getLevel() < RHS->getLevel();
       }
     };
 
-    std::priority_queue<BucketElementTy, SmallVector<BucketElementTy, 8>,
-        DecreasingLevel>
-        Bucket;  // Queue of tree nodes sorted by level in descending order.
-    SmallDenseSet<TreeNodePtr, 8> Affected;
-    SmallDenseMap<TreeNodePtr, unsigned, 8> Visited;
-    SmallVector<TreeNodePtr, 8> AffectedQueue;
+    // Bucket queue of tree nodes ordered by descending level. For simplicity,
+    // we use a priority_queue here.
+    std::priority_queue<TreeNodePtr, SmallVector<TreeNodePtr, 8>,
+                        Compare>
+        Bucket;
+    SmallDenseSet<TreeNodePtr, 8> Visited;
+    SmallVector<TreeNodePtr, 8> Affected;
     SmallVector<TreeNodePtr, 8> VisitedNotAffectedQueue;
   };
 
@@ -736,101 +735,91 @@ struct SemiNCAInfo {
     assert(NCD);
 
     LLVM_DEBUG(dbgs() << "\t\tNCA == " << BlockNamePrinter(NCD) << "\n");
-    const TreeNodePtr ToIDom = To->getIDom();
+    const unsigned NCDLevel = NCD->getLevel();
 
-    // Nothing affected -- NCA property holds.
-    // (Based on the lemma 2.5 from the second paper.)
-    if (NCD == To || NCD == ToIDom) return;
+    // Based on Lemma 2.5 from the second paper, after insertion of (From,To), v
+    // is affected iff depth(NCD)+1 < depth(v) && a path P from To to v exists
+    // where every w on P s.t. depth(v) <= depth(w)
+    //
+    // This reduces to a widest path problem (maximizing the depth of the
+    // minimum vertex in the path) which can be solved by a modified version of
+    // Dijkstra with a bucket queue (named depth-based search in the paper).
 
-    // Identify and collect affected nodes.
+    // To is in the path, so depth(NCD)+1 < depth(v) <= depth(To). Nothing
+    // affected if this does not hold.
+    if (NCDLevel + 1 >= To->getLevel())
+      return;
+
     InsertionInfo II;
-    LLVM_DEBUG(dbgs() << "Marking " << BlockNamePrinter(To)
-                      << " as affected\n");
-    II.Affected.insert(To);
-    const unsigned ToLevel = To->getLevel();
-    LLVM_DEBUG(dbgs() << "Putting " << BlockNamePrinter(To)
-                      << " into a Bucket\n");
-    II.Bucket.push({ToLevel, To});
+    SmallVector<TreeNodePtr, 8> UnaffectedOnCurrentLevel;
+    II.Bucket.push(To);
+    II.Visited.insert(To);
 
     while (!II.Bucket.empty()) {
-      const TreeNodePtr CurrentNode = II.Bucket.top().second;
-      const unsigned  CurrentLevel = CurrentNode->getLevel();
+      TreeNodePtr TN = II.Bucket.top();
       II.Bucket.pop();
-      LLVM_DEBUG(dbgs() << "\tAdding to Visited and AffectedQueue: "
-                        << BlockNamePrinter(CurrentNode) << "\n");
+      II.Affected.push_back(TN);
 
-      II.Visited.insert({CurrentNode, CurrentLevel});
-      II.AffectedQueue.push_back(CurrentNode);
+      const unsigned CurrentLevel = TN->getLevel();
+      LLVM_DEBUG(dbgs() << "Mark " << BlockNamePrinter(TN) <<
+                 "as affected, CurrentLevel " << CurrentLevel << "\n");
 
-      // Discover and collect affected successors of the current node.
-      VisitInsertion(DT, BUI, CurrentNode, CurrentLevel, NCD, II);
+      assert(TN->getBlock() && II.Visited.count(TN) && "Preconditions!");
+
+      while (true) {
+        // Unlike regular Dijkstra, we have an inner loop to expand more
+        // vertices. The first iteration is for the (affected) vertex popped
+        // from II.Bucket and the rest are for vertices in
+        // UnaffectedOnCurrentLevel, which may eventually expand to affected
+        // vertices.
+        //
+        // Invariant: there is an optimal path from `To` to TN with the minimum
+        // depth being CurrentLevel.
+        for (const NodePtr Succ :
+             ChildrenGetter<IsPostDom>::Get(TN->getBlock(), BUI)) {
+          const TreeNodePtr SuccTN = DT.getNode(Succ);
+          assert(SuccTN &&
+                 "Unreachable successor found at reachable insertion");
+          const unsigned SuccLevel = SuccTN->getLevel();
+
+          LLVM_DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ)
+                            << ", level = " << SuccLevel << "\n");
+
+          // There is an optimal path from `To` to Succ with the minimum depth
+          // being min(CurrentLevel, SuccLevel).
+          //
+          // If depth(NCD)+1 < depth(Succ) is not satisfied, Succ is unaffected
+          // and no affected vertex may be reached by a path passing through it.
+          // Stop here. Also, Succ may be visited by other predecessors but the
+          // first visit has the optimal path. Stop if Succ has been visited.
+          if (SuccLevel <= NCDLevel + 1 || !II.Visited.insert(SuccTN).second)
+            continue;
+
+          if (SuccLevel > CurrentLevel) {
+            // Succ is unaffected but it may (transitively) expand to affected
+            // vertices. Store it in UnaffectedOnCurrentLevel.
+            LLVM_DEBUG(dbgs() << "\t\tMarking visited not affected "
+                              << BlockNamePrinter(Succ) << "\n");
+            II.VisitedNotAffectedQueue.push_back(SuccTN);
+            UnaffectedOnCurrentLevel.push_back(SuccTN);
+          } else {
+            // The condition is satisfied (Succ is affected). Add Succ to the
+            // bucket queue.
+            LLVM_DEBUG(dbgs() << "\t\tAdd " << BlockNamePrinter(Succ)
+                              << " to a Bucket\n");
+            II.Bucket.push(SuccTN);
+          }
+        }
+
+        if (UnaffectedOnCurrentLevel.empty())
+          break;
+        TN = UnaffectedOnCurrentLevel.pop_back_val();
+        LLVM_DEBUG(dbgs() << " Next: " << BlockNamePrinter(TN) << "\n");
+      }
     }
 
     // Finish by updating immediate dominators and levels.
     UpdateInsertion(DT, BUI, NCD, II);
-  }
-
-  // Visits an affected node and collect its affected successors.
-  static void VisitInsertion(DomTreeT &DT, const BatchUpdatePtr BUI,
-                             const TreeNodePtr TN, const unsigned RootLevel,
-                             const TreeNodePtr NCD, InsertionInfo &II) {
-    const unsigned NCDLevel = NCD->getLevel();
-    LLVM_DEBUG(dbgs() << "Visiting " << BlockNamePrinter(TN) << ",  RootLevel "
-                      << RootLevel << "\n");
-
-    SmallVector<TreeNodePtr, 8> Stack = {TN};
-    assert(TN->getBlock() && II.Visited.count(TN) && "Preconditions!");
-
-    SmallPtrSet<TreeNodePtr, 8> Processed;
-
-    do {
-      TreeNodePtr Next = Stack.pop_back_val();
-      LLVM_DEBUG(dbgs() << " Next: " << BlockNamePrinter(Next) << "\n");
-
-      for (const NodePtr Succ :
-           ChildrenGetter<IsPostDom>::Get(Next->getBlock(), BUI)) {
-        const TreeNodePtr SuccTN = DT.getNode(Succ);
-        assert(SuccTN && "Unreachable successor found at reachable insertion");
-        const unsigned SuccLevel = SuccTN->getLevel();
-
-        LLVM_DEBUG(dbgs() << "\tSuccessor " << BlockNamePrinter(Succ)
-                          << ", level = " << SuccLevel << "\n");
-
-        // Do not process the same node multiple times.
-        if (Processed.count(Next) > 0)
-          continue;
-
-        // Succ dominated by subtree From -- not affected.
-        // (Based on the lemma 2.5 from the second paper.)
-        if (SuccLevel > RootLevel) {
-          LLVM_DEBUG(dbgs() << "\t\tDominated by subtree From\n");
-          if (II.Visited.count(SuccTN) != 0) {
-            LLVM_DEBUG(dbgs() << "\t\t\talready visited at level "
-                              << II.Visited[SuccTN] << "\n\t\t\tcurrent level "
-                              << RootLevel << ")\n");
-
-            // A node can be necessary to visit again if we see it again at
-            // a lower level than before.
-            if (II.Visited[SuccTN] >= RootLevel)
-              continue;
-          }
-
-          LLVM_DEBUG(dbgs() << "\t\tMarking visited not affected "
-                            << BlockNamePrinter(Succ) << "\n");
-          II.Visited.insert({SuccTN, RootLevel});
-          II.VisitedNotAffectedQueue.push_back(SuccTN);
-          Stack.push_back(SuccTN);
-        } else if ((SuccLevel > NCDLevel + 1) &&
-            II.Affected.count(SuccTN) == 0) {
-          LLVM_DEBUG(dbgs() << "\t\tMarking affected and adding "
-                            << BlockNamePrinter(Succ) << " to a Bucket\n");
-          II.Affected.insert(SuccTN);
-          II.Bucket.push({SuccLevel, SuccTN});
-        }
-      }
-
-      Processed.insert(Next);
-    } while (!Stack.empty());
   }
 
   // Updates immediate dominators and levels after insertion.
@@ -838,7 +827,7 @@ struct SemiNCAInfo {
                               const TreeNodePtr NCD, InsertionInfo &II) {
     LLVM_DEBUG(dbgs() << "Updating NCD = " << BlockNamePrinter(NCD) << "\n");
 
-    for (const TreeNodePtr TN : II.AffectedQueue) {
+    for (const TreeNodePtr TN : II.Affected) {
       LLVM_DEBUG(dbgs() << "\tIDom(" << BlockNamePrinter(TN)
                         << ") = " << BlockNamePrinter(NCD) << "\n");
       TN->setIDom(NCD);

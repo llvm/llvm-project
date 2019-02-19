@@ -175,10 +175,11 @@ define i1 @uaddo_i42_increment_illegal_type(i42 %x, i42* %p) {
 
 define i1 @usubo_ult_i64(i64 %x, i64 %y, i64* %p) {
 ; CHECK-LABEL: @usubo_ult_i64(
-; CHECK-NEXT:    [[S:%.*]] = sub i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i64 [[S]], i64* [[P:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %s = sub i64 %x, %y
   store i64 %s, i64* %p
@@ -190,10 +191,11 @@ define i1 @usubo_ult_i64(i64 %x, i64 %y, i64* %p) {
 
 define i1 @usubo_ugt_i32(i32 %x, i32 %y, i32* %p) {
 ; CHECK-LABEL: @usubo_ugt_i32(
-; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = sub i32 [[X]], [[Y]]
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i32 [[MATH]], i32* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %ov = icmp ugt i32 %y, %x
   %s = sub i32 %x, %y
@@ -205,10 +207,11 @@ define i1 @usubo_ugt_i32(i32 %x, i32 %y, i32* %p) {
 
 define i1 @usubo_ugt_constant_op0_i8(i8 %x, i8* %p) {
 ; CHECK-LABEL: @usubo_ugt_constant_op0_i8(
-; CHECK-NEXT:    [[S:%.*]] = sub i8 42, [[X:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 [[X]], 42
-; CHECK-NEXT:    store i8 [[S]], i8* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 42, i8 [[X:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i8, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i8 [[MATH]], i8* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %s = sub i8 42, %x
   %ov = icmp ugt i8 %x, 42
@@ -220,10 +223,11 @@ define i1 @usubo_ugt_constant_op0_i8(i8 %x, i8* %p) {
 
 define i1 @usubo_ult_constant_op0_i16(i16 %x, i16* %p) {
 ; CHECK-LABEL: @usubo_ult_constant_op0_i16(
-; CHECK-NEXT:    [[S:%.*]] = sub i16 43, [[X:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i16 43, [[X]]
-; CHECK-NEXT:    store i16 [[S]], i16* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i16, i1 } @llvm.usub.with.overflow.i16(i16 43, i16 [[X:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i16, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i16 [[MATH]], i16* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %s = sub i16 43, %x
   %ov = icmp ult i16 43, %x
@@ -235,10 +239,11 @@ define i1 @usubo_ult_constant_op0_i16(i16 %x, i16* %p) {
 
 define i1 @usubo_ult_constant_op1_i16(i16 %x, i16* %p) {
 ; CHECK-LABEL: @usubo_ult_constant_op1_i16(
-; CHECK-NEXT:    [[S:%.*]] = add i16 [[X:%.*]], -44
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i16 [[X]], 44
-; CHECK-NEXT:    store i16 [[S]], i16* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i16, i1 } @llvm.usub.with.overflow.i16(i16 [[X:%.*]], i16 44)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i16, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i16, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i16 [[MATH]], i16* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %s = add i16 %x, -44
   %ov = icmp ult i16 %x, 44
@@ -248,10 +253,11 @@ define i1 @usubo_ult_constant_op1_i16(i16 %x, i16* %p) {
 
 define i1 @usubo_ugt_constant_op1_i8(i8 %x, i8* %p) {
 ; CHECK-LABEL: @usubo_ugt_constant_op1_i8(
-; CHECK-NEXT:    [[OV:%.*]] = icmp ugt i8 45, [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = add i8 [[X]], -45
-; CHECK-NEXT:    store i8 [[S]], i8* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[X:%.*]], i8 45)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i8, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i8, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i8 [[MATH]], i8* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %ov = icmp ugt i8 45, %x
   %s = add i8 %x, -45
@@ -263,10 +269,11 @@ define i1 @usubo_ugt_constant_op1_i8(i8 %x, i8* %p) {
 
 define i1 @usubo_eq_constant1_op1_i32(i32 %x, i32* %p) {
 ; CHECK-LABEL: @usubo_eq_constant1_op1_i32(
-; CHECK-NEXT:    [[S:%.*]] = add i32 [[X:%.*]], -1
-; CHECK-NEXT:    [[OV:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 [[X:%.*]], i32 1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i32 [[MATH]], i32* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %s = add i32 %x, -1
   %ov = icmp eq i32 %x, 0
@@ -283,14 +290,15 @@ define i1 @usubo_ult_sub_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[S:%.*]] = sub i64 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i64 [[S]], i64* [[P:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X:%.*]], i64 [[Y:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[END:%.*]], label [[F]]
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[COND]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[OV:%.*]] = icmp ult i64 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
 entry:
   br i1 %cond, label %t, label %f
@@ -319,10 +327,11 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, i64* %p, i1 %cond) {
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[COND]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[X]], [[Y]]
-; CHECK-NEXT:    [[S:%.*]] = sub i64 [[X]], [[Y]]
-; CHECK-NEXT:    store i64 [[S]], i64* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP0]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP0]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
 entry:
   br i1 %cond, label %t, label %f

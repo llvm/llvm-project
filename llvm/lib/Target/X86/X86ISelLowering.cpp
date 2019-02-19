@@ -4934,6 +4934,13 @@ bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
   return isOperationLegalOrCustomOrPromote(VecOp.getOpcode(), ScalarVT);
 }
 
+bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT) const {
+  // TODO: Allow vectors?
+  if (VT.isVector())
+    return false;
+  return VT.isSimple() || !isOperationExpand(Opcode, VT);
+}
+
 bool X86TargetLowering::isCheapToSpeculateCttz() const {
   // Speculate cttz only if we can directly use TZCNT.
   return Subtarget.hasBMI();
@@ -7377,12 +7384,15 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
         VT.is256BitVector() && !Subtarget.hasInt256())
       return SDValue();
 
+    if (NumElems == 1)
+      return DAG.getBitcast(VT, Elts[FirstLoadedElt]);
+
     if (IsConsecutiveLoad)
       return CreateLoad(VT, LDBase);
 
     // IsConsecutiveLoadWithZeros - we need to create a shuffle of the loaded
     // vector and a zero vector to clear out the zero elements.
-    if (!isAfterLegalize && NumElems == VT.getVectorNumElements()) {
+    if (!isAfterLegalize && VT.isVector() && NumElems == VT.getVectorNumElements()) {
       SmallVector<int, 4> ClearMask(NumElems, -1);
       for (unsigned i = 0; i < NumElems; ++i) {
         if (ZeroMask[i])
@@ -7397,8 +7407,23 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     }
   }
 
-  int LoadSize =
-      (1 + LastLoadedElt - FirstLoadedElt) * LDBaseVT.getStoreSizeInBits();
+  unsigned BaseSize = LDBaseVT.getStoreSizeInBits();
+  int LoadSize = (1 + LastLoadedElt - FirstLoadedElt) * BaseSize;
+
+  // If the upper half of a ymm/zmm load is undef then just load the lower half.
+  if (VT.is256BitVector() || VT.is512BitVector()) {
+    unsigned HalfNumElems = NumElems / 2;
+    if (UndefMask.extractBits(HalfNumElems, HalfNumElems).isAllOnesValue()) {
+      EVT HalfVT =
+          EVT::getVectorVT(*DAG.getContext(), VT.getScalarType(), HalfNumElems);
+      SDValue HalfLD =
+          EltsFromConsecutiveLoads(HalfVT, Elts.drop_back(HalfNumElems), DL,
+                                   DAG, Subtarget, isAfterLegalize);
+      if (HalfLD)
+        return DAG.getNode(ISD::INSERT_SUBVECTOR, DL, VT, DAG.getUNDEF(VT),
+                           HalfLD, DAG.getIntPtrConstant(0, DL));
+    }
+  }
 
   // VZEXT_LOAD - consecutive 32/64-bit load/undefs followed by zeros/undefs.
   if (IsConsecutiveLoad && FirstLoadedElt == 0 &&
@@ -7418,6 +7443,55 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       for (auto *LD : Loads)
         DAG.makeEquivalentMemoryOrdering(LD, ResNode);
       return DAG.getBitcast(VT, ResNode);
+    }
+  }
+
+  // BROADCAST - match the smallest possible repetition pattern, load that
+  // scalar/subvector element and then broadcast to the entire vector.
+  if (ZeroMask.isNullValue() && isPowerOf2_32(NumElems) &&
+      (BaseSize % 8) == 0 && Subtarget.hasAVX() &&
+      (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector())) {
+    for (unsigned SubElems = 1; SubElems < NumElems; SubElems *= 2) {
+      unsigned RepeatSize = SubElems * BaseSize;
+      unsigned ScalarSize = std::min(RepeatSize, 64u);
+      if (!Subtarget.hasAVX2() && ScalarSize < 32)
+        continue;
+
+      bool Match = true;
+      SmallVector<SDValue, 8> RepeatedLoads(SubElems, DAG.getUNDEF(LDBaseVT));
+      for (unsigned i = 0; i != NumElems && Match; ++i) {
+        if (!LoadMask[i])
+          continue;
+        SDValue Elt = peekThroughBitcasts(Elts[i]);
+        if (RepeatedLoads[i % SubElems].isUndef())
+          RepeatedLoads[i % SubElems] = Elt;
+        else
+          Match &= (RepeatedLoads[i % SubElems] == Elt);
+      }
+
+      // We must have loads at both ends of the repetition.
+      Match &= !RepeatedLoads.front().isUndef();
+      Match &= !RepeatedLoads.back().isUndef();
+      if (!Match)
+        continue;
+
+      EVT RepeatVT =
+          VT.isInteger() && (RepeatSize != 64 || TLI.isTypeLegal(MVT::i64))
+              ? EVT::getIntegerVT(*DAG.getContext(), ScalarSize)
+              : EVT::getFloatingPointVT(ScalarSize);
+      if (RepeatSize > ScalarSize)
+        RepeatVT = EVT::getVectorVT(*DAG.getContext(), RepeatVT,
+                                    RepeatSize / ScalarSize);
+      if (SDValue RepeatLoad = EltsFromConsecutiveLoads(
+              RepeatVT, RepeatedLoads, DL, DAG, Subtarget, isAfterLegalize)) {
+        EVT BroadcastVT =
+            EVT::getVectorVT(*DAG.getContext(), RepeatVT.getScalarType(),
+                             VT.getSizeInBits() / ScalarSize);
+        unsigned Opcode = RepeatSize > ScalarSize ? X86ISD::SUBV_BROADCAST
+                                                  : X86ISD::VBROADCAST;
+        SDValue Broadcast = DAG.getNode(Opcode, DL, BroadcastVT, RepeatLoad);
+        return DAG.getBitcast(VT, Broadcast);
+      }
     }
   }
 
@@ -14605,10 +14679,11 @@ static SDValue lowerShuffleWithUndefHalf(const SDLoc &DL, MVT VT, SDValue V1,
     if (NumUpperHalves == 1) {
       // AVX2 has efficient 32/64-bit element cross-lane shuffles.
       if (Subtarget.hasAVX2()) {
-        // extract128 + vunpckhps, is better than vblend + vpermps.
-        // TODO: Refine to account for unary shuffle, splat, and other masks?
-        if (EltWidth == 32 && NumLowerHalves &&
-            HalfVT.is128BitVector() && !is128BitUnpackShuffleMask(HalfMask))
+        // extract128 + vunpckhps/vshufps, is better than vblend + vpermps.
+        if (EltWidth == 32 && NumLowerHalves && HalfVT.is128BitVector() &&
+            !is128BitUnpackShuffleMask(HalfMask) &&
+            (!isSingleSHUFPSMask(HalfMask) ||
+             Subtarget.hasFastVariableShuffle()))
           return SDValue();
         // If this is a unary shuffle (assume that the 2nd operand is
         // canonicalized to undef), then we can use vpermpd. Otherwise, we

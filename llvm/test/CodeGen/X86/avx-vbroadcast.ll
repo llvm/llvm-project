@@ -6,9 +6,7 @@ define <4 x i64> @A(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: A:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: A:
@@ -34,11 +32,9 @@ define <4 x i64> @A2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
 ; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vbroadcastsd (%ecx), %ymm0
 ; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
@@ -590,8 +586,7 @@ define <2 x i64> @G(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: G:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: G:
@@ -615,10 +610,9 @@ define <2 x i64> @G2(i64* %ptr, i64* %ptr2) nounwind uwtable readnone ssp {
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    movl (%ecx), %edx
 ; X32-NEXT:    movl 4(%ecx), %esi
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    movl %edx, (%eax)
 ; X32-NEXT:    movl %esi, 4(%eax)
-; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ;
