@@ -5,12 +5,6 @@ LLVM 8.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 8 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
-
-
 Introduction
 ============
 
@@ -31,6 +25,25 @@ LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the `releases
 page <https://llvm.org/releases/>`_.
 
+Minimum Required Compiler Version
+=================================
+As `discussed on the mailing list
+<https://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_,
+building LLVM will soon require more recent toolchains as follows:
+
+============= ====
+Clang         3.5
+Apple Clang   6.0
+GCC           5.1
+Visual Studio 2017
+============= ====
+
+A new CMake check when configuring LLVM provides a soft-error if your
+toolchain will become unsupported soon. You can opt out of the soft-error by
+setting the ``LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN`` CMake variable to
+``ON``.
+
+
 Non-comprehensive list of changes in this release
 =================================================
 .. NOTE
@@ -40,27 +53,11 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
-* As `discussed on the mailing list
-  <https://lists.llvm.org/pipermail/llvm-dev/2019-January/129452.html>`_,
-  building LLVM will soon require more recent toolchains as follows:
-
-  ============= ====
-  Clang         3.5
-  Apple Clang   6.0
-  GCC           5.1
-  Visual Studio 2017
-  ============= ====
-
-  A new CMake check when configuring LLVM provides a soft-error if your
-  toolchain will become unsupported soon. You can opt out of the soft-error by
-  setting the ``LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN`` CMake variable to
-  ``ON``.
-
 * The **llvm-cov** tool can now export lcov trace files using the
   `-format=lcov` option of the `export` command.
 
-* The add_llvm_loadable_module CMake macro has been removed.  The
-  add_llvm_library macro with the MODULE argument now provides the same
+* The ``add_llvm_loadable_module`` CMake macro has been removed.  The
+  ``add_llvm_library`` macro with the ``MODULE`` argument now provides the same
   functionality.  See `Writing an LLVM Pass
   <WritingAnLLVMPass.html#setting-up-the-build-environment>`_.
 
