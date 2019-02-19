@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.4.3)
+project(custom-libcxx C CXX)
 
 # Build static libcxxabi.
 set(LIBCXXABI_STANDALONE_BUILD 1)
