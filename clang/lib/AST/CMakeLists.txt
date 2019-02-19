@@ -44,7 +44,7 @@ add_clang_library(clangAST
   InheritViz.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
-  LayoutFieldRandomizer.cpp
+  RecordFieldReorganizer.cpp
   Mangle.cpp
   MicrosoftCXXABI.cpp
   MicrosoftMangle.cpp

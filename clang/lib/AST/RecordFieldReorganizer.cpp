@@ -1,4 +1,4 @@
-//===----- LayoutFieldRandomizer.cpp - Randstruct Implementation -*- C++
+//===----- RecordFieldReorganizer.cpp - Implementation for field reorder -*- C++
 //-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -7,19 +7,58 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Cache line best-effort field randomization
+// Contains the implementation for RecordDecl field reordering.
 //
 //===----------------------------------------------------------------------===//
 
-#include "LayoutFieldRandomizer.h"
-#include "llvm/ADT/SmallVector.h"
+#include "clang/AST/RecordFieldReorganizer.h"
+#include "clang/AST/ASTContext.h"
 
 #include <algorithm>
 #include <cstdint>
 #include <random>
+#include <set>
 #include <vector>
 
+// FIXME: Find a better alternative to SmallVector with hardcoded size!
+
 namespace clang {
+
+void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
+                                              const RecordDecl *D) const {
+  // Save original fields for asserting later that a subclass hasn't
+  // sabotaged the RecordDecl by removing or adding fields
+  std::set<Decl *> mutateGuard;
+
+  SmallVector<Decl *, 64> fields;
+  for (auto f : D->fields()) {
+    mutateGuard.insert(f);
+    fields.push_back(f);
+  }
+
+  // Now allow subclass implementations to reorder the fields
+  reorganize(C, D, fields);
+
+  // Assert all fields are still present
+  assert(mutateGuard.size() == fields.size() &&
+         "Field count altered after reorganization");
+  for (auto f : fields) {
+    auto found = std::find(std::begin(mutateGuard), std::end(mutateGuard), f);
+    assert(found != std::end(mutateGuard) &&
+           "Unknown field encountered after reorganization");
+  }
+
+  commit(D, fields);
+}
+
+void RecordFieldReorganizer::commit(
+    const RecordDecl *D, SmallVectorImpl<Decl *> &NewFieldOrder) const {
+  Decl *First, *Last;
+  std::tie(First, Last) = DeclContext::BuildDeclChain(
+      NewFieldOrder, D->hasLoadedFieldsFromExternalStorage());
+  D->FirstDecl = First;
+  D->LastDecl = Last;
+}
 
 /// Bucket to store fields up to size of a cache line during randomization.
 class Bucket {
@@ -51,11 +90,11 @@ public:
   virtual bool isBitfieldRun() const override;
 };
 
-// TODO: Is there a way to detect this? (i.e. on 32bit system vs 64?)
+// FIXME: Is there a way to detect this? (i.e. on 32bit system vs 64?)
 const size_t CACHE_LINE = 64;
 
 SmallVector<FieldDecl *, 64> Bucket::randomize() {
-  // TODO use seed
+  // FIXME use seed
   auto rng = std::default_random_engine{};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
@@ -100,10 +139,7 @@ bool BitfieldRun::canFit(size_t size) const {
   return true;
 }
 
-bool BitfieldRun::isBitfieldRun() const {
-  // Yes.
-  return true;
-}
+bool BitfieldRun::isBitfieldRun() const { return true; }
 
 SmallVector<Decl *, 64> randomize(SmallVector<Decl *, 64> fields) {
   auto rng = std::default_random_engine{};
@@ -161,7 +197,6 @@ SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
         currentBucket = llvm::make_unique<Bucket>();
       }
 
-      // FIXME get access to AST Context
       auto width = ctx.getTypeInfo(f->getType()).Width;
 
       // If we can fit, add it.
@@ -209,9 +244,10 @@ SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
   return finalOrder;
 }
 
-SmallVector<Decl *, 64> rearrange(const ASTContext &ctx,
-                                  SmallVector<Decl *, 64> fields) {
-  return perfrandomize(ctx, fields);
+void Randstruct::reorganize(const ASTContext &C, const RecordDecl *D,
+                            SmallVector<Decl *, 64> &NewOrder) const {
+  SmallVector<Decl *, 64> randomized = perfrandomize(C, NewOrder);
+  NewOrder = randomized;
 }
 
 } // namespace clang

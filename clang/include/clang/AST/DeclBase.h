@@ -1270,6 +1270,8 @@ class DeclContext {
   friend class ExternalASTSource;
   /// For CreateStoredDeclsMap
   friend class DependentDiagnostic;
+  /// For fine-grained control of field order
+  friend class RecordFieldReorganizer;
   /// For hasNeedToReconcileExternalVisibleStorage,
   /// hasLazyLocalLexicalLookups, hasLazyExternalLexicalLookups
   friend class ASTWriter;

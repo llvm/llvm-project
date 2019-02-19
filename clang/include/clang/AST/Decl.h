@@ -65,6 +65,7 @@ class Module;
 class NamespaceDecl;
 class ParmVarDecl;
 class RecordDecl;
+class RecordFieldReorganizer;
 class Stmt;
 class StringLiteral;
 class TagDecl;
