@@ -1288,6 +1288,30 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("extract reads past end of register", MI);
     break;
   }
+  case TargetOpcode::G_INSERT: {
+    const MachineOperand &SrcOp = MI->getOperand(2);
+    if (!SrcOp.isReg()) {
+      report("insert source must be a register", MI);
+      break;
+    }
+
+    const MachineOperand &OffsetOp = MI->getOperand(3);
+    if (!OffsetOp.isImm()) {
+      report("insert offset must be a constant", MI);
+      break;
+    }
+
+    unsigned DstSize = MRI->getType(MI->getOperand(0).getReg()).getSizeInBits();
+    unsigned SrcSize = MRI->getType(SrcOp.getReg()).getSizeInBits();
+
+    if (DstSize <= SrcSize)
+      report("inserted size must be smaller than total register", MI);
+
+    if (SrcSize + OffsetOp.getImm() > DstSize)
+      report("insert writes past end of register", MI);
+
+    break;
+  }
   default:
     break;
   }

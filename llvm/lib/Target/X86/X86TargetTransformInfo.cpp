@@ -3065,10 +3065,25 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
   const FeatureBitset &CalleeBits =
       TM.getSubtargetImpl(*Callee)->getFeatureBits();
 
-  // FIXME: This is likely too limiting as it will include subtarget features
-  // that we might not care about for inlining, but it is conservatively
-  // correct.
-  return (CallerBits & CalleeBits) == CalleeBits;
+  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
+  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
+  return (RealCallerBits & RealCalleeBits) == RealCalleeBits;
+}
+
+bool X86TTIImpl::areFunctionArgsABICompatible(
+    const Function *Caller, const Function *Callee,
+    SmallPtrSetImpl<Argument *> &Args) const {
+  if (!BaseT::areFunctionArgsABICompatible(Caller, Callee, Args))
+    return false;
+
+  // If we get here, we know the target features match. If one function
+  // considers 512-bit vectors legal and the other does not, consider them
+  // incompatible.
+  // FIXME Look at the arguments and only consider 512 bit or larger vectors?
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  return TM.getSubtarget<X86Subtarget>(*Caller).useAVX512Regs() ==
+         TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs();
 }
 
 const X86TTIImpl::TTI::MemCmpExpansionOptions *

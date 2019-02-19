@@ -84,7 +84,7 @@ def : InstRW<[P9_ALUE_2C, P9_ALUO_2C, IP_EXECE_1C, IP_EXECO_1C,
 )>;
 
 // Restricted Dispatch ALU operation for 3 cycles. The operation runs on a
-// slingle slice. However, since it is Restricted it requires all 3 dispatches
+// single slice. However, since it is Restricted it requires all 3 dispatches
 // (DISP) for that superslice.
 def : InstRW<[P9_ALU_3C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
@@ -170,7 +170,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C],
 )>;
 
 // Restricted Dispatch ALU operation for 2 cycles. The operation runs on a
-//  slingle slice. However, since it is Restricted it requires all 3 dispatches
+//  single slice. However, since it is Restricted it requires all 3 dispatches
 //  (DISP) for that superslice.
 def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs

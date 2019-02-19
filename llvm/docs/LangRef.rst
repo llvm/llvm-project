@@ -8364,15 +8364,16 @@ boundary compatible with the type.
 Semantics:
 """"""""""
 
-Memory is allocated; a pointer is returned. The operation is undefined
-if there is insufficient stack space for the allocation. '``alloca``'d
-memory is automatically released when the function returns. The
-'``alloca``' instruction is commonly used to represent automatic
-variables that must have an address available. When the function returns
-(either with the ``ret`` or ``resume`` instructions), the memory is
-reclaimed. Allocating zero bytes is legal, but the returned pointer may not
-be unique. The order in which memory is allocated (ie., which way the stack
-grows) is not specified.
+Memory is allocated; a pointer is returned. The allocated memory is
+uninitialized, and loading from uninitialized memory produces an undefined
+value. The operation itself is undefined if there is insufficient stack
+space for the allocation.'``alloca``'d memory is automatically released
+when the function returns. The '``alloca``' instruction is commonly used
+to represent automatic variables that must have an address available. When
+the function returns (either with the ``ret`` or ``resume`` instructions),
+the memory is reclaimed. Allocating zero bytes is legal, but the returned
+pointer may not be unique. The order in which memory is allocated (ie.,
+which way the stack grows) is not specified.
 
 Example:
 """"""""

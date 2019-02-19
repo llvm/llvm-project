@@ -1378,7 +1378,7 @@ multiclass avx512_subvec_broadcast_rm_dq<bits<8> opc, string OpcodeStr,
 
 let Predicates = [HasAVX512] in {
   // 32-bit targets will fail to load a i64 directly but can use ZEXT_LOAD.
-  def : Pat<(v8i64 (X86VBroadcast (v8i64 (X86vzload addr:$src)))),
+  def : Pat<(v8i64 (X86VBroadcast (v2i64 (X86vzload addr:$src)))),
             (VPBROADCASTQZm addr:$src)>;
 }
 
@@ -1386,7 +1386,7 @@ let Predicates = [HasVLX] in {
   // 32-bit targets will fail to load a i64 directly but can use ZEXT_LOAD.
   def : Pat<(v2i64 (X86VBroadcast (v2i64 (X86vzload addr:$src)))),
             (VPBROADCASTQZ128m addr:$src)>;
-  def : Pat<(v4i64 (X86VBroadcast (v4i64 (X86vzload addr:$src)))),
+  def : Pat<(v4i64 (X86VBroadcast (v2i64 (X86vzload addr:$src)))),
             (VPBROADCASTQZ256m addr:$src)>;
 }
 let Predicates = [HasVLX, HasBWI] in {

@@ -10,6 +10,7 @@ include(CheckCompilerVersion)
 include(HandleLLVMStdlib)
 include(CheckCCompilerFlag)
 include(CheckCXXCompilerFlag)
+include(CheckSymbolExists)
 
 if(CMAKE_LINKER MATCHES "lld-link\.exe" OR (WIN32 AND LLVM_USE_LINKER STREQUAL "lld") OR LLVM_ENABLE_LLD)
   set(LINKER_IS_LLD_LINK TRUE)
@@ -916,3 +917,32 @@ endfunction()
 get_compile_definitions()
 
 option(LLVM_FORCE_ENABLE_STATS "Enable statistics collection for builds that wouldn't normally enable it" OFF)
+
+check_symbol_exists(os_signpost_interval_begin "os/signpost.h" macos_signposts_available)
+if(macos_signposts_available)
+  check_cxx_source_compiles(
+    "#include <os/signpost.h>
+    int main() { os_signpost_interval_begin(nullptr, 0, \"\", \"\"); return 0; }"
+    macos_signposts_usable)
+  if(macos_signposts_usable)
+    set(LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS "WITH_ASSERTS" CACHE STRING
+        "Enable support for Xcode signposts. Can be WITH_ASSERTS, FORCE_ON, FORCE_OFF")
+    string(TOUPPER "${LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS}"
+                   uppercase_LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS)
+    if( uppercase_LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS STREQUAL "WITH_ASSERTS" )
+      if( LLVM_ENABLE_ASSERTIONS )
+        set( LLVM_SUPPORT_XCODE_SIGNPOSTS 1 )
+      endif()
+    elseif( uppercase_LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS STREQUAL "FORCE_ON" )
+      set( LLVM_SUPPORT_XCODE_SIGNPOSTS 1 )
+    elseif( uppercase_LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS STREQUAL "FORCE_OFF" )
+      # We don't need to do anything special to turn off signposts.
+    elseif( NOT DEFINED LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS )
+      # Treat LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS like "FORCE_OFF" when it has not been
+      # defined.
+    else()
+      message(FATAL_ERROR "Unknown value for LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS:"
+                          " \"${LLVM_ENABLE_SUPPORT_XCODE_SIGNPOSTS}\"!")
+    endif()
+  endif()
+endif()

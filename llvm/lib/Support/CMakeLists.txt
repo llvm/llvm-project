@@ -116,6 +116,7 @@ add_llvm_library(LLVMSupport
   ScaledNumber.cpp
   ScopedPrinter.cpp
   SHA1.cpp
+  Signposts.cpp
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp

@@ -952,9 +952,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_XMULO(SDNode *N, unsigned ResNo) {
   SDValue Overflow;
   if (N->getOpcode() == ISD::UMULO) {
     // Unsigned overflow occurred if the high part is non-zero.
+    unsigned Shift = SmallVT.getScalarSizeInBits();
+    EVT ShiftTy = getShiftAmountTyForConstant(Shift, Mul.getValueType(),
+                                              TLI, DAG);
     SDValue Hi = DAG.getNode(ISD::SRL, DL, Mul.getValueType(), Mul,
-                             DAG.getIntPtrConstant(SmallVT.getSizeInBits(),
-                                                   DL));
+                             DAG.getConstant(Shift, DL, ShiftTy));
     Overflow = DAG.getSetCC(DL, N->getValueType(1), Hi,
                             DAG.getConstant(0, DL, Hi.getValueType()),
                             ISD::SETNE);

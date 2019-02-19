@@ -595,4 +595,44 @@ TEST_F(GISelMITest, FewerElementsAnd) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(GISelMITest, MoreElementsAnd) {
+  if (!TM)
+    return;
+
+  LLT s32 = LLT::scalar(32);
+  LLT v2s32 = LLT::vector(2, 32);
+  LLT v6s32 = LLT::vector(6, 32);
+
+  LegalizerInfo LI;
+  LI.getActionDefinitionsBuilder(TargetOpcode::G_AND)
+    .legalFor({v6s32})
+    .clampMinNumElements(0, s32, 6);
+  LI.computeTables();
+
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, LI, Observer, B);
+
+  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
+  auto Val0 = B.buildBitcast(v2s32, Copies[0]);
+  auto Val1 = B.buildBitcast(v2s32, Copies[1]);
+
+  auto And = B.buildAnd(v2s32, Val0, Val1);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.moreElementsVector(*And, 0, v6s32));
+
+  auto CheckStr = R"(
+  CHECK: [[BITCAST0:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
+  CHECK: [[BITCAST1:%[0-9]+]]:_(<2 x s32>) = G_BITCAST
+  CHECK: [[IMP_DEF0:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+  CHECK: [[CONCAT0:%[0-9]+]]:_(<6 x s32>) = G_CONCAT_VECTORS [[BITCAST0]]:_(<2 x s32>), [[IMP_DEF0]]:_(<2 x s32>), [[IMP_DEF0]]:_(<2 x s32>)
+  CHECK: [[IMP_DEF1:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
+  CHECK: [[CONCAT1:%[0-9]+]]:_(<6 x s32>) = G_CONCAT_VECTORS [[BITCAST1]]:_(<2 x s32>), [[IMP_DEF1]]:_(<2 x s32>), [[IMP_DEF1]]:_(<2 x s32>)
+  CHECK: [[AND:%[0-9]+]]:_(<6 x s32>) = G_AND [[CONCAT0]]:_, [[CONCAT1]]:_
+  CHECK: (<2 x s32>) = G_EXTRACT [[AND]]:_(<6 x s32>), 0
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
 } // namespace

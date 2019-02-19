@@ -16,10 +16,8 @@
 #define LLVM_ADT_OPTIONAL_H
 
 #include "llvm/ADT/None.h"
-#include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/type_traits.h"
-#include <algorithm>
 #include <cassert>
 #include <new>
 #include <utility>
