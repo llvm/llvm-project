@@ -2986,19 +2986,24 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   if (Entry) return *Entry;
 
   const ASTRecordLayout *NewEntry = nullptr;
-
+  
   bool ShouldBeRandomized = D->getAttr<RandomizeLayoutAttr>() != nullptr;
-  if (ShouldBeRandomized) {
-      // A staging area to easily reorder the fields
-      SmallVector<Decl *, 64> fields;
-      for (auto f : D->fields()) {
-        fields.push_back(f);
-      }
+  bool NotToBeRandomized = D->getAttr<NoRandomizeLayoutAttr>() != nullptr;
+  
+  if (ShouldBeRandomized && NotToBeRandomized) {
+    Diag(D->getLocation(), diag::warn_randomize_attr_conflict);  
+  }
+  else if (ShouldBeRandomized) {
+    // A staging area to easily reorder the fields
+    SmallVector<Decl *, 64> fields;
+    for (auto f : D->fields()) {
+      fields.push_back(f);
+    }
 
-      fields = rearrange(*this, fields);
+    fields = rearrange(*this, fields);
 
-      // This will rebuild the Decl chain of fields
-      D->reorderFields(fields);
+    // This will rebuild the Decl chain of fields
+    D->reorderFields(fields);
   }
 
   if (isMsLayout(*this)) {
