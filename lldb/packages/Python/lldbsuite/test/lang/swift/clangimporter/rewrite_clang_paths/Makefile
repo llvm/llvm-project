@@ -34,6 +34,8 @@ libFoo.dylib: Foo.swift
 	echo '  <dict>'>>$$PLIST; \
 	echo "    <key>$(BOTDIR)</key>">>$$PLIST; \
 	echo "    <string>$(USERDIR)</string>">>$$PLIST; \
+	echo "    <key>/nonexisting-rootdir</key>">>$$PLIST; \
+	echo "    <string>$(USERDIR)</string>">>$$PLIST; \
 	echo '  </dict>'>>$$PLIST; \
 	echo '</dict>'>>$$PLIST; \
 	echo '</plist>'>>$$PLIST

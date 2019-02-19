@@ -1402,6 +1402,30 @@ bool HasSwiftModules(Module &module) {
 }
 
 namespace {
+
+/// Calls arg.consume_front(<options>) and returns true on success.
+/// \param prefix contains the consumed prefix.
+bool ConsumeIncludeOption(StringRef &arg, StringRef &prefix) {
+  static StringRef options[] = {"-I",
+                                "-F",
+                                "-iquote",
+                                "-idirafter",
+                                "-iframeworkwithsysroot",
+                                "-iframework",
+                                "-iprefix",
+                                "-iwithprefixbefore",
+                                "-iwithprefix",
+                                "-isystemafter",
+                                "-isystem",
+                                "-isysroot"};
+  for (StringRef &option : options)
+    if (arg.consume_front(option)) {
+      prefix = option;
+      return true;
+    }
+  return false;
+}
+
 /// Turn relative paths in clang options into absolute paths based on
 /// \c cur_working_dir.
 template <typename SmallString>
@@ -1409,16 +1433,14 @@ void ApplyWorkingDir(SmallString &clang_argument,
                      StringRef cur_working_dir) {
   StringRef arg = clang_argument.str();
   StringRef prefix;
-  // Ignore the option part of a double-arg include option.
-  if (arg == "-I" || arg == "-F")
-    return;
-  if (arg.consume_front("-I"))
-    prefix = "-I";
-  else if (arg.consume_front("-F"))
-    prefix = "-F";
-  else if (arg.startswith("-"))
+  if (ConsumeIncludeOption(arg, prefix)) {
+    // Ignore the option part of a double-arg include option.
+    if (arg.empty())
+      return;
+  } else if (arg.startswith("-")) {
     // Assume this is a compiler arg and not a path starting with "-".
     return;
+  }
   // There is most probably a path in arg now.
   if (!llvm::sys::path::is_relative(arg))
     return;
@@ -1469,18 +1491,32 @@ void SwiftASTContext::RemapClangImporterOptions(
                   remapped.c_str());
     options.BridgingHeader = remapped;
   }
+
+  // Previous argument was the dash-option of an option pair.
+  bool remap_next = false;
   for (auto &arg_string : options.ExtraArgs) {
     StringRef prefix;
     StringRef arg = arg_string;
-    if (arg.consume_front("-I"))
-      prefix = "-I";
-    else if (arg.consume_front("-F"))
-      prefix = "-F";
+
+    if (remap_next)
+      remap_next = false;
+    else if (ConsumeIncludeOption(arg, prefix)) {
+      if (arg.empty()) {
+        // Option pair.
+        remap_next = true;
+        continue;
+      }
+      // Single-arg include option with prefix.
+    } else {
+      // Not a recognized option.
+      continue;
+    }
+
     if (path_map.RemapPath(arg, remapped)) {
       if (log)
         log->Printf("remapped %s -> %s%s", arg.str().c_str(),
                     prefix.str().c_str(), remapped.c_str());
-      arg_string = prefix.str()+remapped;
+      arg_string = prefix.str() + remapped;
     }
   }
 }
