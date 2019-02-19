@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: not ld.lld %t.o -o %t 2>&1 | FileCheck %s
 
-# CHECK: improper alignment for relocation R_PPC64_ADDR16_LO_DS: 0x8001 is not aligned to 4 bytes
+# CHECK: improper alignment for relocation R_PPC64_TOC16_LO_DS: 0x8001 is not aligned to 4 bytes
 
         .global test
         .p2align        4

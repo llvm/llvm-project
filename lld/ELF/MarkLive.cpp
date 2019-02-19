@@ -1,9 +1,8 @@
 //===- MarkLive.cpp -------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -250,9 +249,10 @@ template <class ELFT> static void doGcSections() {
 
     if (Sec->Flags & SHF_LINK_ORDER)
       continue;
-    if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec))
+
+    if (isReserved<ELFT>(Sec) || Script->shouldKeep(Sec)) {
       Enqueue(Sec, 0);
-    else if (isValidCIdentifier(Sec->Name)) {
+    } else if (isValidCIdentifier(Sec->Name)) {
       CNamedSections[Saver.save("__start_" + Sec->Name)].push_back(Sec);
       CNamedSections[Saver.save("__stop_" + Sec->Name)].push_back(Sec);
     }

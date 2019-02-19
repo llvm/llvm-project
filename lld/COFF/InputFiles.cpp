@@ -1,9 +1,8 @@
 //===- InputFiles.cpp -----------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -155,9 +154,10 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
                                    const coff_aux_section_definition *Def,
                                    StringRef LeaderName) {
   const coff_section *Sec;
-  StringRef Name;
   if (auto EC = COFFObj->getSection(SectionNumber, Sec))
     fatal("getSection failed: #" + Twine(SectionNumber) + ": " + EC.message());
+
+  StringRef Name;
   if (auto EC = COFFObj->getSectionName(Sec, Name))
     fatal("getSectionName failed: #" + Twine(SectionNumber) + ": " +
           EC.message());
@@ -181,8 +181,8 @@ SectionChunk *ObjFile::readSection(uint32_t SectionNumber,
   // of the linker; they are just a data section containing relocations.
   // We can just link them to complete debug info.
   //
-  // CodeView needs a linker support. We need to interpret and debug
-  // info, and then write it to a separate .pdb file.
+  // CodeView needs linker support. We need to interpret debug info,
+  // and then write it to a separate .pdb file.
 
   // Ignore DWARF debug info unless /debug is given.
   if (!Config->Debug && Name.startswith(".debug_"))
@@ -223,20 +223,40 @@ void ObjFile::readAssociativeDefinition(
 
 void ObjFile::readAssociativeDefinition(COFFSymbolRef Sym,
                                         const coff_aux_section_definition *Def,
-                                        uint32_t ParentSection) {
-  SectionChunk *Parent = SparseChunks[ParentSection];
+                                        uint32_t ParentIndex) {
+  SectionChunk *Parent = SparseChunks[ParentIndex];
 
-  // If the parent is pending, it probably means that its section definition
-  // appears after us in the symbol table. Leave the associated section as
-  // pending; we will handle it during the second pass in initializeSymbols().
-  if (Parent == PendingComdat)
+  auto Diag = [&]() {
+    StringRef Name, ParentName;
+    COFFObj->getSymbolName(Sym, Name);
+
+    const coff_section *ParentSec;
+    COFFObj->getSection(ParentIndex, ParentSec);
+    COFFObj->getSectionName(ParentSec, ParentName);
+    error(toString(this) + ": associative comdat " + Name +
+          " has invalid reference to section " + ParentName);
+  };
+
+  if (Parent == PendingComdat) {
+    // This can happen if an associative comdat refers to another associative
+    // comdat that appears after it (invalid per COFF spec) or to a section
+    // without any symbols.
+    Diag();
     return;
+  }
 
   // Check whether the parent is prevailing. If it is, so are we, and we read
   // the section; otherwise mark it as discarded.
   int32_t SectionNumber = Sym.getSectionNumber();
   if (Parent) {
-    SparseChunks[SectionNumber] = readSection(SectionNumber, Def, "");
+    if (Parent->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+      Diag();
+      return;
+    }
+
+    SectionChunk *C = readSection(SectionNumber, Def, "");
+    C->Selection = IMAGE_COMDAT_SELECT_ASSOCIATIVE;
+    SparseChunks[SectionNumber] = C;
     if (SparseChunks[SectionNumber])
       Parent->addAssociative(SparseChunks[SectionNumber]);
   } else {
@@ -290,7 +310,7 @@ Symbol *ObjFile::createRegular(COFFSymbolRef Sym) {
     return Symtab->addUndefined(Name, this, false);
   }
   if (SC)
-    return make<DefinedRegular>(this, /*Name*/ "", false,
+    return make<DefinedRegular>(this, /*Name*/ "", /*IsCOMDAT*/ false,
                                 /*IsExternal*/ false, Sym.getGeneric(), SC);
   return nullptr;
 }
@@ -326,8 +346,7 @@ void ObjFile::initializeSymbols() {
       // was pending at the point when the symbol was read. This can happen in
       // two cases:
       // 1) section definition symbol for a comdat leader;
-      // 2) symbol belongs to a comdat section associated with a section whose
-      //    section definition symbol appears later in the symbol table.
+      // 2) symbol belongs to a comdat section associated with another section.
       // In both of these cases, we can expect the section to be resolved by
       // the time we finish visiting the remaining symbols in the symbol
       // table. So we postpone the handling of this symbol until that time.
@@ -338,7 +357,7 @@ void ObjFile::initializeSymbols() {
 
   for (uint32_t I : PendingIndexes) {
     COFFSymbolRef Sym = check(COFFObj->getSymbol(I));
-    if (auto *Def = Sym.getSectionDefinition()) {
+    if (const coff_aux_section_definition *Def = Sym.getSectionDefinition()) {
       if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         readAssociativeDefinition(Sym, Def);
       else if (Config->MinGW)
@@ -421,7 +440,7 @@ Optional<Symbol *> ObjFile::createDefined(
       std::tie(Leader, Prevailing) =
           Symtab->addComdat(this, GetName(), Sym.getGeneric());
     } else {
-      Leader = make<DefinedRegular>(this, /*Name*/ "", false,
+      Leader = make<DefinedRegular>(this, /*Name*/ "", /*IsCOMDAT*/ false,
                                     /*IsExternal*/ false, Sym.getGeneric());
       Prevailing = true;
     }
@@ -437,20 +456,16 @@ Optional<Symbol *> ObjFile::createDefined(
     return Leader;
   }
 
-  // Read associative section definitions and prepare to handle the comdat
-  // leader symbol by setting the section's ComdatDefs pointer if we encounter a
-  // non-associative comdat.
+  // Prepare to handle the comdat leader symbol by setting the section's
+  // ComdatDefs pointer if we encounter a non-associative comdat.
   if (SparseChunks[SectionNumber] == PendingComdat) {
-    if (auto *Def = Sym.getSectionDefinition()) {
-      if (Def->Selection == IMAGE_COMDAT_SELECT_ASSOCIATIVE)
-        readAssociativeDefinition(Sym, Def);
-      else
+    if (const coff_aux_section_definition *Def = Sym.getSectionDefinition()) {
+      if (Def->Selection != IMAGE_COMDAT_SELECT_ASSOCIATIVE)
         ComdatDefs[SectionNumber] = Def;
     }
+    return None;
   }
 
-  if (SparseChunks[SectionNumber] == PendingComdat)
-    return None;
   return createRegular(Sym);
 }
 

@@ -1,9 +1,8 @@
 //===- Relocations.cpp ----------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -356,7 +355,7 @@ static bool needsGot(RelExpr Expr) {
 static bool isRelExpr(RelExpr Expr) {
   return isRelExprOneOf<R_PC, R_GOTREL, R_GOTREL_FROM_END, R_MIPS_GOTREL,
                         R_PPC_CALL, R_PPC_CALL_PLT, R_AARCH64_PAGE_PC,
-                        R_RELAX_GOT_PC>(Expr);
+                        R_AARCH64_PLT_PAGE_PC, R_RELAX_GOT_PC>(Expr);
 }
 
 // Returns true if a given relocation can be computed at link-time.
@@ -374,8 +373,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
   if (isRelExprOneOf<R_GOT_FROM_END, R_GOT_OFF, R_HEXAGON_GOT, R_TLSLD_GOT_OFF,
                      R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOTREL, R_MIPS_GOT_OFF,
                      R_MIPS_GOT_OFF32, R_MIPS_GOT_GP_PC, R_MIPS_TLSGD,
-                     R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
-                     R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT,
+                     R_AARCH64_GOT_PAGE_PC, R_AARCH64_GOT_PAGE_PC_PLT, R_GOT_PC,
+                     R_GOTONLY_PC, R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT,
                      R_TLSGD_GOT_FROM_END, R_TLSGD_PC, R_PPC_CALL_PLT,
                      R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE, R_HINT,
                      R_TLSLD_HINT, R_TLSIE_HINT>(E))
@@ -383,7 +382,7 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
 
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
-  if (E == R_GOT || E == R_PLT || E == R_TLSDESC)
+  if (E == R_GOT || E == R_GOT_PLT || E == R_PLT || E == R_TLSDESC)
     return Target->usesOnlyLowPageBits(Type) || !Config->Pic;
 
   if (Sym.IsPreemptible)
@@ -1000,6 +999,9 @@ static void scanReloc(InputSectionBase &Sec, OffsetGetter &GetOffset, RelTy *&I,
   // Ignore "hint" relocations because they are only markers for relaxation.
   if (isRelExprOneOf<R_HINT, R_NONE>(Expr))
     return;
+
+  if (Config->EMachine == EM_PPC64 && isPPC64SmallCodeModelReloc(Type))
+    Sec.File->PPC64SmallCodeModelRelocs = true;
 
   // Strenghten or relax relocations.
   //

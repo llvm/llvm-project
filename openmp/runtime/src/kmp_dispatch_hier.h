@@ -924,6 +924,10 @@ void __kmp_dispatch_init_hierarchy(ident_t *loc, int n,
   KMP_DEBUG_ASSERT(new_chunks);
   if (!TCR_4(__kmp_init_parallel))
     __kmp_parallel_initialize();
+#if OMP_50_ENABLED
+  __kmp_resume_if_soft_paused();
+#endif
+
   th = __kmp_threads[gtid];
   team = th->th.th_team;
   active = !team->t.t_serialized;

@@ -1,9 +1,8 @@
 //===------------- debug.h - NVPTX OpenMP debug macros ----------- CUDA -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -130,7 +129,7 @@
 #include "option.h"
 
 template <typename... Arguments>
-static NOINLINE void log(const char *fmt, Arguments... parameters) {
+NOINLINE static void log(const char *fmt, Arguments... parameters) {
   printf(fmt, (int)blockIdx.x, (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),
          (int)(threadIdx.x & 0x1F), parameters...);
 }

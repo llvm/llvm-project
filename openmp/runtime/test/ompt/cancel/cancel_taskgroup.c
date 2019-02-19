@@ -75,7 +75,7 @@ int main()
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{0x[0-f]*}}, parent_task_frame.reenter={{0x[0-f]*}}, new_task_id=[[THIRD_TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}, task_type=ompt_task_explicit=4, has_dependences=no
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[PARENT_TASK_ID]], parent_task_frame.exit={{0x[0-f]*}}, parent_task_frame.reenter={{0x[0-f]*}}, new_task_id=[[CANCEL_TASK_ID:[0-9]+]], codeptr_ra={{0x[0-f]*}}, task_type=ompt_task_explicit|ompt_task_undeferred=134217732, has_dependences=no
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[PARENT_TASK_ID]], second_task_id=[[CANCEL_TASK_ID]], prior_task_status=ompt_task_others=4
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[PARENT_TASK_ID]], second_task_id=[[CANCEL_TASK_ID]], prior_task_status=ompt_task_switch=7
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_cancel: task_data=[[CANCEL_TASK_ID]], flags=ompt_cancel_taskgroup|ompt_cancel_activated=24, codeptr_ra={{0x[0-f]*}}
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[CANCEL_TASK_ID]], second_task_id=[[PARENT_TASK_ID]], prior_task_status=ompt_task_cancel=3
 

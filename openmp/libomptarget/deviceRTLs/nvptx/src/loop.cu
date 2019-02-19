@@ -1,9 +1,8 @@
 //===------------ loop.cu - NVPTX OpenMP loop constructs --------- CUDA -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -101,7 +100,7 @@ public:
     // When IsRuntimeUninitialized is true, we assume that the caller is
     // in an L0 parallel region and that all worker threads participate.
 
-    int tid = GetLogicalThreadIdInBlock();
+    int tid = GetLogicalThreadIdInBlock(IsSPMDExecutionMode);
 
     // Assume we are in teams region or that we use a single block
     // per target region
@@ -208,7 +207,7 @@ public:
                                    ST chunk) {
     ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
             "Expected non-SPMD mode + initialized runtime.");
-    int tid = GetLogicalThreadIdInBlock();
+    int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
     omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(tid);
     T tnum = currTaskDescr->ThreadsInTeam();
     T tripCount = ub - lb + 1; // +1 because ub is inclusive
@@ -352,18 +351,18 @@ public:
                 omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
             (unsigned long long)omptarget_nvptx_threadPrivateContext->Stride(
                 tid));
-
     } else if (schedule == kmp_sched_dynamic || schedule == kmp_sched_guided) {
-      __kmpc_barrier(loc, threadId);
-      // save sched state
-      int teamId = GetOmpTeamId();
+      // save data
       omptarget_nvptx_threadPrivateContext->ScheduleType(tid) = schedule;
-      if (GetThreadIdInBlock() == 0) {
-        if (chunk < 1)
-          chunk = 1;
-        omptarget_nvptx_threadPrivateContext->Chunk(teamId) = chunk;
-        omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId) = ub;
-        omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId) = lb;
+      if (chunk < 1)
+        chunk = 1;
+      omptarget_nvptx_threadPrivateContext->Chunk(tid) = chunk;
+      omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid) = ub;
+      omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = lb;
+      __kmpc_barrier(loc, threadId);
+      if (tid == 0) {
+        omptarget_nvptx_threadPrivateContext->Cnt() = 0;
+        __threadfence_block();
       }
       __kmpc_barrier(loc, threadId);
       PRINT(LD_LOOP,
@@ -371,21 +370,45 @@ public:
             ", chunk %" PRIu64 "\n",
             (int)tnum,
             (unsigned long long)
-                omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId),
-            omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId),
-            omptarget_nvptx_threadPrivateContext->Chunk(teamId));
+                omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+            omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
+            omptarget_nvptx_threadPrivateContext->Chunk(tid));
     }
   }
 
   ////////////////////////////////////////////////////////////////////////////////
   // Support for dispatch next
 
+  INLINE static int64_t Shuffle(unsigned active, int64_t val, int leader) {
+    int lo, hi;
+    asm volatile("mov.b64 {%0,%1}, %2;" : "=r"(lo), "=r"(hi) : "l"(val));
+    hi = __SHFL_SYNC(active, hi, leader);
+    lo = __SHFL_SYNC(active, lo, leader);
+    asm volatile("mov.b64 %0, {%1,%2};" : "=l"(val) : "r"(lo), "r"(hi));
+    return val;
+  }
+
+  INLINE static uint64_t NextIter() {
+    unsigned int active = __ACTIVEMASK();
+    int leader = __ffs(active) - 1;
+    int change = __popc(active);
+    unsigned lane_mask_lt;
+    asm("mov.u32 %0, %%lanemask_lt;" : "=r"(lane_mask_lt));
+    unsigned int rank = __popc(active & lane_mask_lt);
+    uint64_t warp_res;
+    if (rank == 0) {
+      warp_res = atomicAdd(
+          (unsigned long long *)&omptarget_nvptx_threadPrivateContext->Cnt(),
+          change);
+    }
+    warp_res = Shuffle(active, warp_res, leader);
+    return warp_res + rank;
+  }
+
   INLINE static int DynamicNextChunk(T &lb, T &ub, T chunkSize,
-                                     int64_t &loopLowerBound,
-                                     T loopUpperBound) {
-    // calculate lower bound for all lanes in the warp
-    lb = atomicAdd((unsigned long long *)&loopLowerBound,
-                   (unsigned long long)chunkSize);
+                                     T loopLowerBound, T loopUpperBound) {
+    T N = NextIter();
+    lb = loopLowerBound + N * chunkSize;
     ub = lb + chunkSize - 1;  // Clang uses i <= ub
 
     // 3 result cases:
@@ -414,20 +437,17 @@ public:
     return FINISHED;
   }
 
-  // On Pascal, with inlining of the runtime into the user application,
-  // this code deadlocks.  This is probably because different threads
-  // in a warp cannot make independent progress.
-  NOINLINE static int dispatch_next(int32_t gtid, int32_t *plast, T *plower,
-                                    T *pupper, ST *pstride) {
-    ASSERT0(LT_FUSSY, isRuntimeInitialized(),
+  INLINE static int dispatch_next(kmp_Ident *loc, int32_t gtid, int32_t *plast,
+                                  T *plower, T *pupper, ST *pstride) {
+    ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc),
             "Expected non-SPMD mode + initialized runtime.");
     // ID of a thread in its own warp
 
     // automatically selects thread or warp ID based on selected implementation
-    int tid = GetLogicalThreadIdInBlock();
+    int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
     ASSERT0(LT_FUSSY,
-            gtid < GetNumberOfOmpThreads(tid, isSPMDMode(),
-                                         isRuntimeUninitialized()),
+            gtid < GetNumberOfOmpThreads(tid, checkSPMDMode(loc),
+                                         checkRuntimeUninitialized(loc)),
             "current thread is not needed here; error");
     // retrieve schedule
     kmp_sched_t schedule =
@@ -464,11 +484,10 @@ public:
             schedule == kmp_sched_dynamic || schedule == kmp_sched_guided,
             "bad sched");
     T myLb, myUb;
-    int teamId = GetOmpTeamId();
     int finished = DynamicNextChunk(
-        myLb, myUb, omptarget_nvptx_threadPrivateContext->Chunk(teamId),
-        omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId),
-        omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId));
+        myLb, myUb, omptarget_nvptx_threadPrivateContext->Chunk(tid),
+        omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+        omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid));
 
     if (finished == FINISHED)
       return DISPATCH_FINISHED;
@@ -540,7 +559,7 @@ EXTERN int __kmpc_dispatch_next_4(kmp_Ident *loc, int32_t tid, int32_t *p_last,
                                   int32_t *p_lb, int32_t *p_ub, int32_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_4\n");
   return omptarget_nvptx_LoopSupport<int32_t, int32_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 EXTERN int __kmpc_dispatch_next_4u(kmp_Ident *loc, int32_t tid,
@@ -548,14 +567,14 @@ EXTERN int __kmpc_dispatch_next_4u(kmp_Ident *loc, int32_t tid,
                                    uint32_t *p_ub, int32_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_4u\n");
   return omptarget_nvptx_LoopSupport<uint32_t, int32_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 EXTERN int __kmpc_dispatch_next_8(kmp_Ident *loc, int32_t tid, int32_t *p_last,
                                   int64_t *p_lb, int64_t *p_ub, int64_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_8\n");
   return omptarget_nvptx_LoopSupport<int64_t, int64_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 EXTERN int __kmpc_dispatch_next_8u(kmp_Ident *loc, int32_t tid,
@@ -563,7 +582,7 @@ EXTERN int __kmpc_dispatch_next_8u(kmp_Ident *loc, int32_t tid,
                                    uint64_t *p_ub, int64_t *p_st) {
   PRINT0(LD_IO, "call kmpc_dispatch_next_8u\n");
   return omptarget_nvptx_LoopSupport<uint64_t, int64_t>::dispatch_next(
-      tid, p_last, p_lb, p_ub, p_st);
+      loc, tid, p_last, p_lb, p_ub, p_st);
 }
 
 // fini
@@ -756,7 +775,7 @@ EXTERN void __kmpc_reduce_conditional_lastprivate(kmp_Ident *loc, int32_t gtid,
           "Expected non-SPMD mode + initialized runtime.");
 
   omptarget_nvptx_TeamDescr &teamDescr = getMyTeamDescriptor();
-  int tid = GetLogicalThreadIdInBlock();
+  int tid = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
   uint32_t NumThreads = GetNumberOfOmpThreads(tid, checkSPMDMode(loc),
                                               checkRuntimeUninitialized(loc));
   uint64_t *Buffer = teamDescr.getLastprivateIterBuffer();

@@ -1,9 +1,8 @@
 //===- WriterUtils.cpp ----------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -83,7 +82,7 @@ void wasm::writeInitExpr(raw_ostream &OS, const WasmInitExpr &InitExpr) {
   case WASM_OPCODE_I64_CONST:
     writeSleb128(OS, InitExpr.Value.Int64, "literal (i64)");
     break;
-  case WASM_OPCODE_GET_GLOBAL:
+  case WASM_OPCODE_GLOBAL_GET:
     writeUleb128(OS, InitExpr.Value.Global, "literal (global index)");
     break;
   default:
@@ -120,7 +119,7 @@ void wasm::writeEvent(raw_ostream &OS, const WasmEvent &Event) {
 }
 
 void wasm::writeTableType(raw_ostream &OS, const llvm::wasm::WasmTable &Type) {
-  writeU8(OS, WASM_TYPE_ANYFUNC, "table type");
+  writeU8(OS, WASM_TYPE_FUNCREF, "table type");
   writeLimits(OS, Type.Limits);
 }
 

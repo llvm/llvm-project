@@ -4,10 +4,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -60,8 +59,8 @@ int __kmp_init_counter = 0;
 int __kmp_root_counter = 0;
 int __kmp_version = 0;
 
-std::atomic<kmp_uint32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
-std::atomic<kmp_uint32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
+std::atomic<kmp_int32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
+std::atomic<kmp_int32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
 
 unsigned int __kmp_init_wait =
     KMP_DEFAULT_INIT_WAIT; /* initial number of spin-tests   */
@@ -533,5 +532,9 @@ int _You_must_link_with_Microsoft_OpenMP_library = 1;
 
 #if OMP_50_ENABLED
 kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
-#endif
+
+// OMP Pause Resources
+kmp_pause_status_t __kmp_pause_status = kmp_not_paused;
+#endif // OMP_50_ENABLED
+
 // end of file //

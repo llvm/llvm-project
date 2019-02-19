@@ -90,7 +90,7 @@ attributes #0 = { nounwind uwtable "disable-tail-calls"="false" "less-precise-fp
 
 !llvm.ident = !{!0}
 
-!0 = !{!"clang version 3.9.0 (http://llvm.org/git/clang.git 8518d88c3151548eb6d8a7a0bb28c73f65acd897)"}
+!0 = !{!"clang version 3.9.0"}
 !1 = !{!2, !2, i64 0}
 !2 = !{!"any pointer", !3, i64 0}
 !3 = !{!"omnipotent char", !4, i64 0}

@@ -57,7 +57,7 @@ int main()
   // CHECK: {{^}}[[MASTER_ID]]: task level 2: parallel_id=[[IMPLICIT_PARALLEL_ID]], task_id=[[PARENT_TASK_ID]], exit_frame=[[NULL]], reenter_frame={{0x[0-f]+}}
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_create: parent_task_id=[[NESTED_IMPLICIT_TASK_ID]], parent_task_frame.exit={{0x[0-f]+}}, parent_task_frame.reenter={{0x[0-f]+}}, new_task_id=[[EXPLICIT_TASK_ID:[0-9]+]]
-  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[NESTED_IMPLICIT_TASK_ID]], second_task_id=[[EXPLICIT_TASK_ID]], prior_task_status=ompt_task_others=4
+  // CHECK: {{^}}[[MASTER_ID]]: ompt_event_task_schedule: first_task_id=[[NESTED_IMPLICIT_TASK_ID]], second_task_id=[[EXPLICIT_TASK_ID]], prior_task_status=ompt_task_switch=7
   // CHECK: {{^}}[[MASTER_ID]]: task level 0: parallel_id=[[NESTED_PARALLEL_ID]], task_id=[[EXPLICIT_TASK_ID]], exit_frame={{0x[0-f]+}}, reenter_frame=[[NULL]]
   // CHECK: {{^}}[[MASTER_ID]]: task level 1: parallel_id=[[NESTED_PARALLEL_ID]], task_id=[[NESTED_IMPLICIT_TASK_ID]], exit_frame={{0x[0-f]+}}, reenter_frame={{0x[0-f]+}}
   // CHECK: {{^}}[[MASTER_ID]]: task level 2: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]], exit_frame={{0x[0-f]+}}, reenter_frame={{0x[0-f]+}}
