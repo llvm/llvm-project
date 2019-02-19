@@ -5,11 +5,6 @@ lld 8.0.0 Release Notes
 .. contents::
     :local:
 
-.. warning::
-   These are in-progress notes for the upcoming LLVM 8.0.0 release.
-   Release notes for previous releases can be found on
-   `the Download Page <https://releases.llvm.org/download.html>`_.
-
 Introduction
 ============
 
@@ -18,7 +13,7 @@ Mach-O (macOS), MinGW and WebAssembly. lld is command-line-compatible with
 GNU linkers and Microsoft link.exe and is significantly faster than the
 system default linkers.
 
-nlld 8.0.0 has lots of feature improvements and bug fixes.
+lld 8.0.0 has lots of feature improvements and bug fixes.
 
 Non-comprehensive list of changes in this release
 =================================================
