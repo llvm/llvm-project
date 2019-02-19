@@ -9079,6 +9079,8 @@ def err_omp_declare_mapper_wrong_var : Error<
   "only variable %0 is allowed in map clauses of this 'omp declare mapper' directive">;
 def err_omp_declare_mapper_redefinition : Error<
   "redefinition of user-defined mapper for type %0 with name %1">;
+def err_omp_invalid_mapper: Error<
+  "cannot find a valid user-defined mapper for type %0 with name %1">;
 def err_omp_array_section_use : Error<"OpenMP array section is not allowed here">;
 def err_omp_typecheck_section_value : Error<
   "subscripted value is not an array or pointer">;

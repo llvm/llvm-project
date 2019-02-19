@@ -11770,12 +11770,12 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPDeviceClause();
     break;
   case OMPC_map: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPMapClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                  NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPMapClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_num_teams:
@@ -11803,39 +11803,39 @@ OMPClause *OMPClauseReader::readClause() {
     C = new (Context) OMPDefaultmapClause();
     break;
   case OMPC_to: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPToClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                 NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPToClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_from: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPFromClause::CreateEmpty(Context, NumVars, NumDeclarations, NumLists,
-                                   NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPFromClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_use_device_ptr: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPUseDevicePtrClause::CreateEmpty(Context, NumVars, NumDeclarations,
-                                           NumLists, NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPUseDevicePtrClause::CreateEmpty(Context, Sizes);
     break;
   }
   case OMPC_is_device_ptr: {
-    unsigned NumVars = Record.readInt();
-    unsigned NumDeclarations = Record.readInt();
-    unsigned NumLists = Record.readInt();
-    unsigned NumComponents = Record.readInt();
-    C = OMPIsDevicePtrClause::CreateEmpty(Context, NumVars, NumDeclarations,
-                                          NumLists, NumComponents);
+    OMPMappableExprListSizeTy Sizes;
+    Sizes.NumVars = Record.readInt();
+    Sizes.NumUniqueDeclarations = Record.readInt();
+    Sizes.NumComponentLists = Record.readInt();
+    Sizes.NumComponents = Record.readInt();
+    C = OMPIsDevicePtrClause::CreateEmpty(Context, Sizes);
     break;
   }
   }
@@ -12274,6 +12274,10 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
         I, static_cast<OpenMPMapModifierKind>(Record.readInt()));
     C->setMapTypeModifierLoc(I, Record.readSourceLocation());
   }
+  C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
+  DeclarationNameInfo DNI;
+  Record.readDeclarationNameInfo(DNI);
+  C->setMapperIdInfo(DNI);
   C->setMapType(
      static_cast<OpenMPMapClauseKind>(Record.readInt()));
   C->setMapLoc(Record.readSourceLocation());
@@ -12288,6 +12292,12 @@ void OMPClauseReader::VisitOMPMapClause(OMPMapClause *C) {
   for (unsigned i = 0; i != NumVars; ++i)
     Vars.push_back(Record.readExpr());
   C->setVarRefs(Vars);
+
+  SmallVector<Expr *, 16> UDMappers;
+  UDMappers.reserve(NumVars);
+  for (unsigned I = 0; I < NumVars; ++I)
+    UDMappers.push_back(Record.readExpr());
+  C->setUDMapperRefs(UDMappers);
 
   SmallVector<ValueDecl *, 16> Decls;
   Decls.reserve(UniqueDecls);

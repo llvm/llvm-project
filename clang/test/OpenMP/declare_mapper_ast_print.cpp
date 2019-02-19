@@ -21,6 +21,13 @@ public:
 };
 // CHECK: };
 
+// CHECK: class vecchild : public N1::vec {
+class vecchild : public vec {
+public:
+  int lenc;
+};
+// CHECK: };
+
 #pragma omp declare mapper(id: vec v) map(v.len)
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len){{$}}
 };
@@ -56,34 +63,62 @@ public:
 
 template <typename T>
 T foo(T a) {
+  struct foodatchild {
+    T k;
+  };
   struct foodat {
     T a;
+    struct foodatchild b;
   };
-#pragma omp declare mapper(struct foodat v) map(v.a)
+#pragma omp declare mapper(id: struct foodat v) map(v.a)
+#pragma omp declare mapper(idd: struct foodatchild v) map(v.k)
 #pragma omp declare mapper(id: N1::vec v) map(v.len)
   {
 #pragma omp declare mapper(id: N1::vec v) map(v.len)
   }
+  struct foodat fd;
+#pragma omp target map(mapper(id) alloc: fd)
+  { fd.a++; }
+#pragma omp target map(mapper(idd) alloc: fd.b)
+  { fd.b.k++; }
   return 0;
 }
 
 // CHECK: template <typename T> T foo(T a) {
-// CHECK: #pragma omp declare mapper (default : struct foodat v) map(tofrom: v.a)
+// CHECK: #pragma omp declare mapper (id : struct foodat v) map(tofrom: v.a)
+// CHECK: #pragma omp declare mapper (idd : struct foodatchild v) map(tofrom: v.k)
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len)
 // CHECK: {
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len)
 // CHECK: }
+// CHECK: #pragma omp target map(mapper(id),alloc: fd)
+// CHECK: #pragma omp target map(mapper(idd),alloc: fd.b)
 // CHECK: }
 // CHECK: template<> int foo<int>(int a) {
-// CHECK: #pragma omp declare mapper (default : struct foodat v) map(tofrom: v.a)
+// CHECK: #pragma omp declare mapper (id : struct foodat v) map(tofrom: v.a)
+// CHECK: #pragma omp declare mapper (idd : struct foodatchild v) map(tofrom: v.k)
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len)
 // CHECK: {
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len)
 // CHECK: }
+// CHECK: #pragma omp target map(mapper(id),alloc: fd)
+// CHECK: #pragma omp target map(mapper(idd),alloc: fd.b)
 // CHECK: }
 
 // CHECK: int main() {
 int main() {
+  N1::vec vv, vvv;
+  N1::vecchild vc;
+  dat<double> dd;
+#pragma omp target map(mapper(N1::id) tofrom: vv) map(mapper(dat<double>::id) alloc: vvv)
+// CHECK: #pragma omp target map(mapper(N1::id),tofrom: vv) map(mapper(dat<double>::id),alloc: vvv)
+  { vv.len++; }
+#pragma omp target map(mapper(N1::id) tofrom: vc)
+// CHECK: #pragma omp target map(mapper(N1::id),tofrom: vc)
+  { vc.len++; }
+#pragma omp target map(mapper(default) tofrom: dd)
+// CHECK: #pragma omp target map(mapper(default),tofrom: dd)
+  { dd.d++; }
 #pragma omp declare mapper(id: N1::vec v) map(v.len)
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len)
   {
