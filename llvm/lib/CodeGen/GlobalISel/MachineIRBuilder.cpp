@@ -452,26 +452,29 @@ MachineInstrBuilder MachineIRBuilder::buildCast(const DstOp &Dst,
   return buildInstr(Opcode, Dst, Src);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildExtract(unsigned Res, unsigned Src,
+MachineInstrBuilder MachineIRBuilder::buildExtract(const DstOp &Dst,
+                                                   const SrcOp &Src,
                                                    uint64_t Index) {
+  LLT SrcTy = Src.getLLTTy(*getMRI());
+  LLT DstTy = Dst.getLLTTy(*getMRI());
+
 #ifndef NDEBUG
-  assert(getMRI()->getType(Src).isValid() && "invalid operand type");
-  assert(getMRI()->getType(Res).isValid() && "invalid operand type");
-  assert(Index + getMRI()->getType(Res).getSizeInBits() <=
-             getMRI()->getType(Src).getSizeInBits() &&
+  assert(SrcTy.isValid() && "invalid operand type");
+  assert(DstTy.isValid() && "invalid operand type");
+  assert(Index + DstTy.getSizeInBits() <= SrcTy.getSizeInBits() &&
          "extracting off end of register");
 #endif
 
-  if (getMRI()->getType(Res).getSizeInBits() ==
-      getMRI()->getType(Src).getSizeInBits()) {
+  if (DstTy.getSizeInBits() == SrcTy.getSizeInBits()) {
     assert(Index == 0 && "insertion past the end of a register");
-    return buildCast(Res, Src);
+    return buildCast(Dst, Src);
   }
 
-  return buildInstr(TargetOpcode::G_EXTRACT)
-      .addDef(Res)
-      .addUse(Src)
-      .addImm(Index);
+  auto Extract = buildInstr(TargetOpcode::G_EXTRACT);
+  Dst.addDefToMIB(*getMRI(), Extract);
+  Src.addSrcToMIB(Extract);
+  Extract.addImm(Index);
+  return Extract;
 }
 
 void MachineIRBuilder::buildSequence(unsigned Res, ArrayRef<unsigned> Ops,

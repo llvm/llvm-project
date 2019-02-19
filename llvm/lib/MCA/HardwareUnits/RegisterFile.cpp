@@ -188,7 +188,7 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
       if (OtherWS && (OtherWrite.getSourceIndex() != Write.getSourceIndex())) {
         // This partial write has a false dependency on RenameAs.
         assert(!IsEliminated && "Unexpected partial update!");
-        OtherWS->addUser(&WS);
+        OtherWS->addUser(OtherWrite.getSourceIndex(), &WS);
       }
     }
   }
@@ -330,30 +330,25 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, ReadState &RS) {
   if (RMT.AllowZeroMoveEliminationOnly && !IsZeroMove)
     return false;
 
-  MCPhysReg FromReg = RS.getRegisterID();
-  MCPhysReg ToReg = WS.getRegisterID();
-
   // Construct an alias.
-  MCPhysReg AliasReg = FromReg;
-  if (RRIFrom.RenameAs)
-    AliasReg = RRIFrom.RenameAs;
+  MCPhysReg AliasedReg =
+      RRIFrom.RenameAs ? RRIFrom.RenameAs : RS.getRegisterID();
+  MCPhysReg AliasReg = RRITo.RenameAs ? RRITo.RenameAs : WS.getRegisterID();
 
-  const RegisterRenamingInfo &RMAlias = RegisterMappings[AliasReg].second;
+  const RegisterRenamingInfo &RMAlias = RegisterMappings[AliasedReg].second;
   if (RMAlias.AliasRegID)
-    AliasReg = RMAlias.AliasRegID;
+    AliasedReg = RMAlias.AliasRegID;
 
-  if (AliasReg != ToReg) {
-    RegisterMappings[ToReg].second.AliasRegID = AliasReg;
-    for (MCSubRegIterator I(ToReg, &MRI); I.isValid(); ++I)
-      RegisterMappings[*I].second.AliasRegID = AliasReg;
-  }
+  RegisterMappings[AliasReg].second.AliasRegID = AliasedReg;
+  for (MCSubRegIterator I(AliasReg, &MRI); I.isValid(); ++I)
+    RegisterMappings[*I].second.AliasRegID = AliasedReg;
 
-  RMT.NumMoveEliminated++;
   if (IsZeroMove) {
     WS.setWriteZero();
     RS.setReadZero();
   }
   WS.setEliminated();
+  RMT.NumMoveEliminated++;
 
   return true;
 }
@@ -425,7 +420,7 @@ void RegisterFile::addRegisterRead(ReadState &RS,
     WriteState &WS = *WR.getWriteState();
     unsigned WriteResID = WS.getWriteResourceID();
     int ReadAdvance = STI.getReadAdvanceCycles(SC, RD.UseIndex, WriteResID);
-    WS.addUser(&RS, ReadAdvance);
+    WS.addUser(WR.getSourceIndex(), &RS, ReadAdvance);
   }
 }
 

@@ -1,5 +1,8 @@
-# RUN: cp %p/Inputs/foo.cpp %t.cpp
-# RUN: lldb-instr %t.cpp | FileCheck %s
+# RUN: mkdir -p %t.dir
+# RUN: cp %p/Inputs/foo.cpp %t.dir/foo.cpp
+# RUN: cp %p/Inputs/foo.h %t.dir/foo.h
+
+# RUN: lldb-instr %t.dir/foo.cpp | FileCheck %s
 
 # CHECK: LLDB_REGISTER_METHOD(void, Foo, A, ());
 # CHECK: LLDB_REGISTER_METHOD(void, Foo, B, (int));
@@ -7,3 +10,4 @@
 # CHECK: LLDB_REGISTER_METHOD_CONST(int, Foo, D, (bool));
 # CHECK: LLDB_REGISTER_STATIC_METHOD(void, Foo, E, ());
 # CHECK: LLDB_REGISTER_STATIC_METHOD(int, Foo, F, (int));
+# CHECK-NOT: LLDB_REGISTER_STATIC_METHOD(void, Foo, G

@@ -4,7 +4,7 @@
 typedef int (^block_t)();
 
 int block_typedef_kernel(global int* res) {
-  // CHECK: %{{.*}} = alloca <{ i32, i32, [3 x i32] }>
+  // CHECK: %{{.*}} = alloca <{ i32, i32, i8 addrspace(4)*, [3 x i32] }>
   int a[3] = {1, 2, 3};
   // CHECK: call void @llvm.memcpy{{.*}}
   block_t b = ^() { return a[0]; };

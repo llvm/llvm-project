@@ -872,6 +872,12 @@ static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
   IO.mapOptional("Size", Section.Size, Hex64(0));
 }
 
+static void sectionMapping(IO &IO, ELFYAML::VerneedSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapRequired("Info", Section.Info);
+  IO.mapRequired("Dependencies", Section.VerneedV);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::RelocationSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Info", Section.RelocatableSec, StringRef());
@@ -949,6 +955,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
       Section.reset(new ELFYAML::MipsABIFlags());
     sectionMapping(IO, *cast<ELFYAML::MipsABIFlags>(Section.get()));
     break;
+  case ELF::SHT_GNU_verneed:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::VerneedSection());
+    sectionMapping(IO, *cast<ELFYAML::VerneedSection>(Section.get()));
+    break;
   default:
     if (!IO.outputting())
       Section.reset(new ELFYAML::RawContentSection());
@@ -995,6 +1006,25 @@ void MappingTraits<ELFYAML::DynamicEntry>::mapping(IO &IO,
 
   IO.mapRequired("Tag", Rel.Tag);
   IO.mapRequired("Value", Rel.Val);
+}
+
+void MappingTraits<ELFYAML::VerneedEntry>::mapping(IO &IO,
+                                                   ELFYAML::VerneedEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+
+  IO.mapRequired("Version", E.Version);
+  IO.mapRequired("File", E.File);
+  IO.mapRequired("Entries", E.AuxV);
+}
+
+void MappingTraits<ELFYAML::VernauxEntry>::mapping(IO &IO,
+                                                   ELFYAML::VernauxEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+
+  IO.mapRequired("Name", E.Name);
+  IO.mapRequired("Hash", E.Hash);
+  IO.mapRequired("Flags", E.Flags);
+  IO.mapRequired("Other", E.Other);
 }
 
 void MappingTraits<ELFYAML::Relocation>::mapping(IO &IO,

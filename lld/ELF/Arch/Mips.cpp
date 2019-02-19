@@ -347,8 +347,8 @@ bool MIPS<ELFT>::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
   // we cannot make the jump directly and need to create a small stubs
   // to save the target function address.
   // See page 3-38 ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-  if (Type != R_MIPS_26 && Type != R_MICROMIPS_26_S1 &&
-      Type != R_MICROMIPS_PC26_S1)
+  if (Type != R_MIPS_26 && Type != R_MIPS_PC26_S2 &&
+      Type != R_MICROMIPS_26_S1 && Type != R_MICROMIPS_PC26_S1)
     return false;
   auto *F = dyn_cast_or_null<ELFFileBase<ELFT>>(File);
   if (!F)
@@ -460,12 +460,74 @@ calculateMipsRelChain(uint8_t *Loc, RelType Type, uint64_t Val) {
   return std::make_pair(Type & 0xff, Val);
 }
 
+static bool isBranchReloc(RelType Type) {
+  return Type == R_MIPS_26 || Type == R_MIPS_PC26_S2 ||
+         Type == R_MIPS_PC21_S2 || Type == R_MIPS_PC16;
+}
+
+static bool isMicroBranchReloc(RelType Type) {
+  return Type == R_MICROMIPS_26_S1 || Type == R_MICROMIPS_PC16_S1 ||
+         Type == R_MICROMIPS_PC10_S1 || Type == R_MICROMIPS_PC7_S1;
+}
+
+template <class ELFT>
+static uint64_t fixupCrossModeJump(uint8_t *Loc, RelType Type, uint64_t Val) {
+  // Here we need to detect jump/branch from regular MIPS code
+  // to a microMIPS target and vice versa. In that cases jump
+  // instructions need to be replaced by their "cross-mode"
+  // equivalents.
+  const endianness E = ELFT::TargetEndianness;
+  bool IsMicroTgt = Val & 0x1;
+  bool IsCrossJump = (IsMicroTgt && isBranchReloc(Type)) ||
+                     (!IsMicroTgt && isMicroBranchReloc(Type));
+  if (!IsCrossJump)
+    return Val;
+
+  switch (Type) {
+  case R_MIPS_26: {
+    uint32_t Inst = read32<E>(Loc) >> 26;
+    if (Inst == 0x3 || Inst == 0x1d) { // JAL or JALX
+      writeValue<E>(Loc, 0x1d << 26, 32, 0);
+      return Val;
+    }
+    break;
+  }
+  case R_MICROMIPS_26_S1: {
+    uint32_t Inst = readShuffle<E>(Loc) >> 26;
+    if (Inst == 0x3d || Inst == 0x3c) { // JAL32 or JALX32
+      Val >>= 1;
+      writeShuffleValue<E>(Loc, 0x3c << 26, 32, 0);
+      return Val;
+    }
+    break;
+  }
+  case R_MIPS_PC26_S2:
+  case R_MIPS_PC21_S2:
+  case R_MIPS_PC16:
+  case R_MICROMIPS_PC16_S1:
+  case R_MICROMIPS_PC10_S1:
+  case R_MICROMIPS_PC7_S1:
+    // FIXME (simon): Support valid branch relocations.
+    break;
+  default:
+    llvm_unreachable("unexpected jump/branch relocation");
+  }
+
+  error(getErrorLocation(Loc) +
+        "unsupported jump/branch instruction between ISA modes referenced by " +
+        toString(Type) + " relocation");
+  return Val;
+}
+
 template <class ELFT>
 void MIPS<ELFT>::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   const endianness E = ELFT::TargetEndianness;
 
   if (ELFT::Is64Bits || Config->MipsN32Abi)
     std::tie(Type, Val) = calculateMipsRelChain(Loc, Type, Val);
+
+  // Detect cross-mode jump/branch and fix instruction.
+  Val = fixupCrossModeJump<ELFT>(Loc, Type, Val);
 
   // Thread pointer and DRP offsets from the start of TLS data area.
   // https://www.linux-mips.org/wiki/NPTL
