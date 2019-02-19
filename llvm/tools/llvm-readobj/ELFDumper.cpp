@@ -652,16 +652,6 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
   if (!Sec)
     return;
 
-  // The number of entries in the section SHT_GNU_verdef
-  // is determined by DT_VERDEFNUM tag.
-  unsigned VerDefsNum = 0;
-  for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table()) {
-    if (Dyn.d_tag == DT_VERDEFNUM) {
-      VerDefsNum = Dyn.d_un.d_val;
-      break;
-    }
-  }
-
   const uint8_t *SecStartAddress =
       (const uint8_t *)Obj->base() + Sec->sh_offset;
   const uint8_t *SecEndAddress = SecStartAddress + Sec->sh_size;
@@ -669,6 +659,7 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
   const typename ELFO::Elf_Shdr *StrTab =
       unwrapOrError(Obj->getSection(Sec->sh_link));
 
+  unsigned VerDefsNum = Sec->sh_info;
   while (VerDefsNum--) {
     if (P + sizeof(VerDef) > SecEndAddress)
       report_fatal_error("invalid offset in the section");

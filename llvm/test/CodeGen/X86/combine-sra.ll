@@ -168,9 +168,9 @@ define <4 x i32> @combine_vec_ashr_trunc_and(<4 x i32> %x, <4 x i64> %y) {
 ;
 ; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_and:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
-; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
-; AVX2-SLOW-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; AVX2-SLOW-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
 ; AVX2-SLOW-NEXT:    vpsravd %xmm1, %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
@@ -209,8 +209,8 @@ define <4 x i32> @combine_vec_ashr_trunc_lshr(<4 x i64> %x) {
 ; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_lshr:
 ; AVX2-SLOW:       # %bb.0:
 ; AVX2-SLOW-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-SLOW-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; AVX2-SLOW-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
@@ -248,8 +248,8 @@ define <4 x i32> @combine_vec_ashr_trunc_ashr(<4 x i64> %x) {
 ;
 ; AVX2-SLOW-LABEL: combine_vec_ashr_trunc_ashr:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[1,3,2,3,5,7,6,7]
-; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; AVX2-SLOW-NEXT:    vpsravd {{.*}}(%rip), %xmm0, %xmm0
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq

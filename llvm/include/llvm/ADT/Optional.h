@@ -139,6 +139,78 @@ public:
   }
 };
 
+template <typename T> class OptionalStorage<T, true> {
+  union {
+    char empty;
+    T value;
+  };
+  bool hasVal = false;
+
+public:
+  ~OptionalStorage() = default;
+
+  OptionalStorage() noexcept : empty{} {}
+
+  OptionalStorage(OptionalStorage const &other) = default;
+  OptionalStorage(OptionalStorage &&other) = default;
+
+  OptionalStorage &operator=(OptionalStorage const &other) = default;
+  OptionalStorage &operator=(OptionalStorage &&other) = default;
+
+  template <class... Args>
+  explicit OptionalStorage(in_place_t, Args &&... args)
+      : value(std::forward<Args>(args)...), hasVal(true) {}
+
+  void reset() noexcept {
+    if (hasVal) {
+      value.~T();
+      hasVal = false;
+    }
+  }
+
+  bool hasValue() const noexcept { return hasVal; }
+
+  T &getValue() LLVM_LVALUE_FUNCTION noexcept {
+    assert(hasVal);
+    return value;
+  }
+  T const &getValue() const LLVM_LVALUE_FUNCTION noexcept {
+    assert(hasVal);
+    return value;
+  }
+#if LLVM_HAS_RVALUE_REFERENCE_THIS
+  T &&getValue() && noexcept {
+    assert(hasVal);
+    return std::move(value);
+  }
+#endif
+
+  template <class... Args> void emplace(Args &&... args) {
+    reset();
+    ::new ((void *)std::addressof(value)) T(std::forward<Args>(args)...);
+    hasVal = true;
+  }
+
+  OptionalStorage &operator=(T const &y) {
+    if (hasValue()) {
+      value = y;
+    } else {
+      ::new ((void *)std::addressof(value)) T(y);
+      hasVal = true;
+    }
+    return *this;
+  }
+  OptionalStorage &operator=(T &&y) {
+    if (hasValue()) {
+      value = std::move(y);
+    } else {
+      ::new ((void *)std::addressof(value)) T(std::move(y));
+      hasVal = true;
+    }
+    return *this;
+  }
+};
+
 } // namespace optional_detail
 
 template <typename T> class Optional {
