@@ -1177,8 +1177,9 @@ struct SubstObjCTypeArgsVisitor
         return Ctx.getObjCObjectPointerType(resultTy);
       }
       }
+      llvm_unreachable("Unexpected ObjCSubstitutionContext!");
     }
-    llvm_unreachable("Unexpected ObjCSubstitutionContext!");
+    return BaseType::VisitTypedefType(typedefTy);
   }
 
   QualType VisitFunctionType(const FunctionType *funcType) {
