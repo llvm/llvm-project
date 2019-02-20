@@ -41,7 +41,7 @@ protected:
   SBSourceManager(lldb_private::SourceManager *source_manager);
 
 private:
-  std::unique_ptr<lldb_private::SourceManagerImpl> m_opaque_ap;
+  std::unique_ptr<lldb_private::SourceManagerImpl> m_opaque_up;
 };
 
 } // namespace lldb

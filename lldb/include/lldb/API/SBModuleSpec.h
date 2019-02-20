@@ -86,7 +86,7 @@ private:
   friend class SBModule;
   friend class SBTarget;
 
-  std::unique_ptr<lldb_private::ModuleSpec> m_opaque_ap;
+  std::unique_ptr<lldb_private::ModuleSpec> m_opaque_up;
 };
 
 class SBModuleSpecList {
@@ -116,7 +116,7 @@ public:
   bool GetDescription(lldb::SBStream &description);
 
 private:
-  std::unique_ptr<lldb_private::ModuleSpecList> m_opaque_ap;
+  std::unique_ptr<lldb_private::ModuleSpecList> m_opaque_up;
 };
 
 } // namespace lldb

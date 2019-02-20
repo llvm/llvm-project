@@ -320,18 +320,18 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
       Archive::shared_ptr archive_sp(Archive::FindCachedArchive(
           *file, module_sp->GetArchitecture(), module_sp->GetModificationTime(),
           file_offset));
-      std::unique_ptr<ObjectContainerBSDArchive> container_ap(
+      std::unique_ptr<ObjectContainerBSDArchive> container_up(
           new ObjectContainerBSDArchive(module_sp, archive_data_sp,
                                         archive_data_offset, file, file_offset,
                                         length));
 
-      if (container_ap) {
+      if (container_up) {
         if (archive_sp) {
           // We already have this archive in our cache, use it
-          container_ap->SetArchive(archive_sp);
-          return container_ap.release();
-        } else if (container_ap->ParseHeader())
-          return container_ap.release();
+          container_up->SetArchive(archive_sp);
+          return container_up.release();
+        } else if (container_up->ParseHeader())
+          return container_up.release();
       }
     }
   } else {
@@ -340,14 +340,14 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
         *file, module_sp->GetArchitecture(), module_sp->GetModificationTime(),
         file_offset));
     if (archive_sp) {
-      std::unique_ptr<ObjectContainerBSDArchive> container_ap(
+      std::unique_ptr<ObjectContainerBSDArchive> container_up(
           new ObjectContainerBSDArchive(module_sp, data_sp, data_offset, file,
                                         file_offset, length));
 
-      if (container_ap) {
+      if (container_up) {
         // We already have this archive in our cache, use it
-        container_ap->SetArchive(archive_sp);
-        return container_ap.release();
+        container_up->SetArchive(archive_sp);
+        return container_up.release();
       }
     }
   }

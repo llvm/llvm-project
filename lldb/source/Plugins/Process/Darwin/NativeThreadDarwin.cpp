@@ -138,7 +138,7 @@ bool NativeThreadDarwin::NotifyException(MachException::Data &exc) {
     // Allow the arch specific protocol to process (MachException::Data &)exc
     // first before possible reassignment of m_stop_exception with exc. See
     // also MachThread::GetStopException().
-    bool handled = m_arch_ap->NotifyException(exc);
+    bool handled = m_arch_up->NotifyException(exc);
 
     if (m_stop_exception.IsValid())
     {
@@ -175,7 +175,7 @@ bool NativeThreadDarwin::ShouldStop(bool &step_more) const {
     }
     else
     {
-        if (m_arch_ap->StepNotComplete())
+        if (m_arch_up->StepNotComplete())
         {
             step_more = true;
             return false;
@@ -217,7 +217,7 @@ void NativeThreadDarwin::ThreadDidStop() {
 
     // When this method gets called, the process state is still in the state it
     // was in while running so we can act accordingly.
-    m_arch_ap->ThreadDidStop();
+    m_arch_up->ThreadDidStop();
 
 
     // We may have suspended this thread so the primary thread could step

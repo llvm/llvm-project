@@ -1114,7 +1114,7 @@ protected:
                                    ///parser for this module as it may or may
                                    ///not be shared with the SymbolFile
   lldb::SymbolVendorUP
-      m_symfile_ap; ///< A pointer to the symbol vendor for this module.
+      m_symfile_up; ///< A pointer to the symbol vendor for this module.
   std::vector<lldb::SymbolVendorUP>
       m_old_symfiles; ///< If anyone calls Module::SetSymbolFileFileSpec() and
                       ///changes the symbol file,
@@ -1126,9 +1126,9 @@ protected:
                                      ///when you have debug info for a module
                                      ///that doesn't match where the sources
                                      ///currently are
-  lldb::SectionListUP m_sections_ap; ///< Unified section list for module that
-                                     ///is used by the ObjectFile and and
-                                     ///ObjectFile instances for the debug info
+  lldb::SectionListUP m_sections_up; ///< Unified section list for module that
+                                     /// is used by the ObjectFile and and
+                                     /// ObjectFile instances for the debug info
 
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symbol_vendor{false};

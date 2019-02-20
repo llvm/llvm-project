@@ -272,27 +272,27 @@ bool Watchpoint::InvokeCallback(StoppointCallbackContext *context) {
 
 void Watchpoint::SetCondition(const char *condition) {
   if (condition == nullptr || condition[0] == '\0') {
-    if (m_condition_ap)
-      m_condition_ap.reset();
+    if (m_condition_up)
+      m_condition_up.reset();
   } else {
     // Pass nullptr for expr_prefix (no translation-unit level definitions).
     Status error;
     ExecutionContext exe_scope(m_target);
-    m_condition_ap.reset(m_target.GetUserExpressionForLanguage(
+    m_condition_up.reset(m_target.GetUserExpressionForLanguage(
         exe_scope,
         condition, llvm::StringRef(), lldb::eLanguageTypeUnknown,
         UserExpression::eResultTypeAny, EvaluateExpressionOptions(), error));
     if (error.Fail()) {
       // FIXME: Log something...
-      m_condition_ap.reset();
+      m_condition_up.reset();
     }
   }
   SendWatchpointChangedEvent(eWatchpointEventTypeConditionChanged);
 }
 
 const char *Watchpoint::GetConditionText() const {
-  if (m_condition_ap)
-    return m_condition_ap->GetUserText();
+  if (m_condition_up)
+    return m_condition_up->GetUserText();
   else
     return nullptr;
 }

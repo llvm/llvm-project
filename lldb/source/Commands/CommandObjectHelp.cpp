@@ -20,8 +20,9 @@ using namespace lldb_private;
 //-------------------------------------------------------------------------
 
 void CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
-    Stream *s, llvm::StringRef command, llvm::StringRef prefix, llvm::StringRef subcommand,
-    bool include_apropos, bool include_type_lookup) {
+    Stream *s, llvm::StringRef command, llvm::StringRef prefix,
+    llvm::StringRef subcommand, bool include_upropos,
+    bool include_type_lookup) {
   if (!s || command.empty())
     return;
 
@@ -32,7 +33,7 @@ void CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage(
   s->Printf("'%s' is not a known command.\n", command_str.c_str());
   s->Printf("Try '%shelp' to see a current list of commands.\n",
             prefix.str().c_str());
-  if (include_apropos) {
+  if (include_upropos) {
     s->Printf("Try '%sapropos %s' for a list of related commands.\n",
       prefix_str.c_str(), lookup_str.c_str());
   }

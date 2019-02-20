@@ -1139,16 +1139,16 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
   lldb_private::Status err;
 
-  std::unique_ptr<llvm::Module> llvm_module_ap(
+  std::unique_ptr<llvm::Module> llvm_module_up(
       m_code_generator->ReleaseModule());
 
-  if (!llvm_module_ap) {
+  if (!llvm_module_up) {
     err.SetErrorToGenericError();
     err.SetErrorString("IR doesn't contain a module");
     return err;
   }
 
-  for (llvm::Function &function : *llvm_module_ap.get()) {
+  for (llvm::Function &function : *llvm_module_up.get()) {
     llvm::AttributeList attributes = function.getAttributes();
     llvm::AttrBuilder attributes_to_remove;
 
@@ -1164,7 +1164,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   if (execution_policy != eExecutionPolicyTopLevel) {
     // Find the actual name of the function (it's often mangled somehow)
 
-    if (!FindFunctionInModule(function_name, llvm_module_ap.get(),
+    if (!FindFunctionInModule(function_name, llvm_module_up.get(),
                               m_expr.FunctionName())) {
       err.SetErrorToGenericError();
       err.SetErrorStringWithFormat("Couldn't find %s() in the module",
@@ -1205,13 +1205,13 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
                   "expression module '%s'",
                   __FUNCTION__, m_expr.FunctionName());
 
-    custom_passes.EarlyPasses->run(*llvm_module_ap);
+    custom_passes.EarlyPasses->run(*llvm_module_up);
   }
 
   execution_unit_sp = std::make_shared<IRExecutionUnit>(
       m_llvm_context, // handed off here
-                          llvm_module_ap, // handed off here
-                          function_name, exe_ctx.GetTargetSP(), sc,
+      llvm_module_up, // handed off here
+      function_name, exe_ctx.GetTargetSP(), sc,
       m_compiler->getTargetOpts().Features);
 
   ClangExpressionHelper *type_system_helper =
