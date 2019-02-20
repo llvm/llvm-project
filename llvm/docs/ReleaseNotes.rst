@@ -118,7 +118,8 @@ Changes to the MIPS Target
 Changes to the PowerPC Target
 -----------------------------
 
- During this release ...
+* Initial PowerPC support in llvm-exegesis, just enough to run it in latency
+  mode for at least some opcodes.
 
 Changes to the X86 Target
 -------------------------
