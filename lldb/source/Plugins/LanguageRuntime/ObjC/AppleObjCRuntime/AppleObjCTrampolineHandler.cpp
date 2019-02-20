@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCTrampolineHandler.h"
-
 #include "AppleThreadPlanStepThroughObjCTrampoline.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -35,6 +34,8 @@
 #include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/STLExtras.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -1048,8 +1049,8 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
         log->Printf("Found implementation address in cache: 0x%" PRIx64,
                     impl_addr);
 
-      ret_plan_sp.reset(
-          new ThreadPlanRunToAddress(thread, impl_addr, stop_others));
+      ret_plan_sp = std::make_shared<ThreadPlanRunToAddress>(thread, impl_addr,
+                                                             stop_others);
     } else {
       // We haven't seen this class/selector pair yet.  Look it up.
       StreamString errors;
@@ -1128,9 +1129,9 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
       // is not safe to run only one thread.  So we override the
       // stop_others value passed in to us here:
       const bool trampoline_stop_others = false;
-      ret_plan_sp.reset(new AppleThreadPlanStepThroughObjCTrampoline(
+      ret_plan_sp = std::make_shared<AppleThreadPlanStepThroughObjCTrampoline>(
           thread, this, dispatch_values, isa_addr, sel_addr,
-          trampoline_stop_others));
+          trampoline_stop_others);
       if (log) {
         StreamString s;
         ret_plan_sp->GetDescription(&s, eDescriptionLevelFull);

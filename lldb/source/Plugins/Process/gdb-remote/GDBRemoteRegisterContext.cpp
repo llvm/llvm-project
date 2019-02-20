@@ -22,6 +22,8 @@
 #include "Utility/ARM_ehframe_Registers.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
@@ -480,8 +482,8 @@ bool GDBRemoteRegisterContext::ReadAllRegisterValues(
       // ReadRegisterBytes saves the contents of the register in to the
       // m_reg_data buffer
     }
-    data_sp.reset(new DataBufferHeap(m_reg_data.GetDataStart(),
-                                     m_reg_info.GetRegisterDataByteSize()));
+    data_sp = std::make_shared<DataBufferHeap>(
+        m_reg_data.GetDataStart(), m_reg_info.GetRegisterDataByteSize());
     return true;
   } else {
 

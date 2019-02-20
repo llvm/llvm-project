@@ -9,6 +9,7 @@
 #ifndef LLDB_DISABLE_PYTHON
 
 #include "OperatingSystemPython.h"
+
 #include "Plugins/Process/Utility/DynamicRegisterInfo.h"
 #include "Plugins/Process/Utility/RegisterContextDummy.h"
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
@@ -30,6 +31,8 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -259,8 +262,8 @@ ThreadSP OperatingSystemPython::CreateThreadFromThreadInfo(
   if (!thread_sp) {
     if (did_create_ptr)
       *did_create_ptr = true;
-    thread_sp.reset(
-        new ThreadMemory(*m_process, tid, name, queue, reg_data_addr));
+    thread_sp = std::make_shared<ThreadMemory>(*m_process, tid, name, queue,
+                                               reg_data_addr);
   }
 
   if (core_number < core_thread_list.GetSize(false)) {
@@ -321,8 +324,8 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
                   "= 0x%" PRIx64 ", 0x%" PRIx64 ", reg_data_addr = 0x%" PRIx64
                   ") creating memory register context",
                   thread->GetID(), thread->GetProtocolID(), reg_data_addr);
-    reg_ctx_sp.reset(new RegisterContextMemory(
-        *thread, 0, *GetDynamicRegisterInfo(), reg_data_addr));
+    reg_ctx_sp = std::make_shared<RegisterContextMemory>(
+        *thread, 0, *GetDynamicRegisterInfo(), reg_data_addr);
   } else {
     // No register data address is provided, query the python plug-in to let it
     // make up the data as it sees fit
@@ -355,8 +358,8 @@ OperatingSystemPython::CreateRegisterContextForThread(Thread *thread,
       log->Printf("OperatingSystemPython::CreateRegisterContextForThread (tid "
                   "= 0x%" PRIx64 ") forcing a dummy register context",
                   thread->GetID());
-    reg_ctx_sp.reset(new RegisterContextDummy(
-        *thread, 0, target.GetArchitecture().GetAddressByteSize()));
+    reg_ctx_sp = std::make_shared<RegisterContextDummy>(
+        *thread, 0, target.GetArchitecture().GetAddressByteSize());
   }
   return reg_ctx_sp;
 }

@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdlib.h>
 
+#include <memory>
 #include <mutex>
 
 #include "lldb/Core/Debugger.h"
@@ -63,7 +64,7 @@ public:
   }
 
   PluginProperties() : Properties() {
-    m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_properties);
   }
 
@@ -81,7 +82,7 @@ typedef std::shared_ptr<PluginProperties> ProcessKDPPropertiesSP;
 static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
   static ProcessKDPPropertiesSP g_settings_sp;
   if (!g_settings_sp)
-    g_settings_sp.reset(new PluginProperties());
+    g_settings_sp = std::make_shared<PluginProperties>();
   return g_settings_sp;
 }
 
@@ -108,7 +109,7 @@ lldb::ProcessSP ProcessKDP::CreateInstance(TargetSP target_sp,
                                            const FileSpec *crash_file_path) {
   lldb::ProcessSP process_sp;
   if (crash_file_path == NULL)
-    process_sp.reset(new ProcessKDP(target_sp, listener_sp));
+    process_sp = std::make_shared<ProcessKDP>(target_sp, listener_sp);
   return process_sp;
 }
 
@@ -505,7 +506,7 @@ lldb::ThreadSP ProcessKDP::GetKernelThread() {
 
   ThreadSP thread_sp(m_kernel_thread_wp.lock());
   if (!thread_sp) {
-    thread_sp.reset(new ThreadKDP(*this, g_kernel_tid));
+    thread_sp = std::make_shared<ThreadKDP>(*this, g_kernel_tid);
     m_kernel_thread_wp = thread_sp;
   }
   return thread_sp;
@@ -1030,7 +1031,7 @@ public:
 
 CommandObject *ProcessKDP::GetPluginCommandObject() {
   if (!m_command_sp)
-    m_command_sp.reset(new CommandObjectMultiwordProcessKDP(
-        GetTarget().GetDebugger().GetCommandInterpreter()));
+    m_command_sp = std::make_shared<CommandObjectMultiwordProcessKDP>(
+        GetTarget().GetDebugger().GetCommandInterpreter());
   return m_command_sp.get();
 }

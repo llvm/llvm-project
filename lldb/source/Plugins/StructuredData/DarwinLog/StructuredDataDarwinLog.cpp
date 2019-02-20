@@ -8,10 +8,9 @@
 
 #include "StructuredDataDarwinLog.h"
 
-// C includes
 #include <string.h>
 
-// C++ includes
+#include <memory>
 #include <sstream>
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -144,7 +143,7 @@ public:
   }
 
   StructuredDataDarwinLogProperties() : Properties() {
-    m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_properties);
   }
 
@@ -171,7 +170,7 @@ using StructuredDataDarwinLogPropertiesSP =
 static const StructuredDataDarwinLogPropertiesSP &GetGlobalProperties() {
   static StructuredDataDarwinLogPropertiesSP g_settings_sp;
   if (!g_settings_sp)
-    g_settings_sp.reset(new StructuredDataDarwinLogProperties());
+    g_settings_sp = std::make_shared<StructuredDataDarwinLogProperties>();
   return g_settings_sp;
 }
 
