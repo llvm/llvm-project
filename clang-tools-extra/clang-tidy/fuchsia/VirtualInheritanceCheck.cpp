@@ -35,7 +35,7 @@ void VirtualInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 
 void VirtualInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *D = Result.Nodes.getNodeAs<CXXRecordDecl>("decl"))
-    diag(D->getLocStart(), "direct virtual inheritance is disallowed");
+    diag(D->getBeginLoc(), "direct virtual inheritance is disallowed");
 }
 
 }  // namespace fuchsia

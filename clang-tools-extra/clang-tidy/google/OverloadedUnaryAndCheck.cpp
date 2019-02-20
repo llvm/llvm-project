@@ -33,17 +33,15 @@ void OverloadedUnaryAndCheck::registerMatchers(
       this);
   // Also match freestanding unary operator& overloads. Be careful not to match
   // binary methods.
-  Finder->addMatcher(
-      functionDecl(allOf(
-          unless(cxxMethodDecl()),
-          functionDecl(parameterCountIs(1), hasOverloadedOperatorName("&"))
-              .bind("overload"))),
-      this);
+  Finder->addMatcher(functionDecl(unless(cxxMethodDecl()), parameterCountIs(1),
+                                  hasOverloadedOperatorName("&"))
+                         .bind("overload"),
+                     this);
 }
 
 void OverloadedUnaryAndCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Decl = Result.Nodes.getNodeAs<FunctionDecl>("overload");
-  diag(Decl->getLocStart(),
+  diag(Decl->getBeginLoc(),
        "do not overload unary operator&, it is dangerous.");
 }
 

@@ -36,8 +36,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
 
 /// Retrieves the symbols contained in the "main file" section of an AST in the
 /// same order that they appear.
-llvm::Expected<std::vector<SymbolInformation>>
-getDocumentSymbols(ParsedAST &AST);
+llvm::Expected<std::vector<DocumentSymbol>> getDocumentSymbols(ParsedAST &AST);
 
 } // namespace clangd
 } // namespace clang

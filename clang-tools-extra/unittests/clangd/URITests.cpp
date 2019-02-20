@@ -7,11 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Matchers.h"
 #include "TestFS.h"
 #include "URI.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
@@ -27,64 +29,58 @@ MATCHER_P(Scheme, S, "") { return arg.scheme() == S; }
 MATCHER_P(Authority, A, "") { return arg.authority() == A; }
 MATCHER_P(Body, B, "") { return arg.body() == B; }
 
-std::string createOrDie(llvm::StringRef AbsolutePath,
-                        llvm::StringRef Scheme = "file") {
+std::string createOrDie(StringRef AbsolutePath, StringRef Scheme = "file") {
   auto Uri = URI::create(AbsolutePath, Scheme);
   if (!Uri)
-    llvm_unreachable(llvm::toString(Uri.takeError()).c_str());
+    llvm_unreachable(toString(Uri.takeError()).c_str());
   return Uri->toString();
 }
 
-URI parseOrDie(llvm::StringRef Uri) {
+URI parseOrDie(StringRef Uri) {
   auto U = URI::parse(Uri);
   if (!U)
-    llvm_unreachable(llvm::toString(U.takeError()).c_str());
+    llvm_unreachable(toString(U.takeError()).c_str());
   return *U;
 }
 
 TEST(PercentEncodingTest, Encode) {
   EXPECT_EQ(URI("x", /*Authority=*/"", "a/b/c").toString(), "x:a/b/c");
-  EXPECT_EQ(URI("x", /*Authority=*/"", "a!b;c~").toString(), "x:a%21b%3bc~");
+  EXPECT_EQ(URI("x", /*Authority=*/"", "a!b;c~").toString(), "x:a%21b%3Bc~");
   EXPECT_EQ(URI("x", /*Authority=*/"", "a123b").toString(), "x:a123b");
+  EXPECT_EQ(URI("x", /*Authority=*/"", "a:b;c").toString(), "x:a:b%3Bc");
 }
 
 TEST(PercentEncodingTest, Decode) {
   EXPECT_EQ(parseOrDie("x:a/b/c").body(), "a/b/c");
 
-  EXPECT_EQ(parseOrDie("%3a://%3a/%3").scheme(), ":");
-  EXPECT_EQ(parseOrDie("%3a://%3a/%3").authority(), ":");
-  EXPECT_EQ(parseOrDie("%3a://%3a/%3").body(), "/%3");
+  EXPECT_EQ(parseOrDie("s%2b://%3a/%3").scheme(), "s+");
+  EXPECT_EQ(parseOrDie("s%2b://%3a/%3").authority(), ":");
+  EXPECT_EQ(parseOrDie("s%2b://%3a/%3").body(), "/%3");
 
   EXPECT_EQ(parseOrDie("x:a%21b%3ac~").body(), "a!b:c~");
+  EXPECT_EQ(parseOrDie("x:a:b%3bc").body(), "a:b;c");
 }
 
-std::string resolveOrDie(const URI &U, llvm::StringRef HintPath = "") {
+std::string resolveOrDie(const URI &U, StringRef HintPath = "") {
   auto Path = URI::resolve(U, HintPath);
   if (!Path)
-    llvm_unreachable(llvm::toString(Path.takeError()).c_str());
+    llvm_unreachable(toString(Path.takeError()).c_str());
   return *Path;
 }
 
 TEST(URITest, Create) {
 #ifdef _WIN32
-  EXPECT_THAT(createOrDie("c:\\x\\y\\z"), "file:///c%3a/x/y/z");
+  EXPECT_THAT(createOrDie("c:\\x\\y\\z"), "file:///c:/x/y/z");
 #else
   EXPECT_THAT(createOrDie("/x/y/z"), "file:///x/y/z");
-  EXPECT_THAT(createOrDie("/(x)/y/\\ z"), "file:///%28x%29/y/%5c%20z");
+  EXPECT_THAT(createOrDie("/(x)/y/\\ z"), "file:///%28x%29/y/%5C%20z");
 #endif
 }
 
 TEST(URITest, FailedCreate) {
-  auto Fail = [](llvm::Expected<URI> U) {
-    if (!U) {
-      llvm::consumeError(U.takeError());
-      return true;
-    }
-    return false;
-  };
-  EXPECT_TRUE(Fail(URI::create("/x/y/z", "no")));
+  EXPECT_ERROR(URI::create("/x/y/z", "no"));
   // Path has to be absolute.
-  EXPECT_TRUE(Fail(URI::create("x/y/z", "file")));
+  EXPECT_ERROR(URI::create("x/y/z", "file"));
 }
 
 TEST(URITest, Parse) {
@@ -118,25 +114,18 @@ TEST(URITest, Parse) {
 }
 
 TEST(URITest, ParseFailed) {
-  auto FailedParse = [](llvm::StringRef U) {
-    auto URI = URI::parse(U);
-    if (!URI) {
-      llvm::consumeError(URI.takeError());
-      return true;
-    }
-    return false;
-  };
-
   // Expect ':' in URI.
-  EXPECT_TRUE(FailedParse("file//x/y/z"));
+  EXPECT_ERROR(URI::parse("file//x/y/z"));
   // Empty.
-  EXPECT_TRUE(FailedParse(""));
-  EXPECT_TRUE(FailedParse(":/a/b/c"));
+  EXPECT_ERROR(URI::parse(""));
+  EXPECT_ERROR(URI::parse(":/a/b/c"));
+  EXPECT_ERROR(URI::parse("\"/a/b/c\" IWYU pragma: abc"));
 }
 
 TEST(URITest, Resolve) {
 #ifdef _WIN32
   EXPECT_THAT(resolveOrDie(parseOrDie("file:///c%3a/x/y/z")), "c:\\x\\y\\z");
+  EXPECT_THAT(resolveOrDie(parseOrDie("file:///c:/x/y/z")), "c:\\x\\y\\z");
 #else
   EXPECT_EQ(resolveOrDie(parseOrDie("file:/a/b/c")), "/a/b/c");
   EXPECT_EQ(resolveOrDie(parseOrDie("file://auth/a/b/c")), "/a/b/c");
@@ -148,6 +137,28 @@ TEST(URITest, Resolve) {
             testPath("a"));
 }
 
+std::string resolvePathOrDie(StringRef AbsPath, StringRef HintPath = "") {
+  auto Path = URI::resolvePath(AbsPath, HintPath);
+  if (!Path)
+    llvm_unreachable(toString(Path.takeError()).c_str());
+  return *Path;
+}
+
+TEST(URITest, ResolvePath) {
+  StringRef FilePath =
+#ifdef _WIN32
+      "c:\\x\\y\\z";
+#else
+      "/a/b/c";
+#endif
+  EXPECT_EQ(resolvePathOrDie(FilePath), FilePath);
+  EXPECT_EQ(resolvePathOrDie(testPath("x"), testPath("hint")), testPath("x"));
+  // HintPath is not in testRoot(); resolution fails.
+  auto Resolve = URI::resolvePath(testPath("x"), FilePath);
+  EXPECT_FALSE(Resolve);
+  llvm::consumeError(Resolve.takeError());
+}
+
 TEST(URITest, Platform) {
   auto Path = testPath("x");
   auto U = URI::create(Path, "file");
@@ -156,10 +167,10 @@ TEST(URITest, Platform) {
 }
 
 TEST(URITest, ResolveFailed) {
-  auto FailedResolve = [](llvm::StringRef Uri) {
+  auto FailedResolve = [](StringRef Uri) {
     auto Path = URI::resolve(parseOrDie(Uri));
     if (!Path) {
-      llvm::consumeError(Path.takeError());
+      consumeError(Path.takeError());
       return true;
     }
     return false;

@@ -16,6 +16,7 @@
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
+#include "gmock/gmock-matchers.h"
 #include "gtest/gtest.h"
 #include <string>
 #include <vector>
@@ -581,7 +582,8 @@ TEST(ClangMove, DumpDecls) {
                             "namespace a {\n"
                             "class Move1 {};\n"
                             "void f1() {}\n"
-                            "void f2();\n"
+                            "template <typename T>"
+                            "void f2(T t);\n"
                             "} // namespace a\n"
                             "\n"
                             "class ForwardClass;\n"
@@ -594,6 +596,8 @@ TEST(ClangMove, DumpDecls) {
                             "typedef int Int2;\n"
                             "typedef A<double> A_d;"
                             "using Int = int;\n"
+                            "template <typename T>\n"
+                            "using AA = A<T>;\n"
                             "extern int kGlobalInt;\n"
                             "extern const char* const kGlobalStr;\n"
                             "} // namespace b\n"
@@ -608,26 +612,28 @@ TEST(ClangMove, DumpDecls) {
   Spec.NewHeader = "new_foo.h";
   Spec.NewCC = "new_foo.cc";
   DeclarationReporter Reporter;
-  std::set<DeclarationReporter::DeclarationPair> ExpectedDeclarations = {
-      {"A", "Class"},
-      {"B", "Class"},
-      {"a::Move1", "Class"},
-      {"a::f1", "Function"},
-      {"a::f2", "Function"},
-      {"a::b::Move1", "Class"},
-      {"a::b::f", "Function"},
-      {"a::b::E1", "Enum"},
-      {"a::b::E2", "Enum"},
-      {"a::b::Int2", "TypeAlias"},
-      {"a::b::A_d", "TypeAlias"},
-      {"a::b::Int", "TypeAlias"},
-      {"a::b::kGlobalInt", "Variable"},
-      {"a::b::kGlobalStr", "Variable"}};
+  std::vector<DeclarationReporter::Declaration> ExpectedDeclarations = {
+      {"A", "Class", true},
+      {"B", "Class", false},
+      {"a::Move1", "Class", false},
+      {"a::f1", "Function", false},
+      {"a::f2", "Function", true},
+      {"a::b::Move1", "Class", false},
+      {"a::b::f", "Function", false},
+      {"a::b::E1", "Enum", false},
+      {"a::b::E2", "Enum", false},
+      {"a::b::Int2", "TypeAlias", false},
+      {"a::b::A_d", "TypeAlias", false},
+      {"a::b::Int", "TypeAlias", false},
+      {"a::b::AA", "TypeAlias", true},
+      {"a::b::kGlobalInt", "Variable", false},
+      {"a::b::kGlobalStr", "Variable", false}};
   runClangMoveOnCode(Spec, TestHeader, TestCode, &Reporter);
-  std::set<DeclarationReporter::DeclarationPair> Results;
-  for (const auto& DelPair : Reporter.getDeclarationList())
-    Results.insert(DelPair);
-  EXPECT_EQ(ExpectedDeclarations, Results);
+  std::vector<DeclarationReporter::Declaration> Results;
+  for (const auto &DelPair : Reporter.getDeclarationList())
+    Results.push_back(DelPair);
+  EXPECT_THAT(ExpectedDeclarations,
+              testing::UnorderedElementsAreArray(Results));
 }
 
 } // namespace

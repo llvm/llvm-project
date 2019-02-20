@@ -5,7 +5,7 @@
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
 #include "clang/AST/ASTContext.h"
@@ -14,9 +14,9 @@
 #include "clang/Basic/SourceManager.h"
 #include <utility>
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
-
 namespace {
 
 bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
@@ -24,7 +24,7 @@ bool isInformativeQualifierChunk(CodeCompletionString::Chunk const &Chunk) {
          StringRef(Chunk.Text).endswith("::");
 }
 
-void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
+void appendEscapeSnippet(const StringRef Text, std::string *Out) {
   for (const auto Character : Text) {
     if (Character == '$' || Character == '}' || Character == '\\')
       Out->push_back('\\');
@@ -32,13 +32,13 @@ void appendEscapeSnippet(const llvm::StringRef Text, std::string *Out) {
   }
 }
 
-bool looksLikeDocComment(llvm::StringRef CommentText) {
+bool looksLikeDocComment(StringRef CommentText) {
   // We don't report comments that only contain "special" chars.
   // This avoids reporting various delimiters, like:
   //   =================
   //   -----------------
   //   *****************
-  return CommentText.find_first_not_of("/*-= \t\r\n") != llvm::StringRef::npos;
+  return CommentText.find_first_not_of("/*-= \t\r\n") != StringRef::npos;
 }
 
 } // namespace
@@ -51,49 +51,33 @@ std::string getDocComment(const ASTContext &Ctx,
   // get this declaration, so we don't show documentation in that case.
   if (Result.Kind != CodeCompletionResult::RK_Declaration)
     return "";
-  auto *Decl = Result.getDeclaration();
-  if (!Decl || llvm::isa<NamespaceDecl>(Decl)) {
+  return Result.getDeclaration() ? getDeclComment(Ctx, *Result.getDeclaration())
+                                 : "";
+}
+
+std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
+  if (isa<NamespaceDecl>(Decl)) {
     // Namespaces often have too many redecls for any particular redecl comment
     // to be useful. Moreover, we often confuse file headers or generated
     // comments with namespace comments. Therefore we choose to just ignore
     // the comments for namespaces.
     return "";
   }
-  const RawComment *RC = getCompletionComment(Ctx, Decl);
-  if (!RC)
-    return "";
-
-  // Sanity check that the comment does not come from the PCH. We choose to not
-  // write them into PCH, because they are racy and slow to load.
-  assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getLocStart()));
-  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!looksLikeDocComment(Doc))
-    return "";
-  return Doc;
-}
-
-std::string
-getParameterDocComment(const ASTContext &Ctx,
-                       const CodeCompleteConsumer::OverloadCandidate &Result,
-                       unsigned ArgIndex, bool CommentsFromHeaders) {
-  auto *Func = Result.getFunction();
-  if (!Func)
-    return "";
-  const RawComment *RC = getParameterComment(Ctx, Result, ArgIndex);
+  const RawComment *RC = getCompletionComment(Ctx, &Decl);
   if (!RC)
     return "";
   // Sanity check that the comment does not come from the PCH. We choose to not
   // write them into PCH, because they are racy and slow to load.
-  assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getLocStart()));
-  std::string Doc = RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
-  if (!looksLikeDocComment(Doc))
-    return "";
-  return Doc;
+  assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
+  std::string Doc =
+      RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+  return looksLikeDocComment(Doc) ? Doc : "";
 }
 
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet, std::string *RequiredQualifiers) {
   unsigned ArgCount = 0;
+  bool HadObjCArguments = false;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
     // them.
@@ -103,13 +87,36 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
     switch (Chunk.Kind) {
     case CodeCompletionString::CK_TypedText:
       // The typed-text chunk is the actual name. We don't record this chunk.
-      // In general our string looks like <qualifiers><name><signature>.
-      // So once we see the name, any text we recorded so far should be
-      // reclassified as qualifiers.
-      if (RequiredQualifiers)
-        *RequiredQualifiers = std::move(*Signature);
-      Signature->clear();
-      Snippet->clear();
+      // C++:
+      //   In general our string looks like <qualifiers><name><signature>.
+      //   So once we see the name, any text we recorded so far should be
+      //   reclassified as qualifiers.
+      //
+      // Objective-C:
+      //   Objective-C methods may have multiple typed-text chunks, so we must
+      //   treat them carefully. For Objective-C methods, all typed-text chunks
+      //   will end in ':' (unless there are no arguments, in which case we
+      //   can safely treat them as C++).
+      if (!StringRef(Chunk.Text).endswith(":")) { // Treat as C++.
+        if (RequiredQualifiers)
+          *RequiredQualifiers = std::move(*Signature);
+        Signature->clear();
+        Snippet->clear();
+      } else { // Objective-C method with args.
+        // If this is the first TypedText to the Objective-C method, discard any
+        // text that we've previously seen (such as previous parameter selector,
+        // which will be marked as Informative text).
+        //
+        // TODO: Make previous parameters part of the signature for Objective-C
+        // methods.
+        if (!HadObjCArguments) {
+          HadObjCArguments = true;
+          Signature->clear();
+        } else { // Subsequent argument, considered part of snippet/signature.
+          *Signature += Chunk.Text;
+          *Snippet += Chunk.Text;
+        }
+      }
       break;
     case CodeCompletionString::CK_Text:
       *Signature += Chunk.Text;
@@ -164,7 +171,7 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
 }
 
 std::string formatDocumentation(const CodeCompletionString &CCS,
-                                llvm::StringRef DocComment) {
+                                StringRef DocComment) {
   // Things like __attribute__((nonnull(1,3))) and [[noreturn]]. Present this
   // information in the documentation field.
   std::string Result;

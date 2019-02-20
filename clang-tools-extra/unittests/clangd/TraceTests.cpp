@@ -17,10 +17,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
-using namespace llvm;
 
 MATCHER_P(StringNode, Val, "") {
   if (arg->getType() != yaml::Node::NK_Scalar) {
@@ -92,7 +92,7 @@ TEST(TraceTest, SmokeTest) {
 
   // Check whether we expect thread name events on this platform.
   SmallString<32> ThreadName;
-  llvm::get_thread_name(ThreadName);
+  get_thread_name(ThreadName);
   bool ThreadsHaveNames = !ThreadName.empty();
 
   // We expect in order:

@@ -1,11 +1,11 @@
-//===--- Diagnostics.h ------------------------------------------*- C++-*-===//
+//===--- Diagnostics.h -------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H
@@ -27,6 +27,12 @@ struct ClangdDiagnosticOptions {
   /// If true, Clangd uses an LSP extension to embed the fixes with the
   /// diagnostics that are sent to the client.
   bool EmbedFixesInDiagnostics = false;
+
+  /// If true, Clangd uses an LSP extension to send the diagnostic's
+  /// category to the client. The category typically describes the compilation
+  /// stage during which the issue was produced, e.g. "Semantic Issue" or "Parse
+  /// Issue".
+  bool SendDiagnosticCategory = false;
 };
 
 /// Contains basic information about a diagnostic.
@@ -37,6 +43,7 @@ struct DiagBase {
   std::string File;
   clangd::Range Range;
   DiagnosticsEngine::Level Severity = DiagnosticsEngine::Note;
+  std::string Category;
   // Since File is only descriptive, we store a separate flag to distinguish
   // diags from the main file.
   bool InsideMainFile = false;
@@ -71,8 +78,11 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D);
 /// file do not have a corresponding LSP diagnostic, but can still be included
 /// as part of their main diagnostic's message.
 void toLSPDiags(
-    const Diag &D,
+    const Diag &D, const URIForFile &File, const ClangdDiagnosticOptions &Opts,
     llvm::function_ref<void(clangd::Diagnostic, llvm::ArrayRef<Fix>)> OutFn);
+
+/// Convert from Fix to LSP CodeAction.
+CodeAction toCodeAction(const Fix &D, const URIForFile &File);
 
 /// Convert from clang diagnostic level to LSP severity.
 int getSeverity(DiagnosticsEngine::Level L);
@@ -101,4 +111,4 @@ private:
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_DIAGNOSTICS_H

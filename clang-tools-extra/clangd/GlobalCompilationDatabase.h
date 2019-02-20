@@ -1,15 +1,16 @@
-//===--- GlobalCompilationDatabase.h ----------------------------*- C++-*-===//
+//===--- GlobalCompilationDatabase.h -----------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H
 
+#include "Function.h"
 #include "Path.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
@@ -27,22 +28,36 @@ namespace clangd {
 
 class Logger;
 
+struct ProjectInfo {
+  // The directory in which the compilation database was discovered.
+  // Empty if directory-based compilation database discovery was not used.
+  std::string SourceRoot;
+};
+
 /// Provides compilation arguments used for parsing C and C++ files.
 class GlobalCompilationDatabase {
 public:
   virtual ~GlobalCompilationDatabase() = default;
 
   /// If there are any known-good commands for building this file, returns one.
+  /// If the ProjectInfo pointer is set, it will also be populated.
   virtual llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const = 0;
+  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const = 0;
 
   /// Makes a guess at how to build a file.
   /// The default implementation just runs clang on the file.
   /// Clangd should treat the results as unreliable.
   virtual tooling::CompileCommand getFallbackCommand(PathRef File) const;
 
-  /// FIXME(ibiryukov): add facilities to track changes to compilation flags of
-  /// existing targets.
+  using CommandChanged = Event<std::vector<std::string>>;
+  /// The callback is notified when files may have new compile commands.
+  /// The argument is a list of full file paths.
+  CommandChanged::Subscription watch(CommandChanged::Listener L) const {
+    return OnCommandChanged.observe(std::move(L));
+  }
+
+protected:
+  mutable CommandChanged OnCommandChanged;
 };
 
 /// Gets compile args from tooling::CompilationDatabases built for parent
@@ -57,21 +72,13 @@ public:
   /// Scans File's parents looking for compilation databases.
   /// Any extra flags will be added.
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override;
-
-  /// Uses the default fallback command, adding any extra flags.
-  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
-
-  /// Set the compile commands directory to \p P.
-  void setCompileCommandsDir(Path P);
-
-  /// Sets the extra flags that should be added to a file.
-  void setExtraFlagsForFile(PathRef File, std::vector<std::string> ExtraFlags);
+  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override;
 
 private:
-  tooling::CompilationDatabase *getCDBForFile(PathRef File) const;
-  tooling::CompilationDatabase *getCDBInDirLocked(PathRef File) const;
-  void addExtraFlags(PathRef File, tooling::CompileCommand &C) const;
+  tooling::CompilationDatabase *getCDBForFile(PathRef File,
+                                              ProjectInfo *) const;
+  std::pair<tooling::CompilationDatabase *, /*Cached*/ bool>
+  getCDBInDirLocked(PathRef File) const;
 
   mutable std::mutex Mutex;
   /// Caches compilation databases loaded from directories(keys are
@@ -79,64 +86,38 @@ private:
   mutable llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
       CompilationDatabases;
 
-  /// Stores extra flags per file.
-  llvm::StringMap<std::vector<std::string>> ExtraFlagsForFile;
   /// Used for command argument pointing to folder where compile_commands.json
   /// is located.
   llvm::Optional<Path> CompileCommandsDir;
 };
 
-/// A wrapper around GlobalCompilationDatabase that caches the compile commands.
-/// Note that only results of getCompileCommand are cached.
-class CachingCompilationDb : public GlobalCompilationDatabase {
+/// Wraps another compilation database, and supports overriding the commands
+/// using an in-memory mapping.
+class OverlayCDB : public GlobalCompilationDatabase {
 public:
-  explicit CachingCompilationDb(const GlobalCompilationDatabase &InnerCDB);
+  // Base may be null, in which case no entries are inherited.
+  // FallbackFlags are added to the fallback compile command.
+  OverlayCDB(const GlobalCompilationDatabase *Base,
+             std::vector<std::string> FallbackFlags = {});
 
-  /// Gets compile command for \p File from cache or CDB if it's not in the
-  /// cache.
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override;
-
-  /// Forwards to the inner CDB. Results of this function are not cached.
+  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
-  /// Removes an entry for \p File if it's present in the cache.
-  void invalidate(PathRef File);
-
-  /// Removes all cached compile commands.
-  void clear();
-
-private:
-  const GlobalCompilationDatabase &InnerCDB;
-  mutable std::mutex Mut;
-  mutable llvm::StringMap<llvm::Optional<tooling::CompileCommand>>
-      Cached; /* GUARDED_BY(Mut) */
-};
-
-/// Gets compile args from an in-memory mapping based on a filepath. Typically
-/// used by clients who provide the compile commands themselves.
-class InMemoryCompilationDb : public GlobalCompilationDatabase {
-public:
-  /// Gets compile command for \p File from the stored mapping.
-  llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override;
-
-  /// Sets the compilation command for a particular file.
-  ///
-  /// \returns True if the File had no compilation command before.
-  bool setCompilationCommandForFile(PathRef File,
-                                    tooling::CompileCommand CompilationCommand);
-
-  /// Removes the compilation command for \p File if it's present in the
-  /// mapping.
-  void invalidate(PathRef File);
+  /// Sets or clears the compilation command for a particular file.
+  void
+  setCompileCommand(PathRef File,
+                    llvm::Optional<tooling::CompileCommand> CompilationCommand);
 
 private:
   mutable std::mutex Mutex;
   llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
+  const GlobalCompilationDatabase *Base;
+  std::vector<std::string> FallbackFlags;
+  CommandChanged::Subscription BaseChanged;
 };
 
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_GLOBALCOMPILATIONDATABASE_H

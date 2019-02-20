@@ -11,6 +11,7 @@ target_link_libraries(find-all-symbols
   clangBasic
   clangFrontend
   clangLex
+  clangSerialization
   clangTooling
   findAllSymbols
   )

@@ -1,20 +1,22 @@
-//===--- CodeComplete.h -----------------------------------------*- C++-*-===//
+//===--- CodeComplete.h ------------------------------------------*- C++-*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Code completion provides suggestions for what the user might type next.
 // After "std::string S; S." we might suggest members of std::string.
 // Signature help describes the parameters of a function as you type them.
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H
 
+#include "ClangdUnit.h"
 #include "Headers.h"
 #include "Logger.h"
 #include "Path.h"
@@ -24,6 +26,11 @@
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/CodeCompleteOptions.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include <future>
 
 namespace clang {
 class NamedDecl;
@@ -71,12 +78,37 @@ struct CodeCompleteOptions {
   /// Expose origins of completion items in the label (for debugging).
   bool ShowOrigins = false;
 
+  /// If set to true, this will send an asynchronous speculative index request,
+  /// based on the index request for the last code completion on the same file
+  /// and the filter text typed before the cursor, before sema code completion
+  /// is invoked. This can reduce the code completion latency (by roughly
+  /// latency of sema code completion) if the speculative request is the same as
+  /// the one generated for the ongoing code completion from sema. As a sequence
+  /// of code completions often have the same scopes and proximity paths etc,
+  /// this should be effective for a number of code completions.
+  bool SpeculativeIndexRequest = false;
+
   // Populated internally by clangd, do not set.
   /// If `Index` is set, it is used to augment the code completion
   /// results.
   /// FIXME(ioeric): we might want a better way to pass the index around inside
   /// clangd.
   const SymbolIndex *Index = nullptr;
+
+  /// Include completions that require small corrections, e.g. change '.' to
+  /// '->' on member access etc.
+  bool IncludeFixIts = false;
+
+  /// Whether to generate snippets for function arguments on code-completion.
+  /// Needs snippets to be enabled as well.
+  bool EnableFunctionArgSnippets = true;
+
+  /// Whether to include index symbols that are not defined in the scopes
+  /// visible from the code completion point. This applies in contexts without
+  /// explicit scope qualifiers.
+  ///
+  /// Such completions can insert scope qualifiers.
+  bool AllScopes = false;
 };
 
 // Semi-structured representation of a code-complete suggestion for our C++ API.
@@ -108,12 +140,27 @@ struct CodeCompletion {
   // Other fields should apply equally to all bundled completions.
   unsigned BundleSize = 1;
   SymbolOrigin Origin = SymbolOrigin::Unknown;
-  // The header through which this symbol could be included.
-  // Quoted string as expected by an #include directive, e.g. "<memory>".
-  // Empty for non-symbol completions, or when not known.
-  std::string Header;
-  // Present if Header is set and should be inserted to use this item.
-  llvm::Optional<TextEdit> HeaderInsertion;
+
+  struct IncludeCandidate {
+    // The header through which this symbol could be included.
+    // Quoted string as expected by an #include directive, e.g. "<memory>".
+    // Empty for non-symbol completions, or when not known.
+    std::string Header;
+    // Present if Header should be inserted to use this item.
+    llvm::Optional<TextEdit> Insertion;
+  };
+  // All possible include headers ranked by preference. By default, the first
+  // include is used.
+  // If we've bundled together overloads that have different sets of includes,
+  // thse includes may not be accurate for all of them.
+  llvm::SmallVector<IncludeCandidate, 1> Includes;
+
+  /// Holds information about small corrections that needs to be done. Like
+  /// converting '->' to '.' on member access.
+  std::vector<TextEdit> FixIts;
+
+  /// Holds the range of the token we are going to replace with this completion.
+  Range CompletionTokenRange;
 
   // Scores are used to rank completion items.
   struct Scores {
@@ -138,6 +185,9 @@ struct CodeCompletion {
   };
   Scores Score;
 
+  /// Indicates if this item is deprecated.
+  bool Deprecated = false;
+
   // Serialize this to an LSP completion item. This is a lossy operation.
   CompletionItem render(const CodeCompleteOptions &) const;
 };
@@ -149,23 +199,44 @@ struct CodeCompleteResult {
 };
 raw_ostream &operator<<(raw_ostream &, const CodeCompleteResult &);
 
+/// A speculative and asynchronous fuzzy find index request (based on cached
+/// request) that can be sent before parsing sema. This would reduce completion
+/// latency if the speculation succeeds.
+struct SpeculativeFuzzyFind {
+  /// A cached request from past code completions.
+  /// Set by caller of `codeComplete()`.
+  llvm::Optional<FuzzyFindRequest> CachedReq;
+  /// The actual request used by `codeComplete()`.
+  /// Set by `codeComplete()`. This can be used by callers to update cache.
+  llvm::Optional<FuzzyFindRequest> NewReq;
+  /// The result is consumed by `codeComplete()` if speculation succeeded.
+  /// NOTE: the destructor will wait for the async call to finish.
+  std::future<SymbolSlab> Result;
+};
+
 /// Get code completions at a specified \p Pos in \p FileName.
+/// If \p SpecFuzzyFind is set, a speculative and asynchronous fuzzy find index
+/// request (based on cached request) will be run before parsing sema. In case
+/// the speculative result is used by code completion (e.g. speculation failed),
+/// the speculative result is not consumed, and `SpecFuzzyFind` is only
+/// destroyed when the async request finishes.
 CodeCompleteResult codeComplete(PathRef FileName,
                                 const tooling::CompileCommand &Command,
-                                PrecompiledPreamble const *Preamble,
-                                const IncludeStructure &PreambleInclusions,
+                                const PreambleData *Preamble,
                                 StringRef Contents, Position Pos,
-                                IntrusiveRefCntPtr<vfs::FileSystem> VFS,
+                                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
                                 std::shared_ptr<PCHContainerOperations> PCHs,
-                                CodeCompleteOptions Opts);
+                                CodeCompleteOptions Opts,
+                                SpeculativeFuzzyFind *SpecFuzzyFind = nullptr);
 
 /// Get signature help at a specified \p Pos in \p FileName.
 SignatureHelp signatureHelp(PathRef FileName,
                             const tooling::CompileCommand &Command,
-                            PrecompiledPreamble const *Preamble,
-                            StringRef Contents, Position Pos,
-                            IntrusiveRefCntPtr<vfs::FileSystem> VFS,
-                            std::shared_ptr<PCHContainerOperations> PCHs);
+                            const PreambleData *Preamble, StringRef Contents,
+                            Position Pos,
+                            IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
+                            std::shared_ptr<PCHContainerOperations> PCHs,
+                            const SymbolIndex *Index);
 
 // For index-based completion, we only consider:
 //   * symbols in namespaces or translation unit scopes (e.g. no class
@@ -178,7 +249,13 @@ SignatureHelp signatureHelp(PathRef FileName,
 // like workspace/symbols or textDocument/definition, but are not used for code
 // completion.
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx);
+
+/// Retrives a speculative code completion filter text before the cursor.
+/// Exposed for testing only.
+llvm::Expected<llvm::StringRef>
+speculateCompletionFilter(llvm::StringRef Content, Position Pos);
+
 } // namespace clangd
 } // namespace clang
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETE_H

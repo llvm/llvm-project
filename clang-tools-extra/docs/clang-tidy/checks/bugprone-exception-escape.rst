@@ -21,6 +21,8 @@ are always possible to implement in a non throwing way. Non throwing ``swap()``
 operations are also used to create move operations. A throwing ``main()``
 function also results in unexpected termination.
 
+WARNING! This check may be expensive on large source files.
+
 Options
 -------
 

@@ -88,7 +88,7 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssertExprRoot =
       Result.Nodes.getNodeAs<BinaryOperator>("assertExprRoot");
   const auto *CastExpr = Result.Nodes.getNodeAs<CStyleCastExpr>("castExpr");
-  SourceLocation AssertExpansionLoc = CondStmt->getLocStart();
+  SourceLocation AssertExpansionLoc = CondStmt->getBeginLoc();
 
   if (!AssertExpansionLoc.isValid() || !AssertExpansionLoc.isMacroID())
     return;
@@ -129,7 +129,7 @@ void StaticAssertCheck::check(const MatchFinder::MatchResult &Result) {
       FixItHints.push_back(FixItHint::CreateRemoval(
           SourceRange(AssertExprRoot->getOperatorLoc())));
       FixItHints.push_back(FixItHint::CreateRemoval(
-          SourceRange(AssertMSG->getLocStart(), AssertMSG->getLocEnd())));
+          SourceRange(AssertMSG->getBeginLoc(), AssertMSG->getEndLoc())));
       StaticAssertMSG = (Twine(", \"") + AssertMSG->getString() + "\"").str();
     }
 

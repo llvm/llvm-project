@@ -56,12 +56,12 @@ class StmtAncestorASTVisitor
 public:
   StmtAncestorASTVisitor() { StmtStack.push_back(nullptr); }
 
-  /// \brief Run the analysis on the TranslationUnitDecl.
+  /// \brief Run the analysis on the AST.
   ///
   /// In case we're running this analysis multiple times, don't repeat the work.
-  void gatherAncestors(const clang::TranslationUnitDecl *T) {
+  void gatherAncestors(ASTContext &Ctx) {
     if (StmtAncestors.empty())
-      TraverseDecl(const_cast<clang::TranslationUnitDecl *>(T));
+      TraverseAST(Ctx);
   }
 
   /// Accessor for StmtAncestors.

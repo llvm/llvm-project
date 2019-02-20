@@ -12,7 +12,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/PCHContainerOperations.h"
@@ -21,6 +20,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 #include <memory>
 #include <string>
@@ -2241,6 +2241,39 @@ TEST_F(ChangeNamespaceTest, InjectedClassNameInFriendDecl) {
                          "  b.f();\n"
                          "}\n"
                          "}  // namespace e\n";
+  EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
+}
+
+TEST_F(ChangeNamespaceTest, FullyQualifyConflictNamespace) {
+  std::string Code =
+      "namespace x { namespace util { class Some {}; } }\n"
+      "namespace x { namespace y {namespace base { class Base {}; } } }\n"
+      "namespace util { class Status {}; }\n"
+      "namespace base { class Base {}; }\n"
+      "namespace na {\n"
+      "namespace nb {\n"
+      "void f() {\n"
+      "  util::Status s1; x::util::Some s2;\n"
+      "  base::Base b1; x::y::base::Base b2;\n"
+      "}\n"
+      "} // namespace nb\n"
+      "} // namespace na\n";
+
+  std::string Expected =
+      "namespace x { namespace util { class Some {}; } }\n"
+      "namespace x { namespace y {namespace base { class Base {}; } } }\n"
+      "namespace util { class Status {}; }\n"
+      "namespace base { class Base {}; }\n"
+      "\n"
+      "namespace x {\n"
+      "namespace y {\n"
+      "void f() {\n"
+      "  ::util::Status s1; util::Some s2;\n"
+      "  ::base::Base b1; base::Base b2;\n"
+      "}\n"
+      "} // namespace y\n"
+      "} // namespace x\n";
+
   EXPECT_EQ(format(Expected), runChangeNamespaceOnCode(Code));
 }
 

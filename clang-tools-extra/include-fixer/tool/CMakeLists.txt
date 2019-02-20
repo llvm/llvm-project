@@ -11,6 +11,7 @@ target_link_libraries(clang-include-fixer
   clangFrontend
   clangIncludeFixer
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   findAllSymbols

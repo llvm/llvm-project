@@ -69,12 +69,12 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *ND = Result.Nodes.getNodeAs<NamespaceDecl>("namespace");
   const SourceManager &Sources = *Result.SourceManager;
 
-  if (!locationsInSameFile(Sources, ND->getLocStart(), ND->getRBraceLoc()))
+  if (!locationsInSameFile(Sources, ND->getBeginLoc(), ND->getRBraceLoc()))
     return;
 
   // Don't require closing comments for namespaces spanning less than certain
   // number of lines.
-  unsigned StartLine = Sources.getSpellingLineNumber(ND->getLocStart());
+  unsigned StartLine = Sources.getSpellingLineNumber(ND->getBeginLoc());
   unsigned EndLine = Sources.getSpellingLineNumber(ND->getRBraceLoc());
   if (EndLine - StartLine + 1 <= ShortNamespaceLines)
     return;

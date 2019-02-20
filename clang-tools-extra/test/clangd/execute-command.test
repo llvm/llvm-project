@@ -62,3 +62,5 @@
 {"jsonrpc":"2.0","id":9,"method":"workspace/executeCommand","params":{"arguments":[{"custom":"foo", "changes":{"test:///foo.c":[{"range":{"start":{"line":0,"character":32},"end":{"line":0,"character":32}},"newText":"("},{"range":{"start":{"line":0,"character":37},"end":{"line":0,"character":37}},"newText":")"}]}}],"command":"clangd.applyFix"}}
 ---
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

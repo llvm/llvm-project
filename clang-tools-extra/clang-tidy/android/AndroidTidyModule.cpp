@@ -37,16 +37,16 @@ public:
     CheckFactories.registerCheck<CloexecAccept4Check>("android-cloexec-accept4");
     CheckFactories.registerCheck<CloexecAcceptCheck>("android-cloexec-accept");
     CheckFactories.registerCheck<CloexecCreatCheck>("android-cloexec-creat");
+    CheckFactories.registerCheck<CloexecDupCheck>("android-cloexec-dup");
     CheckFactories.registerCheck<CloexecEpollCreate1Check>(
         "android-cloexec-epoll-create1");
     CheckFactories.registerCheck<CloexecEpollCreateCheck>(
         "android-cloexec-epoll-create");
-    CheckFactories.registerCheck<CloexecDupCheck>("android-cloexec-dup");
     CheckFactories.registerCheck<CloexecFopenCheck>("android-cloexec-fopen");
-    CheckFactories.registerCheck<CloexecInotifyInitCheck>(
-        "android-cloexec-inotify-init");
     CheckFactories.registerCheck<CloexecInotifyInit1Check>(
         "android-cloexec-inotify-init1");
+    CheckFactories.registerCheck<CloexecInotifyInitCheck>(
+        "android-cloexec-inotify-init");
     CheckFactories.registerCheck<CloexecMemfdCreateCheck>(
         "android-cloexec-memfd-create");
     CheckFactories.registerCheck<CloexecOpenCheck>("android-cloexec-open");

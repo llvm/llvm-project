@@ -60,10 +60,10 @@ void SimplifySubscriptExprCheck::check(const MatchFinder::MatchResult &Result) {
            "accessing an element of the container does not require a call to "
            "'data()'; did you mean to use 'operator[]'?");
   if (Member->isArrow())
-    DiagBuilder << FixItHint::CreateInsertion(Member->getLocStart(), "(*")
+    DiagBuilder << FixItHint::CreateInsertion(Member->getBeginLoc(), "(*")
                 << FixItHint::CreateInsertion(Member->getOperatorLoc(), ")");
   DiagBuilder << FixItHint::CreateRemoval(
-      {Member->getOperatorLoc(), Call->getLocEnd()});
+      {Member->getOperatorLoc(), Call->getEndLoc()});
 }
 
 void SimplifySubscriptExprCheck::storeOptions(

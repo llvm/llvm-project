@@ -104,4 +104,7 @@ int main() {
   std::set2<int> control;
 }
 
-
+struct ImplicitTypeLoc : std::set2<std::less<int>> {
+  // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: prefer transparent functors
+  ImplicitTypeLoc() {}
+};

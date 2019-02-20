@@ -14,13 +14,27 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SOURCECODE_H
 #include "Protocol.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/Support/SHA1.h"
 
 namespace clang {
 class SourceManager;
 
 namespace clangd {
+
+// We tend to generate digests for source codes in a lot of different places.
+// This represents the type for those digests to prevent us hard coding details
+// of hashing function at every place that needs to store this information.
+using FileDigest = decltype(llvm::SHA1::hash({}));
+FileDigest digest(StringRef Content);
+Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID);
+
+// Counts the number of UTF-16 code units needed to represent a string (LSP
+// specifies string lengths in UTF-16 code units).
+size_t lspLength(StringRef Code);
 
 /// Turn a [line, column] pair into an offset in Code.
 ///
@@ -61,9 +75,23 @@ TextEdit replacementToEdit(StringRef Code, const tooling::Replacement &R);
 std::vector<TextEdit> replacementsToEdits(StringRef Code,
                                           const tooling::Replacements &Repls);
 
-/// Get the absolute file path of a given file entry.
-llvm::Optional<std::string> getAbsoluteFilePath(const FileEntry *F,
-                                                const SourceManager &SourceMgr);
+TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
+                    const LangOptions &L);
+
+/// Get the canonical path of \p F.  This means:
+///
+///   - Absolute path
+///   - Symlinks resolved
+///   - No "." or ".." component
+///   - No duplicate or trailing directory separator
+///
+/// This function should be used when paths needs to be used outside the
+/// component that generate it, so that paths are normalized as much as
+/// possible.
+llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
+                                             const SourceManager &SourceMgr);
+
+bool IsRangeConsecutive(const Range &Left, const Range &Right);
 } // namespace clangd
 } // namespace clang
 #endif

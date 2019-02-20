@@ -6,25 +6,26 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// Token objects represent a characteristic of a symbol, which can be used to
-// perform efficient search. Tokens are keys for inverted index which are mapped
-// to the corresponding posting lists.
-//
-// The symbol std::cout might have the tokens:
-// * Scope "std::"
-// * Trigram "cou"
-// * Trigram "out"
-// * Type "std::ostream"
-//
+///
+/// \file
+/// Token objects represent a characteristic of a symbol, which can be used to
+/// perform efficient search. Tokens are keys for inverted index which are
+/// mapped to the corresponding posting lists.
+///
+/// The symbol std::cout might have the tokens:
+/// * Scope "std::"
+/// * Trigram "cou"
+/// * Trigram "out"
+/// * Type "std::ostream"
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H
 
+#include "index/Index.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include <string>
 #include <vector>
 
@@ -41,6 +42,10 @@ struct Token {
   /// Kind specifies Token type which defines semantics for the internal
   /// representation. Each Kind has different representation stored in Data
   /// field.
+  // FIXME(kbobyrev): Storing Data hash would be more efficient than storing raw
+  // strings. For example, PathURI store URIs of each directory and its parents,
+  // which induces a lot of overhead because these paths tend to be long and
+  // each parent directory is a prefix.
   enum class Kind {
     /// Represents trigram used for fuzzy search of unqualified symbol names.
     ///
@@ -48,15 +53,20 @@ struct Token {
     Trigram,
     /// Scope primitives, e.g. "symbol belongs to namespace foo::bar".
     ///
-    /// Data stroes full scope name , e.g. "foo::bar::baz::" or "" (for global
+    /// Data stroes full scope name, e.g. "foo::bar::baz::" or "" (for global
     /// scope).
     Scope,
+    /// Path Proximity URI to symbol declaration.
+    ///
+    /// Data stores path URI of symbol declaration file or its parent.
+    ///
+    /// Example: "file:///path/to/clang-tools-extra/clangd/index/SymbolIndex.h"
+    /// and some amount of its parents.
+    ProximityURI,
     /// Internal Token type for invalid/special tokens, e.g. empty tokens for
     /// llvm::DenseMap.
     Sentinel,
     /// FIXME(kbobyrev): Add other Token Kinds
-    /// * Path with full or relative path to the directory in which symbol is
-    ///   defined
     /// * Type with qualified type name or its USR
   };
 
@@ -72,6 +82,20 @@ struct Token {
   Kind TokenKind;
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T) {
+    switch (T.TokenKind) {
+    case Kind::Trigram:
+      OS << "T=";
+      break;
+    case Kind::Scope:
+      OS << "S=";
+      break;
+    case Kind::ProximityURI:
+      OS << "U=";
+      break;
+    case Kind::Sentinel:
+      OS << "?=";
+      break;
+    }
     return OS << T.Data;
   }
 
@@ -109,4 +133,4 @@ template <> struct DenseMapInfo<clang::clangd::dex::Token> {
 
 } // namespace llvm
 
-#endif
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_DEX_TOKEN_H

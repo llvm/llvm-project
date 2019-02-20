@@ -168,6 +168,8 @@ void Positive() {
   // CHECK-FIXES: if (NULL == x);
 }
 
+#define MACRO(p) p.get()
+
 void Negative() {
   struct NegPtr {
     int* get();
@@ -193,4 +195,7 @@ void Negative() {
   bool bb = ip.get() == nullptr;
   bb = !ip.get();
   bb = ip.get() ? true : false;
+  std::unique_ptr<int> x;
+  if (MACRO(x) == nullptr)
+    ;
 }

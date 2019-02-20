@@ -67,7 +67,19 @@
 // RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasCase, value: camel_Snake_Back}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: 0} \
+// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: 0}, \
+// RUN:     {key: readability-identifier-naming.GlobalPointerCase, value: CamelCase}, \
+// RUN:     {key: readability-identifier-naming.GlobalPointerSuffix, value: '_Ptr'}, \
+// RUN:     {key: readability-identifier-naming.GlobalConstantPointerCase, value: UPPER_CASE}, \
+// RUN:     {key: readability-identifier-naming.GlobalConstantPointerSuffix, value: '_Ptr'}, \
+// RUN:     {key: readability-identifier-naming.PointerParameterCase, value: lower_case}, \
+// RUN:     {key: readability-identifier-naming.PointerParameterPrefix, value: 'p_'}, \
+// RUN:     {key: readability-identifier-naming.ConstantPointerParameterCase, value: CamelCase}, \
+// RUN:     {key: readability-identifier-naming.ConstantPointerParameterPrefix, value: 'cp_'}, \
+// RUN:     {key: readability-identifier-naming.LocalPointerCase, value: CamelCase}, \
+// RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
+// RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
+// RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
 // RUN:   ]}' -- -std=c++11 -fno-delayed-template-parsing \
 // RUN:   -I%S/Inputs/readability-identifier-naming \
 // RUN:   -isystem %S/Inputs/readability-identifier-naming/system
@@ -235,8 +247,8 @@ public:
   CMyWellNamedClass2() = default;
   CMyWellNamedClass2(CMyWellNamedClass2 const&) = default;
   CMyWellNamedClass2(CMyWellNamedClass2 &&) = default;
-  CMyWellNamedClass2(t_t a_v, void *a_p) : my_class(a_p), my_Bad_Member(a_v) {}
-  // CHECK-FIXES: {{^}}  CMyWellNamedClass2(t_t a_v, void *a_p) : CMyClass(a_p), __my_Bad_Member(a_v) {}{{$}}
+  CMyWellNamedClass2(t_t a_v, void *p_p) : my_class(p_p), my_Bad_Member(a_v) {}
+  // CHECK-FIXES: {{^}}  CMyWellNamedClass2(t_t a_v, void *p_p) : CMyClass(p_p), __my_Bad_Member(a_v) {}{{$}}
 
   CMyWellNamedClass2(t_t a_v) : my_class(), my_Bad_Member(a_v), my_Other_Bad_Member(11) {}
   // CHECK-FIXES: {{^}}  CMyWellNamedClass2(t_t a_v) : CMyClass(), __my_Bad_Member(a_v), __my_Other_Bad_Member(11) {}{{$}}
@@ -474,3 +486,18 @@ unsigned MY_GLOBAL_array[] = {1,2,3};
 unsigned const MyConstGlobal_array[] = {1,2,3};
 // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: invalid case style for global constant 'MyConstGlobal_array'
 // CHECK-FIXES: {{^}}unsigned const MY_CONST_GLOBAL_ARRAY[] = {1,2,3};{{$}}
+
+int * MyGlobal_Ptr;// -> ok
+int * const MyConstantGlobalPointer = nullptr;
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: invalid case style for global constant pointer 'MyConstantGlobalPointer'
+// CHECK-FIXES: {{^}}int * const MY_CONSTANT_GLOBAL_POINTER_Ptr = nullptr;{{$}}
+
+void MyPoiterFunction(int * p_normal_pointer, int * const constant_ptr){
+// CHECK-MESSAGES: :[[@LINE-1]]:59: warning: invalid case style for constant pointer parameter 'constant_ptr'
+// CHECK-FIXES: {{^}}void MyPoiterFunction(int * p_normal_pointer, int * const cp_ConstantPtr){{{$}}
+    int * l_PointerA;
+    int * const pointer_b = nullptr;
+// CHECK-MESSAGES: :[[@LINE-1]]:17: warning: invalid case style for local constant pointer 'pointer_b'
+// CHECK-FIXES: {{^}}    int * const lc_PointerB = nullptr;{{$}}
+}
+

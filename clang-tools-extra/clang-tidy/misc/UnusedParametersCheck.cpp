@@ -41,15 +41,15 @@ static CharSourceRange removeNode(const MatchFinder::MatchResult &Result,
                                   const T *PrevNode, const T *Node,
                                   const T *NextNode) {
   if (NextNode)
-    return CharSourceRange::getCharRange(Node->getLocStart(),
-                                         NextNode->getLocStart());
+    return CharSourceRange::getCharRange(Node->getBeginLoc(),
+                                         NextNode->getBeginLoc());
 
   if (PrevNode)
     return CharSourceRange::getTokenRange(
-        Lexer::getLocForEndOfToken(PrevNode->getLocEnd(), 0,
+        Lexer::getLocForEndOfToken(PrevNode->getEndLoc(), 0,
                                    *Result.SourceManager,
                                    Result.Context->getLangOpts()),
-        Node->getLocEnd());
+        Node->getEndLoc());
 
   return CharSourceRange::getTokenRange(Node->getSourceRange());
 }
@@ -74,7 +74,7 @@ static FixItHint removeArgument(const MatchFinder::MatchResult &Result,
 class UnusedParametersCheck::IndexerVisitor
     : public RecursiveASTVisitor<IndexerVisitor> {
 public:
-  IndexerVisitor(TranslationUnitDecl *Top) { TraverseDecl(Top); }
+  IndexerVisitor(ASTContext &Ctx) { TraverseAST(Ctx); }
 
   const std::unordered_set<const CallExpr *> &
   getFnCalls(const FunctionDecl *Fn) {
@@ -136,8 +136,7 @@ void UnusedParametersCheck::warnOnUnusedParameter(
   auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
 
   if (!Indexer) {
-    Indexer = llvm::make_unique<IndexerVisitor>(
-        Result.Context->getTranslationUnitDecl());
+    Indexer = llvm::make_unique<IndexerVisitor>(*Result.Context);
   }
 
   // Comment out parameter name for non-local functions.

@@ -26,16 +26,69 @@
 namespace clang {
 namespace doc {
 
-static const SymbolID EmptySID = SymbolID();
+namespace {
+
+const SymbolID EmptySID = SymbolID();
 
 template <typename T>
-std::unique_ptr<Info> reduce(std::vector<std::unique_ptr<Info>> &Values) {
-  std::unique_ptr<Info> Merged = llvm::make_unique<T>();
+llvm::Expected<std::unique_ptr<Info>>
+reduce(std::vector<std::unique_ptr<Info>> &Values) {
+  if (Values.empty())
+    return llvm::make_error<llvm::StringError>(" No values to reduce.\n",
+                                               llvm::inconvertibleErrorCode());
+  std::unique_ptr<Info> Merged = llvm::make_unique<T>(Values[0]->USR);
   T *Tmp = static_cast<T *>(Merged.get());
   for (auto &I : Values)
     Tmp->merge(std::move(*static_cast<T *>(I.get())));
-  return Merged;
+  return std::move(Merged);
 }
+
+// Return the index of the matching child in the vector, or -1 if merge is not
+// necessary.
+template <typename T>
+int getChildIndexIfExists(std::vector<T> &Children, T &ChildToMerge) {
+  for (unsigned long I = 0; I < Children.size(); I++) {
+    if (ChildToMerge.USR == Children[I].USR)
+      return I;
+  }
+  return -1;
+}
+
+// For References, we don't need to actually merge them, we just don't want
+// duplicates.
+void reduceChildren(std::vector<Reference> &Children,
+                    std::vector<Reference> &&ChildrenToMerge) {
+  for (auto &ChildToMerge : ChildrenToMerge) {
+    if (getChildIndexIfExists(Children, ChildToMerge) == -1)
+      Children.push_back(std::move(ChildToMerge));
+  }
+}
+
+void reduceChildren(std::vector<FunctionInfo> &Children,
+                    std::vector<FunctionInfo> &&ChildrenToMerge) {
+  for (auto &ChildToMerge : ChildrenToMerge) {
+    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
+    if (mergeIdx == -1) {
+      Children.push_back(std::move(ChildToMerge));
+      continue;
+    }
+    Children[mergeIdx].merge(std::move(ChildToMerge));
+  }
+}
+
+void reduceChildren(std::vector<EnumInfo> &Children,
+                    std::vector<EnumInfo> &&ChildrenToMerge) {
+  for (auto &ChildToMerge : ChildrenToMerge) {
+    int mergeIdx = getChildIndexIfExists(Children, ChildToMerge);
+    if (mergeIdx == -1) {
+      Children.push_back(std::move(ChildToMerge));
+      continue;
+    }
+    Children[mergeIdx].merge(std::move(ChildToMerge));
+  }
+}
+
+} // namespace
 
 // Dispatch function.
 llvm::Expected<std::unique_ptr<Info>>
@@ -73,7 +126,7 @@ void Info::mergeBase(Info &&Other) {
 }
 
 bool Info::mergeable(const Info &Other) {
-  return IT == Other.IT && (USR == EmptySID || USR == Other.USR);
+  return IT == Other.IT && USR == Other.USR;
 }
 
 void SymbolInfo::merge(SymbolInfo &&Other) {
@@ -87,6 +140,11 @@ void SymbolInfo::merge(SymbolInfo &&Other) {
 
 void NamespaceInfo::merge(NamespaceInfo &&Other) {
   assert(mergeable(Other));
+  // Reduce children if necessary.
+  reduceChildren(ChildNamespaces, std::move(Other.ChildNamespaces));
+  reduceChildren(ChildRecords, std::move(Other.ChildRecords));
+  reduceChildren(ChildFunctions, std::move(Other.ChildFunctions));
+  reduceChildren(ChildEnums, std::move(Other.ChildEnums));
   mergeBase(std::move(Other));
 }
 
@@ -100,6 +158,10 @@ void RecordInfo::merge(RecordInfo &&Other) {
     Parents = std::move(Other.Parents);
   if (VirtualParents.empty())
     VirtualParents = std::move(Other.VirtualParents);
+  // Reduce children if necessary.
+  reduceChildren(ChildRecords, std::move(Other.ChildRecords));
+  reduceChildren(ChildFunctions, std::move(Other.ChildFunctions));
+  reduceChildren(ChildEnums, std::move(Other.ChildEnums));
   SymbolInfo::merge(std::move(Other));
 }
 

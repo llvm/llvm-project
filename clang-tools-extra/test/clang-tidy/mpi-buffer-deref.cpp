@@ -1,3 +1,4 @@
+// REQUIRES: static-analyzer
 // RUN: %check_clang_tidy %s mpi-buffer-deref %t -- -- -I %S/Inputs/mpi-type-mismatch
 
 #include "mpimock.h"

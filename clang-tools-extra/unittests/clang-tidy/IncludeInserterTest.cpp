@@ -45,7 +45,7 @@ public:
   }
 
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
-    auto Diag = diag(Result.Nodes.getNodeAs<DeclStmt>("stmt")->getLocStart(),
+    auto Diag = diag(Result.Nodes.getNodeAs<DeclStmt>("stmt")->getBeginLoc(),
                      "foo, bar");
     for (StringRef header : HeadersToInclude()) {
       auto Fixit = Inserter->CreateIncludeInsertion(

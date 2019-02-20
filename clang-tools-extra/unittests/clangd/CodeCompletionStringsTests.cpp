@@ -109,6 +109,53 @@ TEST_F(CompletionStringTest, IgnoreInformativeQualifier) {
   EXPECT_EQ(Snippet, "");
 }
 
+TEST_F(CompletionStringTest, ObjectiveCMethodNoArguments) {
+  Builder.AddResultTypeChunk("void");
+  Builder.AddTypedTextChunk("methodName");
+
+  auto *CCS = Builder.TakeString();
+  computeSignature(*CCS);
+  EXPECT_EQ(Signature, "");
+  EXPECT_EQ(Snippet, "");
+}
+
+TEST_F(CompletionStringTest, ObjectiveCMethodOneArgument) {
+  Builder.AddResultTypeChunk("void");
+  Builder.AddTypedTextChunk("methodWithArg:");
+  Builder.AddPlaceholderChunk("(type)");
+
+  auto *CCS = Builder.TakeString();
+  computeSignature(*CCS);
+  EXPECT_EQ(Signature, "(type)");
+  EXPECT_EQ(Snippet, "${1:(type)}");
+}
+
+TEST_F(CompletionStringTest, ObjectiveCMethodTwoArgumentsFromBeginning) {
+  Builder.AddResultTypeChunk("int");
+  Builder.AddTypedTextChunk("withFoo:");
+  Builder.AddPlaceholderChunk("(type)");
+  Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+  Builder.AddTypedTextChunk("bar:");
+  Builder.AddPlaceholderChunk("(type2)");
+
+  auto *CCS = Builder.TakeString();
+  computeSignature(*CCS);
+  EXPECT_EQ(Signature, "(type) bar:(type2)");
+  EXPECT_EQ(Snippet, "${1:(type)} bar:${2:(type2)}");
+}
+
+TEST_F(CompletionStringTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
+  Builder.AddResultTypeChunk("int");
+  Builder.AddInformativeChunk("withFoo:");
+  Builder.AddTypedTextChunk("bar:");
+  Builder.AddPlaceholderChunk("(type2)");
+
+  auto *CCS = Builder.TakeString();
+  computeSignature(*CCS);
+  EXPECT_EQ(Signature, "(type2)");
+  EXPECT_EQ(Snippet, "${1:(type2)}");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

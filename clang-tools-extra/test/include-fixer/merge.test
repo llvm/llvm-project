@@ -6,7 +6,7 @@ Name:            bar
 Contexts:        
   - ContextType:     Namespace
     ContextName:     a
-FilePath:        ../include/bar.h
+FilePath:        '../include/bar.h'
 Type:            Class
 Seen:            1
 Used:            1
@@ -16,7 +16,7 @@ Name:            bar
 Contexts:        
   - ContextType:     Namespace
     ContextName:     a
-FilePath:        ../include/barbar.h
+FilePath:        '../include/barbar.h'
 Type:            Class
 Seen:            1
 Used:            0

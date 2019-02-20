@@ -13,5 +13,6 @@ target_link_libraries(pp-trace
   clangBasic
   clangFrontend
   clangLex
+  clangSerialization
   clangTooling
   )

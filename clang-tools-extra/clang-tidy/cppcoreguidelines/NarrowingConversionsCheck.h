@@ -24,10 +24,76 @@ namespace cppcoreguidelines {
 /// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-narrowing-conversions.html
 class NarrowingConversionsCheck : public ClangTidyCheck {
 public:
-  NarrowingConversionsCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  NarrowingConversionsCheck(StringRef Name, ClangTidyContext *Context);
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  void diagNarrowType(SourceLocation SourceLoc, const Expr &Lhs,
+                      const Expr &Rhs);
+
+  void diagNarrowTypeToSignedInt(SourceLocation SourceLoc, const Expr &Lhs,
+                                 const Expr &Rhs);
+
+  void diagNarrowIntegerConstant(SourceLocation SourceLoc, const Expr &Lhs,
+                                 const Expr &Rhs, const llvm::APSInt &Value);
+
+  void diagNarrowIntegerConstantToSignedInt(SourceLocation SourceLoc,
+                                            const Expr &Lhs, const Expr &Rhs,
+                                            const llvm::APSInt &Value,
+                                            const uint64_t HexBits);
+
+  void diagNarrowConstant(SourceLocation SourceLoc, const Expr &Lhs,
+                          const Expr &Rhs);
+
+  void diagConstantCast(SourceLocation SourceLoc, const Expr &Lhs,
+                        const Expr &Rhs);
+
+  void diagNarrowTypeOrConstant(const ASTContext &Context,
+                                SourceLocation SourceLoc, const Expr &Lhs,
+                                const Expr &Rhs);
+
+  void handleIntegralCast(const ASTContext &Context, SourceLocation SourceLoc,
+                          const Expr &Lhs, const Expr &Rhs);
+
+  void handleIntegralToBoolean(const ASTContext &Context,
+                               SourceLocation SourceLoc, const Expr &Lhs,
+                               const Expr &Rhs);
+
+  void handleIntegralToFloating(const ASTContext &Context,
+                                SourceLocation SourceLoc, const Expr &Lhs,
+                                const Expr &Rhs);
+
+  void handleFloatingToIntegral(const ASTContext &Context,
+                                SourceLocation SourceLoc, const Expr &Lhs,
+                                const Expr &Rhs);
+
+  void handleFloatingToBoolean(const ASTContext &Context,
+                               SourceLocation SourceLoc, const Expr &Lhs,
+                               const Expr &Rhs);
+
+  void handleBooleanToSignedIntegral(const ASTContext &Context,
+                                     SourceLocation SourceLoc, const Expr &Lhs,
+                                     const Expr &Rhs);
+
+  void handleFloatingCast(const ASTContext &Context, SourceLocation SourceLoc,
+                          const Expr &Lhs, const Expr &Rhs);
+
+  void handleBinaryOperator(const ASTContext &Context, SourceLocation SourceLoc,
+                            const Expr &Lhs, const Expr &Rhs);
+
+  bool handleConditionalOperator(const ASTContext &Context, const Expr &Lhs,
+                                 const Expr &Rhs);
+
+  void handleImplicitCast(const ASTContext &Context,
+                          const ImplicitCastExpr &Cast);
+
+  void handleBinaryOperator(const ASTContext &Context,
+                            const BinaryOperator &Op);
+
+  const bool WarnOnFloatingPointNarrowingConversion;
+  const bool PedanticMode;
 };
 
 } // namespace cppcoreguidelines
