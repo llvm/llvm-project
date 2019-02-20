@@ -14,6 +14,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
+import swift
 import unittest2
 
 
@@ -25,7 +26,11 @@ class TestSwiftBackwardsCompatibilitySimple(lldbtest.TestBase):
     @skipIf(compiler="swiftc", compiler_version=['<', '5.0'])
     @add_test_categories(["swiftpr", "swift-history"])
     def test_simple(self):
-        version = self.getCompilerVersion(os.environ['SWIFTC'])
+        if 'SWIFTC' in os.environ:
+            compiler = os.environ['SWIFTC']
+        else:
+            compiler = swift.getSwiftCompiler()
+        version = self.getCompilerVersion(compiler)
         if version < '5.0':
             self.skipTest('Swift compiler predates stable ABI')
         self.build()

@@ -8106,7 +8106,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "mkdir -p $BUILT_PRODUCTS_DIR/include\n$LLVM_BUILD_DIR/x86_64/bin/llvm-tblgen -I$LLVM_SOURCE_DIR/include -gen-opt-parser-defs $SRCROOT/tools/driver/Options.td -o $BUILT_PRODUCTS_DIR/include/Options.inc\n";
+			shellScript = "set -x\nmkdir -p $BUILT_PRODUCTS_DIR/include\n$(find $LLVM_BUILD_DIR/  -path '*/bin/llvm-tblgen'|head -1) -I$LLDB_PATH_TO_LLVM_SOURCE/include -gen-opt-parser-defs $SRCROOT/tools/driver/Options.td -o $BUILT_PRODUCTS_DIR/include/Options.inc\n";
 		};
 		DD8DC27122026E4400EB6F9E /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -9387,7 +9387,7 @@
 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -9510,7 +9510,7 @@
 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -9658,7 +9658,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -9699,7 +9699,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -9769,7 +9769,7 @@
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include  -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include  -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -9818,7 +9818,7 @@
 				LD_DYLIB_INSTALL_NAME = "@rpath/LLDB.framework/LLDB";
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_GTESTS_CFLAGS = "-I unittests -I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include  -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_TOOLS_INSTALL_DIR = "";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
@@ -9912,7 +9912,7 @@
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLDB_GTESTS_CFLAGS = "-I unittests -I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				MACH_O_TYPE = staticlib;
 				OTHER_CFLAGS = (
@@ -9977,7 +9977,7 @@
 					"-v",
 					"-Wl,-v",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
@@ -10180,7 +10180,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
@@ -10242,7 +10242,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -10282,7 +10282,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -10322,7 +10322,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -10366,7 +10366,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -10420,7 +10420,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 					"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -10478,8 +10478,8 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
-				LLDB_GTESTS_LDFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_LDFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wparentheses",
@@ -10524,7 +10524,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -10562,7 +10562,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
@@ -10626,7 +10626,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -10670,7 +10670,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
@@ -10712,7 +10712,7 @@
 					"$(LLVM_SOURCE_DIR)/tools/clang/include",
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -10751,7 +10751,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				OTHER_CFLAGS = (
@@ -10788,7 +10788,7 @@
 					"\"$(SYSTEM_LIBRARY_DIR)/Frameworks/CoreServices.framework/Frameworks\"",
 				);
 				GCC_ENABLE_CPP_RTTI = NO;
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
 				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
@@ -11510,7 +11510,7 @@
 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "/$(DT_VARIANT)/Applications/Xcode.app/Contents/Developer/usr/bin";
 				"LLDB_TOOLS_INSTALL_DIR[sdk=iphoneos*]" = "/$(DT_VARIANT)/usr/local/bin";
@@ -12505,7 +12505,7 @@
 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -12884,7 +12884,7 @@
 					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -12924,7 +12924,7 @@
 					"$(LLDB_PATH_TO_LLVM_SOURCE)/tools/clang/include",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include",
 				);
-				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
+				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I $(LLDB_PATH_TO_SWIFT_SOURCE)/include -I $(LLDB_PATH_TO_SWIFT_BUILD)/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
@@ -13180,7 +13180,7 @@
 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -13687,7 +13687,7 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/../../../System/Library/PrivateFrameworks",
-					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-L$(LLVM_BUILD_DIR)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
 					"-lLLVMDemangle",
@@ -13697,7 +13697,7 @@
 					"-sectcreate",
 					__TEXT,
 					__info_plist,
-					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-L$(LLVM_BUILD_DIR)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
 					"-lLLVMDemangle",
@@ -14199,7 +14199,7 @@
 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -14642,7 +14642,7 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
-					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-L$(LLVM_BUILD_DIR)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
 					"-lLLVMDemangle",
@@ -14710,7 +14710,7 @@
 					Carbon,
 					"-framework",
 					Security,
-					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-L$(LLVM_BUILD_DIR)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
 					"-lLLVMDemangle",
@@ -14811,7 +14811,7 @@
 				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -14910,7 +14910,7 @@
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
 					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
-					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-L$(LLVM_BUILD_DIR)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
 					"-lLLVMDemangle",
