@@ -14,11 +14,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <errno.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <sys/resource.h>
 #include <sys/types.h>
 #if !defined(__NetBSD__)
@@ -115,14 +117,6 @@ static inline void unsafe_stack_setup(void *start, size_t size, size_t guard) {
   unsafe_stack_guard = guard;
 }
 
-static void unsafe_stack_free() {
-  if (unsafe_stack_start) {
-    UnmapOrDie((char *)unsafe_stack_start - unsafe_stack_guard,
-               unsafe_stack_size + unsafe_stack_guard);
-  }
-  unsafe_stack_start = nullptr;
-}
-
 /// Thread data for the cleanup handler
 static pthread_key_t thread_cleanup_key;
 
@@ -149,26 +143,73 @@ static void *thread_start(void *arg) {
                      tinfo->unsafe_stack_guard);
 
   // Make sure out thread-specific destructor will be called
-  // FIXME: we can do this only any other specific key is set by
-  // intercepting the pthread_setspecific function itself
   pthread_setspecific(thread_cleanup_key, (void *)1);
 
   return start_routine(start_routine_arg);
 }
 
-/// Thread-specific data destructor
+/// Linked list used to store exiting threads stack/thread information.
+struct thread_stack_ll {
+  struct thread_stack_ll *next;
+  void *stack_base;
+  size_t size;
+  pid_t pid;
+  tid_t tid;
+};
+
+/// Linked list of unsafe stacks for threads that are exiting. We delay
+/// unmapping them until the thread exits.
+static thread_stack_ll *thread_stacks = nullptr;
+static pthread_mutex_t thread_stacks_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/// Thread-specific data destructor. We want to free the unsafe stack only after
+/// this thread is terminated. libc can call functions in safestack-instrumented
+/// code (like free) after thread-specific data destructors have run.
 static void thread_cleanup_handler(void *_iter) {
-  // We want to free the unsafe stack only after all other destructors
-  // have already run. We force this function to be called multiple times.
-  // User destructors that might run more then PTHREAD_DESTRUCTOR_ITERATIONS-1
-  // times might still end up executing after the unsafe stack is deallocated.
-  size_t iter = (size_t)_iter;
-  if (iter < PTHREAD_DESTRUCTOR_ITERATIONS) {
-    pthread_setspecific(thread_cleanup_key, (void *)(iter + 1));
-  } else {
-    // This is the last iteration
-    unsafe_stack_free();
+  CHECK_NE(unsafe_stack_start, nullptr);
+  pthread_setspecific(thread_cleanup_key, NULL);
+
+  pthread_mutex_lock(&thread_stacks_mutex);
+  // Temporary list to hold the previous threads stacks so we don't hold the
+  // thread_stacks_mutex for long.
+  thread_stack_ll *temp_stacks = thread_stacks;
+  thread_stacks = nullptr;
+  pthread_mutex_unlock(&thread_stacks_mutex);
+
+  pid_t pid = getpid();
+  tid_t tid = GetTid();
+
+  // Free stacks for dead threads
+  thread_stack_ll **stackp = &temp_stacks;
+  while (*stackp) {
+    thread_stack_ll *stack = *stackp;
+    int error;
+    if (stack->pid != pid ||
+        (internal_iserror(TgKill(stack->pid, stack->tid, 0), &error) &&
+         error == ESRCH)) {
+      UnmapOrDie(stack->stack_base, stack->size);
+      *stackp = stack->next;
+      free(stack);
+    } else
+      stackp = &stack->next;
   }
+
+  thread_stack_ll *cur_stack =
+      (thread_stack_ll *)malloc(sizeof(thread_stack_ll));
+  cur_stack->stack_base = (char *)unsafe_stack_start - unsafe_stack_guard;
+  cur_stack->size = unsafe_stack_size + unsafe_stack_guard;
+  cur_stack->pid = pid;
+  cur_stack->tid = tid;
+
+  pthread_mutex_lock(&thread_stacks_mutex);
+  // Merge thread_stacks with the current thread's stack and any remaining
+  // temp_stacks
+  *stackp = thread_stacks;
+  cur_stack->next = temp_stacks;
+  thread_stacks = cur_stack;
+  pthread_mutex_unlock(&thread_stacks_mutex);
+
+  unsafe_stack_start = nullptr;
 }
 
 static void EnsureInterceptorsInitialized();

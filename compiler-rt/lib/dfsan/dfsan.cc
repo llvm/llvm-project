@@ -423,7 +423,7 @@ static void dfsan_fini() {
 static void dfsan_init(int argc, char **argv, char **envp) {
   InitializeFlags();
 
-  InitializePlatformEarly();
+  ::InitializePlatformEarly();
 
   if (!MmapFixedNoReserve(ShadowAddr(), UnusedAddr() - ShadowAddr()))
     Die();

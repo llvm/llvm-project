@@ -9,7 +9,7 @@
 // RUN: rm -rf $DIR
 // RUN: mkdir -p $DIR
 // RUN: cd $DIR
-// RUN: %clangxx -O0 -fsanitize-coverage=trace-pc-guard %s -ldl -o %t
+// RUN: %clangxx -O0 -fsanitize-coverage=trace-pc-guard %s -o %t
 // RUN: %env_tool_opts=coverage=1 %t 2>&1 | FileCheck %s
 // RUN: %sancovcc  -covered-functions -strip_path_prefix=TestCases/ *.sancov %t 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-SANCOV %s

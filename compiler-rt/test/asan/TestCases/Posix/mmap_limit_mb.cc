@@ -9,7 +9,7 @@
 // RUN: %env_asan_opts=mmap_limit_mb=300 not %run %t 500 1000000 2>&1 | FileCheck %s
 //
 // FIXME: Windows doesn't implement mmap_limit_mb.
-// XFAIL: win32
+// XFAIL: windows-msvc
 
 #include <assert.h>
 #include <stdlib.h>

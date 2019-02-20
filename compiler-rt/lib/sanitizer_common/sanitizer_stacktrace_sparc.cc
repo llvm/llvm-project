@@ -15,7 +15,7 @@
 
 // This file is ported to Sparc v8, but it should be easy to port to
 // Sparc v9.
-#if defined(__sparcv8__)
+#if defined(__sparcv8__) || defined(__sparcv8) || defined(__sparc_v8__)
 
 #include "sanitizer_common.h"
 #include "sanitizer_stacktrace.h"
@@ -55,4 +55,5 @@ void BufferedStackTrace::FastUnwindStack(uptr pc, uptr bp, uptr stack_top,
 
 }  // namespace __sanitizer
 
-#endif  // !defined(__sparcv8__)
+#endif  // !defined(__sparcv8__) && !defined(__sparcv8) &&
+        // !defined(__sparc_v8__)

@@ -1,7 +1,9 @@
 // RUN: %clangxx -fsanitize=unsigned-integer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=RECOVER
 // RUN: %clangxx -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=all -fsanitize-recover=unsigned-integer-overflow %s -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=RECOVER
 // RUN: %env_ubsan_opts=silence_unsigned_overflow=1 %run %t 2>&1 | FileCheck %s --check-prefix=SILENT-RECOVER --allow-empty
-// RUN: %clangxx -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=unsigned-integer-overflow %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=ABORT
+// RUN: %clangxx -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=unsigned-integer-overflow %s -o %t
+// RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=ABORT
+// RUN: %env_ubsan_opts=silence_unsigned_overflow=1 not %run %t 2>&1 | FileCheck %s --check-prefix=ABORT
 
 #include <stdint.h>
 

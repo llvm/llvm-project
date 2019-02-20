@@ -68,9 +68,11 @@ typedef LargeMmapAllocatorPtrArrayDynamic DefaultLargeMmapAllocatorPtrArray;
 // The main purpose of this allocator is to cover large and rare allocation
 // sizes not covered by more efficient allocators (e.g. SizeClassAllocator64).
 template <class MapUnmapCallback = NoOpMapUnmapCallback,
-          class PtrArrayT = DefaultLargeMmapAllocatorPtrArray>
+          class PtrArrayT = DefaultLargeMmapAllocatorPtrArray,
+          class AddressSpaceViewTy = LocalAddressSpaceView>
 class LargeMmapAllocator {
  public:
+  using AddressSpaceView = AddressSpaceViewTy;
   void InitLinkerInitialized() {
     page_size_ = GetPageSizeCached();
     chunks_ = reinterpret_cast<Header**>(ptr_array_.Init());
@@ -202,9 +204,10 @@ class LargeMmapAllocator {
 
   void EnsureSortedChunks() {
     if (chunks_sorted_) return;
-    Sort(reinterpret_cast<uptr *>(chunks_), n_chunks_);
+    Header **chunks = AddressSpaceView::LoadWritable(chunks_, n_chunks_);
+    Sort(reinterpret_cast<uptr *>(chunks), n_chunks_);
     for (uptr i = 0; i < n_chunks_; i++)
-      chunks_[i]->chunk_idx = i;
+      AddressSpaceView::LoadWritable(chunks[i])->chunk_idx = i;
     chunks_sorted_ = true;
   }
 
@@ -272,12 +275,13 @@ class LargeMmapAllocator {
   // The allocator must be locked when calling this function.
   void ForEachChunk(ForEachChunkCallback callback, void *arg) {
     EnsureSortedChunks();  // Avoid doing the sort while iterating.
+    const Header *const *chunks = AddressSpaceView::Load(chunks_, n_chunks_);
     for (uptr i = 0; i < n_chunks_; i++) {
-      auto t = chunks_[i];
+      const Header *t = chunks[i];
       callback(reinterpret_cast<uptr>(GetUser(t)), arg);
       // Consistency check: verify that the array did not change.
-      CHECK_EQ(chunks_[i], t);
-      CHECK_EQ(chunks_[i]->chunk_idx, i);
+      CHECK_EQ(chunks[i], t);
+      CHECK_EQ(AddressSpaceView::Load(chunks[i])->chunk_idx, i);
     }
   }
 
@@ -297,7 +301,7 @@ class LargeMmapAllocator {
     return GetHeader(reinterpret_cast<uptr>(p));
   }
 
-  void *GetUser(Header *h) {
+  void *GetUser(const Header *h) {
     CHECK(IsAligned((uptr)h, page_size_));
     return reinterpret_cast<void*>(reinterpret_cast<uptr>(h) + page_size_);
   }
@@ -316,4 +320,3 @@ class LargeMmapAllocator {
   } stats;
   StaticSpinMutex mutex_;
 };
-

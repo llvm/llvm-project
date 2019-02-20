@@ -3,6 +3,8 @@
 
 // FIXME: Re-enable once PR33590 is fixed.
 // UNSUPPORTED: x86_64
+// Stucks at init and no clone feature equivalent.
+// UNSUPPORTED: freebsd
 
 #include <sanitizer/esan_interface.h>
 #include <sched.h>

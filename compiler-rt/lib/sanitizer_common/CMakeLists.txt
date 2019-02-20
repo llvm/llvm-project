@@ -16,8 +16,10 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_linux.cc
   sanitizer_linux_s390.cc
   sanitizer_mac.cc
+  sanitizer_netbsd.cc
   sanitizer_openbsd.cc
   sanitizer_persistent_allocator.cc
+  sanitizer_platform_limits_freebsd.cc
   sanitizer_platform_limits_linux.cc
   sanitizer_platform_limits_netbsd.cc
   sanitizer_platform_limits_openbsd.cc
@@ -143,6 +145,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_libignore.h
   sanitizer_linux.h
   sanitizer_list.h
+  sanitizer_local_address_space_view.h
   sanitizer_mac.h
   sanitizer_malloc_mac.inc
   sanitizer_mutex.h
@@ -158,6 +161,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_procmaps.h
   sanitizer_quarantine.h
   sanitizer_report_decorator.h
+  sanitizer_ring_buffer.h
   sanitizer_rtems.h
   sanitizer_signal_interceptors.inc
   sanitizer_stackdepot.h

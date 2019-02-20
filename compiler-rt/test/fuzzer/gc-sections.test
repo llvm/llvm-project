@@ -8,8 +8,13 @@ With gc-sections. Currently, we can't remove unused code except with LLD.
 RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -fuse-ld=lld -ffunction-sections -Wl,-gc-sections
 RUN: nm %t | not grep UnusedFunctionShouldBeRemovedByLinker
 RUN: %run %t -runs=0 2>&1 | FileCheck %s
-CHECK-NOT: ERROR: The size of coverage PC tables does not match
 
 With gc sections, with trace-pc. Unused code is removed.
 RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -fsanitize-coverage=0 -fsanitize-coverage=trace-pc -ffunction-sections -Wl,-gc-sections
 RUN: nm %t | not grep UnusedFunctionShouldBeRemovedByLinker
+
+RUN: %cpp_compiler %S/GcSectionsTest.cpp -o %t -fsanitize-coverage=0 -fsanitize-coverage=trace-pc-guard,pc-table -fuse-ld=lld -ffunction-sections -Wl,-gc-sections
+RUN: nm %t | not grep UnusedFunctionShouldBeRemovedByLinker
+RUN: %run %t -runs=0 2>&1 | FileCheck %s
+
+CHECK-NOT: ERROR: The size of coverage PC tables does not match

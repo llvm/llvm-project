@@ -2,6 +2,7 @@
 
 # XRay runtime library implementation files.
 set(XRAY_SOURCES
+    xray_buffer_queue.cc
     xray_init.cc
     xray_flags.cc
     xray_interface.cc
@@ -11,7 +12,6 @@ set(XRAY_SOURCES
 # Implementation files for all XRay modes.
 set(XRAY_FDR_MODE_SOURCES
     xray_fdr_flags.cc
-    xray_buffer_queue.cc
     xray_fdr_logging.cc)
 
 set(XRAY_BASIC_MODE_SOURCES
@@ -67,9 +67,11 @@ set(XRAY_IMPL_HEADERS
   xray_basic_logging.h
   xray_buffer_queue.h
   xray_defs.h
+  xray_fdr_controller.h
   xray_fdr_flags.h
   xray_fdr_flags.inc
   xray_fdr_log_records.h
+  xray_fdr_log_writer.h
   xray_fdr_logging.h
   xray_flags.h
   xray_flags.inc
@@ -147,7 +149,7 @@ if (APPLE)
   add_compiler_rt_object_libraries(RTXray
     OS ${XRAY_SUPPORTED_OS}
     ARCHS ${XRAY_SUPPORTED_ARCH}
-    SOURCES ${x86_64_SOURCES}
+    SOURCES ${XRAY_SOURCES} ${x86_64_SOURCES}
     ADDITIONAL_HEADERS ${XRAY_IMPL_HEADERS}
     CFLAGS ${XRAY_CFLAGS}
     DEFS ${XRAY_COMMON_DEFINITIONS}

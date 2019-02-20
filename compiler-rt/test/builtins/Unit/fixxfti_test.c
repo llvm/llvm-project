@@ -17,7 +17,7 @@
 #include "int_lib.h"
 #include <stdio.h>
 
-#ifdef CRT_HAS_128BIT
+#if defined(CRT_HAS_128BIT) && HAS_80_BIT_LONG_DOUBLE
 
 // Returns: convert a to a signed long long, rounding toward zero.
 
@@ -45,15 +45,15 @@ int test__fixxfti(long double a, ti_int expected)
     return x != expected;
 }
 
-char assumption_1[sizeof(ti_int) == 2*sizeof(di_int)] = {0};
-char assumption_2[sizeof(su_int)*CHAR_BIT == 32] = {0};
-char assumption_3[sizeof(long double)*CHAR_BIT == 128] = {0};
+COMPILE_TIME_ASSERT(sizeof(ti_int) == 2*sizeof(di_int));
+COMPILE_TIME_ASSERT(sizeof(su_int)*CHAR_BIT == 32);
+COMPILE_TIME_ASSERT(sizeof(long double)*CHAR_BIT == 128);
 
 #endif
 
 int main()
 {
-#ifdef CRT_HAS_128BIT
+#if defined(CRT_HAS_128BIT) && HAS_80_BIT_LONG_DOUBLE
     if (test__fixxfti(0.0, 0))
         return 1;
 

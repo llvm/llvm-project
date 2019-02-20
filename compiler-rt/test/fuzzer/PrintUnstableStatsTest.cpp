@@ -18,11 +18,11 @@ __attribute__((noinline)) void ini0() { x++; }
 __attribute__((noinline)) void ini1() { x++; }
 __attribute__((noinline)) void ini2() { x++; }
 
-__attribute__((noinline)) void t0() { x++; }
+__attribute__((noinline)) void t0(int a) { x += a; }
 __attribute__((noinline)) void t1() { x++; }
-__attribute__((noinline)) void t2() { x++; }
+__attribute__((noinline)) void t2(int a, int b) { x += a + b; }
 __attribute__((noinline)) void t3() { x++; }
-__attribute__((noinline)) void t4() { x++; }
+__attribute__((noinline)) void t4(int a, int b, int c) { x += a + b +c; }
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (Size == 1 && Data[0] == 'A' && !skip0) {
@@ -45,19 +45,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
 
   switch (a % 5) {
   case 0:
-    t0();
+    t0(a);
     break;
   case 1:
     t1();
     break;
   case 2:
-    t2();
+    t2(a, a);
     break;
   case 3:
     t3();
     break;
   case 4:
-    t4();
+    t4(a, a, a);
     break;
   default:
     assert(false);

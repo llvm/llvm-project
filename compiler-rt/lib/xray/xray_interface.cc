@@ -22,6 +22,13 @@
 #include <string.h>
 #include <sys/mman.h>
 
+#if SANITIZER_FUCHSIA
+#include <zircon/process.h>
+#include <zircon/sanitizer.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#endif
+
 #include "sanitizer_common/sanitizer_addrhashmap.h"
 #include "sanitizer_common/sanitizer_common.h"
 
@@ -92,22 +99,48 @@ class MProtectHelper {
 
 public:
   explicit MProtectHelper(void *PageAlignedAddr,
-                          std::size_t MProtectLen) XRAY_NEVER_INSTRUMENT
+                          std::size_t MProtectLen,
+                          std::size_t PageSize) XRAY_NEVER_INSTRUMENT
       : PageAlignedAddr(PageAlignedAddr),
         MProtectLen(MProtectLen),
-        MustCleanup(false) {}
+        MustCleanup(false) {
+#if SANITIZER_FUCHSIA
+    MProtectLen = RoundUpTo(MProtectLen, PageSize);
+#endif
+  }
 
   int MakeWriteable() XRAY_NEVER_INSTRUMENT {
+#if SANITIZER_FUCHSIA
+    auto R = __sanitizer_change_code_protection(
+        reinterpret_cast<uintptr_t>(PageAlignedAddr), MProtectLen, true);
+    if (R != ZX_OK) {
+      Report("XRay: cannot change code protection: %s\n",
+             _zx_status_get_string(R));
+      return -1;
+    }
+    MustCleanup = true;
+    return 0;
+#else
     auto R = mprotect(PageAlignedAddr, MProtectLen,
                       PROT_READ | PROT_WRITE | PROT_EXEC);
     if (R != -1)
       MustCleanup = true;
     return R;
+#endif
   }
 
   ~MProtectHelper() XRAY_NEVER_INSTRUMENT {
     if (MustCleanup) {
+#if SANITIZER_FUCHSIA
+      auto R = __sanitizer_change_code_protection(
+          reinterpret_cast<uintptr_t>(PageAlignedAddr), MProtectLen, false);
+      if (R != ZX_OK) {
+        Report("XRay: cannot change code protection: %s\n",
+               _zx_status_get_string(R));
+      }
+#else
       mprotect(PageAlignedAddr, MProtectLen, PROT_READ | PROT_EXEC);
+#endif
     }
   }
 };
@@ -254,7 +287,7 @@ XRayPatchingStatus controlPatching(bool Enable) XRAY_NEVER_INSTRUMENT {
       reinterpret_cast<void *>(MinSled.Address & ~(PageSize - 1));
   size_t MProtectLen =
       (MaxSled.Address - reinterpret_cast<uptr>(PageAlignedAddr)) + cSledLength;
-  MProtectHelper Protector(PageAlignedAddr, MProtectLen);
+  MProtectHelper Protector(PageAlignedAddr, MProtectLen, PageSize);
   if (Protector.MakeWriteable() == -1) {
     Report("Failed mprotect: %d\n", errno);
     return XRayPatchingStatus::FAILED;
@@ -319,7 +352,7 @@ XRayPatchingStatus mprotectAndPatchFunction(int32_t FuncId,
       reinterpret_cast<void *>(MinSled.Address & ~(PageSize - 1));
   size_t MProtectLen =
       (MaxSled.Address - reinterpret_cast<uptr>(PageAlignedAddr)) + cSledLength;
-  MProtectHelper Protector(PageAlignedAddr, MProtectLen);
+  MProtectHelper Protector(PageAlignedAddr, MProtectLen, PageSize);
   if (Protector.MakeWriteable() == -1) {
     Report("Failed mprotect: %d\n", errno);
     return XRayPatchingStatus::FAILED;

@@ -1,7 +1,7 @@
 // RUN: %clangxx_msan -std=c++11 -O0 %s -o %t && %run %t
 // The main goal is getting the pthread name back and
 // FreeBSD based do not support this feature
-// UNSUPPORTED: android, netbsd, freebsd
+// UNSUPPORTED: android, freebsd
 
 // Regression test for a deadlock in pthread_getattr_np
 
@@ -32,7 +32,11 @@ int main(void) {
   assert(!res);
 
   const char *kMyThreadName = "my-thread-name";
+#if defined(__NetBSD__)
+  res = pthread_setname_np(t, "%s", (void *)kMyThreadName);
+#else
   res = pthread_setname_np(t, kMyThreadName);
+#endif
   assert(!res);
 
   char buf[100];

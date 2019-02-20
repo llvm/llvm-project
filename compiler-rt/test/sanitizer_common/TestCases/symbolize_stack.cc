@@ -2,6 +2,9 @@
 
 // Test that symbolizer does not crash on frame with large function name.
 
+// FIXME(dliew): Make this test work with the other sanitizers.
+// XFAIL: darwin && (lsan || tsan || ubsan)
+
 #include <sanitizer/common_interface_defs.h>
 #include <vector>
 

@@ -1,6 +1,6 @@
 // RUN: %clangxx_asan -O0 %s -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O2 %s -o %t && %env_asan_opts=detect_stack_use_after_return=1 not %run %t 2>&1 | FileCheck %s
-// XFAIL: win32
+// XFAIL: windows-msvc
 
 // FIXME: Fix this test under GCC.
 // REQUIRES: Clang
@@ -53,8 +53,8 @@ int main(int argc, char **argv) {
     RecursiveFunctionWithStackFrame<1024>(depth);
     RecursiveFunctionWithStackFrame<2000>(depth);
     // The stack size is tight for the main thread in multithread
-    // environment on FreeBSD.
-#if !defined(__FreeBSD__)
+    // environment on FreeBSD and NetBSD.
+#if !defined(__FreeBSD__) && !defined(__NetBSD__)
     RecursiveFunctionWithStackFrame<5000>(depth);
     RecursiveFunctionWithStackFrame<10000>(depth);
 #endif

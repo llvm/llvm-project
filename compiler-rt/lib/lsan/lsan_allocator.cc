@@ -34,9 +34,6 @@ static const uptr kMaxAllowedMallocSize = 4UL << 30;
 #else
 static const uptr kMaxAllowedMallocSize = 8UL << 30;
 #endif
-typedef LargeMmapAllocator<> SecondaryAllocator;
-typedef CombinedAllocator<PrimaryAllocator, AllocatorCache,
-          SecondaryAllocator> Allocator;
 
 static Allocator allocator;
 

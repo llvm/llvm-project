@@ -30,7 +30,7 @@ struct ApplicationRegion {
   bool ShadowMergedWithPrev;
 };
 
-#if SANITIZER_LINUX && defined(__x86_64__)
+#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && defined(__x86_64__)
 // Linux x86_64
 //
 // Application memory falls into these 5 regions (ignoring the corner case

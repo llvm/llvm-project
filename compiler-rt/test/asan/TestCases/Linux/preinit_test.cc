@@ -1,8 +1,5 @@
-// FIXME: https://code.google.com/p/address-sanitizer/issues/detail?id=316
-// XFAIL: android
-//
-// RUN: %clangxx      -DFUNC=zzzz %s -shared -o %t.so -fPIC
-// RUN: %clangxx_asan -DFUNC=main %s         -o %t    -Wl,-R. %t.so
+// RUN: %clangxx -DFUNC=zzzz %s -shared -o %dynamiclib -fPIC
+// RUN: %clangxx_asan -DFUNC=main %s -o %t %ld_flags_rpath_exe
 // RUN: %run %t
 
 // GNU driver doesn't handle .so files properly.

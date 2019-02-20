@@ -22,7 +22,9 @@
 #include "hwasan_mapping.h"
 #include "hwasan_report.h"
 #include "hwasan_thread.h"
+#include "hwasan_thread_list.h"
 
+#include <dlfcn.h>
 #include <elf.h>
 #include <link.h>
 #include <pthread.h>
@@ -36,6 +38,10 @@
 
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
+
+#if HWASAN_WITH_INTERCEPTORS && !SANITIZER_ANDROID
+THREADLOCAL uptr __hwasan_tls;
+#endif
 
 namespace __hwasan {
 
@@ -51,8 +57,6 @@ static void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name) {
         size);
     Abort();
   }
-  if (common_flags()->no_huge_pages_for_shadow) NoHugePagesInRegion(beg, size);
-  if (common_flags()->use_madv_dontdump) DontDumpShadowMemory(beg, size);
 }
 
 static void ProtectGap(uptr addr, uptr size) {
@@ -103,55 +107,31 @@ static void PrintAddressSpaceLayout() {
   else
     CHECK_EQ(kHighShadowEnd + 1, kHighMemStart);
   PrintRange(kHighShadowStart, kHighShadowEnd, "HighShadow");
-  if (SHADOW_OFFSET) {
-    if (kLowShadowEnd + 1 < kHighShadowStart)
-      PrintRange(kLowShadowEnd + 1, kHighShadowStart - 1, "ShadowGap");
-    else
-      CHECK_EQ(kLowMemEnd + 1, kHighShadowStart);
-    PrintRange(kLowShadowStart, kLowShadowEnd, "LowShadow");
-    if (kLowMemEnd + 1 < kLowShadowStart)
-      PrintRange(kLowMemEnd + 1, kLowShadowStart - 1, "ShadowGap");
-    else
-      CHECK_EQ(kLowMemEnd + 1, kLowShadowStart);
-    PrintRange(kLowMemStart, kLowMemEnd, "LowMem");
-    CHECK_EQ(0, kLowMemStart);
-  } else {
-    if (kLowMemEnd + 1 < kHighShadowStart)
-      PrintRange(kLowMemEnd + 1, kHighShadowStart - 1, "ShadowGap");
-    else
-      CHECK_EQ(kLowMemEnd + 1, kHighShadowStart);
-    PrintRange(kLowMemStart, kLowMemEnd, "LowMem");
-    CHECK_EQ(kLowShadowEnd + 1, kLowMemStart);
-    PrintRange(kLowShadowStart, kLowShadowEnd, "LowShadow");
-    PrintRange(0, kLowShadowStart - 1, "ShadowGap");
-  }
+  if (kLowShadowEnd + 1 < kHighShadowStart)
+    PrintRange(kLowShadowEnd + 1, kHighShadowStart - 1, "ShadowGap");
+  else
+    CHECK_EQ(kLowMemEnd + 1, kHighShadowStart);
+  PrintRange(kLowShadowStart, kLowShadowEnd, "LowShadow");
+  if (kLowMemEnd + 1 < kLowShadowStart)
+    PrintRange(kLowMemEnd + 1, kLowShadowStart - 1, "ShadowGap");
+  else
+    CHECK_EQ(kLowMemEnd + 1, kLowShadowStart);
+  PrintRange(kLowMemStart, kLowMemEnd, "LowMem");
+  CHECK_EQ(0, kLowMemStart);
 }
 
 static uptr GetHighMemEnd() {
   // HighMem covers the upper part of the address space.
   uptr max_address = GetMaxUserVirtualAddress();
-  if (SHADOW_OFFSET)
-    // Adjust max address to make sure that kHighMemEnd and kHighMemStart are
-    // properly aligned:
-    max_address |= SHADOW_GRANULARITY * GetMmapGranularity() - 1;
+  // Adjust max address to make sure that kHighMemEnd and kHighMemStart are
+  // properly aligned:
+  max_address |= (GetMmapGranularity() << kShadowScale) - 1;
   return max_address;
 }
 
 static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
-  // Set the shadow memory address to uninitialized.
-  __hwasan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
-  uptr shadow_start = SHADOW_OFFSET;
-  // Detect if a dynamic shadow address must be used and find the available
-  // location when necessary. When dynamic address is used, the macro
-  // kLowShadowBeg expands to __hwasan_shadow_memory_dynamic_address which
-  // was just set to kDefaultShadowSentinel.
-  if (shadow_start == kDefaultShadowSentinel) {
-    __hwasan_shadow_memory_dynamic_address = 0;
-    CHECK_EQ(0, SHADOW_OFFSET);
-    shadow_start = FindDynamicShadowStart(shadow_size_bytes);
-  }
-  // Update the shadow memory address (potentially) used by instrumentation.
-  __hwasan_shadow_memory_dynamic_address = shadow_start;
+  __hwasan_shadow_memory_dynamic_address =
+      FindDynamicShadowStart(shadow_size_bytes);
 }
 
 bool InitShadow() {
@@ -159,29 +139,23 @@ bool InitShadow() {
   kHighMemEnd = GetHighMemEnd();
 
   // Determine shadow memory base offset.
-  InitializeShadowBaseAddress(MEM_TO_SHADOW_SIZE(kHighMemEnd));
+  InitializeShadowBaseAddress(MemToShadowSize(kHighMemEnd));
 
   // Place the low memory first.
-  if (SHADOW_OFFSET) {
-    kLowMemEnd = SHADOW_OFFSET - 1;
-    kLowMemStart = 0;
-  } else {
-    // LowMem covers as much of the first 4GB as possible.
-    kLowMemEnd = (1UL << 32) - 1;
-    kLowMemStart = MEM_TO_SHADOW(kLowMemEnd) + 1;
-  }
+  kLowMemEnd = __hwasan_shadow_memory_dynamic_address - 1;
+  kLowMemStart = 0;
 
   // Define the low shadow based on the already placed low memory.
-  kLowShadowEnd = MEM_TO_SHADOW(kLowMemEnd);
-  kLowShadowStart = SHADOW_OFFSET ? SHADOW_OFFSET : MEM_TO_SHADOW(kLowMemStart);
+  kLowShadowEnd = MemToShadow(kLowMemEnd);
+  kLowShadowStart = __hwasan_shadow_memory_dynamic_address;
 
   // High shadow takes whatever memory is left up there (making sure it is not
   // interfering with low memory in the fixed case).
-  kHighShadowEnd = MEM_TO_SHADOW(kHighMemEnd);
-  kHighShadowStart = Max(kLowMemEnd, MEM_TO_SHADOW(kHighShadowEnd)) + 1;
+  kHighShadowEnd = MemToShadow(kHighMemEnd);
+  kHighShadowStart = Max(kLowMemEnd, MemToShadow(kHighShadowEnd)) + 1;
 
   // High memory starts where allocated shadow allows.
-  kHighMemStart = SHADOW_TO_MEM(kHighShadowStart);
+  kHighMemStart = ShadowToMem(kHighShadowStart);
 
   // Check the sanity of the defined memory ranges (there might be gaps).
   CHECK_EQ(kHighMemStart % GetMmapGranularity(), 0);
@@ -190,10 +164,7 @@ bool InitShadow() {
   CHECK_GT(kHighShadowStart, kLowMemEnd);
   CHECK_GT(kLowMemEnd, kLowMemStart);
   CHECK_GT(kLowShadowEnd, kLowShadowStart);
-  if (SHADOW_OFFSET)
-    CHECK_GT(kLowShadowStart, kLowMemEnd);
-  else
-    CHECK_GT(kLowMemEnd, kLowShadowStart);
+  CHECK_GT(kLowShadowStart, kLowMemEnd);
 
   if (Verbosity())
     PrintAddressSpaceLayout();
@@ -204,19 +175,41 @@ bool InitShadow() {
 
   // Protect all the gaps.
   ProtectGap(0, Min(kLowMemStart, kLowShadowStart));
-  if (SHADOW_OFFSET) {
-    if (kLowMemEnd + 1 < kLowShadowStart)
-      ProtectGap(kLowMemEnd + 1, kLowShadowStart - kLowMemEnd - 1);
-    if (kLowShadowEnd + 1 < kHighShadowStart)
-      ProtectGap(kLowShadowEnd + 1, kHighShadowStart - kLowShadowEnd - 1);
-  } else {
-    if (kLowMemEnd + 1 < kHighShadowStart)
-      ProtectGap(kLowMemEnd + 1, kHighShadowStart - kLowMemEnd - 1);
-  }
+  if (kLowMemEnd + 1 < kLowShadowStart)
+    ProtectGap(kLowMemEnd + 1, kLowShadowStart - kLowMemEnd - 1);
+  if (kLowShadowEnd + 1 < kHighShadowStart)
+    ProtectGap(kLowShadowEnd + 1, kHighShadowStart - kLowShadowEnd - 1);
   if (kHighShadowEnd + 1 < kHighMemStart)
     ProtectGap(kHighShadowEnd + 1, kHighMemStart - kHighShadowEnd - 1);
 
   return true;
+}
+
+void InitThreads() {
+  CHECK(__hwasan_shadow_memory_dynamic_address);
+  uptr guard_page_size = GetMmapGranularity();
+  uptr thread_space_start =
+      __hwasan_shadow_memory_dynamic_address - (1ULL << kShadowBaseAlignment);
+  uptr thread_space_end =
+      __hwasan_shadow_memory_dynamic_address - guard_page_size;
+  ReserveShadowMemoryRange(thread_space_start, thread_space_end - 1,
+                           "hwasan threads");
+  ProtectGap(thread_space_end,
+             __hwasan_shadow_memory_dynamic_address - thread_space_end);
+  InitThreadList(thread_space_start, thread_space_end - thread_space_start);
+}
+
+static void MadviseShadowRegion(uptr beg, uptr end) {
+  uptr size = end - beg + 1;
+  if (common_flags()->no_huge_pages_for_shadow)
+    NoHugePagesInRegion(beg, size);
+  if (common_flags()->use_madv_dontdump)
+    DontDumpShadowMemory(beg, size);
+}
+
+void MadviseShadow() {
+  MadviseShadowRegion(kLowShadowStart, kLowShadowEnd);
+  MadviseShadowRegion(kHighShadowStart, kHighShadowEnd);
 }
 
 bool MemIsApp(uptr p) {
@@ -240,37 +233,76 @@ void InstallAtExitHandler() {
 
 // ---------------------- TSD ---------------- {{{1
 
+extern "C" void __hwasan_thread_enter() {
+  hwasanThreadList().CreateCurrentThread();
+}
+
+extern "C" void __hwasan_thread_exit() {
+  Thread *t = GetCurrentThread();
+  // Make sure that signal handler can not see a stale current thread pointer.
+  atomic_signal_fence(memory_order_seq_cst);
+  if (t)
+    hwasanThreadList().ReleaseThread(t);
+}
+
+#if HWASAN_WITH_INTERCEPTORS
 static pthread_key_t tsd_key;
 static bool tsd_key_inited = false;
 
-void HwasanTSDInit(void (*destructor)(void *tsd)) {
-  CHECK(!tsd_key_inited);
-  tsd_key_inited = true;
-  CHECK_EQ(0, pthread_key_create(&tsd_key, destructor));
-}
-
-HwasanThread *GetCurrentThread() {
-  return (HwasanThread*)pthread_getspecific(tsd_key);
-}
-
-void SetCurrentThread(HwasanThread *t) {
-  // Make sure that HwasanTSDDtor gets called at the end.
-  CHECK(tsd_key_inited);
-  // Make sure we do not reset the current HwasanThread.
-  CHECK_EQ(0, pthread_getspecific(tsd_key));
-  pthread_setspecific(tsd_key, (void *)t);
+void HwasanTSDThreadInit() {
+  if (tsd_key_inited)
+    CHECK_EQ(0, pthread_setspecific(tsd_key,
+                                    (void *)GetPthreadDestructorIterations()));
 }
 
 void HwasanTSDDtor(void *tsd) {
-  HwasanThread *t = (HwasanThread*)tsd;
-  if (t->destructor_iterations_ > 1) {
-    t->destructor_iterations_--;
-    CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
+  uptr iterations = (uptr)tsd;
+  if (iterations > 1) {
+    CHECK_EQ(0, pthread_setspecific(tsd_key, (void *)(iterations - 1)));
     return;
   }
-  // Make sure that signal handler can not see a stale current thread pointer.
-  atomic_signal_fence(memory_order_seq_cst);
-  HwasanThread::TSDDtor(tsd);
+  __hwasan_thread_exit();
+}
+
+void HwasanTSDInit() {
+  CHECK(!tsd_key_inited);
+  tsd_key_inited = true;
+  CHECK_EQ(0, pthread_key_create(&tsd_key, HwasanTSDDtor));
+}
+#else
+void HwasanTSDInit() {}
+void HwasanTSDThreadInit() {}
+#endif
+
+#if SANITIZER_ANDROID
+uptr *GetCurrentThreadLongPtr() {
+  return (uptr *)get_android_tls_ptr();
+}
+#else
+uptr *GetCurrentThreadLongPtr() {
+  return &__hwasan_tls;
+}
+#endif
+
+#if SANITIZER_ANDROID
+void AndroidTestTlsSlot() {
+  uptr kMagicValue = 0x010203040A0B0C0D;
+  *(uptr *)get_android_tls_ptr() = kMagicValue;
+  dlerror();
+  if (*(uptr *)get_android_tls_ptr() != kMagicValue) {
+    Printf(
+        "ERROR: Incompatible version of Android: TLS_SLOT_SANITIZER(6) is used "
+        "for dlerror().\n");
+    Die();
+  }
+}
+#else
+void AndroidTestTlsSlot() {}
+#endif
+
+Thread *GetCurrentThread() {
+  auto *R = (StackAllocationsRingBuffer*)GetCurrentThreadLongPtr();
+  return hwasanThreadList().GetThreadByBufferAddress((uptr)(R->Next()));
 }
 
 struct AccessInfo {
@@ -340,14 +372,13 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
   SignalContext sig{info, uc};
-  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, uc,
-                common_flags()->fast_unwind_on_fatal);
-
-  ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store);
+  GetStackTrace(stack, kStackTraceMax, StackTrace::GetNextInstructionPc(sig.pc),
+                sig.bp, uc, common_flags()->fast_unwind_on_fatal);
 
   ++hwasan_report_count;
-  if (flags()->halt_on_error || !ai.recover)
-    Die();
+
+  bool fatal = flags()->halt_on_error || !ai.recover;
+  ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store, fatal);
 
 #if defined(__aarch64__)
   uc->uc_mcontext.pc += 4;
@@ -360,8 +391,8 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
-                common_flags()->fast_unwind_on_fatal);
+  GetStackTrace(stack, kStackTraceMax, StackTrace::GetNextInstructionPc(sig.pc),
+                sig.bp, sig.context, common_flags()->fast_unwind_on_fatal);
 }
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {

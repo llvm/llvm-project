@@ -1,0 +1,5 @@
+RUN: rm -f %t-ImplicitIntegerSignChangeTest-Ubsan
+RUN: %cpp_compiler -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=all %S/ImplicitIntegerSignChangeTest.cpp -o %t-ImplicitIntegerSignChangeTest-Ubsan
+RUN: not %run %t-ImplicitIntegerSignChangeTest-Ubsan 2>&1 | FileCheck %s
+CHECK: ImplicitIntegerSignChangeTest.cpp:22:16: runtime error: implicit conversion from type 'int32_t' (aka 'int') of value -1 (32-bit, signed) to type 'uint32_t' (aka 'unsigned int') changed the value to 4294967295 (32-bit, unsigned)
+CHECK: Test unit written to ./crash-

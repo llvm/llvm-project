@@ -9,14 +9,14 @@
 // CHECK-NEXT:        -:    4:int bar1 = 0;
 // CHECK-NEXT:        -:    5:int bar2 = 1;
 // CHECK-NEXT:        -:    6:
-// CHECK-NEXT:        -:    7:void bar(int n) {
+// CHECK-NEXT:        3:    7:void bar(int n) {
 // CHECK-NEXT:        3:    8:  if (n % 5 == 0)
 // CHECK-NEXT:        3:    9:    bar1++;
 // CHECK-NEXT:        -:   10:  else
 // CHECK-NEXT:    #####:   11:    bar2++;
 // CHECK-NEXT:        3:   12:}
 // CHECK-NEXT:        -:   13:
-// CHECK-NEXT:        -:   14:int main(int argc, char *argv[]) {
+// CHECK-NEXT:        1:   14:int main(int argc, char *argv[]) {
 // CHECK-NEXT:        -:   15:#ifdef SHARED_CALL_BEFORE_GCOV_FLUSH
 // CHECK-NEXT:        1:   16:  foo(1);
 // CHECK-NEXT:        -:   17:#endif

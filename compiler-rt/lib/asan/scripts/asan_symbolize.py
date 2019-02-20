@@ -231,6 +231,10 @@ class DarwinSymbolizer(Symbolizer):
     """Overrides Symbolizer.symbolize."""
     if self.binary != binary:
       return None
+    if not os.path.exists(binary):
+      # If the binary doesn't exist atos will exit which will lead to IOError
+      # exceptions being raised later on so just don't try to symbolize.
+      return ['{} ({}:{}+{})'.format(addr, binary, self.arch, offset)]
     atos_line = self.atos.convert('0x%x' % int(offset, 16))
     while "got symbolicator for" in atos_line:
       atos_line = self.atos.readline()
@@ -473,7 +477,7 @@ class SymbolizationLoop(object):
     symbolized_line = self.symbolize_address(addr, binary, offset, arch)
     if not symbolized_line:
       if original_binary != binary:
-        symbolized_line = self.symbolize_address(addr, binary, offset, arch)
+        symbolized_line = self.symbolize_address(addr, original_binary, offset, arch)
     return self.get_symbolized_lines(symbolized_line)
 
 

@@ -10,9 +10,9 @@ RUN: test -f instrprof-shared-main.gcno
 RUN: %clang --coverage -o %t instrprof-shared-main.o instrprof-shared-lib.o
 RUN: test -f %t
 
+RUN: rm -f instrprof-shared-main.gcda instrprof-shared-lib.gcda
 RUN: %run %t
 RUN: llvm-cov gcov instrprof-shared-main.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-main.c.gcov %S/Inputs/instrprof-shared-main.c.gcov
 RUN: llvm-cov gcov instrprof-shared-lib.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-shared-lib.c.gcov %S/Inputs/instrprof-shared-lib_in-loop.c.gcov
-RUN: rm instrprof-shared-main.gcda instrprof-shared-lib.gcda

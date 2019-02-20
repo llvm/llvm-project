@@ -125,9 +125,8 @@ void ErrorAllocTypeMismatch::Print() {
   Decorator d;
   Printf("%s", d.Error());
   Report("ERROR: AddressSanitizer: %s (%s vs %s) on %p\n",
-         scariness.GetDescription(),
-         alloc_names[alloc_type], dealloc_names[dealloc_type],
-         addr_description.addr);
+         scariness.GetDescription(), alloc_names[alloc_type],
+         dealloc_names[dealloc_type], addr_description.Address());
   Printf("%s", d.Default());
   CHECK_GT(dealloc_stack->size, 0);
   scariness.Print();

@@ -108,9 +108,20 @@ extern "C" int __munmap(void *, size_t) SANITIZER_WEAK_ATTRIBUTE;
 #define VM_MEMORY_SANITIZER 99
 #endif
 
+// XNU on Darwin provides a mmap flag that optimizes allocation/deallocation of
+// giant memory regions (i.e. shadow memory regions).
+#define kXnuFastMmapFd 0x4
+static size_t kXnuFastMmapThreshold = 2 << 30; // 2 GB
+static bool use_xnu_fast_mmap = false;
+
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
-  if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_SANITIZER);
+  if (fd == -1) {
+    fd = VM_MAKE_TAG(VM_MEMORY_SANITIZER);
+    if (length >= kXnuFastMmapThreshold) {
+      if (use_xnu_fast_mmap) fd |= kXnuFastMmapFd;
+    }
+  }
   if (&__mmap) return (uptr)__mmap(addr, length, prot, flags, fd, offset);
   return (uptr)mmap(addr, length, prot, flags, fd, offset);
 }
@@ -163,6 +174,10 @@ uptr internal_filesize(fd_t fd) {
   return (uptr)st.st_size;
 }
 
+uptr internal_dup(int oldfd) {
+  return dup(oldfd);
+}
+
 uptr internal_dup2(int oldfd, int newfd) {
   return dup2(oldfd, newfd);
 }
@@ -211,6 +226,18 @@ int internal_fork() {
   if (&__fork)
     return __fork();
   return fork();
+}
+
+int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
+                    uptr *oldlenp, const void *newp, uptr newlen) {
+  return sysctl(const_cast<int *>(name), namelen, oldp, (size_t *)oldlenp,
+                const_cast<void *>(newp), (size_t)newlen);
+}
+
+int internal_sysctlbyname(const char *sname, void *oldp, uptr *oldlenp,
+                          const void *newp, uptr newlen) {
+  return sysctlbyname(sname, oldp, (size_t *)oldlenp, const_cast<void *>(newp),
+                      (size_t)newlen);
 }
 
 int internal_forkpty(int *amaster) {
@@ -347,6 +374,10 @@ void ReExec() {
 }
 
 void CheckASLR() {
+  // Do nothing
+}
+
+void CheckMPROTECT() {
   // Do nothing
 }
 
@@ -499,30 +530,38 @@ MacosVersion GetMacosVersionInternal() {
   uptr len = 0, maxlen = sizeof(version) / sizeof(version[0]);
   for (uptr i = 0; i < maxlen; i++) version[i] = '\0';
   // Get the version length.
-  CHECK_NE(sysctl(mib, 2, 0, &len, 0, 0), -1);
+  CHECK_NE(internal_sysctl(mib, 2, 0, &len, 0, 0), -1);
   CHECK_LT(len, maxlen);
-  CHECK_NE(sysctl(mib, 2, version, &len, 0, 0), -1);
-  switch (version[0]) {
-    case '9': return MACOS_VERSION_LEOPARD;
-    case '1': {
-      switch (version[1]) {
-        case '0': return MACOS_VERSION_SNOW_LEOPARD;
-        case '1': return MACOS_VERSION_LION;
-        case '2': return MACOS_VERSION_MOUNTAIN_LION;
-        case '3': return MACOS_VERSION_MAVERICKS;
-        case '4': return MACOS_VERSION_YOSEMITE;
-        case '5': return MACOS_VERSION_EL_CAPITAN;
-        case '6': return MACOS_VERSION_SIERRA;
-        case '7': return MACOS_VERSION_HIGH_SIERRA;
-        case '8': return MACOS_VERSION_MOJAVE;
-        default:
-          if (IsDigit(version[1]))
-            return MACOS_VERSION_UNKNOWN_NEWER;
-          else
-            return MACOS_VERSION_UNKNOWN;
-      }
-    }
-    default: return MACOS_VERSION_UNKNOWN;
+  CHECK_NE(internal_sysctl(mib, 2, version, &len, 0, 0), -1);
+
+  // Expect <major>.<minor>(.<patch>)
+  CHECK_GE(len, 3);
+  const char *p = version;
+  int major = internal_simple_strtoll(p, &p, /*base=*/10);
+  if (*p != '.') return MACOS_VERSION_UNKNOWN;
+  p += 1;
+  int minor = internal_simple_strtoll(p, &p, /*base=*/10);
+  if (*p != '.') return MACOS_VERSION_UNKNOWN;
+
+  switch (major) {
+    case 9: return MACOS_VERSION_LEOPARD;
+    case 10: return MACOS_VERSION_SNOW_LEOPARD;
+    case 11: return MACOS_VERSION_LION;
+    case 12: return MACOS_VERSION_MOUNTAIN_LION;
+    case 13: return MACOS_VERSION_MAVERICKS;
+    case 14: return MACOS_VERSION_YOSEMITE;
+    case 15: return MACOS_VERSION_EL_CAPITAN;
+    case 16: return MACOS_VERSION_SIERRA;
+    case 17:
+      // Not a typo, 17.5 Darwin Kernel Version maps to High Sierra 10.13.4.
+      if (minor >= 5)
+        return MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
+      return MACOS_VERSION_HIGH_SIERRA;
+    case 18:
+      return MACOS_VERSION_MOJAVE;
+    default:
+      if (major < 9) return MACOS_VERSION_UNKNOWN;
+      return MACOS_VERSION_UNKNOWN_NEWER;
   }
 }
 
@@ -664,6 +703,16 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 }
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
+
+void InitializePlatformEarly() {
+  // Only use xnu_fast_mmap when on x86_64 and the OS supports it.
+  use_xnu_fast_mmap =
+#if defined(__x86_64__)
+      GetMacosVersion() >= MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
+#else
+      false;
+#endif
+}
 
 #if !SANITIZER_GO
 static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";
@@ -1064,14 +1113,16 @@ void CheckNoDeepBind(const char *filename, int flag) {
   // Do nothing.
 }
 
-// FIXME: implement on this platform.
 bool GetRandom(void *buffer, uptr length, bool blocking) {
-  UNIMPLEMENTED();
+  if (!buffer || !length || length > 256)
+    return false;
+  // arc4random never fails.
+  arc4random_buf(buffer, length);
+  return true;
 }
 
-// FIXME: implement on this platform.
 u32 GetNumberOfCPUs() {
-  UNIMPLEMENTED();
+  return (u32)sysconf(_SC_NPROCESSORS_ONLN);
 }
 
 }  // namespace __sanitizer

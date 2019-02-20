@@ -1,5 +1,7 @@
 // RUN: %clang_esan_wset -O0 %s -o %t 2>&1
 // RUN: %env_esan_opts="verbosity=1 record_snapshots=0" %run %t %t 2>&1 | FileCheck %s
+// Stucks at init and no clone feature equivalent.
+// UNSUPPORTED: freebsd
 
 #include <assert.h>
 #include <stdio.h>

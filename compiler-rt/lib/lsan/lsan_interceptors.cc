@@ -153,7 +153,7 @@ INTERCEPTOR(struct fake_mallinfo, mallinfo, void) {
 #define LSAN_MAYBE_INTERCEPT_MALLINFO INTERCEPT_FUNCTION(mallinfo)
 
 INTERCEPTOR(int, mallopt, int cmd, int value) {
-  return -1;
+  return 0;
 }
 #define LSAN_MAYBE_INTERCEPT_MALLOPT INTERCEPT_FUNCTION(mallopt)
 #else

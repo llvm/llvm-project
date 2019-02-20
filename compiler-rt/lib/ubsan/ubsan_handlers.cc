@@ -119,7 +119,9 @@ static void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle LHS,
   if (ignoreReport(Loc, Opts, ET))
     return;
 
-  if (!IsSigned && flags()->silence_unsigned_overflow)
+  // If this is an unsigned overflow in non-fatal mode, potentially ignore it.
+  if (!IsSigned && !Opts.FromUnrecoverableHandler &&
+      flags()->silence_unsigned_overflow)
     return;
 
   ScopedReport R(Opts, Loc, ET);
@@ -457,17 +459,40 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
   SourceLocation Loc = Data->Loc.acquire();
   ErrorType ET = ErrorType::GenericUB;
 
+  const TypeDescriptor &SrcTy = Data->FromType;
+  const TypeDescriptor &DstTy = Data->ToType;
+
+  bool SrcSigned = SrcTy.isSignedIntegerTy();
+  bool DstSigned = DstTy.isSignedIntegerTy();
+
   switch (Data->Kind) {
-  case ICCK_IntegerTruncation:
-    ET = ErrorType::ImplicitIntegerTruncation;
+  case ICCK_IntegerTruncation: { // Legacy, no longer used.
+    // Let's figure out what it should be as per the new types, and upgrade.
+    // If both types are unsigned, then it's an unsigned truncation.
+    // Else, it is a signed truncation.
+    if (!SrcSigned && !DstSigned) {
+      ET = ErrorType::ImplicitUnsignedIntegerTruncation;
+    } else {
+      ET = ErrorType::ImplicitSignedIntegerTruncation;
+    }
+    break;
+  }
+  case ICCK_UnsignedIntegerTruncation:
+    ET = ErrorType::ImplicitUnsignedIntegerTruncation;
+    break;
+  case ICCK_SignedIntegerTruncation:
+    ET = ErrorType::ImplicitSignedIntegerTruncation;
+    break;
+  case ICCK_IntegerSignChange:
+    ET = ErrorType::ImplicitIntegerSignChange;
+    break;
+  case ICCK_SignedIntegerTruncationOrSignChange:
+    ET = ErrorType::ImplicitSignedIntegerTruncationOrSignChange;
     break;
   }
 
   if (ignoreReport(Loc, Opts, ET))
     return;
-
-  const TypeDescriptor &SrcTy = Data->FromType;
-  const TypeDescriptor &DstTy = Data->ToType;
 
   ScopedReport R(Opts, Loc, ET);
 
@@ -477,8 +502,8 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
        "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
        "type %4 changed the value to %5 (%6-bit, %7signed)")
       << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
-      << (SrcTy.isSignedIntegerTy() ? "" : "un") << DstTy << Value(DstTy, Dst)
-      << DstTy.getIntegerBitWidth() << (DstTy.isSignedIntegerTy() ? "" : "un");
+      << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
+      << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
 }
 
 void __ubsan::__ubsan_handle_implicit_conversion(ImplicitConversionData *Data,

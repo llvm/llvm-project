@@ -1,3 +1,4 @@
+UNSUPPORTED: windows
 RUN: %cpp_compiler %S/NullDerefTest.cpp -o %t-NullDerefTest
 RUN: %cpp_compiler %S/SingleByteInputTest.cpp -o %t-SingleByteInputTest
 RUN: mkdir -p %t.dir

@@ -13,16 +13,10 @@
 #include "xray/xray_log_interface.h"
 #include <cassert>
 
-constexpr auto kBufferSize = 16384;
-constexpr auto kBufferMax = 10;
-
 [[clang::xray_always_instrument]] void __attribute__((noinline)) fn() { }
 
 int main(int argc, char *argv[]) {
-  using namespace __xray;
-  FDRLoggingOptions Opts;
-
-  auto status = __xray_log_init(kBufferSize, kBufferMax, &Opts, sizeof(Opts));
+  auto status = __xray_log_init_mode("xray-fdr", "");
   assert(status == XRayLogInitStatus::XRAY_LOG_INITIALIZED);
 
   __xray_patch();
@@ -34,5 +28,5 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK: records:
-// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-exit, tsc: {{[0-9]+}} }
+// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}}, data: '' }
+// CHECK-NEXT: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*fn.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-exit, tsc: {{[0-9]+}}, data: '' }

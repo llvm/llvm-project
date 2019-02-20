@@ -77,7 +77,7 @@ function(add_compiler_rt_object_libraries name)
     endif()
 
     set_target_compile_flags(${libname}
-      ${CMAKE_CXX_FLAGS} ${extra_cflags_${libname}} ${target_flags})
+      ${extra_cflags_${libname}} ${target_flags})
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
     set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")
@@ -357,19 +357,20 @@ set(COMPILER_RT_GTEST_CFLAGS
   -I${COMPILER_RT_GTEST_PATH}
 )
 
+# Mocking support.
+set(COMPILER_RT_GMOCK_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock)
+set(COMPILER_RT_GMOCK_SOURCE ${COMPILER_RT_GMOCK_PATH}/src/gmock-all.cc)
+set(COMPILER_RT_GMOCK_CFLAGS
+  -DGTEST_NO_LLVM_RAW_OSTREAM=1
+  -DGTEST_HAS_RTTI=0
+  -I${COMPILER_RT_GMOCK_PATH}/include
+  -I${COMPILER_RT_GMOCK_PATH}
+)
+
 append_list_if(COMPILER_RT_DEBUG -DSANITIZER_DEBUG=1 COMPILER_RT_UNITTEST_CFLAGS)
 append_list_if(COMPILER_RT_HAS_WCOVERED_SWITCH_DEFAULT_FLAG -Wno-covered-switch-default COMPILER_RT_UNITTEST_CFLAGS)
 
 if(MSVC)
-  # clang doesn't support exceptions on Windows yet.
-  list(APPEND COMPILER_RT_UNITTEST_CFLAGS -D_HAS_EXCEPTIONS=0)
-
-  # We should teach clang to understand "#pragma intrinsic", see PR19898.
-  list(APPEND COMPILER_RT_UNITTEST_CFLAGS -Wno-undefined-inline)
-
-  # Clang doesn't support SEH on Windows yet.
-  list(APPEND COMPILER_RT_GTEST_CFLAGS -DGTEST_HAS_SEH=0)
-
   # gtest use a lot of stuff marked as deprecated on Windows.
   list(APPEND COMPILER_RT_GTEST_CFLAGS -Wno-deprecated-declarations)
 endif()
@@ -550,6 +551,9 @@ macro(add_custom_libcxx name prefix)
   set(PASSTHROUGH_VARIABLES
     CMAKE_C_COMPILER_TARGET
     CMAKE_CXX_COMPILER_TARGET
+    CMAKE_SHARED_LINKER_FLAGS
+    CMAKE_MODULE_LINKER_FLAGS
+    CMAKE_EXE_LINKER_FLAGS
     CMAKE_INSTALL_PREFIX
     CMAKE_MAKE_PROGRAM
     CMAKE_LINKER
@@ -562,14 +566,20 @@ macro(add_custom_libcxx name prefix)
     CMAKE_SYSROOT
     CMAKE_SYSTEM_NAME)
   foreach(variable ${PASSTHROUGH_VARIABLES})
-    if(${variable})
-      list(APPEND CMAKE_PASSTHROUGH_VARIABLES -D${variable}=${${variable}})
+    get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
+    if(${is_value_set})
+      get_property(value CACHE ${variable} PROPERTY VALUE)
+      list(APPEND CMAKE_PASSTHROUGH_VARIABLES -D${variable}=${value})
     endif()
   endforeach()
 
-  string(REPLACE ";" " " FLAGS_STRING "${LIBCXX_CFLAGS}")
-  set(LIBCXX_C_FLAGS "${FLAGS_STRING}")
-  set(LIBCXX_CXX_FLAGS "${FLAGS_STRING}")
+  string(REPLACE ";" " " LIBCXX_C_FLAGS "${LIBCXX_CFLAGS}")
+  get_property(C_FLAGS CACHE CMAKE_C_FLAGS PROPERTY VALUE)
+  set(LIBCXX_C_FLAGS "${LIBCXX_C_FLAGS} ${C_FLAGS}")
+
+  string(REPLACE ";" " " LIBCXX_CXX_FLAGS "${LIBCXX_CFLAGS}")
+  get_property(CXX_FLAGS CACHE CMAKE_CXX_FLAGS PROPERTY VALUE)
+  set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} ${CXX_FLAGS}")
 
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}

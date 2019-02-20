@@ -316,6 +316,12 @@ void ThreadDetach(ThreadState *thr, uptr pc, int tid) {
   ctx->thread_registry->DetachThread(tid, thr);
 }
 
+void ThreadNotJoined(ThreadState *thr, uptr pc, int tid, uptr uid) {
+  CHECK_GT(tid, 0);
+  CHECK_LT(tid, kMaxTid);
+  ctx->thread_registry->SetThreadUserId(tid, uid);
+}
+
 void ThreadSetName(ThreadState *thr, const char *name) {
   ctx->thread_registry->SetThreadName(thr->tid, name);
 }

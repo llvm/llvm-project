@@ -1,20 +1,16 @@
 // RUN: %clangxx -g %s -o %t && %run %t
 
+#include <assert.h>
 #include <stdio.h>
 
 int main(int argc, char **argv) {
-  FILE *fp;
+  FILE *fp = fopen(argv[0], "r");
+  assert(fp);
+
   char buf[2];
-  char *s;
+  char *s = fgets(buf, sizeof(buf), fp);
+  assert(s);
 
-  fp = fopen(argv[0], "r");
-  if (!fp)
-    return 1;
-
-  s = fgets(buf, sizeof(buf), fp);
-  if (!s)
-    return 2;
-
-  fclose(fp);
+  assert(!fclose(fp));
   return 0;
 }

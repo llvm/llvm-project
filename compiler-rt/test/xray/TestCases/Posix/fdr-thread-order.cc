@@ -1,15 +1,12 @@
-// RUN: %clangxx_xray -g -std=c++11 %s -o %t
-// RUN: rm fdr-thread-order.* || true
-// RUN: XRAY_OPTIONS="patch_premain=false xray_naive_log=false \
-// RUN:    xray_logfile_base=fdr-thread-order. xray_fdr_log=true verbosity=1 \
-// RUN:    xray_fdr_log_func_duration_threshold_us=0" %run %t 2>&1 | \
+// RUN: rm -rf %t && mkdir %t
+// RUN: %clangxx_xray -g -std=c++11 %s -o %t.exe
+// RUN: XRAY_OPTIONS="patch_premain=false \
+// RUN:    xray_logfile_base=%t/ xray_mode=xray-fdr verbosity=1" \
+// RUN:    XRAY_FDR_OPTIONS=func_duration_threshold_us=0 %run %t.exe 2>&1 | \
 // RUN:    FileCheck %s
-// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:    "`ls fdr-thread-order.* | head -1`"
-// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t \
-// RUN:    "`ls fdr-thread-order.* | head -1`" | \
-// RUN:    FileCheck %s --check-prefix TRACE
-// RUN: rm fdr-thread-order.*
+// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t.exe %t/*
+// RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t.exe %t/* | \
+// RUN:   FileCheck %s --check-prefix TRACE
 // FIXME: Make llvm-xray work on non-x86_64 as well.
 // REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
@@ -18,9 +15,6 @@
 #include <atomic>
 #include <cassert>
 #include <thread>
-
-constexpr auto kBufferSize = 16384;
-constexpr auto kBufferMax = 10;
 
 std::atomic<uint64_t> var{0};
 
@@ -35,11 +29,8 @@ std::atomic<uint64_t> var{0};
 }
 
 int main(int argc, char *argv[]) {
-  using namespace __xray;
-  FDRLoggingOptions Options;
   __xray_patch();
-  assert(__xray_log_init(kBufferSize, kBufferMax, &Options,
-                         sizeof(FDRLoggingOptions)) ==
+  assert(__xray_log_init_mode("xray-fdr", "") ==
          XRayLogInitStatus::XRAY_LOG_INITIALIZED);
 
   std::atomic_thread_fence(std::memory_order_acq_rel);
@@ -61,7 +52,7 @@ int main(int argc, char *argv[]) {
 }
 
 // We want to make sure that the order of the function log doesn't matter.
-// TRACE-DAG: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*f1.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE-DAG: - { type: 0, func-id: [[FID2:[0-9]+]], function: {{.*f2.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], process: [[PROCESS]], kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE-DAG: - { type: 0, func-id: [[FID1]], function: {{.*f1.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS]], kind: {{function-exit|function-tail-exit}}, tsc: {{[0-9]+}} }
-// TRACE-DAG: - { type: 0, func-id: [[FID2]], function: {{.*f2.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS]], kind: {{function-exit|function-tail-exit}}, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[FID1:[0-9]+]], function: {{.*f1.*}}, cpu: {{.*}}, thread: [[THREAD1:[0-9]+]], process: [[PROCESS:[0-9]+]], kind: function-enter, tsc: {{[0-9]+}}, data: '' }
+// TRACE-DAG: - { type: 0, func-id: [[FID2:[0-9]+]], function: {{.*f2.*}}, cpu: {{.*}}, thread: [[THREAD2:[0-9]+]], process: [[PROCESS]], kind: function-enter, tsc: {{[0-9]+}}, data: '' }
+// TRACE-DAG: - { type: 0, func-id: [[FID1]], function: {{.*f1.*}}, cpu: {{.*}}, thread: [[THREAD1]], process: [[PROCESS]], kind: {{function-exit|function-tail-exit}}, tsc: {{[0-9]+}}, data: '' }
+// TRACE-DAG: - { type: 0, func-id: [[FID2]], function: {{.*f2.*}}, cpu: {{.*}}, thread: [[THREAD2]], process: [[PROCESS]], kind: {{function-exit|function-tail-exit}}, tsc: {{[0-9]+}}, data: '' }

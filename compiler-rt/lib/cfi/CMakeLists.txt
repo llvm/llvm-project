@@ -1,6 +1,6 @@
 add_compiler_rt_component(cfi)
 
-if(OS_NAME MATCHES "Linux")
+if(OS_NAME MATCHES "Linux" OR OS_NAME MATCHES "FreeBSD" OR OS_NAME MATCHES "NetBSD")
   set(CFI_SOURCES cfi.cc)
 
   include_directories(..)

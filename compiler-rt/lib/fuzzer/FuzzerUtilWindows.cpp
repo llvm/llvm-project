@@ -24,7 +24,7 @@
 #include <windows.h>
 
 // This must be included after windows.h.
-#include <Psapi.h>
+#include <psapi.h>
 
 namespace fuzzer {
 
@@ -179,7 +179,9 @@ const void *SearchMemory(const void *Data, size_t DataLen, const void *Patt,
 }
 
 std::string DisassembleCmd(const std::string &FileName) {
-  if (ExecuteCommand("dumpbin /summary > nul") == 0)
+  Vector<std::string> command_vector;
+  command_vector.push_back("dumpbin /summary > nul");
+  if (ExecuteCommand(Command(command_vector)) == 0)
     return "dumpbin /disasm " + FileName;
   Printf("libFuzzer: couldn't find tool to disassemble (dumpbin)\n");
   exit(1);

@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- cmpti2_test.c - Test __cmpti2 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

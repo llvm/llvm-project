@@ -122,8 +122,6 @@ macro(test_targets)
   # what version of MSVC to pretend to be so that the STL works.
   set(MSVC_VERSION_FLAG "")
   if (MSVC)
-    # Find and run MSVC (not clang-cl) and get its version. This will tell
-    # clang-cl what version of MSVC to pretend to be so that the STL works.
     execute_process(COMMAND "$ENV{VSINSTALLDIR}/VC/bin/cl.exe"
       OUTPUT_QUIET
       ERROR_VARIABLE MSVC_COMPAT_VERSION
@@ -191,11 +189,11 @@ macro(test_targets)
       # clang's default CPU's. In the 64-bit case, we must also specify the ABI
       # since the default ABI differs between gcc and clang.
       # FIXME: Ideally, we would build the N32 library too.
-      test_target_arch(mipsel "" "-mips32r2" "--target=mipsel-linux-gnu")
-      test_target_arch(mips64el "" "-mips64r2" "--target=mips64el-linux-gnu" "-mabi=64")
+      test_target_arch(mipsel "" "-mips32r2" "-mabi=32")
+      test_target_arch(mips64el "" "-mips64r2" "-mabi=64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
-      test_target_arch(mips "" "-mips32r2" "--target=mips-linux-gnu")
-      test_target_arch(mips64 "" "-mips64r2" "--target=mips64-linux-gnu" "-mabi=64")
+      test_target_arch(mips "" "-mips32r2" "-mabi=32")
+      test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")

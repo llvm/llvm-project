@@ -19,4 +19,14 @@
 #define XRAY_NEVER_INSTRUMENT
 #endif
 
+#if SANITIZER_NETBSD
+// NetBSD: thread_local is not aligned properly, and the code relying
+// on it segfaults
+#define XRAY_TLS_ALIGNAS(x)
+#define XRAY_HAS_TLS_ALIGNAS 0
+#else
+#define XRAY_TLS_ALIGNAS(x) alignas(x)
+#define XRAY_HAS_TLS_ALIGNAS 1
+#endif
+
 #endif  // XRAY_XRAY_DEFS_H

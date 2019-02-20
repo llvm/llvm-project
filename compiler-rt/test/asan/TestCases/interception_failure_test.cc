@@ -11,6 +11,10 @@
 // it works with the dynamic runtime.
 // XFAIL: win32-static-asan
 
+// On NetBSD, defining strtol in a static build results in linker errors, but
+// it works with the dynamic runtime.
+// XFAIL: netbsd && !asan-dynamic-runtime
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

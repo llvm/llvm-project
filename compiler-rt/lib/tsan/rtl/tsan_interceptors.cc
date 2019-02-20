@@ -53,6 +53,8 @@ using namespace __tsan;  // NOLINT
 #define stdout ((char*)&__sF + (__sF_size * 1))
 #define stderr ((char*)&__sF + (__sF_size * 2))
 
+#define nanosleep __nanosleep50
+#define vfork __vfork14
 #endif
 
 #if SANITIZER_ANDROID
@@ -225,6 +227,16 @@ void InitializeLibIgnore() {
     libignore()->IgnoreNoninstrumentedModules(true);
   libignore()->OnLibraryLoaded(0);
 }
+
+// The following two hooks can be used by for cooperative scheduling when
+// locking.
+#ifdef TSAN_EXTERNAL_HOOKS
+void OnPotentiallyBlockingRegionBegin();
+void OnPotentiallyBlockingRegionEnd();
+#else
+SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionBegin() {}
+SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionEnd() {}
+#endif
 
 }  // namespace __tsan
 
@@ -864,6 +876,8 @@ TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
 // Used in thread-safe function static initialization.
 STDCXX_INTERCEPTOR(int, __cxa_guard_acquire, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_acquire, g);
+  OnPotentiallyBlockingRegionBegin();
+  auto on_exit = at_scope_exit(&OnPotentiallyBlockingRegionEnd);
   for (;;) {
     u32 cmp = atomic_load(g, memory_order_acquire);
     if (cmp == 0) {
@@ -1041,6 +1055,35 @@ TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
   }
   return res;
 }
+
+#if SANITIZER_LINUX
+TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_tryjoin_np, th, ret);
+  int tid = ThreadTid(thr, pc, (uptr)th);
+  ThreadIgnoreBegin(thr, pc);
+  int res = REAL(pthread_tryjoin_np)(th, ret);
+  ThreadIgnoreEnd(thr, pc);
+  if (res == 0)
+    ThreadJoin(thr, pc, tid);
+  else
+    ThreadNotJoined(thr, pc, tid, (uptr)th);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
+                 const struct timespec *abstime) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_timedjoin_np, th, ret, abstime);
+  int tid = ThreadTid(thr, pc, (uptr)th);
+  ThreadIgnoreBegin(thr, pc);
+  int res = BLOCK_REAL(pthread_timedjoin_np)(th, ret, abstime);
+  ThreadIgnoreEnd(thr, pc);
+  if (res == 0)
+    ThreadJoin(thr, pc, tid);
+  else
+    ThreadNotJoined(thr, pc, tid, (uptr)th);
+  return res;
+}
+#endif
 
 // Problem:
 // NPTL implementation of pthread_cond has 2 versions (2.2.5 and 2.3.2).
@@ -2211,7 +2254,8 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
   (void) ctx;
 
 #define COMMON_INTERCEPTOR_FILE_OPEN(ctx, file, path) \
-  Acquire(thr, pc, File2addr(path));                  \
+  if (path)                                           \
+    Acquire(thr, pc, File2addr(path));                \
   if (file) {                                         \
     int fd = fileno_unlocked(file);                   \
     if (fd >= 0) FdFileCreate(thr, pc, fd);           \
@@ -2560,6 +2604,8 @@ TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_wrlock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_trywrlock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_unlock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(int, once, void *o, void (*f)())
+TSAN_INTERCEPTOR_NETBSD_ALIAS_THR2(int, sigsetmask, sigmask, int a, void *b,
+  void *c)
 
 namespace __tsan {
 
@@ -2636,6 +2682,10 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_create);
   TSAN_INTERCEPT(pthread_join);
   TSAN_INTERCEPT(pthread_detach);
+  #if SANITIZER_LINUX
+  TSAN_INTERCEPT(pthread_tryjoin_np);
+  TSAN_INTERCEPT(pthread_timedjoin_np);
+  #endif
 
   TSAN_INTERCEPT_VER(pthread_cond_init, PTHREAD_ABI_BASE);
   TSAN_INTERCEPT_VER(pthread_cond_signal, PTHREAD_ABI_BASE);
@@ -2769,6 +2819,7 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_trywrlock);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_unlock);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(once);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(sigsetmask);
 
   FdInit();
 }

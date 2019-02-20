@@ -223,8 +223,8 @@ static bool IsMemoryPadding(uptr address, uptr size) {
   return true;
 }
 
-static const u8 kHintNop9Bytes[] = {
-  0x66, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
+static const u8 kHintNop8Bytes[] = {
+  0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 template<class T>
@@ -239,8 +239,8 @@ static bool FunctionHasPrefix(uptr address, const T &pattern) {
 static bool FunctionHasPadding(uptr address, uptr size) {
   if (IsMemoryPadding(address - size, size))
     return true;
-  if (size <= sizeof(kHintNop9Bytes) &&
-      FunctionHasPrefix(address, kHintNop9Bytes))
+  if (size <= sizeof(kHintNop8Bytes) &&
+      FunctionHasPrefix(address, kHintNop8Bytes))
     return true;
   return false;
 }

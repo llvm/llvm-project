@@ -7,7 +7,7 @@
 // RUN: %clangxx_asan -O3 %s -o %t && %env_asan_opts=suppressions='"%t.supp"' %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
 // FIXME: Windows symbolizer needs work to make this pass.
-// XFAIL: android,win32
+// XFAIL: android,windows-msvc
 // UNSUPPORTED: ios
 
 // FIXME: atos does not work for inlined functions, yet llvm-symbolizer

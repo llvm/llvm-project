@@ -1,4 +1,5 @@
 XFAIL: ios
+UNSUPPORTED: windows
 RUN: %cpp_compiler %S/FullCoverageSetTest.cpp -o %t-FullCoverageSetTest
 
 RUN: rm -rf  %tmp/T1 %tmp/T2

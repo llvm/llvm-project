@@ -59,6 +59,10 @@ SANITIZER_INTERFACE_ATTRIBUTE
 ALIGNED(16) THREADLOCAL u64 __msan_va_arg_tls[kMsanParamTlsSize / sizeof(u64)];
 
 SANITIZER_INTERFACE_ATTRIBUTE
+ALIGNED(16)
+THREADLOCAL u32 __msan_va_arg_origin_tls[kMsanParamTlsSize / sizeof(u32)];
+
+SANITIZER_INTERFACE_ATTRIBUTE
 THREADLOCAL u64 __msan_va_arg_overflow_size_tls;
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -277,6 +281,8 @@ void ScopedThreadLocalStateBackup::Restore() {
   internal_memset(__msan_param_tls, 0, sizeof(__msan_param_tls));
   internal_memset(__msan_retval_tls, 0, sizeof(__msan_retval_tls));
   internal_memset(__msan_va_arg_tls, 0, sizeof(__msan_va_arg_tls));
+  internal_memset(__msan_va_arg_origin_tls, 0,
+                  sizeof(__msan_va_arg_origin_tls));
 
   if (__msan_get_track_origins()) {
     internal_memset(&__msan_retval_origin_tls, 0,
