@@ -9,6 +9,7 @@ import lldbsuite.test.test_categories as test_categories
 import os
 
 # Third-party modules
+import io
 
 # LLDB modules
 import lldb
@@ -16,7 +17,6 @@ from .lldbtest import *
 from . import configuration
 from . import lldbutil
 from .decorators import *
-
 
 def source_type(filename):
     _, extension = os.path.splitext(filename)
@@ -50,7 +50,7 @@ class CommandParser:
 
     def parse_source_files(self, source_files):
         for source_file in source_files:
-            file_handle = open(source_file)
+            file_handle = io.open(source_file, encoding='utf-8')
             lines = file_handle.readlines()
             line_number = 0
             # non-NULL means we're looking through whitespace to find
