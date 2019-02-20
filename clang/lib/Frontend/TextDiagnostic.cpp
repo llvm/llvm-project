@@ -838,7 +838,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     if (LangOpts.MSCompatibilityVersion &&
         !LangOpts.isCompatibleWithMSVC(LangOptions::MSVC2015))
       OS << ' ';
-    OS << ": ";
+    OS << ':';
     break;
   }
 
