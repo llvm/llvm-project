@@ -121,8 +121,40 @@ Changes to the MIPS Target
 Changes to the PowerPC Target
 -----------------------------
 
-* Initial PowerPC support in llvm-exegesis, just enough to run it in latency
-  mode for at least some opcodes.
+* Switched to non-PIC default
+
+* Deprecated Darwin support
+
+* Enabled Out-of-Order scheduling for P9
+
+* Better overload rules for compatible vector type parameter
+
+* Support constraint ‘wi’, modifier ‘x’ and VSX registers in inline asm
+
+* More ``__float128`` support
+
+* Added new builtins like vector int128 ``pack``/``unpack`` and
+  ``stxvw4x.be``/``stxvd2x.be``
+
+* Provided significant improvements to the automatic vectorizer
+
+* Code-gen improvements (especially for Power9)
+
+* Fixed some long-standing bugs in the back end
+
+* Added experimental prologue/epilogue improvements
+
+* Enabled builtins tests in compiler-rt
+
+* Add ``___fixunstfti``/``floattitf`` in compiler-rt to support conversion
+  between IBM double-double and unsigned int128
+
+* Disable randomized address space when running the sanitizers on Linux ppc64le
+
+* Completed support in LLD for ELFv2
+
+* Enabled llvm-exegesis latency mode for PPC
+
 
 Changes to the X86 Target
 -------------------------
