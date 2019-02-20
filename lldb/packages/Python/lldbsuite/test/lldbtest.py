@@ -438,8 +438,6 @@ def system(commands, **kwargs):
             stdout=PIPE,
             stderr=PIPE,
             shell=True,
-            #encoding="utf-8",
-            #universal_newlines=True,
             **kwargs)
         pid = process.pid
         this_output, this_error = process.communicate()
