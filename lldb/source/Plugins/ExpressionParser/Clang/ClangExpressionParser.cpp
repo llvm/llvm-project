@@ -305,6 +305,10 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     opts.IncludeModuleFiles = true;
   }
 
+  // Make sure clang uses the same VFS as LLDB.
+  m_compiler->setVirtualFileSystem(
+      FileSystem::Instance().GetVirtualFileSystem());
+
   // Register the support for object-file-wrapped Clang modules.
   std::shared_ptr<clang::PCHContainerOperations> pch_operations =
       m_compiler->getPCHContainerOperations();
