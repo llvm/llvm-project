@@ -1,6 +1,6 @@
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=TYPEINFONAME
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=VTABLE
-; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=TYPEINFO
+; RUN: llc < %s -asm-verbose=false -thread-model=single -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=TYPEINFONAME
+; RUN: llc < %s -asm-verbose=false -thread-model=single -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=VTABLE
+; RUN: llc < %s -asm-verbose=false -thread-model=single -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s --check-prefix=TYPEINFO
 
 ; Test that simple vtables assemble as expected.
 ;

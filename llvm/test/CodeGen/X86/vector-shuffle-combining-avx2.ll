@@ -655,8 +655,7 @@ define <16 x i8> @combine_pshufb_insertion_as_broadcast_v2i64(i64 %a0) {
 define <8 x i32> @combine_permd_insertion_as_broadcast_v4i64(i64 %a0) {
 ; X86-LABEL: combine_permd_insertion_as_broadcast_v4i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X86-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %ymm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: combine_permd_insertion_as_broadcast_v4i64:

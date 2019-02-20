@@ -474,6 +474,11 @@ public:
     return buildInstr(TargetOpcode::G_PTRTOINT, {Dst}, {Src});
   }
 
+  /// Build and insert \p Dst = G_BITCAST \p Src
+  MachineInstrBuilder buildBitcast(const DstOp &Dst, const SrcOp &Src) {
+    return buildInstr(TargetOpcode::G_BITCAST, {Dst}, {Src});
+  }
+
   /// \return The opcode of the extension the target wants to use for boolean
   /// values.
   unsigned getBoolExtOp(bool IsVec, bool IsFP) const;

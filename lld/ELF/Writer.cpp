@@ -288,10 +288,8 @@ template <class ELFT> static void createSyntheticSections() {
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ProgramHeaders->Alignment = Config->Wordsize;
 
-  if (needsInterpSection()) {
-    In.Interp = createInterpSection();
-    Add(In.Interp);
-  }
+  if (needsInterpSection())
+    Add(createInterpSection());
 
   if (Config->Strip != StripPolicy::All) {
     In.StrTab = make<StringTableSection>(".strtab", false);

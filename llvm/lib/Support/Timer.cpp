@@ -19,6 +19,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Signposts.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <limits>
@@ -38,6 +39,9 @@ static std::string &getLibSupportInfoOutputFilename() {
 }
 
 static ManagedStatic<sys::SmartMutex<true> > TimerLock;
+
+/// Allows llvm::Timer to emit signposts when supported.
+static ManagedStatic<SignpostEmitter> Signposts;
 
 namespace {
   static cl::opt<bool>
@@ -133,6 +137,7 @@ TimeRecord TimeRecord::getCurrentTime(bool Start) {
 void Timer::startTimer() {
   assert(!Running && "Cannot start a running timer");
   Running = Triggered = true;
+  Signposts->startTimerInterval(this);
   StartTime = TimeRecord::getCurrentTime(true);
 }
 
@@ -141,6 +146,7 @@ void Timer::stopTimer() {
   Running = false;
   Time += TimeRecord::getCurrentTime(false);
   Time -= StartTime;
+  Signposts->endTimerInterval(this);
 }
 
 void Timer::clear() {

@@ -348,8 +348,7 @@ public:
     // FIXME: there is probably a cleaner way to do this.
     auto IsLoadStore = InstName.startswith("load") ||
                        InstName.startswith("store") ||
-                       InstName.startswith("atomic_load") ||
-                       InstName.startswith("atomic_store");
+                       InstName.startswith("atomic");
     if (IsLoadStore) {
       // Parse load/store operands of the form: offset align
       auto &Offset = Lexer.getTok();

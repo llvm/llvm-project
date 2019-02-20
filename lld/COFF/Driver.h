@@ -96,6 +96,8 @@ private:
   // Library search path. The first element is always "" (current directory).
   std::vector<StringRef> SearchPaths;
 
+  void maybeExportMinGWSymbols(const llvm::opt::InputArgList &Args);
+
   // We don't want to add the same file more than once.
   // Files are uniquified by their filesystem and file number.
   std::set<llvm::sys::fs::UniqueID> VisitedFiles;

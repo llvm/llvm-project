@@ -688,6 +688,8 @@ void BitcodeFile::parse() {
       Sym = Symtab->addRegular(this, SymName);
     }
     Symbols.push_back(Sym);
+    if (ObjSym.isUsed())
+      Config->GCRoot.push_back(Sym);
   }
   Directives = Obj->getCOFFLinkerOpts();
 }

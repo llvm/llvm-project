@@ -1544,11 +1544,7 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKGROUP_END)(void) {
   return;
 }
 
-#ifndef KMP_DEBUG
-static
-#endif /* KMP_DEBUG */
-    kmp_int32
-    __kmp_gomp_to_omp_cancellation_kind(int gomp_kind) {
+static kmp_int32 __kmp_gomp_to_omp_cancellation_kind(int gomp_kind) {
   kmp_int32 cncl_kind = 0;
   switch (gomp_kind) {
   case 1:
@@ -1567,71 +1563,49 @@ static
   return cncl_kind;
 }
 
+// Return true if cancellation should take place, false otherwise
 bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_CANCELLATION_POINT)(int which) {
-  if (__kmp_omp_cancellation) {
-    KMP_FATAL(NoGompCancellation);
-  }
   int gtid = __kmp_get_gtid();
   MKLOC(loc, "GOMP_cancellation_point");
-  KA_TRACE(20, ("GOMP_cancellation_point: T#%d\n", gtid));
-
+  KA_TRACE(20, ("GOMP_cancellation_point: T#%d which:%d\n", gtid, which));
   kmp_int32 cncl_kind = __kmp_gomp_to_omp_cancellation_kind(which);
-
   return __kmpc_cancellationpoint(&loc, gtid, cncl_kind);
 }
 
-bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_BARRIER_CANCEL)(void) {
-  if (__kmp_omp_cancellation) {
-    KMP_FATAL(NoGompCancellation);
-  }
-  KMP_FATAL(NoGompCancellation);
-  int gtid = __kmp_get_gtid();
-  MKLOC(loc, "GOMP_barrier_cancel");
-  KA_TRACE(20, ("GOMP_barrier_cancel: T#%d\n", gtid));
-
-  return __kmpc_cancel_barrier(&loc, gtid);
-}
-
+// Return true if cancellation should take place, false otherwise
 bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_CANCEL)(int which, bool do_cancel) {
-  if (__kmp_omp_cancellation) {
-    KMP_FATAL(NoGompCancellation);
-  } else {
-    return FALSE;
-  }
-
   int gtid = __kmp_get_gtid();
   MKLOC(loc, "GOMP_cancel");
-  KA_TRACE(20, ("GOMP_cancel: T#%d\n", gtid));
-
+  KA_TRACE(20, ("GOMP_cancel: T#%d which:%d do_cancel:%d\n", gtid, which,
+                (int)do_cancel));
   kmp_int32 cncl_kind = __kmp_gomp_to_omp_cancellation_kind(which);
 
   if (do_cancel == FALSE) {
-    return KMP_EXPAND_NAME(KMP_API_NAME_GOMP_CANCELLATION_POINT)(which);
+    return __kmpc_cancellationpoint(&loc, gtid, cncl_kind);
   } else {
     return __kmpc_cancel(&loc, gtid, cncl_kind);
   }
 }
 
-bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SECTIONS_END_CANCEL)(void) {
-  if (__kmp_omp_cancellation) {
-    KMP_FATAL(NoGompCancellation);
-  }
+// Return true if cancellation should take place, false otherwise
+bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_BARRIER_CANCEL)(void) {
   int gtid = __kmp_get_gtid();
-  MKLOC(loc, "GOMP_sections_end_cancel");
-  KA_TRACE(20, ("GOMP_sections_end_cancel: T#%d\n", gtid));
-
-  return __kmpc_cancel_barrier(&loc, gtid);
+  KA_TRACE(20, ("GOMP_barrier_cancel: T#%d\n", gtid));
+  return __kmp_barrier_gomp_cancel(gtid);
 }
 
-bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_END_CANCEL)(void) {
-  if (__kmp_omp_cancellation) {
-    KMP_FATAL(NoGompCancellation);
-  }
+// Return true if cancellation should take place, false otherwise
+bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_SECTIONS_END_CANCEL)(void) {
   int gtid = __kmp_get_gtid();
-  MKLOC(loc, "GOMP_loop_end_cancel");
-  KA_TRACE(20, ("GOMP_loop_end_cancel: T#%d\n", gtid));
+  KA_TRACE(20, ("GOMP_sections_end_cancel: T#%d\n", gtid));
+  return __kmp_barrier_gomp_cancel(gtid);
+}
 
-  return __kmpc_cancel_barrier(&loc, gtid);
+// Return true if cancellation should take place, false otherwise
+bool KMP_EXPAND_NAME(KMP_API_NAME_GOMP_LOOP_END_CANCEL)(void) {
+  int gtid = __kmp_get_gtid();
+  KA_TRACE(20, ("GOMP_loop_end_cancel: T#%d\n", gtid));
+  return __kmp_barrier_gomp_cancel(gtid);
 }
 
 // All target functions are empty as of 2014-05-29
