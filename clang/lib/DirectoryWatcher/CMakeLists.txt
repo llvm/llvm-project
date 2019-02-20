@@ -8,7 +8,7 @@ add_clang_library(clangDirectoryWatcher
 
 if(BUILD_SHARED_LIBS)
   if(APPLE)
-    check_include_files("CoreServices/CoreServices.h" HAVE_CORESERVICES_H)
+    check_include_files("CoreServices/FSEvents.h" HAVE_CORESERVICES_H)
     if(HAVE_CORESERVICES_H)
       set(DIRECTORY_WATCHER_FLAGS "${DIRECTORY_WATCHER_FLAGS} -framework CoreServices")
     endif()
