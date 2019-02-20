@@ -1,4 +1,4 @@
-# UNSUPPORTED: system-windows
+# REQUIRES: system-darwin
 
 # Start fresh.
 # RUN: rm -rf %t.root
