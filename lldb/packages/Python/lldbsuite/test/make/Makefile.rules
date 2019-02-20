@@ -342,12 +342,13 @@ SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
 MANDATORY_MODULE_BUILD_CFLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
 
+ifeq "$(OS)" "Darwin"
+	MANDATORY_MODULE_BUILD_CFLAGS += -fcxx-modules
+endif
+
 ifeq "$(MAKE_GMODULES)" "YES"
 	CFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
 	CXXFLAGS += $(MANDATORY_MODULE_BUILD_CFLAGS)
-	ifeq "$(OS)" "Darwin"
-		CXXFLAGS += -fcxx-modules
-	endif
 endif
 
 CXXFLAGS += -std=c++11 $(CFLAGS) $(ARCH_CXXFLAGS)
