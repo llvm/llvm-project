@@ -2971,8 +2971,6 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   // not a complete definition (which is what isDefinition() tests)
   // until we *finish* parsing the definition.
 
-  DiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID);
-
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<RecordDecl*>(D));
 
@@ -2993,7 +2991,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   bool NotToBeRandomized = D->getAttr<NoRandomizeLayoutAttr>() != nullptr;
    
   if (ShouldBeRandomized && NotToBeRandomized) {
-    Diag(D->getLocation(), diag::warn_randomize_attr_conflict);  
+    //Diag(D->getLocation(), diag::warn_randomize_attr_conflict);  
+    getDiagnostics().Report(D->getLocation(), diag::warn_randomize_attr_conflict);
   }
   else if (ShouldBeRandomized) {
     // A staging area to easily reorder the fields
