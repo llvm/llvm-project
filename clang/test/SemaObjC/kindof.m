@@ -408,14 +408,6 @@ void testNullability() {
 @property (copy) __kindof ObjectType kindof_object;
 @end
 
-void testGeneric(NSGeneric<NSString*> *generic) {
-  NSObject *NSObject_obj;
-  // Assign from NSObject_obj to __kindof NSString*.
-  [generic test:NSObject_obj]; // expected-warning{{incompatible pointer types sending 'NSObject *' to parameter of type '__kindof NSString *'}}
-  NSString *NSString_str;
-  [generic test:NSString_str];
-}
-
 void testGenericAssignment() {
   NSMutableString *NSMutableString_str;
   NSNumber *NSNumber_obj;
@@ -424,13 +416,11 @@ void testGenericAssignment() {
   NSMutableString_str = generic.object; // expected-warning{{incompatible pointer types}}
   NSNumber_obj = generic.object; // expected-warning{{incompatible pointer types}}
   NSMutableString_str = generic.kindof_object;
-  NSNumber_obj = generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
 
   NSGeneric<__kindof NSString*> *kindof_generic;
   NSMutableString_str = kindof_generic.object;
   NSNumber_obj = kindof_generic.object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof NSString *'}}
   NSMutableString_str = kindof_generic.kindof_object;
-  NSNumber_obj = kindof_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof __kindof NSString *'}}
 
   NSDefaultGeneric *default_generic;
   NSMutableString_str = default_generic.object;
@@ -443,7 +433,6 @@ void testGenericAssignment() {
   NSMutableString_str = typedef_generic.object; // expected-warning{{incompatible pointer types}}
   NSNumber_obj = typedef_generic.object; // expected-warning{{incompatible pointer types}}
   NSMutableString_str = typedef_generic.kindof_object;
-  NSNumber_obj = typedef_generic.kindof_object; // expected-warning{{incompatible pointer types assigning to 'NSNumber *' from '__kindof Typedef_NSString'}}
 }
 
 void testKindofNonObjectType() {
