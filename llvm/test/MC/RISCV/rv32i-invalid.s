@@ -158,7 +158,7 @@ add ra, zero, zero, zero # CHECK: :[[@LINE]]:21: error: invalid operand for inst
 sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: invalid operand for instruction
 
 # Memory operand not formatted correctly
-lw a4, a5, 111 # CHECK: :[[@LINE]]:8: error: operand must be a symbol with %lo/%pcrel_lo modifier or an integer in the range [-2048, 2047]
+lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
 
 # Too few operands
 ori a0, a1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction

@@ -281,6 +281,21 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, i32* %p) {
   ret i1 %ov
 }
 
+; Special-case: subtract from 0 (negate) changes the compare predicate.
+
+define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
+; CHECK-LABEL: @usubo_ne_constant0_op1_i32(
+; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %s = sub i32 0, %x
+  %ov = icmp ne i32 %x, 0
+  store i32 %s, i32* %p
+  ret i1 %ov
+}
+
 ; Verify insertion point for multi-BB.
 
 declare void @call(i1)

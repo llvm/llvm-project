@@ -1161,7 +1161,7 @@ def err_omp_decl_in_declare_simd : Error<
 def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
 def err_omp_unknown_map_type_modifier : Error<
-  "incorrect map type modifier, expected 'always' or 'close'">;
+  "incorrect map type modifier, expected 'always', 'close', or 'mapper'">;
 def err_omp_map_type_missing : Error<
   "missing map type">;
 def err_omp_map_type_modifier_missing : Error<

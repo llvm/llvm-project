@@ -576,6 +576,7 @@ OPENMP_MAP_KIND(release)
 // Map-type-modifiers for 'map' clause.
 OPENMP_MAP_MODIFIER_KIND(always)
 OPENMP_MAP_MODIFIER_KIND(close)
+OPENMP_MAP_MODIFIER_KIND(mapper)
 
 // Clauses allowed for OpenMP directive 'taskloop'.
 OPENMP_TASKLOOP_CLAUSE(if)

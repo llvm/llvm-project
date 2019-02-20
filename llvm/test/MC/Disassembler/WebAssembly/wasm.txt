@@ -55,3 +55,6 @@
 # This can mean end_block/end_loop/end_if/end_function/end_try..
 # CHECK: end
 0x0B
+
+# CHECK: br_on_exn 0, 0
+0x0A 0x00 0x00

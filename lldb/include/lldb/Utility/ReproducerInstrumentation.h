@@ -29,6 +29,8 @@
   Register<Result Signature>(static_cast<Result(*) Signature>(&Class::Method))
 
 #define LLDB_RECORD_CONSTRUCTOR(Class, Signature, ...)                         \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     lldb_private::repro::Recorder sb_recorder(                                 \
@@ -39,6 +41,8 @@
   }
 
 #define LLDB_RECORD_CONSTRUCTOR_NO_ARGS(Class)                                 \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     lldb_private::repro::Recorder sb_recorder(                                 \
@@ -48,6 +52,8 @@
   }
 
 #define LLDB_RECORD_METHOD(Result, Class, Method, Signature, ...)              \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -60,6 +66,8 @@
   }
 
 #define LLDB_RECORD_METHOD_CONST(Result, Class, Method, Signature, ...)        \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -72,6 +80,8 @@
   }
 
 #define LLDB_RECORD_METHOD_NO_ARGS(Result, Class, Method)                      \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -83,6 +93,8 @@
   }
 
 #define LLDB_RECORD_METHOD_CONST_NO_ARGS(Result, Class, Method)                \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -95,6 +107,8 @@
   }
 
 #define LLDB_RECORD_STATIC_METHOD(Result, Class, Method, Signature, ...)       \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -105,6 +119,8 @@
   }
 
 #define LLDB_RECORD_STATIC_METHOD_NO_ARGS(Result, Class, Method)               \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
+           LLVM_PRETTY_FUNCTION);                                              \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -535,8 +551,8 @@ public:
 
     unsigned id = m_registry.GetID(uintptr_t(f));
 
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "#{0} '{1}'", id,
-             m_pretty_func);
+    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording ({0}) '{1}'",
+             id, m_pretty_func);
 
     m_serializer.SerializeAll(id);
     m_serializer.SerializeAll(args...);
@@ -558,8 +574,8 @@ public:
 
     unsigned id = m_registry.GetID(uintptr_t(f));
 
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "#{0} '{1}'", id,
-             m_pretty_func);
+    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording ({0}) '{1}'",
+             id, m_pretty_func);
 
     m_serializer.SerializeAll(id);
     m_serializer.SerializeAll(args...);

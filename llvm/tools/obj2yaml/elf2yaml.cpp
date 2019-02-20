@@ -57,6 +57,7 @@ class ELFDumper {
   ErrorOr<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
+  ErrorOr<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::Group *> dumpGroup(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::MipsABIFlags *> dumpMipsABIFlags(const Elf_Shdr *Shdr);
@@ -180,6 +181,13 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
     case ELF::SHT_NOBITS: {
       ErrorOr<ELFYAML::NoBitsSection *> S = dumpNoBitsSection(&Sec);
+      if (std::error_code EC = S.getError())
+        return EC;
+      Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
+      break;
+    }
+    case ELF::SHT_GNU_versym: {
+      ErrorOr<ELFYAML::SymverSection *> S = dumpSymverSection(&Sec);
       if (std::error_code EC = S.getError())
         return EC;
       Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
@@ -447,6 +455,24 @@ ELFDumper<ELFT>::dumpNoBitsSection(const Elf_Shdr *Shdr) {
   if (std::error_code EC = dumpCommonSection(Shdr, *S))
     return EC;
   S->Size = Shdr->sh_size;
+
+  return S.release();
+}
+
+template <class ELFT>
+ErrorOr<ELFYAML::SymverSection *>
+ELFDumper<ELFT>::dumpSymverSection(const Elf_Shdr *Shdr) {
+  typedef typename ELFT::Half Elf_Half;
+
+  auto S = make_unique<ELFYAML::SymverSection>();
+  if (std::error_code EC = dumpCommonSection(Shdr, *S))
+    return EC;
+
+  auto VersionsOrErr = Obj.template getSectionContentsAsArray<Elf_Half>(Shdr);
+  if (!VersionsOrErr)
+    return errorToErrorCode(VersionsOrErr.takeError());
+  for (const Elf_Half &E : *VersionsOrErr)
+    S->Entries.push_back(E);
 
   return S.release();
 }

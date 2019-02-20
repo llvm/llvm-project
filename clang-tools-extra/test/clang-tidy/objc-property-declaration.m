@@ -46,6 +46,7 @@ typedef void *CGColorRef;
 @property(strong, nonatomic) NSString *URLStr;
 @property(assign, nonatomic) int abc_camelCase;
 @property(strong, nonatomic) NSString *abc_URL;
+@property(strong, nonatomic) NSString *opac2_sourceComponent;
 @end
 
 @interface Foo ()

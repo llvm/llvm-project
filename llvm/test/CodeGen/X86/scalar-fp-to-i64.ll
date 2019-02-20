@@ -289,15 +289,15 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87_WIN-NEXT:    fldz
 ; X87_WIN-NEXT:  LBB0_2:
 ; X87_WIN-NEXT:    fstp %st(0)
+; X87_WIN-NEXT:    setbe %al
 ; X87_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87_WIN-NEXT:    xorl %edx, %edx
-; X87_WIN-NEXT:    orl $3072, %eax # imm = 0xC00
-; X87_WIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87_WIN-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87_WIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87_WIN-NEXT:    setbe %dl
+; X87_WIN-NEXT:    movzbl %al, %edx
 ; X87_WIN-NEXT:    shll $31, %edx
 ; X87_WIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87_WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -323,15 +323,15 @@ define i64 @f_to_u64(float %a) nounwind {
 ; X87_LIN-NEXT:    fldz
 ; X87_LIN-NEXT:  .LBB0_2:
 ; X87_LIN-NEXT:    fstp %st(0)
+; X87_LIN-NEXT:    setbe %al
 ; X87_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87_LIN-NEXT:    xorl %edx, %edx
-; X87_LIN-NEXT:    orl $3072, %eax # imm = 0xC00
-; X87_LIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87_LIN-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87_LIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87_LIN-NEXT:    setbe %dl
+; X87_LIN-NEXT:    movzbl %al, %edx
 ; X87_LIN-NEXT:    shll $31, %edx
 ; X87_LIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87_LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -779,15 +779,15 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87_WIN-NEXT:    fldz
 ; X87_WIN-NEXT:  LBB2_2:
 ; X87_WIN-NEXT:    fstp %st(0)
+; X87_WIN-NEXT:    setbe %al
 ; X87_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87_WIN-NEXT:    xorl %edx, %edx
-; X87_WIN-NEXT:    orl $3072, %eax # imm = 0xC00
-; X87_WIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87_WIN-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87_WIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87_WIN-NEXT:    setbe %dl
+; X87_WIN-NEXT:    movzbl %al, %edx
 ; X87_WIN-NEXT:    shll $31, %edx
 ; X87_WIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87_WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -813,15 +813,15 @@ define i64 @d_to_u64(double %a) nounwind {
 ; X87_LIN-NEXT:    fldz
 ; X87_LIN-NEXT:  .LBB2_2:
 ; X87_LIN-NEXT:    fstp %st(0)
+; X87_LIN-NEXT:    setbe %al
 ; X87_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87_LIN-NEXT:    xorl %edx, %edx
-; X87_LIN-NEXT:    orl $3072, %eax # imm = 0xC00
-; X87_LIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87_LIN-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87_LIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87_LIN-NEXT:    setbe %dl
+; X87_LIN-NEXT:    movzbl %al, %edx
 ; X87_LIN-NEXT:    shll $31, %edx
 ; X87_LIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87_LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1189,19 +1189,19 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; SSE2_32_WIN-NEXT:    flds __real@5f000000
 ; SSE2_32_WIN-NEXT:    fld %st(1)
 ; SSE2_32_WIN-NEXT:    fsub %st(1), %st
+; SSE2_32_WIN-NEXT:    xorl %edx, %edx
 ; SSE2_32_WIN-NEXT:    fxch %st(1)
 ; SSE2_32_WIN-NEXT:    fucompi %st(2), %st
 ; SSE2_32_WIN-NEXT:    fcmovnbe %st(1), %st
 ; SSE2_32_WIN-NEXT:    fstp %st(1)
+; SSE2_32_WIN-NEXT:    setbe %dl
 ; SSE2_32_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE2_32_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SSE2_32_WIN-NEXT:    xorl %edx, %edx
 ; SSE2_32_WIN-NEXT:    orl $3072, %eax # imm = 0xC00
 ; SSE2_32_WIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; SSE2_32_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; SSE2_32_WIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; SSE2_32_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SSE2_32_WIN-NEXT:    setbe %dl
 ; SSE2_32_WIN-NEXT:    shll $31, %edx
 ; SSE2_32_WIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; SSE2_32_WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1216,19 +1216,19 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; SSE2_32_LIN-NEXT:    flds {{\.LCPI.*}}
 ; SSE2_32_LIN-NEXT:    fld %st(1)
 ; SSE2_32_LIN-NEXT:    fsub %st(1), %st
+; SSE2_32_LIN-NEXT:    xorl %edx, %edx
 ; SSE2_32_LIN-NEXT:    fxch %st(1)
 ; SSE2_32_LIN-NEXT:    fucompi %st(2), %st
 ; SSE2_32_LIN-NEXT:    fcmovnbe %st(1), %st
 ; SSE2_32_LIN-NEXT:    fstp %st(1)
+; SSE2_32_LIN-NEXT:    setbe %dl
 ; SSE2_32_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; SSE2_32_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; SSE2_32_LIN-NEXT:    xorl %edx, %edx
 ; SSE2_32_LIN-NEXT:    orl $3072, %eax # imm = 0xC00
 ; SSE2_32_LIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; SSE2_32_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; SSE2_32_LIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; SSE2_32_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; SSE2_32_LIN-NEXT:    setbe %dl
 ; SSE2_32_LIN-NEXT:    shll $31, %edx
 ; SSE2_32_LIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; SSE2_32_LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1242,19 +1242,19 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; SSE2_64_WIN-NEXT:    flds __real@{{.*}}(%rip)
 ; SSE2_64_WIN-NEXT:    fld %st(1)
 ; SSE2_64_WIN-NEXT:    fsub %st(1), %st
+; SSE2_64_WIN-NEXT:    xorl %eax, %eax
 ; SSE2_64_WIN-NEXT:    fxch %st(1)
 ; SSE2_64_WIN-NEXT:    fucompi %st(2), %st
 ; SSE2_64_WIN-NEXT:    fcmovnbe %st(1), %st
 ; SSE2_64_WIN-NEXT:    fstp %st(1)
+; SSE2_64_WIN-NEXT:    setbe %al
 ; SSE2_64_WIN-NEXT:    fnstcw {{[0-9]+}}(%rsp)
 ; SSE2_64_WIN-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
-; SSE2_64_WIN-NEXT:    xorl %eax, %eax
 ; SSE2_64_WIN-NEXT:    orl $3072, %ecx # imm = 0xC00
 ; SSE2_64_WIN-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; SSE2_64_WIN-NEXT:    fldcw {{[0-9]+}}(%rsp)
 ; SSE2_64_WIN-NEXT:    fistpll {{[0-9]+}}(%rsp)
 ; SSE2_64_WIN-NEXT:    fldcw {{[0-9]+}}(%rsp)
-; SSE2_64_WIN-NEXT:    setbe %al
 ; SSE2_64_WIN-NEXT:    shlq $63, %rax
 ; SSE2_64_WIN-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
 ; SSE2_64_WIN-NEXT:    addq $16, %rsp
@@ -1266,19 +1266,19 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; SSE2_64_LIN-NEXT:    flds {{.*}}(%rip)
 ; SSE2_64_LIN-NEXT:    fld %st(1)
 ; SSE2_64_LIN-NEXT:    fsub %st(1), %st
+; SSE2_64_LIN-NEXT:    xorl %eax, %eax
 ; SSE2_64_LIN-NEXT:    fxch %st(1)
 ; SSE2_64_LIN-NEXT:    fucompi %st(2), %st
 ; SSE2_64_LIN-NEXT:    fcmovnbe %st(1), %st
 ; SSE2_64_LIN-NEXT:    fstp %st(1)
+; SSE2_64_LIN-NEXT:    setbe %al
 ; SSE2_64_LIN-NEXT:    fnstcw -{{[0-9]+}}(%rsp)
 ; SSE2_64_LIN-NEXT:    movzwl -{{[0-9]+}}(%rsp), %ecx
-; SSE2_64_LIN-NEXT:    xorl %eax, %eax
 ; SSE2_64_LIN-NEXT:    orl $3072, %ecx # imm = 0xC00
 ; SSE2_64_LIN-NEXT:    movw %cx, -{{[0-9]+}}(%rsp)
 ; SSE2_64_LIN-NEXT:    fldcw -{{[0-9]+}}(%rsp)
 ; SSE2_64_LIN-NEXT:    fistpll -{{[0-9]+}}(%rsp)
 ; SSE2_64_LIN-NEXT:    fldcw -{{[0-9]+}}(%rsp)
-; SSE2_64_LIN-NEXT:    setbe %al
 ; SSE2_64_LIN-NEXT:    shlq $63, %rax
 ; SSE2_64_LIN-NEXT:    xorq -{{[0-9]+}}(%rsp), %rax
 ; SSE2_64_LIN-NEXT:    retq
@@ -1304,15 +1304,15 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87_WIN-NEXT:    fldz
 ; X87_WIN-NEXT:  LBB4_2:
 ; X87_WIN-NEXT:    fstp %st(0)
+; X87_WIN-NEXT:    setbe %al
 ; X87_WIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87_WIN-NEXT:    xorl %edx, %edx
-; X87_WIN-NEXT:    orl $3072, %eax # imm = 0xC00
-; X87_WIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87_WIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87_WIN-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87_WIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87_WIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87_WIN-NEXT:    setbe %dl
+; X87_WIN-NEXT:    movzbl %al, %edx
 ; X87_WIN-NEXT:    shll $31, %edx
 ; X87_WIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87_WIN-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1338,15 +1338,15 @@ define i64 @x_to_u64(x86_fp80 %a) nounwind {
 ; X87_LIN-NEXT:    fldz
 ; X87_LIN-NEXT:  .LBB4_2:
 ; X87_LIN-NEXT:    fstp %st(0)
+; X87_LIN-NEXT:    setbe %al
 ; X87_LIN-NEXT:    fnstcw {{[0-9]+}}(%esp)
-; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X87_LIN-NEXT:    xorl %edx, %edx
-; X87_LIN-NEXT:    orl $3072, %eax # imm = 0xC00
-; X87_LIN-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; X87_LIN-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X87_LIN-NEXT:    orl $3072, %ecx # imm = 0xC00
+; X87_LIN-NEXT:    movw %cx, {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X87_LIN-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X87_LIN-NEXT:    setbe %dl
+; X87_LIN-NEXT:    movzbl %al, %edx
 ; X87_LIN-NEXT:    shll $31, %edx
 ; X87_LIN-NEXT:    xorl {{[0-9]+}}(%esp), %edx
 ; X87_LIN-NEXT:    movl {{[0-9]+}}(%esp), %eax

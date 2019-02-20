@@ -44,7 +44,8 @@ void __kmp_print_structure(void); // Forward declaration
 // ---------------------------- Barrier Algorithms ----------------------------
 
 // Linear Barrier
-static void __kmp_linear_barrier_gather(
+template <bool cancellable = false>
+static bool __kmp_linear_barrier_gather_template(
     enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
     void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_linear_gather);
@@ -104,7 +105,14 @@ static void __kmp_linear_barrier_gather(
       // Wait for worker thread to arrive
       kmp_flag_64 flag(&other_threads[i]->th.th_bar[bt].bb.b_arrived,
                        new_state);
-      flag.wait(this_thr, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+      if (cancellable) {
+        bool cancelled = flag.wait_cancellable_nosleep(
+            this_thr, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+        if (cancelled)
+          return true;
+      } else {
+        flag.wait(this_thr, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+      }
       ANNOTATE_BARRIER_END(other_threads[i]);
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
       // Barrier imbalance - write min of the thread time and the other thread
@@ -137,9 +145,11 @@ static void __kmp_linear_barrier_gather(
       20,
       ("__kmp_linear_barrier_gather: T#%d(%d:%d) exit for barrier type %d\n",
        gtid, team->t.t_id, tid, bt));
+  return false;
 }
 
-static void __kmp_linear_barrier_release(
+template <bool cancellable = false>
+static bool __kmp_linear_barrier_release_template(
     enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
     int propagate_icvs USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_linear_release);
@@ -201,7 +211,15 @@ static void __kmp_linear_barrier_release(
     KA_TRACE(20, ("__kmp_linear_barrier_release: T#%d wait go(%p) == %u\n",
                   gtid, &thr_bar->b_go, KMP_BARRIER_STATE_BUMP));
     kmp_flag_64 flag(&thr_bar->b_go, KMP_BARRIER_STATE_BUMP);
-    flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
+    if (cancellable) {
+      bool cancelled = flag.wait_cancellable_nosleep(
+          this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
+      if (cancelled) {
+        return true;
+      }
+    } else {
+      flag.wait(this_thr, TRUE USE_ITT_BUILD_ARG(itt_sync_obj));
+    }
     ANNOTATE_BARRIER_END(this_thr);
 #if USE_ITT_BUILD && USE_ITT_NOTIFY
     if ((__itt_sync_create_ptr && itt_sync_obj == NULL) || KMP_ITT_DEBUG) {
@@ -212,7 +230,7 @@ static void __kmp_linear_barrier_release(
       __kmp_itt_task_starting(itt_sync_obj);
 
       if (bt == bs_forkjoin_barrier && TCR_4(__kmp_global.g.g_done))
-        return;
+        return false;
 
       itt_sync_obj = __kmp_itt_barrier_object(gtid, bs_forkjoin_barrier);
       if (itt_sync_obj != NULL)
@@ -222,7 +240,7 @@ static void __kmp_linear_barrier_release(
 #endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
         // Early exit for reaping threads releasing forkjoin barrier
         if (bt == bs_forkjoin_barrier && TCR_4(__kmp_global.g.g_done))
-      return;
+      return false;
 // The worker thread may now assume that the team is valid.
 #ifdef KMP_DEBUG
     tid = __kmp_tid_from_gtid(gtid);
@@ -239,6 +257,35 @@ static void __kmp_linear_barrier_release(
       20,
       ("__kmp_linear_barrier_release: T#%d(%d:%d) exit for barrier type %d\n",
        gtid, team->t.t_id, tid, bt));
+  return false;
+}
+
+static void __kmp_linear_barrier_gather(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+  __kmp_linear_barrier_gather_template<false>(
+      bt, this_thr, gtid, tid, reduce USE_ITT_BUILD_ARG(itt_sync_obj));
+}
+
+static bool __kmp_linear_barrier_gather_cancellable(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    void (*reduce)(void *, void *) USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+  return __kmp_linear_barrier_gather_template<true>(
+      bt, this_thr, gtid, tid, reduce USE_ITT_BUILD_ARG(itt_sync_obj));
+}
+
+static void __kmp_linear_barrier_release(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    int propagate_icvs USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+  __kmp_linear_barrier_release_template<false>(
+      bt, this_thr, gtid, tid, propagate_icvs USE_ITT_BUILD_ARG(itt_sync_obj));
+}
+
+static bool __kmp_linear_barrier_release_cancellable(
+    enum barrier_type bt, kmp_info_t *this_thr, int gtid, int tid,
+    int propagate_icvs USE_ITT_BUILD_ARG(void *itt_sync_obj)) {
+  return __kmp_linear_barrier_release_template<true>(
+      bt, this_thr, gtid, tid, propagate_icvs USE_ITT_BUILD_ARG(itt_sync_obj));
 }
 
 // Tree barrier
@@ -1208,20 +1255,44 @@ static void __kmp_hierarchical_barrier_release(
 
 // End of Barrier Algorithms
 
+// type traits for cancellable value
+// if cancellable is true, then is_cancellable is a normal boolean variable
+// if cancellable is false, then is_cancellable is a compile time constant
+template <bool cancellable> struct is_cancellable {};
+template <> struct is_cancellable<true> {
+  bool value;
+  is_cancellable() : value(false) {}
+  is_cancellable(bool b) : value(b) {}
+  is_cancellable &operator=(bool b) {
+    value = b;
+    return *this;
+  }
+  operator bool() const { return value; }
+};
+template <> struct is_cancellable<false> {
+  is_cancellable &operator=(bool b) { return *this; }
+  constexpr operator bool() const { return false; }
+};
+
 // Internal function to do a barrier.
 /* If is_split is true, do a split barrier, otherwise, do a plain barrier
    If reduce is non-NULL, do a split reduction barrier, otherwise, do a split
    barrier
-   Returns 0 if master thread, 1 if worker thread.  */
-int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
-                  size_t reduce_size, void *reduce_data,
-                  void (*reduce)(void *, void *)) {
+   When cancellable = false,
+     Returns 0 if master thread, 1 if worker thread.
+   When cancellable = true
+     Returns 0 if not cancelled, 1 if cancelled.  */
+template <bool cancellable = false>
+static int __kmp_barrier_template(enum barrier_type bt, int gtid, int is_split,
+                                  size_t reduce_size, void *reduce_data,
+                                  void (*reduce)(void *, void *)) {
   KMP_TIME_PARTITIONED_BLOCK(OMP_plain_barrier);
   KMP_SET_THREAD_STATE_BLOCK(PLAIN_BARRIER);
   int tid = __kmp_tid_from_gtid(gtid);
   kmp_info_t *this_thr = __kmp_threads[gtid];
   kmp_team_t *team = this_thr->th.th_team;
   int status = 0;
+  is_cancellable<cancellable> cancelled;
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   ompt_data_t *my_task_data;
   ompt_data_t *my_parallel_data;
@@ -1305,41 +1376,45 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
     }
 
     if (KMP_MASTER_TID(tid) && __kmp_tasking_mode != tskm_immediate_exec)
-      __kmp_task_team_setup(
-          this_thr, team,
-          0); // use 0 to only setup the current team if nthreads > 1
+      // use 0 to only setup the current team if nthreads > 1
+      __kmp_task_team_setup(this_thr, team, 0);
 
-    switch (__kmp_barrier_gather_pattern[bt]) {
-    case bp_hyper_bar: {
-      KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]); // don't set branch bits
-      // to 0; use linear
-      __kmp_hyper_barrier_gather(bt, this_thr, gtid, tid,
-                                 reduce USE_ITT_BUILD_ARG(itt_sync_obj));
-      break;
-    }
-    case bp_hierarchical_bar: {
-      __kmp_hierarchical_barrier_gather(bt, this_thr, gtid, tid,
-                                        reduce USE_ITT_BUILD_ARG(itt_sync_obj));
-      break;
-    }
-    case bp_tree_bar: {
-      KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]); // don't set branch bits
-      // to 0; use linear
-      __kmp_tree_barrier_gather(bt, this_thr, gtid, tid,
-                                reduce USE_ITT_BUILD_ARG(itt_sync_obj));
-      break;
-    }
-    default: {
-      __kmp_linear_barrier_gather(bt, this_thr, gtid, tid,
+    if (cancellable) {
+      cancelled = __kmp_linear_barrier_gather_cancellable(
+          bt, this_thr, gtid, tid, reduce USE_ITT_BUILD_ARG(itt_sync_obj));
+    } else {
+      switch (__kmp_barrier_gather_pattern[bt]) {
+      case bp_hyper_bar: {
+        // don't set branch bits to 0; use linear
+        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
+        __kmp_hyper_barrier_gather(bt, this_thr, gtid, tid,
+                                   reduce USE_ITT_BUILD_ARG(itt_sync_obj));
+        break;
+      }
+      case bp_hierarchical_bar: {
+        __kmp_hierarchical_barrier_gather(
+            bt, this_thr, gtid, tid, reduce USE_ITT_BUILD_ARG(itt_sync_obj));
+        break;
+      }
+      case bp_tree_bar: {
+        // don't set branch bits to 0; use linear
+        KMP_ASSERT(__kmp_barrier_gather_branch_bits[bt]);
+        __kmp_tree_barrier_gather(bt, this_thr, gtid, tid,
                                   reduce USE_ITT_BUILD_ARG(itt_sync_obj));
-    }
+        break;
+      }
+      default: {
+        __kmp_linear_barrier_gather(bt, this_thr, gtid, tid,
+                                    reduce USE_ITT_BUILD_ARG(itt_sync_obj));
+      }
+      }
     }
 
     KMP_MB();
 
     if (KMP_MASTER_TID(tid)) {
       status = 0;
-      if (__kmp_tasking_mode != tskm_immediate_exec) {
+      if (__kmp_tasking_mode != tskm_immediate_exec && !cancelled) {
         __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
       }
 #if USE_DEBUGGER
@@ -1349,10 +1424,13 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
 #endif
 
 #if OMP_40_ENABLED
-      kmp_int32 cancel_request = KMP_ATOMIC_LD_RLX(&team->t.t_cancel_request);
-      // Reset cancellation flag for worksharing constructs
-      if (cancel_request == cancel_loop || cancel_request == cancel_sections) {
-        KMP_ATOMIC_ST_RLX(&team->t.t_cancel_request, cancel_noreq);
+      if (__kmp_omp_cancellation) {
+        kmp_int32 cancel_request = KMP_ATOMIC_LD_RLX(&team->t.t_cancel_request);
+        // Reset cancellation flag for worksharing constructs
+        if (cancel_request == cancel_loop ||
+            cancel_request == cancel_sections) {
+          KMP_ATOMIC_ST_RLX(&team->t.t_cancel_request, cancel_noreq);
+        }
       }
 #endif
 #if USE_ITT_BUILD
@@ -1416,31 +1494,36 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
         __kmp_itt_barrier_middle(gtid, itt_sync_obj);
 #endif /* USE_ITT_BUILD */
     }
-    if (status == 1 || !is_split) {
-      switch (__kmp_barrier_release_pattern[bt]) {
-      case bp_hyper_bar: {
-        KMP_ASSERT(__kmp_barrier_release_branch_bits[bt]);
-        __kmp_hyper_barrier_release(bt, this_thr, gtid, tid,
-                                    FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
-        break;
-      }
-      case bp_hierarchical_bar: {
-        __kmp_hierarchical_barrier_release(
+    if ((status == 1 || !is_split) && !cancelled) {
+      if (cancellable) {
+        cancelled = __kmp_linear_barrier_release_cancellable(
             bt, this_thr, gtid, tid, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
-        break;
-      }
-      case bp_tree_bar: {
-        KMP_ASSERT(__kmp_barrier_release_branch_bits[bt]);
-        __kmp_tree_barrier_release(bt, this_thr, gtid, tid,
-                                   FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
-        break;
-      }
-      default: {
-        __kmp_linear_barrier_release(bt, this_thr, gtid, tid,
+      } else {
+        switch (__kmp_barrier_release_pattern[bt]) {
+        case bp_hyper_bar: {
+          KMP_ASSERT(__kmp_barrier_release_branch_bits[bt]);
+          __kmp_hyper_barrier_release(bt, this_thr, gtid, tid,
+                                      FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+          break;
+        }
+        case bp_hierarchical_bar: {
+          __kmp_hierarchical_barrier_release(
+              bt, this_thr, gtid, tid, FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+          break;
+        }
+        case bp_tree_bar: {
+          KMP_ASSERT(__kmp_barrier_release_branch_bits[bt]);
+          __kmp_tree_barrier_release(bt, this_thr, gtid, tid,
                                      FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+          break;
+        }
+        default: {
+          __kmp_linear_barrier_release(bt, this_thr, gtid, tid,
+                                       FALSE USE_ITT_BUILD_ARG(itt_sync_obj));
+        }
+        }
       }
-      }
-      if (__kmp_tasking_mode != tskm_immediate_exec) {
+      if (__kmp_tasking_mode != tskm_immediate_exec && !cancelled) {
         __kmp_task_team_sync(this_thr, team);
       }
     }
@@ -1506,8 +1589,42 @@ int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
 #endif
   ANNOTATE_BARRIER_END(&team->t.t_bar);
 
+  if (cancellable)
+    return (int)cancelled;
   return status;
 }
+
+// Returns 0 if master thread, 1 if worker thread.
+int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
+                  size_t reduce_size, void *reduce_data,
+                  void (*reduce)(void *, void *)) {
+  return __kmp_barrier_template<>(bt, gtid, is_split, reduce_size, reduce_data,
+                                  reduce);
+}
+
+#if defined(KMP_GOMP_COMPAT)
+// Returns 1 if cancelled, 0 otherwise
+int __kmp_barrier_gomp_cancel(int gtid) {
+  if (__kmp_omp_cancellation) {
+    int cancelled = __kmp_barrier_template<true>(bs_plain_barrier, gtid, FALSE,
+                                                 0, NULL, NULL);
+    if (cancelled) {
+      int tid = __kmp_tid_from_gtid(gtid);
+      kmp_info_t *this_thr = __kmp_threads[gtid];
+      if (KMP_MASTER_TID(tid)) {
+        // Master does not need to revert anything
+      } else {
+        // Workers need to revert their private b_arrived flag
+        this_thr->th.th_bar[bs_plain_barrier].bb.b_arrived -=
+            KMP_BARRIER_STATE_BUMP;
+      }
+    }
+    return cancelled;
+  }
+  __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+  return FALSE;
+}
+#endif
 
 void __kmp_end_split_barrier(enum barrier_type bt, int gtid) {
   KMP_TIME_DEVELOPER_PARTITIONED_BLOCK(KMP_end_split_barrier);

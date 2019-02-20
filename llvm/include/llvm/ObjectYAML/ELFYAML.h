@@ -122,6 +122,7 @@ struct Section {
     Relocation,
     NoBits,
     Verneed,
+    Symver,
     MipsABIFlags
   };
   SectionKind Kind;
@@ -189,6 +190,16 @@ struct VerneedSection : Section {
 
   static bool classof(const Section *S) {
     return S->Kind == SectionKind::Verneed;
+  }
+};
+
+struct SymverSection : Section {
+  std::vector<uint16_t> Entries;
+
+  SymverSection() : Section(SectionKind::Symver) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::Symver;
   }
 };
 

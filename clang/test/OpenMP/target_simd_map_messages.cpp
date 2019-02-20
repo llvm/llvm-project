@@ -159,7 +159,7 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target simd map(always: x) // expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target simd map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+#pragma omp target simd map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target simd map(always, tofrom: always, tofrom, x)
   for (i = 0; i < argc; ++i) foo();
@@ -263,7 +263,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target simd map(always: x) // expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target simd map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always' or 'close'}} expected-error {{missing map type}}
+#pragma omp target simd map(tofrom, always: x) // expected-error {{incorrect map type modifier, expected 'always', 'close', or 'mapper'}} expected-error {{missing map type}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target simd map(always, tofrom: always, tofrom, x)
   for (i = 0; i < argc; ++i) foo();

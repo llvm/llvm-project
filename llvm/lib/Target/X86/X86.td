@@ -733,7 +733,6 @@ def SNBFeatures : ProcessorFeatures<[], [
   FeatureSlow3OpsLEA,
   FeatureFastScalarFSQRT,
   FeatureFastSHLDRotate,
-  FeatureSlowIncDec,
   FeatureMergeToThreeWayBranch,
   FeatureMacroFusion
 ]>;

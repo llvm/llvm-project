@@ -1,5 +1,5 @@
 // RUN: yaml2obj -o %t.out %p/Inputs/simple-executable-x86_64.yaml
-// RUN: llvm-objdump -d %t.out -df=main | FileCheck %s
+// RUN: llvm-objdump -d %t.out -disassemble-functions=main | FileCheck %s
 
 // CHECK:              Disassembly of section .anothertext:
 // CHECK-NEXT:         main:

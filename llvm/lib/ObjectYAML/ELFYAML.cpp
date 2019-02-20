@@ -446,7 +446,6 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_GROUP);
   ECase(SHT_SYMTAB_SHNDX);
   ECase(SHT_RELR);
-  ECase(SHT_LOOS);
   ECase(SHT_ANDROID_REL);
   ECase(SHT_ANDROID_RELA);
   ECase(SHT_ANDROID_RELR);
@@ -459,8 +458,6 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_GNU_verdef);
   ECase(SHT_GNU_verneed);
   ECase(SHT_GNU_versym);
-  ECase(SHT_HIOS);
-  ECase(SHT_LOPROC);
   switch (Object->Header.Machine) {
   case ELF::EM_ARM:
     ECase(SHT_ARM_EXIDX);
@@ -485,6 +482,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
     break;
   }
 #undef ECase
+  IO.enumFallback<Hex32>(Value);
 }
 
 void ScalarBitSetTraits<ELFYAML::ELF_PF>::bitset(IO &IO,
@@ -872,6 +870,11 @@ static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
   IO.mapOptional("Size", Section.Size, Hex64(0));
 }
 
+static void sectionMapping(IO &IO, ELFYAML::SymverSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapRequired("Entries", Section.Entries);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::VerneedSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Info", Section.Info);
@@ -954,6 +957,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
     if (!IO.outputting())
       Section.reset(new ELFYAML::MipsABIFlags());
     sectionMapping(IO, *cast<ELFYAML::MipsABIFlags>(Section.get()));
+    break;
+  case ELF::SHT_GNU_versym:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::SymverSection());
+    sectionMapping(IO, *cast<ELFYAML::SymverSection>(Section.get()));
     break;
   case ELF::SHT_GNU_verneed:
     if (!IO.outputting())

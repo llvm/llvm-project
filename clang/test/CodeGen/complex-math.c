@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 %s -O1 -emit-llvm -triple x86_64-pc-win64 -o - | FileCheck %s --check-prefix=X86
 // RUN: %clang_cc1 %s -O1 -emit-llvm -triple i686-unknown-unknown -o - | FileCheck %s --check-prefix=X86
 // RUN: %clang_cc1 %s -O1 -emit-llvm -triple powerpc-unknown-unknown -o - | FileCheck %s --check-prefix=PPC
-// RUN %clang_cc1 %s -O1 -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
+// RUN: %clang_cc1 %s -O1 -emit-llvm -triple armv7-none-linux-gnueabi -o - | FileCheck %s --check-prefix=ARM
 // RUN: %clang_cc1 %s -O1 -emit-llvm -triple armv7-none-linux-gnueabihf -o - | FileCheck %s --check-prefix=ARMHF
 // RUN: %clang_cc1 %s -O1 -emit-llvm -triple thumbv7k-apple-watchos2.0 -o - -target-abi aapcs16 | FileCheck %s --check-prefix=ARM7K
 // RUN: %clang_cc1 %s -O1 -emit-llvm -triple aarch64-unknown-unknown -ffast-math -o - | FileCheck %s --check-prefix=AARCH64-FASTMATH
@@ -621,7 +621,7 @@ _Complex double foo(_Complex double a, _Complex double b) {
   // use the base AAPCS.
 
   // ARM-LABEL: @foo(
-  // ARM: call void { double, double } @__muldc3
+  // ARM: call void @__muldc3
 
   // ARMHF-LABEL: @foo(
   // ARMHF: call { double, double } @__muldc3

@@ -3560,6 +3560,7 @@ extern int __kmp_barrier(enum barrier_type bt, int gtid, int is_split,
                          size_t reduce_size, void *reduce_data,
                          void (*reduce)(void *, void *));
 extern void __kmp_end_split_barrier(enum barrier_type bt, int gtid);
+extern int __kmp_barrier_gomp_cancel(int gtid);
 
 /*!
  * Tell the fork call which compiler generated the fork call, and therefore how

@@ -19,6 +19,7 @@ int test_omp_nested()
   int counter = 0;
 #ifdef _OPENMP
   omp_set_nested(1);
+  omp_set_max_active_levels(omp_get_supported_active_levels());
 #endif
 
   #pragma omp parallel shared(counter)

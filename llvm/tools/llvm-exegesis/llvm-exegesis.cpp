@@ -96,12 +96,20 @@ static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
                                       cl::desc(""), cl::init(""));
 
+static cl::opt<bool> AnalysisDisplayUnstableOpcodes(
+    "analysis-display-unstable-clusters",
+    cl::desc("if there is more than one benchmark for an opcode, said "
+             "benchmarks may end up not being clustered into the same cluster "
+             "if the measured performance characteristics are different. by "
+             "default all such opcodes are filtered out. this flag will "
+             "instead show only such unstable opcodes"),
+    cl::init(false));
+
 static cl::opt<std::string>
     CpuName("mcpu",
             cl::desc(
                 "cpu name to use for pfm counters, leave empty to autodetect"),
             cl::init(""));
-
 
 static ExitOnError ExitOnErr;
 
@@ -432,10 +440,14 @@ static void analysisMain() {
     llvm::errs() << "unknown target '" << Points[0].LLVMTriple << "'\n";
     return;
   }
-  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
-      Points, AnalysisNumPoints, AnalysisEpsilon));
 
-  const Analysis Analyzer(*TheTarget, Clustering);
+  std::unique_ptr<llvm::MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
+
+  const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
+      Points, AnalysisNumPoints, AnalysisEpsilon, InstrInfo->getNumOpcodes()));
+
+  const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
+                          AnalysisDisplayUnstableOpcodes);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",
                                             AnalysisClustersOutputFile);

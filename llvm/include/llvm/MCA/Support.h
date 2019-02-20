@@ -94,6 +94,13 @@ public:
 void computeProcResourceMasks(const MCSchedModel &SM,
                               MutableArrayRef<uint64_t> Masks);
 
+// Returns the index of the highest bit set. For resource masks, the position of
+// the highest bit set can be used to construct a resource mask identifier.
+inline unsigned getResourceStateIndex(uint64_t Mask) {
+  assert(Mask && "Processor Resource Mask cannot be zero!");
+  return (std::numeric_limits<uint64_t>::digits - countLeadingZeros(Mask)) - 1;
+}
+
 /// Compute the reciprocal block throughput from a set of processor resource
 /// cycles. The reciprocal block throughput is computed as the MAX between:
 ///  - NumMicroOps / DispatchWidth
