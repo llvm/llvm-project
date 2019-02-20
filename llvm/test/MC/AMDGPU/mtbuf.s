@@ -38,3 +38,18 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:15, nfmt:2, ttmp1
 // SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],  dfmt:15,  nfmt:2, ttmp1 ; encoding: [0x00,0x00,0x7f,0xe9,0x00,0x01,0x1d,0x71]
 // VI:   tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:15,  nfmt:2, ttmp1 ; encoding: [0x00,0x80,0x7b,0xe9,0x00,0x01,0x1d,0x71]
 
+// nfmt is optional:
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:15, ttmp1
+// SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],  dfmt:15,  nfmt:0, ttmp1 ; encoding: [0x00,0x00,0x7f,0xe8,0x00,0x01,0x1d,0x71]
+// VI:   tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:15,  nfmt:0, ttmp1 ; encoding: [0x00,0x80,0x7b,0xe8,0x00,0x01,0x1d,0x71]
+
+// dfmt is optional:
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], nfmt:2, ttmp1
+// SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],  dfmt:0,  nfmt:2, ttmp1 ; encoding: [0x00,0x00,0x07,0xe9,0x00,0x01,0x1d,0x71]
+// VI:   tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:0,  nfmt:2, ttmp1 ; encoding: [0x00,0x80,0x03,0xe9,0x00,0x01,0x1d,0x71]
+
+// nfmt and dfmt can be in either order:
+tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], nfmt:2, dfmt:15, ttmp1
+// SICI: tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7],  dfmt:15,  nfmt:2, ttmp1 ; encoding: [0x00,0x00,0x7f,0xe9,0x00,0x01,0x1d,0x71]
+// VI:   tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:15,  nfmt:2, ttmp1 ; encoding: [0x00,0x80,0x7b,0xe9,0x00,0x01,0x1d,0x71]
+

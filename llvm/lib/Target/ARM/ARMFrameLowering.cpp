@@ -526,6 +526,8 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
         .setMIFlags(MachineInstr::FrameSetup);
 
     switch (TM.getCodeModel()) {
+    case CodeModel::Tiny:
+      llvm_unreachable("Tiny code model not available on ARM.");
     case CodeModel::Small:
     case CodeModel::Medium:
     case CodeModel::Kernel:
@@ -1007,8 +1009,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
     if (Regs.empty())
       continue;
 
-    llvm::sort(Regs.begin(), Regs.end(), [&](const RegAndKill &LHS,
-                                             const RegAndKill &RHS) {
+    llvm::sort(Regs, [&](const RegAndKill &LHS, const RegAndKill &RHS) {
       return TRI.getEncodingValue(LHS.first) < TRI.getEncodingValue(RHS.first);
     });
 
@@ -1104,7 +1105,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     if (Regs.empty())
       continue;
 
-    llvm::sort(Regs.begin(), Regs.end(), [&](unsigned LHS, unsigned RHS) {
+    llvm::sort(Regs, [&](unsigned LHS, unsigned RHS) {
       return TRI.getEncodingValue(LHS) < TRI.getEncodingValue(RHS);
     });
 
@@ -1922,9 +1923,13 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
                         << "\n");
     }
 
+    // Avoid spilling LR in Thumb1 if there's a tail call: it's expensive to
+    // restore LR in that case.
+    bool ExpensiveLRRestore = AFI->isThumb1OnlyFunction() && MFI.hasTailCall();
+
     // If LR is not spilled, but at least one of R4, R5, R6, and R7 is spilled.
     // Spill LR as well so we can fold BX_RET to the registers restore (LDM).
-    if (!LRSpilled && CS1Spilled) {
+    if (!LRSpilled && CS1Spilled && !ExpensiveLRRestore) {
       SavedRegs.set(ARM::LR);
       NumGPRSpills++;
       SmallVectorImpl<unsigned>::iterator LRPos;
@@ -1950,7 +1955,8 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
           // Windows on ARM, accept R11 (frame pointer)
           if (!AFI->isThumbFunction() ||
               (STI.isTargetWindows() && Reg == ARM::R11) ||
-              isARMLowRegister(Reg) || Reg == ARM::LR) {
+              isARMLowRegister(Reg) ||
+              (Reg == ARM::LR && !ExpensiveLRRestore)) {
             SavedRegs.set(Reg);
             LLVM_DEBUG(dbgs() << "Spilling " << printReg(Reg, TRI)
                               << " to make up alignment\n");
@@ -2152,9 +2158,15 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Do not generate a prologue for leaf functions with a stack of size zero.
   // For non-leaf functions we have to allow for the possibility that the
-  // call is to a non-split function, as in PR37807.
-  if (StackSize == 0 && !MFI.hasTailCall())
+  // callis to a non-split function, as in PR37807. This function could also
+  // take the address of a non-split function. When the linker tries to adjust
+  // its non-existent prologue, it would fail with an error. Mark the object
+  // file so that such failures are not errors. See this Go language bug-report
+  // https://go-review.googlesource.com/c/go/+/148819/
+  if (StackSize == 0 && !MFI.hasTailCall()) {
+    MF.getMMI().setHasNosplitStack(true);
     return;
+  }
 
   // Use R4 and R5 as scratch registers.
   // We save R4 and R5 before use and restore them before leaving the function.

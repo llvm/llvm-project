@@ -153,7 +153,7 @@ define <4 x float> @test_rsqrt28_ss_load(<4 x float> %a0, <4 x float>* %a1ptr) {
 define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_ss_maskz:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vrsqrt28ss {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0x7d,0x99,0xcd,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -170,7 +170,7 @@ define <4 x float> @test_rsqrt28_ss_maskz(<4 x float> %a0, i8 %mask) {
 define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x float> %c0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_ss_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vrsqrt28ss {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0x7d,0x19,0xcd,0xd1]
 ; X86-NEXT:    vmovaps %xmm2, %xmm0 # encoding: [0xc5,0xf8,0x28,0xc2]
@@ -189,7 +189,7 @@ define <4 x float> @test_rsqrt28_ss_mask(<4 x float> %a0, <4 x float> %b0, <4 x 
 define <2 x double> @test_rcp28_sd_mask_load(<2 x double> %a0, <2 x double>* %a1ptr, <2 x double> %a2, i8 %mask) {
 ; X86-LABEL: test_rcp28_sd_mask_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x08]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vrcp28sd %xmm0, %xmm0, %xmm1 {%k1} # encoding: [0x62,0xf2,0xfd,0x09,0xcb,0xc8]
 ; X86-NEXT:    vmovapd %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc1]
@@ -210,7 +210,7 @@ declare <2 x double> @llvm.x86.avx512.rcp28.sd(<2 x double>, <2 x double>, <2 x 
 define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* %a1ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_load:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x08]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vrsqrt28sd %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -228,7 +228,7 @@ define <2 x double> @test_rsqrt28_sd_maskz_load(<2 x double> %a0, <2 x double>* 
 define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vrsqrt28sd {sae}, %xmm0, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x99,0xcd,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -245,7 +245,7 @@ define <2 x double> @test_rsqrt28_sd_maskz(<2 x double> %a0, i8 %mask) {
 define <2 x double> @test_rsqrt28_sd_mask(<2 x double> %a0, <2 x double> %b0, <2 x double> %c0, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_mask:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al # encoding: [0x8a,0x44,0x24,0x04]
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x04]
 ; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    vrsqrt28sd {sae}, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf2,0xfd,0x19,0xcd,0xd1]
 ; X86-NEXT:    vmovapd %xmm2, %xmm0 # encoding: [0xc5,0xf9,0x28,0xc2]
@@ -266,9 +266,9 @@ declare <2 x double> @llvm.x86.avx512.rsqrt28.sd(<2 x double>, <2 x double>, <2 
 define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_mem:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
+; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl # encoding: [0x8a,0x4c,0x24,0x08]
-; X86-NEXT:    kmovw %ecx, %k1 # encoding: [0xc5,0xf8,0x92,0xc9]
 ; X86-NEXT:    vrsqrt28sd (%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -286,9 +286,9 @@ define <2 x double> @test_rsqrt28_sd_maskz_mem(<2 x double> %a0, double* %ptr, i
 define <2 x double> @test_rsqrt28_sd_maskz_mem_offset(<2 x double> %a0, double* %ptr, i8 %mask) {
 ; X86-LABEL: test_rsqrt28_sd_maskz_mem_offset:
 ; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x08]
+; X86-NEXT:    kmovw %eax, %k1 # encoding: [0xc5,0xf8,0x92,0xc8]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl # encoding: [0x8a,0x4c,0x24,0x08]
-; X86-NEXT:    kmovw %ecx, %k1 # encoding: [0xc5,0xf8,0x92,0xc9]
 ; X86-NEXT:    vrsqrt28sd 144(%eax), %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf2,0xfd,0x89,0xcd,0x40,0x12]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;

@@ -23,7 +23,7 @@ def HexagonItinerariesV65 :
       ProcessorItineraries<[SLOT0, SLOT1, SLOT2, SLOT3, SLOT_ENDLOOP,
                             CVI_ST, CVI_XLANE, CVI_SHIFT, CVI_MPY0, CVI_MPY1,
                             CVI_LD, CVI_XLSHF, CVI_MPY01, CVI_ALL,
-                            CVI_ALL_NOMEM],
+                            CVI_ALL_NOMEM, CVI_ZW],
                             [Hex_FWD, HVX_FWD],
                             HexagonV65ItinList.ItinList>;
 

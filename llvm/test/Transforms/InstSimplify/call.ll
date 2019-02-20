@@ -189,36 +189,6 @@ define {i8, i1} @test_smul4(i8 %V) {
   ret {i8, i1} %x
 }
 
-declare i256 @llvm.cttz.i256(i256 %src, i1 %is_zero_undef)
-
-define i256 @test_cttz() {
-; CHECK-LABEL: @test_cttz(
-; CHECK-NEXT:    ret i256 1
-;
-  %x = call i256 @llvm.cttz.i256(i256 10, i1 false)
-  ret i256 %x
-}
-
-declare <2 x i256> @llvm.cttz.v2i256(<2 x i256> %src, i1 %is_zero_undef)
-
-define <2 x i256> @test_cttz_vec() {
-; CHECK-LABEL: @test_cttz_vec(
-; CHECK-NEXT:    ret <2 x i256> <i256 1, i256 1>
-;
-  %x = call <2 x i256> @llvm.cttz.v2i256(<2 x i256> <i256 10, i256 10>, i1 false)
-  ret <2 x i256> %x
-}
-
-declare i256 @llvm.ctpop.i256(i256 %src)
-
-define i256 @test_ctpop() {
-; CHECK-LABEL: @test_ctpop(
-; CHECK-NEXT:    ret i256 2
-;
-  %x = call i256 @llvm.ctpop.i256(i256 10)
-  ret i256 %x
-}
-
 ; Test a non-intrinsic that we know about as a library call.
 declare float @fabs(float %x)
 
@@ -498,5 +468,169 @@ define <2 x i8> @fshr_no_shift_modulo_bitwidth_splat(<2 x i8> %x, <2 x i8> %y) {
 ;
   %z = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> <i8 72, i8 72>)
   ret <2 x i8> %z
+}
+
+; When the shift amount is 0, fshl returns its 1st parameter (x), so the guard is not needed.
+
+define i8 @fshl_zero_shift_guard(i8 %x, i8 %y, i8 %sh) {
+; CHECK-LABEL: @fshl_zero_shift_guard(
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[SH:%.*]])
+; CHECK-NEXT:    ret i8 [[F]]
+;
+  %c = icmp eq i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshl returns its 1st parameter (x), so the guard is not needed.
+
+define i8 @fshl_zero_shift_guard_swapped(i8 %x, i8 %y, i8 %sh) {
+; CHECK-LABEL: @fshl_zero_shift_guard_swapped(
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[SH:%.*]])
+; CHECK-NEXT:    ret i8 [[F]]
+;
+  %c = icmp ne i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %sh)
+  %s = select i1 %c, i8 %f, i8 %x
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshl returns its 1st parameter (x), so everything is deleted.
+
+define i8 @fshl_zero_shift_guard_inverted(i8 %x, i8 %y, i8 %sh) {
+; CHECK-LABEL: @fshl_zero_shift_guard_inverted(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %c = icmp eq i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %sh)
+  %s = select i1 %c, i8 %f, i8 %x
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshl returns its 1st parameter (x), so everything is deleted.
+
+define i8 @fshl_zero_shift_guard_inverted_swapped(i8 %x, i8 %y, i8 %sh) {
+; CHECK-LABEL: @fshl_zero_shift_guard_inverted_swapped(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %c = icmp ne i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (y), so the guard is not needed.
+
+define i9 @fshr_zero_shift_guard(i9 %x, i9 %y, i9 %sh) {
+; CHECK-LABEL: @fshr_zero_shift_guard(
+; CHECK-NEXT:    [[F:%.*]] = call i9 @llvm.fshr.i9(i9 [[X:%.*]], i9 [[Y:%.*]], i9 [[SH:%.*]])
+; CHECK-NEXT:    ret i9 [[F]]
+;
+  %c = icmp eq i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %y, i9 %sh)
+  %s = select i1 %c, i9 %y, i9 %f
+  ret i9 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (y), so the guard is not needed.
+
+define i9 @fshr_zero_shift_guard_swapped(i9 %x, i9 %y, i9 %sh) {
+; CHECK-LABEL: @fshr_zero_shift_guard_swapped(
+; CHECK-NEXT:    [[F:%.*]] = call i9 @llvm.fshr.i9(i9 [[X:%.*]], i9 [[Y:%.*]], i9 [[SH:%.*]])
+; CHECK-NEXT:    ret i9 [[F]]
+;
+  %c = icmp ne i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %y, i9 %sh)
+  %s = select i1 %c, i9 %f, i9 %y
+  ret i9 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (y), so everything is deleted.
+
+define i9 @fshr_zero_shift_guard_inverted(i9 %x, i9 %y, i9 %sh) {
+; CHECK-LABEL: @fshr_zero_shift_guard_inverted(
+; CHECK-NEXT:    ret i9 [[Y:%.*]]
+;
+  %c = icmp eq i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %y, i9 %sh)
+  %s = select i1 %c, i9 %f, i9 %y
+  ret i9 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (y), so everything is deleted.
+
+define i9 @fshr_zero_shift_guard_inverted_swapped(i9 %x, i9 %y, i9 %sh) {
+; CHECK-LABEL: @fshr_zero_shift_guard_inverted_swapped(
+; CHECK-NEXT:    ret i9 [[Y:%.*]]
+;
+  %c = icmp ne i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %y, i9 %sh)
+  %s = select i1 %c, i9 %y, i9 %f
+  ret i9 %s
+}
+
+; Negative test - make sure we're matching the correct parameter of fshl.
+
+define i8 @fshl_zero_shift_guard_wrong_select_op(i8 %x, i8 %y, i8 %sh) {
+; CHECK-LABEL: @fshl_zero_shift_guard_wrong_select_op(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[SH:%.*]], 0
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[Y:%.*]], i8 [[SH]])
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i8 [[Y]], i8 [[F]]
+; CHECK-NEXT:    ret i8 [[S]]
+;
+  %c = icmp eq i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 %sh)
+  %s = select i1 %c, i8 %y, i8 %f
+  ret i8 %s
+}
+
+; Vector types work too.
+
+define <2 x i8> @fshr_zero_shift_guard_splat(<2 x i8> %x, <2 x i8> %y, <2 x i8> %sh) {
+; CHECK-LABEL: @fshr_zero_shift_guard_splat(
+; CHECK-NEXT:    [[F:%.*]] = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> [[X:%.*]], <2 x i8> [[Y:%.*]], <2 x i8> [[SH:%.*]])
+; CHECK-NEXT:    ret <2 x i8> [[F]]
+;
+  %c = icmp eq <2 x i8> %sh, zeroinitializer
+  %f = call <2 x i8> @llvm.fshr.v2i8(<2 x i8> %x, <2 x i8> %y, <2 x i8> %sh)
+  %s = select <2 x i1> %c, <2 x i8> %y, <2 x i8> %f
+  ret <2 x i8> %s
+}
+
+; If first two operands of funnel shift are undef, the result is undef
+
+define i8 @fshl_ops_undef(i8 %shamt) {
+; CHECK-LABEL: @fshl_ops_undef(
+; CHECK-NEXT:    ret i8 undef
+;
+  %r = call i8 @llvm.fshl.i8(i8 undef, i8 undef, i8 %shamt)
+  ret i8 %r
+}
+
+define i9 @fshr_ops_undef(i9 %shamt) {
+; CHECK-LABEL: @fshr_ops_undef(
+; CHECK-NEXT:    ret i9 undef
+;
+  %r = call i9 @llvm.fshr.i9(i9 undef, i9 undef, i9 %shamt)
+  ret i9 %r
+}
+
+; If shift amount is undef, treat it as zero, returning operand 0 or 1
+
+define i8 @fshl_shift_undef(i8 %x, i8 %y) {
+; CHECK-LABEL: @fshl_shift_undef(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %r = call i8 @llvm.fshl.i8(i8 %x, i8 %y, i8 undef)
+  ret i8 %r
+}
+
+define i9 @fshr_shift_undef(i9 %x, i9 %y) {
+; CHECK-LABEL: @fshr_shift_undef(
+; CHECK-NEXT:    ret i9 [[Y:%.*]]
+;
+  %r = call i9 @llvm.fshr.i9(i9 %x, i9 %y, i9 undef)
+  ret i9 %r
 }
 

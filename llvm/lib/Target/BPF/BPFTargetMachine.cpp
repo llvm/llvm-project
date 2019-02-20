@@ -51,12 +51,6 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return *RM;
 }
 
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
-  if (CM)
-    return *CM;
-  return CodeModel::Small;
-}
-
 BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                                    StringRef CPU, StringRef FS,
                                    const TargetOptions &Options,
@@ -64,13 +58,14 @@ BPFTargetMachine::BPFTargetMachine(const Target &T, const Triple &TT,
                                    Optional<CodeModel::Model> CM,
                                    CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
-                        getEffectiveRelocModel(RM), getEffectiveCodeModel(CM),
-                        OL),
+                        getEffectiveRelocModel(RM),
+                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();
 
-  BPFMCAsmInfo *MAI = static_cast<BPFMCAsmInfo *>(const_cast<MCAsmInfo *>(AsmInfo));
+  BPFMCAsmInfo *MAI =
+      static_cast<BPFMCAsmInfo *>(const_cast<MCAsmInfo *>(AsmInfo.get()));
   MAI->setDwarfUsesRelocationsAcrossSections(!Subtarget.getUseDwarfRIS());
 }
 namespace {
@@ -115,6 +110,7 @@ void BPFPassConfig::addMachineSSAOptimization() {
 void BPFPassConfig::addPreEmitPass() {
   const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
 
+  addPass(createBPFMIPreEmitCheckingPass());
   if (getOptLevel() != CodeGenOpt::None)
     if (Subtarget->getHasAlu32() && !DisableMIPeephole)
       addPass(createBPFMIPreEmitPeepholePass());

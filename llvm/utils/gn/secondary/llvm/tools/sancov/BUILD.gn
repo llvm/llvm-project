@@ -1,0 +1,18 @@
+executable("sancov") {
+  deps = [
+    "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/PDB",
+    "//llvm/lib/DebugInfo/Symbolize",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCDisassembler",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsAsmPrinters",
+    "//llvm/lib/Target:AllTargetsDescs",
+    "//llvm/lib/Target:AllTargetsDisassemblers",
+    "//llvm/lib/Target:AllTargetsInfos",
+  ]
+  sources = [
+    "sancov.cpp",
+  ]
+}

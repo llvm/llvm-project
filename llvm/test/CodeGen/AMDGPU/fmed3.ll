@@ -1,9 +1,6 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=NOSNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=SNAN -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=VI -check-prefix=GFX89 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GFX9 -check-prefix=GFX89 %s
 
 
 ; GCN-LABEL: {{^}}v_test_nnan_input_fmed3_r_i_i_f32:
@@ -22,87 +19,82 @@ define amdgpu_kernel void @v_test_nnan_input_fmed3_r_i_i_f32(float addrspace(1)*
   ret void
 }
 
-; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_f32:
-; NOSNAN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
-
-; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
-; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define amdgpu_kernel void @v_test_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+; GCN-LABEL: {{^}}v_test_fmed3_nnan_r_i_i_f32:
+; GCN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
+  %a.add = fadd nnan float %a, 1.0
 
-  %max = call float @llvm.maxnum.f32(float %a, float 2.0)
+  %max = call float @llvm.maxnum.f32(float %a.add, float 2.0)
   %med = call float @llvm.minnum.f32(float %max, float 4.0)
 
   store float %med, float addrspace(1)* %outgep
   ret void
 }
 
-; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_commute0_f32:
-; NOSNAN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
-
-; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
-; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define amdgpu_kernel void @v_test_fmed3_r_i_i_commute0_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+; GCN-LABEL: {{^}}v_test_fmed3_nnan_r_i_i_commute0_f32:
+; GCN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute0_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
+  %a.add = fadd nnan float %a, 1.0
 
-  %max = call float @llvm.maxnum.f32(float 2.0, float %a)
+  %max = call float @llvm.maxnum.f32(float 2.0, float %a.add)
   %med = call float @llvm.minnum.f32(float 4.0, float %max)
 
   store float %med, float addrspace(1)* %outgep
   ret void
 }
 
-; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_commute1_f32:
-; NOSNAN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
-
-; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
-; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define amdgpu_kernel void @v_test_fmed3_r_i_i_commute1_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+; GCN-LABEL: {{^}}v_test_fmed3_nnan_r_i_i_commute1_f32:
+; GCN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_commute1_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
+  %a.add = fadd nnan float %a, 1.0
 
-  %max = call float @llvm.maxnum.f32(float %a, float 2.0)
+  %max = call float @llvm.maxnum.f32(float %a.add, float 2.0)
   %med = call float @llvm.minnum.f32(float 4.0, float %max)
 
   store float %med, float addrspace(1)* %outgep
   ret void
 }
 
-; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_constant_order_f32:
+; GCN-LABEL: {{^}}v_test_fmed3_nnan_r_i_i_constant_order_f32:
 ; GCN: v_max_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; GCN: v_min_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
-define amdgpu_kernel void @v_test_fmed3_r_i_i_constant_order_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_constant_order_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
+  %a.add = fadd nnan float %a, 1.0
 
-  %max = call float @llvm.maxnum.f32(float %a, float 4.0)
+  %max = call float @llvm.maxnum.f32(float %a.add, float 4.0)
   %med = call float @llvm.minnum.f32(float %max, float 2.0)
 
   store float %med, float addrspace(1)* %outgep
   ret void
 }
 
-
-; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_multi_use_f32:
+; GCN-LABEL: {{^}}v_test_fmed3_nnan_r_i_i_multi_use_f32:
 ; GCN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; GCN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
-define amdgpu_kernel void @v_test_fmed3_r_i_i_multi_use_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+define amdgpu_kernel void @v_test_fmed3_nnan_r_i_i_multi_use_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
+  %a.add = fadd nnan float %a, 1.0
 
-  %max = call float @llvm.maxnum.f32(float %a, float 2.0)
+  %max = call float @llvm.maxnum.f32(float %a.add, float 2.0)
   %med = call float @llvm.minnum.f32(float %max, float 4.0)
 
   store volatile float %med, float addrspace(1)* %outgep
@@ -118,8 +110,9 @@ define amdgpu_kernel void @v_test_fmed3_r_i_i_f64(double addrspace(1)* %out, dou
   %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr double, double addrspace(1)* %out, i32 %tid
   %a = load double, double addrspace(1)* %gep0
+  %a.add = fadd nnan double %a, 1.0
 
-  %max = call double @llvm.maxnum.f64(double %a, double 2.0)
+  %max = call double @llvm.maxnum.f64(double %a.add, double 2.0)
   %med = call double @llvm.minnum.f64(double %max, double 4.0)
 
   store double %med, double addrspace(1)* %outgep
@@ -142,19 +135,17 @@ define amdgpu_kernel void @v_test_fmed3_r_i_i_no_nans_f32(float addrspace(1)* %o
 }
 
 ; GCN-LABEL: {{^}}v_test_legacy_fmed3_r_i_i_f32:
-; NOSNAN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
-
-; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
-; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
+; GCN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
 define amdgpu_kernel void @v_test_legacy_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
+  %a.nnan = fadd nnan float %a, 1.0
 
   ; fmax_legacy
-  %cmp0 = fcmp ule float %a, 2.0
-  %max = select i1 %cmp0, float 2.0, float %a
+  %cmp0 = fcmp ule float %a.nnan, 2.0
+  %max = select i1 %cmp0, float 2.0, float %a.nnan
 
   ; fmin_legacy
   %cmp1 = fcmp uge float %max, 4.0
@@ -957,6 +948,68 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f16_pat0(half addrspace(1)* %out, 
   %tmp2 = call half @llvm.minnum.f16(half %tmp1, half %c.nnan)
   %med3 = call half @llvm.maxnum.f16(half %tmp0, half %tmp2)
   store half %med3, half addrspace(1)* %outgep
+  ret void
+}
+
+; GCN-LABEL: {{^}}two_non_inline_constant:
+; GCN: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
+; GCN: v_max_f32_e32 [[MAX:v[0-9]+]], 0x41000000, [[ADD]]
+; GCN: v_min_f32_e32 v{{[0-9]+}}, 0x41800000, [[MAX]]
+define amdgpu_kernel void @two_non_inline_constant(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %a = load float, float addrspace(1)* %gep0
+  %add = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float 8.0)
+  %med = call float @llvm.minnum.f32(float %max, float 16.0)
+
+  store float %med, float addrspace(1)* %out.gep
+  ret void
+}
+
+; FIXME: Simple stores do not work as a multiple use because they are bitcasted to integer constants.
+; GCN-LABEL: {{^}}one_non_inline_constant:
+; GCN-DAG: s_mov_b32 [[K1:s[0-9]+]], 0x41800000
+; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
+; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], 1.0, [[K1]]
+define amdgpu_kernel void @one_non_inline_constant(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %a = load float, float addrspace(1)* %gep0
+  %add = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float 1.0)
+  %med = call float @llvm.minnum.f32(float %max, float 16.0)
+
+  store float %med, float addrspace(1)* %out.gep
+
+  %extra.use = fadd float %a, 16.0
+  store volatile float %extra.use, float addrspace(1)* undef
+  ret void
+}
+
+; GCN-LABEL: {{^}}two_non_inline_constant_multi_use:
+; GCN-DAG: s_mov_b32 [[K1:s[0-9]+]], 0x41800000
+; GCN-DAG: s_mov_b32 [[K0:s[0-9]+]], 0x41000000
+; GCN-DAG: v_mov_b32_e32 [[VK1:v[0-9]+]], [[K1]]
+; GCN-DAG: v_add_f32_e32 [[ADD:v[0-9]+]], 0.5,
+; GCN: v_med3_f32 v{{[0-9]+}}, [[ADD]], [[K0]], [[VK1]]
+define amdgpu_kernel void @two_non_inline_constant_multi_use(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
+  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
+  %a = load float, float addrspace(1)* %gep0
+  %add = fadd nnan float %a, 0.5
+  %max = call float @llvm.maxnum.f32(float %add, float 8.0)
+  %med = call float @llvm.minnum.f32(float %max, float 16.0)
+
+  store float %med, float addrspace(1)* %out.gep
+
+  %extra.use0 = fadd float %a, 16.0
+  store volatile float %extra.use0, float addrspace(1)* undef
+  %extra.use1 = fadd float %a, 8.0
+  store volatile float %extra.use1, float addrspace(1)* undef
   ret void
 }
 

@@ -20,12 +20,8 @@ class raw_ostream;
 namespace pdb {
 
 class PDBSymbolExe : public PDBSymbol {
-public:
-  PDBSymbolExe(const IPDBSession &PDBSession,
-               std::unique_ptr<IPDBRawSymbol> ExeSymbol);
-
   DECLARE_PDB_SYMBOL_CONCRETE_TYPE(PDB_SymType::Exe)
-
+public:
   void dump(PDBSymDumper &Dumper) const override;
 
   FORWARD_SYMBOL_METHOD(getAge)

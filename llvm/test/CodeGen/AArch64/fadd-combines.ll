@@ -51,14 +51,47 @@ define double @test4(double %a, double %b, double %c) {
   ret double %add2
 }
 
-define <4 x float> @test5(<4 x float> %a, <4 x float> %b) {
-; CHECK-LABEL: test5:
+define <4 x float> @fmulnegtwo_vec(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fmulnegtwo_vec:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fadd v1.4s, v1.4s, v1.4s
 ; CHECK-NEXT:    fsub v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %mul = fmul <4 x float> %b, <float -2.0, float -2.0, float -2.0, float -2.0>
   %add = fadd <4 x float> %a, %mul
+  ret <4 x float> %add
+}
+
+define <4 x float> @fmulnegtwo_vec_commute(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fmulnegtwo_vec_commute:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fsub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %mul = fmul <4 x float> %b, <float -2.0, float -2.0, float -2.0, float -2.0>
+  %add = fadd <4 x float> %mul, %a
+  ret <4 x float> %add
+}
+
+define <4 x float> @fmulnegtwo_vec_undefs(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fmulnegtwo_vec_undefs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fsub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %mul = fmul <4 x float> %b, <float undef, float -2.0, float undef, float -2.0>
+  %add = fadd <4 x float> %a, %mul
+  ret <4 x float> %add
+}
+
+define <4 x float> @fmulnegtwo_vec_commute_undefs(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: fmulnegtwo_vec_commute_undefs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fadd v1.4s, v1.4s, v1.4s
+; CHECK-NEXT:    fsub v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
+  %mul = fmul <4 x float> %b, <float -2.0, float undef, float -2.0, float -2.0>
+  %add = fadd <4 x float> %mul, %a
   ret <4 x float> %add
 }
 
@@ -99,10 +132,10 @@ define double @test7(double %a, double %b) nounwind {
 define float @fadd_const_multiuse_fmf(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_fmf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI7_0
-; CHECK-NEXT:    adrp x9, .LCPI7_1
-; CHECK-NEXT:    ldr s1, [x8, :lo12:.LCPI7_0]
-; CHECK-NEXT:    ldr s2, [x9, :lo12:.LCPI7_1]
+; CHECK-NEXT:    adrp x8, .LCPI10_0
+; CHECK-NEXT:    adrp x9, .LCPI10_1
+; CHECK-NEXT:    ldr s1, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    ldr s2, [x9, :lo12:.LCPI10_1]
 ; CHECK-NEXT:    fadd s1, s0, s1
 ; CHECK-NEXT:    fadd s0, s0, s2
 ; CHECK-NEXT:    fadd s0, s1, s0
@@ -120,10 +153,10 @@ define float @fadd_const_multiuse_fmf(float %x) {
 define float @fadd_const_multiuse_attr(float %x) #0 {
 ; CHECK-LABEL: fadd_const_multiuse_attr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x9, .LCPI8_1
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ldr s1, [x9, :lo12:.LCPI8_1]
-; CHECK-NEXT:    ldr s2, [x8, :lo12:.LCPI8_0]
+; CHECK-NEXT:    adrp x9, .LCPI11_1
+; CHECK-NEXT:    adrp x8, .LCPI11_0
+; CHECK-NEXT:    ldr s1, [x9, :lo12:.LCPI11_1]
+; CHECK-NEXT:    ldr s2, [x8, :lo12:.LCPI11_0]
 ; CHECK-NEXT:    fadd s1, s0, s1
 ; CHECK-NEXT:    fadd s1, s2, s1
 ; CHECK-NEXT:    fadd s0, s0, s1

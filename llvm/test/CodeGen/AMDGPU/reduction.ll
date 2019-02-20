@@ -1,19 +1,79 @@
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc -march=amdgcn -mcpu=fiji  -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=fiji  -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
-; GCN-LABEL: {{^}}reduction_half4:
+; GCN-LABEL: {{^}}reduction_fadd_v4f16:
 ; GFX9:      v_pk_add_f16 [[ADD:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_add_f16_sdwa v{{[0-9]+}}, [[ADD]], [[ADD]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 ; VI:      v_add_f16_sdwa
 ; VI-NEXT: v_add_f16_e32
 ; VI-NEXT: v_add_f16_e32
-define half @reduction_half4(<4 x half> %vec4) {
+define half @reduction_fadd_v4f16(<4 x half> %vec4) {
 entry:
   %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %bin.rdx = fadd fast <4 x half> %vec4, %rdx.shuf
+  %bin.rdx = fadd <4 x half> %vec4, %rdx.shuf
   %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = fadd fast <4 x half> %bin.rdx, %rdx.shuf1
+  %bin.rdx2 = fadd <4 x half> %bin.rdx, %rdx.shuf1
+  %res = extractelement <4 x half> %bin.rdx2, i32 0
+  ret half %res
+}
+
+; GCN-LABEL: {{^}}reduction_fsub_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_add_f16 [[ADD:v[0-9]+]], v0, v1 neg_lo:[0,1] neg_hi:[0,1]{{$}}
+; GFX9-NEXT: v_sub_f16_sdwa v0, [[ADD]], [[ADD]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT: s_setpc_b64
+
+; VI:      v_sub_f16_sdwa
+; VI-NEXT: v_sub_f16_e32
+; VI-NEXT: v_sub_f16_e32
+; VI-NEXT: s_setpc_b64
+define half @reduction_fsub_v4f16(<4 x half> %vec4) {
+entry:
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx = fsub <4 x half> %vec4, %rdx.shuf
+  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx2 = fsub <4 x half> %bin.rdx, %rdx.shuf1
+  %res = extractelement <4 x half> %bin.rdx2, i32 0
+  ret half %res
+}
+
+; Make sure nsz is preserved when the operations are split.
+; GCN-LABEL: {{^}}reduction_fsub_v4f16_preserve_fmf:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_add_f16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]{{$}}
+; GFX9-NEXT: v_sub_f16_sdwa v0, v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX9-NEXT: s_setpc_b64
+
+; VI: s_waitcnt
+; VI-NEXT: v_sub_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-NEXT: v_sub_f16_e32 v0, v1, v0
+; VI-NEXT: v_add_f16_e32 v0, v2, v0
+; VI-NEXT: s_setpc_b64
+define half @reduction_fsub_v4f16_preserve_fmf(<4 x half> %vec4) {
+entry:
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx = fsub nsz <4 x half> %vec4, %rdx.shuf
+  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx2 = fsub nsz <4 x half> %bin.rdx, %rdx.shuf1
+  %res = extractelement <4 x half> %bin.rdx2, i32 0
+  %neg.res = fsub half -0.0, %res
+  ret half %neg.res
+}
+
+; GCN-LABEL: {{^}}reduction_fmul_half4:
+; GFX9:      v_pk_mul_f16 [[MUL:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX9-NEXT: v_mul_f16_sdwa v{{[0-9]+}}, [[MUL]], [[MUL]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+
+; VI:      v_mul_f16_sdwa
+; VI-NEXT: v_mul_f16_e32
+; VI-NEXT: v_mul_f16_e32
+define half @reduction_fmul_half4(<4 x half> %vec4) {
+entry:
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %bin.rdx = fmul <4 x half> %vec4, %rdx.shuf
+  %rdx.shuf1 = shufflevector <4 x half> %bin.rdx, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %bin.rdx2 = fmul <4 x half> %bin.rdx, %rdx.shuf1
   %res = extractelement <4 x half> %bin.rdx2, i32 0
   ret half %res
 }
@@ -52,19 +112,19 @@ entry:
 define half @reduction_half8(<8 x half> %vec8) {
 entry:
   %rdx.shuf = shufflevector <8 x half> %vec8, <8 x half> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = fadd fast <8 x half> %vec8, %rdx.shuf
+  %bin.rdx = fadd <8 x half> %vec8, %rdx.shuf
   %rdx.shuf1 = shufflevector <8 x half> %bin.rdx, <8 x half> undef, <8 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = fadd fast <8 x half> %bin.rdx, %rdx.shuf1
+  %bin.rdx2 = fadd <8 x half> %bin.rdx, %rdx.shuf1
   %rdx.shuf3 = shufflevector <8 x half> %bin.rdx2, <8 x half> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx4 = fadd fast <8 x half> %bin.rdx2, %rdx.shuf3
+  %bin.rdx4 = fadd <8 x half> %bin.rdx2, %rdx.shuf3
   %res = extractelement <8 x half> %bin.rdx4, i32 0
   ret half %res
 }
 
 ; GCN-LABEL: {{^}}reduction_v8i16:
-; GFX9:      v_pk_add_u16 [[ADD1]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX9-NEXT: v_pk_add_u16 [[ADD2]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX9-NEXT: v_pk_add_u16 [[ADD3]], [[ADD2]], [[ADD1]]{{$}}
+; GFX9:      v_pk_add_u16 [[ADD1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX9-NEXT: v_pk_add_u16 [[ADD2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX9-NEXT: v_pk_add_u16 [[ADD3:v[0-9]+]], [[ADD2]], [[ADD1]]{{$}}
 ; GFX9-NEXT: v_add_u16_sdwa v{{[0-9]+}}, [[ADD3]], [[ADD3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 ; VI:      v_add_u16_sdwa
@@ -92,9 +152,9 @@ entry:
 ; GFX9-NEXT: v_pk_add_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9-NEXT: v_pk_add_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX9:      v_pk_add_f16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX9-NEXT: v_pk_add_f16 [[ADD1]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX9-NEXT: v_pk_add_f16 [[ADD2]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX9-NEXT: v_pk_add_f16 [[ADD3]], [[ADD2]], [[ADD1]]{{$}}
+; GFX9-NEXT: v_pk_add_f16 [[ADD1:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX9-NEXT: v_pk_add_f16 [[ADD2:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; GFX9-NEXT: v_pk_add_f16 [[ADD3:v[0-9]+]], [[ADD2]], [[ADD1]]{{$}}
 ; GFX9-NEXT: v_add_f16_sdwa v{{[0-9]+}}, [[ADD3]], [[ADD3]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 
 ; VI:      v_add_f16_sdwa
@@ -116,13 +176,13 @@ entry:
 define half @reduction_half16(<16 x half> %vec16) {
 entry:
   %rdx.shuf = shufflevector <16 x half> %vec16, <16 x half> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx = fadd fast <16 x half> %vec16, %rdx.shuf
+  %bin.rdx = fadd <16 x half> %vec16, %rdx.shuf
   %rdx.shuf1 = shufflevector <16 x half> %bin.rdx, <16 x half> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx2 = fadd fast <16 x half> %bin.rdx, %rdx.shuf1
+  %bin.rdx2 = fadd <16 x half> %bin.rdx, %rdx.shuf1
   %rdx.shuf3 = shufflevector <16 x half> %bin.rdx2, <16 x half> undef, <16 x i32> <i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx4 = fadd fast <16 x half> %bin.rdx2, %rdx.shuf3
+  %bin.rdx4 = fadd <16 x half> %bin.rdx2, %rdx.shuf3
   %rdx.shuf5 = shufflevector <16 x half> %bin.rdx4, <16 x half> undef, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %bin.rdx6 = fadd fast <16 x half> %bin.rdx4, %rdx.shuf5
+  %bin.rdx6 = fadd <16 x half> %bin.rdx4, %rdx.shuf5
   %res = extractelement <16 x half> %bin.rdx6, i32 0
   ret half %res
 }
@@ -373,40 +433,147 @@ entry:
   ret i16 %res
 }
 
-; GCN-LABEL: {{^}}reduction_fmax_v4half:
-; GFX9:      v_pk_max_f16 [[MAX:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX9-NEXT: v_max_f16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GCN-LABEL: {{^}}reduction_maxnum_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
+; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
+; GFX9-NEXT: v_pk_max_f16 [[MAX:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
 
-; VI:      v_max_f16_sdwa
-; VI-NEXT: v_max_f16_e32
-; VI-NEXT: v_max_f16_e32
-define half @reduction_fmax_v4half(<4 x half> %vec4) {
+; FIXME: Extra canonicalize leftover
+; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT: v_max_f16_e32 v0, [[MAX]], [[TMP]]
+
+; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON0:v[0-9]+]], v0, v0
+; VI-DAG: v_max_f16_e32 [[CANON2:v[0-9]+]], v1, v1
+
+; VI-DAG: v_max_f16_e32 [[MAX0:v[0-9]+]], [[CANON1]], [[CANON3]]
+; VI-DAG: v_max_f16_e32 [[MAX1:v[0-9]+]], [[CANON0]], [[CANON2]]
+; VI: v_max_f16_e32 v0, [[MAX1]], [[MAX0]]
+define half @reduction_maxnum_v4f16(<4 x half> %vec4) {
 entry:
   %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %rdx.minmax.cmp = fcmp fast ogt <4 x half> %vec4, %rdx.shuf
+  %rdx.minmax = call <4 x half> @llvm.maxnum.v4f16(<4 x half> %vec4, <4 x half> %rdx.shuf)
+  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.minmax3 = call <4 x half> @llvm.maxnum.v4f16(<4 x half> %rdx.minmax, <4 x half> %rdx.shuf1)
+  %res = extractelement <4 x half> %rdx.minmax3, i32 0
+  ret half %res
+}
+
+; GCN-LABEL: {{^}}reduction_minnum_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
+; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
+; GFX9-NEXT: v_pk_min_f16 [[MIN:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
+
+; FIXME: Extra canonicalize leftover
+; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT: v_min_f16_e32 v0, [[MIN]], [[TMP]]
+
+
+; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON0:v[0-9]+]], v0, v0
+; VI-DAG: v_max_f16_e32 [[CANON2:v[0-9]+]], v1, v1
+
+; VI-DAG: v_min_f16_e32 [[MAX0:v[0-9]+]], [[CANON1]], [[CANON3]]
+; VI-DAG: v_min_f16_e32 [[MAX1:v[0-9]+]], [[CANON0]], [[CANON2]]
+; VI: v_min_f16_e32 v0, [[MAX1]], [[MAX0]]
+define half @reduction_minnum_v4f16(<4 x half> %vec4) {
+entry:
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.minmax = call <4 x half> @llvm.minnum.v4f16(<4 x half> %vec4, <4 x half> %rdx.shuf)
+  %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+  %rdx.minmax3 = call <4 x half> @llvm.minnum.v4f16(<4 x half> %rdx.minmax, <4 x half> %rdx.shuf1)
+  %res = extractelement <4 x half> %rdx.minmax3, i32 0
+  ret half %res
+}
+
+; FIXME: Need to preserve fast math flags when fmaxnum matched
+; directly from the IR to avoid unnecessary quieting.
+
+; GCN-LABEL: {{^}}reduction_fast_max_pattern_v4f16:
+; XGFX9:      v_pk_max_f16 [[MAX:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; XGFX9-NEXT: v_max_f16_sdwa v{{[0-9]+}}, [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+
+; XVI: s_waitcnt
+; XVI-NEXT: v_max_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; XVI-NEXT: v_max_f16_e32 v0, v0, v1
+; XVI-NEXT: v_max_f16_e32 v0, v0, v2
+; XVI-NEXT: s_setpc_b64
+
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
+; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
+; GFX9-NEXT: v_pk_max_f16 [[MAX:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
+
+; FIXME: Extra canonicalize leftover
+; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MAX]], [[MAX]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT: v_max_f16_e32 v0, [[MAX]], [[TMP]]
+
+; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON0:v[0-9]+]], v0, v0
+; VI-DAG: v_max_f16_e32 [[CANON2:v[0-9]+]], v1, v1
+
+; VI-DAG: v_max_f16_e32 [[MAX0:v[0-9]+]], [[CANON1]], [[CANON3]]
+; VI-DAG: v_max_f16_e32 [[MAX1:v[0-9]+]], [[CANON0]], [[CANON2]]
+; VI: v_max_f16_e32 v0, [[MAX1]], [[MAX0]]
+define half @reduction_fast_max_pattern_v4f16(<4 x half> %vec4) {
+entry:
+  %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %rdx.minmax.cmp = fcmp nnan nsz ogt <4 x half> %vec4, %rdx.shuf
   %rdx.minmax.select = select <4 x i1> %rdx.minmax.cmp, <4 x half> %vec4, <4 x half> %rdx.shuf
   %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax.select, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %rdx.minmax.cmp2 = fcmp fast ogt <4 x half> %rdx.minmax.select, %rdx.shuf1
+  %rdx.minmax.cmp2 = fcmp nnan nsz ogt <4 x half> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <4 x i1> %rdx.minmax.cmp2, <4 x half> %rdx.minmax.select, <4 x half> %rdx.shuf1
   %res = extractelement <4 x half> %rdx.minmax.select3, i32 0
   ret half %res
 }
 
-; GCN-LABEL: {{^}}reduction_fmin_v4half:
-; GFX9:      v_pk_min_f16 [[MIN:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
-; GFX9-NEXT: v_min_f16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; FIXME: Need to preserve fast math flags when fmaxnum matched
+; directly from the IR to avoid unnecessary quieting.
 
-; VI:      v_min_f16_sdwa
-; VI-NEXT: v_min_f16_e32
-; VI-NEXT: v_min_f16_e32
-define half @reduction_fmin_v4half(<4 x half> %vec4) {
+; GCN-LABEL: {{^}}reduction_fast_min_pattern_v4f16:
+; XGFX9:      v_pk_min_f16 [[MIN:v[0-9]+]], v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; XGFX9-NEXT: v_min_f16_sdwa v{{[0-9]+}}, [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+
+; XVI: s_waitcnt
+; XVI-NEXT: v_min_f16_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; XVI-NEXT: v_min_f16_e32 v0, v0, v1
+; XVI-NEXT: v_min_f16_e32 v0, v0, v2
+; XVI-NEXT: s_setpc_b64
+
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 [[CANON1:v[0-9]+]], v1, v1
+; GFX9-NEXT: v_pk_max_f16 [[CANON0:v[0-9]+]], v0, v0
+; GFX9-NEXT: v_pk_min_f16 [[MIN:v[0-9]+]], [[CANON0]], [[CANON1]]{{$}}
+
+; FIXME: Extra canonicalize leftover
+; GFX9-NEXT: v_max_f16_sdwa [[TMP:v[0-9]+]], [[MIN]], [[MIN]] dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; GFX9-NEXT: v_min_f16_e32 v0, [[MIN]], [[TMP]]
+
+
+; VI-DAG: v_max_f16_sdwa [[CANON1:v[0-9]+]], v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_sdwa [[CANON3:v[0-9]+]], v1, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON0:v[0-9]+]], v0, v0
+; VI-DAG: v_max_f16_e32 [[CANON2:v[0-9]+]], v1, v1
+
+; VI-DAG: v_min_f16_e32 [[MAX0:v[0-9]+]], [[CANON1]], [[CANON3]]
+; VI-DAG: v_min_f16_e32 [[MAX1:v[0-9]+]], [[CANON0]], [[CANON2]]
+; VI: v_min_f16_e32 v0, [[MAX1]], [[MAX0]]
+define half @reduction_fast_min_pattern_v4f16(<4 x half> %vec4) {
 entry:
   %rdx.shuf = shufflevector <4 x half> %vec4, <4 x half> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  %rdx.minmax.cmp = fcmp fast olt <4 x half> %vec4, %rdx.shuf
+  %rdx.minmax.cmp = fcmp nnan nsz olt <4 x half> %vec4, %rdx.shuf
   %rdx.minmax.select = select <4 x i1> %rdx.minmax.cmp, <4 x half> %vec4, <4 x half> %rdx.shuf
   %rdx.shuf1 = shufflevector <4 x half> %rdx.minmax.select, <4 x half> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
-  %rdx.minmax.cmp2 = fcmp fast olt <4 x half> %rdx.minmax.select, %rdx.shuf1
+  %rdx.minmax.cmp2 = fcmp nnan nsz olt <4 x half> %rdx.minmax.select, %rdx.shuf1
   %rdx.minmax.select3 = select <4 x i1> %rdx.minmax.cmp2, <4 x half> %rdx.minmax.select, <4 x half> %rdx.shuf1
   %res = extractelement <4 x half> %rdx.minmax.select3, i32 0
   ret half %res
 }
+
+declare <4 x half> @llvm.minnum.v4f16(<4 x half>, <4 x half>)
+declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>)

@@ -7,14 +7,13 @@ define void @fn9(i32* %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7,
 ; CHECK-LABEL: fn9:
 ; 9th fixed argument
 ; CHECK: ldr {{w[0-9]+}}, [sp, #64]
-; CHECK: add [[ARGS:x[0-9]+]], sp, #72
-; CHECK: add {{x[0-9]+}}, [[ARGS]], #8
+; CHECK-DAG: add [[ARGS:x[0-9]+]], sp, #72
 ; First vararg
-; CHECK: ldr {{w[0-9]+}}, [sp, #72]
+; CHECK-DAG: ldr {{w[0-9]+}}, [sp, #72]
 ; Second vararg
-; CHECK: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
+; CHECK-DAG: ldr {{w[0-9]+}}, [sp, #80]
 ; Third vararg
-; CHECK: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
+; CHECK-DAG: ldr {{w[0-9]+}}, [sp, #88]
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4

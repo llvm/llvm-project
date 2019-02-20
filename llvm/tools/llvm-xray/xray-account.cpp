@@ -146,6 +146,10 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
 
   auto &ThreadStack = PerThreadFunctionStack[Record.TId];
   switch (Record.Type) {
+  case RecordTypes::CUSTOM_EVENT:
+  case RecordTypes::TYPED_EVENT:
+    // TODO: Support custom and typed event accounting in the future.
+    return true;
   case RecordTypes::ENTER:
   case RecordTypes::ENTER_ARG: {
     ThreadStack.emplace_back(Record.FuncId, Record.TSC);
@@ -255,9 +259,18 @@ ResultRow getStats(std::vector<uint64_t> &Timings) {
 
 } // namespace
 
+using TupleType = std::tuple<int32_t, uint64_t, ResultRow>;
+
+template <typename F>
+static void sortByKey(std::vector<TupleType> &Results, F Fn) {
+  bool ASC = AccountSortOrder == SortDirection::ASCENDING;
+  llvm::sort(Results, [=](const TupleType &L, const TupleType &R) {
+    return ASC ? Fn(L) < Fn(R) : Fn(L) > Fn(R);
+  });
+}
+
 template <class F>
 void LatencyAccountant::exportStats(const XRayFileHeader &Header, F Fn) const {
-  using TupleType = std::tuple<int32_t, uint64_t, ResultRow>;
   std::vector<TupleType> Results;
   Results.reserve(FunctionLatencies.size());
   for (auto FT : FunctionLatencies) {
@@ -282,84 +295,38 @@ void LatencyAccountant::exportStats(const XRayFileHeader &Header, F Fn) const {
   // Sort the data according to user-provided flags.
   switch (AccountSortOutput) {
   case SortField::FUNCID:
-    llvm::sort(Results.begin(), Results.end(),
-               [](const TupleType &L, const TupleType &R) {
-                 if (AccountSortOrder == SortDirection::ASCENDING)
-                   return std::get<0>(L) < std::get<0>(R);
-                 if (AccountSortOrder == SortDirection::DESCENDING)
-                   return std::get<0>(L) > std::get<0>(R);
-                 llvm_unreachable("Unknown sort direction");
-               });
+    sortByKey(Results, [](const TupleType &X) { return std::get<0>(X); });
     break;
   case SortField::COUNT:
-    llvm::sort(Results.begin(), Results.end(),
-               [](const TupleType &L, const TupleType &R) {
-                 if (AccountSortOrder == SortDirection::ASCENDING)
-                   return std::get<1>(L) < std::get<1>(R);
-                 if (AccountSortOrder == SortDirection::DESCENDING)
-                   return std::get<1>(L) > std::get<1>(R);
-                 llvm_unreachable("Unknown sort direction");
-               });
+    sortByKey(Results, [](const TupleType &X) { return std::get<1>(X); });
     break;
-  default:
-    // Here we need to look into the ResultRow for the rest of the data that
-    // we want to sort by.
-    llvm::sort(Results.begin(), Results.end(),
-               [&](const TupleType &L, const TupleType &R) {
-                 auto &LR = std::get<2>(L);
-                 auto &RR = std::get<2>(R);
-                 switch (AccountSortOutput) {
-                 case SortField::COUNT:
-                   if (AccountSortOrder == SortDirection::ASCENDING)
-                     return LR.Count < RR.Count;
-                   if (AccountSortOrder == SortDirection::DESCENDING)
-                     return LR.Count > RR.Count;
-                   llvm_unreachable("Unknown sort direction");
-                 case SortField::MIN:
-                   if (AccountSortOrder == SortDirection::ASCENDING)
-                     return LR.Min < RR.Min;
-                   if (AccountSortOrder == SortDirection::DESCENDING)
-                     return LR.Min > RR.Min;
-                   llvm_unreachable("Unknown sort direction");
-                 case SortField::MED:
-                   if (AccountSortOrder == SortDirection::ASCENDING)
-                     return LR.Median < RR.Median;
-                   if (AccountSortOrder == SortDirection::DESCENDING)
-                     return LR.Median > RR.Median;
-                   llvm_unreachable("Unknown sort direction");
-                 case SortField::PCT90:
-                   if (AccountSortOrder == SortDirection::ASCENDING)
-                     return LR.Pct90 < RR.Pct90;
-                   if (AccountSortOrder == SortDirection::DESCENDING)
-                     return LR.Pct90 > RR.Pct90;
-                   llvm_unreachable("Unknown sort direction");
-                 case SortField::PCT99:
-                   if (AccountSortOrder == SortDirection::ASCENDING)
-                     return LR.Pct99 < RR.Pct99;
-                   if (AccountSortOrder == SortDirection::DESCENDING)
-                     return LR.Pct99 > RR.Pct99;
-                   llvm_unreachable("Unknown sort direction");
-                 case SortField::MAX:
-                   if (AccountSortOrder == SortDirection::ASCENDING)
-                     return LR.Max < RR.Max;
-                   if (AccountSortOrder == SortDirection::DESCENDING)
-                     return LR.Max > RR.Max;
-                   llvm_unreachable("Unknown sort direction");
-                 case SortField::SUM:
-                   if (AccountSortOrder == SortDirection::ASCENDING)
-                     return LR.Sum < RR.Sum;
-                   if (AccountSortOrder == SortDirection::DESCENDING)
-                     return LR.Sum > RR.Sum;
-                   llvm_unreachable("Unknown sort direction");
-                 default:
-                   llvm_unreachable("Unsupported sort order");
-                 }
-               });
+  case SortField::MIN:
+    sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Min; });
     break;
+  case SortField::MED:
+    sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Median; });
+    break;
+  case SortField::PCT90:
+    sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Pct90; });
+    break;
+  case SortField::PCT99:
+    sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Pct99; });
+    break;
+  case SortField::MAX:
+    sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Max; });
+    break;
+  case SortField::SUM:
+    sortByKey(Results, [](const TupleType &X) { return std::get<2>(X).Sum; });
+    break;
+  case SortField::FUNC:
+    llvm_unreachable("Not implemented");
   }
 
-  if (AccountTop > 0)
-    Results.erase(Results.begin() + AccountTop.getValue(), Results.end());
+  if (AccountTop > 0) {
+    auto MaxTop =
+        std::min(AccountTop.getValue(), static_cast<int>(Results.size()));
+    Results.erase(Results.begin() + MaxTop, Results.end());
+  }
 
   for (const auto &R : Results)
     Fn(std::get<0>(R), std::get<1>(R), std::get<2>(R));
@@ -417,19 +384,25 @@ namespace llvm {
 template <> struct format_provider<llvm::xray::RecordTypes> {
   static void format(const llvm::xray::RecordTypes &T, raw_ostream &Stream,
                      StringRef Style) {
-    switch(T) {
-      case RecordTypes::ENTER:
-        Stream << "enter";
-        break;
-      case RecordTypes::ENTER_ARG:
-        Stream << "enter-arg";
-        break;
-      case RecordTypes::EXIT:
-        Stream << "exit";
-        break;
-      case RecordTypes::TAIL_EXIT:
-        Stream << "tail-exit";
-        break;
+    switch (T) {
+    case RecordTypes::ENTER:
+      Stream << "enter";
+      break;
+    case RecordTypes::ENTER_ARG:
+      Stream << "enter-arg";
+      break;
+    case RecordTypes::EXIT:
+      Stream << "exit";
+      break;
+    case RecordTypes::TAIL_EXIT:
+      Stream << "tail-exit";
+      break;
+    case RecordTypes::CUSTOM_EVENT:
+      Stream << "custom-event";
+      break;
+    case RecordTypes::TYPED_EVENT:
+      Stream << "typed-event";
+      break;
     }
   }
 };

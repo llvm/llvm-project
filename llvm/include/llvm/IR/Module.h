@@ -16,6 +16,7 @@
 #define LLVM_IR_MODULE_H
 
 #include "llvm-c/Types.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -402,11 +403,15 @@ public:
   }
 
   /// Look up the specified global in the module symbol table.
-  ///   1. If it does not exist, add a declaration of the global and return it.
-  ///   2. Else, the global exists but has the wrong type: return the function
-  ///      with a constantexpr cast to the right type.
-  ///   3. Finally, if the existing global is the correct declaration, return
-  ///      the existing global.
+  /// If it does not exist, invoke a callback to create a declaration of the
+  /// global and return it. The global is constantexpr casted to the expected
+  /// type if necessary.
+  Constant *
+  getOrInsertGlobal(StringRef Name, Type *Ty,
+                    function_ref<GlobalVariable *()> CreateGlobalCallback);
+
+  /// Look up the specified global in the module symbol table. If required, this
+  /// overload constructs the global variable using its constructor's defaults.
   Constant *getOrInsertGlobal(StringRef Name, Type *Ty);
 
 /// @}
@@ -840,6 +845,17 @@ public:
   /// Set the PIE level (small or large model)
   void setPIELevel(PIELevel::Level PL);
 /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting code model
+  /// @{
+
+  /// Returns the code model (tiny, small, kernel, medium or large model)
+  Optional<CodeModel::Model> getCodeModel() const;
+
+  /// Set the code model (tiny, small, kernel, medium or large)
+  void setCodeModel(CodeModel::Model CL);
+  /// @}
 
   /// @name Utility functions for querying and setting PGO summary
   /// @{

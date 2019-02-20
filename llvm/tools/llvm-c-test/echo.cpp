@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c-test.h"
+#include "llvm-c/DebugInfo.h"
 #include "llvm-c/Target.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -239,7 +240,17 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     // Try function
     if (LLVMIsAFunction(Cst)) {
       check_value_kind(Cst, LLVMFunctionValueKind);
-      LLVMValueRef Dst = LLVMGetNamedFunction(M, Name);
+
+      LLVMValueRef Dst = nullptr;
+      // Try an intrinsic
+      unsigned ID = LLVMGetIntrinsicID(Cst);
+      if (ID > 0 && !LLVMIntrinsicIsOverloaded(ID)) {
+        Dst = LLVMGetIntrinsicDeclaration(M, ID, nullptr, 0);
+      } else {
+        // Try a normal function
+        Dst = LLVMGetNamedFunction(M, Name);
+      }
+
       if (Dst)
         return Dst;
       report_fatal_error("Could not find function");
@@ -728,6 +739,19 @@ struct FunCloner {
       exit(-1);
     }
 
+    auto Ctx = LLVMGetModuleContext(M);
+    size_t NumMetadataEntries;
+    auto *AllMetadata =
+        LLVMInstructionGetAllMetadataOtherThanDebugLoc(Src,
+                                                       &NumMetadataEntries);
+    for (unsigned i = 0; i < NumMetadataEntries; ++i) {
+      unsigned Kind = LLVMValueMetadataEntriesGetKind(AllMetadata, i);
+      LLVMMetadataRef MD = LLVMValueMetadataEntriesGetMetadata(AllMetadata, i);
+      LLVMSetMetadata(Dst, Kind, LLVMMetadataAsValue(Ctx, MD));
+    }
+    LLVMDisposeValueMetadataEntries(AllMetadata);
+    LLVMSetInstDebugLocation(Builder, Dst);
+
     check_value_kind(Dst, LLVMInstructionValueKind);
     return VMap[Src] = Dst;
   }
@@ -916,7 +940,7 @@ AliasDecl:
   if (!Begin) {
     if (End != nullptr)
       report_fatal_error("Range has an end but no beginning");
-    return;
+    goto NamedMDDecl;
   }
 
   Cur = Begin;
@@ -943,6 +967,38 @@ AliasDecl:
 
     Cur = Next;
   }
+
+NamedMDDecl:
+  LLVMNamedMDNodeRef BeginMD = LLVMGetFirstNamedMetadata(Src);
+  LLVMNamedMDNodeRef EndMD = LLVMGetLastNamedMetadata(Src);
+  if (!BeginMD) {
+    if (EndMD != nullptr)
+      report_fatal_error("Range has an end but no beginning");
+    return;
+  }
+
+  LLVMNamedMDNodeRef CurMD = BeginMD;
+  LLVMNamedMDNodeRef NextMD = nullptr;
+  while (true) {
+    size_t NameLen;
+    const char *Name = LLVMGetNamedMetadataName(CurMD, &NameLen);
+    if (LLVMGetNamedMetadata(M, Name, NameLen))
+      report_fatal_error("Named Metadata Node already cloned");
+    LLVMGetOrInsertNamedMetadata(M, Name, NameLen);
+
+    NextMD = LLVMGetNextNamedMetadata(CurMD);
+    if (NextMD == nullptr) {
+      if (CurMD != EndMD)
+        report_fatal_error("");
+      break;
+    }
+
+    LLVMNamedMDNodeRef PrevMD = LLVMGetPreviousNamedMetadata(NextMD);
+    if (PrevMD != CurMD)
+      report_fatal_error("Next.Previous global is not Current");
+
+    CurMD = NextMD;
+  }
 }
 
 static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
@@ -967,6 +1023,15 @@ static void clone_symbols(LLVMModuleRef Src, LLVMModuleRef M) {
     if (auto I = LLVMGetInitializer(Cur))
       LLVMSetInitializer(G, clone_constant(I, M));
 
+    size_t NumMetadataEntries;
+    auto *AllMetadata = LLVMGlobalCopyAllMetadata(Cur, &NumMetadataEntries);
+    for (unsigned i = 0; i < NumMetadataEntries; ++i) {
+      unsigned Kind = LLVMValueMetadataEntriesGetKind(AllMetadata, i);
+      LLVMMetadataRef MD = LLVMValueMetadataEntriesGetMetadata(AllMetadata, i);
+      LLVMGlobalSetMetadata(G, Kind, MD);
+    }
+    LLVMDisposeValueMetadataEntries(AllMetadata);
+    
     LLVMSetGlobalConstant(G, LLVMIsGlobalConstant(Cur));
     LLVMSetThreadLocal(G, LLVMIsThreadLocal(Cur));
     LLVMSetExternallyInitialized(G, LLVMIsExternallyInitialized(Cur));
@@ -1018,6 +1083,15 @@ FunClone:
       LLVMSetPersonalityFn(Fun, P);
     }
 
+    size_t NumMetadataEntries;
+    auto *AllMetadata = LLVMGlobalCopyAllMetadata(Cur, &NumMetadataEntries);
+    for (unsigned i = 0; i < NumMetadataEntries; ++i) {
+      unsigned Kind = LLVMValueMetadataEntriesGetKind(AllMetadata, i);
+      LLVMMetadataRef MD = LLVMValueMetadataEntriesGetMetadata(AllMetadata, i);
+      LLVMGlobalSetMetadata(Fun, Kind, MD);
+    }
+    LLVMDisposeValueMetadataEntries(AllMetadata);
+
     FunCloner FC(Cur, Fun);
     FC.CloneBBs(Cur);
 
@@ -1041,7 +1115,7 @@ AliasClone:
   if (!Begin) {
     if (End != nullptr)
       report_fatal_error("Range has an end but no beginning");
-    return;
+    goto NamedMDClone;
   }
 
   Cur = Begin;
@@ -1073,6 +1147,47 @@ AliasClone:
 
     Cur = Next;
   }
+
+NamedMDClone:
+  LLVMNamedMDNodeRef BeginMD = LLVMGetFirstNamedMetadata(Src);
+  LLVMNamedMDNodeRef EndMD = LLVMGetLastNamedMetadata(Src);
+  if (!BeginMD) {
+    if (EndMD != nullptr)
+      report_fatal_error("Range has an end but no beginning");
+    return;
+  }
+
+  LLVMNamedMDNodeRef CurMD = BeginMD;
+  LLVMNamedMDNodeRef NextMD = nullptr;
+  while (true) {
+    size_t NameLen;
+    const char *Name = LLVMGetNamedMetadataName(CurMD, &NameLen);
+    LLVMNamedMDNodeRef NamedMD = LLVMGetNamedMetadata(M, Name, NameLen);
+    if (!NamedMD)
+      report_fatal_error("Named MD Node must have been declared already");
+
+    unsigned OperandCount = LLVMGetNamedMetadataNumOperands(Src, Name);
+    LLVMValueRef *OperandBuf = static_cast<LLVMValueRef *>(
+              safe_malloc(OperandCount * sizeof(LLVMValueRef)));
+    LLVMGetNamedMetadataOperands(Src, Name, OperandBuf);
+    for (unsigned i = 0, e = OperandCount; i != e; ++i) {
+      LLVMAddNamedMetadataOperand(M, Name, OperandBuf[i]);
+    }
+    free(OperandBuf);
+
+    NextMD = LLVMGetNextNamedMetadata(CurMD);
+    if (NextMD == nullptr) {
+      if (CurMD != EndMD)
+        report_fatal_error("Last Named MD Node does not match End");
+      break;
+    }
+
+    LLVMNamedMDNodeRef PrevMD = LLVMGetPreviousNamedMetadata(NextMD);
+    if (PrevMD != CurMD)
+      report_fatal_error("Next.Previous Named MD Node is not Current");
+
+    CurMD = NextMD;
+  }
 }
 
 int llvm_echo(void) {
@@ -1089,18 +1204,6 @@ int llvm_echo(void) {
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);
   LLVMSetModuleIdentifier(M, ModuleName, ModuleIdentLen);
 
-  size_t SourceFlagsLen;
-  LLVMModuleFlagEntry *ModuleFlags =
-      LLVMCopyModuleFlagsMetadata(Src, &SourceFlagsLen);
-  for (unsigned i = 0; i < SourceFlagsLen; ++i) {
-    size_t EntryNameLen;
-    const char *EntryName =
-        LLVMModuleFlagEntriesGetKey(ModuleFlags, i, &EntryNameLen);
-    LLVMAddModuleFlag(M, LLVMModuleFlagEntriesGetFlagBehavior(ModuleFlags, i),
-                      EntryName, EntryNameLen,
-                      LLVMModuleFlagEntriesGetMetadata(ModuleFlags, i));
-  }
-
   LLVMSetTarget(M, LLVMGetTarget(Src));
   LLVMSetModuleDataLayout(M, LLVMGetModuleDataLayout(Src));
   if (strcmp(LLVMGetDataLayoutStr(M), LLVMGetDataLayoutStr(Src)))
@@ -1115,7 +1218,6 @@ int llvm_echo(void) {
   char *Str = LLVMPrintModuleToString(M);
   fputs(Str, stdout);
 
-  LLVMDisposeModuleFlagsMetadata(ModuleFlags);
   LLVMDisposeMessage(Str);
   LLVMDisposeModule(Src);
   LLVMDisposeModule(M);

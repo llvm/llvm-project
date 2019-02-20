@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+#define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
+
 #include "CompileUnit.h"
 #include "DebugMap.h"
 #include "LinkUtils.h"
@@ -32,9 +35,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
-#ifndef LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
-#define LLVM_TOOLS_DSYMUTIL_DWARFSTREAMER_H
-
 namespace llvm {
 namespace dsymutil {
 
@@ -50,7 +50,7 @@ public:
   bool init(Triple TheTriple);
 
   /// Dump the file to the disk.
-  bool finish(const DebugMap &);
+  bool finish(const DebugMap &, SymbolMapTranslator &T);
 
   AsmPrinter &getAsmPrinter() const { return *Asm; }
 
@@ -103,6 +103,11 @@ public:
                             StringRef PrologueBytes, unsigned MinInstLength,
                             std::vector<DWARFDebugLine::Row> &Rows,
                             unsigned AdddressSize);
+
+  /// Copy the debug_line over to the updated binary while unobfuscating the
+  /// file names and directories.
+  void translateLineTable(DataExtractor LineData, uint32_t Offset,
+                          LinkOptions &Options);
 
   /// Copy over the debug sections that are not modified when updating.
   void copyInvariantDebugSection(const object::ObjectFile &Obj);

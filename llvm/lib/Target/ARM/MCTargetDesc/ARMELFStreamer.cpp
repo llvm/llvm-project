@@ -465,6 +465,11 @@ public:
   void emitPad(int64_t Offset);
   void emitRegSave(const SmallVectorImpl<unsigned> &RegList, bool isVector);
   void emitUnwindRaw(int64_t Offset, const SmallVectorImpl<uint8_t> &Opcodes);
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                SMLoc Loc) override {
+    EmitDataMappingSymbol();
+    MCObjectStreamer::emitFill(NumBytes, FillValue, Loc);
+  }
 
   void ChangeSection(MCSection *Section, const MCExpr *Subsection) override {
     LastMappingSymbols[getCurrentSection().first] = std::move(LastEMSInfo);
@@ -861,6 +866,7 @@ void ARMTargetELFStreamer::emitArchDefaultAttributes() {
   case ARM::ArchKind::ARMV8_2A:
   case ARM::ArchKind::ARMV8_3A:
   case ARM::ArchKind::ARMV8_4A:
+  case ARM::ArchKind::ARMV8_5A:
     setAttributeItem(CPU_arch_profile, ApplicationProfile, false);
     setAttributeItem(ARM_ISA_use, Allowed, false);
     setAttributeItem(THUMB_ISA_use, AllowThumb32, false);
@@ -1071,7 +1077,7 @@ void ARMTargetELFStreamer::finishAttributeSection() {
   if (Contents.empty())
     return;
 
-  llvm::sort(Contents.begin(), Contents.end(), AttributeItem::LessTag);
+  llvm::sort(Contents, AttributeItem::LessTag);
 
   ARMELFStreamer &Streamer = getStreamer();
 

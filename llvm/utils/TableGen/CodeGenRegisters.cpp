@@ -20,6 +20,7 @@
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -725,7 +726,7 @@ struct TupleExpander : SetTheory::Expander {
 //===----------------------------------------------------------------------===//
 
 static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
-  llvm::sort(M.begin(), M.end(), deref<llvm::less>());
+  llvm::sort(M, deref<llvm::less>());
   M.erase(std::unique(M.begin(), M.end(), deref<llvm::equal>()), M.end());
 }
 
@@ -997,7 +998,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
   for (auto &RC : RegClasses)
     if (SuperRegRCsBV[RC.EnumValue])
       SuperRegRCs.emplace_back(&RC);
-  llvm::sort(SuperRegRCs.begin(), SuperRegRCs.end(), SizeOrder);
+  llvm::sort(SuperRegRCs, SizeOrder);
   assert(SuperRegRCs.front() == BiggestSuperRegRC && "Biggest class wasn't first");
 
   // Find all the subreg classes and order them by size too.
@@ -1008,7 +1009,7 @@ CodeGenRegisterClass::getMatchingSubClassWithSubRegs(
     if (SuperRegClassesBV.any())
       SuperRegClasses.push_back(std::make_pair(&RC, SuperRegClassesBV));
   }
-  llvm::sort(SuperRegClasses.begin(), SuperRegClasses.end(),
+  llvm::sort(SuperRegClasses,
              [&](const std::pair<CodeGenRegisterClass *, BitVector> &A,
                  const std::pair<CodeGenRegisterClass *, BitVector> &B) {
                return SizeOrder(A.first, B.first);
@@ -1073,7 +1074,7 @@ void CodeGenRegisterClass::buildRegUnitSet(const CodeGenRegBank &RegBank,
     if (!RU.Artificial)
       TmpUnits.push_back(*UnitI);
   }
-  llvm::sort(TmpUnits.begin(), TmpUnits.end());
+  llvm::sort(TmpUnits);
   std::unique_copy(TmpUnits.begin(), TmpUnits.end(),
                    std::back_inserter(RegUnits));
 }
@@ -1093,7 +1094,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
   // Read in the user-defined (named) sub-register indices.
   // More indices will be synthesized later.
   std::vector<Record*> SRIs = Records.getAllDerivedDefinitions("SubRegIndex");
-  llvm::sort(SRIs.begin(), SRIs.end(), LessRecord());
+  llvm::sort(SRIs, LessRecord());
   for (unsigned i = 0, e = SRIs.size(); i != e; ++i)
     getSubRegIdx(SRIs[i]);
   // Build composite maps from ComposedOf fields.
@@ -1102,7 +1103,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
 
   // Read in the register definitions.
   std::vector<Record*> Regs = Records.getAllDerivedDefinitions("Register");
-  llvm::sort(Regs.begin(), Regs.end(), LessRecordRegister());
+  llvm::sort(Regs, LessRecordRegister());
   // Assign the enumeration values.
   for (unsigned i = 0, e = Regs.size(); i != e; ++i)
     getReg(Regs[i]);
@@ -1113,7 +1114,7 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
 
   for (Record *R : Tups) {
     std::vector<Record *> TupRegs = *Sets.expand(R);
-    llvm::sort(TupRegs.begin(), TupRegs.end(), LessRecordRegister());
+    llvm::sort(TupRegs, LessRecordRegister());
     for (Record *RC : TupRegs)
       getReg(RC);
   }
@@ -1309,6 +1310,55 @@ getConcatSubRegIndex(const SmallVector<CodeGenSubRegIndex *, 8> &Parts) {
 }
 
 void CodeGenRegBank::computeComposites() {
+  using RegMap = std::map<const CodeGenRegister*, const CodeGenRegister*>;
+
+  // Subreg -> { Reg->Reg }, where the right-hand side is the mapping from
+  // register to (sub)register associated with the action of the left-hand
+  // side subregister.
+  std::map<const CodeGenSubRegIndex*, RegMap> SubRegAction;
+  for (const CodeGenRegister &R : Registers) {
+    const CodeGenRegister::SubRegMap &SM = R.getSubRegs();
+    for (std::pair<const CodeGenSubRegIndex*, const CodeGenRegister*> P : SM)
+      SubRegAction[P.first].insert({&R, P.second});
+  }
+
+  // Calculate the composition of two subregisters as compositions of their
+  // associated actions.
+  auto compose = [&SubRegAction] (const CodeGenSubRegIndex *Sub1,
+                                  const CodeGenSubRegIndex *Sub2) {
+    RegMap C;
+    const RegMap &Img1 = SubRegAction.at(Sub1);
+    const RegMap &Img2 = SubRegAction.at(Sub2);
+    for (std::pair<const CodeGenRegister*, const CodeGenRegister*> P : Img1) {
+      auto F = Img2.find(P.second);
+      if (F != Img2.end())
+        C.insert({P.first, F->second});
+    }
+    return C;
+  };
+
+  // Check if the two maps agree on the intersection of their domains.
+  auto agree = [] (const RegMap &Map1, const RegMap &Map2) {
+    // Technically speaking, an empty map agrees with any other map, but
+    // this could flag false positives. We're interested in non-vacuous
+    // agreements.
+    if (Map1.empty() || Map2.empty())
+      return false;
+    for (std::pair<const CodeGenRegister*, const CodeGenRegister*> P : Map1) {
+      auto F = Map2.find(P.first);
+      if (F == Map2.end() || P.second != F->second)
+        return false;
+    }
+    return true;
+  };
+
+  using CompositePair = std::pair<const CodeGenSubRegIndex*,
+                                  const CodeGenSubRegIndex*>;
+  SmallSet<CompositePair,4> UserDefined;
+  for (const CodeGenSubRegIndex &Idx : SubRegIndices)
+    for (auto P : Idx.getComposites())
+      UserDefined.insert(std::make_pair(&Idx, P.first));
+
   // Keep track of TopoSigs visited. We only need to visit each TopoSig once,
   // and many registers will share TopoSigs on regular architectures.
   BitVector TopoSigs(getNumTopoSigs());
@@ -1341,11 +1391,15 @@ void CodeGenRegBank::computeComposites() {
         assert(Idx3 && "Sub-register doesn't have an index");
 
         // Conflicting composition? Emit a warning but allow it.
-        if (CodeGenSubRegIndex *Prev = Idx1->addComposite(Idx2, Idx3))
-          PrintWarning(Twine("SubRegIndex ") + Idx1->getQualifiedName() +
-                       " and " + Idx2->getQualifiedName() +
-                       " compose ambiguously as " + Prev->getQualifiedName() +
-                       " or " + Idx3->getQualifiedName());
+        if (CodeGenSubRegIndex *Prev = Idx1->addComposite(Idx2, Idx3)) {
+          // If the composition was not user-defined, always emit a warning.
+          if (!UserDefined.count({Idx1, Idx2}) ||
+              agree(compose(Idx1, Idx2), SubRegAction.at(Idx3)))
+            PrintWarning(Twine("SubRegIndex ") + Idx1->getQualifiedName() +
+                         " and " + Idx2->getQualifiedName() +
+                         " compose ambiguously as " + Prev->getQualifiedName() +
+                         " or " + Idx3->getQualifiedName());
+        }          
       }
     }
   }

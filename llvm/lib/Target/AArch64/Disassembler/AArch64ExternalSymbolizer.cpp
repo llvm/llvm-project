@@ -8,12 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExternalSymbolizer.h"
-#include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -60,6 +60,8 @@ getVariant(uint64_t LLVMDisassembler_VariantKind) {
 bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
     MCInst &MI, raw_ostream &CommentStream, int64_t Value, uint64_t Address,
     bool IsBranch, uint64_t Offset, uint64_t InstSize) {
+  if (!SymbolLookUp)
+    return false;
   // FIXME: This method shares a lot of code with
   //        MCExternalSymbolizer::tryAddingSymbolicOperand. It may be possible
   //        refactor the MCExternalSymbolizer interface to allow more of this

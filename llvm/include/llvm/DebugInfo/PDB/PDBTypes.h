@@ -12,6 +12,7 @@
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/IPDBFrameData.h"
 #include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include <cctype>
 #include <cstddef>
@@ -21,6 +22,8 @@
 
 namespace llvm {
 namespace pdb {
+
+typedef uint32_t SymIndexId;
 
 class IPDBDataStream;
 class IPDBInjectedSource;
@@ -69,6 +72,7 @@ using IPDBEnumLineNumbers = IPDBEnumChildren<IPDBLineNumber>;
 using IPDBEnumTables = IPDBEnumChildren<IPDBTable>;
 using IPDBEnumInjectedSources = IPDBEnumChildren<IPDBInjectedSource>;
 using IPDBEnumSectionContribs = IPDBEnumChildren<IPDBSectionContrib>;
+using IPDBEnumFrameData = IPDBEnumChildren<IPDBFrameData>;
 
 /// Specifies which PDB reader implementation is to be used.  Only a value
 /// of PDB_ReaderType::DIA is currently supported, but Native is in the works.
@@ -208,6 +212,18 @@ enum class PDB_SymType {
   CustomType,
   ManagedType,
   Dimension,
+  CallSite,
+  InlineSite,
+  BaseInterface,
+  VectorType,
+  MatrixType,
+  HLSLType,
+  Caller,
+  Callee,
+  Export,
+  HeapAllocationSite,
+  CoffGroup,
+  Inlinee,
   Max
 };
 
@@ -333,6 +349,36 @@ enum PDB_VariantType {
 
 struct Variant {
   Variant() = default;
+
+  explicit Variant(bool V) : Type(PDB_VariantType::Bool) { Value.Bool = V; }
+  explicit Variant(int8_t V) : Type(PDB_VariantType::Int8) { Value.Int8 = V; }
+  explicit Variant(int16_t V) : Type(PDB_VariantType::Int16) {
+    Value.Int16 = V;
+  }
+  explicit Variant(int32_t V) : Type(PDB_VariantType::Int32) {
+    Value.Int32 = V;
+  }
+  explicit Variant(int64_t V) : Type(PDB_VariantType::Int64) {
+    Value.Int64 = V;
+  }
+  explicit Variant(float V) : Type(PDB_VariantType::Single) {
+    Value.Single = V;
+  }
+  explicit Variant(double V) : Type(PDB_VariantType::Double) {
+    Value.Double = V;
+  }
+  explicit Variant(uint8_t V) : Type(PDB_VariantType::UInt8) {
+    Value.UInt8 = V;
+  }
+  explicit Variant(uint16_t V) : Type(PDB_VariantType::UInt16) {
+    Value.UInt16 = V;
+  }
+  explicit Variant(uint32_t V) : Type(PDB_VariantType::UInt32) {
+    Value.UInt32 = V;
+  }
+  explicit Variant(uint64_t V) : Type(PDB_VariantType::UInt64) {
+    Value.UInt64 = V;
+  }
 
   Variant(const Variant &Other) {
     *this = Other;

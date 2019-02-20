@@ -1,21 +1,28 @@
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.coff-i386 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-i386 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-mipsel \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-mipsel \
 RUN:   | FileCheck %s -check-prefix ELF-MIPSEL
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-i386 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-i386 \
 RUN:   | FileCheck %s -check-prefix MACHO-I386
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-x86-64 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-x86-64 \
 RUN:   | FileCheck %s -check-prefix MACHO-X86-64
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-ppc \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-ppc \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-ppc64 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-ppc64 \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC64
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-arm \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.wasm \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.wasm \
 RUN:   | FileCheck %s -check-prefix WASM
+
+# Check flag aliases produce identical output.
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 > %t.sections
+RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.uppers
+RUN: cmp %t.sections %t.uppers
+RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-i386 > %t.lowers
+RUN: cmp %t.sections %t.lowers
 
 COFF:      Sections [
 COFF-NEXT:   Section {
@@ -496,28 +503,28 @@ MACHO-ARM-NEXT:]
 WASM:      Sections [
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: TYPE (0x1)
-WASM-NEXT:     Size: 14
+WASM-NEXT:     Size: 17
 WASM-NEXT:     Offset: 8
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: IMPORT (0x2)
 WASM-NEXT:     Size: 93
-WASM-NEXT:     Offset: 28
+WASM-NEXT:     Offset: 31
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: FUNCTION (0x3)
-WASM-NEXT:     Size: 2
-WASM-NEXT:     Offset: 127
+WASM-NEXT:     Size: 3
+WASM-NEXT:     Offset: 130
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CODE (0xA)
-WASM-NEXT:     Size: 25
-WASM-NEXT:     Offset: 135
+WASM-NEXT:     Size: 36
+WASM-NEXT:     Offset: 139
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: DATA (0xB)
 WASM-NEXT:     Size: 19
-WASM-NEXT:     Offset: 166
+WASM-NEXT:     Offset: 181
 WASM-NEXT:     Segments [
 WASM-NEXT:       Segment {
 WASM-NEXT:         Name: .rodata..L.str
@@ -528,14 +535,14 @@ WASM-NEXT:     ]
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)
-WASM-NEXT:     Size: 61
-WASM-NEXT:     Offset: 191
+WASM-NEXT:     Size: 89
+WASM-NEXT:     Offset: 206
 WASM-NEXT:     Name: linking
 WASM-NEXT:   }
 WASM-NEXT:   Section {
 WASM-NEXT:     Type: CUSTOM (0x0)
-WASM-NEXT:     Size: 12
-WASM-NEXT:     Offset: 266
+WASM-NEXT:     Size: 15
+WASM-NEXT:     Offset: 309
 WASM-NEXT:     Name: reloc.CODE
 WASM-NEXT:   }
 WASM-NEXT: ]

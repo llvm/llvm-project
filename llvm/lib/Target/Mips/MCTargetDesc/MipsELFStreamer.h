@@ -26,6 +26,7 @@ class MCAsmBackend;
 class MCCodeEmitter;
 class MCContext;
 class MCSubtargetInfo;
+struct MCDwarfFrameInfo;
 
 class MipsELFStreamer : public MCELFStreamer {
   SmallVector<std::unique_ptr<MipsOptionRecord>, 8> MipsOptionRecords;
@@ -59,6 +60,12 @@ public:
   /// directives are emitted.
   void EmitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
   void EmitIntValue(uint64_t Value, unsigned Size) override;
+
+  // Overriding these functions allows us to avoid recording of these labels
+  // in EmitLabel and later marking them as microMIPS.
+  void EmitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
+  void EmitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
+  MCSymbol *EmitCFILabel() override;
 
   /// Emits all the option records stored up until the point it's called.
   void EmitMipsOptionRecords();

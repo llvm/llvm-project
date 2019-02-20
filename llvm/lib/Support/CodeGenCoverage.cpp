@@ -22,7 +22,7 @@
 
 #if LLVM_ON_UNIX
 #include <unistd.h>
-#elif _WIN32
+#elif defined(_WIN32)
 #include <windows.h>
 #endif
 
@@ -93,7 +93,7 @@ bool CodeGenCoverage::emit(StringRef CoveragePrefix,
     std::string Pid =
 #if LLVM_ON_UNIX
         llvm::to_string(::getpid());
-#elif _WIN32
+#elif defined(_WIN32)
         llvm::to_string(::GetCurrentProcessId());
 #else
         "";

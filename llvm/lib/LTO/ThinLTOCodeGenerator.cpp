@@ -29,9 +29,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/CachePruning.h"
@@ -297,8 +299,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      const GVSummaryMapTy &DefinedFunctions,
-      const DenseSet<GlobalValue::GUID> &PreservedSymbols, unsigned OptLevel,
+      const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
       bool Freestanding, const TargetMachineBuilder &TMBuilder) {
     if (CachePath.empty())
       return;
@@ -307,87 +308,26 @@ public:
       // The module does not have an entry, it can't have a hash at all
       return;
 
-    // Compute the unique hash for this entry
-    // This is based on the current compiler version, the module itself, the
-    // export list, the hash for every single module in the import list, the
-    // list of ResolvedODR for the module, and the list of preserved symbols.
-
-    // Include the hash for the current module
-    auto ModHash = Index.getModuleHash(ModuleID);
-
-    if (all_of(ModHash, [](uint32_t V) { return V == 0; }))
+    if (all_of(Index.getModuleHash(ModuleID),
+               [](uint32_t V) { return V == 0; }))
       // No hash entry, no caching!
       return;
 
-    SHA1 Hasher;
-
-    // Include the parts of the LTO configuration that affect code generation.
-    auto AddString = [&](StringRef Str) {
-      Hasher.update(Str);
-      Hasher.update(ArrayRef<uint8_t>{0});
-    };
-    auto AddUnsigned = [&](unsigned I) {
-      uint8_t Data[4];
-      Data[0] = I;
-      Data[1] = I >> 8;
-      Data[2] = I >> 16;
-      Data[3] = I >> 24;
-      Hasher.update(ArrayRef<uint8_t>{Data, 4});
-    };
-
-    // Start with the compiler revision
-    Hasher.update(LLVM_VERSION_STRING);
-#ifdef LLVM_REVISION
-    Hasher.update(LLVM_REVISION);
-#endif
-
-    // Hash the optimization level and the target machine settings.
-    AddString(TMBuilder.MCpu);
-    // FIXME: Hash more of Options. For now all clients initialize Options from
-    // command-line flags (which is unsupported in production), but may set
-    // RelaxELFRelocations. The clang driver can also pass FunctionSections,
-    // DataSections and DebuggerTuning via command line flags.
-    AddUnsigned(TMBuilder.Options.RelaxELFRelocations);
-    AddUnsigned(TMBuilder.Options.FunctionSections);
-    AddUnsigned(TMBuilder.Options.DataSections);
-    AddUnsigned((unsigned)TMBuilder.Options.DebuggerTuning);
-    AddString(TMBuilder.MAttr);
-    if (TMBuilder.RelocModel)
-      AddUnsigned(*TMBuilder.RelocModel);
-    AddUnsigned(TMBuilder.CGOptLevel);
-    AddUnsigned(OptLevel);
-    AddUnsigned(Freestanding);
-
-    Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
-    for (auto F : ExportList)
-      // The export list can impact the internalization, be conservative here
-      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&F, sizeof(F)));
-
-    // Include the hash for every module we import functions from
-    for (auto &Entry : ImportList) {
-      auto ModHash = Index.getModuleHash(Entry.first());
-      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
-    }
-
-    // Include the hash for the resolved ODR.
-    for (auto &Entry : ResolvedODR) {
-      Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&Entry.first,
-                                      sizeof(GlobalValue::GUID)));
-      Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&Entry.second,
-                                      sizeof(GlobalValue::LinkageTypes)));
-    }
-
-    // Include the hash for the preserved symbols.
-    for (auto &Entry : PreservedSymbols) {
-      if (DefinedFunctions.count(Entry))
-        Hasher.update(
-            ArrayRef<uint8_t>((const uint8_t *)&Entry, sizeof(GlobalValue::GUID)));
-    }
+    llvm::lto::Config Conf;
+    Conf.OptLevel = OptLevel;
+    Conf.Options = TMBuilder.Options;
+    Conf.CPU = TMBuilder.MCpu;
+    Conf.MAttrs.push_back(TMBuilder.MAttr);
+    Conf.RelocModel = TMBuilder.RelocModel;
+    Conf.CGOptLevel = TMBuilder.CGOptLevel;
+    Conf.Freestanding = Freestanding;
+    SmallString<40> Key;
+    computeLTOCacheKey(Key, Conf, Index, ModuleID, ImportList, ExportList,
+                       ResolvedODR, DefinedGVSummaries);
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
-    sys::path::append(EntryPath, CachePath,
-                      "llvmcache-" + toHex(Hasher.result()));
+    sys::path::append(EntryPath, CachePath, "llvmcache-" + Key);
   }
 
   // Access the path to this entry in the cache.
@@ -456,8 +396,8 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   if (!SingleModule) {
     promoteModule(TheModule, Index);
 
-    // Apply summary-based LinkOnce/Weak resolution decisions.
-    thinLTOResolveWeakForLinkerModule(TheModule, DefinedGlobals);
+    // Apply summary-based prevailing-symbol resolution decisions.
+    thinLTOResolvePrevailingInModule(TheModule, DefinedGlobals);
 
     // Save temps: after promotion.
     saveTempBitcode(TheModule, SaveTempsDir, count, ".1.promoted.bc");
@@ -499,12 +439,12 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   return codegenModule(TheModule, TM);
 }
 
-/// Resolve LinkOnce/Weak symbols. Record resolutions in the \p ResolvedODR map
+/// Resolve prevailing symbols. Record resolutions in the \p ResolvedODR map
 /// for caching, and in the \p Index for application during the ThinLTO
 /// backends. This is needed for correctness for exported symbols (ensure
 /// at least one copy kept) and a compile-time optimization (to drop duplicate
 /// copies when possible).
-static void resolveWeakForLinkerInIndex(
+static void resolvePrevailingInIndex(
     ModuleSummaryIndex &Index,
     StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>>
         &ResolvedODR) {
@@ -526,7 +466,7 @@ static void resolveWeakForLinkerInIndex(
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
 
-  thinLTOResolveWeakForLinkerInIndex(Index, isPrevailing, recordNewLinkage);
+  thinLTOResolvePrevailingInIndex(Index, isPrevailing, recordNewLinkage);
 }
 
 // Initialize the TargetMachine builder for a given Triple
@@ -645,7 +585,8 @@ static void computeDeadSymbolsInIndex(
   auto isPrevailing = [&](GlobalValue::GUID G) {
     return PrevailingType::Unknown;
   };
-  computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
+  computeDeadSymbolsWithConstProp(Index, GUIDPreservedSymbols, isPrevailing,
+                                  /* ImportEnabled = */ true);
 }
 
 /**
@@ -674,11 +615,11 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
                            ExportLists);
 
-  // Resolve LinkOnce/Weak symbols.
+  // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolveWeakForLinkerInIndex(Index, ResolvedODR);
+  resolvePrevailingInIndex(Index, ResolvedODR);
 
-  thinLTOResolveWeakForLinkerModule(
+  thinLTOResolvePrevailingInModule(
       TheModule, ModuleToDefinedGVSummaries[ModuleIdentifier]);
 
   // Promote the exported values in the index, so that they are promoted
@@ -721,13 +662,21 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
  * Compute the list of summaries needed for importing into module.
  */
 void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
-    StringRef ModulePath, ModuleSummaryIndex &Index,
+    Module &TheModule, ModuleSummaryIndex &Index,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   auto ModuleCount = Index.modulePaths().size();
+  auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
   StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
+
+  // Convert the preserved symbols set from string to GUID
+  auto GUIDPreservedSymbols = computeGUIDPreservedSymbols(
+      PreservedSymbols, Triple(TheModule.getTargetTriple()));
+
+  // Compute "dead" symbols, we don't want to import/export these!
+  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
@@ -735,22 +684,29 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
                            ExportLists);
 
-  llvm::gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                         ImportLists[ModulePath],
-                                         ModuleToSummariesForIndex);
+  llvm::gatherImportedSummariesForModule(
+      ModuleIdentifier, ModuleToDefinedGVSummaries,
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
 }
 
 /**
  * Emit the list of files needed for importing into module.
  */
-void ThinLTOCodeGenerator::emitImports(StringRef ModulePath,
-                                       StringRef OutputName,
+void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
                                        ModuleSummaryIndex &Index) {
   auto ModuleCount = Index.modulePaths().size();
+  auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
   // Collect for each module the list of function it defines (GUID -> Summary).
   StringMap<GVSummaryMapTy> ModuleToDefinedGVSummaries(ModuleCount);
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
+
+  // Convert the preserved symbols set from string to GUID
+  auto GUIDPreservedSymbols = computeGUIDPreservedSymbols(
+      PreservedSymbols, Triple(TheModule.getTargetTriple()));
+
+  // Compute "dead" symbols, we don't want to import/export these!
+  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
 
   // Generate import/export list
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
@@ -759,13 +715,13 @@ void ThinLTOCodeGenerator::emitImports(StringRef ModulePath,
                            ExportLists);
 
   std::map<std::string, GVSummaryMapTy> ModuleToSummariesForIndex;
-  llvm::gatherImportedSummariesForModule(ModulePath, ModuleToDefinedGVSummaries,
-                                         ImportLists[ModulePath],
-                                         ModuleToSummariesForIndex);
+  llvm::gatherImportedSummariesForModule(
+      ModuleIdentifier, ModuleToDefinedGVSummaries,
+      ImportLists[ModuleIdentifier], ModuleToSummariesForIndex);
 
   std::error_code EC;
-  if ((EC =
-           EmitImportsFiles(ModulePath, OutputName, ModuleToSummariesForIndex)))
+  if ((EC = EmitImportsFiles(ModuleIdentifier, OutputName,
+                             ModuleToSummariesForIndex)))
     report_fatal_error(Twine("Failed to open ") + OutputName +
                        " to save imports lists\n");
 }
@@ -816,14 +772,6 @@ void ThinLTOCodeGenerator::optimize(Module &TheModule) {
 
   // Optimize now
   optimizeModule(TheModule, *TMBuilder.create(), OptLevel, Freestanding);
-}
-
-/**
- * Perform ThinLTO CodeGen.
- */
-std::unique_ptr<MemoryBuffer> ThinLTOCodeGenerator::codegen(Module &TheModule) {
-  initTMBuilder(TMBuilder, Triple(TheModule.getTargetTriple()));
-  return codegenModule(TheModule, *TMBuilder.create());
 }
 
 /// Write out the generated object file, either from CacheEntryPath or from
@@ -893,7 +841,7 @@ void ThinLTOCodeGenerator::run() {
                                  /*IsImporting*/ false);
 
         // CodeGen
-        auto OutputBuffer = codegen(*TheModule);
+        auto OutputBuffer = codegenModule(*TheModule, *TMBuilder.create());
         if (SavedObjectsDirectoryPath.empty())
           ProducedBinaries[count] = std::move(OutputBuffer);
         else
@@ -936,6 +884,9 @@ void ThinLTOCodeGenerator::run() {
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(*Index, GUIDPreservedSymbols);
 
+  // Synthesize entry counts for functions in the combined index.
+  computeSyntheticCounts(*Index);
+
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.
   StringMap<FunctionImporter::ImportMapTy> ImportLists(ModuleCount);
@@ -949,9 +900,9 @@ void ThinLTOCodeGenerator::run() {
   // on the index, and nuke this map.
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
 
-  // Resolve LinkOnce/Weak symbols, this has to be computed early because it
+  // Resolve prevailing symbols, this has to be computed early because it
   // impacts the caching.
-  resolveWeakForLinkerInIndex(*Index, ResolvedODR);
+  resolvePrevailingInIndex(*Index, ResolvedODR);
 
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).
@@ -975,12 +926,11 @@ void ThinLTOCodeGenerator::run() {
   std::vector<int> ModulesOrdering;
   ModulesOrdering.resize(Modules.size());
   std::iota(ModulesOrdering.begin(), ModulesOrdering.end(), 0);
-  llvm::sort(ModulesOrdering.begin(), ModulesOrdering.end(),
-             [&](int LeftIndex, int RightIndex) {
-               auto LSize = Modules[LeftIndex].getBuffer().size();
-               auto RSize = Modules[RightIndex].getBuffer().size();
-               return LSize > RSize;
-             });
+  llvm::sort(ModulesOrdering, [&](int LeftIndex, int RightIndex) {
+    auto LSize = Modules[LeftIndex].getBuffer().size();
+    auto RSize = Modules[RightIndex].getBuffer().size();
+    return LSize > RSize;
+  });
 
   // Parallel optimizer + codegen
   {
@@ -991,14 +941,14 @@ void ThinLTOCodeGenerator::run() {
         auto ModuleIdentifier = ModuleBuffer.getBufferIdentifier();
         auto &ExportList = ExportLists[ModuleIdentifier];
 
-        auto &DefinedFunctions = ModuleToDefinedGVSummaries[ModuleIdentifier];
+        auto &DefinedGVSummaries = ModuleToDefinedGVSummaries[ModuleIdentifier];
 
         // The module may be cached, this helps handling it.
         ModuleCacheEntry CacheEntry(CacheOptions.Path, *Index, ModuleIdentifier,
                                     ImportLists[ModuleIdentifier], ExportList,
                                     ResolvedODR[ModuleIdentifier],
-                                    DefinedFunctions, GUIDPreservedSymbols,
-                                    OptLevel, Freestanding, TMBuilder);
+                                    DefinedGVSummaries, OptLevel, Freestanding,
+                                    TMBuilder);
         auto CacheEntryPath = CacheEntry.getEntryPath();
 
         {

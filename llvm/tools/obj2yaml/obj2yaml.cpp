@@ -50,7 +50,7 @@ static void reportError(StringRef Input, Error Err) {
     Input = "<stdin>";
   std::string ErrMsg;
   raw_string_ostream OS(ErrMsg);
-  logAllUnhandledErrors(std::move(Err), OS, "");
+  logAllUnhandledErrors(std::move(Err), OS);
   OS.flush();
   errs() << "Error reading file: " << Input << ": " << ErrMsg;
   errs().flush();

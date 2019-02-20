@@ -616,6 +616,9 @@ public:
     case MachO::PLATFORM_TVOS: return "tvos";
     case MachO::PLATFORM_WATCHOS: return "watchos";
     case MachO::PLATFORM_BRIDGEOS: return "bridgeos";
+    case MachO::PLATFORM_IOSSIMULATOR: return "iossimulator";
+    case MachO::PLATFORM_TVOSSIMULATOR: return "tvossimulator";
+    case MachO::PLATFORM_WATCHOSSIMULATOR: return "watchossimulator";
     default:
       std::string ret;
       raw_string_ostream ss(ret);

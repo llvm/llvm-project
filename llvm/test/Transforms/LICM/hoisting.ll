@@ -150,6 +150,23 @@ return:
   ret i32 %sum
 }
 
+; Can neither sink nor hoist
+define i32 @test_volatile(i1 %c) {
+; CHECK-LABEL: @test_volatile(
+; CHECK-LABEL: Loop:
+; CHECK: load volatile i32, i32* @X
+; CHECK-LABEL: Out:
+  br label %Loop
+
+Loop:
+  %A = load volatile i32, i32* @X
+  br i1 %c, label %Loop, label %Out
+
+Out:
+  ret i32 %A
+}
+
+
 declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) nounwind readonly
 declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) nounwind
 declare void @escaping.invariant.start({}*) nounwind

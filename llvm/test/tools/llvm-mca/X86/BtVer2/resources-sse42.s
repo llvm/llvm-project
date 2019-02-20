@@ -79,7 +79,7 @@ pcmpgtq     (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]
-# CHECK-NEXT: 28.00  20.00   -     8.00    -     1.00   9.00   18.00   -     8.00    -     13.00  37.00   -
+# CHECK-NEXT: 28.00  20.00   -     8.00    -     5.00   13.00  18.00   -     8.00    -     13.00  37.00   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   Instructions:
@@ -97,9 +97,9 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   3.00    -     2.00    -     3.00   7.00    -     pcmpestri	$1, (%rax), %xmm2
 # CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   2.00    -     2.00    -     3.00   7.00    -     pcmpestrm	$1, %xmm0, %xmm2
 # CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   3.00    -     2.00    -     3.00   7.00    -     pcmpestrm	$1, (%rax), %xmm2
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00    -      -      -      -      -     2.00    -     pcmpistri	$1, %xmm0, %xmm2
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   1.00    -      -      -      -     2.00    -     pcmpistri	$1, (%rax), %xmm2
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00    -      -      -      -      -     2.00    -     pcmpistrm	$1, %xmm0, %xmm2
-# CHECK-NEXT: 1.00    -      -     1.00    -      -     1.00   1.00    -      -      -      -     2.00    -     pcmpistrm	$1, (%rax), %xmm2
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   2.00    -      -      -      -      -     2.00    -     pcmpistri	$1, %xmm0, %xmm2
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   2.00   1.00    -      -      -      -     2.00    -     pcmpistri	$1, (%rax), %xmm2
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   2.00    -      -      -      -      -     2.00    -     pcmpistrm	$1, %xmm0, %xmm2
+# CHECK-NEXT: 1.00    -      -     1.00    -     1.00   2.00   1.00    -      -      -      -     2.00    -     pcmpistrm	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -     0.50   0.50    -     pcmpgtq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50   1.00    -      -      -     0.50   0.50    -     pcmpgtq	(%rax), %xmm2

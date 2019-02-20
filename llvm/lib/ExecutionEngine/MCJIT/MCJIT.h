@@ -331,9 +331,9 @@ protected:
   /// the future.
   std::unique_ptr<MemoryBuffer> emitObject(Module *M);
 
-  void NotifyObjectEmitted(const object::ObjectFile& Obj,
-                           const RuntimeDyld::LoadedObjectInfo &L);
-  void NotifyFreeingObject(const object::ObjectFile& Obj);
+  void notifyObjectLoaded(const object::ObjectFile &Obj,
+                          const RuntimeDyld::LoadedObjectInfo &L);
+  void notifyFreeingObject(const object::ObjectFile &Obj);
 
   JITSymbol findExistingSymbol(const std::string &Name);
   Module *findModuleForSymbol(const std::string &Name, bool CheckFunctionsOnly);

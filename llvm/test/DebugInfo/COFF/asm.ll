@@ -14,7 +14,7 @@
 
 ; X86-LABEL: _f:
 ; X86:      .cv_file 1 "D:\\asm.c"
-; X86:      .cv_loc 0 1 4 0 is_stmt 0
+; X86:      .cv_loc 0 1 4 0
 ; X86:      .cv_loc 0 1 5 0
 ; X86:      calll   _g
 ; X86:      .cv_loc 0 1 6 0
@@ -71,7 +71,7 @@
 
 ; X64-LABEL: f:
 ; X64:      .cv_file 1 "D:\\asm.c"
-; X64:      .cv_loc 0 1 3 0 is_stmt 0
+; X64:      .cv_loc 0 1 3 0
 ; X64:      subq    $40, %rsp
 ; X64:      .cv_loc 0 1 4 0
 ; X64:      .cv_loc 0 1 5 0
@@ -99,7 +99,7 @@
 ; OBJ64:          DisplayName: f
 ; OBJ64:          LinkageName: f
 ; OBJ64:        }
-; OBJ64-NEXT:   ProcEnd {
+; OBJ64:        ProcEnd {
 ; OBJ64:        }
 ; OBJ64-NEXT: ]
 ; OBJ64:      FunctionLineTable [

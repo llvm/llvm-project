@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 
 target datalayout = "E-p:32:32"
-target triple = "powerpc-apple-darwin8.7.0"
+target triple = "powerpc-unknown-linux-gnu"
 
 ;CHECK-LABEL: foo:
 ; There are 4 inner loops (%bb, %bb12, %bb25, %bb38) that all exit to %cond_next48
@@ -11,10 +11,10 @@ target triple = "powerpc-apple-darwin8.7.0"
 ; One of the blocks ends up with a loop exit block that gets a tail-duplicated copy
 ; of %cond_next48, so there should only be two unconditional branches.
 
-;CHECK: b LBB0_13
-;CHECK: b LBB0_13
-;CHECK-NOT: b LBB0_13
-;CHECK: LBB0_13: ; %cond_next48
+;CHECK: b .LBB0_13
+;CHECK: b .LBB0_13
+;CHECK-NOT: b .LBB0_13
+;CHECK: .LBB0_13: # %cond_next48
 
 define void @foo(i32 %W, i32 %X, i32 %Y, i32 %Z) {
 entry:

@@ -91,8 +91,8 @@ struct ImmInstrInfo {
   uint64_t ZeroIsSpecialNew : 3;
   // Is the operation commutative?
   uint64_t IsCommutative : 1;
-  // The operand number to check for load immediate.
-  uint64_t ConstantOpNo : 3;
+  // The operand number to check for add-immediate def.
+  uint64_t OpNoForForwarding : 3;
   // The operand number for the immediate.
   uint64_t ImmOpNo : 3;
   // The opcode of the new instruction.
@@ -101,6 +101,8 @@ struct ImmInstrInfo {
   uint64_t ImmWidth : 5;
   // The immediate should be truncated to N bits.
   uint64_t TruncateImmTo : 5;
+  // Is the instruction summing the operand
+  uint64_t IsSummingOperands : 1;
 };
 
 // Information required to convert an instruction to just a materialized
@@ -123,10 +125,42 @@ class PPCInstrInfo : public PPCGenInstrInfo {
                             unsigned DestReg, int FrameIdx,
                             const TargetRegisterClass *RC,
                             SmallVectorImpl<MachineInstr *> &NewMIs) const;
-  bool transformToImmForm(MachineInstr &MI, const ImmInstrInfo &III,
-                          unsigned ConstantOpNo, int64_t Imm) const;
-  MachineInstr *getConstantDefMI(MachineInstr &MI, unsigned &ConstOp,
-                                 bool &SeenIntermediateUse) const;
+
+  // If the inst has imm-form and one of its operand is produced by a LI,
+  // put the imm into the inst directly and remove the LI if possible.
+  bool transformToImmFormFedByLI(MachineInstr &MI, const ImmInstrInfo &III,
+                                 unsigned ConstantOpNo, int64_t Imm) const;
+  // If the inst has imm-form and one of its operand is produced by an
+  // add-immediate, try to transform it when possible.
+  bool transformToImmFormFedByAdd(MachineInstr &MI, const ImmInstrInfo &III,
+                                  unsigned ConstantOpNo,
+                                  MachineInstr &DefMI,
+                                  bool KillDefMI) const;
+  // Try to find that, if the instruction 'MI' contains any operand that
+  // could be forwarded from some inst that feeds it. If yes, return the
+  // Def of that operand. And OpNoForForwarding is the operand index in
+  // the 'MI' for that 'Def'. If we see another use of this Def between
+  // the Def and the MI, SeenIntermediateUse becomes 'true'.
+  MachineInstr *getForwardingDefMI(MachineInstr &MI,
+                                   unsigned &OpNoForForwarding,
+                                   bool &SeenIntermediateUse) const;
+
+  // Can the user MI have it's source at index \p OpNoForForwarding
+  // forwarded from an add-immediate that feeds it?
+  bool isUseMIElgibleForForwarding(MachineInstr &MI, const ImmInstrInfo &III,
+                                   unsigned OpNoForForwarding) const;
+  bool isDefMIElgibleForForwarding(MachineInstr &DefMI,
+                                   const ImmInstrInfo &III,
+                                   MachineOperand *&ImmMO,
+                                   MachineOperand *&RegMO) const;
+  bool isImmElgibleForForwarding(const MachineOperand &ImmMO,
+                                 const MachineInstr &DefMI,
+                                 const ImmInstrInfo &III,
+                                 int64_t &Imm) const;
+  bool isRegElgibleForForwarding(const MachineOperand &RegMO,
+                                 const MachineInstr &DefMI,
+                                 const MachineInstr &MI,
+                                 bool KillDefMI) const;
   const unsigned *getStoreOpcodesForSpillArray() const;
   const unsigned *getLoadOpcodesForSpillArray() const;
   virtual void anchor();
@@ -157,6 +191,16 @@ public:
 
   bool isXFormMemOp(unsigned Opcode) const {
     return get(Opcode).TSFlags & PPCII::XFormMemOp;
+  }
+  static bool isSameClassPhysRegCopy(unsigned Opcode) {
+    unsigned CopyOpcodes[] =
+      { PPC::OR, PPC::OR8, PPC::FMR, PPC::VOR, PPC::XXLOR, PPC::XXLORf,
+        PPC::XSCPSGNDP, PPC::MCRF, PPC::QVFMR, PPC::QVFMRs, PPC::QVFMRb,
+        PPC::CROR, PPC::EVOR, -1U };
+    for (int i = 0; CopyOpcodes[i] != -1U; i++)
+      if (Opcode == CopyOpcodes[i])
+        return true;
+    return false;
   }
 
   ScheduleHazardRecognizer *
@@ -369,8 +413,30 @@ public:
   bool convertToImmediateForm(MachineInstr &MI,
                               MachineInstr **KilledDef = nullptr) const;
   void replaceInstrWithLI(MachineInstr &MI, const LoadImmediateInfo &LII) const;
+  void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
+                                  int64_t Imm) const;
 
-  bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III) const;
+  bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III,
+                       bool PostRA) const;
+
+  /// getRegNumForOperand - some operands use different numbering schemes
+  /// for the same registers. For example, a VSX instruction may have any of
+  /// vs0-vs63 allocated whereas an Altivec instruction could only have
+  /// vs32-vs63 allocated (numbered as v0-v31). This function returns the actual
+  /// register number needed for the opcode/operand number combination.
+  /// The operand number argument will be useful when we need to extend this
+  /// to instructions that use both Altivec and VSX numbering (for different
+  /// operands).
+  static unsigned getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
+                                      unsigned OpNo) {
+    if (Desc.TSFlags & PPCII::UseVSXReg) {
+      if (isVRRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::V0);
+      else if (isVFRegister(Reg))
+        Reg = PPC::VSX32 + (Reg - PPC::VF0);
+    }
+    return Reg;
+  }
 };
 
 }

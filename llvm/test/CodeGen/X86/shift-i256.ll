@@ -15,7 +15,7 @@ define i256 @shift2(i256 %c) nounwind
 {
   %b = shl i256 1, %c  ; %c must not be a constant
   ; Special case when %c is 0:
-  ; CHECK-X64: testb [[REG:%r[0-9]+b]], [[REG]]
+  ; CHECK-X64: testb [[REG:%(bpl|r[0-9]+b)]], {{%(bpl|r[0-9]+b)}}
   ; CHECK-X64: cmoveq
   ret i256 %b
 }

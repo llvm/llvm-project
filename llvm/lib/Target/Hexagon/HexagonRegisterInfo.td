@@ -82,13 +82,14 @@ let Namespace = "Hexagon" in {
   def isub_hi  : SubRegIndex<32, 32>;
   def vsub_lo  : SubRegIndex<512>;
   def vsub_hi  : SubRegIndex<512, 512>;
+  def wsub_lo  : SubRegIndex<1024>;
+  def wsub_hi  : SubRegIndex<1024, 1024>;
   def subreg_overflow : SubRegIndex<1, 0>;
 
   // Integer registers.
   foreach i = 0-28 in {
     def R#i  : Ri<i, "r"#i>,  DwarfRegNum<[i]>;
   }
-
   def R29 : Ri<29, "r29", ["sp"]>, DwarfRegNum<[29]>;
   def R30 : Ri<30, "r30", ["fp"]>, DwarfRegNum<[30]>;
   def R31 : Ri<31, "r31", ["lr"]>, DwarfRegNum<[31]>;
@@ -206,6 +207,18 @@ let Namespace = "Hexagon" in {
   def W15 : Rd<30, "v31:30", [V30, V31]>, DwarfRegNum<[129]>;
   }
 
+  // Aliases of the V* registers used to hold quad vec values.
+  let SubRegIndices = [wsub_lo, wsub_hi], CoveredBySubRegs = 1 in {
+  def VQ0  : Rd< 0, "v3:0",   [W0,  W1]>,  DwarfRegNum<[252]>;
+  def VQ1  : Rd< 4, "v7:4",   [W2,  W3]>,  DwarfRegNum<[253]>;
+  def VQ2  : Rd< 8, "v11:8",  [W4,  W5]>,  DwarfRegNum<[254]>;
+  def VQ3  : Rd<12, "v15:12", [W6,  W7]>,  DwarfRegNum<[255]>;
+  def VQ4  : Rd<16, "v19:16", [W8,  W9]>,  DwarfRegNum<[256]>;
+  def VQ5  : Rd<20, "v23:20", [W10, W11]>, DwarfRegNum<[257]>;
+  def VQ6  : Rd<24, "v27:24", [W12, W13]>, DwarfRegNum<[258]>;
+  def VQ7  : Rd<28, "v31:28", [W14, W15]>, DwarfRegNum<[259]>;
+  }
+
   // Vector Predicate registers.
   def Q0 : Rq<0, "q0">, DwarfRegNum<[131]>;
   def Q1 : Rq<1, "q1">, DwarfRegNum<[132]>;
@@ -295,29 +308,6 @@ def VecQ32:  ValueTypeByHwMode<[Hvx64,  Hvx128,  DefaultMode],
 
 // HVX register classes
 
-// Register classes.
-//
-// FIXME: the register order should be defined in terms of the preferred
-// allocation order...
-//
-def IntRegs : RegisterClass<"Hexagon", [i32, f32, v4i8, v2i16], 32,
-  (add (sequence "R%u", 0, 9), (sequence "R%u", 12, 28),
-       R10, R11, R29, R30, R31)>;
-
-// Registers are listed in reverse order for allocation preference reasons.
-def GeneralSubRegs : RegisterClass<"Hexagon", [i32], 32,
-  (add R23, R22, R21, R20, R19, R18, R17, R16,
-       R7, R6, R5, R4, R3, R2, R1, R0)>;
-
-def IntRegsLow8 : RegisterClass<"Hexagon", [i32], 32,
-  (add R7, R6, R5, R4, R3, R2, R1, R0)> ;
-
-def DoubleRegs : RegisterClass<"Hexagon", [i64, f64, v8i8, v4i16, v2i32], 64,
-  (add (sequence "D%u", 0, 4), (sequence "D%u", 6, 13), D5, D14, D15)>;
-
-def GeneralDoubleLow8Regs : RegisterClass<"Hexagon", [i64], 64,
-  (add D11, D10, D9, D8, D3, D2, D1, D0)>;
-
 def HvxVR : RegisterClass<"Hexagon", [VecI8, VecI16, VecI32], 512,
   (add (sequence "V%u", 0, 31), VTMP)> {
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
@@ -335,6 +325,32 @@ def HvxQR : RegisterClass<"Hexagon", [VecI1, VecQ8, VecQ16, VecQ32], 512,
   let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
     [RegInfo<512,512,512>, RegInfo<1024,1024,1024>, RegInfo<512,512,512>]>;
 }
+
+def HvxVQR : RegisterClass<"Hexagon", [untyped], 2048,
+  (add (sequence "VQ%u", 0, 7))> {
+  let RegInfos = RegInfoByHwMode<[Hvx64, Hvx128, DefaultMode],
+    [RegInfo<2048,2048,2048>, RegInfo<4096,4096,4096>, RegInfo<2048,2048,2048>]>;
+}
+
+// Core register classes
+
+def IntRegs : RegisterClass<"Hexagon", [i32, f32, v4i8, v2i16], 32,
+  (add (sequence "R%u", 0, 9), (sequence "R%u", 12, 28),
+       R10, R11, R29, R30, R31)>;
+
+// Registers are listed in reverse order for allocation preference reasons.
+def GeneralSubRegs : RegisterClass<"Hexagon", [i32], 32,
+  (add R23, R22, R21, R20, R19, R18, R17, R16,
+       R7, R6, R5, R4, R3, R2, R1, R0)>;
+
+def IntRegsLow8 : RegisterClass<"Hexagon", [i32], 32,
+  (add R7, R6, R5, R4, R3, R2, R1, R0)> ;
+
+def DoubleRegs : RegisterClass<"Hexagon", [i64, f64, v8i8, v4i16, v2i32], 64,
+  (add (sequence "D%u", 0, 4), (sequence "D%u", 6, 13), D5, D14, D15)>;
+
+def GeneralDoubleLow8Regs : RegisterClass<"Hexagon", [i64], 64,
+  (add D11, D10, D9, D8, D3, D2, D1, D0)>;
 
 let Size = 32 in
 def PredRegs : RegisterClass<"Hexagon",

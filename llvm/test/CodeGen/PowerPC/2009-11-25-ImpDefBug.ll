@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin9.5 -mcpu=g5
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu.5 -mcpu=g5
 ; rdar://7422268
 
 %struct..0EdgeT = type { i32, i32, float, float, i32, i32, i32, float, i32, i32 }

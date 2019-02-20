@@ -1,11 +1,11 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin -mcpu=g5 | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -mcpu=g5 | FileCheck %s
 ; Formerly incorrectly inserted vsldoi (endian confusion)
 
 @baz = common global <16 x i8> zeroinitializer    ; <<16 x i8>*> [#uses=1]
 
 define void @foo(<16 x i8> %x) nounwind ssp {
 entry:
-; CHECK: _foo:
+; CHECK: foo:
 ; CHECK-NOT: vsldoi
   %x_addr = alloca <16 x i8>                      ; <<16 x i8>*> [#uses=2]
   %temp = alloca <16 x i8>                        ; <<16 x i8>*> [#uses=2]

@@ -10,7 +10,7 @@
 ; GCN-DAG: v_interp_p1_f32{{(_e32)*}} v{{[0-9]+}}, v{{[0-9]+}}, attr0.y{{$}}
 ; GCN-DAG: v_interp_p2_f32{{(_e32)*}} v{{[0-9]+}}, v{{[0-9]+}}, attr0.y{{$}}
 ; GCN-DAG: v_interp_mov_f32{{(_e32)*}} v{{[0-9]+}}, p0, attr0.x{{$}}
-define amdgpu_ps void @v_interp(<16 x i8> addrspace(2)* inreg %arg, <16 x i8> addrspace(2)* inreg %arg1, <32 x i8> addrspace(2)* inreg %arg2, i32 inreg %arg3, <2 x float> %arg4) #0 {
+define amdgpu_ps void @v_interp(<16 x i8> addrspace(4)* inreg %arg, <16 x i8> addrspace(4)* inreg %arg1, <32 x i8> addrspace(4)* inreg %arg2, i32 inreg %arg3, <2 x float> %arg4) #0 {
 main_body:
   %i = extractelement <2 x float> %arg4, i32 0
   %j = extractelement <2 x float> %arg4, i32 1
@@ -185,7 +185,7 @@ bb:
 
 ; GCN-LABEL: {{^}}v_interp_p1_bank16_bug:
 ; 16BANK-NOT: v_interp_p1_f32{{(_e32)*}} [[DST:v[0-9]+]], [[DST]]
-define amdgpu_ps void @v_interp_p1_bank16_bug([6 x <16 x i8>] addrspace(2)* byval %arg, [17 x <16 x i8>] addrspace(2)* byval %arg13, [17 x <4 x i32>] addrspace(2)* byval %arg14, [34 x <8 x i32>] addrspace(2)* byval %arg15, float inreg %arg16, i32 inreg %arg17, <2 x i32> %arg18, <2 x i32> %arg19, <2 x i32> %arg20, <3 x i32> %arg21, <2 x i32> %arg22, <2 x i32> %arg23, <2 x i32> %arg24, float %arg25, float %arg26, float %arg27, float %arg28, float %arg29, float %arg30, i32 %arg31, float %arg32, float %arg33) #0 {
+define amdgpu_ps void @v_interp_p1_bank16_bug([6 x <16 x i8>] addrspace(4)* byval %arg, [17 x <16 x i8>] addrspace(4)* byval %arg13, [17 x <4 x i32>] addrspace(4)* byval %arg14, [34 x <8 x i32>] addrspace(4)* byval %arg15, float inreg %arg16, i32 inreg %arg17, <2 x i32> %arg18, <2 x i32> %arg19, <2 x i32> %arg20, <3 x i32> %arg21, <2 x i32> %arg22, <2 x i32> %arg23, <2 x i32> %arg24, float %arg25, float %arg26, float %arg27, float %arg28, float %arg29, float %arg30, i32 %arg31, float %arg32, float %arg33) #0 {
 main_body:
   %i.i = extractelement <2 x i32> %arg19, i32 0
   %j.i = extractelement <2 x i32> %arg19, i32 1

@@ -525,7 +525,7 @@ void VirtRegRewriter::rewrite() {
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();
         if (SubReg != 0) {
-          if (NoSubRegLiveness) {
+          if (NoSubRegLiveness || !MRI->shouldTrackSubRegLiveness(VirtReg)) {
             // A virtual register kill refers to the whole register, so we may
             // have to add implicit killed operands for the super-register.  A
             // partial redef always kills and redefines the super-register.

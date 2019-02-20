@@ -1,0 +1,232 @@
+import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
+declare_args() {
+  # If is_goma is true, the location of the goma client install.
+  if (host_os == "win") {
+    goma_dir = "c:\src\goma\goma-win64"
+  } else {
+    goma_dir = getenv("HOME") + "/goma"
+  }
+}
+
+toolchain("unix") {
+  cc = "cc"
+  cxx = "c++"
+
+  if (clang_base_path != "") {
+    cc = "$clang_base_path/bin/clang"
+    cxx = "$clang_base_path/bin/clang++"
+  }
+
+  ld = cxx  # Don't use goma wrapper for linking.
+  if (use_goma) {
+    cc = "$goma_dir/gomacc $cc"
+    cxx = "$goma_dir/gomacc $cxx"
+  }
+
+  tool("cc") {
+    depfile = "{{output}}.d"
+    command = "$cc -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
+    depsformat = "gcc"
+    description = "CC {{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+    ]
+  }
+
+  tool("cxx") {
+    depfile = "{{output}}.d"
+    command = "$cxx -MMD -MF $depfile -o {{output}} -c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
+    depsformat = "gcc"
+    description = "CXX {{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+    ]
+  }
+
+  tool("alink") {
+    if (host_os == "mac") {
+      command = "libtool -static -no_warning_for_no_symbols {{arflags}} -o {{output}} {{inputs}}"
+    } else {
+      # Remove the output file first so that ar doesn't try to modify the
+      # existing file.
+      command =
+          "rm -f {{output}} && ar rcsDT {{arflags}} -o {{output}} {{inputs}}"
+    }
+    description = "AR {{output}}"
+    outputs = [
+      "{{output_dir}}/{{target_output_name}}.a",
+    ]
+    output_prefix = "lib"
+    default_output_dir = "{{root_out_dir}}/lib"
+  }
+
+  tool("solink") {
+    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    if (host_os == "mac") {
+      command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}}"
+      default_output_extension = ".dylib"
+    } else {
+      command =
+          "$ld -shared {{ldflags}} -Wl,-z,defs -o $outfile {{libs}} {{inputs}}"
+      default_output_extension = ".so"
+    }
+    description = "SOLINK $outfile"
+    outputs = [
+      outfile,
+    ]
+    lib_switch = "-l"
+    output_prefix = "lib"
+    default_output_dir = "{{root_out_dir}}/lib"
+  }
+
+  tool("solink_module") {
+    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    if (host_os == "mac") {
+      command = "$ld -shared {{ldflags}} -Wl,-flat_namespace -Wl,-undefined,suppress -o $outfile {{libs}} {{inputs}}"
+      default_output_extension = ".dylib"
+    } else {
+      command = "$ld -shared {{ldflags}} -o $outfile {{libs}} {{inputs}}"
+      default_output_extension = ".so"
+    }
+    description = "SOLINK $outfile"
+    outputs = [
+      outfile,
+    ]
+    lib_switch = "-l"
+    default_output_dir = "{{root_out_dir}}/lib"
+  }
+
+  tool("link") {
+    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    if (host_os == "mac") {
+      command = "$ld {{ldflags}} -o $outfile {{libs}} {{inputs}}"
+    } else {
+      command = "$ld {{ldflags}} -o $outfile {{libs}} -Wl,--start-group {{inputs}} -Wl,--end-group"
+    }
+    description = "LINK $outfile"
+    outputs = [
+      outfile,
+    ]
+    lib_switch = "-l"
+
+    # Setting this allows targets to override the default executable output by
+    # setting output_dir.
+    default_output_dir = "{{root_out_dir}}/bin"
+  }
+
+  tool("copy") {
+    command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+    description = "COPY {{source}} {{output}}"
+  }
+
+  tool("stamp") {
+    command = "touch {{output}}"
+    description = "STAMP {{output}}"
+  }
+}
+
+toolchain("win") {
+  cl = "cl"
+  link = "link"
+
+  if (clang_base_path != "") {
+    cl = "$clang_base_path/bin/clang-cl"
+    link = "$clang_base_path/bin/lld-link"
+  }
+
+  if (use_goma) {
+    cl = "$goma_dir/gomacc $cl"
+  }
+
+  tool("cc") {
+    command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}}"
+    depsformat = "msvc"
+    description = "CC {{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.obj",
+    ]
+  }
+
+  tool("cxx") {
+    command = "$cl /nologo /showIncludes /Fo{{output}} /c {{source}} {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}}"
+    depsformat = "msvc"
+    description = "CXX {{output}}"
+    outputs = [
+      "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.obj",
+    ]
+  }
+
+  tool("alink") {
+    command = "lib /nologo {{arflags}} /out:{{output}} {{inputs}}"
+    description = "LIB {{output}}"
+    outputs = [
+      "{{output_dir}}/{{target_output_name}}.lib",
+    ]
+    default_output_dir = "{{root_out_dir}}/lib"
+  }
+
+  tool("solink") {
+    dllfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    libfile = "$dllfile.lib"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile /implib:$libfile {{libs}} /pdb:$dllfile.pdb {{inputs}}"
+    description = "LINK $dllfile"
+    link_output = libfile
+    depend_output = libfile
+    runtime_outputs = [ dllfile ]
+    outputs = [
+      dllfile,
+      libfile,
+    ]
+    default_output_extension = ".dll"
+    restat = true
+
+    # Put dlls next to the executables in bin/ on Windows, since Windows
+    # doesn't have a configurable rpath. This matches initialization of
+    # module_dir to bin/ in AddLLVM.cmake's set_output_directory().
+    default_output_dir = "{{root_out_dir}}/bin"
+  }
+
+  # Plugins for opt and clang and so on don't work in LLVM's Windows build
+  # since the code doesn't have export annotations, but there are a few
+  # standalone loadable modules used for unit-testing LLVM's dynamic library
+  # loading code.
+  tool("solink_module") {
+    dllfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    command = "$link /nologo /dll {{ldflags}} /out:$dllfile {{libs}} /pdb:$dllfile.pdb {{inputs}}"
+    description = "LINK_MODULE $dllfile"
+    outputs = [
+      dllfile,
+    ]
+    runtime_outputs = outputs
+    default_output_extension = ".dll"
+
+    # No default_output_dir, all clients set output_dir.
+  }
+
+  tool("link") {
+    outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+    command = "$link /nologo {{ldflags}} /out:$outfile {{libs}} /pdb:$outfile.pdb {{inputs}}"
+    description = "LINK $outfile"
+    outputs = [
+      outfile,
+    ]
+    default_output_extension = ".exe"
+
+    # Setting this allows targets to override the default executable output by
+    # setting output_dir.
+    default_output_dir = "{{root_out_dir}}/bin"
+  }
+
+  tool("copy") {
+    # GN hands out slash-using paths, but cmd's copy needs backslashes.
+    # Use cmd's %foo:a=b% substitution feature to convert.
+    command = "cmd /c set source=\"{{source}}\" & set output=\"{{output}}\" & call copy /Y %source:/=\% %output:\=/% > nul"
+    description = "COPY {{source}} {{output}}"
+  }
+
+  tool("stamp") {
+    command = "cmd /c type nul > {{output}}"
+    description = "STAMP {{output}}"
+  }
+}

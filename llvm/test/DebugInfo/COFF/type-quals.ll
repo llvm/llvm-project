@@ -52,7 +52,6 @@
 ; CHECK:   Pointer (0x1001) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: const volatile int (0x1000)
-; CHECK:     PointerAttributes: 0x1100C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -99,7 +98,6 @@
 ; CHECK:   Pointer (0x1006) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x1100C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -112,7 +110,6 @@
 ; CHECK:   Pointer (0x1007) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: float (0x40)
-; CHECK:     PointerAttributes: 0x1100C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -125,7 +122,6 @@
 ; CHECK:   Pointer (0x1008) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x1120C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -170,7 +166,6 @@
 ; CHECK:   Pointer (0x100E) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: const int (0x100D)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -183,7 +178,6 @@
 ; CHECK:   Pointer (0x100F) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x1102C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: LValueReference (0x1)
 ; CHECK:     IsFlat: 0
@@ -215,28 +209,42 @@
 ; CHECK:     FunctionType: void (int& __restrict) (0x1011)
 ; CHECK:     Name: g
 ; CHECK:   }
-; CHECK:   ArgList (0x1013) {
+; CHECK:   Modifier (0x1013) {
+; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
+; CHECK:     ModifiedType: char (0x70)
+; CHECK:     Modifiers [ (0x1)
+; CHECK:       Const (0x1)
+; CHECK:     ]
+; CHECK:   }
+; CHECK:   Array (0x1014) {
+; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
+; CHECK:     ElementType: const char (0x1013)
+; CHECK:     IndexType: unsigned __int64 (0x23)
+; CHECK:     SizeOf: 4
+; CHECK:     Name:
+; CHECK:   }
+; CHECK:   ArgList (0x1015) {
 ; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
 ; CHECK:     NumArgs: 0
 ; CHECK:     Arguments [
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   Procedure (0x1014) {
+; CHECK:   Procedure (0x1016) {
 ; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
 ; CHECK:     ReturnType: void (0x3)
 ; CHECK:     CallingConvention: NearC (0x0)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 0
-; CHECK:     ArgListType: () (0x1013)
+; CHECK:     ArgListType: () (0x1015)
 ; CHECK:   }
-; CHECK:   FuncId (0x1015) {
+; CHECK:   FuncId (0x1017) {
 ; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
 ; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void () (0x1014)
+; CHECK:     FunctionType: void () (0x1016)
 ; CHECK:     Name: h
 ; CHECK:   }
-; CHECK:   Struct (0x1016) {
+; CHECK:   Struct (0x1018) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 0
 ; CHECK:     Properties [ (0x180)
@@ -249,39 +257,38 @@
 ; CHECK:     SizeOf: 0
 ; CHECK:     Name: h::Foo
 ; CHECK:   }
-; CHECK:   Pointer (0x1017) {
+; CHECK:   Pointer (0x1019) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: h::Foo (0x1016)
-; CHECK:     PointerAttributes: 0x1000C
+; CHECK:     PointeeType: h::Foo (0x1018)
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
-; CHECK:     IsConst: 0
+; CHECK:     IsConst: 1
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     IsRestrict: 0
 ; CHECK:     SizeOf: 8
 ; CHECK:   }
-; CHECK:   ArgList (0x1018) {
+; CHECK:   ArgList (0x101A) {
 ; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
 ; CHECK:     NumArgs: 1
 ; CHECK:     Arguments [
 ; CHECK:       ArgType: int (0x74)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   MemberFunction (0x1019) {
+; CHECK:   MemberFunction (0x101B) {
 ; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK:     ReturnType: int (0x74)
-; CHECK:     ClassType: h::Foo (0x1016)
-; CHECK:     ThisType: h::Foo* (0x1017)
+; CHECK:     ClassType: h::Foo (0x1018)
+; CHECK:     ThisType: h::Foo* const (0x1019)
 ; CHECK:     CallingConvention: NearC (0x0)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 1
-; CHECK:     ArgListType: (int) (0x1018)
+; CHECK:     ArgListType: (int) (0x101A)
 ; CHECK:     ThisAdjustment: 0
 ; CHECK:   }
-; CHECK:   FieldList (0x101A) {
+; CHECK:   FieldList (0x101C) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK:     DataMember {
 ; CHECK:       TypeLeafKind: LF_MEMBER (0x150D)
@@ -293,27 +300,26 @@
 ; CHECK:     OneMethod {
 ; CHECK:       TypeLeafKind: LF_ONEMETHOD (0x1511)
 ; CHECK:       AccessSpecifier: Public (0x3)
-; CHECK:       Type: int h::Foo::(int) (0x1019)
+; CHECK:       Type: int h::Foo::(int) (0x101B)
 ; CHECK:       Name: func
 ; CHECK:     }
 ; CHECK:   }
-; CHECK:   Struct (0x101B) {
+; CHECK:   Struct (0x101D) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 2
 ; CHECK:     Properties [ (0x100)
 ; CHECK:       Scoped (0x100)
 ; CHECK:     ]
-; CHECK:     FieldList: <field list> (0x101A)
+; CHECK:     FieldList: <field list> (0x101C)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 4
 ; CHECK:     Name: h::Foo
 ; CHECK:   }
 
-; CHECK:   Pointer (0x101D) {
+; CHECK:   Pointer (0x101F) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x904C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToDataMember (0x2)
 ; CHECK:     IsFlat: 0
@@ -322,13 +328,12 @@
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     IsRestrict: 1
 ; CHECK:     SizeOf: 4
-; CHECK:     ClassType: h::Foo (0x1016)
+; CHECK:     ClassType: h::Foo (0x1018)
 ; CHECK:     Representation: SingleInheritanceData (0x1)
 ; CHECK:   }
-; CHECK:   Pointer (0x101E) {
+; CHECK:   Pointer (0x1020) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: int h::Foo::(int) (0x1019)
-; CHECK:     PointerAttributes: 0x1006C
+; CHECK:     PointeeType: int h::Foo::(int) (0x101B)
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
 ; CHECK:     IsFlat: 0
@@ -337,28 +342,26 @@
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     IsRestrict: 0
 ; CHECK:     SizeOf: 8
-; CHECK:     ClassType: h::Foo (0x1016)
+; CHECK:     ClassType: h::Foo (0x1018)
 ; CHECK:     Representation: SingleInheritanceFunction (0x5)
 ; CHECK:   }
-; CHECK:   MemberFuncId (0x101F) {
+; CHECK:   MemberFuncId (0x1021) {
 ; CHECK:     TypeLeafKind: LF_MFUNC_ID (0x1602)
-; CHECK:     ClassType: h::Foo (0x1016)
-; CHECK:     FunctionType: int h::Foo::(int) (0x1019)
+; CHECK:     ClassType: h::Foo (0x1018)
+; CHECK:     FunctionType: int h::Foo::(int) (0x101B)
 ; CHECK:     Name: func
 ; CHECK:   }
-; CHECK:   Modifier (0x1020) {
-; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
-; CHECK:     ModifiedType: char (0x70)
-; CHECK:     Modifiers [ (0x1)
-; CHECK:       Const (0x1)
-; CHECK:     ]
-; CHECK:   }
-; CHECK:   Array (0x1021) {
-; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: const char (0x1020)
-; CHECK:     IndexType: unsigned __int64 (0x23)
-; CHECK:     SizeOf: 4
-; CHECK:     Name:
+; CHECK:   Pointer (0x1022) {
+; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
+; CHECK:     PointeeType: h::Foo (0x1018)
+; CHECK:     PtrType: Near64 (0xC)
+; CHECK:     PtrMode: Pointer (0x0)
+; CHECK:     IsFlat: 0
+; CHECK:     IsConst: 0
+; CHECK:     IsVolatile: 0
+; CHECK:     IsUnaligned: 0
+; CHECK:     IsRestrict: 0
+; CHECK:     SizeOf: 8
 ; CHECK:   }
 ; CHECK: ]
 

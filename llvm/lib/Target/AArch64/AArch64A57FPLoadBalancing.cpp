@@ -377,11 +377,10 @@ bool AArch64A57FPLoadBalancing::runOnBasicBlock(MachineBasicBlock &MBB) {
 
   // Now we have a set of sets, order them by start address so
   // we can iterate over them sequentially.
-  llvm::sort(V.begin(), V.end(),
-             [](const std::vector<Chain*> &A,
-                const std::vector<Chain*> &B) {
-      return A.front()->startsBefore(B.front());
-    });
+  llvm::sort(V,
+             [](const std::vector<Chain *> &A, const std::vector<Chain *> &B) {
+               return A.front()->startsBefore(B.front());
+             });
 
   // As we only have two colors, we can track the global (BB-level) balance of
   // odds versus evens. We aim to keep this near zero to keep both execution
@@ -453,16 +452,16 @@ bool AArch64A57FPLoadBalancing::colorChainSet(std::vector<Chain*> GV,
   // change them to!
   // Final tie-break with instruction order so pass output is stable (i.e. not
   // dependent on malloc'd pointer values).
-  llvm::sort(GV.begin(), GV.end(), [](const Chain *G1, const Chain *G2) {
-      if (G1->size() != G2->size())
-        return G1->size() > G2->size();
-      if (G1->requiresFixup() != G2->requiresFixup())
-        return G1->requiresFixup() > G2->requiresFixup();
-      // Make sure startsBefore() produces a stable final order.
-      assert((G1 == G2 || (G1->startsBefore(G2) ^ G2->startsBefore(G1))) &&
-             "Starts before not total order!");
-      return G1->startsBefore(G2);
-    });
+  llvm::sort(GV, [](const Chain *G1, const Chain *G2) {
+    if (G1->size() != G2->size())
+      return G1->size() > G2->size();
+    if (G1->requiresFixup() != G2->requiresFixup())
+      return G1->requiresFixup() > G2->requiresFixup();
+    // Make sure startsBefore() produces a stable final order.
+    assert((G1 == G2 || (G1->startsBefore(G2) ^ G2->startsBefore(G1))) &&
+           "Starts before not total order!");
+    return G1->startsBefore(G2);
+  });
 
   Color PreferredColor = Parity < 0 ? Color::Even : Color::Odd;
   while (Chain *G = getAndEraseNext(PreferredColor, GV)) {

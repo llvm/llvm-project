@@ -105,7 +105,7 @@ void LLVMMoveToContainingSection(LLVMSectionIteratorRef Sect,
   if (!SecOrErr) {
    std::string Buf;
    raw_string_ostream OS(Buf);
-   logAllUnhandledErrors(SecOrErr.takeError(), OS, "");
+   logAllUnhandledErrors(SecOrErr.takeError(), OS);
    OS.flush();
    report_fatal_error(Buf);
   }
@@ -187,7 +187,7 @@ const char *LLVMGetSymbolName(LLVMSymbolIteratorRef SI) {
   if (!Ret) {
     std::string Buf;
     raw_string_ostream OS(Buf);
-    logAllUnhandledErrors(Ret.takeError(), OS, "");
+    logAllUnhandledErrors(Ret.takeError(), OS);
     OS.flush();
     report_fatal_error(Buf);
   }
@@ -199,7 +199,7 @@ uint64_t LLVMGetSymbolAddress(LLVMSymbolIteratorRef SI) {
   if (!Ret) {
     std::string Buf;
     raw_string_ostream OS(Buf);
-    logAllUnhandledErrors(Ret.takeError(), OS, "");
+    logAllUnhandledErrors(Ret.takeError(), OS);
     OS.flush();
     report_fatal_error(Buf);
   }
@@ -229,7 +229,7 @@ const char *LLVMGetRelocationTypeName(LLVMRelocationIteratorRef RI) {
   SmallVector<char, 0> ret;
   (*unwrap(RI))->getTypeName(ret);
   char *str = static_cast<char*>(safe_malloc(ret.size()));
-  std::copy(ret.begin(), ret.end(), str);
+  llvm::copy(ret, str);
   return str;
 }
 

@@ -1,0 +1,30 @@
+# RUN: llc -o - %s -mtriple=i686-- -mcpu=ivybridge --run-pass X86CondBrFolding | FileCheck %s
+
+# Test wrong assertion when meet SUB32ri with global address
+# in X86CondBrFoldingiPass
+--- |
+  @img2buf_normal = external global i32
+  define void @func() { ret void }
+...
+---
+# CHECK: bb.0:
+# CHECK: %2:gr32 = SUB32ri %1, @img2buf_normal, implicit-def $eflags
+
+name: func
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $edx
+    %1:gr32 = COPY $edx
+    %2:gr32 = MOV32rm %1:gr32, 1, $noreg, 850256, $noreg
+    %3:gr32 = SUB32ri %2:gr32, @img2buf_normal, implicit-def $eflags
+    JE_1 %bb.2, implicit $eflags
+    JMP_1 %bb.3
+
+  bb.2:
+    RET 0, undef $eax
+
+  bb.3:
+    $eax = MOV32rr %3:gr32
+    RET 0, $eax
+...

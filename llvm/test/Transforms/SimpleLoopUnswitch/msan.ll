@@ -1,4 +1,5 @@
 ; RUN: opt -passes='loop(unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -enable-mssa-loop-dependency=true -verify-memoryssa -passes='loop(unswitch),verify<loops>' -S < %s | FileCheck %s
 
 declare void @unknown()
 declare void @unknown2()

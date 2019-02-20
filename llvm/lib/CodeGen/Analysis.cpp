@@ -471,7 +471,7 @@ static bool nextRealType(SmallVectorImpl<CompositeType *> &SubTypes,
 bool llvm::isInTailCallPosition(ImmutableCallSite CS, const TargetMachine &TM) {
   const Instruction *I = CS.getInstruction();
   const BasicBlock *ExitBB = I->getParent();
-  const TerminatorInst *Term = ExitBB->getTerminator();
+  const Instruction *Term = ExitBB->getTerminator();
   const ReturnInst *Ret = dyn_cast<ReturnInst>(Term);
 
   // The block must end in a return statement or unreachable.
@@ -496,6 +496,10 @@ bool llvm::isInTailCallPosition(ImmutableCallSite CS, const TargetMachine &TM) {
       // Debug info intrinsics do not get in the way of tail call optimization.
       if (isa<DbgInfoIntrinsic>(BBI))
         continue;
+      // A lifetime end intrinsic should not stop tail call optimization.
+      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(BBI))
+        if (II->getIntrinsicID() == Intrinsic::lifetime_end)
+          continue;
       if (BBI->mayHaveSideEffects() || BBI->mayReadFromMemory() ||
           !isSafeToSpeculativelyExecute(&*BBI))
         return false;
@@ -519,10 +523,12 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
   AttrBuilder CalleeAttrs(cast<CallInst>(I)->getAttributes(),
                           AttributeList::ReturnIndex);
 
-  // Noalias is completely benign as far as calling convention goes, it
-  // shouldn't affect whether the call is a tail call.
+  // NoAlias and NonNull are completely benign as far as calling convention
+  // goes, they shouldn't affect whether the call is a tail call.
   CallerAttrs.removeAttribute(Attribute::NoAlias);
   CalleeAttrs.removeAttribute(Attribute::NoAlias);
+  CallerAttrs.removeAttribute(Attribute::NonNull);
+  CalleeAttrs.removeAttribute(Attribute::NonNull);
 
   if (CallerAttrs.contains(Attribute::ZExt)) {
     if (!CalleeAttrs.contains(Attribute::ZExt))
@@ -538,6 +544,21 @@ bool llvm::attributesPermitTailCall(const Function *F, const Instruction *I,
     ADS = false;
     CallerAttrs.removeAttribute(Attribute::SExt);
     CalleeAttrs.removeAttribute(Attribute::SExt);
+  }
+
+  // Drop sext and zext return attributes if the result is not used.
+  // This enables tail calls for code like:
+  //
+  // define void @caller() {
+  // entry:
+  //   %unused_result = tail call zeroext i1 @callee()
+  //   br label %retlabel
+  // retlabel:
+  //   ret void
+  // }
+  if (I->use_empty()) {
+    CalleeAttrs.removeAttribute(Attribute::SExt);
+    CalleeAttrs.removeAttribute(Attribute::ZExt);
   }
 
   // If they're still different, there's some facet we don't understand
@@ -650,7 +671,7 @@ static void collectEHScopeMembers(
 
     // Returns are boundaries where scope transfer can occur, don't follow
     // successors.
-    if (Visiting->isReturnBlock())
+    if (Visiting->isEHScopeReturnBlock())
       continue;
 
     for (const MachineBasicBlock *Succ : Visiting->successors())

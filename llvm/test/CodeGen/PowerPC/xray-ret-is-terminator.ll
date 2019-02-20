@@ -1,4 +1,4 @@
-; RUN: llc -o - -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -o - -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 define void @ILLBeBack() #0 {
 ; CHECK-LABEL @ILLBeBack

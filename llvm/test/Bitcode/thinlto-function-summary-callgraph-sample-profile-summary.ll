@@ -31,7 +31,7 @@
 ; CHECK-NEXT:    <VERSION
 ; CHECK-NEXT:    <VALUE_GUID op0=26 op1=123/>
 ; op4=none1 op6=hot1 op8=cold1 op10=none2 op12=hot2 op14=cold2 op16=none3 op18=hot3 op20=cold3 op22=123
-; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op5=7 op6=0 op7=1 op8=3 op9=4 op10=1 op11=8 op12=0 op13=2 op14=3 op15=5 op16=1 op17=9 op18=0 op19=3 op20=3 op21=6 op22=1 op23=26 op24=4/>
+; CHECK-NEXT:    <PERMODULE_PROFILE {{.*}} op6=7 op7=0 op8=1 op9=3 op10=4 op11=1 op12=8 op13=0 op14=2 op15=3 op16=5 op17=1 op18=9 op19=0 op20=3 op21=3 op22=6 op23=1 op24=26 op25=4/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; CHECK: <STRTAB_BLOCK
@@ -58,7 +58,7 @@
 ; COMBINED-NEXT:    <COMBINED abbrevid=
 ; COMBINED-NEXT:    <COMBINED abbrevid=
 ; COMBINED-NEXT:    <COMBINED abbrevid=
-; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op6=[[NONE1:.*]] op7=0 op8=[[HOT1:.*]] op9=3 op10=[[COLD1:.*]] op11=1 op12=[[NONE2:.*]] op13=0 op14=[[HOT2:.*]] op15=3 op16=[[COLD2:.*]] op17=1 op18=[[NONE3:.*]] op19=0 op20=[[HOT3:.*]] op21=3 op22=[[COLD3:.*]] op23=1/>
+; COMBINED-NEXT:    <COMBINED_PROFILE {{.*}} op8=[[NONE1:.*]] op9=0 op10=[[HOT1:.*]] op11=3 op12=[[COLD1:.*]] op13=1 op14=[[NONE2:.*]] op15=0 op16=[[HOT2:.*]] op17=3 op18=[[COLD2:.*]] op19=1 op20=[[NONE3:.*]] op21=0 op22=[[HOT3:.*]] op23=3 op24=[[COLD3:.*]] op25=1/>
 ; COMBINED_NEXT:    <COMBINED abbrevid=
 ; COMBINED_NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 

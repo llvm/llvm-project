@@ -17,13 +17,14 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 #define LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 
-#include "Pipeline.h"
-#include "View.h"
+#include "Views/View.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MCA/Pipeline.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
 
 /// A printer class that knows how to collects statistics on the
@@ -48,5 +49,6 @@ public:
   void printReport(llvm::raw_ostream &OS) const;
 };
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H

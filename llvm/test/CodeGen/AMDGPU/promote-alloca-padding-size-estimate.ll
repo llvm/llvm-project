@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-code-object-v3 -disable-promote-alloca-to-vector < %s | FileCheck -check-prefix=GCN %s
 
 ; This shows that the amount of LDS estimate is sensitive to the order
 ; of the LDS globals.

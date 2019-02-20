@@ -68,7 +68,7 @@ class MockSession : public IPDBSession {
   uint64_t getLoadAddress() const override { return 0; }
   bool setLoadAddress(uint64_t Address) override { return false; }
   std::unique_ptr<PDBSymbolExe> getGlobalScope() override { return nullptr; }
-  std::unique_ptr<PDBSymbol> getSymbolById(uint32_t SymbolId) const override {
+  std::unique_ptr<PDBSymbol> getSymbolById(SymIndexId SymbolId) const override {
     return nullptr;
   }
   std::unique_ptr<IPDBSourceFile>
@@ -159,6 +159,10 @@ class MockSession : public IPDBSession {
   std::unique_ptr<IPDBEnumSectionContribs> getSectionContribs() const override {
     return nullptr;
   }
+
+  std::unique_ptr<IPDBEnumFrameData> getFrameData() const override {
+    return nullptr;
+  }
 };
 
 class MockRawSymbol : public IPDBRawSymbol {
@@ -166,7 +170,8 @@ public:
   MockRawSymbol(PDB_SymType SymType)
       : Type(SymType) {}
 
-  void dump(raw_ostream &OS, int Indent) const override {}
+  void dump(raw_ostream &OS, int Indent, PdbSymbolIdField ShowIdFields,
+    PdbSymbolIdField RecurseIdFields) const override {}
 
   std::unique_ptr<IPDBEnumSymbols>
   findChildren(PDB_SymType Type) const override {

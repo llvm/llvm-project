@@ -2,13 +2,20 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define void @add_i32(i32 %x, i32 %y) {entry: ret void}
+  define void @add_i32() {entry: ret void}
+  define void @add_i8_sext() {entry: ret void}
+  define void @add_i8_zext() {entry: ret void}
+  define void @add_i8_aext() {entry: ret void}
+  define void @add_i16_sext() {entry: ret void}
+  define void @add_i16_zext() {entry: ret void}
+  define void @add_i16_aext() {entry: ret void}
+  define void @add_i64() {entry: ret void}
+  define void @add_i128() {entry: ret void}
 
 ...
 ---
 name:            add_i32
 alignment:       2
-legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0.entry:
@@ -26,5 +33,304 @@ body:             |
     %2:_(s32) = G_ADD %0, %1
     $v0 = COPY %2(s32)
     RetRA implicit $v0
+
+...
+---
+name:            add_i8_sext
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1
+
+    ; MIPS32-LABEL: name: add_i8_sext
+    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]]
+    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
+    ; MIPS32: $v0 = COPY [[ASHR]](s32)
+    ; MIPS32: RetRA implicit $v0
+    %2:_(s32) = COPY $a0
+    %0:_(s8) = G_TRUNC %2(s32)
+    %3:_(s32) = COPY $a1
+    %1:_(s8) = G_TRUNC %3(s32)
+    %4:_(s8) = G_ADD %1, %0
+    %5:_(s32) = G_SEXT %4(s8)
+    $v0 = COPY %5(s32)
+    RetRA implicit $v0
+
+...
+---
+name:            add_i8_zext
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1
+
+    ; MIPS32-LABEL: name: add_i8_zext
+    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C]]
+    ; MIPS32: $v0 = COPY [[AND]](s32)
+    ; MIPS32: RetRA implicit $v0
+    %2:_(s32) = COPY $a0
+    %0:_(s8) = G_TRUNC %2(s32)
+    %3:_(s32) = COPY $a1
+    %1:_(s8) = G_TRUNC %3(s32)
+    %4:_(s8) = G_ADD %1, %0
+    %5:_(s32) = G_ZEXT %4(s8)
+    $v0 = COPY %5(s32)
+    RetRA implicit $v0
+
+...
+---
+name:            add_i8_aext
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1
+
+    ; MIPS32-LABEL: name: add_i8_aext
+    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: $v0 = COPY [[COPY4]](s32)
+    ; MIPS32: RetRA implicit $v0
+    %2:_(s32) = COPY $a0
+    %0:_(s8) = G_TRUNC %2(s32)
+    %3:_(s32) = COPY $a1
+    %1:_(s8) = G_TRUNC %3(s32)
+    %4:_(s8) = G_ADD %1, %0
+    %5:_(s32) = G_ANYEXT %4(s8)
+    $v0 = COPY %5(s32)
+    RetRA implicit $v0
+
+...
+---
+name:            add_i16_sext
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1
+
+    ; MIPS32-LABEL: name: add_i16_sext
+    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY4]], [[C]]
+    ; MIPS32: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]]
+    ; MIPS32: $v0 = COPY [[ASHR]](s32)
+    ; MIPS32: RetRA implicit $v0
+    %2:_(s32) = COPY $a0
+    %0:_(s16) = G_TRUNC %2(s32)
+    %3:_(s32) = COPY $a1
+    %1:_(s16) = G_TRUNC %3(s32)
+    %4:_(s16) = G_ADD %1, %0
+    %5:_(s32) = G_SEXT %4(s16)
+    $v0 = COPY %5(s32)
+    RetRA implicit $v0
+
+...
+---
+name:            add_i16_zext
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1
+
+    ; MIPS32-LABEL: name: add_i16_zext
+    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C]]
+    ; MIPS32: $v0 = COPY [[AND]](s32)
+    ; MIPS32: RetRA implicit $v0
+    %2:_(s32) = COPY $a0
+    %0:_(s16) = G_TRUNC %2(s32)
+    %3:_(s32) = COPY $a1
+    %1:_(s16) = G_TRUNC %3(s32)
+    %4:_(s16) = G_ADD %1, %0
+    %5:_(s32) = G_ZEXT %4(s16)
+    $v0 = COPY %5(s32)
+    RetRA implicit $v0
+
+...
+---
+name:            add_i16_aext
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1
+
+    ; MIPS32-LABEL: name: add_i16_aext
+    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY1]](s32)
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY3]]
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+    ; MIPS32: $v0 = COPY [[COPY4]](s32)
+    ; MIPS32: RetRA implicit $v0
+    %2:_(s32) = COPY $a0
+    %0:_(s16) = G_TRUNC %2(s32)
+    %3:_(s32) = COPY $a1
+    %1:_(s16) = G_TRUNC %3(s32)
+    %4:_(s16) = G_ADD %1, %0
+    %5:_(s32) = G_ANYEXT %4(s16)
+    $v0 = COPY %5(s32)
+    RetRA implicit $v0
+
+...
+---
+name:            add_i64
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1, $a2, $a3
+
+    ; MIPS32-LABEL: name: add_i64
+    ; MIPS32: liveins: $a0, $a1, $a2, $a3
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY3]], [[COPY1]]
+    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
+    ; MIPS32: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[AND]]
+    ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD1]](s32), [[COPY3]]
+    ; MIPS32: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY]]
+    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[COPY5:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
+    ; MIPS32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY5]], [[C2]]
+    ; MIPS32: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[ADD2]], [[AND1]]
+    ; MIPS32: $v0 = COPY [[ADD3]](s32)
+    ; MIPS32: $v1 = COPY [[ADD1]](s32)
+    ; MIPS32: RetRA implicit $v0, implicit $v1
+    %2:_(s32) = COPY $a0
+    %3:_(s32) = COPY $a1
+    %0:_(s64) = G_MERGE_VALUES %3(s32), %2(s32)
+    %4:_(s32) = COPY $a2
+    %5:_(s32) = COPY $a3
+    %1:_(s64) = G_MERGE_VALUES %5(s32), %4(s32)
+    %6:_(s64) = G_ADD %1, %0
+    %7:_(s32), %8:_(s32) = G_UNMERGE_VALUES %6(s64)
+    $v0 = COPY %8(s32)
+    $v1 = COPY %7(s32)
+    RetRA implicit $v0, implicit $v1
+
+...
+---
+name:            add_i128
+alignment:       2
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 28, size: 4, alignment: 4, stack-id: 0, isImmutable: true }
+  - { id: 1, offset: 24, size: 4, alignment: 8, stack-id: 0, isImmutable: true }
+  - { id: 2, offset: 20, size: 4, alignment: 4, stack-id: 0, isImmutable: true }
+  - { id: 3, offset: 16, size: 4, alignment: 8, stack-id: 0, isImmutable: true }
+body:             |
+  bb.1.entry:
+    liveins: $a0, $a1, $a2, $a3
+
+    ; MIPS32-LABEL: name: add_i128
+    ; MIPS32: liveins: $a0, $a1, $a2, $a3
+    ; MIPS32: [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
+    ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
+    ; MIPS32: [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+    ; MIPS32: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 0)
+    ; MIPS32: [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+    ; MIPS32: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1, align 0)
+    ; MIPS32: [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
+    ; MIPS32: [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load 4 from %fixed-stack.2, align 0)
+    ; MIPS32: [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
+    ; MIPS32: [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (load 4 from %fixed-stack.3, align 0)
+    ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[LOAD]], [[COPY]]
+    ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[COPY4:%[0-9]+]]:_(s32) = COPY [[C]](s32)
+    ; MIPS32: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY4]], [[C1]]
+    ; MIPS32: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[AND]]
+    ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD1]](s32), [[LOAD]]
+    ; MIPS32: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[LOAD1]], [[COPY1]]
+    ; MIPS32: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[COPY5:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
+    ; MIPS32: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY5]], [[C2]]
+    ; MIPS32: [[ADD3:%[0-9]+]]:_(s32) = G_ADD [[ADD2]], [[AND1]]
+    ; MIPS32: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD3]](s32), [[LOAD1]]
+    ; MIPS32: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[LOAD2]], [[COPY2]]
+    ; MIPS32: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[COPY6:%[0-9]+]]:_(s32) = COPY [[ICMP1]](s32)
+    ; MIPS32: [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C3]]
+    ; MIPS32: [[ADD5:%[0-9]+]]:_(s32) = G_ADD [[ADD4]], [[AND2]]
+    ; MIPS32: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD5]](s32), [[LOAD2]]
+    ; MIPS32: [[ADD6:%[0-9]+]]:_(s32) = G_ADD [[LOAD3]], [[COPY3]]
+    ; MIPS32: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[COPY7:%[0-9]+]]:_(s32) = COPY [[ICMP2]](s32)
+    ; MIPS32: [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY7]], [[C4]]
+    ; MIPS32: [[ADD7:%[0-9]+]]:_(s32) = G_ADD [[ADD6]], [[AND3]]
+    ; MIPS32: $v0 = COPY [[ADD1]](s32)
+    ; MIPS32: $v1 = COPY [[ADD3]](s32)
+    ; MIPS32: $a0 = COPY [[ADD5]](s32)
+    ; MIPS32: $a1 = COPY [[ADD7]](s32)
+    ; MIPS32: RetRA implicit $v0, implicit $v1, implicit $a0, implicit $a1
+    %2:_(s32) = COPY $a0
+    %3:_(s32) = COPY $a1
+    %4:_(s32) = COPY $a2
+    %5:_(s32) = COPY $a3
+    %0:_(s128) = G_MERGE_VALUES %2(s32), %3(s32), %4(s32), %5(s32)
+    %10:_(p0) = G_FRAME_INDEX %fixed-stack.3
+    %6:_(s32) = G_LOAD %10(p0) :: (load 4 from %fixed-stack.3, align 0)
+    %11:_(p0) = G_FRAME_INDEX %fixed-stack.2
+    %7:_(s32) = G_LOAD %11(p0) :: (load 4 from %fixed-stack.2, align 0)
+    %12:_(p0) = G_FRAME_INDEX %fixed-stack.1
+    %8:_(s32) = G_LOAD %12(p0) :: (load 4 from %fixed-stack.1, align 0)
+    %13:_(p0) = G_FRAME_INDEX %fixed-stack.0
+    %9:_(s32) = G_LOAD %13(p0) :: (load 4 from %fixed-stack.0, align 0)
+    %1:_(s128) = G_MERGE_VALUES %6(s32), %7(s32), %8(s32), %9(s32)
+    %14:_(s128) = G_ADD %1, %0
+    %15:_(s32), %16:_(s32), %17:_(s32), %18:_(s32) = G_UNMERGE_VALUES %14(s128)
+    $v0 = COPY %15(s32)
+    $v1 = COPY %16(s32)
+    $a0 = COPY %17(s32)
+    $a1 = COPY %18(s32)
+    RetRA implicit $v0, implicit $v1, implicit $a0, implicit $a1
 
 ...

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=new-pm-pgo-sample-use-pipeline -profile-file=%S/Inputs/function_metadata.prof -S | FileCheck %s
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=new-pm-pgo-sample-use-pipeline -profile-file=%S/Inputs/function_metadata.compact.afdo -S | FileCheck %s
 
 ; Tests whether the functions in the inline stack are added to the
 ; function_entry_count metadata.
@@ -27,8 +28,10 @@ define void @test_liveness() !dbg !12 {
 }
 
 ; GUIDs of foo, bar, foo1, foo2 and foo3 should be included in the metadata to
-; make sure hot inline stacks are imported.
-; CHECK: ![[ENTRY_TEST]] = !{!"function_entry_count", i64 1, i64 2494702099028631698, i64 6699318081062747564, i64 7546896869197086323, i64 7682762345278052905,  i64 -7908226060800700466, i64 -2012135647395072713}
+; make sure hot inline stacks are imported. The total count of baz is lower
+; than the hot cutoff threshold and its GUID should not be included in the
+; metadata.
+; CHECK: ![[ENTRY_TEST]] = !{!"function_entry_count", i64 1, i64 2494702099028631698, i64 6699318081062747564, i64 7682762345278052905,  i64 -7908226060800700466, i64 -2012135647395072713}
 
 ; Check GUIDs for both foo and foo_available are included in the metadata to
 ; make sure the liveness analysis can capture the dependency from test_liveness

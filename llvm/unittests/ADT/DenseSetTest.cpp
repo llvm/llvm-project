@@ -15,6 +15,13 @@ using namespace llvm;
 
 namespace {
 
+static_assert(std::is_const<std::remove_pointer<
+                  DenseSet<int>::const_iterator::pointer>::type>::value,
+              "Iterator pointer type should be const");
+static_assert(std::is_const<std::remove_reference<
+                  DenseSet<int>::const_iterator::reference>::type>::value,
+              "Iterator reference type should be const");
+
 // Test hashing with a set of only two entries.
 TEST(DenseSetTest, DoubleEntrySetTest) {
   llvm::DenseSet<unsigned> set(2);
@@ -73,6 +80,14 @@ TYPED_TEST(DenseSetTest, InitializerList) {
   EXPECT_EQ(0u, set.count(3));
 }
 
+TYPED_TEST(DenseSetTest, InitializerListWithNonPowerOfTwoLength) {
+  TypeParam set({1, 2, 3});
+  EXPECT_EQ(3u, set.size());
+  EXPECT_EQ(1u, set.count(1));
+  EXPECT_EQ(1u, set.count(2));
+  EXPECT_EQ(1u, set.count(3));
+}
+
 TYPED_TEST(DenseSetTest, ConstIteratorComparison) {
   TypeParam set({1});
   const TypeParam &cset = set;
@@ -112,6 +127,15 @@ TYPED_TEST(DenseSetTest, FindAsTest) {
   EXPECT_EQ(1u, *set.find_as("b"));
   EXPECT_EQ(2u, *set.find_as("c"));
   EXPECT_TRUE(set.find_as("d") == set.end());
+}
+
+TYPED_TEST(DenseSetTest, EqualityComparisonTest) {
+  TypeParam set1({1, 2, 3, 4});
+  TypeParam set2({4, 3, 2, 1});
+  TypeParam set3({2, 3, 4, 5});
+
+  EXPECT_EQ(set1, set2);
+  EXPECT_NE(set1, set3);
 }
 
 // Simple class that counts how many moves and copy happens when growing a map

@@ -22,6 +22,7 @@ declare i32 @bar()
 define i32 @f3() shadowcallstack {
   ; CHECK: f3:
   ; CHECK: str x30, [x18], #8
+  ; CHECK: .cfi_escape 0x16, 0x12, 0x02, 0x82, 0x78
   ; CHECK: str x30, [sp, #-16]!
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
@@ -44,4 +45,12 @@ define i32 @f4() shadowcallstack {
   ; CHECK: ldr x30, [x18, #-8]!
   ; CHECK: ret
   ret i32 %res1234
+}
+
+define i32 @f5() shadowcallstack nounwind {
+  ; CHECK: f5:
+  ; CHECK-NOT: .cfi_escape
+  %res = call i32 @bar()
+  %res1 = add i32 %res, 1
+  ret i32 %res
 }

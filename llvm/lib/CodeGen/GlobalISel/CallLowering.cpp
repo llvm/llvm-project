@@ -23,6 +23,8 @@
 
 using namespace llvm;
 
+void CallLowering::anchor() {}
+
 bool CallLowering::lowerCall(
     MachineIRBuilder &MIRBuilder, ImmutableCallSite CS, unsigned ResReg,
     ArrayRef<unsigned> ArgRegs, std::function<unsigned()> GetCalleeReg) const {
@@ -164,7 +166,6 @@ unsigned CallLowering::ValueHandler::extendRegister(unsigned ValReg,
     // nop in big-endian situations.
     return ValReg;
   case CCValAssign::AExt: {
-    assert(!VA.getLocVT().isVector() && "unexpected vector extend");
     auto MIB = MIRBuilder.buildAnyExt(LocTy, ValReg);
     return MIB->getOperand(0).getReg();
   }
@@ -181,3 +182,5 @@ unsigned CallLowering::ValueHandler::extendRegister(unsigned ValReg,
   }
   llvm_unreachable("unable to extend register");
 }
+
+void CallLowering::ValueHandler::anchor() {}

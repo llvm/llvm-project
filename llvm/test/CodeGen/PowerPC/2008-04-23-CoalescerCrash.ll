@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
 @_ZL10DeviceCode = internal global i16 0		; <i16*> [#uses=1]
 @.str19 = internal constant [64 x i8] c"unlock_then_erase_sector: failed to erase block (status= 0x%x)\0A\00"		; <[64 x i8]*> [#uses=1]
@@ -10,6 +10,8 @@ declare void @IOLog(i8*, ...)
 
 declare void @IODelay(i32)
 
+; CHECK: @_Z14ProgramByWordsPvyy
+; CHECK: blr
 define i32 @_Z14ProgramByWordsPvyy(i8* %buffer, i64 %Offset, i64 %bufferSize) nounwind  {
 entry:
 	store volatile i8 -1, i8* null, align 1

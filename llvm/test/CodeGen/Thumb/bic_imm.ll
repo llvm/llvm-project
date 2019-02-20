@@ -39,22 +39,77 @@ entry:
 define void @truncated(i16 %a, i16* %p) {
 ; CHECK-T1-LABEL: truncated:
 ; CHECK-T1:       @ %bb.0:
-; CHECK-T1-NEXT:    ldr r2, .LCPI2_0
+; CHECK-T1-NEXT:    movs r2, #128
+; CHECK-T1-NEXT:    bics r0, r2
+; CHECK-T1-NEXT:    strh r0, [r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: truncated:
+; CHECK-T2:       @ %bb.0:
+; CHECK-T2-NEXT:    bic r0, r0, #128
+; CHECK-T2-NEXT:    strh r0, [r1]
+; CHECK-T2-NEXT:    bx lr
+  %and = and i16 %a, -129
+  store i16 %and, i16* %p
+  ret void
+}
+
+define void @truncated_neg2(i16 %a, i16* %p) {
+; CHECK-T1-LABEL: truncated_neg2:
+; CHECK-T1:       @ %bb.0:
+; CHECK-T1-NEXT:    movs r2, #1
+; CHECK-T1-NEXT:    bics r0, r2
+; CHECK-T1-NEXT:    strh r0, [r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: truncated_neg2:
+; CHECK-T2:       @ %bb.0:
+; CHECK-T2-NEXT:    bic r0, r0, #1
+; CHECK-T2-NEXT:    strh r0, [r1]
+; CHECK-T2-NEXT:    bx lr
+  %and = and i16 %a, -2
+  store i16 %and, i16* %p
+  ret void
+}
+
+define void @truncated_neg256(i16 %a, i16* %p) {
+; CHECK-T1-LABEL: truncated_neg256:
+; CHECK-T1:       @ %bb.0:
+; CHECK-T1-NEXT:    movs r2, #255
+; CHECK-T1-NEXT:    bics r0, r2
+; CHECK-T1-NEXT:    strh r0, [r1]
+; CHECK-T1-NEXT:    bx lr
+;
+; CHECK-T2-LABEL: truncated_neg256:
+; CHECK-T2:       @ %bb.0:
+; CHECK-T2-NEXT:    bic r0, r0, #255
+; CHECK-T2-NEXT:    strh r0, [r1]
+; CHECK-T2-NEXT:    bx lr
+  %and = and i16 %a, -256
+  store i16 %and, i16* %p
+  ret void
+}
+
+; FIXME: Thumb2 supports "bic r0, r0, #510"
+define void @truncated_neg511(i16 %a, i16* %p) {
+; CHECK-T1-LABEL: truncated_neg511:
+; CHECK-T1:       @ %bb.0:
+; CHECK-T1-NEXT:    ldr r2, .LCPI5_0
 ; CHECK-T1-NEXT:    ands r2, r0
 ; CHECK-T1-NEXT:    strh r2, [r1]
 ; CHECK-T1-NEXT:    bx lr
 ; CHECK-T1-NEXT:    .p2align 2
 ; CHECK-T1-NEXT:  @ %bb.1:
-; CHECK-T1-NEXT:  .LCPI2_0:
-; CHECK-T1-NEXT:    .long 65407 @ 0xff7f
+; CHECK-T1-NEXT:  .LCPI5_0:
+; CHECK-T1-NEXT:    .long 65025 @ 0xfe01
 ;
-; CHECK-T2-LABEL: truncated:
+; CHECK-T2-LABEL: truncated_neg511:
 ; CHECK-T2:       @ %bb.0:
-; CHECK-T2-NEXT:    movw r2, #65407
+; CHECK-T2-NEXT:    movw r2, #65025
 ; CHECK-T2-NEXT:    ands r0, r2
 ; CHECK-T2-NEXT:    strh r0, [r1]
 ; CHECK-T2-NEXT:    bx lr
-  %and = and i16 %a, -129
+  %and = and i16 %a, -511
   store i16 %and, i16* %p
   ret void
 }

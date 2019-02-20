@@ -29,7 +29,10 @@
 @a = external global i32, align 4
 @b = external global [1 x i32], align 4
 
-; CHECK: LV: Not vectorizing: Cannot prove legality.
+; We can vectorize this loop because we are storing an invariant value into an
+; invariant address.
+
+; CHECK: LV: We can vectorize this loop!
 ; CHECK-LABEL: @test
 define void @test() {
 entry:

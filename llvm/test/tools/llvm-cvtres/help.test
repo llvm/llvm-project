@@ -2,7 +2,7 @@
 ; RUN: FileCheck -input-file=%t %s -check-prefix=HELP_TEST
 
 ; HELP_TEST: 	  OVERVIEW: Resource Converter
-; HELP_TEST-DAG:  USAGE: cvtres [options] <inputs>
+; HELP_TEST-DAG:  USAGE: llvm-cvtres [options] file...
 ; HELP_TEST-DAG:  OPTIONS:
 ; HELP_TEST-NEXT:   /DEFINE:symbol 
 ; HELP_TEST-NEXT:   /FOLDDUPS:     

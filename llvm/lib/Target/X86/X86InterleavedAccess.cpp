@@ -463,7 +463,7 @@ static void setGroupSize(MVT VT, SmallVectorImpl<uint32_t> &SizeInfo) {
 //  {DiffToJump,...,VF/2-1,VF,...,DiffToJump+VF-1}.
 //  Imm variable sets the offset amount. The result of the
 //  function is stored inside ShuffleMask vector and it built as described in
-//  the begin of the description. AlignDirection is a boolean that indecat the
+//  the begin of the description. AlignDirection is a boolean that indicates the
 //  direction of the alignment. (false - align to the "right" side while true -
 //  align to the "left" side)
 static void DecodePALIGNRMask(MVT VT, unsigned Imm,

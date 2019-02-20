@@ -77,6 +77,7 @@ module TypeKind : sig
   | Vector
   | Metadata
   | X86_mmx
+  | Token
 end
 
 (** The linkage of a global value, accessed with {!linkage} and
@@ -260,6 +261,12 @@ module Opcode : sig
   | AtomicRMW
   | Resume
   | LandingPad
+  | AddrSpaceCast
+  | CleanupRet
+  | CatchRet
+  | CatchPad
+  | CleanupPad
+  | CatchSwitch
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -336,6 +343,7 @@ module ValueKind : sig
   | ConstantVector
   | Function
   | GlobalAlias
+  | GlobalIFunc
   | GlobalVariable
   | UndefValue
   | Instruction of Opcode.t
@@ -657,6 +665,10 @@ val is_packed : lltype -> bool
     [false] otherwise. See the method [llvm::StructType::isOpaque]. *)
 val is_opaque : lltype -> bool
 
+(** [is_literal sty] returns [true] if the structure type [sty] is literal.
+    [false] otherwise. See the method [llvm::StructType::isLiteral]. *)
+val is_literal : lltype -> bool
+
 
 (** {7 Operations on pointer, vector, and array types} *)
 
@@ -801,6 +813,11 @@ val set_operand : llvalue -> int -> llvalue -> unit
     See the method [llvm::User::getNumOperands]. *)
 val num_operands : llvalue -> int
 
+
+(** [indices i] returns the indices for the ExtractValue or InsertValue
+    instruction [i].
+    See the [llvm::getIndices] methods. *)
+val indices : llvalue -> int array
 
 (** {7 Operations on constants of (mostly) any type} *)
 
@@ -1824,7 +1841,12 @@ val remove_enum_call_site_attr : llvalue -> llattrkind -> AttrIndex.t -> unit
 val remove_string_call_site_attr : llvalue -> string -> AttrIndex.t -> unit
 
 
-(** {7 Operations on call instructions (only)} *)
+(** {7 Operations on call and invoke instructions (only)} *)
+
+(** [num_arg_operands ci] returns the number of arguments for the call or
+    invoke instruction [ci].  See the method
+    [llvm::CallInst::getNumArgOperands]. *)
+val num_arg_operands : llvalue -> int
 
 (** [is_tail_call ci] is [true] if the call instruction [ci] is flagged as
     eligible for tail call optimization, [false] otherwise.
@@ -1835,6 +1857,14 @@ val is_tail_call : llvalue -> bool
     call optimization if [tc] is [true], clears otherwise.
     See the method [llvm::CallInst::setTailCall]. *)
 val set_tail_call : bool -> llvalue -> unit
+
+(** [get_normal_dest ii] is the normal destination basic block of an invoke
+    instruction. See the method [llvm::InvokeInst::getNormalDest()]. *)
+val get_normal_dest : llvalue -> llbasicblock
+
+(** [get_unwind_dest ii] is the unwind destination basic block of an invoke
+    instruction. See the method [llvm::InvokeInst::getUnwindDest()]. *)
+val get_unwind_dest : llvalue -> llbasicblock
 
 
 (** {7 Operations on load/store instructions (only)} *)
@@ -1857,16 +1887,16 @@ val set_volatile : bool -> llvalue -> unit
 val is_terminator : llvalue -> bool
 
 (** [successor v i] returns the successor at index [i] for the value [v].
-    See the method [llvm::TerminatorInst::getSuccessor]. *)
+    See the method [llvm::Instruction::getSuccessor]. *)
 val successor : llvalue -> int -> llbasicblock
 
 (** [set_successor v i o] sets the successor of the value [v] at the index [i] to
     the value [o].
-    See the method [llvm::TerminatorInst::setSuccessor]. *)
+    See the method [llvm::Instruction::setSuccessor]. *)
 val set_successor : llvalue -> int -> llbasicblock -> unit
 
 (** [num_successors v] returns the number of successors for the value [v].
-    See the method [llvm::TerminatorInst::getNumSuccessors]. *)
+    See the method [llvm::Instruction::getNumSuccessors]. *)
 val num_successors : llvalue -> int
 
 (** [successors v] returns the successors of [v]. *)
@@ -2067,6 +2097,10 @@ val build_invoke : llvalue -> llvalue array -> llbasicblock ->
     See the method [llvm::LLVMBuilder::CreateLandingPad]. *)
 val build_landingpad : lltype -> llvalue -> int -> string -> llbuilder ->
                          llvalue
+
+(** [is_cleanup lp] returns [true] if [landingpad] instruction lp is a cleanup.
+    See the method [llvm::LandingPadInst::isCleanup]. *)
+val is_cleanup : llvalue -> bool
 
 (** [set_cleanup lp] sets the cleanup flag in the [landingpad]instruction.
     See the method [llvm::LandingPadInst::setCleanup]. *)

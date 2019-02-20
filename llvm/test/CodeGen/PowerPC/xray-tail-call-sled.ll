@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -o - -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -filetype=asm -relocation-model=pic -o - -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 define i32 @callee() nounwind noinline uwtable "function-instrument"="xray-always" {
 ; CHECK-LABEL: .Ltmp0:

@@ -39,7 +39,7 @@ using namespace llvm;
 #include "X86GenRegisterInfo.inc"
 
 #define GET_INSTRINFO_MC_DESC
-#define GET_GENINSTRINFO_MC_HELPERS
+#define GET_INSTRINFO_MC_HELPERS
 #include "X86GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -81,120 +81,193 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
     codeview::RegisterId CVReg;
     MCPhysReg Reg;
   } RegMap[] = {
-    { codeview::RegisterId::CVRegAL, X86::AL},
-    { codeview::RegisterId::CVRegCL, X86::CL},
-    { codeview::RegisterId::CVRegDL, X86::DL},
-    { codeview::RegisterId::CVRegBL, X86::BL},
-    { codeview::RegisterId::CVRegAH, X86::AH},
-    { codeview::RegisterId::CVRegCH, X86::CH},
-    { codeview::RegisterId::CVRegDH, X86::DH},
-    { codeview::RegisterId::CVRegBH, X86::BH},
-    { codeview::RegisterId::CVRegAX, X86::AX},
-    { codeview::RegisterId::CVRegCX, X86::CX},
-    { codeview::RegisterId::CVRegDX, X86::DX},
-    { codeview::RegisterId::CVRegBX, X86::BX},
-    { codeview::RegisterId::CVRegSP, X86::SP},
-    { codeview::RegisterId::CVRegBP, X86::BP},
-    { codeview::RegisterId::CVRegSI, X86::SI},
-    { codeview::RegisterId::CVRegDI, X86::DI},
-    { codeview::RegisterId::CVRegEAX, X86::EAX},
-    { codeview::RegisterId::CVRegECX, X86::ECX},
-    { codeview::RegisterId::CVRegEDX, X86::EDX},
-    { codeview::RegisterId::CVRegEBX, X86::EBX},
-    { codeview::RegisterId::CVRegESP, X86::ESP},
-    { codeview::RegisterId::CVRegEBP, X86::EBP},
-    { codeview::RegisterId::CVRegESI, X86::ESI},
-    { codeview::RegisterId::CVRegEDI, X86::EDI},
+      {codeview::RegisterId::AL, X86::AL},
+      {codeview::RegisterId::CL, X86::CL},
+      {codeview::RegisterId::DL, X86::DL},
+      {codeview::RegisterId::BL, X86::BL},
+      {codeview::RegisterId::AH, X86::AH},
+      {codeview::RegisterId::CH, X86::CH},
+      {codeview::RegisterId::DH, X86::DH},
+      {codeview::RegisterId::BH, X86::BH},
+      {codeview::RegisterId::AX, X86::AX},
+      {codeview::RegisterId::CX, X86::CX},
+      {codeview::RegisterId::DX, X86::DX},
+      {codeview::RegisterId::BX, X86::BX},
+      {codeview::RegisterId::SP, X86::SP},
+      {codeview::RegisterId::BP, X86::BP},
+      {codeview::RegisterId::SI, X86::SI},
+      {codeview::RegisterId::DI, X86::DI},
+      {codeview::RegisterId::EAX, X86::EAX},
+      {codeview::RegisterId::ECX, X86::ECX},
+      {codeview::RegisterId::EDX, X86::EDX},
+      {codeview::RegisterId::EBX, X86::EBX},
+      {codeview::RegisterId::ESP, X86::ESP},
+      {codeview::RegisterId::EBP, X86::EBP},
+      {codeview::RegisterId::ESI, X86::ESI},
+      {codeview::RegisterId::EDI, X86::EDI},
 
-    { codeview::RegisterId::CVRegEFLAGS, X86::EFLAGS},
+      {codeview::RegisterId::EFLAGS, X86::EFLAGS},
 
-    { codeview::RegisterId::CVRegST0, X86::FP0},
-    { codeview::RegisterId::CVRegST1, X86::FP1},
-    { codeview::RegisterId::CVRegST2, X86::FP2},
-    { codeview::RegisterId::CVRegST3, X86::FP3},
-    { codeview::RegisterId::CVRegST4, X86::FP4},
-    { codeview::RegisterId::CVRegST5, X86::FP5},
-    { codeview::RegisterId::CVRegST6, X86::FP6},
-    { codeview::RegisterId::CVRegST7, X86::FP7},
+      {codeview::RegisterId::ST0, X86::FP0},
+      {codeview::RegisterId::ST1, X86::FP1},
+      {codeview::RegisterId::ST2, X86::FP2},
+      {codeview::RegisterId::ST3, X86::FP3},
+      {codeview::RegisterId::ST4, X86::FP4},
+      {codeview::RegisterId::ST5, X86::FP5},
+      {codeview::RegisterId::ST6, X86::FP6},
+      {codeview::RegisterId::ST7, X86::FP7},
 
-    { codeview::RegisterId::CVRegXMM0, X86::XMM0},
-    { codeview::RegisterId::CVRegXMM1, X86::XMM1},
-    { codeview::RegisterId::CVRegXMM2, X86::XMM2},
-    { codeview::RegisterId::CVRegXMM3, X86::XMM3},
-    { codeview::RegisterId::CVRegXMM4, X86::XMM4},
-    { codeview::RegisterId::CVRegXMM5, X86::XMM5},
-    { codeview::RegisterId::CVRegXMM6, X86::XMM6},
-    { codeview::RegisterId::CVRegXMM7, X86::XMM7},
+      {codeview::RegisterId::XMM0, X86::XMM0},
+      {codeview::RegisterId::XMM1, X86::XMM1},
+      {codeview::RegisterId::XMM2, X86::XMM2},
+      {codeview::RegisterId::XMM3, X86::XMM3},
+      {codeview::RegisterId::XMM4, X86::XMM4},
+      {codeview::RegisterId::XMM5, X86::XMM5},
+      {codeview::RegisterId::XMM6, X86::XMM6},
+      {codeview::RegisterId::XMM7, X86::XMM7},
 
-    { codeview::RegisterId::CVRegXMM8, X86::XMM8},
-    { codeview::RegisterId::CVRegXMM9, X86::XMM9},
-    { codeview::RegisterId::CVRegXMM10, X86::XMM10},
-    { codeview::RegisterId::CVRegXMM11, X86::XMM11},
-    { codeview::RegisterId::CVRegXMM12, X86::XMM12},
-    { codeview::RegisterId::CVRegXMM13, X86::XMM13},
-    { codeview::RegisterId::CVRegXMM14, X86::XMM14},
-    { codeview::RegisterId::CVRegXMM15, X86::XMM15},
+      {codeview::RegisterId::XMM8, X86::XMM8},
+      {codeview::RegisterId::XMM9, X86::XMM9},
+      {codeview::RegisterId::XMM10, X86::XMM10},
+      {codeview::RegisterId::XMM11, X86::XMM11},
+      {codeview::RegisterId::XMM12, X86::XMM12},
+      {codeview::RegisterId::XMM13, X86::XMM13},
+      {codeview::RegisterId::XMM14, X86::XMM14},
+      {codeview::RegisterId::XMM15, X86::XMM15},
 
-    { codeview::RegisterId::CVRegSIL, X86::SIL},
-    { codeview::RegisterId::CVRegDIL, X86::DIL},
-    { codeview::RegisterId::CVRegBPL, X86::BPL},
-    { codeview::RegisterId::CVRegSPL, X86::SPL},
-    { codeview::RegisterId::CVRegRAX, X86::RAX},
-    { codeview::RegisterId::CVRegRBX, X86::RBX},
-    { codeview::RegisterId::CVRegRCX, X86::RCX},
-    { codeview::RegisterId::CVRegRDX, X86::RDX},
-    { codeview::RegisterId::CVRegRSI, X86::RSI},
-    { codeview::RegisterId::CVRegRDI, X86::RDI},
-    { codeview::RegisterId::CVRegRBP, X86::RBP},
-    { codeview::RegisterId::CVRegRSP, X86::RSP},
-    { codeview::RegisterId::CVRegR8, X86::R8},
-    { codeview::RegisterId::CVRegR9, X86::R9},
-    { codeview::RegisterId::CVRegR10, X86::R10},
-    { codeview::RegisterId::CVRegR11, X86::R11},
-    { codeview::RegisterId::CVRegR12, X86::R12},
-    { codeview::RegisterId::CVRegR13, X86::R13},
-    { codeview::RegisterId::CVRegR14, X86::R14},
-    { codeview::RegisterId::CVRegR15, X86::R15},
-    { codeview::RegisterId::CVRegR8B, X86::R8B},
-    { codeview::RegisterId::CVRegR9B, X86::R9B},
-    { codeview::RegisterId::CVRegR10B, X86::R10B},
-    { codeview::RegisterId::CVRegR11B, X86::R11B},
-    { codeview::RegisterId::CVRegR12B, X86::R12B},
-    { codeview::RegisterId::CVRegR13B, X86::R13B},
-    { codeview::RegisterId::CVRegR14B, X86::R14B},
-    { codeview::RegisterId::CVRegR15B, X86::R15B},
-    { codeview::RegisterId::CVRegR8W, X86::R8W},
-    { codeview::RegisterId::CVRegR9W, X86::R9W},
-    { codeview::RegisterId::CVRegR10W, X86::R10W},
-    { codeview::RegisterId::CVRegR11W, X86::R11W},
-    { codeview::RegisterId::CVRegR12W, X86::R12W},
-    { codeview::RegisterId::CVRegR13W, X86::R13W},
-    { codeview::RegisterId::CVRegR14W, X86::R14W},
-    { codeview::RegisterId::CVRegR15W, X86::R15W},
-    { codeview::RegisterId::CVRegR8D, X86::R8D},
-    { codeview::RegisterId::CVRegR9D, X86::R9D},
-    { codeview::RegisterId::CVRegR10D, X86::R10D},
-    { codeview::RegisterId::CVRegR11D, X86::R11D},
-    { codeview::RegisterId::CVRegR12D, X86::R12D},
-    { codeview::RegisterId::CVRegR13D, X86::R13D},
-    { codeview::RegisterId::CVRegR14D, X86::R14D},
-    { codeview::RegisterId::CVRegR15D, X86::R15D},
-    { codeview::RegisterId::CVRegAMD64_YMM0, X86::YMM0},
-    { codeview::RegisterId::CVRegAMD64_YMM1, X86::YMM1},
-    { codeview::RegisterId::CVRegAMD64_YMM2, X86::YMM2},
-    { codeview::RegisterId::CVRegAMD64_YMM3, X86::YMM3},
-    { codeview::RegisterId::CVRegAMD64_YMM4, X86::YMM4},
-    { codeview::RegisterId::CVRegAMD64_YMM5, X86::YMM5},
-    { codeview::RegisterId::CVRegAMD64_YMM6, X86::YMM6},
-    { codeview::RegisterId::CVRegAMD64_YMM7, X86::YMM7},
-    { codeview::RegisterId::CVRegAMD64_YMM8, X86::YMM8},
-    { codeview::RegisterId::CVRegAMD64_YMM9, X86::YMM9},
-    { codeview::RegisterId::CVRegAMD64_YMM10, X86::YMM10},
-    { codeview::RegisterId::CVRegAMD64_YMM11, X86::YMM11},
-    { codeview::RegisterId::CVRegAMD64_YMM12, X86::YMM12},
-    { codeview::RegisterId::CVRegAMD64_YMM13, X86::YMM13},
-    { codeview::RegisterId::CVRegAMD64_YMM14, X86::YMM14},
-    { codeview::RegisterId::CVRegAMD64_YMM15, X86::YMM15},
+      {codeview::RegisterId::SIL, X86::SIL},
+      {codeview::RegisterId::DIL, X86::DIL},
+      {codeview::RegisterId::BPL, X86::BPL},
+      {codeview::RegisterId::SPL, X86::SPL},
+      {codeview::RegisterId::RAX, X86::RAX},
+      {codeview::RegisterId::RBX, X86::RBX},
+      {codeview::RegisterId::RCX, X86::RCX},
+      {codeview::RegisterId::RDX, X86::RDX},
+      {codeview::RegisterId::RSI, X86::RSI},
+      {codeview::RegisterId::RDI, X86::RDI},
+      {codeview::RegisterId::RBP, X86::RBP},
+      {codeview::RegisterId::RSP, X86::RSP},
+      {codeview::RegisterId::R8, X86::R8},
+      {codeview::RegisterId::R9, X86::R9},
+      {codeview::RegisterId::R10, X86::R10},
+      {codeview::RegisterId::R11, X86::R11},
+      {codeview::RegisterId::R12, X86::R12},
+      {codeview::RegisterId::R13, X86::R13},
+      {codeview::RegisterId::R14, X86::R14},
+      {codeview::RegisterId::R15, X86::R15},
+      {codeview::RegisterId::R8B, X86::R8B},
+      {codeview::RegisterId::R9B, X86::R9B},
+      {codeview::RegisterId::R10B, X86::R10B},
+      {codeview::RegisterId::R11B, X86::R11B},
+      {codeview::RegisterId::R12B, X86::R12B},
+      {codeview::RegisterId::R13B, X86::R13B},
+      {codeview::RegisterId::R14B, X86::R14B},
+      {codeview::RegisterId::R15B, X86::R15B},
+      {codeview::RegisterId::R8W, X86::R8W},
+      {codeview::RegisterId::R9W, X86::R9W},
+      {codeview::RegisterId::R10W, X86::R10W},
+      {codeview::RegisterId::R11W, X86::R11W},
+      {codeview::RegisterId::R12W, X86::R12W},
+      {codeview::RegisterId::R13W, X86::R13W},
+      {codeview::RegisterId::R14W, X86::R14W},
+      {codeview::RegisterId::R15W, X86::R15W},
+      {codeview::RegisterId::R8D, X86::R8D},
+      {codeview::RegisterId::R9D, X86::R9D},
+      {codeview::RegisterId::R10D, X86::R10D},
+      {codeview::RegisterId::R11D, X86::R11D},
+      {codeview::RegisterId::R12D, X86::R12D},
+      {codeview::RegisterId::R13D, X86::R13D},
+      {codeview::RegisterId::R14D, X86::R14D},
+      {codeview::RegisterId::R15D, X86::R15D},
+      {codeview::RegisterId::AMD64_YMM0, X86::YMM0},
+      {codeview::RegisterId::AMD64_YMM1, X86::YMM1},
+      {codeview::RegisterId::AMD64_YMM2, X86::YMM2},
+      {codeview::RegisterId::AMD64_YMM3, X86::YMM3},
+      {codeview::RegisterId::AMD64_YMM4, X86::YMM4},
+      {codeview::RegisterId::AMD64_YMM5, X86::YMM5},
+      {codeview::RegisterId::AMD64_YMM6, X86::YMM6},
+      {codeview::RegisterId::AMD64_YMM7, X86::YMM7},
+      {codeview::RegisterId::AMD64_YMM8, X86::YMM8},
+      {codeview::RegisterId::AMD64_YMM9, X86::YMM9},
+      {codeview::RegisterId::AMD64_YMM10, X86::YMM10},
+      {codeview::RegisterId::AMD64_YMM11, X86::YMM11},
+      {codeview::RegisterId::AMD64_YMM12, X86::YMM12},
+      {codeview::RegisterId::AMD64_YMM13, X86::YMM13},
+      {codeview::RegisterId::AMD64_YMM14, X86::YMM14},
+      {codeview::RegisterId::AMD64_YMM15, X86::YMM15},
+      {codeview::RegisterId::AMD64_YMM16, X86::YMM16},
+      {codeview::RegisterId::AMD64_YMM17, X86::YMM17},
+      {codeview::RegisterId::AMD64_YMM18, X86::YMM18},
+      {codeview::RegisterId::AMD64_YMM19, X86::YMM19},
+      {codeview::RegisterId::AMD64_YMM20, X86::YMM20},
+      {codeview::RegisterId::AMD64_YMM21, X86::YMM21},
+      {codeview::RegisterId::AMD64_YMM22, X86::YMM22},
+      {codeview::RegisterId::AMD64_YMM23, X86::YMM23},
+      {codeview::RegisterId::AMD64_YMM24, X86::YMM24},
+      {codeview::RegisterId::AMD64_YMM25, X86::YMM25},
+      {codeview::RegisterId::AMD64_YMM26, X86::YMM26},
+      {codeview::RegisterId::AMD64_YMM27, X86::YMM27},
+      {codeview::RegisterId::AMD64_YMM28, X86::YMM28},
+      {codeview::RegisterId::AMD64_YMM29, X86::YMM29},
+      {codeview::RegisterId::AMD64_YMM30, X86::YMM30},
+      {codeview::RegisterId::AMD64_YMM31, X86::YMM31},
+      {codeview::RegisterId::AMD64_ZMM0, X86::ZMM0},
+      {codeview::RegisterId::AMD64_ZMM1, X86::ZMM1},
+      {codeview::RegisterId::AMD64_ZMM2, X86::ZMM2},
+      {codeview::RegisterId::AMD64_ZMM3, X86::ZMM3},
+      {codeview::RegisterId::AMD64_ZMM4, X86::ZMM4},
+      {codeview::RegisterId::AMD64_ZMM5, X86::ZMM5},
+      {codeview::RegisterId::AMD64_ZMM6, X86::ZMM6},
+      {codeview::RegisterId::AMD64_ZMM7, X86::ZMM7},
+      {codeview::RegisterId::AMD64_ZMM8, X86::ZMM8},
+      {codeview::RegisterId::AMD64_ZMM9, X86::ZMM9},
+      {codeview::RegisterId::AMD64_ZMM10, X86::ZMM10},
+      {codeview::RegisterId::AMD64_ZMM11, X86::ZMM11},
+      {codeview::RegisterId::AMD64_ZMM12, X86::ZMM12},
+      {codeview::RegisterId::AMD64_ZMM13, X86::ZMM13},
+      {codeview::RegisterId::AMD64_ZMM14, X86::ZMM14},
+      {codeview::RegisterId::AMD64_ZMM15, X86::ZMM15},
+      {codeview::RegisterId::AMD64_ZMM16, X86::ZMM16},
+      {codeview::RegisterId::AMD64_ZMM17, X86::ZMM17},
+      {codeview::RegisterId::AMD64_ZMM18, X86::ZMM18},
+      {codeview::RegisterId::AMD64_ZMM19, X86::ZMM19},
+      {codeview::RegisterId::AMD64_ZMM20, X86::ZMM20},
+      {codeview::RegisterId::AMD64_ZMM21, X86::ZMM21},
+      {codeview::RegisterId::AMD64_ZMM22, X86::ZMM22},
+      {codeview::RegisterId::AMD64_ZMM23, X86::ZMM23},
+      {codeview::RegisterId::AMD64_ZMM24, X86::ZMM24},
+      {codeview::RegisterId::AMD64_ZMM25, X86::ZMM25},
+      {codeview::RegisterId::AMD64_ZMM26, X86::ZMM26},
+      {codeview::RegisterId::AMD64_ZMM27, X86::ZMM27},
+      {codeview::RegisterId::AMD64_ZMM28, X86::ZMM28},
+      {codeview::RegisterId::AMD64_ZMM29, X86::ZMM29},
+      {codeview::RegisterId::AMD64_ZMM30, X86::ZMM30},
+      {codeview::RegisterId::AMD64_ZMM31, X86::ZMM31},
+      {codeview::RegisterId::AMD64_K0, X86::K0},
+      {codeview::RegisterId::AMD64_K1, X86::K1},
+      {codeview::RegisterId::AMD64_K2, X86::K2},
+      {codeview::RegisterId::AMD64_K3, X86::K3},
+      {codeview::RegisterId::AMD64_K4, X86::K4},
+      {codeview::RegisterId::AMD64_K5, X86::K5},
+      {codeview::RegisterId::AMD64_K6, X86::K6},
+      {codeview::RegisterId::AMD64_K7, X86::K7},
+      {codeview::RegisterId::AMD64_XMM16, X86::XMM16},
+      {codeview::RegisterId::AMD64_XMM17, X86::XMM17},
+      {codeview::RegisterId::AMD64_XMM18, X86::XMM18},
+      {codeview::RegisterId::AMD64_XMM19, X86::XMM19},
+      {codeview::RegisterId::AMD64_XMM20, X86::XMM20},
+      {codeview::RegisterId::AMD64_XMM21, X86::XMM21},
+      {codeview::RegisterId::AMD64_XMM22, X86::XMM22},
+      {codeview::RegisterId::AMD64_XMM23, X86::XMM23},
+      {codeview::RegisterId::AMD64_XMM24, X86::XMM24},
+      {codeview::RegisterId::AMD64_XMM25, X86::XMM25},
+      {codeview::RegisterId::AMD64_XMM26, X86::XMM26},
+      {codeview::RegisterId::AMD64_XMM27, X86::XMM27},
+      {codeview::RegisterId::AMD64_XMM28, X86::XMM28},
+      {codeview::RegisterId::AMD64_XMM29, X86::XMM29},
+      {codeview::RegisterId::AMD64_XMM30, X86::XMM30},
+      {codeview::RegisterId::AMD64_XMM31, X86::XMM31},
+
   };
   for (unsigned I = 0; I < array_lengthof(RegMap); ++I)
     MRI->mapLLVMRegToCVReg(RegMap[I].Reg, static_cast<int>(RegMap[I].CVReg));
@@ -307,83 +380,19 @@ class X86MCInstrAnalysis : public MCInstrAnalysis {
 public:
   X86MCInstrAnalysis(const MCInstrInfo *MCII) : MCInstrAnalysis(MCII) {}
 
-  bool isDependencyBreaking(const MCSubtargetInfo &STI,
-                            const MCInst &Inst) const override;
+#define GET_STIPREDICATE_DECLS_FOR_MC_ANALYSIS
+#include "X86GenSubtargetInfo.inc"
+
   bool clearsSuperRegisters(const MCRegisterInfo &MRI, const MCInst &Inst,
                             APInt &Mask) const override;
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 uint64_t GotSectionVA,
+                 const Triple &TargetTriple) const override;
 };
 
-bool X86MCInstrAnalysis::isDependencyBreaking(const MCSubtargetInfo &STI,
-                                              const MCInst &Inst) const {
-  if (STI.getCPU() == "btver2") {
-    // Reference: Agner Fog's microarchitecture.pdf - Section 20 "AMD Bobcat and
-    // Jaguar pipeline", subsection 8 "Dependency-breaking instructions".
-    switch (Inst.getOpcode()) {
-    default:
-      return false;
-    case X86::SUB32rr:
-    case X86::SUB64rr:
-    case X86::SBB32rr:
-    case X86::SBB64rr:
-    case X86::XOR32rr:
-    case X86::XOR64rr:
-    case X86::XORPSrr:
-    case X86::XORPDrr:
-    case X86::VXORPSrr:
-    case X86::VXORPDrr:
-    case X86::ANDNPSrr:
-    case X86::VANDNPSrr:
-    case X86::ANDNPDrr:
-    case X86::VANDNPDrr:
-    case X86::PXORrr:
-    case X86::VPXORrr:
-    case X86::PANDNrr:
-    case X86::VPANDNrr:
-    case X86::PSUBBrr:
-    case X86::PSUBWrr:
-    case X86::PSUBDrr:
-    case X86::PSUBQrr:
-    case X86::VPSUBBrr:
-    case X86::VPSUBWrr:
-    case X86::VPSUBDrr:
-    case X86::VPSUBQrr:
-    case X86::PCMPEQBrr:
-    case X86::PCMPEQWrr:
-    case X86::PCMPEQDrr:
-    case X86::PCMPEQQrr:
-    case X86::VPCMPEQBrr:
-    case X86::VPCMPEQWrr:
-    case X86::VPCMPEQDrr:
-    case X86::VPCMPEQQrr:
-    case X86::PCMPGTBrr:
-    case X86::PCMPGTWrr:
-    case X86::PCMPGTDrr:
-    case X86::PCMPGTQrr:
-    case X86::VPCMPGTBrr:
-    case X86::VPCMPGTWrr:
-    case X86::VPCMPGTDrr:
-    case X86::VPCMPGTQrr:
-    case X86::MMX_PXORirr:
-    case X86::MMX_PANDNirr:
-    case X86::MMX_PSUBBirr:
-    case X86::MMX_PSUBDirr:
-    case X86::MMX_PSUBQirr:
-    case X86::MMX_PSUBWirr:
-    case X86::MMX_PCMPGTBirr:
-    case X86::MMX_PCMPGTDirr:
-    case X86::MMX_PCMPGTWirr:
-    case X86::MMX_PCMPEQBirr:
-    case X86::MMX_PCMPEQDirr:
-    case X86::MMX_PCMPEQWirr:
-      return Inst.getOperand(1).getReg() == Inst.getOperand(2).getReg();
-    case X86::CMP32rr:
-    case X86::CMP64rr:
-      return Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg();
-    }
-  }
-
-  return false;
-}
+#define GET_STIPREDICATE_DEFS_FOR_MC_ANALYSIS
+#include "X86GenSubtargetInfo.inc"
 
 bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
                                               const MCInst &Inst,
@@ -435,6 +444,64 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   }
 
   return Mask.getBoolValue();
+}
+
+static std::vector<std::pair<uint64_t, uint64_t>>
+findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                  uint64_t GotPltSectionVA) {
+  // Do a lightweight parsing of PLT entries.
+  std::vector<std::pair<uint64_t, uint64_t>> Result;
+  for (uint64_t Byte = 0, End = PltContents.size(); Byte + 6 < End; ) {
+    // Recognize a jmp.
+    if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0xa3) {
+      // The jmp instruction at the beginning of each PLT entry jumps to the
+      // address of the base of the .got.plt section plus the immediate.
+      uint32_t Imm = support::endian::read32le(PltContents.data() + Byte + 2);
+      Result.push_back(
+          std::make_pair(PltSectionVA + Byte, GotPltSectionVA + Imm));
+      Byte += 6;
+    } else if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0x25) {
+      // The jmp instruction at the beginning of each PLT entry jumps to the
+      // immediate.
+      uint32_t Imm = support::endian::read32le(PltContents.data() + Byte + 2);
+      Result.push_back(std::make_pair(PltSectionVA + Byte, Imm));
+      Byte += 6;
+    } else
+      Byte++;
+  }
+  return Result;
+}
+
+static std::vector<std::pair<uint64_t, uint64_t>>
+findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
+  // Do a lightweight parsing of PLT entries.
+  std::vector<std::pair<uint64_t, uint64_t>> Result;
+  for (uint64_t Byte = 0, End = PltContents.size(); Byte + 6 < End; ) {
+    // Recognize a jmp.
+    if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0x25) {
+      // The jmp instruction at the beginning of each PLT entry jumps to the
+      // address of the next instruction plus the immediate.
+      uint32_t Imm = support::endian::read32le(PltContents.data() + Byte + 2);
+      Result.push_back(
+          std::make_pair(PltSectionVA + Byte, PltSectionVA + Byte + 6 + Imm));
+      Byte += 6;
+    } else
+      Byte++;
+  }
+  return Result;
+}
+
+std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
+    uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+    uint64_t GotPltSectionVA, const Triple &TargetTriple) const {
+  switch (TargetTriple.getArch()) {
+    case Triple::x86:
+      return findX86PltEntries(PltSectionVA, PltContents, GotPltSectionVA);
+    case Triple::x86_64:
+      return findX86_64PltEntries(PltSectionVA, PltContents);
+    default:
+      return {};
+  }
 }
 
 } // end of namespace X86_MC

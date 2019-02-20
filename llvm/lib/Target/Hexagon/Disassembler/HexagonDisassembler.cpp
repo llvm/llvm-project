@@ -9,7 +9,6 @@
 
 #define DEBUG_TYPE "hexagon-disassembler"
 
-#include "Hexagon.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "MCTargetDesc/HexagonMCChecker.h"
 #include "MCTargetDesc/HexagonMCInstrInfo.h"
@@ -118,6 +117,10 @@ DecodeGeneralDoubleLow8RegsRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const void *Decoder);
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst,
+                                              unsigned RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder);
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder);
@@ -146,62 +149,7 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
                                     uint64_t /*Address*/, const void *Decoder);
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
                                     const void *Decoder);
-
-static DecodeStatus s4_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<4>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s29_3ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                    const void *Decoder) {
-  signedDecoder<14>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s8_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<8>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s4_3ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<7>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s31_1ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                    const void *Decoder) {
-  signedDecoder<12>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s3_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<3>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s30_2ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                    const void *Decoder) {
-  signedDecoder<13>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s6_0ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<6>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s6_3ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<9>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s4_1ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<5>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
-static DecodeStatus s4_2ImmDecoder(MCInst &MI, unsigned tmp, uint64_t,
-                                   const void *Decoder) {
-  signedDecoder<6>(MI, tmp, Decoder);
-  return MCDisassembler::Success;
-}
+#include "HexagonDepDecoders.h"
 #include "HexagonGenDisassemblerTables.inc"
 
 static MCDisassembler *createHexagonDisassembler(const Target &T,
@@ -662,6 +610,18 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
       Hexagon::W12, Hexagon::W13, Hexagon::W14, Hexagon::W15};
 
   return (DecodeRegisterClass(Inst, RegNo >> 1, HvxWRDecoderTable));
+}
+
+LLVM_ATTRIBUTE_UNUSED  // Suppress warning temporarily.
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst,
+                                              unsigned RegNo,
+                                              uint64_t /*Address*/,
+                                              const void *Decoder) {
+  static const MCPhysReg HvxVQRDecoderTable[] = {
+      Hexagon::VQ0,  Hexagon::VQ1,  Hexagon::VQ2,  Hexagon::VQ3,
+      Hexagon::VQ4,  Hexagon::VQ5,  Hexagon::VQ6,  Hexagon::VQ7};
+
+  return DecodeRegisterClass(Inst, RegNo >> 2, HvxVQRDecoderTable);
 }
 
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,

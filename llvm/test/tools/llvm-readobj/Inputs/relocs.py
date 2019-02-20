@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 # Generates ELF, COFF and MachO object files for different architectures
 # containing all relocations:
 #
@@ -14,7 +16,6 @@
 
 import operator
 import shutil
-import StringIO
 import struct
 import subprocess
 import sys
@@ -43,17 +44,17 @@ class EnumType(type):
 
   # Not supported (Enums are immutable).
   def __setattr__(self, name, value):
-    raise NotSupportedException, self.__setattr__
+    raise NotSupportedException(self.__setattr__)
 
   # Not supported (Enums are immutable).
   def __delattr__(self, name):
-    raise NotSupportedException, self.__delattr__
+    raise NotSupportedException(self.__delattr__)
 
   # Gets the enum symbol for the specified value.
   def __getitem__(self, value):
     symbol = self._map.get(value)
     if symbol is None:
-      raise KeyError, value
+      raise KeyError(value)
     return symbol
 
   # Gets the enum symbol for the specified value or none.
@@ -63,18 +64,18 @@ class EnumType(type):
 
   # Not supported (Enums are immutable).
   def __setitem__(self, value, symbol):
-    raise NotSupportedException, self.__setitem__
+    raise NotSupportedException(self.__setitem__)
 
   # Not supported (Enums are immutable).
   def __delitem__(self, value):
-    raise NotSupportedException, self.__delitem__
+    raise NotSupportedException(self.__delitem__)
 
   def entries(self):
     # sort by (value, name)
     def makeKey(item):
       return (item[1], item[0])
     e = []
-    for pair in sorted(self._nameMap.iteritems(), key=makeKey):
+    for pair in sorted(self._nameMap.items(), key=makeKey):
       e.append(pair)
     return e
 
@@ -100,7 +101,7 @@ class BinaryReader:
   def read(self, N):
     data = self.file.read(N)
     if len(data) != N:
-      raise ValueError, "Out of data!"
+      raise ValueError("Out of data!")
     return data
 
   def int8(self):
@@ -266,7 +267,7 @@ def patchElf(path, relocs):
   elif fileclass == 2:
     f.is64Bit = True
   else:
-    raise ValueError, "Unknown file class %x" % fileclass
+    raise ValueError("Unknown file class %x" % fileclass)
 
   byteordering = f.uint8()
   if byteordering == 1:
@@ -274,7 +275,7 @@ def patchElf(path, relocs):
   elif byteordering == 2:
       f.isLSB = False
   else:
-      raise ValueError, "Unknown byte ordering %x" % byteordering
+      raise ValueError("Unknown byte ordering %x" % byteordering)
 
   f.seek(18)
   e_machine = f.uint16()
@@ -375,7 +376,7 @@ def patchMacho(filename, relocs):
   elif magic == '\xCF\xFA\xED\xFE':
     f.isLSB, f.is64Bit = True, True
   else:
-    raise ValueError,"Not a Mach-O object file: %r (bad magic)" % path
+    raise ValueError("Not a Mach-O object file: %r (bad magic)" % path)
 
   cputype = f.uint32()
   cpusubtype = f.uint32()
@@ -392,8 +393,8 @@ def patchMacho(filename, relocs):
     patchMachoLoadCommand(f, relocs)
 
   if f.tell() - start != loadCommandsSize:
-    raise ValueError,"%s: warning: invalid load commands size: %r" % (
-      sys.argv[0], loadCommandsSize)
+    raise ValueError("%s: warning: invalid load commands size: %r" % (
+      sys.argv[0], loadCommandsSize))
 
 def patchMachoLoadCommand(f, relocs):
   start = f.tell()
@@ -408,8 +409,8 @@ def patchMachoLoadCommand(f, relocs):
     f.read(cmdSize - 8)
 
   if f.tell() - start != cmdSize:
-    raise ValueError,"%s: warning: invalid load command size: %r" % (
-      sys.argv[0], cmdSize)
+    raise ValueError("%s: warning: invalid load command size: %r" % (
+      sys.argv[0], cmdSize))
 
 def patchMachoSegmentLoadCommand(f, relocs):
   segment_name = f.read(16)

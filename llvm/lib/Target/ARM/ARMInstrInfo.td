@@ -144,6 +144,7 @@ def ARMintretflag    : SDNode<"ARMISD::INTRET_FLAG", SDT_ARMcall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
+def ARMsubs          : SDNode<"ARMISD::SUBS", SDTIntBinOp, [SDNPOutGlue]>;
 
 def ARMssatnoshift   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
 
@@ -221,6 +222,7 @@ def HasV4T           : Predicate<"Subtarget->hasV4TOps()">,
 def NoV4T            : Predicate<"!Subtarget->hasV4TOps()">;
 def HasV5T           : Predicate<"Subtarget->hasV5TOps()">,
                                  AssemblerPredicate<"HasV5TOps", "armv5t">;
+def NoV5T            : Predicate<"!Subtarget->hasV5TOps()">;
 def HasV5TE          : Predicate<"Subtarget->hasV5TEOps()">,
                                  AssemblerPredicate<"HasV5TEOps", "armv5te">;
 def HasV6            : Predicate<"Subtarget->hasV6Ops()">,
@@ -255,6 +257,8 @@ def HasV8_3a         : Predicate<"Subtarget->hasV8_3aOps()">,
                                  AssemblerPredicate<"HasV8_3aOps", "armv8.3a">;
 def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
                                  AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
+def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
+                                 AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
 def NoVFP            : Predicate<"!Subtarget->hasVFP2()">;
 def HasVFP2          : Predicate<"Subtarget->hasVFP2()">,
                                  AssemblerPredicate<"FeatureVFP2", "VFP2">;
@@ -285,6 +289,8 @@ def HasFP16          : Predicate<"Subtarget->hasFP16()">,
                                  AssemblerPredicate<"FeatureFP16","half-float conversions">;
 def HasFullFP16      : Predicate<"Subtarget->hasFullFP16()">,
                                  AssemblerPredicate<"FeatureFullFP16","full half-float">;
+def HasFP16FML       : Predicate<"Subtarget->hasFP16FML()">,
+                                 AssemblerPredicate<"FeatureFP16FML","full half-float fml">;
 def HasDivideInThumb : Predicate<"Subtarget->hasDivideInThumbMode()">,
                                  AssemblerPredicate<"FeatureHWDivThumb", "divide in THUMB">;
 def HasDivideInARM   : Predicate<"Subtarget->hasDivideInARMMode()">,
@@ -351,23 +357,24 @@ def UseNegativeImmediates :
 let RecomputePerFunction = 1 in {
   def UseMovt          : Predicate<"Subtarget->useMovt(*MF)">;
   def DontUseMovt      : Predicate<"!Subtarget->useMovt(*MF)">;
-  def UseMovtInPic          : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
-  def DontUseMovtInPic      : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
+  def UseMovtInPic     : Predicate<"Subtarget->useMovt(*MF) && Subtarget->allowPositionIndependentMovt()">;
+  def DontUseMovtInPic : Predicate<"!Subtarget->useMovt(*MF) || !Subtarget->allowPositionIndependentMovt()">;
+
+  def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
+                           "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
+                           "MF->getFunction().optForMinSize())">;
 }
-def UseFPVMLx        : Predicate<"Subtarget->useFPVMLx()">;
 def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 
 // Prefer fused MAC for fp mul + add over fp VMLA / VMLS if they are available.
-// But only select them if more precision in FP computation is allowed.
+// But only select them if more precision in FP computation is allowed, and when
+// they are not slower than a mul + add sequence.
 // Do not use them for Darwin platforms.
 def UseFusedMAC      : Predicate<"(TM.Options.AllowFPOpFusion =="
                                  " FPOpFusion::Fast && "
                                  " Subtarget->hasVFP4()) && "
-                                 "!Subtarget->isTargetDarwin()">;
-def DontUseFusedMAC  : Predicate<"!(TM.Options.AllowFPOpFusion =="
-                                 " FPOpFusion::Fast &&"
-                                 " Subtarget->hasVFP4()) || "
-                                 "Subtarget->isTargetDarwin()">;
+                                 "!Subtarget->isTargetDarwin() &&"
+                                 "Subtarget->useFPVMLx()">;
 
 def HasFastVGETLNi32 : Predicate<"!Subtarget->hasSlowVGETLNi32()">;
 def HasSlowVGETLNi32 : Predicate<"Subtarget->hasSlowVGETLNi32()">;
@@ -386,6 +393,10 @@ let RecomputePerFunction = 1 in {
 }
 
 def GenExecuteOnly : Predicate<"Subtarget->genExecuteOnly()">;
+
+// Armv8.5-A extensions
+def HasSB            : Predicate<"Subtarget->hasSB()">,
+                       AssemblerPredicate<"FeatureSB", "sb">;
 
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.
@@ -2191,6 +2202,9 @@ def TRAP : AXI<(outs), (ins), MiscFrm, NoItinerary,
   let Inst = 0xe7ffdefe;
 }
 
+def : Pat<(debugtrap), (BKPT 0)>, Requires<[IsARM, HasV5T]>;
+def : Pat<(debugtrap), (UDF 254)>, Requires<[IsARM, NoV5T]>;
+
 // Address computation and loads and stores in PIC mode.
 let isNotDuplicable = 1 in {
 def PICADD  : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$a, pclabel:$cp, pred:$p),
@@ -3321,7 +3335,7 @@ multiclass arm_ldst_mult<string asm, string sfx, bit L_bit, bit P_bit, Format f,
 
 let hasSideEffects = 0 in {
 
-let mayLoad = 1, hasExtraDefRegAllocReq = 1 in
+let mayLoad = 1, hasExtraDefRegAllocReq = 1, variadicOpsAreDefs = 1 in
 defm LDM : arm_ldst_mult<"ldm", "", 1, 0, LdStMulFrm, IIC_iLoad_m,
                          IIC_iLoad_mu>, ComplexDeprecationPredicate<"ARMLoad">;
 
@@ -3519,10 +3533,14 @@ def : ARMV6Pat<(add rGPR:$Rn, (sext_inreg (srl rGPR:$Rm, imm8_or_16:$rot),
 def SXTB16  : AI_ext_rrot_np<0b01101000, "sxtb16">;
 def : ARMV6Pat<(int_arm_sxtb16 GPR:$Src),
                (SXTB16 GPR:$Src, 0)>;
+def : ARMV6Pat<(int_arm_sxtb16 (rotr GPR:$Src, rot_imm:$rot)),
+               (SXTB16 GPR:$Src, rot_imm:$rot)>;
 
 def SXTAB16 : AI_exta_rrot_np<0b01101000, "sxtab16">;
 def : ARMV6Pat<(int_arm_sxtab16 GPR:$LHS, GPR:$RHS),
                (SXTAB16 GPR:$LHS, GPR:$RHS, 0)>;
+def : ARMV6Pat<(int_arm_sxtab16 GPR:$LHS, (rotr GPR:$RHS, rot_imm:$rot)),
+               (SXTAB16 GPR:$LHS, GPR:$RHS, rot_imm:$rot)>;
 
 // Zero extenders
 
@@ -3544,6 +3562,8 @@ def : ARMV6Pat<(and (srl GPR:$Src, (i32 8)), 0xFF00FF),
                (UXTB16 GPR:$Src, 1)>;
 def : ARMV6Pat<(int_arm_uxtb16 GPR:$Src),
                (UXTB16 GPR:$Src, 0)>;
+def : ARMV6Pat<(int_arm_uxtb16 (rotr GPR:$Src, rot_imm:$rot)),
+               (UXTB16 GPR:$Src, rot_imm:$rot)>;
 
 def UXTAB : AI_exta_rrot<0b01101110, "uxtab",
                         BinOpFrag<(add node:$LHS, (and node:$RHS, 0x00FF))>>;
@@ -3560,6 +3580,8 @@ def : ARMV6Pat<(add rGPR:$Rn, (and (srl rGPR:$Rm, imm8_or_16:$rot), 0xFFFF)),
 def UXTAB16 : AI_exta_rrot_np<0b01101100, "uxtab16">;
 def : ARMV6Pat<(int_arm_uxtab16 GPR:$LHS, GPR:$RHS),
                (UXTAB16 GPR:$LHS, GPR:$RHS, 0)>;
+def : ARMV6Pat<(int_arm_uxtab16 GPR:$LHS, (rotr GPR:$RHS, rot_imm:$rot)),
+               (UXTAB16 GPR:$LHS, GPR:$RHS, rot_imm:$rot)>;
 
 
 def SBFX  : I<(outs GPRnopc:$Rd),
@@ -3619,6 +3641,14 @@ defm SUB  : AsI1_bin_irs<0b0010, "sub",
 let isAdd = 1 in
 defm ADDS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMaddc, 1>;
 defm SUBS : AsI1_bin_s_irs<IIC_iALUi, IIC_iALUr, IIC_iALUsr, ARMsubc>;
+
+def : ARMPat<(ARMsubs GPR:$Rn, mod_imm:$imm), (SUBSri $Rn, mod_imm:$imm)>;
+def : ARMPat<(ARMsubs GPR:$Rn, GPR:$Rm), (SUBSrr $Rn, $Rm)>;
+def : ARMPat<(ARMsubs GPR:$Rn, so_reg_imm:$shift),
+             (SUBSrsi $Rn, so_reg_imm:$shift)>;
+def : ARMPat<(ARMsubs GPR:$Rn, so_reg_reg:$shift),
+             (SUBSrsr $Rn, so_reg_reg:$shift)>;
+
 
 let isAdd = 1 in
 defm ADC : AI1_adde_sube_irs<0b0101, "adc", ARMadde, 1>;
@@ -4863,6 +4893,14 @@ def TSB : AInoP<(outs), (ins tsb_opt:$opt), MiscFrm, NoItinerary,
 
 }
 
+// Armv8.5-A speculation barrier
+def SB : AInoP<(outs), (ins), MiscFrm, NoItinerary, "sb", "", []>,
+         Requires<[IsARM, HasSB]>, Sched<[]> {
+  let Inst{31-0} = 0xf57ff070;
+  let Unpredictable = 0x000fff0f;
+  let hasSideEffects = 1;
+}
+
 let usesCustomInserter = 1, Defs = [CPSR] in {
 
 // Pseudo instruction that combines movs + predicated rsbmi
@@ -4870,7 +4908,7 @@ let usesCustomInserter = 1, Defs = [CPSR] in {
   def ABS : ARMPseudoInst<(outs GPR:$dst), (ins GPR:$src), 8, NoItinerary, []>;
 }
 
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, Defs = [CPSR] in {
     def COPY_STRUCT_BYVAL_I32 : PseudoInst<
       (outs), (ins GPR:$dst, GPR:$src, i32imm:$size, i32imm:$alignment),
       NoItinerary,
@@ -5902,6 +5940,8 @@ include "ARMInstrNEON.td"
 // Memory barriers
 def : InstAlias<"dmb", (DMB 0xf), 0>, Requires<[IsARM, HasDB]>;
 def : InstAlias<"dsb", (DSB 0xf), 0>, Requires<[IsARM, HasDB]>;
+def : InstAlias<"ssbb", (DSB 0x0), 1>, Requires<[IsARM, HasDB]>;
+def : InstAlias<"pssbb", (DSB 0x4), 1>, Requires<[IsARM, HasDB]>;
 def : InstAlias<"isb", (ISB 0xf), 0>, Requires<[IsARM, HasDB]>;
 // Armv8-R 'Data Full Barrier'
 def : InstAlias<"dfb", (DSB 0xc), 1>, Requires<[IsARM, HasDFB]>;

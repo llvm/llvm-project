@@ -544,9 +544,9 @@ Error InstrProfSymtab::create(const NameIterRange &IterRange) {
 void InstrProfSymtab::finalizeSymtab() {
   if (Sorted)
     return;
-  llvm::sort(MD5NameMap.begin(), MD5NameMap.end(), less_first());
-  llvm::sort(MD5FuncMap.begin(), MD5FuncMap.end(), less_first());
-  llvm::sort(AddrToMD5Map.begin(), AddrToMD5Map.end(), less_first());
+  llvm::sort(MD5NameMap, less_first());
+  llvm::sort(MD5FuncMap, less_first());
+  llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
                      AddrToMD5Map.end());
   Sorted = true;

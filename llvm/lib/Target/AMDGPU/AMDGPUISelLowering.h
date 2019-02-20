@@ -41,8 +41,6 @@ public:
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
 protected:
-  AMDGPUAS AMDGPUASI;
-
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   /// Split a vector store into multiple scalar stores.
@@ -58,8 +56,9 @@ protected:
   SDValue LowerFROUND64(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFROUND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFLOOR(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFLOG(SDValue Op, SelectionDAG &Dag,
+  SDValue LowerFLOG(SDValue Op, SelectionDAG &DAG,
                     double Log2BaseInverted) const;
+  SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
 
@@ -95,6 +94,8 @@ protected:
   SDValue performCtlz_CttzCombine(const SDLoc &SL, SDValue Cond, SDValue LHS,
                              SDValue RHS, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+
+  bool isConstantCostlierToNegate(SDValue N) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -246,6 +247,11 @@ public:
                                            const SelectionDAG &DAG,
                                            unsigned Depth = 0) const override;
 
+  bool isKnownNeverNaNForTargetNode(SDValue Op,
+                                    const SelectionDAG &DAG,
+                                    bool SNaN = false,
+                                    unsigned Depth = 0) const override;
+
   /// Helper function that adds Reg to the LiveIn list of the DAG's
   /// MachineFunction.
   ///
@@ -279,7 +285,6 @@ public:
   SDValue storeStackInputValue(SelectionDAG &DAG,
                                const SDLoc &SL,
                                SDValue Chain,
-                               SDValue StackPtr,
                                SDValue ArgVal,
                                int64_t Offset) const;
 
@@ -299,13 +304,11 @@ public:
   uint32_t getImplicitParameterOffset(const MachineFunction &MF,
                                       const ImplicitParameter Param) const;
 
-  AMDGPUAS getAMDGPUAS() const {
-    return AMDGPUASI;
-  }
-
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
+
+  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 };
 
 namespace AMDGPUISD {
@@ -357,6 +360,7 @@ enum NodeType : unsigned {
   SIN_HW,
   FMAX_LEGACY,
   FMIN_LEGACY,
+
   FMAX3,
   SMAX3,
   UMAX3,
@@ -479,6 +483,7 @@ enum NodeType : unsigned {
   BUFFER_LOAD,
   BUFFER_LOAD_FORMAT,
   BUFFER_LOAD_FORMAT_D16,
+  SBUFFER_LOAD,
   BUFFER_STORE,
   BUFFER_STORE_FORMAT,
   BUFFER_STORE_FORMAT_D16,

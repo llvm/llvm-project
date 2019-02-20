@@ -9,20 +9,21 @@
 define zeroext i1 @_Z3fooRSt6atomicIbEb(%"struct.std::atomic"* nocapture dereferenceable(1) %a, i1 returned zeroext %b) nounwind {
 ; CHECK-LABEL: _Z3fooRSt6atomicIbEb:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $3, %rax
-; CHECK-NEXT:    movb 2147450880(%rax), %al
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movq %rdi, %rcx
+; CHECK-NEXT:    shrq $3, %rcx
+; CHECK-NEXT:    movb 2147450880(%rcx), %cl
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    je .LBB0_3
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    andl $7, %ecx
-; CHECK-NEXT:    cmpb %al, %cl
+; CHECK-NEXT:    movl %edi, %edx
+; CHECK-NEXT:    andb $7, %dl
+; CHECK-NEXT:    cmpb %cl, %dl
 ; CHECK-NEXT:    jge .LBB0_2
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    xchgb %al, (%rdi)
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    xchgb %cl, (%rdi)
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    pushq %rax

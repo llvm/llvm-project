@@ -69,10 +69,6 @@ public:
 
   void reset() override { CurIter = Args.empty() ? Args.end() : Args.begin(); }
 
-  FunctionArgEnumerator *clone() const override {
-    return new FunctionArgEnumerator(Session, Func);
-  }
-
 private:
   typedef std::vector<std::unique_ptr<PDBSymbolData>> ArgListType;
   const IPDBSession &Session;
@@ -80,12 +76,6 @@ private:
   ArgListType Args;
   ArgListType::const_iterator CurIter;
 };
-}
-
-PDBSymbolFunc::PDBSymbolFunc(const IPDBSession &PDBSession,
-                             std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {
-  assert(RawSymbol->getSymTag() == PDB_SymType::Function);
 }
 
 std::unique_ptr<IPDBEnumChildren<PDBSymbolData>>

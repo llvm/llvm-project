@@ -173,10 +173,11 @@ loop:
 end:
   ret i32 %vala
 ; CHECK-LABEL: define i32 @test7b(
-; CHECK: load atomic i32, i32* %y monotonic
-
-; CHECK-LABEL: end:
+; CHECK-LABEL: entry:
 ; CHECK: store i32 5, i32* %x
+; CHECK-LABEL: loop:
+; CHECK: load atomic i32, i32* %y monotonic
+; CHECK-LABEL: end:
 ; CHECK: store atomic i32 %{{.+}}, i32* %z unordered, align 4
 }
 

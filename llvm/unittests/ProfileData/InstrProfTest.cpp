@@ -42,8 +42,10 @@ struct InstrProfTest : ::testing::Test {
 
   void SetUp() { Writer.setOutputSparse(false); }
 
-  void readProfile(std::unique_ptr<MemoryBuffer> Profile) {
-    auto ReaderOrErr = IndexedInstrProfReader::create(std::move(Profile));
+  void readProfile(std::unique_ptr<MemoryBuffer> Profile,
+                   std::unique_ptr<MemoryBuffer> Remapping = nullptr) {
+    auto ReaderOrErr = IndexedInstrProfReader::create(std::move(Profile),
+                                                      std::move(Remapping));
     EXPECT_THAT_ERROR(ReaderOrErr.takeError(), Succeeded());
     Reader = std::move(ReaderOrErr.get());
   }
@@ -987,6 +989,44 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
         }
       }
     }
+  }
+}
+
+TEST_P(MaybeSparseInstrProfTest, remapping_test) {
+  Writer.addRecord({"_Z3fooi", 0x1234, {1, 2, 3, 4}}, Err);
+  Writer.addRecord({"file:_Z3barf", 0x567, {5, 6, 7}}, Err);
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile), llvm::MemoryBuffer::getMemBuffer(R"(
+    type i l
+    name 3bar 4quux
+  )"));
+
+  std::vector<uint64_t> Counts;
+  for (StringRef FooName : {"_Z3fooi", "_Z3fool"}) {
+    EXPECT_THAT_ERROR(Reader->getFunctionCounts(FooName, 0x1234, Counts),
+                      Succeeded());
+    ASSERT_EQ(4u, Counts.size());
+    EXPECT_EQ(1u, Counts[0]);
+    EXPECT_EQ(2u, Counts[1]);
+    EXPECT_EQ(3u, Counts[2]);
+    EXPECT_EQ(4u, Counts[3]);
+  }
+
+  for (StringRef BarName : {"file:_Z3barf", "file:_Z4quuxf"}) {
+    EXPECT_THAT_ERROR(Reader->getFunctionCounts(BarName, 0x567, Counts),
+                      Succeeded());
+    ASSERT_EQ(3u, Counts.size());
+    EXPECT_EQ(5u, Counts[0]);
+    EXPECT_EQ(6u, Counts[1]);
+    EXPECT_EQ(7u, Counts[2]);
+  }
+
+  for (StringRef BadName : {"_Z3foof", "_Z4quuxi", "_Z3barl", "", "_ZZZ",
+                            "_Z3barf", "otherfile:_Z4quuxf"}) {
+    EXPECT_THAT_ERROR(Reader->getFunctionCounts(BadName, 0x1234, Counts),
+                      Failed());
+    EXPECT_THAT_ERROR(Reader->getFunctionCounts(BadName, 0x567, Counts),
+                      Failed());
   }
 }
 

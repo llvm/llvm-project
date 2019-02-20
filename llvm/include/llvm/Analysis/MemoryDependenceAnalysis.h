@@ -304,7 +304,7 @@ private:
     /// The maximum size of the dereferences of the pointer.
     ///
     /// May be UnknownSize if the sizes are unknown.
-    LocationSize Size = MemoryLocation::UnknownSize;
+    LocationSize Size = LocationSize::unknown();
     /// The AA tags associated with dereferences of the pointer.
     ///
     /// The members may be null if there are no tags or conflicting tags.

@@ -109,7 +109,7 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    psrld $16, %xmm2
 ; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
-; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [6.553600e+04,6.553600e+04,6.553600e+04,6.553600e+04]
+; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
 ; SSE2-NEXT:    mulps %xmm3, %xmm2
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [65535,65535,65535,65535]
 ; SSE2-NEXT:    pand %xmm4, %xmm0
@@ -129,7 +129,7 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    psrld $16, %xmm2
 ; SSE41-NEXT:    cvtdq2ps %xmm2, %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm3 = [6.553600e+04,6.553600e+04,6.553600e+04,6.553600e+04]
+; SSE41-NEXT:    movaps {{.*#+}} xmm3 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
 ; SSE41-NEXT:    mulps %xmm3, %xmm2
 ; SSE41-NEXT:    pxor %xmm4, %xmm4
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0],xmm4[1],xmm0[2],xmm4[3],xmm0[4],xmm4[5],xmm0[6],xmm4[7]

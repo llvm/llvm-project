@@ -22,7 +22,8 @@ define x86_vectorcallcc i32 @test_int_3(i64 inreg %a) {
 }
 ; X86-LABEL: {{^}}test_int_3@@8:
 ; X64-LABEL: {{^}}test_int_3@@8:
-; CHECK: movl %ecx, %eax
+; X86: movl %ecx, %eax
+; X64: movq %rcx, %rax
 
 define x86_vectorcallcc i32 @test_int_4(i32 inreg %a, i32 inreg %b) {
   %s = add i32 %a, %b
@@ -148,8 +149,8 @@ entry:
   ret <4 x float> %0
 }
 ; CHECK-LABEL: test_mixed_5
-; CHECK:       movaps	%xmm5, 16(%{{(e|r)}}sp)
-; CHECK:       movaps	%xmm5, %xmm0
+; CHECK-DAG:   movaps	%xmm{{[0,5]}}, 16(%{{(e|r)}}sp)
+; CHECK-DAG:   movaps	%xmm5, %xmm0
 ; CHECK:       ret{{[ql]}}
 
 define x86_vectorcallcc %struct.HVA4 @test_mixed_6(%struct.HVA4 inreg %a, %struct.HVA4* %b) {
@@ -183,12 +184,12 @@ entry:
   ret void
 }
 ; CHECK-LABEL: test_mixed_7
+; X64:         mov{{[ql]}}	%rcx, %rax
 ; CHECK:       movaps	%xmm{{[0-9]}}, 64(%{{rcx|eax}})
 ; CHECK:       movaps	%xmm{{[0-9]}}, 48(%{{rcx|eax}})
 ; CHECK:       movaps	%xmm{{[0-9]}}, 32(%{{rcx|eax}})
 ; CHECK:       movaps	%xmm{{[0-9]}}, 16(%{{rcx|eax}})
 ; CHECK:       movaps	%xmm{{[0-9]}}, (%{{rcx|eax}})
-; X64:         mov{{[ql]}}	%rcx, %rax
 ; CHECK:       ret{{[ql]}}
 
 define x86_vectorcallcc <4 x float> @test_mixed_8(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x float> %d, i32 %e, <4 x float> %f) {

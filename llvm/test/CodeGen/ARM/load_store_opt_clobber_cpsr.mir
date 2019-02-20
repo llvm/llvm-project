@@ -1,0 +1,33 @@
+# RUN: llc -mtriple=thumbv6m--eabi -verify-machineinstrs -run-pass=arm-ldst-opt %s -o - | FileCheck %s
+
+# Make sure bb.0 isn't transformed: it would incorrectly clobber CPSR.
+#
+# Make sure bb.1 is transformed, so the test doesn't accidentally break.
+
+# CHECK-LABEL: bb.0:
+# CHECK: renamable $r0 = tLDRi renamable $r4, 0, 14, $noreg :: (load 4)
+# CHECK: renamable $r1 = tLDRi renamable $r4, 1, 14, $noreg :: (load 4)
+
+# CHECK-LABEL: bb.1:
+# CHECK: $r4 = tLDMIA_UPD $r4, 14, $noreg, def $r0, def $r1
+# CHECK: $r4, dead $cpsr = tSUBi8 $r4, 8, 14, $noreg
+
+name: foo
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r2, $r4
+    renamable $r0 = tLDRi renamable $r2, 4, 14, $noreg :: (load 4)
+    dead renamable $r0, $cpsr = tADDi3 killed renamable $r0, 1, 14, $noreg
+    renamable $r0 = tLDRi renamable $r4, 0, 14, $noreg :: (load 4)
+    renamable $r1 = tLDRi renamable $r4, 1, 14, $noreg :: (load 4)
+    tBcc %bb.1, 0, killed $cpsr
+  bb.1:
+    liveins: $r2, $r4
+    renamable $r0 = tLDRi renamable $r2, 4, 14, $noreg :: (load 4)
+    dead renamable $r0, $cpsr = tADDi3 killed renamable $r0, 1, 14, $noreg
+    renamable $r0 = tLDRi renamable $r4, 0, 14, $noreg :: (load 4)
+    renamable $r1 = tLDRi renamable $r4, 1, 14, $noreg :: (load 4)
+  bb.2:
+    liveins: $r4
+    TRAP

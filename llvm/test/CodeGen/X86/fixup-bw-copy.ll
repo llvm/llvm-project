@@ -7,15 +7,11 @@
 target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 
 define i8 @test_movb(i8 %a0) {
-; BWON64-LABEL: test_movb:
-; BWON64:       # %bb.0:
-; BWON64-NEXT:    movl %edi, %eax
-; BWON64-NEXT:    retq
-;
-; BWOFF64-LABEL: test_movb:
-; BWOFF64:       # %bb.0:
-; BWOFF64-NEXT:    movb %dil, %al
-; BWOFF64-NEXT:    retq
+; X64-LABEL: test_movb:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
 ;
 ; X32-LABEL: test_movb:
 ; X32:       # %bb.0:
@@ -25,15 +21,11 @@ define i8 @test_movb(i8 %a0) {
 }
 
 define i16 @test_movw(i16 %a0) {
-; BWON64-LABEL: test_movw:
-; BWON64:       # %bb.0:
-; BWON64-NEXT:    movl %edi, %eax
-; BWON64-NEXT:    retq
-;
-; BWOFF64-LABEL: test_movw:
-; BWOFF64:       # %bb.0:
-; BWOFF64-NEXT:    movw %di, %ax
-; BWOFF64-NEXT:    retq
+; X64-LABEL: test_movw:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
 ;
 ; BWON32-LABEL: test_movw:
 ; BWON32:       # %bb.0:
@@ -51,9 +43,10 @@ define i16 @test_movw(i16 %a0) {
 define i8 @test_movb_hreg(i16 %a0) {
 ; X64-LABEL: test_movb_hreg:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrl $8, %eax
-; X64-NEXT:    addb %dil, %al
+; X64-NEXT:    leal (%rax,%rdi), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;

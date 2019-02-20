@@ -1,0 +1,34 @@
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+
+--- |
+  define amdgpu_kernel void @inttoptr(i32 addrspace(4)* %const0, i32 addrspace(0)* %flat0) {ret void}
+...
+---
+
+name:            inttoptr
+legalized:       true
+regBankSelected: true
+
+# GCN-LABEL: name: inttoptr
+# GCN: [[S64:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+# GCN: [[V64:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+# FIXME: This extra copy is unnecessary, but is it the instruction selector's
+# job to clean this up?
+# GCN: [[S64_COPY:%[0-9]+]]:sreg_64 = COPY [[S64]]
+# GCN: [[VAL:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[S64_COPY]], 0, 0
+# GCN: [[V_VAL:%[0-9]+]]:vgpr_32 = COPY [[VAL]]
+# GCN: FLAT_STORE_DWORD [[V64]], [[V_VAL]]
+#
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr0_vgpr1
+    %0:sgpr(s64) = COPY $sgpr0_sgpr1
+    %1:vgpr(s64) = COPY $vgpr0_vgpr1
+    %2:sgpr(p4) = G_INTTOPTR %0
+    %3:sgpr(s32) = G_LOAD %2 :: (load 4 from %ir.const0)
+    %4:vgpr(p0) = G_INTTOPTR %1
+    %5:vgpr(s32) = COPY %3
+    G_STORE %5, %4 :: (store 4 into %ir.flat0)
+...
+---

@@ -1,14 +1,14 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+fp64 | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+fp64 -filetype=obj -o - | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=+fp64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefix=CHECK-OBJ
 
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 2> %t1
+# RUN: not llvm-mc %s -triple mips64-unknown-linux-gnuabin32 2> %t1
 # RUN: FileCheck %s -check-prefix=INVALID < %t1
 #
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n64 2> %t2
+# RUN: not llvm-mc %s -triple mips64-unknown-linux-gnu 2> %t2
 # RUN: FileCheck %s -check-prefix=INVALID < %t2
 #
 # CHECK-ASM: .module nooddspreg

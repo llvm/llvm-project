@@ -29,16 +29,19 @@ namespace llvm {
 class ScheduleDAGSDNodes;
 class SelectionDAGISel;
 
-class RegisterScheduler : public MachinePassRegistryNode {
+class RegisterScheduler
+    : public MachinePassRegistryNode<
+          ScheduleDAGSDNodes *(*)(SelectionDAGISel *, CodeGenOpt::Level)> {
 public:
   using FunctionPassCtor = ScheduleDAGSDNodes *(*)(SelectionDAGISel*,
                                                    CodeGenOpt::Level);
 
-  static MachinePassRegistry Registry;
+  static MachinePassRegistry<FunctionPassCtor> Registry;
 
   RegisterScheduler(const char *N, const char *D, FunctionPassCtor C)
-  : MachinePassRegistryNode(N, D, (MachinePassCtor)C)
-  { Registry.Add(this); }
+      : MachinePassRegistryNode(N, D, C) {
+    Registry.Add(this);
+  }
   ~RegisterScheduler() { Registry.Remove(this); }
 
 
@@ -51,7 +54,7 @@ public:
     return (RegisterScheduler *)Registry.getList();
   }
 
-  static void setListener(MachinePassRegistryListener *L) {
+  static void setListener(MachinePassRegistryListener<FunctionPassCtor> *L) {
     Registry.setListener(L);
   }
 };

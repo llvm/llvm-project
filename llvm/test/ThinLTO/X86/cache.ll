@@ -1,5 +1,7 @@
-; Verify first that *without* hash, we don't use the cache.
+; NetBSD: noatime mounts currently inhibit 'touch -a' updates
+; UNSUPPORTED: system-netbsd
 
+; Verify first that *without* hash, we don't use the cache.
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: opt -module-summary %p/Inputs/cache.ll -o %t2.bc
 
@@ -102,38 +104,61 @@
 ; RUN: ls -ltu %t.cache/* | not grep 1970-01-01
 
 ; Verify that specifying max size for the cache directory prunes it to this
-; size, removing the largest files first.
+; size, removing the oldest files first.
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create cache files with different sizes.
-; Only 8B, 16B and 76B files should stay after pruning.
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-1024', 'w') as file: file.truncate(1024)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-16', 'w') as file: file.truncate(16)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-8', 'w') as file: file.truncate(8)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-76', 'w') as file: file.truncate(76)"
-; RUN: "%python" -c "with open(r'%t.cache/llvmcache-foo-77', 'w') as file: file.truncate(77)"
-; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-bytes 100
-; RUN: ls %t.cache/llvmcache-foo-16
+; Only 8B and 76B files should stay after pruning.
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-100k', 'w') as file: file.truncate(102400)"
+; RUN: touch -t 198002011200 %t.cache/llvmcache-foo-100k
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-16', 'w') as file: file.truncate(16)"
+; RUN: touch -t 198002021200 %t.cache/llvmcache-foo-16
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-77k', 'w') as file: file.truncate(78848)"
+; RUN: touch -t 198002031200 %t.cache/llvmcache-foo-77k
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-8', 'w') as file: file.truncate(8)"
+; RUN: touch -t 198002041200 %t.cache/llvmcache-foo-8
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-76', 'w') as file: file.truncate(76)"
+; RUN: touch -t 198002051200 %t.cache/llvmcache-foo-76
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-bytes 78847 --thinlto-cache-entry-expiration 4294967295
 ; RUN: ls %t.cache/llvmcache-foo-8
 ; RUN: ls %t.cache/llvmcache-foo-76
-; RUN: not ls %t.cache/llvmcache-foo-1024
-; RUN: not ls %t.cache/llvmcache-foo-77
+; RUN: not ls %t.cache/llvmcache-foo-16
+; RUN: not ls %t.cache/llvmcache-foo-100k
+; RUN: not ls %t.cache/llvmcache-foo-77k
+
+; Verify that specifying a max size > 4GB for the cache directory does not
+; prematurely prune, due to an integer overflow.
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: %python -c "with open(r'%t.cache/llvmcache-foo-10', 'w') as file: file.truncate(10)"
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-bytes 4294967297
+; RUN: ls %t.cache/llvmcache-foo-10
+
+; Verify that negative numbers aren't accepted for the
+; --thinlto-cache-max-size-bytes switch
+; RUN: rm -Rf %t.cache && mkdir %t.cache
+; RUN: not llvm-lto %t.bc --thinlto-cache-max-size-bytes -1 2>&1 | FileCheck %s
+; CHECK: -thinlto-cache-max-size-bytes option: '-1' value invalid
 
 ; Verify that specifying max number of files in the cache directory prunes
-; it to this amount, removing the largest files first.
+; it to this amount, removing the oldest files first.
 ; RUN: rm -Rf %t.cache && mkdir %t.cache
 ; Create cache files with different sizes.
-; Only 8B and 16B files should stay after pruning.
-; RUN: "%python" -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1024
-; RUN: "%python" -c "print(' ' * 15)" > %t.cache/llvmcache-foo-16
-; RUN: "%python" -c "print(' ' * 7)" > %t.cache/llvmcache-foo-8
-; RUN: "%python" -c "print(' ' * 75)" > %t.cache/llvmcache-foo-76
-; RUN: "%python" -c "print(' ' * 76)" > %t.cache/llvmcache-foo-77
-; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-files 2
-; RUN: ls %t.cache/llvmcache-foo-16
-; RUN: ls %t.cache/llvmcache-foo-8
-; RUN: not ls %t.cache/llvmcache-foo-76
+; Only 75B and 76B files should stay after pruning.
+; RUN: %python -c "print(' ' * 1023)" > %t.cache/llvmcache-foo-1023
+; RUN: touch -t 198002011200 %t.cache/llvmcache-foo-1023
+; RUN: %python -c "print(' ' * 15)" > %t.cache/llvmcache-foo-15
+; RUN: touch -t 198002021200 %t.cache/llvmcache-foo-15
+; RUN: %python -c "print(' ' * 7)" > %t.cache/llvmcache-foo-7
+; RUN: touch -t 198002031200 %t.cache/llvmcache-foo-7
+; RUN: %python -c "print(' ' * 75)" > %t.cache/llvmcache-foo-75
+; RUN: touch -t 198002041200 %t.cache/llvmcache-foo-75
+; RUN: %python -c "print(' ' * 76)" > %t.cache/llvmcache-foo-76
+; RUN: touch -t 198002051200 %t.cache/llvmcache-foo-76
+; RUN: llvm-lto -thinlto-action=run -exported-symbol=globalfunc %t2.bc %t.bc -thinlto-cache-dir %t.cache --thinlto-cache-max-size-files 4 --thinlto-cache-entry-expiration 4294967295
+; RUN: ls %t.cache/llvmcache-foo-75
+; RUN: ls %t.cache/llvmcache-foo-76
+; RUN: not ls %t.cache/llvmcache-foo-15
 ; RUN: not ls %t.cache/llvmcache-foo-1024
-; RUN: not ls %t.cache/llvmcache-foo-77
+; RUN: not ls %t.cache/llvmcache-foo-7
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"

@@ -407,14 +407,12 @@ value to be particularly effective when used below to harden loads.
 
 ##### Indirect Call, Branch, and Return Predicates
 
-(Not yet implemented.)
-
 There is no analogous flag to use when tracing indirect calls, branches, and
 returns. The predicate state must be accumulated through some other means.
 Fundamentally, this is the reverse of the problem posed in CFI: we need to
 check where we came from rather than where we are going. For function-local
 jump tables, this is easily arranged by testing the input to the jump table
-within each destination:
+within each destination (not yet implemented, use retpolines):
 ```
         pushq   %rax
         xorl    %eax, %eax              # Zero out initial predicate state.
@@ -462,7 +460,8 @@ return_addr:
 ```
 
 For an ABI without a "red zone" (and thus unable to read the return address
-from the stack), mitigating returns face similar problems to calls below.
+from the stack), we can compute the expected return address prior to the call
+into a register preserved across the call and use that similarly to the above.
 
 Indirect calls (and returns in the absence of a red zone ABI) pose the most
 significant challenge to propagate. The simplest technique would be to define a

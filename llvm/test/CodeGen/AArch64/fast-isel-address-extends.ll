@@ -6,8 +6,10 @@ target triple = "arm64-apple-ios8.0.0"
 ; This test was trying to fold the sext %tmp142 in to the address arithmetic in %sunkaddr1.
 ; This was incorrect as %.mux isn't available in the last bb.
 
-; CHECK: sxtw [[REG:x[0-9]+]]
-; CHECK: strh wzr, {{\[}}[[REG]], {{.*}}, lsl #1]
+; CHECK: sxtw [[REG0:x[0-9]+]]
+; CHECK: str [[REG0]], [sp, [[OFFSET:#[0-9]+]]]
+; CHECK: ldr [[REG1:x[0-9]+]], [sp, [[OFFSET]]]
+; CHECK: strh wzr, [{{.*}}, [[REG1]], lsl #1]
 
 ; Function Attrs: nounwind optsize ssp
 define void @EdgeLoop(i32 %dir, i32 %edge, i32 %width, i16* %tmp89, i32 %tmp136, i16 %tmp144) #0 {

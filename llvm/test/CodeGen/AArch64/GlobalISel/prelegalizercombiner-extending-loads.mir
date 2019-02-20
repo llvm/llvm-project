@@ -1,0 +1,449 @@
+# RUN: llc -O0 -run-pass=aarch64-prelegalizer-combiner -global-isel %s -o - | FileCheck %s
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64--"
+  define void @test_anyext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_anyext_with_copy(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_signext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_zeroext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_2anyext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_1anyext_1signext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_1xor_1signext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_1anyext_1zeroext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_1signext_1zeroext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_1anyext64_1signext32(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_1anyext32_1signext64(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_2anyext32_1signext64(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_multiblock_anyext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_multiblock_signext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_multiblock_zeroext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_multiblock_2anyext(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_multiblock_1anyext64_1signext32(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_multiblock_1anyext32_1signext64(i8* %addr) {
+  entry:
+    ret void
+  }
+  define void @test_multiblock_2anyext32_1signext64(i8* %addr) {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_anyext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_anyext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_LOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ANYEXT %1
+    $w0 = COPY %2
+...
+
+---
+name:            test_anyext_with_copy
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_anyext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_LOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s8) = COPY %1
+    %3:_(s32) = G_ANYEXT %1
+    $w0 = COPY %3
+...
+
+---
+name:            test_signext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_signext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+...
+
+---
+name:            test_zeroext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_zeroext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ZEXT %1
+    $w0 = COPY %2
+...
+
+---
+name:            test_2anyext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_2anyext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_LOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s32) = G_ANYEXT %1
+    $w0 = COPY %2
+    $w1 = COPY %3
+...
+
+---
+name:            test_1anyext_1signext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_1anyext_1signext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+    $w1 = COPY %3
+...
+
+---
+name:            test_1xor_1signext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_1xor_1signext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
+    ; CHECK: [[T3:%[0-9]+]]:_(s8) = G_XOR [[T2]], {{%[0-9]+}}
+    ; CHECK: [[T4:%[0-9]+]]:_(s32) = G_ANYEXT [[T3]]
+    ; CHECK: $w0 = COPY [[T4]](s32)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s8) = G_CONSTANT i32 -1
+    %3:_(s8) = G_XOR %1, %2
+    %5:_(s32) = G_ANYEXT %3
+    %6:_(s32) = G_SEXT %1
+    $w0 = COPY %5
+    $w1 = COPY %6
+...
+
+---
+name:            test_1anyext_1zeroext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_1anyext_1zeroext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s32) = G_ZEXT %1
+    $w0 = COPY %2
+    $w1 = COPY %3
+...
+ 
+---
+name:            test_1signext_1zeroext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_1signext_1zeroext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
+    ; CHECK: [[T3:%[0-9]+]]:_(s32) = G_ZEXT [[T2]]
+    ; CHECK: $w0 = COPY [[T3]](s32)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ZEXT %1
+    %3:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+    $w1 = COPY %3
+...
+
+---
+name:            test_1anyext64_1signext32
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_1anyext64_1signext32
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: [[T2:%[0-9]+]]:_(s64) = G_ANYEXT [[T1]]
+    ; CHECK: $x0 = COPY [[T2]](s64)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s64) = G_ANYEXT %1
+    %3:_(s32) = G_SEXT %1
+    $x0 = COPY %2
+    $w1 = COPY %3
+...
+
+---
+name:            test_1anyext32_1signext64
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_1anyext32_1signext64
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s64) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
+    ; CHECK: [[T3:%[0-9]+]]:_(s32) = G_ANYEXT [[T2]]
+    ; CHECK: $w0 = COPY [[T3]](s32)
+    ; CHECK: $x1 = COPY [[T1]](s64)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s64) = G_SEXT %1
+    $w0 = COPY %2
+    $x1 = COPY %3
+...
+
+---
+name:            test_2anyext32_1signext64
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_2anyext32_1signext64
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s64) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
+    ; CHECK: [[T3:%[0-9]+]]:_(s32) = G_ANYEXT [[T2]]
+    ; CHECK: [[T5:%[0-9]+]]:_(s32) = G_ANYEXT [[T2]]
+    ; CHECK: $w0 = COPY [[T3]](s32)
+    ; CHECK: $x1 = COPY [[T1]](s64)
+    ; CHECK: $w2 = COPY [[T5]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s64) = G_SEXT %1
+    %4:_(s32) = G_ANYEXT %1
+    $w0 = COPY %2
+    $x1 = COPY %3
+    $w2 = COPY %4
+...
+
+---
+name:            test_multiblock_anyext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_multiblock_anyext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_LOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: G_BR %bb.1
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    G_BR %bb.1
+  bb.1:
+    %2:_(s32) = G_ANYEXT %1
+    $w0 = COPY %2
+...
+
+---
+name:            test_multiblock_signext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_multiblock_signext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    G_BR %bb.1
+  bb.1:
+    %2:_(s32) = G_SEXT %1
+    $w0 = COPY %2
+...
+
+---
+name:            test_multiblock_zeroext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_multiblock_zeroext
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_ZEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    G_BR %bb.1
+  bb.1:
+    %2:_(s32) = G_ZEXT %1
+    $w0 = COPY %2
+...
+
+---
+name:            test_multiblock_2anyext
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_multiblock
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_LOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: $w0 = COPY [[T1]](s32)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %2:_(s32) = G_ANYEXT %1
+    G_BR %bb.1
+  bb.1:
+    %3:_(s32) = G_ANYEXT %1
+    $w0 = COPY %2
+    $w1 = COPY %3
+...
+
+---
+name:            test_multiblock_1anyext64_1signext32
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_multiblock_1anyext64_1signext32
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s32) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: G_BR %bb.1
+    ; CHECK: [[T2:%[0-9]+]]:_(s64) = G_ANYEXT [[T1]]
+    ; CHECK: $x0 = COPY [[T2]](s64)
+    ; CHECK: $w1 = COPY [[T1]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    G_BR %bb.1
+  bb.1:
+    %2:_(s64) = G_ANYEXT %1
+    %3:_(s32) = G_SEXT %1
+    $x0 = COPY %2
+    $w1 = COPY %3
+...
+
+---
+name:            test_multiblock_1anyext32_1signext64
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_multiblock_1anyext32_1signext64
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s64) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: G_BR %bb.1
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
+    ; CHECK: [[T3:%[0-9]+]]:_(s32) = G_ANYEXT [[T2]]
+    ; CHECK: $w0 = COPY [[T3]](s32)
+    ; CHECK: $x1 = COPY [[T1]](s64)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    G_BR %bb.1
+  bb.1:
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s64) = G_SEXT %1
+    $w0 = COPY %2
+    $x1 = COPY %3
+...
+
+---
+name:            test_multiblock_2anyext32_1signext64
+body: |
+  bb.0.entry:
+    liveins: $x0
+    ; CHECK-LABEL: name: test_multiblock_2anyext32_1signext64
+    ; CHECK: [[T0:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: [[T1:%[0-9]+]]:_(s64) = G_SEXTLOAD [[T0]](p0) :: (load 1 from %ir.addr)
+    ; CHECK: [[T2:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
+    ; CHECK: [[T3:%[0-9]+]]:_(s32) = G_ANYEXT [[T2]]
+    ; CHECK: G_BR %bb.1
+    ; CHECK: [[T4:%[0-9]+]]:_(s8) = G_TRUNC [[T1]]
+    ; CHECK: [[T5:%[0-9]+]]:_(s32) = G_ANYEXT [[T4]]
+    ; CHECK: $w0 = COPY [[T5]](s32)
+    ; CHECK: $x1 = COPY [[T1]](s64)
+    ; CHECK: $w2 = COPY [[T3]](s32)
+    %0:_(p0) = COPY $x0
+    %1:_(s8) = G_LOAD %0 :: (load 1 from %ir.addr)
+    %4:_(s32) = G_ANYEXT %1
+    G_BR %bb.1
+  bb.1:
+    %2:_(s32) = G_ANYEXT %1
+    %3:_(s64) = G_SEXT %1
+    $w0 = COPY %2
+    $x1 = COPY %3
+    $w2 = COPY %4
+...
+

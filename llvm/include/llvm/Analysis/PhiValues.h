@@ -88,6 +88,22 @@ private:
   /// All values reachable from each component.
   DenseMap<unsigned int, ConstValueSet> ReachableMap;
 
+  /// A CallbackVH to notify PhiValues when a value is deleted or replaced, so
+  /// that the cached information for that value can be cleared to avoid
+  /// dangling pointers to invalid values.
+  class PhiValuesCallbackVH final : public CallbackVH {
+    PhiValues *PV;
+    void deleted() override;
+    void allUsesReplacedWith(Value *New) override;
+
+  public:
+    PhiValuesCallbackVH(Value *V, PhiValues *PV = nullptr)
+        : CallbackVH(V), PV(PV) {}
+  };
+
+  /// A set of callbacks to the values that processPhi has seen.
+  DenseSet<PhiValuesCallbackVH, DenseMapInfo<Value *>> TrackedValues;
+
   /// The function that the PhiValues is for.
   const Function &F;
 

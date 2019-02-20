@@ -1,19 +1,19 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj -o - | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations -mips-abi-flags - | \
 # RUN:   FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-32R1,CHECK-OBJ-MIPS
 
-# RUN: llvm-mc /dev/null -arch=mips -mcpu=mips32 -mattr=fpxx -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -triple mips-unknown-linux-gnu -mattr=fpxx -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations -mips-abi-flags - | \
 # RUN:   FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-32R1,CHECK-OBJ-MIPS
 
-# RUN: llvm-mc /dev/null -arch=mips -mcpu=mips32r6 -mattr=fpxx -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -triple mips-unknown-linux-gnu -mcpu=mips32r6 -mattr=fpxx -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations -mips-abi-flags - | \
 # RUN:   FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-32R6,CHECK-OBJ-MIPS
 
-# RUN: llvm-mc /dev/null -arch=mips -mcpu=octeon -target-abi n64 -filetype=obj -o - | \
+# RUN: llvm-mc /dev/null -triple mips64-unknown-linux-gnu -mcpu=octeon -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations -mips-abi-flags - | \
 # RUN:   FileCheck %s -check-prefixes=CHECK-OBJ,CHECK-OBJ-64R2,CHECK-OBJ-OCTEON
 

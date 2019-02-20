@@ -703,17 +703,17 @@ declare <16 x float> @llvm.nearbyint.v16f32(<16 x float> %p)
 define <2 x double> @const_floor_v2f64() {
 ; SSE41-LABEL: const_floor_v2f64:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-2.000000e+00,2.000000e+00]
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-2.0E+0,2.0E+0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: const_floor_v2f64:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-2.000000e+00,2.000000e+00]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-2.0E+0,2.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: const_floor_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-2.000000e+00,2.000000e+00]
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-2.0E+0,2.0E+0]
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.floor.v2f64(<2 x double> <double -1.5, double 2.5>)
   ret <2 x double> %t
@@ -722,17 +722,17 @@ define <2 x double> @const_floor_v2f64() {
 define <4 x float> @const_floor_v4f32() {
 ; SSE41-LABEL: const_floor_v4f32:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-4.000000e+00,6.000000e+00,-9.000000e+00,2.000000e+00]
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-4.0E+0,6.0E+0,-9.0E+0,2.0E+0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: const_floor_v4f32:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-4.000000e+00,6.000000e+00,-9.000000e+00,2.000000e+00]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-4.0E+0,6.0E+0,-9.0E+0,2.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: const_floor_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-4.000000e+00,6.000000e+00,-9.000000e+00,2.000000e+00]
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-4.0E+0,6.0E+0,-9.0E+0,2.0E+0]
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.floor.v4f32(<4 x float> <float -3.5, float 6.0, float -9.0, float 2.5>)
   ret <4 x float> %t
@@ -741,17 +741,17 @@ define <4 x float> @const_floor_v4f32() {
 define <2 x double> @const_ceil_v2f64() {
 ; SSE41-LABEL: const_ceil_v2f64:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-1.000000e+00,3.000000e+00]
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-1.0E+0,3.0E+0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: const_ceil_v2f64:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.000000e+00,3.000000e+00]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.0E+0,3.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: const_ceil_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.000000e+00,3.000000e+00]
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.0E+0,3.0E+0]
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.ceil.v2f64(<2 x double> <double -1.5, double 2.5>)
   ret <2 x double> %t
@@ -760,17 +760,17 @@ define <2 x double> @const_ceil_v2f64() {
 define <4 x float> @const_ceil_v4f32() {
 ; SSE41-LABEL: const_ceil_v4f32:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-3.000000e+00,6.000000e+00,-9.000000e+00,3.000000e+00]
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-3.0E+0,6.0E+0,-9.0E+0,3.0E+0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: const_ceil_v4f32:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.000000e+00,6.000000e+00,-9.000000e+00,3.000000e+00]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.0E+0,6.0E+0,-9.0E+0,3.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: const_ceil_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.000000e+00,6.000000e+00,-9.000000e+00,3.000000e+00]
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.0E+0,6.0E+0,-9.0E+0,3.0E+0]
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.ceil.v4f32(<4 x float> <float -3.5, float 6.0, float -9.0, float 2.5>)
   ret <4 x float> %t
@@ -779,17 +779,17 @@ define <4 x float> @const_ceil_v4f32() {
 define <2 x double> @const_trunc_v2f64() {
 ; SSE41-LABEL: const_trunc_v2f64:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-1.000000e+00,2.000000e+00]
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-1.0E+0,2.0E+0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: const_trunc_v2f64:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.000000e+00,2.000000e+00]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.0E+0,2.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: const_trunc_v2f64:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.000000e+00,2.000000e+00]
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-1.0E+0,2.0E+0]
 ; AVX512-NEXT:    retq
   %t = call <2 x double> @llvm.trunc.v2f64(<2 x double> <double -1.5, double 2.5>)
   ret <2 x double> %t
@@ -798,17 +798,17 @@ define <2 x double> @const_trunc_v2f64() {
 define <4 x float> @const_trunc_v4f32() {
 ; SSE41-LABEL: const_trunc_v4f32:
 ; SSE41:       ## %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-3.000000e+00,6.000000e+00,-9.000000e+00,2.000000e+00]
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [-3.0E+0,6.0E+0,-9.0E+0,2.0E+0]
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: const_trunc_v4f32:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.000000e+00,6.000000e+00,-9.000000e+00,2.000000e+00]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.0E+0,6.0E+0,-9.0E+0,2.0E+0]
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: const_trunc_v4f32:
 ; AVX512:       ## %bb.0:
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.000000e+00,6.000000e+00,-9.000000e+00,2.000000e+00]
+; AVX512-NEXT:    vmovaps {{.*#+}} xmm0 = [-3.0E+0,6.0E+0,-9.0E+0,2.0E+0]
 ; AVX512-NEXT:    retq
   %t = call <4 x float> @llvm.trunc.v4f32(<4 x float> <float -3.5, float 6.0, float -9.0, float 2.5>)
   ret <4 x float> %t

@@ -2971,12 +2971,16 @@ unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV,
   unsigned ConstAlign =
       MF->getDataLayout().getPrefTypeAlignment(Type::getInt32PtrTy(*Context));
   unsigned Idx = MF->getConstantPool()->getConstantPoolIndex(CPV, ConstAlign);
+  MachineMemOperand *CPMMO =
+      MF->getMachineMemOperand(MachinePointerInfo::getConstantPool(*MF),
+                               MachineMemOperand::MOLoad, 4, 4);
 
   unsigned TempReg = MF->getRegInfo().createVirtualRegister(&ARM::rGPRRegClass);
   unsigned Opc = isThumb2 ? ARM::t2LDRpci : ARM::LDRcp;
   MachineInstrBuilder MIB =
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), TempReg)
-          .addConstantPoolIndex(Idx);
+          .addConstantPoolIndex(Idx)
+          .addMemOperand(CPMMO);
   if (Opc == ARM::LDRcp)
     MIB.addImm(0);
   MIB.add(predOps(ARMCC::AL));
@@ -2989,6 +2993,7 @@ unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV,
   MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), DestReg)
             .addReg(TempReg)
             .addImm(ARMPCLabelIndex);
+
   if (!Subtarget->isThumb())
     MIB.add(predOps(ARMCC::AL));
 

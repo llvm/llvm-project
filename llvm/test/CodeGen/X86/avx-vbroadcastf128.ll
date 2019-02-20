@@ -98,6 +98,31 @@ define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
  ret <32 x i8> %2
 }
 
+; PR38949 - https://bugs.llvm.org/show_bug.cgi?id=38949
+; Don't limit the transform based on extra uses of the load itself (the store is a user of the load's chain value).
+
+define void @subv_reuse_is_ok(<4 x float>* %a, <8 x float>* %b) {
+; X32-LABEL: subv_reuse_is_ok:
+; X32:       # %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X32-NEXT:    vmovups %ymm0, (%eax)
+; X32-NEXT:    vzeroupper
+; X32-NEXT:    retl
+;
+; X64-LABEL: subv_reuse_is_ok:
+; X64:       # %bb.0:
+; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-NEXT:    vmovups %ymm0, (%rsi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %ld = load <4 x float>, <4 x float>* %a, align 1
+  %splat128 = shufflevector <4 x float> %ld, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  store <8 x float> %splat128, <8 x float>* %b, align 16
+  ret void
+}
+
 define <4 x double> @test_broadcast_2f64_4f64_reuse(<2 x double>* %p0, <2 x double>* %p1) {
 ; X32-LABEL: test_broadcast_2f64_4f64_reuse:
 ; X32:       # %bb.0:

@@ -171,12 +171,11 @@ define void @testcallprologue() {
 
 define i32 @icall(i32 (i32)* %foo) {
 ; CHECK-LABEL: icall:
-; CHECK: movw [[REG:r[0-9]+]], r24
+; CHECK: movw r30, r24
 ; CHECK: ldi r22, 147
 ; CHECK: ldi r23, 248
 ; CHECK: ldi r24, 214
 ; CHECK: ldi r25, 198
-; CHECK: movw r30, [[REG]]
 ; CHECK: icall
 ; CHECK: subi r22, 251
 ; CHECK: sbci r23, 255

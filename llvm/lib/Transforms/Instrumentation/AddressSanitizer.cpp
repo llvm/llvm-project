@@ -109,6 +109,7 @@ static const uint64_t kFreeBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kFreeBSD_ShadowOffset64 = 1ULL << 46;
 static const uint64_t kNetBSD_ShadowOffset32 = 1ULL << 30;
 static const uint64_t kNetBSD_ShadowOffset64 = 1ULL << 46;
+static const uint64_t kNetBSDKasan_ShadowOffset64 = 0xdfff900000000000;
 static const uint64_t kPS4CPU_ShadowOffset64 = 1ULL << 40;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
 
@@ -344,10 +345,14 @@ static cl::opt<uint32_t> ClForceExperiment(
     cl::init(0));
 
 static cl::opt<bool>
-    ClUsePrivateAliasForGlobals("asan-use-private-alias",
-                                cl::desc("Use private aliases for global"
-                                         " variables"),
-                                cl::Hidden, cl::init(false));
+    ClUsePrivateAlias("asan-use-private-alias",
+                      cl::desc("Use private aliases for global variables"),
+                      cl::Hidden, cl::init(false));
+
+static cl::opt<bool>
+    ClUseOdrIndicator("asan-use-odr-indicator",
+                      cl::desc("Use odr indicators to improve ODR reporting"),
+                      cl::Hidden, cl::init(false));
 
 static cl::opt<bool>
     ClUseGlobalsGC("asan-globals-live-support",
@@ -541,11 +546,14 @@ static ShadowMapping getShadowMapping(Triple &TargetTriple, int LongSize,
       Mapping.Offset = kPPC64_ShadowOffset64;
     else if (IsSystemZ)
       Mapping.Offset = kSystemZ_ShadowOffset64;
-    else if (IsFreeBSD)
+    else if (IsFreeBSD && !IsMIPS64)
       Mapping.Offset = kFreeBSD_ShadowOffset64;
-    else if (IsNetBSD)
-      Mapping.Offset = kNetBSD_ShadowOffset64;
-    else if (IsPS4CPU)
+    else if (IsNetBSD) {
+      if (IsKasan)
+        Mapping.Offset = kNetBSDKasan_ShadowOffset64;
+      else
+        Mapping.Offset = kNetBSD_ShadowOffset64;
+    } else if (IsPS4CPU)
       Mapping.Offset = kPS4CPU_ShadowOffset64;
     else if (IsLinux && IsX86_64) {
       if (IsKasan)
@@ -734,9 +742,12 @@ public:
 
   explicit AddressSanitizerModule(bool CompileKernel = false,
                                   bool Recover = false,
-                                  bool UseGlobalsGC = true)
-      : ModulePass(ID),
-        UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+                                  bool UseGlobalsGC = true,
+                                  bool UseOdrIndicator = false)
+      : ModulePass(ID), UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC),
+        // Enable aliases as they should have no downside with ODR indicators.
+        UsePrivateAlias(UseOdrIndicator || ClUsePrivateAlias),
+        UseOdrIndicator(UseOdrIndicator || ClUseOdrIndicator),
         // Not a typo: ClWithComdat is almost completely pointless without
         // ClUseGlobalsGC (because then it only works on modules without
         // globals, which are rare); it is a prerequisite for ClUseGlobalsGC;
@@ -745,11 +756,10 @@ public:
         // ClWithComdat and ClUseGlobalsGC unless the frontend says it's ok to
         // do globals-gc.
         UseCtorComdat(UseGlobalsGC && ClWithComdat) {
-          this->Recover = ClRecover.getNumOccurrences() > 0 ?
-              ClRecover : Recover;
-          this->CompileKernel = ClEnableKasan.getNumOccurrences() > 0 ?
-              ClEnableKasan : CompileKernel;
-	}
+    this->Recover = ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover;
+    this->CompileKernel =
+        ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan : CompileKernel;
+  }
 
   bool runOnModule(Module &M) override;
   StringRef getPassName() const override { return "AddressSanitizerModule"; }
@@ -793,6 +803,8 @@ private:
   bool CompileKernel;
   bool Recover;
   bool UseGlobalsGC;
+  bool UsePrivateAlias;
+  bool UseOdrIndicator;
   bool UseCtorComdat;
   Type *IntptrTy;
   LLVMContext *C;
@@ -993,7 +1005,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     if (ID == Intrinsic::localescape) LocalEscapeCall = &II;
     if (!ASan.UseAfterScope)
       return;
-    if (ID != Intrinsic::lifetime_start && ID != Intrinsic::lifetime_end)
+    if (!II.isLifetimeStartOrEnd())
       return;
     // Found lifetime intrinsic, add ASan instrumentation if necessary.
     ConstantInt *Size = dyn_cast<ConstantInt>(II.getArgOperand(0));
@@ -1092,9 +1104,11 @@ INITIALIZE_PASS(
 
 ModulePass *llvm::createAddressSanitizerModulePass(bool CompileKernel,
                                                    bool Recover,
-                                                   bool UseGlobalsGC) {
+                                                   bool UseGlobalsGC,
+                                                   bool UseOdrIndicator) {
   assert(!CompileKernel || Recover);
-  return new AddressSanitizerModule(CompileKernel, Recover, UseGlobalsGC);
+  return new AddressSanitizerModule(CompileKernel, Recover, UseGlobalsGC,
+                                    UseOdrIndicator);
 }
 
 static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
@@ -1103,25 +1117,11 @@ static size_t TypeSizeToSizeIndex(uint32_t TypeSize) {
   return Res;
 }
 
-// Create a constant for Str so that we can pass it to the run-time lib.
-static GlobalVariable *createPrivateGlobalForString(Module &M, StringRef Str,
-                                                    bool AllowMerging) {
-  Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
-  // We use private linkage for module-local strings. If they can be merged
-  // with another one, we set the unnamed_addr attribute.
-  GlobalVariable *GV =
-      new GlobalVariable(M, StrConst->getType(), true,
-                         GlobalValue::PrivateLinkage, StrConst, kAsanGenPrefix);
-  if (AllowMerging) GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(1);  // Strings may not be merged w/o setting align 1.
-  return GV;
-}
-
 /// Create a global describing a source location.
 static GlobalVariable *createPrivateGlobalForSourceLoc(Module &M,
                                                        LocationMetadata MD) {
   Constant *LocData[] = {
-      createPrivateGlobalForString(M, MD.Filename, true),
+      createPrivateGlobalForString(M, MD.Filename, true, kAsanGenPrefix),
       ConstantInt::get(Type::getInt32Ty(M.getContext()), MD.LineNo),
       ConstantInt::get(Type::getInt32Ty(M.getContext()), MD.ColumnNo),
   };
@@ -1135,6 +1135,10 @@ static GlobalVariable *createPrivateGlobalForSourceLoc(Module &M,
 
 /// Check if \p G has been created by a trusted compiler pass.
 static bool GlobalWasGeneratedByCompiler(GlobalVariable *G) {
+  // Do not instrument @llvm.global_ctors, @llvm.used, etc.
+  if (G->getName().startswith("llvm."))
+    return true;
+
   // Do not instrument asan globals.
   if (G->getName().startswith(kAsanGenPrefix) ||
       G->getName().startswith(kSanCovGenPrefix) ||
@@ -1382,7 +1386,7 @@ static void instrumentMaskedLoadOrStore(AddressSanitizer *Pass,
     } else {
       IRBuilder<> IRB(I);
       Value *MaskElem = IRB.CreateExtractElement(Mask, Idx);
-      TerminatorInst *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
+      Instruction *ThenTerm = SplitBlockAndInsertIfThen(MaskElem, I, false);
       InsertBefore = ThenTerm;
     }
 
@@ -1535,8 +1539,9 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     Value *TagCheck =
         IRB.CreateICmpEQ(Tag, ConstantInt::get(IntptrTy, kMyriadDDRTag));
 
-    TerminatorInst *TagCheckTerm = SplitBlockAndInsertIfThen(
-        TagCheck, InsertBefore, false, MDBuilder(*C).createBranchWeights(1, 100000));
+    Instruction *TagCheckTerm =
+        SplitBlockAndInsertIfThen(TagCheck, InsertBefore, false,
+                                  MDBuilder(*C).createBranchWeights(1, 100000));
     assert(cast<BranchInst>(TagCheckTerm)->isUnconditional());
     IRB.SetInsertPoint(TagCheckTerm);
     InsertBefore = TagCheckTerm;
@@ -1552,12 +1557,12 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
 
   Value *Cmp = IRB.CreateICmpNE(ShadowValue, CmpVal);
   size_t Granularity = 1ULL << Mapping.Scale;
-  TerminatorInst *CrashTerm = nullptr;
+  Instruction *CrashTerm = nullptr;
 
   if (ClAlwaysSlowPath || (TypeSize < 8 * Granularity)) {
     // We use branch weights for the slow path check, to indicate that the slow
     // path is rarely taken. This seems to be the case for SPEC benchmarks.
-    TerminatorInst *CheckTerm = SplitBlockAndInsertIfThen(
+    Instruction *CheckTerm = SplitBlockAndInsertIfThen(
         Cmp, InsertBefore, false, MDBuilder(*C).createBranchWeights(1, 100000));
     assert(cast<BranchInst>(CheckTerm)->isUnconditional());
     BasicBlock *NextBB = CheckTerm->getSuccessor(0);
@@ -1656,20 +1661,39 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
   if (!Ty->isSized()) return false;
   if (!G->hasInitializer()) return false;
   if (GlobalWasGeneratedByCompiler(G)) return false; // Our own globals.
-  // Touch only those globals that will not be defined in other modules.
-  // Don't handle ODR linkage types and COMDATs since other modules may be built
-  // without ASan.
-  if (G->getLinkage() != GlobalVariable::ExternalLinkage &&
-      G->getLinkage() != GlobalVariable::PrivateLinkage &&
-      G->getLinkage() != GlobalVariable::InternalLinkage)
-    return false;
-  if (G->hasComdat()) return false;
   // Two problems with thread-locals:
   //   - The address of the main thread's copy can't be computed at link-time.
   //   - Need to poison all copies, not just the main thread's one.
   if (G->isThreadLocal()) return false;
   // For now, just ignore this Global if the alignment is large.
   if (G->getAlignment() > MinRedzoneSizeForGlobal()) return false;
+
+  // For non-COFF targets, only instrument globals known to be defined by this
+  // TU.
+  // FIXME: We can instrument comdat globals on ELF if we are using the
+  // GC-friendly metadata scheme.
+  if (!TargetTriple.isOSBinFormatCOFF()) {
+    if (!G->hasExactDefinition() || G->hasComdat())
+      return false;
+  } else {
+    // On COFF, don't instrument non-ODR linkages.
+    if (G->isInterposable())
+      return false;
+  }
+
+  // If a comdat is present, it must have a selection kind that implies ODR
+  // semantics: no duplicates, any, or exact match.
+  if (Comdat *C = G->getComdat()) {
+    switch (C->getSelectionKind()) {
+    case Comdat::Any:
+    case Comdat::ExactMatch:
+    case Comdat::NoDuplicates:
+      break;
+    case Comdat::Largest:
+    case Comdat::SameSize:
+      return false;
+    }
+  }
 
   if (G->hasSection()) {
     StringRef Section = G->getSection();
@@ -2085,7 +2109,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
   // We shouldn't merge same module names, as this string serves as unique
   // module ID in runtime.
   GlobalVariable *ModuleName = createPrivateGlobalForString(
-      M, M.getModuleIdentifier(), /*AllowMerging*/ false);
+      M, M.getModuleIdentifier(), /*AllowMerging*/ false, kAsanGenPrefix);
 
   for (size_t i = 0; i < n; i++) {
     static const uint64_t kMaxGlobalRedzone = 1 << 18;
@@ -2097,7 +2121,7 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
     // if it's available, otherwise just write the name of global variable).
     GlobalVariable *Name = createPrivateGlobalForString(
         M, MD.Name.empty() ? NameForGlobal : MD.Name,
-        /*AllowMerging*/ true);
+        /*AllowMerging*/ true, kAsanGenPrefix);
 
     Type *Ty = G->getValueType();
     uint64_t SizeInBytes = DL.getTypeAllocSize(Ty);
@@ -2124,7 +2148,12 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
         new GlobalVariable(M, NewTy, G->isConstant(), Linkage, NewInitializer,
                            "", G, G->getThreadLocalMode());
     NewGlobal->copyAttributesFrom(G);
+    NewGlobal->setComdat(G->getComdat());
     NewGlobal->setAlignment(MinRZ);
+    // Don't fold globals with redzones. ODR violation detector and redzone
+    // poisoning implicitly creates a dependence on the global's address, so it
+    // is no longer valid for it to be marked unnamed_addr.
+    NewGlobal->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
     // Move null-terminated C strings to "__asan_cstring" section on Darwin.
     if (TargetTriple.isOSBinFormatMachO() && !G->hasSection() &&
@@ -2165,12 +2194,18 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
     bool CanUsePrivateAliases =
         TargetTriple.isOSBinFormatELF() || TargetTriple.isOSBinFormatMachO() ||
         TargetTriple.isOSBinFormatWasm();
-    if (CanUsePrivateAliases && ClUsePrivateAliasForGlobals) {
+    if (CanUsePrivateAliases && UsePrivateAlias) {
       // Create local alias for NewGlobal to avoid crash on ODR between
       // instrumented and non-instrumented libraries.
-      auto *GA = GlobalAlias::create(GlobalValue::InternalLinkage,
-                                     NameForGlobal + M.getName(), NewGlobal);
+      InstrumentedGlobal =
+          GlobalAlias::create(GlobalValue::PrivateLinkage, "", NewGlobal);
+    }
 
+    // ODR should not happen for local linkage.
+    if (NewGlobal->hasLocalLinkage()) {
+      ODRIndicator = ConstantExpr::getIntToPtr(ConstantInt::get(IntptrTy, -1),
+                                               IRB.getInt8PtrTy());
+    } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
       auto *ODRIndicatorSym =
@@ -2184,7 +2219,6 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
       ODRIndicatorSym->setDLLStorageClass(NewGlobal->getDLLStorageClass());
       ODRIndicatorSym->setAlignment(1);
       ODRIndicator = ODRIndicatorSym;
-      InstrumentedGlobal = GA;
     }
 
     Constant *Initializer = ConstantStruct::get(
@@ -2999,7 +3033,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       IntptrPtrTy);
   GlobalVariable *StackDescriptionGlobal =
       createPrivateGlobalForString(*F.getParent(), DescriptionString,
-                                   /*AllowMerging*/ true);
+                                   /*AllowMerging*/ true, kAsanGenPrefix);
   Value *Description = IRB.CreatePointerCast(StackDescriptionGlobal, IntptrTy);
   IRB.CreateStore(Description, BasePlus1);
   // Write the PC to redzone[2].
@@ -3057,7 +3091,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
       //     <This is not a fake stack; unpoison the redzones>
       Value *Cmp =
           IRBRet.CreateICmpNE(FakeStack, Constant::getNullValue(IntptrTy));
-      TerminatorInst *ThenTerm, *ElseTerm;
+      Instruction *ThenTerm, *ElseTerm;
       SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
 
       IRBuilder<> IRBPoison(ThenTerm);

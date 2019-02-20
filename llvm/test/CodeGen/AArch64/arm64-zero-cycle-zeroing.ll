@@ -1,9 +1,14 @@
-; RUN: llc -mtriple=arm64-apple-ios   -mcpu=cyclone   < %s | FileCheck %s -check-prefixes=ALL,CYCLONE
-; RUN: llc -mtriple=arm64-apple-ios   -mcpu=cyclone -mattr=+fullfp16 < %s | FileCheck %s -check-prefixes=CYCLONE-FULLFP16
-; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=exynos-m1 < %s | FileCheck %s -check-prefixes=ALL,OTHERS
-; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=exynos-m3 < %s | FileCheck %s -check-prefixes=ALL,OTHERS
-; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=kryo      < %s | FileCheck %s -check-prefixes=ALL,OTHERS
-; RUN: llc -mtriple=aarch64-gnu-linux -mcpu=falkor    < %s | FileCheck %s -check-prefixes=ALL,OTHERS
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=-zcz                    | FileCheck %s -check-prefixes=ALL,NONEGP,NONEFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz                    | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz -mattr=+fullfp16   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZERO16
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-gp                 | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mattr=+zcz-fp                 | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
+; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone                  | FileCheck %s -check-prefixes=ALL,ZEROGP,NONEFP
+; RUN: llc < %s -mtriple=arm64-apple-ios   -mcpu=cyclone -mattr=+fullfp16 | FileCheck %s -check-prefixes=ALL,ZEROGP,NONE16
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=exynos-m1                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=exynos-m3                | FileCheck %s -check-prefixes=ALL,NONEGP,ZEROFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=kryo                     | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -mcpu=falkor                   | FileCheck %s -check-prefixes=ALL,ZEROGP,ZEROFP
 
 declare void @bar(half, float, double, <2 x double>)
 declare void @bari(i32, i32)
@@ -14,17 +19,22 @@ define void @t1() nounwind ssp {
 entry:
 ; ALL-LABEL: t1:
 ; ALL-NOT: fmov
-; ALL:     ldr h0,{{.*}}
-; CYCLONE: fmov s1, wzr
-; CYCLONE: fmov d2, xzr
-; CYCLONE: movi.16b v3, #0
-; CYCLONE-FULLFP16: fmov h0, wzr
-; CYCLONE-FULLFP16: fmov s1, wzr
-; CYCLONE-FULLFP16: fmov d2, xzr
-; CYCLONE-FULLFP16: movi.16b v3, #0
-; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
-; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
-; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
+; NONEFP: ldr h0,{{.*}}
+; NONEFP: fmov s1, wzr
+; NONEFP: fmov d2, xzr
+; NONEFP: movi{{(.16b)?}} v3{{(.2d)?}}, #0
+; NONE16: fmov h0, wzr
+; NONE16: fmov s1, wzr
+; NONE16: fmov d2, xzr
+; NONE16: movi{{(.16b)?}} v3{{(.2d)?}}, #0
+; ZEROFP: ldr h0,{{.*}}
+; ZEROFP: movi v{{[0-3]+}}.2d, #0
+; ZEROFP: movi v{{[0-3]+}}.2d, #0
+; ZEROFP: movi v{{[0-3]+}}.2d, #0
+; ZERO16: movi v{{[0-3]+}}.2d, #0
+; ZERO16: movi v{{[0-3]+}}.2d, #0
+; ZERO16: movi v{{[0-3]+}}.2d, #0
+; ZERO16: movi v{{[0-3]+}}.2d, #0
   tail call void @bar(half 0.000000e+00, float 0.000000e+00, double 0.000000e+00, <2 x double> <double 0.000000e+00, double 0.000000e+00>) nounwind
   ret void
 }
@@ -32,9 +42,10 @@ entry:
 define void @t2() nounwind ssp {
 entry:
 ; ALL-LABEL: t2:
-; ALL-NOT: mov w0, wzr
-; ALL: mov w{{[0-3]+}}, #0
-; ALL: mov w{{[0-3]+}}, #0
+; NONEGP: mov w0, wzr
+; NONEGP: mov w1, wzr
+; ZEROGP: mov w0, #0
+; ZEROGP: mov w1, #0
   tail call void @bari(i32 0, i32 0) nounwind
   ret void
 }
@@ -42,25 +53,25 @@ entry:
 define void @t3() nounwind ssp {
 entry:
 ; ALL-LABEL: t3:
-; ALL-NOT: mov x0, xzr
-; ALL: mov x{{[0-3]+}}, #0
-; ALL: mov x{{[0-3]+}}, #0
+; NONEGP: mov x0, xzr
+; NONEGP: mov x1, xzr
+; ZEROGP: mov x0, #0
+; ZEROGP: mov x1, #0
   tail call void @barl(i64 0, i64 0) nounwind
   ret void
 }
 
 define void @t4() nounwind ssp {
 ; ALL-LABEL: t4:
-; ALL-NOT: fmov
-; CYCLONE: fmov s{{[0-3]+}}, wzr
-; CYCLONE: fmov s{{[0-3]+}}, wzr
-; CYCLONE-FULLFP16: fmov s{{[0-3]+}}, wzr
-; CYCLONE-FULLFP16: fmov s{{[0-3]+}}, wzr
-; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
-; OTHERS: movi v{{[0-3]+}}.2d, #0000000000000000
+; NONEFP: fmov s{{[0-3]+}}, wzr
+; NONEFP: fmov s{{[0-3]+}}, wzr
+; ZEROFP: movi v{{[0-3]+}}.2d, #0
+; ZEROFP: movi v{{[0-3]+}}.2d, #0
   tail call void @barf(float 0.000000e+00, float 0.000000e+00) nounwind
   ret void
 }
+
+declare double @sin(double)
 
 ; We used to produce spills+reloads for a Q register with zero cycle zeroing
 ; enabled.
@@ -88,10 +99,133 @@ for.end:
 
 define <2 x i64> @t6() {
 ; ALL-LABEL: t6:
-; CYCLONE: movi.16b v0, #0
-; OTHERS: movi v0.2d, #0000000000000000
- ret <2 x i64> zeroinitializer
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <2 x i64> zeroinitializer
 }
 
+define i1 @ti1() {
+entry:
+; ALL-LABEL: ti1:
+; NONEGP: mov w0, wzr
+; ZEROGP: mov w0, #0
+  ret i1 false
+}
 
-declare double @sin(double)
+define i8 @ti8() {
+entry:
+; ALL-LABEL: ti8:
+; NONEGP: mov w0, wzr
+; ZEROGP: mov w0, #0
+  ret i8 0
+}
+
+define i16 @ti16() {
+entry:
+; ALL-LABEL: ti16:
+; NONEGP: mov w0, wzr
+ ; ZEROGP: mov w0, #0
+  ret i16 0
+}
+
+define i32 @ti32() {
+entry:
+; ALL-LABEL: ti32:
+; NONEGP: mov w0, wzr
+; ZEROGP: mov w0, #0
+  ret i32 0
+}
+
+define i64 @ti64() {
+entry:
+; ALL-LABEL: ti64:
+; NONEGP: mov x0, xzr
+; ZEROGP: mov x0, #0
+  ret i64 0
+}
+
+define float @tf32() {
+entry:
+; ALL-LABEL: tf32:
+; NONEFP: mov s0, wzr
+; ZEROFP: movi v0.2d, #0
+  ret float 0.0
+}
+
+define double @td64() {
+entry:
+; ALL-LABEL: td64:
+; NONEFP: mov d0, xzr
+; ZEROFP: movi v0.2d, #0
+  ret double 0.0
+}
+
+define <8 x i8> @tv8i8() {
+entry:
+; ALL-LABEL: tv8i8:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <8 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+}
+
+define <4 x i16> @tv4i16() {
+entry:
+; ALL-LABEL: tv4i16:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <4 x i16> <i16 0, i16 0, i16 0, i16 0>
+}
+
+define <2 x i32> @tv2i32() {
+entry:
+; ALL-LABEL: tv2i32:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <2 x i32> <i32 0, i32 0>
+}
+
+define <2 x float> @tv2f32() {
+entry:
+; ALL-LABEL: tv2f32:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <2 x float> <float 0.0, float 0.0>
+}
+
+define <16 x i8> @tv16i8() {
+entry:
+; ALL-LABEL: tv16i8:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <16 x i8> <i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0, i8 0>
+}
+
+define <8 x i16> @tv8i16() {
+entry:
+; ALL-LABEL: tv8i16:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <8 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>
+}
+
+define <4 x i32> @tv4i32() {
+entry:
+; ALL-LABEL: tv4i32:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <4 x i32> <i32 0, i32 0, i32 0, i32 0>
+}
+
+define <2 x i64> @tv2i64() {
+entry:
+; ALL-LABEL: tv2i64:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <2 x i64> <i64 0, i64 0>
+}
+
+define <4 x float> @tv4f32() {
+entry:
+; ALL-LABEL: tv4f32:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <4 x float> <float 0.0, float 0.0, float 0.0, float 0.0>
+}
+
+define <2 x double> @tv2d64() {
+entry:
+; ALL-LABEL: tv2d64:
+; ALL: movi{{(.16b)?}} v0{{(.2d)?}}, #0
+  ret <2 x double> <double 0.0, double 0.0>
+}
+

@@ -142,6 +142,7 @@ struct MCSchedClassDesc {
 struct MCRegisterCostEntry {
   unsigned RegisterClassID;
   unsigned Cost;
+  bool AllowMoveElimination;
 };
 
 /// A register file descriptor.
@@ -159,6 +160,12 @@ struct MCRegisterFileDesc {
   uint16_t NumRegisterCostEntries;
   // Index of the first cost entry in MCExtraProcessorInfo::RegisterCostTable.
   uint16_t RegisterCostEntryIdx;
+  // A value of zero means: there is no limit in the number of moves that can be
+  // eliminated every cycle.
+  uint16_t MaxMovesEliminatedPerCycle;
+  // Ture if this register file only knows how to optimize register moves from
+  // known zero registers.
+  bool AllowZeroMoveEliminationOnly;
 };
 
 /// Provide extra details about the machine processor.
@@ -176,18 +183,8 @@ struct MCExtraProcessorInfo {
   unsigned NumRegisterFiles;
   const MCRegisterCostEntry *RegisterCostTable;
   unsigned NumRegisterCostEntries;
-
-  struct PfmCountersInfo {
-    // An optional name of a performance counter that can be used to measure
-    // cycles.
-    const char *CycleCounter;
-
-    // For each MCProcResourceDesc defined by the processor, an optional list of
-    // names of performance counters that can be used to measure the resource
-    // utilization.
-    const char **IssueCounters;
-  };
-  PfmCountersInfo PfmCounters;
+  unsigned LoadQueueID;
+  unsigned StoreQueueID;
 };
 
 /// Machine model for scheduling, bundling, and heuristics.

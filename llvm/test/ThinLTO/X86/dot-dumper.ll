@@ -20,7 +20,7 @@
 ; STRUCTURE-DAG:      subgraph cluster_1
 ; STRUCTURE:          // Cross-module edges:
 ; STRUCTURE-DAG:      M0_{{[0-9]+}} -> M1_{{[0-9]+}} // call
-; STRUCTURE-DAG:      M0_{{[0-9]+}} -> M1_{{[0-9]+}} [{{.*}}]; // ref
+; STRUCTURE-DAG:      M0_{{[0-9]+}} -> M1_{{[0-9]+}} [{{.*}}]; // const-ref
 ; STRUCTURE-NEXT:   }
 
 ; CLUSTER0:         // Module: {{.*}}1.bc
@@ -33,13 +33,13 @@
 
 ; CLUSTER1:         // Module: {{.*}}2.bc
 ; CLUSTER1-NEXT:    subgraph cluster_1 {
-; CLUSTER1-DAG:       M1_[[A:[0-9]+]] [{{.*}}A|extern{{.*}}]; // variable
-; CLUSTER1-DAG:       M1_[[FOO:[0-9]+]] [{{.*}}foo|extern{{.*}}]; // function, not eligible to import
-; CLUSTER1-DAG:       M1_[[B:[0-9]+]] [{{.*}}B|extern{{.*}}]; // variable
+; CLUSTER1-DAG:       M1_[[A:[0-9]+]] [{{.*}}A|extern{{.*}}]; // variable, immutable
+; CLUSTER1-DAG:       M1_[[FOO:[0-9]+]] [{{.*}}foo|extern{{.*}} ffl: 00001{{.*}}]; // function
+; CLUSTER1-DAG:       M1_[[B:[0-9]+]] [{{.*}}B|extern{{.*}}]; // variable, immutable
 ; CLUSTER1-DAG:       M1_[[BAR:[0-9]+]] [{{.*}}bar|extern{{.*}}]; // function, dead
 ; CLUSTER1-NEXT:      // Edges:
-; CLUSTER1-DAG:       M1_[[FOO]] -> M1_[[B]] [{{.*}}]; // ref
-; CLUSTER1-DAG:       M1_[[FOO]] -> M1_[[A]] [{{.*}}]; // ref
+; CLUSTER1-DAG:       M1_[[FOO]] -> M1_[[B]] [{{.*}}]; // const-ref
+; CLUSTER1-DAG:       M1_[[FOO]] -> M1_[[A]] [{{.*}}]; // const-ref
 ; CLUSTER1-DAG:     }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

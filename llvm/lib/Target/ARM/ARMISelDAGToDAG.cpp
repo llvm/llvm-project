@@ -1345,9 +1345,8 @@ static inline SDValue getAL(SelectionDAG *CurDAG, const SDLoc &dl) {
 }
 
 void ARMDAGToDAGISel::transferMemOperands(SDNode *N, SDNode *Result) {
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MemOp});
 }
 
 bool ARMDAGToDAGISel::tryARMIndexedLoad(SDNode *N) {
@@ -1764,12 +1763,14 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
   default: llvm_unreachable("unhandled vld type");
     // Double-register operations:
   case MVT::v8i8:  OpcodeIndex = 0; break;
+  case MVT::v4f16:
   case MVT::v4i16: OpcodeIndex = 1; break;
   case MVT::v2f32:
   case MVT::v2i32: OpcodeIndex = 2; break;
   case MVT::v1i64: OpcodeIndex = 3; break;
     // Quad-register operations:
   case MVT::v16i8: OpcodeIndex = 0; break;
+  case MVT::v8f16:
   case MVT::v8i16: OpcodeIndex = 1; break;
   case MVT::v4f32:
   case MVT::v4i32: OpcodeIndex = 2; break;
@@ -1854,9 +1855,8 @@ void ARMDAGToDAGISel::SelectVLD(SDNode *N, bool isUpdating, unsigned NumVecs,
   }
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(VLd)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VLd), {MemOp});
 
   if (NumVecs == 1) {
     ReplaceNode(N, VLd);
@@ -1893,8 +1893,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   if (!SelectAddrMode6(N, N->getOperand(AddrOpIdx), MemAddr, Align))
     return;
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
 
   SDValue Chain = N->getOperand(0);
   EVT VT = N->getOperand(Vec0Idx).getValueType();
@@ -1983,7 +1982,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
     SDNode *VSt = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
 
     // Transfer memoperands.
-    cast<MachineSDNode>(VSt)->setMemRefs(MemOp, MemOp + 1);
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(VSt), {MemOp});
 
     ReplaceNode(N, VSt);
     return;
@@ -2007,7 +2006,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   SDNode *VStA = CurDAG->getMachineNode(QOpcodes0[OpcodeIndex], dl,
                                         MemAddr.getValueType(),
                                         MVT::Other, OpsA);
-  cast<MachineSDNode>(VStA)->setMemRefs(MemOp, MemOp + 1);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VStA), {MemOp});
   Chain = SDValue(VStA, 1);
 
   // Store the odd D registers.
@@ -2026,7 +2025,7 @@ void ARMDAGToDAGISel::SelectVST(SDNode *N, bool isUpdating, unsigned NumVecs,
   Ops.push_back(Chain);
   SDNode *VStB = CurDAG->getMachineNode(QOpcodes1[OpcodeIndex], dl, ResTys,
                                         Ops);
-  cast<MachineSDNode>(VStB)->setMemRefs(MemOp, MemOp + 1);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VStB), {MemOp});
   ReplaceNode(N, VStB);
 }
 
@@ -2045,8 +2044,7 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
   if (!SelectAddrMode6(N, N->getOperand(AddrOpIdx), MemAddr, Align))
     return;
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
 
   SDValue Chain = N->getOperand(0);
   unsigned Lane =
@@ -2135,7 +2133,7 @@ void ARMDAGToDAGISel::SelectVLDSTLane(SDNode *N, bool IsLoad, bool isUpdating,
   unsigned Opc = (is64BitVector ? DOpcodes[OpcodeIndex] :
                                   QOpcodes[OpcodeIndex]);
   SDNode *VLdLn = CurDAG->getMachineNode(Opc, dl, ResTys, Ops);
-  cast<MachineSDNode>(VLdLn)->setMemRefs(MemOp, MemOp + 1);
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VLdLn), {MemOp});
   if (!IsLoad) {
     ReplaceNode(N, VLdLn);
     return;
@@ -2264,9 +2262,8 @@ void ARMDAGToDAGISel::SelectVLDDup(SDNode *N, bool IsIntrinsic,
   }
 
   // Transfer memoperands.
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(VLdDup)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(VLdDup), {MemOp});
 
   // Extract the subregisters.
   if (NumVecs == 1) {
@@ -2308,6 +2305,11 @@ bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
       if (isOpcWithIntImmediate(N->getOperand(0).getNode(), ISD::SRL,
                                 Srl_imm)) {
         assert(Srl_imm > 0 && Srl_imm < 32 && "bad amount in shift node!");
+
+        // Mask off the unnecessary bits of the AND immediate; normally
+        // DAGCombine will do this, but that might not happen if
+        // targetShrinkDemandedConstant chooses a different immediate.
+        And_imm &= -1U >> Srl_imm;
 
         // Note: The width operand is encoded as width-1.
         unsigned Width = countTrailingOnes(And_imm) - 1;
@@ -2476,9 +2478,8 @@ void ARMDAGToDAGISel::SelectCMP_SWAP(SDNode *N) {
       Opcode, SDLoc(N),
       CurDAG->getVTList(MVT::i32, MVT::i32, MVT::Other), Ops);
 
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = cast<MemSDNode>(N)->getMemOperand();
-  cast<MachineSDNode>(CmpSwap)->setMemRefs(MemOp, MemOp + 1);
+  MachineMemOperand *MemOp = cast<MemSDNode>(N)->getMemOperand();
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(CmpSwap), {MemOp});
 
   ReplaceUses(SDValue(N, 0), SDValue(CmpSwap, 0));
   ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 2));
@@ -2627,12 +2628,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       // queries work properly. This e.g. gives the register allocation the
       // required information for rematerialization.
       MachineFunction& MF = CurDAG->getMachineFunction();
-      MachineSDNode::mmo_iterator MemOp = MF.allocateMemRefsArray(1);
-      MemOp[0] = MF.getMachineMemOperand(
-          MachinePointerInfo::getConstantPool(MF),
-          MachineMemOperand::MOLoad, 4, 4);
+      MachineMemOperand *MemOp =
+          MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
+                                  MachineMemOperand::MOLoad, 4, 4);
 
-      cast<MachineSDNode>(ResNode)->setMemRefs(MemOp, MemOp+1);
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(ResNode), {MemOp});
 
       ReplaceNode(N, ResNode);
       return;
@@ -3030,11 +3030,13 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     switch (VT.getSimpleVT().SimpleTy) {
     default: return;
     case MVT::v8i8:  Opc = ARM::VZIPd8; break;
+    case MVT::v4f16:
     case MVT::v4i16: Opc = ARM::VZIPd16; break;
     case MVT::v2f32:
     // vzip.32 Dd, Dm is a pseudo-instruction expanded to vtrn.32 Dd, Dm.
     case MVT::v2i32: Opc = ARM::VTRNd32; break;
     case MVT::v16i8: Opc = ARM::VZIPq8; break;
+    case MVT::v8f16:
     case MVT::v8i16: Opc = ARM::VZIPq16; break;
     case MVT::v4f32:
     case MVT::v4i32: Opc = ARM::VZIPq32; break;
@@ -3051,11 +3053,13 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     switch (VT.getSimpleVT().SimpleTy) {
     default: return;
     case MVT::v8i8:  Opc = ARM::VUZPd8; break;
+    case MVT::v4f16:
     case MVT::v4i16: Opc = ARM::VUZPd16; break;
     case MVT::v2f32:
     // vuzp.32 Dd, Dm is a pseudo-instruction expanded to vtrn.32 Dd, Dm.
     case MVT::v2i32: Opc = ARM::VTRNd32; break;
     case MVT::v16i8: Opc = ARM::VUZPq8; break;
+    case MVT::v8f16:
     case MVT::v8i16: Opc = ARM::VUZPq16; break;
     case MVT::v4f32:
     case MVT::v4i32: Opc = ARM::VUZPq32; break;
@@ -3072,10 +3076,12 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     switch (VT.getSimpleVT().SimpleTy) {
     default: return;
     case MVT::v8i8:  Opc = ARM::VTRNd8; break;
+    case MVT::v4f16:
     case MVT::v4i16: Opc = ARM::VTRNd16; break;
     case MVT::v2f32:
     case MVT::v2i32: Opc = ARM::VTRNd32; break;
     case MVT::v16i8: Opc = ARM::VTRNq8; break;
+    case MVT::v8f16:
     case MVT::v8i16: Opc = ARM::VTRNq16; break;
     case MVT::v4f32:
     case MVT::v4i32: Opc = ARM::VTRNq32; break;
@@ -3410,9 +3416,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
                        CurDAG->getRegister(0, MVT::i32), Chain};
       SDNode *Ld = CurDAG->getMachineNode(NewOpc, dl, ResTys, Ops);
       // Transfer memoperands.
-      MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-      MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-      cast<MachineSDNode>(Ld)->setMemRefs(MemOp, MemOp + 1);
+      MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(Ld), {MemOp});
 
       // Remap uses.
       SDValue OutChain = isThumb ? SDValue(Ld, 2) : SDValue(Ld, 1);
@@ -3478,9 +3483,8 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
 
       SDNode *St = CurDAG->getMachineNode(NewOpc, dl, ResTys, Ops);
       // Transfer memoperands.
-      MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-      MemOp[0] = cast<MemIntrinsicSDNode>(N)->getMemOperand();
-      cast<MachineSDNode>(St)->setMemRefs(MemOp, MemOp + 1);
+      MachineMemOperand *MemOp = cast<MemIntrinsicSDNode>(N)->getMemOperand();
+      CurDAG->setNodeMemRefs(cast<MachineSDNode>(St), {MemOp});
 
       ReplaceNode(N, St);
       return;

@@ -35,25 +35,6 @@ class ObjectFile;
 
 } // end namespace object
 
-/// JITEvent_EmittedFunctionDetails - Helper struct for containing information
-/// about a generated machine code function.
-struct JITEvent_EmittedFunctionDetails {
-  struct LineStart {
-    /// The address at which the current line changes.
-    uintptr_t Address;
-
-    /// The new location information.  These can be translated to DebugLocTuples
-    /// using MF->getDebugLocTuple().
-    DebugLoc Loc;
-  };
-
-  /// The machine function the struct contains information for.
-  const MachineFunction *MF;
-
-  /// The list of line boundary information, sorted by address.
-  std::vector<LineStart> LineStarts;
-};
-
 /// JITEventListener - Abstract interface for use by the JIT to notify clients
 /// about significant events during compilation. For example, to notify
 /// profilers and debuggers that need to know where functions have been emitted.
@@ -61,26 +42,26 @@ struct JITEvent_EmittedFunctionDetails {
 /// The default implementation of each method does nothing.
 class JITEventListener {
 public:
-  using EmittedFunctionDetails = JITEvent_EmittedFunctionDetails;
+  using ObjectKey = uint64_t;
 
-public:
   JITEventListener() = default;
   virtual ~JITEventListener() = default;
 
-  /// NotifyObjectEmitted - Called after an object has been successfully
-  /// emitted to memory.  NotifyFunctionEmitted will not be called for
+  /// notifyObjectLoaded - Called after an object has had its sections allocated
+  /// and addresses assigned to all symbols. Note: Section memory will not have
+  /// been relocated yet. notifyFunctionLoaded will not be called for
   /// individual functions in the object.
   ///
   /// ELF-specific information
   /// The ObjectImage contains the generated object image
   /// with section headers updated to reflect the address at which sections
   /// were loaded and with relocations performed in-place on debug sections.
-  virtual void NotifyObjectEmitted(const object::ObjectFile &Obj,
-                                   const RuntimeDyld::LoadedObjectInfo &L) {}
+  virtual void notifyObjectLoaded(ObjectKey K, const object::ObjectFile &Obj,
+                                  const RuntimeDyld::LoadedObjectInfo &L) {}
 
-  /// NotifyFreeingObject - Called just before the memory associated with
+  /// notifyFreeingObject - Called just before the memory associated with
   /// a previously emitted object is released.
-  virtual void NotifyFreeingObject(const object::ObjectFile &Obj) {}
+  virtual void notifyFreeingObject(ObjectKey K) {}
 
   // Get a pointe to the GDB debugger registration listener.
   static JITEventListener *createGDBRegistrationListener();

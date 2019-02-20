@@ -8,14 +8,14 @@ entry:
 
 return:                                           ; No predecessors!
   %bar = bitcast %2* %x to i8*
-  %foo = call i8* @objc_autoreleaseReturnValue(i8* %bar) nounwind
+  %foo = call i8* @llvm.objc.autoreleaseReturnValue(i8* %bar) nounwind
   call void @callee()
   call void @use_pointer(i8* %foo)
-  call void @objc_release(i8* %foo) nounwind
+  call void @llvm.objc.release(i8* %foo) nounwind
   ret void
 }
 
-declare i8* @objc_autoreleaseReturnValue(i8*)
-declare void @objc_release(i8*)
+declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
+declare void @llvm.objc.release(i8*)
 declare void @callee()
 declare void @use_pointer(i8*)

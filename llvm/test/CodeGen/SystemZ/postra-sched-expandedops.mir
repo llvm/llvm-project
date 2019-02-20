@@ -1,0 +1,90 @@
+# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 -start-before=postmisched \
+# RUN:  -debug-only=machine-scheduler -o - 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Test that the cycle index is the same before and after scheduling an
+# instruction with 6 decoder slots.
+
+# CHECK:      ++ | Current cycle index: 3
+# CHECK-NEXT: ++ | Resource counters: Z13_FXaUnit:2
+# CHECK-NEXT: ** ScheduleDAGMI::schedule picking next node
+# CHECK-NEXT: ** Available: {SU(3):DL/FXa(4cyc)/LSU/6uops/GroupsAlone,  SU(6):LARL/FXa}
+# CHECK-NEXT: ** Best so far: SU(3):DL/FXa(4cyc)/LSU/6uops/GroupsAlone  Grouping cost:-1 Height:43
+# CHECK-NEXT: ** Tried      : SU(6):LARL/FXa Height:14
+# CHECK-NEXT: ** Scheduling SU(3)   Grouping cost:-1
+# CHECK-NEXT: ++ HazardRecognizer emitting SU(3):DL/FXa(4cyc)/LSU/6uops/GroupsAlone
+# CHECK-NEXT: ++ Decode group before emission:  <empty>
+# CHECK-NEXT: ++ Completed decode group: { SU(3):DL/FXa(4cyc)/LSU/6uops/GroupsAlone } (6 decoder slots)
+# CHECK-NEXT: ++ | Current decoder group:  <empty>
+# CHECK-NEXT: ++ | Current cycle index: 3
+
+
+--- |
+  ; ModuleID = '<stdin>'
+  source_filename = "<stdin>"
+  target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
+  target triple = "s390x--linux-gnu"
+  
+  %0 = type { i8, i8, i8, i8, i16, i32, i32, i32 }
+  
+  @TTSize = external dso_local local_unnamed_addr global i32, align 4
+  @AS_TTable = external dso_local local_unnamed_addr global %0*, align 8
+  @Variant = external dso_local local_unnamed_addr global i32, align 4
+  
+  define dso_local void @LearnStoreTT(i32 signext %arg, i32 zeroext %arg1, i32 signext %arg2) #0 {
+  bb:
+    %tmp = load i32, i32* @TTSize, align 4
+    %tmp3 = urem i32 %arg1, %tmp
+    %tmp4 = load %0*, %0** @AS_TTable, align 8
+    %tmp5 = zext i32 %tmp3 to i64
+    %tmp6 = load i32, i32* @Variant, align 4
+    %tmp7 = add i32 %tmp6, -3
+    %tmp8 = icmp ugt i32 %tmp7, 1
+    %tmp9 = select i1 %tmp8, i8 3, i8 1
+    store i8 %tmp9, i8* undef, align 1
+    store i32 %arg, i32* undef, align 4
+    %tmp10 = trunc i32 %arg2 to i8
+    store i8 %tmp10, i8* null, align 1
+    %tmp11 = getelementptr inbounds %0, %0* %tmp4, i64 %tmp5, i32 2
+    store i8 0, i8* %tmp11, align 2
+    ret void
+  }
+  
+  attributes #0 = { "target-cpu"="z13" }
+
+...
+---
+name:            LearnStoreTT
+alignment:       4
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$r2d' }
+  - { reg: '$r3d' }
+  - { reg: '$r4d' }
+frameInfo:       
+  maxCallFrameSize: 0
+body:             |
+  bb.0.bb:
+    liveins: $r2d, $r3d, $r4d
+  
+    $r1d = LGR $r3d, implicit-def $r0q
+    renamable $r3d = LARL @TTSize
+    renamable $r0d = LLILL 0, implicit killed $r0q, implicit-def $r0q
+    renamable $r0q = DL killed renamable $r0q, killed renamable $r3d, 0, $noreg :: (dereferenceable load 4 from @TTSize)
+    renamable $r3d = LGRL @AS_TTable :: (dereferenceable load 8 from @AS_TTable)
+    renamable $r1d = LLGFR renamable $r0l, implicit killed $r0q
+    renamable $r5d = LARL @Variant
+    renamable $r0l = LHI -3
+    renamable $r0l = A killed renamable $r0l, killed renamable $r5d, 0, $noreg, implicit-def dead $cc :: (dereferenceable load 4 from @Variant)
+    CLFI killed renamable $r0l, 1, implicit-def $cc
+    renamable $r0l = LHI 1
+    renamable $r0l = LOCHI killed renamable $r0l, 3, 14, 2, implicit killed $cc
+    STC killed renamable $r0l, undef renamable $r1d, 0, $noreg :: (store 1 into `i8* undef`)
+    ST renamable $r2l, undef renamable $r1d, 0, $noreg, implicit killed $r2d :: (store 4 into `i32* undef`)
+    STC renamable $r4l, $noreg, 0, $noreg, implicit killed $r4d :: (store 1 into `i8* null`)
+    renamable $r1d = MGHI killed renamable $r1d, 20
+    renamable $r0l = LHI 0
+    STC killed renamable $r0l, killed renamable $r3d, 2, killed renamable $r1d :: (store 1 into %ir.tmp11, align 2)
+    Return
+
+...

@@ -4,11 +4,11 @@
 ; target triple = "xcore"
 
 ; CHECK-LABEL: f
-; CHECK: entsp 2
+; CHECK: entsp [[S:[0-9]+]]
 ; ...the prologue...
 ; CHECK: .loc 1 2 0 prologue_end      # test.c:2:0
 ; CHECK: add r0, r0, 1
-; CHECK: retsp 2
+; CHECK: retsp [[S]]
 define i32 @f(i32 %a) !dbg !4 {
 entry:
   %a.addr = alloca i32, align 4

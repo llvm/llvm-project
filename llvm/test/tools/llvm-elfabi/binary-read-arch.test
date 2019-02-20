@@ -1,0 +1,15 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-elfabi %t --emit-tbe=- | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_X86_64
+
+# CHECK:      --- !tapi-tbe
+# CHECK-NEXT: TbeVersion: {{[1-9]\d*\.(0|([1-9]\d*))}}
+# CHECK-NEXT: Arch: x86_64
+# CHECK-NEXT: Symbols: {}
+# CHECK-NEXT: ...

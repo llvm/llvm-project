@@ -25,7 +25,7 @@
 ; CHECK:  }
 ; CHECK:  Subsection [
 ; CHECK:    SubSectionType: Symbols (0xF1)
-; CHECK:    SubSectionSize: 0x2A
+; CHECK:    SubSectionSize:
 ; CHECK:    UDTSym {
 ; CHECK:      Kind: S_UDT (0x1108)
 ; CHECK:      Type: MemberTest::A (0x1008)
@@ -33,7 +33,7 @@
 ; CHECK:    }
 ; CHECK:    UDTSym {
 ; CHECK:      Kind: S_UDT (0x1108)
-; CHECK:      Type: void (int, float, <no type>)* (0x100E)
+; CHECK:      Type: void (int, float, <no type>)* (0x100F)
 ; CHECK:      UDTName: FuncTypedef
 ; CHECK:    }
 ; CHECK:  ]

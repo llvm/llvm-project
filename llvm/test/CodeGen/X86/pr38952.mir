@@ -1,0 +1,103 @@
+# RUN: llc %s -run-pass=postra-machine-sink -o - | FileCheck %s
+--- |
+  ; Module stripped of everything, MIR below is what's interesting
+  ; ModuleID = '<stdin>'
+  source_filename = "justacall.cpp"
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  ; Function Attrs: noinline norecurse nounwind uwtable
+  define dso_local i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 {
+  entry:
+    br label %if.end
+  if.end:
+    br label %return
+  return:
+    ret i32 0
+  }
+
+  !0 = !{!"dummy metadata"}
+  !2 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !5, nameTableKind: None)
+  !3 = !DIFile(filename: "justacall.cpp", directory: "/tmp")
+  !4 = !{}
+  !5 = !{!0}
+  !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !14 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 7, type: !15, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: true, unit: !2, retainedNodes: !20)
+  !15 = !DISubroutineType(types: !16)
+  !16 = !{!7, !7}
+  !20 = !{!21}
+  !21 = !DILocalVariable(name: "argc", arg: 1, scope: !14, file: !3, line: 7, type: !7)
+
+...
+---
+name:            main
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:
+liveins:
+  - { reg: '$edi', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    0
+  adjustsStack:    false
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    liveins: $edi
+  
+  ; Test that the DBG_VALUE on ebx below is sunk with the def of ebx, despite
+  ; not being adjacent to the def, see PR38952
+
+    DBG_VALUE $edi, $noreg, !21, !DIExpression()
+    renamable $ebx = COPY $edi
+    renamable $eax = MOV32r0 implicit-def dead $eflags
+    DBG_VALUE $ebx, $noreg, !21, !DIExpression()
+    CMP32ri $edi, 255, implicit-def $eflags
+    JG_1 %bb.2, implicit killed $eflags
+    JMP_1 %bb.1
+  
+  bb.1.if.end:
+  ; CHECK-LABEL: bb.1.if.end
+    successors: %bb.2(0x80000000)
+    liveins: $ebx
+  
+  ; CHECK: $ebx = COPY $edi
+  ; CHECK-NEXT: DBG_VALUE $ebx
+    renamable $rdx = MOVSX64rr32 renamable $ebx
+    renamable $rdx = nsw SHL64ri killed renamable $rdx, 2, implicit-def dead $eflags
+    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+    $rdi = MOV32ri64 0
+    $esi = MOV32r0 implicit-def dead $eflags
+    CALL64pcrel32 &memset, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit killed $esi, implicit $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
+    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
+  
+  bb.2.return:
+    liveins: $eax
+  
+    RET 0, $eax
+
+...

@@ -33,9 +33,6 @@ namespace llvm {
       SELECT_XCC,  // Select between two values using the current XCC flags.
       SELECT_FCC,  // Select between two values using the current FCC flags.
 
-      EH_SJLJ_SETJMP,  // builtin setjmp operation
-      EH_SJLJ_LONGJMP, // builtin longjmp operation
-
       Hi, Lo,      // Hi/Lo operations, typically on a global address.
 
       FTOI,        // FP to Int within a FP register.
@@ -171,12 +168,6 @@ namespace llvm {
     SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 
-    SDValue LowerEH_SJLJ_SETJMP(SDValue Op, SelectionDAG &DAG,
-                                const SparcTargetLowering &TLI) const ;
-    SDValue LowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG,
-                                 const SparcTargetLowering &TLI) const ;
-
-    unsigned getSRetArgSize(SelectionDAG &DAG, SDValue Callee) const;
     SDValue withTargetFlags(SDValue Op, unsigned TF, SelectionDAG &DAG) const;
     SDValue makeHiLoPair(SDValue Op, unsigned HiTF, unsigned LoTF,
                          SelectionDAG &DAG) const;
@@ -191,6 +182,13 @@ namespace llvm {
                              const SDLoc &DL, SelectionDAG &DAG) const;
 
     SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+
+    SDValue PerformBITCASTCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+
+    SDValue bitcastConstantFPToInt(ConstantFPSDNode *C, const SDLoc &DL,
+                                   SelectionDAG &DAG) const;
+
+    SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
     bool ShouldShrinkFPConstant(EVT VT) const override {
       // Do not shrink FP constpool if VT == MVT::f128.
@@ -213,10 +211,6 @@ namespace llvm {
 
     MachineBasicBlock *expandSelectCC(MachineInstr &MI, MachineBasicBlock *BB,
                                       unsigned BROpcode) const;
-    MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
-                                        MachineBasicBlock *MBB) const;
-    MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
-                                         MachineBasicBlock *MBB) const;
   };
 } // end namespace llvm
 

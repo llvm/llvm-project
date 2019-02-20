@@ -156,6 +156,10 @@ static cl::opt<bool> EnableGVNSink(
     "enable-gvn-sink", cl::init(false), cl::Hidden,
     cl::desc("Enable the GVN sinking pass (default = off)"));
 
+static cl::opt<bool>
+    EnableCHR("enable-chr", cl::init(true), cl::Hidden,
+              cl::desc("Enable control height reduction optimization (CHR)"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -170,6 +174,7 @@ PassManagerBuilder::PassManagerBuilder() {
     VerifyInput = false;
     VerifyOutput = false;
     MergeFunctions = false;
+    SplitColdCode = false;
     PrepareForLTO = false;
     EnablePGOInstrGen = RunPGOInstrGen;
     PGOInstrGen = PGOOutputFile;
@@ -371,13 +376,11 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   addExtensionsToPM(EP_LateLoopOptimizations, MPM);
   MPM.add(createLoopDeletionPass());          // Delete dead loops
 
-  if (EnableLoopInterchange) {
-    // FIXME: These are function passes and break the loop pass pipeline.
+  if (EnableLoopInterchange)
     MPM.add(createLoopInterchangePass()); // Interchange loops
-    MPM.add(createCFGSimplificationPass());
-  }
-  if (!DisableUnrollLoops)
-    MPM.add(createSimpleLoopUnrollPass(OptLevel));    // Unroll small loops
+
+  MPM.add(createSimpleLoopUnrollPass(OptLevel,
+                                     DisableUnrollLoops)); // Unroll small loops
   addExtensionsToPM(EP_LoopOptimizerEnd, MPM);
   // This ends the loop pass pipelines.
 
@@ -415,10 +418,18 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
   // Clean up after everything.
   addInstructionCombiningPass(MPM);
   addExtensionsToPM(EP_Peephole, MPM);
+
+  if (EnableCHR && OptLevel >= 3 &&
+      (!PGOInstrUse.empty() || !PGOSampleUse.empty()))
+    MPM.add(createControlHeightReductionLegacyPass());
 }
 
 void PassManagerBuilder::populateModulePassManager(
     legacy::PassManagerBase &MPM) {
+  // Whether this is a default or *LTO pre-link pipeline. The FullLTO post-link
+  // is handled separately, so just check this is not the ThinLTO post-link.
+  bool DefaultOrPreLinkPipeline = !PerformThinLTO;
+
   if (!PGOSampleUse.empty()) {
     MPM.add(createPruneEHPass());
     MPM.add(createSampleProfileLoaderPass(PGOSampleUse));
@@ -515,7 +526,7 @@ void PassManagerBuilder::populateModulePassManager(
   // profile annotation in backend more difficult.
   // PGO instrumentation is added during the compile phase for ThinLTO, do
   // not run it a second time
-  if (!PerformThinLTO && !PrepareForThinLTOUsingPGOSampleProfile)
+  if (DefaultOrPreLinkPipeline && !PrepareForThinLTOUsingPGOSampleProfile)
     addPGOInstrPasses(MPM);
 
   // We add a module alias analysis pass here. In part due to bugs in the
@@ -631,7 +642,7 @@ void PassManagerBuilder::populateModulePassManager(
   // llvm.loop.distribute=true or when -enable-loop-distribute is specified.
   MPM.add(createLoopDistributePass());
 
-  MPM.add(createLoopVectorizePass(DisableUnrollLoops, LoopVectorize));
+  MPM.add(createLoopVectorizePass(DisableUnrollLoops, !LoopVectorize));
 
   // Eliminate loads by forwarding stores from the previous iteration to loads
   // of the current iteration.
@@ -676,16 +687,17 @@ void PassManagerBuilder::populateModulePassManager(
   addExtensionsToPM(EP_Peephole, MPM);
   addInstructionCombiningPass(MPM);
 
+  if (EnableUnrollAndJam && !DisableUnrollLoops) {
+    // Unroll and Jam. We do this before unroll but need to be in a separate
+    // loop pass manager in order for the outer loop to be processed by
+    // unroll and jam before the inner loop is unrolled.
+    MPM.add(createLoopUnrollAndJamPass(OptLevel));
+  }
+
+  MPM.add(createLoopUnrollPass(OptLevel,
+                               DisableUnrollLoops)); // Unroll small loops
+
   if (!DisableUnrollLoops) {
-    if (EnableUnrollAndJam) {
-      // Unroll and Jam. We do this before unroll but need to be in a separate
-      // loop pass manager in order for the outer loop to be processed by
-      // unroll and jam before the inner loop is unrolled.
-      MPM.add(createLoopUnrollAndJamPass(OptLevel));
-    }
-
-    MPM.add(createLoopUnrollPass(OptLevel));    // Unroll small loops
-
     // LoopUnroll may generate some redundency to cleanup.
     addInstructionCombiningPass(MPM);
 
@@ -694,7 +706,9 @@ void PassManagerBuilder::populateModulePassManager(
     // outer loop. LICM pass can help to promote the runtime check out if the
     // checked value is loop invariant.
     MPM.add(createLICMPass());
- }
+  }
+
+  MPM.add(createWarnMissedTransformationsPass());
 
   // After vectorization and unrolling, assume intrinsics may tell us more
   // about pointer alignments.
@@ -709,6 +723,12 @@ void PassManagerBuilder::populateModulePassManager(
     MPM.add(createGlobalDCEPass());         // Remove dead fns and globals.
     MPM.add(createConstantMergePass());     // Merge dup global constants
   }
+
+  // See comment in the new PM for justification of scheduling splitting at
+  // this stage (\ref buildModuleSimplificationPipeline).
+  if ((EnableHotColdSplit || SplitColdCode) &&
+      !(PrepareForLTO || PrepareForThinLTO))
+    MPM.add(createHotColdSplittingPass());
 
   if (MergeFunctions)
     MPM.add(createMergeFunctionsPass());
@@ -726,9 +746,6 @@ void PassManagerBuilder::populateModulePassManager(
   // flattening of blocks.
   MPM.add(createDivRemPairsPass());
 
-  if (EnableHotColdSplit)
-    MPM.add(createHotColdSplittingPass());
-
   // LoopSink (and other loop passes since the last simplifyCFG) might have
   // resulted in single-entry-single-exit or empty blocks. Clean up the CFG.
   MPM.add(createCFGSimplificationPass());
@@ -741,6 +758,12 @@ void PassManagerBuilder::populateModulePassManager(
 }
 
 void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
+  // Load sample profile before running the LTO optimization pipeline.
+  if (!PGOSampleUse.empty()) {
+    PM.add(createPruneEHPass());
+    PM.add(createSampleProfileLoaderPass(PGOSampleUse));
+  }
+
   // Remove unused virtual tables to improve the quality of code generated by
   // whole-program devirtualization and bitset lowering.
   PM.add(createGlobalDCEPass());
@@ -858,12 +881,13 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
   if (EnableLoopInterchange)
     PM.add(createLoopInterchangePass());
 
-  if (!DisableUnrollLoops)
-    PM.add(createSimpleLoopUnrollPass(OptLevel));   // Unroll small loops
-  PM.add(createLoopVectorizePass(true, LoopVectorize));
+  PM.add(createSimpleLoopUnrollPass(OptLevel,
+                                    DisableUnrollLoops)); // Unroll small loops
+  PM.add(createLoopVectorizePass(true, !LoopVectorize));
   // The vectorizer may have significantly shortened a loop body; unroll again.
-  if (!DisableUnrollLoops)
-    PM.add(createLoopUnrollPass(OptLevel));
+  PM.add(createLoopUnrollPass(OptLevel, DisableUnrollLoops));
+
+  PM.add(createWarnMissedTransformationsPass());
 
   // Now that we've optimized loops (in particular loop induction variables),
   // we may have exposed more scalar opportunities. Run parts of the scalar
@@ -892,6 +916,11 @@ void PassManagerBuilder::addLTOOptimizationPasses(legacy::PassManagerBase &PM) {
 
 void PassManagerBuilder::addLateLTOOptimizationPasses(
     legacy::PassManagerBase &PM) {
+  // See comment in the new PM for justification of scheduling splitting at
+  // this stage (\ref buildModuleSimplificationPipeline).
+  if (EnableHotColdSplit || SplitColdCode)
+    PM.add(createHotColdSplittingPass());
+
   // Delete basic blocks, which optimization passes may have killed.
   PM.add(createCFGSimplificationPass());
 

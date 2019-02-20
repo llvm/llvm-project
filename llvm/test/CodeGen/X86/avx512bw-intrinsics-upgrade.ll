@@ -2888,3 +2888,1009 @@ define <32 x i16>@test_int_x86_avx512_mask_dbpsadbw_512(<64 x i8> %x0, <64 x i8>
   %res4 = add <32 x i16> %res3, %res2
   ret <32 x i16> %res4
 }
+
+define <32 x i16> @test_mask_adds_epu16_rr_512(<32 x i16> %a, <32 x i16> %b) {
+; CHECK-LABEL: test_mask_adds_epu16_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddusw %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xdd,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.paddus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epu16_rrk_512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_adds_epu16_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddusw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdd,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu16_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddusw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdd,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.paddus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epu16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i32 %mask) {
+; X86-LABEL: test_mask_adds_epu16_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddusw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdd,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu16_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddusw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdd,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.paddus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epu16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+; X86-LABEL: test_mask_adds_epu16_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpaddusw (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xdd,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu16_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpaddusw (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xdd,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.paddus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epu16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_adds_epu16_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddusw (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdd,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu16_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddusw (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdd,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.paddus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epu16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+; X86-LABEL: test_mask_adds_epu16_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddusw (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdd,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu16_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddusw (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdd,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.paddus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+declare <32 x i16> @llvm.x86.avx512.mask.paddus.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
+
+define <32 x i16> @test_mask_subs_epu16_rr_512(<32 x i16> %a, <32 x i16> %b) {
+; CHECK-LABEL: test_mask_subs_epu16_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsubusw %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xd9,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epu16_rrk_512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_subs_epu16_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubusw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd9,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu16_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubusw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd9,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epu16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i32 %mask) {
+; X86-LABEL: test_mask_subs_epu16_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubusw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd9,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu16_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubusw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd9,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epu16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+; X86-LABEL: test_mask_subs_epu16_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpsubusw (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xd9,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu16_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsubusw (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xd9,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epu16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_subs_epu16_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubusw (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd9,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu16_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubusw (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd9,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epu16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+; X86-LABEL: test_mask_subs_epu16_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubusw (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd9,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu16_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubusw (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd9,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubus.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+declare <32 x i16> @llvm.x86.avx512.mask.psubus.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
+
+define <64 x i8> @test_mask_adds_epu8_rr_512(<64 x i8> %a, <64 x i8> %b) {
+; CHECK-LABEL: test_mask_adds_epu8_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddusb %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xdc,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.paddus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epu8_rrk_512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_adds_epu8_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddusb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdc,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu8_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddusb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdc,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.paddus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epu8_rrkz_512(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
+; X86-LABEL: test_mask_adds_epu8_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddusb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdc,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu8_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddusb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdc,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.paddus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epu8_rm_512(<64 x i8> %a, <64 x i8>* %ptr_b) {
+; X86-LABEL: test_mask_adds_epu8_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpaddusb (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xdc,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu8_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpaddusb (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xdc,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.paddus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epu8_rmk_512(<64 x i8> %a, <64 x i8>* %ptr_b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_adds_epu8_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddusb (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdc,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu8_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddusb (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xdc,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.paddus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epu8_rmkz_512(<64 x i8> %a, <64 x i8>* %ptr_b, i64 %mask) {
+; X86-LABEL: test_mask_adds_epu8_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddusb (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdc,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epu8_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddusb (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xdc,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.paddus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+declare <64 x i8> @llvm.x86.avx512.mask.paddus.b.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
+
+define <64 x i8> @test_mask_subs_epu8_rr_512(<64 x i8> %a, <64 x i8> %b) {
+; CHECK-LABEL: test_mask_subs_epu8_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsubusb %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xd8,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epu8_rrk_512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_subs_epu8_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubusb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd8,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu8_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubusb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd8,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epu8_rrkz_512(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
+; X86-LABEL: test_mask_subs_epu8_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubusb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd8,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu8_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubusb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd8,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epu8_rm_512(<64 x i8> %a, <64 x i8>* %ptr_b) {
+; X86-LABEL: test_mask_subs_epu8_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpsubusb (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xd8,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu8_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsubusb (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xd8,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epu8_rmk_512(<64 x i8> %a, <64 x i8>* %ptr_b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_subs_epu8_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubusb (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd8,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu8_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubusb (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xd8,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epu8_rmkz_512(<64 x i8> %a, <64 x i8>* %ptr_b, i64 %mask) {
+; X86-LABEL: test_mask_subs_epu8_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubusb (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd8,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epu8_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubusb (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xd8,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubus.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+declare <64 x i8> @llvm.x86.avx512.mask.psubus.b.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
+
+define <32 x i16> @test_adds_epi16_rr_512(<32 x i16> %a, <32 x i16> %b) {
+; CHECK-LABEL: test_adds_epi16_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddsw %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xed,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %1 = call <32 x i16> @llvm.x86.avx512.padds.w.512(<32 x i16> %a, <32 x i16> %b)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @test_adds_epi16_rrk_512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_adds_epi16_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_adds_epi16_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <32 x i16> @llvm.x86.avx512.padds.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %passThru
+  ret <32 x i16> %3
+}
+
+define <32 x i16> @test_adds_epi16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i32 %mask) {
+; X86-LABEL: test_adds_epi16_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_adds_epi16_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <32 x i16> @llvm.x86.avx512.padds.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> zeroinitializer
+  ret <32 x i16> %3
+}
+
+define <32 x i16> @test_adds_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+; X86-LABEL: test_adds_epi16_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpaddsw (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xed,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_adds_epi16_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpaddsw (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xed,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %1 = call <32 x i16> @llvm.x86.avx512.padds.w.512(<32 x i16> %a, <32 x i16> %b)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @test_adds_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_adds_epi16_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddsw (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_adds_epi16_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddsw (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %1 = call <32 x i16> @llvm.x86.avx512.padds.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %passThru
+  ret <32 x i16> %3
+}
+
+define <32 x i16> @test_adds_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+; X86-LABEL: test_adds_epi16_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddsw (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_adds_epi16_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddsw (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %1 = call <32 x i16> @llvm.x86.avx512.padds.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> zeroinitializer
+  ret <32 x i16> %3
+}
+
+declare <32 x i16> @llvm.x86.avx512.padds.w.512(<32 x i16>, <32 x i16>)
+
+define <32 x i16> @test_mask_adds_epi16_rr_512(<32 x i16> %a, <32 x i16> %b) {
+; CHECK-LABEL: test_mask_adds_epi16_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddsw %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xed,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.padds.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epi16_rrk_512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_adds_epi16_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi16_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.padds.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epi16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i32 %mask) {
+; X86-LABEL: test_mask_adds_epi16_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi16_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.padds.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+; X86-LABEL: test_mask_adds_epi16_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpaddsw (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xed,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi16_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpaddsw (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xed,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.padds.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_adds_epi16_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddsw (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi16_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddsw (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xed,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.padds.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_adds_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+; X86-LABEL: test_mask_adds_epi16_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddsw (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi16_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddsw (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xed,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.padds.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+declare <32 x i16> @llvm.x86.avx512.mask.padds.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
+
+define <32 x i16> @test_subs_epi16_rr_512(<32 x i16> %a, <32 x i16> %b) {
+; CHECK-LABEL: test_subs_epi16_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe9,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %1 = call <32 x i16> @llvm.x86.avx512.psubs.w.512(<32 x i16> %a, <32 x i16> %b)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @test_subs_epi16_rrk_512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_subs_epi16_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_subs_epi16_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <32 x i16> @llvm.x86.avx512.psubs.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %passThru
+  ret <32 x i16> %3
+}
+
+define <32 x i16> @test_subs_epi16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i32 %mask) {
+; X86-LABEL: test_subs_epi16_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_subs_epi16_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %1 = call <32 x i16> @llvm.x86.avx512.psubs.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> zeroinitializer
+  ret <32 x i16> %3
+}
+
+define <32 x i16> @test_subs_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+; X86-LABEL: test_subs_epi16_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpsubsw (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe9,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_subs_epi16_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsubsw (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe9,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %1 = call <32 x i16> @llvm.x86.avx512.psubs.w.512(<32 x i16> %a, <32 x i16> %b)
+  ret <32 x i16> %1
+}
+
+define <32 x i16> @test_subs_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_subs_epi16_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubsw (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_subs_epi16_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubsw (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %1 = call <32 x i16> @llvm.x86.avx512.psubs.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %passThru
+  ret <32 x i16> %3
+}
+
+define <32 x i16> @test_subs_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+; X86-LABEL: test_subs_epi16_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubsw (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_subs_epi16_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubsw (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %1 = call <32 x i16> @llvm.x86.avx512.psubs.w.512(<32 x i16> %a, <32 x i16> %b)
+  %2 = bitcast i32 %mask to <32 x i1>
+  %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> zeroinitializer
+  ret <32 x i16> %3
+}
+
+declare <32 x i16> @llvm.x86.avx512.psubs.w.512(<32 x i16>, <32 x i16>)
+
+define <32 x i16> @test_mask_subs_epi16_rr_512(<32 x i16> %a, <32 x i16> %b) {
+; CHECK-LABEL: test_mask_subs_epi16_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe9,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubs.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epi16_rrk_512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_subs_epi16_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi16_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubsw %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubs.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epi16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i32 %mask) {
+; X86-LABEL: test_mask_subs_epi16_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi16_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubsw %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubs.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+; X86-LABEL: test_mask_subs_epi16_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpsubsw (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe9,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi16_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsubsw (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe9,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubs.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 -1)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+; X86-LABEL: test_mask_subs_epi16_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubsw (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi16_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubsw (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe9,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubs.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> %passThru, i32 %mask)
+  ret <32 x i16> %res
+}
+
+define <32 x i16> @test_mask_subs_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+; X86-LABEL: test_mask_subs_epi16_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovd {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf9,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubsw (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi16_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovd %esi, %k1 # encoding: [0xc5,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubsw (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe9,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %res = call <32 x i16> @llvm.x86.avx512.mask.psubs.w.512(<32 x i16> %a, <32 x i16> %b, <32 x i16> zeroinitializer, i32 %mask)
+  ret <32 x i16> %res
+}
+
+declare <32 x i16> @llvm.x86.avx512.mask.psubs.w.512(<32 x i16>, <32 x i16>, <32 x i16>, i32)
+
+define <64 x i8> @test_mask_adds_epi8_rr_512(<64 x i8> %a, <64 x i8> %b) {
+; CHECK-LABEL: test_mask_adds_epi8_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpaddsb %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xec,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.padds.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epi8_rrk_512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_adds_epi8_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddsb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xec,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi8_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddsb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xec,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.padds.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epi8_rrkz_512(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
+; X86-LABEL: test_mask_adds_epi8_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpaddsb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xec,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi8_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpaddsb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xec,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.padds.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epi8_rm_512(<64 x i8> %a, <64 x i8>* %ptr_b) {
+; X86-LABEL: test_mask_adds_epi8_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpaddsb (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xec,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi8_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpaddsb (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xec,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.padds.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epi8_rmk_512(<64 x i8> %a, <64 x i8>* %ptr_b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_adds_epi8_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddsb (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xec,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi8_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddsb (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xec,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.padds.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_adds_epi8_rmkz_512(<64 x i8> %a, <64 x i8>* %ptr_b, i64 %mask) {
+; X86-LABEL: test_mask_adds_epi8_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpaddsb (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xec,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_adds_epi8_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpaddsb (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xec,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.padds.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+declare <64 x i8> @llvm.x86.avx512.mask.padds.b.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
+
+define <64 x i8> @test_mask_subs_epi8_rr_512(<64 x i8> %a, <64 x i8> %b) {
+; CHECK-LABEL: test_mask_subs_epi8_rr_512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsubsb %zmm1, %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe8,0xc1]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubs.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epi8_rrk_512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_subs_epi8_rrk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubsb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe8,0xd1]
+; X86-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi8_rrk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubsb %zmm1, %zmm0, %zmm2 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe8,0xd1]
+; X64-NEXT:    vmovdqa64 %zmm2, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc2]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubs.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epi8_rrkz_512(<64 x i8> %a, <64 x i8> %b, i64 %mask) {
+; X86-LABEL: test_mask_subs_epi8_rrkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vpsubsb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe8,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi8_rrkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rdi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xcf]
+; X64-NEXT:    vpsubsb %zmm1, %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe8,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubs.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epi8_rm_512(<64 x i8> %a, <64 x i8>* %ptr_b) {
+; X86-LABEL: test_mask_subs_epi8_rm_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpsubsb (%eax), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe8,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi8_rm_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsubsb (%rdi), %zmm0, %zmm0 # encoding: [0x62,0xf1,0x7d,0x48,0xe8,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubs.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 -1)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epi8_rmk_512(<64 x i8> %a, <64 x i8>* %ptr_b, <64 x i8> %passThru, i64 %mask) {
+; X86-LABEL: test_mask_subs_epi8_rmk_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubsb (%eax), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe8,0x08]
+; X86-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi8_rmk_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubsb (%rdi), %zmm0, %zmm1 {%k1} # encoding: [0x62,0xf1,0x7d,0x49,0xe8,0x0f]
+; X64-NEXT:    vmovdqa64 %zmm1, %zmm0 # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubs.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> %passThru, i64 %mask)
+  ret <64 x i8> %res
+}
+
+define <64 x i8> @test_mask_subs_epi8_rmkz_512(<64 x i8> %a, <64 x i8>* %ptr_b, i64 %mask) {
+; X86-LABEL: test_mask_subs_epi8_rmkz_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    kmovq {{[0-9]+}}(%esp), %k1 # encoding: [0xc4,0xe1,0xf8,0x90,0x4c,0x24,0x08]
+; X86-NEXT:    vpsubsb (%eax), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe8,0x00]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: test_mask_subs_epi8_rmkz_512:
+; X64:       # %bb.0:
+; X64-NEXT:    kmovq %rsi, %k1 # encoding: [0xc4,0xe1,0xfb,0x92,0xce]
+; X64-NEXT:    vpsubsb (%rdi), %zmm0, %zmm0 {%k1} {z} # encoding: [0x62,0xf1,0x7d,0xc9,0xe8,0x07]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %b = load <64 x i8>, <64 x i8>* %ptr_b
+  %res = call <64 x i8> @llvm.x86.avx512.mask.psubs.b.512(<64 x i8> %a, <64 x i8> %b, <64 x i8> zeroinitializer, i64 %mask)
+  ret <64 x i8> %res
+}
+
+declare <64 x i8> @llvm.x86.avx512.mask.psubs.b.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)

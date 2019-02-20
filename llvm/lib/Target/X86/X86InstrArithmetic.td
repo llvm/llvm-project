@@ -46,11 +46,11 @@ def LEA64r   : RI<0x8D, MRMSrcMem, (outs GR64:$dst), (ins lea64mem:$src),
 // (and possibly third) value from a register.
 // This is used for instructions that put the memory operands before other
 // uses.
-class SchedLoadReg<SchedWrite SW> : Sched<[SW,
+class SchedLoadReg<X86FoldableSchedWrite Sched> : Sched<[Sched.Folded,
   // Memory operand.
   ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault,
   // Register reads (implicit or explicit).
-  ReadAfterLd, ReadAfterLd]>;
+  Sched.ReadAfterFold, Sched.ReadAfterFold]>;
 
 // Extra precision multiplication
 
@@ -63,18 +63,18 @@ def MUL8r  : I<0xF6, MRM4r, (outs),  (ins GR8:$src), "mul{b}\t$src",
                // This probably ought to be moved to a def : Pat<> if the
                // syntax can be accepted.
                [(set AL, (mul AL, GR8:$src)),
-                (implicit EFLAGS)]>, Sched<[WriteIMul]>;
+                (implicit EFLAGS)]>, Sched<[WriteIMul8]>;
 // AX,DX = AX*GR16
 let Defs = [AX,DX,EFLAGS], Uses = [AX], hasSideEffects = 0 in
 def MUL16r : I<0xF7, MRM4r, (outs),  (ins GR16:$src),
                "mul{w}\t$src",
-               []>, OpSize16, Sched<[WriteIMul]>;
+               []>, OpSize16, Sched<[WriteIMul16]>;
 // EAX,EDX = EAX*GR32
 let Defs = [EAX,EDX,EFLAGS], Uses = [EAX], hasSideEffects = 0 in
 def MUL32r : I<0xF7, MRM4r, (outs),  (ins GR32:$src),
                "mul{l}\t$src",
                [/*(set EAX, EDX, EFLAGS, (X86umul_flag EAX, GR32:$src))*/]>,
-               OpSize32, Sched<[WriteIMul]>;
+               OpSize32, Sched<[WriteIMul32]>;
 // RAX,RDX = RAX*GR64
 let Defs = [RAX,RDX,EFLAGS], Uses = [RAX], hasSideEffects = 0 in
 def MUL64r : RI<0xF7, MRM4r, (outs), (ins GR64:$src),
@@ -89,20 +89,20 @@ def MUL8m  : I<0xF6, MRM4m, (outs), (ins i8mem :$src),
                // This probably ought to be moved to a def : Pat<> if the
                // syntax can be accepted.
                [(set AL, (mul AL, (loadi8 addr:$src))),
-                (implicit EFLAGS)]>, SchedLoadReg<WriteIMul.Folded>;
+                (implicit EFLAGS)]>, SchedLoadReg<WriteIMul8>;
 // AX,DX = AX*[mem16]
 let mayLoad = 1, hasSideEffects = 0 in {
 let Defs = [AX,DX,EFLAGS], Uses = [AX] in
 def MUL16m : I<0xF7, MRM4m, (outs), (ins i16mem:$src),
-               "mul{w}\t$src", []>, OpSize16, SchedLoadReg<WriteIMul.Folded>;
+               "mul{w}\t$src", []>, OpSize16, SchedLoadReg<WriteIMul16>;
 // EAX,EDX = EAX*[mem32]
 let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
 def MUL32m : I<0xF7, MRM4m, (outs), (ins i32mem:$src),
-              "mul{l}\t$src", []>, OpSize32, SchedLoadReg<WriteIMul.Folded>;
+              "mul{l}\t$src", []>, OpSize32, SchedLoadReg<WriteIMul32>;
 // RAX,RDX = RAX*[mem64]
 let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
 def MUL64m : RI<0xF7, MRM4m, (outs), (ins i64mem:$src),
-                "mul{q}\t$src", []>, SchedLoadReg<WriteIMul64.Folded>,
+                "mul{q}\t$src", []>, SchedLoadReg<WriteIMul64>,
                 Requires<[In64BitMode]>;
 }
 
@@ -110,15 +110,15 @@ let hasSideEffects = 0 in {
 // AL,AH = AL*GR8
 let Defs = [AL,EFLAGS,AX], Uses = [AL] in
 def IMUL8r  : I<0xF6, MRM5r, (outs),  (ins GR8:$src), "imul{b}\t$src", []>,
-                Sched<[WriteIMul]>;
+                Sched<[WriteIMul8]>;
 // AX,DX = AX*GR16
 let Defs = [AX,DX,EFLAGS], Uses = [AX] in
 def IMUL16r : I<0xF7, MRM5r, (outs),  (ins GR16:$src), "imul{w}\t$src", []>,
-                OpSize16, Sched<[WriteIMul]>;
+                OpSize16, Sched<[WriteIMul16]>;
 // EAX,EDX = EAX*GR32
 let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
 def IMUL32r : I<0xF7, MRM5r, (outs),  (ins GR32:$src), "imul{l}\t$src", []>,
-                OpSize32, Sched<[WriteIMul]>;
+                OpSize32, Sched<[WriteIMul32]>;
 // RAX,RDX = RAX*GR64
 let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
 def IMUL64r : RI<0xF7, MRM5r, (outs), (ins GR64:$src), "imul{q}\t$src", []>,
@@ -128,19 +128,19 @@ let mayLoad = 1 in {
 // AL,AH = AL*[mem8]
 let Defs = [AL,EFLAGS,AX], Uses = [AL] in
 def IMUL8m  : I<0xF6, MRM5m, (outs), (ins i8mem :$src),
-                "imul{b}\t$src", []>, SchedLoadReg<WriteIMul.Folded>;
+                "imul{b}\t$src", []>, SchedLoadReg<WriteIMul8>;
 // AX,DX = AX*[mem16]
 let Defs = [AX,DX,EFLAGS], Uses = [AX] in
 def IMUL16m : I<0xF7, MRM5m, (outs), (ins i16mem:$src),
-                "imul{w}\t$src", []>, OpSize16, SchedLoadReg<WriteIMul.Folded>;
+                "imul{w}\t$src", []>, OpSize16, SchedLoadReg<WriteIMul16>;
 // EAX,EDX = EAX*[mem32]
 let Defs = [EAX,EDX,EFLAGS], Uses = [EAX] in
 def IMUL32m : I<0xF7, MRM5m, (outs), (ins i32mem:$src),
-                "imul{l}\t$src", []>, OpSize32, SchedLoadReg<WriteIMul.Folded>;
+                "imul{l}\t$src", []>, OpSize32, SchedLoadReg<WriteIMul32>;
 // RAX,RDX = RAX*[mem64]
 let Defs = [RAX,RDX,EFLAGS], Uses = [RAX] in
 def IMUL64m : RI<0xF7, MRM5m, (outs), (ins i64mem:$src),
-                 "imul{q}\t$src", []>, SchedLoadReg<WriteIMul64.Folded>,
+                 "imul{q}\t$src", []>, SchedLoadReg<WriteIMul64>,
                  Requires<[In64BitMode]>;
 }
 } // hasSideEffects
@@ -156,18 +156,18 @@ def IMUL16rr : I<0xAF, MRMSrcReg, (outs GR16:$dst), (ins GR16:$src1,GR16:$src2),
                  "imul{w}\t{$src2, $dst|$dst, $src2}",
                  [(set GR16:$dst, EFLAGS,
                        (X86smul_flag GR16:$src1, GR16:$src2))]>,
-                 Sched<[WriteIMul]>, TB, OpSize16;
+                 Sched<[WriteIMul16Reg]>, TB, OpSize16;
 def IMUL32rr : I<0xAF, MRMSrcReg, (outs GR32:$dst), (ins GR32:$src1,GR32:$src2),
                  "imul{l}\t{$src2, $dst|$dst, $src2}",
                  [(set GR32:$dst, EFLAGS,
                        (X86smul_flag GR32:$src1, GR32:$src2))]>,
-                 Sched<[WriteIMul]>, TB, OpSize32;
+                 Sched<[WriteIMul32Reg]>, TB, OpSize32;
 def IMUL64rr : RI<0xAF, MRMSrcReg, (outs GR64:$dst),
                                    (ins GR64:$src1, GR64:$src2),
                   "imul{q}\t{$src2, $dst|$dst, $src2}",
                   [(set GR64:$dst, EFLAGS,
                         (X86smul_flag GR64:$src1, GR64:$src2))]>,
-                  Sched<[WriteIMul64]>, TB;
+                  Sched<[WriteIMul64Reg]>, TB;
 } // isCommutable
 
 // Register-Memory Signed Integer Multiply
@@ -176,19 +176,19 @@ def IMUL16rm : I<0xAF, MRMSrcMem, (outs GR16:$dst),
                  "imul{w}\t{$src2, $dst|$dst, $src2}",
                  [(set GR16:$dst, EFLAGS,
                        (X86smul_flag GR16:$src1, (loadi16 addr:$src2)))]>,
-                 Sched<[WriteIMul.Folded, ReadAfterLd]>, TB, OpSize16;
+                 Sched<[WriteIMul16Reg.Folded, WriteIMul16Reg.ReadAfterFold]>, TB, OpSize16;
 def IMUL32rm : I<0xAF, MRMSrcMem, (outs GR32:$dst),
                  (ins GR32:$src1, i32mem:$src2),
                  "imul{l}\t{$src2, $dst|$dst, $src2}",
                  [(set GR32:$dst, EFLAGS,
                        (X86smul_flag GR32:$src1, (loadi32 addr:$src2)))]>,
-                 Sched<[WriteIMul.Folded, ReadAfterLd]>, TB, OpSize32;
+                 Sched<[WriteIMul32Reg.Folded, WriteIMul32Reg.ReadAfterFold]>, TB, OpSize32;
 def IMUL64rm : RI<0xAF, MRMSrcMem, (outs GR64:$dst),
                                    (ins GR64:$src1, i64mem:$src2),
                   "imul{q}\t{$src2, $dst|$dst, $src2}",
                   [(set GR64:$dst, EFLAGS,
                         (X86smul_flag GR64:$src1, (loadi64 addr:$src2)))]>,
-                  Sched<[WriteIMul64.Folded, ReadAfterLd]>, TB;
+                  Sched<[WriteIMul64Reg.Folded, WriteIMul32Reg.ReadAfterFold]>, TB;
 } // Constraints = "$src1 = $dst"
 
 } // Defs = [EFLAGS]
@@ -201,37 +201,37 @@ def IMUL16rri  : Ii16<0x69, MRMSrcReg,                      // GR16 = GR16*I16
                       "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR16:$dst, EFLAGS,
                             (X86smul_flag GR16:$src1, imm:$src2))]>,
-                      Sched<[WriteIMul]>, OpSize16;
+                      Sched<[WriteIMul16Imm]>, OpSize16;
 def IMUL16rri8 : Ii8<0x6B, MRMSrcReg,                       // GR16 = GR16*I8
                      (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR16:$dst, EFLAGS,
                            (X86smul_flag GR16:$src1, i16immSExt8:$src2))]>,
-                     Sched<[WriteIMul]>, OpSize16;
+                     Sched<[WriteIMul16Imm]>, OpSize16;
 def IMUL32rri  : Ii32<0x69, MRMSrcReg,                      // GR32 = GR32*I32
                       (outs GR32:$dst), (ins GR32:$src1, i32imm:$src2),
                       "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR32:$dst, EFLAGS,
                             (X86smul_flag GR32:$src1, imm:$src2))]>,
-                      Sched<[WriteIMul]>, OpSize32;
+                      Sched<[WriteIMul32Imm]>, OpSize32;
 def IMUL32rri8 : Ii8<0x6B, MRMSrcReg,                       // GR32 = GR32*I8
                      (outs GR32:$dst), (ins GR32:$src1, i32i8imm:$src2),
                      "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR32:$dst, EFLAGS,
                            (X86smul_flag GR32:$src1, i32immSExt8:$src2))]>,
-                     Sched<[WriteIMul]>, OpSize32;
+                     Sched<[WriteIMul32Imm]>, OpSize32;
 def IMUL64rri32 : RIi32S<0x69, MRMSrcReg,                    // GR64 = GR64*I32
                          (outs GR64:$dst), (ins GR64:$src1, i64i32imm:$src2),
                          "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set GR64:$dst, EFLAGS,
                              (X86smul_flag GR64:$src1, i64immSExt32:$src2))]>,
-                         Sched<[WriteIMul64]>;
+                         Sched<[WriteIMul64Imm]>;
 def IMUL64rri8 : RIi8<0x6B, MRMSrcReg,                      // GR64 = GR64*I8
                       (outs GR64:$dst), (ins GR64:$src1, i64i8imm:$src2),
                       "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR64:$dst, EFLAGS,
                             (X86smul_flag GR64:$src1, i64immSExt8:$src2))]>,
-                      Sched<[WriteIMul64]>;
+                      Sched<[WriteIMul64Imm]>;
 
 // Memory-Integer Signed Integer Multiply
 def IMUL16rmi  : Ii16<0x69, MRMSrcMem,                     // GR16 = [mem16]*I16
@@ -239,41 +239,41 @@ def IMUL16rmi  : Ii16<0x69, MRMSrcMem,                     // GR16 = [mem16]*I16
                       "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR16:$dst, EFLAGS,
                             (X86smul_flag (loadi16 addr:$src1), imm:$src2))]>,
-                      Sched<[WriteIMul.Folded]>, OpSize16;
+                      Sched<[WriteIMul16Imm.Folded]>, OpSize16;
 def IMUL16rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR16 = [mem16]*I8
                      (outs GR16:$dst), (ins i16mem:$src1, i16i8imm :$src2),
                      "imul{w}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR16:$dst, EFLAGS,
                            (X86smul_flag (loadi16 addr:$src1),
                                          i16immSExt8:$src2))]>,
-                     Sched<[WriteIMul.Folded]>, OpSize16;
+                     Sched<[WriteIMul16Imm.Folded]>, OpSize16;
 def IMUL32rmi  : Ii32<0x69, MRMSrcMem,                     // GR32 = [mem32]*I32
                       (outs GR32:$dst), (ins i32mem:$src1, i32imm:$src2),
                       "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR32:$dst, EFLAGS,
                             (X86smul_flag (loadi32 addr:$src1), imm:$src2))]>,
-                      Sched<[WriteIMul.Folded]>, OpSize32;
+                      Sched<[WriteIMul32Imm.Folded]>, OpSize32;
 def IMUL32rmi8 : Ii8<0x6B, MRMSrcMem,                       // GR32 = [mem32]*I8
                      (outs GR32:$dst), (ins i32mem:$src1, i32i8imm: $src2),
                      "imul{l}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                      [(set GR32:$dst, EFLAGS,
                            (X86smul_flag (loadi32 addr:$src1),
                                          i32immSExt8:$src2))]>,
-                     Sched<[WriteIMul.Folded]>, OpSize32;
+                     Sched<[WriteIMul32Imm.Folded]>, OpSize32;
 def IMUL64rmi32 : RIi32S<0x69, MRMSrcMem,                   // GR64 = [mem64]*I32
                          (outs GR64:$dst), (ins i64mem:$src1, i64i32imm:$src2),
                          "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                          [(set GR64:$dst, EFLAGS,
                               (X86smul_flag (loadi64 addr:$src1),
                                             i64immSExt32:$src2))]>,
-                         Sched<[WriteIMul64.Folded]>;
+                         Sched<[WriteIMul64Imm.Folded]>;
 def IMUL64rmi8 : RIi8<0x6B, MRMSrcMem,                      // GR64 = [mem64]*I8
                       (outs GR64:$dst), (ins i64mem:$src1, i64i8imm: $src2),
                       "imul{q}\t{$src2, $src1, $dst|$dst, $src1, $src2}",
                       [(set GR64:$dst, EFLAGS,
                             (X86smul_flag (loadi64 addr:$src1),
                                           i64immSExt8:$src2))]>,
-                      Sched<[WriteIMul64.Folded]>;
+                      Sched<[WriteIMul64Imm.Folded]>;
 } // Defs = [EFLAGS]
 
 // unsigned division/remainder
@@ -295,17 +295,17 @@ def DIV64r : RI<0xF7, MRM6r, (outs), (ins GR64:$src),
 let mayLoad = 1 in {
 let Defs = [AL,AH,EFLAGS], Uses = [AX] in
 def DIV8m  : I<0xF6, MRM6m, (outs), (ins i8mem:$src),   // AX/[mem8] = AL,AH
-               "div{b}\t$src", []>, SchedLoadReg<WriteDiv8.Folded>;
+               "div{b}\t$src", []>, SchedLoadReg<WriteDiv8>;
 let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
 def DIV16m : I<0xF7, MRM6m, (outs), (ins i16mem:$src),  // DX:AX/[mem16] = AX,DX
-               "div{w}\t$src", []>, OpSize16, SchedLoadReg<WriteDiv16.Folded>;
+               "div{w}\t$src", []>, OpSize16, SchedLoadReg<WriteDiv16>;
 let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in    // EDX:EAX/[mem32] = EAX,EDX
 def DIV32m : I<0xF7, MRM6m, (outs), (ins i32mem:$src),
-               "div{l}\t$src", []>, SchedLoadReg<WriteDiv32.Folded>, OpSize32;
+               "div{l}\t$src", []>, SchedLoadReg<WriteDiv32>, OpSize32;
 // RDX:RAX/[mem64] = RAX,RDX
 let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in
 def DIV64m : RI<0xF7, MRM6m, (outs), (ins i64mem:$src),
-                "div{q}\t$src", []>, SchedLoadReg<WriteDiv64.Folded>,
+                "div{q}\t$src", []>, SchedLoadReg<WriteDiv64>,
                 Requires<[In64BitMode]>;
 }
 
@@ -327,16 +327,16 @@ def IDIV64r: RI<0xF7, MRM7r, (outs), (ins GR64:$src),
 let mayLoad = 1 in {
 let Defs = [AL,AH,EFLAGS], Uses = [AX] in
 def IDIV8m : I<0xF6, MRM7m, (outs), (ins i8mem:$src),   // AX/[mem8] = AL,AH
-               "idiv{b}\t$src", []>, SchedLoadReg<WriteIDiv8.Folded>;
+               "idiv{b}\t$src", []>, SchedLoadReg<WriteIDiv8>;
 let Defs = [AX,DX,EFLAGS], Uses = [AX,DX] in
 def IDIV16m: I<0xF7, MRM7m, (outs), (ins i16mem:$src),  // DX:AX/[mem16] = AX,DX
-               "idiv{w}\t$src", []>, OpSize16, SchedLoadReg<WriteIDiv16.Folded>;
+               "idiv{w}\t$src", []>, OpSize16, SchedLoadReg<WriteIDiv16>;
 let Defs = [EAX,EDX,EFLAGS], Uses = [EAX,EDX] in    // EDX:EAX/[mem32] = EAX,EDX
 def IDIV32m: I<0xF7, MRM7m, (outs), (ins i32mem:$src),
-               "idiv{l}\t$src", []>, OpSize32, SchedLoadReg<WriteIDiv32.Folded>;
+               "idiv{l}\t$src", []>, OpSize32, SchedLoadReg<WriteIDiv32>;
 let Defs = [RAX,RDX,EFLAGS], Uses = [RAX,RDX] in // RDX:RAX/[mem64] = RAX,RDX
 def IDIV64m: RI<0xF7, MRM7m, (outs), (ins i64mem:$src),
-                "idiv{q}\t$src", []>, SchedLoadReg<WriteIDiv64.Folded>,
+                "idiv{q}\t$src", []>, SchedLoadReg<WriteIDiv64>,
                 Requires<[In64BitMode]>;
 }
 } // hasSideEffects = 0
@@ -422,22 +422,35 @@ def NOT64m : RI<0xF7, MRM2m, (outs), (ins i64mem:$dst), "not{q}\t$dst",
 } // SchedRW
 } // CodeSize
 
+def X86add_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
+                               (X86add_flag node:$lhs, node:$rhs), [{
+  return hasNoCarryFlagUses(SDValue(N, 1));
+}]>;
+
+def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
+                               (X86sub_flag node:$lhs, node:$rhs), [{
+  // Only use DEC if the result is used.
+  return !SDValue(N, 0).use_empty() && hasNoCarryFlagUses(SDValue(N, 1));
+}]>;
+
 // TODO: inc/dec is slow for P4, but fast for Pentium-M.
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 let CodeSize = 2 in
 def INC8r  : I<0xFE, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),
                "inc{b}\t$dst",
-               [(set GR8:$dst, EFLAGS, (X86inc_flag GR8:$src1))]>;
+               [(set GR8:$dst, EFLAGS, (X86add_flag_nocf GR8:$src1, 1))]>;
 let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def INC16r : I<0xFF, MRM0r, (outs GR16:$dst), (ins GR16:$src1),
                "inc{w}\t$dst",
-               [(set GR16:$dst, EFLAGS, (X86inc_flag GR16:$src1))]>, OpSize16;
+               [(set GR16:$dst, EFLAGS, (X86add_flag_nocf GR16:$src1, 1))]>,
+               OpSize16;
 def INC32r : I<0xFF, MRM0r, (outs GR32:$dst), (ins GR32:$src1),
                "inc{l}\t$dst",
-               [(set GR32:$dst, EFLAGS, (X86inc_flag GR32:$src1))]>, OpSize32;
+               [(set GR32:$dst, EFLAGS, (X86add_flag_nocf GR32:$src1, 1))]>,
+               OpSize32;
 def INC64r : RI<0xFF, MRM0r, (outs GR64:$dst), (ins GR64:$src1), "inc{q}\t$dst",
-                [(set GR64:$dst, EFLAGS, (X86inc_flag GR64:$src1))]>;
+                [(set GR64:$dst, EFLAGS, (X86add_flag_nocf GR64:$src1, 1))]>;
 } // isConvertibleToThreeAddress = 1, CodeSize = 2
 
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
@@ -474,16 +487,18 @@ let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
 let CodeSize = 2 in
 def DEC8r  : I<0xFE, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                "dec{b}\t$dst",
-               [(set GR8:$dst, EFLAGS, (X86dec_flag GR8:$src1))]>;
+               [(set GR8:$dst, EFLAGS, (X86sub_flag_nocf GR8:$src1, 1))]>;
 let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def DEC16r : I<0xFF, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                "dec{w}\t$dst",
-               [(set GR16:$dst, EFLAGS, (X86dec_flag GR16:$src1))]>, OpSize16;
+               [(set GR16:$dst, EFLAGS, (X86sub_flag_nocf GR16:$src1, 1))]>,
+               OpSize16;
 def DEC32r : I<0xFF, MRM1r, (outs GR32:$dst), (ins GR32:$src1),
                "dec{l}\t$dst",
-               [(set GR32:$dst, EFLAGS, (X86dec_flag GR32:$src1))]>, OpSize32;
+               [(set GR32:$dst, EFLAGS, (X86sub_flag_nocf GR32:$src1, 1))]>,
+               OpSize32;
 def DEC64r : RI<0xFF, MRM1r, (outs GR64:$dst), (ins GR64:$src1), "dec{q}\t$dst",
-                [(set GR64:$dst, EFLAGS, (X86dec_flag GR64:$src1))]>;
+                [(set GR64:$dst, EFLAGS, (X86sub_flag_nocf GR64:$src1, 1))]>;
 } // isConvertibleToThreeAddress = 1, CodeSize = 2
 
 // Short forms only valid in 32-bit mode. Selected during MCInst lowering.
@@ -691,7 +706,7 @@ class BinOpRM<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : ITy<opcode, MRMSrcMem, typeinfo, outlist,
         (ins typeinfo.RegClass:$src1, typeinfo.MemOperand:$src2),
         mnemonic, "{$src2, $src1|$src1, $src2}", pattern>,
-    Sched<[sched.Folded, ReadAfterLd]>;
+    Sched<[sched.Folded, sched.ReadAfterFold]>;
 
 // BinOpRM_F - Instructions like "cmp reg, [mem]".
 class BinOpRM_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -806,8 +821,8 @@ class BinOpMR_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMR<opcode, mnemonic, typeinfo,
             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
                                    typeinfo.RegClass:$src))]>,
-            Sched<[WriteALULd, ReadDefault, ReadDefault, ReadDefault,
-                   ReadDefault, ReadDefault, ReadAfterLd]>;
+            Sched<[WriteALU.Folded, ReadDefault, ReadDefault, ReadDefault,
+                   ReadDefault, ReadDefault, WriteALU.ReadAfterFold]>;
 
 // BinOpMI - Instructions like "add [mem], imm".
 class BinOpMI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -839,7 +854,7 @@ class BinOpMI_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI<opcode, mnemonic, typeinfo, f,
             [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
                                   typeinfo.ImmOperator:$src))]>,
-            Sched<[WriteALULd]>;
+            Sched<[WriteALU.Folded]>;
 
 // BinOpMI8 - Instructions like "add [mem], imm8".
 class BinOpMI8<string mnemonic, X86TypeInfo typeinfo,
@@ -872,7 +887,7 @@ class BinOpMI8_F<string mnemonic, X86TypeInfo typeinfo,
   : BinOpMI8<mnemonic, typeinfo, f,
              [(set EFLAGS, (opnode (typeinfo.LoadNode addr:$dst),
                                     typeinfo.Imm8Operator:$src))]>,
-             Sched<[WriteALULd]>;
+             Sched<[WriteALU.Folded]>;
 
 // BinOpAI - Instructions like "add %eax, %eax, imm", that imp-def EFLAGS.
 class BinOpAI<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
@@ -913,8 +928,8 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
   let Defs = [EFLAGS] in {
     let Constraints = "$src1 = $dst" in {
       let isCommutable = CommutableRR in {
-        def NAME#8rr  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag>;
         let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+          def NAME#8rr  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag>;
           def NAME#16rr : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag>;
           def NAME#32rr : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag>;
           def NAME#64rr : BinOpRR_RF<BaseOpc, mnemonic, Xi64, opnodeflag>;
@@ -931,9 +946,9 @@ multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
       def NAME#32rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi32, opnodeflag>;
       def NAME#64rm  : BinOpRM_RF<BaseOpc2, mnemonic, Xi64, opnodeflag>;
 
-      def NAME#8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
-
       let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+        def NAME#8ri   : BinOpRI_RF<0x80, mnemonic, Xi8 , opnodeflag, RegMRM>;
+
         // NOTE: These are order specific, we want the ri8 forms to be listed
         // first so that they are slightly preferred to the ri forms.
         def NAME#16ri8 : BinOpRI8_RF<0x82, mnemonic, Xi16, opnodeflag, RegMRM>;
@@ -1176,6 +1191,30 @@ let isCompare = 1 in {
 defm CMP : ArithBinOp_F<0x38, 0x3A, 0x3C, "cmp", MRM7r, MRM7m, X86cmp, 0, 0>;
 }
 
+// Patterns to recognize loads on the LHS of an ADC. We can't make X86adc_flag
+// commutable since it has EFLAGs as an input.
+def : Pat<(X86adc_flag (loadi8 addr:$src2), GR8:$src1, EFLAGS),
+          (ADC8rm GR8:$src1, addr:$src2)>;
+def : Pat<(X86adc_flag (loadi16 addr:$src2), GR16:$src1, EFLAGS),
+          (ADC16rm GR16:$src1, addr:$src2)>;
+def : Pat<(X86adc_flag (loadi32 addr:$src2), GR32:$src1, EFLAGS),
+          (ADC32rm GR32:$src1, addr:$src2)>;
+def : Pat<(X86adc_flag (loadi64 addr:$src2), GR64:$src1, EFLAGS),
+          (ADC64rm GR64:$src1, addr:$src2)>;
+
+// Patterns to recognize RMW ADC with loads in operand 1.
+def : Pat<(store (X86adc_flag GR8:$src, (loadi8 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC8mr addr:$dst, GR8:$src)>;
+def : Pat<(store (X86adc_flag GR16:$src, (loadi16 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC16mr addr:$dst, GR16:$src)>;
+def : Pat<(store (X86adc_flag GR32:$src, (loadi32 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC32mr addr:$dst, GR32:$src)>;
+def : Pat<(store (X86adc_flag GR64:$src, (loadi64 addr:$dst), EFLAGS),
+                 addr:$dst),
+          (ADC64mr addr:$dst, GR64:$src)>;
 
 //===----------------------------------------------------------------------===//
 // Semantically, test instructions are similar like AND, except they don't
@@ -1188,16 +1227,21 @@ def X86testpat : PatFrag<(ops node:$lhs, node:$rhs),
 let isCompare = 1 in {
   let Defs = [EFLAGS] in {
     let isCommutable = 1 in {
-      def TEST8rr  : BinOpRR_F<0x84, "test", Xi8 , X86testpat>;
-      def TEST16rr : BinOpRR_F<0x84, "test", Xi16, X86testpat>;
-      def TEST32rr : BinOpRR_F<0x84, "test", Xi32, X86testpat>;
-      def TEST64rr : BinOpRR_F<0x84, "test", Xi64, X86testpat>;
+      // Avoid selecting these and instead use a test+and. Post processing will
+      // combine them. This gives bunch of other patterns that start with
+      // and a chance to match.
+      def TEST8rr  : BinOpRR_F<0x84, "test", Xi8 , null_frag>;
+      def TEST16rr : BinOpRR_F<0x84, "test", Xi16, null_frag>;
+      def TEST32rr : BinOpRR_F<0x84, "test", Xi32, null_frag>;
+      def TEST64rr : BinOpRR_F<0x84, "test", Xi64, null_frag>;
     } // isCommutable
 
-    def TEST8mr    : BinOpMR_F<0x84, "test", Xi8 , X86testpat>;
-    def TEST16mr   : BinOpMR_F<0x84, "test", Xi16, X86testpat>;
-    def TEST32mr   : BinOpMR_F<0x84, "test", Xi32, X86testpat>;
-    def TEST64mr   : BinOpMR_F<0x84, "test", Xi64, X86testpat>;
+    let hasSideEffects = 0, mayLoad = 1 in {
+    def TEST8mr    : BinOpMR_F<0x84, "test", Xi8 , null_frag>;
+    def TEST16mr   : BinOpMR_F<0x84, "test", Xi16, null_frag>;
+    def TEST32mr   : BinOpMR_F<0x84, "test", Xi32, null_frag>;
+    def TEST64mr   : BinOpMR_F<0x84, "test", Xi64, null_frag>;
+    }
 
     def TEST8ri    : BinOpRI_F<0xF6, "test", Xi8 , X86testpat, MRM0r>;
     def TEST16ri   : BinOpRI_F<0xF6, "test", Xi16, X86testpat, MRM0r>;
@@ -1235,7 +1279,7 @@ multiclass bmi_andn<string mnemonic, RegisterClass RC, X86MemOperand x86memop,
             !strconcat(mnemonic, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
             [(set RC:$dst, EFLAGS,
              (X86and_flag (not RC:$src1), (ld_frag addr:$src2)))]>,
-           Sched<[WriteALULd, ReadAfterLd]>;
+           Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>;
 }
 
 // Complexity is reduced to give and with immediate a chance to match first.
@@ -1275,7 +1319,7 @@ let hasSideEffects = 0 in {
 
 let Predicates = [HasBMI2] in {
   let Uses = [EDX] in
-    defm MULX32 : bmi_mulx<"mulx{l}", GR32, i32mem, WriteIMul>;
+    defm MULX32 : bmi_mulx<"mulx{l}", GR32, i32mem, WriteIMul32>;
   let Uses = [RDX] in
     defm MULX64 : bmi_mulx<"mulx{q}", GR64, i64mem, WriteIMul64>, VEX_W;
 }
@@ -1283,22 +1327,18 @@ let Predicates = [HasBMI2] in {
 //===----------------------------------------------------------------------===//
 // ADCX and ADOX Instructions
 //
+// We don't have patterns for these as there is no advantage over ADC for
+// most code.
 let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
-    Constraints = "$src1 = $dst", AddedComplexity = 10 in {
-  let SchedRW = [WriteADC] in {
+    Constraints = "$src1 = $dst", hasSideEffects = 0 in {
+  let SchedRW = [WriteADC], isCommutable = 1 in {
   def ADCX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
                    (ins GR32:$src1, GR32:$src2),
-                   "adcx{l}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR32:$dst, EFLAGS,
-                     (X86adc_flag GR32:$src1, GR32:$src2, EFLAGS))]>, T8PD;
+                   "adcx{l}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
   def ADCX64rr : RI<0xF6, MRMSrcReg, (outs GR64:$dst),
                     (ins GR64:$src1, GR64:$src2),
-                    "adcx{q}\t{$src2, $dst|$dst, $src2}",
-                    [(set GR64:$dst, EFLAGS,
-                      (X86adc_flag GR64:$src1, GR64:$src2, EFLAGS))]>, T8PD;
+                    "adcx{q}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
 
-  // We don't have patterns for ADOX yet.
-  let hasSideEffects = 0 in {
   def ADOX32rr : I<0xF6, MRMSrcReg, (outs GR32:$dst),
                    (ins GR32:$src1, GR32:$src2),
                    "adox{l}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
@@ -1306,26 +1346,17 @@ let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
   def ADOX64rr : RI<0xF6, MRMSrcReg, (outs GR64:$dst),
                     (ins GR64:$src1, GR64:$src2),
                     "adox{q}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
-  } // hasSideEffects = 0
   } // SchedRW
 
-  let mayLoad = 1, SchedRW = [WriteADCLd, ReadAfterLd] in {
+  let mayLoad = 1, SchedRW = [WriteADC.Folded, WriteADC.ReadAfterFold] in {
   def ADCX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst),
                    (ins GR32:$src1, i32mem:$src2),
-                   "adcx{l}\t{$src2, $dst|$dst, $src2}",
-                   [(set GR32:$dst, EFLAGS,
-                     (X86adc_flag GR32:$src1, (loadi32 addr:$src2), EFLAGS))]>,
-                   T8PD;
+                   "adcx{l}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
 
   def ADCX64rm : RI<0xF6, MRMSrcMem, (outs GR64:$dst),
                     (ins GR64:$src1, i64mem:$src2),
-                    "adcx{q}\t{$src2, $dst|$dst, $src2}",
-                    [(set GR64:$dst, EFLAGS,
-                      (X86adc_flag GR64:$src1, (loadi64 addr:$src2), EFLAGS))]>,
-                    T8PD;
+                    "adcx{q}\t{$src2, $dst|$dst, $src2}", []>, T8PD;
 
-  // We don't have patterns for ADOX yet.
-  let hasSideEffects = 0 in {
   def ADOX32rm : I<0xF6, MRMSrcMem, (outs GR32:$dst),
                    (ins GR32:$src1, i32mem:$src2),
                    "adox{l}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
@@ -1333,6 +1364,5 @@ let Predicates = [HasADX], Defs = [EFLAGS], Uses = [EFLAGS],
   def ADOX64rm : RI<0xF6, MRMSrcMem, (outs GR64:$dst),
                     (ins GR64:$src1, i64mem:$src2),
                     "adox{q}\t{$src2, $dst|$dst, $src2}", []>, T8XS;
-  } // hasSideEffects = 0
-  } // mayLoad = 1, SchedRW = [WriteADCLd]
+  } // mayLoad, SchedRW
 }

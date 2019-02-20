@@ -1,4 +1,5 @@
 ; RUN: opt -loop-unswitch -S < %s | FileCheck %s
+; RUN: opt -loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
 
 define void @f(i32 %n, i32* %ptr) {
 ; CHECK-LABEL: @f(

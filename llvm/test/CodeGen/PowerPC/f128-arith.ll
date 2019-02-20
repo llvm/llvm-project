@@ -283,7 +283,7 @@ define void @qp_powi(fp128* nocapture readonly %a, i32* nocapture readonly %b,
                      fp128* nocapture %res) {
 ; CHECK-LABEL: qp_powi:
 ; CHECK:         lxv v2, 0(r3)
-; CHECK:         lwz r3, 0(r4)
+; CHECK:         lwz r5, 0(r4)
 ; CHECK:         bl __powikf2
 ; CHECK:         blr
 entry:

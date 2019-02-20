@@ -62,16 +62,8 @@ def AMDGPULoopOp : SDTypeProfile<0, 2,
   [SDTCisVT<0, i64>, SDTCisVT<1, OtherVT>]
 >;
 
-def AMDGPUBreakOp : SDTypeProfile<1, 1,
-  [SDTCisVT<0, i64>, SDTCisVT<1, i64>]
->;
-
 def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
   [SDTCisVT<0, i64>, SDTCisVT<1, i1>, SDTCisVT<2, i64>]
->;
-
-def AMDGPUElseBreakOp : SDTypeProfile<1, 2,
-  [SDTCisVT<0, i64>, SDTCisVT<1, i64>, SDTCisVT<2, i64>]
 >;
 
 def AMDGPUAddeSubeOp : SDTypeProfile<2, 3,

@@ -8,6 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
@@ -44,7 +45,7 @@ void initLLVM() {
 
 /// Create a TargetMachine. As we lack a dedicated always available target for
 /// unittests, we go for "AArch64".
-std::unique_ptr<TargetMachine> createTargetMachine() {
+std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   Triple TargetTriple("aarch64--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -52,8 +53,9 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
-      "AArch64", "", "", Options, None, None, CodeGenOpt::Aggressive));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine("AArch64", "", "", Options, None, None,
+                             CodeGenOpt::Aggressive)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
@@ -79,7 +81,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 }
 
 std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
-createDummyModule(LLVMContext &Context, const TargetMachine &TM,
+createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
                   StringRef MIRFunc) {
   SmallString<512> S;
   StringRef MIRString = (Twine(R"MIR(
@@ -136,7 +138,7 @@ protected:
     B.setInsertPt(*EntryMBB, EntryMBB->end());
   }
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
+  std::unique_ptr<LLVMTargetMachine> TM;
   MachineFunction *MF;
   std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
       ModuleMMIPair;

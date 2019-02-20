@@ -1,8 +1,8 @@
 ; Test alloca instrumentation.
 ;
-; RUN: opt < %s -hwasan -S | FileCheck %s --check-prefixes=CHECK,DYNAMIC-SHADOW,NO-UAR-TAGS
+; RUN: opt < %s -hwasan -hwasan-with-ifunc=1 -S | FileCheck %s --check-prefixes=CHECK,DYNAMIC-SHADOW,NO-UAR-TAGS
 ; RUN: opt < %s -hwasan -hwasan-mapping-offset=0 -S | FileCheck %s --check-prefixes=CHECK,ZERO-BASED-SHADOW,NO-UAR-TAGS
-; RUN: opt < %s -hwasan -hwasan-uar-retag-to-zero=0 -S | FileCheck %s --check-prefixes=CHECK,DYNAMIC-SHADOW,UAR-TAGS
+; RUN: opt < %s -hwasan -hwasan-with-ifunc=1 -hwasan-uar-retag-to-zero=0 -S | FileCheck %s --check-prefixes=CHECK,DYNAMIC-SHADOW,UAR-TAGS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"

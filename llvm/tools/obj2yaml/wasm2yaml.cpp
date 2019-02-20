@@ -49,11 +49,23 @@ static WasmYAML::Limits make_limits(const wasm::WasmLimits &Limits) {
   return L;
 }
 
-std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
+std::unique_ptr<WasmYAML::CustomSection>
+WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
   std::unique_ptr<WasmYAML::CustomSection> CustomSec;
-  if (WasmSec.Name == "name") {
-    std::unique_ptr<WasmYAML::NameSection> NameSec = make_unique<WasmYAML::NameSection>();
-    for (const llvm::wasm::WasmFunctionName &Func: Obj.debugNames()) {
+  if (WasmSec.Name == "dylink") {
+    std::unique_ptr<WasmYAML::DylinkSection> DylinkSec =
+        make_unique<WasmYAML::DylinkSection>();
+    const wasm::WasmDylinkInfo& Info = Obj.dylinkInfo();
+    DylinkSec->MemorySize = Info.MemorySize;
+    DylinkSec->MemoryAlignment = Info.MemoryAlignment;
+    DylinkSec->TableSize = Info.TableSize;
+    DylinkSec->TableAlignment = Info.TableAlignment;
+    DylinkSec->Needed = Info.Needed;
+    CustomSec = std::move(DylinkSec);
+  } else if (WasmSec.Name == "name") {
+    std::unique_ptr<WasmYAML::NameSection> NameSec =
+        make_unique<WasmYAML::NameSection>();
+    for (const llvm::wasm::WasmFunctionName &Func : Obj.debugNames()) {
       WasmYAML::NameEntry NameEntry;
       NameEntry.Name = Func.Name;
       NameEntry.Index = Func.Index;
@@ -61,7 +73,8 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
     }
     CustomSec = std::move(NameSec);
   } else if (WasmSec.Name == "linking") {
-    std::unique_ptr<WasmYAML::LinkingSection> LinkingSec = make_unique<WasmYAML::LinkingSection>();
+    std::unique_ptr<WasmYAML::LinkingSection> LinkingSec =
+        make_unique<WasmYAML::LinkingSection>();
     LinkingSec->Version = Obj.linkingData().Version;
 
     ArrayRef<StringRef> Comdats = Obj.linkingData().Comdats;
@@ -70,7 +83,7 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
     for (auto &Func : Obj.functions()) {
       if (Func.Comdat != UINT32_MAX) {
         LinkingSec->Comdats[Func.Comdat].Entries.emplace_back(
-                WasmYAML::ComdatEntry{wasm::WASM_COMDAT_FUNCTION, Func.Index});
+            WasmYAML::ComdatEntry{wasm::WASM_COMDAT_FUNCTION, Func.Index});
       }
     }
 
@@ -104,6 +117,7 @@ std::unique_ptr<WasmYAML::CustomSection> WasmDumper::dumpCustomSection(const Was
         break;
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+      case wasm::WASM_SYMBOL_TYPE_EVENT:
         Info.ElementIndex = Symbol.ElementIndex;
         break;
       case wasm::WASM_SYMBOL_TYPE_SECTION:
@@ -152,9 +166,13 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       for (const auto &FunctionSig : Obj.types()) {
         WasmYAML::Signature Sig;
         Sig.Index = Index++;
-        Sig.ReturnType = FunctionSig.ReturnType;
-        for (const auto &ParamType : FunctionSig.ParamTypes)
-          Sig.ParamTypes.push_back(ParamType);
+        Sig.ReturnType = wasm::WASM_TYPE_NORESULT;
+        assert(FunctionSig.Returns.size() <= 1 &&
+               "Functions with multiple returns are not supported");
+        if (FunctionSig.Returns.size())
+          Sig.ReturnType = static_cast<uint32_t>(FunctionSig.Returns[0]);
+        for (const auto &ParamType : FunctionSig.Params)
+          Sig.ParamTypes.push_back(static_cast<uint32_t>(ParamType));
         TypeSec->Signatures.push_back(Sig);
       }
       S = std::move(TypeSec);
@@ -174,6 +192,10 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         case wasm::WASM_EXTERNAL_GLOBAL:
           Im.GlobalImport.Type = Import.Global.Type;
           Im.GlobalImport.Mutable = Import.Global.Mutable;
+          break;
+        case wasm::WASM_EXTERNAL_EVENT:
+          Im.EventImport.Attribute = Import.Event.Attribute;
+          Im.EventImport.SigIndex = Import.Event.SigIndex;
           break;
         case wasm::WASM_EXTERNAL_TABLE:
           Im.TableImport = make_table(Import.Table);
@@ -222,6 +244,18 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         GlobalSec->Globals.push_back(G);
       }
       S = std::move(GlobalSec);
+      break;
+    }
+    case wasm::WASM_SEC_EVENT: {
+      auto EventSec = make_unique<WasmYAML::EventSection>();
+      for (auto &Event : Obj.events()) {
+        WasmYAML::Event E;
+        E.Index = Event.Index;
+        E.Attribute = Event.Type.Attribute;
+        E.SigIndex = Event.Type.SigIndex;
+        EventSec->Events.push_back(E);
+      }
+      S = std::move(EventSec);
       break;
     }
     case wasm::WASM_SEC_START: {
@@ -290,7 +324,7 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
       llvm_unreachable("Unknown section type");
       break;
     }
-    for (const wasm::WasmRelocation &Reloc: WasmSec.Relocations) {
+    for (const wasm::WasmRelocation &Reloc : WasmSec.Relocations) {
       WasmYAML::Relocation R;
       R.Type = Reloc.Type;
       R.Index = Reloc.Index;

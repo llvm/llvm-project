@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "Utils/RISCVBaseInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCFixedLenDisassembler.h"
@@ -211,6 +212,15 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
 }
 
 template <unsigned N>
+static DecodeStatus decodeUImmNonZeroOperand(MCInst &Inst, uint64_t Imm,
+                                             int64_t Address,
+                                             const void *Decoder) {
+  if (Imm == 0)
+    return MCDisassembler::Fail;
+  return decodeUImmOperand<N>(Inst, Imm, Address, Decoder);
+}
+
+template <unsigned N>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address, const void *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
@@ -218,6 +228,15 @@ static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
   // Sign-extend the number in the bottom N bits of Imm
   Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm)));
   return MCDisassembler::Success;
+}
+
+template <unsigned N>
+static DecodeStatus decodeSImmNonZeroOperand(MCInst &Inst, uint64_t Imm,
+                                             int64_t Address,
+                                             const void *Decoder) {
+  if (Imm == 0)
+    return MCDisassembler::Fail;
+  return decodeSImmOperand<N>(Inst, Imm, Address, Decoder);
 }
 
 template <unsigned N>
@@ -243,6 +262,17 @@ static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint64_t Imm,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeFRMArg(MCInst &Inst, uint64_t Imm,
+                                 int64_t Address,
+                                 const void *Decoder) {
+  assert(isUInt<3>(Imm) && "Invalid immediate");
+  if (!llvm::RISCVFPRndMode::isValidRoundingMode(Imm))
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
 #include "RISCVGenDisassemblerTables.inc"
 
 DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
@@ -257,11 +287,19 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   // It's a 32 bit instruction if bit 0 and 1 are 1.
   if ((Bytes[0] & 0x3) == 0x3) {
+    if (Bytes.size() < 4) {
+      Size = 0;
+      return MCDisassembler::Fail;
+    }
     Insn = support::endian::read32le(Bytes.data());
     LLVM_DEBUG(dbgs() << "Trying RISCV32 table :\n");
     Result = decodeInstruction(DecoderTable32, MI, Insn, Address, this, STI);
     Size = 4;
   } else {
+    if (Bytes.size() < 2) {
+      Size = 0;
+      return MCDisassembler::Fail;
+    }
     Insn = support::endian::read16le(Bytes.data());
 
     if (!STI.getFeatureBits()[RISCV::Feature64Bit]) {

@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
+; CHECK: @t
+; CHECK: blr
 define i32 @t(i64 %byteStart, i32 %activeIndex) nounwind  {
 entry:
 	%tmp50 = load i32, i32* null, align 4		; <i32> [#uses=1]

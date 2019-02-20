@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin -mcpu=g4 -disable-ppc-ilp-pref | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu -mcpu=g4 -disable-ppc-ilp-pref | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=g4 -disable-ppc-ilp-pref | FileCheck %s
 
 ; ModuleID = 'tsc.c'

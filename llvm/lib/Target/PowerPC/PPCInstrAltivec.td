@@ -1051,6 +1051,20 @@ def : Pat<(v4f32 (ftrunc v4f32:$vA)),
 def : Pat<(v4f32 (fnearbyint v4f32:$vA)),
           (VRFIN $vA)>;
 
+// Vector selection
+def : Pat<(v16i8 (vselect v16i8:$vA, v16i8:$vB, v16i8:$vC)),
+          (VSEL $vC, $vB, $vA)>;
+def : Pat<(v8i16 (vselect v8i16:$vA, v8i16:$vB, v8i16:$vC)),
+          (VSEL $vC, $vB, $vA)>;
+def : Pat<(v4i32 (vselect v4i32:$vA, v4i32:$vB, v4i32:$vC)),
+          (VSEL $vC, $vB, $vA)>;
+def : Pat<(v2i64 (vselect v2i64:$vA, v2i64:$vB, v2i64:$vC)),
+          (VSEL $vC, $vB, $vA)>;
+def : Pat<(v4f32 (vselect v4i32:$vA, v4f32:$vB, v4f32:$vC)),
+          (VSEL $vC, $vB, $vA)>;
+def : Pat<(v2f64 (vselect v2i64:$vA, v2f64:$vB, v2f64:$vC)),
+          (VSEL $vC, $vB, $vA)>;
+
 } // end HasAltivec
 
 def HasP8Altivec : Predicate<"PPCSubTarget->hasP8Altivec()">;

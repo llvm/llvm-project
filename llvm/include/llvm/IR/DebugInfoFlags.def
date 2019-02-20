@@ -11,10 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: Add other DW-based macros.
-#ifndef HANDLE_DI_FLAG
-#error "Missing macro definition of HANDLE_DI_FLAG"
+#if !(defined HANDLE_DI_FLAG || defined HANDLE_DISP_FLAG)
+#error "Missing macro definition of HANDLE_DI*"
 #endif
+
+#ifndef HANDLE_DI_FLAG
+#define HANDLE_DI_FLAG(ID, NAME)
+#endif
+
+#ifndef HANDLE_DISP_FLAG
+#define HANDLE_DISP_FLAG(ID, NAME)
+#endif
+
+// General flags kept in DINode.
 
 HANDLE_DI_FLAG(0, Zero) // Use it as zero value.
                         // For example: void foo(DIFlags Flags = FlagZero).
@@ -64,4 +73,25 @@ HANDLE_DI_FLAG((1 << 29), Largest)
 #undef DI_FLAG_LARGEST_NEEDED
 #endif
 
+// Subprogram-specific flags kept in DISubprogram.
+
+// Use this as a zero/initialization value.
+// For example: void foo(DISPFlags Flags = SPFlagZero).
+HANDLE_DISP_FLAG(0, Zero)
+// Virtuality is a two-bit enum field in the LSB of the word.
+// Values should match DW_VIRTUALITY_*.
+HANDLE_DISP_FLAG(1u, Virtual)
+HANDLE_DISP_FLAG(2u, PureVirtual)
+HANDLE_DISP_FLAG((1u << 2), LocalToUnit)
+HANDLE_DISP_FLAG((1u << 3), Definition)
+HANDLE_DISP_FLAG((1u << 4), Optimized)
+
+#ifdef DISP_FLAG_LARGEST_NEEDED
+// Intended to be used with ADT/BitmaskEnum.h.
+// NOTE: Always must be equal to largest flag, check this when adding new flags.
+HANDLE_DISP_FLAG((1 << 4), Largest)
+#undef DISP_FLAG_LARGEST_NEEDED
+#endif
+
 #undef HANDLE_DI_FLAG
+#undef HANDLE_DISP_FLAG

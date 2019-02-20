@@ -1,6 +1,10 @@
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=verde -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx803 -mattr=-flat-for-global -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
-; RUN: llc -march=amdgcn -mtriple=amdgcn---amdgiz -mcpu=gfx900 -mattr=-flat-for-global -mattr=+vgpr-spilling -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=verde -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx803 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=SI %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck --check-prefix=GCN --check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mtriple=amdgcn-- -mcpu=gfx900 -filetype=obj < %s | llvm-readobj -relocations | FileCheck --check-prefix=RELS %s
+
+; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD0 0x0
+; RELS: R_AMDGPU_ABS32_LO SCRATCH_RSRC_DWORD1 0x0
 
 ; This used to fail due to a v_add_i32 instruction with an illegal immediate
 ; operand that was created during Local Stack Slot Allocation. Test case derived

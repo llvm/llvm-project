@@ -1,10 +1,10 @@
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -march=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE %s
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -march=amdgcn < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri -mattr=-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA %s
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga -mattr=-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -show-mc-encoding -mattr=+promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga -mattr=-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE-VECT -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -show-mc-encoding -mattr=-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga -mattr=-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -show-mc-encoding -mattr=-code-object-v3,+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -march=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -show-mc-encoding -mattr=-code-object-v3,+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3,-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-PROMOTE %s
+; RUN: llc -show-mc-encoding -mattr=-code-object-v3,-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -march=amdgcn < %s | FileCheck %s -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC
+; RUN: llc -show-mc-encoding -mattr=-code-object-v3,-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -mcpu=kaveri -mattr=-code-object-v3,-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC -check-prefix=HSA-ALLOCA %s
+; RUN: llc -show-mc-encoding -mattr=-code-object-v3,+promote-alloca -disable-promote-alloca-to-vector -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga -mattr=-code-object-v3,-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -show-mc-encoding -mattr=-code-object-v3,+promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga -mattr=-code-object-v3,-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-PROMOTE-VECT -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -show-mc-encoding -mattr=-code-object-v3,-promote-alloca -amdgpu-load-store-vectorizer=0 -enable-amdgpu-aa=0 -verify-machineinstrs -mtriple=amdgcn-amdhsa -march=amdgcn -mcpu=tonga -mattr=-code-object-v3,-unaligned-buffer-access < %s | FileCheck -enable-var-scope -check-prefix=SI-ALLOCA -check-prefix=SI -check-prefix=FUNC %s
 
 ; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -data-layout=A5 -mcpu=kaveri -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -enable-var-scope -check-prefix=HSAOPT -check-prefix=OPT %s
 ; RUN: opt -S -mtriple=amdgcn-unknown-unknown -data-layout=A5 -mcpu=kaveri -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck -enable-var-scope -check-prefix=NOHSAOPT -check-prefix=OPT %s
@@ -232,8 +232,10 @@ for.end:
 ; SI-ALLOCA: buffer_load_sshort v{{[0-9]+}}, v{{[0-9]+}}, s[{{[0-9]+:[0-9]+}}], s{{[0-9]+}}
 
 ; SI-PROMOTE-VECT: s_load_dword [[IDX:s[0-9]+]]
+; SI-PROMOTE-VECT: s_mov_b32 [[SREG:s[0-9]+]], 0x10000
 ; SI-PROMOTE-VECT: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 4
-; SI-PROMOTE-VECT: v_bfe_u32 v{{[0-9]+}}, v{{[0-9]+}}, [[SCALED_IDX]], 16
+; SI-PROMOTE-VECT: v_mov_b32_e32 [[VREG:v[0-9]+]], [[SCALED_IDX]]
+; SI-PROMOTE-VECT: v_bfe_u32 v{{[0-9]+}}, [[SREG]], [[VREG]], 16
 define amdgpu_kernel void @short_array(i32 addrspace(1)* %out, i32 %index) #0 {
 entry:
   %0 = alloca [2 x i16], addrspace(5)

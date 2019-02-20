@@ -9,7 +9,7 @@ define i8* @start(i8 %v) {
   %c1 = icmp eq i8 %v, 0
   br i1 %c1, label %true, label %false
 true:
-  ; CHECK: %ca = musttail call i8* @side_effects(i8 %v)
+  ; CHECK: %ca = musttail call i8* @side_effects(i8 0)
   ; CHECK: ret i8* %ca
   %ca = musttail call i8* @side_effects(i8 %v)
   ret i8* %ca
@@ -34,7 +34,7 @@ define internal i8* @side_effects(i8 %v) {
   ; is always `null`.
   ; The call can't be removed due to `external` call above, though.
 
-  ; CHECK: %ca = musttail call i8* @start(i8 %v)
+  ; CHECK: %ca = musttail call i8* @start(i8 0)
   %ca = musttail call i8* @start(i8 %v)
 
   ; Thus the result must be returned anyway

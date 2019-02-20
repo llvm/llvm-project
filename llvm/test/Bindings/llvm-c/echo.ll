@@ -166,6 +166,38 @@ exit:
   ret void
 }
 
-!llvm.module.flags = !{!1}
+define void @with_debuginfo() !dbg !4 {
+  ret void, !dbg !7
+}
 
-!1 = !{i32 2, !"Debug Info Version", i32 3}
+declare i8* @llvm.stacksave()
+declare void @llvm.stackrestore(i8*)
+declare void @llvm.lifetime.start.p0i8(i64, i8*)
+declare void @llvm.lifetime.end.p0i8(i64, i8*)
+
+define void @test_intrinsics() {
+entry:
+  %sp = call i8* @llvm.stacksave()
+  %x = alloca i32
+  %0 = bitcast i32* %x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0)
+  call void @llvm.lifetime.end.p0i8(i64 4, i8* %0)
+  call void @llvm.stackrestore(i8* %sp)
+  ret void
+}
+
+!llvm.dbg.cu = !{!0, !2}
+!llvm.module.flags = !{!3}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+!1 = !DIFile(filename: "echo.ll", directory: "/llvm/test/Bindings/llvm-c/echo.ll")
+!2 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "with_debuginfo", linkageName: "_with_debuginfo", scope: null, file: !1, line: 42, type: !5, isLocal: false, isDefinition: true, scopeLine: 1519, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !6, retainedNodes: !6)
+!5 = !DISubroutineType(types: !6)
+!6 = !{}
+!7 = !DILocation(line: 42, scope: !8, inlinedAt: !11)
+!8 = distinct !DILexicalBlock(scope: !9, file: !1, line: 42, column: 12)
+!9 = distinct !DISubprogram(name: "fake_inlined_block", linkageName: "_fake_inlined_block", scope: null, file: !1, line: 82, type: !5, isLocal: false, isDefinition: true, scopeLine: 82, flags: DIFlagPrototyped, isOptimized: true, unit: !2, templateParams: !6, retainedNodes: !6)
+!10 = distinct !DILocation(line: 84, scope: !8, inlinedAt: !11)
+!11 = !DILocation(line: 42, scope: !4)

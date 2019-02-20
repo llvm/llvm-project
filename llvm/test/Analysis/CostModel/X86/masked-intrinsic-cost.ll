@@ -112,22 +112,22 @@ define <8 x float> @test4(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> %d
 define void @test5(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ; AVX2-LABEL: 'test5'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SKL-LABEL: 'test5'
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; SKL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; KNL-LABEL: 'test5'
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; KNL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SKX-LABEL: 'test5'
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; SKX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: call void @llvm.masked.store.v2f32.p0v2f32(<2 x float> %val, <2 x float>* %addr, i32 4, <2 x i1> %mask)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
@@ -164,22 +164,22 @@ define void @test6(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
 define <2 x float> @test7(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %dst) {
 ; AVX2-LABEL: 'test7'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %res
 ;
 ; SKL-LABEL: 'test7'
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; SKL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
+; SKL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
 ; SKL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %res
 ;
 ; KNL-LABEL: 'test7'
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; KNL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
+; KNL-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
 ; KNL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %res
 ;
 ; SKX-LABEL: 'test7'
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-; SKX-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
+; SKX-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1> %mask, <2 x float> %dst)
 ; SKX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x float> %res
 ;
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer

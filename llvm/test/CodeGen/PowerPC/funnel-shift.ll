@@ -18,9 +18,8 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshl_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subfic 6, 5, 32
 ; CHECK-NEXT:    andi. 5, 5, 31
-; CHECK-NEXT:    clrlwi 6, 6, 27
+; CHECK-NEXT:    subfic 6, 5, 32
 ; CHECK-NEXT:    slw 5, 3, 5
 ; CHECK-NEXT:    srw 4, 4, 6
 ; CHECK-NEXT:    or 4, 5, 4
@@ -36,24 +35,19 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshl_i37:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 6, -8857
-; CHECK-NEXT:    subfic 7, 5, 37
 ; CHECK-NEXT:    clrldi 5, 5, 27
-; CHECK-NEXT:    clrldi 4, 4, 27
 ; CHECK-NEXT:    ori 6, 6, 51366
-; CHECK-NEXT:    clrldi 7, 7, 27
+; CHECK-NEXT:    clrldi 4, 4, 27
 ; CHECK-NEXT:    sldi 6, 6, 32
 ; CHECK-NEXT:    oris 6, 6, 3542
 ; CHECK-NEXT:    ori 6, 6, 31883
-; CHECK-NEXT:    mulhdu 8, 7, 6
 ; CHECK-NEXT:    mulhdu 6, 5, 6
-; CHECK-NEXT:    rldicl 8, 8, 59, 5
 ; CHECK-NEXT:    rldicl 6, 6, 59, 5
-; CHECK-NEXT:    mulli 8, 8, 37
 ; CHECK-NEXT:    mulli 6, 6, 37
-; CHECK-NEXT:    sub 7, 7, 8
 ; CHECK-NEXT:    subf. 5, 6, 5
-; CHECK-NEXT:    srd 4, 4, 7
+; CHECK-NEXT:    subfic 6, 5, 37
 ; CHECK-NEXT:    sld 5, 3, 5
+; CHECK-NEXT:    srd 4, 4, 6
 ; CHECK-NEXT:    or 4, 5, 4
 ; CHECK-NEXT:    isel 3, 3, 4, 2
 ; CHECK-NEXT:    blr
@@ -130,9 +124,8 @@ define i8 @fshl_i8_const_fold() {
 define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: fshr_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subfic 6, 5, 32
 ; CHECK-NEXT:    andi. 5, 5, 31
-; CHECK-NEXT:    clrlwi 6, 6, 27
+; CHECK-NEXT:    subfic 6, 5, 32
 ; CHECK-NEXT:    srw 5, 4, 5
 ; CHECK-NEXT:    slw 3, 3, 6
 ; CHECK-NEXT:    or 3, 3, 5
@@ -148,24 +141,19 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) {
 ; CHECK-LABEL: fshr_i37:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lis 6, -8857
-; CHECK-NEXT:    subfic 7, 5, 37
 ; CHECK-NEXT:    clrldi 5, 5, 27
-; CHECK-NEXT:    clrldi 9, 4, 27
 ; CHECK-NEXT:    ori 6, 6, 51366
-; CHECK-NEXT:    clrldi 7, 7, 27
 ; CHECK-NEXT:    sldi 6, 6, 32
 ; CHECK-NEXT:    oris 6, 6, 3542
 ; CHECK-NEXT:    ori 6, 6, 31883
-; CHECK-NEXT:    mulhdu 8, 5, 6
-; CHECK-NEXT:    mulhdu 6, 7, 6
-; CHECK-NEXT:    rldicl 8, 8, 59, 5
+; CHECK-NEXT:    mulhdu 6, 5, 6
 ; CHECK-NEXT:    rldicl 6, 6, 59, 5
-; CHECK-NEXT:    mulli 8, 8, 37
 ; CHECK-NEXT:    mulli 6, 6, 37
-; CHECK-NEXT:    subf. 5, 8, 5
-; CHECK-NEXT:    sub 6, 7, 6
-; CHECK-NEXT:    srd 5, 9, 5
-; CHECK-NEXT:    sld 3, 3, 6
+; CHECK-NEXT:    subf. 5, 6, 5
+; CHECK-NEXT:    clrldi 6, 4, 27
+; CHECK-NEXT:    subfic 7, 5, 37
+; CHECK-NEXT:    srd 5, 6, 5
+; CHECK-NEXT:    sld 3, 3, 7
 ; CHECK-NEXT:    or 3, 3, 5
 ; CHECK-NEXT:    isel 3, 4, 3, 2
 ; CHECK-NEXT:    blr

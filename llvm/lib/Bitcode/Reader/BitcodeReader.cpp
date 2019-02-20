@@ -876,6 +876,7 @@ static FunctionSummary::FFlags getDecodedFFlags(uint64_t RawFlags) {
   Flags.ReadOnly = (RawFlags >> 1) & 0x1;
   Flags.NoRecurse = (RawFlags >> 2) & 0x1;
   Flags.ReturnDoesNotAlias = (RawFlags >> 3) & 0x1;
+  Flags.NoInline = (RawFlags >> 4) & 0x1;
   return Flags;
 }
 
@@ -895,6 +896,11 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   bool Local = (RawFlags & 0x4);
 
   return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live, Local);
+}
+
+// Decode the flags for GlobalVariable in the summary
+static GlobalVarSummary::GVarFlags getDecodedGVarFlags(uint64_t RawFlags) {
+  return GlobalVarSummary::GVarFlags((RawFlags & 0x1) ? true : false);
 }
 
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
@@ -960,6 +966,20 @@ static int getDecodedCastOpcode(unsigned Val) {
   case bitc::CAST_INTTOPTR: return Instruction::IntToPtr;
   case bitc::CAST_BITCAST : return Instruction::BitCast;
   case bitc::CAST_ADDRSPACECAST: return Instruction::AddrSpaceCast;
+  }
+}
+
+static int getDecodedUnaryOpcode(unsigned Val, Type *Ty) {
+  bool IsFP = Ty->isFPOrFPVectorTy();
+  // UnOps are only valid for int/fp or vector of int/fp types
+  if (!IsFP && !Ty->isIntOrIntVectorTy())
+    return -1;
+
+  switch (Val) {
+  default:
+    return -1;
+  case bitc::UNOP_NEG:
+    return IsFP ? Instruction::FNeg : -1;
   }
 }
 
@@ -1165,6 +1185,8 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::NoCfCheck:       return 1ULL << 57;
   case Attribute::OptForFuzzing:   return 1ULL << 58;
   case Attribute::ShadowCallStack: return 1ULL << 59;
+  case Attribute::SpeculativeLoadHardening:
+    return 1ULL << 60;
   case Attribute::Dereferenceable:
     llvm_unreachable("dereferenceable attribute not supported in raw format");
     break;
@@ -1389,6 +1411,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::SanitizeThread;
   case bitc::ATTR_KIND_SANITIZE_MEMORY:
     return Attribute::SanitizeMemory;
+  case bitc::ATTR_KIND_SPECULATIVE_LOAD_HARDENING:
+    return Attribute::SpeculativeLoadHardening;
   case bitc::ATTR_KIND_SWIFT_ERROR:
     return Attribute::SwiftError;
   case bitc::ATTR_KIND_SWIFT_SELF:
@@ -2312,6 +2336,19 @@ Error BitcodeReader::parseConstants() {
       }
       break;
     }
+    case bitc::CST_CODE_CE_UNOP: {  // CE_UNOP: [opcode, opval]
+      if (Record.size() < 2)
+        return error("Invalid record");
+      int Opc = getDecodedUnaryOpcode(Record[0], CurTy);
+      if (Opc < 0) {
+        V = UndefValue::get(CurTy);  // Unknown unop.
+      } else {
+        Constant *LHS = ValueList.getConstantFwdRef(Record[1], CurTy);
+        unsigned Flags = 0;
+        V = ConstantExpr::get(Opc, LHS, Flags);
+      }
+      break;
+    }
     case bitc::CST_CODE_CE_BINOP: {  // CE_BINOP: [opcode, opval, opval]
       if (Record.size() < 3)
         return error("Invalid record");
@@ -2938,7 +2975,7 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
 Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   // v1: [type, callingconv, isproto, linkage, paramattr, alignment, section,
   // visibility, gc, unnamed_addr, prologuedata, dllstorageclass, comdat,
-  // prefixdata,  personalityfn, preemption specifier] (name in VST)
+  // prefixdata,  personalityfn, preemption specifier, addrspace] (name in VST)
   // v2: [strtab_offset, strtab_size, v1]
   StringRef Name;
   std::tie(Name, Record) = readNameFromStrtab(Record);
@@ -2957,8 +2994,12 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   if (CC & ~CallingConv::MaxID)
     return error("Invalid calling convention ID");
 
-  Function *Func =
-      Function::Create(FTy, GlobalValue::ExternalLinkage, Name, TheModule);
+  unsigned AddrSpace = TheModule->getDataLayout().getProgramAddressSpace();
+  if (Record.size() > 16)
+    AddrSpace = Record[16];
+
+  Function *Func = Function::Create(FTy, GlobalValue::ExternalLinkage,
+                                    AddrSpace, Name, TheModule);
 
   Func->setCallingConv(CC);
   bool isProto = Record[2];
@@ -3508,6 +3549,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
 
       unsigned Line = Record[0], Col = Record[1];
       unsigned ScopeID = Record[2], IAID = Record[3];
+      bool isImplicitCode = Record.size() == 5 && Record[4];
 
       MDNode *Scope = nullptr, *IA = nullptr;
       if (ScopeID) {
@@ -3522,12 +3564,32 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         if (!IA)
           return error("Invalid record");
       }
-      LastLoc = DebugLoc::get(Line, Col, Scope, IA);
+      LastLoc = DebugLoc::get(Line, Col, Scope, IA, isImplicitCode);
       I->setDebugLoc(LastLoc);
       I = nullptr;
       continue;
     }
+    case bitc::FUNC_CODE_INST_UNOP: {    // UNOP: [opval, ty, opcode]
+      unsigned OpNum = 0;
+      Value *LHS;
+      if (getValueTypePair(Record, OpNum, NextValueNo, LHS) ||
+          OpNum+1 > Record.size())
+        return error("Invalid record");
 
+      int Opc = getDecodedUnaryOpcode(Record[OpNum++], LHS->getType());
+      if (Opc == -1)
+        return error("Invalid record");
+      I = UnaryOperator::Create((Instruction::UnaryOps)Opc, LHS);
+      InstructionList.push_back(I);
+      if (OpNum < Record.size()) {
+        if (isa<FPMathOperator>(I)) {
+          FastMathFlags FMF = getDecodedFastMathFlags(Record[OpNum]);
+          if (FMF.any())
+            I->setFastMathFlags(FMF);
+        }
+      }
+      break;
+    }
     case bitc::FUNC_CODE_INST_BINOP: {    // BINOP: [opval, ty, opval, opcode]
       unsigned OpNum = 0;
       Value *LHS, *RHS;
@@ -4618,7 +4680,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     CurBB->getInstList().push_back(I);
 
     // If this was a terminator instruction, move to the next block.
-    if (isa<TerminatorInst>(I)) {
+    if (I->isTerminator()) {
       ++CurBBNo;
       CurBB = CurBBNo < FunctionBBs.size() ? FunctionBBs[CurBBNo] : nullptr;
     }
@@ -4856,7 +4918,7 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   ValueIdToValueInfoMap[ValueID] = std::make_pair(
       TheIndex.getOrInsertValueInfo(
           ValueGUID,
-          UseStrtab ? ValueName : TheIndex.saveString(ValueName.str())),
+          UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
       OriginalNameID);
 }
 
@@ -5162,6 +5224,12 @@ static void parseTypeIdSummaryRecord(ArrayRef<uint64_t> Record,
     parseWholeProgramDevirtResolution(Record, Strtab, Slot, TypeId);
 }
 
+static void setImmutableRefs(std::vector<ValueInfo> &Refs, unsigned Count) {
+  // Read-only refs are in the end of the refs list.
+  for (unsigned RefNo = Refs.size() - Count; RefNo < Refs.size(); ++RefNo)
+    Refs[RefNo].setReadOnly();
+}
+
 // Eagerly parse the entire summary block. This populates the GlobalValueSummary
 // objects in the index.
 Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
@@ -5179,9 +5247,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
-  if (Version < 1 || Version > 4)
+  if (Version < 1 || Version > 6)
     return error("Invalid summary version " + Twine(Version) +
-                 ", 1, 2, 3 or 4 expected");
+                 ". Version should be in the range [1-6].");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -5235,6 +5303,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // 1 bit: SkipModuleByDistributedBackend flag.
       if (Flags & 0x2)
         TheIndex.setSkipModuleByDistributedBackend();
+      // 1 bit: HasSyntheticEntryCounts flag.
+      if (Flags & 0x4)
+        TheIndex.setHasSyntheticEntryCounts();
       break;
     }
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]
@@ -5260,11 +5331,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned InstCount = Record[2];
       uint64_t RawFunFlags = 0;
       unsigned NumRefs = Record[3];
+      unsigned NumImmutableRefs = 0;
       int RefListStartIndex = 4;
       if (Version >= 4) {
         RawFunFlags = Record[3];
         NumRefs = Record[4];
         RefListStartIndex = 5;
+        if (Version >= 5) {
+          NumImmutableRefs = Record[5];
+          RefListStartIndex = 6;
+        }
       }
 
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
@@ -5283,9 +5359,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       std::vector<FunctionSummary::EdgeTy> Calls = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
+      setImmutableRefs(Refs, NumImmutableRefs);
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
-          std::move(Calls), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), /*EntryCount=*/0,
+          std::move(Refs), std::move(Calls), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
@@ -5331,14 +5408,21 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.addGlobalValueSummary(GUID.first, std::move(AS));
       break;
     }
-    // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
+    // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, varflags, n x valueid]
     case bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS: {
       unsigned ValueID = Record[0];
       uint64_t RawFlags = Record[1];
+      unsigned RefArrayStart = 2;
+      GlobalVarSummary::GVarFlags GVF;
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      if (Version >= 5) {
+        GVF = getDecodedGVarFlags(Record[2]);
+        RefArrayStart = 3;
+      }
       std::vector<ValueInfo> Refs =
-          makeRefList(ArrayRef<uint64_t>(Record).slice(2));
-      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
+          makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
+      auto FS =
+          llvm::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
       FS->setModulePath(getThisModule()->first());
       auto GUID = getValueInfoFromValueId(ValueID);
       FS->setOriginalName(GUID.second);
@@ -5356,13 +5440,25 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[2];
       unsigned InstCount = Record[3];
       uint64_t RawFunFlags = 0;
+      uint64_t EntryCount = 0;
       unsigned NumRefs = Record[4];
+      unsigned NumImmutableRefs = 0;
       int RefListStartIndex = 5;
 
       if (Version >= 4) {
         RawFunFlags = Record[4];
-        NumRefs = Record[5];
         RefListStartIndex = 6;
+        size_t NumRefsIndex = 5;
+        if (Version >= 5) {
+          RefListStartIndex = 7;
+          if (Version >= 6) {
+            NumRefsIndex = 6;
+            EntryCount = Record[5];
+            RefListStartIndex = 8;
+          }
+          NumImmutableRefs = Record[RefListStartIndex - 1];
+        }
+        NumRefs = Record[NumRefsIndex];
       }
 
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
@@ -5376,9 +5472,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, false);
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;
+      setImmutableRefs(Refs, NumImmutableRefs);
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
-          std::move(Edges), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), EntryCount,
+          std::move(Refs), std::move(Edges), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
@@ -5424,10 +5521,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned ValueID = Record[0];
       uint64_t ModuleId = Record[1];
       uint64_t RawFlags = Record[2];
+      unsigned RefArrayStart = 3;
+      GlobalVarSummary::GVarFlags GVF;
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      if (Version >= 5) {
+        GVF = getDecodedGVarFlags(Record[3]);
+        RefArrayStart = 4;
+      }
       std::vector<ValueInfo> Refs =
-          makeRefList(ArrayRef<uint64_t>(Record).slice(3));
-      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
+          makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
+      auto FS =
+          llvm::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;

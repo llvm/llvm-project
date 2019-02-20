@@ -1,9 +1,12 @@
 set(LLVM_TARGET_DEFINITIONS MSP430.td)
 
+tablegen(LLVM MSP430GenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM MSP430GenAsmWriter.inc -gen-asm-writer)
 tablegen(LLVM MSP430GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM MSP430GenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM MSP430GenDisassemblerTables.inc -gen-disassembler)
 tablegen(LLVM MSP430GenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM MSP430GenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM MSP430GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM MSP430GenSubtargetInfo.inc -gen-subtarget)
 
@@ -26,3 +29,5 @@ add_llvm_target(MSP430CodeGen
 add_subdirectory(InstPrinter)
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)
+add_subdirectory(AsmParser)
+add_subdirectory(Disassembler)

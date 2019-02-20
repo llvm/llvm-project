@@ -116,7 +116,6 @@ v_add_f32 v0, |v0|, -v0 row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 //===----------------------------------------------------------------------===//
 
 // NOSICI: error:
-// VI9: v_nop row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0 ; encoding: [0xfa,0x00,0x00,0x7e,0x00,0x01,0x09,0xa1]
 v_nop row_shl:1 row_mask:0xa bank_mask:0x1 bound_ctrl:0
 
 // NOSICI: error:

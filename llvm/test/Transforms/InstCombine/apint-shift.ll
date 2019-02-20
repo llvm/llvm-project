@@ -319,8 +319,8 @@ define i1 @test16(i84 %X) {
 
 define <2 x i1> @test16vec(<2 x i84> %X) {
 ; CHECK-LABEL: @test16vec(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i84> %X, <i84 16, i84 16>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i84> [[X:%.*]], <i84 16, i84 16>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i84> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shr = ashr <2 x i84> %X, <i84 4, i84 4>
@@ -525,4 +525,23 @@ define i40 @test26(i40 %A) {
   %C = bitcast i40 %B to i40
   %D = shl i40 %C, 1
   ret i40 %D
+}
+
+; OSS-Fuzz #9880
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
+define i177 @ossfuzz_9880(i177 %X) {
+; CHECK-LABEL: @ossfuzz_9880(
+; CHECK-NEXT:    ret i177 1
+;
+  %A = alloca i177
+  %L1 = load i177, i177* %A
+  %B = or i177 0, -1
+  %B5 = udiv i177 %L1, %B
+  %B4 = add i177 %B5, %B
+  %B2 = add i177 %B, %B4
+  %B6 = mul i177 %B5, %B2
+  %B20 = shl i177 %L1, %B6
+  %B14 = sub i177 %B20, %B5
+  %B1 = udiv i177 %B14, %B6
+  ret i177 %B1
 }

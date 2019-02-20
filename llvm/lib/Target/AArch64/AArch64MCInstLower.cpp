@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -44,16 +45,31 @@ AArch64MCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
   assert(TheTriple.isOSWindows() &&
          "Windows is the only supported COFF target");
 
-  bool IsIndirect = (TargetFlags & AArch64II::MO_DLLIMPORT);
+  bool IsIndirect = (TargetFlags & (AArch64II::MO_DLLIMPORT | AArch64II::MO_COFFSTUB));
   if (!IsIndirect)
     return Printer.getSymbol(GV);
 
   SmallString<128> Name;
-  Name = "__imp_";
+  if (TargetFlags & AArch64II::MO_DLLIMPORT)
+    Name = "__imp_";
+  else if (TargetFlags & AArch64II::MO_COFFSTUB)
+    Name = ".refptr.";
   Printer.TM.getNameWithPrefix(Name, GV,
                                Printer.getObjFileLowering().getMangler());
 
-  return Ctx.getOrCreateSymbol(Name);
+  MCSymbol *MCSym = Ctx.getOrCreateSymbol(Name);
+
+  if (TargetFlags & AArch64II::MO_COFFSTUB) {
+    MachineModuleInfoCOFF &MMICOFF =
+        Printer.MMI->getObjFileInfo<MachineModuleInfoCOFF>();
+    MachineModuleInfoImpl::StubValueTy &StubSym =
+        MMICOFF.getGVStubEntry(MCSym);
+
+    if (!StubSym.getPointer())
+      StubSym = MachineModuleInfoImpl::StubValueTy(Printer.getSymbol(GV), true);
+  }
+
+  return MCSym;
 }
 
 MCSymbol *
@@ -252,5 +268,18 @@ void AArch64MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     MCOperand MCOp;
     if (lowerOperand(MO, MCOp))
       OutMI.addOperand(MCOp);
+  }
+
+  switch (OutMI.getOpcode()) {
+  case AArch64::CATCHRET:
+    OutMI = MCInst();
+    OutMI.setOpcode(AArch64::RET);
+    OutMI.addOperand(MCOperand::createReg(AArch64::LR));
+    break;
+  case AArch64::CLEANUPRET:
+    OutMI = MCInst();
+    OutMI.setOpcode(AArch64::RET);
+    OutMI.addOperand(MCOperand::createReg(AArch64::LR));
+    break;
   }
 }

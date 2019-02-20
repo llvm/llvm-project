@@ -1,0 +1,75 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump --reloc %t > %t1
+# RUN: llvm-objdump -r      %t > %t2
+# RUN: cmp %t1 %t2
+# RUN: FileCheck %s --input-file=%t1
+
+# CHECK: RELOCATION RECORDS FOR [.rel.text]:
+# CHECK: 0000000000000001 R_X86_64_32 glob1
+# CHECK: 0000000000000001 R_X86_64_32S glob2
+# CHECK: 0000000000000002 R_X86_64_64 loc1
+
+# CHECK: RELOCATION RECORDS FOR [.rela.text]:
+# CHECK: 0000000000000001 R_X86_64_32 glob1+1
+# CHECK: 0000000000000001 R_X86_64_32S glob2+2
+# CHECK: 0000000000000002 R_X86_64_64 loc1+3
+
+!ELF
+FileHeader: !FileHeader
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+
+Sections:
+- Name: .text
+  Type: SHT_PROGBITS
+  Content: "0000000000000000"
+  AddressAlign: 16
+  Flags: [SHF_ALLOC]
+
+- Name: .rel.text
+  Type: SHT_REL
+  Info: .text
+  AddressAlign: 4
+  Relocations:
+    - Offset: 0x1
+      Symbol: glob1
+      Type: R_X86_64_32
+    - Offset: 0x1
+      Symbol: glob2
+      Type: R_X86_64_32S
+    - Offset: 0x2
+      Symbol: loc1
+      Type: R_X86_64_64
+
+- Name: .rela.text
+  Type: SHT_RELA
+  Link: .symtab
+  Info: .text
+  AddressAlign: 4
+  Relocations:
+    - Offset: 0x1
+      Addend: 1
+      Symbol: glob1
+      Type: R_X86_64_32
+    - Offset: 0x1
+      Addend: 2
+      Symbol: glob2
+      Type: R_X86_64_32S
+    - Offset: 0x2
+      Addend: 3
+      Symbol: loc1
+      Type: R_X86_64_64
+
+Symbols:
+  Local:
+    - Name: loc1
+    - Name: loc2
+  Global:
+    - Name: glob1
+      Section: .text
+      Value: 0x0
+      Size: 4
+    - Name: glob2
+

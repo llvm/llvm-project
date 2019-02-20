@@ -25,6 +25,7 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ;
 ; X64-LABEL: cnt8:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrb %al
 ; X64-NEXT:    andb $85, %al
@@ -36,8 +37,9 @@ define i8 @cnt8(i8 %x) nounwind readnone {
 ; X64-NEXT:    addb %al, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrb $4, %al
-; X64-NEXT:    addb %dil, %al
+; X64-NEXT:    leal (%rax,%rdi), %eax
 ; X64-NEXT:    andb $15, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X32-POPCNT-LABEL: cnt8:

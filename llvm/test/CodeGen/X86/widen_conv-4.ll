@@ -19,7 +19,7 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ; X86-SSE2-NEXT:    movups %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movss %xmm2, 16(%eax)
 ; X86-SSE2-NEXT:    movaps %xmm2, %xmm0
-; X86-SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm2[1],xmm0[1]
+; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
 ; X86-SSE2-NEXT:    movss %xmm0, 24(%eax)
 ; X86-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,2,3]
 ; X86-SSE2-NEXT:    movss %xmm2, 20(%eax)
@@ -77,7 +77,6 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    pushl %ebp
 ; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    pushl %esi
 ; X86-SSE2-NEXT:    andl $-16, %esp
 ; X86-SSE2-NEXT:    subl $32, %esp
 ; X86-SSE2-NEXT:    movl 8(%ebp), %eax
@@ -88,24 +87,19 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X86-SSE2-NEXT:    movzbl 2(%ecx), %ecx
 ; X86-SSE2-NEXT:    movdqa %xmm0, (%esp)
-; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE2-NEXT:    shll $8, %edx
-; X86-SSE2-NEXT:    movzbl (%esp), %esi
-; X86-SSE2-NEXT:    orl %edx, %esi
-; X86-SSE2-NEXT:    movd %esi, %xmm0
-; X86-SSE2-NEXT:    pinsrw $1, %ecx, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm1, %xmm1
-; X86-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X86-SSE2-NEXT:    movzbl (%esp), %edx
+; X86-SSE2-NEXT:    movd %edx, %xmm0
+; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-SSE2-NEXT:    pinsrw $2, %edx, %xmm0
+; X86-SSE2-NEXT:    pinsrw $4, %ecx, %xmm0
 ; X86-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-SSE2-NEXT:    movss %xmm0, (%eax)
 ; X86-SSE2-NEXT:    movaps %xmm0, %xmm1
-; X86-SSE2-NEXT:    movhlps {{.*#+}} xmm1 = xmm0[1],xmm1[1]
+; X86-SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
 ; X86-SSE2-NEXT:    movss %xmm1, 8(%eax)
 ; X86-SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X86-SSE2-NEXT:    movss %xmm0, 4(%eax)
-; X86-SSE2-NEXT:    leal -4(%ebp), %esp
-; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    movl %ebp, %esp
 ; X86-SSE2-NEXT:    popl %ebp
 ; X86-SSE2-NEXT:    retl
 ;
@@ -135,15 +129,11 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X64-SSE2-NEXT:    movzbl 2(%rsi), %eax
 ; X64-SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; X64-SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; X64-SSE2-NEXT:    shll $8, %ecx
-; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; X64-SSE2-NEXT:    orl %ecx, %edx
-; X64-SSE2-NEXT:    movd %edx, %xmm0
-; X64-SSE2-NEXT:    pinsrw $1, %eax, %xmm0
-; X64-SSE2-NEXT:    pxor %xmm1, %xmm1
-; X64-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
-; X64-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; X64-SSE2-NEXT:    movd %ecx, %xmm0
+; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
+; X64-SSE2-NEXT:    pinsrw $2, %ecx, %xmm0
+; X64-SSE2-NEXT:    pinsrw $4, %eax, %xmm0
 ; X64-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE2-NEXT:    movlps %xmm0, (%rdi)
 ; X64-SSE2-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]

@@ -1,0 +1,224 @@
+# RUN: llc -o - %s -start-after=patchable-function -O0 | FileCheck %s
+
+# Generated from the source file pr19307.cc:
+# #include <string>
+# void parse_range(unsigned long long &offset, unsigned long long &limit,
+#                  std::string range) {
+#   if (range.compare(0, 6, "items=") != 0 || range[6] == '-')
+#     offset = 1;
+#   range.erase(0, 6);
+#   limit = 2;
+# }
+# with "clang++ -S -emit-llvm -O0 -g pr19307.cc"
+#
+# Location of "range" string is spilled from %rdx to stack and is
+# addressed via %rbp.
+# CHECK: movq %rdx, {{[-0-9]+}}(%rbp)
+# CHECK-NEXT: [[START_LABEL:.Ltmp[0-9]+]]:
+# This location should be valid until the end of the function.
+#
+# Verify that we have proper range in debug_loc section:
+# CHECK: .Ldebug_loc{{[0-9]+}}:
+# CHECK: DW_OP_breg1
+# CHECK:      .quad [[START_LABEL]]-.Lfunc_begin0
+# CHECK-NEXT: .quad .Lfunc_end0-.Lfunc_begin0
+# CHECK: DW_OP_breg6
+# CHECK: DW_OP_deref
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+  
+  %"class.std::basic_string" = type { %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" }
+  %"struct.std::basic_string<char, std::char_traits<char>, std::allocator<char> >::_Alloc_hider" = type { i8* }
+  
+  @.str = private unnamed_addr constant [7 x i8] c"items=\00", align 1
+  
+  ; Function Attrs: uwtable
+  define void @_Z11parse_rangeRyS_Ss(i64* %offset, i64* %limit, %"class.std::basic_string"* %range) #0 !dbg !34 {
+  entry:
+    %offset.addr = alloca i64*, align 8
+    %limit.addr = alloca i64*, align 8
+    store i64* %offset, i64** %offset.addr, align 8
+    call void @llvm.dbg.declare(metadata i64** %offset.addr, metadata !41, metadata !DIExpression()), !dbg !42
+    store i64* %limit, i64** %limit.addr, align 8
+    call void @llvm.dbg.declare(metadata i64** %limit.addr, metadata !43, metadata !DIExpression()), !dbg !42
+    call void @llvm.dbg.declare(metadata %"class.std::basic_string"* %range, metadata !44, metadata !DIExpression(DW_OP_deref)), !dbg !45
+    %call = call i32 @_ZNKSs7compareEmmPKc(%"class.std::basic_string"* %range, i64 0, i64 6, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0)), !dbg !46
+    %cmp = icmp ne i32 %call, 0, !dbg !46
+    br i1 %cmp, label %if.then, label %lor.lhs.false, !dbg !46
+  
+  lor.lhs.false:                                    ; preds = %entry
+    %call1 = call i8* @_ZNSsixEm(%"class.std::basic_string"* %range, i64 6), !dbg !48
+    %0 = load i8, i8* %call1, !dbg !48
+    %conv = sext i8 %0 to i32, !dbg !48
+    %cmp2 = icmp eq i32 %conv, 45, !dbg !48
+    br i1 %cmp2, label %if.then, label %if.end, !dbg !48
+  
+  if.then:                                          ; preds = %lor.lhs.false, %entry
+    %1 = load i64*, i64** %offset.addr, align 8, !dbg !50
+    store i64 1, i64* %1, align 8, !dbg !50
+    br label %if.end, !dbg !50
+  
+  if.end:                                           ; preds = %if.then, %lor.lhs.false
+    %call3 = call %"class.std::basic_string"* @_ZNSs5eraseEmm(%"class.std::basic_string"* %range, i64 0, i64 6), !dbg !51
+    %2 = load i64*, i64** %limit.addr, align 8, !dbg !52
+    store i64 2, i64* %2, align 8, !dbg !52
+    ret void, !dbg !53
+  }
+  
+  ; Function Attrs: nounwind readnone speculatable
+  declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+  
+  declare i32 @_ZNKSs7compareEmmPKc(%"class.std::basic_string"*, i64, i64, i8*) #2
+  
+  declare i8* @_ZNSsixEm(%"class.std::basic_string"*, i64) #2
+  
+  declare %"class.std::basic_string"* @_ZNSs5eraseEmm(%"class.std::basic_string"*, i64, i64) #2
+  
+  ; Function Attrs: nounwind
+  declare void @llvm.stackprotector(i8*, i8**) #3
+  
+  attributes #0 = { uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #1 = { nounwind readnone speculatable }
+  attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+  attributes #3 = { nounwind }
+  
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!31, !32}
+  !llvm.ident = !{!33}
+  
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 3.5.0 (209308)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !3, globals: !2, imports: !11)
+  !1 = !DIFile(filename: "pr19307.cc", directory: "/llvm_cmake_gcc")
+  !2 = !{}
+  !3 = !{!4, !6, !8}
+  !4 = !DICompositeType(tag: DW_TAG_structure_type, file: !5, line: 83, flags: DIFlagFwdDecl, identifier: "_ZTS11__mbstate_t")
+  !5 = !DIFile(filename: "/usr/include/wchar.h", directory: "/llvm_cmake_gcc")
+  !6 = !DICompositeType(tag: DW_TAG_structure_type, name: "lconv", file: !7, line: 54, flags: DIFlagFwdDecl, identifier: "_ZTS5lconv")
+  !7 = !DIFile(filename: "/usr/include/locale.h", directory: "/llvm_cmake_gcc")
+  !8 = !DICompositeType(tag: DW_TAG_class_type, name: "basic_string<char, std::char_traits<char>, std::allocator<char> >", scope: !10, file: !9, line: 1134, flags: DIFlagFwdDecl, identifier: "_ZTSSs")
+  !9 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/bits/basic_string.tcc", directory: "/llvm_cmake_gcc")
+  !10 = !DINamespace(name: "std", scope: null)
+  !11 = !{!12, !15, !18, !22, !27, !30}
+  !12 = !DIImportedEntity(tag: DW_TAG_imported_module, scope: !13, entity: !14, file: !1, line: 57)
+  !13 = !DINamespace(name: "__gnu_debug", scope: null)
+  !14 = !DINamespace(name: "__debug", scope: !10)
+  !15 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !10, entity: !16, file: !1, line: 66)
+  !16 = !DIDerivedType(tag: DW_TAG_typedef, name: "mbstate_t", file: !5, line: 106, baseType: !17)
+  !17 = !DIDerivedType(tag: DW_TAG_typedef, name: "__mbstate_t", file: !5, line: 95, baseType: !4)
+  !18 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !10, entity: !19, file: !1, line: 141)
+  !19 = !DIDerivedType(tag: DW_TAG_typedef, name: "wint_t", file: !20, line: 141, baseType: !21)
+  !20 = !DIFile(filename: "/llvm_cmake_gcc/bin/../lib/clang/3.5.0/include/stddef.h", directory: "/llvm_cmake_gcc")
+  !21 = !DIBasicType(name: "unsigned int", size: 32, align: 32, encoding: DW_ATE_unsigned)
+  !22 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !23, entity: !24, file: !1, line: 42)
+  !23 = !DINamespace(name: "__gnu_cxx", scope: null)
+  !24 = !DIDerivedType(tag: DW_TAG_typedef, name: "size_t", scope: !10, file: !25, line: 155, baseType: !26)
+  !25 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/x86_64-linux-gnu/bits/c++config.h", directory: "/llvm_cmake_gcc")
+  !26 = !DIBasicType(name: "long unsigned int", size: 64, align: 64, encoding: DW_ATE_unsigned)
+  !27 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !23, entity: !28, file: !1, line: 43)
+  !28 = !DIDerivedType(tag: DW_TAG_typedef, name: "ptrdiff_t", scope: !10, file: !25, line: 156, baseType: !29)
+  !29 = !DIBasicType(name: "long int", size: 64, align: 64, encoding: DW_ATE_signed)
+  !30 = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: !10, entity: !6, file: !1, line: 55)
+  !31 = !{i32 2, !"Dwarf Version", i32 4}
+  !32 = !{i32 2, !"Debug Info Version", i32 3}
+  !33 = !{!"clang version 3.5.0 (209308)"}
+  !34 = distinct !DISubprogram(name: "parse_range", linkageName: "_Z11parse_rangeRyS_Ss", scope: !1, file: !1, line: 3, type: !35, isLocal: false, isDefinition: true, scopeLine: 4, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+  !35 = !DISubroutineType(types: !36)
+  !36 = !{null, !37, !37, !39}
+  !37 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !38)
+  !38 = !DIBasicType(name: "long long unsigned int", size: 64, align: 64, encoding: DW_ATE_unsigned)
+  !39 = !DIDerivedType(tag: DW_TAG_typedef, name: "string", scope: !10, file: !40, line: 65, baseType: !8)
+  !40 = !DIFile(filename: "/usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../include/c++/4.6/bits/stringfwd.h", directory: "/llvm_cmake_gcc")
+  !41 = !DILocalVariable(name: "offset", arg: 1, scope: !34, file: !1, line: 3, type: !37)
+  !42 = !DILocation(line: 3, scope: !34)
+  !43 = !DILocalVariable(name: "limit", arg: 2, scope: !34, file: !1, line: 3, type: !37)
+  !44 = !DILocalVariable(name: "range", arg: 3, scope: !34, file: !1, line: 4, type: !39)
+  !45 = !DILocation(line: 4, scope: !34)
+  !46 = !DILocation(line: 5, scope: !47)
+  !47 = distinct !DILexicalBlock(scope: !34, file: !1, line: 5)
+  !48 = !DILocation(line: 5, scope: !49)
+  !49 = distinct !DILexicalBlock(scope: !47, file: !1, line: 5)
+  !50 = !DILocation(line: 6, scope: !47)
+  !51 = !DILocation(line: 7, scope: !34)
+  !52 = !DILocation(line: 8, scope: !34)
+  !53 = !DILocation(line: 9, scope: !34)
+
+...
+---
+name:            _Z11parse_rangeRyS_Ss
+alignment:       4
+tracksRegLiveness: true
+liveins:         
+  - { reg: '$rdi' }
+  - { reg: '$rsi' }
+  - { reg: '$rdx' }
+frameInfo:       
+  stackSize:       40
+  offsetAdjustment: -32
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  maxCallFrameSize: 0
+fixedStack:      
+  - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: 0 }
+stack:           
+  - { id: 0, name: offset.addr, offset: -24, size: 8, alignment: 8, stack-id: 0, 
+      debug-info-variable: '!41', debug-info-expression: '!DIExpression()', 
+      debug-info-location: '!42' }
+  - { id: 1, name: limit.addr, offset: -32, size: 8, alignment: 8, stack-id: 0, 
+      debug-info-variable: '!43', debug-info-expression: '!DIExpression()', 
+      debug-info-location: '!42' }
+  - { id: 2, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: 0 }
+  - { id: 3, type: spill-slot, offset: -48, size: 8, alignment: 8, stack-id: 0 }
+body:             |
+  bb.0.entry:
+    liveins: $rdi, $rsi, $rdx
+  
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset $rbp, -16
+    $rbp = frame-setup MOV64rr $rsp
+    CFI_INSTRUCTION def_cfa_register $rbp
+    $rsp = frame-setup SUB64ri8 $rsp, 32, implicit-def dead $eflags
+    $eax = XOR32rr undef $eax, undef $eax, implicit-def $eflags, implicit-def $rax
+    MOV64mr $rbp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store 8 into %ir.offset.addr)
+    MOV64mr $rbp, 1, $noreg, -16, $noreg, killed renamable $rsi :: (store 8 into %ir.limit.addr)
+    DBG_VALUE renamable $rdx, 0, !44, !DIExpression(DW_OP_deref), debug-location !45
+    $rdi = MOV64rr $rdx, debug-location !46
+    $rsi = MOV64rr killed $rax, debug-location !46
+    $eax = MOV32ri 6, implicit-def $rax, debug-location !46
+    MOV64mr $rbp, 1, $noreg, -24, $noreg, killed $rdx :: (store 8 into %stack.2)
+    DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
+    $rdx = MOV64rr killed $rax, debug-location !46
+    renamable $rcx = MOV64ri @.str, debug-location !46
+    CALL64pcrel32 @_ZNKSs7compareEmmPKc, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit killed $rdx, implicit killed $rcx, implicit-def $eax, debug-location !46
+    CMP32ri8 killed renamable $eax, 0, implicit-def $eflags, debug-location !46
+    JNE_1 %bb.2, implicit $eflags, debug-location !46
+  
+  bb.1.lor.lhs.false:
+    DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
+    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load 8 from %stack.2)
+    $esi = MOV32ri 6, implicit-def $rsi, debug-location !48
+    CALL64pcrel32 @_ZNSsixEm, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit-def $rax, debug-location !48
+    renamable $ecx = MOVSX32rm8 killed renamable $rax, 1, $noreg, 0, $noreg, debug-location !48 :: (load 1 from %ir.call1)
+    CMP32ri8 killed renamable $ecx, 45, implicit-def $eflags, debug-location !48
+    JNE_1 %bb.3, implicit $eflags, debug-location !48
+  
+  bb.2.if.then:
+    DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
+    renamable $rax = MOV64rm $rbp, 1, $noreg, -8, $noreg, debug-location !50 :: (load 8 from %ir.offset.addr)
+    MOV64mi32 killed renamable $rax, 1, $noreg, 0, $noreg, 1, debug-location !50 :: (store 8 into %ir.1)
+  
+  bb.3.if.end:
+    DBG_VALUE $rbp, 0, !44, !DIExpression(DW_OP_constu, 24, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !45
+    $esi = XOR32rr undef $esi, undef $esi, implicit-def $eflags, implicit-def $rsi
+    $rdi = MOV64rm $rbp, 1, $noreg, -24, $noreg :: (load 8 from %stack.2)
+    $edx = MOV32ri 6, implicit-def $rdx, debug-location !51
+    CALL64pcrel32 @_ZNSs5eraseEmm, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $rsi, implicit killed $rdx, implicit-def $rax, debug-location !51
+    renamable $rdx = MOV64rm $rbp, 1, $noreg, -16, $noreg, debug-location !52 :: (load 8 from %ir.limit.addr)
+    MOV64mi32 killed renamable $rdx, 1, $noreg, 0, $noreg, 2, debug-location !52 :: (store 8 into %ir.2)
+    MOV64mr $rbp, 1, $noreg, -32, $noreg, killed $rax :: (store 8 into %stack.3)
+    $rsp = frame-destroy ADD64ri8 $rsp, 32, implicit-def dead $eflags, debug-location !53
+    $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !53
+    CFI_INSTRUCTION def_cfa $rsp, 8, debug-location !53
+    RETQ debug-location !53
+
+...

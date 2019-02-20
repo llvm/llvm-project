@@ -1,0 +1,16 @@
+executable("llvm-mc") {
+  deps = [
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target:AllTargetsAsmParsers",
+    "//llvm/lib/Target:AllTargetsAsmPrinters",
+    "//llvm/lib/Target:AllTargetsDescs",
+    "//llvm/lib/Target:AllTargetsDisassemblers",
+    "//llvm/lib/Target:AllTargetsInfos",
+  ]
+  sources = [
+    "Disassembler.cpp",
+    "llvm-mc.cpp",
+  ]
+}

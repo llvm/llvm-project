@@ -17,10 +17,14 @@ entry:
   ; CHECK-NEXT: br label %endblock
 
   ; CHECK-LABEL: loadbb1:{{.*}}
-  ; CHECK: [[GEP1:%[0-9]+]] = getelementptr i64, i64* {{.*}}, i64 1
-  ; CHECK-NEXT: [[GEP2:%[0-9]+]] = getelementptr i64, i64* {{.*}}, i64 1
-  ; CHECK-NEXT: [[LOAD1:%[0-9]+]] = load i64, i64* [[GEP1]]
-  ; CHECK-NEXT: [[LOAD2:%[0-9]+]] = load i64, i64* [[GEP2]]
+  ; CHECK: [[BCC1:%[0-9]+]] = bitcast i32* {{.*}} to i8*
+  ; CHECK-NEXT: [[BCC2:%[0-9]+]] = bitcast i32* {{.*}} to i8*
+  ; CHECK-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, i8* [[BCC2]], i8 8
+  ; CHECK-NEXT: [[BCL1:%[0-9]+]] = bitcast i8* [[GEP1]] to i64*
+  ; CHECK-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, i8* [[BCC1]], i8 8
+  ; CHECK-NEXT: [[BCL2:%[0-9]+]] = bitcast i8* [[GEP2]] to i64*
+  ; CHECK-NEXT: [[LOAD1:%[0-9]+]] = load i64, i64* [[BCL1]]
+  ; CHECK-NEXT: [[LOAD2:%[0-9]+]] = load i64, i64* [[BCL2]]
   ; CHECK-NEXT: [[BSWAP1:%[0-9]+]] = call i64 @llvm.bswap.i64(i64 [[LOAD1]])
   ; CHECK-NEXT: [[BSWAP2:%[0-9]+]] = call i64 @llvm.bswap.i64(i64 [[LOAD2]])
   ; CHECK-NEXT: [[ICMP:%[0-9]+]] = icmp eq i64 [[BSWAP1]], [[BSWAP2]]
@@ -38,10 +42,14 @@ entry:
   ; CHECK-BE-NEXT: br label %endblock
 
   ; CHECK-BE-LABEL: loadbb1:{{.*}}
-  ; CHECK-BE: [[GEP1:%[0-9]+]] = getelementptr i64, i64* {{.*}}, i64 1
-  ; CHECK-BE-NEXT: [[GEP2:%[0-9]+]] = getelementptr i64, i64* {{.*}}, i64 1
-  ; CHECK-BE-NEXT: [[LOAD1:%[0-9]+]] = load i64, i64* [[GEP1]]
-  ; CHECK-BE-NEXT: [[LOAD2:%[0-9]+]] = load i64, i64* [[GEP2]]
+  ; CHECK-BE: [[BCC1:%[0-9]+]] = bitcast i32* {{.*}} to i8*
+  ; CHECK-BE-NEXT: [[BCC2:%[0-9]+]] = bitcast i32* {{.*}} to i8*
+  ; CHECK-BE-NEXT: [[GEP1:%[0-9]+]] = getelementptr i8, i8* [[BCC2]], i8 8
+  ; CHECK-BE-NEXT: [[BCL1:%[0-9]+]] = bitcast i8* [[GEP1]] to i64*
+  ; CHECK-BE-NEXT: [[GEP2:%[0-9]+]] = getelementptr i8, i8* [[BCC1]], i8 8
+  ; CHECK-BE-NEXT: [[BCL2:%[0-9]+]] = bitcast i8* [[GEP2]] to i64*
+  ; CHECK-BE-NEXT: [[LOAD1:%[0-9]+]] = load i64, i64* [[BCL1]]
+  ; CHECK-BE-NEXT: [[LOAD2:%[0-9]+]] = load i64, i64* [[BCL2]]
   ; CHECK-BE-NEXT: [[ICMP:%[0-9]+]] = icmp eq i64 [[LOAD1]], [[LOAD2]]
   ; CHECK-BE-NEXT:  br i1 [[ICMP]], label %endblock, label %res_block
 

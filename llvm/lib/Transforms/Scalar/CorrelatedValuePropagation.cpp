@@ -19,7 +19,6 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LazyValueInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -28,6 +27,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -44,6 +44,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <utility>
 
@@ -272,10 +273,11 @@ static bool processMemAccess(Instruction *I, LazyValueInfo *LVI) {
 /// information is sufficient to prove this comparison. Even for local
 /// conditions, this can sometimes prove conditions instcombine can't by
 /// exploiting range information.
-static bool processCmp(CmpInst *C, LazyValueInfo *LVI) {
-  Value *Op0 = C->getOperand(0);
-  Constant *Op1 = dyn_cast<Constant>(C->getOperand(1));
-  if (!Op1) return false;
+static bool processCmp(CmpInst *Cmp, LazyValueInfo *LVI) {
+  Value *Op0 = Cmp->getOperand(0);
+  auto *C = dyn_cast<Constant>(Cmp->getOperand(1));
+  if (!C)
+    return false;
 
   // As a policy choice, we choose not to waste compile time on anything where
   // the comparison is testing local values.  While LVI can sometimes reason
@@ -283,20 +285,18 @@ static bool processCmp(CmpInst *C, LazyValueInfo *LVI) {
   // the block local query for uses from terminator instructions, but that's
   // handled in the code for each terminator.
   auto *I = dyn_cast<Instruction>(Op0);
-  if (I && I->getParent() == C->getParent())
+  if (I && I->getParent() == Cmp->getParent())
     return false;
 
   LazyValueInfo::Tristate Result =
-    LVI->getPredicateAt(C->getPredicate(), Op0, Op1, C);
-  if (Result == LazyValueInfo::Unknown) return false;
+      LVI->getPredicateAt(Cmp->getPredicate(), Op0, C, Cmp);
+  if (Result == LazyValueInfo::Unknown)
+    return false;
 
   ++NumCmps;
-  if (Result == LazyValueInfo::True)
-    C->replaceAllUsesWith(ConstantInt::getTrue(C->getContext()));
-  else
-    C->replaceAllUsesWith(ConstantInt::getFalse(C->getContext()));
-  C->eraseFromParent();
-
+  Constant *TorF = ConstantInt::get(Type::getInt1Ty(Cmp->getContext()), Result);
+  Cmp->replaceAllUsesWith(TorF);
+  Cmp->eraseFromParent();
   return true;
 }
 
@@ -307,7 +307,9 @@ static bool processCmp(CmpInst *C, LazyValueInfo *LVI) {
 /// that cannot fire no matter what the incoming edge can safely be removed. If
 /// a case fires on every incoming edge then the entire switch can be removed
 /// and replaced with a branch to the case destination.
-static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI, DominatorTree *DT) {
+static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI,
+                          DominatorTree *DT) {
+  DomTreeUpdater DTU(*DT, DomTreeUpdater::UpdateStrategy::Lazy);
   Value *Cond = SI->getCondition();
   BasicBlock *BB = SI->getParent();
 
@@ -372,7 +374,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI, DominatorTree *DT)
       ++NumDeadCases;
       Changed = true;
       if (--SuccessorsCount[Succ] == 0)
-        DT->deleteEdge(BB, Succ);
+        DTU.deleteEdge(BB, Succ);
       continue;
     }
     if (State == LazyValueInfo::True) {
@@ -389,15 +391,11 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI, DominatorTree *DT)
     ++CI;
   }
 
-  if (Changed) {
+  if (Changed)
     // If the switch has been simplified to the point where it can be replaced
     // by a branch then do so now.
-    DeferredDominance DDT(*DT);
     ConstantFoldTerminator(BB, /*DeleteDeadConditions = */ false,
-                           /*TLI = */ nullptr, &DDT);
-    DDT.flush();
-  }
-
+                           /*TLI = */ nullptr, &DTU);
   return Changed;
 }
 

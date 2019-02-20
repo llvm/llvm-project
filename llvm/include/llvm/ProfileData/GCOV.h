@@ -24,9 +24,11 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
@@ -266,13 +268,14 @@ struct GCOVEdge {
   GCOVBlock &Src;
   GCOVBlock &Dst;
   uint64_t Count = 0;
+  uint64_t CyclesCount = 0;
 };
 
 /// GCOVFunction - Collects function information.
 class GCOVFunction {
 public:
-  using BlockIterator = pointee_iterator<SmallVectorImpl<
-      std::unique_ptr<GCOVBlock>>::const_iterator>;
+  using BlockIterator = pointee_iterator<
+      SmallVectorImpl<std::unique_ptr<GCOVBlock>>::const_iterator>;
 
   GCOVFunction(GCOVFile &P) : Parent(P) {}
 
@@ -322,6 +325,9 @@ class GCOVBlock {
 
 public:
   using EdgeIterator = SmallVectorImpl<GCOVEdge *>::const_iterator;
+  using BlockVector = SmallVector<const GCOVBlock *, 4>;
+  using BlockVectorLists = SmallVector<BlockVector, 4>;
+  using Edges = SmallVector<GCOVEdge *, 4>;
 
   GCOVBlock(GCOVFunction &P, uint32_t N) : Parent(P), Number(N) {}
   ~GCOVBlock();
@@ -364,6 +370,16 @@ public:
   void print(raw_ostream &OS) const;
   void dump() const;
   void collectLineCounts(FileInfo &FI);
+
+  static uint64_t getCycleCount(const Edges &Path);
+  static void unblock(const GCOVBlock *U, BlockVector &Blocked,
+                      BlockVectorLists &BlockLists);
+  static bool lookForCircuit(const GCOVBlock *V, const GCOVBlock *Start,
+                             Edges &Path, BlockVector &Blocked,
+                             BlockVectorLists &BlockLists,
+                             const BlockVector &Blocks, uint64_t &Count);
+  static void getCyclesCount(const BlockVector &Blocks, uint64_t &Count);
+  static uint64_t getLineCount(const BlockVector &Blocks);
 
 private:
   GCOVFunction &Parent;

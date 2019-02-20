@@ -130,12 +130,12 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    DBG_VALUE debug-use $edi, debug-use _, !21, !DIExpression(), debug-location !25
-    DBG_VALUE debug-use $rsi, debug-use _, !22, !DIExpression(), debug-location !26
+    DBG_VALUE $edi, _, !21, !DIExpression(), debug-location !25
+    DBG_VALUE $rsi, _, !22, !DIExpression(), debug-location !26
     %2 = MOV32rm $rip, 1, _, @bar, _, debug-location !27 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 0)`, !tbaa !28)
-    DBG_VALUE debug-use %2, debug-use _, !23, !DIExpression(), debug-location !32
+    DBG_VALUE %2, _, !23, !DIExpression(), debug-location !32
     %3 = MOV32rm $rip, 1, _, @bar + 4, _, debug-location !33 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1)`, !tbaa !28)
-    DBG_VALUE debug-use %3, debug-use _, !24, !DIExpression(), debug-location !34
+    DBG_VALUE %3, _, !24, !DIExpression(), debug-location !34
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !35
     $edi = COPY %2, debug-location !35
     $esi = COPY %3, debug-location !35
@@ -153,11 +153,11 @@ body:             |
 # not cover the whole BB.
 #
 # CHECKDBG-LABEL: ********** EMITTING LIVE DEBUG VARIABLES **********
-# CHECKDBG-NEXT: !"argc,5"        [0B;0e):0 Loc0=debug-use $edi
+# CHECKDBG-NEXT: !"argc,5"        [0B;0e):0 Loc0=$edi
 # CHECKDBG-NEXT:         [0B;0e):0 %bb.0-160B
-# CHECKDBG-NEXT: !"argv,5"        [0B;0e):0 Loc0=debug-use $rsi
+# CHECKDBG-NEXT: !"argv,5"        [0B;0e):0 Loc0=$rsi
 # CHECKDBG-NEXT:         [0B;0e):0 %bb.0-160B
-# CHECKDBG-NEXT: !"a0,7"  [16r;64r):0 Loc0=debug-use %2
+# CHECKDBG-NEXT: !"a0,7"  [16r;64r):0 Loc0=%2
 # CHECKDBG-NEXT:         [16r;64r):0 %bb.0-160B
-# CHECKDBG-NEXT: !"a1,8"  [32r;80r):0 Loc0=debug-use %3
+# CHECKDBG-NEXT: !"a1,8"  [32r;80r):0 Loc0=%3
 # CHECKDBG-NEXT:         [32r;80r):0 %bb.0-160B

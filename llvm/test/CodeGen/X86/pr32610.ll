@@ -20,11 +20,11 @@ entry:
   %conv = zext i1 %cmp to i32
   %tobool1.i = icmp ne i32 undef, 0
   %or.cond.i = and i1 %cmp, %tobool1.i
-  %cond.i = select i1 %or.cond.i, i32 %conv, i32 undef
+  %cond.i = select i1 %or.cond.i, i32 %conv, i32 1
   store i32 %cond.i, i32* @c, align 4, !tbaa !1
   %1 = load i32, i32* getelementptr inbounds ([1 x i32], [1 x i32]* @b, i32 0, i32 0), align 4
   %tobool = icmp ne i32 %1, 0
-  %2 = select i1 %tobool, i32 %1, i32 undef
+  %2 = select i1 %tobool, i32 %1, i32 2
   store i32 %2, i32* @d, align 4, !tbaa !1
   ret void
 }

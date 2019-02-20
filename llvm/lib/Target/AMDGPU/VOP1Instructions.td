@@ -84,6 +84,10 @@ class VOP1_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AsmMatchConverter = "cvtSdwaVOP1";
 }
 
+class VOP1_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
+  VOP_DPP_Pseudo <OpName, P, pattern> {
+}
+
 class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
   list<dag> ret =
     !if(P.HasModifiers,
@@ -103,6 +107,8 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   def _e32 : VOP1_Pseudo <opName, P>;
   def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
   def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
+  foreach _ = BoolToList<P.HasExtDPP>.ret in
+    def _dpp : VOP1_DPP_Pseudo <opName, P>;
 }
 
 // Special profile for instructions which have clamp
@@ -173,7 +179,9 @@ defm V_CVT_F32_I32 : VOP1Inst <"v_cvt_f32_i32", VOP1_F32_I32, sint_to_fp>;
 defm V_CVT_F32_U32 : VOP1Inst <"v_cvt_f32_u32", VOP1_F32_I32, uint_to_fp>;
 defm V_CVT_U32_F32 : VOP1Inst <"v_cvt_u32_f32", VOP_I32_F32, fp_to_uint>;
 defm V_CVT_I32_F32 : VOP1Inst <"v_cvt_i32_f32", VOP_I32_F32, fp_to_sint>;
+let FPDPRounding = 1 in {
 defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, fpround>;
+} // End FPDPRounding = 1
 defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, fpextend>;
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
 defm V_CVT_FLR_I32_F32 : VOP1Inst <"v_cvt_flr_i32_f32", VOP_I32_F32, cvt_flr_i32_f32>;
@@ -226,7 +234,9 @@ defm V_FFBH_I32 : VOP1Inst <"v_ffbh_i32", VOP_I32_I32>;
 let SchedRW = [WriteDoubleAdd] in {
 defm V_FREXP_EXP_I32_F64 : VOP1Inst <"v_frexp_exp_i32_f64", VOP_I32_F64, int_amdgcn_frexp_exp>;
 defm V_FREXP_MANT_F64 : VOP1Inst <"v_frexp_mant_f64", VOP_F64_F64, int_amdgcn_frexp_mant>;
+let FPDPRounding = 1 in {
 defm V_FRACT_F64 : VOP1Inst <"v_fract_f64", VOP_F64_F64, AMDGPUfract>;
+} // End FPDPRounding = 1
 } // End SchedRW = [WriteDoubleAdd]
 
 defm V_FREXP_EXP_I32_F32 : VOP1Inst <"v_frexp_exp_i32_f32", VOP_I32_F32, int_amdgcn_frexp_exp>;
@@ -242,7 +252,9 @@ def VOP_I32_VI32_NO_EXT : VOPProfile<[i32, i32, untyped, untyped]> {
   let Src0RC64 = VRegSrc_32;
 
   let HasExt = 0;
-  let HasSDWA9 = 0;
+  let HasExtDPP = 0;
+  let HasExtSDWA = 0;
+  let HasExtSDWA9 = 0;
 }
 
 // Special case because there are no true output operands.  Hack vdst
@@ -271,7 +283,10 @@ def VOP_MOVRELD : VOPProfile<[untyped, i32, untyped, untyped]> {
   let AsmSDWA9 = getAsmSDWA9<1, 0, 1>.ret;
 
   let HasExt = 0;
-  let HasSDWA9 = 0;
+  let HasExtDPP = 0;
+  let HasExtSDWA = 0;
+  let HasExtSDWA9 = 0;
+
   let HasDst = 0;
   let EmitDst = 1; // force vdst emission
 }
@@ -328,8 +343,10 @@ defm V_EXP_LEGACY_F32 : VOP1Inst <"v_exp_legacy_f32", VOP_F32_F32>;
 
 let SubtargetPredicate = Has16BitInsts in {
 
+let FPDPRounding = 1 in {
 defm V_CVT_F16_U16 : VOP1Inst <"v_cvt_f16_u16", VOP1_F16_I16, uint_to_fp>;
 defm V_CVT_F16_I16 : VOP1Inst <"v_cvt_f16_i16", VOP1_F16_I16, sint_to_fp>;
+} // End FPDPRounding = 1
 defm V_CVT_U16_F16 : VOP1Inst <"v_cvt_u16_f16", VOP_I16_F16, fp_to_uint>;
 defm V_CVT_I16_F16 : VOP1Inst <"v_cvt_i16_f16", VOP_I16_F16, fp_to_sint>;
 let SchedRW = [WriteQuarterRate32] in {
@@ -347,7 +364,9 @@ defm V_FLOOR_F16 : VOP1Inst <"v_floor_f16", VOP_F16_F16, ffloor>;
 defm V_CEIL_F16 : VOP1Inst <"v_ceil_f16", VOP_F16_F16, fceil>;
 defm V_TRUNC_F16 : VOP1Inst <"v_trunc_f16", VOP_F16_F16, ftrunc>;
 defm V_RNDNE_F16 : VOP1Inst <"v_rndne_f16", VOP_F16_F16, frint>;
+let FPDPRounding = 1 in {
 defm V_FRACT_F16 : VOP1Inst <"v_fract_f16", VOP_F16_F16, AMDGPUfract>;
+} // End FPDPRounding = 1
 
 }
 
@@ -495,13 +514,8 @@ defm V_EXP_LEGACY_F32    : VOP1_Real_ci <0x46>;
 // VI
 //===----------------------------------------------------------------------===//
 
-class VOP1_DPP <bits<8> op, VOP1_Pseudo ps, VOPProfile P = ps.Pfl> :
-  VOP_DPP <ps.OpName, P> {
-  let Defs = ps.Defs;
-  let Uses = ps.Uses;
-  let SchedRW = ps.SchedRW;
-  let hasSideEffects = ps.hasSideEffects;
-
+class VOP1_DPPe <bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
+  VOP_DPPe <P> {
   bits<8> vdst;
   let Inst{8-0}   = 0xfa; // dpp
   let Inst{16-9}  = op;
@@ -539,9 +553,10 @@ multiclass VOP1_Real_vi <bits<10> op> {
     VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
-  // For now left dpp only for asm/dasm
-  // TODO: add corresponding pseudo
-  def _dpp : VOP1_DPP<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")>;
+  foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
+    def _dpp_vi :
+      VOP_DPP_Real<!cast<VOP1_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.VI>,
+      VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
 defm V_NOP               : VOP1_Real_vi <0x0>;
@@ -712,9 +727,11 @@ multiclass VOP1_Real_gfx9 <bits<10> op> {
     VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
-  // For now left dpp only for asm/dasm
-  // TODO: add corresponding pseudo
-  def _dpp : VOP1_DPP<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")>;
+  foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
+    def _dpp_gfx9 :
+      VOP_DPP_Real<!cast<VOP1_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.GFX9>,
+      VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")>;
+
 }
 
 defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;

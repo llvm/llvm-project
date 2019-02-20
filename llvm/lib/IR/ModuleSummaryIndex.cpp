@@ -14,10 +14,16 @@
 
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
+
+#define DEBUG_TYPE "module-summary-index"
+
+STATISTIC(ReadOnlyLiveGVars,
+          "Number of live global variables marked read only");
 
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
@@ -28,6 +34,17 @@ bool ValueInfo::isDSOLocal() const {
                       [](const std::unique_ptr<GlobalValueSummary> &Summary) {
                         return Summary->isDSOLocal();
                       });
+}
+
+// Gets the number of immutable refs in RefEdgeList
+unsigned FunctionSummary::immutableRefCount() const {
+  // Here we take advantage of having all readonly references
+  // located in the end of the RefEdgeList.
+  auto Refs = refs();
+  unsigned ImmutableRefCnt = 0;
+  for (int I = Refs.size() - 1; I >= 0 && Refs[I].isReadOnly(); --I)
+    ImmutableRefCnt++;
+  return ImmutableRefCnt;
 }
 
 // Collect for the given module the list of function it defines
@@ -84,6 +101,80 @@ bool ModuleSummaryIndex::isGUIDLive(GlobalValue::GUID GUID) const {
   return false;
 }
 
+static void propagateConstantsToRefs(GlobalValueSummary *S) {
+  // If reference is not readonly then referenced summary is not
+  // readonly either. Note that:
+  // - All references from GlobalVarSummary are conservatively considered as
+  //   not readonly. Tracking them properly requires more complex analysis
+  //   then we have now.
+  //
+  // - AliasSummary objects have no refs at all so this function is a no-op
+  //   for them.
+  for (auto &VI : S->refs()) {
+    if (VI.isReadOnly()) {
+      // We only mark refs as readonly when computing function summaries on
+      // analysis phase.
+      assert(isa<FunctionSummary>(S));
+      continue;
+    }
+    for (auto &Ref : VI.getSummaryList())
+      // If references to alias is not readonly then aliasee is not readonly
+      if (auto *GVS = dyn_cast<GlobalVarSummary>(Ref->getBaseObject()))
+        GVS->setReadOnly(false);
+  }
+}
+
+// Do the constant propagation in combined index.
+// The goal of constant propagation is internalization of readonly
+// variables. To determine which variables are readonly and which
+// are not we take following steps:
+// - During analysis we speculatively assign readonly attribute to
+//   all variables which can be internalized. When computing function
+//   summary we also assign readonly attribute to a reference if
+//   function doesn't modify referenced variable.
+//
+// - After computing dead symbols in combined index we do the constant
+//   propagation. During this step we clear readonly attribute from
+//   all variables which:
+//   a. are preserved or can't be imported
+//   b. referenced by any global variable initializer
+//   c. referenced by a function and reference is not readonly
+//
+// Internalization itself happens in the backend after import is finished
+// See internalizeImmutableGVs.
+void ModuleSummaryIndex::propagateConstants(
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
+  for (auto &P : *this)
+    for (auto &S : P.second.SummaryList) {
+      if (!isGlobalValueLive(S.get()))
+        // We don't examine references from dead objects
+        continue;
+
+      // Global variable can't be marked read only if it is not eligible
+      // to import since we need to ensure that all external references
+      // get a local (imported) copy. It also can't be marked read only
+      // if it or any alias (since alias points to the same memory) are
+      // preserved or notEligibleToImport, since either of those means
+      // there could be writes that are not visible (because preserved
+      // means it could have external to DSO writes, and notEligibleToImport
+      // means it could have writes via inline assembly leading it to be
+      // in the @llvm.*used).
+      if (auto *GVS = dyn_cast<GlobalVarSummary>(S->getBaseObject()))
+        // Here we intentionally pass S.get() not GVS, because S could be
+        // an alias.
+        if (!canImportGlobalVar(S.get()) || GUIDPreservedSymbols.count(P.first))
+          GVS->setReadOnly(false);
+      propagateConstantsToRefs(S.get());
+    }
+  if (llvm::AreStatisticsEnabled())
+    for (auto &P : *this)
+      if (P.second.SummaryList.size())
+        if (auto *GVS = dyn_cast<GlobalVarSummary>(
+                P.second.SummaryList[0]->getBaseObject()))
+          if (isGlobalValueLive(GVS) && GVS->isReadOnly())
+            ReadOnlyLiveGVars++;
+}
+
 // TODO: write a graphviz dumper for SCCs (see ModuleSummaryIndex::exportToDot)
 // then delete this function and update its tests
 LLVM_DUMP_METHOD
@@ -108,6 +199,7 @@ namespace {
 struct Attributes {
   void add(const Twine &Name, const Twine &Value,
            const Twine &Comment = Twine());
+  void addComment(const Twine &Comment);
   std::string getAsString() const;
 
   std::vector<std::string> Attrs;
@@ -129,6 +221,10 @@ void Attributes::add(const Twine &Name, const Twine &Value,
   A += Value.str();
   A += "\"";
   Attrs.push_back(A);
+  addComment(Comment);
+}
+
+void Attributes::addComment(const Twine &Comment) {
   if (!Comment.isTriviallyEmpty()) {
     if (Comments.empty())
       Comments = " // ";
@@ -182,8 +278,9 @@ static std::string linkageToString(GlobalValue::LinkageTypes LT) {
 
 static std::string fflagsToString(FunctionSummary::FFlags F) {
   auto FlagValue = [](unsigned V) { return V ? '1' : '0'; };
-  char FlagRep[] = {FlagValue(F.ReadNone), FlagValue(F.ReadOnly),
-                    FlagValue(F.NoRecurse), FlagValue(F.ReturnDoesNotAlias), 0};
+  char FlagRep[] = {FlagValue(F.ReadNone),     FlagValue(F.ReadOnly),
+                    FlagValue(F.NoRecurse),    FlagValue(F.ReturnDoesNotAlias),
+                    FlagValue(F.NoInline), 0};
 
   return FlagRep;
 }
@@ -198,9 +295,12 @@ static std::string getSummaryAttributes(GlobalValueSummary* GVS) {
          ", ffl: " + fflagsToString(FS->fflags());
 }
 
+static std::string getNodeVisualName(GlobalValue::GUID Id) {
+  return std::string("@") + std::to_string(Id);
+}
+
 static std::string getNodeVisualName(const ValueInfo &VI) {
-  return VI.name().empty() ? std::string("@") + std::to_string(VI.getGUID())
-                           : VI.name().str();
+  return VI.name().empty() ? getNodeVisualName(VI.getGUID()) : VI.name().str();
 }
 
 static std::string getNodeLabel(const ValueInfo &VI, GlobalValueSummary *GVS) {
@@ -221,13 +321,25 @@ static std::string getNodeLabel(const ValueInfo &VI, GlobalValueSummary *GVS) {
 // specific module associated with it. Typically this is function
 // or variable defined in native object or library.
 static void defineExternalNode(raw_ostream &OS, const char *Pfx,
-                               const ValueInfo &VI) {
-  auto StrId = std::to_string(VI.getGUID());
-  OS << "  " << StrId << " [label=\"" << getNodeVisualName(VI)
-     << "\"]; // defined externally\n";
+                               const ValueInfo &VI, GlobalValue::GUID Id) {
+  auto StrId = std::to_string(Id);
+  OS << "  " << StrId << " [label=\"";
+
+  if (VI) {
+    OS << getNodeVisualName(VI);
+  } else {
+    OS << getNodeVisualName(Id);
+  }
+  OS << "\"]; // defined externally\n";
 }
 
-void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
+static bool hasReadOnlyFlag(const GlobalValueSummary *S) {
+  if (auto *GVS = dyn_cast<GlobalVarSummary>(S))
+    return GVS->isReadOnly();
+  return false;
+}
+
+void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
   std::vector<Edge> CrossModuleEdges;
   DenseMap<GlobalValue::GUID, std::vector<uint64_t>> NodeMap;
   StringMap<GVSummaryMapTy> ModuleToDefinedGVS;
@@ -241,14 +353,18 @@ void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
                                        "_" + std::to_string(Id);
   };
 
-  auto DrawEdge = [&](const char *Pfx, int SrcMod, GlobalValue::GUID SrcId,
-                      int DstMod, GlobalValue::GUID DstId, int TypeOrHotness) {
-    // 0 corresponds to alias edge, 1 to ref edge, 2 to call with unknown
-    // hotness, ...
-    TypeOrHotness += 2;
+  auto DrawEdge = [&](const char *Pfx, uint64_t SrcMod, GlobalValue::GUID SrcId,
+                      uint64_t DstMod, GlobalValue::GUID DstId,
+                      int TypeOrHotness) {
+    // 0 - alias
+    // 1 - reference
+    // 2 - constant reference
+    // Other value: (hotness - 3).
+    TypeOrHotness += 3;
     static const char *EdgeAttrs[] = {
         " [style=dotted]; // alias",
         " [style=dashed]; // ref",
+        " [style=dashed,color=forestgreen]; // const-ref",
         " // call (hotness : Unknown)",
         " [color=blue]; // call (hotness : Cold)",
         " // call (hotness : None)",
@@ -291,6 +407,8 @@ void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
         A.add("shape", "box");
       } else {
         A.add("shape", "Mrecord", "variable");
+        if (Flags.Live && hasReadOnlyFlag(SummaryIt.second))
+          A.addComment("immutable");
       }
 
       auto VI = getValueInfo(SummaryIt.first);
@@ -308,13 +426,20 @@ void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
     for (auto &SummaryIt : GVSMap) {
       auto *GVS = SummaryIt.second;
       for (auto &R : GVS->refs())
-        Draw(SummaryIt.first, R.getGUID(), -1);
+        Draw(SummaryIt.first, R.getGUID(), R.isReadOnly() ? -1 : -2);
 
       if (auto *AS = dyn_cast_or_null<AliasSummary>(SummaryIt.second)) {
-        auto AliaseeOrigId = AS->getAliasee().getOriginalName();
-        auto AliaseeId = getGUIDFromOriginalID(AliaseeOrigId);
+        GlobalValue::GUID AliaseeId;
+        if (AS->hasAliaseeGUID())
+          AliaseeId = AS->getAliaseeGUID();
+        else {
+          auto AliaseeOrigId = AS->getAliasee().getOriginalName();
+          AliaseeId = getGUIDFromOriginalID(AliaseeOrigId);
+          if (!AliaseeId)
+            AliaseeId = AliaseeOrigId;
+        }
 
-        Draw(SummaryIt.first, AliaseeId ? AliaseeId : AliaseeOrigId, -2);
+        Draw(SummaryIt.first, AliaseeId, -3);
         continue;
       }
 
@@ -330,7 +455,7 @@ void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
   for (auto &E : CrossModuleEdges) {
     auto &ModList = NodeMap[E.Dst];
     if (ModList.empty()) {
-      defineExternalNode(OS, "  ", getValueInfo(E.Dst));
+      defineExternalNode(OS, "  ", getValueInfo(E.Dst), E.Dst);
       // Add fake module to the list to draw an edge to an external node
       // in the loop below.
       ModList.push_back(-1);

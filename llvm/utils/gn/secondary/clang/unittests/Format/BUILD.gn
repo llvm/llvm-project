@@ -1,0 +1,31 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("FormatTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//clang/lib/Format",
+    "//clang/lib/Frontend",
+    "//clang/lib/Rewrite",
+    "//clang/lib/Tooling/Core",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "CleanupTest.cpp",
+    "FormatTest.cpp",
+    "FormatTestComments.cpp",
+    "FormatTestJS.cpp",
+    "FormatTestJava.cpp",
+    "FormatTestObjC.cpp",
+    "FormatTestProto.cpp",
+    "FormatTestRawStrings.cpp",
+    "FormatTestSelective.cpp",
+    "FormatTestTableGen.cpp",
+    "FormatTestTextProto.cpp",
+    "NamespaceEndCommentsFixerTest.cpp",
+    "SortImportsTestJS.cpp",
+    "SortImportsTestJava.cpp",
+    "SortIncludesTest.cpp",
+    "UsingDeclarationsSorterTest.cpp",
+  ]
+}

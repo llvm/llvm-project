@@ -181,12 +181,8 @@ bool MachineCSE::PerformTrivialCopyPropagation(MachineInstr *MI,
     LLVM_DEBUG(dbgs() << "Coalescing: " << *DefMI);
     LLVM_DEBUG(dbgs() << "***     to: " << *MI);
 
-    // Collect matching debug values.
-    SmallVector<MachineInstr *, 2> DbgValues;
-    DefMI->collectDebugValues(DbgValues);
-    // Propagate SrcReg to debug value instructions.
-    for (auto *DBI : DbgValues)
-      DBI->getOperand(0).setReg(SrcReg);
+    // Update matching debug values.
+    DefMI->changeDebugValuesDefReg(SrcReg);
 
     // Propagate SrcReg of copies to MI.
     MO.setReg(SrcReg);
@@ -239,6 +235,21 @@ MachineCSE::isPhysDefTriviallyDead(unsigned Reg,
   return false;
 }
 
+static bool isCallerPreservedOrConstPhysReg(unsigned Reg,
+                                            const MachineFunction &MF,
+                                            const TargetRegisterInfo &TRI) {
+  // MachineRegisterInfo::isConstantPhysReg directly called by
+  // MachineRegisterInfo::isCallerPreservedOrConstPhysReg expects the
+  // reserved registers to be frozen. That doesn't cause a problem  post-ISel as
+  // most (if not all) targets freeze reserved registers right after ISel.
+  //
+  // It does cause issues mid-GlobalISel, however, hence the additional
+  // reservedRegsFrozen check.
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  return TRI.isCallerPreservedPhysReg(Reg, MF) ||
+         (MRI.reservedRegsFrozen() && MRI.isConstantPhysReg(Reg));
+}
+
 /// hasLivePhysRegDefUses - Return true if the specified instruction read/write
 /// physical registers (except for dead defs of physical registers). It also
 /// returns the physical register def by reference if it's the only one and the
@@ -258,7 +269,7 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
     if (TargetRegisterInfo::isVirtualRegister(Reg))
       continue;
     // Reading either caller preserved or constant physregs is ok.
-    if (!MRI->isCallerPreservedOrConstPhysReg(Reg))
+    if (!isCallerPreservedOrConstPhysReg(Reg, *MI->getMF(), *TRI))
       for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
         PhysRefs.insert(*AI);
   }

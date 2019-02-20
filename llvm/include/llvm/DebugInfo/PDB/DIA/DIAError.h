@@ -23,23 +23,29 @@ enum class dia_error_code {
   already_loaded,
   debug_info_mismatch,
 };
+} // namespace pdb
+} // namespace llvm
+
+namespace std {
+template <>
+struct is_error_code_enum<llvm::pdb::dia_error_code> : std::true_type {};
+} // namespace std
+
+namespace llvm {
+namespace pdb {
+const std::error_category &DIAErrCategory();
+
+inline std::error_code make_error_code(dia_error_code E) {
+  return std::error_code(static_cast<int>(E), DIAErrCategory());
+}
 
 /// Base class for errors originating in DIA SDK, e.g. COM calls
-class DIAError : public ErrorInfo<DIAError> {
+class DIAError : public ErrorInfo<DIAError, StringError> {
 public:
+  using ErrorInfo<DIAError, StringError>::ErrorInfo;
+  DIAError(const Twine &S) : ErrorInfo(S, dia_error_code::unspecified) {}
   static char ID;
-  DIAError(dia_error_code C);
-  DIAError(StringRef Context);
-  DIAError(dia_error_code C, StringRef Context);
-
-  void log(raw_ostream &OS) const override;
-  StringRef getErrorMessage() const;
-  std::error_code convertToErrorCode() const override;
-
-private:
-  std::string ErrMsg;
-  dia_error_code Code;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 #endif

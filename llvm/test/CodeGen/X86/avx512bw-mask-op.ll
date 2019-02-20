@@ -4,8 +4,8 @@
 define i32 @mask32(i32 %x) {
 ; CHECK-LABEL: mask32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    notl %edi
 ; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
 ; CHECK-NEXT:    retq
   %m0 = bitcast i32 %x to <32 x i1>
   %m1 = xor <32 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
@@ -19,8 +19,8 @@ define i32 @mask32(i32 %x) {
 define i64 @mask64(i64 %x) {
 ; CHECK-LABEL: mask64:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    notq %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    notq %rax
 ; CHECK-NEXT:    retq
   %m0 = bitcast i64 %x to <64 x i1>
   %m1 = xor <64 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
@@ -79,10 +79,10 @@ define i32 @mand32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mand32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl %esi, %eax
-; CHECK-NEXT:    xorl %esi, %edi
-; CHECK-NEXT:    orl %eax, %edi
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    andl %esi, %ecx
+; CHECK-NEXT:    xorl %esi, %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    retq
   %ma = bitcast i32 %x to <32 x i1>
   %mb = bitcast i32 %y to <32 x i1>
@@ -116,10 +116,10 @@ define i64 @mand64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mand64:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andq %rsi, %rax
-; CHECK-NEXT:    xorq %rsi, %rdi
-; CHECK-NEXT:    orq %rax, %rdi
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rcx
+; CHECK-NEXT:    andq %rsi, %rcx
+; CHECK-NEXT:    xorq %rsi, %rax
+; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    retq
   %ma = bitcast i64 %x to <64 x i1>
   %mb = bitcast i64 %y to <64 x i1>

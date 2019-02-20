@@ -237,8 +237,8 @@ MCFragment::~MCFragment() = default;
 
 MCFragment::MCFragment(FragmentType Kind, bool HasInstructions,
                        MCSection *Parent)
-    : Kind(Kind), HasInstructions(HasInstructions), Parent(Parent),
-      Atom(nullptr), Offset(~UINT64_C(0)) {
+    : Kind(Kind), HasInstructions(HasInstructions), LayoutOrder(0),
+      Parent(Parent), Atom(nullptr), Offset(~UINT64_C(0)) {
   if (Parent && !isDummy())
     Parent->getFragmentList().push_back(this);
 }

@@ -2,6 +2,8 @@
 // RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -s -t | FileCheck %s
 
 .section assocSec, "dr", discard, "assocSym"
+.global assocSym
+assocSym:
 .long 1
 
 .section secName, "dr", discard, "Symbol1"

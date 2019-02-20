@@ -733,8 +733,13 @@ unsigned LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
     if ((Reg = isLoadFromStackSlot(MI, FrameIndex)))
       return Reg;
     // Check for post-frame index elimination operations
-    const MachineMemOperand *Dummy;
-    return hasLoadFromStackSlot(MI, Dummy, FrameIndex);
+    SmallVector<const MachineMemOperand *, 1> Accesses;
+    if (hasLoadFromStackSlot(MI, Accesses)){
+      FrameIndex =
+          cast<FixedStackPseudoSourceValue>(Accesses.front()->getPseudoValue())
+              ->getFrameIndex();
+      return 1;
+    }
   }
   return 0;
 }

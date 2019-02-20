@@ -50,7 +50,7 @@ public:
   BlockToIndexMapping(Function &F) {
     for (BasicBlock &BB : F)
       V.push_back(&BB);
-    llvm::sort(V.begin(), V.end());
+    llvm::sort(V);
   }
 
   size_t blockToIndex(BasicBlock *BB) const {
@@ -609,7 +609,8 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
         } else {
           // For all other values, the spill is placed immediately after
           // the definition.
-          assert(!isa<TerminatorInst>(E.def()) && "unexpected terminator");
+          assert(!cast<Instruction>(E.def())->isTerminator() &&
+                 "unexpected terminator");
           InsertPt = cast<Instruction>(E.def())->getNextNode();
         }
 
@@ -664,7 +665,7 @@ static Instruction *insertSpills(SpillInfo &Spills, coro::Shape &Shape) {
 }
 
 // Sets the unwind edge of an instruction to a particular successor.
-static void setUnwindEdgeTo(TerminatorInst *TI, BasicBlock *Succ) {
+static void setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {
   if (auto *II = dyn_cast<InvokeInst>(TI))
     II->setUnwindDest(Succ);
   else if (auto *CS = dyn_cast<CatchSwitchInst>(TI))

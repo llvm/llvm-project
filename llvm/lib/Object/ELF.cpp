@@ -139,6 +139,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_MSP430:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/MSP430.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -147,7 +154,7 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
 
 #undef ELF_RELOC
 
-uint32_t llvm::object::getELFRelrRelocationType(uint32_t Machine) {
+uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
   switch (Machine) {
   case ELF::EM_X86_64:
     return ELF::R_X86_64_RELATIVE;
@@ -293,7 +300,7 @@ ELFFile<ELFT>::decode_relrs(Elf_Relr_Range relrs) const {
   Elf_Rela Rela;
   Rela.r_info = 0;
   Rela.r_addend = 0;
-  Rela.setType(getRelrRelocationType(), false);
+  Rela.setType(getRelativeRelocationType(), false);
   std::vector<Elf_Rela> Relocs;
 
   // Word type: uint32_t for Elf32, and uint64_t for Elf64.
@@ -393,20 +400,17 @@ ELFFile<ELFT>::android_relas(const Elf_Shdr *Sec) const {
     if (GroupedByAddend && GroupHasAddend)
       Addend += ReadSLEB();
 
+    if (!GroupHasAddend)
+      Addend = 0;
+
     for (uint64_t I = 0; I != NumRelocsInGroup; ++I) {
       Elf_Rela R;
       Offset += GroupedByOffsetDelta ? GroupOffsetDelta : ReadSLEB();
       R.r_offset = Offset;
       R.r_info = GroupedByInfo ? GroupRInfo : ReadSLEB();
-
-      if (GroupHasAddend) {
-        if (!GroupedByAddend)
-          Addend += ReadSLEB();
-        R.r_addend = Addend;
-      } else {
-        R.r_addend = 0;
-      }
-
+      if (GroupHasAddend && !GroupedByAddend)
+        Addend += ReadSLEB();
+      R.r_addend = Addend;
       Relocs.push_back(R);
 
       if (ErrStr)

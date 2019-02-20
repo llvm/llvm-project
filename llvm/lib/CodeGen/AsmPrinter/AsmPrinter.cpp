@@ -12,10 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/AsmPrinter.h"
-#include "AsmPrinterHandler.h"
 #include "CodeViewDebug.h"
 #include "DwarfDebug.h"
 #include "DwarfException.h"
+#include "WasmException.h"
 #include "WinCFGuard.h"
 #include "WinException.h"
 #include "llvm/ADT/APFloat.h"
@@ -32,8 +32,10 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/GCStrategy.h"
@@ -52,6 +54,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -355,7 +358,7 @@ bool AsmPrinter::doInitialization(Module &M) {
     }
     break;
   case ExceptionHandling::Wasm:
-    // TODO to prevent warning
+    ES = new WasmException(this);
     break;
   }
   if (ES)
@@ -363,7 +366,7 @@ bool AsmPrinter::doInitialization(Module &M) {
                                    DWARFGroupName, DWARFGroupDescription));
 
   if (mdconst::extract_or_null<ConstantInt>(
-          MMI->getModule()->getModuleFlag("cfguard")))
+          MMI->getModule()->getModuleFlag("cfguardtable")))
     Handlers.push_back(HandlerInfo(new WinCFGuard(this), CFGuardName,
                                    CFGuardDescription, DWARFGroupName,
                                    DWARFGroupDescription));
@@ -627,8 +630,7 @@ void AsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
 ///
 /// \p Value - The value to emit.
 /// \p Size - The size of the integer (in bytes) to emit.
-void AsmPrinter::EmitDebugThreadLocal(const MCExpr *Value,
-                                      unsigned Size) const {
+void AsmPrinter::EmitDebugValue(const MCExpr *Value, unsigned Size) const {
   OutStreamer->EmitValue(Value, Size);
 }
 
@@ -655,6 +657,9 @@ void AsmPrinter::EmitFunctionHeader() {
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
+
+  if (F.hasFnAttribute(Attribute::Cold))
+    OutStreamer->EmitSymbolAttribute(CurrentFnSym, MCSA_Cold);
 
   if (isVerbose()) {
     F.printAsOperand(OutStreamer->GetCommentOS(),
@@ -749,18 +754,30 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   bool Commented = false;
 
+  auto getSize =
+      [&MFI](const SmallVectorImpl<const MachineMemOperand *> &Accesses) {
+        unsigned Size = 0;
+        for (auto A : Accesses)
+          if (MFI.isSpillSlotObjectIndex(
+                  cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
+                      ->getFrameIndex()))
+            Size += A->getSize();
+        return Size;
+      };
+
   // We assume a single instruction only has a spill or reload, not
   // both.
   const MachineMemOperand *MMO;
+  SmallVector<const MachineMemOperand *, 2> Accesses;
   if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
     if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
       CommentOS << MMO->getSize() << "-byte Reload";
       Commented = true;
     }
-  } else if (TII->hasLoadFromStackSlot(MI, MMO, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      CommentOS << MMO->getSize() << "-byte Folded Reload";
+  } else if (TII->hasLoadFromStackSlot(MI, Accesses)) {
+    if (auto Size = getSize(Accesses)) {
+      CommentOS << Size << "-byte Folded Reload";
       Commented = true;
     }
   } else if (TII->isStoreToStackSlotPostFE(MI, FI)) {
@@ -769,9 +786,9 @@ static bool emitComments(const MachineInstr &MI, raw_ostream &CommentOS,
       CommentOS << MMO->getSize() << "-byte Spill";
       Commented = true;
     }
-  } else if (TII->hasStoreToStackSlot(MI, MMO, FI)) {
-    if (MFI.isSpillSlotObjectIndex(FI)) {
-      CommentOS << MMO->getSize() << "-byte Folded Spill";
+  } else if (TII->hasStoreToStackSlot(MI, Accesses)) {
+    if (auto Size = getSize(Accesses)) {
+      CommentOS << Size << "-byte Folded Spill";
       Commented = true;
     }
   }
@@ -1066,6 +1083,10 @@ void AsmPrinter::EmitFunctionBody() {
         ++NumInstsInFunction;
       }
 
+      // If there is a pre-instruction symbol, emit a label for it here.
+      if (MCSymbol *S = MI.getPreInstrSymbol())
+        OutStreamer->EmitLabel(S);
+
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {
           NamedRegionTimer T(HI.TimerName, HI.TimerDescription,
@@ -1116,6 +1137,10 @@ void AsmPrinter::EmitFunctionBody() {
         EmitInstruction(&MI);
         break;
       }
+
+      // If there is a post-instruction symbol, emit a label for it here.
+      if (MCSymbol *S = MI.getPostInstrSymbol())
+        OutStreamer->EmitLabel(S);
 
       if (ShouldPrintDebugScopes) {
         for (const HandlerInfo &HI : Handlers) {
@@ -1394,6 +1419,33 @@ bool AsmPrinter::doFinalization(Module &M) {
     }
   }
 
+  if (TM.getTargetTriple().isOSBinFormatCOFF()) {
+    MachineModuleInfoCOFF &MMICOFF =
+        MMI->getObjFileInfo<MachineModuleInfoCOFF>();
+
+    // Output stubs for external and common global variables.
+    MachineModuleInfoCOFF::SymbolListTy Stubs = MMICOFF.GetGVStubList();
+    if (!Stubs.empty()) {
+      const DataLayout &DL = M.getDataLayout();
+
+      for (const auto &Stub : Stubs) {
+        SmallString<256> SectionName = StringRef(".rdata$");
+        SectionName += Stub.first->getName();
+        OutStreamer->SwitchSection(OutContext.getCOFFSection(
+            SectionName,
+            COFF::IMAGE_SCN_CNT_INITIALIZED_DATA | COFF::IMAGE_SCN_MEM_READ |
+                COFF::IMAGE_SCN_LNK_COMDAT,
+            SectionKind::getReadOnly(), Stub.first->getName(),
+            COFF::IMAGE_COMDAT_SELECT_ANY));
+        EmitAlignment(Log2_32(DL.getPointerSize()));
+        OutStreamer->EmitSymbolAttribute(Stub.first, MCSA_Global);
+        OutStreamer->EmitLabel(Stub.first);
+        OutStreamer->EmitSymbolValue(Stub.second.getPointer(),
+                                     DL.getPointerSize());
+      }
+    }
+  }
+
   // Finalize debug and EH information.
   for (const HandlerInfo &HI : Handlers) {
     NamedRegionTimer T(HI.TimerName, HI.TimerDescription, HI.TimerGroupName,
@@ -1449,6 +1501,9 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // Emit llvm.ident metadata in an '.ident' directive.
   EmitModuleIdents(M);
+
+  // Emit bytes for llvm.commandline metadata.
+  EmitModuleCommandLines(M);
 
   // Emit __morestack address if needed for indirect calls.
   if (MMI->usesMorestackAddr()) {
@@ -1534,7 +1589,8 @@ bool AsmPrinter::doFinalization(Module &M) {
     // Emit address-significance attributes for all globals.
     OutStreamer->EmitAddrsig();
     for (const GlobalValue &GV : M.global_values())
-      if (!GV.isThreadLocal() && !GV.getName().startswith("llvm.") &&
+      if (!GV.use_empty() && !GV.isThreadLocal() &&
+          !GV.hasDLLImportStorageClass() && !GV.getName().startswith("llvm.") &&
           !GV.hasAtLeastLocalUnnamedAddr())
         OutStreamer->EmitAddrsigSym(getSymbol(&GV));
   }
@@ -1956,6 +2012,29 @@ void AsmPrinter::EmitModuleIdents(Module &M) {
       OutStreamer->EmitIdent(S->getString());
     }
   }
+}
+
+void AsmPrinter::EmitModuleCommandLines(Module &M) {
+  MCSection *CommandLine = getObjFileLowering().getSectionForCommandLines();
+  if (!CommandLine)
+    return;
+
+  const NamedMDNode *NMD = M.getNamedMetadata("llvm.commandline");
+  if (!NMD || !NMD->getNumOperands())
+    return;
+
+  OutStreamer->PushSection();
+  OutStreamer->SwitchSection(CommandLine);
+  OutStreamer->EmitZeros(1);
+  for (unsigned i = 0, e = NMD->getNumOperands(); i != e; ++i) {
+    const MDNode *N = NMD->getOperand(i);
+    assert(N->getNumOperands() == 1 &&
+           "llvm.commandline metadata entry can have only one operand");
+    const MDString *S = cast<MDString>(N->getOperand(0));
+    OutStreamer->EmitBytes(S->getString());
+    OutStreamer->EmitZeros(1);
+  }
+  OutStreamer->PopSection();
 }
 
 //===--------------------------------------------------------------------===//
@@ -2927,11 +3006,6 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
 
-  assert(!S.useStatepoints() && "statepoints do not currently support custom"
-         " stackmap formats, please see the documentation for a description of"
-         " the default format.  If you really need a custom serialized format,"
-         " please file a bug");
-
   gcp_map_type &GCMap = getGCMap(GCMetadataPrinters);
   gcp_map_type::iterator GCPI = GCMap.find(&S);
   if (GCPI != GCMap.end())
@@ -2950,6 +3024,27 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
     }
 
   report_fatal_error("no GCMetadataPrinter registered for GC: " + Twine(Name));
+}
+
+void AsmPrinter::emitStackMaps(StackMaps &SM) {
+  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+  bool NeedsDefault = false;
+  if (MI->begin() == MI->end())
+    // No GC strategy, use the default format.
+    NeedsDefault = true;
+  else
+    for (auto &I : *MI) {
+      if (GCMetadataPrinter *MP = GetOrCreateGCPrinter(*I))
+        if (MP->emitStackMaps(SM, *this))
+          continue;
+      // The strategy doesn't have printer or doesn't emit custom stack maps.
+      // Use the default format.
+      NeedsDefault = true;
+    }
+
+  if (NeedsDefault)
+    SM.serializeToStackMapSection();
 }
 
 /// Pin vtable to this file.

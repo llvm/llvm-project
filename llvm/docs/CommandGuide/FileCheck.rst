@@ -24,6 +24,9 @@ match.  The file to verify is read from standard input unless the
 OPTIONS
 -------
 
+Options are parsed from the environment variable ``FILECHECK_OPTS``
+and from the command line.
+
 .. option:: -help
 
  Print a summary of command line options.
@@ -77,9 +80,16 @@ OPTIONS
   -verify``. With this option FileCheck will verify that input does not contain
   warnings not covered by any ``CHECK:`` patterns.
 
+.. option:: --dump-input <mode>
+
+  Dump input to stderr, adding annotations representing currently enabled
+  diagnostics.  Do this either 'always', on 'fail', or 'never'.  Specify 'help'
+  to explain the dump format and quit.
+
 .. option:: --dump-input-on-failure
 
-  When the check fails, dump all of the original input.
+  When the check fails, dump all of the original input.  This option is
+  deprecated in favor of `--dump-input=fail`.
 
 .. option:: --enable-var-scope
 
@@ -115,6 +125,10 @@ OPTIONS
   directives.  This option is deprecated and is only provided for convenience
   as old tests are migrated to the new non-overlapping ``CHECK-DAG:``
   implementation.
+
+.. option:: --color
+
+  Use colors in output (autodetected by default).
 
 EXIT STATUS
 -----------
@@ -270,9 +284,9 @@ you can use the "``CHECK-EMPTY:``" directive.
 
 .. code-block:: llvm
 
-   foo
+   declare void @foo()
 
-   bar
+   declare void @bar()
    ; CHECK: foo
    ; CHECK-EMPTY:
    ; CHECK-NEXT: bar
@@ -303,6 +317,29 @@ can be used:
    ; CHECK-NOT: load
    ; CHECK: ret i8
    }
+
+The "CHECK-COUNT:" directive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you need to match multiple lines with the same pattern over and over again
+you can repeat a plain ``CHECK:`` as many times as needed. If that looks too
+boring you can instead use a counted check "``CHECK-COUNT-<num>:``", where
+``<num>`` is a positive decimal number. It will match the pattern exactly
+``<num>`` times, no more and no less. If you specified a custom check prefix,
+just use "``<PREFIX>-COUNT-<num>:``" for the same effect.
+Here is a simple example:
+
+.. code-block:: text
+
+   Loop at depth 1
+   Loop at depth 1
+   Loop at depth 1
+   Loop at depth 1
+     Loop at depth 2
+       Loop at depth 3
+
+   ; CHECK-COUNT-6: Loop at depth {{[0-9]+}}
+   ; CHECK-NOT:     Loop at depth {{[0-9]+}}
 
 The "CHECK-DAG:" directive
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

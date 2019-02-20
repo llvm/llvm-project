@@ -54,8 +54,8 @@ private:
 
 char WebAssemblyReplacePhysRegs::ID = 0;
 INITIALIZE_PASS(WebAssemblyReplacePhysRegs, DEBUG_TYPE,
-                "Replace physical registers with virtual registers",
-                false, false)
+                "Replace physical registers with virtual registers", false,
+                false)
 
 FunctionPass *llvm::createWebAssemblyReplacePhysRegs() {
   return new WebAssemblyReplacePhysRegs();
@@ -86,7 +86,7 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
     // Replace explicit uses of the physical register with a virtual register.
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(PReg);
     unsigned VReg = WebAssembly::NoRegister;
-    for (auto I = MRI.reg_begin(PReg), E = MRI.reg_end(); I != E; ) {
+    for (auto I = MRI.reg_begin(PReg), E = MRI.reg_end(); I != E;) {
       MachineOperand &MO = *I++;
       if (!MO.isImplicit()) {
         if (VReg == WebAssembly::NoRegister)

@@ -9,10 +9,10 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK-LABEL: test_select_fcmp_oeq_i32:
 
-; CMOV-NEXT: ucomiss  %xmm1, %xmm0
-; CMOV-NEXT: cmovnel  %esi, %edi
-; CMOV-NEXT: cmovpl  %esi, %edi
 ; CMOV-NEXT: movl  %edi, %eax
+; CMOV-NEXT: ucomiss  %xmm1, %xmm0
+; CMOV-NEXT: cmovnel  %esi, %eax
+; CMOV-NEXT: cmovpl  %esi, %eax
 ; CMOV-NEXT: retq
 
 ; NOCMOV-NEXT:  flds  8(%esp)
@@ -36,10 +36,10 @@ entry:
 
 ; CHECK-LABEL: test_select_fcmp_oeq_i64:
 
-; CMOV-NEXT:   ucomiss  %xmm1, %xmm0
-; CMOV-NEXT:   cmovneq  %rsi, %rdi
-; CMOV-NEXT:   cmovpq  %rsi, %rdi
 ; CMOV-NEXT:   movq  %rdi, %rax
+; CMOV-NEXT:   ucomiss  %xmm1, %xmm0
+; CMOV-NEXT:   cmovneq  %rsi, %rax
+; CMOV-NEXT:   cmovpq  %rsi, %rax
 ; CMOV-NEXT:   retq
 
 ; NOCMOV-NEXT:   flds  8(%esp)
@@ -64,10 +64,10 @@ entry:
 
 ; CHECK-LABEL: test_select_fcmp_une_i64:
 
-; CMOV-NEXT:   ucomiss  %xmm1, %xmm0
-; CMOV-NEXT:   cmovneq  %rdi, %rsi
-; CMOV-NEXT:   cmovpq  %rdi, %rsi
 ; CMOV-NEXT:   movq  %rsi, %rax
+; CMOV-NEXT:   ucomiss  %xmm1, %xmm0
+; CMOV-NEXT:   cmovneq  %rdi, %rax
+; CMOV-NEXT:   cmovpq  %rdi, %rax
 ; CMOV-NEXT:   retq
 
 ; NOCMOV-NEXT:   flds  8(%esp)

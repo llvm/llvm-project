@@ -1332,6 +1332,10 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     Streamer.EmitIntValue(dwarf::DW_CFA_GNU_window_save, 1);
     return;
 
+  case MCCFIInstruction::OpNegateRAState:
+    Streamer.EmitIntValue(dwarf::DW_CFA_AARCH64_negate_ra_state, 1);
+    return;
+
   case MCCFIInstruction::OpUndefined: {
     unsigned Reg = Instr.getRegister();
     Streamer.EmitIntValue(dwarf::DW_CFA_undefined, 1);
@@ -1418,7 +1422,12 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
-    Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
+    if (Reg < 64) {
+      Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
+    } else {
+      Streamer.EmitIntValue(dwarf::DW_CFA_restore_extended, 1);
+      Streamer.EmitULEB128IntValue(Reg);
+    }
     return;
   }
   case MCCFIInstruction::OpGnuArgsSize:
@@ -1556,9 +1565,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
   uint8_t CIEVersion = getCIEVersion(IsEH, context.getDwarfVersion());
   Streamer.EmitIntValue(CIEVersion, 1);
 
-  // Augmentation String
-  SmallString<8> Augmentation;
   if (IsEH) {
+    SmallString<8> Augmentation;
     Augmentation += "z";
     if (Frame.Personality)
       Augmentation += "P";
@@ -1567,6 +1575,8 @@ const MCSymbol &FrameEmitterImpl::EmitCIE(const MCDwarfFrameInfo &Frame) {
     Augmentation += "R";
     if (Frame.IsSignalFrame)
       Augmentation += "S";
+    if (Frame.IsBKeyFrame)
+      Augmentation += "B";
     Streamer.EmitBytes(Augmentation);
   }
   Streamer.EmitIntValue(0, 1);
@@ -1721,25 +1731,28 @@ namespace {
 
 struct CIEKey {
   static const CIEKey getEmptyKey() {
-    return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX));
+    return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX),
+                  false);
   }
 
   static const CIEKey getTombstoneKey() {
-    return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX));
+    return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX),
+                  false);
   }
 
   CIEKey(const MCSymbol *Personality, unsigned PersonalityEncoding,
          unsigned LSDAEncoding, bool IsSignalFrame, bool IsSimple,
-         unsigned RAReg)
+         unsigned RAReg, bool IsBKeyFrame)
       : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
         LsdaEncoding(LSDAEncoding), IsSignalFrame(IsSignalFrame),
-        IsSimple(IsSimple), RAReg(RAReg) {}
+        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame) {}
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
         PersonalityEncoding(Frame.PersonalityEncoding),
         LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
-        IsSimple(Frame.IsSimple), RAReg(Frame.RAReg) {}
+        IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
+        IsBKeyFrame(Frame.IsBKeyFrame) {}
 
   const MCSymbol *Personality;
   unsigned PersonalityEncoding;
@@ -1747,6 +1760,7 @@ struct CIEKey {
   bool IsSignalFrame;
   bool IsSimple;
   unsigned RAReg;
+  bool IsBKeyFrame;
 };
 
 } // end anonymous namespace
@@ -1758,9 +1772,9 @@ template <> struct DenseMapInfo<CIEKey> {
   static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
 
   static unsigned getHashValue(const CIEKey &Key) {
-    return static_cast<unsigned>(
-        hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
-                     Key.IsSignalFrame, Key.IsSimple, Key.RAReg));
+    return static_cast<unsigned>(hash_combine(
+        Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
+        Key.IsSignalFrame, Key.IsSimple, Key.RAReg, Key.IsBKeyFrame));
   }
 
   static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
@@ -1768,8 +1782,8 @@ template <> struct DenseMapInfo<CIEKey> {
            LHS.PersonalityEncoding == RHS.PersonalityEncoding &&
            LHS.LsdaEncoding == RHS.LsdaEncoding &&
            LHS.IsSignalFrame == RHS.IsSignalFrame &&
-           LHS.IsSimple == RHS.IsSimple &&
-           LHS.RAReg == RHS.RAReg;
+           LHS.IsSimple == RHS.IsSimple && LHS.RAReg == RHS.RAReg &&
+           LHS.IsBKeyFrame == RHS.IsBKeyFrame;
   }
 };
 

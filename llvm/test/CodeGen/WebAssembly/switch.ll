@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-block-placement -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs | FileCheck %s
 
 ; Test switch instructions. Block placement is disabled because it reorders
 ; the blocks in a way that isn't interesting here.

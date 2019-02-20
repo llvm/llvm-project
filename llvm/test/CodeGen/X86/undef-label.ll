@@ -10,20 +10,17 @@ define void @xyz() {
 ; CHECK-LABEL: xyz:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl $g, %eax
-; CHECK-NEXT:    movq %rax, %xmm1
-; CHECK-NEXT:    xorps %xmm0, %xmm0
-; CHECK-NEXT:    ucomisd %xmm0, %xmm1
+; CHECK-NEXT:    movq %rax, %xmm0
+; CHECK-NEXT:    xorps %xmm1, %xmm1
+; CHECK-NEXT:    ucomisd %xmm1, %xmm0
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:    jnp .LBB0_3
-; CHECK-NEXT:  .LBB0_1: # %foo.preheader
-; CHECK-NEXT:    movl $g, %eax
-; CHECK-NEXT:    movq %rax, %xmm1
+; CHECK-NEXT:    jnp .LBB0_2
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB0_2: # %foo
+; CHECK-NEXT:  .LBB0_1: # %foo
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ucomisd %xmm0, %xmm1
-; CHECK-NEXT:    ja .LBB0_2
-; CHECK-NEXT:  .LBB0_3: # %bar
+; CHECK-NEXT:    ucomisd %xmm1, %xmm0
+; CHECK-NEXT:    ja .LBB0_1
+; CHECK-NEXT:  .LBB0_2: # %bar
 ; CHECK-NEXT:    retq
 entry:
   br i1 fcmp oeq (double bitcast (i64 ptrtoint (i32* @g to i64) to double), double 0.000000e+00), label %bar, label %foo

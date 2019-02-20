@@ -38,6 +38,7 @@ tracksRegLiveness: true
 # CHECK-NEXT: hasCalls: false
 # CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: maxCallFrameSize:
+# CHECK-NEXT: cvBytesOfCalleeSavedRegisters: 0
 # CHECK-NEXT: hasOpaqueSPAdjustment: false
 # CHECK-NEXT: hasVAStart: false
 # CHECK-NEXT: hasMustTailInVarArgFunc: false
@@ -68,6 +69,7 @@ tracksRegLiveness: true
 # CHECK-NEXT: hasCalls: true
 # CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: maxCallFrameSize: 4
+# CHECK-NEXT: cvBytesOfCalleeSavedRegisters: 8
 # CHECK-NEXT: hasOpaqueSPAdjustment: true
 # CHECK-NEXT: hasVAStart: true
 # CHECK-NEXT: hasMustTailInVarArgFunc: true
@@ -83,6 +85,7 @@ frameInfo:
   adjustsStack:    true
   hasCalls:        true
   maxCallFrameSize: 4
+  cvBytesOfCalleeSavedRegisters: 8
   hasOpaqueSPAdjustment: true
   hasVAStart:      true
   hasMustTailInVarArgFunc: true

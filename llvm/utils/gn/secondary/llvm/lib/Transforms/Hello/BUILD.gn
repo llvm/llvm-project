@@ -1,0 +1,22 @@
+assert(host_os != "win", "loadable modules not supported on win")
+
+loadable_module("Hello") {
+  output_name = "LLVMHello"
+  deps = [
+    # LLVMHello doesn't want to link in any LLVM code, it just
+    # needs its headers.
+    "//llvm/include/llvm/IR:public_tablegen",
+  ]
+  sources = [
+    "Hello.cpp",
+  ]
+
+  if (host_os == "linux") {
+    # The GN build currently doesn't globally pass -fPIC, but that's
+    # needed for building .so files on Linux.  Just pass it manually
+    # for loadable_modules for now.
+    cflags = [ "-fPIC" ]
+  }
+
+  # FIXME: Use Hello.exports to remove all exports.
+}

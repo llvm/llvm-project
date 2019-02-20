@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -disable-wasm-explicit-locals | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test zeroext and signext ABI keywords
 
@@ -6,8 +6,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: z2s_func:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype z2s_func (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push[[NUM0:[0-9]+]]=, 24{{$}}
 ; CHECK-NEXT: i32.shl $push[[NUM2:[0-9]+]]=, $0, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: i32.const $push[[NUM1:[0-9]+]]=, 24{{$}}
@@ -18,8 +17,7 @@ define signext i8 @z2s_func(i8 zeroext %t) {
 }
 
 ; CHECK-LABEL: s2z_func:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype s2z_func (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push[[NUM0:[0-9]+]]=, 255{{$}}
 ; CHECK-NEXT: i32.and $push[[NUM1:[0-9]+]]=, $0, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM1]]{{$}}
@@ -28,8 +26,7 @@ define zeroext i8 @s2z_func(i8 signext %t) {
 }
 
 ; CHECK-LABEL: z2s_call:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype z2s_call (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push[[NUM0:[0-9]+]]=, 255{{$}}
 ; CHECK-NEXT: i32.and $push[[NUM1:[0-9]+]]=, $0, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: call $push[[NUM2:[0-9]+]]=, z2s_func@FUNCTION, $pop[[NUM1]]{{$}}
@@ -42,8 +39,7 @@ define i32 @z2s_call(i32 %t) {
 }
 
 ; CHECK-LABEL: s2z_call:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype s2z_call (i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.const $push[[NUM0:[0-9]+]]=, 24{{$}}
 ; CHECK-NEXT: i32.shl $push[[NUM1:[0-9]+]]=, $0, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT: i32.const $push[[NUM6:[0-9]+]]=, 24{{$}}

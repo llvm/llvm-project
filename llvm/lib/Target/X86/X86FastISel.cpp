@@ -738,6 +738,10 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
     if (GV->isThreadLocal())
       return false;
 
+    // Can't handle !absolute_symbol references yet.
+    if (GV->isAbsoluteSymbolRef())
+      return false;
+
     // RIP-relative addresses can't have additional register operands, so if
     // we've already folded stuff into the addressing mode, just force the
     // global value into its own register, which we can use as the basereg.
@@ -1274,7 +1278,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
     unsigned Reg = X86MFInfo->getSRetReturnReg();
     assert(Reg &&
            "SRetReturnReg should have been set in LowerFormalArguments()!");
-    unsigned RetReg = Subtarget->is64Bit() ? X86::RAX : X86::EAX;
+    unsigned RetReg = Subtarget->isTarget64BitLP64() ? X86::RAX : X86::EAX;
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(TargetOpcode::COPY), RetReg).addReg(Reg);
     RetRegs.push_back(RetReg);
@@ -2896,23 +2900,15 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         isCommutativeIntrinsic(II))
       std::swap(LHS, RHS);
 
-    bool UseIncDec = false;
-    if (isa<ConstantInt>(RHS) && cast<ConstantInt>(RHS)->isOne())
-      UseIncDec = true;
-
     unsigned BaseOpc, CondOpc;
     switch (II->getIntrinsicID()) {
     default: llvm_unreachable("Unexpected intrinsic!");
     case Intrinsic::sadd_with_overflow:
-      BaseOpc = UseIncDec ? unsigned(X86ISD::INC) : unsigned(ISD::ADD);
-      CondOpc = X86::SETOr;
-      break;
+      BaseOpc = ISD::ADD; CondOpc = X86::SETOr; break;
     case Intrinsic::uadd_with_overflow:
       BaseOpc = ISD::ADD; CondOpc = X86::SETBr; break;
     case Intrinsic::ssub_with_overflow:
-      BaseOpc = UseIncDec ? unsigned(X86ISD::DEC) : unsigned(ISD::SUB);
-      CondOpc = X86::SETOr;
-      break;
+      BaseOpc = ISD::SUB; CondOpc = X86::SETOr; break;
     case Intrinsic::usub_with_overflow:
       BaseOpc = ISD::SUB; CondOpc = X86::SETBr; break;
     case Intrinsic::smul_with_overflow:
@@ -2934,9 +2930,11 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
         { X86::DEC8r, X86::DEC16r, X86::DEC32r, X86::DEC64r }
       };
 
-      if (BaseOpc == X86ISD::INC || BaseOpc == X86ISD::DEC) {
+      if (CI->isOne() && (BaseOpc == ISD::ADD || BaseOpc == ISD::SUB) &&
+          CondOpc == X86::SETOr) {
+        // We can use INC/DEC.
         ResultReg = createResultReg(TLI.getRegClassFor(VT));
-        bool IsDec = BaseOpc == X86ISD::DEC;
+        bool IsDec = BaseOpc == ISD::SUB;
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(Opc[IsDec][VT.SimpleTy-MVT::i8]), ResultReg)
           .addReg(LHSReg, getKillRegState(LHSIsKill));
@@ -3218,8 +3216,8 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       (CalledFn && CalledFn->hasFnAttribute("no_caller_saved_registers")))
     return false;
 
-  // Functions using retpoline should use SDISel for calls.
-  if (Subtarget->useRetpoline())
+  // Functions using retpoline for indirect calls need to use SDISel.
+  if (Subtarget->useRetpolineIndirectCalls())
     return false;
 
   // Handle only C, fastcc, and webkit_js calling conventions for now.
@@ -3730,9 +3728,6 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   switch (VT.SimpleTy) {
   default: llvm_unreachable("Unexpected value type");
   case MVT::i1:
-    // TODO: Support this properly.
-    if (Subtarget->hasAVX512())
-      return 0;
     VT = MVT::i8;
     LLVM_FALLTHROUGH;
   case MVT::i8:  Opc = X86::MOV8ri;  break;
@@ -3740,21 +3735,13 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
   case MVT::i32: Opc = X86::MOV32ri; break;
   case MVT::i64: {
     if (isUInt<32>(Imm))
-      Opc = X86::MOV32ri;
+      Opc = X86::MOV32ri64;
     else if (isInt<32>(Imm))
       Opc = X86::MOV64ri32;
     else
       Opc = X86::MOV64ri;
     break;
   }
-  }
-  if (VT == MVT::i64 && Opc == X86::MOV32ri) {
-    unsigned SrcReg = fastEmitInst_i(Opc, &X86::GR32RegClass, Imm);
-    unsigned ResultReg = createResultReg(&X86::GR64RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-            TII.get(TargetOpcode::SUBREG_TO_REG), ResultReg)
-      .addImm(0).addReg(SrcReg).addImm(X86::sub_32bit);
-    return ResultReg;
   }
   return fastEmitInst_i(Opc, TLI.getRegClassFor(VT), Imm);
 }

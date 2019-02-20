@@ -15,14 +15,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Check that globals were instrumented:
 
 ; CHECK: @global = global { i32, [60 x i8] } zeroinitializer, comdat, align 32
-; CHECK: @.str = internal unnamed_addr constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }, comdat($".str${{[01-9a-f]+}}"), align 32
+; CHECK: @.str = internal constant { [14 x i8], [50 x i8] } { [14 x i8] c"Hello, world!\00", [50 x i8] zeroinitializer }, comdat($".str${{[01-9a-f]+}}"), align 32
 
 ; Check emitted location descriptions:
 ; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
 ; CHECK: [[FILENAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
 ; CHECK: [[LOCDESCR:@___asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
 ; CHECK: @__asan_global_global = {{.*}}i64 ptrtoint ({ i32, [60 x i8] }* @global to i64){{.*}} section "asan_globals"{{.*}}, !associated
-; CHECK: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @.str to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; CHECK: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @{{.str|1}} to i64){{.*}} section "asan_globals"{{.*}}, !associated
 
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.

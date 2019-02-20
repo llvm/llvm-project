@@ -372,6 +372,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
     LLVMContext::MD_align,
     LLVMContext::MD_dereferenceable,
     LLVMContext::MD_dereferenceable_or_null,
+    LLVMContext::MD_access_group,
   };
 
   for (unsigned ID : KnownIDs)
@@ -380,7 +381,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
   // Add all operands to the new PHI and combine TBAA metadata.
   for (unsigned i = 1, e = PN.getNumIncomingValues(); i != e; ++i) {
     LoadInst *LI = cast<LoadInst>(PN.getIncomingValue(i));
-    combineMetadata(NewLI, LI, KnownIDs);
+    combineMetadata(NewLI, LI, KnownIDs, true);
     Value *NewInVal = LI->getOperand(0);
     if (NewInVal != InVal)
       InVal = nullptr;
@@ -413,7 +414,7 @@ Instruction *InstCombiner::FoldPHIArgLoadIntoPHI(PHINode &PN) {
 Instruction *InstCombiner::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
-  if (TerminatorInst *TI = Phi.getParent()->getTerminator())
+  if (Instruction *TI = Phi.getParent()->getTerminator())
     if (TI->isEHPad())
       return nullptr;
 
@@ -487,7 +488,7 @@ Instruction *InstCombiner::FoldPHIArgZextsIntoPHI(PHINode &Phi) {
 Instruction *InstCombiner::FoldPHIArgOpIntoPHI(PHINode &PN) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
-  if (TerminatorInst *TI = PN.getParent()->getTerminator())
+  if (Instruction *TI = PN.getParent()->getTerminator())
     if (TI->isEHPad())
       return nullptr;
 

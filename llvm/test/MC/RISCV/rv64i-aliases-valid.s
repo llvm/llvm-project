@@ -4,7 +4,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -riscv-no-aliases -d - \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-EXPAND,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
@@ -17,21 +17,21 @@
 # TODO ld
 # TODO sd
 
-# CHECK-INST: addiw a0, zero, 0
-# CHECK-ALIAS: sext.w a0, zero
+# CHECK-INST: addi a0, zero, 0
+# CHECK-ALIAS: mv a0, zero
 li x10, 0
-# CHECK-EXPAND: addiw a0, zero, 1
+# CHECK-EXPAND: addi a0, zero, 1
 li x10, 1
-# CHECK-EXPAND: addiw a0, zero, -1
+# CHECK-EXPAND: addi a0, zero, -1
 li x10, -1
-# CHECK-EXPAND: addiw a0, zero, 2047
+# CHECK-EXPAND: addi a0, zero, 2047
 li x10, 2047
-# CHECK-EXPAND: addiw a0, zero, -2047
+# CHECK-EXPAND: addi a0, zero, -2047
 li x10, -2047
 # CHECK-EXPAND: lui a1, 1
 # CHECK-EXPAND: addiw a1, a1, -2048
 li x11, 2048
-# CHECK-EXPAND: addiw a1, zero, -2048
+# CHECK-EXPAND: addi a1, zero, -2048
 li x11, -2048
 # CHECK-EXPAND: lui a1, 1
 # CHECK-EXPAND: addiw a1, a1, -2047
@@ -66,28 +66,28 @@ li x12, -2147483648
 # CHECK-EXPAND: lui a2, 524288
 li x12, -0x80000000
 
-# CHECK-EXPAND: addiw a2, zero, 1
+# CHECK-EXPAND: addi a2, zero, 1
 # CHECK-EXPAND: slli a2, a2, 31
 li x12, 0x80000000
-# CHECK-EXPAND: addiw a2, zero, 1
+# CHECK-EXPAND: addi a2, zero, 1
 # CHECK-EXPAND: slli a2, a2, 32
 # CHECK-EXPAND: addi a2, a2, -1
 li x12, 0xFFFFFFFF
 
-# CHECK-EXPAND: addiw t0, zero, 1
+# CHECK-EXPAND: addi t0, zero, 1
 # CHECK-EXPAND: slli t0, t0, 32
 li t0, 0x100000000
-# CHECK-EXPAND: addiw t1, zero, -1
+# CHECK-EXPAND: addi t1, zero, -1
 # CHECK-EXPAND: slli t1, t1, 63
 li t1, 0x8000000000000000
-# CHECK-EXPAND: addiw t1, zero, -1
+# CHECK-EXPAND: addi t1, zero, -1
 # CHECK-EXPAND: slli t1, t1, 63
 li t1, -0x8000000000000000
 # CHECK-EXPAND: lui t2, 9321
 # CHECK-EXPAND: addiw t2, t2, -1329
 # CHECK-EXPAND: slli t2, t2, 35
 li t2, 0x1234567800000000
-# CHECK-EXPAND: addiw t3, zero, 7
+# CHECK-EXPAND: addi t3, zero, 7
 # CHECK-EXPAND: slli t3, t3, 36
 # CHECK-EXPAND: addi t3, t3, 11
 # CHECK-EXPAND: slli t3, t3, 24
@@ -102,8 +102,21 @@ li t3, 0x700000000B00000F
 # CHECK-EXPAND: slli t4, t4, 13
 # CHECK-EXPAND: addi t4, t4, -272
 li t4, 0x123456789abcdef0
-# CHECK-EXPAND: addiw t5, zero, -1
+# CHECK-EXPAND: addi t5, zero, -1
 li t5, 0xFFFFFFFFFFFFFFFF
+
+# CHECK-EXPAND: addi a0, zero, 1110
+li a0, %lo(0x123456)
+# CHECK-OBJ-NOALIAS: addi a0, zero, 0
+# CHECK-OBJ: R_RISCV_PCREL_LO12
+li a0, %pcrel_lo(0x123456)
+
+# CHECK-OBJ-NOALIAS: addi a0, zero, 0
+# CHECK-OBJ: R_RISCV_LO12
+li a0, %lo(foo)
+# CHECK-OBJ-NOALIAS: addi a0, zero, 0
+# CHECK-OBJ: R_RISCV_PCREL_LO12
+li a0, %pcrel_lo(foo)
 
 # CHECK-INST: subw t6, zero, ra
 # CHECK-ALIAS: negw t6, ra
@@ -111,3 +124,21 @@ negw x31, x1
 # CHECK-INST: addiw t6, ra, 0
 # CHECK-ALIAS: sext.w t6, ra
 sext.w x31, x1
+
+# The following aliases are accepted as input but the canonical form
+# of the instruction will always be printed.
+# CHECK-INST: addiw a2, a3, 4
+# CHECK-ALIAS: addiw a2, a3, 4
+addw a2,a3,4
+
+# CHECK-INST: slliw a2, a3, 4
+# CHECK-ALIAS: slliw a2, a3, 4
+sllw a2,a3,4
+
+# CHECK-INST: srliw a2, a3, 4
+# CHECK-ALIAS: srliw a2, a3, 4
+srlw a2,a3,4
+
+# CHECK-INST: sraiw a2, a3, 4
+# CHECK-ALIAS: sraiw a2, a3, 4
+sraw a2,a3,4

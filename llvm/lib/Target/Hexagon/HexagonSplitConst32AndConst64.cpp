@@ -63,7 +63,7 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
   auto &HST = Fn.getSubtarget<HexagonSubtarget>();
   auto &HTM = static_cast<const HexagonTargetMachine&>(Fn.getTarget());
   auto &TLOF = *HTM.getObjFileLowering();
-  if (HST.useSmallData() && TLOF.isSmallDataEnabled())
+  if (HST.useSmallData() && TLOF.isSmallDataEnabled(HTM))
     return false;
 
   const TargetInstrInfo *TII = HST.getInstrInfo();

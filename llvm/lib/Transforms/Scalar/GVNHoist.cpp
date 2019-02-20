@@ -246,8 +246,8 @@ static void combineKnownMetadata(Instruction *ReplInst, Instruction *I) {
       LLVMContext::MD_tbaa,           LLVMContext::MD_alias_scope,
       LLVMContext::MD_noalias,        LLVMContext::MD_range,
       LLVMContext::MD_fpmath,         LLVMContext::MD_invariant_load,
-      LLVMContext::MD_invariant_group};
-  combineMetadata(ReplInst, I, KnownIDs);
+      LLVMContext::MD_invariant_group, LLVMContext::MD_access_group};
+  combineMetadata(ReplInst, I, KnownIDs, true);
 }
 
 // This pass hoists common computations across branches sharing common
@@ -365,7 +365,7 @@ private:
 
   // Return true when a successor of BB dominates A.
   bool successorDominate(const BasicBlock *BB, const BasicBlock *A) {
-    for (const BasicBlock *Succ : BB->getTerminator()->successors())
+    for (const BasicBlock *Succ : successors(BB))
       if (DT->dominates(Succ, A))
         return true;
 
@@ -577,15 +577,15 @@ private:
   // Returns the edge via which an instruction in BB will get the values from.
 
   // Returns true when the values are flowing out to each edge.
-  bool valueAnticipable(CHIArgs C, TerminatorInst *TI) const {
+  bool valueAnticipable(CHIArgs C, Instruction *TI) const {
     if (TI->getNumSuccessors() > (unsigned)size(C))
       return false; // Not enough args in this CHI.
 
     for (auto CHI : C) {
       BasicBlock *Dest = CHI.Dest;
       // Find if all the edges have values flowing out of BB.
-      bool Found = llvm::any_of(TI->successors(), [Dest](const BasicBlock *BB) {
-          return BB == Dest; });
+      bool Found = llvm::any_of(
+          successors(TI), [Dest](const BasicBlock *BB) { return BB == Dest; });
       if (!Found)
         return false;
     }
@@ -748,11 +748,9 @@ private:
     // TODO: Remove fully-redundant expressions.
     // Get instruction from the Map, assume that all the Instructions
     // with same VNs have same rank (this is an approximation).
-    llvm::sort(Ranks.begin(), Ranks.end(),
-               [this, &Map](const VNType &r1, const VNType &r2) {
-                 return (rank(*Map.lookup(r1).begin()) <
-                         rank(*Map.lookup(r2).begin()));
-               });
+    llvm::sort(Ranks, [this, &Map](const VNType &r1, const VNType &r2) {
+      return (rank(*Map.lookup(r1).begin()) < rank(*Map.lookup(r2).begin()));
+    });
 
     // - Sort VNs according to their rank, and start with lowest ranked VN
     // - Take a VN and for each instruction with same VN
@@ -784,6 +782,7 @@ private:
       // which currently have dead terminators that are control
       // dependence sources of a block which is in NewLiveBlocks.
       IDFs.setDefiningBlocks(VNBlocks);
+      IDFBlocks.clear();
       IDFs.calculate(IDFBlocks);
 
       // Make a map of BB vs instructions to be hoisted.
@@ -792,7 +791,7 @@ private:
       }
       // Insert empty CHI node for this VN. This is used to factor out
       // basic blocks where the ANTIC can potentially change.
-      for (auto IDFB : IDFBlocks) { // TODO: Prune out useless CHI insertions.
+      for (auto IDFB : IDFBlocks) {
         for (unsigned i = 0; i < V.size(); ++i) {
           CHIArg C = {VN, nullptr, nullptr};
            // Ignore spurious PDFs.
@@ -1100,7 +1099,7 @@ private:
           break;
 
         // Do not value number terminator instructions.
-        if (isa<TerminatorInst>(&I1))
+        if (I1.isTerminator())
           break;
 
         if (auto *Load = dyn_cast<LoadInst>(&I1))

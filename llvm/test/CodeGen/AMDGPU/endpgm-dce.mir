@@ -295,3 +295,20 @@ body:             |
   bb.2:
     S_ENDPGM
 ...
+
+# GCN-LABEL: name: implicit_use_on_s_endpgm
+# GCN: V_ADD_I32
+# GCN: COPY
+# GCN: V_ADDC_U32
+# GCN: S_ENDPGM implicit %3
+name: implicit_use_on_s_endpgm
+tracksRegLiveness: true
+
+body:             |
+  bb.0:
+    dead %0:vgpr_32 = V_ADD_I32_e32 12345, undef %1:vgpr_32, implicit-def $vcc, implicit $exec
+    %2:sreg_64_xexec = COPY $vcc
+    %3:vgpr_32, dead %4:sreg_64_xexec = V_ADDC_U32_e64 undef %5:vgpr_32, undef %6:vgpr_32, %2, implicit $exec
+    S_ENDPGM implicit %3
+
+...

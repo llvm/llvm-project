@@ -175,11 +175,24 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit) {
   unsigned NumDies = Unit.getNumDIEs();
   for (unsigned I = 0; I < NumDies; ++I) {
     auto Die = Unit.getDIEAtIndex(I);
+
     if (Die.getTag() == DW_TAG_null)
       continue;
+
+    bool HasTypeAttr = false;
     for (auto AttrValue : Die.attributes()) {
       NumUnitErrors += verifyDebugInfoAttribute(Die, AttrValue);
       NumUnitErrors += verifyDebugInfoForm(Die, AttrValue);
+      HasTypeAttr |= (AttrValue.Attr == DW_AT_type);
+    }
+
+    if (!HasTypeAttr && (Die.getTag() == DW_TAG_formal_parameter ||
+                         Die.getTag() == DW_TAG_variable ||
+                         Die.getTag() == DW_TAG_array_type)) {
+      error() << "DIE with tag " << TagString(Die.getTag())
+              << " is missing type attribute:\n";
+      dump(Die) << '\n';
+      NumUnitErrors++;
     }
     NumUnitErrors += verifyDebugInfoCallSite(Die);
   }
@@ -312,9 +325,10 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       case dwarf::DW_UT_split_type: {
         Unit = TypeUnitVector.addUnit(llvm::make_unique<DWARFTypeUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
-            DObj.getStringSection(), DObj.getStringOffsetSection(),
-            &DObj.getAppleObjCSection(), DObj.getLineSection(),
-            DCtx.isLittleEndian(), false, TypeUnitVector));
+            &DObj.getLocSection(), DObj.getStringSection(),
+            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DObj.getLineSection(), DCtx.isLittleEndian(), false,
+            TypeUnitVector));
         break;
       }
       case dwarf::DW_UT_skeleton:
@@ -325,9 +339,10 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
       case 0: {
         Unit = CompileUnitVector.addUnit(llvm::make_unique<DWARFCompileUnit>(
             DCtx, S, Header, DCtx.getDebugAbbrev(), &DObj.getRangeSection(),
-            DObj.getStringSection(), DObj.getStringOffsetSection(),
-            &DObj.getAppleObjCSection(), DObj.getLineSection(),
-            DCtx.isLittleEndian(), false, CompileUnitVector));
+            &DObj.getLocSection(), DObj.getStringSection(),
+            DObj.getStringOffsetSection(), &DObj.getAppleObjCSection(),
+            DObj.getLineSection(), DCtx.isLittleEndian(), false,
+            CompileUnitVector));
         break;
       }
       default: { llvm_unreachable("Invalid UnitType."); }
@@ -349,15 +364,18 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
 
 bool DWARFVerifier::handleDebugInfo() {
   const DWARFObject &DObj = DCtx.getDWARFObj();
+  unsigned NumErrors = 0;
 
   OS << "Verifying .debug_info Unit Header Chain...\n";
-  unsigned result = verifyUnitSection(DObj.getInfoSection(), DW_SECT_INFO);
+  DObj.forEachInfoSections([&](const DWARFSection &S) {
+    NumErrors += verifyUnitSection(S, DW_SECT_INFO);
+  });
 
   OS << "Verifying .debug_types Unit Header Chain...\n";
   DObj.forEachTypesSections([&](const DWARFSection &S) {
-    result += verifyUnitSection(S, DW_SECT_TYPES);
+    NumErrors += verifyUnitSection(S, DW_SECT_TYPES);
   });
-  return result == 0;
+  return NumErrors == 0;
 }
 
 unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
@@ -517,6 +535,15 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                   "incompatible tag " +
                   TagString(RefTag));
     }
+    break;
+  }
+  case DW_AT_type: {
+    DWARFDie TypeDie = Die.getAttributeValueAsReferencedDie(DW_AT_type);
+    if (TypeDie && !isType(TypeDie.getTag())) {
+      ReportError("DIE has " + AttributeString(Attr) +
+                  " with incompatible tag " + TagString(TypeDie.getTag()));
+    }
+    break;
   }
   default:
     break;
@@ -527,6 +554,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
 unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
                                             DWARFAttribute &AttrValue) {
   const DWARFObject &DObj = DCtx.getDWARFObj();
+  auto DieCU = Die.getDwarfUnit();
   unsigned NumErrors = 0;
   const auto Form = AttrValue.Value.getForm();
   switch (Form) {
@@ -539,7 +567,6 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
     assert(RefVal);
     if (RefVal) {
-      auto DieCU = Die.getDwarfUnit();
       auto CUSize = DieCU->getNextUnitOffset() - DieCU->getOffset();
       auto CUOffset = AttrValue.Value.getRawUValue();
       if (CUOffset >= CUSize) {
@@ -564,7 +591,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
     assert(RefVal);
     if (RefVal) {
-      if (*RefVal >= DObj.getInfoSection().Data.size()) {
+      if (*RefVal >= DieCU->getInfoSection().Data.size()) {
         ++NumErrors;
         error() << "DW_FORM_ref_addr offset beyond .debug_info "
                    "bounds:\n";
@@ -583,6 +610,45 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     if (SecOffset && *SecOffset >= DObj.getStringSection().size()) {
       ++NumErrors;
       error() << "DW_FORM_strp offset beyond .debug_str bounds:\n";
+      dump(Die) << '\n';
+    }
+    break;
+  }
+  case DW_FORM_strx:
+  case DW_FORM_strx1:
+  case DW_FORM_strx2:
+  case DW_FORM_strx3:
+  case DW_FORM_strx4: {
+    auto Index = AttrValue.Value.getRawUValue();
+    auto DieCU = Die.getDwarfUnit();
+    // Check that we have a valid DWARF v5 string offsets table.
+    if (!DieCU->getStringOffsetsTableContribution()) {
+      ++NumErrors;
+      error() << FormEncodingString(Form)
+              << " used without a valid string offsets table:\n";
+      dump(Die) << '\n';
+      break;
+    }
+    // Check that the index is within the bounds of the section. 
+    unsigned ItemSize = DieCU->getDwarfStringOffsetsByteSize();
+    // Use a 64-bit type to calculate the offset to guard against overflow.
+    uint64_t Offset =
+        (uint64_t)DieCU->getStringOffsetsBase() + Index * ItemSize;
+    if (DObj.getStringOffsetSection().Data.size() < Offset + ItemSize) {
+      ++NumErrors;
+      error() << FormEncodingString(Form) << " uses index "
+              << format("%" PRIu64, Index) << ", which is too large:\n";
+      dump(Die) << '\n';
+      break;
+    }
+    // Check that the string offset is valid.
+    uint64_t StringOffset = *DieCU->getStringOffsetSectionItem(Index);
+    if (StringOffset >= DObj.getStringSection().size()) {
+      ++NumErrors;
+      error() << FormEncodingString(Form) << " uses index "
+              << format("%" PRIu64, Index)
+              << ", but the referenced string"
+                 " offset is beyond .debug_str bounds:\n";
       dump(Die) << '\n';
     }
     break;

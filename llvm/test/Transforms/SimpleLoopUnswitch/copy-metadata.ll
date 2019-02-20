@@ -1,4 +1,5 @@
 ; RUN: opt < %s -simple-loop-unswitch -S | FileCheck %s
+; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S | FileCheck %s
 
 ; This test checks if unswitched condition preserve make.implicit metadata.
 define i32 @test(i1 %cond) {

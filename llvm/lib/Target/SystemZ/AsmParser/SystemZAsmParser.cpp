@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InstPrinter/SystemZInstPrinter.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -243,6 +244,11 @@ public:
     return Kind == KindImmTLS;
   }
 
+  const ImmTLSOp getImmTLS() const {
+    assert(Kind == KindImmTLS && "Not a TLS immediate");
+    return ImmTLS;
+  }
+
   // Memory operands.
   bool isMem() const override {
     return Kind == KindMem;
@@ -268,6 +274,11 @@ public:
   }
   bool isMemDisp12Len8(RegisterKind RegKind) const {
     return isMemDisp12(BDLMem, RegKind) && inRange(Mem.Length.Imm, 1, 0x100);
+  }
+
+  const MemOp& getMem() const {
+    assert(Kind == KindMem && "Not a Mem operand");
+    return Mem;
   }
 
   // Override MCParsedAsmOperand.
@@ -623,8 +634,61 @@ static struct InsnMatchEntry InsnMatchTable[] = {
     { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } }
 };
 
+static void printMCExpr(const MCExpr *E, raw_ostream &OS) {
+  if (!E)
+    return;
+  if (auto *CE = dyn_cast<MCConstantExpr>(E))
+    OS << *CE;
+  else if (auto *UE = dyn_cast<MCUnaryExpr>(E))
+    OS << *UE;
+  else if (auto *BE = dyn_cast<MCBinaryExpr>(E))
+    OS << *BE;
+  else if (auto *SRE = dyn_cast<MCSymbolRefExpr>(E))
+    OS << *SRE;
+  else
+    OS << *E;
+}
+
 void SystemZOperand::print(raw_ostream &OS) const {
-  llvm_unreachable("Not implemented");
+  switch (Kind) {
+    break;
+  case KindToken:
+    OS << "Token:" << getToken();
+    break;
+  case KindReg:
+    OS << "Reg:" << SystemZInstPrinter::getRegisterName(getReg());
+    break;
+  case KindImm:
+    OS << "Imm:";
+    printMCExpr(getImm(), OS);
+    break;
+  case KindImmTLS:
+    OS << "ImmTLS:";
+    printMCExpr(getImmTLS().Imm, OS);
+    if (getImmTLS().Sym) {
+      OS << ", ";
+      printMCExpr(getImmTLS().Sym, OS);
+    }
+    break;
+  case KindMem: {
+    const MemOp &Op = getMem();
+    OS << "Mem:" << *cast<MCConstantExpr>(Op.Disp);
+    if (Op.Base) {
+      OS << "(";
+      if (Op.MemKind == BDLMem)
+        OS << *cast<MCConstantExpr>(Op.Length.Imm) << ",";
+      else if (Op.MemKind == BDRMem)
+        OS << SystemZInstPrinter::getRegisterName(Op.Length.Reg) << ",";
+      if (Op.Index)
+        OS << SystemZInstPrinter::getRegisterName(Op.Index) << ",";
+      OS << SystemZInstPrinter::getRegisterName(Op.Base);
+      OS << ")";
+    }
+    break;
+  }
+  case KindInvalid:
+    break;
+  }
 }
 
 // Parse one register of the form %<prefix><number>.

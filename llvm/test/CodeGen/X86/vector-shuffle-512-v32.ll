@@ -40,15 +40,15 @@ define <32 x i16> @shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_
 ; KNL-LABEL: shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_1f:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpshufb {{.*#+}} ymm2 = ymm0[4,5,10,11,4,5,6,7,14,15,2,3,4,5,2,3,20,21,26,27,20,21,22,23,30,31,18,19,20,21,18,19]
-; KNL-NEXT:    vpermq {{.*#+}} ymm3 = ymm0[2,3,0,1]
-; KNL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm3[0,1,10,11,8,9,8,9,14,15,2,3,4,5,2,3,16,17,26,27,24,25,24,25,30,31,18,19,20,21,18,19]
-; KNL-NEXT:    vmovdqa {{.*#+}} ymm4 = <0,0,0,0,u,u,u,u,0,0,u,u,255,255,0,0,255,255,255,255,u,u,255,255,255,255,u,u,0,0,255,255>
-; KNL-NEXT:    vpblendvb %ymm4, %ymm0, %ymm2, %ymm0
-; KNL-NEXT:    vpshufb {{.*#+}} ymm3 = ymm3[0,1,10,11,8,9,8,9,14,15,6,7,4,5,14,15,16,17,26,27,24,25,24,25,30,31,22,23,20,21,30,31]
+; KNL-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
+; KNL-NEXT:    vpshufb {{.*#+}} ymm3 = ymm0[0,1,10,11,8,9,8,9,14,15,6,7,4,5,14,15,16,17,26,27,24,25,24,25,30,31,22,23,20,21,30,31]
 ; KNL-NEXT:    vmovdqa {{.*#+}} ymm4 = <255,255,255,255,u,u,u,u,255,255,u,u,0,0,255,255,0,0,0,0,u,u,0,0,0,0,u,u,255,255,u,u>
-; KNL-NEXT:    vpblendvb %ymm4, %ymm2, %ymm3, %ymm2
-; KNL-NEXT:    vmovdqa {{.*#+}} ymm3 = <255,255,255,255,u,u,u,u,255,255,u,u,255,255,255,255,255,255,255,255,u,u,255,255,255,255,u,u,255,255,0,0>
-; KNL-NEXT:    vpblendvb %ymm3, %ymm2, %ymm1, %ymm1
+; KNL-NEXT:    vpblendvb %ymm4, %ymm2, %ymm3, %ymm3
+; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm3[0,1,2,3,4,5,6],ymm1[7],ymm3[8,9,10,11,12,13,14],ymm1[15]
+; KNL-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,10,11,8,9,8,9,14,15,2,3,4,5,2,3,16,17,26,27,24,25,24,25,30,31,18,19,20,21,18,19]
+; KNL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
+; KNL-NEXT:    vmovdqa {{.*#+}} ymm3 = <0,0,0,0,u,u,u,u,0,0,u,u,255,255,0,0,255,255,255,255,u,u,255,255,255,255,u,u,0,0,255,255>
+; KNL-NEXT:    vpblendvb %ymm3, %ymm0, %ymm2, %ymm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuffle_v32i16_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_01_02_05_u_u_07_u_0a_01_00_05_u_04_07_u_0a_1f:
@@ -72,8 +72,8 @@ define <32 x i16> @shuffle_v32i16_0f_1f_0e_16_0d_1d_04_1e_0b_1b_0a_1a_09_19_08_1
 ; KNL-NEXT:    vpblendw {{.*#+}} ymm1 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
 ; KNL-NEXT:    vextracti128 $1, %ymm3, %xmm3
 ; KNL-NEXT:    vpbroadcastw %xmm3, %ymm3
-; KNL-NEXT:    vmovdqa {{.*#+}} ymm4 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,0,0]
-; KNL-NEXT:    vpblendvb %ymm4, %ymm1, %ymm3, %ymm1
+; KNL-NEXT:    vpblendw {{.*#+}} ymm3 = ymm1[0,1,2,3,4,5,6],ymm3[7],ymm1[8,9,10,11,12,13,14],ymm3[15]
+; KNL-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm3[4,5,6,7]
 ; KNL-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[u,u,14,15,u,u,12,13,u,u,10,11,u,u,8,9,u,u,22,23,u,u,20,21,u,u,18,19,u,u,16,17]
 ; KNL-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7],ymm0[8],ymm2[9],ymm0[10],ymm2[11],ymm0[12],ymm2[13],ymm0[14],ymm2[15]
 ; KNL-NEXT:    retq

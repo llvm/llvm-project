@@ -110,8 +110,8 @@ define void @test_mulx_i32(i32 %a0, i32 %a1, i32* %a2) optsize {
 ; GENERIC-LABEL: test_mulx_i32:
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    #APP
-; GENERIC-NEXT:    mulxl %esi, %esi, %edi # sched: [3:1.00]
-; GENERIC-NEXT:    mulxl (%rdx), %esi, %edi # sched: [8:1.00]
+; GENERIC-NEXT:    mulxl %esi, %esi, %edi # sched: [4:1.00]
+; GENERIC-NEXT:    mulxl (%rdx), %esi, %edi # sched: [9:1.00]
 ; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
@@ -158,72 +158,56 @@ define void @test_mulx_i32(i32 %a0, i32 %a1, i32* %a2) optsize {
   ret void
 }
 
-define i64 @test_mulx_i64(i64 %a0, i64 %a1, i64 *%a2) {
+define void @test_mulx_i64(i64 %a0, i64 %a1, i64 *%a2) {
 ; GENERIC-LABEL: test_mulx_i64:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    movq %rdx, %rax # sched: [1:0.33]
-; GENERIC-NEXT:    movq %rdi, %rdx # sched: [1:0.33]
-; GENERIC-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [3:1.00]
-; GENERIC-NEXT:    mulxq (%rax), %rdx, %rax # sched: [8:1.00]
-; GENERIC-NEXT:    orq %rcx, %rax # sched: [1:0.33]
+; GENERIC-NEXT:    #APP
+; GENERIC-NEXT:    mulxq %rsi, %rsi, %rdi # sched: [4:1.00]
+; GENERIC-NEXT:    mulxq (%rdx), %rsi, %rdi # sched: [9:1.00]
+; GENERIC-NEXT:    #NO_APP
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_mulx_i64:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    movq %rdx, %rax # sched: [1:0.25]
-; HASWELL-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
-; HASWELL-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:1.00]
-; HASWELL-NEXT:    mulxq (%rax), %rdx, %rax # sched: [9:1.00]
-; HASWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; HASWELL-NEXT:    #APP
+; HASWELL-NEXT:    mulxq %rsi, %rsi, %rdi # sched: [4:1.00]
+; HASWELL-NEXT:    mulxq (%rdx), %rsi, %rdi # sched: [9:1.00]
+; HASWELL-NEXT:    #NO_APP
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_mulx_i64:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    movq %rdx, %rax # sched: [1:0.25]
-; BROADWELL-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
-; BROADWELL-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:1.00]
-; BROADWELL-NEXT:    mulxq (%rax), %rdx, %rax # sched: [9:1.00]
-; BROADWELL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; BROADWELL-NEXT:    #APP
+; BROADWELL-NEXT:    mulxq %rsi, %rsi, %rdi # sched: [4:1.00]
+; BROADWELL-NEXT:    mulxq (%rdx), %rsi, %rdi # sched: [9:1.00]
+; BROADWELL-NEXT:    #NO_APP
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_mulx_i64:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    movq %rdx, %rax # sched: [1:0.25]
-; SKYLAKE-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
-; SKYLAKE-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:1.00]
-; SKYLAKE-NEXT:    mulxq (%rax), %rdx, %rax # sched: [9:1.00]
-; SKYLAKE-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; SKYLAKE-NEXT:    #APP
+; SKYLAKE-NEXT:    mulxq %rsi, %rsi, %rdi # sched: [4:1.00]
+; SKYLAKE-NEXT:    mulxq (%rdx), %rsi, %rdi # sched: [9:1.00]
+; SKYLAKE-NEXT:    #NO_APP
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_mulx_i64:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    movq %rdx, %rax # sched: [1:0.25]
-; KNL-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
-; KNL-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [4:1.00]
-; KNL-NEXT:    mulxq (%rax), %rdx, %rax # sched: [9:1.00]
-; KNL-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; KNL-NEXT:    #APP
+; KNL-NEXT:    mulxq %rsi, %rsi, %rdi # sched: [4:1.00]
+; KNL-NEXT:    mulxq (%rdx), %rsi, %rdi # sched: [9:1.00]
+; KNL-NEXT:    #NO_APP
 ; KNL-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_mulx_i64:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    movq %rdx, %rax # sched: [1:0.25]
-; ZNVER1-NEXT:    movq %rdi, %rdx # sched: [1:0.25]
-; ZNVER1-NEXT:    mulxq %rsi, %rsi, %rcx # sched: [3:1.00]
-; ZNVER1-NEXT:    mulxq (%rax), %rdx, %rax # sched: [8:1.00]
-; ZNVER1-NEXT:    orq %rcx, %rax # sched: [1:0.25]
+; ZNVER1-NEXT:    #APP
+; ZNVER1-NEXT:    mulxq %rsi, %rsi, %rdi # sched: [3:1.00]
+; ZNVER1-NEXT:    mulxq (%rdx), %rsi, %rdi # sched: [8:1.00]
+; ZNVER1-NEXT:    #NO_APP
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1  = load i64, i64 *%a2
-  %2  = zext i64 %a0 to i128
-  %3  = zext i64 %a1 to i128
-  %4  = zext i64 %1 to i128
-  %5  = mul i128 %2, %3
-  %6  = mul i128 %2, %4
-  %7  = lshr i128 %5, 64
-  %8  = lshr i128 %6, 64
-  %9  = trunc i128 %7 to i64
-  %10 = trunc i128 %8 to i64
-  %11 = or i64 %9, %10
-  ret i64 %11
+  tail call void asm "mulx $1, $1, $0 \0A\09 mulx $2, $1, $0 ", "r,r,*m"(i64 %a0, i64 %a1, i64* %a2) nounwind
+  ret void
 }
 
 define i32 @test_pdep_i32(i32 %a0, i32 %a1, i32 *%a2) {

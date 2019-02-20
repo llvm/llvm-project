@@ -23,18 +23,6 @@ define i1 @p0(i8 %x) {
   ret i1 %ret
 }
 
-define i1 @pv(i8 %x, i8 %y) {
-; CHECK-LABEL: @pv(
-; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[TMP0]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
-;
-  %tmp0 = lshr i8 -1, %y
-  %tmp1 = and i8 %tmp0, %x
-  %ret = icmp slt i8 %tmp1, %x
-  ret i1 %ret
-}
-
 ; ============================================================================ ;
 ; Vector tests
 ; ============================================================================ ;
@@ -120,8 +108,9 @@ define i1 @cv0(i8 %y) {
 ; CHECK-LABEL: @cv0(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %x = call i8 @gen8()
   %tmp0 = lshr i8 -1, %y
@@ -195,4 +184,43 @@ define <2 x i1> @n2(<2 x i8> %x) {
   %tmp0 = and <2 x i8> %x, <i8 3, i8 16> ; only the first one is valid.
   %ret = icmp slt <2 x i8> %tmp0, %x
   ret <2 x i1> %ret
+}
+
+; ============================================================================ ;
+; Potential miscompiles.
+; ============================================================================ ;
+
+define i1 @nv(i8 %x, i8 %y) {
+; CHECK-LABEL: @nv(
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %tmp0 = lshr i8 -1, %y
+  %tmp1 = and i8 %tmp0, %x
+  %ret = icmp slt i8 %tmp1, %x
+  ret i1 %ret
+}
+
+define <2 x i1> @n3(<2 x i8> %x) {
+; CHECK-LABEL: @n3(
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 -1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
+;
+  %tmp0 = and <2 x i8> %x, <i8 3, i8 -1>
+  %ret = icmp slt <2 x i8> %tmp0, %x
+  ret <2 x i1> %ret
+}
+
+define <3 x i1> @n4(<3 x i8> %x) {
+; CHECK-LABEL: @n4(
+; CHECK-NEXT:    [[TMP0:%.*]] = and <3 x i8> [[X:%.*]], <i8 3, i8 undef, i8 -1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <3 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    ret <3 x i1> [[RET]]
+;
+  %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 -1>
+  %ret = icmp slt <3 x i8> %tmp0, %x
+  ret <3 x i1> %ret
 }

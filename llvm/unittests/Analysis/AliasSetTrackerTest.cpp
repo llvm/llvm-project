@@ -78,6 +78,8 @@ TEST(AliasSetTracker, AliasUnknownInst) {
   for (auto &Inst : *Test->begin()) {
     bool FoundAS = false;
     for (AliasSet &AS : AST) {
+      if (!Inst.mayReadOrWriteMemory())
+        continue;
       if (!AS.aliasesUnknownInst(&Inst, AA))
         continue;
       ASSERT_NE(FoundAS, true);

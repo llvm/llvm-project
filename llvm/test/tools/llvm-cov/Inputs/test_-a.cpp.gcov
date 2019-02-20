@@ -49,7 +49,7 @@
         4:   34-block  0
        12:   34-block  1
         8:   34-block  2
-        8:   35:      assign(ii, jj);
+       12:   35:      assign(ii, jj);
         8:   35-block  0
         4:   35-block  1
         2:   36:}

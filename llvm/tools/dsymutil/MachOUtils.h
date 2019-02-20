@@ -9,8 +9,11 @@
 #ifndef LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 #define LLVM_TOOLS_DSYMUTIL_MACHOUTILS_H
 
+#include "SymbolMap.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
+
 #include <string>
 
 namespace llvm {
@@ -38,8 +41,8 @@ bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName, const LinkOptions &,
                              StringRef SDKPath);
 
-bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
-                           raw_fd_ostream &OutFile);
+bool generateDsymCompanion(const DebugMap &DM, SymbolMapTranslator &Translator,
+                           MCStreamer &MS, raw_fd_ostream &OutFile);
 
 std::string getArchName(StringRef Arch);
 } // namespace MachOUtils

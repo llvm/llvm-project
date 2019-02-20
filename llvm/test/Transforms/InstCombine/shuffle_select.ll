@@ -348,7 +348,7 @@ define <4 x float> @fadd(<4 x float> %v) {
 
 define <4 x double> @fsub(<4 x double> %v) {
 ; CHECK-LABEL: @fsub(
-; CHECK-NEXT:    [[B:%.*]] = fsub <4 x double> <double 4.100000e+01, double 4.200000e+01, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = fsub <4 x double> <double undef, double undef, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[V]], <4 x double> [[B]], <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x double> [[S]]
 ;
@@ -371,7 +371,7 @@ define <4 x float> @fmul(<4 x float> %v) {
 
 define <4 x double> @fdiv_constant_op0(<4 x double> %v) {
 ; CHECK-LABEL: @fdiv_constant_op0(
-; CHECK-NEXT:    [[B:%.*]] = fdiv fast <4 x double> <double 4.100000e+01, double 4.200000e+01, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = fdiv fast <4 x double> <double undef, double undef, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[V]], <4 x double> [[B]], <4 x i32> <i32 undef, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x double> [[S]]
 ;
@@ -392,7 +392,7 @@ define <4 x double> @fdiv_constant_op1(<4 x double> %v) {
 
 define <4 x double> @frem(<4 x double> %v) {
 ; CHECK-LABEL: @frem(
-; CHECK-NEXT:    [[B:%.*]] = frem <4 x double> <double 4.100000e+01, double 4.200000e+01, double 4.300000e+01, double 4.400000e+01>, [[V:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = frem <4 x double> <double 4.100000e+01, double 4.200000e+01, double undef, double undef>, [[V:%.*]]
 ; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x double> [[B]], <4 x double> [[V]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x double> [[S]]
 ;
@@ -791,8 +791,8 @@ define <4 x double> @fdiv_fdiv(<4 x double> %v0) {
 
 define <4 x double> @frem_frem(<4 x double> %v0) {
 ; CHECK-LABEL: @frem_frem(
-; CHECK-NEXT:    [[T1:%.*]] = frem <4 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = frem <4 x double> [[V0]], <double 5.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>
+; CHECK-NEXT:    [[T1:%.*]] = frem <4 x double> <double 1.000000e+00, double 2.000000e+00, double undef, double undef>, [[V0:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = frem <4 x double> [[V0]], <double undef, double undef, double 7.000000e+00, double 8.000000e+00>
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x double> [[T1]], <4 x double> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x double> [[T3]]
 ;
@@ -1284,8 +1284,8 @@ define <4 x double> @frem_2_vars(<4 x double> %v0, <4 x double> %v1) {
 
 define <4 x double> @fdiv_2_vars(<4 x double> %v0, <4 x double> %v1) {
 ; CHECK-LABEL: @fdiv_2_vars(
-; CHECK-NEXT:    [[T1:%.*]] = fdiv <4 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>, [[V0:%.*]]
-; CHECK-NEXT:    [[T2:%.*]] = fdiv <4 x double> [[V1:%.*]], <double 5.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>
+; CHECK-NEXT:    [[T1:%.*]] = fdiv <4 x double> <double 1.000000e+00, double 2.000000e+00, double undef, double undef>, [[V0:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = fdiv <4 x double> [[V1:%.*]], <double undef, double undef, double 7.000000e+00, double 8.000000e+00>
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x double> [[T1]], <4 x double> [[T2]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    ret <4 x double> [[T3]]
 ;
@@ -1413,7 +1413,7 @@ define <4 x i8> @or_add_not_enough_masking(<4 x i8> %v) {
 ; CHECK-LABEL: @or_add_not_enough_masking(
 ; CHECK-NEXT:    [[V0:%.*]] = lshr <4 x i8> [[V:%.*]], <i8 1, i8 1, i8 1, i8 1>
 ; CHECK-NEXT:    [[T1:%.*]] = or <4 x i8> [[V0]], <i8 undef, i8 undef, i8 -64, i8 -64>
-; CHECK-NEXT:    [[T2:%.*]] = add nuw nsw <4 x i8> [[V0]], <i8 1, i8 2, i8 undef, i8 undef>
+; CHECK-NEXT:    [[T2:%.*]] = add <4 x i8> [[V0]], <i8 1, i8 2, i8 undef, i8 undef>
 ; CHECK-NEXT:    [[T3:%.*]] = shufflevector <4 x i8> [[T1]], <4 x i8> [[T2]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    ret <4 x i8> [[T3]]
 ;

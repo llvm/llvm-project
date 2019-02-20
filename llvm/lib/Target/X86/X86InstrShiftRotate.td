@@ -16,7 +16,7 @@
 let Defs = [EFLAGS] in {
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteShiftCL] in {
 def SHL8rCL  : I<0xD2, MRM4r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "shl{b}\t{%cl, $dst|$dst, cl}",
                  [(set GR8:$dst, (shl GR8:$src1, CL))]>;
@@ -29,7 +29,7 @@ def SHL32rCL : I<0xD3, MRM4r, (outs GR32:$dst), (ins GR32:$src1),
 def SHL64rCL : RI<0xD3, MRM4r, (outs GR64:$dst), (ins GR64:$src1),
                   "shl{q}\t{%cl, $dst|$dst, cl}",
                   [(set GR64:$dst, (shl GR64:$src1, CL))]>;
-} // Uses = [CL]
+} // Uses = [CL], SchedRW
 
 def SHL8ri   : Ii8<0xC0, MRM4r, (outs GR8 :$dst), (ins GR8 :$src1, u8imm:$src2),
                    "shl{b}\t{$src2, $dst|$dst, $src2}",
@@ -64,11 +64,9 @@ def SHL64r1  : RI<0xD1, MRM4r, (outs GR64:$dst), (ins GR64:$src1),
 } // hasSideEffects = 0
 } // Constraints = "$src = $dst", SchedRW
 
-
-let SchedRW = [WriteShiftLd, WriteRMW] in {
 // FIXME: Why do we need an explicit "Uses = [CL]" when the instr has a pattern
 // using CL?
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteShiftCLLd, WriteRMW] in {
 def SHL8mCL  : I<0xD2, MRM4m, (outs), (ins i8mem :$dst),
                  "shl{b}\t{%cl, $dst|$dst, cl}",
                  [(store (shl (loadi8 addr:$dst), CL), addr:$dst)]>;
@@ -85,6 +83,8 @@ def SHL64mCL : RI<0xD3, MRM4m, (outs), (ins i64mem:$dst),
                   [(store (shl (loadi64 addr:$dst), CL), addr:$dst)]>,
                   Requires<[In64BitMode]>;
 }
+
+let SchedRW = [WriteShiftLd, WriteRMW] in {
 def SHL8mi   : Ii8<0xC0, MRM4m, (outs), (ins i8mem :$dst, u8imm:$src),
                    "shl{b}\t{$src, $dst|$dst, $src}",
                 [(store (shl (loadi8 addr:$dst), (i8 imm:$src)), addr:$dst)]>;
@@ -120,7 +120,7 @@ def SHL64m1 : RI<0xD1, MRM4m, (outs), (ins i64mem:$dst),
 } // SchedRW
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteShiftCL] in {
 def SHR8rCL  : I<0xD2, MRM5r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "shr{b}\t{%cl, $dst|$dst, cl}",
                  [(set GR8:$dst, (srl GR8:$src1, CL))]>;
@@ -166,8 +166,7 @@ def SHR64r1  : RI<0xD1, MRM5r, (outs GR64:$dst), (ins GR64:$src1),
 } // Constraints = "$src = $dst", SchedRW
 
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteShiftCLLd, WriteRMW] in {
 def SHR8mCL  : I<0xD2, MRM5m, (outs), (ins i8mem :$dst),
                  "shr{b}\t{%cl, $dst|$dst, cl}",
                  [(store (srl (loadi8 addr:$dst), CL), addr:$dst)]>;
@@ -184,6 +183,8 @@ def SHR64mCL : RI<0xD3, MRM5m, (outs), (ins i64mem:$dst),
                   [(store (srl (loadi64 addr:$dst), CL), addr:$dst)]>,
                   Requires<[In64BitMode]>;
 }
+
+let SchedRW = [WriteShiftLd, WriteRMW] in {
 def SHR8mi   : Ii8<0xC0, MRM5m, (outs), (ins i8mem :$dst, u8imm:$src),
                    "shr{b}\t{$src, $dst|$dst, $src}",
                 [(store (srl (loadi8 addr:$dst), (i8 imm:$src)), addr:$dst)]>;
@@ -219,7 +220,7 @@ def SHR64m1 : RI<0xD1, MRM5m, (outs), (ins i64mem:$dst),
 } // SchedRW
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteShiftCL] in {
 def SAR8rCL  : I<0xD2, MRM7r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "sar{b}\t{%cl, $dst|$dst, cl}",
                  [(set GR8:$dst, (sra GR8:$src1, CL))]>;
@@ -268,8 +269,7 @@ def SAR64r1  : RI<0xD1, MRM7r, (outs GR64:$dst), (ins GR64:$src1),
 } // Constraints = "$src = $dst", SchedRW
 
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteShiftCLLd, WriteRMW] in {
 def SAR8mCL  : I<0xD2, MRM7m, (outs), (ins i8mem :$dst),
                  "sar{b}\t{%cl, $dst|$dst, cl}",
                  [(store (sra (loadi8 addr:$dst), CL), addr:$dst)]>;
@@ -286,6 +286,8 @@ def SAR64mCL : RI<0xD3, MRM7m, (outs), (ins i64mem:$dst),
                  [(store (sra (loadi64 addr:$dst), CL), addr:$dst)]>,
                  Requires<[In64BitMode]>;
 }
+
+let SchedRW = [WriteShiftLd, WriteRMW] in {
 def SAR8mi   : Ii8<0xC0, MRM7m, (outs), (ins i8mem :$dst, u8imm:$src),
                    "sar{b}\t{$src, $dst|$dst, $src}",
                 [(store (sra (loadi8 addr:$dst), (i8 imm:$src)), addr:$dst)]>;
@@ -325,9 +327,9 @@ def SAR64m1 : RI<0xD1, MRM7m, (outs), (ins i64mem:$dst),
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0 in {
-let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
+let Constraints = "$src1 = $dst", SchedRW = [WriteRotate] in {
 
-let Uses = [CL, EFLAGS] in {
+let Uses = [CL, EFLAGS], SchedRW = [WriteRotateCL] in {
 def RCL8rCL : I<0xD2, MRM2r, (outs GR8:$dst), (ins GR8:$src1),
                 "rcl{b}\t{%cl, $dst|$dst, cl}", []>;
 def RCL16rCL : I<0xD3, MRM2r, (outs GR16:$dst), (ins GR16:$src1),
@@ -357,7 +359,7 @@ def RCL64ri : RIi8<0xC1, MRM2r, (outs GR64:$dst), (ins GR64:$src1, u8imm:$cnt),
                    "rcl{q}\t{$cnt, $dst|$dst, $cnt}", []>;
 } // Uses = [EFLAGS]
 
-let Uses = [CL, EFLAGS] in {
+let Uses = [CL, EFLAGS], SchedRW = [WriteRotateCL] in {
 def RCR8rCL : I<0xD2, MRM3r, (outs GR8:$dst), (ins GR8:$src1),
                 "rcr{b}\t{%cl, $dst|$dst, cl}", []>;
 def RCR16rCL : I<0xD3, MRM3r, (outs GR16:$dst), (ins GR16:$src1),
@@ -389,7 +391,7 @@ def RCR64ri : RIi8<0xC1, MRM3r, (outs GR64:$dst), (ins GR64:$src1, u8imm:$cnt),
 
 } // Constraints = "$src = $dst"
 
-let SchedRW = [WriteShiftLd, WriteRMW], mayStore = 1 in {
+let SchedRW = [WriteRotateLd, WriteRMW], mayStore = 1 in {
 let Uses = [EFLAGS] in {
 def RCL8m1 : I<0xD0, MRM2m, (outs), (ins i8mem:$dst),
                "rcl{b}\t$dst", []>;
@@ -428,7 +430,7 @@ def RCR64mi : RIi8<0xC1, MRM3m, (outs), (ins i64mem:$dst, u8imm:$cnt),
                    Requires<[In64BitMode]>;
 } // Uses = [EFLAGS]
 
-let Uses = [CL, EFLAGS] in {
+let Uses = [CL, EFLAGS], SchedRW = [WriteRotateCLLd, WriteRMW] in {
 def RCL8mCL : I<0xD2, MRM2m, (outs), (ins i8mem:$dst),
                 "rcl{b}\t{%cl, $dst|$dst, cl}", []>;
 def RCL16mCL : I<0xD3, MRM2m, (outs), (ins i16mem:$dst),
@@ -452,9 +454,9 @@ def RCR64mCL : RI<0xD3, MRM3m, (outs), (ins i64mem:$dst),
 } // SchedRW
 } // hasSideEffects = 0
 
-let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
+let Constraints = "$src1 = $dst", SchedRW = [WriteRotate] in {
 // FIXME: provide shorter instructions when imm8 == 1
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteRotateCL] in {
 def ROL8rCL  : I<0xD2, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "rol{b}\t{%cl, $dst|$dst, cl}",
                  [(set GR8:$dst, (rotl GR8:$src1, CL))]>;
@@ -498,8 +500,7 @@ def ROL64r1  : RI<0xD1, MRM0r, (outs GR64:$dst), (ins GR64:$src1),
                   [(set GR64:$dst, (rotl GR64:$src1, (i8 1)))]>;
 } // Constraints = "$src = $dst", SchedRW
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteRotateCLLd, WriteRMW] in {
 def ROL8mCL  : I<0xD2, MRM0m, (outs), (ins i8mem :$dst),
                  "rol{b}\t{%cl, $dst|$dst, cl}",
                  [(store (rotl (loadi8 addr:$dst), CL), addr:$dst)]>;
@@ -514,6 +515,8 @@ def ROL64mCL :  RI<0xD3, MRM0m, (outs), (ins i64mem:$dst),
                    [(store (rotl (loadi64 addr:$dst), CL), addr:$dst)]>,
                    Requires<[In64BitMode]>;
 }
+
+let SchedRW = [WriteRotateLd, WriteRMW] in {
 def ROL8mi   : Ii8<0xC0, MRM0m, (outs), (ins i8mem :$dst, u8imm:$src1),
                    "rol{b}\t{$src1, $dst|$dst, $src1}",
                [(store (rotl (loadi8 addr:$dst), (i8 imm:$src1)), addr:$dst)]>;
@@ -548,8 +551,8 @@ def ROL64m1  : RI<0xD1, MRM0m, (outs), (ins i64mem:$dst),
                  Requires<[In64BitMode]>;
 } // SchedRW
 
-let Constraints = "$src1 = $dst", SchedRW = [WriteShift] in {
-let Uses = [CL] in {
+let Constraints = "$src1 = $dst", SchedRW = [WriteRotate] in {
+let Uses = [CL], SchedRW = [WriteRotateCL] in {
 def ROR8rCL  : I<0xD2, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                  "ror{b}\t{%cl, $dst|$dst, cl}",
                  [(set GR8:$dst, (rotr GR8:$src1, CL))]>;
@@ -595,8 +598,7 @@ def ROR64r1  : RI<0xD1, MRM1r, (outs GR64:$dst), (ins GR64:$src1),
                   [(set GR64:$dst, (rotl GR64:$src1, (i8 63)))]>;
 } // Constraints = "$src = $dst", SchedRW
 
-let SchedRW = [WriteShiftLd, WriteRMW] in {
-let Uses = [CL] in {
+let Uses = [CL], SchedRW = [WriteRotateCLLd, WriteRMW] in {
 def ROR8mCL  : I<0xD2, MRM1m, (outs), (ins i8mem :$dst),
                  "ror{b}\t{%cl, $dst|$dst, cl}",
                  [(store (rotr (loadi8 addr:$dst), CL), addr:$dst)]>;
@@ -611,6 +613,8 @@ def ROR64mCL : RI<0xD3, MRM1m, (outs), (ins i64mem:$dst),
                   [(store (rotr (loadi64 addr:$dst), CL), addr:$dst)]>,
                   Requires<[In64BitMode]>;
 }
+
+let SchedRW = [WriteRotateLd, WriteRMW] in {
 def ROR8mi   : Ii8<0xC0, MRM1m, (outs), (ins i8mem :$dst, u8imm:$src),
                    "ror{b}\t{$src, $dst|$dst, $src}",
                    [(store (rotr (loadi8 addr:$dst), (i8 imm:$src)), addr:$dst)]>;
@@ -822,6 +826,8 @@ def ROT64L2R_imm8  : SDNodeXForm<imm, [{
   return getI8Imm(64 - N->getZExtValue(), SDLoc(N));
 }]>;
 
+// NOTE: We use WriteShift for these rotates as they avoid the stalls
+// of many of the older x86 rotate instructions.
 multiclass bmi_rotate<string asm, RegisterClass RC, X86MemOperand x86memop> {
 let hasSideEffects = 0 in {
   def ri : Ii8<0xF0, MRMSrcReg, (outs RC:$dst), (ins RC:$src1, u8imm:$src2),
@@ -844,12 +850,12 @@ let hasSideEffects = 0 in {
   def rm : I<0xF7, MRMSrcMem4VOp3,
              (outs RC:$dst), (ins x86memop:$src1, RC:$src2),
              !strconcat(asm, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"), []>,
-             VEX, Sched<[WriteShiftLd,
+             VEX, Sched<[WriteShift.Folded,
                          // x86memop:$src1
                          ReadDefault, ReadDefault, ReadDefault, ReadDefault,
                          ReadDefault,
                          // RC:$src2
-                         ReadAfterLd]>;
+                         WriteShift.ReadAfterFold]>;
 }
 }
 

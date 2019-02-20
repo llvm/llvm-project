@@ -1,4 +1,5 @@
 # RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=VI %s
+# RUN: llc -march=amdgcn -mcpu=gfx803 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX8 %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN -check-prefix=GFX9 %s
 
 # GCN-LABEL: name: hazard_implicit_def
@@ -57,4 +58,70 @@ body:             |
     INLINEASM &"; no-op", 1, 327690, def $vgpr5
     $vgpr0 = V_INTERP_P1_F32 killed $vgpr4, 0, 0, implicit $m0, implicit $exec
     SI_RETURN_TO_EPILOG killed $vgpr5, killed $vgpr0
+...
+
+# IMPLICIT_DEF/DBG_VALUE instructions should not prevent the hazard recognizer
+# from adding s_nop instructions between m0 update and s_sendmsg.
+
+# GCN-LABEL: name: hazard-lookahead-implicit-def
+# GCN: $vgpr6 = IMPLICIT_DEF
+# GFX8-NEXT: S_NOP 0
+# GFX9-NEXT: S_NOP 0
+# GCN: S_SENDMSG 3, implicit $exec, implicit $m0
+---
+name: hazard-lookahead-implicit-def
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 killed $sgpr12
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    $vgpr2 = IMPLICIT_DEF
+    $vgpr3 = IMPLICIT_DEF
+    $vgpr4 = IMPLICIT_DEF
+    $vgpr5 = IMPLICIT_DEF
+    $vgpr6 = IMPLICIT_DEF
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: hazard-lookahead-dbg-value
+# GCN: DBG_VALUE 6
+# GFX8-NEXT: S_NOP 0
+# GFX9-NEXT: S_NOP 0
+# GCN: S_SENDMSG 3, implicit $exec, implicit $m0
+---
+name: hazard-lookahead-dbg-value
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 killed $sgpr12
+    DBG_VALUE 0
+    DBG_VALUE 1
+    DBG_VALUE 2
+    DBG_VALUE 3
+    DBG_VALUE 4
+    DBG_VALUE 5
+    DBG_VALUE 6
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM
+...
+
+# GCN-LABEL: name: hazard-lookahead-dbg-label
+# GCN: DBG_LABEL 6
+# GFX8-NEXT: S_NOP 0
+# GFX9-NEXT: S_NOP 0
+# GCN: S_SENDMSG 3, implicit $exec, implicit $m0
+---
+name: hazard-lookahead-dbg-label
+body: |
+  bb.0:
+    $m0 = S_MOV_B32 killed $sgpr12
+    DBG_LABEL 0
+    DBG_LABEL 1
+    DBG_LABEL 2
+    DBG_LABEL 3
+    DBG_LABEL 4
+    DBG_LABEL 5
+    DBG_LABEL 6
+    S_SENDMSG 3, implicit $exec, implicit $m0
+    S_ENDPGM
 ...

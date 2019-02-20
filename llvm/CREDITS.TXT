@@ -492,8 +492,8 @@ D: Thread Local Storage implementation
 N: Bill Wendling
 I: wendling
 E: isanbard@gmail.com
-D: Release manager, IR Linker, LTO
-D: Bunches of stuff
+D: Release manager, IR Linker, LTO.
+D: Bunches of stuff.
 
 N: Bob Wilson
 E: bob.wilson@acm.org
@@ -501,4 +501,16 @@ D: Advanced SIMD (NEON) support in the ARM backend.
 
 N: QingShan Zhang
 E: qshanz@cn.ibm.com
+D: PowerPC Backend Developer
+
+N: Li Jia He
+E: hljhehlj@cn.ibm.com
+D: PowerPC Backend Developer
+
+N: Zixuan Wu
+E: wuzish@cn.ibm.com
+D: PowerPC Backend Developer
+
+N: Kang Zhang
+E: shkzhang@cn.ibm.com
 D: PowerPC Backend Developer

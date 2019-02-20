@@ -1,22 +1,22 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding |\
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -show-encoding |\
 # RUN:   FileCheck %s -check-prefix=NORMAL
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 -show-encoding |\
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -show-encoding |\
 # RUN:   FileCheck %s -check-prefix=NORMAL
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -show-encoding |\
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -show-encoding |\
 # RUN:   FileCheck %s -check-prefix=NORMAL
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=micromips -show-encoding |\
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefix=MICRO
 
 # Repeat the tests using ELF output.
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-O32
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -filetype=obj | \
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-NXX,ELF-N32
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -filetype=obj | \
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-NXX,ELF-N64
 
   .weak weak_label

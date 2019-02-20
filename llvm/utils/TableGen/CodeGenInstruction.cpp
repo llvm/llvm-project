@@ -202,7 +202,8 @@ CGIOperandList::ParseOperandName(const std::string &Op, bool AllowWholeOp) {
   return std::make_pair(0U, 0U);
 }
 
-static void ParseConstraint(const std::string &CStr, CGIOperandList &Ops) {
+static void ParseConstraint(const std::string &CStr, CGIOperandList &Ops,
+                            Record *Rec) {
   // EARLY_CLOBBER: @early $reg
   std::string::size_type wpos = CStr.find_first_of(" \t");
   std::string::size_type start = CStr.find_first_not_of(" \t");
@@ -211,13 +212,17 @@ static void ParseConstraint(const std::string &CStr, CGIOperandList &Ops) {
     std::string Name = CStr.substr(wpos+1);
     wpos = Name.find_first_not_of(" \t");
     if (wpos == std::string::npos)
-      PrintFatalError("Illegal format for @earlyclobber constraint: '" + CStr + "'");
+      PrintFatalError(
+        Rec->getLoc(), "Illegal format for @earlyclobber constraint in '" +
+        Rec->getName() + "': '" + CStr + "'");
     Name = Name.substr(wpos);
     std::pair<unsigned,unsigned> Op = Ops.ParseOperandName(Name, false);
 
     // Build the string for the operand
     if (!Ops[Op.first].Constraints[Op.second].isNone())
-      PrintFatalError("Operand '" + Name + "' cannot have multiple constraints!");
+      PrintFatalError(
+        Rec->getLoc(), "Operand '" + Name + "' of '" + Rec->getName() +
+        "' cannot have multiple constraints!");
     Ops[Op.first].Constraints[Op.second] =
     CGIOperandList::ConstraintInfo::getEarlyClobber();
     return;
@@ -225,39 +230,73 @@ static void ParseConstraint(const std::string &CStr, CGIOperandList &Ops) {
 
   // Only other constraint is "TIED_TO" for now.
   std::string::size_type pos = CStr.find_first_of('=');
-  assert(pos != std::string::npos && "Unrecognized constraint");
+  if (pos == std::string::npos)
+    PrintFatalError(
+      Rec->getLoc(), "Unrecognized constraint '" + CStr +
+      "' in '" + Rec->getName() + "'");
   start = CStr.find_first_not_of(" \t");
-  std::string Name = CStr.substr(start, pos - start);
 
   // TIED_TO: $src1 = $dst
-  wpos = Name.find_first_of(" \t");
-  if (wpos == std::string::npos)
-    PrintFatalError("Illegal format for tied-to constraint: '" + CStr + "'");
-  std::string DestOpName = Name.substr(0, wpos);
-  std::pair<unsigned,unsigned> DestOp = Ops.ParseOperandName(DestOpName, false);
+  wpos = CStr.find_first_of(" \t", start);
+  if (wpos == std::string::npos || wpos > pos)
+    PrintFatalError(
+      Rec->getLoc(), "Illegal format for tied-to constraint in '" +
+      Rec->getName() + "': '" + CStr + "'");
+  std::string LHSOpName = StringRef(CStr).substr(start, wpos - start);
+  std::pair<unsigned,unsigned> LHSOp = Ops.ParseOperandName(LHSOpName, false);
 
-  Name = CStr.substr(pos+1);
-  wpos = Name.find_first_not_of(" \t");
+  wpos = CStr.find_first_not_of(" \t", pos + 1);
   if (wpos == std::string::npos)
-    PrintFatalError("Illegal format for tied-to constraint: '" + CStr + "'");
+    PrintFatalError(
+      Rec->getLoc(), "Illegal format for tied-to constraint: '" + CStr + "'");
 
-  std::string SrcOpName = Name.substr(wpos);
-  std::pair<unsigned,unsigned> SrcOp = Ops.ParseOperandName(SrcOpName, false);
-  if (SrcOp > DestOp) {
-    std::swap(SrcOp, DestOp);
-    std::swap(SrcOpName, DestOpName);
+  std::string RHSOpName = StringRef(CStr).substr(wpos);
+  std::pair<unsigned,unsigned> RHSOp = Ops.ParseOperandName(RHSOpName, false);
+
+  // Sort the operands into order, which should put the output one
+  // first. But keep the original order, for use in diagnostics.
+  bool FirstIsDest = (LHSOp < RHSOp);
+  std::pair<unsigned,unsigned> DestOp = (FirstIsDest ? LHSOp : RHSOp);
+  StringRef DestOpName = (FirstIsDest ? LHSOpName : RHSOpName);
+  std::pair<unsigned,unsigned> SrcOp = (FirstIsDest ? RHSOp : LHSOp);
+  StringRef SrcOpName = (FirstIsDest ? RHSOpName : LHSOpName);
+
+  // Ensure one operand is a def and the other is a use.
+  if (DestOp.first >= Ops.NumDefs)
+    PrintFatalError(
+      Rec->getLoc(), "Input operands '" + LHSOpName + "' and '" + RHSOpName +
+      "' of '" + Rec->getName() + "' cannot be tied!");
+  if (SrcOp.first < Ops.NumDefs)
+    PrintFatalError(
+      Rec->getLoc(), "Output operands '" + LHSOpName + "' and '" + RHSOpName +
+      "' of '" + Rec->getName() + "' cannot be tied!");
+
+  // The constraint has to go on the operand with higher index, i.e.
+  // the source one. Check there isn't another constraint there
+  // already.
+  if (!Ops[SrcOp.first].Constraints[SrcOp.second].isNone())
+    PrintFatalError(
+      Rec->getLoc(), "Operand '" + SrcOpName + "' of '" + Rec->getName() +
+      "' cannot have multiple constraints!");
+
+  unsigned DestFlatOpNo = Ops.getFlattenedOperandNumber(DestOp);
+  auto NewConstraint = CGIOperandList::ConstraintInfo::getTied(DestFlatOpNo);
+
+  // Check that the earlier operand is not the target of another tie
+  // before making it the target of this one.
+  for (const CGIOperandList::OperandInfo &Op : Ops) {
+    for (unsigned i = 0; i < Op.MINumOperands; i++)
+      if (Op.Constraints[i] == NewConstraint)
+        PrintFatalError(
+          Rec->getLoc(), "Operand '" + DestOpName + "' of '" + Rec->getName() +
+          "' cannot have multiple operands tied to it!");
   }
 
-  unsigned FlatOpNo = Ops.getFlattenedOperandNumber(SrcOp);
-
-  if (!Ops[DestOp.first].Constraints[DestOp.second].isNone())
-    PrintFatalError("Operand '" + DestOpName +
-      "' cannot have multiple constraints!");
-  Ops[DestOp.first].Constraints[DestOp.second] =
-    CGIOperandList::ConstraintInfo::getTied(FlatOpNo);
+  Ops[SrcOp.first].Constraints[SrcOp.second] = NewConstraint;
 }
 
-static void ParseConstraints(const std::string &CStr, CGIOperandList &Ops) {
+static void ParseConstraints(const std::string &CStr, CGIOperandList &Ops,
+                             Record *Rec) {
   if (CStr.empty()) return;
 
   const std::string delims(",");
@@ -269,7 +308,7 @@ static void ParseConstraints(const std::string &CStr, CGIOperandList &Ops) {
     if (eidx == std::string::npos)
       eidx = CStr.length();
 
-    ParseConstraint(CStr.substr(bidx, eidx - bidx), Ops);
+    ParseConstraint(CStr.substr(bidx, eidx - bidx), Ops, Rec);
     bidx = CStr.find_first_not_of(delims, eidx);
   }
 }
@@ -302,6 +341,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   AsmString = R->getValueAsString("AsmString");
 
   isReturn     = R->getValueAsBit("isReturn");
+  isEHScopeReturn = R->getValueAsBit("isEHScopeReturn");
   isBranch     = R->getValueAsBit("isBranch");
   isIndirectBranch = R->getValueAsBit("isIndirectBranch");
   isCompare    = R->getValueAsBit("isCompare");
@@ -330,6 +370,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isConvergent = R->getValueAsBit("isConvergent");
   hasNoSchedulingInfo = R->getValueAsBit("hasNoSchedulingInfo");
   FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
+  variadicOpsAreDefs = R->getValueAsBit("variadicOpsAreDefs");
 
   bool Unset;
   mayLoad      = R->getValueAsBitOrUnset("mayLoad", Unset);
@@ -352,7 +393,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   hasChain_Inferred = false;
 
   // Parse Constraints.
-  ParseConstraints(R->getValueAsString("Constraints"), Operands);
+  ParseConstraints(R->getValueAsString("Constraints"), Operands, R);
 
   // Parse the DisableEncoding field.
   Operands.ProcessDisableEncoding(R->getValueAsString("DisableEncoding"));

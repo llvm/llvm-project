@@ -5,7 +5,7 @@ target triple = "msp430"
 %struct.X = type { i8 }
 
 ; CHECK-LABEL: @foo
-; CHECK: sub.w   #4, r1
+; CHECK: sub   #4, r1
 ; CHECK: mov.b   #1, 3(r1)
 define void @foo() {
   %1 = alloca %struct.X
@@ -21,7 +21,7 @@ define void @foo() {
 }
 
 ; CHECK-LABEL: @bar
-; CHECK: sub.w   #4, r1
+; CHECK: sub   #4, r1
 ; CHECK: mov.b   #1, 3(r1)
 define void @bar() {
   %1 = alloca [3 x %struct.X]
@@ -40,8 +40,8 @@ define void @bar() {
 %struct.Y = type { i8, i16 }
 
 ; CHECK-LABEL: @baz
-; CHECK: sub.w   #8, r1
-; CHECK: mov.w   #2, 6(r1)
+; CHECK: sub   #8, r1
+; CHECK: mov   #2, 6(r1)
 define void @baz() {
   %1 = alloca %struct.Y, align 2
   %2 = alloca %struct.Y, align 2

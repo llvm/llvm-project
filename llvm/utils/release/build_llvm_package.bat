@@ -19,8 +19,8 @@ set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\Co
 
 set revision=%1
 set branch=trunk
-set package_version=7.0.0-r%revision%
-set clang_format_vs_version=7.0.0.%revision%
+set package_version=8.0.0-r%revision%
+set clang_format_vs_version=8.0.0.%revision%
 set build_dir=llvm_package_%revision%
 
 echo Branch: %branch%
@@ -40,7 +40,7 @@ svn.exe export -r %revision% http://llvm.org/svn/llvm-project/cfe/%branch% llvm/
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/clang-tools-extra/%branch% llvm/tools/clang/tools/extra || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/lld/%branch% llvm/tools/lld || exit /b
 svn.exe export -r %revision% http://llvm.org/svn/llvm-project/compiler-rt/%branch% llvm/projects/compiler-rt || exit /b
-REM svn.exe export -r %revision% http://llvm.org/svn/llvm-project/openmp/%branch% llvm/projects/openmp || exit /b
+svn.exe export -r %revision% http://llvm.org/svn/llvm-project/openmp/%branch% llvm/projects/openmp || exit /b
 
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.

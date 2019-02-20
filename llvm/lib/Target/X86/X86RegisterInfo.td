@@ -436,11 +436,12 @@ def GR8_ABCD_H : RegisterClass<"X86", [i8], 8, (add AH, CH, DH, BH)>;
 def GR16_ABCD : RegisterClass<"X86", [i16], 16, (add AX, CX, DX, BX)>;
 def GR32_ABCD : RegisterClass<"X86", [i32], 32, (add EAX, ECX, EDX, EBX)>;
 def GR64_ABCD : RegisterClass<"X86", [i64], 64, (add RAX, RCX, RDX, RBX)>;
-def GR32_TC   : RegisterClass<"X86", [i32], 32, (add EAX, ECX, EDX)>;
+def GR32_TC   : RegisterClass<"X86", [i32], 32, (add EAX, ECX, EDX, ESP)>;
 def GR64_TC   : RegisterClass<"X86", [i64], 64, (add RAX, RCX, RDX, RSI, RDI,
-                                                     R8, R9, R11, RIP)>;
+                                                     R8, R9, R11, RIP, RSP)>;
 def GR64_TCW64 : RegisterClass<"X86", [i64], 64, (add RAX, RCX, RDX,
-                                                      R8, R9, R10, R11, RIP)>;
+                                                      R8, R9, R10, R11,
+                                                      RIP, RSP)>;
 
 // GR8_NOREX - GR8 registers which do not require a REX prefix.
 def GR8_NOREX : RegisterClass<"X86", [i8], 8,
@@ -498,6 +499,16 @@ def LOW32_ADDR_ACCESS_RBP : RegisterClass<"X86", [i32], 32,
 // A class to support the 'A' assembler constraint: [ER]AX then [ER]DX.
 def GR32_AD : RegisterClass<"X86", [i32], 32, (add EAX, EDX)>;
 def GR64_AD : RegisterClass<"X86", [i64], 64, (add RAX, RDX)>;
+
+// Classes to support the 64-bit assembler constraint tied to a fixed
+// register in 32-bit mode. The second register is always the next in
+// the list. Wrap around causes an error.
+def GR32_DC : RegisterClass<"X86", [i32], 32, (add EDX, ECX)>;
+def GR32_CB : RegisterClass<"X86", [i32], 32, (add ECX, EBX)>;
+def GR32_BSI : RegisterClass<"X86", [i32], 32, (add EBX, ESI)>;
+def GR32_SIDI : RegisterClass<"X86", [i32], 32, (add ESI, EDI)>;
+def GR32_DIBP : RegisterClass<"X86", [i32], 32, (add EDI, EBP)>;
+def GR32_BPSP : RegisterClass<"X86", [i32], 32, (add EBP, ESP)>;
 
 // Scalar SSE2 floating point registers.
 def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;

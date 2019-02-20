@@ -44,7 +44,7 @@ ArgAllocaCost("amdgpu-inline-arg-alloca-cost", cl::Hidden, cl::init(2200),
               cl::desc("Cost of alloca argument"));
 
 // If the amount of scratch memory to eliminate exceeds our ability to allocate
-// it into registers we gain nothing by agressively inlining functions for that
+// it into registers we gain nothing by aggressively inlining functions for that
 // heuristic.
 static cl::opt<unsigned>
 ArgAllocaCutoff("amdgpu-inline-arg-alloca-cutoff", cl::Hidden, cl::init(256),
@@ -118,8 +118,6 @@ unsigned AMDGPUInliner::getInlineThreshold(CallSite CS) const {
   if (!Callee)
     return (unsigned)Thres;
 
-  const AMDGPUAS AS = AMDGPU::getAMDGPUAS(*Caller->getParent());
-
   // If we have a pointer to private array passed into a function
   // it will not be optimized out, leaving scratch usage.
   // Increase the inline threshold to allow inliniting in this case.
@@ -128,7 +126,7 @@ unsigned AMDGPUInliner::getInlineThreshold(CallSite CS) const {
   for (Value *PtrArg : CS.args()) {
     Type *Ty = PtrArg->getType();
     if (!Ty->isPointerTy() ||
-        Ty->getPointerAddressSpace() != AS.PRIVATE_ADDRESS)
+        Ty->getPointerAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
       continue;
     PtrArg = GetUnderlyingObject(PtrArg, DL);
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(PtrArg)) {
@@ -174,18 +172,23 @@ InlineCost AMDGPUInliner::getInlineCost(CallSite CS) {
   Function *Caller = CS.getCaller();
   TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
 
-  if (!Callee || Callee->isDeclaration() || CS.isNoInline() ||
-      !TTI.areInlineCompatible(Caller, Callee))
-    return llvm::InlineCost::getNever();
+  if (!Callee || Callee->isDeclaration())
+    return llvm::InlineCost::getNever("undefined callee");
+
+  if (CS.isNoInline())
+    return llvm::InlineCost::getNever("noinline");
+
+  if (!TTI.areInlineCompatible(Caller, Callee))
+    return llvm::InlineCost::getNever("incompatible");
 
   if (CS.hasFnAttr(Attribute::AlwaysInline)) {
     if (isInlineViable(*Callee))
-      return llvm::InlineCost::getAlways();
-    return llvm::InlineCost::getNever();
+      return llvm::InlineCost::getAlways("alwaysinline viable");
+    return llvm::InlineCost::getNever("alwaysinline unviable");
   }
 
   if (isWrapperOnlyCall(CS))
-    return llvm::InlineCost::getAlways();
+    return llvm::InlineCost::getAlways("wrapper-only call");
 
   InlineParams LocalParams = Params;
   LocalParams.DefaultThreshold = (int)getInlineThreshold(CS);

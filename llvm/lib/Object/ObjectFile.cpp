@@ -77,6 +77,14 @@ bool ObjectFile::isSectionBitcode(DataRefImpl Sec) const {
 
 bool ObjectFile::isSectionStripped(DataRefImpl Sec) const { return false; }
 
+bool ObjectFile::isBerkeleyText(DataRefImpl Sec) const {
+  return isSectionText(Sec);
+}
+
+bool ObjectFile::isBerkeleyData(DataRefImpl Sec) const {
+  return isSectionData(Sec);
+}
+
 section_iterator ObjectFile::getRelocatedSection(DataRefImpl Sec) const {
   return section_iterator(SectionRef(Sec, this));
 }

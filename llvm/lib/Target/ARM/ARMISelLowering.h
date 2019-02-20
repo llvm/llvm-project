@@ -85,6 +85,7 @@ class VectorType;
       FMSTAT,       // ARM fmstat instruction.
 
       CMOV,         // ARM conditional move instructions.
+      SUBS,         // Flag-setting subtraction.
 
       SSAT,         // Signed saturation
       USAT,         // Unsigned saturation
@@ -389,6 +390,9 @@ class VectorType;
                                        const SelectionDAG &DAG,
                                        unsigned Depth) const override;
 
+    bool targetShrinkDemandedConstant(SDValue Op, const APInt &Demanded,
+                                      TargetLoweringOpt &TLO) const override;
+
 
     bool ExpandInlineAsm(CallInst *CI) const override;
 
@@ -535,7 +539,8 @@ class VectorType;
     bool shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
     TargetLoweringBase::AtomicExpansionKind
     shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
-    bool shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+    TargetLoweringBase::AtomicExpansionKind
+    shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
 
     bool useLoadStackGuardNode() const override;
 
@@ -588,6 +593,8 @@ class VectorType;
     bool isDesirableToCommuteWithShift(const SDNode *N,
                                        CombineLevel Level) const override;
 
+    bool shouldFoldShiftPairToMask(const SDNode *N,
+                                   CombineLevel Level) const override;
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -690,6 +697,9 @@ class VectorType;
     unsigned getRegisterByName(const char* RegName, EVT VT,
                                SelectionDAG &DAG) const override;
 
+    SDValue BuildSDIVPow2(SDNode *N, const APInt &Divisor, SelectionDAG &DAG,
+                          SmallVectorImpl<SDNode *> &Created) const override;
+
     /// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
     /// than a pair of fmul and fadd instructions. fmuladd intrinsics will be
     /// expanded to FMAs when this method returns true, otherwise fmuladd is
@@ -768,6 +778,8 @@ class VectorType;
     bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
 
     bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
+
+    bool shouldConsiderGEPOffsetSplit() const override { return true; }
 
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
                     SDValue ARMcc, SDValue CCR, SDValue Cmp,

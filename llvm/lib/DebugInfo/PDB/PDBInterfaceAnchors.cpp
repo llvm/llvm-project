@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/IPDBDataStream.h"
+#include "llvm/DebugInfo/PDB/IPDBFrameData.h"
 #include "llvm/DebugInfo/PDB/IPDBInjectedSource.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/DebugInfo/PDB/IPDBRawSymbol.h"
@@ -35,3 +36,5 @@ IPDBTable::~IPDBTable() = default;
 IPDBInjectedSource::~IPDBInjectedSource() = default;
 
 IPDBSectionContrib::~IPDBSectionContrib() = default;
+
+IPDBFrameData::~IPDBFrameData() = default;

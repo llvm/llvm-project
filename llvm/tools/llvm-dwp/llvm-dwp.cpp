@@ -43,21 +43,21 @@
 
 using namespace llvm;
 using namespace llvm::object;
-using namespace cl;
 
-OptionCategory DwpCategory("Specific Options");
-static list<std::string> InputFiles(Positional, ZeroOrMore,
-                                    desc("<input files>"), cat(DwpCategory));
+cl::OptionCategory DwpCategory("Specific Options");
+static cl::list<std::string> InputFiles(cl::Positional, cl::ZeroOrMore,
+                                        cl::desc("<input files>"),
+                                        cl::cat(DwpCategory));
 
-static list<std::string> ExecFilenames(
-    "e", ZeroOrMore,
-    desc("Specify the executable/library files to get the list of *.dwo from"),
-    value_desc("filename"), cat(DwpCategory));
+static cl::list<std::string> ExecFilenames(
+    "e", cl::ZeroOrMore,
+    cl::desc("Specify the executable/library files to get the list of *.dwo from"),
+    cl::value_desc("filename"), cl::cat(DwpCategory));
 
-static opt<std::string> OutputFilename(Required, "o",
-                                       desc("Specify the output file."),
-                                       value_desc("filename"),
-                                       cat(DwpCategory));
+static cl::opt<std::string> OutputFilename(cl::Required, "o",
+                                           cl::desc("Specify the output file."),
+                                           cl::value_desc("filename"),
+                                           cl::cat(DwpCategory));
 
 static void writeStringsAndOffsets(MCStreamer &Out, DWPStringPool &Strings,
                                    MCSection *StrOffsetSection,
@@ -644,7 +644,7 @@ static int error(const Twine &Error, const Twine &Context) {
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
-  ParseCommandLineOptions(argc, argv, "merge split dwarf (.dwo) files");
+  cl::ParseCommandLineOptions(argc, argv, "merge split dwarf (.dwo) files\n");
 
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
@@ -697,13 +697,21 @@ int main(int argc, char **argv) {
   // Create the output file.
   std::error_code EC;
   raw_fd_ostream OutFile(OutputFilename, EC, sys::fs::F_None);
+  Optional<buffer_ostream> BOS;
+  raw_pwrite_stream *OS;
   if (EC)
     return error(Twine(OutputFilename) + ": " + EC.message(), Context);
+  if (OutFile.supportsSeeking()) {
+    OS = &OutFile;
+  } else {
+    BOS.emplace(OutFile);
+    OS = BOS.getPointer();
+  }
 
   MCTargetOptions MCOptions = InitMCTargetOptionsFromFlags();
   std::unique_ptr<MCStreamer> MS(TheTarget->createMCObjectStreamer(
       TheTriple, MC, std::unique_ptr<MCAsmBackend>(MAB),
-      MAB->createObjectWriter(OutFile), std::unique_ptr<MCCodeEmitter>(MCE),
+      MAB->createObjectWriter(*OS), std::unique_ptr<MCCodeEmitter>(MCE),
       *MSTI, MCOptions.MCRelaxAll, MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ false));
   if (!MS)

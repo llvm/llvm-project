@@ -949,7 +949,7 @@ entry:
 define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b) {
 ; X32-AVX-LABEL: fallback_broadcast_v4f64_to_v8f64:
 ; X32-AVX:       # %bb.0: # %entry
-; X32-AVX-NEXT:    vmovapd {{.*#+}} ymm3 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00]
+; X32-AVX-NEXT:    vmovapd {{.*#+}} ymm3 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; X32-AVX-NEXT:    vaddpd %ymm3, %ymm0, %ymm0
 ; X32-AVX-NEXT:    vaddpd %ymm3, %ymm2, %ymm2
 ; X32-AVX-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
@@ -963,7 +963,7 @@ define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b)
 ;
 ; X32-AVX512-LABEL: fallback_broadcast_v4f64_to_v8f64:
 ; X32-AVX512:       # %bb.0: # %entry
-; X32-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00]
+; X32-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; X32-AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; X32-AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm2, %zmm2
 ; X32-AVX512-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
@@ -975,7 +975,7 @@ define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b)
 ;
 ; X64-AVX-LABEL: fallback_broadcast_v4f64_to_v8f64:
 ; X64-AVX:       # %bb.0: # %entry
-; X64-AVX-NEXT:    vmovapd {{.*#+}} ymm3 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00]
+; X64-AVX-NEXT:    vmovapd {{.*#+}} ymm3 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; X64-AVX-NEXT:    vaddpd %ymm3, %ymm0, %ymm0
 ; X64-AVX-NEXT:    vaddpd %ymm3, %ymm2, %ymm2
 ; X64-AVX-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
@@ -989,7 +989,7 @@ define void @fallback_broadcast_v4f64_to_v8f64(<4 x double> %a, <8 x double> %b)
 ;
 ; X64-AVX512-LABEL: fallback_broadcast_v4f64_to_v8f64:
 ; X64-AVX512:       # %bb.0: # %entry
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.000000e+00,2.000000e+00,3.000000e+00,4.000000e+00]
+; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm2 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; X64-AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm2, %zmm2
 ; X64-AVX512-NEXT:    vaddpd %zmm2, %zmm1, %zmm1

@@ -48,7 +48,7 @@ define <4 x i8> @h(<4 x float> %v) {
 }
 
 ; CHECK-LABEL: i:
-define <4 x i8> @i(<4 x i8>* %x) {
+define <4 x i8> @i(<4 x i8>* %x, <4 x i8> %y) {
 ; Note: vld1 here is reasonably important. Mixing VFP and NEON
 ; instructions is bad on some cores
   ; CHECK: vld1
@@ -59,7 +59,7 @@ define <4 x i8> @i(<4 x i8>* %x) {
   ; CHECK: vmul
   ; CHECK: vmovn
   %1 = load <4 x i8>, <4 x i8>* %x, align 4
-  %2 = sdiv <4 x i8> zeroinitializer, %1
+  %2 = sdiv <4 x i8> %y, %1
   ret <4 x i8> %2
 }
 ; CHECK-LABEL: j:

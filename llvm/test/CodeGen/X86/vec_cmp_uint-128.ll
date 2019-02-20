@@ -288,7 +288,7 @@ define <16 x i8> @ne_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 define <2 x i64> @ge_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-LABEL: ge_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -305,7 +305,7 @@ define <2 x i64> @ge_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: ge_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2
@@ -470,7 +470,7 @@ define <16 x i8> @ge_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 define <2 x i64> @gt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-LABEL: gt_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -485,7 +485,7 @@ define <2 x i64> @gt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: gt_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
@@ -710,7 +710,7 @@ define <16 x i8> @gt_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 define <2 x i64> @le_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-LABEL: le_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -727,7 +727,7 @@ define <2 x i64> @le_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: le_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
@@ -892,7 +892,7 @@ define <16 x i8> @le_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 define <2 x i64> @lt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE2-LABEL: lt_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE2-NEXT:    pxor %xmm2, %xmm0
 ; SSE2-NEXT:    pxor %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
@@ -907,7 +907,7 @@ define <2 x i64> @lt_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ;
 ; SSE41-LABEL: lt_v2i64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm1
 ; SSE41-NEXT:    movdqa %xmm1, %xmm2

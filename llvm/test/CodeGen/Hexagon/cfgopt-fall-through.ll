@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=hexagon -verify-machineinstrs -hexagon-initial-cfg-cleanup=0 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Check for some sane output. This test used to crash.

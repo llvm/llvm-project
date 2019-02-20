@@ -24,12 +24,12 @@ define float @combine_fabs_constant() {
 define <4 x float> @combine_vec_fabs_constant() {
 ; SSE-LABEL: combine_vec_fabs_constant:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0.000000e+00,0.000000e+00,2.000000e+00,2.000000e+00]
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0.0E+0,0.0E+0,2.0E+0,2.0E+0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_fabs_constant:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0.000000e+00,0.000000e+00,2.000000e+00,2.000000e+00]
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,0.0E+0,2.0E+0,2.0E+0]
 ; AVX-NEXT:    retq
   %1 = call <4 x float> @llvm.fabs.v4f32(<4 x float> <float 0.0, float -0.0, float 2.0, float -2.0>)
   ret <4 x float> %1

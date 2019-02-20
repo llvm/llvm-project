@@ -78,139 +78,143 @@ names from both the *Processor* and *Alternative Processor* can be used.
   .. table:: AMDGPU Processors
      :name: amdgpu-processor-table
 
-     =========== =============== ============ ===== ========= ======= ==================
-     Processor   Alternative     Target       dGPU/ Target    ROCm    Example
-                 Processor       Triple       APU   Features  Support Products
+     =========== =============== ============ ===== ========== ======= ======================
+     Processor   Alternative     Target       dGPU/ Target     ROCm    Example
+                 Processor       Triple       APU   Features   Support Products
                                  Architecture       Supported
                                                     [Default]
-     =========== =============== ============ ===== ========= ======= ==================
+     =========== =============== ============ ===== ========== ======= ======================
      **Radeon HD 2000/3000 Series (R600)** [AMD-RADEON-HD-2000-3000]_
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------------
      ``r600``                    ``r600``     dGPU
      ``r630``                    ``r600``     dGPU
      ``rs880``                   ``r600``     dGPU
      ``rv670``                   ``r600``     dGPU
      **Radeon HD 4000 Series (R700)** [AMD-RADEON-HD-4000]_
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------------
      ``rv710``                   ``r600``     dGPU
      ``rv730``                   ``r600``     dGPU
      ``rv770``                   ``r600``     dGPU
      **Radeon HD 5000 Series (Evergreen)** [AMD-RADEON-HD-5000]_
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------------
      ``cedar``                   ``r600``     dGPU
      ``cypress``                 ``r600``     dGPU
      ``juniper``                 ``r600``     dGPU
      ``redwood``                 ``r600``     dGPU
      ``sumo``                    ``r600``     dGPU
      **Radeon HD 6000 Series (Northern Islands)** [AMD-RADEON-HD-6000]_
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------------
      ``barts``                   ``r600``     dGPU
      ``caicos``                  ``r600``     dGPU
      ``cayman``                  ``r600``     dGPU
      ``turks``                   ``r600``     dGPU
      **GCN GFX6 (Southern Islands (SI))** [AMD-GCN-GFX6]_
-     -----------------------------------------------------------------------------------
+     ----------------------------------------------------------------------------------------
      ``gfx600``  - ``tahiti``    ``amdgcn``   dGPU
      ``gfx601``  - ``hainan``    ``amdgcn``   dGPU
                  - ``oland``
                  - ``pitcairn``
                  - ``verde``
      **GCN GFX7 (Sea Islands (CI))** [AMD-GCN-GFX7]_
-     -----------------------------------------------------------------------------------
-     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                     - A6-7000
-                                                                      - A6 Pro-7050B
-                                                                      - A8-7100
-                                                                      - A8 Pro-7150B
-                                                                      - A10-7300
-                                                                      - A10 Pro-7350B
-                                                                      - FX-7500
-                                                                      - A8-7200P
-                                                                      - A10-7400P
-                                                                      - FX-7600P
-     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU            ROCm    - FirePro W8100
-                                                                      - FirePro W9100
-                                                                      - FirePro S9150
-                                                                      - FirePro S9170
-     ``gfx702``                  ``amdgcn``   dGPU            ROCm    - Radeon R9 290
-                                                                      - Radeon R9 290x
-                                                                      - Radeon R390
-                                                                      - Radeon R390x
-     ``gfx703``  - ``kabini``    ``amdgcn``   APU                     - E1-2100
-                 - ``mullins``                                        - E1-2200
-                                                                      - E1-2500
-                                                                      - E2-3000
-                                                                      - E2-3800
-                                                                      - A4-5000
-                                                                      - A4-5100
-                                                                      - A6-5200
-                                                                      - A4 Pro-3340B
-     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                    - Radeon HD 7790
-                                                                      - Radeon HD 8770
-                                                                      - R7 260
-                                                                      - R7 260X
+     ----------------------------------------------------------------------------------------
+     ``gfx700``  - ``kaveri``    ``amdgcn``   APU                      - A6-7000
+                                                                       - A6 Pro-7050B
+                                                                       - A8-7100
+                                                                       - A8 Pro-7150B
+                                                                       - A10-7300
+                                                                       - A10 Pro-7350B
+                                                                       - FX-7500
+                                                                       - A8-7200P
+                                                                       - A10-7400P
+                                                                       - FX-7600P
+     ``gfx701``  - ``hawaii``    ``amdgcn``   dGPU             ROCm    - FirePro W8100
+                                                                       - FirePro W9100
+                                                                       - FirePro S9150
+                                                                       - FirePro S9170
+     ``gfx702``                  ``amdgcn``   dGPU             ROCm    - Radeon R9 290
+                                                                       - Radeon R9 290x
+                                                                       - Radeon R390
+                                                                       - Radeon R390x
+     ``gfx703``  - ``kabini``    ``amdgcn``   APU                      - E1-2100
+                 - ``mullins``                                         - E1-2200
+                                                                       - E1-2500
+                                                                       - E2-3000
+                                                                       - E2-3800
+                                                                       - A4-5000
+                                                                       - A4-5100
+                                                                       - A6-5200
+                                                                       - A4 Pro-3340B
+     ``gfx704``  - ``bonaire``   ``amdgcn``   dGPU                     - Radeon HD 7790
+                                                                       - Radeon HD 8770
+                                                                       - R7 260
+                                                                       - R7 260X
      **GCN GFX8 (Volcanic Islands (VI))** [AMD-GCN-GFX8]_
-     -----------------------------------------------------------------------------------
-     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack           - A6-8500P
-                                                      [on]            - Pro A6-8500B
-                                                                      - A8-8600P
-                                                                      - Pro A8-8600B
-                                                                      - FX-8800P
-                                                                      - Pro A12-8800B
-     \                           ``amdgcn``   APU   - xnack   ROCm    - A10-8700P
-                                                      [on]            - Pro A10-8700B
-                                                                      - A10-8780P
-     \                           ``amdgcn``   APU   - xnack           - A10-9600P
-                                                      [on]            - A10-9630P
-                                                                      - A12-9700P
-                                                                      - A12-9730P
-                                                                      - FX-9800P
-                                                                      - FX-9830P
-     \                           ``amdgcn``   APU   - xnack           - E2-9010
-                                                      [on]            - A6-9210
-                                                                      - A9-9410
-     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack   ROCm    - FirePro S7150
-                 - ``tonga``                          [off]           - FirePro S7100
-                                                                      - FirePro W7100
-                                                                      - Radeon R285
-                                                                      - Radeon R9 380
-                                                                      - Radeon R9 385
-                                                                      - Mobile FirePro
-                                                                        M7170
-     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack   ROCm    - Radeon R9 Nano
-                                                      [off]           - Radeon R9 Fury
-                                                                      - Radeon R9 FuryX
-                                                                      - Radeon Pro Duo
-                                                                      - FirePro S9300x2
-                                                                      - Radeon Instinct MI8
-     \           - ``polaris10`` ``amdgcn``   dGPU  - xnack   ROCm    - Radeon RX 470
-                                                      [off]           - Radeon RX 480
-                                                                      - Radeon Instinct MI6
-     \           - ``polaris11`` ``amdgcn``   dGPU  - xnack   ROCm    - Radeon RX 460
+     ----------------------------------------------------------------------------------------
+     ``gfx801``  - ``carrizo``   ``amdgcn``   APU   - xnack            - A6-8500P
+                                                      [on]             - Pro A6-8500B
+                                                                       - A8-8600P
+                                                                       - Pro A8-8600B
+                                                                       - FX-8800P
+                                                                       - Pro A12-8800B
+     \                           ``amdgcn``   APU   - xnack    ROCm    - A10-8700P
+                                                      [on]             - Pro A10-8700B
+                                                                       - A10-8780P
+     \                           ``amdgcn``   APU   - xnack            - A10-9600P
+                                                      [on]             - A10-9630P
+                                                                       - A12-9700P
+                                                                       - A12-9730P
+                                                                       - FX-9800P
+                                                                       - FX-9830P
+     \                           ``amdgcn``   APU   - xnack            - E2-9010
+                                                      [on]             - A6-9210
+                                                                       - A9-9410
+     ``gfx802``  - ``iceland``   ``amdgcn``   dGPU  - xnack    ROCm    - FirePro S7150
+                 - ``tonga``                          [off]            - FirePro S7100
+                                                                       - FirePro W7100
+                                                                       - Radeon R285
+                                                                       - Radeon R9 380
+                                                                       - Radeon R9 385
+                                                                       - Mobile FirePro
+                                                                         M7170
+     ``gfx803``  - ``fiji``      ``amdgcn``   dGPU  - xnack    ROCm    - Radeon R9 Nano
+                                                      [off]            - Radeon R9 Fury
+                                                                       - Radeon R9 FuryX
+                                                                       - Radeon Pro Duo
+                                                                       - FirePro S9300x2
+                                                                       - Radeon Instinct MI8
+     \           - ``polaris10`` ``amdgcn``   dGPU  - xnack    ROCm    - Radeon RX 470
+                                                      [off]            - Radeon RX 480
+                                                                       - Radeon Instinct MI6
+     \           - ``polaris11`` ``amdgcn``   dGPU  - xnack    ROCm    - Radeon RX 460
                                                       [off]
      ``gfx810``  - ``stoney``    ``amdgcn``   APU   - xnack
                                                       [on]
      **GCN GFX9** [AMD-GCN-GFX9]_
-     -----------------------------------------------------------------------------------
-     ``gfx900``                  ``amdgcn``   dGPU  - xnack   ROCm    - Radeon Vega
-                                                      [off]             Frontier Edition
-                                                                      - Radeon RX Vega 56
-                                                                      - Radeon RX Vega 64
-                                                                      - Radeon RX Vega 64
-                                                                        Liquid
-                                                                      - Radeon Instinct MI25
-     ``gfx902``                  ``amdgcn``   APU   - xnack           - Ryzen 3 2200G
-                                                      [on]            - Ryzen 5 2400G
-     ``gfx904``                  ``amdgcn``   dGPU  - xnack           *TBA*
+     ----------------------------------------------------------------------------------------
+     ``gfx900``                  ``amdgcn``   dGPU  - xnack    ROCm    - Radeon Vega
+                                                      [off]              Frontier Edition
+                                                                       - Radeon RX Vega 56
+                                                                       - Radeon RX Vega 64
+                                                                       - Radeon RX Vega 64
+                                                                         Liquid
+                                                                       - Radeon Instinct MI25
+     ``gfx902``                  ``amdgcn``   APU   - xnack            - Ryzen 3 2200G
+                                                      [on]             - Ryzen 5 2400G
+     ``gfx904``                  ``amdgcn``   dGPU  - xnack            *TBA*
                                                       [off]
-                                                                      .. TODO
-                                                                         Add product
-                                                                         names.
-     ``gfx906``                  ``amdgcn``   dGPU  - xnack           *TBA*
-                                                      [off]
-                                                                      .. TODO
-                                                                         Add product
-                                                                         names.
-     =========== =============== ============ ===== ========= ======= ==================
+                                                                       .. TODO
+                                                                          Add product
+                                                                          names.
+     ``gfx906``                  ``amdgcn``   dGPU  - xnack            - Radeon Instinct MI50
+                                                      [off]            - Radeon Instinct MI60
+                                                      sram-ecc
+                                                      [on]
+     ``gfx909``                  ``amdgcn``   APU   - xnack            *TBA* (Raven Ridge 2)
+                                                      [on]
+                                                                       .. TODO
+                                                                          Add product
+                                                                          names.
+     =========== =============== ============ ===== ========== ======= ======================
 
 .. _amdgpu-target-features:
 
@@ -241,24 +245,26 @@ For example:
   .. table:: AMDGPU Target Features
      :name: amdgpu-target-feature-table
 
-     ============== ==================================================
-     Target Feature Description
-     ============== ==================================================
-     -m[no-]xnack   Enable/disable generating code that has
-                    memory clauses that are compatible with
-                    having XNACK replay enabled.
+     =============== ==================================================
+     Target Feature  Description
+     =============== ==================================================
+     -m[no-]xnack    Enable/disable generating code that has
+                     memory clauses that are compatible with
+                     having XNACK replay enabled.
 
-                    This is used for demand paging and page
-                    migration. If XNACK replay is enabled in
-                    the device, then if a page fault occurs
-                    the code may execute incorrectly if the
-                    ``xnack`` feature is not enabled. Executing
-                    code that has the feature enabled on a
-                    device that does not have XNACK replay
-                    enabled will execute correctly, but may
-                    be less performant than code with the
-                    feature disabled.
-     ============== ==================================================
+                     This is used for demand paging and page
+                     migration. If XNACK replay is enabled in
+                     the device, then if a page fault occurs
+                     the code may execute incorrectly if the
+                     ``xnack`` feature is not enabled. Executing
+                     code that has the feature enabled on a
+                     device that does not have XNACK replay
+                     enabled will execute correctly, but may
+                     be less performant than code with the
+                     feature disabled.
+     -m[no-]sram-ecc Enable/disable generating code that assumes SRAM
+                     ECC is enabled/disabled.
+     =============== ==================================================
 
 .. _amdgpu-address-spaces:
 
@@ -544,6 +550,17 @@ The AMDGPU backend uses the following ELF header:
                                                   be 0.
                                                   See
                                                   :ref:`amdgpu-target-features`.
+     ``EF_AMDGPU_SRAM_ECC``            0x00000200 Indicates if the ``sram-ecc``
+                                                  target feature is
+                                                  enabled for all code
+                                                  contained in the code object.
+                                                  If the processor
+                                                  does not support the
+                                                  ``sram-ecc`` target
+                                                  feature then must
+                                                  be 0.
+                                                  See
+                                                  :ref:`amdgpu-target-features`.
      ================================= ========== =============================
 
   .. table:: AMDGPU ``EF_AMDGPU_MACH`` Values
@@ -589,6 +606,7 @@ The AMDGPU backend uses the following ELF header:
      ``EF_AMDGPU_MACH_AMDGCN_GFX904``  0x02e      ``gfx904``
      ``EF_AMDGPU_MACH_AMDGCN_GFX906``  0x02f      ``gfx906``
      *reserved*                        0x030      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX909``  0x031      ``gfx909``
      ================================= ========== =============================
 
 Sections
@@ -661,17 +679,18 @@ aligned. In addition, minimal zero byte padding must be generated to ensure the
 ``desc`` field size is a multiple of 4 bytes. The ``sh_addralign`` field of the
 ``.note`` section must be at least 4 to indicate at least 8 byte alignment.
 
-The AMDGPU backend code object uses the following ELF note records in the
-``.note`` section. The *Description* column specifies the layout of the note
-record's ``desc`` field. All fields are consecutive bytes. Note records with
-variable size strings have a corresponding ``*_size`` field that specifies the
-number of bytes, including the terminating null character, in the string. The
-string(s) come immediately after the preceding fields.
+.. _amdgpu-note-records-v2:
+
+Code Object V2 Note Records (-mattr=-code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The AMDGPU backend code object uses the following ELF note record in the
+``.note`` section.
 
 Additional note records can be present.
 
-  .. table:: AMDGPU ELF Note Records
-     :name: amdgpu-elf-note-records-table
+  .. table:: AMDGPU Code Object V2 ELF Note Records
+     :name: amdgpu-elf-note-records-table-v2
 
      ===== ============================== ======================================
      Name  Type                           Description
@@ -681,8 +700,8 @@ Additional note records can be present.
 
 ..
 
-  .. table:: AMDGPU ELF Note Record Enumeration Values
-     :name: amdgpu-elf-note-record-enumeration-values-table
+  .. table:: AMDGPU Code Object V2 ELF Note Record Enumeration Values
+     :name: amdgpu-elf-note-record-enumeration-values-table-v2
 
      ============================== =====
      Name                           Value
@@ -696,8 +715,46 @@ Additional note records can be present.
   Specifies extensible metadata associated with the code objects executed on HSA
   [HSA]_ compatible runtimes such as AMD's ROCm [AMD-ROCm]_. It is required when
   the target triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`). See
-  :ref:`amdgpu-amdhsa-code-object-metadata` for the syntax of the code
+  :ref:`amdgpu-amdhsa-code-object-metadata-v2` for the syntax of the code
   object metadata string.
+
+.. _amdgpu-note-records-v3:
+
+Code Object V3 Note Records (-mattr=+code-object-v3)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The AMDGPU backend code object uses the following ELF note record in the
+``.note`` section.
+
+Additional note records can be present.
+
+  .. table:: AMDGPU Code Object V3 ELF Note Records
+     :name: amdgpu-elf-note-records-table-v3
+
+     ======== ============================== ======================================
+     Name     Type                           Description
+     ======== ============================== ======================================
+     "AMDGPU" ``NT_AMDGPU_METADATA``         Metadata in Message Pack [MsgPack]_
+                                             binary format.
+     ======== ============================== ======================================
+
+..
+
+  .. table:: AMDGPU Code Object V3 ELF Note Record Enumeration Values
+     :name: amdgpu-elf-note-record-enumeration-values-table-v3
+
+     ============================== =====
+     Name                           Value
+     ============================== =====
+     *reserved*                     0-31
+     ``NT_AMDGPU_METADATA``         32
+     ============================== =====
+
+``NT_AMDGPU_METADATA``
+  Specifies extensible metadata associated with an AMDGPU code
+  object. It is encoded as a map in the Message Pack [MsgPack]_ binary
+  data format. See :ref:`amdgpu-amdhsa-code-object-metadata-v3` for the
+  map keys defined for the ``amdhsa`` OS.
 
 .. _amdgpu-symbols:
 
@@ -991,13 +1048,21 @@ Code Object Metadata
 
 The code object metadata specifies extensible metadata associated with the code
 objects executed on HSA [HSA]_ compatible runtimes such as AMD's ROCm
-[AMD-ROCm]_. It is specified by the ``NT_AMD_AMDGPU_HSA_METADATA`` note record
-(see :ref:`amdgpu-note-records`) and is required when the target triple OS is
-``amdhsa`` (see :ref:`amdgpu-target-triples`). It must contain the minimum
-information necessary to support the ROCM kernel queries. For example, the
-segment sizes needed in a dispatch packet. In addition, a high level language
-runtime may require other information to be included. For example, the AMD
-OpenCL runtime records kernel argument information.
+[AMD-ROCm]_. It is specified in a note record (see :ref:`amdgpu-note-records`)
+and is required when the target triple OS is ``amdhsa`` (see
+:ref:`amdgpu-target-triples`). It must contain the minimum information
+necessary to support the ROCM kernel queries. For example, the segment sizes
+needed in a dispatch packet. In addition, a high level language runtime may
+require other information to be included. For example, the AMD OpenCL runtime
+records kernel argument information.
+
+.. _amdgpu-amdhsa-code-object-metadata-v2:
+
+Code Object V2 Metadata (-mattr=-code-object-v3)
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+Code object V2 metadata is specified by the ``NT_AMD_AMDGPU_METADATA`` note
+record (see :ref:`amdgpu-note-records-v2`).
 
 The metadata is specified as a YAML formatted string (see [YAML]_ and
 :doc:`YamlIO`).
@@ -1007,7 +1072,7 @@ The metadata is specified as a YAML formatted string (see [YAML]_ and
    contain null characters, otherwise it should be.
 
 The metadata is represented as a single YAML document comprised of the mapping
-defined in table :ref:`amdgpu-amdhsa-code-object-metadata-mapping-table` and
+defined in table :ref:`amdgpu-amdhsa-code-object-metadata-map-table-v2` and
 referenced tables.
 
 For boolean values, the string values of ``false`` and ``true`` are used for
@@ -1016,8 +1081,8 @@ false and true respectively.
 Additional information can be added to the mappings. To avoid conflicts, any
 non-AMD key names should be prefixed by "*vendor-name*.".
 
-  .. table:: AMDHSA Code Object Metadata Mapping
-     :name: amdgpu-amdhsa-code-object-metadata-mapping-table
+  .. table:: AMDHSA Code Object V2 Metadata Map
+     :name: amdgpu-amdhsa-code-object-metadata-map-table-v2
 
      ========== ============== ========= =======================================
      String Key Value Type     Required? Description
@@ -1054,14 +1119,14 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                            printf function call.
      "Kernels"  sequence of    Required  Sequence of the mappings for each
                 mapping                  kernel in the code object. See
-                                         :ref:`amdgpu-amdhsa-code-object-kernel-metadata-mapping-table`
+                                         :ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v2`
                                          for the definition of the mapping.
      ========== ============== ========= =======================================
 
 ..
 
-  .. table:: AMDHSA Code Object Kernel Metadata Mapping
-     :name: amdgpu-amdhsa-code-object-kernel-metadata-mapping-table
+  .. table:: AMDHSA Code Object V2 Kernel Metadata Map
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v2
 
      ================= ============== ========= ================================
      String Key        Value Type     Required? Description
@@ -1083,22 +1148,22 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                   minor version.
      "Attrs"           mapping                  Mapping of kernel attributes.
                                                 See
-                                                :ref:`amdgpu-amdhsa-code-object-kernel-attribute-metadata-mapping-table`
+                                                :ref:`amdgpu-amdhsa-code-object-kernel-attribute-metadata-map-table-v2`
                                                 for the mapping definition.
      "Args"            sequence of              Sequence of mappings of the
                        mapping                  kernel arguments. See
-                                                :ref:`amdgpu-amdhsa-code-object-kernel-argument-metadata-mapping-table`
+                                                :ref:`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v2`
                                                 for the definition of the mapping.
      "CodeProps"       mapping                  Mapping of properties related to
                                                 the kernel code. See
-                                                :ref:`amdgpu-amdhsa-code-object-kernel-code-properties-metadata-mapping-table`
+                                                :ref:`amdgpu-amdhsa-code-object-kernel-code-properties-metadata-map-table-v2`
                                                 for the mapping definition.
      ================= ============== ========= ================================
 
 ..
 
-  .. table:: AMDHSA Code Object Kernel Attribute Metadata Mapping
-     :name: amdgpu-amdhsa-code-object-kernel-attribute-metadata-mapping-table
+  .. table:: AMDHSA Code Object V2 Kernel Attribute Metadata Map
+     :name: amdgpu-amdhsa-code-object-kernel-attribute-metadata-map-table-v2
 
      =================== ============== ========= ==============================
      String Key          Value Type     Required? Description
@@ -1138,8 +1203,8 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 
 ..
 
-  .. table:: AMDHSA Code Object Kernel Argument Metadata Mapping
-     :name: amdgpu-amdhsa-code-object-kernel-argument-metadata-mapping-table
+  .. table:: AMDHSA Code Object V2 Kernel Argument Metadata Map
+     :name: amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v2
 
      ================= ============== ========= ================================
      String Key        Value Type     Required? Description
@@ -1336,8 +1401,8 @@ non-AMD key names should be prefixed by "*vendor-name*.".
 
 ..
 
-  .. table:: AMDHSA Code Object Kernel Code Properties Metadata Mapping
-     :name: amdgpu-amdhsa-code-object-kernel-code-properties-metadata-mapping-table
+  .. table:: AMDHSA Code Object V2 Kernel Code Properties Metadata Map
+     :name: amdgpu-amdhsa-code-object-kernel-code-properties-metadata-map-table-v2
 
      ============================ ============== ========= =====================
      String Key                   Value Type     Required? Description
@@ -1414,6 +1479,414 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                            created spill
                                                            location.
      ============================ ============== ========= =====================
+
+.. _amdgpu-amdhsa-code-object-metadata-v3:
+
+Code Object V3 Metadata (-mattr=+code-object-v3)
+++++++++++++++++++++++++++++++++++++++++++++++++
+
+Code object V3 metadata is specified by the ``NT_AMDGPU_METADATA`` note record
+(see :ref:`amdgpu-note-records-v3`).
+
+The metadata is represented as Message Pack formatted binary data (see
+[MsgPack]_). The top level is a Message Pack map that includes the
+keys defined in table
+:ref:`amdgpu-amdhsa-code-object-metadata-map-table-v3` and referenced
+tables.
+
+Additional information can be added to the maps. To avoid conflicts,
+any key names should be prefixed by "*vendor-name*." where
+``vendor-name`` can be the the name of the vendor and specific vendor
+tool that generates the information. The prefix is abbreviated to
+simply "." when it appears within a map that has been added by the
+same *vendor-name*.
+
+  .. table:: AMDHSA Code Object V3 Metadata Map
+     :name: amdgpu-amdhsa-code-object-metadata-map-table-v3
+
+     ================= ============== ========= =======================================
+     String Key        Value Type     Required? Description
+     ================= ============== ========= =======================================
+     "amdhsa.version"  sequence of    Required  - The first integer is the major
+                       2 integers                 version. Currently 1.
+                                                - The second integer is the minor
+                                                  version. Currently 0.
+     "amdhsa.printf"   sequence of              Each string is encoded information
+                       strings                  about a printf function call. The
+                                                encoded information is organized as
+                                                fields separated by colon (':'):
+
+                                                ``ID:N:S[0]:S[1]:...:S[N-1]:FormatString``
+
+                                                where:
+
+                                                ``ID``
+                                                  A 32 bit integer as a unique id for
+                                                  each printf function call
+
+                                                ``N``
+                                                  A 32 bit integer equal to the number
+                                                  of arguments of printf function call
+                                                  minus 1
+
+                                                ``S[i]`` (where i = 0, 1, ... , N-1)
+                                                  32 bit integers for the size in bytes
+                                                  of the i-th FormatString argument of
+                                                  the printf function call
+
+                                                FormatString
+                                                  The format string passed to the
+                                                  printf function call.
+     "amdhsa.kernels"  sequence of    Required  Sequence of the maps for each
+                       map                      kernel in the code object. See
+                                                :ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v3`
+                                                for the definition of the keys included
+                                                in that map.
+     ================= ============== ========= =======================================
+
+..
+
+  .. table:: AMDHSA Code Object V3 Kernel Metadata Map
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v3
+
+     =================================== ============== ========= ================================
+     String Key                          Value Type     Required? Description
+     =================================== ============== ========= ================================
+     ".name"                             string         Required  Source name of the kernel.
+     ".symbol"                           string         Required  Name of the kernel
+                                                                  descriptor ELF symbol.
+     ".language"                         string                   Source language of the kernel.
+                                                                  Values include:
+
+                                                                  - "OpenCL C"
+                                                                  - "OpenCL C++"
+                                                                  - "HCC"
+                                                                  - "HIP"
+                                                                  - "OpenMP"
+                                                                  - "Assembler"
+
+     ".language_version"                 sequence of              - The first integer is the major
+                                         2 integers                 version.
+                                                                  - The second integer is the
+                                                                    minor version.
+     ".args"                             sequence of              Sequence of maps of the
+                                         map                      kernel arguments. See
+                                                                  :ref:`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v3`
+                                                                  for the definition of the keys
+                                                                  included in that map.
+     ".reqd_workgroup_size"              sequence of              If not 0, 0, 0 then all values
+                                         3 integers               must be >=1 and the dispatch
+                                                                  work-group size X, Y, Z must
+                                                                  correspond to the specified
+                                                                  values. Defaults to 0, 0, 0.
+
+                                                                  Corresponds to the OpenCL
+                                                                  ``reqd_work_group_size``
+                                                                  attribute.
+     ".workgroup_size_hint"              sequence of              The dispatch work-group size
+                                         3 integers               X, Y, Z is likely to be the
+                                                                  specified values.
+
+                                                                  Corresponds to the OpenCL
+                                                                  ``work_group_size_hint``
+                                                                  attribute.
+     ".vec_type_hint"                    string                   The name of a scalar or vector
+                                                                  type.
+
+                                                                  Corresponds to the OpenCL
+                                                                  ``vec_type_hint`` attribute.
+
+     ".device_enqueue_symbol"            string                   The external symbol name
+                                                                  associated with a kernel.
+                                                                  OpenCL runtime allocates a
+                                                                  global buffer for the symbol
+                                                                  and saves the kernel's address
+                                                                  to it, which is used for
+                                                                  device side enqueueing. Only
+                                                                  available for device side
+                                                                  enqueued kernels.
+     ".kernarg_segment_size"             integer        Required  The size in bytes of
+                                                                  the kernarg segment
+                                                                  that holds the values
+                                                                  of the arguments to
+                                                                  the kernel.
+     ".group_segment_fixed_size"         integer        Required  The amount of group
+                                                                  segment memory
+                                                                  required by a
+                                                                  work-group in
+                                                                  bytes. This does not
+                                                                  include any
+                                                                  dynamically allocated
+                                                                  group segment memory
+                                                                  that may be added
+                                                                  when the kernel is
+                                                                  dispatched.
+     ".private_segment_fixed_size"       integer        Required  The amount of fixed
+                                                                  private address space
+                                                                  memory required for a
+                                                                  work-item in
+                                                                  bytes. If the kernel
+                                                                  uses a dynamic call
+                                                                  stack then additional
+                                                                  space must be added
+                                                                  to this value for the
+                                                                  call stack.
+     ".kernarg_segment_align"            integer        Required  The maximum byte
+                                                                  alignment of
+                                                                  arguments in the
+                                                                  kernarg segment. Must
+                                                                  be a power of 2.
+     ".wavefront_size"                   integer        Required  Wavefront size. Must
+                                                                  be a power of 2.
+     ".sgpr_count"                       integer        Required  Number of scalar
+                                                                  registers required by a
+                                                                  wavefront for
+                                                                  GFX6-GFX9. A register
+                                                                  is required if it is
+                                                                  used explicitly, or
+                                                                  if a higher numbered
+                                                                  register is used
+                                                                  explicitly. This
+                                                                  includes the special
+                                                                  SGPRs for VCC, Flat
+                                                                  Scratch (GFX7-GFX9)
+                                                                  and XNACK (for
+                                                                  GFX8-GFX9). It does
+                                                                  not include the 16
+                                                                  SGPR added if a trap
+                                                                  handler is
+                                                                  enabled. It is not
+                                                                  rounded up to the
+                                                                  allocation
+                                                                  granularity.
+     ".vgpr_count"                       integer        Required  Number of vector
+                                                                  registers required by
+                                                                  each work-item for
+                                                                  GFX6-GFX9. A register
+                                                                  is required if it is
+                                                                  used explicitly, or
+                                                                  if a higher numbered
+                                                                  register is used
+                                                                  explicitly.
+     ".max_flat_workgroup_size"          integer        Required  Maximum flat
+                                                                  work-group size
+                                                                  supported by the
+                                                                  kernel in work-items.
+                                                                  Must be >=1 and
+                                                                  consistent with
+                                                                  ReqdWorkGroupSize if
+                                                                  not 0, 0, 0.
+     ".sgpr_spill_count"                 integer                  Number of stores from
+                                                                  a scalar register to
+                                                                  a register allocator
+                                                                  created spill
+                                                                  location.
+     ".vgpr_spill_count"                 integer                  Number of stores from
+                                                                  a vector register to
+                                                                  a register allocator
+                                                                  created spill
+                                                                  location.
+     =================================== ============== ========= ================================
+
+..
+
+  .. table:: AMDHSA Code Object V3 Kernel Argument Metadata Map
+     :name: amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v3
+
+     ====================== ============== ========= ================================
+     String Key             Value Type     Required? Description
+     ====================== ============== ========= ================================
+     ".name"                string                   Kernel argument name.
+     ".type_name"           string                   Kernel argument type name.
+     ".size"                integer        Required  Kernel argument size in bytes.
+     ".offset"              integer        Required  Kernel argument offset in
+                                                     bytes. The offset must be a
+                                                     multiple of the alignment
+                                                     required by the argument.
+     ".value_kind"          string         Required  Kernel argument kind that
+                                                     specifies how to set up the
+                                                     corresponding argument.
+                                                     Values include:
+
+                                                     "by_value"
+                                                       The argument is copied
+                                                       directly into the kernarg.
+
+                                                     "global_buffer"
+                                                       A global address space pointer
+                                                       to the buffer data is passed
+                                                       in the kernarg.
+
+                                                     "dynamic_shared_pointer"
+                                                       A group address space pointer
+                                                       to dynamically allocated LDS
+                                                       is passed in the kernarg.
+
+                                                     "sampler"
+                                                       A global address space
+                                                       pointer to a S# is passed in
+                                                       the kernarg.
+
+                                                     "image"
+                                                       A global address space
+                                                       pointer to a T# is passed in
+                                                       the kernarg.
+
+                                                     "pipe"
+                                                       A global address space pointer
+                                                       to an OpenCL pipe is passed in
+                                                       the kernarg.
+
+                                                     "queue"
+                                                       A global address space pointer
+                                                       to an OpenCL device enqueue
+                                                       queue is passed in the
+                                                       kernarg.
+
+                                                     "hidden_global_offset_x"
+                                                       The OpenCL grid dispatch
+                                                       global offset for the X
+                                                       dimension is passed in the
+                                                       kernarg.
+
+                                                     "hidden_global_offset_y"
+                                                       The OpenCL grid dispatch
+                                                       global offset for the Y
+                                                       dimension is passed in the
+                                                       kernarg.
+
+                                                     "hidden_global_offset_z"
+                                                       The OpenCL grid dispatch
+                                                       global offset for the Z
+                                                       dimension is passed in the
+                                                       kernarg.
+
+                                                     "hidden_none"
+                                                       An argument that is not used
+                                                       by the kernel. Space needs to
+                                                       be left for it, but it does
+                                                       not need to be set up.
+
+                                                     "hidden_printf_buffer"
+                                                       A global address space pointer
+                                                       to the runtime printf buffer
+                                                       is passed in kernarg.
+
+                                                     "hidden_default_queue"
+                                                       A global address space pointer
+                                                       to the OpenCL device enqueue
+                                                       queue that should be used by
+                                                       the kernel by default is
+                                                       passed in the kernarg.
+
+                                                     "hidden_completion_action"
+                                                       A global address space pointer
+                                                       to help link enqueued kernels into
+                                                       the ancestor tree for determining
+                                                       when the parent kernel has finished.
+
+     ".value_type"          string         Required  Kernel argument value type. Only
+                                                     present if ".value_kind" is
+                                                     "by_value". For vector data
+                                                     types, the value is for the
+                                                     element type. Values include:
+
+                                                     - "struct"
+                                                     - "i8"
+                                                     - "u8"
+                                                     - "i16"
+                                                     - "u16"
+                                                     - "f16"
+                                                     - "i32"
+                                                     - "u32"
+                                                     - "f32"
+                                                     - "i64"
+                                                     - "u64"
+                                                     - "f64"
+
+                                                     .. TODO
+                                                        How can it be determined if a
+                                                        vector type, and what size
+                                                        vector?
+     ".pointee_align"       integer                  Alignment in bytes of pointee
+                                                     type for pointer type kernel
+                                                     argument. Must be a power
+                                                     of 2. Only present if
+                                                     ".value_kind" is
+                                                     "dynamic_shared_pointer".
+     ".address_space"       string                   Kernel argument address space
+                                                     qualifier. Only present if
+                                                     ".value_kind" is "global_buffer" or
+                                                     "dynamic_shared_pointer". Values
+                                                     are:
+
+                                                     - "private"
+                                                     - "global"
+                                                     - "constant"
+                                                     - "local"
+                                                     - "generic"
+                                                     - "region"
+
+                                                     .. TODO
+                                                        Is "global_buffer" only "global"
+                                                        or "constant"? Is
+                                                        "dynamic_shared_pointer" always
+                                                        "local"? Can HCC allow "generic"?
+                                                        How can "private" or "region"
+                                                        ever happen?
+     ".access"              string                   Kernel argument access
+                                                     qualifier. Only present if
+                                                     ".value_kind" is "image" or
+                                                     "pipe". Values
+                                                     are:
+
+                                                     - "read_only"
+                                                     - "write_only"
+                                                     - "read_write"
+
+                                                     .. TODO
+                                                        Does this apply to
+                                                        "global_buffer"?
+     ".actual_access"       string                   The actual memory accesses
+                                                     performed by the kernel on the
+                                                     kernel argument. Only present if
+                                                     ".value_kind" is "global_buffer",
+                                                     "image", or "pipe". This may be
+                                                     more restrictive than indicated
+                                                     by ".access" to reflect what the
+                                                     kernel actual does. If not
+                                                     present then the runtime must
+                                                     assume what is implied by
+                                                     ".access" and ".is_const"      . Values
+                                                     are:
+
+                                                     - "read_only"
+                                                     - "write_only"
+                                                     - "read_write"
+
+     ".is_const"            boolean                  Indicates if the kernel argument
+                                                     is const qualified. Only present
+                                                     if ".value_kind" is
+                                                     "global_buffer".
+
+     ".is_restrict"         boolean                  Indicates if the kernel argument
+                                                     is restrict qualified. Only
+                                                     present if ".value_kind" is
+                                                     "global_buffer".
+
+     ".is_volatile"         boolean                  Indicates if the kernel argument
+                                                     is volatile qualified. Only
+                                                     present if ".value_kind" is
+                                                     "global_buffer".
+
+     ".is_pipe"             boolean                  Indicates if the kernel argument
+                                                     is pipe qualified. Only present
+                                                     if ".value_kind" is "pipe".
+
+                                                     .. TODO
+                                                        Can "global_buffer" be pipe
+                                                        qualified?
+     ====================== ============== ========= ================================
 
 ..
 
@@ -4085,21 +4558,26 @@ Instructions
 .. toctree::
    :hidden:
 
-   AMDGPUAsmGFX7
-   AMDGPUAsmGFX8
-   AMDGPUAsmGFX9
+   AMDGPU/AMDGPUAsmGFX7
+   AMDGPU/AMDGPUAsmGFX8
+   AMDGPU/AMDGPUAsmGFX9
+   AMDGPUModifierSyntax
    AMDGPUOperandSyntax
+   AMDGPUInstructionSyntax
+   AMDGPUInstructionNotation
 
-An instruction has the following syntax:
+An instruction has the following :doc:`syntax<AMDGPUInstructionSyntax>`:
 
-    *<opcode> <operand0>, <operand1>,... <modifier0> <modifier1>...*
+    ``<``\ *opcode*\ ``>    <``\ *operand0*\ ``>, <``\ *operand1*\ ``>,...    <``\ *modifier0*\ ``> <``\ *modifier1*\ ``>...``
 
-Note that operands are normally comma-separated while modifiers are space-separated.
+:doc:`Operands<AMDGPUOperandSyntax>` are normally comma-separated while
+:doc:`modifiers<AMDGPUModifierSyntax>` are space-separated.
 
-The order of operands and modifiers is fixed. Most modifiers are optional and may be omitted.
+The order of *operands* and *modifiers* is fixed.
+Most *modifiers* are optional and may be omitted.
 
-See detailed instruction syntax description for :doc:`GFX7<AMDGPUAsmGFX7>`,
-:doc:`GFX8<AMDGPUAsmGFX8>` and :doc:`GFX9<AMDGPUAsmGFX9>`.
+See detailed instruction syntax description for :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`,
+:doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>` and :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`.
 
 Note that features under development are not included in this description.
 
@@ -4110,22 +4588,12 @@ operands, refer to one of instruction set architecture manuals
 Operands
 ~~~~~~~~
 
-The following syntax for register operands is supported:
-
-* SGPR registers: s0, ... or s[0], ...
-* VGPR registers: v0, ... or v[0], ...
-* TTMP registers: ttmp0, ... or ttmp[0], ...
-* Special registers: exec (exec_lo, exec_hi), vcc (vcc_lo, vcc_hi), flat_scratch (flat_scratch_lo, flat_scratch_hi)
-* Special trap registers: tba (tba_lo, tba_hi), tma (tma_lo, tma_hi)
-* Register pairs, quads, etc: s[2:3], v[10:11], ttmp[5:6], s[4:7], v[12:15], ttmp[4:7], s[8:15], ...
-* Register lists: [s0, s1], [ttmp0, ttmp1, ttmp2, ttmp3]
-* Register index expressions: v[2*2], s[1-1:2-1]
-* 'off' indicates that an operand is not enabled
+Detailed description of operands may be found :doc:`here<AMDGPUOperandSyntax>`.
 
 Modifiers
 ~~~~~~~~~
 
-Detailed description of modifiers may be found :doc:`here<AMDGPUOperandSyntax>`.
+Detailed description of modifiers may be found :doc:`here<AMDGPUModifierSyntax>`.
 
 Instruction Examples
 ~~~~~~~~~~~~~~~~~~~~
@@ -4355,7 +4823,7 @@ used.  The default value for all keys is 0, with the following exceptions:
 - *wavefront_size* defaults to 6.
 - *kernarg_segment_alignment*, *group_segment_alignment*, and
   *private_segment_alignment* default to 4. Note that alignments are specified
-  as a power of two, so a value of **n** means an alignment of 2^ **n**.
+  as a power of 2, so a value of **n** means an alignment of 2^ **n**.
 
 The *.amd_kernel_code_t* directive must be placed immediately after the
 function label and before any instructions.
@@ -4568,12 +5036,23 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                             :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx9-table`.
      ======================================================== ================ ============ ===================
 
+.amdgpu_metadata
+++++++++++++++++
+
+Optional directive which declares the contents of the ``NT_AMDGPU_METADATA``
+note record (see :ref:`amdgpu-elf-note-records-table-v3`).
+
+The contents must be in the [YAML]_ markup format, with the same structure and
+semantics described in :ref:`amdgpu-amdhsa-code-object-metadata-v3`.
+
+This directive is terminated by an ``.end_amdgpu_metadata`` directive.
+
 Example HSA Source Code (-mattr=+code-object-v3)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here is an example of a minimal assembly source file, defining one HSA kernel:
 
-.. code-block:: nasm
+.. code-block:: none
 
   .amdgcn_target "amdgcn-amd-amdhsa--gfx900+xnack" // optional
 
@@ -4600,6 +5079,24 @@ Here is an example of a minimal assembly source file, defining one HSA kernel:
     .amdhsa_next_free_sgpr .amdgcn.next_free_sgpr
   .end_amdhsa_kernel
 
+  .amdgpu_metadata
+  ---
+  amdhsa.version:
+    - 1
+    - 0
+  amdhsa.kernels:
+    - .name: hello_world
+      .symbol: hello_world.kd
+      .kernarg_segment_size: 48
+      .group_segment_fixed_size: 0
+      .private_segment_fixed_size: 0
+      .kernarg_segment_align: 4
+      .wavefront_size: 64
+      .sgpr_count: 2
+      .vgpr_count: 3
+      .max_flat_workgroup_size: 256
+  ...
+  .end_amdgpu_metadata
 
 Additional Documentation
 ========================
@@ -4618,6 +5115,7 @@ Additional Documentation
 .. [ELF] `Executable and Linkable Format (ELF) <http://www.sco.com/developers/gabi/>`__
 .. [DWARF] `DWARF Debugging Information Format <http://dwarfstd.org/>`__
 .. [YAML] `YAML Ain't Markup Language (YAML™) Version 1.2 <http://www.yaml.org/spec/1.2/spec.html>`__
+.. [MsgPack] `Message Pack <http://www.msgpack.org/>`__
 .. [OpenCL] `The OpenCL Specification Version 2.0 <http://www.khronos.org/registry/cl/specs/opencl-2.0.pdf>`__
 .. [HRF] `Heterogeneous-race-free Memory Models <http://benedictgaster.org/wp-content/uploads/2014/01/asplos269-FINAL.pdf>`__
 .. [CLANG-ATTR] `Attributes in Clang <http://clang.llvm.org/docs/AttributeReference.html>`__

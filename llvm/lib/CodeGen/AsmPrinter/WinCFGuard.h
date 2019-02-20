@@ -14,7 +14,7 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_WINCFGUARD_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_WINCFGUARD_H
 
-#include "AsmPrinterHandler.h"
+#include "llvm/CodeGen/AsmPrinterHandler.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {

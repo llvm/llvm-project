@@ -1,0 +1,16 @@
+# RUN: not obj2yaml %p/Inputs/WASM/invalid-section-order.wasm 2>&1 | FileCheck %s
+# CHECK: {{.*}}: Out of order section type: 10
+
+# Inputs/WASM/invalid-section-order.wasm is generated from this ll file, by
+# modifying WasmObjectWriter to incorrectly write the data section before the
+# code section.
+#
+# target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
+# target triple = "wasm32-unknown-unknown"
+#
+# @data = global i32 0, align 4
+#
+# define void @foo() {
+# entry:
+#   ret void
+# }

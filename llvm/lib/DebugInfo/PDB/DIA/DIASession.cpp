@@ -9,6 +9,7 @@
 #include "llvm/DebugInfo/PDB/DIA/DIASession.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumDebugStreams.h"
+#include "llvm/DebugInfo/PDB/DIA/DIAEnumFrameData.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumInjectedSources.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumLineNumbers.h"
 #include "llvm/DebugInfo/PDB/DIA/DIAEnumSectionContribs.h"
@@ -42,7 +43,7 @@ static Error ErrorFromHResult(HRESULT Result, const char *Str, Ts &&... Args) {
 
   switch (Result) {
   case E_PDB_NOT_FOUND:
-    return make_error<GenericError>(generic_error_code::invalid_path, Context);
+    return errorCodeToError(std::error_code(ENOENT, std::generic_category()));
   case E_PDB_FORMAT:
     return make_error<DIAError>(dia_error_code::invalid_file_format, Context);
   case E_INVALIDARG:
@@ -71,8 +72,7 @@ static Error LoadDIA(CComPtr<IDiaDataSource> &DiaDataSource) {
 // If the CoCreateInstance call above failed, msdia*.dll is not registered.
 // Try loading the DLL corresponding to the #included DIA SDK.
 #if !defined(_MSC_VER)
-  return llvm::make_error<GenericError>(
-      "DIA is only supported when using MSVC.");
+  return llvm::make_error<PDBError>(pdb_error_code::dia_failed_loading);
 #else
   const wchar_t *msdia_dll = nullptr;
 #if _MSC_VER >= 1900 && _MSC_VER < 2000
@@ -104,7 +104,7 @@ Error DIASession::createFromPdb(StringRef Path,
 
   llvm::SmallVector<UTF16, 128> Path16;
   if (!llvm::convertUTF8ToUTF16String(Path, Path16))
-    return make_error<GenericError>(generic_error_code::invalid_path);
+    return make_error<PDBError>(pdb_error_code::invalid_utf8_path, Path);
 
   const wchar_t *Path16Str = reinterpret_cast<const wchar_t *>(Path16.data());
   HRESULT HR;
@@ -130,7 +130,7 @@ Error DIASession::createFromExe(StringRef Path,
 
   llvm::SmallVector<UTF16, 128> Path16;
   if (!llvm::convertUTF8ToUTF16String(Path, Path16))
-    return make_error<GenericError>(generic_error_code::invalid_path, Path);
+    return make_error<PDBError>(pdb_error_code::invalid_utf8_path, Path);
 
   const wchar_t *Path16Str = reinterpret_cast<const wchar_t *>(Path16.data());
   HRESULT HR;
@@ -188,7 +188,8 @@ bool DIASession::addressForRVA(uint32_t RVA, uint32_t &Section,
   return false;
 }
 
-std::unique_ptr<PDBSymbol> DIASession::getSymbolById(uint32_t SymbolId) const {
+std::unique_ptr<PDBSymbol>
+DIASession::getSymbolById(SymIndexId SymbolId) const {
   CComPtr<IDiaSymbol> LocatedSymbol;
   if (S_OK != Session->symbolById(SymbolId, &LocatedSymbol))
     return nullptr;
@@ -407,7 +408,7 @@ DIASession::getInjectedSources() const {
   if (!Files)
     return nullptr;
 
-  return llvm::make_unique<DIAEnumInjectedSources>(*this, Files);
+  return llvm::make_unique<DIAEnumInjectedSources>(Files);
 }
 
 std::unique_ptr<IPDBEnumSectionContribs>
@@ -418,4 +419,14 @@ DIASession::getSectionContribs() const {
     return nullptr;
 
   return llvm::make_unique<DIAEnumSectionContribs>(*this, Sections);
+}
+
+std::unique_ptr<IPDBEnumFrameData>
+DIASession::getFrameData() const {
+  CComPtr<IDiaEnumFrameData> FD =
+      getTableEnumerator<IDiaEnumFrameData>(*Session);
+  if (!FD)
+    return nullptr;
+
+  return llvm::make_unique<DIAEnumFrameData>(FD);
 }

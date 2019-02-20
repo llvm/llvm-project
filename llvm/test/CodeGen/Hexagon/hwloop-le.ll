@@ -1,438 +1,408 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv4 -O3 < %s | FileCheck %s
+; RUN: llc -march=hexagon -mcpu=hexagonv5 -O3 < %s | FileCheck %s
 
-
-; CHECK: test_pos1_ir_sle
+; CHECK-LABEL: f0:
 ; CHECK: loop0
 ; a < b
-define void @test_pos1_ir_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 28395, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f0(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 28395, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ 28395, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 1
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ 28395, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 1
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos2_ir_sle
+; CHECK-LABEL: f1:
 ; CHECK: loop0
 ; a < b
-define void @test_pos2_ir_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 9073, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f1(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 9073, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ 9073, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 2
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ 9073, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 2
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos4_ir_sle
+; CHECK-LABEL: f2:
 ; CHECK: loop0
 ; a < b
-define void @test_pos4_ir_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 21956, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f2(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 21956, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ 21956, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 4
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ 21956, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 4
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos8_ir_sle
+; CHECK-LABEL: f3:
 ; CHECK: loop0
 ; a < b
-define void @test_pos8_ir_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 16782, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f3(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 16782, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ 16782, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 8
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ 16782, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 8
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos16_ir_sle
+; CHECK-LABEL: f4:
 ; CHECK: loop0
 ; a < b
-define void @test_pos16_ir_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 19097, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f4(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 19097, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ 19097, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 16
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ 19097, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 16
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos1_ri_sle
+; CHECK-LABEL: f5:
 ; CHECK: loop0
 ; a < b
-define void @test_pos1_ri_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, 14040
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f5(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, 14040
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 1
-  %cmp = icmp sle i32 %inc, 14040
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 1
+  %v8 = icmp sle i32 %v7, 14040
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos2_ri_sle
+; CHECK-LABEL: f6:
 ; CHECK: loop0
 ; a < b
-define void @test_pos2_ri_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, 13710
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f6(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, 13710
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 2
-  %cmp = icmp sle i32 %inc, 13710
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 2
+  %v8 = icmp sle i32 %v7, 13710
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos4_ri_sle
+; CHECK-LABEL: f7:
 ; CHECK: loop0
 ; a < b
-define void @test_pos4_ri_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, 9920
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f7(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, 9920
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 4
-  %cmp = icmp sle i32 %inc, 9920
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 4
+  %v8 = icmp sle i32 %v7, 9920
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos8_ri_sle
+; CHECK-LABEL: f8:
 ; CHECK: loop0
 ; a < b
-define void @test_pos8_ri_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, 18924
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f8(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, 18924
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 8
-  %cmp = icmp sle i32 %inc, 18924
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 8
+  %v8 = icmp sle i32 %v7, 18924
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos16_ri_sle
+; CHECK-LABEL: f9:
 ; CHECK: loop0
 ; a < b
-define void @test_pos16_ri_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, 11812
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f9(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, 11812
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 16
-  %cmp = icmp sle i32 %inc, 11812
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 16
+  %v8 = icmp sle i32 %v7, 11812
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos1_rr_sle
+; CHECK-LABEL: f10:
 ; CHECK: loop0
 ; a < b
-define void @test_pos1_rr_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f10(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 1
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 1
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos2_rr_sle
+; CHECK-LABEL: f11:
 ; CHECK: loop0
 ; a < b
-define void @test_pos2_rr_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f11(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 2
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 2
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos4_rr_sle
+; CHECK-LABEL: f12:
 ; CHECK: loop0
 ; a < b
-define void @test_pos4_rr_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f12(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 4
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 4
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos8_rr_sle
+; CHECK-LABEL: f13:
 ; CHECK: loop0
 ; a < b
-define void @test_pos8_rr_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f13(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 8
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 8
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
-; CHECK: test_pos16_rr_sle
+; CHECK-LABEL: f14:
 ; CHECK: loop0
 ; a < b
-define void @test_pos16_rr_sle(i8* nocapture %p, i32 %a, i32 %b) nounwind {
-entry:
-  %cmp3 = icmp sle i32 %a, %b
-  br i1 %cmp3, label %for.body.lr.ph, label %for.end
+define void @f14(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
+b0:
+  %v0 = icmp sle i32 %a1, %a2
+  br i1 %v0, label %b1, label %b3
 
-for.body.lr.ph:                                   ; preds = %entry
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %i.04 = phi i32 [ %a, %for.body.lr.ph ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %p, i32 %i.04
-  %0 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %0 to i32
-  %add = add nsw i32 %conv, 1
-  %conv1 = trunc i32 %add to i8
-  store i8 %conv1, i8* %arrayidx, align 1
-  %inc = add nsw i32 %i.04, 16
-  %cmp = icmp sle i32 %inc, %b
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v1 = phi i32 [ %a1, %b1 ], [ %v7, %b2 ]
+  %v2 = getelementptr inbounds i8, i8* %a0, i32 %v1
+  %v3 = load i8, i8* %v2, align 1
+  %v4 = zext i8 %v3 to i32
+  %v5 = add nsw i32 %v4, 1
+  %v6 = trunc i32 %v5 to i8
+  store i8 %v6, i8* %v2, align 1
+  %v7 = add nsw i32 %v1, 16
+  %v8 = icmp sle i32 %v7, %a2
+  br i1 %v8, label %b2, label %b3
 
-for.end:                                          ; preds = %for.body, %entry
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
-
-
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }

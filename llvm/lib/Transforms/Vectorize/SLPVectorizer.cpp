@@ -1536,12 +1536,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       // Check for terminator values (e.g. invoke).
       for (unsigned j = 0; j < VL.size(); ++j)
         for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
-          TerminatorInst *Term = dyn_cast<TerminatorInst>(
-              cast<PHINode>(VL[j])->getIncomingValueForBlock(PH->getIncomingBlock(i)));
-          if (Term) {
-            LLVM_DEBUG(
-                dbgs()
-                << "SLP: Need to swizzle PHINodes (TerminatorInst use).\n");
+          Instruction *Term = dyn_cast<Instruction>(
+              cast<PHINode>(VL[j])->getIncomingValueForBlock(
+                  PH->getIncomingBlock(i)));
+          if (Term && Term->isTerminator()) {
+            LLVM_DEBUG(dbgs()
+                       << "SLP: Need to swizzle PHINodes (terminator use).\n");
             BS.cancelScheduling(VL, VL0);
             newTreeEntry(VL, false, UserTreeIdx, ReuseShuffleIndicies);
             return;
@@ -2164,7 +2164,7 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
                 // extractelement/ext pair.
                 DeadCost -= TTI->getExtractWithExtendCost(
                     Ext->getOpcode(), Ext->getType(), VecTy, i);
-                // Add back the cost of s|zext which is subtracted seperately.
+                // Add back the cost of s|zext which is subtracted separately.
                 DeadCost += TTI->getCastInstrCost(
                     Ext->getOpcode(), Ext->getType(), E->getType(), Ext);
                 continue;
@@ -2536,13 +2536,13 @@ int BoUpSLP::getTreeCost() {
     // uses. However, we should not compute the cost of duplicate sequences.
     // For example, if we have a build vector (i.e., insertelement sequence)
     // that is used by more than one vector instruction, we only need to
-    // compute the cost of the insertelement instructions once. The redundent
+    // compute the cost of the insertelement instructions once. The redundant
     // instructions will be eliminated by CSE.
     //
     // We should consider not creating duplicate tree entries for gather
     // sequences, and instead add additional edges to the tree representing
     // their uses. Since such an approach results in fewer total entries,
-    // existing heuristics based on tree size may yeild different results.
+    // existing heuristics based on tree size may yield different results.
     //
     if (TE.NeedToGather &&
         std::any_of(std::next(VectorizableTree.begin(), I + 1),
@@ -3643,6 +3643,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       auto &Locs = ExternallyUsedValues[Scalar];
       ExternallyUsedValues.insert({Ex, Locs});
       ExternallyUsedValues.erase(Scalar);
+      // Required to update internally referenced instructions.
+      Scalar->replaceAllUsesWith(Ex);
       continue;
     }
 
@@ -3652,7 +3654,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       if (PHINode *PH = dyn_cast<PHINode>(User)) {
         for (int i = 0, e = PH->getNumIncomingValues(); i != e; ++i) {
           if (PH->getIncomingValue(i) == Scalar) {
-            TerminatorInst *IncomingTerminator =
+            Instruction *IncomingTerminator =
                 PH->getIncomingBlock(i)->getTerminator();
             if (isa<CatchSwitchInst>(IncomingTerminator)) {
               Builder.SetInsertPoint(VecI->getParent(),
@@ -3960,7 +3962,7 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
     ScheduleEnd = I->getNextNode();
     if (isOneOf(S, I) != I)
       CheckSheduleForI(I);
-    assert(ScheduleEnd && "tried to vectorize a TerminatorInst?");
+    assert(ScheduleEnd && "tried to vectorize a terminator?");
     LLVM_DEBUG(dbgs() << "SLP:  initialize schedule region to " << *I << "\n");
     return true;
   }
@@ -3996,7 +3998,7 @@ bool BoUpSLP::BlockScheduling::extendSchedulingRegion(Value *V,
         ScheduleEnd = I->getNextNode();
         if (isOneOf(S, I) != I)
           CheckSheduleForI(I);
-        assert(ScheduleEnd && "tried to vectorize a TerminatorInst?");
+        assert(ScheduleEnd && "tried to vectorize a terminator?");
         LLVM_DEBUG(dbgs() << "SLP:  extend schedule region end to " << *I
                           << "\n");
         return true;
@@ -4267,7 +4269,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
     Worklist.push_back(I);
 
   // Traverse the expression tree in bottom-up order looking for loads. If we
-  // encounter an instruciton we don't yet handle, we give up.
+  // encounter an instruction we don't yet handle, we give up.
   auto MaxWidth = 0u;
   auto FoundUnknownInst = false;
   while (!Worklist.empty() && !FoundUnknownInst) {
@@ -4840,7 +4842,7 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
         continue;
       if (GEP->getType()->isVectorTy())
         continue;
-      GEPs[GetUnderlyingObject(GEP->getPointerOperand(), *DL)].push_back(GEP);
+      GEPs[GEP->getPointerOperand()].push_back(GEP);
     }
   }
 }
@@ -5126,9 +5128,12 @@ class HorizontalReduction {
     /// Checks if the reduction operation can be vectorized.
     bool isVectorizable() const {
       return LHS && RHS &&
-             // We currently only support adds && min/max reductions.
+             // We currently only support add/mul/logical && min/max reductions.
              ((Kind == RK_Arithmetic &&
-               (Opcode == Instruction::Add || Opcode == Instruction::FAdd)) ||
+               (Opcode == Instruction::Add || Opcode == Instruction::FAdd ||
+                Opcode == Instruction::Mul || Opcode == Instruction::FMul ||
+                Opcode == Instruction::And || Opcode == Instruction::Or ||
+                Opcode == Instruction::Xor)) ||
               ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
                (Kind == RK_Min || Kind == RK_Max)) ||
               (Opcode == Instruction::ICmp &&
@@ -5450,7 +5455,7 @@ class HorizontalReduction {
     }
   };
 
-  Instruction *ReductionRoot = nullptr;
+  WeakTrackingVH ReductionRoot;
 
   /// The operation data of the reduction operation.
   OperationData ReductionData;
@@ -5735,7 +5740,7 @@ public:
     unsigned ReduxWidth = PowerOf2Floor(NumReducedVals);
 
     Value *VectorizedTree = nullptr;
-    IRBuilder<> Builder(ReductionRoot);
+    IRBuilder<> Builder(cast<Instruction>(ReductionRoot));
     FastMathFlags Unsafe;
     Unsafe.setFast();
     Builder.setFastMathFlags(Unsafe);
@@ -5744,8 +5749,13 @@ public:
     BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
     // The same extra argument may be used several time, so log each attempt
     // to use it.
-    for (auto &Pair : ExtraArgs)
+    for (auto &Pair : ExtraArgs) {
+      assert(Pair.first && "DebugLoc must be set.");
       ExternallyUsedValues[Pair.second].push_back(Pair.first);
+    }
+    // The reduction root is used as the insertion point for new instructions,
+    // so set it as externally used to prevent it from being deleted.
+    ExternallyUsedValues[ReductionRoot];
     SmallVector<Value *, 16> IgnoreList;
     for (auto &V : ReductionOps)
       IgnoreList.append(V.begin(), V.end());
@@ -5797,6 +5807,7 @@ public:
       Value *VectorizedRoot = V.vectorizeTree(ExternallyUsedValues);
 
       // Emit a reduction.
+      Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
       Value *ReducedSubTree =
           emitReduction(VectorizedRoot, Builder, ReduxWidth, TTI);
       if (VectorizedTree) {
@@ -5823,8 +5834,6 @@ public:
         VectorizedTree = VectReductionData.createOp(Builder, "", ReductionOps);
       }
       for (auto &Pair : ExternallyUsedValues) {
-        assert(!Pair.second.empty() &&
-               "At least one DebugLoc must be inserted");
         // Add each externally used value to the final reduction.
         for (auto *I : Pair.second) {
           Builder.SetCurrentDebugLocation(I->getDebugLoc());

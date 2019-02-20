@@ -21,6 +21,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -67,6 +69,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
@@ -236,18 +239,20 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, bool AllowVarArgs,
-                             bool AllowAlloca, std::string Suffix)
+                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
+                             bool AllowVarArgs, bool AllowAlloca,
+                             std::string Suffix)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AllowVarArgs(AllowVarArgs),
+      BPI(BPI), AC(AC), AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, std::string Suffix)
+                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
+                             std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AllowVarArgs(false),
+      BPI(BPI), AC(AC), AllowVarArgs(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
                                      /* AllowAlloca */ false)),
@@ -332,8 +337,7 @@ bool CodeExtractor::isLegalToShrinkwrapLifetimeMarkers(
       default: {
         IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&II);
         if (IntrInst) {
-          if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_start ||
-              IntrInst->getIntrinsicID() == Intrinsic::lifetime_end)
+          if (IntrInst->isLifetimeStartOrEnd())
             break;
           return false;
         }
@@ -577,7 +581,7 @@ void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
     // changing them to branch to NewBB instead.
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
       if (Blocks.count(PN->getIncomingBlock(i))) {
-        TerminatorInst *TI = PN->getIncomingBlock(i)->getTerminator();
+        Instruction *TI = PN->getIncomingBlock(i)->getTerminator();
         TI->replaceUsesOfWith(OldPred, NewBB);
       }
 
@@ -735,9 +739,9 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
           ? (header->getName().empty() ? "extracted" : header->getName().str())
           : Suffix;
   // Create the new function
-  Function *newFunction =
-      Function::Create(funcType, GlobalValue::InternalLinkage,
-                       oldFunction->getName() + "." + SuffixToUse, M);
+  Function *newFunction = Function::Create(
+      funcType, GlobalValue::InternalLinkage, oldFunction->getAddressSpace(),
+      oldFunction->getName() + "." + SuffixToUse, M);
   // If the old function is no-throw, so is the new one.
   if (oldFunction->doesNotThrow())
     newFunction->setDoesNotThrow();
@@ -818,6 +822,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::SanitizeMemory:
       case Attribute::SanitizeThread:
       case Attribute::SanitizeHWAddress:
+      case Attribute::SpeculativeLoadHardening:
       case Attribute::StackProtect:
       case Attribute::StackProtectReq:
       case Attribute::StackProtectStrong:
@@ -842,7 +847,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       Value *Idx[2];
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(header->getContext()));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), i);
-      TerminatorInst *TI = newFunction->begin()->getTerminator();
+      Instruction *TI = newFunction->begin()->getTerminator();
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructTy, &*AI, Idx, "gep_" + inputs[i]->getName(), TI);
       RewriteVal = new LoadInst(GEP, "loadgep_" + inputs[i]->getName(), TI);
@@ -872,20 +877,103 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   for (unsigned i = 0, e = Users.size(); i != e; ++i)
     // The BasicBlock which contains the branch is not in the region
     // modify the branch target to a new block
-    if (TerminatorInst *TI = dyn_cast<TerminatorInst>(Users[i]))
-      if (!Blocks.count(TI->getParent()) &&
-          TI->getParent()->getParent() == oldFunction)
-        TI->replaceUsesOfWith(header, newHeader);
+    if (Instruction *I = dyn_cast<Instruction>(Users[i]))
+      if (I->isTerminator() && !Blocks.count(I->getParent()) &&
+          I->getParent()->getParent() == oldFunction)
+        I->replaceUsesOfWith(header, newHeader);
 
   return newFunction;
+}
+
+/// Erase lifetime.start markers which reference inputs to the extraction
+/// region, and insert the referenced memory into \p LifetimesStart.
+///
+/// The extraction region is defined by a set of blocks (\p Blocks), and a set
+/// of allocas which will be moved from the caller function into the extracted
+/// function (\p SunkAllocas).
+static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
+                                         const SetVector<Value *> &SunkAllocas,
+                                         SetVector<Value *> &LifetimesStart) {
+  for (BasicBlock *BB : Blocks) {
+    for (auto It = BB->begin(), End = BB->end(); It != End;) {
+      auto *II = dyn_cast<IntrinsicInst>(&*It);
+      ++It;
+      if (!II || !II->isLifetimeStartOrEnd())
+        continue;
+
+      // Get the memory operand of the lifetime marker. If the underlying
+      // object is a sunk alloca, or is otherwise defined in the extraction
+      // region, the lifetime marker must not be erased.
+      Value *Mem = II->getOperand(1)->stripInBoundsOffsets();
+      if (SunkAllocas.count(Mem) || definedInRegion(Blocks, Mem))
+        continue;
+
+      if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+        LifetimesStart.insert(Mem);
+      II->eraseFromParent();
+    }
+  }
+}
+
+/// Insert lifetime start/end markers surrounding the call to the new function
+/// for objects defined in the caller.
+static void insertLifetimeMarkersSurroundingCall(
+    Module *M, ArrayRef<Value *> LifetimesStart, ArrayRef<Value *> LifetimesEnd,
+    CallInst *TheCall) {
+  LLVMContext &Ctx = M->getContext();
+  auto Int8PtrTy = Type::getInt8PtrTy(Ctx);
+  auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
+  Instruction *Term = TheCall->getParent()->getTerminator();
+
+  // The memory argument to a lifetime marker must be a i8*. Cache any bitcasts
+  // needed to satisfy this requirement so they may be reused.
+  DenseMap<Value *, Value *> Bitcasts;
+
+  // Emit lifetime markers for the pointers given in \p Objects. Insert the
+  // markers before the call if \p InsertBefore, and after the call otherwise.
+  auto insertMarkers = [&](Function *MarkerFunc, ArrayRef<Value *> Objects,
+                           bool InsertBefore) {
+    for (Value *Mem : Objects) {
+      assert((!isa<Instruction>(Mem) || cast<Instruction>(Mem)->getFunction() ==
+                                            TheCall->getFunction()) &&
+             "Input memory not defined in original function");
+      Value *&MemAsI8Ptr = Bitcasts[Mem];
+      if (!MemAsI8Ptr) {
+        if (Mem->getType() == Int8PtrTy)
+          MemAsI8Ptr = Mem;
+        else
+          MemAsI8Ptr =
+              CastInst::CreatePointerCast(Mem, Int8PtrTy, "lt.cast", TheCall);
+      }
+
+      auto Marker = CallInst::Create(MarkerFunc, {NegativeOne, MemAsI8Ptr});
+      if (InsertBefore)
+        Marker->insertBefore(TheCall);
+      else
+        Marker->insertBefore(Term);
+    }
+  };
+
+  if (!LifetimesStart.empty()) {
+    auto StartFn = llvm::Intrinsic::getDeclaration(
+        M, llvm::Intrinsic::lifetime_start, Int8PtrTy);
+    insertMarkers(StartFn, LifetimesStart, /*InsertBefore=*/true);
+  }
+
+  if (!LifetimesEnd.empty()) {
+    auto EndFn = llvm::Intrinsic::getDeclaration(
+        M, llvm::Intrinsic::lifetime_end, Int8PtrTy);
+    insertMarkers(EndFn, LifetimesEnd, /*InsertBefore=*/false);
+  }
 }
 
 /// emitCallAndSwitchStatement - This method sets up the caller side by adding
 /// the call instruction, splitting any PHI nodes in the header block as
 /// necessary.
-void CodeExtractor::
-emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
-                           ValueSet &inputs, ValueSet &outputs) {
+CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
+                                                    BasicBlock *codeReplacer,
+                                                    ValueSet &inputs,
+                                                    ValueSet &outputs) {
   // Emit a call to the new function, passing in: *pointer to struct (if
   // aggregating parameters), or plan inputs and allocated memory for outputs
   std::vector<Value *> params, StructValues, ReloadOutputs, Reloads;
@@ -893,13 +981,21 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
   Module *M = newFunction->getParent();
   LLVMContext &Context = M->getContext();
   const DataLayout &DL = M->getDataLayout();
+  CallInst *call = nullptr;
 
   // Add inputs as params, or to be filled into the struct
-  for (Value *input : inputs)
+  unsigned ArgNo = 0;
+  SmallVector<unsigned, 1> SwiftErrorArgs;
+  for (Value *input : inputs) {
     if (AggregateArgs)
       StructValues.push_back(input);
-    else
+    else {
       params.push_back(input);
+      if (input->isSwiftError())
+        SwiftErrorArgs.push_back(ArgNo);
+    }
+    ++ArgNo;
+  }
 
   // Create allocas for the outputs
   for (Value *output : outputs) {
@@ -943,8 +1039,8 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
   }
 
   // Emit the call to the function
-  CallInst *call = CallInst::Create(newFunction, params,
-                                    NumExitBlocks > 1 ? "targetBlock" : "");
+  call = CallInst::Create(newFunction, params,
+                          NumExitBlocks > 1 ? "targetBlock" : "");
   // Add debug location to the new call, if the original function has debug
   // info. In that case, the terminator of the entry block of the extracted
   // function contains the first debug location of the extracted function,
@@ -954,6 +1050,12 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
       call->setDebugLoc(DL);
   }
   codeReplacer->getInstList().push_back(call);
+
+  // Set swifterror parameter attributes.
+  for (unsigned SwiftErrArgNo : SwiftErrorArgs) {
+    call->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
+    newFunction->addParamAttr(SwiftErrArgNo, Attribute::SwiftError);
+  }
 
   Function::arg_iterator OutputArgBegin = newFunction->arg_begin();
   unsigned FirstOut = inputs.size();
@@ -1034,7 +1136,7 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
 
   unsigned switchVal = 0;
   for (BasicBlock *Block : Blocks) {
-    TerminatorInst *TI = Block->getTerminator();
+    Instruction *TI = Block->getTerminator();
     for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
       if (!Blocks.count(TI->getSuccessor(i))) {
         BasicBlock *OldTarget = TI->getSuccessor(i);
@@ -1116,6 +1218,12 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
     TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks-1));
     break;
   }
+
+  // Insert lifetime markers around the reloads of any output values. The
+  // allocas output values are stored in are only in-use in the codeRepl block.
+  insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
+
+  return call;
 }
 
 void CodeExtractor::moveCodeToFunction(Function *newFunction) {
@@ -1129,6 +1237,13 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
 
     // Insert this basic block into the new function
     newBlocks.push_back(Block);
+
+    // Remove @llvm.assume calls that were moved to the new function from the
+    // old function's assumption cache.
+    if (AC)
+      for (auto &I : *Block)
+        if (match(&I, m_Intrinsic<Intrinsic::assume>()))
+          AC->unregisterAssumption(cast<CallInst>(&I));
   }
 }
 
@@ -1140,7 +1255,7 @@ void CodeExtractor::calculateNewCallTerminatorWeights(
   using BlockNode = BlockFrequencyInfoImplBase::BlockNode;
 
   // Update the branch weights for the exit block.
-  TerminatorInst *TI = CodeReplacer->getTerminator();
+  Instruction *TI = CodeReplacer->getTerminator();
   SmallVector<unsigned, 8> BranchWeights(TI->getNumSuccessors(), 0);
 
   // Block Frequency distribution with dummy node.
@@ -1291,11 +1406,17 @@ Function *CodeExtractor::extractCodeRegion() {
       cast<Instruction>(II)->moveBefore(TI);
   }
 
+  // Collect objects which are inputs to the extraction region and also
+  // referenced by lifetime start markers within it. The effects of these
+  // markers must be replicated in the calling function to prevent the stack
+  // coloring pass from merging slots which store input objects.
+  ValueSet LifetimesStart;
+  eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
+
   // Construct new function based on inputs/outputs & add allocas for all defs.
-  Function *newFunction = constructFunction(inputs, outputs, header,
-                                            newFuncRoot,
-                                            codeReplacer, oldFunction,
-                                            oldFunction->getParent());
+  Function *newFunction =
+      constructFunction(inputs, outputs, header, newFuncRoot, codeReplacer,
+                        oldFunction, oldFunction->getParent());
 
   // Update the entry count of the function.
   if (BFI) {
@@ -1306,9 +1427,15 @@ Function *CodeExtractor::extractCodeRegion() {
     BFI->setBlockFreq(codeReplacer, EntryFreq.getFrequency());
   }
 
-  emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs);
+  CallInst *TheCall =
+      emitCallAndSwitchStatement(newFunction, codeReplacer, inputs, outputs);
 
   moveCodeToFunction(newFunction);
+
+  // Replicate the effects of any lifetime start/end markers which referenced
+  // input objects in the extraction region by placing markers around the call.
+  insertLifetimeMarkersSurroundingCall(
+      oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, TheCall);
 
   // Propagate personality info to the new function if there is one.
   if (oldFunction->hasPersonalityFn())
@@ -1359,10 +1486,10 @@ Function *CodeExtractor::extractCodeRegion() {
     }
     // Remove debug info intrinsics which refer to values in the new function
     // from the old function.
-    SmallVector<DbgInfoIntrinsic *, 4> DbgUsers;
+    SmallVector<DbgVariableIntrinsic *, 4> DbgUsers;
     for (Instruction &I : BB)
       findDbgUsers(DbgUsers, &I);
-    for (auto *DVI : DbgUsers)
+    for (DbgVariableIntrinsic *DVI : DbgUsers)
       DVI->eraseFromParent();
   }
 

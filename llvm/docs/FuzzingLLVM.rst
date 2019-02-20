@@ -10,7 +10,8 @@ Introduction
 ============
 
 The LLVM tree includes a number of fuzzers for various components. These are
-built on top of :doc:`LibFuzzer <LibFuzzer>`.
+built on top of :doc:`LibFuzzer <LibFuzzer>`. In order to build and run these
+fuzzers, see :ref:`building-fuzzers`.
 
 
 Available Fuzzers
@@ -109,7 +110,8 @@ It receives optimzation pipeline and runs it for each fuzzer input.
 
 Interface of this fuzzer almost directly mirrors ``llvm-isel-fuzzer``. Both
 ``mtriple`` and ``passes`` arguments are required. Passes are specified in a
-format suitable for the new pass manager.
+format suitable for the new pass manager. You can find some documentation about
+this format in the doxygen for ``PassBuilder::parsePassPipeline``.
 
 .. code-block:: shell
 
@@ -235,6 +237,10 @@ by adding the following two flags to your CMake invocation:
 .. note:: If you have ``compiler-rt`` checked out in an LLVM tree when building
           with sanitizers, you'll want to specify ``-DLLVM_BUILD_RUNTIME=Off``
           to avoid building the sanitizers themselves with sanitizers enabled.
+
+.. note:: You may run into issues if you build with BFD ld, which is the
+          default linker on many unix systems. These issues are being tracked
+          in https://llvm.org/PR34636.
 
 Continuously Running and Finding Bugs
 -------------------------------------

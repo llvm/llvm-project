@@ -5,11 +5,11 @@
 define void @_Z15uint64_to_asciimPc(i64 %arg) {
 ; HSW-LABEL: _Z15uint64_to_asciimPc:
 ; HSW:       # %bb.0: # %bb
-; HSW-NEXT:    movabsq $811296384146066817, %rax # imm = 0xB424DC35095CD81
-; HSW-NEXT:    movq %rdi, %rdx
-; HSW-NEXT:    mulxq %rax, %rax, %rcx
-; HSW-NEXT:    shrq $42, %rcx
-; HSW-NEXT:    imulq $281474977, %rcx, %rax # imm = 0x10C6F7A1
+; HSW-NEXT:    movq %rdi, %rax
+; HSW-NEXT:    movabsq $811296384146066817, %rcx # imm = 0xB424DC35095CD81
+; HSW-NEXT:    mulq %rcx
+; HSW-NEXT:    shrq $42, %rdx
+; HSW-NEXT:    imulq $281474977, %rdx, %rax # imm = 0x10C6F7A1
 ; HSW-NEXT:    shrq $20, %rax
 ; HSW-NEXT:    leal (%rax,%rax,4), %eax
 ; HSW-NEXT:    addl $5, %eax
@@ -22,11 +22,11 @@ define void @_Z15uint64_to_asciimPc(i64 %arg) {
 ;
 ; ZN-LABEL: _Z15uint64_to_asciimPc:
 ; ZN:       # %bb.0: # %bb
-; ZN-NEXT:    movabsq $811296384146066817, %rax # imm = 0xB424DC35095CD81
-; ZN-NEXT:    movq %rdi, %rdx
-; ZN-NEXT:    mulxq %rax, %rax, %rcx
-; ZN-NEXT:    shrq $42, %rcx
-; ZN-NEXT:    imulq $281474977, %rcx, %rax # imm = 0x10C6F7A1
+; ZN-NEXT:    movq %rdi, %rax
+; ZN-NEXT:    movabsq $811296384146066817, %rcx # imm = 0xB424DC35095CD81
+; ZN-NEXT:    mulq %rcx
+; ZN-NEXT:    shrq $42, %rdx
+; ZN-NEXT:    imulq $281474977, %rdx, %rax # imm = 0x10C6F7A1
 ; ZN-NEXT:    shrq $20, %rax
 ; ZN-NEXT:    leal 5(%rax,%rax,4), %eax
 ; ZN-NEXT:    andl $134217727, %eax # imm = 0x7FFFFFF

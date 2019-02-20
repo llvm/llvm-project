@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios7 | FileCheck %s --check-prefix CHECK-IOS
 ; RUN: llc < %s -mtriple=arm64-linux-gnu | FileCheck %s --check-prefix CHECK-LINUX
+; RUN: llc < %s -mtriple=arm64-linux-android | FileCheck %s --check-prefix CHECK-LINUX
 
 ; Combine sin / cos into a single call unless they may write errno (as
 ; captured by readnone attrbiute, controlled by clang -fmath-errno

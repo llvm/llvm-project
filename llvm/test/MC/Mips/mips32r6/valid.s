@@ -281,6 +281,10 @@ a:
         sdbbp     34             # CHECK: sdbbp 34               # encoding: [0x00,0x00,0x08,0x8e]
                                  # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SDBBP
                                  # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SDBBP_MM
+        sigrie                   # CHECK: sigrie                 # encoding: [0x04,0x17,0x00,0x00]
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SIGRIE
+        sigrie    257            # CHECK: sigrie 257             # encoding: [0x04,0x17,0x01,0x01]
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SIGRIE
         sync                     # CHECK: sync                   # encoding: [0x00,0x00,0x00,0x0f]
                                  # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SYNC
         sync    1                # CHECK: sync 1                 # encoding: [0x00,0x00,0x00,0x4f]

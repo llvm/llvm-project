@@ -158,10 +158,9 @@ RecordRecTy *RecordRecTy::get(ArrayRef<Record *> UnsortedClasses) {
 
   SmallVector<Record *, 4> Classes(UnsortedClasses.begin(),
                                    UnsortedClasses.end());
-  llvm::sort(Classes.begin(), Classes.end(),
-             [](Record *LHS, Record *RHS) {
-               return LHS->getNameInitAsString() < RHS->getNameInitAsString();
-             });
+  llvm::sort(Classes, [](Record *LHS, Record *RHS) {
+    return LHS->getNameInitAsString() < RHS->getNameInitAsString();
+  });
 
   FoldingSetNodeID ID;
   ProfileRecordRecTy(ID, Classes);
@@ -487,7 +486,7 @@ Init *IntInit::convertInitializerTo(RecTy *Ty) const {
 
     SmallVector<Init *, 16> NewBits(BRT->getNumBits());
     for (unsigned i = 0; i != BRT->getNumBits(); ++i)
-      NewBits[i] = BitInit::get(Value & (1LL << i));
+      NewBits[i] = BitInit::get(Value & ((i < 64) ? (1LL << i) : 0));
 
     return BitsInit::get(NewBits);
   }
@@ -710,6 +709,8 @@ Init *UnOpInit::Fold(Record *CurRec, bool IsFinal) const {
         return StringInit::get(LHSi->getAsString());
     } else if (isa<RecordRecTy>(getType())) {
       if (StringInit *Name = dyn_cast<StringInit>(LHS)) {
+        if (!CurRec && !IsFinal)
+          break;
         assert(CurRec && "NULL pointer");
         Record *D;
 

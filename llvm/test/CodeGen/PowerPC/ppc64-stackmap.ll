@@ -1,4 +1,4 @@
-; RUN: llc                             < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 ;
 ; Note: Print verbose stackmaps using -debug-only=stackmaps.
 

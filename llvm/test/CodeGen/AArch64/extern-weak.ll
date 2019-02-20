@@ -1,6 +1,7 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=pic -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -relocation-model=static -o - < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -code-model=large -o - %s | FileCheck --check-prefix=CHECK-LARGE %s
+; RUN: llc -mtriple=aarch64-none-none-eabi -code-model=tiny -o - %s | FileCheck --check-prefix=CHECK-TINY %s
 
 declare extern_weak i32 @var()
 
@@ -20,6 +21,9 @@ define i32()* @foo() {
 ; CHECK-LARGE: movk x0, #:abs_g1_nc:var
 ; CHECK-LARGE: movk x0, #:abs_g2_nc:var
 ; CHECK-LARGE: movk x0, #:abs_g3:var
+
+  ; In the tiny codemodel we us a got relocated LDR.
+; CHECK-TINY: ldr x0, :got:var
 }
 
 
@@ -41,6 +45,9 @@ define i32* @bar() {
 ; CHECK-LARGE: movk [[ADDR]], #:abs_g1_nc:arr_var
 ; CHECK-LARGE: movk [[ADDR]], #:abs_g2_nc:arr_var
 ; CHECK-LARGE: movk [[ADDR]], #:abs_g3:arr_var
+
+; CHECK-TINY: ldr [[BASE:x[0-9]+]], :got:arr_var
+; CHECK-TINY: add x0, [[BASE]], #20
 }
 
 @defined_weak_var = internal unnamed_addr global i32 0
@@ -55,4 +62,6 @@ define i32* @wibble() {
 ; CHECK-LARGE: movk x0, #:abs_g1_nc:defined_weak_var
 ; CHECK-LARGE: movk x0, #:abs_g2_nc:defined_weak_var
 ; CHECK-LARGE: movk x0, #:abs_g3:defined_weak_var
+
+; CHECK-TINY: adr x0, defined_weak_var
 }

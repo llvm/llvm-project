@@ -38,6 +38,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/ilist.h"
 #include "llvm/ADT/ilist_node.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include <algorithm>
 #include <cassert>
@@ -52,12 +53,14 @@ class LoopVectorizationCostModel;
 class BasicBlock;
 class DominatorTree;
 class InnerLoopVectorizer;
-class InterleaveGroup;
+template <class T> class InterleaveGroup;
+class LoopInfo;
 class raw_ostream;
 class Value;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPlanSlp;
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -293,6 +296,10 @@ struct VPTransformState {
     /// of replication, maps the BasicBlock of the last replica created.
     SmallDenseMap<VPBasicBlock *, BasicBlock *> VPBB2IRBB;
 
+    /// Vector of VPBasicBlocks whose terminator instruction needs to be fixed
+    /// up at the end of vector code generation.
+    SmallVector<VPBasicBlock *, 8> VPBBsToFix;
+
     CFGState() = default;
   } CFG;
 
@@ -312,6 +319,9 @@ struct VPTransformState {
   /// Hold a reference to a mapping between VPValues in VPlan and original
   /// Values they correspond to.
   VPValue2ValueTy VPValue2Value;
+
+  /// Hold the trip count of the scalar loop.
+  Value *TripCount = nullptr;
 
   /// Hold a pointer to InnerLoopVectorizer to reuse its IR generation methods.
   InnerLoopVectorizer *ILV;
@@ -600,10 +610,16 @@ public:
 /// the VPInstruction is also a single def-use vertex.
 class VPInstruction : public VPUser, public VPRecipeBase {
   friend class VPlanHCFGTransforms;
+  friend class VPlanSlp;
 
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
-  enum { Not = Instruction::OtherOpsEnd + 1 };
+  enum {
+    Not = Instruction::OtherOpsEnd + 1,
+    ICmpULE,
+    SLPLoad,
+    SLPStore,
+  };
 
 private:
   typedef unsigned char OpcodeTy;
@@ -612,6 +628,13 @@ private:
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction.
   void generateInstruction(VPTransformState &State, unsigned Part);
+
+protected:
+  Instruction *getUnderlyingInstr() {
+    return cast_or_null<Instruction>(getUnderlyingValue());
+  }
+
+  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
@@ -624,6 +647,11 @@ public:
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
     return V->getVPValueID() == VPValue::VPInstructionSC;
+  }
+
+  VPInstruction *clone() const {
+    SmallVector<VPValue *, 2> Operands(operands());
+    return new VPInstruction(Opcode, Operands);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -643,6 +671,14 @@ public:
 
   /// Print the VPInstruction.
   void print(raw_ostream &O) const;
+
+  /// Return true if this instruction may modify memory.
+  bool mayWriteToMemory() const {
+    // TODO: we can use attributes of the called function to rule out memory
+    //       modifications.
+    return Opcode == Instruction::Store || Opcode == Instruction::Call ||
+           Opcode == Instruction::Invoke || Opcode == SLPStore;
+  }
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type for each
@@ -764,11 +800,15 @@ public:
 /// or stores into one wide load/store and shuffles.
 class VPInterleaveRecipe : public VPRecipeBase {
 private:
-  const InterleaveGroup *IG;
+  const InterleaveGroup<Instruction> *IG;
+  std::unique_ptr<VPUser> User;
 
 public:
-  VPInterleaveRecipe(const InterleaveGroup *IG)
-      : VPRecipeBase(VPInterleaveSC), IG(IG) {}
+  VPInterleaveRecipe(const InterleaveGroup<Instruction> *IG, VPValue *Mask)
+      : VPRecipeBase(VPInterleaveSC), IG(IG) {
+    if (Mask) // Create a VPInstruction to register as a user of the mask.
+      User.reset(new VPUser({Mask}));
+  }
   ~VPInterleaveRecipe() override = default;
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -782,7 +822,7 @@ public:
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent) const override;
 
-  const InterleaveGroup *getInterleaveGroup() { return IG; }
+  const InterleaveGroup<Instruction> *getInterleaveGroup() { return IG; }
 };
 
 /// VPReplicateRecipe replicates a given instruction producing multiple scalar
@@ -1107,12 +1147,19 @@ private:
   // (operators '==' and '<').
   SmallPtrSet<VPValue *, 16> VPExternalDefs;
 
+  /// Represents the backedge taken count of the original loop, for folding
+  /// the tail.
+  VPValue *BackedgeTakenCount = nullptr;
+
   /// Holds a mapping between Values and their corresponding VPValue inside
   /// VPlan.
   Value2VPValueTy Value2VPValue;
 
   /// Holds the VPLoopInfo analysis for this VPlan.
   VPLoopInfo VPLInfo;
+
+  /// Holds the condition bit values built during VPInstruction to VPRecipe transformation.
+  SmallVector<VPValue *, 4> VPCBVs;
 
 public:
   VPlan(VPBlockBase *Entry = nullptr) : Entry(Entry) {}
@@ -1121,9 +1168,14 @@ public:
     if (Entry)
       VPBlockBase::deleteCFG(Entry);
     for (auto &MapEntry : Value2VPValue)
-      delete MapEntry.second;
+      if (MapEntry.second != BackedgeTakenCount)
+        delete MapEntry.second;
+    if (BackedgeTakenCount)
+      delete BackedgeTakenCount; // Delete once, if in Value2VPValue or not.
     for (VPValue *Def : VPExternalDefs)
       delete Def;
+    for (VPValue *CBV : VPCBVs)
+      delete CBV;
   }
 
   /// Generate the IR code for this VPlan.
@@ -1133,6 +1185,13 @@ public:
   const VPBlockBase *getEntry() const { return Entry; }
 
   VPBlockBase *setEntry(VPBlockBase *Block) { return Entry = Block; }
+
+  /// The backedge taken count of the original loop.
+  VPValue *getOrCreateBackedgeTakenCount() {
+    if (!BackedgeTakenCount)
+      BackedgeTakenCount = new VPValue();
+    return BackedgeTakenCount;
+  }
 
   void addVF(unsigned VF) { VFs.insert(VF); }
 
@@ -1146,6 +1205,11 @@ public:
   /// in the pool.
   void addExternalDef(VPValue *VPVal) {
     VPExternalDefs.insert(VPVal);
+  }
+
+  /// Add \p CBV to the vector of condition bit values.
+  void addCBV(VPValue *CBV) {
+    VPCBVs.push_back(CBV);
   }
 
   void addVPValue(Value *V) {
@@ -1429,6 +1493,144 @@ public:
   }
 };
 
+class VPInterleavedAccessInfo {
+private:
+  DenseMap<VPInstruction *, InterleaveGroup<VPInstruction> *>
+      InterleaveGroupMap;
+
+  /// Type for mapping of instruction based interleave groups to VPInstruction
+  /// interleave groups
+  using Old2NewTy = DenseMap<InterleaveGroup<Instruction> *,
+                             InterleaveGroup<VPInstruction> *>;
+
+  /// Recursively \p Region and populate VPlan based interleave groups based on
+  /// \p IAI.
+  void visitRegion(VPRegionBlock *Region, Old2NewTy &Old2New,
+                   InterleavedAccessInfo &IAI);
+  /// Recursively traverse \p Block and populate VPlan based interleave groups
+  /// based on \p IAI.
+  void visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
+                  InterleavedAccessInfo &IAI);
+
+public:
+  VPInterleavedAccessInfo(VPlan &Plan, InterleavedAccessInfo &IAI);
+
+  ~VPInterleavedAccessInfo() {
+    SmallPtrSet<InterleaveGroup<VPInstruction> *, 4> DelSet;
+    // Avoid releasing a pointer twice.
+    for (auto &I : InterleaveGroupMap)
+      DelSet.insert(I.second);
+    for (auto *Ptr : DelSet)
+      delete Ptr;
+  }
+
+  /// Get the interleave group that \p Instr belongs to.
+  ///
+  /// \returns nullptr if doesn't have such group.
+  InterleaveGroup<VPInstruction> *
+  getInterleaveGroup(VPInstruction *Instr) const {
+    if (InterleaveGroupMap.count(Instr))
+      return InterleaveGroupMap.find(Instr)->second;
+    return nullptr;
+  }
+};
+
+/// Class that maps (parts of) an existing VPlan to trees of combined
+/// VPInstructions.
+class VPlanSlp {
+private:
+  enum class OpMode { Failed, Load, Opcode };
+
+  /// A DenseMapInfo implementation for using SmallVector<VPValue *, 4> as
+  /// DenseMap keys.
+  struct BundleDenseMapInfo {
+    static SmallVector<VPValue *, 4> getEmptyKey() {
+      return {reinterpret_cast<VPValue *>(-1)};
+    }
+
+    static SmallVector<VPValue *, 4> getTombstoneKey() {
+      return {reinterpret_cast<VPValue *>(-2)};
+    }
+
+    static unsigned getHashValue(const SmallVector<VPValue *, 4> &V) {
+      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+    }
+
+    static bool isEqual(const SmallVector<VPValue *, 4> &LHS,
+                        const SmallVector<VPValue *, 4> &RHS) {
+      return LHS == RHS;
+    }
+  };
+
+  /// Mapping of values in the original VPlan to a combined VPInstruction.
+  DenseMap<SmallVector<VPValue *, 4>, VPInstruction *, BundleDenseMapInfo>
+      BundleToCombined;
+
+  VPInterleavedAccessInfo &IAI;
+
+  /// Basic block to operate on. For now, only instructions in a single BB are
+  /// considered.
+  const VPBasicBlock &BB;
+
+  /// Indicates whether we managed to combine all visited instructions or not.
+  bool CompletelySLP = true;
+
+  /// Width of the widest combined bundle in bits.
+  unsigned WidestBundleBits = 0;
+
+  using MultiNodeOpTy =
+      typename std::pair<VPInstruction *, SmallVector<VPValue *, 4>>;
+
+  // Input operand bundles for the current multi node. Each multi node operand
+  // bundle contains values not matching the multi node's opcode. They will
+  // be reordered in reorderMultiNodeOps, once we completed building a
+  // multi node.
+  SmallVector<MultiNodeOpTy, 4> MultiNodeOps;
+
+  /// Indicates whether we are building a multi node currently.
+  bool MultiNodeActive = false;
+
+  /// Check if we can vectorize Operands together.
+  bool areVectorizable(ArrayRef<VPValue *> Operands) const;
+
+  /// Add combined instruction \p New for the bundle \p Operands.
+  void addCombined(ArrayRef<VPValue *> Operands, VPInstruction *New);
+
+  /// Indicate we hit a bundle we failed to combine. Returns nullptr for now.
+  VPInstruction *markFailed();
+
+  /// Reorder operands in the multi node to maximize sequential memory access
+  /// and commutative operations.
+  SmallVector<MultiNodeOpTy, 4> reorderMultiNodeOps();
+
+  /// Choose the best candidate to use for the lane after \p Last. The set of
+  /// candidates to choose from are values with an opcode matching \p Last's
+  /// or loads consecutive to \p Last.
+  std::pair<OpMode, VPValue *> getBest(OpMode Mode, VPValue *Last,
+                                       SmallPtrSetImpl<VPValue *> &Candidates,
+                                       VPInterleavedAccessInfo &IAI);
+
+  /// Print bundle \p Values to dbgs().
+  void dumpBundle(ArrayRef<VPValue *> Values);
+
+public:
+  VPlanSlp(VPInterleavedAccessInfo &IAI, VPBasicBlock &BB) : IAI(IAI), BB(BB) {}
+
+  ~VPlanSlp() {
+    for (auto &KV : BundleToCombined)
+      delete KV.second;
+  }
+
+  /// Tries to build an SLP tree rooted at \p Operands and returns a
+  /// VPInstruction combining \p Operands, if they can be combined.
+  VPInstruction *buildGraph(ArrayRef<VPValue *> Operands);
+
+  /// Return the width of the widest combined bundle in bits.
+  unsigned getWidestBundleBits() const { return WidestBundleBits; }
+
+  /// Return true if all visited instruction can be combined.
+  bool isCompletelySLP() const { return CompletelySLP; }
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

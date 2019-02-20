@@ -1,0 +1,16 @@
+executable("yaml2obj") {
+  deps = [
+    "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/ObjectYAML",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "yaml2coff.cpp",
+    "yaml2elf.cpp",
+    "yaml2macho.cpp",
+    "yaml2obj.cpp",
+    "yaml2wasm.cpp",
+  ]
+}

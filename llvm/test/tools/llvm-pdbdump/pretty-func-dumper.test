@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -all -class-recurse-depth=1 \
 ; RUN:   %p/Inputs/PrettyFuncDumperTest.pdb > %t
 ; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBALS_FUNC

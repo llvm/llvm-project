@@ -11,7 +11,7 @@
 ; This can be expressed in a several ways in IR:
 ;   trunc + sext + icmp ne <- not canonical
 ;   shl   + ashr + icmp ne
-;   add          + icmp ult
+;   add          + icmp ult/ule
 ;   add          + icmp uge/ugt
 ; However only the simplest form (with two shifts) gets lowered best.
 
@@ -160,19 +160,17 @@ define i1 @shifts_necmp_i64_i8(i64 %x) nounwind {
 define i1 @add_ultcmp_i16_i8(i16 %x) nounwind {
 ; X86-LABEL: add_ultcmp_i16_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addl $-128, %eax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    cmpl $65280, %eax # imm = 0xFF00
-; X86-NEXT:    setb %al
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    cmpw %ax, %cx
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ultcmp_i16_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    addl $-128, %edi
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    cmpl $65280, %eax # imm = 0xFF00
-; X64-NEXT:    setb %al
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    cmpw %di, %ax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %tmp0 = add i16 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp ult i16 %tmp0, -256 ; ~0U << 8
@@ -182,17 +180,17 @@ define i1 @add_ultcmp_i16_i8(i16 %x) nounwind {
 define i1 @add_ultcmp_i32_i16(i32 %x) nounwind {
 ; X86-LABEL: add_ultcmp_i32_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $-32768, %eax # imm = 0x8000
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cmpl $-65536, %eax # imm = 0xFFFF0000
-; X86-NEXT:    setb %al
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movswl %ax, %ecx
+; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ultcmp_i32_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    addl $-32768, %edi # imm = 0x8000
-; X64-NEXT:    cmpl $-65536, %edi # imm = 0xFFFF0000
-; X64-NEXT:    setb %al
+; X64-NEXT:    movswl %di, %eax
+; X64-NEXT:    cmpl %edi, %eax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %tmp0 = add i32 %x, -32768 ; ~0U << (16-1)
   %tmp1 = icmp ult i32 %tmp0, -65536 ; ~0U << 16
@@ -203,16 +201,16 @@ define i1 @add_ultcmp_i32_i8(i32 %x) nounwind {
 ; X86-LABEL: add_ultcmp_i32_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addl $-128, %eax
-; X86-NEXT:    cmpl $-256, %eax
-; X86-NEXT:    setb %al
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ultcmp_i32_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    addl $-128, %edi
-; X64-NEXT:    cmpl $-256, %edi
-; X64-NEXT:    setb %al
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    cmpl %edi, %eax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %tmp0 = add i32 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp ult i32 %tmp0, -256 ; ~0U << 8
@@ -223,19 +221,16 @@ define i1 @add_ultcmp_i64_i32(i64 %x) nounwind {
 ; X86-LABEL: add_ultcmp_i64_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    adcl $-1, %eax
-; X86-NEXT:    cmpl $-1, %eax
+; X86-NEXT:    sarl $31, %eax
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ultcmp_i64_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    addq $-2147483648, %rdi # imm = 0x80000000
-; X64-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
-; X64-NEXT:    cmpq %rax, %rdi
-; X64-NEXT:    setb %al
+; X64-NEXT:    movslq %edi, %rax
+; X64-NEXT:    cmpq %rdi, %rax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %tmp0 = add i64 %x, -2147483648 ; ~0U << (32-1)
   %tmp1 = icmp ult i64 %tmp0, -4294967296 ; ~0U << 32
@@ -246,19 +241,19 @@ define i1 @add_ultcmp_i64_i16(i64 %x) nounwind {
 ; X86-LABEL: add_ultcmp_i64_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $-32768, %ecx # imm = 0x8000
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    adcl $-1, %eax
-; X86-NEXT:    cmpl $-65536, %ecx # imm = 0xFFFF0000
-; X86-NEXT:    sbbl $-1, %eax
-; X86-NEXT:    setb %al
+; X86-NEXT:    movswl %ax, %ecx
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ultcmp_i64_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    addq $-32768, %rdi # imm = 0x8000
-; X64-NEXT:    cmpq $-65536, %rdi # imm = 0xFFFF0000
-; X64-NEXT:    setb %al
+; X64-NEXT:    movswq %di, %rax
+; X64-NEXT:    cmpq %rdi, %rax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %tmp0 = add i64 %x, -32768 ; ~0U << (16-1)
   %tmp1 = icmp ult i64 %tmp0, -65536 ; ~0U << 16
@@ -269,22 +264,43 @@ define i1 @add_ultcmp_i64_i8(i64 %x) nounwind {
 ; X86-LABEL: add_ultcmp_i64_i8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl $-128, %eax
-; X86-NEXT:    adcl $-1, %ecx
-; X86-NEXT:    cmpl $-256, %eax
-; X86-NEXT:    sbbl $-1, %ecx
-; X86-NEXT:    setb %al
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ultcmp_i64_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    addq $-128, %rdi
-; X64-NEXT:    cmpq $-256, %rdi
-; X64-NEXT:    setb %al
+; X64-NEXT:    movsbq %dil, %rax
+; X64-NEXT:    cmpq %rdi, %rax
+; X64-NEXT:    setne %al
 ; X64-NEXT:    retq
   %tmp0 = add i64 %x, -128 ; ~0U << (8-1)
   %tmp1 = icmp ult i64 %tmp0, -256 ; ~0U << 8
+  ret i1 %tmp1
+}
+
+; Slightly more canonical variant
+define i1 @add_ulecmp_i16_i8(i16 %x) nounwind {
+; X86-LABEL: add_ulecmp_i16_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movsbl %al, %ecx
+; X86-NEXT:    cmpw %ax, %cx
+; X86-NEXT:    setne %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_ulecmp_i16_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    movsbl %dil, %eax
+; X64-NEXT:    cmpw %di, %ax
+; X64-NEXT:    setne %al
+; X64-NEXT:    retq
+  %tmp0 = add i16 %x, -128 ; ~0U << (8-1)
+  %tmp1 = icmp ule i16 %tmp0, -257 ; ~0U << 8 - 1
   ret i1 %tmp1
 }
 
@@ -492,16 +508,14 @@ define i1 @add_ugecmp_bad_i8_i16(i16 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl $128, %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    cmpl $127, %eax
+; X86-NEXT:    cmpw $127, %ax
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ugecmp_bad_i8_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    subl $-128, %edi
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    cmpl $127, %eax
+; X64-NEXT:    cmpw $127, %di
 ; X64-NEXT:    seta %al
 ; X64-NEXT:    retq
   %tmp0 = add i16 %x, 128 ; 1U << (8-1)
@@ -584,16 +598,14 @@ define i1 @add_ugecmp_bad_i16_i4(i16 %x) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl $8, %eax
-; X86-NEXT:    movzwl %ax, %eax
-; X86-NEXT:    cmpl $15, %eax
+; X86-NEXT:    cmpw $15, %ax
 ; X86-NEXT:    seta %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: add_ugecmp_bad_i16_i4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    addl $8, %edi
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    cmpl $15, %eax
+; X64-NEXT:    cmpw $15, %di
 ; X64-NEXT:    seta %al
 ; X64-NEXT:    retq
   %tmp0 = add i16 %x, 8 ; 1U << (4-1)

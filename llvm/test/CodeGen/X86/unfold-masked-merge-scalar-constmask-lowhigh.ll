@@ -10,18 +10,20 @@
 define i8 @out8_constmask(i8 %x, i8 %y) {
 ; CHECK-NOBMI-LABEL: out8_constmask:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    andb $15, %dil
-; CHECK-NOBMI-NEXT:    andb $-16, %sil
-; CHECK-NOBMI-NEXT:    orb %dil, %sil
 ; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    andb $15, %dil
+; CHECK-NOBMI-NEXT:    andb $-16, %al
+; CHECK-NOBMI-NEXT:    orb %dil, %al
+; CHECK-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: out8_constmask:
 ; CHECK-BMI:       # %bb.0:
-; CHECK-BMI-NEXT:    andb $15, %dil
-; CHECK-BMI-NEXT:    andb $-16, %sil
-; CHECK-BMI-NEXT:    orb %dil, %sil
 ; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    andb $15, %dil
+; CHECK-BMI-NEXT:    andb $-16, %al
+; CHECK-BMI-NEXT:    orb %dil, %al
+; CHECK-BMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-BMI-NEXT:    retq
   %mx = and i8 %x, 15
   %my = and i8 %y, -16
@@ -100,18 +102,20 @@ define i64 @out64_constmask(i64 %x, i64 %y) {
 define i8 @in8_constmask(i8 %x, i8 %y) {
 ; CHECK-NOBMI-LABEL: in8_constmask:
 ; CHECK-NOBMI:       # %bb.0:
+; CHECK-NOBMI-NEXT:    movl %esi, %eax
 ; CHECK-NOBMI-NEXT:    xorl %esi, %edi
 ; CHECK-NOBMI-NEXT:    andb $15, %dil
-; CHECK-NOBMI-NEXT:    xorb %dil, %sil
-; CHECK-NOBMI-NEXT:    movl %esi, %eax
+; CHECK-NOBMI-NEXT:    xorb %dil, %al
+; CHECK-NOBMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-BMI-LABEL: in8_constmask:
 ; CHECK-BMI:       # %bb.0:
+; CHECK-BMI-NEXT:    movl %esi, %eax
 ; CHECK-BMI-NEXT:    xorl %esi, %edi
 ; CHECK-BMI-NEXT:    andb $15, %dil
-; CHECK-BMI-NEXT:    xorb %dil, %sil
-; CHECK-BMI-NEXT:    movl %esi, %eax
+; CHECK-BMI-NEXT:    xorb %dil, %al
+; CHECK-BMI-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-BMI-NEXT:    retq
   %n0 = xor i8 %x, %y
   %n1 = and i8 %n0, 15

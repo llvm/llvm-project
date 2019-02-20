@@ -1,0 +1,5 @@
+RUN: llvm-readelf -e %p/Inputs/trivial.obj.elf-i386 > %t.e
+RUN: llvm-readelf --headers %p/Inputs/trivial.obj.elf-i386 > %t.headers
+RUN: llvm-readelf -h -l -S %p/Inputs/trivial.obj.elf-i386 > %t.hlS
+RUN: cmp %t.e %t.headers
+RUN: cmp %t.e %t.hlS

@@ -499,43 +499,14 @@ bool PPCInstPrinter::showRegistersWithPrefix() const {
   return TT.isOSDarwin() || FullRegNamesWithPercent || FullRegNames;
 }
 
-/// stripRegisterPrefix - This method strips the character prefix from a
-/// register name so that only the number is left.
-static const char *stripRegisterPrefix(const char *RegName) {
-  switch (RegName[0]) {
-  case 'r':
-  case 'f':
-  case 'q': // for QPX
-  case 'v':
-    if (RegName[1] == 's')
-      return RegName + 2;
-    return RegName + 1;
-  case 'c': if (RegName[1] == 'r') return RegName + 2;
-  }
-
-  return RegName;
-}
-
 void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     unsigned Reg = Op.getReg();
-
-    // There are VSX instructions that use VSX register numbering (vs0 - vs63)
-    // as well as those that use VMX register numbering (v0 - v31 which
-    // correspond to vs32 - vs63). If we have an instruction that uses VSX
-    // numbering, we need to convert the VMX registers to VSX registers.
-    // Namely, we print 32-63 when the instruction operates on one of the
-    // VMX registers.
-    // (Please synchronize with PPCAsmPrinter::printOperand)
-    if ((MII.get(MI->getOpcode()).TSFlags & PPCII::UseVSXReg) &&
-        !ShowVSRNumsAsVR) {
-      if (PPCInstrInfo::isVRRegister(Reg))
-        Reg = PPC::VSX32 + (Reg - PPC::V0);
-      else if (PPCInstrInfo::isVFRegister(Reg))
-        Reg = PPC::VSX32 + (Reg - PPC::VF0);
-    }
+    if (!ShowVSRNumsAsVR)
+      Reg = PPCInstrInfo::getRegNumForOperand(MII.get(MI->getOpcode()),
+                                              Reg, OpNo);
 
     const char *RegName;
     RegName = getVerboseConditionRegName(Reg, MRI.getEncodingValue(Reg));
@@ -544,7 +515,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (showRegistersWithPercentPrefix(RegName))
       O << "%";
     if (!showRegistersWithPrefix())
-      RegName = stripRegisterPrefix(RegName);
+      RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
 
     O << RegName;
     return;

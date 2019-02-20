@@ -47,7 +47,7 @@
 ---
 # CHECK-LABEL: name: vccz_corrupt_workaround
 # CHECK: $vcc = V_CMP_EQ_F32
-# CHECK-NEXT: S_WAITCNT 0
+# CHECK-NEXT: S_WAITCNT 127
 # CHECK-NEXT: $vcc = S_MOV_B64 $vcc
 # CHECK-NEXT: S_CBRANCH_VCCZ %bb.2, implicit killed $vcc
 
@@ -78,7 +78,7 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0_sgpr1, $vcc
 
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     $vcc = V_CMP_EQ_F32_e64 0, 0, 0, undef $sgpr2, 0, implicit $exec
@@ -140,7 +140,7 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0_sgpr1
 
-    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+    $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
     S_CBRANCH_VCCZ %bb.1, implicit undef $vcc

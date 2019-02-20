@@ -1118,6 +1118,13 @@ public:
   static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
                              Type *OnlyIfReducedTy = nullptr);
 
+  /// get - Return a unary operator constant expression,
+  /// folding if possible.
+  ///
+  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
+  static Constant *get(unsigned Opcode, Constant *C1, unsigned Flags = 0, 
+                       Type *OnlyIfReducedTy = nullptr);
+
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
   ///

@@ -4,44 +4,45 @@
 
 ; CHECK: v{{[0-9]*}}.cur
 
-define void @conv3x3_i(i8* noalias nocapture readonly %iptr0, i32 %shift, i32 %width) #0 {
-entry:
-  br i1 undef, label %for.body.lr.ph, label %for.end
+; Function Attrs: nounwind
+define void @f0(i8* noalias nocapture readonly %a0, i32 %a1, i32 %a2, <16 x i32>* %a3, <16 x i32>* %a4) #0 {
+b0:
+  br i1 undef, label %b1, label %b3
 
-for.body.lr.ph:
-  br label %for.body
+b1:                                               ; preds = %b0
+  br label %b2
 
-for.body:
-  %iptr0.pn = phi i8* [ %iptr0, %for.body.lr.ph ], [ %iptr0.addr.0121, %for.body ]
-  %j.0115 = phi i32 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
-  %sline000.0114 = phi <16 x i32> [ zeroinitializer, %for.body.lr.ph ], [ %1, %for.body ]
-  %sline100.0113 = phi <16 x i32> [ zeroinitializer, %for.body.lr.ph ], [ zeroinitializer, %for.body ]
-  %iptr0.addr.0121 = getelementptr inbounds i8, i8* %iptr0.pn, i32 64
-  %0 = bitcast i8* %iptr0.addr.0121 to <16 x i32>*
-  %1 = load <16 x i32>, <16 x i32>* %0, align 64, !tbaa !1
-  %2 = load <16 x i32>, <16 x i32>* null, align 64, !tbaa !1
-  %3 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %1, <16 x i32> %sline000.0114, i32 4)
-  %4 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> zeroinitializer, <16 x i32> %sline100.0113, i32 4)
-  %5 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %2, <16 x i32> zeroinitializer, i32 4)
-  %6 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %3, <16 x i32> %sline000.0114)
-  %7 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %5, <16 x i32> zeroinitializer)
-  %8 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi(<32 x i32> %6, i32 0, i32 0)
-  %9 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi.acc(<32 x i32> %8, <32 x i32> zeroinitializer, i32 undef, i32 0)
-  %10 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi.acc(<32 x i32> %9, <32 x i32> undef, i32 undef, i32 0)
-  %11 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %10)
-  %12 = tail call <16 x i32> @llvm.hexagon.V6.vasrwh(<16 x i32> %11, <16 x i32> undef, i32 %shift)
-  %13 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> undef, <16 x i32> %12)
-  store <16 x i32> %13, <16 x i32>* undef, align 64, !tbaa !1
-  %14 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi.acc(<32 x i32> zeroinitializer, <32 x i32> %7, i32 undef, i32 1)
-  %15 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %14)
-  %16 = tail call <16 x i32> @llvm.hexagon.V6.vasrwh(<16 x i32> %15, <16 x i32> undef, i32 %shift)
-  %17 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> %16, <16 x i32> undef)
-  store <16 x i32> %17, <16 x i32>* undef, align 64, !tbaa !1
-  %add = add nsw i32 %j.0115, 64
-  %cmp = icmp slt i32 %add, %width
-  br i1 %cmp, label %for.body, label %for.end
+b2:                                               ; preds = %b2, %b1
+  %v0 = phi i8* [ %a0, %b1 ], [ %v4, %b2 ]
+  %v1 = phi i32 [ 0, %b1 ], [ %v23, %b2 ]
+  %v2 = phi <16 x i32> [ zeroinitializer, %b1 ], [ %v6, %b2 ]
+  %v3 = phi <16 x i32> [ zeroinitializer, %b1 ], [ zeroinitializer, %b2 ]
+  %v4 = getelementptr inbounds i8, i8* %v0, i32 64
+  %v5 = bitcast i8* %v4 to <16 x i32>*
+  %v6 = load <16 x i32>, <16 x i32>* %v5, align 64, !tbaa !0
+  %v7 = load <16 x i32>, <16 x i32>* %a3, align 64, !tbaa !0
+  %v8 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v6, <16 x i32> %v2, i32 4)
+  %v9 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> zeroinitializer, <16 x i32> %v3, i32 4)
+  %v10 = tail call <16 x i32> @llvm.hexagon.V6.valignbi(<16 x i32> %v7, <16 x i32> zeroinitializer, i32 4)
+  %v11 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v8, <16 x i32> %v2)
+  %v12 = tail call <32 x i32> @llvm.hexagon.V6.vcombine(<16 x i32> %v10, <16 x i32> zeroinitializer)
+  %v13 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi(<32 x i32> %v11, i32 0, i32 0)
+  %v14 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi.acc(<32 x i32> %v13, <32 x i32> zeroinitializer, i32 undef, i32 0)
+  %v15 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi.acc(<32 x i32> %v14, <32 x i32> undef, i32 undef, i32 0)
+  %v16 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v15)
+  %v17 = tail call <16 x i32> @llvm.hexagon.V6.vasrwh(<16 x i32> %v16, <16 x i32> undef, i32 %a1)
+  %v18 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> undef, <16 x i32> %v17)
+  store <16 x i32> %v18, <16 x i32>* %a3, align 64, !tbaa !0
+  %v19 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybusi.acc(<32 x i32> zeroinitializer, <32 x i32> %v12, i32 undef, i32 1)
+  %v20 = tail call <16 x i32> @llvm.hexagon.V6.hi(<32 x i32> %v19)
+  %v21 = tail call <16 x i32> @llvm.hexagon.V6.vasrwh(<16 x i32> %v20, <16 x i32> undef, i32 %a1)
+  %v22 = tail call <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32> %v21, <16 x i32> undef)
+  store <16 x i32> %v22, <16 x i32>* %a4, align 64, !tbaa !0
+  %v23 = add nsw i32 %v1, 64
+  %v24 = icmp slt i32 %v23, %a2
+  br i1 %v24, label %b2, label %b3
 
-for.end:
+b3:                                               ; preds = %b2, %b0
   ret void
 }
 
@@ -56,6 +57,6 @@ declare <16 x i32> @llvm.hexagon.V6.vsathub(<16 x i32>, <16 x i32>) #1
 attributes #0 = { nounwind "target-cpu"="hexagonv60" "target-features"="+hvxv60,+hvx-length64b" }
 attributes #1 = { nounwind readnone }
 
-!1 = !{!2, !2, i64 0}
-!2 = !{!"omnipotent char", !3, i64 0}
-!3 = !{!"Simple C/C++ TBAA"}
+!0 = !{!1, !1, i64 0}
+!1 = !{!"omnipotent char", !2, i64 0}
+!2 = !{!"Simple C/C++ TBAA"}

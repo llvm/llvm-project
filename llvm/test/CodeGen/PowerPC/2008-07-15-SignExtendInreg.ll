@@ -1,7 +1,13 @@
-; RUN: llc -verify-machineinstrs < %s
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f128:64:128"
-target triple = "powerpc-apple-darwin9"
+target triple = "powerpc-unknown-linux-gnu"
 
+; CHECK: t
+; CHECK: mr 4, 3
+; CHECK: lbz 3
+; CHECK: extsb 5, 3
+; CHECK: sth 5
+; CHECK: blr
 define signext i16 @t(i16* %dct)  nounwind  {
 entry:
          load i16, i16* null, align 2         ; <i16>:0 [#uses=2]

@@ -13,6 +13,7 @@
 
 #include "llvm/IR/Module.h"
 #include "SymbolTableListTraitsImpl.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -146,7 +147,8 @@ Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
   GlobalValue *F = getNamedValue(Name);
   if (!F) {
     // Nope, add it
-    Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage, Name);
+    Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
+                                     DL.getProgramAddressSpace(), Name);
     if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
     FunctionList.push_back(New);
@@ -155,8 +157,9 @@ Constant *Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
 
   // If the function exists but has the wrong type, return a bitcast to the
   // right type.
-  if (F->getType() != PointerType::getUnqual(Ty))
-    return ConstantExpr::getBitCast(F, PointerType::getUnqual(Ty));
+  auto *PTy = PointerType::get(Ty, F->getAddressSpace());
+  if (F->getType() != PTy)
+    return ConstantExpr::getBitCast(F, PTy);
 
   // Otherwise, we just found the existing function or a prototype.
   return F;
@@ -200,16 +203,14 @@ GlobalVariable *Module::getGlobalVariable(StringRef Name,
 ///      with a constantexpr cast to the right type.
 ///   3. Finally, if the existing global is the correct declaration, return the
 ///      existing global.
-Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
+Constant *Module::getOrInsertGlobal(
+    StringRef Name, Type *Ty,
+    function_ref<GlobalVariable *()> CreateGlobalCallback) {
   // See if we have a definition for the specified global already.
   GlobalVariable *GV = dyn_cast_or_null<GlobalVariable>(getNamedValue(Name));
-  if (!GV) {
-    // Nope, add it
-    GlobalVariable *New =
-      new GlobalVariable(*this, Ty, false, GlobalVariable::ExternalLinkage,
-                         nullptr, Name);
-     return New;                    // Return the new declaration.
-  }
+  if (!GV)
+    GV = CreateGlobalCallback();
+  assert(GV && "The CreateGlobalCallback is expected to create a global");
 
   // If the variable exists but has the wrong type, return a bitcast to the
   // right type.
@@ -220,6 +221,14 @@ Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
 
   // Otherwise, we just found the existing function or a prototype.
   return GV;
+}
+
+// Overload to construct a global variable using its constructor's defaults.
+Constant *Module::getOrInsertGlobal(StringRef Name, Type *Ty) {
+  return getOrInsertGlobal(Name, Ty, [&] {
+    return new GlobalVariable(*this, Ty, false, GlobalVariable::ExternalLinkage,
+                              nullptr, Name);
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -504,6 +513,24 @@ PIELevel::Level Module::getPIELevel() const {
 
 void Module::setPIELevel(PIELevel::Level PL) {
   addModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
+}
+
+Optional<CodeModel::Model> Module::getCodeModel() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("Code Model"));
+
+  if (!Val)
+    return None;
+
+  return static_cast<CodeModel::Model>(
+      cast<ConstantInt>(Val->getValue())->getZExtValue());
+}
+
+void Module::setCodeModel(CodeModel::Model CL) {
+  // Linking object files with different code models is undefined behavior
+  // because the compiler would have to generate additional code (to span
+  // longer jumps) if a larger code model is used with a smaller one.
+  // Therefore we will treat attempts to mix code models as an error.
+  addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
 void Module::setProfileSummary(Metadata *M) {

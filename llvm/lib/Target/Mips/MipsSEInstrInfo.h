@@ -47,9 +47,6 @@ public:
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;
 
-  bool isCopyInstr(const MachineInstr &MI, const MachineOperand *&Src,
-                   const MachineOperand *&Dest) const override;
-
   void storeRegToStack(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator MI,
                        unsigned SrcReg, bool isKill, int FrameIndex,
@@ -78,6 +75,13 @@ public:
   unsigned loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator II, const DebugLoc &DL,
                          unsigned *NewImm) const;
+
+protected:
+  /// If the specific machine instruction is a instruction that moves/copies
+  /// value from one register to another register return true along with
+  /// @Source machine operand and @Destination machine operand.
+  bool isCopyInstrImpl(const MachineInstr &MI, const MachineOperand *&Source,
+                       const MachineOperand *&Destination) const override;
 
 private:
   unsigned getAnalyzableBrOpc(unsigned Opc) const override;

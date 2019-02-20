@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=x86_64-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64
-; RUN: llc -mtriple=x86_64-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64FAST
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64FAST
 
-; RUN: llc -mtriple=i686-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86
-; RUN: llc -mtriple=i686-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86FAST
+; RUN: llc -verify-machineinstrs -mtriple=i686-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86
+; RUN: llc -verify-machineinstrs -mtriple=i686-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86FAST
 
 declare void @bar(i32)
 
@@ -163,4 +163,4 @@ define void @direct_tail() #0 {
 ; X86FAST-NOT: __{{.*}}_retpoline_{{.*}}:
 
 
-attributes #0 = { "target-features"="+retpoline-external-thunk" }
+attributes #0 = { "target-features"="+retpoline-indirect-calls,+retpoline-external-thunk" }

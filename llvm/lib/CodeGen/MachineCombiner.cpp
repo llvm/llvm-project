@@ -231,8 +231,6 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
     // Get the first instruction that uses MO
     MachineRegisterInfo::reg_iterator RI = MRI->reg_begin(MO.getReg());
     RI++;
-    if (RI == MRI->reg_end())
-      continue;
     MachineInstr *UseMO = RI->getParent();
     unsigned LatencyOp = 0;
     if (UseMO && BlockTrace.isDepInTrace(*Root, *UseMO)) {

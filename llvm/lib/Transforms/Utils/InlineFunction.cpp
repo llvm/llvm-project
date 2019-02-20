@@ -31,6 +31,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -84,13 +85,15 @@ PreserveAlignmentAssumptions("preserve-alignment-assumptions-during-inlining",
   cl::init(true), cl::Hidden,
   cl::desc("Convert align attributes to assumptions during inlining."));
 
-bool llvm::InlineFunction(CallInst *CI, InlineFunctionInfo &IFI,
-                          AAResults *CalleeAAR, bool InsertLifetime) {
+llvm::InlineResult llvm::InlineFunction(CallInst *CI, InlineFunctionInfo &IFI,
+                                        AAResults *CalleeAAR,
+                                        bool InsertLifetime) {
   return InlineFunction(CallSite(CI), IFI, CalleeAAR, InsertLifetime);
 }
 
-bool llvm::InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,
-                          AAResults *CalleeAAR, bool InsertLifetime) {
+llvm::InlineResult llvm::InlineFunction(InvokeInst *II, InlineFunctionInfo &IFI,
+                                        AAResults *CalleeAAR,
+                                        bool InsertLifetime) {
   return InlineFunction(CallSite(II), IFI, CalleeAAR, InsertLifetime);
 }
 
@@ -768,14 +771,16 @@ static void HandleInlinedEHPad(InvokeInst *II, BasicBlock *FirstNewBlock,
   UnwindDest->removePredecessor(InvokeBB);
 }
 
-/// When inlining a call site that has !llvm.mem.parallel_loop_access metadata,
-/// that metadata should be propagated to all memory-accessing cloned
-/// instructions.
+/// When inlining a call site that has !llvm.mem.parallel_loop_access or
+/// llvm.access.group metadata, that metadata should be propagated to all
+/// memory-accessing cloned instructions.
 static void PropagateParallelLoopAccessMetadata(CallSite CS,
                                                 ValueToValueMapTy &VMap) {
   MDNode *M =
     CS.getInstruction()->getMetadata(LLVMContext::MD_mem_parallel_loop_access);
-  if (!M)
+  MDNode *CallAccessGroup =
+      CS.getInstruction()->getMetadata(LLVMContext::MD_access_group);
+  if (!M && !CallAccessGroup)
     return;
 
   for (ValueToValueMapTy::iterator VMI = VMap.begin(), VMIE = VMap.end();
@@ -787,11 +792,20 @@ static void PropagateParallelLoopAccessMetadata(CallSite CS,
     if (!NI)
       continue;
 
-    if (MDNode *PM = NI->getMetadata(LLVMContext::MD_mem_parallel_loop_access)) {
+    if (M) {
+      if (MDNode *PM =
+              NI->getMetadata(LLVMContext::MD_mem_parallel_loop_access)) {
         M = MDNode::concatenate(PM, M);
       NI->setMetadata(LLVMContext::MD_mem_parallel_loop_access, M);
-    } else if (NI->mayReadOrWriteMemory()) {
-      NI->setMetadata(LLVMContext::MD_mem_parallel_loop_access, M);
+      } else if (NI->mayReadOrWriteMemory()) {
+        NI->setMetadata(LLVMContext::MD_mem_parallel_loop_access, M);
+      }
+    }
+
+    if (NI->mayReadOrWriteMemory()) {
+      MDNode *UnitedAccGroups = uniteAccessGroups(
+          NI->getMetadata(LLVMContext::MD_access_group), CallAccessGroup);
+      NI->setMetadata(LLVMContext::MD_access_group, UnitedAccGroups);
     }
   }
 }
@@ -1306,16 +1320,10 @@ static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
 
 // Check whether this Value is used by a lifetime intrinsic.
 static bool isUsedByLifetimeMarker(Value *V) {
-  for (User *U : V->users()) {
-    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U)) {
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::lifetime_start:
-      case Intrinsic::lifetime_end:
+  for (User *U : V->users())
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U))
+      if (II->isLifetimeStartOrEnd())
         return true;
-      }
-    }
-  }
   return false;
 }
 
@@ -1491,9 +1499,10 @@ static void updateCalleeCount(BlockFrequencyInfo *CallerBFI, BasicBlock *CallBB,
 /// instruction 'call B' is inlined, and 'B' calls 'C', then the call to 'C' now
 /// exists in the instruction stream.  Similarly this will inline a recursive
 /// function by one level.
-bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
-                          AAResults *CalleeAAR, bool InsertLifetime,
-                          Function *ForwardVarArgsTo) {
+llvm::InlineResult llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
+                                        AAResults *CalleeAAR,
+                                        bool InsertLifetime,
+                                        Function *ForwardVarArgsTo) {
   Instruction *TheCall = CS.getInstruction();
   assert(TheCall->getParent() && TheCall->getFunction()
          && "Instruction not in function!");
@@ -1504,7 +1513,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   Function *CalledFunc = CS.getCalledFunction();
   if (!CalledFunc ||               // Can't inline external function or indirect
       CalledFunc->isDeclaration()) // call!
-    return false;
+    return "external or indirect";
 
   // The inliner does not know how to inline through calls with operand bundles
   // in general ...
@@ -1518,7 +1527,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
       if (Tag == LLVMContext::OB_funclet)
         continue;
 
-      return false;
+      return "unsupported operand bundle";
     }
   }
 
@@ -1537,7 +1546,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     if (!Caller->hasGC())
       Caller->setGC(CalledFunc->getGC());
     else if (CalledFunc->getGC() != Caller->getGC())
-      return false;
+      return "incompatible GC";
   }
 
   // Get the personality function from the callee if it contains a landing pad.
@@ -1561,7 +1570,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
     // TODO: This isn't 100% true. Some personality functions are proper
     //       supersets of others and can be used in place of the other.
     else if (CalledPersonality != CallerPersonality)
-      return false;
+      return "incompatible personality";
   }
 
   // We need to figure out which funclet the callsite was in so that we may
@@ -1586,7 +1595,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
             // for catchpads.
             for (const BasicBlock &CalledBB : *CalledFunc) {
               if (isa<CatchSwitchInst>(CalledBB.getFirstNonPHI()))
-                return false;
+                return "catch in cleanup funclet";
             }
           }
         } else if (isAsynchronousEHPersonality(Personality)) {
@@ -1594,7 +1603,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
           // funclet in the callee.
           for (const BasicBlock &CalledBB : *CalledFunc) {
             if (CalledBB.isEHPad())
-              return false;
+              return "SEH in cleanup funclet";
           }
         }
       }
@@ -2244,7 +2253,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   // Change the branch that used to go to AfterCallBB to branch to the first
   // basic block of the inlined function.
   //
-  TerminatorInst *Br = OrigBB->getTerminator();
+  Instruction *Br = OrigBB->getTerminator();
   assert(Br && Br->getOpcode() == Instruction::Br &&
          "splitBasicBlock broken!");
   Br->setOperand(0, &*FirstNewBlock);

@@ -1,7 +1,7 @@
-# RUN: not llvm-mc -arch=mips %s 2>%t1
+# RUN: not llvm-mc -triple mips-unknown-linux-gnu %s 2>%t1
 # RUN: FileCheck --check-prefix=O32 %s < %t1
 
-# RUN: not llvm-mc -arch=mips64 %s 2>%t1
+# RUN: not llvm-mc -triple mips64-unknown-linux-gnu %s 2>%t1
 # RUN: FileCheck --check-prefix=N64 %s < %t1
 
 # Check that subu only rejects any non-constant values.

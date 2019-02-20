@@ -362,14 +362,13 @@ entry:
 }
 
 ; LITENDIAN: v8f16_to_v16i8:
-; LITENDIAN: ld.h [[R1:\$w[0-9]+]],
+; LITENDIAN: ld.b [[R1:\$w[0-9]+]],
 ; LITENDIAN: addv.b [[R3:\$w[0-9]+]], [[R1]], [[R1]]
 ; LITENDIAN: st.b [[R3]],
 ; LITENDIAN: .size v8f16_to_v16i8
 
 ; BIGENDIAN: v8f16_to_v16i8:
-; BIGENDIAN: ld.h [[R1:\$w[0-9]+]],
-; BIGENDIAN: shf.b [[R3:\$w[0-9]+]], [[R1]], 177
+; BIGENDIAN: ld.b [[R1:\$w[0-9]+]],
 ; BIGENDIAN: addv.b [[R4:\$w[0-9]+]], [[R2]], [[R2]]
 ; BIGENDIAN: st.b [[R4]],
 ; BIGENDIAN: .size v8f16_to_v16i8
@@ -431,14 +430,13 @@ entry:
 }
 
 ; LITENDIAN: v8f16_to_v4i32:
-; LITENDIAN: ld.h [[R1:\$w[0-9]+]],
+; LITENDIAN: ld.w [[R1:\$w[0-9]+]],
 ; LITENDIAN: addv.w [[R2:\$w[0-9]+]], [[R1]], [[R1]]
 ; LITENDIAN: st.w [[R2]],
 ; LITENDIAN: .size v8f16_to_v4i32
 
 ; BIGENDIAN: v8f16_to_v4i32:
-; BIGENDIAN: ld.h [[R1:\$w[0-9]+]],
-; BIGENDIAN: shf.h [[R2:\$w[0-9]+]], [[R1]], 177
+; BIGENDIAN: ld.w [[R1:\$w[0-9]+]],
 ; BIGENDIAN: addv.w [[R3:\$w[0-9]+]], [[R2]], [[R2]]
 ; BIGENDIAN: st.w [[R3]],
 ; BIGENDIAN: .size v8f16_to_v4i32
@@ -455,14 +453,13 @@ entry:
 }
 
 ; LITENDIAN: v8f16_to_v4f32:
-; LITENDIAN: ld.h [[R1:\$w[0-9]+]],
+; LITENDIAN: ld.w [[R1:\$w[0-9]+]],
 ; LITENDIAN: fadd.w [[R2:\$w[0-9]+]], [[R1]], [[R1]]
 ; LITENDIAN: st.w [[R2]],
 ; LITENDIAN: .size v8f16_to_v4f32
 
 ; BIGENDIAN: v8f16_to_v4f32:
-; BIGENDIAN: ld.h [[R1:\$w[0-9]+]],
-; BIGENDIAN: shf.h [[R2:\$w[0-9]+]], [[R1]], 177
+; BIGENDIAN: ld.w [[R1:\$w[0-9]+]],
 ; BIGENDIAN: fadd.w [[R3:\$w[0-9]+]], [[R2]], [[R2]]
 ; BIGENDIAN: st.w [[R3]],
 ; BIGENDIAN: .size v8f16_to_v4f32
@@ -479,14 +476,13 @@ entry:
 }
 
 ; LITENDIAN: v8f16_to_v2i64:
-; LITENDIAN: ld.h [[R1:\$w[0-9]+]],
+; LITENDIAN: ld.d [[R1:\$w[0-9]+]],
 ; LITENDIAN: addv.d [[R2:\$w[0-9]+]], [[R1]], [[R1]]
 ; LITENDIAN: st.d [[R2]],
 ; LITENDIAN: .size v8f16_to_v2i64
 
 ; BIGENDIAN: v8f16_to_v2i64:
-; BIGENDIAN: ld.h [[R1:\$w[0-9]+]],
-; BIGENDIAN: shf.h [[R2:\$w[0-9]+]], [[R1]], 27
+; BIGENDIAN: ld.d [[R1:\$w[0-9]+]],
 ; BIGENDIAN: addv.d [[R3:\$w[0-9]+]], [[R2]], [[R2]]
 ; BIGENDIAN: st.d [[R3]],
 ; BIGENDIAN: .size v8f16_to_v2i64
@@ -503,14 +499,13 @@ entry:
 }
 
 ; LITENDIAN: v8f16_to_v2f64:
-; LITENDIAN: ld.h [[R1:\$w[0-9]+]],
+; LITENDIAN: ld.d [[R1:\$w[0-9]+]],
 ; LITENDIAN: fadd.d [[R2:\$w[0-9]+]], [[R1]], [[R1]]
 ; LITENDIAN: st.d [[R2]],
 ; LITENDIAN: .size v8f16_to_v2f64
 
 ; BIGENDIAN: v8f16_to_v2f64:
-; BIGENDIAN: ld.h [[R1:\$w[0-9]+]],
-; BIGENDIAN: shf.h [[R2:\$w[0-9]+]], [[R1]], 27
+; BIGENDIAN: ld.d [[R1:\$w[0-9]+]],
 ; BIGENDIAN: fadd.d [[R3:\$w[0-9]+]], [[R2]], [[R2]]
 ; BIGENDIAN: st.d [[R3]],
 ; BIGENDIAN: .size v8f16_to_v2f64

@@ -58,3 +58,7 @@ def FixAllFDIVSQRT : SubtargetFeature<
   "true",
   "LEON erratum fix: Fix FDIVS/FDIVD/FSQRTS/FSQRTD instructions with NOPs and floating-point store" 
 >;
+
+def LeonCycleCounter
+  : SubtargetFeature<"leoncyclecounter", "HasLeonCycleCounter", "true",
+                     "Use the Leon cycle counter register">;

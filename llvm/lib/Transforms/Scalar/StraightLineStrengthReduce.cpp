@@ -640,12 +640,12 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
   Value *Reduced = nullptr; // equivalent to but weaker than C.Ins
   switch (C.CandidateKind) {
   case Candidate::Add:
-  case Candidate::Mul:
+  case Candidate::Mul: {
     // C = Basis + Bump
-    if (BinaryOperator::isNeg(Bump)) {
+    Value *NegBump;
+    if (match(Bump, m_Neg(m_Value(NegBump)))) {
       // If Bump is a neg instruction, emit C = Basis - (-Bump).
-      Reduced =
-          Builder.CreateSub(Basis.Ins, BinaryOperator::getNegArgument(Bump));
+      Reduced = Builder.CreateSub(Basis.Ins, NegBump);
       // We only use the negative argument of Bump, and Bump itself may be
       // trivially dead.
       RecursivelyDeleteTriviallyDeadInstructions(Bump);
@@ -662,6 +662,7 @@ void StraightLineStrengthReduce::rewriteCandidateWithBasis(
       Reduced = Builder.CreateAdd(Basis.Ins, Bump);
     }
     break;
+  }
   case Candidate::GEP:
     {
       Type *IntPtrTy = DL->getIntPtrType(C.Ins->getType());

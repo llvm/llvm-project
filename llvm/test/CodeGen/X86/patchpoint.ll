@@ -103,8 +103,8 @@ define i64 @test_patchpoint_with_attributes() {
 entry:
 ; CHECK-LABEL: test_patchpoint_with_attributes:
 ; CHECK: movl $42, %edi
-; CHECK: xorl %r10d, %r10d
 ; CHECK: movl $17, %esi
+; CHECK: xorl %r10d, %r10d
 ; CHECK: movabsq $_consume_attributes, %r11
 ; CHECK-NEXT: callq *%r11
 ; CHECK-NEXT: xchgw %ax, %ax

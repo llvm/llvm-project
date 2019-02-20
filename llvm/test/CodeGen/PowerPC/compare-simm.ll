@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 | FileCheck %s
+; RUN: llc -verify-machineinstrs -ppc-asm-full-reg-names < %s -mtriple=powerpc-unknown-linux-gnu | FileCheck %s
 
 define i32 @test(i32 %x) nounwind {
 ; CHECK-LABEL: @test

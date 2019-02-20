@@ -100,7 +100,7 @@ add_llvm_install_targets(install-xcode-toolchain
                          PREFIX ${LLVMToolchainDir}/usr/)
 
 if(LLVM_DISTRIBUTION_COMPONENTS)
-  if(CMAKE_CONFIGURATION_TYPES)
+  if(LLVM_ENABLE_IDE)
     message(FATAL_ERROR "LLVM_DISTRIBUTION_COMPONENTS cannot be specified with multi-configuration generators (i.e. Xcode or Visual Studio)")
   endif()
 

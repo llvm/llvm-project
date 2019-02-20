@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-rotate < %s | FileCheck %s
+; RUN: opt -S -loop-rotate -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
 source_filename = "/tmp/loop.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.13.0"

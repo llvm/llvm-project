@@ -1,4 +1,4 @@
-//===- HexagonDepITypes.h -------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 // Automatically generated file, please consult code owner before editing.
 //===----------------------------------------------------------------------===//
-
 
 namespace llvm {
 namespace HexagonII {
@@ -45,6 +44,7 @@ enum Type {
   TypeCVI_VX = 29,
   TypeCVI_VX_DV = 30,
   TypeCVI_VX_LATE = 31,
+  TypeCVI_ZW = 32,
   TypeDUPLEX = 33,
   TypeENDLOOP = 34,
   TypeEXTENDER = 35,
@@ -59,7 +59,7 @@ enum Type {
   TypeS_2op = 44,
   TypeS_3op = 45,
   TypeV2LDST = 48,
-  TypeV4LDST = 49
+  TypeV4LDST = 49,
 };
 }
 }

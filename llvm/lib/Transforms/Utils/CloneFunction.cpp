@@ -18,11 +18,11 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
@@ -32,6 +32,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <map>
 using namespace llvm;
@@ -235,8 +236,8 @@ Function *llvm::CloneFunction(Function *F, ValueToValueMapTy &VMap,
                                     ArgTypes, F->getFunctionType()->isVarArg());
 
   // Create the new function...
-  Function *NewF =
-      Function::Create(FTy, F->getLinkage(), F->getName(), F->getParent());
+  Function *NewF = Function::Create(FTy, F->getLinkage(), F->getAddressSpace(),
+                                    F->getName(), F->getParent());
 
   // Loop over the arguments, copying the names of the mapped arguments over...
   Function::arg_iterator DestI = NewF->arg_begin();
@@ -365,7 +366,7 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
   }
 
   // Finally, clone over the terminator.
-  const TerminatorInst *OldTI = BB->getTerminator();
+  const Instruction *OldTI = BB->getTerminator();
   bool TerminatorDone = false;
   if (const BranchInst *BI = dyn_cast<BranchInst>(OldTI)) {
     if (BI->isConditional()) {
@@ -414,8 +415,8 @@ void PruningFunctionCloner::CloneBlock(const BasicBlock *BB,
           CodeInfo->OperandBundleCallSites.push_back(NewInst);
 
     // Recursively clone any reachable successor blocks.
-    const TerminatorInst *TI = BB->getTerminator();
-    for (const BasicBlock *Succ : TI->successors())
+    const Instruction *TI = BB->getTerminator();
+    for (const BasicBlock *Succ : successors(TI))
       ToClone.push_back(Succ);
   }
 
@@ -636,6 +637,22 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   Function::iterator I = Begin;
   while (I != NewFunc->end()) {
+    // We need to simplify conditional branches and switches with a constant
+    // operand. We try to prune these out when cloning, but if the
+    // simplification required looking through PHI nodes, those are only
+    // available after forming the full basic block. That may leave some here,
+    // and we still want to prune the dead code as early as possible.
+    //
+    // Do the folding before we check if the block is dead since we want code
+    // like
+    //  bb:
+    //    br i1 undef, label %bb, label %bb
+    // to be simplified to
+    //  bb:
+    //    br label %bb
+    // before we call I->getSinglePredecessor().
+    ConstantFoldTerminator(&*I);
+
     // Check if this block has become dead during inlining or other
     // simplifications. Note that the first block will appear dead, as it has
     // not yet been wired up properly.
@@ -645,13 +662,6 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
       DeleteDeadBlock(DeadBB);
       continue;
     }
-
-    // We need to simplify conditional branches and switches with a constant
-    // operand. We try to prune these out when cloning, but if the
-    // simplification required looking through PHI nodes, those are only
-    // available after forming the full basic block. That may leave some here,
-    // and we still want to prune the dead code as early as possible.
-    ConstantFoldTerminator(&*I);
 
     BranchInst *BI = dyn_cast<BranchInst>(I->getTerminator());
     if (!BI || BI->isConditional()) { ++I; continue; }
@@ -786,11 +796,12 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
 
 /// Duplicate non-Phi instructions from the beginning of block up to
 /// StopAt instruction into a split block between BB and its predecessor.
-BasicBlock *
-llvm::DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
-                                          Instruction *StopAt,
-                                          ValueToValueMapTy &ValueMapping,
-                                          DominatorTree *DT) {
+BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
+    BasicBlock *BB, BasicBlock *PredBB, Instruction *StopAt,
+    ValueToValueMapTy &ValueMapping, DomTreeUpdater &DTU) {
+
+  assert(count(successors(PredBB), BB) == 1 &&
+         "There must be a single edge between PredBB and BB!");
   // We are going to have to map operands from the original BB block to the new
   // copy of the block 'NewBB'.  If there are PHI nodes in BB, evaluate them to
   // account for entry from PredBB.
@@ -798,9 +809,15 @@ llvm::DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
     ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
 
-  BasicBlock *NewBB = SplitEdge(PredBB, BB, DT);
+  BasicBlock *NewBB = SplitEdge(PredBB, BB);
   NewBB->setName(PredBB->getName() + ".split");
   Instruction *NewTerm = NewBB->getTerminator();
+
+  // FIXME: SplitEdge does not yet take a DTU, so we include the split edge
+  //        in the update set here.
+  DTU.applyUpdates({{DominatorTree::Delete, PredBB, BB},
+                    {DominatorTree::Insert, PredBB, NewBB},
+                    {DominatorTree::Insert, NewBB, BB}});
 
   // Clone the non-phi instructions of BB into NewBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.

@@ -32,8 +32,8 @@ func (pm PassManager) AddThreadSanitizerPass() {
 	C.LLVMAddThreadSanitizerPass(pm.C)
 }
 
-func (pm PassManager) AddMemorySanitizerPass() {
-	C.LLVMAddMemorySanitizerPass(pm.C)
+func (pm PassManager) AddMemorySanitizerLegacyPassPass() {
+	C.LLVMAddMemorySanitizerLegacyPassPass(pm.C)
 }
 
 func (pm PassManager) AddDataFlowSanitizerPass(abilist []string) {

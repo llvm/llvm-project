@@ -25,7 +25,6 @@ class DominatorTree;
 class Function;
 class Instruction;
 class LoopInfo;
-class TerminatorInst;
 
 /// Analyze the specified function to find all of the loop backedges in the
 /// function and return them.  This is a relatively cheap (compared to
@@ -46,7 +45,7 @@ unsigned GetSuccessorNumber(const BasicBlock *BB, const BasicBlock *Succ);
 /// edges from a block with multiple successors to a block with multiple
 /// predecessors.
 ///
-bool isCriticalEdge(const TerminatorInst *TI, unsigned SuccNum,
+bool isCriticalEdge(const Instruction *TI, unsigned SuccNum,
                     bool AllowIdenticalEdges = false);
 
 /// Determine whether instruction 'To' is reachable from 'From',

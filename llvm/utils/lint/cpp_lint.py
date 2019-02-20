@@ -6,6 +6,7 @@
 # TODO: add unittests for the verifier functions:
 # http://docs.python.org/library/unittest.html .
 
+from __future__ import print_function
 import common_lint
 import re
 import sys
@@ -86,7 +87,7 @@ class CppLint(common_lint.BaseLint):
 def CppLintMain(filenames):
   all_lint = common_lint.RunLintOverAllFiles(CppLint(), filenames)
   for lint in all_lint:
-    print '%s:%d:%s' % (lint[0], lint[1], lint[2])
+    print('%s:%d:%s' % (lint[0], lint[1], lint[2]))
   return 0
 
 

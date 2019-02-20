@@ -141,7 +141,7 @@ class MIMG_NoSampler_Helper <bits<7> op, string asm,
 
   let InOperandList = !con((ins addr_rc:$vaddr, SReg_256:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                                R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
+                                R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
                       #!if(BaseOpcode.HasD16, "$d16", "");
@@ -199,7 +199,7 @@ class MIMG_Store_Helper <bits<7> op, string asm,
 
   let InOperandList = !con((ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
                                 DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                                R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
+                                R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = asm#" $vdata, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da"
                       #!if(BaseOpcode.HasD16, "$d16", "");
@@ -252,7 +252,7 @@ class MIMG_Atomic_Helper <string asm, RegisterClass data_rc,
 
   let InOperandList = (ins data_rc:$vdata, addr_rc:$vaddr, SReg_256:$srsrc,
                            DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                           R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da);
+                           R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da);
   let AsmString = asm#" $vdst, $vaddr, $srsrc$dmask$unorm$glc$slc$r128$tfe$lwe$da";
 }
 
@@ -316,7 +316,7 @@ class MIMG_Sampler_Helper <bits<7> op, string asm, RegisterClass dst_rc,
 
   let InOperandList = !con((ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, GLC:$glc, SLC:$slc,
-                                R128:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
+                                R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
                            !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
   let AsmString = asm#" $vdata, $vaddr, $srsrc, $ssamp$dmask$unorm$glc$slc$r128$tfe$lwe$da"
                       #!if(BaseOpcode.HasD16, "$d16", "");

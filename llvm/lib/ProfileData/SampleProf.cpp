@@ -26,6 +26,14 @@
 using namespace llvm;
 using namespace sampleprof;
 
+namespace llvm {
+namespace sampleprof {
+SampleProfileFormat FunctionSamples::Format;
+DenseMap<uint64_t, StringRef> FunctionSamples::GUIDToFuncNameMap;
+Module *FunctionSamples::CurrentModule;
+} // namespace sampleprof
+} // namespace llvm
+
 namespace {
 
 // FIXME: This class is only here to support the transition to llvm::Error. It
@@ -59,6 +67,8 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Unimplemented feature";
     case sampleprof_error::counter_overflow:
       return "Counter overflow";
+    case sampleprof_error::ostream_seek_unsupported:
+      return "Ostream does not support seek";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }

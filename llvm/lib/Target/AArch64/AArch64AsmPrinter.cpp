@@ -21,16 +21,20 @@
 #include "InstPrinter/AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -77,6 +81,12 @@ public:
     return MCInstLowering.lowerOperand(MO, MCOp);
   }
 
+  void EmitJumpTableInfo() override;
+  void emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
+                          const MachineBasicBlock *MBB, unsigned JTI);
+
+  void LowerJumpTableDestSmall(MCStreamer &OutStreamer, const MachineInstr &MI);
+
   void LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                      const MachineInstr &MI);
   void LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
@@ -100,12 +110,33 @@ public:
     AU.setPreservesAll();
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override {
-    AArch64FI = F.getInfo<AArch64FunctionInfo>();
-    STI = static_cast<const AArch64Subtarget*>(&F.getSubtarget());
-    bool Result = AsmPrinter::runOnMachineFunction(F);
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    AArch64FI = MF.getInfo<AArch64FunctionInfo>();
+    STI = static_cast<const AArch64Subtarget*>(&MF.getSubtarget());
+
+    SetupMachineFunction(MF);
+
+    if (STI->isTargetCOFF()) {
+      bool Internal = MF.getFunction().hasInternalLinkage();
+      COFF::SymbolStorageClass Scl = Internal ? COFF::IMAGE_SYM_CLASS_STATIC
+                                              : COFF::IMAGE_SYM_CLASS_EXTERNAL;
+      int Type =
+        COFF::IMAGE_SYM_DTYPE_FUNCTION << COFF::SCT_COMPLEX_TYPE_SHIFT;
+
+      OutStreamer->BeginCOFFSymbolDef(CurrentFnSym);
+      OutStreamer->EmitCOFFSymbolStorageClass(Scl);
+      OutStreamer->EmitCOFFSymbolType(Type);
+      OutStreamer->EndCOFFSymbolDef();
+    }
+
+    // Emit the rest of the function body.
+    EmitFunctionBody();
+
+    // Emit the XRay table for this function.
     emitXRayTable();
-    return Result;
+
+    // We didn't modify anything.
+    return false;
   }
 
 private:
@@ -208,7 +239,7 @@ void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
     // linker can safely perform dead code stripping.  Since LLVM never
     // generates code that does this, it is always safe to set.
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
   }
 }
 
@@ -433,6 +464,104 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   printOperand(MI, NOps - 2, OS);
 }
 
+void AArch64AsmPrinter::EmitJumpTableInfo() {
+  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
+  if (!MJTI) return;
+
+  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
+  if (JT.empty()) return;
+
+  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
+  MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
+  OutStreamer->SwitchSection(ReadOnlySec);
+
+  auto AFI = MF->getInfo<AArch64FunctionInfo>();
+  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
+    const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
+
+    // If this jump table was deleted, ignore it.
+    if (JTBBs.empty()) continue;
+
+    unsigned Size = AFI->getJumpTableEntrySize(JTI);
+    EmitAlignment(Log2_32(Size));
+    OutStreamer->EmitLabel(GetJTISymbol(JTI));
+
+    for (auto *JTBB : JTBBs)
+      emitJumpTableEntry(MJTI, JTBB, JTI);
+  }
+}
+
+void AArch64AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo *MJTI,
+                                           const MachineBasicBlock *MBB,
+                                           unsigned JTI) {
+  const MCExpr *Value = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
+  auto AFI = MF->getInfo<AArch64FunctionInfo>();
+  unsigned Size = AFI->getJumpTableEntrySize(JTI);
+
+  if (Size == 4) {
+    // .word LBB - LJTI
+    const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
+    const MCExpr *Base = TLI->getPICJumpTableRelocBaseExpr(MF, JTI, OutContext);
+    Value = MCBinaryExpr::createSub(Value, Base, OutContext);
+  } else {
+    // .byte (LBB - LBB) >> 2 (or .hword)
+    const MCSymbol *BaseSym = AFI->getJumpTableEntryPCRelSymbol(JTI);
+    const MCExpr *Base = MCSymbolRefExpr::create(BaseSym, OutContext);
+    Value = MCBinaryExpr::createSub(Value, Base, OutContext);
+    Value = MCBinaryExpr::createLShr(
+        Value, MCConstantExpr::create(2, OutContext), OutContext);
+  }
+
+  OutStreamer->EmitValue(Value, Size);
+}
+
+/// Small jump tables contain an unsigned byte or half, representing the offset
+/// from the lowest-addressed possible destination to the desired basic
+/// block. Since all instructions are 4-byte aligned, this is further compressed
+/// by counting in instructions rather than bytes (i.e. divided by 4). So, to
+/// materialize the correct destination we need:
+///
+///             adr xDest, .LBB0_0
+///             ldrb wScratch, [xTable, xEntry]   (with "lsl #1" for ldrh).
+///             add xDest, xDest, xScratch, lsl #2
+void AArch64AsmPrinter::LowerJumpTableDestSmall(llvm::MCStreamer &OutStreamer,
+                                                const llvm::MachineInstr &MI) {
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned ScratchReg = MI.getOperand(1).getReg();
+  unsigned ScratchRegW =
+      STI->getRegisterInfo()->getSubReg(ScratchReg, AArch64::sub_32);
+  unsigned TableReg = MI.getOperand(2).getReg();
+  unsigned EntryReg = MI.getOperand(3).getReg();
+  int JTIdx = MI.getOperand(4).getIndex();
+  bool IsByteEntry = MI.getOpcode() == AArch64::JumpTableDest8;
+
+  // This has to be first because the compression pass based its reachability
+  // calculations on the start of the JumpTableDest instruction.
+  auto Label =
+      MF->getInfo<AArch64FunctionInfo>()->getJumpTableEntryPCRelSymbol(JTIdx);
+  EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::ADR)
+                                  .addReg(DestReg)
+                                  .addExpr(MCSymbolRefExpr::create(
+                                      Label, MF->getContext())));
+
+  // Load the number of instruction-steps to offset from the label.
+  unsigned LdrOpcode = IsByteEntry ? AArch64::LDRBBroX : AArch64::LDRHHroX;
+  EmitToStreamer(OutStreamer, MCInstBuilder(LdrOpcode)
+                                  .addReg(ScratchRegW)
+                                  .addReg(TableReg)
+                                  .addReg(EntryReg)
+                                  .addImm(0)
+                                  .addImm(IsByteEntry ? 0 : 1));
+
+  // Multiply the steps by 4 and add to the already materialized base label
+  // address.
+  EmitToStreamer(OutStreamer, MCInstBuilder(AArch64::ADDXrs)
+                                  .addReg(DestReg)
+                                  .addReg(DestReg)
+                                  .addReg(ScratchReg)
+                                  .addImm(2));
+}
+
 void AArch64AsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                       const MachineInstr &MI) {
   unsigned NumNOPBytes = StackMapOpers(&MI).getNumPatchBytes();
@@ -503,7 +632,7 @@ void AArch64AsmPrinter::LowerPATCHPOINT(MCStreamer &OutStreamer, StackMaps &SM,
 
 void AArch64AsmPrinter::EmitFMov0(const MachineInstr &MI) {
   unsigned DestReg = MI.getOperand(0).getReg();
-  if (STI->hasZeroCycleZeroing() && !STI->hasZeroCycleZeroingFPWorkaround()) {
+  if (STI->hasZeroCycleZeroingFP() && !STI->hasZeroCycleZeroingFPWorkaround()) {
     // Convert H/S/D register to corresponding Q register
     if (AArch64::H0 <= DestReg && DestReg <= AArch64::H31)
       DestReg = AArch64::Q0 + (DestReg - AArch64::H0);
@@ -559,6 +688,8 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     OutStreamer->EmitLabel(LOHLabel);
   }
 
+  AArch64TargetStreamer *TS =
+    static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
   // Do any manual lowerings.
   switch (MI->getOpcode()) {
   default:
@@ -585,12 +716,27 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
       OutStreamer->EmitRawText(StringRef(OS.str()));
     }
     return;
+
+  case AArch64::EMITBKEY: {
+      ExceptionHandling ExceptionHandlingType = MAI->getExceptionHandlingType();
+      if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
+          ExceptionHandlingType != ExceptionHandling::ARM)
+        return;
+
+      if (needsCFIMoves() == CFI_M_None)
+        return;
+
+      OutStreamer->EmitCFIBKeyFrame();
+      return;
+    }
   }
 
   // Tail calls use pseudo instructions so they have the proper code-gen
   // attributes (isCall, isReturn, etc.). We lower them to the real
   // instruction here.
-  case AArch64::TCRETURNri: {
+  case AArch64::TCRETURNri:
+  case AArch64::TCRETURNriBTI:
+  case AArch64::TCRETURNriALL: {
     MCInst TmpInst;
     TmpInst.setOpcode(AArch64::BR);
     TmpInst.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
@@ -660,6 +806,32 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     return;
   }
 
+  case AArch64::JumpTableDest32: {
+    // We want:
+    //     ldrsw xScratch, [xTable, xEntry, lsl #2]
+    //     add xDest, xTable, xScratch
+    unsigned DestReg = MI->getOperand(0).getReg(),
+             ScratchReg = MI->getOperand(1).getReg(),
+             TableReg = MI->getOperand(2).getReg(),
+             EntryReg = MI->getOperand(3).getReg();
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDRSWroX)
+                                     .addReg(ScratchReg)
+                                     .addReg(TableReg)
+                                     .addReg(EntryReg)
+                                     .addImm(0)
+                                     .addImm(1));
+    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ADDXrs)
+                                     .addReg(DestReg)
+                                     .addReg(TableReg)
+                                     .addReg(ScratchReg)
+                                     .addImm(0));
+    return;
+  }
+  case AArch64::JumpTableDest16:
+  case AArch64::JumpTableDest8:
+    LowerJumpTableDestSmall(*OutStreamer, *MI);
+    return;
+
   case AArch64::FMOVH0:
   case AArch64::FMOVS0:
   case AArch64::FMOVD0:
@@ -682,6 +854,100 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(*MI);
+    return;
+
+  case AArch64::SEH_StackAlloc:
+    TS->EmitARM64WinCFIAllocStack(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveFPLR:
+    TS->EmitARM64WinCFISaveFPLR(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveFPLR_X:
+    assert(MI->getOperand(0).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveFPLRX(-MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveReg:
+    TS->EmitARM64WinCFISaveReg(MI->getOperand(0).getImm(),
+                               MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveReg_X:
+    assert(MI->getOperand(1).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveRegX(MI->getOperand(0).getImm(),
+		                -MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveRegP:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp");
+    TS->EmitARM64WinCFISaveRegP(MI->getOperand(0).getImm(),
+                                MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveRegP_X:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp_x");
+    assert(MI->getOperand(2).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveRegPX(MI->getOperand(0).getImm(),
+                                 -MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveFReg:
+    TS->EmitARM64WinCFISaveFReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveFReg_X:
+    assert(MI->getOperand(1).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveFRegX(MI->getOperand(0).getImm(),
+                                 -MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveFRegP:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp");
+    TS->EmitARM64WinCFISaveFRegP(MI->getOperand(0).getImm(),
+                                 MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveFRegP_X:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp_x");
+    assert(MI->getOperand(2).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveFRegPX(MI->getOperand(0).getImm(),
+                                  -MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SetFP:
+    TS->EmitARM64WinCFISetFP();
+    return;
+
+  case AArch64::SEH_AddFP:
+    TS->EmitARM64WinCFIAddFP(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_Nop:
+    TS->EmitARM64WinCFINop();
+    return;
+
+  case AArch64::SEH_PrologEnd:
+    TS->EmitARM64WinCFIPrologEnd();
+    return;
+
+  case AArch64::SEH_EpilogStart:
+    TS->EmitARM64WinCFIEpilogStart();
+    return;
+
+  case AArch64::SEH_EpilogEnd:
+    TS->EmitARM64WinCFIEpilogEnd();
     return;
   }
 

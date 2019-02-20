@@ -16,8 +16,9 @@ define i32 @rotate_left_32(i32 %a, i32 %b) {
 ; X64-LABEL: rotate_left_32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    roll %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
   %and = and i32 %b, 31
   %shl = shl i32 %a, %and
@@ -39,8 +40,9 @@ define i32 @rotate_right_32(i32 %a, i32 %b) {
 ; X64-LABEL: rotate_right_32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorl %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorl %cl, %eax
 ; X64-NEXT:    retq
   %and = and i32 %b, 31
   %shl = lshr i32 %a, %and
@@ -63,9 +65,9 @@ define i64 @rotate_left_64(i64 %a, i64 %b) {
 ; X86-NEXT:    .cfi_offset %esi, -16
 ; X86-NEXT:    .cfi_offset %edi, -12
 ; X86-NEXT:    .cfi_offset %ebx, -8
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    movl %edi, %edx
@@ -76,7 +78,7 @@ define i64 @rotate_left_64(i64 %a, i64 %b) {
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:  .LBB2_2:
-; X86-NEXT:    negl %ecx
+; X86-NEXT:    negb %cl
 ; X86-NEXT:    movl %edi, %ebx
 ; X86-NEXT:    shrl %cl, %ebx
 ; X86-NEXT:    shrdl %cl, %edi, %esi
@@ -98,9 +100,10 @@ define i64 @rotate_left_64(i64 %a, i64 %b) {
 ;
 ; X64-LABEL: rotate_left_64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolq %cl, %rdi
+; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    rolq %cl, %rax
 ; X64-NEXT:    retq
   %and = and i64 %b, 63
   %shl = shl i64 %a, %and
@@ -123,9 +126,9 @@ define i64 @rotate_right_64(i64 %a, i64 %b) {
 ; X86-NEXT:    .cfi_offset %esi, -16
 ; X86-NEXT:    .cfi_offset %edi, -12
 ; X86-NEXT:    .cfi_offset %ebx, -8
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    movl %edi, %eax
@@ -136,7 +139,7 @@ define i64 @rotate_right_64(i64 %a, i64 %b) {
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB3_2:
-; X86-NEXT:    negl %ecx
+; X86-NEXT:    negb %cl
 ; X86-NEXT:    movl %edi, %ebx
 ; X86-NEXT:    shll %cl, %ebx
 ; X86-NEXT:    shldl %cl, %edi, %esi
@@ -158,9 +161,10 @@ define i64 @rotate_right_64(i64 %a, i64 %b) {
 ;
 ; X64-LABEL: rotate_right_64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorq %cl, %rdi
+; X64-NEXT:    movq %rsi, %rcx
 ; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
+; X64-NEXT:    rorq %cl, %rax
 ; X64-NEXT:    retq
   %and = and i64 %b, 63
   %shl = lshr i64 %a, %and
@@ -184,6 +188,7 @@ define void @rotate_left_m32(i32 *%pa, i32 %b) {
 ; X64-LABEL: rotate_left_m32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    roll %cl, (%rdi)
 ; X64-NEXT:    retq
   %a = load i32, i32* %pa, align 16
@@ -208,6 +213,7 @@ define void @rotate_right_m32(i32 *%pa, i32 %b) {
 ; X64-LABEL: rotate_right_m32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    rorl %cl, (%rdi)
 ; X64-NEXT:    retq
   %a = load i32, i32* %pa, align 16
@@ -236,7 +242,7 @@ define void @rotate_left_m64(i64 *%pa, i64 %b) {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %edx
 ; X86-NEXT:    movl 4(%eax), %ebx
@@ -250,7 +256,7 @@ define void @rotate_left_m64(i64 *%pa, i64 %b) {
 ; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    xorl %esi, %esi
 ; X86-NEXT:  .LBB6_2:
-; X86-NEXT:    negl %ecx
+; X86-NEXT:    negb %cl
 ; X86-NEXT:    movl %ebx, %ebp
 ; X86-NEXT:    shrl %cl, %ebp
 ; X86-NEXT:    shrdl %cl, %ebx, %edx
@@ -276,7 +282,8 @@ define void @rotate_left_m64(i64 *%pa, i64 %b) {
 ;
 ; X64-LABEL: rotate_left_m64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    rolq %cl, (%rdi)
 ; X64-NEXT:    retq
   %a = load i64, i64* %pa, align 16
@@ -305,33 +312,33 @@ define void @rotate_right_m64(i64 *%pa, i64 %b) {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl (%eax), %ebx
-; X86-NEXT:    movl 4(%eax), %edx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    shrl %cl, %esi
+; X86-NEXT:    movl 4(%eax), %esi
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    shrl %cl, %edx
 ; X86-NEXT:    movl %ebx, %edi
-; X86-NEXT:    shrdl %cl, %edx, %edi
+; X86-NEXT:    shrdl %cl, %esi, %edi
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB7_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:    movl %edx, %edi
+; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:  .LBB7_2:
-; X86-NEXT:    negl %ecx
+; X86-NEXT:    negb %cl
 ; X86-NEXT:    movl %ebx, %ebp
 ; X86-NEXT:    shll %cl, %ebp
-; X86-NEXT:    shldl %cl, %ebx, %edx
+; X86-NEXT:    shldl %cl, %ebx, %esi
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    je .LBB7_4
 ; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ebp, %edx
+; X86-NEXT:    movl %ebp, %esi
 ; X86-NEXT:    xorl %ebp, %ebp
 ; X86-NEXT:  .LBB7_4:
-; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    orl %esi, %edx
 ; X86-NEXT:    orl %ebp, %edi
-; X86-NEXT:    movl %esi, 4(%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    movl %edi, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 16
@@ -345,7 +352,8 @@ define void @rotate_right_m64(i64 *%pa, i64 %b) {
 ;
 ; X64-LABEL: rotate_right_m64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    movq %rsi, %rcx
+; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; X64-NEXT:    rorq %cl, (%rdi)
 ; X64-NEXT:    retq
   %a = load i64, i64* %pa, align 16
@@ -373,8 +381,10 @@ define i8 @rotate_left_8(i8 %x, i32 %amount) {
 ; X64-LABEL: rotate_left_8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolb %cl, %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rolb %cl, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %amt = trunc i32 %amount to i8
   %sub = sub i8 0, %amt
@@ -397,8 +407,10 @@ define i8 @rotate_right_8(i8 %x, i32 %amount) {
 ; X64-LABEL: rotate_right_8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorb %cl, %dil
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorb %cl, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %amt = trunc i32 %amount to i8
   %sub = sub i8 0, %amt
@@ -421,8 +433,10 @@ define i16 @rotate_left_16(i16 %x, i32 %amount) {
 ; X64-LABEL: rotate_left_16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rolw %cl, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rolw %cl, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %amt = trunc i32 %amount to i16
   %sub = sub i16 0, %amt
@@ -445,8 +459,10 @@ define i16 @rotate_right_16(i16 %x, i32 %amount) {
 ; X64-LABEL: rotate_right_16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    rorw %cl, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    rorw %cl, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %amt = trunc i32 %amount to i16
   %sub = sub i16 0, %amt
@@ -469,6 +485,7 @@ define void @rotate_left_m8(i8* %p, i32 %amount) {
 ; X64-LABEL: rotate_left_m8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    rolb %cl, (%rdi)
 ; X64-NEXT:    retq
   %x = load i8, i8* %p, align 1
@@ -494,6 +511,7 @@ define void @rotate_right_m8(i8* %p, i32 %amount) {
 ; X64-LABEL: rotate_right_m8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    rorb %cl, (%rdi)
 ; X64-NEXT:    retq
   %x = load i8, i8* %p, align 1
@@ -519,6 +537,7 @@ define void @rotate_left_m16(i16* %p, i32 %amount) {
 ; X64-LABEL: rotate_left_m16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    rolw %cl, (%rdi)
 ; X64-NEXT:    retq
   %x = load i16, i16* %p, align 1
@@ -544,6 +563,7 @@ define void @rotate_right_m16(i16* %p, i32 %amount) {
 ; X64-LABEL: rotate_right_m16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    rorw %cl, (%rdi)
 ; X64-NEXT:    retq
   %x = load i16, i16* %p, align 1
@@ -569,10 +589,11 @@ define i32 @rotate_demanded_bits(i32, i32) {
 ;
 ; X64-LABEL: rotate_demanded_bits:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $30, %sil
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    roll %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andb $30, %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
   %3 = and i32 %1, 30
   %4 = shl i32 %0, %3
@@ -594,10 +615,11 @@ define i32 @rotate_demanded_bits_2(i32, i32) {
 ;
 ; X64-LABEL: rotate_demanded_bits_2:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $23, %sil
 ; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    roll %cl, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andb $23, %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
   %3 = and i32 %1, 23
   %4 = shl i32 %0, %3
@@ -620,11 +642,12 @@ define i32 @rotate_demanded_bits_3(i32, i32) {
 ;
 ; X64-LABEL: rotate_demanded_bits_3:
 ; X64:       # %bb.0:
-; X64-NEXT:    addb %sil, %sil
-; X64-NEXT:    andb $30, %sil
-; X64-NEXT:    movl %esi, %ecx
-; X64-NEXT:    roll %cl, %edi
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    leal (%rsi,%rsi), %ecx
+; X64-NEXT:    andb $30, %cl
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    roll %cl, %eax
 ; X64-NEXT:    retq
   %3 = shl i32 %1, 1
   %4 = and i32 %3, 30

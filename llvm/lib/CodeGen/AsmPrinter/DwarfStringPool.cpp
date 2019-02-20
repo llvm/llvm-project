@@ -24,25 +24,39 @@ DwarfStringPool::DwarfStringPool(BumpPtrAllocator &A, AsmPrinter &Asm,
     : Pool(A), Prefix(Prefix),
       ShouldCreateSymbols(Asm.MAI->doesDwarfUseRelocationsAcrossSections()) {}
 
-DwarfStringPool::EntryRef DwarfStringPool::getEntry(AsmPrinter &Asm,
-                                                    StringRef Str) {
+StringMapEntry<DwarfStringPool::EntryTy> &
+DwarfStringPool::getEntryImpl(AsmPrinter &Asm, StringRef Str) {
   auto I = Pool.insert(std::make_pair(Str, EntryTy()));
+  auto &Entry = I.first->second;
   if (I.second) {
-    auto &Entry = I.first->second;
-    Entry.Index = Pool.size() - 1;
+    Entry.Index = EntryTy::NotIndexed;
     Entry.Offset = NumBytes;
     Entry.Symbol = ShouldCreateSymbols ? Asm.createTempSymbol(Prefix) : nullptr;
 
     NumBytes += Str.size() + 1;
     assert(NumBytes > Entry.Offset && "Unexpected overflow");
   }
-  return EntryRef(*I.first);
+  return *I.first;
+}
+
+DwarfStringPool::EntryRef DwarfStringPool::getEntry(AsmPrinter &Asm,
+                                                    StringRef Str) {
+  auto &MapEntry = getEntryImpl(Asm, Str);
+  return EntryRef(MapEntry, false);
+}
+
+DwarfStringPool::EntryRef DwarfStringPool::getIndexedEntry(AsmPrinter &Asm,
+                                                           StringRef Str) {
+  auto &MapEntry = getEntryImpl(Asm, Str);
+  if (!MapEntry.getValue().isIndexed())
+    MapEntry.getValue().Index = NumIndexedStrings++;
+  return EntryRef(MapEntry, true);
 }
 
 void DwarfStringPool::emitStringOffsetsTableHeader(AsmPrinter &Asm,
                                                    MCSection *Section,
                                                    MCSymbol *StartSym) {
-  if (empty())
+  if (getNumIndexedStrings() == 0)
     return;
   Asm.OutStreamer->SwitchSection(Section);
   unsigned EntrySize = 4;
@@ -51,7 +65,7 @@ void DwarfStringPool::emitStringOffsetsTableHeader(AsmPrinter &Asm,
   // table. The header consists of an entry with the contribution's
   // size (not including the size of the length field), the DWARF version and
   // 2 bytes of padding.
-  Asm.emitInt32(size() * EntrySize + 4);
+  Asm.emitInt32(getNumIndexedStrings() * EntrySize + 4);
   Asm.emitInt16(Asm.getDwarfVersion());
   Asm.emitInt16(0);
   // Define the symbol that marks the start of the contribution. It is
@@ -69,12 +83,17 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
   // Start the dwarf str section.
   Asm.OutStreamer->SwitchSection(StrSection);
 
-  // Get all of the string pool entries and put them in an array by their ID so
-  // we can sort them.
-  SmallVector<const StringMapEntry<EntryTy> *, 64> Entries(Pool.size());
+  // Get all of the string pool entries and sort them by their offset.
+  SmallVector<const StringMapEntry<EntryTy> *, 64> Entries;
+  Entries.reserve(Pool.size());
 
   for (const auto &E : Pool)
-    Entries[E.getValue().Index] = &E;
+    Entries.push_back(&E);
+
+  llvm::sort(Entries, [](const StringMapEntry<EntryTy> *A,
+                         const StringMapEntry<EntryTy> *B) {
+    return A->getValue().Offset < B->getValue().Offset;
+  });
 
   for (const auto &Entry : Entries) {
     assert(ShouldCreateSymbols == static_cast<bool>(Entry->getValue().Symbol) &&
@@ -93,6 +112,14 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
 
   // If we've got an offset section go ahead and emit that now as well.
   if (OffsetSection) {
+    // Now only take the indexed entries and put them in an array by their ID so
+    // we can emit them in order.
+    Entries.resize(NumIndexedStrings);
+    for (const auto &Entry : Pool) {
+      if (Entry.getValue().isIndexed())
+        Entries[Entry.getValue().Index] = &Entry;
+    }
+
     Asm.OutStreamer->SwitchSection(OffsetSection);
     unsigned size = 4; // FIXME: DWARF64 is 8.
     for (const auto &Entry : Entries)

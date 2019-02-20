@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_TOOLS_DSYMUTIL_COMPILEUNIT_H
+#define LLVM_TOOLS_DSYMUTIL_COMPILEUNIT_H
+
 #include "llvm/ADT/IntervalMap.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
-
-#ifndef LLVM_TOOLS_DSYMUTIL_COMPILEUNIT_H
-#define LLVM_TOOLS_DSYMUTIL_COMPILEUNIT_H
 
 namespace llvm {
 namespace dsymutil {

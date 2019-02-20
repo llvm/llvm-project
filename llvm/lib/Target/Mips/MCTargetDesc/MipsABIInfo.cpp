@@ -55,6 +55,8 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef CPU,
     return MipsABIInfo::N32();
   if (Options.getABIName().startswith("n64"))
     return MipsABIInfo::N64();
+  if (TT.getEnvironment() == llvm::Triple::GNUABIN32)
+    return MipsABIInfo::N32();
   assert(Options.getABIName().empty() && "Unknown ABI option for MIPS");
 
   if (TT.isMIPS64())

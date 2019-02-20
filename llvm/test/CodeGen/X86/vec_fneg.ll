@@ -98,3 +98,47 @@ define <2 x float> @fneg_bitcast(i64 %i) nounwind {
   %fneg = fsub <2 x float> <float -0.0, float -0.0>, %bitcast
   ret <2 x float> %fneg
 }
+
+define <4 x float> @fneg_undef_elts_v4f32(<4 x float> %x) {
+; X32-SSE-LABEL: fneg_undef_elts_v4f32:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg_undef_elts_v4f32:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    retq
+  %r = fsub <4 x float> <float -0.0, float undef, float undef, float -0.0>, %x
+  ret <4 x float> %r
+}
+
+; This isn't fneg, but similarly check that (X - 0.0) is simplified.
+
+define <4 x float> @fsub0_undef_elts_v4f32(<4 x float> %x) {
+; X32-SSE-LABEL: fsub0_undef_elts_v4f32:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fsub0_undef_elts_v4f32:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    retq
+  %r = fsub <4 x float> %x, <float 0.0, float undef, float 0.0, float undef>
+  ret <4 x float> %r
+}
+
+define <4 x float> @fneg(<4 x float> %Q) nounwind {
+; X32-SSE-LABEL: fneg:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    retq
+  %tmp = fneg <4 x float> %Q
+  ret <4 x float> %tmp
+}
+
+

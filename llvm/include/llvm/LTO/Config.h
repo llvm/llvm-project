@@ -49,6 +49,10 @@ struct Config {
   /// Use the new pass manager
   bool UseNewPM = false;
 
+  /// Flag to indicate that the optimizer should not assume builtins are present
+  /// on the target.
+  bool Freestanding = false;
+
   /// Disable entirely the optimizer, including importing for ThinLTO
   bool CodeGenOnly = false;
 
@@ -72,6 +76,9 @@ struct Config {
 
   /// Sample PGO profile path.
   std::string SampleProfile;
+
+  /// Name remapping file for profile data.
+  std::string ProfileRemapping;
 
   /// The directory to store .dwo files.
   std::string DwoDir;

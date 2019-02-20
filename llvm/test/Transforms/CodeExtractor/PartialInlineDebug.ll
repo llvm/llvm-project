@@ -23,7 +23,8 @@ if.end:                                           ; preds = %if.then, %entry
 
 ; CHECK-LABEL: @caller
 ; CHECK: codeRepl.i:
-; CHECK-NEXT: call void @callee.2.if.then(i32 %v, i32* %mul.loc.i), !dbg ![[DBG2:[0-9]+]]
+; CHECK-NOT: br label
+; CHECK: call void @callee.2.if.then(i32 %v, i32* %mul.loc.i), !dbg ![[DBG2:[0-9]+]]
 define i32 @caller(i32 %v) !dbg !8 {
 entry:
   %call = call i32 @callee(i32 %v), !dbg !14
@@ -53,7 +54,8 @@ if.end:
 
 ; CHECK-LABEL: @caller2
 ; CHECK: codeRepl.i:
-; CHECK-NEXT: call void @callee2.1.if.then(i32 %v, i32* %sub.loc.i), !dbg ![[DBG4:[0-9]+]]
+; CHECK-NOT: br label
+; CHECK: call void @callee2.1.if.then(i32 %v, i32* %sub.loc.i), !dbg ![[DBG4:[0-9]+]]
 define i32 @caller2(i32 %v) !dbg !21 {
 entry:
   %call = call i32 @callee2(i32 %v), !dbg !22

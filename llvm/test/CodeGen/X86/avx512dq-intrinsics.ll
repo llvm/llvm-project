@@ -4,6 +4,118 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64,AVX512DQ,X64-AVX512DQ
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512dq,+avx512vl --show-mc-encoding | FileCheck %s --check-prefixes=CHECK,X64,AVX512DQVL,X64-AVX512DQVL
 
+define i32 @test_int_x86_avx512_kadd_w(<16 x i32> %A, <16 x i32> %B) nounwind {
+; CHECK-LABEL: test_int_x86_avx512_kadd_w:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0x7d,0x48,0x27,0xc0]
+; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0x75,0x48,0x27,0xc9]
+; CHECK-NEXT:    kaddw %k1, %k0, %k0 # encoding: [0xc5,0xfc,0x4a,0xc1]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    kortestw %k0, %k0 # encoding: [0xc5,0xf8,0x98,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = icmp ne <16 x i32> %A, zeroinitializer
+  %1 = icmp ne <16 x i32> %B, zeroinitializer
+  %2 = call <16 x i1> @llvm.x86.avx512.kadd.w(<16 x i1> %0, <16 x i1> %1)
+  %3 = bitcast <16 x i1> %2 to i16
+  %4 = icmp eq i16 %3, 0
+  %5 = zext i1 %4 to i32
+  ret i32 %5
+}
+declare <16 x i1> @llvm.x86.avx512.kadd.w(<16 x i1>, <16 x i1>)
+
+define i32 @test_int_x86_avx512_kadd_b(<8 x i64> %A, <8 x i64> %B) nounwind {
+; CHECK-LABEL: test_int_x86_avx512_kadd_b:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vptestmq %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x48,0x27,0xc0]
+; CHECK-NEXT:    vptestmq %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0xf5,0x48,0x27,0xc9]
+; CHECK-NEXT:    kaddb %k1, %k0, %k0 # encoding: [0xc5,0xfd,0x4a,0xc1]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    kortestb %k0, %k0 # encoding: [0xc5,0xf9,0x98,0xc0]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+entry:
+  %0 = icmp ne <8 x i64> %A, zeroinitializer
+  %1 = icmp ne <8 x i64> %B, zeroinitializer
+  %2 = call <8 x i1> @llvm.x86.avx512.kadd.b(<8 x i1> %0, <8 x i1> %1)
+  %3 = bitcast <8 x i1> %2 to i8
+  %4 = icmp eq i8 %3, 0
+  %5 = zext i1 %4 to i32
+  ret i32 %5
+}
+declare <8 x i1> @llvm.x86.avx512.kadd.b(<8 x i1>, <8 x i1>)
+
+define i32 @test_x86_avx512_ktestc_w(<16 x i32> %A, <16 x i32> %B) {
+; CHECK-LABEL: test_x86_avx512_ktestc_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0x7d,0x48,0x27,0xc0]
+; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0x75,0x48,0x27,0xc9]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    ktestw %k1, %k0 # encoding: [0xc5,0xf8,0x99,0xc1]
+; CHECK-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %1 = icmp ne <16 x i32> %A, zeroinitializer
+  %2 = icmp ne <16 x i32> %B, zeroinitializer
+  %res = call i32 @llvm.x86.avx512.ktestc.w(<16 x i1> %1, <16 x i1> %2) ; <i32> [#uses=1]
+  ret i32 %res
+}
+declare i32 @llvm.x86.avx512.ktestc.w(<16 x i1>, <16 x i1>) nounwind readnone
+
+define i32 @test_x86_avx512_ktestz_w(<16 x i32> %A, <16 x i32> %B) {
+; CHECK-LABEL: test_x86_avx512_ktestz_w:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0x7d,0x48,0x27,0xc0]
+; CHECK-NEXT:    vptestmd %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0x75,0x48,0x27,0xc9]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    ktestw %k1, %k0 # encoding: [0xc5,0xf8,0x99,0xc1]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %1 = icmp ne <16 x i32> %A, zeroinitializer
+  %2 = icmp ne <16 x i32> %B, zeroinitializer
+  %res = call i32 @llvm.x86.avx512.ktestz.w(<16 x i1> %1, <16 x i1> %2) ; <i32> [#uses=1]
+  ret i32 %res
+}
+declare i32 @llvm.x86.avx512.ktestz.w(<16 x i1>, <16 x i1>) nounwind readnone
+
+define i32 @test_x86_avx512_ktestc_b(<8 x i64> %A, <8 x i64> %B) {
+; CHECK-LABEL: test_x86_avx512_ktestc_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestmq %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x48,0x27,0xc0]
+; CHECK-NEXT:    vptestmq %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0xf5,0x48,0x27,0xc9]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    ktestb %k1, %k0 # encoding: [0xc5,0xf9,0x99,0xc1]
+; CHECK-NEXT:    setb %al # encoding: [0x0f,0x92,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %1 = icmp ne <8 x i64> %A, zeroinitializer
+  %2 = icmp ne <8 x i64> %B, zeroinitializer
+  %res = call i32 @llvm.x86.avx512.ktestc.b(<8 x i1> %1, <8 x i1> %2) ; <i32> [#uses=1]
+  ret i32 %res
+}
+declare i32 @llvm.x86.avx512.ktestc.b(<8 x i1>, <8 x i1>) nounwind readnone
+
+define i32 @test_x86_avx512_ktestz_b(<8 x i64> %A, <8 x i64> %B) {
+; CHECK-LABEL: test_x86_avx512_ktestz_b:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestmq %zmm0, %zmm0, %k0 # encoding: [0x62,0xf2,0xfd,0x48,0x27,0xc0]
+; CHECK-NEXT:    vptestmq %zmm1, %zmm1, %k1 # encoding: [0x62,0xf2,0xf5,0x48,0x27,0xc9]
+; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
+; CHECK-NEXT:    ktestb %k1, %k0 # encoding: [0xc5,0xf9,0x99,0xc1]
+; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
+; CHECK-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
+  %1 = icmp ne <8 x i64> %A, zeroinitializer
+  %2 = icmp ne <8 x i64> %B, zeroinitializer
+  %res = call i32 @llvm.x86.avx512.ktestz.b(<8 x i1> %1, <8 x i1> %2) ; <i32> [#uses=1]
+  ret i32 %res
+}
+declare i32 @llvm.x86.avx512.ktestz.b(<8 x i1>, <8 x i1>) nounwind readnone
+
 declare <8 x i64> @llvm.x86.avx512.mask.cvtpd2qq.512(<8 x double>, <8 x i64>, i8, i32)
 
 define <8 x i64>@test_int_x86_avx512_mask_cvt_pd2qq_512(<8 x double> %x0, <8 x i64> %x1, i8 %x2) {
@@ -556,8 +668,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ; X86-AVX512DQ-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X86-AVX512DQ:       # %bb.0:
 ; X86-AVX512DQ-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
+; X86-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQ-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X86-AVX512DQ-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # encoding: [0xc5,0xe9,0x58,0xc0]
 ; X86-AVX512DQ-NEXT:    vaddpd %xmm0, %xmm3, %xmm0 # encoding: [0xc5,0xe1,0x58,0xc0]
@@ -566,8 +678,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ; X86-AVX512DQVL-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X86-AVX512DQVL:       # %bb.0:
 ; X86-AVX512DQVL-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
+; X86-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQVL-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X86-AVX512DQVL-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0x58,0xc0]
 ; X86-AVX512DQVL-NEXT:    vaddpd %xmm0, %xmm3, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xe1,0x58,0xc0]
@@ -575,8 +687,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ;
 ; X64-AVX512DQ-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQ-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
 ; X64-AVX512DQ-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X64-AVX512DQ-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # encoding: [0xc5,0xe9,0x58,0xc0]
@@ -585,8 +697,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ;
 ; X64-AVX512DQVL-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X64-AVX512DQVL:       # %bb.0:
-; X64-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQVL-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
 ; X64-AVX512DQVL-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X64-AVX512DQVL-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0x58,0xc0]
@@ -640,8 +752,8 @@ declare i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
 define i8 @test_int_x86_avx512_mask_fpclass_sd(<2 x double> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_sd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclasssd $2, %xmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x08,0x67,0xc8,0x02]
-; CHECK-NEXT:    vfpclasssd $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x67,0xc0,0x04]
+; CHECK-NEXT:    vfpclasssd $4, %xmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x08,0x67,0xc8,0x04]
+; CHECK-NEXT:    vfpclasssd $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x67,0xc0,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
@@ -675,8 +787,8 @@ declare i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float>, i32, i8)
 define i8 @test_int_x86_avx512_mask_fpclass_ss(<4 x float> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ss:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassss $2, %xmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x08,0x67,0xc8,0x02]
-; CHECK-NEXT:    vfpclassss $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x67,0xc0,0x04]
+; CHECK-NEXT:    vfpclassss $4, %xmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x08,0x67,0xc8,0x04]
+; CHECK-NEXT:    vfpclassss $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x67,0xc0,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]

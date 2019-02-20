@@ -157,14 +157,6 @@ bool StackProtector::ContainsProtectableArray(Type *Ty, bool &IsLarge,
   return NeedsProtector;
 }
 
-static bool isLifetimeInst(const Instruction *I) {
-  if (const auto Intrinsic = dyn_cast<IntrinsicInst>(I)) {
-    const auto Id = Intrinsic->getIntrinsicID();
-    return Id == Intrinsic::lifetime_start || Id == Intrinsic::lifetime_end;
-  }
-  return false;
-}
-
 bool StackProtector::HasAddressTaken(const Instruction *AI) {
   for (const User *U : AI->users()) {
     if (const StoreInst *SI = dyn_cast<StoreInst>(U)) {
@@ -175,7 +167,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
         return true;
     } else if (const CallInst *CI = dyn_cast<CallInst>(U)) {
       // Ignore intrinsics that are not calls. TODO: Use isLoweredToCall().
-      if (!isa<DbgInfoIntrinsic>(CI) && !isLifetimeInst(CI))
+      if (!isa<DbgInfoIntrinsic>(CI) && !CI->isLifetimeStartOrEnd())
         return true;
     } else if (isa<InvokeInst>(U)) {
       return true;
@@ -199,6 +191,18 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
   return false;
 }
 
+/// Search for the first call to the llvm.stackprotector intrinsic and return it
+/// if present.
+static const CallInst *findStackProtectorIntrinsic(Function &F) {
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB)
+      if (const CallInst *CI = dyn_cast<CallInst>(&I))
+        if (CI->getCalledFunction() ==
+            Intrinsic::getDeclaration(F.getParent(), Intrinsic::stackprotector))
+          return CI;
+  return nullptr;
+}
+
 /// Check whether or not this function needs a stack protector based
 /// upon the stack protector level.
 ///
@@ -215,13 +219,7 @@ bool StackProtector::HasAddressTaken(const Instruction *AI) {
 bool StackProtector::RequiresStackProtector() {
   bool Strong = false;
   bool NeedsProtector = false;
-  for (const BasicBlock &BB : *F)
-    for (const Instruction &I : BB)
-      if (const CallInst *CI = dyn_cast<CallInst>(&I))
-        if (CI->getCalledFunction() ==
-            Intrinsic::getDeclaration(F->getParent(),
-                                      Intrinsic::stackprotector))
-          HasPrologue = true;
+  HasPrologue = findStackProtectorIntrinsic(*F);
 
   if (F->hasFnAttribute(Attribute::SafeStack))
     return false;
@@ -379,7 +377,8 @@ bool StackProtector::InsertStackProtectors() {
   // protection in SDAG.
   bool SupportsSelectionDAGSP =
       TLI->useStackGuardXorFP() ||
-      (EnableSelectionDAGSP && !TM->Options.EnableFastISel);
+      (EnableSelectionDAGSP && !TM->Options.EnableFastISel &&
+       !TM->Options.EnableGlobalISel);
   AllocaInst *AI = nullptr;       // Place on stack that stores the stack guard.
 
   for (Function::iterator I = F->begin(), E = F->end(); I != E;) {
@@ -398,6 +397,14 @@ bool StackProtector::InsertStackProtectors() {
     // The epilogue instrumentation is postponed to SelectionDAG.
     if (SupportsSelectionDAGSP)
       break;
+
+    // Find the stack guard slot if the prologue was not created by this pass
+    // itself via a previous call to CreatePrologue().
+    if (!AI) {
+      const CallInst *SPCall = findStackProtectorIntrinsic(*F);
+      assert(SPCall && "Call to llvm.stackprotector is missing");
+      AI = cast<AllocaInst>(SPCall->getArgOperand(1));
+    }
 
     // Set HasIRCheck to true, so that SelectionDAG will not generate its own
     // version. SelectionDAG called 'shouldEmitSDCheck' to check whether

@@ -36,10 +36,10 @@ define amdgpu_kernel void @load_v2i8_to_v2f32(<2 x float> addrspace(1)* noalias 
 ; GCN-LABEL: {{^}}load_v3i8_to_v3f32:
 ; GCN: {{buffer|flat}}_load_dword [[VAL:v[0-9]+]]
 ; GCN-NOT: v_cvt_f32_ubyte3_e32
-; GCN-DAG: v_cvt_f32_ubyte2_e32 v{{[0-9]+}}, [[VAL]]
-; GCN-DAG: v_cvt_f32_ubyte1_e32 v[[HIRESULT:[0-9]+]], [[VAL]]
+; GCN-DAG: v_cvt_f32_ubyte2_e32 v[[HIRESULT:[0-9]+]], [[VAL]]
+; GCN-DAG: v_cvt_f32_ubyte1_e32 v{{[0-9]+}}, [[VAL]]
 ; GCN-DAG: v_cvt_f32_ubyte0_e32 v[[LORESULT:[0-9]+]], [[VAL]]
-; GCN: buffer_store_dwordx2 v{{\[}}[[LORESULT]]:[[HIRESULT]]{{\]}},
+; GCN: buffer_store_dwordx3 v{{\[}}[[LORESULT]]:[[HIRESULT]]{{\]}},
 define amdgpu_kernel void @load_v3i8_to_v3f32(<3 x float> addrspace(1)* noalias %out, <3 x i8> addrspace(1)* noalias %in) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <3 x i8>, <3 x i8> addrspace(1)* %in, i32 %tid

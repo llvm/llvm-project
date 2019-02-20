@@ -1,0 +1,22 @@
+assert(host_os != "win", "loadable modules not supported on win")
+
+loadable_module("bugpoint-passes") {
+  output_name = "BugpointPasses"
+  deps = [
+    # BugpointPasses doesn't want to link in any LLVM code, it just
+    # needs its headers.
+    "//llvm/include/llvm/IR:public_tablegen",
+  ]
+  sources = [
+    "TestPasses.cpp",
+  ]
+
+  if (host_os == "linux") {
+    # The GN build currently doesn't globally pass -fPIC, but that's
+    # needed for building .so files on Linux.  Just pass it manually
+    # for loadable_modules for now.
+    cflags = [ "-fPIC" ]
+  }
+
+  # FIXME: Use bugpoint.exports to remove all exports.
+}

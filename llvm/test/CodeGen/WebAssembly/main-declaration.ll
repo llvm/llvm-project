@@ -14,6 +14,7 @@ define void @foo() {
 
 ; CHECK-NOT:   __original_main
 ; CHECK-LABEL: foo:
+; CHECK-NEXT:    .functype foo () -> ()
 ; CHECK-NEXT:    call main@FUNCTION
 ; CHECK-NEXT:    end_function
 ; CHECK-NOT:   __original_main

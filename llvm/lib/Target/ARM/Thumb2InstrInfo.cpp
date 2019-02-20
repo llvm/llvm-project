@@ -146,9 +146,7 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
       MFI.getObjectSize(FI), MFI.getObjectAlignment(FI));
 
-  if (RC == &ARM::GPRRegClass   || RC == &ARM::tGPRRegClass ||
-      RC == &ARM::tcGPRRegClass || RC == &ARM::rGPRRegClass ||
-      RC == &ARM::GPRnopcRegClass) {
+  if (ARM::GPRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(ARM::t2STRi12))
         .addReg(SrcReg, getKillRegState(isKill))
         .addFrameIndex(FI)
@@ -190,9 +188,7 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
-  if (RC == &ARM::GPRRegClass   || RC == &ARM::tGPRRegClass ||
-      RC == &ARM::tcGPRRegClass || RC == &ARM::rGPRRegClass ||
-      RC == &ARM::GPRnopcRegClass) {
+  if (ARM::GPRRegClass.hasSubClassEq(RC)) {
     BuildMI(MBB, I, DL, get(ARM::t2LDRi12), DestReg)
         .addFrameIndex(FI)
         .addImm(0)

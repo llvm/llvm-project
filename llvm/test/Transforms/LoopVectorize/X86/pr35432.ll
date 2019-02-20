@@ -40,8 +40,8 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i8 [[CONV3]], -1
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 -1, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP6]], [[TMP3]]
-; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP7]], i32 [[TMP6]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP7]], i32 [[TMP3]], i32 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[UMAX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], [[TMP5]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP9]], 8
@@ -50,8 +50,8 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i8 [[CONV3]], -1
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i8 [[TMP10]] to i32
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 -1, [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i32 [[TMP12]], [[TMP3]]
-; CHECK-NEXT:    [[UMAX1:%.*]] = select i1 [[TMP13]], i32 [[TMP12]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ugt i32 [[TMP3]], [[TMP12]]
+; CHECK-NEXT:    [[UMAX1:%.*]] = select i1 [[TMP13]], i32 [[TMP3]], i32 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[UMAX1]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP14]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = trunc i32 [[TMP15]] to i8

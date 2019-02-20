@@ -13,13 +13,10 @@ b0:
 }
 
 ; CHECK-LABEL: f1
-; No variable-shift rotates. Check for the default expansion code.
-; This is a rotate left by %a1(r1).
-; CHECK: r[[R10:[0-9]+]] = sub(#32,r1)
-; CHECK: r[[R11:[0-9]+]] = and(r1,#31)
-; CHECK: r[[R12:[0-9]+]] = and(r[[R10]],#31)
-; CHECK: r[[R13:[0-9]+]] = asl(r0,r[[R11]])
-; CHECK: r[[R13]] |= lsr(r0,r[[R12]])
+; This is a rotate left by %a1(r1). Use register-pair shift to implement it.
+; CHECK: r[[R10:[0-9]+]]:[[R11:[0-9]+]] = combine(r0,r0)
+; CHECK: r[[R12:[0-9]+]]:[[R13:[0-9]+]] = asl(r[[R10]]:[[R11]],r1)
+; CHECK: r0 = r[[R12]]
 define i32 @f1(i32 %a0, i32 %a1) #0 {
 b0:
   %v0 = shl i32 %a0, %a1
@@ -40,13 +37,9 @@ b0:
 }
 
 ; CHECK-LABEL: f3
-; No variable-shift rotates. Check for the default expansion code.
-; This is a rotate right by %a1(r1) that became a rotate left by 32-%a1.
-; CHECK: r[[R30:[0-9]+]] = sub(#32,r1)
-; CHECK: r[[R31:[0-9]+]] = and(r1,#31)
-; CHECK: r[[R32:[0-9]+]] = and(r[[R30]],#31)
-; CHECK: r[[R33:[0-9]+]] = asl(r0,r[[R32]])
-; CHECK: r[[R33]] |= lsr(r0,r[[R31]])
+; This is a rotate right by %a1(r1). Use register-pair shift to implement it.
+; CHECK: r[[R30:[0-9]+]]:[[R31:[0-9]+]] = combine(r0,r0)
+; CHECK: r[[R32:[0-9]+]]:[[R33:[0-9]+]] = lsr(r[[R30]]:[[R31]],r1)
 define i32 @f3(i32 %a0, i32 %a1) #0 {
 b0:
   %v0 = lshr i32 %a0, %a1
@@ -67,13 +60,10 @@ b0:
 }
 
 ; CHECK-LABEL: f5
-; No variable-shift rotates. Check for the default expansion code.
 ; This is a rotate left by %a1(r2).
-; CHECK: r[[R50:[0-9]+]] = sub(#64,r2)
-; CHECK: r[[R51:[0-9]+]] = and(r2,#63)
-; CHECK: r[[R52:[0-9]+]] = and(r[[R50]],#63)
-; CHECK: r[[R53:[0-9]+]]:[[R54:[0-9]+]] = asl(r1:0,r[[R51]])
-; CHECK: r[[R53]]:[[R54]] |= lsr(r1:0,r[[R52]])
+; CHECK: r[[R50:[0-9]+]]:[[R51:[0-9]+]] = asl(r1:0,r2)
+; CHECK: r[[R52:[0-9]+]] = sub(#64,r2)
+; CHECK: r[[R50]]:[[R51]] |= lsr(r1:0,r[[R52]])
 define i64 @f5(i64 %a0, i32 %a1) #0 {
 b0:
   %v0 = zext i32 %a1 to i64
@@ -96,13 +86,10 @@ b0:
 }
 
 ; CHECK-LABEL: f7
-; No variable-shift rotates. Check for the default expansion code.
-; This is a rotate right by %a1(r2) that became a rotate left by 64-%a1.
-; CHECK: r[[R70:[0-9]+]] = sub(#64,r2)
-; CHECK: r[[R71:[0-9]+]] = and(r2,#63)
-; CHECK: r[[R72:[0-9]+]] = and(r[[R70]],#63)
-; CHECK: r[[R73:[0-9]+]]:[[R75:[0-9]+]] = asl(r1:0,r[[R72]])
-; CHECK: r[[R73]]:[[R75]] |= lsr(r1:0,r[[R71]])
+; This is a rotate right by %a1(r2).
+; CHECK: r[[R70:[0-9]+]]:[[R71:[0-9]+]] = lsr(r1:0,r2)
+; CHECK: r[[R72:[0-9]+]] = sub(#64,r2)
+; CHECK: r[[R70]]:[[R71]] |= asl(r1:0,r[[R72]])
 define i64 @f7(i64 %a0, i32 %a1) #0 {
 b0:
   %v0 = zext i32 %a1 to i64

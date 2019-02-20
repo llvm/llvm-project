@@ -15,8 +15,7 @@ RUN: llvm-ar --format=gnu rc %t.a 0123456789abcde 0123456789abcdef foo/012345678
 RUN: cat %t.a | FileCheck -strict-whitespace %s
 
 CHECK:      !<arch>
-CHECK-NEXT: //                                              36        `
-CHECK-NEXT: 0123456789abcdef/
+CHECK-NEXT: //                                              18        `
 CHECK-NEXT: 0123456789abcdef/
 CHECK-NEXT: 0123456789abcde/0           0     0     644     4         `
 CHECK-NEXT: bar.
@@ -24,7 +23,7 @@ CHECK-SAME: /0              0           0     0     644     4         `
 CHECK-NEXT: zed.
 CHECK-SAME: 0123456789abcde/0           0     0     644     4         `
 CHECK-NEXT: bar2
-CHECK-SAME: /18             0           0     0     644     4         `
+CHECK-SAME: /0              0           0     0     644     4         `
 CHECK-NEXT: zed2
 
 RUN: rm -f %t.a
@@ -38,7 +37,7 @@ BSD-SAME: #1/16           0           0     0     644     20        `
 BSD-NEXT: 0123456789abcdefzed.
 
 RUN: rm -f %t.a
-RUN: llvm-ar --format=darwin rc %t.a 0123456789abcde 0123456789abcdef
+RUN: llvm-ar --format=darwin rcS %t.a 0123456789abcde 0123456789abcdef
 RUN: cat %t.a | FileCheck -strict-whitespace --check-prefix=DARWIN %s
 
 DARWIN:      !<arch>

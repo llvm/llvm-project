@@ -615,11 +615,17 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
       // the original loop body.
       if (Iter == 0)
         DT->changeImmediateDominator(Exit, cast<BasicBlock>(LVMap[Latch]));
+#ifdef EXPENSIVE_CHECKS
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
+#endif
     }
 
-    updateBranchWeights(InsertBot, cast<BranchInst>(VMap[LatchBR]), Iter,
+    auto *LatchBRCopy = cast<BranchInst>(VMap[LatchBR]);
+    updateBranchWeights(InsertBot, LatchBRCopy, Iter,
                         PeelCount, ExitWeight);
+    // Remove Loop metadata from the latch branch instruction
+    // because it is not the Loop's latch branch anymore.
+    LatchBRCopy->setMetadata(LLVMContext::MD_loop, nullptr);
 
     InsertTop = InsertBot;
     InsertBot = SplitBlock(InsertBot, InsertBot->getTerminator(), DT, LI);

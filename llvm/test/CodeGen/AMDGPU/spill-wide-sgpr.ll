@@ -45,11 +45,11 @@ ret:
 
 ; ALL-LABEL: {{^}}spill_sgpr_x4:
 ; SMEM: s_add_u32 m0, s3, 0x100{{$}}
-; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[12:15], m0 ; 16-byte Folded Spill
+; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[VALS:[0-9]+:[0-9]+]]{{\]}}, m0 ; 16-byte Folded Spill
 ; SMEM: s_cbranch_scc1
 
 ; SMEM: s_add_u32 m0, s3, 0x100{{$}}
-; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[12:15], m0 ; 16-byte Folded Reload
+; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[VALS]]{{\]}}, m0 ; 16-byte Folded Reload
 ; SMEM: s_dcache_wb
 ; SMEM: s_endpgm
 
@@ -94,15 +94,15 @@ ret:
 ; ALL-LABEL: {{^}}spill_sgpr_x8:
 
 ; SMEM: s_add_u32 m0, s3, 0x100{{$}}
-; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[16:19], m0 ; 16-byte Folded Spill
+; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[VALS:[0-9]+:[0-9]+]]{{\]}}, m0 ; 16-byte Folded Spill
 ; SMEM: s_add_u32 m0, s3, 0x110{{$}}
-; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[16:19], m0 ; 16-byte Folded Spill
+; SMEM: s_buffer_store_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[VALS]]{{\]}}, m0 ; 16-byte Folded Spill
 ; SMEM: s_cbranch_scc1
 
 ; SMEM: s_add_u32 m0, s3, 0x100{{$}}
-; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[16:19], m0 ; 16-byte Folded Reload
+; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[VALS]]{{\]}}, m0 ; 16-byte Folded Reload
 ; SMEM: s_add_u32 m0, s3, 0x110{{$}}
-; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s[16:19], m0 ; 16-byte Folded Reload
+; SMEM: s_buffer_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[}}[[VALS]]{{\]}}, m0 ; 16-byte Folded Reload
 
 ; SMEM: s_dcache_wb
 ; SMEM: s_endpgm

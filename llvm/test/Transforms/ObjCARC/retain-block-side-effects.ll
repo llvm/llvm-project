@@ -4,7 +4,7 @@
 ; objc_retainBlock stores into %repeater so the load from after the
 ; call isn't forwardable from the store before the call.
 
-; CHECK: %tmp16 = call i8* @objc_retainBlock(i8* %tmp15) [[NUW:#[0-9]+]]
+; CHECK: %tmp16 = call i8* @llvm.objc.retainBlock(i8* %tmp15) [[NUW:#[0-9]+]]
 ; CHECK: %tmp17 = bitcast i8* %tmp16 to void ()*
 ; CHECK: %tmp18 = load %struct.__block_byref_repeater*, %struct.__block_byref_repeater** %byref.forwarding, align 8
 ; CHECK: %repeater12 = getelementptr inbounds %struct.__block_byref_repeater, %struct.__block_byref_repeater* %tmp18, i64 0, i32 6
@@ -27,7 +27,7 @@ entry:
   %tmp14 = bitcast %struct.__block_byref_repeater* %repeater to i8*
   store i8* %tmp14, i8** %block.captured11, align 8
   %tmp15 = bitcast <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0*, i8* }>* %block to i8*
-  %tmp16 = call i8* @objc_retainBlock(i8* %tmp15) nounwind
+  %tmp16 = call i8* @llvm.objc.retainBlock(i8* %tmp15) nounwind
   %tmp17 = bitcast i8* %tmp16 to void ()*
   %tmp18 = load %struct.__block_byref_repeater*, %struct.__block_byref_repeater** %byref.forwarding, align 8
   %repeater12 = getelementptr inbounds %struct.__block_byref_repeater, %struct.__block_byref_repeater* %tmp18, i64 0, i32 6
@@ -36,7 +36,7 @@ entry:
   ret void
 }
 
-declare i8* @objc_retainBlock(i8*)
+declare i8* @llvm.objc.retainBlock(i8*)
 
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes [[NUW]] = { nounwind }

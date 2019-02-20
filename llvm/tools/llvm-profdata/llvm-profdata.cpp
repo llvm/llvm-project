@@ -123,6 +123,47 @@ static void handleMergeWriterError(Error E, StringRef WhenceFile = "",
   }
 }
 
+namespace {
+/// A remapper from original symbol names to new symbol names based on a file
+/// containing a list of mappings from old name to new name.
+class SymbolRemapper {
+  std::unique_ptr<MemoryBuffer> File;
+  DenseMap<StringRef, StringRef> RemappingTable;
+
+public:
+  /// Build a SymbolRemapper from a file containing a list of old/new symbols.
+  static std::unique_ptr<SymbolRemapper> create(StringRef InputFile) {
+    auto BufOrError = MemoryBuffer::getFileOrSTDIN(InputFile);
+    if (!BufOrError)
+      exitWithErrorCode(BufOrError.getError(), InputFile);
+
+    auto Remapper = llvm::make_unique<SymbolRemapper>();
+    Remapper->File = std::move(BufOrError.get());
+
+    for (line_iterator LineIt(*Remapper->File, /*SkipBlanks=*/true, '#');
+         !LineIt.is_at_eof(); ++LineIt) {
+      std::pair<StringRef, StringRef> Parts = LineIt->split(' ');
+      if (Parts.first.empty() || Parts.second.empty() ||
+          Parts.second.count(' ')) {
+        exitWithError("unexpected line in remapping file",
+                      (InputFile + ":" + Twine(LineIt.line_number())).str(),
+                      "expected 'old_symbol new_symbol'");
+      }
+      Remapper->RemappingTable.insert(Parts);
+    }
+    return Remapper;
+  }
+
+  /// Attempt to map the given old symbol into a new symbol.
+  ///
+  /// \return The new symbol, or \p Name if no such symbol was found.
+  StringRef operator()(StringRef Name) {
+    StringRef New = RemappingTable.lookup(Name);
+    return New.empty() ? Name : New;
+  }
+};
+}
+
 struct WeightedFile {
   std::string Filename;
   uint64_t Weight;
@@ -161,7 +202,8 @@ static bool isFatalError(instrprof_error IPE) {
 }
 
 /// Load an input into a writer context.
-static void loadInput(const WeightedFile &Input, WriterContext *WC) {
+static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
+                      WriterContext *WC) {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // If there's a pending hard error, don't do more work.
@@ -192,6 +234,8 @@ static void loadInput(const WeightedFile &Input, WriterContext *WC) {
   }
 
   for (auto &I : *Reader) {
+    if (Remapper)
+      I.Name = (*Remapper)(I.Name);
     const StringRef FuncName = I.Name;
     bool Reported = false;
     WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
@@ -236,6 +280,7 @@ static void mergeWriterContexts(WriterContext *Dst, WriterContext *Src) {
 }
 
 static void mergeInstrProfile(const WeightedFileVector &Inputs,
+                              SymbolRemapper *Remapper,
                               StringRef OutputFilename,
                               ProfileFormat OutputFormat, bool OutputSparse,
                               unsigned NumThreads) {
@@ -267,14 +312,14 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 
   if (NumThreads == 1) {
     for (const auto &Input : Inputs)
-      loadInput(Input, Contexts[0].get());
+      loadInput(Input, Remapper, Contexts[0].get());
   } else {
     ThreadPool Pool(NumThreads);
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
     for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Contexts[Ctx].get());
+      Pool.async(loadInput, Input, Remapper, Contexts[Ctx].get());
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
@@ -322,11 +367,43 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
   }
 }
 
+/// Make a copy of the given function samples with all symbol names remapped
+/// by the provided symbol remapper.
+static sampleprof::FunctionSamples
+remapSamples(const sampleprof::FunctionSamples &Samples,
+             SymbolRemapper &Remapper, sampleprof_error &Error) {
+  sampleprof::FunctionSamples Result;
+  Result.setName(Remapper(Samples.getName()));
+  Result.addTotalSamples(Samples.getTotalSamples());
+  Result.addHeadSamples(Samples.getHeadSamples());
+  for (const auto &BodySample : Samples.getBodySamples()) {
+    Result.addBodySamples(BodySample.first.LineOffset,
+                          BodySample.first.Discriminator,
+                          BodySample.second.getSamples());
+    for (const auto &Target : BodySample.second.getCallTargets()) {
+      Result.addCalledTargetSamples(BodySample.first.LineOffset,
+                                    BodySample.first.Discriminator,
+                                    Remapper(Target.first()), Target.second);
+    }
+  }
+  for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
+    sampleprof::FunctionSamplesMap &Target =
+        Result.functionSamplesAt(CallsiteSamples.first);
+    for (const auto &Callsite : CallsiteSamples.second) {
+      sampleprof::FunctionSamples Remapped =
+          remapSamples(Callsite.second, Remapper, Error);
+      MergeResult(Error, Target[Remapped.getName()].merge(Remapped));
+    }
+  }
+  return Result;
+}
+
 static sampleprof::SampleProfileFormat FormatMap[] = {
     sampleprof::SPF_None, sampleprof::SPF_Text, sampleprof::SPF_Compact_Binary,
     sampleprof::SPF_GCC, sampleprof::SPF_Binary};
 
 static void mergeSampleProfile(const WeightedFileVector &Inputs,
+                               SymbolRemapper *Remapper,
                                StringRef OutputFilename,
                                ProfileFormat OutputFormat) {
   using namespace sampleprof;
@@ -357,9 +434,13 @@ static void mergeSampleProfile(const WeightedFileVector &Inputs,
     for (StringMap<FunctionSamples>::iterator I = Profiles.begin(),
                                               E = Profiles.end();
          I != E; ++I) {
-      StringRef FName = I->first();
-      FunctionSamples &Samples = I->second;
-      sampleprof_error Result = ProfileMap[FName].merge(Samples, Input.Weight);
+      sampleprof_error Result = sampleprof_error::success;
+      FunctionSamples Remapped =
+          Remapper ? remapSamples(I->second, *Remapper, Result)
+                   : FunctionSamples();
+      FunctionSamples &Samples = Remapper ? Remapped : I->second;
+      StringRef FName = Samples.getName();
+      MergeResult(Result, ProfileMap[FName].merge(Samples, Input.Weight));
       if (Result != sampleprof_error::success) {
         std::error_code EC = make_error_code(Result);
         handleMergeWriterError(errorCodeToError(EC), Input.Filename, FName);
@@ -461,6 +542,10 @@ static int merge_main(int argc, const char *argv[]) {
   cl::opt<bool> DumpInputFileList(
       "dump-input-file-list", cl::init(false), cl::Hidden,
       cl::desc("Dump the list of input files and their weights, then exit"));
+  cl::opt<std::string> RemappingFile("remapping-file", cl::value_desc("file"),
+                                     cl::desc("Symbol remapping file"));
+  cl::alias RemappingFileA("r", cl::desc("Alias for --remapping-file"),
+                           cl::aliasopt(RemappingFile));
   cl::opt<std::string> OutputFilename("output", cl::value_desc("output"),
                                       cl::init("-"), cl::Required,
                                       cl::desc("Output file"));
@@ -509,11 +594,16 @@ static int merge_main(int argc, const char *argv[]) {
     return 0;
   }
 
+  std::unique_ptr<SymbolRemapper> Remapper;
+  if (!RemappingFile.empty())
+    Remapper = SymbolRemapper::create(RemappingFile);
+
   if (ProfileKind == instr)
-    mergeInstrProfile(WeightedInputs, OutputFilename, OutputFormat,
-                      OutputSparse, NumThreads);
+    mergeInstrProfile(WeightedInputs, Remapper.get(), OutputFilename,
+                      OutputFormat, OutputSparse, NumThreads);
   else
-    mergeSampleProfile(WeightedInputs, OutputFilename, OutputFormat);
+    mergeSampleProfile(WeightedInputs, Remapper.get(), OutputFilename,
+                       OutputFormat);
 
   return 0;
 }
@@ -600,12 +690,16 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                       decltype(MinCmp)>
       HottestFuncs(MinCmp);
 
+  // Add marker so that IR-level instrumentation round-trips properly.
+  if (TextFormat && IsIRInstr)
+    OS << ":ir\n";
+
   for (const auto &Func : *Reader) {
     bool Show =
         ShowAllFunctions || (!ShowFunction.empty() &&
                              Func.Name.find(ShowFunction) != Func.Name.npos);
 
-    bool doTextFormatDump = (Show && ShowCounts && TextFormat);
+    bool doTextFormatDump = (Show && TextFormat);
 
     if (doTextFormatDump) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
@@ -679,7 +773,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   if (Reader->hasError())
     exitWithError(Reader->getError(), Filename);
 
-  if (ShowCounts && TextFormat)
+  if (TextFormat)
     return 0;
   std::unique_ptr<ProfileSummary> PS(Builder.getSummary());
   OS << "Instrumentation level: "

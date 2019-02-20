@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIVI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,CIVI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=bonaire -amdgpu-atomic-optimizations=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,CIVI %s
+; RUN: llc -march=amdgcn -mcpu=tonga -amdgpu-atomic-optimizations=false -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,CIVI %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -amdgpu-atomic-optimizations=false -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}atomic_add_i64_offset:
 ; CIVI: buffer_atomic_add_x2 v{{\[[0-9]+:[0-9]+\]}}, off, s[{{[0-9]+}}:{{[0-9]+}}], 0 offset:32{{$}}

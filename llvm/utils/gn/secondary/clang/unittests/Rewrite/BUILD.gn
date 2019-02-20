@@ -1,0 +1,12 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("RewriteTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Rewrite",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "RewriteBufferTest.cpp",
+  ]
+}

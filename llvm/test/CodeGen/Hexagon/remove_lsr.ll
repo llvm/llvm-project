@@ -1,6 +1,6 @@
 ; Test fix for PR-13709.
-; RUN: llc -march=hexagon -mcpu=hexagonv4 < %s | FileCheck %s
-; CHECK: foo
+; RUN: llc -march=hexagon < %s | FileCheck %s
+; CHECK: f0
 ; CHECK-NOT: lsr(r{{[0-9]+}}:{{[0-9]+}}, #32)
 ; CHECK-NOT: lsr(r{{[0-9]+}}:{{[0-9]+}}, #32)
 
@@ -13,64 +13,64 @@
 ; This makes the lsr instruction dead and it gets removed subsequently
 ; by a dead code removal pass.
 
-%union.vect64 = type { i64 }
-%union.vect32 = type { i32 }
 
-define void @foo(%union.vect64* nocapture %sss_extracted_bit_rx_data_ptr,
- %union.vect32* nocapture %s_even, %union.vect32* nocapture %s_odd,
- i8* nocapture %scr_s_even_code_ptr, i8* nocapture %scr_s_odd_code_ptr)
- nounwind {
-entry:
-  %scevgep = getelementptr %union.vect64, %union.vect64* %sss_extracted_bit_rx_data_ptr, i32 1
-  %scevgep28 = getelementptr %union.vect32, %union.vect32* %s_odd, i32 1
-  %scevgep32 = getelementptr %union.vect32, %union.vect32* %s_even, i32 1
-  %scevgep36 = getelementptr i8, i8* %scr_s_odd_code_ptr, i32 1
-  %scevgep39 = getelementptr i8, i8* %scr_s_even_code_ptr, i32 1
-  br label %for.body
+%s.0 = type { i64 }
+%s.1 = type { i32 }
 
-for.body:                                         ; preds = %for.body, %entry
-  %lsr.iv42 = phi i32 [ %lsr.iv.next, %for.body ], [ 2, %entry ]
-  %lsr.iv40 = phi i8* [ %scevgep41, %for.body ], [ %scevgep39, %entry ]
-  %lsr.iv37 = phi i8* [ %scevgep38, %for.body ], [ %scevgep36, %entry ]
-  %lsr.iv33 = phi %union.vect32* [ %scevgep34, %for.body ], [ %scevgep32, %entry ]
-  %lsr.iv29 = phi %union.vect32* [ %scevgep30, %for.body ], [ %scevgep28, %entry ]
-  %lsr.iv = phi %union.vect64* [ %scevgep26, %for.body ], [ %scevgep, %entry ]
-  %predicate_1.023 = phi i8 [ undef, %entry ], [ %10, %for.body ]
-  %predicate.022 = phi i8 [ undef, %entry ], [ %9, %for.body ]
-  %val.021 = phi i64 [ undef, %entry ], [ %srcval, %for.body ]
-  %lsr.iv3335 = bitcast %union.vect32* %lsr.iv33 to i32*
-  %lsr.iv2931 = bitcast %union.vect32* %lsr.iv29 to i32*
-  %lsr.iv27 = bitcast %union.vect64* %lsr.iv to i64*
-  %0 = tail call i64 @llvm.hexagon.A2.vsubhs(i64 0, i64 %val.021)
-  %conv3 = sext i8 %predicate.022 to i32
-  %1 = trunc i64 %val.021 to i32
-  %2 = trunc i64 %0 to i32
-  %3 = tail call i32 @llvm.hexagon.C2.mux(i32 %conv3, i32 %1, i32 %2)
-  store i32 %3, i32* %lsr.iv3335, align 4
-  %conv8 = sext i8 %predicate_1.023 to i32
-  %4 = lshr i64 %val.021, 32
-  %5 = trunc i64 %4 to i32
-  %6 = lshr i64 %0, 32
-  %7 = trunc i64 %6 to i32
-  %8 = tail call i32 @llvm.hexagon.C2.mux(i32 %conv8, i32 %5, i32 %7)
-  store i32 %8, i32* %lsr.iv2931, align 4
-  %srcval = load i64, i64* %lsr.iv27, align 8
-  %9 = load i8, i8* %lsr.iv40, align 1
-  %10 = load i8, i8* %lsr.iv37, align 1
-  %lftr.wideiv = trunc i32 %lsr.iv42 to i8
-  %exitcond = icmp eq i8 %lftr.wideiv, 32
-  %scevgep26 = getelementptr %union.vect64, %union.vect64* %lsr.iv, i32 1
-  %scevgep30 = getelementptr %union.vect32, %union.vect32* %lsr.iv29, i32 1
-  %scevgep34 = getelementptr %union.vect32, %union.vect32* %lsr.iv33, i32 1
-  %scevgep38 = getelementptr i8, i8* %lsr.iv37, i32 1
-  %scevgep41 = getelementptr i8, i8* %lsr.iv40, i32 1
-  %lsr.iv.next = add i32 %lsr.iv42, 1
-  br i1 %exitcond, label %for.end, label %for.body
+define void @f0(%s.0* nocapture %a0, %s.1* nocapture %a1, %s.1* nocapture %a2, i8* nocapture %a3, i8* nocapture %a4) #0 {
+b0:
+  %v0 = getelementptr %s.0, %s.0* %a0, i32 1
+  %v1 = getelementptr %s.1, %s.1* %a2, i32 1
+  %v2 = getelementptr %s.1, %s.1* %a1, i32 1
+  %v3 = getelementptr i8, i8* %a4, i32 1
+  %v4 = getelementptr i8, i8* %a3, i32 1
+  br label %b1
 
-for.end:                                          ; preds = %for.body
+b1:                                               ; preds = %b1, %b0
+  %v5 = phi i32 [ %v38, %b1 ], [ 2, %b0 ]
+  %v6 = phi i8* [ %v37, %b1 ], [ %v4, %b0 ]
+  %v7 = phi i8* [ %v36, %b1 ], [ %v3, %b0 ]
+  %v8 = phi %s.1* [ %v35, %b1 ], [ %v2, %b0 ]
+  %v9 = phi %s.1* [ %v34, %b1 ], [ %v1, %b0 ]
+  %v10 = phi %s.0* [ %v33, %b1 ], [ %v0, %b0 ]
+  %v11 = phi i8 [ undef, %b0 ], [ %v30, %b1 ]
+  %v12 = phi i8 [ undef, %b0 ], [ %v29, %b1 ]
+  %v13 = phi i64 [ undef, %b0 ], [ %v28, %b1 ]
+  %v14 = bitcast %s.1* %v8 to i32*
+  %v15 = bitcast %s.1* %v9 to i32*
+  %v16 = bitcast %s.0* %v10 to i64*
+  %v17 = tail call i64 @llvm.hexagon.A2.vsubhs(i64 0, i64 %v13)
+  %v18 = sext i8 %v12 to i32
+  %v19 = trunc i64 %v13 to i32
+  %v20 = trunc i64 %v17 to i32
+  %v21 = tail call i32 @llvm.hexagon.C2.mux(i32 %v18, i32 %v19, i32 %v20)
+  store i32 %v21, i32* %v14, align 4
+  %v22 = sext i8 %v11 to i32
+  %v23 = lshr i64 %v13, 32
+  %v24 = trunc i64 %v23 to i32
+  %v25 = lshr i64 %v17, 32
+  %v26 = trunc i64 %v25 to i32
+  %v27 = tail call i32 @llvm.hexagon.C2.mux(i32 %v22, i32 %v24, i32 %v26)
+  store i32 %v27, i32* %v15, align 4
+  %v28 = load i64, i64* %v16, align 8
+  %v29 = load i8, i8* %v6, align 1
+  %v30 = load i8, i8* %v7, align 1
+  %v31 = trunc i32 %v5 to i8
+  %v32 = icmp eq i8 %v31, 32
+  %v33 = getelementptr %s.0, %s.0* %v10, i32 1
+  %v34 = getelementptr %s.1, %s.1* %v9, i32 1
+  %v35 = getelementptr %s.1, %s.1* %v8, i32 1
+  %v36 = getelementptr i8, i8* %v7, i32 1
+  %v37 = getelementptr i8, i8* %v6, i32 1
+  %v38 = add i32 %v5, 1
+  br i1 %v32, label %b2, label %b1
+
+b2:                                               ; preds = %b1
   ret void
 }
 
-declare i64 @llvm.hexagon.A2.vsubhs(i64, i64) nounwind readnone
+declare i64 @llvm.hexagon.A2.vsubhs(i64, i64) #1
+declare i32 @llvm.hexagon.C2.mux(i32, i32, i32) #1
 
-declare i32 @llvm.hexagon.C2.mux(i32, i32, i32) nounwind readnone
+attributes #0 = { nounwind "target-cpu"="hexagonv5" }
+attributes #1 = { nounwind readnone "target-cpu"="hexagonv5" }

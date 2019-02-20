@@ -13,6 +13,9 @@
 /* Define to 1 to enable crash overrides, and to 0 otherwise. */
 #cmakedefine01 ENABLE_CRASH_OVERRIDES
 
+/* Define to 1 to enable crash memory dumps, and to 0 otherwise. */
+#cmakedefine01 LLVM_ENABLE_CRASH_DUMPS
+
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
 

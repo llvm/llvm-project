@@ -62,7 +62,7 @@ private:
   MachineRegisterInfo *MRI;
   std::set<MachineInstr *> DeadInstrs;
 };
-}; // end anonymous namespace
+} // end anonymous namespace
 
 char RISCVMergeBaseOffsetOpt::ID = 0;
 INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, "riscv-merge-base-offset",

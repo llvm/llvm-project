@@ -14,7 +14,7 @@
   .byte  0x4   # DW_AT_language [DW_FORM_data1] (DW_LANG_C_plus_plus)
   .long  0     # DW_AT_name [DW_FORM_strp] ( .debug_str[0x00000000] = "test")
   .long  0     # DW_AT_comp_dir [DW_FORM_strp] ( .debug_str[0x00000000] = "test")
-  .long  0     # DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+  .long  0     # DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000 ".text")
   .long  0     # DW_AT_high_pc [DW_FORM_data4] (0x00000000)
 
 .section  .debug_abbrev,"",@progbits

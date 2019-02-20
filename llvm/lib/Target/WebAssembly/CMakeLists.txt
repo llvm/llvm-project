@@ -20,6 +20,7 @@ add_llvm_target(WebAssemblyCodeGen
   WebAssemblyCFGStackify.cpp
   WebAssemblyCFGSort.cpp
   WebAssemblyLateEHPrepare.cpp
+  WebAssemblyEHRestoreStackPointer.cpp
   WebAssemblyExceptionInfo.cpp
   WebAssemblyExplicitLocals.cpp
   WebAssemblyFastISel.cpp

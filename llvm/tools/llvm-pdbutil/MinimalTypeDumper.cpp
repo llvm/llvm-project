@@ -12,6 +12,7 @@
 #include "FormatUtil.h"
 #include "LinePrinter.h"
 
+#include "llvm-pdbutil.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -19,6 +20,7 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -27,15 +29,37 @@ using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 static std::string formatClassOptions(uint32_t IndentLevel,
-                                      ClassOptions Options) {
+                                      ClassOptions Options, TpiStream *Stream,
+                                      TypeIndex CurrentTypeIndex) {
   std::vector<std::string> Opts;
+
+  if (Stream && Stream->supportsTypeLookup() &&
+      !opts::dump::DontResolveForwardRefs &&
+      ((Options & ClassOptions::ForwardReference) != ClassOptions::None)) {
+    // If we're able to resolve forward references, do that.
+    Expected<TypeIndex> ETI =
+        Stream->findFullDeclForForwardRef(CurrentTypeIndex);
+    if (!ETI) {
+      consumeError(ETI.takeError());
+      PUSH_FLAG(ClassOptions, ForwardReference, Options, "forward ref (??\?)");
+    } else {
+      const char *Direction = (*ETI == CurrentTypeIndex)
+                                  ? "="
+                                  : ((*ETI < CurrentTypeIndex) ? "<-" : "->");
+      std::string Formatted =
+          formatv("forward ref ({0} {1})", Direction, *ETI).str();
+      PUSH_FLAG(ClassOptions, ForwardReference, Options, std::move(Formatted));
+    }
+  } else {
+    PUSH_FLAG(ClassOptions, ForwardReference, Options, "forward ref");
+  }
+
   PUSH_FLAG(ClassOptions, HasConstructorOrDestructor, Options,
             "has ctor / dtor");
   PUSH_FLAG(ClassOptions, ContainsNestedClass, Options,
             "contains nested class");
   PUSH_FLAG(ClassOptions, HasConversionOperator, Options,
             "conversion operator");
-  PUSH_FLAG(ClassOptions, ForwardReference, Options, "forward ref");
   PUSH_FLAG(ClassOptions, HasUniqueName, Options, "has unique name");
   PUSH_FLAG(ClassOptions, Intrinsic, Options, "intrin");
   PUSH_FLAG(ClassOptions, Nested, Options, "is nested");
@@ -194,6 +218,7 @@ static std::string formatFunctionOptions(FunctionOptions Options) {
 }
 
 Error MinimalTypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
+  CurrentTypeIndex = Index;
   // formatLine puts the newline at the beginning, so we use formatLine here
   // to start a new line, and then individual visit methods use format to
   // append to the existing line.
@@ -304,7 +329,8 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   P.formatLine("vtable: {0}, base list: {1}, field list: {2}",
                Class.VTableShape, Class.DerivationList, Class.FieldList);
   P.formatLine("options: {0}, sizeof {1}",
-               formatClassOptions(P.getIndentLevel(), Class.Options),
+               formatClassOptions(P.getIndentLevel(), Class.Options, Stream,
+                                  CurrentTypeIndex),
                Class.Size);
   return Error::success();
 }
@@ -316,7 +342,8 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
     P.formatLine("unique name: `{0}`", Union.UniqueName);
   P.formatLine("field list: {0}", Union.FieldList);
   P.formatLine("options: {0}, sizeof {1}",
-               formatClassOptions(P.getIndentLevel(), Union.Options),
+               formatClassOptions(P.getIndentLevel(), Union.Options, Stream,
+                                  CurrentTypeIndex),
                Union.Size);
   return Error::success();
 }
@@ -328,7 +355,8 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR, EnumRecord &Enum) {
   P.formatLine("field list: {0}, underlying type: {1}", Enum.FieldList,
                Enum.UnderlyingType);
   P.formatLine("options: {0}",
-               formatClassOptions(P.getIndentLevel(), Enum.Options));
+               formatClassOptions(P.getIndentLevel(), Enum.Options, Stream,
+                                  CurrentTypeIndex));
   return Error::success();
 }
 

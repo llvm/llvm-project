@@ -83,18 +83,21 @@ Error mergeIdRecords(MergingTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
 Error mergeTypeAndIdRecords(MergingTypeTableBuilder &DestIds,
                             MergingTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
-                            const CVTypeArray &IdsAndTypes);
+                            const CVTypeArray &IdsAndTypes,
+                            Optional<EndPrecompRecord> &EndPrecomp);
 
 Error mergeTypeAndIdRecords(GlobalTypeTableBuilder &DestIds,
                             GlobalTypeTableBuilder &DestTypes,
                             SmallVectorImpl<TypeIndex> &SourceToDest,
                             const CVTypeArray &IdsAndTypes,
-                            ArrayRef<GloballyHashedType> Hashes);
+                            ArrayRef<GloballyHashedType> Hashes,
+                            Optional<EndPrecompRecord> &EndPrecomp);
 
 Error mergeTypeRecords(GlobalTypeTableBuilder &Dest,
                        SmallVectorImpl<TypeIndex> &SourceToDest,
                        const CVTypeArray &Types,
-                       ArrayRef<GloballyHashedType> Hashes);
+                       ArrayRef<GloballyHashedType> Hashes,
+                       Optional<EndPrecompRecord> &EndPrecomp);
 
 Error mergeIdRecords(GlobalTypeTableBuilder &Dest, ArrayRef<TypeIndex> Types,
                      SmallVectorImpl<TypeIndex> &SourceToDest,

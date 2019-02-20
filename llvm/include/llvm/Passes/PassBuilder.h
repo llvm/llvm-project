@@ -19,6 +19,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include <vector>
@@ -32,10 +33,13 @@ class ModuleSummaryIndex;
 /// A struct capturing PGO tunables.
 struct PGOOptions {
   PGOOptions(std::string ProfileGenFile = "", std::string ProfileUseFile = "",
-             std::string SampleProfileFile = "", bool RunProfileGen = false,
-             bool SamplePGOSupport = false)
+             std::string SampleProfileFile = "",
+             std::string ProfileRemappingFile = "",
+             bool RunProfileGen = false, bool SamplePGOSupport = false)
       : ProfileGenFile(ProfileGenFile), ProfileUseFile(ProfileUseFile),
-        SampleProfileFile(SampleProfileFile), RunProfileGen(RunProfileGen),
+        SampleProfileFile(SampleProfileFile),
+        ProfileRemappingFile(ProfileRemappingFile),
+        RunProfileGen(RunProfileGen),
         SamplePGOSupport(SamplePGOSupport || !SampleProfileFile.empty()) {
     assert((RunProfileGen ||
             !SampleProfileFile.empty() ||
@@ -45,6 +49,7 @@ struct PGOOptions {
   std::string ProfileGenFile;
   std::string ProfileUseFile;
   std::string SampleProfileFile;
+  std::string ProfileRemappingFile;
   bool RunProfileGen;
   bool SamplePGOSupport;
 };
@@ -58,6 +63,7 @@ struct PGOOptions {
 class PassBuilder {
   TargetMachine *TM;
   Optional<PGOOptions> PGOOpt;
+  PassInstrumentationCallbacks *PIC;
 
 public:
   /// A struct to capture parsed pass pipeline names.
@@ -172,8 +178,9 @@ public:
   };
 
   explicit PassBuilder(TargetMachine *TM = nullptr,
-                       Optional<PGOOptions> PGOOpt = None)
-      : TM(TM), PGOOpt(PGOOpt) {}
+                       Optional<PGOOptions> PGOOpt = None,
+                       PassInstrumentationCallbacks *PIC = nullptr)
+      : TM(TM), PGOOpt(PGOOpt), PIC(PIC) {}
 
   /// Cross register the analysis managers through their proxies.
   ///
@@ -378,8 +385,9 @@ public:
   /// If the sequence of passes aren't all the exact same kind of pass, it will
   /// be an error. You cannot mix different levels implicitly, you must
   /// explicitly form a pass manager in which to nest passes.
-  bool parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
+  Error parsePassPipeline(ModulePassManager &MPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
 
   /// {{@ Parse a textual pass pipeline description into a specific PassManager
   ///
@@ -388,12 +396,15 @@ public:
   /// this is the valid pipeline text:
   ///
   ///   function(lpass)
-  bool parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
-  bool parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
-  bool parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText,
-                         bool VerifyEachPass = true, bool DebugLogging = false);
+  Error parsePassPipeline(CGSCCPassManager &CGPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
+  Error parsePassPipeline(FunctionPassManager &FPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
+  Error parsePassPipeline(LoopPassManager &LPM, StringRef PipelineText,
+                          bool VerifyEachPass = true,
+                          bool DebugLogging = false);
   /// @}}
 
   /// Parse a textual alias analysis pipeline into the provided AA manager.
@@ -411,7 +422,7 @@ public:
   /// Returns false if the text cannot be parsed cleanly. The specific state of
   /// the \p AA manager is unspecified if such an error is encountered and this
   /// returns false.
-  bool parseAAPipeline(AAManager &AA, StringRef PipelineText);
+  Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
   /// Register a callback for a default optimizer pipeline extension
   /// point
@@ -490,6 +501,18 @@ public:
     PipelineStartEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the very end of the
+  /// function optimization pipeline. A key difference between this and the
+  /// legacy PassManager's OptimizerLast callback is that this extension point
+  /// is not triggered at O0. Extensions to the O0 pipeline should append their
+  /// passes to the end of the overall pipeline.
+  void registerOptimizerLastEPCallback(
+      const std::function<void(FunctionPassManager &, OptimizationLevel)> &C) {
+    OptimizerLastEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -555,37 +578,42 @@ public:
     TopLevelPipelineParsingCallbacks.push_back(C);
   }
 
+  /// Enable or disable the hot/cold splitting optimization. By default, it is
+  /// disabled.
+  void setEnableHotColdSplitting(bool Enabled);
+
 private:
   static Optional<std::vector<PipelineElement>>
   parsePipelineText(StringRef Text);
 
-  bool parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
+  Error parseModulePass(ModulePassManager &MPM, const PipelineElement &E,
+                        bool VerifyEachPass, bool DebugLogging);
+  Error parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
                        bool VerifyEachPass, bool DebugLogging);
-  bool parseCGSCCPass(CGSCCPassManager &CGPM, const PipelineElement &E,
+  Error parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
+                          bool VerifyEachPass, bool DebugLogging);
+  Error parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
                       bool VerifyEachPass, bool DebugLogging);
-  bool parseFunctionPass(FunctionPassManager &FPM, const PipelineElement &E,
-                     bool VerifyEachPass, bool DebugLogging);
-  bool parseLoopPass(LoopPassManager &LPM, const PipelineElement &E,
-                     bool VerifyEachPass, bool DebugLogging);
   bool parseAAPassName(AAManager &AA, StringRef Name);
 
-  bool parseLoopPassPipeline(LoopPassManager &LPM,
-                             ArrayRef<PipelineElement> Pipeline,
-                             bool VerifyEachPass, bool DebugLogging);
-  bool parseFunctionPassPipeline(FunctionPassManager &FPM,
-                                 ArrayRef<PipelineElement> Pipeline,
-                                 bool VerifyEachPass, bool DebugLogging);
-  bool parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
+  Error parseLoopPassPipeline(LoopPassManager &LPM,
                               ArrayRef<PipelineElement> Pipeline,
                               bool VerifyEachPass, bool DebugLogging);
-  bool parseModulePassPipeline(ModulePassManager &MPM,
+  Error parseFunctionPassPipeline(FunctionPassManager &FPM,
+                                  ArrayRef<PipelineElement> Pipeline,
+                                  bool VerifyEachPass, bool DebugLogging);
+  Error parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
                                ArrayRef<PipelineElement> Pipeline,
                                bool VerifyEachPass, bool DebugLogging);
+  Error parseModulePassPipeline(ModulePassManager &MPM,
+                                ArrayRef<PipelineElement> Pipeline,
+                                bool VerifyEachPass, bool DebugLogging);
 
   void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
                          OptimizationLevel Level, bool RunProfileGen,
                          std::string ProfileGenFile,
-                         std::string ProfileUseFile);
+                         std::string ProfileUseFile,
+                         std::string ProfileRemappingFile);
 
   void invokePeepholeEPCallbacks(FunctionPassManager &, OptimizationLevel);
 
@@ -602,6 +630,8 @@ private:
       CGSCCOptimizerLateEPCallbacks;
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerStartEPCallbacks;
+  SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
+      OptimizerLastEPCallbacks;
   // Module callbacks
   SmallVector<std::function<void(ModulePassManager &)>, 2>
       PipelineStartEPCallbacks;
@@ -639,6 +669,8 @@ private:
   // AA callbacks
   SmallVector<std::function<bool(StringRef Name, AAManager &AA)>, 2>
       AAParsingCallbacks;
+  // Tunable passes
+  bool SplitColdCode = false;
 };
 
 /// This utility template takes care of adding require<> and invalidate<>

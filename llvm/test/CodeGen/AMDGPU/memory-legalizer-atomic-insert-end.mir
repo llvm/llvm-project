@@ -1,14 +1,8 @@
 # RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-memory-legalizer  %s -o - | FileCheck %s
 
 --- |
-  ; ModuleID = '<stdin>'
-  source_filename = "<stdin>"
-  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
-
-  ; Function Attrs: nounwind readnone
   declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-  ; Function Attrs: nounwind
   define amdgpu_kernel void @atomic_max_i32_noret(
       i32 addrspace(1)* %out,
       i32 addrspace(1)* addrspace(1)* %in,
@@ -85,8 +79,8 @@ body:             |
   bb.0 (%ir-block.0):
     successors: %bb.1.atomic(0x40000000), %bb.2.exit(0x40000000)
     liveins: $vgpr0, $sgpr0_sgpr1
- 
-    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(2)* undef`)
+
+    $sgpr4_sgpr5 = S_LOAD_DWORDX2_IMM $sgpr0_sgpr1, 11, 0 :: (non-temporal dereferenceable invariant load 8 from `i64 addrspace(4)* undef`)
     $vgpr1 = V_ASHRREV_I32_e32 31, $vgpr0, implicit $exec
     $vgpr1_vgpr2 = V_LSHL_B64 $vgpr0_vgpr1, 3, implicit $exec
     $sgpr7 = S_MOV_B32 61440
@@ -98,12 +92,12 @@ body:             |
     $sgpr2_sgpr3 = S_AND_SAVEEXEC_B64 killed $vcc, implicit-def $exec, implicit-def $scc, implicit $exec
     $sgpr2_sgpr3 = S_XOR_B64 $exec, killed $sgpr2_sgpr3, implicit-def dead $scc
     SI_MASK_BRANCH %bb.2.exit, implicit $exec
- 
+
   bb.1.atomic:
     successors: %bb.2.exit(0x80000000)
     liveins: $sgpr4_sgpr5_sgpr6_sgpr7:0x0000000C, $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr1_vgpr2_vgpr3_vgpr4:0x00000003
- 
-    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 15, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(2)* undef`)
+
+    $sgpr0 = S_LOAD_DWORD_IMM killed $sgpr0_sgpr1, 15, 0 :: (non-temporal dereferenceable invariant load 4 from `i32 addrspace(4)* undef`)
     dead $vgpr0 = V_MOV_B32_e32 -1, implicit $exec
     dead $vgpr0 = V_MOV_B32_e32 61440, implicit $exec
     $sgpr4_sgpr5 = S_MOV_B64 0
@@ -111,7 +105,7 @@ body:             |
     $vgpr0 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
     S_WAITCNT 3952
     BUFFER_ATOMIC_SMAX_ADDR64 killed $vgpr0, killed $vgpr1_vgpr2, killed $sgpr4_sgpr5_sgpr6_sgpr7, 0, 400, 0, implicit $exec :: (volatile load seq_cst 4 from %ir.gep)
- 
+
   bb.2.exit:
     liveins: $sgpr2_sgpr3
 

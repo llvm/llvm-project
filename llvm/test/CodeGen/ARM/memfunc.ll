@@ -388,6 +388,7 @@ entry:
 @arr7 = external global [7 x i8], align 1
 @arr8 = internal global [128 x i8] undef
 @arr9 = weak_odr global [128 x i8] undef
+@arr10 = dso_local global [8 x i8] c"\01\02\03\04\05\06\07\08", align 1
 define void @f9(i8* %dest, i32 %n) "no-frame-pointer-elim"="true" {
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @arr1, i32 0, i32 0), i32 %n, i1 false)
@@ -399,7 +400,7 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @arr7, i32 0, i32 0), i32 %n, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([128 x i8], [128 x i8]* @arr8, i32 0, i32 0), i32 %n, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([128 x i8], [128 x i8]* @arr9, i32 0, i32 0), i32 %n, i1 false)
-
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @arr10, i32 0, i32 0), i32 %n, i1 false)
   unreachable
 }
 
@@ -427,6 +428,11 @@ entry:
 ; CHECK-GNUEABI: arr8,128,16
 ; CHECK: .p2align 4
 ; CHECK: arr9:
+; CHECK-IOS: .p2align 3
+; CHECK-DARWIN: .p2align 2
+; CHECK-EABI: .p2align 2
+; CHECK-GNUEABI: .p2align 2
+; CHECK: arr10:
 
 ; CHECK-NOT: arr7:
 

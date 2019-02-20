@@ -2,6 +2,10 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+f -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV32IF %s
 
+; These tests are each targeted at a particular RISC-V FPU instruction. Most
+; other files in this folder exercise LLVM IR instructions that don't directly
+; match a RISC-V instruction.
+
 define float @fadd_s(float %a, float %b) nounwind {
 ; RV32IF-LABEL: fadd_s:
 ; RV32IF:       # %bb.0:
@@ -185,4 +189,79 @@ define i32 @fle_s(float %a, float %b) nounwind {
   %1 = fcmp ole float %a, %b
   %2 = zext i1 %1 to i32
   ret i32 %2
+}
+
+declare float @llvm.fma.f32(float, float, float)
+
+define float @fmadd_s(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fmadd_s:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    fmv.w.x ft1, a1
+; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fmadd.s ft0, ft2, ft1, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+  %1 = call float @llvm.fma.f32(float %a, float %b, float %c)
+  ret float %1
+}
+
+define float @fmsub_s(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fmsub_s:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    lui a2, %hi(.LCPI15_0)
+; RV32IF-NEXT:    addi a2, a2, %lo(.LCPI15_0)
+; RV32IF-NEXT:    flw ft1, 0(a2)
+; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV32IF-NEXT:    fmv.w.x ft1, a1
+; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fmsub.s ft0, ft2, ft1, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+  %c_ = fadd float 0.0, %c ; avoid negation using xor
+  %negc = fsub float -0.0, %c_
+  %1 = call float @llvm.fma.f32(float %a, float %b, float %negc)
+  ret float %1
+}
+
+define float @fnmadd_s(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmadd_s:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a2
+; RV32IF-NEXT:    lui a2, %hi(.LCPI16_0)
+; RV32IF-NEXT:    addi a2, a2, %lo(.LCPI16_0)
+; RV32IF-NEXT:    flw ft1, 0(a2)
+; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV32IF-NEXT:    fmv.w.x ft2, a0
+; RV32IF-NEXT:    fadd.s ft1, ft2, ft1
+; RV32IF-NEXT:    fmv.w.x ft2, a1
+; RV32IF-NEXT:    fnmadd.s ft0, ft1, ft2, ft0
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+  %a_ = fadd float 0.0, %a
+  %c_ = fadd float 0.0, %c
+  %nega = fsub float -0.0, %a_
+  %negc = fsub float -0.0, %c_
+  %1 = call float @llvm.fma.f32(float %nega, float %b, float %negc)
+  ret float %1
+}
+
+define float @fnmsub_s(float %a, float %b, float %c) nounwind {
+; RV32IF-LABEL: fnmsub_s:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmv.w.x ft0, a0
+; RV32IF-NEXT:    lui a0, %hi(.LCPI17_0)
+; RV32IF-NEXT:    addi a0, a0, %lo(.LCPI17_0)
+; RV32IF-NEXT:    flw ft1, 0(a0)
+; RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; RV32IF-NEXT:    fmv.w.x ft1, a2
+; RV32IF-NEXT:    fmv.w.x ft2, a1
+; RV32IF-NEXT:    fnmsub.s ft0, ft0, ft2, ft1
+; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    ret
+  %a_ = fadd float 0.0, %a
+  %nega = fsub float -0.0, %a_
+  %1 = call float @llvm.fma.f32(float %nega, float %b, float %c)
+  ret float %1
 }

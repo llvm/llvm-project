@@ -2900,7 +2900,7 @@ multiclass UnaryExtraVRRaSPair<string mnemonic, bits<16> opcode,
 }
 
 multiclass UnaryExtraVRRaSPairGeneric<string mnemonic, bits<16> opcode> {
-  let M4 = 0 in
+  let M4 = 0, Defs = [CC] in
     def "" : InstVRRa<opcode, (outs VR128:$V1),
                      (ins VR128:$V2, imm32zx4:$M3, imm32zx4:$M5),
                      mnemonic#"\t$V1, $V2, $M3, $M5", []>;
@@ -3472,7 +3472,9 @@ multiclass BinaryVRRbSPair<string mnemonic, bits<16> opcode,
 class BinaryVRRbSPairGeneric<string mnemonic, bits<16> opcode>
   : InstVRRb<opcode, (outs VR128:$V1),
              (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
-             mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+             mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []> {
+  let Defs = [CC];
+}
 
 // Declare a pair of instructions, one which sets CC and one which doesn't.
 // The CC-setting form ends with "S" and sets the low bit of M5.
@@ -3496,9 +3498,10 @@ multiclass BinaryExtraVRRbSPair<string mnemonic, bits<16> opcode,
 }
 
 multiclass BinaryExtraVRRbSPairGeneric<string mnemonic, bits<16> opcode> {
-  def "" : InstVRRb<opcode, (outs VR128:$V1),
-                   (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
-                   mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+  let Defs = [CC] in
+    def "" : InstVRRb<opcode, (outs VR128:$V1),
+                     (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+                     mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
   def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $M4",
                   (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
                                             imm32zx4:$M4, 0)>;
@@ -4185,9 +4188,10 @@ multiclass TernaryOptVRRbSPair<string mnemonic, bits<16> opcode,
 }
 
 multiclass TernaryOptVRRbSPairGeneric<string mnemonic, bits<16> opcode> {
-  def "" : InstVRRb<opcode, (outs VR128:$V1),
-                   (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
-                   mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
+  let Defs = [CC] in
+    def "" : InstVRRb<opcode, (outs VR128:$V1),
+                     (ins VR128:$V2, VR128:$V3, imm32zx4:$M4, imm32zx4:$M5),
+                     mnemonic#"\t$V1, $V2, $V3, $M4, $M5", []>;
   def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $M4",
                   (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
                                             imm32zx4:$M4, 0)>;
@@ -4385,7 +4389,8 @@ multiclass QuaternaryOptVRRdSPair<string mnemonic, bits<16> opcode,
 }
 
 multiclass QuaternaryOptVRRdSPairGeneric<string mnemonic, bits<16> opcode> {
-  def "" : QuaternaryVRRdGeneric<mnemonic, opcode>;
+  let Defs = [CC] in
+    def "" : QuaternaryVRRdGeneric<mnemonic, opcode>;
   def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $V4, $M5",
                   (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
                                             VR128:$V4, imm32zx4:$M5, 0)>;

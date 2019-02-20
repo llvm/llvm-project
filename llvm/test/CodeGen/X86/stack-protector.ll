@@ -94,7 +94,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test1b:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -135,7 +135,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test1c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -176,7 +176,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test1d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -255,7 +255,7 @@ entry:
 ; DARWIN-X64: callq ___stack_chk_fail
 
 ; MINGW-X64-LABEL: test2b:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -298,7 +298,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test2c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -341,7 +341,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test2d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -465,7 +465,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test3c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -506,7 +506,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test3d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -632,7 +632,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test4c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -675,7 +675,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test4d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -828,7 +828,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test5d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a.addr = alloca i8*, align 8
@@ -946,7 +946,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test6c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %retval = alloca i32, align 4
@@ -987,7 +987,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test6d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %retval = alloca i32, align 4
@@ -1099,7 +1099,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test7c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: .seh_endproc
 
   %a = alloca i32, align 4
@@ -1135,7 +1135,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test7d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %a = alloca i32, align 4
@@ -1240,7 +1240,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test8c:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %b = alloca i32, align 4
@@ -1275,7 +1275,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test8d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %b = alloca i32, align 4
@@ -2850,7 +2850,7 @@ entry:
 ; MSVC-I386: calll @__security_check_cookie@4
 
 ; MINGW-X64-LABEL: test19d:
-; MINGW-X64: mov{{l|q}} __stack_chk_guard
+; MINGW-X64: mov{{l|q}} .refptr.__stack_chk_guard
 ; MINGW-X64: callq __stack_chk_fail
 
   %c = alloca %struct.pair, align 4

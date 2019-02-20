@@ -1,26 +1,27 @@
 ; RUN: opt < %s -loop-accesses -analyze | FileCheck -check-prefix=OLDPM %s
 ; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck -check-prefix=NEWPM %s
 
-; Test to confirm LAA will find store to invariant address.
-; Inner loop has a store to invariant address.
+; Test to confirm LAA will find multiple stores to an invariant address in the
+; inner loop.
 ;
 ;  for(; i < itr; i++) {
 ;    for(; j < itr; j++) {
 ;      var1[i] = var2[j] + var1[i];
+;      var1[i]++;
 ;    }
 ;  }
 
 ; The LAA with the new PM is a loop pass so we go from inner to outer loops.
 
 ; OLDPM: for.cond1.preheader:
-; OLDPM:   Store to invariant address was not found in loop.
+; OLDPM:   Non vectorizable stores to invariant address were not found in loop.
 ; OLDPM: for.body3:
-; OLDPM:   Store to invariant address was found in loop.
+; OLDPM:   Non vectorizable stores to invariant address were found in loop.
 
 ; NEWPM: for.body3:
-; NEWPM:   Store to invariant address was found in loop.
+; NEWPM:   Non vectorizable stores to invariant address were found in loop.
 ; NEWPM: for.cond1.preheader:
-; NEWPM:   Store to invariant address was not found in loop.
+; NEWPM:   Non vectorizable stores to invariant address were not found in loop.
 
 define i32 @foo(i32* nocapture %var1, i32* nocapture readonly %var2, i32 %itr) #0 {
 entry:
@@ -45,6 +46,9 @@ for.body3:                                        ; preds = %for.body3, %for.bod
   %2 = load i32, i32* %arrayidx5, align 4
   %add = add nsw i32 %2, %1
   store i32 %add, i32* %arrayidx5, align 4
+  %3 = load i32, i32* %arrayidx5, align 4
+  %4 = add nsw i32 %3, 1
+  store i32 %4, i32* %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, %itr

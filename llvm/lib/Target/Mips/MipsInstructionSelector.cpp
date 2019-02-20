@@ -15,6 +15,7 @@
 #include "MipsRegisterBankInfo.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 
 #define DEBUG_TYPE "mips-isel"
 
@@ -144,6 +145,42 @@ bool MipsInstructionSelector::select(MachineInstr &I,
              .addMemOperand(*I.memoperands_begin());
     break;
   }
+  case G_UDIV:
+  case G_UREM:
+  case G_SDIV:
+  case G_SREM: {
+    unsigned HILOReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
+    bool IsSigned = I.getOpcode() == G_SREM || I.getOpcode() == G_SDIV;
+    bool IsDiv = I.getOpcode() == G_UDIV || I.getOpcode() == G_SDIV;
+
+    MachineInstr *PseudoDIV, *PseudoMove;
+    PseudoDIV = BuildMI(MBB, I, I.getDebugLoc(),
+                        TII.get(IsSigned ? Mips::PseudoSDIV : Mips::PseudoUDIV))
+                    .addDef(HILOReg)
+                    .add(I.getOperand(1))
+                    .add(I.getOperand(2));
+    if (!constrainSelectedInstRegOperands(*PseudoDIV, TII, TRI, RBI))
+      return false;
+
+    PseudoMove = BuildMI(MBB, I, I.getDebugLoc(),
+                         TII.get(IsDiv ? Mips::PseudoMFLO : Mips::PseudoMFHI))
+                     .addDef(I.getOperand(0).getReg())
+                     .addUse(HILOReg);
+    if (!constrainSelectedInstRegOperands(*PseudoMove, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
+  case G_SELECT: {
+    // Handle operands with pointer type.
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::MOVN_I_I))
+             .add(I.getOperand(0))
+             .add(I.getOperand(2))
+             .add(I.getOperand(1))
+             .add(I.getOperand(3));
+    break;
+  }
   case G_CONSTANT: {
     int Imm = I.getOperand(1).getCImm()->getValue().getLimitedValue();
     unsigned LUiReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
@@ -193,7 +230,85 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     I.eraseFromParent();
     return true;
   }
+  case G_ICMP: {
+    struct Instr {
+      unsigned Opcode, Def, LHS, RHS;
+      Instr(unsigned Opcode, unsigned Def, unsigned LHS, unsigned RHS)
+          : Opcode(Opcode), Def(Def), LHS(LHS), RHS(RHS){};
 
+      bool hasImm() const {
+        if (Opcode == Mips::SLTiu || Opcode == Mips::XORi)
+          return true;
+        return false;
+      }
+    };
+
+    SmallVector<struct Instr, 2> Instructions;
+    unsigned ICMPReg = I.getOperand(0).getReg();
+    unsigned Temp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    unsigned LHS = I.getOperand(2).getReg();
+    unsigned RHS = I.getOperand(3).getReg();
+    CmpInst::Predicate Cond =
+        static_cast<CmpInst::Predicate>(I.getOperand(1).getPredicate());
+
+    switch (Cond) {
+    case CmpInst::ICMP_EQ: // LHS == RHS -> (LHS ^ RHS) < 1
+      Instructions.emplace_back(Mips::XOR, Temp, LHS, RHS);
+      Instructions.emplace_back(Mips::SLTiu, ICMPReg, Temp, 1);
+      break;
+    case CmpInst::ICMP_NE: // LHS != RHS -> 0 < (LHS ^ RHS)
+      Instructions.emplace_back(Mips::XOR, Temp, LHS, RHS);
+      Instructions.emplace_back(Mips::SLTu, ICMPReg, Mips::ZERO, Temp);
+      break;
+    case CmpInst::ICMP_UGT: // LHS >  RHS -> RHS < LHS
+      Instructions.emplace_back(Mips::SLTu, ICMPReg, RHS, LHS);
+      break;
+    case CmpInst::ICMP_UGE: // LHS >= RHS -> !(LHS < RHS)
+      Instructions.emplace_back(Mips::SLTu, Temp, LHS, RHS);
+      Instructions.emplace_back(Mips::XORi, ICMPReg, Temp, 1);
+      break;
+    case CmpInst::ICMP_ULT: // LHS <  RHS -> LHS < RHS
+      Instructions.emplace_back(Mips::SLTu, ICMPReg, LHS, RHS);
+      break;
+    case CmpInst::ICMP_ULE: // LHS <= RHS -> !(RHS < LHS)
+      Instructions.emplace_back(Mips::SLTu, Temp, RHS, LHS);
+      Instructions.emplace_back(Mips::XORi, ICMPReg, Temp, 1);
+      break;
+    case CmpInst::ICMP_SGT: // LHS >  RHS -> RHS < LHS
+      Instructions.emplace_back(Mips::SLT, ICMPReg, RHS, LHS);
+      break;
+    case CmpInst::ICMP_SGE: // LHS >= RHS -> !(LHS < RHS)
+      Instructions.emplace_back(Mips::SLT, Temp, LHS, RHS);
+      Instructions.emplace_back(Mips::XORi, ICMPReg, Temp, 1);
+      break;
+    case CmpInst::ICMP_SLT: // LHS <  RHS -> LHS < RHS
+      Instructions.emplace_back(Mips::SLT, ICMPReg, LHS, RHS);
+      break;
+    case CmpInst::ICMP_SLE: // LHS <= RHS -> !(RHS < LHS)
+      Instructions.emplace_back(Mips::SLT, Temp, RHS, LHS);
+      Instructions.emplace_back(Mips::XORi, ICMPReg, Temp, 1);
+      break;
+    default:
+      return false;
+    }
+
+    MachineIRBuilder B(I);
+    for (const struct Instr &Instruction : Instructions) {
+      MachineInstrBuilder MIB = B.buildInstr(
+          Instruction.Opcode, {Instruction.Def}, {Instruction.LHS});
+
+      if (Instruction.hasImm())
+        MIB.addImm(Instruction.RHS);
+      else
+        MIB.addUse(Instruction.RHS);
+
+      if (!MIB.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+
+    I.eraseFromParent();
+    return true;
+  }
   default:
     return false;
   }

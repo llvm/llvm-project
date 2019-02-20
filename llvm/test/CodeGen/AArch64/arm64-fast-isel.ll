@@ -30,11 +30,11 @@ define void @t1(i64 %a) nounwind {
 define zeroext i1 @i1(i1 %a) nounwind {
 entry:
 ; CHECK: @i1
-; CHECK: and w0, w0, #0x1
-; CHECK: strb w0, [sp, #15]
-; CHECK: ldrb w0, [sp, #15]
-; CHECK: and w0, w0, #0x1
-; CHECK: and w0, w0, #0x1
+; CHECK: and [[REG:w[0-9]+]], w0, #0x1
+; CHECK: strb [[REG]], [sp, #15]
+; CHECK: ldrb [[REG1:w[0-9]+]], [sp, #15]
+; CHECK: and [[REG2:w[0-9]+]], [[REG1]], #0x1
+; CHECK: and w0, [[REG2]], #0x1
 ; CHECK: add sp, sp, #16
 ; CHECK: ret
   %a.addr = alloca i1, align 1

@@ -22,6 +22,7 @@
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugCrossExSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugCrossImpSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugInlineeLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugLinesSubsection.h"
 #include "llvm/DebugInfo/CodeView/DebugStringTableSubsection.h"
@@ -64,6 +65,16 @@ DumpOutputStyle::DumpOutputStyle(InputFile &File)
 
 PDBFile &DumpOutputStyle::getPdb() { return File.pdb(); }
 object::COFFObjectFile &DumpOutputStyle::getObj() { return File.obj(); }
+
+void DumpOutputStyle::printStreamNotValidForObj() {
+  AutoIndent Indent(P, 4);
+  P.formatLine("Dumping this stream is not valid for object files");
+}
+
+void DumpOutputStyle::printStreamNotPresent(StringRef StreamName) {
+  AutoIndent Indent(P, 4);
+  P.formatLine("{0} stream not present", StreamName);
+}
 
 Error DumpOutputStyle::dump() {
   if (opts::dump::DumpSummary) {
@@ -129,6 +140,11 @@ Error DumpOutputStyle::dump() {
 
   if (opts::dump::DumpXme) {
     if (auto EC = dumpXme())
+      return EC;
+  }
+
+  if (opts::dump::DumpFpo) {
+    if (auto EC = dumpFpo())
       return EC;
   }
 
@@ -199,13 +215,13 @@ static void printHeader(LinePrinter &P, const Twine &S) {
 Error DumpOutputStyle::dumpFileSummary() {
   printHeader(P, "Summary");
 
-  ExitOnError Err("Invalid PDB Format: ");
-
-  AutoIndent Indent(P);
   if (File.isObj()) {
-    P.formatLine("Dumping File summary is not valid for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
+
+  AutoIndent Indent(P);
+  ExitOnError Err("Invalid PDB Format: ");
 
   P.formatLine("Block Size: {0}", getPdb().getBlockSize());
   P.formatLine("Number of blocks: {0}", getPdb().getBlockCount());
@@ -234,7 +250,7 @@ Error DumpOutputStyle::dumpFileSummary() {
 static StatCollection getSymbolStats(const SymbolGroup &SG,
                                      StatCollection &CumulativeStats) {
   StatCollection Stats;
-  if (SG.getFile().isPdb()) {
+  if (SG.getFile().isPdb() && SG.hasDebugStream()) {
     // For PDB files, all symbols are packed into one stream.
     for (const auto &S : SG.getPdbModuleStream().symbols(nullptr)) {
       Stats.update(S.kind(), S.length());
@@ -326,11 +342,12 @@ static bool shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group) {
 Error DumpOutputStyle::dumpStreamSummary() {
   printHeader(P, "Streams");
 
-  AutoIndent Indent(P);
   if (File.isObj()) {
-    P.formatLine("Dumping streams is not valid for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
+
+  AutoIndent Indent(P);
 
   if (StreamPurposes.empty())
     discoverStreamPurposes(getPdb(), StreamPurposes);
@@ -527,18 +544,18 @@ static void dumpSectionContrib(LinePrinter &P, const SectionContrib2 &SC,
 
 Error DumpOutputStyle::dumpModules() {
   printHeader(P, "Modules");
-  AutoIndent Indent(P);
 
   if (File.isObj()) {
-    P.formatLine("Dumping modules is not supported for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
 
   if (!getPdb().hasPDBDbiStream()) {
-    P.formatLine("DBI Stream not present");
+    printStreamNotPresent("DBI");
     return Error::success();
   }
 
+  AutoIndent Indent(P);
   ExitOnError Err("Unexpected error processing modules: ");
 
   auto &Stream = Err(getPdb().getPDBDbiStream());
@@ -570,7 +587,12 @@ Error DumpOutputStyle::dumpModuleFiles() {
   printHeader(P, "Files");
 
   if (File.isObj()) {
-    P.formatLine("Dumping files is not valid for object files");
+    printStreamNotValidForObj();
+    return Error::success();
+  }
+
+  if (!getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
     return Error::success();
   }
 
@@ -590,6 +612,11 @@ Error DumpOutputStyle::dumpModuleFiles() {
 
 Error DumpOutputStyle::dumpSymbolStats() {
   printHeader(P, "Module Stats");
+
+  if (File.isPdb() && !getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
 
   ExitOnError Err("Unexpected error processing modules: ");
 
@@ -625,9 +652,9 @@ Error DumpOutputStyle::dumpSymbolStats() {
     }
   });
 
-  P.printLine("  Summary |");
-  AutoIndent Indent(P, 4);
   if (SymStats.Totals.Count > 0) {
+    P.printLine("  Summary |");
+    AutoIndent Indent(P, 4);
     printModuleDetailStats<SymbolKind>(P, "Symbols", SymStats);
     printModuleDetailStats<DebugSubsectionKind>(P, "Chunks", ChunkStats);
   }
@@ -680,6 +707,11 @@ static uint32_t getLongestTypeLeafName(const StatCollection &Stats) {
 Error DumpOutputStyle::dumpUdtStats() {
   printHeader(P, "S_UDT Record Stats");
 
+  if (File.isPdb() && !getPdb().hasPDBGlobalsStream()) {
+    printStreamNotPresent("Globals");
+    return Error::success();
+  }
+
   StatCollection UdtStats;
   StatCollection UdtTargetStats;
   AutoIndent Indent(P, 4);
@@ -726,11 +758,6 @@ Error DumpOutputStyle::dumpUdtStats() {
   P.NewLine();
 
   if (File.isPdb()) {
-    if (!getPdb().hasPDBGlobalsStream()) {
-      P.printLine("- Error: globals stream not present");
-      return Error::success();
-    }
-
     auto &SymbolRecords = cantFail(getPdb().getPDBSymbolStream());
     auto ExpGlobals = getPdb().getPDBGlobalsStream();
     if (!ExpGlobals)
@@ -839,6 +866,11 @@ static void typesetLinesAndColumns(LinePrinter &P, uint32_t Start,
 Error DumpOutputStyle::dumpLines() {
   printHeader(P, "Lines");
 
+  if (File.isPdb() && !getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
   uint32_t LastModi = UINT32_MAX;
   uint32_t LastNameIndex = UINT32_MAX;
   iterateModuleSubsections<DebugLinesSubsectionRef>(
@@ -875,6 +907,11 @@ Error DumpOutputStyle::dumpLines() {
 Error DumpOutputStyle::dumpInlineeLines() {
   printHeader(P, "Inlinee Lines");
 
+  if (File.isPdb() && !getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
   iterateModuleSubsections<DebugInlineeLinesSubsectionRef>(
       File, PrintScope{P, 2},
       [this](uint32_t Modi, const SymbolGroup &Strings,
@@ -893,6 +930,12 @@ Error DumpOutputStyle::dumpInlineeLines() {
 
 Error DumpOutputStyle::dumpXmi() {
   printHeader(P, "Cross Module Imports");
+
+  if (File.isPdb() && !getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
   iterateModuleSubsections<DebugCrossModuleImportsSubsectionRef>(
       File, PrintScope{P, 2},
       [this](uint32_t Modi, const SymbolGroup &Strings,
@@ -929,6 +972,11 @@ Error DumpOutputStyle::dumpXmi() {
 Error DumpOutputStyle::dumpXme() {
   printHeader(P, "Cross Module Exports");
 
+  if (File.isPdb() && !getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
   iterateModuleSubsections<DebugCrossModuleExportsSubsectionRef>(
       File, PrintScope{P, 2},
       [this](uint32_t Modi, const SymbolGroup &Strings,
@@ -940,6 +988,111 @@ Error DumpOutputStyle::dumpXme() {
         }
       });
 
+  return Error::success();
+}
+
+std::string formatFrameType(object::frame_type FT) {
+  switch (FT) {
+  case object::frame_type::Fpo:
+    return "FPO";
+  case object::frame_type::NonFpo:
+    return "Non-FPO";
+  case object::frame_type::Trap:
+    return "Trap";
+  case object::frame_type::Tss:
+    return "TSS";
+  }
+  return "<unknown>";
+}
+
+Error DumpOutputStyle::dumpOldFpo(PDBFile &File) {
+  printHeader(P, "Old FPO Data");
+
+  ExitOnError Err("Error dumping old fpo data:");
+  auto &Dbi = Err(File.getPDBDbiStream());
+
+  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::FPO);
+  if (Index == kInvalidStreamIndex) {
+    printStreamNotPresent("FPO");
+    return Error::success();
+  }
+
+  std::unique_ptr<MappedBlockStream> OldFpo = File.createIndexedStream(Index);
+  BinaryStreamReader Reader(*OldFpo);
+  FixedStreamArray<object::FpoData> Records;
+  Err(Reader.readArray(Records,
+                       Reader.bytesRemaining() / sizeof(object::FpoData)));
+
+  P.printLine("  RVA    | Code | Locals | Params | Prolog | Saved Regs | Use "
+              "BP | Has SEH | Frame Type");
+
+  for (const object::FpoData &FD : Records) {
+    P.formatLine("{0:X-8} | {1,4} | {2,6} | {3,6} | {4,6} | {5,10} | {6,6} | "
+                 "{7,7} | {8,9}",
+                 uint32_t(FD.Offset), uint32_t(FD.Size), uint32_t(FD.NumLocals),
+                 uint32_t(FD.NumParams), FD.getPrologSize(),
+                 FD.getNumSavedRegs(), FD.useBP(), FD.hasSEH(),
+                 formatFrameType(FD.getFP()));
+  }
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpNewFpo(PDBFile &File) {
+  printHeader(P, "New FPO Data");
+
+  ExitOnError Err("Error dumping new fpo data:");
+  auto &Dbi = Err(File.getPDBDbiStream());
+
+  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::NewFPO);
+  if (Index == kInvalidStreamIndex) {
+    printStreamNotPresent("New FPO");
+    return Error::success();
+  }
+
+  std::unique_ptr<MappedBlockStream> NewFpo = File.createIndexedStream(Index);
+
+  DebugFrameDataSubsectionRef FDS;
+  if (auto EC = FDS.initialize(*NewFpo))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid new fpo stream");
+
+  P.printLine("  RVA    | Code | Locals | Params | Stack | Prolog | Saved Regs "
+              "| Has SEH | Has C++EH | Start | Program");
+  for (const FrameData &FD : FDS) {
+    bool IsFuncStart = FD.Flags & FrameData::IsFunctionStart;
+    bool HasEH = FD.Flags & FrameData::HasEH;
+    bool HasSEH = FD.Flags & FrameData::HasSEH;
+
+    auto &StringTable = Err(File.getStringTable());
+
+    auto Program = Err(StringTable.getStringForID(FD.FrameFunc));
+    P.formatLine("{0:X-8} | {1,4} | {2,6} | {3,6} | {4,5} | {5,6} | {6,10} | "
+                 "{7,7} | {8,9} | {9,5} | {10}",
+                 uint32_t(FD.RvaStart), uint32_t(FD.CodeSize),
+                 uint32_t(FD.LocalSize), uint32_t(FD.ParamsSize),
+                 uint32_t(FD.MaxStackSize), uint16_t(FD.PrologSize),
+                 uint16_t(FD.SavedRegsSize), HasSEH, HasEH, IsFuncStart,
+                 Program);
+  }
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpFpo() {
+  if (!File.isPdb()) {
+    printStreamNotValidForObj();
+    return Error::success();
+  }
+
+  PDBFile &File = getPdb();
+  if (!File.hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
+  if (auto EC = dumpOldFpo(File))
+    return EC;
+  if (auto EC = dumpNewFpo(File))
+    return EC;
   return Error::success();
 }
 
@@ -965,7 +1118,7 @@ Error DumpOutputStyle::dumpStringTableFromPdb() {
 
       std::vector<uint32_t> SortedIDs(IS->name_ids().begin(),
                                       IS->name_ids().end());
-      llvm::sort(SortedIDs.begin(), SortedIDs.end());
+      llvm::sort(SortedIDs);
       for (uint32_t I : SortedIDs) {
         auto ES = IS->getStringForID(I);
         llvm::SmallString<32> Str;
@@ -1037,12 +1190,13 @@ Error DumpOutputStyle::dumpStringTableFromObj() {
 
 Error DumpOutputStyle::dumpNamedStreams() {
   printHeader(P, "Named Streams");
-  AutoIndent Indent(P, 2);
 
   if (File.isObj()) {
-    P.formatLine("Dumping Named Streams is only supported for PDB files.");
+    printStreamNotValidForObj();
     return Error::success();
   }
+
+  AutoIndent Indent(P);
   ExitOnError Err("Invalid PDB File: ");
 
   auto &IS = Err(File.pdb().getPDBInfoStream());
@@ -1087,13 +1241,13 @@ static void
 dumpFullTypeStream(LinePrinter &Printer, LazyRandomTypeCollection &Types,
                    uint32_t NumTypeRecords, uint32_t NumHashBuckets,
                    FixedStreamArray<support::ulittle32_t> HashValues,
-                   bool Bytes, bool Extras) {
+                   TpiStream *Stream, bool Bytes, bool Extras) {
 
   Printer.formatLine("Showing {0:N} records", NumTypeRecords);
   uint32_t Width = NumDigits(TypeIndex::FirstNonSimpleIndex + NumTypeRecords);
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
-                           NumHashBuckets, HashValues);
+                           NumHashBuckets, HashValues, Stream);
 
   if (auto EC = codeview::visitTypeStream(Types, V)) {
     Printer.formatLine("An error occurred dumping type records: {0}",
@@ -1109,7 +1263,8 @@ static void dumpPartialTypeStream(LinePrinter &Printer,
       NumDigits(TypeIndex::FirstNonSimpleIndex + Stream.getNumTypeRecords());
 
   MinimalTypeDumpVisitor V(Printer, Width + 2, Bytes, Extras, Types,
-                           Stream.getNumHashBuckets(), Stream.getHashValues());
+                           Stream.getNumHashBuckets(), Stream.getHashValues(),
+                           &Stream);
 
   if (opts::dump::DumpTypeDependents) {
     // If we need to dump all dependents, then iterate each index and find
@@ -1171,7 +1326,8 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     Types.reset(Reader, 100);
 
     if (opts::dump::DumpTypes) {
-      dumpFullTypeStream(P, Types, 0, 0, {}, opts::dump::DumpTypeData, false);
+      dumpFullTypeStream(P, Types, 0, 0, {}, nullptr, opts::dump::DumpTypeData,
+                         false);
     } else if (opts::dump::DumpTypeExtras) {
       auto LocalHashes = LocallyHashedType::hashTypeCollection(Types);
       auto GlobalHashes = GloballyHashedType::hashTypeCollection(Types);
@@ -1204,7 +1360,6 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
     printHeader(P, "Types (IPI Stream)");
   }
 
-  AutoIndent Indent(P);
   assert(!File.isObj());
 
   bool Present = false;
@@ -1229,10 +1384,11 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
   }
 
   if (!Present) {
-    P.formatLine("Stream not present");
+    printStreamNotPresent(StreamIdx == StreamTPI ? "TPI" : "IPI");
     return Error::success();
   }
 
+  AutoIndent Indent(P);
   ExitOnError Err("Unexpected error processing types: ");
 
   auto &Stream = Err((StreamIdx == StreamTPI) ? getPdb().getPDBTpiStream()
@@ -1240,11 +1396,14 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
 
   auto &Types = (StreamIdx == StreamTPI) ? File.types() : File.ids();
 
+  // Enable resolving forward decls.
+  Stream.buildHashMap();
+
   if (DumpTypes || !Indices.empty()) {
     if (Indices.empty())
       dumpFullTypeStream(P, Types, Stream.getNumTypeRecords(),
                          Stream.getNumHashBuckets(), Stream.getHashValues(),
-                         DumpBytes, DumpExtras);
+                         &Stream, DumpBytes, DumpExtras);
     else {
       std::vector<TypeIndex> TiList(Indices.begin(), Indices.end());
       dumpPartialTypeStream(P, Types, Stream, TiList, DumpBytes, DumpExtras,
@@ -1261,19 +1420,21 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
       P.formatLine("TI: {0}, Offset: {1}", IO.Type, fmtle(IO.Offset));
     }
 
-    P.NewLine();
-    P.formatLine("Hash Adjusters:");
-    auto &Adjusters = Stream.getHashAdjusters();
-    auto &Strings = Err(getPdb().getStringTable());
-    for (const auto &A : Adjusters) {
-      AutoIndent Indent2(P);
-      auto ExpectedStr = Strings.getStringForID(A.first);
-      TypeIndex TI(A.second);
-      if (ExpectedStr)
-        P.formatLine("`{0}` -> {1}", *ExpectedStr, TI);
-      else {
-        P.formatLine("unknown str id ({0}) -> {1}", A.first, TI);
-        consumeError(ExpectedStr.takeError());
+    if (getPdb().hasPDBStringTable()) {
+      P.NewLine();
+      P.formatLine("Hash Adjusters:");
+      auto &Adjusters = Stream.getHashAdjusters();
+      auto &Strings = Err(getPdb().getStringTable());
+      for (const auto &A : Adjusters) {
+        AutoIndent Indent2(P);
+        auto ExpectedStr = Strings.getStringForID(A.first);
+        TypeIndex TI(A.second);
+        if (ExpectedStr)
+          P.formatLine("`{0}` -> {1}", *ExpectedStr, TI);
+        else {
+          P.formatLine("unknown str id ({0}) -> {1}", A.first, TI);
+          consumeError(ExpectedStr.takeError());
+        }
       }
     }
   }
@@ -1321,12 +1482,12 @@ Error DumpOutputStyle::dumpModuleSymsForObj() {
 Error DumpOutputStyle::dumpModuleSymsForPdb() {
   printHeader(P, "Symbols");
 
-  AutoIndent Indent(P);
-  if (!getPdb().hasPDBDbiStream()) {
-    P.formatLine("DBI Stream not present");
+  if (File.isPdb() && !getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
     return Error::success();
   }
 
+  AutoIndent Indent(P);
   ExitOnError Err("Unexpected error processing symbols: ");
 
   auto &Ids = File.ids();
@@ -1364,17 +1525,18 @@ Error DumpOutputStyle::dumpModuleSymsForPdb() {
 
 Error DumpOutputStyle::dumpGSIRecords() {
   printHeader(P, "GSI Records");
-  AutoIndent Indent(P);
 
   if (File.isObj()) {
-    P.formatLine("Dumping Globals is not supported for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
 
   if (!getPdb().hasPDBSymbolStream()) {
-    P.formatLine("GSI Common Symbol Stream not present");
+    printStreamNotPresent("GSI Common Symbol");
     return Error::success();
   }
+
+  AutoIndent Indent(P);
 
   auto &Records = cantFail(getPdb().getPDBSymbolStream());
   auto &Types = File.types();
@@ -1397,38 +1559,72 @@ Error DumpOutputStyle::dumpGSIRecords() {
 
 Error DumpOutputStyle::dumpGlobals() {
   printHeader(P, "Global Symbols");
-  AutoIndent Indent(P);
 
   if (File.isObj()) {
-    P.formatLine("Dumping Globals is not supported for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
 
   if (!getPdb().hasPDBGlobalsStream()) {
-    P.formatLine("Globals stream not present");
+    printStreamNotPresent("Globals");
     return Error::success();
   }
+
+  AutoIndent Indent(P);
   ExitOnError Err("Error dumping globals stream: ");
   auto &Globals = Err(getPdb().getPDBGlobalsStream());
 
-  const GSIHashTable &Table = Globals.getGlobalsTable();
-  Err(dumpSymbolsFromGSI(Table, opts::dump::DumpGlobalExtras));
+  if (opts::dump::DumpGlobalNames.empty()) {
+    const GSIHashTable &Table = Globals.getGlobalsTable();
+    Err(dumpSymbolsFromGSI(Table, opts::dump::DumpGlobalExtras));
+  } else {
+    SymbolStream &SymRecords = cantFail(getPdb().getPDBSymbolStream());
+    auto &Types = File.types();
+    auto &Ids = File.ids();
+
+    SymbolVisitorCallbackPipeline Pipeline;
+    SymbolDeserializer Deserializer(nullptr, CodeViewContainer::Pdb);
+    MinimalSymbolDumper Dumper(P, opts::dump::DumpSymRecordBytes, Ids, Types);
+
+    Pipeline.addCallbackToPipeline(Deserializer);
+    Pipeline.addCallbackToPipeline(Dumper);
+    CVSymbolVisitor Visitor(Pipeline);
+
+    using ResultEntryType = std::pair<uint32_t, CVSymbol>;
+    for (StringRef Name : opts::dump::DumpGlobalNames) {
+      AutoIndent Indent(P);
+      P.formatLine("Global Name `{0}`", Name);
+      std::vector<ResultEntryType> Results =
+          Globals.findRecordsByName(Name, SymRecords);
+      if (Results.empty()) {
+        AutoIndent Indent(P);
+        P.printLine("(no matching records found)");
+        continue;
+      }
+
+      for (ResultEntryType Result : Results) {
+        if (auto E = Visitor.visitSymbolRecord(Result.second, Result.first))
+          return E;
+      }
+    }
+  }
   return Error::success();
 }
 
 Error DumpOutputStyle::dumpPublics() {
   printHeader(P, "Public Symbols");
-  AutoIndent Indent(P);
 
   if (File.isObj()) {
-    P.formatLine("Dumping Globals is not supported for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
 
   if (!getPdb().hasPDBPublicsStream()) {
-    P.formatLine("Publics stream not present");
+    printStreamNotPresent("Publics");
     return Error::success();
   }
+
+  AutoIndent Indent(P);
   ExitOnError Err("Error dumping publics stream: ");
   auto &Publics = Err(getPdb().getPDBPublicsStream());
 
@@ -1514,8 +1710,6 @@ Error DumpOutputStyle::dumpSymbolsFromGSI(const GSIHashTable &Table,
 
   // Return early if we aren't dumping public hash table and address map info.
   if (HashExtras) {
-    P.formatBinary("Hash Bitmap", Table.HashBitmap, 0);
-
     P.formatLine("Hash Entries");
     {
       AutoIndent Indent2(P);
@@ -1560,12 +1754,17 @@ Error DumpOutputStyle::dumpSectionHeaders() {
 void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
   printHeader(P, Label);
 
-  AutoIndent Indent(P);
   if (File.isObj()) {
-    P.formatLine("Dumping Section Headers is not supported for object files");
+    printStreamNotValidForObj();
     return;
   }
 
+  if (!getPdb().hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return;
+  }
+
+  AutoIndent Indent(P);
   ExitOnError Err("Error dumping section headers: ");
   std::unique_ptr<MappedBlockStream> Stream;
   ArrayRef<object::coff_section> Headers;
@@ -1606,19 +1805,18 @@ void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
 Error DumpOutputStyle::dumpSectionContribs() {
   printHeader(P, "Section Contributions");
 
-  AutoIndent Indent(P);
   if (File.isObj()) {
-    P.formatLine(
-        "Dumping section contributions is not supported for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
 
-  ExitOnError Err("Error dumping section contributions: ");
   if (!getPdb().hasPDBDbiStream()) {
-    P.formatLine(
-        "Section contribs require a DBI Stream, which could not be loaded");
+    printStreamNotPresent("DBI");
     return Error::success();
   }
+
+  AutoIndent Indent(P);
+  ExitOnError Err("Error dumping section contributions: ");
 
   auto &Dbi = Err(getPdb().getPDBDbiStream());
 
@@ -1651,20 +1849,19 @@ Error DumpOutputStyle::dumpSectionContribs() {
 
 Error DumpOutputStyle::dumpSectionMap() {
   printHeader(P, "Section Map");
-  AutoIndent Indent(P);
 
   if (File.isObj()) {
-    P.formatLine("Dumping section map is not supported for object files");
+    printStreamNotValidForObj();
     return Error::success();
   }
-
-  ExitOnError Err("Error dumping section map: ");
 
   if (!getPdb().hasPDBDbiStream()) {
-    P.formatLine("Dumping the section map requires a DBI Stream, which could "
-                 "not be loaded");
+    printStreamNotPresent("DBI");
     return Error::success();
   }
+
+  AutoIndent Indent(P);
+  ExitOnError Err("Error dumping section map: ");
 
   auto &Dbi = Err(getPdb().getPDBDbiStream());
 

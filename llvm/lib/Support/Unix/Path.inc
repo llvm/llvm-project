@@ -38,6 +38,8 @@
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #include <sys/attr.h>
+#elif defined(__DragonFly__)
+#include <sys/mount.h>
 #endif
 
 // Both stdio.h and cstdio are included via different paths and
@@ -49,11 +51,12 @@
 // For GNU Hurd
 #if defined(__GNU__) && !defined(PATH_MAX)
 # define PATH_MAX 4096
+# define MAXPATHLEN 4096
 #endif
 
 #include <sys/types.h>
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
-    !defined(__linux__)
+    !defined(__linux__) && !defined(__FreeBSD_kernel__)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
@@ -82,7 +85,7 @@
 #define STATVFS_F_FRSIZE(vfs) static_cast<uint64_t>(vfs.f_bsize)
 #endif
 
-#if defined(__NetBSD__)
+#if defined(__NetBSD__) || defined(__DragonFly__) || defined(__GNU__)
 #define STATVFS_F_FLAG(vfs) (vfs).f_flag
 #else
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
@@ -98,7 +101,7 @@ const file_t kInvalidFile = -1;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
     defined(__minix) || defined(__FreeBSD_kernel__) || defined(__linux__) ||   \
-    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX)
+    defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) || defined(__GNU__)
 static int
 test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
 {
@@ -178,14 +181,34 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   char exe_path[MAXPATHLEN];
   StringRef aPath("/proc/self/exe");
   if (sys::fs::exists(aPath)) {
-      // /proc is not always mounted under Linux (chroot for example).
-      ssize_t len = readlink(aPath.str().c_str(), exe_path, sizeof(exe_path));
-      if (len >= 0)
-          return std::string(exe_path, len);
+    // /proc is not always mounted under Linux (chroot for example).
+    ssize_t len = readlink(aPath.str().c_str(), exe_path, sizeof(exe_path));
+    if (len < 0)
+      return "";
+
+    // Null terminate the string for realpath. readlink never null
+    // terminates its output.
+    len = std::min(len, ssize_t(sizeof(exe_path) - 1));
+    exe_path[len] = '\0';
+
+    // On Linux, /proc/self/exe always looks through symlinks. However, on
+    // GNU/Hurd, /proc/self/exe is a symlink to the path that was used to start
+    // the program, and not the eventual binary file. Therefore, call realpath
+    // so this behaves the same on all platforms.
+#if _POSIX_VERSION >= 200112 || defined(__GLIBC__)
+    char *real_path = realpath(exe_path, NULL);
+    std::string ret = std::string(real_path);
+    free(real_path);
+    return ret;
+#else
+    char real_path[MAXPATHLEN];
+    realpath(exe_path, real_path);
+    return std::string(real_path);
+#endif
   } else {
-      // Fall back to the classical detection.
-      if (getprogpath(exe_path, argv0))
-        return exe_path;
+    // Fall back to the classical detection.
+    if (getprogpath(exe_path, argv0))
+      return exe_path;
   }
 #elif defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
   // Use dladdr to get executable path if available.
@@ -347,7 +370,7 @@ std::error_code remove(const Twine &path, bool IgnoreNonExisting) {
 }
 
 static bool is_local_impl(struct STATVFS &Vfs) {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__GNU__)
 #ifndef NFS_SUPER_MAGIC
 #define NFS_SUPER_MAGIC 0x6969
 #endif
@@ -357,7 +380,11 @@ static bool is_local_impl(struct STATVFS &Vfs) {
 #ifndef CIFS_MAGIC_NUMBER
 #define CIFS_MAGIC_NUMBER 0xFF534D42
 #endif
+#ifdef __GNU__
+  switch ((uint32_t)Vfs.__f_type) {
+#else
   switch ((uint32_t)Vfs.f_type) {
+#endif
   case NFS_SUPER_MAGIC:
   case SMB_SUPER_MAGIC:
   case CIFS_MAGIC_NUMBER:
@@ -523,33 +550,46 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   llvm::sys::path::append(Path, Storage);
 }
 
+
+void expand_tilde(const Twine &path, SmallVectorImpl<char> &dest) {
+  dest.clear();
+  if (path.isTriviallyEmpty())
+    return;
+
+  path.toVector(dest);
+  expandTildeExpr(dest);
+
+  return;
+}
+
+static file_type typeForMode(mode_t Mode) {
+  if (S_ISDIR(Mode))
+    return file_type::directory_file;
+  else if (S_ISREG(Mode))
+    return file_type::regular_file;
+  else if (S_ISBLK(Mode))
+    return file_type::block_file;
+  else if (S_ISCHR(Mode))
+    return file_type::character_file;
+  else if (S_ISFIFO(Mode))
+    return file_type::fifo_file;
+  else if (S_ISSOCK(Mode))
+    return file_type::socket_file;
+  else if (S_ISLNK(Mode))
+    return file_type::symlink_file;
+  return file_type::type_unknown;
+}
+
 static std::error_code fillStatus(int StatRet, const struct stat &Status,
                                   file_status &Result) {
   if (StatRet != 0) {
-    std::error_code ec(errno, std::generic_category());
-    if (ec == errc::no_such_file_or_directory)
+    std::error_code EC(errno, std::generic_category());
+    if (EC == errc::no_such_file_or_directory)
       Result = file_status(file_type::file_not_found);
     else
       Result = file_status(file_type::status_error);
-    return ec;
+    return EC;
   }
-
-  file_type Type = file_type::type_unknown;
-
-  if (S_ISDIR(Status.st_mode))
-    Type = file_type::directory_file;
-  else if (S_ISREG(Status.st_mode))
-    Type = file_type::regular_file;
-  else if (S_ISBLK(Status.st_mode))
-    Type = file_type::block_file;
-  else if (S_ISCHR(Status.st_mode))
-    Type = file_type::character_file;
-  else if (S_ISFIFO(Status.st_mode))
-    Type = file_type::fifo_file;
-  else if (S_ISSOCK(Status.st_mode))
-    Type = file_type::socket_file;
-  else if (S_ISLNK(Status.st_mode))
-    Type = file_type::symlink_file;
 
   uint32_t atime_nsec, mtime_nsec;
 #if defined(HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
@@ -563,9 +603,9 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
 #endif
 
   perms Perms = static_cast<perms>(Status.st_mode) & all_perms;
-  Result = file_status(Type, Perms, Status.st_dev, Status.st_nlink,
-                       Status.st_ino, Status.st_atime, atime_nsec,
-                       Status.st_mtime, mtime_nsec,
+  Result = file_status(typeForMode(Status.st_mode), Perms, Status.st_dev,
+                       Status.st_nlink, Status.st_ino,
+                       Status.st_atime, atime_nsec, Status.st_mtime, mtime_nsec,
                        Status.st_uid, Status.st_gid, Status.st_size);
 
   return std::error_code();
@@ -595,17 +635,22 @@ std::error_code setPermissions(const Twine &Path, perms Permissions) {
   return std::error_code();
 }
 
-std::error_code setLastModificationAndAccessTime(int FD, TimePoint<> Time) {
+std::error_code setLastAccessAndModificationTime(int FD, TimePoint<> AccessTime,
+                                                 TimePoint<> ModificationTime) {
 #if defined(HAVE_FUTIMENS)
   timespec Times[2];
-  Times[0] = Times[1] = sys::toTimeSpec(Time);
+  Times[0] = sys::toTimeSpec(AccessTime);
+  Times[1] = sys::toTimeSpec(ModificationTime);
   if (::futimens(FD, Times))
     return std::error_code(errno, std::generic_category());
   return std::error_code();
 #elif defined(HAVE_FUTIMES)
   timeval Times[2];
-  Times[0] = Times[1] = sys::toTimeVal(
-      std::chrono::time_point_cast<std::chrono::microseconds>(Time));
+  Times[0] = sys::toTimeVal(
+      std::chrono::time_point_cast<std::chrono::microseconds>(AccessTime));
+  Times[1] =
+      sys::toTimeVal(std::chrono::time_point_cast<std::chrono::microseconds>(
+          ModificationTime));
   if (::futimes(FD, Times))
     return std::error_code(errno, std::generic_category());
   return std::error_code();
@@ -703,19 +748,30 @@ std::error_code detail::directory_iterator_destruct(detail::DirIterState &it) {
   return std::error_code();
 }
 
-std::error_code detail::directory_iterator_increment(detail::DirIterState &it) {
+static file_type direntType(dirent* Entry) {
+  // Most platforms provide the file type in the dirent: Linux/BSD/Mac.
+  // The DTTOIF macro lets us reuse our status -> type conversion.
+#if defined(_DIRENT_HAVE_D_TYPE) && defined(DTTOIF)
+  return typeForMode(DTTOIF(Entry->d_type));
+#else
+  // Other platforms such as Solaris require a stat() to get the type.
+  return file_type::type_unknown;
+#endif
+}
+
+std::error_code detail::directory_iterator_increment(detail::DirIterState &It) {
   errno = 0;
-  dirent *cur_dir = ::readdir(reinterpret_cast<DIR *>(it.IterationHandle));
-  if (cur_dir == nullptr && errno != 0) {
+  dirent *CurDir = ::readdir(reinterpret_cast<DIR *>(It.IterationHandle));
+  if (CurDir == nullptr && errno != 0) {
     return std::error_code(errno, std::generic_category());
-  } else if (cur_dir != nullptr) {
-    StringRef name(cur_dir->d_name);
-    if ((name.size() == 1 && name[0] == '.') ||
-        (name.size() == 2 && name[0] == '.' && name[1] == '.'))
-      return directory_iterator_increment(it);
-    it.CurrentEntry.replace_filename(name);
+  } else if (CurDir != nullptr) {
+    StringRef Name(CurDir->d_name);
+    if ((Name.size() == 1 && Name[0] == '.') ||
+        (Name.size() == 2 && Name[0] == '.' && Name[1] == '.'))
+      return directory_iterator_increment(It);
+    It.CurrentEntry.replace_filename(Name, direntType(CurDir));
   } else
-    return directory_iterator_destruct(it);
+    return directory_iterator_destruct(It);
 
   return std::error_code();
 }
@@ -781,8 +837,10 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
 
   SmallString<128> Storage;
   StringRef P = Name.toNullTerminatedStringRef(Storage);
-  if ((ResultFD = sys::RetryAfterSignal(-1, ::open, P.begin(), OpenFlags, Mode)) <
-      0)
+  // Call ::open in a lambda to avoid overload resolution in RetryAfterSignal
+  // when open is overloaded, such as in Bionic.
+  auto Open = [&]() { return ::open(P.begin(), OpenFlags, Mode); };
+  if ((ResultFD = sys::RetryAfterSignal(-1, Open)) < 0)
     return std::error_code(errno, std::generic_category());
 #ifndef O_CLOEXEC
   if (!(Flags & OF_ChildInherit)) {
@@ -959,29 +1017,6 @@ static bool getDarwinConfDir(bool TempDir, SmallVectorImpl<char> &Result) {
     Result.clear();
   }
   #endif
-  return false;
-}
-
-static bool getUserCacheDir(SmallVectorImpl<char> &Result) {
-  // First try using XDG_CACHE_HOME env variable,
-  // as specified in XDG Base Directory Specification at
-  // http://standards.freedesktop.org/basedir-spec/basedir-spec-latest.html
-  if (const char *XdgCacheDir = std::getenv("XDG_CACHE_HOME")) {
-    Result.clear();
-    Result.append(XdgCacheDir, XdgCacheDir + strlen(XdgCacheDir));
-    return true;
-  }
-
-  // Try Darwin configuration query
-  if (getDarwinConfDir(false, Result))
-    return true;
-
-  // Use "$HOME/.cache" if $HOME is available
-  if (home_directory(Result)) {
-    append(Result, ".cache");
-    return true;
-  }
-
   return false;
 }
 

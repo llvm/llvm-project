@@ -53,6 +53,9 @@
 ; RUN: ls %t.cache | count 5
 
 
+; Increase the age of llvmcache-foo
+; RUN: touch -r %t.cache/llvmcache-foo -d '-2 minutes' %t.cache/llvmcache-foo
+
 ; This should remove it.
 ; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \

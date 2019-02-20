@@ -24,22 +24,28 @@ enum class msf_error_code {
   invalid_format,
   block_in_use
 };
+} // namespace msf
+} // namespace llvm
+
+namespace std {
+template <>
+struct is_error_code_enum<llvm::msf::msf_error_code> : std::true_type {};
+} // namespace std
+
+namespace llvm {
+namespace msf {
+const std::error_category &MSFErrCategory();
+
+inline std::error_code make_error_code(msf_error_code E) {
+  return std::error_code(static_cast<int>(E), MSFErrCategory());
+}
 
 /// Base class for errors originating when parsing raw PDB files
-class MSFError : public ErrorInfo<MSFError> {
+class MSFError : public ErrorInfo<MSFError, StringError> {
 public:
+  using ErrorInfo<MSFError, StringError>::ErrorInfo; // inherit constructors
+  MSFError(const Twine &S) : ErrorInfo(S, msf_error_code::unspecified) {}
   static char ID;
-  MSFError(msf_error_code C);
-  MSFError(const std::string &Context);
-  MSFError(msf_error_code C, const std::string &Context);
-
-  void log(raw_ostream &OS) const override;
-  const std::string &getErrorMessage() const;
-  std::error_code convertToErrorCode() const override;
-
-private:
-  std::string ErrMsg;
-  msf_error_code Code;
 };
 } // namespace msf
 } // namespace llvm

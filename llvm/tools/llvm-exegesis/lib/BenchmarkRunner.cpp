@@ -13,14 +13,16 @@
 #include "Assembler.h"
 #include "BenchmarkRunner.h"
 #include "MCInstrDescView.h"
+#include "PerfHelper.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 
+namespace llvm {
 namespace exegesis {
 
 BenchmarkFailure::BenchmarkFailure(const llvm::Twine &S)
@@ -28,74 +30,94 @@ BenchmarkFailure::BenchmarkFailure(const llvm::Twine &S)
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State,
                                  InstructionBenchmark::ModeE Mode)
-    : State(State), RATC(State.getRegInfo(),
-                         getFunctionReservedRegs(State.getTargetMachine())),
-      Mode(Mode) {}
+    : State(State), Mode(Mode), Scratch(llvm::make_unique<ScratchSpace>()) {}
 
 BenchmarkRunner::~BenchmarkRunner() = default;
 
-llvm::Expected<std::vector<InstructionBenchmark>>
-BenchmarkRunner::run(unsigned Opcode, unsigned NumRepetitions) {
-  const llvm::MCInstrDesc &InstrDesc = State.getInstrInfo().get(Opcode);
-  // Ignore instructions that we cannot run.
-  if (InstrDesc.isPseudo())
-    return llvm::make_error<BenchmarkFailure>("Unsupported opcode: isPseudo");
-  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
-    return llvm::make_error<BenchmarkFailure>(
-        "Unsupported opcode: isBranch/isIndirectBranch");
-  if (InstrDesc.isCall() || InstrDesc.isReturn())
-    return llvm::make_error<BenchmarkFailure>(
-        "Unsupported opcode: isCall/isReturn");
-
-  llvm::Expected<std::vector<BenchmarkConfiguration>> ConfigurationOrError =
-      generateConfigurations(Opcode);
-
-  if (llvm::Error E = ConfigurationOrError.takeError())
-    return std::move(E);
-
-  std::vector<InstructionBenchmark> InstrBenchmarks;
-  for (const BenchmarkConfiguration &Conf : ConfigurationOrError.get())
-    InstrBenchmarks.push_back(runOne(Conf, Opcode, NumRepetitions));
-  return InstrBenchmarks;
+// Repeat the snippet until there are at least MinInstructions in the resulting
+// code.
+static std::vector<llvm::MCInst>
+GenerateInstructions(const BenchmarkCode &BC, const size_t MinInstructions) {
+  if (BC.Instructions.empty())
+    return {};
+  std::vector<llvm::MCInst> Code = BC.Instructions;
+  for (int I = 0; Code.size() < MinInstructions; ++I)
+    Code.push_back(BC.Instructions[I % BC.Instructions.size()]);
+  return Code;
 }
 
+namespace {
+class FunctionExecutorImpl : public BenchmarkRunner::FunctionExecutor {
+public:
+  FunctionExecutorImpl(const LLVMState &State,
+                       llvm::object::OwningBinary<llvm::object::ObjectFile> Obj,
+                       BenchmarkRunner::ScratchSpace *Scratch)
+      : Function(State.createTargetMachine(), std::move(Obj)),
+        Scratch(Scratch) {}
+
+private:
+  llvm::Expected<int64_t> runAndMeasure(const char *Counters) const override {
+    // We sum counts when there are several counters for a single ProcRes
+    // (e.g. P23 on SandyBridge).
+    int64_t CounterValue = 0;
+    llvm::SmallVector<llvm::StringRef, 2> CounterNames;
+    llvm::StringRef(Counters).split(CounterNames, '+');
+    char *const ScratchPtr = Scratch->ptr();
+    for (auto &CounterName : CounterNames) {
+      CounterName = CounterName.trim();
+      pfm::PerfEvent PerfEvent(CounterName);
+      if (!PerfEvent.valid())
+        llvm::report_fatal_error(
+            llvm::Twine("invalid perf event '").concat(CounterName).concat("'"));
+      pfm::Counter Counter(PerfEvent);
+      Scratch->clear();
+      {
+        llvm::CrashRecoveryContext CRC;
+        llvm::CrashRecoveryContext::Enable();
+        const bool Crashed = !CRC.RunSafely([this, &Counter, ScratchPtr]() {
+          Counter.start();
+          this->Function(ScratchPtr);
+          Counter.stop();
+        });
+        llvm::CrashRecoveryContext::Disable();
+        // FIXME: Better diagnosis.
+        if (Crashed)
+          return llvm::make_error<BenchmarkFailure>(
+              "snippet crashed while running");
+      }
+      CounterValue += Counter.read();
+    }
+    return CounterValue;
+  }
+
+  const ExecutableFunction Function;
+  BenchmarkRunner::ScratchSpace *const Scratch;
+};
+} // namespace
+
 InstructionBenchmark
-BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
-                        unsigned Opcode, unsigned NumRepetitions) const {
+BenchmarkRunner::runConfiguration(const BenchmarkCode &BC,
+                                  unsigned NumRepetitions) const {
   InstructionBenchmark InstrBenchmark;
   InstrBenchmark.Mode = Mode;
   InstrBenchmark.CpuName = State.getTargetMachine().getTargetCPU();
   InstrBenchmark.LLVMTriple =
       State.getTargetMachine().getTargetTriple().normalize();
   InstrBenchmark.NumRepetitions = NumRepetitions;
-  InstrBenchmark.Info = Configuration.Info;
+  InstrBenchmark.Info = BC.Info;
 
-  const std::vector<llvm::MCInst> &Snippet = Configuration.Snippet;
-  if (Snippet.empty()) {
-    InstrBenchmark.Error = "Empty snippet";
-    return InstrBenchmark;
-  }
+  const std::vector<llvm::MCInst> &Instructions = BC.Instructions;
 
-  InstrBenchmark.Key.Instructions = Snippet;
-
-  // Repeat the snippet until there are at least NumInstructions in the
-  // resulting code. The snippet is always repeated at least once.
-  const auto GenerateInstructions = [&Configuration](
-                                        const int MinInstructions) {
-    std::vector<llvm::MCInst> Code = Configuration.Snippet;
-    for (int I = 0; I < MinInstructions; ++I)
-      Code.push_back(Configuration.Snippet[I % Configuration.Snippet.size()]);
-    return Code;
-  };
+  InstrBenchmark.Key.Instructions = Instructions;
+  InstrBenchmark.Key.RegisterInitialValues = BC.RegisterInitialValues;
 
   // Assemble at least kMinInstructionsForSnippet instructions by repeating the
   // snippet for debug/analysis. This is so that the user clearly understands
   // that the inside instructions are repeated.
   constexpr const int kMinInstructionsForSnippet = 16;
   {
-    auto ObjectFilePath =
-        writeObjectFile(Configuration.SnippetSetup,
-                        GenerateInstructions(kMinInstructionsForSnippet));
+    auto ObjectFilePath = writeObjectFile(
+        BC, GenerateInstructions(BC, kMinInstructionsForSnippet));
     if (llvm::Error E = ObjectFilePath.takeError()) {
       InstrBenchmark.Error = llvm::toString(std::move(E));
       return InstrBenchmark;
@@ -108,82 +130,36 @@ BenchmarkRunner::runOne(const BenchmarkConfiguration &Configuration,
 
   // Assemble NumRepetitions instructions repetitions of the snippet for
   // measurements.
-  auto ObjectFilePath =
-      writeObjectFile(Configuration.SnippetSetup,
-                      GenerateInstructions(InstrBenchmark.NumRepetitions));
+  auto ObjectFilePath = writeObjectFile(
+      BC, GenerateInstructions(BC, InstrBenchmark.NumRepetitions));
   if (llvm::Error E = ObjectFilePath.takeError()) {
     InstrBenchmark.Error = llvm::toString(std::move(E));
     return InstrBenchmark;
   }
   llvm::outs() << "Check generated assembly with: /usr/bin/objdump -d "
                << *ObjectFilePath << "\n";
-  const ExecutableFunction EF(State.createTargetMachine(),
-                              getObjectFromFile(*ObjectFilePath));
-  InstrBenchmark.Measurements = runMeasurements(EF, NumRepetitions);
+  const FunctionExecutorImpl Executor(State, getObjectFromFile(*ObjectFilePath),
+                                      Scratch.get());
+  auto Measurements = runMeasurements(Executor);
+  if (llvm::Error E = Measurements.takeError()) {
+    InstrBenchmark.Error = llvm::toString(std::move(E));
+    return InstrBenchmark;
+  }
+  InstrBenchmark.Measurements = std::move(*Measurements);
+  assert(InstrBenchmark.NumRepetitions > 0 && "invalid NumRepetitions");
+  for (BenchmarkMeasure &BM : InstrBenchmark.Measurements) {
+    // Scale the measurements by instruction.
+    BM.PerInstructionValue /= InstrBenchmark.NumRepetitions;
+    // Scale the measurements by snippet.
+    BM.PerSnippetValue *= static_cast<double>(BC.Instructions.size()) /
+                          InstrBenchmark.NumRepetitions;
+  }
 
   return InstrBenchmark;
 }
 
-llvm::Expected<std::vector<BenchmarkConfiguration>>
-BenchmarkRunner::generateConfigurations(unsigned Opcode) const {
-  if (auto E = generatePrototype(Opcode)) {
-    SnippetPrototype &Prototype = E.get();
-    // TODO: Generate as many configurations as needed here.
-    BenchmarkConfiguration Configuration;
-    Configuration.Info = Prototype.Explanation;
-    for (InstructionInstance &II : Prototype.Snippet) {
-      II.randomizeUnsetVariables();
-      Configuration.Snippet.push_back(II.build());
-    }
-    Configuration.SnippetSetup.RegsToDef = computeRegsToDef(Prototype.Snippet);
-    return std::vector<BenchmarkConfiguration>{Configuration};
-  } else
-    return E.takeError();
-}
-
-std::vector<unsigned> BenchmarkRunner::computeRegsToDef(
-    const std::vector<InstructionInstance> &Snippet) const {
-  // Collect all register uses and create an assignment for each of them.
-  // Loop invariant: DefinedRegs[i] is true iif it has been set at least once
-  // before the current instruction.
-  llvm::BitVector DefinedRegs = RATC.emptyRegisters();
-  std::vector<unsigned> RegsToDef;
-  for (const InstructionInstance &II : Snippet) {
-    // Returns the register that this Operand sets or uses, or 0 if this is not
-    // a register.
-    const auto GetOpReg = [&II](const Operand &Op) -> unsigned {
-      if (Op.ImplicitReg) {
-        return *Op.ImplicitReg;
-      } else if (Op.IsExplicit && II.getValueFor(Op).isReg()) {
-        return II.getValueFor(Op).getReg();
-      }
-      return 0;
-    };
-    // Collect used registers that have never been def'ed.
-    for (const Operand &Op : II.Instr.Operands) {
-      if (!Op.IsDef) {
-        const unsigned Reg = GetOpReg(Op);
-        if (Reg > 0 && !DefinedRegs.test(Reg)) {
-          RegsToDef.push_back(Reg);
-          DefinedRegs.set(Reg);
-        }
-      }
-    }
-    // Mark defs as having been def'ed.
-    for (const Operand &Op : II.Instr.Operands) {
-      if (Op.IsDef) {
-        const unsigned Reg = GetOpReg(Op);
-        if (Reg > 0) {
-          DefinedRegs.set(Reg);
-        }
-      }
-    }
-  }
-  return RegsToDef;
-}
-
 llvm::Expected<std::string>
-BenchmarkRunner::writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
+BenchmarkRunner::writeObjectFile(const BenchmarkCode &BC,
                                  llvm::ArrayRef<llvm::MCInst> Code) const {
   int ResultFD = 0;
   llvm::SmallString<256> ResultPath;
@@ -192,38 +168,11 @@ BenchmarkRunner::writeObjectFile(const BenchmarkConfiguration::Setup &Setup,
     return std::move(E);
   llvm::raw_fd_ostream OFS(ResultFD, true /*ShouldClose*/);
   assembleToStream(State.getExegesisTarget(), State.createTargetMachine(),
-                   Setup.RegsToDef, Code, OFS);
+                   BC.LiveIns, BC.RegisterInitialValues, Code, OFS);
   return ResultPath.str();
 }
 
-llvm::Expected<SnippetPrototype>
-BenchmarkRunner::generateSelfAliasingPrototype(const Instruction &Instr) const {
-  const AliasingConfigurations SelfAliasing(Instr, Instr);
-  if (SelfAliasing.empty()) {
-    return llvm::make_error<BenchmarkFailure>("empty self aliasing");
-  }
-  SnippetPrototype Prototype;
-  InstructionInstance II(Instr);
-  if (SelfAliasing.hasImplicitAliasing()) {
-    Prototype.Explanation = "implicit Self cycles, picking random values.";
-  } else {
-    Prototype.Explanation =
-        "explicit self cycles, selecting one aliasing Conf.";
-    // This is a self aliasing instruction so defs and uses are from the same
-    // instance, hence twice II in the following call.
-    setRandomAliasing(SelfAliasing, II, II);
-  }
-  Prototype.Snippet.push_back(std::move(II));
-  return std::move(Prototype);
-}
+BenchmarkRunner::FunctionExecutor::~FunctionExecutor() {}
 
-llvm::Expected<SnippetPrototype>
-BenchmarkRunner::generateUnconstrainedPrototype(const Instruction &Instr,
-                                                llvm::StringRef Msg) const {
-  SnippetPrototype Prototype;
-  Prototype.Explanation =
-      llvm::formatv("{0}, repeating an unconstrained assignment", Msg);
-  Prototype.Snippet.emplace_back(Instr);
-  return std::move(Prototype);
-}
 } // namespace exegesis
+} // namespace llvm

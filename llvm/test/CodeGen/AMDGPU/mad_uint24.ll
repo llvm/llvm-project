@@ -1,8 +1,8 @@
 ; RUN: llc < %s -march=r600 -mcpu=redwood | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 ; RUN: llc < %s -march=r600 -mcpu=cayman | FileCheck %s --check-prefix=EG --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC
-; RUN: llc < %s -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC
+; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck %s --check-prefix=SI --check-prefix=FUNC --check-prefix=GCN
+; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN
+; RUN: llc < %s -march=amdgcn -mcpu=fiji -mattr=-flat-for-global -verify-machineinstrs | FileCheck %s --check-prefix=VI --check-prefix=FUNC --check-prefix=GCN
 
 declare i32 @llvm.r600.read.tidig.x() nounwind readnone
 
@@ -136,5 +136,92 @@ bb4:                                              ; preds = %bb4, %bb
 
 bb18:                                             ; preds = %bb4
   store i32 %tmp16, i32 addrspace(1)* %arg
+  ret void
+}
+
+; FUNC-LABEL: {{^}}i8_mad_sat_16:
+; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; The result must be sign-extended
+; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
+; EG: 8
+; SI: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; VI: v_mad_u16 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
+; GCN: v_med3_i32 v{{[0-9]}}, [[EXT]],
+define amdgpu_kernel void @i8_mad_sat_16(i8 addrspace(1)* %out, i8 addrspace(1)* %in0, i8 addrspace(1)* %in1, i8 addrspace(1)* %in2, i64 addrspace(5)* %idx) {
+entry:
+  %retval.0.i = load i64, i64 addrspace(5)* %idx
+  %arrayidx = getelementptr inbounds i8, i8 addrspace(1)* %in0, i64 %retval.0.i
+  %arrayidx2 = getelementptr inbounds i8, i8 addrspace(1)* %in1, i64 %retval.0.i
+  %arrayidx4 = getelementptr inbounds i8, i8 addrspace(1)* %in2, i64 %retval.0.i
+  %l1 = load i8, i8 addrspace(1)* %arrayidx, align 1
+  %l2 = load i8, i8 addrspace(1)* %arrayidx2, align 1
+  %l3 = load i8, i8 addrspace(1)* %arrayidx4, align 1
+  %conv1.i = sext i8 %l1 to i16
+  %conv3.i = sext i8 %l2 to i16
+  %conv5.i = sext i8 %l3 to i16
+  %mul.i.i.i = mul nsw i16 %conv3.i, %conv1.i
+  %add.i.i = add i16 %mul.i.i.i, %conv5.i
+  %c4 = icmp sgt i16 %add.i.i, -128
+  %cond.i.i = select i1 %c4, i16 %add.i.i, i16 -128
+  %c5 = icmp slt i16 %cond.i.i, 127
+  %cond13.i.i = select i1 %c5, i16 %cond.i.i, i16 127
+  %conv8.i = trunc i16 %cond13.i.i to i8
+  %arrayidx7 = getelementptr inbounds i8, i8 addrspace(1)* %out, i64 %retval.0.i
+  store i8 %conv8.i, i8 addrspace(1)* %arrayidx7, align 1
+  ret void
+}
+
+; FUNC-LABEL: {{^}}i8_mad_32:
+; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; The result must be sign-extended
+; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
+; EG: 8
+; SI: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; VI: v_mad_u16 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
+define amdgpu_kernel void @i8_mad_32(i32 addrspace(1)* %out, i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i64 addrspace(5)* %idx) {
+entry:
+  %retval.0.i = load i64, i64 addrspace(5)* %idx
+  %arrayidx = getelementptr inbounds i8, i8 addrspace(1)* %a, i64 %retval.0.i
+  %arrayidx2 = getelementptr inbounds i8, i8 addrspace(1)* %b, i64 %retval.0.i
+  %arrayidx4 = getelementptr inbounds i8, i8 addrspace(1)* %c, i64 %retval.0.i
+  %la = load i8, i8 addrspace(1)* %arrayidx, align 1
+  %lb = load i8, i8 addrspace(1)* %arrayidx2, align 1
+  %lc = load i8, i8 addrspace(1)* %arrayidx4, align 1
+  %exta = sext i8 %la to i16
+  %extb = sext i8 %lb to i16
+  %extc = sext i8 %lc to i16
+  %mul = mul i16 %exta, %extb
+  %mad = add i16 %mul, %extc
+  %mad_ext = sext i16 %mad to i32
+  store i32 %mad_ext, i32 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}i8_mad_64:
+; EG: MULADD_UINT24 {{[* ]*}}T{{[0-9]}}.[[MAD_CHAN:[XYZW]]]
+; The result must be sign-extended
+; EG: BFE_INT {{[* ]*}}T{{[0-9]\.[XYZW]}}, PV.[[MAD_CHAN]], 0.0, literal.x
+; EG: 8
+; SI: v_mad_u32_u24 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; VI: v_mad_u16 [[MAD:v[0-9]]], {{[sv][0-9], [sv][0-9]}}
+; GCN: v_bfe_i32 [[EXT:v[0-9]]], [[MAD]], 0, 16
+define amdgpu_kernel void @i8_mad_64(i64 addrspace(1)* %out, i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i64 addrspace(5)* %idx) {
+entry:
+  %retval.0.i = load i64, i64 addrspace(5)* %idx
+  %arrayidx = getelementptr inbounds i8, i8 addrspace(1)* %a, i64 %retval.0.i
+  %arrayidx2 = getelementptr inbounds i8, i8 addrspace(1)* %b, i64 %retval.0.i
+  %arrayidx4 = getelementptr inbounds i8, i8 addrspace(1)* %c, i64 %retval.0.i
+  %la = load i8, i8 addrspace(1)* %arrayidx, align 1
+  %lb = load i8, i8 addrspace(1)* %arrayidx2, align 1
+  %lc = load i8, i8 addrspace(1)* %arrayidx4, align 1
+  %exta = sext i8 %la to i16
+  %extb = sext i8 %lb to i16
+  %extc = sext i8 %lc to i16
+  %mul = mul i16 %exta, %extb
+  %mad = add i16 %mul, %extc
+  %mad_ext = sext i16 %mad to i64
+  store i64 %mad_ext, i64 addrspace(1)* %out
   ret void
 }

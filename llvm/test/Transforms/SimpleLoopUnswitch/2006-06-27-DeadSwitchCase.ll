@@ -1,4 +1,5 @@
 ; RUN: opt < %s -simple-loop-unswitch -disable-output
+; RUN: opt < %s -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
 
 define void @init_caller_save() {
 entry:

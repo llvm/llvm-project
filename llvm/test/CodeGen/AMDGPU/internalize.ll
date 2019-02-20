@@ -8,14 +8,15 @@
 ; ALL: gvar_used
 @gvar_used = addrspace(1) global i32 undef, align 4
 
-; ALL: define internal fastcc void @func_used_noinline(
+; OPT: define internal fastcc void @func_used_noinline(
+; OPT-NONE: define fastcc void @func_used_noinline(
 define fastcc void @func_used_noinline(i32 addrspace(1)* %out, i32 %tid) #1 {
 entry:
   store volatile i32 %tid, i32 addrspace(1)* %out
   ret void
 }
 
-; OPTNONE: define internal fastcc void @func_used_alwaysinline(
+; OPTNONE: define fastcc void @func_used_alwaysinline(
 ; OPT-NOT: @func_used_alwaysinline
 define fastcc void @func_used_alwaysinline(i32 addrspace(1)* %out, i32 %tid) #2 {
 entry:
@@ -23,7 +24,7 @@ entry:
   ret void
 }
 
-; OPTNONE: define internal void @func_unused(
+; OPTNONE: define void @func_unused(
 ; OPT-NOT: @func_unused
 define void @func_unused(i32 addrspace(1)* %out, i32 %tid) #1 {
 entry:

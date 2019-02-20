@@ -8,27 +8,26 @@ declare <2 x i64> @llvm.ctpop.v2i64(<2 x i64>)
 define <2 x i64> @footz(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: footz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm2, %xmm2
-; CHECK-NEXT:    psubq %xmm0, %xmm2
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
-; CHECK-NEXT:    paddq %xmm2, %xmm3
-; CHECK-NEXT:    movdqa %xmm3, %xmm0
-; CHECK-NEXT:    psrlq $1, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psubq %xmm0, %xmm3
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
-; CHECK-NEXT:    movdqa %xmm3, %xmm2
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    psrlq $2, %xmm3
-; CHECK-NEXT:    pand %xmm0, %xmm3
-; CHECK-NEXT:    paddq %xmm2, %xmm3
-; CHECK-NEXT:    movdqa %xmm3, %xmm0
-; CHECK-NEXT:    psrlq $4, %xmm0
-; CHECK-NEXT:    paddq %xmm3, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psadbw %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    paddq %xmm0, %xmm1
+; CHECK-NEXT:    pandn %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlw $1, %xmm1
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    psubb %xmm1, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    psrlw $2, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    paddb %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlw $4, %xmm1
+; CHECK-NEXT:    paddb %xmm0, %xmm1
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    pxor %xmm0, %xmm0
+; CHECK-NEXT:    psadbw %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %a, i1 true)
   ret <2 x i64> %c
@@ -58,18 +57,18 @@ define <2 x i64> @foolz(<2 x i64> %a) nounwind {
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
 ; CHECK-NEXT:    pxor %xmm0, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-NEXT:    psrlq $1, %xmm0
+; CHECK-NEXT:    psrlw $1, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psubq %xmm0, %xmm1
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
+; CHECK-NEXT:    psubb %xmm0, %xmm1
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm1, %xmm2
 ; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    psrlq $2, %xmm1
+; CHECK-NEXT:    psrlw $2, %xmm1
 ; CHECK-NEXT:    pand %xmm0, %xmm1
-; CHECK-NEXT:    paddq %xmm2, %xmm1
+; CHECK-NEXT:    paddb %xmm2, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm2
-; CHECK-NEXT:    psrlq $4, %xmm2
-; CHECK-NEXT:    paddq %xmm1, %xmm2
+; CHECK-NEXT:    psrlw $4, %xmm2
+; CHECK-NEXT:    paddb %xmm1, %xmm2
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm2
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    psadbw %xmm2, %xmm0
@@ -83,18 +82,18 @@ define <2 x i64> @foopop(<2 x i64> %a) nounwind {
 ; CHECK-LABEL: foopop:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $1, %xmm1
+; CHECK-NEXT:    psrlw $1, %xmm1
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    psubq %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [3689348814741910323,3689348814741910323]
+; CHECK-NEXT:    psubb %xmm1, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm2
 ; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    psrlq $2, %xmm0
+; CHECK-NEXT:    psrlw $2, %xmm0
 ; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    paddq %xmm2, %xmm0
+; CHECK-NEXT:    paddb %xmm2, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $4, %xmm1
-; CHECK-NEXT:    paddq %xmm0, %xmm1
+; CHECK-NEXT:    psrlw $4, %xmm1
+; CHECK-NEXT:    paddb %xmm0, %xmm1
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    pxor %xmm0, %xmm0
 ; CHECK-NEXT:    psadbw %xmm0, %xmm1
@@ -112,27 +111,26 @@ define <2 x i32> @promtz(<2 x i32> %a) nounwind {
 ; CHECK-LABEL: promtz:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    por {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    pxor %xmm1, %xmm1
-; CHECK-NEXT:    pxor %xmm2, %xmm2
-; CHECK-NEXT:    psubq %xmm0, %xmm2
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm3
-; CHECK-NEXT:    paddq %xmm2, %xmm3
-; CHECK-NEXT:    movdqa %xmm3, %xmm0
-; CHECK-NEXT:    psrlq $1, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psubq %xmm0, %xmm3
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
-; CHECK-NEXT:    movdqa %xmm3, %xmm2
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    psrlq $2, %xmm3
-; CHECK-NEXT:    pand %xmm0, %xmm3
-; CHECK-NEXT:    paddq %xmm2, %xmm3
-; CHECK-NEXT:    movdqa %xmm3, %xmm0
-; CHECK-NEXT:    psrlq $4, %xmm0
-; CHECK-NEXT:    paddq %xmm3, %xmm0
-; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psadbw %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    paddq %xmm0, %xmm1
+; CHECK-NEXT:    pandn %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlw $1, %xmm1
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    psubb %xmm1, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; CHECK-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    psrlw $2, %xmm0
+; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    paddb %xmm2, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlw $4, %xmm1
+; CHECK-NEXT:    paddb %xmm0, %xmm1
+; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
+; CHECK-NEXT:    pxor %xmm0, %xmm0
+; CHECK-NEXT:    psadbw %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %c = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %a, i1 false)
   ret <2 x i32> %c
@@ -164,18 +162,18 @@ define <2 x i32> @promlz(<2 x i32> %a) nounwind {
 ; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
 ; CHECK-NEXT:    pxor %xmm0, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    psrlq $1, %xmm0
+; CHECK-NEXT:    psrlw $1, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-NEXT:    psubq %xmm0, %xmm2
-; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [3689348814741910323,3689348814741910323]
+; CHECK-NEXT:    psubb %xmm0, %xmm2
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm2, %xmm3
 ; CHECK-NEXT:    pand %xmm0, %xmm3
-; CHECK-NEXT:    psrlq $2, %xmm2
+; CHECK-NEXT:    psrlw $2, %xmm2
 ; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    paddq %xmm3, %xmm2
+; CHECK-NEXT:    paddb %xmm3, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    psrlq $4, %xmm0
-; CHECK-NEXT:    paddq %xmm2, %xmm0
+; CHECK-NEXT:    psrlw $4, %xmm0
+; CHECK-NEXT:    paddb %xmm2, %xmm0
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    psadbw %xmm1, %xmm0
 ; CHECK-NEXT:    psubq {{.*}}(%rip), %xmm0
@@ -191,18 +189,18 @@ define <2 x i32> @prompop(<2 x i32> %a) nounwind {
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $1, %xmm1
+; CHECK-NEXT:    psrlw $1, %xmm1
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
-; CHECK-NEXT:    psubq %xmm1, %xmm0
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [3689348814741910323,3689348814741910323]
+; CHECK-NEXT:    psubb %xmm1, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
 ; CHECK-NEXT:    movdqa %xmm0, %xmm3
 ; CHECK-NEXT:    pand %xmm1, %xmm3
-; CHECK-NEXT:    psrlq $2, %xmm0
+; CHECK-NEXT:    psrlw $2, %xmm0
 ; CHECK-NEXT:    pand %xmm1, %xmm0
-; CHECK-NEXT:    paddq %xmm3, %xmm0
+; CHECK-NEXT:    paddb %xmm3, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlq $4, %xmm1
-; CHECK-NEXT:    paddq %xmm0, %xmm1
+; CHECK-NEXT:    psrlw $4, %xmm1
+; CHECK-NEXT:    paddb %xmm0, %xmm1
 ; CHECK-NEXT:    pand {{.*}}(%rip), %xmm1
 ; CHECK-NEXT:    psadbw %xmm2, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, %xmm0

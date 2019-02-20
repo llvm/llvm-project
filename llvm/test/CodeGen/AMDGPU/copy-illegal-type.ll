@@ -147,10 +147,7 @@ define amdgpu_kernel void @test_copy_v3i8_align1(<3 x i8> addrspace(1)* %out, <3
 }
 
 ; FUNC-LABEL: {{^}}test_copy_v4i8_volatile_load:
-; GCN: {{buffer|flat}}_load_ubyte
-; GCN: {{buffer|flat}}_load_ubyte
-; GCN: {{buffer|flat}}_load_ubyte
-; GCN: {{buffer|flat}}_load_ubyte
+; GCN: {{buffer|flat}}_load_dword
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
 define amdgpu_kernel void @test_copy_v4i8_volatile_load(<4 x i8> addrspace(1)* %out, <4 x i8> addrspace(1)* %in) nounwind {

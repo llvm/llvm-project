@@ -903,7 +903,7 @@ bool PPCFastISel::PPCEmitCmp(const Value *SrcValue1, const Value *SrcValue2,
     case MVT::i8:
     case MVT::i16:
       NeedsExt = true;
-      // Intentional fall-through.
+      LLVM_FALLTHROUGH;
     case MVT::i32:
       if (!UseImm)
         CmpOpc = IsZExt ? PPC::CMPLW : PPC::CMPW;

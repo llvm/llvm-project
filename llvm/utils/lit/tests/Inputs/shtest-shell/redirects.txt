@@ -17,13 +17,13 @@
 # Check stderr redirect (2> and 2>>).
 #
 # RUN: echo "not-present" > %t.stderr-write
-# RUN: "%{python}" %S/write-to-stderr.py 2> %t.stderr-write
+# RUN: %{python} %S/write-to-stderr.py 2> %t.stderr-write
 # RUN: FileCheck --check-prefix=STDERR-WRITE < %t.stderr-write %s
 #
 # STDERR-WRITE-NOT: not-present
 # STDERR-WRITE: a line on stderr
 #
-# RUN: "%{python}" %S/write-to-stderr.py 2>> %t.stderr-write
+# RUN: %{python} %S/write-to-stderr.py 2>> %t.stderr-write
 # RUN: FileCheck --check-prefix=STDERR-APPEND < %t.stderr-write %s
 #
 # STDERR-APPEND: a line on stderr
@@ -33,7 +33,7 @@
 # Check combined redirect (&>).
 #
 # RUN: echo "not-present" > %t.combined
-# RUN: "%{python}" %S/write-to-stdout-and-stderr.py &> %t.combined
+# RUN: %{python} %S/write-to-stdout-and-stderr.py &> %t.combined
 # RUN: FileCheck --check-prefix=COMBINED-WRITE < %t.combined %s
 #
 # COMBINED-WRITE-NOT: not-present

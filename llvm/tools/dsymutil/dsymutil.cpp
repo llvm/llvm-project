@@ -7,9 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This program is a utility that aims to be a dropin replacement for
-// Darwin's dsymutil.
-//
+// This program is a utility that aims to be a dropin replacement for Darwin's
+// dsymutil.
 //===----------------------------------------------------------------------===//
 
 #include "dsymutil.h"
@@ -60,6 +59,8 @@ static opt<std::string>
     OutputFileOpt("o",
                   desc("Specify the output file. default: <input file>.dwarf"),
                   value_desc("filename"), cat(DsymCategory));
+static alias OutputFileOptA("out", desc("Alias for -o"),
+                            aliasopt(OutputFileOpt));
 
 static opt<std::string> OsoPrependPath(
     "oso-prepend-path",
@@ -100,6 +101,11 @@ static opt<bool> Update(
          "tables and other DWARF optimizations."),
     init(false), cat(DsymCategory));
 static alias UpdateA("u", desc("Alias for --update"), aliasopt(Update));
+
+static opt<std::string> SymbolMap(
+    "symbol-map",
+    desc("Updates the existing dSYMs inplace using symbol map specified."),
+    value_desc("bcsymbolmap"), cat(DsymCategory));
 
 static cl::opt<AccelTableKind> AcceleratorTable(
     "accelerator", cl::desc("Output accelerator tables."),
@@ -165,20 +171,18 @@ static opt<bool>
                        desc("Embed warnings in the linked DWARF debug info."),
                        cat(DsymCategory));
 
-static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
+static Error createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
   if (NoOutput)
-    return true;
+    return Error::success();
 
   // Create plist file to write to.
   llvm::SmallString<128> InfoPlist(BundleRoot);
   llvm::sys::path::append(InfoPlist, "Contents/Info.plist");
   std::error_code EC;
   llvm::raw_fd_ostream PL(InfoPlist, EC, llvm::sys::fs::F_Text);
-  if (EC) {
-    WithColor::error() << "cannot create plist file " << InfoPlist << ": "
-                       << EC.message() << '\n';
-    return false;
-  }
+  if (EC)
+    return make_error<StringError>(
+        "cannot create Plist: " + toString(errorCodeToError(EC)), EC);
 
   CFBundleInfo BI = getBundleInfo(Bin);
 
@@ -230,22 +234,21 @@ static bool createPlistFile(llvm::StringRef Bin, llvm::StringRef BundleRoot) {
      << "</plist>\n";
 
   PL.close();
-  return true;
+  return Error::success();
 }
 
-static bool createBundleDir(llvm::StringRef BundleBase) {
+static Error createBundleDir(llvm::StringRef BundleBase) {
   if (NoOutput)
-    return true;
+    return Error::success();
 
   llvm::SmallString<128> Bundle(BundleBase);
   llvm::sys::path::append(Bundle, "Contents", "Resources", "DWARF");
-  if (std::error_code EC = create_directories(Bundle.str(), true,
-                                              llvm::sys::fs::perms::all_all)) {
-    WithColor::error() << "cannot create directory " << Bundle << ": "
-                       << EC.message() << "\n";
-    return false;
-  }
-  return true;
+  if (std::error_code EC =
+          create_directories(Bundle.str(), true, llvm::sys::fs::perms::all_all))
+    return make_error<StringError>(
+        "cannot create bundle: " + toString(errorCodeToError(EC)), EC);
+
+  return Error::success();
 }
 
 static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
@@ -257,7 +260,7 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
 
   Expected<OwningBinary<Binary>> BinOrErr = createBinary(OutputFile);
   if (!BinOrErr) {
-    errs() << OutputFile << ": " << toString(BinOrErr.takeError());
+    WithColor::error() << OutputFile << ": " << toString(BinOrErr.takeError());
     return false;
   }
 
@@ -276,9 +279,12 @@ static bool verify(llvm::StringRef OutputFile, llvm::StringRef Arch) {
   return false;
 }
 
-static std::string getOutputFileName(llvm::StringRef InputFile) {
+static Expected<std::string> getOutputFileName(llvm::StringRef InputFile) {
+  if (OutputFileOpt == "-")
+    return OutputFileOpt;
+
   // When updating, do in place replacement.
-  if (OutputFileOpt.empty() && Update)
+  if (OutputFileOpt.empty() && (Update || !SymbolMap.empty()))
     return InputFile;
 
   // If a flat dSYM has been requested, things are pretty simple.
@@ -305,8 +311,10 @@ static std::string getOutputFileName(llvm::StringRef InputFile) {
   llvm::SmallString<128> BundleDir(OutputFileOpt);
   if (BundleDir.empty())
     BundleDir = DwarfFile + ".dSYM";
-  if (!createBundleDir(BundleDir) || !createPlistFile(DwarfFile, BundleDir))
-    return "";
+  if (auto E = createBundleDir(BundleDir))
+    return std::move(E);
+  if (auto E = createPlistFile(DwarfFile, BundleDir))
+    return std::move(E);
 
   llvm::sys::path::append(BundleDir, "Contents", "Resources", "DWARF",
                           llvm::sys::path::filename(DwarfFile));
@@ -326,6 +334,9 @@ static Expected<LinkOptions> getOptions() {
   Options.NoTimestamp = NoTimestamp;
   Options.PrependPath = OsoPrependPath;
   Options.TheAccelTableKind = AcceleratorTable;
+
+  if (!SymbolMap.empty())
+    Options.Update = true;
 
   if (Assembly)
     Options.FileType = OutputFileType::Assembly;
@@ -445,6 +456,13 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  if (InputFiles.size() > 1 && !SymbolMap.empty() &&
+      !llvm::sys::fs::is_directory(SymbolMap)) {
+    WithColor::error() << "when unobfuscating multiple files, --symbol-map "
+                       << "needs to point to a directory.\n";
+    return 1;
+  }
+
   if (getenv("RC_DEBUG_OPTIONS"))
     PaperTrailWarnings = true;
 
@@ -458,6 +476,8 @@ int main(int argc, char **argv) {
       WithColor::error() << "unsupported cpu architecture: '" << Arch << "'\n";
       return 1;
     }
+
+  SymbolMapLoader SymMapLoader(SymbolMap);
 
   for (auto &InputFile : *InputsOrErr) {
     // Dump the symbol table for each input file and requested arch
@@ -513,6 +533,9 @@ int main(int argc, char **argv) {
       if (DumpDebugMap)
         continue;
 
+      if (!SymbolMap.empty())
+        OptionsOrErr->Translator = SymMapLoader.Load(InputFile, *Map);
+
       if (Map->begin() == Map->end())
         WithColor::warning()
             << "no debug symbols in executable (-arch "
@@ -521,13 +544,20 @@ int main(int argc, char **argv) {
       // Using a std::shared_ptr rather than std::unique_ptr because move-only
       // types don't work with std::bind in the ThreadPool implementation.
       std::shared_ptr<raw_fd_ostream> OS;
-      std::string OutputFile = getOutputFileName(InputFile);
+
+      Expected<std::string> OutputFileOrErr = getOutputFileName(InputFile);
+      if (!OutputFileOrErr) {
+        WithColor::error() << toString(OutputFileOrErr.takeError());
+        return 1;
+      }
+
+      std::string OutputFile = *OutputFileOrErr;
       if (NeedsTempFiles) {
         TempFiles.emplace_back(Map->getTriple().getArchName().str());
 
         auto E = TempFiles.back().createTempFile();
         if (E) {
-          errs() << toString(std::move(E));
+          WithColor::error() << toString(std::move(E));
           return 1;
         }
 
@@ -540,7 +570,7 @@ int main(int argc, char **argv) {
         OS = std::make_shared<raw_fd_ostream>(NoOutput ? "-" : OutputFile, EC,
                                               sys::fs::F_None);
         if (EC) {
-          errs() << OutputFile << ": " << EC.message();
+          WithColor::error() << OutputFile << ": " << EC.message();
           return 1;
         }
       }
@@ -567,10 +597,16 @@ int main(int argc, char **argv) {
     if (!AllOK)
       return 1;
 
-    if (NeedsTempFiles &&
-        !MachOUtils::generateUniversalBinary(
-            TempFiles, getOutputFileName(InputFile), *OptionsOrErr, SDKPath))
-      return 1;
+    if (NeedsTempFiles) {
+      Expected<std::string> OutputFileOrErr = getOutputFileName(InputFile);
+      if (!OutputFileOrErr) {
+        WithColor::error() << toString(OutputFileOrErr.takeError());
+        return 1;
+      }
+      if (!MachOUtils::generateUniversalBinary(TempFiles, *OutputFileOrErr,
+                                               *OptionsOrErr, SDKPath))
+        return 1;
+    }
   }
 
   return 0;

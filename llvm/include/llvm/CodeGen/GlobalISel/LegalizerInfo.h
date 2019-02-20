@@ -39,6 +39,7 @@ class MachineInstr;
 class MachineIRBuilder;
 class MachineRegisterInfo;
 class MCInstrInfo;
+class GISelChangeObserver;
 
 namespace LegalizeActions {
 enum LegalizeAction : std::uint8_t {
@@ -121,7 +122,7 @@ struct LegalityQuery {
   ArrayRef<LLT> Types;
 
   struct MemDesc {
-    uint64_t Size;
+    uint64_t SizeInBits;
     AtomicOrdering Ordering;
   };
 
@@ -651,6 +652,20 @@ public:
     return minScalar(TypeIdx, MinTy).maxScalar(TypeIdx, MaxTy);
   }
 
+  /// Widen the scalar to match the size of another.
+  LegalizeRuleSet &minScalarSameAs(unsigned TypeIdx, unsigned LargeTypeIdx) {
+    typeIdx(TypeIdx);
+    return widenScalarIf(
+        [=](const LegalityQuery &Query) {
+          return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
+                 Query.Types[TypeIdx].getSizeInBits();
+        },
+        [=](const LegalityQuery &Query) {
+          return std::make_pair(TypeIdx,
+                                Query.Types[LargeTypeIdx].getElementType());
+        });
+  }
+
   /// Add more elements to the vector to reach the next power of two.
   /// No effect if the type is not a vector or the element count is a power of
   /// two.
@@ -693,6 +708,8 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT VecTy = Query.Types[TypeIdx];
+          if (MaxElements == 1)
+            return std::make_pair(TypeIdx, VecTy.getElementType());
           return std::make_pair(
               TypeIdx, LLT::vector(MaxElements, VecTy.getScalarSizeInBits()));
         });
@@ -947,9 +964,9 @@ public:
 
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
-  virtual bool legalizeCustom(MachineInstr &MI,
-                              MachineRegisterInfo &MRI,
-                              MachineIRBuilder &MIRBuilder) const;
+  virtual bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIRBuilder,
+                              GISelChangeObserver &Observer) const;
 
 private:
   /// Determine what action should be taken to legalize the given generic

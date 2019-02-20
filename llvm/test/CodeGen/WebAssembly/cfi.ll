@@ -1,4 +1,4 @@
-; RUN: opt -S -lowertypetests < %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: opt -S -lowertypetests < %s | llc -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck %s
 
 ; Tests that we correctly assign indexes for control flow integrity.
 

@@ -147,7 +147,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
     COFFYAML::Section NewYAMLSection;
     ObjSection.getName(NewYAMLSection.Name);
     NewYAMLSection.Header.Characteristics = COFFSection->Characteristics;
-    NewYAMLSection.Header.VirtualAddress = ObjSection.getAddress();
+    NewYAMLSection.Header.VirtualAddress = COFFSection->VirtualAddress;
     NewYAMLSection.Header.VirtualSize = COFFSection->VirtualSize;
     NewYAMLSection.Header.NumberOfLineNumbers =
         COFFSection->NumberOfLinenumbers;
@@ -188,7 +188,7 @@ void COFFDumper::dumpSections(unsigned NumSections) {
       if (!SymbolNameOrErr) {
        std::string Buf;
        raw_string_ostream OS(Buf);
-       logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS, "");
+       logAllUnhandledErrors(SymbolNameOrErr.takeError(), OS);
        OS.flush();
        report_fatal_error(Buf);
       }

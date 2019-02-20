@@ -1,6 +1,6 @@
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX700 %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx700 -mattr=-code-object-v3 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX700 %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -mattr=-code-object-v3 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX800 %s
+// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-code-object-v3 -show-encoding %s | FileCheck --check-prefix=CHECK --check-prefix=GFX900 %s
 
 // CHECK:  .amd_amdgpu_hsa_metadata
 // CHECK:    Version: [ 1, 0 ]

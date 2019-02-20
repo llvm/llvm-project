@@ -553,11 +553,11 @@
 # DSB
 #------------------------------------------------------------------------------
 
-# CHECK: dsb	#0x0
+# CHECK: ssbb
 # CHECK: dsb	#0x1
 # CHECK: dsb	oshst
 # CHECK: dsb	osh
-# CHECK: dsb	#0x4
+# CHECK: pssbb
 # CHECK: dsb	#0x5
 # CHECK: dsb	nshst
 # CHECK: dsb	nsh

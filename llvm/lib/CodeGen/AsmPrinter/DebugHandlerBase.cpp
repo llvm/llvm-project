@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DebugHandlerBase.h"
+#include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -205,8 +205,9 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 
   // Calculate history for local variables.
   assert(DbgValues.empty() && "DbgValues map wasn't cleaned!");
-  calculateDbgValueHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
-                           DbgValues);
+  assert(DbgLabels.empty() && "DbgLabels map wasn't cleaned!");
+  calculateDbgEntityHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
+                            DbgValues, DbgLabels);
   LLVM_DEBUG(DbgValues.dump());
 
   // Request labels for the full history.
@@ -242,6 +243,12 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
       if (Range.second)
         requestLabelAfterInsn(Range.second);
     }
+  }
+
+  // Ensure there is a symbol before DBG_LABEL.
+  for (const auto &I : DbgLabels) {
+    const MachineInstr *MI = I.second;
+    requestLabelBeforeInsn(MI);
   }
 
   PrevInstLoc = DebugLoc();
@@ -311,6 +318,7 @@ void DebugHandlerBase::endFunction(const MachineFunction *MF) {
   if (hasDebugInfo(MMI, MF))
     endFunctionImpl(MF);
   DbgValues.clear();
+  DbgLabels.clear();
   LabelsBeforeInsn.clear();
   LabelsAfterInsn.clear();
 }

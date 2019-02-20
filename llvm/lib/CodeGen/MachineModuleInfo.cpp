@@ -194,7 +194,7 @@ void MMIAddrLabelMapCallbackPtr::allUsesReplacedWith(Value *V2) {
   Map->UpdateForRAUWBlock(cast<BasicBlock>(getValPtr()), cast<BasicBlock>(V2));
 }
 
-MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
+MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
   : ImmutablePass(ID), TM(*TM),
     Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
             TM->getObjFileLowering(), nullptr, false) {
@@ -206,10 +206,11 @@ MachineModuleInfo::~MachineModuleInfo() = default;
 bool MachineModuleInfo::doInitialization(Module &M) {
   ObjFileMMI = nullptr;
   CurCallSite = 0;
-  DbgInfoAvailable = UsesVAFloatArgument = UsesMorestackAddr = false;
+  UsesVAFloatArgument = UsesMorestackAddr = false;
   HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;
   TheModule = &M;
+  DbgInfoAvailable = !empty(M.debug_compile_units());
   return false;
 }
 

@@ -77,13 +77,13 @@ private:
   std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  RTDyldObjectLinkingLayer ObjectLayer;
-  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
+  LegacyRTDyldObjectLinkingLayer ObjectLayer;
+  LegacyIRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
   using OptimizeFunction =
       std::function<std::unique_ptr<Module>(std::unique_ptr<Module>)>;
 
-  IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
+  LegacyIRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
   std::unique_ptr<JITCompileCallbackManager> CompileCallbackMgr;
   std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
@@ -108,7 +108,7 @@ public:
         TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
         ObjectLayer(ES,
                     [this](VModuleKey K) {
-                      return RTDyldObjectLinkingLayer::Resources{
+                      return LegacyRTDyldObjectLinkingLayer::Resources{
                           std::make_shared<SectionMemoryManager>(), Resolver};
                     }),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
@@ -116,8 +116,8 @@ public:
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
-        CompileCallbackMgr(orc::createLocalCompileCallbackManager(
-            TM->getTargetTriple(), ES, 0)) {
+        CompileCallbackMgr(cantFail(orc::createLocalCompileCallbackManager(
+            TM->getTargetTriple(), ES, 0))) {
     auto IndirectStubsMgrBuilder =
       orc::createLocalIndirectStubsManagerBuilder(TM->getTargetTriple());
     IndirectStubsMgr = IndirectStubsMgrBuilder();

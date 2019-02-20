@@ -1,0 +1,15 @@
+static_library("BinaryFormat") {
+  output_name = "LLVMBinaryFormat"
+  deps = [
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "AMDGPUMetadataVerifier.cpp",
+    "Dwarf.cpp",
+    "Magic.cpp",
+    "MsgPackReader.cpp",
+    "MsgPackTypes.cpp",
+    "MsgPackWriter.cpp",
+    "Wasm.cpp",
+  ]
+}

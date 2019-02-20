@@ -24,3 +24,6 @@ HELP-NOT: -reverse-iterate
 
 RUN: llvm-dwarfdump --version 2>&1 | FileCheck --check-prefix=VERSION %s
 VERSION: {{ version }}
+
+RUN: llvm-dwarfdump -diff -verbose 2>&1 | FileCheck --check-prefix=INCOMPATIBLE %s
+INCOMPATIBLE: error: incompatible arguments: specifying both -diff and -verbose is currently not supported

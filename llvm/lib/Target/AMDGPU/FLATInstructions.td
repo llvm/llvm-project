@@ -121,6 +121,11 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
   let Inst{63-56} = !if(ps.has_vdst, vdst, ?);
 }
 
+class GlobalSaddrTable <bit is_saddr, string Name = ""> {
+  bit IsSaddr = is_saddr;
+  string SaddrOp = Name;
+}
+
 // TODO: Is exec allowed for saddr? The disabled value 0x7f is the
 // same encoding value as exec_hi, so it isn't possible to use that if
 // saddr is 32-bit (which isn't handled here yet).
@@ -171,15 +176,19 @@ class FLAT_Store_Pseudo <string opName, RegisterClass vdataClass,
 
 multiclass FLAT_Global_Load_Pseudo<string opName, RegisterClass regClass, bit HasTiedInput = 0> {
   let is_flat_global = 1 in {
-    def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>;
-    def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1, 1>;
+    def "" : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1>,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Load_Pseudo<opName, regClass, HasTiedInput, 1, 1, 1>,
+      GlobalSaddrTable<1, opName>;
   }
 }
 
 multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
   let is_flat_global = 1 in {
-    def "" : FLAT_Store_Pseudo<opName, regClass, 1, 1>;
-    def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1, 1>;
+    def "" : FLAT_Store_Pseudo<opName, regClass, 1, 1>,
+      GlobalSaddrTable<0, opName>;
+    def _SADDR : FLAT_Store_Pseudo<opName, regClass, 1, 1, 1>,
+      GlobalSaddrTable<1, opName>;
   }
 }
 
@@ -262,6 +271,7 @@ multiclass FLAT_Atomic_Pseudo<
     (outs),
     (ins VReg_64:$vaddr, data_rc:$vdata, offset_u12:$offset, SLC:$slc),
     " $vaddr, $vdata$offset$slc">,
+    GlobalSaddrTable<0, opName>,
     AtomicNoRet <opName, 0> {
     let PseudoInstr = NAME;
   }
@@ -272,10 +282,11 @@ multiclass FLAT_Atomic_Pseudo<
     " $vdst, $vaddr, $vdata$offset glc$slc",
     [(set vt:$vdst,
       (atomic (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$vdata))]>,
+       GlobalSaddrTable<0, opName#"_rtn">,
        AtomicNoRet <opName, 1>;
 }
 
-multiclass FLAT_Global_Atomic_Pseudo<
+multiclass FLAT_Global_Atomic_Pseudo_NO_RTN<
   string opName,
   RegisterClass vdst_rc,
   ValueType vt,
@@ -287,10 +298,31 @@ multiclass FLAT_Global_Atomic_Pseudo<
     (outs),
     (ins VReg_64:$vaddr, data_rc:$vdata, offset_s13:$offset, SLC:$slc),
     " $vaddr, $vdata, off$offset$slc">,
+    GlobalSaddrTable<0, opName>,
     AtomicNoRet <opName, 0> {
     let has_saddr = 1;
     let PseudoInstr = NAME;
   }
+
+  def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
+    (outs),
+    (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, offset_s13:$offset, SLC:$slc),
+    " $vaddr, $vdata, $saddr$offset$slc">,
+    GlobalSaddrTable<1, opName>,
+    AtomicNoRet <opName#"_saddr", 0> {
+    let has_saddr = 1;
+    let enabled_saddr = 1;
+    let PseudoInstr = NAME#"_SADDR";
+  }
+}
+
+multiclass FLAT_Global_Atomic_Pseudo_RTN<
+  string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  SDPatternOperator atomic = null_frag,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc> {
 
   def _RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),
@@ -298,24 +330,16 @@ multiclass FLAT_Global_Atomic_Pseudo<
     " $vdst, $vaddr, $vdata, off$offset glc$slc",
     [(set vt:$vdst,
       (atomic (FLATSignedAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$vdata))]>,
+      GlobalSaddrTable<0, opName#"_rtn">,
       AtomicNoRet <opName, 1> {
     let has_saddr = 1;
-  }
-
-  def _SADDR : FLAT_AtomicNoRet_Pseudo <opName,
-    (outs),
-    (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, offset_s13:$offset, SLC:$slc),
-    " $vaddr, $vdata, $saddr$offset$slc">,
-    AtomicNoRet <opName#"_saddr", 0> {
-    let has_saddr = 1;
-    let enabled_saddr = 1;
-    let PseudoInstr = NAME#"_SADDR";
   }
 
   def _SADDR_RTN : FLAT_AtomicRet_Pseudo <opName,
     (outs vdst_rc:$vdst),
       (ins VReg_64:$vaddr, data_rc:$vdata, SReg_64:$saddr, offset_s13:$offset, SLC:$slc),
     " $vdst, $vaddr, $vdata, $saddr$offset glc$slc">,
+    GlobalSaddrTable<1, opName#"_rtn">,
     AtomicNoRet <opName#"_saddr", 1> {
      let has_saddr = 1;
      let enabled_saddr = 1;
@@ -323,10 +347,20 @@ multiclass FLAT_Global_Atomic_Pseudo<
   }
 }
 
+multiclass FLAT_Global_Atomic_Pseudo<
+  string opName,
+  RegisterClass vdst_rc,
+  ValueType vt,
+  SDPatternOperator atomic = null_frag,
+  ValueType data_vt = vt,
+  RegisterClass data_rc = vdst_rc> :
+    FLAT_Global_Atomic_Pseudo_NO_RTN<opName, vdst_rc, vt, atomic, data_vt, data_rc>,
+    FLAT_Global_Atomic_Pseudo_RTN<opName, vdst_rc, vt, atomic, data_vt, data_rc>;
+
 class flat_binary_atomic_op<SDNode atomic_op> : PatFrag<
   (ops node:$ptr, node:$value),
   (atomic_op node:$ptr, node:$value),
-  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUASI.FLAT_ADDRESS;}]
+  [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::FLAT_ADDRESS;}]
 >;
 
 def atomic_cmp_swap_flat : flat_binary_atomic_op<AMDGPUatomic_cmp_swap>;

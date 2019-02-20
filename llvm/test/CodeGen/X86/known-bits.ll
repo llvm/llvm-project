@@ -9,34 +9,46 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
+; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movzbl (%eax), %eax
-; X32-NEXT:    imull $101, %eax, %eax
+; X32-NEXT:    movzbl (%eax), %ecx
+; X32-NEXT:    imull $101, %ecx, %eax
 ; X32-NEXT:    shrl $14, %eax
+; X32-NEXT:    imull $177, %ecx, %ecx
+; X32-NEXT:    shrl $14, %ecx
 ; X32-NEXT:    movzbl %al, %eax
-; X32-NEXT:    vmovd %eax, %xmm0
-; X32-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X32-NEXT:    vpextrd $1, %xmm0, %ebp
+; X32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm1
+; X32-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3.57331108E-43,3.57331108E-43,3.57331108E-43,3.57331108E-43]
+; X32-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; X32-NEXT:    movzbl %cl, %eax
+; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X32-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; X32-NEXT:    vpextrd $1, %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X32-NEXT:    vpextrd $1, %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X32-NEXT:    xorl %ecx, %ecx
-; X32-NEXT:    vmovd %xmm0, %esi
-; X32-NEXT:    vpextrd $2, %xmm0, %edi
-; X32-NEXT:    vpextrd $3, %xmm0, %ebx
+; X32-NEXT:    vmovd %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
+; X32-NEXT:    vmovd %xmm0, (%esp) # 4-byte Folded Spill
+; X32-NEXT:    vpextrd $2, %xmm1, %edi
+; X32-NEXT:    vpextrd $2, %xmm0, %esi
+; X32-NEXT:    vpextrd $3, %xmm1, %ebx
+; X32-NEXT:    vpextrd $3, %xmm0, %ebp
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB0_1: # %CF
 ; X32-NEXT:    # =>This Loop Header: Depth=1
 ; X32-NEXT:    # Child Loop BB0_2 Depth 2
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    xorl %edx, %edx
-; X32-NEXT:    movl %ebp, %eax
-; X32-NEXT:    divl %ebp
+; X32-NEXT:    divl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X32-NEXT:    xorl %edx, %edx
-; X32-NEXT:    movl %esi, %eax
-; X32-NEXT:    divl %esi
-; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    divl (%esp) # 4-byte Folded Reload
 ; X32-NEXT:    movl %edi, %eax
-; X32-NEXT:    divl %edi
 ; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    divl %esi
 ; X32-NEXT:    movl %ebx, %eax
-; X32-NEXT:    divl %ebx
+; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    divl %ebp
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB0_2: # %CF237
 ; X32-NEXT:    # Parent Loop BB0_1 Depth=1
@@ -47,33 +59,46 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ;
 ; X64-LABEL: knownbits_zext_in_reg:
 ; X64:       # %bb.0: # %BB
+; X64-NEXT:    pushq %rbp
+; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    movzbl (%rdi), %eax
-; X64-NEXT:    imull $101, %eax, %eax
+; X64-NEXT:    imull $101, %eax, %ecx
+; X64-NEXT:    shrl $14, %ecx
+; X64-NEXT:    imull $177, %eax, %eax
 ; X64-NEXT:    shrl $14, %eax
+; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm1
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm2 = [3.57331108E-43,3.57331108E-43,3.57331108E-43,3.57331108E-43]
+; X64-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; X64-NEXT:    vpextrd $1, %xmm0, %r8d
+; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; X64-NEXT:    vpextrd $1, %xmm1, %r8d
+; X64-NEXT:    vpextrd $1, %xmm0, %r9d
 ; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    vmovd %xmm0, %r9d
-; X64-NEXT:    vpextrd $2, %xmm0, %edi
-; X64-NEXT:    vpextrd $3, %xmm0, %ecx
+; X64-NEXT:    vmovd %xmm1, %r10d
+; X64-NEXT:    vmovd %xmm0, %r11d
+; X64-NEXT:    vpextrd $2, %xmm1, %edi
+; X64-NEXT:    vpextrd $2, %xmm0, %ebx
+; X64-NEXT:    vpextrd $3, %xmm1, %ecx
+; X64-NEXT:    vpextrd $3, %xmm0, %ebp
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_1: # %CF
 ; X64-NEXT:    # =>This Loop Header: Depth=1
 ; X64-NEXT:    # Child Loop BB0_2 Depth 2
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %r8d, %eax
-; X64-NEXT:    divl %r8d
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    movl %r9d, %eax
 ; X64-NEXT:    divl %r9d
+; X64-NEXT:    movl %r10d, %eax
 ; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %r11d
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    divl %edi
 ; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ebx
 ; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    divl %ecx
+; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ebp
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_2: # %CF237
 ; X64-NEXT:    # Parent Loop BB0_1 Depth=1
@@ -85,11 +110,13 @@ BB:
   %L5 = load i8, i8* %0
   %Sl9 = select i1 true, i8 %L5, i8 undef
   %B21 = udiv i8 %Sl9, -93
+  %B22 = udiv i8 %Sl9,  93
   br label %CF
 
 CF:                                               ; preds = %CF246, %BB
   %I40 = insertelement <4 x i8> zeroinitializer, i8 %B21, i32 1
-  %B41 = srem <4 x i8> %I40, %I40
+  %I41 = insertelement <4 x i8> zeroinitializer, i8 %B22, i32 1
+  %B41 = srem <4 x i8> %I40, %I41
   br label %CF237
 
 CF237:                                            ; preds = %CF237, %CF
@@ -271,3 +298,36 @@ declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
 declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64) nounwind readnone
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
+
+define i32 @knownbits_fshl(i32 %a0) nounwind {
+; X32-LABEL: knownbits_fshl:
+; X32:       # %bb.0:
+; X32-NEXT:    movl $3, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_fshl:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $3, %eax
+; X64-NEXT:    retq
+  %1 = tail call i32 @llvm.fshl.i32(i32 %a0, i32 -1, i32 5)
+  %2 = and i32 %1, 3
+  ret i32 %2
+}
+
+define i32 @knownbits_fshr(i32 %a0) nounwind {
+; X32-LABEL: knownbits_fshr:
+; X32:       # %bb.0:
+; X32-NEXT:    movl $3, %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: knownbits_fshr:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $3, %eax
+; X64-NEXT:    retq
+  %1 = tail call i32 @llvm.fshr.i32(i32 %a0, i32 -1, i32 5)
+  %2 = and i32 %1, 3
+  ret i32 %2
+}
+
+declare i32 @llvm.fshl.i32(i32, i32, i32) nounwind readnone
+declare i32 @llvm.fshr.i32(i32, i32, i32) nounwind readnone

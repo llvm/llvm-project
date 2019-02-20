@@ -9,11 +9,10 @@
 @d = common global i64 zeroinitializer, align 8
 @e = common global i64 zeroinitializer, align 8
 
-define void @foo() {
+define void @foo(i64 %x) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    movl d, %eax
 ; X86-NEXT:    notl %eax
 ; X86-NEXT:    movl d+4, %ecx
@@ -23,43 +22,37 @@ define void @foo() {
 ; X86-NEXT:    shrdl $21, %ecx, %eax
 ; X86-NEXT:    shrl $21, %ecx
 ; X86-NEXT:    andl $-2, %eax
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    addl $7, %eax
-; X86-NEXT:    adcxl %edx, %ecx
+; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    pushl %ecx
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $0
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
-; X86-NEXT:    pushl $0
-; X86-NEXT:    .cfi_adjust_cfa_offset 4
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
 ; X86-NEXT:    calll __divdi3
 ; X86-NEXT:    addl $16, %esp
-; X86-NEXT:    .cfi_adjust_cfa_offset -16
 ; X86-NEXT:    orl %eax, %edx
 ; X86-NEXT:    setne {{[0-9]+}}(%esp)
 ; X86-NEXT:    popl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq {{.*}}(%rip), %rax
-; X64-NEXT:    movabsq $3013716102212485120, %rcx # imm = 0x29D2DED3DE400000
-; X64-NEXT:    andnq %rcx, %rax, %rcx
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    movq {{.*}}(%rip), %rcx
+; X64-NEXT:    movabsq $3013716102212485120, %rdx # imm = 0x29D2DED3DE400000
+; X64-NEXT:    andnq %rdx, %rcx, %rcx
 ; X64-NEXT:    shrq $21, %rcx
 ; X64-NEXT:    addq $7, %rcx
-; X64-NEXT:    movabsq $4393751543808, %rax # imm = 0x3FF00000000
-; X64-NEXT:    testq %rax, %rcx
+; X64-NEXT:    movq %rdi, %rdx
+; X64-NEXT:    orq %rcx, %rdx
+; X64-NEXT:    shrq $32, %rdx
 ; X64-NEXT:    je .LBB0_1
 ; X64-NEXT:  # %bb.2:
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    divq %rcx
+; X64-NEXT:    cqto
+; X64-NEXT:    idivq %rcx
 ; X64-NEXT:    jmp .LBB0_3
 ; X64-NEXT:  .LBB0_1:
-; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    # kill: def $eax killed $eax def $rax
@@ -87,7 +80,7 @@ define void @foo() {
   %18 = ashr i64 %4, %17
   %19 = and i64 %18, 9223372036854775806
   %20 = add nsw i64 7, %19
-  %21 = sdiv i64 0, %20
+  %21 = sdiv i64 %x, %20
   %22 = icmp ne i64 %21, 0
   %23 = zext i1 %22 to i8
   store i8 %23, i8* %1, align 1

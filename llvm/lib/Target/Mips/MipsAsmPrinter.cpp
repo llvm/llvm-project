@@ -561,6 +561,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         O << '$' << MipsInstPrinter::getRegisterName(Reg);
         return false;
       }
+      break;
     }
     case 'w':
       // Print MSA registers for the 'f' constraint
@@ -1203,18 +1204,23 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 
 // Emit .dtprelword or .dtpreldword directive
 // and value for debug thread local expression.
-void MipsAsmPrinter::EmitDebugThreadLocal(const MCExpr *Value,
-                                          unsigned Size) const {
-  switch (Size) {
-  case 4:
-    OutStreamer->EmitDTPRel32Value(Value);
-    break;
-  case 8:
-    OutStreamer->EmitDTPRel64Value(Value);
-    break;
-  default:
-    llvm_unreachable("Unexpected size of expression value.");
+void MipsAsmPrinter::EmitDebugValue(const MCExpr *Value, unsigned Size) const {
+  if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
+    if (MipsExpr && MipsExpr->getKind() == MipsMCExpr::MEK_DTPREL) {
+      switch (Size) {
+      case 4:
+        OutStreamer->EmitDTPRel32Value(MipsExpr->getSubExpr());
+        break;
+      case 8:
+        OutStreamer->EmitDTPRel64Value(MipsExpr->getSubExpr());
+        break;
+      default:
+        llvm_unreachable("Unexpected size of expression value.");
+      }
+      return;
+    }
   }
+  AsmPrinter::EmitDebugValue(Value, Size);
 }
 
 // Align all targets of indirect branches on bundle size.  Used only if target
@@ -1240,8 +1246,12 @@ void MipsAsmPrinter::NaClAlignIndirectJumpTargets(MachineFunction &MF) {
 
 bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
   return (Opcode == Mips::LONG_BRANCH_LUi
+          || Opcode == Mips::LONG_BRANCH_LUi2Op
+          || Opcode == Mips::LONG_BRANCH_LUi2Op_64
           || Opcode == Mips::LONG_BRANCH_ADDiu
-          || Opcode == Mips::LONG_BRANCH_DADDiu);
+          || Opcode == Mips::LONG_BRANCH_ADDiu2Op
+          || Opcode == Mips::LONG_BRANCH_DADDiu
+          || Opcode == Mips::LONG_BRANCH_DADDiu2Op);
 }
 
 // Force static initialization.

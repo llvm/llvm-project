@@ -1,6 +1,12 @@
 ; Test for the conservative assembly handling mode used by KMSAN.
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK,CHECK-NONCONS %s
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S | FileCheck -check-prefixes=CHECK,CHECK-CONS %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
+; RUN: -msan-handle-asm-conservative=0 -S -passes=msan 2>&1 | FileCheck        \
+; RUN: "-check-prefixes=CHECK,CHECK-NONCONS" %s
+; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK,CHECK-NONCONS %s
+; RUN: opt < %s -msan-kernel=1 -msan-check-access-address=0                    \
+; RUN: -msan-handle-asm-conservative=1 -S -passes=msan 2>&1 | FileCheck        \
+; RUN: "-check-prefixes=CHECK,CHECK-CONS" %s
+; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S | FileCheck -check-prefixes=CHECK,CHECK-CONS %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ;    unsigned long *addr = &value;
 ;    asm("btsq %2, %1; setc %0" : "=qm" (bit), "=m" (addr): "Ir" (nr));
 ;    if (bit)
-;      return 0
+;      return 0;
 ;    else
 ;      return 1;
 ;  }
@@ -52,25 +58,37 @@ if.else:                                          ; preds = %entry
   ret i32 1
 }
 
-; Start with the asm call
+; %nr is first poisoned, then unpoisoned (written to). Need to optimize this in the future.
+; CHECK: [[NRC1:%.*]] = bitcast i64* %nr to i8*
+; CHECK: call void @__msan_poison_alloca(i8* [[NRC1]]{{.*}})
+; CHECK: [[NRC2:%.*]] = bitcast i64* %nr to i8*
+; CHECK: call { i8*, i32* } @__msan_metadata_ptr_for_store_8(i8* [[NRC2]])
+
+; Hooks for inputs usually go before the assembly statement. But here we have none,
+; because %nr is passed by value. However we check %nr for being initialized.
+; CHECK-CONS: [[NRC3:%.*]] = bitcast i64* %nr to i8*
+; CHECK-CONS: call { i8*, i32* } @__msan_metadata_ptr_for_load_8(i8* [[NRC3]])
+
+; In the conservative mode, call the store hooks for %bit and %addr:
+; CHECK-CONS: call void @__msan_instrument_asm_store(i8* %bit, i64 1)
+; CHECK-CONS: [[ADDR8S:%.*]] = bitcast i64** %addr to i8*
+; CHECK-CONS: call void @__msan_instrument_asm_store(i8* [[ADDR8S]], i64 8)
+
+; Landing pad for the %nr check above.
+; CHECK-CONS: call void @__msan_warning
+
 ; CHECK: call void asm "btsq $2, $1; setc $0"
 
 ; Calculating the shadow offset of %bit.
-; CHECK: [[PTR:%.*]] = ptrtoint {{.*}} %bit to i64
-; CHECK: [[SH_NUM:%.*]] = xor i64 [[PTR]], [[OFF:[0-9]*]]
-; CHECK: [[SHADOW:%.*]] = inttoptr i64 [[SH_NUM]] {{.*}}
+; CHECKz: [[PTR:%.*]] = ptrtoint {{.*}} %bit to i64
+; CHECKz: [[SH_NUM:%.*]] = xor i64 [[PTR]]
+; CHECKz: [[SHADOW:%.*]] = inttoptr i64 [[SH_NUM]] {{.*}}
 
-; In the conservative mode, unpoison the shadow.
-; CHECK-CONS: store i8 0, i8* [[SHADOW]]
-; Now calculate the shadow address again, because MSan does this for every
-; shadow access.
-; CHECK-CONS: [[PTR2:%.*]] = ptrtoint {{.*}} %bit to i64
-; CHECK-CONS: [[SH_NUM2:%.*]] = xor i64 [[PTR2]], [[OFF]]
-; CHECK-CONS: [[SHADOW2:%.*]] = inttoptr i64 [[SH_NUM2]] {{.*}}
+; CHECK: [[META:%.*]] = call {{.*}} @__msan_metadata_ptr_for_load_1(i8* %bit)
+; CHECK: [[SHADOW:%.*]] = extractvalue { i8*, i32* } [[META]], 0
 
 ; Now load the shadow value for the boolean.
-; CHECK-NONCONS: [[MSLD:%.*]] = load {{.*}} [[SHADOW]]
-; CHECK-CONS: [[MSLD:%.*]] = load {{.*}} [[SHADOW2]]
+; CHECK: [[MSLD:%.*]] = load {{.*}} [[SHADOW]]
 ; CHECK: [[MSPROP:%.*]] = trunc i8 [[MSLD]] to i1
 
 ; Is the shadow poisoned?
@@ -79,5 +97,5 @@ if.else:                                          ; preds = %entry
 
 ; If yes, raise a warning.
 ; CHECK: <label>:[[IFTRUE]]
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
 

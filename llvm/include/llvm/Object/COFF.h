@@ -594,6 +594,8 @@ enum class coff_guard_flags : uint32_t {
   FidTableHasFlags = 0x10000000, // Indicates that fid tables are 5 bytes
 };
 
+enum class frame_type : uint16_t { Fpo = 0, Trap = 1, Tss = 2, NonFpo = 3 };
+
 struct coff_load_config_code_integrity {
   support::ulittle16_t Flags;
   support::ulittle16_t Catalog;
@@ -883,6 +885,7 @@ public:
     assert(is64());
     return reinterpret_cast<const coff_load_configuration64 *>(LoadConfig);
   }
+  StringRef getRelocationTypeName(uint16_t Type) const;
 
 protected:
   void moveSymbolNext(DataRefImpl &Symb) const override;
@@ -968,6 +971,9 @@ public:
       return nullptr;
     return reinterpret_cast<const dos_header *>(base());
   }
+  std::error_code getCOFFHeader(const coff_file_header *&Res) const;
+  std::error_code
+  getCOFFBigObjHeader(const coff_bigobj_file_header *&Res) const;
   std::error_code getPE32Header(const pe32_header *&Res) const;
   std::error_code getPE32PlusHeader(const pe32plus_header *&Res) const;
   std::error_code getDataDirectory(uint32_t index,
@@ -1016,6 +1022,8 @@ public:
 
   ArrayRef<uint8_t> getSymbolAuxData(COFFSymbolRef Symbol) const;
 
+  uint32_t getSymbolIndex(COFFSymbolRef Symbol) const;
+
   size_t getSymbolTableEntrySize() const {
     if (COFFHeader)
       return sizeof(coff_symbol16);
@@ -1058,6 +1066,8 @@ public:
 
   bool isRelocatableObject() const override;
   bool is64() const { return PE32PlusHeader; }
+
+  StringRef mapDebugSectionName(StringRef Name) const override;
 
   static bool classof(const Binary *v) { return v->isCOFF(); }
 };
@@ -1227,7 +1237,7 @@ struct FpoData {
   bool useBP() const { return (Attributes >> 10) & 1; }
 
   // cbFrame: frame pointer
-  int getFP() const { return Attributes >> 14; }
+  frame_type getFP() const { return static_cast<frame_type>(Attributes >> 14); }
 };
 
 } // end namespace object

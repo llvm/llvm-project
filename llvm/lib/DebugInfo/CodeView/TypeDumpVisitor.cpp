@@ -361,7 +361,6 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, TypeServer2Record &TS) {
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
   printTypeIndex("PointeeType", Ptr.getReferentType());
-  W->printHex("PointerAttributes", uint32_t(Ptr.getOptions()));
   W->printEnum("PtrType", unsigned(Ptr.getPointerKind()),
                makeArrayRef(PtrKindNames));
   W->printEnum("PtrMode", unsigned(Ptr.getMode()), makeArrayRef(PtrModeNames));
@@ -371,6 +370,8 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
   W->printNumber("IsVolatile", Ptr.isVolatile());
   W->printNumber("IsUnaligned", Ptr.isUnaligned());
   W->printNumber("IsRestrict", Ptr.isRestrict());
+  W->printNumber("IsThisPtr&", Ptr.isLValueReferenceThisPtr());
+  W->printNumber("IsThisPtr&&", Ptr.isRValueReferenceThisPtr());
   W->printNumber("SizeOf", Ptr.getSize());
 
   if (Ptr.isPointerToMember()) {

@@ -236,6 +236,7 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
       // MI will become a KILL, don't considers it in scheduling
       return AluDiscarded;
     }
+    break;
   default:
     break;
   }

@@ -66,7 +66,8 @@ static cl::opt<unsigned>
                         cl::desc("Restrict range of Bcc instructions (DEBUG)"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
-    : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP),
+    : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP,
+                          AArch64::CATCHRET),
       RI(STI.getTargetTriple()), Subtarget(STI) {}
 
 /// GetInstSize - Return the number of bytes of code the specified
@@ -107,6 +108,14 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case AArch64::TLSDESC_CALLSEQ:
     // This gets lowered to an instruction sequence which takes 16 bytes
     NumBytes = 16;
+    break;
+  case AArch64::JumpTableDest32:
+  case AArch64::JumpTableDest16:
+  case AArch64::JumpTableDest8:
+    NumBytes = 12;
+    break;
+  case AArch64::SPACE:
+    NumBytes = MI.getOperand(1).getImm();
     break;
   }
 
@@ -675,14 +684,36 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   if (!Subtarget.hasCustomCheapAsMoveHandling())
     return MI.isAsCheapAsAMove();
 
-  if (Subtarget.hasExynosCheapAsMoveHandling()) {
-    if (isExynosResetFast(MI) || isExynosShiftLeftFast(MI))
+  const unsigned Opcode = MI.getOpcode();
+
+  // Firstly, check cases gated by features.
+
+  if (Subtarget.hasZeroCycleZeroingFP()) {
+    if (Opcode == AArch64::FMOVH0 ||
+        Opcode == AArch64::FMOVS0 ||
+        Opcode == AArch64::FMOVD0)
       return true;
-    else
-      return MI.isAsCheapAsAMove();
   }
 
-  switch (MI.getOpcode()) {
+  if (Subtarget.hasZeroCycleZeroingGP()) {
+    if (Opcode == TargetOpcode::COPY &&
+        (MI.getOperand(1).getReg() == AArch64::WZR ||
+         MI.getOperand(1).getReg() == AArch64::XZR))
+      return true;
+  }
+
+  // Secondly, check cases specific to sub-targets.
+
+  if (Subtarget.hasExynosCheapAsMoveHandling()) {
+    if (isExynosCheapAsMove(MI))
+      return true;
+
+    return MI.isAsCheapAsAMove();
+  }
+
+  // Finally, check generic cases.
+
+  switch (Opcode) {
   default:
     return false;
 
@@ -723,217 +754,12 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     return canBeExpandedToORR(MI, 32);
   case AArch64::MOVi64imm:
     return canBeExpandedToORR(MI, 64);
-
-  // It is cheap to zero out registers if the subtarget has ZeroCycleZeroing
-  // feature.
-  case AArch64::FMOVH0:
-  case AArch64::FMOVS0:
-  case AArch64::FMOVD0:
-    return Subtarget.hasZeroCycleZeroing();
-  case TargetOpcode::COPY:
-    return (Subtarget.hasZeroCycleZeroing() &&
-            (MI.getOperand(1).getReg() == AArch64::WZR ||
-             MI.getOperand(1).getReg() == AArch64::XZR));
   }
 
   llvm_unreachable("Unknown opcode to check as cheap as a move!");
 }
 
-bool AArch64InstrInfo::isExynosResetFast(const MachineInstr &MI) const {
-  unsigned Reg, Imm, Shift;
-
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-
-  // MOV Rd, SP
-  case AArch64::ADDWri:
-  case AArch64::ADDXri:
-    if (!MI.getOperand(1).isReg() || !MI.getOperand(2).isImm())
-      return false;
-
-    Reg = MI.getOperand(1).getReg();
-    Imm = MI.getOperand(2).getImm();
-    return ((Reg == AArch64::WSP || Reg == AArch64::SP) && Imm == 0);
-
-  // Literal
-  case AArch64::ADR:
-  case AArch64::ADRP:
-    return true;
-
-  // MOVI Vd, #0
-  case AArch64::MOVID:
-  case AArch64::MOVIv8b_ns:
-  case AArch64::MOVIv2d_ns:
-  case AArch64::MOVIv16b_ns:
-    Imm = MI.getOperand(1).getImm();
-    return (Imm == 0);
-
-  // MOVI Vd, #0
-  case AArch64::MOVIv2i32:
-  case AArch64::MOVIv4i16:
-  case AArch64::MOVIv4i32:
-  case AArch64::MOVIv8i16:
-    Imm = MI.getOperand(1).getImm();
-    Shift = MI.getOperand(2).getImm();
-    return (Imm == 0 && Shift == 0);
-
-  // MOV Rd, Imm
-  case AArch64::MOVNWi:
-  case AArch64::MOVNXi:
-
-  // MOV Rd, Imm
-  case AArch64::MOVZWi:
-  case AArch64::MOVZXi:
-    return true;
-
-  // MOV Rd, Imm
-  case AArch64::ORRWri:
-  case AArch64::ORRXri:
-    if (!MI.getOperand(1).isReg())
-      return false;
-
-    Reg = MI.getOperand(1).getReg();
-    Imm = MI.getOperand(2).getImm();
-    return ((Reg == AArch64::WZR || Reg == AArch64::XZR) && Imm == 0);
-
-  // MOV Rd, Rm
-  case AArch64::ORRWrs:
-  case AArch64::ORRXrs:
-    if (!MI.getOperand(1).isReg())
-      return false;
-
-    Reg = MI.getOperand(1).getReg();
-    Imm = MI.getOperand(3).getImm();
-    Shift = AArch64_AM::getShiftValue(Imm);
-    return ((Reg == AArch64::WZR || Reg == AArch64::XZR) && Shift == 0);
-  }
-}
-
-bool AArch64InstrInfo::isExynosShiftLeftFast(const MachineInstr &MI) const {
-  unsigned Imm, Shift;
-  AArch64_AM::ShiftExtendType Ext;
-
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-
-  // WriteI
-  case AArch64::ADDSWri:
-  case AArch64::ADDSXri:
-  case AArch64::ADDWri:
-  case AArch64::ADDXri:
-  case AArch64::SUBSWri:
-  case AArch64::SUBSXri:
-  case AArch64::SUBWri:
-  case AArch64::SUBXri:
-    return true;
-
-  // WriteISReg
-  case AArch64::ADDSWrs:
-  case AArch64::ADDSXrs:
-  case AArch64::ADDWrs:
-  case AArch64::ADDXrs:
-  case AArch64::ANDSWrs:
-  case AArch64::ANDSXrs:
-  case AArch64::ANDWrs:
-  case AArch64::ANDXrs:
-  case AArch64::BICSWrs:
-  case AArch64::BICSXrs:
-  case AArch64::BICWrs:
-  case AArch64::BICXrs:
-  case AArch64::EONWrs:
-  case AArch64::EONXrs:
-  case AArch64::EORWrs:
-  case AArch64::EORXrs:
-  case AArch64::ORNWrs:
-  case AArch64::ORNXrs:
-  case AArch64::ORRWrs:
-  case AArch64::ORRXrs:
-  case AArch64::SUBSWrs:
-  case AArch64::SUBSXrs:
-  case AArch64::SUBWrs:
-  case AArch64::SUBXrs:
-    Imm = MI.getOperand(3).getImm();
-    Shift = AArch64_AM::getShiftValue(Imm);
-    Ext = AArch64_AM::getShiftType(Imm);
-    return (Shift == 0 || (Shift <= 3 && Ext == AArch64_AM::LSL));
-
-  // WriteIEReg
-  case AArch64::ADDSWrx:
-  case AArch64::ADDSXrx:
-  case AArch64::ADDSXrx64:
-  case AArch64::ADDWrx:
-  case AArch64::ADDXrx:
-  case AArch64::ADDXrx64:
-  case AArch64::SUBSWrx:
-  case AArch64::SUBSXrx:
-  case AArch64::SUBSXrx64:
-  case AArch64::SUBWrx:
-  case AArch64::SUBXrx:
-  case AArch64::SUBXrx64:
-    Imm = MI.getOperand(3).getImm();
-    Shift = AArch64_AM::getArithShiftValue(Imm);
-    Ext = AArch64_AM::getArithExtendType(Imm);
-    return (Shift == 0 || (Shift <= 3 && Ext == AArch64_AM::UXTX));
-
-  case AArch64::PRFMroW:
-  case AArch64::PRFMroX:
-
-  // WriteLDIdx
-  case AArch64::LDRBBroW:
-  case AArch64::LDRBBroX:
-  case AArch64::LDRHHroW:
-  case AArch64::LDRHHroX:
-  case AArch64::LDRSBWroW:
-  case AArch64::LDRSBWroX:
-  case AArch64::LDRSBXroW:
-  case AArch64::LDRSBXroX:
-  case AArch64::LDRSHWroW:
-  case AArch64::LDRSHWroX:
-  case AArch64::LDRSHXroW:
-  case AArch64::LDRSHXroX:
-  case AArch64::LDRSWroW:
-  case AArch64::LDRSWroX:
-  case AArch64::LDRWroW:
-  case AArch64::LDRWroX:
-  case AArch64::LDRXroW:
-  case AArch64::LDRXroX:
-
-  case AArch64::LDRBroW:
-  case AArch64::LDRBroX:
-  case AArch64::LDRDroW:
-  case AArch64::LDRDroX:
-  case AArch64::LDRHroW:
-  case AArch64::LDRHroX:
-  case AArch64::LDRSroW:
-  case AArch64::LDRSroX:
-
-  // WriteSTIdx
-  case AArch64::STRBBroW:
-  case AArch64::STRBBroX:
-  case AArch64::STRHHroW:
-  case AArch64::STRHHroX:
-  case AArch64::STRWroW:
-  case AArch64::STRWroX:
-  case AArch64::STRXroW:
-  case AArch64::STRXroX:
-
-  case AArch64::STRBroW:
-  case AArch64::STRBroX:
-  case AArch64::STRDroW:
-  case AArch64::STRDroX:
-  case AArch64::STRHroW:
-  case AArch64::STRHroX:
-  case AArch64::STRSroW:
-  case AArch64::STRSroX:
-    Imm = MI.getOperand(3).getImm();
-    Ext = AArch64_AM::getMemExtendType(Imm);
-    return (Ext == AArch64_AM::SXTX || Ext == AArch64_AM::UXTX);
-  }
-}
-
-bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) const {
+bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;
@@ -1055,6 +881,32 @@ bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) const {
   }
 }
 
+bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+    default:
+      return false;
+    case AArch64::SEH_StackAlloc:
+    case AArch64::SEH_SaveFPLR:
+    case AArch64::SEH_SaveFPLR_X:
+    case AArch64::SEH_SaveReg:
+    case AArch64::SEH_SaveReg_X:
+    case AArch64::SEH_SaveRegP:
+    case AArch64::SEH_SaveRegP_X:
+    case AArch64::SEH_SaveFReg:
+    case AArch64::SEH_SaveFReg_X:
+    case AArch64::SEH_SaveFRegP:
+    case AArch64::SEH_SaveFRegP_X:
+    case AArch64::SEH_SetFP:
+    case AArch64::SEH_AddFP:
+    case AArch64::SEH_Nop:
+    case AArch64::SEH_PrologEnd:
+    case AArch64::SEH_EpilogStart:
+    case AArch64::SEH_EpilogEnd:
+      return true;
+  }
+}
+
 bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
                                              unsigned &SrcReg, unsigned &DstReg,
                                              unsigned &SubIdx) const {
@@ -1105,6 +957,21 @@ bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
     }
   }
   return false;
+}
+
+bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                            const MachineBasicBlock *MBB,
+                                            const MachineFunction &MF) const {
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
+    return true;
+  switch (MI.getOpcode()) {
+  case AArch64::DSB:
+  case AArch64::ISB:
+    // DSB and ISB also are scheduling barriers.
+    return true;
+  default:;
+  }
+  return isSEHInstruction(MI);
 }
 
 /// analyzeCompare - For a comparison instruction, return the source registers
@@ -1593,11 +1460,36 @@ bool AArch64InstrInfo::substituteCmpToZero(
 }
 
 bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD)
+  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
+      MI.getOpcode() != AArch64::CATCHRET)
     return false;
 
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
+
+  if (MI.getOpcode() == AArch64::CATCHRET) {
+    // Skip to the first instruction before the epilog.
+    const TargetInstrInfo *TII =
+      MBB.getParent()->getSubtarget().getInstrInfo();
+    MachineBasicBlock *TargetMBB = MI.getOperand(0).getMBB();
+    auto MBBI = MachineBasicBlock::iterator(MI);
+    MachineBasicBlock::iterator FirstEpilogSEH = std::prev(MBBI);
+    while (FirstEpilogSEH->getFlag(MachineInstr::FrameDestroy) &&
+           FirstEpilogSEH != MBB.begin())
+      FirstEpilogSEH = std::prev(FirstEpilogSEH);
+    if (FirstEpilogSEH != MBB.begin())
+      FirstEpilogSEH = std::next(FirstEpilogSEH);
+    BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADRP))
+        .addReg(AArch64::X0, RegState::Define)
+        .addMBB(TargetMBB);
+    BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADDXri))
+        .addReg(AArch64::X0, RegState::Define)
+        .addReg(AArch64::X0)
+        .addMBB(TargetMBB)
+        .addImm(0);
+    return true;
+  }
+
   unsigned Reg = MI.getOperand(0).getReg();
   const GlobalValue *GV =
       cast<GlobalValue>((*MI.memoperands_begin())->getValue());
@@ -1607,7 +1499,7 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 
   if ((OpFlags & AArch64II::MO_GOT) != 0) {
     BuildMI(MBB, MI, DL, get(AArch64::LOADgot), Reg)
-        .addGlobalAddress(GV, 0, AArch64II::MO_GOT);
+        .addGlobalAddress(GV, 0, OpFlags);
     BuildMI(MBB, MI, DL, get(AArch64::LDRXui), Reg)
         .addReg(Reg, RegState::Kill)
         .addImm(0)
@@ -1632,6 +1524,9 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(Reg, RegState::Kill)
         .addImm(0)
         .addMemOperand(*MI.memoperands_begin());
+  } else if (TM.getCodeModel() == CodeModel::Tiny) {
+    BuildMI(MBB, MI, DL, get(AArch64::ADR), Reg)
+        .addGlobalAddress(GV, 0, OpFlags);
   } else {
     BuildMI(MBB, MI, DL, get(AArch64::ADRP), Reg)
         .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
@@ -1645,71 +1540,6 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   MBB.erase(MI);
 
   return true;
-}
-
-/// Return true if this is this instruction has a non-zero immediate
-bool AArch64InstrInfo::hasShiftedReg(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  case AArch64::ADDSWrs:
-  case AArch64::ADDSXrs:
-  case AArch64::ADDWrs:
-  case AArch64::ADDXrs:
-  case AArch64::ANDSWrs:
-  case AArch64::ANDSXrs:
-  case AArch64::ANDWrs:
-  case AArch64::ANDXrs:
-  case AArch64::BICSWrs:
-  case AArch64::BICSXrs:
-  case AArch64::BICWrs:
-  case AArch64::BICXrs:
-  case AArch64::EONWrs:
-  case AArch64::EONXrs:
-  case AArch64::EORWrs:
-  case AArch64::EORXrs:
-  case AArch64::ORNWrs:
-  case AArch64::ORNXrs:
-  case AArch64::ORRWrs:
-  case AArch64::ORRXrs:
-  case AArch64::SUBSWrs:
-  case AArch64::SUBSXrs:
-  case AArch64::SUBWrs:
-  case AArch64::SUBXrs:
-    if (MI.getOperand(3).isImm()) {
-      unsigned val = MI.getOperand(3).getImm();
-      return (val != 0);
-    }
-    break;
-  }
-  return false;
-}
-
-/// Return true if this is this instruction has a non-zero immediate
-bool AArch64InstrInfo::hasExtendedReg(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  case AArch64::ADDSWrx:
-  case AArch64::ADDSXrx:
-  case AArch64::ADDSXrx64:
-  case AArch64::ADDWrx:
-  case AArch64::ADDXrx:
-  case AArch64::ADDXrx64:
-  case AArch64::SUBSWrx:
-  case AArch64::SUBSXrx:
-  case AArch64::SUBSXrx64:
-  case AArch64::SUBWrx:
-  case AArch64::SUBXrx:
-  case AArch64::SUBXrx64:
-    if (MI.getOperand(3).isImm()) {
-      unsigned val = MI.getOperand(3).getImm();
-      return (val != 0);
-    }
-    break;
-  }
-
-  return false;
 }
 
 // Return true if this instruction simply sets its single destination register
@@ -1832,67 +1662,6 @@ unsigned AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     break;
   }
   return 0;
-}
-
-/// Return true if this is load/store scales or extends its register offset.
-/// This refers to scaling a dynamic index as opposed to scaled immediates.
-/// MI should be a memory op that allows scaled addressing.
-bool AArch64InstrInfo::isScaledAddr(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  case AArch64::LDRBBroW:
-  case AArch64::LDRBroW:
-  case AArch64::LDRDroW:
-  case AArch64::LDRHHroW:
-  case AArch64::LDRHroW:
-  case AArch64::LDRQroW:
-  case AArch64::LDRSBWroW:
-  case AArch64::LDRSBXroW:
-  case AArch64::LDRSHWroW:
-  case AArch64::LDRSHXroW:
-  case AArch64::LDRSWroW:
-  case AArch64::LDRSroW:
-  case AArch64::LDRWroW:
-  case AArch64::LDRXroW:
-  case AArch64::STRBBroW:
-  case AArch64::STRBroW:
-  case AArch64::STRDroW:
-  case AArch64::STRHHroW:
-  case AArch64::STRHroW:
-  case AArch64::STRQroW:
-  case AArch64::STRSroW:
-  case AArch64::STRWroW:
-  case AArch64::STRXroW:
-  case AArch64::LDRBBroX:
-  case AArch64::LDRBroX:
-  case AArch64::LDRDroX:
-  case AArch64::LDRHHroX:
-  case AArch64::LDRHroX:
-  case AArch64::LDRQroX:
-  case AArch64::LDRSBWroX:
-  case AArch64::LDRSBXroX:
-  case AArch64::LDRSHWroX:
-  case AArch64::LDRSHXroX:
-  case AArch64::LDRSWroX:
-  case AArch64::LDRSroX:
-  case AArch64::LDRWroX:
-  case AArch64::LDRXroX:
-  case AArch64::STRBBroX:
-  case AArch64::STRBroX:
-  case AArch64::STRDroX:
-  case AArch64::STRHHroX:
-  case AArch64::STRHroX:
-  case AArch64::STRQroX:
-  case AArch64::STRSroX:
-  case AArch64::STRWroX:
-  case AArch64::STRXroX:
-
-    unsigned Val = MI.getOperand(3).getImm();
-    AArch64_AM::ShiftExtendType ExtType = AArch64_AM::getMemExtendType(Val);
-    return (ExtType != AArch64_AM::UXTX) || AArch64_AM::getMemDoShift(Val);
-  }
-  return false;
 }
 
 /// Check all MachineMemOperands for a hint to suppress pairing.
@@ -2415,9 +2184,8 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
   if (BaseOp1.getType() != BaseOp2.getType())
     return false;
 
-  assert(BaseOp1.isReg() ||
-         BaseOp1.isFI() &&
-             "Only base registers and frame indices are supported.");
+  assert((BaseOp1.isReg() || BaseOp1.isFI()) &&
+         "Only base registers and frame indices are supported.");
 
   // Check for both base regs and base FI.
   if (BaseOp1.isReg() && BaseOp1.getReg() != BaseOp2.getReg())
@@ -2550,7 +2318,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
             .addImm(0)
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
       }
-    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroing()) {
+    } else if (SrcReg == AArch64::WZR && Subtarget.hasZeroCycleZeroingGP()) {
       BuildMI(MBB, I, DL, get(AArch64::MOVZWi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
@@ -2587,7 +2355,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
           .addReg(SrcReg, getKillRegState(KillSrc))
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
-    } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroing()) {
+    } else if (SrcReg == AArch64::XZR && Subtarget.hasZeroCycleZeroingGP()) {
       BuildMI(MBB, I, DL, get(AArch64::MOVZXi), DestReg)
           .addImm(0)
           .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
@@ -2802,13 +2570,33 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   llvm_unreachable("unimplemented reg-to-reg copy");
 }
 
+static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
+                                    MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator InsertBefore,
+                                    const MCInstrDesc &MCID,
+                                    unsigned SrcReg, bool IsKill,
+                                    unsigned SubIdx0, unsigned SubIdx1, int FI,
+                                    MachineMemOperand *MMO) {
+  unsigned SrcReg0 = SrcReg;
+  unsigned SrcReg1 = SrcReg;
+  if (TargetRegisterInfo::isPhysicalRegister(SrcReg)) {
+    SrcReg0 = TRI.getSubReg(SrcReg, SubIdx0);
+    SubIdx0 = 0;
+    SrcReg1 = TRI.getSubReg(SrcReg, SubIdx1);
+    SubIdx1 = 0;
+  }
+  BuildMI(MBB, InsertBefore, DebugLoc(), MCID)
+      .addReg(SrcReg0, getKillRegState(IsKill), SubIdx0)
+      .addReg(SrcReg1, getKillRegState(IsKill), SubIdx1)
+      .addFrameIndex(FI)
+      .addImm(0)
+      .addMemOperand(MMO);
+}
+
 void AArch64InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned SrcReg,
     bool isKill, int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
-  DebugLoc DL;
-  if (MBBI != MBB.end())
-    DL = MBBI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
@@ -2844,8 +2632,14 @@ void AArch64InstrInfo::storeRegToStackSlot(
         MF.getRegInfo().constrainRegClass(SrcReg, &AArch64::GPR64RegClass);
       else
         assert(SrcReg != AArch64::SP);
-    } else if (AArch64::FPR64RegClass.hasSubClassEq(RC))
+    } else if (AArch64::FPR64RegClass.hasSubClassEq(RC)) {
       Opc = AArch64::STRDui;
+    } else if (AArch64::WSeqPairsClassRegClass.hasSubClassEq(RC)) {
+      storeRegPairToStackSlot(getRegisterInfo(), MBB, MBBI,
+                              get(AArch64::STPWi), SrcReg, isKill,
+                              AArch64::sube32, AArch64::subo32, FI, MMO);
+      return;
+    }
     break;
   case 16:
     if (AArch64::FPR128RegClass.hasSubClassEq(RC))
@@ -2855,14 +2649,9 @@ void AArch64InstrInfo::storeRegToStackSlot(
       Opc = AArch64::ST1Twov1d;
       Offset = false;
     } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, MBBI, DL, get(AArch64::STPXi))
-          .addReg(TRI->getSubReg(SrcReg, AArch64::sube64),
-                  getKillRegState(isKill))
-          .addReg(TRI->getSubReg(SrcReg, AArch64::subo64),
-                  getKillRegState(isKill))
-          .addFrameIndex(FI)
-          .addImm(0)
-          .addMemOperand(MMO);
+      storeRegPairToStackSlot(getRegisterInfo(), MBB, MBBI,
+                              get(AArch64::STPXi), SrcReg, isKill,
+                              AArch64::sube64, AArch64::subo64, FI, MMO);
       return;
     }
     break;
@@ -2901,7 +2690,7 @@ void AArch64InstrInfo::storeRegToStackSlot(
   }
   assert(Opc && "Unknown register class");
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
+  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
                                      .addReg(SrcReg, getKillRegState(isKill))
                                      .addFrameIndex(FI);
 
@@ -2910,13 +2699,35 @@ void AArch64InstrInfo::storeRegToStackSlot(
   MI.addMemOperand(MMO);
 }
 
+static void loadRegPairFromStackSlot(const TargetRegisterInfo &TRI,
+                                     MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator InsertBefore,
+                                     const MCInstrDesc &MCID,
+                                     unsigned DestReg, unsigned SubIdx0,
+                                     unsigned SubIdx1, int FI,
+                                     MachineMemOperand *MMO) {
+  unsigned DestReg0 = DestReg;
+  unsigned DestReg1 = DestReg;
+  bool IsUndef = true;
+  if (TargetRegisterInfo::isPhysicalRegister(DestReg)) {
+    DestReg0 = TRI.getSubReg(DestReg, SubIdx0);
+    SubIdx0 = 0;
+    DestReg1 = TRI.getSubReg(DestReg, SubIdx1);
+    SubIdx1 = 0;
+    IsUndef = false;
+  }
+  BuildMI(MBB, InsertBefore, DebugLoc(), MCID)
+      .addReg(DestReg0, RegState::Define | getUndefRegState(IsUndef), SubIdx0)
+      .addReg(DestReg1, RegState::Define | getUndefRegState(IsUndef), SubIdx1)
+      .addFrameIndex(FI)
+      .addImm(0)
+      .addMemOperand(MMO);
+}
+
 void AArch64InstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, unsigned DestReg,
     int FI, const TargetRegisterClass *RC,
     const TargetRegisterInfo *TRI) const {
-  DebugLoc DL;
-  if (MBBI != MBB.end())
-    DL = MBBI->getDebugLoc();
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
@@ -2952,8 +2763,14 @@ void AArch64InstrInfo::loadRegFromStackSlot(
         MF.getRegInfo().constrainRegClass(DestReg, &AArch64::GPR64RegClass);
       else
         assert(DestReg != AArch64::SP);
-    } else if (AArch64::FPR64RegClass.hasSubClassEq(RC))
+    } else if (AArch64::FPR64RegClass.hasSubClassEq(RC)) {
       Opc = AArch64::LDRDui;
+    } else if (AArch64::WSeqPairsClassRegClass.hasSubClassEq(RC)) {
+      loadRegPairFromStackSlot(getRegisterInfo(), MBB, MBBI,
+                               get(AArch64::LDPWi), DestReg, AArch64::sube32,
+                               AArch64::subo32, FI, MMO);
+      return;
+    }
     break;
   case 16:
     if (AArch64::FPR128RegClass.hasSubClassEq(RC))
@@ -2963,14 +2780,9 @@ void AArch64InstrInfo::loadRegFromStackSlot(
       Opc = AArch64::LD1Twov1d;
       Offset = false;
     } else if (AArch64::XSeqPairsClassRegClass.hasSubClassEq(RC)) {
-      BuildMI(MBB, MBBI, DL, get(AArch64::LDPXi))
-          .addReg(TRI->getSubReg(DestReg, AArch64::sube64),
-                  getDefRegState(true))
-          .addReg(TRI->getSubReg(DestReg, AArch64::subo64),
-                  getDefRegState(true))
-          .addFrameIndex(FI)
-          .addImm(0)
-          .addMemOperand(MMO);
+      loadRegPairFromStackSlot(getRegisterInfo(), MBB, MBBI,
+                               get(AArch64::LDPXi), DestReg, AArch64::sube64,
+                               AArch64::subo64, FI, MMO);
       return;
     }
     break;
@@ -3009,7 +2821,7 @@ void AArch64InstrInfo::loadRegFromStackSlot(
   }
   assert(Opc && "Unknown register class");
 
-  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DL, get(Opc))
+  const MachineInstrBuilder MI = BuildMI(MBB, MBBI, DebugLoc(), get(Opc))
                                      .addReg(DestReg, getDefRegState(true))
                                      .addFrameIndex(FI);
   if (Offset)
@@ -3021,7 +2833,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                            unsigned DestReg, unsigned SrcReg, int Offset,
                            const TargetInstrInfo *TII,
-                           MachineInstr::MIFlag Flag, bool SetNZCV) {
+                           MachineInstr::MIFlag Flag, bool SetNZCV,
+                           bool NeedsWinCFI) {
   if (DestReg == SrcReg && Offset == 0)
     return;
 
@@ -3066,6 +2879,11 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
         .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftSize))
         .setMIFlag(Flag);
 
+   if (NeedsWinCFI && SrcReg == AArch64::SP && DestReg == AArch64::SP)
+     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
+         .addImm(ThisVal)
+         .setMIFlag(Flag);
+
     SrcReg = DestReg;
     Offset -= ThisVal;
     if (Offset == 0)
@@ -3076,6 +2894,21 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
       .addImm(Offset)
       .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
       .setMIFlag(Flag);
+
+  if (NeedsWinCFI) {
+    if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
+        (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
+      if (Offset == 0)
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_SetFP)).
+                setMIFlag(Flag);
+      else
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AddFP)).
+                addImm(Offset).setMIFlag(Flag);
+    } else if (DestReg == AArch64::SP) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc)).
+              addImm(Offset).setMIFlag(Flag);
+    }
+  }
 }
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
@@ -4911,7 +4744,9 @@ AArch64InstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
   using namespace AArch64II;
 
   static const std::pair<unsigned, const char *> TargetFlags[] = {
-      {MO_GOT, "aarch64-got"}, {MO_NC, "aarch64-nc"}, {MO_TLS, "aarch64-tls"}};
+      {MO_COFFSTUB, "aarch64-coffstub"},
+      {MO_GOT, "aarch64-got"},   {MO_NC, "aarch64-nc"},
+      {MO_TLS, "aarch64-tls"},   {MO_DLLIMPORT, "aarch64-dllimport"}};
   return makeArrayRef(TargetFlags);
 }
 
@@ -5013,11 +4848,13 @@ enum MachineOutlinerClass {
 
 enum MachineOutlinerMBBFlags {
   LRUnavailableSomewhere = 0x2,
-  HasCalls = 0x4
+  HasCalls = 0x4,
+  UnsafeRegsDead = 0x8
 };
 
 unsigned
 AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
+  assert(C.LRUWasSet && "LRU wasn't set?");
   MachineFunction *MF = C.getMF();
   const AArch64RegisterInfo *ARI = static_cast<const AArch64RegisterInfo *>(
       MF->getSubtarget().getRegisterInfo());
@@ -5040,17 +4877,22 @@ AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
 outliner::OutlinedFunction
 AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  unsigned SequenceSize = std::accumulate(
-      RepeatedSequenceLocs[0].front(),
-      std::next(RepeatedSequenceLocs[0].back()),
-      0, [this](unsigned Sum, const MachineInstr &MI) {
-        return Sum + getInstSizeInBytes(MI);
-      });
+  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
+  unsigned SequenceSize =
+      std::accumulate(FirstCand.front(), std::next(FirstCand.back()), 0,
+                      [this](unsigned Sum, const MachineInstr &MI) {
+                        return Sum + getInstSizeInBytes(MI);
+                      });
 
-  // Compute liveness information for each candidate.
+  // Properties about candidate MBBs that hold for all of them.
+  unsigned FlagsSetInAll = 0xF;
+
+  // Compute liveness information for each candidate, and set FlagsSetInAll.
   const TargetRegisterInfo &TRI = getRegisterInfo();
   std::for_each(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-                [&TRI](outliner::Candidate &C) { C.initLRU(TRI); });
+                [&FlagsSetInAll](outliner::Candidate &C) {
+                  FlagsSetInAll &= C.Flags;
+                });
 
   // According to the AArch64 Procedure Call Standard, the following are
   // undefined on entry/exit from a function call:
@@ -5063,23 +4905,31 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // of these registers is live into/across it. Thus, we need to delete
   // those
   // candidates.
-  auto CantGuaranteeValueAcrossCall = [](outliner::Candidate &C) {
+  auto CantGuaranteeValueAcrossCall = [&TRI](outliner::Candidate &C) {
+    // If the unsafe registers in this block are all dead, then we don't need
+    // to compute liveness here.
+    if (C.Flags & UnsafeRegsDead)
+      return false;
+    C.initLRU(TRI);
     LiveRegUnits LRU = C.LRU;
     return (!LRU.available(AArch64::W16) || !LRU.available(AArch64::W17) ||
             !LRU.available(AArch64::NZCV));
   };
 
-  // Erase every candidate that violates the restrictions above. (It could be
-  // true that we have viable candidates, so it's not worth bailing out in
-  // the case that, say, 1 out of 20 candidates violate the restructions.)
-  RepeatedSequenceLocs.erase(std::remove_if(RepeatedSequenceLocs.begin(),
-                                            RepeatedSequenceLocs.end(),
-                                            CantGuaranteeValueAcrossCall),
-                             RepeatedSequenceLocs.end());
+  // Are there any candidates where those registers are live?
+  if (!(FlagsSetInAll & UnsafeRegsDead)) {
+    // Erase every candidate that violates the restrictions above. (It could be
+    // true that we have viable candidates, so it's not worth bailing out in
+    // the case that, say, 1 out of 20 candidates violate the restructions.)
+    RepeatedSequenceLocs.erase(std::remove_if(RepeatedSequenceLocs.begin(),
+                                              RepeatedSequenceLocs.end(),
+                                              CantGuaranteeValueAcrossCall),
+                               RepeatedSequenceLocs.end());
 
-  // If the sequence is empty, we're done.
-  if (RepeatedSequenceLocs.empty())
-    return outliner::OutlinedFunction();
+    // If the sequence doesn't have enough candidates left, then we're done.
+    if (RepeatedSequenceLocs.size() < 2)
+      return outliner::OutlinedFunction();
+  }
 
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
@@ -5096,6 +4946,64 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   unsigned FrameID = MachineOutlinerDefault;
   unsigned NumBytesToCreateFrame = 4;
 
+  bool HasBTI = any_of(RepeatedSequenceLocs, [](outliner::Candidate &C) {
+    return C.getMF()->getFunction().hasFnAttribute("branch-target-enforcement");
+  });
+
+  // Returns true if an instructions is safe to fix up, false otherwise.
+  auto IsSafeToFixup = [this, &TRI](MachineInstr &MI) {
+    if (MI.isCall())
+      return true;
+
+    if (!MI.modifiesRegister(AArch64::SP, &TRI) &&
+        !MI.readsRegister(AArch64::SP, &TRI))
+      return true;
+
+    // Any modification of SP will break our code to save/restore LR.
+    // FIXME: We could handle some instructions which add a constant
+    // offset to SP, with a bit more work.
+    if (MI.modifiesRegister(AArch64::SP, &TRI))
+      return false;
+
+    // At this point, we have a stack instruction that we might need to
+    // fix up. We'll handle it if it's a load or store.
+    if (MI.mayLoadOrStore()) {
+      MachineOperand *Base; // Filled with the base operand of MI.
+      int64_t Offset;       // Filled with the offset of MI.
+
+      // Does it allow us to offset the base operand and is the base the
+      // register SP?
+      if (!getMemOperandWithOffset(MI, Base, Offset, &TRI) || !Base->isReg() ||
+          Base->getReg() != AArch64::SP)
+        return false;
+
+      // Find the minimum/maximum offset for this instruction and check
+      // if fixing it up would be in range.
+      int64_t MinOffset,
+          MaxOffset;  // Unscaled offsets for the instruction.
+      unsigned Scale; // The scale to multiply the offsets by.
+      unsigned DummyWidth;
+      getMemOpInfo(MI.getOpcode(), Scale, DummyWidth, MinOffset, MaxOffset);
+
+      Offset += 16; // Update the offset to what it would be if we outlined.
+      if (Offset < MinOffset * Scale || Offset > MaxOffset * Scale)
+        return false;
+
+      // It's in range, so we can outline it.
+      return true;
+    }
+
+    // FIXME: Add handling for instructions like "add x0, sp, #8".
+
+    // We can't fix it up, so don't outline it.
+    return false;
+  };
+
+  // True if it's possible to fix up each stack instruction in this sequence.
+  // Important for frames/call variants that modify the stack.
+  bool AllStackInstrsSafe = std::all_of(
+      FirstCand.front(), std::next(FirstCand.back()), IsSafeToFixup);
+
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
@@ -5104,65 +5012,102 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     SetCandidateCallInfo(MachineOutlinerTailCall, 4);
   }
 
-  else if (LastInstrOpcode == AArch64::BL || LastInstrOpcode == AArch64::BLR) {
+  else if (LastInstrOpcode == AArch64::BL ||
+           (LastInstrOpcode == AArch64::BLR && !HasBTI)) {
     // FIXME: Do we need to check if the code after this uses the value of LR?
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = 0;
     SetCandidateCallInfo(MachineOutlinerThunk, 4);
   }
 
-  // Make sure that LR isn't live on entry to this candidate. The only
-  // instructions that use LR that could possibly appear in a repeated sequence
-  // are calls. Therefore, we only have to check and see if LR is dead on entry
-  // to (or exit from) some candidate.
-  else if (std::all_of(RepeatedSequenceLocs.begin(),
-                       RepeatedSequenceLocs.end(),
-                       [](outliner::Candidate &C) {
-                         return C.LRU.available(AArch64::LR);
-                         })) {
-    FrameID = MachineOutlinerNoLRSave;
-    NumBytesToCreateFrame = 4;
-    SetCandidateCallInfo(MachineOutlinerNoLRSave, 4);
-  }
-
-  // LR is live, so we need to save it. Decide whether it should be saved to
-  // the stack, or if it can be saved to a register.
   else {
-    if (std::all_of(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-                    [this](outliner::Candidate &C) {
-                      return findRegisterToSaveLRTo(C);
-                    })) {
-      // Every candidate has an available callee-saved register for the save.
-      // We can save LR to a register.
-      FrameID = MachineOutlinerRegSave;
-      NumBytesToCreateFrame = 4;
-      SetCandidateCallInfo(MachineOutlinerRegSave, 12);
+    // We need to decide how to emit calls + frames. We can always emit the same
+    // frame if we don't need to save to the stack. If we have to save to the
+    // stack, then we need a different frame.
+    unsigned NumBytesNoStackCalls = 0;
+    std::vector<outliner::Candidate> CandidatesWithoutStackFixups;
+
+    for (outliner::Candidate &C : RepeatedSequenceLocs) {
+      C.initLRU(TRI);
+
+      // Is LR available? If so, we don't need a save.
+      if (C.LRU.available(AArch64::LR)) {
+        NumBytesNoStackCalls += 4;
+        C.setCallInfo(MachineOutlinerNoLRSave, 4);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // Is an unused register available? If so, we won't modify the stack, so
+      // we can outline with the same frame type as those that don't save LR.
+      else if (findRegisterToSaveLRTo(C)) {
+        NumBytesNoStackCalls += 12;
+        C.setCallInfo(MachineOutlinerRegSave, 12);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // Is SP used in the sequence at all? If not, we don't have to modify
+      // the stack, so we are guaranteed to get the same frame.
+      else if (C.UsedInSequence.available(AArch64::SP)) {
+        NumBytesNoStackCalls += 12;
+        C.setCallInfo(MachineOutlinerDefault, 12);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // If we outline this, we need to modify the stack. Pretend we don't
+      // outline this by saving all of its bytes.
+      else {
+        NumBytesNoStackCalls += SequenceSize;
+      }
     }
 
-    else {
-      // At least one candidate does not have an available callee-saved
-      // register. We must save LR to the stack.
-      FrameID = MachineOutlinerDefault;
-      NumBytesToCreateFrame = 4;
+    // If there are no places where we have to save LR, then note that we
+    // don't have to update the stack. Otherwise, give every candidate the
+    // default call type, as long as it's safe to do so.
+    if (!AllStackInstrsSafe ||
+        NumBytesNoStackCalls <= RepeatedSequenceLocs.size() * 12) {
+      RepeatedSequenceLocs = CandidatesWithoutStackFixups;
+      FrameID = MachineOutlinerNoLRSave;
+    } else {
       SetCandidateCallInfo(MachineOutlinerDefault, 12);
     }
+
+    // If we dropped all of the candidates, bail out here.
+    if (RepeatedSequenceLocs.size() < 2) {
+      RepeatedSequenceLocs.clear();
+      return outliner::OutlinedFunction();
+    }
   }
 
-  // Check if the range contains a call. These require a save + restore of the
-  // link register.
-  if (std::any_of(RepeatedSequenceLocs[0].front(),
-                  RepeatedSequenceLocs[0].back(),
-                  [](const MachineInstr &MI) { return MI.isCall(); }))
-    NumBytesToCreateFrame += 8; // Save + restore the link register.
+  // Does every candidate's MBB contain a call? If so, then we might have a call
+  // in the range.
+  if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
+    // Check if the range contains a call. These require a save + restore of the
+    // link register.
+    bool ModStackToSaveLR = false;
+    if (std::any_of(FirstCand.front(), FirstCand.back(),
+                    [](const MachineInstr &MI) { return MI.isCall(); }))
+      ModStackToSaveLR = true;
 
-  // Handle the last instruction separately. If this is a tail call, then the
-  // last instruction is a call. We don't want to save + restore in this case.
-  // However, it could be possible that the last instruction is a call without
-  // it being valid to tail call this sequence. We should consider this as well.
-  else if (FrameID != MachineOutlinerThunk &&
-           FrameID != MachineOutlinerTailCall &&
-           RepeatedSequenceLocs[0].back()->isCall())
-    NumBytesToCreateFrame += 8;
+    // Handle the last instruction separately. If this is a tail call, then the
+    // last instruction is a call. We don't want to save + restore in this case.
+    // However, it could be possible that the last instruction is a call without
+    // it being valid to tail call this sequence. We should consider this as
+    // well.
+    else if (FrameID != MachineOutlinerThunk &&
+             FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
+      ModStackToSaveLR = true;
+
+    if (ModStackToSaveLR) {
+      // We can't fix up the stack. Bail out.
+      if (!AllStackInstrsSafe) {
+        RepeatedSequenceLocs.clear();
+        return outliner::OutlinedFunction();
+      }
+
+      // Save + restore LR.
+      NumBytesToCreateFrame += 8;
+    }
+  }
 
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
                                     NumBytesToCreateFrame, FrameID);
@@ -5194,30 +5139,70 @@ bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
   return true;
 }
 
-unsigned
-AArch64InstrInfo::getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
-  unsigned Flags = 0x0;
-  // Check if there's a call inside this MachineBasicBlock. If there is, then
-  // set a flag.
-  if (std::any_of(MBB.begin(), MBB.end(),
-                  [](MachineInstr &MI) { return MI.isCall(); }))
-    Flags |= MachineOutlinerMBBFlags::HasCalls;
-
+bool AArch64InstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                                              unsigned &Flags) const {
   // Check if LR is available through all of the MBB. If it's not, then set
   // a flag.
   assert(MBB.getParent()->getRegInfo().tracksLiveness() &&
          "Suitable Machine Function for outlining must track liveness");
   LiveRegUnits LRU(getRegisterInfo());
-  LRU.addLiveOuts(MBB);
 
-  std::for_each(MBB.rbegin(),
-                MBB.rend(),
+  std::for_each(MBB.rbegin(), MBB.rend(),
                 [&LRU](MachineInstr &MI) { LRU.accumulate(MI); });
 
-  if (!LRU.available(AArch64::LR))
-      Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
+  // Check if each of the unsafe registers are available...
+  bool W16AvailableInBlock = LRU.available(AArch64::W16);
+  bool W17AvailableInBlock = LRU.available(AArch64::W17);
+  bool NZCVAvailableInBlock = LRU.available(AArch64::NZCV);
 
-  return Flags;
+  // If all of these are dead (and not live out), we know we don't have to check
+  // them later.
+  if (W16AvailableInBlock && W17AvailableInBlock && NZCVAvailableInBlock)
+    Flags |= MachineOutlinerMBBFlags::UnsafeRegsDead;
+
+  // Now, add the live outs to the set.
+  LRU.addLiveOuts(MBB);
+
+  // If any of these registers is available in the MBB, but also a live out of
+  // the block, then we know outlining is unsafe.
+  if (W16AvailableInBlock && !LRU.available(AArch64::W16))
+    return false;
+  if (W17AvailableInBlock && !LRU.available(AArch64::W17))
+    return false;
+  if (NZCVAvailableInBlock && !LRU.available(AArch64::NZCV))
+    return false;
+
+  // Check if there's a call inside this MachineBasicBlock. If there is, then
+  // set a flag.
+  if (any_of(MBB, [](MachineInstr &MI) { return MI.isCall(); }))
+    Flags |= MachineOutlinerMBBFlags::HasCalls;
+
+  MachineFunction *MF = MBB.getParent();
+
+  // In the event that we outline, we may have to save LR. If there is an
+  // available register in the MBB, then we'll always save LR there. Check if
+  // this is true.
+  bool CanSaveLR = false;
+  const AArch64RegisterInfo *ARI = static_cast<const AArch64RegisterInfo *>(
+      MF->getSubtarget().getRegisterInfo());
+
+  // Check if there is an available register across the sequence that we can
+  // use.
+  for (unsigned Reg : AArch64::GPR64RegClass) {
+    if (!ARI->isReservedReg(*MF, Reg) && Reg != AArch64::LR &&
+        Reg != AArch64::X16 && Reg != AArch64::X17 && LRU.available(Reg)) {
+      CanSaveLR = true;
+      break;
+    }
+  }
+
+  // Check if we have a register we can save LR to, and if LR was used
+  // somewhere. If both of those things are true, then we need to evaluate the
+  // safety of outlining stack instructions later.
+  if (!CanSaveLR && !LRU.available(AArch64::LR))
+    Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
+
+  return true;
 }
 
 outliner::InstrType
@@ -5340,97 +5325,6 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
       MI.modifiesRegister(AArch64::W30, &getRegisterInfo()))
     return outliner::InstrType::Illegal;
 
-  // Does this use the stack?
-  if (MI.modifiesRegister(AArch64::SP, &RI) ||
-      MI.readsRegister(AArch64::SP, &RI)) {
-    // True if there is no chance that any outlined candidate from this range
-    // could require stack fixups. That is, both
-    // * LR is available in the range (No save/restore around call)
-    // * The range doesn't include calls (No save/restore in outlined frame)
-    // are true.
-    // FIXME: This is very restrictive; the flags check the whole block,
-    // not just the bit we will try to outline.
-    bool MightNeedStackFixUp =
-        (Flags & (MachineOutlinerMBBFlags::LRUnavailableSomewhere |
-                  MachineOutlinerMBBFlags::HasCalls));
-
-    // If this instruction is in a range where it *never* needs to be fixed
-    // up, then we can *always* outline it. This is true even if it's not
-    // possible to fix that instruction up.
-    //
-    // Why? Consider two equivalent instructions I1, I2 where both I1 and I2
-    // use SP. Suppose that I1 sits within a range that definitely doesn't
-    // need stack fixups, while I2 sits in a range that does.
-    //
-    // First, I1 can be outlined as long as we *never* fix up the stack in
-    // any sequence containing it. I1 is already a safe instruction in the
-    // original program, so as long as we don't modify it we're good to go.
-    // So this leaves us with showing that outlining I2 won't break our
-    // program.
-    //
-    // Suppose I1 and I2 belong to equivalent candidate sequences. When we
-    // look at I2, we need to see if it can be fixed up. Suppose I2, (and
-    // thus I1) cannot be fixed up. Then I2 will be assigned an unique
-    // integer label; thus, I2 cannot belong to any candidate sequence (a
-    // contradiction). Suppose I2 can be fixed up. Then I1 can be fixed up
-    // as well, so we're good. Thus, I1 is always safe to outline.
-    //
-    // This gives us two things: first off, it buys us some more instructions
-    // for our search space by deeming stack instructions illegal only when
-    // they can't be fixed up AND we might have to fix them up. Second off,
-    // This allows us to catch tricky instructions like, say,
-    // %xi = ADDXri %sp, n, 0. We can't safely outline these since they might
-    // be paired with later SUBXris, which might *not* end up being outlined.
-    // If we mess with the stack to save something, then an ADDXri messes with
-    // it *after*, then we aren't going to restore the right something from
-    // the stack if we don't outline the corresponding SUBXri first. ADDXris and
-    // SUBXris are extremely common in prologue/epilogue code, so supporting
-    // them in the outliner can be a pretty big win!
-    if (!MightNeedStackFixUp)
-      return outliner::InstrType::Legal;
-
-    // Any modification of SP will break our code to save/restore LR.
-    // FIXME: We could handle some instructions which add a constant offset to
-    // SP, with a bit more work.
-    if (MI.modifiesRegister(AArch64::SP, &RI))
-      return outliner::InstrType::Illegal;
-
-    // At this point, we have a stack instruction that we might need to fix
-    // up. We'll handle it if it's a load or store.
-    if (MI.mayLoadOrStore()) {
-      MachineOperand *Base; // Filled with the base operand of MI.
-      int64_t Offset; // Filled with the offset of MI.
-
-      // Does it allow us to offset the base operand and is the base the
-      // register SP?
-      if (!getMemOperandWithOffset(MI, Base, Offset, &RI) ||
-          !Base->isReg() || Base->getReg() != AArch64::SP)
-        return outliner::InstrType::Illegal;
-
-      // Find the minimum/maximum offset for this instruction and check if
-      // fixing it up would be in range.
-      int64_t MinOffset, MaxOffset; // Unscaled offsets for the instruction.
-      unsigned Scale;               // The scale to multiply the offsets by.
-      unsigned DummyWidth;
-      getMemOpInfo(MI.getOpcode(), Scale, DummyWidth, MinOffset, MaxOffset);
-
-      // TODO: We should really test what happens if an instruction overflows.
-      // This is tricky to test with IR tests, but when the outliner is moved
-      // to a MIR test, it really ought to be checked.
-      Offset += 16; // Update the offset to what it would be if we outlined.
-      if (Offset < MinOffset * Scale || Offset > MaxOffset * Scale)
-        return outliner::InstrType::Illegal;
-
-      // It's in range, so we can outline it.
-      return outliner::InstrType::Legal;
-    }
-
-    // FIXME: Add handling for instructions like "add x0, sp, #8".
-
-    // We can't fix it up, so don't outline it.
-    return outliner::InstrType::Illegal;
-  }
-
   return outliner::InstrType::Legal;
 }
 
@@ -5475,7 +5369,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
       TailOpcode = AArch64::TCRETURNdi;
     } else {
       assert(Call->getOpcode() == AArch64::BLR);
-      TailOpcode = AArch64::TCRETURNri;
+      TailOpcode = AArch64::TCRETURNriALL;
     }
     MachineInstr *TC = BuildMI(MF, DebugLoc(), get(TailOpcode))
                             .add(Call->getOperand(0))
@@ -5636,3 +5530,6 @@ bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   MachineFunction &MF) const {
   return MF.getFunction().optForMinSize();
 }
+
+#define GET_INSTRINFO_HELPERS
+#include "AArch64GenInstrInfo.inc"

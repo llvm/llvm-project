@@ -26,22 +26,22 @@ class TestingConfig:
                      'LSAN_OPTIONS', 'ADB', 'ANDROID_SERIAL',
                      'SANITIZER_IGNORE_CVE_2016_2143', 'TMPDIR', 'TMP', 'TEMP',
                      'TEMPDIR', 'AVRLIT_BOARD', 'AVRLIT_PORT',
-                     'FILECHECK_DUMP_INPUT_ON_FAILURE']
+                     'FILECHECK_DUMP_INPUT_ON_FAILURE', 'FILECHECK_OPTS',
+                     'VCINSTALLDIR', 'VCToolsinstallDir', 'VSINSTALLDIR',
+                     'WindowsSdkDir', 'WindowsSDKLibVersion']
+
+        if sys.platform == 'win32':
+            pass_vars.append('INCLUDE')
+            pass_vars.append('LIB')
+            pass_vars.append('PATHEXT')
+            environment['PYTHONBUFFERED'] = '1'
+
         for var in pass_vars:
             val = os.environ.get(var, '')
             # Check for empty string as some variables such as LD_PRELOAD cannot be empty
             # ('') for OS's such as OpenBSD.
             if val:
                 environment[var] = val
-
-        if sys.platform == 'win32':
-            environment.update({
-                    'INCLUDE' : os.environ.get('INCLUDE',''),
-                    'PATHEXT' : os.environ.get('PATHEXT',''),
-                    'PYTHONUNBUFFERED' : '1',
-                    'TEMP' : os.environ.get('TEMP',''),
-                    'TMP' : os.environ.get('TMP',''),
-                    })
 
         # Set the default available features based on the LitConfig.
         available_features = []
@@ -100,7 +100,6 @@ class TestingConfig:
             litConfig.fatal(
                 'unable to parse config file %r, traceback: %s' % (
                     path, traceback.format_exc()))
-
         self.finish(litConfig)
 
     def __init__(self, parent, name, suffixes, test_format,

@@ -25,6 +25,7 @@ Basic Commands
    llvm-nm
    llvm-objdump
    llvm-config
+   llvm-cxxmap
    llvm-diff
    llvm-cov
    llvm-profdata

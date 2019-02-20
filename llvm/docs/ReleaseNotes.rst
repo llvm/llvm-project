@@ -1,35 +1,35 @@
 ========================
-LLVM 7.0.0 Release Notes
+LLVM 8.0.0 Release Notes
 ========================
 
 .. contents::
     :local:
 
 .. warning::
-   These are in-progress notes for the upcoming LLVM 7 release.
+   These are in-progress notes for the upcoming LLVM 8 release.
    Release notes for previous releases can be found on
-   `the Download Page <http://releases.llvm.org/download.html>`_.
+   `the Download Page <https://releases.llvm.org/download.html>`_.
 
 
 Introduction
 ============
 
 This document contains the release notes for the LLVM Compiler Infrastructure,
-release 7.0.0.  Here we describe the status of LLVM, including major improvements
+release 8.0.0.  Here we describe the status of LLVM, including major improvements
 from the previous release, improvements in various subprojects of LLVM, and
 some of the current users of the code.  All LLVM releases may be downloaded
-from the `LLVM releases web site <http://llvm.org/releases/>`_.
+from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
 For more information about LLVM, including information about the latest
-release, please check out the `main LLVM web site <http://llvm.org/>`_.  If you
+release, please check out the `main LLVM web site <https://llvm.org/>`_.  If you
 have questions or comments, the `LLVM Developer's Mailing List
-<http://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
+<https://lists.llvm.org/mailman/listinfo/llvm-dev>`_ is a good place to send
 them.
 
 Note that if you are reading this file from a Subversion checkout or the main
 LLVM web page, this document applies to the *next* release, not the current
 one.  To see the release notes for a specific release, please see the `releases
-page <http://llvm.org/releases/>`_.
+page <https://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
@@ -40,76 +40,13 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
-* Libraries have been renamed from 7.0 to 7. This change also impacts
-  downstream libraries like lldb.
+* The **llvm-cov** tool can now export lcov trace files using the
+  `-format=lcov` option of the `export` command.
 
-* The LoopInstSimplify pass (-loop-instsimplify) has been removed.
-
-* Symbols starting with ``?`` are no longer mangled by LLVM when using the
-  Windows ``x`` or ``w`` IR mangling schemes.
-
-* A new tool named :doc:`llvm-exegesis <CommandGuide/llvm-exegesis>` has been
-  added. :program:`llvm-exegesis` automatically measures instruction scheduling
-  properties (latency/uops) and provides a principled way to edit scheduling
-  models.
-
-* A new tool named :doc:`llvm-mca <CommandGuide/llvm-mca>` has been added.
-  :program:`llvm-mca` is a  static performance analysis tool that uses
-  information available in LLVM to statically predict the performance of
-  machine code for a specific CPU.
-
-* The optimization flag to merge constants (-fmerge-all-constants) is no longer
-  applied by default.
-
-* Optimization of floating-point casts is improved. This may cause surprising
-  results for code that is relying on the undefined behavior of overflowing 
-  casts. The optimization can be disabled by specifying a function attribute:
-  "strict-float-cast-overflow"="false". This attribute may be created by the
-  clang option :option:`-fno-strict-float-cast-overflow`.
-  Code sanitizers can be used to detect affected patterns. The option for
-  detecting this problem alone is "-fsanitize=float-cast-overflow":
-
-.. code-block:: c
-
-    int main() {
-      float x = 4294967296.0f;
-      x = (float)((int)x);
-      printf("junk in the ftrunc: %f\n", x);
-      return 0;
-    }
-
-.. code-block:: bash
-
-    clang -O1 ftrunc.c -fsanitize=float-cast-overflow ; ./a.out 
-    ftrunc.c:5:15: runtime error: 4.29497e+09 is outside the range of representable values of type 'int'
-    junk in the ftrunc: 0.000000
-
-* ``LLVM_ON_WIN32`` is no longer set by ``llvm/Config/config.h`` and
-  ``llvm/Config/llvm-config.h``.  If you used this macro, use the compiler-set
-  ``_WIN32`` instead which is set exactly when ``LLVM_ON_WIN32`` used to be set.
-
-* The ``DEBUG`` macro has been renamed to ``LLVM_DEBUG``, the interface remains
-  the same.  If you used this macro you need to migrate to the new one.
-  You should also clang-format your code to make it easier to integrate future
-  changes locally.  This can be done with the following bash commands:
-
-.. code-block:: bash
-
-    git grep -l 'DEBUG' | xargs perl -pi -e 's/\bDEBUG\s?\(/LLVM_DEBUG(/g'
-    git diff -U0 master | ../clang/tools/clang-format/clang-format-diff.py -i -p1 -style LLVM
-
-* Early support for UBsan, X-Ray instrumentation and libFuzzer (x86 and x86_64) for OpenBSD. Support for MSan
-  (x86_64), X-Ray instrumentation and libFuzzer (x86 and x86_64) for FreeBSD.
-
-* ``SmallVector<T, 0>`` shrank from ``sizeof(void*) * 4 + sizeof(T)`` to
-  ``sizeof(void*) + sizeof(unsigned) * 2``, smaller than ``std::vector<T>`` on
-  64-bit platforms.  The maximum capacity is now restricted to ``UINT32_MAX``.
-  Since SmallVector doesn't have the exception-safety pessimizations some
-  implementations saddle std::vector with and is better at using ``realloc``,
-  it's now a better choice even on the heap (although when TinyPtrVector works,
-  it's even smaller).
-
-* Note..
+* The add_llvm_loadable_module CMake macro has been removed.  The
+  add_llvm_library macro with the MODULE argument now provides the same
+  functionality.  See `Writing an LLVM Pass
+  <WritingAnLLVMPass.html#setting-up-the-build-environment>`_.
 
 .. NOTE
    If you would like to document a larger change, then you can add a
@@ -124,13 +61,6 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
-* The signatures for the builtins @llvm.memcpy, @llvm.memmove, and @llvm.memset
-  have changed. Alignment is no longer an argument, and are instead conveyed as
-  parameter attributes.
-
-* invariant.group.barrier has been renamed to launder.invariant.group.
-
-* invariant.group metadata can now refer only empty metadata nodes.
 
 Changes to the ARM Backend
 --------------------------
@@ -152,7 +82,8 @@ Changes to the PowerPC Target
 Changes to the X86 Target
 -------------------------
 
- During this release ...
+* Machine model for AMD bdver2 (Piledriver) CPU was added. It is used to support
+  instruction scheduling and other instruction cost heuristics.
 
 Changes to the AMDGPU Target
 -----------------------------
@@ -167,26 +98,16 @@ Changes to the AVR Target
 Changes to the OCaml bindings
 -----------------------------
 
-* Remove ``add_bb_vectorize``.
 
 
 Changes to the C API
 --------------------
 
-* Remove ``LLVMAddBBVectorizePass``. The implementation was removed and the C
-  interface was made a deprecated no-op in LLVM 5. Use
-  ``LLVMAddSLPVectorizePass`` instead to get the supported SLP vectorizer.
 
 Changes to the DAG infrastructure
 ---------------------------------
-* ADDC/ADDE/SUBC/SUBE are now deprecated and will default to expand. Backends
-  that wish to continue to use these opcodes should explicitely request so
-  using ``setOperationAction`` in their ``TargetLowering``. New backends
-  should use UADDO/ADDCARRY/USUBO/SUBCARRY instead of the deprecated opcodes.
 
-* The SETCCE opcode has now been removed in favor of SETCCCARRY.
-
-External Open Source Projects Using LLVM 7
+External Open Source Projects Using LLVM 8
 ==========================================
 
 * A project...
@@ -196,11 +117,11 @@ Additional Information
 ======================
 
 A wide variety of additional information is available on the `LLVM web page
-<http://llvm.org/>`_, in particular in the `documentation
-<http://llvm.org/docs/>`_ section.  The web page also contains versions of the
+<https://llvm.org/>`_, in particular in the `documentation
+<https://llvm.org/docs/>`_ section.  The web page also contains versions of the
 API documentation which is up-to-date with the Subversion version of the source
 code.  You can access versions of these documents specific to this release by
 going into the ``llvm/docs/`` directory in the LLVM tree.
 
 If you have any questions or comments about LLVM, please feel free to contact
-us via the `mailing lists <http://llvm.org/docs/#maillist>`_.
+us via the `mailing lists <https://llvm.org/docs/#mailing-lists>`_.

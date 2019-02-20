@@ -983,45 +983,18 @@ static int getID(struct InternalInstruction* insn, const void *miiArg) {
       insn->opcode == 0xE3)
     attrMask ^= ATTR_ADSIZE;
 
-  /*
-   * In 64-bit mode all f64 superscripted opcodes ignore opcode size prefix
-   * CALL/JMP/JCC instructions need to ignore 0x66 and consume 4 bytes
-   */
+  // If we're in 16-bit mode and this is one of the relative jumps and opsize
+  // prefix isn't present, we need to force the opsize attribute since the
+  // prefix is inverted relative to 32-bit mode.
+  if (insn->mode == MODE_16BIT && !insn->hasOpSize &&
+      insn->opcodeType == ONEBYTE &&
+      (insn->opcode == 0xE8 || insn->opcode == 0xE9))
+    attrMask |= ATTR_OPSIZE;
 
-  if ((insn->mode == MODE_64BIT) && insn->hasOpSize) {
-    switch (insn->opcode) {
-    case 0xE8:
-    case 0xE9:
-      // Take care of psubsb and other mmx instructions.
-      if (insn->opcodeType == ONEBYTE) {
-        attrMask ^= ATTR_OPSIZE;
-        insn->immediateSize = 4;
-        insn->displacementSize = 4;
-      }
-      break;
-    case 0x82:
-    case 0x83:
-    case 0x84:
-    case 0x85:
-    case 0x86:
-    case 0x87:
-    case 0x88:
-    case 0x89:
-    case 0x8A:
-    case 0x8B:
-    case 0x8C:
-    case 0x8D:
-    case 0x8E:
-    case 0x8F:
-      // Take care of lea and three byte ops.
-      if (insn->opcodeType == TWOBYTE) {
-        attrMask ^= ATTR_OPSIZE;
-        insn->immediateSize = 4;
-        insn->displacementSize = 4;
-      }
-      break;
-    }
-  }
+  if (insn->mode == MODE_16BIT && !insn->hasOpSize &&
+      insn->opcodeType == TWOBYTE &&
+      insn->opcode >= 0x80 && insn->opcode <= 0x8F)
+    attrMask |= ATTR_OPSIZE;
 
   if (getIDWithAttrMask(&instructionID, insn, attrMask))
     return -1;
@@ -1420,7 +1393,7 @@ static int readModRM(struct InternalInstruction* insn) {
       break;
     case 0x1:
       insn->displacementSize = 1;
-      /* FALLTHROUGH */
+      LLVM_FALLTHROUGH;
     case 0x2:
       insn->eaDisplacement = (mod == 0x1 ? EA_DISP_8 : EA_DISP_32);
       switch (rm & 7) {

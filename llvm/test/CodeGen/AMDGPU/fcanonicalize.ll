@@ -2,12 +2,18 @@
 
 declare float @llvm.fabs.f32(float) #0
 declare float @llvm.canonicalize.f32(float) #0
+declare <2 x float> @llvm.canonicalize.v2f32(<2 x float>) #0
+declare <3 x float> @llvm.canonicalize.v3f32(<3 x float>) #0
+declare <4 x float> @llvm.canonicalize.v4f32(<4 x float>) #0
+declare <8 x float> @llvm.canonicalize.v8f32(<8 x float>) #0
 declare double @llvm.fabs.f64(double) #0
 declare double @llvm.canonicalize.f64(double) #0
+declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>) #0
+declare <3 x double> @llvm.canonicalize.v3f64(<3 x double>) #0
+declare <4 x double> @llvm.canonicalize.v4f64(<4 x double>) #0
 declare half @llvm.canonicalize.f16(half) #0
 declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
-declare <2 x double> @llvm.canonicalize.v2f64(<2 x double>) #0
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_f32:
 ; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
@@ -548,6 +554,74 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(<2 x double> addrspace(
   %canonicalized = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %val)
   store <2 x double> %canonicalized, <2 x double> addrspace(1)* %out
   ret void
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_v2f32:
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+define <2 x float> @v_test_canonicalize_v2f32(<2 x float> %arg) #1 {
+  %canon = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %arg)
+  ret <2 x float> %canon
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_v3f32:
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+define <3 x float> @v_test_canonicalize_v3f32(<3 x float> %arg) #1 {
+  %canon = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> %arg)
+  ret <3 x float> %canon
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_v4f32:
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+define <4 x float> @v_test_canonicalize_v4f32(<4 x float> %arg) #1 {
+  %canon = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %arg)
+  ret <4 x float> %canon
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_v8f32:
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+; GCN: v_mul_f32_e32 [[REG:v[0-9]+]], 1.0, {{v[0-9]+}}
+define <8 x float> @v_test_canonicalize_v8f32(<8 x float> %arg) #1 {
+  %canon = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> %arg)
+  ret <8 x float> %canon
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_v2f64:
+; GCN: v_max_f64
+; GCN: v_max_f64
+define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
+  %canon = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %arg)
+  ret <2 x double> %canon
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_v3f64:
+; GCN: v_max_f64
+; GCN: v_max_f64
+; GCN: v_max_f64
+define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
+  %canon = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> %arg)
+  ret <3 x double> %canon
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_v4f64:
+; GCN: v_max_f64
+; GCN: v_max_f64
+; GCN: v_max_f64
+; GCN: v_max_f64
+define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
+  %canon = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %arg)
+  ret <4 x double> %canon
 }
 
 attributes #0 = { nounwind readnone }

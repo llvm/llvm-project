@@ -30,7 +30,7 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK: catch.start:
 ; CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad
 ; CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.catch(i32 0)
-; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(i32 0)
+; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(token %[[CATCHPAD]], i32 0)
 ; CHECK-NEXT:   store i32 0, i32* getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 0)
 ; CHECK-NEXT:   %[[LSDA:.*]] = call i8* @llvm.wasm.lsda()
 ; CHECK-NEXT:   store i8* %[[LSDA]], i8** getelementptr inbounds ({ i32, i8*, i32 }, { i32, i8*, i32 }* @__wasm_lpad_context, i32 0, i32 1)
@@ -98,7 +98,7 @@ catch.start3:                                     ; preds = %catch.dispatch2
   %matches = icmp eq i32 %8, %9
   br i1 %matches, label %catch4, label %rethrow
 ; CHECK: catch.start3:
-; CHECK:   call void @llvm.wasm.landingpad.index(i32 0)
+; CHECK:   call void @llvm.wasm.landingpad.index(token %{{.+}}, i32 0)
 
 catch4:                                           ; preds = %catch.start3
   %10 = call i8* @__cxa_begin_catch(i8* %7) [ "funclet"(token %6) ]
@@ -298,6 +298,34 @@ try.cont10:                                       ; preds = %invoke.cont3, %catc
   ret void
 }
 
+; Tests if instructions after a call to @llvm.wasm.throw are deleted and the
+; BB's dead children are deleted.
+
+; CHECK-LABEL: @test6
+define i32 @test6(i1 %b, i8* %p) {
+entry:
+  br i1 %b, label %bb.true, label %bb.false
+
+; CHECK:      bb.true:
+; CHECK-NEXT:   call void @llvm.wasm.throw(i32 0, i8* %p)
+; CHECK-NEXT:   unreachable
+bb.true:                                          ; preds = %entry
+  call void @llvm.wasm.throw(i32 0, i8* %p)
+  br label %bb.true.0
+
+; CHECK-NOT:  bb.true.0
+bb.true.0:                                        ; preds = %bb.true
+  br label %merge
+
+; CHECK:      bb.false
+bb.false:                                         ; preds = %entry
+  br label %merge
+
+; CHECK:      merge
+merge:                                            ; preds = %bb.true.0, %bb.false
+  ret i32 0
+}
+
 declare void @foo()
 declare void @func(i32)
 declare %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* returned)
@@ -305,13 +333,13 @@ declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)
 declare i32 @llvm.eh.typeid.for(i8*)
+declare void @llvm.wasm.throw(i32, i8*)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
 
 ; CHECK-DAG: declare i8* @llvm.wasm.catch(i32)
-; CHECK-DAG: declare void @llvm.wasm.landingpad.index(i32)
+; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32)
 ; CHECK-DAG: declare i8* @llvm.wasm.lsda()
 ; CHECK-DAG: declare i32 @_Unwind_CallPersonality(i8*)
-

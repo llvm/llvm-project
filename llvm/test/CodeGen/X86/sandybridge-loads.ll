@@ -30,9 +30,10 @@ define void @widestores(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounw
 ; CHECK-LABEL: widestores:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
-; CHECK-NEXT:    vmovaps (%rsi), %ymm1
+; CHECK-NEXT:    vmovaps (%rsi), %xmm1
+; CHECK-NEXT:    vmovaps 16(%rsi), %xmm2
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsi)
-; CHECK-NEXT:    vextractf128 $1, %ymm1, 16(%rdi)
+; CHECK-NEXT:    vmovaps %xmm2, 16(%rdi)
 ; CHECK-NEXT:    vmovaps %xmm1, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

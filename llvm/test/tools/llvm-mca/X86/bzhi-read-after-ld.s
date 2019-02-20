@@ -11,22 +11,29 @@ bzhil	%esi, (%rdi), %eax
 # ALL-NEXT:     Instructions:      2
 
 # BDWELL-NEXT:  Total Cycles:      9
-# BDWELL-NEXT:  Dispatch Width:    4
+# HASWELL-NEXT: Total Cycles:      9
+# SKYLAKE-NEXT: Total Cycles:      9
+# ZNVER1-NEXT:  Total Cycles:      8
+
+# ALL-NEXT:     Total uOps:        3
+
+# BDWELL:       Dispatch Width:    4
+# BDWELL-NEXT:  uOps Per Cycle:    0.33
 # BDWELL-NEXT:  IPC:               0.22
 # BDWELL-NEXT:  Block RThroughput: 0.8
 
-# HASWELL-NEXT: Total Cycles:      9
-# HASWELL-NEXT: Dispatch Width:    4
+# HASWELL:      Dispatch Width:    4
+# HASWELL-NEXT: uOps Per Cycle:    0.33
 # HASWELL-NEXT: IPC:               0.22
 # HASWELL-NEXT: Block RThroughput: 0.8
 
-# SKYLAKE-NEXT: Total Cycles:      9
-# SKYLAKE-NEXT: Dispatch Width:    6
+# SKYLAKE:      Dispatch Width:    6
+# SKYLAKE-NEXT: uOps Per Cycle:    0.33
 # SKYLAKE-NEXT: IPC:               0.22
 # SKYLAKE-NEXT: Block RThroughput: 0.5
 
-# ZNVER1-NEXT:  Total Cycles:      8
-# ZNVER1-NEXT:  Dispatch Width:    4
+# ZNVER1:       Dispatch Width:    4
+# ZNVER1-NEXT:  uOps Per Cycle:    0.38
 # ZNVER1-NEXT:  IPC:               0.25
 # ZNVER1-NEXT:  Block RThroughput: 0.8
 

@@ -1,3 +1,4 @@
+; RUN: opt < %s -S -passes=msan 2>&1 | FileCheck %s
 ; RUN: opt < %s -msan -S | FileCheck %s
 
 target datalayout = "E-m:m-i8:8:32-i16:16:32-i64:64-n32:64-S128"
@@ -53,3 +54,30 @@ define i32 @bar2() {
 ; CHECK: store i64 0, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_va_arg_tls, i32 0, i32 0), align 8
 ; CHECK: store i64 0, i64* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 8) to i64*), align 8
 ; CHECK: store {{.*}} 16, {{.*}} @__msan_va_arg_overflow_size_tls
+
+; Test that MSan doesn't generate code overflowing __msan_va_arg_tls when too many arguments are
+; passed to a variadic function.
+define dso_local i64 @many_args() {
+entry:
+  %ret = call i64 (i64, ...) @sum(i64 120,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1,
+    i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1
+  )
+  ret i64 %ret
+}
+
+; If the size of __msan_va_arg_tls changes the second argument of `add` must also be changed.
+; CHECK-LABEL: @many_args
+; CHECK: i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 792)
+; CHECK-NOT: i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 800)
+declare i64 @sum(i64 %n, ...)

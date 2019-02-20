@@ -115,6 +115,7 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
 
   CommentString = ";";
   ExceptionsType = ExceptionHandling::WinEH;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
 }
 
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
@@ -131,4 +132,7 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
 
   CommentString = "//";
   ExceptionsType = ExceptionHandling::DwarfCFI;
+  // The default is dwarf, but WinEH can be enabled optionally, which requires
+  // WinEHEncodingType to be set.
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
 }

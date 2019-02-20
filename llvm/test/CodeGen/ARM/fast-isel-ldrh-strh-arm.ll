@@ -82,7 +82,8 @@ entry:
 ; ARM: t9
   %add.ptr = getelementptr inbounds i16, i16* %a, i64 -8
   store i16 0, i16* %add.ptr, align 2
-; ARM: strh	r1, [r0, #-16]
+; ARM: movw [[REG0:r[0-9]+]], #0
+; ARM: strh [[REG0]], [{{r[0-9]+}}, #-16]
   ret void
 }
 
@@ -93,9 +94,10 @@ entry:
 ; ARM: t10
   %add.ptr = getelementptr inbounds i16, i16* %a, i64 -128
   store i16 0, i16* %add.ptr, align 2
-; ARM: mvn r{{[1-9]}}, #255
-; ARM: add r0, r0, r{{[1-9]}}
-; ARM: strh r{{[1-9]}}, [r0]
+; ARM: mvn r1, #255
+; ARM: add [[REG0:r[0-9]+]], r0, r1
+; ARM: movw [[REG1:r[0-9]+]], #0
+; ARM: strh [[REG1]], {{\[}}[[REG0]]]
   ret void
 }
 
@@ -104,7 +106,8 @@ entry:
 ; ARM: t11
   %add.ptr = getelementptr inbounds i16, i16* %a, i64 8
   store i16 0, i16* %add.ptr, align 2
-; ARM: strh r{{[1-9]}}, [r0, #16]
+; ARM: movw [[REG1:r[0-9]+]], #0
+; ARM: strh [[REG1]], [{{r[0-9]+}}, #16]
   ret void
 }
 
@@ -115,8 +118,9 @@ entry:
 ; ARM: t12
   %add.ptr = getelementptr inbounds i16, i16* %a, i64 128
   store i16 0, i16* %add.ptr, align 2
-; ARM: add r0, r0, #256
-; ARM: strh r{{[1-9]}}, [r0]
+; ARM: add [[REG0:r[0-9]+]], r0, #256
+; ARM: movw [[REG1:r[0-9]+]], #0
+; ARM: strh [[REG1]], {{\[}}[[REG0]]]
   ret void
 }
 

@@ -20,6 +20,7 @@ enum MCSymbolAttr {
   MCSA_Invalid = 0,    ///< Not a valid directive.
 
   // Various directives in alphabetical order.
+  MCSA_Cold,                ///< .cold (MachO)
   MCSA_ELF_TypeFunction,    ///< .type _foo, STT_FUNC  # aka @function
   MCSA_ELF_TypeIndFunction, ///< .type _foo, STT_GNU_IFUNC
   MCSA_ELF_TypeObject,      ///< .type _foo, STT_OBJECT  # aka @object

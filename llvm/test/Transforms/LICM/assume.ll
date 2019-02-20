@@ -35,8 +35,10 @@ for.end104:
 
 define void @f_1(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @f_1(
+; CHECK-LABEL: entry:
+; CHECK: call void @llvm.assume(i1 %cond)
 ; CHECK: %val = load i32, i32* %ptr
-; CHECK-NEXT:  br label %loop
+; CHECK-LABEL: loop:
 
 entry:
   br label %loop
@@ -49,4 +51,49 @@ loop:
   br label %loop
 }
 
+; Can't hoist because the call may throw and the assume
+; may never execute.
+define void @f_2(i1 %cond, i32* %ptr) {
+; CHECK-LABEL: @f_2(
+; CHECK-LABEL: entry:
+; CHECK-LABEL: loop:
+; CHECK: call void @llvm.assume(i1 %cond)
+; CHECK: %val = load i32, i32* %ptr
+
+entry:
+  br label %loop
+
+loop:
+  %x = phi i32 [ 0, %entry ], [ %x.inc, %loop ]
+  call void @maythrow()
+  call void @llvm.assume(i1 %cond)
+  %val = load i32, i32* %ptr
+  %x.inc = add i32 %x, %val
+  br label %loop
+}
+
+; Note: resulting loop could be peeled and then hoisted, but
+; by default assume is captured in phi cycle.
+define void @f_3(i1 %cond, i32* %ptr) {
+; CHECK-LABEL: @f_3(
+; CHECK-LABEL: entry:
+; CHECK: %val = load i32, i32* %ptr
+; CHECK-LABEL: loop:
+; CHECK: call void @llvm.assume(i1 %x.cmp)
+
+entry:
+  br label %loop
+
+loop:
+  %x = phi i32 [ 0, %entry ], [ %x.inc, %loop ]
+  %x.cmp = phi i1 [%cond, %entry], [%cond.next, %loop]
+  call void @llvm.assume(i1 %x.cmp)
+  %val = load i32, i32* %ptr
+  %cond.next = icmp eq i32 %val, 5
+  %x.inc = add i32 %x, %val
+  br label %loop
+}
+
+
+declare void @maythrow()
 declare void @llvm.assume(i1)

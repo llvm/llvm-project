@@ -24,16 +24,16 @@ declare float @llvm.fabs.f32(float) #1
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; VI: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, 1.0
 define amdgpu_kernel void @multiple_fadd_use_test_f32(float addrspace(1)* %out, float %x, float %y, float %z) #0 {
-  %a11 = fadd fast float %y, -1.0
+  %a11 = fadd float %y, -1.0
   %a12 = call float @llvm.fabs.f32(float %a11)
-  %a13 = fadd fast float %x, -1.0
+  %a13 = fadd float %x, -1.0
   %a14 = call float @llvm.fabs.f32(float %a13)
   %a15 = fcmp ogt float %a12, %a14
   %a16 = select i1 %a15, float %a12, float %a14
-  %a17 = fmul fast float %a16, 2.0
-  %a18 = fmul fast float %a17, %a17
-  %a19 = fmul fast float %a18, %a17
-  %a20 = fsub fast float 1.0, %a19
+  %a17 = fmul float %a16, 2.0
+  %a18 = fmul float %a17, %a17
+  %a19 = fmul float %a18, %a17
+  %a20 = fsub float 1.0, %a19
   store float %a20, float addrspace(1)* %out
   ret void
 }
@@ -123,16 +123,16 @@ define amdgpu_kernel void @multiple_fadd_use_test_f16(half addrspace(1)* %out, i
   %x = bitcast i16 %x.arg to half
   %y = bitcast i16 %y.arg to half
   %z = bitcast i16 %z.arg to half
-  %a11 = fadd fast half %y, -1.0
+  %a11 = fadd half %y, -1.0
   %a12 = call half @llvm.fabs.f16(half %a11)
-  %a13 = fadd fast half %x, -1.0
+  %a13 = fadd half %x, -1.0
   %a14 = call half @llvm.fabs.f16(half %a13)
   %a15 = fcmp ogt half %a12, %a14
   %a16 = select i1 %a15, half %a12, half %a14
-  %a17 = fmul fast half %a16, 2.0
-  %a18 = fmul fast half %a17, %a17
-  %a19 = fmul fast half %a18, %a17
-  %a20 = fsub fast half 1.0, %a19
+  %a17 = fmul half %a16, 2.0
+  %a18 = fmul half %a17, %a17
+  %a19 = fmul half %a18, %a17
+  %a20 = fsub half 1.0, %a19
   store half %a20, half addrspace(1)* %out
   ret void
 }

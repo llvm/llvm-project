@@ -93,36 +93,29 @@ bool
 MachineRegisterInfo::constrainRegAttrs(unsigned Reg,
                                        unsigned ConstrainingReg,
                                        unsigned MinNumRegs) {
-  auto const *OldRC = getRegClassOrNull(Reg);
-  auto const *RC = getRegClassOrNull(ConstrainingReg);
-  // A virtual register at any point must have either a low-level type
-  // or a class assigned, but not both. The only exception is the internals of
-  // GlobalISel's instruction selection pass, which is allowed to temporarily
-  // introduce registers with types and classes both.
-  assert((OldRC || getType(Reg).isValid()) && "Reg has neither class nor type");
-  assert((!OldRC || !getType(Reg).isValid()) && "Reg has class and type both");
-  assert((RC || getType(ConstrainingReg).isValid()) &&
-         "ConstrainingReg has neither class nor type");
-  assert((!RC || !getType(ConstrainingReg).isValid()) &&
-         "ConstrainingReg has class and type both");
-  if (OldRC && RC)
-    return ::constrainRegClass(*this, Reg, OldRC, RC, MinNumRegs);
-  // If one of the virtual registers is generic (used in generic machine
-  // instructions, has a low-level type, doesn't have a class), and the other is
-  // concrete (used in target specific instructions, doesn't have a low-level
-  // type, has a class), we can not unify them.
-  if (OldRC || RC)
+  const LLT RegTy = getType(Reg);
+  const LLT ConstrainingRegTy = getType(ConstrainingReg);
+  if (RegTy.isValid() && ConstrainingRegTy.isValid() &&
+      RegTy != ConstrainingRegTy)
     return false;
-  // At this point, both registers are guaranteed to have a valid low-level
-  // type, and they must agree.
-  if (getType(Reg) != getType(ConstrainingReg))
-    return false;
-  auto const *OldRB = getRegBankOrNull(Reg);
-  auto const *RB = getRegBankOrNull(ConstrainingReg);
-  if (OldRB)
-    return !RB || RB == OldRB;
-  if (RB)
-    setRegBank(Reg, *RB);
+  const auto ConstrainingRegCB = getRegClassOrRegBank(ConstrainingReg);
+  if (!ConstrainingRegCB.isNull()) {
+    const auto RegCB = getRegClassOrRegBank(Reg);
+    if (RegCB.isNull())
+      setRegClassOrRegBank(Reg, ConstrainingRegCB);
+    else if (RegCB.is<const TargetRegisterClass *>() !=
+             ConstrainingRegCB.is<const TargetRegisterClass *>())
+      return false;
+    else if (RegCB.is<const TargetRegisterClass *>()) {
+      if (!::constrainRegClass(
+              *this, Reg, RegCB.get<const TargetRegisterClass *>(),
+              ConstrainingRegCB.get<const TargetRegisterClass *>(), MinNumRegs))
+        return false;
+    } else if (RegCB != ConstrainingRegCB)
+      return false;
+  }
+  if (ConstrainingRegTy.isValid())
+    setType(Reg, ConstrainingRegTy);
   return true;
 }
 
@@ -177,11 +170,17 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   return Reg;
 }
 
+unsigned MachineRegisterInfo::cloneVirtualRegister(unsigned VReg,
+                                                   StringRef Name) {
+  unsigned Reg = createIncompleteVirtualRegister(Name);
+  VRegInfo[Reg].first = VRegInfo[VReg].first;
+  setType(Reg, getType(VReg));
+  if (TheDelegate)
+    TheDelegate->MRI_NoteNewVirtualRegister(Reg);
+  return Reg;
+}
+
 void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
-  // Check that VReg doesn't have a class.
-  assert((getRegClassOrRegBank(VReg).isNull() ||
-         !getRegClassOrRegBank(VReg).is<const TargetRegisterClass *>()) &&
-         "Can't set the size of a non-generic virtual register");
   VRegToType.grow(VReg);
   VRegToType[VReg] = Ty;
 }

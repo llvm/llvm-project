@@ -18,6 +18,6 @@
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
 #include "Unix/COM.inc"
-#elif _WIN32
+#elif defined(_WIN32)
 #include "Windows/COM.inc"
 #endif

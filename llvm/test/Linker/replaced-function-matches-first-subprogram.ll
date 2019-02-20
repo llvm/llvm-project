@@ -54,7 +54,7 @@ entry:
 
 ; We can't use CHECK-NOT/CHECK-SAME with a CHECK-DAG, so rely on field order to
 ; prove that there's no function: here.
-; CHECK-DAG: ![[SP2r:.*]] = {{.*}}!DISubprogram({{.*}} isOptimized: false, unit: ![[CU1]], retainedNodes:
+; CHECK-DAG: ![[SP2r:.*]] = {{.*}}!DISubprogram({{.*}} unit: ![[CU1]], retainedNodes:
 !7 = distinct !DISubprogram(name: "foo", line: 2, isLocal: false, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 2, file: !8, scope: !9, type: !6, retainedNodes: !2)
 
 ; The new subprogram should be pointing at the new directory.

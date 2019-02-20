@@ -14,34 +14,19 @@ declare void @notdead(i8*)
 ; lowered correctly
 
 define i32 @va1(i8* %fmt, ...) nounwind {
-; RV32I-LABEL: va1:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw a1, 20(sp)
-; RV32I-NEXT:    sw a7, 44(sp)
-; RV32I-NEXT:    sw a6, 40(sp)
-; RV32I-NEXT:    sw a5, 36(sp)
-; RV32I-NEXT:    sw a4, 32(sp)
-; RV32I-NEXT:    sw a3, 28(sp)
-; RV32I-NEXT:    sw a2, 24(sp)
-; RV32I-NEXT:    addi a0, sp, 24
-; RV32I-NEXT:    sw a0, 12(sp)
-; RV32I-NEXT:    lw a0, 20(sp)
-; RV32I-NEXT:    addi sp, sp, 48
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va1:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
-; RV32I-FPELIM-NEXT:    sw a1, 20(sp)
+; RV32I-FPELIM-NEXT:    mv a0, a1
 ; RV32I-FPELIM-NEXT:    sw a7, 44(sp)
 ; RV32I-FPELIM-NEXT:    sw a6, 40(sp)
 ; RV32I-FPELIM-NEXT:    sw a5, 36(sp)
 ; RV32I-FPELIM-NEXT:    sw a4, 32(sp)
 ; RV32I-FPELIM-NEXT:    sw a3, 28(sp)
 ; RV32I-FPELIM-NEXT:    sw a2, 24(sp)
-; RV32I-FPELIM-NEXT:    addi a0, sp, 24
-; RV32I-FPELIM-NEXT:    sw a0, 12(sp)
-; RV32I-FPELIM-NEXT:    lw a0, 20(sp)
+; RV32I-FPELIM-NEXT:    addi a1, sp, 24
+; RV32I-FPELIM-NEXT:    sw a1, 12(sp)
+; RV32I-FPELIM-NEXT:    sw a0, 20(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 48
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -51,16 +36,16 @@ define i32 @va1(i8* %fmt, ...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    sw a1, 4(s0)
+; RV32I-WITHFP-NEXT:    mv a0, a1
 ; RV32I-WITHFP-NEXT:    sw a7, 28(s0)
 ; RV32I-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32I-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32I-WITHFP-NEXT:    sw a4, 16(s0)
 ; RV32I-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32I-WITHFP-NEXT:    sw a2, 8(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s0, 8
-; RV32I-WITHFP-NEXT:    sw a0, -12(s0)
-; RV32I-WITHFP-NEXT:    lw a0, 4(s0)
+; RV32I-WITHFP-NEXT:    addi a1, s0, 8
+; RV32I-WITHFP-NEXT:    sw a1, -12(s0)
+; RV32I-WITHFP-NEXT:    sw a0, 4(s0)
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 48
@@ -78,34 +63,19 @@ define i32 @va1(i8* %fmt, ...) nounwind {
 }
 
 define i32 @va1_va_arg(i8* %fmt, ...) nounwind {
-; RV32I-LABEL: va1_va_arg:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw a1, 20(sp)
-; RV32I-NEXT:    sw a7, 44(sp)
-; RV32I-NEXT:    sw a6, 40(sp)
-; RV32I-NEXT:    sw a5, 36(sp)
-; RV32I-NEXT:    sw a4, 32(sp)
-; RV32I-NEXT:    sw a3, 28(sp)
-; RV32I-NEXT:    sw a2, 24(sp)
-; RV32I-NEXT:    addi a0, sp, 24
-; RV32I-NEXT:    sw a0, 12(sp)
-; RV32I-NEXT:    lw a0, 20(sp)
-; RV32I-NEXT:    addi sp, sp, 48
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va1_va_arg:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
-; RV32I-FPELIM-NEXT:    sw a1, 20(sp)
+; RV32I-FPELIM-NEXT:    mv a0, a1
 ; RV32I-FPELIM-NEXT:    sw a7, 44(sp)
 ; RV32I-FPELIM-NEXT:    sw a6, 40(sp)
 ; RV32I-FPELIM-NEXT:    sw a5, 36(sp)
 ; RV32I-FPELIM-NEXT:    sw a4, 32(sp)
 ; RV32I-FPELIM-NEXT:    sw a3, 28(sp)
 ; RV32I-FPELIM-NEXT:    sw a2, 24(sp)
-; RV32I-FPELIM-NEXT:    addi a0, sp, 24
-; RV32I-FPELIM-NEXT:    sw a0, 12(sp)
-; RV32I-FPELIM-NEXT:    lw a0, 20(sp)
+; RV32I-FPELIM-NEXT:    addi a1, sp, 24
+; RV32I-FPELIM-NEXT:    sw a1, 12(sp)
+; RV32I-FPELIM-NEXT:    sw a0, 20(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 48
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -115,16 +85,16 @@ define i32 @va1_va_arg(i8* %fmt, ...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    sw a1, 4(s0)
+; RV32I-WITHFP-NEXT:    mv a0, a1
 ; RV32I-WITHFP-NEXT:    sw a7, 28(s0)
 ; RV32I-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32I-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32I-WITHFP-NEXT:    sw a4, 16(s0)
 ; RV32I-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32I-WITHFP-NEXT:    sw a2, 8(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s0, 8
-; RV32I-WITHFP-NEXT:    sw a0, -12(s0)
-; RV32I-WITHFP-NEXT:    lw a0, 4(s0)
+; RV32I-WITHFP-NEXT:    addi a1, s0, 8
+; RV32I-WITHFP-NEXT:    sw a1, -12(s0)
+; RV32I-WITHFP-NEXT:    sw a0, 4(s0)
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 48
@@ -140,37 +110,6 @@ define i32 @va1_va_arg(i8* %fmt, ...) nounwind {
 ; Ensure the adjustment when restoring the stack pointer using the frame
 ; pointer is correct
 define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
-; RV32I-LABEL: va1_va_arg_alloca:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s0, 8(sp)
-; RV32I-NEXT:    sw s1, 4(sp)
-; RV32I-NEXT:    addi s0, sp, 16
-; RV32I-NEXT:    sw a1, 4(s0)
-; RV32I-NEXT:    sw a7, 28(s0)
-; RV32I-NEXT:    sw a6, 24(s0)
-; RV32I-NEXT:    sw a5, 20(s0)
-; RV32I-NEXT:    sw a4, 16(s0)
-; RV32I-NEXT:    sw a3, 12(s0)
-; RV32I-NEXT:    sw a2, 8(s0)
-; RV32I-NEXT:    addi a0, s0, 8
-; RV32I-NEXT:    sw a0, -16(s0)
-; RV32I-NEXT:    lw s1, 4(s0)
-; RV32I-NEXT:    addi a0, s1, 15
-; RV32I-NEXT:    andi a0, a0, -16
-; RV32I-NEXT:    sub a0, sp, a0
-; RV32I-NEXT:    mv sp, a0
-; RV32I-NEXT:    lui a1, %hi(notdead)
-; RV32I-NEXT:    addi a1, a1, %lo(notdead)
-; RV32I-NEXT:    jalr a1
-; RV32I-NEXT:    mv a0, s1
-; RV32I-NEXT:    addi sp, s0, -16
-; RV32I-NEXT:    lw s1, 4(sp)
-; RV32I-NEXT:    lw s0, 8(sp)
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 48
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va1_va_arg_alloca:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
@@ -178,7 +117,7 @@ define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
 ; RV32I-FPELIM-NEXT:    sw s0, 8(sp)
 ; RV32I-FPELIM-NEXT:    sw s1, 4(sp)
 ; RV32I-FPELIM-NEXT:    addi s0, sp, 16
-; RV32I-FPELIM-NEXT:    sw a1, 4(s0)
+; RV32I-FPELIM-NEXT:    mv s1, a1
 ; RV32I-FPELIM-NEXT:    sw a7, 28(s0)
 ; RV32I-FPELIM-NEXT:    sw a6, 24(s0)
 ; RV32I-FPELIM-NEXT:    sw a5, 20(s0)
@@ -187,8 +126,8 @@ define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
 ; RV32I-FPELIM-NEXT:    sw a2, 8(s0)
 ; RV32I-FPELIM-NEXT:    addi a0, s0, 8
 ; RV32I-FPELIM-NEXT:    sw a0, -16(s0)
-; RV32I-FPELIM-NEXT:    lw s1, 4(s0)
-; RV32I-FPELIM-NEXT:    addi a0, s1, 15
+; RV32I-FPELIM-NEXT:    sw a1, 4(s0)
+; RV32I-FPELIM-NEXT:    addi a0, a1, 15
 ; RV32I-FPELIM-NEXT:    andi a0, a0, -16
 ; RV32I-FPELIM-NEXT:    sub a0, sp, a0
 ; RV32I-FPELIM-NEXT:    mv sp, a0
@@ -208,7 +147,7 @@ define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    sw s1, 4(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    sw a1, 4(s0)
+; RV32I-WITHFP-NEXT:    mv s1, a1
 ; RV32I-WITHFP-NEXT:    sw a7, 28(s0)
 ; RV32I-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32I-WITHFP-NEXT:    sw a5, 20(s0)
@@ -217,8 +156,8 @@ define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, s0, 8
 ; RV32I-WITHFP-NEXT:    sw a0, -16(s0)
-; RV32I-WITHFP-NEXT:    lw s1, 4(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s1, 15
+; RV32I-WITHFP-NEXT:    sw a1, 4(s0)
+; RV32I-WITHFP-NEXT:    addi a0, a1, 15
 ; RV32I-WITHFP-NEXT:    andi a0, a0, -16
 ; RV32I-WITHFP-NEXT:    sub a0, sp, a0
 ; RV32I-WITHFP-NEXT:    mv sp, a0
@@ -241,20 +180,6 @@ define i32 @va1_va_arg_alloca(i8* %fmt, ...) nounwind {
 }
 
 define void @va1_caller() nounwind {
-; RV32I-LABEL: va1_caller:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a0, 261888
-; RV32I-NEXT:    mv a3, a0
-; RV32I-NEXT:    lui a0, %hi(va1)
-; RV32I-NEXT:    addi a0, a0, %lo(va1)
-; RV32I-NEXT:    addi a4, zero, 2
-; RV32I-NEXT:    mv a2, zero
-; RV32I-NEXT:    jalr a0
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ; Pass a double, as a float would be promoted by a C/C++ frontend
 ; RV32I-FPELIM-LABEL: va1_caller:
 ; RV32I-FPELIM:       # %bb.0:
@@ -290,25 +215,6 @@ define void @va1_caller() nounwind {
 ; register pair (where the first register is even-numbered).
 
 define double @va2(i8 *%fmt, ...) nounwind {
-; RV32I-LABEL: va2:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw a7, 44(sp)
-; RV32I-NEXT:    sw a6, 40(sp)
-; RV32I-NEXT:    sw a5, 36(sp)
-; RV32I-NEXT:    sw a4, 32(sp)
-; RV32I-NEXT:    sw a3, 28(sp)
-; RV32I-NEXT:    sw a2, 24(sp)
-; RV32I-NEXT:    sw a1, 20(sp)
-; RV32I-NEXT:    addi a0, sp, 35
-; RV32I-NEXT:    sw a0, 12(sp)
-; RV32I-NEXT:    addi a0, sp, 27
-; RV32I-NEXT:    andi a1, a0, -8
-; RV32I-NEXT:    lw a0, 0(a1)
-; RV32I-NEXT:    ori a1, a1, 4
-; RV32I-NEXT:    lw a1, 0(a1)
-; RV32I-NEXT:    addi sp, sp, 48
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va2:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
@@ -370,26 +276,6 @@ define double @va2(i8 *%fmt, ...) nounwind {
 }
 
 define double @va2_va_arg(i8 *%fmt, ...) nounwind {
-; RV32I-LABEL: va2_va_arg:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw a7, 44(sp)
-; RV32I-NEXT:    sw a6, 40(sp)
-; RV32I-NEXT:    sw a5, 36(sp)
-; RV32I-NEXT:    sw a4, 32(sp)
-; RV32I-NEXT:    sw a3, 28(sp)
-; RV32I-NEXT:    sw a2, 24(sp)
-; RV32I-NEXT:    sw a1, 20(sp)
-; RV32I-NEXT:    addi a0, sp, 27
-; RV32I-NEXT:    andi a0, a0, -8
-; RV32I-NEXT:    ori a1, a0, 4
-; RV32I-NEXT:    sw a1, 12(sp)
-; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    addi a2, a1, 4
-; RV32I-NEXT:    sw a2, 12(sp)
-; RV32I-NEXT:    lw a1, 0(a1)
-; RV32I-NEXT:    addi sp, sp, 48
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va2_va_arg:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
@@ -445,19 +331,6 @@ define double @va2_va_arg(i8 *%fmt, ...) nounwind {
 }
 
 define void @va2_caller() nounwind {
-; RV32I-LABEL: va2_caller:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a0, 261888
-; RV32I-NEXT:    mv a3, a0
-; RV32I-NEXT:    lui a0, %hi(va2)
-; RV32I-NEXT:    addi a0, a0, %lo(va2)
-; RV32I-NEXT:    mv a2, zero
-; RV32I-NEXT:    jalr a0
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va2_caller:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
@@ -490,50 +363,25 @@ define void @va2_caller() nounwind {
 ; double is passed in a4 and a5 (rather than a3 and a4)
 
 define double @va3(i32 %a, double %b, ...) nounwind {
-; RV32I-LABEL: va3:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw ra, 4(sp)
-; RV32I-NEXT:    sw a7, 28(sp)
-; RV32I-NEXT:    sw a6, 24(sp)
-; RV32I-NEXT:    sw a5, 20(sp)
-; RV32I-NEXT:    sw a4, 16(sp)
-; RV32I-NEXT:    sw a3, 12(sp)
-; RV32I-NEXT:    addi a0, sp, 27
-; RV32I-NEXT:    sw a0, 0(sp)
-; RV32I-NEXT:    lui a0, %hi(__adddf3)
-; RV32I-NEXT:    addi a5, a0, %lo(__adddf3)
-; RV32I-NEXT:    addi a0, sp, 19
-; RV32I-NEXT:    andi a0, a0, -8
-; RV32I-NEXT:    lw a4, 0(a0)
-; RV32I-NEXT:    ori a0, a0, 4
-; RV32I-NEXT:    lw a3, 0(a0)
-; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    mv a1, a2
-; RV32I-NEXT:    mv a2, a4
-; RV32I-NEXT:    jalr a5
-; RV32I-NEXT:    lw ra, 4(sp)
-; RV32I-NEXT:    addi sp, sp, 32
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va3:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -32
 ; RV32I-FPELIM-NEXT:    sw ra, 4(sp)
+; RV32I-FPELIM-NEXT:    mv t0, a2
+; RV32I-FPELIM-NEXT:    mv a0, a1
 ; RV32I-FPELIM-NEXT:    sw a7, 28(sp)
 ; RV32I-FPELIM-NEXT:    sw a6, 24(sp)
 ; RV32I-FPELIM-NEXT:    sw a5, 20(sp)
 ; RV32I-FPELIM-NEXT:    sw a4, 16(sp)
 ; RV32I-FPELIM-NEXT:    sw a3, 12(sp)
-; RV32I-FPELIM-NEXT:    addi a0, sp, 27
-; RV32I-FPELIM-NEXT:    sw a0, 0(sp)
-; RV32I-FPELIM-NEXT:    addi a0, sp, 19
-; RV32I-FPELIM-NEXT:    andi a0, a0, -8
-; RV32I-FPELIM-NEXT:    lw a4, 0(a0)
-; RV32I-FPELIM-NEXT:    ori a0, a0, 4
-; RV32I-FPELIM-NEXT:    lw a3, 0(a0)
-; RV32I-FPELIM-NEXT:    mv a0, a1
-; RV32I-FPELIM-NEXT:    mv a1, a2
-; RV32I-FPELIM-NEXT:    mv a2, a4
+; RV32I-FPELIM-NEXT:    addi a1, sp, 27
+; RV32I-FPELIM-NEXT:    sw a1, 0(sp)
+; RV32I-FPELIM-NEXT:    addi a1, sp, 19
+; RV32I-FPELIM-NEXT:    andi a1, a1, -8
+; RV32I-FPELIM-NEXT:    lw a2, 0(a1)
+; RV32I-FPELIM-NEXT:    ori a1, a1, 4
+; RV32I-FPELIM-NEXT:    lw a3, 0(a1)
+; RV32I-FPELIM-NEXT:    mv a1, t0
 ; RV32I-FPELIM-NEXT:    call __adddf3
 ; RV32I-FPELIM-NEXT:    lw ra, 4(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 32
@@ -545,21 +393,21 @@ define double @va3(i32 %a, double %b, ...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 20(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 16(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 24
+; RV32I-WITHFP-NEXT:    mv t0, a2
+; RV32I-WITHFP-NEXT:    mv a0, a1
 ; RV32I-WITHFP-NEXT:    sw a7, 20(s0)
 ; RV32I-WITHFP-NEXT:    sw a6, 16(s0)
 ; RV32I-WITHFP-NEXT:    sw a5, 12(s0)
 ; RV32I-WITHFP-NEXT:    sw a4, 8(s0)
 ; RV32I-WITHFP-NEXT:    sw a3, 4(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s0, 19
-; RV32I-WITHFP-NEXT:    sw a0, -12(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s0, 11
-; RV32I-WITHFP-NEXT:    andi a0, a0, -8
-; RV32I-WITHFP-NEXT:    lw a4, 0(a0)
-; RV32I-WITHFP-NEXT:    ori a0, a0, 4
-; RV32I-WITHFP-NEXT:    lw a3, 0(a0)
-; RV32I-WITHFP-NEXT:    mv a0, a1
-; RV32I-WITHFP-NEXT:    mv a1, a2
-; RV32I-WITHFP-NEXT:    mv a2, a4
+; RV32I-WITHFP-NEXT:    addi a1, s0, 19
+; RV32I-WITHFP-NEXT:    sw a1, -12(s0)
+; RV32I-WITHFP-NEXT:    addi a1, s0, 11
+; RV32I-WITHFP-NEXT:    andi a1, a1, -8
+; RV32I-WITHFP-NEXT:    lw a2, 0(a1)
+; RV32I-WITHFP-NEXT:    ori a1, a1, 4
+; RV32I-WITHFP-NEXT:    lw a3, 0(a1)
+; RV32I-WITHFP-NEXT:    mv a1, t0
 ; RV32I-WITHFP-NEXT:    call __adddf3
 ; RV32I-WITHFP-NEXT:    lw s0, 16(sp)
 ; RV32I-WITHFP-NEXT:    lw ra, 20(sp)
@@ -583,52 +431,26 @@ define double @va3(i32 %a, double %b, ...) nounwind {
 }
 
 define double @va3_va_arg(i32 %a, double %b, ...) nounwind {
-; RV32I-LABEL: va3_va_arg:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw ra, 4(sp)
-; RV32I-NEXT:    sw a7, 28(sp)
-; RV32I-NEXT:    sw a6, 24(sp)
-; RV32I-NEXT:    sw a5, 20(sp)
-; RV32I-NEXT:    sw a4, 16(sp)
-; RV32I-NEXT:    sw a3, 12(sp)
-; RV32I-NEXT:    addi a0, sp, 19
-; RV32I-NEXT:    andi a0, a0, -8
-; RV32I-NEXT:    ori a3, a0, 4
-; RV32I-NEXT:    sw a3, 0(sp)
-; RV32I-NEXT:    lw a4, 0(a0)
-; RV32I-NEXT:    addi a0, a3, 4
-; RV32I-NEXT:    sw a0, 0(sp)
-; RV32I-NEXT:    lui a0, %hi(__adddf3)
-; RV32I-NEXT:    addi a5, a0, %lo(__adddf3)
-; RV32I-NEXT:    lw a3, 0(a3)
-; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    mv a1, a2
-; RV32I-NEXT:    mv a2, a4
-; RV32I-NEXT:    jalr a5
-; RV32I-NEXT:    lw ra, 4(sp)
-; RV32I-NEXT:    addi sp, sp, 32
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va3_va_arg:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -32
 ; RV32I-FPELIM-NEXT:    sw ra, 4(sp)
+; RV32I-FPELIM-NEXT:    mv t0, a2
+; RV32I-FPELIM-NEXT:    mv a0, a1
 ; RV32I-FPELIM-NEXT:    sw a7, 28(sp)
 ; RV32I-FPELIM-NEXT:    sw a6, 24(sp)
 ; RV32I-FPELIM-NEXT:    sw a5, 20(sp)
 ; RV32I-FPELIM-NEXT:    sw a4, 16(sp)
 ; RV32I-FPELIM-NEXT:    sw a3, 12(sp)
-; RV32I-FPELIM-NEXT:    addi a0, sp, 19
-; RV32I-FPELIM-NEXT:    andi a0, a0, -8
-; RV32I-FPELIM-NEXT:    ori a3, a0, 4
+; RV32I-FPELIM-NEXT:    addi a1, sp, 19
+; RV32I-FPELIM-NEXT:    andi a1, a1, -8
+; RV32I-FPELIM-NEXT:    ori a3, a1, 4
 ; RV32I-FPELIM-NEXT:    sw a3, 0(sp)
-; RV32I-FPELIM-NEXT:    lw a4, 0(a0)
-; RV32I-FPELIM-NEXT:    addi a0, a3, 4
-; RV32I-FPELIM-NEXT:    sw a0, 0(sp)
+; RV32I-FPELIM-NEXT:    lw a2, 0(a1)
+; RV32I-FPELIM-NEXT:    addi a1, a3, 4
+; RV32I-FPELIM-NEXT:    sw a1, 0(sp)
 ; RV32I-FPELIM-NEXT:    lw a3, 0(a3)
-; RV32I-FPELIM-NEXT:    mv a0, a1
-; RV32I-FPELIM-NEXT:    mv a1, a2
-; RV32I-FPELIM-NEXT:    mv a2, a4
+; RV32I-FPELIM-NEXT:    mv a1, t0
 ; RV32I-FPELIM-NEXT:    call __adddf3
 ; RV32I-FPELIM-NEXT:    lw ra, 4(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 32
@@ -640,22 +462,22 @@ define double @va3_va_arg(i32 %a, double %b, ...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 20(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 16(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 24
+; RV32I-WITHFP-NEXT:    mv t0, a2
+; RV32I-WITHFP-NEXT:    mv a0, a1
 ; RV32I-WITHFP-NEXT:    sw a7, 20(s0)
 ; RV32I-WITHFP-NEXT:    sw a6, 16(s0)
 ; RV32I-WITHFP-NEXT:    sw a5, 12(s0)
 ; RV32I-WITHFP-NEXT:    sw a4, 8(s0)
 ; RV32I-WITHFP-NEXT:    sw a3, 4(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s0, 11
-; RV32I-WITHFP-NEXT:    andi a0, a0, -8
-; RV32I-WITHFP-NEXT:    ori a3, a0, 4
+; RV32I-WITHFP-NEXT:    addi a1, s0, 11
+; RV32I-WITHFP-NEXT:    andi a1, a1, -8
+; RV32I-WITHFP-NEXT:    ori a3, a1, 4
 ; RV32I-WITHFP-NEXT:    sw a3, -12(s0)
-; RV32I-WITHFP-NEXT:    lw a4, 0(a0)
-; RV32I-WITHFP-NEXT:    addi a0, a3, 4
-; RV32I-WITHFP-NEXT:    sw a0, -12(s0)
+; RV32I-WITHFP-NEXT:    lw a2, 0(a1)
+; RV32I-WITHFP-NEXT:    addi a1, a3, 4
+; RV32I-WITHFP-NEXT:    sw a1, -12(s0)
 ; RV32I-WITHFP-NEXT:    lw a3, 0(a3)
-; RV32I-WITHFP-NEXT:    mv a0, a1
-; RV32I-WITHFP-NEXT:    mv a1, a2
-; RV32I-WITHFP-NEXT:    mv a2, a4
+; RV32I-WITHFP-NEXT:    mv a1, t0
 ; RV32I-WITHFP-NEXT:    call __adddf3
 ; RV32I-WITHFP-NEXT:    lw s0, 16(sp)
 ; RV32I-WITHFP-NEXT:    lw ra, 20(sp)
@@ -671,23 +493,6 @@ define double @va3_va_arg(i32 %a, double %b, ...) nounwind {
 }
 
 define void @va3_caller() nounwind {
-; RV32I-LABEL: va3_caller:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -16
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    lui a0, 261888
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:    lui a0, 262144
-; RV32I-NEXT:    mv a5, a0
-; RV32I-NEXT:    lui a0, %hi(va3)
-; RV32I-NEXT:    addi a3, a0, %lo(va3)
-; RV32I-NEXT:    addi a0, zero, 2
-; RV32I-NEXT:    mv a1, zero
-; RV32I-NEXT:    mv a4, zero
-; RV32I-NEXT:    jalr a3
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 16
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va3_caller:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -16
@@ -725,64 +530,22 @@ define void @va3_caller() nounwind {
 declare void @llvm.va_copy(i8*, i8*)
 
 define i32 @va4_va_copy(i32 %argno, ...) nounwind {
-; RV32I-LABEL: va4_va_copy:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw ra, 12(sp)
-; RV32I-NEXT:    sw s1, 8(sp)
-; RV32I-NEXT:    sw a1, 20(sp)
-; RV32I-NEXT:    sw a7, 44(sp)
-; RV32I-NEXT:    sw a6, 40(sp)
-; RV32I-NEXT:    sw a5, 36(sp)
-; RV32I-NEXT:    sw a4, 32(sp)
-; RV32I-NEXT:    sw a3, 28(sp)
-; RV32I-NEXT:    sw a2, 24(sp)
-; RV32I-NEXT:    addi a0, sp, 24
-; RV32I-NEXT:    sw a0, 4(sp)
-; RV32I-NEXT:    sw a0, 0(sp)
-; RV32I-NEXT:    lw s1, 20(sp)
-; RV32I-NEXT:    lui a1, %hi(notdead)
-; RV32I-NEXT:    addi a1, a1, %lo(notdead)
-; RV32I-NEXT:    jalr a1
-; RV32I-NEXT:    lw a0, 4(sp)
-; RV32I-NEXT:    addi a0, a0, 3
-; RV32I-NEXT:    andi a0, a0, -4
-; RV32I-NEXT:    addi a1, a0, 4
-; RV32I-NEXT:    sw a1, 4(sp)
-; RV32I-NEXT:    lw a1, 0(a0)
-; RV32I-NEXT:    addi a0, a0, 7
-; RV32I-NEXT:    andi a0, a0, -4
-; RV32I-NEXT:    addi a2, a0, 4
-; RV32I-NEXT:    sw a2, 4(sp)
-; RV32I-NEXT:    lw a2, 0(a0)
-; RV32I-NEXT:    addi a0, a0, 7
-; RV32I-NEXT:    andi a0, a0, -4
-; RV32I-NEXT:    addi a3, a0, 4
-; RV32I-NEXT:    sw a3, 4(sp)
-; RV32I-NEXT:    add a1, a1, s1
-; RV32I-NEXT:    add a1, a1, a2
-; RV32I-NEXT:    lw a0, 0(a0)
-; RV32I-NEXT:    add a0, a1, a0
-; RV32I-NEXT:    lw s1, 8(sp)
-; RV32I-NEXT:    lw ra, 12(sp)
-; RV32I-NEXT:    addi sp, sp, 48
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va4_va_copy:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
 ; RV32I-FPELIM-NEXT:    sw ra, 12(sp)
 ; RV32I-FPELIM-NEXT:    sw s1, 8(sp)
-; RV32I-FPELIM-NEXT:    sw a1, 20(sp)
+; RV32I-FPELIM-NEXT:    mv s1, a1
 ; RV32I-FPELIM-NEXT:    sw a7, 44(sp)
 ; RV32I-FPELIM-NEXT:    sw a6, 40(sp)
 ; RV32I-FPELIM-NEXT:    sw a5, 36(sp)
 ; RV32I-FPELIM-NEXT:    sw a4, 32(sp)
 ; RV32I-FPELIM-NEXT:    sw a3, 28(sp)
 ; RV32I-FPELIM-NEXT:    sw a2, 24(sp)
+; RV32I-FPELIM-NEXT:    sw a1, 20(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, sp, 24
 ; RV32I-FPELIM-NEXT:    sw a0, 4(sp)
 ; RV32I-FPELIM-NEXT:    sw a0, 0(sp)
-; RV32I-FPELIM-NEXT:    lw s1, 20(sp)
 ; RV32I-FPELIM-NEXT:    call notdead
 ; RV32I-FPELIM-NEXT:    lw a0, 4(sp)
 ; RV32I-FPELIM-NEXT:    addi a0, a0, 3
@@ -815,17 +578,17 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw s0, 24(sp)
 ; RV32I-WITHFP-NEXT:    sw s1, 20(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 32
-; RV32I-WITHFP-NEXT:    sw a1, 4(s0)
+; RV32I-WITHFP-NEXT:    mv s1, a1
 ; RV32I-WITHFP-NEXT:    sw a7, 28(s0)
 ; RV32I-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32I-WITHFP-NEXT:    sw a5, 20(s0)
 ; RV32I-WITHFP-NEXT:    sw a4, 16(s0)
 ; RV32I-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32I-WITHFP-NEXT:    sw a2, 8(s0)
+; RV32I-WITHFP-NEXT:    sw a1, 4(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, s0, 8
 ; RV32I-WITHFP-NEXT:    sw a0, -16(s0)
 ; RV32I-WITHFP-NEXT:    sw a0, -20(s0)
-; RV32I-WITHFP-NEXT:    lw s1, 4(s0)
 ; RV32I-WITHFP-NEXT:    call notdead
 ; RV32I-WITHFP-NEXT:    lw a0, -16(s0)
 ; RV32I-WITHFP-NEXT:    addi a0, a0, 3
@@ -874,19 +637,6 @@ define i32 @va4_va_copy(i32 %argno, ...) nounwind {
 ; Check 2x*xlen values are aligned appropriately when passed on the stack in a vararg call
 
 define i32 @va5_aligned_stack_callee(i32 %a, ...) nounwind {
-; RV32I-LABEL: va5_aligned_stack_callee:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -32
-; RV32I-NEXT:    sw a7, 28(sp)
-; RV32I-NEXT:    sw a6, 24(sp)
-; RV32I-NEXT:    sw a5, 20(sp)
-; RV32I-NEXT:    sw a4, 16(sp)
-; RV32I-NEXT:    sw a3, 12(sp)
-; RV32I-NEXT:    sw a2, 8(sp)
-; RV32I-NEXT:    sw a1, 4(sp)
-; RV32I-NEXT:    addi a0, zero, 1
-; RV32I-NEXT:    addi sp, sp, 32
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va5_aligned_stack_callee:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -32
@@ -925,50 +675,6 @@ define i32 @va5_aligned_stack_callee(i32 %a, ...) nounwind {
 define void @va5_aligned_stack_caller() nounwind {
 ; The double should be 8-byte aligned on the stack, but the two-element array
 ; should only be 4-byte aligned
-; RV32I-LABEL: va5_aligned_stack_caller:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -64
-; RV32I-NEXT:    sw ra, 60(sp)
-; RV32I-NEXT:    addi a0, zero, 17
-; RV32I-NEXT:    sw a0, 24(sp)
-; RV32I-NEXT:    addi a0, zero, 16
-; RV32I-NEXT:    sw a0, 20(sp)
-; RV32I-NEXT:    addi a0, zero, 15
-; RV32I-NEXT:    sw a0, 16(sp)
-; RV32I-NEXT:    lui a0, 262236
-; RV32I-NEXT:    addi a0, a0, 655
-; RV32I-NEXT:    sw a0, 12(sp)
-; RV32I-NEXT:    lui a0, 377487
-; RV32I-NEXT:    addi a0, a0, 1475
-; RV32I-NEXT:    sw a0, 8(sp)
-; RV32I-NEXT:    addi a0, zero, 14
-; RV32I-NEXT:    sw a0, 0(sp)
-; RV32I-NEXT:    lui a0, 262153
-; RV32I-NEXT:    addi a0, a0, 491
-; RV32I-NEXT:    sw a0, 44(sp)
-; RV32I-NEXT:    lui a0, 545260
-; RV32I-NEXT:    addi a0, a0, -1967
-; RV32I-NEXT:    sw a0, 40(sp)
-; RV32I-NEXT:    lui a0, 964690
-; RV32I-NEXT:    addi a0, a0, -328
-; RV32I-NEXT:    sw a0, 36(sp)
-; RV32I-NEXT:    lui a0, 335544
-; RV32I-NEXT:    addi a0, a0, 1311
-; RV32I-NEXT:    sw a0, 32(sp)
-; RV32I-NEXT:    lui a0, 688509
-; RV32I-NEXT:    addi a6, a0, -2048
-; RV32I-NEXT:    lui a0, %hi(va5_aligned_stack_callee)
-; RV32I-NEXT:    addi a5, a0, %lo(va5_aligned_stack_callee)
-; RV32I-NEXT:    addi a0, zero, 1
-; RV32I-NEXT:    addi a1, zero, 11
-; RV32I-NEXT:    addi a2, sp, 32
-; RV32I-NEXT:    addi a3, zero, 12
-; RV32I-NEXT:    addi a4, zero, 13
-; RV32I-NEXT:    addi a7, zero, 4
-; RV32I-NEXT:    jalr a5
-; RV32I-NEXT:    lw ra, 60(sp)
-; RV32I-NEXT:    addi sp, sp, 64
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va5_aligned_stack_caller:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -64
@@ -1068,26 +774,9 @@ define void @va5_aligned_stack_caller() nounwind {
 ; still set up correctly.
 
 define i32 @va6_no_fixed_args(...) nounwind {
-; RV32I-LABEL: va6_no_fixed_args:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi sp, sp, -48
-; RV32I-NEXT:    sw a0, 16(sp)
-; RV32I-NEXT:    sw a7, 44(sp)
-; RV32I-NEXT:    sw a6, 40(sp)
-; RV32I-NEXT:    sw a5, 36(sp)
-; RV32I-NEXT:    sw a4, 32(sp)
-; RV32I-NEXT:    sw a3, 28(sp)
-; RV32I-NEXT:    sw a2, 24(sp)
-; RV32I-NEXT:    sw a1, 20(sp)
-; RV32I-NEXT:    addi a0, sp, 20
-; RV32I-NEXT:    sw a0, 12(sp)
-; RV32I-NEXT:    lw a0, 16(sp)
-; RV32I-NEXT:    addi sp, sp, 48
-; RV32I-NEXT:    ret
 ; RV32I-FPELIM-LABEL: va6_no_fixed_args:
 ; RV32I-FPELIM:       # %bb.0:
 ; RV32I-FPELIM-NEXT:    addi sp, sp, -48
-; RV32I-FPELIM-NEXT:    sw a0, 16(sp)
 ; RV32I-FPELIM-NEXT:    sw a7, 44(sp)
 ; RV32I-FPELIM-NEXT:    sw a6, 40(sp)
 ; RV32I-FPELIM-NEXT:    sw a5, 36(sp)
@@ -1095,9 +784,9 @@ define i32 @va6_no_fixed_args(...) nounwind {
 ; RV32I-FPELIM-NEXT:    sw a3, 28(sp)
 ; RV32I-FPELIM-NEXT:    sw a2, 24(sp)
 ; RV32I-FPELIM-NEXT:    sw a1, 20(sp)
-; RV32I-FPELIM-NEXT:    addi a0, sp, 20
-; RV32I-FPELIM-NEXT:    sw a0, 12(sp)
-; RV32I-FPELIM-NEXT:    lw a0, 16(sp)
+; RV32I-FPELIM-NEXT:    addi a1, sp, 20
+; RV32I-FPELIM-NEXT:    sw a1, 12(sp)
+; RV32I-FPELIM-NEXT:    sw a0, 16(sp)
 ; RV32I-FPELIM-NEXT:    addi sp, sp, 48
 ; RV32I-FPELIM-NEXT:    ret
 ;
@@ -1107,7 +796,6 @@ define i32 @va6_no_fixed_args(...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    sw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    addi s0, sp, 16
-; RV32I-WITHFP-NEXT:    sw a0, 0(s0)
 ; RV32I-WITHFP-NEXT:    sw a7, 28(s0)
 ; RV32I-WITHFP-NEXT:    sw a6, 24(s0)
 ; RV32I-WITHFP-NEXT:    sw a5, 20(s0)
@@ -1115,9 +803,9 @@ define i32 @va6_no_fixed_args(...) nounwind {
 ; RV32I-WITHFP-NEXT:    sw a3, 12(s0)
 ; RV32I-WITHFP-NEXT:    sw a2, 8(s0)
 ; RV32I-WITHFP-NEXT:    sw a1, 4(s0)
-; RV32I-WITHFP-NEXT:    addi a0, s0, 4
-; RV32I-WITHFP-NEXT:    sw a0, -12(s0)
-; RV32I-WITHFP-NEXT:    lw a0, 0(s0)
+; RV32I-WITHFP-NEXT:    addi a1, s0, 4
+; RV32I-WITHFP-NEXT:    sw a1, -12(s0)
+; RV32I-WITHFP-NEXT:    sw a0, 0(s0)
 ; RV32I-WITHFP-NEXT:    lw s0, 8(sp)
 ; RV32I-WITHFP-NEXT:    lw ra, 12(sp)
 ; RV32I-WITHFP-NEXT:    addi sp, sp, 48

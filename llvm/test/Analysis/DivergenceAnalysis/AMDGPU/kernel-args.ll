@@ -1,6 +1,6 @@
-; RUN: opt %s -mtriple amdgcn-- -analyze -divergence | FileCheck %s
+; RUN: opt %s -mtriple amdgcn-- -analyze -divergence -use-gpu-divergence-analysis | FileCheck %s
 
-; CHECK-LABEL: Printing analysis 'Divergence Analysis' for function 'test_amdgpu_ps':
+; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'test_amdgpu_ps':
 ; CHECK: DIVERGENT:
 ; CHECK-NOT: %arg0
 ; CHECK-NOT: %arg1
@@ -14,7 +14,7 @@ define amdgpu_ps void @test_amdgpu_ps([4 x <16 x i8>] addrspace(2)* byval %arg0,
   ret void
 }
 
-; CHECK-LABEL: Printing analysis 'Divergence Analysis' for function 'test_amdgpu_kernel':
+; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'test_amdgpu_kernel':
 ; CHECK-NOT: %arg0
 ; CHECK-NOT: %arg1
 ; CHECK-NOT: %arg2
@@ -26,7 +26,7 @@ define amdgpu_kernel void @test_amdgpu_kernel([4 x <16 x i8>] addrspace(2)* byva
   ret void
 }
 
-; CHECK-LABEL: Printing analysis 'Divergence Analysis' for function 'test_c':
+; CHECK-LABEL: Printing analysis 'Legacy Divergence Analysis' for function 'test_c':
 ; CHECK: DIVERGENT:
 ; CHECK: DIVERGENT:
 ; CHECK: DIVERGENT:

@@ -315,6 +315,66 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function *> &Funcs) {
 }
 
 namespace {
+/// ReduceCrashingFunctionAttributes reducer - This works by removing
+/// attributes on a particular function and seeing if the program still crashes.
+/// If it does, then keep the newer, smaller program.
+///
+class ReduceCrashingFunctionAttributes : public ListReducer<Attribute> {
+  BugDriver &BD;
+  std::string FnName;
+  BugTester TestFn;
+
+public:
+  ReduceCrashingFunctionAttributes(BugDriver &bd, const std::string &FnName,
+                                   BugTester testFn)
+      : BD(bd), FnName(FnName), TestFn(testFn) {}
+
+  Expected<TestResult> doTest(std::vector<Attribute> &Prefix,
+                              std::vector<Attribute> &Kept) override {
+    if (!Kept.empty() && TestFuncAttrs(Kept))
+      return KeepSuffix;
+    if (!Prefix.empty() && TestFuncAttrs(Prefix))
+      return KeepPrefix;
+    return NoFailure;
+  }
+
+  bool TestFuncAttrs(std::vector<Attribute> &Attrs);
+};
+}
+
+bool ReduceCrashingFunctionAttributes::TestFuncAttrs(
+    std::vector<Attribute> &Attrs) {
+  // Clone the program to try hacking it apart...
+  std::unique_ptr<Module> M = CloneModule(BD.getProgram());
+  Function *F = M->getFunction(FnName);
+
+  // Build up an AttributeList from the attributes we've been given by the
+  // reducer.
+  AttrBuilder AB;
+  for (auto A : Attrs)
+    AB.addAttribute(A);
+  AttributeList NewAttrs;
+  NewAttrs =
+      NewAttrs.addAttributes(BD.getContext(), AttributeList::FunctionIndex, AB);
+
+  // Set this new list of attributes on the function.
+  F->setAttributes(NewAttrs);
+
+  // Try running on the hacked up program...
+  if (TestFn(BD, M.get())) {
+    BD.setNewProgram(std::move(M)); // It crashed, keep the trimmed version...
+
+    // Pass along the set of attributes that caused the crash.
+    Attrs.clear();
+    for (Attribute A : NewAttrs.getFnAttributes()) {
+      Attrs.push_back(A);
+    }
+    return true;
+  }
+  return false;
+}
+
+namespace {
 /// Simplify the CFG without completely destroying it.
 /// This is not well defined, but basically comes down to "try to eliminate
 /// unreachable blocks and constant fold terminators without deciding that
@@ -409,7 +469,7 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock *> &BBs) {
         for (BasicBlock *Succ : successors(&BB))
           Succ->removePredecessor(&BB);
 
-        TerminatorInst *BBTerm = BB.getTerminator();
+        Instruction *BBTerm = BB.getTerminator();
         if (BBTerm->isEHPad() || BBTerm->getType()->isTokenTy())
           continue;
         if (!BBTerm->getType()->isVoidTy())
@@ -703,7 +763,7 @@ bool ReduceCrashingInstructions::TestInsts(
   // Convert list to set for fast lookup...
   SmallPtrSet<Instruction *, 32> Instructions;
   for (unsigned i = 0, e = Insts.size(); i != e; ++i) {
-    assert(!isa<TerminatorInst>(Insts[i]));
+    assert(!Insts[i]->isTerminator());
     Instructions.insert(cast<Instruction>(VMap[Insts[i]]));
   }
 
@@ -717,7 +777,7 @@ bool ReduceCrashingInstructions::TestInsts(
     for (Function::iterator FI = MI->begin(), FE = MI->end(); FI != FE; ++FI)
       for (BasicBlock::iterator I = FI->begin(), E = FI->end(); I != E;) {
         Instruction *Inst = &*I++;
-        if (!Instructions.count(Inst) && !isa<TerminatorInst>(Inst) &&
+        if (!Instructions.count(Inst) && !Inst->isTerminator() &&
             !Inst->isEHPad() && !Inst->getType()->isTokenTy() &&
             !Inst->isSwiftError()) {
           if (!Inst->getType()->isVoidTy())
@@ -950,7 +1010,7 @@ static Error ReduceInsts(BugDriver &BD, BugTester TestFn) {
     for (const Function &F : BD.getProgram())
       for (const BasicBlock &BB : F)
         for (const Instruction &I : BB)
-          if (!isa<TerminatorInst>(&I))
+          if (!I.isTerminator())
             Insts.push_back(&I);
 
     Expected<bool> Result =
@@ -1054,6 +1114,38 @@ static Error DebugACrash(BugDriver &BD, BugTester TestFn) {
 
     if (Functions.size() < OldSize)
       BD.EmitProgressBitcode(BD.getProgram(), "reduced-function");
+  }
+
+  // For each remaining function, try to reduce that function's attributes.
+  std::vector<std::string> FunctionNames;
+  for (Function &F : BD.getProgram())
+    FunctionNames.push_back(F.getName());
+
+  if (!FunctionNames.empty() && !BugpointIsInterrupted) {
+    outs() << "\n*** Attempting to reduce the number of function attributes in "
+              "the testcase\n";
+
+    unsigned OldSize = 0;
+    unsigned NewSize = 0;
+    for (std::string &Name : FunctionNames) {
+      Function *Fn = BD.getProgram().getFunction(Name);
+      assert(Fn && "Could not find funcion?");
+
+      std::vector<Attribute> Attrs;
+      for (Attribute A : Fn->getAttributes().getFnAttributes())
+        Attrs.push_back(A);
+
+      OldSize += Attrs.size();
+      Expected<bool> Result =
+          ReduceCrashingFunctionAttributes(BD, Name, TestFn).reduceList(Attrs);
+      if (Error E = Result.takeError())
+        return E;
+
+      NewSize += Attrs.size();
+    }
+
+    if (OldSize < NewSize)
+      BD.EmitProgressBitcode(BD.getProgram(), "reduced-function-attributes");
   }
 
   // Attempt to change conditional branches into unconditional branches to

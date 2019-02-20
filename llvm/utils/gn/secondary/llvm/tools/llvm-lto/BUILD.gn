@@ -1,0 +1,17 @@
+executable("llvm-lto") {
+  deps = [
+    "//llvm/lib/Bitcode/Reader",
+    "//llvm/lib/Bitcode/Writer",
+    "//llvm/lib/IR",
+    "//llvm/lib/IRReader",
+    "//llvm/lib/LTO",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+    "//llvm/lib/Target:TargetsToBuild",
+  ]
+  sources = [
+    "llvm-lto.cpp",
+  ]
+}

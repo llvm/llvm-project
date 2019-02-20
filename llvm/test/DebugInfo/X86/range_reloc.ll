@@ -1,5 +1,4 @@
-; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -use-dwarf-ranges-base-address-specifier | FileCheck --check-prefix=COMMON --check-prefix=BASE %s
-; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=COMMON --check-prefix=NOBASE %s
+; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - | FileCheck %s
 ; RUN: llc -filetype=asm -mtriple=x86_64-pc-linux-gnu %s -o - -dwarf-version 5 | FileCheck --check-prefix=DWARF5 %s
 
 ; Group ranges in a range list that apply to the same section and use a base
@@ -15,106 +14,154 @@
 ; in the linked executable. Without compression in the objects, the win would be
 ; smaller (the growth of debug_ranges itself would be more significant).
 
-; COMMON: {{^.Ldebug_ranges0}}
-; COMMON-NEXT:   .quad   .Lfunc_begin0
-; COMMON-NEXT:   .quad   .Lfunc_end0
-; BASE-NEXT:   .quad   -1
-; BASE-NEXT:   .quad   .Lfunc_begin1
-; BASE-NEXT:   .quad   .Lfunc_begin1-.Lfunc_begin1
-; BASE-NEXT:   .quad   .Lfunc_end1-.Lfunc_begin1
-; BASE-NEXT:   .quad   .Lfunc_begin3-.Lfunc_begin1
-; BASE-NEXT:   .quad   .Lfunc_end3-.Lfunc_begin1
-; BASE-NEXT:   .quad   -1
-; BASE-NEXT:   .quad   0
-; NOBASE-NEXT:   .quad   .Lfunc_begin1
-; NOBASE-NEXT:   .quad   .Lfunc_end1
-; NOBASE-NEXT:   .quad   .Lfunc_begin3
-; NOBASE-NEXT:   .quad   .Lfunc_end3
-; COMMON-NEXT:   .quad   .Lfunc_begin4
-; COMMON-NEXT:   .quad   .Lfunc_end4
-; COMMON-NEXT:   .quad   .Lfunc_begin5
-; COMMON-NEXT:   .quad   .Lfunc_end5
-; COMMON-NEXT:   .quad   0
-; COMMON-NEXT:   .quad   0
+; This is a merged module containing two CUs, one that uses range base address
+; specifiers and exercises different cases there, and another that does not
+
+; ranges.cpp
+; Single range entry
+; __attribute__((section("a"))) void f1() {}
+; Single address with two ranges due to the whole caused by f3
+; __attribute__((section("b"))) void f2() {}
+; __attribute__((section("b"))) __attribute__((nodebug)) void f3() {}
+; __attribute__((section("b"))) void f4() {}
+; Reset the base address & emit a couple more single range entries
+; __attribute__((section("c"))) void f5() {}
+; __attribute__((section("d"))) void f6() {}
+; ranges_no_base.cpp:
+; Include enough complexity to cause ranges to be emitted, so it can be checked
+; that those ranges don't use base address specifiers
+; __attribute__((section("e"))) void f7() {}
+; __attribute__((section("f"))) void f8() {}
+
+; CHECK: {{^.Ldebug_ranges0}}
+; CHECK-NEXT:   .quad   -1
+; CHECK-NEXT:   .quad   .Lfunc_begin0
+; CHECK-NEXT:   .quad   .Lfunc_begin0-.Lfunc_begin0
+; CHECK-NEXT:   .quad   .Lfunc_end0-.Lfunc_begin0
+; CHECK-NEXT:   .quad   -1
+; CHECK-NEXT:   .quad   .Lfunc_begin1
+; CHECK-NEXT:   .quad   .Lfunc_begin1-.Lfunc_begin1
+; CHECK-NEXT:   .quad   .Lfunc_end1-.Lfunc_begin1
+; CHECK-NEXT:   .quad   .Lfunc_begin3-.Lfunc_begin1
+; CHECK-NEXT:   .quad   .Lfunc_end3-.Lfunc_begin1
+; CHECK-NEXT:   .quad   -1
+; CHECK-NEXT:   .quad   .Lfunc_begin4
+; CHECK-NEXT:   .quad   .Lfunc_begin4-.Lfunc_begin4
+; CHECK-NEXT:   .quad   .Lfunc_end4-.Lfunc_begin4
+; CHECK-NEXT:   .quad   -1
+; CHECK-NEXT:   .quad   .Lfunc_begin5
+; CHECK-NEXT:   .quad   .Lfunc_begin5-.Lfunc_begin5
+; CHECK-NEXT:   .quad   .Lfunc_end5-.Lfunc_begin5
+; CHECK-NEXT:   .quad   0
+; CHECK-NEXT:   .quad   0
+; CHECK-NEXT: {{^.Ldebug_ranges1}}
+; CHECK-NEXT:   .quad   .Lfunc_begin6
+; CHECK-NEXT:   .quad   .Lfunc_end6
+; CHECK-NEXT:   .quad   .Lfunc_begin7
+; CHECK-NEXT:   .quad   .Lfunc_end7
 
 ; DWARF5: {{^.Ldebug_ranges0}}
-; DWARF5-NEXT:                                      # DW_RLE_start_length
-; DWARF5-NEXT: .quad    .Lfunc_begin0               #   start
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 0                              #   start index
 ; DWARF5-NEXT: .uleb128 .Lfunc_end0-.Lfunc_begin0   #   length
-; DWARF5-NEXT:                                      # DW_RLE_base_address
-; DWARF5-NEXT: .quad    .Lfunc_begin1               #   base address
+; DWARF5-NEXT:                                      # DW_RLE_base_addressx
+; DWARF5-NEXT: .byte 1                              #   base address index
 ; DWARF5-NEXT:                                      # DW_RLE_offset_pair
 ; DWARF5-NEXT: .uleb128 .Lfunc_begin1-.Lfunc_begin1 #   starting offset
 ; DWARF5-NEXT: .uleb128 .Lfunc_end1-.Lfunc_begin1   #   ending offset
 ; DWARF5-NEXT:                                      # DW_RLE_offset_pair
 ; DWARF5-NEXT: .uleb128 .Lfunc_begin3-.Lfunc_begin1 #   starting offset
 ; DWARF5-NEXT: .uleb128 .Lfunc_end3-.Lfunc_begin1   #   ending offset
-; DWARF5-NEXT:                                      # DW_RLE_start_length
-; DWARF5-NEXT: .quad	   .Lfunc_begin4               #   start
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 3                              #   start index
 ; DWARF5-NEXT: .uleb128 .Lfunc_end4-.Lfunc_begin4   #   length
-; DWARF5-NEXT:                                      # DW_RLE_start_length
-; DWARF5-NEXT: .quad	   .Lfunc_begin5               #   start
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 4                              #   start index
 ; DWARF5-NEXT: .uleb128 .Lfunc_end5-.Lfunc_begin5   #   length
+; DWARF5-NEXT:                                      # DW_RLE_end_of_list
+; DWARF5-NEXT: {{^.Ldebug_ranges1}}
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 5                              #   start index
+; DWARF5-NEXT: .uleb128 .Lfunc_end6-.Lfunc_begin6   #   length
+; DWARF5-NEXT:                                      # DW_RLE_startx_length
+; DWARF5-NEXT: .byte 6                              #   start index
+; DWARF5-NEXT: .uleb128 .Lfunc_end7-.Lfunc_begin7   #   length
 ; DWARF5-NEXT:                                      # DW_RLE_end_of_list
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define void @_Z2f1v() #0 section "a" !dbg !7 {
-entry:
-  ret void, !dbg !10
-}
-
-; Function Attrs: noinline nounwind optnone uwtable
-define void @_Z2f2v() #0 section "b" !dbg !11 {
+define dso_local void @_Z2f1v() section "a" !dbg !9 {
 entry:
   ret void, !dbg !12
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define void @_Z2f3v() #0 section "b" {
-entry:
-  ret void
-}
-
-; Function Attrs: noinline nounwind optnone uwtable
-define void @_Z2f4v() #0 section "b" !dbg !13 {
+define dso_local void @_Z2f2v() section "b" !dbg !13 {
 entry:
   ret void, !dbg !14
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define void @_Z2f5v() #0 section "e" !dbg !15 {
+define dso_local void @_Z2f3v() section "b" {
+entry:
+  ret void
+}
+
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local void @_Z2f4v() section "b" !dbg !15 {
 entry:
   ret void, !dbg !16
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define void @_Z2f6v() #0 section "f" !dbg !17 {
+define dso_local void @_Z2f5v() section "c" !dbg !17 {
 entry:
   ret void, !dbg !18
 }
 
-attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local void @_Z2f6v() section "d" !dbg !19 {
+entry:
+  ret void, !dbg !20
+}
 
-!llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5}
-!llvm.ident = !{!6}
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local void @_Z2f7v() section "e" !dbg !21 {
+entry:
+  ret void, !dbg !22
+}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 6.0.0 (trunk 309523) (llvm/trunk 309526)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
-!1 = !DIFile(filename: "funcs.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
+; Function Attrs: noinline nounwind optnone uwtable
+define dso_local void @_Z2f8v() section "f" !dbg !23 {
+entry:
+  ret void, !dbg !24
+}
+
+!llvm.dbg.cu = !{!0, !3}
+!llvm.ident = !{!5, !5}
+!llvm.module.flags = !{!6, !7, !8}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 8.0.0 (trunk 346343) (llvm/trunk 346350)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None, debugBaseAddress: true)
+!1 = !DIFile(filename: "ranges.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
 !2 = !{}
-!3 = !{i32 2, !"Dwarf Version", i32 4}
-!4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !{i32 1, !"wchar_size", i32 4}
-!6 = !{!"clang version 6.0.0 (trunk 309523) (llvm/trunk 309526)"}
-!7 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
-!8 = !DISubroutineType(types: !9)
-!9 = !{null}
-!10 = !DILocation(line: 1, column: 42, scope: !7)
-!11 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", scope: !1, file: !1, line: 2, type: !8, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
-!12 = !DILocation(line: 2, column: 42, scope: !11)
-!13 = distinct !DISubprogram(name: "f4", linkageName: "_Z2f4v", scope: !1, file: !1, line: 4, type: !8, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
-!14 = !DILocation(line: 4, column: 42, scope: !13)
-!15 = distinct !DISubprogram(name: "f5", linkageName: "_Z2f5v", scope: !1, file: !1, line: 5, type: !8, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
-!16 = !DILocation(line: 5, column: 42, scope: !15)
-!17 = distinct !DISubprogram(name: "f6", linkageName: "_Z2f6v", scope: !1, file: !1, line: 6, type: !8, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
-!18 = !DILocation(line: 6, column: 42, scope: !17)
+!3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !4, producer: "clang version 8.0.0 (trunk 346343) (llvm/trunk 346350)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
+!4 = !DIFile(filename: "ranges_no_base.cpp", directory: "/usr/local/google/home/blaikie/dev/scratch")
+!5 = !{!"clang version 8.0.0 (trunk 346343) (llvm/trunk 346350)"}
+!6 = !{i32 2, !"Dwarf Version", i32 4}
+!7 = !{i32 2, !"Debug Info Version", i32 3}
+!8 = !{i32 1, !"wchar_size", i32 4}
+!9 = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v", scope: !1, file: !1, line: 1, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!10 = !DISubroutineType(types: !11)
+!11 = !{null}
+!12 = !DILocation(line: 1, column: 42, scope: !9)
+!13 = distinct !DISubprogram(name: "f2", linkageName: "_Z2f2v", scope: !1, file: !1, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!14 = !DILocation(line: 2, column: 42, scope: !13)
+!15 = distinct !DISubprogram(name: "f4", linkageName: "_Z2f4v", scope: !1, file: !1, line: 4, type: !10, isLocal: false, isDefinition: true, scopeLine: 4, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!16 = !DILocation(line: 4, column: 42, scope: !15)
+!17 = distinct !DISubprogram(name: "f5", linkageName: "_Z2f5v", scope: !1, file: !1, line: 5, type: !10, isLocal: false, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!18 = !DILocation(line: 5, column: 42, scope: !17)
+!19 = distinct !DISubprogram(name: "f6", linkageName: "_Z2f6v", scope: !1, file: !1, line: 6, type: !10, isLocal: false, isDefinition: true, scopeLine: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, retainedNodes: !2)
+!20 = !DILocation(line: 6, column: 42, scope: !19)
+!21 = distinct !DISubprogram(name: "f7", linkageName: "_Z2f7v", scope: !4, file: !4, line: 1, type: !10, isLocal: false, isDefinition: true, scopeLine: 1, flags: DIFlagPrototyped, isOptimized: false, unit: !3, retainedNodes: !2)
+!22 = !DILocation(line: 1, column: 42, scope: !21)
+!23 = distinct !DISubprogram(name: "f8", linkageName: "_Z2f8v", scope: !4, file: !4, line: 2, type: !10, isLocal: false, isDefinition: true, scopeLine: 2, flags: DIFlagPrototyped, isOptimized: false, unit: !3, retainedNodes: !2)
+!24 = !DILocation(line: 2, column: 42, scope: !23)

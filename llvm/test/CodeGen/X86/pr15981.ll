@@ -19,9 +19,9 @@ define i32 @fn1(i32, i32) {
 ;
 ; X64-LABEL: fn1:
 ; X64:       # %bb.0:
-; X64-NEXT:    testl %esi, %esi
-; X64-NEXT:    cmovel %esi, %edi
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    testl %esi, %esi
+; X64-NEXT:    cmovel %esi, %eax
 ; X64-NEXT:    retq
   %3 = icmp ne i32 %1, 0
   %4 = select i1 %3, i32 %0, i32 0

@@ -76,7 +76,7 @@ class DWARFContext : public DIContext {
 
   DWARFUnitVector DWOUnits;
   std::unique_ptr<DWARFDebugAbbrev> AbbrevDWO;
-  std::unique_ptr<DWARFDebugLocDWO> LocDWO;
+  std::unique_ptr<DWARFDebugLoclists> LocDWO;
 
   /// The maximum DWARF version of all units.
   unsigned MaxVersion = 0;
@@ -132,49 +132,60 @@ public:
 
   bool verify(raw_ostream &OS, DIDumpOptions DumpOpts = {}) override;
 
-  using cu_iterator_range = DWARFUnitVector::iterator_range;
-  using tu_iterator_range = DWARFUnitVector::iterator_range;
+  using unit_iterator_range = DWARFUnitVector::iterator_range;
 
   /// Get units from .debug_info in this context.
-  cu_iterator_range info_section_units() {
+  unit_iterator_range info_section_units() {
     parseNormalUnits();
-    return cu_iterator_range(NormalUnits.begin(),
-                             NormalUnits.begin() +
-                                 NormalUnits.getNumInfoUnits());
+    return unit_iterator_range(NormalUnits.begin(),
+                               NormalUnits.begin() +
+                                   NormalUnits.getNumInfoUnits());
   }
 
   /// Get units from .debug_types in this context.
-  tu_iterator_range types_section_units() {
+  unit_iterator_range types_section_units() {
     parseNormalUnits();
-    return tu_iterator_range(
+    return unit_iterator_range(
         NormalUnits.begin() + NormalUnits.getNumInfoUnits(), NormalUnits.end());
   }
 
   /// Get compile units in this context.
-  cu_iterator_range compile_units() { return info_section_units(); }
+  unit_iterator_range compile_units() { return info_section_units(); }
 
   /// Get type units in this context.
-  tu_iterator_range type_units() { return types_section_units(); }
+  unit_iterator_range type_units() { return types_section_units(); }
+
+  /// Get all normal compile/type units in this context.
+  unit_iterator_range normal_units() {
+    parseNormalUnits();
+    return unit_iterator_range(NormalUnits.begin(), NormalUnits.end());
+  }
 
   /// Get units from .debug_info..dwo in the DWO context.
-  cu_iterator_range dwo_info_section_units() {
+  unit_iterator_range dwo_info_section_units() {
     parseDWOUnits();
-    return cu_iterator_range(DWOUnits.begin(),
-                             DWOUnits.begin() + DWOUnits.getNumInfoUnits());
+    return unit_iterator_range(DWOUnits.begin(),
+                               DWOUnits.begin() + DWOUnits.getNumInfoUnits());
   }
 
   /// Get units from .debug_types.dwo in the DWO context.
-  tu_iterator_range dwo_types_section_units() {
+  unit_iterator_range dwo_types_section_units() {
     parseDWOUnits();
-    return tu_iterator_range(DWOUnits.begin() + DWOUnits.getNumInfoUnits(),
-                             DWOUnits.end());
+    return unit_iterator_range(DWOUnits.begin() + DWOUnits.getNumInfoUnits(),
+                               DWOUnits.end());
   }
 
   /// Get compile units in the DWO context.
-  cu_iterator_range dwo_compile_units() { return dwo_info_section_units(); }
+  unit_iterator_range dwo_compile_units() { return dwo_info_section_units(); }
 
   /// Get type units in the DWO context.
-  tu_iterator_range dwo_type_units() { return dwo_types_section_units(); }
+  unit_iterator_range dwo_type_units() { return dwo_types_section_units(); }
+
+  /// Get all units in the DWO context.
+  unit_iterator_range dwo_units() {
+    parseDWOUnits();
+    return unit_iterator_range(DWOUnits.begin(), DWOUnits.end());
+  }
 
   /// Get the number of compile units in this context.
   unsigned getNumCompileUnits() {
@@ -220,7 +231,17 @@ public:
   /// Get a DIE given an exact offset.
   DWARFDie getDIEForOffset(uint32_t Offset);
 
-  unsigned getMaxVersion() const { return MaxVersion; }
+  unsigned getMaxVersion() {
+    // Ensure info units have been parsed to discover MaxVersion
+    info_section_units();
+    return MaxVersion;
+  }
+
+  unsigned getMaxDWOVersion() {
+    // Ensure DWO info units have been parsed to discover MaxVersion
+    dwo_info_section_units();
+    return MaxVersion;
+  }
 
   void setMaxVersionIfGreater(unsigned Version) {
     if (Version > MaxVersion)
@@ -241,7 +262,7 @@ public:
   const DWARFDebugAbbrev *getDebugAbbrevDWO();
 
   /// Get a pointer to the parsed DebugLoc object.
-  const DWARFDebugLocDWO *getDebugLocDWO();
+  const DWARFDebugLoclists *getDebugLocDWO();
 
   /// Get a pointer to the parsed DebugAranges object.
   const DWARFDebugAranges *getDebugAranges();
@@ -335,6 +356,13 @@ public:
   /// Get address size from CUs.
   /// TODO: refactor compile_units() to make this const.
   uint8_t getCUAddrSize();
+
+  /// Dump Error as warning message to stderr.
+  static void dumpWarning(Error Warning);
+
+  Triple::ArchType getArch() const {
+    return getDWARFObj().getFile()->getArch();
+  }
 
 private:
   /// Return the compile unit which contains instruction with provided

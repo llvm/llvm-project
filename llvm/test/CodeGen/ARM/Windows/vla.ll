@@ -14,13 +14,13 @@ entry:
 }
 
 ; CHECK-SMALL-CODE:   adds [[R4:r[0-9]+]], #7
-; CHECK-SMALL-CODE:   bic [[R4]], [[R4]], #7
+; CHECK-SMALL-CODE:   bic [[R4]], [[R4]], #4
 ; CHECK-SMALL-CODE:   lsrs r4, [[R4]], #2
 ; CHECK-SMALL-CODE:   bl __chkstk
 ; CHECK-SMALL-CODE:   sub.w sp, sp, r4
 
 ; CHECK-LARGE-CODE:   adds  [[R4:r[0-9]+]], #7
-; CHECK-LARGE-CODE:   bic   [[R4]], [[R4]], #7
+; CHECK-LARGE-CODE:   bic   [[R4]], [[R4]], #4
 ; CHECK-LARGE-CODE:   lsrs  r4, [[R4]], #2
 ; CHECK-LARGE-CODE:   movw  [[IP:r[0-9]+]], :lower16:__chkstk
 ; CHECK-LARGE-CODE:   movt  [[IP]], :upper16:__chkstk

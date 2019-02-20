@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mtriple=i386-linux-gnu | FileCheck -check-prefix=X86_LINUX %s
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck -check-prefix=X64_LINUX %s
+; RUN: llc < %s -mtriple=i386-linux-gnu -fast-isel | FileCheck -check-prefix=X86_ISEL_LINUX %s
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel | FileCheck -check-prefix=X64_ISEL_LINUX %s
 ; RUN: llc < %s -mtriple=i686-pc-win32 | FileCheck -check-prefix=X86_WIN %s
 ; RUN: llc < %s -mtriple=x86_64-pc-win32 | FileCheck -check-prefix=X64_WIN %s
 ; RUN: llc < %s -mtriple=i686-pc-windows-gnu | FileCheck -check-prefix=MINGW32 %s
@@ -453,3 +455,59 @@ define i32* @f16() {
 
   ret i32* @i6
 }
+
+; NOTE: Similar to f1() but with direct TLS segment access disabled
+define i32 @f17() #0 {
+; X86_LINUX-LABEL: f17:
+; X86_LINUX:      movl %gs:0, %eax
+; X86_LINUX-NEXT: movl i1@NTPOFF(%eax), %eax
+; X86_LINUX-NEXT: ret
+; X64_LINUX-LABEL: f17:
+; X64_LINUX:      movq %fs:0, %rax
+; X64_LINUX-NEXT: movl i1@TPOFF(%rax), %eax
+; X64_LINUX-NEXT: ret
+; X86_ISEL_LINUX-LABEL: f17:
+; X86_ISEL_LINUX:      movl %gs:0, %eax
+; X86_ISEL_LINUX-NEXT: movl i1@NTPOFF(%eax), %eax
+; X86_ISEL_LINUX-NEXT: ret
+; X64_ISEL_LINUX-LABEL: f17:
+; X64_ISEL_LINUX:      movq %fs:0, %rax
+; X64_ISEL_LINUX-NEXT: movl i1@TPOFF(%rax), %eax
+; X64_ISEL_LINUX-NEXT: ret
+
+entry:
+	%tmp1 = load i32, i32* @i1
+	ret i32 %tmp1
+}
+
+; NOTE: Similar to f3() but with direct TLS segment access disabled
+define i32 @f18() #1 {
+; X86_LINUX-LABEL: f18:
+; X86_LINUX:      movl i2@INDNTPOFF, %eax
+; X86_LINUX-NEXT: movl %gs:0, %ecx
+; X86_LINUX-NEXT: movl (%ecx,%eax), %eax
+; X86_LINUX-NEXT: ret
+; X64_LINUX-LABEL: f18:
+; X64_LINUX:      movq i2@GOTTPOFF(%rip), %rax
+; X64_LINUX-NEXT: movq %fs:0, %rcx
+; X64_LINUX-NEXT: movl (%rcx,%rax), %eax
+; X64_LINUX-NEXT: ret
+; X86_ISEL_LINUX-LABEL: f18:
+; X86_ISEL_LINUX:      movl i2@INDNTPOFF, %eax
+; X86_ISEL_LINUX-NEXT: movl %gs:0, %ecx
+; X86_ISEL_LINUX-NEXT: movl (%ecx,%eax), %eax
+; X86_ISEL_LINUX-NEXT: ret
+; X64_ISEL_LINUX-LABEL: f18:
+; X64_ISEL_LINUX:      movq i2@GOTTPOFF(%rip), %rax
+; X64_ISEL_LINUX-NEXT: movq %fs:0, %rcx
+; X64_ISEL_LINUX-NEXT: movl (%rcx,%rax), %eax
+; X64_ISEL_LINUX-NEXT: ret
+
+
+entry:
+	%tmp1 = load i32, i32* @i2
+	ret i32 %tmp1
+}
+
+attributes #0 = { "indirect-tls-seg-refs" }
+attributes #1 = { nounwind "indirect-tls-seg-refs" }

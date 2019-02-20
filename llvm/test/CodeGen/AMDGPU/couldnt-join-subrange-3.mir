@@ -7,10 +7,10 @@
   source_filename = "llpcPipeline"
   target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
   target triple = "amdgcn--amdpal"
-  
+
   ; Function Attrs: nounwind readonly
   declare <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32>, i32, i32, i1, i1) #0
-  
+
   ; Function Attrs: nounwind
   define dllexport amdgpu_ps void @_amdgpu_ps_main() local_unnamed_addr #1 !spirv.ExecutionModel !1 {
   .entry:
@@ -26,7 +26,7 @@
     %__llpc_global_proxy_r6.8.vec.insert1391 = insertelement <4 x i32> %__llpc_global_proxy_r6.12.vec.insert1420, i32 undef, i32 2
     %__llpc_global_proxy_r4.12.vec.insert1195 = shufflevector <4 x i32> undef, <4 x i32> %__llpc_global_proxy_r6.8.vec.insert1391, <4 x i32> <i32 0, i32 1, i32 2, i32 5>
     br label %._crit_edge3553
-  
+
   ._crit_edge3553:                                  ; preds = %._crit_edge3553, %.entry
     %__llpc_global_proxy_r10.12.vec.extract24363572 = phi i32 [ 0, %.entry ], [ %8, %._crit_edge3553 ]
     %__llpc_global_proxy_r4.23564 = phi <4 x i32> [ %__llpc_global_proxy_r4.12.vec.insert1195, %.entry ], [ %__llpc_global_proxy_r4.12.vec.insert1200, %._crit_edge3553 ]
@@ -36,22 +36,22 @@
     %8 = add nuw nsw i32 %__llpc_global_proxy_r10.12.vec.extract24363572, 1
     %9 = icmp ult i32 %8, 3
     br i1 %9, label %._crit_edge3553, label %._crit_edge3575, !llvm.loop !2, !amdgpu.uniform !4, !structurizecfg.uniform !4
-  
+
   ._crit_edge3575:                                  ; preds = %._crit_edge3553
     br i1 undef, label %._crit_edge3411, label %.lr.ph3410.preheader, !amdgpu.uniform !4
-  
+
   .lr.ph3410.preheader:                             ; preds = %._crit_edge3575
     %10 = call <4 x float> @llvm.amdgcn.buffer.load.format.v4f32(<4 x i32> undef, i32 %__llpc_global_proxy_r4.12.vec.extract, i32 0, i1 false, i1 false) #6
     %bc3321.le = bitcast <4 x float> %10 to <4 x i32>
     %__llpc_global_proxy_r11.12.vec.insert2769.le = shufflevector <4 x i32> undef, <4 x i32> %bc3321.le, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
     %__llpc_global_proxy_r11.0.vec.insert2624 = insertelement <4 x i32> %__llpc_global_proxy_r11.12.vec.insert2769.le, i32 -1, i32 0
     br label %.lr.ph3410
-  
+
   .lr.ph3410:                                       ; preds = %.lr.ph3410, %.lr.ph3410.preheader
     %__llpc_global_proxy_r11.223394 = phi <4 x i32> [ %11, %.lr.ph3410 ], [ %__llpc_global_proxy_r11.0.vec.insert2624, %.lr.ph3410.preheader ]
     %11 = shufflevector <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, <4 x i32> %__llpc_global_proxy_r11.223394, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
     br i1 true, label %.lr.ph3410, label %DummyReturnBlock, !amdgpu.uniform !4, !structurizecfg.uniform !4
-  
+
   ._crit_edge3411:                                  ; preds = %._crit_edge3575
     %12 = shufflevector <4 x i32> undef, <4 x i32> %__llpc_global_proxy_r4.12.vec.insert1200, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
     %__llpc_global_proxy_r4.12.vec.insert1202 = insertelement <4 x i32> %12, i32 undef, i32 3
@@ -89,47 +89,47 @@
     %41 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %40, float undef) #7
     call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %41, <2 x half> undef, i1 true, i1 true) #6
     ret void
-  
+
   DummyReturnBlock:                                 ; preds = %.lr.ph3410
     ret void
   }
-  
+
   ; Function Attrs: nounwind readnone speculatable
   declare <2 x float> @llvm.trunc.v2f32(<2 x float>) #2
-  
+
   ; Function Attrs: nounwind readnone speculatable
   declare <2 x float> @llvm.minnum.v2f32(<2 x float>, <2 x float>) #2
-  
+
   ; Function Attrs: nounwind readnone speculatable
   declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #2
-  
+
   ; Function Attrs: nounwind
   declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #3
-  
+
   ; Function Attrs: convergent nounwind
   declare { i1, i64 } @llvm.amdgcn.if(i1) #4
-  
+
   ; Function Attrs: convergent nounwind
   declare { i1, i64 } @llvm.amdgcn.else(i64) #4
-  
+
   ; Function Attrs: convergent nounwind readnone
   declare i64 @llvm.amdgcn.break(i64) #5
-  
+
   ; Function Attrs: convergent nounwind readnone
   declare i64 @llvm.amdgcn.if.break(i1, i64) #5
-  
+
   ; Function Attrs: convergent nounwind readnone
   declare i64 @llvm.amdgcn.else.break(i64, i64) #5
-  
+
   ; Function Attrs: convergent nounwind
   declare i1 @llvm.amdgcn.loop(i64) #4
-  
+
   ; Function Attrs: convergent nounwind
   declare void @llvm.amdgcn.end.cf(i64) #4
-  
+
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #6
-  
+
   attributes #0 = { nounwind readonly "target-cpu"="gfx900" }
   attributes #1 = { nounwind "InitialPSInputAddr"="3841" "target-cpu"="gfx900" }
   attributes #2 = { nounwind readnone speculatable "target-cpu"="gfx900" }
@@ -138,9 +138,9 @@
   attributes #5 = { convergent nounwind readnone }
   attributes #6 = { nounwind }
   attributes #7 = { nounwind readnone speculatable }
-  
+
   !amdgpu.pal.metadata = !{!0}
-  
+
   !0 = !{i32 268435482, i32 7, i32 268435488, i32 -1, i32 268435480, i32 916933962, i32 268435481, i32 -1162810017, i32 268435538, i32 4096, i32 268435539, i32 8192, i32 11338, i32 53215232, i32 11339, i32 20, i32 41411, i32 4, i32 41393, i32 8, i32 41479, i32 0, i32 41476, i32 17301504, i32 41478, i32 1087, i32 41721, i32 45, i32 41633, i32 0, i32 41645, i32 0, i32 268435528, i32 0, i32 268435493, i32 0, i32 268435500, i32 0, i32 268435507, i32 256, i32 268435514, i32 104, i32 268435536, i32 0, i32 11274, i32 2883584, i32 11275, i32 6, i32 41412, i32 0, i32 41413, i32 4, i32 41400, i32 16908288, i32 41398, i32 5, i32 41395, i32 0, i32 41396, i32 0, i32 41397, i32 0, i32 41619, i32 100860300, i32 41475, i32 6160, i32 41103, i32 15, i32 268435485, i32 0, i32 268435529, i32 0, i32 268435494, i32 0, i32 268435501, i32 0, i32 268435508, i32 256, i32 268435515, i32 104, i32 41720, i32 0, i32 41744, i32 0, i32 41747, i32 2097152, i32 41685, i32 65536, i32 268435460, i32 1376215782, i32 268435461, i32 835526634, i32 268435476, i32 -918515376, i32 268435477, i32 679325817, i32 268435532, i32 7, i32 49752, i32 127, i32 11348, i32 268435459, i32 11349, i32 268435460, i32 11340, i32 268435456, i32 11342, i32 0, i32 11343, i32 1, i32 11344, i32 2, i32 11345, i32 3, i32 11346, i32 4, i32 11347, i32 6, i32 41361, i32 0, i32 41362, i32 1, i32 41363, i32 2, i32 41364, i32 3, i32 41365, i32 4, i32 11276, i32 268435456, i32 11278, i32 5}
   !1 = !{i32 4}
   !2 = distinct !{!2, !3}
@@ -157,7 +157,7 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 tracksRegLiveness: true
-registers:       
+registers:
   - { id: 0, class: sreg_128, preferred-register: '' }
   - { id: 1, class: sreg_32_xm0, preferred-register: '%5' }
   - { id: 2, class: sreg_128, preferred-register: '' }
@@ -230,8 +230,8 @@ registers:
   - { id: 69, class: vgpr_32, preferred-register: '' }
   - { id: 70, class: sreg_32_xm0, preferred-register: '' }
   - { id: 71, class: vreg_128, preferred-register: '' }
-liveins:         
-frameInfo:       
+liveins:
+frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
@@ -249,13 +249,13 @@ frameInfo:
   localFrameSize:  0
   savePoint:       ''
   restorePoint:    ''
-fixedStack:      
-stack:           
-constants:       
+fixedStack:
+stack:
+constants:
 body:             |
   bb.0..entry:
     successors: %bb.1(0x80000000)
-  
+
     %10:vgpr_32 = V_TRUNC_F32_e32 undef %11:vgpr_32, implicit $exec
     %12:vgpr_32 = V_CVT_U32_F32_e32 killed %10, implicit $exec
     %50:vgpr_32 = V_LSHRREV_B32_e32 4, killed %12, implicit $exec
@@ -265,10 +265,10 @@ body:             |
     %9:sreg_32_xm0 = S_MOV_B32 0
     %70:sreg_32_xm0 = COPY killed %9
     %71:vreg_128 = COPY killed %52
-  
+
   bb.1.._crit_edge3553:
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
-  
+
     %53:vreg_128 = COPY killed %71
     %1:sreg_32_xm0 = COPY killed %70
     %57:vgpr_32 = V_ADD_U32_e32 target-flags(amdgpu-rel32-lo) 1, %53.sub3, implicit $exec
@@ -281,38 +281,38 @@ body:             |
     %71:vreg_128 = COPY killed %54
     S_CBRANCH_SCC1 %bb.1, implicit killed $scc
     S_BRANCH %bb.2
-  
+
   bb.2.._crit_edge3575:
     successors: %bb.5(0x40000000), %bb.3(0x40000000)
-  
+
     S_CBRANCH_SCC1 %bb.5, implicit undef $scc
     S_BRANCH %bb.3
-  
+
   bb.3..lr.ph3410.preheader:
     successors: %bb.4(0x80000000)
-  
+
     dead %22:vreg_128 = BUFFER_LOAD_FORMAT_XYZW_IDXEN killed %53.sub3, undef %24:sreg_128, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 16 from constant-pool, align 1, addrspace 4)
     dead %60:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
     %36:sreg_64 = S_AND_B64 $exec, -1, implicit-def dead $scc
     dead %67:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  
+
   bb.4..lr.ph3410:
     successors: %bb.4(0x7c000000), %bb.6(0x04000000)
-  
+
     $vcc = COPY %36
     S_CBRANCH_VCCNZ %bb.4, implicit killed $vcc
     S_BRANCH %bb.6
-  
+
   bb.5.._crit_edge3411:
     %39:vgpr_32 = V_MUL_F32_e32 target-flags(amdgpu-gotprel) 0, killed %55.sub0, implicit $exec
     %41:vgpr_32 = V_MIN_F32_e32 1106771968, killed %39, implicit $exec
     %42:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, killed %41, 0, 0, 0, 0, 0, 0, implicit $exec
     %43:vgpr_32 = nnan arcp contract reassoc V_MAD_F32 0, killed %42, 0, 0, 0, 0, 0, 0, implicit $exec
     %44:vgpr_32 = V_MAD_F32 0, killed %43, 0, 0, 0, 0, 0, 0, implicit $exec
-    %45:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, killed %44, 0, undef %46:vgpr_32, 0, implicit $exec
+    %45:vgpr_32 = V_CVT_PKRTZ_F16_F32_e64 0, killed %44, 0, undef %46:vgpr_32, 0, 0, implicit $exec
     EXP_DONE 0, killed %45, undef %47:vgpr_32, undef %48:vgpr_32, undef %49:vgpr_32, -1, -1, 15, implicit $exec
     S_ENDPGM
-  
+
   bb.6.DummyReturnBlock:
     S_ENDPGM
 

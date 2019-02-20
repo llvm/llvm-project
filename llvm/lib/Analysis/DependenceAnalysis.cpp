@@ -633,8 +633,8 @@ static AliasResult underlyingObjectsAlias(AliasAnalysis *AA,
                                           const MemoryLocation &LocB) {
   // Check the original locations (minus size) for noalias, which can happen for
   // tbaa, incompatible underlying object locations, etc.
-  MemoryLocation LocAS(LocA.Ptr, MemoryLocation::UnknownSize, LocA.AATags);
-  MemoryLocation LocBS(LocB.Ptr, MemoryLocation::UnknownSize, LocB.AATags);
+  MemoryLocation LocAS(LocA.Ptr, LocationSize::unknown(), LocA.AATags);
+  MemoryLocation LocBS(LocB.Ptr, LocationSize::unknown(), LocB.AATags);
   if (AA->alias(LocAS, LocBS) == NoAlias)
     return NoAlias;
 

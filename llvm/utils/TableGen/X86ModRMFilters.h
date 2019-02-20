@@ -38,7 +38,7 @@ public:
   /// @result       - True if the filter returns the same value for any ModR/M
   ///                 byte; false if not.
   virtual bool isDumb() const { return false; }
-  
+
   /// accepts       - Indicates whether the filter accepts a particular ModR/M
   ///                 byte value.
   ///
@@ -85,7 +85,7 @@ public:
 };
 
 /// ExtendedFilter - Extended opcodes are classified based on the value of the
-///   mod field [bits 7-6] and the value of the nnn field [bits 5-3]. 
+///   mod field [bits 7-6] and the value of the nnn field [bits 5-3].
 class ExtendedFilter : public ModRMFilter {
   void anchor() override;
   bool R;
@@ -96,7 +96,7 @@ public:
   /// \param r   True if the mod field must be set to 11; false otherwise.
   ///            The name is explained at ModFilter.
   /// \param nnn The required value of the nnn field.
-  ExtendedFilter(bool r, uint8_t nnn) : 
+  ExtendedFilter(bool r, uint8_t nnn) :
     ModRMFilter(),
     R(r),
     NNN(nnn) {

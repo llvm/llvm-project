@@ -68,6 +68,7 @@ representation.
    CMakePrimer
    AdvancedBuilds
    HowToBuildOnARM
+   HowToBuildWithPGO
    HowToCrossCompileBuiltinsOnArm
    HowToCrossCompileLLVM
    CommandGuide/index
@@ -79,6 +80,7 @@ representation.
    yaml2obj
    HowToSubmitABug
    SphinxQuickstartTemplate
+   MarkdownQuickstartTemplate
    Phabricator
    TestingGuide
    tutorial/index
@@ -105,6 +107,9 @@ representation.
 
 :doc:`HowToBuildOnARM`
    Notes on building and testing LLVM/Clang on ARM.
+
+:doc:`HowToBuildWithPGO`
+    Notes on building LLVM/Clang with PGO.
 
 :doc:`HowToCrossCompileBuiltinsOnArm`
    Notes on cross-building and testing the compiler-rt builtins for Arm.
@@ -143,6 +148,9 @@ representation.
 
 :doc:`LLVM Testing Infrastructure Guide <TestingGuide>`
    A reference manual for using the LLVM testing infrastructure.
+
+:doc:`TestSuiteGuide`
+  Describes how to compile and run the test-suite benchmarks.
 
 `How to build the C, C++, ObjC, and ObjC++ front end`__
    Instructions for building the clang front-end from source.
@@ -268,6 +276,7 @@ For API clients and LLVM developers.
    GoldPlugin
    MarkedUpDisassembly
    SystemLibrary
+   SupportLibrary
    SourceLevelDebugging
    Vectorizers
    WritingAnLLVMBackend
@@ -283,6 +292,7 @@ For API clients and LLVM developers.
    Statepoints
    MergeFunctions
    TypeMetadata
+   TransformMetadata
    FaultMaps
    MIRLangRef
    Coroutines
@@ -292,6 +302,8 @@ For API clients and LLVM developers.
    XRayFDRFormat
    PDB/index
    CFIVerify
+   SpeculativeLoadHardening
+   StackSafetyAnalysis
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -341,8 +353,8 @@ For API clients and LLVM developers.
 :doc:`BitCodeFormat`
    This describes the file format and encoding used for LLVM "bc" files.
 
-:doc:`System Library <SystemLibrary>`
-   This document describes the LLVM System Library (``lib/System``) and
+:doc:`Support Library <SupportLibrary>`
+   This document describes the LLVM Support Library (``lib/Support``) and
    how to keep LLVM source code portable
 
 :doc:`LinkTimeOptimization`
@@ -425,6 +437,13 @@ For API clients and LLVM developers.
 :doc:`CFIVerify`
   A description of the verification tool for Control Flow Integrity.
 
+:doc:`SpeculativeLoadHardening`
+  A description of the Speculative Load Hardening mitigation for Spectre v1.
+
+:doc:`StackSafetyAnalysis`
+  This document describes the design of the stack safety analysis of local
+  variables.
+
 Development Process Documentation
 =================================
 
@@ -441,6 +460,7 @@ Information about LLVM's development process.
    Packaging
    ReleaseProcess
    Phabricator
+   BugLifeCycle
 
 :doc:`Contributing`
    An overview on how to contribute to LLVM.
@@ -470,6 +490,9 @@ Information about LLVM's development process.
 :doc:`Phabricator`
    Describes how to use the Phabricator code review tool hosted on
    http://reviews.llvm.org/ and its command line interface, Arcanist.
+
+:doc:`BugLifeCycle`
+   Describes how bugs are reported, triaged and closed.
 
 Community
 =========
@@ -550,6 +573,7 @@ can be better.
 
    CodeOfConduct
    Proposals/GitHubMove
+   Proposals/TestSuite
    Proposals/VectorizationPlan
 
 :doc:`CodeOfConduct`
@@ -558,6 +582,9 @@ can be better.
 
 :doc:`Proposals/GitHubMove`
    Proposal to move from SVN/Git to GitHub.
+
+:doc:`Proposals/TestSuite`
+   Proposals for additional benchmarks/programs for llvm's test-suite.
 
 :doc:`Proposals/VectorizationPlan`
    Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.

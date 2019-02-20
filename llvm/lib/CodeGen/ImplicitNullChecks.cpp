@@ -90,7 +90,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
   /// A data type for representing the result computed by \c
   /// computeDependence.  States whether it is okay to reorder the
   /// instruction passed to \c computeDependence with at most one
-  /// depednency.
+  /// dependency.
   struct DependenceResult {
     /// Can we actually re-order \p MI with \p Insts (see \c
     /// computeDependence).
@@ -344,11 +344,11 @@ ImplicitNullChecks::areMemoryOpsAliased(MachineInstr &MI,
           return AR_MayAlias;
         continue;
       }
-      llvm::AliasResult AAResult = AA->alias(
-          MemoryLocation(MMO1->getValue(), MemoryLocation::UnknownSize,
-                         MMO1->getAAInfo()),
-          MemoryLocation(MMO2->getValue(), MemoryLocation::UnknownSize,
-                         MMO2->getAAInfo()));
+      llvm::AliasResult AAResult =
+          AA->alias(MemoryLocation(MMO1->getValue(), LocationSize::unknown(),
+                                   MMO1->getAAInfo()),
+                    MemoryLocation(MMO2->getValue(), LocationSize::unknown(),
+                                   MMO2->getAAInfo()));
       if (AAResult != NoAlias)
         return AR_MayAlias;
     }
@@ -651,7 +651,7 @@ MachineInstr *ImplicitNullChecks::insertFaultingInstr(
     }
   }
 
-  MIB.setMemRefs(MI->memoperands_begin(), MI->memoperands_end());
+  MIB.setMemRefs(MI->memoperands());
 
   return MIB;
 }

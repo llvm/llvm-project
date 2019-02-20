@@ -23,6 +23,11 @@ struct SectionName {
   bool IsNameUnique;
 };
 
+struct SectionedAddress {
+  uint64_t Address;
+  uint64_t SectionIndex;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_DEBUGINFO_DWARF_DWARFSECTION_H

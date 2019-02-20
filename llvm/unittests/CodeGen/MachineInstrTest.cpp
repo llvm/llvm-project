@@ -257,8 +257,8 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
   LLVMContext Ctx;
   DIFile *DIF = DIFile::getDistinct(Ctx, "filename", "");
   DISubprogram *DIS = DISubprogram::getDistinct(
-      Ctx, nullptr, "", "", DIF, 0, nullptr, false, false, 0, nullptr, 0, 0, 0,
-      DINode::FlagZero, false, nullptr);
+      Ctx, nullptr, "", "", DIF, 0, nullptr, 0, nullptr, 0, 0, DINode::FlagZero,
+      DISubprogram::SPFlagZero, nullptr);
   DILocation *DIL = DILocation::get(Ctx, 1, 5, DIS);
   DebugLoc DL(DIL);
   MachineInstr *MI = MF->CreateMachineInstr(MCID, DL);

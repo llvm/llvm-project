@@ -6,10 +6,13 @@
 
 @g = external local_unnamed_addr global i32, align 4
 
+; CHECK-LABEL: define{{.*}}@caller(
+; CHECK: call void @llvm.lifetime.start.p0i8(i64 -1, i8* %tmp.i)
+; CHECK-NEXT: call void @callee_unknown_use1.{{.*}}(i8* %tmp.i
+
 define i32 @callee_unknown_use1(i32 %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL:define{{.*}}@callee_unknown_use1.{{[0-9]}}
 ; CHECK-NOT: alloca
-; CHECK: call void @llvm.lifetime
 bb:
   %tmp = alloca  i8, align 4
   %tmp2 = load i32, i32* @g, align 4, !tbaa !2

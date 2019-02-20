@@ -19,9 +19,12 @@
 #include "RuntimeDyldMachO.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MutexGuard.h"
+
+#include <future>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -131,6 +134,14 @@ void RuntimeDyldImpl::resolveRelocations() {
     ErrorStr = toString(std::move(Err));
   }
 
+  resolveLocalRelocations();
+
+  // Print out sections after relocation.
+  LLVM_DEBUG(for (int i = 0, e = Sections.size(); i != e; ++i)
+                 dumpSectionMemory(Sections[i], "after relocations"););
+}
+
+void RuntimeDyldImpl::resolveLocalRelocations() {
   // Iterate over all outstanding relocations
   for (auto it = Relocations.begin(), e = Relocations.end(); it != e; ++it) {
     // The Section here (Sections[i]) refers to the section in which the
@@ -143,10 +154,6 @@ void RuntimeDyldImpl::resolveRelocations() {
     resolveRelocationList(it->second, Addr);
   }
   Relocations.clear();
-
-  // Print out sections after relocation.
-  LLVM_DEBUG(for (int i = 0, e = Sections.size(); i != e; ++i)
-                 dumpSectionMemory(Sections[i], "after relocations"););
 }
 
 void RuntimeDyldImpl::mapSectionAddress(const void *LocalAddress,
@@ -204,7 +211,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
 
   // First, collect all weak and common symbols. We need to know if stronger
   // definitions occur elsewhere.
-  JITSymbolResolver::LookupFlagsResult SymbolFlags;
+  JITSymbolResolver::LookupSet ResponsibilitySet;
   {
     JITSymbolResolver::LookupSet Symbols;
     for (auto &Sym : Obj.symbols()) {
@@ -218,10 +225,10 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       }
     }
 
-    if (auto FlagsResultOrErr = Resolver.lookupFlags(Symbols))
-      SymbolFlags = std::move(*FlagsResultOrErr);
+    if (auto ResultOrErr = Resolver.getResponsibilitySet(Symbols))
+      ResponsibilitySet = std::move(*ResultOrErr);
     else
-      return FlagsResultOrErr.takeError();
+      return ResultOrErr.takeError();
   }
 
   // Parse symbols
@@ -249,37 +256,36 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
       return NameOrErr.takeError();
 
     // Compute JIT symbol flags.
-    JITSymbolFlags JITSymFlags = getJITSymbolFlags(*I);
+    auto JITSymFlags = getJITSymbolFlags(*I);
+    if (!JITSymFlags)
+      return JITSymFlags.takeError();
 
     // If this is a weak definition, check to see if there's a strong one.
     // If there is, skip this symbol (we won't be providing it: the strong
     // definition will). If there's no strong definition, make this definition
     // strong.
-    if (JITSymFlags.isWeak() || JITSymFlags.isCommon()) {
+    if (JITSymFlags->isWeak() || JITSymFlags->isCommon()) {
       // First check whether there's already a definition in this instance.
-      // FIXME: Override existing weak definitions with strong ones.
       if (GlobalSymbolTable.count(Name))
         continue;
 
-      // Then check whether we found flags for an existing symbol during the
-      // flags lookup earlier.
-      auto FlagsI = SymbolFlags.find(Name);
-      if (FlagsI == SymbolFlags.end() ||
-          (JITSymFlags.isWeak() && !FlagsI->second.isStrong()) ||
-          (JITSymFlags.isCommon() && FlagsI->second.isCommon())) {
-        if (JITSymFlags.isWeak())
-          JITSymFlags &= ~JITSymbolFlags::Weak;
-        if (JITSymFlags.isCommon()) {
-          JITSymFlags &= ~JITSymbolFlags::Common;
-          uint32_t Align = I->getAlignment();
-          uint64_t Size = I->getCommonSize();
-          if (!CommonAlign)
-            CommonAlign = Align;
-          CommonSize += alignTo(CommonSize, Align) + Size;
-          CommonSymbolsToAllocate.push_back(*I);
-        }
-      } else
+      // If we're not responsible for this symbol, skip it.
+      if (!ResponsibilitySet.count(Name))
         continue;
+
+      // Otherwise update the flags on the symbol to make this definition
+      // strong.
+      if (JITSymFlags->isWeak())
+        *JITSymFlags &= ~JITSymbolFlags::Weak;
+      if (JITSymFlags->isCommon()) {
+        *JITSymFlags &= ~JITSymbolFlags::Common;
+        uint32_t Align = I->getAlignment();
+        uint64_t Size = I->getCommonSize();
+        if (!CommonAlign)
+          CommonAlign = Align;
+        CommonSize = alignTo(CommonSize, Align) + Size;
+        CommonSymbolsToAllocate.push_back(*I);
+      }
     }
 
     if (Flags & SymbolRef::SF_Absolute &&
@@ -296,7 +302,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " SID: " << SectionID
                         << " Offset: " << format("%p", (uintptr_t)Addr)
                         << " flags: " << Flags << "\n");
-      GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, JITSymFlags);
+      GlobalSymbolTable[Name] = SymbolTableEntry(SectionID, Addr, *JITSymFlags);
     } else if (SymType == object::SymbolRef::ST_Function ||
                SymType == object::SymbolRef::ST_Data ||
                SymType == object::SymbolRef::ST_Unknown ||
@@ -329,7 +335,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
                         << " Offset: " << format("%p", (uintptr_t)SectOffset)
                         << " flags: " << Flags << "\n");
       GlobalSymbolTable[Name] =
-          SymbolTableEntry(SectionID, SectOffset, JITSymFlags);
+          SymbolTableEntry(SectionID, SectOffset, *JITSymFlags);
     }
   }
 
@@ -642,7 +648,8 @@ void RuntimeDyldImpl::writeBytesUnaligned(uint64_t Value, uint8_t *Dst,
   }
 }
 
-JITSymbolFlags RuntimeDyldImpl::getJITSymbolFlags(const BasicSymbolRef &SR) {
+Expected<JITSymbolFlags>
+RuntimeDyldImpl::getJITSymbolFlags(const SymbolRef &SR) {
   return JITSymbolFlags::fromObjectSymbol(SR);
 }
 
@@ -683,11 +690,15 @@ Error RuntimeDyldImpl::emitCommonSymbols(const ObjectFile &Obj,
       Addr += AlignOffset;
       Offset += AlignOffset;
     }
-    JITSymbolFlags JITSymFlags = getJITSymbolFlags(Sym);
+    auto JITSymFlags = getJITSymbolFlags(Sym);
+
+    if (!JITSymFlags)
+      return JITSymFlags.takeError();
+
     LLVM_DEBUG(dbgs() << "Allocating common symbol " << Name << " address "
                       << format("%p", Addr) << "\n");
     GlobalSymbolTable[Name] =
-      SymbolTableEntry(SectionID, Offset, JITSymFlags);
+        SymbolTableEntry(SectionID, Offset, std::move(*JITSymFlags));
     Offset += Size;
     Addr += Size;
   }
@@ -992,42 +1003,8 @@ void RuntimeDyldImpl::resolveRelocationList(const RelocationList &Relocs,
   }
 }
 
-Error RuntimeDyldImpl::resolveExternalSymbols() {
-  StringMap<JITEvaluatedSymbol> ExternalSymbolMap;
-
-  // Resolution can trigger emission of more symbols, so iterate until
-  // we've resolved *everything*.
-  {
-    JITSymbolResolver::LookupSet ResolvedSymbols;
-
-    while (true) {
-      JITSymbolResolver::LookupSet NewSymbols;
-
-      for (auto &RelocKV : ExternalSymbolRelocations) {
-        StringRef Name = RelocKV.first();
-        if (!Name.empty() && !GlobalSymbolTable.count(Name) &&
-            !ResolvedSymbols.count(Name))
-          NewSymbols.insert(Name);
-      }
-
-      if (NewSymbols.empty())
-        break;
-
-      auto NewResolverResults = Resolver.lookup(NewSymbols);
-      if (!NewResolverResults)
-        return NewResolverResults.takeError();
-
-      assert(NewResolverResults->size() == NewSymbols.size() &&
-             "Should have errored on unresolved symbols");
-
-      for (auto &RRKV : *NewResolverResults) {
-        assert(!ResolvedSymbols.count(RRKV.first) && "Redundant resolution?");
-        ExternalSymbolMap.insert(RRKV);
-        ResolvedSymbols.insert(RRKV.first);
-      }
-    }
-  }
-
+void RuntimeDyldImpl::applyExternalSymbolRelocations(
+    const StringMap<JITEvaluatedSymbol> ExternalSymbolMap) {
   while (!ExternalSymbolRelocations.empty()) {
 
     StringMap<RelocationList>::iterator i = ExternalSymbolRelocations.begin();
@@ -1089,8 +1066,112 @@ Error RuntimeDyldImpl::resolveExternalSymbols() {
 
     ExternalSymbolRelocations.erase(i);
   }
+}
+
+Error RuntimeDyldImpl::resolveExternalSymbols() {
+  StringMap<JITEvaluatedSymbol> ExternalSymbolMap;
+
+  // Resolution can trigger emission of more symbols, so iterate until
+  // we've resolved *everything*.
+  {
+    JITSymbolResolver::LookupSet ResolvedSymbols;
+
+    while (true) {
+      JITSymbolResolver::LookupSet NewSymbols;
+
+      for (auto &RelocKV : ExternalSymbolRelocations) {
+        StringRef Name = RelocKV.first();
+        if (!Name.empty() && !GlobalSymbolTable.count(Name) &&
+            !ResolvedSymbols.count(Name))
+          NewSymbols.insert(Name);
+      }
+
+      if (NewSymbols.empty())
+        break;
+
+#ifdef _MSC_VER
+      using ExpectedLookupResult =
+          MSVCPExpected<JITSymbolResolver::LookupResult>;
+#else
+      using ExpectedLookupResult = Expected<JITSymbolResolver::LookupResult>;
+#endif
+
+      auto NewSymbolsP = std::make_shared<std::promise<ExpectedLookupResult>>();
+      auto NewSymbolsF = NewSymbolsP->get_future();
+      Resolver.lookup(NewSymbols,
+                      [=](Expected<JITSymbolResolver::LookupResult> Result) {
+                        NewSymbolsP->set_value(std::move(Result));
+                      });
+
+      auto NewResolverResults = NewSymbolsF.get();
+
+      if (!NewResolverResults)
+        return NewResolverResults.takeError();
+
+      assert(NewResolverResults->size() == NewSymbols.size() &&
+             "Should have errored on unresolved symbols");
+
+      for (auto &RRKV : *NewResolverResults) {
+        assert(!ResolvedSymbols.count(RRKV.first) && "Redundant resolution?");
+        ExternalSymbolMap.insert(RRKV);
+        ResolvedSymbols.insert(RRKV.first);
+      }
+    }
+  }
+
+  applyExternalSymbolRelocations(ExternalSymbolMap);
 
   return Error::success();
+}
+
+void RuntimeDyldImpl::finalizeAsync(
+    std::unique_ptr<RuntimeDyldImpl> This, std::function<void(Error)> OnEmitted,
+    std::unique_ptr<MemoryBuffer> UnderlyingBuffer) {
+
+  // FIXME: Move-capture OnRelocsApplied and UnderlyingBuffer once we have
+  // c++14.
+  auto SharedUnderlyingBuffer =
+      std::shared_ptr<MemoryBuffer>(std::move(UnderlyingBuffer));
+  auto SharedThis = std::shared_ptr<RuntimeDyldImpl>(std::move(This));
+  auto PostResolveContinuation =
+      [SharedThis, OnEmitted, SharedUnderlyingBuffer](
+          Expected<JITSymbolResolver::LookupResult> Result) {
+        if (!Result) {
+          OnEmitted(Result.takeError());
+          return;
+        }
+
+        /// Copy the result into a StringMap, where the keys are held by value.
+        StringMap<JITEvaluatedSymbol> Resolved;
+        for (auto &KV : *Result)
+          Resolved[KV.first] = KV.second;
+
+        SharedThis->applyExternalSymbolRelocations(Resolved);
+        SharedThis->resolveLocalRelocations();
+        SharedThis->registerEHFrames();
+        std::string ErrMsg;
+        if (SharedThis->MemMgr.finalizeMemory(&ErrMsg))
+          OnEmitted(make_error<StringError>(std::move(ErrMsg),
+                                            inconvertibleErrorCode()));
+        else
+          OnEmitted(Error::success());
+      };
+
+  JITSymbolResolver::LookupSet Symbols;
+
+  for (auto &RelocKV : SharedThis->ExternalSymbolRelocations) {
+    StringRef Name = RelocKV.first();
+    assert(!Name.empty() && "Symbol has no name?");
+    assert(!SharedThis->GlobalSymbolTable.count(Name) &&
+           "Name already processed. RuntimeDyld instances can not be re-used "
+           "when finalizing with finalizeAsync.");
+    Symbols.insert(Name);
+  }
+
+  if (!Symbols.empty()) {
+    SharedThis->Resolver.lookup(Symbols, PostResolveContinuation);
+  } else
+    PostResolveContinuation(std::map<StringRef, JITEvaluatedSymbol>());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1239,6 +1320,36 @@ void RuntimeDyld::registerEHFrames() {
 void RuntimeDyld::deregisterEHFrames() {
   if (Dyld)
     Dyld->deregisterEHFrames();
+}
+// FIXME: Kill this with fire once we have a new JIT linker: this is only here
+// so that we can re-use RuntimeDyld's implementation without twisting the
+// interface any further for ORC's purposes.
+void jitLinkForORC(object::ObjectFile &Obj,
+                   std::unique_ptr<MemoryBuffer> UnderlyingBuffer,
+                   RuntimeDyld::MemoryManager &MemMgr,
+                   JITSymbolResolver &Resolver, bool ProcessAllSections,
+                   std::function<Error(
+                       std::unique_ptr<RuntimeDyld::LoadedObjectInfo> LoadedObj,
+                       std::map<StringRef, JITEvaluatedSymbol>)>
+                       OnLoaded,
+                   std::function<void(Error)> OnEmitted) {
+
+  RuntimeDyld RTDyld(MemMgr, Resolver);
+  RTDyld.setProcessAllSections(ProcessAllSections);
+
+  auto Info = RTDyld.loadObject(Obj);
+
+  if (RTDyld.hasError()) {
+    OnEmitted(make_error<StringError>(RTDyld.getErrorString(),
+                                      inconvertibleErrorCode()));
+    return;
+  }
+
+  if (auto Err = OnLoaded(std::move(Info), RTDyld.getSymbolTable()))
+    OnEmitted(std::move(Err));
+
+  RuntimeDyldImpl::finalizeAsync(std::move(RTDyld.Dyld), std::move(OnEmitted),
+                                 std::move(UnderlyingBuffer));
 }
 
 } // end namespace llvm

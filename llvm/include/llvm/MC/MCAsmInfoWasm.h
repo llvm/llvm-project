@@ -19,6 +19,6 @@ class MCAsmInfoWasm : public MCAsmInfo {
 protected:
   MCAsmInfoWasm();
 };
-}
+} // namespace llvm
 
 #endif

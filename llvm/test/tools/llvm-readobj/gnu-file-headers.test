@@ -2,6 +2,8 @@ RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-i386 --elf-output-style=GNU \
 RUN:   | FileCheck %s -check-prefix ELF32
 RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-x86-64 --elf-output-style=GNU \
 RUN:   | FileCheck %s -check-prefix ELF64
+RUN: llvm-readobj -h %p/Inputs/trivial.obj.elf-mipsel --elf-output-style=GNU \
+RUN:   | FileCheck %s -check-prefix MIPSEL
 
 ELF32:      ELF Header:
 ELF32-NEXT:  Magic:   7f 45 4c 46 01 01 01 03 00 00 00 00 00 00 00 00
@@ -44,3 +46,24 @@ ELF64-NEXT:  Number of program headers:          0
 ELF64-NEXT:  Size of section headers:           64 (bytes)
 ELF64-NEXT:  Number of section headers:         10
 ELF64-NEXT:  Section header string table index: 7
+
+MIPSEL:     ELF Header:
+MIPSEL-NEXT:  Magic:   7f 45 4c 46 01 01 01 03 00 00 00 00 00 00 00 00
+MIPSEL-NEXT:  Class:                             ELF32
+MIPSEL-NEXT:  Data:                              2's complement, little endian
+MIPSEL-NEXT:  Version:                           1 (current)
+MIPSEL-NEXT:  OS/ABI:                            UNIX - GNU
+MIPSEL-NEXT:  ABI Version:                       0x0
+MIPSEL-NEXT:  Type:                              REL (Relocatable file)
+MIPSEL-NEXT:  Machine:                           MIPS R3000
+MIPSEL-NEXT:  Version:                           0x1
+MIPSEL-NEXT:  Entry point address:               0x0
+MIPSEL-NEXT:  Start of program headers:          0 (bytes into file)
+MIPSEL-NEXT:  Start of section headers:          172 (bytes into file)
+MIPSEL-NEXT:  Flags:                             0x50001000, o32, mips32
+MIPSEL-NEXT:  Size of this header:               52 (bytes)
+MIPSEL-NEXT:  Size of program headers:           0 (bytes)
+MIPSEL-NEXT:  Number of program headers:         0
+MIPSEL-NEXT:  Size of section headers:           40 (bytes)
+MIPSEL-NEXT:  Number of section headers:         9
+MIPSEL-NEXT:  Section header string table index: 6

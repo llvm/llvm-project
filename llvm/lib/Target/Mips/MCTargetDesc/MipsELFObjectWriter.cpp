@@ -11,6 +11,7 @@
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -225,7 +226,9 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case Mips::fixup_Mips_NONE:
     return ELF::R_MIPS_NONE;
   case FK_Data_1:
-    report_fatal_error("MIPS does not support one byte relocations");
+    Ctx.reportError(Fixup.getLoc(),
+                    "MIPS does not support one byte relocations");
+    return ELF::R_MIPS_NONE;
   case Mips::fixup_Mips_16:
   case FK_Data_2:
     return IsPCRel ? ELF::R_MIPS_PC16 : ELF::R_MIPS_16;
@@ -236,6 +239,10 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
 
   if (IsPCRel) {
     switch (Kind) {
+    case FK_Data_8:
+      Ctx.reportError(Fixup.getLoc(),
+                      "MIPS does not support 64-bit PC-relative relocations");
+      return ELF::R_MIPS_NONE;
     case Mips::fixup_Mips_Branch_PCRel:
     case Mips::fixup_Mips_PC16:
       return ELF::R_MIPS_PC16;
@@ -401,6 +408,10 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_HIGHER;
   case Mips::fixup_MICROMIPS_HIGHEST:
     return ELF::R_MICROMIPS_HIGHEST;
+  case Mips::fixup_Mips_JALR:
+    return ELF::R_MIPS_JALR;
+  case Mips::fixup_MICROMIPS_JALR:
+    return ELF::R_MICROMIPS_JALR;
   }
 
   llvm_unreachable("invalid fixup kind!");
@@ -453,7 +464,7 @@ void MipsELFObjectWriter::sortRelocs(const MCAssembler &Asm,
     return;
 
   // Sort relocations by the address they are applied to.
-  llvm::sort(Relocs.begin(), Relocs.end(),
+  llvm::sort(Relocs,
              [](const ELFRelocationEntry &A, const ELFRelocationEntry &B) {
                return A.Offset < B.Offset;
              });

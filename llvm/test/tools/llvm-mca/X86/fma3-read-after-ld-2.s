@@ -14,22 +14,36 @@ vfmadd213ps (%rdi), %xmm1, %xmm2
 # ALL-NEXT:     Instructions:      2
 
 # BDWELL-NEXT:  Total Cycles:      13
-# BDWELL-NEXT:  Dispatch Width:    4
-# BDWELL-NEXT:  IPC:               0.15
+# BDWELL-NEXT:  Total uOps:        3
 
 # HASWELL-NEXT: Total Cycles:      14
-# HASWELL-NEXT: Dispatch Width:    4
-# HASWELL-NEXT: IPC:               0.14
+# HASWELL-NEXT: Total uOps:        3
 
 # SKYLAKE-NEXT: Total Cycles:      13
-# SKYLAKE-NEXT: Dispatch Width:    6
-# SKYLAKE-NEXT: IPC:               0.15
+# SKYLAKE-NEXT: Total uOps:        3
 
 # ZNVER1-NEXT:  Total Cycles:      15
-# ZNVER1-NEXT:  Dispatch Width:    4
-# ZNVER1-NEXT:  IPC:               0.13
+# ZNVER1-NEXT:  Total uOps:        2
 
-# ALL-NEXT:     Block RThroughput: 1.0
+# BDWELL:       Dispatch Width:    4
+# BDWELL-NEXT:  uOps Per Cycle:    0.23
+# BDWELL-NEXT:  IPC:               0.15
+# BDWELL-NEXT:  Block RThroughput: 1.0
+
+# HASWELL:      Dispatch Width:    4
+# HASWELL-NEXT: uOps Per Cycle:    0.21
+# HASWELL-NEXT: IPC:               0.14
+# HASWELL-NEXT: Block RThroughput: 1.0
+
+# SKYLAKE:      Dispatch Width:    6
+# SKYLAKE-NEXT: uOps Per Cycle:    0.23
+# SKYLAKE-NEXT: IPC:               0.15
+# SKYLAKE-NEXT: Block RThroughput: 1.0
+
+# ZNVER1:       Dispatch Width:    4
+# ZNVER1-NEXT:  uOps Per Cycle:    0.13
+# ZNVER1-NEXT:  IPC:               0.13
+# ZNVER1-NEXT:  Block RThroughput: 1.0
 
 # ALL:          Timeline view:
 
@@ -40,17 +54,17 @@ vfmadd213ps (%rdi), %xmm1, %xmm2
 
 # ALL-NEXT:     Index     0123456789
 
-# ZNVER1:       [0,0]     DeeeER    .   .   vaddps	%xmm0, %xmm0, %xmm2
-# ZNVER1-NEXT:  [0,1]     DeeeeeeeeeeeeER   vfmadd213ps	(%rdi), %xmm1, %xmm2
+# BDWELL:       [0,0]     DeeeER    . .   vaddps	%xmm0, %xmm0, %xmm2
+# BDWELL-NEXT:  [0,1]     DeeeeeeeeeeER   vfmadd213ps	(%rdi), %xmm1, %xmm2
 
 # HASWELL:      [0,0]     DeeeER    .  .   vaddps	%xmm0, %xmm0, %xmm2
 # HASWELL-NEXT: [0,1]     DeeeeeeeeeeeER   vfmadd213ps	(%rdi), %xmm1, %xmm2
 
-# BDWELL:       [0,0]     DeeeER    . .   vaddps	%xmm0, %xmm0, %xmm2
-# BDWELL-NEXT:  [0,1]     DeeeeeeeeeeER   vfmadd213ps	(%rdi), %xmm1, %xmm2
-
 # SKYLAKE:      [0,0]     DeeeeER   . .   vaddps	%xmm0, %xmm0, %xmm2
 # SKYLAKE-NEXT: [0,1]     DeeeeeeeeeeER   vfmadd213ps	(%rdi), %xmm1, %xmm2
+
+# ZNVER1:       [0,0]     DeeeER    .   .   vaddps	%xmm0, %xmm0, %xmm2
+# ZNVER1-NEXT:  [0,1]     DeeeeeeeeeeeeER   vfmadd213ps	(%rdi), %xmm1, %xmm2
 
 # ALL:          Average Wait times (based on the timeline view):
 # ALL-NEXT:     [0]: Executions

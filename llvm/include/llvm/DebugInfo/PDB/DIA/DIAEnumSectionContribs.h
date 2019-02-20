@@ -28,7 +28,6 @@ public:
   ChildTypePtr getChildAtIndex(uint32_t Index) const override;
   ChildTypePtr getNext() override;
   void reset() override;
-  DIAEnumSectionContribs *clone() const override;
 
 private:
   const DIASession &Session;

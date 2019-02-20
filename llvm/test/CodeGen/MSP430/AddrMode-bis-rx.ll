@@ -8,7 +8,7 @@ define i16 @am1(i16 %x, i16* %a) nounwind {
 	ret i16 %2
 }
 ; CHECK-LABEL: am1:
-; CHECK:		bis.w	0(r13), r12
+; CHECK:		bis	0(r13), r12
 
 @foo = external global i16
 
@@ -18,7 +18,7 @@ define i16 @am2(i16 %x) nounwind {
 	ret i16 %2
 }
 ; CHECK-LABEL: am2:
-; CHECK:		bis.w	&foo, r12
+; CHECK:		bis	&foo, r12
 
 @bar = internal constant [2 x i8] [ i8 32, i8 64 ]
 
@@ -37,7 +37,7 @@ define i16 @am4(i16 %x) nounwind {
 	ret i16 %2
 }
 ; CHECK-LABEL: am4:
-; CHECK:		bis.w	&32, r12
+; CHECK:		bis	&32, r12
 
 define i16 @am5(i16 %x, i16* %a) nounwind {
 	%1 = getelementptr i16, i16* %a, i16 2
@@ -46,7 +46,7 @@ define i16 @am5(i16 %x, i16* %a) nounwind {
 	ret i16 %3
 }
 ; CHECK-LABEL: am5:
-; CHECK:		bis.w	4(r13), r12
+; CHECK:		bis	4(r13), r12
 
 %S = type { i16, i16 }
 @baz = common global %S zeroinitializer, align 1
@@ -57,7 +57,7 @@ define i16 @am6(i16 %x) nounwind {
 	ret i16 %2
 }
 ; CHECK-LABEL: am6:
-; CHECK:		bis.w	&baz+2, r12
+; CHECK:		bis	&baz+2, r12
 
 %T = type { i16, [2 x i8] }
 @duh = internal constant %T { i16 16, [2 x i8][i8 32, i8 64 ] }

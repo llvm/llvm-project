@@ -56,10 +56,6 @@ static cl::opt<bool>
                cl::desc("Avoid optimizing x86 call frames for size"),
                cl::init(false), cl::Hidden);
 
-namespace llvm {
-void initializeX86CallFrameOptimizationPass(PassRegistry &);
-}
-
 namespace {
 
 class X86CallFrameOptimization : public MachineFunctionPass {

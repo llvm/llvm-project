@@ -22,8 +22,9 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
@@ -36,6 +37,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
 #include <utility>
@@ -47,8 +49,8 @@ using namespace llvm;
 STATISTIC(NumSimplified, "Number of redundant instructions simplified");
 
 static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
-                             AssumptionCache &AC,
-                             const TargetLibraryInfo &TLI) {
+                             AssumptionCache &AC, const TargetLibraryInfo &TLI,
+                             MemorySSAUpdater *MSSAU) {
   const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
   SimplifyQuery SQ(DL, &TLI, &DT, &AC);
 
@@ -75,9 +77,12 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
   // iterate.
   LoopBlocksRPO RPOT(&L);
   RPOT.perform(&LI);
+  MemorySSA *MSSA = MSSAU ? MSSAU->getMemorySSA() : nullptr;
 
   bool Changed = false;
   for (;;) {
+    if (MSSAU && VerifyMemorySSA)
+      MSSA->verifyMemorySSA();
     for (BasicBlock *BB : RPOT) {
       for (Instruction &I : *BB) {
         if (auto *PI = dyn_cast<PHINode>(&I))
@@ -129,6 +134,12 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
             ToSimplify->insert(UserI);
         }
 
+        if (MSSAU)
+          if (Instruction *SimpleI = dyn_cast_or_null<Instruction>(V))
+            if (MemoryAccess *MA = MSSA->getMemoryAccess(&I))
+              if (MemoryAccess *ReplacementMA = MSSA->getMemoryAccess(SimpleI))
+                MA->replaceAllUsesWith(ReplacementMA);
+
         assert(I.use_empty() && "Should always have replaced all uses!");
         if (isInstructionTriviallyDead(&I, &TLI))
           DeadInsts.push_back(&I);
@@ -141,8 +152,11 @@ static bool simplifyLoopInst(Loop &L, DominatorTree &DT, LoopInfo &LI,
     // iteration over all instructions in all the loop blocks.
     if (!DeadInsts.empty()) {
       Changed = true;
-      RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, &TLI);
+      RecursivelyDeleteTriviallyDeadInstructions(DeadInsts, &TLI, MSSAU);
     }
+
+    if (MSSAU && VerifyMemorySSA)
+      MSSA->verifyMemorySSA();
 
     // If we never found a PHI that needs to be simplified in the next
     // iteration, we're done.
@@ -180,8 +194,15 @@ public:
             *L->getHeader()->getParent());
     const TargetLibraryInfo &TLI =
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+    MemorySSA *MSSA = nullptr;
+    Optional<MemorySSAUpdater> MSSAU;
+    if (EnableMSSALoopDependency) {
+      MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+      MSSAU = MemorySSAUpdater(MSSA);
+    }
 
-    return simplifyLoopInst(*L, DT, LI, AC, TLI);
+    return simplifyLoopInst(*L, DT, LI, AC, TLI,
+                            MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -189,6 +210,10 @@ public:
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.setPreservesCFG();
+    if (EnableMSSALoopDependency) {
+      AU.addRequired<MemorySSAWrapperPass>();
+      AU.addPreserved<MemorySSAWrapperPass>();
+    }
     getLoopAnalysisUsage(AU);
   }
 };
@@ -198,7 +223,13 @@ public:
 PreservedAnalyses LoopInstSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                             LoopStandardAnalysisResults &AR,
                                             LPMUpdater &) {
-  if (!simplifyLoopInst(L, AR.DT, AR.LI, AR.AC, AR.TLI))
+  Optional<MemorySSAUpdater> MSSAU;
+  if (AR.MSSA) {
+    MSSAU = MemorySSAUpdater(AR.MSSA);
+    AR.MSSA->verifyMemorySSA();
+  }
+  if (!simplifyLoopInst(L, AR.DT, AR.LI, AR.AC, AR.TLI,
+                        MSSAU.hasValue() ? MSSAU.getPointer() : nullptr))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
@@ -212,6 +243,7 @@ INITIALIZE_PASS_BEGIN(LoopInstSimplifyLegacyPass, "loop-instsimplify",
                       "Simplify instructions in loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LoopInstSimplifyLegacyPass, "loop-instsimplify",
                     "Simplify instructions in loops", false, false)

@@ -63,6 +63,7 @@ public:
   Error visitCaptionStmt(const CaptionStmt *) override;
   Error visitCharacteristicsStmt(const CharacteristicsStmt *) override;
   Error visitClassStmt(const ClassStmt *) override;
+  Error visitExStyleStmt(const ExStyleStmt *) override;
   Error visitFontStmt(const FontStmt *) override;
   Error visitLanguageStmt(const LanguageResource *) override;
   Error visitStyleStmt(const StyleStmt *) override;
@@ -80,6 +81,7 @@ public:
     uint32_t VersionInfo;
 
     Optional<uint32_t> Style;
+    Optional<uint32_t> ExStyle;
     StringRef Caption;
     struct FontInfo {
       uint32_t Size;

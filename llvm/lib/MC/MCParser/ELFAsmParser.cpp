@@ -321,6 +321,9 @@ static unsigned parseSectionFlags(StringRef flagsStr, bool *UseLastGroup) {
     case 'y':
       flags |= ELF::SHF_ARM_PURECODE;
       break;
+    case 's':
+      flags |= ELF::SHF_HEX_GPREL;
+      break;
     case 'G':
       flags |= ELF::SHF_GROUP;
       break;
@@ -481,34 +484,6 @@ static bool hasPrefix(StringRef SectionName, StringRef Prefix) {
   return SectionName.startswith(Prefix) || SectionName == Prefix.drop_back();
 }
 
-// Return a set of section flags based on the section name that can then
-// be augmented later, otherwise return 0 if we don't have any reasonable
-// defaults.
-static unsigned defaultSectionFlags(StringRef SectionName) {
-
-  if (hasPrefix(SectionName, ".rodata.cst"))
-    return ELF::SHF_ALLOC | ELF::SHF_MERGE;
-
-  if (hasPrefix(SectionName, ".rodata.") || SectionName == ".rodata1")
-    return ELF::SHF_ALLOC;
-
-  if (SectionName == ".fini" || SectionName == ".init" ||
-      hasPrefix(SectionName, ".text."))
-    return ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
-
-  if (hasPrefix(SectionName, ".data.") || SectionName == ".data1" ||
-      hasPrefix(SectionName, ".bss.") ||
-      hasPrefix(SectionName, ".init_array.") ||
-      hasPrefix(SectionName, ".fini_array.") ||
-      hasPrefix(SectionName, ".preinit_array."))
-    return ELF::SHF_ALLOC | ELF::SHF_WRITE;
-
-  if (hasPrefix(SectionName, ".tdata.") || hasPrefix(SectionName, ".tbss."))
-    return ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_TLS;
-
-  return 0;
-}
-
 bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   StringRef SectionName;
 
@@ -518,13 +493,27 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
   StringRef TypeName;
   int64_t Size = 0;
   StringRef GroupName;
+  unsigned Flags = 0;
   const MCExpr *Subsection = nullptr;
   bool UseLastGroup = false;
   MCSymbolELF *Associated = nullptr;
   int64_t UniqueID = ~0;
 
-  // Set the default section flags first in case no others are given.
-  unsigned Flags = defaultSectionFlags(SectionName);
+  // Set the defaults first.
+  if (hasPrefix(SectionName, ".rodata.") || SectionName == ".rodata1")
+    Flags |= ELF::SHF_ALLOC;
+  else if (SectionName == ".fini" || SectionName == ".init" ||
+           hasPrefix(SectionName, ".text."))
+    Flags |= ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+  else if (hasPrefix(SectionName, ".data.") || SectionName == ".data1" ||
+           hasPrefix(SectionName, ".bss.") ||
+           hasPrefix(SectionName, ".init_array.") ||
+           hasPrefix(SectionName, ".fini_array.") ||
+           hasPrefix(SectionName, ".preinit_array."))
+    Flags |= ELF::SHF_ALLOC | ELF::SHF_WRITE;
+  else if (hasPrefix(SectionName, ".tdata.") ||
+           hasPrefix(SectionName, ".tbss."))
+    Flags |= ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_TLS;
 
   if (getLexer().is(AsmToken::Comma)) {
     Lex();
@@ -552,12 +541,6 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
 
     if (extraFlags == -1U)
       return TokError("unknown flag");
-
-    // If we found additional section flags on a known section then give a
-    // warning.
-    if (Flags && Flags != extraFlags)
-      Warning(loc, "setting incorrect section attributes for " + SectionName);
-
     Flags |= extraFlags;
 
     bool Mergeable = Flags & ELF::SHF_MERGE;

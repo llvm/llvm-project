@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit < %s | FileCheck %s
+; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 ; Source:
 ;
@@ -8,14 +8,12 @@
 ;     if (cond1) {
 ;         if (cond2) { // This is the first cold region we visit.
 ;             sideeffect(0);
-;             sideeffect(10);
 ;             sink(0);
 ;         }
 ;
 ;         // There's a larger, overlapping cold region here. But we ignore it.
 ;         // This could be improved.
 ;         sideeffect(1);
-;         sideeffect(11);
 ;         sink(1);
 ;     }
 ; }
@@ -42,13 +40,11 @@ define void @_Z3fooii(i32, i32) {
 
 ; <label>:10:                                     ; preds = %7
   call void @_Z10sideeffecti(i32 0)
-  call void @_Z10sideeffecti(i32 10)
   call void @_Z4sinki(i32 0) #3
   br label %11
 
 ; <label>:11:                                     ; preds = %10, %7
   call void @_Z10sideeffecti(i32 1)
-  call void @_Z10sideeffecti(i32 11)
   call void @_Z4sinki(i32 1) #3
   br label %12
 
@@ -58,7 +54,6 @@ define void @_Z3fooii(i32, i32) {
 
 ; CHECK-LABEL: define {{.*}}@_Z3fooii.cold.1
 ; CHECK: call void @_Z10sideeffecti(i32 0)
-; CHECK: call void @_Z10sideeffecti(i32 10)
 
 declare void @_Z10sideeffecti(i32)
 

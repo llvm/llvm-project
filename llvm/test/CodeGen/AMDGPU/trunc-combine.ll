@@ -25,7 +25,7 @@ define i32 @trunc_bitcast_i64_lshr_32_i32(i64 %bar) {
 ; GCN: _load_dword
 ; GCN-NOT: _load_dword
 ; GCN-NOT: v_mov_b32
-; GCN: v_add_u32_e32 v0, vcc, 4, v0
+; GCN: v_add_u16_e32 v0, 4, v0
 define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
   %load0 = load i32, i32 addrspace(1)* undef
   %load1 = load i32, i32 addrspace(1)* null
@@ -42,7 +42,7 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; GCN: _load_dword
 ; GCN-NOT: _load_dword
 ; GCN-NOT: v_mov_b32
-; GCN: v_add_u32_e32 v0, vcc, 4, v0
+; GCN: v_add_u16_e32 v0, 4, v0
 define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
   %load0 = load float, float addrspace(1)* undef
   %load1 = load float, float addrspace(1)* null

@@ -19,6 +19,6 @@ records:
 #CHECK-NEXT:    nonstop-tsc: true
 #CHECK-NEXT:    cycle-frequency: 2601000000
 #CHECK-NEXT:  records:
-#CHECK-NEXT:    - { type: 0, func-id: 1, function: '1', cpu: 1, thread: 111, kind: function-enter, tsc: 10001 }
-#CHECK-NEXT:    - { type: 0, func-id: 1, function: '1', cpu: 1, thread: 111, kind: function-exit, tsc: 10100 }
+#CHECK-NEXT:    - { type: 0, func-id: 1, function: '1', cpu: 1, thread: 111, kind: function-enter, tsc: 10001, data: '' }
+#CHECK-NEXT:    - { type: 0, func-id: 1, function: '1', cpu: 1, thread: 111, kind: function-exit, tsc: 10100, data: '' }
 #CHECK-NEXT:  ...

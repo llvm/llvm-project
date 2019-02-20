@@ -1,0 +1,59 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-before=prologepilog \
+# RUN:   -stop-after=prologepilog | FileCheck %s
+# Check save_freg_x, save_freg
+
+# CHECK:       early-clobber $sp = frame-setup STRDpre killed $d10, $sp, -16
+# CHECK-NEXT:  frame-setup SEH_SaveFReg_X 10, -16
+# CHECK-NEXT:  frame-setup STRDui killed $d8, $sp, 1 :: (store 8 into %stack.0)
+# CHECK-NEXT:  frame-setup SEH_SaveFReg 8, 8
+# CHECK-NEXT:  frame-setup SEH_PrologEnd
+# CHECK:       frame-destroy SEH_EpilogStart
+# CHECK-NEXT:  $d8 = frame-destroy LDRDui $sp, 1 :: (load 8 from %stack.0)
+# CHECK-NEXT:  frame-destroy SEH_SaveFReg 8, 8
+# CHECK-NEXT:  early-clobber $sp, $d10 = frame-destroy LDRDpost $sp, 16 :: (load 8 from %stack.1)
+# CHECK-NEXT:  frame-destroy SEH_SaveFReg_X 10, -16
+# CHECK-NEXT:  frame-destroy SEH_EpilogEnd
+# CHECK-NEXT:  RET_ReallyLR implicit $x0
+...
+---
+name:            test
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+registers:
+liveins:
+  - { reg: '$w0', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       112
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  hasOpaqueSPAdjustment: true
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+stack:
+constants:
+body:             |
+  bb.0.entry:
+    liveins: $d0, $d1
+    $d8 = FADDDrr $d0, killed $d1
+    $d10 = FADDDrr killed $d8, $d0
+    $x0 = COPY killed $d10
+    RET_ReallyLR implicit $x0
+...

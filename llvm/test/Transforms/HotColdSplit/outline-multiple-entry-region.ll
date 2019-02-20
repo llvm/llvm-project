@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit < %s | FileCheck %s
+; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 ; Source:
 ;
@@ -26,11 +26,9 @@ target triple = "x86_64-apple-macosx10.14.0"
 
 ; CHECK-LABEL: define {{.*}}@_Z3fooii.cold.1
 ; CHECK: call void @_Z10sideeffecti(i32 1)
-; CHECK: call void @_Z10sideeffecti(i32 11)
 
 ; CHECK-LABEL: define {{.*}}@_Z3fooii.cold.2
 ; CHECK: call void @_Z10sideeffecti(i32 0)
-; CHECK: call void @_Z10sideeffecti(i32 10)
 
 ; CHECK-LABEL: define {{.*}}@_Z3fooii.cold.3
 ; CHECK: call void @_Z4sinkv
@@ -50,7 +48,6 @@ define void @_Z3fooii(i32, i32) {
 
 ; <label>:8:                                      ; preds = %5
   call void @_Z10sideeffecti(i32 0)
-  call void @_Z10sideeffecti(i32 10)
   br label %14
 
 ; <label>:9:                                      ; preds = %5
@@ -60,7 +57,6 @@ define void @_Z3fooii(i32, i32) {
 
 ; <label>:12:                                     ; preds = %9
   call void @_Z10sideeffecti(i32 1)
-  call void @_Z10sideeffecti(i32 11)
   br label %14
 
 ; <label>:13:                                     ; preds = %9

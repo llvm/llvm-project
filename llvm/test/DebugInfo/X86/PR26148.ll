@@ -16,11 +16,10 @@
 ; This is similar to the bug in test/DebugInfo/ARM/PR26163.ll, except that there is an
 ; extra non-overlapping range first. Thus, we make sure that the backend actually looks
 ; at all expressions when determining whether to merge ranges, not just the first one.
-; AS in 26163, we expect two ranges (as opposed to one), the first one being zero sized
+; AS in 26163, we only expect one range as the first one is zero sized.
 ;
 ;
-; CHECK: [0x0000000000000004, 0x0000000000000004): DW_OP_lit3, DW_OP_piece 0x4, DW_OP_reg5 RDI, DW_OP_piece 0x2
-; CHECK: [0x0000000000000004, 0x0000000000000014): DW_OP_lit3, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_piece 0x4
+; CHECK: [0x0000000000000000, 0x000000000000000f): DW_OP_lit3, DW_OP_piece 0x4, DW_OP_lit0, DW_OP_piece 0x4
 
 source_filename = "test/DebugInfo/X86/PR26148.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -35,11 +34,8 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0
-; The attributes are here to force the zero-sized range not to be at the start of
-; the function, which has special interpretation in DWARF. The fact that this happens
-; at all is probably an LLVM bug.
 
-define void @fn1(i16 signext %p1) #1 !dbg !16 {
+define void @fn1(i16 signext %p1) !dbg !16 {
 entry:
   tail call void @llvm.dbg.value(metadata i16 %p1, metadata !20, metadata !23), !dbg !24
   tail call void @llvm.dbg.declare(metadata %struct.S0* undef, metadata !21, metadata !23), !dbg !25
@@ -60,7 +56,6 @@ entry:
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!12, !13, !14}

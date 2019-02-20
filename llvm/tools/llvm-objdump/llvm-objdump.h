@@ -22,6 +22,7 @@ namespace object {
   class COFFObjectFile;
   class COFFImportFile;
   class MachOObjectFile;
+  class MachOUniversalBinary;
   class ObjectFile;
   class Archive;
   class RelocationRef;
@@ -30,10 +31,10 @@ namespace object {
 extern cl::opt<std::string> TripleName;
 extern cl::opt<std::string> ArchName;
 extern cl::opt<std::string> MCPU;
-extern cl::opt<std::string> Demangle;
 extern cl::list<std::string> MAttrs;
 extern cl::list<std::string> FilterSections;
 extern cl::opt<bool> AllHeaders;
+extern cl::opt<bool> Demangle;
 extern cl::opt<bool> Disassemble;
 extern cl::opt<bool> DisassembleAll;
 extern cl::opt<bool> NoShowRawInsn;
@@ -71,6 +72,7 @@ extern cl::opt<DIDumpType> DwarfDumpType;
 void error(std::error_code ec);
 bool RelocAddressLess(object::RelocationRef a, object::RelocationRef b);
 void ParseInputMachO(StringRef Filename);
+void ParseInputMachO(object::MachOUniversalBinary *UB);
 void printCOFFUnwindInfo(const object::COFFObjectFile* o);
 void printMachOUnwindInfo(const object::MachOObjectFile* o);
 void printMachOExportsTrie(const object::MachOObjectFile* o);

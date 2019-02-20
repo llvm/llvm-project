@@ -25,7 +25,7 @@ namespace MCParserUtils {
 /// On success, returns false and sets the Symbol and Value output parameters.
 bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                MCAsmParser &Parser, MCSymbol *&Symbol,
-                               const MCExpr *&Value, bool AllowExtendedExpr = false);
+                               const MCExpr *&Value);
 
 } // namespace MCParserUtils
 

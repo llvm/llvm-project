@@ -1,4 +1,5 @@
-; RUN: llc < %s -mtriple=x86_64-pc-win32-coreclr | FileCheck %s -check-prefix=WIN_X64
+; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR38376.
+; RUN: llc < %s -mtriple=x86_64-pc-win32-coreclr -verify-machineinstrs=0 | FileCheck %s -check-prefix=WIN_X64
 ; RUN: llc < %s -mtriple=x86_64-pc-linux         | FileCheck %s -check-prefix=LINUX
 
 ; By default, windows CoreCLR requires an inline prologue stack expansion check

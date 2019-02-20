@@ -143,12 +143,12 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-declare i8 addrspace(2)* @llvm.amdgcn.dispatch.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr() #1
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 declare i32 @llvm.amdgcn.workgroup.id.x() #1
 
-declare i8 addrspace(2)* @llvm.amdgcn.implicitarg.ptr() #1
+declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #1
 
 attributes #1 = { nounwind readnone }

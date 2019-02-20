@@ -1,5 +1,6 @@
 ; RUN: opt -passes='loop(unswitch),verify<loops>' -enable-nontrivial-unswitch -S < %s | FileCheck %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -S < %s | FileCheck %s
+; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
 
 declare i32 @a()
 declare i32 @b()
@@ -2796,10 +2797,10 @@ loop_begin:
 ; CHECK:       loop_begin.us:
 ; CHECK-NEXT:    %[[V1_US:.*]] = load i1, i1* %ptr1
 ; CHECK-NEXT:    %[[V2_US:.*]] = load i1, i1* %ptr2
-; CHECK-NEXT:    %[[AND1_US:.*]] = and i1 %[[V1_US]], false
+; CHECK-NEXT:    %[[AND1_US:.*]] = and i1 %[[V1_US]], %cond1
 ; CHECK-NEXT:    %[[OR1_US:.*]] = or i1 %[[V2_US]], %cond2
 ; CHECK-NEXT:    %[[AND2_US:.*]] = and i1 %[[AND1_US]], %[[OR1_US]]
-; CHECK-NEXT:    %[[AND3_US:.*]] = and i1 %[[AND2_US]], false
+; CHECK-NEXT:    %[[AND3_US:.*]] = and i1 %[[AND2_US]], %cond3
 ; CHECK-NEXT:    br label %loop_b.us
 ;
 ; CHECK:       loop_b.us:
@@ -2857,9 +2858,96 @@ loop_exit:
 ; CHECK-NEXT:    ret
 }
 
-; Non-trivial unswitching of a switch.
-define i32 @test27(i1* %ptr, i32 %cond) {
+; Non-trivial partial loop unswitching of multiple invariant inputs to an `or`
+; chain. Basically an inverted version of corresponding `and` test (test26).
+define i32 @test27(i1* %ptr1, i1* %ptr2, i1* %ptr3, i1 %cond1, i1 %cond2, i1 %cond3) {
 ; CHECK-LABEL: @test27(
+entry:
+  br label %loop_begin
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    %[[INV_OR:.*]] = or i1 %cond3, %cond1
+; CHECK-NEXT:    br i1 %[[INV_OR]], label %entry.split.us, label %entry.split
+
+loop_begin:
+  %v1 = load i1, i1* %ptr1
+  %v2 = load i1, i1* %ptr2
+  %cond_or1 = or i1 %v1, %cond1
+  %cond_and1 = and i1 %v2, %cond2
+  %cond_or2 = or i1 %cond_or1, %cond_and1
+  %cond_or3 = or i1 %cond_or2, %cond3
+  br i1 %cond_or3, label %loop_b, label %loop_a
+; The 'loop_b' unswitched loop.
+;
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label %loop_begin.us
+;
+; CHECK:       loop_begin.us:
+; CHECK-NEXT:    %[[V1_US:.*]] = load i1, i1* %ptr1
+; CHECK-NEXT:    %[[V2_US:.*]] = load i1, i1* %ptr2
+; CHECK-NEXT:    %[[OR1_US:.*]] = or i1 %[[V1_US]], %cond1
+; CHECK-NEXT:    %[[AND1_US:.*]] = and i1 %[[V2_US]], %cond2
+; CHECK-NEXT:    %[[OR2_US:.*]] = or i1 %[[OR1_US]], %[[AND1_US]]
+; CHECK-NEXT:    %[[OR3_US:.*]] = or i1 %[[OR2_US]], %cond3
+; CHECK-NEXT:    br label %loop_b.us
+;
+; CHECK:       loop_b.us:
+; CHECK-NEXT:    call i32 @b()
+; CHECK-NEXT:    br label %latch.us
+;
+; CHECK:       latch.us:
+; CHECK-NEXT:    %[[V3_US:.*]] = load i1, i1* %ptr3
+; CHECK-NEXT:    br i1 %[[V3_US]], label %loop_begin.us, label %loop_exit.split.us
+;
+; CHECK:       loop_exit.split.us:
+; CHECK-NEXT:    br label %loop_exit
+
+; The original loop.
+;
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label %loop_begin
+;
+; CHECK:       loop_begin:
+; CHECK-NEXT:    %[[V1:.*]] = load i1, i1* %ptr1
+; CHECK-NEXT:    %[[V2:.*]] = load i1, i1* %ptr2
+; CHECK-NEXT:    %[[OR1:.*]] = or i1 %[[V1]], false
+; CHECK-NEXT:    %[[AND1:.*]] = and i1 %[[V2]], %cond2
+; CHECK-NEXT:    %[[OR2:.*]] = or i1 %[[OR1]], %[[AND1]]
+; CHECK-NEXT:    %[[OR3:.*]] = or i1 %[[OR2]], false
+; CHECK-NEXT:    br i1 %[[OR3]], label %loop_b, label %loop_a
+
+loop_a:
+  call i32 @a()
+  br label %latch
+; CHECK:       loop_a:
+; CHECK-NEXT:    call i32 @a()
+; CHECK-NEXT:    br label %latch
+
+loop_b:
+  call i32 @b()
+  br label %latch
+; CHECK:       loop_b:
+; CHECK-NEXT:    call i32 @b()
+; CHECK-NEXT:    br label %latch
+
+latch:
+  %v3 = load i1, i1* %ptr3
+  br i1 %v3, label %loop_begin, label %loop_exit
+; CHECK:       latch:
+; CHECK-NEXT:    %[[V3:.*]] = load i1, i1* %ptr3
+; CHECK-NEXT:    br i1 %[[V3]], label %loop_begin, label %loop_exit.split
+
+loop_exit:
+  ret i32 0
+; CHECK:       loop_exit.split:
+; CHECK-NEXT:    br label %loop_exit
+;
+; CHECK:       loop_exit:
+; CHECK-NEXT:    ret
+}
+
+; Non-trivial unswitching of a switch.
+define i32 @test28(i1* %ptr, i32 %cond) {
+; CHECK-LABEL: @test28(
 entry:
   br label %loop_begin
 ; CHECK-NEXT:  entry:
@@ -2970,8 +3058,8 @@ loop_exit:
 ; can introduce multiple edges to successors. These need lots of special case
 ; handling as they get collapsed in many cases (domtree, the unswitch itself)
 ; but not in all cases (the PHI node operands).
-define i32 @test28(i32 %arg) {
-; CHECK-LABEL: @test28(
+define i32 @test29(i32 %arg) {
+; CHECK-LABEL: @test29(
 entry:
   br label %header
 ; CHECK-NEXT:  entry:
@@ -3149,12 +3237,12 @@ exit:
 ; CHECK-NEXT:    ret i32 %[[EXIT_PHI2]]
 }
 
-; Similar to @test28 but designed to have one of the duplicate edges be
+; Similar to @test29 but designed to have one of the duplicate edges be
 ; a loop exit edge as those can in some cases be special. Among other things,
 ; this includes an LCSSA phi with multiple entries despite being a dedicated
 ; exit block.
-define i32 @test29(i32 %arg) {
-; CHECK-LABEL: define i32 @test29(
+define i32 @test30(i32 %arg) {
+; CHECK-LABEL: define i32 @test30(
 entry:
   br label %header
 ; CHECK-NEXT:  entry:
@@ -3946,8 +4034,8 @@ exit:
 ; viable for unswitching the inner-most loop. This lets us check that the
 ; unswitching doesn't end up cycling infinitely even when the cycle is
 ; indirect and due to revisiting a loop after cloning.
-define void @test30(i32 %arg) {
-; CHECK-LABEL: define void @test30(
+define void @test31(i32 %arg) {
+; CHECK-LABEL: define void @test31(
 entry:
   br label %outer.header
 ; CHECK-NEXT:  entry:

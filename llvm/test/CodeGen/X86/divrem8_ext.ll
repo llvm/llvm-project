@@ -112,6 +112,7 @@ define signext i8 @test_sdivrem_sext_ah(i8 %x, i8 %y) {
 ; X64-LABEL: test_sdivrem_sext_ah:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %ecx
@@ -137,6 +138,7 @@ define signext i8 @test_srem_sext_ah(i8 %x, i8 %y) {
 ; X64-LABEL: test_srem_sext_ah:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %eax
@@ -150,8 +152,8 @@ define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ; X32-LABEL: test_srem_noext_ah:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    cbtw
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-NEXT:    idivb %cl
 ; X32-NEXT:    movsbl %ah, %eax
 ; X32-NEXT:    addb %cl, %al
@@ -161,6 +163,7 @@ define i8 @test_srem_noext_ah(i8 %x, i8 %y) {
 ; X64-LABEL: test_srem_noext_ah:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %eax
@@ -186,6 +189,7 @@ define i64 @test_srem_sext64_ah(i8 %x, i8 %y) {
 ; X64-LABEL: test_srem_sext64_ah:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    cbtw
 ; X64-NEXT:    idivb %sil
 ; X64-NEXT:    movsbl %ah, %eax

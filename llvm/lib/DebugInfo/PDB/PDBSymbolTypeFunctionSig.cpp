@@ -56,21 +56,10 @@ public:
 
   void reset() override { Enumerator->reset(); }
 
-  MyType *clone() const override {
-    std::unique_ptr<ArgEnumeratorType> Clone(Enumerator->clone());
-    return new FunctionArgEnumerator(Session, std::move(Clone));
-  }
-
 private:
   const IPDBSession &Session;
   std::unique_ptr<ArgEnumeratorType> Enumerator;
 };
-}
-
-PDBSymbolTypeFunctionSig::PDBSymbolTypeFunctionSig(
-    const IPDBSession &PDBSession, std::unique_ptr<IPDBRawSymbol> Symbol)
-    : PDBSymbol(PDBSession, std::move(Symbol)) {
-  assert(RawSymbol->getSymTag() == PDB_SymType::FunctionSig);
 }
 
 std::unique_ptr<IPDBEnumSymbols>

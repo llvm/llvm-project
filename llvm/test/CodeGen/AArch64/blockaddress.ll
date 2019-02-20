@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -code-model=large -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-LARGE %s
+; RUN: llc -code-model=tiny -mtriple=aarch64-none-none-eabi -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-TINY %s
 
 @addr = global i8* null
 
@@ -21,6 +22,11 @@ define void @test_blockaddress() {
 ; CHECK-LARGE: str [[ADDR_REG]],
 ; CHECK-LARGE: ldr [[NEWDEST:x[0-9]+]]
 ; CHECK-LARGE: br [[NEWDEST]]
+
+; CHECK-TINY: adr [[DEST:x[0-9]+]], {{.Ltmp[0-9]+}}
+; CHECK-TINY: str [[DEST]],
+; CHECK-TINY: ldr [[NEWDEST:x[0-9]+]]
+; CHECK-TINY: br [[NEWDEST]]
 
 block:
   ret void

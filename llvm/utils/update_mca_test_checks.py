@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 
 """A test case update script.
 
@@ -80,7 +80,7 @@ def _parse_args():
   if not args.llvm_mca_binary:
     raise Error('--llvm-mca-binary value cannot be empty string')
 
-  if os.path.basename(args.llvm_mca_binary) != 'llvm-mca':
+  if 'llvm-mca' not in os.path.basename(args.llvm_mca_binary):
     _warn('unexpected binary name: {}'.format(args.llvm_mca_binary))
 
   return args
@@ -116,7 +116,7 @@ def _get_run_infos(run_lines, args):
       _warn('could not split tool and filecheck commands: {}'.format(run_line))
       continue
 
-    tool_basename = os.path.basename(args.llvm_mca_binary)
+    tool_basename = os.path.splitext(os.path.basename(args.llvm_mca_binary))[0]
 
     if not tool_cmd.startswith(tool_basename + ' '):
       _warn('skipping non-{} RUN line: {}'.format(tool_basename, run_line))
@@ -222,6 +222,68 @@ def _get_useful_prefix_info(run_infos):
   return common_to_all, longest_prefix_len
 
 
+def _align_matching_blocks(all_blocks, farthest_indexes):
+  """ Some sub-sequences of blocks may be common to multiple lists of blocks,
+      but at different indexes in each one.
+
+      For example, in the following case, A,B,E,F, and H are common to both
+      sets, but only A and B would be identified as such due to the indexes
+      matching:
+
+      index | 0 1 2 3 4 5 6
+      ------+--------------
+      setA  | A B C D E F H
+      setB  | A B E F G H
+
+      This function attempts to align the indexes of matching blocks by
+      inserting empty blocks into the block list. With this approach, A, B, E,
+      F, and H would now be able to be identified as matching blocks:
+
+      index | 0 1 2 3 4 5 6 7
+      ------+----------------
+      setA  | A B C D E F   H
+      setB  | A B     E F G H
+  """
+
+  # "Farthest block analysis": essentially, iterate over all blocks and find
+  # the highest index into a block list for the first instance of each block.
+  # This is relatively expensive, but we're dealing with small numbers of
+  # blocks so it doesn't make a perceivable difference to user time.
+  for blocks in all_blocks.values():
+    for block in blocks:
+      if not block:
+        continue
+
+      index = blocks.index(block)
+
+      if index > farthest_indexes[block]:
+        farthest_indexes[block] = index
+
+  # Use the results of the above analysis to identify any blocks that can be
+  # shunted along to match the farthest index value.
+  for blocks in all_blocks.values():
+    for index, block in enumerate(blocks):
+      if not block:
+        continue
+
+      changed = False
+      # If the block has not already been subject to alignment (i.e. if the
+      # previous block is not empty) then insert empty blocks until the index
+      # matches the farthest index identified for that block.
+      if (index > 0) and blocks[index - 1]:
+        while(index < farthest_indexes[block]):
+          blocks.insert(index, '')
+          index += 1
+          changed = True
+
+      if changed:
+        # Bail out.  We'll need to re-do the farthest block analysis now that
+        # we've inserted some blocks.
+        return True
+
+  return False
+
+
 def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
   """ For each run line, run the tool with the specified args and collect the
       output. We use the concept of 'blocks' for uniquing, where a block is
@@ -253,6 +315,10 @@ def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
   all_blocks = {}
   max_block_len = 0
 
+  # A cache of the furthest-back position in any block list of the first
+  # instance of each block, indexed by the block itself.
+  farthest_indexes = defaultdict(int)
+
   # Run the tool for each run line to generate all of the blocks.
   for prefixes, tool_args in run_infos:
     key = _block_key(tool_args, prefixes)
@@ -269,6 +335,11 @@ def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
     all_blocks[key] = [b.lstrip('\n').rstrip()
                        for b in raw_tool_output.split('\n\n')]
     max_block_len = max(max_block_len, len(all_blocks[key]))
+
+    # Attempt to align matching blocks until no more changes can be made.
+    made_changes = True
+    while made_changes:
+      made_changes = _align_matching_blocks(all_blocks, farthest_indexes)
 
   # If necessary, pad the lists of blocks with empty blocks so that they are
   # all the same length.
@@ -321,6 +392,9 @@ def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
             _warn('Multiple prefixes generating same output: {} '
                   '(discarding {})'.format(','.join(s), ','.join(s[1:])))
 
+      if block_text and not current_set:
+        raise Error(
+          'block not captured by existing prefixes:\n\n{}'.format(block_text))
       block_infos[block_num][block_text] = sorted(list(current_set))
 
     # If we have multiple block_texts, try to break them down further to avoid
@@ -341,10 +415,12 @@ def _get_block_infos(run_infos, test_path, args, common_prefix):  # noqa
 
 def _write_block(output, block, not_prefix_set, common_prefix, prefix_pad):
   """ Write an individual block, with correct padding on the prefixes.
+      Returns a set of all of the prefixes that it has written.
   """
   end_prefix = ':     '
   previous_prefix = None
   num_lines_of_prefix = 0
+  written_prefixes = set()
 
   for prefix, line in block:
     if prefix in not_prefix_set:
@@ -364,6 +440,7 @@ def _write_block(output, block, not_prefix_set, common_prefix, prefix_pad):
       num_lines_of_prefix = 0
       previous_prefix = prefix
 
+    written_prefixes.add(prefix)
     output.append(
         '{} {}{}{} {}'.format(COMMENT_CHAR,
                               prefix,
@@ -373,6 +450,7 @@ def _write_block(output, block, not_prefix_set, common_prefix, prefix_pad):
     end_prefix = '-NEXT:'
 
   output.append('')
+  return written_prefixes
 
 
 def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
@@ -416,29 +494,44 @@ def _write_output(test_path, input_lines, prefix_list, block_infos,  # noqa
     output_lines.append('')
 
   output_check_lines = []
+  used_prefixes = set()
   for block_num in range(len(block_infos)):
-    for block_text in sorted(block_infos[block_num]):
-      if not block_text:
-        continue
+    if type(block_infos[block_num]) is list:
+      # The block is of the type output from _break_down_block().
+      used_prefixes |= _write_block(output_check_lines,
+                                    block_infos[block_num],
+                                    not_prefix_set,
+                                    common_prefix,
+                                    prefix_pad)
+    else:
+      # _break_down_block() was unable to do do anything so output the block
+      # as-is.
 
-      if type(block_infos[block_num]) is list:
-        # The block is of the type output from _break_down_block().
-        _write_block(output_check_lines,
-                     block_infos[block_num],
-                     not_prefix_set,
-                     common_prefix,
-                     prefix_pad)
-        break
-      elif block_infos[block_num][block_text]:
-        # _break_down_block() was unable to do do anything so output the block
-        # as-is.
+      # Rather than writing out each block as soon we encounter it, save it
+      # indexed by prefix so that we can write all of the blocks out sorted by
+      # prefix at the end.
+      output_blocks = defaultdict(list)
+
+      for block_text in sorted(block_infos[block_num]):
+
+        if not block_text:
+          continue
+
         lines = block_text.split('\n')
         for prefix in block_infos[block_num][block_text]:
-          _write_block(output_check_lines,
-                       [(prefix, line) for line in lines],
-                       not_prefix_set,
-                       common_prefix,
-                       prefix_pad)
+          assert prefix not in output_blocks
+          used_prefixes |= _write_block(output_blocks[prefix],
+                                        [(prefix, line) for line in lines],
+                                        not_prefix_set,
+                                        common_prefix,
+                                        prefix_pad)
+
+      for prefix in sorted(output_blocks):
+        output_check_lines.extend(output_blocks[prefix])
+
+  unused_prefixes = (prefix_set - not_prefix_set) - used_prefixes
+  if unused_prefixes:
+    raise Error('unused prefixes: {}'.format(sorted(unused_prefixes)))
 
   if output_check_lines:
     output_lines.insert(0, ADVERT)

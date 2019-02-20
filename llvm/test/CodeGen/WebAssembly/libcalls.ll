@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck %s
 
 ; Test a subset of compiler-rt/libm libcalls expected to be emitted by the wasm backend
 

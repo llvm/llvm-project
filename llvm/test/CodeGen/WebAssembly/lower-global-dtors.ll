@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false | FileCheck --check-prefix=CHECK --check-prefix=FINI --check-prefix=NULL %s
+; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck --check-prefix=CHECK --check-prefix=FINI --check-prefix=NULL %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -40,11 +40,11 @@ declare void @after_the_null()
 ]
 
 ; CHECK-LABEL: .Lcall_dtors.0:
-; CHECK-NEXT: .param          i32{{$}}
+; CHECK-NEXT: .functype .Lcall_dtors.0 (i32) -> (){{$}}
 ; CHECK-NEXT: call            orig_dtor0@FUNCTION{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.0:
-; CHECK-NEXT: block
+; CHECK:      block
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.0@FUNCTION{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
@@ -55,12 +55,12 @@ declare void @after_the_null()
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors.1:
-; CHECK-NEXT: .param          i32{{$}}
+; CHECK-NEXT: .functype .Lcall_dtors.1 (i32) -> (){{$}}
 ; CHECK-NEXT: call            orig_dtor1a@FUNCTION{{$}}
 ; CHECK-NEXT: call            orig_dtor1b@FUNCTION{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.1:
-; CHECK-NEXT: block
+; CHECK:      block
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1@FUNCTION{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
@@ -71,11 +71,11 @@ declare void @after_the_null()
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors.1.associated1c0:
-; CHECK-NEXT: .param          i32{{$}}
+; CHECK-NEXT: .functype .Lcall_dtors.1.associated1c0 (i32) -> (){{$}}
 ; CHECK-NEXT: call            orig_dtor1c0@FUNCTION{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.1.associated1c0:
-; CHECK-NEXT: block
+; CHECK:      block
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c0@FUNCTION{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
@@ -86,12 +86,12 @@ declare void @after_the_null()
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors.1.associated1c1:
-; CHECK-NEXT: .param          i32{{$}}
+; CHECK-NEXT: .functype .Lcall_dtors.1.associated1c1 (i32) -> (){{$}}
 ; CHECK-NEXT: call            orig_dtor1c1a@FUNCTION{{$}}
 ; CHECK-NEXT: call            orig_dtor1c1b@FUNCTION{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors.1.associated1c1:
-; CHECK-NEXT: block
+; CHECK:      block
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors.1.associated1c1@FUNCTION{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
@@ -102,11 +102,11 @@ declare void @after_the_null()
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors:
-; CHECK-NEXT: .param          i32{{$}}
+; CHECK-NEXT: .functype .Lcall_dtors (i32) -> (){{$}}
 ; CHECK-NEXT: call            orig_dtor65536@FUNCTION{{$}}
 
 ; CHECK-LABEL: .Lregister_call_dtors:
-; CHECK-NEXT: block
+; CHECK:      block
 ; CHECK-NEXT: i32.const       $push2=, .Lcall_dtors@FUNCTION{{$}}
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
@@ -127,7 +127,7 @@ declare void @after_the_null()
 
 ; CHECK-LABEL: .weak __dso_handle
 
-; CHECK-LABEL: .functype __cxa_atexit, i32, i32, i32, i32{{$}}
+; CHECK-LABEL: .functype __cxa_atexit (i32, i32, i32) -> (i32){{$}}
 
 ; We shouldn't make use of a .fini_array section.
 

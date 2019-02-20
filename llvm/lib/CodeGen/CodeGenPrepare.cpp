@@ -223,8 +223,17 @@ static cl::opt<bool>
 
 namespace {
 
+enum ExtType {
+  ZeroExtension,   // Zero extension has been seen.
+  SignExtension,   // Sign extension has been seen.
+  BothExtension    // This extension type is used if we saw sext after
+                   // ZeroExtension had been set, or if we saw zext after
+                   // SignExtension had been set. It makes the type
+                   // information of a promoted instruction invalid.
+};
+
 using SetOfInstrs = SmallPtrSet<Instruction *, 16>;
-using TypeIsSExt = PointerIntPair<Type *, 1, bool>;
+using TypeIsSExt = PointerIntPair<Type *, 2, ExtType>;
 using InstrToOrigTy = DenseMap<Instruction *, TypeIsSExt>;
 using SExts = SmallVector<Instruction *, 16>;
 using ValueToSExts = DenseMap<Value *, SExts>;
@@ -269,7 +278,7 @@ class TypePromotionTransaction;
     /// Keep track of GEPs accessing the same data structures such as structs or
     /// arrays that are candidates to be split later because of their large
     /// size.
-    DenseMap<
+    MapVector<
         AssertingVH<Value>,
         SmallVector<std::pair<AssertingVH<GetElementPtrInst>, int64_t>, 32>>
         LargeOffsetGEPMap;
@@ -312,6 +321,24 @@ class TypePromotionTransaction;
     }
 
   private:
+    template <typename F>
+    void resetIteratorIfInvalidatedWhileCalling(BasicBlock *BB, F f) {
+      // Substituting can cause recursive simplifications, which can invalidate
+      // our iterator.  Use a WeakTrackingVH to hold onto it in case this
+      // happens.
+      Value *CurValue = &*CurInstIterator;
+      WeakTrackingVH IterHandle(CurValue);
+
+      f();
+
+      // If the iterator instruction was recursively deleted, start over at the
+      // start of the block.
+      if (IterHandle != CurValue) {
+        CurInstIterator = BB->begin();
+        SunkAddrs.clear();
+      }
+    }
+
     bool eliminateFallThrough(Function &F);
     bool eliminateMostlyEmptyBlocks(Function &F);
     BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
@@ -427,11 +454,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   bool MadeChange = true;
   while (MadeChange) {
     MadeChange = false;
-    SeenChainsForSExt.clear();
-    ValToSExtendedUses.clear();
-    RemovedInsts.clear();
-    LargeOffsetGEPMap.clear();
-    LargeOffsetGEPID.clear();
     for (Function::iterator I = F.begin(); I != F.end(); ) {
       BasicBlock *BB = &*I++;
       bool ModifiedDTOnIteration = false;
@@ -451,6 +473,11 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
       I->deleteValue();
 
     EverMadeChange |= MadeChange;
+    SeenChainsForSExt.clear();
+    ValToSExtendedUses.clear();
+    RemovedInsts.clear();
+    LargeOffsetGEPMap.clear();
+    LargeOffsetGEPID.clear();
   }
 
   SunkAddrs.clear();
@@ -1679,23 +1706,20 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
     default: break;
     case Intrinsic::objectsize: {
       // Lower all uses of llvm.objectsize.*
-      ConstantInt *RetVal =
+      Value *RetVal =
           lowerObjectSizeCall(II, *DL, TLInfo, /*MustSucceed=*/true);
-      // Substituting this can cause recursive simplifications, which can
-      // invalidate our iterator.  Use a WeakTrackingVH to hold onto it in case
-      // this
-      // happens.
-      Value *CurValue = &*CurInstIterator;
-      WeakTrackingVH IterHandle(CurValue);
 
-      replaceAndRecursivelySimplify(CI, RetVal, TLInfo, nullptr);
-
-      // If the iterator instruction was recursively deleted, start over at the
-      // start of the block.
-      if (IterHandle != CurValue) {
-        CurInstIterator = BB->begin();
-        SunkAddrs.clear();
-      }
+      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
+        replaceAndRecursivelySimplify(CI, RetVal, TLInfo, nullptr);
+      });
+      return true;
+    }
+    case Intrinsic::is_constant: {
+      // If is_constant hasn't folded away yet, lower it to false now.
+      Constant *RetVal = ConstantInt::get(II->getType(), 0);
+      resetIteratorIfInvalidatedWhileCalling(BB, [&]() {
+        replaceAndRecursivelySimplify(CI, RetVal, TLInfo, nullptr);
+      });
       return true;
     }
     case Intrinsic::aarch64_stlxr:
@@ -1712,11 +1736,22 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       return true;
     }
     case Intrinsic::launder_invariant_group:
-    case Intrinsic::strip_invariant_group:
-      II->replaceAllUsesWith(II->getArgOperand(0));
+    case Intrinsic::strip_invariant_group: {
+      Value *ArgVal = II->getArgOperand(0);
+      auto it = LargeOffsetGEPMap.find(II);
+      if (it != LargeOffsetGEPMap.end()) {
+          // Merge entries in LargeOffsetGEPMap to reflect the RAUW.
+          // Make sure not to have to deal with iterator invalidation
+          // after possibly adding ArgVal to LargeOffsetGEPMap.
+          auto GEPs = std::move(it->second);
+          LargeOffsetGEPMap[ArgVal].append(GEPs.begin(), GEPs.end());
+          LargeOffsetGEPMap.erase(II);
+      }
+
+      II->replaceAllUsesWith(ArgVal);
       II->eraseFromParent();
       return true;
-
+    }
     case Intrinsic::cttz:
     case Intrinsic::ctlz:
       // If counting zeros is expensive, try to avoid it.
@@ -1861,15 +1896,6 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB) {
   for (unsigned i = 0, e = TailCalls.size(); i != e; ++i) {
     CallInst *CI = TailCalls[i];
     CallSite CS(CI);
-
-    // Conservatively require the attributes of the call to match those of the
-    // return. Ignore noalias because it doesn't affect the call sequence.
-    AttributeList CalleeAttrs = CS.getAttributes();
-    if (AttrBuilder(CalleeAttrs, AttributeList::ReturnIndex)
-            .removeAttribute(Attribute::NoAlias) !=
-        AttrBuilder(CalleeAttrs, AttributeList::ReturnIndex)
-            .removeAttribute(Attribute::NoAlias))
-      continue;
 
     // Make sure the call instruction is followed by an unconditional branch to
     // the return block.
@@ -2336,6 +2362,8 @@ class TypePromotionTransaction {
 
     /// Keep track of the original uses (pair Instruction, Index).
     SmallVector<InstructionAndIdx, 4> OriginalUses;
+    /// Keep track of the debug users.
+    SmallVector<DbgValueInst *, 1> DbgValues;
 
     using use_iterator = SmallVectorImpl<InstructionAndIdx>::iterator;
 
@@ -2349,6 +2377,10 @@ class TypePromotionTransaction {
         Instruction *UserI = cast<Instruction>(U.getUser());
         OriginalUses.push_back(InstructionAndIdx(UserI, U.getOperandNo()));
       }
+      // Record the debug uses separately. They are not in the instruction's
+      // use list, but they are replaced by RAUW.
+      findDbgValues(DbgValues, Inst);
+
       // Now, we can replace the uses.
       Inst->replaceAllUsesWith(New);
     }
@@ -2360,6 +2392,15 @@ class TypePromotionTransaction {
                         EndIt = OriginalUses.end();
            UseIt != EndIt; ++UseIt) {
         UseIt->Inst->setOperand(UseIt->Idx, Inst);
+      }
+      // RAUW has replaced all original uses with references to the new value,
+      // including the debug uses. Since we are undoing the replacements,
+      // the original debug uses must also be reinstated to maintain the
+      // correctness and utility of debug value instructions.
+      for (auto *DVI: DbgValues) {
+        LLVMContext &Ctx = Inst->getType()->getContext();
+        auto *MV = MetadataAsValue::get(Ctx, ValueAsMetadata::get(Inst));
+        DVI->setOperand(0, MV);
       }
     }
   };
@@ -2631,15 +2672,159 @@ private:
                              Value *PromotedOperand) const;
 };
 
+class PhiNodeSet;
+
+/// An iterator for PhiNodeSet.
+class PhiNodeSetIterator {
+  PhiNodeSet * const Set;
+  size_t CurrentIndex = 0;
+
+public:
+  /// The constructor. Start should point to either a valid element, or be equal
+  /// to the size of the underlying SmallVector of the PhiNodeSet.
+  PhiNodeSetIterator(PhiNodeSet * const Set, size_t Start);
+  PHINode * operator*() const;
+  PhiNodeSetIterator& operator++();
+  bool operator==(const PhiNodeSetIterator &RHS) const;
+  bool operator!=(const PhiNodeSetIterator &RHS) const;
+};
+
+/// Keeps a set of PHINodes.
+///
+/// This is a minimal set implementation for a specific use case:
+/// It is very fast when there are very few elements, but also provides good
+/// performance when there are many. It is similar to SmallPtrSet, but also
+/// provides iteration by insertion order, which is deterministic and stable
+/// across runs. It is also similar to SmallSetVector, but provides removing
+/// elements in O(1) time. This is achieved by not actually removing the element
+/// from the underlying vector, so comes at the cost of using more memory, but
+/// that is fine, since PhiNodeSets are used as short lived objects.
+class PhiNodeSet {
+  friend class PhiNodeSetIterator;
+
+  using MapType = SmallDenseMap<PHINode *, size_t, 32>;
+  using iterator =  PhiNodeSetIterator;
+
+  /// Keeps the elements in the order of their insertion in the underlying
+  /// vector. To achieve constant time removal, it never deletes any element.
+  SmallVector<PHINode *, 32> NodeList;
+
+  /// Keeps the elements in the underlying set implementation. This (and not the
+  /// NodeList defined above) is the source of truth on whether an element
+  /// is actually in the collection.
+  MapType NodeMap;
+
+  /// Points to the first valid (not deleted) element when the set is not empty
+  /// and the value is not zero. Equals to the size of the underlying vector
+  /// when the set is empty. When the value is 0, as in the beginning, the
+  /// first element may or may not be valid.
+  size_t FirstValidElement = 0;
+
+public:
+  /// Inserts a new element to the collection.
+  /// \returns true if the element is actually added, i.e. was not in the
+  /// collection before the operation.
+  bool insert(PHINode *Ptr) {
+    if (NodeMap.insert(std::make_pair(Ptr, NodeList.size())).second) {
+      NodeList.push_back(Ptr);
+      return true;
+    }
+    return false;
+  }
+
+  /// Removes the element from the collection.
+  /// \returns whether the element is actually removed, i.e. was in the
+  /// collection before the operation.
+  bool erase(PHINode *Ptr) {
+    auto it = NodeMap.find(Ptr);
+    if (it != NodeMap.end()) {
+      NodeMap.erase(Ptr);
+      SkipRemovedElements(FirstValidElement);
+      return true;
+    }
+    return false;
+  }
+
+  /// Removes all elements and clears the collection.
+  void clear() {
+    NodeMap.clear();
+    NodeList.clear();
+    FirstValidElement = 0;
+  }
+
+  /// \returns an iterator that will iterate the elements in the order of
+  /// insertion.
+  iterator begin() {
+    if (FirstValidElement == 0)
+      SkipRemovedElements(FirstValidElement);
+    return PhiNodeSetIterator(this, FirstValidElement);
+  }
+
+  /// \returns an iterator that points to the end of the collection.
+  iterator end() { return PhiNodeSetIterator(this, NodeList.size()); }
+
+  /// Returns the number of elements in the collection.
+  size_t size() const {
+    return NodeMap.size();
+  }
+
+  /// \returns 1 if the given element is in the collection, and 0 if otherwise.
+  size_t count(PHINode *Ptr) const {
+    return NodeMap.count(Ptr);
+  }
+
+private:
+  /// Updates the CurrentIndex so that it will point to a valid element.
+  ///
+  /// If the element of NodeList at CurrentIndex is valid, it does not
+  /// change it. If there are no more valid elements, it updates CurrentIndex
+  /// to point to the end of the NodeList.
+  void SkipRemovedElements(size_t &CurrentIndex) {
+    while (CurrentIndex < NodeList.size()) {
+      auto it = NodeMap.find(NodeList[CurrentIndex]);
+      // If the element has been deleted and added again later, NodeMap will
+      // point to a different index, so CurrentIndex will still be invalid.
+      if (it != NodeMap.end() && it->second == CurrentIndex)
+        break;
+      ++CurrentIndex;
+    }
+  }
+};
+
+PhiNodeSetIterator::PhiNodeSetIterator(PhiNodeSet *const Set, size_t Start)
+    : Set(Set), CurrentIndex(Start) {}
+
+PHINode * PhiNodeSetIterator::operator*() const {
+  assert(CurrentIndex < Set->NodeList.size() &&
+         "PhiNodeSet access out of range");
+  return Set->NodeList[CurrentIndex];
+}
+
+PhiNodeSetIterator& PhiNodeSetIterator::operator++() {
+  assert(CurrentIndex < Set->NodeList.size() &&
+         "PhiNodeSet access out of range");
+  ++CurrentIndex;
+  Set->SkipRemovedElements(CurrentIndex);
+  return *this;
+}
+
+bool PhiNodeSetIterator::operator==(const PhiNodeSetIterator &RHS) const {
+  return CurrentIndex == RHS.CurrentIndex;
+}
+
+bool PhiNodeSetIterator::operator!=(const PhiNodeSetIterator &RHS) const {
+  return !((*this) == RHS);
+}
+
 /// Keep track of simplification of Phi nodes.
 /// Accept the set of all phi nodes and erase phi node from this set
 /// if it is simplified.
 class SimplificationTracker {
   DenseMap<Value *, Value *> Storage;
   const SimplifyQuery &SQ;
-  // Tracks newly created Phi nodes. We use a SetVector to get deterministic
-  // order when iterating over the set in MatchPhiSet.
-  SmallSetVector<PHINode *, 32> AllPhiNodes;
+  // Tracks newly created Phi nodes. The elements are iterated by insertion
+  // order.
+  PhiNodeSet AllPhiNodes;
   // Tracks newly created Select nodes.
   SmallPtrSet<SelectInst *, 32> AllSelectNodes;
 
@@ -2671,7 +2856,7 @@ public:
           Put(PI, V);
           PI->replaceAllUsesWith(V);
           if (auto *PHI = dyn_cast<PHINode>(PI))
-            AllPhiNodes.remove(PHI);
+            AllPhiNodes.erase(PHI);
           if (auto *Select = dyn_cast<SelectInst>(PI))
             AllSelectNodes.erase(Select);
           PI->eraseFromParent();
@@ -2694,11 +2879,11 @@ public:
     assert(Get(To) == To && "Replacement PHI node is already replaced.");
     Put(From, To);
     From->replaceAllUsesWith(To);
-    AllPhiNodes.remove(From);
+    AllPhiNodes.erase(From);
     From->eraseFromParent();
   }
 
-  SmallSetVector<PHINode *, 32>& newPhiNodes() { return AllPhiNodes; }
+  PhiNodeSet& newPhiNodes() { return AllPhiNodes; }
 
   void insertNewPhi(PHINode *PN) { AllPhiNodes.insert(PN); }
 
@@ -2726,8 +2911,7 @@ public:
 
 /// A helper class for combining addressing modes.
 class AddressingModeCombiner {
-  typedef std::pair<Value *, BasicBlock *> ValueInBB;
-  typedef DenseMap<ValueInBB, Value *> FoldAddrToValueMapping;
+  typedef DenseMap<Value *, Value *> FoldAddrToValueMapping;
   typedef std::pair<PHINode *, PHINode *> PHIPair;
 
 private:
@@ -2747,10 +2931,10 @@ private:
   const SimplifyQuery &SQ;
 
   /// Original Address.
-  ValueInBB Original;
+  Value *Original;
 
 public:
-  AddressingModeCombiner(const SimplifyQuery &_SQ, ValueInBB OriginalValue)
+  AddressingModeCombiner(const SimplifyQuery &_SQ, Value *OriginalValue)
       : CommonType(nullptr), SQ(_SQ), Original(OriginalValue) {}
 
   /// Get the combined AddrMode
@@ -2846,46 +3030,40 @@ public:
   }
 
 private:
-  /// Initialize Map with anchor values. For address seen in some BB
+  /// Initialize Map with anchor values. For address seen
   /// we set the value of different field saw in this address.
-  /// If address is not an instruction than basic block is set to null.
   /// At the same time we find a common type for different field we will
   /// use to create new Phi/Select nodes. Keep it in CommonType field.
   /// Return false if there is no common type found.
   bool initializeMap(FoldAddrToValueMapping &Map) {
     // Keep track of keys where the value is null. We will need to replace it
     // with constant null when we know the common type.
-    SmallVector<ValueInBB, 2> NullValue;
+    SmallVector<Value *, 2> NullValue;
     Type *IntPtrTy = SQ.DL.getIntPtrType(AddrModes[0].OriginalValue->getType());
     for (auto &AM : AddrModes) {
-      BasicBlock *BB = nullptr;
-      if (Instruction *I = dyn_cast<Instruction>(AM.OriginalValue))
-        BB = I->getParent();
-
       Value *DV = AM.GetFieldAsValue(DifferentField, IntPtrTy);
       if (DV) {
         auto *Type = DV->getType();
         if (CommonType && CommonType != Type)
           return false;
         CommonType = Type;
-        Map[{ AM.OriginalValue, BB }] = DV;
+        Map[AM.OriginalValue] = DV;
       } else {
-        NullValue.push_back({ AM.OriginalValue, BB });
+        NullValue.push_back(AM.OriginalValue);
       }
     }
     assert(CommonType && "At least one non-null value must be!");
-    for (auto VIBB : NullValue)
-      Map[VIBB] = Constant::getNullValue(CommonType);
+    for (auto *V : NullValue)
+      Map[V] = Constant::getNullValue(CommonType);
     return true;
   }
 
-  /// We have mapping between value A and basic block where value A
-  /// seen to other value B where B was a field in addressing mode represented
-  /// by A. Also we have an original value C representing an address in some
-  /// basic block. Traversing from C through phi and selects we ended up with
-  /// A's in a map. This utility function tries to find a value V which is a
-  /// field in addressing mode C and traversing through phi nodes and selects
-  /// we will end up in corresponded values B in a map.
+  /// We have mapping between value A and other value B where B was a field in
+  /// addressing mode represented by A. Also we have an original value C
+  /// representing an address we start with. Traversing from C through phi and
+  /// selects we ended up with A's in a map. This utility function tries to find
+  /// a value V which is a field in addressing mode C and traversing through phi
+  /// nodes and selects we will end up in corresponded values B in a map.
   /// The utility will create a new Phi/Selects if needed.
   // The simple example looks as follows:
   // BB1:
@@ -2898,22 +3076,24 @@ private:
   //   p = phi [p1, BB1], [p2, BB2]
   //   v = load p
   // Map is
-  //   <p1, BB1> -> b1
-  //   <p2, BB2> -> b2
+  //   p1 -> b1
+  //   p2 -> b2
   // Request is
-  //   <p, BB3> -> ?
-  // The function tries to find or build phi [b1, BB1], [b2, BB2] in BB3
+  //   p -> ?
+  // The function tries to find or build phi [b1, BB1], [b2, BB2] in BB3.
   Value *findCommon(FoldAddrToValueMapping &Map) {
     // Tracks the simplification of newly created phi nodes. The reason we use
     // this mapping is because we will add new created Phi nodes in AddrToBase.
     // Simplification of Phi nodes is recursive, so some Phi node may
-    // be simplified after we added it to AddrToBase.
+    // be simplified after we added it to AddrToBase. In reality this
+    // simplification is possible only if original phi/selects were not
+    // simplified yet.
     // Using this mapping we can find the current value in AddrToBase.
     SimplificationTracker ST(SQ);
 
     // First step, DFS to create PHI nodes for all intermediate blocks.
     // Also fill traverse order for the second step.
-    SmallVector<ValueInBB, 32> TraverseOrder;
+    SmallVector<Value *, 32> TraverseOrder;
     InsertPlaceholders(Map, TraverseOrder, ST);
 
     // Second Step, fill new nodes by merged values and simplify if possible.
@@ -2943,7 +3123,7 @@ private:
   /// Matcher tracks the matched Phi nodes.
   bool MatchPhiNode(PHINode *PHI, PHINode *Candidate,
                     SmallSetVector<PHIPair, 8> &Matcher,
-                    SmallSetVector<PHINode *, 32> &PhiNodesToMatch) {
+                    PhiNodeSet &PhiNodesToMatch) {
     SmallVector<PHIPair, 8> WorkList;
     Matcher.insert({ PHI, Candidate });
     WorkList.push_back({ PHI, Candidate });
@@ -2992,11 +3172,12 @@ private:
   /// Returns false if this matching fails and creation of new Phi is disabled.
   bool MatchPhiSet(SimplificationTracker &ST, bool AllowNewPhiNodes,
                    unsigned &PhiNotMatchedCount) {
-    // Use a SetVector for Matched to make sure we do replacements (ReplacePhi)
-    // in a deterministic order below.
+    // Matched and PhiNodesToMatch iterate their elements in a deterministic
+    // order, so the replacements (ReplacePhi) are also done in a deterministic
+    // order.
     SmallSetVector<PHIPair, 8> Matched;
     SmallPtrSet<PHINode *, 8> WillNotMatch;
-    SmallSetVector<PHINode *, 32> &PhiNodesToMatch = ST.newPhiNodes();
+    PhiNodeSet &PhiNodesToMatch = ST.newPhiNodes();
     while (PhiNodesToMatch.size()) {
       PHINode *PHI = *PhiNodesToMatch.begin();
 
@@ -3031,129 +3212,86 @@ private:
       // Just remove all seen values in matcher. They will not match anything.
       PhiNotMatchedCount += WillNotMatch.size();
       for (auto *P : WillNotMatch)
-        PhiNodesToMatch.remove(P);
+        PhiNodesToMatch.erase(P);
     }
     return true;
   }
-  /// Fill the placeholder with values from predecessors and simplify it.
+  /// Fill the placeholders with values from predecessors and simplify them.
   void FillPlaceholders(FoldAddrToValueMapping &Map,
-                        SmallVectorImpl<ValueInBB> &TraverseOrder,
+                        SmallVectorImpl<Value *> &TraverseOrder,
                         SimplificationTracker &ST) {
     while (!TraverseOrder.empty()) {
-      auto Current = TraverseOrder.pop_back_val();
+      Value *Current = TraverseOrder.pop_back_val();
       assert(Map.find(Current) != Map.end() && "No node to fill!!!");
-      Value *CurrentValue = Current.first;
-      BasicBlock *CurrentBlock = Current.second;
       Value *V = Map[Current];
 
       if (SelectInst *Select = dyn_cast<SelectInst>(V)) {
         // CurrentValue also must be Select.
-        auto *CurrentSelect = cast<SelectInst>(CurrentValue);
+        auto *CurrentSelect = cast<SelectInst>(Current);
         auto *TrueValue = CurrentSelect->getTrueValue();
-        ValueInBB TrueItem = { TrueValue, isa<Instruction>(TrueValue)
-                                              ? CurrentBlock
-                                              : nullptr };
-        assert(Map.find(TrueItem) != Map.end() && "No True Value!");
-        Select->setTrueValue(ST.Get(Map[TrueItem]));
+        assert(Map.find(TrueValue) != Map.end() && "No True Value!");
+        Select->setTrueValue(ST.Get(Map[TrueValue]));
         auto *FalseValue = CurrentSelect->getFalseValue();
-        ValueInBB FalseItem = { FalseValue, isa<Instruction>(FalseValue)
-                                                ? CurrentBlock
-                                                : nullptr };
-        assert(Map.find(FalseItem) != Map.end() && "No False Value!");
-        Select->setFalseValue(ST.Get(Map[FalseItem]));
+        assert(Map.find(FalseValue) != Map.end() && "No False Value!");
+        Select->setFalseValue(ST.Get(Map[FalseValue]));
       } else {
         // Must be a Phi node then.
         PHINode *PHI = cast<PHINode>(V);
+        auto *CurrentPhi = dyn_cast<PHINode>(Current);
         // Fill the Phi node with values from predecessors.
-        bool IsDefinedInThisBB =
-            cast<Instruction>(CurrentValue)->getParent() == CurrentBlock;
-        auto *CurrentPhi = dyn_cast<PHINode>(CurrentValue);
-        for (auto B : predecessors(CurrentBlock)) {
-          Value *PV = IsDefinedInThisBB
-                          ? CurrentPhi->getIncomingValueForBlock(B)
-                          : CurrentValue;
-          ValueInBB item = { PV, isa<Instruction>(PV) ? B : nullptr };
-          assert(Map.find(item) != Map.end() && "No predecessor Value!");
-          PHI->addIncoming(ST.Get(Map[item]), B);
+        for (auto B : predecessors(PHI->getParent())) {
+          Value *PV = CurrentPhi->getIncomingValueForBlock(B);
+          assert(Map.find(PV) != Map.end() && "No predecessor Value!");
+          PHI->addIncoming(ST.Get(Map[PV]), B);
         }
       }
-      // Simplify if possible.
       Map[Current] = ST.Simplify(V);
     }
   }
 
-  /// Starting from value recursively iterates over predecessors up to known
-  /// ending values represented in a map. For each traversed block inserts
-  /// a placeholder Phi or Select.
+  /// Starting from original value recursively iterates over def-use chain up to
+  /// known ending values represented in a map. For each traversed phi/select
+  /// inserts a placeholder Phi or Select.
   /// Reports all new created Phi/Select nodes by adding them to set.
-  /// Also reports and order in what basic blocks have been traversed.
+  /// Also reports and order in what values have been traversed.
   void InsertPlaceholders(FoldAddrToValueMapping &Map,
-                          SmallVectorImpl<ValueInBB> &TraverseOrder,
+                          SmallVectorImpl<Value *> &TraverseOrder,
                           SimplificationTracker &ST) {
-    SmallVector<ValueInBB, 32> Worklist;
-    assert((isa<PHINode>(Original.first) || isa<SelectInst>(Original.first)) &&
+    SmallVector<Value *, 32> Worklist;
+    assert((isa<PHINode>(Original) || isa<SelectInst>(Original)) &&
            "Address must be a Phi or Select node");
     auto *Dummy = UndefValue::get(CommonType);
     Worklist.push_back(Original);
     while (!Worklist.empty()) {
-      auto Current = Worklist.pop_back_val();
-      // If value is not an instruction it is something global, constant,
-      // parameter and we can say that this value is observable in any block.
-      // Set block to null to denote it.
-      // Also please take into account that it is how we build anchors.
-      if (!isa<Instruction>(Current.first))
-        Current.second = nullptr;
+      Value *Current = Worklist.pop_back_val();
       // if it is already visited or it is an ending value then skip it.
       if (Map.find(Current) != Map.end())
         continue;
       TraverseOrder.push_back(Current);
 
-      Value *CurrentValue = Current.first;
-      BasicBlock *CurrentBlock = Current.second;
       // CurrentValue must be a Phi node or select. All others must be covered
       // by anchors.
-      Instruction *CurrentI = cast<Instruction>(CurrentValue);
-      bool IsDefinedInThisBB = CurrentI->getParent() == CurrentBlock;
-
-      unsigned PredCount = pred_size(CurrentBlock);
-      // if Current Value is not defined in this basic block we are interested
-      // in values in predecessors.
-      if (!IsDefinedInThisBB) {
-        assert(PredCount && "Unreachable block?!");
-        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
-                                       &CurrentBlock->front());
-        Map[Current] = PHI;
-        ST.insertNewPhi(PHI);
-        // Add all predecessors in work list.
-        for (auto B : predecessors(CurrentBlock))
-          Worklist.push_back({ CurrentValue, B });
-        continue;
-      }
-      // Value is defined in this basic block.
-      if (SelectInst *OrigSelect = dyn_cast<SelectInst>(CurrentI)) {
+      if (SelectInst *CurrentSelect = dyn_cast<SelectInst>(Current)) {
         // Is it OK to get metadata from OrigSelect?!
         // Create a Select placeholder with dummy value.
-        SelectInst *Select =
-            SelectInst::Create(OrigSelect->getCondition(), Dummy, Dummy,
-                               OrigSelect->getName(), OrigSelect, OrigSelect);
+        SelectInst *Select = SelectInst::Create(
+            CurrentSelect->getCondition(), Dummy, Dummy,
+            CurrentSelect->getName(), CurrentSelect, CurrentSelect);
         Map[Current] = Select;
         ST.insertNewSelect(Select);
-        // We are interested in True and False value in this basic block.
-        Worklist.push_back({ OrigSelect->getTrueValue(), CurrentBlock });
-        Worklist.push_back({ OrigSelect->getFalseValue(), CurrentBlock });
+        // We are interested in True and False values.
+        Worklist.push_back(CurrentSelect->getTrueValue());
+        Worklist.push_back(CurrentSelect->getFalseValue());
       } else {
         // It must be a Phi node then.
-        auto *CurrentPhi = cast<PHINode>(CurrentI);
-        // Create new Phi node for merge of bases.
-        assert(PredCount && "Unreachable block?!");
-        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
-                                       &CurrentBlock->front());
+        PHINode *CurrentPhi = cast<PHINode>(Current);
+        unsigned PredCount = CurrentPhi->getNumIncomingValues();
+        PHINode *PHI =
+            PHINode::Create(CommonType, PredCount, "sunk_phi", CurrentPhi);
         Map[Current] = PHI;
         ST.insertNewPhi(PHI);
-
-        // Add all predecessors in work list.
-        for (auto B : predecessors(CurrentBlock))
-          Worklist.push_back({ CurrentPhi->getIncomingValueForBlock(B), B });
+        for (Value *P : CurrentPhi->incoming_values())
+          Worklist.push_back(P);
       }
     }
   }
@@ -3285,6 +3423,41 @@ namespace {
 
 /// Hepler class to perform type promotion.
 class TypePromotionHelper {
+  /// Utility function to add a promoted instruction \p ExtOpnd to
+  /// \p PromotedInsts and record the type of extension we have seen.
+  static void addPromotedInst(InstrToOrigTy &PromotedInsts,
+                              Instruction *ExtOpnd,
+                              bool IsSExt) {
+    ExtType ExtTy = IsSExt ? SignExtension : ZeroExtension;
+    InstrToOrigTy::iterator It = PromotedInsts.find(ExtOpnd);
+    if (It != PromotedInsts.end()) {
+      // If the new extension is same as original, the information in
+      // PromotedInsts[ExtOpnd] is still correct.
+      if (It->second.getInt() == ExtTy)
+        return;
+
+      // Now the new extension is different from old extension, we make
+      // the type information invalid by setting extension type to
+      // BothExtension.
+      ExtTy = BothExtension;
+    }
+    PromotedInsts[ExtOpnd] = TypeIsSExt(ExtOpnd->getType(), ExtTy);
+  }
+
+  /// Utility function to query the original type of instruction \p Opnd
+  /// with a matched extension type. If the extension doesn't match, we
+  /// cannot use the information we had on the original type.
+  /// BothExtension doesn't match any extension type.
+  static const Type *getOrigType(const InstrToOrigTy &PromotedInsts,
+                                 Instruction *Opnd,
+                                 bool IsSExt) {
+    ExtType ExtTy = IsSExt ? SignExtension : ZeroExtension;
+    InstrToOrigTy::const_iterator It = PromotedInsts.find(Opnd);
+    if (It != PromotedInsts.end() && It->second.getInt() == ExtTy)
+      return It->second.getPointer();
+    return nullptr;
+  }
+
   /// Utility function to check whether or not a sign or zero extension
   /// of \p Inst with \p ConsideredExtType can be moved through \p Inst by
   /// either using the operands of \p Inst or promoting \p Inst.
@@ -3473,10 +3646,9 @@ bool TypePromotionHelper::canGetThrough(const Instruction *Inst,
   // I.e., check that trunc just drops extended bits of the same kind of
   // the extension.
   // #1 get the type of the operand and check the kind of the extended bits.
-  const Type *OpndType;
-  InstrToOrigTy::const_iterator It = PromotedInsts.find(Opnd);
-  if (It != PromotedInsts.end() && It->second.getInt() == IsSExt)
-    OpndType = It->second.getPointer();
+  const Type *OpndType = getOrigType(PromotedInsts, Opnd, IsSExt);
+  if (OpndType)
+    ;
   else if ((IsSExt && isa<SExtInst>(Opnd)) || (!IsSExt && isa<ZExtInst>(Opnd)))
     OpndType = Opnd->getOperand(0)->getType();
   else
@@ -3604,8 +3776,7 @@ Value *TypePromotionHelper::promoteOperandForOther(
 
   // Remember the original type of the instruction before promotion.
   // This is useful to know that the high bits are sign extended bits.
-  PromotedInsts.insert(std::pair<Instruction *, TypeIsSExt>(
-      ExtOpnd, TypeIsSExt(ExtOpnd->getType(), IsSExt)));
+  addPromotedInst(PromotedInsts, ExtOpnd, IsSExt);
   // Step #1.
   TPT.mutateType(ExtOpnd, Ext->getType());
   // Step #2.
@@ -3809,8 +3980,13 @@ bool AddressingModeMatcher::matchOperationAddr(User *AddrInst, unsigned Opcode,
       } else {
         uint64_t TypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
         if (ConstantInt *CI = dyn_cast<ConstantInt>(AddrInst->getOperand(i))) {
-          ConstantOffset += CI->getSExtValue() * TypeSize;
-        } else if (TypeSize) {  // Scales of zero don't do anything.
+          const APInt &CVal = CI->getValue();
+          if (CVal.getMinSignedBits() <= 64) {
+            ConstantOffset += CVal.getSExtValue() * TypeSize;
+            continue;
+          }
+        }
+        if (TypeSize) {  // Scales of zero don't do anything.
           // We only allow one variable index at the moment.
           if (VariableOperand != -1)
             return false;
@@ -4334,7 +4510,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   bool PhiOrSelectSeen = false;
   SmallVector<Instruction*, 16> AddrModeInsts;
   const SimplifyQuery SQ(*DL, TLInfo);
-  AddressingModeCombiner AddrModes(SQ, { Addr, MemoryInst->getParent() });
+  AddressingModeCombiner AddrModes(SQ, Addr);
   TypePromotionTransaction TPT(RemovedInsts);
   TypePromotionTransaction::ConstRestorationPt LastKnownGood =
       TPT.getRestorationPoint();
@@ -4951,8 +5127,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
           return LargeOffsetGEPID[LHS.first] < LargeOffsetGEPID[RHS.first];
         };
     // Sorting all the GEPs of the same data structures based on the offsets.
-    llvm::sort(LargeOffsetGEPs.begin(), LargeOffsetGEPs.end(),
-               compareGEPOffset);
+    llvm::sort(LargeOffsetGEPs, compareGEPOffset);
     LargeOffsetGEPs.erase(
         std::unique(LargeOffsetGEPs.begin(), LargeOffsetGEPs.end()),
         LargeOffsetGEPs.end());
@@ -4985,11 +5160,11 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
       }
 
       // Generate a new GEP to replace the current one.
-      IRBuilder<> Builder(GEP);
+      LLVMContext &Ctx = GEP->getContext();
       Type *IntPtrTy = DL->getIntPtrType(GEP->getType());
       Type *I8PtrTy =
-          Builder.getInt8PtrTy(GEP->getType()->getPointerAddressSpace());
-      Type *I8Ty = Builder.getInt8Ty();
+          Type::getInt8PtrTy(Ctx, GEP->getType()->getPointerAddressSpace());
+      Type *I8Ty = Type::getInt8Ty(Ctx);
 
       if (!NewBaseGEP) {
         // Create a new base if we don't have one yet.  Find the insertion
@@ -5025,6 +5200,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
         NewGEPBases.insert(NewBaseGEP);
       }
 
+      IRBuilder<> Builder(GEP);
       Value *NewGEP = NewBaseGEP;
       if (Offset == BaseOffset) {
         if (GEP->getType() != I8PtrTy)

@@ -239,7 +239,7 @@ public:
     SmallVector<std::pair<BasicBlock *, Value *>, 4> Ops;
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
-    llvm::sort(Ops.begin(), Ops.end());
+    llvm::sort(Ops);
     for (auto &P : Ops) {
       Blocks.push_back(P.first);
       Values.push_back(P.second);
@@ -258,14 +258,14 @@ public:
   /// Create a PHI from an array of incoming values and incoming blocks.
   template <typename VArray, typename BArray>
   ModelledPHI(const VArray &V, const BArray &B) {
-    std::copy(V.begin(), V.end(), std::back_inserter(Values));
-    std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
+    llvm::copy(V, std::back_inserter(Values));
+    llvm::copy(B, std::back_inserter(Blocks));
   }
 
   /// Create a PHI from [I[OpNum] for I in Insts].
   template <typename BArray>
   ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum, const BArray &B) {
-    std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
+    llvm::copy(B, std::back_inserter(Blocks));
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
   }
@@ -762,7 +762,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
   }
   if (Preds.size() < 2)
     return 0;
-  llvm::sort(Preds.begin(), Preds.end());
+  llvm::sort(Preds);
 
   unsigned NumOrigPreds = Preds.size();
   // We can only sink instructions through unconditional branches.
@@ -859,7 +859,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
   // Update metadata and IR flags.
   for (auto *I : Insts)
     if (I != I0) {
-      combineMetadataForCSE(I0, I);
+      combineMetadataForCSE(I0, I, true);
       I0->andIRFlags(I);
     }
 

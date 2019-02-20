@@ -28,24 +28,24 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG:[0-9]+]], 1
 ;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: # %test2
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK-NEXT: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: bne 0, .[[OPT2LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[TEST3LABEL:[_0-9A-Za-z]+]]: # %test3
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK-NEXT: andi. {{[0-9]+}}, [[TAGREG]], 4
 ;CHECK-NEXT: bne 0, .[[OPT3LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[TEST4LABEL:[_0-9A-Za-z]+]]: # %test4
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
+;CHECK-NEXT: andi. {{[0-9]+}}, [[TAGREG]], 8
 ;CHECK-NEXT: bne 0, .[[OPT4LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[EXITLABEL:[_0-9A-Za-z]+]]: # %exit
 ;CHECK: blr
 ;CHECK-NEXT: .[[OPT1LABEL]]:
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: beq 0, .[[TEST3LABEL]]
 ;CHECK-NEXT: .[[OPT2LABEL]]:
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 4
 ;CHECK-NEXT: beq 0, .[[TEST4LABEL]]
 ;CHECK-NEXT: .[[OPT3LABEL]]:
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 8
 ;CHECK-NEXT: beq 0, .[[EXITLABEL]]
 ;CHECK-NEXT: .[[OPT4LABEL]]:
 ;CHECK: b .[[EXITLABEL]]
@@ -119,18 +119,18 @@ exit:
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
 ;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: # %test2
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK-NEXT: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: bne 0, .[[OPT2LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[TEST3LABEL:[_0-9A-Za-z]+]]: # %test3
-;CHECK-NEXT: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK-NEXT: andi. {{[0-9]+}}, [[TAGREG]], 4
 ;CHECK-NEXT: bne 0, .[[OPT3LABEL:[_0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[EXITLABEL:[_0-9A-Za-z]+]]: # %exit
 ;CHECK: blr
 ;CHECK-NEXT: .[[OPT1LABEL]]:
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: beq 0, .[[TEST3LABEL]]
 ;CHECK-NEXT: .[[OPT2LABEL]]:
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 4
 ;CHECK-NEXT: beq 0, .[[EXITLABEL]]
 ;CHECK-NEXT: .[[OPT3LABEL]]:
 ;CHECK: b .[[EXITLABEL]]
@@ -285,23 +285,23 @@ exit:
 ;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 1
 ;CHECK-NEXT: bc 12, 1, .[[OPT1LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: # %test2
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: bne 0, .[[OPT2LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[TEST3LABEL:[._0-9A-Za-z]+]]: # %test3
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 4
 ;CHECK-NEXT: bne 0, .[[OPT3LABEL:[._0-9A-Za-z]+]]
 ;CHECK-NEXT: .[[TEST4LABEL:[._0-9A-Za-z]+]]: # %{{(test4|optional3)}}
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 8
 ;CHECK-NEXT: beq 0, .[[LATCHLABEL]]
 ;CHECK-NEXT: b .[[OPT4LABEL:[._0-9A-Za-z]+]]
 ;CHECK: [[OPT1LABEL]]
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 30, 30
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 2
 ;CHECK-NEXT: beq 0, .[[TEST3LABEL]]
 ;CHECK-NEXT: .[[OPT2LABEL]]
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 29, 29
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 4
 ;CHECK-NEXT: beq 0, .[[TEST4LABEL]]
 ;CHECK-NEXT: .[[OPT3LABEL]]
-;CHECK: rlwinm. {{[0-9]+}}, [[TAGREG]], 0, 28, 28
+;CHECK: andi. {{[0-9]+}}, [[TAGREG]], 8
 ;CHECK-NEXT: beq 0, .[[LATCHLABEL]]
 ;CHECK: [[OPT4LABEL]]:
 ;CHECK: b .[[LATCHLABEL]]
@@ -375,12 +375,12 @@ exit:
 ; Make sure then2 falls through from test2
 ; CHECK-NOT: # %{{[-_a-zA-Z0-9]+}}
 ; CHECK: # %bb.{{[0-9]+}}: # %then2
-; CHECK: rlwinm. {{[0-9]+}}, {{[0-9]+}}, 0, 29, 29
+; CHECK: andi. {{[0-9]+}}, {{[0-9]+}}, 4
 ; CHECK: # %else1
 ; CHECK: bl a
 ; CHECK: bl a
 ; Make sure then2 was copied into else1
-; CHECK: rlwinm. {{[0-9]+}}, {{[0-9]+}}, 0, 29, 29
+; CHECK: andi. {{[0-9]+}}, {{[0-9]+}}, 4
 ; CHECK: # %end1
 ; CHECK: bl d
 ; CHECK: # %else2

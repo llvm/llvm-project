@@ -3,7 +3,7 @@
 ; RUN: not llvm-lto2 run -o %t3.bc %t1.bc %t2.bc -r %t1.bc,bar,px \
 ; RUN:     -r %t1.bc,foo,x -r %t2.bc,foo,x -save-temps 2>&1 | FileCheck %s
 
-; CHECK: Interposable and available_externally symbol
+; CHECK: Interposable and available_externally/linkonce_odr/weak_odr symbol
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

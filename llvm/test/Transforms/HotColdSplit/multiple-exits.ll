@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit < %s | FileCheck %s
+; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 ; Source:
 ;
@@ -55,7 +55,6 @@ return:                                           ; preds = %exit2, %exit1
 }
 
 ; CHECK-LABEL: define {{.*}}@foo.cold.1(
-; TODO: Eliminate this unnecessary unconditional branch.
 ; CHECK: br
 ; CHECK: [[exit1Stub:.*]]:
 ; CHECK-NEXT: ret i1 true

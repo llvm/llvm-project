@@ -167,16 +167,15 @@ define <8 x i16> @test9(<8 x i16> %A, <8 x i16> %B) nounwind {
 ; CHECK-SSE2-LABEL: test9:
 ; CHECK-SSE2:       # %bb.0:
 ; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
-; CHECK-SSE2-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0,1]
-; CHECK-SSE2-NEXT:    por %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[2,3,4,5,6,7,8,9,10,11,12,13,14,15],zero,zero
+; CHECK-SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1]
+; CHECK-SSE2-NEXT:    por %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    retl
 ;
 ; CHECK-SSSE3-LABEL: test9:
 ; CHECK-SSSE3:       # %bb.0:
-; CHECK-SSSE3-NEXT:    palignr {{.*#+}} xmm1 = xmm1[2,3,4,5,6,7,8,9,10,11,12,13,14,15,0,1]
 ; CHECK-SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-SSSE3-NEXT:    palignr {{.*#+}} xmm0 = xmm1[2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm0[0,1]
 ; CHECK-SSSE3-NEXT:    retl
 ;
 ; CHECK-AVX-LABEL: test9:

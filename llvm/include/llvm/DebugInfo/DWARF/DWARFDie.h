@@ -180,6 +180,7 @@ public:
   /// \returns a valid DWARFDie instance if the attribute exists, or an invalid
   /// DWARFDie object if it doesn't.
   DWARFDie getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const;
+  DWARFDie getAttributeValueAsReferencedDie(const DWARFFormValue &V) const;
 
   /// Extract the range base attribute from this DIE as absolute section offset.
   ///
@@ -402,6 +403,10 @@ public:
       : Die(It.Die), AtEnd(!It.Die.getPreviousSibling()) {
     if (!AtEnd)
       Die = Die.getPreviousSibling();
+  }
+
+  llvm::DWARFDie::iterator base() const {
+    return llvm::DWARFDie::iterator(AtEnd ? Die : Die.getSibling());
   }
 
   reverse_iterator<llvm::DWARFDie::iterator> &operator++() {

@@ -34,7 +34,10 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      1800
 # CHECK-NEXT: Total Cycles:      3811
-# CHECK-NEXT: Dispatch Width:    2
+# CHECK-NEXT: Total uOps:        3400
+
+# CHECK:      Dispatch Width:    2
+# CHECK-NEXT: uOps Per Cycle:    0.89
 # CHECK-NEXT: IPC:               0.47
 # CHECK-NEXT: Block RThroughput: 38.0
 
@@ -104,17 +107,17 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK-NEXT: 1.     2     9.5    0.5    35.5      vaddps	%xmm0, %xmm1, %xmm3
 # CHECK-NEXT: 2.     2     11.5   0.0    33.5      vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT: 3.     2     12.5   2.0    31.5      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 4.     1     5.0    4.0    29.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 5.     1     6.0    6.0    27.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 6.     1     7.0    7.0    26.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 7.     1     8.0    8.0    24.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 8.     1     9.0    9.0    23.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 9.     1     10.0   10.0   21.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 10.    1     11.0   11.0   20.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 11.    1     12.0   12.0   18.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 12.    1     13.0   13.0   17.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 13.    1     14.0   14.0   15.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 14.    1     15.0   15.0   14.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 15.    1     16.0   16.0   12.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 16.    1     17.0   17.0   11.0      vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT: 17.    1     19.0   0.0    10.0      vandps	%xmm4, %xmm1, %xmm0
+# CHECK-NEXT: 4.     2     13.5   4.0    30.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 5.     2     14.5   6.0    28.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 6.     2     15.5   7.5    27.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 7.     2     16.5   9.0    25.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 8.     2     17.5   10.5   24.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 9.     2     18.5   12.0   22.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 10.    2     19.5   13.5   21.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 11.    2     20.5   15.0   19.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 12.    2     21.5   16.5   18.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 13.    2     22.5   18.0   16.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 14.    2     23.5   19.5   15.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 15.    2     21.0   21.0   13.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 16.    2     22.0   22.0   12.5      vaddps	%ymm3, %ymm1, %ymm4
+# CHECK-NEXT: 17.    2     24.0   0.0    11.5      vandps	%xmm4, %xmm1, %xmm0

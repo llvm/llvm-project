@@ -24,6 +24,8 @@ add_llvm_target(BPFCodeGen
   BPFSubtarget.cpp
   BPFTargetMachine.cpp
   BPFMIPeephole.cpp
+  BPFMIChecking.cpp
+  BTFDebug.cpp
   )
 
 add_subdirectory(AsmParser)

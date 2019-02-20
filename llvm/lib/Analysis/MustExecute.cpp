@@ -22,20 +22,32 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-/// Computes loop safety information, checks loop body & header
-/// for the possibility of may throw exception.
-///
-void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
+const DenseMap<BasicBlock *, ColorVector> &
+LoopSafetyInfo::getBlockColors() const {
+  return BlockColors;
+}
+
+void LoopSafetyInfo::copyColors(BasicBlock *New, BasicBlock *Old) {
+  ColorVector &ColorsForNewBlock = BlockColors[New];
+  ColorVector &ColorsForOldBlock = BlockColors[Old];
+  ColorsForNewBlock = ColorsForOldBlock;
+}
+
+bool SimpleLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
+  (void)BB;
+  return anyBlockMayThrow();
+}
+
+bool SimpleLoopSafetyInfo::anyBlockMayThrow() const {
+  return MayThrow;
+}
+
+void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   assert(CurLoop != nullptr && "CurLoop can't be null");
   BasicBlock *Header = CurLoop->getHeader();
-  // Setting default safety values.
-  SafetyInfo->MayThrow = false;
-  SafetyInfo->HeaderMayThrow = false;
   // Iterate over header and compute safety info.
-  SafetyInfo->HeaderMayThrow =
-    !isGuaranteedToTransferExecutionToSuccessor(Header);
-
-  SafetyInfo->MayThrow = SafetyInfo->HeaderMayThrow;
+  HeaderMayThrow = !isGuaranteedToTransferExecutionToSuccessor(Header);
+  MayThrow = HeaderMayThrow;
   // Iterate over loop instructions and compute safety info.
   // Skip header as it has been computed and stored in HeaderMayThrow.
   // The first block in loopinfo.Blocks is guaranteed to be the header.
@@ -43,23 +55,60 @@ void llvm::computeLoopSafetyInfo(LoopSafetyInfo *SafetyInfo, Loop *CurLoop) {
          "First block must be header");
   for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
                             BBE = CurLoop->block_end();
-       (BB != BBE) && !SafetyInfo->MayThrow; ++BB)
-    SafetyInfo->MayThrow |=
-      !isGuaranteedToTransferExecutionToSuccessor(*BB);
+       (BB != BBE) && !MayThrow; ++BB)
+    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(*BB);
 
+  computeBlockColors(CurLoop);
+}
+
+bool ICFLoopSafetyInfo::blockMayThrow(const BasicBlock *BB) const {
+  return ICF.hasICF(BB);
+}
+
+bool ICFLoopSafetyInfo::anyBlockMayThrow() const {
+  return MayThrow;
+}
+
+void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
+  assert(CurLoop != nullptr && "CurLoop can't be null");
+  ICF.clear();
+  MW.clear();
+  MayThrow = false;
+  // Figure out the fact that at least one block may throw.
+  for (auto &BB : CurLoop->blocks())
+    if (ICF.hasICF(&*BB)) {
+      MayThrow = true;
+      break;
+    }
+  computeBlockColors(CurLoop);
+}
+
+void ICFLoopSafetyInfo::insertInstructionTo(const BasicBlock *BB) {
+  ICF.invalidateBlock(BB);
+  MW.invalidateBlock(BB);
+}
+
+void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
+  // TODO: So far we just conservatively drop cache, but maybe we can not do it
+  // when Inst is not an ICF instruction. Follow-up on that.
+  ICF.invalidateBlock(Inst->getParent());
+  MW.invalidateBlock(Inst->getParent());
+}
+
+void LoopSafetyInfo::computeBlockColors(const Loop *CurLoop) {
   // Compute funclet colors if we might sink/hoist in a function with a funclet
   // personality routine.
   Function *Fn = CurLoop->getHeader()->getParent();
   if (Fn->hasPersonalityFn())
     if (Constant *PersonalityFn = Fn->getPersonalityFn())
       if (isScopedEHPersonality(classifyEHPersonality(PersonalityFn)))
-        SafetyInfo->BlockColors = colorEHFunclets(*Fn);
+        BlockColors = colorEHFunclets(*Fn);
 }
 
 /// Return true if we can prove that the given ExitBlock is not reached on the
 /// first iteration of the given loop.  That is, the backedge of the loop must
 /// be executed before the ExitBlock is executed in any dynamic execution trace.
-static bool CanProveNotTakenFirstIteration(BasicBlock *ExitBlock,
+static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
                                            const DominatorTree *DT,
                                            const Loop *CurLoop) {
   auto *CondExitBlock = ExitBlock->getSinglePredecessor();
@@ -99,15 +148,94 @@ static bool CanProveNotTakenFirstIteration(BasicBlock *ExitBlock,
   return SimpleCst->isAllOnesValue();
 }
 
+/// Collect all blocks from \p CurLoop which lie on all possible paths from
+/// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
+/// \p Predecessors. If \p BB is the header, \p Predecessors will be empty.
+static void collectTransitivePredecessors(
+    const Loop *CurLoop, const BasicBlock *BB,
+    SmallPtrSetImpl<const BasicBlock *> &Predecessors) {
+  assert(Predecessors.empty() && "Garbage in predecessors set?");
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
+  if (BB == CurLoop->getHeader())
+    return;
+  SmallVector<const BasicBlock *, 4> WorkList;
+  for (auto *Pred : predecessors(BB)) {
+    Predecessors.insert(Pred);
+    WorkList.push_back(Pred);
+  }
+  while (!WorkList.empty()) {
+    auto *Pred = WorkList.pop_back_val();
+    assert(CurLoop->contains(Pred) && "Should only reach loop blocks!");
+    // We are not interested in backedges and we don't want to leave loop.
+    if (Pred == CurLoop->getHeader())
+      continue;
+    // TODO: If BB lies in an inner loop of CurLoop, this will traverse over all
+    // blocks of this inner loop, even those that are always executed AFTER the
+    // BB. It may make our analysis more conservative than it could be, see test
+    // @nested and @nested_no_throw in test/Analysis/MustExecute/loop-header.ll.
+    // We can ignore backedge of all loops containing BB to get a sligtly more
+    // optimistic result.
+    for (auto *PredPred : predecessors(Pred))
+      if (Predecessors.insert(PredPred).second)
+        WorkList.push_back(PredPred);
+  }
+}
+
+bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
+                                             const BasicBlock *BB,
+                                             const DominatorTree *DT) const {
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
+
+  // Fast path: header is always reached once the loop is entered.
+  if (BB == CurLoop->getHeader())
+    return true;
+
+  // Collect all transitive predecessors of BB in the same loop. This set will
+  // be a subset of the blocks within the loop.
+  SmallPtrSet<const BasicBlock *, 4> Predecessors;
+  collectTransitivePredecessors(CurLoop, BB, Predecessors);
+
+  // Make sure that all successors of all predecessors of BB are either:
+  // 1) BB,
+  // 2) Also predecessors of BB,
+  // 3) Exit blocks which are not taken on 1st iteration.
+  // Memoize blocks we've already checked.
+  SmallPtrSet<const BasicBlock *, 4> CheckedSuccessors;
+  for (auto *Pred : Predecessors) {
+    // Predecessor block may throw, so it has a side exit.
+    if (blockMayThrow(Pred))
+      return false;
+    for (auto *Succ : successors(Pred))
+      if (CheckedSuccessors.insert(Succ).second &&
+          Succ != BB && !Predecessors.count(Succ))
+        // By discharging conditions that are not executed on the 1st iteration,
+        // we guarantee that *at least* on the first iteration all paths from
+        // header that *may* execute will lead us to the block of interest. So
+        // that if we had virtually peeled one iteration away, in this peeled
+        // iteration the set of predecessors would contain only paths from
+        // header to BB without any exiting edges that may execute.
+        //
+        // TODO: We only do it for exiting edges currently. We could use the
+        // same function to skip some of the edges within the loop if we know
+        // that they will not be taken on the 1st iteration.
+        //
+        // TODO: If we somehow know the number of iterations in loop, the same
+        // check may be done for any arbitrary N-th iteration as long as N is
+        // not greater than minimum number of iterations in this loop.
+        if (CurLoop->contains(Succ) ||
+            !CanProveNotTakenFirstIteration(Succ, DT, CurLoop))
+          return false;
+  }
+
+  // All predecessors can only lead us to BB.
+  return true;
+}
+
 /// Returns true if the instruction in a loop is guaranteed to execute at least
 /// once.
-bool llvm::isGuaranteedToExecute(const Instruction &Inst,
-                                 const DominatorTree *DT, const Loop *CurLoop,
-                                 const LoopSafetyInfo *SafetyInfo) {
-  // We have to check to make sure that the instruction dominates all
-  // of the exit blocks.  If it doesn't, then there is a path out of the loop
-  // which does not execute this instruction, so we can't hoist it.
-
+bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
+                                                 const DominatorTree *DT,
+                                                 const Loop *CurLoop) const {
   // If the instruction is in the header block for the loop (which is very
   // common), it is always guaranteed to dominate the exit blocks.  Since this
   // is a common case, and can save some work, check it now.
@@ -116,52 +244,48 @@ bool llvm::isGuaranteedToExecute(const Instruction &Inst,
     // Inst unless we can prove that Inst comes before the potential implicit
     // exit.  At the moment, we use a (cheap) hack for the common case where
     // the instruction of interest is the first one in the block.
-    return !SafetyInfo->HeaderMayThrow ||
-      Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
+    return !HeaderMayThrow ||
+           Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
-  // Somewhere in this loop there is an instruction which may throw and make us
-  // exit the loop.
-  if (SafetyInfo->MayThrow)
-    return false;
+  // If there is a path from header to exit or latch that doesn't lead to our
+  // instruction's block, return false.
+  return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+}
 
-  // Note: There are two styles of reasoning intermixed below for
-  // implementation efficiency reasons.  They are:
-  // 1) If we can prove that the instruction dominates all exit blocks, then we
-  // know the instruction must have executed on *some* iteration before we
-  // exit.  We do not prove *which* iteration the instruction must execute on.
-  // 2) If we can prove that the instruction dominates the latch and all exits
-  // which might be taken on the first iteration, we know the instruction must
-  // execute on the first iteration.  This second style allows a conditional
-  // exit before the instruction of interest which is provably not taken on the
-  // first iteration.  This is a quite common case for range check like
-  // patterns.  TODO: support loops with multiple latches.
+bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
+                                              const DominatorTree *DT,
+                                              const Loop *CurLoop) const {
+  return !ICF.isDominatedByICFIFromSameBlock(&Inst) &&
+         allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+}
 
-  const bool InstDominatesLatch =
-    CurLoop->getLoopLatch() != nullptr &&
-    DT->dominates(Inst.getParent(), CurLoop->getLoopLatch());
+bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
+                                                 const Loop *CurLoop) const {
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
 
-  // Get the exit blocks for the current loop.
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  CurLoop->getExitBlocks(ExitBlocks);
+  // Fast path: there are no instructions before header.
+  if (BB == CurLoop->getHeader())
+    return true;
 
-  // Verify that the block dominates each of the exit blocks of the loop.
-  for (BasicBlock *ExitBlock : ExitBlocks)
-    if (!DT->dominates(Inst.getParent(), ExitBlock))
-      if (!InstDominatesLatch ||
-          !CanProveNotTakenFirstIteration(ExitBlock, DT, CurLoop))
-        return false;
-
-  // As a degenerate case, if the loop is statically infinite then we haven't
-  // proven anything since there are no exit blocks.
-  if (ExitBlocks.empty())
-    return false;
-
-  // FIXME: In general, we have to prove that the loop isn't an infinite loop.
-  // See http::llvm.org/PR24078 .  (The "ExitBlocks.empty()" check above is
-  // just a special case of this.)
+  // Collect all transitive predecessors of BB in the same loop. This set will
+  // be a subset of the blocks within the loop.
+  SmallPtrSet<const BasicBlock *, 4> Predecessors;
+  collectTransitivePredecessors(CurLoop, BB, Predecessors);
+  // Find if there any instruction in either predecessor that could write
+  // to memory.
+  for (auto *Pred : Predecessors)
+    if (MW.mayWriteToMemory(Pred))
+      return false;
   return true;
 }
 
+bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const Instruction &I,
+                                                 const Loop *CurLoop) const {
+  auto *BB = I.getParent();
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
+  return !MW.isDominatedByMemoryWriteFromSameBlock(&I) &&
+         doesNotWriteMemoryBefore(BB, CurLoop);
+}
 
 namespace {
   struct MustExecutePrinter : public FunctionPass {
@@ -195,9 +319,9 @@ static bool isMustExecuteIn(const Instruction &I, Loop *L, DominatorTree *DT) {
   // TODO: merge these two routines.  For the moment, we display the best
   // result obtained by *either* implementation.  This is a bit unfair since no
   // caller actually gets the full power at the moment.
-  LoopSafetyInfo LSI;
-  computeLoopSafetyInfo(&LSI, L);
-  return isGuaranteedToExecute(I, DT, L, &LSI) ||
+  SimpleLoopSafetyInfo LSI;
+  LSI.computeLoopSafetyInfo(L);
+  return LSI.isGuaranteedToExecute(I, DT, L) ||
     isGuaranteedToExecuteForEveryIteration(&I, L);
 }
 

@@ -25,13 +25,13 @@
   ; CHECK: ![[CS3]] = distinct !DILocation(line: 8, column: 3, scope: !{{[0-9]+}})
   ;
   ; CHECK:  bb.1.if.then:
-  ; CHECK:      DBG_VALUE debug-use $ebx, debug-use $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
-  ; CHECK-NOT:  DBG_VALUE debug-use $ebx, debug-use $noreg, ![[A_VAR]], !DIExpression(), debug-location
-  ; CHECK:      DBG_VALUE debug-use $ebx, debug-use $noreg, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS2]]
+  ; CHECK:      DBG_VALUE $ebx, $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+  ; CHECK-NOT:  DBG_VALUE $ebx, $noreg, ![[A_VAR]], !DIExpression(), debug-location
+  ; CHECK:      DBG_VALUE $ebx, $noreg, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS2]]
   ; CHECK: bb.2.if.end:
-  ; CHECK:     DBG_VALUE debug-use $ebx, debug-use $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
-  ; CHECK-NOT: DBG_VALUE debug-use $ebx, debug-use $noreg, ![[A_VAR]], !DIExpression(), debug-location
-  ; CHECK:     DBG_VALUE debug-use $ebx, debug-use $noreg, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS3]]
+  ; CHECK:     DBG_VALUE $ebx, $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+  ; CHECK-NOT: DBG_VALUE $ebx, $noreg, ![[A_VAR]], !DIExpression(), debug-location
+  ; CHECK:     DBG_VALUE $ebx, $noreg, ![[A_VAR]], !DIExpression(), debug-location ![[INLCS3]]
   ;
   ; ModuleID = 'livedebugvalues-limit.ll'
   source_filename = "livedebugvalues-limit.c"
@@ -159,7 +159,7 @@ body:             |
     CFI_INSTRUCTION offset $rbp, -16
     $rbp = frame-setup MOV64rr $rsp
     CFI_INSTRUCTION def_cfa_register $rbp
-    DBG_VALUE debug-use $edi, debug-use _, !12, !13, debug-location !14
+    DBG_VALUE $edi, _, !12, !13, debug-location !14
     $rbp = POP64r implicit-def $rsp, implicit $rsp, debug-location !15
     TAILJMPd64 @sink, csr_64, implicit $rsp, implicit $rsp, implicit $edi, debug-location !15
 
@@ -208,10 +208,10 @@ body:             |
     frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
     frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION offset $rbx, -24
-    DBG_VALUE debug-use $edi, debug-use _, !19, !13, debug-location !20
+    DBG_VALUE $edi, _, !19, !13, debug-location !20
     $ebx = MOV32rr $edi
-    DBG_VALUE debug-use $ebx, debug-use _, !12, !13, debug-location !21
-    DBG_VALUE debug-use $ebx, debug-use _, !19, !13, debug-location !20
+    DBG_VALUE $ebx, _, !12, !13, debug-location !21
+    DBG_VALUE $ebx, _, !19, !13, debug-location !20
     CALL64pcrel32 @sink, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !23
     TEST32rr $ebx, $ebx, implicit-def $eflags, debug-location !24
     JE_1 %bb.2.if.end, implicit $eflags
@@ -220,18 +220,18 @@ body:             |
     successors: %bb.2.if.end
     liveins: $ebx, $rbp
   
-    DBG_VALUE debug-use $ebx, debug-use _, !19, !13, debug-location !20
-    DBG_VALUE debug-use $ebx, debug-use _, !12, !13, debug-location !27
+    DBG_VALUE $ebx, _, !19, !13, debug-location !20
+    DBG_VALUE $ebx, _, !12, !13, debug-location !27
     $edi = MOV32rr $ebx, debug-location !29
     CALL64pcrel32 @sink, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !29
   
   bb.2.if.end:
     liveins: $ebx, $rbp
   
-    DBG_VALUE debug-use $ebx, debug-use _, !19, !13, debug-location !20
+    DBG_VALUE $ebx, _, !19, !13, debug-location !20
     $edi = MOV32rr killed $ebx, debug-location !33
     $rsp = ADD64ri8 $rsp, 8, implicit-def dead $eflags, debug-location !33
-    DBG_VALUE debug-use $ebx, debug-use _, !12, !13, debug-location !31
+    DBG_VALUE $ebx, _, !12, !13, debug-location !31
     $rbx = POP64r implicit-def $rsp, implicit $rsp, debug-location !33
     $rbp = POP64r implicit-def $rsp, implicit $rsp, debug-location !33
     TAILJMPd64 @sink, csr_64, implicit $rsp, implicit $rsp, implicit $edi, debug-location !33

@@ -182,7 +182,7 @@ define amdgpu_kernel void @cmp_sext_k_neg1(i1 addrspace(1)* %out, i8 addrspace(1
 
 ; FUNC-LABEL: {{^}}v_cmp_sext_k_neg1_i8_sext_arg:
 ; GCN: v_cmp_ne_u32_e32 vcc, -1, v0
-; GCN-NEXT: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], 0, 1, vcc
+; GCN: v_cndmask_b32_e64 [[SELECT:v[0-9]+]], 0, 1, vcc
 ; GCN: buffer_store_byte [[SELECT]]
 define void @v_cmp_sext_k_neg1_i8_sext_arg(i8 signext %b) nounwind {
   %b.ext = sext i8 %b to i32

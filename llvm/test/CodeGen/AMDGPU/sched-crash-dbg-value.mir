@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa-amdgizcl -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
 
 --- |
   %struct.widget.0 = type { float, i32, i32 }
@@ -169,7 +169,7 @@
 ---
 
 # CHECK: name: sched_dbg_value_crash
-# CHECK: DBG_VALUE debug-use %99, debug-use $noreg, !5, !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), debug-location !8
+# CHECK: DBG_VALUE %99, $noreg, !5, !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), debug-location !8
 
 name:            sched_dbg_value_crash
 alignment:       0
@@ -319,7 +319,7 @@ body:             |
     %124:vgpr_32 = IMPLICIT_DEF
     %125:vgpr_32 = IMPLICIT_DEF
     %126:vgpr_32 = IMPLICIT_DEF
-    DBG_VALUE debug-use %103, debug-use _, !5, !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), debug-location !8
+    DBG_VALUE %103, _, !5, !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), debug-location !8
     ADJCALLSTACKUP 0, 0, implicit-def $sgpr32, implicit $sgpr32
     %127:sreg_64 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-rel32-lo) @func + 4, target-flags(amdgpu-rel32-hi) @func + 4, implicit-def dead $scc
     $sgpr4 = COPY $sgpr101

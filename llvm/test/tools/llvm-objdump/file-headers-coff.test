@@ -10,4 +10,4 @@ sections:
 symbols:
 
 # CHECK: architecture: i386
-# CHECK: start address: 0x0000
+# CHECK: start address: 0x00000000

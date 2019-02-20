@@ -125,7 +125,7 @@ Error PDBFile::parseFileHeaders() {
   if (auto EC = Reader.readObject(SB)) {
     consumeError(std::move(EC));
     return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Does not contain superblock");
+                                "MSF superblock is missing");
   }
 
   if (auto EC = msf::validateSuperBlock(*SB))
@@ -401,7 +401,9 @@ uint32_t PDBFile::getPointerSize() {
   return 4;
 }
 
-bool PDBFile::hasPDBDbiStream() const { return StreamDBI < getNumStreams(); }
+bool PDBFile::hasPDBDbiStream() const {
+  return StreamDBI < getNumStreams() && getStreamByteSize(StreamDBI) > 0;
+}
 
 bool PDBFile::hasPDBGlobalsStream() {
   auto DbiS = getPDBDbiStream();

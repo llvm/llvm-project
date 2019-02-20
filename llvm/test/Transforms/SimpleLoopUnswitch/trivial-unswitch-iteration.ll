@@ -1,4 +1,5 @@
 ; RUN: opt -passes='loop(loop-instsimplify,simplify-cfg,unswitch),verify<loops>' -S < %s | FileCheck %s
+; RUN: opt -enable-mssa-loop-dependency=true -verify-memoryssa -passes='loop(loop-instsimplify,simplify-cfg,unswitch),verify<loops>' -S < %s | FileCheck %s
 
 declare void @some_func() noreturn
 

@@ -103,7 +103,7 @@ bool PPCDispatchGroupSBHazardRecognizer::mustComeFirst(const MCInstrDesc *MCID,
   case PPC::Sched::IIC_LdStLHA:
   case PPC::Sched::IIC_LdStLHAU:
   case PPC::Sched::IIC_LdStLWA:
-  case PPC::Sched::IIC_LdStSTDU:
+  case PPC::Sched::IIC_LdStSTU:
   case PPC::Sched::IIC_LdStSTFDU:
     NSlots = 2;
     break;
@@ -112,7 +112,7 @@ bool PPCDispatchGroupSBHazardRecognizer::mustComeFirst(const MCInstrDesc *MCID,
   case PPC::Sched::IIC_LdStLHAUX:
   case PPC::Sched::IIC_LdStLWARX:
   case PPC::Sched::IIC_LdStLDARX:
-  case PPC::Sched::IIC_LdStSTDUX:
+  case PPC::Sched::IIC_LdStSTUX:
   case PPC::Sched::IIC_LdStSTDCX:
   case PPC::Sched::IIC_LdStSTWCX:
   case PPC::Sched::IIC_BrMCRX: // mtcr

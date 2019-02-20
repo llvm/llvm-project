@@ -1,6 +1,16 @@
-; RUN: llc -verify-machineinstrs < %s
-target triple = "powerpc-apple-darwin9.2.2"
+; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+target triple = "powerpc-unknown-linux-gnu"
 
+; CHECK: func:
+; CHECK: li 3, 0
+; CHECK: li 4, 0
+; CHECK: li 5, 0
+; CHECK: li 6, 0
+; CHECK: li 7, 0
+; CHECK: li 8, 0
+; CHECK: li 9, 0
+; CHECK: li 10, 0
+; CHECK: blr
 define i256 @func(ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) nounwind readnone  {
 entry:
 	br i1 false, label %bb36, label %bb484

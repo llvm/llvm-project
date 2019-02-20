@@ -274,11 +274,24 @@ entry:
   ret double %result
 }
 
+; CHECK-LABEL: f19
+; COMMON: fmod
+define double @f19() {
+entry:
+  %rem = call double @llvm.experimental.constrained.frem.f64(
+                                               double 1.000000e+00,
+                                               double 1.000000e+01,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict")
+  ret double %rem
+}
+
 @llvm.fp.env = thread_local global i8 zeroinitializer, section "llvm.metadata"
-declare double @llvm.experimental.constrained.fdiv.f64(double, double, metadata, metadata)
-declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fadd.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.fsub.f64(double, double, metadata, metadata)
+declare double @llvm.experimental.constrained.fmul.f64(double, double, metadata, metadata)
+declare double @llvm.experimental.constrained.fdiv.f64(double, double, metadata, metadata)
+declare double @llvm.experimental.constrained.frem.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.sqrt.f64(double, metadata, metadata)
 declare double @llvm.experimental.constrained.pow.f64(double, double, metadata, metadata)
 declare double @llvm.experimental.constrained.powi.f64(double, i32, metadata, metadata)

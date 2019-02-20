@@ -6,7 +6,7 @@
 ; GCN-LABEL: {{^}}testKernel
 ; GCN: BB0_1:
 ; GCN: s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT: v_cmp_eq_f32_e64
+; GCN-NEXT: v_cmp_eq_f32_e32
 ; GCN: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GCN-NEXT: v_cmp_eq_f32_e32
 ; GCN: s_waitcnt vmcnt(0) lgkmcnt(0)

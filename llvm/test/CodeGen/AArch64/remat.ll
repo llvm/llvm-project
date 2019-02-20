@@ -13,6 +13,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=saphira -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=kryo -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=thunderx2t99 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=tsv110 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mattr=+custom-cheap-as-move -o - %s | FileCheck %s
 
 %X = type { i64, i64, i64 }

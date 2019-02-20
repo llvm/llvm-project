@@ -80,8 +80,8 @@ define double @f7(double %a, double %b) {
 ; block generated, odds are good that we have close to the ideal code for this:
 ;
 ; CHECK-NEON-LABEL: f8:
-; CHECK-NEON:      movw    [[R3:r[0-9]+]], #1123
 ; CHECK-NEON:      adr     [[R2:r[0-9]+]], LCPI7_0
+; CHECK-NEON:      movw    [[R3:r[0-9]+]], #1123
 ; CHECK-NEON-NEXT: cmp     r0, [[R3]]
 ; CHECK-NEON-NEXT: it      eq
 ; CHECK-NEON-NEXT: addeq{{.*}} [[R2]], #4
@@ -142,3 +142,14 @@ define float @f12(i32 %a, i32 %b) nounwind uwtable readnone ssp {
   ret float %2
 }
 
+; CHECK-LABEL: test_overflow_recombine:
+define i1 @test_overflow_recombine(i32 %in) {
+; CHECK: smull [[LO:r[0-9]+]], [[HI:r[0-9]+]]
+; CHECK: subs [[ZERO:r[0-9]+]], [[HI]], [[LO]], asr #31
+; CHECK: movne [[ZERO]], #1
+  %prod = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 0, i32 %in)
+  %overflow = extractvalue { i32, i1 } %prod, 1
+  ret i1 %overflow
+}
+
+declare { i32, i1 } @llvm.smul.with.overflow.i32(i32, i32)

@@ -11,6 +11,7 @@
 #define LLVM_ANALYSIS_OBJCARCINSTKIND_H
 
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {
@@ -48,7 +49,7 @@ enum class ARCInstKind {
   CopyWeak,                 ///< objc_copyWeak (derived)
   DestroyWeak,              ///< objc_destroyWeak (derived)
   StoreStrong,              ///< objc_storeStrong (derived)
-  IntrinsicUser,            ///< clang.arc.use
+  IntrinsicUser,            ///< llvm.objc.clang.arc.use
   CallOrUser,               ///< could call objc_release and/or "use" pointers
   Call,                     ///< could call objc_release
   User,                     ///< could "use" a pointer

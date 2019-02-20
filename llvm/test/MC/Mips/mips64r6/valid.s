@@ -242,6 +242,10 @@ a:
         sdbbp     34             # CHECK: sdbbp 34               # encoding: [0x00,0x00,0x08,0x8e]
                                  # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SDBBP
                                  # CHECK-NOT:                    # <MCInst #{{[0-9]+}} SDBBP_MM
+        sigrie                   # CHECK: sigrie                 # encoding: [0x04,0x17,0x00,0x00]
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SIGRIE
+        sigrie    257            # CHECK: sigrie 257             # encoding: [0x04,0x17,0x01,0x01]
+                                 # CHECK-NEXT:                   # <MCInst #{{[0-9]+}} SIGRIE
         sdc2    $20,629($s2)     # CHECK: sdc2 $20, 629($18)     # encoding: [0x49,0xf4,0x92,0x75]
         sel.d   $f0,$f1,$f2      # CHECK: sel.d $f0, $f1, $f2 # encoding: [0x46,0x22,0x08,0x10]
         sel.s   $f0,$f1,$f2      # CHECK: sel.s $f0, $f1, $f2 # encoding: [0x46,0x02,0x08,0x10]

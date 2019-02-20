@@ -246,40 +246,6 @@ define <4 x i32> @test_v4i32_xor_signmask_sub_const_undef(<4 x i32> %a0) {
   ret <4 x i32> %2
 }
 
-; ~(X-C) --> (-C-1)-X
-
-define <4 x i32> @test_v4i32_not_signmask_sub_var_splatconst(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_not_signmask_sub_var_splatconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 2, i32 2, i32 2, i32 2>, [[A0:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
-;
-  %1 = sub <4 x i32> %a0, <i32  3, i32  3, i32  3, i32  3>
-  %2 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %1
-  ret <4 x i32> %2
-}
-
-define <4 x i32> @test_v4i32_not_signmask_sub_var_const(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_not_signmask_sub_var_const(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -3, i32 -5, i32 1, i32 -15>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
-;
-  %1 = sub <4 x i32> %a0, <i32 3, i32 5, i32 -1, i32 15>
-  %2 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %1
-  ret <4 x i32> %2
-}
-
-define <4 x i32> @test_v4i32_not_signmask_sub_var_const_undef(<4 x i32> %a0) {
-; CHECK-LABEL: @test_v4i32_not_signmask_sub_var_const_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -3, i32 undef, i32 1, i32 -15>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -1, i32 -1, i32 -1, i32 undef>
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
-;
-  %1 = sub <4 x i32> %a0, <i32 3, i32 undef, i32 -1, i32 15>
-  %2 = xor <4 x i32> <i32 -1, i32 -1, i32 -1, i32 undef>, %1
-  ret <4 x i32> %2
-}
-
 ; (X + C) ^ signmask -> (X + C + signmask)
 
 define <4 x i32> @test_v4i32_xor_signmask_add_splatconst(<4 x i32> %a0) {

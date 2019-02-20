@@ -116,14 +116,14 @@ define <16 x float> @makefloat(float %f1, float %f2, float %f3, float %f4, float
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm1, %zmm24, %zmm24
 ; CHECK-NEXT:    vmovaps %zmm24, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovaps {{[0-9]+}}(%rsp), %zmm0
-; CHECK-NEXT:    vmovss %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    vmovss %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    vmovss %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    vmovss %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    vmovss %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    vmovss %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; CHECK-NEXT:    vmovss %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vmovss %xmm14, (%rsp) # 4-byte Spill
+; CHECK-NEXT:    vmovss %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
+; CHECK-NEXT:    vmovss %xmm15, (%rsp) # 4-byte Spill
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8

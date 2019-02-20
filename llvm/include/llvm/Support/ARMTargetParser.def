@@ -106,6 +106,11 @@ ARM_ARCH("armv8.4-a", ARMV8_4A, "8.4-A", "v8.4a",
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
           ARM::AEK_DOTPROD))
+ARM_ARCH("armv8.5-a", ARMV8_5A, "8.5-A", "v8.5a",
+         ARMBuildAttrs::CPUArch::v8_A, FK_CRYPTO_NEON_FP_ARMV8,
+         (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
+          ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC | ARM::AEK_RAS |
+          ARM::AEK_DOTPROD))
 ARM_ARCH("armv8-r", ARMV8R, "8-R", "v8r", ARMBuildAttrs::CPUArch::v8_R,
           FK_NEON_FP_ARMV8,
           (ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB |
@@ -152,6 +157,8 @@ ARM_ARCH_EXT_NAME("iwmmxt",   ARM::AEK_IWMMXT,   nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("iwmmxt2",  ARM::AEK_IWMMXT2,  nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("maverick", ARM::AEK_MAVERICK, nullptr,  nullptr)
 ARM_ARCH_EXT_NAME("xscale",   ARM::AEK_XSCALE,   nullptr,  nullptr)
+ARM_ARCH_EXT_NAME("fp16fml",  ARM::AEK_FP16FML,  "+fp16fml", "-fp16fml")
+ARM_ARCH_EXT_NAME("sb",       ARM::AEK_SB,       "+sb",      "-sb")
 #undef ARM_ARCH_EXT_NAME
 
 #ifndef ARM_HW_DIV_NAME
@@ -202,10 +209,9 @@ ARM_CPU_NAME("arm926ej-s", ARMV5TEJ, FK_NONE, true, ARM::AEK_NONE)
 ARM_CPU_NAME("arm1136j-s", ARMV6, FK_NONE, false, ARM::AEK_NONE)
 ARM_CPU_NAME("arm1136jf-s", ARMV6, FK_VFPV2, true, ARM::AEK_NONE)
 ARM_CPU_NAME("arm1136jz-s", ARMV6, FK_NONE, false, ARM::AEK_NONE)
-ARM_CPU_NAME("arm1176j-s", ARMV6K, FK_NONE, true, ARM::AEK_NONE)
-ARM_CPU_NAME("arm1176jz-s", ARMV6KZ, FK_NONE, false, ARM::AEK_NONE)
-ARM_CPU_NAME("mpcore", ARMV6K, FK_VFPV2, false, ARM::AEK_NONE)
+ARM_CPU_NAME("mpcore", ARMV6K, FK_VFPV2, true, ARM::AEK_NONE)
 ARM_CPU_NAME("mpcorenovfp", ARMV6K, FK_NONE, false, ARM::AEK_NONE)
+ARM_CPU_NAME("arm1176jz-s", ARMV6KZ, FK_NONE, false, ARM::AEK_NONE)
 ARM_CPU_NAME("arm1176jzf-s", ARMV6KZ, FK_VFPV2, true, ARM::AEK_NONE)
 ARM_CPU_NAME("arm1156t2-s", ARMV6T2, FK_NONE, true, ARM::AEK_NONE)
 ARM_CPU_NAME("arm1156t2f-s", ARMV6T2, FK_VFPV2, false, ARM::AEK_NONE)

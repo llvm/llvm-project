@@ -37,7 +37,7 @@ macho-i386: 00000000         *UND*          _puts
 ELF-shared: shared-object-test.elf-i386:     file format
 ELF-shared: SYMBOL TABLE:
 ELF-shared: 00000200 l     F .text 00000003 local_func
-ELF-shared: 000012b8 l       *ABS* 00000000 .hidden _GLOBAL_OFFSET_TABLE_
-ELF-shared: 00001248 l       *ABS* 00000000 .hidden _DYNAMIC
-ELF-shared: 000012c4 g       .data 00000004 defined_sym
+ELF-shared: 000012b8 l     O *ABS*           00000000 .hidden _GLOBAL_OFFSET_TABLE_
+ELF-shared: 00001248 l     O *ABS*           00000000 .hidden _DYNAMIC
+ELF-shared: 000012c4 g     O .data           00000004 defined_sym
 ELF-shared: 000001f0 g     F .text 00000003 global_func

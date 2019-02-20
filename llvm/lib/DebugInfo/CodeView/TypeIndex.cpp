@@ -74,6 +74,9 @@ StringRef TypeIndex::simpleTypeName(TypeIndex TI) {
   if (TI.isNoneType())
     return "<no type>";
 
+  if (TI == TypeIndex::NullptrT())
+    return "std::nullptr_t";
+
   // This is a simple type.
   for (const auto &SimpleTypeName : SimpleTypeNames) {
     if (SimpleTypeName.Kind == TI.getSimpleKind()) {

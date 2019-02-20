@@ -130,6 +130,10 @@ OPTIONS
 
  Generate enhanced disassembly info.
 
+.. option:: -gen-exegesis
+
+ Generate llvm-exegesis tables.
+
 .. option:: -version
 
  Show the version number of this program.

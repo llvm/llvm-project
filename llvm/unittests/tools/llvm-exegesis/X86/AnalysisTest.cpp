@@ -1,3 +1,12 @@
+//===-- AnalysisTest.cpp ---------------------------------------*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "Analysis.h"
 
 #include <cassert>
@@ -8,6 +17,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace llvm {
 namespace exegesis {
 namespace {
 
@@ -27,7 +37,7 @@ protected:
     }
     STI.reset(TheTarget->createMCSubtargetInfo(TT, "haswell", ""));
 
-    // Compute the ProxResIdx of ports unes in tests.
+    // Compute the ProxResIdx of ports uses in tests.
     const auto &SM = STI->getSchedModel();
     for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
       const std::string Name = SM.getProcResource(I)->Name;
@@ -100,3 +110,4 @@ TEST_F(AnalysisTest, ComputeIdealizedProcResPressure_1P1_1P05_2P0156) {
 
 } // namespace
 } // namespace exegesis
+} // namespace llvm

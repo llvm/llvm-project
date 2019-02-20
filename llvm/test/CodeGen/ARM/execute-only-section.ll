@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=thumbv7m -mattr=+execute-only %s -o - | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv8m.base -mattr=+execute-only %s -o - | FileCheck %s
+; RUN: llc < %s -mtriple=thumbv8m.base -mcpu=cortex-m23 -mattr=+execute-only %s -o - | FileCheck %s
 ; RUN: llc < %s -mtriple=thumbv8m.main -mattr=+execute-only %s -o - | FileCheck %s
 
 ; CHECK:     .section .text,"axy",%progbits,unique,0

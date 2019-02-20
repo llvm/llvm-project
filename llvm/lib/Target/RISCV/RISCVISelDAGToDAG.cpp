@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "RISCV.h"
 #include "RISCVTargetMachine.h"
+#include "Utils/RISCVMatInt.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/Debug.h"
@@ -56,20 +57,47 @@ public:
 
 private:
   void doPeepholeLoadStoreADDI();
-  void doPeepholeBuildPairF64SplitF64();
 };
 }
 
 void RISCVDAGToDAGISel::PostprocessISelDAG() {
   doPeepholeLoadStoreADDI();
-  doPeepholeBuildPairF64SplitF64();
+}
+
+static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
+                         MVT XLenVT) {
+  RISCVMatInt::InstSeq Seq;
+  RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64, Seq);
+
+  SDNode *Result;
+  SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
+  for (RISCVMatInt::Inst &Inst : Seq) {
+    SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, XLenVT);
+    if (Inst.Opc == RISCV::LUI)
+      Result = CurDAG->getMachineNode(RISCV::LUI, DL, XLenVT, SDImm);
+    else
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg, SDImm);
+
+    // Only the first instruction has X0 as its source.
+    SrcReg = SDValue(Result, 0);
+  }
+
+  return Result;
+}
+
+// Returns true if the Node is an ISD::AND with a constant argument. If so,
+// set Mask to that constant value.
+static bool isConstantMask(SDNode *Node, uint64_t &Mask) {
+  if (Node->getOpcode() == ISD::AND &&
+      Node->getOperand(1).getOpcode() == ISD::Constant) {
+    Mask = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    return true;
+  }
+  return false;
 }
 
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
-  unsigned Opcode = Node->getOpcode();
-  MVT XLenVT = Subtarget->getXLenVT();
-
-  // If we have a custom node, we have already selected
+  // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
     LLVM_DEBUG(dbgs() << "== "; Node->dump(CurDAG); dbgs() << "\n");
     Node->setNodeId(-1);
@@ -78,26 +106,57 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
   // Instruction Selection not handled by the auto-generated tablegen selection
   // should be handled here.
+  unsigned Opcode = Node->getOpcode();
+  MVT XLenVT = Subtarget->getXLenVT();
+  SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
-  if (Opcode == ISD::Constant && VT == XLenVT) {
-    auto *ConstNode = cast<ConstantSDNode>(Node);
-    // Materialize zero constants as copies from X0. This allows the coalescer
-    // to propagate these into other instructions.
-    if (ConstNode->isNullValue()) {
+
+  switch (Opcode) {
+  case ISD::Constant: {
+    auto ConstNode = cast<ConstantSDNode>(Node);
+    if (VT == XLenVT && ConstNode->isNullValue()) {
       SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), SDLoc(Node),
                                            RISCV::X0, XLenVT);
       ReplaceNode(Node, New.getNode());
       return;
     }
+    int64_t Imm = ConstNode->getSExtValue();
+    if (XLenVT == MVT::i64) {
+      ReplaceNode(Node, selectImm(CurDAG, SDLoc(Node), Imm, XLenVT));
+      return;
+    }
+    break;
   }
-  if (Opcode == ISD::FrameIndex) {
-    SDLoc DL(Node);
+  case ISD::FrameIndex: {
     SDValue Imm = CurDAG->getTargetConstant(0, DL, XLenVT);
     int FI = cast<FrameIndexSDNode>(Node)->getIndex();
-    EVT VT = Node->getValueType(0);
     SDValue TFI = CurDAG->getTargetFrameIndex(FI, VT);
     ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ADDI, DL, VT, TFI, Imm));
     return;
+  }
+  case ISD::SRL: {
+    if (!Subtarget->is64Bit())
+      break;
+    SDValue Op0 = Node->getOperand(0);
+    SDValue Op1 = Node->getOperand(1);
+    uint64_t Mask;
+    // Match (srl (and val, mask), imm) where the result would be a
+    // zero-extended 32-bit integer. i.e. the mask is 0xffffffff or the result
+    // is equivalent to this (SimplifyDemandedBits may have removed lower bits
+    // from the mask that aren't necessary due to the right-shifting).
+    if (Op1.getOpcode() == ISD::Constant &&
+        isConstantMask(Op0.getNode(), Mask)) {
+      uint64_t ShAmt = cast<ConstantSDNode>(Op1.getNode())->getZExtValue();
+
+      if ((Mask | maskTrailingOnes<uint64_t>(ShAmt)) == 0xffffffff) {
+        SDValue ShAmtVal =
+            CurDAG->getTargetConstant(ShAmt, SDLoc(Node), XLenVT);
+        CurDAG->SelectNodeTo(Node, RISCV::SRLIW, XLenVT, Op0.getOperand(0),
+                             ShAmtVal);
+        return;
+      }
+    }
+  }
   }
 
   // Select the default instruction.
@@ -214,43 +273,6 @@ void RISCVDAGToDAGISel::doPeepholeLoadStoreADDI() {
     if (Base.getNode()->use_empty())
       CurDAG->RemoveDeadNode(Base.getNode());
   }
-}
-
-// Remove redundant BuildPairF64+SplitF64 pairs. i.e. cases where an f64 is
-// built of two i32 values, only to be split apart again. This must be done
-// here as a peephole optimisation as the DAG has not been fully legalized at
-// the point BuildPairF64/SplitF64 nodes are created in RISCVISelLowering, so
-// some nodes would not yet have been replaced with libcalls.
-void RISCVDAGToDAGISel::doPeepholeBuildPairF64SplitF64() {
-  SelectionDAG::allnodes_iterator Position(CurDAG->getRoot().getNode());
-  ++Position;
-
-  while (Position != CurDAG->allnodes_begin()) {
-    SDNode *N = &*--Position;
-    // Skip dead nodes and any nodes other than SplitF64Pseudo.
-    if (N->use_empty() || !N->isMachineOpcode() ||
-        !(N->getMachineOpcode() == RISCV::SplitF64Pseudo))
-      continue;
-
-    // If the operand to SplitF64 is a BuildPairF64, the split operation is
-    // redundant. Just use the operands to BuildPairF64 as the result.
-    SDValue F64Val = N->getOperand(0);
-    if (F64Val.isMachineOpcode() &&
-        F64Val.getMachineOpcode() == RISCV::BuildPairF64Pseudo) {
-      LLVM_DEBUG(
-          dbgs() << "Removing redundant SplitF64Pseudo and replacing uses "
-                    "with BuildPairF64Pseudo operands:\n");
-      LLVM_DEBUG(dbgs() << "N:    ");
-      LLVM_DEBUG(N->dump(CurDAG));
-      LLVM_DEBUG(dbgs() << "F64Val: ");
-      LLVM_DEBUG(F64Val->dump(CurDAG));
-      LLVM_DEBUG(dbgs() << "\n");
-      SDValue From[] = {SDValue(N, 0), SDValue(N, 1)};
-      SDValue To[] = {F64Val.getOperand(0), F64Val.getOperand(1)};
-      CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);
-    }
-  }
-  CurDAG->RemoveDeadNodes();
 }
 
 // This pass converts a legalized DAG into a RISCV-specific DAG, ready

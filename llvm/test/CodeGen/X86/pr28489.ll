@@ -3,8 +3,8 @@ declare void @g(i32, i1)
 
 ;CHECK-LABEL: f:
 ;CHECK: cmpxchg8b
-;CHECK: sete %cl
-;CHECK: movzbl %cl
+;CHECK: sete [[REG:%[abcd]l]]
+;CHECK: movzbl [[REG]]
 define void @f(i64* %arg, i64 %arg1) {
 entry:
   %tmp5 = cmpxchg i64* %arg, i64 %arg1, i64 %arg1 seq_cst seq_cst

@@ -1,5 +1,5 @@
-// RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=kaveri -show-encoding %s | FileCheck %s --check-prefix=ASM
-// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -show-encoding %s | llvm-readobj -s -sd | FileCheck %s --check-prefix=ELF
+// RUN: llvm-mc -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 -show-encoding %s | FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -filetype=obj -triple amdgcn--amdhsa -mcpu=kaveri -mattr=-code-object-v3 -show-encoding %s | llvm-readobj -s -sd | FileCheck %s --check-prefix=ELF
 
 // For compatibility reasons we treat convert .text sections to .hsatext
 

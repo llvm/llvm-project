@@ -6,8 +6,8 @@ target triple = "msp430"
 ; Test that CMP instruction is not removed by MachineCSE.
 ;
 ; CHECK-LABEL: @f
-; CHECK: cmp.w r15, r13
-; CHECK: cmp.w r15, r13
+; CHECK: cmp r15, r13
+; CHECK: cmp r15, r13
 ; CHECK-NEXT: jeq .LBB0_2
 define i16 @f(i16, i16, i16, i16) {
 entry:

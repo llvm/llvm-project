@@ -38,7 +38,7 @@ multiclass CMOV<bits<8> opc, string Mnemonic, X86FoldableSchedWrite Sched,
   }
 
   let Uses = [EFLAGS], Predicates = [HasCMov], Constraints = "$src1 = $dst",
-      SchedRW = [Sched.Folded, ReadAfterLd] in {
+      SchedRW = [Sched.Folded, Sched.ReadAfterFold] in {
     def NAME#16rm
       : I<opc, MRMSrcMem, (outs GR16:$dst), (ins GR16:$src1, i16mem:$src2),
           !strconcat(Mnemonic, "{w}\t{$src2, $dst|$dst, $src2}"),

@@ -53,6 +53,7 @@ private:
   enum DbgValueKind kind;
   bool IsIndirect;
   bool Invalid = false;
+  bool Emitted = false;
 
 public:
   /// Constructor for non-constants.
@@ -126,7 +127,17 @@ public:
   void setIsInvalidated() { Invalid = true; }
   bool isInvalidated() const { return Invalid; }
 
-  LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
+  /// setIsEmitted / isEmitted - Getter/Setter for flag indicating that this
+  /// SDDbgValue has been emitted to an MBB.
+  void setIsEmitted() { Emitted = true; }
+  bool isEmitted() const { return Emitted; }
+
+  /// clearIsEmitted - Reset Emitted flag, for certain special cases where
+  /// dbg.addr is emitted twice.
+  void clearIsEmitted() { Emitted = false; }
+
+  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void print(raw_ostream &OS) const;
 };
 
 /// Holds the information from a dbg_label node through SDISel.

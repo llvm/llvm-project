@@ -70,7 +70,7 @@ branch  1 taken 8
 branch  2 taken 4
         8:   34-block  2
 unconditional  3 taken 8
-        8:   35:      assign(ii, jj);
+       12:   35:      assign(ii, jj);
         8:   35-block  0
 unconditional  0 taken 8
         4:   35-block  1

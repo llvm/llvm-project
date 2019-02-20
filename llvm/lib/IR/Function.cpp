@@ -195,12 +195,17 @@ LLVMContext &Function::getContext() const {
   return getType()->getContext();
 }
 
-unsigned Function::getInstructionCount() {
+unsigned Function::getInstructionCount() const {
   unsigned NumInstrs = 0;
-  for (BasicBlock &BB : BasicBlocks)
+  for (const BasicBlock &BB : BasicBlocks)
     NumInstrs += std::distance(BB.instructionsWithoutDebug().begin(),
                                BB.instructionsWithoutDebug().end());
   return NumInstrs;
+}
+
+Function *Function::Create(FunctionType *Ty, LinkageTypes Linkage,
+                           const Twine &N, Module &M) {
+  return Create(Ty, Linkage, M.getDataLayout().getProgramAddressSpace(), N, &M);
 }
 
 void Function::removeFromParent() {
@@ -215,10 +220,19 @@ void Function::eraseFromParent() {
 // Function Implementation
 //===----------------------------------------------------------------------===//
 
-Function::Function(FunctionType *Ty, LinkageTypes Linkage, const Twine &name,
-                   Module *ParentModule)
+static unsigned computeAddrSpace(unsigned AddrSpace, Module *M) {
+  // If AS == -1 and we are passed a valid module pointer we place the function
+  // in the program address space. Otherwise we default to AS0.
+  if (AddrSpace == static_cast<unsigned>(-1))
+    return M ? M->getDataLayout().getProgramAddressSpace() : 0;
+  return AddrSpace;
+}
+
+Function::Function(FunctionType *Ty, LinkageTypes Linkage, unsigned AddrSpace,
+                   const Twine &name, Module *ParentModule)
     : GlobalObject(Ty, Value::FunctionVal,
-                   OperandTraits<Function>::op_begin(this), 0, Linkage, name),
+                   OperandTraits<Function>::op_begin(this), 0, Linkage, name,
+                   computeAddrSpace(AddrSpace, ParentModule)),
       NumArgs(Ty->getNumParams()) {
   assert(FunctionType::isValidReturnType(getReturnType()) &&
          "invalid return type");

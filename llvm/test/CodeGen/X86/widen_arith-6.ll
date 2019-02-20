@@ -14,7 +14,7 @@ define void @update(<3 x float>* %dst, <3 x float>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    movl $1073741824, {{[0-9]+}}(%esp) # imm = 0x40000000
 ; CHECK-NEXT:    movl $1065353216, {{[0-9]+}}(%esp) # imm = 0x3F800000
 ; CHECK-NEXT:    movl $0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <1976.04004,1976.04004,1976.04004,u>
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = <1.97604004E+3,1.97604004E+3,1.97604004E+3,u>
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %forbody

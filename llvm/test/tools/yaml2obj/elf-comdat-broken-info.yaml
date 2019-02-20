@@ -1,0 +1,27 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -sections %t | FileCheck %s
+
+--- !ELF
+FileHeader:
+  Class:               ELFCLASS64
+  Data:                ELFDATA2LSB
+  Type:                ET_REL
+  Machine:             EM_X86_64
+Sections:
+  - Name:              .group
+    Type:              SHT_GROUP
+    Link:              .symtab
+    Info:              12345
+    Members:
+      - SectionOrType: GRP_COMDAT
+
+## Check we are able to produce SHT_GROUP section with a custom Info value (12345).
+# CHECK:      Name: .group
+# CHECK-NEXT: Type: SHT_GROUP
+# CHECK-NEXT: Flags [
+# CHECK-NEXT: ]
+# CHECK-NEXT: Address:
+# CHECK-NEXT: Offset:
+# CHECK-NEXT: Size:
+# CHECK-NEXT: Link:
+# CHECK-NEXT: Info: 12345

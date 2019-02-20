@@ -14,8 +14,9 @@ define i16 @combine_bswap_rotate(i16 %a0) {
 ;
 ; X64-LABEL: combine_bswap_rotate:
 ; X64:       # %bb.0:
-; X64-NEXT:    rolw $9, %di
 ; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    rolw $9, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %1 = call i16 @llvm.bswap.i16(i16 %a0)
   %2 = shl i16 %1, 1

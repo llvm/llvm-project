@@ -367,11 +367,17 @@ class raw_fd_ostream : public raw_pwrite_stream {
   int FD;
   bool ShouldClose;
 
+  bool SupportsSeeking;
+
+#ifdef _WIN32
+  /// True if this fd refers to a Windows console device. Mintty and other
+  /// terminal emulators are TTYs, but they are not consoles.
+  bool IsWindowsConsole = false;
+#endif
+
   std::error_code EC;
 
   uint64_t pos;
-
-  bool SupportsSeeking;
 
   /// See raw_ostream::write_impl.
   void write_impl(const char *Ptr, size_t Size) override;
@@ -547,6 +553,8 @@ public:
 class buffer_ostream : public raw_svector_ostream {
   raw_ostream &OS;
   SmallVector<char, 0> Buffer;
+
+  virtual void anchor() override;
 
 public:
   buffer_ostream(raw_ostream &OS) : raw_svector_ostream(Buffer), OS(OS) {}

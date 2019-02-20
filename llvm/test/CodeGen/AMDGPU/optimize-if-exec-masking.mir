@@ -1,31 +1,21 @@
 # RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-optimize-exec-masking -o -  %s | FileCheck %s
 
 --- |
-  target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64"
-
-  define amdgpu_kernel void @optimize_if_and_saveexec_xor(i32 %z, i32 %v) #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor(i32 %z, i32 %v) {
   main_body:
-    %id = call i32 @llvm.amdgcn.workitem.id.x()
-    %cc = icmp eq i32 %id, 0
-    %0 = call { i1, i64 } @llvm.amdgcn.if(i1 %cc)
-    %1 = extractvalue { i1, i64 } %0, 0
-    %2 = extractvalue { i1, i64 } %0, 1
-    br i1 %1, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:                                               ; preds = %main_body
     %v.if = load volatile i32, i32 addrspace(1)* undef
     br label %end
 
   end:                                              ; preds = %if, %main_body
-    %r = phi i32 [ 4, %main_body ], [ %v.if, %if ]
-    call void @llvm.amdgcn.end.cf(i64 %2)
-    store i32 %r, i32 addrspace(1)* undef
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_and_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -34,9 +24,9 @@
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_or_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_or_saveexec(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -45,31 +35,20 @@
     ret void
   }
 
-
-  define amdgpu_kernel void @optimize_if_and_saveexec_xor_valu_middle(i32 %z, i32 %v) #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_valu_middle(i32 %z, i32 %v) {
   main_body:
-    %id = call i32 @llvm.amdgcn.workitem.id.x()
-    %cc = icmp eq i32 %id, 0
-    %0 = call { i1, i64 } @llvm.amdgcn.if(i1 %cc)
-    %1 = extractvalue { i1, i64 } %0, 0
-    %2 = extractvalue { i1, i64 } %0, 1
-    store i32 %id, i32 addrspace(1)* undef
-    br i1 %1, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:                                               ; preds = %main_body
-    %v.if = load volatile i32, i32 addrspace(1)* undef
     br label %end
 
   end:                                              ; preds = %if, %main_body
-    %r = phi i32 [ 4, %main_body ], [ %v.if, %if ]
-    call void @llvm.amdgcn.end.cf(i64 %2)
-    store i32 %r, i32 addrspace(1)* undef
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_and_saveexec_xor_wrong_reg(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_wrong_reg(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -78,9 +57,9 @@
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_and_saveexec_xor_modify_copy_to_exec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_modify_copy_to_exec(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -89,9 +68,9 @@
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_and_saveexec_xor_live_out_setexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_and_saveexec_xor_live_out_setexec(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -100,9 +79,9 @@
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_unknown_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_unknown_saveexec(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -111,9 +90,9 @@
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_andn2_saveexec(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_andn2_saveexec(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -122,9 +101,9 @@
     ret void
   }
 
-  define amdgpu_kernel void @optimize_if_andn2_saveexec_no_commute(i32 %z, i32 %v)  #0 {
+  define amdgpu_kernel void @optimize_if_andn2_saveexec_no_commute(i32 %z, i32 %v) {
   main_body:
-      br i1 undef, label %if, label %end
+    br i1 undef, label %if, label %end
 
   if:
     br label %end
@@ -133,16 +112,16 @@
     ret void
   }
 
-  ; Function Attrs: nounwind readnone
-  declare i32 @llvm.amdgcn.workitem.id.x() #1
+  define amdgpu_kernel void @if_and_xor_read_exec_copy_subreg() {
+  main_body:
+    br i1 undef, label %if, label %end
 
-  declare { i1, i64 } @llvm.amdgcn.if(i1)
+  if:                                               ; preds = %main_body
+    br label %end
 
-  declare void @llvm.amdgcn.end.cf(i64)
-
-
-  attributes #0 = { nounwind }
-  attributes #1 = { nounwind readnone }
+  end:                                              ; preds = %if, %main_body
+    ret void
+  }
 
 ...
 ---
@@ -152,28 +131,8 @@
 # CHECK-NEXT: SI_MASK_BRANCH
 
 name:            optimize_if_and_saveexec_xor
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -192,7 +151,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -200,7 +159,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -210,28 +169,8 @@ body:             |
 # CHECK-NEXT: SI_MASK_BRANCH
 
 name:            optimize_if_and_saveexec
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -249,7 +188,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -257,7 +196,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -267,28 +206,8 @@ body:             |
 # CHECK-NEXT: SI_MASK_BRANCH
 
 name:            optimize_if_or_saveexec
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -306,7 +225,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -314,40 +233,20 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
 ---
 # CHECK-LABEL: name: optimize_if_and_saveexec_xor_valu_middle
 # CHECK: $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
-# CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`, addrspace 1)
+# CHECK-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
 # CHECK-NEXT: $sgpr0_sgpr1 = S_XOR_B64 $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
 # CHECK-NEXT: $exec = COPY killed $sgpr2_sgpr3
 # CHECK-NEXT: SI_MASK_BRANCH
 name:            optimize_if_and_saveexec_xor_valu_middle
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -356,7 +255,7 @@ body:             |
     $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
     $vgpr0 = V_MOV_B32_e32 4, implicit $exec
     $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
-    BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET $vgpr0, undef $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     $sgpr0_sgpr1 = S_XOR_B64 $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
     $exec = S_MOV_B64_term killed $sgpr2_sgpr3
     SI_MASK_BRANCH %bb.2, implicit $exec
@@ -367,7 +266,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -375,7 +274,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -386,28 +285,8 @@ body:             |
 # CHECK-NEXT: $exec = COPY $sgpr0_sgpr1
 # CHECK-NEXT: SI_MASK_BRANCH %bb.2, implicit $exec
 name:            optimize_if_and_saveexec_xor_wrong_reg
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -425,7 +304,7 @@ body:             |
 
   bb.1.if:
     liveins: $sgpr0_sgpr1 , $sgpr4_sgpr5_sgpr6_sgpr7
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1, $sgpr4_sgpr5_sgpr6_sgpr7
@@ -433,7 +312,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -446,28 +325,8 @@ body:             |
 # CHECK-NEXT: SI_MASK_BRANCH %bb.2, implicit $exec
 
 name:            optimize_if_and_saveexec_xor_modify_copy_to_exec
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -487,7 +346,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -497,7 +356,7 @@ body:             |
     $sgpr1 = S_MOV_B32 1
     $sgpr2 = S_MOV_B32 -1
     $sgpr3 = S_MOV_B32 61440
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -508,28 +367,8 @@ body:             |
 # CHECK-NEXT: $exec = COPY $sgpr2_sgpr3
 # CHECK-NEXT: SI_MASK_BRANCH
 name:            optimize_if_and_saveexec_xor_live_out_setexec
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -548,7 +387,7 @@ body:             |
     S_SLEEP 0, implicit $sgpr2_sgpr3
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -556,7 +395,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -568,28 +407,8 @@ body:             |
 # CHECK-NEXT: SI_MASK_BRANCH %bb.2, implicit $exec
 
 name:            optimize_if_unknown_saveexec
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -607,7 +426,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -615,7 +434,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -625,28 +444,8 @@ body:             |
 # CHECK-NEXT: SI_MASK_BRANCH
 
 name:            optimize_if_andn2_saveexec
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -664,7 +463,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -672,7 +471,7 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
 ...
@@ -682,28 +481,8 @@ body:             |
 # CHECK-NEXT: $exec = COPY killed $sgpr2_sgpr3
 # CHECK-NEXT: SI_MASK_BRANCH %bb.2, implicit $exec
 name:            optimize_if_andn2_saveexec_no_commute
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0' }
-frameInfo:
-  isFrameAddressTaken: false
-  isReturnAddressTaken: false
-  hasStackMap:     false
-  hasPatchPoint:   false
-  stackSize:       0
-  offsetAdjustment: 0
-  maxAlignment:    0
-  adjustsStack:    false
-  hasCalls:        false
-  maxCallFrameSize: 0
-  hasOpaqueSPAdjustment: false
-  hasVAStart:      false
-  hasMustTailInVarArgFunc: false
 body:             |
   bb.0.main_body:
     liveins: $vgpr0
@@ -721,7 +500,7 @@ body:             |
 
     $sgpr7 = S_MOV_B32 61440
     $sgpr6 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec :: (volatile load 4 from `i32 addrspace(1)* undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
 
   bb.2.end:
     liveins: $vgpr0, $sgpr0_sgpr1
@@ -729,7 +508,45 @@ body:             |
     $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec :: (store 4 into `i32 addrspace(1)* undef`)
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
+...
+---
+# A read from exec copy subreg prevents optimization
+# CHECK-LABEL: name: if_and_xor_read_exec_copy_subreg{{$}}
+# CHECK: $sgpr0_sgpr1 = COPY $exec
+# CHECK-NEXT: $sgpr4 = S_MOV_B32 $sgpr1
+name:            if_and_xor_read_exec_copy_subreg
+liveins:
+  - { reg: '$vgpr0' }
+body:             |
+  bb.0.main_body:
+    liveins: $vgpr0
+
+    $sgpr0_sgpr1 = COPY $exec
+    $sgpr4 = S_MOV_B32 $sgpr1
+    $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 4, implicit $exec
+    $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
+    $sgpr0_sgpr1 = S_XOR_B64 $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = S_MOV_B64_term killed $sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1.if:
+    liveins: $sgpr0_sgpr1
+
+    $sgpr7 = S_MOV_B32 61440
+    $sgpr6 = S_MOV_B32 -1
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
+
+  bb.2.end:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $sgpr3 = S_MOV_B32 61440
+    $sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM
 ...

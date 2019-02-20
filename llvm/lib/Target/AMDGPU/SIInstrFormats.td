@@ -121,6 +121,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that this is a D16 buffer instruction.
   field bit D16Buf = 0;
 
+  // This bit indicates that this uses the floating point double precision
+  // rounding mode flags
+  field bit FPDPRounding = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -177,6 +181,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{49} = IsPacked;
 
   let TSFlags{50} = D16Buf;
+
+  let TSFlags{51} = FPDPRounding;
 
   let SchedRW = [Write32Bit];
 

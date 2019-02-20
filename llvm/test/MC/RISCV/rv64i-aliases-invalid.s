@@ -8,5 +8,21 @@ rdinstreth x29 # CHECK: :[[@LINE]]:1: error: instruction use requires an option 
 rdcycleh x27   # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
 rdtimeh x28    # CHECK: :[[@LINE]]:1: error: instruction use requires an option to be enabled
 
+sll x2, x3, 64  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+srl x2, x3, 64  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+sra x2, x3, 64  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+
+sll x2, x3, -1  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+srl x2, x3, -2  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+sra x2, x3, -3  # CHECK: :[[@LINE]]:13: error: immediate must be an integer in the range [0, 63]
+
+sllw x2, x3, 32  # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
+srlw x2, x3, 32  # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
+sraw x2, x3, 32  # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
+
+sllw x2, x3, -1  # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
+srlw x2, x3, -2  # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
+sraw x2, x3, -3  # CHECK: :[[@LINE]]:14: error: immediate must be an integer in the range [0, 31]
+
 foo:
   .space 8

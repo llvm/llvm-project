@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8,GFX89 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX8,GFX89 %s
-; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX89 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck --check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -mtriple=amdgcn-amd- -mcpu=gfx900 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck --check-prefixes=GCN,GFX9,GFX89 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck --check-prefixes=GCN,GFX9,GFX89 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
@@ -240,7 +240,7 @@ entry:
 
 ; GCN-LABEL: {{^}}nontemporal_global_1:
 ; GFX8:  flat_store_dword v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} glc slc{{$}}
-; GFX9:  global_store_dword v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, off glc slc{{$}}
+; GFX9:  global_store_dword v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}}, s[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
 define amdgpu_kernel void @nontemporal_global_1(
     i32* %in, i32 addrspace(1)* %out) {
 entry:

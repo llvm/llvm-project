@@ -104,7 +104,7 @@ declare i64* @__local_stdio_printf_options() local_unnamed_addr #4
 
 ; CHECK-LABEL: fp
 ; CHECK: str     x21, [sp, #-96]!
-; CHECK: stp     x20, x19, [sp, #16]
+; CHECK: stp     x19, x20, [sp, #16]
 ; CHECK: stp     x29, x30, [sp, #32]
 ; CHECK: add     x29, sp, #32
 ; CHECK: add     x8, x29, #24
@@ -124,10 +124,10 @@ declare i64* @__local_stdio_printf_options() local_unnamed_addr #4
 ; CHECK: mov     x3, x19
 ; CHECK: mov     x4, xzr
 ; CHECK: bl      __stdio_common_vsprintf
-; CHECK: ldp     x29, x30, [sp, #32]
-; CHECK: ldp     x20, x19, [sp, #16]
 ; CHECK: cmp     w0, #0
 ; CHECK: csinv   w0, w0, wzr, ge
+; CHECK: ldp     x29, x30, [sp, #32]
+; CHECK: ldp     x19, x20, [sp, #16]
 ; CHECK: ldr     x21, [sp], #96
 ; CHECK: ret
 define i32 @fp(i8*, i64, i8*, ...) local_unnamed_addr #6 {
@@ -151,8 +151,8 @@ attributes #6 = { "no-frame-pointer-elim"="true" }
 
 ; CHECK-LABEL: vla
 ; CHECK: str     x23, [sp, #-112]!
-; CHECK: stp     x22, x21, [sp, #16]
-; CHECK: stp     x20, x19, [sp, #32]
+; CHECK: stp     x21, x22, [sp, #16]
+; CHECK: stp     x19, x20, [sp, #32]
 ; CHECK: stp     x29, x30, [sp, #48]
 ; CHECK: add     x29, sp, #48
 ; CHECK: add     x8, x29, #16
@@ -183,8 +183,8 @@ attributes #6 = { "no-frame-pointer-elim"="true" }
 ; CHECK: mov     sp, [[REG2]]
 ; CHECK: sub     sp, x29, #48
 ; CHECK: ldp     x29, x30, [sp, #48]
-; CHECK: ldp     x20, x19, [sp, #32]
-; CHECK: ldp     x22, x21, [sp, #16]
+; CHECK: ldp     x19, x20, [sp, #32]
+; CHECK: ldp     x21, x22, [sp, #16]
 ; CHECK: ldr     x23, [sp], #112
 ; CHECK: ret
 define void @vla(i32, i8*, ...) local_unnamed_addr {
@@ -211,32 +211,34 @@ declare i8* @llvm.stacksave()
 declare void @llvm.stackrestore(i8*)
 
 ; CHECK-LABEL: snprintf
-; CHECK: sub     sp,  sp, #96
-; CHECK: stp     x21, x20, [sp, #16]
-; CHECK: stp     x19, x30, [sp, #32]
-; CHECK: add     x8, sp, #56
-; CHECK: mov     x19, x2
-; CHECK: mov     x20, x1
-; CHECK: mov     x21, x0
-; CHECK: stp     x6, x7, [sp, #80]
-; CHECK: stp     x4, x5, [sp, #64]
-; CHECK: str     x3, [sp, #56]
-; CHECK: str     x8, [sp, #8]
-; CHECK: bl      __local_stdio_printf_options
-; CHECK: ldr     x8, [x0]
-; CHECK: add     x5, sp, #56
-; CHECK: mov     x1, x21
-; CHECK: mov     x2, x20
-; CHECK: orr     x0, x8, #0x2
-; CHECK: mov     x3, x19
-; CHECK: mov     x4, xzr
-; CHECK: bl      __stdio_common_vsprintf
-; CHECK: ldp     x19, x30, [sp, #32]
-; CHECK: ldp     x21, x20, [sp, #16]
-; CHECK: cmp     w0, #0
-; CHECK: csinv   w0, w0, wzr, ge
-; CHECK: add     sp, sp, #96
-; CHECK: ret
+; CHECK-DAG: sub     sp,  sp, #96
+; CHECK-DAG: str     x21, [sp, #16]
+; CHECK-DAG: stp     x19, x20, [sp, #24]
+; CHECK-DAG: str     x30, [sp, #40]
+; CHECK-DAG: add     x8, sp, #56
+; CHECK-DAG: mov     x19, x2
+; CHECK-DAG: mov     x20, x1
+; CHECK-DAG: mov     x21, x0
+; CHECK-DAG: stp     x6, x7, [sp, #80]
+; CHECK-DAG: stp     x4, x5, [sp, #64]
+; CHECK-DAG: str     x3, [sp, #56]
+; CHECK-DAG: str     x8, [sp, #8]
+; CHECK-DAG: bl      __local_stdio_printf_options
+; CHECK-DAG: ldr     x8, [x0]
+; CHECK-DAG: add     x5, sp, #56
+; CHECK-DAG: mov     x1, x21
+; CHECK-DAG: mov     x2, x20
+; CHECK-DAG: orr     x0, x8, #0x2
+; CHECK-DAG: mov     x3, x19
+; CHECK-DAG: mov     x4, xzr
+; CHECK-DAG: bl      __stdio_common_vsprintf
+; CHECK-DAG: ldr     x30, [sp, #40]
+; CHECK-DAG: ldp     x19, x20, [sp, #24]
+; CHECK-DAG: ldr     x21, [sp, #16]
+; CHECK-DAG: cmp     w0, #0
+; CHECK-DAG: csinv   w0, w0, wzr, ge
+; CHECK-DAG: add     sp, sp, #96
+; CHECK-DAG: ret
 define i32 @snprintf(i8*, i64, i8*, ...) local_unnamed_addr #5 {
   %4 = alloca i8*, align 8
   %5 = bitcast i8** %4 to i8*

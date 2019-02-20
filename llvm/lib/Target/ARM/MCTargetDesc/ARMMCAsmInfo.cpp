@@ -31,6 +31,9 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
 
   SupportsDebugInformation = true;
 
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
+
   // Exceptions handling
   ExceptionsType = (TheTriple.isOSDarwin() && !TheTriple.isWatchABI())
                        ? ExceptionHandling::SjLj
@@ -55,6 +58,9 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
   Code32Directive = ".code\t32";
 
   SupportsDebugInformation = true;
+
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
 
   // Exceptions handling
   switch (TheTriple.getOS()) {
@@ -90,6 +96,9 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
   PrivateGlobalPrefix = "$M";
   PrivateLabelPrefix = "$M";
   CommentString = ";";
+
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
@@ -110,5 +119,7 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
 
   UseIntegratedAssembler = true;
   DwarfRegNumForCFI = false;
-}
 
+  // Conditional Thumb 4-byte instructions can have an implicit IT.
+  MaxInstLength = 6;
+}

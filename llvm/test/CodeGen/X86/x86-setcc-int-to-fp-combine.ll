@@ -52,7 +52,7 @@ define void @foo2(<4 x float>* noalias %result) nounwind {
 ; CHECK-NEXT: .long 1088421888              ## float 7
 ; CHECK-LABEL: foo2:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.000000e+00,5.000000e+00,6.000000e+00,7.000000e+00]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.0E+0,5.0E+0,6.0E+0,7.0E+0]
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %val = uitofp <4 x i32> <i32 4, i32 5, i32 6, i32 7> to <4 x float>
@@ -89,7 +89,7 @@ define void @foo4(<4 x float>* noalias %result) nounwind {
 ; CHECK-NEXT: .long 1132396544              ## float 255
 ; CHECK-LABEL: foo4:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.000000e+00,1.270000e+02,1.280000e+02,2.550000e+02]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,1.27E+2,1.28E+2,2.55E+2]
 ; CHECK-NEXT:    movaps %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %val = uitofp <4 x i8> <i8 1, i8 127, i8 -128, i8 -1> to <4 x float>

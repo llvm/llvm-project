@@ -1,0 +1,143 @@
+import("//llvm/utils/gn/build/buildflags.gni")
+import("//llvm/utils/gn/build/mac_sdk.gni")
+import("//llvm/utils/gn/build/toolchain/compiler.gni")
+
+config("compiler_defaults") {
+  defines = []
+
+  # FIXME: Don't define this globally here.
+  if (host_os != "win") {
+    defines += [ "LLVM_ON_UNIX" ]
+  }
+
+  if (!llvm_enable_assertions) {
+    defines += [ "NDEBUG" ]
+  }
+
+  cflags = []
+
+  if (host_os == "mac" && clang_base_path != "") {
+    cflags += [
+      "-isysroot",
+      mac_sdk_path,
+    ]
+  }
+
+  if (host_os != "win") {
+    if (is_debug) {
+      cflags += [ "-g" ]
+    } else {
+      cflags += [ "-O3" ]
+    }
+    cflags += [ "-fdiagnostics-color" ]
+    cflags_cc = [
+      "-std=c++11",
+      "-fno-exceptions",
+      "-fno-rtti",
+      "-fvisibility-inlines-hidden",
+    ]
+  } else {
+    if (is_debug) {
+      cflags += [ "/Zi" ]
+    } else {
+      cflags += [
+        "/O2",
+        "/Zc:inline",
+      ]
+    }
+    defines += [
+      "_CRT_SECURE_NO_DEPRECATE",
+      "_CRT_SECURE_NO_WARNINGS",
+      "_CRT_NONSTDC_NO_DEPRECATE",
+      "_CRT_NONSTDC_NO_WARNINGS",
+      "_SCL_SECURE_NO_DEPRECATE",
+      "_SCL_SECURE_NO_WARNINGS",
+
+      "_HAS_EXCEPTIONS=0",
+      "_UNICODE",
+      "UNICODE",
+    ]
+    cflags += [
+      "/EHs-c-",
+      "/GR-",
+    ]
+
+    # The MSVC default value (1 MB) is not enough for parsing recursive C++
+    # templates in Clang.
+    ldflags = [ "/STACK:10000000" ]
+  }
+
+  # Warning setup.
+  if (host_os == "win" && !is_clang) {
+    cflags += [
+      # Suppress ''modifier' : used more than once' (__forceinline and inline).
+      "-wd4141",
+
+      # Suppress 'conversion from 'type1' to 'type2', possible loss of data'.
+      "-wd4244",
+
+      # Suppress 'conversion from 'size_t' to 'type', possible loss of data'.
+      "-wd4267",
+
+      # Suppress 'no matching operator delete found'.
+      "-wd4291",
+
+      # Suppress 'noexcept used with no exception handling mode specified'.
+      "-wd4577",
+
+      # Suppress 'destructor was implicitly defined as deleted'.
+      "-wd4624",
+
+      # Suppress 'unsafe mix of type <type> and type <type> in operation'.
+      "-wd4805",
+    ]
+  } else {
+    if (host_os == "win") {
+      cflags += [ "/W4" ]
+    } else {
+      cflags += [
+        "-Wall",
+        "-Wextra",
+      ]
+    }
+    cflags += [
+      "-Wno-unused-parameter",
+      "-Wstring-conversion",
+    ]
+    if (is_clang) {
+      cflags += [ "-Wdelete-non-virtual-dtor" ]
+    }
+    if (is_clang && use_goma) {
+      # goma converts all paths to lowercase on the server, breaking this
+      # warning.
+      cflags += [ "-Wno-nonportable-include-path" ]
+    }
+  }
+}
+
+config("llvm_code") {
+  include_dirs = [
+    "//llvm/include",
+    "$root_gen_dir/llvm/include",
+  ]
+}
+
+config("lld_code") {
+  include_dirs = [
+    "//lld/include",
+    "$root_gen_dir/lld/include",
+  ]
+}
+
+config("clang_code") {
+  include_dirs = [
+    "//clang/include",
+    "$root_gen_dir/clang/include",
+  ]
+}
+
+config("warn_covered_switch_default") {
+  if (is_clang) {
+    cflags = [ "-Wcovered-switch-default" ]
+  }
+}

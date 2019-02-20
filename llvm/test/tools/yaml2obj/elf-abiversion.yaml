@@ -1,0 +1,16 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -file-headers %t | FileCheck %s --check-prefix=FROMYAML
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=TOYAML
+
+## Check we are able to parse/emit the ABI version with yaml2obj/obj2yaml.
+
+# FROMYAML: ABIVersion: 5
+# TOYAML:   ABIVersion: 0x05
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  ABIVersion:      0x05

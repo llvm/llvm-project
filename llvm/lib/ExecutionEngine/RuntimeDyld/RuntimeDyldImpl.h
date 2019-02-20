@@ -370,7 +370,7 @@ protected:
   void writeBytesUnaligned(uint64_t Value, uint8_t *Dst, unsigned Size) const;
 
   /// Generate JITSymbolFlags from a libObject symbol.
-  virtual JITSymbolFlags getJITSymbolFlags(const BasicSymbolRef &Sym);
+  virtual Expected<JITSymbolFlags> getJITSymbolFlags(const SymbolRef &Sym);
 
   /// Modify the given target address based on the given symbol flags.
   /// This can be used by subclasses to tweak addresses based on symbol flags,
@@ -432,6 +432,9 @@ protected:
   processRelocationRef(unsigned SectionID, relocation_iterator RelI,
                        const ObjectFile &Obj, ObjSectionToIDMap &ObjSectionToID,
                        StubMap &Stubs) = 0;
+
+  void applyExternalSymbolRelocations(
+      const StringMap<JITEvaluatedSymbol> ExternalSymbolMap);
 
   /// Resolve relocations to external symbols.
   Error resolveExternalSymbols();
@@ -535,6 +538,12 @@ public:
   }
 
   void resolveRelocations();
+
+  void resolveLocalRelocations();
+
+  static void finalizeAsync(std::unique_ptr<RuntimeDyldImpl> This,
+                            std::function<void(Error)> OnEmitted,
+                            std::unique_ptr<MemoryBuffer> UnderlyingBuffer);
 
   void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 

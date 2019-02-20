@@ -6,8 +6,18 @@ declare half @llvm.fabs.f16(half) #0
 declare half @llvm.canonicalize.f16(half) #0
 declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 declare <2 x half> @llvm.canonicalize.v2f16(<2 x half>) #0
+declare <3 x half> @llvm.canonicalize.v3f16(<3 x half>) #0
+declare <4 x half> @llvm.canonicalize.v4f16(<4 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
+; GCN-LABEL: {{^}}test_fold_canonicalize_undef_value_f16:
+; GFX89: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7e00{{$}}
+; GFX89: {{flat|global}}_store_short v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
+define amdgpu_kernel void @test_fold_canonicalize_undef_value_f16(half addrspace(1)* %out) #1 {
+  %canonicalized = call half @llvm.canonicalize.f16(half undef)
+  store half %canonicalized, half addrspace(1)* %out
+  ret void
+}
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_var_f16:
 ; GFX89: v_max_f16_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
@@ -30,6 +40,21 @@ define amdgpu_kernel void @s_test_canonicalize_var_f16(half addrspace(1)* %out, 
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
   store half %canonicalized, half addrspace(1)* %out
   ret void
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_build_vector_v2f16:
+; GFX9: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-NEXT: v_pk_max_f16 v0, v0, v0
+
+; VI: v_max_f16_sdwa v1, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_max_f16_e32 v0, v0, v0
+; VI: v_or_b32_e32 v0, v0, v1
+define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1 {
+  %ins0 = insertelement <2 x half> undef, half %lo, i32 0
+  %ins1 = insertelement <2 x half> %ins0, half %hi, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %ins1)
+  ret <2 x half> %canonicalized
 }
 
 ; GCN-LABEL: {{^}}v_test_canonicalize_fabs_var_f16:
@@ -474,6 +499,243 @@ define amdgpu_kernel void @test_fold_canonicalize_snan3_value_v2f16(<2 x half> a
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> <half 0xHFC01, half 0xHFC01>)
   store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
   ret void
+}
+
+; FIXME: Extra 4th component handled
+; GCN-LABEL: {{^}}v_test_canonicalize_var_v3f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT: v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT: s_setpc_b64
+
+; VI-DAG: v_max_f16_sdwa [[CANON_ELT1:v[0-9]+]], v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON_ELT0:v[0-9]+]], v0, v0
+; VI-DAG: v_max_f16_e32 v1, v1, v1
+; VI-DAG: v_or_b32_e32 v0, [[CANON_ELT0]], [[CANON_ELT1]]
+
+; VI: s_setpc_b64
+define <3 x half> @v_test_canonicalize_var_v3f16(<3 x half> %val) #1 {
+  %canonicalized = call <3 x half> @llvm.canonicalize.v3f16(<3 x half> %val)
+  ret <3 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_var_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT: v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT: s_setpc_b64
+
+; VI-DAG: v_max_f16_sdwa [[CANON_ELT3:v[0-9]+]], v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON_ELT2:v[0-9]+]], v1, v1
+; VI-DAG: v_max_f16_sdwa [[CANON_ELT1:v[0-9]+]], v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:WORD_1
+; VI-DAG: v_max_f16_e32 [[CANON_ELT0:v[0-9]+]], v0, v0
+; VI-DAG: v_or_b32_e32 v0, [[CANON_ELT0]], [[CANON_ELT1]]
+; VI-DAG: v_or_b32_e32 v1, [[CANON_ELT2]], [[CANON_ELT3]]
+; VI: s_setpc_b64
+define <4 x half> @v_test_canonicalize_var_v4f16(<4 x half> %val) #1 {
+  %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %val)
+  ret <4 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}s_test_canonicalize_undef_v2f16:
+; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7e007e00
+; GFX89: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, [[REG]]
+define amdgpu_kernel void @s_test_canonicalize_undef_v2f16(<2 x half> addrspace(1)* %out) #1 {
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> undef)
+  store <2 x half> %canonicalized, <2 x half> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_reg_undef_v2f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: s_setpc_b64
+
+; High bits known zero
+; FIXME: Should also be true on gfx9 by default?
+; VI: s_waitcnt
+; VI-NEXT: v_max_f16_e32 v0, v0, v0
+; VI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
+  %vec = insertelement <2 x half> undef, half %val, i32 0
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_undef_reg_v2f16:
+; GFX89: s_waitcnt
+; GFX89-NEXT: v_max_f16_sdwa v0, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX89-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
+  %vec = insertelement <2 x half> undef, half %val, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_undef_lo_imm_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x3c003c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 0x7fc00000
+; CI-NEXT: v_mov_b32_e32 v1, 1.0
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_undef_lo_imm_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 1.0, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_imm_lo_undef_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x3c003c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 1.0
+; CI-NEXT: v_mov_b32_e32 v1, 0x7fc00000
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_imm_lo_undef_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 1.0, i32 0
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_undef_lo_k_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x4c004c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 0x7fc00000
+; CI-NEXT: v_mov_b32_e32 v1, 0x41800000
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_undef_lo_k_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 16.0, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_k_lo_undef_hi_v2f16:
+; GCN: s_waitcnt
+; GFX89-NEXT: v_mov_b32_e32 v0, 0x4c004c00
+; GFX89-NEXT: s_setpc_b64
+
+; CI-NEXT: v_mov_b32_e32 v0, 0x41800000
+; CI-NEXT: v_mov_b32_e32 v1, 0x7fc00000
+; CI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_k_lo_undef_hi_v2f16() #1 {
+  %vec = insertelement <2 x half> undef, half 16.0, i32 0
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_reg_k_v2f16:
+; GFX9: s_waitcnt
+; GFX9-DAG: v_max_f16_e32 v0, v0, v0
+; GFX9-DAG: s_movk_i32 [[K:s[0-9]+]], 0x4000
+; GFX9: v_and_b32_e32 v0, 0xffff, v0
+; GFX9: v_lshl_or_b32 v0, [[K]], 16, v0
+; GFX9: s_setpc_b64
+
+; VI: s_waitcnt
+; VI-NEXT: v_max_f16_e32 v0, v0, v0
+; VI-NEXT: v_or_b32_e32 v0, 2.0, v0
+; VI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
+  %vec0 = insertelement <2 x half> undef, half %val, i32 0
+  %vec1 = insertelement <2 x half> %vec0, half 2.0, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_k_reg_v2f16:
+; GFX9: v_max_f16_e32 v0, v0, v0
+; GFX9: v_mov_b32_e32 [[K:v[0-9]+]], 0x4000
+; GFX9: v_lshl_or_b32 v0, v0, 16, [[K]]
+; GFX9: s_setpc_b64
+
+; VI: s_waitcnt
+; VI-NEXT: v_max_f16_sdwa v0, v0, v0 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT: v_or_b32_e32 v0, 0x4000, v0
+; VI-NEXT: s_setpc_b64
+define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
+  %vec0 = insertelement <2 x half> undef, half 2.0, i32 0
+  %vec1 = insertelement <2 x half> %vec0, half %val, i32 1
+  %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
+  ret <2 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}s_test_canonicalize_undef_v4f16:
+; GCN: v_mov_b32_e32 v0, 0x7e007e00
+; GCN: v_mov_b32_e32 v1, v0
+define amdgpu_kernel void @s_test_canonicalize_undef_v4f16(<4 x half> addrspace(1)* %out) #1 {
+  %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> undef)
+  store <4 x half> %canonicalized, <4 x half> addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_reg_undef_undef_undef_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: v_mov_b32_e32 v1, 0
+; GFX9-NEXT: s_setpc_b64
+
+; VI: s_waitcnt
+; VI-NEXT: v_max_f16_e32 v0, v0, v0
+; VI-NEXT: v_or_b32_e32 v0, 0x7e000000, v0
+; VI-NEXT: v_mov_b32_e32 v1, 0x7e007e00
+; VI-NEXT: s_setpc_b64
+define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1 {
+  %vec = insertelement <4 x half> undef, half %val, i32 0
+  %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec)
+  ret <4 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_reg_reg_undef_undef_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-NEXT: v_pk_max_f16 v0, v0, v0
+; GFX9-NEXT: v_mov_b32_e32 v1, 0
+; GFX9-NEXT: s_setpc_b64
+
+; VI: s_waitcnt
+; VI-DAG: v_max_f16_e32 v0, v0, v0
+; VI-DAG: v_max_f16_sdwa v1, v1, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI: v_or_b32_e32 v0, v0, v1
+; VI-NEXT: v_mov_b32_e32 v1, 0x7e007e00
+; VI-NEXT: s_setpc_b64
+define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, half %val1) #1 {
+  %vec0 = insertelement <4 x half> undef, half %val0, i32 0
+  %vec1 = insertelement <4 x half> %vec0, half %val1, i32 1
+  %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec1)
+  ret <4 x half> %canonicalized
+}
+
+; GCN-LABEL: {{^}}v_test_canonicalize_reg_undef_reg_reg_v4f16:
+; GFX9: s_waitcnt
+; GFX9-NEXT: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff
+; GFX9-NEXT: v_and_b32_e32 v1, [[MASK]], v1
+; GFX9-NEXT: v_max_f16_e32 v0, v0, v0
+; GFX9-NEXT: v_lshl_or_b32 v1, v2, 16, v1
+; GFX9-NEXT: v_and_b32_e32 v0, [[MASK]], v0
+; GFX9-NEXT: v_pk_max_f16 v1, v1, v1
+; GFX9-NEXT: s_setpc_b64
+
+; VI: s_waitcnt
+; VI-NEXT: v_max_f16_e32 v0, v0, v0
+; VI-NEXT: v_max_f16_e32 v1, v1, v1
+; VI-NEXT: v_max_f16_sdwa v2, v2, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; VI-NEXT: v_or_b32_e32 v0, 0x7e000000, v0
+; VI-NEXT: v_or_b32_e32 v1, v1, v2
+; VI-NEXT: s_setpc_b64
+define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half %val1, half %val2) #1 {
+  %vec0 = insertelement <4 x half> undef, half %val0, i32 0
+  %vec1 = insertelement <4 x half> %vec0, half %val1, i32 2
+  %vec2 = insertelement <4 x half> %vec1, half %val2, i32 3
+  %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec2)
+  ret <4 x half> %canonicalized
 }
 
 attributes #0 = { nounwind readnone }

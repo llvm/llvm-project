@@ -65,15 +65,15 @@
 
 
 ; ASM-LABEL: pad_right: # @pad_right
-; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] $ecx
-; ASM:         movl    %ecx, %eax
+; ASM:         movq    %rcx, %rax
+; ASM:         #DEBUG_VALUE: pad_right:o <- [DW_OP_LLVM_fragment 32 32] $eax
 ; ASM:         retq
 
 
 ; ASM-LABEL: pad_left: # @pad_left
-; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] $ecx
 ; ASM:         .cv_loc 2 1 24 3                # t.c:24:3
-; ASM:         movl    %ecx, %eax
+; ASM:         movq    %rcx, %rax
+; ASM:         #DEBUG_VALUE: pad_left:o <- [DW_OP_LLVM_fragment 0 32] $eax
 ; ASM:         retq
 
 
@@ -108,7 +108,7 @@
 ; ASM:        .cv_def_range    [[oy_start]] [[oy_end]], "C\021\027\000\000\000\004\000\000\000"
 
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: loop_csr
 ; OBJ:       }
@@ -116,14 +116,14 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegEDI (0x18)
+; OBJ:         Register: EDI (0x18)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
 ; OBJ:         }
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegESI (0x17)
+; OBJ:         Register: ESI (0x17)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -136,9 +136,9 @@
 ; ASM:        .asciz  "pad_right"             # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    .Lfunc_begin1 .Lfunc_end1, "C\021\022\000\000\000\004\000\000\000"
+; ASM:        .cv_def_range    .Lfunc_begin1 .Ltmp8, "C\021\021\000\000\000\004\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: pad_right
 ; OBJ:       }
@@ -146,7 +146,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegECX (0x12)
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -159,9 +159,9 @@
 ; ASM:        .asciz  "pad_left"              # Function name
 ; ASM:        .short  4414                    # Record kind: S_LOCAL
 ; ASM:        .asciz  "o"
-; ASM:        .cv_def_range    .Lfunc_begin2 .Lfunc_end2, "C\021\022\000\000\000\000\000\000\000"
+; ASM:        .cv_def_range    .Lfunc_begin2 .Ltmp10, "C\021\021\000\000\000\000\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: pad_left
 ; OBJ:       }
@@ -169,7 +169,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegECX (0x12)
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         LocalVariableAddrRange {
@@ -187,7 +187,7 @@
 ; ASM:        .asciz  "p"
 ; ASM:        .cv_def_range    [[p_start]] .Lfunc_end3, "C\021\021\000\000\000\004\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: nested
 ; OBJ:       }
@@ -196,7 +196,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeRegisterRelSym {
-; OBJ:         BaseRegister: CVRegRCX (0x14A)
+; OBJ:         BaseRegister: RCX (0x14A)
 ; OBJ:         HasSpilledUDTMember: No
 ; OBJ:         OffsetInParent: 0
 ; OBJ:         BasePointerOffset: 0
@@ -207,7 +207,7 @@
 ; OBJ:         VarName: p
 ; OBJ:       }
 ; OBJ:       DefRangeSubfieldRegisterSym {
-; OBJ:         Register: CVRegEAX (0x11)
+; OBJ:         Register: EAX (0x11)
 ; OBJ:         MayHaveNoName: 0
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         LocalVariableAddrRange {
@@ -223,7 +223,7 @@
 ; ASM:        .asciz  "o"
 ; ASM:        .cv_def_range    [[spill_o_x_start]] [[spill_o_x_end]], "E\021O\001A\000$\000\000\000"
 
-; OBJ-LABEL: {{.*}}Proc{{.*}}Sym {
+; OBJ-LABEL: GlobalProcIdSym {
 ; OBJ:         Kind: S_GPROC32_ID (0x1147)
 ; OBJ:         DisplayName: bitpiece_spill
 ; OBJ:       }
@@ -231,7 +231,7 @@
 ; OBJ:         VarName: o
 ; OBJ:       }
 ; OBJ:       DefRangeRegisterRelSym {
-; OBJ:         BaseRegister: CVRegRSP (0x14F)
+; OBJ:         BaseRegister: RSP (0x14F)
 ; OBJ:         HasSpilledUDTMember: Yes
 ; OBJ:         OffsetInParent: 4
 ; OBJ:         BasePointerOffset: 36

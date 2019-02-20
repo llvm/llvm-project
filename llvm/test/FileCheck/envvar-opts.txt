@@ -1,0 +1,15 @@
+; Create a case that produces a simple diagnostic.
+; RUN: echo foo > %t.in
+; CHECK: foo
+; CHECK: bar
+
+; RUN: env FILECHECK_OPTS= \
+; RUN: not FileCheck %s -input-file %t.in 2>&1 \
+; RUN: | FileCheck -check-prefix QUIET %s
+
+; RUN: env FILECHECK_OPTS=-v \
+; RUN: not FileCheck %s -input-file %t.in 2>&1 \
+; RUN: | FileCheck -check-prefix VERB %s
+
+; QUIET-NOT: remark: {{CHECK}}: expected string found in input
+; VERB:      remark: {{CHECK}}: expected string found in input

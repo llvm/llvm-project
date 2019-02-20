@@ -266,13 +266,10 @@ llvm::objcarc::FindDependencies(DependenceKind Flavor,
   for (const BasicBlock *BB : Visited) {
     if (BB == StartBB)
       continue;
-    const TerminatorInst *TI = cast<TerminatorInst>(&BB->back());
-    for (succ_const_iterator SI(TI), SE(TI, false); SI != SE; ++SI) {
-      const BasicBlock *Succ = *SI;
+    for (const BasicBlock *Succ : successors(BB))
       if (Succ != StartBB && !Visited.count(Succ)) {
         DependingInsts.insert(reinterpret_cast<Instruction *>(-1));
         return;
       }
-    }
   }
 }

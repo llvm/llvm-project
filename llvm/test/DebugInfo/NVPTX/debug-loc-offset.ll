@@ -93,7 +93,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !llvm.module.flags = !{!18, !19}
 !llvm.ident = !{!20, !20}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (210479)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (210479)", isOptimized: false, emissionKind: FullDebug, file: !1, enums: !2, retainedTypes: !2, globals: !2, imports: !2, nameTableKind: None)
 !1 = !DIFile(filename: "debug-loc-offset1.cc", directory: "/llvm_cmake_gcc")
 !2 = !{}
 !4 = distinct !DISubprogram(name: "bar", linkageName: "_Z3bari", line: 1, isLocal: false, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !0, scopeLine: 1, file: !1, scope: !5, type: !6, retainedNodes: !2)
@@ -101,7 +101,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !6 = !DISubroutineType(types: !7)
 !7 = !{!8, !8}
 !8 = !DIBasicType(tag: DW_TAG_base_type, name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
-!9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (210479)", isOptimized: false, emissionKind: FullDebug, file: !10, enums: !2, retainedTypes: !11, globals: !2, imports: !2)
+!9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 (210479)", isOptimized: false, emissionKind: FullDebug, file: !10, enums: !2, retainedTypes: !11, globals: !2, imports: !2, nameTableKind: None)
 !10 = !DIFile(filename: "debug-loc-offset2.cc", directory: "/llvm_cmake_gcc")
 !11 = !{!12}
 !12 = !DICompositeType(tag: DW_TAG_structure_type, name: "A", line: 1, flags: DIFlagFwdDecl, file: !10, identifier: "_ZTS1A")
@@ -166,8 +166,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK: // .b8 1                                // DW_FORM_addr
 ; CHECK: // .b8 64                               // DW_AT_frame_base
 ; CHECK: // .b8 10                               // DW_FORM_block1
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -201,8 +200,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK: // .b8 1                                // DW_FORM_addr
 ; CHECK: // .b8 64                               // DW_AT_frame_base
 ; CHECK: // .b8 10                               // DW_FORM_block1
-; CHECK: // .b8 135                              // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 64
+; CHECK: // .b8 135,64                           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 8                                // DW_FORM_string
 ; CHECK: // .b8 3                                // DW_AT_name
 ; CHECK: // .b8 8                                // DW_FORM_string
@@ -250,74 +248,14 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK: // .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK: // .b8 8                                // Address Size (in bytes)
 ; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x8f DW_TAG_compile_unit
-; CHECK: // .b8 99                               // DW_AT_producer
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 118
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 32
-; CHECK: // .b8 51
-; CHECK: // .b8 46
-; CHECK: // .b8 53
-; CHECK: // .b8 46
-; CHECK: // .b8 48
-; CHECK: // .b8 32
-; CHECK: // .b8 40
-; CHECK: // .b8 50
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 52
-; CHECK: // .b8 55
-; CHECK: // .b8 57
-; CHECK: // .b8 41
+; CHECK: // .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,50,49,48,52,55,57,41 // DW_AT_producer
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_language
 ; CHECK: // .b8 0
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 103
-; CHECK: // .b8 45
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 45
-; CHECK: // .b8 111
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 115
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 50
-; CHECK: // .b8 46
-; CHECK: // .b8 99
-; CHECK: // .b8 99
+; CHECK: // .b8 100,101,98,117,103,45,108,111,99,45,111,102,102,115,101,116,50,46,99,99 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK: // .b8 47                               // DW_AT_comp_dir
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 118
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 107
-; CHECK: // .b8 101
-; CHECK: // .b8 95
-; CHECK: // .b8 103
-; CHECK: // .b8 99
-; CHECK: // .b8 99
+; CHECK: // .b8 47,108,108,118,109,95,99,109,97,107,101,95,103,99,99 // DW_AT_comp_dir
 ; CHECK: // .b8 0
 ; CHECK: // .b64 Lfunc_begin1                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end1                      // DW_AT_high_pc
@@ -330,18 +268,9 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK: // .b64 Lfunc_end1                      // DW_AT_high_pc
 ; CHECK: // .b8 1                                // DW_AT_frame_base
 ; CHECK: // .b8 156
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 51
-; CHECK: // .b8 98
-; CHECK: // .b8 97
-; CHECK: // .b8 122
-; CHECK: // .b8 49
-; CHECK: // .b8 65
+; CHECK: // .b8 95,90,51,98,97,122,49,65         // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 98                               // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 122
+; CHECK: // .b8 98,97,122                        // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 2                                // DW_AT_decl_file
 ; CHECK: // .b8 6                                // DW_AT_decl_line
@@ -360,74 +289,14 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK: // .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK: // .b8 8                                // Address Size (in bytes)
 ; CHECK: // .b8 1                                // Abbrev [1] 0xb:0x91 DW_TAG_compile_unit
-; CHECK: // .b8 99                               // DW_AT_producer
-; CHECK: // .b8 108
-; CHECK: // .b8 97
-; CHECK: // .b8 110
-; CHECK: // .b8 103
-; CHECK: // .b8 32
-; CHECK: // .b8 118
-; CHECK: // .b8 101
-; CHECK: // .b8 114
-; CHECK: // .b8 115
-; CHECK: // .b8 105
-; CHECK: // .b8 111
-; CHECK: // .b8 110
-; CHECK: // .b8 32
-; CHECK: // .b8 51
-; CHECK: // .b8 46
-; CHECK: // .b8 53
-; CHECK: // .b8 46
-; CHECK: // .b8 48
-; CHECK: // .b8 32
-; CHECK: // .b8 40
-; CHECK: // .b8 50
-; CHECK: // .b8 49
-; CHECK: // .b8 48
-; CHECK: // .b8 52
-; CHECK: // .b8 55
-; CHECK: // .b8 57
-; CHECK: // .b8 41
+; CHECK: // .b8 99,108,97,110,103,32,118,101,114,115,105,111,110,32,51,46,53,46,48,32,40,50,49,48,52,55,57,41 // DW_AT_producer
 ; CHECK: // .b8 0
 ; CHECK: // .b8 4                                // DW_AT_language
 ; CHECK: // .b8 0
-; CHECK: // .b8 100                              // DW_AT_name
-; CHECK: // .b8 101
-; CHECK: // .b8 98
-; CHECK: // .b8 117
-; CHECK: // .b8 103
-; CHECK: // .b8 45
-; CHECK: // .b8 108
-; CHECK: // .b8 111
-; CHECK: // .b8 99
-; CHECK: // .b8 45
-; CHECK: // .b8 111
-; CHECK: // .b8 102
-; CHECK: // .b8 102
-; CHECK: // .b8 115
-; CHECK: // .b8 101
-; CHECK: // .b8 116
-; CHECK: // .b8 49
-; CHECK: // .b8 46
-; CHECK: // .b8 99
-; CHECK: // .b8 99
+; CHECK: // .b8 100,101,98,117,103,45,108,111,99,45,111,102,102,115,101,116,49,46,99,99 // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK: // .b8 47                               // DW_AT_comp_dir
-; CHECK: // .b8 108
-; CHECK: // .b8 108
-; CHECK: // .b8 118
-; CHECK: // .b8 109
-; CHECK: // .b8 95
-; CHECK: // .b8 99
-; CHECK: // .b8 109
-; CHECK: // .b8 97
-; CHECK: // .b8 107
-; CHECK: // .b8 101
-; CHECK: // .b8 95
-; CHECK: // .b8 103
-; CHECK: // .b8 99
-; CHECK: // .b8 99
+; CHECK: // .b8 47,108,108,118,109,95,99,109,97,107,101,95,103,99,99 // DW_AT_comp_dir
 ; CHECK: // .b8 0
 ; CHECK: // .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK: // .b64 Lfunc_end0                      // DW_AT_high_pc
@@ -436,17 +305,9 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK: // .b64 Lfunc_end0                      // DW_AT_high_pc
 ; CHECK: // .b8 1                                // DW_AT_frame_base
 ; CHECK: // .b8 156
-; CHECK: // .b8 95                               // DW_AT_MIPS_linkage_name
-; CHECK: // .b8 90
-; CHECK: // .b8 51
-; CHECK: // .b8 98
-; CHECK: // .b8 97
-; CHECK: // .b8 114
-; CHECK: // .b8 105
+; CHECK: // .b8 95,90,51,98,97,114,105           // DW_AT_MIPS_linkage_name
 ; CHECK: // .b8 0
-; CHECK: // .b8 98                               // DW_AT_name
-; CHECK: // .b8 97
-; CHECK: // .b8 114
+; CHECK: // .b8 98,97,114                        // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 1                                // DW_AT_decl_file
 ; CHECK: // .b8 1                                // DW_AT_decl_line
@@ -460,9 +321,7 @@ attributes #2 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 ; CHECK: // .b32 148                             // DW_AT_type
 ; CHECK: // .b8 0                                // End Of Children Mark
 ; CHECK: // .b8 7                                // Abbrev [7] 0x94:0x7 DW_TAG_base_type
-; CHECK: // .b8 105                              // DW_AT_name
-; CHECK: // .b8 110
-; CHECK: // .b8 116
+; CHECK: // .b8 105,110,116                      // DW_AT_name
 ; CHECK: // .b8 0
 ; CHECK: // .b8 5                                // DW_AT_encoding
 ; CHECK: // .b8 4                                // DW_AT_byte_size

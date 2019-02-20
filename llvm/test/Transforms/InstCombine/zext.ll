@@ -35,8 +35,8 @@ define <2 x i64> @test3(<2 x i64> %A) {
 
 define <2 x i64> @test4(<2 x i64> %A) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i64> %A, <i64 63, i64 63>
-; CHECK-NEXT:    [[XOR:%.*]] = and <2 x i64> [[TMP1]], <i64 23, i64 42>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i64> [[A:%.*]], <i64 23, i64 42>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i64> [[AND]], <i64 23, i64 42>
 ; CHECK-NEXT:    ret <2 x i64> [[XOR]]
 ;
   %trunc = trunc <2 x i64> %A to <2 x i32>

@@ -73,7 +73,7 @@ define amdgpu_kernel void @udiv_i32_div_pow2(i32 addrspace(1)* %out, i32 addrspa
 
 ; FUNC-LABEL: {{^}}udiv_i32_div_k_even:
 ; SI-DAG: buffer_load_dword [[VAL:v[0-9]+]]
-; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0xfabbd9c1
+; SI-DAG: s_mov_b32 [[K:s[0-9]+]], 0xfabbd9c1
 ; SI: v_mul_hi_u32 [[MULHI:v[0-9]+]], [[VAL]], [[K]]
 ; SI: v_lshrrev_b32_e32 [[RESULT:v[0-9]+]], 25, [[MULHI]]
 ; SI: buffer_store_dword [[RESULT]]
@@ -87,7 +87,7 @@ define amdgpu_kernel void @udiv_i32_div_k_even(i32 addrspace(1)* %out, i32 addrs
 
 ; FUNC-LABEL: {{^}}udiv_i32_div_k_odd:
 ; SI-DAG: buffer_load_dword [[VAL:v[0-9]+]]
-; SI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 0x7d5deca3
+; SI-DAG: s_mov_b32 [[K:s[0-9]+]], 0x7d5deca3
 ; SI: v_mul_hi_u32 [[MULHI:v[0-9]+]], [[VAL]], [[K]]
 ; SI: v_lshrrev_b32_e32 [[RESULT:v[0-9]+]], 24, [[MULHI]]
 ; SI: buffer_store_dword [[RESULT]]

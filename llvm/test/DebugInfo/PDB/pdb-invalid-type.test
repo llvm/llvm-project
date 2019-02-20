@@ -2,7 +2,7 @@
 # RUN: llvm-pdbutil yaml2pdb -pdb=%t2.pdb %s
 # RUN: not llvm-pdbutil merge -pdb=%t.pdb %t1.pdb %t2.pdb 2>&1 | FileCheck %s
 
-# CHECK: CodeView Error: The CodeView record is corrupted.
+# CHECK: The CodeView record is corrupted
 
 ---
 TpiStream:

@@ -1,4 +1,4 @@
-//===- HexagonDepMappings.td ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 // Automatically generated file, please consult code owner before editing.
 //===----------------------------------------------------------------------===//
-
 
 def A2_negAlias : InstAlias<"$Rd32 = neg($Rs32)", (A2_subri IntRegs:$Rd32, 0, IntRegs:$Rs32)>;
 def A2_notAlias : InstAlias<"$Rd32 = not($Rs32)", (A2_subri IntRegs:$Rd32, -1, IntRegs:$Rs32)>;
@@ -252,6 +251,7 @@ def V6_vaslhv_altAlias : InstAlias<"$Vd32 = vaslh($Vu32,$Vv32)", (V6_vaslhv HvxV
 def V6_vaslw_acc_altAlias : InstAlias<"$Vx32 += vaslw($Vu32,$Rt32)", (V6_vaslw_acc HvxVR:$Vx32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
 def V6_vaslw_altAlias : InstAlias<"$Vd32 = vaslw($Vu32,$Rt32)", (V6_vaslw HvxVR:$Vd32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
 def V6_vaslwv_altAlias : InstAlias<"$Vd32 = vaslw($Vu32,$Vv32)", (V6_vaslwv HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
+def V6_vasr_into_altAlias : InstAlias<"$Vxx32 = vasrinto($Vu32,$Vv32)", (V6_vasr_into HvxWR:$Vxx32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vasrh_acc_altAlias : InstAlias<"$Vx32 += vasrh($Vu32,$Rt32)", (V6_vasrh_acc HvxVR:$Vx32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
 def V6_vasrh_altAlias : InstAlias<"$Vd32 = vasrh($Vu32,$Rt32)", (V6_vasrh HvxVR:$Vd32, HvxVR:$Vu32, IntRegs:$Rt32)>, Requires<[UseHVX]>;
 def V6_vasrhbrndsat_altAlias : InstAlias<"$Vd32 = vasrhb($Vu32,$Vv32,$Rt8):rnd:sat", (V6_vasrhbrndsat HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32, IntRegsLow8:$Rt8)>;
@@ -402,6 +402,7 @@ def V6_vrmpyubi_acc_altAlias : InstAlias<"$Vxx32 += vrmpyub($Vuu32,$Rt32,#$Ii)",
 def V6_vrmpyubi_altAlias : InstAlias<"$Vdd32 = vrmpyub($Vuu32,$Rt32,#$Ii)", (V6_vrmpyubi HvxWR:$Vdd32, HvxWR:$Vuu32, IntRegs:$Rt32, u1_0Imm:$Ii)>, Requires<[UseHVX]>;
 def V6_vrmpyubv_acc_altAlias : InstAlias<"$Vx32 += vrmpyub($Vu32,$Vv32)", (V6_vrmpyubv_acc HvxVR:$Vx32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vrmpyubv_altAlias : InstAlias<"$Vd32 = vrmpyub($Vu32,$Vv32)", (V6_vrmpyubv HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
+def V6_vrotr_altAlias : InstAlias<"$Vd32 = vrotr($Vu32,$Vv32)", (V6_vrotr HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vroundhb_altAlias : InstAlias<"$Vd32 = vroundhb($Vu32,$Vv32):sat", (V6_vroundhb HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vroundhub_altAlias : InstAlias<"$Vd32 = vroundhub($Vu32,$Vv32):sat", (V6_vroundhub HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
 def V6_vrounduhub_altAlias : InstAlias<"$Vd32 = vrounduhub($Vu32,$Vv32):sat", (V6_vrounduhub HvxVR:$Vd32, HvxVR:$Vu32, HvxVR:$Vv32)>, Requires<[UseHVX]>;
@@ -473,4 +474,6 @@ def V6_vunpackub_altAlias : InstAlias<"$Vdd32 = vunpackub($Vu32)", (V6_vunpackub
 def V6_vunpackuh_altAlias : InstAlias<"$Vdd32 = vunpackuh($Vu32)", (V6_vunpackuh HvxWR:$Vdd32, HvxVR:$Vu32)>, Requires<[UseHVX]>;
 def V6_vzb_altAlias : InstAlias<"$Vdd32 = vzxtb($Vu32)", (V6_vzb HvxWR:$Vdd32, HvxVR:$Vu32)>, Requires<[UseHVX]>;
 def V6_vzh_altAlias : InstAlias<"$Vdd32 = vzxth($Vu32)", (V6_vzh HvxWR:$Vdd32, HvxVR:$Vu32)>, Requires<[UseHVX]>;
+def V6_zld0Alias : InstAlias<"z = vmem($Rt32)", (V6_zLd_ai IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
+def V6_zldp0Alias : InstAlias<"if ($Pv4) z = vmem($Rt32)", (V6_zLd_pred_ai PredRegs:$Pv4, IntRegs:$Rt32, 0)>, Requires<[UseHVX]>;
 def Y2_dcfetchAlias : InstAlias<"dcfetch($Rs32)", (Y2_dcfetchbo IntRegs:$Rs32, 0)>;

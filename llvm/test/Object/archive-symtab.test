@@ -2,6 +2,11 @@ RUN: rm -f %t.a
 RUN: llvm-ar rcsU %t.a %p/Inputs/trivial-object-test.elf-x86-64 %p/Inputs/trivial-object-test2.elf-x86-64
 RUN: llvm-nm -M %t.a | FileCheck %s
 
+RUN: rm -f %t.a
+RUN: env SYM64_THRESHOLD=1 llvm-ar rcsU %t.a %p/Inputs/trivial-object-test.elf-x86-64 %p/Inputs/trivial-object-test2.elf-x86-64
+RUN: llvm-nm -M %t.a | FileCheck %s
+RUXX: grep SYM64 %t.a
+
 CHECK: Archive map
 CHECK-NEXT: main in trivial-object-test.elf-x86-64
 CHECK-NEXT: foo in trivial-object-test2.elf-x86-64
@@ -82,6 +87,11 @@ RUN: rm -f %t.a
 RUN: llvm-ar --format=bsd rcsU %t.a %p/Inputs/trivial-object-test.macho-x86-64 %p/Inputs/trivial-object-test2.macho-x86-64
 RUN: llvm-nm -M %t.a | FileCheck --check-prefix=MACHO %s
 
+RUN: rm -f %t.a
+RUN: env SYM64_THRESHOLD=1 llvm-ar --format=darwin rcsU %t.a %p/Inputs/trivial-object-test.macho-x86-64 %p/Inputs/trivial-object-test2.macho-x86-64
+RUN: llvm-nm -M %t.a | FileCheck --check-prefix=MACHO %s
+RUN: grep '__\.SYMDEF_64' %t.a
+
 MACHO: Archive map
 MACHO-NEXT: _main in trivial-object-test.macho-x86-64
 MACHO-NEXT: _foo in trivial-object-test2.macho-x86-64
@@ -138,3 +148,21 @@ RUN: llvm-ar --format=gnu rcsD %t.a %p/Inputs/trivial-object-test.macho-x86-64
 RUN: FileCheck --check-prefix=GNU-SYMTAB-ALIGN %s < %t.a
 GNU-SYMTAB-ALIGN: !<arch>
 GNU-SYMTAB-ALIGN-NEXT: /               0           0     0     0       14        `
+
+
+** Test the behavior of an empty archive:
+
+No symbol table emitted for GNU archives
+RUN: rm -f %t.a
+RUN: llvm-ar rcs --format=gnu %t.a
+RUN: not grep -q '/               ' %t.a
+
+No symbol table for BSD archives
+RUN: rm -f %t.a
+RUN: llvm-ar rcs --format=bsd %t.a
+RUN: not grep -q '__\.SYMDEF' %t.a
+
+And we do emit a symbol table for DARWIN archives
+RUN: rm -f %t.a
+RUN: llvm-ar rcs --format=darwin %t.a
+RUN: grep -q '__\.SYMDEF' %t.a

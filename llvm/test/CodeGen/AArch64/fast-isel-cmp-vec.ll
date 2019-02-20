@@ -24,7 +24,7 @@ bb2:
 define <2 x i32> @icmp_constfold_v2i32(<2 x i32> %a) {
 ; CHECK-LABEL: icmp_constfold_v2i32:
 ; CHECK:      ; %bb.0:
-; CHECK-NEXT:  movi d[[CMP:[0-9]+]], #0xffffffffffffffff
+; CHECK-NEXT:  movi.2d v[[CMP:[0-9]+]], #0xffffffffffffffff
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.2s [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.8b v0, v[[CMP]], [[MASK]]
@@ -56,7 +56,7 @@ bb2:
 define <4 x i32> @icmp_constfold_v4i32(<4 x i32> %a) {
 ; CHECK-LABEL: icmp_constfold_v4i32:
 ; CHECK:      ; %bb.0:
-; CHECK-NEXT:  movi d[[CMP:[0-9]+]], #0xffffffffffffffff
+; CHECK-NEXT:  movi.2d v[[CMP:[0-9]+]], #0xffffffffffffffff
 ; CHECK-NEXT: ; %bb.1:
 ; CHECK-NEXT:  movi.4h [[MASK:v[0-9]+]], #1
 ; CHECK-NEXT:  and.8b [[ZEXT:v[0-9]+]], v[[CMP]], [[MASK]]

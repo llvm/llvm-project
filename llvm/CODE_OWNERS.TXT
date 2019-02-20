@@ -71,7 +71,7 @@ D: Loop Strength Reduction, Register allocators
 N: Andrea Di Biagio
 E: andrea.dibiagio@sony.com
 E: andrea.dibiagio@gmail.com
-D: llvm-mca
+D: MCA, llvm-mca
 
 N: Duncan P. N. Exon Smith
 E: dexonsmith@apple.com
@@ -218,3 +218,11 @@ D: Release management (x.y.0 releases)
 N: whitequark
 E: whitequark@whitequark.org
 D: C API, OCaml bindings
+
+N: Jake Ehrlich
+E: jakehehrlich@google.com
+D: llvm-objcopy (tools/llvm-objcopy)
+
+N: Martin Storsjö
+E: martin@martin.st
+D: MinGW

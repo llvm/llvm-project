@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-explicit-locals -disable-wasm-fallthrough-return-opt | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-disable-explicit-locals -wasm-keep-registers -disable-wasm-fallthrough-return-opt | FileCheck %s
 
 ; Test constant load and store address offsets.
 
@@ -180,7 +180,7 @@ define i64 @load_i64_with_unfolded_gep_offset(i64* %p) {
 ; Basic store.
 
 ; CHECK-LABEL: store_i32_no_offset:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype store_i32_no_offset (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i32_no_offset(i32 *%p, i32 %v) {
@@ -251,7 +251,7 @@ define void @store_i32_with_unfolded_gep_offset(i32* %p) {
 ; When storing from a fixed address, materialize a zero.
 
 ; CHECK-LABEL: store_i32_to_numeric_address:
-; CHECK-NEXT: i32.const $push0=, 0{{$}}
+; CHECK:      i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.const $push1=, 0{{$}}
 ; CHECK-NEXT: i32.store 42($pop0), $pop1{{$}}
 define void @store_i32_to_numeric_address() {

@@ -71,15 +71,20 @@ void dwarfgen::DIE::addAttribute(uint16_t A, dwarf::Form Form,
     break;
 
   case DW_FORM_strp:
+    Die->addValue(
+        DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
+        DIEString(DG.getStringPool().getEntry(*DG.getAsmPrinter(), String)));
+    break;
+
   case DW_FORM_GNU_str_index:
   case DW_FORM_strx:
   case DW_FORM_strx1:
   case DW_FORM_strx2:
   case DW_FORM_strx3:
   case DW_FORM_strx4:
-    Die->addValue(
-        DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
-        DIEString(DG.getStringPool().getEntry(*DG.getAsmPrinter(), String)));
+    Die->addValue(DG.getAllocator(), static_cast<dwarf::Attribute>(A), Form,
+                  DIEString(DG.getStringPool().getIndexedEntry(
+                      *DG.getAsmPrinter(), String)));
     break;
 
   default:

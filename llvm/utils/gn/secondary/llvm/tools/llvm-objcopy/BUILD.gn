@@ -1,0 +1,60 @@
+import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+tablegen("ObjcopyOpts") {
+  visibility = [ ":llvm-objcopy" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+tablegen("StripOpts") {
+  visibility = [ ":llvm-objcopy" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+symlinks = [ "llvm-strip" ]
+if (llvm_install_binutils_symlinks) {
+  symlinks += [
+    "objcopy",
+    "strip",
+  ]
+}
+foreach(target, symlinks) {
+  symlink_or_copy(target) {
+    deps = [
+      ":llvm-objcopy",
+    ]
+    source = "llvm-objcopy"
+    output = "$root_out_dir/bin/$target"
+  }
+}
+
+# //:llvm-objcopy depends on this symlink target, see comment in //BUILD.gn.
+group("symlinks") {
+  deps = []
+  foreach(target, symlinks) {
+    deps += [ ":$target" ]
+  }
+}
+
+executable("llvm-objcopy") {
+  deps = [
+    ":ObjcopyOpts",
+    ":StripOpts",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ "." ]
+  sources = [
+    "Buffer.cpp",
+    "COFF/COFFObjcopy.cpp",
+    "COFF/Reader.cpp",
+    "COFF/Writer.cpp",
+    "CopyConfig.cpp",
+    "ELF/ELFObjcopy.cpp",
+    "ELF/Object.cpp",
+    "llvm-objcopy.cpp",
+  ]
+}

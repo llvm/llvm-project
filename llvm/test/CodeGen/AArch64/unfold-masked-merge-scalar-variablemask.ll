@@ -65,9 +65,9 @@ define i64 @out64(i64 %x, i64 %y, i64 %mask) {
 define i8 @in8(i8 %x, i8 %y, i8 %mask) {
 ; CHECK-LABEL: in8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    bic w9, w1, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %n0 = xor i8 %x, %y
   %n1 = and i8 %n0, %mask
@@ -78,9 +78,9 @@ define i8 @in8(i8 %x, i8 %y, i8 %mask) {
 define i16 @in16(i16 %x, i16 %y, i16 %mask) {
 ; CHECK-LABEL: in16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    bic w9, w1, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %n0 = xor i16 %x, %y
   %n1 = and i16 %n0, %mask
@@ -558,11 +558,11 @@ define i32 @in_multiuse_A(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; CHECK-NEXT:    eor w8, w0, w1
 ; CHECK-NEXT:    and w20, w8, w3
 ; CHECK-NEXT:    mov w0, w20
-; CHECK-NEXT:    stp x19, x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x19, x30, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w19, w1
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    eor w0, w20, w19
-; CHECK-NEXT:    ldp x19, x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x19, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x20, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %n0 = xor i32 %x, %y
@@ -576,12 +576,12 @@ define i32 @in_multiuse_B(i32 %x, i32 %y, i32 %z, i32 %mask) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x20, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    eor w0, w0, w1
-; CHECK-NEXT:    stp x19, x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    stp x19, x30, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov w19, w1
 ; CHECK-NEXT:    and w20, w0, w3
 ; CHECK-NEXT:    bl use32
 ; CHECK-NEXT:    eor w0, w20, w19
-; CHECK-NEXT:    ldp x19, x30, [sp, #16] // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x19, x30, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x20, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %n0 = xor i32 %x, %y

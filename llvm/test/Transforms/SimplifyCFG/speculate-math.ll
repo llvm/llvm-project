@@ -7,6 +7,8 @@ declare float @llvm.fmuladd.f32(float, float, float) nounwind readonly
 declare float @llvm.fabs.f32(float) nounwind readonly
 declare float @llvm.minnum.f32(float, float) nounwind readonly
 declare float @llvm.maxnum.f32(float, float) nounwind readonly
+declare float @llvm.minimum.f32(float, float) nounwind readonly
+declare float @llvm.maximum.f32(float, float) nounwind readonly
 
 ; ALL-LABEL: @fdiv_test(
 ; EXPENSIVE: select i1 %cmp, double %div, double 0.0
@@ -123,6 +125,40 @@ cond.else.i:                                      ; preds = %entry
   br label %test_maxnum.exit
 
 test_maxnum.exit:                                   ; preds = %cond.else.i, %entry
+  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  store float %cond.i, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; ALL-LABEL: @minimum_test(
+; ALL: select
+define void @minimum_test(float addrspace(1)* noalias nocapture %out, float %a, float %b) nounwind {
+entry:
+  %cmp.i = fcmp olt float %a, 0.000000e+00
+  br i1 %cmp.i, label %test_minimum.exit, label %cond.else.i
+
+cond.else.i:                                      ; preds = %entry
+  %0 = tail call float @llvm.minimum.f32(float %a, float %b) nounwind readnone
+  br label %test_minimum.exit
+
+test_minimum.exit:                                   ; preds = %cond.else.i, %entry
+  %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
+  store float %cond.i, float addrspace(1)* %out, align 4
+  ret void
+}
+
+; ALL-LABEL: @maximum_test(
+; ALL: select
+define void @maximum_test(float addrspace(1)* noalias nocapture %out, float %a, float %b) nounwind {
+entry:
+  %cmp.i = fcmp olt float %a, 0.000000e+00
+  br i1 %cmp.i, label %test_maximum.exit, label %cond.else.i
+
+cond.else.i:                                      ; preds = %entry
+  %0 = tail call float @llvm.maximum.f32(float %a, float %b) nounwind readnone
+  br label %test_maximum.exit
+
+test_maximum.exit:                                   ; preds = %cond.else.i, %entry
   %cond.i = phi float [ %0, %cond.else.i ], [ 0x7FF8000000000000, %entry ]
   store float %cond.i, float addrspace(1)* %out, align 4
   ret void

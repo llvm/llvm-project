@@ -43,20 +43,38 @@ void llvm::ComputeLegalValueVTs(const Function &F, const TargetMachine &TM,
   }
 }
 
-void llvm::ComputeSignatureVTs(const Function &F, const TargetMachine &TM,
+void llvm::ComputeSignatureVTs(const FunctionType *Ty, const Function &F,
+                               const TargetMachine &TM,
                                SmallVectorImpl<MVT> &Params,
                                SmallVectorImpl<MVT> &Results) {
-  ComputeLegalValueVTs(F, TM, F.getReturnType(), Results);
+  ComputeLegalValueVTs(F, TM, Ty->getReturnType(), Results);
 
+  MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
   if (Results.size() > 1) {
     // WebAssembly currently can't lower returns of multiple values without
     // demoting to sret (see WebAssemblyTargetLowering::CanLowerReturn). So
     // replace multiple return values with a pointer parameter.
     Results.clear();
-    Params.push_back(
-        MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits()));
+    Params.push_back(PtrVT);
   }
 
-  for (auto &Arg : F.args())
-    ComputeLegalValueVTs(F, TM, Arg.getType(), Params);
+  for (auto *Param : Ty->params())
+    ComputeLegalValueVTs(F, TM, Param, Params);
+  if (Ty->isVarArg())
+    Params.push_back(PtrVT);
+}
+
+void llvm::ValTypesFromMVTs(const ArrayRef<MVT> &In,
+                            SmallVectorImpl<wasm::ValType> &Out) {
+  for (MVT Ty : In)
+    Out.push_back(WebAssembly::toValType(Ty));
+}
+
+std::unique_ptr<wasm::WasmSignature>
+llvm::SignatureFromMVTs(const SmallVectorImpl<MVT> &Results,
+                        const SmallVectorImpl<MVT> &Params) {
+  auto Sig = make_unique<wasm::WasmSignature>();
+  ValTypesFromMVTs(Results, Sig->Returns);
+  ValTypesFromMVTs(Params, Sig->Params);
+  return Sig;
 }

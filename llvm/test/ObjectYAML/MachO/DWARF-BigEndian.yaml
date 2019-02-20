@@ -376,8 +376,8 @@ DWARF:
 #CHECK: DWARF:           
 #CHECK:   debug_str:       
 #CHECK:     - 'clang version 4.0.0 (trunk 290181) (llvm/trunk 290209)'
-#CHECK:     - ../compiler-rt/lib/builtins/absvdi2.c
-#CHECK:     - /Users/cbieneman/dev/open-source/llvm-build-rel
+#CHECK:     - '../compiler-rt/lib/builtins/absvdi2.c'
+#CHECK:     - '/Users/cbieneman/dev/open-source/llvm-build-rel'
 #CHECK:     - int
 #CHECK:     - di_int
 #CHECK:     - long long int

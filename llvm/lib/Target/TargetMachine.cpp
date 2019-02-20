@@ -40,12 +40,7 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
       RequireStructuredCFG(false), DefaultOptions(Options), Options(Options) {
 }
 
-TargetMachine::~TargetMachine() {
-  delete AsmInfo;
-  delete MRI;
-  delete MII;
-  delete STI;
-}
+TargetMachine::~TargetMachine() = default;
 
 bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;
@@ -139,6 +134,15 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
 
   // DLLImport explicitly marks the GV as external.
   if (GV && GV->hasDLLImportStorageClass())
+    return false;
+
+  // On MinGW, variables that haven't been declared with DLLImport may still
+  // end up automatically imported by the linker. To make this feasible,
+  // don't assume the variables to be DSO local unless we actually know
+  // that for sure. This only has to be done for variables; for functions
+  // the linker can insert thunks for calling functions from another DLL.
+  if (TT.isWindowsGNUEnvironment() && GV && GV->isDeclarationForLinker() &&
+      isa<GlobalVariable>(GV))
     return false;
 
   // Every other GV is local on COFF.

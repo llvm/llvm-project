@@ -267,8 +267,7 @@ define i32 @test_diamond_simple(i32* %p, i32* %q, i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[X1:%.*]] = icmp eq i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[Z2:%.*]] = select i1 [[X1]], i32 [[B:%.*]], i32 0
 ; CHECK-NEXT:    [[X2:%.*]] = icmp eq i32 [[B]], 0
-; CHECK-NEXT:    [[Z3:%.*]] = sub i32 [[Z2]], [[B]]
-; CHECK-NEXT:    [[Z4:%.*]] = select i1 [[X2]], i32 [[Z3]], i32 3
+; CHECK-NEXT:    [[Z4:%.*]] = select i1 [[X2]], i32 [[Z2]], i32 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = or i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP3:%.*]], label [[TMP2:%.*]]

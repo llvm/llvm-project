@@ -184,18 +184,15 @@ bool Constant::isNotMinSignedValue() const {
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     return !CFP->getValueAPF().bitcastToAPInt().isMinSignedValue();
 
-  // Check for constant vectors which are splats of INT_MIN values.
-  if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
-    if (Constant *Splat = CV->getSplatValue())
-      return Splat->isNotMinSignedValue();
-
-  // Check for constant vectors which are splats of INT_MIN values.
-  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this)) {
-    if (CV->isSplat()) {
-      if (CV->getElementType()->isFloatingPointTy())
-        return !CV->getElementAsAPFloat(0).bitcastToAPInt().isMinSignedValue();
-      return !CV->getElementAsAPInt(0).isMinSignedValue();
+  // Check that vectors don't contain INT_MIN
+  if (this->getType()->isVectorTy()) {
+    unsigned NumElts = this->getType()->getVectorNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = this->getAggregateElement(i);
+      if (!Elt || !Elt->isNotMinSignedValue())
+        return false;
     }
+    return true;
   }
 
   // It *may* contain INT_MIN, we can't tell.
@@ -353,8 +350,12 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
 
 Constant *Constant::getAggregateElement(Constant *Elt) const {
   assert(isa<IntegerType>(Elt->getType()) && "Index must be an integer");
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Elt))
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(Elt)) {
+    // Check if the constant fits into an uint64_t.
+    if (CI->getValue().getActiveBits() > 64)
+      return nullptr;
     return getAggregateElement(CI->getZExtValue());
+  }
   return nullptr;
 }
 
@@ -962,7 +963,7 @@ ConstantAggregate::ConstantAggregate(CompositeType *T, ValueTy VT,
                                      ArrayRef<Constant *> V)
     : Constant(T, VT, OperandTraits<ConstantAggregate>::op_end(this) - V.size(),
                V.size()) {
-  std::copy(V.begin(), V.end(), op_begin());
+  llvm::copy(V, op_begin());
 
   // Check that types match, unless this is an opaque struct.
   if (auto *ST = dyn_cast<StructType>(T))
@@ -1800,6 +1801,36 @@ Constant *ConstantExpr::getAddrSpaceCast(Constant *C, Type *DstTy,
     C = getBitCast(C, MidTy);
   }
   return getFoldedCast(Instruction::AddrSpaceCast, C, DstTy, OnlyIfReduced);
+}
+
+Constant *ConstantExpr::get(unsigned Opcode, Constant *C, unsigned Flags, 
+                            Type *OnlyIfReducedTy) {
+  // Check the operands for consistency first.
+  assert(Instruction::isUnaryOp(Opcode) &&
+         "Invalid opcode in unary constant expression");
+
+#ifndef NDEBUG
+  switch (Opcode) {
+  case Instruction::FNeg:
+    assert(C->getType()->isFPOrFPVectorTy() &&
+           "Tried to create a floating-point operation on a "
+           "non-floating-point type!");
+    break;
+  default:
+    break;
+  }
+#endif
+
+  // TODO: Try to constant fold operation.
+
+  if (OnlyIfReducedTy == C->getType())
+    return nullptr;
+
+  Constant *ArgVec[] = { C };
+  ConstantExprKeyType Key(Opcode, ArgVec, 0, Flags);
+
+  LLVMContextImpl *pImpl = C->getContext().pImpl;
+  return pImpl->ExprConstants.getOrCreate(C->getType(), Key);
 }
 
 Constant *ConstantExpr::get(unsigned Opcode, Constant *C1, Constant *C2,

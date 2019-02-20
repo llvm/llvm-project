@@ -387,6 +387,10 @@ bool MCMachOStreamer::EmitSymbolAttribute(MCSymbol *Sym,
     Symbol->setWeakDefinition();
     Symbol->setWeakReference();
     break;
+
+  case MCSA_Cold:
+    Symbol->setCold();
+    break;
   }
 
   return true;

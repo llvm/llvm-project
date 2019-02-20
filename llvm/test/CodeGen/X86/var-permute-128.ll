@@ -405,7 +405,7 @@ define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) noun
 ; SSE41-NEXT:    pxor %xmm0, %xmm0
 ; SSE41-NEXT:    pcmpeqq %xmm1, %xmm0
 ; SSE41-NEXT:    movddup {{.*#+}} xmm1 = xmm2[0,0]
-; SSE41-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
+; SSE41-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1,1]
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE41-NEXT:    movapd %xmm2, %xmm0
 ; SSE41-NEXT:    retq

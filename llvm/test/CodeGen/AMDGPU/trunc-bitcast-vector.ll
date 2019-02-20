@@ -51,8 +51,7 @@ define amdgpu_kernel void @trunc_i16_bitcast_v2i16(i16 addrspace(1)* %out, <2 x 
 ;   t21: v2i32,ch = load<LD8[%in(addrspace=1)]> t12, t10, undef:i64
 ;        t23: i64 = bitcast t21
 ;      t30: i16 = truncate t23
-; SI: buffer_load_dword v[[VAL:[0-9]+]]
-; VI: buffer_load_dwordx2 v{{\[}}[[VAL:[0-9]+]]
+; GCN: buffer_load_dword v[[VAL:[0-9]+]]
 ; GCN: buffer_store_short v[[VAL]], off
 define amdgpu_kernel void @trunc_i16_bitcast_v4i16(i16 addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
   %ld = load <4 x i16>, <4 x i16> addrspace(1)* %in

@@ -50,6 +50,32 @@ static Expected<uint32_t> getHashForUdt(const CVType &Rec) {
 }
 
 template <typename T>
+static Expected<TagRecordHash> getTagRecordHashForUdt(const CVType &Rec) {
+  T Deserialized;
+  if (auto E = TypeDeserializer::deserializeAs(const_cast<CVType &>(Rec),
+                                               Deserialized))
+    return std::move(E);
+
+  ClassOptions Opts = Deserialized.getOptions();
+
+  bool ForwardRef = bool(Opts & ClassOptions::ForwardReference);
+
+  uint32_t ThisRecordHash = getHashForUdt(Deserialized, Rec.data());
+
+  // If we don't have a forward ref we can't compute the hash of it from the
+  // full record because it requires hashing the entire buffer.
+  if (!ForwardRef)
+    return TagRecordHash{std::move(Deserialized), ThisRecordHash, 0};
+
+  bool Scoped = bool(Opts & ClassOptions::Scoped);
+
+  StringRef NameToHash =
+      Scoped ? Deserialized.getUniqueName() : Deserialized.getName();
+  uint32_t FullHash = hashStringV1(NameToHash);
+  return TagRecordHash{std::move(Deserialized), FullHash, ThisRecordHash};
+}
+
+template <typename T>
 static Expected<uint32_t> getSourceLineHash(const CVType &Rec) {
   T Deserialized;
   if (auto E = TypeDeserializer::deserializeAs(const_cast<CVType &>(Rec),
@@ -58,6 +84,23 @@ static Expected<uint32_t> getSourceLineHash(const CVType &Rec) {
   char Buf[4];
   support::endian::write32le(Buf, Deserialized.getUDT().getIndex());
   return hashStringV1(StringRef(Buf, 4));
+}
+
+Expected<TagRecordHash> llvm::pdb::hashTagRecord(const codeview::CVType &Type) {
+  switch (Type.kind()) {
+  case LF_CLASS:
+  case LF_STRUCTURE:
+  case LF_INTERFACE:
+    return getTagRecordHashForUdt<ClassRecord>(Type);
+  case LF_UNION:
+    return getTagRecordHashForUdt<UnionRecord>(Type);
+  case LF_ENUM:
+    return getTagRecordHashForUdt<EnumRecord>(Type);
+  default:
+    assert(false && "Type is not a tag record!");
+  }
+  return make_error<StringError>("Invalid record type",
+                                 inconvertibleErrorCode());
 }
 
 Expected<uint32_t> llvm::pdb::hashTypeRecord(const CVType &Rec) {

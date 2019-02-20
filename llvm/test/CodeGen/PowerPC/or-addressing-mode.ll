@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 | not grep ori
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-apple-darwin8 | not grep rlwimi
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | not grep ori
+; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-linux-gnu | not grep rlwimi
 
 define i32 @test1(i8* %P) {
         %tmp.2.i = ptrtoint i8* %P to i32               ; <i32> [#uses=2]

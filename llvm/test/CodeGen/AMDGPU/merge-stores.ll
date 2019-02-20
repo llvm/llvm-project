@@ -164,8 +164,8 @@ define amdgpu_kernel void @merge_global_store_4_constants_mixed_i32_f32(float ad
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_3_constants_i32:
-; SI-DAG: buffer_store_dwordx2
-; SI-DAG: buffer_store_dword
+; SI-DAG: buffer_store_dwordx3
+; SI-NOT: buffer_store_dwordx2
 ; SI-NOT: buffer_store_dword
 ; GCN: s_endpgm
 define amdgpu_kernel void @merge_global_store_3_constants_i32(i32 addrspace(1)* %out) #0 {
@@ -274,11 +274,9 @@ define amdgpu_kernel void @merge_global_store_4_adjacent_loads_i32(i32 addrspace
 }
 
 ; GCN-LABEL: {{^}}merge_global_store_3_adjacent_loads_i32:
-; SI-DAG: buffer_load_dwordx2
-; SI-DAG: buffer_load_dword v
+; SI-DAG: buffer_load_dwordx3
 ; GCN: s_waitcnt
-; SI-DAG: buffer_store_dword v
-; SI-DAG: buffer_store_dwordx2 v
+; SI-DAG: buffer_store_dwordx3 v
 ; GCN: s_endpgm
 define amdgpu_kernel void @merge_global_store_3_adjacent_loads_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i32, i32 addrspace(1)* %out, i32 1
@@ -563,8 +561,7 @@ define amdgpu_kernel void @merge_global_store_6_constants_i32(i32 addrspace(1)* 
 
 ; GCN-LABEL: {{^}}merge_global_store_7_constants_i32:
 ; GCN: buffer_store_dwordx4
-; GCN: buffer_store_dwordx2
-; GCN: buffer_store_dword v
+; GCN: buffer_store_dwordx3
 define amdgpu_kernel void @merge_global_store_7_constants_i32(i32 addrspace(1)* %out) {
   store i32 34, i32 addrspace(1)* %out, align 4
   %idx1 = getelementptr inbounds i32, i32 addrspace(1)* %out, i64 1
@@ -611,13 +608,11 @@ define amdgpu_kernel void @merge_global_store_8_constants_i32(i32 addrspace(1)* 
 
 ; GCN-LABEL: {{^}}copy_v3i32_align4:
 ; GCN-NOT: SCRATCH_RSRC_DWORD
-; GCN-DAG: buffer_load_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
-; GCN-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_load_dwordx3 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 ; GCN-NOT: offen
 ; GCN: s_waitcnt vmcnt
 ; GCN-NOT: offen
-; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; GCN-DAG: buffer_store_dwordx3 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 
 ; GCN: ScratchSize: 0{{$}}
 define amdgpu_kernel void @copy_v3i32_align4(<3 x i32> addrspace(1)* noalias %out, <3 x i32> addrspace(1)* noalias %in) #0 {
@@ -644,13 +639,11 @@ define amdgpu_kernel void @copy_v3i64_align4(<3 x i64> addrspace(1)* noalias %ou
 
 ; GCN-LABEL: {{^}}copy_v3f32_align4:
 ; GCN-NOT: SCRATCH_RSRC_DWORD
-; GCN-DAG: buffer_load_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
-; GCN-DAG: buffer_load_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
+; GCN-DAG: buffer_load_dwordx3 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 ; GCN-NOT: offen
 ; GCN: s_waitcnt vmcnt
 ; GCN-NOT: offen
-; GCN-DAG: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
-; GCN-DAG: buffer_store_dword v{{[0-9]+}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0 offset:8
+; GCN-DAG: buffer_store_dwordx3 v{{\[[0-9]+:[0-9]+\]}}, off, s{{\[[0-9]+:[0-9]+\]}}, 0{{$}}
 ; GCN: ScratchSize: 0{{$}}
 define amdgpu_kernel void @copy_v3f32_align4(<3 x float> addrspace(1)* noalias %out, <3 x float> addrspace(1)* noalias %in) #0 {
   %vec = load <3 x float>, <3 x float> addrspace(1)* %in, align 4
