@@ -399,7 +399,7 @@ def : InstRW<[P9_DPE_7C, P9_DPO_7C, IP_EXECE_1C, IP_EXECO_1C,
 //  dispatch units for the superslice.
 def : InstRW<[P9_DP_5C, IP_EXEC_1C, DISP_1C, DISP_1C, DISP_1C],
       (instrs
-    (instregex "MADD(HD|HDU|LD)$"),
+    (instregex "MADD(HD|HDU|LD|LD8)$"),
     (instregex "MUL(HD|HW|LD|LI|LI8|LW)(U)?$")
 )>;
 

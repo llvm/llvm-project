@@ -403,8 +403,18 @@ void MappingTraits<wasm::WasmInitExpr>::mapping(IO &IO,
 void MappingTraits<WasmYAML::DataSegment>::mapping(
     IO &IO, WasmYAML::DataSegment &Segment) {
   IO.mapOptional("SectionOffset", Segment.SectionOffset);
-  IO.mapRequired("MemoryIndex", Segment.MemoryIndex);
-  IO.mapRequired("Offset", Segment.Offset);
+  IO.mapRequired("InitFlags", Segment.InitFlags);
+  if (Segment.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX) {
+    IO.mapRequired("MemoryIndex", Segment.MemoryIndex);
+  } else {
+    Segment.MemoryIndex = 0;
+  }
+  if ((Segment.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0) {
+    IO.mapRequired("Offset", Segment.Offset);
+  } else {
+    Segment.Offset.Opcode = wasm::WASM_OPCODE_I32_CONST;
+    Segment.Offset.Value.Int32 = 0;
+  }
   IO.mapRequired("Content", Segment.Content);
 }
 

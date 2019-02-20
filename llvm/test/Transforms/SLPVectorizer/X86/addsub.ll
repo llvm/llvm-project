@@ -348,18 +348,22 @@ define void @reorder_alt_rightsubTree(double* nocapture %c, double* noalias noca
 
 define void @no_vec_shuff_reorder() #0 {
 ; CHECK-LABEL: @no_vec_shuff_reorder(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, <2 x float>* bitcast ([4 x float]* @fa to <2 x float>*), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* bitcast ([4 x float]* @fb to <2 x float>*), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP5]], <2 x float>* bitcast ([4 x float]* @fc to <2 x float>*), align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 2) to <2 x float>*), align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 2) to <2 x float>*), align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x float> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = fsub <2 x float> [[TMP6]], [[TMP7]]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> [[TMP9]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    store <2 x float> [[TMP10]], <2 x float>* bitcast (float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 2) to <2 x float>*), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 0), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 0), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    store float [[TMP3]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 0), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub float [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store float [[TMP6]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 1), align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd float [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    store float [[TMP9]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fa, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = fsub float [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    store float [[TMP12]], float* getelementptr inbounds ([4 x float], [4 x float]* @fc, i32 0, i64 3), align 4
 ; CHECK-NEXT:    ret void
 ;
   %1 = load float, float* getelementptr inbounds ([4 x float], [4 x float]* @fb, i32 0, i64 0), align 4

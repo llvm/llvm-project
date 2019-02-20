@@ -224,6 +224,13 @@ OPTIONS
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode).
 
+.. option:: -analysis-display-unstable-clusters
+
+ If there is more than one benchmark for an opcode, said benchmarks may end up
+ not being clustered into the same cluster if the measured performance
+ characteristics are different. by default all such opcodes are filtered out.
+ This flag will instead show only such unstable opcodes.
+
 .. option:: -ignore-invalid-sched-class=false
 
  If set, ignore instructions that do not have a sched class (class idx = 0).

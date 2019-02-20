@@ -1199,10 +1199,20 @@ public:
 
   /// Wrapper for findRegisterDefOperandIdx, it returns
   /// a pointer to the MachineOperand rather than an index.
-  MachineOperand *findRegisterDefOperand(unsigned Reg, bool isDead = false,
-                                      const TargetRegisterInfo *TRI = nullptr) {
-    int Idx = findRegisterDefOperandIdx(Reg, isDead, false, TRI);
+  MachineOperand *
+  findRegisterDefOperand(unsigned Reg, bool isDead = false,
+                         bool Overlap = false,
+                         const TargetRegisterInfo *TRI = nullptr) {
+    int Idx = findRegisterDefOperandIdx(Reg, isDead, Overlap, TRI);
     return (Idx == -1) ? nullptr : &getOperand(Idx);
+  }
+
+  const MachineOperand *
+  findRegisterDefOperand(unsigned Reg, bool isDead = false,
+                         bool Overlap = false,
+                         const TargetRegisterInfo *TRI = nullptr) const {
+    return const_cast<MachineInstr *>(this)->findRegisterDefOperand(
+        Reg, isDead, Overlap, TRI);
   }
 
   /// Find the index of the first operand in the

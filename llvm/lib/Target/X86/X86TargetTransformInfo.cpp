@@ -146,13 +146,6 @@ unsigned X86TTIImpl::getRegisterBitWidth(bool Vector) const {
   return 32;
 }
 
-// Use horizontal 128-bit operations, which use low and high
-// 64-bit parts of vector register. This also allows vectorizer
-// to use partial vector operations.
-unsigned X86TTIImpl::getMinVectorRegisterBitWidth() const {
-  return 64;
-}
-
 unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
   return getRegisterBitWidth(true);
 }

@@ -241,38 +241,134 @@ define void @shl_v16i32() {
 
 define void @shl_v32i16() {
 ; SSE-LABEL: @shl_v32i16(
-; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i16>, <4 x i16>* bitcast ([32 x i16]* @a16 to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 4) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP3:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 12) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP5:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP6:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 20) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP7:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP8:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 28) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP9:%.*]] = load <4 x i16>, <4 x i16>* bitcast ([32 x i16]* @b16 to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP10:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 4) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP11:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP12:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 12) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP13:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP14:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 20) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP15:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP16:%.*]] = load <4 x i16>, <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 28) to <4 x i16>*), align 2
-; SSE-NEXT:    [[TMP17:%.*]] = shl <4 x i16> [[TMP1]], [[TMP9]]
-; SSE-NEXT:    [[TMP18:%.*]] = shl <4 x i16> [[TMP2]], [[TMP10]]
-; SSE-NEXT:    [[TMP19:%.*]] = shl <4 x i16> [[TMP3]], [[TMP11]]
-; SSE-NEXT:    [[TMP20:%.*]] = shl <4 x i16> [[TMP4]], [[TMP12]]
-; SSE-NEXT:    [[TMP21:%.*]] = shl <4 x i16> [[TMP5]], [[TMP13]]
-; SSE-NEXT:    [[TMP22:%.*]] = shl <4 x i16> [[TMP6]], [[TMP14]]
-; SSE-NEXT:    [[TMP23:%.*]] = shl <4 x i16> [[TMP7]], [[TMP15]]
-; SSE-NEXT:    [[TMP24:%.*]] = shl <4 x i16> [[TMP8]], [[TMP16]]
-; SSE-NEXT:    store <4 x i16> [[TMP17]], <4 x i16>* bitcast ([32 x i16]* @c16 to <4 x i16>*), align 2
-; SSE-NEXT:    store <4 x i16> [[TMP18]], <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 4) to <4 x i16>*), align 2
-; SSE-NEXT:    store <4 x i16> [[TMP19]], <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8) to <4 x i16>*), align 2
-; SSE-NEXT:    store <4 x i16> [[TMP20]], <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 12) to <4 x i16>*), align 2
-; SSE-NEXT:    store <4 x i16> [[TMP21]], <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <4 x i16>*), align 2
-; SSE-NEXT:    store <4 x i16> [[TMP22]], <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 20) to <4 x i16>*), align 2
-; SSE-NEXT:    store <4 x i16> [[TMP23]], <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24) to <4 x i16>*), align 2
-; SSE-NEXT:    store <4 x i16> [[TMP24]], <4 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 28) to <4 x i16>*), align 2
+; SSE-NEXT:    [[A0:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 0), align 2
+; SSE-NEXT:    [[A1:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 1), align 2
+; SSE-NEXT:    [[A2:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 2), align 2
+; SSE-NEXT:    [[A3:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 3), align 2
+; SSE-NEXT:    [[A4:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 4), align 2
+; SSE-NEXT:    [[A5:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 5), align 2
+; SSE-NEXT:    [[A6:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 6), align 2
+; SSE-NEXT:    [[A7:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 7), align 2
+; SSE-NEXT:    [[A8:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8), align 2
+; SSE-NEXT:    [[A9:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 9), align 2
+; SSE-NEXT:    [[A10:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 10), align 2
+; SSE-NEXT:    [[A11:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 11), align 2
+; SSE-NEXT:    [[A12:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 12), align 2
+; SSE-NEXT:    [[A13:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 13), align 2
+; SSE-NEXT:    [[A14:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 14), align 2
+; SSE-NEXT:    [[A15:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 15), align 2
+; SSE-NEXT:    [[A16:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16), align 2
+; SSE-NEXT:    [[A17:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 17), align 2
+; SSE-NEXT:    [[A18:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 18), align 2
+; SSE-NEXT:    [[A19:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 19), align 2
+; SSE-NEXT:    [[A20:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 20), align 2
+; SSE-NEXT:    [[A21:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 21), align 2
+; SSE-NEXT:    [[A22:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 22), align 2
+; SSE-NEXT:    [[A23:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 23), align 2
+; SSE-NEXT:    [[A24:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24), align 2
+; SSE-NEXT:    [[A25:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 25), align 2
+; SSE-NEXT:    [[A26:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 26), align 2
+; SSE-NEXT:    [[A27:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 27), align 2
+; SSE-NEXT:    [[A28:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 28), align 2
+; SSE-NEXT:    [[A29:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 29), align 2
+; SSE-NEXT:    [[A30:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 30), align 2
+; SSE-NEXT:    [[A31:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 31), align 2
+; SSE-NEXT:    [[B0:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 0), align 2
+; SSE-NEXT:    [[B1:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 1), align 2
+; SSE-NEXT:    [[B2:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 2), align 2
+; SSE-NEXT:    [[B3:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 3), align 2
+; SSE-NEXT:    [[B4:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 4), align 2
+; SSE-NEXT:    [[B5:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 5), align 2
+; SSE-NEXT:    [[B6:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 6), align 2
+; SSE-NEXT:    [[B7:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 7), align 2
+; SSE-NEXT:    [[B8:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8), align 2
+; SSE-NEXT:    [[B9:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 9), align 2
+; SSE-NEXT:    [[B10:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 10), align 2
+; SSE-NEXT:    [[B11:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 11), align 2
+; SSE-NEXT:    [[B12:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 12), align 2
+; SSE-NEXT:    [[B13:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 13), align 2
+; SSE-NEXT:    [[B14:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 14), align 2
+; SSE-NEXT:    [[B15:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 15), align 2
+; SSE-NEXT:    [[B16:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16), align 2
+; SSE-NEXT:    [[B17:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 17), align 2
+; SSE-NEXT:    [[B18:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 18), align 2
+; SSE-NEXT:    [[B19:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 19), align 2
+; SSE-NEXT:    [[B20:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 20), align 2
+; SSE-NEXT:    [[B21:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 21), align 2
+; SSE-NEXT:    [[B22:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 22), align 2
+; SSE-NEXT:    [[B23:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 23), align 2
+; SSE-NEXT:    [[B24:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24), align 2
+; SSE-NEXT:    [[B25:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 25), align 2
+; SSE-NEXT:    [[B26:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 26), align 2
+; SSE-NEXT:    [[B27:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 27), align 2
+; SSE-NEXT:    [[B28:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 28), align 2
+; SSE-NEXT:    [[B29:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 29), align 2
+; SSE-NEXT:    [[B30:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 30), align 2
+; SSE-NEXT:    [[B31:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 31), align 2
+; SSE-NEXT:    [[R0:%.*]] = shl i16 [[A0]], [[B0]]
+; SSE-NEXT:    [[R1:%.*]] = shl i16 [[A1]], [[B1]]
+; SSE-NEXT:    [[R2:%.*]] = shl i16 [[A2]], [[B2]]
+; SSE-NEXT:    [[R3:%.*]] = shl i16 [[A3]], [[B3]]
+; SSE-NEXT:    [[R4:%.*]] = shl i16 [[A4]], [[B4]]
+; SSE-NEXT:    [[R5:%.*]] = shl i16 [[A5]], [[B5]]
+; SSE-NEXT:    [[R6:%.*]] = shl i16 [[A6]], [[B6]]
+; SSE-NEXT:    [[R7:%.*]] = shl i16 [[A7]], [[B7]]
+; SSE-NEXT:    [[R8:%.*]] = shl i16 [[A8]], [[B8]]
+; SSE-NEXT:    [[R9:%.*]] = shl i16 [[A9]], [[B9]]
+; SSE-NEXT:    [[R10:%.*]] = shl i16 [[A10]], [[B10]]
+; SSE-NEXT:    [[R11:%.*]] = shl i16 [[A11]], [[B11]]
+; SSE-NEXT:    [[R12:%.*]] = shl i16 [[A12]], [[B12]]
+; SSE-NEXT:    [[R13:%.*]] = shl i16 [[A13]], [[B13]]
+; SSE-NEXT:    [[R14:%.*]] = shl i16 [[A14]], [[B14]]
+; SSE-NEXT:    [[R15:%.*]] = shl i16 [[A15]], [[B15]]
+; SSE-NEXT:    [[R16:%.*]] = shl i16 [[A16]], [[B16]]
+; SSE-NEXT:    [[R17:%.*]] = shl i16 [[A17]], [[B17]]
+; SSE-NEXT:    [[R18:%.*]] = shl i16 [[A18]], [[B18]]
+; SSE-NEXT:    [[R19:%.*]] = shl i16 [[A19]], [[B19]]
+; SSE-NEXT:    [[R20:%.*]] = shl i16 [[A20]], [[B20]]
+; SSE-NEXT:    [[R21:%.*]] = shl i16 [[A21]], [[B21]]
+; SSE-NEXT:    [[R22:%.*]] = shl i16 [[A22]], [[B22]]
+; SSE-NEXT:    [[R23:%.*]] = shl i16 [[A23]], [[B23]]
+; SSE-NEXT:    [[R24:%.*]] = shl i16 [[A24]], [[B24]]
+; SSE-NEXT:    [[R25:%.*]] = shl i16 [[A25]], [[B25]]
+; SSE-NEXT:    [[R26:%.*]] = shl i16 [[A26]], [[B26]]
+; SSE-NEXT:    [[R27:%.*]] = shl i16 [[A27]], [[B27]]
+; SSE-NEXT:    [[R28:%.*]] = shl i16 [[A28]], [[B28]]
+; SSE-NEXT:    [[R29:%.*]] = shl i16 [[A29]], [[B29]]
+; SSE-NEXT:    [[R30:%.*]] = shl i16 [[A30]], [[B30]]
+; SSE-NEXT:    [[R31:%.*]] = shl i16 [[A31]], [[B31]]
+; SSE-NEXT:    store i16 [[R0]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 0), align 2
+; SSE-NEXT:    store i16 [[R1]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 1), align 2
+; SSE-NEXT:    store i16 [[R2]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 2), align 2
+; SSE-NEXT:    store i16 [[R3]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 3), align 2
+; SSE-NEXT:    store i16 [[R4]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 4), align 2
+; SSE-NEXT:    store i16 [[R5]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 5), align 2
+; SSE-NEXT:    store i16 [[R6]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 6), align 2
+; SSE-NEXT:    store i16 [[R7]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 7), align 2
+; SSE-NEXT:    store i16 [[R8]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8), align 2
+; SSE-NEXT:    store i16 [[R9]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 9), align 2
+; SSE-NEXT:    store i16 [[R10]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 10), align 2
+; SSE-NEXT:    store i16 [[R11]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 11), align 2
+; SSE-NEXT:    store i16 [[R12]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 12), align 2
+; SSE-NEXT:    store i16 [[R13]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 13), align 2
+; SSE-NEXT:    store i16 [[R14]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 14), align 2
+; SSE-NEXT:    store i16 [[R15]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 15), align 2
+; SSE-NEXT:    store i16 [[R16]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16), align 2
+; SSE-NEXT:    store i16 [[R17]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 17), align 2
+; SSE-NEXT:    store i16 [[R18]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 18), align 2
+; SSE-NEXT:    store i16 [[R19]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 19), align 2
+; SSE-NEXT:    store i16 [[R20]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 20), align 2
+; SSE-NEXT:    store i16 [[R21]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 21), align 2
+; SSE-NEXT:    store i16 [[R22]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 22), align 2
+; SSE-NEXT:    store i16 [[R23]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 23), align 2
+; SSE-NEXT:    store i16 [[R24]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24), align 2
+; SSE-NEXT:    store i16 [[R25]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 25), align 2
+; SSE-NEXT:    store i16 [[R26]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 26), align 2
+; SSE-NEXT:    store i16 [[R27]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 27), align 2
+; SSE-NEXT:    store i16 [[R28]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 28), align 2
+; SSE-NEXT:    store i16 [[R29]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 29), align 2
+; SSE-NEXT:    store i16 [[R30]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 30), align 2
+; SSE-NEXT:    store i16 [[R31]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 31), align 2
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @shl_v32i16(
