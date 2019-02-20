@@ -79,6 +79,9 @@ Changes to the LLVM IR
 Changes to the AArch64 Target
 -----------------------------
 
+* Initial support for the Tiny code model, where code and its statically
+  defined symbols must live within 1MB of each other.
+
 * Added support for the ``.arch_extension`` assembler directive, just like
   on ARM.
 
