@@ -120,6 +120,13 @@ Non-comprehensive list of changes in this release
 
 - Improved support for MIPS N32 ABI and MIPS R6 target triples.
 
+- Clang now includes builtin functions for bitwise rotation of common value
+  sizes, such as: `__builtin_rotateleft32
+  <LanguageExtensions.html#builtin-rotateleft>`_
+
+- Improved optimization for the corresponding MSVC compatibility builtins such
+  as ``_rotl()``.
+
 New Compiler Flags
 ------------------
 
