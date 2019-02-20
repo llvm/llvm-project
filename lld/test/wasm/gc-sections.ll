@@ -66,8 +66,8 @@ entry:
 ; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Segments:        
 ; CHECK-NEXT:       - SectionOffset:   7
-; CHECK-NEXT:         MemoryIndex:     0
-; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:         InitFlags:       0
+; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         '02000000'
@@ -129,8 +129,8 @@ entry:
 ; NO-GC:        - Type:            DATA
 ; NO-GC-NEXT:     Segments:        
 ; NO-GC-NEXT:       - SectionOffset:   7
-; NO-GC-NEXT:         MemoryIndex:     0
-; NO-GC-NEXT:         Offset:          
+; NO-GC-NEXT:         InitFlags:       0
+; NO-GC-NEXT:         Offset:
 ; NO-GC-NEXT:           Opcode:          I32_CONST
 ; NO-GC-NEXT:           Value:           1024
 ; NO-GC-NEXT:         Content:         '010000000000000002000000'

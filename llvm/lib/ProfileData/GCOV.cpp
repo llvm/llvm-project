@@ -18,6 +18,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <system_error>
@@ -686,7 +687,15 @@ std::string FileInfo::getCoveragePath(StringRef Filename,
   if (Options.LongFileNames && !Filename.equals(MainFilename))
     CoveragePath =
         mangleCoveragePath(MainFilename, Options.PreservePaths) + "##";
-  CoveragePath += mangleCoveragePath(Filename, Options.PreservePaths) + ".gcov";
+  CoveragePath += mangleCoveragePath(Filename, Options.PreservePaths);
+  if (Options.HashFilenames) {
+    MD5 Hasher;
+    MD5::MD5Result Result;
+    Hasher.update(Filename.str());
+    Hasher.final(Result);
+    CoveragePath += "##" + Result.digest().str().str();
+  }
+  CoveragePath += ".gcov";
   return CoveragePath;
 }
 

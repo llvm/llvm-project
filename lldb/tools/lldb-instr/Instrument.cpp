@@ -104,8 +104,7 @@ static std::string GetRegisterConstructorMacro(StringRef Class,
                                                StringRef Signature) {
   std::string Macro;
   llvm::raw_string_ostream OS(Macro);
-  OS << "LLDB_REGISTER_CONSTRUCTOR(" << Class << ", (" << Signature
-     << "));\n\n";
+  OS << "LLDB_REGISTER_CONSTRUCTOR(" << Class << ", (" << Signature << "));\n";
   return OS.str();
 }
 
@@ -158,6 +157,15 @@ public:
     if (ShouldSkip(Decl))
       return false;
 
+    // Skip CXXMethodDecls that already starts with a macro. This should make
+    // it easier to rerun the tool to find missing macros.
+    Stmt *Body = Decl->getBody();
+    for (auto &C : Body->children()) {
+      if (C->getBeginLoc().isMacroID())
+        return false;
+      break;
+    }
+
     // Print 'bool' instead of '_Bool'.
     PrintingPolicy Policy(Context.getLangOpts());
     Policy.Bool = true;
@@ -207,14 +215,6 @@ public:
           ReturnType.getAsString(Policy), Record->getNameAsString(),
           Decl->getNameAsString(), ParamTypesStr, ParamNamesStr,
           Decl->isStatic(), Decl->isConst());
-    }
-
-    // If this CXXMethodDecl already starts with a macro we're done.
-    Stmt *Body = Decl->getBody();
-    for (auto &C : Body->children()) {
-      if (C->getBeginLoc().isMacroID())
-        return false;
-      break;
     }
 
     // Insert the macro at the beginning of the function. We don't attempt to
@@ -304,10 +304,18 @@ class SBAction : public ASTFrontendAction {
 public:
   SBAction() = default;
 
-  void EndSourceFileAction() override { MyRewriter.overwriteChangedFiles(); }
+  bool BeginSourceFileAction(CompilerInstance &CI) override {
+    llvm::outs() << "{\n";
+    return true;
+  }
+
+  void EndSourceFileAction() override {
+    llvm::outs() << "}\n";
+    MyRewriter.overwriteChangedFiles();
+  }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef file) override {
+                                                 StringRef File) override {
     MyRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     return llvm::make_unique<SBConsumer>(MyRewriter, CI.getASTContext());
   }

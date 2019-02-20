@@ -1,0 +1,27 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj --sections %t | FileCheck %s
+
+# CHECK: Name: enum
+# CHECK: Type: SHT_PROGBITS
+# CHECK: Name: machine-specific
+# CHECK: Type: SHT_X86_64_UNWIND
+# CHECK: Name: hex
+# CHECK: Type: Unknown (0xABCD)
+# CHECK: Name: decimal
+# CHECK: Type: Unknown (0x4D2)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  enum
+    Type:  SHT_PROGBITS
+  - Name:  machine-specific
+    Type:  SHT_X86_64_UNWIND
+  - Name:  hex
+    Type:  0xabcd
+  - Name:  decimal
+    Type:  1234

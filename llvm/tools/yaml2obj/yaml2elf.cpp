@@ -17,6 +17,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -549,25 +550,23 @@ template <class ELFT>
 bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::Group &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  typedef typename ELFT::Word Elf_Word;
   assert(Section.Type == llvm::ELF::SHT_GROUP &&
          "Section type is not SHT_GROUP");
 
-  SHeader.sh_entsize = sizeof(Elf_Word);
+  SHeader.sh_entsize = 4;
   SHeader.sh_size = SHeader.sh_entsize * Section.Members.size();
 
-  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
 
   for (auto member : Section.Members) {
-    Elf_Word SIdx;
     unsigned int sectionIndex = 0;
     if (member.sectionNameOrType == "GRP_COMDAT")
       sectionIndex = llvm::ELF::GRP_COMDAT;
     else if (!convertSectionIndex(SN2I, Section.Name, member.sectionNameOrType,
                                   sectionIndex))
       return false;
-    SIdx = sectionIndex;
-    OS.write((const char *)&SIdx, sizeof(SIdx));
+    support::endian::write<uint32_t>(OS, sectionIndex, ELFT::TargetEndianness);
   }
   return true;
 }
@@ -576,17 +575,13 @@ template <class ELFT>
 bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::SymverSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  typedef typename ELFT::Half Elf_Half;
-
   raw_ostream &OS =
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
-  for (uint16_t V : Section.Entries) {
-    Elf_Half Version = (Elf_Half)V;
-    OS.write((const char *)&Version, sizeof(Elf_Half));
-  }
+  for (uint16_t Version : Section.Entries)
+    support::endian::write<uint16_t>(OS, Version, ELFT::TargetEndianness);
 
-  SHeader.sh_size = Section.Entries.size() * sizeof(Elf_Half);
-  SHeader.sh_entsize = sizeof(Elf_Half);
+  SHeader.sh_entsize = 2;
+  SHeader.sh_size = Section.Entries.size() * SHeader.sh_entsize;
   return true;
 }
 
@@ -671,22 +666,21 @@ template <class ELFT>
 void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::DynamicSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
-  typedef typename ELFT::Addr Elf_Addr;
+  typedef typename ELFT::uint uintX_t;
+
   assert(Section.Type == llvm::ELF::SHT_DYNAMIC &&
          "Section type is not SHT_DYNAMIC");
 
-  SHeader.sh_size = 2 * sizeof(Elf_Addr) * Section.Entries.size();
+  SHeader.sh_size = 2 * sizeof(uintX_t) * Section.Entries.size();
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
   else
     SHeader.sh_entsize = sizeof(Elf_Dyn);
 
-  auto &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+  raw_ostream &OS = CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
   for (const ELFYAML::DynamicEntry &DE : Section.Entries) {
-    Elf_Addr Tag = (Elf_Addr)DE.Tag;
-    OS.write((const char *)&Tag, sizeof(Elf_Addr));
-    Elf_Addr Val = (Elf_Addr)DE.Val;
-    OS.write((const char *)&Val, sizeof(Elf_Addr));
+    support::endian::write<uintX_t>(OS, DE.Tag, ELFT::TargetEndianness);
+    support::endian::write<uintX_t>(OS, DE.Val, ELFT::TargetEndianness);
   }
 }
 

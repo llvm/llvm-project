@@ -14,7 +14,7 @@ int main(void) {
   handle->handle_bytes = MAX_HANDLE_SZ;
 
   int mount_id;
-  int res = name_to_handle_at(AT_FDCWD, "/bin/cat", handle, &mount_id, 0);
+  int res = name_to_handle_at(AT_FDCWD, "/dev/null", handle, &mount_id, 0);
   assert(!res);
   __msan_check_mem_is_initialized(&mount_id, sizeof(mount_id));
   __msan_check_mem_is_initialized(&handle->handle_bytes,

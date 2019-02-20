@@ -487,8 +487,11 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::DataSection &Section) {
   encodeULEB128(Section.Segments.size(), OS);
   for (auto &Segment : Section.Segments) {
-    encodeULEB128(Segment.MemoryIndex, OS);
-    writeInitExpr(Segment.Offset, OS);
+    encodeULEB128(Segment.InitFlags, OS);
+    if (Segment.InitFlags & wasm::WASM_SEGMENT_HAS_MEMINDEX)
+      encodeULEB128(Segment.MemoryIndex, OS);
+    if ((Segment.InitFlags & wasm::WASM_SEGMENT_IS_PASSIVE) == 0)
+      writeInitExpr(Segment.Offset, OS);
     encodeULEB128(Segment.Content.binary_size(), OS);
     Segment.Content.writeAsBinary(OS);
   }

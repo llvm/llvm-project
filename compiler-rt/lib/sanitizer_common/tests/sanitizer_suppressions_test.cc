@@ -131,4 +131,10 @@ TEST_F(SuppressionContextTest, HasSuppressionType) {
   EXPECT_FALSE(ctx_.HasSuppressionType("signal"));
 }
 
+TEST_F(SuppressionContextTest, RegressionTestForBufferOverflowInSuppressions) {
+  EXPECT_DEATH(ctx_.Parse("race"), "failed to parse suppressions");
+  EXPECT_DEATH(ctx_.Parse("foo"), "failed to parse suppressions");
+}
+
+
 }  // namespace __sanitizer

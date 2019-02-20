@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | llvm-readobj -r -s -symbols | FileCheck %s
+; RUN: llc -filetype=obj -thread-model=single %s -o - | llvm-readobj -r -s -symbols | FileCheck %s
 
 ; CHECK: Format: WASM
 ; CHECK-NEXT:Arch: wasm32

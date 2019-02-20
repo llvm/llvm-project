@@ -31,10 +31,16 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
     return false;
 
   // Don't coerce non-integral pointers to integers or vice versa.
-  if (DL.isNonIntegralPointerType(StoredVal->getType()) !=
-      DL.isNonIntegralPointerType(LoadTy))
+  if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()) !=
+      DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
+    // As a special case, allow coercion of memset used to initialize
+    // an array w/null.  Despite non-integral pointers not generally having a
+    // specific bit pattern, we do assume null is zero.
+    if (auto *CI = dyn_cast<Constant>(StoredVal))
+      return CI->isNullValue();
     return false;
-
+  }
+  
   return true;
 }
 
@@ -207,10 +213,21 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
 /// memdep query of a load that ends up being a clobbering store.
 int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
                                    StoreInst *DepSI, const DataLayout &DL) {
+  auto *StoredVal = DepSI->getValueOperand();
+  
   // Cannot handle reading from store of first-class aggregate yet.
-  if (DepSI->getValueOperand()->getType()->isStructTy() ||
-      DepSI->getValueOperand()->getType()->isArrayTy())
+  if (StoredVal->getType()->isStructTy() ||
+      StoredVal->getType()->isArrayTy())
     return -1;
+
+  // Don't coerce non-integral pointers to integers or vice versa.
+  if (DL.isNonIntegralPointerType(StoredVal->getType()->getScalarType()) !=
+      DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
+    // Allow casts of zero values to null as a special case
+    auto *CI = dyn_cast<Constant>(StoredVal);
+    if (!CI || !CI->isNullValue())
+      return -1;
+  }
 
   Value *StorePtr = DepSI->getPointerOperand();
   uint64_t StoreSize =
@@ -226,6 +243,11 @@ int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
                                   const DataLayout &DL) {
   // Cannot handle reading from store of first-class aggregate yet.
   if (DepLI->getType()->isStructTy() || DepLI->getType()->isArrayTy())
+    return -1;
+
+  // Don't coerce non-integral pointers to integers or vice versa.
+  if (DL.isNonIntegralPointerType(DepLI->getType()->getScalarType()) !=
+      DL.isNonIntegralPointerType(LoadTy->getScalarType()))
     return -1;
 
   Value *DepPtr = DepLI->getPointerOperand();
@@ -264,9 +286,15 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
 
   // If this is memset, we just need to see if the offset is valid in the size
   // of the memset..
-  if (MI->getIntrinsicID() == Intrinsic::memset)
+  if (MI->getIntrinsicID() == Intrinsic::memset) {
+    if (DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
+      auto *CI = dyn_cast<ConstantInt>(cast<MemSetInst>(MI)->getValue());
+      if (!CI || !CI->isZero())
+        return -1;
+    }
     return analyzeLoadFromClobberingWrite(LoadTy, LoadPtr, MI->getDest(),
                                           MemSizeInBits, DL);
+  }
 
   // If we have a memcpy/memmove, the only case we can handle is if this is a
   // copy from constant memory.  In that case, we can read directly from the
@@ -286,6 +314,12 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
                                               MemSizeInBits, DL);
   if (Offset == -1)
     return Offset;
+
+  // Don't coerce non-integral pointers to integers or vice versa, and the
+  // memtransfer is implicitly a raw byte code
+  if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
+    // TODO: Can allow nullptrs from constant zeros
+    return -1;
 
   unsigned AS = Src->getType()->getPointerAddressSpace();
   // Otherwise, see if we can constant fold a load from the constant with the

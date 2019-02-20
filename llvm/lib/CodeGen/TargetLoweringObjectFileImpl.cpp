@@ -1693,8 +1693,14 @@ MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
     Group = C->getName();
   }
 
-  return getContext().getWasmSection(Name, Kind, Group,
-                                     MCContext::GenericSectionID);
+  MCSectionWasm* Section =
+      getContext().getWasmSection(Name, Kind, Group,
+                                  MCContext::GenericSectionID);
+
+  if (TM.Options.ThreadModel != ThreadModel::Single)
+    Section->setPassive();
+
+  return Section;
 }
 
 static MCSectionWasm *selectWasmSectionForGlobal(
@@ -1723,7 +1729,12 @@ static MCSectionWasm *selectWasmSectionForGlobal(
     UniqueID = *NextUniqueID;
     (*NextUniqueID)++;
   }
-  return Ctx.getWasmSection(Name, Kind, Group, UniqueID);
+
+  MCSectionWasm* Section = Ctx.getWasmSection(Name, Kind, Group, UniqueID);
+  if (Section->isWasmData() && TM.Options.ThreadModel != ThreadModel::Single)
+    Section->setPassive();
+
+  return Section;
 }
 
 MCSection *TargetLoweringObjectFileWasm::SelectSectionForGlobal(

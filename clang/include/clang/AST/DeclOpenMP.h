@@ -217,7 +217,7 @@ public:
 class OMPDeclareMapperDecl final : public ValueDecl, public DeclContext {
   friend class ASTDeclReader;
 
-  /// Clauses assoicated with this mapper declaration
+  /// Clauses associated with this mapper declaration
   MutableArrayRef<OMPClause *> Clauses;
 
   /// Mapper variable, which is 'v' in the example above

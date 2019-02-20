@@ -8,11 +8,19 @@ Sections:
       - Initial:         0x00000003
   - Type:            DATA
     Segments:
-      - MemoryIndex:      0
+      - InitFlags:        0
         Offset:
           Opcode:          I32_CONST
           Value:           4
         Content:         '10001000'
+      - InitFlags:       1
+        Content:         '01010101'
+      - InitFlags:       2
+        MemoryIndex:     0
+        Offset:
+          Opcode:        I32_CONST
+          Value:         8
+        Content:         '00110011'
     Relocations:
       - Type:            R_WASM_MEMORY_ADDR_I32
         Index:           0
@@ -49,10 +57,20 @@ Sections:
 # CHECK-NEXT:        Offset:          0x00000006
 # CHECK-NEXT:        Addend:          -6
 # CHECK-NEXT:     Segments:
-# CHECK-NEXT:       - SectionOffset:   6
-# CHECK-NEXT:         MemoryIndex:     0
+# CHECK-NEXT:       - SectionOffset:  6
+# CHECK-NEXT:         InitFlags:      0
 # CHECK-NEXT:         Offset:
-# CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           4
-# CHECK-NEXT:         Content:         '10001000'
+# CHECK-NEXT:           Opcode:         I32_CONST
+# CHECK-NEXT:           Value:          4
+# CHECK-NEXT:         Content:        '10001000'
+# CHECK-NEXT:       - SectionOffset:  12
+# CHECK-NEXT:         InitFlags:      1
+# CHECK-NEXT:         Content:        '01010101'
+# CHECK-NEXT:       - SectionOffset:  22
+# CHECK-NEXT:         InitFlags:      2
+# CHECK-NEXT:         MemoryIndex:    0
+# CHECK-NEXT:         Offset:
+# CHECK-NEXT:           Opcode:         I32_CONST
+# CHECK-NEXT:           Value:          8
+# CHECK-NEXT:         Content:        '00110011'
 # CHECK-NEXT:   - Type:            CUSTOM

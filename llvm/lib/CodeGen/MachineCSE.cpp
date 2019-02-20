@@ -94,6 +94,7 @@ namespace {
         ScopedHashTable<MachineInstr *, unsigned, MachineInstrExpressionTrait,
                         AllocatorTy>;
     using ScopeType = ScopedHTType::ScopeTy;
+    using PhysDefVector = SmallVector<std::pair<unsigned, unsigned>, 2>;
 
     unsigned LookAheadLimit = 0;
     DenseMap<MachineBasicBlock *, ScopeType *> ScopeMap;
@@ -108,13 +109,11 @@ namespace {
                                 MachineBasicBlock::const_iterator E) const;
     bool hasLivePhysRegDefUses(const MachineInstr *MI,
                                const MachineBasicBlock *MBB,
-                               SmallSet<unsigned,8> &PhysRefs,
-                               SmallVectorImpl<unsigned> &PhysDefs,
-                               bool &PhysUseDef) const;
+                               SmallSet<unsigned, 8> &PhysRefs,
+                               PhysDefVector &PhysDefs, bool &PhysUseDef) const;
     bool PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                          SmallSet<unsigned,8> &PhysRefs,
-                          SmallVectorImpl<unsigned> &PhysDefs,
-                          bool &NonLocal) const;
+                          SmallSet<unsigned, 8> &PhysRefs,
+                          PhysDefVector &PhysDefs, bool &NonLocal) const;
     bool isCSECandidate(MachineInstr *MI);
     bool isProfitableToCSE(unsigned CSReg, unsigned Reg,
                            MachineInstr *CSMI, MachineInstr *MI);
@@ -255,9 +254,9 @@ static bool isCallerPreservedOrConstPhysReg(unsigned Reg,
 /// instruction does not uses a physical register.
 bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
                                        const MachineBasicBlock *MBB,
-                                       SmallSet<unsigned,8> &PhysRefs,
-                                       SmallVectorImpl<unsigned> &PhysDefs,
-                                       bool &PhysUseDef) const{
+                                       SmallSet<unsigned, 8> &PhysRefs,
+                                       PhysDefVector &PhysDefs,
+                                       bool &PhysUseDef) const {
   // First, add all uses to PhysRefs.
   for (const MachineOperand &MO : MI->operands()) {
     if (!MO.isReg() || MO.isDef())
@@ -277,7 +276,8 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
   // (which currently contains only uses), set the PhysUseDef flag.
   PhysUseDef = false;
   MachineBasicBlock::const_iterator I = MI; I = std::next(I);
-  for (const MachineOperand &MO : MI->operands()) {
+  for (const auto &MOP : llvm::enumerate(MI->operands())) {
+    const MachineOperand &MO = MOP.value();
     if (!MO.isReg() || !MO.isDef())
       continue;
     unsigned Reg = MO.getReg();
@@ -292,20 +292,21 @@ bool MachineCSE::hasLivePhysRegDefUses(const MachineInstr *MI,
     // common since this pass is run before livevariables. We can scan
     // forward a few instructions and check if it is obviously dead.
     if (!MO.isDead() && !isPhysDefTriviallyDead(Reg, I, MBB->end()))
-      PhysDefs.push_back(Reg);
+      PhysDefs.push_back(std::make_pair(MOP.index(), Reg));
   }
 
   // Finally, add all defs to PhysRefs as well.
   for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i)
-    for (MCRegAliasIterator AI(PhysDefs[i], TRI, true); AI.isValid(); ++AI)
+    for (MCRegAliasIterator AI(PhysDefs[i].second, TRI, true); AI.isValid();
+         ++AI)
       PhysRefs.insert(*AI);
 
   return !PhysRefs.empty();
 }
 
 bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
-                                  SmallSet<unsigned,8> &PhysRefs,
-                                  SmallVectorImpl<unsigned> &PhysDefs,
+                                  SmallSet<unsigned, 8> &PhysRefs,
+                                  PhysDefVector &PhysDefs,
                                   bool &NonLocal) const {
   // For now conservatively returns false if the common subexpression is
   // not in the same basic block as the given instruction. The only exception
@@ -319,7 +320,8 @@ bool MachineCSE::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
       return false;
 
     for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i) {
-      if (MRI->isAllocatable(PhysDefs[i]) || MRI->isReserved(PhysDefs[i]))
+      if (MRI->isAllocatable(PhysDefs[i].second) ||
+          MRI->isReserved(PhysDefs[i].second))
         // Avoid extending live range of physical registers if they are
         //allocatable or reserved.
         return false;
@@ -535,7 +537,7 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
     // It's also not safe if the instruction uses physical registers.
     bool CrossMBBPhysDef = false;
     SmallSet<unsigned, 8> PhysRefs;
-    SmallVector<unsigned, 2> PhysDefs;
+    PhysDefVector PhysDefs;
     bool PhysUseDef = false;
     if (FoundCSE && hasLivePhysRegDefUses(MI, MBB, PhysRefs,
                                           PhysDefs, PhysUseDef)) {
@@ -634,6 +636,9 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
       // we should make sure it is not dead at CSMI.
       for (unsigned ImplicitDefToUpdate : ImplicitDefsToUpdate)
         CSMI->getOperand(ImplicitDefToUpdate).setIsDead(false);
+      for (auto PhysDef : PhysDefs)
+        if (!MI->getOperand(PhysDef.first).isDead())
+          CSMI->getOperand(PhysDef.first).setIsDead(false);
 
       // Go through implicit defs of CSMI and MI, and clear the kill flags on
       // their uses in all the instructions between CSMI and MI.
@@ -662,9 +667,9 @@ bool MachineCSE::ProcessBlock(MachineBasicBlock *MBB) {
         // Add physical register defs now coming in from a predecessor to MBB
         // livein list.
         while (!PhysDefs.empty()) {
-          unsigned LiveIn = PhysDefs.pop_back_val();
-          if (!MBB->isLiveIn(LiveIn))
-            MBB->addLiveIn(LiveIn);
+          auto LiveIn = PhysDefs.pop_back_val();
+          if (!MBB->isLiveIn(LiveIn.second))
+            MBB->addLiveIn(LiveIn.second);
         }
         ++NumCrossBBCSEs;
       }

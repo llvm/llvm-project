@@ -75,6 +75,11 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
     set(LIBRARY_DIR ${LLVM_LIBRARY_DIR})
     set(INCLUDE_DIR ${LLVM_INCLUDE_DIR})
     set(LLVM_OBJ_DIR ${LLVM_BINARY_DIR})
+    # The LLVM_CMAKE_PATH variable is set when doing non-standalone builds and
+    # used in this project, so we need to make sure we set this value.
+    # FIXME: LLVM_CMAKE_DIR comes from LLVMConfig.cmake.  We should rename
+    # LLVM_CMAKE_PATH to LLVM_CMAKE_DIR throughout the project.
+    set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR})
   endif()
 
   set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")

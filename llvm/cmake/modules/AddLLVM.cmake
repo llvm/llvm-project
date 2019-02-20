@@ -1718,6 +1718,9 @@ function(setup_dependency_debugging name)
 endfunction()
 
 function(find_first_existing_vc_file path out_var)
+  if(NOT EXISTS "${path}")
+    return()
+  endif()
   if(EXISTS "${path}/.svn")
     set(svn_files
       "${path}/.svn/wc.db"   # SVN 1.7

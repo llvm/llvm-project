@@ -34,7 +34,7 @@ __start:
 # CHECK-NEXT:   ]
 # CHECK-NEXT:   HeaderSize: 52
 # CHECK-NEXT:   ProgramHeaderEntrySize: 32
-# CHECK-NEXT:   ProgramHeaderCount: 5
+# CHECK-NEXT:   ProgramHeaderCount: 7
 # CHECK-NEXT:   SectionHeaderEntrySize: 40
 # CHECK-NEXT:   SectionHeaderCount: 11
 # CHECK-NEXT:   StringTableSectionIndex: 9
@@ -61,8 +61,8 @@ __start:
 # CHECK-NEXT:     Flags [ (0x2)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x100D8
-# CHECK-NEXT:     Offset: 0xD8
+# CHECK-NEXT:     Address: 0x10118
+# CHECK-NEXT:     Offset: 0x118
 # CHECK-NEXT:     Size: 24
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
@@ -76,8 +76,8 @@ __start:
 # CHECK-NEXT:     Flags [ (0x2)
 # CHECK-NEXT:       SHF_ALLOC (0x2)
 # CHECK-NEXT:     ]
-# CHECK-NEXT:     Address: 0x100F0
-# CHECK-NEXT:     Offset: 0xF0
+# CHECK-NEXT:     Address: 0x10130
+# CHECK-NEXT:     Offset: 0x130
 # CHECK-NEXT:     Size: 24
 # CHECK-NEXT:     Link: 0
 # CHECK-NEXT:     Info: 0
@@ -245,8 +245,8 @@ __start:
 # CHECK-NEXT:     Offset: 0x34
 # CHECK-NEXT:     VirtualAddress: 0x10034
 # CHECK-NEXT:     PhysicalAddress: 0x10034
-# CHECK-NEXT:     FileSize: 160
-# CHECK-NEXT:     MemSize: 160
+# CHECK-NEXT:     FileSize: 224
+# CHECK-NEXT:     MemSize: 224
 # CHECK-NEXT:     Flags [ (0x4)
 # CHECK-NEXT:       PF_R (0x4)
 # CHECK-NEXT:     ]
@@ -257,8 +257,8 @@ __start:
 # CHECK-NEXT:     Offset: 0x0
 # CHECK-NEXT:     VirtualAddress: 0x10000
 # CHECK-NEXT:     PhysicalAddress: 0x10000
-# CHECK-NEXT:     FileSize: 264
-# CHECK-NEXT:     MemSize: 264
+# CHECK-NEXT:     FileSize: 328
+# CHECK-NEXT:     MemSize: 328
 # CHECK-NEXT:     Flags [ (0x4)
 # CHECK-NEXT:       PF_R (0x4)
 # CHECK-NEXT:     ]
@@ -302,5 +302,29 @@ __start:
 # CHECK-NEXT:       PF_W
 # CHECK-NEXT:     ]
 # CHECK-NEXT:     Alignment: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   ProgramHeader {
+# CHECK-NEXT:     Type: PT_MIPS_REGINFO
+# CHECK-NEXT:     Offset: 0x130
+# CHECK-NEXT:     VirtualAddress: 0x10130
+# CHECK-NEXT:     PhysicalAddress: 0x10130
+# CHECK-NEXT:     FileSize: 24
+# CHECK-NEXT:     MemSize: 24
+# CHECK-NEXT:     Flags [ (0x4)
+# CHECK-NEXT:       PF_R (0x4)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Alignment: 4
+# CHECK-NEXT:   }
+# CHECK-NEXT:   ProgramHeader {
+# CHECK-NEXT:     Type: PT_MIPS_ABIFLAGS
+# CHECK-NEXT:     Offset: 0x118
+# CHECK-NEXT:     VirtualAddress: 0x10118
+# CHECK-NEXT:     PhysicalAddress: 0x10118
+# CHECK-NEXT:     FileSize: 24
+# CHECK-NEXT:     MemSize: 24
+# CHECK-NEXT:     Flags [ (0x4)
+# CHECK-NEXT:       PF_R (0x4)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Alignment: 8
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]

@@ -71,3 +71,49 @@ la a3, ra
 # CHECK-PIC-RV32: lw    a4, %pcrel_lo(.Lpcrel_hi9)(a4)
 # CHECK-PIC-RV64: ld    a4, %pcrel_lo(.Lpcrel_hi9)(a4)
 la a4, f1
+
+# CHECK: .Lpcrel_hi10:
+# CHECK: auipc a0, %pcrel_hi(a_symbol)
+# CHECK: lb  a0, %pcrel_lo(.Lpcrel_hi10)(a0)
+lb a0, a_symbol
+
+# CHECK: .Lpcrel_hi11:
+# CHECK: auipc a1, %pcrel_hi(a_symbol)
+# CHECK: lh  a1, %pcrel_lo(.Lpcrel_hi11)(a1)
+lh a1, a_symbol
+
+# CHECK: .Lpcrel_hi12:
+# CHECK: auipc a2, %pcrel_hi(a_symbol)
+# CHECK: lhu  a2, %pcrel_lo(.Lpcrel_hi12)(a2)
+lhu a2, a_symbol
+
+# CHECK: .Lpcrel_hi13:
+# CHECK: auipc a3, %pcrel_hi(a_symbol)
+# CHECK: lw  a3, %pcrel_lo(.Lpcrel_hi13)(a3)
+lw a3, a_symbol
+
+# CHECK: .Lpcrel_hi14:
+# CHECK: auipc a4, %pcrel_hi(a_symbol)
+# CHECK: sb  a3, %pcrel_lo(.Lpcrel_hi14)(a4)
+sb a3, a_symbol, a4
+
+# CHECK: .Lpcrel_hi15:
+# CHECK: auipc a4, %pcrel_hi(a_symbol)
+# CHECK: sh  a3, %pcrel_lo(.Lpcrel_hi15)(a4)
+sh a3, a_symbol, a4
+
+# CHECK: .Lpcrel_hi16:
+# CHECK: auipc a4, %pcrel_hi(a_symbol)
+# CHECK: sw  a3, %pcrel_lo(.Lpcrel_hi16)(a4)
+sw a3, a_symbol, a4
+
+# Check that we can load the address of symbols that are spelled like a register
+# CHECK: .Lpcrel_hi17:
+# CHECK: auipc a2, %pcrel_hi(zero)
+# CHECK: lw  a2, %pcrel_lo(.Lpcrel_hi17)(a2)
+lw a2, zero
+
+# CHECK: .Lpcrel_hi18:
+# CHECK: auipc a4, %pcrel_hi(zero)
+# CHECK: sw  a3, %pcrel_lo(.Lpcrel_hi18)(a4)
+sw a3, zero, a4

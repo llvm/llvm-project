@@ -691,6 +691,13 @@ to crash on invalid inputs.
 Examples: regular expression matchers, text or binary format parsers, compression,
 network, crypto.
 
+Q. LibFuzzer crashes on my complicated fuzz target (but works fine for me on smaller targets).
+----------------------------------------------------------------------------------------------
+
+Check if your fuzz target uses ``dlclose``.
+Currently, libFuzzer doesn't support targets that call ``dlclose``,
+this may be fixed in future.
+
 
 Trophies
 ========

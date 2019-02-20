@@ -113,7 +113,9 @@ def fpimmneg1 : FPImmLeaf<fAny, [{
 }]>;
 
 // Some 'special' instructions - expanded after instruction selection.
-let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
+// Clobbers EFLAGS due to OR instruction used internally.
+// FIXME: Can we model this in SelectionDAG?
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Defs = [EFLAGS] in {
   def FP32_TO_INT16_IN_MEM : PseudoI<(outs), (ins i16mem:$dst, RFP32:$src),
                               [(X86fp_to_i16mem RFP32:$src, addr:$dst)]>;
   def FP32_TO_INT32_IN_MEM : PseudoI<(outs), (ins i32mem:$dst, RFP32:$src),

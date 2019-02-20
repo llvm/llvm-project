@@ -154,7 +154,7 @@ define void @call_ptr(i64 (i64)* %arg) {
 ; CHECK-NEXT:   - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:    7
-; CHECK-NEXT:         MemoryIndex:      0
+; CHECK-NEXT:         InitFlags:        0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
