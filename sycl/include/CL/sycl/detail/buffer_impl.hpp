@@ -390,31 +390,46 @@ void buffer_impl<AllocatorT>::moveMemoryTo(
     Event->setIsHostEvent(false);
 
     OCLState.Queue = std::move(Queue);
-    OCLState.Mem = nullptr;
     return;
   }
   // Copy from host to OCL device.
   if (OCLState.Queue->is_host() && !Queue->is_host()) {
-    const size_t ByteSize = get_size();
-    cl_int Error;
-    cl_mem Mem =
-        clCreateBuffer(Context->getHandleRef(), CL_MEM_READ_WRITE, ByteSize,
-                       /*host_ptr=*/nullptr, &Error);
-    CHECK_OCL_CODE(Error);
-
-    OCLState.Queue = std::move(Queue);
-    OCLState.Mem = Mem;
-
-    // Just exit if nothing to read from host.
     if (nullptr == BufPtr) {
       return;
     }
+
+    cl_int Error;
+    const size_t ByteSize = get_size();
+
+    // We don't create new OpenCL buffer object to copy from OCL device to host
+    // when we already have them in OCLState. But if contexts of buffer object
+    // from OCLState and input Queue are not same - we should create new OpenCL
+    // buffer object.
+    bool NeedToCreateCLBuffer = true;
+
+    if (OCLState.Mem != nullptr) {
+      cl_context MemCtx;
+      Error = clGetMemObjectInfo(OCLState.Mem, CL_MEM_CONTEXT,
+                                 sizeof(cl_context), &MemCtx, nullptr);
+      CHECK_OCL_CODE(Error);
+      NeedToCreateCLBuffer = MemCtx != Context->getHandleRef();
+    }
+
+    if (NeedToCreateCLBuffer) {
+      OCLState.Mem =
+          clCreateBuffer(Context->getHandleRef(), CL_MEM_READ_WRITE, ByteSize,
+                         /*host_ptr=*/nullptr, &Error);
+      CHECK_OCL_CODE(Error);
+    }
+
+    OCLState.Queue = std::move(Queue);
+
     std::vector<cl_event> CLEvents =
         detail::getOrWaitEvents(std::move(DepEvents), Context);
     cl_event &WriteBufEvent = Event->getHandleRef();
     // Enqueue copying from host to new OCL buffer.
     Error =
-        clEnqueueWriteBuffer(OCLState.Queue->getHandleRef(), Mem,
+        clEnqueueWriteBuffer(OCLState.Queue->getHandleRef(), OCLState.Mem,
                              /*blocking_write=*/CL_FALSE, /*offset=*/0,
                              ByteSize, BufPtr, CLEvents.size(), CLEvents.data(),
                              &WriteBufEvent); // replace &WriteBufEvent to NULL
