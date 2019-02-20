@@ -1,9 +1,8 @@
 //===-- DWARFUnit.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -191,13 +190,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
                                                       IsDWARF64());
   while (offset < next_cu_offset &&
          die.FastExtract(data, this, fixed_form_sizes, &offset)) {
-    //        if (log)
-    //            log->Printf("0x%8.8x: %*.*s%s%s",
-    //                        die.GetOffset(),
-    //                        depth * 2, depth * 2, "",
-    //                        DW_TAG_value_to_name (die.Tag()),
-    //                        die.HasChildren() ? " *" : "");
-
     const bool null_die = die.IsNULL();
     if (depth == 0) {
       assert(m_die_array.empty() && "Compile unit DIE already added");
@@ -223,7 +215,7 @@ void DWARFUnit::ExtractDIEsRWLocked() {
           // the list (saves up to 25% in C++ code), we need a way to let the
           // DIE know that it actually doesn't have children.
           if (!m_die_array.empty())
-            m_die_array.back().SetEmptyChildren(true);
+            m_die_array.back().SetHasChildren(false);
         }
       } else {
         die.SetParentIndex(m_die_array.size() - die_index_stack[depth - 1]);
@@ -244,9 +236,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
       if (depth > 0)
         --depth;
-      if (depth == 0)
-        break; // We are done with this compile unit!
-
       prev_die_had_children = false;
     } else {
       die_index_stack.back() = m_die_array.size() - 1;
@@ -258,10 +247,17 @@ void DWARFUnit::ExtractDIEsRWLocked() {
       }
       prev_die_had_children = die_has_children;
     }
+
+    if (depth == 0)
+      break; // We are done with this compile unit!
   }
 
   if (!m_die_array.empty()) {
-    lldbassert(!m_first_die || m_first_die == m_die_array.front());
+    if (m_first_die) {
+      // Only needed for the assertion.
+      m_first_die.SetHasChildren(m_die_array.front().HasChildren());
+      lldbassert(m_first_die == m_die_array.front());
+    }
     m_first_die = m_die_array.front();
   }
 
@@ -301,8 +297,46 @@ void DWARFUnit::ExtractDIEsEndCheck(lldb::offset_t offset) const {
   }
 }
 
+// This is used when a split dwarf is enabled.
+// A skeleton compilation unit may contain the DW_AT_str_offsets_base attribute
+// that points to the first string offset of the CU contribution to the
+// .debug_str_offsets. At the same time, the corresponding split debug unit also
+// may use DW_FORM_strx* forms pointing to its own .debug_str_offsets.dwo and
+// for that case, we should find the offset (skip the section header).
+static void SetDwoStrOffsetsBase(DWARFUnit *dwo_cu) {
+  lldb::offset_t baseOffset = 0;
+
+  const DWARFDataExtractor &strOffsets =
+      dwo_cu->GetSymbolFileDWARF()->get_debug_str_offsets_data();
+  uint64_t length = strOffsets.GetU32(&baseOffset);
+  if (length == 0xffffffff)
+    length = strOffsets.GetU64(&baseOffset);
+
+  // Check version.
+  if (strOffsets.GetU16(&baseOffset) < 5)
+    return;
+
+  // Skip padding.
+  baseOffset += 2;
+
+  dwo_cu->SetStrOffsetsBase(baseOffset);
+}
+
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
+  dw_addr_t addr_base = cu_die.GetAttributeValueAsUnsigned(
+      m_dwarf, this, DW_AT_addr_base, LLDB_INVALID_ADDRESS);
+  if (addr_base != LLDB_INVALID_ADDRESS)
+    SetAddrBase(addr_base);
+
+  dw_addr_t ranges_base = cu_die.GetAttributeValueAsUnsigned(
+      m_dwarf, this, DW_AT_rnglists_base, LLDB_INVALID_ADDRESS);
+  if (ranges_base != LLDB_INVALID_ADDRESS)
+    SetRangesBase(ranges_base);
+
+  SetStrOffsetsBase(cu_die.GetAttributeValueAsUnsigned(
+      m_dwarf, this, DW_AT_str_offsets_base, 0));
+
   uint64_t base_addr = cu_die.GetAttributeValueAsAddress(
       m_dwarf, this, DW_AT_low_pc, LLDB_INVALID_ADDRESS);
   if (base_addr == LLDB_INVALID_ADDRESS)
@@ -333,11 +367,25 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 
   m_dwo_symbol_file = std::move(dwo_symbol_file);
 
-  dw_addr_t addr_base =
-      cu_die.GetAttributeValueAsUnsigned(m_dwarf, this, DW_AT_GNU_addr_base, 0);
-  dw_addr_t ranges_base = cu_die.GetAttributeValueAsUnsigned(
-      m_dwarf, this, DW_AT_GNU_ranges_base, 0);
-  dwo_cu->SetAddrBase(addr_base, ranges_base, m_offset);
+  // Here for DWO CU we want to use the address base set in the skeleton unit
+  // (DW_AT_addr_base) if it is available and use the DW_AT_GNU_addr_base
+  // otherwise. We do that because pre-DWARF v5 could use the DW_AT_GNU_*
+  // attributes which were applicable to the DWO units. The corresponding
+  // DW_AT_* attributes standardized in DWARF v5 are also applicable to the main
+  // unit in contrast.
+  if (addr_base == LLDB_INVALID_ADDRESS)
+    addr_base = cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
+                                                   DW_AT_GNU_addr_base, 0);
+  dwo_cu->SetAddrBase(addr_base);
+
+  if (ranges_base == LLDB_INVALID_ADDRESS)
+    ranges_base = cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
+                                                     DW_AT_GNU_ranges_base, 0);
+  dwo_cu->SetRangesBase(ranges_base);
+
+  dwo_cu->SetBaseObjOffset(m_offset);
+
+  SetDwoStrOffsetsBase(dwo_cu);
 }
 
 DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
@@ -395,12 +443,18 @@ dw_offset_t DWARFUnit::GetAbbrevOffset() const {
   return m_abbrevs ? m_abbrevs->GetOffset() : DW_INVALID_OFFSET;
 }
 
-void DWARFUnit::SetAddrBase(dw_addr_t addr_base,
-                            dw_addr_t ranges_base,
-                            dw_offset_t base_obj_offset) {
-  m_addr_base = addr_base;
+void DWARFUnit::SetAddrBase(dw_addr_t addr_base) { m_addr_base = addr_base; }
+
+void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
   m_ranges_base = ranges_base;
+}
+
+void DWARFUnit::SetBaseObjOffset(dw_offset_t base_obj_offset) {
   m_base_obj_offset = base_obj_offset;
+}
+
+void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
+  m_str_offsets_base = str_offsets_base;
 }
 
 // It may be called only with m_die_array_mutex held R/W.
@@ -586,9 +640,7 @@ void DWARFUnit::SetUserData(void *d) {
 }
 
 bool DWARFUnit::Supports_DW_AT_APPLE_objc_complete_type() {
-  if (GetProducer() == eProducerLLVMGCC)
-    return false;
-  return true;
+  return GetProducer() != eProducerLLVMGCC;
 }
 
 bool DWARFUnit::DW_AT_decl_file_attributes_are_invalid() {
@@ -600,11 +652,8 @@ bool DWARFUnit::DW_AT_decl_file_attributes_are_invalid() {
 bool DWARFUnit::Supports_unnamed_objc_bitfields() {
   if (GetProducer() == eProducerClang) {
     const uint32_t major_version = GetProducerVersionMajor();
-    if (major_version > 425 ||
-        (major_version == 425 && GetProducerVersionUpdate() >= 13))
-      return true;
-    else
-      return false;
+    return major_version > 425 ||
+           (major_version == 425 && GetProducerVersionUpdate() >= 13);
   }
   return true; // Assume all other compilers didn't have incorrect ObjC bitfield
                // info
@@ -714,6 +763,80 @@ bool DWARFUnit::GetIsOptimized() {
     }
   }
   return m_is_optimized == eLazyBoolYes;
+}
+
+FileSpec::Style DWARFUnit::GetPathStyle() {
+  if (!m_comp_dir)
+    ComputeCompDirAndGuessPathStyle();
+  return m_comp_dir->GetPathStyle();
+}
+
+const FileSpec &DWARFUnit::GetCompilationDirectory() {
+  if (!m_comp_dir)
+    ComputeCompDirAndGuessPathStyle();
+  return *m_comp_dir;
+}
+
+// DWARF2/3 suggests the form hostname:pathname for compilation directory.
+// Remove the host part if present.
+static llvm::StringRef
+removeHostnameFromPathname(llvm::StringRef path_from_dwarf) {
+  llvm::StringRef host, path;
+  std::tie(host, path) = path_from_dwarf.split(':');
+
+  if (host.contains('/'))
+    return path_from_dwarf;
+
+  // check whether we have a windows path, and so the first character is a
+  // drive-letter not a hostname.
+  if (host.size() == 1 && llvm::isAlpha(host[0]) && path.startswith("\\"))
+    return path_from_dwarf;
+
+  return path;
+}
+
+static FileSpec resolveCompDir(const FileSpec &path) {
+  bool is_symlink = SymbolFileDWARF::GetSymlinkPaths().FindFileIndex(
+                        0, path, /*full*/ true) != UINT32_MAX;
+
+  if (!is_symlink)
+    return path;
+
+  namespace fs = llvm::sys::fs;
+  if (fs::get_file_type(path.GetPath(), false) != fs::file_type::symlink_file)
+    return path;
+
+  FileSpec resolved_symlink;
+  const auto error = FileSystem::Instance().Readlink(path, resolved_symlink);
+  if (error.Success())
+    return resolved_symlink;
+
+  return path;
+}
+
+void DWARFUnit::ComputeCompDirAndGuessPathStyle() {
+  m_comp_dir = FileSpec();
+  const DWARFDebugInfoEntry *die = GetUnitDIEPtrOnly();
+  if (!die)
+    return;
+
+  auto guess = [](llvm::StringRef str) {
+    if (str.startswith("/"))
+      return FileSpec::Style::posix;
+    if (str.size() > 3 && llvm::isAlpha(str[0]) && str.substr(1, 2) == ":\\")
+      return FileSpec::Style::windows;
+    return FileSpec::Style::native;
+  };
+  llvm::StringRef comp_dir = removeHostnameFromPathname(
+      die->GetAttributeValueAsString(m_dwarf, this, DW_AT_comp_dir, NULL));
+  if (!comp_dir.empty()) {
+    m_comp_dir = resolveCompDir(FileSpec(comp_dir, guess(comp_dir)));
+  } else {
+    // Try to detect the style based on the DW_AT_name attribute, but just store
+    // the detected style in the m_comp_dir field.
+    m_comp_dir = FileSpec("", guess(die->GetAttributeValueAsString(
+                                  m_dwarf, this, DW_AT_name, NULL)));
+  }
 }
 
 SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() const {

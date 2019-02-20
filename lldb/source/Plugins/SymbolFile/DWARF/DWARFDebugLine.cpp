@@ -1,9 +1,8 @@
 //===-- DWARFDebugLine.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,6 +17,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 
+#include "DWARFUnit.h"
 #include "LogChannelDWARF.h"
 #include "SymbolFileDWARF.h"
 
@@ -41,7 +41,7 @@ void DWARFDebugLine::Parse(const DWARFDataExtractor &debug_line_data) {
     if (line_table_sp.get() == NULL)
       break;
 
-    if (ParseStatementTable(debug_line_data, &offset, line_table_sp.get())) {
+    if (ParseStatementTable(debug_line_data, &offset, line_table_sp.get(), nullptr)) {
       // Make sure we don't don't loop infinitely
       if (offset <= debug_line_offset)
         break;
@@ -127,7 +127,7 @@ DWARFDebugLine::DumpStatementTable(Log *log,
                 "--------\n",
                 debug_line_offset);
 
-    if (ParseStatementTable(debug_line_data, &offset, DumpStateToFile, log))
+    if (ParseStatementTable(debug_line_data, &offset, DumpStateToFile, log, nullptr))
       return offset;
     else
       return debug_line_offset + 1; // Skip to next byte in .debug_line section
@@ -366,17 +366,38 @@ void DWARFDebugLine::Parse(const DWARFDataExtractor &debug_line_data,
                            void *userData) {
   lldb::offset_t offset = 0;
   if (debug_line_data.ValidOffset(offset)) {
-    if (!ParseStatementTable(debug_line_data, &offset, callback, userData))
+    if (!ParseStatementTable(debug_line_data, &offset, callback, userData, nullptr))
       ++offset; // Skip to next byte in .debug_line section
   }
 }
+
+namespace {
+struct EntryDescriptor {
+  dw_sleb128_t code;
+  dw_sleb128_t form;
+};
+
+static std::vector<EntryDescriptor>
+ReadDescriptors(const DWARFDataExtractor &debug_line_data,
+                lldb::offset_t *offset_ptr) {
+  std::vector<EntryDescriptor> ret;
+  uint8_t n = debug_line_data.GetU8(offset_ptr);
+  for (uint8_t i = 0; i < n; ++i) {
+    EntryDescriptor ent;
+    ent.code = debug_line_data.GetULEB128(offset_ptr);
+    ent.form = debug_line_data.GetULEB128(offset_ptr);
+    ret.push_back(ent);
+  }
+  return ret;
+}
+} // namespace
 
 //----------------------------------------------------------------------
 // DWARFDebugLine::ParsePrologue
 //----------------------------------------------------------------------
 bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
                                    lldb::offset_t *offset_ptr,
-                                   Prologue *prologue) {
+                                   Prologue *prologue, DWARFUnit *dwarf_cu) {
   const lldb::offset_t prologue_offset = *offset_ptr;
 
   // DEBUG_PRINTF("0x%8.8x: ParsePrologue()\n", *offset_ptr);
@@ -386,8 +407,13 @@ bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
   const char *s;
   prologue->total_length = debug_line_data.GetDWARFInitialLength(offset_ptr);
   prologue->version = debug_line_data.GetU16(offset_ptr);
-  if (prologue->version < 2 || prologue->version > 4)
+  if (prologue->version < 2 || prologue->version > 5)
     return false;
+
+  if (prologue->version >= 5) {
+    prologue->address_size = debug_line_data.GetU8(offset_ptr);
+    prologue->segment_selector_size = debug_line_data.GetU8(offset_ptr);
+  }
 
   prologue->prologue_length = debug_line_data.GetDWARFOffset(offset_ptr);
   const lldb::offset_t end_prologue_offset =
@@ -410,25 +436,83 @@ bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
     prologue->standard_opcode_lengths.push_back(op_len);
   }
 
-  while (*offset_ptr < end_prologue_offset) {
-    s = debug_line_data.GetCStr(offset_ptr);
-    if (s && s[0])
-      prologue->include_directories.push_back(s);
-    else
-      break;
-  }
+  if (prologue->version >= 5) {
+    std::vector<EntryDescriptor> dirEntryFormatV =
+        ReadDescriptors(debug_line_data, offset_ptr);
+    uint8_t dirCount = debug_line_data.GetULEB128(offset_ptr);
+    for (int i = 0; i < dirCount; ++i) {
+      for (EntryDescriptor &ent : dirEntryFormatV) {
+        DWARFFormValue value(dwarf_cu, ent.form);
+        if (ent.code != DW_LNCT_path) {
+          if (!value.SkipValue(debug_line_data, offset_ptr))
+            return false;
+          continue;
+        }
 
-  while (*offset_ptr < end_prologue_offset) {
-    const char *name = debug_line_data.GetCStr(offset_ptr);
-    if (name && name[0]) {
-      FileNameEntry fileEntry;
-      fileEntry.name = name;
-      fileEntry.dir_idx = debug_line_data.GetULEB128(offset_ptr);
-      fileEntry.mod_time = debug_line_data.GetULEB128(offset_ptr);
-      fileEntry.length = debug_line_data.GetULEB128(offset_ptr);
-      prologue->file_names.push_back(fileEntry);
-    } else
-      break;
+        if (!value.ExtractValue(debug_line_data, offset_ptr))
+          return false;
+        prologue->include_directories.push_back(value.AsCString());
+      }
+    }
+
+    std::vector<EntryDescriptor> filesEntryFormatV =
+        ReadDescriptors(debug_line_data, offset_ptr);
+    llvm::DenseSet<std::pair<uint64_t, uint64_t>> seen;
+    uint8_t n = debug_line_data.GetULEB128(offset_ptr);
+    for (int i = 0; i < n; ++i) {
+      FileNameEntry entry;
+      for (EntryDescriptor &ent : filesEntryFormatV) {
+        DWARFFormValue value(dwarf_cu, ent.form);
+        if (!value.ExtractValue(debug_line_data, offset_ptr))
+          return false;
+
+        switch (ent.code) {
+        case DW_LNCT_path:
+          entry.name = value.AsCString();
+          break;
+        case DW_LNCT_directory_index:
+          entry.dir_idx = value.Unsigned();
+          break;
+        case DW_LNCT_timestamp:
+          entry.mod_time = value.Unsigned();
+          break;
+        case DW_LNCT_size:
+          entry.length = value.Unsigned();
+          break;
+        case DW_LNCT_MD5:
+          assert(value.Unsigned() == 16);
+          std::uninitialized_copy_n(value.BlockData(), 16,
+                                    entry.checksum.Bytes.begin());
+          break;
+        default:
+          break;
+        }
+      }
+
+      if (seen.insert(entry.checksum.words()).second)
+        prologue->file_names.push_back(entry);
+    }
+  } else {
+    while (*offset_ptr < end_prologue_offset) {
+      s = debug_line_data.GetCStr(offset_ptr);
+      if (s && s[0])
+        prologue->include_directories.push_back(s);
+      else
+        break;
+    }
+
+    while (*offset_ptr < end_prologue_offset) {
+      const char *name = debug_line_data.GetCStr(offset_ptr);
+      if (name && name[0]) {
+        FileNameEntry fileEntry;
+        fileEntry.name = name;
+        fileEntry.dir_idx = debug_line_data.GetULEB128(offset_ptr);
+        fileEntry.mod_time = debug_line_data.GetULEB128(offset_ptr);
+        fileEntry.length = debug_line_data.GetULEB128(offset_ptr);
+        prologue->file_names.push_back(fileEntry);
+      } else
+        break;
+    }
   }
 
   // XXX GNU as is broken for 64-Bit DWARF
@@ -444,12 +528,11 @@ bool DWARFDebugLine::ParsePrologue(const DWARFDataExtractor &debug_line_data,
 
 bool DWARFDebugLine::ParseSupportFiles(
     const lldb::ModuleSP &module_sp, const DWARFDataExtractor &debug_line_data,
-    const lldb_private::FileSpec &cu_comp_dir, dw_offset_t stmt_list,
-    FileSpecList &support_files) {
+    dw_offset_t stmt_list, FileSpecList &support_files, DWARFUnit *dwarf_cu) {
   lldb::offset_t offset = stmt_list;
 
   Prologue prologue;
-  if (!ParsePrologue(debug_line_data, &offset, &prologue)) {
+  if (!ParsePrologue(debug_line_data, &offset, &prologue, dwarf_cu)) {
     Host::SystemLog(Host::eSystemLogError, "error: parsing line table prologue "
                                            "at 0x%8.8x (parsing ended around "
                                            "0x%8.8" PRIx64 "\n",
@@ -461,9 +544,11 @@ bool DWARFDebugLine::ParseSupportFiles(
   std::string remapped_file;
 
   for (uint32_t file_idx = 1;
-       prologue.GetFile(file_idx, cu_comp_dir, file_spec); ++file_idx) {
+       prologue.GetFile(file_idx, dwarf_cu->GetCompilationDirectory(),
+                        dwarf_cu->GetPathStyle(), file_spec);
+       ++file_idx) {
     if (module_sp->RemapSourceFile(file_spec.GetPath(), remapped_file))
-      file_spec.SetFile(remapped_file, false, FileSpec::Style::native);
+      file_spec.SetFile(remapped_file, FileSpec::Style::native);
     support_files.Append(file_spec);
   }
   return true;
@@ -478,7 +563,7 @@ bool DWARFDebugLine::ParseSupportFiles(
 //----------------------------------------------------------------------
 bool DWARFDebugLine::ParseStatementTable(
     const DWARFDataExtractor &debug_line_data, lldb::offset_t *offset_ptr,
-    DWARFDebugLine::State::Callback callback, void *userData) {
+    DWARFDebugLine::State::Callback callback, void *userData, DWARFUnit *dwarf_cu) {
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_LINE));
   Prologue::shared_ptr prologue(new Prologue());
 
@@ -489,7 +574,7 @@ bool DWARFDebugLine::ParseStatementTable(
       func_cat, "DWARFDebugLine::ParseStatementTable (.debug_line[0x%8.8x])",
       debug_line_offset);
 
-  if (!ParsePrologue(debug_line_data, offset_ptr, prologue.get())) {
+  if (!ParsePrologue(debug_line_data, offset_ptr, prologue.get(), dwarf_cu)) {
     if (log)
       log->Error("failed to parse DWARF line table prologue");
     // Restore our offset and return false to indicate failure!
@@ -775,9 +860,9 @@ static void ParseStatementTableCallback(dw_offset_t offset,
 //----------------------------------------------------------------------
 bool DWARFDebugLine::ParseStatementTable(
     const DWARFDataExtractor &debug_line_data, lldb::offset_t *offset_ptr,
-    LineTable *line_table) {
+    LineTable *line_table, DWARFUnit *dwarf_cu) {
   return ParseStatementTable(debug_line_data, offset_ptr,
-                             ParseStatementTableCallback, line_table);
+                             ParseStatementTableCallback, line_table, dwarf_cu);
 }
 
 inline bool DWARFDebugLine::Prologue::IsValid() const {
@@ -863,10 +948,12 @@ void DWARFDebugLine::Prologue::Dump(Log *log) {
 //}
 
 bool DWARFDebugLine::Prologue::GetFile(uint32_t file_idx,
-    const lldb_private::FileSpec &comp_dir, FileSpec &file) const {
+                                       const FileSpec &comp_dir,
+                                       FileSpec::Style style,
+                                       FileSpec &file) const {
   uint32_t idx = file_idx - 1; // File indexes are 1 based...
   if (idx < file_names.size()) {
-    file.SetFile(file_names[idx].name, false, FileSpec::Style::native);
+    file.SetFile(file_names[idx].name, style);
     if (file.IsRelative()) {
       if (file_names[idx].dir_idx > 0) {
         const uint32_t dir_idx = file_names[idx].dir_idx - 1;

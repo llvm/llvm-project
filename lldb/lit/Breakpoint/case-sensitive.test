@@ -1,6 +1,6 @@
 # REQUIRES: nowindows
 #
-# RUN: %cc %p/Inputs/case-sensitive.c -g -o %t
+# RUN: %build %p/Inputs/case-sensitive.c --nodefaultlib -o %t
 # RUN: lldb-test breakpoints %t %s | FileCheck %s
 
 breakpoint set -f case-sensitive.c -l 3

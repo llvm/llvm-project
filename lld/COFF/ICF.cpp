@@ -1,9 +1,8 @@
 //===- ICF.cpp ------------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -263,19 +262,21 @@ void ICF::run(ArrayRef<Chunk *> Vec) {
 
   // Initially, we use hash values to partition sections.
   parallelForEach(Chunks, [&](SectionChunk *SC) {
-    SC->Class[1] = xxHash64(SC->getContents());
+    SC->Class[0] = xxHash64(SC->getContents());
   });
 
   // Combine the hashes of the sections referenced by each section into its
   // hash.
-  parallelForEach(Chunks, [&](SectionChunk *SC) {
-    uint32_t Hash = SC->Class[1];
-    for (Symbol *B : SC->symbols())
-      if (auto *Sym = dyn_cast_or_null<DefinedRegular>(B))
-        Hash ^= Sym->getChunk()->Class[1];
-    // Set MSB to 1 to avoid collisions with non-hash classs.
-    SC->Class[0] = Hash | (1U << 31);
-  });
+  for (unsigned Cnt = 0; Cnt != 2; ++Cnt) {
+    parallelForEach(Chunks, [&](SectionChunk *SC) {
+      uint32_t Hash = SC->Class[Cnt % 2];
+      for (Symbol *B : SC->symbols())
+        if (auto *Sym = dyn_cast_or_null<DefinedRegular>(B))
+          Hash += Sym->getChunk()->Class[Cnt % 2];
+      // Set MSB to 1 to avoid collisions with non-hash classs.
+      SC->Class[(Cnt + 1) % 2] = Hash | (1U << 31);
+    });
+  }
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.

@@ -97,7 +97,7 @@ syncsource.py configuration in ~/.syncsourcerc:
         # option.
         #
         # Below, I have transfer of the lldb dir skip everything
-        # rooted at "/llvm" below the the lldb dir.  This is
+        # rooted at "/llvm" below the lldb dir.  This is
         # because we want the source OS X lldb to move to
         # a destination of {some-dest-root}/llvm/tools/lldb, and
         # not have the OS-X-inverted llvm copy over with the lldb

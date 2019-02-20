@@ -51,8 +51,6 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                     substrs=['1234'])
 
     @add_test_categories(["libc++"])
-    @skipIf(debug_info="gmodules",
-            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -180,8 +178,6 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                     substrs=['vector has 0 items'])
 
     @add_test_categories(["libc++"])
-    @skipIf(debug_info="gmodules",
-            bugnumber="https://bugs.llvm.org/show_bug.cgi?id=36048")
     def test_ref_and_ptr(self):
         """Test that that file and class static variables display correctly."""
         self.build()

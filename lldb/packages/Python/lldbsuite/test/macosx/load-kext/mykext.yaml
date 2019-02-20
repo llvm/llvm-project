@@ -1,0 +1,222 @@
+--- !mach-o
+FileHeader:      
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x0000000B
+  ncmds:           7
+  sizeofcmds:      520
+  flags:           0x00000085
+  reserved:        0x00000000
+LoadCommands:    
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         7
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:        
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0000000000000F60
+        size:            158
+        offset:          0x00000F60
+        align:           4
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __DATA
+    vmaddr:          4096
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        4096
+    maxprot:         7
+    initprot:        3
+    nsects:          1
+    flags:           0
+    Sections:        
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x0000000000001000
+        size:            220
+        offset:          0x00001000
+        align:           3
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x00000000
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          8192
+    vmsize:          4096
+    fileoff:         8192
+    filesize:        800
+    maxprot:         7
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          8224
+    nsyms:           19
+    stroff:          8528
+    strsize:         464
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       16
+    iextdefsym:      16
+    nextdefsym:      3
+    iundefsym:       19
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       8192
+    nlocrel:         4
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            17A97B33-09B7-3195-9408-DBD965D578A5
+  - cmd:             LC_SOURCE_VERSION
+    cmdsize:         16
+    version:         0
+LinkEditData:    
+  NameList:        
+    - n_strx:          40
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          141
+      n_type:          0x64
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          155
+      n_type:          0x66
+      n_sect:          3
+      n_desc:          1
+      n_value:         1543540349
+    - n_strx:          276
+      n_type:          0x20
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          287
+      n_type:          0x20
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          298
+      n_type:          0x20
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          309
+      n_type:          0x20
+      n_sect:          0
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x64
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          325
+      n_type:          0x1E
+      n_sect:          1
+      n_desc:          0
+      n_value:         3992
+    - n_strx:          333
+      n_type:          0x1E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4018
+    - n_strx:          361
+      n_type:          0x1E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4035
+    - n_strx:          392
+      n_type:          0x1E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4052
+    - n_strx:          417
+      n_type:          0x1E
+      n_sect:          1
+      n_desc:          0
+      n_value:         4068
+    - n_strx:          424
+      n_type:          0x1E
+      n_sect:          2
+      n_desc:          0
+      n_value:         4296
+    - n_strx:          435
+      n_type:          0x1E
+      n_sect:          2
+      n_desc:          0
+      n_value:         4304
+    - n_strx:          446
+      n_type:          0x1E
+      n_sect:          2
+      n_desc:          0
+      n_value:         4312
+    - n_strx:          2
+      n_type:          0x0F
+      n_sect:          2
+      n_desc:          0
+      n_value:         4096
+    - n_strx:          13
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         3936
+    - n_strx:          27
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         3968
+  StringTable:     
+    - ' '
+    - _kmod_info
+    - _mykext_start
+    - _mykext_stop
+    - /tmp/mykext/build/mykext/Build/Intermediates.noindex/mykext.build/Debug/mykext.build/DerivedSources/
+    - mykext_info.c
+    - /tmp/mykext/build/mykext/Build/Intermediates.noindex/mykext.build/Debug/mykext.build/Objects-normal/x86_64/mykext_info.o
+    - _kmod_info
+    - __realmain
+    - __antimain
+    - __kext_apple_cc
+    - __start
+    - _OSKextGetCurrentIdentifier
+    - _OSKextGetCurrentVersionString
+    - _OSKextGetCurrentLoadTag
+    - __stop
+    - __realmain
+    - __antimain
+    - __kext_apple_cc
+    - ''
+    - ''
+...

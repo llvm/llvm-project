@@ -107,7 +107,7 @@ On Mac OS X (under MacVim) , the following key mappings are available:
 ABOUT                                           *lldb-about*
 
 Grab the latest version of this plugin (and LLDB sources) with:
-  git clone http://llvm.org/git/lldb
+  git clone https://github.com/llvm/llvm-project.git
 
 File any bugs at:
   http://llvm.org/bugs/enter_bug.cgi?product=lldb

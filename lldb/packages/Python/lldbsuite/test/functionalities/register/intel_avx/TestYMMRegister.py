@@ -21,7 +21,6 @@ class TestYMMRegister(TestBase):
     @skipIfiOSSimulator
     @skipIfTargetAndroid()
     @skipIf(archs=no_match(['i386', 'x86_64']))
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://30523153")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test(self):
         self.build(dictionary={"CFLAGS_EXTRAS": "-march=haswell"})
@@ -58,7 +57,7 @@ class TestYMMRegister(TestBase):
         else:
             register_range = 8
         for i in range(register_range):
-            j = i - ((i / 8) * 8)
+            j = i - ((i // 8) * 8)
             self.runCmd("thread step-inst")
 
             register_byte = (byte_pattern1 | j)

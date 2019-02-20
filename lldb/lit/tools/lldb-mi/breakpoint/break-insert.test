@@ -1,7 +1,4 @@
-# XFAIL: windows
-# -> llvm.org/pr24452
-#
-# RUN: %cc -o a.exe %p/inputs/break-insert.c -g
+# RUN: %build %p/inputs/break-insert.c --nodefaultlib -o a.exe
 # RUN: %lldbmi < %s | FileCheck %s
 
 # Test that a breakpoint can be inserted before creating a target.

@@ -1,19 +1,14 @@
 //===-- TypeCategory.cpp -----------------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/DataFormatters/TypeCategory.h"
 #include "lldb/Target/Language.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 using namespace lldb;
 using namespace lldb_private;
@@ -167,10 +162,7 @@ bool TypeCategoryImpl::Get(ValueObject &valobj,
 
   else /*if (filter_sp.get() && synth.get())*/
   {
-    if (filter_sp->GetRevision() > synth->GetRevision())
-      pick_synth = false;
-    else
-      pick_synth = true;
+    pick_synth = filter_sp->GetRevision() <= synth->GetRevision();
   }
   if (pick_synth) {
     if (regex_synth && reason)

@@ -1,14 +1,12 @@
 //===-- IRMemoryMap.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/IRMemoryMap.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -16,6 +14,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 
 using namespace lldb_private;
@@ -272,20 +271,16 @@ IRMemoryMap::Allocation::Allocation(lldb::addr_t process_alloc,
                                     uint32_t permissions, uint8_t alignment,
                                     AllocationPolicy policy)
     : m_process_alloc(process_alloc), m_process_start(process_start),
-      m_size(size), m_permissions(permissions), m_alignment(alignment),
-      m_policy(policy), m_leak(false) {
+      m_size(size), m_policy(policy), m_leak(false), m_permissions(permissions),
+      m_alignment(alignment) {
   switch (policy) {
   default:
     assert(0 && "We cannot reach this!");
   case eAllocationPolicyHostOnly:
-    m_data.SetByteSize(size);
-    memset(m_data.GetBytes(), 0, size);
-    break;
-  case eAllocationPolicyProcessOnly:
-    break;
   case eAllocationPolicyMirror:
     m_data.SetByteSize(size);
-    memset(m_data.GetBytes(), 0, size);
+    break;
+  case eAllocationPolicyProcessOnly:
     break;
   }
 }
@@ -393,9 +388,10 @@ lldb::addr_t IRMemoryMap::Malloc(size_t size, uint8_t alignment,
   lldb::addr_t mask = alignment - 1;
   aligned_address = (allocation_address + mask) & (~mask);
 
-  m_allocations[aligned_address] =
-      Allocation(allocation_address, aligned_address, allocation_size,
-                 permissions, alignment, policy);
+  m_allocations.emplace(
+      std::piecewise_construct, std::forward_as_tuple(aligned_address),
+      std::forward_as_tuple(allocation_address, aligned_address,
+                            allocation_size, permissions, alignment, policy));
 
   if (zero_memory) {
     Status write_error;

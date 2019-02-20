@@ -15,7 +15,7 @@ class TestCppScopes(TestBase):
     def test_all_but_c(self):
         self.do_test(False)
 
-    @expectedFailureAll(oslist=["windows"])
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_c(self):
         self.do_test(True)
 

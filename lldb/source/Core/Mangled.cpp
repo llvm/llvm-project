@@ -1,9 +1,8 @@
 //===-- Mangled.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -16,34 +15,32 @@
 #pragma comment(lib, "dbghelp.lib")
 #endif
 
-#include <cstdlib>
-#include <mutex>
-#include <string>
-#include <utility>
-
-#include "swift/Demangling/Demangle.h"
-#include "llvm/ADT/DenseMap.h"
-
 #include "lldb/Core/RichManglingContext.h"
+#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
-#include <ctype.h>
-#include <functional>
-#include <mutex>
 #include "lldb/lldb-enumerations.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 
+#include "swift/Demangling/Demangle.h"
+
+#include <mutex>
+#include <string>
+#include <utility>
+
+#include <stdlib.h>
+#include <string.h>
 using namespace lldb_private;
 
 #if defined(_MSC_VER)
@@ -301,9 +298,10 @@ static char *GetMSVCDemangledStr(const char *M) {
 #endif
 }
 
-static char *GetItaniumDemangledStr(const char *M,
-                                    llvm::ItaniumPartialDemangler &ipd) {
+static char *GetItaniumDemangledStr(const char *M) {
   char *demangled_cstr = nullptr;
+
+  llvm::ItaniumPartialDemangler ipd;
   bool err = ipd.partialDemangle(M);
   if (!err) {
     // Default buffer and size (will realloc in case it's too small).
@@ -393,6 +391,7 @@ bool Mangled::DemangleWithRichManglingInfo(
     }
   }
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 //----------------------------------------------------------------------
@@ -424,8 +423,7 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
         demangled_name = GetMSVCDemangledStr(mangled_name);
         break;
       case eManglingSchemeItanium: {
-        llvm::ItaniumPartialDemangler ipd;
-        demangled_name = GetItaniumDemangledStr(mangled_name, ipd);
+        demangled_name = GetItaniumDemangledStr(mangled_name);
         break;
       }
       case eManglingSchemeNone:
@@ -445,8 +443,8 @@ Mangled::GetDemangledName(lldb::LanguageType language) const {
       std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
           mangled_name));
       if (!demangled.empty()) {
-        m_demangled.SetStringWithMangledCounterpart(demangled.c_str(),
-                                                    m_mangled);
+        m_demangled.SetStringWithMangledCounterpart(demangled,
+						    m_mangled);
         if (log)
           log->Printf("demangle swift: %s -> \"%s\"", mangled_name,
                       demangled.c_str());
@@ -502,9 +500,7 @@ bool Mangled::NameMatches(const RegularExpression &regex,
     return true;
 
   ConstString demangled = GetDemangledName(language);
-  if (demangled && regex.Execute(demangled.AsCString()))
-    return true;
-  return false;
+  return demangled && regex.Execute(demangled.AsCString());
 }
 
 //----------------------------------------------------------------------

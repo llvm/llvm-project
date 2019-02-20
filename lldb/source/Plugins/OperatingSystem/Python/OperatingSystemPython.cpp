@@ -1,18 +1,14 @@
 //===-- OperatingSystemPython.cpp --------------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLDB_DISABLE_PYTHON
 
 #include "OperatingSystemPython.h"
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "Plugins/Process/Utility/DynamicRegisterInfo.h"
 #include "Plugins/Process/Utility/RegisterContextDummy.h"
 #include "Plugins/Process/Utility/RegisterContextMemory.h"
@@ -20,7 +16,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -32,6 +27,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 
@@ -53,7 +49,8 @@ OperatingSystem *OperatingSystemPython::CreateInstance(Process *process,
   // Python OperatingSystem plug-ins must be requested by name, so force must
   // be true
   FileSpec python_os_plugin_spec(process->GetPythonOSPluginPath());
-  if (python_os_plugin_spec && python_os_plugin_spec.Exists()) {
+  if (python_os_plugin_spec &&
+      FileSystem::Instance().Exists(python_os_plugin_spec)) {
     std::unique_ptr<OperatingSystemPython> os_ap(
         new OperatingSystemPython(process, python_os_plugin_spec));
     if (os_ap.get() && os_ap->IsValid())
@@ -215,7 +212,7 @@ bool OperatingSystemPython::UpdateThreadList(ThreadList &old_thread_list,
   // beginning of the list
   uint32_t insert_idx = 0;
   for (uint32_t core_idx = 0; core_idx < num_cores; ++core_idx) {
-    if (core_used_map[core_idx] == false) {
+    if (!core_used_map[core_idx]) {
       new_thread_list.InsertThread(
           core_thread_list.GetThreadAtIndex(core_idx, false), insert_idx);
       ++insert_idx;

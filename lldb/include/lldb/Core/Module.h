@@ -1,40 +1,39 @@
 //===-- Module.h ------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_Module_h_
 #define liblldb_Module_h_
 
-#include "lldb/Core/Address.h"    // for Address
-#include "lldb/Core/ModuleSpec.h" // for ModuleSpec
-#include "lldb/Symbol/ObjectFile.h" // for ObjectFile
+#include "lldb/Core/Address.h"
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Status.h" // for Status
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for LanguageType, SymbolType
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-#include "lldb/lldb-types.h" // for addr_t, offset_t
+#include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
-#include <memory> // for enable_shared_from_this
+#include <memory>
 #include <mutex>
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t
+#include <stddef.h>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -168,10 +167,11 @@ public:
     // Once we get the object file, update our module with the object file's
     // architecture since it might differ in vendor/os if some parts were
     // unknown.
-    if (!module_sp->m_objfile_sp->GetArchitecture(module_sp->m_arch))
-      return nullptr;
-
-    return module_sp;
+    if (ArchSpec arch = module_sp->m_objfile_sp->GetArchitecture()) {
+      module_sp->m_arch = arch;
+      return module_sp;
+    }
+    return nullptr;
   }
 
   //------------------------------------------------------------------
@@ -380,7 +380,7 @@ public:
   //------------------------------------------------------------------
   size_t FindFunctions(const ConstString &name,
                        const CompilerDeclContext *parent_decl_ctx,
-                       uint32_t name_type_mask, bool symbols_ok,
+                       lldb::FunctionNameType name_type_mask, bool symbols_ok,
                        bool inlines_ok, bool append,
                        SymbolContextList &sc_list);
 
@@ -498,10 +498,6 @@ public:
   /// have to specify complete scoping on all expressions, but it also allows
   /// for exact matching when required.
   ///
-  /// @param[in] sc
-  ///     A symbol context that scopes where to extract a type list
-  ///     from.
-  ///
   /// @param[in] type_name
   ///     The name of the type we are looking for that is a fully
   ///     or partially qualified type name.
@@ -520,8 +516,7 @@ public:
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
   size_t
-  FindTypes(const SymbolContext &sc, const ConstString &type_name,
-            bool exact_match, size_t max_matches,
+  FindTypes(const ConstString &type_name, bool exact_match, size_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeList &types);
 
@@ -532,10 +527,6 @@ public:
   /// Find types by name that are in a namespace. This function is used by the
   /// expression parser when searches need to happen in an exact namespace
   /// scope.
-  ///
-  /// @param[in] sc
-  ///     A symbol context that scopes where to extract a type list
-  ///     from.
   ///
   /// @param[in] type_name
   ///     The name of a type within a namespace that should not include
@@ -550,8 +541,7 @@ public:
   /// @return
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
-  size_t FindTypesInNamespace(const SymbolContext &sc,
-                              const ConstString &type_name,
+  size_t FindTypesInNamespace(const ConstString &type_name,
                               const CompilerDeclContext *parent_decl_ctx,
                               size_t max_matches, TypeList &type_list);
 
@@ -816,10 +806,9 @@ public:
   ///
   /// @see SymbolContext::Scope
   //------------------------------------------------------------------
-  uint32_t
-  ResolveSymbolContextForAddress(const Address &so_addr, uint32_t resolve_scope,
-                                 SymbolContext &sc,
-                                 bool resolve_tail_call_address = false);
+  uint32_t ResolveSymbolContextForAddress(
+      const Address &so_addr, lldb::SymbolContextItem resolve_scope,
+      SymbolContext &sc, bool resolve_tail_call_address = false);
 
   //------------------------------------------------------------------
   /// Resolve items in the symbol context for a given file and line.
@@ -862,10 +851,9 @@ public:
   ///
   /// @see SymbolContext::Scope
   //------------------------------------------------------------------
-  uint32_t ResolveSymbolContextForFilePath(const char *file_path, uint32_t line,
-                                           bool check_inlines,
-                                           uint32_t resolve_scope,
-                                           SymbolContextList &sc_list);
+  uint32_t ResolveSymbolContextForFilePath(
+      const char *file_path, uint32_t line, bool check_inlines,
+      lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
   //------------------------------------------------------------------
   /// Resolve items in the symbol context for a given file and line.
@@ -909,10 +897,9 @@ public:
   ///
   /// @see SymbolContext::Scope
   //------------------------------------------------------------------
-  uint32_t ResolveSymbolContextsForFileSpec(const FileSpec &file_spec,
-                                            uint32_t line, bool check_inlines,
-                                            uint32_t resolve_scope,
-                                            SymbolContextList &sc_list);
+  uint32_t ResolveSymbolContextsForFileSpec(
+      const FileSpec &file_spec, uint32_t line, bool check_inlines,
+      lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
   void SetFileSpecAndObjectName(const FileSpec &file,
                                 const ConstString &object_name);
@@ -1054,9 +1041,10 @@ public:
   public:
     LookupInfo()
         : m_name(), m_lookup_name(), m_language(lldb::eLanguageTypeUnknown),
-          m_name_type_mask(0), m_match_name_after_lookup(false) {}
+          m_name_type_mask(lldb::eFunctionNameTypeNone),
+          m_match_name_after_lookup(false) {}
 
-    LookupInfo(const ConstString &name, uint32_t name_type_mask,
+    LookupInfo(const ConstString &name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);
 
     const ConstString &GetName() const { return m_name; }
@@ -1067,24 +1055,31 @@ public:
 
     void SetLookupName(const ConstString &name) { m_lookup_name = name; }
 
-    uint32_t GetNameTypeMask() const { return m_name_type_mask; }
+    lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
 
-    void SetNameTypeMask(uint32_t mask) { m_name_type_mask = mask; }
+    void SetNameTypeMask(lldb::FunctionNameType mask) {
+      m_name_type_mask = mask;
+    }
 
     void Prune(SymbolContextList &sc_list, size_t start_idx) const;
 
   protected:
-    ConstString m_name;        ///< What the user originally typed
-    ConstString m_lookup_name; ///< The actual name will lookup when calling in
-                               ///the object or symbol file
-    lldb::LanguageType
-        m_language;            ///< Limit matches to only be for this language
-    uint32_t m_name_type_mask; ///< One or more bits from lldb::FunctionNameType
-                               ///that indicate what kind of names we are
-                               ///looking for
-    bool m_match_name_after_lookup; ///< If \b true, then demangled names that
-                                    ///match will need to contain "m_name" in
-                                    ///order to be considered a match
+    /// What the user originally typed
+    ConstString m_name;
+
+    /// The actual name will lookup when calling in the object or symbol file
+    ConstString m_lookup_name;
+
+    /// Limit matches to only be for this language
+    lldb::LanguageType m_language;
+
+    /// One or more bits from lldb::FunctionNameType that indicate what kind of
+    /// names we are looking for
+    lldb::FunctionNameType m_name_type_mask;
+
+    ///< If \b true, then demangled names that match will need to contain
+    ///< "m_name" in order to be considered a match
+    bool m_match_name_after_lookup;
   };
 
 protected:
@@ -1178,7 +1173,7 @@ protected:
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContextForAddress(lldb::addr_t vm_addr,
                                           bool vm_addr_is_file_addr,
-                                          uint32_t resolve_scope,
+                                          lldb::SymbolContextItem resolve_scope,
                                           Address &so_addr, SymbolContext &sc);
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,
@@ -1199,9 +1194,8 @@ private:
   Module(); // Only used internally by CreateJITModule ()
 
   size_t FindTypes_Impl(
-      const SymbolContext &sc, const ConstString &name,
-      const CompilerDeclContext *parent_decl_ctx, bool append,
-      size_t max_matches,
+      const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+      bool append, size_t max_matches,
       llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
       TypeMap &types);
 

@@ -1,9 +1,8 @@
 //===-- SBThreadPlan.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,7 +13,6 @@
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -31,6 +29,7 @@
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 
@@ -254,6 +253,30 @@ SBThreadPlan SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address,
     SBThreadPlan plan =
         SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForRunToAddress(
             false, *address, false, plan_status));
+
+    if (plan_status.Fail())
+      error.SetErrorString(plan_status.AsCString());
+
+    return plan;
+  } else {
+    return SBThreadPlan();
+  }
+}
+
+SBThreadPlan
+SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name) {
+  SBError error;
+  return QueueThreadPlanForStepScripted(script_class_name, error);
+}
+
+SBThreadPlan
+SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name,
+                                             SBError &error) {
+  if (m_opaque_sp) {
+    Status plan_status;
+    SBThreadPlan plan =
+        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepScripted(
+            false, script_class_name, false, plan_status));
 
     if (plan_status.Fail())
       error.SetErrorString(plan_status.AsCString());

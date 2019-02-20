@@ -1,13 +1,11 @@
 //===-- lldb-platform.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #if defined(__APPLE__)
 #include <netinet/in.h>
@@ -19,10 +17,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
-// C++ Includes
 #include <fstream>
 
-// Other libraries and framework includes
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 
@@ -100,7 +96,7 @@ static void display_usage(const char *progname, const char *subcommand) {
 
 static Status save_socket_id_to_file(const std::string &socket_id,
                                      const FileSpec &file_spec) {
-  FileSpec temp_file_spec(file_spec.GetDirectory().AsCString(), false);
+  FileSpec temp_file_spec(file_spec.GetDirectory().AsCString());
   Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
     return Status("Failed to create directory %s: %s",
@@ -193,7 +189,7 @@ int main_platform(int argc, char *argv[]) {
 
     case 'f': // Socket file
       if (optarg && optarg[0])
-        socket_file.SetFile(optarg, false, FileSpec::Style::native);
+        socket_file.SetFile(optarg, FileSpec::Style::native);
       break;
 
     case 'p': {

@@ -153,6 +153,9 @@ class ValueAPITestCase(TestBase):
         val_s = target.EvaluateExpression('s')
         val_a = target.EvaluateExpression('a')
         self.assertTrue(
+            val_s.GetChildMemberWithName('a').GetAddress().IsValid(),
+            VALID_VARIABLE)
+        self.assertTrue(
             val_s.GetChildMemberWithName('a').AddressOf(),
             VALID_VARIABLE)
         self.assertTrue(

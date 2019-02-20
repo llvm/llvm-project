@@ -8,7 +8,6 @@ class TestCppChainedCalls(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_with_run_command(self):
         self.build()
 

@@ -1,0 +1,66 @@
+# Test behavior on strange (invalid?) elf files where the sections cross segment
+# boundary. The test input was generated from this yaml file, but the program
+# header was modified by hand, so this input is here for reference only.
+#
+# Right now lldb shortens sections to make sure every section is fully contained
+# within a segment, but other behaviors are possible too (including outright
+# rejecting such files).
+
+# RUN: lldb-test object-file %S/Inputs/PT_LOAD-overlap-section.elf | FileCheck %s
+
+# CHECK:      Index: 0
+# CHECK-NEXT: ID: 0xffffffffffffffff
+# CHECK-NEXT: Name: PT_LOAD[0]
+# CHECK-NEXT: Type: container
+# CHECK-NEXT: Permissions: rwx
+# CHECK-NEXT: Thread specific: no
+# CHECK-NEXT: VM address: 0x1006
+# CHECK-NEXT: VM size: 8
+# CHECK-NEXT: File size: 8
+# CHECK-NEXT: Showing 1 subsections
+# CHECK-NEXT:   Index: 0
+# CHECK-NEXT:   ID: 0x2
+# CHECK-NEXT:   Name: .text
+# CHECK-NEXT:   Type: code
+# CHECK-NEXT:   Permissions: r-x
+# CHECK-NEXT:   Thread specific: no
+# CHECK-NEXT:   VM address: 0x1008
+# CHECK-NEXT:   VM size: 6
+# CHECK-NEXT:   File size: 8
+
+# CHECK:      Index: 1
+# CHECK-NEXT: ID: 0x1
+# CHECK-NEXT: Name: .interp
+# CHECK-NEXT: Type: regular
+# CHECK-NEXT: Permissions: r--
+# CHECK-NEXT: Thread specific: no
+# CHECK-NEXT: VM address: 0x1000
+# CHECK-NEXT: VM size: 6
+# CHECK-NEXT: File size: 8
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1008
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_W, PF_R ]
+    VAddr: 0x1008 # Modified by hand to start at 0x1006
+    Align: 0x4
+    Sections:
+      - Section: .text

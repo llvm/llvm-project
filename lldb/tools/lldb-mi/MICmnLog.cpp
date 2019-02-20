@@ -1,9 +1,8 @@
 //===-- MICmnLog.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -209,10 +208,7 @@ bool CMICmnLog::RegisterMedium(const IMedium &vrMedium) {
 bool CMICmnLog::HaveMediumAlready(const IMedium &vrMedium) const {
   IMedium *pMedium = const_cast<IMedium *>(&vrMedium);
   const MapMediumToName_t::const_iterator it = m_mapMediumToName.find(pMedium);
-  if (it != m_mapMediumToName.end())
-    return true;
-
-  return false;
+  return it != m_mapMediumToName.end();
 }
 
 //++

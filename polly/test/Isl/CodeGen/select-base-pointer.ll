@@ -51,7 +51,7 @@ if.end:                                           ; preds = %if.then, %entry.spl
   ret void
 }
 
-!0 = !{!"clang version 3.9.0 (http://llvm.org/git/clang.git 8518d88c3151548eb6d8a7a0bb28c73f65acd897)"}
+!0 = !{!"clang version 3.9.0"}
 !1 = !{!2, !3, i64 8}
 !2 = !{!"_ZTSN11xercesc_2_513DOMParentNodeE", !3, i64 0, !3, i64 8, !6, i64 16}
 !3 = !{!"any pointer", !4, i64 0}

@@ -1,9 +1,8 @@
 //===- Args.h ---------------------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 #define LLD_ARGS_H
 
 #include "lld/Common/LLVM.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
@@ -22,7 +22,11 @@ class InputArgList;
 
 namespace lld {
 namespace args {
+
+llvm::CodeGenOpt::Level getCGOptLevel(int OptLevelLTO);
+
 int getInteger(llvm::opt::InputArgList &Args, unsigned Key, int Default);
+
 std::vector<StringRef> getStrings(llvm::opt::InputArgList &Args, int Id);
 
 uint64_t getZOptionValue(llvm::opt::InputArgList &Args, int Id, StringRef Key,

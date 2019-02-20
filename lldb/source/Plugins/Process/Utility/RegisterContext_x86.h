@@ -1,9 +1,8 @@
 //===-- RegisterContext_x86.h -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -341,7 +340,7 @@ LLVM_PACKED_END
 
 // x86 extensions to FXSAVE (i.e. for AVX and MPX processors)
 LLVM_PACKED_START
-struct LLVM_ALIGNAS(64) XSAVE {
+struct LLVM_ALIGNAS(16) XSAVE {
   FXSAVE i387;      // floating point registers typical in i387_fxsave_struct
   XSAVE_HDR header; // The xsave_hdr_struct can be used to determine if the
                     // following extensions are usable

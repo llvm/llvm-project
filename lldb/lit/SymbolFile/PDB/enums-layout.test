@@ -1,45 +1,45 @@
-REQUIRES: windows
-RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/SimpleTypesTest.cpp /o %T/SimpleTypesTest.cpp.enums.obj
-RUN: link %T/SimpleTypesTest.cpp.enums.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/SimpleTypesTest.cpp.enums.exe
-RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck %s
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=msvc --arch=32 --nodefaultlib --output=%T/SimpleTypesTest.cpp.enums.exe %S/Inputs/SimpleTypesTest.cpp
+RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM %s
+RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM_CONST %s
+RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM_EMPTY %s
+RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM_UCHAR %s
+RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM_CLASS %s
+RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck --check-prefix=ENUM_STRUCT %s
 
 ; FIXME: PDB does not have information about scoped enumeration (Enum class) so the  
 ; compiler type used is the same as the one for unscoped enumeration.
 
-CHECK: Module [[CU:.*]]
-CHECK-DAG: {{^[0-9A-F]+}}: SymbolVendor ([[CU]])
-CHECK:      Type{{.*}} , name = "Enum", size = 4, decl = SimpleTypesTest.cpp:19, compiler_type = {{.*}} enum Enum {
-CHECK-NEXT:    RED,
-CHECK-NEXT:    GREEN,
-CHECK-NEXT:    BLUE
-CHECK-NEXT:}
+ENUM:      Type{{.*}} , name = "Enum", size = 4, decl = simpletypestest.cpp:19, compiler_type = {{.*}} enum Enum {
+ENUM_NEXT:    RED,
+ENUM_NEXT:    GREEN,
+ENUM_NEXT:    BLUE
+ENUM_NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumConst", size = 4,  decl = SimpleTypesTest.cpp:22, compiler_type = {{.*}} enum EnumConst {
-CHECK-NEXT:    LOW,
-CHECK-NEXT:    NORMAL,
-CHECK-NEXT:    HIGH
-CHECK-NEXT:}
+ENUM_CONST:      Type{{.*}} , name = "EnumConst", size = 4,  decl = simpletypestest.cpp:22, compiler_type = {{.*}} enum EnumConst {
+ENUM_CONST-NEXT:    LOW,
+ENUM_CONST-NEXT:    NORMAL,
+ENUM_CONST-NEXT:    HIGH
+ENUM_CONST-NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumEmpty", size = 4,  decl = SimpleTypesTest.cpp:25, compiler_type = {{.*}} enum EnumEmpty {
-CHECK-NEXT:}
+ENUM_EMPTY:      Type{{.*}} , name = "EnumEmpty", size = 4,  decl = simpletypestest.cpp:25, compiler_type = {{.*}} enum EnumEmpty {
+ENUM_EMPTY-NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumUChar", size = 1,  decl = SimpleTypesTest.cpp:28, compiler_type = {{.*}} enum EnumUChar {
-CHECK-NEXT:    ON,
-CHECK-NEXT:    OFF,
-CHECK-NEXT:    AUTO
-CHECK-NEXT:}
+ENUM_UCHAR:      Type{{.*}} , name = "EnumUChar", size = 1,  decl = simpletypestest.cpp:28, compiler_type = {{.*}} enum EnumUChar {
+ENUM_UCHAR-NEXT:    ON,
+ENUM_UCHAR-NEXT:    OFF,
+ENUM_UCHAR-NEXT:    AUTO
+ENUM_UCHAR-NEXT:}
 
 ; Note that `enum EnumClass` is tested instead of `enum class EnumClass`
-CHECK:      Type{{.*}} , name = "EnumClass", size = 4,  decl = SimpleTypesTest.cpp:32, compiler_type = {{.*}} enum EnumClass {
-CHECK-NEXT:    YES,
-CHECK-NEXT:    NO,
-CHECK-NEXT:    DEFAULT
-CHECK-NEXT:}
+ENUM_CLASS:      Type{{.*}} , name = "EnumClass", size = 4,  decl = simpletypestest.cpp:32, compiler_type = {{.*}} enum EnumClass {
+ENUM_CLASS-NEXT:    YES,
+ENUM_CLASS-NEXT:    NO,
+ENUM_CLASS-NEXT:    DEFAULT
+ENUM_CLASS-NEXT:}
 
-CHECK:      Type{{.*}} , name = "EnumStruct", size = 4,  decl = SimpleTypesTest.cpp:35, compiler_type = {{.*}} enum EnumStruct {
-CHECK-NEXT:    red,
-CHECK-NEXT:    blue,
-CHECK-NEXT:    black
-CHECK-NEXT:}
-
-CHECK-DAG: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\SimpleTypesTest.cpp'
+ENUM_STRUCT:      Type{{.*}} , name = "EnumStruct", size = 4,  decl = simpletypestest.cpp:35, compiler_type = {{.*}} enum EnumStruct {
+ENUM_STRUCT-NEXT:    red,
+ENUM_STRUCT-NEXT:    blue,
+ENUM_STRUCT-NEXT:    black
+ENUM_STRUCT-NEXT:}

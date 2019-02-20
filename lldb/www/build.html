@@ -143,7 +143,7 @@
         <div class="post" id="BuildingLldbOnMacOSX">
           <h1 class="postheader">Building LLDB on Mac OS X</h1>
           <div class="postcontent">
-            <p>Building on Mac OS X is as easy as downloading the code and building the Xcode project or workspace:</p>
+            <p> There are two ways to build LLDB on Mac OS X: Using Xcode and using CMake
           </div>
           <div class="postcontent">
             <h2>Preliminaries</h2>
@@ -151,12 +151,33 @@
               <li>XCode 4.3 or newer requires the "Command Line Tools" component (XCode->Preferences->Downloads->Components).</li>
               <li>Mac OS X Lion or newer requires installing <a href="http://swig.org">Swig</a>.</li>
             </ul>
-            <h2>Building LLDB</h2>
+            <h2>Building LLDB with Xcode</h2>
+            <p>Building on Mac OS X with Xcode is as easy as downloading the code and building the Xcode project or workspace:</p>
             <ul>
               <li><a href="download.html">Download</a> the lldb sources.</li>
               <li>Follow the code signing instructions in <b>lldb/docs/code-signing.txt</b></li>
               <li>In Xcode 3.x: <b>lldb/lldb.xcodeproj</b>, select the <b>lldb-tool</b> target, and build.</li>
               <li>In Xcode 4.x: <b>lldb/lldb.xcworkspace</b>, select the <b>lldb-tool</b> scheme, and build.</li>
+            </ul>
+            <h2>Building LLDB with CMake</h2>
+            <p> First download the LLVM, Clang, libc++ and LLDB sources. Refer to <a href="source.html">this page</a> for precise instructions on this step.</p>
+            <p> Refer to the code signing instructions in <b>lldb/docs/code-signing.txt</b> for info on codesigning debugserver during the build.</p>
+            <p> Using CMake is documented on the <a href="http://llvm.org/docs/CMake.html">Building LLVM with CMake</a> page.
+            Ninja is the recommended generator to use when building LLDB with CMake.</p>
+            <code>
+              &gt; cmake $PATH_TO_LLVM -G Ninja
+              <br />&gt; ninja lldb
+            </code>
+            <p>
+               As noted in the "Building LLVM with CMake" page mentioned above, you can pass
+               variables to cmake to change build behavior. If LLDB is built as a part of LLVM,
+               then you can pass LLVM-specific CMake variables to cmake when building LLDB.
+            </p>
+            <p>Here are some commonly used LLDB-specific CMake variables:</p>
+            <ul>
+              <li><code><b>LLDB_EXPORT_ALL_SYMBOLS</b>:BOOL </code>: Exports all symbols. Useful in conjunction with CMAKE_BUILD_TYPE=Debug.</li>
+              <li><code><b>LLDB_BUILD_FRAMEWORK</b>:BOOL </code>: Builds LLDB.framework as Xcode would</li>
+              <li><code><b>LLDB_CODESIGN_IDENTITY</b>:STRING </code>: Determines the codesign identity to use. An empty string means skip building debugserver to avoid codesigning.</li>
             </ul>
           </div>
           <div class="postfooter"></div>
@@ -228,48 +249,11 @@
             </code>
             <h2>Building LLDB</h2>
             <p>
-              We first need to checkout the source trees into the appropriate locations.  Both
-              Clang and LLDB build as subprojects of LLVM.  This means we will be checking out
-              the source for both Clang and LLDB into the <tt>tools</tt> subdirectory of LLVM.  We
-              will be setting up a directory hierarchy looking something like this:
-            </p>
-            <p>
-              <pre><tt>  
-                  llvm
-                  |
-                  `-- tools
-                      |
-                      +-- clang
-                      |
-                      `-- lldb
-                </tt></pre>
-            </p>
-            <p>
-              For reference, we will call the root of the LLVM project tree <tt>$llvm</tt>, and the
-              roots of the Clang and LLDB source trees <tt>$clang</tt> and <tt>$lldb</tt> respectively.
-            </p>
-            <p>Change to the directory where you want to do development work and checkout LLVM:</p>
-            <code>&gt; svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm</code>
-
-            <p>Now switch to LLVM&#8217;s tools subdirectory and checkout both Clang and LLDB:</p>
-            <code>
-              &gt; cd $llvm/tools
-              <br />&gt; svn co http://llvm.org/svn/llvm-project/cfe/trunk clang
-              <br />&gt; svn co http://llvm.org/svn/llvm-project/lldb/trunk lldb
-            </code>
-
-            <p>
-              In general, building the LLDB trunk revision requires trunk revisions of both
-              LLVM and Clang.
-            </p>
-            <p>
-              It is highly recommended that you build the system out of tree.  Create a second
-              build directory and configure the LLVM project tree to your specifications as
-              outlined in LLVM&#8217;s <em>Getting Started Guide</em>.  A typical build procedure
-              might be:
-            </p>
-            <code>
-              &gt; cd $llvm/..
+              LLDB requires both LLVM and Clang to build. We first need to checkout the source tree,
+              which contains all three. Change to the directory where you want to do development
+              work and clone the repository:</p>
+            <code>&gt; git clone https://github.com/llvm/llvm-project.git
+              <br />&gt; cd llvm-project
               <br />&gt; mkdir build
               <br />&gt; cd build
             </code>
@@ -288,7 +272,7 @@
               ninja on your system. To build using ninja:
             </p>
             <code>
-              &gt; cmake ../llvm -G Ninja
+              &gt; cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS='clang;lldb'
               <br />&gt; ninja lldb
               <br />&gt; ninja check-lldb
             </code>
@@ -297,7 +281,7 @@
               two additional arguments to cmake before running ninja:
             </p>
             <code>
-              &gt; cmake ../llvm -G Ninja -DLLDB_EXPORT_ALL_SYMBOLS=1 -DCMAKE_BUILD_TYPE=Debug
+              &gt; cmake ../llvm -G Ninja -DLLVM_ENABLE_PROJECTS='clang;lldb' -DLLDB_EXPORT_ALL_SYMBOLS=1 -DCMAKE_BUILD_TYPE=Debug
             </code>
             <h3>Using CMake + Unix Makefiles</h3>
             <p>If you do not have Ninja, you can still use CMake to generate Unix Makefiles that build LLDB:</p>

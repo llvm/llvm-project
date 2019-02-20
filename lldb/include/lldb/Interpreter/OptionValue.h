@@ -1,19 +1,14 @@
 //===-- OptionValue.h -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_OptionValue_h_
 #define liblldb_OptionValue_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"
@@ -58,9 +53,11 @@ public:
     eDumpOptionValue = (1u << 2),
     eDumpOptionDescription = (1u << 3),
     eDumpOptionRaw = (1u << 4),
+    eDumpOptionCommand = (1u << 5),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
-        (eDumpOptionName | eDumpOptionType | eDumpOptionDescription)
+        (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),
+    eDumpGroupExport = (eDumpOptionCommand | eDumpOptionName | eDumpOptionValue)
   };
 
   OptionValue()

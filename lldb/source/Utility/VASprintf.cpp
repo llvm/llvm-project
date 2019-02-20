@@ -1,21 +1,20 @@
 //===-- VASPrintf.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/VASPrintf.h"
 
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h" // for SmallVectorImpl
-#include "llvm/ADT/StringRef.h"   // for StringRef
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 
-#include <assert.h> // for assert
-#include <stdarg.h> // for va_end, va_list, va_copy
-#include <stdio.h>  // for vsnprintf, size_t
+#include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 bool lldb_private::VASprintf(llvm::SmallVectorImpl<char> &buf, const char *fmt,
                              va_list args) {

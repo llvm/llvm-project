@@ -1,9 +1,8 @@
 //===-- RichManglingContext.cpp ---------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -74,6 +73,7 @@ bool RichManglingContext::IsCtorOrDtor() const {
   case None:
     return false;
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 bool RichManglingContext::IsFunction() const {
@@ -86,40 +86,36 @@ bool RichManglingContext::IsFunction() const {
   case None:
     return false;
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 void RichManglingContext::processIPDStrResult(char *ipd_res, size_t res_size) {
+  // Error case: Clear the buffer.
   if (LLVM_UNLIKELY(ipd_res == nullptr)) {
     assert(res_size == m_ipd_buf_size &&
            "Failed IPD queries keep the original size in the N parameter");
 
-    // Error case: Clear the buffer.
-    m_ipd_str_len = 0;
-    m_ipd_buf[m_ipd_str_len] = '\0';
-  } else {
-    // IPD's res_size includes null terminator.
-    size_t res_len = res_size - 1;
-    assert(ipd_res[res_len] == '\0' &&
-           "IPD returns null-terminated strings and we rely on that");
-
-    if (LLVM_UNLIKELY(ipd_res != m_ipd_buf)) {
-      // Realloc case: Take over the new buffer.
-      m_ipd_buf = ipd_res; // std::realloc freed or reused the old buffer.
-      m_ipd_buf_size =
-          res_size; // Actual buffer may be bigger, but we can't know.
-      m_ipd_str_len = res_len;
-
-      Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE);
-      if (log)
-        log->Printf("ItaniumPartialDemangler Realloc: new buffer size %lu",
-                    m_ipd_buf_size);
-    } else {
-      // 99% case: Just remember the string length.
-      m_ipd_str_len = res_len;
-    }
+    m_ipd_buf[0] = '\0';
+    m_buffer = llvm::StringRef(m_ipd_buf, 0);
+    return;
   }
 
-  m_buffer = llvm::StringRef(m_ipd_buf, m_ipd_str_len);
+  // IPD's res_size includes null terminator.
+  assert(ipd_res[res_size - 1] == '\0' &&
+         "IPD returns null-terminated strings and we rely on that");
+
+  // Update buffer/size on realloc.
+  if (LLVM_UNLIKELY(ipd_res != m_ipd_buf || res_size > m_ipd_buf_size)) {
+    m_ipd_buf = ipd_res;       // std::realloc freed or reused the old buffer.
+    m_ipd_buf_size = res_size; // May actually be bigger, but we can't know.
+
+    if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE))
+      LLDB_LOG(log, "ItaniumPartialDemangler Realloc: new buffer size is {0}",
+               m_ipd_buf_size);
+  }
+
+  // 99% case: Just remember the string length.
+  m_buffer = llvm::StringRef(m_ipd_buf, res_size - 1);
 }
 
 void RichManglingContext::ParseFunctionBaseName() {

@@ -119,7 +119,6 @@ class EventAPITestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
-    @expectedFlakeyOS(oslist=["windows"])
     def test_wait_for_event(self):
         """Exercise SBListener.WaitForEvent() API."""
         self.build()
@@ -198,7 +197,6 @@ class EventAPITestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases")
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""
         self.build()

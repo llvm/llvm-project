@@ -1,16 +1,11 @@
 //===-- LibCxxVector.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "LibCxx.h"
 
 #include "lldb/Core/ValueObject.h"
@@ -149,7 +144,7 @@ bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::Update() {
   if (!data_type_finder_sp)
     return false;
   m_element_type = data_type_finder_sp->GetCompilerType().GetPointeeType();
-  if (auto size = m_element_type.GetByteSize(nullptr)) {
+  if (llvm::Optional<uint64_t> size = m_element_type.GetByteSize(nullptr)) {
     m_element_size = *size;
 
     if (m_element_size > 0) {
@@ -217,7 +212,7 @@ lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::GetChildAtIndex(
     return {};
   mask = 1 << bit_index;
   bool bit_set = ((byte & mask) != 0);
-  auto size = m_bool_type.GetByteSize(nullptr);
+  llvm::Optional<uint64_t> size = m_bool_type.GetByteSize(nullptr);
   if (!size)
     return {};
   DataBufferSP buffer_sp(new DataBufferHeap(*size, 0));

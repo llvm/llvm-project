@@ -53,7 +53,7 @@
 # CHECK-NEXT:  }
 
 # SECTION: Sections:
-# SECTION: Idx Name          Size      Address          Type
+# SECTION: Idx Name          Size     VMA              Type
 # SECTION:   0               00000000 0000000000000000
 # SECTION:   1 .text         00000056 0000000000000000 TEXT
 # SECTION:   2 .rela.text    00000090 0000000000000000

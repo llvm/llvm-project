@@ -1,15 +1,15 @@
 //===-- ExpressionParser.h --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_ExpressionParser_h_
 #define liblldb_ExpressionParser_h_
 
+#include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-public.h"
@@ -48,6 +48,41 @@ public:
   /// Destructor
   //------------------------------------------------------------------
   virtual ~ExpressionParser(){};
+
+  //------------------------------------------------------------------
+  /// Attempts to find possible command line completions for the given
+  /// expression.
+  ///
+  /// @param[out] request
+  ///     The completion request to fill out. The completion should be a string
+  ///     that would complete the current token at the cursor position.
+  ///     Note that the string in the list replaces the current token
+  ///     in the command line.
+  ///
+  /// @param[in] line
+  ///     The line with the completion cursor inside the expression as a string.
+  ///     The first line in the expression has the number 0.
+  ///
+  /// @param[in] pos
+  ///     The character position in the line with the completion cursor.
+  ///     If the value is 0, then the cursor is on top of the first character
+  ///     in the line (i.e. the user has requested completion from the start of
+  ///     the expression).
+  ///
+  /// @param[in] typed_pos
+  ///     The cursor position in the line as typed by the user. If the user
+  ///     expression has not been transformed in some form (e.g. wrapping it
+  ///     in a function body for C languages), then this is equal to the
+  ///     'pos' parameter. The semantics of this value are otherwise equal to
+  ///     'pos' (e.g. a value of 0 means the cursor is at start of the
+  ///     expression).
+  ///
+  /// @return
+  ///     True if we added any completion results to the output;
+  ///     false otherwise.
+  //------------------------------------------------------------------
+  virtual bool Complete(CompletionRequest &request, unsigned line, unsigned pos,
+                        unsigned typed_pos) = 0;
 
   //------------------------------------------------------------------
   /// Parse a single expression and convert it to IR using Clang.  Don't wrap

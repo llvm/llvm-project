@@ -40,7 +40,7 @@ set(LLDB_TEST_USER_ARGS
   ""
   CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
 
-# The .nodindex suffix is a marker for Spotlight to never index the
+# The .noindex suffix is a marker for Spotlight to never index the
 # build directory.  LLDB queries Spotlight to locate .dSYM bundles
 # based on the UUID embedded in a binary, and because the UUID is a
 # hash of filename and .text section, there *will* be conflicts inside
@@ -85,12 +85,13 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   endif()
 endif()
 
-if(LLDB_CODESIGN_IDENTITY)
-  list(APPEND LLDB_TEST_COMMON_ARGS --codesign-identity "${LLDB_CODESIGN_IDENTITY}")
+if(LLDB_CODESIGN_IDENTITY_USED)
+  list(APPEND LLDB_TEST_COMMON_ARGS --codesign-identity "${LLDB_CODESIGN_IDENTITY_USED}")
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)
-  list(APPEND LLDB_TEST_COMMON_ARGS --framework ${LLDB_FRAMEWORK_DIR}/LLDB.framework)
+  get_target_property(framework_target_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
+  list(APPEND LLDB_TEST_COMMON_ARGS --framework ${framework_target_dir}/LLDB.framework)
 endif()
 
 if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
@@ -98,11 +99,17 @@ if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
     --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
 endif()
 
-if(CMAKE_HOST_APPLE)
+if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
+  if (NOT EXISTS "${LLDB_LIT_TOOLS_DIR}")
+    message(WARNING "LLDB_LIT_TOOLS_DIR ${LLDB_LIT_TOOLS_DIR} does not exist.")
+  endif()
+endif()
+
+if(CMAKE_HOST_APPLE AND DEBUGSERVER_PATH)
   list(APPEND LLDB_TEST_COMMON_ARGS --server ${DEBUGSERVER_PATH})
 endif()
 
-if(SKIP_DEBUGSERVER)
+if(SKIP_TEST_DEBUGSERVER)
   list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
 endif()
 
@@ -119,10 +126,18 @@ add_python_test_target(check-lldb-single
 # output is desired (i.e. in continuous integration contexts) check-lldb-single is a better target.
 add_custom_target(check-lldb)
 
+# Make check-lldb depend on all test dependencies.
+add_dependencies(check-lldb lldb-test-deps)
+
 # If we're building with an in-tree clang, then list clang as a dependency
 # to run tests.
 if (TARGET clang)
   add_dependencies(check-lldb clang)
+endif()
+
+# If we build the framework, tests will use the tools in there.
+if (TARGET lldb-framework)
+  add_dependencies(check-lldb lldb-framework)
 endif()
 
 # LLD is required to link test executables on Windows.
@@ -137,7 +152,6 @@ endif ()
 # Run the lit-style tests and the unittests as part of the check-lldb target.
 add_dependencies(check-lldb check-lldb-lit)
 
-add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPENDS})
-# This will add LLDB's test dependencies to the depenednecies for check-all and
+# This will add LLDB's test dependencies to the dependencies for check-all and
 # include them in the test-depends target.
 set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS ${ARG_DEPENDS})

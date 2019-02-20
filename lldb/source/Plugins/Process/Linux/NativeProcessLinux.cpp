@@ -1,37 +1,30 @@
 //===-- NativeProcessLinux.cpp -------------------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "NativeProcessLinux.h"
 
-// C Includes
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 
-// C++ Includes
 #include <fstream>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 
-// Other libraries and framework includes
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"
@@ -41,6 +34,8 @@
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/Support/Errno.h"
@@ -49,6 +44,7 @@
 
 #include "NativeThreadLinux.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "Plugins/Process/Utility/LinuxProcMaps.h"
 #include "Procfs.h"
 
 #include <linux/unistd.h>
@@ -759,9 +755,7 @@ void NativeProcessLinux::MonitorBreakpoint(NativeThreadLinux &thread) {
 
   // Mark the thread as stopped at breakpoint.
   thread.SetStoppedByBreakpoint();
-  Status error = FixupBreakpointPCAsNeeded(thread);
-  if (error.Fail())
-    LLDB_LOG(log, "pid = {0} fixup: {1}", thread.GetID(), error);
+  FixupBreakpointPCAsNeeded(thread);
 
   if (m_threads_stepping_with_breakpoint.find(thread.GetID()) !=
       m_threads_stepping_with_breakpoint.end())
@@ -1238,90 +1232,6 @@ Status NativeProcessLinux::Kill() {
   return error;
 }
 
-static Status
-ParseMemoryRegionInfoFromProcMapsLine(llvm::StringRef &maps_line,
-                                      MemoryRegionInfo &memory_region_info) {
-  memory_region_info.Clear();
-
-  StringExtractor line_extractor(maps_line);
-
-  // Format: {address_start_hex}-{address_end_hex} perms offset  dev   inode
-  // pathname perms: rwxp   (letter is present if set, '-' if not, final
-  // character is p=private, s=shared).
-
-  // Parse out the starting address
-  lldb::addr_t start_address = line_extractor.GetHexMaxU64(false, 0);
-
-  // Parse out hyphen separating start and end address from range.
-  if (!line_extractor.GetBytesLeft() || (line_extractor.GetChar() != '-'))
-    return Status(
-        "malformed /proc/{pid}/maps entry, missing dash between address range");
-
-  // Parse out the ending address
-  lldb::addr_t end_address = line_extractor.GetHexMaxU64(false, start_address);
-
-  // Parse out the space after the address.
-  if (!line_extractor.GetBytesLeft() || (line_extractor.GetChar() != ' '))
-    return Status(
-        "malformed /proc/{pid}/maps entry, missing space after range");
-
-  // Save the range.
-  memory_region_info.GetRange().SetRangeBase(start_address);
-  memory_region_info.GetRange().SetRangeEnd(end_address);
-
-  // Any memory region in /proc/{pid}/maps is by definition mapped into the
-  // process.
-  memory_region_info.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
-
-  // Parse out each permission entry.
-  if (line_extractor.GetBytesLeft() < 4)
-    return Status("malformed /proc/{pid}/maps entry, missing some portion of "
-                  "permissions");
-
-  // Handle read permission.
-  const char read_perm_char = line_extractor.GetChar();
-  if (read_perm_char == 'r')
-    memory_region_info.SetReadable(MemoryRegionInfo::OptionalBool::eYes);
-  else if (read_perm_char == '-')
-    memory_region_info.SetReadable(MemoryRegionInfo::OptionalBool::eNo);
-  else
-    return Status("unexpected /proc/{pid}/maps read permission char");
-
-  // Handle write permission.
-  const char write_perm_char = line_extractor.GetChar();
-  if (write_perm_char == 'w')
-    memory_region_info.SetWritable(MemoryRegionInfo::OptionalBool::eYes);
-  else if (write_perm_char == '-')
-    memory_region_info.SetWritable(MemoryRegionInfo::OptionalBool::eNo);
-  else
-    return Status("unexpected /proc/{pid}/maps write permission char");
-
-  // Handle execute permission.
-  const char exec_perm_char = line_extractor.GetChar();
-  if (exec_perm_char == 'x')
-    memory_region_info.SetExecutable(MemoryRegionInfo::OptionalBool::eYes);
-  else if (exec_perm_char == '-')
-    memory_region_info.SetExecutable(MemoryRegionInfo::OptionalBool::eNo);
-  else
-    return Status("unexpected /proc/{pid}/maps exec permission char");
-
-  line_extractor.GetChar();              // Read the private bit
-  line_extractor.SkipSpaces();           // Skip the separator
-  line_extractor.GetHexMaxU64(false, 0); // Read the offset
-  line_extractor.GetHexMaxU64(false, 0); // Read the major device number
-  line_extractor.GetChar();              // Read the device id separator
-  line_extractor.GetHexMaxU64(false, 0); // Read the major device number
-  line_extractor.SkipSpaces();           // Skip the separator
-  line_extractor.GetU64(0, 10);          // Read the inode number
-
-  line_extractor.SkipSpaces();
-  const char *name = line_extractor.Peek();
-  if (name)
-    memory_region_info.SetName(name);
-
-  return Status();
-}
-
 Status NativeProcessLinux::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                                MemoryRegionInfo &range_info) {
   // FIXME review that the final memory region returned extends to the end of
@@ -1407,22 +1317,23 @@ Status NativeProcessLinux::PopulateMemoryRegionCache() {
     m_supports_mem_region = LazyBool::eLazyBoolNo;
     return BufferOrError.getError();
   }
-  StringRef Rest = BufferOrError.get()->getBuffer();
-  while (! Rest.empty()) {
-    StringRef Line;
-    std::tie(Line, Rest) = Rest.split('\n');
-    MemoryRegionInfo info;
-    const Status parse_error =
-        ParseMemoryRegionInfoFromProcMapsLine(Line, info);
-    if (parse_error.Fail()) {
-      LLDB_LOG(log, "failed to parse proc maps line '{0}': {1}", Line,
-               parse_error);
-      m_supports_mem_region = LazyBool::eLazyBoolNo;
-      return parse_error;
-    }
-    m_mem_region_cache.emplace_back(
-        info, FileSpec(info.GetName().GetCString(), true));
-  }
+  Status Result;
+  ParseLinuxMapRegions(BufferOrError.get()->getBuffer(),
+                       [&](const MemoryRegionInfo &Info, const Status &ST) {
+                         if (ST.Success()) {
+                           FileSpec file_spec(Info.GetName().GetCString());
+                           FileSystem::Instance().Resolve(file_spec);
+                           m_mem_region_cache.emplace_back(Info, file_spec);
+                           return true;
+                         } else {
+                           m_supports_mem_region = LazyBool::eLazyBoolNo;
+                           LLDB_LOG(log, "failed to parse proc maps: {0}", ST);
+                           Result = ST;
+                           return false;
+                         }
+                       });
+  if (Result.Fail())
+    return Result;
 
   if (m_mem_region_cache.empty()) {
     // No entries after attempting to read them.  This shouldn't happen if
@@ -1502,40 +1413,6 @@ size_t NativeProcessLinux::UpdateThreads() {
   return m_threads.size();
 }
 
-Status NativeProcessLinux::GetSoftwareBreakpointPCOffset(
-    uint32_t &actual_opcode_size) {
-  // FIXME put this behind a breakpoint protocol class that can be
-  // set per architecture.  Need ARM, MIPS support here.
-  static const uint8_t g_i386_opcode[] = {0xCC};
-  static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-
-  switch (m_arch.GetMachine()) {
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    actual_opcode_size = static_cast<uint32_t>(sizeof(g_i386_opcode));
-    return Status();
-
-  case llvm::Triple::systemz:
-    actual_opcode_size = static_cast<uint32_t>(sizeof(g_s390x_opcode));
-    return Status();
-
-  case llvm::Triple::arm:
-  case llvm::Triple::aarch64:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::ppc64le:
-    // On these architectures the PC don't get updated for breakpoint hits
-    actual_opcode_size = 0;
-    return Status();
-
-  default:
-    assert(false && "CPU type not supported!");
-    return Status("CPU type not supported");
-  }
-}
-
 Status NativeProcessLinux::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                          bool hardware) {
   if (hardware)
@@ -1551,74 +1428,26 @@ Status NativeProcessLinux::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
     return NativeProcessProtocol::RemoveBreakpoint(addr);
 }
 
-Status NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(
-    size_t trap_opcode_size_hint, size_t &actual_opcode_size,
-    const uint8_t *&trap_opcode_bytes) {
-  // FIXME put this behind a breakpoint protocol class that can be set per
-  // architecture.  Need MIPS support here.
-  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+NativeProcessLinux::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   // The ARM reference recommends the use of 0xe7fddefe and 0xdefe but the
   // linux kernel does otherwise.
-  static const uint8_t g_arm_breakpoint_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
-  static const uint8_t g_i386_opcode[] = {0xCC};
-  static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
-  static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
-  static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
-  static const uint8_t g_thumb_breakpoint_opcode[] = {0x01, 0xde};
-  static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+  static const uint8_t g_arm_opcode[] = {0xf0, 0x01, 0xf0, 0xe7};
+  static const uint8_t g_thumb_opcode[] = {0x01, 0xde};
 
-  switch (m_arch.GetMachine()) {
-  case llvm::Triple::aarch64:
-    trap_opcode_bytes = g_aarch64_opcode;
-    actual_opcode_size = sizeof(g_aarch64_opcode);
-    return Status();
-
+  switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::arm:
-    switch (trap_opcode_size_hint) {
+    switch (size_hint) {
     case 2:
-      trap_opcode_bytes = g_thumb_breakpoint_opcode;
-      actual_opcode_size = sizeof(g_thumb_breakpoint_opcode);
-      return Status();
+      return llvm::makeArrayRef(g_thumb_opcode);
     case 4:
-      trap_opcode_bytes = g_arm_breakpoint_opcode;
-      actual_opcode_size = sizeof(g_arm_breakpoint_opcode);
-      return Status();
+      return llvm::makeArrayRef(g_arm_opcode);
     default:
-      assert(false && "Unrecognised trap opcode size hint!");
-      return Status("Unrecognised trap opcode size hint!");
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "Unrecognised trap opcode size hint!");
     }
-
-  case llvm::Triple::x86:
-  case llvm::Triple::x86_64:
-    trap_opcode_bytes = g_i386_opcode;
-    actual_opcode_size = sizeof(g_i386_opcode);
-    return Status();
-
-  case llvm::Triple::mips:
-  case llvm::Triple::mips64:
-    trap_opcode_bytes = g_mips64_opcode;
-    actual_opcode_size = sizeof(g_mips64_opcode);
-    return Status();
-
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64el:
-    trap_opcode_bytes = g_mips64el_opcode;
-    actual_opcode_size = sizeof(g_mips64el_opcode);
-    return Status();
-
-  case llvm::Triple::systemz:
-    trap_opcode_bytes = g_s390x_opcode;
-    actual_opcode_size = sizeof(g_s390x_opcode);
-    return Status();
-
-  case llvm::Triple::ppc64le:
-    trap_opcode_bytes = g_ppc64le_opcode;
-    actual_opcode_size = sizeof(g_ppc64le_opcode);
-    return Status();
-
   default:
-    assert(false && "CPU type not supported!");
-    return Status("CPU type not supported");
+    return NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_hint);
   }
 }
 
@@ -1675,15 +1504,6 @@ Status NativeProcessLinux::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
     dst += k_ptrace_word_size;
   }
   return Status();
-}
-
-Status NativeProcessLinux::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf,
-                                                 size_t size,
-                                                 size_t &bytes_read) {
-  Status error = ReadMemory(addr, buf, size, bytes_read);
-  if (error.Fail())
-    return error;
-  return m_breakpoint_list.RemoveTrapsFromBuffer(addr, buf, size);
 }
 
 Status NativeProcessLinux::WriteMemory(lldb::addr_t addr, const void *buf,
@@ -1810,90 +1630,14 @@ NativeThreadLinux &NativeProcessLinux::AddThread(lldb::tid_t thread_id) {
   return static_cast<NativeThreadLinux &>(*m_threads.back());
 }
 
-Status
-NativeProcessLinux::FixupBreakpointPCAsNeeded(NativeThreadLinux &thread) {
-  Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
-
-  Status error;
-
-  // Find out the size of a breakpoint (might depend on where we are in the
-  // code).
-  NativeRegisterContext &context = thread.GetRegisterContext();
-
-  uint32_t breakpoint_size = 0;
-  error = GetSoftwareBreakpointPCOffset(breakpoint_size);
-  if (error.Fail()) {
-    LLDB_LOG(log, "GetBreakpointSize() failed: {0}", error);
-    return error;
-  } else
-    LLDB_LOG(log, "breakpoint size: {0}", breakpoint_size);
-
-  // First try probing for a breakpoint at a software breakpoint location: PC -
-  // breakpoint size.
-  const lldb::addr_t initial_pc_addr = context.GetPCfromBreakpointLocation();
-  lldb::addr_t breakpoint_addr = initial_pc_addr;
-  if (breakpoint_size > 0) {
-    // Do not allow breakpoint probe to wrap around.
-    if (breakpoint_addr >= breakpoint_size)
-      breakpoint_addr -= breakpoint_size;
-  }
-
-  // Check if we stopped because of a breakpoint.
-  NativeBreakpointSP breakpoint_sp;
-  error = m_breakpoint_list.GetBreakpoint(breakpoint_addr, breakpoint_sp);
-  if (!error.Success() || !breakpoint_sp) {
-    // We didn't find one at a software probe location.  Nothing to do.
-    LLDB_LOG(log,
-             "pid {0} no lldb breakpoint found at current pc with "
-             "adjustment: {1}",
-             GetID(), breakpoint_addr);
-    return Status();
-  }
-
-  // If the breakpoint is not a software breakpoint, nothing to do.
-  if (!breakpoint_sp->IsSoftwareBreakpoint()) {
-    LLDB_LOG(
-        log,
-        "pid {0} breakpoint found at {1:x}, not software, nothing to adjust",
-        GetID(), breakpoint_addr);
-    return Status();
-  }
-
-  //
-  // We have a software breakpoint and need to adjust the PC.
-  //
-
-  // Sanity check.
-  if (breakpoint_size == 0) {
-    // Nothing to do!  How did we get here?
-    LLDB_LOG(log,
-             "pid {0} breakpoint found at {1:x}, it is software, but the "
-             "size is zero, nothing to do (unexpected)",
-             GetID(), breakpoint_addr);
-    return Status();
-  }
-
-  // Change the program counter.
-  LLDB_LOG(log, "pid {0} tid {1}: changing PC from {2:x} to {3:x}", GetID(),
-           thread.GetID(), initial_pc_addr, breakpoint_addr);
-
-  error = context.SetPC(breakpoint_addr);
-  if (error.Fail()) {
-    LLDB_LOG(log, "pid {0} tid {1}: failed to set PC: {2}", GetID(),
-             thread.GetID(), error);
-    return error;
-  }
-
-  return error;
-}
-
 Status NativeProcessLinux::GetLoadedModuleFileSpec(const char *module_path,
                                                    FileSpec &file_spec) {
   Status error = PopulateMemoryRegionCache();
   if (error.Fail())
     return error;
 
-  FileSpec module_file_spec(module_path, true);
+  FileSpec module_file_spec(module_path);
+  FileSystem::Instance().Resolve(module_file_spec);
 
   file_spec.Clear();
   for (const auto &it : m_mem_region_cache) {
@@ -1913,7 +1657,7 @@ Status NativeProcessLinux::GetFileLoadAddress(const llvm::StringRef &file_name,
   if (error.Fail())
     return error;
 
-  FileSpec file(file_name, false);
+  FileSpec file(file_name);
   for (const auto &it : m_mem_region_cache) {
     if (it.second == file) {
       load_addr = it.first.GetRange().GetRangeBase();

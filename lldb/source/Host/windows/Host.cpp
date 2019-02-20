@@ -1,20 +1,16 @@
 //===-- source/Host/windows/Host.cpp ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include "lldb/Host/windows/AutoHandle.h"
 #include "lldb/Host/windows/windows.h"
 #include <stdio.h>
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
@@ -36,8 +32,9 @@ namespace {
 bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
   // Open the PE File as a binary file, and parse just enough information to
   // determine the machine type.
-  File imageBinary(executable.GetPath().c_str(), File::eOpenOptionRead,
-                   lldb::eFilePermissionsUserRead);
+  File imageBinary;
+  FileSystem::Instance().Open(imageBinary, executable, File::eOpenOptionRead,
+                              lldb::eFilePermissionsUserRead);
   imageBinary.SeekFromStart(0x3c);
   int32_t peOffset = 0;
   uint32_t peHead = 0;
@@ -83,7 +80,7 @@ void GetProcessExecutableAndTriple(const AutoHandle &handle,
   triple.setOS(llvm::Triple::Win32);
   triple.setArch(llvm::Triple::UnknownArch);
   if (GetExecutableForProcess(handle, executable)) {
-    FileSpec executableFile(executable.c_str(), false);
+    FileSpec executableFile(executable.c_str());
     process.SetExecutableFile(executableFile, true);
     GetTripleForProcess(executableFile, triple);
   }
@@ -122,7 +119,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   std::string path;
   if (!llvm::convertWideToUTF8(buffer.data(), path))
     return module_filespec;
-  module_filespec.SetFile(path, false, FileSpec::Style::native);
+  module_filespec.SetFile(path, FileSpec::Style::native);
   return module_filespec;
 }
 
@@ -145,7 +142,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
       ProcessInstanceInfo process;
       std::string exeFile;
       llvm::convertWideToUTF8(pe.szExeFile, exeFile);
-      process.SetExecutableFile(FileSpec(exeFile, false), true);
+      process.SetExecutableFile(FileSpec(exeFile), true);
       process.SetProcessID(pe.th32ProcessID);
       process.SetParentProcessID(pe.th32ParentProcessID);
       GetProcessExecutableAndTriple(handle, process);
@@ -189,7 +186,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       return error;
     }
     expand_tool_spec.AppendPathComponent("lldb-argdumper.exe");
-    if (!expand_tool_spec.Exists()) {
+    if (!FileSystem::Instance().Exists(expand_tool_spec)) {
       error.SetErrorString("could not find the lldb-argdumper tool");
       return error;
     }

@@ -1,18 +1,13 @@
 //===-- BreakpointResolverFileLine.cpp --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -93,7 +88,7 @@ BreakpointResolver *BreakpointResolverFileLine::CreateFromStructuredData(
     return nullptr;
   }
 
-  FileSpec file_spec(filename, false);
+  FileSpec file_spec(filename);
 
   return new BreakpointResolverFileLine(bkpt, file_spec, line_no, column,
                                         offset, check_inlines, skip_prologue,
@@ -193,8 +188,12 @@ void BreakpointResolverFileLine::FilterContexts(SymbolContextList &sc_list,
     // inline int foo2() { ... }
     //
     // but that's the best we can do for now.
+    // One complication, if the line number returned from GetStartLineSourceInfo
+    // is 0, then we can't do this calculation.  That can happen if
+    // GetStartLineSourceInfo gets an error, or if the first line number in
+    // the function really is 0 - which happens for some languages.
     const int decl_line_is_too_late_fudge = 1;
-    if (m_line_number < line - decl_line_is_too_late_fudge) {
+    if (line && m_line_number < line - decl_line_is_too_late_fudge) {
       LLDB_LOG(log, "removing symbol context at {0}:{1}", file, line);
       sc_list.RemoveContextAtIndex(i);
       --i;

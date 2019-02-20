@@ -18,6 +18,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibStdcpp.cpp
   LibStdcppTuple.cpp
   LibStdcppUniquePointer.cpp
+  MSVCUndecoratedNameParser.cpp
 
   LINK_LIBS
     lldbCore

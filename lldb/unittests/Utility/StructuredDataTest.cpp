@@ -1,9 +1,8 @@
 //===-- StructuredDataTest.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,11 +34,11 @@ TEST(StructuredDataTest, StringDump) {
 TEST(StructuredDataTest, ParseJSONFromFile) {
   Status status;
   auto object_sp = StructuredData::ParseJSONFromFile(
-      FileSpec("non-existing-file.json", false), status);
+      FileSpec("non-existing-file.json"), status);
   EXPECT_EQ(nullptr, object_sp);
 
   std::string input = GetInputFilePath("StructuredData-basic.json");
-  object_sp = StructuredData::ParseJSONFromFile(FileSpec(input, false), status);
+  object_sp = StructuredData::ParseJSONFromFile(FileSpec(input), status);
   ASSERT_NE(nullptr, object_sp);
 
   StreamString S;

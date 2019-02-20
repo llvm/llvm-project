@@ -1,18 +1,12 @@
 //===-- Target.cpp ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-#include <mutex>
-// Other libraries and framework includes
-#include "swift/Frontend/Frontend.h"
-// Project includes
+#include "lldb/Target/Target.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTSource.h"
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
@@ -26,14 +20,12 @@
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Section.h"
 #include "lldb/Core/SearchFilter.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
@@ -60,15 +52,18 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/SystemRuntime.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+#include <mutex>
 
+#include "swift/Frontend/Frontend.h"
 #include "swift/SIL/SILModule.h"
 
 using namespace lldb;
@@ -205,6 +200,8 @@ void Target::DeleteCurrentProcess() {
 const lldb::ProcessSP &Target::CreateProcess(ListenerSP listener_sp,
                                              llvm::StringRef plugin_name,
                                              const FileSpec *crash_file) {
+  if (!listener_sp)
+    listener_sp = GetDebugger().GetListener();
   DeleteCurrentProcess();
   m_process_sp = Process::FindPlugin(shared_from_this(), plugin_name,
                                      listener_sp, crash_file);
@@ -435,12 +432,11 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
                           false);
 }
 
-BreakpointSP
-Target::CreateBreakpoint(const FileSpecList *containingModules,
-                         const FileSpecList *containingSourceFiles,
-                         const char *func_name, uint32_t func_name_type_mask,
-                         LanguageType language, lldb::addr_t offset,
-                         LazyBool skip_prologue, bool internal, bool hardware) {
+BreakpointSP Target::CreateBreakpoint(
+    const FileSpecList *containingModules,
+    const FileSpecList *containingSourceFiles, const char *func_name,
+    FunctionNameType func_name_type_mask, LanguageType language,
+    lldb::addr_t offset, LazyBool skip_prologue, bool internal, bool hardware) {
   BreakpointSP bp_sp;
   if (func_name) {
     SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList(
@@ -463,9 +459,9 @@ lldb::BreakpointSP
 Target::CreateBreakpoint(const FileSpecList *containingModules,
                          const FileSpecList *containingSourceFiles,
                          const std::vector<std::string> &func_names,
-                         uint32_t func_name_type_mask, LanguageType language,
-                         lldb::addr_t offset, LazyBool skip_prologue,
-                         bool internal, bool hardware) {
+                         FunctionNameType func_name_type_mask,
+                         LanguageType language, lldb::addr_t offset,
+                         LazyBool skip_prologue, bool internal, bool hardware) {
   BreakpointSP bp_sp;
   size_t num_names = func_names.size();
   if (num_names > 0) {
@@ -485,11 +481,13 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
   return bp_sp;
 }
 
-BreakpointSP Target::CreateBreakpoint(
-    const FileSpecList *containingModules,
-    const FileSpecList *containingSourceFiles, const char *func_names[],
-    size_t num_names, uint32_t func_name_type_mask, LanguageType language,
-    lldb::addr_t offset, LazyBool skip_prologue, bool internal, bool hardware) {
+BreakpointSP
+Target::CreateBreakpoint(const FileSpecList *containingModules,
+                         const FileSpecList *containingSourceFiles,
+                         const char *func_names[], size_t num_names,
+                         FunctionNameType func_name_type_mask,
+                         LanguageType language, lldb::addr_t offset,
+                         LazyBool skip_prologue, bool internal, bool hardware) {
   BreakpointSP bp_sp;
   if (num_names > 0) {
     SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList(
@@ -785,7 +783,7 @@ void Target::GetBreakpointNames(std::vector<std::string> &names)
   for (auto bp_name : m_breakpoint_names) {
     names.push_back(bp_name.first.AsCString());
   }
-  std::sort(names.begin(), names.end());
+  llvm::sort(names.begin(), names.end());
 }
 
 bool Target::ProcessIsValid() {
@@ -1473,20 +1471,20 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
 
     FileSpecList dependent_files;
     ObjectFile *executable_objfile = executable_sp->GetObjectFile();
-    bool load_dependens;
+    bool load_dependents = true;
     switch (load_dependent_files) {
     case eLoadDependentsDefault:
-      load_dependens = executable_sp->IsExecutable();
+      load_dependents = executable_sp->IsExecutable();
       break;
     case eLoadDependentsYes:
-      load_dependens = true;
+      load_dependents = true;
       break;
     case eLoadDependentsNo:
-      load_dependens = false;
+      load_dependents = false;
       break;
     }
 
-    if (executable_objfile && load_dependens) {
+    if (executable_objfile && load_dependents) {
       executable_objfile->GetDependentModules(dependent_files);
       for (uint32_t i = 0; i < dependent_files.GetSize(); i++) {
         FileSpec dependent_file_spec(
@@ -1510,12 +1508,32 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   }
 }
 
-bool Target::SetArchitecture(const ArchSpec &arch_spec) {
+bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
   bool missing_local_arch = !m_arch.GetSpec().IsValid();
   bool replace_local_arch = true;
   bool compatible_local_arch = false;
   ArchSpec other(arch_spec);
+
+  // Changing the architecture might mean that the currently selected platform
+  // isn't compatible. Set the platform correctly if we are asked to do so,
+  // otherwise assume the user will set the platform manually.
+  if (set_platform) {
+    if (other.IsValid()) {
+      auto platform_sp = GetPlatform();
+      if (!platform_sp ||
+          !platform_sp->IsCompatibleArchitecture(other, false, nullptr)) {
+        ArchSpec platform_arch;
+        auto arch_platform_sp =
+            Platform::GetPlatformForArchitecture(other, &platform_arch);
+        if (arch_platform_sp) {
+          SetPlatform(arch_platform_sp);
+          if (platform_arch.IsValid())
+            other = platform_arch;
+        }
+      }
+    }
+  }
 
   if (!missing_local_arch) {
     if (m_arch.GetSpec().IsCompatibleMatch(arch_spec)) {
@@ -2693,249 +2711,22 @@ lldb::addr_t Target::GetPersistentSymbol(const ConstString &name) {
 
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
                                             AddressClass addr_class) const {
-  addr_t code_addr = load_addr;
-  switch (m_arch.GetSpec().GetMachine()) {
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-    switch (addr_class) {
-    case AddressClass::eData:
-    case AddressClass::eDebug:
-      return LLDB_INVALID_ADDRESS;
-
-    case AddressClass::eUnknown:
-    case AddressClass::eInvalid:
-    case AddressClass::eCode:
-    case AddressClass::eCodeAlternateISA:
-    case AddressClass::eRuntime:
-      if ((code_addr & 2ull) || (addr_class == AddressClass::eCodeAlternateISA))
-        code_addr |= 1ull;
-      break;
-    }
-    break;
-
-  case llvm::Triple::arm:
-  case llvm::Triple::thumb:
-    switch (addr_class) {
-    case AddressClass::eData:
-    case AddressClass::eDebug:
-      return LLDB_INVALID_ADDRESS;
-
-    case AddressClass::eUnknown:
-    case AddressClass::eInvalid:
-    case AddressClass::eCode:
-    case AddressClass::eCodeAlternateISA:
-    case AddressClass::eRuntime:
-      // Check if bit zero it no set?
-      if ((code_addr & 1ull) == 0) {
-        // Bit zero isn't set, check if the address is a multiple of 2?
-        if (code_addr & 2ull) {
-          // The address is a multiple of 2 so it must be thumb, set bit zero
-          code_addr |= 1ull;
-        } else if (addr_class == AddressClass::eCodeAlternateISA) {
-          // We checked the address and the address claims to be the alternate
-          // ISA which means thumb, so set bit zero.
-          code_addr |= 1ull;
-        }
-      }
-      break;
-    }
-    break;
-
-  default:
-    break;
-  }
-  return code_addr;
+  auto arch_plugin = GetArchitecturePlugin();
+  return arch_plugin ?
+      arch_plugin->GetCallableLoadAddress(load_addr, addr_class) : load_addr;
 }
 
 lldb::addr_t Target::GetOpcodeLoadAddress(lldb::addr_t load_addr,
                                           AddressClass addr_class) const {
-  addr_t opcode_addr = load_addr;
-  switch (m_arch.GetSpec().GetMachine()) {
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el:
-  case llvm::Triple::arm:
-  case llvm::Triple::thumb:
-    switch (addr_class) {
-    case AddressClass::eData:
-    case AddressClass::eDebug:
-      return LLDB_INVALID_ADDRESS;
-
-    case AddressClass::eInvalid:
-    case AddressClass::eUnknown:
-    case AddressClass::eCode:
-    case AddressClass::eCodeAlternateISA:
-    case AddressClass::eRuntime:
-      opcode_addr &= ~(1ull);
-      break;
-    }
-    break;
-
-  default:
-    break;
-  }
-  return opcode_addr;
+  auto arch_plugin = GetArchitecturePlugin();
+  return arch_plugin ?
+      arch_plugin->GetOpcodeLoadAddress(load_addr, addr_class) : load_addr;
 }
 
 lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
-  addr_t breakable_addr = addr;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-
-  switch (m_arch.GetSpec().GetMachine()) {
-  default:
-    break;
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el: {
-    addr_t function_start = 0;
-    addr_t current_offset = 0;
-    uint32_t loop_count = 0;
-    Address resolved_addr;
-    uint32_t arch_flags = m_arch.GetSpec().GetFlags();
-    bool IsMips16 = arch_flags & ArchSpec::eMIPSAse_mips16;
-    bool IsMicromips = arch_flags & ArchSpec::eMIPSAse_micromips;
-    SectionLoadList &section_load_list = GetSectionLoadList();
-
-    if (section_load_list.IsEmpty())
-      // No sections are loaded, so we must assume we are not running yet and
-      // need to operate only on file address.
-      m_images.ResolveFileAddress(addr, resolved_addr);
-    else
-      section_load_list.ResolveLoadAddress(addr, resolved_addr);
-
-    // Get the function boundaries to make sure we don't scan back before the
-    // beginning of the current function.
-    ModuleSP temp_addr_module_sp(resolved_addr.GetModule());
-    if (temp_addr_module_sp) {
-      SymbolContext sc;
-      uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
-      temp_addr_module_sp->ResolveSymbolContextForAddress(resolved_addr,
-                                                          resolve_scope, sc);
-      Address sym_addr;
-      if (sc.function)
-        sym_addr = sc.function->GetAddressRange().GetBaseAddress();
-      else if (sc.symbol)
-        sym_addr = sc.symbol->GetAddress();
-
-      function_start = sym_addr.GetLoadAddress(this);
-      if (function_start == LLDB_INVALID_ADDRESS)
-        function_start = sym_addr.GetFileAddress();
-
-      if (function_start)
-        current_offset = addr - function_start;
-    }
-
-    // If breakpoint address is start of function then we dont have to do
-    // anything.
-    if (current_offset == 0)
-      return breakable_addr;
-    else
-      loop_count = current_offset / 2;
-
-    if (loop_count > 3) {
-      // Scan previous 6 bytes
-      if (IsMips16 | IsMicromips)
-        loop_count = 3;
-      // For mips-only, instructions are always 4 bytes, so scan previous 4
-      // bytes only.
-      else
-        loop_count = 2;
-    }
-
-    // Create Disassembler Instance
-    lldb::DisassemblerSP disasm_sp(
-        Disassembler::FindPlugin(m_arch.GetSpec(), nullptr, nullptr));
-
-    ExecutionContext exe_ctx;
-    CalculateExecutionContext(exe_ctx);
-    InstructionList instruction_list;
-    InstructionSP prev_insn;
-    bool prefer_file_cache = true; // Read from file
-    uint32_t inst_to_choose = 0;
-
-    for (uint32_t i = 1; i <= loop_count; i++) {
-      // Adjust the address to read from.
-      resolved_addr.Slide(-2);
-      AddressRange range(resolved_addr, i * 2);
-      uint32_t insn_size = 0;
-
-      disasm_sp->ParseInstructions(&exe_ctx, range, nullptr, prefer_file_cache);
-
-      uint32_t num_insns = disasm_sp->GetInstructionList().GetSize();
-      if (num_insns) {
-        prev_insn = disasm_sp->GetInstructionList().GetInstructionAtIndex(0);
-        insn_size = prev_insn->GetOpcode().GetByteSize();
-        if (i == 1 && insn_size == 2) {
-          // This looks like a valid 2-byte instruction (but it could be a part
-          // of upper 4 byte instruction).
-          instruction_list.Append(prev_insn);
-          inst_to_choose = 1;
-        } else if (i == 2) {
-          // Here we may get one 4-byte instruction or two 2-byte instructions.
-          if (num_insns == 2) {
-            // Looks like there are two 2-byte instructions above our
-            // breakpoint target address. Now the upper 2-byte instruction is
-            // either a valid 2-byte instruction or could be a part of it's
-            // upper 4-byte instruction. In both cases we don't care because in
-            // this case lower 2-byte instruction is definitely a valid
-            // instruction and whatever i=1 iteration has found out is true.
-            inst_to_choose = 1;
-            break;
-          } else if (insn_size == 4) {
-            // This instruction claims its a valid 4-byte instruction. But it
-            // could be a part of it's upper 4-byte instruction. Lets try
-            // scanning upper 2 bytes to verify this.
-            instruction_list.Append(prev_insn);
-            inst_to_choose = 2;
-          }
-        } else if (i == 3) {
-          if (insn_size == 4)
-            // FIXME: We reached here that means instruction at [target - 4] has
-            // already claimed to be a 4-byte instruction, and now instruction
-            // at [target - 6] is also claiming that it's a 4-byte instruction.
-            // This can not be true. In this case we can not decide the valid
-            // previous instruction so we let lldb set the breakpoint at the
-            // address given by user.
-            inst_to_choose = 0;
-          else
-            // This is straight-forward
-            inst_to_choose = 2;
-          break;
-        }
-      } else {
-        // Decode failed, bytes do not form a valid instruction. So whatever
-        // previous iteration has found out is true.
-        if (i > 1) {
-          inst_to_choose = i - 1;
-          break;
-        }
-      }
-    }
-
-    // Check if we are able to find any valid instruction.
-    if (inst_to_choose) {
-      if (inst_to_choose > instruction_list.GetSize())
-        inst_to_choose--;
-      prev_insn = instruction_list.GetInstructionAtIndex(inst_to_choose - 1);
-
-      if (prev_insn->HasDelaySlot()) {
-        uint32_t shift_size = prev_insn->GetOpcode().GetByteSize();
-        // Adjust the breakable address
-        breakable_addr = addr - shift_size;
-        if (log)
-          log->Printf("Target::%s Breakpoint at 0x%8.8" PRIx64
-                      " is adjusted to 0x%8.8" PRIx64 " due to delay slot\n",
-                      __FUNCTION__, addr, breakable_addr);
-      }
-    }
-    break;
-  }
-  }
-  return breakable_addr;
+  auto arch_plugin = GetArchitecturePlugin();
+  return arch_plugin ?
+      arch_plugin->GetBreakableLoadAddress(addr, *this) : addr;
 }
 
 SourceManager &Target::GetSourceManager() {
@@ -3359,18 +3150,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
 
   PlatformSP platform_sp(GetPlatform());
 
-  // Finalize the file actions, and if none were given, default to opening up a
-  // pseudo terminal
-  const bool default_to_use_pty = platform_sp ? platform_sp->IsHost() : false;
-  if (log)
-    log->Printf("Target::%s have platform=%s, platform_sp->IsHost()=%s, "
-                "default_to_use_pty=%s",
-                __FUNCTION__, platform_sp ? "true" : "false",
-                platform_sp ? (platform_sp->IsHost() ? "true" : "false")
-                            : "n/a",
-                default_to_use_pty ? "true" : "false");
-
-  launch_info.FinalizeFileActions(this, default_to_use_pty);
+  FinalizeFileActions(launch_info);
 
   if (state == eStateConnected) {
     if (launch_info.GetFlags().Test(eLaunchFlagLaunchInTTY)) {
@@ -3411,8 +3191,7 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
     } else {
       // Use a Process plugin to construct the process.
       const char *plugin_name = launch_info.GetProcessPluginName();
-      CreateProcess(launch_info.GetListenerForProcess(debugger), plugin_name,
-                    nullptr);
+      CreateProcess(launch_info.GetListener(), plugin_name, nullptr);
     }
 
     // Since we didn't have a platform launch the process, launch it here.
@@ -3587,6 +3366,86 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   return error;
 }
 
+void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+
+  // Finalize the file actions, and if none were given, default to opening up a
+  // pseudo terminal
+  PlatformSP platform_sp = GetPlatform();
+  const bool default_to_use_pty =
+      m_platform_sp ? m_platform_sp->IsHost() : false;
+  LLDB_LOG(
+      log,
+      "have platform={0}, platform_sp->IsHost()={1}, default_to_use_pty={2}",
+      bool(platform_sp),
+      platform_sp ? (platform_sp->IsHost() ? "true" : "false") : "n/a",
+      default_to_use_pty);
+
+  // If nothing for stdin or stdout or stderr was specified, then check the
+  // process for any default settings that were set with "settings set"
+  if (info.GetFileActionForFD(STDIN_FILENO) == nullptr ||
+      info.GetFileActionForFD(STDOUT_FILENO) == nullptr ||
+      info.GetFileActionForFD(STDERR_FILENO) == nullptr) {
+    LLDB_LOG(log, "at least one of stdin/stdout/stderr was not set, evaluating "
+                  "default handling");
+
+    if (info.GetFlags().Test(eLaunchFlagLaunchInTTY)) {
+      // Do nothing, if we are launching in a remote terminal no file actions
+      // should be done at all.
+      return;
+    }
+
+    if (info.GetFlags().Test(eLaunchFlagDisableSTDIO)) {
+      LLDB_LOG(log, "eLaunchFlagDisableSTDIO set, adding suppression action "
+                    "for stdin, stdout and stderr");
+      info.AppendSuppressFileAction(STDIN_FILENO, true, false);
+      info.AppendSuppressFileAction(STDOUT_FILENO, false, true);
+      info.AppendSuppressFileAction(STDERR_FILENO, false, true);
+    } else {
+      // Check for any values that might have gotten set with any of: (lldb)
+      // settings set target.input-path (lldb) settings set target.output-path
+      // (lldb) settings set target.error-path
+      FileSpec in_file_spec;
+      FileSpec out_file_spec;
+      FileSpec err_file_spec;
+      // Only override with the target settings if we don't already have an
+      // action for in, out or error
+      if (info.GetFileActionForFD(STDIN_FILENO) == nullptr)
+        in_file_spec = GetStandardInputPath();
+      if (info.GetFileActionForFD(STDOUT_FILENO) == nullptr)
+        out_file_spec = GetStandardOutputPath();
+      if (info.GetFileActionForFD(STDERR_FILENO) == nullptr)
+        err_file_spec = GetStandardErrorPath();
+
+      LLDB_LOG(log, "target stdin='{0}', target stdout='{1}', stderr='{1}'",
+               in_file_spec, out_file_spec, err_file_spec);
+
+      if (in_file_spec) {
+        info.AppendOpenFileAction(STDIN_FILENO, in_file_spec, true, false);
+        LLDB_LOG(log, "appended stdin open file action for {0}", in_file_spec);
+      }
+
+      if (out_file_spec) {
+        info.AppendOpenFileAction(STDOUT_FILENO, out_file_spec, false, true);
+        LLDB_LOG(log, "appended stdout open file action for {0}",
+                 out_file_spec);
+      }
+
+      if (err_file_spec) {
+        info.AppendOpenFileAction(STDERR_FILENO, err_file_spec, false, true);
+        LLDB_LOG(log, "appended stderr open file action for {0}",
+                 err_file_spec);
+      }
+
+      if (default_to_use_pty &&
+          (!in_file_spec || !out_file_spec || !err_file_spec)) {
+        llvm::Error Err = info.SetUpPtyRedirection();
+        LLDB_LOG_ERROR(log, std::move(Err), "SetUpPtyRedirection failed: {0}");
+      }
+    }
+  }
+}
+
 //--------------------------------------------------------------
 // Target::StopHook
 //--------------------------------------------------------------
@@ -3759,7 +3618,8 @@ static constexpr PropertyDefinition g_properties[] = {
          "whose paths don't match the local file system."},
     {"debug-file-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, {},
-     "List of directories to be searched when locating debug symbol files."},
+     "List of directories to be searched when locating debug symbol files. "
+     "See also symbols.enable-external-lookup."},
     {"clang-module-search-paths", OptionValue::eTypeFileSpecList, false, 0,
      nullptr, {},
      "List of directories to be searched when locating modules for Clang."},
@@ -3894,6 +3754,8 @@ static constexpr PropertyDefinition g_properties[] = {
     {"display-runtime-support-values", OptionValue::eTypeBoolean, false, false,
      nullptr, {}, "If true, LLDB will show variables that are meant to "
                   "support the operation of a language's runtime support."},
+    {"display-recognized-arguments", OptionValue::eTypeBoolean, false, false,
+     nullptr, {}, "Show recognized arguments in variable listings by default."},
     {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
      "Disable lock-step debugging, instead control threads independently."},
     {"require-hardware-breakpoint", OptionValue::eTypeBoolean, false, 0,
@@ -3946,6 +3808,7 @@ enum {
   ePropertyTrapHandlerNames,
   ePropertySDKPath,
   ePropertyDisplayRuntimeSupportValues,
+  ePropertyDisplayRecognizedArguments,
   ePropertyNonStopModeEnabled,
   ePropertyRequireHardwareBreakpoints,
   ePropertyExperimental,
@@ -4554,6 +4417,16 @@ bool TargetProperties::GetDisplayRuntimeSupportValues() const {
 
 void TargetProperties::SetDisplayRuntimeSupportValues(bool b) {
   const uint32_t idx = ePropertyDisplayRuntimeSupportValues;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
+}
+
+bool TargetProperties::GetDisplayRecognizedArguments() const {
+  const uint32_t idx = ePropertyDisplayRecognizedArguments;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(nullptr, idx, false);
+}
+
+void TargetProperties::SetDisplayRecognizedArguments(bool b) {
+  const uint32_t idx = ePropertyDisplayRecognizedArguments;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 

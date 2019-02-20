@@ -1,24 +1,19 @@
 //===-- CommandCompletions.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
 #include <pwd.h>
 #endif
 
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 
-// Project includes
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -105,7 +100,6 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
   if (CompletionBuffer.size() >= PATH_MAX)
     return matches.GetSize();
 
-  namespace fs = llvm::sys::fs;
   namespace path = llvm::sys::path;
 
   llvm::StringRef SearchDir;
@@ -121,7 +115,7 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
     if (FirstSep != llvm::StringRef::npos)
       Remainder = Buffer.drop_front(FirstSep + 1);
 
-    llvm::SmallString<PATH_MAX> Resolved;
+    llvm::SmallString<256> Resolved;
     if (!Resolver.ResolveExact(Username, Resolved)) {
       // We couldn't resolve it as a full username.  If there were no slashes
       // then this might be a partial username.   We try to resolve it as such
@@ -182,11 +176,16 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
   // SearchDir now contains the directory to search in, and Prefix contains the
   // text we want to match against items in that directory.
 
+  FileSystem &fs = FileSystem::Instance();
   std::error_code EC;
-  fs::directory_iterator Iter(SearchDir, EC, false);
-  fs::directory_iterator End;
+  llvm::vfs::directory_iterator Iter = fs.DirBegin(SearchDir, EC);
+  llvm::vfs::directory_iterator End;
   for (; Iter != End && !EC; Iter.increment(EC)) {
     auto &Entry = *Iter;
+    llvm::ErrorOr<llvm::vfs::Status> Status = fs.GetStatus(Entry.path());
+
+    if (!Status)
+      continue;
 
     auto Name = path::filename(Entry.path());
 
@@ -194,20 +193,18 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
     if (Name == "." || Name == ".." || !Name.startswith(PartialItem))
       continue;
 
-    // We have a match.
-
-    llvm::ErrorOr<fs::basic_file_status> st = Entry.status();
-    if (!st)
-      continue;
+    bool is_dir = Status->isDirectory();
 
     // If it's a symlink, then we treat it as a directory as long as the target
     // is a directory.
-    bool is_dir = fs::is_directory(*st);
-    if (fs::is_symlink_file(*st)) {
-      fs::file_status target_st;
-      if (!fs::status(Entry.path(), target_st))
-        is_dir = fs::is_directory(target_st);
+    if (Status->isSymlink()) {
+      FileSpec symlink_filespec(Entry.path());
+      FileSpec resolved_filespec;
+      auto error = fs.ResolveSymbolicLink(symlink_filespec, resolved_filespec);
+      if (error.Success())
+        is_dir = fs.IsDirectory(symlink_filespec);
     }
+
     if (only_directories && !is_dir)
       continue;
 
@@ -361,7 +358,7 @@ CommandCompletions::SourceFileCompleter::SourceFileCompleter(
     CompletionRequest &request)
     : CommandCompletions::Completer(interpreter, request),
       m_include_support_files(include_support_files), m_matching_files() {
-  FileSpec partial_spec(m_request.GetCursorArgumentPrefix(), false);
+  FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
   m_file_name = partial_spec.GetFilename().GetCString();
   m_dir_name = partial_spec.GetDirectory().GetCString();
 }
@@ -501,7 +498,7 @@ size_t CommandCompletions::SymbolCompleter::DoCompletion(SearchFilter *filter) {
 CommandCompletions::ModuleCompleter::ModuleCompleter(
     CommandInterpreter &interpreter, CompletionRequest &request)
     : CommandCompletions::Completer(interpreter, request) {
-  FileSpec partial_spec(m_request.GetCursorArgumentPrefix(), false);
+  FileSpec partial_spec(m_request.GetCursorArgumentPrefix());
   m_file_name = partial_spec.GetFilename().GetCString();
   m_dir_name = partial_spec.GetDirectory().GetCString();
 }

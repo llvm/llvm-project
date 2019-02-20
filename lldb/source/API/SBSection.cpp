@@ -1,9 +1,8 @@
 //===-- SBSection.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,7 +13,6 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/DataBuffer.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
@@ -166,7 +164,7 @@ SBData SBSection::GetSectionData(uint64_t offset, uint64_t size) {
             else
               file_size = 0;
           }
-          auto data_buffer_sp = DataBufferLLVM::CreateSliceFromPath(
+          auto data_buffer_sp = FileSystem::Instance().CreateDataBuffer(
               objfile->GetFileSpec().GetPath(), file_size, file_offset);
           if (data_buffer_sp && data_buffer_sp->GetByteSize() > 0) {
             DataExtractorSP data_extractor_sp(

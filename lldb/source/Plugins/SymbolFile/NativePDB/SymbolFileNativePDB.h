@@ -96,7 +96,7 @@ public:
 
   bool ParseImportedModules(
       const SymbolContext &sc,
-      std::vector<lldb_private::SourceModule> &imported_modules) override;
+      std::vector<SourceModule> &imported_modules) override;
 
   size_t ParseBlocksRecursive(Function &func) override;
 

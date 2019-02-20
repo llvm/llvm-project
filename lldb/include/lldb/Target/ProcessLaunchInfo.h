@@ -1,9 +1,8 @@
 //===-- ProcessLaunchInfo.h -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -52,7 +51,10 @@ public:
 
   bool AppendSuppressFileAction(int fd, bool read, bool write);
 
-  void FinalizeFileActions(Target *target, bool default_to_use_pty);
+  // Redirect stdin/stdout/stderr to a pty, if no action for the respective file
+  // descriptor is specified. (So if stdin and stdout already have file actions,
+  // but stderr doesn't, then only stderr will be redirected to a pty.)
+  llvm::Error SetUpPtyRedirection();
 
   size_t GetNumFileActions() const { return m_file_actions.size(); }
 
@@ -130,8 +132,6 @@ public:
   void SetListener(const lldb::ListenerSP &listener_sp) {
     m_listener_sp = listener_sp;
   }
-
-  lldb::ListenerSP GetListenerForProcess(Debugger &debugger);
 
   lldb::ListenerSP GetHijackListener() const { return m_hijack_listener_sp; }
 

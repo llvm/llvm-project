@@ -1,9 +1,8 @@
 //===-- DWARFDebugMacro.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +24,7 @@ DWARFDebugMacroHeader::ParseHeader(const DWARFDataExtractor &debug_macro_data,
   header.m_version = debug_macro_data.GetU16(offset);
 
   uint8_t flags = debug_macro_data.GetU8(offset);
-  header.m_offset_is_64_bit = flags & OFFSET_SIZE_MASK ? true : false;
+  header.m_offset_is_64_bit = (flags & OFFSET_SIZE_MASK) != 0;
 
   if (flags & DEBUG_LINE_OFFSET_MASK) {
     if (header.m_offset_is_64_bit)

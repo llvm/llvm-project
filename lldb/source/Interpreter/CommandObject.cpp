@@ -1,9 +1,8 @@
 //===-- CommandObject.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -409,15 +408,12 @@ const char *CommandObject::GetArgumentName(CommandArgumentType arg_type) {
 }
 
 bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
-  if ((arg_repeat_type == eArgRepeatPairPlain) ||
-      (arg_repeat_type == eArgRepeatPairOptional) ||
-      (arg_repeat_type == eArgRepeatPairPlus) ||
-      (arg_repeat_type == eArgRepeatPairStar) ||
-      (arg_repeat_type == eArgRepeatPairRange) ||
-      (arg_repeat_type == eArgRepeatPairRangeOptional))
-    return true;
-
-  return false;
+  return (arg_repeat_type == eArgRepeatPairPlain) ||
+         (arg_repeat_type == eArgRepeatPairOptional) ||
+         (arg_repeat_type == eArgRepeatPairPlus) ||
+         (arg_repeat_type == eArgRepeatPairStar) ||
+         (arg_repeat_type == eArgRepeatPairRange) ||
+         (arg_repeat_type == eArgRepeatPairRangeOptional);
 }
 
 static CommandObject::CommandArgumentEntry

@@ -1,21 +1,16 @@
 //===-- ClangUserExpression.h -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_ClangUserExpression_h_
 #define liblldb_ClangUserExpression_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "ASTResultSynthesizer.h"
 #include "ASTStructExtractor.h"
 #include "ClangExpressionDeclMap.h"
@@ -157,6 +152,9 @@ public:
              bool keep_result_in_memory, bool generate_debug_info,
              uint32_t line_offset = 0) override;
 
+  bool Complete(ExecutionContext &exe_ctx, CompletionRequest &request,
+                unsigned complete_pos) override;
+
   ExpressionTypeSystemHelper *GetTypeSystemHelper() override {
     return &m_type_system_helper;
   }
@@ -188,8 +186,8 @@ private:
                     lldb::addr_t struct_address,
                     DiagnosticManager &diagnostic_manager) override;
 
-  llvm::Optional<lldb::LanguageType> GetLanguageForExpr(
-      DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx);
+  void UpdateLanguageForExpr(DiagnosticManager &diagnostic_manager,
+                             ExecutionContext &exe_ctx);
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
                                    ExecutionContext &exe_ctx);
   bool PrepareForParsing(DiagnosticManager &diagnostic_manager,
@@ -212,6 +210,13 @@ private:
     lldb::TargetSP m_target_sp;
   };
 
+  /// The language type of the current expression.
+  lldb::LanguageType m_expr_lang = lldb::eLanguageTypeUnknown;
+
+  /// The absolute character position in the transformed source code where the
+  /// user code (as typed by the user) starts. If the variable is empty, then we
+  /// were not able to calculate this position.
+  llvm::Optional<size_t> m_user_expression_start_pos;
   ResultDelegate m_result_delegate;
 };
 

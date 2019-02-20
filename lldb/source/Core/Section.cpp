@@ -1,25 +1,24 @@
 //===-- Section.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Address.h" // for Address
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h" // for FileSpec
-#include "lldb/Utility/Stream.h"   // for Stream
-#include "lldb/Utility/VMRange.h"  // for VMRange
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/VMRange.h"
 
-#include <inttypes.h> // for PRIx64
-#include <limits>     // for numeric_limits
-#include <utility>    // for distance
+#include <inttypes.h>
+#include <limits>
+#include <utility>
 
 namespace lldb_private {
 class DataExtractor;
@@ -61,6 +60,8 @@ const char *Section::GetTypeAsCString() const {
     return "objc-cfstrings";
   case eSectionTypeDWARFDebugAbbrev:
     return "dwarf-abbrev";
+  case eSectionTypeDWARFDebugAbbrevDwo:
+    return "dwarf-abbrev-dwo";
   case eSectionTypeDWARFDebugAddr:
     return "dwarf-addr";
   case eSectionTypeDWARFDebugAranges:
@@ -71,10 +72,16 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-frame";
   case eSectionTypeDWARFDebugInfo:
     return "dwarf-info";
+  case eSectionTypeDWARFDebugInfoDwo:
+    return "dwarf-info-dwo";
   case eSectionTypeDWARFDebugLine:
     return "dwarf-line";
+  case eSectionTypeDWARFDebugLineStr:
+    return "dwarf-line-str";
   case eSectionTypeDWARFDebugLoc:
     return "dwarf-loc";
+  case eSectionTypeDWARFDebugLocLists:
+    return "dwarf-loclists";
   case eSectionTypeDWARFDebugMacInfo:
     return "dwarf-macinfo";
   case eSectionTypeDWARFDebugMacro:
@@ -85,10 +92,16 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-pubtypes";
   case eSectionTypeDWARFDebugRanges:
     return "dwarf-ranges";
+  case eSectionTypeDWARFDebugRngLists:
+    return "dwarf-rnglists";
   case eSectionTypeDWARFDebugStr:
     return "dwarf-str";
+  case eSectionTypeDWARFDebugStrDwo:
+    return "dwarf-str-dwo";
   case eSectionTypeDWARFDebugStrOffsets:
     return "dwarf-str-offsets";
+  case eSectionTypeDWARFDebugStrOffsetsDwo:
+    return "dwarf-str-offsets-dwo";
   case eSectionTypeDWARFDebugTypes:
     return "dwarf-types";
   case eSectionTypeDWARFDebugNames:
@@ -125,6 +138,10 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-gnu-debugaltlink";
   case eSectionTypeOther:
     return "regular";
+
+  case eSectionTypeSwiftModules:
+  case eSectionTypeDWARFAppleExternalTypes:
+    break;
   }
   return "unknown";
 }

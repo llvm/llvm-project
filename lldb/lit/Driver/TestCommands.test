@@ -1,0 +1,41 @@
+# RUN: %lldb -x -b \
+# RUN:  -S %S/Inputs/Print0.in \
+# RUN:  -O 'expr 1' \
+# RUN:  -S %S/Inputs/Print2.in \
+# RUN:  -O 'expr 3' \
+# RUN:  -s %S/Inputs/Print4.in \
+# RUN:  -o 'expr 5' \
+# RUN:  -s %S/Inputs/Print6.in \
+# RUN:  -o 'expr 7' \
+# RUN: | FileCheck %s
+#
+# RUN: %lldb -x -b \
+# RUN:  -s %S/Inputs/Print4.in \
+# RUN:  -o 'expr 5' \
+# RUN:  -s %S/Inputs/Print6.in \
+# RUN:  -o 'expr 7' \
+# RUN:  -S %S/Inputs/Print0.in \
+# RUN:  -O 'expr 1' \
+# RUN:  -S %S/Inputs/Print2.in \
+# RUN:  -O 'expr 3' \
+# RUN: | FileCheck %s
+#
+# RUN: %lldb -x -b \
+# RUN:  -s %S/Inputs/Print4.in \
+# RUN:  -S %S/Inputs/Print0.in \
+# RUN:  -o 'expr 5' \
+# RUN:  -O 'expr 1' \
+# RUN:  -s %S/Inputs/Print6.in \
+# RUN:  -S %S/Inputs/Print2.in \
+# RUN:  -o 'expr 7' \
+# RUN:  -O 'expr 3' \
+# RUN: | FileCheck %s
+
+# CHECK: (int) $0 = 0
+# CHECK: (int) $1 = 1
+# CHECK: (int) $2 = 2
+# CHECK: (int) $3 = 3
+# CHECK: (int) $4 = 4
+# CHECK: (int) $5 = 5
+# CHECK: (int) $6 = 6
+# CHECK: (int) $7 = 7

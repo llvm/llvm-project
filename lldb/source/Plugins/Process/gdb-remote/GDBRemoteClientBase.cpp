@@ -1,9 +1,8 @@
 //===-- GDBRemoteClientBase.cpp ---------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -379,7 +378,7 @@ void GDBRemoteClientBase::Lock::SyncWithContinueThread(bool interrupt) {
         log->PutCString("GDBRemoteClientBase::Lock::Lock sent packet: \\x03");
       m_comm.m_interrupt_time = steady_clock::now();
     }
-    m_comm.m_cv.wait(lock, [this] { return m_comm.m_is_running == false; });
+    m_comm.m_cv.wait(lock, [this] { return !m_comm.m_is_running; });
     m_did_interrupt = true;
   }
   m_acquired = true;

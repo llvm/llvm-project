@@ -1,29 +1,24 @@
 //===-- CPlusPlusLanguage.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "CPlusPlusLanguage.h"
 
-// C Includes
 #include <cctype>
 #include <cstring>
 
-// C++ Includes
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <set>
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Demangle/Demangle.h"
+#include "llvm/Demangle/ItaniumDemangle.h"
 
-// Project includes
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
@@ -41,6 +36,7 @@
 #include "LibCxxAtomic.h"
 #include "LibCxxVariant.h"
 #include "LibStdcpp.h"
+#include "MSVCUndecoratedNameParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -144,10 +140,7 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
   }
 
   // We processed all characters. It is a vaild basename.
-  if (idx == basename.size())
-    return true;
-
-  return false;
+  return idx == basename.size();
 }
 
 bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
@@ -265,6 +258,10 @@ bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
     const char *name, llvm::StringRef &context, llvm::StringRef &identifier) {
+  if (MSVCUndecoratedNameParser::IsMSVCUndecoratedName(name))
+    return MSVCUndecoratedNameParser::ExtractContextAndIdentifier(name, context,
+                                                                  identifier);
+
   CPlusPlusNameParser parser(name);
   if (auto full_name = parser.ParseAsFullName()) {
     identifier = full_name.getValue().basename;
@@ -274,72 +271,89 @@ bool CPlusPlusLanguage::ExtractContextAndIdentifier(
   return false;
 }
 
-/// Given a mangled function `mangled`, replace all the primitive function type
-/// arguments of `search` with type `replace`.
-static ConstString SubsPrimitiveParmItanium(llvm::StringRef mangled,
-                                            llvm::StringRef search,
-                                            llvm::StringRef replace) {
-  class PrimitiveParmSubs {
-    llvm::StringRef mangled;
-    llvm::StringRef search;
-    llvm::StringRef replace;
-    ptrdiff_t read_pos;
-    std::string output;
-    std::back_insert_iterator<std::string> writer;
+namespace {
+class NodeAllocator {
+  llvm::BumpPtrAllocator Alloc;
 
-  public:
-    PrimitiveParmSubs(llvm::StringRef m, llvm::StringRef s, llvm::StringRef r)
-        : mangled(m), search(s), replace(r), read_pos(0),
-          writer(std::back_inserter(output)) {}
+public:
+  void reset() { Alloc.Reset(); }
 
-    void Substitute(llvm::StringRef tail) {
-      assert(tail.data() >= mangled.data() &&
-             tail.data() < mangled.data() + mangled.size() &&
-             "tail must point into range of mangled");
-
-      if (tail.startswith(search)) {
-        auto reader = mangled.begin() + read_pos;
-        ptrdiff_t read_len = tail.data() - (mangled.data() + read_pos);
-
-        // First write the unmatched part of the original. Then write the
-        // replacement string. Finally skip the search string in the original.
-        writer = std::copy(reader, reader + read_len, writer);
-        writer = std::copy(replace.begin(), replace.end(), writer);
-        read_pos += read_len + search.size();
-      }
-    }
-
-    ConstString Finalize() {
-      // If we did a substitution, write the remaining part of the original.
-      if (read_pos > 0) {
-        writer = std::copy(mangled.begin() + read_pos, mangled.end(), writer);
-        read_pos = mangled.size();
-      }
-
-      return ConstString(output);
-    }
-
-    static void Callback(void *context, const char *match) {
-      ((PrimitiveParmSubs *)context)->Substitute(llvm::StringRef(match));
-    }
-  };
-
-  // The demangler will call back for each instance of a primitive type,
-  // allowing us to perform substitution
-  PrimitiveParmSubs parmSubs(mangled, search, replace);
-  assert(mangled.data()[mangled.size()] == '\0' && "Expect C-String");
-  bool err = llvm::itaniumFindTypesInMangledName(mangled.data(), &parmSubs,
-                                                 PrimitiveParmSubs::Callback);
-  ConstString result = parmSubs.Finalize();
-
-  if (Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE)) {
-    if (err)
-      LLDB_LOG(log, "Failed to substitute mangling in {0}", mangled);
-    else if (result)
-      LLDB_LOG(log, "Substituted mangling {0} -> {1}", mangled, result);
+  template <typename T, typename... Args> T *makeNode(Args &&... args) {
+    return new (Alloc.Allocate(sizeof(T), alignof(T)))
+        T(std::forward<Args>(args)...);
   }
 
-  return result;
+  void *allocateNodeArray(size_t sz) {
+    return Alloc.Allocate(sizeof(llvm::itanium_demangle::Node *) * sz,
+                          alignof(llvm::itanium_demangle::Node *));
+  }
+};
+
+/// Given a mangled function `Mangled`, replace all the primitive function type
+/// arguments of `Search` with type `Replace`.
+class TypeSubstitutor
+    : public llvm::itanium_demangle::AbstractManglingParser<TypeSubstitutor,
+                                                            NodeAllocator> {
+  /// Input character until which we have constructed the respective output
+  /// already
+  const char *Written;
+
+  llvm::StringRef Search;
+  llvm::StringRef Replace;
+  llvm::SmallString<128> Result;
+
+  /// Whether we have performed any substitutions.
+  bool Substituted;
+
+  void reset(llvm::StringRef Mangled, llvm::StringRef Search,
+             llvm::StringRef Replace) {
+    AbstractManglingParser::reset(Mangled.begin(), Mangled.end());
+    Written = Mangled.begin();
+    this->Search = Search;
+    this->Replace = Replace;
+    Result.clear();
+    Substituted = false;
+  }
+
+  void appendUnchangedInput() {
+    Result += llvm::StringRef(Written, First - Written);
+    Written = First;
+  }
+
+public:
+  TypeSubstitutor() : AbstractManglingParser(nullptr, nullptr) {}
+
+  ConstString substitute(llvm::StringRef Mangled, llvm::StringRef From,
+                         llvm::StringRef To) {
+    Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_LANGUAGE);
+
+    reset(Mangled, From, To);
+    if (parse() == nullptr) {
+      LLDB_LOG(log, "Failed to substitute mangling in {0}", Mangled);
+      return ConstString();
+    }
+    if (!Substituted)
+      return ConstString();
+
+    // Append any trailing unmodified input.
+    appendUnchangedInput();
+    LLDB_LOG(log, "Substituted mangling {0} -> {1}", Mangled, Result);
+    return ConstString(Result);
+  }
+
+  llvm::itanium_demangle::Node *parseType() {
+    if (llvm::StringRef(First, numLeft()).startswith(Search)) {
+      // We found a match. Append unmodified input up to this point.
+      appendUnchangedInput();
+
+      // And then perform the replacement.
+      Result += Replace;
+      Written += Search.size();
+      Substituted = true;
+    }
+    return AbstractManglingParser::parseType();
+  }
+};
 }
 
 uint32_t CPlusPlusLanguage::FindAlternateFunctionManglings(
@@ -368,23 +382,24 @@ uint32_t CPlusPlusLanguage::FindAlternateFunctionManglings(
     alternates.insert(ConstString(fixed_scratch));
   }
 
+  TypeSubstitutor TS;
   // `char` is implementation defined as either `signed` or `unsigned`.  As a
   // result a char parameter has 3 possible manglings: 'c'-char, 'a'-signed
   // char, 'h'-unsigned char.  If we're looking for symbols with a signed char
   // parameter, try finding matches which have the general case 'c'.
   if (ConstString char_fixup =
-          SubsPrimitiveParmItanium(mangled_name.GetStringRef(), "a", "c"))
+          TS.substitute(mangled_name.GetStringRef(), "a", "c"))
     alternates.insert(char_fixup);
 
   // long long parameter mangling 'x', may actually just be a long 'l' argument
   if (ConstString long_fixup =
-          SubsPrimitiveParmItanium(mangled_name.GetStringRef(), "x", "l"))
+          TS.substitute(mangled_name.GetStringRef(), "x", "l"))
     alternates.insert(long_fixup);
 
   // unsigned long long parameter mangling 'y', may actually just be unsigned
   // long 'm' argument
   if (ConstString ulong_fixup =
-          SubsPrimitiveParmItanium(mangled_name.GetStringRef(), "y", "m"))
+          TS.substitute(mangled_name.GetStringRef(), "y", "m"))
     alternates.insert(ulong_fixup);
 
   return alternates.size() - start_size;

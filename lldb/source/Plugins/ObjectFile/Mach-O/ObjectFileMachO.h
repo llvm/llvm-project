@@ -1,25 +1,20 @@
 //===-- ObjectFileMachO.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_ObjectFileMachO_h_
 #define liblldb_ObjectFileMachO_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/RangeMap.h"
+#include "lldb/Host/SafeMachO.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/SafeMachO.h"
 #include "lldb/Utility/UUID.h"
 
 //----------------------------------------------------------------------
@@ -96,7 +91,7 @@ public:
 
   void Dump(lldb_private::Stream *s) override;
 
-  bool GetArchitecture(lldb_private::ArchSpec &arch) override;
+  lldb_private::ArchSpec GetArchitecture() override;
 
   bool GetUUID(lldb_private::UUID *uuid) override;
 
@@ -108,7 +103,7 @@ public:
 
   lldb_private::Address GetEntryPointAddress() override;
 
-  lldb_private::Address GetHeaderAddress() override;
+  lldb_private::Address GetBaseAddress() override;
 
   uint32_t GetNumThreadContexts() override;
 
@@ -151,10 +146,10 @@ protected:
           lldb::offset_t lc_offset, // Offset to the first load command
           lldb_private::UUID &uuid);
 
-  static bool GetArchitecture(const llvm::MachO::mach_header &header,
-                              const lldb_private::DataExtractor &data,
-                              lldb::offset_t lc_offset,
-                              lldb_private::ArchSpec &arch);
+  static lldb_private::ArchSpec
+  GetArchitecture(const llvm::MachO::mach_header &header,
+                  const lldb_private::DataExtractor &data,
+                  lldb::offset_t lc_offset);
 
   // Intended for same-host arm device debugging where lldb needs to
   // detect libraries in the shared cache and augment the nlist entries
@@ -196,6 +191,8 @@ protected:
   void SanitizeSegmentCommand(llvm::MachO::segment_command_64 &seg_cmd,
                               uint32_t cmd_idx);
 
+  bool SectionIsLoadable(const lldb_private::Section *section);
+
   llvm::MachO::mach_header m_header;
   static const lldb_private::ConstString &GetSegmentNameTEXT();
   static const lldb_private::ConstString &GetSegmentNameDATA();
@@ -203,6 +200,7 @@ protected:
   static const lldb_private::ConstString &GetSegmentNameDATA_CONST();
   static const lldb_private::ConstString &GetSegmentNameOBJC();
   static const lldb_private::ConstString &GetSegmentNameLINKEDIT();
+  static const lldb_private::ConstString &GetSegmentNameDWARF();
   static const lldb_private::ConstString &GetSectionNameEHFrame();
 
   llvm::MachO::dysymtab_command m_dysymtab;

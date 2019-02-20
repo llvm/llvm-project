@@ -50,8 +50,7 @@
       <li><a href="/test.html">Test</a></li>
       <li><a href="/SB-api-coding-rules.html">SB API Coding Rules</a></li>
       <li><a href="http://bugs.llvm.org">Bug Reports</a></li>
-      <li><a href="http://llvm.org/svn/llvm-project/lldb/trunk">Browse SVN</a></li>
-      <li><a href="http://llvm.org/viewvc/llvm-project/lldb/trunk">Browse ViewVC</a></li>
+      <li><a href="https://github.com/llvm/llvm-project/tree/master/lldb/">Browse Sources</a></li>
     </ul>
     </div>
   </div>

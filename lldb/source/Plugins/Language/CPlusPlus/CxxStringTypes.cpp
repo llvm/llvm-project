@@ -1,9 +1,8 @@
 //===-- CxxStringTypes.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -101,7 +100,7 @@ bool lldb_private::formatters::WCharStringSummaryProvider(
     return false;
 
   // Safe to pass nullptr for exe_scope here.
-  auto size = wchar_compiler_type.GetBitSize(nullptr);
+  llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
   if (!size)
     return false;
   const uint32_t wchar_size = *size;
@@ -198,7 +197,7 @@ bool lldb_private::formatters::WCharSummaryProvider(
     return false;
 
     // Safe to pass nullptr for exe_scope here.
-  auto size = wchar_compiler_type.GetBitSize(nullptr);
+  llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
   if (!size)
     return false;
   const uint32_t wchar_size = *size;

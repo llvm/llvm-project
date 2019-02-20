@@ -1,0 +1,25 @@
+# UNSUPPORTED: system-windows, system-darwin
+#
+# RUN: %clang -o %t %p/inputs/main.c -g
+# RUN: %python %p/inputs/target-select-so-path.py "%debugserver" "%lldbmi %t" %s
+
+# Test that -target-select command can hook up a path
+# added by gdb-set solib-search-path.
+
+# Check that we have a valid target created via file-exec-and-symbols.
+# CHECK: ^done
+
+-interpreter-exec console "target modules search-paths list"
+# CHECK ^done
+
+-gdb-set solib-search-path /example/dir
+# CHECK: ^done
+
+-target-select remote localhost:$PORT
+# CHECK: ^connected
+
+-interpreter-exec console "target modules search-paths list"
+# CHECK: ~"[0] \".\" -> \"/example/dir\"\n"
+# CHECK-NEXT: ^done
+
+-gdb-exit

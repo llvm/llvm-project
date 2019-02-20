@@ -68,6 +68,7 @@ static clang::EnumDecl *GetAsEnumDecl(const CompilerType &compiler_type) {
       if (const clang::EnumType *enum_type =
               qual_type->getAs<clang::EnumType>())
         return enum_type->getDecl();
+      break;
     }
     default:
       break;

@@ -1,9 +1,8 @@
 //===-- SBStringList.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -47,7 +46,7 @@ const lldb_private::StringList &SBStringList::operator*() const {
   return *m_opaque_ap;
 }
 
-bool SBStringList::IsValid() const { return (m_opaque_ap.get() != NULL); }
+bool SBStringList::IsValid() const { return (m_opaque_ap != NULL); }
 
 void SBStringList::AppendString(const char *str) {
   if (str != NULL) {

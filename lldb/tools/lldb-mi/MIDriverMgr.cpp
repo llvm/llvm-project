@@ -1,9 +1,8 @@
 //===-- MIDriverMgr.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -516,29 +515,27 @@ bool CMIDriverMgr::ParseArgs(const int argc, const char *argv[],
       const CMIUtilString strArg(argv[i]);
 
       // Argument "--executable" is also check for in CMIDriver::ParseArgs()
-      if ((0 ==
-           strArg.compare(
-               "--interpreter")) || // Given by the client such as Eclipse
-          (0 == strArg.compare("--executable"))) // Used to specify that there
-                                                 // is executable argument also
-                                                 // on the command line
-      {                                          // See fn description.
+      if (("--interpreter" == strArg) || // Given by the client such as Eclipse
+          ("--executable" == strArg))    // Used to specify that there
+                                         // is executable argument also
+                                         // on the command line
+      {                                  // See fn description.
         bHaveArgInterpret = true;
       }
-      if (0 == strArg.compare("--version")) {
+      if ("--version" == strArg) {
         bHaveArgVersion = true;
       }
-      if (0 == strArg.compare("--versionLong")) {
+      if ("--versionLong" == strArg) {
         bHaveArgVersionLong = true;
       }
-      if (0 == strArg.compare("--log")) {
+      if ("--log" == strArg) {
         bHaveArgLog = true;
       }
       if (0 == strArg.compare(0, 10, "--log-dir=")) {
         strLogDir = strArg.substr(10, CMIUtilString::npos);
         bHaveArgLogDir = true;
       }
-      if ((0 == strArg.compare("--help")) || (0 == strArg.compare("-h"))) {
+      if (("--help" == strArg) || ("-h" == strArg)) {
         bHaveArgHelp = true;
       }
     }

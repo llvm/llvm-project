@@ -1,20 +1,15 @@
 //===-- CommandObjectSettings.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectSettings.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
-// Project includes
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -30,7 +25,8 @@ using namespace lldb_private;
 
 static constexpr OptionDefinition g_settings_set_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Apply the new value to the global default value." }
+  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Apply the new value to the global default value." },
+  { LLDB_OPT_SET_2, false, "force",  'f', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Force an empty value to be accepted as the default." }
     // clang-format on
 };
 
@@ -108,6 +104,9 @@ insert-before or insert-after.");
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'f':
+        m_force = true;
+        break;
       case 'g':
         m_global = true;
         break;
@@ -122,6 +121,7 @@ insert-before or insert-after.");
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_global = false;
+      m_force = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -129,8 +129,8 @@ insert-before or insert-after.");
     }
 
     // Instance variables to hold the values for command options.
-
     bool m_global;
+    bool m_force;
   };
 
   int HandleArgumentCompletion(
@@ -184,8 +184,10 @@ protected:
     if (!ParseOptions(cmd_args, result))
       return false;
 
+    const size_t min_argc = m_options.m_force ? 1 : 2;
     const size_t argc = cmd_args.GetArgumentCount();
-    if ((argc < 2) && (!m_options.m_global)) {
+
+    if ((argc < min_argc) && (!m_options.m_global)) {
       result.AppendError("'settings set' takes more arguments");
       result.SetStatus(eReturnStatusFailed);
       return false;
@@ -197,6 +199,19 @@ protected:
           "'settings set' command requires a valid variable name");
       result.SetStatus(eReturnStatusFailed);
       return false;
+    }
+
+    // A missing value corresponds to clearing the setting when "force" is
+    // specified.
+    if (argc == 1 && m_options.m_force) {
+      Status error(m_interpreter.GetDebugger().SetPropertyValue(
+          &m_exe_ctx, eVarSetOperationClear, var_name, llvm::StringRef()));
+      if (error.Fail()) {
+        result.AppendError(error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+      return result.Succeeded();
     }
 
     // Split the raw command into var_name and value pair.
@@ -298,6 +313,210 @@ protected:
 
     return result.Succeeded();
   }
+};
+
+//-------------------------------------------------------------------------
+// CommandObjectSettingsWrite -- Write settings to file
+//-------------------------------------------------------------------------
+
+static constexpr OptionDefinition g_settings_write_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_ALL, true,  "file",  'f', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,    "The file into which to write the settings." },
+  { LLDB_OPT_SET_ALL, false, "append",'a', OptionParser::eNoArgument,       nullptr, {}, 0,                                       eArgTypeNone,        "Append to saved settings file if it exists."},
+    // clang-format on
+};
+
+class CommandObjectSettingsWrite : public CommandObjectParsed {
+public:
+  CommandObjectSettingsWrite(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "settings export",
+            "Write matching debugger settings and their "
+            "current values to a file that can be read in with "
+            "\"settings read\". Defaults to writing all settings.",
+            nullptr),
+        m_options() {
+    CommandArgumentEntry arg1;
+    CommandArgumentData var_name_arg;
+
+    // Define the first (and only) variant of this arg.
+    var_name_arg.arg_type = eArgTypeSettingVariableName;
+    var_name_arg.arg_repetition = eArgRepeatOptional;
+
+    // There is only one variant this argument could be; put it into the
+    // argument entry.
+    arg1.push_back(var_name_arg);
+
+    // Push the data for the first argument into the m_arguments vector.
+    m_arguments.push_back(arg1);
+  }
+
+  ~CommandObjectSettingsWrite() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() {}
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'f':
+        m_filename.assign(option_arg);
+        break;
+      case 'a':
+        m_append = true;
+        break;
+      default:
+        error.SetErrorStringWithFormat("unrecognized option '%c'",
+                                       short_option);
+        break;
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_filename.clear();
+      m_append = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_settings_write_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    std::string m_filename;
+    bool m_append = false;
+  };
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    FileSpec file_spec(m_options.m_filename);
+    FileSystem::Instance().Resolve(file_spec);
+    std::string path(file_spec.GetPath());
+    uint32_t options = File::OpenOptions::eOpenOptionWrite |
+                       File::OpenOptions::eOpenOptionCanCreate;
+    if (m_options.m_append)
+      options |= File::OpenOptions::eOpenOptionAppend;
+    else
+      options |= File::OpenOptions::eOpenOptionTruncate;
+
+    StreamFile out_file(path.c_str(), options,
+                        lldb::eFilePermissionsFileDefault);
+
+    if (!out_file.GetFile().IsValid()) {
+      result.AppendErrorWithFormat("%s: unable to write to file", path.c_str());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    // Exporting should not be context sensitive.
+    ExecutionContext clean_ctx;
+
+    if (args.empty()) {
+      m_interpreter.GetDebugger().DumpAllPropertyValues(
+          &clean_ctx, out_file, OptionValue::eDumpGroupExport);
+      return result.Succeeded();
+    }
+
+    for (const auto &arg : args) {
+      Status error(m_interpreter.GetDebugger().DumpPropertyValue(
+          &clean_ctx, out_file, arg.ref, OptionValue::eDumpGroupExport));
+      if (!error.Success()) {
+        result.AppendError(error.AsCString());
+        result.SetStatus(eReturnStatusFailed);
+      }
+    }
+
+    return result.Succeeded();
+  }
+
+private:
+  CommandOptions m_options;
+};
+
+//-------------------------------------------------------------------------
+// CommandObjectSettingsRead -- Read settings from file
+//-------------------------------------------------------------------------
+
+static constexpr OptionDefinition g_settings_read_options[] = {
+    // clang-format off
+  {LLDB_OPT_SET_ALL, true, "file",'f', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,       "The file from which to read the breakpoints." },
+    // clang-format on
+};
+
+class CommandObjectSettingsRead : public CommandObjectParsed {
+public:
+  CommandObjectSettingsRead(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "settings read",
+            "Read settings previously saved to a file with \"settings write\".",
+            nullptr),
+        m_options() {}
+
+  ~CommandObjectSettingsRead() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() {}
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'f':
+        m_filename.assign(option_arg);
+        break;
+      default:
+        error.SetErrorStringWithFormat("unrecognized option '%c'",
+                                       short_option);
+        break;
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_filename.clear();
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_settings_read_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    std::string m_filename;
+  };
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    FileSpec file(m_options.m_filename);
+    FileSystem::Instance().Resolve(file);
+    ExecutionContext clean_ctx;
+    CommandInterpreterRunOptions options;
+    options.SetAddToHistory(false);
+    options.SetEchoCommands(false);
+    options.SetPrintResults(true);
+    options.SetStopOnError(false);
+    m_interpreter.HandleCommandsFromFile(file, &clean_ctx, options, result);
+    return result.Succeeded();
+  }
+
+private:
+  CommandOptions m_options;
 };
 
 //-------------------------------------------------------------------------
@@ -987,6 +1206,10 @@ CommandObjectMultiwordSettings::CommandObjectMultiwordSettings(
                  CommandObjectSP(new CommandObjectSettingsAppend(interpreter)));
   LoadSubCommand("clear",
                  CommandObjectSP(new CommandObjectSettingsClear(interpreter)));
+  LoadSubCommand("write",
+                 CommandObjectSP(new CommandObjectSettingsWrite(interpreter)));
+  LoadSubCommand("read",
+                 CommandObjectSP(new CommandObjectSettingsRead(interpreter)));
 }
 
 CommandObjectMultiwordSettings::~CommandObjectMultiwordSettings() = default;

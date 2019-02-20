@@ -1,16 +1,11 @@
 //===-- ThreadPlanShouldStopHere.cpp ----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/LanguageRuntime.h"
@@ -169,17 +164,17 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
           log->Printf("ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
                       "Queueing StepInRange plan to step through line 0 code.");
         return_plan_sp =
-          current_plan
-            ->GetThread().QueueThreadPlanForStepInRangeNoShouldStop(
-              false, range, sc, NULL, eOnlyDuringStepping, status, eLazyBoolCalculate,
-              eLazyBoolNo);
+            current_plan->GetThread().QueueThreadPlanForStepInRangeNoShouldStop(
+                false, range, sc, NULL, eOnlyDuringStepping, status,
+                eLazyBoolCalculate, eLazyBoolNo);
       } else {
         if (log)
-          log->Printf("ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
-                      "Queueing StepOverRange plan to step through line 0 code.");
+          log->Printf(
+              "ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
+              "Queueing StepOverRange plan to step through line 0 code.");
         return_plan_sp =
             current_plan->GetThread().QueueThreadPlanForStepOverRange(
-              false, range, sc, eOnlyDuringStepping, status, eLazyBoolNo);
+                false, range, sc, eOnlyDuringStepping, status, eLazyBoolNo);
       }
     }
   }

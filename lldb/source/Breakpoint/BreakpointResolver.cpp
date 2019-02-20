@@ -1,18 +1,13 @@
 //===-- BreakpointResolver.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Breakpoint/BreakpointResolver.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 // Have to include the other breakpoint resolver types here so the static
@@ -242,10 +237,10 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
           worklist_begin, worklist_end,
           [&](const SymbolContext &sc) { return SourceLoc(sc) < requested; });
       // Sort the remaining entries by (line, column).
-      std::sort(worklist_begin, worklist_end,
-                [](const SymbolContext &a, const SymbolContext &b) {
-                  return SourceLoc(a) < SourceLoc(b);
-                });
+      llvm::sort(worklist_begin, worklist_end,
+                 [](const SymbolContext &a, const SymbolContext &b) {
+                   return SourceLoc(a) < SourceLoc(b);
+                 });
 
       // Filter out all locations with a source location after the closest match.
       if (worklist_begin != worklist_end)
@@ -265,11 +260,11 @@ void BreakpointResolver::SetSCMatchesByLine(SearchFilter &filter,
     }
 
     // Sort by file address.
-    std::sort(worklist_begin, worklist_end,
-              [](const SymbolContext &a, const SymbolContext &b) {
-                return a.line_entry.range.GetBaseAddress().GetFileAddress() <
-                       b.line_entry.range.GetBaseAddress().GetFileAddress();
-              });
+    llvm::sort(worklist_begin, worklist_end,
+               [](const SymbolContext &a, const SymbolContext &b) {
+                 return a.line_entry.range.GetBaseAddress().GetFileAddress() <
+                        b.line_entry.range.GetBaseAddress().GetFileAddress();
+               });
 
     // Go through and see if there are line table entries that are
     // contiguous, and if so keep only the first of the contiguous range.

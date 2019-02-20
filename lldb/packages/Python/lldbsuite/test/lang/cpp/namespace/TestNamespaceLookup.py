@@ -42,11 +42,9 @@ class NamespaceLookupTestCase(TestBase):
                              'stop reason = breakpoint'])
 
     @expectedFailureAll(
-        oslist=[
-            "windows",
-            "linux",
-            "freebsd"],
+        oslist=["freebsd"],
         bugnumber="llvm.org/pr25819")
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -185,6 +183,7 @@ class NamespaceLookupTestCase(TestBase):
         self.expect("expr -- foo()", startstr="(int) $2 = 42")
 
     @unittest2.expectedFailure("lldb file scope lookup bugs")
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_file_scope_lookup_with_run_command(self):
         """Test file scope lookup in lldb."""
         self.build()
@@ -204,7 +203,7 @@ class NamespaceLookupTestCase(TestBase):
         # finds the global ::func().
         self.expect("expr -- func()", startstr="(int) $0 = 2")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr25819")
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_scope_lookup_before_using_with_run_command(self):
         """Test scope lookup before using in lldb."""
         self.build()
@@ -230,10 +229,7 @@ class NamespaceLookupTestCase(TestBase):
         oslist=["linux"],
         debug_info=["dwo"])  # Skip to avoid crash
     @expectedFailureAll(
-        oslist=[
-            "windows",
-            "linux",
-            "freebsd"],
+        oslist=["freebsd"],
         bugnumber="llvm.org/pr25819")
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
@@ -297,10 +293,7 @@ class NamespaceLookupTestCase(TestBase):
         self.expect("expr -- func()", startstr="error")
 
     @expectedFailureAll(
-        oslist=[
-            "windows",
-            "linux",
-            "freebsd"],
+        oslist=["freebsd"],
         bugnumber="llvm.org/pr25819")
     def test_scope_lookup_shadowed_by_using_with_run_command(self):
         """Test scope lookup shadowed by using in lldb."""

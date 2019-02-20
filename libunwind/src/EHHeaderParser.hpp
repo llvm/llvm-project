@@ -1,9 +1,8 @@
 //===------------------------- EHHeaderParser.hpp -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //
 //  Parses ELF .eh_frame_hdr sections.
@@ -36,7 +35,7 @@ public:
     uint8_t table_enc;
   };
 
-  static void decodeEHHdr(A &addressSpace, pint_t ehHdrStart, pint_t ehHdrEnd,
+  static bool decodeEHHdr(A &addressSpace, pint_t ehHdrStart, pint_t ehHdrEnd,
                           EHHeaderInfo &ehHdrInfo);
   static bool findFDE(A &addressSpace, pint_t pc, pint_t ehHdrStart,
                       uint32_t sectionLength,
@@ -53,12 +52,14 @@ private:
 };
 
 template <typename A>
-void EHHeaderParser<A>::decodeEHHdr(A &addressSpace, pint_t ehHdrStart,
+bool EHHeaderParser<A>::decodeEHHdr(A &addressSpace, pint_t ehHdrStart,
                                     pint_t ehHdrEnd, EHHeaderInfo &ehHdrInfo) {
   pint_t p = ehHdrStart;
   uint8_t version = addressSpace.get8(p++);
-  if (version != 1)
-    _LIBUNWIND_ABORT("Unsupported .eh_frame_hdr version");
+  if (version != 1) {
+    _LIBUNWIND_LOG0("Unsupported .eh_frame_hdr version");
+    return false;
+  }
 
   uint8_t eh_frame_ptr_enc = addressSpace.get8(p++);
   uint8_t fde_count_enc = addressSpace.get8(p++);
@@ -71,6 +72,8 @@ void EHHeaderParser<A>::decodeEHHdr(A &addressSpace, pint_t ehHdrStart,
           ? 0
           : addressSpace.getEncodedP(p, ehHdrEnd, fde_count_enc, ehHdrStart);
   ehHdrInfo.table = p;
+
+  return true;
 }
 
 template <typename A>
@@ -102,7 +105,9 @@ bool EHHeaderParser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehHdrStart,
   pint_t ehHdrEnd = ehHdrStart + sectionLength;
 
   EHHeaderParser<A>::EHHeaderInfo hdrInfo;
-  EHHeaderParser<A>::decodeEHHdr(addressSpace, ehHdrStart, ehHdrEnd, hdrInfo);
+  if (!EHHeaderParser<A>::decodeEHHdr(addressSpace, ehHdrStart, ehHdrEnd,
+                                      hdrInfo))
+    return false;
 
   size_t tableEntrySize = getTableEntrySize(hdrInfo.table_enc);
   pint_t tableEntry;

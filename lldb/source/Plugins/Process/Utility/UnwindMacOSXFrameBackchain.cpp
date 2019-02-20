@@ -1,9 +1,8 @@
 //===-- UnwindMacOSXFrameBackchain.cpp --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -114,7 +113,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
   if (!m_cursors.empty()) {
     lldb::addr_t first_frame_pc = m_cursors.front().pc;
     if (first_frame_pc != LLDB_INVALID_ADDRESS) {
-      const uint32_t resolve_scope =
+      const SymbolContextItem resolve_scope =
           eSymbolContextModule | eSymbolContextCompUnit |
           eSymbolContextFunction | eSymbolContextSymbol;
 
@@ -205,7 +204,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
   if (!m_cursors.empty()) {
     lldb::addr_t first_frame_pc = m_cursors.front().pc;
     if (first_frame_pc != LLDB_INVALID_ADDRESS) {
-      const uint32_t resolve_scope =
+      const SymbolContextItem resolve_scope =
           eSymbolContextModule | eSymbolContextCompUnit |
           eSymbolContextFunction | eSymbolContextSymbol;
 

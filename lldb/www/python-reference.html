@@ -515,11 +515,11 @@ Enter your Python command(s). Type 'DONE' to end.
                    its operations. </p>
                 <p>There is a longer discussion of scripted thread plans and the state machine, and several interesting examples
                    of their use in:</p>
-        <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/python/scripted_step.py">scripted_step.py</a>
+        <a href="https://github.com/llvm/llvm-project/blob/master/lldb/examples/python/scripted_step.py">scripted_step.py</a>
 
                 <p> And for a MUCH fuller discussion of the whole state machine, see:</p>
 
-        <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/Target/ThreadPlan.h">ThreadPlan.h</a>
+        <a href="https://github.com/llvm/llvm-project/blob/master/lldb/include/lldb/Target/ThreadPlan.h">ThreadPlan.h</a>
              
                 <p>If you are reading those comments it is useful to know that scripted thread plans are set to be
                   "MasterPlans", and not "OkayToDiscard".
@@ -795,7 +795,7 @@ total 365848
 </tt></pre></code>
         <p>A more interesting template has been created in the source repository that can help you to create
             lldb command quickly:</p>
-        <a href="http://llvm.org/svn/llvm-project/lldb/trunk/examples/python/cmdtemplate.py">cmdtemplate.py</a>
+        <a href="https://github.com/llvm/llvm-project/blob/master/lldb/examples/python/cmdtemplate.py">cmdtemplate.py</a>
 		<p>
 		A commonly required facility is being able to create a command that does some token substitution, and then runs a different debugger command
 		(usually, it po'es the result of an expression evaluated on its argument). For instance, given the following program:
@@ -843,13 +843,14 @@ $2 = 0x000000010010aba0 Let's Be Friendsfoobar</tt></pre></code>
                     <b>LLDB.framework</b> to create your own stand-alone python programs, you will
                     need to tell python where to look in order to find this module. This
                     is done by setting the <b>PYTHONPATH</b> environment variable, adding
-                    a path to the directory that contains the <b>lldb.py</b> python module.  On 
-                    Mac OS X, this is contained inside the LLDB.framework, so you would do:
+                    a path to the directory that contains the <b>lldb.py</b> python module.  The 
+                    lldb driver program has an option to report the path to the lldb module.
+                    You can use that to point to correct lldb.py:
                     
                     <p>For csh and tcsh:</p>
-                    <p><code>% <b>setenv PYTHONPATH /Developer/Library/PrivateFrameworks/LLDB.framework/Resources/Python</b></code></p>
+                    <p><code>% <b>setenv PYTHONPATH `lldb -P`</b></p>
                     <p>For sh and bash:
-                    <p><code>% <b>export PYTHONPATH=/Developer/Library/PrivateFrameworks/LLDB.framework/Resources/Python</b></code></p>
+                    <p><code>% <b>export PYTHONPATH=`lldb -P`</b></p>
                     
                     <p> Alternately, you can append the LLDB Python directory to the <b>sys.path</b> list directly in
                     your Python code before importing the lldb module.</p>

@@ -1,9 +1,8 @@
 //===-- Timer.cpp -----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "lldb/Utility/Timer.h"
@@ -12,11 +11,11 @@
 #include <algorithm>
 #include <map>
 #include <mutex>
-#include <utility> // for pair
+#include <utility>
 #include <vector>
 
-#include <assert.h> // for assert
-#include <stdarg.h> // for va_end, va_list, va_start
+#include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 using namespace lldb_private;
@@ -125,7 +124,7 @@ void Timer::DumpCategoryTimes(Stream *s) {
     return; // Later code will break without any elements.
 
   // Sort by time
-  std::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
+  llvm::sort(sorted.begin(), sorted.end(), CategoryMapIteratorSortCriterion);
 
   for (const auto &timer : sorted)
     s->Printf("%.9f sec for %s\n", timer.second / 1000000000., timer.first);

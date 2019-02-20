@@ -47,7 +47,7 @@ class TypeInfo;
 }
 namespace serialization {
 struct ValidationInfo;
-struct ExtendedValidationInfo;
+class ExtendedValidationInfo;
 }
 }
 

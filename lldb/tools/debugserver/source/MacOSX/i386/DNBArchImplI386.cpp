@@ -1,9 +1,8 @@
 //===-- DNBArchImplI386.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -889,10 +888,7 @@ bool DNBArchImplI386::RollbackTransForHWP() {
       LOG_WATCHPOINTS,
       "DNBArchImplI386::RollbackTransForHWP() SetDBGState() => 0x%8.8x.", kret);
 
-  if (kret == KERN_SUCCESS)
-    return true;
-  else
-    return false;
+  return kret == KERN_SUCCESS;
 }
 bool DNBArchImplI386::FinishTransForHWP() {
   m_2pc_trans_state = Trans_Done;
@@ -918,7 +914,7 @@ uint32_t DNBArchImplI386::EnableHardwareWatchpoint(nub_addr_t addr,
     return INVALID_NUB_HW_INDEX;
 
   // We must watch for either read or write
-  if (read == false && write == false)
+  if (!read && !write)
     return INVALID_NUB_HW_INDEX;
 
   // Read the debug state

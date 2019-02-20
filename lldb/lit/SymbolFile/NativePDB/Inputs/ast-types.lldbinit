@@ -1,0 +1,20 @@
+target variable TC
+target variable TS
+target variable TU
+target variable TE
+
+target variable ABCInt
+target variable ABCFloat
+target variable ABCVoid
+
+target variable AC0
+target variable ACNeg1
+
+target variable AC0D
+target variable ACNeg1D
+target variable AD
+target variable ADE
+
+target modules dump ast
+
+quit

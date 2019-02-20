@@ -1,9 +1,8 @@
 //===-- MICmdArgValString.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,7 +32,7 @@ CMICmdArgValString::CMICmdArgValString()
 // Throws:  None.
 //--
 CMICmdArgValString::CMICmdArgValString(const bool vbAnything)
-    : m_bHandleQuotedString(vbAnything ? true : false), m_bAcceptNumbers(false),
+    : m_bHandleQuotedString(vbAnything), m_bAcceptNumbers(false),
       m_bHandleDirPaths(false), m_bHandleAnything(vbAnything) {}
 
 //++
@@ -391,8 +390,5 @@ bool CMICmdArgValString::IsStringArgQuotedQuotedTextEmbedded(
     return false;
 
   const size_t nLen = vrTxt.length();
-  if ((nLen > 5) && ((nPos + 2) == (nPos2 - 2)))
-    return false;
-
-  return true;
+  return !((nLen > 5) && ((nPos + 2) == (nPos2 - 2)));
 }

@@ -1,8 +1,7 @@
 """
-                     The LLVM Compiler Infrastructure
-
-This file is distributed under the University of Illinois Open Source
-License. See LICENSE.TXT for details.
+Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+See https://llvm.org/LICENSE.txt for license information.
+SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 Provides the configuration class, which holds all information related to
 how this invocation of the test suite should be run.
@@ -193,5 +192,5 @@ def get_filecheck_path():
     """
     Get the path to the FileCheck testing tool.
     """
-    if os.path.lexists(filecheck):
+    if filecheck and os.path.lexists(filecheck):
         return filecheck

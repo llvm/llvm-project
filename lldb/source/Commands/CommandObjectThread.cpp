@@ -1,20 +1,14 @@
 //===-- CommandObjectThread.cpp ---------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectThread.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/SourceManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
@@ -37,6 +31,7 @@
 #include "lldb/Target/ThreadPlanStepInstruction.h"
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
+#include "lldb/Utility/State.h"
 #include "lldb/lldb-private.h"
 
 using namespace lldb;
@@ -1524,6 +1519,51 @@ public:
 };
 
 //-------------------------------------------------------------------------
+// CommandObjectThreadException
+//-------------------------------------------------------------------------
+
+class CommandObjectThreadException : public CommandObjectIterateOverThreads {
+ public:
+  CommandObjectThreadException(CommandInterpreter &interpreter)
+      : CommandObjectIterateOverThreads(
+            interpreter, "thread exception",
+            "Display the current exception object for a thread. Defaults to "
+            "the current thread.",
+            "thread exception",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
+
+  ~CommandObjectThreadException() override = default;
+
+  bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
+    ThreadSP thread_sp =
+        m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
+    if (!thread_sp) {
+      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64 "\n",
+                                   tid);
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    Stream &strm = result.GetOutputStream();
+    ValueObjectSP exception_object_sp = thread_sp->GetCurrentException();
+    if (exception_object_sp) {
+      exception_object_sp->Dump(strm);
+    }
+
+    ThreadSP exception_thread_sp = thread_sp->GetCurrentExceptionBacktrace();
+    if (exception_thread_sp && exception_thread_sp->IsValid()) {
+      const uint32_t num_frames_with_source = 0;
+      const bool stop_format = false;
+      exception_thread_sp->GetStatus(strm, 0, UINT32_MAX,
+                                     num_frames_with_source, stop_format);
+    }
+
+    return true;
+  }
+};
+
+//-------------------------------------------------------------------------
 // CommandObjectThreadReturn
 //-------------------------------------------------------------------------
 
@@ -1738,7 +1778,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filenames.AppendIfUnique(FileSpec(option_arg, false));
+        m_filenames.AppendIfUnique(FileSpec(option_arg));
         if (m_filenames.GetSize() > 1)
           return Status("only one source file expected.");
         break;
@@ -2068,6 +2108,9 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                  CommandObjectSP(new CommandObjectThreadUntil(interpreter)));
   LoadSubCommand("info",
                  CommandObjectSP(new CommandObjectThreadInfo(interpreter)));
+  LoadSubCommand(
+      "exception",
+      CommandObjectSP(new CommandObjectThreadException(interpreter)));
   LoadSubCommand("step-in",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-in",

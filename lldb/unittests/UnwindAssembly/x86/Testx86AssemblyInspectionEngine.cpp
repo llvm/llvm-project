@@ -2,10 +2,9 @@
 //-*-===//
 
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -133,7 +132,7 @@ std::unique_ptr<x86AssemblyInspectionEngine> Geti386Inspector() {
 
 namespace lldb_private {
 static std::ostream &operator<<(std::ostream &OS,
-                                const UnwindPlan::Row::CFAValue &CFA) {
+                                const UnwindPlan::Row::FAValue &CFA) {
   StreamString S;
   CFA.Dump(S, nullptr, nullptr);
   return OS << S.GetData();
@@ -2368,7 +2367,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestStackRealign8BitDisp_i386) {
   ASSERT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(data, sizeof(data),
                                                            sample_range, plan));
 
-  UnwindPlan::Row::CFAValue esp_plus_4, esp_plus_8, ebp_plus_8;
+  UnwindPlan::Row::FAValue esp_plus_4, esp_plus_8, ebp_plus_8;
   esp_plus_4.SetIsRegisterPlusOffset(k_esp, 4);
   esp_plus_8.SetIsRegisterPlusOffset(k_esp, 8);
   ebp_plus_8.SetIsRegisterPlusOffset(k_ebp, 8);
@@ -2402,7 +2401,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestStackRealign32BitDisp_x86_64) {
   ASSERT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(data, sizeof(data),
                                                            sample_range, plan));
 
-  UnwindPlan::Row::CFAValue rsp_plus_8, rsp_plus_16, rbp_plus_16;
+  UnwindPlan::Row::FAValue rsp_plus_8, rsp_plus_16, rbp_plus_16;
   rsp_plus_8.SetIsRegisterPlusOffset(k_rsp, 8);
   rsp_plus_16.SetIsRegisterPlusOffset(k_rsp, 16);
   rbp_plus_16.SetIsRegisterPlusOffset(k_rbp, 16);
@@ -2414,6 +2413,65 @@ TEST_F(Testx86AssemblyInspectionEngine, TestStackRealign32BitDisp_x86_64) {
         << "i: " << i;
   EXPECT_EQ(rsp_plus_8,
             plan.GetRowForFunctionOffset(sizeof(data) - 1)->GetCFAValue());
+}
+
+TEST_F(Testx86AssemblyInspectionEngine, TestStackRealignMSVC_i386) {
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Geti386Inspector();
+
+  uint8_t data[] = {
+      0x53,                               // offset 00 -- pushl %ebx
+      0x8b, 0xdc,                         // offset 01 -- movl %esp, %ebx
+      0x83, 0xec, 0x08,                   // offset 03 -- subl $8, %esp
+      0x81, 0xe4, 0x00, 0xff, 0xff, 0xff, // offset 06 -- andl $-256, %esp
+      0x83, 0xc4, 0x04,                   // offset 12 -- addl $4, %esp
+      0x55,                               // offset 15 -- pushl %ebp
+      0x8b, 0xec,                         // offset 16 -- movl %esp, %ebp
+      0x81, 0xec, 0x00, 0x02, 0x00, 0x00, // offset 18 -- subl $512, %esp
+      0x89, 0x7d, 0xfc,                   // offset 24 -- movl %edi, -4(%ebp)
+      0x8b, 0xe5,                         // offset 27 -- movl %ebp, %esp
+      0x5d,                               // offset 29 -- popl %ebp
+      0x8b, 0xe3,                         // offset 30 -- movl %ebx, %esp
+      0x5b,                               // offset 32 -- popl %ebx
+      0xc3                                // offset 33 -- retl
+  };
+
+  AddressRange sample_range(0x1000, sizeof(data));
+  UnwindPlan plan(eRegisterKindLLDB);
+  ASSERT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(data, sizeof(data),
+                                                           sample_range, plan));
+
+  UnwindPlan::Row::FAValue esp_minus_4, esp_plus_0, esp_plus_4, esp_plus_8,
+      ebx_plus_8, ebp_plus_0;
+  esp_minus_4.SetIsRegisterPlusOffset(k_esp, -4);
+  esp_plus_0.SetIsRegisterPlusOffset(k_esp, 0);
+  esp_plus_4.SetIsRegisterPlusOffset(k_esp, 4);
+  esp_plus_8.SetIsRegisterPlusOffset(k_esp, 8);
+  ebx_plus_8.SetIsRegisterPlusOffset(k_ebx, 8);
+  ebp_plus_0.SetIsRegisterPlusOffset(k_ebp, 0);
+
+  // Test CFA
+  EXPECT_EQ(esp_plus_4, plan.GetRowForFunctionOffset(0)->GetCFAValue());
+  EXPECT_EQ(esp_plus_8, plan.GetRowForFunctionOffset(1)->GetCFAValue());
+  for (size_t i = 3; i < 33; ++i)
+    EXPECT_EQ(ebx_plus_8, plan.GetRowForFunctionOffset(i)->GetCFAValue())
+        << "i: " << i;
+  EXPECT_EQ(esp_plus_4, plan.GetRowForFunctionOffset(33)->GetCFAValue());
+
+  // Test AFA
+  EXPECT_EQ(esp_plus_0, plan.GetRowForFunctionOffset(12)->GetAFAValue());
+  EXPECT_EQ(esp_minus_4, plan.GetRowForFunctionOffset(15)->GetAFAValue());
+  EXPECT_EQ(esp_plus_0, plan.GetRowForFunctionOffset(16)->GetAFAValue());
+  for (size_t i = 18; i < 30; ++i)
+    EXPECT_EQ(ebp_plus_0, plan.GetRowForFunctionOffset(i)->GetAFAValue())
+        << "i: " << i;
+  EXPECT_EQ(esp_minus_4, plan.GetRowForFunctionOffset(30)->GetAFAValue());
+
+  // Test saved register
+  UnwindPlan::Row::RegisterLocation reg_loc;
+  EXPECT_TRUE(
+      plan.GetRowForFunctionOffset(27)->GetRegisterInfo(k_edi, reg_loc));
+  EXPECT_TRUE(reg_loc.IsAtAFAPlusOffset());
+  EXPECT_EQ(-4, reg_loc.GetOffset());
 }
 
 // Give the disassembler random bytes to test that it doesn't exceed

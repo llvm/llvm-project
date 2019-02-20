@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import cmd
 import optparse
 import os
 import shlex
@@ -75,6 +76,22 @@ class Object(object):
         bytes = self.file.read(self.obj_size)
         self.file.seek(saved_pos, 0)
         return bytes
+
+    def save(self, path=None, overwrite=False):
+        '''
+            Save the contents of the object to disk using 'path' argument as
+            the path, or save it to the current working directory using the
+            object name.
+        '''
+
+        if path is None:
+            path = self.name
+        if not overwrite and os.path.exists(path):
+            print('error: outfile "%s" already exists' % (path))
+            return
+        print('Saving "%s" to "%s"...' % (self.name, path))
+        with open(path, 'w') as f:
+            f.write(self.get_bytes())
 
 
 class StringTable(object):
@@ -186,6 +203,67 @@ class Archive(object):
         for obj in self.objects:
             obj.dump(f=f, flat=flat)
 
+class Interactive(cmd.Cmd):
+    '''Interactive prompt for exploring contents of BSD archive files, type
+      "help" to see a list of supported commands.'''
+    image_option_parser = None
+
+    def __init__(self, archives):
+        cmd.Cmd.__init__(self)
+        self.use_rawinput = False
+        self.intro = ('Interactive  BSD archive prompt, type "help" to see a '
+                      'list of supported commands.')
+        self.archives = archives
+        self.prompt = '% '
+
+    def default(self, line):
+        '''Catch all for unknown command, which will exit the interpreter.'''
+        print("unknown command: %s" % line)
+        return True
+
+    def do_q(self, line):
+        '''Quit command'''
+        return True
+
+    def do_quit(self, line):
+        '''Quit command'''
+        return True
+
+    def do_extract(self, line):
+        args = shlex.split(line)
+        if args:
+            extracted = False
+            for object_name in args:
+                for archive in self.archives:
+                    matches = archive.find(object_name)
+                    if matches:
+                        for object in matches:
+                            object.save(overwrite=False)
+                            extracted = True
+            if not extracted:
+                print('error: no object matches "%s" in any archives' % (
+                        object_name))
+        else:
+            print('error: must specify the name of an object to extract')
+
+    def do_ls(self, line):
+        args = shlex.split(line)
+        if args:
+            for object_name in args:
+                for archive in self.archives:
+                    matches = archive.find(object_name)
+                    if matches:
+                        for object in matches:
+                            object.dump(flat=False)
+                    else:
+                        print('error: no object matches "%s" in "%s"' % (
+                                object_name, archive.path))
+        else:
+            for archive in self.archives:
+                archive.dump(flat=True)
+                print('')
+
+
 
 def main():
     parser = optparse.OptionParser(
@@ -243,8 +321,23 @@ def main():
               'then the extracted object file will be extracted into the '
               'current working directory if a file doesn\'t already exist '
               'with that name.'))
+    parser.add_option(
+        '-i', '--interactive',
+        action='store_true',
+        dest='interactive',
+        default=False,
+        help=('Enter an interactive shell that allows users to interactively '
+              'explore contents of .a files.'))
 
     (options, args) = parser.parse_args(sys.argv[1:])
+
+    if options.interactive:
+        archives = []
+        for path in args:
+            archives.append(Archive(path))
+        interpreter = Interactive(archives)
+        interpreter.cmdloop()
+        return
 
     for path in args:
         archive = Archive(path)
@@ -256,17 +349,7 @@ def main():
                 if options.extract:
                     if len(matches) == 1:
                         dump_all = False
-                        if options.outfile is None:
-                            outfile_path = matches[0].name
-                        else:
-                            outfile_path = options.outfile
-                        if os.path.exists(outfile_path):
-                            print('error: outfile "%s" already exists' % (
-                              outfile_path))
-                        else:
-                            print('Saving file to "%s"...' % (outfile_path))
-                            with open(outfile_path, 'w') as outfile:
-                                outfile.write(matches[0].get_bytes())
+                        matches[0].save(path=options.outfile, overwrite=False)
                     else:
                         print('error: multiple objects match "%s". Specify '
                               'the modification time using --mtime.' % (

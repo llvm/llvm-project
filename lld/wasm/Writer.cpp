@@ -1,9 +1,8 @@
 //===- Writer.cpp ---------------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,6 +20,7 @@
 #include "lld/Common/Strings.h"
 #include "lld/Common/Threads.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Object/WasmTraits.h"
@@ -95,6 +95,7 @@ private:
   void createRelocSections();
   void createLinkingSection();
   void createNameSection();
+  void createProducersSection();
 
   void writeHeader();
   void writeSections();
@@ -175,7 +176,7 @@ void Writer::createImportSection() {
     Import.Module = "env";
     Import.Field = kFunctionTableName;
     Import.Kind = WASM_EXTERNAL_TABLE;
-    Import.Table.ElemType = WASM_TYPE_ANYFUNC;
+    Import.Table.ElemType = WASM_TYPE_FUNCREF;
     Import.Table.Limits = {0, TableSize, 0};
     writeImport(OS, Import);
   }
@@ -304,7 +305,7 @@ void Writer::createTableSection() {
 
   writeUleb128(OS, 1, "table count");
   WasmLimits Limits = {WASM_LIMITS_FLAG_HAS_MAX, TableSize, TableSize};
-  writeTableType(OS, WasmTable{WASM_TYPE_ANYFUNC, Limits});
+  writeTableType(OS, WasmTable{WASM_TYPE_FUNCREF, Limits});
 }
 
 void Writer::createExportSection() {
@@ -327,7 +328,8 @@ void Writer::calculateCustomSections() {
       StringRef Name = Section->getName();
       // These custom sections are known the linker and synthesized rather than
       // blindly copied
-      if (Name == "linking" || Name == "name" || Name.startswith("reloc."))
+      if (Name == "linking" || Name == "name" || Name == "producers" ||
+          Name.startswith("reloc."))
         continue;
       // .. or it is a debug section
       if (StripDebug && Name.startswith(".debug_"))
@@ -364,7 +366,7 @@ void Writer::createElemSection() {
   writeUleb128(OS, 0, "table index");
   WasmInitExpr InitExpr;
   if (Config->Pic) {
-    InitExpr.Opcode = WASM_OPCODE_GET_GLOBAL;
+    InitExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
     InitExpr.Value.Global = WasmSym::TableBase->getGlobalIndex();
   } else {
     InitExpr.Opcode = WASM_OPCODE_I32_CONST;
@@ -477,7 +479,7 @@ void Writer::createDylinkSection() {
   raw_ostream &OS = Section->getStream();
 
   writeUleb128(OS, MemSize, "MemSize");
-  writeUleb128(OS, int(log2(MemAlign)), "MemAlign");
+  writeUleb128(OS, MemAlign, "MemAlign");
   writeUleb128(OS, IndirectFunctions.size(), "TableSize");
   writeUleb128(OS, 0, "TableAlign");
   writeUleb128(OS, 0, "Needed");  // TODO: Support "needed" shared libraries
@@ -633,6 +635,45 @@ void Writer::createNameSection() {
   Sub.writeTo(Section->getStream());
 }
 
+void Writer::createProducersSection() {
+  SmallVector<std::pair<std::string, std::string>, 8> Languages;
+  SmallVector<std::pair<std::string, std::string>, 8> Tools;
+  SmallVector<std::pair<std::string, std::string>, 8> SDKs;
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    const WasmProducerInfo &Info = File->getWasmObj()->getProducerInfo();
+    for (auto &Producers : {std::make_pair(&Info.Languages, &Languages),
+                            std::make_pair(&Info.Tools, &Tools),
+                            std::make_pair(&Info.SDKs, &SDKs)})
+      for (auto &Producer : *Producers.first)
+        if (Producers.second->end() ==
+            std::find_if(Producers.second->begin(), Producers.second->end(),
+                         [&](std::pair<std::string, std::string> Seen) {
+                           return Seen.first == Producer.first;
+                         }))
+          Producers.second->push_back(Producer);
+  }
+  int FieldCount =
+      int(!Languages.empty()) + int(!Tools.empty()) + int(!SDKs.empty());
+  if (FieldCount == 0)
+    return;
+  SyntheticSection *Section =
+      createSyntheticSection(WASM_SEC_CUSTOM, "producers");
+  auto &OS = Section->getStream();
+  writeUleb128(OS, FieldCount, "field count");
+  for (auto &Field :
+       {std::make_pair("language", Languages),
+        std::make_pair("processed-by", Tools), std::make_pair("sdk", SDKs)}) {
+    if (Field.second.empty())
+      continue;
+    writeStr(OS, Field.first, "field name");
+    writeUleb128(OS, Field.second.size(), "number of entries");
+    for (auto &Entry : Field.second) {
+      writeStr(OS, Entry.first, "producer name");
+      writeStr(OS, Entry.second, "producer version");
+    }
+  }
+}
+
 void Writer::writeHeader() {
   memcpy(Buffer->getBufferStart(), Header.data(), Header.size());
 }
@@ -691,7 +732,7 @@ void Writer::layoutMemory() {
   MemAlign = 0;
   for (OutputSegment *Seg : Segments) {
     MemAlign = std::max(MemAlign, Seg->Alignment);
-    MemoryPtr = alignTo(MemoryPtr, Seg->Alignment);
+    MemoryPtr = alignTo(MemoryPtr, 1ULL << Seg->Alignment);
     Seg->StartVA = MemoryPtr;
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", Seg->Name,
                 MemoryPtr, Seg->Size, Seg->Alignment));
@@ -772,8 +813,12 @@ void Writer::createSections() {
     createLinkingSection();
     createRelocSections();
   }
+
   if (!Config->StripDebug && !Config->StripAll)
     createNameSection();
+
+  if (!Config->StripAll)
+    createProducersSection();
 
   for (OutputSection *S : OutputSections) {
     S->setOffset(FileSize);
@@ -858,40 +903,42 @@ void Writer::assignSymtab() {
   StringMap<uint32_t> SectionSymbolIndices;
 
   unsigned SymbolIndex = SymtabEntries.size();
-  for (ObjFile *File : Symtab->ObjectFiles) {
-    LLVM_DEBUG(dbgs() << "Symtab entries: " << File->getName() << "\n");
-    for (Symbol *Sym : File->getSymbols()) {
-      if (Sym->getFile() != File)
-        continue;
 
-      if (auto *S = dyn_cast<SectionSymbol>(Sym)) {
-        StringRef Name = S->getName();
-        if (CustomSectionMapping.count(Name) == 0)
-          continue;
+  auto AddSymbol = [&](Symbol *Sym) {
+    if (auto *S = dyn_cast<SectionSymbol>(Sym)) {
+      StringRef Name = S->getName();
+      if (CustomSectionMapping.count(Name) == 0)
+        return;
 
-        auto SSI = SectionSymbolIndices.find(Name);
-        if (SSI != SectionSymbolIndices.end()) {
-          Sym->setOutputSymbolIndex(SSI->second);
-          continue;
-        }
-
-        SectionSymbolIndices[Name] = SymbolIndex;
-        CustomSectionSymbols[Name] = cast<SectionSymbol>(Sym);
-
-        Sym->markLive();
+      auto SSI = SectionSymbolIndices.find(Name);
+      if (SSI != SectionSymbolIndices.end()) {
+        Sym->setOutputSymbolIndex(SSI->second);
+        return;
       }
 
-      // (Since this is relocatable output, GC is not performed so symbols must
-      // be live.)
-      assert(Sym->isLive());
-      Sym->setOutputSymbolIndex(SymbolIndex++);
-      SymtabEntries.emplace_back(Sym);
-    }
-  }
+      SectionSymbolIndices[Name] = SymbolIndex;
+      CustomSectionSymbols[Name] = cast<SectionSymbol>(Sym);
 
-  // For the moment, relocatable output doesn't contain any synthetic functions,
-  // so no need to look through the Symtab for symbols not referenced by
-  // Symtab->ObjectFiles.
+      Sym->markLive();
+    }
+
+    // (Since this is relocatable output, GC is not performed so symbols must
+    // be live.)
+    assert(Sym->isLive());
+    Sym->setOutputSymbolIndex(SymbolIndex++);
+    SymtabEntries.emplace_back(Sym);
+  };
+
+  for (Symbol *Sym : Symtab->getSymbols())
+    if (!Sym->isLazy())
+      AddSymbol(Sym);
+
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    LLVM_DEBUG(dbgs() << "Local symtab entries: " << File->getName() << "\n");
+    for (Symbol *Sym : File->getSymbols())
+      if (Sym->isLocal())
+        AddSymbol(Sym);
+  }
 }
 
 uint32_t Writer::lookupType(const WasmSignature &Sig) {

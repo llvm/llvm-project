@@ -1,9 +1,8 @@
 //===-- MICmnResources.h ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -264,11 +263,14 @@ enum {
   IDS_CMD_ERR_INFO_PRINTFN_NOT_FOUND,
   IDS_CMD_ERR_INFO_PRINTFN_FAILED,
   IDS_CMD_ERR_GDBSET_OPT_TARGETASYNC,
+  IDS_CMD_ERR_GDBSET_OPT_BREAKPOINT,
   IDS_CMD_ERR_GDBSET_OPT_SOLIBSEARCHPATH,
   IDS_CMD_ERR_GDBSET_OPT_PRINT_BAD_ARGS,
   IDS_CMD_ERR_GDBSET_OPT_PRINT_UNKNOWN_OPTION,
   IDS_CMD_ERR_GDBSHOW_OPT_PRINT_BAD_ARGS,
   IDS_CMD_ERR_GDBSHOW_OPT_PRINT_UNKNOWN_OPTION,
+  IDS_CMD_ERR_GDBSHOW_OPT_BREAKPOINT_BAD_ARGS,
+  IDS_CMD_ERR_GDBSHOW_OPT_BREAKPOINT_UNKNOWN_OPTION,
   IDS_CMD_ERR_EXPR_INVALID,
   IDS_CMD_ERR_ATTACH_FAILED,
   IDS_CMD_ERR_ATTACH_BAD_ARGS

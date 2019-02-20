@@ -1,22 +1,17 @@
 //===-- FileSpec.h ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_FileSpec_h_
 #define liblldb_FileSpec_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/ConstString.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -24,8 +19,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class Stream;
@@ -70,23 +65,19 @@ public:
   ///
   /// Takes a path to a file which can be just a filename, or a full path. If
   /// \a path is not nullptr or empty, this function will call
-  /// FileSpec::SetFile (const char *path, bool resolve).
+  /// FileSpec::SetFile (const char *path).
   ///
   /// @param[in] path
   ///     The full or partial path to a file.
   ///
-  /// @param[in] resolve_path
-  ///     If \b true, then we resolve the path, removing stray ../.. and so
-  ///     forth,
-  ///     if \b false we trust the path is in canonical form already.
+  /// @param[in] style
+  ///     The style of the path
   ///
-  /// @see FileSpec::SetFile (const char *path, bool resolve)
+  /// @see FileSpec::SetFile (const char *path)
   //------------------------------------------------------------------
-  explicit FileSpec(llvm::StringRef path, bool resolve_path,
-                    Style style = Style::native);
+  explicit FileSpec(llvm::StringRef path, Style style = Style::native);
 
-  explicit FileSpec(llvm::StringRef path, bool resolve_path,
-                    const llvm::Triple &Triple);
+  explicit FileSpec(llvm::StringRef path, const llvm::Triple &Triple);
 
   //------------------------------------------------------------------
   /// Copy constructor
@@ -272,47 +263,6 @@ public:
   //------------------------------------------------------------------
   void Dump(Stream *s) const;
 
-  //------------------------------------------------------------------
-  /// Existence test.
-  ///
-  /// @return
-  ///     \b true if the file exists on disk, \b false otherwise.
-  //------------------------------------------------------------------
-  bool Exists() const;
-
-  //------------------------------------------------------------------
-  /// Check if a file is readable by the current user
-  ///
-  /// @return
-  ///     \b true if the file exists on disk and is readable, \b false
-  ///     otherwise.
-  //------------------------------------------------------------------
-  bool Readable() const;
-
-  //------------------------------------------------------------------
-  /// Expanded existence test.
-  ///
-  /// Call into the Host to see if it can help find the file (e.g. by
-  /// searching paths set in the environment, etc.).
-  ///
-  /// If found, sets the value of m_directory to the directory where the file
-  /// was found.
-  ///
-  /// @return
-  ///     \b true if was able to find the file using expanded search
-  ///     methods, \b false otherwise.
-  //------------------------------------------------------------------
-  bool ResolveExecutableLocation();
-
-  //------------------------------------------------------------------
-  /// Canonicalize this file path (basically running the static
-  /// FileSpec::Resolve method on it). Useful if you asked us not to resolve
-  /// the file path when you set the file.
-  //------------------------------------------------------------------
-  bool ResolvePath();
-
-  uint64_t GetByteSize() const;
-
   Style GetPathStyle() const;
 
   //------------------------------------------------------------------
@@ -374,6 +324,13 @@ public:
   ///     \b false otherwise.
   //------------------------------------------------------------------
   bool IsAbsolute() const;
+
+  /// Make the FileSpec absolute by treating it relative to \a dir. Absolute
+  /// FileSpecs are never changed by this function.
+  void MakeAbsolute(const FileSpec &dir);
+
+  /// Temporary helper for FileSystem change.
+  void SetPath(llvm::StringRef p) { SetFile(p); }
 
   //------------------------------------------------------------------
   /// Extract the full path to the file.
@@ -450,19 +407,6 @@ public:
   ConstString GetFileNameStrippingExtension() const;
 
   //------------------------------------------------------------------
-  /// Return the current permissions of the path.
-  ///
-  /// Returns a bitmask for the current permissions of the file ( zero or more
-  /// of the permission bits defined in File::Permissions).
-  ///
-  /// @return
-  ///     Zero if the file doesn't exist or we are unable to get
-  ///     information for the file, otherwise one or more permission
-  ///     bits from the File::Permissions enumeration.
-  //------------------------------------------------------------------
-  uint32_t GetPermissions() const;
-
-  //------------------------------------------------------------------
   /// Get the memory cost of this object.
   ///
   /// Return the size in bytes that this object takes in memory. This returns
@@ -490,10 +434,9 @@ public:
   ///     If \b true, then we will try to resolve links the path using
   ///     the static FileSpec::Resolve.
   //------------------------------------------------------------------
-  void SetFile(llvm::StringRef path, bool resolve_path, Style style);
+  void SetFile(llvm::StringRef path, Style style);
 
-  void SetFile(llvm::StringRef path, bool resolve_path,
-               const llvm::Triple &Triple);
+  void SetFile(llvm::StringRef path, const llvm::Triple &Triple);
 
   bool IsResolved() const { return m_is_resolved; }
 
@@ -511,16 +454,6 @@ public:
   ///     indicates if the paths in this object have been resolved.
   //------------------------------------------------------------------
   void SetIsResolved(bool is_resolved) { m_is_resolved = is_resolved; }
-
-  //------------------------------------------------------------------
-  /// Resolves user name and links in \a path, and overwrites the input
-  /// argument with the resolved path.
-  ///
-  /// @param[in] path
-  ///     Input path to be resolved, in the form of a llvm::SmallString or
-  ///     similar.
-  //------------------------------------------------------------------
-  static void Resolve(llvm::SmallVectorImpl<char> &path);
 
   FileSpec CopyByAppendingPathComponent(llvm::StringRef component) const;
   FileSpec CopyByRemovingLastPathComponent() const;
@@ -542,32 +475,11 @@ public:
 
   ConstString GetLastPathComponent() const;
 
-  enum EnumerateDirectoryResult {
-    eEnumerateDirectoryResultNext,  // Enumerate next entry in the current
-                                    // directory
-    eEnumerateDirectoryResultEnter, // Recurse into the current entry if it is a
-                                    // directory or symlink, or next if not
-    eEnumerateDirectoryResultQuit   // Stop directory enumerations at any level
-  };
-
-  typedef EnumerateDirectoryResult (*EnumerateDirectoryCallbackType)(
-      void *baton, llvm::sys::fs::file_type file_type, const FileSpec &spec);
-
-  static void EnumerateDirectory(llvm::StringRef dir_path,
-                                 bool find_directories, bool find_files,
-                                 bool find_other,
-                                 EnumerateDirectoryCallbackType callback,
-                                 void *callback_baton);
-
-  typedef std::function<EnumerateDirectoryResult(
-      llvm::sys::fs::file_type file_type, const FileSpec &spec)>
-      DirectoryCallback;
-
 protected:
   //------------------------------------------------------------------
   // Convenience method for setting the file without changing the style.
   //------------------------------------------------------------------
-  void SetFile(llvm::StringRef path, bool resolve_path);
+  void SetFile(llvm::StringRef path);
 
   //------------------------------------------------------------------
   // Member variables

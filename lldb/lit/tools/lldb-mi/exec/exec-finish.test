@@ -1,7 +1,4 @@
-# XFAIL: windows
-# -> llvm.org/pr24452
-#
-# RUN: %cc -o %t %p/inputs/main.c -g
+# RUN: %build %p/inputs/main.c -o %t
 # RUN: %lldbmi %t < %s | FileCheck %s
 
 # Test lldb-mi -exec-finish command.

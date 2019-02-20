@@ -1,16 +1,14 @@
 //===-- IRInterpreter.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
@@ -19,6 +17,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -1592,9 +1591,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
         // Check if this is a string literal or constant string pointer
         if (arg_ty->isPointerTy()) {
-          // Pointer to just one type
-          assert(arg_ty->getNumContainedTypes() == 1);
-
           lldb::addr_t addr = tmp_op.ULongLong();
           size_t dataSize = 0;
 

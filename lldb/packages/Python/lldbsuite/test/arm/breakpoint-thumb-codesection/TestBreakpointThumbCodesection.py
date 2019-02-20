@@ -18,6 +18,7 @@ class TestBreakpointThumbCodesection(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(archs=no_match(["arm"]))
+    @skipIfDarwinEmbedded   # codegen on darwin always defaults to thumb for armv7/armv7k targets
     def test_breakpoint(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

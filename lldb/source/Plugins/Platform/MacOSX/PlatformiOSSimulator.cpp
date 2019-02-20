@@ -1,19 +1,14 @@
 //===-- PlatformiOSSimulator.cpp -----------------------------------*- C++
 //-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "PlatformiOSSimulator.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
@@ -80,7 +75,7 @@ PlatformSP PlatformiOSSimulator::CreateInstance(bool force,
   }
 
   bool create = force;
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     switch (arch->GetMachine()) {
     case llvm::Triple::x86_64:
     case llvm::Triple::x86: {
@@ -94,7 +89,7 @@ PlatformSP PlatformiOSSimulator::CreateInstance(bool force,
       // Only accept "unknown" for the vendor if the host is Apple and it
       // "unknown" wasn't specified (it was just returned because it was NOT
       // specified)
-      case llvm::Triple::UnknownArch:
+      case llvm::Triple::UnknownVendor:
         create = !arch->TripleVendorWasSpecified();
         break;
 #endif
@@ -196,7 +191,7 @@ Status PlatformiOSSimulator::ResolveExecutable(
   // ourselves
   Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
 
-  if (resolved_module_spec.GetFileSpec().Exists()) {
+  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
     if (resolved_module_spec.GetArchitecture().IsValid()) {
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           NULL, NULL, NULL);
@@ -234,7 +229,7 @@ Status PlatformiOSSimulator::ResolveExecutable(
     }
 
     if (error.Fail() || !exe_module_sp) {
-      if (resolved_module_spec.GetFileSpec().Readable()) {
+      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
         error.SetErrorStringWithFormat(
             "'%s' doesn't contain any '%s' platform architectures: %s",
             resolved_module_spec.GetFileSpec().GetPath().c_str(),
@@ -253,18 +248,19 @@ Status PlatformiOSSimulator::ResolveExecutable(
   return error;
 }
 
-static FileSpec::EnumerateDirectoryResult
+static FileSystem::EnumerateDirectoryResult
 EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
-                           const FileSpec &file_spec) {
+                           llvm::StringRef path) {
   if (ft == llvm::sys::fs::file_type::directory_file) {
+    FileSpec file_spec(path);
     const char *filename = file_spec.GetFilename().GetCString();
     if (filename &&
         strncmp(filename, "iPhoneSimulator", strlen("iPhoneSimulator")) == 0) {
       ::snprintf((char *)baton, PATH_MAX, "%s", filename);
-      return FileSpec::eEnumerateDirectoryResultQuit;
+      return FileSystem::eEnumerateDirectoryResultQuit;
     }
   }
-  return FileSpec::eEnumerateDirectoryResultNext;
+  return FileSystem::eEnumerateDirectoryResultNext;
 }
 
 const char *PlatformiOSSimulator::GetSDKDirectoryAsCString() {
@@ -282,9 +278,9 @@ const char *PlatformiOSSimulator::GetSDKDirectoryAsCString() {
       bool find_directories = true;
       bool find_files = false;
       bool find_other = false;
-      FileSpec::EnumerateDirectory(sdks_directory, find_directories, find_files,
-                                   find_other, EnumerateDirectoryCallback,
-                                   sdk_dirname);
+      FileSystem::Instance().EnumerateDirectory(
+          sdks_directory, find_directories, find_files, find_other,
+          EnumerateDirectoryCallback, sdk_dirname);
 
       if (sdk_dirname[0]) {
         m_sdk_directory = sdks_directory;
@@ -320,13 +316,15 @@ Status PlatformiOSSimulator::GetSymbolFile(const FileSpec &platform_file,
                  platform_file_path);
 
       // First try in the SDK and see if the file is in there
-      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
-      if (local_file.Exists())
+      local_file.SetFile(resolved_path, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(local_file);
+      if (FileSystem::Instance().Exists(local_file))
         return error;
 
       // Else fall back to the actual path itself
-      local_file.SetFile(platform_file_path, true, FileSpec::Style::native);
-      if (local_file.Exists())
+      local_file.SetFile(platform_file_path, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(local_file);
+      if (FileSystem::Instance().Exists(local_file))
         return error;
     }
     error.SetErrorStringWithFormat(

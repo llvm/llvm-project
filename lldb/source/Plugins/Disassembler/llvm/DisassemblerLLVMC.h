@@ -1,22 +1,18 @@
 //===-- DisassemblerLLVMC.h -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_DisassemblerLLVMC_h_
 #define liblldb_DisassemblerLLVMC_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <mutex>
 #include <string>
 
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/PluginManager.h"

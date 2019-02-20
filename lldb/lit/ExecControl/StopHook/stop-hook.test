@@ -1,11 +1,16 @@
-# RUN: %cc %p/Inputs/stop-hook.c -g -o %t
+# RUN: %clang %p/Inputs/stop-hook.c -g -o %t
 # Test setting stop-hook per-function
-# RUN: %lldb -b -s %s -O 'target create %t' -O 'target stop-hook add -n b -o "expr ptr"' \
+# RUN: %lldb -b -s %p/Inputs/stop-hook-1.lldbinit -s %s -f %t \
 # RUN:      | FileCheck --check-prefix=CHECK --check-prefix=CHECK-FUNC %s
 # Test setting stop-hook per-line range
-# RUN: %lldb -b -s %s -O 'target create %t' -O 'target stop-hook add -f stop-hook.c -l 30 -e 34 -o "expr ptr"'  | FileCheck %s
+# RUN: %lldb -b -s %p/Inputs/stop-hook-2.lldbinit -s %s -f %t | FileCheck %s
 # Test setting stop-hook with multi-line expression
-# RUN: %lldb -b -s %s -O 'target create %t' -O 'target stop-hook add -f stop-hook.c -l 30 -e 34' -O 'expr ptr' -O DONE | FileCheck %s
+# RUN: %lldb -b -s %p/Inputs/stop-hook-3.lldbinit -s %s -f %t | FileCheck %s
+# This test is not "unsupported" on Windows, but it fails because "expr ptr"
+# does not evaluate correctly. However, the error message contains the expected
+# string, so the test "passes" despite the fact that the commands failed
+# llvm.org/pr40119
+# UNSUPPORTED: system-windows
 
 break set -f stop-hook.c -p "// Set breakpoint here to test target stop-hook"
 break set -f stop-hook.c -p "// Another breakpoint which is outside of the stop-hook range"

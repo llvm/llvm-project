@@ -1,9 +1,8 @@
 //===-- DWARFDebugInfoEntry.h -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -43,7 +42,6 @@ typedef UInt32ToDIEMMap::const_iterator UInt32ToDIEMMapConstIter;
 class DWARFDeclContext;
 
 #define DIE_SIBLING_IDX_BITSIZE 31
-#define DIE_ABBR_IDX_BITSIZE 15
 
 class DWARFDebugInfoEntry {
 public:
@@ -57,8 +55,7 @@ public:
 
   DWARFDebugInfoEntry()
       : m_offset(DW_INVALID_OFFSET), m_parent_idx(0), m_sibling_idx(0),
-        m_empty_children(false), m_abbr_idx(0), m_has_children(false),
-        m_tag(0) {}
+        m_has_children(false), m_abbr_idx(0), m_tag(0) {}
 
   explicit operator bool() const { return m_offset != DW_INVALID_OFFSET; }
   bool operator==(const DWARFDebugInfoEntry &rhs) const;
@@ -182,7 +179,7 @@ public:
   DumpAttribute(SymbolFileDWARF *dwarf2Data, const DWARFUnit *cu,
                 const lldb_private::DWARFDataExtractor &debug_info_data,
                 lldb::offset_t *offset_ptr, lldb_private::Stream &s,
-                dw_attr_t attr, dw_form_t form);
+                dw_attr_t attr, DWARFFormValue &form_value);
   // This one dumps the comp unit name, objfile name and die offset for this die
   // so the stream S.
   void DumpLocation(SymbolFileDWARF *dwarf2Data, DWARFUnit *cu,
@@ -231,10 +228,10 @@ public:
   // we don't need to store our child pointer, if we have a child it will
   // be the next entry in the list...
   DWARFDebugInfoEntry *GetFirstChild() {
-    return (HasChildren() && !m_empty_children) ? this + 1 : NULL;
+    return HasChildren() ? this + 1 : NULL;
   }
   const DWARFDebugInfoEntry *GetFirstChild() const {
-    return (HasChildren() && !m_empty_children) ? this + 1 : NULL;
+    return HasChildren() ? this + 1 : NULL;
   }
 
   void GetDeclContextDIEs(DWARFUnit *cu,
@@ -275,10 +272,6 @@ public:
 
   void SetParentIndex(uint32_t idx) { m_parent_idx = idx; }
 
-  bool GetEmptyChildren() const { return m_empty_children; }
-
-  void SetEmptyChildren(bool b) { m_empty_children = b; }
-
   static void
   DumpDIECollection(lldb_private::Stream &strm,
                     DWARFDebugInfoEntry::collection &die_collection);
@@ -289,13 +282,13 @@ protected:
   uint32_t m_parent_idx; // How many to subtract from "this" to get the parent.
                          // If zero this die has no parent
   uint32_t m_sibling_idx : 31, // How many to add to "this" to get the sibling.
-      m_empty_children : 1;    // If a DIE says it had children, yet it just
-                               // contained a NULL tag, this will be set.
-  uint32_t m_abbr_idx : DIE_ABBR_IDX_BITSIZE,
-                        m_has_children : 1, // Set to 1 if this DIE has children
-                        m_tag : 16; // A copy of the DW_TAG value so we don't
-                                    // have to go through the compile unit
-                                    // abbrev table
+      // If it is zero, then the DIE doesn't have children, or the
+      // DWARF claimed it had children but the DIE only contained
+      // a single NULL terminating child.
+      m_has_children : 1;
+  uint16_t m_abbr_idx;
+  uint16_t m_tag; // A copy of the DW_TAG value so we don't have to go through
+                  // the compile unit abbrev table
 };
 
 #endif // SymbolFileDWARF_DWARFDebugInfoEntry_h_

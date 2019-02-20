@@ -44,13 +44,13 @@ class LibCxxFunctionTestCase(TestBase):
                     substrs=['f1 =  Function = foo(int, int)'])
 
         self.expect("frame variable f2",
-                    substrs=['f2 =  Lambda in File main.cpp at Line 27'])
+                    substrs=['f2 =  Lambda in File main.cpp at Line 26'])
 
         self.expect("frame variable f3",
-                    substrs=['f3 =  Lambda in File main.cpp at Line 31'])
+                    substrs=['f3 =  Lambda in File main.cpp at Line 30'])
 
         self.expect("frame variable f4",
-                    substrs=['f4 =  Function in File main.cpp at Line 17'])
+                    substrs=['f4 =  Function in File main.cpp at Line 16'])
 
         self.expect("frame variable f5",
                     substrs=['f5 =  Function = Bar::add_num(int) const'])

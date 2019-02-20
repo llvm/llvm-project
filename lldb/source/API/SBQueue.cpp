@@ -1,9 +1,8 @@
 //===-- SBQueue.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -107,7 +106,7 @@ public:
   }
 
   void FetchThreads() {
-    if (m_thread_list_fetched == false) {
+    if (!m_thread_list_fetched) {
       lldb::QueueSP queue_sp = m_queue_wp.lock();
       if (queue_sp) {
         Process::StopLocker stop_locker;
@@ -127,7 +126,7 @@ public:
   }
 
   void FetchItems() {
-    if (m_pending_items_fetched == false) {
+    if (!m_pending_items_fetched) {
       QueueSP queue_sp = m_queue_wp.lock();
       if (queue_sp) {
         Process::StopLocker stop_locker;
@@ -178,7 +177,7 @@ public:
     uint32_t result = 0;
 
     QueueSP queue_sp = m_queue_wp.lock();
-    if (m_pending_items_fetched == false && queue_sp) {
+    if (!m_pending_items_fetched && queue_sp) {
       result = queue_sp->GetNumPendingWorkItems();
     } else {
       result = m_pending_items.size();

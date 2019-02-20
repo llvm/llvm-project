@@ -1,20 +1,15 @@
 //===-- NSDictionary.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
 #include "clang/AST/DeclCXX.h"
 
-// Project includes
 #include "NSDictionary.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
@@ -286,18 +281,11 @@ namespace Foundation1437 {
   
   struct DataDescriptor_32 {
     uint32_t _buffer;
-    union {
-      struct {
-        uint32_t _mutations;
-      };
-      struct {
-        uint32_t _muts;
-        uint32_t _used:25;
-        uint32_t _kvo:1;
-        uint32_t _szidx:6;
-      };
-    };
-    
+    uint32_t _muts;
+    uint32_t _used : 25;
+    uint32_t _kvo : 1;
+    uint32_t _szidx : 6;
+
     uint64_t GetSize() {
       return (_szidx) >= NSDictionaryNumSizeBuckets ?
           0 : NSDictionaryCapacities[_szidx];
@@ -306,18 +294,11 @@ namespace Foundation1437 {
   
   struct DataDescriptor_64 {
     uint64_t _buffer;
-    union {
-      struct {
-        uint64_t _mutations;
-      };
-      struct {
-        uint32_t _muts;
-        uint32_t _used:25;
-        uint32_t _kvo:1;
-        uint32_t _szidx:6;
-      };
-    };
-    
+    uint32_t _muts;
+    uint32_t _used : 25;
+    uint32_t _kvo : 1;
+    uint32_t _szidx : 6;
+
     uint64_t GetSize() {
       return (_szidx) >= NSDictionaryNumSizeBuckets ?
           0 : NSDictionaryCapacities[_szidx];

@@ -1,9 +1,8 @@
 //===-- NativeProcessNetBSD.h --------------------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -58,9 +57,6 @@ public:
   Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
-  Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
-                               size_t &bytes_read) override;
-
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                      size_t &bytes_written) override;
 
@@ -93,16 +89,6 @@ public:
   static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
                               int data = 0, int *result = nullptr);
 
-protected:
-  // ---------------------------------------------------------------------
-  // NativeProcessProtocol protected interface
-  // ---------------------------------------------------------------------
-
-  Status
-  GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
-                                  size_t &actual_opcode_size,
-                                  const uint8_t *&trap_opcode_bytes) override;
-
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
   ArchSpec m_arch;
@@ -125,8 +111,6 @@ private:
   void MonitorSIGTRAP(lldb::pid_t pid);
   void MonitorSignal(lldb::pid_t pid, int signal);
 
-  Status GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size);
-  Status FixupBreakpointPCAsNeeded(NativeThreadNetBSD &thread);
   Status PopulateMemoryRegionCache();
   void SigchldHandler();
 

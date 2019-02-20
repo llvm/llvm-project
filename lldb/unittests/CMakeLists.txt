@@ -78,6 +78,6 @@ add_subdirectory(tools)
 add_subdirectory(UnwindAssembly)
 add_subdirectory(Utility)
 
-if(LLDB_CAN_USE_DEBUGSERVER)
+if(LLDB_CAN_USE_DEBUGSERVER AND NOT SKIP_TEST_DEBUGSERVER)
   add_subdirectory(debugserver)
 endif()

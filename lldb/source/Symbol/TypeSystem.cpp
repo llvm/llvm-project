@@ -1,9 +1,8 @@
 //===-- TypeSystem.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -107,6 +106,10 @@ CompilerType TypeSystem::GetBuiltinTypeByName(const ConstString &name) {
 
 CompilerType TypeSystem::GetTypeForFormatters(void *type) {
   return CompilerType(this, type);
+}
+
+size_t TypeSystem::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
+  return 0;
 }
 
 TemplateArgumentKind
@@ -225,7 +228,7 @@ void TypeSystemMap::ForEach(std::function<bool(TypeSystem *)> const &callback) {
     TypeSystem *type_system = pair.second.get();
     if (type_system && !visited.count(type_system)) {
       visited.insert(type_system);
-      if (callback(type_system) == false)
+      if (!callback(type_system))
         break;
     }
   }

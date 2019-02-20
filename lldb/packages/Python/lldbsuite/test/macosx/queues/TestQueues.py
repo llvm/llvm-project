@@ -280,7 +280,7 @@ class TestQueues(TestBase):
         process = target.LaunchSimple(
             [],
             [
-                'DYLD_INSERT_LIBRARIES=/Applications/Xcode.app/Contents/Developer/usr/lib/libBacktraceRecording.dylib',
+                'DYLD_INSERT_LIBRARIES=%s' % (libbtr_path),
                 'DYLD_LIBRARY_PATH=/usr/lib/system/introspection'],
             self.get_process_working_directory())
 

@@ -7,7 +7,7 @@
 # RUN: llvm-readobj --program-headers %t | FileCheck --check-prefix=NOPHDRS %s
 
 # NORELRO:      Sections:
-# NORELRO-NEXT: Idx Name          Size      Address          Type
+# NORELRO-NEXT: Idx Name          Size     VMA              Type
 # NORELRO-NEXT:   0               00000000 0000000000000000
 # NORELRO-NEXT:   1 .dynsym       00000048 0000000000200120
 # NORELRO-NEXT:   2 .hash         00000020 0000000000200168

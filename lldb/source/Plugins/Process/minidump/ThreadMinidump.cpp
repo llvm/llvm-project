@@ -1,20 +1,19 @@
 //===-- ThreadMinidump.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "ThreadMinidump.h"
 #include "ProcessMinidump.h"
 
+#include "RegisterContextMinidump_ARM.h"
+#include "RegisterContextMinidump_ARM64.h"
 #include "RegisterContextMinidump_x86_32.h"
 #include "RegisterContextMinidump_x86_64.h"
 
-// Other libraries and framework includes
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/elf-core/RegisterContextPOSIXCore_x86_64.h"
@@ -27,8 +26,6 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 
-// C Includes
-// C++ Includes
 
 using namespace lldb;
 using namespace lldb_private;
@@ -54,7 +51,6 @@ RegisterContextSP
 ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
   RegisterContextSP reg_ctx_sp;
   uint32_t concrete_frame_idx = 0;
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_THREAD));
 
   if (frame)
     concrete_frame_idx = frame->GetConcreteFrameIndex();
@@ -88,15 +84,22 @@ ThreadMinidump::CreateRegisterContextForFrame(StackFrame *frame) {
           *this, reg_interface, gpregset, {}));
       break;
     }
-    default:
+    case llvm::Triple::aarch64: {
+      DataExtractor data(m_gpregset_data.data(), m_gpregset_data.size(),
+                         lldb::eByteOrderLittle, 8);
+      m_thread_reg_ctx_sp.reset(new RegisterContextMinidump_ARM64(*this, data));
       break;
     }
-
-    if (!reg_interface) {
-      if (log)
-        log->Printf("elf-core::%s:: Architecture(%d) not supported",
-                    __FUNCTION__, arch.GetMachine());
-      assert(false && "Architecture not supported");
+    case llvm::Triple::arm: {
+      DataExtractor data(m_gpregset_data.data(), m_gpregset_data.size(),
+                         lldb::eByteOrderLittle, 8);
+      const bool apple = arch.GetTriple().getVendor() == llvm::Triple::Apple;
+      m_thread_reg_ctx_sp.reset(
+          new RegisterContextMinidump_ARM(*this, data, apple));
+      break;
+    }
+    default:
+      break;
     }
 
     reg_ctx_sp = m_thread_reg_ctx_sp;

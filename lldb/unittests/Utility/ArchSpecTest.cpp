@@ -1,9 +1,8 @@
 //===-- ArchSpecTest.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -170,4 +169,66 @@ TEST(ArchSpecTest, MergeFromMachOUnknown) {
   ASSERT_TRUE(B.IsValid());
   A.MergeFrom(B);
   ASSERT_EQ(A.GetCore(), ArchSpec::eCore_uknownMach64);
+}
+
+TEST(ArchSpecTest, Compatibility) {
+  {
+    ArchSpec A("x86_64-apple-macosx10.12");
+    ArchSpec B("x86_64-apple-macosx10.12");
+    ASSERT_TRUE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+  }
+  {
+    // The version information is auxiliary to support availablity but
+    // doesn't affect compatibility.
+    ArchSpec A("x86_64-apple-macosx10.11");
+    ArchSpec B("x86_64-apple-macosx10.12");
+    ASSERT_TRUE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+  }
+  {
+    ArchSpec A("x86_64-apple-macosx10.13");
+    ArchSpec B("x86_64h-apple-macosx10.13");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+  }
+  {
+    ArchSpec A("x86_64-apple-macosx");
+    ArchSpec B("x86_64-apple-ios-simulator");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+  }
+  {
+    ArchSpec A("x86_64-*-*");
+    ArchSpec B("x86_64-apple-ios-simulator");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+  }
+  {
+    ArchSpec A("arm64-*-*");
+    ArchSpec B("arm64-apple-ios");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    // FIXME: This looks unintuitive and we should investigate whether
+    // this is the desired behavior.
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+  }
+  {
+    ArchSpec A("x86_64-*-*");
+    ArchSpec B("x86_64-apple-ios-simulator");
+    ASSERT_FALSE(A.IsExactMatch(B));
+    // FIXME: See above, though the extra environment complicates things.
+    ASSERT_FALSE(A.IsCompatibleMatch(B));
+  }
+  {
+    ArchSpec A("x86_64");
+    ArchSpec B("x86_64-apple-macosx10.14");
+    // FIXME: The exact match also looks unintuitive.
+    ASSERT_TRUE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
+  }
+}
+
+TEST(ArchSpecTest, OperatorBool) {
+  EXPECT_FALSE(ArchSpec());
+  EXPECT_TRUE(ArchSpec("x86_64-pc-linux"));
 }

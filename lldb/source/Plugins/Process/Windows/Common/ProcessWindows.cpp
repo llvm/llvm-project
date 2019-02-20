@@ -1,9 +1,8 @@
 //===-- ProcessWindows.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,12 +12,11 @@
 #include "lldb/Host/windows/windows.h"
 #include <psapi.h>
 
-// Other libraries and framework includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostNativeProcessBase.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
@@ -28,6 +26,7 @@
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/State.h"
 
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
@@ -70,6 +69,20 @@ std::string GetProcessExecutableName(DWORD pid) {
     ::CloseHandle(process_handle);
   }
   return file_name;
+}
+
+DWORD ConvertLldbToWinApiProtect(uint32_t protect) {
+  // We also can process a read / write permissions here, but if the debugger
+  // will make later a write into the allocated memory, it will fail. To get
+  // around it is possible inside DoWriteMemory to remember memory permissions,
+  // allow write, write and restore permissions, but for now we process only
+  // the executable permission.
+  //
+  // TODO: Process permissions other than executable
+  if (protect & ePermissionsExecutable)
+    return PAGE_EXECUTE_READWRITE;
+
+  return PAGE_READWRITE;
 }
 
 } // anonymous namespace
@@ -237,11 +250,13 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
 
   FileSpec working_dir = launch_info.GetWorkingDirectory();
   namespace fs = llvm::sys::fs;
-  if (working_dir && (!working_dir.ResolvePath() ||
-                      !fs::is_directory(working_dir.GetPath()))) {
-    result.SetErrorStringWithFormat("No such file or directory: %s",
-                                    working_dir.GetCString());
-    return result;
+  if (working_dir) {
+    FileSystem::Instance().Resolve(working_dir);
+    if (!FileSystem::Instance().IsDirectory(working_dir)) {
+      result.SetErrorStringWithFormat("No such file or directory: %s",
+                                      working_dir.GetCString());
+      return result;
+    }
   }
 
   if (!launch_info.GetFlags().Test(eLaunchFlagDebug)) {
@@ -379,7 +394,7 @@ Status ProcessWindows::DoResume() {
       SetPrivateState(eStateRunning);
     }
   } else {
-    LLDB_LOG(log, "error: process %I64u is in state %u.  Returning...",
+    LLDB_LOG(log, "error: process {0} is in state {1}.  Returning...",
              m_session_data->m_debugger->GetProcess().GetProcessId(),
              GetPrivateState());
   }
@@ -577,7 +592,7 @@ bool ProcessWindows::CanDebug(lldb::TargetSP target_sp,
   // For now we are just making sure the file exists for a given module
   ModuleSP exe_module_sp(target_sp->GetExecutableModule());
   if (exe_module_sp.get())
-    return exe_module_sp->GetFileSpec().Exists();
+    return FileSystem::Instance().Exists(exe_module_sp->GetFileSpec());
   // However, if there is no executable module, we return true since we might
   // be preparing to attach.
   return true;
@@ -693,6 +708,58 @@ size_t ProcessWindows::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
     LLDB_LOG(log, "writing failed with error: {0}", error);
   }
   return bytes_written;
+}
+
+lldb::addr_t ProcessWindows::DoAllocateMemory(size_t size, uint32_t permissions,
+                                              Status &error) {
+  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
+  llvm::sys::ScopedLock lock(m_mutex);
+  LLDB_LOG(log, "attempting to allocate {0} bytes with permissions {1}", size,
+           permissions);
+
+  if (!m_session_data) {
+    LLDB_LOG(log, "cannot allocate, there is no active debugger connection.");
+    error.SetErrorString(
+        "cannot allocate, there is no active debugger connection");
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  HostProcess process = m_session_data->m_debugger->GetProcess();
+  lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
+  auto protect = ConvertLldbToWinApiProtect(permissions);
+  auto result = VirtualAllocEx(handle, nullptr, size, MEM_COMMIT, protect);
+  if (!result) {
+    error.SetError(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "allocating failed with error: {0}", error);
+    return LLDB_INVALID_ADDRESS;
+  }
+
+  return reinterpret_cast<addr_t>(result);
+}
+
+Status ProcessWindows::DoDeallocateMemory(lldb::addr_t ptr) {
+  Status result;
+
+  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
+  llvm::sys::ScopedLock lock(m_mutex);
+  LLDB_LOG(log, "attempting to deallocate bytes at address {0}", ptr);
+
+  if (!m_session_data) {
+    LLDB_LOG(log, "cannot deallocate, there is no active debugger connection.");
+    result.SetErrorString(
+        "cannot deallocate, there is no active debugger connection");
+    return result;
+  }
+
+  HostProcess process = m_session_data->m_debugger->GetProcess();
+  lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
+  if (!VirtualFreeEx(handle, reinterpret_cast<LPVOID>(ptr), 0, MEM_RELEASE)) {
+    result.SetError(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "deallocating failed with error: {0}", result);
+    return result;
+  }
+
+  return result;
 }
 
 Status ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
@@ -812,6 +879,14 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
 
   SetProcessExitStatus(GetID(), true, 0, exit_code);
   SetPrivateState(eStateExited);
+
+  // If the process exits before any initial stop then notify the debugger 
+  // of the error otherwise WaitForDebuggerConnection() will be blocked.
+  // An example of this issue is when a process fails to load a dependent DLL. 
+  if (m_session_data && !m_session_data->m_initial_stop_received) {
+    Status error(exit_code, eErrorTypeWin32);
+    OnDebuggerError(error, 0);
+  }
 }
 
 void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
@@ -829,7 +904,8 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
       return;
     }
 
-    FileSpec executable_file(file_name, true);
+    FileSpec executable_file(file_name);
+    FileSystem::Instance().Resolve(executable_file);
     ModuleSpec module_spec(executable_file);
     Status error;
     module = GetTarget().GetSharedModule(module_spec, &error);
@@ -880,8 +956,9 @@ ProcessWindows::OnDebugException(bool first_chance,
   }
 
   if (!first_chance) {
-    // Any second chance exception is an application crash by definition.
-    SetPrivateState(eStateCrashed);
+    // Not any second chance exception is an application crash by definition.
+    // It may be an expression evaluation crash.
+    SetPrivateState(eStateStopped);
   }
 
   ExceptionResult result = ExceptionResult::SendToApplication;

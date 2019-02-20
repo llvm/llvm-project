@@ -1,9 +1,8 @@
 //===-- DWARFUnit.h ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,8 +32,6 @@ enum DWARFProducer {
 };
 
 class DWARFUnit {
-  friend class DWARFCompileUnit;
-
   using die_iterator_range =
       llvm::iterator_range<DWARFDebugInfoEntry::collection::iterator>;
 
@@ -113,8 +110,11 @@ public:
   dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_addr_t GetAddrBase() const { return m_addr_base; }
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
-  void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base,
-                   dw_offset_t base_obj_offset);
+  dw_addr_t GetStrOffsetsBase() const { return m_str_offsets_base; }
+  void SetAddrBase(dw_addr_t addr_base);
+  void SetRangesBase(dw_addr_t ranges_base);
+  void SetBaseObjOffset(dw_offset_t base_obj_offset);
+  void SetStrOffsetsBase(dw_offset_t str_offsets_base);
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf,
                               DWARFDebugAranges *debug_aranges);
 
@@ -168,6 +168,9 @@ public:
 
   bool GetIsOptimized();
 
+  const lldb_private::FileSpec &GetCompilationDirectory();
+  lldb_private::FileSpec::Style GetPathStyle();
+
   SymbolFileDWARFDwo *GetDwoSymbolFile() const;
 
   dw_offset_t GetBaseObjOffset() const;
@@ -204,6 +207,8 @@ protected:
   dw_offset_t m_length = 0;
   uint16_t m_version = 0;
   uint8_t m_addr_size = 0;
+  uint8_t m_unit_type = 0;
+  uint64_t m_dwo_id = 0;
   DWARFProducer m_producer = eProducerInvalid;
   uint32_t m_producer_version_major = 0;
   uint32_t m_producer_version_minor = 0;
@@ -211,12 +216,13 @@ protected:
   lldb::LanguageType m_language_type = lldb::eLanguageTypeUnknown;
   bool m_is_dwarf64 = false;
   lldb_private::LazyBool m_is_optimized = lldb_private::eLazyBoolCalculate;
+  llvm::Optional<lldb_private::FileSpec> m_comp_dir;
   dw_addr_t m_addr_base = 0;   // Value of DW_AT_addr_base
   dw_addr_t m_ranges_base = 0; // Value of DW_AT_ranges_base
   // If this is a dwo compile unit this is the offset of the base compile unit
   // in the main object file
   dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
-
+  dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
   // Offset of the initial length field.
   dw_offset_t m_offset;
 
@@ -245,6 +251,8 @@ private:
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);
   void ExtractDIEsEndCheck(lldb::offset_t offset) const;
+
+  void ComputeCompDirAndGuessPathStyle();
 
   DISALLOW_COPY_AND_ASSIGN(DWARFUnit);
 };

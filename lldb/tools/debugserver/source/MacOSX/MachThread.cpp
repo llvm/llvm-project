@@ -1,9 +1,8 @@
 //===-- MachThread.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -83,7 +82,7 @@ bool MachThread::SetSuspendCountBeforeResume(bool others_stopped) {
   DNBLogThreadedIf(LOG_THREAD | LOG_VERBOSE, "MachThread::%s ( )",
                    __FUNCTION__);
   DNBError err;
-  if (MachPortNumberIsValid(m_mach_port_number) == false)
+  if (!MachPortNumberIsValid(m_mach_port_number))
     return false;
 
   integer_t times_to_resume;
@@ -121,7 +120,7 @@ bool MachThread::RestoreSuspendCountAfterStop() {
   DNBLogThreadedIf(LOG_THREAD | LOG_VERBOSE, "MachThread::%s ( )",
                    __FUNCTION__);
   DNBError err;
-  if (MachPortNumberIsValid(m_mach_port_number) == false)
+  if (!MachPortNumberIsValid(m_mach_port_number))
     return false;
 
   if (m_suspend_count > 0) {

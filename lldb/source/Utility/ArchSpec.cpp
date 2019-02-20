@@ -1,9 +1,8 @@
 //===-- ArchSpec.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,15 +10,15 @@
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
-#include "lldb/Utility/Stream.h" // for Stream
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
-#include "lldb/lldb-defines.h" // for LLDB_INVALID_C...
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Twine.h" // for Twine
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/MachO.h" // for CPUType::CPU_T...
-#include "llvm/Support/Compiler.h"   // for LLVM_FALLTHROUGH
+#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Host.h"
 
 using namespace lldb;
@@ -610,10 +609,8 @@ const char *ArchSpec::GetArchitectureName() const {
 
 bool ArchSpec::IsMIPS() const {
   const llvm::Triple::ArchType machine = GetMachine();
-  if (machine == llvm::Triple::mips || machine == llvm::Triple::mipsel ||
-      machine == llvm::Triple::mips64 || machine == llvm::Triple::mips64el)
-    return true;
-  return false;
+  return machine == llvm::Triple::mips || machine == llvm::Triple::mipsel ||
+         machine == llvm::Triple::mips64 || machine == llvm::Triple::mips64el;
 }
 
 std::string ArchSpec::GetTargetABI() const {
@@ -815,6 +812,7 @@ bool ArchSpec::CharIsSignedByDefault() const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
+  case llvm::Triple::arc:
     return false;
   }
 }
@@ -1018,7 +1016,7 @@ bool ArchSpec::IsCompatibleMatch(const ArchSpec &rhs) const {
   return IsEqualTo(rhs, false);
 }
 
-static bool isCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
+static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
                                     llvm::Triple::EnvironmentType rhs) {
   if (lhs == rhs)
     return true;
@@ -1095,9 +1093,7 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
     const llvm::Triple::EnvironmentType rhs_triple_env =
         rhs_triple.getEnvironment();
 
-    if (!isCompatibleEnvironment(lhs_triple_env, rhs_triple_env))
-      return false;
-    return true;
+    return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);
   }
   return false;
 }

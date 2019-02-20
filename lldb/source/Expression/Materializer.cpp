@@ -1,19 +1,13 @@
 //===-- Materializer.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Core/DumpDataExtractor.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -27,6 +21,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
 
 using namespace lldb_private;
 
@@ -50,7 +45,7 @@ uint32_t Materializer::AddStructMember(Entity &entity) {
 }
 
 void Materializer::Entity::SetSizeAndAlignmentFromType(CompilerType &type) {
-  if (auto size = type.GetByteSize(nullptr))
+  if (llvm::Optional<uint64_t> size = type.GetByteSize(nullptr))
     m_size = *size;
 
   uint32_t bit_alignment = type.GetTypeBitAlign();
@@ -565,7 +560,7 @@ public:
 
         if (data.GetByteSize() < m_variable_sp->GetType()->GetByteSize()) {
           if (data.GetByteSize() == 0 &&
-              m_variable_sp->LocationExpression().IsValid() == false) {
+              !m_variable_sp->LocationExpression().IsValid()) {
             err.SetErrorStringWithFormat("the variable '%s' has no location, "
                                          "it may have been optimized out",
                                          m_variable_sp->GetName().AsCString());
@@ -574,7 +569,8 @@ public:
                 "size of variable %s (%" PRIu64
                 ") is larger than the ValueObject's size (%" PRIu64 ")",
                 m_variable_sp->GetName().AsCString(),
-                m_variable_sp->GetType()->GetByteSize(), data.GetByteSize());
+                m_variable_sp->GetType()->GetByteSize().getValueOr(0),
+                data.GetByteSize());
           }
           return;
         }
@@ -865,7 +861,7 @@ public:
 
       ExecutionContextScope *exe_scope = map.GetBestExecutionContextScope();
 
-      auto byte_size = m_type.GetByteSize(exe_scope);
+      llvm::Optional<uint64_t> byte_size = m_type.GetByteSize(exe_scope);
       if (!byte_size) {
         err.SetErrorString("can't get size of type");
         return;
@@ -1122,7 +1118,6 @@ private:
   CompilerType m_type;
   bool m_is_program_reference;
   bool m_keep_in_memory;
-  bool m_is_error_result;
 
   lldb::addr_t m_temporary_allocation;
   size_t m_temporary_allocation_size;

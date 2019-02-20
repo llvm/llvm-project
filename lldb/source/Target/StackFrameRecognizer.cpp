@@ -1,17 +1,12 @@
 //===-- StackFrameRecognizer.cpp --------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <vector>
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Symbol.h"
@@ -53,8 +48,9 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
 
 class StackFrameRecognizerManagerImpl {
 public:
-  void AddRecognizer(StackFrameRecognizerSP recognizer, ConstString &module,
-                     ConstString &symbol, bool first_instruction_only) {
+  void AddRecognizer(StackFrameRecognizerSP recognizer,
+                     const ConstString &module, const ConstString &symbol,
+                     bool first_instruction_only) {
     m_recognizers.push_front({(uint32_t)m_recognizers.size(), false, recognizer, false, module, RegularExpressionSP(),
                               symbol, RegularExpressionSP(),
                               first_instruction_only});
@@ -156,8 +152,8 @@ StackFrameRecognizerManagerImpl &GetStackFrameRecognizerManagerImpl() {
 }
 
 void StackFrameRecognizerManager::AddRecognizer(
-    StackFrameRecognizerSP recognizer, ConstString &module, ConstString &symbol,
-    bool first_instruction_only) {
+    StackFrameRecognizerSP recognizer, const ConstString &module,
+    const ConstString &symbol, bool first_instruction_only) {
   GetStackFrameRecognizerManagerImpl().AddRecognizer(recognizer, module, symbol,
                                                      first_instruction_only);
 }

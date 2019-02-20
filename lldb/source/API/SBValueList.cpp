@@ -1,9 +1,8 @@
 //===-- SBValueList.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -99,7 +98,7 @@ SBValueList::SBValueList(const ValueListImpl *lldb_object_ptr) : m_opaque_ap() {
 
 SBValueList::~SBValueList() {}
 
-bool SBValueList::IsValid() const { return (m_opaque_ap.get() != NULL); }
+bool SBValueList::IsValid() const { return (m_opaque_ap != NULL); }
 
 void SBValueList::Clear() { m_opaque_ap.reset(); }
 
@@ -150,7 +149,7 @@ SBValue SBValueList::GetValueAtIndex(uint32_t idx) const {
   //    idx);
 
   SBValue sb_value;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     sb_value = m_opaque_ap->GetValueAtIndex(idx);
 
   if (log) {
@@ -172,7 +171,7 @@ uint32_t SBValueList::GetSize() const {
   //    log->Printf ("SBValueList::GetSize ()");
 
   uint32_t size = 0;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     size = m_opaque_ap->GetSize();
 
   if (log)
@@ -183,20 +182,20 @@ uint32_t SBValueList::GetSize() const {
 }
 
 void SBValueList::CreateIfNeeded() {
-  if (m_opaque_ap.get() == NULL)
+  if (m_opaque_ap == NULL)
     m_opaque_ap.reset(new ValueListImpl());
 }
 
 SBValue SBValueList::FindValueObjectByUID(lldb::user_id_t uid) {
   SBValue sb_value;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     sb_value = m_opaque_ap->FindValueByUID(uid);
   return sb_value;
 }
 
 SBValue SBValueList::GetFirstValueByName(const char *name) const {
   SBValue sb_value;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     sb_value = m_opaque_ap->GetFirstValueByName(name);
   return sb_value;
 }
@@ -205,5 +204,5 @@ void *SBValueList::opaque_ptr() { return m_opaque_ap.get(); }
 
 ValueListImpl &SBValueList::ref() {
   CreateIfNeeded();
-  return *m_opaque_ap.get();
+  return *m_opaque_ap;
 }

@@ -1,3 +1,3 @@
-add_lldb_tool(darwin-debug INCLUDE_IN_SUITE
+add_lldb_tool(darwin-debug
   darwin-debug.cpp
   )

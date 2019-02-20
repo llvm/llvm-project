@@ -1,0 +1,82 @@
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/AstRestoreTest.cpp
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=ENUM %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=GLOBAL %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=BASE %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=CLASS %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=INNER %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=TEMPLATE %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=FOO %s
+RUN: lldb-test symbols -dump-ast %t.exe | FileCheck --check-prefix=MAIN %s
+
+ENUM: Module: {{.*}}
+ENUM: namespace N0 {
+ENUM:     namespace N1 {
+ENUM:         namespace  {
+ENUM:             enum Enum {
+ENUM:                 Enum_0,
+ENUM:                 Enum_1,
+ENUM:                 Enum_2,
+ENUM:                 Enum_3
+ENUM:             };
+ENUM:         }
+ENUM:     }
+ENUM: }
+
+GLOBAL: Module: {{.*}}
+GLOBAL: namespace N0 {
+GLOBAL:     namespace N1 {
+GLOBAL:         N0::N1::(anonymous namespace)::Enum Global;
+GLOBAL:     }
+GLOBAL: }
+
+BASE: Module: {{.*}}
+BASE: namespace N0 {
+BASE:     namespace N1 {
+BASE:         struct Base {
+BASE:             N0::N1::(anonymous namespace)::Enum m_e;
+BASE:         };
+BASE:     }
+BASE: }
+
+CLASS: Module: {{.*}}
+CLASS: namespace N0 {
+CLASS:     namespace N1 {
+CLASS:         class Class : public N0::N1::Base {
+CLASS-DAG:             const N0::N1::(anonymous namespace)::Enum m_ce;
+CLASS-DAG:             static int ClassStatic;
+CLASS-DAG:             N0::N1::Class::Inner m_inner;
+CLASS-DAG:             {{(inline )?}}Class(N0::N1::(anonymous namespace)::Enum);
+CLASS-DAG:             static {{(inline )?}}int StaticFunc(const N0::N1::Class &);
+CLASS-DAG:             {{(inline )?}}int PrivateFunc(const N0::N1::Class::Inner &);
+CLASS:         };
+CLASS:     }
+CLASS: }
+
+INNER: Module: {{.*}}
+INNER: namespace N0 {
+INNER:     namespace N1 {
+INNER:         class Class : public N0::N1::Base {
+INNER:             struct Inner {
+INNER:                 char x;
+INNER:                 short y;
+INNER:                 int z;
+INNER:             };
+INNER:         };
+INNER:     }
+INNER: }
+
+TEMPLATE: Module: {{.*}}
+TEMPLATE: struct Template<N0::N1::Class> {
+TEMPLATE:     inline void TemplateFunc<1>();
+TEMPLATE: };
+
+FOO: Module: {{.*}}
+FOO: namespace N0 {
+FOO:     namespace N1 {
+FOO:         void foo();
+FOO:     }
+FOO: }
+
+MAIN: Module: {{.*}}
+MAIN: int main();

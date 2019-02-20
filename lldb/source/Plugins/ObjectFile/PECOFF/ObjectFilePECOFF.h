@@ -1,22 +1,18 @@
 //===-- ObjectFilePECOFF.h --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_ObjectFilePECOFF_h_
 #define liblldb_ObjectFilePECOFF_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/ObjectFile.h"
+#include "llvm/Object/Binary.h"
 
 class ObjectFilePECOFF : public lldb_private::ObjectFile {
 public:
@@ -113,7 +109,7 @@ public:
 
   void Dump(lldb_private::Stream *s) override;
 
-  bool GetArchitecture(lldb_private::ArchSpec &arch) override;
+  lldb_private::ArchSpec GetArchitecture() override;
 
   bool GetUUID(lldb_private::UUID *uuid) override;
 
@@ -261,6 +257,8 @@ protected:
   bool ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr);
   bool ParseSectionHeaders(uint32_t offset);
 
+  uint32_t ParseDependentModules();
+
   static void DumpDOSHeader(lldb_private::Stream *s,
                             const dos_header_t &header);
   static void DumpCOFFHeader(lldb_private::Stream *s,
@@ -269,11 +267,16 @@ protected:
                                 const coff_opt_header_t &header);
   void DumpSectionHeaders(lldb_private::Stream *s);
   void DumpSectionHeader(lldb_private::Stream *s, const section_header_t &sh);
-  bool GetSectionName(std::string &sect_name, const section_header_t &sect);
+  void DumpDependentModules(lldb_private::Stream *s);
+
+  llvm::StringRef GetSectionName(const section_header_t &sect);
 
   typedef std::vector<section_header_t> SectionHeaderColl;
   typedef SectionHeaderColl::iterator SectionHeaderCollIter;
   typedef SectionHeaderColl::const_iterator SectionHeaderCollConstIter;
+
+private:
+  bool CreateBinary();
 
 private:
   dos_header_t m_dos_header;
@@ -282,6 +285,9 @@ private:
   SectionHeaderColl m_sect_headers;
   lldb::addr_t m_image_base;
   lldb_private::Address m_entry_point_address;
+  llvm::Optional<lldb_private::FileSpecList> m_deps_filespec;
+  typedef llvm::object::OwningBinary<llvm::object::Binary> OWNBINType;
+  llvm::Optional<OWNBINType> m_owningbin;
 };
 
 #endif // liblldb_ObjectFilePECOFF_h_

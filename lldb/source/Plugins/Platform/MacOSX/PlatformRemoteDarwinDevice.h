@@ -1,21 +1,16 @@
 //===-- PlatformRemoteDarwinDevice.h -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_PlatformRemoteDarwinDevice_h_
 #define liblldb_PlatformRemoteDarwinDevice_h_
 
-// C Includes
-// C++ Includes
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "PlatformDarwin.h"
 #include "lldb/Utility/FileSpec.h"
 
@@ -84,10 +79,10 @@ protected:
 
   const SDKDirectoryInfo *GetSDKDirectoryForCurrentOSVersion();
 
-  static lldb_private::FileSpec::EnumerateDirectoryResult
-  GetContainedFilesIntoVectorOfStringsCallback(
-      void *baton, llvm::sys::fs::file_type ft,
-      const lldb_private::FileSpec &file_spec);
+  static lldb_private::FileSystem::EnumerateDirectoryResult
+  GetContainedFilesIntoVectorOfStringsCallback(void *baton,
+                                               llvm::sys::fs::file_type ft,
+                                               llvm::StringRef path);
 
   uint32_t FindFileInAllSDKs(const char *platform_file_path,
                              lldb_private::FileSpecList &file_list);

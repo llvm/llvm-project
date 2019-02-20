@@ -1,9 +1,8 @@
 //===-- GDBRemoteClientBaseTest.cpp -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include <future>
@@ -48,7 +47,8 @@ struct TestClient : public GDBRemoteClientBase {
 class GDBRemoteClientBaseTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(Connect(client, server), llvm::Succeeded());
+    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
+                      llvm::Succeeded());
     ASSERT_EQ(TestClient::eBroadcastBitRunPacketSent,
               listener_sp->StartListeningForEvents(
                   &client, TestClient::eBroadcastBitRunPacketSent));

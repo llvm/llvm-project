@@ -1,9 +1,8 @@
 //===-- SBHostOS.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,8 +10,9 @@
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #endif
 
-#include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBHostOS.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThread.h"
@@ -74,6 +74,10 @@ SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
   case ePathTypeClangDir:
     fspec = GetClangResourceDir();
     break;
+
+  case ePathTypeSupportFileDir:
+  case ePathTypeSwiftDir:
+    break;
   }
 
   SBFileSpec sb_fspec;
@@ -86,7 +90,8 @@ SBFileSpec SBHostOS::GetUserHomeDirectory() {
 
   llvm::SmallString<64> home_dir_path;
   llvm::sys::path::home_directory(home_dir_path);
-  FileSpec homedir(home_dir_path.c_str(), true);
+  FileSpec homedir(home_dir_path.c_str());
+  FileSystem::Instance().Resolve(homedir);
 
   sb_fspec.SetFileSpec(homedir);
   return sb_fspec;

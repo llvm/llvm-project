@@ -34,7 +34,7 @@ class NSClass {
   float f;
   double d;
 };
-}
+} // namespace NS
 
 class Class {
 public:
@@ -48,6 +48,10 @@ int test_func(int a, int b) { return a + b; }
 
 typedef Class ClassTypedef;
 typedef NS::NSClass NSClassTypedef;
+typedef int (*FuncPointerTypedef)();
+typedef int (*VariadicFuncPointerTypedef)(char, ...);
+FuncPointerTypedef GlobalFunc;
+VariadicFuncPointerTypedef GlobalVariadicFunc;
 int GlobalArray[10];
 
 static const int sizeof_NSClass = sizeof(NS::NSClass);
@@ -57,6 +61,9 @@ static const int sizeof_Enum = sizeof(Enum);
 static const int sizeof_ShortEnum = sizeof(ShortEnum);
 static const int sizeof_ClassTypedef = sizeof(ClassTypedef);
 static const int sizeof_NSClassTypedef = sizeof(NSClassTypedef);
+static const int sizeof_FuncPointerTypedef = sizeof(FuncPointerTypedef);
+static const int sizeof_VariadicFuncPointerTypedef =
+    sizeof(VariadicFuncPointerTypedef);
 static const int sizeof_GlobalArray = sizeof(GlobalArray);
 
 int main(int argc, char **argv) {

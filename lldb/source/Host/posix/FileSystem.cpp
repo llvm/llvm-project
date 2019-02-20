@@ -1,9 +1,8 @@
 //===-- FileSystem.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,6 +10,7 @@
 
 // C includes
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/mount.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -47,7 +47,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
     error.SetErrorToErrno();
   else {
     buf[count] = '\0'; // Success
-    dst.SetFile(buf, false, FileSpec::Style::native);
+    dst.SetFile(buf, FileSpec::Style::native);
   }
   return error;
 }
@@ -65,11 +65,15 @@ Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
     return err;
   }
 
-  dst = FileSpec(real_path, false);
+  dst = FileSpec(real_path);
 
   return Status();
 }
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
   return ::fopen(path, mode);
+}
+
+int FileSystem::Open(const char *path, int flags, int mode) {
+  return ::open(path, flags, mode);
 }

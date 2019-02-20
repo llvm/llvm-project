@@ -1,9 +1,8 @@
 //===-- SelectHelper.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,14 +16,14 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/lldb-enumerations.h" // for ErrorType::eErrorTypePOSIX
-#include "lldb/lldb-types.h"        // for socket_t
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 
-#include "llvm/ADT/DenseMap.h" // for DenseMapPair, DenseMap, Dense...
-#include "llvm/ADT/Optional.h" // for Optional
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 
 #include <algorithm>
-#include <chrono> // for microseconds, seconds, steady...
+#include <chrono>
 
 #include <errno.h>
 #if defined(_WIN32)

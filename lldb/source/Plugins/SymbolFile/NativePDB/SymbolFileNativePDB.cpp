@@ -1315,9 +1315,7 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
                                                     PdbCompilandSymId var_id,
                                                     bool is_param) {
   ModuleSP module = GetObjectFile()->GetModule();
-  Block &block = GetOrCreateBlock(scope_id);
-  VariableInfo var_info =
-      GetVariableLocationInfo(*m_index, var_id, block, module);
+  VariableInfo var_info = GetVariableLocationInfo(*m_index, var_id, module);
   if (!var_info.location || !var_info.ranges)
     return nullptr;
 

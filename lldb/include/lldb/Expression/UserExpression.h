@@ -1,23 +1,18 @@
 //===-- UserExpression.h ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_UserExpression_h_
 #define liblldb_UserExpression_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/Materializer.h"
@@ -98,6 +93,34 @@ public:
                      lldb_private::ExecutionPolicy execution_policy,
                      bool keep_result_in_memory, bool generate_debug_info,
                      uint32_t line_offset) = 0;
+
+  //------------------------------------------------------------------
+  /// Attempts to find possible command line completions for the given
+  /// (possible incomplete) user expression.
+  ///
+  /// @param[in] exe_ctx
+  ///     The execution context to use when looking up entities that
+  ///     are needed for parsing and completing (locations of functions, types
+  ///     of variables, persistent variables, etc.)
+  ///
+  /// @param[out] request
+  ///     The completion request to fill out. The completion should be a string
+  ///     that would complete the current token at the cursor position.
+  ///     Note that the string in the list replaces the current token
+  ///     in the command line.
+  ///
+  /// @param[in] complete_pos
+  ///     The position of the cursor inside the user expression string.
+  ///     The completion process starts on the token that the cursor is in.
+  ///
+  /// @return
+  ///     True if we added any completion results to the output;
+  ///     false otherwise.
+  //------------------------------------------------------------------
+  virtual bool Complete(ExecutionContext &exe_ctx, CompletionRequest &request,
+                        unsigned complete_pos) {
+    return false;
+  }
 
   virtual bool CanInterpret() = 0;
 

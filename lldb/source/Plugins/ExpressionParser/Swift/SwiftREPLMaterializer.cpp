@@ -297,9 +297,9 @@ public:
   EntityREPLPersistentVariable(
       lldb::ExpressionVariableSP &persistent_variable_sp,
       SwiftREPLMaterializer *parent,
-      Materializer::PersistentVariableDelegate *delegate)
+      Materializer::PersistentVariableDelegate *)
       : Entity(), m_persistent_variable_sp(persistent_variable_sp),
-        m_parent(parent), m_delegate(delegate) {
+        m_parent(parent) {
     // Hard-coding to maximum size of a pointer since persistent variables are
     // materialized by reference
     m_size = 8;
@@ -452,7 +452,6 @@ public:
 private:
   lldb::ExpressionVariableSP m_persistent_variable_sp;
   SwiftREPLMaterializer *m_parent;
-  Materializer::PersistentVariableDelegate *m_delegate;
 };
 
 uint32_t SwiftREPLMaterializer::AddPersistentVariable(

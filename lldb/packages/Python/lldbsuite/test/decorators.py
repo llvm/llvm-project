@@ -75,13 +75,14 @@ def _check_expected_version(comparison, expected, actual):
         LooseVersion(expected_str))
 
 
+_re_pattern_type = type(re.compile(''))
 def _match_decorator_property(expected, actual):
     if actual is None or expected is None:
         return True
 
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
-    elif isinstance(expected, (re._pattern_type,) + six.string_types):
+    elif isinstance(expected, (_re_pattern_type,) + six.string_types):
         return re.search(expected, actual) is not None
     elif hasattr(expected, "__iter__"):
         return any([x is not None and _match_decorator_property(x, actual)
@@ -162,7 +163,7 @@ def _decorateTest(mode,
                   debug_info=None,
                   swig_version=None, py_version=None,
                   macos_version=None,
-                  remote=None):
+                  remote=None, dwarf_version=None):
     def fn(self):
         skip_for_os = _match_decorator_property(
             lldbplatform.translate(oslist), self.getPlatform())
@@ -193,10 +194,15 @@ def _decorateTest(mode,
             py_version is None) or _check_expected_version(
             py_version[0], py_version[1], sys.version_info)
         skip_for_macos_version = (macos_version is None) or (
-            _check_expected_version(
+            (platform.mac_ver()[0] != "") and (_check_expected_version(
                 macos_version[0],
                 macos_version[1],
-                platform.mac_ver()[0]))
+                platform.mac_ver()[0])))
+        skip_for_dwarf_version = (
+             dwarf_version is None) or (
+                 (self.getDebugInfo() is 'dwarf') and
+                 _check_expected_version(
+                     dwarf_version[0], dwarf_version[1], self.getDwarfVersion()))
 
         # For the test to be skipped, all specified (e.g. not None) parameters must be True.
         # An unspecified parameter means "any", so those are marked skip by default.  And we skip
@@ -210,7 +216,8 @@ def _decorateTest(mode,
                       (swig_version, skip_for_swig_version, "swig version"),
                       (py_version, skip_for_py_version, "python version"),
                       (macos_version, skip_for_macos_version, "macOS version"),
-                      (remote, skip_for_remote, "platform locality (remote/local)")]
+                      (remote, skip_for_remote, "platform locality (remote/local)"),
+                      (dwarf_version, skip_for_dwarf_version, "dwarf version")]
         reasons = []
         final_skip_result = True
         for this_condition in conditions:
@@ -254,7 +261,7 @@ def expectedFailureAll(bugnumber=None,
                        debug_info=None,
                        swig_version=None, py_version=None,
                        macos_version=None,
-                       remote=None):
+                       remote=None, dwarf_version=None):
     return _decorateTest(DecorateMode.Xfail,
                          bugnumber=bugnumber,
                          oslist=oslist, hostoslist=hostoslist,
@@ -263,7 +270,7 @@ def expectedFailureAll(bugnumber=None,
                          debug_info=debug_info,
                          swig_version=swig_version, py_version=py_version,
                          macos_version=None,
-                         remote=remote)
+                         remote=remote,dwarf_version=dwarf_version)
 
 
 # provide a function to skip on defined oslist, compiler version, and archs
@@ -279,7 +286,7 @@ def skipIf(bugnumber=None,
            debug_info=None,
            swig_version=None, py_version=None,
            macos_version=None,
-           remote=None):
+           remote=None, dwarf_version=None):
     return _decorateTest(DecorateMode.Skip,
                          bugnumber=bugnumber,
                          oslist=oslist, hostoslist=hostoslist,
@@ -288,7 +295,7 @@ def skipIf(bugnumber=None,
                          debug_info=debug_info,
                          swig_version=swig_version, py_version=py_version,
                          macos_version=macos_version,
-                         remote=remote)
+                         remote=remote, dwarf_version=dwarf_version)
 
 
 def _skip_for_android(reason, api_levels, archs):
@@ -357,7 +364,7 @@ def apple_simulator_test(platform):
             return "simulator tests are run only on darwin hosts"
         try:
             DEVNULL = open(os.devnull, 'w')
-            output = subprocess.check_output(["xcodebuild", "-showsdks"], stderr=DEVNULL)
+            output = subprocess.check_output(["xcodebuild", "-showsdks"], stderr=DEVNULL).decode("utf-8")
             if re.search('%ssimulator' % platform, output):
                 return None
             else:
@@ -456,12 +463,6 @@ def expectedFlakey(expected_fn, bugnumber=None):
         return expectedFailure_impl(bugnumber)
     else:
         return expectedFailure_impl
-
-
-def expectedFlakeyDsym(bugnumber=None):
-    def fn(self):
-        return self.getDebugInfo() == "dwarf"
-    return expectedFlakey(fn, bugnumber)
 
 
 def expectedFlakeyOS(oslist, bugnumber=None, compilers=None):
@@ -615,6 +616,7 @@ def swiftTest(func):
             # This configuration is Swift-compatible
             return None
     return skipTestIfFn(is_not_swift_compatible)(func)
+
 
 def skipIfHostIncompatibleWithRemote(func):
     """Decorate the item to skip tests if binaries built on this host are incompatible."""
@@ -850,7 +852,7 @@ def skipUnlessFeature(feature):
         if platform.system() == 'Darwin':
             try:
                 DEVNULL = open(os.devnull, 'w')
-                output = subprocess.check_output(["/usr/sbin/sysctl", feature], stderr=DEVNULL)
+                output = subprocess.check_output(["/usr/sbin/sysctl", feature], stderr=DEVNULL).decode("utf-8")
                 # If 'feature: 1' was output, then this feature is available and
                 # the test should not be skipped.
                 if re.match('%s: 1\s*' % feature, output):
@@ -860,3 +862,10 @@ def skipUnlessFeature(feature):
             except subprocess.CalledProcessError:
                 return "%s is not supported on this system." % feature
     return skipTestIfFn(is_feature_enabled)
+
+def skipIfSanitized(func):
+    """Skip this test if the environment is set up to run LLDB itself under ASAN."""
+    def is_sanitized():
+        return (('DYLD_INSERT_LIBRARIES' in os.environ) and
+                'libclang_rt.asan' in os.environ['DYLD_INSERT_LIBRARIES'])
+    return skipTestIfFn(is_sanitized)(func)

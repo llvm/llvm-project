@@ -508,7 +508,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     uint32_t limit_start_line = 0;
     uint32_t limit_end_line = 0;
     if (limit_file) {
-      limit_file_spec.SetFile(limit_file, false, FileSpec::Style::native);
+      limit_file_spec.SetFile(limit_file, FileSpec::Style::native);
       limit_start_line = m_options.GetPoundLineLine();
       limit_end_line = limit_start_line +
                        std::count(m_expr_text.begin(), m_expr_text.end(), '\n');
@@ -622,9 +622,8 @@ lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
 }
 
 SwiftUserExpression::ResultDelegate::ResultDelegate(
-    lldb::TargetSP target, SwiftUserExpression &user_expression, bool is_error)
-    : m_target_sp(target), m_user_expression(user_expression),
-      m_is_error(is_error) {}
+    lldb::TargetSP target, SwiftUserExpression &, bool is_error)
+    : m_target_sp(target), m_is_error(is_error) {}
 
 ConstString SwiftUserExpression::ResultDelegate::GetName() {
   auto prefix = m_persistent_state->GetPersistentVariablePrefix(m_is_error);
@@ -647,8 +646,7 @@ lldb::ExpressionVariableSP &SwiftUserExpression::ResultDelegate::GetVariable() {
 }
 
 SwiftUserExpression::PersistentVariableDelegate::PersistentVariableDelegate(
-    SwiftUserExpression &user_expression)
-    : m_user_expression(user_expression) {}
+    SwiftUserExpression &) {}
 
 ConstString SwiftUserExpression::PersistentVariableDelegate::GetName() {
   return ConstString();

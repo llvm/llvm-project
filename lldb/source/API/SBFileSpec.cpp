@@ -1,17 +1,17 @@
 //===-- SBFileSpec.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include <inttypes.h> // PRIu64
+#include <inttypes.h>
 #include <limits.h>
 
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
@@ -31,11 +31,15 @@ SBFileSpec::SBFileSpec(const lldb_private::FileSpec &fspec)
     : m_opaque_ap(new lldb_private::FileSpec(fspec)) {}
 
 // Deprecated!!!
-SBFileSpec::SBFileSpec(const char *path)
-    : m_opaque_ap(new FileSpec(path, true)) {}
+SBFileSpec::SBFileSpec(const char *path) : m_opaque_ap(new FileSpec(path)) {
+  FileSystem::Instance().Resolve(*m_opaque_ap);
+}
 
 SBFileSpec::SBFileSpec(const char *path, bool resolve)
-    : m_opaque_ap(new FileSpec(path, resolve)) {}
+    : m_opaque_ap(new FileSpec(path)) {
+  if (resolve)
+    FileSystem::Instance().Resolve(*m_opaque_ap);
+}
 
 SBFileSpec::~SBFileSpec() {}
 
@@ -50,7 +54,7 @@ bool SBFileSpec::IsValid() const { return m_opaque_ap->operator bool(); }
 bool SBFileSpec::Exists() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
-  bool result = m_opaque_ap->Exists();
+  bool result = FileSystem::Instance().Exists(*m_opaque_ap);
 
   if (log)
     log->Printf("SBFileSpec(%p)::Exists () => %s",
@@ -61,13 +65,13 @@ bool SBFileSpec::Exists() const {
 }
 
 bool SBFileSpec::ResolveExecutableLocation() {
-  return m_opaque_ap->ResolveExecutableLocation();
+  return FileSystem::Instance().ResolveExecutableLocation(*m_opaque_ap);
 }
 
 int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
                             size_t dst_len) {
   llvm::SmallString<64> result(src_path);
-  lldb_private::FileSpec::Resolve(result);
+  FileSystem::Instance().Resolve(result);
   ::snprintf(dst_path, dst_len, "%s", result.c_str());
   return std::min(dst_len - 1, result.size());
 }
@@ -143,12 +147,10 @@ const lldb_private::FileSpec *SBFileSpec::get() const {
 }
 
 const lldb_private::FileSpec &SBFileSpec::operator*() const {
-  return *m_opaque_ap.get();
+  return *m_opaque_ap;
 }
 
-const lldb_private::FileSpec &SBFileSpec::ref() const {
-  return *m_opaque_ap.get();
-}
+const lldb_private::FileSpec &SBFileSpec::ref() const { return *m_opaque_ap; }
 
 void SBFileSpec::SetFileSpec(const lldb_private::FileSpec &fs) {
   *m_opaque_ap = fs;

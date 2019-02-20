@@ -4,10 +4,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -2839,7 +2838,7 @@ static void __kmp_enable_tasking(kmp_task_team_t *task_team,
   threads_data = (kmp_thread_data_t *)TCR_PTR(task_team->tt.tt_threads_data);
   KMP_DEBUG_ASSERT(threads_data != NULL);
 
-  if ((__kmp_tasking_mode == tskm_task_teams) &&
+  if (__kmp_tasking_mode == tskm_task_teams &&
       (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME)) {
     // Release any threads sleeping at the barrier, so that they can steal
     // tasks and execute them.  In extra barrier mode, tasks do not sleep
@@ -4132,7 +4131,7 @@ void __kmp_taskloop_recur(ident_t *loc, int gtid, kmp_task_t *task,
 @param lb        Pointer to loop lower bound in task structure
 @param ub        Pointer to loop upper bound in task structure
 @param st        Loop stride
-@param nogroup   Flag, 1 if nogroup clause specified, 0 otherwise
+@param nogroup   Flag, 1 if no taskgroup needs to be added, 0 otherwise
 @param sched     Schedule specified 0/1/2 for none/grainsize/num_tasks
 @param grainsize Schedule value if specified
 @param task_dup  Tasks duplication routine

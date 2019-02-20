@@ -1,9 +1,8 @@
 //===-- SymbolFileSymtab.cpp ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -46,7 +45,7 @@ SymbolFile *SymbolFileSymtab::CreateInstance(ObjectFile *obj_file) {
 }
 
 size_t SymbolFileSymtab::GetTypes(SymbolContextScope *sc_scope,
-                                  uint32_t type_mask,
+                                  TypeClass type_mask,
                                   lldb_private::TypeList &type_list) {
   return 0;
 }
@@ -131,15 +130,13 @@ CompUnitSP SymbolFileSymtab::ParseCompileUnitAtIndex(uint32_t idx) {
   return cu_sp;
 }
 
-lldb::LanguageType
-SymbolFileSymtab::ParseCompileUnitLanguage(const SymbolContext &sc) {
+lldb::LanguageType SymbolFileSymtab::ParseLanguage(CompileUnit &comp_unit) {
   return eLanguageTypeUnknown;
 }
 
-size_t SymbolFileSymtab::ParseCompileUnitFunctions(const SymbolContext &sc) {
+size_t SymbolFileSymtab::ParseFunctions(CompileUnit &comp_unit) {
   size_t num_added = 0;
   // We must at least have a valid compile unit
-  assert(sc.comp_unit != NULL);
   const Symtab *symtab = m_obj_file->GetSymtab();
   const Symbol *curr_symbol = NULL;
   const Symbol *next_symbol = NULL;
@@ -185,7 +182,7 @@ size_t SymbolFileSymtab::ParseCompileUnitFunctions(const SymbolContext &sc) {
             }
 
             FunctionSP func_sp(
-                new Function(sc.comp_unit,
+                new Function(&comp_unit,
                              symbol_idx,       // UserID is the DIE offset
                              LLDB_INVALID_UID, // We don't have any type info
                                                // for this function
@@ -194,7 +191,7 @@ size_t SymbolFileSymtab::ParseCompileUnitFunctions(const SymbolContext &sc) {
                              func_range)); // first address range
 
             if (func_sp.get() != NULL) {
-              sc.comp_unit->AddFunction(func_sp);
+              comp_unit.AddFunction(func_sp);
               ++num_added;
             }
           }
@@ -207,16 +204,16 @@ size_t SymbolFileSymtab::ParseCompileUnitFunctions(const SymbolContext &sc) {
   return num_added;
 }
 
-bool SymbolFileSymtab::ParseCompileUnitLineTable(const SymbolContext &sc) {
+size_t SymbolFileSymtab::ParseTypes(CompileUnit &comp_unit) { return 0; }
+
+bool SymbolFileSymtab::ParseLineTable(CompileUnit &comp_unit) { return false; }
+
+bool SymbolFileSymtab::ParseDebugMacros(CompileUnit &comp_unit) {
   return false;
 }
 
-bool SymbolFileSymtab::ParseCompileUnitDebugMacros(const SymbolContext &sc) {
-  return false;
-}
-
-bool SymbolFileSymtab::ParseCompileUnitSupportFiles(
-    const SymbolContext &sc, FileSpecList &support_files) {
+bool SymbolFileSymtab::ParseSupportFiles(CompileUnit &comp_unit,
+                                         FileSpecList &support_files) {
   return false;
 }
 
@@ -225,11 +222,7 @@ bool SymbolFileSymtab::ParseImportedModules(
   return false;
 }
 
-size_t SymbolFileSymtab::ParseFunctionBlocks(const SymbolContext &sc) {
-  return 0;
-}
-
-size_t SymbolFileSymtab::ParseTypes(const SymbolContext &sc) { return 0; }
+size_t SymbolFileSymtab::ParseBlocksRecursive(Function &func) { return 0; }
 
 size_t SymbolFileSymtab::ParseVariablesForContext(const SymbolContext &sc) {
   return 0;
@@ -250,7 +243,7 @@ bool SymbolFileSymtab::CompleteType(lldb_private::CompilerType &compiler_type) {
 }
 
 uint32_t SymbolFileSymtab::ResolveSymbolContext(const Address &so_addr,
-                                                uint32_t resolve_scope,
+                                                SymbolContextItem resolve_scope,
                                                 SymbolContext &sc) {
   if (m_obj_file->GetSymtab() == NULL)
     return 0;

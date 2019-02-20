@@ -5,12 +5,13 @@
 #include "llvm/Support/Path.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ModuleCache.h"
-#include "TestingSupport/TestUtilities.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -44,7 +45,7 @@ static const uint32_t uuid_bytes = 20;
 static const size_t module_size = 5602;
 
 static FileSpec GetDummyRemotePath() {
-  FileSpec fs("/", false, FileSpec::Style::posix);
+  FileSpec fs("/", FileSpec::Style::posix);
   fs.AppendPathComponent(dummy_remote_dir);
   fs.AppendPathComponent(module_name);
   return fs;
@@ -65,6 +66,7 @@ static FileSpec GetSysrootView(FileSpec spec, const char *hostname) {
 }
 
 void ModuleCacheTest::SetUpTestCase() {
+  FileSystem::Initialize();
   HostInfo::Initialize();
   ObjectFileELF::Initialize();
 
@@ -75,17 +77,19 @@ void ModuleCacheTest::SetUpTestCase() {
 void ModuleCacheTest::TearDownTestCase() {
   ObjectFileELF::Terminate();
   HostInfo::Terminate();
+  FileSystem::Terminate();
 }
 
 static void VerifyDiskState(const FileSpec &cache_dir, const char *hostname) {
   FileSpec uuid_view = GetUuidView(cache_dir);
-  EXPECT_TRUE(uuid_view.Exists()) << "uuid_view is: " << uuid_view.GetCString();
-  EXPECT_EQ(module_size, uuid_view.GetByteSize());
+  EXPECT_TRUE(FileSystem::Instance().Exists(uuid_view))
+      << "uuid_view is: " << uuid_view.GetCString();
+  EXPECT_EQ(module_size, FileSystem::Instance().GetByteSize(uuid_view));
 
   FileSpec sysroot_view = GetSysrootView(cache_dir, hostname);
-  EXPECT_TRUE(sysroot_view.Exists()) << "sysroot_view is: "
-                                     << sysroot_view.GetCString();
-  EXPECT_EQ(module_size, sysroot_view.GetByteSize());
+  EXPECT_TRUE(FileSystem::Instance().Exists(sysroot_view))
+      << "sysroot_view is: " << sysroot_view.GetCString();
+  EXPECT_EQ(module_size, FileSystem::Instance().GetByteSize(sysroot_view));
 }
 
 void ModuleCacheTest::TryGetAndPut(const FileSpec &cache_dir,

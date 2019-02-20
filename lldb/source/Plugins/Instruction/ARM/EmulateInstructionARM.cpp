@@ -1,9 +1,8 @@
 //===-- EmulateInstructionARM.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,8 +25,7 @@
 #include "Utility/ARM_DWARF_Registers.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MathExtras.h" // for SignExtend32 template function
-                                     // and countTrailingZeros function
+#include "llvm/Support/MathExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -777,10 +775,7 @@ bool EmulateInstructionARM::WriteBits32UnknownToMemory(addr_t address) {
   uint32_t random_data = rand();
   const uint32_t addr_byte_size = GetAddressByteSize();
 
-  if (!MemAWrite(context, address, random_data, addr_byte_size))
-    return false;
-
-  return true;
+  return MemAWrite(context, address, random_data, addr_byte_size);
 }
 
 // Write "bits (32) UNKNOWN" to register n.  Helper function for many ARM
@@ -3341,10 +3336,7 @@ bool EmulateInstructionARM::EmulateCMNImm(const uint32_t opcode,
   EmulateInstruction::Context context;
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
-  if (!WriteFlags(context, res.result, res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteFlags(context, res.result, res.carry_out, res.overflow);
 }
 
 // Compare Negative (register) adds a register value and an optionally-shifted
@@ -3411,10 +3403,7 @@ bool EmulateInstructionARM::EmulateCMNReg(const uint32_t opcode,
   EmulateInstruction::Context context;
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
-  if (!WriteFlags(context, res.result, res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteFlags(context, res.result, res.carry_out, res.overflow);
 }
 
 // Compare (immediate) subtracts an immediate value from a register value. It
@@ -3464,10 +3453,7 @@ bool EmulateInstructionARM::EmulateCMPImm(const uint32_t opcode,
   EmulateInstruction::Context context;
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
-  if (!WriteFlags(context, res.result, res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteFlags(context, res.result, res.carry_out, res.overflow);
 }
 
 // Compare (register) subtracts an optionally-shifted register value from a
@@ -3543,10 +3529,7 @@ bool EmulateInstructionARM::EmulateCMPReg(const uint32_t opcode,
   EmulateInstruction::Context context;
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
-  if (!WriteFlags(context, res.result, res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteFlags(context, res.result, res.carry_out, res.overflow);
 }
 
 // Arithmetic Shift Right (immediate) shifts a register value right by an
@@ -9246,11 +9229,8 @@ bool EmulateInstructionARM::EmulateRSBImm(const uint32_t opcode,
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
 
-  if (!WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
-                                 res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
+                                   res.carry_out, res.overflow);
 }
 
 // Reverse Subtract (register) subtracts a register value from an optionally-
@@ -9327,11 +9307,8 @@ bool EmulateInstructionARM::EmulateRSBReg(const uint32_t opcode,
   EmulateInstruction::Context context;
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
-  if (!WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
-                                 res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
+                                   res.carry_out, res.overflow);
 }
 
 // Reverse Subtract with Carry (immediate) subtracts a register value and the
@@ -9389,11 +9366,8 @@ bool EmulateInstructionARM::EmulateRSCImm(const uint32_t opcode,
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
 
-  if (!WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
-                                 res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
+                                   res.carry_out, res.overflow);
 }
 
 // Reverse Subtract with Carry (register) subtracts a register value and the
@@ -9461,11 +9435,8 @@ bool EmulateInstructionARM::EmulateRSCReg(const uint32_t opcode,
   EmulateInstruction::Context context;
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
-  if (!WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
-                                 res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
+                                   res.carry_out, res.overflow);
 }
 
 // Subtract with Carry (immediate) subtracts an immediate value and the value
@@ -9532,11 +9503,8 @@ bool EmulateInstructionARM::EmulateSBCImm(const uint32_t opcode,
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
 
-  if (!WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
-                                 res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
+                                   res.carry_out, res.overflow);
 }
 
 // Subtract with Carry (register) subtracts an optionally-shifted register
@@ -9621,11 +9589,8 @@ bool EmulateInstructionARM::EmulateSBCReg(const uint32_t opcode,
   EmulateInstruction::Context context;
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
-  if (!WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
-                                 res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
+                                   res.carry_out, res.overflow);
 }
 
 // This instruction subtracts an immediate value from a register value, and
@@ -9714,11 +9679,8 @@ bool EmulateInstructionARM::EmulateSUBImmThumb(const uint32_t opcode,
   context.type = EmulateInstruction::eContextImmediate;
   context.SetNoArgs();
 
-  if (!WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
-                                 res.carry_out, res.overflow))
-    return false;
-
-  return true;
+  return WriteCoreRegOptionalFlags(context, res.result, Rd, setflags,
+                                   res.carry_out, res.overflow);
 }
 
 // This instruction subtracts an immediate value from a register value, and
@@ -14154,11 +14116,8 @@ bool EmulateInstructionARM::BranchWritePC(const Context &context,
   else
     target = addr & 0xfffffffe;
 
-  if (!WriteRegisterUnsigned(context, eRegisterKindGeneric,
-                             LLDB_REGNUM_GENERIC_PC, target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindGeneric,
+                               LLDB_REGNUM_GENERIC_PC, target);
 }
 
 // As a side effect, BXWritePC sets context.arg2 to eModeARM or eModeThumb by
@@ -14192,11 +14151,8 @@ bool EmulateInstructionARM::BXWritePC(Context &context, uint32_t addr) {
                                LLDB_REGNUM_GENERIC_FLAGS, m_new_inst_cpsr))
       return false;
   }
-  if (!WriteRegisterUnsigned(context, eRegisterKindGeneric,
-                             LLDB_REGNUM_GENERIC_PC, target))
-    return false;
-
-  return true;
+  return WriteRegisterUnsigned(context, eRegisterKindGeneric,
+                               LLDB_REGNUM_GENERIC_PC, target);
 }
 
 // Dispatches to either BXWritePC or BranchWritePC based on architecture
@@ -14409,14 +14365,14 @@ bool EmulateInstructionARM::EvaluateInstruction(uint32_t evaluate_options) {
       evaluate_options & eEmulateInstructionOptionIgnoreConditions;
 
   bool success = false;
-  if (m_opcode_cpsr == 0 || m_ignore_conditions == false) {
+  if (m_opcode_cpsr == 0 || !m_ignore_conditions) {
     m_opcode_cpsr =
         ReadRegisterUnsigned(eRegisterKindDWARF, dwarf_cpsr, 0, &success);
   }
 
   // Only return false if we are unable to read the CPSR if we care about
   // conditions
-  if (success == false && m_ignore_conditions == false)
+  if (!success && !m_ignore_conditions)
     return false;
 
   uint32_t orig_pc_value = 0;

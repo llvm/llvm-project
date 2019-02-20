@@ -1,9 +1,8 @@
 //===------- state-queue.cu - NVPTX OpenMP GPU State Queue ------- CUDA -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -30,7 +29,8 @@ INLINE uint32_t omptarget_nvptx_Queue<ElementType, SIZE>::DEQUEUE_TICKET() {
 }
 
 template <typename ElementType, uint32_t SIZE>
-INLINE uint32_t omptarget_nvptx_Queue<ElementType, SIZE>::ID(uint32_t ticket) {
+INLINE uint32_t
+omptarget_nvptx_Queue<ElementType, SIZE>::ID(uint32_t ticket) {
   return (ticket / SIZE) * 2;
 }
 

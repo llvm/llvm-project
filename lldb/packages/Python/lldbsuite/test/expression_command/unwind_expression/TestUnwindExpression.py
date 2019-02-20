@@ -55,7 +55,6 @@ class UnwindFromExpressionTest(TestBase):
 
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"])
     def test_unwind_expression(self):
         """Test unwinding from an expression."""
         self.build_and_run_to_bkpt()

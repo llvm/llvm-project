@@ -1,9 +1,8 @@
 //===-- ObjectFilePECOFF.cpp ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -23,11 +22,14 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
 #include "llvm/BinaryFormat/COFF.h"
 
+#include "llvm/Object/COFFImportFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
@@ -86,6 +88,10 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!objfile_ap || !objfile_ap->ParseHeader())
     return nullptr;
 
+  // Cache coff binary.
+  if (!objfile_ap->CreateBinary())
+    return nullptr;
+
   return objfile_ap.release();
 }
 
@@ -131,9 +137,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
           specs.Append(ModuleSpec(file, spec));
           spec.SetTriple("i686-pc-windows");
           specs.Append(ModuleSpec(file, spec));
-        }
-        else if (coff_header.machine == MachineArmNt)
-        {
+        } else if (coff_header.machine == MachineArmNt) {
           spec.SetTriple("arm-pc-windows");
           specs.Append(ModuleSpec(file, spec));
         }
@@ -168,6 +172,40 @@ lldb::SymbolType ObjectFilePECOFF::MapSymbolType(uint16_t coff_symbol_type) {
   return lldb::eSymbolTypeInvalid;
 }
 
+bool ObjectFilePECOFF::CreateBinary() {
+  if (m_owningbin)
+    return true;
+
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+
+  auto binary = llvm::object::createBinary(m_file.GetPath());
+  if (!binary) {
+    if (log)
+      log->Printf("ObjectFilePECOFF::CreateBinary() - failed to create binary "
+                  "for file (%s): %s",
+                  m_file ? m_file.GetPath().c_str() : "<NULL>",
+                  errorToErrorCode(binary.takeError()).message().c_str());
+    return false;
+  }
+
+  // Make sure we only handle COFF format.
+  if (!binary->getBinary()->isCOFF() &&
+      !binary->getBinary()->isCOFFImportFile())
+    return false;
+
+  m_owningbin = OWNBINType(std::move(*binary));
+  if (log)
+    log->Printf("%p ObjectFilePECOFF::CreateBinary() module = %p (%s), file = "
+                "%s, binary = %p (Bin = %p)",
+                static_cast<void *>(this),
+                static_cast<void *>(GetModule().get()),
+                GetModule()->GetSpecificationDescription().c_str(),
+                m_file ? m_file.GetPath().c_str() : "<NULL>",
+                static_cast<void *>(m_owningbin.getPointer()),
+                static_cast<void *>(m_owningbin->getBinary()));
+  return true;
+}
+
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    DataBufferSP &data_sp,
                                    lldb::offset_t data_offset,
@@ -176,7 +214,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
-      m_entry_point_address() {
+      m_entry_point_address(), m_deps_filespec(), m_owningbin() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
   ::memset(&m_coff_header_opt, 0, sizeof(m_coff_header_opt));
@@ -188,7 +226,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
-      m_entry_point_address() {
+      m_entry_point_address(), m_deps_filespec(), m_owningbin() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
   ::memset(&m_coff_header_opt, 0, sizeof(m_coff_header_opt));
@@ -431,7 +469,7 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
 
 DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (m_file) {
-    // A bit of a hack, but we intend to write to this buffer, so we can't 
+    // A bit of a hack, but we intend to write to this buffer, so we can't
     // mmap it.
     auto buffer_sp = MapFileData(m_file, size, offset);
     return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
@@ -488,25 +526,23 @@ bool ObjectFilePECOFF::ParseSectionHeaders(
     }
   }
 
-  return m_sect_headers.empty() == false;
+  return !m_sect_headers.empty();
 }
 
-bool ObjectFilePECOFF::GetSectionName(std::string &sect_name,
-                                      const section_header_t &sect) {
-  if (sect.name[0] == '/') {
-    lldb::offset_t stroff = strtoul(&sect.name[1], NULL, 10);
+llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
+  llvm::StringRef hdr_name(sect.name, llvm::array_lengthof(sect.name));
+  hdr_name = hdr_name.split('\0').first;
+  if (hdr_name.consume_front("/")) {
+    lldb::offset_t stroff;
+    if (!to_integer(hdr_name, stroff, 10))
+      return "";
     lldb::offset_t string_file_offset =
         m_coff_header.symoff + (m_coff_header.nsyms * 18) + stroff;
-    const char *name = m_data.GetCStr(&string_file_offset);
-    if (name) {
-      sect_name = name;
-      return true;
-    }
-
-    return false;
+    if (const char *name = m_data.GetCStr(&string_file_offset))
+      return name;
+    return "";
   }
-  sect_name = sect.name;
-  return true;
+  return hdr_name;
 }
 
 //----------------------------------------------------------------------
@@ -663,147 +699,216 @@ bool ObjectFilePECOFF::IsStripped() {
 }
 
 void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
-  if (!m_sections_ap.get()) {
-    m_sections_ap.reset(new SectionList());
+  if (m_sections_ap)
+    return;
+  m_sections_ap.reset(new SectionList());
 
+  ModuleSP module_sp(GetModule());
+  if (module_sp) {
+    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+    const uint32_t nsects = m_sect_headers.size();
     ModuleSP module_sp(GetModule());
-    if (module_sp) {
-      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-      const uint32_t nsects = m_sect_headers.size();
-      ModuleSP module_sp(GetModule());
-      for (uint32_t idx = 0; idx < nsects; ++idx) {
-        std::string sect_name;
-        GetSectionName(sect_name, m_sect_headers[idx]);
-        ConstString const_sect_name(sect_name.c_str());
-        static ConstString g_code_sect_name(".code");
-        static ConstString g_CODE_sect_name("CODE");
-        static ConstString g_data_sect_name(".data");
-        static ConstString g_DATA_sect_name("DATA");
-        static ConstString g_bss_sect_name(".bss");
-        static ConstString g_BSS_sect_name("BSS");
-        static ConstString g_debug_sect_name(".debug");
-        static ConstString g_reloc_sect_name(".reloc");
-        static ConstString g_stab_sect_name(".stab");
-        static ConstString g_stabstr_sect_name(".stabstr");
-        static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
-        static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
-        static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
-        static ConstString g_sect_name_dwarf_debug_info(".debug_info");
-        static ConstString g_sect_name_dwarf_debug_line(".debug_line");
-        static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
-        static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
-        static ConstString g_sect_name_dwarf_debug_names(".debug_names");
-        static ConstString g_sect_name_dwarf_debug_pubnames(".debug_pubnames");
-        static ConstString g_sect_name_dwarf_debug_pubtypes(".debug_pubtypes");
-        static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
-        static ConstString g_sect_name_dwarf_debug_str(".debug_str");
-        static ConstString g_sect_name_dwarf_debug_types(".debug_types");
-        static ConstString g_sect_name_eh_frame(".eh_frame");
-        static ConstString g_sect_name_swift_ast(".swift_ast");
-        static ConstString g_sect_name_go_symtab(".gosymtab");
-        SectionType section_type = eSectionTypeOther;
-        if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
-            ((const_sect_name == g_code_sect_name) ||
-             (const_sect_name == g_CODE_sect_name))) {
-          section_type = eSectionTypeCode;
-        } else if (m_sect_headers[idx].flags &
-                       llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
-                   ((const_sect_name == g_data_sect_name) ||
-                    (const_sect_name == g_DATA_sect_name))) {
+    for (uint32_t idx = 0; idx < nsects; ++idx) {
+      ConstString const_sect_name(GetSectionName(m_sect_headers[idx]));
+      static ConstString g_code_sect_name(".code");
+      static ConstString g_CODE_sect_name("CODE");
+      static ConstString g_data_sect_name(".data");
+      static ConstString g_DATA_sect_name("DATA");
+      static ConstString g_bss_sect_name(".bss");
+      static ConstString g_BSS_sect_name("BSS");
+      static ConstString g_debug_sect_name(".debug");
+      static ConstString g_reloc_sect_name(".reloc");
+      static ConstString g_stab_sect_name(".stab");
+      static ConstString g_stabstr_sect_name(".stabstr");
+      static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
+      static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
+      static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
+      static ConstString g_sect_name_dwarf_debug_info(".debug_info");
+      static ConstString g_sect_name_dwarf_debug_line(".debug_line");
+      static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
+      static ConstString g_sect_name_dwarf_debug_loclists(".debug_loclists");
+      static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
+      static ConstString g_sect_name_dwarf_debug_names(".debug_names");
+      static ConstString g_sect_name_dwarf_debug_pubnames(".debug_pubnames");
+      static ConstString g_sect_name_dwarf_debug_pubtypes(".debug_pubtypes");
+      static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
+      static ConstString g_sect_name_dwarf_debug_str(".debug_str");
+      static ConstString g_sect_name_dwarf_debug_types(".debug_types");
+      static ConstString g_sect_name_eh_frame(".eh_frame");
+      static ConstString g_sect_name_swift_ast(".swift_ast"); // downstream change
+      static ConstString g_sect_name_go_symtab(".gosymtab");
+      SectionType section_type = eSectionTypeOther;
+      if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE &&
+          ((const_sect_name == g_code_sect_name) ||
+          (const_sect_name == g_CODE_sect_name))) {
+        section_type = eSectionTypeCode;
+      } else if (m_sect_headers[idx].flags &
+                    llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA &&
+                ((const_sect_name == g_data_sect_name) ||
+                  (const_sect_name == g_DATA_sect_name))) {
+        if (m_sect_headers[idx].size == 0 && m_sect_headers[idx].offset == 0)
+          section_type = eSectionTypeZeroFill;
+        else
           section_type = eSectionTypeData;
-        } else if (m_sect_headers[idx].flags &
-                       llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
-                   ((const_sect_name == g_bss_sect_name) ||
-                    (const_sect_name == g_BSS_sect_name))) {
-          if (m_sect_headers[idx].size == 0)
-            section_type = eSectionTypeZeroFill;
-          else
-            section_type = eSectionTypeData;
-        } else if (const_sect_name == g_debug_sect_name) {
-          section_type = eSectionTypeDebug;
-        } else if (const_sect_name == g_stabstr_sect_name) {
-          section_type = eSectionTypeDataCString;
-        } else if (const_sect_name == g_reloc_sect_name) {
-          section_type = eSectionTypeOther;
-        } else if (const_sect_name == g_sect_name_dwarf_debug_abbrev)
-          section_type = eSectionTypeDWARFDebugAbbrev;
-        else if (const_sect_name == g_sect_name_dwarf_debug_aranges)
-          section_type = eSectionTypeDWARFDebugAranges;
-        else if (const_sect_name == g_sect_name_dwarf_debug_frame)
-          section_type = eSectionTypeDWARFDebugFrame;
-        else if (const_sect_name == g_sect_name_dwarf_debug_info)
-          section_type = eSectionTypeDWARFDebugInfo;
-        else if (const_sect_name == g_sect_name_dwarf_debug_line)
-          section_type = eSectionTypeDWARFDebugLine;
-        else if (const_sect_name == g_sect_name_dwarf_debug_loc)
-          section_type = eSectionTypeDWARFDebugLoc;
-        else if (const_sect_name == g_sect_name_dwarf_debug_macinfo)
-          section_type = eSectionTypeDWARFDebugMacInfo;
-        else if (const_sect_name == g_sect_name_dwarf_debug_names)
-          section_type = eSectionTypeDWARFDebugNames;
-        else if (const_sect_name == g_sect_name_dwarf_debug_pubnames)
-          section_type = eSectionTypeDWARFDebugPubNames;
-        else if (const_sect_name == g_sect_name_dwarf_debug_pubtypes)
-          section_type = eSectionTypeDWARFDebugPubTypes;
-        else if (const_sect_name == g_sect_name_dwarf_debug_ranges)
-          section_type = eSectionTypeDWARFDebugRanges;
-        else if (const_sect_name == g_sect_name_dwarf_debug_str)
-          section_type = eSectionTypeDWARFDebugStr;
-        else if (const_sect_name == g_sect_name_dwarf_debug_types)
-          section_type = eSectionTypeDWARFDebugTypes;
-        else if (const_sect_name == g_sect_name_eh_frame)
-          section_type = eSectionTypeEHFrame;
-        else if (const_sect_name == g_sect_name_swift_ast)
-          section_type = eSectionTypeSwiftModules;
-        else if (const_sect_name == g_sect_name_go_symtab)
-          section_type = eSectionTypeGoSymtab;
-        else if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE) {
-          section_type = eSectionTypeCode;
-        } else if (m_sect_headers[idx].flags &
-                   llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA) {
+      } else if (m_sect_headers[idx].flags &
+                    llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA &&
+                ((const_sect_name == g_bss_sect_name) ||
+                  (const_sect_name == g_BSS_sect_name))) {
+        if (m_sect_headers[idx].size == 0)
+          section_type = eSectionTypeZeroFill;
+        else
           section_type = eSectionTypeData;
-        } else if (m_sect_headers[idx].flags &
-                   llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
-          if (m_sect_headers[idx].size == 0)
-            section_type = eSectionTypeZeroFill;
-          else
-            section_type = eSectionTypeData;
-        }
-
-        // Use a segment ID of the segment index shifted left by 8 so they
-        // never conflict with any of the sections.
-        SectionSP section_sp(new Section(
-            module_sp, // Module to which this section belongs
-            this,      // Object file to which this section belongs
-            idx + 1, // Section ID is the 1 based segment index shifted right by
-                     // 8 bits as not to collide with any of the 256 section IDs
-                     // that are possible
-            const_sect_name, // Name of this section
-            section_type,    // This section is a container of other sections.
-            m_coff_header_opt.image_base +
-                m_sect_headers[idx].vmaddr, // File VM address == addresses as
-                                            // they are found in the object file
-            m_sect_headers[idx].vmsize,     // VM size in bytes of this section
-            m_sect_headers[idx]
-                .offset, // Offset to the data for this section in the file
-            m_sect_headers[idx]
-                .size, // Size in bytes of this section as found in the file
-            m_coff_header_opt.sect_alignment, // Section alignment
-            m_sect_headers[idx].flags));      // Flags for this section
-
-        // section_sp->SetIsEncrypted (segment_is_encrypted);
-
-        unified_section_list.AddSection(section_sp);
-        m_sections_ap->AddSection(section_sp);
+      } else if (const_sect_name == g_debug_sect_name) {
+        section_type = eSectionTypeDebug;
+      } else if (const_sect_name == g_stabstr_sect_name) {
+        section_type = eSectionTypeDataCString;
+      } else if (const_sect_name == g_reloc_sect_name) {
+        section_type = eSectionTypeOther;
+      } else if (const_sect_name == g_sect_name_dwarf_debug_abbrev)
+        section_type = eSectionTypeDWARFDebugAbbrev;
+      else if (const_sect_name == g_sect_name_dwarf_debug_aranges)
+        section_type = eSectionTypeDWARFDebugAranges;
+      else if (const_sect_name == g_sect_name_dwarf_debug_frame)
+        section_type = eSectionTypeDWARFDebugFrame;
+      else if (const_sect_name == g_sect_name_dwarf_debug_info)
+        section_type = eSectionTypeDWARFDebugInfo;
+      else if (const_sect_name == g_sect_name_dwarf_debug_line)
+        section_type = eSectionTypeDWARFDebugLine;
+      else if (const_sect_name == g_sect_name_dwarf_debug_loc)
+        section_type = eSectionTypeDWARFDebugLoc;
+      else if (const_sect_name == g_sect_name_dwarf_debug_loclists)
+        section_type = eSectionTypeDWARFDebugLocLists;
+      else if (const_sect_name == g_sect_name_dwarf_debug_macinfo)
+        section_type = eSectionTypeDWARFDebugMacInfo;
+      else if (const_sect_name == g_sect_name_dwarf_debug_names)
+        section_type = eSectionTypeDWARFDebugNames;
+      else if (const_sect_name == g_sect_name_dwarf_debug_pubnames)
+        section_type = eSectionTypeDWARFDebugPubNames;
+      else if (const_sect_name == g_sect_name_dwarf_debug_pubtypes)
+        section_type = eSectionTypeDWARFDebugPubTypes;
+      else if (const_sect_name == g_sect_name_dwarf_debug_ranges)
+        section_type = eSectionTypeDWARFDebugRanges;
+      else if (const_sect_name == g_sect_name_dwarf_debug_str)
+        section_type = eSectionTypeDWARFDebugStr;
+      else if (const_sect_name == g_sect_name_dwarf_debug_types)
+        section_type = eSectionTypeDWARFDebugTypes;
+      else if (const_sect_name == g_sect_name_eh_frame)
+        section_type = eSectionTypeEHFrame;
+      else if (const_sect_name == g_sect_name_swift_ast)
+        section_type = eSectionTypeSwiftModules; // downstream change
+      else if (const_sect_name == g_sect_name_go_symtab)
+        section_type = eSectionTypeGoSymtab;
+      else if (m_sect_headers[idx].flags & llvm::COFF::IMAGE_SCN_CNT_CODE) {
+        section_type = eSectionTypeCode;
+      } else if (m_sect_headers[idx].flags &
+                 llvm::COFF::IMAGE_SCN_CNT_INITIALIZED_DATA) {
+        section_type = eSectionTypeData;
+      } else if (m_sect_headers[idx].flags &
+                 llvm::COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA) {
+        if (m_sect_headers[idx].size == 0)
+          section_type = eSectionTypeZeroFill;
+        else
+          section_type = eSectionTypeData;
       }
+
+      // Use a segment ID of the segment index shifted left by 8 so they
+      // never conflict with any of the sections.
+      SectionSP section_sp(new Section(
+          module_sp, // Module to which this section belongs
+          this,      // Object file to which this section belongs
+          idx + 1, // Section ID is the 1 based segment index shifted right by
+                   // 8 bits as not to collide with any of the 256 section IDs
+                   // that are possible
+          const_sect_name, // Name of this section
+          section_type,    // This section is a container of other sections.
+          m_coff_header_opt.image_base +
+              m_sect_headers[idx].vmaddr, // File VM address == addresses as
+                                          // they are found in the object file
+          m_sect_headers[idx].vmsize,     // VM size in bytes of this section
+          m_sect_headers[idx]
+              .offset, // Offset to the data for this section in the file
+          m_sect_headers[idx]
+              .size, // Size in bytes of this section as found in the file
+          m_coff_header_opt.sect_alignment, // Section alignment
+          m_sect_headers[idx].flags));      // Flags for this section
+
+      // section_sp->SetIsEncrypted (segment_is_encrypted);
+
+      unified_section_list.AddSection(section_sp);
+      m_sections_ap->AddSection(section_sp);
     }
   }
 }
 
 bool ObjectFilePECOFF::GetUUID(UUID *uuid) { return false; }
 
+uint32_t ObjectFilePECOFF::ParseDependentModules() {
+  ModuleSP module_sp(GetModule());
+  if (!module_sp)
+    return 0;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  if (m_deps_filespec)
+    return m_deps_filespec->GetSize();
+
+  // Cache coff binary if it is not done yet.
+  if (!CreateBinary())
+    return 0;
+
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  if (log)
+    log->Printf("%p ObjectFilePECOFF::ParseDependentModules() module = %p "
+                "(%s), binary = %p (Bin = %p)",
+                static_cast<void *>(this), static_cast<void *>(module_sp.get()),
+                module_sp->GetSpecificationDescription().c_str(),
+                static_cast<void *>(m_owningbin.getPointer()),
+                m_owningbin ? static_cast<void *>(m_owningbin->getBinary())
+                            : nullptr);
+
+  auto COFFObj =
+      llvm::dyn_cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
+  if (!COFFObj)
+    return 0;
+
+  m_deps_filespec = FileSpecList();
+
+  for (const auto &entry : COFFObj->import_directories()) {
+    llvm::StringRef dll_name;
+    auto ec = entry.getName(dll_name);
+    // Report a bogus entry.
+    if (ec != std::error_code()) {
+      if (log)
+        log->Printf("ObjectFilePECOFF::ParseDependentModules() - failed to get "
+                    "import directory entry name: %s",
+                    ec.message().c_str());
+      continue;
+    }
+
+    // At this moment we only have the base name of the DLL. The full path can
+    // only be seen after the dynamic loading.  Our best guess is Try to get it
+    // with the help of the object file's directory.
+    llvm::SmallString<128> dll_fullpath;
+    FileSpec dll_specs(dll_name);
+    dll_specs.GetDirectory().SetString(m_file.GetDirectory().GetCString());
+
+    if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
+      m_deps_filespec->Append(FileSpec(dll_fullpath));
+    else {
+      // Known DLLs or DLL not found in the object file directory.
+      m_deps_filespec->Append(FileSpec(dll_name));
+    }
+  }
+  return m_deps_filespec->GetSize();
+}
+
 uint32_t ObjectFilePECOFF::GetDependentModules(FileSpecList &files) {
-  return 0;
+  auto num_modules = ParseDependentModules();
+  auto original_size = files.GetSize();
+
+  for (unsigned i = 0; i < num_modules; ++i)
+    files.AppendIfUnique(m_deps_filespec->GetFileSpecAtIndex(i));
+
+  return files.GetSize() - original_size;
 }
 
 lldb_private::Address ObjectFilePECOFF::GetEntryPointAddress() {
@@ -814,12 +919,12 @@ lldb_private::Address ObjectFilePECOFF::GetEntryPointAddress() {
     return m_entry_point_address;
 
   SectionList *section_list = GetSectionList();
-  addr_t offset = m_coff_header_opt.entry;
+  addr_t file_addr = m_coff_header_opt.entry + m_coff_header_opt.image_base;
 
   if (!section_list)
-    m_entry_point_address.SetOffset(offset);
+    m_entry_point_address.SetOffset(file_addr);
   else
-    m_entry_point_address.ResolveAddressUsingFileSections(offset, section_list);
+    m_entry_point_address.ResolveAddressUsingFileSections(file_addr, section_list);
   return m_entry_point_address;
 }
 
@@ -837,8 +942,7 @@ void ObjectFilePECOFF::Dump(Stream *s) {
     s->Indent();
     s->PutCString("ObjectFilePECOFF");
 
-    ArchSpec header_arch;
-    GetArchitecture(header_arch);
+    ArchSpec header_arch = GetArchitecture();
 
     *s << ", file = '" << m_file
        << "', arch = " << header_arch.GetArchitectureName() << "\n";
@@ -859,6 +963,9 @@ void ObjectFilePECOFF::Dump(Stream *s) {
     }
     s->EOL();
     DumpSectionHeaders(s);
+    s->EOL();
+
+    DumpDependentModules(s);
     s->EOL();
   }
 }
@@ -977,8 +1084,7 @@ void ObjectFilePECOFF::DumpOptCOFFHeader(Stream *s,
 //----------------------------------------------------------------------
 void ObjectFilePECOFF::DumpSectionHeader(Stream *s,
                                          const section_header_t &sh) {
-  std::string name;
-  GetSectionName(name, sh);
+  std::string name = GetSectionName(sh);
   s->Printf("%-16s 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%8.8x 0x%4.4x "
             "0x%4.4x 0x%8.8x\n",
             name.c_str(), sh.vmaddr, sh.vmsize, sh.offset, sh.size, sh.reloff,
@@ -1007,6 +1113,22 @@ void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
   }
 }
 
+//----------------------------------------------------------------------
+// DumpDependentModules
+//
+// Dump all of the dependent modules to the specified output stream
+//----------------------------------------------------------------------
+void ObjectFilePECOFF::DumpDependentModules(lldb_private::Stream *s) {
+  auto num_modules = ParseDependentModules();
+  if (num_modules > 0) {
+    s->PutCString("Dependent Modules\n");
+    for (unsigned i = 0; i < num_modules; ++i) {
+      auto spec = m_deps_filespec->GetFileSpecAtIndex(i);
+      s->Printf("  %s\n", spec.GetFilename().GetCString());
+    }
+  }
+}
+
 bool ObjectFilePECOFF::IsWindowsSubsystem() {
   switch (m_coff_header_opt.subsystem) {
   case llvm::COFF::IMAGE_SUBSYSTEM_NATIVE:
@@ -1022,9 +1144,11 @@ bool ObjectFilePECOFF::IsWindowsSubsystem() {
   }
 }
 
-bool ObjectFilePECOFF::GetArchitecture(ArchSpec &arch) {
+ArchSpec ObjectFilePECOFF::GetArchitecture() {
   uint16_t machine = m_coff_header.machine;
   switch (machine) {
+  default:
+    break;
   case llvm::COFF::IMAGE_FILE_MACHINE_AMD64:
   case llvm::COFF::IMAGE_FILE_MACHINE_I386:
   case llvm::COFF::IMAGE_FILE_MACHINE_POWERPC:
@@ -1032,14 +1156,13 @@ bool ObjectFilePECOFF::GetArchitecture(ArchSpec &arch) {
   case llvm::COFF::IMAGE_FILE_MACHINE_ARM:
   case llvm::COFF::IMAGE_FILE_MACHINE_ARMNT:
   case llvm::COFF::IMAGE_FILE_MACHINE_THUMB:
+    ArchSpec arch;
     arch.SetArchitecture(eArchTypeCOFF, machine, LLDB_INVALID_CPUTYPE,
                          IsWindowsSubsystem() ? llvm::Triple::Win32
                                               : llvm::Triple::UnknownOS);
-    return true;
-  default:
-    break;
+    return arch;
   }
-  return false;
+  return ArchSpec();
 }
 
 ObjectFile::Type ObjectFilePECOFF::CalculateType() {
@@ -1053,6 +1176,7 @@ ObjectFile::Type ObjectFilePECOFF::CalculateType() {
 }
 
 ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
+
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------

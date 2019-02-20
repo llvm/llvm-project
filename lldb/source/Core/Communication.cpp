@@ -1,36 +1,35 @@
 //===-- Communication.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Communication.h"
 
-#include "lldb/Core/Event.h"
-#include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Utility/Connection.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Event.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for LogIfAnyCategoriesSet, LIBLLDB...
-#include "lldb/Utility/Status.h"  // for Status
+#include "lldb/Utility/Logging.h"
+#include "lldb/Utility/Status.h"
 
-#include "llvm/ADT/None.h"         // for None
-#include "llvm/ADT/Optional.h"     // for Optional
-#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/Compiler.h"
 
-#include <algorithm> // for min
-#include <chrono>    // for duration, seconds
+#include <algorithm>
+#include <chrono>
 #include <cstring>
-#include <memory> // for shared_ptr
+#include <memory>
 
-#include <errno.h>    // for EIO
-#include <inttypes.h> // for PRIu64
-#include <stdio.h>    // for snprintf
+#include <errno.h>
+#include <inttypes.h>
+#include <stdio.h>
 
 using namespace lldb;
 using namespace lldb_private;

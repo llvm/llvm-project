@@ -1,9 +1,8 @@
 //===-- Section.h -----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,16 +13,16 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/UserID.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for SectionType
-#include "lldb/lldb-forward.h"      // for SectionSP, ModuleSP, SectionWP
-#include "lldb/lldb-types.h"        // for addr_t, offset_t, user_id_t
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 
-#include <memory> // for enable_shared_from_this
-#include <vector> // for vector
+#include <memory>
+#include <vector>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, UINT32_MAX
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class Address;

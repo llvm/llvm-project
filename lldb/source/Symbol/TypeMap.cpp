@@ -1,17 +1,13 @@
 //===-- TypeMap.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -27,7 +23,6 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
-// Project includes
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
@@ -227,8 +222,7 @@ void TypeMap::RemoveMismatchedTypes(const std::string &type_scope,
       } else {
         // The type we are currently looking at doesn't exists in a namespace
         // or class, so it only matches if there is no type scope...
-        keep_match =
-            type_scope.empty() && type_basename.compare(match_type_name) == 0;
+        keep_match = type_scope.empty() && type_basename == match_type_name;
       }
     }
 

@@ -1,30 +1,29 @@
 //===-- Communication.h -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_Communication_h_
 #define liblldb_Communication_h_
 
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Timeout.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for ConnectionStatus, FLAGS_ANONYMOU...
-#include "lldb/lldb-forward.h"      // for ConnectionSP
-#include "lldb/lldb-types.h"        // for thread_arg_t, thread_result_t
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-types.h"
 
 #include <atomic>
 #include <mutex>
-#include <ratio> // for micro
+#include <ratio>
 #include <string>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint8_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class Connection;

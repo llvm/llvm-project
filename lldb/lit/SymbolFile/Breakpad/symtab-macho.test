@@ -1,0 +1,21 @@
+# RUN: yaml2obj %S/Inputs/basic-macho.yaml > %T/symtab-macho.out
+# RUN: %lldb %T/symtab-macho.out -o "target symbols add -s symtab-macho.out %S/Inputs/symtab-macho.syms" \
+# RUN:   -s %s | FileCheck %s
+
+image dump symtab symtab-macho.out
+# CHECK-LABEL: (lldb) image dump symtab symtab-macho.out
+# CHECK: Symtab, file = {{.*}}symtab-macho.out, num_symbols = 1:
+# CHECK: Index   UserID DSX Type            File Address/Value Load Address       Size               Flags      Name
+# CHECK: [    0]      0   X Code            0x0000000100000ff0                    0x0000000000000006 0x00000000 _start
+
+# CHECK-LABEL: (lldb) image lookup -a 0x100000ff0 -v
+# CHECK: Address: symtab-macho.out[0x0000000100000ff0] (symtab-macho.out.__TEXT.__text + 0)
+# CHECK: Symbol: id = {0x00000000}, range = [0x0000000100000ff0-0x0000000100000ff6), name="_start"
+
+# CHECK-LABEL: (lldb) image lookup -n _start -v
+# CHECK: Address: symtab-macho.out[0x0000000100000ff0] (symtab-macho.out.__TEXT.__text + 0)
+# CHECK: Symbol: id = {0x00000000}, range = [0x0000000100000ff0-0x0000000100000ff6), name="_start"
+
+image lookup -a 0x100000ff0 -v
+image lookup -n _start -v
+exit

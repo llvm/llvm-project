@@ -1,9 +1,8 @@
 //===-- ArchSpec.h ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,11 +14,11 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
-#include <cstddef> // for size_t
-#include <cstdint> // for uint32_t
-#include <string>  // for string
+#include <cstddef>
+#include <cstdint>
+#include <string>
 
 namespace lldb_private {
 
@@ -371,6 +370,7 @@ public:
   bool IsValid() const {
     return m_core >= eCore_arm_generic && m_core < kNumCores;
   }
+  explicit operator bool() const { return IsValid(); }
 
   bool TripleVendorWasSpecified() const {
     return !m_triple.getVendorName().empty();

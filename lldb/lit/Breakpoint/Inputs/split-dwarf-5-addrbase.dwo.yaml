@@ -1,0 +1,35 @@
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .debug_loc.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000001
+    Content:         ''
+  - Name:            .debug_str_offsets.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000001
+    Content:         200000000500000000000000090000002C000000340000003C0000004000000045000000
+  - Name:            .debug_str.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE, SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x0000000000000001
+    Content:         746573742E64776F00636C616E672076657273696F6E20382E302E3020287472756E6B203334373239392900746573742E6363005F5A3362617A760062617A006D61696E00696E7400
+  - Name:            .debug_info.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000001
+    Content:         360000000500050800000000E93484C441B7E84A01000104000202000600000001560304010103011C0000000156050104350000000406050400
+  - Name:            .debug_abbrev.dwo
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_EXCLUDE ]
+    AddressAlign:    0x0000000000000001
+    Content:         011101B042252525130503250000022E00111B120640186E2503253A0B3B0B3F190000032E00111B1206401803253A0B3B0B49133F19000004240003253E0B0B0B000000
+Symbols:         {}
+DynamicSymbols:  {}
+...

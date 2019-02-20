@@ -1,13 +1,11 @@
 //===-- MinidumpTypesTest.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/minidump/MinidumpParser.h"
@@ -16,9 +14,9 @@
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -38,9 +36,13 @@ using namespace minidump;
 
 class MinidumpParserTest : public testing::Test {
 public:
+  void SetUp() override { FileSystem::Initialize(); }
+
+  void TearDown() override { FileSystem::Terminate(); }
+
   void SetUpData(const char *minidump_filename) {
     std::string filename = GetInputFilePath(minidump_filename);
-    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, -1, 0);
+    auto BufferPtr = FileSystem::Instance().CreateDataBuffer(filename, -1, 0);
     ASSERT_NE(BufferPtr, nullptr);
     llvm::Optional<MinidumpParser> optional_parser =
         MinidumpParser::Create(BufferPtr);
@@ -54,7 +56,7 @@ public:
   void InvalidMinidump(const char *minidump_filename, uint64_t load_size) {
     std::string filename = GetInputFilePath(minidump_filename);
     auto BufferPtr =
-        DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
+        FileSystem::Instance().CreateDataBuffer(filename, load_size, 0);
     ASSERT_NE(BufferPtr, nullptr);
 
     llvm::Optional<MinidumpParser> optional_parser =
@@ -89,7 +91,7 @@ TEST_F(MinidumpParserTest, GetThreadListNotPadded) {
   // after the thread count.
   SetUpData("thread-list-not-padded.dmp");
   llvm::ArrayRef<MinidumpThread> thread_list;
-  
+
   thread_list = parser->GetThreads();
   ASSERT_EQ(2UL, thread_list.size());
   EXPECT_EQ(0x11223344UL, thread_list[0].thread_id);
@@ -297,29 +299,120 @@ TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
   EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).hasValue());
 }
 
-void check_region_info(std::unique_ptr<MinidumpParser> &parser,
-                       const uint64_t addr, MemoryRegionInfo::OptionalBool read,
-                       MemoryRegionInfo::OptionalBool write,
-                       MemoryRegionInfo::OptionalBool exec) {
+void check_region(std::unique_ptr<MinidumpParser> &parser,
+                  lldb::addr_t addr, lldb::addr_t start, lldb::addr_t end,
+                  MemoryRegionInfo::OptionalBool read,
+                  MemoryRegionInfo::OptionalBool write,
+                  MemoryRegionInfo::OptionalBool exec,
+                  MemoryRegionInfo::OptionalBool mapped,
+                  ConstString name = ConstString()) {
   auto range_info = parser->GetMemoryRegionInfo(addr);
-  ASSERT_TRUE(range_info.hasValue());
-  EXPECT_EQ(read, range_info->GetReadable());
-  EXPECT_EQ(write, range_info->GetWritable());
-  EXPECT_EQ(exec, range_info->GetExecutable());
+  EXPECT_EQ(start, range_info.GetRange().GetRangeBase());
+  EXPECT_EQ(end, range_info.GetRange().GetRangeEnd());
+  EXPECT_EQ(read, range_info.GetReadable());
+  EXPECT_EQ(write, range_info.GetWritable());
+  EXPECT_EQ(exec, range_info.GetExecutable());
+  EXPECT_EQ(mapped, range_info.GetMapped());
+  EXPECT_EQ(name, range_info.GetName());
 }
+
+// Same as above function where addr == start
+void check_region(std::unique_ptr<MinidumpParser> &parser,
+                  lldb::addr_t start, lldb::addr_t end,
+                  MemoryRegionInfo::OptionalBool read,
+                  MemoryRegionInfo::OptionalBool write,
+                  MemoryRegionInfo::OptionalBool exec,
+                  MemoryRegionInfo::OptionalBool mapped,
+                  ConstString name = ConstString()) {
+  check_region(parser, start, start, end, read, write, exec, mapped, name);
+}
+
+
+constexpr auto yes = MemoryRegionInfo::eYes;
+constexpr auto no = MemoryRegionInfo::eNo;
+constexpr auto unknown = MemoryRegionInfo::eDontKnow;
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfo) {
   SetUpData("fizzbuzz_wow64.dmp");
 
-  const auto yes = MemoryRegionInfo::eYes;
-  const auto no = MemoryRegionInfo::eNo;
+  check_region(parser, 0x00000000, 0x00010000, no, no, no, no);
+  check_region(parser, 0x00010000, 0x00020000, yes, yes, no, yes);
+  check_region(parser, 0x00020000, 0x00030000, yes, yes, no, yes);
+  check_region(parser, 0x00030000, 0x00031000, yes, yes, no, yes);
+  check_region(parser, 0x00031000, 0x00040000, no, no, no, no);
+  check_region(parser, 0x00040000, 0x00041000, yes, no, no, yes);
 
-  check_region_info(parser, 0x00000, no, no, no);
-  check_region_info(parser, 0x10000, yes, yes, no);
-  check_region_info(parser, 0x20000, yes, yes, no);
-  check_region_info(parser, 0x30000, yes, yes, no);
-  check_region_info(parser, 0x31000, no, no, no);
-  check_region_info(parser, 0x40000, yes, no, no);
+  // Check addresses contained inside ranges
+  check_region(parser, 0x00000001, 0x00000000, 0x00010000, no, no, no, no);
+  check_region(parser, 0x0000ffff, 0x00000000, 0x00010000, no, no, no, no);
+  check_region(parser, 0x00010001, 0x00010000, 0x00020000, yes, yes, no, yes);
+  check_region(parser, 0x0001ffff, 0x00010000, 0x00020000, yes, yes, no, yes);
+
+  // Test that an address after the last entry maps to rest of the memory space
+  check_region(parser, 0x7fff0000, 0x7fff0000, UINT64_MAX, no, no, no, no);
+}
+
+TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemoryList) {
+  SetUpData("regions-memlist.dmp");
+  // Test we can get memory regions from the MINIDUMP_MEMORY_LIST stream when
+  // we don't have a MemoryInfoListStream.
+
+  // Test addres before the first entry comes back with nothing mapped up
+  // to first valid region info
+  check_region(parser, 0x00000000, 0x00001000, no, no, no, no);
+  check_region(parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
+  check_region(parser, 0x00001010, 0x00002000, no, no, no, no);
+  check_region(parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
+  check_region(parser, 0x00002020, UINT64_MAX, no, no, no, no);
+}
+
+TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
+  SetUpData("regions-memlist64.dmp");
+  // Test we can get memory regions from the MINIDUMP_MEMORY64_LIST stream when
+  // we don't have a MemoryInfoListStream.
+
+  // Test addres before the first entry comes back with nothing mapped up
+  // to first valid region info
+  check_region(parser, 0x00000000, 0x00001000, no, no, no, no);
+  check_region(parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
+  check_region(parser, 0x00001010, 0x00002000, no, no, no, no);
+  check_region(parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
+  check_region(parser, 0x00002020, UINT64_MAX, no, no, no, no);
+}
+
+TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
+  SetUpData("regions-linux-map.dmp");
+  // Test we can get memory regions from the linux /proc/<pid>/maps stream when
+  // we don't have a MemoryInfoListStream.
+
+  // Test addres before the first entry comes back with nothing mapped up
+  // to first valid region info
+  ConstString a("/system/bin/app_process");
+  ConstString b("/system/bin/linker");
+  ConstString c("/system/lib/liblog.so");
+  ConstString d("/system/lib/libc.so");
+  ConstString n;
+  check_region(parser, 0x00000000, 0x400d9000, no , no , no , no , n);
+  check_region(parser, 0x400d9000, 0x400db000, yes, no , yes, yes, a);
+  check_region(parser, 0x400db000, 0x400dc000, yes, no , no , yes, a);
+  check_region(parser, 0x400dc000, 0x400dd000, yes, yes, no , yes, n);
+  check_region(parser, 0x400dd000, 0x400ec000, yes, no , yes, yes, b);
+  check_region(parser, 0x400ec000, 0x400ed000, yes, no , no , yes, n);
+  check_region(parser, 0x400ed000, 0x400ee000, yes, no , no , yes, b);
+  check_region(parser, 0x400ee000, 0x400ef000, yes, yes, no , yes, b);
+  check_region(parser, 0x400ef000, 0x400fb000, yes, yes, no , yes, n);
+  check_region(parser, 0x400fb000, 0x400fc000, yes, no , yes, yes, c);
+  check_region(parser, 0x400fc000, 0x400fd000, yes, yes, yes, yes, c);
+  check_region(parser, 0x400fd000, 0x400ff000, yes, no , yes, yes, c);
+  check_region(parser, 0x400ff000, 0x40100000, yes, no , no , yes, c);
+  check_region(parser, 0x40100000, 0x40101000, yes, yes, no , yes, c);
+  check_region(parser, 0x40101000, 0x40122000, yes, no , yes, yes, d);
+  check_region(parser, 0x40122000, 0x40123000, yes, yes, yes, yes, d);
+  check_region(parser, 0x40123000, 0x40167000, yes, no , yes, yes, d);
+  check_region(parser, 0x40167000, 0x40169000, yes, no , no , yes, d);
+  check_region(parser, 0x40169000, 0x4016b000, yes, yes, no , yes, d);
+  check_region(parser, 0x4016b000, 0x40176000, yes, yes, no , yes, n);
+  check_region(parser, 0x40176000, UINT64_MAX, no , no , no , no , n);
 }
 
 // Windows Minidump tests
@@ -530,3 +623,42 @@ TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_32_wow64) {
     }
   }
 }
+
+TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMinAddress) {
+  SetUpData("modules-dup-min-addr.dmp");
+  // Test that if we have two modules in the module list:
+  //    /tmp/a with range [0x2000-0x3000)
+  //    /tmp/a with range [0x1000-0x2000)
+  // That we end up with one module in the filtered list with the
+  // range [0x1000-0x2000). MinidumpParser::GetFilteredModuleList() is
+  // trying to ensure that if we have the same module mentioned more than
+  // one time, we pick the one with the lowest base_of_image.
+  std::vector<const MinidumpModule *> filtered_modules =
+      parser->GetFilteredModuleList();
+  EXPECT_EQ(1u, filtered_modules.size());
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[0]->base_of_image);
+}
+
+TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
+  SetUpData("modules-order.dmp");
+  // Test that if we have two modules in the module list:
+  //    /tmp/a with range [0x2000-0x3000)
+  //    /tmp/b with range [0x1000-0x2000)
+  // That we end up with two modules in the filtered list with the same ranges
+  // and in the same order. Previous versions of the
+  // MinidumpParser::GetFilteredModuleList() function would sort all images
+  // by address and modify the order of the modules.
+  std::vector<const MinidumpModule *> filtered_modules =
+      parser->GetFilteredModuleList();
+  llvm::Optional<std::string> name;
+  EXPECT_EQ(2u, filtered_modules.size());
+  EXPECT_EQ(0x0000000000002000u, filtered_modules[0]->base_of_image);
+  name = parser->GetMinidumpString(filtered_modules[0]->module_name_rva);
+  ASSERT_TRUE((bool)name);
+  EXPECT_EQ(std::string("/tmp/a"), *name);
+  EXPECT_EQ(0x0000000000001000u, filtered_modules[1]->base_of_image);
+  name = parser->GetMinidumpString(filtered_modules[1]->module_name_rva);
+  ASSERT_TRUE((bool)name);
+  EXPECT_EQ(std::string("/tmp/b"), *name);
+}
+

@@ -1,15 +1,14 @@
 //===-- MICmnResources.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // Third party headers
 #include "assert.h"
-#include <inttypes.h> // For PRIx64
+#include <inttypes.h>
 
 // In-house headers:
 #include "MICmnResources.h"
@@ -78,7 +77,7 @@ const CMICmnResources::SRsrcTextData
          "and a custom plugin.\nThe custom plugin is not necessary to operate "
          "the MI Driver."},
         {IDE_MI_APP_ARG_USAGE, "\nMI driver usage:\n\n\tlldb-mi [--longOption] "
-                               "[-s hortOption] [executeable]\n\n[] = optional "
+                               "[-s hortOption] [executable]\n\n[] = optional "
                                "argument."},
         {IDE_MI_APP_ARG_HELP, "-h\n--help\n\tPrints out usage information for "
                               "the MI debugger. Exit the MI\n\tDriver "
@@ -439,6 +438,8 @@ const CMICmnResources::SRsrcTextData
         {IDS_CMD_ERR_INFO_PRINTFN_FAILED, "The request '%s' failed."},
         {IDS_CMD_ERR_GDBSET_OPT_TARGETASYNC,
          "'target-async' expects \"on\" or \"off\""},
+        {IDS_CMD_ERR_GDBSET_OPT_BREAKPOINT,
+         "'breakpoint' expects \"pending on\" or \"pending off\""},
         {IDS_CMD_ERR_GDBSET_OPT_SOLIBSEARCHPATH,
          "'solib-search-path' requires at least one argument"},
         {IDS_CMD_ERR_GDBSET_OPT_PRINT_BAD_ARGS,
@@ -449,6 +450,10 @@ const CMICmnResources::SRsrcTextData
          "'print' expects option-name and \"on\" or \"off\""},
         {IDS_CMD_ERR_GDBSHOW_OPT_PRINT_UNKNOWN_OPTION,
          "'print' error. The option '%s' not found"},
+        {IDS_CMD_ERR_GDBSHOW_OPT_BREAKPOINT_BAD_ARGS,
+        "'breakpoint' expects option-name"},
+        {IDS_CMD_ERR_GDBSHOW_OPT_BREAKPOINT_UNKNOWN_OPTION,
+        "'breakpoint' error. The option '%s' not found"},
         {IDS_CMD_ERR_EXPR_INVALID, "Failed to evaluate expression: %s"},
         {IDS_CMD_ERR_ATTACH_FAILED,
          "Command '%s'. Attach to process failed: %s"},

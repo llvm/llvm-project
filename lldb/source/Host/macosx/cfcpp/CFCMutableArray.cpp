@@ -1,9 +1,8 @@
 //===-- CFCMutableArray.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -88,7 +87,7 @@ bool CFCMutableArray::SetValueAtIndex(CFIndex idx, const void *value) {
 bool CFCMutableArray::AppendValue(const void *value, bool can_create) {
   CFMutableArrayRef array = get();
   if (array == NULL) {
-    if (can_create == false)
+    if (!can_create)
       return false;
     array =
         ::CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -106,7 +105,7 @@ bool CFCMutableArray::AppendCStringAsCFString(const char *s,
                                               bool can_create) {
   CFMutableArrayRef array = get();
   if (array == NULL) {
-    if (can_create == false)
+    if (!can_create)
       return false;
     array =
         ::CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -124,7 +123,7 @@ bool CFCMutableArray::AppendFileSystemRepresentationAsCFString(
     const char *s, bool can_create) {
   CFMutableArrayRef array = get();
   if (array == NULL) {
-    if (can_create == false)
+    if (!can_create)
       return false;
     array =
         ::CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);

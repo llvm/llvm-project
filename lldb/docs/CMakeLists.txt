@@ -1,4 +1,3 @@
-
 include(FindDoxygen)
 
 if(DOXYGEN_FOUND)
@@ -39,3 +38,12 @@ if(EPYDOC_EXECUTABLE)
       COMMENT "Generating LLDB Python API reference with epydoc" VERBATIM
     )
 endif(EPYDOC_EXECUTABLE)
+
+if (LLVM_ENABLE_SPHINX)
+  include(AddSphinxTarget)
+  if (SPHINX_FOUND)
+    if (${SPHINX_OUTPUT_HTML})
+      add_sphinx_target(html lldb)
+    endif()
+  endif()
+endif()

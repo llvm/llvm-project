@@ -40,7 +40,7 @@ class MiTestCaseBase(Base):
                 pass
         Base.tearDown(self)
 
-    def spawnLldbMi(self, args=None):
+    def spawnLldbMi(self, exe=None, args=None, preconfig=True):
         import pexpect
         self.child = pexpect.spawn("%s --interpreter %s" % (
             self.lldbMiExec, args if args else ""), cwd=self.getBuildDir())
@@ -49,6 +49,14 @@ class MiTestCaseBase(Base):
         self.child.logfile_read = open(self.mylog, "w")
         # wait until lldb-mi has started up and is ready to go
         self.expect(self.child_prompt, exactly=True)
+        if preconfig:
+            self.runCmd("settings set symbols.enable-external-lookup false")
+            self.expect("\^done")
+            self.expect(self.child_prompt, exactly=True)
+        if exe:
+            self.runCmd("-file-exec-and-symbols \"%s\"" % exe)
+            # Testcases expect to be able to match output of this command,
+            # see test_lldbmi_specialchars.
 
     def runCmd(self, cmd):
         self.child.sendline(cmd)

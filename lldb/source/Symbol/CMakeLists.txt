@@ -64,3 +64,6 @@ add_lldb_library(lldbSymbol
   LINK_COMPONENTS
     Support
   )
+if(CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT SWIFT_COMPILER_IS_MSVC_LIKE)
+  target_compile_options(lldbSymbol PRIVATE -Wno-dollar-in-identifier-extension)
+endif()

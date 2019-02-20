@@ -10,10 +10,10 @@ import time
 import re
 
 import lldb
-from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+
 
 class ObjCiVarIMPTestCase(TestBase):
 

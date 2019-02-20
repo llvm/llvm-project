@@ -1,15 +1,11 @@
 //===-- CommandObjectExpression.cpp -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "swift/AST/Identifier.h"
 #include "swift/AST/Module.h"
 #include "swift/IDE/REPLCodeCompletion.h"
@@ -19,7 +15,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-// Project includes
 #include "CommandObjectExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
 #include "lldb/Core/Debugger.h"
@@ -328,6 +323,72 @@ CommandObjectExpression::~CommandObjectExpression() = default;
 
 Options *CommandObjectExpression::GetOptions() { return &m_option_group; }
 
+int CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
+  EvaluateExpressionOptions options;
+  options.SetCoerceToId(m_varobj_options.use_objc);
+  options.SetLanguage(m_command_options.language);
+  options.SetExecutionPolicy(lldb_private::eExecutionPolicyNever);
+  options.SetAutoApplyFixIts(false);
+  options.SetGenerateDebugInfo(false);
+
+  // We need a valid execution context with a frame pointer for this
+  // completion, so if we don't have one we should try to make a valid
+  // execution context.
+  if (m_interpreter.GetExecutionContext().GetFramePtr() == nullptr)
+    m_interpreter.UpdateExecutionContext(nullptr);
+
+  // This didn't work, so let's get out before we start doing things that
+  // expect a valid frame pointer.
+  if (m_interpreter.GetExecutionContext().GetFramePtr() == nullptr)
+    return 0;
+
+  ExecutionContext exe_ctx(m_interpreter.GetExecutionContext());
+
+  Target *target = exe_ctx.GetTargetPtr();
+
+  if (!target)
+    target = GetDummyTarget();
+
+  if (!target)
+    return 0;
+
+  unsigned cursor_pos = request.GetRawCursorPos();
+  llvm::StringRef code = request.GetRawLine();
+
+  const std::size_t original_code_size = code.size();
+
+  // Remove the first token which is 'expr' or some alias/abbreviation of that.
+  code = llvm::getToken(code).second.ltrim();
+  OptionsWithRaw args(code);
+  code = args.GetRawPart();
+
+  // The position where the expression starts in the command line.
+  assert(original_code_size >= code.size());
+  std::size_t raw_start = original_code_size - code.size();
+
+  // Check if the cursor is actually in the expression string, and if not, we
+  // exit.
+  // FIXME: We should complete the options here.
+  if (cursor_pos < raw_start)
+    return 0;
+
+  // Make the cursor_pos again relative to the start of the code string.
+  assert(cursor_pos >= raw_start);
+  cursor_pos -= raw_start;
+
+  auto language = exe_ctx.GetFrameRef().GetLanguage();
+
+  Status error;
+  lldb::UserExpressionSP expr(target->GetUserExpressionForLanguage(exe_ctx,
+      code, llvm::StringRef(), language, UserExpression::eResultTypeAny,
+      options, error));
+  if (error.Fail())
+    return 0;
+
+  expr->Complete(exe_ctx, request, cursor_pos);
+  return request.GetNumberOfMatches();
+}
+
 static lldb_private::Status
 CanBeUsedForElementCountPrinting(ValueObject &valobj) {
   CompilerType type(valobj.GetCompilerType());
@@ -384,8 +445,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
     if (m_command_options.auto_apply_fixits == eLazyBoolCalculate)
       auto_apply_fixits = target->GetEnableAutoApplyFixIts();
     else
-      auto_apply_fixits =
-          m_command_options.auto_apply_fixits == eLazyBoolYes ? true : false;
+      auto_apply_fixits = m_command_options.auto_apply_fixits == eLazyBoolYes;
 
     options.SetAutoApplyFixIts(auto_apply_fixits);
 

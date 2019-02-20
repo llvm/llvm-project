@@ -1,9 +1,8 @@
 //===-- HostInfoPosix.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -119,7 +118,7 @@ uint32_t HostInfoPosix::GetEffectiveUserID() { return geteuid(); }
 
 uint32_t HostInfoPosix::GetEffectiveGroupID() { return getegid(); }
 
-FileSpec HostInfoPosix::GetDefaultShell() { return FileSpec("/bin/sh", false); }
+FileSpec HostInfoPosix::GetDefaultShell() { return FileSpec("/bin/sh"); }
 
 bool HostInfoPosix::ComputePathRelativeToLibrary(FileSpec &file_spec,
                                                  llvm::StringRef dir) {
@@ -175,7 +174,7 @@ bool HostInfoPosix::ComputeSupportExeDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoPosix::ComputeHeaderDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/opt/local/include/lldb", false);
+  FileSpec temp_file("/opt/local/include/lldb");
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }

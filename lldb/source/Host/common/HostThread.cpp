@@ -1,9 +1,8 @@
 //===-- HostThread.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -43,5 +42,5 @@ lldb::thread_result_t HostThread::GetResult() const {
 }
 
 bool HostThread::EqualsThread(lldb::thread_t thread) const {
-  return m_native_thread->GetSystemHandle() == thread;
+  return m_native_thread->EqualsThread(thread);
 }

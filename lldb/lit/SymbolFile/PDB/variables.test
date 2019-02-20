@@ -1,58 +1,66 @@
-REQUIRES: windows
-RUN: clang-cl /Z7 /c /GS- %S/Inputs/VariablesTest.cpp /o %T/VariablesTest.cpp.obj
-RUN: link %T/VariablesTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/VariablesTest.cpp.exe
-RUN: lldb-test symbols %T/VariablesTest.cpp.exe | FileCheck %s
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=clang-cl --mode=compile --arch=64 --nodefaultlib --output=%T/VariablesTest.cpp.obj %S/Inputs/VariablesTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=64 --nodefaultlib --output=%T/VariablesTest.cpp.exe %T/VariablesTest.cpp.obj
+RUN: lldb-test symbols %T/VariablesTest.cpp.exe > %T/VariablesTest.out
+RUN: FileCheck --check-prefix=GLOBALS --input-file=%T/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-F --input-file=%T/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-MAIN --input-file=%T/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-CONSTRUCTOR --input-file=%T/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-MEMBER --input-file=%T/VariablesTest.out %s
 
-CHECK: Module [[MOD:.*]]
-CHECK: SymbolVendor ([[MOD]])
-CHECK:     CompileUnit{{.*}}, language = "c++", file = '{{.*}}\VariablesTest.cpp'
-CHECK-DAG:   Variable{{.*}}, name = "g_IntVar"
-CHECK-SAME:  scope = global, location = {{.*}}, external
-CHECK-DAG:   Variable{{.*}}, name = "m_StaticClassMember"
-CHECK-SAME:  scope = global, location = {{.*}}, external
-CHECK-DAG:   Variable{{.*}}, name = "g_pConst"
-CHECK-SAME:  scope = global, location = {{.*}}, external
-CHECK-DAG:   Variable{{.*}}, name = "same_name_var"
-CHECK-SAME:  scope = global, location = {{.*}}, external
-CHECK-DAG:   Variable{{.*}}, name = "g_EnumVar"
-CHECK-SAME:  scope = global, location = {{.*}}, external
-CHECK-DAG:   Variable{{.*}}, name = "g_tls"
-CHECK-SAME:  scope = thread local, location = {{.*}}, external
-CHECK-DAG:   Variable{{.*}}, name = "ClassVar"
-CHECK-SAME:  scope = global, location = {{.*}}, external
-CHECK-DAG:   Variable{{.*}}, name = "g_Const"
-CHECK-SAME:  scope = ??? (2)
+GLOBALS: Module [[MOD:.*]]
+GLOBALS: SymbolVendor pdb ([[MOD]])
+GLOBALS:     CompileUnit{{.*}}, language = "c++", file = '{{.*}}\VariablesTest.cpp'
+GLOBALS-DAG:   Variable{{.*}}, name = "g_IntVar"
+GLOBALS-SAME:  scope = global, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "m_StaticClassMember"
+GLOBALS-SAME:  scope = global, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "g_pConst"
+GLOBALS-SAME:  scope = global, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "same_name_var"
+GLOBALS-SAME:  scope = global, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "g_EnumVar"
+GLOBALS-SAME:  scope = global, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "g_tls"
+GLOBALS-SAME:  scope = thread local, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "ClassVar"
+GLOBALS-SAME:  scope = global, location = {{.*}}, external
+GLOBALS-DAG:   Variable{{.*}}, name = "g_Const"
+GLOBALS-SAME:  scope = ??? (2)
+GLOBALS:     Function
 
-CHECK-DAG:   Function{[[FID1:.*]]}, mangled = ?f@@YAHHH@Z
-CHECK-NEXT:  Block{[[FID1]]}
-CHECK-DAG:     Variable{{.*}}, name = "var_arg1"
-CHECK-SAME:    scope = parameter
-CHECK-DAG:     Variable{{.*}}, name = "var_arg2"
-CHECK-SAME:    scope = parameter
-CHECK-DAG:     Variable{{.*}}, name = "same_name_var"
-CHECK-SAME:    scope = local
+FUNC-F:      Function{{.*}}, mangled = ?f@@YAHHH@Z
+FUNC-F-NEXT:   Block
+FUNC-F-NEXT:     Variable{{.*}}, name = "var_arg1"
+FUNC-F-SAME:                     scope = parameter
+FUNC-F-NEXT:     Variable{{.*}}, name = "var_arg2"
+FUNC-F-SAME:                     scope = parameter
+FUNC-F-NEXT:     Variable{{.*}}, name = "same_name_var"
+FUNC-F-SAME:                     scope = local
 
-CHECK-DAG:   Function{[[FID2:.*]]}, mangled = main
-CHECK-NEXT:  Block{[[FID2]]}
-CHECK-DAG:     Variable{{.*}}, name = "same_name_var"
-CHECK-SAME:    scope = local
-CHECK-DAG:     Variable{{.*}}, name = "local_const"
-CHECK-SAME:    scope = local
-CHECK-DAG:     Variable{{.*}}, name = "local_pCString"
-CHECK-SAME:    scope = local
-CHECK-DAG:     Variable{{.*}}, name = "a"
-CHECK-SAME:    scope = local
+FUNC-MAIN:      Function{{.*}}, mangled = main
+FUNC-MAIN-NEXT:   Block
+FUNC-MAIN-NEXT:     Variable{{.*}}, name = "same_name_var"
+FUNC-MAIN-SAME:                     scope = local
+FUNC-MAIN-NEXT:     Variable{{.*}}, name = "local_const"
+FUNC-MAIN-SAME:                     scope = local
+FUNC-MAIN-NEXT:     Variable{{.*}}, name = "local_CString"
+FUNC-MAIN-SAME:                     scope = local
+FUNC-MAIN-NEXT:     Variable{{.*}}, name = "local_pCString"
+FUNC-MAIN-SAME:                     scope = local
+FUNC-MAIN-NEXT:     Variable{{.*}}, name = "a"
+FUNC-MAIN-SAME:                     scope = local
 
-CHECK-DAG:   Function{[[FID3:.*]]}, mangled = ??0Class@@QEAA@H@Z
-CHECK-NEXT:  Block{[[FID3]]}
-CHECK-DAG:     Variable{{.*}}, name = "this"
-CHECK-SAME:    scope = parameter
-CHECK-SAME:    artificial
-CHECK-DAG:     Variable{{.*}}, name = "a"
-CHECK-SAME:    scope = parameter
+FUNC-CONSTRUCTOR:      Function{{.*}}, mangled = ??0Class@@QEAA@H@Z
+FUNC-CONSTRUCTOR-NEXT:   Block
+FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "this"
+FUNC-CONSTRUCTOR-SAME:                     scope = parameter
+FUNC-CONSTRUCTOR-SAME:                     artificial
+FUNC-CONSTRUCTOR-NEXT:     Variable{{.*}}, name = "a"
+FUNC-CONSTRUCTOR-SAME:                     scope = parameter
 
-CHECK-DAG:   Function{[[FID4:.*]]}, mangled = ?Func@Class@@QEAAXXZ
-CHECK-NEXT:  Block{[[FID4]]}
-CHECK-DAG:     Variable{{.*}}, name = "this"
-CHECK-SAME:    scope = parameter
-CHECK-SAME:    artificial
+FUNC-MEMBER:      Function{{.*}}, mangled = ?Func@Class@@QEAAXXZ
+FUNC-MEMBER-NEXT:   Block
+FUNC-MEMBER-NEXT:     Variable{{.*}}, name = "this"
+FUNC-MEMBER-SAME:                     scope = parameter
+FUNC-MEMBER-SAME:                     artificial

@@ -28,8 +28,6 @@ def building_with_ubsan_enabled():
 def build_dir_san_suffix():
     if building_with_asan_enabled():
         return "+asan"
-    elif building_with_ubsan_enabled():
-        return "+ubsan"
     else:
         return ""
 
@@ -237,5 +235,4 @@ def library_paths():
 def package_build_path():
     return os.path.join(
         llvm_build_dirtree(),
-        LLVM_BUILD_DIRS()[
-            lldb_configuration()])
+        LLVM_BUILD_DIRS()[lldb_configuration()])

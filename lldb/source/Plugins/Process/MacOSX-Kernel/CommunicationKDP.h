@@ -1,27 +1,22 @@
 //===-- CommunicationKDP.h --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_CommunicationKDP_h_
 #define liblldb_CommunicationKDP_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <mutex>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Listener.h"
 #include "lldb/Core/StreamBuffer.h"
-#include "lldb/Host/Predicate.h"
+#include "lldb/Utility/Listener.h"
+#include "lldb/Utility/Predicate.h"
 #include "lldb/lldb-private.h"
 
 class CommunicationKDP : public lldb_private::Communication {

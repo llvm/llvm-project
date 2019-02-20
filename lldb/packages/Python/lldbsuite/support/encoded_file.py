@@ -1,8 +1,7 @@
 """
-                     The LLVM Compiler Infrastructure
-
-This file is distributed under the University of Illinois Open Source
-License. See LICENSE.TXT for details.
+Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+See https://llvm.org/LICENSE.txt for license information.
+SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 Prepares language bindings for LLDB build process.  Run with --help
 to see a description of the supported command line arguments.
@@ -32,13 +31,7 @@ def _encoded_write(old_write, encoding):
         # If we were asked to write a `str` (in Py2) or a `bytes` (in Py3) decode it
         # as unicode before attempting to write.
         if isinstance(s, six.binary_type):
-            try:
-                s = s.decode(encoding)
-            except UnicodeError as err:
-                sys.stderr.write(
-                    "attempted to write non-unicode-conformant byte "
-                    "string '{}', ignoring decode step: {}\n".format(s, err))
-                s = u""
+            s = s.decode(encoding, "replace")
         return old_write(s)
     return impl
 

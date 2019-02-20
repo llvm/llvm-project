@@ -11,6 +11,10 @@
 // This technique in general allows us to exercise most of LLDB's type
 // system without a running process.
 
+// Define _fltused, since we're not linking against the MS C runtime, but use
+// floats.
+extern "C" int _fltused = 0;
+
 template<typename T>
 struct MakeResult {
   static T result() {

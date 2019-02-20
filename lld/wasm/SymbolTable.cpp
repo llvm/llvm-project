@@ -1,9 +1,8 @@
 //===- SymbolTable.cpp ----------------------------------------------------===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -242,10 +241,12 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
 
   if (shouldReplace(S, File, Flags)) {
     // If the new defined function doesn't have signture (i.e. bitcode
-    // functions) but the old symbols does then preserve the old signature
+    // functions) but the old symbol does then preserve the old signature
     const WasmSignature *OldSig = nullptr;
     if (auto* F = dyn_cast<FunctionSymbol>(S))
       OldSig = F->Signature;
+    if (auto *L = dyn_cast<LazySymbol>(S))
+      OldSig = L->Signature;
     auto NewSym = replaceSymbol<DefinedFunction>(S, Name, Flags, File, Function);
     if (!NewSym->Signature)
       NewSym->Signature = OldSig;
@@ -378,15 +379,31 @@ void SymbolTable::addLazy(ArchiveFile *File, const Archive::Symbol *Sym) {
   std::tie(S, WasInserted) = insert(Name, nullptr);
 
   if (WasInserted) {
-    replaceSymbol<LazySymbol>(S, Name, File, *Sym);
+    replaceSymbol<LazySymbol>(S, Name, 0, File, *Sym);
     return;
   }
 
-  // If there is an existing undefined symbol, load a new one from the archive.
-  if (S->isUndefined()) {
-    LLVM_DEBUG(dbgs() << "replacing existing undefined\n");
-    File->addMember(Sym);
+  if (!S->isUndefined())
+    return;
+
+  // The existing symbol is undefined, load a new one from the archive,
+  // unless the the existing symbol is weak in which case replace the undefined
+  // symbols with a LazySymbol.
+  if (S->isWeak()) {
+    const WasmSignature *OldSig = nullptr;
+    // In the case of an UndefinedFunction we need to preserve the expected
+    // signature.
+    if (auto *F = dyn_cast<UndefinedFunction>(S))
+      OldSig = F->Signature;
+    LLVM_DEBUG(dbgs() << "replacing existing weak undefined symbol\n");
+    auto NewSym = replaceSymbol<LazySymbol>(S, Name, WASM_SYMBOL_BINDING_WEAK,
+                                            File, *Sym);
+    NewSym->Signature = OldSig;
+    return;
   }
+
+  LLVM_DEBUG(dbgs() << "replacing existing undefined\n");
+  File->addMember(Sym);
 }
 
 bool SymbolTable::addComdat(StringRef Name) {

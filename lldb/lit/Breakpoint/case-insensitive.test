@@ -1,8 +1,6 @@
-# REQUIRES: windows
-# XFAIL: windows
-# -> llvm.org/pr24528
-#
-# RUN: %cc %p/Inputs/case-sensitive.c -g -o %t
+# REQUIRES: system-windows
+
+# RUN: %build %p/Inputs/case-sensitive.c --nodefaultlib -o %t
 # RUN: lldb-test breakpoints %t %s | FileCheck %s
 
 breakpoint set -f case-sensitive.c -l 3

@@ -1,18 +1,13 @@
 //===-- DisassemblerLLVMC.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Project includes
 #include "DisassemblerLLVMC.h"
 
-// Other libraries and framework includes
 #include "llvm-c/Disassembler.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -1340,10 +1335,7 @@ bool DisassemblerLLVMC::FlavorValidForArchSpec(
 
   if (triple.getArch() == llvm::Triple::x86 ||
       triple.getArch() == llvm::Triple::x86_64) {
-    if (strcmp(flavor, "intel") == 0 || strcmp(flavor, "att") == 0)
-      return true;
-    else
-      return false;
+    return strcmp(flavor, "intel") == 0 || strcmp(flavor, "att") == 0;
   } else
     return false;
 }
@@ -1382,7 +1374,7 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
       }
 
       SymbolContext sym_ctx;
-      const uint32_t resolve_scope =
+      const SymbolContextItem resolve_scope =
           eSymbolContextFunction | eSymbolContextSymbol;
       if (pc_so_addr.IsValid() && pc_so_addr.GetModule()) {
         pc_so_addr.GetModule()->ResolveSymbolContextForAddress(

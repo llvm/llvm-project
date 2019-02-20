@@ -4,6 +4,7 @@ Test SB API support for identifying artificial (tail call) frames.
 
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class TestArtificialFrameThreadStepOut1(TestBase):
@@ -35,11 +36,11 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         # Did we hit our breakpoint?
         threads = lldbutil.get_threads_stopped_at_breakpoint(process,
                 breakpoint)
-        self.assertTrue(
-            len(threads) == 1,
+        self.assertEqual(
+            len(threads), 1,
             "There should be a thread stopped at our breakpoint")
 
-        self.assertTrue(breakpoint.GetHitCount() == 1)
+        self.assertEqual(breakpoint.GetHitCount(), 1)
 
         thread = threads[0]
 
@@ -51,6 +52,7 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         #   frame #4: ... a.out`main at main.cpp:23:3 [opt]
         return thread
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_stepping_out_past_artificial_frame(self):
         self.build()
         thread = self.prepare_thread()
@@ -59,15 +61,16 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         # frame #2, because we behave as-if artificial frames were not present.
         thread.StepOut()
         frame2 = thread.GetSelectedFrame()
-        self.assertTrue(frame2.GetDisplayFunctionName() == "func2()")
+        self.assertEqual(frame2.GetDisplayFunctionName(), "func2()")
         self.assertFalse(frame2.IsArtificial())
 
         # Ditto: stepping out of frame #2 should move to frame #4.
         thread.StepOut()
         frame4 = thread.GetSelectedFrame()
-        self.assertTrue(frame4.GetDisplayFunctionName() == "main")
+        self.assertEqual(frame4.GetDisplayFunctionName(), "main")
         self.assertFalse(frame2.IsArtificial())
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
     def test_return_past_artificial_frame(self):
         self.build()
         thread = self.prepare_thread()
@@ -78,13 +81,13 @@ class TestArtificialFrameThreadStepOut1(TestBase):
         # to frame #2.
         thread.ReturnFromFrame(thread.GetSelectedFrame(), value)
         frame2 = thread.GetSelectedFrame()
-        self.assertTrue(frame2.GetDisplayFunctionName() == "func2()")
+        self.assertEqual(frame2.GetDisplayFunctionName(), "func2()")
         self.assertFalse(frame2.IsArtificial())
 
         # Ditto: stepping out of frame #2 should move to frame #4.
         thread.ReturnFromFrame(thread.GetSelectedFrame(), value)
         frame4 = thread.GetSelectedFrame()
-        self.assertTrue(frame4.GetDisplayFunctionName() == "main")
+        self.assertEqual(frame4.GetDisplayFunctionName(), "main")
         self.assertFalse(frame2.IsArtificial())
 
     def setUp(self):

@@ -1,20 +1,15 @@
 //===-- SBFrame.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <algorithm>
 #include <set>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/API/SBFrame.h"
 
 #include "lldb/lldb-types.h"
@@ -114,7 +109,7 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
   SBSymbolContext sb_sym_ctx;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
+  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   StackFrame *frame = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
@@ -123,7 +118,7 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
-        sb_sym_ctx.SetSymbolContext(&frame->GetSymbolContext(resolve_scope));
+        sb_sym_ctx.SetSymbolContext(&frame->GetSymbolContext(scope));
       } else {
         if (log)
           log->Printf("SBFrame::GetVariables () => error: could not "
@@ -962,7 +957,8 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
 
   const bool statics = options.GetIncludeStatics();
   const bool arguments = options.GetIncludeArguments();
-  const bool recognized_arguments = options.GetIncludeRecognizedArguments();
+  const bool recognized_arguments =
+        options.GetIncludeRecognizedArguments(SBTarget(exe_ctx.GetTargetSP()));
   const bool locals = options.GetIncludeLocals();
   const bool in_scope_only = options.GetInScopeOnly();
   const bool include_runtime_support_values =

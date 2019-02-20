@@ -1,9 +1,8 @@
 //===-- DWARFExpression.h ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,8 +11,8 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private.h"
 #include <functional>
@@ -40,7 +39,10 @@ public:
   enum LocationListFormat : uint8_t {
     NonLocationList,     // Not a location list
     RegularLocationList, // Location list format used in non-split dwarf files
-    SplitDwarfLocationList, // Location list format used in split dwarf files
+    SplitDwarfLocationList, // Location list format used in pre-DWARF v5 split
+                            // dwarf files (.debug_loc.dwo)
+    LocLists,               // Location list format used in DWARF v5
+                            // (.debug_loclists/.debug_loclists.dwo).
   };
 
   //------------------------------------------------------------------
@@ -152,7 +154,7 @@ public:
   lldb::addr_t GetLocation_DW_OP_addr(uint32_t op_addr_idx, bool &error) const;
 
   bool Update_DW_OP_addr(lldb::addr_t file_addr);
-  
+
   void SetModule(const lldb::ModuleSP &module) { m_module_wp = module; }
 
   bool ContainsThreadLocalStorage() const;

@@ -1,9 +1,8 @@
 //===-- FileSystem.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -75,7 +74,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   else if (!llvm::convertWideToUTF8(buf.data(), path))
     error.SetErrorString(PATH_CONVERSION_ERROR);
   else
-    dst.SetFile(path, false, FileSpec::Style::native);
+    dst.SetFile(path, FileSpec::Style::native);
 
   ::CloseHandle(h);
   return error;
@@ -95,4 +94,13 @@ FILE *FileSystem::Fopen(const char *path, const char *mode) {
   if (_wfopen_s(&file, wpath.c_str(), wmode.c_str()) != 0)
     return nullptr;
   return file;
+}
+
+int FileSystem::Open(const char *path, int flags, int mode) {
+  std::wstring wpath;
+  if (!llvm::ConvertUTF8toWide(path, wpath))
+    return -1;
+  int result;
+  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
+  return result;
 }

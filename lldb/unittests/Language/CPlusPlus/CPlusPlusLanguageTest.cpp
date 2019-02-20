@@ -1,9 +1,8 @@
 //===-- CPlusPlusLanguageTest.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
@@ -138,7 +137,14 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       {"std::vector<Class, std::allocator<Class>>"
        "::_M_emplace_back_aux<Class const&>",
        "std::vector<Class, std::allocator<Class>>",
-       "_M_emplace_back_aux<Class const&>"}};
+       "_M_emplace_back_aux<Class const&>"},
+      {"`anonymous namespace'::foo", "`anonymous namespace'", "foo"},
+      {"`operator<<A>'::`2'::B<0>::operator>",
+       "`operator<<A>'::`2'::B<0>",
+       "operator>"},
+      {"`anonymous namespace'::S::<<::__l2::Foo",
+       "`anonymous namespace'::S::<<::__l2",
+       "Foo"}};
 
   llvm::StringRef context, basename;
   for (const auto &test : test_cases) {
@@ -184,4 +190,5 @@ TEST(CPlusPlusLanguage, FindAlternateFunctionManglings) {
   EXPECT_THAT(FindAlternate("_ZN1A1fEx"), Contains("_ZN1A1fEl"));
   EXPECT_THAT(FindAlternate("_ZN1A1fEy"), Contains("_ZN1A1fEm"));
   EXPECT_THAT(FindAlternate("_ZN1A1fEai"), Contains("_ZN1A1fEci"));
+  EXPECT_THAT(FindAlternate("_bogus"), IsEmpty());
 }

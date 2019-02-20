@@ -1,20 +1,15 @@
 //===-- ProcessInfo.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/ProcessInfo.h"
 
-// C Includes
-// C++ Includes
 #include <climits>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Stream.h"
 
@@ -29,8 +24,8 @@ ProcessInfo::ProcessInfo()
 
 ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
                          lldb::pid_t pid)
-    : m_executable(name, false), m_arguments(), m_environment(),
-      m_uid(UINT32_MAX), m_gid(UINT32_MAX), m_arch(arch), m_pid(pid) {}
+    : m_executable(name), m_arguments(), m_environment(), m_uid(UINT32_MAX),
+      m_gid(UINT32_MAX), m_arch(arch), m_pid(pid) {}
 
 void ProcessInfo::Clear() {
   m_executable.Clear();
@@ -67,7 +62,7 @@ void ProcessInfo::SetExecutableFile(const FileSpec &exe_file,
   if (exe_file) {
     m_executable = exe_file;
     if (add_exe_file_as_first_arg) {
-      llvm::SmallString<PATH_MAX> filename;
+      llvm::SmallString<128> filename;
       exe_file.GetPath(filename);
       if (!filename.empty())
         m_arguments.InsertArgumentAtIndex(0, filename);
@@ -96,8 +91,7 @@ void ProcessInfo::SetArguments(char const **argv,
       // Yes the first argument is an executable, set it as the executable in
       // the launch options. Don't resolve the file path as the path could be a
       // remote platform path
-      const bool resolve = false;
-      m_executable.SetFile(first_arg, resolve, FileSpec::Style::native);
+      m_executable.SetFile(first_arg, FileSpec::Style::native);
     }
   }
 }
@@ -113,8 +107,7 @@ void ProcessInfo::SetArguments(const Args &args, bool first_arg_is_executable) {
       // Yes the first argument is an executable, set it as the executable in
       // the launch options. Don't resolve the file path as the path could be a
       // remote platform path
-      const bool resolve = false;
-      m_executable.SetFile(first_arg, resolve, FileSpec::Style::native);
+      m_executable.SetFile(first_arg, FileSpec::Style::native);
     }
   }
 }

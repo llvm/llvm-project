@@ -1,9 +1,8 @@
 //===-- NativeProcessLinux.h ---------------------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -71,9 +70,6 @@ public:
   Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                     size_t &bytes_read) override;
 
-  Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
-                               size_t &bytes_read) override;
-
   Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                      size_t &bytes_written) override;
 
@@ -134,13 +130,8 @@ public:
   bool SupportHardwareSingleStepping() const;
 
 protected:
-  // ---------------------------------------------------------------------
-  // NativeProcessProtocol protected interface
-  // ---------------------------------------------------------------------
-  Status
-  GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
-                                  size_t &actual_opcode_size,
-                                  const uint8_t *&trap_opcode_bytes) override;
+  llvm::Expected<llvm::ArrayRef<uint8_t>>
+  GetSoftwareBreakpointTrapOpcode(size_t size_hint) override;
 
 private:
   MainLoop::SignalHandleUP m_sigchld_handle;
@@ -189,10 +180,6 @@ private:
   bool StopTrackingThread(lldb::tid_t thread_id);
 
   NativeThreadLinux &AddThread(lldb::tid_t thread_id);
-
-  Status GetSoftwareBreakpointPCOffset(uint32_t &actual_opcode_size);
-
-  Status FixupBreakpointPCAsNeeded(NativeThreadLinux &thread);
 
   /// Writes a siginfo_t structure corresponding to the given thread ID to the
   /// memory region pointed to by @p siginfo.

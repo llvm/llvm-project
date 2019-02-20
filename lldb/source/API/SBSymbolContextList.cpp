@@ -1,9 +1,8 @@
 //===-- SBSymbolContextList.cpp ---------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,14 +30,14 @@ operator=(const SBSymbolContextList &rhs) {
 }
 
 uint32_t SBSymbolContextList::GetSize() const {
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     return m_opaque_ap->GetSize();
   return 0;
 }
 
 SBSymbolContext SBSymbolContextList::GetContextAtIndex(uint32_t idx) {
   SBSymbolContext sb_sc;
-  if (m_opaque_ap.get()) {
+  if (m_opaque_ap) {
     SymbolContext sc;
     if (m_opaque_ap->GetContextAtIndex(idx, sc)) {
       sb_sc.SetSymbolContext(&sc);
@@ -48,7 +47,7 @@ SBSymbolContext SBSymbolContextList::GetContextAtIndex(uint32_t idx) {
 }
 
 void SBSymbolContextList::Clear() {
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     m_opaque_ap->Clear();
 }
 
@@ -62,7 +61,7 @@ void SBSymbolContextList::Append(SBSymbolContextList &sc_list) {
     m_opaque_ap->Append(*sc_list);
 }
 
-bool SBSymbolContextList::IsValid() const { return m_opaque_ap.get() != NULL; }
+bool SBSymbolContextList::IsValid() const { return m_opaque_ap != NULL; }
 
 lldb_private::SymbolContextList *SBSymbolContextList::operator->() const {
   return m_opaque_ap.get();
@@ -70,12 +69,12 @@ lldb_private::SymbolContextList *SBSymbolContextList::operator->() const {
 
 lldb_private::SymbolContextList &SBSymbolContextList::operator*() const {
   assert(m_opaque_ap.get());
-  return *m_opaque_ap.get();
+  return *m_opaque_ap;
 }
 
 bool SBSymbolContextList::GetDescription(lldb::SBStream &description) {
   Stream &strm = description.ref();
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     m_opaque_ap->GetDescription(&strm, lldb::eDescriptionLevelFull, NULL);
   return true;
 }

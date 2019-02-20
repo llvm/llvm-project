@@ -1,27 +1,20 @@
 //===-- ABISysV_arm.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "ABISysV_arm.h"
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 
-// Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -30,6 +23,8 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
@@ -1444,10 +1439,7 @@ bool ABISysV_arm::PrepareTrivialCall(Thread &thread, addr_t sp,
       ~1ull; // clear bit zero since the CPSR will take care of the mode for us
 
   // Set "pc" to the address requested
-  if (!reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, function_addr))
-    return false;
-
-  return true;
+  return reg_ctx->WriteRegisterFromUnsigned(pc_reg_num, function_addr);
 }
 
 bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
@@ -1480,7 +1472,7 @@ bool ABISysV_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
       size_t bit_width = 0;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           compiler_type.IsPointerOrReferenceType()) {
-        if (auto size = compiler_type.GetBitSize(&thread))
+        if (llvm::Optional<uint64_t> size = compiler_type.GetBitSize(&thread))
           bit_width = *size;
       } else {
         // We only handle integer, pointer and reference types currently...
@@ -1587,8 +1579,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info =
       reg_ctx->GetRegisterInfo(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_ARG1);
-  auto bit_width = compiler_type.GetBitSize(&thread);
-  auto byte_size = compiler_type.GetByteSize(&thread);
+  llvm::Optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+  llvm::Optional<uint64_t> byte_size = compiler_type.GetByteSize(&thread);
   if (!bit_width || !byte_size)
     return return_valobj_sp;
 
@@ -1724,7 +1716,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
           compiler_type.IsHomogeneousAggregate(&base_type);
 
       if (homogeneous_count > 0 && homogeneous_count <= 4) {
-        auto base_byte_size = base_type.GetByteSize(nullptr);
+        llvm::Optional<uint64_t> base_byte_size =
+            base_type.GetByteSize(nullptr);
         if (base_type.IsVectorType(nullptr, nullptr)) {
           if (base_byte_size &&
               (*base_byte_size == 8 || *base_byte_size == 16)) {
@@ -1752,7 +1745,8 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
                 compiler_type.GetFieldAtIndex(index, name, NULL, NULL, NULL);
 
             if (base_type.IsFloatingPointType(float_count, is_complex)) {
-              auto base_byte_size = base_type.GetByteSize(nullptr);
+              llvm::Optional<uint64_t> base_byte_size =
+                  base_type.GetByteSize(nullptr);
               if (float_count == 2 && is_complex) {
                 if (index != 0 && base_byte_size &&
                     vfp_byte_size != *base_byte_size)

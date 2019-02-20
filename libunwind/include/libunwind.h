@@ -1,9 +1,8 @@
 //===---------------------------- libunwind.h -----------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //
 // Compatible with libunwind API documented at:
@@ -76,7 +75,7 @@ typedef struct unw_addr_space *unw_addr_space_t;
 
 typedef int unw_regnum_t;
 typedef uintptr_t unw_word_t;
-#if defined(__arm__)
+#if defined(__arm__) && !defined(__ARM_DWARF_EH__)
 typedef uint64_t unw_fpreg_t;
 #else
 typedef double unw_fpreg_t;
@@ -821,6 +820,42 @@ enum {
   UNW_MIPS_F31 = 63,
   UNW_MIPS_HI = 64,
   UNW_MIPS_LO = 65,
+};
+
+// SPARC registers
+enum {
+  UNW_SPARC_G0 = 0,
+  UNW_SPARC_G1 = 1,
+  UNW_SPARC_G2 = 2,
+  UNW_SPARC_G3 = 3,
+  UNW_SPARC_G4 = 4,
+  UNW_SPARC_G5 = 5,
+  UNW_SPARC_G6 = 6,
+  UNW_SPARC_G7 = 7,
+  UNW_SPARC_O0 = 8,
+  UNW_SPARC_O1 = 9,
+  UNW_SPARC_O2 = 10,
+  UNW_SPARC_O3 = 11,
+  UNW_SPARC_O4 = 12,
+  UNW_SPARC_O5 = 13,
+  UNW_SPARC_O6 = 14,
+  UNW_SPARC_O7 = 15,
+  UNW_SPARC_L0 = 16,
+  UNW_SPARC_L1 = 17,
+  UNW_SPARC_L2 = 18,
+  UNW_SPARC_L3 = 19,
+  UNW_SPARC_L4 = 20,
+  UNW_SPARC_L5 = 21,
+  UNW_SPARC_L6 = 22,
+  UNW_SPARC_L7 = 23,
+  UNW_SPARC_I0 = 24,
+  UNW_SPARC_I1 = 25,
+  UNW_SPARC_I2 = 26,
+  UNW_SPARC_I3 = 27,
+  UNW_SPARC_I4 = 28,
+  UNW_SPARC_I5 = 29,
+  UNW_SPARC_I6 = 30,
+  UNW_SPARC_I7 = 31,
 };
 
 #endif

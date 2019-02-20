@@ -1,42 +1,41 @@
 //===-- SourceManager.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/SourceManager.h"
 
-#include "lldb/Core/Address.h"      // for Address
-#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/Address.h"
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/FormatEntity.h" // for FormatEntity
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/LineEntry.h" // for LineEntry
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/PathMappingList.h" // for PathMappingList
+#include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/lldb-enumerations.h" // for StopShowColumn::eStopSho...
+#include "lldb/lldb-enumerations.h"
 
-#include "llvm/ADT/Twine.h" // for Twine
+#include "llvm/ADT/Twine.h"
 
 #include <memory>
-#include <utility> // for pair
+#include <utility>
 
-#include <assert.h> // for assert
-#include <stdio.h>  // for size_t, NULL, snprintf
+#include <assert.h>
+#include <stdio.h>
 
 namespace lldb_private {
 class ExecutionContext;
@@ -92,7 +91,7 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
     file_sp->UpdateIfNeeded();
 
   // If file_sp is no good or it points to a non-existent file, reset it.
-  if (!file_sp || !file_sp->GetFileSpec().Exists()) {
+  if (!file_sp || !FileSystem::Instance().Exists(file_sp->GetFileSpec())) {
     if (target_sp)
       file_sp = std::make_shared<File>(file_spec, target_sp.get());
     else
@@ -158,7 +157,9 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
     const SymbolContextList *bp_locs) {
   if (count == 0)
     return 0;
-  size_t return_value = 0;
+
+  Stream::ByteDelta delta(*s);
+
   if (start_line == 0) {
     if (m_last_line != 0 && m_last_line != UINT32_MAX)
       start_line = m_last_line + m_last_count;
@@ -193,9 +194,8 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
           ::snprintf(prefix, sizeof(prefix), "    ");
       }
 
-      return_value +=
-          s->Printf("%s%2.2s %-4u\t", prefix,
-                    line == curr_line ? current_line_cstr : "", line);
+      s->Printf("%s%2.2s %-4u\t", prefix,
+                line == curr_line ? current_line_cstr : "", line);
 
       // So far we treated column 0 as a special 'no column value', but
       // DisplaySourceLines starts counting columns from 0 (and no column is
@@ -211,21 +211,20 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         // Display caret cursor.
         std::string src_line;
         m_last_file_sp->GetLine(line, src_line);
-        return_value += s->Printf("    \t");
+        s->Printf("    \t");
         // Insert a space for every non-tab character in the source line.
         for (size_t i = 0; i + 1 < column && i < src_line.length(); ++i)
-          return_value += s->PutChar(src_line[i] == '\t' ? '\t' : ' ');
+          s->PutChar(src_line[i] == '\t' ? '\t' : ' ');
         // Now add the caret.
-        return_value += s->Printf("^\n");
+        s->Printf("^\n");
       }
       if (this_line_size == 0) {
         m_last_line = UINT32_MAX;
         break;
-      } else
-        return_value += this_line_size;
+      }
     }
   }
-  return return_value;
+  return *delta;
 }
 
 size_t SourceManager::DisplaySourceLinesWithLineNumbers(
@@ -405,14 +404,14 @@ void SourceManager::FindLinesMatchingRegex(FileSpec &file_spec,
 SourceManager::File::File(const FileSpec &file_spec,
                           lldb::DebuggerSP debugger_sp)
     : m_file_spec_orig(file_spec), m_file_spec(file_spec),
-      m_mod_time(FileSystem::GetModificationTime(file_spec)),
+      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_debugger_wp(debugger_sp) {
   CommonInitializer(file_spec, nullptr);
 }
 
 SourceManager::File::File(const FileSpec &file_spec, Target *target)
     : m_file_spec_orig(file_spec), m_file_spec(file_spec),
-      m_mod_time(FileSystem::GetModificationTime(file_spec)),
+      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_debugger_wp(target ? target->GetDebugger().shared_from_this()
                            : DebuggerSP()) {
   CommonInitializer(file_spec, target);
@@ -432,7 +431,8 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         size_t num_matches =
             target->GetImages().ResolveSymbolContextForFilePath(
                 file_spec.GetFilename().AsCString(), 0, check_inlines,
-                lldb::eSymbolContextModule | lldb::eSymbolContextCompUnit,
+                SymbolContextItem(eSymbolContextModule |
+                                  eSymbolContextCompUnit),
                 sc_list);
         bool got_multiple = false;
         if (num_matches != 0) {
@@ -456,12 +456,12 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
             SymbolContext sc;
             sc_list.GetContextAtIndex(0, sc);
             m_file_spec = sc.comp_unit;
-            m_mod_time = FileSystem::GetModificationTime(m_file_spec);
+            m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
           }
         }
       }
       // Try remapping if m_file_spec does not correspond to an existing file.
-      if (!m_file_spec.Exists()) {
+      if (!FileSystem::Instance().Exists(m_file_spec)) {
         FileSpec new_file_spec;
         // Check target specific source remappings first, then fall back to
         // modules objects can have individual path remappings that were
@@ -469,14 +469,14 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         if (target->GetSourcePathMap().FindFile(m_file_spec, new_file_spec) ||
             target->GetImages().FindSourceFile(m_file_spec, new_file_spec)) {
           m_file_spec = new_file_spec;
-          m_mod_time = FileSystem::GetModificationTime(m_file_spec);
+          m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
         }
       }
     }
   }
 
   if (m_mod_time != llvm::sys::TimePoint<>())
-    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
+    m_data_sp = FileSystem::Instance().CreateDataBuffer(m_file_spec);
 }
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
@@ -520,7 +520,7 @@ uint32_t SourceManager::File::GetLineLength(uint32_t line,
 
   if (end_offset > start_offset) {
     uint32_t length = end_offset - start_offset;
-    if (include_newline_chars == false) {
+    if (!include_newline_chars) {
       const char *line_start =
           (const char *)m_data_sp->GetBytes() + start_offset;
       while (length > 0) {
@@ -549,12 +549,12 @@ void SourceManager::File::UpdateIfNeeded() {
   // TODO: use host API to sign up for file modifications to anything in our
   // source cache and only update when we determine a file has been updated.
   // For now we check each time we want to display info for the file.
-  auto curr_mod_time = FileSystem::GetModificationTime(m_file_spec);
+  auto curr_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
 
   if (curr_mod_time != llvm::sys::TimePoint<>() &&
       m_mod_time != curr_mod_time) {
     m_mod_time = curr_mod_time;
-    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
+    m_data_sp = FileSystem::Instance().CreateDataBuffer(m_file_spec);
     m_offsets.clear();
   }
 }

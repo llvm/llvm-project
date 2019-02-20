@@ -1,16 +1,11 @@
 //===-- SBCommandReturnObject.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/API/SBCommandReturnObject.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
@@ -52,9 +47,7 @@ operator=(const SBCommandReturnObject &rhs) {
   return *this;
 }
 
-bool SBCommandReturnObject::IsValid() const {
-  return m_opaque_ap.get() != nullptr;
-}
+bool SBCommandReturnObject::IsValid() const { return m_opaque_ap != nullptr; }
 
 const char *SBCommandReturnObject::GetOutput() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));

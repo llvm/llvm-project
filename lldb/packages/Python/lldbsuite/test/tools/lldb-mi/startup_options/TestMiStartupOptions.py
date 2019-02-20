@@ -22,7 +22,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
     def test_lldbmi_executable_option_file(self):
         """Test that 'lldb-mi --interpreter %s' loads executable file."""
 
-        self.spawnLldbMi(args="%s" % self.myexe)
+        self.spawnLldbMi(exe=self.myexe)
 
         # Test that the executable is loaded when file was specified
         self.expect("-file-exec-and-symbols \"%s\"" % self.myexe)
@@ -52,7 +52,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         # Prepare path to executable
         path = "unknown_file"
 
-        self.spawnLldbMi(args="%s" % path)
+        self.spawnLldbMi(exe=path)
 
         # Test that the executable isn't loaded when unknown file was specified
         self.expect("-file-exec-and-symbols \"%s\"" % path)
@@ -71,7 +71,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --interpreter %s' loads executable which is specified via absolute path."""
 
         # Prepare path to executable
-        self.spawnLldbMi(args="%s" % self.myexe)
+        self.spawnLldbMi(exe=self.myexe)
 
         # Test that the executable is loaded when file was specified using
         # absolute path
@@ -95,7 +95,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Prepare path to executable
         path = os.path.relpath(self.myexe, self.getBuildDir())
-        self.spawnLldbMi(args="%s" % path)
+        self.spawnLldbMi(exe=path)
 
         # Test that the executable is loaded when file was specified using
         # relative path
@@ -119,7 +119,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         # Prepare path to executable
         path = "unknown_dir" + self.myexe
 
-        self.spawnLldbMi(args="%s" % path)
+        self.spawnLldbMi(exe=path)
 
         # Test that the executable isn't loaded when file was specified using
         # unknown path
@@ -237,7 +237,11 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
 
         # Prepared source file
         sourceFile = self.copyScript("start_script_error")
-        self.spawnLldbMi(args="--source %s" % sourceFile)
+        self.spawnLldbMi(args="--source %s" % sourceFile, preconfig=False)
+
+        # After 'settings set symbols.enable-external-lookup false'
+        self.expect("settings set symbols.enable-external-lookup false")
+        self.expect("\^done")
 
         # After '-file-exec-and-symbols a.out'
         self.expect("-file-exec-and-symbols %s" % self.myexe)
@@ -259,7 +263,7 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         """Test that 'lldb-mi --log' creates a log file in the current directory."""
 
         logDirectory = self.getBuildDir()
-        self.spawnLldbMi(args="%s --log" % self.myexe)
+        self.spawnLldbMi(exe=self.myexe, args="--log")
 
         # Test that the executable is loaded when file was specified
         self.expect("-file-exec-and-symbols \"%s\"" % self.myexe)
@@ -296,9 +300,8 @@ class MiStartupOptionsTestCase(lldbmi_testcase.MiTestCaseBase):
         import tempfile
         logDirectory = tempfile.gettempdir()
 
-        self.spawnLldbMi(
-            args="%s --log --log-dir=%s" %
-            (self.myexe, logDirectory))
+        self.spawnLldbMi(exe=self.myexe,
+            args="--log --log-dir=%s" % logDirectory)
 
         # Test that the executable is loaded when file was specified
         self.expect("-file-exec-and-symbols \"%s\"" % self.myexe)

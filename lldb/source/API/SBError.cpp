@@ -1,9 +1,8 @@
 //===-- SBError.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,7 +27,7 @@ SBError::~SBError() {}
 
 const SBError &SBError::operator=(const SBError &rhs) {
   if (rhs.IsValid()) {
-    if (m_opaque_ap.get())
+    if (m_opaque_ap)
       *m_opaque_ap = *rhs;
     else
       m_opaque_ap.reset(new Status(*rhs));
@@ -39,13 +38,13 @@ const SBError &SBError::operator=(const SBError &rhs) {
 }
 
 const char *SBError::GetCString() const {
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     return m_opaque_ap->AsCString();
   return NULL;
 }
 
 void SBError::Clear() {
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     m_opaque_ap->Clear();
 }
 
@@ -53,7 +52,7 @@ bool SBError::Fail() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   bool ret_value = false;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     ret_value = m_opaque_ap->Fail();
 
   if (log)
@@ -66,7 +65,7 @@ bool SBError::Fail() const {
 bool SBError::Success() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   bool ret_value = true;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     ret_value = m_opaque_ap->Success();
 
   if (log)
@@ -80,7 +79,7 @@ uint32_t SBError::GetError() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t err = 0;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     err = m_opaque_ap->GetError();
 
   if (log)
@@ -93,7 +92,7 @@ uint32_t SBError::GetError() const {
 ErrorType SBError::GetType() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ErrorType err_type = eErrorTypeInvalid;
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     err_type = m_opaque_ap->GetType();
 
   if (log)
@@ -137,10 +136,10 @@ int SBError::SetErrorStringWithFormat(const char *format, ...) {
   return num_chars;
 }
 
-bool SBError::IsValid() const { return m_opaque_ap.get() != NULL; }
+bool SBError::IsValid() const { return m_opaque_ap != NULL; }
 
 void SBError::CreateIfNeeded() {
-  if (m_opaque_ap.get() == NULL)
+  if (m_opaque_ap == NULL)
     m_opaque_ap.reset(new Status());
 }
 
@@ -159,7 +158,7 @@ const lldb_private::Status &SBError::operator*() const {
 }
 
 bool SBError::GetDescription(SBStream &description) {
-  if (m_opaque_ap.get()) {
+  if (m_opaque_ap) {
     if (m_opaque_ap->Success())
       description.Printf("success");
     else {

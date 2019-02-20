@@ -777,7 +777,9 @@ static void CountLocals(
             swift_type->dump(ss);
             ss.flush();
             log->Printf("Adding injected self: type (%p) context(%p) is: %s",
-                        swift_type, ast_context.GetASTContext(), s.c_str());
+                        static_cast<void *>(swift_type.getPointer()),
+                        static_cast<void *>(ast_context.GetASTContext()),
+                        s.c_str());
           }
         }
       }
@@ -1421,13 +1423,16 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   // turned on.
   swift::verify(*source_file);
 
-  ParsedExpression result = {std::move(code_manipulator),
-                             *ast_context,
-                             module,
-                             *external_lookup,
-                             *source_file,
-                             std::move(main_filename)};
+  ParsedExpression result = {
+    std::move(code_manipulator), *ast_context, module, *external_lookup,
+    *source_file, std::move(main_filename), /*buffer_id*/0,
+  };
   return std::move(result);
+}
+
+bool SwiftExpressionParser::Complete(CompletionRequest &request, unsigned line,
+				     unsigned pos, unsigned typed_pos) {
+  return false;
 }
 
 unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,

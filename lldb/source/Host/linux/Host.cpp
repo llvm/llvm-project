@@ -1,13 +1,11 @@
 //===-- source/Host/linux/Host.cpp ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -18,20 +16,17 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/linux/Support.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/DataExtractor.h"
 
 using namespace lldb;
@@ -125,7 +120,7 @@ static bool IsDirNumeric(const char *dname) {
 static ArchSpec GetELFProcessCPUType(llvm::StringRef exe_path) {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
-  auto buffer_sp = DataBufferLLVM::CreateSliceFromPath(exe_path, 0x20, 0);
+  auto buffer_sp = FileSystem::Instance().CreateDataBuffer(exe_path, 0x20, 0);
   if (!buffer_sp)
     return ArchSpec();
 
@@ -190,8 +185,7 @@ static bool GetProcessAndStatInfo(::pid_t pid,
     return false;
 
   process_info.SetProcessID(pid);
-  process_info.GetExecutableFile().SetFile(PathRef, false,
-                                           FileSpec::Style::native);
+  process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
 
   llvm::StringRef Rest = Environ->getBuffer();
   while (!Rest.empty()) {

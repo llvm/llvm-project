@@ -279,8 +279,8 @@ void DWARFASTParserSwift::GetClangType(const DWARFDIE &die,
   }
 }
 
-Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
-                                                      const DWARFDIE &die) {
+Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
+    lldb_private::CompileUnit &comp_unit, const DWARFDIE &die) {
   DWARFRangeList func_ranges;
   const char *name = NULL;
   const char *mangled = NULL;
@@ -341,19 +341,19 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(const SymbolContext &sc,
       std::unique_ptr<Declaration> decl_ap;
       if (decl_file != 0 || decl_line != 0 || decl_column != 0)
         decl_ap.reset(new Declaration(
-            sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(decl_file),
+            comp_unit.GetSupportFiles().GetFileSpecAtIndex(decl_file),
             decl_line, decl_column));
 
       if (dwarf->FixupAddress(func_range.GetBaseAddress())) {
         const user_id_t func_user_id = die.GetID();
-        func_sp.reset(new Function(sc.comp_unit, func_user_id, func_user_id,
+        func_sp.reset(new Function(&comp_unit, func_user_id, func_user_id,
                                    func_name, nullptr, func_range,
                                    can_throw)); // first address range
 
         if (func_sp.get() != NULL) {
           if (frame_base.IsValid())
             func_sp->GetFrameBaseExpression() = frame_base;
-          sc.comp_unit->AddFunction(func_sp);
+          comp_unit.AddFunction(func_sp);
           return func_sp.get();
         }
       }

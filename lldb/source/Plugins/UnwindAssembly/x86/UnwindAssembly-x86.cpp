@@ -1,9 +1,8 @@
 //===-- UnwindAssembly-x86.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,7 +91,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
   // assembly parsing instead.
 
   if (first_row->GetCFAValue().GetValueType() !=
-          UnwindPlan::Row::CFAValue::isRegisterPlusOffset ||
+          UnwindPlan::Row::FAValue::isRegisterPlusOffset ||
       RegisterNumber(thread, unwind_plan.GetRegisterKind(),
                      first_row->GetCFAValue().GetRegisterNumber()) !=
           sp_regnum ||
@@ -100,10 +99,10 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
     return false;
   }
   UnwindPlan::Row::RegisterLocation first_row_pc_loc;
-  if (first_row->GetRegisterInfo(
+  if (!first_row->GetRegisterInfo(
           pc_regnum.GetAsKind(unwind_plan.GetRegisterKind()),
-          first_row_pc_loc) == false ||
-      first_row_pc_loc.IsAtCFAPlusOffset() == false ||
+          first_row_pc_loc) ||
+      !first_row_pc_loc.IsAtCFAPlusOffset() ||
       first_row_pc_loc.GetOffset() != -wordsize) {
     return false;
   }

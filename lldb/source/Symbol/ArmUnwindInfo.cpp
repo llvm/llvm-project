@@ -1,9 +1,8 @@
 //===-- ArmUnwindInfo.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -66,7 +65,7 @@ ArmUnwindInfo::ArmUnwindInfo(ObjectFile &objfile, SectionSP &arm_exidx,
 
   // Sort the entries in the exidx section. The entries should be sorted inside
   // the section but some old compiler isn't sorted them.
-  std::sort(m_exidx_entries.begin(), m_exidx_entries.end());
+  llvm::sort(m_exidx_entries.begin(), m_exidx_entries.end());
 }
 
 ArmUnwindInfo::~ArmUnwindInfo() {}

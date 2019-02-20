@@ -1,5 +1,6 @@
 import lldb
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test import decorators
 import lldbsuite.test.lldbutil as lldbutil
 
 
@@ -7,6 +8,7 @@ class TestVLA(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @decorators.skipIf(compiler="clang", compiler_version=['<', '8.0'])
     def test_vla(self):
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(

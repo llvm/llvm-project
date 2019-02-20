@@ -1,19 +1,14 @@
 //===-- AppleObjCTrampolineHandler.cpp ----------------------------*- C++
 //-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCTrampolineHandler.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "AppleThreadPlanStepThroughObjCTrampoline.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
@@ -80,7 +75,7 @@ extern \"C\" void * __lldb_objc_find_implementation_for_selector (           \n\
         void *super_ptr;                                                     \n\
     };                                                                       \n\
     struct __lldb_objc_super {                                               \n\
-        void *reciever;                                                      \n\
+        void *receiver;                                                      \n\
         struct __lldb_objc_class *class_ptr;                                 \n\
     };                                                                       \n\
     struct __lldb_msg_ref {                                                  \n\
@@ -202,7 +197,7 @@ extern \"C\" void * __lldb_objc_find_implementation_for_selector (void *object, 
         void *super_ptr;                                                     \n\
     };                                                                       \n\
     struct __lldb_objc_super {                                               \n\
-        void *reciever;                                                      \n\
+        void *receiver;                                                      \n\
         struct __lldb_objc_class *class_ptr;                                 \n\
     };                                                                       \n\
     struct __lldb_msg_ref {                                                  \n\

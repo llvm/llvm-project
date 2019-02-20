@@ -1,9 +1,8 @@
 //===-- HostInfoWindows.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,7 +10,7 @@
 
 #include <objbase.h>
 
-#include <mutex> // std::once
+#include <mutex>
 
 #include "lldb/Host/windows/HostInfoWindows.h"
 #include "lldb/Host/windows/PosixApi.h"
@@ -92,7 +91,7 @@ FileSpec HostInfoWindows::GetProgramFileSpec() {
     ::GetModuleFileNameW(NULL, buffer.data(), buffer.size());
     std::string path;
     llvm::convertWideToUTF8(buffer.data(), path);
-    m_program_filespec.SetFile(path, false, FileSpec::Style::native);
+    m_program_filespec.SetFile(path, FileSpec::Style::native);
   });
   return m_program_filespec;
 }
@@ -103,9 +102,9 @@ FileSpec HostInfoWindows::GetDefaultShell() {
 
   std::string shell;
   if (GetEnvironmentVar("ComSpec", shell))
-    return FileSpec(shell, false);
+    return FileSpec(shell);
 
-  return FileSpec("C:\\Windows\\system32\\cmd.exe", false);
+  return FileSpec("C:\\Windows\\system32\\cmd.exe");
 }
 
 bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,

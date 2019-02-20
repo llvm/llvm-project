@@ -1,0 +1,47 @@
+# XFAIL: system-windows
+# -> llvm.org/pr24452
+#
+# RUN: %clang -o %t %p/inputs/break-insert-pending.c -g
+# RUN: %lldbmi %t < %s | FileCheck %s
+
+# Test for enabling pending breakpoints globally
+
+-break-insert printf
+# CHECK: ^error,msg="Command 'break-insert'. Breakpoint location 'printf' not found
+
+-gdb-set breakpoint pending on
+# CHECK: ^done
+-gdb-show breakpoint pending
+# CHECK: ^done,value="on"
+-break-insert printf
+# CHECK: ^done,bkpt={number="2",type="breakpoint",disp="keep",enabled="y",addr="0xffffffffffffffff",func="??",file="??",fullname="??/??",line="0",pending=["printf"],times="0",original-location="printf"}
+
+-exec-run
+# CHECK: ^running
+# CHECK: *stopped,reason="breakpoint-hit",disp="del",bkptno="2",frame={level="0",addr="{{0x[0-9a-f]*[^f][0-9a-f]*}}"
+-break-disable 2
+# CHECK: ^done
+-exec-continue
+# CHECK: ^running
+# CHECK: *stopped,reason="exited-normally"
+
+# Test that it can be turned back off
+-gdb-show breakpoint pending
+# CHECK: ^done,value="on"
+-gdb-set breakpoint pending off
+# CHECK: ^done
+-gdb-show breakpoint pending
+# CHECK: ^done,value="off"
+-break-insert printf-non-existent
+# CHECK: ^error,msg="Command 'break-insert'. Breakpoint location 'printf-non-existent' not found"
+# Check that enable/disable with 1 and 0 works
+-gdb-set breakpoint pending 1
+# CHECK: ^done
+-gdb-show breakpoint pending
+# CHECK: ^done,value="on"
+-gdb-set breakpoint pending 0
+# CHECK: ^done
+-gdb-show breakpoint pending
+# CHECK: ^done,value="off"
+-gdb-set breakpoint pending garbage
+# CHECK: ^done

@@ -1,9 +1,8 @@
 //===-- SymbolFileDWARFDwo.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -61,14 +60,6 @@ SymbolFileDWARFDwo::ParseCompileUnit(DWARFUnit *dwarf_cu,
 }
 
 DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
-  // A clang module is found via a skeleton CU, but is not a proper DWO.
-  // Clang modules have a .debug_info section instead of the *_dwo variant.
-  if (auto *section_list = m_obj_file->GetSectionList(false))
-    if (auto section_sp =
-            section_list->FindSectionByType(eSectionTypeDWARFDebugInfo, true))
-      if (!section_sp->GetName().GetStringRef().endswith("dwo"))
-        return nullptr;
-
   // Only dwo files with 1 compile unit is supported
   if (GetNumCompileUnits() == 1)
     return DebugInfo()->GetCompileUnitAtIndex(0);
@@ -124,6 +115,37 @@ lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
 
 DWARFUnit *SymbolFileDWARFDwo::GetBaseCompileUnit() {
   return m_base_dwarf_cu;
+}
+
+const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_abbrev_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugAbbrevDwo,
+                              m_data_debug_abbrev);
+}
+
+const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_addr_data() {
+  // For single file split dwarf case (when we have .dwo sections in a .o),
+  // we do not want to use the .debug_addr section from .o file,
+  // but want to get one from the final executable.
+  // For regular split debug case, .dwo file does not contain the
+  // .debug_addr, so we would always fall back to such lookup anyways.
+  llvm::call_once(m_data_debug_addr.m_flag, [this] {
+    SymbolFileDWARF::LoadSectionData(eSectionTypeDWARFDebugAddr,
+                                     std::ref(m_data_debug_addr.m_data));
+  });
+  return m_data_debug_addr.m_data;
+}
+
+const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_info_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugInfoDwo, m_data_debug_info);
+}
+
+const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_str_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugStrDwo, m_data_debug_str);
+}
+
+const DWARFDataExtractor &SymbolFileDWARFDwo::get_debug_str_offsets_data() {
+  return GetCachedSectionData(eSectionTypeDWARFDebugStrOffsetsDwo,
+                              m_data_debug_str_offsets);
 }
 
 SymbolFileDWARF *SymbolFileDWARFDwo::GetBaseSymbolFile() {

@@ -1,26 +1,25 @@
 //===-- ValueObjectMemory.cpp ---------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ValueObjectMemory.h"
-#include "lldb/Core/Scalar.h" // for Scalar, operator!=
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataExtractor.h" // for DataExtractor
-#include "lldb/Utility/Status.h"        // for Status
-#include "lldb/lldb-types.h"            // for addr_t
-#include "llvm/Support/ErrorHandling.h" // for llvm_unreachable
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-types.h"
+#include "llvm/Support/ErrorHandling.h"
 
-#include <assert.h> // for assert
-#include <memory>   // for shared_ptr
+#include <assert.h>
+#include <memory>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -137,10 +136,8 @@ size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
 
 uint64_t ValueObjectMemory::GetByteSize() {
   if (m_type_sp)
-    return m_type_sp->GetByteSize();
-  if (auto size = m_compiler_type.GetByteSize(nullptr))
-    return *size;
-  return 0;
+    return m_type_sp->GetByteSize().getValueOr(0);
+  return m_compiler_type.GetByteSize(nullptr).getValueOr(0);
 }
 
 lldb::ValueType ValueObjectMemory::GetValueType() const {

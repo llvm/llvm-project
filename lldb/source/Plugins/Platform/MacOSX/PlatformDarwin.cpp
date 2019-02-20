@@ -1,22 +1,18 @@
 //===-- PlatformDarwin.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "PlatformDarwin.h"
 
-// C Includes
 #include <string.h>
 
-// C++ Includes
 #include <algorithm>
 #include <mutex>
 
-// Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Debugger.h"
@@ -33,7 +29,6 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
@@ -43,7 +38,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
-#include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
+#include <TargetConditionals.h>
 #endif
 
 using namespace lldb;
@@ -88,7 +83,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
           ObjectFile *objfile = symfile->GetObjectFile();
           if (objfile) {
             FileSpec symfile_spec(objfile->GetFileSpec());
-            if (symfile_spec && symfile_spec.Exists()) {
+            if (symfile_spec && FileSystem::Instance().Exists(symfile_spec)) {
               while (module_spec.GetFilename()) {
                 std::string module_basename(
                     module_spec.GetFilename().GetCString());
@@ -130,20 +125,21 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                     "%s/../Python/%s.py",
                     symfile_spec.GetDirectory().GetCString(),
                     original_module_basename.c_str());
-                FileSpec script_fspec(path_string.GetString(), true);
-                FileSpec orig_script_fspec(original_path_string.GetString(),
-                                           true);
+                FileSpec script_fspec(path_string.GetString());
+                FileSystem::Instance().Resolve(script_fspec);
+                FileSpec orig_script_fspec(original_path_string.GetString());
+                FileSystem::Instance().Resolve(orig_script_fspec);
 
                 // if we did some replacements of reserved characters, and a
                 // file with the untampered name exists, then warn the user
                 // that the file as-is shall not be loaded
                 if (feedback_stream) {
                   if (module_basename != original_module_basename &&
-                      orig_script_fspec.Exists()) {
+                      FileSystem::Instance().Exists(orig_script_fspec)) {
                     const char *reason_for_complaint =
                         was_keyword ? "conflicts with a keyword"
                                     : "contains reserved characters";
-                    if (script_fspec.Exists())
+                    if (FileSystem::Instance().Exists(script_fspec))
                       feedback_stream->Printf(
                           "warning: the symbol file '%s' contains a debug "
                           "script. However, its name"
@@ -167,7 +163,7 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
                   }
                 }
 
-                if (script_fspec.Exists()) {
+                if (FileSystem::Instance().Exists(script_fspec)) {
                   file_list.Append(script_fspec);
                   break;
                 }
@@ -193,25 +189,12 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          const ModuleSpec &sym_spec,
                                          FileSpec &sym_file) {
-  Status error;
   sym_file = sym_spec.GetSymbolFileSpec();
-
-  llvm::sys::fs::file_status st;
-  if (status(sym_file.GetPath(), st, false)) {
-    error.SetErrorString("Could not stat file!");
-    return error;
+  if (FileSystem::Instance().IsDirectory(sym_file)) {
+    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
+                                               sym_spec.GetArchitecturePtr());
   }
-
-  if (exists(st)) {
-    if (is_directory(st)) {
-      sym_file = Symbols::FindSymbolFileInBundle(
-          sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
-    }
-  } else {
-    if (sym_spec.GetUUID().IsValid()) {
-    }
-  }
-  return error;
+  return {};
 }
 
 static lldb_private::Status
@@ -261,7 +244,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
     if (!cache_path.empty()) {
       std::string module_path(module_spec.GetFileSpec().GetPath());
       cache_path.append(module_path);
-      FileSpec module_cache_spec(cache_path, false);
+      FileSpec module_cache_spec(cache_path);
 
       // if rsync is supported, always bring in the file - rsync will be very
       // efficient when files are the same on the local and remote end of the
@@ -270,7 +253,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
         err = BringInRemoteFile(this, module_spec, module_cache_spec);
         if (err.Fail())
           return err;
-        if (module_cache_spec.Exists()) {
+        if (FileSystem::Instance().Exists(module_cache_spec)) {
           Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
           if (log)
             log->Printf("[%s] module %s/%s was rsynced and is now there",
@@ -286,7 +269,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
       }
 
       // try to find the module in the cache
-      if (module_cache_spec.Exists()) {
+      if (FileSystem::Instance().Exists(module_cache_spec)) {
         // get the local and remote MD5 and compare
         if (m_remote_platform_sp) {
           // when going over the *slow* GDB remote transfer mechanism we first
@@ -337,7 +320,7 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
       Status err = BringInRemoteFile(this, module_spec, module_cache_spec);
       if (err.Fail())
         return err;
-      if (module_cache_spec.Exists()) {
+      if (FileSystem::Instance().Exists(module_cache_spec)) {
         Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
         if (log)
           log->Printf("[%s] module %s/%s is now cached and fine",
@@ -412,8 +395,8 @@ Status PlatformDarwin::GetSharedModule(
               snprintf(new_path + search_path_len,
                        sizeof(new_path) - search_path_len, "/%s",
                        platform_path + bundle_directory_len);
-              FileSpec new_file_spec(new_path, false);
-              if (new_file_spec.Exists()) {
+              FileSpec new_file_spec(new_path);
+              if (FileSystem::Instance().Exists(new_file_spec)) {
                 ModuleSpec new_module_spec(module_spec);
                 new_module_spec.GetFileSpec() = new_file_spec;
                 Status new_error(Platform::GetSharedModule(
@@ -505,10 +488,7 @@ bool PlatformDarwin::ModuleIsExcludedForUnconstrainedSearches(
     return false;
 
   ObjectFile::Type obj_type = obj_file->GetType();
-  if (obj_type == ObjectFile::eTypeDynamicLinker)
-    return true;
-  else
-    return false;
+  return obj_type == ObjectFile::eTypeDynamicLinker;
 }
 
 bool PlatformDarwin::x86GetSupportedArchitectureAtIndex(uint32_t idx,
@@ -1167,9 +1147,9 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
       if (xcode_select_prefix_dir)
         xcode_dir_path.append(xcode_select_prefix_dir);
       xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
-      temp_file_spec.SetFile(xcode_dir_path, false, FileSpec::Style::native);
+      temp_file_spec.SetFile(xcode_dir_path, FileSpec::Style::native);
       auto dir_buffer =
-          DataBufferLLVM::CreateFromPath(temp_file_spec.GetPath());
+          FileSystem::Instance().CreateDataBuffer(temp_file_spec.GetPath());
       if (dir_buffer && dir_buffer->GetByteSize() > 0) {
         llvm::StringRef path_ref(dir_buffer->GetChars());
         // Trim tailing newlines and make sure there is enough room for a null
@@ -1183,8 +1163,8 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
     }
 
     if (!developer_dir_path_valid) {
-      FileSpec xcode_select_cmd("/usr/bin/xcode-select", false);
-      if (xcode_select_cmd.Exists()) {
+      FileSpec xcode_select_cmd("/usr/bin/xcode-select");
+      if (FileSystem::Instance().Exists(xcode_select_cmd)) {
         int exit_status = -1;
         int signo = -1;
         std::string command_output;
@@ -1206,8 +1186,8 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
           }
           developer_dir_path[i] = '\0';
 
-          FileSpec devel_dir(developer_dir_path, false);
-          if (llvm::sys::fs::is_directory(devel_dir.GetPath())) {
+          FileSpec devel_dir(developer_dir_path);
+          if (FileSystem::Instance().IsDirectory(devel_dir)) {
             developer_dir_path_valid = true;
           }
         }
@@ -1215,9 +1195,8 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
     }
 
     if (developer_dir_path_valid) {
-      temp_file_spec.SetFile(developer_dir_path, false,
-                             FileSpec::Style::native);
-      if (temp_file_spec.Exists()) {
+      temp_file_spec.SetFile(developer_dir_path, FileSpec::Style::native);
+      if (FileSystem::Instance().Exists(temp_file_spec)) {
         m_developer_directory.assign(developer_dir_path);
         return m_developer_directory.c_str();
       }
@@ -1247,7 +1226,7 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
   FileSpecList bp_modules;
   for (size_t i = 0; i < llvm::array_lengthof(g_bp_modules); i++) {
     const char *bp_module = g_bp_modules[i];
-    bp_modules.Append(FileSpec(bp_module, false));
+    bp_modules.Append(FileSpec(bp_module));
   }
 
   bool internal = true;
@@ -1300,20 +1279,20 @@ static const char *const sdk_strings[] = {
 };
 
 static FileSpec CheckPathForXcode(const FileSpec &fspec) {
-  if (fspec.Exists()) {
+  if (FileSystem::Instance().Exists(fspec)) {
     const char substr[] = ".app/Contents";
 
     std::string path_to_shlib = fspec.GetPath();
     size_t pos = path_to_shlib.rfind(substr);
     if (pos != std::string::npos) {
       path_to_shlib.erase(pos + strlen(substr));
-      FileSpec ret(path_to_shlib, false);
+      FileSpec ret(path_to_shlib);
 
       FileSpec xcode_binary_path = ret;
       xcode_binary_path.AppendPathComponent("MacOS");
       xcode_binary_path.AppendPathComponent("Xcode");
 
-      if (xcode_binary_path.Exists()) {
+      if (FileSystem::Instance().Exists(xcode_binary_path)) {
         return ret;
       }
     }
@@ -1348,8 +1327,9 @@ static FileSpec GetXcodeContentsPath() {
     if (!g_xcode_filespec) {
       const char *developer_dir_env_var = getenv("DEVELOPER_DIR");
       if (developer_dir_env_var && developer_dir_env_var[0]) {
-        g_xcode_filespec =
-            CheckPathForXcode(FileSpec(developer_dir_env_var, true));
+        FileSpec developer_dir_spec = FileSpec(developer_dir_env_var);
+        FileSystem::Instance().Resolve(developer_dir_spec);
+        g_xcode_filespec = CheckPathForXcode(developer_dir_spec);
       }
 
       // Fall back to using "xcrun" to find the selected Xcode
@@ -1373,7 +1353,7 @@ static FileSpec GetXcodeContentsPath() {
           }
           output.append("/..");
 
-          g_xcode_filespec = CheckPathForXcode(FileSpec(output, false));
+          g_xcode_filespec = CheckPathForXcode(FileSpec(output));
         }
       }
     }
@@ -1417,23 +1397,24 @@ bool PlatformDarwin::SDKSupportsModules(SDKType desired_type,
   return false;
 }
 
-FileSpec::EnumerateDirectoryResult PlatformDarwin::DirectoryEnumerator(
-    void *baton, llvm::sys::fs::file_type file_type, const FileSpec &spec) {
+FileSystem::EnumerateDirectoryResult PlatformDarwin::DirectoryEnumerator(
+    void *baton, llvm::sys::fs::file_type file_type, llvm::StringRef path) {
   SDKEnumeratorInfo *enumerator_info = static_cast<SDKEnumeratorInfo *>(baton);
 
+  FileSpec spec(path);
   if (SDKSupportsModules(enumerator_info->sdk_type, spec)) {
     enumerator_info->found_path = spec;
-    return FileSpec::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
+    return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
   }
 
-  return FileSpec::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
+  return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
 }
 
 FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
                                                   const FileSpec &sdks_spec) {
   // Look inside Xcode for the required installed iOS SDK version
 
-  if (!llvm::sys::fs::is_directory(sdks_spec.GetPath())) {
+  if (!FileSystem::Instance().IsDirectory(sdks_spec)) {
     return FileSpec();
   }
 
@@ -1445,11 +1426,11 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
 
   enumerator_info.sdk_type = sdk_type;
 
-  FileSpec::EnumerateDirectory(sdks_spec.GetPath(), find_directories,
-                               find_files, find_other, DirectoryEnumerator,
-                               &enumerator_info);
+  FileSystem::Instance().EnumerateDirectory(
+      sdks_spec.GetPath(), find_directories, find_files, find_other,
+      DirectoryEnumerator, &enumerator_info);
 
-  if (llvm::sys::fs::is_directory(enumerator_info.found_path.GetPath()))
+  if (FileSystem::Instance().IsDirectory(enumerator_info.found_path))
     return enumerator_info.found_path;
   else
     return FileSpec();
@@ -1496,7 +1477,7 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
                                version.getMinor().getValueOr(0));
         native_sdk_spec.AppendPathComponent(native_sdk_name.GetString());
 
-        if (native_sdk_spec.Exists()) {
+        if (FileSystem::Instance().Exists(native_sdk_spec)) {
           return native_sdk_spec;
         }
       }
@@ -1594,7 +1575,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     sysroot_spec = GetSDKDirectoryForModules(sdk_type);
   }
 
-  if (llvm::sys::fs::is_directory(sysroot_spec.GetPath())) {
+  if (FileSystem::Instance().IsDirectory(sysroot_spec.GetPath())) {
     options.push_back("-isysroot");
     options.push_back(sysroot_spec.GetPath());
   }
@@ -1658,7 +1639,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       xcode_lldb_resources.AppendPathComponent("SharedFrameworks");
       xcode_lldb_resources.AppendPathComponent("LLDB.framework");
       xcode_lldb_resources.AppendPathComponent("Resources");
-      if (xcode_lldb_resources.Exists()) {
+      if (FileSystem::Instance().Exists(xcode_lldb_resources)) {
         FileSpec dir;
         dir.GetDirectory().SetCString(xcode_lldb_resources.GetPath().c_str());
         g_executable_dirs.push_back(dir);
@@ -1672,7 +1653,7 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
     FileSpec executable_file;
     executable_file.GetDirectory() = executable_dir.GetDirectory();
     executable_file.GetFilename().SetCString(basename);
-    if (executable_file.Exists())
+    if (FileSystem::Instance().Exists(executable_file))
       return executable_file;
   }
 
@@ -1810,7 +1791,7 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
           path_to_try.AppendPathComponent(path_parts[k]);
         }
 
-        if (path_to_try.Exists()) {
+        if (FileSystem::Instance().Exists(path_to_try)) {
           ModuleSpec new_module_spec(module_spec);
           new_module_spec.GetFileSpec() = path_to_try;
           Status new_error(Platform::GetSharedModule(

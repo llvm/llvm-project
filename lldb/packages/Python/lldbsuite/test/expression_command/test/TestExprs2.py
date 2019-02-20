@@ -24,9 +24,6 @@ class ExprCommands2TestCase(TestBase):
             'main.cpp',
             '// Please test many expressions while stopped at this line:')
 
-    @expectedFailureAll(
-        oslist=["windows"],
-        bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     def test_more_expr_commands(self):
         """Test some more expression commands."""
         self.build()
@@ -60,9 +57,7 @@ class ExprCommands2TestCase(TestBase):
         # (int) $5 = 6
 
     @skipIfLinux
-    @expectedFailureAll(
-            oslist=["windows"],
-            bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24489")
     def test_expr_symbols(self):
         """Test symbols."""
         self.build()

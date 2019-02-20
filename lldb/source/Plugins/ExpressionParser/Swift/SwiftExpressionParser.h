@@ -63,6 +63,15 @@ public:
                         const EvaluateExpressionOptions &options);
 
   //------------------------------------------------------------------
+  /// Attempts to find possible command line completions for the given
+  /// expression.
+  ///
+  /// Currently unimplemented for Swift.
+  //------------------------------------------------------------------
+  bool Complete(CompletionRequest &request, unsigned line, unsigned pos,
+                unsigned typed_pos) override;
+
+  //------------------------------------------------------------------
   /// Parse a single expression and convert it to IR using Swift.  Don't
   /// wrap the expression in anything at all.
   ///

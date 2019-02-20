@@ -826,7 +826,9 @@ LLDBSwigPython_GetRecognizedArguments
     lldb::SBFrame frame_sb(frame_sp);
     PyObject *arg = SBTypeToSWIGWrapper(frame_sb);
 
-    PyObject* result = PyObject_CallMethodObjArgs(implementor, PyString_FromString(callee_name), arg, NULL);
+    PythonString str(callee_name);
+    PyObject* result = PyObject_CallMethodObjArgs(implementor, str.get(), arg,
+                                                  NULL);
     return result;
 }
 

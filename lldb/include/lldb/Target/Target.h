@@ -1,17 +1,14 @@
 //===-- Target.h ------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_Target_h_
 #define liblldb_Target_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <map>
 #include <memory>
@@ -19,15 +16,12 @@
 #include <unordered_set>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
 #include "lldb/Core/Architecture.h"
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/UserSettingsController.h"
@@ -45,6 +39,7 @@
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
@@ -211,6 +206,10 @@ public:
   bool GetDisplayRuntimeSupportValues() const;
 
   void SetDisplayRuntimeSupportValues(bool b);
+
+  bool GetDisplayRecognizedArguments() const;
+
+  void SetDisplayRecognizedArguments(bool b);
 
   const ProcessLaunchInfo &GetProcessLaunchInfo();
 
@@ -572,7 +571,9 @@ public:
   //------------------------------------------------------------------
   void Dump(Stream *s, lldb::DescriptionLevel description_level);
 
-  const lldb::ProcessSP &CreateProcess(lldb::ListenerSP listener,
+  // If listener_sp is null, the listener of the owning Debugger object will be
+  // used.
+  const lldb::ProcessSP &CreateProcess(lldb::ListenerSP listener_sp,
                                        llvm::StringRef plugin_name,
                                        const FileSpec *crash_file);
 
@@ -651,14 +652,12 @@ public:
   // eLazyBoolCalculate, we use the current target setting, else we use the
   // values passed in. func_name_type_mask is or'ed values from the
   // FunctionNameType enum.
-  lldb::BreakpointSP CreateBreakpoint(const FileSpecList *containingModules,
-                                      const FileSpecList *containingSourceFiles,
-                                      const char *func_name,
-                                      uint32_t func_name_type_mask,
-                                      lldb::LanguageType language,
-                                      lldb::addr_t offset,
-                                      LazyBool skip_prologue, bool internal,
-                                      bool request_hardware);
+  lldb::BreakpointSP CreateBreakpoint(
+      const FileSpecList *containingModules,
+      const FileSpecList *containingSourceFiles, const char *func_name,
+      lldb::FunctionNameType func_name_type_mask, lldb::LanguageType language,
+      lldb::addr_t offset, LazyBool skip_prologue, bool internal,
+      bool request_hardware);
 
   lldb::BreakpointSP
   CreateExceptionBreakpoint(enum lldb::LanguageType language, bool catch_bp,
@@ -680,20 +679,20 @@ public:
   // the case where you just want to set a breakpoint on a set of names you
   // already know. func_name_type_mask is or'ed values from the
   // FunctionNameType enum.
-  lldb::BreakpointSP
-  CreateBreakpoint(const FileSpecList *containingModules,
-                   const FileSpecList *containingSourceFiles,
-                   const char *func_names[], size_t num_names,
-                   uint32_t func_name_type_mask, lldb::LanguageType language,
-                   lldb::addr_t offset, LazyBool skip_prologue, bool internal,
-                   bool request_hardware);
+  lldb::BreakpointSP CreateBreakpoint(
+      const FileSpecList *containingModules,
+      const FileSpecList *containingSourceFiles, const char *func_names[],
+      size_t num_names, lldb::FunctionNameType func_name_type_mask,
+      lldb::LanguageType language, lldb::addr_t offset, LazyBool skip_prologue,
+      bool internal, bool request_hardware);
 
   lldb::BreakpointSP
   CreateBreakpoint(const FileSpecList *containingModules,
                    const FileSpecList *containingSourceFiles,
                    const std::vector<std::string> &func_names,
-                   uint32_t func_name_type_mask, lldb::LanguageType language,
-                   lldb::addr_t m_offset, LazyBool skip_prologue, bool internal,
+                   lldb::FunctionNameType func_name_type_mask,
+                   lldb::LanguageType language, lldb::addr_t m_offset,
+                   LazyBool skip_prologue, bool internal,
                    bool request_hardware);
 
   // Use this to create a general breakpoint:
@@ -980,28 +979,30 @@ public:
   /// Set the architecture for this target.
   ///
   /// If the current target has no Images read in, then this just sets the
-  /// architecture, which will
-  /// be used to select the architecture of the ExecutableModule when that is
-  /// set.
-  /// If the current target has an ExecutableModule, then calling
-  /// SetArchitecture with a different
+  /// architecture, which will be used to select the architecture of the
+  /// ExecutableModule when that is set. If the current target has an
+  /// ExecutableModule, then calling SetArchitecture with a different
   /// architecture from the currently selected one will reset the
-  /// ExecutableModule to that slice
-  /// of the file backing the ExecutableModule.  If the file backing the
-  /// ExecutableModule does not
-  /// contain a fork of this architecture, then this code will return false, and
-  /// the architecture
-  /// won't be changed.
-  /// If the input arch_spec is the same as the already set architecture, this
-  /// is a no-op.
+  /// ExecutableModule to that slice of the file backing the ExecutableModule.
+  /// If the file backing the ExecutableModule does not contain a fork of this
+  /// architecture, then this code will return false, and the architecture
+  /// won't be changed. If the input arch_spec is the same as the already set
+  /// architecture, this is a no-op.
   ///
   /// @param[in] arch_spec
   ///     The new architecture.
   ///
+  /// @param[in] set_platform
+  ///     If \b true, then the platform will be adjusted if the currently
+  ///     selected platform is not compatible with the archicture being set.
+  ///     If \b false, then just the architecture will be set even if the
+  ///     currently selected platform isn't compatible (in case it might be
+  ///     manually set following this function call).
+  ///
   /// @return
   ///     \b true if the architecture was successfully set, \bfalse otherwise.
   //------------------------------------------------------------------
-  bool SetArchitecture(const ArchSpec &arch_spec);
+  bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false);
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
 
@@ -1492,6 +1493,8 @@ private:
   void PrimeFromDummyTarget(Target *dummy_target);
 
   void AddBreakpoint(lldb::BreakpointSP breakpoint_sp, bool internal);
+
+  void FinalizeFileActions(ProcessLaunchInfo &info);
 
   DISALLOW_COPY_AND_ASSIGN(Target);
 };

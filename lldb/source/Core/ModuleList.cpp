@@ -1,46 +1,45 @@
 //===-- ModuleList.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ModuleList.h"
-#include "lldb/Core/FileSpecList.h" // for FileSpecList
+#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Symbols.h"
-#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContextList, SymbolCon...
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Utility/ArchSpec.h"    // for ArchSpec
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for GetLogIfAnyCategoriesSet
-#include "lldb/Utility/UUID.h"    // for UUID, operator!=, operator==
-#include "lldb/lldb-defines.h"    // for LLDB_INVALID_INDEX32
+#include "lldb/Utility/Logging.h"
+#include "lldb/Utility/UUID.h"
+#include "lldb/lldb-defines.h"
 
 #if defined(_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
+#include "lldb/Host/windows/PosixApi.h"
 #endif
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "clang/Driver/Driver.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/raw_ostream.h" // for fs
-#include "clang/Driver/Driver.h"
+#include "llvm/Support/raw_ostream.h"
 
-#include <chrono> // for operator!=, time_point
-#include <memory> // for shared_ptr
+#include <chrono>
+#include <memory>
 #include <mutex>
-#include <string>  // for string
-#include <utility> // for distance
+#include <string>
+#include <utility>
 
 namespace lldb_private {
 class Function;
@@ -71,9 +70,16 @@ namespace {
 static constexpr PropertyDefinition g_properties[] = {
     {"enable-external-lookup", OptionValue::eTypeBoolean, true, true, nullptr,
      {},
-     "Control the use of external tools or libraries to locate symbol files. "
-     "On macOS, Spotlight is used to locate a matching .dSYM bundle based on "
-     "the UUID of the executable."},
+     "Control the use of external tools and repositories to locate symbol "
+     "files. Directories listed in target.debug-file-search-paths and "
+     "directory of the executable are always checked first for separate debug "
+     "info files. Then depending on this setting: "
+     "On macOS, Spotlight would be also used to locate a matching .dSYM "
+     "bundle based on the UUID of the executable. "
+     "On NetBSD, directory /usr/libdata/debug would be also searched. "
+     "On platforms other than NetBSD directory /usr/lib/debug would be "
+     "also searched."
+    },
     {"use-swift-dwarfimporter", OptionValue::eTypeBoolean, false, true, nullptr,
      {}, "Reconstruct Clang module dependencies from DWARF "
          "when debugging Swift code"},
@@ -353,8 +359,9 @@ ModuleSP ModuleList::GetModuleAtIndexUnlocked(size_t idx) const {
 }
 
 size_t ModuleList::FindFunctions(const ConstString &name,
-                                 uint32_t name_type_mask, bool include_symbols,
-                                 bool include_inlines, bool append,
+                                 FunctionNameType name_type_mask,
+                                 bool include_symbols, bool include_inlines,
+                                 bool append,
                                  SymbolContextList &sc_list) const {
   if (!append)
     sc_list.Clear();
@@ -388,7 +395,7 @@ size_t ModuleList::FindFunctions(const ConstString &name,
 }
 
 size_t ModuleList::FindFunctionSymbols(const ConstString &name,
-                                       uint32_t name_type_mask,
+                                       lldb::FunctionNameType name_type_mask,
                                        SymbolContextList &sc_list) {
   const size_t old_size = sc_list.GetSize();
 
@@ -619,7 +626,7 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
 }
 
 size_t
-ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
+ModuleList::FindTypes(Module *search_first, const ConstString &name,
                       bool name_is_fully_qualified, size_t max_matches,
                       llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                       TypeList &types) const {
@@ -627,14 +634,12 @@ ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
 
   size_t total_matches = 0;
   collection::const_iterator pos, end = m_modules.end();
-  if (sc.module_sp) {
-    // The symbol context "sc" contains a module so we want to search that one
-    // first if it is in our list...
+  if (search_first) {
     for (pos = m_modules.begin(); pos != end; ++pos) {
-      if (sc.module_sp.get() == (*pos).get()) {
+      if (search_first == pos->get()) {
         total_matches +=
-            (*pos)->FindTypes(sc, name, name_is_fully_qualified, max_matches,
-                              searched_symbol_files, types);
+            search_first->FindTypes(name, name_is_fully_qualified, max_matches,
+                                    searched_symbol_files, types);
 
         if (total_matches >= max_matches)
           break;
@@ -643,15 +648,14 @@ ModuleList::FindTypes(const SymbolContext &sc, const ConstString &name,
   }
 
   if (total_matches < max_matches) {
-    SymbolContext world_sc;
     for (pos = m_modules.begin(); pos != end; ++pos) {
       // Search the module if the module is not equal to the one in the symbol
       // context "sc". If "sc" contains a empty module shared pointer, then the
       // comparison will always be true (valid_module_ptr != nullptr).
-      if (sc.module_sp.get() != (*pos).get())
+      if (search_first != pos->get())
         total_matches +=
-            (*pos)->FindTypes(world_sc, name, name_is_fully_qualified,
-                              max_matches, searched_symbol_files, types);
+            (*pos)->FindTypes(name, name_is_fully_qualified, max_matches,
+                              searched_symbol_files, types);
 
       if (total_matches >= max_matches)
         break;
@@ -747,9 +751,10 @@ bool ModuleList::ResolveFileAddress(lldb::addr_t vm_addr,
   return false;
 }
 
-uint32_t ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
-                                                    uint32_t resolve_scope,
-                                                    SymbolContext &sc) const {
+uint32_t
+ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
+                                           SymbolContextItem resolve_scope,
+                                           SymbolContext &sc) const {
   // The address is already section offset so it has a module
   uint32_t resolved_flags = 0;
   ModuleSP module_sp(so_addr.GetModule());
@@ -772,15 +777,15 @@ uint32_t ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
 
 uint32_t ModuleList::ResolveSymbolContextForFilePath(
     const char *file_path, uint32_t line, bool check_inlines,
-    uint32_t resolve_scope, SymbolContextList &sc_list) const {
-  FileSpec file_spec(file_path, false);
+    SymbolContextItem resolve_scope, SymbolContextList &sc_list) const {
+  FileSpec file_spec(file_path);
   return ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
                                           resolve_scope, sc_list);
 }
 
 uint32_t ModuleList::ResolveSymbolContextsForFileSpec(
     const FileSpec &file_spec, uint32_t line, bool check_inlines,
-    uint32_t resolve_scope, SymbolContextList &sc_list) const {
+    SymbolContextItem resolve_scope, SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {
@@ -940,14 +945,13 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
     const auto num_directories = module_search_paths_ptr->GetSize();
     for (size_t idx = 0; idx < num_directories; ++idx) {
       auto search_path_spec = module_search_paths_ptr->GetFileSpecAtIndex(idx);
-      if (!search_path_spec.ResolvePath())
-        continue;
+      FileSystem::Instance().Resolve(search_path_spec);
       namespace fs = llvm::sys::fs;
-      if (!fs::is_directory(search_path_spec.GetPath()))
+      if (!FileSystem::Instance().IsDirectory(search_path_spec))
         continue;
       search_path_spec.AppendPathComponent(
           module_spec.GetFileSpec().GetFilename().AsCString());
-      if (!search_path_spec.Exists())
+      if (!FileSystem::Instance().Exists(search_path_spec))
         continue;
 
       auto resolved_module_spec(module_spec);
@@ -988,13 +992,15 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
   // Don't look for the file if it appears to be the same one we already
   // checked for above...
   if (located_binary_modulespec.GetFileSpec() != module_file_spec) {
-    if (!located_binary_modulespec.GetFileSpec().Exists()) {
+    if (!FileSystem::Instance().Exists(
+            located_binary_modulespec.GetFileSpec())) {
       located_binary_modulespec.GetFileSpec().GetPath(path, sizeof(path));
       if (path[0] == '\0')
         module_file_spec.GetPath(path, sizeof(path));
       // How can this check ever be true? This branch it is false, and we
       // haven't modified file_spec.
-      if (located_binary_modulespec.GetFileSpec().Exists()) {
+      if (FileSystem::Instance().Exists(
+              located_binary_modulespec.GetFileSpec())) {
         std::string uuid_str;
         if (uuid_ptr && uuid_ptr->IsValid())
           uuid_str = uuid_ptr->GetAsString();
@@ -1035,7 +1041,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
       // If we didn't have a UUID in mind when looking for the object file,
       // then we should make sure the modification time hasn't changed!
       if (platform_module_spec.GetUUIDPtr() == nullptr) {
-        auto file_spec_mod_time = FileSystem::GetModificationTime(
+        auto file_spec_mod_time = FileSystem::Instance().GetModificationTime(
             located_binary_modulespec.GetFileSpec());
         if (file_spec_mod_time != llvm::sys::TimePoint<>()) {
           if (file_spec_mod_time != module_sp->GetModificationTime()) {

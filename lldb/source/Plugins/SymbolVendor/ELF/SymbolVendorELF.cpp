@@ -1,9 +1,8 @@
 //===-- SymbolVendorELF.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -101,16 +100,17 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
     const FileSpec fspec = file_spec_list.GetFileSpecAtIndex(idx);
 
     module_spec.GetFileSpec() = obj_file->GetFileSpec();
-    module_spec.GetFileSpec().ResolvePath();
+    FileSystem::Instance().Resolve(module_spec.GetFileSpec());
     module_spec.GetSymbolFileSpec() = fspec;
     module_spec.GetUUID() = uuid;
     FileSpec dsym_fspec = Symbols::LocateExecutableSymbolFile(module_spec);
     if (dsym_fspec) {
       DataBufferSP dsym_file_data_sp;
       lldb::offset_t dsym_file_data_offset = 0;
-      ObjectFileSP dsym_objfile_sp = ObjectFile::FindPlugin(
-          module_sp, &dsym_fspec, 0, dsym_fspec.GetByteSize(),
-          dsym_file_data_sp, dsym_file_data_offset);
+      ObjectFileSP dsym_objfile_sp =
+          ObjectFile::FindPlugin(module_sp, &dsym_fspec, 0,
+                                 FileSystem::Instance().GetByteSize(dsym_fspec),
+                                 dsym_file_data_sp, dsym_file_data_offset);
       if (dsym_objfile_sp) {
         // This objfile is for debugging purposes. Sadly, ObjectFileELF won't
         // be able to figure this out consistently as the symbol file may not

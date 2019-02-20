@@ -1,9 +1,8 @@
 //===-- File.cpp ------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,9 +26,10 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
+#include "llvm/Support/Process.h"
 
 #include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
@@ -70,27 +70,6 @@ static const char *GetStreamOpenModeFromOptions(uint32_t options) {
 
 int File::kInvalidDescriptor = -1;
 FILE *File::kInvalidStream = NULL;
-
-File::File(const char *path, uint32_t options, uint32_t permissions)
-    : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-      m_stream(kInvalidStream), m_options(), m_own_stream(false),
-      m_is_interactive(eLazyBoolCalculate),
-      m_is_real_terminal(eLazyBoolCalculate),
-      m_supports_colors(eLazyBoolCalculate) {
-  Open(path, options, permissions);
-}
-
-File::File(const FileSpec &filespec, uint32_t options, uint32_t permissions)
-    : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-      m_stream(kInvalidStream), m_options(0), m_own_stream(false),
-      m_is_interactive(eLazyBoolCalculate),
-      m_is_real_terminal(eLazyBoolCalculate),
-      m_supports_colors(eLazyBoolCalculate)
-{
-  if (filespec) {
-    Open(filespec.GetPath().c_str(), options, permissions);
-  }
-}
 
 File::~File() { Close(); }
 
@@ -160,108 +139,6 @@ void File::SetStream(FILE *fh, bool transfer_ownership) {
   m_own_stream = transfer_ownership;
 }
 
-static int DoOpen(const char *path, int flags, int mode) {
-#ifdef _MSC_VER
-  std::wstring wpath;
-  if (!llvm::ConvertUTF8toWide(path, wpath))
-    return -1;
-  int result;
-  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
-  return result;
-#else
-  return ::open(path, flags, mode);
-#endif
-}
-
-Status File::Open(const char *path, uint32_t options, uint32_t permissions) {
-  Status error;
-  if (IsValid())
-    Close();
-
-  int oflag = 0;
-  const bool read = options & eOpenOptionRead;
-  const bool write = options & eOpenOptionWrite;
-  if (write) {
-    if (read)
-      oflag |= O_RDWR;
-    else
-      oflag |= O_WRONLY;
-
-    if (options & eOpenOptionAppend)
-      oflag |= O_APPEND;
-
-    if (options & eOpenOptionTruncate)
-      oflag |= O_TRUNC;
-
-    if (options & eOpenOptionCanCreate)
-      oflag |= O_CREAT;
-
-    if (options & eOpenOptionCanCreateNewOnly)
-      oflag |= O_CREAT | O_EXCL;
-  } else if (read) {
-    oflag |= O_RDONLY;
-
-#ifndef _WIN32
-    if (options & eOpenOptionDontFollowSymlinks)
-      oflag |= O_NOFOLLOW;
-#endif
-  }
-
-#ifndef _WIN32
-  if (options & eOpenOptionNonBlocking)
-    oflag |= O_NONBLOCK;
-  if (options & eOpenOptionCloseOnExec)
-    oflag |= O_CLOEXEC;
-#else
-  oflag |= O_BINARY;
-#endif
-
-  mode_t mode = 0;
-  if (oflag & O_CREAT) {
-    if (permissions & lldb::eFilePermissionsUserRead)
-      mode |= S_IRUSR;
-    if (permissions & lldb::eFilePermissionsUserWrite)
-      mode |= S_IWUSR;
-    if (permissions & lldb::eFilePermissionsUserExecute)
-      mode |= S_IXUSR;
-    if (permissions & lldb::eFilePermissionsGroupRead)
-      mode |= S_IRGRP;
-    if (permissions & lldb::eFilePermissionsGroupWrite)
-      mode |= S_IWGRP;
-    if (permissions & lldb::eFilePermissionsGroupExecute)
-      mode |= S_IXGRP;
-    if (permissions & lldb::eFilePermissionsWorldRead)
-      mode |= S_IROTH;
-    if (permissions & lldb::eFilePermissionsWorldWrite)
-      mode |= S_IWOTH;
-    if (permissions & lldb::eFilePermissionsWorldExecute)
-      mode |= S_IXOTH;
-  }
-
-  m_descriptor = llvm::sys::RetryAfterSignal(-1, DoOpen, path, oflag, mode);
-  if (!DescriptorIsValid())
-    error.SetErrorToErrno();
-  else {
-    m_should_close_fd = true;
-    m_options = options;
-  }
-
-  return error;
-}
-
-uint32_t File::GetPermissions(const FileSpec &file_spec, Status &error) {
-  if (file_spec) {
-    error.Clear();
-    auto Perms = llvm::sys::fs::getPermissions(file_spec.GetPath());
-    if (Perms)
-      return *Perms;
-    error = Status(Perms.getError());
-    return 0;
-  } else
-    error.SetErrorString("empty file spec");
-  return 0;
-}
-
 uint32_t File::GetPermissions(Status &error) const {
   int fd = GetDescriptor();
   if (fd != kInvalidDescriptor) {
@@ -316,7 +193,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
     if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)
       error.SetErrorToErrno();
     else
-      file_spec.SetFile(path, false, FileSpec::Style::native);
+      file_spec.SetFile(path, FileSpec::Style::native);
   } else {
     error.SetErrorString("invalid file handle");
   }
@@ -331,7 +208,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
       error.SetErrorToErrno();
     else {
       path[len] = '\0';
-      file_spec.SetFile(path, false, FileSpec::Style::native);
+      file_spec.SetFile(path, FileSpec::Style::native);
     }
   }
 #else
@@ -808,6 +685,9 @@ void File::CalculateInteractiveAndTerminal() {
     if (_isatty(fd)) {
       m_is_interactive = eLazyBoolYes;
       m_is_real_terminal = eLazyBoolYes;
+#if defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+      m_supports_colors = eLazyBoolYes;
+#endif
     }
 #else
     if (isatty(fd)) {

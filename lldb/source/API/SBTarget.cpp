@@ -1,9 +1,8 @@
 //===-- SBTarget.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -227,7 +226,8 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
   if (target_sp) {
-    FileSpec filespec(core_file, true);
+    FileSpec filespec(core_file);
+    FileSystem::Instance().Resolve(filespec);
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec));
     if (process_sp) {
@@ -326,10 +326,9 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
     if (getenv("LLDB_LAUNCH_FLAG_DISABLE_STDIO"))
       launch_flags |= eLaunchFlagDisableSTDIO;
 
-    ProcessLaunchInfo launch_info(
-        FileSpec{stdin_path, false}, FileSpec{stdout_path, false},
-        FileSpec{stderr_path, false}, FileSpec{working_directory, false},
-        launch_flags);
+    ProcessLaunchInfo launch_info(FileSpec(stdin_path), FileSpec(stdout_path),
+                                  FileSpec(stderr_path),
+                                  FileSpec(working_directory), launch_flags);
 
     Module *exe_module = target_sp->GetExecutableModulePointer();
     if (exe_module)
@@ -517,8 +516,7 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
 
   if (name && target_sp) {
     ProcessAttachInfo attach_info;
-    attach_info.GetExecutableFile().SetFile(name, false,
-                                            FileSpec::Style::native);
+    attach_info.GetExecutableFile().SetFile(name, FileSpec::Style::native);
     attach_info.SetWaitForLaunch(wait_for);
     if (listener.IsValid())
       attach_info.SetListener(listener.GetSP());
@@ -661,11 +659,12 @@ SBSymbolContext
 SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
                                          uint32_t resolve_scope) {
   SBSymbolContext sc;
+  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   if (addr.IsValid()) {
     TargetSP target_sp(GetSP());
     if (target_sp)
-      target_sp->GetImages().ResolveSymbolContextForAddress(
-          addr.ref(), resolve_scope, sc.ref());
+      target_sp->GetImages().ResolveSymbolContextForAddress(addr.ref(), scope,
+                                                            sc.ref());
   }
   return sc;
 }
@@ -766,7 +765,7 @@ SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
     const lldb::addr_t offset = 0;
     if (module_name && module_name[0]) {
       FileSpecList module_spec_list;
-      module_spec_list.Append(FileSpec(module_name, false));
+      module_spec_list.Append(FileSpec(module_name));
       sb_bp = target_sp->CreateBreakpoint(
           &module_spec_list, NULL, symbol_name, eFunctionNameTypeAuto,
           eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
@@ -790,7 +789,7 @@ lldb::SBBreakpoint
 SBTarget::BreakpointCreateByName(const char *symbol_name,
                                  const SBFileSpecList &module_list,
                                  const SBFileSpecList &comp_unit_list) {
-  uint32_t name_type_mask = eFunctionNameTypeAuto;
+  lldb::FunctionNameType name_type_mask = eFunctionNameTypeAuto;
   return BreakpointCreateByName(symbol_name, name_type_mask,
                                 eLanguageTypeUnknown, module_list,
                                 comp_unit_list);
@@ -817,9 +816,10 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     const bool hardware = false;
     const LazyBool skip_prologue = eLazyBoolCalculate;
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    sb_bp = target_sp->CreateBreakpoint(
-        module_list.get(), comp_unit_list.get(), symbol_name, name_type_mask,
-        symbol_language, 0, skip_prologue, internal, hardware);
+    FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
+    sb_bp = target_sp->CreateBreakpoint(module_list.get(), comp_unit_list.get(),
+                                        symbol_name, mask, symbol_language, 0,
+                                        skip_prologue, internal, hardware);
   }
 
   if (log)
@@ -860,11 +860,11 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool internal = false;
     const bool hardware = false;
+    FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
     const LazyBool skip_prologue = eLazyBoolCalculate;
     sb_bp = target_sp->CreateBreakpoint(
-        module_list.get(), comp_unit_list.get(), symbol_names, num_names,
-        name_type_mask, symbol_language, offset, skip_prologue, internal,
-        hardware);
+        module_list.get(), comp_unit_list.get(), symbol_names, num_names, mask,
+        symbol_language, offset, skip_prologue, internal, hardware);
   }
 
   if (log) {
@@ -893,7 +893,7 @@ SBBreakpoint SBTarget::BreakpointCreateByRegex(const char *symbol_name_regex,
   SBFileSpecList module_spec_list;
   SBFileSpecList comp_unit_list;
   if (module_name && module_name[0]) {
-    module_spec_list.Append(FileSpec(module_name, false));
+    module_spec_list.Append(FileSpec(module_name));
   }
   return BreakpointCreateByRegex(symbol_name_regex, eLanguageTypeUnknown,
                                  module_spec_list, comp_unit_list);
@@ -994,7 +994,7 @@ SBTarget::BreakpointCreateBySourceRegex(const char *source_regex,
   SBFileSpecList module_spec_list;
 
   if (module_name && module_name[0]) {
-    module_spec_list.Append(FileSpec(module_name, false));
+    module_spec_list.Append(FileSpec(module_name));
   }
 
   SBFileSpecList source_file_list;
@@ -1541,6 +1541,26 @@ bool SBTarget::DeleteAllWatchpoints() {
   return false;
 }
 
+void SBTarget::AppendImageSearchPath(const char *from, const char *to,
+                                     lldb::SBError &error) {
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return error.SetErrorString("invalid target");
+
+  const ConstString csFrom(from), csTo(to);
+  if (!csFrom)
+    return error.SetErrorString("<from> path can't be empty");
+  if (!csTo)
+    return error.SetErrorString("<to> path can't be empty");
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+  if (log)
+    log->Printf("SBTarget(%p)::%s: '%s' -> '%s'",
+                static_cast<void *>(target_sp.get()),  __FUNCTION__,
+                from, to);
+  target_sp->GetImageSearchPathList().Append(csFrom, csTo, true);
+}
+
 lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
                                    const char *uuid_cstr) {
   return AddModule(path, triple, uuid_cstr, NULL);
@@ -1553,7 +1573,7 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
   if (target_sp) {
     ModuleSpec module_spec;
     if (path)
-      module_spec.GetFileSpec().SetFile(path, false, FileSpec::Style::native);
+      module_spec.GetFileSpec().SetFile(path, FileSpec::Style::native);
 
     if (uuid_cstr)
       module_spec.GetUUID().SetFromStringRef(uuid_cstr);
@@ -1565,8 +1585,7 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
       module_spec.GetArchitecture() = target_sp->GetArchitecture();
 
     if (symfile)
-      module_spec.GetSymbolFileSpec().SetFile(symfile, false,
-                                              FileSpec::Style::native);
+      module_spec.GetSymbolFileSpec().SetFile(symfile, FileSpec::Style::native);
 
     sb_module.SetSP(target_sp->GetSharedModule(module_spec));
   }
@@ -1740,17 +1759,19 @@ bool SBTarget::GetDescription(SBStream &description,
 lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
                                                   uint32_t name_type_mask) {
   lldb::SBSymbolContextList sb_sc_list;
-  if (name && name[0]) {
-    TargetSP target_sp(GetSP());
-    if (target_sp) {
-      const bool symbols_ok = true;
-      const bool inlines_ok = true;
-      const bool append = true;
-      target_sp->GetImages().FindFunctions(ConstString(name), name_type_mask,
-                                           symbols_ok, inlines_ok, append,
-                                           *sb_sc_list);
-    }
-  }
+  if (!name | !name[0])
+    return sb_sc_list;
+
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return sb_sc_list;
+
+  const bool symbols_ok = true;
+  const bool inlines_ok = true;
+  const bool append = true;
+  FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
+  target_sp->GetImages().FindFunctions(ConstString(name), mask, symbols_ok,
+                                       inlines_ok, append, *sb_sc_list);
   return sb_sc_list;
 }
 
@@ -1854,11 +1875,10 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
     ModuleList &images = target_sp->GetImages();
     ConstString const_typename(typename_cstr);
     bool exact_match = false;
-    SymbolContext sc;
     TypeList type_list;
     llvm::DenseSet<SymbolFile *> searched_symbol_files;
     uint32_t num_matches =
-        images.FindTypes(sc, const_typename, exact_match, UINT32_MAX,
+        images.FindTypes(nullptr, const_typename, exact_match, UINT32_MAX,
                          searched_symbol_files, type_list);
 
     if (num_matches > 0) {

@@ -1,9 +1,8 @@
 //===-- PythonDataObjectsTests.cpp ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -167,7 +166,7 @@ TEST_F(PythonDataObjectsTest, TestDictionaryResolutionWithDot) {
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonInteger) {
-// Test that integers behave correctly when wrapped by a PythonInteger.
+  // Test that integers behave correctly when wrapped by a PythonInteger.
 
 #if PY_MAJOR_VERSION < 3
   // Verify that `PythonInt` works correctly when given a PyInt object.
@@ -557,7 +556,9 @@ TEST_F(PythonDataObjectsTest, TestPythonCallableInvoke) {
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonFile) {
-  File file(FileSystem::DEV_NULL, File::eOpenOptionRead);
+  File file;
+  FileSystem::Instance().Open(file, FileSpec(FileSystem::DEV_NULL),
+                              File::eOpenOptionRead);
   PythonFile py_file(file, "r");
   EXPECT_TRUE(PythonFile::Check(py_file.get()));
 }

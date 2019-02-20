@@ -1,0 +1,50 @@
+# Test that an overlapping PT_INTERP segment does not cause us to drop the
+# subsequent PT_LOAD segment.
+
+# RUN: yaml2obj %s > %t
+# RUN: lldb-test object-file %t | FileCheck %s
+
+# CHECK:        Index: 0
+# CHECK-NEXT:   ID: 0xfffffffffffffffe
+# CHECK-NEXT:   Name: PT_LOAD[0]
+# CHECK-NEXT:   Type: container
+# CHECK-NEXT:   Permissions: rwx
+# CHECK-NEXT:   Thread specific: no
+# CHECK-NEXT:   VM address: 0x1000
+# CHECK-NEXT:   VM size: 12
+# CHECK-NEXT:   File size: 12
+# CHECK-NEXT:   Showing 2 subsections
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_ARM
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         3232
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1004
+    AddressAlign:    0x4
+    Content:         DEADBEEFBAADF00D
+ProgramHeaders:
+  - Type: PT_INTERP
+    Flags: [ PF_R ]
+    VAddr: 0x1000
+    Align: 0x4
+    Sections:
+      - Section: .interp
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_W, PF_R ]
+    VAddr: 0x1000
+    Align: 0x4
+    Sections:
+      - Section: .interp
+      - Section: .text

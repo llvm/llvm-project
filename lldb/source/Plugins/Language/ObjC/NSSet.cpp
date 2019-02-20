@@ -1,16 +1,11 @@
 //===-- NSSet.cpp -----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "NSSet.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
@@ -159,28 +154,18 @@ namespace Foundation1437 {
     uint32_t _cow;
     // __table storage
     uint32_t _objs_addr;
-    union {
-      uint32_t _mutations;
-      struct {
-        uint32_t _muts;
-        uint32_t _used : 26;
-        uint32_t _szidx : 6;
-      };
-    };
+    uint32_t _muts;
+    uint32_t _used : 26;
+    uint32_t _szidx : 6;
   };
   
   struct DataDescriptor_64 {
     uint64_t _cow;
     // __Table storage
     uint64_t _objs_addr;
-    union {
-      uint64_t _mutations;
-      struct {
-        uint32_t _muts;
-        uint32_t _used : 26;
-        uint32_t _szidx : 6;
-      };
-    };
+    uint32_t _muts;
+    uint32_t _used : 26;
+    uint32_t _szidx : 6;
   };
   
   using NSSetMSyntheticFrontEnd =

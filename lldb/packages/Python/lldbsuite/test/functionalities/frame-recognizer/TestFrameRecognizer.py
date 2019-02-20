@@ -67,9 +67,24 @@ class FrameRecognizerTestCase(TestBase):
         self.expect("frame variable",
                     substrs=['(int) a = 42', '(int) b = 56'])
 
-        opts = lldb.SBVariablesOptions();
-        opts.SetIncludeRecognizedArguments(True);
-        variables = frame.GetVariables(opts);
+        # Recognized arguments don't show up by default...
+        variables = frame.GetVariables(lldb.SBVariablesOptions())
+        self.assertEqual(variables.GetSize(), 0)
+
+        # ...unless you set target.display-recognized-arguments to 1...
+        self.runCmd("settings set target.display-recognized-arguments 1")
+        variables = frame.GetVariables(lldb.SBVariablesOptions())
+        self.assertEqual(variables.GetSize(), 2)
+
+        # ...and you can reset it back to 0 to hide them again...
+        self.runCmd("settings set target.display-recognized-arguments 0")
+        variables = frame.GetVariables(lldb.SBVariablesOptions())
+        self.assertEqual(variables.GetSize(), 0)
+
+        # ... or explicitly ask for them with SetIncludeRecognizedArguments(True).
+        opts = lldb.SBVariablesOptions()
+        opts.SetIncludeRecognizedArguments(True)
+        variables = frame.GetVariables(opts)
 
         self.assertEqual(variables.GetSize(), 2)
         self.assertEqual(variables.GetValueAtIndex(0).name, "a")

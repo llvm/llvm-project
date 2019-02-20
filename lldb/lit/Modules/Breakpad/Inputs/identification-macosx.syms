@@ -1,0 +1,6 @@
+MODULE mac x86_64 D98C0E682089AA1BEACD6A8C1F16707B0 mac.out
+PUBLIC 0 0 _mh_execute_header
+PUBLIC f30 0 start
+STACK CFI INIT f30 6 .cfa: $rsp 8 + .ra: .cfa -8 + ^
+STACK CFI f31 $rbp: .cfa -16 + ^ .cfa: $rsp 16 +
+STACK CFI f34 .cfa: $rbp 16 +

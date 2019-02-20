@@ -1,9 +1,8 @@
 //===-- ScriptInterpreterPython.cpp -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -137,6 +136,9 @@ public:
 
     InitializePythonHome();
 
+    // Register _lldb as a built-in module.
+    PyImport_AppendInittab("_lldb", g_swig_init_callback);
+
 // Python < 3.2 and Python >= 3.2 reversed the ordering requirements for
 // calling `Py_Initialize` and `PyEval_InitThreads`.  < 3.2 requires that you
 // call `PyEval_InitThreads` first, and >= 3.2 requires that you call it last.
@@ -205,7 +207,7 @@ ScriptInterpreterPython::Locker::Locker(ScriptInterpreterPython *py_interpreter,
       m_python_interpreter(py_interpreter) {
   DoAcquireLock();
   if ((on_entry & InitSession) == InitSession) {
-    if (DoInitSession(on_entry, in, out, err) == false) {
+    if (!DoInitSession(on_entry, in, out, err)) {
       // Don't teardown the session if we didn't init it.
       m_teardown_session = false;
     }
@@ -826,11 +828,15 @@ bool ScriptInterpreterPython::ExecuteOneLine(
                                                  error_file_sp);
     } else {
       input_file_sp.reset(new StreamFile());
-      input_file_sp->GetFile().Open(FileSystem::DEV_NULL,
-                                    File::eOpenOptionRead);
+      FileSystem::Instance().Open(input_file_sp->GetFile(),
+                                  FileSpec(FileSystem::DEV_NULL),
+                                  File::eOpenOptionRead);
+
       output_file_sp.reset(new StreamFile());
-      output_file_sp->GetFile().Open(FileSystem::DEV_NULL,
-                                     File::eOpenOptionWrite);
+      FileSystem::Instance().Open(output_file_sp->GetFile(),
+                                  FileSpec(FileSystem::DEV_NULL),
+                                  File::eOpenOptionWrite);
+
       error_file_sp = output_file_sp;
     }
 
@@ -1544,7 +1550,7 @@ lldb::ValueObjectListSP ScriptInterpreterPython::GetRecognizedArguments(
   if (py_return.get()) {
     PythonList result_list(PyRefType::Borrowed, py_return.get());
     ValueObjectListSP result = ValueObjectListSP(new ValueObjectList());
-    for (int i = 0; i < result_list.GetSize(); i++) {
+    for (size_t i = 0; i < result_list.GetSize(); i++) {
       PyObject *item = result_list.GetItemAtIndex(i).get();
       lldb::SBValue *sb_value_ptr =
           (lldb::SBValue *)g_swig_cast_to_sbvalue(item);
@@ -2014,7 +2020,7 @@ ScriptInterpreterPython::ScriptedBreakpointResolverSearchDepth(
 StructuredData::ObjectSP
 ScriptInterpreterPython::LoadPluginModule(const FileSpec &file_spec,
                                           lldb_private::Status &error) {
-  if (!file_spec.Exists()) {
+  if (!FileSystem::Instance().Exists(file_spec)) {
     error.SetErrorString("no such file");
     return StructuredData::ObjectSP();
   }
@@ -2746,7 +2752,8 @@ bool ScriptInterpreterPython::LoadScriptingModule(
   lldb::DebuggerSP debugger_sp = m_interpreter.GetDebugger().shared_from_this();
 
   {
-    FileSpec target_file(pathname, true);
+    FileSpec target_file(pathname);
+    FileSystem::Instance().Resolve(target_file);
     std::string basename(target_file.GetFilename().GetCString());
 
     StreamString command_stream;
@@ -2830,7 +2837,7 @@ bool ScriptInterpreterPython::LoadScriptingModule(
 
     bool was_imported = (was_imported_globally || was_imported_locally);
 
-    if (was_imported == true && can_reload == false) {
+    if (was_imported && !can_reload) {
       error.SetErrorString("module already imported");
       return false;
     }

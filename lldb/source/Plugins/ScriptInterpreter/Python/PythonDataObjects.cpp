@@ -1,9 +1,8 @@
 //===-- PythonDataObjects.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -222,9 +221,7 @@ PythonBytes::~PythonBytes() {}
 bool PythonBytes::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
-  if (PyBytes_Check(py_obj))
-    return true;
-  return false;
+  return PyBytes_Check(py_obj);
 }
 
 void PythonBytes::Reset(PyRefType type, PyObject *py_obj) {
@@ -294,9 +291,7 @@ PythonByteArray::~PythonByteArray() {}
 bool PythonByteArray::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
-  if (PyByteArray_Check(py_obj))
-    return true;
-  return false;
+  return PyByteArray_Check(py_obj);
 }
 
 void PythonByteArray::Reset(PyRefType type, PyObject *py_obj) {
@@ -939,7 +934,8 @@ PythonFile::PythonFile() : PythonObject() {}
 PythonFile::PythonFile(File &file, const char *mode) { Reset(file, mode); }
 
 PythonFile::PythonFile(const char *path, const char *mode) {
-  lldb_private::File file(path, GetOptionsFromMode(mode));
+  lldb_private::File file;
+  FileSystem::Instance().Open(file, FileSpec(path), GetOptionsFromMode(mode));
   Reset(file, mode);
 }
 

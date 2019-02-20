@@ -30,7 +30,7 @@ public:
                                   bool *type_is_new_ptr) override;
 
   lldb_private::Function *
-  ParseFunctionFromDWARF(const lldb_private::SymbolContext &sc,
+  ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die) override;
 
   bool

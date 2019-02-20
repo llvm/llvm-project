@@ -1,13 +1,11 @@
 //===-- JITLoaderGDB.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 
 #include "llvm/Support/MathExtras.h"
 
@@ -315,7 +313,7 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
       char jit_name[64];
       snprintf(jit_name, 64, "JIT(0x%" PRIx64 ")", symbolfile_addr);
       module_sp = m_process->ReadModuleFromMemory(
-          FileSpec(jit_name, false), symbolfile_addr, symbolfile_size);
+          FileSpec(jit_name), symbolfile_addr, symbolfile_size);
 
       if (module_sp && module_sp->GetObjectFile()) {
         // load the symbol table right away

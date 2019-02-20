@@ -1,9 +1,8 @@
 //===-- PlatformDarwinTest.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -55,19 +54,18 @@ TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
   std::string base = "/Applications/Xcode.app/Contents/Developer/Platforms/";
   EXPECT_TRUE(PlatformDarwinTester::SDKSupportsModules(
       PlatformDarwin::SDKType::iPhoneSimulator,
-      FileSpec(base +
-          "iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator12.0.sdk",
-          false)));
+      FileSpec(
+          base +
+          "iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator12.0.sdk")));
   EXPECT_FALSE(PlatformDarwinTester::SDKSupportsModules(
       PlatformDarwin::SDKType::iPhoneSimulator,
-      FileSpec(base +
-          "iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.2.sdk",
-          false)));
+      FileSpec(
+          base +
+          "iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.2.sdk")));
   EXPECT_TRUE(PlatformDarwinTester::SDKSupportsModules(
       PlatformDarwin::SDKType::MacOSX,
-      FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk",
-               false)));
+      FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk")));
   EXPECT_FALSE(PlatformDarwinTester::SDKSupportsModules(
       PlatformDarwin::SDKType::MacOSX,
-      FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk", false)));
+      FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk")));
 }

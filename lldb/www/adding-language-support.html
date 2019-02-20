@@ -56,7 +56,7 @@
     	  <div class="postcontent">
             <p>
               The LanguageType enum
-              (see <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/lldb-enumerations.h">lldb-enumerations.h</a>)
+              (see <a href="https://github.com/llvm/llvm-project/blob/master/lldb/include/lldb/lldb-enumerations.h">lldb-enumerations.h</a>)
               contains a list of every language known to LLDB. It is
               the one place where support for a language must live
               that will need to merge cleanly with core LLDB if you
@@ -72,8 +72,8 @@
     	  <h1 class="postheader">Add a TypeSystem for the Language</h1>
     	  <div class="postcontent">
             <p>
-              Both <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/Core/Module.h">Module</a>
-              and <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/Target/Target.h">Target</a>
+              Both <a href="https://github.com/llvm/llvm-project/blob/master/lldb/include/lldb/Core/Module.h">Module</a>
+              and <a href="https://github.com/llvm/llvm-project/blob/master/lldb/include/lldb/Target/Target.h">Target</a>
               support the retrieval of a TypeSystem instance via
               GetTypeSystemForLanguage(). For Module, this method is
               directly on the Module instance. For Target, this is
@@ -116,7 +116,7 @@
               Expression Evaluation support is enabled by implementing
               the relevant methods on a TypeSystem-derived class.
               Search for "Expression" in the
-              <a href="http://llvm.org/svn/llvm-project/lldb/trunk/include/lldb/Symbol/TypeSystem.h">TypeSystem header</a>
+              <a href="https://github.com/llvm/llvm-project/blob/master/lldb/include/lldb/Symbol/TypeSystem.h">TypeSystem header</a>
               to find relevant
               methods to implement.
             </p>
@@ -160,7 +160,7 @@
               Your TypeSystem will need an approach for creating types
               based on a set of Modules.  If your type info is going
               to come from DWARF info, you will want to subclass
-              <a href="http://llvm.org/svn/llvm-project/lldb/trunk/source/Plugins/SymbolFile/DWARF/DWARFASTParser.h">DWARFASTParser</a>.
+              <a href="https://github.com/llvm/llvm-project/blob/master/lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParser.h">DWARFASTParser</a>.
             </p>
           </div>
           <div class="postfooter"></div>

@@ -1,9 +1,8 @@
 //===-- PluginManager.h -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,14 +11,14 @@
 
 #include "lldb/Core/Architecture.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Status.h"          // for Status
-#include "lldb/lldb-enumerations.h"       // for ScriptLanguage
-#include "lldb/lldb-forward.h"            // for OptionValuePropertiesSP
-#include "lldb/lldb-private-interfaces.h" // for DebuggerInitializeCallback
-#include "llvm/ADT/StringRef.h"           // for StringRef
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-interfaces.h"
+#include "llvm/ADT/StringRef.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class CommandInterpreter;

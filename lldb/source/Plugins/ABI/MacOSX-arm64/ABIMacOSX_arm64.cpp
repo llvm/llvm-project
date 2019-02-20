@@ -1,26 +1,20 @@
 //===-- ABIMacOSX_arm64.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "ABIMacOSX_arm64.h"
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Symbol/UnwindPlan.h"
@@ -30,6 +24,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 
 #include "Utility/ARM64_DWARF_Registers.h"
@@ -1765,7 +1761,7 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
       return false;
 
     CompilerType value_type = value->GetCompilerType();
-    auto bit_size = value_type.GetBitSize(&thread);
+    llvm::Optional<uint64_t> bit_size = value_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
 
@@ -2114,7 +2110,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     uint32_t &NGRN,       // NGRN (see ABI documentation)
     uint32_t &NSRN,       // NSRN (see ABI documentation)
     DataExtractor &data) {
-  auto byte_size = value_type.GetByteSize(nullptr);
+  llvm::Optional<uint64_t> byte_size = value_type.GetByteSize(nullptr);
   if (!byte_size || *byte_size == 0)
     return false;
 
@@ -2131,7 +2127,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     if (NSRN < 8 && (8 - NSRN) >= homogeneous_count) {
       if (!base_type)
         return false;
-      auto base_byte_size = base_type.GetByteSize(nullptr);
+      llvm::Optional<uint64_t> base_byte_size = base_type.GetByteSize(nullptr);
       if (!base_byte_size)
         return false;
       uint32_t data_offset = 0;
@@ -2267,7 +2263,8 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   if (!reg_ctx)
     return return_valobj_sp;
 
-  auto byte_size = return_compiler_type.GetByteSize(nullptr);
+  llvm::Optional<uint64_t> byte_size =
+      return_compiler_type.GetByteSize(nullptr);
   if (!byte_size)
     return return_valobj_sp;
 

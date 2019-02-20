@@ -1,9 +1,8 @@
 //===-- DataBufferHeap.h ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,10 +10,10 @@
 #define liblldb_DataBufferHeap_h_
 
 #include "lldb/Utility/DataBuffer.h"
-#include "lldb/lldb-types.h"    // for offset_t
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "lldb/lldb-types.h"
+#include "llvm/ADT/StringRef.h"
 
-#include <cstdint> // for uint8_t, uint64_t
+#include <cstdint>
 #include <vector>
 
 namespace lldb_private {
@@ -90,7 +89,8 @@ public:
   /// Set the number of bytes in the data buffer.
   ///
   /// Sets the number of bytes that this object should be able to contain.
-  /// This can be used prior to copying data into the buffer.
+  /// This can be used prior to copying data into the buffer. Note that this
+  /// zero-initializes up to \p byte_size bytes.
   ///
   /// @param[in] byte_size
   ///     The new size in bytes that this data buffer should attempt

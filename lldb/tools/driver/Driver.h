@@ -1,9 +1,8 @@
 //===-- Driver.h ------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,19 +10,19 @@
 #define lldb_Driver_h_
 
 #include "Platform.h"
-#include "lldb/Host/PseudoTerminal.h"
-
-#include <bitset>
-#include <set>
-#include <string>
-#include <vector>
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 
-class IOChannel;
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
+
+#include <set>
+#include <string>
+#include <vector>
 
 class Driver : public lldb::SBBroadcaster {
 public:
@@ -42,8 +41,7 @@ public:
   /// @return The exit code that the process should return.
   int MainLoop();
 
-  lldb::SBError ParseArgs(int argc, const char *argv[], FILE *out_fh,
-                          bool &do_exit);
+  lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, bool &exiting);
 
   const char *GetFilename() const;
 
@@ -58,57 +56,56 @@ public:
 
   bool GetDebugMode() const;
 
-  class OptionData {
-  public:
-    OptionData();
-    ~OptionData();
-
-    void Clear();
-
-    void AddInitialCommand(const char *command, CommandPlacement placement,
+  struct OptionData {
+    void AddLocalLLDBInit();
+    void AddInitialCommand(std::string command, CommandPlacement placement,
                            bool is_file, lldb::SBError &error);
 
     struct InitialCmdEntry {
-      InitialCmdEntry(const char *in_contents, bool in_is_file,
+      InitialCmdEntry(std::string contents, bool in_is_file,
                       bool is_cwd_lldbinit_file_read, bool in_quiet = false)
-          : contents(in_contents), is_file(in_is_file),
-            is_cwd_lldbinit_file_read(is_cwd_lldbinit_file_read),
-            source_quietly(in_quiet) {}
+          : contents(std::move(contents)), is_file(in_is_file),
+            source_quietly(in_quiet),
+            is_cwd_lldbinit_file_read(is_cwd_lldbinit_file_read) {}
 
       std::string contents;
       bool is_file;
-      bool is_cwd_lldbinit_file_read; // if this is reading ./.lldbinit - so we
-                                      // may skip if not permitted
       bool source_quietly;
+
+      /// Remember if this is reading the local lldbinit file so we can skip it
+      /// if not permitted.
+      bool is_cwd_lldbinit_file_read;
     };
 
     std::vector<std::string> m_args;
-    lldb::ScriptLanguage m_script_lang;
+
+    lldb::ScriptLanguage m_script_lang = lldb::eScriptLanguageDefault;
+    lldb::LanguageType m_repl_lang = lldb::eLanguageTypeUnknown;
+    lldb::pid_t m_process_pid = LLDB_INVALID_PROCESS_ID;
+
     std::string m_core_file;
     std::string m_crash_log;
+    std::string m_repl_options;
+    std::string m_process_name;
+
     std::vector<InitialCmdEntry> m_initial_commands;
     std::vector<InitialCmdEntry> m_after_file_commands;
     std::vector<InitialCmdEntry> m_after_crash_commands;
-    bool m_debug_mode;
-    bool m_source_quietly;
-    bool m_print_version;
-    bool m_print_python_path;
-    bool m_print_help;
-    bool m_wait_for;
-    bool m_repl;
-    lldb::LanguageType m_repl_lang;
-    std::string m_repl_options;
-    std::string m_process_name;
-    lldb::pid_t m_process_pid;
-    bool m_use_external_editor; // FIXME: When we have set/show variables we can
-                                // remove this from here.
-    bool m_batch;
-    typedef std::set<char> OptionSet;
+
+    bool m_debug_mode = false;
+    bool m_source_quietly = false;
+    bool m_print_version = false;
+    bool m_print_python_path = false;
+    bool m_wait_for = false;
+    bool m_repl = false;
+    bool m_batch = false;
+
+    // FIXME: When we have set/show variables we can remove this from here.
+    bool m_use_external_editor = false;
+
+    using OptionSet = std::set<char>;
     OptionSet m_seen_options;
   };
-
-  static lldb::SBError SetOptionValue(int option_idx, const char *option_arg,
-                                      Driver::OptionData &data);
 
   lldb::SBDebugger &GetDebugger() { return m_debugger; }
 
@@ -117,10 +114,6 @@ public:
 private:
   lldb::SBDebugger m_debugger;
   OptionData m_option_data;
-
-  void ResetOptionValues();
-
-  void ReadyForCommand();
 };
 
 #endif // lldb_Driver_h_

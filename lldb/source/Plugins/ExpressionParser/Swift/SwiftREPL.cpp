@@ -111,7 +111,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
   repl_executable.GetFilename().SetCString("repl_swift");
   std::string repl_exe_path(repl_executable.GetPath());
 
-  if (!repl_executable.Exists()) {
+  if (!FileSystem::Instance().Exists(repl_executable)) {
     err.SetErrorStringWithFormat("REPL executable does not exist: '%s'",
                                  repl_exe_path.c_str());
     return nullptr;
@@ -347,7 +347,7 @@ lldb::offset_t SwiftREPL::GetDesiredIndentation(const StringList &lines,
   if (cursor_position == 0 || last_line[cursor_position - 1] == '}') {
 
     // The brace must be the first non-space character
-    const int actual_indent = REPL::CalculateActualIndentation(lines);
+    const size_t actual_indent = REPL::CalculateActualIndentation(lines);
 
     if (last_line.length() > actual_indent && last_line[actual_indent] == '}') {
       // Stop searching once a reason to unindent was found
@@ -419,7 +419,7 @@ bool isThrownError(ValueObjectSP valobj_sp) {
     return false;
   if (name_cstr[1] != 'E')
     return false;
-  for (int index = 2; index < length; index++) {
+  for (size_t index = 2; index < length; index++) {
 
     char digit = name_cstr[index];
     if (digit < '0' || digit > '9')

@@ -1,9 +1,8 @@
 //===-- SBAttachInfo.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,16 +25,14 @@ SBAttachInfo::SBAttachInfo(lldb::pid_t pid)
 SBAttachInfo::SBAttachInfo(const char *path, bool wait_for)
     : m_opaque_sp(new ProcessAttachInfo()) {
   if (path && path[0])
-    m_opaque_sp->GetExecutableFile().SetFile(path, false,
-                                             FileSpec::Style::native);
+    m_opaque_sp->GetExecutableFile().SetFile(path, FileSpec::Style::native);
   m_opaque_sp->SetWaitForLaunch(wait_for);
 }
 
 SBAttachInfo::SBAttachInfo(const char *path, bool wait_for, bool async)
     : m_opaque_sp(new ProcessAttachInfo()) {
   if (path && path[0])
-    m_opaque_sp->GetExecutableFile().SetFile(path, false,
-                                             FileSpec::Style::native);
+    m_opaque_sp->GetExecutableFile().SetFile(path, FileSpec::Style::native);
   m_opaque_sp->SetWaitForLaunch(wait_for);
   m_opaque_sp->SetAsync(async);
 }
@@ -79,8 +76,7 @@ void SBAttachInfo::SetProcessPluginName(const char *plugin_name) {
 
 void SBAttachInfo::SetExecutable(const char *path) {
   if (path && path[0])
-    m_opaque_sp->GetExecutableFile().SetFile(path, false,
-                                             FileSpec::Style::native);
+    m_opaque_sp->GetExecutableFile().SetFile(path, FileSpec::Style::native);
   else
     m_opaque_sp->GetExecutableFile().Clear();
 }

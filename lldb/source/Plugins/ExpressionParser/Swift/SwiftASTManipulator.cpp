@@ -40,58 +40,6 @@
 
 using namespace lldb_private;
 
-static void DumpGenericNames(
-    lldb_private::Stream &wrapped_stream,
-    llvm::ArrayRef<Expression::SwiftGenericInfo::Binding> generic_bindings) {
-  if (generic_bindings.empty())
-    return;
-
-  wrapped_stream.PutChar('<');
-
-  bool comma = false;
-
-  for (const Expression::SwiftGenericInfo::Binding &binding :
-       generic_bindings) {
-    if (comma)
-      wrapped_stream.PutCString(", ");
-    comma = true;
-
-    wrapped_stream.PutCString(binding.name);
-  }
-
-  wrapped_stream.PutChar('>');
-}
-
-static void DumpPlaceholderArguments(
-    lldb_private::Stream &wrapped_stream,
-    llvm::ArrayRef<Expression::SwiftGenericInfo::Binding> generic_bindings) {
-  if (generic_bindings.empty())
-    return;
-
-  for (const Expression::SwiftGenericInfo::Binding &binding :
-       generic_bindings) {
-    const char *name = binding.name;
-
-    wrapped_stream.Printf(", _ __lldb_placeholder_%s : UnsafePointer<%s>!",
-                          name, name);
-  }
-}
-
-static void DumpPlaceholdersIntoCall(
-    lldb_private::Stream &wrapped_stream,
-    llvm::ArrayRef<Expression::SwiftGenericInfo::Binding> generic_bindings) {
-  if (generic_bindings.empty())
-    return;
-
-  for (const Expression::SwiftGenericInfo::Binding &binding :
-       generic_bindings) {
-    wrapped_stream.Printf(
-        ",\n"
-        "      (nil as UnsafePointer<$__lldb_typeof_generic_%s>?)",
-        binding.name);
-  }
-}
-
 swift::VarDecl::Specifier
 SwiftASTManipulator::VariableInfo::GetVarSpecifier() const {
   if (m_decl)
@@ -1441,7 +1389,6 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
 
   swift::ASTContext &ast_context = m_source_file.getASTContext();
 
-  llvm::MutableArrayRef<swift::TypeLoc> inherited;
   swift::TypeAliasDecl *type_alias_decl = new (ast_context)
       swift::TypeAliasDecl(source_loc, swift::SourceLoc(), name, source_loc,
                            nullptr, &m_source_file);
@@ -1458,8 +1405,8 @@ swift::ValueDecl *SwiftASTManipulator::MakeGlobalTypealias(
     ss.flush();
 
     log->Printf("Made global type alias for %s (%p) in context (%p):\n%s",
-                name.get(), GetSwiftType(type).getPointer(), &ast_context,
-                s.c_str());
+                name.get(), static_cast<void *>(GetSwiftType(type).getPointer()),
+                static_cast<void *>(&ast_context), s.c_str());
   }
 
   if (type_alias_decl) {

@@ -1,10 +1,9 @@
 //===-- AppleObjCClassDescriptorV2.cpp -----------------------------*- C++
 //-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -264,11 +263,7 @@ bool ClassDescriptorV2::method_t::Read(Process *process, lldb::addr_t addr) {
   }
 
   process->ReadCStringFromMemory(m_types_ptr, m_types, error);
-  if (error.Fail()) {
-    return false;
-  }
-
-  return true;
+  return !error.Fail();
 }
 
 bool ClassDescriptorV2::ivar_list_t::Read(Process *process, lldb::addr_t addr) {
@@ -323,11 +318,7 @@ bool ClassDescriptorV2::ivar_t::Read(Process *process, lldb::addr_t addr) {
   }
 
   process->ReadCStringFromMemory(m_type_ptr, m_type, error);
-  if (error.Fail()) {
-    return false;
-  }
-
-  return true;
+  return !error.Fail();
 }
 
 bool ClassDescriptorV2::Describe(
@@ -521,11 +512,11 @@ void ClassDescriptorV2::iVarsStorage::fill(AppleObjCRuntimeV2 &runtime,
     CompilerType ivar_type =
         encoding_to_type_sp->RealizeType(type, for_expression);
     if (ivar_type) {
-      auto ivar_size = ivar_type.GetByteSize(nullptr);
       LLDB_LOGV(log,
                 "name = {0}, encoding = {1}, offset_ptr = {2:x}, size = "
                 "{3}, type_size = {4}",
-                name, type, offset_ptr, size, ivar_size ? *ivar_size : 0);
+                name, type, offset_ptr, size,
+                ivar_type.GetByteSize(nullptr).getValueOr(0));
       Scalar offset_scalar;
       Status error;
       const int offset_ptr_size = 4;

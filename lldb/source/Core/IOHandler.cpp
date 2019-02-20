@@ -1,36 +1,31 @@
 //===-- IOHandler.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/IOHandler.h"
 
-// C Includes
 #ifndef LLDB_DISABLE_CURSES
 #include <curses.h>
 #include <panel.h>
 #endif
 
-// C++ Includes
 #if defined(__APPLE__)
 #include <deque>
 #endif
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Host/File.h"            // for File
-#include "lldb/Host/Predicate.h"       // for Predicate, ::eBroad...
-#include "lldb/Utility/Status.h"       // for Status
-#include "lldb/Utility/StreamString.h" // for StreamString
-#include "lldb/Utility/StringList.h"   // for StringList
-#include "lldb/lldb-forward.h"         // for StreamFileSP
+#include "lldb/Host/File.h"
+#include "lldb/Utility/Predicate.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
+#include "lldb/lldb-forward.h"
 
 #ifndef LLDB_DISABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
@@ -40,7 +35,6 @@
 #ifndef LLDB_DISABLE_CURSES
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectRegister.h"
 #include "lldb/Symbol/Block.h"
@@ -53,25 +47,26 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/State.h"
 #endif
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
 #ifdef _MSC_VER
 #include "lldb/Host/windows/windows.h"
 #endif
 
-#include <memory> // for shared_ptr
-#include <mutex>  // for recursive_mutex
+#include <memory>
+#include <mutex>
 
-#include <assert.h>    // for assert
-#include <ctype.h>     // for isspace
-#include <errno.h>     // for EINTR, errno
-#include <locale.h>    // for setlocale
-#include <stdint.h>    // for uint32_t, UINT32_MAX
-#include <stdio.h>     // for size_t, fprintf, feof
-#include <string.h>    // for strlen
-#include <type_traits> // for move
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <locale.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <type_traits>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -172,12 +167,10 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
 
 IOHandlerConfirm::~IOHandlerConfirm() = default;
 
-int IOHandlerConfirm::IOHandlerComplete(IOHandler &io_handler,
-                                        const char *current_line,
-                                        const char *cursor,
-                                        const char *last_char,
-                                        int skip_first_n_matches,
-                                        int max_matches, StringList &matches) {
+int IOHandlerConfirm::IOHandlerComplete(
+    IOHandler &io_handler, const char *current_line, const char *cursor,
+    const char *last_char, int skip_first_n_matches, int max_matches,
+    StringList &matches, StringList &descriptions) {
   if (current_line == cursor) {
     if (m_default_response) {
       matches.AppendString("y");
@@ -223,12 +216,10 @@ void IOHandlerConfirm::IOHandlerInputComplete(IOHandler &io_handler,
   }
 }
 
-int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
-                                         const char *current_line,
-                                         const char *cursor,
-                                         const char *last_char,
-                                         int skip_first_n_matches,
-                                         int max_matches, StringList &matches) {
+int IOHandlerDelegate::IOHandlerComplete(
+    IOHandler &io_handler, const char *current_line, const char *cursor,
+    const char *last_char, int skip_first_n_matches, int max_matches,
+    StringList &matches, StringList &descriptions) {
   switch (m_completion) {
   case Completion::None:
     break;
@@ -236,14 +227,16 @@ int IOHandlerDelegate::IOHandlerComplete(IOHandler &io_handler,
   case Completion::LLDBCommand:
     return io_handler.GetDebugger().GetCommandInterpreter().HandleCompletion(
         current_line, cursor, last_char, skip_first_n_matches, max_matches,
-        matches);
-
+        matches, descriptions);
   case Completion::Expression: {
+    CompletionResult result;
     CompletionRequest request(current_line, current_line - cursor,
-                              skip_first_n_matches, max_matches, matches);
+                              skip_first_n_matches, max_matches, result);
     CommandCompletions::InvokeCommonCompletionCallbacks(
         io_handler.GetDebugger().GetCommandInterpreter(),
         CommandCompletions::eVariablePathCompletion, request, nullptr);
+    result.GetMatches(matches);
+    result.GetDescriptions(descriptions);
 
     size_t num_matches = request.GetNumberOfMatches();
     if (num_matches > 0) {
@@ -433,17 +426,15 @@ int IOHandlerEditline::FixIndentationCallback(Editline *editline,
       *editline_reader, lines, cursor_position);
 }
 
-int IOHandlerEditline::AutoCompleteCallback(const char *current_line,
-                                            const char *cursor,
-                                            const char *last_char,
-                                            int skip_first_n_matches,
-                                            int max_matches,
-                                            StringList &matches, void *baton) {
+int IOHandlerEditline::AutoCompleteCallback(
+    const char *current_line, const char *cursor, const char *last_char,
+    int skip_first_n_matches, int max_matches, StringList &matches,
+    StringList &descriptions, void *baton) {
   IOHandlerEditline *editline_reader = (IOHandlerEditline *)baton;
   if (editline_reader)
     return editline_reader->m_delegate.IOHandlerComplete(
         *editline_reader, current_line, cursor, last_char, skip_first_n_matches,
-        max_matches, matches);
+        max_matches, matches, descriptions);
   return 0;
 }
 #endif
@@ -1062,7 +1053,7 @@ public:
     Windows::iterator pos, end = m_subwindows.end();
     size_t i = 0;
     for (pos = m_subwindows.begin(); pos != end; ++pos, ++i) {
-      if ((*pos)->m_name.compare(name) == 0)
+      if ((*pos)->m_name == name)
         return *pos;
     }
     return WindowSP();
@@ -1754,11 +1745,7 @@ public:
   void Initialize() {
     ::setlocale(LC_ALL, "");
     ::setlocale(LC_CTYPE, "");
-#if 0
-            ::initscr();
-#else
     m_screen = ::newterm(nullptr, m_out, m_in);
-#endif
     ::start_color();
     ::curs_set(0);
     ::noecho();

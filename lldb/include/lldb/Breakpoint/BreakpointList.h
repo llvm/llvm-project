@@ -1,22 +1,17 @@
 //===-- BreakpointList.h ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_BreakpointList_h_
 #define liblldb_BreakpointList_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
 
 namespace lldb_private {
@@ -54,18 +49,6 @@ public:
   void Dump(Stream *s) const;
 
   //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint with id \a breakID.
-  ///
-  /// @param[in] breakID
-  ///   The breakpoint ID to seek for.
-  ///
-  /// @result
-  ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
-  ///   breakpoint doesn't exist.
-  //------------------------------------------------------------------
-  lldb::BreakpointSP FindBreakpointByID(lldb::break_id_t breakID);
-
-  //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint with id \a breakID.  Const
   /// version.
   ///
@@ -76,7 +59,7 @@ public:
   ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
   ///   breakpoint doesn't exist.
   //------------------------------------------------------------------
-  const lldb::BreakpointSP FindBreakpointByID(lldb::break_id_t breakID) const;
+  lldb::BreakpointSP FindBreakpointByID(lldb::break_id_t breakID) const;
 
   //------------------------------------------------------------------
   /// Returns a shared pointer to the breakpoint with index \a i.
@@ -88,20 +71,7 @@ public:
   ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
   ///   breakpoint doesn't exist.
   //------------------------------------------------------------------
-  lldb::BreakpointSP GetBreakpointAtIndex(size_t i);
-
-  //------------------------------------------------------------------
-  /// Returns a shared pointer to the breakpoint with index \a i, const
-  /// version
-  ///
-  /// @param[in] i
-  ///   The breakpoint index to seek for.
-  ///
-  /// @result
-  ///   A shared pointer to the breakpoint.  May contain a NULL pointer if the
-  ///   breakpoint doesn't exist.
-  //------------------------------------------------------------------
-  const lldb::BreakpointSP GetBreakpointAtIndex(size_t i) const;
+  lldb::BreakpointSP GetBreakpointAtIndex(size_t i) const;
 
   //------------------------------------------------------------------
   /// Find all the breakpoints with a given name
@@ -201,7 +171,7 @@ public:
   void GetListMutex(std::unique_lock<std::recursive_mutex> &lock);
 
 protected:
-  typedef std::list<lldb::BreakpointSP> bp_collection;
+  typedef std::vector<lldb::BreakpointSP> bp_collection;
 
   bp_collection::iterator GetBreakpointIDIterator(lldb::break_id_t breakID);
 
@@ -211,7 +181,7 @@ protected:
   std::recursive_mutex &GetMutex() const { return m_mutex; }
 
   mutable std::recursive_mutex m_mutex;
-  bp_collection m_breakpoints; // The breakpoint list, currently a list.
+  bp_collection m_breakpoints;
   lldb::break_id_t m_next_break_id;
   bool m_is_internal;
 

@@ -1,0 +1,84 @@
+# RUN: rm -rf %t.dir
+# RUN: mkdir %t.dir
+# RUN: cd %t.dir
+# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-file1.dwo.yaml > %t.dir/file1.dwo
+# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-file2.dwo.yaml > %t.dir/file2.dwo
+# RUN: yaml2obj %p/Inputs/split-dwarf5-debug-stroffsets-main.yaml      > %t.dir/test
+# RUN: lldb-test breakpoints %t.dir/test %s | FileCheck %s
+
+# This test checks that source code location is shown correctly
+# when split DWARF 5 is used and both DWO/executable file contains
+# .debug_str_offsets/.debug_str_offsets.dwo sections.
+# Used clang version 8.0.0 (trunk 347299)
+#
+# split-dwarf5-debug-stroffsets-file1.dwo.yaml, split-dwarf5-debug-stroffsets-file2.dwo.yaml
+# and split-dwarf5-debug-stroffsets-main.yaml are reduced yaml files produces
+# from the DWO files and the corresponding executable.
+#
+# Code:
+# // decl.h
+# struct struct1 {
+#   ~struct1();
+#   static void f();
+# };
+# 
+# struct struct2 {
+#   ~struct2();
+#   static void f();
+# };
+# 
+# int g();
+#
+# // file1.cpp
+# #include "decls.h"
+# 
+# int g() {
+#   return 1;
+# }
+# 
+# struct1::~struct1() {
+#   int x = g();
+# }
+# 
+# void struct1::f() {}
+# 
+# float test() {
+#  return 0.0f;
+# }
+# 
+# int main() {
+#   struct1::f();
+#   struct2::f();
+# 
+#   struct1 s1;
+#   struct2 s2;
+# 
+#   test();
+# 
+#   return 0;
+# }
+#
+# // file2.cpp
+#
+#
+# #include "decls.h"
+# 
+# struct2::~struct2() {
+#   int x = g();
+# }
+# 
+# void struct2::f() {}
+#
+#
+# Invocation used was:
+# clang++ file1.cpp -o file1.o -g -fno-rtti -c -gdwarf-5 -gsplit-dwarf -ffunction-sections
+# clang++ file2.cpp -o file2.o -g -fno-rtti -c -gdwarf-5 -gsplit-dwarf -ffunction-sections
+# clang++ file1.o file2.o -g -fno-rtti -gdwarf-5 -o test -gsplit-dwarf -ffunction-sections
+
+b struct1::f
+# CHECK-LABEL: b struct1::f
+# CHECK: Address: {{.*}}struct1::f() + 4 at file1.cpp:11:20
+
+b struct2::f
+# CHECK-LABEL: b struct2::f
+# CHECK: Address: {{.*}}struct2::f() + 4 at file2.cpp:7:20

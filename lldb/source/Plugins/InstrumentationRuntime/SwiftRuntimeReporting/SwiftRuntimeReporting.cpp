@@ -86,7 +86,7 @@ static StructuredData::ArraySP ReadThreads(ProcessSP process_sp, addr_t addr) {
   uint64_t num_extra_threads = process_sp->ReadUnsignedIntegerFromMemory(addr, ptr_size, 0, read_error);
   if (num_extra_threads > 16) num_extra_threads = 16;
   addr_t threads_ptr = process_sp->ReadUnsignedIntegerFromMemory(addr + ptr_size, ptr_size, 0, read_error);
-  for (int i = 0; i < num_extra_threads; i++) {
+  for (size_t i = 0; i < num_extra_threads; i++) {
     StructuredData::ArraySP trace(new StructuredData::Array());
     int thread_struct_stride = 3 * ptr_size + 8;
     addr_t thread_ptr = threads_ptr + i * thread_struct_stride;
@@ -105,7 +105,7 @@ static StructuredData::ArraySP ReadThreads(ProcessSP process_sp, addr_t addr) {
     if (num_frames > 256) num_frames = 256;
     addr_t frames_ptr = process_sp->ReadUnsignedIntegerFromMemory(
         thread_ptr + 8 + 2 * ptr_size, ptr_size, 0, read_error);
-    for (int j = 0; j < num_frames; j++) {
+    for (size_t j = 0; j < num_frames; j++) {
       addr_t frame = process_sp->ReadUnsignedIntegerFromMemory(
           frames_ptr + j * ptr_size, ptr_size, 0, read_error);
       trace->AddItem(
@@ -131,7 +131,7 @@ static StructuredData::ArraySP ReadFixits(ProcessSP process_sp, addr_t addr) {
   uint64_t num_fixits = process_sp->ReadUnsignedIntegerFromMemory(addr, ptr_size, 0, read_error);
   if (num_fixits > 16) num_fixits = 16;
   addr_t fixits_ptr = process_sp->ReadUnsignedIntegerFromMemory(addr + ptr_size, ptr_size, 0, read_error);
-  for (int i = 0; i < num_fixits; i++) {
+  for (size_t i = 0; i < num_fixits; i++) {
     int fixit_struct_stride = 6 * ptr_size;
     addr_t fixit_ptr = fixits_ptr + i * fixit_struct_stride;
 
@@ -181,7 +181,7 @@ static StructuredData::ArraySP ReadNotes(ProcessSP process_sp, addr_t addr) {
   uint64_t num_notes = process_sp->ReadUnsignedIntegerFromMemory(addr, ptr_size, 0, read_error);
   if (num_notes > 16) num_notes = 16;
   addr_t fixits_ptr = process_sp->ReadUnsignedIntegerFromMemory(addr + ptr_size, ptr_size, 0, read_error);
-  for (int i = 0; i < num_notes; i++) {
+  for (size_t i = 0; i < num_notes; i++) {
     int note_struct_stride = 3 * ptr_size;
     addr_t note_ptr = fixits_ptr + i * note_struct_stride;
 
@@ -299,7 +299,7 @@ SwiftRuntimeReporting::RetrieveReportData(ExecutionContextRef exe_ctx_ref) {
   thread->AddStringItem("description", current_stack_description);
   thread->AddIntegerItem("tid", thread_sp->GetIndexID());
   threads->AddItem(thread);
-  for (int i = 0; i < extra_threads->GetSize(); i++) {
+  for (size_t i = 0; i < extra_threads->GetSize(); i++) {
     threads->AddItem(extra_threads->GetItemAtIndex(i));
   }
 

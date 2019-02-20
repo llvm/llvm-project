@@ -1,17 +1,38 @@
 //===-- Driver.cpp ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "Driver.h"
 
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBHostOS.h"
+#include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/PrettyStackTrace.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
+
 #include <algorithm>
 #include <atomic>
+#include <bitset>
 #include <csignal>
+#include <string>
+#include <thread>
+#include <utility>
+
 #include <fcntl.h>
 #include <limits.h>
 #include <stdio.h>
@@ -26,40 +47,50 @@
 #include <unistd.h>
 #endif
 
-#include <string>
-
-#include "lldb/API/SBBreakpoint.h"
-#include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBCommunication.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBEvent.h"
-#include "lldb/API/SBHostOS.h"
-#include "lldb/API/SBLanguageRuntime.h"
-#include "lldb/API/SBListener.h"
-#include "lldb/API/SBProcess.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/API/SBStringList.h"
-#include "lldb/API/SBTarget.h"
-#include "lldb/API/SBThread.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Signals.h"
-#include <thread>
-#include <utility>
-
 #if !defined(__APPLE__)
 #include "llvm/Support/DataTypes.h"
 #endif
 
 using namespace lldb;
+using namespace llvm;
+
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  OPT_##ID,
+#include "Options.inc"
+#undef OPTION
+};
+
+#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#include "Options.inc"
+#undef PREFIX
+
+const opt::OptTable::Info InfoTable[] = {
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
+               HELPTEXT, METAVAR, VALUES)                                      \
+  {                                                                            \
+      PREFIX,      NAME,      HELPTEXT,                                        \
+      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
+      PARAM,       FLAGS,     OPT_##GROUP,                                     \
+      OPT_##ALIAS, ALIASARGS, VALUES},
+#include "Options.inc"
+#undef OPTION
+};
+
+class LLDBOptTable : public opt::OptTable {
+public:
+  LLDBOptTable() : OptTable(InfoTable) {}
+};
+} // namespace
 
 static void reset_stdin_termios();
 static bool g_old_stdin_termios_is_valid = false;
 static struct termios g_old_stdin_termios;
 
-static Driver *g_driver = NULL;
+static Driver *g_driver = nullptr;
 
 // In the Driver::MainLoop, we change the terminal settings.  This function is
 // added as an atexit handler to make sure we clean them up.
@@ -70,395 +101,39 @@ static void reset_stdin_termios() {
   }
 }
 
-typedef struct {
-  uint32_t usage_mask; // Used to mark options that can be used together.  If (1
-                       // << n & usage_mask) != 0
-                       // then this option belongs to option set n.
-  bool required;       // This option is required (in the current usage level)
-  const char *long_option; // Full name for this option.
-  int short_option;        // Single character for this option.
-  int option_has_arg; // no_argument, required_argument or optional_argument
-  uint32_t completion_type; // Cookie the option class can use to do define the
-                            // argument completion.
-  lldb::CommandArgumentType argument_type; // Type of argument this option takes
-  const char *usage_text; // Full text explaining what this options does and
-                          // what (if any) argument to
-                          // pass it.
-} OptionDefinition;
-
-#define LLDB_3_TO_5 LLDB_OPT_SET_3 | LLDB_OPT_SET_4 | LLDB_OPT_SET_5
-#define LLDB_4_TO_5 LLDB_OPT_SET_4 | LLDB_OPT_SET_5
-
-static constexpr OptionDefinition g_options[] = {
-    {LLDB_OPT_SET_1, true, "help", 'h', no_argument, 0, eArgTypeNone,
-     "Prints out the usage information for the LLDB debugger."},
-    {LLDB_OPT_SET_2, true, "version", 'v', no_argument, 0, eArgTypeNone,
-     "Prints out the current version number of the LLDB debugger."},
-    {LLDB_OPT_SET_3, true, "arch", 'a', required_argument, 0,
-     eArgTypeArchitecture,
-     "Tells the debugger to use the specified architecture when starting and "
-     "running the program.  <architecture> must "
-     "be one of the architectures for which the program was compiled."},
-    {LLDB_OPT_SET_3, true, "file", 'f', required_argument, 0, eArgTypeFilename,
-     "Tells the debugger to use the file <filename> as the program to be "
-     "debugged."},
-    {LLDB_OPT_SET_3, false, "core", 'c', required_argument, 0, eArgTypeFilename,
-     "Tells the debugger to use the fullpath to <path> as the core file."},
-    {LLDB_OPT_SET_5, true, "attach-pid", 'p', required_argument, 0, eArgTypePid,
-     "Tells the debugger to attach to a process with the given pid."},
-    {LLDB_OPT_SET_4, true, "attach-name", 'n', required_argument, 0,
-     eArgTypeProcessName,
-     "Tells the debugger to attach to a process with the given name."},
-    {LLDB_OPT_SET_4, true, "wait-for", 'w', no_argument, 0, eArgTypeNone,
-     "Tells the debugger to wait for a process with the given pid or name to "
-     "launch before attaching."},
-    {LLDB_3_TO_5, false, "source", 's', required_argument, 0, eArgTypeFilename,
-     "Tells the debugger to read in and execute the lldb commands in the given "
-     "file, after any file provided on the command line has been loaded."},
-    {LLDB_3_TO_5, false, "one-line", 'o', required_argument, 0, eArgTypeNone,
-     "Tells the debugger to execute this one-line lldb command after any file "
-     "provided on the command line has been loaded."},
-    {LLDB_3_TO_5, false, "source-before-file", 'S', required_argument, 0,
-     eArgTypeFilename, "Tells the debugger to read in and execute the lldb "
-                       "commands in the given file, before any file provided "
-                       "on the command line has been loaded."},
-    {LLDB_3_TO_5, false, "one-line-before-file", 'O', required_argument, 0,
-     eArgTypeNone, "Tells the debugger to execute this one-line lldb command "
-                   "before any file provided on the command line has been "
-                   "loaded."},
-    {LLDB_3_TO_5, false, "one-line-on-crash", 'k', required_argument, 0,
-     eArgTypeNone, "When in batch mode, tells the debugger to execute this "
-                   "one-line lldb command if the target crashes."},
-    {LLDB_3_TO_5, false, "source-on-crash", 'K', required_argument, 0,
-     eArgTypeFilename, "When in batch mode, tells the debugger to source this "
-                       "file of lldb commands if the target crashes."},
-    {LLDB_3_TO_5, false, "source-quietly", 'Q', no_argument, 0, eArgTypeNone,
-     "Tells the debugger to execute this one-line lldb command before any file "
-     "provided on the command line has been loaded."},
-    {LLDB_3_TO_5, false, "batch", 'b', no_argument, 0, eArgTypeNone,
-     "Tells the debugger to run the commands from -s, -S, -o & -O, and "
-     "then quit.  However if any run command stopped due to a signal or crash, "
-     "the debugger will return to the interactive prompt at the place of the "
-     "crash."},
-    {LLDB_3_TO_5, false, "editor", 'e', no_argument, 0, eArgTypeNone,
-     "Tells the debugger to open source files using the host's \"external "
-     "editor\" mechanism."},
-    {LLDB_3_TO_5, false, "no-lldbinit", 'x', no_argument, 0, eArgTypeNone,
-     "Do not automatically parse any '.lldbinit' files."},
-    {LLDB_3_TO_5, false, "no-use-colors", 'X', no_argument, 0, eArgTypeNone,
-     "Do not use colors."},
-    {LLDB_OPT_SET_6, true, "python-path", 'P', no_argument, 0, eArgTypeNone,
-     "Prints out the path to the lldb.py file for this version of lldb."},
-    {LLDB_3_TO_5, false, "script-language", 'l', required_argument, 0,
-     eArgTypeScriptLang,
-     "Tells the debugger to use the specified scripting language for "
-     "user-defined scripts, rather than the default.  "
-     "Valid scripting languages that can be specified include Python, Perl, "
-     "Ruby and Tcl.  Currently only the Python "
-     "extensions have been implemented."},
-    {LLDB_3_TO_5, false, "debug", 'd', no_argument, 0, eArgTypeNone,
-     "Tells the debugger to print out extra information for debugging itself."},
-    {LLDB_OPT_SET_7, true, "repl", 'r', optional_argument, 0, eArgTypeNone,
-     "Runs lldb in REPL mode with a stub process."},
-    {LLDB_OPT_SET_7, true, "repl-language", 'R', required_argument, 0,
-     eArgTypeNone, "Chooses the language for the REPL."}};
-
-static constexpr auto g_num_options = sizeof(g_options)/sizeof(OptionDefinition);
-
-static const uint32_t last_option_set_with_args = 2;
-
 Driver::Driver()
-    : SBBroadcaster("Driver"), m_debugger(SBDebugger::Create(false)),
-      m_option_data() {
+    : SBBroadcaster("Driver"), m_debugger(SBDebugger::Create(false)) {
   // We want to be able to handle CTRL+D in the terminal to have it terminate
   // certain input
   m_debugger.SetCloseInputOnEOF(false);
   g_driver = this;
 }
 
-Driver::~Driver() { g_driver = NULL; }
+Driver::~Driver() { g_driver = nullptr; }
 
-// This function takes INDENT, which tells how many spaces to output at the
-// front
-// of each line; TEXT, which is the text that is to be output. It outputs the
-// text, on multiple lines if necessary, to RESULT, with INDENT spaces at the
-// front of each line.  It breaks lines on spaces, tabs or newlines, shortening
-// the line if necessary to not break in the middle of a word. It assumes that
-// each output line should contain a maximum of OUTPUT_MAX_COLUMNS characters.
-
-void OutputFormattedUsageText(FILE *out, int indent, const char *text,
-                              int output_max_columns) {
-  int len = strlen(text);
-  std::string text_string(text);
-
-  // Force indentation to be reasonable.
-  if (indent >= output_max_columns)
-    indent = 0;
-
-  // Will it all fit on one line?
-
-  if (len + indent < output_max_columns)
-    // Output as a single line
-    fprintf(out, "%*s%s\n", indent, "", text);
-  else {
-    // We need to break it up into multiple lines.
-    int text_width = output_max_columns - indent - 1;
-    int start = 0;
-    int end = start;
-    int final_end = len;
-    int sub_len;
-
-    while (end < final_end) {
-      // Dont start the 'text' on a space, since we're already outputting the
-      // indentation.
-      while ((start < final_end) && (text[start] == ' '))
-        start++;
-
-      end = start + text_width;
-      if (end > final_end)
-        end = final_end;
-      else {
-        // If we're not at the end of the text, make sure we break the line on
-        // white space.
-        while (end > start && text[end] != ' ' && text[end] != '\t' &&
-               text[end] != '\n')
-          end--;
-      }
-      sub_len = end - start;
-      std::string substring = text_string.substr(start, sub_len);
-      fprintf(out, "%*s%s\n", indent, "", substring.c_str());
-      start = end + 1;
-    }
-  }
-}
-
-static void ShowUsage(FILE *out, Driver::OptionData data) {
-  uint32_t screen_width = 80;
-  uint32_t indent_level = 0;
-  const char *name = "lldb";
-
-  fprintf(out, "\nUsage:\n\n");
-
-  indent_level += 2;
-
-  // First, show each usage level set of options, e.g. <cmd>
-  // [options-for-level-0]
-  //                                                   <cmd>
-  //                                                   [options-for-level-1]
-  //                                                   etc.
-
-  uint32_t num_option_sets = 0;
-
-  for (const auto &opt : g_options) {
-    uint32_t this_usage_mask = opt.usage_mask;
-    if (this_usage_mask == LLDB_OPT_SET_ALL) {
-      if (num_option_sets == 0)
-        num_option_sets = 1;
-    } else {
-      for (uint32_t j = 0; j < LLDB_MAX_NUM_OPTION_SETS; j++) {
-        if (this_usage_mask & 1 << j) {
-          if (num_option_sets <= j)
-            num_option_sets = j + 1;
-        }
-      }
-    }
-  }
-
-  for (uint32_t opt_set = 0; opt_set < num_option_sets; opt_set++) {
-    uint32_t opt_set_mask;
-
-    opt_set_mask = 1 << opt_set;
-
-    if (opt_set > 0)
-      fprintf(out, "\n");
-    fprintf(out, "%*s%s", indent_level, "", name);
-    bool is_help_line = false;
-
-    for (const auto &opt : g_options) {
-      if (opt.usage_mask & opt_set_mask) {
-        CommandArgumentType arg_type = opt.argument_type;
-        const char *arg_name =
-            SBCommandInterpreter::GetArgumentTypeAsCString(arg_type);
-        // This is a bit of a hack, but there's no way to say certain options
-        // don't have arguments yet...
-        // so we do it by hand here.
-        if (opt.short_option == 'h')
-          is_help_line = true;
-
-        if (opt.required) {
-          if (opt.option_has_arg == required_argument)
-            fprintf(out, " -%c <%s>", opt.short_option, arg_name);
-          else if (opt.option_has_arg == optional_argument)
-            fprintf(out, " -%c [<%s>]", opt.short_option, arg_name);
-          else
-            fprintf(out, " -%c", opt.short_option);
-        } else {
-          if (opt.option_has_arg == required_argument)
-            fprintf(out, " [-%c <%s>]", opt.short_option, arg_name);
-          else if (opt.option_has_arg == optional_argument)
-            fprintf(out, " [-%c [<%s>]]", opt.short_option,
-                    arg_name);
-          else
-            fprintf(out, " [-%c]", opt.short_option);
-        }
-      }
-    }
-    if (!is_help_line && (opt_set <= last_option_set_with_args))
-      fprintf(out, " [[--] <PROGRAM-ARG-1> [<PROGRAM_ARG-2> ...]]");
-  }
-
-  fprintf(out, "\n\n");
-
-  // Now print out all the detailed information about the various options:  long
-  // form, short form and help text:
-  //   -- long_name <argument>
-  //   - short <argument>
-  //   help text
-
-  // This variable is used to keep track of which options' info we've printed
-  // out, because some options can be in
-  // more than one usage level, but we only want to print the long form of its
-  // information once.
-
-  Driver::OptionData::OptionSet options_seen;
-  Driver::OptionData::OptionSet::iterator pos;
-
-  indent_level += 5;
-
-  for (const auto &opt : g_options) {
-    // Only print this option if we haven't already seen it.
-    pos = options_seen.find(opt.short_option);
-    if (pos == options_seen.end()) {
-      CommandArgumentType arg_type = opt.argument_type;
-      const char *arg_name =
-          SBCommandInterpreter::GetArgumentTypeAsCString(arg_type);
-
-      options_seen.insert(opt.short_option);
-      fprintf(out, "%*s-%c ", indent_level, "", opt.short_option);
-      if (arg_type != eArgTypeNone)
-        fprintf(out, "<%s>", arg_name);
-      fprintf(out, "\n");
-      fprintf(out, "%*s--%s ", indent_level, "", opt.long_option);
-      if (arg_type != eArgTypeNone)
-        fprintf(out, "<%s>", arg_name);
-      fprintf(out, "\n");
-      indent_level += 5;
-      OutputFormattedUsageText(out, indent_level, opt.usage_text,
-                               screen_width);
-      indent_level -= 5;
-      fprintf(out, "\n");
-    }
-  }
-
-  indent_level -= 5;
-
-  fprintf(out, "\n%*sNotes:\n", indent_level, "");
-  indent_level += 5;
-
-  fprintf(out,
-          "\n%*sMultiple \"-s\" and \"-o\" options can be provided.  They will "
-          "be processed"
-          "\n%*sfrom left to right in order, with the source files and commands"
-          "\n%*sinterleaved.  The same is true of the \"-S\" and \"-O\" "
-          "options.  The before"
-          "\n%*sfile and after file sets can intermixed freely, the command "
-          "parser will"
-          "\n%*ssort them out.  The order of the file specifiers (\"-c\", "
-          "\"-f\", etc.) is"
-          "\n%*snot significant in this regard.\n\n",
-          indent_level, "", indent_level, "", indent_level, "", indent_level,
-          "", indent_level, "", indent_level, "");
-
-  fprintf(
-      out,
-      "\n%*sIf you don't provide -f then the first argument will be the file "
-      "to be"
-      "\n%*sdebugged which means that '%s -- <filename> [<ARG1> [<ARG2>]]' also"
-      "\n%*sworks.  But remember to end the options with \"--\" if any of your"
-      "\n%*sarguments have a \"-\" in them.\n\n",
-      indent_level, "", indent_level, "", name, indent_level, "", indent_level,
-      "");
-}
-
- static void BuildGetOptTable(std::vector<option> &getopt_table) {
-  getopt_table.resize(g_num_options + 1);
-
-  std::bitset<256> option_seen;
-  uint32_t j = 0;
-  for (const auto &opt : g_options) {
-    char short_opt = opt.short_option;
-
-    if (option_seen.test(short_opt) == false) {
-      getopt_table[j].name = opt.long_option;
-      getopt_table[j].has_arg = opt.option_has_arg;
-      getopt_table[j].flag = NULL;
-      getopt_table[j].val = opt.short_option;
-      option_seen.set(short_opt);
-      ++j;
-    }
-  }
-
-  getopt_table[j].name = NULL;
-  getopt_table[j].has_arg = 0;
-  getopt_table[j].flag = NULL;
-  getopt_table[j].val = 0;
-}
-
-Driver::OptionData::OptionData()
-    : m_args(), m_script_lang(lldb::eScriptLanguageDefault), m_core_file(),
-      m_crash_log(), m_initial_commands(), m_after_file_commands(),
-      m_after_crash_commands(), m_debug_mode(false), m_source_quietly(false),
-      m_print_version(false), m_print_python_path(false), m_print_help(false),
-      m_wait_for(false), m_repl(false), m_repl_lang(eLanguageTypeUnknown),
-      m_repl_options(), m_process_name(),
-      m_process_pid(LLDB_INVALID_PROCESS_ID), m_use_external_editor(false),
-      m_batch(false), m_seen_options() {}
-
-Driver::OptionData::~OptionData() {}
-
-void Driver::OptionData::Clear() {
-  m_args.clear();
-  m_script_lang = lldb::eScriptLanguageDefault;
-  m_initial_commands.clear();
-  m_after_file_commands.clear();
-
-  // If there is a local .lldbinit, add that to the
-  // list of things to be sourced, if the settings
-  // permit it.
+void Driver::OptionData::AddLocalLLDBInit() {
+  // If there is a local .lldbinit, add that to the list of things to be
+  // sourced, if the settings permit it.
   SBFileSpec local_lldbinit(".lldbinit", true);
-
   SBFileSpec homedir_dot_lldb = SBHostOS::GetUserHomeDirectory();
   homedir_dot_lldb.AppendPathComponent(".lldbinit");
 
-  // Only read .lldbinit in the current working directory
-  // if it's not the same as the .lldbinit in the home
-  // directory (which is already being read in).
-  if (local_lldbinit.Exists() &&
-      strcmp(local_lldbinit.GetDirectory(), homedir_dot_lldb.GetDirectory()) !=
-          0) {
-    char path[2048];
-    local_lldbinit.GetPath(path, 2047);
+  // Only read .lldbinit in the current working directory if it's not the same
+  // as the .lldbinit in the home directory (which is already being read in).
+  if (local_lldbinit.Exists() && strcmp(local_lldbinit.GetDirectory(),
+                                        homedir_dot_lldb.GetDirectory()) != 0) {
+    char path[PATH_MAX];
+    local_lldbinit.GetPath(path, sizeof(path));
     InitialCmdEntry entry(path, true, true, true);
     m_after_file_commands.push_back(entry);
   }
 
-  m_debug_mode = false;
-  m_source_quietly = false;
-  m_print_help = false;
-  m_print_version = false;
-  m_print_python_path = false;
-  m_use_external_editor = false;
-  m_wait_for = false;
+  // Swift support.
   m_repl = false;
   m_repl_options.erase();
-  m_process_name.erase();
-  m_batch = false;
-  m_after_crash_commands.clear();
-
-  m_process_pid = LLDB_INVALID_PROCESS_ID;
 }
 
-void Driver::OptionData::AddInitialCommand(const char *command,
+void Driver::OptionData::AddInitialCommand(std::string command,
                                            CommandPlacement placement,
                                            bool is_file, SBError &error) {
   std::vector<InitialCmdEntry> *command_set;
@@ -475,7 +150,7 @@ void Driver::OptionData::AddInitialCommand(const char *command,
   }
 
   if (is_file) {
-    SBFileSpec file(command);
+    SBFileSpec file(command.c_str());
     if (file.Exists())
       command_set->push_back(InitialCmdEntry(command, is_file, false));
     else if (file.ResolveExecutableLocation()) {
@@ -484,22 +159,21 @@ void Driver::OptionData::AddInitialCommand(const char *command,
       command_set->push_back(InitialCmdEntry(final_path, is_file, false));
     } else
       error.SetErrorStringWithFormat(
-          "file specified in --source (-s) option doesn't exist: '%s'", optarg);
+          "file specified in --source (-s) option doesn't exist: '%s'",
+          command.c_str());
   } else
     command_set->push_back(InitialCmdEntry(command, is_file, false));
 }
 
-void Driver::ResetOptionValues() { m_option_data.Clear(); }
-
 const char *Driver::GetFilename() const {
   if (m_option_data.m_args.empty())
-    return NULL;
+    return nullptr;
   return m_option_data.m_args.front().c_str();
 }
 
 const char *Driver::GetCrashLogFilename() const {
   if (m_option_data.m_crash_log.empty())
-    return NULL;
+    return nullptr;
   return m_option_data.m_crash_log.c_str();
 }
 
@@ -530,7 +204,7 @@ void Driver::WriteCommandsForSourcing(CommandPlacement placement,
       // file in the current working directory), only read it if
       // target.load-cwd-lldbinit is 'true'.
       if (command_entry.is_cwd_lldbinit_file_read) {
-        SBStringList strlist = m_debugger.GetInternalVariableValue(
+        SBStringList strlist = lldb::SBDebugger::GetInternalVariableValue(
             "target.load-cwd-lldbinit", m_debugger.GetInstanceName());
         if (strlist.GetSize() == 1 &&
             strcmp(strlist.GetStringAtIndex(0), "warn") == 0) {
@@ -557,7 +231,8 @@ void Driver::WriteCommandsForSourcing(CommandPlacement placement,
       }
       bool source_quietly =
           m_option_data.m_source_quietly || command_entry.source_quietly;
-      strm.Printf("command source -s %i '%s'\n", source_quietly, command);
+      strm.Printf("command source -s %i '%s'\n",
+                  static_cast<int>(source_quietly), command);
     } else
       strm.Printf("%s\n", command);
   }
@@ -566,287 +241,232 @@ void Driver::WriteCommandsForSourcing(CommandPlacement placement,
 bool Driver::GetDebugMode() const { return m_option_data.m_debug_mode; }
 
 // Check the arguments that were passed to this program to make sure they are
-// valid and to get their
-// argument values (if any).  Return a boolean value indicating whether or not
-// to start up the full
-// debugger (i.e. the Command Interpreter) or not.  Return FALSE if the
-// arguments were invalid OR
-// if the user only wanted help or version information.
-
-SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
-                          bool &exiting) {
-  static_assert(g_num_options > 0, "cannot handle arguments");
-
-  ResetOptionValues();
-
+// valid and to get their argument values (if any).  Return a boolean value
+// indicating whether or not to start up the full debugger (i.e. the Command
+// Interpreter) or not.  Return FALSE if the arguments were invalid OR if the
+// user only wanted help or version information.
+SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   SBError error;
-  std::vector<option> long_options_vector;
-  BuildGetOptTable(long_options_vector);
-  if (long_options_vector.empty()) {
-    error.SetErrorStringWithFormat("invalid long options");
-    return error;
-  }
-
-  // Build the option_string argument for call to getopt_long_only.
-  std::string option_string;
-  auto sentinel_it = std::prev(std::end(long_options_vector));
-  for (auto long_opt_it = std::begin(long_options_vector);
-            long_opt_it != sentinel_it; ++long_opt_it) {
-    if (long_opt_it->flag == nullptr) {
-      option_string.push_back(static_cast<char>(long_opt_it->val));
-      switch (long_opt_it->has_arg) {
-      default:
-      case no_argument:
-        break;
-      case required_argument:
-        option_string.push_back(':');
-        break;
-      case optional_argument:
-        option_string.append("::");
-        break;
-      }
-    }
-  }
+  m_option_data.AddLocalLLDBInit();
 
   // This is kind of a pain, but since we make the debugger in the Driver's
-  // constructor, we can't
-  // know at that point whether we should read in init files yet.  So we don't
-  // read them in in the
-  // Driver constructor, then set the flags back to "read them in" here, and
-  // then if we see the
-  // "-n" flag, we'll turn it off again.  Finally we have to read them in by
-  // hand later in the
-  // main loop.
-
+  // constructor, we can't know at that point whether we should read in init
+  // files yet.  So we don't read them in in the Driver constructor, then set
+  // the flags back to "read them in" here, and then if we see the "-n" flag,
+  // we'll turn it off again.  Finally we have to read them in by hand later in
+  // the main loop.
   m_debugger.SkipLLDBInitFiles(false);
   m_debugger.SkipAppInitFiles(false);
 
-// Prepare for & make calls to getopt_long_only.
-#if __GLIBC__
-  optind = 0;
-#else
-  optreset = 1;
-  optind = 1;
-#endif
-  int val;
-  while (1) {
-    int long_options_index = -1;
-    val = ::getopt_long_only(argc, const_cast<char **>(argv),
-                             option_string.c_str(), long_options_vector.data(),
-                             &long_options_index);
+  if (args.hasArg(OPT_version)) {
+    m_option_data.m_print_version = true;
+  }
 
-    if (val == -1)
-      break;
-    else if (val == '?') {
-      m_option_data.m_print_help = true;
-      error.SetErrorStringWithFormat("unknown or ambiguous option");
-      break;
-    } else if (val == 0)
-      continue;
-    else {
-      m_option_data.m_seen_options.insert((char)val);
-      if (long_options_index == -1) {
-        auto long_opt_it = std::find_if(std::begin(long_options_vector), sentinel_it,
-            [val](const option &long_option) { return long_option.val == val; });
-        if (std::end(long_options_vector) != long_opt_it)
-          long_options_index =
-              std::distance(std::begin(long_options_vector), long_opt_it);
-      }
+  if (args.hasArg(OPT_python_path)) {
+    m_option_data.m_print_python_path = true;
+  }
 
-      if (long_options_index >= 0) {
-        const int short_option = g_options[long_options_index].short_option;
+  if (args.hasArg(OPT_batch)) {
+    m_option_data.m_batch = true;
+  }
 
-        switch (short_option) {
-        case 'h':
-          m_option_data.m_print_help = true;
-          break;
+  if (auto *arg = args.getLastArg(OPT_core)) {
+    auto arg_value = arg->getValue();
+    SBFileSpec file(arg_value);
+    if (!file.Exists()) {
+      error.SetErrorStringWithFormat(
+          "file specified in --core (-c) option doesn't exist: '%s'",
+          arg_value);
+      return error;
+    }
+    m_option_data.m_core_file = arg_value;
+  }
 
-        case 'v':
-          m_option_data.m_print_version = true;
-          break;
+  if (args.hasArg(OPT_editor)) {
+    m_option_data.m_use_external_editor = true;
+  }
 
-        case 'P':
-          m_option_data.m_print_python_path = true;
-          break;
+  if (args.hasArg(OPT_no_lldbinit)) {
+    m_debugger.SkipLLDBInitFiles(true);
+    m_debugger.SkipAppInitFiles(true);
+  }
 
-        case 'b':
-          m_option_data.m_batch = true;
-          break;
+  if (args.hasArg(OPT_no_use_colors)) {
+    m_debugger.SetUseColor(false);
+  }
 
-        case 'c': {
-          SBFileSpec file(optarg);
-          if (file.Exists()) {
-            m_option_data.m_core_file = optarg;
-          } else
-            error.SetErrorStringWithFormat(
-                "file specified in --core (-c) option doesn't exist: '%s'",
-                optarg);
-        } break;
-
-        case 'e':
-          m_option_data.m_use_external_editor = true;
-          break;
-
-        case 'x':
-          m_debugger.SkipLLDBInitFiles(true);
-          m_debugger.SkipAppInitFiles(true);
-          break;
-
-        case 'X':
-          m_debugger.SetUseColor(false);
-          break;
-
-        case 'f': {
-          SBFileSpec file(optarg);
-          if (file.Exists()) {
-            m_option_data.m_args.push_back(optarg);
-          } else if (file.ResolveExecutableLocation()) {
-            char path[PATH_MAX];
-            file.GetPath(path, sizeof(path));
-            m_option_data.m_args.push_back(path);
-          } else
-            error.SetErrorStringWithFormat(
-                "file specified in --file (-f) option doesn't exist: '%s'",
-                optarg);
-        } break;
-
-        case 'a':
-          if (!m_debugger.SetDefaultArchitecture(optarg))
-            error.SetErrorStringWithFormat(
-                "invalid architecture in the -a or --arch option: '%s'",
-                optarg);
-          break;
-
-        case 'l':
-          m_option_data.m_script_lang = m_debugger.GetScriptingLanguage(optarg);
-          break;
-
-        case 'd':
-          m_option_data.m_debug_mode = true;
-          break;
-
-        case 'Q':
-          m_option_data.m_source_quietly = true;
-          break;
-
-        case 'K':
-          m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterCrash,
-                                          true, error);
-          break;
-        case 'k':
-          m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterCrash,
-                                          false, error);
-          break;
-
-        case 'n':
-          m_option_data.m_process_name = optarg;
-          break;
-
-        case 'w':
-          m_option_data.m_wait_for = true;
-          break;
-
-        case 'p': {
-          char *remainder;
-          m_option_data.m_process_pid = strtol(optarg, &remainder, 0);
-          if (remainder == optarg || *remainder != '\0')
-            error.SetErrorStringWithFormat(
-                "Could not convert process PID: \"%s\" into a pid.", optarg);
-        } break;
-
-        case 'r':
-          m_option_data.m_repl = true;
-          if (optarg && optarg[0])
-            m_option_data.m_repl_options = optarg;
-          else
-            m_option_data.m_repl_options.clear();
-          break;
-
-        case 'R':
-          m_option_data.m_repl_lang =
-              SBLanguageRuntime::GetLanguageTypeFromString(optarg);
-          if (m_option_data.m_repl_lang == eLanguageTypeUnknown) {
-            error.SetErrorStringWithFormat("Unrecognized language name: \"%s\"",
-                                           optarg);
-          }
-          break;
-
-        case 's':
-          m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterFile,
-                                          true, error);
-          break;
-        case 'o':
-          m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterFile,
-                                          false, error);
-          break;
-        case 'S':
-          m_option_data.AddInitialCommand(optarg, eCommandPlacementBeforeFile,
-                                          true, error);
-          break;
-        case 'O':
-          m_option_data.AddInitialCommand(optarg, eCommandPlacementBeforeFile,
-                                          false, error);
-          break;
-        default:
-          m_option_data.m_print_help = true;
-          error.SetErrorStringWithFormat("unrecognized option %c",
-                                         short_option);
-          break;
-        }
-      } else {
-        error.SetErrorStringWithFormat("invalid option with value %i", val);
-      }
-      if (error.Fail()) {
-        return error;
-      }
+  if (auto *arg = args.getLastArg(OPT_file)) {
+    auto arg_value = arg->getValue();
+    SBFileSpec file(arg_value);
+    if (file.Exists()) {
+      m_option_data.m_args.emplace_back(arg_value);
+    } else if (file.ResolveExecutableLocation()) {
+      char path[PATH_MAX];
+      file.GetPath(path, sizeof(path));
+      m_option_data.m_args.emplace_back(path);
+    } else {
+      error.SetErrorStringWithFormat(
+          "file specified in --file (-f) option doesn't exist: '%s'",
+          arg_value);
+      return error;
     }
   }
 
-  if (error.Fail() || m_option_data.m_print_help) {
-    ShowUsage(out_fh, m_option_data);
+  if (auto *arg = args.getLastArg(OPT_arch)) {
+    auto arg_value = arg->getValue();
+    if (!lldb::SBDebugger::SetDefaultArchitecture(arg_value)) {
+      error.SetErrorStringWithFormat(
+          "invalid architecture in the -a or --arch option: '%s'", arg_value);
+      return error;
+    }
+  }
+
+  if (auto *arg = args.getLastArg(OPT_script_language)) {
+    auto arg_value = arg->getValue();
+    m_option_data.m_script_lang = m_debugger.GetScriptingLanguage(arg_value);
+  }
+
+  if (args.hasArg(OPT_no_use_colors)) {
+    m_option_data.m_debug_mode = true;
+  }
+
+  if (args.hasArg(OPT_no_use_colors)) {
+    m_debugger.SetUseColor(false);
+  }
+
+  if (args.hasArg(OPT_source_quietly)) {
+    m_option_data.m_source_quietly = true;
+  }
+
+  if (auto *arg = args.getLastArg(OPT_attach_name)) {
+    auto arg_value = arg->getValue();
+    m_option_data.m_process_name = arg_value;
+  }
+
+  if (args.hasArg(OPT_wait_for)) {
+    m_option_data.m_wait_for = true;
+  }
+
+  if (auto *arg = args.getLastArg(OPT_attach_pid)) {
+    auto arg_value = arg->getValue();
+    char *remainder;
+    m_option_data.m_process_pid = strtol(arg_value, &remainder, 0);
+    if (remainder == arg_value || *remainder != '\0') {
+      error.SetErrorStringWithFormat(
+          "Could not convert process PID: \"%s\" into a pid.", arg_value);
+      return error;
+    }
+  }
+
+  if (auto *arg = args.getLastArg(OPT_repl_language)) {
+    auto arg_value = arg->getValue();
+    m_option_data.m_repl_lang =
+        SBLanguageRuntime::GetLanguageTypeFromString(arg_value);
+    if (m_option_data.m_repl_lang == eLanguageTypeUnknown) {
+      error.SetErrorStringWithFormat("Unrecognized language name: \"%s\"",
+                                     arg_value);
+      return error;
+    }
+  }
+
+  if (args.hasArg(OPT_repl)) {
+    m_option_data.m_repl = true;
+  }
+
+  if (auto *arg = args.getLastArg(OPT_repl_)) {
+    m_option_data.m_repl = true;
+    if (auto arg_value = arg->getValue())
+      m_option_data.m_repl_options = arg_value;
+  }
+
+  // We need to process the options below together as their relative order
+  // matters.
+  for (auto *arg : args.filtered(OPT_source_on_crash, OPT_one_line_on_crash,
+                                 OPT_source, OPT_source_before_file,
+                                 OPT_one_line, OPT_one_line_before_file)) {
+    auto arg_value = arg->getValue();
+    if (arg->getOption().matches(OPT_source_on_crash)) {
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterCrash,
+                                      true, error);
+      if (error.Fail())
+        return error;
+    }
+
+    if (arg->getOption().matches(OPT_one_line_on_crash)) {
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterCrash,
+                                      false, error);
+      if (error.Fail())
+        return error;
+    }
+
+    if (arg->getOption().matches(OPT_source)) {
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterFile,
+                                      true, error);
+      if (error.Fail())
+        return error;
+    }
+
+    if (arg->getOption().matches(OPT_source_before_file)) {
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementBeforeFile,
+                                      true, error);
+      if (error.Fail())
+        return error;
+    }
+
+    if (arg->getOption().matches(OPT_one_line)) {
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterFile,
+                                      false, error);
+      if (error.Fail())
+        return error;
+    }
+
+    if (arg->getOption().matches(OPT_one_line_before_file)) {
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementBeforeFile,
+                                      false, error);
+      if (error.Fail())
+        return error;
+    }
+  }
+
+  if (m_option_data.m_process_name.empty() &&
+      m_option_data.m_process_pid == LLDB_INVALID_PROCESS_ID) {
+
+    // If the option data args array is empty that means the file was not
+    // specified with -f and we need to get it from the input args.
+    if (m_option_data.m_args.empty()) {
+      if (auto *arg = args.getLastArgNoClaim(OPT_INPUT)) {
+        m_option_data.m_args.push_back(arg->getAsString((args)));
+      }
+    }
+
+    // Any argument following -- is an argument for the inferior.
+    if (auto *arg = args.getLastArgNoClaim(OPT_REM)) {
+      for (auto value : arg->getValues())
+        m_option_data.m_args.emplace_back(value);
+    }
+  } else if (args.getLastArgNoClaim() != nullptr) {
+    WithColor::warning() << "program arguments are ignored when attaching.\n";
+  }
+
+  if (m_option_data.m_print_version) {
+    llvm::outs() << lldb::SBDebugger::GetVersionString() << '\n';
     exiting = true;
-  } else if (m_option_data.m_print_version) {
-    ::fprintf(out_fh, "%s\n", m_debugger.GetVersionString());
-    exiting = true;
-  } else if (m_option_data.m_print_python_path) {
+    return error;
+  }
+
+  if (m_option_data.m_print_python_path) {
     SBFileSpec python_file_spec = SBHostOS::GetLLDBPythonPath();
     if (python_file_spec.IsValid()) {
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);
       if (num_chars < PATH_MAX) {
-        ::fprintf(out_fh, "%s\n", python_path);
+        llvm::outs() << python_path << '\n';
       } else
-        ::fprintf(out_fh, "<PATH TOO LONG>\n");
+        llvm::outs() << "<PATH TOO LONG>\n";
     } else
-      ::fprintf(out_fh, "<COULD NOT FIND PATH>\n");
+      llvm::outs() << "<COULD NOT FIND PATH>\n";
     exiting = true;
-  } else if (m_option_data.m_process_name.empty() &&
-             m_option_data.m_process_pid == LLDB_INVALID_PROCESS_ID) {
-    // Any arguments that are left over after option parsing are for
-    // the program. If a file was specified with -f then the filename
-    // is already in the m_option_data.m_args array, and any remaining args
-    // are arguments for the inferior program. If no file was specified with
-    // -f, then what is left is the program name followed by any arguments.
-
-    // Skip any options we consumed with getopt_long_only
-    argc -= optind;
-    argv += optind;
-
-    if (argc > 0) {
-      for (int arg_idx = 0; arg_idx < argc; ++arg_idx) {
-        const char *arg = argv[arg_idx];
-        if (arg)
-          m_option_data.m_args.push_back(arg);
-      }
-    }
-
-  } else {
-    // Skip any options we consumed with getopt_long_only
-    argc -= optind;
-
-    if (argc > 0)
-      ::fprintf(out_fh,
-                "Warning: program arguments are ignored when attaching.\n");
+    return error;
   }
 
   return error;
@@ -856,7 +476,7 @@ static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
                                           size_t commands_size, int fds[2]) {
   enum PIPES { READ, WRITE }; // Constants 0 and 1 for READ and WRITE
 
-  ::FILE *commands_file = NULL;
+  ::FILE *commands_file = nullptr;
   fds[0] = -1;
   fds[1] = -1;
   int err = 0;
@@ -868,10 +488,13 @@ static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
   if (err == 0) {
     ssize_t nrwr = write(fds[WRITE], commands_data, commands_size);
     if (nrwr < 0) {
-      fprintf(stderr, "error: write(%i, %p, %" PRIu64 ") failed (errno = %i) "
-                      "when trying to open LLDB commands pipe\n",
-              fds[WRITE], static_cast<const void *>(commands_data),
-              static_cast<uint64_t>(commands_size), errno);
+      WithColor::error()
+          << format(
+                 "write(%i, %p, %" PRIu64
+                 ") failed (errno = %i) when trying to open LLDB commands pipe",
+                 fds[WRITE], static_cast<const void *>(commands_data),
+                 static_cast<uint64_t>(commands_size), errno)
+          << '\n';
     } else if (static_cast<size_t>(nrwr) == commands_size) {
 // Close the write end of the pipe so when we give the read end to
 // the debugger/command interpreter it will exit when it consumes all
@@ -886,20 +509,20 @@ static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
       // Now open the read file descriptor in a FILE * that we can give to
       // the debugger as an input handle
       commands_file = fdopen(fds[READ], "r");
-      if (commands_file) {
-        fds[READ] =
-            -1; // The FILE * 'commands_file' now owns the read descriptor
-                // Hand ownership if the FILE * over to the debugger for
-                // "commands_file".
+      if (commands_file != nullptr) {
+        fds[READ] = -1; // The FILE * 'commands_file' now owns the read
+                        // descriptor Hand ownership if the FILE * over to the
+                        // debugger for "commands_file".
       } else {
-        fprintf(stderr, "error: fdopen(%i, \"r\") failed (errno = %i) when "
-                        "trying to open LLDB commands pipe\n",
-                fds[READ], errno);
+        WithColor::error() << format("fdopen(%i, \"r\") failed (errno = %i) "
+                                     "when trying to open LLDB commands pipe",
+                                     fds[READ], errno)
+                           << '\n';
       }
     }
   } else {
-    fprintf(stderr,
-            "error: can't create pipe file descriptors for LLDB commands\n");
+    WithColor::error()
+        << "can't create pipe file descriptors for LLDB commands\n";
   }
 
   return commands_file;
@@ -949,9 +572,9 @@ int Driver::MainLoop() {
   // Disabling stdin buffering with MSVC's 2015 CRT exposes a bug in fgets
   // which causes it to miss newlines depending on whether there have been an
   // odd or even number of characters.  Bug has been reported to MS via Connect.
-  ::setbuf(stdin, NULL);
+  ::setbuf(stdin, nullptr);
 #endif
-  ::setbuf(stdout, NULL);
+  ::setbuf(stdout, nullptr);
 
   m_debugger.SetErrorFileHandle(stderr, false);
   m_debugger.SetOutputFileHandle(stdout, false);
@@ -961,7 +584,7 @@ int Driver::MainLoop() {
   m_debugger.SetUseExternalEditor(m_option_data.m_use_external_editor);
 
   struct winsize window_size;
-  if (isatty(STDIN_FILENO) &&
+  if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
     if (window_size.ws_col > 0)
       m_debugger.SetTerminalWidth(window_size.ws_col);
@@ -992,7 +615,7 @@ int Driver::MainLoop() {
   const size_t num_args = m_option_data.m_args.size();
   if (num_args > 0) {
     char arch_name[64];
-    if (m_debugger.GetDefaultArchitecture(arch_name, sizeof(arch_name)))
+    if (lldb::SBDebugger::GetDefaultArchitecture(arch_name, sizeof(arch_name)))
       commands_stream.Printf("target create --arch=%s %s", arch_name,
                              EscapeString(m_option_data.m_args[0]).c_str());
     else
@@ -1040,16 +663,16 @@ int Driver::MainLoop() {
   bool spawn_thread = false;
 
   if (m_option_data.m_repl) {
-    const char *repl_options = NULL;
+    const char *repl_options = nullptr;
     if (!m_option_data.m_repl_options.empty())
       repl_options = m_option_data.m_repl_options.c_str();
     SBError error(m_debugger.RunREPL(m_option_data.m_repl_lang, repl_options));
     if (error.Fail()) {
       const char *error_cstr = error.GetCString();
-      if (error_cstr && error_cstr[0])
-        fprintf(stderr, "error: %s\n", error_cstr);
+      if ((error_cstr != nullptr) && (error_cstr[0] != 0))
+        WithColor::error() << error_cstr << '\n';
       else
-        fprintf(stderr, "error: %u\n", error.GetError());
+        WithColor::error() << error.GetError() << '\n';
     }
   } else {
     // Check if we have any data in the commands stream, and if so, save it to a
@@ -1062,12 +685,12 @@ int Driver::MainLoop() {
     // track that.
     bool quit_requested = false;
     bool stopped_for_crash = false;
-    if (commands_data && commands_size) {
+    if ((commands_data != nullptr) && (commands_size != 0u)) {
       int initial_commands_fds[2];
       bool success = true;
       FILE *commands_file = PrepareCommandsForSourcing(
           commands_data, commands_size, initial_commands_fds);
-      if (commands_file) {
+      if (commands_file != nullptr) {
         m_debugger.SetInputFileHandle(commands_file, true);
 
         // Set the debugger into Sync mode when running the command file.
@@ -1096,7 +719,7 @@ int Driver::MainLoop() {
           const size_t crash_commands_size = crash_commands_stream.GetSize();
           commands_file = PrepareCommandsForSourcing(
               crash_commands_data, crash_commands_size, crash_command_fds);
-          if (commands_file) {
+          if (commands_file != nullptr) {
             bool local_quit_requested;
             bool local_stopped_for_crash;
             m_debugger.SetInputFileHandle(commands_file, true);
@@ -1151,9 +774,9 @@ void Driver::ResizeWindow(unsigned short col) {
 
 void sigwinch_handler(int signo) {
   struct winsize window_size;
-  if (isatty(STDIN_FILENO) &&
+  if ((isatty(STDIN_FILENO) != 0) &&
       ::ioctl(STDIN_FILENO, TIOCGWINSZ, &window_size) == 0) {
-    if ((window_size.ws_col > 0) && g_driver != NULL) {
+    if ((window_size.ws_col > 0) && g_driver != nullptr) {
       g_driver->ResizeWindow(window_size.ws_col);
     }
   }
@@ -1161,7 +784,7 @@ void sigwinch_handler(int signo) {
 
 void sigint_handler(int signo) {
   static std::atomic_flag g_interrupt_sent = ATOMIC_FLAG_INIT;
-  if (g_driver) {
+  if (g_driver != nullptr) {
     if (!g_interrupt_sent.test_and_set()) {
       g_driver->GetDebugger().DispatchInputInterrupt();
       g_interrupt_sent.clear();
@@ -1173,7 +796,7 @@ void sigint_handler(int signo) {
 }
 
 void sigtstp_handler(int signo) {
-  if (g_driver)
+  if (g_driver != nullptr)
     g_driver->GetDebugger().SaveInputTerminalState();
 
   signal(signo, SIG_DFL);
@@ -1182,12 +805,51 @@ void sigtstp_handler(int signo) {
 }
 
 void sigcont_handler(int signo) {
-  if (g_driver)
+  if (g_driver != nullptr)
     g_driver->GetDebugger().RestoreInputTerminalState();
 
   signal(signo, SIG_DFL);
   kill(getpid(), signo);
   signal(signo, sigcont_handler);
+}
+
+static void printHelp(LLDBOptTable &table, llvm::StringRef tool_name) {
+  std::string usage_str = tool_name.str() + "options";
+  table.PrintHelp(llvm::outs(), usage_str.c_str(), "LLDB", false);
+
+  std::string examples = R"___(
+EXAMPLES:
+  The debugger can be started in several modes.
+
+  Passing an executable as a positional argument prepares lldb to debug the
+  given executable. Arguments passed after -- are considered arguments to the
+  debugged executable.
+
+    lldb --arch x86_64 /path/to/program -- --arch arvm7
+
+  Passing one of the attach options causes lldb to immediately attach to the
+  given process.
+
+    lldb -p <pid>
+    lldb -n <process-name>
+
+  Passing --repl starts lldb in REPL mode.
+
+    lldb -r
+
+  Passing --core causes lldb to debug the core file.
+
+    lldb -c /path/to/core
+
+  Command options can be combined with either mode and cause lldb to run the
+  specified commands before or after events, like loading the file or crashing,
+  in the order provided on the command line.
+
+    lldb -O 'settings set stop-disassembly-count 20' -o 'run' -o 'bt'
+    lldb -S /source/before/file -s /source/after/file
+    lldb -K /source/before/crash -k /source/after/crash
+  )___";
+  llvm::outs() << examples;
 }
 
 int
@@ -1208,11 +870,48 @@ main(int argc, char const *argv[])
   const char **argv = argvPointers.data();
 #endif
 
-  llvm::StringRef ToolName = argv[0];
+  // Print stack trace on crash.
+  llvm::StringRef ToolName = llvm::sys::path::filename(argv[0]);
   llvm::sys::PrintStackTraceOnErrorSignal(ToolName);
   llvm::PrettyStackTraceProgram X(argc, argv);
 
-  SBDebugger::Initialize();
+  // Parse arguments.
+  LLDBOptTable T;
+  unsigned MAI;
+  unsigned MAC;
+  ArrayRef<const char *> arg_arr = makeArrayRef(argv + 1, argc - 1);
+  opt::InputArgList input_args = T.ParseArgs(arg_arr, MAI, MAC);
+
+  if (input_args.hasArg(OPT_help)) {
+    printHelp(T, ToolName);
+    return 0;
+  }
+
+  for (auto *arg : input_args.filtered(OPT_UNKNOWN)) {
+    WithColor::warning() << "ignoring unknown option: " << arg->getSpelling()
+                         << '\n';
+  }
+
+  SBInitializerOptions options;
+
+  if (auto *arg = input_args.getLastArg(OPT_capture)) {
+    auto arg_value = arg->getValue();
+    options.SetReproducerPath(arg_value);
+    options.SetCaptureReproducer(true);
+  }
+
+  if (auto *arg = input_args.getLastArg(OPT_replay)) {
+    auto arg_value = arg->getValue();
+    options.SetReplayReproducer(true);
+    options.SetReproducerPath(arg_value);
+  }
+
+  SBError error = SBDebugger::Initialize(options);
+  if (error.Fail()) {
+    WithColor::error() << "initialization failed: " << error.GetCString()
+                       << '\n';
+    return 1;
+  }
 
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
@@ -1231,12 +930,11 @@ main(int argc, char const *argv[])
     Driver driver;
 
     bool exiting = false;
-    SBError error(driver.ParseArgs(argc, argv, stdout, exiting));
+    SBError error(driver.ProcessArgs(input_args, exiting));
     if (error.Fail()) {
       exit_code = 1;
-      const char *error_cstr = error.GetCString();
-      if (error_cstr)
-        ::fprintf(stderr, "error: %s\n", error_cstr);
+      if (const char *error_cstr = error.GetCString())
+        WithColor::error() << error_cstr << '\n';
     } else if (!exiting) {
       exit_code = driver.MainLoop();
     }

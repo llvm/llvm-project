@@ -1,18 +1,13 @@
 //===-- SymbolFileDWARFDwp.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileDWARFDwp.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 
@@ -30,7 +25,7 @@ lldbSectTypeToLlvmSectionKind(lldb::SectionType type) {
   case lldb::eSectionTypeDWARFDebugLine:
     return llvm::DW_SECT_LINE;
   case lldb::eSectionTypeDWARFDebugLoc:
-    return llvm::DW_SECT_LOC;
+    return llvm::DW_SECT_LOC; 
   case lldb::eSectionTypeDWARFDebugStrOffsets:
     return llvm::DW_SECT_STR_OFFSETS;
   // case lldb::eSectionTypeDWARFDebugMacinfo:
@@ -50,7 +45,8 @@ SymbolFileDWARFDwp::Create(lldb::ModuleSP module_sp,
   lldb::DataBufferSP file_data_sp;
   lldb::offset_t file_data_offset = 0;
   lldb::ObjectFileSP obj_file = lldb_private::ObjectFile::FindPlugin(
-      module_sp, &file_spec, file_offset, file_spec.GetByteSize(), file_data_sp,
+      module_sp, &file_spec, file_offset,
+      lldb_private::FileSystem::Instance().GetByteSize(file_spec), file_data_sp,
       file_data_offset);
   if (obj_file == nullptr)
     return nullptr;

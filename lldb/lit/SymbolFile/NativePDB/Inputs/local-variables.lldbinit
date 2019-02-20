@@ -1,0 +1,32 @@
+break set -n main
+run a b c d e f g
+p argc
+step
+p SomeLocal
+step
+p Param1
+p Param2
+step
+p Param1
+p Param2
+p Local1
+step
+p Param1
+p Param2
+p Local1
+p Local2
+step
+p Param1
+p Param2
+p Local1
+p Local2
+step
+p Param1
+p Param2
+p Local1
+p Local2
+continue
+
+target modules dump ast
+
+quit

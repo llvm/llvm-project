@@ -1,9 +1,8 @@
 //===-- Stream.cpp ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,7 +10,7 @@
 
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/VASPrintf.h"
-#include "llvm/ADT/SmallString.h" // for SmallString
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/LEB128.h"
 
 #include <string>
@@ -93,9 +92,9 @@ void Stream::QuotedCString(const char *cstr, const char *format) {
 //------------------------------------------------------------------
 void Stream::Address(uint64_t addr, uint32_t addr_size, const char *prefix,
                      const char *suffix) {
-  if (prefix == NULL)
+  if (prefix == nullptr)
     prefix = "";
-  if (suffix == NULL)
+  if (suffix == nullptr)
     suffix = "";
   //    int addr_width = m_addr_size << 1;
   //    Printf ("%s0x%0*" PRIx64 "%s", prefix, addr_width, addr, suffix);
@@ -313,26 +312,25 @@ size_t Stream::PrintfAsRawHex8(const char *format, ...) {
   llvm::SmallString<1024> buf;
   VASprintf(buf, format, args);
 
-  size_t length = 0;
+  ByteDelta delta(*this);
   for (char C : buf)
-    length += _PutHex8(C, false);
+    _PutHex8(C, false);
 
   va_end(args);
 
-  return length;
+  return *delta;
 }
 
 size_t Stream::PutNHex8(size_t n, uint8_t uvalue) {
-  size_t bytes_written = 0;
+  ByteDelta delta(*this);
   for (size_t i = 0; i < n; ++i)
-    bytes_written += _PutHex8(uvalue, false);
-  return bytes_written;
+    _PutHex8(uvalue, false);
+  return *delta;
 }
 
-size_t Stream::_PutHex8(uint8_t uvalue, bool add_prefix) {
-  size_t bytes_written = 0;
+void Stream::_PutHex8(uint8_t uvalue, bool add_prefix) {
   if (m_flags.Test(eBinary)) {
-    bytes_written = Write(&uvalue, 1);
+    Write(&uvalue, 1);
   } else {
     if (add_prefix)
       PutCString("0x");
@@ -343,56 +341,62 @@ size_t Stream::_PutHex8(uint8_t uvalue, bool add_prefix) {
     char nibble_chars[2];
     nibble_chars[0] = g_hex_to_ascii_hex_char[(uvalue >> 4) & 0xf];
     nibble_chars[1] = g_hex_to_ascii_hex_char[(uvalue >> 0) & 0xf];
-    bytes_written = Write(nibble_chars, sizeof(nibble_chars));
+    Write(nibble_chars, sizeof(nibble_chars));
   }
-  return bytes_written;
 }
 
-size_t Stream::PutHex8(uint8_t uvalue) { return _PutHex8(uvalue, false); }
+size_t Stream::PutHex8(uint8_t uvalue) {
+  ByteDelta delta(*this);
+  _PutHex8(uvalue, false);
+  return *delta;
+}
 
 size_t Stream::PutHex16(uint16_t uvalue, ByteOrder byte_order) {
+  ByteDelta delta(*this);
+
   if (byte_order == eByteOrderInvalid)
     byte_order = m_byte_order;
 
-  size_t bytes_written = 0;
   if (byte_order == eByteOrderLittle) {
     for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   } else {
     for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   }
-  return bytes_written;
+  return *delta;
 }
 
 size_t Stream::PutHex32(uint32_t uvalue, ByteOrder byte_order) {
+  ByteDelta delta(*this);
+
   if (byte_order == eByteOrderInvalid)
     byte_order = m_byte_order;
 
-  size_t bytes_written = 0;
   if (byte_order == eByteOrderLittle) {
     for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   } else {
     for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   }
-  return bytes_written;
+  return *delta;
 }
 
 size_t Stream::PutHex64(uint64_t uvalue, ByteOrder byte_order) {
+  ByteDelta delta(*this);
+
   if (byte_order == eByteOrderInvalid)
     byte_order = m_byte_order;
 
-  size_t bytes_written = 0;
   if (byte_order == eByteOrderLittle) {
     for (size_t byte = 0; byte < sizeof(uvalue); ++byte)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   } else {
     for (size_t byte = sizeof(uvalue) - 1; byte < sizeof(uvalue); --byte)
-      bytes_written += _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
+      _PutHex8((uint8_t)(uvalue >> (byte * 8)), false);
   }
-  return bytes_written;
+  return *delta;
 }
 
 size_t Stream::PutMaxHex64(uint64_t uvalue, size_t byte_size,
@@ -438,65 +442,66 @@ size_t Stream::PutLongDouble(long double ld, ByteOrder byte_order) {
 
 size_t Stream::PutRawBytes(const void *s, size_t src_len,
                            ByteOrder src_byte_order, ByteOrder dst_byte_order) {
+  ByteDelta delta(*this);
+
   if (src_byte_order == eByteOrderInvalid)
     src_byte_order = m_byte_order;
 
   if (dst_byte_order == eByteOrderInvalid)
     dst_byte_order = m_byte_order;
 
-  size_t bytes_written = 0;
   const uint8_t *src = (const uint8_t *)s;
   bool binary_was_set = m_flags.Test(eBinary);
   if (!binary_was_set)
     m_flags.Set(eBinary);
   if (src_byte_order == dst_byte_order) {
     for (size_t i = 0; i < src_len; ++i)
-      bytes_written += _PutHex8(src[i], false);
+      _PutHex8(src[i], false);
   } else {
     for (size_t i = src_len - 1; i < src_len; --i)
-      bytes_written += _PutHex8(src[i], false);
+      _PutHex8(src[i], false);
   }
   if (!binary_was_set)
     m_flags.Clear(eBinary);
 
-  return bytes_written;
+  return *delta;
 }
 
 size_t Stream::PutBytesAsRawHex8(const void *s, size_t src_len,
                                  ByteOrder src_byte_order,
                                  ByteOrder dst_byte_order) {
+  ByteDelta delta(*this);
   if (src_byte_order == eByteOrderInvalid)
     src_byte_order = m_byte_order;
 
   if (dst_byte_order == eByteOrderInvalid)
     dst_byte_order = m_byte_order;
 
-  size_t bytes_written = 0;
   const uint8_t *src = (const uint8_t *)s;
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
   if (src_byte_order == dst_byte_order) {
     for (size_t i = 0; i < src_len; ++i)
-      bytes_written += _PutHex8(src[i], false);
+      _PutHex8(src[i], false);
   } else {
     for (size_t i = src_len - 1; i < src_len; --i)
-      bytes_written += _PutHex8(src[i], false);
+      _PutHex8(src[i], false);
   }
   if (binary_is_set)
     m_flags.Set(eBinary);
 
-  return bytes_written;
+  return *delta;
 }
 
 size_t Stream::PutCStringAsRawHex8(const char *s) {
-  size_t bytes_written = 0;
+  ByteDelta delta(*this);
   bool binary_is_set = m_flags.Test(eBinary);
   m_flags.Clear(eBinary);
   while(*s) {
-    bytes_written += _PutHex8(*s, false);
+    _PutHex8(*s, false);
     ++s;
   }
   if (binary_is_set)
     m_flags.Set(eBinary);
-  return bytes_written;
+  return *delta;
 }

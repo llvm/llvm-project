@@ -1,34 +1,29 @@
 //===-- CommandInterpreter.h ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_CommandInterpreter_h_
 #define liblldb_CommandInterpreter_h_
 
-// C Includes
-// C++ Includes
-#include <mutex>
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandAlias.h"
 #include "lldb/Interpreter/CommandHistory.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"
+#include <mutex>
 
 namespace lldb_private {
 
@@ -220,7 +215,8 @@ public:
                                           bool include_aliases) const;
 
   CommandObject *GetCommandObject(llvm::StringRef cmd,
-                                  StringList *matches = nullptr) const;
+                                  StringList *matches = nullptr,
+                                  StringList *descriptions = nullptr) const;
 
   bool CommandExists(llvm::StringRef cmd) const;
 
@@ -324,7 +320,8 @@ public:
   // FIXME: Only max_return_elements == -1 is supported at present.
   int HandleCompletion(const char *current_line, const char *cursor,
                        const char *last_char, int match_start_point,
-                       int max_return_elements, StringList &matches);
+                       int max_return_elements, StringList &matches,
+                       StringList &descriptions);
 
   // This version just returns matches, and doesn't compute the substring.  It
   // is here so the Help command can call it for the first argument. It uses
@@ -333,7 +330,8 @@ public:
 
   int GetCommandNamesMatchingPartialString(const char *cmd_cstr,
                                            bool include_aliases,
-                                           StringList &matches);
+                                           StringList &matches,
+                                           StringList &descriptions);
 
   void GetHelp(CommandReturnObject &result,
                uint32_t types = eCommandTypesAllThem);
@@ -540,7 +538,8 @@ protected:
   lldb::CommandObjectSP GetCommandSP(llvm::StringRef cmd,
                                      bool include_aliases = true,
                                      bool exact = true,
-                                     StringList *matches = nullptr) const;
+                                     StringList *matches = nullptr,
+                                     StringList *descriptions = nullptr) const;
 
 private:
   Status PreprocessCommand(std::string &command);

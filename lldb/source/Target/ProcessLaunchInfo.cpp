@@ -1,25 +1,18 @@
 //===-- ProcessLaunchInfo.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <climits>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/Core/Debugger.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -108,8 +101,7 @@ bool ProcessLaunchInfo::AppendOpenFileAction(int fd, const FileSpec &file_spec,
 bool ProcessLaunchInfo::AppendSuppressFileAction(int fd, bool read,
                                                  bool write) {
   FileAction file_action;
-  if (file_action.Open(fd, FileSpec{FileSystem::DEV_NULL, false}, read,
-                       write)) {
+  if (file_action.Open(fd, FileSpec(FileSystem::DEV_NULL), read, write)) {
     AppendFileAction(file_action);
     return true;
   }
@@ -151,7 +143,7 @@ const FileSpec &ProcessLaunchInfo::GetShell() const { return m_shell; }
 void ProcessLaunchInfo::SetShell(const FileSpec &shell) {
   m_shell = shell;
   if (m_shell) {
-    m_shell.ResolveExecutableLocation();
+    FileSystem::Instance().ResolveExecutableLocation(m_shell);
     m_flags.Set(lldb::eLaunchFlagLaunchInShell);
   } else
     m_flags.Clear(lldb::eLaunchFlagLaunchInShell);
@@ -212,124 +204,38 @@ void ProcessLaunchInfo::SetDetachOnError(bool enable) {
     m_flags.Clear(lldb::eLaunchFlagDetachOnError);
 }
 
-void ProcessLaunchInfo::FinalizeFileActions(Target *target,
-                                            bool default_to_use_pty) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+llvm::Error ProcessLaunchInfo::SetUpPtyRedirection() {
+  Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS);
+  LLDB_LOG(log, "Generating a pty to use for stdin/out/err");
 
-  // If nothing for stdin or stdout or stderr was specified, then check the
-  // process for any default settings that were set with "settings set"
-  if (GetFileActionForFD(STDIN_FILENO) == nullptr ||
-      GetFileActionForFD(STDOUT_FILENO) == nullptr ||
-      GetFileActionForFD(STDERR_FILENO) == nullptr) {
-    if (log)
-      log->Printf("ProcessLaunchInfo::%s at least one of stdin/stdout/stderr "
-                  "was not set, evaluating default handling",
-                  __FUNCTION__);
-
-    if (m_flags.Test(eLaunchFlagLaunchInTTY)) {
-      // Do nothing, if we are launching in a remote terminal no file actions
-      // should be done at all.
-      return;
-    }
-
-    if (m_flags.Test(eLaunchFlagDisableSTDIO)) {
-      if (log)
-        log->Printf("ProcessLaunchInfo::%s eLaunchFlagDisableSTDIO set, adding "
-                    "suppression action for stdin, stdout and stderr",
-                    __FUNCTION__);
-      AppendSuppressFileAction(STDIN_FILENO, true, false);
-      AppendSuppressFileAction(STDOUT_FILENO, false, true);
-      AppendSuppressFileAction(STDERR_FILENO, false, true);
-    } else {
-      // Check for any values that might have gotten set with any of: (lldb)
-      // settings set target.input-path (lldb) settings set target.output-path
-      // (lldb) settings set target.error-path
-      FileSpec in_file_spec;
-      FileSpec out_file_spec;
-      FileSpec err_file_spec;
-      if (target) {
-        // Only override with the target settings if we don't already have an
-        // action for in, out or error
-        if (GetFileActionForFD(STDIN_FILENO) == nullptr)
-          in_file_spec = target->GetStandardInputPath();
-        if (GetFileActionForFD(STDOUT_FILENO) == nullptr)
-          out_file_spec = target->GetStandardOutputPath();
-        if (GetFileActionForFD(STDERR_FILENO) == nullptr)
-          err_file_spec = target->GetStandardErrorPath();
-      }
-
-      if (log)
-        log->Printf("ProcessLaunchInfo::%s target stdin='%s', target "
-                    "stdout='%s', stderr='%s'",
-                    __FUNCTION__,
-                    in_file_spec ? in_file_spec.GetCString() : "<null>",
-                    out_file_spec ? out_file_spec.GetCString() : "<null>",
-                    err_file_spec ? err_file_spec.GetCString() : "<null>");
-
-      if (in_file_spec) {
-        AppendOpenFileAction(STDIN_FILENO, in_file_spec, true, false);
-        if (log)
-          log->Printf(
-              "ProcessLaunchInfo::%s appended stdin open file action for %s",
-              __FUNCTION__, in_file_spec.GetCString());
-      }
-
-      if (out_file_spec) {
-        AppendOpenFileAction(STDOUT_FILENO, out_file_spec, false, true);
-        if (log)
-          log->Printf(
-              "ProcessLaunchInfo::%s appended stdout open file action for %s",
-              __FUNCTION__, out_file_spec.GetCString());
-      }
-
-      if (err_file_spec) {
-        AppendOpenFileAction(STDERR_FILENO, err_file_spec, false, true);
-        if (log)
-          log->Printf(
-              "ProcessLaunchInfo::%s appended stderr open file action for %s",
-              __FUNCTION__, err_file_spec.GetCString());
-      }
-
-      if (default_to_use_pty &&
-          (!in_file_spec || !out_file_spec || !err_file_spec)) {
-        if (log)
-          log->Printf("ProcessLaunchInfo::%s default_to_use_pty is set, and at "
-                      "least one stdin/stderr/stdout is unset, so generating a "
-                      "pty to use for it",
-                      __FUNCTION__);
-
-        int open_flags = O_RDWR | O_NOCTTY;
+  int open_flags = O_RDWR | O_NOCTTY;
 #if !defined(_WIN32)
-        // We really shouldn't be specifying platform specific flags that are
-        // intended for a system call in generic code.  But this will have to
-        // do for now.
-        open_flags |= O_CLOEXEC;
+  // We really shouldn't be specifying platform specific flags that are
+  // intended for a system call in generic code.  But this will have to
+  // do for now.
+  open_flags |= O_CLOEXEC;
 #endif
-        if (m_pty->OpenFirstAvailableMaster(open_flags, nullptr, 0)) {
-          const FileSpec slave_file_spec{m_pty->GetSlaveName(nullptr, 0),
-                                         false};
-
-          // Only use the slave tty if we don't have anything specified for
-          // input and don't have an action for stdin
-          if (!in_file_spec && GetFileActionForFD(STDIN_FILENO) == nullptr) {
-            AppendOpenFileAction(STDIN_FILENO, slave_file_spec, true, false);
-          }
-
-          // Only use the slave tty if we don't have anything specified for
-          // output and don't have an action for stdout
-          if (!out_file_spec && GetFileActionForFD(STDOUT_FILENO) == nullptr) {
-            AppendOpenFileAction(STDOUT_FILENO, slave_file_spec, false, true);
-          }
-
-          // Only use the slave tty if we don't have anything specified for
-          // error and don't have an action for stderr
-          if (!err_file_spec && GetFileActionForFD(STDERR_FILENO) == nullptr) {
-            AppendOpenFileAction(STDERR_FILENO, slave_file_spec, false, true);
-          }
-        }
-      }
-    }
+  if (!m_pty->OpenFirstAvailableMaster(open_flags, nullptr, 0)) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "PTY::OpenFirstAvailableMaster failed");
   }
+  const FileSpec slave_file_spec(m_pty->GetSlaveName(nullptr, 0));
+
+  // Only use the slave tty if we don't have anything specified for
+  // input and don't have an action for stdin
+  if (GetFileActionForFD(STDIN_FILENO) == nullptr)
+    AppendOpenFileAction(STDIN_FILENO, slave_file_spec, true, false);
+
+  // Only use the slave tty if we don't have anything specified for
+  // output and don't have an action for stdout
+  if (GetFileActionForFD(STDOUT_FILENO) == nullptr)
+    AppendOpenFileAction(STDOUT_FILENO, slave_file_spec, false, true);
+
+  // Only use the slave tty if we don't have anything specified for
+  // error and don't have an action for stderr
+  if (GetFileActionForFD(STDERR_FILENO) == nullptr)
+    AppendOpenFileAction(STDERR_FILENO, slave_file_spec, false, true);
+  return llvm::Error::success();
 }
 
 bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
@@ -359,7 +265,7 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
         // Add a modified PATH environment variable in case argv[0] is a
         // relative path.
         const char *argv0 = argv[0];
-        FileSpec arg_spec(argv0, false);
+        FileSpec arg_spec(argv0);
         if (arg_spec.IsRelative()) {
           // We have a relative path to our executable which may not work if we
           // just try to run "a.out" (without it being converted to "./a.out")
@@ -438,11 +344,4 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
     error.SetErrorString("not launching in shell");
   }
   return false;
-}
-
-ListenerSP ProcessLaunchInfo::GetListenerForProcess(Debugger &debugger) {
-  if (m_listener_sp)
-    return m_listener_sp;
-  else
-    return debugger.GetListener();
 }

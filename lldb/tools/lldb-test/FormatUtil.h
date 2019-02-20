@@ -1,9 +1,8 @@
 //===- FormatUtil.h ------------------------------------------- *- C++ --*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,19 +25,28 @@ class LinePrinter {
   int CurrentIndent;
 
 public:
+  class Line {
+    LinePrinter *P;
+
+  public:
+    Line(LinePrinter &P) : P(&P) { P.OS.indent(P.CurrentIndent); }
+    ~Line();
+
+    Line(Line &&RHS) : P(RHS.P) { RHS.P = nullptr; }
+    void operator=(Line &&) = delete;
+
+    operator llvm::raw_ostream &() { return P->OS; }
+  };
+
   LinePrinter(int Indent, llvm::raw_ostream &Stream);
 
   void Indent(uint32_t Amount = 0);
   void Unindent(uint32_t Amount = 0);
   void NewLine();
 
-  void printLine(const llvm::Twine &T);
-  void print(const llvm::Twine &T);
+  void printLine(const llvm::Twine &T) { line() << T; }
   template <typename... Ts> void formatLine(const char *Fmt, Ts &&... Items) {
     printLine(llvm::formatv(Fmt, std::forward<Ts>(Items)...));
-  }
-  template <typename... Ts> void format(const char *Fmt, Ts &&... Items) {
-    print(llvm::formatv(Fmt, std::forward<Ts>(Items)...));
   }
 
   void formatBinary(llvm::StringRef Label, llvm::ArrayRef<uint8_t> Data,
@@ -46,7 +54,7 @@ public:
   void formatBinary(llvm::StringRef Label, llvm::ArrayRef<uint8_t> Data,
                     uint64_t BaseAddr, uint32_t StartOffset);
 
-  llvm::raw_ostream &getStream() { return OS; }
+  Line line() { return Line(*this); }
   int getIndentLevel() const { return CurrentIndent; }
 };
 
@@ -63,12 +71,6 @@ struct AutoIndent {
   LinePrinter *L = nullptr;
   uint32_t Amount = 0;
 };
-
-template <class T>
-inline llvm::raw_ostream &operator<<(LinePrinter &Printer, const T &Item) {
-  Printer.getStream() << Item;
-  return Printer.getStream();
-}
 
 } // namespace lldb_private
 

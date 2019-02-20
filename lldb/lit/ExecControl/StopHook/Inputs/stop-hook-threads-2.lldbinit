@@ -1,0 +1,4 @@
+break set -f stop-hook-threads.cpp -p "Break here to test that the stop-hook"
+run
+target stop-hook add -x 2 -o "frame variable thread_index"
+target stop-hook add -o continue

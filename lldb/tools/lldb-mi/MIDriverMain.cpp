@@ -1,9 +1,8 @@
 //===-- MIDriverMain.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -42,7 +41,7 @@
 #include "MIDriver.h"
 #include "MIDriverMgr.h"
 #include "MIUtilDebug.h"
-#include "Platform.h" // Define signals - CODETAG_IOR_SIGNALS
+#include "Platform.h"
 
 #if defined(_MSC_VER)
 #pragma warning(                                                               \
@@ -165,11 +164,7 @@ bool DriverSystemShutdown(const bool vbAppExitOk) {
 //--
 int main(int argc, char const *argv[]) {
 #if MICONFIG_DEBUG_SHOW_ATTACH_DBG_DLG
-#ifdef _WIN32
-  CMIUtilDebug::ShowDlgWaitForDbgAttach();
-#else
   CMIUtilDebug::WaitForDbgAttachInfinteLoop();
-#endif //  _WIN32
 #endif // MICONFIG_DEBUG_SHOW_ATTACH_DBG_DLG
 
   llvm::StringRef ToolName = argv[0];

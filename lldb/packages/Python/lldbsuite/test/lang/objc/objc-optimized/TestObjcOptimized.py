@@ -1,7 +1,6 @@
 """
 Test that objective-c expression parser continues to work for optimized build.
 
-http://llvm.org/viewvc/llvm-project?rev=126973&view=rev
 Fixed a bug in the expression parser where the 'this'
 or 'self' variable was not properly read if the compiler
 optimized it into a register.

@@ -1,15 +1,13 @@
 //===-- SBProcess.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcess.h"
 
-// C Includes
 #include <inttypes.h>
 
 #include "lldb/lldb-defines.h"
@@ -18,7 +16,6 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
@@ -28,9 +25,9 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 
-// Project includes
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -130,10 +127,9 @@ bool SBProcess::RemoteLaunch(char const **argv, char const **envp,
     if (process_sp->GetState() == eStateConnected) {
       if (stop_at_entry)
         launch_flags |= eLaunchFlagStopAtEntry;
-      ProcessLaunchInfo launch_info(
-          FileSpec{stdin_path, false}, FileSpec{stdout_path, false},
-          FileSpec{stderr_path, false}, FileSpec{working_directory, false},
-          launch_flags);
+      ProcessLaunchInfo launch_info(FileSpec(stdin_path), FileSpec(stdout_path),
+                                    FileSpec(stderr_path),
+                                    FileSpec(working_directory), launch_flags);
       Module *exe_module = process_sp->GetTarget().GetExecutableModulePointer();
       if (exe_module)
         launch_info.SetExecutableFile(exe_module->GetPlatformFileSpec(), true);
@@ -1351,7 +1347,7 @@ lldb::SBError SBProcess::SaveCore(const char *file_name) {
     return error;
   }
 
-  FileSpec core_file(file_name, false);
+  FileSpec core_file(file_name);
   error.ref() = PluginManager::SaveCore(process_sp, core_file);
   return error;
 }
@@ -1361,18 +1357,14 @@ SBProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                SBMemoryRegionInfo &sb_region_info) {
   lldb::SBError sb_error;
   ProcessSP process_sp(GetSP());
-  MemoryRegionInfoSP region_info_sp =
-      std::make_shared<lldb_private::MemoryRegionInfo>();
   if (process_sp) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
       std::lock_guard<std::recursive_mutex> guard(
           process_sp->GetTarget().GetAPIMutex());
+
       sb_error.ref() =
-          process_sp->GetMemoryRegionInfo(load_addr, *region_info_sp);
-      if (sb_error.Success()) {
-        sb_region_info.ref() = *region_info_sp;
-      }
+          process_sp->GetMemoryRegionInfo(load_addr, sb_region_info.ref());
     } else {
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
       if (log)
@@ -1388,35 +1380,23 @@ SBProcess::GetMemoryRegionInfo(lldb::addr_t load_addr,
 }
 
 lldb::SBMemoryRegionInfoList SBProcess::GetMemoryRegions() {
-  lldb::SBError sb_error;
   lldb::SBMemoryRegionInfoList sb_region_list;
+
   ProcessSP process_sp(GetSP());
-  if (process_sp) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      std::lock_guard<std::recursive_mutex> guard(
-          process_sp->GetTarget().GetAPIMutex());
-      std::vector<MemoryRegionInfoSP> region_list;
-      sb_error.ref() = process_sp->GetMemoryRegions(region_list);
-      if (sb_error.Success()) {
-        std::vector<MemoryRegionInfoSP>::iterator end = region_list.end();
-        for (std::vector<MemoryRegionInfoSP>::iterator it = region_list.begin();
-             it != end; it++) {
-          SBMemoryRegionInfo sb_region_info(it->get());
-          sb_region_list.Append(sb_region_info);
-        }
-      }
-    } else {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-      if (log)
-        log->Printf(
-            "SBProcess(%p)::GetMemoryRegionInfo() => error: process is running",
-            static_cast<void *>(process_sp.get()));
-      sb_error.SetErrorString("process is running");
-    }
+  Process::StopLocker stop_locker;
+  if (process_sp && stop_locker.TryLock(&process_sp->GetRunLock())) {
+    std::lock_guard<std::recursive_mutex> guard(
+        process_sp->GetTarget().GetAPIMutex());
+
+    process_sp->GetMemoryRegions(sb_region_list.ref());
   } else {
-    sb_error.SetErrorString("SBProcess is invalid");
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
+    if (log)
+      log->Printf(
+          "SBProcess(%p)::GetMemoryRegionInfo() => error: process is running",
+          static_cast<void *>(process_sp.get()));
   }
+
   return sb_region_list;
 }
 

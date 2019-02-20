@@ -1,9 +1,8 @@
 //===-- Process.h -----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,10 +11,8 @@
 
 #include "lldb/Host/Config.h"
 
-// C Includes
 #include <limits.h>
 
-// C++ Includes
 #include <chrono>
 #include <list>
 #include <memory>
@@ -24,13 +21,8 @@
 #include <unordered_set>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointSiteList.h"
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Event.h"
-#include "lldb/Core/Listener.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeValue.h"
@@ -47,6 +39,9 @@
 #include "lldb/Target/QueueList.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/Event.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/NameMatches.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -319,7 +314,7 @@ public:
                            NameMatch process_name_match_type)
       : m_match_info(), m_name_match_type(process_name_match_type),
         m_match_all_users(false) {
-    m_match_info.GetExecutableFile().SetFile(process_name, false,
+    m_match_info.GetExecutableFile().SetFile(process_name,
                                              FileSpec::Style::native);
   }
 
@@ -2100,7 +2095,7 @@ public:
   ///     An error value.
   //------------------------------------------------------------------
   virtual Status
-  GetMemoryRegions(std::vector<lldb::MemoryRegionInfoSP> &region_list);
+  GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list);
 
   virtual Status GetWatchpointSupportInfo(uint32_t &num) {
     Status error;

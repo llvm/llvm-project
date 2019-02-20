@@ -1,7 +1,4 @@
-# XFAIL: windows
-# -> llvm.org/pr24452
-#
-# RUN: %cc -o %t %p/inputs/data-info-line.c -g
+# RUN: %build %p/inputs/data-info-line.c --nodefaultlib -o %t
 # RUN: %lldbmi %t < %s | FileCheck %s
 
 # Test lldb-mi -data-info-line command.

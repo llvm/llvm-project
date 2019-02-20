@@ -158,6 +158,7 @@ class LoadUnloadTestCase(TestBase):
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @expectedFailureAndroid  # wrong source file shows up for hidden library
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
+    @skipIfDarwinEmbedded
     def test_dyld_library_path(self):
         """Test (DY)LD_LIBRARY_PATH after moving libd.dylib, which defines d_function, somewhere else."""
         self.copy_shlibs_to_remote(hidden_dir=True)
@@ -220,7 +221,6 @@ class LoadUnloadTestCase(TestBase):
         triple='.*-android')
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
-    @expectedFailureAll(bugnumber="rdar://38484268")
     def test_lldb_process_load_and_unload_commands(self):
         """Test that lldb process load/unload command work correctly."""
         self.copy_shlibs_to_remote()

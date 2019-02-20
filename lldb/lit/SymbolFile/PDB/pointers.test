@@ -1,0 +1,38 @@
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/PointerTypeTest.cpp.obj %S/Inputs/PointerTypeTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/PointerTypeTest.cpp.exe %T/PointerTypeTest.cpp.obj
+RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck %s
+RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST-F %s
+RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST %s
+RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN %s
+RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=F %s
+
+CHECK: Module [[MOD:.*]]
+CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\PointerTypeTest.cpp'
+
+MAIN-ST-F:  name = "f"
+MAIN-ST-F-SAME: decl = PointerTypeTest.cpp:8
+MAIN-ST-F-SAME: compiler_type = {{.*}} int (int)
+
+MAIN-ST:  name = "ST", size = 4, decl = PointerTypeTest.cpp:6, compiler_type = {{.*}} struct ST {
+MAIN-ST-NEXT: int a;
+MAIN-ST-NEXT: int {{.*}}f(int);
+MAIN-ST-NEXT:}
+
+MAIN:   Function{[[FID1:.*]]}, mangled = _main
+MAIN-NEXT:  Block{[[FID1]]}
+MAIN:     Variable{{.*}}, name = "array_pointer"
+MAIN-SAME:    (int (*)[2][4]), scope = local
+MAIN:     Variable{{.*}}, name = "p_int"
+MAIN-SAME:    (int *), scope = local
+MAIN:     Variable{{.*}}, name = "p_member_field"
+MAIN-SAME:    (int ST::*), scope = local
+MAIN:     Variable{{.*}}, name = "p_member_method"
+MAIN-SAME:    (int (ST::*)(int) __attribute__((thiscall))), scope = local
+
+F:   Function{[[FID2:.*]]}, demangled = {{.*}}f(int)
+F-NEXT:  Block{[[FID2]]}
+F:     Variable{{.*}}, name = "this"
+F-SAME:    (ST *), scope = parameter, location = {{.*}}, artificial
+F:     Variable{{.*}}, name = "x"
+F-SAME:    (int), scope = parameter, decl = PointerTypeTest.cpp:8

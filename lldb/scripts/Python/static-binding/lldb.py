@@ -162,6 +162,7 @@ eStateCrashed = _lldb.eStateCrashed
 eStateDetached = _lldb.eStateDetached
 eStateExited = _lldb.eStateExited
 eStateSuspended = _lldb.eStateSuspended
+kLastStateType = _lldb.kLastStateType
 eLaunchFlagNone = _lldb.eLaunchFlagNone
 eLaunchFlagExec = _lldb.eLaunchFlagExec
 eLaunchFlagDebug = _lldb.eLaunchFlagDebug
@@ -575,6 +576,13 @@ eSectionTypeDWARFGNUDebugAltLink = _lldb.eSectionTypeDWARFGNUDebugAltLink
 eSectionTypeDWARFDebugTypes = _lldb.eSectionTypeDWARFDebugTypes
 eSectionTypeDWARFDebugNames = _lldb.eSectionTypeDWARFDebugNames
 eSectionTypeOther = _lldb.eSectionTypeOther
+eSectionTypeDWARFDebugLineStr = _lldb.eSectionTypeDWARFDebugLineStr
+eSectionTypeDWARFDebugRngLists = _lldb.eSectionTypeDWARFDebugRngLists
+eSectionTypeDWARFDebugLocLists = _lldb.eSectionTypeDWARFDebugLocLists
+eSectionTypeDWARFDebugAbbrevDwo = _lldb.eSectionTypeDWARFDebugAbbrevDwo
+eSectionTypeDWARFDebugInfoDwo = _lldb.eSectionTypeDWARFDebugInfoDwo
+eSectionTypeDWARFDebugStrDwo = _lldb.eSectionTypeDWARFDebugStrDwo
+eSectionTypeDWARFDebugStrOffsetsDwo = _lldb.eSectionTypeDWARFDebugStrOffsetsDwo
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 eEmulateInstructionOptionAutoAdvancePC = _lldb.eEmulateInstructionOptionAutoAdvancePC
 eEmulateInstructionOptionIgnoreConditions = _lldb.eEmulateInstructionOptionIgnoreConditions
@@ -2527,6 +2535,14 @@ class SBCommandInterpreter(_object):
         """
         return _lldb.SBCommandInterpreter_HandleCompletion(self, *args)
 
+    def HandleCompletionWithDescriptions(self, *args):
+        """
+        HandleCompletionWithDescriptions(self, str current_line, uint32_t cursor_pos, int match_start_point, 
+            int max_return_elements, SBStringList matches, 
+            SBStringList descriptions) -> int
+        """
+        return _lldb.SBCommandInterpreter_HandleCompletionWithDescriptions(self, *args)
+
     def IsActive(self):
         """IsActive(self) -> bool"""
         return _lldb.SBCommandInterpreter_IsActive(self)
@@ -3350,7 +3366,7 @@ class SBDebugger(_object):
     # Create a new debugger instance
     debugger = lldb.SBDebugger.Create()
 
-    # When we step or continue, don't return from the function until the process 
+    # When we step or continue, don't return from the function until the process
     # stops. We do this by setting the async mode to false.
     debugger.SetAsync (False)
 
@@ -3368,7 +3384,7 @@ class SBDebugger(_object):
         # Launch the process. Since we specified synchronous mode, we won't return
         # from this function until we hit the breakpoint at main
         process = target.LaunchSimple (None, None, os.getcwd())
-        
+
         # Make sure the launch went ok
         if process:
             # Print some simple process info
@@ -3445,9 +3461,12 @@ class SBDebugger(_object):
     __swig_getmethods__ = {}
     __getattr__ = lambda self, name: _swig_getattr(self, SBDebugger, name)
     __repr__ = _swig_repr
-    def Initialize():
-        """Initialize()"""
-        return _lldb.SBDebugger_Initialize()
+    def Initialize(*args):
+        """
+        Initialize()
+        Initialize(SBInitializerOptions options)
+        """
+        return _lldb.SBDebugger_Initialize(*args)
 
     if _newclass:Initialize = staticmethod(Initialize)
     __swig_getmethods__["Initialize"] = lambda x: Initialize
@@ -3796,6 +3815,10 @@ class SBDebugger(_object):
         """SetPrompt(self, str prompt)"""
         return _lldb.SBDebugger_SetPrompt(self, *args)
 
+    def GetReproducerPath(self):
+        """GetReproducerPath(self) -> str"""
+        return _lldb.SBDebugger_GetReproducerPath(self)
+
     def GetScriptLanguage(self):
         """GetScriptLanguage(self) -> ScriptLanguage"""
         return _lldb.SBDebugger_GetScriptLanguage(self)
@@ -3874,9 +3897,12 @@ class SBDebugger(_object):
 SBDebugger_swigregister = _lldb.SBDebugger_swigregister
 SBDebugger_swigregister(SBDebugger)
 
-def SBDebugger_Initialize():
-  """SBDebugger_Initialize()"""
-  return _lldb.SBDebugger_Initialize()
+def SBDebugger_Initialize(*args):
+  """
+    Initialize()
+    SBDebugger_Initialize(SBInitializerOptions options)
+    """
+  return _lldb.SBDebugger_Initialize(*args)
 
 def SBDebugger_Terminate():
   """SBDebugger_Terminate()"""
@@ -5524,6 +5550,38 @@ def SBHostOS_ThreadJoin(*args):
   """SBHostOS_ThreadJoin(thread_t thread, thread_result_t result, SBError err) -> bool"""
   return _lldb.SBHostOS_ThreadJoin(*args)
 
+class SBInitializerOptions(_object):
+    """Proxy of C++ lldb::SBInitializerOptions class"""
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBInitializerOptions, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBInitializerOptions, name)
+    __repr__ = _swig_repr
+    def __init__(self, *args): 
+        """
+        __init__(self) -> SBInitializerOptions
+        __init__(self, SBInitializerOptions rhs) -> SBInitializerOptions
+        """
+        this = _lldb.new_SBInitializerOptions(*args)
+        try: self.this.append(this)
+        except: self.this = this
+    __swig_destroy__ = _lldb.delete_SBInitializerOptions
+    __del__ = lambda self : None;
+    def SetCaptureReproducer(self, *args):
+        """SetCaptureReproducer(self, bool b)"""
+        return _lldb.SBInitializerOptions_SetCaptureReproducer(self, *args)
+
+    def SetReplayReproducer(self, *args):
+        """SetReplayReproducer(self, bool b)"""
+        return _lldb.SBInitializerOptions_SetReplayReproducer(self, *args)
+
+    def SetReproducerPath(self, *args):
+        """SetReproducerPath(self, str path)"""
+        return _lldb.SBInitializerOptions_SetReproducerPath(self, *args)
+
+SBInitializerOptions_swigregister = _lldb.SBInitializerOptions_swigregister
+SBInitializerOptions_swigregister(SBInitializerOptions)
+
 class SBInstruction(_object):
     """Proxy of C++ lldb::SBInstruction class"""
     __swig_setmethods__ = {}
@@ -6221,6 +6279,10 @@ class SBMemoryRegionInfo(_object):
         """IsMapped(self) -> bool"""
         return _lldb.SBMemoryRegionInfo_IsMapped(self)
 
+    def GetName(self):
+        """GetName(self) -> str"""
+        return _lldb.SBMemoryRegionInfo_GetName(self)
+
     def __eq__(self, *args):
         """__eq__(self, SBMemoryRegionInfo rhs) -> bool"""
         return _lldb.SBMemoryRegionInfo___eq__(self, *args)
@@ -6652,6 +6714,10 @@ class SBModule(_object):
     def IsTypeSystemCompatible(self, *args):
         """IsTypeSystemCompatible(self, LanguageType language) -> SBError"""
         return _lldb.SBModule_IsTypeSystemCompatible(self, *args)
+
+    def GetObjectFileEntryPointAddress(self):
+        """GetObjectFileEntryPointAddress(self) -> SBAddress"""
+        return _lldb.SBModule_GetObjectFileEntryPointAddress(self)
 
     def __eq__(self, *args):
         """__eq__(self, SBModule rhs) -> bool"""
@@ -9389,6 +9455,14 @@ class SBTarget(_object):
         """GetExecutable(self) -> SBFileSpec"""
         return _lldb.SBTarget_GetExecutable(self)
 
+    def AppendImageSearchPath(self, *args):
+        """
+        AppendImageSearchPath(self, str _from, str to, SBError error)
+
+        Append the path mapping (from -> to) to the target's paths mapping list.
+        """
+        return _lldb.SBTarget_AppendImageSearchPath(self, *args)
+
     def AddModule(self, *args):
         """
         AddModule(self, SBModule module) -> bool
@@ -10553,6 +10627,24 @@ class SBThread(_object):
         """
         return _lldb.SBThread_GetExtendedBacktraceOriginatingIndexID(self)
 
+    def GetCurrentException(self):
+        """
+        Returns an SBValue object represeting the current exception for the thread,
+        if there is any. Currently, this works for Obj-C code and returns an SBValue
+        representing the NSException object at the throw site or that's currently
+        being processes.
+        """
+        return _lldb.SBThread_GetCurrentException(self)
+
+    def GetCurrentExceptionBacktrace(self):
+        """
+        Returns a historical (fake) SBThread representing the stack trace of an
+        exception, if there is one for the thread. Currently, this works for Obj-C
+        code, and can retrieve the throw-site backtrace of an NSException object
+        even when the program is no longer at the throw site.
+        """
+        return _lldb.SBThread_GetCurrentExceptionBacktrace(self)
+
     def SafeToCallFunctions(self):
         """
         Takes no arguments, returns a bool.
@@ -10777,6 +10869,10 @@ class SBThreadPlan(_object):
     def QueueThreadPlanForRunToAddress(self, *args):
         """QueueThreadPlanForRunToAddress(self, SBAddress address) -> SBThreadPlan"""
         return _lldb.SBThreadPlan_QueueThreadPlanForRunToAddress(self, *args)
+
+    def QueueThreadPlanForStepScripted(self, *args):
+        """QueueThreadPlanForStepScripted(self, str script_class_name) -> SBThreadPlan"""
+        return _lldb.SBThreadPlan_QueueThreadPlanForStepScripted(self, *args)
 
 SBThreadPlan_swigregister = _lldb.SBThreadPlan_swigregister
 SBThreadPlan_swigregister(SBThreadPlan)
@@ -13323,9 +13419,9 @@ class SBVariablesOptions(_object):
         """SetIncludeArguments(self, bool arg0)"""
         return _lldb.SBVariablesOptions_SetIncludeArguments(self, *args)
 
-    def GetIncludeRecognizedArguments(self):
-        """GetIncludeRecognizedArguments(self) -> bool"""
-        return _lldb.SBVariablesOptions_GetIncludeRecognizedArguments(self)
+    def GetIncludeRecognizedArguments(self, *args):
+        """GetIncludeRecognizedArguments(self, SBTarget arg0) -> bool"""
+        return _lldb.SBVariablesOptions_GetIncludeRecognizedArguments(self, *args)
 
     def SetIncludeRecognizedArguments(self, *args):
         """SetIncludeRecognizedArguments(self, bool arg0)"""

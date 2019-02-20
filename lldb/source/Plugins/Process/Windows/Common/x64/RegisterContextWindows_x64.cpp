@@ -1,15 +1,14 @@
 //===-- RegisterContextWindows_x64.cpp --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Host/windows/windows.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-types.h"
 
@@ -74,12 +73,12 @@ RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr},
     {DEFINE_GPR(rcx, nullptr),
-     {dwarf_rcx_x86_64, dwarf_rcx_x86_64, LLDB_INVALID_REGNUM,
+     {dwarf_rcx_x86_64, dwarf_rcx_x86_64, LLDB_REGNUM_GENERIC_ARG1,
       LLDB_INVALID_REGNUM, lldb_rcx_x86_64},
      nullptr,
      nullptr},
     {DEFINE_GPR(rdx, nullptr),
-     {dwarf_rdx_x86_64, dwarf_rdx_x86_64, LLDB_INVALID_REGNUM,
+     {dwarf_rdx_x86_64, dwarf_rdx_x86_64, LLDB_REGNUM_GENERIC_ARG2,
       LLDB_INVALID_REGNUM, lldb_rdx_x86_64},
      nullptr,
      nullptr},
@@ -104,22 +103,22 @@ RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr},
     {DEFINE_GPR(r8, nullptr),
-     {dwarf_r8_x86_64, dwarf_r8_x86_64, LLDB_INVALID_REGNUM,
+     {dwarf_r8_x86_64, dwarf_r8_x86_64, LLDB_REGNUM_GENERIC_ARG3,
       LLDB_INVALID_REGNUM, lldb_r8_x86_64},
      nullptr,
      nullptr},
     {DEFINE_GPR(r9, nullptr),
-     {dwarf_r9_x86_64, dwarf_r9_x86_64, LLDB_INVALID_REGNUM,
+     {dwarf_r9_x86_64, dwarf_r9_x86_64, LLDB_REGNUM_GENERIC_ARG4,
       LLDB_INVALID_REGNUM, lldb_r9_x86_64},
      nullptr,
      nullptr},
     {DEFINE_GPR(r10, nullptr),
-     {dwarf_r10_x86_64, dwarf_r10_x86_64, LLDB_INVALID_REGNUM,
+     {dwarf_r10_x86_64, dwarf_r10_x86_64, LLDB_REGNUM_GENERIC_ARG5,
       LLDB_INVALID_REGNUM, lldb_r10_x86_64},
      nullptr,
      nullptr},
     {DEFINE_GPR(r11, nullptr),
-     {dwarf_r11_x86_64, dwarf_r11_x86_64, LLDB_INVALID_REGNUM,
+     {dwarf_r11_x86_64, dwarf_r11_x86_64, LLDB_REGNUM_GENERIC_ARG6,
       LLDB_INVALID_REGNUM, lldb_r11_x86_64},
      nullptr,
      nullptr},

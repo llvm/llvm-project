@@ -1,9 +1,8 @@
 //===- SymbolTable.h --------------------------------------------*- C++ -*-===//
 //
-//                             The LLVM Linker
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,6 +27,7 @@ class Chunk;
 class CommonChunk;
 class Defined;
 class DefinedAbsolute;
+class DefinedRegular;
 class DefinedRelative;
 class Lazy;
 class SectionChunk;
@@ -89,7 +89,7 @@ public:
   Symbol *addRegular(InputFile *F, StringRef N,
                      const llvm::object::coff_symbol_generic *S = nullptr,
                      SectionChunk *C = nullptr);
-  std::pair<Symbol *, bool>
+  std::pair<DefinedRegular *, bool>
   addComdat(InputFile *F, StringRef N,
             const llvm::object::coff_symbol_generic *S = nullptr);
   Symbol *addCommon(InputFile *F, StringRef N, uint64_t Size,

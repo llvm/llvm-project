@@ -1,0 +1,92 @@
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/ClassLayoutTest.cpp.obj %S/Inputs/ClassLayoutTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/ClassLayoutTest.cpp.exe %T/ClassLayoutTest.cpp.obj
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=ENUM %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNION %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=STRUCT %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=COMPLEX %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=LIST %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNNAMED-STRUCT %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=BASE %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=FRIEND %s
+RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=CLASS %s
+
+CHECK: Module [[MOD:.*]]
+CHECK: {{^[0-9A-F]+}}: SymbolVendor pdb ([[MOD]])
+CHECK: {{^[0-9A-F]+}}:   CompileUnit{{[{]0x[0-9a-f]+[}]}}, language = "c++", file = '{{.*}}\ClassLayoutTest.cpp'
+
+ENUM:  name = "Enum", size = 4,  decl = ClassLayoutTest.cpp:5
+ENUM-SAME: enum Enum {
+ENUM:    RED,
+ENUM:    GREEN,
+ENUM:    BLUE
+ENUM:}
+
+UNION:  name = "Union", size = 4, decl = ClassLayoutTest.cpp:9
+UNION-SAME: union Union {
+UNION:    short Row;
+UNION:    unsigned short Col;
+UNION:    int Line : 16;
+UNION:    long Table;
+UNION:}
+
+STRUCT:  name = "Struct", size = 64, decl = ClassLayoutTest.cpp:22
+STRUCT-SAME: struct Struct {
+STRUCT:    bool A;
+STRUCT:    unsigned char UCharVar;
+STRUCT:    unsigned int UIntVar;
+STRUCT:    long long LongLongVar;
+STRUCT:    Enum EnumVar;
+STRUCT:    int array[10];
+STRUCT:}
+
+COMPLEX:  name = "Complex", size = 368, decl = ClassLayoutTest.cpp:33
+COMPLEX-SAME: struct Complex {
+COMPLEX:    _List *array[90];
+COMPLEX:    int x;
+COMPLEX:    int a;
+COMPLEX:    float b;
+COMPLEX:}
+
+LIST:  name = "_List", size = 12, decl = ClassLayoutTest.cpp:45
+LIST-SAME: struct _List {
+LIST:    _List *current;
+LIST:    _List *previous;
+LIST:    _List *next;
+LIST:}
+
+UNNAMED-STRUCT:  name = "UnnamedStruct", size = 4, decl = ClassLayoutTest.cpp:52
+UNNAMED-STRUCT-SAME: struct UnnamedStruct {
+UNNAMED-STRUCT:   int a;
+UNNAMED-STRUCT:}
+
+BASE:  name = "Base", size = 4,  decl = ClassLayoutTest.cpp:59
+BASE-SAME: class Base {
+BASE:    int a;
+BASE:    Base();
+BASE:    ~Base();
+BASE:    int Get();
+BASE:}
+
+FRIEND:  name = "Friend", size = 1, decl = ClassLayoutTest.cpp:70
+FRIEND-SAME: class Friend {
+FRIEND:    int f();
+FRIEND: }
+
+CLASS:  name = "Class", size = 88, decl = ClassLayoutTest.cpp:74
+CLASS-SAME: class Class : public MemberTest::Base {
+CLASS:    static int m_static;
+CLASS:    int m_public;
+CLASS:    Struct m_struct;
+CLASS:    Union m_union;
+CLASS:    int m_private;
+CLASS:    int m_protected;
+CLASS:    Class();
+CLASS:    Class(int);
+CLASS:    ~Class();
+CLASS:    static int {{.*}}StaticMemberFunc(int, ...);
+CLASS:    int Get();
+CLASS:    int f(MemberTest::Friend);
+CLASS:    bool operator==(const MemberTest::Class &)
+CLASS:}

@@ -1,20 +1,19 @@
 //===-- NativeProcessProtocol.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/common/NativeBreakpointList.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
-#include "lldb/Host/common/SoftwareBreakpoint.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
@@ -359,17 +358,271 @@ void NativeProcessProtocol::NotifyDidExec() {
 Status NativeProcessProtocol::SetSoftwareBreakpoint(lldb::addr_t addr,
                                                     uint32_t size_hint) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("NativeProcessProtocol::%s addr = 0x%" PRIx64, __FUNCTION__,
-                addr);
+  LLDB_LOG(log, "addr = {0:x}, size_hint = {1}", addr, size_hint);
 
-  return m_breakpoint_list.AddRef(
-      addr, size_hint, false,
-      [this](lldb::addr_t addr, size_t size_hint, bool /* hardware */,
-             NativeBreakpointSP &breakpoint_sp) -> Status {
-        return SoftwareBreakpoint::CreateSoftwareBreakpoint(
-            *this, addr, size_hint, breakpoint_sp);
-      });
+  auto it = m_software_breakpoints.find(addr);
+  if (it != m_software_breakpoints.end()) {
+    ++it->second.ref_count;
+    return Status();
+  }
+  auto expected_bkpt = EnableSoftwareBreakpoint(addr, size_hint);
+  if (!expected_bkpt)
+    return Status(expected_bkpt.takeError());
+
+  m_software_breakpoints.emplace(addr, std::move(*expected_bkpt));
+  return Status();
+}
+
+Status NativeProcessProtocol::RemoveSoftwareBreakpoint(lldb::addr_t addr) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  LLDB_LOG(log, "addr = {0:x}", addr);
+  auto it = m_software_breakpoints.find(addr);
+  if (it == m_software_breakpoints.end())
+    return Status("Breakpoint not found.");
+  assert(it->second.ref_count > 0);
+  if (--it->second.ref_count > 0)
+    return Status();
+
+  // This is the last reference. Let's remove the breakpoint.
+  Status error;
+
+  // Clear a software breakpoint instruction
+  llvm::SmallVector<uint8_t, 4> curr_break_op(
+      it->second.breakpoint_opcodes.size(), 0);
+
+  // Read the breakpoint opcode
+  size_t bytes_read = 0;
+  error =
+      ReadMemory(addr, curr_break_op.data(), curr_break_op.size(), bytes_read);
+  if (error.Fail() || bytes_read < curr_break_op.size()) {
+    return Status("addr=0x%" PRIx64
+                  ": tried to read %zu bytes but only read %zu",
+                  addr, curr_break_op.size(), bytes_read);
+  }
+  const auto &saved = it->second.saved_opcodes;
+  // Make sure the breakpoint opcode exists at this address
+  if (makeArrayRef(curr_break_op) != it->second.breakpoint_opcodes) {
+    if (curr_break_op != it->second.saved_opcodes)
+      return Status("Original breakpoint trap is no longer in memory.");
+    LLDB_LOG(log,
+             "Saved opcodes ({0:@[x]}) have already been restored at {1:x}.",
+             llvm::make_range(saved.begin(), saved.end()), addr);
+  } else {
+    // We found a valid breakpoint opcode at this address, now restore the
+    // saved opcode.
+    size_t bytes_written = 0;
+    error = WriteMemory(addr, saved.data(), saved.size(), bytes_written);
+    if (error.Fail() || bytes_written < saved.size()) {
+      return Status("addr=0x%" PRIx64
+                    ": tried to write %zu bytes but only wrote %zu",
+                    addr, saved.size(), bytes_written);
+    }
+
+    // Verify that our original opcode made it back to the inferior
+    llvm::SmallVector<uint8_t, 4> verify_opcode(saved.size(), 0);
+    size_t verify_bytes_read = 0;
+    error = ReadMemory(addr, verify_opcode.data(), verify_opcode.size(),
+                       verify_bytes_read);
+    if (error.Fail() || verify_bytes_read < verify_opcode.size()) {
+      return Status("addr=0x%" PRIx64
+                    ": tried to read %zu verification bytes but only read %zu",
+                    addr, verify_opcode.size(), verify_bytes_read);
+    }
+    if (verify_opcode != saved)
+      LLDB_LOG(log, "Restoring bytes at {0:x}: {1:@[x]}", addr,
+               llvm::make_range(saved.begin(), saved.end()));
+  }
+
+  m_software_breakpoints.erase(it);
+  return Status();
+}
+
+llvm::Expected<NativeProcessProtocol::SoftwareBreakpoint>
+NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
+                                                uint32_t size_hint) {
+  Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+
+  auto expected_trap = GetSoftwareBreakpointTrapOpcode(size_hint);
+  if (!expected_trap)
+    return expected_trap.takeError();
+
+  llvm::SmallVector<uint8_t, 4> saved_opcode_bytes(expected_trap->size(), 0);
+  // Save the original opcodes by reading them so we can restore later.
+  size_t bytes_read = 0;
+  Status error = ReadMemory(addr, saved_opcode_bytes.data(),
+                            saved_opcode_bytes.size(), bytes_read);
+  if (error.Fail())
+    return error.ToError();
+
+  // Ensure we read as many bytes as we expected.
+  if (bytes_read != saved_opcode_bytes.size()) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to read memory while attempting to set breakpoint: attempted "
+        "to read {0} bytes but only read {1}.",
+        saved_opcode_bytes.size(), bytes_read);
+  }
+
+  LLDB_LOG(
+      log, "Overwriting bytes at {0:x}: {1:@[x]}", addr,
+      llvm::make_range(saved_opcode_bytes.begin(), saved_opcode_bytes.end()));
+
+  // Write a software breakpoint in place of the original opcode.
+  size_t bytes_written = 0;
+  error = WriteMemory(addr, expected_trap->data(), expected_trap->size(),
+                      bytes_written);
+  if (error.Fail())
+    return error.ToError();
+
+  // Ensure we wrote as many bytes as we expected.
+  if (bytes_written != expected_trap->size()) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed write memory while attempting to set "
+        "breakpoint: attempted to write {0} bytes but only wrote {1}",
+        expected_trap->size(), bytes_written);
+  }
+
+  llvm::SmallVector<uint8_t, 4> verify_bp_opcode_bytes(expected_trap->size(),
+                                                       0);
+  size_t verify_bytes_read = 0;
+  error = ReadMemory(addr, verify_bp_opcode_bytes.data(),
+                     verify_bp_opcode_bytes.size(), verify_bytes_read);
+  if (error.Fail())
+    return error.ToError();
+
+  // Ensure we read as many verification bytes as we expected.
+  if (verify_bytes_read != verify_bp_opcode_bytes.size()) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Failed to read memory while "
+        "attempting to verify breakpoint: attempted to read {0} bytes "
+        "but only read {1}",
+        verify_bp_opcode_bytes.size(), verify_bytes_read);
+  }
+
+  if (llvm::makeArrayRef(verify_bp_opcode_bytes.data(), verify_bytes_read) !=
+      *expected_trap) {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Verification of software breakpoint "
+        "writing failed - trap opcodes not successfully read back "
+        "after writing when setting breakpoint at {0:x}",
+        addr);
+  }
+
+  LLDB_LOG(log, "addr = {0:x}: SUCCESS", addr);
+  return SoftwareBreakpoint{1, saved_opcode_bytes, *expected_trap};
+}
+
+llvm::Expected<llvm::ArrayRef<uint8_t>>
+NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
+  static const uint8_t g_aarch64_opcode[] = {0x00, 0x00, 0x20, 0xd4};
+  static const uint8_t g_i386_opcode[] = {0xCC};
+  static const uint8_t g_mips64_opcode[] = {0x00, 0x00, 0x00, 0x0d};
+  static const uint8_t g_mips64el_opcode[] = {0x0d, 0x00, 0x00, 0x00};
+  static const uint8_t g_s390x_opcode[] = {0x00, 0x01};
+  static const uint8_t g_ppc64le_opcode[] = {0x08, 0x00, 0xe0, 0x7f}; // trap
+
+  switch (GetArchitecture().GetMachine()) {
+  case llvm::Triple::aarch64:
+    return llvm::makeArrayRef(g_aarch64_opcode);
+
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+    return llvm::makeArrayRef(g_i386_opcode);
+
+  case llvm::Triple::mips:
+  case llvm::Triple::mips64:
+    return llvm::makeArrayRef(g_mips64_opcode);
+
+  case llvm::Triple::mipsel:
+  case llvm::Triple::mips64el:
+    return llvm::makeArrayRef(g_mips64el_opcode);
+
+  case llvm::Triple::systemz:
+    return llvm::makeArrayRef(g_s390x_opcode);
+
+  case llvm::Triple::ppc64le:
+    return llvm::makeArrayRef(g_ppc64le_opcode);
+
+  default:
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "CPU type not supported!");
+  }
+}
+
+size_t NativeProcessProtocol::GetSoftwareBreakpointPCOffset() {
+  switch (GetArchitecture().GetMachine()) {
+  case llvm::Triple::x86:
+  case llvm::Triple::x86_64:
+  case llvm::Triple::systemz:
+    // These architectures report increment the PC after breakpoint is hit.
+    return cantFail(GetSoftwareBreakpointTrapOpcode(0)).size();
+
+  case llvm::Triple::arm:
+  case llvm::Triple::aarch64:
+  case llvm::Triple::mips64:
+  case llvm::Triple::mips64el:
+  case llvm::Triple::mips:
+  case llvm::Triple::mipsel:
+  case llvm::Triple::ppc64le:
+    // On these architectures the PC doesn't get updated for breakpoint hits.
+    return 0;
+
+  default:
+    llvm_unreachable("CPU type not supported!");
+  }
+}
+
+void NativeProcessProtocol::FixupBreakpointPCAsNeeded(
+    NativeThreadProtocol &thread) {
+  Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_BREAKPOINTS);
+
+  Status error;
+
+  // Find out the size of a breakpoint (might depend on where we are in the
+  // code).
+  NativeRegisterContext &context = thread.GetRegisterContext();
+
+  uint32_t breakpoint_size = GetSoftwareBreakpointPCOffset();
+  LLDB_LOG(log, "breakpoint size: {0}", breakpoint_size);
+  if (breakpoint_size == 0)
+    return;
+
+  // First try probing for a breakpoint at a software breakpoint location: PC -
+  // breakpoint size.
+  const lldb::addr_t initial_pc_addr = context.GetPCfromBreakpointLocation();
+  lldb::addr_t breakpoint_addr = initial_pc_addr;
+  // Do not allow breakpoint probe to wrap around.
+  if (breakpoint_addr >= breakpoint_size)
+    breakpoint_addr -= breakpoint_size;
+
+  if (m_software_breakpoints.count(breakpoint_addr) == 0) {
+    // We didn't find one at a software probe location.  Nothing to do.
+    LLDB_LOG(log,
+             "pid {0} no lldb software breakpoint found at current pc with "
+             "adjustment: {1}",
+             GetID(), breakpoint_addr);
+    return;
+  }
+
+  //
+  // We have a software breakpoint and need to adjust the PC.
+  //
+
+  // Change the program counter.
+  LLDB_LOG(log, "pid {0} tid {1}: changing PC from {2:x} to {3:x}", GetID(),
+           thread.GetID(), initial_pc_addr, breakpoint_addr);
+
+  error = context.SetPC(breakpoint_addr);
+  if (error.Fail()) {
+    // This can happen in case the process was killed between the time we read
+    // the PC and when we are updating it. There's nothing better to do than to
+    // swallow the error.
+    LLDB_LOG(log, "pid {0} tid {1}: failed to set PC: {2}", GetID(),
+             thread.GetID(), error);
+  }
 }
 
 Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
@@ -377,15 +630,35 @@ Status NativeProcessProtocol::RemoveBreakpoint(lldb::addr_t addr,
   if (hardware)
     return RemoveHardwareBreakpoint(addr);
   else
-    return m_breakpoint_list.DecRef(addr);
+    return RemoveSoftwareBreakpoint(addr);
 }
 
-Status NativeProcessProtocol::EnableBreakpoint(lldb::addr_t addr) {
-  return m_breakpoint_list.EnableBreakpoint(addr);
-}
+Status NativeProcessProtocol::ReadMemoryWithoutTrap(lldb::addr_t addr,
+                                                    void *buf, size_t size,
+                                                    size_t &bytes_read) {
+  Status error = ReadMemory(addr, buf, size, bytes_read);
+  if (error.Fail())
+    return error;
 
-Status NativeProcessProtocol::DisableBreakpoint(lldb::addr_t addr) {
-  return m_breakpoint_list.DisableBreakpoint(addr);
+  auto data =
+      llvm::makeMutableArrayRef(static_cast<uint8_t *>(buf), bytes_read);
+  for (const auto &pair : m_software_breakpoints) {
+    lldb::addr_t bp_addr = pair.first;
+    auto saved_opcodes = makeArrayRef(pair.second.saved_opcodes);
+
+    if (bp_addr + saved_opcodes.size() < addr || addr + bytes_read <= bp_addr)
+      continue; // Breapoint not in range, ignore
+
+    if (bp_addr < addr) {
+      saved_opcodes = saved_opcodes.drop_front(addr - bp_addr);
+      bp_addr = addr;
+    }
+    auto bp_data = data.drop_front(bp_addr - addr);
+    std::copy_n(saved_opcodes.begin(),
+                std::min(saved_opcodes.size(), bp_data.size()),
+                bp_data.begin());
+  }
+  return Status();
 }
 
 lldb::StateType NativeProcessProtocol::GetState() const {

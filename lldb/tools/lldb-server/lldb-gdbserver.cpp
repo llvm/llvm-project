@@ -1,13 +1,11 @@
 //===-- lldb-gdbserver.cpp --------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,8 +17,6 @@
 #include <unistd.h>
 #endif
 
-// C++ Includes
-
 
 #include "Acceptor.h"
 #include "LLDBServerUtilities.h"
@@ -28,6 +24,7 @@
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostGetOpt.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/Pipe.h"
@@ -187,7 +184,9 @@ void handle_launch(GDBRemoteCommunicationServerLLGS &gdb_server, int argc,
     llvm::errs() << "Error getting current directory: " << ec.message() << "\n";
     exit(1);
   }
-  info.SetWorkingDirectory(FileSpec(cwd, true));
+  FileSpec cwd_spec(cwd);
+  FileSystem::Instance().Resolve(cwd_spec);
+  info.SetWorkingDirectory(cwd_spec);
   info.GetEnvironment() = Host::GetEnvironment();
 
   gdb_server.SetLaunchInfo(info);
@@ -218,20 +217,17 @@ Status writeSocketIdToPipe(const char *const named_pipe_path,
   return writeSocketIdToPipe(port_name_pipe, socket_id);
 }
 
-Status writeSocketIdToPipe(int unnamed_pipe_fd, const std::string &socket_id) {
-#if defined(_WIN32)
-  return Status("Unnamed pipes are not supported on Windows.");
-#else
-  Pipe port_pipe{Pipe::kInvalidDescriptor, unnamed_pipe_fd};
+Status writeSocketIdToPipe(lldb::pipe_t unnamed_pipe,
+                           const std::string &socket_id) {
+  Pipe port_pipe{LLDB_INVALID_PIPE, unnamed_pipe};
   return writeSocketIdToPipe(port_pipe, socket_id);
-#endif
 }
 
 void ConnectToRemote(MainLoop &mainloop,
                      GDBRemoteCommunicationServerLLGS &gdb_server,
                      bool reverse_connect, const char *const host_and_port,
                      const char *const progname, const char *const subcommand,
-                     const char *const named_pipe_path, int unnamed_pipe_fd,
+                     const char *const named_pipe_path, pipe_t unnamed_pipe,
                      int connection_fd) {
   Status error;
 
@@ -331,8 +327,8 @@ void ConnectToRemote(MainLoop &mainloop,
         }
         // If we have an unnamed pipe to write the socket id back to, do that
         // now.
-        else if (unnamed_pipe_fd >= 0) {
-          error = writeSocketIdToPipe(unnamed_pipe_fd, socket_id);
+        else if (unnamed_pipe != LLDB_INVALID_PIPE) {
+          error = writeSocketIdToPipe(unnamed_pipe, socket_id);
           if (error.Fail())
             fprintf(stderr, "failed to write to the unnamed pipe: %s\n",
                     error.AsCString());
@@ -384,7 +380,7 @@ int main_gdbserver(int argc, char *argv[]) {
   std::string log_file;
   StringRef
       log_channels; // e.g. "lldb process threads:gdb-remote default:linux all"
-  int unnamed_pipe_fd = -1;
+  lldb::pipe_t unnamed_pipe = LLDB_INVALID_PIPE;
   bool reverse_connect = false;
   int connection_fd = -1;
 
@@ -425,7 +421,7 @@ int main_gdbserver(int argc, char *argv[]) {
 
     case 'U': // unnamed pipe
       if (optarg && optarg[0])
-        unnamed_pipe_fd = StringConvert::ToUInt32(optarg, -1);
+        unnamed_pipe = (pipe_t)StringConvert::ToUInt64(optarg, -1);
       break;
 
     case 'r':
@@ -528,8 +524,8 @@ int main_gdbserver(int argc, char *argv[]) {
   printf("%s-%s", LLGS_PROGRAM_NAME, LLGS_VERSION_STR);
 
   ConnectToRemote(mainloop, gdb_server, reverse_connect, host_and_port,
-                  progname, subcommand, named_pipe_path.c_str(),
-                  unnamed_pipe_fd, connection_fd);
+                  progname, subcommand, named_pipe_path.c_str(), 
+                  unnamed_pipe, connection_fd);
 
   if (!gdb_server.IsConnected()) {
     fprintf(stderr, "no connection information provided, unable to run\n");

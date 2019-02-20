@@ -85,3 +85,6 @@ add_lldb_library(lldbTarget
   LINK_COMPONENTS
     Support
   )
+if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
+  target_compile_options(lldbTarget PRIVATE -Wno-dollar-in-identifier-extension)
+endif()

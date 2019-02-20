@@ -1,9 +1,8 @@
 //===-- ClangUtil.cpp -------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // A collection of helper methods and data structures for manipulating clang
 // types and decls.
@@ -47,4 +46,12 @@ CompilerType ClangUtil::RemoveFastQualifiers(const CompilerType &ct) {
   QualType qual_type(GetQualType(ct));
   qual_type.removeLocalFastQualifiers();
   return CompilerType(ct.GetTypeSystem(), qual_type.getAsOpaquePtr());
+}
+
+clang::TagDecl *ClangUtil::GetAsTagDecl(const CompilerType &type) {
+  clang::QualType qual_type = ClangUtil::GetCanonicalQualType(type);
+  if (qual_type.isNull())
+    return nullptr;
+
+  return qual_type->getAsTagDecl();
 }

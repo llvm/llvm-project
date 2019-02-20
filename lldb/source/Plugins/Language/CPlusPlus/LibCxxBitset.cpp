@@ -1,9 +1,8 @@
 //===-- LibCxxBitset.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -80,7 +79,8 @@ ValueObjectSP BitsetFrontEnd::GetChildAtIndex(size_t idx) {
   ValueObjectSP chunk;
   // For small bitsets __first_ is not an array, but a plain size_t.
   if (m_first->GetCompilerType().IsArrayType(&type, nullptr, nullptr)) {
-    auto bit_size = type.GetBitSize(ctx.GetBestExecutionContextScope());
+    llvm::Optional<uint64_t> bit_size =
+        type.GetBitSize(ctx.GetBestExecutionContextScope());
     if (!bit_size || *bit_size == 0)
       return {};
     chunk = m_first->GetChildAtIndex(idx / *bit_size, true);
@@ -91,7 +91,8 @@ ValueObjectSP BitsetFrontEnd::GetChildAtIndex(size_t idx) {
   if (!type || !chunk)
     return {};
 
-  auto bit_size = type.GetBitSize(ctx.GetBestExecutionContextScope());
+  llvm::Optional<uint64_t> bit_size =
+      type.GetBitSize(ctx.GetBestExecutionContextScope());
   if (!bit_size || *bit_size == 0)
     return {};
   size_t chunk_idx = idx % *bit_size;

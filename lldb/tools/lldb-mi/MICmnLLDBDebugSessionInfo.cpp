@@ -1,19 +1,18 @@
 //===-- MICmnLLDBDebugSessionInfo.cpp ---------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 // Third party headers:
 #include "lldb/API/SBThread.h"
-#include <inttypes.h> // For PRIx64
+#include <inttypes.h>
 #ifdef _WIN32
-#include <io.h> // For the ::_access()
+#include <io.h>
 #else
-#include <unistd.h> // For the ::access()
+#include <unistd.h>
 #endif              // _WIN32
 #include "lldb/API/SBBreakpointLocation.h"
 
@@ -532,7 +531,7 @@ bool CMICmnLLDBDebugSessionInfo::GetVariableInfo(const lldb::SBValue &vrValue,
                                                  const bool vbInSimpleForm,
                                                  CMIUtilString &vwrStrValue) {
   const CMICmnLLDBUtilSBValue utilValue(vrValue, true, false);
-  const bool bExpandAggregates = vbInSimpleForm ? false : true;
+  const bool bExpandAggregates = !vbInSimpleForm;
   vwrStrValue = utilValue.GetValue(bExpandAggregates);
   return MIstatus::success;
 }

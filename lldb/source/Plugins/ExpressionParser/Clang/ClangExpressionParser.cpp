@@ -1,18 +1,16 @@
 //===-- ClangExpressionParser.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
+#include <cctype>
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ExternalASTSource.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
@@ -36,6 +34,8 @@
 #include "clang/Parse/ParseAST.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
+#include "clang/Sema/CodeCompleteConsumer.h"
+#include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaConsumer.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -57,7 +57,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
-// Project includes
 #include "ClangDiagnostic.h"
 #include "ClangExpressionParser.h"
 
@@ -263,7 +262,7 @@ private:
 ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
                                              Expression &expr,
                                              bool generate_debug_info)
-    : ExpressionParser(exe_scope, expr, generate_debug_info),
+    : ExpressionParser(exe_scope, expr, generate_debug_info), m_compiler(),
       m_pp_callbacks(nullptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
@@ -419,6 +418,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   // 5. Set language options.
   lldb::LanguageType language = expr.Language();
+  LangOptions &lang_opts = m_compiler->getLangOpts();
 
   switch (language) {
   case lldb::eLanguageTypeC:
@@ -430,14 +430,13 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     // For now, the expression parser must use C++ anytime the language is a C
     // family language, because the expression parser uses features of C++ to
     // capture values.
-    m_compiler->getLangOpts().CPlusPlus = true;
+    lang_opts.CPlusPlus = true;
     break;
   case lldb::eLanguageTypeObjC:
-    m_compiler->getLangOpts().ObjC1 = true;
-    m_compiler->getLangOpts().ObjC2 = true;
+    lang_opts.ObjC = true;
     // FIXME: the following language option is a temporary workaround,
     // to "ask for ObjC, get ObjC++" (see comment above).
-    m_compiler->getLangOpts().CPlusPlus = true;
+    lang_opts.CPlusPlus = true;
 
     // Clang now sets as default C++14 as the default standard (with
     // GNU extensions), so we do the same here to avoid mismatches that
@@ -445,69 +444,67 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     // as it's a C++11 feature). Currently lldb evaluates C++14 as C++11 (see
     // two lines below) so we decide to be consistent with that, but this could
     // be re-evaluated in the future.
-    m_compiler->getLangOpts().CPlusPlus11 = true;
+    lang_opts.CPlusPlus11 = true;
     break;
   case lldb::eLanguageTypeC_plus_plus:
   case lldb::eLanguageTypeC_plus_plus_11:
   case lldb::eLanguageTypeC_plus_plus_14:
-    m_compiler->getLangOpts().CPlusPlus11 = true;
+    lang_opts.CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
     LLVM_FALLTHROUGH;
   case lldb::eLanguageTypeC_plus_plus_03:
-    m_compiler->getLangOpts().CPlusPlus = true;
-    // FIXME: the following language option is a temporary workaround,
-    // to "ask for C++, get ObjC++".  Apple hopes to remove this requirement on
-    // non-Apple platforms, but for now it is needed.
-    m_compiler->getLangOpts().ObjC1 = true;
+    lang_opts.CPlusPlus = true;
+    if (process_sp)
+      lang_opts.ObjC =
+          process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
   default:
-    m_compiler->getLangOpts().ObjC1 = true;
-    m_compiler->getLangOpts().ObjC2 = true;
-    m_compiler->getLangOpts().CPlusPlus = true;
-    m_compiler->getLangOpts().CPlusPlus11 = true;
+    lang_opts.ObjC = true;
+    lang_opts.CPlusPlus = true;
+    lang_opts.CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
     break;
   }
 
-  m_compiler->getLangOpts().Bool = true;
-  m_compiler->getLangOpts().WChar = true;
-  m_compiler->getLangOpts().Blocks = true;
-  m_compiler->getLangOpts().DebuggerSupport =
+  lang_opts.Bool = true;
+  lang_opts.WChar = true;
+  lang_opts.Blocks = true;
+  lang_opts.DebuggerSupport =
       true; // Features specifically for debugger clients
   if (expr.DesiredResultType() == Expression::eResultTypeId)
-    m_compiler->getLangOpts().DebuggerCastResultToId = true;
+    lang_opts.DebuggerCastResultToId = true;
 
-  m_compiler->getLangOpts().CharIsSigned =
-      ArchSpec(m_compiler->getTargetOpts().Triple.c_str())
-          .CharIsSignedByDefault();
+  lang_opts.CharIsSigned = ArchSpec(m_compiler->getTargetOpts().Triple.c_str())
+                               .CharIsSignedByDefault();
 
   // Spell checking is a nice feature, but it ends up completing a lot of types
   // that we didn't strictly speaking need to complete. As a result, we spend a
   // long time parsing and importing debug information.
-  m_compiler->getLangOpts().SpellChecking = false;
+  lang_opts.SpellChecking = false;
 
-  if (process_sp && m_compiler->getLangOpts().ObjC1) {
+  if (process_sp && lang_opts.ObjC) {
     if (process_sp->GetObjCLanguageRuntime()) {
       if (process_sp->GetObjCLanguageRuntime()->GetRuntimeVersion() ==
           ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
-        m_compiler->getLangOpts().ObjCRuntime.set(ObjCRuntime::MacOSX,
-                                                  VersionTuple(10, 7));
+        lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
       else
-        m_compiler->getLangOpts().ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
-                                                  VersionTuple(10, 7));
+        lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
+                                  VersionTuple(10, 7));
 
       if (process_sp->GetObjCLanguageRuntime()->HasNewLiteralsAndIndexing())
-        m_compiler->getLangOpts().DebuggerObjCLiteral = true;
+        lang_opts.DebuggerObjCLiteral = true;
     }
   }
 
-  m_compiler->getLangOpts().ThreadsafeStatics = false;
-  m_compiler->getLangOpts().AccessControl =
-      false; // Debuggers get universal access
-  m_compiler->getLangOpts().DollarIdents =
-      true; // $ indicates a persistent variable name
+  lang_opts.ThreadsafeStatics = false;
+  lang_opts.AccessControl = false; // Debuggers get universal access
+  lang_opts.DollarIdents = true;   // $ indicates a persistent variable name
+  // We enable all builtin functions beside the builtins from libc/libm (e.g.
+  // 'fopen'). Those libc functions are already correctly handled by LLDB, and
+  // additionally enabling them as expandable builtins is breaking Clang.
+  lang_opts.NoBuiltin = true;
 
   // Set CodeGen options
   m_compiler->getCodeGenOpts().EmitDeclMetadata = true;
@@ -563,10 +560,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
   // 8. Most of this we get from the CompilerInstance, but we also want to give
   // the context an ExternalASTSource.
-  // We enable all builtin functions beside the builtins from libc/libm (e.g.
-  // 'fopen'). Those libc functions are already correctly handled by LLDB, and
-  // additionally enabling them as expandable builtins is breaking Clang.
-  m_compiler->getLangOpts().NoBuiltin = true;
 
   auto &PP = m_compiler->getPreprocessor();
   auto &builtin_context = PP.getBuiltinInfo();
@@ -602,9 +595,276 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
 
 ClangExpressionParser::~ClangExpressionParser() {}
 
+namespace {
+
+//----------------------------------------------------------------------
+/// @class CodeComplete
+///
+/// A code completion consumer for the clang Sema that is responsible for
+/// creating the completion suggestions when a user requests completion
+/// of an incomplete `expr` invocation.
+//----------------------------------------------------------------------
+class CodeComplete : public CodeCompleteConsumer {
+  CodeCompletionTUInfo m_info;
+
+  std::string m_expr;
+  unsigned m_position = 0;
+  CompletionRequest &m_request;
+  /// The printing policy we use when printing declarations for our completion
+  /// descriptions.
+  clang::PrintingPolicy m_desc_policy;
+
+  /// Returns true if the given character can be used in an identifier.
+  /// This also returns true for numbers because for completion we usually
+  /// just iterate backwards over iterators.
+  ///
+  /// Note: lldb uses '$' in its internal identifiers, so we also allow this.
+  static bool IsIdChar(char c) {
+    return c == '_' || std::isalnum(c) || c == '$';
+  }
+
+  /// Returns true if the given character is used to separate arguments
+  /// in the command line of lldb.
+  static bool IsTokenSeparator(char c) { return c == ' ' || c == '\t'; }
+
+  /// Drops all tokens in front of the expression that are unrelated for
+  /// the completion of the cmd line. 'unrelated' means here that the token
+  /// is not interested for the lldb completion API result.
+  StringRef dropUnrelatedFrontTokens(StringRef cmd) {
+    if (cmd.empty())
+      return cmd;
+
+    // If we are at the start of a word, then all tokens are unrelated to
+    // the current completion logic.
+    if (IsTokenSeparator(cmd.back()))
+      return StringRef();
+
+    // Remove all previous tokens from the string as they are unrelated
+    // to completing the current token.
+    StringRef to_remove = cmd;
+    while (!to_remove.empty() && !IsTokenSeparator(to_remove.back())) {
+      to_remove = to_remove.drop_back();
+    }
+    cmd = cmd.drop_front(to_remove.size());
+
+    return cmd;
+  }
+
+  /// Removes the last identifier token from the given cmd line.
+  StringRef removeLastToken(StringRef cmd) {
+    while (!cmd.empty() && IsIdChar(cmd.back())) {
+      cmd = cmd.drop_back();
+    }
+    return cmd;
+  }
+
+  /// Attemps to merge the given completion from the given position into the
+  /// existing command. Returns the completion string that can be returned to
+  /// the lldb completion API.
+  std::string mergeCompletion(StringRef existing, unsigned pos,
+                              StringRef completion) {
+    StringRef existing_command = existing.substr(0, pos);
+    // We rewrite the last token with the completion, so let's drop that
+    // token from the command.
+    existing_command = removeLastToken(existing_command);
+    // We also should remove all previous tokens from the command as they
+    // would otherwise be added to the completion that already has the
+    // completion.
+    existing_command = dropUnrelatedFrontTokens(existing_command);
+    return existing_command.str() + completion.str();
+  }
+
+public:
+  /// Constructs a CodeComplete consumer that can be attached to a Sema.
+  /// @param[out] matches
+  ///    The list of matches that the lldb completion API expects as a result.
+  ///    This may already contain matches, so it's only allowed to append
+  ///    to this variable.
+  /// @param[out] expr
+  ///    The whole expression string that we are currently parsing. This
+  ///    string needs to be equal to the input the user typed, and NOT the
+  ///    final code that Clang is parsing.
+  /// @param[out] position
+  ///    The character position of the user cursor in the `expr` parameter.
+  ///
+  CodeComplete(CompletionRequest &request, clang::LangOptions ops,
+               std::string expr, unsigned position)
+      : CodeCompleteConsumer(CodeCompleteOptions(), false),
+        m_info(std::make_shared<GlobalCodeCompletionAllocator>()), m_expr(expr),
+        m_position(position), m_request(request), m_desc_policy(ops) {
+
+    // Ensure that the printing policy is producing a description that is as
+    // short as possible.
+    m_desc_policy.SuppressScope = true;
+    m_desc_policy.SuppressTagKeyword = true;
+    m_desc_policy.FullyQualifiedName = false;
+    m_desc_policy.TerseOutput = true;
+    m_desc_policy.IncludeNewlines = false;
+    m_desc_policy.UseVoidForZeroParams = false;
+    m_desc_policy.Bool = true;
+  }
+
+  /// Deregisters and destroys this code-completion consumer.
+  virtual ~CodeComplete() {}
+
+  /// \name Code-completion filtering
+  /// Check if the result should be filtered out.
+  bool isResultFilteredOut(StringRef Filter,
+                           CodeCompletionResult Result) override {
+    // This code is mostly copied from CodeCompleteConsumer.
+    switch (Result.Kind) {
+    case CodeCompletionResult::RK_Declaration:
+      return !(
+          Result.Declaration->getIdentifier() &&
+          Result.Declaration->getIdentifier()->getName().startswith(Filter));
+    case CodeCompletionResult::RK_Keyword:
+      return !StringRef(Result.Keyword).startswith(Filter);
+    case CodeCompletionResult::RK_Macro:
+      return !Result.Macro->getName().startswith(Filter);
+    case CodeCompletionResult::RK_Pattern:
+      return !StringRef(Result.Pattern->getAsString()).startswith(Filter);
+    }
+    // If we trigger this assert or the above switch yields a warning, then
+    // CodeCompletionResult has been enhanced with more kinds of completion
+    // results. Expand the switch above in this case.
+    assert(false && "Unknown completion result type?");
+    // If we reach this, then we should just ignore whatever kind of unknown
+    // result we got back. We probably can't turn it into any kind of useful
+    // completion suggestion with the existing code.
+    return true;
+  }
+
+  /// \name Code-completion callbacks
+  /// Process the finalized code-completion results.
+  void ProcessCodeCompleteResults(Sema &SemaRef, CodeCompletionContext Context,
+                                  CodeCompletionResult *Results,
+                                  unsigned NumResults) override {
+
+    // The Sema put the incomplete token we try to complete in here during
+    // lexing, so we need to retrieve it here to know what we are completing.
+    StringRef Filter = SemaRef.getPreprocessor().getCodeCompletionFilter();
+
+    // Iterate over all the results. Filter out results we don't want and
+    // process the rest.
+    for (unsigned I = 0; I != NumResults; ++I) {
+      // Filter the results with the information from the Sema.
+      if (!Filter.empty() && isResultFilteredOut(Filter, Results[I]))
+        continue;
+
+      CodeCompletionResult &R = Results[I];
+      std::string ToInsert;
+      std::string Description;
+      // Handle the different completion kinds that come from the Sema.
+      switch (R.Kind) {
+      case CodeCompletionResult::RK_Declaration: {
+        const NamedDecl *D = R.Declaration;
+        ToInsert = R.Declaration->getNameAsString();
+        // If we have a function decl that has no arguments we want to
+        // complete the empty parantheses for the user. If the function has
+        // arguments, we at least complete the opening bracket.
+        if (const FunctionDecl *F = dyn_cast<FunctionDecl>(D)) {
+          if (F->getNumParams() == 0)
+            ToInsert += "()";
+          else
+            ToInsert += "(";
+          raw_string_ostream OS(Description);
+          F->print(OS, m_desc_policy, false);
+          OS.flush();
+        } else if (const VarDecl *V = dyn_cast<VarDecl>(D)) {
+          Description = V->getType().getAsString(m_desc_policy);
+        } else if (const FieldDecl *F = dyn_cast<FieldDecl>(D)) {
+          Description = F->getType().getAsString(m_desc_policy);
+        } else if (const NamespaceDecl *N = dyn_cast<NamespaceDecl>(D)) {
+          // If we try to complete a namespace, then we can directly append
+          // the '::'.
+          if (!N->isAnonymousNamespace())
+            ToInsert += "::";
+        }
+        break;
+      }
+      case CodeCompletionResult::RK_Keyword:
+        ToInsert = R.Keyword;
+        break;
+      case CodeCompletionResult::RK_Macro:
+        ToInsert = R.Macro->getName().str();
+        break;
+      case CodeCompletionResult::RK_Pattern:
+        ToInsert = R.Pattern->getTypedText();
+        break;
+      }
+      // At this point all information is in the ToInsert string.
+
+      // We also filter some internal lldb identifiers here. The user
+      // shouldn't see these.
+      if (StringRef(ToInsert).startswith("$__lldb_"))
+        continue;
+      if (!ToInsert.empty()) {
+        // Merge the suggested Token into the existing command line to comply
+        // with the kind of result the lldb API expects.
+        std::string CompletionSuggestion =
+            mergeCompletion(m_expr, m_position, ToInsert);
+        m_request.AddCompletion(CompletionSuggestion, Description);
+      }
+    }
+  }
+
+  /// \param S the semantic-analyzer object for which code-completion is being
+  /// done.
+  ///
+  /// \param CurrentArg the index of the current argument.
+  ///
+  /// \param Candidates an array of overload candidates.
+  ///
+  /// \param NumCandidates the number of overload candidates
+  void ProcessOverloadCandidates(Sema &S, unsigned CurrentArg,
+                                 OverloadCandidate *Candidates,
+                                 unsigned NumCandidates,
+                                 SourceLocation OpenParLoc) override {
+    // At the moment we don't filter out any overloaded candidates.
+  }
+
+  CodeCompletionAllocator &getAllocator() override {
+    return m_info.getAllocator();
+  }
+
+  CodeCompletionTUInfo &getCodeCompletionTUInfo() override { return m_info; }
+};
+} // namespace
+
+bool ClangExpressionParser::Complete(CompletionRequest &request, unsigned line,
+                                     unsigned pos, unsigned typed_pos) {
+  DiagnosticManager mgr;
+  // We need the raw user expression here because that's what the CodeComplete
+  // class uses to provide completion suggestions.
+  // However, the `Text` method only gives us the transformed expression here.
+  // To actually get the raw user input here, we have to cast our expression to
+  // the LLVMUserExpression which exposes the right API. This should never fail
+  // as we always have a ClangUserExpression whenever we call this.
+  LLVMUserExpression &llvm_expr = *static_cast<LLVMUserExpression *>(&m_expr);
+  CodeComplete CC(request, m_compiler->getLangOpts(), llvm_expr.GetUserText(),
+                  typed_pos);
+  // We don't need a code generator for parsing.
+  m_code_generator.reset();
+  // Start parsing the expression with our custom code completion consumer.
+  ParseInternal(mgr, &CC, line, pos);
+  return true;
+}
+
+// Swift only
+// Extra arguments are only used in Swift. We should get rid of them
+// to avoid clashes when merging from upstream.
+// End Swift only
 unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
                                       uint32_t first_line, uint32_t last_line,
                                       uint32_t line_offset) {
+  return ParseInternal(diagnostic_manager);
+}
+
+unsigned
+ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
+                                     CodeCompleteConsumer *completion_consumer,
+                                     unsigned completion_line,
+                                     unsigned completion_column) {
   ClangDiagnosticManagerAdapter *adapter =
       static_cast<ClangDiagnosticManagerAdapter *>(
           m_compiler->getDiagnostics().getClient());
@@ -615,8 +875,9 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   const char *expr_text = m_expr.Text();
 
-  clang::SourceManager &SourceMgr = m_compiler->getSourceManager();
+  clang::SourceManager &source_mgr = m_compiler->getSourceManager();
   bool created_main_file = false;
+  /* Swift only */
   if (m_expr.GetOptions() &&
       m_expr.GetOptions()->GetPoundLineFilePath() == NULL &&
       m_compiler->getCodeGenOpts().getDebugInfo() ==
@@ -626,9 +887,47 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
             expr_text, *m_expr.GetOptions(), temp_source_path)) {
       auto file = m_file_manager->getFile(temp_source_path);
       if (file) {
-        SourceMgr.setMainFileID(
-            SourceMgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
+        source_mgr.setMainFileID(
+            source_mgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
         created_main_file = true;
+      }
+    }
+  }
+  /* end swift only */
+
+  // Clang wants to do completion on a real file known by Clang's file manager,
+  // so we have to create one to make this work.
+  // TODO: We probably could also simulate to Clang's file manager that there
+  // is a real file that contains our code.
+  bool should_create_file = completion_consumer != nullptr;
+
+  // We also want a real file on disk if we generate full debug info.
+  should_create_file |= m_compiler->getCodeGenOpts().getDebugInfo() ==
+                        codegenoptions::FullDebugInfo;
+
+  if (should_create_file) {
+    int temp_fd = -1;
+    llvm::SmallString<128> result_path;
+    if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
+      tmpdir_file_spec.AppendPathComponent("lldb-%%%%%%.expr");
+      std::string temp_source_path = tmpdir_file_spec.GetPath();
+      llvm::sys::fs::createUniqueFile(temp_source_path, temp_fd, result_path);
+    } else {
+      llvm::sys::fs::createTemporaryFile("lldb", "expr", temp_fd, result_path);
+    }
+
+    if (temp_fd != -1) {
+      lldb_private::File file(temp_fd, true);
+      const size_t expr_text_len = strlen(expr_text);
+      size_t bytes_written = expr_text_len;
+      if (file.Write(expr_text, bytes_written).Success()) {
+        if (bytes_written == expr_text_len) {
+          file.Close();
+          source_mgr.setMainFileID(
+              source_mgr.createFileID(m_file_manager->getFile(result_path),
+                                      SourceLocation(), SrcMgr::C_User));
+          created_main_file = true;
+        }
       }
     }
   }
@@ -636,7 +935,7 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (!created_main_file) {
     std::unique_ptr<MemoryBuffer> memory_buffer =
         MemoryBuffer::getMemBufferCopy(expr_text, __FUNCTION__);
-    SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(memory_buffer)));
+    source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
   }
 
   diag_buf->BeginSourceFile(m_compiler->getLangOpts(),
@@ -651,14 +950,30 @@ unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   if (ClangExpressionDeclMap *decl_map = type_system_helper->DeclMap())
     decl_map->InstallCodeGenerator(m_code_generator.get());
 
+  // If we want to parse for code completion, we need to attach our code
+  // completion consumer to the Sema and specify a completion position.
+  // While parsing the Sema will call this consumer with the provided
+  // completion suggestions.
+  if (completion_consumer) {
+    auto main_file = source_mgr.getFileEntryForID(source_mgr.getMainFileID());
+    auto &PP = m_compiler->getPreprocessor();
+    // Lines and columns start at 1 in Clang, but code completion positions are
+    // indexed from 0, so we need to add 1 to the line and column here.
+    ++completion_line;
+    ++completion_column;
+    PP.SetCodeCompletionPoint(main_file, completion_line, completion_column);
+  }
+
   if (ast_transformer) {
     ast_transformer->Initialize(m_compiler->getASTContext());
     ParseAST(m_compiler->getPreprocessor(), ast_transformer,
-             m_compiler->getASTContext());
+             m_compiler->getASTContext(), false, TU_Complete,
+             completion_consumer);
   } else {
     m_code_generator->Initialize(m_compiler->getASTContext());
     ParseAST(m_compiler->getPreprocessor(), m_code_generator.get(),
-             m_compiler->getASTContext());
+             m_compiler->getASTContext(), false, TU_Complete,
+             completion_consumer);
   }
 
   diag_buf->EndSourceFile();
@@ -950,9 +1265,9 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
           if (!dynamic_checkers->Install(install_diagnostics, exe_ctx)) {
             if (install_diagnostics.Diagnostics().size())
-              err.SetErrorString("couldn't install checkers, unknown error");
-            else
               err.SetErrorString(install_diagnostics.GetString().c_str());
+            else
+              err.SetErrorString("couldn't install checkers, unknown error");
 
             return err;
           }

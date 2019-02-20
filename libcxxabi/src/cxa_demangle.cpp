@@ -1,9 +1,8 @@
 //===-------------------------- cxa_demangle.cpp --------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,12 +10,8 @@
 // file does not yet support:
 //   - C++ modules TS
 
-#define _LIBCPP_NO_EXCEPTIONS
-
-#include "__cxxabi_config.h"
-
 #include "demangle/ItaniumDemangle.h"
-
+#include "__cxxabi_config.h"
 #include <cassert>
 #include <cctype>
 #include <cstdio>
@@ -25,7 +20,6 @@
 #include <functional>
 #include <numeric>
 #include <utility>
-#include <vector>
 
 using namespace itanium_demangle;
 

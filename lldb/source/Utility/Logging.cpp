@@ -1,18 +1,17 @@
 //===-- Logging.cpp ---------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Logging.h"
 #include "lldb/Utility/Log.h"
 
-#include "llvm/ADT/ArrayRef.h" // for ArrayRef
+#include "llvm/ADT/ArrayRef.h"
 
-#include <stdarg.h> // for va_end, va_list, va_start
+#include <stdarg.h>
 
 using namespace lldb_private;
 

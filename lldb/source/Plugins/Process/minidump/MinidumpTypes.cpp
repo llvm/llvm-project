@@ -1,16 +1,13 @@
 //===-- MinidumpTypes.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "MinidumpTypes.h"
 
-// Other libraries and framework includes
 // C includes
 // C++ includes
 
@@ -244,6 +241,8 @@ MinidumpMemoryInfo::ParseMemoryInfoList(llvm::ArrayRef<uint8_t> &data) {
     return {};
 
   std::vector<const MinidumpMemoryInfo *> result;
+  result.reserve(header->num_of_entries);
+
   for (uint64_t i = 0; i < header->num_of_entries; ++i) {
     result.push_back(reinterpret_cast<const MinidumpMemoryInfo *>(
         data.data() + i * header->size_of_entry));

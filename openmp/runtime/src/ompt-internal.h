@@ -4,10 +4,9 @@
 
 //===----------------------------------------------------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is dual licensed under the MIT and the University of Illinois Open
-// Source Licenses. See LICENSE.txt for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,7 +14,7 @@
 #define __OMPT_INTERNAL_H__
 
 #include "ompt-event-specific.h"
-#include "ompt.h"
+#include "omp-tools.h"
 
 #define OMPT_VERSION 1
 
@@ -60,7 +59,7 @@ typedef struct {
   int thread_num;
 #if OMP_40_ENABLED
   int ndeps;
-  ompt_task_dependence_t *deps;
+  ompt_dependence_t *deps;
 #endif /* OMP_40_ENABLED */
 } ompt_task_info_t;
 

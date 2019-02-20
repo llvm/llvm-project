@@ -35,7 +35,7 @@ class MixedLanguagesTestCase(TestBase):
         self.format_string = m.group(1)
 
         # Change the default format to print the language.
-        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}`${function.name}{${function.pc-offset}}}{, lang=${language}}\n"
+        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\`${function.name}{${function.pc-offset}}}{, lang=${language}}\n"
         self.runCmd("settings set frame-format %s" % format_string)
         self.expect("settings show frame-format", SETTING_MSG("frame-format"),
                     substrs=[format_string])

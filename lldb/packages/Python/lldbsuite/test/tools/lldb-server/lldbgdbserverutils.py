@@ -221,7 +221,7 @@ def expect_lldb_gdbserver_replay(
                         packet_desc = send_packet
                     logger.info(
                         "sending packet to remote: {}".format(packet_desc))
-                sock.sendall(send_packet)
+                sock.sendall(send_packet.encode())
             else:
                 # This is an entry expecting to receive content from the remote
                 # debug monitor.
@@ -921,7 +921,7 @@ def process_is_running(pid, unknown_value=True):
     elif platform.system() in ['Darwin', 'Linux', 'FreeBSD', 'NetBSD']:
         # Build the list of running process ids
         output = subprocess.check_output(
-            "ps ax | awk '{ print $1; }'", shell=True)
+            "ps ax | awk '{ print $1; }'", shell=True).decode("utf-8")
         text_process_ids = output.split('\n')[1:]
         # Convert text pids to ints
         process_ids = [int(text_pid)

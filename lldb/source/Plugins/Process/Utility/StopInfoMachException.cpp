@@ -1,24 +1,19 @@
 //===-- StopInfoMachException.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "StopInfoMachException.h"
 
-// C Includes
 
 #if defined(__APPLE__)
 // Needed for the EXC_RESOURCE interpretation macros
 #include <kern/exc_resource.h>
 #endif
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -48,8 +43,10 @@ const char *StopInfoMachException::GetDescription() {
     const char *subcode_label = "subcode";
     const char *subcode_desc = NULL;
 
+#if defined(__APPLE__)
     char code_desc_buf[32];
     char subcode_desc_buf[32];
+#endif
 
     switch (m_value) {
     case 1: // EXC_BAD_ACCESS

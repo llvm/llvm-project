@@ -1,20 +1,19 @@
 //===-- DumpDataExtractor.cpp -----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpDataExtractor.h"
 
-#include "lldb/lldb-defines.h" // for LLDB_INVALID_ADDRESS
-#include "lldb/lldb-forward.h" // for TargetSP, DisassemblerSP
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-forward.h"
 
-#include "lldb/Core/Address.h" // for Address
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/ExecutionContextScope.h"
@@ -23,22 +22,22 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 
-#include "clang/AST/ASTContext.h"    // for ASTContext
-#include "clang/AST/CanonicalType.h" // for CanQualType
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/CanonicalType.h"
 
-#include "llvm/ADT/APFloat.h"     // for APFloat, APFloatBase:...
-#include "llvm/ADT/APInt.h"       // for APInt
-#include "llvm/ADT/ArrayRef.h"    // for ArrayRef
-#include "llvm/ADT/SmallVector.h" // for SmallVector
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
-#include <limits> // for numeric_limits, numer...
-#include <memory> // for shared_ptr
-#include <string> // for string, basic_string
+#include <limits>
+#include <memory>
+#include <string>
 
-#include <assert.h>   // for assert
-#include <ctype.h>    // for isprint
-#include <inttypes.h> // for PRIu64, PRIx64, PRIX64
-#include <math.h>     // for ldexpf
+#include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
+#include <math.h>
 
 #include <bitset>
 #include <sstream>

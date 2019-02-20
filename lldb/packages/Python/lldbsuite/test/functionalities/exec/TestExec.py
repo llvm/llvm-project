@@ -7,19 +7,9 @@ from __future__ import print_function
 import lldb
 import os
 import time
-from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
-
-def execute_command(command):
-    #print('%% %s' % (command))
-    (exit_status, output) = seven.get_command_status_output(command)
-    # if output:
-    #    print(output)
-    #print('status = %u' % (exit_status))
-    return exit_status
 
 
 class ExecTestCase(TestBase):
@@ -31,12 +21,14 @@ class ExecTestCase(TestBase):
     @skipUnlessDarwin
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
+    @skipIfSanitized # rdar://problem/43756823
     def test_hitting_exec (self):
         self.do_test(False)
 
     @skipUnlessDarwin
     @expectedFailureAll(archs=['i386'], bugnumber="rdar://28656532")
     @expectedFailureAll(oslist=["ios", "tvos", "watchos", "bridgeos"], bugnumber="rdar://problem/34559552") # this exec test has problems on ios systems
+    @skipIfSanitized # rdar://problem/43756823
     def test_skipping_exec (self):
         self.do_test(False)
 
@@ -61,6 +53,8 @@ class ExecTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
+        if self.TraceOn():
+            self.runCmd("settings show target.process.stop-on-exec", check=False)
         if skip_exec:
             self.dbg.HandleCommand("settings set target.process.stop-on-exec false")
             def cleanup():
@@ -94,6 +88,8 @@ class ExecTestCase(TestBase):
         process.Continue()
 
         if not skip_exec:
+            self.assertFalse(process.GetState() == lldb.eStateExited,
+                             "Process should not have exited!")
             self.assertTrue(process.GetState() == lldb.eStateStopped,
                             "Process should be stopped at __dyld_start")
 

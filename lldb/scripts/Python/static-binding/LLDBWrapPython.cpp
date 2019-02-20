@@ -2775,104 +2775,104 @@ void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton);
 #define SWIGTYPE_p_lldb__SBFrame swig_types[30]
 #define SWIGTYPE_p_lldb__SBFunction swig_types[31]
 #define SWIGTYPE_p_lldb__SBHostOS swig_types[32]
-#define SWIGTYPE_p_lldb__SBInstruction swig_types[33]
-#define SWIGTYPE_p_lldb__SBInstructionList swig_types[34]
-#define SWIGTYPE_p_lldb__SBLanguageRuntime swig_types[35]
-#define SWIGTYPE_p_lldb__SBLaunchInfo swig_types[36]
-#define SWIGTYPE_p_lldb__SBLineEntry swig_types[37]
-#define SWIGTYPE_p_lldb__SBListener swig_types[38]
-#define SWIGTYPE_p_lldb__SBMemoryRegionInfo swig_types[39]
-#define SWIGTYPE_p_lldb__SBMemoryRegionInfoList swig_types[40]
-#define SWIGTYPE_p_lldb__SBModule swig_types[41]
-#define SWIGTYPE_p_lldb__SBModuleSpec swig_types[42]
-#define SWIGTYPE_p_lldb__SBModuleSpecList swig_types[43]
-#define SWIGTYPE_p_lldb__SBPlatform swig_types[44]
-#define SWIGTYPE_p_lldb__SBPlatformConnectOptions swig_types[45]
-#define SWIGTYPE_p_lldb__SBPlatformShellCommand swig_types[46]
-#define SWIGTYPE_p_lldb__SBProcess swig_types[47]
-#define SWIGTYPE_p_lldb__SBProcessInfo swig_types[48]
-#define SWIGTYPE_p_lldb__SBQueue swig_types[49]
-#define SWIGTYPE_p_lldb__SBQueueItem swig_types[50]
-#define SWIGTYPE_p_lldb__SBSection swig_types[51]
-#define SWIGTYPE_p_lldb__SBSourceManager swig_types[52]
-#define SWIGTYPE_p_lldb__SBStream swig_types[53]
-#define SWIGTYPE_p_lldb__SBStringList swig_types[54]
-#define SWIGTYPE_p_lldb__SBStructuredData swig_types[55]
-#define SWIGTYPE_p_lldb__SBSymbol swig_types[56]
-#define SWIGTYPE_p_lldb__SBSymbolContext swig_types[57]
-#define SWIGTYPE_p_lldb__SBSymbolContextList swig_types[58]
-#define SWIGTYPE_p_lldb__SBTarget swig_types[59]
-#define SWIGTYPE_p_lldb__SBThread swig_types[60]
-#define SWIGTYPE_p_lldb__SBThreadCollection swig_types[61]
-#define SWIGTYPE_p_lldb__SBThreadPlan swig_types[62]
-#define SWIGTYPE_p_lldb__SBTrace swig_types[63]
-#define SWIGTYPE_p_lldb__SBTraceOptions swig_types[64]
-#define SWIGTYPE_p_lldb__SBType swig_types[65]
-#define SWIGTYPE_p_lldb__SBTypeCategory swig_types[66]
-#define SWIGTYPE_p_lldb__SBTypeEnumMember swig_types[67]
-#define SWIGTYPE_p_lldb__SBTypeEnumMemberList swig_types[68]
-#define SWIGTYPE_p_lldb__SBTypeFilter swig_types[69]
-#define SWIGTYPE_p_lldb__SBTypeFormat swig_types[70]
-#define SWIGTYPE_p_lldb__SBTypeList swig_types[71]
-#define SWIGTYPE_p_lldb__SBTypeMember swig_types[72]
-#define SWIGTYPE_p_lldb__SBTypeMemberFunction swig_types[73]
-#define SWIGTYPE_p_lldb__SBTypeNameSpecifier swig_types[74]
-#define SWIGTYPE_p_lldb__SBTypeSummary swig_types[75]
-#define SWIGTYPE_p_lldb__SBTypeSummaryOptions swig_types[76]
-#define SWIGTYPE_p_lldb__SBTypeSynthetic swig_types[77]
-#define SWIGTYPE_p_lldb__SBUnixSignals swig_types[78]
-#define SWIGTYPE_p_lldb__SBValue swig_types[79]
-#define SWIGTYPE_p_lldb__SBValueList swig_types[80]
-#define SWIGTYPE_p_lldb__SBVariablesOptions swig_types[81]
-#define SWIGTYPE_p_lldb__SBWatchpoint swig_types[82]
-#define SWIGTYPE_p_lldb_private__SharingPtrT_lldb_private__ValueObject_t swig_types[83]
-#define SWIGTYPE_p_long_double swig_types[84]
-#define SWIGTYPE_p_long_long swig_types[85]
-#define SWIGTYPE_p_p_void swig_types[86]
-#define SWIGTYPE_p_pthread_rwlock_t swig_types[87]
-#define SWIGTYPE_p_pthread_t swig_types[88]
-#define SWIGTYPE_p_short swig_types[89]
-#define SWIGTYPE_p_signed_char swig_types[90]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ABI_t swig_types[91]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Baton_t swig_types[92]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Block_t swig_types[93]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BreakpointLocation_t swig_types[94]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BreakpointResolver_t swig_types[95]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BreakpointSite_t swig_types[96]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Breakpoint_t swig_types[97]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BroadcasterManager_t swig_types[98]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Broadcaster_t swig_types[99]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ClangASTImporter_t swig_types[100]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__CommandObject_t swig_types[101]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Communication_t swig_types[102]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__CompileUnit_t swig_types[103]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Connection_t swig_types[104]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__DataBuffer_t swig_types[105]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__DataExtractor_t swig_types[106]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Debugger_t swig_types[107]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Disassembler_t swig_types[108]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__DynamicLoader_t swig_types[109]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__EventDataStructuredData_t swig_types[110]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__EventData_t swig_types[111]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Event_t swig_types[112]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ExecutionContextRef_t swig_types[113]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ExpressionVariable_t swig_types[114]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__File_t swig_types[115]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__FuncUnwinders_t swig_types[116]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__FunctionCaller_t swig_types[117]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Function_t swig_types[118]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__IOHandler_t swig_types[119]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__IOObject_t swig_types[120]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__IRExecutionUnit_t swig_types[121]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__InlineFunctionInfo_t swig_types[122]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Instruction_t swig_types[123]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__InstrumentationRuntime_t swig_types[124]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__JITLoader_t swig_types[125]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__LanguageRuntime_t swig_types[126]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__LineTable_t swig_types[127]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Listener_t swig_types[128]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__MemoryHistory_t swig_types[129]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__MemoryRegionInfo_t swig_types[130]
+#define SWIGTYPE_p_lldb__SBInitializerOptions swig_types[33]
+#define SWIGTYPE_p_lldb__SBInstruction swig_types[34]
+#define SWIGTYPE_p_lldb__SBInstructionList swig_types[35]
+#define SWIGTYPE_p_lldb__SBLanguageRuntime swig_types[36]
+#define SWIGTYPE_p_lldb__SBLaunchInfo swig_types[37]
+#define SWIGTYPE_p_lldb__SBLineEntry swig_types[38]
+#define SWIGTYPE_p_lldb__SBListener swig_types[39]
+#define SWIGTYPE_p_lldb__SBMemoryRegionInfo swig_types[40]
+#define SWIGTYPE_p_lldb__SBMemoryRegionInfoList swig_types[41]
+#define SWIGTYPE_p_lldb__SBModule swig_types[42]
+#define SWIGTYPE_p_lldb__SBModuleSpec swig_types[43]
+#define SWIGTYPE_p_lldb__SBModuleSpecList swig_types[44]
+#define SWIGTYPE_p_lldb__SBPlatform swig_types[45]
+#define SWIGTYPE_p_lldb__SBPlatformConnectOptions swig_types[46]
+#define SWIGTYPE_p_lldb__SBPlatformShellCommand swig_types[47]
+#define SWIGTYPE_p_lldb__SBProcess swig_types[48]
+#define SWIGTYPE_p_lldb__SBProcessInfo swig_types[49]
+#define SWIGTYPE_p_lldb__SBQueue swig_types[50]
+#define SWIGTYPE_p_lldb__SBQueueItem swig_types[51]
+#define SWIGTYPE_p_lldb__SBSection swig_types[52]
+#define SWIGTYPE_p_lldb__SBSourceManager swig_types[53]
+#define SWIGTYPE_p_lldb__SBStream swig_types[54]
+#define SWIGTYPE_p_lldb__SBStringList swig_types[55]
+#define SWIGTYPE_p_lldb__SBStructuredData swig_types[56]
+#define SWIGTYPE_p_lldb__SBSymbol swig_types[57]
+#define SWIGTYPE_p_lldb__SBSymbolContext swig_types[58]
+#define SWIGTYPE_p_lldb__SBSymbolContextList swig_types[59]
+#define SWIGTYPE_p_lldb__SBTarget swig_types[60]
+#define SWIGTYPE_p_lldb__SBThread swig_types[61]
+#define SWIGTYPE_p_lldb__SBThreadCollection swig_types[62]
+#define SWIGTYPE_p_lldb__SBThreadPlan swig_types[63]
+#define SWIGTYPE_p_lldb__SBTrace swig_types[64]
+#define SWIGTYPE_p_lldb__SBTraceOptions swig_types[65]
+#define SWIGTYPE_p_lldb__SBType swig_types[66]
+#define SWIGTYPE_p_lldb__SBTypeCategory swig_types[67]
+#define SWIGTYPE_p_lldb__SBTypeEnumMember swig_types[68]
+#define SWIGTYPE_p_lldb__SBTypeEnumMemberList swig_types[69]
+#define SWIGTYPE_p_lldb__SBTypeFilter swig_types[70]
+#define SWIGTYPE_p_lldb__SBTypeFormat swig_types[71]
+#define SWIGTYPE_p_lldb__SBTypeList swig_types[72]
+#define SWIGTYPE_p_lldb__SBTypeMember swig_types[73]
+#define SWIGTYPE_p_lldb__SBTypeMemberFunction swig_types[74]
+#define SWIGTYPE_p_lldb__SBTypeNameSpecifier swig_types[75]
+#define SWIGTYPE_p_lldb__SBTypeSummary swig_types[76]
+#define SWIGTYPE_p_lldb__SBTypeSummaryOptions swig_types[77]
+#define SWIGTYPE_p_lldb__SBTypeSynthetic swig_types[78]
+#define SWIGTYPE_p_lldb__SBUnixSignals swig_types[79]
+#define SWIGTYPE_p_lldb__SBValue swig_types[80]
+#define SWIGTYPE_p_lldb__SBValueList swig_types[81]
+#define SWIGTYPE_p_lldb__SBVariablesOptions swig_types[82]
+#define SWIGTYPE_p_lldb__SBWatchpoint swig_types[83]
+#define SWIGTYPE_p_lldb_private__SharingPtrT_lldb_private__ValueObject_t swig_types[84]
+#define SWIGTYPE_p_long_double swig_types[85]
+#define SWIGTYPE_p_long_long swig_types[86]
+#define SWIGTYPE_p_p_void swig_types[87]
+#define SWIGTYPE_p_pthread_rwlock_t swig_types[88]
+#define SWIGTYPE_p_pthread_t swig_types[89]
+#define SWIGTYPE_p_short swig_types[90]
+#define SWIGTYPE_p_signed_char swig_types[91]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ABI_t swig_types[92]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Baton_t swig_types[93]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Block_t swig_types[94]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BreakpointLocation_t swig_types[95]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BreakpointResolver_t swig_types[96]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BreakpointSite_t swig_types[97]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Breakpoint_t swig_types[98]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__BroadcasterManager_t swig_types[99]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Broadcaster_t swig_types[100]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ClangASTImporter_t swig_types[101]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__CommandObject_t swig_types[102]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Communication_t swig_types[103]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__CompileUnit_t swig_types[104]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Connection_t swig_types[105]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__DataBuffer_t swig_types[106]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__DataExtractor_t swig_types[107]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Debugger_t swig_types[108]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Disassembler_t swig_types[109]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__DynamicLoader_t swig_types[110]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__EventDataStructuredData_t swig_types[111]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__EventData_t swig_types[112]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Event_t swig_types[113]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ExecutionContextRef_t swig_types[114]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ExpressionVariable_t swig_types[115]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__File_t swig_types[116]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__FuncUnwinders_t swig_types[117]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__FunctionCaller_t swig_types[118]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Function_t swig_types[119]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__IOHandler_t swig_types[120]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__IOObject_t swig_types[121]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__IRExecutionUnit_t swig_types[122]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__InlineFunctionInfo_t swig_types[123]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Instruction_t swig_types[124]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__InstrumentationRuntime_t swig_types[125]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__JITLoader_t swig_types[126]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__LanguageRuntime_t swig_types[127]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__LineTable_t swig_types[128]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Listener_t swig_types[129]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__MemoryHistory_t swig_types[130]
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__Module_t swig_types[131]
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__ObjectFileJITDelegate_t swig_types[132]
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__ObjectFile_t swig_types[133]
@@ -3094,6 +3094,52 @@ namespace swig {
     }
   };
 }
+
+
+namespace {
+template <class T>
+T PyLongAsT(PyObject *obj) {
+  static_assert(true, "unsupported type"); 
+}
+
+template <> uint64_t PyLongAsT<uint64_t>(PyObject *obj) {
+  return static_cast<uint64_t>(PyLong_AsUnsignedLongLong(obj));
+}
+
+template <> uint32_t PyLongAsT<uint32_t>(PyObject *obj) {
+  return static_cast<uint32_t>(PyLong_AsUnsignedLong(obj));
+}
+
+template <> int64_t PyLongAsT<int64_t>(PyObject *obj) {
+  return static_cast<int64_t>(PyLong_AsLongLong(obj));
+}
+
+template <> int32_t PyLongAsT<int32_t>(PyObject *obj) {
+  return static_cast<int32_t>(PyLong_AsLong(obj));
+}
+
+template <class T>
+bool SetNumberFromPyObject(T &number, PyObject *obj) {
+  if (PyInt_Check(obj))
+    number = static_cast<T>(PyInt_AsLong(obj));
+  else if (PyLong_Check(obj))
+    number = PyLongAsT<T>(obj);
+  else return false;
+
+  return true;
+}
+
+template <>
+bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
+  if (PyFloat_Check(obj)) {
+    number = PyFloat_AsDouble(obj);
+    return true;
+  }
+
+  return false;
+}
+
+} // namespace
 
 
 #include <algorithm>
@@ -5057,9 +5103,7 @@ SWIGINTERN PyObject *_wrap_SBAddress___str__(PyObject *SWIGUNUSEDPARM(self), PyO
   }
   arg1 = reinterpret_cast< lldb::SBAddress * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBAddress___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -7145,9 +7189,7 @@ SWIGINTERN PyObject *_wrap_SBBlock___str__(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   arg1 = reinterpret_cast< lldb::SBBlock * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBBlock___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -8889,9 +8931,7 @@ SWIGINTERN PyObject *_wrap_SBBreakpoint___str__(PyObject *SWIGUNUSEDPARM(self), 
   }
   arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBBreakpoint___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -10189,9 +10229,7 @@ SWIGINTERN PyObject *_wrap_SBBreakpointLocation___str__(PyObject *SWIGUNUSEDPARM
   }
   arg1 = reinterpret_cast< lldb::SBBreakpointLocation * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBBreakpointLocation___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -11548,9 +11586,7 @@ SWIGINTERN PyObject *_wrap_SBBreakpointName___str__(PyObject *SWIGUNUSEDPARM(sel
   }
   arg1 = reinterpret_cast< lldb::SBBreakpointName * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBBreakpointName___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -14035,6 +14071,95 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBCommandInterpreter_HandleCompletionWithDescriptions(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBCommandInterpreter *arg1 = (lldb::SBCommandInterpreter *) 0 ;
+  char *arg2 = (char *) 0 ;
+  uint32_t arg3 ;
+  int arg4 ;
+  int arg5 ;
+  lldb::SBStringList *arg6 = 0 ;
+  lldb::SBStringList *arg7 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  unsigned int val3 ;
+  int ecode3 = 0 ;
+  int val4 ;
+  int ecode4 = 0 ;
+  int val5 ;
+  int ecode5 = 0 ;
+  void *argp6 = 0 ;
+  int res6 = 0 ;
+  void *argp7 = 0 ;
+  int res7 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  PyObject * obj4 = 0 ;
+  PyObject * obj5 = 0 ;
+  PyObject * obj6 = 0 ;
+  int result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOOOOO:SBCommandInterpreter_HandleCompletionWithDescriptions",&obj0,&obj1,&obj2,&obj3,&obj4,&obj5,&obj6)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBCommandInterpreter, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "1"" of type '" "lldb::SBCommandInterpreter *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBCommandInterpreter * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  ecode3 = SWIG_AsVal_unsigned_SS_int(obj2, &val3);
+  if (!SWIG_IsOK(ecode3)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode3), "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "3"" of type '" "uint32_t""'");
+  } 
+  arg3 = static_cast< uint32_t >(val3);
+  ecode4 = SWIG_AsVal_int(obj3, &val4);
+  if (!SWIG_IsOK(ecode4)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode4), "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "4"" of type '" "int""'");
+  } 
+  arg4 = static_cast< int >(val4);
+  ecode5 = SWIG_AsVal_int(obj4, &val5);
+  if (!SWIG_IsOK(ecode5)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode5), "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "5"" of type '" "int""'");
+  } 
+  arg5 = static_cast< int >(val5);
+  res6 = SWIG_ConvertPtr(obj5, &argp6, SWIGTYPE_p_lldb__SBStringList,  0 );
+  if (!SWIG_IsOK(res6)) {
+    SWIG_exception_fail(SWIG_ArgError(res6), "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "6"" of type '" "lldb::SBStringList &""'"); 
+  }
+  if (!argp6) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "6"" of type '" "lldb::SBStringList &""'"); 
+  }
+  arg6 = reinterpret_cast< lldb::SBStringList * >(argp6);
+  res7 = SWIG_ConvertPtr(obj6, &argp7, SWIGTYPE_p_lldb__SBStringList,  0 );
+  if (!SWIG_IsOK(res7)) {
+    SWIG_exception_fail(SWIG_ArgError(res7), "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "7"" of type '" "lldb::SBStringList &""'"); 
+  }
+  if (!argp7) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBCommandInterpreter_HandleCompletionWithDescriptions" "', argument " "7"" of type '" "lldb::SBStringList &""'"); 
+  }
+  arg7 = reinterpret_cast< lldb::SBStringList * >(argp7);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (int)(arg1)->HandleCompletionWithDescriptions((char const *)arg2,arg3,arg4,arg5,*arg6,*arg7);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_int(static_cast< int >(result));
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBCommandInterpreter_IsActive(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBCommandInterpreter *arg1 = (lldb::SBCommandInterpreter *) 0 ;
@@ -15269,9 +15394,7 @@ SWIGINTERN PyObject *_wrap_SBCommandReturnObject___str__(PyObject *SWIGUNUSEDPAR
   }
   arg1 = reinterpret_cast< lldb::SBCommandReturnObject * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBCommandReturnObject___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -16742,9 +16865,7 @@ SWIGINTERN PyObject *_wrap_SBCompileUnit___str__(PyObject *SWIGUNUSEDPARM(self),
   }
   arg1 = reinterpret_cast< lldb::SBCompileUnit * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBCompileUnit___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -17990,16 +18111,10 @@ SWIGINTERN PyObject *_wrap_SBData_CreateDataFromUInt64Array(PyObject *SWIGUNUSED
       int size = PyList_Size(obj2);
       int i = 0;
       arg4 = size;
-      arg3 = (uint64_t*) malloc(size * sizeof(uint64_t));
+      arg3 = (uint64_t *) malloc(size * sizeof(uint64_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj2,i);
-        if (PyInt_Check(o)) {
-          arg3[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg3[i] = PyLong_AsUnsignedLongLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg3[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg3);
           return NULL;
@@ -18068,16 +18183,10 @@ SWIGINTERN PyObject *_wrap_SBData_CreateDataFromUInt32Array(PyObject *SWIGUNUSED
       int size = PyList_Size(obj2);
       int i = 0;
       arg4 = size;
-      arg3 = (uint32_t*) malloc(size * sizeof(uint32_t));
+      arg3 = (uint32_t *) malloc(size * sizeof(uint32_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj2,i);
-        if (PyInt_Check(o)) {
-          arg3[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg3[i] = PyLong_AsUnsignedLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg3[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg3);
           return NULL;
@@ -18146,16 +18255,10 @@ SWIGINTERN PyObject *_wrap_SBData_CreateDataFromSInt64Array(PyObject *SWIGUNUSED
       int size = PyList_Size(obj2);
       int i = 0;
       arg4 = size;
-      arg3 = (int64_t*) malloc(size * sizeof(int64_t));
+      arg3 = (int64_t *) malloc(size * sizeof(int64_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj2,i);
-        if (PyInt_Check(o)) {
-          arg3[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg3[i] = PyLong_AsLongLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg3[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg3);
           return NULL;
@@ -18224,16 +18327,10 @@ SWIGINTERN PyObject *_wrap_SBData_CreateDataFromSInt32Array(PyObject *SWIGUNUSED
       int size = PyList_Size(obj2);
       int i = 0;
       arg4 = size;
-      arg3 = (int32_t*) malloc(size * sizeof(int32_t));
+      arg3 = (int32_t *) malloc(size * sizeof(int32_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj2,i);
-        if (PyInt_Check(o)) {
-          arg3[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg3[i] = PyLong_AsLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg3[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg3);
           return NULL;
@@ -18302,14 +18399,16 @@ SWIGINTERN PyObject *_wrap_SBData_CreateDataFromDoubleArray(PyObject *SWIGUNUSED
       int size = PyList_Size(obj2);
       int i = 0;
       arg4 = size;
-      arg3 = (double*) malloc(size * sizeof(double));
+      arg3 = (double *) malloc(size * sizeof(double));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj2,i);
-        if (PyFloat_Check(o)) {
-          arg3[i] = PyFloat_AsDouble(o);
+        if (!SetNumberFromPyObject(arg3[i], o)) {
+          PyErr_SetString(PyExc_TypeError,"list must contain numbers");
+          free(arg3);
+          return NULL;
         }
-        else {
-          PyErr_SetString(PyExc_TypeError,"list must contain floating-point numbers");
+        
+        if (PyErr_Occurred()) {
           free(arg3);
           return NULL;
         }
@@ -18401,16 +18500,10 @@ SWIGINTERN PyObject *_wrap_SBData_SetDataFromUInt64Array(PyObject *SWIGUNUSEDPAR
       int size = PyList_Size(obj1);
       int i = 0;
       arg3 = size;
-      arg2 = (uint64_t*) malloc(size * sizeof(uint64_t));
+      arg2 = (uint64_t *) malloc(size * sizeof(uint64_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj1,i);
-        if (PyInt_Check(o)) {
-          arg2[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg2[i] = PyLong_AsUnsignedLongLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg2[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg2);
           return NULL;
@@ -18470,16 +18563,10 @@ SWIGINTERN PyObject *_wrap_SBData_SetDataFromUInt32Array(PyObject *SWIGUNUSEDPAR
       int size = PyList_Size(obj1);
       int i = 0;
       arg3 = size;
-      arg2 = (uint32_t*) malloc(size * sizeof(uint32_t));
+      arg2 = (uint32_t *) malloc(size * sizeof(uint32_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj1,i);
-        if (PyInt_Check(o)) {
-          arg2[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg2[i] = PyLong_AsUnsignedLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg2[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg2);
           return NULL;
@@ -18539,16 +18626,10 @@ SWIGINTERN PyObject *_wrap_SBData_SetDataFromSInt64Array(PyObject *SWIGUNUSEDPAR
       int size = PyList_Size(obj1);
       int i = 0;
       arg3 = size;
-      arg2 = (int64_t*) malloc(size * sizeof(int64_t));
+      arg2 = (int64_t *) malloc(size * sizeof(int64_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj1,i);
-        if (PyInt_Check(o)) {
-          arg2[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg2[i] = PyLong_AsLongLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg2[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg2);
           return NULL;
@@ -18608,16 +18689,10 @@ SWIGINTERN PyObject *_wrap_SBData_SetDataFromSInt32Array(PyObject *SWIGUNUSEDPAR
       int size = PyList_Size(obj1);
       int i = 0;
       arg3 = size;
-      arg2 = (int32_t*) malloc(size * sizeof(int32_t));
+      arg2 = (int32_t *) malloc(size * sizeof(int32_t));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj1,i);
-        if (PyInt_Check(o)) {
-          arg2[i] = PyInt_AsLong(o);
-        }
-        else if (PyLong_Check(o)) {
-          arg2[i] = PyLong_AsLong(o);
-        }
-        else {
+        if (!SetNumberFromPyObject(arg2[i], o)) {
           PyErr_SetString(PyExc_TypeError,"list must contain numbers");
           free(arg2);
           return NULL;
@@ -18677,14 +18752,16 @@ SWIGINTERN PyObject *_wrap_SBData_SetDataFromDoubleArray(PyObject *SWIGUNUSEDPAR
       int size = PyList_Size(obj1);
       int i = 0;
       arg3 = size;
-      arg2 = (double*) malloc(size * sizeof(double));
+      arg2 = (double *) malloc(size * sizeof(double));
       for (i = 0; i < size; i++) {
         PyObject *o = PyList_GetItem(obj1,i);
-        if (PyFloat_Check(o)) {
-          arg2[i] = PyFloat_AsDouble(o);
+        if (!SetNumberFromPyObject(arg2[i], o)) {
+          PyErr_SetString(PyExc_TypeError,"list must contain numbers");
+          free(arg2);
+          return NULL;
         }
-        else {
-          PyErr_SetString(PyExc_TypeError,"list must contain floating-point numbers");
+        
+        if (PyErr_Occurred()) {
           free(arg2);
           return NULL;
         }
@@ -18730,9 +18807,7 @@ SWIGINTERN PyObject *_wrap_SBData___str__(PyObject *SWIGUNUSEDPARM(self), PyObje
   }
   arg1 = reinterpret_cast< lldb::SBData * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBData___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -18748,7 +18823,7 @@ SWIGINTERN PyObject *SBData_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObjec
   return SWIG_Py_Void();
 }
 
-SWIGINTERN PyObject *_wrap_SBDebugger_Initialize(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_SBDebugger_Initialize__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   
   if (!PyArg_ParseTuple(args,(char *)":SBDebugger_Initialize")) SWIG_fail;
@@ -18760,6 +18835,66 @@ SWIGINTERN PyObject *_wrap_SBDebugger_Initialize(PyObject *SWIGUNUSEDPARM(self),
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_Initialize__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBInitializerOptions *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBDebugger_Initialize",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_lldb__SBInitializerOptions,  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_Initialize" "', argument " "1"" of type '" "lldb::SBInitializerOptions &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBDebugger_Initialize" "', argument " "1"" of type '" "lldb::SBInitializerOptions &""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBInitializerOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    lldb::SBDebugger::Initialize(*arg1);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_Initialize(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[2];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 1); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 0) {
+    return _wrap_SBDebugger_Initialize__SWIG_0(self, args);
+  }
+  if (argc == 1) {
+    int _v;
+    void *vptr = 0;
+    int res = SWIG_ConvertPtr(argv[0], &vptr, SWIGTYPE_p_lldb__SBInitializerOptions, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_SBDebugger_Initialize__SWIG_1(self, args);
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'SBDebugger_Initialize'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    Initialize()\n"
+    "    lldb::SBDebugger::Initialize(lldb::SBInitializerOptions &)\n");
   return NULL;
 }
 
@@ -20917,17 +21052,29 @@ fail:
 SWIGINTERN PyObject *_wrap_SBDebugger_StateAsCString(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::StateType arg1 ;
-  int val1 ;
-  int ecode1 = 0 ;
   PyObject * obj0 = 0 ;
   char *result = 0 ;
   
   if (!PyArg_ParseTuple(args,(char *)"O:SBDebugger_StateAsCString",&obj0)) SWIG_fail;
-  ecode1 = SWIG_AsVal_int(obj0, &val1);
-  if (!SWIG_IsOK(ecode1)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "SBDebugger_StateAsCString" "', argument " "1"" of type '" "lldb::StateType""'");
-  } 
-  arg1 = static_cast< lldb::StateType >(val1);
+  {
+    using namespace lldb_private;
+    if (PythonInteger::Check(obj0))
+    {
+      PythonInteger py_int(PyRefType::Borrowed, obj0);
+      int64_t state_type_value = py_int.GetInteger() ;
+      
+      if (state_type_value > lldb::StateType::kLastStateType) {
+        PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
+        return nullptr;
+      }
+      arg1 = static_cast<lldb::StateType>(state_type_value);
+    }
+    else
+    {
+      PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+      return nullptr;
+    }
+  }
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (char *)lldb::SBDebugger::StateAsCString(arg1);
@@ -20960,17 +21107,29 @@ fail:
 SWIGINTERN PyObject *_wrap_SBDebugger_StateIsRunningState(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::StateType arg1 ;
-  int val1 ;
-  int ecode1 = 0 ;
   PyObject * obj0 = 0 ;
   bool result;
   
   if (!PyArg_ParseTuple(args,(char *)"O:SBDebugger_StateIsRunningState",&obj0)) SWIG_fail;
-  ecode1 = SWIG_AsVal_int(obj0, &val1);
-  if (!SWIG_IsOK(ecode1)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "SBDebugger_StateIsRunningState" "', argument " "1"" of type '" "lldb::StateType""'");
-  } 
-  arg1 = static_cast< lldb::StateType >(val1);
+  {
+    using namespace lldb_private;
+    if (PythonInteger::Check(obj0))
+    {
+      PythonInteger py_int(PyRefType::Borrowed, obj0);
+      int64_t state_type_value = py_int.GetInteger() ;
+      
+      if (state_type_value > lldb::StateType::kLastStateType) {
+        PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
+        return nullptr;
+      }
+      arg1 = static_cast<lldb::StateType>(state_type_value);
+    }
+    else
+    {
+      PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+      return nullptr;
+    }
+  }
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (bool)lldb::SBDebugger::StateIsRunningState(arg1);
@@ -20986,17 +21145,29 @@ fail:
 SWIGINTERN PyObject *_wrap_SBDebugger_StateIsStoppedState(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::StateType arg1 ;
-  int val1 ;
-  int ecode1 = 0 ;
   PyObject * obj0 = 0 ;
   bool result;
   
   if (!PyArg_ParseTuple(args,(char *)"O:SBDebugger_StateIsStoppedState",&obj0)) SWIG_fail;
-  ecode1 = SWIG_AsVal_int(obj0, &val1);
-  if (!SWIG_IsOK(ecode1)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode1), "in method '" "SBDebugger_StateIsStoppedState" "', argument " "1"" of type '" "lldb::StateType""'");
-  } 
-  arg1 = static_cast< lldb::StateType >(val1);
+  {
+    using namespace lldb_private;
+    if (PythonInteger::Check(obj0))
+    {
+      PythonInteger py_int(PyRefType::Borrowed, obj0);
+      int64_t state_type_value = py_int.GetInteger() ;
+      
+      if (state_type_value > lldb::StateType::kLastStateType) {
+        PyErr_SetString(PyExc_ValueError, "Not a valid StateType value");
+        return nullptr;
+      }
+      arg1 = static_cast<lldb::StateType>(state_type_value);
+    }
+    else
+    {
+      PyErr_SetString(PyExc_ValueError, "Expecting an integer");
+      return nullptr;
+    }
+  }
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (bool)lldb::SBDebugger::StateIsStoppedState(arg1);
@@ -21554,6 +21725,32 @@ SWIGINTERN PyObject *_wrap_SBDebugger_SetPrompt(PyObject *SWIGUNUSEDPARM(self), 
   return resultobj;
 fail:
   if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBDebugger_GetReproducerPath(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBDebugger *arg1 = (lldb::SBDebugger *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  char *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBDebugger_GetReproducerPath",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBDebugger, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBDebugger_GetReproducerPath" "', argument " "1"" of type '" "lldb::SBDebugger const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (char *)((lldb::SBDebugger const *)arg1)->GetReproducerPath();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_FromCharPtr((const char *)result);
+  return resultobj;
+fail:
   return NULL;
 }
 
@@ -22287,9 +22484,7 @@ SWIGINTERN PyObject *_wrap_SBDebugger___str__(PyObject *SWIGUNUSEDPARM(self), Py
   }
   arg1 = reinterpret_cast< lldb::SBDebugger * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBDebugger___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -22750,9 +22945,7 @@ SWIGINTERN PyObject *_wrap_SBDeclaration___str__(PyObject *SWIGUNUSEDPARM(self),
   }
   arg1 = reinterpret_cast< lldb::SBDeclaration * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBDeclaration___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -23672,9 +23865,7 @@ SWIGINTERN PyObject *_wrap_SBError___str__(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   arg1 = reinterpret_cast< lldb::SBError * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBError___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -27289,9 +27480,7 @@ SWIGINTERN PyObject *_wrap_SBFileSpec___str__(PyObject *SWIGUNUSEDPARM(self), Py
   }
   arg1 = reinterpret_cast< lldb::SBFileSpec * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBFileSpec___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -29793,9 +29982,7 @@ SWIGINTERN PyObject *_wrap_SBFrame___str__(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   arg1 = reinterpret_cast< lldb::SBFrame * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBFrame___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -30537,9 +30724,7 @@ SWIGINTERN PyObject *_wrap_SBFunction___str__(PyObject *SWIGUNUSEDPARM(self), Py
   }
   arg1 = reinterpret_cast< lldb::SBFunction * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBFunction___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -30897,6 +31082,220 @@ SWIGINTERN PyObject *SBHostOS_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObj
   PyObject *obj;
   if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
   SWIG_TypeNewClientData(SWIGTYPE_p_lldb__SBHostOS, SWIG_NewClientData(obj));
+  return SWIG_Py_Void();
+}
+
+SWIGINTERN PyObject *_wrap_new_SBInitializerOptions__SWIG_0(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBInitializerOptions *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)":new_SBInitializerOptions")) SWIG_fail;
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (lldb::SBInitializerOptions *)new lldb::SBInitializerOptions();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_lldb__SBInitializerOptions, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SBInitializerOptions__SWIG_1(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBInitializerOptions *arg1 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  lldb::SBInitializerOptions *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:new_SBInitializerOptions",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1, SWIGTYPE_p_lldb__SBInitializerOptions,  0  | 0);
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "new_SBInitializerOptions" "', argument " "1"" of type '" "lldb::SBInitializerOptions const &""'"); 
+  }
+  if (!argp1) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "new_SBInitializerOptions" "', argument " "1"" of type '" "lldb::SBInitializerOptions const &""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBInitializerOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (lldb::SBInitializerOptions *)new lldb::SBInitializerOptions((lldb::SBInitializerOptions const &)*arg1);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj(SWIG_as_voidptr(result), SWIGTYPE_p_lldb__SBInitializerOptions, SWIG_POINTER_NEW |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_new_SBInitializerOptions(PyObject *self, PyObject *args) {
+  int argc;
+  PyObject *argv[2];
+  int ii;
+  
+  if (!PyTuple_Check(args)) SWIG_fail;
+  argc = (int)PyObject_Length(args);
+  for (ii = 0; (ii < argc) && (ii < 1); ii++) {
+    argv[ii] = PyTuple_GET_ITEM(args,ii);
+  }
+  if (argc == 0) {
+    return _wrap_new_SBInitializerOptions__SWIG_0(self, args);
+  }
+  if (argc == 1) {
+    int _v;
+    int res = SWIG_ConvertPtr(argv[0], 0, SWIGTYPE_p_lldb__SBInitializerOptions, 0);
+    _v = SWIG_CheckState(res);
+    if (_v) {
+      return _wrap_new_SBInitializerOptions__SWIG_1(self, args);
+    }
+  }
+  
+fail:
+  SWIG_SetErrorMsg(PyExc_NotImplementedError,"Wrong number of arguments for overloaded function 'new_SBInitializerOptions'.\n"
+    "  Possible C/C++ prototypes are:\n"
+    "    lldb::SBInitializerOptions()\n"
+    "    lldb::SBInitializerOptions(lldb::SBInitializerOptions const &)\n");
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_delete_SBInitializerOptions(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBInitializerOptions *arg1 = (lldb::SBInitializerOptions *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:delete_SBInitializerOptions",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBInitializerOptions, SWIG_POINTER_DISOWN |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "delete_SBInitializerOptions" "', argument " "1"" of type '" "lldb::SBInitializerOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBInitializerOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    delete arg1;
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBInitializerOptions_SetCaptureReproducer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBInitializerOptions *arg1 = (lldb::SBInitializerOptions *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBInitializerOptions_SetCaptureReproducer",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBInitializerOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBInitializerOptions_SetCaptureReproducer" "', argument " "1"" of type '" "lldb::SBInitializerOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBInitializerOptions * >(argp1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBInitializerOptions_SetCaptureReproducer" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetCaptureReproducer(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBInitializerOptions_SetReplayReproducer(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBInitializerOptions *arg1 = (lldb::SBInitializerOptions *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBInitializerOptions_SetReplayReproducer",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBInitializerOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBInitializerOptions_SetReplayReproducer" "', argument " "1"" of type '" "lldb::SBInitializerOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBInitializerOptions * >(argp1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBInitializerOptions_SetReplayReproducer" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetReplayReproducer(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBInitializerOptions_SetReproducerPath(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBInitializerOptions *arg1 = (lldb::SBInitializerOptions *) 0 ;
+  char *arg2 = (char *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBInitializerOptions_SetReproducerPath",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBInitializerOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBInitializerOptions_SetReproducerPath" "', argument " "1"" of type '" "lldb::SBInitializerOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBInitializerOptions * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBInitializerOptions_SetReproducerPath" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetReproducerPath((char const *)arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *SBInitializerOptions_swigregister(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *obj;
+  if (!PyArg_ParseTuple(args,(char*)"O:swigregister", &obj)) return NULL;
+  SWIG_TypeNewClientData(SWIGTYPE_p_lldb__SBInitializerOptions, SWIG_NewClientData(obj));
   return SWIG_Py_Void();
 }
 
@@ -31577,9 +31976,7 @@ SWIGINTERN PyObject *_wrap_SBInstruction___str__(PyObject *SWIGUNUSEDPARM(self),
   }
   arg1 = reinterpret_cast< lldb::SBInstruction * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBInstruction___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -32060,9 +32457,7 @@ SWIGINTERN PyObject *_wrap_SBInstructionList___str__(PyObject *SWIGUNUSEDPARM(se
   }
   arg1 = reinterpret_cast< lldb::SBInstructionList * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBInstructionList___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -34072,9 +34467,7 @@ SWIGINTERN PyObject *_wrap_SBLineEntry___str__(PyObject *SWIGUNUSEDPARM(self), P
   }
   arg1 = reinterpret_cast< lldb::SBLineEntry * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBLineEntry___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -35326,6 +35719,32 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBMemoryRegionInfo_GetName(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBMemoryRegionInfo *arg1 = (lldb::SBMemoryRegionInfo *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  char *result = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBMemoryRegionInfo_GetName",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBMemoryRegionInfo, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBMemoryRegionInfo_GetName" "', argument " "1"" of type '" "lldb::SBMemoryRegionInfo *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBMemoryRegionInfo * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (char *)(arg1)->GetName();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_FromCharPtr((const char *)result);
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBMemoryRegionInfo___eq__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBMemoryRegionInfo *arg1 = (lldb::SBMemoryRegionInfo *) 0 ;
@@ -35455,9 +35874,7 @@ SWIGINTERN PyObject *_wrap_SBMemoryRegionInfo___str__(PyObject *SWIGUNUSEDPARM(s
   }
   arg1 = reinterpret_cast< lldb::SBMemoryRegionInfo * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBMemoryRegionInfo___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -37604,6 +38021,32 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBModule_GetObjectFileEntryPointAddress(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBModule *arg1 = (lldb::SBModule *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  lldb::SBAddress result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBModule_GetObjectFileEntryPointAddress",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBModule, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBModule_GetObjectFileEntryPointAddress" "', argument " "1"" of type '" "lldb::SBModule const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBModule * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = ((lldb::SBModule const *)arg1)->GetObjectFileEntryPointAddress();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBAddress(static_cast< const lldb::SBAddress& >(result))), SWIGTYPE_p_lldb__SBAddress, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBModule___eq__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBModule *arg1 = (lldb::SBModule *) 0 ;
@@ -37695,9 +38138,7 @@ SWIGINTERN PyObject *_wrap_SBModule___str__(PyObject *SWIGUNUSEDPARM(self), PyOb
   }
   arg1 = reinterpret_cast< lldb::SBModule * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBModule___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -38330,9 +38771,7 @@ SWIGINTERN PyObject *_wrap_SBModuleSpec___str__(PyObject *SWIGUNUSEDPARM(self), 
   }
   arg1 = reinterpret_cast< lldb::SBModuleSpec * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBModuleSpec___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -38789,9 +39228,7 @@ SWIGINTERN PyObject *_wrap_SBModuleSpecList___str__(PyObject *SWIGUNUSEDPARM(sel
   }
   arg1 = reinterpret_cast< lldb::SBModuleSpecList * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBModuleSpecList___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -43532,9 +43969,7 @@ SWIGINTERN PyObject *_wrap_SBProcess___str__(PyObject *SWIGUNUSEDPARM(self), PyO
   }
   arg1 = reinterpret_cast< lldb::SBProcess * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBProcess___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -45546,9 +45981,7 @@ SWIGINTERN PyObject *_wrap_SBSection___str__(PyObject *SWIGUNUSEDPARM(self), PyO
   }
   arg1 = reinterpret_cast< lldb::SBSection * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBSection___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -48136,9 +48569,7 @@ SWIGINTERN PyObject *_wrap_SBSymbol___str__(PyObject *SWIGUNUSEDPARM(self), PyOb
   }
   arg1 = reinterpret_cast< lldb::SBSymbol * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBSymbol___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -48793,9 +49224,7 @@ SWIGINTERN PyObject *_wrap_SBSymbolContext___str__(PyObject *SWIGUNUSEDPARM(self
   }
   arg1 = reinterpret_cast< lldb::SBSymbolContext * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBSymbolContext___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -49200,9 +49629,7 @@ SWIGINTERN PyObject *_wrap_SBSymbolContextList___str__(PyObject *SWIGUNUSEDPARM(
   }
   arg1 = reinterpret_cast< lldb::SBSymbolContextList * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBSymbolContextList___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -50451,6 +50878,67 @@ SWIGINTERN PyObject *_wrap_SBTarget_GetExecutable(PyObject *SWIGUNUSEDPARM(self)
   resultobj = SWIG_NewPointerObj((new lldb::SBFileSpec(static_cast< const lldb::SBFileSpec& >(result))), SWIGTYPE_p_lldb__SBFileSpec, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBTarget_AppendImageSearchPath(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBTarget *arg1 = (lldb::SBTarget *) 0 ;
+  char *arg2 = (char *) 0 ;
+  char *arg3 = (char *) 0 ;
+  lldb::SBError *arg4 = 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  int res3 ;
+  char *buf3 = 0 ;
+  int alloc3 = 0 ;
+  void *argp4 = 0 ;
+  int res4 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  PyObject * obj2 = 0 ;
+  PyObject * obj3 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OOOO:SBTarget_AppendImageSearchPath",&obj0,&obj1,&obj2,&obj3)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBTarget, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBTarget_AppendImageSearchPath" "', argument " "1"" of type '" "lldb::SBTarget *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBTarget_AppendImageSearchPath" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  res3 = SWIG_AsCharPtrAndSize(obj2, &buf3, NULL, &alloc3);
+  if (!SWIG_IsOK(res3)) {
+    SWIG_exception_fail(SWIG_ArgError(res3), "in method '" "SBTarget_AppendImageSearchPath" "', argument " "3"" of type '" "char const *""'");
+  }
+  arg3 = reinterpret_cast< char * >(buf3);
+  res4 = SWIG_ConvertPtr(obj3, &argp4, SWIGTYPE_p_lldb__SBError,  0 );
+  if (!SWIG_IsOK(res4)) {
+    SWIG_exception_fail(SWIG_ArgError(res4), "in method '" "SBTarget_AppendImageSearchPath" "', argument " "4"" of type '" "lldb::SBError &""'"); 
+  }
+  if (!argp4) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBTarget_AppendImageSearchPath" "', argument " "4"" of type '" "lldb::SBError &""'"); 
+  }
+  arg4 = reinterpret_cast< lldb::SBError * >(argp4);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->AppendImageSearchPath((char const *)arg2,(char const *)arg3,*arg4);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  if (alloc3 == SWIG_NEWOBJ) delete[] buf3;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  if (alloc3 == SWIG_NEWOBJ) delete[] buf3;
   return NULL;
 }
 
@@ -56603,9 +57091,7 @@ SWIGINTERN PyObject *_wrap_SBTarget___str__(PyObject *SWIGUNUSEDPARM(self), PyOb
   }
   arg1 = reinterpret_cast< lldb::SBTarget * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTarget___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -59485,6 +59971,58 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBThread_GetCurrentException(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBThread *arg1 = (lldb::SBThread *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  lldb::SBValue result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBThread_GetCurrentException",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBThread, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThread_GetCurrentException" "', argument " "1"" of type '" "lldb::SBThread *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBThread * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetCurrentException();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBValue(static_cast< const lldb::SBValue& >(result))), SWIGTYPE_p_lldb__SBValue, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBThread_GetCurrentExceptionBacktrace(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBThread *arg1 = (lldb::SBThread *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  lldb::SBThread result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBThread_GetCurrentExceptionBacktrace",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBThread, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThread_GetCurrentExceptionBacktrace" "', argument " "1"" of type '" "lldb::SBThread *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBThread * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->GetCurrentExceptionBacktrace();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBThread(static_cast< const lldb::SBThread& >(result))), SWIGTYPE_p_lldb__SBThread, SWIG_POINTER_OWN |  0 );
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBThread_SafeToCallFunctions(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBThread *arg1 = (lldb::SBThread *) 0 ;
@@ -59526,9 +60064,7 @@ SWIGINTERN PyObject *_wrap_SBThread___str__(PyObject *SWIGUNUSEDPARM(self), PyOb
   }
   arg1 = reinterpret_cast< lldb::SBThread * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBThread___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -60555,6 +61091,44 @@ SWIGINTERN PyObject *_wrap_SBThreadPlan_QueueThreadPlanForRunToAddress(PyObject 
   resultobj = SWIG_NewPointerObj((new lldb::SBThreadPlan(static_cast< const lldb::SBThreadPlan& >(result))), SWIGTYPE_p_lldb__SBThreadPlan, SWIG_POINTER_OWN |  0 );
   return resultobj;
 fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBThreadPlan_QueueThreadPlanForStepScripted(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBThreadPlan *arg1 = (lldb::SBThreadPlan *) 0 ;
+  char *arg2 = (char *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  int res2 ;
+  char *buf2 = 0 ;
+  int alloc2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  lldb::SBThreadPlan result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBThreadPlan_QueueThreadPlanForStepScripted",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBThreadPlan, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBThreadPlan_QueueThreadPlanForStepScripted" "', argument " "1"" of type '" "lldb::SBThreadPlan *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBThreadPlan * >(argp1);
+  res2 = SWIG_AsCharPtrAndSize(obj1, &buf2, NULL, &alloc2);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBThreadPlan_QueueThreadPlanForStepScripted" "', argument " "2"" of type '" "char const *""'");
+  }
+  arg2 = reinterpret_cast< char * >(buf2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (arg1)->QueueThreadPlanForStepScripted((char const *)arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_NewPointerObj((new lldb::SBThreadPlan(static_cast< const lldb::SBThreadPlan& >(result))), SWIGTYPE_p_lldb__SBThreadPlan, SWIG_POINTER_OWN |  0 );
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
+  return resultobj;
+fail:
+  if (alloc2 == SWIG_NEWOBJ) delete[] buf2;
   return NULL;
 }
 
@@ -61645,9 +62219,7 @@ SWIGINTERN PyObject *_wrap_SBTypeMember___str__(PyObject *SWIGUNUSEDPARM(self), 
   }
   arg1 = reinterpret_cast< lldb::SBTypeMember * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeMember___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -62070,9 +62642,7 @@ SWIGINTERN PyObject *_wrap_SBTypeMemberFunction___str__(PyObject *SWIGUNUSEDPARM
   }
   arg1 = reinterpret_cast< lldb::SBTypeMemberFunction * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeMemberFunction___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -63387,9 +63957,7 @@ SWIGINTERN PyObject *_wrap_SBType___str__(PyObject *SWIGUNUSEDPARM(self), PyObje
   }
   arg1 = reinterpret_cast< lldb::SBType * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBType___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -64922,9 +65490,7 @@ SWIGINTERN PyObject *_wrap_SBTypeCategory___str__(PyObject *SWIGUNUSEDPARM(self)
   }
   arg1 = reinterpret_cast< lldb::SBTypeCategory * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeCategory___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -65234,9 +65800,7 @@ SWIGINTERN PyObject *_wrap_SBTypeEnumMember___str__(PyObject *SWIGUNUSEDPARM(sel
   }
   arg1 = reinterpret_cast< lldb::SBTypeEnumMember * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeEnumMember___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -66061,9 +66625,7 @@ SWIGINTERN PyObject *_wrap_SBTypeFilter___str__(PyObject *SWIGUNUSEDPARM(self), 
   }
   arg1 = reinterpret_cast< lldb::SBTypeFilter * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeFilter___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -66746,9 +67308,7 @@ SWIGINTERN PyObject *_wrap_SBTypeFormat___str__(PyObject *SWIGUNUSEDPARM(self), 
   }
   arg1 = reinterpret_cast< lldb::SBTypeFormat * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeFormat___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -67280,9 +67840,7 @@ SWIGINTERN PyObject *_wrap_SBTypeNameSpecifier___str__(PyObject *SWIGUNUSEDPARM(
   }
   arg1 = reinterpret_cast< lldb::SBTypeNameSpecifier * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeNameSpecifier___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -68459,9 +69017,7 @@ SWIGINTERN PyObject *_wrap_SBTypeSummary___str__(PyObject *SWIGUNUSEDPARM(self),
   }
   arg1 = reinterpret_cast< lldb::SBTypeSummary * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeSummary___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -69185,9 +69741,7 @@ SWIGINTERN PyObject *_wrap_SBTypeSynthetic___str__(PyObject *SWIGUNUSEDPARM(self
   }
   arg1 = reinterpret_cast< lldb::SBTypeSynthetic * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBTypeSynthetic___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -72733,9 +73287,7 @@ SWIGINTERN PyObject *_wrap_SBValue___str__(PyObject *SWIGUNUSEDPARM(self), PyObj
   }
   arg1 = reinterpret_cast< lldb::SBValue * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBValue___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -73173,9 +73725,7 @@ SWIGINTERN PyObject *_wrap_SBValueList___str__(PyObject *SWIGUNUSEDPARM(self), P
   }
   arg1 = reinterpret_cast< lldb::SBValueList * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBValueList___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -73382,20 +73932,32 @@ fail:
 SWIGINTERN PyObject *_wrap_SBVariablesOptions_GetIncludeRecognizedArguments(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBVariablesOptions *arg1 = (lldb::SBVariablesOptions *) 0 ;
+  lldb::SBTarget *arg2 = 0 ;
   void *argp1 = 0 ;
   int res1 = 0 ;
+  void *argp2 = 0 ;
+  int res2 = 0 ;
   PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
   bool result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:SBVariablesOptions_GetIncludeRecognizedArguments",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBVariablesOptions_GetIncludeRecognizedArguments",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBVariablesOptions, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
     SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBVariablesOptions_GetIncludeRecognizedArguments" "', argument " "1"" of type '" "lldb::SBVariablesOptions const *""'"); 
   }
   arg1 = reinterpret_cast< lldb::SBVariablesOptions * >(argp1);
+  res2 = SWIG_ConvertPtr(obj1, &argp2, SWIGTYPE_p_lldb__SBTarget,  0  | 0);
+  if (!SWIG_IsOK(res2)) {
+    SWIG_exception_fail(SWIG_ArgError(res2), "in method '" "SBVariablesOptions_GetIncludeRecognizedArguments" "', argument " "2"" of type '" "lldb::SBTarget const &""'"); 
+  }
+  if (!argp2) {
+    SWIG_exception_fail(SWIG_ValueError, "invalid null reference " "in method '" "SBVariablesOptions_GetIncludeRecognizedArguments" "', argument " "2"" of type '" "lldb::SBTarget const &""'"); 
+  }
+  arg2 = reinterpret_cast< lldb::SBTarget * >(argp2);
   {
     SWIG_PYTHON_THREAD_BEGIN_ALLOW;
-    result = (bool)((lldb::SBVariablesOptions const *)arg1)->GetIncludeRecognizedArguments();
+    result = (bool)((lldb::SBVariablesOptions const *)arg1)->GetIncludeRecognizedArguments((lldb::SBTarget const &)*arg2);
     SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = SWIG_From_bool(static_cast< bool >(result));
@@ -74362,9 +74924,7 @@ SWIGINTERN PyObject *_wrap_SBWatchpoint___str__(PyObject *SWIGUNUSEDPARM(self), 
   }
   arg1 = reinterpret_cast< lldb::SBWatchpoint * >(argp1);
   {
-    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
     result = (PyObject *)lldb_SBWatchpoint___str__(arg1);
-    SWIG_PYTHON_THREAD_END_ALLOW;
   }
   resultobj = result;
   return resultobj;
@@ -76399,6 +76959,11 @@ static PyMethodDef SwigMethods[] = {
 		"    int match_start_point, int max_return_elements, \n"
 		"    SBStringList matches) -> int\n"
 		""},
+	 { (char *)"SBCommandInterpreter_HandleCompletionWithDescriptions", _wrap_SBCommandInterpreter_HandleCompletionWithDescriptions, METH_VARARGS, (char *)"\n"
+		"SBCommandInterpreter_HandleCompletionWithDescriptions(SBCommandInterpreter self, char current_line, uint32_t cursor_pos, \n"
+		"    int match_start_point, int max_return_elements, \n"
+		"    SBStringList matches, SBStringList descriptions) -> int\n"
+		""},
 	 { (char *)"SBCommandInterpreter_IsActive", _wrap_SBCommandInterpreter_IsActive, METH_VARARGS, (char *)"SBCommandInterpreter_IsActive(SBCommandInterpreter self) -> bool"},
 	 { (char *)"SBCommandInterpreter_WasInterrupted", _wrap_SBCommandInterpreter_WasInterrupted, METH_VARARGS, (char *)"SBCommandInterpreter_WasInterrupted(SBCommandInterpreter self) -> bool"},
 	 { (char *)"SBCommandInterpreter_swigregister", SBCommandInterpreter_swigregister, METH_VARARGS, NULL},
@@ -76561,7 +77126,10 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBData_SetDataFromDoubleArray", _wrap_SBData_SetDataFromDoubleArray, METH_VARARGS, (char *)"SBData_SetDataFromDoubleArray(SBData self, double array) -> bool"},
 	 { (char *)"SBData___str__", _wrap_SBData___str__, METH_VARARGS, (char *)"SBData___str__(SBData self) -> PyObject"},
 	 { (char *)"SBData_swigregister", SBData_swigregister, METH_VARARGS, NULL},
-	 { (char *)"SBDebugger_Initialize", _wrap_SBDebugger_Initialize, METH_VARARGS, (char *)"SBDebugger_Initialize()"},
+	 { (char *)"SBDebugger_Initialize", _wrap_SBDebugger_Initialize, METH_VARARGS, (char *)"\n"
+		"Initialize()\n"
+		"SBDebugger_Initialize(SBInitializerOptions options)\n"
+		""},
 	 { (char *)"SBDebugger_Terminate", _wrap_SBDebugger_Terminate, METH_VARARGS, (char *)"SBDebugger_Terminate()"},
 	 { (char *)"SBDebugger_Create", _wrap_SBDebugger_Create, METH_VARARGS, (char *)"\n"
 		"Create() -> SBDebugger\n"
@@ -76674,6 +77242,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBDebugger_GetID", _wrap_SBDebugger_GetID, METH_VARARGS, (char *)"SBDebugger_GetID(SBDebugger self) -> user_id_t"},
 	 { (char *)"SBDebugger_GetPrompt", _wrap_SBDebugger_GetPrompt, METH_VARARGS, (char *)"SBDebugger_GetPrompt(SBDebugger self) -> char"},
 	 { (char *)"SBDebugger_SetPrompt", _wrap_SBDebugger_SetPrompt, METH_VARARGS, (char *)"SBDebugger_SetPrompt(SBDebugger self, char prompt)"},
+	 { (char *)"SBDebugger_GetReproducerPath", _wrap_SBDebugger_GetReproducerPath, METH_VARARGS, (char *)"SBDebugger_GetReproducerPath(SBDebugger self) -> char"},
 	 { (char *)"SBDebugger_GetScriptLanguage", _wrap_SBDebugger_GetScriptLanguage, METH_VARARGS, (char *)"SBDebugger_GetScriptLanguage(SBDebugger self) -> ScriptLanguage"},
 	 { (char *)"SBDebugger_SetScriptLanguage", _wrap_SBDebugger_SetScriptLanguage, METH_VARARGS, (char *)"SBDebugger_SetScriptLanguage(SBDebugger self, ScriptLanguage script_lang)"},
 	 { (char *)"SBDebugger_GetCloseInputOnEOF", _wrap_SBDebugger_GetCloseInputOnEOF, METH_VARARGS, (char *)"SBDebugger_GetCloseInputOnEOF(SBDebugger self) -> bool"},
@@ -77156,6 +77725,15 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"new_SBHostOS", _wrap_new_SBHostOS, METH_VARARGS, (char *)"new_SBHostOS() -> SBHostOS"},
 	 { (char *)"delete_SBHostOS", _wrap_delete_SBHostOS, METH_VARARGS, (char *)"delete_SBHostOS(SBHostOS self)"},
 	 { (char *)"SBHostOS_swigregister", SBHostOS_swigregister, METH_VARARGS, NULL},
+	 { (char *)"new_SBInitializerOptions", _wrap_new_SBInitializerOptions, METH_VARARGS, (char *)"\n"
+		"SBInitializerOptions()\n"
+		"new_SBInitializerOptions(SBInitializerOptions rhs) -> SBInitializerOptions\n"
+		""},
+	 { (char *)"delete_SBInitializerOptions", _wrap_delete_SBInitializerOptions, METH_VARARGS, (char *)"delete_SBInitializerOptions(SBInitializerOptions self)"},
+	 { (char *)"SBInitializerOptions_SetCaptureReproducer", _wrap_SBInitializerOptions_SetCaptureReproducer, METH_VARARGS, (char *)"SBInitializerOptions_SetCaptureReproducer(SBInitializerOptions self, bool b)"},
+	 { (char *)"SBInitializerOptions_SetReplayReproducer", _wrap_SBInitializerOptions_SetReplayReproducer, METH_VARARGS, (char *)"SBInitializerOptions_SetReplayReproducer(SBInitializerOptions self, bool b)"},
+	 { (char *)"SBInitializerOptions_SetReproducerPath", _wrap_SBInitializerOptions_SetReproducerPath, METH_VARARGS, (char *)"SBInitializerOptions_SetReproducerPath(SBInitializerOptions self, char path)"},
+	 { (char *)"SBInitializerOptions_swigregister", SBInitializerOptions_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_SBInstruction", _wrap_new_SBInstruction, METH_VARARGS, (char *)"\n"
 		"SBInstruction()\n"
 		"new_SBInstruction(SBInstruction rhs) -> SBInstruction\n"
@@ -77316,6 +77894,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBMemoryRegionInfo_IsWritable", _wrap_SBMemoryRegionInfo_IsWritable, METH_VARARGS, (char *)"SBMemoryRegionInfo_IsWritable(SBMemoryRegionInfo self) -> bool"},
 	 { (char *)"SBMemoryRegionInfo_IsExecutable", _wrap_SBMemoryRegionInfo_IsExecutable, METH_VARARGS, (char *)"SBMemoryRegionInfo_IsExecutable(SBMemoryRegionInfo self) -> bool"},
 	 { (char *)"SBMemoryRegionInfo_IsMapped", _wrap_SBMemoryRegionInfo_IsMapped, METH_VARARGS, (char *)"SBMemoryRegionInfo_IsMapped(SBMemoryRegionInfo self) -> bool"},
+	 { (char *)"SBMemoryRegionInfo_GetName", _wrap_SBMemoryRegionInfo_GetName, METH_VARARGS, (char *)"SBMemoryRegionInfo_GetName(SBMemoryRegionInfo self) -> char"},
 	 { (char *)"SBMemoryRegionInfo___eq__", _wrap_SBMemoryRegionInfo___eq__, METH_VARARGS, (char *)"SBMemoryRegionInfo___eq__(SBMemoryRegionInfo self, SBMemoryRegionInfo rhs) -> bool"},
 	 { (char *)"SBMemoryRegionInfo___ne__", _wrap_SBMemoryRegionInfo___ne__, METH_VARARGS, (char *)"SBMemoryRegionInfo___ne__(SBMemoryRegionInfo self, SBMemoryRegionInfo rhs) -> bool"},
 	 { (char *)"SBMemoryRegionInfo_GetDescription", _wrap_SBMemoryRegionInfo_GetDescription, METH_VARARGS, (char *)"SBMemoryRegionInfo_GetDescription(SBMemoryRegionInfo self, SBStream description) -> bool"},
@@ -77514,6 +78093,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBModule_GetSymbolFileSpec", _wrap_SBModule_GetSymbolFileSpec, METH_VARARGS, (char *)"SBModule_GetSymbolFileSpec(SBModule self) -> SBFileSpec"},
 	 { (char *)"SBModule_GetObjectFileHeaderAddress", _wrap_SBModule_GetObjectFileHeaderAddress, METH_VARARGS, (char *)"SBModule_GetObjectFileHeaderAddress(SBModule self) -> SBAddress"},
 	 { (char *)"SBModule_IsTypeSystemCompatible", _wrap_SBModule_IsTypeSystemCompatible, METH_VARARGS, (char *)"SBModule_IsTypeSystemCompatible(SBModule self, LanguageType language) -> SBError"},
+	 { (char *)"SBModule_GetObjectFileEntryPointAddress", _wrap_SBModule_GetObjectFileEntryPointAddress, METH_VARARGS, (char *)"SBModule_GetObjectFileEntryPointAddress(SBModule self) -> SBAddress"},
 	 { (char *)"SBModule___eq__", _wrap_SBModule___eq__, METH_VARARGS, (char *)"SBModule___eq__(SBModule self, SBModule rhs) -> bool"},
 	 { (char *)"SBModule___ne__", _wrap_SBModule___ne__, METH_VARARGS, (char *)"SBModule___ne__(SBModule self, SBModule rhs) -> bool"},
 	 { (char *)"SBModule___str__", _wrap_SBModule___str__, METH_VARARGS, (char *)"SBModule___str__(SBModule self) -> PyObject"},
@@ -78390,6 +78970,12 @@ static PyMethodDef SwigMethods[] = {
 		"\n"
 		""},
 	 { (char *)"SBTarget_GetExecutable", _wrap_SBTarget_GetExecutable, METH_VARARGS, (char *)"SBTarget_GetExecutable(SBTarget self) -> SBFileSpec"},
+	 { (char *)"SBTarget_AppendImageSearchPath", _wrap_SBTarget_AppendImageSearchPath, METH_VARARGS, (char *)"\n"
+		"SBTarget_AppendImageSearchPath(SBTarget self, char _from, char to, SBError error)\n"
+		"\n"
+		"/// Append the path mapping (from -> to) to the target's paths mapping list.\n"
+		"\n"
+		""},
 	 { (char *)"SBTarget_AddModule", _wrap_SBTarget_AddModule, METH_VARARGS, (char *)"\n"
 		"AddModule(SBModule module) -> bool\n"
 		"AddModule(char path, char triple, char uuid) -> SBModule\n"
@@ -79043,6 +79629,20 @@ static PyMethodDef SwigMethods[] = {
 		"In that case, this ExtendedBacktrace thread's IndexID will be returned.\n"
 		"\n"
 		""},
+	 { (char *)"SBThread_GetCurrentException", _wrap_SBThread_GetCurrentException, METH_VARARGS, (char *)"\n"
+		"Returns an SBValue object represeting the current exception for the thread,\n"
+		"if there is any. Currently, this works for Obj-C code and returns an SBValue\n"
+		"representing the NSException object at the throw site or that's currently\n"
+		"being processes.\n"
+		"\n"
+		""},
+	 { (char *)"SBThread_GetCurrentExceptionBacktrace", _wrap_SBThread_GetCurrentExceptionBacktrace, METH_VARARGS, (char *)"\n"
+		"Returns a historical (fake) SBThread representing the stack trace of an\n"
+		"exception, if there is one for the thread. Currently, this works for Obj-C\n"
+		"code, and can retrieve the throw-site backtrace of an NSException object\n"
+		"even when the program is no longer at the throw site.\n"
+		"\n"
+		""},
 	 { (char *)"SBThread_SafeToCallFunctions", _wrap_SBThread_SafeToCallFunctions, METH_VARARGS, (char *)"\n"
 		"Takes no arguments, returns a bool.\n"
 		"lldb may be able to detect that function calls should not be executed\n"
@@ -79089,6 +79689,7 @@ static PyMethodDef SwigMethods[] = {
 		"SBThreadPlan_QueueThreadPlanForStepOut(SBThreadPlan self, uint32_t frame_idx_to_step_to) -> SBThreadPlan\n"
 		""},
 	 { (char *)"SBThreadPlan_QueueThreadPlanForRunToAddress", _wrap_SBThreadPlan_QueueThreadPlanForRunToAddress, METH_VARARGS, (char *)"SBThreadPlan_QueueThreadPlanForRunToAddress(SBThreadPlan self, SBAddress address) -> SBThreadPlan"},
+	 { (char *)"SBThreadPlan_QueueThreadPlanForStepScripted", _wrap_SBThreadPlan_QueueThreadPlanForStepScripted, METH_VARARGS, (char *)"SBThreadPlan_QueueThreadPlanForStepScripted(SBThreadPlan self, char script_class_name) -> SBThreadPlan"},
 	 { (char *)"SBThreadPlan_swigregister", SBThreadPlan_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_SBTrace", _wrap_new_SBTrace, METH_VARARGS, (char *)"new_SBTrace() -> SBTrace"},
 	 { (char *)"SBTrace_GetTraceData", _wrap_SBTrace_GetTraceData, METH_VARARGS, (char *)"\n"
@@ -79606,7 +80207,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBVariablesOptions_IsValid", _wrap_SBVariablesOptions_IsValid, METH_VARARGS, (char *)"SBVariablesOptions_IsValid(SBVariablesOptions self) -> bool"},
 	 { (char *)"SBVariablesOptions_GetIncludeArguments", _wrap_SBVariablesOptions_GetIncludeArguments, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeArguments(SBVariablesOptions self) -> bool"},
 	 { (char *)"SBVariablesOptions_SetIncludeArguments", _wrap_SBVariablesOptions_SetIncludeArguments, METH_VARARGS, (char *)"SBVariablesOptions_SetIncludeArguments(SBVariablesOptions self, bool arg1)"},
-	 { (char *)"SBVariablesOptions_GetIncludeRecognizedArguments", _wrap_SBVariablesOptions_GetIncludeRecognizedArguments, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeRecognizedArguments(SBVariablesOptions self) -> bool"},
+	 { (char *)"SBVariablesOptions_GetIncludeRecognizedArguments", _wrap_SBVariablesOptions_GetIncludeRecognizedArguments, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeRecognizedArguments(SBVariablesOptions self, SBTarget arg1) -> bool"},
 	 { (char *)"SBVariablesOptions_SetIncludeRecognizedArguments", _wrap_SBVariablesOptions_SetIncludeRecognizedArguments, METH_VARARGS, (char *)"SBVariablesOptions_SetIncludeRecognizedArguments(SBVariablesOptions self, bool arg1)"},
 	 { (char *)"SBVariablesOptions_GetIncludeLocals", _wrap_SBVariablesOptions_GetIncludeLocals, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeLocals(SBVariablesOptions self) -> bool"},
 	 { (char *)"SBVariablesOptions_SetIncludeLocals", _wrap_SBVariablesOptions_SetIncludeLocals, METH_VARARGS, (char *)"SBVariablesOptions_SetIncludeLocals(SBVariablesOptions self, bool arg1)"},
@@ -79721,6 +80322,7 @@ static swig_type_info _swigt__p_lldb__SBFileSpecList = {"_p_lldb__SBFileSpecList
 static swig_type_info _swigt__p_lldb__SBFrame = {"_p_lldb__SBFrame", "lldb::SBFrame *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_lldb__SBFunction = {"_p_lldb__SBFunction", "lldb::SBFunction *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_lldb__SBHostOS = {"_p_lldb__SBHostOS", "lldb::SBHostOS *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_lldb__SBInitializerOptions = {"_p_lldb__SBInitializerOptions", "lldb::SBInitializerOptions *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_lldb__SBInstruction = {"_p_lldb__SBInstruction", "lldb::SBInstruction *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_lldb__SBInstructionList = {"_p_lldb__SBInstructionList", "lldb::SBInstructionList *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_lldb__SBLanguageRuntime = {"_p_lldb__SBLanguageRuntime", "lldb::SBLanguageRuntime *", 0, 0, (void*)0, 0};
@@ -79818,7 +80420,6 @@ static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__LanguageRuntime_t
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__LineTable_t = {"_p_std__shared_ptrT_lldb_private__LineTable_t", "lldb::LineTableSP *|std::shared_ptr< lldb_private::LineTable > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Listener_t = {"_p_std__shared_ptrT_lldb_private__Listener_t", "std::shared_ptr< lldb_private::Listener > *|lldb::ListenerSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__MemoryHistory_t = {"_p_std__shared_ptrT_lldb_private__MemoryHistory_t", "lldb::MemoryHistorySP *|std::shared_ptr< lldb_private::MemoryHistory > *", 0, 0, (void*)0, 0};
-static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__MemoryRegionInfo_t = {"_p_std__shared_ptrT_lldb_private__MemoryRegionInfo_t", "std::shared_ptr< lldb_private::MemoryRegionInfo > *|lldb::MemoryRegionInfoSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Module_t = {"_p_std__shared_ptrT_lldb_private__Module_t", "lldb::ModuleSP *|std::shared_ptr< lldb_private::Module > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__ObjectFileJITDelegate_t = {"_p_std__shared_ptrT_lldb_private__ObjectFileJITDelegate_t", "lldb::ObjectFileJITDelegateSP *|std::shared_ptr< lldb_private::ObjectFileJITDelegate > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__ObjectFile_t = {"_p_std__shared_ptrT_lldb_private__ObjectFile_t", "lldb::ObjectFileSP *|std::shared_ptr< lldb_private::ObjectFile > *", 0, 0, (void*)0, 0};
@@ -79979,6 +80580,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_lldb__SBFrame,
   &_swigt__p_lldb__SBFunction,
   &_swigt__p_lldb__SBHostOS,
+  &_swigt__p_lldb__SBInitializerOptions,
   &_swigt__p_lldb__SBInstruction,
   &_swigt__p_lldb__SBInstructionList,
   &_swigt__p_lldb__SBLanguageRuntime,
@@ -80076,7 +80678,6 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__shared_ptrT_lldb_private__LineTable_t,
   &_swigt__p_std__shared_ptrT_lldb_private__Listener_t,
   &_swigt__p_std__shared_ptrT_lldb_private__MemoryHistory_t,
-  &_swigt__p_std__shared_ptrT_lldb_private__MemoryRegionInfo_t,
   &_swigt__p_std__shared_ptrT_lldb_private__Module_t,
   &_swigt__p_std__shared_ptrT_lldb_private__ObjectFileJITDelegate_t,
   &_swigt__p_std__shared_ptrT_lldb_private__ObjectFile_t,
@@ -80237,6 +80838,7 @@ static swig_cast_info _swigc__p_lldb__SBFileSpecList[] = {  {&_swigt__p_lldb__SB
 static swig_cast_info _swigc__p_lldb__SBFrame[] = {  {&_swigt__p_lldb__SBFrame, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_lldb__SBFunction[] = {  {&_swigt__p_lldb__SBFunction, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_lldb__SBHostOS[] = {  {&_swigt__p_lldb__SBHostOS, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_lldb__SBInitializerOptions[] = {  {&_swigt__p_lldb__SBInitializerOptions, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_lldb__SBInstruction[] = {  {&_swigt__p_lldb__SBInstruction, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_lldb__SBInstructionList[] = {  {&_swigt__p_lldb__SBInstructionList, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_lldb__SBLanguageRuntime[] = {  {&_swigt__p_lldb__SBLanguageRuntime, 0, 0, 0},{0, 0, 0, 0}};
@@ -80334,7 +80936,6 @@ static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__LanguageRuntime_t
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__LineTable_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__LineTable_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Listener_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__Listener_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__MemoryHistory_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__MemoryHistory_t, 0, 0, 0},{0, 0, 0, 0}};
-static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__MemoryRegionInfo_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__MemoryRegionInfo_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Module_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__Module_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__ObjectFileJITDelegate_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__ObjectFileJITDelegate_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__ObjectFile_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__ObjectFile_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -80495,6 +81096,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_lldb__SBFrame,
   _swigc__p_lldb__SBFunction,
   _swigc__p_lldb__SBHostOS,
+  _swigc__p_lldb__SBInitializerOptions,
   _swigc__p_lldb__SBInstruction,
   _swigc__p_lldb__SBInstructionList,
   _swigc__p_lldb__SBLanguageRuntime,
@@ -80592,7 +81194,6 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__shared_ptrT_lldb_private__LineTable_t,
   _swigc__p_std__shared_ptrT_lldb_private__Listener_t,
   _swigc__p_std__shared_ptrT_lldb_private__MemoryHistory_t,
-  _swigc__p_std__shared_ptrT_lldb_private__MemoryRegionInfo_t,
   _swigc__p_std__shared_ptrT_lldb_private__Module_t,
   _swigc__p_std__shared_ptrT_lldb_private__ObjectFileJITDelegate_t,
   _swigc__p_std__shared_ptrT_lldb_private__ObjectFile_t,
@@ -81376,6 +81977,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eStateDetached",SWIG_From_int(static_cast< int >(lldb::eStateDetached)));
   SWIG_Python_SetConstant(d, "eStateExited",SWIG_From_int(static_cast< int >(lldb::eStateExited)));
   SWIG_Python_SetConstant(d, "eStateSuspended",SWIG_From_int(static_cast< int >(lldb::eStateSuspended)));
+  SWIG_Python_SetConstant(d, "kLastStateType",SWIG_From_int(static_cast< int >(lldb::kLastStateType)));
   SWIG_Python_SetConstant(d, "eLaunchFlagNone",SWIG_From_int(static_cast< int >(lldb::eLaunchFlagNone)));
   SWIG_Python_SetConstant(d, "eLaunchFlagExec",SWIG_From_int(static_cast< int >(lldb::eLaunchFlagExec)));
   SWIG_Python_SetConstant(d, "eLaunchFlagDebug",SWIG_From_int(static_cast< int >(lldb::eLaunchFlagDebug)));
@@ -81789,6 +82391,13 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugTypes",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugTypes)));
   SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugNames",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugNames)));
   SWIG_Python_SetConstant(d, "eSectionTypeOther",SWIG_From_int(static_cast< int >(lldb::eSectionTypeOther)));
+  SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugLineStr",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugLineStr)));
+  SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugRngLists",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugRngLists)));
+  SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugLocLists",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugLocLists)));
+  SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugAbbrevDwo",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugAbbrevDwo)));
+  SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugInfoDwo",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugInfoDwo)));
+  SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugStrDwo",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugStrDwo)));
+  SWIG_Python_SetConstant(d, "eSectionTypeDWARFDebugStrOffsetsDwo",SWIG_From_int(static_cast< int >(lldb::eSectionTypeDWARFDebugStrOffsetsDwo)));
   SWIG_Python_SetConstant(d, "eEmulateInstructionOptionNone",SWIG_From_int(static_cast< int >(lldb::eEmulateInstructionOptionNone)));
   SWIG_Python_SetConstant(d, "eEmulateInstructionOptionAutoAdvancePC",SWIG_From_int(static_cast< int >(lldb::eEmulateInstructionOptionAutoAdvancePC)));
   SWIG_Python_SetConstant(d, "eEmulateInstructionOptionIgnoreConditions",SWIG_From_int(static_cast< int >(lldb::eEmulateInstructionOptionIgnoreConditions)));

@@ -1,6 +1,6 @@
-# XFAIL: windows
+# UNSUPPORTED: system-windows
 
-# RUN: %cxx %p/Inputs/call-function.cpp -g -o %t
+# RUN: %clangxx %p/Inputs/call-function.cpp -g -o %t
 
 # RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-basic
 # RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-basic

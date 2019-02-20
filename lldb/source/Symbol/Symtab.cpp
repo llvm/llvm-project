@@ -1,9 +1,8 @@
 //===-- Symtab.cpp ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,9 +23,9 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
-#include "lldb/Target/SwiftLanguageRuntime.h"
-
 #include "llvm/ADT/StringRef.h"
+
+#include "lldb/Target/SwiftLanguageRuntime.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -143,6 +142,8 @@ void Symtab::Dump(Stream *s, Target *target, SortOrder sort_order,
       }
       break;
     }
+  } else {
+    s->PutCString("\n");
   }
 }
 
@@ -253,6 +254,7 @@ static bool lldb_skip_name(llvm::StringRef mangled,
   case Mangled::eManglingSchemeNone:
     return true;
   }
+  llvm_unreachable("unknown scheme!");
 }
 
 void Symtab::InitNameIndexes() {
@@ -325,16 +327,9 @@ void Symtab::InitNameIndexes() {
 
         const SymbolType type = symbol->GetType();
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
-          // Other schemes are not relevant in the Swift use case.
-          bool is_relevant_itanium =
-              !lldb_skip_name(entry.cstring.GetStringRef(),
-                              Mangled::eManglingSchemeItanium);
-
-          if (is_relevant_itanium) {
-            if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name)) {
-              RegisterMangledNameEntry(entry, class_contexts, backlog, rmc);
-            }
-          } else if (SwiftLanguageRuntime::IsSwiftMangledName(name.str().c_str())) {
+          if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name))
+            RegisterMangledNameEntry(entry, class_contexts, backlog, rmc);
+	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.str().c_str())) {
             lldb_private::ConstString basename;
             bool is_method = false;
             ConstString mangled_name = mangled.GetMangledName();
@@ -638,10 +633,9 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
     return;
 
   // Sort the indexes in place using std::stable_sort.
-  // NOTE: The use of std::stable_sort instead of std::sort here is strictly for
-  // performance,
-  // not correctness.  The indexes vector tends to be "close" to sorted, which
-  // the stable sort handles better.
+  // NOTE: The use of std::stable_sort instead of llvm::sort here is strictly
+  // for performance, not correctness.  The indexes vector tends to be "close"
+  // to sorted, which the stable sort handles better.
 
   std::vector<lldb::addr_t> addr_cache(m_symbols.size(), LLDB_INVALID_ADDRESS);
 
@@ -768,7 +762,7 @@ uint32_t Symtab::AppendSymbolIndexesMatchingRegExAndType(
   for (uint32_t i = 0; i < sym_end; i++) {
     if (symbol_type == eSymbolTypeAny ||
         m_symbols[i].GetType() == symbol_type) {
-      if (CheckSymbolAtIndex(i, symbol_debug_type, symbol_visibility) == false)
+      if (!CheckSymbolAtIndex(i, symbol_debug_type, symbol_visibility))
         continue;
 
       const char *name = m_symbols[i].GetName().AsCString();
@@ -1004,32 +998,8 @@ void Symtab::InitAddressIndexes() {
 
 void Symtab::CalculateSymbolSizes() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
-
-  if (!m_symbols.empty()) {
-    if (!m_file_addr_to_index_computed)
-      InitAddressIndexes();
-
-    const size_t num_entries = m_file_addr_to_index.GetSize();
-
-    for (size_t i = 0; i < num_entries; ++i) {
-      // The entries in the m_file_addr_to_index have calculated the sizes
-      // already so we will use this size if we need to.
-      const FileRangeToIndexMap::Entry &entry =
-          m_file_addr_to_index.GetEntryRef(i);
-
-      Symbol &symbol = m_symbols[entry.data];
-
-      // If the symbol size is already valid, no need to do anything
-      if (symbol.GetByteSizeIsValid())
-        continue;
-
-      const addr_t range_size = entry.GetByteSize();
-      if (range_size > 0) {
-        symbol.SetByteSize(range_size);
-        symbol.SetSizeIsSynthesized(true);
-      }
-    }
-  }
+  // Size computation happens inside InitAddressIndexes.
+  InitAddressIndexes();
 }
 
 Symbol *Symtab::FindSymbolAtFileAddress(addr_t file_addr) {
@@ -1184,7 +1154,7 @@ size_t Symtab::FindFunctionSymbols(const ConstString &name,
   }
 
   if (!symbol_indexes.empty()) {
-    std::sort(symbol_indexes.begin(), symbol_indexes.end());
+    llvm::sort(symbol_indexes.begin(), symbol_indexes.end());
     symbol_indexes.erase(
         std::unique(symbol_indexes.begin(), symbol_indexes.end()),
         symbol_indexes.end());

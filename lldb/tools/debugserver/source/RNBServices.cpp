@@ -1,9 +1,8 @@
 //===-- RNBServices.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -57,9 +56,9 @@ int GetProcesses(CFMutableArrayRef plistMutableArray, bool all_users) {
 
       const pid_t pid = proc_info.kp_proc.p_pid;
       // Skip zombie processes and processes with unset status
-      if (kinfo_user_matches == false || // User is acceptable
-          pid == our_pid ||              // Skip this process
-          pid == 0 ||                    // Skip kernel (kernel pid is zero)
+      if (!kinfo_user_matches || // User is acceptable
+          pid == our_pid ||      // Skip this process
+          pid == 0 ||            // Skip kernel (kernel pid is zero)
           proc_info.kp_proc.p_stat ==
               SZOMB || // Zombies are bad, they like brains...
           proc_info.kp_proc.p_flag & P_TRACED || // Being debugged?

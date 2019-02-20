@@ -1,9 +1,8 @@
 //===-- MachTask.h ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //----------------------------------------------------------------------
@@ -18,14 +17,10 @@
 #ifndef __MachTask_h__
 #define __MachTask_h__
 
-// C Includes
 #include <mach/mach.h>
 #include <sys/socket.h>
-// C++ Includes
 #include <map>
 #include <string>
-// Other libraries and framework includes
-// Project includes
 #include "DNBDefs.h"
 #include "MachException.h"
 #include "MachVMMemory.h"

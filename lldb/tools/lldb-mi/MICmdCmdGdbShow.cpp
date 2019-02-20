@@ -1,9 +1,8 @@
 //===-- MICmdCmdGdbShow.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -32,7 +31,8 @@ const CMICmdCmdGdbShow::MapGdbOptionNameToFnGdbOptionPtr_t
         {"print", &CMICmdCmdGdbShow::OptionFnPrint},
         {"language", &CMICmdCmdGdbShow::OptionFnLanguage},
         {"disassembly-flavor", &CMICmdCmdGdbShow::OptionFnDisassemblyFlavor},
-        {"fallback", &CMICmdCmdGdbShow::OptionFnFallback}};
+        {"fallback", &CMICmdCmdGdbShow::OptionFnFallback},
+        {"breakpoint", &CMICmdCmdGdbShow::OptionFnBreakpoint}};
 
 //++
 //------------------------------------------------------------------------------------
@@ -344,6 +344,43 @@ bool CMICmdCmdGdbShow::OptionFnDisassemblyFlavor(const CMIUtilString::VecString_
   lldb::SBDebugger &rDbgr = m_rLLDBDebugSessionInfo.GetDebugger();
   m_strValue = lldb::SBDebugger::GetInternalVariableValue("target.x86-disassembly-flavor",
                                                           rDbgr.GetInstanceName()).GetStringAtIndex(0);
+  return MIstatus::success;
+}
+
+//++
+//------------------------------------------------------------------------------------
+// Details: Carry out work to complete the GDB show option 'breakpoint' to
+// prepare
+//          and send back the requested information.
+// Type:    Method.
+// Args:    vrWords - (R) List of additional parameters used by this option.
+// Return:  MIstatus::success - Function succeeded.
+//          MIstatus::failure - Function failed.
+// Throws:  None.
+//--
+bool CMICmdCmdGdbShow::OptionFnBreakpoint(
+    const CMIUtilString::VecString_t &vrWords) {
+  if (vrWords.size() != 1) {
+    m_bGbbOptionFnHasError = true;
+    m_strGdbOptionFnError = MIRSRC(IDS_CMD_ERR_GDBSHOW_OPT_BREAKPOINT_BAD_ARGS);
+    return MIstatus::failure;
+  }
+
+  const CMIUtilString strOption(vrWords[0]);
+  if (!CMIUtilString::Compare(strOption, "pending")) {
+    m_bGbbOptionFnHasError = true;
+    m_strGdbOptionFnError = CMIUtilString::Format(
+        MIRSRC(IDS_CMD_ERR_GDBSHOW_OPT_BREAKPOINT_UNKNOWN_OPTION),
+        strOption.c_str());
+    return MIstatus::failure;
+  }
+
+  if (!m_rLLDBDebugSessionInfo.SharedDataRetrieve("breakpoint.pending",
+                                                  m_strValue)) {
+    if (m_strValue.empty())
+      m_strValue = "off";
+  }
+
   return MIstatus::success;
 }
 

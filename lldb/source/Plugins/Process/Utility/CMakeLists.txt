@@ -5,6 +5,7 @@ add_lldb_library(lldbPluginProcessUtility PLUGIN
   HistoryThread.cpp
   HistoryUnwind.cpp
   InferiorCallPOSIX.cpp
+  LinuxProcMaps.cpp
   LinuxSignals.cpp
   MipsLinuxSignals.cpp
   NativeRegisterContextRegisterInfo.cpp

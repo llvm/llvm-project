@@ -724,6 +724,7 @@ def setupSysPath():
 
     pluginPath = os.path.join(scriptPath, 'plugins')
     toolsLLDBMIPath = os.path.join(scriptPath, 'tools', 'lldb-mi')
+    toolsLLDBVSCode = os.path.join(scriptPath, 'tools', 'lldb-vscode')
     toolsLLDBServerPath = os.path.join(scriptPath, 'tools', 'lldb-server')
 
     # Insert script dir, plugin dir, lldb-mi dir and lldb-server dir to the
@@ -732,6 +733,9 @@ def setupSysPath():
     # Adding test/tools/lldb-mi to the path makes it easy
     sys.path.insert(0, toolsLLDBMIPath)
     # to "import lldbmi_testcase" from the MI tests
+    # Adding test/tools/lldb-vscode to the path makes it easy to
+    # "import lldb_vscode_testcase" from the VSCode tests
+    sys.path.insert(0, toolsLLDBVSCode)
     # Adding test/tools/lldb-server to the path makes it easy
     sys.path.insert(0, toolsLLDBServerPath)
     # to "import lldbgdbserverutils" from the lldb-server tests
@@ -800,6 +804,15 @@ def setupSysPath():
             print(
                 "The 'lldb-mi' executable cannot be located.  The lldb-mi tests can not be run as a result.")
             configuration.skipCategories.append("lldb-mi")
+
+    lldbVSCodeExec = os.path.join(lldbDir, "lldb-vscode")
+    if is_exe(lldbVSCodeExec):
+        os.environ["LLDBVSCODE_EXEC"] = lldbVSCodeExec
+    else:
+        if not configuration.shouldSkipBecauseOfCategories(["lldb-vscode"]):
+            print(
+                "The 'lldb-vscode' executable cannot be located.  The lldb-vscode tests can not be run as a result.")
+            configuration.skipCategories.append("lldb-vscode")
 
     lldbPythonDir = None  # The directory that contains 'lldb/__init__.py'
     if not configuration.lldbFrameworkPath and os.path.exists(os.path.join(lldbLibDir, "LLDB.framework")):
@@ -1083,14 +1096,15 @@ def getMyCommandLine():
 
 def checkDsymForUUIDIsNotOn():
     cmd = ["defaults", "read", "com.apple.DebugSymbols"]
-    pipe = subprocess.Popen(
+    process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT)
-    cmd_output = pipe.stdout.read()
-    if cmd_output and "DBGFileMappedPaths = " in cmd_output:
+    cmd_output = process.stdout.read()
+    output_str = cmd_output.decode("utf-8")
+    if "DBGFileMappedPaths = " in output_str:
         print("%s =>" % ' '.join(cmd))
-        print(cmd_output)
+        print(output_str)
         print(
             "Disable automatic lookup and caching of dSYMs before running the test suite!")
         print("Exiting...")

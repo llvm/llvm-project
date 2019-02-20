@@ -1,20 +1,9 @@
-# RUN: %cxx %p/Inputs/stop-hook-threads.cpp -g -o %t
-# RUN: %lldb -b -s %s -O 'target create %t' \
-# RUN:     -O 'break set -f stop-hook-threads.cpp -p "Break here to test that the stop-hook"' \
-# RUN:     -O run \
-# RUN:     -O 'target stop-hook add' \
-# RUN:            -O "frame variable --show-globals g_val" \
-# RUN:            -O "thread list" \
-# RUN:            -O continue \
-# RUN:            -O DONE \
+# RUN: %clangxx %p/Inputs/stop-hook-threads.cpp -g -o %t
+# RUN: %lldb -b -s %p/Inputs/stop-hook-threads-1.lldbinit -s %s -f %t \
 # RUN:     | FileCheck --check-prefix=CHECK --check-prefix=CHECK-NO-FILTER %s
-# RUN: %lldb -b -s %s \
-# RUN:     -O 'target create %t' \
-# RUN:     -O 'break set -f stop-hook-threads.cpp -p "Break here to test that the stop-hook"' \
-# RUN:     -O run \
-# RUN:     -O 'target stop-hook add -x 2 -o "frame variable thread_index"' \
-# RUN:     -O 'target stop-hook add -o continue' \
+# RUN: %lldb -b -s %p/Inputs/stop-hook-threads-2.lldbinit -s %s -f %t \
 # RUN:     | FileCheck --check-prefix=CHECK --check-prefix=CHECK-FILTER %s
+# XFAIL: system-windows
 
 thread list
 break set -f stop-hook-threads.cpp -p "Set break point at this line"

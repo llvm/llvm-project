@@ -73,6 +73,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   if (EXISTS ${LLVM_CMAKE_PATH})
+    # Enable warnings, otherwise -w gets added to the cflags by HandleLLVMOptions.
+    set(LLVM_ENABLE_WARNINGS ON)
     list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_PATH}")
     include("${LLVM_CMAKE_PATH}/AddLLVM.cmake")
     include("${LLVM_CMAKE_PATH}/HandleLLVMOptions.cmake")
@@ -81,7 +83,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   set(PACKAGE_NAME libunwind)
-  set(PACKAGE_VERSION 8.0.0svn)
+  set(PACKAGE_VERSION 9.0.0svn)
   set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
   set(PACKAGE_BUGREPORT "llvm-bugs@lists.llvm.org")
 
@@ -165,6 +167,9 @@ if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT WIN32)
 elseif(LIBUNWIND_BUILD_32_BITS)
   message(FATAL_ERROR "LIBUNWIND_BUILD_32_BITS=ON is not supported on this platform.")
 endif()
+
+option(LIBUNWIND_HERMETIC_STATIC_LIBRARY
+  "Do not export any symbols from the static library." OFF)
 
 #===============================================================================
 # Configure System
@@ -285,6 +290,9 @@ unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_EHSC_FLAG -EHsc)
 
 unwind_append_if(LIBUNWIND_C_FLAGS LIBUNWIND_HAS_FUNWIND_TABLES -funwind-tables)
 
+# Ensure that we don't depend on C++ standard library.
+unwind_append_if(LIBUNWIND_CXX_FLAGS LIBUNWIND_HAS_NOSTDINCXX_FLAG -nostdinc++)
+
 # Assert
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 if (LIBUNWIND_ENABLE_ASSERTIONS)
@@ -338,28 +346,6 @@ endif()
 #===============================================================================
 
 include_directories(include)
-
-find_path(
-  LIBUNWIND_LIBCXX_INCLUDES_INTERNAL
-  __libcpp_version
-  PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxx/include
-        ${LLVM_MAIN_SRC_DIR}/runtimes/libcxx/include
-        ${LLVM_MAIN_SRC_DIR}/../libcxx/include
-  NO_DEFAULT_PATH
-  NO_CMAKE_FIND_ROOT_PATH
-  )
-if ((NOT LIBUNWIND_STANDALONE_BUILD OR HAVE_LIBCXX) AND
-    IS_DIRECTORY "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")
-  set(LIBUNWIND_CXX_INCLUDE_PATHS_DEFAULT "${LIBUNWIND_LIBCXX_INCLUDES_INTERNAL}")
-endif()
-
-set(LIBUNWIND_CXX_INCLUDE_PATHS "${LIBUNWIND_CXX_INCLUDE_PATHS_DEFAULT}" CACHE PATH
-    "Paths to C++ header directories separated by ';'.")
-
-if (NOT LIBUNWIND_CXX_INCLUDE_PATHS STREQUAL "")
-  list(APPEND LIBUNWIND_CXX_FLAGS -nostdinc++)
-  include_directories("${LIBUNWIND_CXX_INCLUDE_PATHS}")
-endif()
 
 add_subdirectory(src)
 

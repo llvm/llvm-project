@@ -1,16 +1,11 @@
 //===-- VectorType.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/DataFormatters/VectorType.h"
 
 #include "lldb/Core/ValueObject.h"
@@ -175,8 +170,9 @@ static size_t CalculateNumChildren(
     lldb_private::ExecutionContextScope *exe_scope =
         nullptr // does not matter here because all we trade in are basic types
     ) {
-  auto container_size = container_type.GetByteSize(exe_scope);
-  auto element_size = element_type.GetByteSize(exe_scope);
+  llvm::Optional<uint64_t> container_size =
+      container_type.GetByteSize(exe_scope);
+  llvm::Optional<uint64_t> element_size = element_type.GetByteSize(exe_scope);
 
   if (container_size && element_size && *element_size) {
     if (*container_size % *element_size)
@@ -202,7 +198,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     if (idx >= CalculateNumChildren())
       return {};
-    auto size = m_child_type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
     if (!size)
       return {};
     auto offset = idx * *size;

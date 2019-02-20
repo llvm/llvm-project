@@ -1,9 +1,8 @@
 //===-- GDBRemoteCommunicationServerCommon.cpp ------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,23 +10,21 @@
 
 #include <errno.h>
 
-// C Includes
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
 
-// C++ Includes
 #include <chrono>
 #include <cstring>
 
-// Other libraries and framework includes
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Host/SafeMachO.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/FileAction.h"
@@ -36,12 +33,10 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/SafeMachO.h"
 #include "lldb/Utility/StreamGDBRemote.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Triple.h"
 
-// Project includes
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
@@ -353,7 +348,7 @@ GDBRemoteCommunicationServerCommon::Handle_qfProcessInfo(
         std::string file;
         extractor.GetHexByteString(file);
         match_info.GetProcessInfo().GetExecutableFile().SetFile(
-            file, false, FileSpec::Style::native);
+            file, FileSpec::Style::native);
       } else if (key.equals("name_match")) {
         NameMatch name_match = llvm::StringSwitch<NameMatch>(value)
                                    .Case("equals", NameMatch::Equals)
@@ -520,7 +515,8 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Open(
       if (packet.GetChar() == ',') {
         mode_t mode = packet.GetHexMaxU32(false, 0600);
         Status error;
-        const FileSpec path_spec{path, true};
+        FileSpec path_spec(path);
+        FileSystem::Instance().Resolve(path_spec);
         int fd = ::open(path_spec.GetCString(), flags, mode);
         const int save_errno = fd == -1 ? errno : 0;
         StreamString response;
@@ -659,12 +655,14 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Mode(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    Status error;
-    const uint32_t mode = File::GetPermissions(FileSpec{path, true}, error);
+    FileSpec file_spec(path);
+    FileSystem::Instance().Resolve(file_spec);
+    std::error_code ec;
+    const uint32_t mode = FileSystem::Instance().GetPermissions(file_spec, ec);
     StreamString response;
     response.Printf("F%u", mode);
-    if (mode == 0 || error.Fail())
-      response.Printf(",%i", (int)error.GetError());
+    if (mode == 0 || ec)
+      response.Printf(",%i", (int)Status(ec).GetError());
     return SendPacketNoLock(response.GetString());
   }
   return SendErrorResponse(23);
@@ -698,7 +696,11 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_symlink(
   packet.GetHexByteStringTerminatedBy(dst, ',');
   packet.GetChar(); // Skip ',' char
   packet.GetHexByteString(src);
-  Status error = FileSystem::Symlink(FileSpec{src, true}, FileSpec{dst, false});
+
+  FileSpec src_spec(src);
+  FileSystem::Instance().Resolve(src_spec);
+  Status error = FileSystem::Instance().Symlink(src_spec, FileSpec(dst));
+
   StreamString response;
   response.Printf("F%u,%u", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());
@@ -731,9 +733,11 @@ GDBRemoteCommunicationServerCommon::Handle_qPlatform_shell(
         packet.GetHexByteString(working_dir);
       int status, signo;
       std::string output;
-      Status err = Host::RunShellCommand(
-          path.c_str(), FileSpec{working_dir, true}, &status, &signo, &output,
-          std::chrono::seconds(10));
+      FileSpec working_spec(working_dir);
+      FileSystem::Instance().Resolve(working_spec);
+      Status err =
+          Host::RunShellCommand(path.c_str(), working_spec, &status, &signo,
+                                &output, std::chrono::seconds(10));
       StreamGDBRemote response;
       if (err.Fail()) {
         response.PutCString("F,");
@@ -884,7 +888,7 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDIN(
   packet.GetHexByteString(path);
   const bool read = true;
   const bool write = false;
-  if (file_action.Open(STDIN_FILENO, FileSpec{path, false}, read, write)) {
+  if (file_action.Open(STDIN_FILENO, FileSpec(path), read, write)) {
     m_process_launch_info.AppendFileAction(file_action);
     return SendOKResponse();
   }
@@ -900,7 +904,7 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDOUT(
   packet.GetHexByteString(path);
   const bool read = false;
   const bool write = true;
-  if (file_action.Open(STDOUT_FILENO, FileSpec{path, false}, read, write)) {
+  if (file_action.Open(STDOUT_FILENO, FileSpec(path), read, write)) {
     m_process_launch_info.AppendFileAction(file_action);
     return SendOKResponse();
   }
@@ -916,7 +920,7 @@ GDBRemoteCommunicationServerCommon::Handle_QSetSTDERR(
   packet.GetHexByteString(path);
   const bool read = false;
   const bool write = true;
-  if (file_action.Open(STDERR_FILENO, FileSpec{path, false}, read, write)) {
+  if (file_action.Open(STDERR_FILENO, FileSpec(path), read, write)) {
     m_process_launch_info.AppendFileAction(file_action);
     return SendOKResponse();
   }
@@ -1024,7 +1028,7 @@ GDBRemoteCommunicationServerCommon::Handle_A(StringExtractorGDBRemote &packet) {
               if (success) {
                 if (arg_idx == 0)
                   m_process_launch_info.GetExecutableFile().SetFile(
-                      arg, false, FileSpec::Style::native);
+                      arg, FileSpec::Style::native);
                 m_process_launch_info.GetArguments().AppendArgument(arg);
                 if (log)
                   log->Printf("LLGSPacketHandler::%s added arg %d: \"%s\"",
@@ -1263,7 +1267,9 @@ FileSpec GDBRemoteCommunicationServerCommon::FindModuleFile(
 #ifdef __ANDROID__
   return HostInfoAndroid::ResolveLibraryPath(module_path, arch);
 #else
-  return FileSpec(module_path, true);
+  FileSpec file_spec(module_path);
+  FileSystem::Instance().Resolve(file_spec);
+  return file_spec;
 #endif
 }
 
@@ -1272,7 +1278,9 @@ GDBRemoteCommunicationServerCommon::GetModuleInfo(llvm::StringRef module_path,
                                                   llvm::StringRef triple) {
   ArchSpec arch(triple);
 
-  const FileSpec req_module_path_spec(module_path, true);
+  FileSpec req_module_path_spec(module_path);
+  FileSystem::Instance().Resolve(req_module_path_spec);
+
   const FileSpec module_path_spec =
       FindModuleFile(req_module_path_spec.GetPath(), arch);
   const ModuleSpec module_spec(module_path_spec, arch);

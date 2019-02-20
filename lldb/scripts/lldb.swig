@@ -41,12 +41,12 @@ Older swig versions will simply ignore this setting.
 */
 %define MODULEIMPORT
 "try:
-    # Try a relative import first
-    from . import $module
+    # Try an absolute import first.  If we're being loaded from lldb,
+    # _lldb should be a built-in module.
+    import $module
 except ImportError:
-    # Maybe absolute import will work (if we're being loaded from lldb, it
-    # should).
-    import $module"
+    # Relative import should work if we are being loaded by Python.
+    from . import $module"
 %enddef
 // These versions will not generate working python modules, so error out early.
 #if SWIG_VERSION >= 0x030009 && SWIG_VERSION < 0x030011
@@ -187,6 +187,7 @@ import six
 %include "./interface/SBFrame.i"
 %include "./interface/SBFunction.i"
 %include "./interface/SBHostOS.i"
+%include "./interface/SBInitializerOptions.i"
 %include "./interface/SBInstruction.i"
 %include "./interface/SBInstructionList.i"
 %include "./interface/SBLanguageRuntime.i"

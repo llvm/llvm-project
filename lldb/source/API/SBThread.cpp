@@ -1,9 +1,8 @@
 //===-- SBThread.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,7 +13,6 @@
 #include "lldb/API/SBSymbolContext.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -32,6 +30,7 @@
 #include "lldb/Target/ThreadPlanStepOut.h"
 #include "lldb/Target/ThreadPlanStepRange.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
 
@@ -590,7 +589,7 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
             success = true;
           }
           if (node->GetType() == eStructuredDataTypeBoolean) {
-            if (node->GetAsBoolean()->GetValue() == true)
+            if (node->GetAsBoolean()->GetValue())
               strm.Printf("true");
             else
               strm.Printf("false");
@@ -1489,7 +1488,7 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
     }
   }
 
-  if (log && sb_origin_thread.IsValid() == false)
+  if (log && !sb_origin_thread.IsValid())
     log->Printf("SBThread(%p)::GetExtendedBacktraceThread() is not returning a "
                 "Valid thread",
                 static_cast<void *>(exe_ctx.GetThreadPtr()));
@@ -1501,6 +1500,20 @@ uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
   if (thread_sp)
     return thread_sp->GetExtendedBacktraceOriginatingIndexID();
   return LLDB_INVALID_INDEX32;
+}
+
+SBValue SBThread::GetCurrentException() {
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (!thread_sp) return SBValue();
+
+  return SBValue(thread_sp->GetCurrentException());
+}
+
+SBThread SBThread::GetCurrentExceptionBacktrace() {
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (!thread_sp) return SBThread();
+
+  return SBThread(thread_sp->GetCurrentExceptionBacktrace());
 }
 
 bool SBThread::SafeToCallFunctions() {

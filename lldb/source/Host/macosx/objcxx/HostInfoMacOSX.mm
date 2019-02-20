@@ -1,17 +1,16 @@
 //===-- HostInfoMacOSX.mm ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/SafeMachO.h"
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
@@ -97,14 +96,13 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
     uint32_t len = sizeof(program_fullpath);
     int err = _NSGetExecutablePath(program_fullpath, &len);
     if (err == 0)
-      g_program_filespec.SetFile(program_fullpath, false,
-                                 FileSpec::Style::native);
+      g_program_filespec.SetFile(program_fullpath, FileSpec::Style::native);
     else if (err == -1) {
       char *large_program_fullpath = (char *)::malloc(len + 1);
 
       err = _NSGetExecutablePath(large_program_fullpath, &len);
       if (err == 0)
-        g_program_filespec.SetFile(large_program_fullpath, false,
+        g_program_filespec.SetFile(large_program_fullpath,
                                    FileSpec::Style::native);
 
       ::free(large_program_fullpath);
@@ -140,8 +138,9 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     // as in the case of a python script, the executable is python, not
     // the lldb driver.
     raw_path.append("/../bin");
-    FileSpec support_dir_spec(raw_path, true);
-    if (!llvm::sys::fs::is_directory(support_dir_spec.GetPath())) {
+    FileSpec support_dir_spec(raw_path);
+    FileSystem::Instance().Resolve(support_dir_spec);
+    if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
       Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
       if (log)
         log->Printf("HostInfoMacOSX::%s(): failed to find support directory",
@@ -209,7 +208,8 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns", true);
+  FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns");
+  FileSystem::Instance().Resolve(temp_file);
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }
@@ -300,6 +300,6 @@ bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
     raw_path.resize(framework_pos);
     raw_path.append("/Resources/Swift");
   }
-  file_spec.SetFile(raw_path.c_str(), true, FileSpec::Style::native);
+  file_spec.SetFile(raw_path.c_str(), FileSpec::Style::native);
   return true;
 }

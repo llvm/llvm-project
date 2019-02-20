@@ -1,9 +1,8 @@
 //===-- CommandInterpreter.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -31,6 +30,7 @@
 #include "Commands/CommandObjectProcess.h"
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegister.h"
+#include "Commands/CommandObjectReproducer.h"
 #include "Commands/CommandObjectSettings.h"
 #include "Commands/CommandObjectSource.h"
 #include "Commands/CommandObjectStats.h"
@@ -42,9 +42,9 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
@@ -434,7 +434,6 @@ void CommandInterpreter::Initialize() {
     AddAlias("var", cmd_obj_sp);
     AddAlias("vo", cmd_obj_sp, "--object-description");
   }
-  
 }
 
 void CommandInterpreter::Clear() {
@@ -488,6 +487,8 @@ void CommandInterpreter::LoadCommandDictionary() {
   m_command_dict["quit"] = CommandObjectSP(new CommandObjectQuit(*this));
   m_command_dict["register"] =
       CommandObjectSP(new CommandObjectRegister(*this));
+  m_command_dict["reproducer"] =
+      CommandObjectSP(new CommandObjectReproducer(*this));
   m_command_dict["script"] =
       CommandObjectSP(new CommandObjectScript(*this, script_language));
   m_command_dict["settings"] =
@@ -845,20 +846,23 @@ void CommandInterpreter::LoadCommandDictionary() {
 }
 
 int CommandInterpreter::GetCommandNamesMatchingPartialString(
-    const char *cmd_str, bool include_aliases, StringList &matches) {
-  AddNamesMatchingPartialString(m_command_dict, cmd_str, matches);
+    const char *cmd_str, bool include_aliases, StringList &matches,
+    StringList &descriptions) {
+  AddNamesMatchingPartialString(m_command_dict, cmd_str, matches,
+                                &descriptions);
 
   if (include_aliases) {
-    AddNamesMatchingPartialString(m_alias_dict, cmd_str, matches);
+    AddNamesMatchingPartialString(m_alias_dict, cmd_str, matches,
+                                  &descriptions);
   }
 
   return matches.GetSize();
 }
 
-CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
-                                                 bool include_aliases,
-                                                 bool exact,
-                                                 StringList *matches) const {
+CommandObjectSP
+CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str, bool include_aliases,
+                                 bool exact, StringList *matches,
+                                 StringList *descriptions) const {
   CommandObjectSP command_sp;
 
   std::string cmd = cmd_str;
@@ -899,8 +903,8 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
     // empty CommandObjectSP and the list of matches.
 
     if (HasCommands()) {
-      num_cmd_matches =
-          AddNamesMatchingPartialString(m_command_dict, cmd_str, *matches);
+      num_cmd_matches = AddNamesMatchingPartialString(m_command_dict, cmd_str,
+                                                      *matches, descriptions);
     }
 
     if (num_cmd_matches == 1) {
@@ -911,8 +915,8 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
     }
 
     if (include_aliases && HasAliases()) {
-      num_alias_matches =
-          AddNamesMatchingPartialString(m_alias_dict, cmd_str, *matches);
+      num_alias_matches = AddNamesMatchingPartialString(m_alias_dict, cmd_str,
+                                                        *matches, descriptions);
     }
 
     if (num_alias_matches == 1) {
@@ -923,8 +927,8 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
     }
 
     if (HasUserCommands()) {
-      num_user_matches =
-          AddNamesMatchingPartialString(m_user_dict, cmd_str, *matches);
+      num_user_matches = AddNamesMatchingPartialString(m_user_dict, cmd_str,
+                                                       *matches, descriptions);
     }
 
     if (num_user_matches == 1) {
@@ -949,6 +953,8 @@ CommandObjectSP CommandInterpreter::GetCommandSP(llvm::StringRef cmd_str,
     }
   } else if (matches && command_sp) {
     matches->AppendString(cmd_str);
+    if (descriptions)
+      descriptions->AppendString(command_sp->GetHelp());
   }
 
   return command_sp;
@@ -986,16 +992,16 @@ bool CommandInterpreter::AddUserCommand(llvm::StringRef name,
   if (!name.empty()) {
     // do not allow replacement of internal commands
     if (CommandExists(name)) {
-      if (can_replace == false)
+      if (!can_replace)
         return false;
-      if (m_command_dict[name]->IsRemovable() == false)
+      if (!m_command_dict[name]->IsRemovable())
         return false;
     }
 
     if (UserCommandExists(name)) {
-      if (can_replace == false)
+      if (!can_replace)
         return false;
-      if (m_user_dict[name]->IsRemovable() == false)
+      if (!m_user_dict[name]->IsRemovable())
         return false;
     }
 
@@ -1048,10 +1054,12 @@ CommandObjectSP CommandInterpreter::GetCommandSPExact(llvm::StringRef cmd_str,
   return ret_val;
 }
 
-CommandObject *CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
-                                                    StringList *matches) const {
+CommandObject *
+CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
+                                     StringList *matches,
+                                     StringList *descriptions) const {
   CommandObject *command_obj =
-      GetCommandSP(cmd_str, false, true, matches).get();
+      GetCommandSP(cmd_str, false, true, matches, descriptions).get();
 
   // If we didn't find an exact match to the command string in the commands,
   // look in the aliases.
@@ -1059,7 +1067,7 @@ CommandObject *CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
   if (command_obj)
     return command_obj;
 
-  command_obj = GetCommandSP(cmd_str, true, true, matches).get();
+  command_obj = GetCommandSP(cmd_str, true, true, matches, descriptions).get();
 
   if (command_obj)
     return command_obj;
@@ -1074,10 +1082,12 @@ CommandObject *CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
   if (command_obj) {
     if (matches)
       matches->AppendString(command_obj->GetCommandName());
+    if (descriptions)
+      descriptions->AppendString(command_obj->GetHelp());
     return command_obj;
   }
 
-  return GetCommandSP(cmd_str, true, false, matches).get();
+  return GetCommandSP(cmd_str, true, false, matches, descriptions).get();
 }
 
 bool CommandInterpreter::CommandExists(llvm::StringRef cmd) const {
@@ -1388,7 +1398,7 @@ CommandObject *CommandInterpreter::BuildAliasResult(
   alias_cmd_obj = desugared.first.get();
   std::string alias_name_str = alias_name;
   if ((cmd_args.GetArgumentCount() == 0) ||
-      (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0))
+      (alias_name_str != cmd_args.GetArgumentAtIndex(0)))
     cmd_args.Unshift(alias_name_str);
 
   result_str.Printf("%s", alias_cmd_obj->GetCommandName().str().c_str());
@@ -1450,130 +1460,140 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
   size_t start_backtick;
   size_t pos = 0;
   while ((start_backtick = command.find('`', pos)) != std::string::npos) {
+    // Stop if an error was encountered during the previous iteration.
+    if (error.Fail())
+      break;
+
     if (start_backtick > 0 && command[start_backtick - 1] == '\\') {
       // The backtick was preceded by a '\' character, remove the slash and
-      // don't treat the backtick as the start of an expression
+      // don't treat the backtick as the start of an expression.
       command.erase(start_backtick - 1, 1);
-      // No need to add one to start_backtick since we just deleted a char
+      // No need to add one to start_backtick since we just deleted a char.
       pos = start_backtick;
-    } else {
-      const size_t expr_content_start = start_backtick + 1;
-      const size_t end_backtick = command.find('`', expr_content_start);
-      if (end_backtick == std::string::npos)
-        return error;
-      else if (end_backtick == expr_content_start) {
-        // Empty expression (two backticks in a row)
-        command.erase(start_backtick, 2);
-      } else {
-        std::string expr_str(command, expr_content_start,
-                             end_backtick - expr_content_start);
+      continue;
+    }
 
-        ExecutionContext exe_ctx(GetExecutionContext());
-        Target *target = exe_ctx.GetTargetPtr();
-        // Get a dummy target to allow for calculator mode while processing
-        // backticks. This also helps break the infinite loop caused when
-        // target is null.
-        if (!target)
-          target = m_debugger.GetDummyTarget();
-        if (target) {
-          ValueObjectSP expr_result_valobj_sp;
+    const size_t expr_content_start = start_backtick + 1;
+    const size_t end_backtick = command.find('`', expr_content_start);
 
-          EvaluateExpressionOptions options;
-          options.SetCoerceToId(false);
-          options.SetUnwindOnError(true);
-          options.SetIgnoreBreakpoints(true);
-          options.SetKeepInMemory(false);
-          options.SetTryAllThreads(true);
-          options.SetTimeout(llvm::None);
+    if (end_backtick == std::string::npos) {
+      // Stop if there's no end backtick.
+      break;
+    }
 
-          ExpressionResults expr_result = target->EvaluateExpression(
-              expr_str.c_str(), exe_ctx.GetFramePtr(), expr_result_valobj_sp,
-              options);
+    if (end_backtick == expr_content_start) {
+      // Skip over empty expression. (two backticks in a row)
+      command.erase(start_backtick, 2);
+      continue;
+    }
 
-          if (expr_result == eExpressionCompleted) {
-            Scalar scalar;
-            if (expr_result_valobj_sp)
-              expr_result_valobj_sp =
-                  expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
-                      expr_result_valobj_sp->GetDynamicValueType(), true);
-            if (expr_result_valobj_sp->ResolveValue(scalar)) {
-              command.erase(start_backtick, end_backtick - start_backtick + 1);
-              StreamString value_strm;
-              const bool show_type = false;
-              scalar.GetValue(&value_strm, show_type);
-              size_t value_string_size = value_strm.GetSize();
-              if (value_string_size) {
-                command.insert(start_backtick, value_strm.GetString());
-                pos = start_backtick + value_string_size;
-                continue;
-              } else {
-                error.SetErrorStringWithFormat("expression value didn't result "
-                                               "in a scalar value for the "
-                                               "expression '%s'",
-                                               expr_str.c_str());
-              }
-            } else {
-              error.SetErrorStringWithFormat("expression value didn't result "
-                                             "in a scalar value for the "
-                                             "expression '%s'",
-                                             expr_str.c_str());
-            }
-          } else {
-            if (expr_result_valobj_sp)
-              error = expr_result_valobj_sp->GetError();
-            if (error.Success()) {
+    std::string expr_str(command, expr_content_start,
+                         end_backtick - expr_content_start);
 
-              switch (expr_result) {
-              case eExpressionSetupError:
-                error.SetErrorStringWithFormat(
-                    "expression setup error for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionParseError:
-                error.SetErrorStringWithFormat(
-                    "expression parse error for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionResultUnavailable:
-                error.SetErrorStringWithFormat(
-                    "expression error fetching result for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionCompleted:
-                break;
-              case eExpressionDiscarded:
-                error.SetErrorStringWithFormat(
-                    "expression discarded for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionInterrupted:
-                error.SetErrorStringWithFormat(
-                    "expression interrupted for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionHitBreakpoint:
-                error.SetErrorStringWithFormat(
-                    "expression hit breakpoint for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionTimedOut:
-                error.SetErrorStringWithFormat(
-                    "expression timed out for the expression '%s'",
-                    expr_str.c_str());
-                break;
-              case eExpressionStoppedForDebug:
-                error.SetErrorStringWithFormat("expression stop at entry point "
-                                               "for debugging for the "
-                                               "expression '%s'",
-                                               expr_str.c_str());
-                break;
-              }
-            }
-          }
+    ExecutionContext exe_ctx(GetExecutionContext());
+    Target *target = exe_ctx.GetTargetPtr();
+
+    // Get a dummy target to allow for calculator mode while processing
+    // backticks. This also helps break the infinite loop caused when target is
+    // null.
+    if (!target)
+      target = m_debugger.GetDummyTarget();
+
+    if (!target)
+      continue;
+
+    ValueObjectSP expr_result_valobj_sp;
+
+    EvaluateExpressionOptions options;
+    options.SetCoerceToId(false);
+    options.SetUnwindOnError(true);
+    options.SetIgnoreBreakpoints(true);
+    options.SetKeepInMemory(false);
+    options.SetTryAllThreads(true);
+    options.SetTimeout(llvm::None);
+
+    ExpressionResults expr_result =
+        target->EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
+                                   expr_result_valobj_sp, options);
+
+    if (expr_result == eExpressionCompleted) {
+      Scalar scalar;
+      if (expr_result_valobj_sp)
+        expr_result_valobj_sp =
+            expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
+                expr_result_valobj_sp->GetDynamicValueType(), true);
+      if (expr_result_valobj_sp->ResolveValue(scalar)) {
+        command.erase(start_backtick, end_backtick - start_backtick + 1);
+        StreamString value_strm;
+        const bool show_type = false;
+        scalar.GetValue(&value_strm, show_type);
+        size_t value_string_size = value_strm.GetSize();
+        if (value_string_size) {
+          command.insert(start_backtick, value_strm.GetString());
+          pos = start_backtick + value_string_size;
+          continue;
+        } else {
+          error.SetErrorStringWithFormat("expression value didn't result "
+                                         "in a scalar value for the "
+                                         "expression '%s'",
+                                         expr_str.c_str());
+          break;
         }
-      }
-      if (error.Fail())
+      } else {
+        error.SetErrorStringWithFormat("expression value didn't result "
+                                       "in a scalar value for the "
+                                       "expression '%s'",
+                                       expr_str.c_str());
         break;
+      }
+
+      continue;
+    }
+
+    if (expr_result_valobj_sp)
+      error = expr_result_valobj_sp->GetError();
+
+    if (error.Success()) {
+      switch (expr_result) {
+      case eExpressionSetupError:
+        error.SetErrorStringWithFormat(
+            "expression setup error for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionParseError:
+        error.SetErrorStringWithFormat(
+            "expression parse error for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionResultUnavailable:
+        error.SetErrorStringWithFormat(
+            "expression error fetching result for the expression '%s'",
+            expr_str.c_str());
+        break;
+      case eExpressionCompleted:
+        break;
+      case eExpressionDiscarded:
+        error.SetErrorStringWithFormat(
+            "expression discarded for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionInterrupted:
+        error.SetErrorStringWithFormat(
+            "expression interrupted for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionHitBreakpoint:
+        error.SetErrorStringWithFormat(
+            "expression hit breakpoint for the expression '%s'",
+            expr_str.c_str());
+        break;
+      case eExpressionTimedOut:
+        error.SetErrorStringWithFormat(
+            "expression timed out for the expression '%s'", expr_str.c_str());
+        break;
+      case eExpressionStoppedForDebug:
+        error.SetErrorStringWithFormat("expression stop at entry point "
+                                       "for debugging for the "
+                                       "expression '%s'",
+                                       expr_str.c_str());
+        break;
+      }
     }
   }
   return error;
@@ -1763,16 +1783,17 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
   if (request.GetCursorIndex() == -1) {
     // We got nothing on the command line, so return the list of commands
     bool include_aliases = true;
-    StringList new_matches;
-    num_command_matches =
-        GetCommandNamesMatchingPartialString("", include_aliases, new_matches);
-    request.AddCompletions(new_matches);
+    StringList new_matches, descriptions;
+    num_command_matches = GetCommandNamesMatchingPartialString(
+        "", include_aliases, new_matches, descriptions);
+    request.AddCompletions(new_matches, descriptions);
   } else if (request.GetCursorIndex() == 0) {
     // The cursor is in the first argument, so just do a lookup in the
     // dictionary.
-    StringList new_matches;
-    CommandObject *cmd_obj = GetCommandObject(
-        request.GetParsedLine().GetArgumentAtIndex(0), &new_matches);
+    StringList new_matches, new_descriptions;
+    CommandObject *cmd_obj =
+        GetCommandObject(request.GetParsedLine().GetArgumentAtIndex(0),
+                         &new_matches, &new_descriptions);
 
     if (num_command_matches == 1 && cmd_obj && cmd_obj->IsMultiwordObject() &&
         new_matches.GetStringAtIndex(0) != nullptr &&
@@ -1784,12 +1805,13 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
         look_for_subcommand = true;
         num_command_matches = 0;
         new_matches.DeleteStringAtIndex(0);
+        new_descriptions.DeleteStringAtIndex(0);
         request.GetParsedLine().AppendArgument(llvm::StringRef());
         request.SetCursorIndex(request.GetCursorIndex() + 1);
         request.SetCursorCharPosition(0);
       }
     }
-    request.AddCompletions(new_matches);
+    request.AddCompletions(new_matches, new_descriptions);
     num_command_matches = request.GetNumberOfMatches();
   }
 
@@ -1813,12 +1835,13 @@ int CommandInterpreter::HandleCompletionMatches(CompletionRequest &request) {
 
 int CommandInterpreter::HandleCompletion(
     const char *current_line, const char *cursor, const char *last_char,
-    int match_start_point, int max_return_elements, StringList &matches) {
+    int match_start_point, int max_return_elements, StringList &matches,
+    StringList &descriptions) {
 
   llvm::StringRef command_line(current_line, last_char - current_line);
+  CompletionResult result;
   CompletionRequest request(command_line, cursor - current_line,
-                            match_start_point, max_return_elements, matches);
-
+                            match_start_point, max_return_elements, result);
   // Don't complete comments, and if the line we are completing is just the
   // history repeat character, substitute the appropriate history line.
   const char *first_arg = request.GetParsedLine().GetArgumentAtIndex(0);
@@ -1828,6 +1851,7 @@ int CommandInterpreter::HandleCompletion(
     else if (first_arg[0] == CommandHistory::g_repeat_char) {
       if (auto hist_str = m_command_history.FindString(first_arg)) {
         matches.InsertStringAtIndex(0, *hist_str);
+        descriptions.InsertStringAtIndex(0, "Previous command history event");
         return -2;
       } else
         return 0;
@@ -1838,6 +1862,8 @@ int CommandInterpreter::HandleCompletion(
   lldbassert(max_return_elements == -1);
 
   int num_command_matches = HandleCompletionMatches(request);
+  result.GetMatches(matches);
+  result.GetDescriptions(descriptions);
 
   if (num_command_matches <= 0)
     return num_command_matches;
@@ -1845,6 +1871,7 @@ int CommandInterpreter::HandleCompletion(
   if (request.GetParsedLine().GetArgumentCount() == 0) {
     // If we got an empty string, insert nothing.
     matches.InsertStringAtIndex(0, "");
+    descriptions.InsertStringAtIndex(0, "");
   } else {
     // Now figure out if there is a common substring, and if so put that in
     // element 0, otherwise put an empty string in element 0.
@@ -1866,6 +1893,7 @@ int CommandInterpreter::HandleCompletion(
       common_prefix.push_back(' ');
     }
     matches.InsertStringAtIndex(0, common_prefix.c_str());
+    descriptions.InsertStringAtIndex(0, "");
   }
   return num_command_matches;
 }
@@ -1924,7 +1952,7 @@ void CommandInterpreter::BuildAliasCommandArgs(CommandObject *alias_cmd_obj,
 
   // Make sure that the alias name is the 0th element in cmd_args
   std::string alias_name_str = alias_name;
-  if (alias_name_str.compare(cmd_args.GetArgumentAtIndex(0)) != 0)
+  if (alias_name_str != cmd_args.GetArgumentAtIndex(0))
     cmd_args.Unshift(alias_name_str);
 
   Args new_args(alias_cmd_obj->GetCommandName());
@@ -2076,13 +2104,14 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
       LoadCWDlldbinitFile should_load =
           target->TargetProperties::GetLoadCWDlldbinitFile();
       if (should_load == eLoadCWDlldbinitWarn) {
-        FileSpec dot_lldb(".lldbinit", true);
+        FileSpec dot_lldb(".lldbinit");
+        FileSystem::Instance().Resolve(dot_lldb);
         llvm::SmallString<64> home_dir_path;
         llvm::sys::path::home_directory(home_dir_path);
-        FileSpec homedir_dot_lldb(home_dir_path.c_str(), false);
+        FileSpec homedir_dot_lldb(home_dir_path.c_str());
         homedir_dot_lldb.AppendPathComponent(".lldbinit");
-        homedir_dot_lldb.ResolvePath();
-        if (dot_lldb.Exists() &&
+        FileSystem::Instance().Resolve(homedir_dot_lldb);
+        if (FileSystem::Instance().Exists(dot_lldb) &&
             dot_lldb.GetDirectory() != homedir_dot_lldb.GetDirectory()) {
           result.AppendErrorWithFormat(
               "There is a .lldbinit file in the current directory which is not "
@@ -2100,7 +2129,8 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
           return;
         }
       } else if (should_load == eLoadCWDlldbinitTrue) {
-        init_file.SetFile("./.lldbinit", true, FileSpec::Style::native);
+        init_file.SetFile("./.lldbinit", FileSpec::Style::native);
+        FileSystem::Instance().Resolve(init_file);
       }
     }
   } else {
@@ -2112,11 +2142,11 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
     // init files.
     llvm::SmallString<64> home_dir_path;
     llvm::sys::path::home_directory(home_dir_path);
-    FileSpec profilePath(home_dir_path.c_str(), false);
+    FileSpec profilePath(home_dir_path.c_str());
     profilePath.AppendPathComponent(".lldbinit");
     std::string init_file_path = profilePath.GetPath();
 
-    if (m_skip_app_init_files == false) {
+    if (!m_skip_app_init_files) {
       FileSpec program_file_spec(HostInfo::GetProgramFileSpec());
       const char *program_name = program_file_spec.GetFilename().AsCString();
 
@@ -2124,22 +2154,22 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
         char program_init_file_name[PATH_MAX];
         ::snprintf(program_init_file_name, sizeof(program_init_file_name),
                    "%s-%s", init_file_path.c_str(), program_name);
-        init_file.SetFile(program_init_file_name, true,
-                          FileSpec::Style::native);
-        if (!init_file.Exists())
+        init_file.SetFile(program_init_file_name, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(init_file);
+        if (!FileSystem::Instance().Exists(init_file))
           init_file.Clear();
       }
     }
 
     if (!init_file && !m_skip_lldbinit_files)
-      init_file.SetFile(init_file_path, false, FileSpec::Style::native);
+      init_file.SetFile(init_file_path, FileSpec::Style::native);
   }
 
   // If the file exists, tell HandleCommand to 'source' it; this will do the
   // actual broadcasting of the commands back to any appropriate listener (see
   // CommandObjectSource::Execute for more details).
 
-  if (init_file.Exists()) {
+  if (FileSystem::Instance().Exists(init_file)) {
     const bool saved_batch = SetBatchCommandMode(true);
     CommandInterpreterRunOptions options;
     options.SetSilent(true);
@@ -2340,13 +2370,12 @@ enum {
 void CommandInterpreter::HandleCommandsFromFile(
     FileSpec &cmd_file, ExecutionContext *context,
     CommandInterpreterRunOptions &options, CommandReturnObject &result) {
-  if (cmd_file.Exists()) {
+  if (FileSystem::Instance().Exists(cmd_file)) {
     StreamFileSP input_file_sp(new StreamFile());
 
     std::string cmd_file_path = cmd_file.GetPath();
-    Status error = input_file_sp->GetFile().Open(cmd_file_path.c_str(),
-                                                 File::eOpenOptionRead);
-
+    Status error = FileSystem::Instance().Open(input_file_sp->GetFile(),
+                                               cmd_file, File::eOpenOptionRead);
     if (error.Success()) {
       Debugger &debugger = GetDebugger();
 
@@ -2376,7 +2405,7 @@ void CommandInterpreter::HandleCommandsFromFile(
         flags |= eHandleCommandFlagStopOnError;
       }
 
-      // stop-on-crash can only be set, if it is present in all levels of 
+      // stop-on-crash can only be set, if it is present in all levels of
       // pushed flag sets.
       if (options.GetStopOnCrash()) {
         if (m_command_source_flags.empty()) {
@@ -2755,7 +2784,7 @@ void CommandInterpreter::IOHandlerInputComplete(IOHandler &io_handler,
       return;
 
   const bool is_interactive = io_handler.GetIsInteractive();
-  if (is_interactive == false) {
+  if (!is_interactive) {
     // When we are not interactive, don't execute blank lines. This will happen
     // sourcing a commands file. We don't want blank lines to repeat the
     // previous command and cause any errors to occur (like redefining an
@@ -3004,8 +3033,7 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
       bool is_alias = GetAliasFullName(next_word, full_name);
       cmd_obj = GetCommandObject(next_word, &matches);
       bool is_real_command =
-          (is_alias == false) ||
-          (cmd_obj != nullptr && cmd_obj->IsAlias() == false);
+          (!is_alias) || (cmd_obj != nullptr && !cmd_obj->IsAlias());
       if (!is_real_command) {
         matches.Clear();
         std::string alias_result;

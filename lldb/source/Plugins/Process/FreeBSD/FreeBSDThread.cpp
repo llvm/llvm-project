@@ -1,13 +1,11 @@
 //===-- FreeBSDThread.cpp ---------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <pthread.h>
 #include <pthread_np.h>
@@ -16,12 +14,9 @@
 #include <sys/types.h>
 #include <sys/user.h>
 
-// C++ Includes
-// Other libraries and framework includes
-#include "lldb/Core/State.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/State.h"
 
-// Project includes
 #include "FreeBSDThread.h"
 #include "POSIXStopInfo.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
@@ -42,7 +37,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThread.h"
@@ -50,6 +44,7 @@
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/State.h"
 #include "llvm/ADT/SmallString.h"
 
 using namespace lldb;

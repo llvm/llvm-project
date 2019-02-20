@@ -10,6 +10,7 @@ import time
 import re
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
+from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
@@ -19,17 +20,20 @@ class TestScriptedResolver(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_scripted_resolver(self):
         """Use a scripted resolver to set a by symbol name breakpoint"""
         self.build()
         self.do_test()
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_search_depths(self):
         """ Make sure we are called at the right depths depending on what we return
             from __get_depth__"""
         self.build()
         self.do_test_depths()
 
+    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_command_line(self):
         """ Make sure we are called at the right depths depending on what we return
             from __get_depth__"""

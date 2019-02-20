@@ -1,9 +1,8 @@
 //===-- ProcessElfCore.h ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 // Notes about Linux Process core dumps:
 //  1) Linux core dump is stored as ELF file.
@@ -17,13 +16,9 @@
 #ifndef liblldb_ProcessElfCore_h_
 #define liblldb_ProcessElfCore_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
@@ -140,7 +135,7 @@ private:
   // For ProcessElfCore only
   //------------------------------------------------------------------
   typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
-  typedef lldb_private::RangeDataArray<lldb::addr_t, lldb::addr_t, FileRange, 1>
+  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
       VMRangeToFileOffset;
   typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
       VMRangeToPermissions;
@@ -170,7 +165,7 @@ private:
 
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
-      const elf::ELFProgramHeader *segment_header,
+      const elf::ELFProgramHeader &segment_header,
       lldb_private::DataExtractor segment_data);
 
   // Returns number of thread contexts stored in the core file
@@ -178,7 +173,7 @@ private:
 
   // Parse a contiguous address range of the process from LOAD segment
   lldb::addr_t
-  AddAddressRangeFromLoadSegment(const elf::ELFProgramHeader *header);
+  AddAddressRangeFromLoadSegment(const elf::ELFProgramHeader &header);
 
   llvm::Expected<std::vector<lldb_private::CoreNote>>
   parseSegment(const lldb_private::DataExtractor &segment);

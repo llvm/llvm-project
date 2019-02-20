@@ -1,0 +1,7 @@
+breakpoint set --file ExpressionsTest.cpp --line 19
+run
+print result
+print N0::N1::sum(N0::N1::buf1, sizeof(N0::N1::buf1))
+print N1::sum(N1::buf1, sizeof(N1::buf1))
+print sum(buf1, sizeof(buf1))
+print sum(buf1, 1000000000)

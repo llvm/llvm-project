@@ -1,6 +1,5 @@
-REQUIRES: windows
-RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/SimpleTypesTest.cpp /o %T/SimpleTypesTest.cpp.typedefs.obj
-RUN: link %T/SimpleTypesTest.cpp.typedefs.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/SimpleTypesTest.cpp.typedefs.exe
+REQUIRES: system-windows, msvc
+RUN: %build --compiler=msvc --arch=32 --nodefaultlib --output=%T/SimpleTypesTest.cpp.typedefs.exe %S/Inputs/SimpleTypesTest.cpp
 RUN: lldb-test symbols %T/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s
 
 ; Generate 32-bit target
@@ -13,7 +12,7 @@ RUN: lldb-test symbols %T/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s
 ; both of them is the same.
 
 CHECK: Module [[MOD:.*]]
-CHECK: {{^[0-9A-F]+}}: SymbolVendor ([[MOD]])
+CHECK: {{^[0-9A-F]+}}: SymbolVendor pdb ([[MOD]])
 CHECK-DAG: name = "char32_t", size = 4, compiler_type = {{.*}} char32_t
 CHECK-DAG: name = "char16_t", size = 2, compiler_type = {{.*}} char16_t
 CHECK-DAG: Type{{.*}} , name = "unsigned long", size = 4, compiler_type = {{.*}} unsigned long
@@ -46,9 +45,10 @@ CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} void *
 CHECK-DAG: Type{{.*}} , name = "long", size = 4, compiler_type = {{.*}} long
 CHECK-DAG: Type{{.*}} , name = "unsigned short", size = 2, compiler_type = {{.*}} unsigned short
 CHECK-DAG: Type{{.*}} , name = "unsigned int", size = 4, compiler_type = {{.*}} unsigned int
+CHECK-DAG: Type{{.*}} , name = "char", size = 1, compiler_type = {{.*}} char
 CHECK-DAG: Type{{.*}} , name = "signed char", size = 1, compiler_type = {{.*}} signed char
-CHECK-DAG: Type{{.*}} , compiler_type = {{.*}} signed char (void *, long, unsigned short, unsigned int, ...)
-CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} signed char (*)(void *, long, unsigned short, unsigned int, ...)
+CHECK-DAG: Type{{.*}} , compiler_type = {{.*}} char (void *, long, unsigned short, unsigned int, ...)
+CHECK-DAG: Type{{.*}} , size = 4, compiler_type = {{.*}} char (*)(void *, long, unsigned short, unsigned int, ...)
 CHECK-DAG: Type{{.*}} , name = "VarArgsFuncTypedef", compiler_type = {{.*}} typedef VarArgsFuncTypedef
 
 CHECK-DAG: Type{{.*}} , name = "float", size = 4, compiler_type = {{.*}} float

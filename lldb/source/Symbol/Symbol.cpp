@@ -1,9 +1,8 @@
 //===-- Symbol.cpp ----------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -143,7 +142,7 @@ FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
     // back into a string that is the re-exported name.
     intptr_t str_ptr = m_addr_range.GetByteSize();
     if (str_ptr != 0)
-      return FileSpec((const char *)str_ptr, false);
+      return FileSpec((const char *)str_ptr);
   }
   return FileSpec();
 }

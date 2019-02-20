@@ -1,4 +1,5 @@
-REQUIRES: windows, lld
-RUN: clang-cl /c /Zi /Gy %S/Inputs/FunctionLevelLinkingTest.cpp /o %t.obj
+REQUIRES: system-windows, lld
+RUN: %clang_cl /c /Zi /Gy %S/Inputs/FunctionLevelLinkingTest.cpp /o %t.obj
 RUN: lld-link /debug:full /nodefaultlib /entry:main /order:@%S/Inputs/FunctionLevelLinkingTest.ord %t.obj /out:%t.exe
-RUN: lldb-test symbols -verify %t.exe
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -verify %t.exe
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -verify %t.exe

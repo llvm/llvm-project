@@ -1,13 +1,11 @@
 //===-- ProcessMonitor.cpp ------------------------------------ -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <poll.h>
 #include <signal.h>
@@ -19,16 +17,14 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// C++ Includes
-// Other libraries and framework includes
-#include "lldb/Core/RegisterValue.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/Support/Errno.h"
 
@@ -171,7 +167,7 @@ static size_t DoWriteMemory(lldb::pid_t pid, lldb::addr_t vm_addr,
 
   pi_desc.piod_op = PIOD_WRITE_D;
   pi_desc.piod_offs = (void *)vm_addr;
-  pi_desc.piod_addr = (void *)buf;
+  pi_desc.piod_addr = const_cast<void *>(buf);
   pi_desc.piod_len = size;
 
   if (PTRACE(PT_IO, pid, (caddr_t)&pi_desc, 0) < 0) {

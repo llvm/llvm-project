@@ -1,16 +1,14 @@
 //===-- CompilerType.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompilerType.h"
 
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
@@ -21,6 +19,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 
@@ -561,7 +560,7 @@ CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
 
 llvm::Optional<uint64_t>
 CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
-  if (auto bit_size = GetBitSize(exe_scope))
+  if (llvm::Optional<uint64_t> bit_size = GetBitSize(exe_scope))
     return (*bit_size + 7) / 8;
   return {};
 }
@@ -889,7 +888,7 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    auto byte_size = GetByteSize(nullptr);
+    llvm::Optional<uint64_t> byte_size = GetByteSize(nullptr);
     if (!byte_size)
       return false;
     lldb::offset_t offset = data_byte_offset;
@@ -987,7 +986,7 @@ bool CompilerType::SetValueFromScalar(const Scalar &value, Stream &strm) {
     if (encoding == lldb::eEncodingInvalid || count != 1)
       return false;
 
-    auto bit_width = GetBitSize(nullptr);
+    llvm::Optional<uint64_t> bit_width = GetBitSize(nullptr);
     if (!bit_width)
       return false;
 
@@ -1141,16 +1140,6 @@ bool CompilerType::WriteToMemory(lldb_private::ExecutionContext *exe_ctx,
   return false;
 }
 
-// clang::CXXRecordDecl *
-// CompilerType::GetAsCXXRecordDecl (lldb::opaque_compiler_type_t
-// opaque_compiler_qual_type)
-//{
-//    if (opaque_compiler_qual_type)
-//        return
-//        clang::QualType::getFromOpaquePtr(opaque_compiler_qual_type)->getAsCXXRecordDecl();
-//    return NULL;
-//}
-
 bool lldb_private::operator==(const lldb_private::CompilerType &lhs,
                               const lldb_private::CompilerType &rhs) {
   return lhs.GetTypeSystem() == rhs.GetTypeSystem() &&
@@ -1159,6 +1148,5 @@ bool lldb_private::operator==(const lldb_private::CompilerType &lhs,
 
 bool lldb_private::operator!=(const lldb_private::CompilerType &lhs,
                               const lldb_private::CompilerType &rhs) {
-  return lhs.GetTypeSystem() != rhs.GetTypeSystem() ||
-         lhs.GetOpaqueQualType() != rhs.GetOpaqueQualType();
+  return !(lhs == rhs);
 }

@@ -1,9 +1,8 @@
 //===-- UnwindPlan.cpp ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -29,6 +28,8 @@ operator==(const UnwindPlan::Row::RegisterLocation &rhs) const {
 
     case atCFAPlusOffset:
     case isCFAPlusOffset:
+    case atAFAPlusOffset:
+    case isAFAPlusOffset:
       return m_location.offset == rhs.m_location.offset;
 
     case inOtherRegister:
@@ -95,6 +96,16 @@ void UnwindPlan::Row::RegisterLocation::Dump(Stream &s,
       s.PutChar(']');
   } break;
 
+  case atAFAPlusOffset:
+  case isAFAPlusOffset: {
+    s.PutChar('=');
+    if (m_type == atAFAPlusOffset)
+      s.PutChar('[');
+    s.Printf("AFA%+d", m_location.offset);
+    if (m_type == atAFAPlusOffset)
+      s.PutChar(']');
+  } break;
+
   case inOtherRegister: {
     const RegisterInfo *other_reg_info = nullptr;
     if (unwind_plan)
@@ -125,8 +136,8 @@ static void DumpRegisterName(Stream &s, const UnwindPlan *unwind_plan,
     s.Printf("reg(%u)", reg_num);
 }
 
-bool UnwindPlan::Row::CFAValue::
-operator==(const UnwindPlan::Row::CFAValue &rhs) const {
+bool UnwindPlan::Row::FAValue::
+operator==(const UnwindPlan::Row::FAValue &rhs) const {
   if (m_type == rhs.m_type) {
     switch (m_type) {
     case unspecified:
@@ -148,7 +159,7 @@ operator==(const UnwindPlan::Row::CFAValue &rhs) const {
   return false;
 }
 
-void UnwindPlan::Row::CFAValue::Dump(Stream &s, const UnwindPlan *unwind_plan,
+void UnwindPlan::Row::FAValue::Dump(Stream &s, const UnwindPlan *unwind_plan,
                                      Thread *thread) const {
   switch (m_type) {
   case isRegisterPlusOffset:
@@ -171,6 +182,7 @@ void UnwindPlan::Row::CFAValue::Dump(Stream &s, const UnwindPlan *unwind_plan,
 
 void UnwindPlan::Row::Clear() {
   m_cfa_value.SetUnspecified();
+  m_afa_value.SetUnspecified();
   m_offset = 0;
   m_register_locations.clear();
 }
@@ -183,6 +195,12 @@ void UnwindPlan::Row::Dump(Stream &s, const UnwindPlan *unwind_plan,
     s.Printf("%4" PRId64 ": CFA=", GetOffset());
 
   m_cfa_value.Dump(s, unwind_plan, thread);
+
+  if (!m_afa_value.IsUnspecified()) {
+    s.Printf(" AFA=");
+    m_afa_value.Dump(s, unwind_plan, thread);
+  }
+
   s.Printf(" => ");
   for (collection::const_iterator idx = m_register_locations.begin();
        idx != m_register_locations.end(); ++idx) {
@@ -194,7 +212,8 @@ void UnwindPlan::Row::Dump(Stream &s, const UnwindPlan *unwind_plan,
   s.EOL();
 }
 
-UnwindPlan::Row::Row() : m_offset(0), m_cfa_value(), m_register_locations() {}
+UnwindPlan::Row::Row()
+    : m_offset(0), m_cfa_value(), m_afa_value(), m_register_locations() {}
 
 bool UnwindPlan::Row::GetRegisterInfo(
     uint32_t reg_num,
@@ -296,8 +315,10 @@ bool UnwindPlan::Row::SetRegisterLocationToSame(uint32_t reg_num,
 }
 
 bool UnwindPlan::Row::operator==(const UnwindPlan::Row &rhs) const {
-  return m_offset == rhs.m_offset && m_cfa_value == rhs.m_cfa_value &&
-         m_register_locations == rhs.m_register_locations;
+  return m_offset == rhs.m_offset &&
+      m_cfa_value == rhs.m_cfa_value &&
+      m_afa_value == rhs.m_afa_value &&
+      m_register_locations == rhs.m_register_locations;
 }
 
 void UnwindPlan::AppendRow(const UnwindPlan::RowSP &row_sp) {
@@ -399,7 +420,7 @@ bool UnwindPlan::PlanValidAtAddress(Address addr) {
   // UnwindPlan.
   if (GetRowAtIndex(0).get() == nullptr ||
       GetRowAtIndex(0)->GetCFAValue().GetValueType() ==
-          Row::CFAValue::unspecified) {
+          Row::FAValue::unspecified) {
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_UNWIND));
     if (log) {
       StreamString s;

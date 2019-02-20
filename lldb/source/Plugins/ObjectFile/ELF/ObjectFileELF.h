@@ -1,19 +1,16 @@
 //===-- ObjectFileELF.h --------------------------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_ObjectFileELF_h_
 #define liblldb_ObjectFileELF_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"
@@ -123,7 +120,7 @@ public:
 
   void Dump(lldb_private::Stream *s) override;
 
-  bool GetArchitecture(lldb_private::ArchSpec &arch) override;
+  lldb_private::ArchSpec GetArchitecture() override;
 
   bool GetUUID(lldb_private::UUID *uuid) override;
 
@@ -136,6 +133,8 @@ public:
 
   lldb_private::Address GetEntryPointAddress() override;
 
+  lldb_private::Address GetBaseAddress() override;
+
   ObjectFile::Type CalculateType() override;
 
   ObjectFile::Strata CalculateStrata() override;
@@ -147,14 +146,8 @@ public:
   size_t ReadSectionData(lldb_private::Section *section,
                          lldb_private::DataExtractor &section_data) override;
 
-  // Returns number of program headers found in the ELF file.
-  size_t GetProgramHeaderCount();
-
-  // Returns the program header with the given index.
-  const elf::ELFProgramHeader *GetProgramHeaderByIndex(lldb::user_id_t id);
-
-  // Returns segment data for the given index.
-  lldb_private::DataExtractor GetSegmentDataByIndex(lldb::user_id_t id);
+  llvm::ArrayRef<elf::ELFProgramHeader> ProgramHeaders();
+  lldb_private::DataExtractor GetSegmentData(const elf::ELFProgramHeader &H);
 
   llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const override;
@@ -176,8 +169,6 @@ private:
                 const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   typedef std::vector<elf::ELFProgramHeader> ProgramHeaderColl;
-  typedef ProgramHeaderColl::iterator ProgramHeaderCollIter;
-  typedef ProgramHeaderColl::const_iterator ProgramHeaderCollConstIter;
 
   struct ELFSectionHeaderInfo : public elf::ELFSectionHeader {
     lldb_private::ConstString section_name;
@@ -230,10 +221,10 @@ private:
   /// The address class for each symbol in the elf file
   FileAddressToAddressClassMap m_address_class_map;
 
-  /// Returns a 1 based index of the given section header.
+  /// Returns the index of the given section header.
   size_t SectionIndex(const SectionHeaderCollIter &I);
 
-  /// Returns a 1 based index of the given section header.
+  /// Returns the index of the given section header.
   size_t SectionIndex(const SectionHeaderCollConstIter &I) const;
 
   // Parses the ELF program headers.
@@ -248,13 +239,15 @@ private:
 
   /// Parses all section headers present in this object file and populates
   /// m_program_headers.  This method will compute the header list only once.
-  /// Returns the number of headers parsed.
-  size_t ParseProgramHeaders();
+  /// Returns true iff the headers have been successfully parsed.
+  bool ParseProgramHeaders();
 
   /// Parses all section headers present in this object file and populates
   /// m_section_headers.  This method will compute the header list only once.
   /// Returns the number of headers parsed.
   size_t ParseSectionHeaders();
+
+  lldb::SectionType GetSectionType(const ELFSectionHeaderInfo &H) const;
 
   static void ParseARMAttributes(lldb_private::DataExtractor &data,
                                  uint64_t length,

@@ -1,16 +1,11 @@
 //===-- CommandObjectMultiword.cpp ------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -193,9 +188,10 @@ int CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
 
   auto arg0 = request.GetParsedLine()[0].ref;
   if (request.GetCursorIndex() == 0) {
-    StringList new_matches;
-    AddNamesMatchingPartialString(m_subcommand_dict, arg0, new_matches);
-    request.AddCompletions(new_matches);
+    StringList new_matches, descriptions;
+    AddNamesMatchingPartialString(m_subcommand_dict, arg0, new_matches,
+                                  &descriptions);
+    request.AddCompletions(new_matches, descriptions);
 
     if (new_matches.GetSize() == 1 &&
         new_matches.GetStringAtIndex(0) != nullptr &&

@@ -1,9 +1,8 @@
 //===-- ConstString.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,20 +11,20 @@
 #include "lldb/Utility/Stream.h"
 
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/iterator.h"            // for iterator_facade_base
-#include "llvm/Support/Allocator.h"       // for BumpPtrAllocator
-#include "llvm/Support/DJB.h"             // for djbHash
-#include "llvm/Support/FormatProviders.h" // for format_provider
+#include "llvm/ADT/iterator.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/DJB.h"
+#include "llvm/Support/FormatProviders.h"
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/Threading.h"
 
-#include <algorithm> // for min
+#include <algorithm>
 #include <array>
-#include <utility> // for make_pair, pair
+#include <utility>
 
-#include <inttypes.h> // for PRIu64
-#include <stdint.h>   // for uint8_t, uint32_t, uint64_t
-#include <string.h>   // for size_t, strlen
+#include <inttypes.h>
+#include <stdint.h>
+#include <string.h>
 
 using namespace lldb_private;
 

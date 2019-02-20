@@ -1,19 +1,14 @@
 //===-- StackFrameRecognizer.h ----------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_StackFrameRecognizer_h_
 #define liblldb_StackFrameRecognizer_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/StructuredData.h"
@@ -33,6 +28,9 @@ class RecognizedStackFrame
 public:
   virtual lldb::ValueObjectListSP GetRecognizedArguments() {
     return m_arguments;
+  }
+  virtual lldb::ValueObjectSP GetExceptionObject() {
+    return lldb::ValueObjectSP();
   }
   virtual ~RecognizedStackFrame(){};
 
@@ -101,7 +99,8 @@ private:
 class StackFrameRecognizerManager {
 public:
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
-                            ConstString &module, ConstString &symbol,
+                            const ConstString &module,
+                            const ConstString &symbol,
                             bool first_instruction_only = true);
 
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,

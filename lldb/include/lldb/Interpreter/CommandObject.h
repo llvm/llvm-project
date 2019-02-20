@@ -1,23 +1,18 @@
 //===-- CommandObject.h -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef liblldb_CommandObject_h_
 #define liblldb_CommandObject_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Interpreter/CommandCompletions.h"
@@ -37,8 +32,9 @@ namespace lldb_private {
 // number added.
 
 template <typename ValueType>
-int AddNamesMatchingPartialString(const std::map<std::string, ValueType> &in_map,
-                                  llvm::StringRef cmd_str, StringList &matches) {
+int AddNamesMatchingPartialString(
+    const std::map<std::string, ValueType> &in_map, llvm::StringRef cmd_str,
+    StringList &matches, StringList *descriptions = nullptr) {
   int number_added = 0;
 
   const bool add_all = cmd_str.empty();
@@ -47,6 +43,8 @@ int AddNamesMatchingPartialString(const std::map<std::string, ValueType> &in_map
     if (add_all || (iter->first.find(cmd_str, 0) == 0)) {
       ++number_added;
       matches.AppendString(iter->first.c_str());
+      if (descriptions)
+        descriptions->AppendString(iter->second->GetHelp());
     }
   }
 

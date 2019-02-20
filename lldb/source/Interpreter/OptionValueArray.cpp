@@ -1,18 +1,13 @@
 //===-- OptionValueArray.cpp ------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/OptionValueArray.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Stream.h"
@@ -31,13 +26,17 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
       strm.Printf("(%s)", GetTypeAsCString());
   }
   if (dump_mask & eDumpOptionValue) {
-    if (dump_mask & eDumpOptionType)
-      strm.Printf(" =%s", (m_values.size() > 0) ? "\n" : "");
-    strm.IndentMore();
+    const bool one_line = dump_mask & eDumpOptionCommand;
     const uint32_t size = m_values.size();
+    if (dump_mask & eDumpOptionType)
+      strm.Printf(" =%s", (m_values.size() > 0 && !one_line) ? "\n" : "");
+    if (!one_line)
+      strm.IndentMore();
     for (uint32_t i = 0; i < size; ++i) {
-      strm.Indent();
-      strm.Printf("[%u]: ", i);
+      if (!one_line) {
+        strm.Indent();
+        strm.Printf("[%u]: ", i);
+      }
       const uint32_t extra_dump_options = m_raw_value_dump ? eDumpOptionRaw : 0;
       switch (array_element_type) {
       default:
@@ -63,10 +62,16 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                                                   extra_dump_options);
         break;
       }
-      if (i < (size - 1))
-        strm.EOL();
+
+      if (!one_line) {
+        if (i < (size - 1))
+          strm.EOL();
+      } else {
+        strm << ' ';
+      }
     }
-    strm.IndentLess();
+    if (!one_line)
+      strm.IndentLess();
   }
 }
 
@@ -215,7 +220,7 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
         if (num_remove_indexes) {
           // Sort and then erase in reverse so indexes are always valid
           if (num_remove_indexes > 1) {
-            std::sort(remove_indexes.begin(), remove_indexes.end());
+            llvm::sort(remove_indexes.begin(), remove_indexes.end());
             for (std::vector<int>::const_reverse_iterator
                      pos = remove_indexes.rbegin(),
                      end = remove_indexes.rend();

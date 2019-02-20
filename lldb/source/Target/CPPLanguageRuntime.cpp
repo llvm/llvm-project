@@ -1,10 +1,9 @@
 //===-- CPPLanguageRuntime.cpp
 //-------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,11 +13,9 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include "lldb/API/SBValue.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/VariableList.h"
 
-#include "lldb/API/SBFrame.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -95,6 +92,15 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   //    we will obtain the name from this pointer.
   ValueObjectSP member__f_(
       valobj_sp->GetChildMemberWithName(ConstString("__f_"), true));
+
+  if (member__f_) {
+    ValueObjectSP sub_member__f_(
+       member__f_->GetChildMemberWithName(ConstString("__f_"), true));
+
+    if (sub_member__f_)
+        member__f_ = sub_member__f_;
+  }
+
   lldb::addr_t member__f_pointer_value = member__f_->GetValueAsUnsigned(0);
 
   optional_info.member__f_pointer_value = member__f_pointer_value;

@@ -1,25 +1,21 @@
 //===-- PathMappingList.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <climits>
 #include <cstring>
 
-// Other libraries and framework includes
-// Project includes
-#include "lldb/lldb-private-enumerations.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/lldb-private-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -37,7 +33,7 @@ namespace {
   ConstString NormalizePath(const ConstString &path) {
     // If we use "path" to construct a FileSpec, it will normalize the path for
     // us. We then grab the string and turn it back into a ConstString.
-    return ConstString(FileSpec(path.GetStringRef(), false).GetPath());
+    return ConstString(FileSpec(path.GetStringRef()).GetPath());
   }
 }
 //----------------------------------------------------------------------
@@ -176,13 +172,13 @@ bool PathMappingList::RemapPath(llvm::StringRef path,
       // We need to figure out if the "path" argument is relative. If it is,
       // then we should remap, else skip this entry.
       if (path_is_relative == eLazyBoolCalculate) {
-        path_is_relative = FileSpec(path, false).IsRelative() ? eLazyBoolYes :
-        eLazyBoolNo;
+        path_is_relative =
+            FileSpec(path).IsRelative() ? eLazyBoolYes : eLazyBoolNo;
       }
       if (!path_is_relative)
         continue;
     }
-    FileSpec remapped(it.second.GetStringRef(), false);
+    FileSpec remapped(it.second.GetStringRef());
     remapped.AppendPathComponent(path);
     new_path = remapped.GetPath();
     return true;
@@ -196,7 +192,7 @@ bool PathMappingList::ReverseRemapPath(const FileSpec &file, FileSpec &fixed) co
   for (const auto &it : m_pairs) {
     if (!path_ref.consume_front(it.second.GetStringRef()))
       continue;
-    fixed.SetFile(it.first.GetStringRef(), false, FileSpec::Style::native);
+    fixed.SetFile(it.first.GetStringRef(), FileSpec::Style::native);
     fixed.AppendPathComponent(path_ref);
     return true;
   }
@@ -230,16 +226,16 @@ bool PathMappingList::FindFile(const FileSpec &orig_spec,
         // FileSpec paths already.
         prefix_ref = prefix_ref.drop_front();
       } else {
-        FileSpec prefix_spec(prefix_ref, false, FileSpec::Style::native);
+        FileSpec prefix_spec(prefix_ref, FileSpec::Style::native);
         prefix_is_relative = prefix_spec.IsRelative();
       }
       if (prefix_is_relative != orig_is_relative)
         continue;
 
       if (orig_ref.consume_front(prefix_ref)) {
-        new_spec.SetFile(pos->second.GetCString(), false, FileSpec::Style::native);
+        new_spec.SetFile(pos->second.GetCString(), FileSpec::Style::native);
         new_spec.AppendPathComponent(orig_ref);
-        if (new_spec.Exists())
+        if (FileSystem::Instance().Exists(new_spec))
           return true;
       }
     }

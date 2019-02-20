@@ -1,9 +1,8 @@
 //===-- Function.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -201,21 +200,6 @@ Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
   assert(comp_unit != nullptr);
 }
 
-Function::Function(CompileUnit *comp_unit, lldb::user_id_t func_uid,
-                   lldb::user_id_t type_uid, const char *mangled, Type *type,
-                   const AddressRange &range, bool canThrow)
-    : UserID(func_uid), m_comp_unit(comp_unit), m_type_uid(type_uid),
-      m_type(type), m_mangled(ConstString(mangled), true), m_block(func_uid),
-      m_range(range), m_frame_base(nullptr), m_flags(),
-      m_prologue_byte_size(0) {
-  m_block.SetParentScope(this);
-
-  if (canThrow)
-    m_flags.Set(flagsFunctionCanThrow);
-
-  assert(comp_unit != nullptr);
-}
-
 Function::~Function() {}
 
 void Function::GetStartLineSourceInfo(FileSpec &source_file,
@@ -287,11 +271,11 @@ llvm::MutableArrayRef<CallEdge> Function::GetCallEdges() {
   m_call_edges = sym_file->ParseCallEdgesInFunction(GetID());
 
   // Sort the call edges to speed up return_pc lookups.
-  std::sort(m_call_edges.begin(), m_call_edges.end(),
-            [](const CallEdge &LHS, const CallEdge &RHS) {
-              return LHS.GetUnresolvedReturnPCAddress() <
-                     RHS.GetUnresolvedReturnPCAddress();
-            });
+  llvm::sort(m_call_edges.begin(), m_call_edges.end(),
+             [](const CallEdge &LHS, const CallEdge &RHS) {
+               return LHS.GetUnresolvedReturnPCAddress() <
+                      RHS.GetUnresolvedReturnPCAddress();
+             });
 
   return m_call_edges;
 }
@@ -306,14 +290,14 @@ llvm::MutableArrayRef<CallEdge> Function::GetTailCallingEdges() {
 
 Block &Function::GetBlock(bool can_create) {
   if (!m_block.BlockInfoHasBeenParsed() && can_create) {
-    SymbolContext sc;
-    CalculateSymbolContext(&sc);
-    if (sc.module_sp) {
-      sc.module_sp->GetSymbolVendor()->ParseFunctionBlocks(sc);
+    ModuleSP module_sp = CalculateSymbolContextModule();
+    if (module_sp) {
+      module_sp->GetSymbolVendor()->ParseBlocksRecursive(*this);
     } else {
-      Host::SystemLog(Host::eSystemLogError, "error: unable to find module "
-                                             "shared pointer for function '%s' "
-                                             "in %s\n",
+      Host::SystemLog(Host::eSystemLogError,
+                      "error: unable to find module "
+                      "shared pointer for function '%s' "
+                      "in %s\n",
                       GetName().GetCString(), m_comp_unit->GetPath().c_str());
     }
     m_block.SetBlockInfoHasBeenParsed(true, true);

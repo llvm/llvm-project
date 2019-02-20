@@ -1,15 +1,14 @@
 //===-- ValueObjectConstResultChild.cpp --------------------------*- C++-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/ValueObjectConstResultChild.h"
 
-#include "lldb/lldb-private-enumerations.h" // for AddressType::eAddressType
+#include "lldb/lldb-private-enumerations.h"
 namespace lldb_private {
 class DataExtractor;
 }
@@ -50,6 +49,11 @@ lldb::ValueObjectSP ValueObjectConstResultChild::GetSyntheticChildAtOffset(
 
 lldb::ValueObjectSP ValueObjectConstResultChild::AddressOf(Status &error) {
   return m_impl.AddressOf(error);
+}
+
+lldb::addr_t ValueObjectConstResultChild::GetAddressOf(
+  bool scalar_is_load_address, AddressType* address_type) {
+  return m_impl.GetAddressOf(scalar_is_load_address, address_type);
 }
 
 ValueObject *ValueObjectConstResultChild::CreateChildAtIndex(

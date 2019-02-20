@@ -1,23 +1,18 @@
 //===-- OptionValueDictionary.cpp -------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/OptionValueDictionary.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
-// Project includes
-#include "lldb/Core/State.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/State.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -33,16 +28,23 @@ void OptionValueDictionary::DumpValue(const ExecutionContext *exe_ctx,
       strm.Printf("(%s)", GetTypeAsCString());
   }
   if (dump_mask & eDumpOptionValue) {
+    const bool one_line = dump_mask & eDumpOptionCommand;
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" =");
 
     collection::iterator pos, end = m_values.end();
 
-    strm.IndentMore();
+    if (!one_line)
+      strm.IndentMore();
 
     for (pos = m_values.begin(); pos != end; ++pos) {
       OptionValue *option_value = pos->second.get();
-      strm.EOL();
+
+      if (one_line)
+        strm << ' ';
+      else
+        strm.EOL();
+
       strm.Indent(pos->first.GetCString());
 
       const uint32_t extra_dump_options = m_raw_value_dump ? eDumpOptionRaw : 0;
@@ -74,7 +76,8 @@ void OptionValueDictionary::DumpValue(const ExecutionContext *exe_ctx,
         break;
       }
     }
-    strm.IndentLess();
+    if (!one_line)
+      strm.IndentLess();
   }
 }
 

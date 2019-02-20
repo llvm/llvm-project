@@ -12,7 +12,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class LibCxxFunctionTestCase(TestBase):
+class LibCxxFunctionSteppingIntoCallableTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 

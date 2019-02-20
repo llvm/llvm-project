@@ -1,10 +1,9 @@
 //===-- ItaniumABILanguageRuntime.cpp --------------------------------------*-
 //C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -14,9 +13,11 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectMemory.h"
+#include "lldb/DataFormatters/FormattersHelpers.h"
+#include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -32,6 +33,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 
 #include <vector>
@@ -99,7 +101,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             llvm::DenseSet<SymbolFile *> searched_symbol_files;
             if (sc.module_sp) {
               num_matches = sc.module_sp->FindTypes(
-                  sc, ConstString(lookup_name), exact_match, 1,
+                  ConstString(lookup_name), exact_match, 1,
                   searched_symbol_files, class_types);
             }
 
@@ -107,7 +109,7 @@ TypeAndOrName ItaniumABILanguageRuntime::GetTypeInfoFromVTableAddress(
             // list in the target and get as many unique matches as possible
             if (num_matches == 0) {
               num_matches = target.GetImages().FindTypes(
-                  sc, ConstString(lookup_name), exact_match, UINT32_MAX,
+                  nullptr, ConstString(lookup_name), exact_match, UINT32_MAX,
                   searched_symbol_files, class_types);
             }
 
@@ -205,71 +207,71 @@ bool ItaniumABILanguageRuntime::GetDynamicTypeAndAddress(
 
   // Only a pointer or reference type can have a different dynamic and static
   // type:
-  if (CouldHaveDynamicValue(in_value)) {
-    // First job, pull out the address at 0 offset from the object.
-    AddressType address_type;
-    lldb::addr_t original_ptr = in_value.GetPointerValue(&address_type);
-    if (original_ptr == LLDB_INVALID_ADDRESS)
-      return false;
+  if (!CouldHaveDynamicValue(in_value))
+    return false;
 
-    ExecutionContext exe_ctx(in_value.GetExecutionContextRef());
+  // First job, pull out the address at 0 offset from the object.
+  AddressType address_type;
+  lldb::addr_t original_ptr = in_value.GetPointerValue(&address_type);
+  if (original_ptr == LLDB_INVALID_ADDRESS)
+    return false;
 
-    Process *process = exe_ctx.GetProcessPtr();
+  ExecutionContext exe_ctx(in_value.GetExecutionContextRef());
 
-    if (process == nullptr)
-      return false;
+  Process *process = exe_ctx.GetProcessPtr();
 
-    Status error;
-    const lldb::addr_t vtable_address_point =
-        process->ReadPointerFromMemory(original_ptr, error);
+  if (process == nullptr)
+    return false;
 
-    if (!error.Success() || vtable_address_point == LLDB_INVALID_ADDRESS) {
-      return false;
-    }
+  Status error;
+  const lldb::addr_t vtable_address_point =
+      process->ReadPointerFromMemory(original_ptr, error);
 
-    class_type_or_name = GetTypeInfoFromVTableAddress(in_value, original_ptr,
-                                                      vtable_address_point);
+  if (!error.Success() || vtable_address_point == LLDB_INVALID_ADDRESS)
+    return false;
 
-    if (class_type_or_name) {
-      TypeSP type_sp = class_type_or_name.GetTypeSP();
-      // There can only be one type with a given name, so we've just found
-      // duplicate definitions, and this one will do as well as any other. We
-      // don't consider something to have a dynamic type if it is the same as
-      // the static type.  So compare against the value we were handed.
-      if (type_sp) {
-        if (ClangASTContext::AreTypesSame(in_value.GetCompilerType(),
-                                          type_sp->GetForwardCompilerType())) {
-          // The dynamic type we found was the same type, so we don't have a
-          // dynamic type here...
-          return false;
-        }
+  class_type_or_name = GetTypeInfoFromVTableAddress(in_value, original_ptr,
+                                                    vtable_address_point);
 
-        // The offset_to_top is two pointers above the vtable pointer.
-        const uint32_t addr_byte_size = process->GetAddressByteSize();
-        const lldb::addr_t offset_to_top_location =
-            vtable_address_point - 2 * addr_byte_size;
-        // Watch for underflow, offset_to_top_location should be less than
-        // vtable_address_point
-        if (offset_to_top_location >= vtable_address_point)
-          return false;
-        const int64_t offset_to_top = process->ReadSignedIntegerFromMemory(
-            offset_to_top_location, addr_byte_size, INT64_MIN, error);
+  if (!class_type_or_name)
+    return false;
 
-        if (offset_to_top == INT64_MIN)
-          return false;
-        // So the dynamic type is a value that starts at offset_to_top above
-        // the original address.
-        lldb::addr_t dynamic_addr = original_ptr + offset_to_top;
-        if (!process->GetTarget().GetSectionLoadList().ResolveLoadAddress(
-                dynamic_addr, dynamic_address)) {
-          dynamic_address.SetRawAddress(dynamic_addr);
-        }
-        return true;
-      }
-    }
+  TypeSP type_sp = class_type_or_name.GetTypeSP();
+  // There can only be one type with a given name, so we've just found
+  // duplicate definitions, and this one will do as well as any other. We
+  // don't consider something to have a dynamic type if it is the same as
+  // the static type.  So compare against the value we were handed.
+  if (!type_sp)
+    return true;
+
+  if (ClangASTContext::AreTypesSame(in_value.GetCompilerType(),
+                                    type_sp->GetForwardCompilerType())) {
+    // The dynamic type we found was the same type, so we don't have a
+    // dynamic type here...
+    return false;
   }
 
-  return class_type_or_name.IsEmpty() == false;
+  // The offset_to_top is two pointers above the vtable pointer.
+  const uint32_t addr_byte_size = process->GetAddressByteSize();
+  const lldb::addr_t offset_to_top_location =
+      vtable_address_point - 2 * addr_byte_size;
+  // Watch for underflow, offset_to_top_location should be less than
+  // vtable_address_point
+  if (offset_to_top_location >= vtable_address_point)
+    return false;
+  const int64_t offset_to_top = process->ReadSignedIntegerFromMemory(
+      offset_to_top_location, addr_byte_size, INT64_MIN, error);
+
+  if (offset_to_top == INT64_MIN)
+    return false;
+  // So the dynamic type is a value that starts at offset_to_top above
+  // the original address.
+  lldb::addr_t dynamic_addr = original_ptr + offset_to_top;
+  if (!process->GetTarget().GetSectionLoadList().ResolveLoadAddress(
+          dynamic_addr, dynamic_address)) {
+    dynamic_address.SetRawAddress(dynamic_addr);
+  }
+  return true;
 }
 
 TypeAndOrName ItaniumABILanguageRuntime::FixUpDynamicType(
@@ -310,10 +312,7 @@ bool ItaniumABILanguageRuntime::IsVTableName(const char *name) {
     return false;
 
   // Can we maybe ask Clang about this?
-  if (strstr(name, "_vptr$") == name)
-    return true;
-  else
-    return false;
+  return strstr(name, "_vptr$") == name;
 }
 
 //------------------------------------------------------------------
@@ -484,8 +483,8 @@ lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
     // Limit the number of modules that are searched for these breakpoints for
     // Apple binaries.
     FileSpecList filter_modules;
-    filter_modules.Append(FileSpec("libc++abi.dylib", false));
-    filter_modules.Append(FileSpec("libSystem.B.dylib", false));
+    filter_modules.Append(FileSpec("libc++abi.dylib"));
+    filter_modules.Append(FileSpec("libSystem.B.dylib"));
     return target.GetSearchFilterForModuleList(&filter_modules);
   } else {
     return LanguageRuntime::CreateExceptionSearchFilter();
@@ -551,6 +550,64 @@ bool ItaniumABILanguageRuntime::ExceptionBreakpointsExplainStop(
   uint64_t break_site_id = stop_reason->GetValue();
   return m_process->GetBreakpointSiteList().BreakpointSiteContainsBreakpoint(
       break_site_id, m_cxx_exception_bp_sp->GetID());
+}
+
+ValueObjectSP ItaniumABILanguageRuntime::GetExceptionObjectForThread(
+    ThreadSP thread_sp) {
+  if (!thread_sp->SafeToCallFunctions())
+    return {};
+
+  ClangASTContext *clang_ast_context =
+      m_process->GetTarget().GetScratchClangASTContext();
+  CompilerType voidstar =
+      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+
+  DiagnosticManager diagnostics;
+  ExecutionContext exe_ctx;
+  EvaluateExpressionOptions options;
+
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+  options.SetStopOthers(true);
+  options.SetTimeout(std::chrono::milliseconds(500));
+  options.SetTryAllThreads(false);
+  thread_sp->CalculateExecutionContext(exe_ctx);
+
+  const ModuleList &modules = m_process->GetTarget().GetImages();
+  SymbolContextList contexts;
+  SymbolContext context;
+
+  modules.FindSymbolsWithNameAndType(
+      ConstString("__cxa_current_exception_type"), eSymbolTypeCode, contexts);
+  contexts.GetContextAtIndex(0, context);
+  Address addr = context.symbol->GetAddress();
+
+  Status error;
+  FunctionCaller *function_caller =
+      m_process->GetTarget().GetFunctionCallerForLanguage(
+          eLanguageTypeC, voidstar, addr, ValueList(), "caller", error);
+
+  ExpressionResults func_call_ret;
+  Value results;
+  func_call_ret = function_caller->ExecuteFunction(exe_ctx, nullptr, options,
+                                                   diagnostics, results);
+  if (func_call_ret != eExpressionCompleted || !error.Success()) {
+    return ValueObjectSP();
+  }
+
+  size_t ptr_size = m_process->GetAddressByteSize();
+  addr_t result_ptr = results.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+  addr_t exception_addr =
+      m_process->ReadPointerFromMemory(result_ptr - ptr_size, error);
+
+  lldb_private::formatters::InferiorSizedWord exception_isw(exception_addr,
+                                                            *m_process);
+  ValueObjectSP exception = ValueObject::CreateValueObjectFromData(
+      "exception", exception_isw.GetAsData(m_process->GetByteOrder()), exe_ctx,
+      voidstar);
+  exception = exception->GetDynamicValue(eDynamicDontRunTarget);
+
+  return exception;
 }
 
 TypeAndOrName ItaniumABILanguageRuntime::GetDynamicTypeInfo(

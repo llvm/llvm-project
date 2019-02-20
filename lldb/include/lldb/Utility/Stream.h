@@ -1,9 +1,8 @@
 //===-- Stream.h ------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,15 +11,15 @@
 
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
-#include "lldb/lldb-enumerations.h" // for ByteOrder::eByteOrderInvalid
-#include "llvm/ADT/StringRef.h"     // for StringRef
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <stdarg.h>
-#include <stddef.h>    // for size_t
-#include <stdint.h>    // for uint32_t, uint64_t, uint8_t
-#include <type_traits> // for forward
+#include <stddef.h>
+#include <stdint.h>
+#include <type_traits>
 
 namespace lldb_private {
 
@@ -44,6 +43,25 @@ public:
     eANSIColor = (eVerbose << 3), ///< If set, then it is ok to colorize the output
                            ///with ANSI escape sequences
 // END SWIFT PATCH
+  };
+
+  /// Utility class for counting the bytes that were written to a stream in a
+  /// certain time span.
+  /// @example
+  ///   ByteDelta delta(*this);
+  ///   WriteDataToStream("foo");
+  ///   return *delta;
+  /// @endcode
+  class ByteDelta {
+    Stream *m_stream;
+    /// Bytes we have written so far when ByteDelta was created.
+    size_t m_start;
+
+  public:
+    ByteDelta(Stream &s) : m_stream(&s), m_start(s.GetWrittenBytes()) {}
+    /// Returns the number of bytes written to the given Stream since this
+    /// ByteDelta object was created.
+    size_t operator*() const { return m_stream->GetWrittenBytes() - m_start; }
   };
 
   //------------------------------------------------------------------
@@ -558,7 +576,7 @@ protected:
   int m_indent_level; ///< Indention level.
   std::size_t m_bytes_written = 0; ///< Number of bytes written so far.
 
-  size_t _PutHex8(uint8_t uvalue, bool add_prefix);
+  void _PutHex8(uint8_t uvalue, bool add_prefix);
 
   //------------------------------------------------------------------
   /// Output character bytes to the stream.

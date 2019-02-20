@@ -9,7 +9,7 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
 endif ()
 
 if (NOT LLDB_DISABLE_LIBEDIT)
-  list(APPEND LLDB_SYSTEM_LIBS edit)
+  list(APPEND LLDB_SYSTEM_LIBS ${libedit_LIBRARIES})
 endif()
 if (NOT LLDB_DISABLE_CURSES)
   list(APPEND LLDB_SYSTEM_LIBS ${CURSES_LIBRARIES})
@@ -45,6 +45,7 @@ add_lldb_library(lldbUtility
   ArchSpec.cpp
   Args.cpp
   Baton.cpp
+  Broadcaster.cpp
   Connection.cpp
   ConstString.cpp
   CompletionRequest.cpp
@@ -53,17 +54,23 @@ add_lldb_library(lldbUtility
   DataEncoder.cpp
   DataExtractor.cpp
   Environment.cpp
+  FileCollector.cpp
+  Event.cpp
   FileSpec.cpp
   IOObject.cpp
   JSON.cpp
   LLDBAssert.cpp
+  Listener.cpp
   Log.cpp
   Logging.cpp
   NameMatches.cpp
-  Range.cpp
+  RegisterValue.cpp
   RegularExpression.cpp
+  Reproducer.cpp
+  Scalar.cpp
   SelectHelper.cpp
   SharingPtr.cpp
+  State.cpp
   Status.cpp
   Stream.cpp
   StreamCallback.cpp

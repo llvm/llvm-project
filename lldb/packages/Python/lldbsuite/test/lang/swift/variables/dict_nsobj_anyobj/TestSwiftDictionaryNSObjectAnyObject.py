@@ -65,13 +65,22 @@ class TestDictionaryNSObjectAnyObject(TestBase):
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        self.expect(
-            "frame variable -d run -- d2",
-            substrs=[
-                'Int64(1)',
-                'Int64(2)',
-                'Int64(3)',
-                'Int64(4)'])
+        if self.getArchitecture() in ['arm', 'armv7', 'armv7k', 'i386']:
+            self.expect(
+                "frame variable -d run -- d2",
+                substrs=[
+                    'Int32(1)',
+                    'Int32(2)',
+                    'Int32(3)',
+                    'Int32(4)'])
+        else:
+            self.expect(
+                "frame variable -d run -- d2",
+                substrs=[
+                    'Int64(1)',
+                    'Int64(2)',
+                    'Int64(3)',
+                    'Int64(4)'])
 
         self.expect(
             "frame variable -d run -- d3",

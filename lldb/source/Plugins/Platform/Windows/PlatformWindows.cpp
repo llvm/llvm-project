@@ -1,24 +1,19 @@
 //===-- PlatformWindows.cpp -------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "PlatformWindows.h"
 
-// C Includes
 #include <stdio.h>
 #if defined(_WIN32)
 #include "lldb/Host/windows/windows.h"
 #include <winsock2.h>
 #endif
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Debugger.h"
@@ -71,14 +66,14 @@ PlatformSP PlatformWindows::CreateInstance(bool force,
   const bool is_host = false;
 
   bool create = force;
-  if (create == false && arch && arch->IsValid()) {
+  if (!create && arch && arch->IsValid()) {
     const llvm::Triple &triple = arch->GetTriple();
     switch (triple.getVendor()) {
     case llvm::Triple::PC:
       create = true;
       break;
 
-    case llvm::Triple::UnknownArch:
+    case llvm::Triple::UnknownVendor:
       create = !arch->TripleVendorWasSpecified();
       break;
 
@@ -192,16 +187,18 @@ Status PlatformWindows::ResolveExecutable(
   if (IsHost()) {
     // if we cant resolve the executable loation based on the current path
     // variables
-    if (!resolved_module_spec.GetFileSpec().Exists()) {
+    if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
       resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-      resolved_module_spec.GetFileSpec().SetFile(exe_path, true,
+      resolved_module_spec.GetFileSpec().SetFile(exe_path,
                                                  FileSpec::Style::native);
+      FileSystem::Instance().Resolve(resolved_module_spec.GetFileSpec());
     }
 
-    if (!resolved_module_spec.GetFileSpec().Exists())
-      resolved_module_spec.GetFileSpec().ResolveExecutableLocation();
+    if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
+      FileSystem::Instance().ResolveExecutableLocation(
+          resolved_module_spec.GetFileSpec());
 
-    if (resolved_module_spec.GetFileSpec().Exists())
+    if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
       error.Clear();
     else {
       ms.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
@@ -215,7 +212,7 @@ Status PlatformWindows::ResolveExecutable(
     } else {
       // We may connect to a process and use the provided executable (Don't use
       // local $PATH).
-      if (resolved_module_spec.GetFileSpec().Exists())
+      if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
         error.Clear();
       else
         error.SetErrorStringWithFormat("the platform is not currently "
@@ -262,7 +259,8 @@ Status PlatformWindows::ResolveExecutable(
       }
 
       if (error.Fail() || !exe_module_sp) {
-        if (resolved_module_spec.GetFileSpec().Readable()) {
+        if (FileSystem::Instance().Readable(
+                resolved_module_spec.GetFileSpec())) {
           error.SetErrorStringWithFormat(
               "'%s' doesn't contain any '%s' platform architectures: %s",
               resolved_module_spec.GetFileSpec().GetPath().c_str(),
@@ -438,9 +436,8 @@ ProcessSP PlatformWindows::DebugProcess(ProcessLaunchInfo &launch_info,
     ProcessAttachInfo attach_info(launch_info);
     return Attach(attach_info, debugger, target, error);
   } else {
-    ProcessSP process_sp =
-        target->CreateProcess(launch_info.GetListenerForProcess(debugger),
-                              launch_info.GetProcessPluginName(), nullptr);
+    ProcessSP process_sp = target->CreateProcess(
+        launch_info.GetListener(), launch_info.GetProcessPluginName(), nullptr);
 
     // We need to launch and attach to the process.
     launch_info.GetFlags().Set(eLaunchFlagDebug);

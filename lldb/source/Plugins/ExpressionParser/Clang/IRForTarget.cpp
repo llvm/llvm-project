@@ -1,9 +1,8 @@
 //===-- IRForTarget.cpp -----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -25,7 +24,6 @@
 
 #include "clang/AST/ASTContext.h"
 
-#include "lldb/Core/Scalar.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -36,6 +34,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
 
 #include <map>
@@ -310,7 +309,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
   lldb_private::ExecutionContext exe_ctx(target_sp, true);
-  auto bit_size =
+  llvm::Optional<uint64_t> bit_size =
       m_result_type.GetBitSize(exe_ctx.GetBestExecutionContextScope());
   if (!bit_size) {
     lldb_private::StreamString type_desc_stream;
@@ -337,9 +336,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   if (log)
     log->Printf("Creating a new result global: \"%s\" with size 0x%" PRIx64,
                 m_result_name.GetCString(),
-                m_result_type.GetByteSize(nullptr)
-                    ? *m_result_type.GetByteSize(nullptr)
-                    : 0);
+                m_result_type.GetByteSize(nullptr).getValueOr(0));
 
   // Construct a new result global and set up its metadata
 
@@ -783,11 +780,8 @@ bool IRForTarget::RewriteObjCConstStrings() {
 static bool IsObjCSelectorRef(Value *value) {
   GlobalVariable *global_variable = dyn_cast<GlobalVariable>(value);
 
-  if (!global_variable || !global_variable->hasName() ||
-      !global_variable->getName().startswith("OBJC_SELECTOR_REFERENCES_"))
-    return false;
-
-  return true;
+  return !(!global_variable || !global_variable->hasName() ||
+           !global_variable->getName().startswith("OBJC_SELECTOR_REFERENCES_"));
 }
 
 // This function does not report errors; its callers are responsible.
@@ -958,11 +952,8 @@ bool IRForTarget::RewriteObjCSelectors(BasicBlock &basic_block) {
 static bool IsObjCClassReference(Value *value) {
   GlobalVariable *global_variable = dyn_cast<GlobalVariable>(value);
 
-  if (!global_variable || !global_variable->hasName() ||
-      !global_variable->getName().startswith("OBJC_CLASS_REFERENCES_"))
-    return false;
-
-  return true;
+  return !(!global_variable || !global_variable->hasName() ||
+           !global_variable->getName().startswith("OBJC_CLASS_REFERENCES_"));
 }
 
 // This function does not report errors; its callers are responsible.
@@ -1264,12 +1255,9 @@ bool IRForTarget::MaterializeInitializer(uint8_t *data, Constant *initializer) {
         llvm::NextPowerOf2(constant_size) * 8);
 
     lldb_private::Status get_data_error;
-    if (!scalar.GetAsMemoryData(data, constant_size,
-                                lldb_private::endian::InlHostByteOrder(),
-                                get_data_error))
-      return false;
-
-    return true;
+    return scalar.GetAsMemoryData(data, constant_size,
+                                  lldb_private::endian::InlHostByteOrder(),
+                                  get_data_error) != 0;
   } else if (ConstantDataArray *array_initializer =
                  dyn_cast<ConstantDataArray>(initializer)) {
     if (array_initializer->isString()) {
@@ -1381,7 +1369,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       value_type = global_variable->getType();
     }
 
-    auto value_size = compiler_type.GetByteSize(nullptr);
+    llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(nullptr);
     if (!value_size)
       return false;
     lldb::offset_t value_alignment =

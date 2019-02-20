@@ -53,7 +53,7 @@ class MiSyntaxTestCase(lldbmi_testcase.MiTestCaseBase):
         os.symlink(self.myexe, complicated_myexe)
         self.addTearDownHook(lambda: os.unlink(complicated_myexe))
 
-        self.spawnLldbMi(args="\"%s\"" % complicated_myexe)
+        self.spawnLldbMi(exe=complicated_myexe)
 
         # Test that the executable was loaded
         self.expect(

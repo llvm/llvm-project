@@ -17,7 +17,6 @@ class ThreadJumpTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr32343")
     def test(self):
         """Test thread jump handling."""
         self.build(dictionary=self.getBuildFlags())

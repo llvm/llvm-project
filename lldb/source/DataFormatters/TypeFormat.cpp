@@ -1,21 +1,16 @@
 //===-- TypeFormat.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/DataFormatters/TypeFormat.h"
 
-// C Includes
 
-// C++ Includes
 
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
@@ -166,11 +161,10 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     if (!target_sp)
       return false;
     const ModuleList &images(target_sp->GetImages());
-    SymbolContext sc;
     TypeList types;
     llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
-    images.FindTypes(sc, m_enum_type, false, UINT32_MAX, searched_symbol_files,
-                     types);
+    images.FindTypes(nullptr, m_enum_type, false, UINT32_MAX,
+                     searched_symbol_files, types);
     if (types.GetSize() == 0)
       return false;
     for (lldb::TypeSP type_sp : types.Types()) {
@@ -185,7 +179,7 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
     }
   } else
     valobj_enum_type = iter->second;
-  if (valobj_enum_type.IsValid() == false)
+  if (!valobj_enum_type.IsValid())
     return false;
   DataExtractor data;
   Status error;

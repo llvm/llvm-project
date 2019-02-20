@@ -1,9 +1,8 @@
 //===-- XML.cpp -------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -201,8 +200,7 @@ void XMLNode::ForEachAttribute(AttributeCallback const &callback) const {
           llvm::StringRef attr_value;
           if (child->content)
             attr_value = llvm::StringRef((const char *)child->content);
-          if (callback(llvm::StringRef((const char *)attr->name), attr_value) ==
-              false)
+          if (!callback(llvm::StringRef((const char *)attr->name), attr_value))
             return;
         }
       }
@@ -217,7 +215,7 @@ void XMLNode::ForEachSiblingNode(NodeCallback const &callback) const {
   if (IsValid()) {
     // iterate through all siblings
     for (xmlNodePtr node = m_node; node; node = node->next) {
-      if (callback(XMLNode(node)) == false)
+      if (!callback(XMLNode(node)))
         return;
     }
   }
@@ -234,7 +232,7 @@ void XMLNode::ForEachSiblingElement(NodeCallback const &callback) const {
       if (node->type != XML_ELEMENT_NODE)
         continue;
 
-      if (callback(XMLNode(node)) == false)
+      if (!callback(XMLNode(node)))
         return;
     }
   }
@@ -263,7 +261,7 @@ void XMLNode::ForEachSiblingElementWithName(
                     // ignore this one
       }
 
-      if (callback(XMLNode(node)) == false)
+      if (!callback(XMLNode(node)))
         return;
     }
   }
@@ -439,7 +437,7 @@ XMLNode ApplePropertyList::GetValueNode(const char *key) const {
         "key", [key, &value_node](const XMLNode &key_node) -> bool {
           std::string key_name;
           if (key_node.GetElementText(key_name)) {
-            if (key_name.compare(key) == 0) {
+            if (key_name == key) {
               value_node = key_node.GetSibling();
               while (value_node && !value_node.IsElement())
                 value_node = value_node.GetSibling();

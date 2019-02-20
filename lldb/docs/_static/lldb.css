@@ -1,0 +1,26 @@
+table.mapping {
+  width: 100%;
+}
+
+table.mapping td {
+  width: 50%;
+  padding: 5px;
+}
+
+table.mapping td.hed {
+  background: #606060;
+  color: white;
+  text-align: left;
+  border-bottom: 2px #fff solid;
+  font-weight: bold;
+}
+
+table.mapping td.header {
+  background: #eee;
+}
+
+table.mapping td.content {
+  font-family: monospace;
+  padding-bottom: 15px;
+}
+

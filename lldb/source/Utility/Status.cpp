@@ -1,33 +1,35 @@
 //===-- Status.cpp -----------------------------------------------*- C++
 //-*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Utility/VASPrintf.h"
-#include "lldb/lldb-defines.h"      // for LLDB_GENERIC_ERROR
-#include "lldb/lldb-enumerations.h" // for ErrorType, ErrorType::eErr...
-#include "llvm/ADT/SmallString.h"   // for SmallString
-#include "llvm/ADT/StringRef.h"     // for StringRef
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errno.h"
-#include "llvm/Support/FormatProviders.h" // for format_provider
+#include "llvm/Support/FormatProviders.h"
 
 #include <cerrno>
 #include <cstdarg>
-#include <string> // for string
+#include <string>
 #include <system_error>
 
 #ifdef __APPLE__
 #include <mach/mach.h>
 #endif
 
-#include <stdint.h> // for uint32_t
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#include <stdint.h>
 
 namespace llvm {
 class raw_ostream;
@@ -87,7 +89,8 @@ llvm::Error Status::ToError() const {
   if (Success())
     return llvm::Error::success();
   if (m_type == ErrorType::eErrorTypePOSIX)
-    return llvm::errorCodeToError(std::error_code(m_code, std::generic_category()));
+    return llvm::errorCodeToError(
+        std::error_code(m_code, std::generic_category()));
   return llvm::make_error<llvm::StringError>(AsCString(),
                                              llvm::inconvertibleErrorCode());
 }
@@ -105,6 +108,23 @@ const Status &Status::operator=(const Status &rhs) {
 }
 
 Status::~Status() = default;
+
+#ifdef _WIN32
+static std::string RetrieveWin32ErrorString(uint32_t error_code) {
+  char *buffer = nullptr;
+  std::string message;
+  // Retrieve win32 system error.
+  if (::FormatMessageA(
+          FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+              FORMAT_MESSAGE_MAX_WIDTH_MASK,
+          NULL, error_code, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+          (LPSTR)&buffer, 0, NULL)) {
+    message.assign(buffer);
+    ::LocalFree(buffer);
+  }
+  return message;
+}
+#endif
 
 //----------------------------------------------------------------------
 // Get the error value as a NULL C string. The error string will be fetched and
@@ -126,6 +146,12 @@ const char *Status::AsCString(const char *default_error_str) const {
 
     case eErrorTypePOSIX:
       m_string = llvm::sys::StrError(m_code);
+      break;
+
+    case eErrorTypeWin32:
+#if defined(_WIN32)
+      m_string = RetrieveWin32ErrorString(m_code);
+#endif
       break;
 
     default:

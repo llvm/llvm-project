@@ -22,21 +22,17 @@ class TestAllowJIT(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_allow_jit_expr_command(self):
         """Test the --allow-jit command line flag"""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.expr_cmd_test()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
     def test_allow_jit_options(self):
         """Test the SetAllowJIT SBExpressionOption setting"""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
         self.expr_options_test()
-
-        
 
     def setUp(self):
         # Call super's setUp().
@@ -62,7 +58,7 @@ class TestAllowJIT(TestBase):
                                    "Set a breakpoint here", self.main_source_file)
 
         frame = thread.GetFrameAtIndex(0)
-        
+
         # First make sure we can call the function with the default option set. 
         options = lldb.SBExpressionOptions()
         # Check that the default is to allow JIT:

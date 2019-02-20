@@ -1,9 +1,8 @@
 //===-- SBTypeEnumMember.cpp ---------------------------------- -*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -94,7 +93,7 @@ SBTypeEnumMemberList::SBTypeEnumMemberList(const SBTypeEnumMemberList &rhs)
     Append(const_cast<SBTypeEnumMemberList &>(rhs).GetTypeEnumMemberAtIndex(i));
 }
 
-bool SBTypeEnumMemberList::IsValid() { return (m_opaque_ap.get() != NULL); }
+bool SBTypeEnumMemberList::IsValid() { return (m_opaque_ap != NULL); }
 
 SBTypeEnumMemberList &SBTypeEnumMemberList::
 operator=(const SBTypeEnumMemberList &rhs) {
@@ -116,7 +115,7 @@ void SBTypeEnumMemberList::Append(SBTypeEnumMember enum_member) {
 
 SBTypeEnumMember
 SBTypeEnumMemberList::GetTypeEnumMemberAtIndex(uint32_t index) {
-  if (m_opaque_ap.get())
+  if (m_opaque_ap)
     return SBTypeEnumMember(m_opaque_ap->GetTypeEnumMemberAtIndex(index));
   return SBTypeEnumMember();
 }

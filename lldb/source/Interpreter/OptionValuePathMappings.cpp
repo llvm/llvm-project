@@ -1,18 +1,14 @@
 //===-- OptionValuePathMappings.cpp -----------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/OptionValuePathMappings.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
@@ -23,7 +19,7 @@ using namespace lldb_private;
 namespace {
 static bool VerifyPathExists(const char *path) {
   if (path && path[0])
-    return FileSpec(path, false).Exists();
+    return FileSystem::Instance().Exists(path);
   else
     return false;
 }
@@ -180,7 +176,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
         size_t num_remove_indexes = remove_indexes.size();
         if (num_remove_indexes) {
           // Sort and then erase in reverse so indexes are always valid
-          std::sort(remove_indexes.begin(), remove_indexes.end());
+          llvm::sort(remove_indexes.begin(), remove_indexes.end());
           for (size_t j = num_remove_indexes - 1; j < num_remove_indexes; ++j) {
             m_path_mappings.Remove(j, m_notify_changes);
           }

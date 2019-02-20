@@ -1,9 +1,8 @@
 //===-- MIDriver.cpp --------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -443,8 +442,7 @@ lldb::SBError CMIDriver::ParseArgs(const int argc, const char *argv[],
           CMICmdArgValString(true, false, true).IsStringArg(strArg)) {
         // Is this the command file for the '-s' or '--source' options?
         const CMIUtilString strPrevArg(argv[i - 1]);
-        if (strPrevArg.compare("-s") == 0 ||
-            strPrevArg.compare("--source") == 0) {
+        if (strPrevArg == "-s" || strPrevArg == "--source") {
           m_strCmdLineArgCommandFileNamePath = strArg;
           m_bHaveCommandFileNamePathOnCmdLine = true;
           i--; // skip '-s' on the next loop
@@ -457,7 +455,7 @@ lldb::SBError CMIDriver::ParseArgs(const int argc, const char *argv[],
       }
       // Report error if no command file was specified for the '-s' or
       // '--source' options
-      else if (strArg.compare("-s") == 0 || strArg.compare("--source") == 0) {
+      else if (strArg == "-s" || strArg == "--source") {
         vwbExiting = true;
         const CMIUtilString errMsg = CMIUtilString::Format(
             MIRSRC(IDS_CMD_ARGS_ERR_VALIDATION_MISSING_INF), strArg.c_str());
@@ -465,13 +463,13 @@ lldb::SBError CMIDriver::ParseArgs(const int argc, const char *argv[],
         break;
       }
       // This argument is also checked for in CMIDriverMgr::ParseArgs()
-      else if (strArg.compare("--executable") == 0) // Used to specify that
-                                                    // there is executable
-                                                    // argument also on the
-                                                    // command line
-      {                                             // See fn description.
+      else if (strArg == "--executable") // Used to specify that
+                                         // there is executable
+                                         // argument also on the
+                                         // command line
+      {                                  // See fn description.
         bHaveExecutableLongOption = true;
-      } else if (strArg.compare("--synchronous") == 0) {
+      } else if (strArg == "--synchronous") {
         CMICmnLLDBDebugSessionInfo::Instance().GetDebugger().SetAsync(false);
       }
     }

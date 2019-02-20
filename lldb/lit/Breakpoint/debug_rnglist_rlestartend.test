@@ -1,0 +1,28 @@
+# RUN: yaml2obj %p/Inputs/debug_rnglist_rlestartend.yaml > %ttest
+# RUN: lldb-test breakpoints %ttest %s | FileCheck %s
+
+# Test shows that LDLB is able to handle DW_RLE_start_end entries properly.
+
+# The following code and invocation were used to produce asm file.
+# clang -O0 -gdwarf-5 test.cpp -S -o test.s -fuse-ld=lld -ffunction-sections
+# It was edited to use DW_RLE_start_end, compiled and converted to yaml.
+# The yaml was manually reduced.
+#
+# //test.cpp:
+# int zed() { 
+#  return 1;
+# }
+#
+# int main() {
+#  return zed();
+# }
+#
+# clang and LLD versions were 8.0.0 (trunk 344035)
+
+b main
+# CHECK-LABEL: b main
+# CHECK: Address: {{.*}}`main + 15 at test.cpp:6:10
+
+b zed
+# CHECK-LABEL: b zed
+# CHECK: Address: {{.*}}`zed() + 4 at test.cpp:2:3

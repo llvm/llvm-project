@@ -1,21 +1,16 @@
 //===-- TypeSummary.cpp ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/DataFormatters/TypeSummary.h"
 
-// C Includes
 
-// C++ Includes
 
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
@@ -139,7 +134,7 @@ bool CXXFunctionSummaryFormat::FormatObject(ValueObject *valobj,
                                             const TypeSummaryOptions &options) {
   dest.clear();
   StreamString stream;
-  if (!m_impl || m_impl(*valobj, stream, options) == false)
+  if (!m_impl || !m_impl(*valobj, stream, options))
     return false;
   dest = stream.GetString();
   return true;

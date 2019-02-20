@@ -1,22 +1,21 @@
 //===-- StringList.cpp ------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/StringList.h"
 
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h" // for Stream
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/ArrayRef.h" // for ArrayRef, makeArrayRef
+#include "llvm/ADT/ArrayRef.h"
 
-#include <algorithm> // for min
-#include <stdint.h>  // for SIZE_MAX, uint32_t
-#include <string.h>  // for size_t, strcspn, NULL
+#include <algorithm>
+#include <stdint.h>
+#include <string.h>
 
 using namespace lldb_private;
 
@@ -83,7 +82,7 @@ size_t StringList::GetMaxStringLength() const {
 const char *StringList::GetStringAtIndex(size_t idx) const {
   if (idx < m_strings.size())
     return m_strings[idx].c_str();
-  return NULL;
+  return nullptr;
 }
 
 void StringList::Join(const char *separator, Stream &strm) {

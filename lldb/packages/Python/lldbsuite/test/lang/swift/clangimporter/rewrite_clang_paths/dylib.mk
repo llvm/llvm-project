@@ -9,6 +9,7 @@ SWIFTFLAGS_EXTRAS = \
 	    -Xcc -I./buildbot/I-single \
 	    -Xcc -F./buildbot/Frameworks \
 	    -Xcc -F -Xcc buildbot/Frameworks \
+	    -Xcc -iquote -Xcc /nonexisting-rootdir \
 	    -import-objc-header $(BOTDIR)/Foo/bridge.h
 
 include $(LEVEL)/Makefile.rules

@@ -1,9 +1,8 @@
 //===-- Opcode.h ------------------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -11,12 +10,12 @@
 #define lldb_Opcode_h
 
 #include "lldb/Utility/Endian.h"
-#include "lldb/lldb-enumerations.h" // for ByteOrder, ByteOrder::eByteOrde...
+#include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/MathExtras.h"
 
-#include <assert.h> // for assert
-#include <stdint.h> // for uint32_t, uint8_t, uint16_t
+#include <assert.h>
+#include <stdint.h>
 #include <string.h>
 
 namespace lldb_private {

@@ -6,6 +6,8 @@ class S<string name>: Separate<["--", "-"], name>;
 
 def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
+def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
+def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 def dynamicbase: F<"dynamicbase">, HelpText<"Enable ASLR">;
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
@@ -52,29 +54,31 @@ def pdb: S<"pdb">, HelpText<"Specify output PDB debug information file">;
 def Xlink : J<"Xlink=">, MetaVarName<"<arg>">,
     HelpText<"Pass <arg> to the COFF linker">;
 
-// Currently stubs to avoid errors
-def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries">;
-def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
-def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
-def build_id: F<"build-id">;
-def disable_auto_image_base: F<"disable-auto-image-base">;
-def enable_auto_image_base: F<"enable-auto-image-base">;
-def enable_auto_import: F<"enable-auto-import">;
-def end_group: F<"end-group">;
-def full_shutdown: Flag<["--"], "full-shutdown">;
-def high_entropy_va: F<"high-entropy-va">, HelpText<"Enable 64-bit ASLR">;
-def major_image_version: S<"major-image-version">;
-def minor_image_version: S<"minor-image-version">;
-def no_seh: F<"no-seh">;
-def nxcompat: F<"nxcompat">, HelpText<"Enable data execution prevention">;
-def pic_executable: F<"pic-executable">;
-def sysroot: J<"sysroot">, HelpText<"Sysroot">;
-def start_group: F<"start-group">;
-def tsaware: F<"tsaware">, HelpText<"Create Terminal Server aware executable">;
-def v: Flag<["-"], "v">, HelpText<"Display the version number">;
-def version: F<"version">, HelpText<"Display the version number and exit">;
-
 // Alias
 def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def alias_strip_s: Flag<["-"], "s">, Alias<strip_all>;
 def alias_strip_S: Flag<["-"], "S">, Alias<strip_debug>;
+
+// Ignored options
+def: Joined<["-"], "O">;
+def: F<"build-id">;
+def: F<"disable-auto-image-base">;
+def: F<"enable-auto-image-base">;
+def: F<"enable-auto-import">;
+def: F<"end-group">;
+def: Flag<["--"], "full-shutdown">;
+def: F<"high-entropy-va">;
+def: S<"major-image-version">;
+def: S<"minor-image-version">;
+def: F<"no-seh">;
+def: F<"nxcompat">;
+def: F<"pic-executable">;
+def: S<"plugin">;
+def: J<"plugin=">;
+def: S<"plugin-opt">;
+def: J<"plugin-opt=">;
+def: J<"sysroot">;
+def: F<"start-group">;
+def: F<"tsaware">;
+def: Flag<["-"], "v">;
+def: F<"version">;

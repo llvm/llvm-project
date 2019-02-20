@@ -1,7 +1,7 @@
-This README file describes the files and directories related to the Python test
-suite under the current 'test' directory.
+This README file describes the files and directories related       -*- rst -*-
+to the Python test suite under the current 'test' directory.
 
-o dotest.py
+- dotest.py
 
   Provides the test driver for the test suite.  To invoke it, cd to the 'test'
   directory and issue the './dotest.py' command or './dotest.py -v' for more
@@ -20,7 +20,7 @@ o dotest.py
      This runs the test suite, with logging turned on for the lldb as well as
      the process.gdb-remote channels and directs the run log to a file.
 
-o lldbtest.py
+- lldbtest.py
 
   Provides an abstract base class of lldb test case named 'TestBase', which in
   turn inherits from Python's unittest.TestCase.  The concrete subclass can
@@ -41,7 +41,7 @@ o lldbtest.py
   test case on its own.  To run the whole test suite, 'dotest.py' is all you
   need to do.
 
-o subdirectories of 'test'
+- subdirectories of 'test'
 
   Most of them predate the introduction of the python test suite and contain
   example C/C++/ObjC source files which get compiled into executables which are
@@ -58,7 +58,7 @@ o subdirectories of 'test'
   testcase that run a process to a breakpoint and check a local variable.  These
   are convenient starting points for adding new tests.
 
-o make directory
+- make directory
 
   Contains Makefile.rules, which can be utilized by test cases to write Makefile
   based rules to build binaries for the inferiors.
@@ -95,12 +95,12 @@ o make directory
   The exe names for the two test methods are equal to the test method names and
   are therefore guaranteed different.
 
-o plugins directory
+- plugins directory
 
   Contains platform specific plugin to build binaries with dsym/dwarf debugging
   info.  Other platform specific functionalities may be added in the future.
 
-o unittest2 directory
+- unittest2 directory
 
   Many new features were added to unittest in Python 2.7, including test
   discovery. unittest2 allows you to use these features with earlier versions of
@@ -114,7 +114,7 @@ o unittest2 directory
   Later versions of unittest2 include changes in unittest made in Python 3.2 and
   onwards after the release of Python 2.7.
 
-o dotest.pl
+- dotest.pl
 
   In case you wonder, there is also a 'dotest.pl' perl script file.  It was
   created to visit each Python test case under the specified directory and
@@ -127,47 +127,56 @@ o dotest.pl
 
   Note: dotest.pl has been moved to the attic directory.
 
-o Profiling dotest.py runs
+- Profiling dotest.py runs
 
   I used the following command line thingy to do the profiling on a SnowLeopard
   machine:
 
-$ DOTEST_PROFILE=YES DOTEST_SCRIPT_DIR=/Volumes/data/lldb/svn/trunk/test /System/Library/Frameworks/Python.framework/Versions/Current/lib/python2.6/cProfile.py -o my.profile ./dotest.py -v -w 2> ~/Developer/Log/lldbtest.log
+    $ DOTEST_PROFILE=YES DOTEST_SCRIPT_DIR=/Volumes/data/lldb/svn/trunk/test /System/Library/Frameworks/Python.framework/Versions/Current/lib/python2.6/cProfile.py -o my.profile ./dotest.py -v -w 2> ~/Developer/Log/lldbtest.log
 
   After that, I used the pstats.py module to browse the statistics:
 
-$ python /System/Library/Frameworks/Python.framework/Versions/Current/lib/python2.6/pstats.py my.profile 
+    $ python /System/Library/Frameworks/Python.framework/Versions/Current/lib/python2.6/pstats.py my.profile 
 
-o Writing test cases:
+- Writing test cases:
 
- We strongly prefer writing test cases using the SB API's rather than the runCmd & expect.  
- Unless you are actually testing some feature of the command line, please don't write 
- command based tests.  For historical reasons there are plenty of examples of tests in the 
- test suite that use runCmd where they shouldn't, but don't copy them, copy the plenty that 
- do use the SB API's instead.  
+  We strongly prefer writing test cases using the SB API's rather than
+  the runCmd & expect.  Unless you are actually testing some feature
+  of the command line, please don't write command based tests.  For
+  historical reasons there are plenty of examples of tests in the test
+  suite that use runCmd where they shouldn't, but don't copy them,
+  copy the plenty that do use the SB API's instead.
 
- The reason for this is that our policy is that we will maintain compatibility with the 
- SB API's.  But we don't make any similar guarantee about the details of command result format.  
- If your test is using the command line, it is going to have to check against the command result
- text, and you either end up writing your check  pattern by checking as little as possible so 
- you won't be exposed to random changes in the text; in which case you can end up missing some 
- failure, or you test too much and it means irrelevant changes break your tests.
+  The reason for this is that our policy is that we will maintain
+  compatibility with the SB API's.  But we don't make any similar
+  guarantee about the details of command result format.  If your test
+  is using the command line, it is going to have to check against the
+  command result text, and you either end up writing your check
+  pattern by checking as little as possible so you won't be exposed to
+  random changes in the text; in which case you can end up missing
+  some failure, or you test too much and it means irrelevant changes
+  break your tests.
 
- However, if you use the Python API's it is possible to check all the results you want 
- to check in a very explicit way, which makes the tests much more robust.
+  However, if you use the Python API's it is possible to check all the
+  results you want to check in a very explicit way, which makes the
+  tests much more robust.
 
- Even if you are testing that a command-line command does some specific thing, it is still 
- better in general to use the SB API's to drive to the point where you want to run the test, 
- then use SBInterpreter::HandleCommand to run the command.  You get the full result text 
- from the command in the command return object, and all the part where you are driving the 
- debugger to the point you want to test will be more robust.
+  Even if you are testing that a command-line command does some
+  specific thing, it is still better in general to use the SB API's to
+  drive to the point where you want to run the test, then use
+  SBInterpreter::HandleCommand to run the command.  You get the full
+  result text from the command in the command return object, and all
+  the part where you are driving the debugger to the point you want to
+  test will be more robust.
 
- The sample_test directory contains a standard and an "inline" test that are good starting
- points for writing a new test.
+  The sample_test directory contains a standard and an "inline" test
+  that are good starting points for writing a new test.
 
-o Attaching in test cases:
+- Attaching in test cases:
 
- If you need to attach to inferiors in your tests, you must make sure the inferior calls
- lldb_enable_attach(), before the debugger attempts to attach. This function performs any
- platform-specific processing needed to enable attaching to this process (e.g., on Linux, we
- execute prctl(PR_SET_TRACER) syscall to disable protections present in some Linux systems).
+  If you need to attach to inferiors in your tests, you must make sure
+  the inferior calls lldb_enable_attach(), before the debugger
+  attempts to attach. This function performs any platform-specific
+  processing needed to enable attaching to this process (e.g., on
+  Linux, we execute prctl(PR_SET_TRACER) syscall to disable
+  protections present in some Linux systems).
