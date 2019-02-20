@@ -313,7 +313,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   m_strip_underscore =
       (m_execution_engine_ap->getDataLayout().getGlobalPrefix() == '_');
 
-  if (!m_execution_engine_ap.get()) {
+  if (!m_execution_engine_ap) {
     error.SetErrorToGenericError();
     error.SetErrorStringWithFormat("Couldn't JIT the function: %s",
                                    error_string.c_str());

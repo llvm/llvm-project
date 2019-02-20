@@ -1076,7 +1076,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
     }
   }
   if (m_type & eFileSpecified) {
-    if (m_file_spec_ap.get()) {
+    if (m_file_spec_ap) {
       // If we don't have a block or a comp_unit, then we aren't going to match
       // a source file.
       if (sc.block == nullptr && sc.comp_unit == nullptr)
@@ -1171,7 +1171,7 @@ void SymbolContextSpecifier::GetDescription(
       s->Printf("Module: %s\n", m_module_spec.c_str());
   }
 
-  if (m_type == eFileSpecified && m_file_spec_ap.get() != nullptr) {
+  if (m_type == eFileSpecified && m_file_spec_ap != nullptr) {
     m_file_spec_ap->GetPath(path_str, PATH_MAX);
     s->Indent();
     s->Printf("File: %s", path_str);
@@ -1209,7 +1209,7 @@ void SymbolContextSpecifier::GetDescription(
     s->Printf("Class name: %s.\n", m_class_name.c_str());
   }
 
-  if (m_type == eAddressRangeSpecified && m_address_range_ap.get() != nullptr) {
+  if (m_type == eAddressRangeSpecified && m_address_range_ap != nullptr) {
     s->Indent();
     s->PutCString("Address range: ");
     m_address_range_ap->Dump(s, m_target_sp.get(),

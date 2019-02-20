@@ -61,7 +61,7 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
          ++idx) {
       std::unique_ptr<SymbolFile> curr_symfile_ap(create_callback(obj_file));
 
-      if (curr_symfile_ap.get()) {
+      if (curr_symfile_ap) {
         const uint32_t sym_file_abilities = curr_symfile_ap->GetAbilities();
         if (sym_file_abilities > best_symfile_abilities) {
           best_symfile_abilities = sym_file_abilities;
@@ -73,7 +73,7 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
         }
       }
     }
-    if (best_symfile_ap.get()) {
+    if (best_symfile_ap) {
       // Let the winning symbol file parser initialize itself more completely
       // now that it has been chosen
       best_symfile_ap->InitializeObject();

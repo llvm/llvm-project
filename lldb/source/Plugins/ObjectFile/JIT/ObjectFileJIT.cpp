@@ -115,7 +115,7 @@ Symtab *ObjectFileJIT::GetSymtab() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_symtab_ap.get() == NULL) {
+    if (m_symtab_ap == NULL) {
       m_symtab_ap.reset(new Symtab(this));
       std::lock_guard<std::recursive_mutex> symtab_guard(
           m_symtab_ap->GetMutex());
@@ -134,7 +134,7 @@ bool ObjectFileJIT::IsStripped() {
 }
 
 void ObjectFileJIT::CreateSections(SectionList &unified_section_list) {
-  if (!m_sections_ap.get()) {
+  if (!m_sections_ap) {
     m_sections_ap.reset(new SectionList());
     ObjectFileJITDelegateSP delegate_sp(m_delegate_wp.lock());
     if (delegate_sp) {
@@ -161,7 +161,7 @@ void ObjectFileJIT::Dump(Stream *s) {
     if (sections)
       sections->Dump(s, NULL, true, UINT32_MAX);
 
-    if (m_symtab_ap.get())
+    if (m_symtab_ap)
       m_symtab_ap->Dump(s, NULL, eSortOrderNone);
   }
 }

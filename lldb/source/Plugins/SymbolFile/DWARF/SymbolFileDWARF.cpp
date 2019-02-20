@@ -665,11 +665,11 @@ const DWARFDataExtractor &SymbolFileDWARF::get_gnu_debugaltlink() {
 }
 
 DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
-  if (m_abbr.get() == NULL) {
+  if (m_abbr == NULL) {
     const DWARFDataExtractor &debug_abbrev_data = get_debug_abbrev_data();
     if (debug_abbrev_data.GetByteSize() > 0) {
       m_abbr.reset(new DWARFDebugAbbrev());
-      if (m_abbr.get())
+      if (m_abbr)
         m_abbr->Parse(debug_abbrev_data);
     }
   }
@@ -681,13 +681,13 @@ const DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() const {
 }
 
 DWARFDebugInfo *SymbolFileDWARF::DebugInfo() {
-  if (m_info.get() == NULL) {
+  if (m_info == NULL) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
     if (get_debug_info_data().GetByteSize() > 0) {
       m_info.reset(new DWARFDebugInfo());
-      if (m_info.get()) {
+      if (m_info) {
         m_info->SetDwarfData(this);
       }
     }
@@ -719,7 +719,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
 }
 
 DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
-  if (m_ranges.get() == NULL) {
+  if (m_ranges == NULL) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
                        static_cast<void *>(this));
@@ -729,7 +729,7 @@ DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
     else if (get_debug_rnglists_data().GetByteSize() > 0)
       m_ranges.reset(new DWARFDebugRngLists());
 
-    if (m_ranges.get())
+    if (m_ranges)
       m_ranges->Extract(this);
   }
   return m_ranges.get();
@@ -994,7 +994,7 @@ static void ParseDWARFLineTableCallback(dw_offset_t offset,
     LineTable *line_table = info->line_table;
 
     // If this is our first time here, we need to create a sequence container.
-    if (!info->sequence_ap.get()) {
+    if (!info->sequence_ap) {
       info->sequence_ap.reset(line_table->CreateLineSequenceContainer());
       assert(info->sequence_ap.get());
     }
@@ -1025,7 +1025,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
                                                    DW_INVALID_OFFSET);
       if (cu_line_offset != DW_INVALID_OFFSET) {
         std::unique_ptr<LineTable> line_table_ap(new LineTable(&comp_unit));
-        if (line_table_ap.get()) {
+        if (line_table_ap) {
           ParseDWARFLineTableCallbackInfo info;
           info.line_table = line_table_ap.get();
 

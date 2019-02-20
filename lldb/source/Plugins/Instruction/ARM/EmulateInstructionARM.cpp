@@ -742,13 +742,13 @@ EmulateInstructionARM::CreateInstance(const ArchSpec &arch,
       std::unique_ptr<EmulateInstructionARM> emulate_insn_ap(
           new EmulateInstructionARM(arch));
 
-      if (emulate_insn_ap.get())
+      if (emulate_insn_ap)
         return emulate_insn_ap.release();
     } else if (arch.GetTriple().getArch() == llvm::Triple::thumb) {
       std::unique_ptr<EmulateInstructionARM> emulate_insn_ap(
           new EmulateInstructionARM(arch));
 
-      if (emulate_insn_ap.get())
+      if (emulate_insn_ap)
         return emulate_insn_ap.release();
     }
   }

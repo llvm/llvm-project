@@ -189,7 +189,7 @@ lldb::LanguageType CompileUnit::GetLanguage() {
 }
 
 LineTable *CompileUnit::GetLineTable() {
-  if (m_line_table_ap.get() == nullptr) {
+  if (m_line_table_ap == nullptr) {
     if (m_flags.IsClear(flagsParsedLineTable)) {
       m_flags.Set(flagsParsedLineTable);
       SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();

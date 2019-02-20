@@ -637,7 +637,7 @@ addr_t DynamicLoaderPOSIXDYLD::GetEntryPoint() {
   if (m_entry_point != LLDB_INVALID_ADDRESS)
     return m_entry_point;
 
-  if (m_auxv.get() == NULL)
+  if (m_auxv == NULL)
     return LLDB_INVALID_ADDRESS;
 
   AuxVector::iterator I = m_auxv->FindEntry(AuxVector::AUXV_AT_ENTRY);

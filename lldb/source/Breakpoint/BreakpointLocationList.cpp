@@ -129,7 +129,7 @@ void BreakpointLocationList::Dump(Stream *s) const {
   s->IndentMore();
   collection::const_iterator pos, end = m_locations.end();
   for (pos = m_locations.begin(); pos != end; ++pos)
-    (*pos).get()->Dump(s);
+    (*pos)->Dump(s);
   s->IndentLess();
 }
 

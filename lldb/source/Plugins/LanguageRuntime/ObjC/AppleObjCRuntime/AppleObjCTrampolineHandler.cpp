@@ -749,7 +749,7 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
 
   // Build our vtable dispatch handler here:
   m_vtables_ap.reset(new AppleObjCVTables(process_sp, m_objc_module_sp));
-  if (m_vtables_ap.get())
+  if (m_vtables_ap)
     m_vtables_ap->ReadRegions();
 }
 
@@ -770,7 +770,7 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
 
     // First stage is to make the ClangUtility to hold our injected function:
 
-    if (!m_impl_code.get()) {
+    if (!m_impl_code) {
       if (m_lookup_implementation_function_code != NULL) {
         Status error;
         m_impl_code.reset(exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
@@ -864,7 +864,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
   if (!found_it) {
     uint32_t flags;
-    if (m_vtables_ap.get()) {
+    if (m_vtables_ap) {
       found_it = m_vtables_ap->IsAddressInVTables(curr_pc, flags);
       if (found_it) {
         this_dispatch.name = "vtable";
