@@ -33,7 +33,9 @@ private:
 public:
   FileIndexRecord(FileID FID, bool IsSystem) : FID(FID), IsSystem(IsSystem) {}
 
-  ArrayRef<DeclOccurrence> getDeclOccurrencesSortedByOffset() const { return Decls; }
+  ArrayRef<DeclOccurrence> getDeclOccurrencesSortedByOffset() const {
+    return Decls;
+  }
 
   FileID getFileID() const { return FID; }
   bool isSystem() const { return IsSystem; }
