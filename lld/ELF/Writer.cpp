@@ -60,7 +60,8 @@ private:
 
   std::vector<PhdrEntry *> createPhdrs();
   void removeEmptyPTLoad();
-  void addPtArmExid(std::vector<PhdrEntry *> &Phdrs);
+  void addPhdrForSection(std::vector<PhdrEntry *> &Phdrs, unsigned ShType,
+                         unsigned PType, unsigned PFlags);
   void assignFileOffsets();
   void assignFileOffsetsBinary();
   void setPhdrs();
@@ -1757,7 +1758,16 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // image base and the dynamic section on mips includes the image base.
   if (!Config->Relocatable && !Config->OFormatBinary) {
     Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs() : createPhdrs();
-    addPtArmExid(Phdrs);
+    if (Config->EMachine == EM_ARM) {
+      // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
+      addPhdrForSection(Phdrs, SHT_ARM_EXIDX, PT_ARM_EXIDX, PF_R);
+    }
+    if (Config->EMachine == EM_MIPS) {
+      // Add separate segments for MIPS-specific sections.
+      addPhdrForSection(Phdrs, SHT_MIPS_REGINFO, PT_MIPS_REGINFO, PF_R);
+      addPhdrForSection(Phdrs, SHT_MIPS_OPTIONS, PT_MIPS_OPTIONS, PF_R);
+      addPhdrForSection(Phdrs, SHT_MIPS_ABIFLAGS, PT_MIPS_ABIFLAGS, PF_R);
+    }
     Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
 
     // Find the TLS segment. This happens before the section layout loop so that
@@ -2053,19 +2063,17 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
 }
 
 template <class ELFT>
-void Writer<ELFT>::addPtArmExid(std::vector<PhdrEntry *> &Phdrs) {
-  if (Config->EMachine != EM_ARM)
-    return;
-  auto I = llvm::find_if(OutputSections, [](OutputSection *Cmd) {
-    return Cmd->Type == SHT_ARM_EXIDX;
-  });
+void Writer<ELFT>::addPhdrForSection(std::vector<PhdrEntry *> &Phdrs,
+                                     unsigned ShType, unsigned PType,
+                                     unsigned PFlags) {
+  auto I = llvm::find_if(
+      OutputSections, [=](OutputSection *Cmd) { return Cmd->Type == ShType; });
   if (I == OutputSections.end())
     return;
 
-  // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
-  PhdrEntry *ARMExidx = make<PhdrEntry>(PT_ARM_EXIDX, PF_R);
-  ARMExidx->add(*I);
-  Phdrs.push_back(ARMExidx);
+  PhdrEntry *Entry = make<PhdrEntry>(PType, PFlags);
+  Entry->add(*I);
+  Phdrs.push_back(Entry);
 }
 
 // The first section of each PT_LOAD, the first section in PT_GNU_RELRO and the
