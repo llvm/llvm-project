@@ -24,7 +24,8 @@ struct make_variant_imp;
 
 template <size_t ...Indices>
 struct make_variant_imp<std::integer_sequence<size_t, Indices...>> {
-  using type = std::variant<decltype((Indices, char(0)))...>;
+  template <size_t> using AlwaysChar = char;
+  using type = std::variant<AlwaysChar<Indices>...>;
 };
 
 template <size_t N>

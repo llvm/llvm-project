@@ -11,7 +11,7 @@
 
 // duration
 
-// static constexpr duration min();
+// static constexpr duration min(); // noexcept after C++17
 
 #include <chrono>
 #include <limits>
@@ -23,6 +23,10 @@
 template <class D>
 void test()
 {
+    LIBCPP_ASSERT_NOEXCEPT(std::chrono::duration_values<typename D::rep>::min());
+#if TEST_STD_VER > 17
+    ASSERT_NOEXCEPT(       std::chrono::duration_values<typename D::rep>::min());
+#endif
     {
     typedef typename D::rep Rep;
     Rep min_rep = std::chrono::duration_values<Rep>::min();

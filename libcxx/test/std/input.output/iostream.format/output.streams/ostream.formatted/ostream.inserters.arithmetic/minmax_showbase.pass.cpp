@@ -24,6 +24,12 @@
 //  Testing to make sure that the max length values are correctly inserted when
 //  using std::showbase
 
+// This test exposes a regression that was not fixed yet in the libc++
+// shipped with macOS 10.12, 10.13 and 10.14. See D32670 for details.
+// XFAIL: with_system_cxx_lib=macosx10.14
+// XFAIL: with_system_cxx_lib=macosx10.13
+// XFAIL: with_system_cxx_lib=macosx10.12
+
 #include <cassert>
 #include <cstdint>
 #include <ios>

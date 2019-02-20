@@ -244,6 +244,7 @@
 #include <utility>
 #include <iomanip> // for quoted
 #include <string_view>
+#include <version>
 
 #include <__debug>
 
@@ -256,41 +257,7 @@ _LIBCPP_PUSH_MACROS
 
 #ifndef _LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER >= 17
-#define __cpp_lib_filesystem 201703
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
-
-struct _FilesystemClock {
-#if !defined(_LIBCPP_HAS_NO_INT128)
-  typedef __int128_t rep;
-  typedef nano period;
-#else
-  typedef long long rep;
-  typedef nano period;
-#endif
-
-  typedef chrono::duration<rep, period> duration;
-  typedef chrono::time_point<_FilesystemClock> time_point;
-
-  static _LIBCPP_CONSTEXPR_AFTER_CXX11 const bool is_steady = false;
-
-  _LIBCPP_FUNC_VIS static time_point now() noexcept;
-
-  _LIBCPP_INLINE_VISIBILITY
-  static time_t to_time_t(const time_point& __t) noexcept {
-    typedef chrono::duration<rep> __secs;
-    return time_t(
-        chrono::duration_cast<__secs>(__t.time_since_epoch()).count());
-  }
-
-  _LIBCPP_INLINE_VISIBILITY
-  static time_point from_time_t(time_t __t) noexcept {
-    typedef chrono::duration<rep> __secs;
-    return time_point(__secs(__t));
-  }
-};
 
 typedef chrono::time_point<_FilesystemClock> file_time_type;
 
@@ -590,7 +557,7 @@ template <class _ECharT>
 typename enable_if<__can_convert_char<_ECharT>::value, bool>::type
 __is_separator(_ECharT __e) {
   return __e == _ECharT('/');
-};
+}
 
 struct _NullSentinal {};
 
@@ -1184,6 +1151,31 @@ public:
     return __is;
   }
 
+  friend _LIBCPP_INLINE_VISIBILITY bool operator==(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) == 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator!=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) != 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator<(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) < 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator<=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) <= 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator>(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) > 0;
+  }
+  friend _LIBCPP_INLINE_VISIBILITY bool operator>=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.compare(__rhs) >= 0;
+  }
+
+  friend _LIBCPP_INLINE_VISIBILITY path operator/(const path& __lhs,
+                                                  const path& __rhs) {
+    path __result(__lhs);
+    __result /= __rhs;
+    return __result;
+  }
 private:
   inline _LIBCPP_INLINE_VISIBILITY path&
   __assign_view(__string_view const& __s) noexcept {
@@ -1199,43 +1191,6 @@ inline _LIBCPP_INLINE_VISIBILITY void swap(path& __lhs, path& __rhs) noexcept {
 
 _LIBCPP_FUNC_VIS
 size_t hash_value(const path& __p) noexcept;
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator==(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) == 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator!=(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) != 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator<(const path& __lhs,
-                                                const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) < 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator<=(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) <= 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator>(const path& __lhs,
-                                                const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) > 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY bool operator>=(const path& __lhs,
-                                                 const path& __rhs) noexcept {
-  return __lhs.compare(__rhs) >= 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY path operator/(const path& __lhs,
-                                                const path& __rhs) {
-  path __result(__lhs);
-  __result /= __rhs;
-  return __result;
-}
 
 template <class _Source>
 _LIBCPP_INLINE_VISIBILITY

@@ -52,6 +52,9 @@ test(S s)
 int main()
 {
     typedef std::string_view    string_view;
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    typedef std::u8string_view u8string_view;
+#endif
     typedef std::u16string_view u16string_view;
     typedef std::u32string_view u32string_view;
     typedef std::wstring_view   wstring_view;
@@ -62,6 +65,9 @@ int main()
     test(wstring_view  ());
     test(string_view   ( "123"));
     test(wstring_view  (L"123"));
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    test(u8string_view{u8"123"});
+#endif
 #if TEST_STD_VER >= 11
     test(u16string_view{u"123"});
     test(u32string_view{U"123"});
@@ -70,16 +76,25 @@ int main()
 #if TEST_STD_VER > 14
     {
     constexpr string_view       sv { "123", 3 };
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    constexpr u8string_view u8sv {u8"123", 3 };
+#endif
     constexpr u16string_view u16sv {u"123", 3 };
     constexpr u32string_view u32sv {U"123", 3 };
     constexpr wstring_view     wsv {L"123", 3 };
 
     static_assert (    *--sv.rend() ==    sv[0], "" );
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    static_assert (  *--u8sv.rend() ==  u8sv[0], "" );
+#endif
     static_assert ( *--u16sv.rend() == u16sv[0], "" );
     static_assert ( *--u32sv.rend() == u32sv[0], "" );
     static_assert (   *--wsv.rend() ==   wsv[0], "" );
 
     static_assert (    *--sv.crend() ==    sv[0], "" );
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    static_assert (  *--u8sv.crend() ==  u8sv[0], "" );
+#endif
     static_assert ( *--u16sv.crend() == u16sv[0], "" );
     static_assert ( *--u32sv.crend() == u32sv[0], "" );
     static_assert (   *--wsv.crend() ==   wsv[0], "" );

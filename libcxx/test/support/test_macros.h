@@ -87,11 +87,14 @@
 #endif
 #endif
 
-// Attempt to deduce GCC version
-#if defined(_LIBCPP_VERSION) && __has_include(<features.h>)
+// Attempt to deduce the GLIBC version
+#if (defined(__has_include) && __has_include(<features.h>)) || \
+    defined(__linux__)
 #include <features.h>
+#if defined(__GLIBC_PREREQ)
 #define TEST_HAS_GLIBC
 #define TEST_GLIBC_PREREQ(major, minor) __GLIBC_PREREQ(major, minor)
+#endif
 #endif
 
 #if TEST_STD_VER >= 11
@@ -134,12 +137,16 @@
 #    define TEST_HAS_C11_FEATURES
 #    define TEST_HAS_TIMESPEC_GET
 #  elif defined(__linux__)
-#    if !defined(_LIBCPP_HAS_MUSL_LIBC)
-#      if _LIBCPP_GLIBC_PREREQ(2, 17)
+// This block preserves the old behavior used by include/__config:
+// _LIBCPP_GLIBC_PREREQ would be defined to 0 if __GLIBC_PREREQ was not
+// available. The configuration here may be too vague though, as Bionic, uClibc,
+// newlib, etc may all support these features but need to be configured.
+#    if defined(TEST_GLIBC_PREREQ)
+#      if TEST_GLIBC_PREREQ(2, 17)
 #        define TEST_HAS_TIMESPEC_GET
 #        define TEST_HAS_C11_FEATURES
 #      endif
-#    else // defined(_LIBCPP_HAS_MUSL_LIBC)
+#    elif defined(_LIBCPP_HAS_MUSL_LIBC)
 #      define TEST_HAS_C11_FEATURES
 #      define TEST_HAS_TIMESPEC_GET
 #    endif
@@ -281,6 +288,16 @@ inline void DoNotOptimize(Tp const& value) {
 }
 #endif
 
+#if defined(__GNUC__)
+#define TEST_ALWAYS_INLINE __attribute__((always_inline))
+#define TEST_NOINLINE __attribute__((noinline))
+#elif defined(_MSC_VER)
+#define TEST_ALWAYS_INLINE __forceinline
+#define TEST_NOINLINE __declspec(noinline)
+#else
+#define TEST_ALWAYS_INLINE
+#define TEST_NOINLINE
+#endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop

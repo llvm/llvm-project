@@ -49,6 +49,9 @@
 #define _CRPC NASTY_MACRO
 #define _CPC  NASTY_MACRO
 
+// yvals.h on MINGW defines this macro
+#define _C2 NASTY_MACRO
+
 // Test that libc++ doesn't use names reserved by WIN32 API Macros.
 // NOTE: Obviously we can only define these on non-windows platforms.
 #ifndef _WIN32

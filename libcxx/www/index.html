@@ -22,8 +22,9 @@
 
   <div class="submenu">
     <label>Quick Links</label>
-    <a href="https://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a>
-    <a href="https://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits</a>
+    <a href="https://libcxxabi.llvm.org/">libc++abi</a>
+    <a href="https://lists.llvm.org/mailman/listinfo/libcxx-dev">libcxx-dev</a>
+    <a href="https://lists.llvm.org/mailman/listinfo/libcxx-commits">libcxx-commits</a>
     <a href="https://bugs.llvm.org/">Bug Reports</a>
     <a href="https://llvm.org/svn/llvm-project/libcxx/trunk/">Browse SVN</a>
     <a href="https://llvm.org/viewvc/llvm-project/libcxx/trunk/">Browse ViewVC</a>
@@ -35,8 +36,8 @@
   <h1>"libc++" C++ Standard Library</h1>
   <!--*********************************************************************-->
 
-  <p>libc++ is a new implementation of the C++ standard library, targeting
-     C++11.</p>
+  <p>libc++ is an implementation of the C++ standard library, targeting
+     C++11, C++14 and above.</p>
 
   <p>All of the code in libc++ is <a
      href="https://llvm.org/docs/DeveloperPolicy.html#license">dual licensed</a>
@@ -114,9 +115,8 @@
   <!--=====================================================================-->
 
   <p>
-    libc++ is known to work on the following platforms, using g++-4.2 and
-    clang (lack of C++11 language support disables some functionality). Note
-    that functionality provided by &lt;atomic&gt; is only functional with
+    libc++ is known to work on the following platforms, using g++ and
+    clang. Note that functionality provided by &lt;atomic&gt; is only functional with
     clang.
   </p>
 
@@ -126,6 +126,8 @@
     <li>FreeBSD 10+ i386</li>
     <li>FreeBSD 10+ x86_64</li>
     <li>FreeBSD 10+ ARM</li>
+    <li>Linux i386</li>
+    <li>Linux x86_64</li>
   </ul>
 
   <!--=====================================================================-->
@@ -198,7 +200,7 @@
   </p>
 
   <p>Send discussions to the
-    <a href="https://lists.llvm.org/mailman/listinfo/cfe-dev">clang mailing list</a>.</p>
+    <a href="https://lists.llvm.org/mailman/listinfo/libcxx-dev">libc++ mailing list</a>.</p>
 
   <!--=====================================================================-->
   <h2>Bug reports and patches</h2>
@@ -207,14 +209,14 @@
   <p>
   If you think you've found a bug in libc++, please report it using
   the <a href="https://bugs.llvm.org/">LLVM Bugzilla</a>. If you're not sure, you
-  can post a message to the <a href="https://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev</a>
-  mailing list or on IRC. Please include "libc++" in your subject.
+  can post a message to the <a href="https://lists.llvm.org/mailman/listinfo/libcxx-dev">libcxx-dev</a>
+  mailing list or on IRC.
   </p>
 
   <p>
   If you want to contribute a patch to libc++, the best place for that is
   <a href="https://llvm.org/docs/Phabricator.html">Phabricator</a>. Please
-  include [libc++] in the subject and add cfe-commits as a subscriber.
+  add libcxx-commits as a subscriber.
   </p>
 
   <!--=====================================================================-->

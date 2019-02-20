@@ -49,6 +49,6 @@ function(get_git_version var)
       set(GIT_VERSION "v0.0.0")
   endif()
 
-  message("-- git Version: ${GIT_VERSION}")
+  message(STATUS "git Version: ${GIT_VERSION}")
   set(${var} ${GIT_VERSION} PARENT_SCOPE)
 endfunction()

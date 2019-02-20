@@ -6,15 +6,15 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// UNSUPPORTED: c++98, c++03
 
 // <vector>
 
 // vector()
 //        noexcept(is_nothrow_default_constructible<allocator_type>::value);
 
-// This tests a conforming extension
+// This *was* a conforming extension, but it was adopted in N4258.
 
-// UNSUPPORTED: c++98, c++03
 
 #include <vector>
 #include <cassert>

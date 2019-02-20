@@ -187,6 +187,7 @@ template <class charT> class messages_byname;
 #include <streambuf>
 #include <iterator>
 #include <limits>
+#include <version>
 #ifndef __APPLE__
 #include <cstdarg>
 #endif
@@ -727,7 +728,7 @@ locale::id
 num_get<_CharT, _InputIterator>::id;
 
 template <class _Tp>
-_Tp
+_LIBCPP_HIDDEN _Tp
 __num_get_signed_integral(const char* __a, const char* __a_end,
                           ios_base::iostate& __err, int __base)
 {
@@ -762,7 +763,7 @@ __num_get_signed_integral(const char* __a, const char* __a_end,
 }
 
 template <class _Tp>
-_Tp
+_LIBCPP_HIDDEN _Tp
 __num_get_unsigned_integral(const char* __a, const char* __a_end,
                             ios_base::iostate& __err, int __base)
 {
@@ -2407,6 +2408,23 @@ private:
     void init(const ctype<_CharT>&);
     string_type __analyze(char __fmt, const ctype<_CharT>&);
 };
+
+#define _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(_CharT) \
+template <> _LIBCPP_FUNC_VIS time_base::dateorder __time_get_storage<_CharT>::__do_date_order() const; \
+template <> _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const char*); \
+template <> _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const string&); \
+template <> _LIBCPP_FUNC_VIS void __time_get_storage<_CharT>::init(const ctype<_CharT>&); \
+template <> _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::string_type __time_get_storage<_CharT>::__analyze(char, const ctype<_CharT>&); \
+extern template _LIBCPP_FUNC_VIS time_base::dateorder __time_get_storage<_CharT>::__do_date_order() const; \
+extern template _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const char*); \
+extern template _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::__time_get_storage(const string&); \
+extern template _LIBCPP_FUNC_VIS void __time_get_storage<_CharT>::init(const ctype<_CharT>&); \
+extern template _LIBCPP_FUNC_VIS __time_get_storage<_CharT>::string_type __time_get_storage<_CharT>::__analyze(char, const ctype<_CharT>&); \
+/**/
+
+_LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(char)
+_LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION(wchar_t)
+#undef _LIBCPP_TIME_GET_STORAGE_EXPLICIT_INSTANTIATION
 
 template <class _CharT, class _InputIterator = istreambuf_iterator<_CharT> >
 class _LIBCPP_TEMPLATE_VIS time_get_byname

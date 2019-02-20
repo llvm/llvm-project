@@ -228,6 +228,10 @@ module std [system] {
     header "atomic"
     export *
   }
+  module bit {
+    header "bit"
+    export *
+  }
   module bitset {
     header "bitset"
     export string
@@ -518,10 +522,6 @@ module std [system] {
     }
     module deque {
       header "experimental/deque"
-      export *
-    }
-    module dynarray {
-      header "experimental/dynarray"
       export *
     }
     module filesystem {

@@ -81,6 +81,7 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <cstddef>
 #include <cstdlib>
 #include <type_traits>
+#include <version>
 
 #if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
 #include <vcruntime_exception.h>
@@ -163,7 +164,7 @@ public:
 };
 
 template<class _Ep>
-exception_ptr
+_LIBCPP_INLINE_VISIBILITY exception_ptr
 make_exception_ptr(_Ep __e) _NOEXCEPT
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -222,7 +223,7 @@ _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void rethrow_exception(exception_ptr p);
 template <class _E> void *__GetExceptionInfo(_E);
 
 template<class _Ep>
-exception_ptr
+_LIBCPP_INLINE_VISIBILITY exception_ptr
 make_exception_ptr(_Ep __e) _NOEXCEPT
 {
   return __copy_exception_ptr(_VSTD::addressof(__e), __GetExceptionInfo(__e));

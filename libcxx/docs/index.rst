@@ -34,6 +34,7 @@ Getting Started with libc++
 .. toctree::
    :maxdepth: 2
 
+   ReleaseNotes
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx
@@ -79,8 +80,8 @@ reasons, but some of the major ones are:
 Platform and Compiler Support
 -----------------------------
 
-libc++ is known to work on the following platforms, using gcc-4.2 and
-clang  (lack of C++11 language support disables some functionality).
+libc++ is known to work on the following platforms, using gcc and
+clang.
 Note that functionality provided by ``<atomic>`` is only functional with clang
 and GCC.
 
@@ -104,7 +105,7 @@ C++ Dialect Support
 
 * C++11 - Complete
 * `C++14 - Complete <http://libcxx.llvm.org/cxx1y_status.html>`__
-* `C++1z - In Progress <http://libcxx.llvm.org/cxx1z_status.html>`__
+* `C++17 - In Progress <http://libcxx.llvm.org/cxx1z_status.html>`__
 * `Post C++14 Technical Specifications - In Progress <http://libcxx.llvm.org/ts1z_status.html>`__
 
 Notes and Known Issues
@@ -160,21 +161,18 @@ and `Getting started with LLVM <http://llvm.org/docs/GettingStarted.html>`__.
 
 If you think you've found a bug in libc++, please report it using
 the `LLVM Bugzilla`_. If you're not sure, you
-can post a message to the `cfe-dev mailing list`_ or on IRC.
-Please include "libc++" in your subject.
+can post a message to the `libcxx-dev mailing list`_ or on IRC.
 
 **Patches**
 
 If you want to contribute a patch to libc++, the best place for that is
-`Phabricator <http://llvm.org/docs/Phabricator.html>`_. Please include [libcxx] in the subject and
-add `cfe-commits` as a subscriber. Also make sure you are subscribed to the
-`cfe-commits mailing list <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_.
+`Phabricator <http://llvm.org/docs/Phabricator.html>`_. Please add `libcxx-commits` as a subscriber.
+Also make sure you are subscribed to the `libcxx-commits mailing list <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_.
 
 **Discussion and Questions**
 
 Send discussions and questions to the
-`cfe-dev mailing list <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
-Please include [libcxx] in the subject.
+`libcxx-dev mailing list <http://lists.llvm.org/mailman/listinfo/libcxx-dev>`_.
 
 
 
@@ -183,7 +181,7 @@ Quick Links
 * `LLVM Homepage <http://llvm.org/>`_
 * `libc++abi Homepage <http://libcxxabi.llvm.org/>`_
 * `LLVM Bugzilla <https://bugs.llvm.org/>`_
-* `cfe-commits Mailing List`_
-* `cfe-dev Mailing List`_
+* `libcxx-commits Mailing List`_
+* `libcxx-dev Mailing List`_
 * `Browse libc++ -- SVN <http://llvm.org/svn/llvm-project/libcxx/trunk/>`_
 * `Browse libc++ -- ViewVC <http://llvm.org/viewvc/llvm-project/libcxx/trunk/>`_

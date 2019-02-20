@@ -27,6 +27,7 @@
 #ifndef _LIBCPP_HAS_NO_THREADS
 #include <atomic>
 #endif
+#include <bit>
 #include <bitset>
 #include <cassert>
 #include <ccomplex>
@@ -144,7 +145,6 @@
 #include <experimental/coroutine>
 #endif
 #include <experimental/deque>
-#include <experimental/dynarray>
 #include <experimental/filesystem>
 #include <experimental/forward_list>
 #include <experimental/functional>

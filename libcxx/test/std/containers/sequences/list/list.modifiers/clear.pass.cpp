@@ -9,11 +9,12 @@
 
 // <list>
 
-// void clear();
+// void clear() noexcept;
 
 #include <list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -21,6 +22,7 @@ int main()
     {
     int a[] = {1, 2, 3};
     std::list<int> c(a, a+3);
+    ASSERT_NOEXCEPT(c.clear());
     c.clear();
     assert(c.empty());
     }
@@ -28,6 +30,7 @@ int main()
     {
     int a[] = {1, 2, 3};
     std::list<int, min_allocator<int>> c(a, a+3);
+    ASSERT_NOEXCEPT(c.clear());
     c.clear();
     assert(c.empty());
     }

@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: with_system_cxx_lib=macosx10.7
-
 // <istream>
 
 // basic_istream<charT,traits>& get(char_type& c);

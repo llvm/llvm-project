@@ -124,6 +124,7 @@ template <class Mutex>
 */
 
 #include <__config>
+#include <version>
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
@@ -143,7 +144,8 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-struct _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX __shared_mutex_base
+struct _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("shared_mutex"))
+__shared_mutex_base
 {
     mutex               __mut_;
     condition_variable  __gate1_;
@@ -160,14 +162,14 @@ struct _LIBCPP_TYPE_VIS _LIBCPP_AVAILABILITY_SHARED_MUTEX __shared_mutex_base
     __shared_mutex_base& operator=(const __shared_mutex_base&) = delete;
 
     // Exclusive ownership
-    void lock(); // blocking
-    bool try_lock();
-    void unlock();
+    void lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_capability()); // blocking
+    bool try_lock() _LIBCPP_THREAD_SAFETY_ANNOTATION(try_acquire_capability(true));
+    void unlock() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_capability());
 
     // Shared ownership
-    void lock_shared(); // blocking
-    bool try_lock_shared();
-    void unlock_shared();
+    void lock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(acquire_shared_capability()); // blocking
+    bool try_lock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(try_acquire_shared_capability(true));
+    void unlock_shared() _LIBCPP_THREAD_SAFETY_ANNOTATION(release_shared_capability());
 
 //     typedef implementation-defined native_handle_type; // See 30.2.3
 //     native_handle_type native_handle(); // See 30.2.3

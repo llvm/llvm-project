@@ -12,6 +12,7 @@
 // template<charT> T4 setfill(charT c);
 
 #include <iomanip>
+#include <ostream>
 #include <cassert>
 
 template <class CharT>

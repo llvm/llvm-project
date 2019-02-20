@@ -208,6 +208,7 @@ namespace std {
 #include <type_traits>
 #include <utility>
 #include <limits>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -218,7 +219,7 @@ _LIBCPP_PUSH_MACROS
 
 namespace std { // explicitly not using versioning namespace
 
-class _LIBCPP_EXCEPTION_ABI bad_variant_access : public exception {
+class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS bad_variant_access : public exception {
 public:
   virtual const char* what() const _NOEXCEPT;
 };
@@ -231,6 +232,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_NORETURN
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 void __throw_bad_variant_access() {
 #ifndef _LIBCPP_NO_EXCEPTIONS
         throw bad_variant_access();
@@ -1064,7 +1066,7 @@ public:
 #ifndef _LIBCPP_NO_EXCEPTIONS
       // EXTENSION: When the move construction of `__lhs` into `__rhs` throws
       // and `__tmp` is nothrow move constructible then we move `__tmp` back
-      // into `__rhs` and provide the strong exception safety guarentee.
+      // into `__rhs` and provide the strong exception safety guarantee.
       try {
         this->__generic_construct(*__rhs, _VSTD::move(*__lhs));
       } catch (...) {
@@ -1320,7 +1322,8 @@ constexpr bool holds_alternative(const variant<_Types...>& __v) noexcept {
 
 template <size_t _Ip, class _Vp>
 inline _LIBCPP_INLINE_VISIBILITY
-static constexpr auto&& __generic_get(_Vp&& __v) {
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
+constexpr auto&& __generic_get(_Vp&& __v) {
   using __variant_detail::__access::__variant;
   if (!__holds_alternative<_Ip>(__v)) {
     __throw_bad_variant_access();
@@ -1330,6 +1333,7 @@ static constexpr auto&& __generic_get(_Vp&& __v) {
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr variant_alternative_t<_Ip, variant<_Types...>>& get(
     variant<_Types...>& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1339,6 +1343,7 @@ constexpr variant_alternative_t<_Ip, variant<_Types...>>& get(
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr variant_alternative_t<_Ip, variant<_Types...>>&& get(
     variant<_Types...>&& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1348,6 +1353,7 @@ constexpr variant_alternative_t<_Ip, variant<_Types...>>&& get(
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const variant_alternative_t<_Ip, variant<_Types...>>& get(
     const variant<_Types...>& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1357,6 +1363,7 @@ constexpr const variant_alternative_t<_Ip, variant<_Types...>>& get(
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const variant_alternative_t<_Ip, variant<_Types...>>&& get(
     const variant<_Types...>&& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1366,6 +1373,7 @@ constexpr const variant_alternative_t<_Ip, variant<_Types...>>&& get(
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr _Tp& get(variant<_Types...>& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
@@ -1373,6 +1381,7 @@ constexpr _Tp& get(variant<_Types...>& __v) {
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr _Tp&& get(variant<_Types...>&& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(
@@ -1381,6 +1390,7 @@ constexpr _Tp&& get(variant<_Types...>&& __v) {
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const _Tp& get(const variant<_Types...>& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
@@ -1388,6 +1398,7 @@ constexpr const _Tp& get(const variant<_Types...>& __v) {
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const _Tp&& get(const variant<_Types...>&& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(
@@ -1437,6 +1448,16 @@ get_if(const variant<_Types...>* __v) noexcept {
   return _VSTD::get_if<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
 
+template <class _Operator>
+struct __convert_to_bool {
+  template <class _T1, class _T2>
+  _LIBCPP_INLINE_VISIBILITY constexpr bool operator()(_T1 && __t1, _T2&& __t2) const {
+    static_assert(std::is_convertible<decltype(_Operator{}(_VSTD::forward<_T1>(__t1), _VSTD::forward<_T2>(__t2))), bool>::value,
+        "the relational operator does not return a type which is implicitly convertible to bool");
+    return _Operator{}(_VSTD::forward<_T1>(__t1), _VSTD::forward<_T2>(__t2));
+  }
+};
+
 template <class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
 constexpr bool operator==(const variant<_Types...>& __lhs,
@@ -1444,7 +1465,7 @@ constexpr bool operator==(const variant<_Types...>& __lhs,
   using __variant_detail::__visitation::__variant;
   if (__lhs.index() != __rhs.index()) return false;
   if (__lhs.valueless_by_exception()) return true;
-  return __variant::__visit_value_at(__lhs.index(), equal_to<>{}, __lhs, __rhs);
+  return __variant::__visit_value_at(__lhs.index(), __convert_to_bool<equal_to<>>{}, __lhs, __rhs);
 }
 
 template <class... _Types>
@@ -1455,7 +1476,7 @@ constexpr bool operator!=(const variant<_Types...>& __lhs,
   if (__lhs.index() != __rhs.index()) return true;
   if (__lhs.valueless_by_exception()) return false;
   return __variant::__visit_value_at(
-      __lhs.index(), not_equal_to<>{}, __lhs, __rhs);
+      __lhs.index(), __convert_to_bool<not_equal_to<>>{}, __lhs, __rhs);
 }
 
 template <class... _Types>
@@ -1467,7 +1488,7 @@ constexpr bool operator<(const variant<_Types...>& __lhs,
   if (__lhs.valueless_by_exception()) return true;
   if (__lhs.index() < __rhs.index()) return true;
   if (__lhs.index() > __rhs.index()) return false;
-  return __variant::__visit_value_at(__lhs.index(), less<>{}, __lhs, __rhs);
+  return __variant::__visit_value_at(__lhs.index(), __convert_to_bool<less<>>{}, __lhs, __rhs);
 }
 
 template <class... _Types>
@@ -1479,7 +1500,7 @@ constexpr bool operator>(const variant<_Types...>& __lhs,
   if (__rhs.valueless_by_exception()) return true;
   if (__lhs.index() > __rhs.index()) return true;
   if (__lhs.index() < __rhs.index()) return false;
-  return __variant::__visit_value_at(__lhs.index(), greater<>{}, __lhs, __rhs);
+  return __variant::__visit_value_at(__lhs.index(), __convert_to_bool<greater<>>{}, __lhs, __rhs);
 }
 
 template <class... _Types>
@@ -1492,7 +1513,7 @@ constexpr bool operator<=(const variant<_Types...>& __lhs,
   if (__lhs.index() < __rhs.index()) return true;
   if (__lhs.index() > __rhs.index()) return false;
   return __variant::__visit_value_at(
-      __lhs.index(), less_equal<>{}, __lhs, __rhs);
+      __lhs.index(), __convert_to_bool<less_equal<>>{}, __lhs, __rhs);
 }
 
 template <class... _Types>
@@ -1505,11 +1526,12 @@ constexpr bool operator>=(const variant<_Types...>& __lhs,
   if (__lhs.index() > __rhs.index()) return true;
   if (__lhs.index() < __rhs.index()) return false;
   return __variant::__visit_value_at(
-      __lhs.index(), greater_equal<>{}, __lhs, __rhs);
+      __lhs.index(), __convert_to_bool<greater_equal<>>{}, __lhs, __rhs);
 }
 
 template <class _Visitor, class... _Vs>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
   bool __results[] = {__vs.valueless_by_exception()...};

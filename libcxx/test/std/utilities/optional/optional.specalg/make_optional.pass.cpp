@@ -10,6 +10,14 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
+// XFAIL: availability=macosx10.13
+// XFAIL: availability=macosx10.12
+// XFAIL: availability=macosx10.11
+// XFAIL: availability=macosx10.10
+// XFAIL: availability=macosx10.9
+// XFAIL: availability=macosx10.8
+// XFAIL: availability=macosx10.7
+
 // template <class T>
 //   constexpr optional<decay_t<T>> make_optional(T&& v);
 

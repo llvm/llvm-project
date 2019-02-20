@@ -55,7 +55,7 @@ __throw_bad_alloc()
 }  // std
 
 #if !defined(__GLIBCXX__) &&                                                   \
-    (!defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)) &&      \
+    !defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME) &&      \
     !defined(_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS)
 
 // Implement all new and delete operators as weak definitions
@@ -135,8 +135,7 @@ _LIBCPP_WEAK
 void
 operator delete(void* ptr) _NOEXCEPT
 {
-    if (ptr)
-        ::free(ptr);
+    ::free(ptr);
 }
 
 _LIBCPP_WEAK
@@ -174,7 +173,7 @@ operator delete[] (void* ptr, size_t) _NOEXCEPT
     ::operator delete[](ptr);
 }
 
-#if !defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION)
+#if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION)
 
 _LIBCPP_WEAK
 void *
@@ -257,11 +256,10 @@ _LIBCPP_WEAK
 void
 operator delete(void* ptr, std::align_val_t) _NOEXCEPT
 {
-    if (ptr)
 #if defined(_LIBCPP_MSVCRT_LIKE)
-        ::_aligned_free(ptr);
+    ::_aligned_free(ptr);
 #else
-        ::free(ptr);
+    ::free(ptr);
 #endif
 }
 
@@ -300,5 +298,5 @@ operator delete[] (void* ptr, size_t, std::align_val_t alignment) _NOEXCEPT
     ::operator delete[](ptr, alignment);
 }
 
-#endif // !_LIBCPP_HAS_NO_ALIGNED_ALLOCATION
+#endif // !_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
 #endif // !__GLIBCXX__ && (!_LIBCPP_ABI_MICROSOFT || _LIBCPP_NO_VCRUNTIME) && !_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS

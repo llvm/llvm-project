@@ -70,7 +70,7 @@ typedef pthread_t __libcpp_thread_id;
 
 typedef pthread_t __libcpp_thread_t;
 
-// Thrad Local Storage
+// Thread Local Storage
 typedef pthread_key_t __libcpp_tls_key;
 
 #define _LIBCPP_TLS_DESTRUCTOR_CC

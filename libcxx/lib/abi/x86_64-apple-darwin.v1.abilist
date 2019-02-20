@@ -8,8 +8,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt13bad_exception4whatEv'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNKSt13runtime_error4whatEv'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt13runtime_error4whatEv'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNKSt16bad_array_length4whatEv'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNKSt16bad_array_length4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt16nested_exception14rethrow_nestedEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt18bad_variant_access4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt19bad_optional_access4whatEv'}
@@ -527,16 +525,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZNSt15underflow_errorD1Ev'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNSt15underflow_errorD2Ev'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNSt15underflow_errorD2Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthC1Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthC1Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthC2Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthC2Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthD0Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthD0Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthD1Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthD1Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthD2Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthD2Ev'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNSt16invalid_argumentD0Ev'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNSt16invalid_argumentD0Ev'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNSt16invalid_argumentD1Ev'}
@@ -1197,13 +1185,11 @@
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__119__shared_weak_countD0Ev'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__119__shared_weak_countD1Ev'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__119__shared_weak_countD2Ev'}
-{'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__119__start_std_streamsE', 'size': 0}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__119__thread_local_dataEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__119declare_no_pointersEPcm'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__119piecewise_constructE', 'size': 0}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__120__get_collation_nameEPKc'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__120__throw_system_errorEiPKc'}
-{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__121__throw_runtime_errorEPKc'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__121__undeclare_reachableEPv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__121recursive_timed_mutex4lockEv'}
@@ -1282,6 +1268,8 @@
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__15wcerrE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__15wclogE', 'size': 0}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZNSt3__15wcoutE', 'size': 0}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__16__itoa8__u32toaEjPc'}
+{'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__16__itoa8__u64toaEyPc'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__16__sortIRNS_6__lessIaaEEPaEEvT0_S5_T_'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__16__sortIRNS_6__lessIccEEPcEEvT0_S5_T_'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNSt3__16__sortIRNS_6__lessIddEEPdEEvT0_S5_T_'}
@@ -1804,8 +1792,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt14overflow_error'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTISt15underflow_error'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt15underflow_error'}
-{'type': 'U', 'is_defined': False, 'name': '__ZTISt16bad_array_length'}
-{'type': 'I', 'is_defined': True, 'name': '__ZTISt16bad_array_length'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTISt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTISt16nested_exception', 'size': 0}
@@ -2059,8 +2045,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt14overflow_error'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTSSt15underflow_error'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt15underflow_error'}
-{'type': 'U', 'is_defined': False, 'name': '__ZTSSt16bad_array_length'}
-{'type': 'I', 'is_defined': True, 'name': '__ZTSSt16bad_array_length'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTSSt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTSSt16nested_exception', 'size': 0}
@@ -2251,8 +2235,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt14overflow_error'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTVSt15underflow_error'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt15underflow_error'}
-{'type': 'U', 'is_defined': False, 'name': '__ZTVSt16bad_array_length'}
-{'type': 'I', 'is_defined': True, 'name': '__ZTVSt16bad_array_length'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTVSt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVSt16nested_exception', 'size': 0}

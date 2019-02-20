@@ -418,6 +418,7 @@ template <class E> constexpr const E* data(initializer_list<E> il) noexcept;    
 #include <type_traits>
 #include <cstddef>
 #include <initializer_list>
+#include <version>
 #ifdef __APPLE__
 #include <Availability.h>
 #endif
@@ -435,6 +436,23 @@ struct _LIBCPP_TEMPLATE_VIS output_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS forward_iterator_tag       : public input_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS bidirectional_iterator_tag : public forward_iterator_tag {};
 struct _LIBCPP_TEMPLATE_VIS random_access_iterator_tag : public bidirectional_iterator_tag {};
+
+template <class _Tp>
+struct __has_iterator_typedefs
+{
+private:
+    struct __two {char __lx; char __lxx;};
+    template <class _Up> static __two __test(...);
+    template <class _Up> static char __test(typename std::__void_t<typename _Up::iterator_category>::type* = 0,
+    										typename std::__void_t<typename _Up::difference_type>::type* = 0,
+    										typename std::__void_t<typename _Up::value_type>::type* = 0,
+    										typename std::__void_t<typename _Up::reference>::type* = 0,
+    										typename std::__void_t<typename _Up::pointer>::type* = 0
+    										);
+public:
+    static const bool value = sizeof(__test<_Tp>(0,0,0,0,0)) == 1;
+};
+
 
 template <class _Tp>
 struct __has_iterator_category
@@ -478,7 +496,7 @@ struct __iterator_traits<_Iter, true>
 
 template <class _Iter>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits
-    : __iterator_traits<_Iter, __has_iterator_category<_Iter>::value> {};
+    : __iterator_traits<_Iter, __has_iterator_typedefs<_Iter>::value> {};
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*>

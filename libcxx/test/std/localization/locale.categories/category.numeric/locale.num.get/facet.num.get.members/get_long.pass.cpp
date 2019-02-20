@@ -17,6 +17,7 @@
 #include <locale>
 #include <ios>
 #include <cassert>
+#include <limits>
 #include <streambuf>
 #include "test_iterators.h"
 
@@ -46,6 +47,7 @@ int main()
     const my_facet f(1);
     std::ios ios(0);
     long v = -1;
+    const std::ios_base::fmtflags zf = static_cast<std::ios_base::fmtflags>(0);
     {
         const char str[] = "123";
         assert((ios.flags() & ios.basefield) == ios.dec);
@@ -110,7 +112,7 @@ int main()
     }
     {
         const char str[] = "123";
-        ios.setf(0, ios.basefield);
+        ios.setf(zf, ios.basefield);
         std::ios_base::iostate err = ios.goodbit;
         input_iterator<const char*> iter =
             f.get(input_iterator<const char*>(str),
@@ -122,7 +124,7 @@ int main()
     }
     {
         const char str[] = "0x123";
-        ios.setf(0, ios.basefield);
+        ios.setf(zf, ios.basefield);
         std::ios_base::iostate err = ios.goodbit;
         input_iterator<const char*> iter =
             f.get(input_iterator<const char*>(str),
@@ -134,7 +136,7 @@ int main()
     }
     {
         const char str[] = "0123";
-        ios.setf(0, ios.basefield);
+        ios.setf(zf, ios.basefield);
         std::ios_base::iostate err = ios.goodbit;
         input_iterator<const char*> iter =
             f.get(input_iterator<const char*>(str),
@@ -146,7 +148,7 @@ int main()
     }
     {
         const char str[] = "2-";
-        ios.setf(0, ios.basefield);
+        ios.setf(zf, ios.basefield);
         std::ios_base::iostate err = ios.goodbit;
         input_iterator<const char*> iter =
             f.get(input_iterator<const char*>(str),

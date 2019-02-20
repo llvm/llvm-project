@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -48,7 +48,7 @@ int main ()
     static_assert(!std::span<const int>(iArr1, 3).empty(), "");
     static_assert(!std::span<const int>(iArr1, 4).empty(), "");
     static_assert(!std::span<const int>(iArr1, 5).empty(), "");
-    
+
     assert( (std::span<int>().empty()           ));
     assert( (std::span<long>().empty()          ));
     assert( (std::span<double>().empty()        ));

@@ -12,6 +12,7 @@
 #include <bitset>
 #include <cstdlib>
 #include <cassert>
+#include <stdexcept>
 
 #include "test_macros.h"
 

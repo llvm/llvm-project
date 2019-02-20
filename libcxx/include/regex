@@ -769,6 +769,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <memory>
 #include <vector>
 #include <deque>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -989,6 +990,10 @@ public:
 
 #if defined(__mips__) && defined(__GLIBC__)
     static const char_class_type __regex_word = static_cast<char_class_type>(_ISbit(15));
+#elif defined(__NetBSD__)
+    // NetBSD defines classes up to 0x2000
+    // see sys/ctype_bits.h, _CTYPE_Q
+    static const char_class_type __regex_word = 0x8000;
 #else
     static const char_class_type __regex_word = 0x80;
 #endif
@@ -1351,9 +1356,9 @@ public:
     virtual ~__node() {}
 
     _LIBCPP_INLINE_VISIBILITY
-    virtual void __exec(__state&) const {};
+    virtual void __exec(__state&) const {}
     _LIBCPP_INLINE_VISIBILITY
-    virtual void __exec_split(bool, __state&) const {};
+    virtual void __exec_split(bool, __state&) const {}
 };
 
 // __end_state

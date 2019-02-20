@@ -19,6 +19,7 @@
 // wstring to_wstring(double val);
 // wstring to_wstring(long double val);
 
+#include <limits>
 #include <string>
 #include <cassert>
 #include <sstream>

@@ -7,11 +7,13 @@ import subprocess
 import sys
 
 # Input file type enumeration
-IT_Invalid    = 0
-IT_JSON       = 1
+IT_Invalid = 0
+IT_JSON = 1
 IT_Executable = 2
 
 _num_magic_bytes = 2 if sys.platform.startswith('win') else 4
+
+
 def is_executable_file(filename):
     """
     Return 'True' if 'filename' names a valid file which is likely
@@ -46,7 +48,7 @@ def is_json_file(filename):
         with open(filename, 'r') as f:
             json.load(f)
         return True
-    except:
+    except BaseException:
         pass
     return False
 
@@ -84,6 +86,7 @@ def check_input_file(filename):
         sys.exit(1)
     return ftype
 
+
 def find_benchmark_flag(prefix, benchmark_flags):
     """
     Search the specified list of flags for a flag matching `<prefix><arg>` and
@@ -97,6 +100,7 @@ def find_benchmark_flag(prefix, benchmark_flags):
             result = f[len(prefix):]
     return result
 
+
 def remove_benchmark_flags(prefix, benchmark_flags):
     """
     Return a new list containing the specified benchmark_flags except those
@@ -104,6 +108,7 @@ def remove_benchmark_flags(prefix, benchmark_flags):
     """
     assert prefix.startswith('--') and prefix.endswith('=')
     return [f for f in benchmark_flags if not f.startswith(prefix)]
+
 
 def load_benchmark_results(fname):
     """
@@ -129,7 +134,7 @@ def run_benchmark(exe_name, benchmark_flags):
         thandle, output_name = tempfile.mkstemp()
         os.close(thandle)
         benchmark_flags = list(benchmark_flags) + \
-                          ['--benchmark_out=%s' % output_name]
+            ['--benchmark_out=%s' % output_name]
 
     cmd = [exe_name] + benchmark_flags
     print("RUNNING: %s" % ' '.join(cmd))
@@ -156,4 +161,4 @@ def run_or_load_benchmark(filename, benchmark_flags):
     elif ftype == IT_Executable:
         return run_benchmark(filename, benchmark_flags)
     else:
-        assert False # This branch is unreachable
+        assert False  # This branch is unreachable

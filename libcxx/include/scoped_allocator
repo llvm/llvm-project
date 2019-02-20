@@ -108,6 +108,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 
 #include <__config>
 #include <memory>
+#include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header

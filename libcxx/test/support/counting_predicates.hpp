@@ -7,9 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __COUNTING_PREDICATES_H
-#define __COUNTING_PREDICATES_H
+#ifndef TEST_SUPPORT_COUNTING_PREDICATES_H
+#define TEST_SUPPORT_COUNTING_PREDICATES_H
 
+#include <cstddef>
 
 template <typename Predicate, typename Arg>
 struct unary_counting_predicate {
@@ -27,7 +28,7 @@ public:
 private:
     Predicate p_;
     mutable size_t count_;
-    };
+};
 
 
 template <typename Predicate, typename Arg1, typename Arg2=Arg1>
@@ -47,6 +48,6 @@ public:
 private:
     Predicate p_;
     mutable size_t count_;
-    };
+};
 
-#endif // __COUNTING_PREDICATES_H
+#endif // TEST_SUPPORT_COUNTING_PREDICATES_H

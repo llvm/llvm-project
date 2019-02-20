@@ -9,7 +9,7 @@
 
 // <chrono>
 
-// duration_values::zero
+// duration_values::zero  // noexcept after C++17
 
 #include <chrono>
 #include <cassert>
@@ -24,5 +24,12 @@ int main()
 #if TEST_STD_VER >= 11
     static_assert(std::chrono::duration_values<int>::zero() == 0, "");
     static_assert(std::chrono::duration_values<Rep>::zero() == 0, "");
+#endif
+
+    LIBCPP_ASSERT_NOEXCEPT(std::chrono::duration_values<int>::zero());
+    LIBCPP_ASSERT_NOEXCEPT(std::chrono::duration_values<Rep>::zero());
+#if TEST_STD_VER > 17
+    ASSERT_NOEXCEPT(std::chrono::duration_values<int>::zero());
+    ASSERT_NOEXCEPT(std::chrono::duration_values<Rep>::zero());
 #endif
 }
