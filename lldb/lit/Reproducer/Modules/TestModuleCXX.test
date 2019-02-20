@@ -1,4 +1,4 @@
-# REQUIRES: nowindows
+# UNSUPPORTED: system-windows
 
 # Start fresh.
 # RUN: rm -rf %t.root

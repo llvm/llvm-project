@@ -933,6 +933,14 @@ void addSanitizersAtO0(ModulePassManager &MPM, const Triple &TargetTriple,
         /*CompileKernel=*/false, Recover, ModuleUseAfterScope,
         CodeGenOpts.SanitizeAddressUseOdrIndicator));
   }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(MemorySanitizerPass({})));
+  }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
+  }
 }
 
 /// A clean version of `EmitAssembly` that uses the new pass manager.
