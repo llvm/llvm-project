@@ -16,14 +16,13 @@
 using namespace clang;
 using namespace clang::index;
 
-void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles,
-                                       unsigned Offset,
+void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles, unsigned Offset,
                                        const Decl *D,
                                        ArrayRef<SymbolRelation> Relations) {
   assert(D->isCanonicalDecl() &&
          "Occurrences should be associated with their canonical decl");
 
-  auto IsNextOccurence = [&]()->bool {
+  auto IsNextOccurence = [&]() -> bool {
     if (Decls.empty())
       return true;
     auto &Last = Decls.back();
