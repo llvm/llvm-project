@@ -44,13 +44,15 @@ public:
     llvm::sys::TimePoint<> ModTime;
   };
 
-  typedef std::function<void(ArrayRef<Event> Events, bool isInitial)> EventReceiver;
+  typedef std::function<void(ArrayRef<Event> Events, bool isInitial)>
+      EventReceiver;
 
   ~DirectoryWatcher();
 
-  static std::unique_ptr<DirectoryWatcher>
-    create(StringRef Path, EventReceiver Receiver, bool waitInitialSync,
-           std::string &Error);
+  static std::unique_ptr<DirectoryWatcher> create(StringRef Path,
+                                                  EventReceiver Receiver,
+                                                  bool waitInitialSync,
+                                                  std::string &Error);
 
 private:
   struct Implementation;
@@ -58,8 +60,8 @@ private:
 
   DirectoryWatcher();
 
-  DirectoryWatcher(const DirectoryWatcher&) = delete;
-  DirectoryWatcher &operator =(const DirectoryWatcher&) = delete;
+  DirectoryWatcher(const DirectoryWatcher &) = delete;
+  DirectoryWatcher &operator=(const DirectoryWatcher &) = delete;
 };
 
 } // namespace clang

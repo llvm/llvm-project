@@ -24,6 +24,7 @@ namespace {
 
 class EventCollection {
   SmallVector<DirectoryWatcher::Event, 6> Events;
+
 public:
   EventCollection() = default;
   explicit EventCollection(ArrayRef<DirectoryWatcher::Event> events) {
@@ -49,11 +50,12 @@ public:
       StringRef fname = filenames[i];
       DirectoryWatcher::EventKind kind = kinds[i];
       file_status stat = stats[i];
-      auto it = std::find_if(evts.begin(), evts.end(), [&](const DirectoryWatcher::Event &evt)->bool {
-        return path::filename(evt.Filename) == fname;
-      });
+      auto it = std::find_if(evts.begin(), evts.end(),
+                             [&](const DirectoryWatcher::Event &evt) -> bool {
+                               return path::filename(evt.Filename) == fname;
+                             });
       if (it == evts.end()) {
-        hadError = err(Twine("expected filename '"+fname+"' not found"));
+        hadError = err(Twine("expected filename '" + fname + "' not found"));
         continue;
       }
       if (it->Kind != kind) {
@@ -63,25 +65,28 @@ public:
       }
       if (it->Kind != DirectoryWatcher::EventKind::Removed &&
           it->ModTime != stat.getLastModificationTime())
-        hadError = err(Twine("filename '"+fname+"' has different mod time"));
+        hadError =
+            err(Twine("filename '" + fname + "' has different mod time"));
       evts.erase(it);
     }
     for (const auto &evt : evts) {
-      hadError = err(Twine("unexpected filename '"+path::filename(evt.Filename)+"' found"));
+      hadError = err(Twine("unexpected filename '" +
+                           path::filename(evt.Filename) + "' found"));
     }
     return !hadError;
   }
 
-  bool hasAdded(ArrayRef<StringRef> filenames, ArrayRef<file_status> stats) const {
+  bool hasAdded(ArrayRef<StringRef> filenames,
+                ArrayRef<file_status> stats) const {
     std::vector<DirectoryWatcher::EventKind> kinds{
-      filenames.size(), DirectoryWatcher::EventKind::Added };
+        filenames.size(), DirectoryWatcher::EventKind::Added};
     return hasEvents(filenames, kinds, stats);
   }
 
   bool hasRemoved(ArrayRef<StringRef> filenames) const {
     std::vector<DirectoryWatcher::EventKind> kinds{
-      filenames.size(), DirectoryWatcher::EventKind::Removed };
-    std::vector<file_status> stats{ filenames.size(), file_status{} };
+        filenames.size(), DirectoryWatcher::EventKind::Removed};
+    std::vector<file_status> stats{filenames.size(), file_status{}};
     return hasEvents(filenames, kinds, stats);
   }
 
@@ -98,7 +103,8 @@ struct EventOccurrence {
   bool IsInitial;
 };
 
-class DirectoryWatcherTest: public std::enable_shared_from_this<DirectoryWatcherTest> {
+class DirectoryWatcherTest
+    : public std::enable_shared_from_this<DirectoryWatcherTest> {
   std::string WatchedDir;
   std::string TempDir;
   std::unique_ptr<DirectoryWatcher> DirWatcher;
@@ -125,15 +131,14 @@ public:
   }
 
 public:
-  StringRef getWatchedDir() const {
-    return WatchedDir;
-  }
+  StringRef getWatchedDir() const { return WatchedDir; }
 
   void addFile(StringRef filename, file_status &stat) {
     SmallString<128> pathBuf;
     pathBuf = TempDir;
     path::append(pathBuf, filename);
-    Expected<file_t> ft = openNativeFileForWrite(pathBuf, CD_CreateNew, OF_None);
+    Expected<file_t> ft =
+        openNativeFileForWrite(pathBuf, CD_CreateNew, OF_None);
     ASSERT_TRUE((bool)ft);
     closeFile(*ft);
 
@@ -147,7 +152,8 @@ public:
     ASSERT_FALSE(EC);
   }
 
-  void addFiles(ArrayRef<StringRef> filenames, std::vector<file_status> &stats) {
+  void addFiles(ArrayRef<StringRef> filenames,
+                std::vector<file_status> &stats) {
     for (auto fname : filenames) {
       file_status stat;
       addFile(fname, stat);
@@ -177,7 +183,8 @@ public:
   /// \returns true for error.
   bool startWatching(bool waitInitialSync) {
     std::weak_ptr<DirectoryWatcherTest> weakThis = shared_from_this();
-    auto receiver = [weakThis](ArrayRef<DirectoryWatcher::Event> events, bool isInitial) {
+    auto receiver = [weakThis](ArrayRef<DirectoryWatcher::Event> events,
+                               bool isInitial) {
       if (auto this_ = weakThis.lock())
         this_->onEvents(events, isInitial);
     };
@@ -187,15 +194,14 @@ public:
     return DirWatcher == nullptr;
   }
 
-  void stopWatching() {
-    DirWatcher.reset();
-  }
+  void stopWatching() { DirWatcher.reset(); }
 
   /// \returns None if the timeout is reached before getting an event.
   Optional<EventOccurrence> getNextEvent(unsigned timeout_seconds = 5) {
     std::unique_lock<std::mutex> lck(Mutex);
-    auto pred = [&]()->bool { return !EvtOccurs.empty(); };
-    bool gotEvent = Condition.wait_for(lck, std::chrono::seconds(timeout_seconds), pred);
+    auto pred = [&]() -> bool { return !EvtOccurs.empty(); };
+    bool gotEvent =
+        Condition.wait_for(lck, std::chrono::seconds(timeout_seconds), pred);
     if (!gotEvent)
       return None;
 
@@ -220,7 +226,7 @@ private:
   }
 };
 
-}
+} // namespace
 
 TEST(DirectoryWatcherTest, initialScan) {
   auto t = std::make_shared<DirectoryWatcherTest>();
@@ -300,18 +306,17 @@ TEST(DirectoryWatcherTest, fileEvents) {
       coll.append(evt->Events);
     }
 
-    EXPECT_TRUE(coll.hasEvents(
-      std::vector<StringRef>{"a", "b", "c"},
-      std::vector<DirectoryWatcher::EventKind>{
-        DirectoryWatcher::EventKind::Added,
-        DirectoryWatcher::EventKind::Removed,
-        DirectoryWatcher::EventKind::Added,
-      },
-      std::vector<file_status>{
-        stats[0],
-        file_status{},
-        stats[1],
-      }));
+    EXPECT_TRUE(coll.hasEvents(std::vector<StringRef>{"a", "b", "c"},
+                               std::vector<DirectoryWatcher::EventKind>{
+                                   DirectoryWatcher::EventKind::Added,
+                                   DirectoryWatcher::EventKind::Removed,
+                                   DirectoryWatcher::EventKind::Added,
+                               },
+                               std::vector<file_status>{
+                                   stats[0],
+                                   file_status{},
+                                   stats[1],
+                               }));
   }
   {
     std::vector<StringRef> fnames = {"a", "c"};
