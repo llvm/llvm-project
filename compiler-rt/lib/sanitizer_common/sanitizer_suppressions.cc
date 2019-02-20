@@ -104,7 +104,7 @@ bool SuppressionContext::Match(const char *str, const char *type,
 }
 
 static const char *StripPrefix(const char *str, const char *prefix) {
-  while (str && *str == *prefix) {
+  while (*str && *str == *prefix) {
     str++;
     prefix++;
   }

@@ -1,4 +1,4 @@
-# REQUIRES: nowindows
+# REQUIRES: system-darwin
 
 # Start fresh.
 # RUN: rm -rf %t.root

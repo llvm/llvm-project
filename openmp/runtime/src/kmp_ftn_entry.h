@@ -1371,6 +1371,15 @@ int FTN_STDCALL FTN_PAUSE_RESOURCE_ALL(kmp_pause_status_t kind) {
 #endif
 }
 
+// Returns the maximum number of nesting levels supported by implementation
+int FTN_STDCALL FTN_GET_SUPPORTED_ACTIVE_LEVELS(void) {
+#ifdef KMP_STUB
+  return 1;
+#else
+  return KMP_MAX_ACTIVE_LEVELS_LIMIT;
+#endif
+}
+
 #endif // OMP_50_ENABLED
 
 // GCC compatibility (versioned symbols)
@@ -1476,6 +1485,7 @@ KMP_VERSION_SYMBOL(FTN_GET_PARTITION_PLACE_NUMS, 45, "OMP_4.5");
 // KMP_VERSION_SYMBOL(FTN_GET_DEVICE_NUM, 50, "OMP_5.0");
 // KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE, 50, "OMP_5.0");
 // KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE_ALL, 50, "OMP_5.0");
+// KMP_VERSION_SYMBOL(FTN_GET_SUPPORTED_ACTIVE_LEVELS, 50, "OMP_5.0");
 #endif
 
 #endif // KMP_USE_VERSION_SYMBOLS

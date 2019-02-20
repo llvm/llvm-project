@@ -146,9 +146,9 @@ Error ExecuteStage::execute(InstRef &IR) {
   // BufferSize=0 as reserved. Resources with a buffer size of zero will only
   // be released after MCIS is issued, and all the ResourceCycles for those
   // units have been consumed.
-  HWS.dispatch(IR);
+  bool IsReadyInstruction = HWS.dispatch(IR);
   notifyReservedOrReleasedBuffers(IR, /* Reserved */ true);
-  if (!HWS.isReady(IR))
+  if (!IsReadyInstruction)
     return ErrorSuccess();
 
   // If we did not return early, then the scheduler is ready for execution.

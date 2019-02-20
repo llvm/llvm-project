@@ -15,7 +15,9 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_CLUSTERING_H
 
 #include "BenchmarkResult.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
+#include <limits>
 #include <vector>
 
 namespace llvm {
@@ -27,21 +29,28 @@ public:
   // for more explanations on the algorithm.
   static llvm::Expected<InstructionBenchmarkClustering>
   create(const std::vector<InstructionBenchmark> &Points, size_t MinPts,
-         double Epsilon);
+         double Epsilon, llvm::Optional<unsigned> NumOpcodes = llvm::None);
 
   class ClusterId {
   public:
     static ClusterId noise() { return ClusterId(kNoise); }
     static ClusterId error() { return ClusterId(kError); }
     static ClusterId makeValid(size_t Id) { return ClusterId(Id); }
-    ClusterId() : Id_(kUndef) {}
+    static ClusterId makeValidUnstable(size_t Id) {
+      return ClusterId(Id, /*IsUnstable=*/true);
+    }
+
+    ClusterId() : Id_(kUndef), IsUnstable_(false) {}
+
+    // Compare id's, ignoring the 'unstability' bit.
     bool operator==(const ClusterId &O) const { return Id_ == O.Id_; }
     bool operator<(const ClusterId &O) const { return Id_ < O.Id_; }
 
     bool isValid() const { return Id_ <= kMaxValid; }
-    bool isUndef() const { return Id_ == kUndef; }
+    bool isUnstable() const { return IsUnstable_; }
     bool isNoise() const { return Id_ == kNoise; }
     bool isError() const { return Id_ == kError; }
+    bool isUndef() const { return Id_ == kUndef; }
 
     // Precondition: isValid().
     size_t getId() const {
@@ -50,14 +59,19 @@ public:
     }
 
   private:
-    explicit ClusterId(size_t Id) : Id_(Id) {}
+    ClusterId(size_t Id, bool IsUnstable = false)
+        : Id_(Id), IsUnstable_(IsUnstable) {}
+
     static constexpr const size_t kMaxValid =
-        std::numeric_limits<size_t>::max() - 4;
+        (std::numeric_limits<size_t>::max() >> 1) - 4;
     static constexpr const size_t kNoise = kMaxValid + 1;
     static constexpr const size_t kError = kMaxValid + 2;
     static constexpr const size_t kUndef = kMaxValid + 3;
-    size_t Id_;
+
+    size_t Id_ : (std::numeric_limits<size_t>::digits - 1);
+    size_t IsUnstable_ : 1;
   };
+  static_assert(sizeof(ClusterId) == sizeof(size_t), "should be a bit field.");
 
   struct Cluster {
     Cluster() = delete;
@@ -101,8 +115,10 @@ public:
 private:
   InstructionBenchmarkClustering(
       const std::vector<InstructionBenchmark> &Points, double EpsilonSquared);
+
   llvm::Error validateAndSetup();
   void dbScan(size_t MinPts);
+  void stabilize(unsigned NumOpcodes);
   void rangeQuery(size_t Q, std::vector<size_t> &Scratchpad) const;
 
   const std::vector<InstructionBenchmark> &Points_;

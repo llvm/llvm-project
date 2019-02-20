@@ -139,6 +139,7 @@ public:
     using irsymtab::Symbol::getCOFFWeakExternalFallback;
     using irsymtab::Symbol::getSectionName;
     using irsymtab::Symbol::isExecutable;
+    using irsymtab::Symbol::isUsed;
   };
 
   /// A range over the symbols in this InputFile.

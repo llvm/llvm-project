@@ -63,6 +63,11 @@ RUN: llvm-cov gcov -lp -gcno test_paths.gcno -gcda test_paths.gcda srcdir/../tes
 RUN: diff -aub test_paths.cpp.gcov srcdir#^#test_paths.cpp##srcdir#nested_dir#^#test.cpp.gcov
 RUN: diff -aub test_paths.h.gcov srcdir#^#test_paths.cpp##srcdir#nested_dir#^#test.h.gcov
 
+# Hash pathnames.
+RUN: llvm-cov gcov -x -gcno test_paths.gcno -gcda test_paths.gcda srcdir/../test_paths.cpp | diff -u test_hash.output -
+RUN: diff -aub test_paths.cpp.gcov test.cpp##a806e5b3093cd6f683da88c0da150daf.gcov
+RUN: diff -aub test_paths.h.gcov test.h##0cbee7e2421fa4517420ac4f935620ca.gcov
+
 # Function summaries. This changes stdout, but not the gcov files.
 RUN: llvm-cov gcov test.c -f | diff -u test_-f.output -
 RUN: diff -aub test_no_options.cpp.gcov test.cpp.gcov

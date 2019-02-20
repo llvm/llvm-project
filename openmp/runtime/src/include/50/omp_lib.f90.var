@@ -317,6 +317,11 @@
             integer (kind=omp_integer_kind) omp_pause_resource_all
           end function omp_pause_resource_all
 
+          function omp_get_supported_active_levels() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_supported_active_levels
+          end function omp_get_supported_active_levels
+
           subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock

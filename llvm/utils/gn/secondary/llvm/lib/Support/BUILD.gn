@@ -98,6 +98,7 @@ static_library("Support") {
     "SHA1.cpp",
     "ScaledNumber.cpp",
     "ScopedPrinter.cpp",
+    "Signposts.cpp",
     "SmallPtrSet.cpp",
     "SmallVector.cpp",
     "SourceMgr.cpp",

@@ -11,6 +11,8 @@ def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
 def dynamicbase: F<"dynamicbase">, HelpText<"Enable ASLR">;
 def entry: S<"entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
+def exclude_all_symbols: F<"exclude-all-symbols">,
+    HelpText<"Don't automatically export any symbols">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
 def gc_sections: F<"gc-sections">, HelpText<"Remove unused sections">;

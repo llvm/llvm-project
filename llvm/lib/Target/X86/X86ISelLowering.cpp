@@ -10483,45 +10483,24 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
     V2 = getZeroVector(VT, Subtarget, DAG, DL);
 
   switch (VT.SimpleTy) {
-  case MVT::v2f64:
-  case MVT::v4f32:
-  case MVT::v4f64:
-  case MVT::v8f32:
-    return DAG.getNode(X86ISD::BLENDI, DL, VT, V1, V2,
-                       DAG.getConstant(BlendMask, DL, MVT::i8));
   case MVT::v4i64:
   case MVT::v8i32:
     assert(Subtarget.hasAVX2() && "256-bit integer blends require AVX2!");
     LLVM_FALLTHROUGH;
-  case MVT::v2i64:
-  case MVT::v4i32:
-    // If we have AVX2 it is faster to use VPBLENDD when the shuffle fits into
-    // that instruction.
-    if (Subtarget.hasAVX2()) {
-      // Scale the blend by the number of 32-bit dwords per element.
-      int Scale =  VT.getScalarSizeInBits() / 32;
-      BlendMask = scaleVectorShuffleBlendMask(BlendMask, Mask.size(), Scale);
-      MVT BlendVT = VT.getSizeInBits() > 128 ? MVT::v8i32 : MVT::v4i32;
-      V1 = DAG.getBitcast(BlendVT, V1);
-      V2 = DAG.getBitcast(BlendVT, V2);
-      return DAG.getBitcast(
-          VT, DAG.getNode(X86ISD::BLENDI, DL, BlendVT, V1, V2,
-                          DAG.getConstant(BlendMask, DL, MVT::i8)));
-    }
+  case MVT::v4f64:
+  case MVT::v8f32:
+    assert(Subtarget.hasAVX() && "256-bit float blends require AVX!");
     LLVM_FALLTHROUGH;
-  case MVT::v8i16: {
-    // For integer shuffles we need to expand the mask and cast the inputs to
-    // v8i16s prior to blending.
-    int Scale = 8 / VT.getVectorNumElements();
-    BlendMask = scaleVectorShuffleBlendMask(BlendMask, Mask.size(), Scale);
-    V1 = DAG.getBitcast(MVT::v8i16, V1);
-    V2 = DAG.getBitcast(MVT::v8i16, V2);
-    return DAG.getBitcast(VT,
-                          DAG.getNode(X86ISD::BLENDI, DL, MVT::v8i16, V1, V2,
-                                      DAG.getConstant(BlendMask, DL, MVT::i8)));
-  }
+  case MVT::v2f64:
+  case MVT::v2i64:
+  case MVT::v4f32:
+  case MVT::v4i32:
+  case MVT::v8i16:
+    assert(Subtarget.hasSSE41() && "128-bit blends require SSE41!");
+    return DAG.getNode(X86ISD::BLENDI, DL, VT, V1, V2,
+                       DAG.getConstant(BlendMask, DL, MVT::i8));
   case MVT::v16i16: {
-    assert(Subtarget.hasAVX2() && "256-bit integer blends require AVX2!");
+    assert(Subtarget.hasAVX2() && "v16i16 blends require AVX2!");
     SmallVector<int, 8> RepeatedMask;
     if (is128BitLaneRepeatedShuffleMask(MVT::v16i16, Mask, RepeatedMask)) {
       // We can lower these with PBLENDW which is mirrored across 128-bit lanes.
@@ -10549,10 +10528,11 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
     }
     LLVM_FALLTHROUGH;
   }
-  case MVT::v16i8:
-  case MVT::v32i8: {
-    assert((VT.is128BitVector() || Subtarget.hasAVX2()) &&
-           "256-bit byte-blends require AVX2 support!");
+  case MVT::v32i8:
+    assert(Subtarget.hasAVX2() && "256-bit byte-blends require AVX2!");
+    LLVM_FALLTHROUGH;
+  case MVT::v16i8: {
+    assert(Subtarget.hasSSE41() && "128-bit byte-blends require SSE41!");
 
     // Attempt to lower to a bitmask if we can. VPAND is faster than VPBLENDVB.
     if (SDValue Masked = lowerShuffleAsBitMask(DL, VT, V1, V2, Mask, Zeroable,
@@ -31016,34 +30996,11 @@ static bool matchBinaryPermuteShuffle(
           return true;
         }
       } else {
-        // Determine a type compatible with X86ISD::BLENDI.
-        ShuffleVT = MaskVT;
-        if (Subtarget.hasAVX2()) {
-          if (ShuffleVT == MVT::v4i64)
-            ShuffleVT = MVT::v8i32;
-          else if (ShuffleVT == MVT::v2i64)
-            ShuffleVT = MVT::v4i32;
-        } else {
-          if (ShuffleVT == MVT::v2i64 || ShuffleVT == MVT::v4i32)
-            ShuffleVT = MVT::v8i16;
-          else if (ShuffleVT == MVT::v4i64)
-            ShuffleVT = MVT::v4f64;
-          else if (ShuffleVT == MVT::v8i32)
-            ShuffleVT = MVT::v8f32;
-        }
-
-        if (!ShuffleVT.isFloatingPoint()) {
-          int Scale = EltSizeInBits / ShuffleVT.getScalarSizeInBits();
-          BlendMask =
-              scaleVectorShuffleBlendMask(BlendMask, NumMaskElts, Scale);
-          ShuffleVT = MVT::getIntegerVT(EltSizeInBits / Scale);
-          ShuffleVT = MVT::getVectorVT(ShuffleVT, NumMaskElts * Scale);
-        }
-
         V1 = ForceV1Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V1;
         V2 = ForceV2Zero ? getZeroVector(MaskVT, Subtarget, DAG, DL) : V2;
         PermuteImm = (unsigned)BlendMask;
         Shuffle = X86ISD::BLENDI;
+        ShuffleVT = MaskVT;
         return true;
       }
     }
@@ -31755,15 +31712,10 @@ static SDValue combineX86ShufflesRecursively(
   if (2 < OpInputs.size())
     return SDValue();
 
-  SDValue Input0 = (OpInputs.size() > 0 ? OpInputs[0] : SDValue());
-  SDValue Input1 = (OpInputs.size() > 1 ? OpInputs[1] : SDValue());
-
   // Add the inputs to the Ops list, avoiding duplicates.
   SmallVector<SDValue, 16> Ops(SrcOps.begin(), SrcOps.end());
 
   auto AddOp = [&Ops](SDValue Input, int InsertionPoint) -> int {
-    if (!Input)
-      return -1;
     // Attempt to find an existing match.
     SDValue InputBC = peekThroughBitcasts(Input);
     for (int i = 0, e = Ops.size(); i < e; ++i)
@@ -31779,8 +31731,9 @@ static SDValue combineX86ShufflesRecursively(
     return Ops.size() - 1;
   };
 
-  int InputIdx0 = AddOp(Input0, SrcOpIndex);
-  int InputIdx1 = AddOp(Input1, -1);
+  SmallVector<int, 2> OpInputIdx;
+  for (SDValue OpInput : OpInputs)
+    OpInputIdx.push_back(AddOp(OpInput, OpInputIdx.empty() ? SrcOpIndex : -1));
 
   assert(((RootMask.size() > OpMask.size() &&
            RootMask.size() % OpMask.size() == 0) ||
@@ -31853,11 +31806,11 @@ static SDValue combineX86ShufflesRecursively(
 
     OpMaskedIdx = OpMaskedIdx & (MaskWidth - 1);
     if (OpMask[OpIdx] < (int)OpMask.size()) {
-      assert(0 <= InputIdx0 && "Unknown target shuffle input");
-      OpMaskedIdx += InputIdx0 * MaskWidth;
+      assert(0 <= OpInputIdx[0] && "Unknown target shuffle input");
+      OpMaskedIdx += OpInputIdx[0] * MaskWidth;
     } else {
-      assert(0 <= InputIdx1 && "Unknown target shuffle input");
-      OpMaskedIdx += InputIdx1 * MaskWidth;
+      assert(0 <= OpInputIdx[1] && "Unknown target shuffle input");
+      OpMaskedIdx += OpInputIdx[1] * MaskWidth;
     }
 
     Mask[i] = OpMaskedIdx;
@@ -32206,6 +32159,29 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                                 VT.getSizeInBits());
       }
 
+    return SDValue();
+  }
+  case X86ISD::BLENDI: {
+    SDValue N0 = N.getOperand(0);
+    SDValue N1 = N.getOperand(1);
+
+    // blend(bitcast(x),bitcast(y)) -> bitcast(blend(x,y)) to narrower types.
+    // TODO: Handle MVT::v16i16 repeated blend mask.
+    if (N0.getOpcode() == ISD::BITCAST && N1.getOpcode() == ISD::BITCAST &&
+        N0.getOperand(0).getValueType() == N1.getOperand(0).getValueType()) {
+      MVT SrcVT = N0.getOperand(0).getSimpleValueType();
+      if ((VT.getScalarSizeInBits() % SrcVT.getScalarSizeInBits()) == 0 &&
+          SrcVT.getScalarSizeInBits() >= 32) {
+        unsigned Mask = N.getConstantOperandVal(2);
+        unsigned Size = VT.getVectorNumElements();
+        unsigned Scale = VT.getScalarSizeInBits() / SrcVT.getScalarSizeInBits();
+        unsigned ScaleMask = scaleVectorShuffleBlendMask(Mask, Size, Scale);
+        return DAG.getBitcast(
+            VT, DAG.getNode(X86ISD::BLENDI, DL, SrcVT, N0.getOperand(0),
+                            N1.getOperand(0),
+                            DAG.getConstant(ScaleMask, DL, MVT::i8)));
+      }
+    }
     return SDValue();
   }
   case X86ISD::PSHUFD:
@@ -38615,7 +38591,7 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
       A = LHS.getOperand(0);
     if (!LHS.getOperand(1).isUndef())
       B = LHS.getOperand(1);
-    ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(LHS.getNode())->getMask();
+    ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(LHS)->getMask();
     llvm::copy(Mask, LMask.begin());
   } else {
     A = LHS;
@@ -38632,7 +38608,7 @@ static bool isHorizontalBinOp(SDValue &LHS, SDValue &RHS, bool IsCommutative) {
       C = RHS.getOperand(0);
     if (!RHS.getOperand(1).isUndef())
       D = RHS.getOperand(1);
-    ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(RHS.getNode())->getMask();
+    ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(RHS)->getMask();
     llvm::copy(Mask, RMask.begin());
   } else {
     C = RHS;

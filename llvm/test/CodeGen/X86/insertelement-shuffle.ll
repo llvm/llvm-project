@@ -95,8 +95,7 @@ define <8 x i64> @insert_subvector_into_undef(i32 %x0, i32 %x1) nounwind {
 ;
 ; X86_AVX512-LABEL: insert_subvector_into_undef:
 ; X86_AVX512:       # %bb.0:
-; X86_AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X86_AVX512-NEXT:    vbroadcastsd %xmm0, %zmm0
+; X86_AVX512-NEXT:    vbroadcastsd {{[0-9]+}}(%esp), %zmm0
 ; X86_AVX512-NEXT:    retl
 ;
 ; X64_AVX512-LABEL: insert_subvector_into_undef:
