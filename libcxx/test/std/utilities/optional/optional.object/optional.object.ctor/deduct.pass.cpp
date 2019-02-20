@@ -23,7 +23,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 //  Test the explicit deduction guides
     {
@@ -50,4 +50,6 @@ int main()
     assert(static_cast<bool>(opt) == static_cast<bool>(source));
     assert(*opt == *source);
     }
+
+  return 0;
 }

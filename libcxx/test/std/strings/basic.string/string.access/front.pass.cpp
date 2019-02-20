@@ -31,7 +31,7 @@ test(S s)
     assert(s.front() == typename S::value_type('z'));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -52,4 +52,6 @@ int main()
         assert(false);
     }
 #endif
+
+  return 0;
 }

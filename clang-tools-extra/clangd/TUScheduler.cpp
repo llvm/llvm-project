@@ -45,6 +45,7 @@
 #include "Cancellation.h"
 #include "Logger.h"
 #include "Trace.h"
+#include "index/CanonicalIncludes.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -385,8 +386,9 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     std::shared_ptr<const PreambleData> NewPreamble = buildPreamble(
         FileName, *Invocation, OldPreamble, OldCommand, Inputs, PCHs,
         StorePreambleInMemory,
-        [this](ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP) {
-          Callbacks.onPreambleAST(FileName, Ctx, std::move(PP));
+        [this](ASTContext &Ctx, std::shared_ptr<clang::Preprocessor> PP,
+               const CanonicalIncludes &CanonIncludes) {
+          Callbacks.onPreambleAST(FileName, Ctx, std::move(PP), CanonIncludes);
         });
 
     bool CanReuseAST = InputsAreTheSame && (OldPreamble == NewPreamble);

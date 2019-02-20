@@ -28,7 +28,7 @@ test(T expected)
 
 extern float zero;
 
-int main()
+int main(int, char**)
 {
     test<bool>(false);
     test<char>(0);
@@ -57,6 +57,8 @@ int main()
     test<float>(1.f/zero);
     test<double>(1./zero);
     test<long double>(1./zero);
+
+  return 0;
 }
 
 float zero = 0;

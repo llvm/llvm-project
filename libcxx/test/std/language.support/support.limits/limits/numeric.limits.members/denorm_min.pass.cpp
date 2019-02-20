@@ -26,7 +26,7 @@ test(T expected)
     assert(std::numeric_limits<const volatile T>::denorm_min() == expected);
 }
 
-int main()
+int main(int, char**)
 {
     test<bool>(false);
     test<char>(0);
@@ -65,4 +65,6 @@ int main()
 #if !defined(__FLT_DENORM_MIN__) && !defined(FLT_TRUE_MIN)
 #error Test has no expected values for floating point types
 #endif
+
+  return 0;
 }

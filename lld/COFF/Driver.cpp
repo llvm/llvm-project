@@ -224,23 +224,33 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef MB, StringRef SymName,
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &C,
                                         StringRef SymName,
                                         StringRef ParentName) {
+
+  auto ReportBufferError = [=](Error &&E,
+                              StringRef ChildName) {
+    fatal("could not get the buffer for the member defining symbol " +
+          SymName + ": " + ParentName + "(" + ChildName + "): " +
+          toString(std::move(E)));
+  };
+
   if (!C.getParent()->isThin()) {
-    MemoryBufferRef MB = CHECK(
-        C.getMemoryBufferRef(),
-        "could not get the buffer for the member defining symbol " + SymName);
+    Expected<MemoryBufferRef> MBOrErr = C.getMemoryBufferRef();
+    if (!MBOrErr)
+      ReportBufferError(MBOrErr.takeError(), check(C.getFullName()));
+    MemoryBufferRef MB = MBOrErr.get();
     enqueueTask([=]() { Driver->addArchiveBuffer(MB, SymName, ParentName); });
     return;
   }
 
-  auto Future = std::make_shared<std::future<MBErrPair>>(createFutureForFile(
-      CHECK(C.getFullName(),
-            "could not get the filename for the member defining symbol " +
-                SymName)));
+  std::string ChildName = CHECK(
+      C.getFullName(),
+      "could not get the filename for the member defining symbol " +
+      SymName);
+  auto Future = std::make_shared<std::future<MBErrPair>>(
+      createFutureForFile(ChildName));
   enqueueTask([=]() {
     auto MBOrErr = Future->get();
     if (MBOrErr.second)
-      fatal("could not get the buffer for the member defining " + SymName +
-            ": " + MBOrErr.second.message());
+      ReportBufferError(errorCodeToError(MBOrErr.second), ChildName);
     Driver->addArchiveBuffer(takeBuffer(std::move(MBOrErr.first)), SymName,
                              ParentName);
   });
@@ -897,6 +907,44 @@ static void parsePDBAltPath(StringRef AltPath) {
   Config->PDBAltPath = Buf;
 }
 
+// In MinGW, if no symbols are chosen to be exported, then all symbols are
+// automatically exported by default. This behavior can be forced by the
+// -export-all-symbols option, so that it happens even when exports are
+// explicitly specified. The automatic behavior can be disabled using the
+// -exclude-all-symbols option, so that lld-link behaves like link.exe rather
+// than MinGW in the case that nothing is explicitly exported.
+void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &Args) {
+  if (!Config->DLL)
+    return;
+
+  if (!Args.hasArg(OPT_export_all_symbols)) {
+    if (!Config->Exports.empty())
+      return;
+    if (Args.hasArg(OPT_exclude_all_symbols))
+      return;
+  }
+
+  AutoExporter Exporter;
+
+  for (auto *Arg : Args.filtered(OPT_wholearchive_file))
+    if (Optional<StringRef> Path = doFindFile(Arg->getValue()))
+      Exporter.addWholeArchive(*Path);
+
+  Symtab->forEachSymbol([&](Symbol *S) {
+    auto *Def = dyn_cast<Defined>(S);
+    if (!Exporter.shouldExport(Def))
+      return;
+
+    Export E;
+    E.Name = Def->getName();
+    E.Sym = Def;
+    if (Chunk *C = Def->getChunk())
+      if (!(C->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+        E.Data = true;
+    Config->Exports.push_back(E);
+  });
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   // If the first command line argument is "/lib", link.exe acts like lib.exe.
   // We call our own implementation of lib.exe that understands bitcode files.
@@ -1325,14 +1373,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
 
   std::set<sys::fs::UniqueID> WholeArchives;
-  AutoExporter Exporter;
-  for (auto *Arg : Args.filtered(OPT_wholearchive_file)) {
-    if (Optional<StringRef> Path = doFindFile(Arg->getValue())) {
+  for (auto *Arg : Args.filtered(OPT_wholearchive_file))
+    if (Optional<StringRef> Path = doFindFile(Arg->getValue()))
       if (Optional<sys::fs::UniqueID> ID = getUniqueID(*Path))
         WholeArchives.insert(*ID);
-      Exporter.addWholeArchive(*Path);
-    }
-  }
 
   // A predicate returning true if a given path is an argument for
   // /wholearchive:, or /wholearchive is enabled globally.
@@ -1596,23 +1640,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // In MinGW, all symbols are automatically exported if no symbols
   // are chosen to be exported.
-  if (Config->DLL && ((Config->MinGW && Config->Exports.empty()) ||
-                      Args.hasArg(OPT_export_all_symbols))) {
-    Exporter.initSymbolExcludes();
-
-    Symtab->forEachSymbol([=](Symbol *S) {
-      auto *Def = dyn_cast<Defined>(S);
-      if (!Exporter.shouldExport(Def))
-        return;
-      Export E;
-      E.Name = Def->getName();
-      E.Sym = Def;
-      if (Def->getChunk() &&
-          !(Def->getChunk()->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
-        E.Data = true;
-      Config->Exports.push_back(E);
-    });
-  }
+  if (Config->MinGW)
+    maybeExportMinGWSymbols(Args);
 
   // Windows specific -- when we are creating a .dll file, we also
   // need to create a .lib file.

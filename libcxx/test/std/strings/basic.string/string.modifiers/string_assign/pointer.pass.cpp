@@ -26,7 +26,7 @@ test(S s, const typename S::value_type* str, S expected)
     assert(s == expected);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -74,4 +74,6 @@ int main()
     s_long.assign(s_long.c_str() + 30);
     assert(s_long == "nsectetur/");
     }
+
+  return 0;
 }

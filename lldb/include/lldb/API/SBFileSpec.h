@@ -82,7 +82,7 @@ private:
 
   const lldb_private::FileSpec &ref() const;
 
-  std::unique_ptr<lldb_private::FileSpec> m_opaque_ap;
+  std::unique_ptr<lldb_private::FileSpec> m_opaque_up;
 };
 
 } // namespace lldb

@@ -19,6 +19,7 @@
 
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
 
@@ -152,5 +153,8 @@ bool ImplicitControlFlowTracking::isSpecialInstruction(
 
 bool MemoryWriteTracking::isSpecialInstruction(
     const Instruction *Insn) const {
+  using namespace PatternMatch;
+  if (match(Insn, m_Intrinsic<Intrinsic::experimental_widenable_condition>()))
+    return false;
   return Insn->mayWriteToMemory();
 }

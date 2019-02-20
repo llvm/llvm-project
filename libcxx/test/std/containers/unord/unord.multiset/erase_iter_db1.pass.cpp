@@ -17,7 +17,7 @@
 #include <unordered_set>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
     int a1[] = {1, 2, 3};
@@ -30,8 +30,10 @@ int main()
 
 #else
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }
 
 #endif

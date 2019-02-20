@@ -38,7 +38,7 @@ struct mutex
 
 mutex m;
 
-int main()
+int main(int, char**)
 {
     std::unique_lock<mutex> lk(m, std::defer_lock);
     assert(lk.try_lock_for(ms(5)) == true);
@@ -71,4 +71,6 @@ int main()
         assert(e.code().value() == EPERM);
     }
 #endif
+
+  return 0;
 }

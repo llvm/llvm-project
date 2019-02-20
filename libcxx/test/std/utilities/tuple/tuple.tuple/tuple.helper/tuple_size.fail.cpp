@@ -18,9 +18,11 @@
 
 #include <tuple>
 
-int main()
+int main(int, char**)
 {
     (void)std::tuple_size<std::tuple<> &>::value; // expected-error {{implicit instantiation of undefined template}}
     (void)std::tuple_size<int>::value; // expected-error {{implicit instantiation of undefined template}}
     (void)std::tuple_size<std::tuple<>*>::value; // expected-error {{implicit instantiation of undefined template}}
+
+  return 0;
 }

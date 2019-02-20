@@ -24,9 +24,9 @@ regBankSelected: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: local_use
-    ; CHECK: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+    ; CHECK: [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
     ; CHECK: [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
-    %0:gpr(s32) = G_CONSTANT 1
+    %0:gpr(s32) = G_CONSTANT i32 1
     %1:gpr(s32) = G_ADD %0, %0
 ...
 
@@ -38,10 +38,10 @@ body:             |
   ; CHECK-LABEL: name: non_local_1use
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
   ; CHECK: bb.1:
-  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ADD1:%[0-9]+]]:gpr(s32) = G_ADD [[C1]], [[ADD]]
 
   ; Existing registers should be left untouched
@@ -50,7 +50,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
-    %0:gpr(s32) = G_CONSTANT 1
+    %0:gpr(s32) = G_CONSTANT i32 1
     %1:gpr(s32) = G_ADD %0, %0
 
   bb.1:
@@ -65,10 +65,10 @@ body:             |
   ; CHECK-LABEL: name: non_local_2uses
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
   ; CHECK: bb.1:
-  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ADD1:%[0-9]+]]:gpr(s32) = G_ADD [[C1]], [[C1]]
 
   ; Existing registers should be left untouched
@@ -77,7 +77,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
-    %0:gpr(s32) = G_CONSTANT 1
+    %0:gpr(s32) = G_CONSTANT i32 1
     %1:gpr(s32) = G_ADD %0, %0
 
   bb.1:
@@ -93,11 +93,11 @@ body:             |
   ; CHECK-LABEL: name: non_local_phi_use
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr(s32) = PHI [[C1]](s32), %bb.1
   ; CHECK:   [[ADD1:%[0-9]+]]:gpr(s32) = G_ADD [[PHI]], [[PHI]]
@@ -108,7 +108,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
-    %0:gpr(s32) = G_CONSTANT 1
+    %0:gpr(s32) = G_CONSTANT i32 1
     %1:gpr(s32) = G_ADD %0, %0
 
   bb.1:
@@ -128,14 +128,14 @@ body:             |
   ; CHECK-LABEL: name: non_local_phi_use_followed_by_use
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ADD:%[0-9]+]]:gpr(s32) = G_ADD [[C]], [[C]]
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C1:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:gpr(s32) = PHI [[C1]](s32), %bb.1
-  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT 1
+  ; CHECK:   [[C2:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 1
   ; CHECK:   [[ADD1:%[0-9]+]]:gpr(s32) = G_ADD [[PHI]], [[C2]]
 
   ; Existing registers should be left untouched
@@ -144,7 +144,7 @@ body:             |
   bb.0:
     successors: %bb.1
 
-    %0:gpr(s32) = G_CONSTANT 1
+    %0:gpr(s32) = G_CONSTANT i32 1
     %1:gpr(s32) = G_ADD %0, %0
 
   bb.1:

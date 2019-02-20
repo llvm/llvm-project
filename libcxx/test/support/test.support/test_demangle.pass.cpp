@@ -14,7 +14,7 @@ struct MyType {};
 
 template <class T, class U> struct ArgumentListID {};
 
-int main() {
+int main(int, char**) {
   struct {
     const char* raw;
     const char* expect;
@@ -34,4 +34,6 @@ int main() {
     assert(demangle(raw) == expect);
 #endif
   }
+
+  return 0;
 }

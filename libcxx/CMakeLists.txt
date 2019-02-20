@@ -23,7 +23,7 @@ set(CMAKE_MODULE_PATH
   ${CMAKE_MODULE_PATH}
   )
 
-if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR OR LIBCXX_STANDALONE_BUILD)
   project(libcxx CXX C)
 
   set(PACKAGE_NAME libcxx)
@@ -224,6 +224,7 @@ option(LIBCXXABI_ENABLE_STATIC_UNWINDER "Statically link the LLVM unwinder." OFF
 
 # Target options --------------------------------------------------------------
 option(LIBCXX_BUILD_32_BITS "Build 32 bit libc++." ${LLVM_BUILD_32_BITS})
+set(LIBCXX_TARGET_TRIPLE "" CACHE STRING "Use alternate target triple.")
 set(LIBCXX_SYSROOT "" CACHE STRING "Use alternate sysroot.")
 set(LIBCXX_GCC_TOOLCHAIN "" CACHE STRING "Use alternate GCC toolchain.")
 
@@ -460,19 +461,29 @@ include(HandleLibcxxFlags)
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
 add_target_flags_if(LIBCXX_BUILD_32_BITS "-m32")
-add_target_flags_if(LIBCXX_TARGET_TRIPLE "--target=${LIBCXX_TARGET_TRIPLE}")
-add_target_flags_if(LIBCXX_SYSROOT "--sysroot=${LIBCXX_SYSROOT}")
-add_target_flags_if(LIBCXX_GCC_TOOLCHAIN "--gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
-if (LIBCXX_TARGET_TRIPLE)
+
+if(LIBCXX_TARGET_TRIPLE)
+  add_target_flags("--target=${LIBCXX_TARGET_TRIPLE}")
+elseif(CMAKE_CXX_COMPILER_TARGET)
+  set(LIBCXX_TARGET_TRIPLE "${CMAKE_CXX_COMPILER_TARGET}")
+endif()
+if(LIBCXX_SYSROOT)
+  add_target_flags("--sysroot=${LIBCXX_SYSROOT}")
+elseif(CMAKE_SYSROOT)
+  set(LIBCXX_SYSROOT "${CMAKE_SYSROOT}")
+endif()
+if(LIBCXX_GCC_TOOLCHAIN)
+  add_target_flags("--gcc-toolchain=${LIBCXX_GCC_TOOLCHAIN}")
+elseif(CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN)
+  set(LIBCXX_GCC_TOOLCHAIN "${CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN}")
+endif()
+
+if(LIBCXX_TARGET_TRIPLE)
   set(TARGET_TRIPLE "${LIBCXX_TARGET_TRIPLE}")
 endif()
 
 # Configure compiler.
 include(config-ix)
-
-if (LIBCXX_USE_COMPILER_RT)
-  list(APPEND LIBCXX_LINK_FLAGS "-rtlib=compiler-rt")
-endif()
 
 # Configure coverage options.
 if (LIBCXX_GENERATE_COVERAGE)
@@ -511,11 +522,12 @@ remove_flags("/D_DEBUG" "/MTd" "/MDd" "/MT" "/Md")
 remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 
 # Required flags ==============================================================
-set(LIBCXX_STANDARD_VER c++11 CACHE INTERNAL "internal option to change build dialect")
 if (LIBCXX_HAS_MUSL_LIBC OR LIBCXX_TARGETING_CLANG_CL)
   # musl's pthread implementations uses volatile types in their structs which is
   # not a constexpr in C++11 but is in C++14, so we use C++14 with musl.
-  set(LIBCXX_STANDARD_VER c++14 CACHE INTERNAL "internal option to change build dialect")
+  set(LIBCXX_STANDARD_VER c++14 CACHE STRING "internal option to change build dialect")
+else()
+  set(LIBCXX_STANDARD_VER c++11 CACHE STRING "internal option to change build dialect")
 endif()
 add_compile_flags_if_supported(-std=${LIBCXX_STANDARD_VER})
 add_compile_flags_if_supported("/std:${LIBCXX_STANDARD_VER}")

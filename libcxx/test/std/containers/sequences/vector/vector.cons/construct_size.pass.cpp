@@ -60,7 +60,7 @@ test(typename C::size_type n)
     test2<C> ( n );
 }
 
-int main()
+int main(int, char**)
 {
     test<std::vector<int> >(50);
     test<std::vector<DefaultOnly> >(500);
@@ -71,4 +71,6 @@ int main()
     test2<std::vector<DefaultOnly, test_allocator<DefaultOnly>> >( 100, test_allocator<DefaultOnly>(23));
     assert(DefaultOnly::count == 0);
 #endif
+
+  return 0;
 }

@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     static_assert(std::is_polymorphic<std::exception>::value,
                  "std::is_polymorphic<std::exception>::value");
@@ -21,4 +21,6 @@ int main()
     b2 = b;
     const char* w = b2.what();
     assert(w);
+
+  return 0;
 }

@@ -47,8 +47,10 @@ void test()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test<int, short>();
     test<int*, char>();
+
+  return 0;
 }

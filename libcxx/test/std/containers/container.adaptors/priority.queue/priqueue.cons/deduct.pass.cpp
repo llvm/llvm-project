@@ -38,7 +38,7 @@
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
 
 //  Test the explicit deduction guides
@@ -119,4 +119,6 @@ int main()
     assert(pri.size() == 4);
     assert(pri.top() == 0);
     }
+
+  return 0;
 }

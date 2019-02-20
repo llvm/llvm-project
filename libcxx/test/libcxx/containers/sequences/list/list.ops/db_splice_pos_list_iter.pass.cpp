@@ -20,7 +20,7 @@
 #include <cstdlib>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::list<int> v1(3);
@@ -28,4 +28,6 @@ int main()
         v1.splice(v1.begin(), v2, v1.begin());
         assert(false);
     }
+
+  return 0;
 }

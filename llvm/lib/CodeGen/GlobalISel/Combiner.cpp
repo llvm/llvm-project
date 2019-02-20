@@ -50,7 +50,7 @@ public:
   }
 
   void erasingInstr(MachineInstr &MI) override {
-    LLVM_DEBUG(dbgs() << "Erased: " << MI << "\n");
+    LLVM_DEBUG(dbgs() << "Erasing: " << MI << "\n");
     WorkList.remove(&MI);
   }
   void createdInstr(MachineInstr &MI) override {
@@ -129,9 +129,10 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
           CurMI->eraseFromParentAndMarkDBGValuesForRemoval();
           continue;
         }
-        WorkList.insert(CurMI);
+        WorkList.deferred_insert(CurMI);
       }
     }
+    WorkList.finalize();
     // Main Loop. Process the instructions here.
     while (!WorkList.empty()) {
       MachineInstr *CurrInst = WorkList.pop_back_val();

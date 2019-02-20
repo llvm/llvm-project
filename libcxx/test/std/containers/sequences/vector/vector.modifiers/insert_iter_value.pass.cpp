@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<int> v(100);
@@ -93,4 +93,6 @@ int main()
             assert(v[j] == 0);
     }
 #endif
+
+  return 0;
 }

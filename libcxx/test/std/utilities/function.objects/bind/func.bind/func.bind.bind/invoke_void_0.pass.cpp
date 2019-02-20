@@ -54,7 +54,7 @@ struct A_int_0
     int operator()() const {count += 2; return 5;}
 };
 
-int main()
+int main(int, char**)
 {
     test(std::bind(f));
     test(std::bind(&f));
@@ -70,4 +70,6 @@ int main()
     test(std::bind<void>(&g));
     test(std::bind<void>(A_int_0()));
     test_const(std::bind<void>(A_int_0()));
+
+  return 0;
 }

@@ -25,7 +25,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::ostreambuf_iterator<char> I1;
 #if TEST_STD_VER <= 14
@@ -58,4 +58,6 @@ int main()
     static_assert((std::is_same<I2::traits_type, std::char_traits<wchar_t> >::value), "");
     static_assert((std::is_same<I2::streambuf_type, std::wstreambuf>::value), "");
     static_assert((std::is_same<I2::ostream_type, std::wostream>::value), "");
+
+  return 0;
 }

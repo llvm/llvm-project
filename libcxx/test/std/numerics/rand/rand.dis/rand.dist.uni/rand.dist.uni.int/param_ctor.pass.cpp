@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::uniform_int_distribution<long> D;
@@ -40,4 +40,6 @@ int main()
         assert(p.a() == 5);
         assert(p.b() == 10);
     }
+
+  return 0;
 }

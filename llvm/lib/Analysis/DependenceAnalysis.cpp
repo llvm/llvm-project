@@ -3368,6 +3368,19 @@ static void dumpSmallBitVector(SmallBitVector &BV) {
 }
 #endif
 
+bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
+                                FunctionAnalysisManager::Invalidator &Inv) {
+  // Check if the analysis itself has been invalidated.
+  auto PAC = PA.getChecker<DependenceAnalysis>();
+  if (!PAC.preserved() && !PAC.preservedSet<AllAnalysesOn<Function>>())
+    return true;
+
+  // Check transitive dependencies.
+  return Inv.invalidate<AAManager>(F, PA) ||
+         Inv.invalidate<ScalarEvolutionAnalysis>(F, PA) ||
+         Inv.invalidate<LoopAnalysis>(F, PA);
+}
+
 // depends -
 // Returns NULL if there is no dependence.
 // Otherwise, return a Dependence with as many details as possible.

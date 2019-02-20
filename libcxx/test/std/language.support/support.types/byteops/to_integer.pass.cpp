@@ -16,7 +16,7 @@
 // This function shall not participate in overload resolution unless
 //   is_integral_v<IntegerType> is true.
 
-int main () {
+int main(int, char**) {
     constexpr std::byte b1{static_cast<std::byte>(1)};
     constexpr std::byte b3{static_cast<std::byte>(3)};
 
@@ -27,4 +27,6 @@ int main () {
 
     static_assert(std::to_integer<int>(b1) == 1, "");
     static_assert(std::to_integer<int>(b3) == 3, "");
+
+  return 0;
 }

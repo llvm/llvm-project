@@ -39,10 +39,12 @@ struct gen
 };
 
 
-int main()
+int main(int, char**)
 {
     std::vector<int> v;
     std::random_shuffle(v.begin(), v.end());
     gen r;
     std::random_shuffle(v.begin(), v.end(), r);
+
+  return 0;
 }

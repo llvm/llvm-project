@@ -130,14 +130,16 @@ static Error populateDynamic(DynamicEntries &Dyn,
   if (Dyn.SONameOffset.hasValue() && *Dyn.SONameOffset >= Dyn.StrSize) {
     return createStringError(
         object_error::parse_failed,
-        "DT_SONAME string offset (0x%016x) outside of dynamic string table",
+        "DT_SONAME string offset (0x%016" PRIx64
+        ") outside of dynamic string table",
         *Dyn.SONameOffset);
   }
   for (uint64_t Offset : Dyn.NeededLibNames) {
     if (Offset >= Dyn.StrSize) {
       return createStringError(
           object_error::parse_failed,
-          "DT_NEEDED string offset (0x%016x) outside of dynamic string table",
+          "DT_NEEDED string offset (0x%016" PRIx64
+          ") outside of dynamic string table",
           Offset);
     }
   }

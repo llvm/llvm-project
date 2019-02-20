@@ -156,7 +156,7 @@ DEFINE_AND_RUN_IS_INCOMPLETE_TEST({
   checkNumIncompleteTypeAlive(0);
 })
 
-int main() {
+int main(int, char**) {
   {
     test_pointer</*IsArray*/ false>();
     test_derived();
@@ -167,4 +167,6 @@ int main() {
     test_sfinae<int[]>();
     test_sfinae_runtime();
   }
+
+  return 0;
 }

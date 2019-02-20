@@ -39,7 +39,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("   123");
@@ -75,4 +75,6 @@ int main()
         assert(is.eof());
         assert(is.fail());
     }
+
+  return 0;
 }

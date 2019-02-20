@@ -335,5 +335,14 @@ format::FormatStyle getFormatStyleForFile(llvm::StringRef File,
   return *Style;
 }
 
+llvm::Expected<tooling::Replacements>
+cleanupAndFormat(StringRef Code, const tooling::Replacements &Replaces,
+                 const format::FormatStyle &Style) {
+  auto CleanReplaces = cleanupAroundReplacements(Code, Replaces, Style);
+  if (!CleanReplaces)
+    return CleanReplaces;
+  return formatReplacements(Code, std::move(*CleanReplaces), Style);
+}
+
 } // namespace clangd
 } // namespace clang

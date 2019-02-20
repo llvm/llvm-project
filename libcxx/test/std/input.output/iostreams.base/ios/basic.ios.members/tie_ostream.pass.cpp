@@ -15,11 +15,13 @@
 #include <ios>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::ios ios(0);
     std::ostream* os = (std::ostream*)1;
     std::ostream* r = ios.tie(os);
     assert(r == 0);
     assert(ios.tie() == os);
+
+  return 0;
 }

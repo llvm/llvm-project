@@ -817,8 +817,8 @@ Error DWARFDebugLine::LineTable::parse(
       State.Row.Address += AddrOffset;
 
       if (OS) {
-        *OS << "address += " << ((uint32_t)AdjustOpcode)
-            << ",  line += " << LineOffset << "\n";
+        *OS << "address += " << AddrOffset << ",  line += " << LineOffset
+            << "\n";
         OS->indent(12);
         State.Row.dump(*OS);
       }

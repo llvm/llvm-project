@@ -40,7 +40,9 @@ test()
     assert(m1 == m2);
 }
 
-int main()
+int main(int, char**)
 {
     test();
+
+  return 0;
 }

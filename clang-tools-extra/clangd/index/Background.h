@@ -54,7 +54,7 @@ public:
       llvm::unique_function<BackgroundIndexStorage *(llvm::StringRef)>;
 
   // Creates an Index Storage that saves shards into disk. Index storage uses
-  // CDBDirectory + ".clangd-index/" as the folder to save shards.
+  // CDBDirectory + ".clangd/index/" as the folder to save shards.
   static Factory createDiskBackedStorageFactory();
 };
 
@@ -67,11 +67,12 @@ public:
   /// If BuildIndexPeriodMs is greater than 0, the symbol index will only be
   /// rebuilt periodically (one per \p BuildIndexPeriodMs); otherwise, index is
   /// rebuilt for each indexed file.
-  BackgroundIndex(Context BackgroundContext, const FileSystemProvider &,
-                  const GlobalCompilationDatabase &CDB,
-                  BackgroundIndexStorage::Factory IndexStorageFactory,
-                  size_t BuildIndexPeriodMs = 0,
-                  size_t ThreadPoolSize = llvm::hardware_concurrency());
+  BackgroundIndex(
+      Context BackgroundContext, const FileSystemProvider &,
+      const GlobalCompilationDatabase &CDB,
+      BackgroundIndexStorage::Factory IndexStorageFactory,
+      size_t BuildIndexPeriodMs = 0,
+      size_t ThreadPoolSize = llvm::heavyweight_hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
   // Enqueue translation units for indexing.

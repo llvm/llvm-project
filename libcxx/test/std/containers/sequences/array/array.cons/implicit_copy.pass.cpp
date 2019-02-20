@@ -32,7 +32,7 @@ struct NoDefault {
   NoDefault(int) {}
 };
 
-int main() {
+int main(int, char**) {
   {
     typedef double T;
     typedef std::array<T, 3> C;
@@ -89,4 +89,6 @@ int main() {
     TEST_NOT_COPY_ASSIGNABLE(C);
   }
 
+
+  return 0;
 }

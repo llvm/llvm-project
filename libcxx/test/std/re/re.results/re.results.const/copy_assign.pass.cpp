@@ -34,7 +34,7 @@ test(const Allocator& a)
         assert(m1.get_allocator() == Allocator());
 }
 
-int main()
+int main(int, char**)
 {
     test<char>   (std::allocator<std::sub_match<const char *> >());
     test<wchar_t>(std::allocator<std::sub_match<const wchar_t *> >());
@@ -46,4 +46,6 @@ int main()
 //  other_allocator has POCCA -> true
     test<char>   (other_allocator<std::sub_match<const char*> >(3));
     test<wchar_t>(other_allocator<std::sub_match<const wchar_t*> >(3));
+
+  return 0;
 }

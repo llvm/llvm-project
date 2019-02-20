@@ -24,7 +24,7 @@ void test_contiguous ( const C &c )
         assert ( *(c.begin() + static_cast<typename C::difference_type>(i)) == *(std::addressof(*c.begin()) + i));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -49,4 +49,6 @@ int main()
     test_contiguous(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()));
     }
 #endif
+
+  return 0;
 }

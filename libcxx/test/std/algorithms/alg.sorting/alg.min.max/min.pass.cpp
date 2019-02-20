@@ -24,7 +24,7 @@ test(const T& a, const T& b, const T& x)
     assert(&std::min(a, b) == &x);
 }
 
-int main()
+int main(int, char**)
 {
     {
     int x = 0;
@@ -52,4 +52,6 @@ int main()
     static_assert(std::min(y, x) == y, "" );
     }
 #endif
+
+  return 0;
 }

@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year       = std::chrono::year;
     using month      = std::chrono::month;
@@ -35,4 +35,6 @@ int main()
         year_month ym(year{1234}, month{i});
         assert( static_cast<unsigned>(ym.month()) == i);
     }
+
+  return 0;
 }

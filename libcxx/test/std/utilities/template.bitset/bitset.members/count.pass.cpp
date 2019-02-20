@@ -42,7 +42,7 @@ void test_count()
     assert(c1 == c2);
 }
 
-int main()
+int main(int, char**)
 {
     test_count<0>();
     test_count<1>();
@@ -53,4 +53,6 @@ int main()
     test_count<64>();
     test_count<65>();
     test_count<1000>();
+
+  return 0;
 }

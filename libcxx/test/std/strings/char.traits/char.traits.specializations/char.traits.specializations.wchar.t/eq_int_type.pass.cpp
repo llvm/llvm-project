@@ -15,11 +15,13 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert( std::char_traits<wchar_t>::eq_int_type(L'a', L'a'));
     assert(!std::char_traits<wchar_t>::eq_int_type(L'a', L'A'));
     assert(!std::char_traits<wchar_t>::eq_int_type(std::char_traits<wchar_t>::eof(), L'A'));
     assert( std::char_traits<wchar_t>::eq_int_type(std::char_traits<wchar_t>::eof(),
                                                    std::char_traits<wchar_t>::eof()));
+
+  return 0;
 }

@@ -15,7 +15,9 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(std::char_traits<wchar_t>::eof() == WEOF);
+
+  return 0;
 }

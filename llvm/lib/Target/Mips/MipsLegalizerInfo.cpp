@@ -28,21 +28,37 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalFor({s32})
       .clampScalar(0, s32, s32);
 
+  getActionDefinitionsBuilder(G_MUL)
+      .legalFor({s32})
+      .minScalar(0, s32);
+
   getActionDefinitionsBuilder({G_UADDE, G_USUBO, G_USUBE})
       .lowerFor({{s32, s1}});
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
-      .legalForCartesianProduct({p0, s32}, {p0});
+      .legalForTypesWithMemDesc({{s32, p0, 8, 8},
+                                 {s32, p0, 16, 8},
+                                 {s32, p0, 32, 8},
+                                 {p0, p0, 32, 8}})
+      .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_ZEXTLOAD, G_SEXTLOAD})
-      .legalForTypesWithMemSize({{s32, p0, 8},
-                                 {s32, p0, 16}})
+    .legalForTypesWithMemDesc({{s32, p0, 8, 8},
+                               {s32, p0, 16, 8}})
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_SELECT)
       .legalForCartesianProduct({p0, s32}, {s32})
       .minScalar(0, s32)
       .minScalar(1, s32);
+
+  getActionDefinitionsBuilder(G_BRCOND)
+      .legalFor({s32})
+      .minScalar(0, s32);
+
+  getActionDefinitionsBuilder(G_PHI)
+      .legalFor({p0, s32})
+      .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({s32})

@@ -11,6 +11,7 @@
 #include "COFF/COFFObjcopy.h"
 #include "CopyConfig.h"
 #include "ELF/ELFObjcopy.h"
+#include "MachO/MachOObjcopy.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,7 @@
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -68,9 +70,7 @@ LLVM_ATTRIBUTE_NORETURN void error(Error E) {
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, std::error_code EC) {
   assert(EC);
-  WithColor::error(errs(), ToolName)
-      << "'" << File << "': " << EC.message() << ".\n";
-  exit(1);
+  error(createFileError(File, EC));
 }
 
 LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
@@ -142,6 +142,8 @@ static Error executeObjcopyOnBinary(const CopyConfig &Config,
     return elf::executeObjcopyOnBinary(Config, *ELFBinary, Out);
   else if (auto *COFFBinary = dyn_cast<object::COFFObjectFile>(&In))
     return coff::executeObjcopyOnBinary(Config, *COFFBinary, Out);
+  else if (auto *MachOBinary = dyn_cast<object::MachOObjectFile>(&In))
+    return macho::executeObjcopyOnBinary(Config, *MachOBinary, Out);
   else
     return createStringError(object_error::invalid_file_type,
                              "Unsupported object file format");
@@ -152,9 +154,6 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
-    // FIXME: Archive::child_iterator requires that Err be checked *during* loop
-    // iteration, and hence does not allow early returns.
-    cantFail(std::move(Err));
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr)
       return createFileError(Ar.getFileName(), ChildOrErr.takeError());

@@ -26,34 +26,34 @@ entry:
 ; CHECK: Relocations [
 ; CHECK-NEXT:   Section (4) CODE {
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_LEB (3)
+; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x9
 ; CHECK-NEXT:       Symbol: b
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_MEMORY_ADDR_LEB (3)
+; CHECK-NEXT:       Type: R_WASM_MEMORY_ADDR_LEB (3)
 ; CHECK-NEXT:       Offset: 0x14
 ; CHECK-NEXT:       Symbol: a
 ; CHECK-NEXT:       Addend: 0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_TYPE_INDEX_LEB (6)
+; CHECK-NEXT:       Type: R_WASM_TYPE_INDEX_LEB (6)
 ; CHECK-NEXT:       Offset: 0x1A
 ; CHECK-NEXT:       Index: 0x1
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_TYPE_INDEX_LEB (6)
+; CHECK-NEXT:       Type: R_WASM_TYPE_INDEX_LEB (6)
 ; CHECK-NEXT:       Offset: 0x24
 ; CHECK-NEXT:       Index: 0x0
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+; CHECK-NEXT:       Type: R_WASM_FUNCTION_INDEX_LEB (0)
 ; CHECK-NEXT:       Offset: 0x2D
 ; CHECK-NEXT:       Symbol: c
 ; CHECK-NEXT:     }
 ; CHECK-NEXT:     Relocation {
-; CHECK-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+; CHECK-NEXT:       Type: R_WASM_FUNCTION_INDEX_LEB (0)
 ; CHECK-NEXT:       Offset: 0x34
 ; CHECK-NEXT:       Symbol: d
 ; CHECK-NEXT:     }

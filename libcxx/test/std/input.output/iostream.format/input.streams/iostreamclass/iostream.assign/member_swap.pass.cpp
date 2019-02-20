@@ -33,7 +33,7 @@ struct test_iostream
     void swap(test_iostream& s) {base::swap(s);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb1;
@@ -81,4 +81,6 @@ int main()
         assert(is2.precision() == 6);
         assert(is2.getloc().name() == "C");
     }
+
+  return 0;
 }

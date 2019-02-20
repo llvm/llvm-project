@@ -889,7 +889,6 @@ main(int argc, char const *argv[])
   }
 
   SBInitializerOptions options;
-
   if (auto *arg = input_args.getLastArg(OPT_capture)) {
     auto arg_value = arg->getValue();
     options.SetReproducerPath(arg_value);

@@ -35,7 +35,7 @@ void test_message_for_bad_value() {
     assert(errno == E2BIG);
 }
 
-int main()
+int main(int, char**)
 {
     const std::error_category& e_cat1 = std::generic_category();
     std::string m1 = e_cat1.name();
@@ -43,4 +43,6 @@ int main()
     {
         test_message_for_bad_value();
     }
+
+  return 0;
 }

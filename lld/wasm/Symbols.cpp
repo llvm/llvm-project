@@ -116,7 +116,7 @@ bool Symbol::isExported() const {
   if (Config->ExportDynamic && !isHidden())
     return true;
 
-  return false;
+  return Flags & WASM_SYMBOL_EXPORTED;
 }
 
 uint32_t FunctionSymbol::getFunctionIndex() const {
@@ -292,4 +292,17 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
     return "SectionKind";
   }
   llvm_unreachable("invalid symbol kind");
+}
+
+// Print out a log message for --trace-symbol.
+void lld::wasm::printTraceSymbol(Symbol *Sym) {
+  std::string S;
+  if (Sym->isUndefined())
+    S = ": reference to ";
+  else if (Sym->isLazy())
+    S = ": lazy definition of ";
+  else
+    S = ": definition of ";
+
+  message(toString(Sym->getFile()) + S + Sym->getName());
 }

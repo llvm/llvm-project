@@ -27,7 +27,7 @@ test(const String& p, std::regex_constants::syntax_option_type f, unsigned mc)
     assert(r.mark_count() == mc);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::string("\\(a\\)"), std::regex_constants::basic, 1);
     test(std::string("\\(a[bc]\\)"), std::regex_constants::basic, 1);
@@ -58,4 +58,6 @@ int main()
     test(std::string("\\(a[bc]\\)"), std::regex_constants::egrep, 0);
     test(std::string("\\(a\\([bc]\\)\\)"), std::regex_constants::egrep, 0);
     test(std::string("(a([bc]))"), std::regex_constants::egrep, 2);
+
+  return 0;
 }

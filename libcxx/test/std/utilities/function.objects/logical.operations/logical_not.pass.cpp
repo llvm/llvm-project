@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::logical_not<int> F;
     const F f = F();
@@ -38,4 +38,6 @@ int main()
     constexpr bool bar = std::logical_not<> () (36);
     static_assert ( !bar, "" );
 #endif
+
+  return 0;
 }

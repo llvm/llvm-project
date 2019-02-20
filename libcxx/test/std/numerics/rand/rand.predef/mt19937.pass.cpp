@@ -18,9 +18,11 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::mt19937 e;
     e.discard(9999);
     assert(e() == 4123659995u);
+
+  return 0;
 }

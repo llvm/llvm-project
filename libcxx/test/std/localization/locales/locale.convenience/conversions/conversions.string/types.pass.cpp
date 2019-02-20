@@ -22,7 +22,7 @@
 #include <locale>
 #include <codecvt>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::wstring_convert<std::codecvt_utf8<wchar_t> > myconv;
@@ -31,4 +31,6 @@ int main()
         static_assert((std::is_same<myconv::state_type, std::mbstate_t>::value), "");
         static_assert((std::is_same<myconv::int_type, std::char_traits<wchar_t>::int_type>::value), "");
     }
+
+  return 0;
 }

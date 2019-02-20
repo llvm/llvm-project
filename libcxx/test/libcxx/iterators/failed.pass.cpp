@@ -18,7 +18,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ostreambuf_iterator<char> i(nullptr);
@@ -28,4 +28,6 @@ int main()
         std::ostreambuf_iterator<wchar_t> i(nullptr);
         assert(i.failed());
     }
+
+  return 0;
 }

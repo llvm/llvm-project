@@ -28,7 +28,7 @@ struct testbuf
     void pbump(int n) {base::pbump(n);}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("123");
@@ -66,4 +66,6 @@ int main()
         assert(sb.underflow() == L'4');
         assert(sb.underflow() == L'4');
     }
+
+  return 0;
 }

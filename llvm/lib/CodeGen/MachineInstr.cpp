@@ -25,6 +25,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/CodeGen/GlobalISel/RegisterBank.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
@@ -49,9 +50,9 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -518,39 +519,46 @@ uint16_t MachineInstr::mergeFlagsWith(const MachineInstr &Other) const {
   return getFlags() | Other.getFlags();
 }
 
-void MachineInstr::copyIRFlags(const Instruction &I) {
+uint16_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
+  uint16_t MIFlags = 0;
   // Copy the wrapping flags.
   if (const OverflowingBinaryOperator *OB =
           dyn_cast<OverflowingBinaryOperator>(&I)) {
     if (OB->hasNoSignedWrap())
-      setFlag(MachineInstr::MIFlag::NoSWrap);
+      MIFlags |= MachineInstr::MIFlag::NoSWrap;
     if (OB->hasNoUnsignedWrap())
-      setFlag(MachineInstr::MIFlag::NoUWrap);
+      MIFlags |= MachineInstr::MIFlag::NoUWrap;
   }
 
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
-      setFlag(MachineInstr::MIFlag::IsExact);
+      MIFlags |= MachineInstr::MIFlag::IsExact;
 
   // Copy the fast-math flags.
   if (const FPMathOperator *FP = dyn_cast<FPMathOperator>(&I)) {
     const FastMathFlags Flags = FP->getFastMathFlags();
     if (Flags.noNaNs())
-      setFlag(MachineInstr::MIFlag::FmNoNans);
+      MIFlags |= MachineInstr::MIFlag::FmNoNans;
     if (Flags.noInfs())
-      setFlag(MachineInstr::MIFlag::FmNoInfs);
+      MIFlags |= MachineInstr::MIFlag::FmNoInfs;
     if (Flags.noSignedZeros())
-      setFlag(MachineInstr::MIFlag::FmNsz);
+      MIFlags |= MachineInstr::MIFlag::FmNsz;
     if (Flags.allowReciprocal())
-      setFlag(MachineInstr::MIFlag::FmArcp);
+      MIFlags |= MachineInstr::MIFlag::FmArcp;
     if (Flags.allowContract())
-      setFlag(MachineInstr::MIFlag::FmContract);
+      MIFlags |= MachineInstr::MIFlag::FmContract;
     if (Flags.approxFunc())
-      setFlag(MachineInstr::MIFlag::FmAfn);
+      MIFlags |= MachineInstr::MIFlag::FmAfn;
     if (Flags.allowReassoc())
-      setFlag(MachineInstr::MIFlag::FmReassoc);
+      MIFlags |= MachineInstr::MIFlag::FmReassoc;
   }
+
+  return MIFlags;
+}
+
+void MachineInstr::copyIRFlags(const Instruction &I) {
+  Flags = copyFlagsFromInstruction(I);
 }
 
 bool MachineInstr::hasPropertyInBundle(uint64_t Mask, QueryType Type) const {
@@ -1283,8 +1291,10 @@ bool MachineInstr::hasOrderedMemoryRef() const {
     return true;
 
   // Check if any of our memory operands are ordered.
+  // TODO: This should probably be be isUnordered (see D57601), but the callers
+  // need audited and test cases written to be sure.
   return llvm::any_of(memoperands(), [](const MachineMemOperand *MMO) {
-    return !MMO->isUnordered();
+    return MMO->isVolatile() || MMO->isAtomic();
   });
 }
 
@@ -1305,6 +1315,8 @@ bool MachineInstr::isDereferenceableInvariantLoad(AliasAnalysis *AA) const {
 
   for (MachineMemOperand *MMO : memoperands()) {
     if (MMO->isVolatile()) return false;
+    // TODO: Figure out whether isAtomic is really necessary (see D57601).
+    if (MMO->isAtomic()) return false;
     if (MMO->isStore()) return false;
     if (MMO->isInvariant() && MMO->isDereferenceable())
       continue;
@@ -1905,7 +1917,7 @@ void MachineInstr::setRegisterDefReadUndef(unsigned Reg, bool IsUndef) {
 void MachineInstr::addRegisterDefined(unsigned Reg,
                                       const TargetRegisterInfo *RegInfo) {
   if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
-    MachineOperand *MO = findRegisterDefOperand(Reg, false, RegInfo);
+    MachineOperand *MO = findRegisterDefOperand(Reg, false, false, RegInfo);
     if (MO)
       return;
   } else {
@@ -2099,4 +2111,55 @@ void MachineInstr::changeDebugValuesDefReg(unsigned Reg) {
   // Propagate Reg to debug value instructions.
   for (auto *DBI : DbgValues)
     DBI->getOperand(0).setReg(Reg);
+}
+
+using MMOList = SmallVector<const MachineMemOperand *, 2>;
+
+static unsigned getSpillSlotSize(MMOList &Accesses,
+                                 const MachineFrameInfo &MFI) {
+  unsigned Size = 0;
+  for (auto A : Accesses)
+    if (MFI.isSpillSlotObjectIndex(
+            cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
+                ->getFrameIndex()))
+      Size += A->getSize();
+  return Size;
+}
+
+Optional<unsigned>
+MachineInstr::getSpillSize(const TargetInstrInfo *TII) const {
+  int FI;
+  if (TII->isStoreToStackSlotPostFE(*this, FI)) {
+    const MachineFrameInfo &MFI = getMF()->getFrameInfo();
+    if (MFI.isSpillSlotObjectIndex(FI))
+      return (*memoperands_begin())->getSize();
+  }
+  return None;
+}
+
+Optional<unsigned>
+MachineInstr::getFoldedSpillSize(const TargetInstrInfo *TII) const {
+  MMOList Accesses;
+  if (TII->hasStoreToStackSlot(*this, Accesses))
+    return getSpillSlotSize(Accesses, getMF()->getFrameInfo());
+  return None;
+}
+
+Optional<unsigned>
+MachineInstr::getRestoreSize(const TargetInstrInfo *TII) const {
+  int FI;
+  if (TII->isLoadFromStackSlotPostFE(*this, FI)) {
+    const MachineFrameInfo &MFI = getMF()->getFrameInfo();
+    if (MFI.isSpillSlotObjectIndex(FI))
+      return (*memoperands_begin())->getSize();
+  }
+  return None;
+}
+
+Optional<unsigned>
+MachineInstr::getFoldedRestoreSize(const TargetInstrInfo *TII) const {
+  MMOList Accesses;
+  if (TII->hasLoadFromStackSlot(*this, Accesses))
+    return getSpillSlotSize(Accesses, getMF()->getFrameInfo());
+  return None;
 }

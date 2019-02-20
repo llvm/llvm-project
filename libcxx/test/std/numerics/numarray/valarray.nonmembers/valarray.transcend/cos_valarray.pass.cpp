@@ -31,7 +31,7 @@ bool is_about(double x, double y, int p)
     return a == o.str();
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -48,4 +48,6 @@ int main()
         for (std::size_t i = 0; i < v3.size(); ++i)
             assert(is_about(v3[i], a3[i], 10));
     }
+
+  return 0;
 }

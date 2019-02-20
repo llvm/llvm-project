@@ -301,7 +301,7 @@ def SPR : RegisterClass<"ARM", [f32], 32, (sequence "S%u", 0, 31)> {
                         (decimate (rotl SPR, 1), 4),
                         (decimate (rotl SPR, 1), 2))];
   let AltOrderSelect = [{
-    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs(MF);
+    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs();
   }];
   let DiagnosticString = "operand must be a register in range [s0, s31]";
 }
@@ -313,7 +313,7 @@ def HPR : RegisterClass<"ARM", [f16], 32, (sequence "S%u", 0, 31)> {
                         (decimate (rotl HPR, 1), 4),
                         (decimate (rotl HPR, 1), 2))];
   let AltOrderSelect = [{
-    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs(MF);
+    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs();
   }];
   let DiagnosticString = "operand must be a register in range [s0, s31]";
 }
@@ -335,7 +335,7 @@ def DPR : RegisterClass<"ARM", [f64, v8i8, v4i16, v2i32, v1i64, v2f32, v4f16], 6
   let AltOrders = [(rotl DPR, 16),
                    (add (decimate (rotl DPR, 16), 2), (rotl DPR, 16))];
   let AltOrderSelect = [{
-    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs(MF);
+    return 1 + MF.getSubtarget<ARMSubtarget>().useStride4VFPs();
   }];
   let DiagnosticType = "DPR";
 }

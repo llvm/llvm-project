@@ -24,7 +24,7 @@ def use_lldb_substitutions(config):
 
     build_script = os.path.dirname(__file__)
     build_script = os.path.join(build_script, 'build.py')
-    build_script_args = [build_script, 
+    build_script_args = [build_script,
                         '--compiler=any', # Default to best compiler
                         '--arch=' + str(config.lldb_bitness)]
     if config.lldb_lit_tools_dir:
@@ -35,7 +35,7 @@ def use_lldb_substitutions(config):
     primary_tools = [
         ToolSubst('%lldb',
                   command=FindTool('lldb'),
-                  extra_args=['-S',
+                  extra_args=['--no-lldbinit', '-S',
                               os.path.join(config.test_source_root,
                                            'lit-lldb-init')]),
         lldbmi,
@@ -44,6 +44,7 @@ def use_lldb_substitutions(config):
                   extra_args=dsargs,
                   unresolved='ignore'),
         'lldb-test',
+        'lldb-instr',
         ToolSubst('%build',
                   command="'" + sys.executable + "'",
                   extra_args=build_script_args)
@@ -51,7 +52,8 @@ def use_lldb_substitutions(config):
 
     llvm_config.add_tool_substitutions(primary_tools,
                                        [config.lldb_tools_dir])
-    if lldbmi.was_resolved:
+    # lldb-mi always fails without Python support
+    if lldbmi.was_resolved and not config.lldb_disable_python:
         config.available_features.add('lldb-mi')
 
 def _use_msvc_substitutions(config):

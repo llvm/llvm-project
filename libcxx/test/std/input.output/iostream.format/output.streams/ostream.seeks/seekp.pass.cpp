@@ -36,7 +36,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         seekpos_called = 0;
@@ -64,4 +64,6 @@ int main()
         assert(seekpos_called == 1);
         assert(os.rdstate() == std::ios_base::eofbit);
     }
+
+  return 0;
 }

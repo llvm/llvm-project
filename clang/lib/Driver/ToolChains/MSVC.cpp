@@ -1407,10 +1407,10 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
           DAL.AddFlagArg(
               A, Opts.getOption(options::OPT_fno_omit_frame_pointer));
       } else {
-        // Don't warn about /Oy- in 64-bit builds (where
+        // Don't warn about /Oy- in x86-64 builds (where
         // SupportsForcingFramePointer is false).  The flag having no effect
         // there is a compiler-internal optimization, and people shouldn't have
-        // to special-case their build files for 64-bit clang-cl.
+        // to special-case their build files for x86-64 clang-cl.
         A->claim();
       }
       break;
@@ -1441,8 +1441,8 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
 
-  // /Oy and /Oy- only has an effect under X86-32.
-  bool SupportsForcingFramePointer = getArch() == llvm::Triple::x86;
+  // /Oy and /Oy- don't have an effect on X86-64
+  bool SupportsForcingFramePointer = getArch() != llvm::Triple::x86_64;
 
   // The -O[12xd] flag actually expands to several flags.  We must desugar the
   // flags so that options embedded can be negated.  For example, the '-O2' flag

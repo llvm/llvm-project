@@ -47,7 +47,7 @@ struct do_nothing
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         A a;
@@ -70,4 +70,6 @@ int main()
     static_assert(*it2 == p[1], "");
     }
 #endif
+
+  return 0;
 }

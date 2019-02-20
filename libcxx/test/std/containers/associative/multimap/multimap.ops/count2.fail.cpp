@@ -28,7 +28,7 @@
 #error "This test requires is C++14 (or later)"
 #else
 
-int main()
+int main(int, char**)
 {
     typedef std::multimap<int, double, transparent_less_private> M;
 

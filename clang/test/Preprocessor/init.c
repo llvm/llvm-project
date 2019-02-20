@@ -5991,7 +5991,7 @@
 // PPC64LE:#define _ARCH_PWR5 1
 // PPC64LE:#define _ARCH_PWR5X 1
 // PPC64LE:#define _ARCH_PWR6 1
-// PPC64LE:#define _ARCH_PWR6X 1
+// PPC64LE-NOT:#define _ARCH_PWR6X 1
 // PPC64LE:#define _ARCH_PWR7 1
 // PPC64LE:#define _CALL_ELF 2
 // PPC64LE:#define _LITTLE_ENDIAN 1
@@ -6331,7 +6331,7 @@
 // PPCPWR7:#define _ARCH_PWR5 1
 // PPCPWR7:#define _ARCH_PWR5X 1
 // PPCPWR7:#define _ARCH_PWR6 1
-// PPCPWR7:#define _ARCH_PWR6X 1
+// PPCPWR7-NOT:#define _ARCH_PWR6X 1
 // PPCPWR7:#define _ARCH_PWR7 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu power7 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPOWER7 %s
@@ -6344,7 +6344,7 @@
 // PPCPOWER7:#define _ARCH_PWR5 1
 // PPCPOWER7:#define _ARCH_PWR5X 1
 // PPCPOWER7:#define _ARCH_PWR6 1
-// PPCPOWER7:#define _ARCH_PWR6X 1
+// PPCPOWER7-NOT:#define _ARCH_PWR6X 1
 // PPCPOWER7:#define _ARCH_PWR7 1
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=powerpc64-none-none -target-cpu pwr8 -fno-signed-char < /dev/null | FileCheck -match-full-lines -check-prefix PPCPWR8 %s
@@ -6357,7 +6357,7 @@
 // PPCPWR8:#define _ARCH_PWR5 1
 // PPCPWR8:#define _ARCH_PWR5X 1
 // PPCPWR8:#define _ARCH_PWR6 1
-// PPCPWR8:#define _ARCH_PWR6X 1
+// PPCPWR8-NOT:#define _ARCH_PWR6X 1
 // PPCPWR8:#define _ARCH_PWR7 1
 // PPCPWR8:#define _ARCH_PWR8 1
 //
@@ -6374,7 +6374,7 @@
 // PPCPOWER8:#define _ARCH_PWR5 1
 // PPCPOWER8:#define _ARCH_PWR5X 1
 // PPCPOWER8:#define _ARCH_PWR6 1
-// PPCPOWER8:#define _ARCH_PWR6X 1
+// PPCPOWER8-NOT:#define _ARCH_PWR6X 1
 // PPCPOWER8:#define _ARCH_PWR7 1
 // PPCPOWER8:#define _ARCH_PWR8 1
 //
@@ -6388,7 +6388,7 @@
 // PPCPWR9:#define _ARCH_PWR5 1
 // PPCPWR9:#define _ARCH_PWR5X 1
 // PPCPWR9:#define _ARCH_PWR6 1
-// PPCPWR9:#define _ARCH_PWR6X 1
+// PPCPWR9-NOT:#define _ARCH_PWR6X 1
 // PPCPWR9:#define _ARCH_PWR7 1
 // PPCPWR9:#define _ARCH_PWR9 1
 //
@@ -6402,7 +6402,7 @@
 // PPCPOWER9:#define _ARCH_PWR5 1
 // PPCPOWER9:#define _ARCH_PWR5X 1
 // PPCPOWER9:#define _ARCH_PWR6 1
-// PPCPOWER9:#define _ARCH_PWR6X 1
+// PPCPOWER9-NOT:#define _ARCH_PWR6X 1
 // PPCPOWER9:#define _ARCH_PWR7 1
 // PPCPOWER9:#define _ARCH_PWR9 1
 //
@@ -9166,20 +9166,20 @@
 // WEBASSEMBLY-NOT:#define __ELF__
 // WEBASSEMBLY-NEXT:#define __FINITE_MATH_ONLY__ 0
 // WEBASSEMBLY-NEXT:#define __FLOAT128__ 1
-// WEBASSEMBLY-NEXT:#define __FLT16_DECIMAL_DIG__ 5
-// WEBASSEMBLY-NEXT:#define __FLT16_DENORM_MIN__ 5.9604644775390625e-8F16
-// WEBASSEMBLY-NEXT:#define __FLT16_DIG__ 3
-// WEBASSEMBLY-NEXT:#define __FLT16_EPSILON__ 9.765625e-4F16
-// WEBASSEMBLY-NEXT:#define __FLT16_HAS_DENORM__ 1
-// WEBASSEMBLY-NEXT:#define __FLT16_HAS_INFINITY__ 1
-// WEBASSEMBLY-NEXT:#define __FLT16_HAS_QUIET_NAN__ 1
-// WEBASSEMBLY-NEXT:#define __FLT16_MANT_DIG__ 11
-// WEBASSEMBLY-NEXT:#define __FLT16_MAX_10_EXP__ 4
-// WEBASSEMBLY-NEXT:#define __FLT16_MAX_EXP__ 15
-// WEBASSEMBLY-NEXT:#define __FLT16_MAX__ 6.5504e+4F16
-// WEBASSEMBLY-NEXT:#define __FLT16_MIN_10_EXP__ (-13)
-// WEBASSEMBLY-NEXT:#define __FLT16_MIN_EXP__ (-14)
-// WEBASSEMBLY-NEXT:#define __FLT16_MIN__ 6.103515625e-5F16
+// WEBASSEMBLY-NOT:#define __FLT16_DECIMAL_DIG__
+// WEBASSEMBLY-NOT:#define __FLT16_DENORM_MIN__
+// WEBASSEMBLY-NOT:#define __FLT16_DIG__
+// WEBASSEMBLY-NOT:#define __FLT16_EPSILON__
+// WEBASSEMBLY-NOT:#define __FLT16_HAS_DENORM__
+// WEBASSEMBLY-NOT:#define __FLT16_HAS_INFINITY__
+// WEBASSEMBLY-NOT:#define __FLT16_HAS_QUIET_NAN__
+// WEBASSEMBLY-NOT:#define __FLT16_MANT_DIG__
+// WEBASSEMBLY-NOT:#define __FLT16_MAX_10_EXP__
+// WEBASSEMBLY-NOT:#define __FLT16_MAX_EXP__
+// WEBASSEMBLY-NOT:#define __FLT16_MAX__
+// WEBASSEMBLY-NOT:#define __FLT16_MIN_10_EXP__
+// WEBASSEMBLY-NOT:#define __FLT16_MIN_EXP__
+// WEBASSEMBLY-NOT:#define __FLT16_MIN__
 // WEBASSEMBLY-NEXT:#define __FLT_DECIMAL_DIG__ 9
 // WEBASSEMBLY-NEXT:#define __FLT_DENORM_MIN__ 1.40129846e-45F
 // WEBASSEMBLY-NEXT:#define __FLT_DIG__ 6

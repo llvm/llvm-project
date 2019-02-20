@@ -51,7 +51,7 @@ struct test
     using base::c;
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::vector<int, test_allocator<int> > C;
     C v = make<C>(5);
@@ -59,4 +59,6 @@ int main()
     assert(q.c.get_allocator() == test_allocator<int>(3));
     assert(q.size() == 5);
     assert(q.top() == 4);
+
+  return 0;
 }

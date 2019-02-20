@@ -25,7 +25,7 @@ constexpr fs::perm_options ME(int val) {
   return static_cast<fs::perm_options>(val);
 }
 
-int main() {
+int main(int, char**) {
   typedef fs::perm_options E;
   static_assert(std::is_enum<E>::value, "");
 
@@ -44,4 +44,6 @@ int main() {
         E::remove   == ME(4) &&
         E::nofollow == ME(8),
         "Expected enumeration values do not match");
+
+  return 0;
 }

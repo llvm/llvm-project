@@ -365,7 +365,7 @@ void test3()
     test(S("abcdeabcdeabcdeabcde"), "abcdeabcdeabcdeabcde", 21, 20, 0);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -389,4 +389,6 @@ int main()
     static_assert (sv2.rfind( "abcde", 0, 1 ) == 0, "" );
     }
 #endif
+
+  return 0;
 }

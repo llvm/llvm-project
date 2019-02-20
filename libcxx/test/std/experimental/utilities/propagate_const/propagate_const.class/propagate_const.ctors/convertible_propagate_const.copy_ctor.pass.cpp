@@ -21,5 +21,7 @@ using std::experimental::propagate_const;
 typedef propagate_const<X> PX;
 typedef propagate_const<CopyConstructibleFromX> PY;
 
-int main() { static_assert(!std::is_constructible<PX, PY>::value, ""); }
+int main(int, char**) { static_assert(!std::is_constructible<PX, PY>::value, ""); 
+  return 0;
+}
 

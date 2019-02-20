@@ -21,7 +21,7 @@ auto extract ( const AtContainer &t, const std::integer_sequence<T, I...> )
 -> decltype ( std::make_tuple ( std::get<I>(t)... ))
 {     return  std::make_tuple ( std::get<I>(t)... ); }
 
-int main()
+int main(int, char**)
 {
 //  Make a couple of sequences
     using int3    = std::make_integer_sequence<int, 3>;     // generates int:    0,1,2
@@ -76,4 +76,6 @@ int main()
     auto tsizemix = extract ( tup, sizemix ());
     static_assert ( std::tuple_size<decltype(tsizemix)>::value == sizemix::size (), "tsizemix size wrong");
     assert ( tsizemix == std::make_tuple ( 11, 11, 12, 13, 15 ));
+
+  return 0;
 }

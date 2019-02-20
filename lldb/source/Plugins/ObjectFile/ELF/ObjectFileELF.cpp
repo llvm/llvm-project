@@ -55,6 +55,7 @@ namespace {
 const char *const LLDB_NT_OWNER_FREEBSD = "FreeBSD";
 const char *const LLDB_NT_OWNER_GNU = "GNU";
 const char *const LLDB_NT_OWNER_NETBSD = "NetBSD";
+const char *const LLDB_NT_OWNER_NETBSDCORE = "NetBSD-CORE";
 const char *const LLDB_NT_OWNER_OPENBSD = "OpenBSD";
 const char *const LLDB_NT_OWNER_CSR = "csr";
 const char *const LLDB_NT_OWNER_ANDROID = "Android";
@@ -70,8 +71,10 @@ const elf_word LLDB_NT_GNU_ABI_SIZE = 16;
 
 const elf_word LLDB_NT_GNU_BUILD_ID_TAG = 0x03;
 
-const elf_word LLDB_NT_NETBSD_ABI_TAG = 0x01;
-const elf_word LLDB_NT_NETBSD_ABI_SIZE = 4;
+const elf_word LLDB_NT_NETBSD_IDENT_TAG = 1;
+const elf_word LLDB_NT_NETBSD_IDENT_DESCSZ = 4;
+const elf_word LLDB_NT_NETBSD_IDENT_NAMESZ = 7;
+const elf_word LLDB_NT_NETBSD_PROCINFO = 1;
 
 // GNU ABI note OS constants
 const elf_word LLDB_NT_GNU_ABI_OS_LINUX = 0x00;
@@ -435,11 +438,11 @@ ObjectFile *ObjectFileELF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   unsigned address_size = ELFHeader::AddressSizeInBytes(magic);
   if (address_size == 4 || address_size == 8) {
-    std::unique_ptr<ObjectFileELF> objfile_ap(new ObjectFileELF(
+    std::unique_ptr<ObjectFileELF> objfile_up(new ObjectFileELF(
         module_sp, data_sp, data_offset, file, file_offset, length));
-    ArchSpec spec = objfile_ap->GetArchitecture();
-    if (spec && objfile_ap->SetModulesArchitecture(spec))
-      return objfile_ap.release();
+    ArchSpec spec = objfile_up->GetArchitecture();
+    if (spec && objfile_up->SetModulesArchitecture(spec))
+      return objfile_up.release();
   }
 
   return NULL;
@@ -453,11 +456,11 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
     if (ELFHeader::MagicBytesMatch(magic)) {
       unsigned address_size = ELFHeader::AddressSizeInBytes(magic);
       if (address_size == 4 || address_size == 8) {
-        std::unique_ptr<ObjectFileELF> objfile_ap(
+        std::unique_ptr<ObjectFileELF> objfile_up(
             new ObjectFileELF(module_sp, data_sp, process_sp, header_addr));
-        ArchSpec spec = objfile_ap->GetArchitecture();
-        if (spec && objfile_ap->SetModulesArchitecture(spec))
-          return objfile_ap.release();
+        ArchSpec spec = objfile_up->GetArchitecture();
+        if (spec && objfile_up->SetModulesArchitecture(spec))
+          return objfile_up.release();
       }
     }
   }
@@ -774,7 +777,7 @@ ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
       m_header(), m_uuid(), m_gnu_debuglink_file(), m_gnu_debuglink_crc(0),
       m_program_headers(), m_section_headers(), m_dynamic_symbols(),
-      m_filespec_ap(), m_entry_point_address(), m_arch_spec() {
+      m_filespec_up(), m_entry_point_address(), m_arch_spec() {
   if (file)
     m_file = *file;
   ::memset(&m_header, 0, sizeof(m_header));
@@ -787,7 +790,7 @@ ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
       m_header(), m_uuid(), m_gnu_debuglink_file(), m_gnu_debuglink_crc(0),
       m_program_headers(), m_section_headers(), m_dynamic_symbols(),
-      m_filespec_ap(), m_entry_point_address(), m_arch_spec() {
+      m_filespec_up(), m_entry_point_address(), m_arch_spec() {
   ::memset(&m_header, 0, sizeof(m_header));
 }
 
@@ -896,49 +899,43 @@ bool ObjectFileELF::ParseHeader() {
   return m_header.Parse(m_data, &offset);
 }
 
-bool ObjectFileELF::GetUUID(lldb_private::UUID *uuid) {
+UUID ObjectFileELF::GetUUID() {
   // Need to parse the section list to get the UUIDs, so make sure that's been
   // done.
   if (!ParseSectionHeaders() && GetType() != ObjectFile::eTypeCoreFile)
-    return false;
+    return UUID();
 
-  using u32le = llvm::support::ulittle32_t;
-  if (m_uuid.IsValid()) {
-    // We have the full build id uuid.
-    *uuid = m_uuid;
-    return true;
-  } else if (GetType() == ObjectFile::eTypeCoreFile) {
-    uint32_t core_notes_crc = 0;
+  if (!m_uuid) {
+    using u32le = llvm::support::ulittle32_t;
+    if (GetType() == ObjectFile::eTypeCoreFile) {
+      uint32_t core_notes_crc = 0;
 
-    if (!ParseProgramHeaders())
-      return false;
+      if (!ParseProgramHeaders())
+        return UUID();
 
-    core_notes_crc = CalculateELFNotesSegmentsCRC32(m_program_headers, m_data);
+      core_notes_crc =
+          CalculateELFNotesSegmentsCRC32(m_program_headers, m_data);
 
-    if (core_notes_crc) {
-      // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make it look
-      // different form .gnu_debuglink crc - followed by 4 bytes of note
-      // segments crc.
-      u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
-      m_uuid = UUID::fromData(data, sizeof(data));
-    }
-  } else {
-    if (!m_gnu_debuglink_crc)
-      m_gnu_debuglink_crc =
-          calc_gnu_debuglink_crc32(m_data.GetDataStart(), m_data.GetByteSize());
-    if (m_gnu_debuglink_crc) {
-      // Use 4 bytes of crc from the .gnu_debuglink section.
-      u32le data(m_gnu_debuglink_crc);
-      m_uuid = UUID::fromData(&data, sizeof(data));
+      if (core_notes_crc) {
+        // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make it
+        // look different form .gnu_debuglink crc - followed by 4 bytes of note
+        // segments crc.
+        u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
+        m_uuid = UUID::fromData(data, sizeof(data));
+      }
+    } else {
+      if (!m_gnu_debuglink_crc)
+        m_gnu_debuglink_crc = calc_gnu_debuglink_crc32(m_data.GetDataStart(),
+                                                       m_data.GetByteSize());
+      if (m_gnu_debuglink_crc) {
+        // Use 4 bytes of crc from the .gnu_debuglink section.
+        u32le data(m_gnu_debuglink_crc);
+        m_uuid = UUID::fromData(&data, sizeof(data));
+      }
     }
   }
 
-  if (m_uuid.IsValid()) {
-    *uuid = m_uuid;
-    return true;
-  }
-
-  return false;
+  return m_uuid;
 }
 
 lldb_private::FileSpecList ObjectFileELF::GetDebugSymbolFilePaths() {
@@ -956,7 +953,7 @@ uint32_t ObjectFileELF::GetDependentModules(FileSpecList &files) {
   uint32_t num_specs = 0;
 
   for (unsigned i = 0; i < num_modules; ++i) {
-    if (files.AppendIfUnique(m_filespec_ap->GetFileSpecAtIndex(i)))
+    if (files.AppendIfUnique(m_filespec_up->GetFileSpecAtIndex(i)))
       num_specs++;
   }
 
@@ -1063,10 +1060,10 @@ Address ObjectFileELF::GetBaseAddress() {
 // ParseDependentModules
 //----------------------------------------------------------------------
 size_t ObjectFileELF::ParseDependentModules() {
-  if (m_filespec_ap.get())
-    return m_filespec_ap->GetSize();
+  if (m_filespec_up)
+    return m_filespec_up->GetSize();
 
-  m_filespec_ap.reset(new FileSpecList());
+  m_filespec_up.reset(new FileSpecList());
 
   if (!ParseSectionHeaders())
     return 0;
@@ -1113,11 +1110,11 @@ size_t ObjectFileELF::ParseDependentModules() {
       const char *lib_name = dynstr_data.PeekCStr(str_index);
       FileSpec file_spec(lib_name);
       FileSystem::Instance().Resolve(file_spec);
-      m_filespec_ap->Append(file_spec);
+      m_filespec_up->Append(file_spec);
     }
   }
 
-  return m_filespec_ap->GetSize();
+  return m_filespec_up->GetSize();
 }
 
 //----------------------------------------------------------------------
@@ -1300,25 +1297,39 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
         // The note.n_name == LLDB_NT_OWNER_GNU is valid for Linux platform
         arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
     }
-    // Process NetBSD ELF notes.
+    // Process NetBSD ELF executables and shared libraries
     else if ((note.n_name == LLDB_NT_OWNER_NETBSD) &&
-             (note.n_type == LLDB_NT_NETBSD_ABI_TAG) &&
-             (note.n_descsz == LLDB_NT_NETBSD_ABI_SIZE)) {
-      // Pull out the min version info.
+             (note.n_type == LLDB_NT_NETBSD_IDENT_TAG) &&
+             (note.n_descsz == LLDB_NT_NETBSD_IDENT_DESCSZ) &&
+             (note.n_namesz == LLDB_NT_NETBSD_IDENT_NAMESZ)) {
+      // Pull out the version info.
       uint32_t version_info;
       if (data.GetU32(&offset, &version_info, 1) == nullptr) {
         error.SetErrorString("failed to read NetBSD ABI note payload");
         return error;
       }
-
+      // Convert the version info into a major/minor/patch number.
+      //     #define __NetBSD_Version__ MMmmrrpp00
+      //
+      //     M = major version
+      //     m = minor version; a minor number of 99 indicates current.
+      //     r = 0 (since NetBSD 3.0 not used)
+      //     p = patchlevel
+      const uint32_t version_major = version_info / 100000000;
+      const uint32_t version_minor = (version_info % 100000000) / 1000000;
+      const uint32_t version_patch = (version_info % 10000) / 100;
+      // Set the elf OS version to NetBSD.  Also clear the vendor.
+      arch_spec.GetTriple().setOSName(
+          llvm::formatv("netbsd{0}.{1}.{2}", version_major, version_minor,
+                        version_patch).str());
+      arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
+    }
+    // Process NetBSD ELF core(5) notes
+    else if ((note.n_name == LLDB_NT_OWNER_NETBSDCORE) &&
+             (note.n_type == LLDB_NT_NETBSD_PROCINFO)) {
       // Set the elf OS version to NetBSD.  Also clear the vendor.
       arch_spec.GetTriple().setOS(llvm::Triple::OSType::NetBSD);
       arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
-
-      if (log)
-        log->Printf(
-            "ObjectFileELF::%s detected NetBSD, min version constant %" PRIu32,
-            __FUNCTION__, version_info);
     }
     // Process OpenBSD ELF notes.
     else if (note.n_name == LLDB_NT_OWNER_OPENBSD) {
@@ -1937,10 +1948,10 @@ public:
 }
 
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
-  if (m_sections_ap)
+  if (m_sections_up)
     return;
 
-  m_sections_ap = llvm::make_unique<SectionList>();
+  m_sections_up = llvm::make_unique<SectionList>();
   VMAddressProvider address_provider(CalculateType());
 
   size_t LoadID = 0;
@@ -1960,7 +1971,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         eSectionTypeContainer, InfoOr->GetRangeBase(), InfoOr->GetByteSize(),
         PHdr.p_offset, PHdr.p_filesz, Log2Align, /*flags*/ 0);
     Segment->SetPermissions(GetPermissions(PHdr));
-    m_sections_ap->AddSection(Segment);
+    m_sections_up->AddSection(Segment);
 
     address_provider.AddSegment(*InfoOr, std::move(Segment));
   }
@@ -2006,7 +2017,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
 
     section_sp->SetPermissions(GetPermissions(header));
     section_sp->SetIsThreadSpecific(header.sh_flags & SHF_TLS);
-    (InfoOr->Segment ? InfoOr->Segment->GetChildren() : *m_sections_ap)
+    (InfoOr->Segment ? InfoOr->Segment->GetChildren() : *m_sections_up)
         .AddSection(section_sp);
     address_provider.AddSection(std::move(*InfoOr), std::move(section_sp));
   }
@@ -2014,7 +2025,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   // For eTypeDebugInfo files, the Symbol Vendor will take care of updating the
   // unified section list.
   if (GetType() != eTypeDebugInfo)
-    unified_section_list = *m_sections_ap;
+    unified_section_list = *m_sections_up;
 }
 
 // Find the arm/aarch64 mapping symbol character in the given symbol name.
@@ -2390,7 +2401,7 @@ unsigned ObjectFileELF::ParseSymbolTable(Symtab *symbol_table,
   }
 
   // Get section list for this object file.
-  SectionList *section_list = m_sections_ap.get();
+  SectionList *section_list = m_sections_up.get();
   if (!section_list)
     return 0;
 
@@ -2618,7 +2629,7 @@ ObjectFileELF::ParseTrampolineSymbols(Symtab *symbol_table, user_id_t start_id,
   if (!sym_hdr)
     return 0;
 
-  SectionList *section_list = m_sections_ap.get();
+  SectionList *section_list = m_sections_up.get();
   if (!section_list)
     return 0;
 
@@ -2811,7 +2822,7 @@ Symtab *ObjectFileELF::GetSymtab() {
   if (module_obj_file && module_obj_file != this)
     return module_obj_file->GetSymtab();
 
-  if (m_symtab_ap.get() == NULL) {
+  if (m_symtab_up == NULL) {
     SectionList *section_list = module_sp->GetSectionList();
     if (!section_list)
       return NULL;
@@ -2835,8 +2846,8 @@ Symtab *ObjectFileELF::GetSymtab() {
               .get();
     }
     if (symtab) {
-      m_symtab_ap.reset(new Symtab(symtab->GetObjectFile()));
-      symbol_id += ParseSymbolTable(m_symtab_ap.get(), symbol_id, symtab);
+      m_symtab_up.reset(new Symtab(symtab->GetObjectFile()));
+      symbol_id += ParseSymbolTable(m_symtab_up.get(), symbol_id, symtab);
     }
 
     // DT_JMPREL
@@ -2860,30 +2871,30 @@ Symtab *ObjectFileELF::GetSymtab() {
             GetSectionHeaderByIndex(reloc_id);
         assert(reloc_header);
 
-        if (m_symtab_ap == nullptr)
-          m_symtab_ap.reset(new Symtab(reloc_section->GetObjectFile()));
+        if (m_symtab_up == nullptr)
+          m_symtab_up.reset(new Symtab(reloc_section->GetObjectFile()));
 
-        ParseTrampolineSymbols(m_symtab_ap.get(), symbol_id, reloc_header,
+        ParseTrampolineSymbols(m_symtab_up.get(), symbol_id, reloc_header,
                                reloc_id);
       }
     }
 
-    DWARFCallFrameInfo *eh_frame = GetUnwindTable().GetEHFrameInfo();
-    if (eh_frame) {
-      if (m_symtab_ap == nullptr)
-        m_symtab_ap.reset(new Symtab(this));
-      ParseUnwindSymbols(m_symtab_ap.get(), eh_frame);
+    if (DWARFCallFrameInfo *eh_frame =
+            GetModule()->GetUnwindTable().GetEHFrameInfo()) {
+      if (m_symtab_up == nullptr)
+        m_symtab_up.reset(new Symtab(this));
+      ParseUnwindSymbols(m_symtab_up.get(), eh_frame);
     }
 
     // If we still don't have any symtab then create an empty instance to avoid
     // do the section lookup next time.
-    if (m_symtab_ap == nullptr)
-      m_symtab_ap.reset(new Symtab(this));
+    if (m_symtab_up == nullptr)
+      m_symtab_up.reset(new Symtab(this));
 
-    m_symtab_ap->CalculateSymbolSizes();
+    m_symtab_up->CalculateSymbolSizes();
   }
 
-  return m_symtab_ap.get();
+  return m_symtab_up.get();
 }
 
 void ObjectFileELF::RelocateSection(lldb_private::Section *section)
@@ -3282,7 +3293,7 @@ void ObjectFileELF::DumpDependentModules(lldb_private::Stream *s) {
   if (num_modules > 0) {
     s->PutCString("Dependent Modules:\n");
     for (unsigned i = 0; i < num_modules; ++i) {
-      const FileSpec &spec = m_filespec_ap->GetFileSpecAtIndex(i);
+      const FileSpec &spec = m_filespec_up->GetFileSpecAtIndex(i);
       s->Printf("   %s\n", spec.GetFilename().GetCString());
     }
   }

@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using weekday      = std::chrono::weekday;
     using weekday_last = std::chrono::weekday_last;
@@ -33,4 +33,6 @@ int main()
 
     for (unsigned i = 0; i <= 255; ++i)
         assert(weekday_last{weekday{i}}.ok() == weekday{i}.ok());
+
+  return 0;
 }

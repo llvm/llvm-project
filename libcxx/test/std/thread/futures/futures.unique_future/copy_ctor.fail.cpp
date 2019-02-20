@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
     {
@@ -47,4 +47,6 @@ int main()
         std::future<void> f = f0; // expected-error {{calling a private constructor of class 'std::__1::future<void>'}}
     }
 #endif
+
+  return 0;
 }

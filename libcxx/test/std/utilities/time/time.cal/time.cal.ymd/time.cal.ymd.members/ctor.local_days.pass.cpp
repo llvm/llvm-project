@@ -29,7 +29,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year           = std::chrono::year;
     using day            = std::chrono::day;
@@ -81,4 +81,6 @@ int main()
     assert( ymd.month() == std::chrono::November);
     assert( ymd.day()   == day{29});
     }
+
+  return 0;
 }

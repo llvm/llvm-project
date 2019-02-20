@@ -64,7 +64,7 @@ CMyClass::~CMyClass() {
 
 bool operator==(const CMyClass &lhs, const CMyClass &rhs) { return lhs.equal(rhs); }
 
-int main()
+int main(int, char**)
 {
     CMyClass instance(42);
     std::vector<CMyClass> vec;
@@ -85,4 +85,6 @@ int main()
         assert(is_contiguous_container_asan_correct(vec));
     }
 #endif
+
+  return 0;
 }

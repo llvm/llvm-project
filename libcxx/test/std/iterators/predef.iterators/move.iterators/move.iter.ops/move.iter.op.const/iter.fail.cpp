@@ -23,8 +23,10 @@ test(It i)
     std::move_iterator<It> r = i;
 }
 
-int main()
+int main(int, char**)
 {
     char s[] = "123";
     test(s);
+
+  return 0;
 }

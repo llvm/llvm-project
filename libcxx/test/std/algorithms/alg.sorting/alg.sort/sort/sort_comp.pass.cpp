@@ -30,7 +30,7 @@ struct indirect_less
         {return *x < *y;}
 };
 
-int main()
+int main(int, char**)
 {
     {
     std::vector<int> v(1000);
@@ -53,4 +53,6 @@ int main()
     assert(*v[2] == 2);
     }
 #endif
+
+  return 0;
 }

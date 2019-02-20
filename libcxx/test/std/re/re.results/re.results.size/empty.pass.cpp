@@ -30,7 +30,9 @@ test()
     assert(m.size() == 3);
 }
 
-int main()
+int main(int, char**)
 {
     test<char>();
+
+  return 0;
 }

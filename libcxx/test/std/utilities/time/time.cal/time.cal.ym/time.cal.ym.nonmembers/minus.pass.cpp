@@ -29,7 +29,7 @@
 
 #include <iostream>
 
-int main()
+int main(int, char**)
 {
     using year       = std::chrono::year;
     using years      = std::chrono::years;
@@ -86,4 +86,6 @@ int main()
 //  TODO: different year
 
     }
+
+  return 0;
 }

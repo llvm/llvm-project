@@ -32,7 +32,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<const int, double> V;
@@ -225,4 +225,6 @@ int main()
         assert (!(cii != ii1 ));
     }
 #endif
+
+  return 0;
 }

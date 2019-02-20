@@ -21,8 +21,10 @@
 
 #include "allocators.h"
 
-int main()
+int main(int, char**)
 {
     std::scoped_allocator_adaptor<A1<int>> a;
     a.allocate(10, (const void*)0); // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  return 0;
 }

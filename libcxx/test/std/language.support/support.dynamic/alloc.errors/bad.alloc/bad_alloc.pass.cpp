@@ -12,7 +12,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_base_of<std::exception, std::bad_alloc>::value),
                  "std::is_base_of<std::exception, std::bad_alloc>::value");
@@ -23,4 +23,6 @@ int main()
     b2 = b;
     const char* w = b2.what();
     assert(w);
+
+  return 0;
 }

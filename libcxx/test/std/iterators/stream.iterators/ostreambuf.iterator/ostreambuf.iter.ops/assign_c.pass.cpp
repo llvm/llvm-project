@@ -17,7 +17,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ostringstream outf;
@@ -35,4 +35,6 @@ int main()
         i = L'b';
         assert(outf.str() == L"ab");
     }
+
+  return 0;
 }

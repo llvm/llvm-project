@@ -15,11 +15,13 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::error_condition ec(std::errc::not_a_directory);
         assert(ec.value() == static_cast<int>(std::errc::not_a_directory));
         assert(ec.category() == std::generic_category());
     }
+
+  return 0;
 }

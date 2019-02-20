@@ -25,8 +25,10 @@ struct test
 
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(t.sgetc() == -1);
+
+  return 0;
 }

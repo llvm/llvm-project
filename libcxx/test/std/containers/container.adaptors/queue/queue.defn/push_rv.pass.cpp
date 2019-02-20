@@ -17,7 +17,7 @@
 
 #include "MoveOnly.h"
 
-int main()
+int main(int, char**)
 {
     std::queue<MoveOnly> q;
     q.push(MoveOnly(1));
@@ -32,4 +32,6 @@ int main()
     assert(q.size() == 3);
     assert(q.front() == MoveOnly(1));
     assert(q.back() == MoveOnly(3));
+
+  return 0;
 }

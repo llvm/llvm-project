@@ -21,7 +21,7 @@
 #include "private_constructor.hpp"
 #include "is_transparent.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::pair<const int, double> V;
@@ -487,4 +487,6 @@ int main()
     assert(r.second == next(m.begin(), 8));
     }
 #endif
+
+  return 0;
 }

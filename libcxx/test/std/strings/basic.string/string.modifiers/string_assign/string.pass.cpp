@@ -37,7 +37,7 @@ testAlloc(S s, S str, const typename S::allocator_type& a)
     assert(s.get_allocator() == a);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -113,4 +113,6 @@ int main()
     static_assert(noexcept(S().assign(S())), "");  // LWG#2063
     }
 #endif
+
+  return 0;
 }

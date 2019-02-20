@@ -49,7 +49,7 @@ define fastcc double @bar(i32 %hash, double %x, double %y) nounwind {
 ; CHECK-NEXT:    fchs
 ; CHECK-NEXT:    fxch %st(1)
 ; CHECK-NEXT:  .LBB1_5: # %bb16
-; CHECK-NEXT:    faddp %st(1)
+; CHECK-NEXT:    faddp %st, %st(1)
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

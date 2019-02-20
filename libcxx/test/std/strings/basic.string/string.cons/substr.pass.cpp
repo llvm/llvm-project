@@ -140,7 +140,7 @@ void test2583()
 #endif
 #endif
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_allocator<char> A;
@@ -224,4 +224,6 @@ int main()
     test2583();
 #endif
 #endif
+
+  return 0;
 }

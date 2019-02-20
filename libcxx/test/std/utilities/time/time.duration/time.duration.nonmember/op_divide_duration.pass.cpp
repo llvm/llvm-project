@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "truncate_fp.h"
 
-int main()
+int main(int, char**)
 {
     {
     std::chrono::nanoseconds ns1(15);
@@ -65,4 +65,6 @@ int main()
     static_assert(s1 / s2 == 20./3, "");
     }
 #endif
+
+  return 0;
 }

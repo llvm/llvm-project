@@ -1,4 +1,4 @@
-//===--- Selection.h ------------------------------------------------------===//
+//===--- Selection.cpp ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -51,7 +51,7 @@ public:
   //  - those that can't be stored in DynTypedNode.
   // We're missing some interesting things like Attr due to the latter.
   bool TraverseDecl(Decl *X) {
-    if (isa<TranslationUnitDecl>(X))
+    if (X && isa<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
     return traverseNode(X, [&] { return Base::TraverseDecl(X); });
   }
@@ -198,11 +198,10 @@ private:
       auto E = SM.getDecomposedLoc(R.getEnd());
       if (B.first != SelFile || E.first != SelFile)
         continue;
-      assert(R.isTokenRange());
       // Try to cover up to the next token, spaces between children don't count.
       if (auto Tok = Lexer::findNextToken(R.getEnd(), SM, LangOpts))
         E.second = SM.getFileOffset(Tok->getLocation());
-      else
+      else if (R.isTokenRange())
         E.second += Lexer::MeasureTokenLength(R.getEnd(), SM, LangOpts);
       ChildRanges.push_back({B.second, E.second});
     }

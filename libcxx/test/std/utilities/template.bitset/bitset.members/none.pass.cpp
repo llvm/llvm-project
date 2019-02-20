@@ -31,7 +31,7 @@ void test_none()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_none<0>();
     test_none<1>();
@@ -42,4 +42,6 @@ int main()
     test_none<64>();
     test_none<65>();
     test_none<1000>();
+
+  return 0;
 }

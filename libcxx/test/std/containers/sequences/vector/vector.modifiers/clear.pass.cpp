@@ -17,7 +17,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
     int a[] = {1, 2, 3};
@@ -39,4 +39,6 @@ int main()
     LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
     }
 #endif
+
+  return 0;
 }

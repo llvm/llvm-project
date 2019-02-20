@@ -43,7 +43,7 @@ test(S s, typename S::size_type n, S expected)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -85,4 +85,6 @@ int main()
     test(S(), S::npos, S("not going to happen"));
     }
 #endif
+
+  return 0;
 }

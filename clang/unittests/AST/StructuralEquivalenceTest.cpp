@@ -230,6 +230,33 @@ TEST_F(StructuralEquivalenceFunctionTest, TemplateVsNonTemplate) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceFunctionTest, DifferentOperators) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X{}; bool operator<(X, X);",
+      "struct X{}; bool operator==(X, X);", Lang_CXX,
+      functionDecl(hasOverloadedOperatorName("<")),
+      functionDecl(hasOverloadedOperatorName("==")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, SameOperators) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X{}; bool operator<(X, X);",
+      "struct X{}; bool operator<(X, X);", Lang_CXX,
+      functionDecl(hasOverloadedOperatorName("<")),
+      functionDecl(hasOverloadedOperatorName("<")));
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceFunctionTest, CtorVsDtor) {
+  auto t = makeDecls<FunctionDecl>(
+      "struct X{ X(); };",
+      "struct X{ ~X(); };", Lang_CXX,
+      cxxConstructorDecl(),
+      cxxDestructorDecl());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceFunctionTest, ParamConstWithRef) {
   auto t = makeNamedDecls("void foo(int&);",
                           "void foo(const int&);", Lang_CXX);
@@ -378,10 +405,12 @@ TEST_F(StructuralEquivalenceFunctionTest, FunctionsWithDifferentNoreturnAttr) {
   EXPECT_TRUE(testStructuralMatch(t));
 }
 
-// These attributes may not be available on certain platforms.
-#if defined(__x86_64__) && defined(__linux__)
 TEST_F(StructuralEquivalenceFunctionTest,
     FunctionsWithDifferentCallingConventions) {
+  // These attributes may not be available on certain platforms.
+  if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
+      llvm::Triple::x86_64)
+    return;
   auto t = makeNamedDecls(
       "__attribute__((preserve_all)) void foo();",
       "__attribute__((ms_abi))   void foo();",
@@ -390,13 +419,15 @@ TEST_F(StructuralEquivalenceFunctionTest,
 }
 
 TEST_F(StructuralEquivalenceFunctionTest, FunctionsWithDifferentSavedRegsAttr) {
+  if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
+      llvm::Triple::x86_64)
+    return;
   auto t = makeNamedDecls(
       "__attribute__((no_caller_saved_registers)) void foo();",
       "                                           void foo();",
       Lang_C);
   EXPECT_FALSE(testStructuralMatch(t));
 }
-#endif
 
 struct StructuralEquivalenceCXXMethodTest : StructuralEquivalenceTest {
 };

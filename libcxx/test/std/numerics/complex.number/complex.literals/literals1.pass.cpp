@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using namespace std::literals;
 
@@ -37,4 +37,6 @@ int main()
     auto c2 = 3if;
     assert ( c1 == c2 );
     }
+
+  return 0;
 }

@@ -95,7 +95,7 @@ test()
     assert(std::search(Iter1(ij), Iter1(ij+sj), Iter2(ik), Iter2(ik+sk)) == Iter1(ij+6));
 }
 
-int main()
+int main(int, char**)
 {
     test<forward_iterator<const int*>, forward_iterator<const int*> >();
     test<forward_iterator<const int*>, bidirectional_iterator<const int*> >();
@@ -121,4 +121,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

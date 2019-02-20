@@ -1048,14 +1048,18 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     break;
   }
 
-  case ISD::INLINEASM: {
+  case ISD::INLINEASM:
+  case ISD::INLINEASM_BR: {
     unsigned NumOps = Node->getNumOperands();
     if (Node->getOperand(NumOps-1).getValueType() == MVT::Glue)
       --NumOps;  // Ignore the glue operand.
 
     // Create the inline asm machine instruction.
-    MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(),
-                                      TII->get(TargetOpcode::INLINEASM));
+    unsigned TgtOpc = Node->getOpcode() == ISD::INLINEASM_BR
+                          ? TargetOpcode::INLINEASM_BR
+                          : TargetOpcode::INLINEASM;
+    MachineInstrBuilder MIB =
+        BuildMI(*MF, Node->getDebugLoc(), TII->get(TgtOpc));
 
     // Add the asm string as an external symbol operand.
     SDValue AsmStrV = Node->getOperand(InlineAsm::Op_AsmString);
@@ -1136,7 +1140,8 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     // then remove the early-clobber flag.
     for (unsigned Reg : ECRegs) {
       if (MIB->readsRegister(Reg, TRI)) {
-        MachineOperand *MO = MIB->findRegisterDefOperand(Reg, false, TRI);
+        MachineOperand *MO = 
+            MIB->findRegisterDefOperand(Reg, false, false, TRI);
         assert(MO && "No def operand for clobbered register?");
         MO->setIsEarlyClobber(false);
       }

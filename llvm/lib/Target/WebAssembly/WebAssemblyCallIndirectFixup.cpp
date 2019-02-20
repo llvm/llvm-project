@@ -60,7 +60,7 @@ FunctionPass *llvm::createWebAssemblyCallIndirectFixup() {
   return new WebAssemblyCallIndirectFixup();
 }
 
-static unsigned GetNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
+static unsigned getNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
     using namespace WebAssembly;
   case PCALL_INDIRECT_VOID:
@@ -90,8 +90,8 @@ static unsigned GetNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
   }
 }
 
-static bool IsPseudoCallIndirect(const MachineInstr &MI) {
-  return GetNonPseudoCallIndirectOpcode(MI) !=
+static bool isPseudoCallIndirect(const MachineInstr &MI) {
+  return getNonPseudoCallIndirectOpcode(MI) !=
          WebAssembly::INSTRUCTION_LIST_END;
 }
 
@@ -105,11 +105,11 @@ bool WebAssemblyCallIndirectFixup::runOnMachineFunction(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (IsPseudoCallIndirect(MI)) {
+      if (isPseudoCallIndirect(MI)) {
         LLVM_DEBUG(dbgs() << "Found call_indirect: " << MI << '\n');
 
         // Rewrite pseudo to non-pseudo
-        const MCInstrDesc &Desc = TII->get(GetNonPseudoCallIndirectOpcode(MI));
+        const MCInstrDesc &Desc = TII->get(getNonPseudoCallIndirectOpcode(MI));
         MI.setDesc(Desc);
 
         // Rewrite argument order

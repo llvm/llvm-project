@@ -22,7 +22,7 @@ struct testbuf
     testbuf() {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -48,4 +48,6 @@ int main()
         os << std::setprecision(10);
         assert(os.precision() == 10);
     }
+
+  return 0;
 }

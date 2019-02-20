@@ -2251,7 +2251,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 
   // Match the types so we can compare the stride and the BETakenCount.
   // The Stride can be positive/negative, so we sign extend Stride;
-  // The backdgeTakenCount is non-negative, so we zero extend BETakenCount.
+  // The backedgeTakenCount is non-negative, so we zero extend BETakenCount.
   const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
   uint64_t StrideTypeSize = DL.getTypeAllocSize(StrideExpr->getType());
   uint64_t BETypeSize = DL.getTypeAllocSize(BETakenCount->getType());

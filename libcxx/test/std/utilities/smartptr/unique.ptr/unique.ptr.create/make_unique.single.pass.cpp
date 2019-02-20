@@ -11,7 +11,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
     std::unique_ptr<int> p1 = std::make_unique<int>(1);
@@ -28,4 +28,6 @@ int main()
     p2 = std::make_unique<std::string> ( 6, 'z' );
     assert ( *p2 == "zzzzzz" );
     }
+
+  return 0;
 }

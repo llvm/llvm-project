@@ -31,7 +31,7 @@ struct some_comp
     bool operator()(const T&, const T&) const { return false; }
 };
 
-int main()
+int main(int, char**)
 {
 #if defined(_LIBCPP_VERSION)
     typedef std::pair<const MoveOnly, MoveOnly> V;
@@ -52,4 +52,6 @@ int main()
         typedef std::multimap<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;
         static_assert(!std::is_nothrow_move_constructible<C>::value, "");
     }
+
+  return 0;
 }

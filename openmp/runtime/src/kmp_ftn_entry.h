@@ -734,11 +734,15 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_THREAD_LIMIT)(void) {
 #ifdef KMP_STUB
   return 1; // TO DO: clarify whether it returns 1 or 0?
 #else
+  int gtid;
+  kmp_info_t *thread;
   if (!__kmp_init_serial) {
     __kmp_serial_initialize();
   }
-  /* global ICV */
-  return __kmp_cg_max_nth;
+
+  gtid = __kmp_entry_gtid();
+  thread = __kmp_threads[gtid];
+  return thread->th.th_current_task->td_icvs.thread_limit;
 #endif
 }
 
@@ -1367,6 +1371,15 @@ int FTN_STDCALL FTN_PAUSE_RESOURCE_ALL(kmp_pause_status_t kind) {
 #endif
 }
 
+// Returns the maximum number of nesting levels supported by implementation
+int FTN_STDCALL FTN_GET_SUPPORTED_ACTIVE_LEVELS(void) {
+#ifdef KMP_STUB
+  return 1;
+#else
+  return KMP_MAX_ACTIVE_LEVELS_LIMIT;
+#endif
+}
+
 #endif // OMP_50_ENABLED
 
 // GCC compatibility (versioned symbols)
@@ -1472,6 +1485,7 @@ KMP_VERSION_SYMBOL(FTN_GET_PARTITION_PLACE_NUMS, 45, "OMP_4.5");
 // KMP_VERSION_SYMBOL(FTN_GET_DEVICE_NUM, 50, "OMP_5.0");
 // KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE, 50, "OMP_5.0");
 // KMP_VERSION_SYMBOL(FTN_PAUSE_RESOURCE_ALL, 50, "OMP_5.0");
+// KMP_VERSION_SYMBOL(FTN_GET_SUPPORTED_ACTIVE_LEVELS, 50, "OMP_5.0");
 #endif
 
 #endif // KMP_USE_VERSION_SYMBOLS

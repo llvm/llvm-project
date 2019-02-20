@@ -22,7 +22,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -44,8 +44,10 @@ int main()
 
 #else
 
-int main()
+int main(int, char**)
 {
+
+  return 0;
 }
 
 #endif

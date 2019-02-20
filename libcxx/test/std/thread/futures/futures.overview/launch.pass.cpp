@@ -22,7 +22,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 #ifdef _LIBCPP_HAS_NO_STRONG_ENUMS
    LIBCPP_STATIC_ASSERT(static_cast<int>(std::launch::any) ==
@@ -43,4 +43,6 @@ int main()
 #endif
     static_assert(static_cast<int>(std::launch::async) == 1, "");
     static_assert(static_cast<int>(std::launch::deferred) == 2, "");
+
+  return 0;
 }

@@ -3922,6 +3922,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   case Instruction::VAArg:
   case Instruction::Alloca:
   case Instruction::Invoke:
+  case Instruction::CallBr:
   case Instruction::PHI:
   case Instruction::Store:
   case Instruction::Ret:
@@ -4346,7 +4347,8 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     // is guaranteed to return.
     return CS.onlyReadsMemory() || CS.onlyAccessesArgMemory() ||
            match(I, m_Intrinsic<Intrinsic::assume>()) ||
-           match(I, m_Intrinsic<Intrinsic::sideeffect>());
+           match(I, m_Intrinsic<Intrinsic::sideeffect>()) ||
+           match(I, m_Intrinsic<Intrinsic::experimental_widenable_condition>());
   }
 
   // Other instructions return normally.

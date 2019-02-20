@@ -27,7 +27,7 @@ test()
     (void)r;
 }
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<const char*> >();
     test<random_access_iterator<char*> >();
@@ -40,4 +40,6 @@ int main()
         (void)it;
     }
 #endif
+
+  return 0;
 }

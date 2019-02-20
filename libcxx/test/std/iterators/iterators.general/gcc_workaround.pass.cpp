@@ -17,4 +17,6 @@ void f(const std::string &s) { TEST_IGNORE_NODISCARD s.begin(); }
 
 void AppendTo(const std::vector<char> &v) { TEST_IGNORE_NODISCARD v.begin(); }
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

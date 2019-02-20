@@ -53,7 +53,7 @@ void test_test(bool test_throws)
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_test<0>(true);
     test_test<1>(true);
@@ -64,4 +64,6 @@ int main()
     test_test<64>(false);
     test_test<65>(false);
     test_test<1000>(false);
+
+  return 0;
 }

@@ -49,7 +49,7 @@ test()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test<Cardinals>();
 
@@ -59,4 +59,6 @@ int main()
     test<EightBitColors>();
 
     test<Fruits>();
+
+  return 0;
 }

@@ -28,7 +28,7 @@ void check() {
 
 struct T { };
 
-int main() {
+int main(int, char**) {
   check<T,             T>();
   check<T&,            T>();
   check<T const,       T>();
@@ -54,4 +54,6 @@ int main() {
   check<std::reference_wrapper<T[3]>&,     T (&)[3]>();
   check<std::reference_wrapper<T ()>,      T (&)()>();
   check<std::reference_wrapper<T ()>&,     T (&)()>();
+
+  return 0;
 }

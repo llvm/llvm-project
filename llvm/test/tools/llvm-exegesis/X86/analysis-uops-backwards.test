@@ -1,5 +1,5 @@
 # This tests backwards-compatibility of the yaml schema (see PR39082).
-# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file="" -analysis-numpoints=1 | FileCheck %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-numpoints=1 | FileCheck %s
 
 # CHECK: cluster_id,opcode_name,config,sched_class,HWPort0,HWPort1,HWPort2,HWPort3,HWPort4,HWPort5,HWPort6,HWPort7,NumMicroOps
 # CHECK-NEXT: vzeroall

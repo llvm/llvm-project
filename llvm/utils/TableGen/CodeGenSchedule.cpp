@@ -1935,8 +1935,9 @@ void CodeGenSchedModels::checkCompleteness() {
       unsigned SCIdx = getSchedClassIdx(*Inst);
       if (!SCIdx) {
         if (Inst->TheDef->isValueUnset("SchedRW") && !HadCompleteModel) {
-          PrintError("No schedule information for instruction '"
-                     + Inst->TheDef->getName() + "'");
+          PrintError(Inst->TheDef->getLoc(),
+                     "No schedule information for instruction '" +
+                         Inst->TheDef->getName() + "'");
           Complete = false;
         }
         continue;
@@ -1954,8 +1955,9 @@ void CodeGenSchedModels::checkCompleteness() {
         return R->getValueAsDef("SchedModel") == ProcModel.ModelDef;
       });
       if (I == InstRWs.end()) {
-        PrintError("'" + ProcModel.ModelName + "' lacks information for '" +
-                   Inst->TheDef->getName() + "'");
+        PrintError(Inst->TheDef->getLoc(), "'" + ProcModel.ModelName +
+                                               "' lacks information for '" +
+                                               Inst->TheDef->getName() + "'");
         Complete = false;
       }
     }

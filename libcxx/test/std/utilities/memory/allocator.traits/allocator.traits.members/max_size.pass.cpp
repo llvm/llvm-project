@@ -42,7 +42,7 @@ struct B
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         B<int> b;
@@ -74,4 +74,6 @@ int main()
         static_assert(noexcept(std::allocator_traits<std::allocator<int>>::max_size(a)) == true, "");
     }
 #endif
+
+  return 0;
 }

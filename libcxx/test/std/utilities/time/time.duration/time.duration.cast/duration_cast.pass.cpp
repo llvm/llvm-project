@@ -32,7 +32,7 @@ test(const FromDuration& f, const ToDuration& d)
     }
 }
 
-int main()
+int main(int, char**)
 {
     test(std::chrono::milliseconds(7265000), std::chrono::hours(2));
     test(std::chrono::milliseconds(7265000), std::chrono::minutes(121));
@@ -50,4 +50,6 @@ int main()
     static_assert(h.count() == 2, "");
     }
 #endif
+
+  return 0;
 }

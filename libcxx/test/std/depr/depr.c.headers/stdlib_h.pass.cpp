@@ -63,7 +63,7 @@
 #error RAND_MAX not defined
 #endif
 
-int main()
+int main(int, char**)
 {
     size_t s = 0; ((void)s);
     div_t d; ((void)d);
@@ -116,4 +116,6 @@ int main()
     static_assert((std::is_same<decltype(wctomb(pc,L' ')), int>::value), "");
     static_assert((std::is_same<decltype(mbstowcs(pw,"",0)), size_t>::value), "");
     static_assert((std::is_same<decltype(wcstombs(pc,pwc,0)), size_t>::value), "");
+
+  return 0;
 }

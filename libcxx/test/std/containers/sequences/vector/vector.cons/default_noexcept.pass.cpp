@@ -29,7 +29,7 @@ struct some_alloc
     some_alloc(const some_alloc&);
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::vector<MoveOnly> C;
@@ -47,4 +47,6 @@ int main()
         typedef std::vector<MoveOnly, some_alloc<MoveOnly>> C;
         static_assert(!std::is_nothrow_default_constructible<C>::value, "");
     }
+
+  return 0;
 }

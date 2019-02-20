@@ -1,5 +1,5 @@
 # RUN: echo "-P %p/Inputs/hello.obj.elf-x86_64" > %t-response
 # RUN: llvm-nm @%t-response | FileCheck %s
 
-CHECK: main T 0 0
+CHECK: main T 0 15
 CHECK: puts U 0 0

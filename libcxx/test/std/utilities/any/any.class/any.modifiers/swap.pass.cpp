@@ -8,13 +8,7 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_any_cast && !libcpp-no-exceptions
 
 // <any>
 
@@ -127,7 +121,7 @@ void test_self_swap() {
     assert(large::count == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test_noexcept();
     test_swap_empty<small>();
@@ -137,4 +131,6 @@ int main()
     test_swap<small, large>();
     test_swap<large, small>();
     test_self_swap();
+
+  return 0;
 }

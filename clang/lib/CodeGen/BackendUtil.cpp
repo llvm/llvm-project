@@ -36,6 +36,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -52,6 +53,7 @@
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
@@ -242,15 +244,15 @@ static void addAddressSanitizerPasses(const PassManagerBuilder &Builder,
   bool UseGlobalsGC = asanUseGlobalsGC(T, CGOpts);
   PM.add(createAddressSanitizerFunctionPass(/*CompileKernel*/ false, Recover,
                                             UseAfterScope));
-  PM.add(createAddressSanitizerModulePass(/*CompileKernel*/ false, Recover,
-                                          UseGlobalsGC, UseOdrIndicator));
+  PM.add(createModuleAddressSanitizerLegacyPassPass(
+      /*CompileKernel*/ false, Recover, UseGlobalsGC, UseOdrIndicator));
 }
 
 static void addKernelAddressSanitizerPasses(const PassManagerBuilder &Builder,
                                             legacy::PassManagerBase &PM) {
   PM.add(createAddressSanitizerFunctionPass(
       /*CompileKernel*/ true, /*Recover*/ true, /*UseAfterScope*/ false));
-  PM.add(createAddressSanitizerModulePass(
+  PM.add(createModuleAddressSanitizerLegacyPassPass(
       /*CompileKernel*/ true, /*Recover*/ true, /*UseGlobalsGC*/ true,
       /*UseOdrIndicator*/ false));
 }
@@ -278,7 +280,8 @@ static void addGeneralOptsForMemorySanitizer(const PassManagerBuilder &Builder,
   const CodeGenOptions &CGOpts = BuilderWrapper.getCGOpts();
   int TrackOrigins = CGOpts.SanitizeMemoryTrackOrigins;
   bool Recover = CGOpts.SanitizeRecover.has(SanitizerKind::Memory);
-  PM.add(createMemorySanitizerLegacyPassPass(TrackOrigins, Recover, CompileKernel));
+  PM.add(createMemorySanitizerLegacyPassPass(
+      MemorySanitizerOptions{TrackOrigins, Recover, CompileKernel}));
 
   // MemorySanitizer inserts complex instrumentation that mostly follows
   // the logic of the original code, but operates on "shadow" values.
@@ -915,6 +918,30 @@ static PassBuilder::OptimizationLevel mapToLevel(const CodeGenOptions &Opts) {
   }
 }
 
+void addSanitizersAtO0(ModulePassManager &MPM, const Triple &TargetTriple,
+                       const LangOptions &LangOpts,
+                       const CodeGenOptions &CodeGenOpts) {
+  if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
+    MPM.addPass(RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
+    bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        AddressSanitizerPass(/*CompileKernel=*/false, Recover,
+                             CodeGenOpts.SanitizeAddressUseAfterScope)));
+    bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
+    MPM.addPass(ModuleAddressSanitizerPass(
+        /*CompileKernel=*/false, Recover, ModuleUseAfterScope,
+        CodeGenOpts.SanitizeAddressUseOdrIndicator));
+  }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::Memory)) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(MemorySanitizerPass({})));
+  }
+
+  if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
+  }
+}
+
 /// A clean version of `EmitAssembly` that uses the new pass manager.
 ///
 /// Not all features are currently supported in this system, but where
@@ -960,6 +987,17 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
     PGOOpt = PGOOptions("", "", "", "", false, true);
 
   PassBuilder PB(TM.get(), PGOOpt);
+
+  // Attempt to load pass plugins and register their callbacks with PB.
+  for (auto &PluginFN : CodeGenOpts.PassPlugins) {
+    auto PassPlugin = PassPlugin::Load(PluginFN);
+    if (PassPlugin) {
+      PassPlugin->registerPassBuilderCallbacks(PB);
+    } else {
+      Diags.Report(diag::err_fe_unable_to_load_plugin)
+          << PluginFN << toString(PassPlugin.takeError());
+    }
+  }
 
   LoopAnalysisManager LAM(CodeGenOpts.DebugPassManager);
   FunctionAnalysisManager FAM(CodeGenOpts.DebugPassManager);
@@ -1023,13 +1061,36 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       if (LangOpts.Sanitize.has(SanitizerKind::Memory))
         PB.registerOptimizerLastEPCallback(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
-              FPM.addPass(MemorySanitizerPass());
+              FPM.addPass(MemorySanitizerPass({}));
             });
       if (LangOpts.Sanitize.has(SanitizerKind::Thread))
         PB.registerOptimizerLastEPCallback(
             [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
               FPM.addPass(ThreadSanitizerPass());
             });
+      if (LangOpts.Sanitize.has(SanitizerKind::Address)) {
+        PB.registerPipelineStartEPCallback([&](ModulePassManager &MPM) {
+          MPM.addPass(
+              RequireAnalysisPass<ASanGlobalsMetadataAnalysis, Module>());
+        });
+        bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::Address);
+        bool UseAfterScope = CodeGenOpts.SanitizeAddressUseAfterScope;
+        PB.registerOptimizerLastEPCallback(
+            [Recover, UseAfterScope](FunctionPassManager &FPM,
+                                     PassBuilder::OptimizationLevel Level) {
+              FPM.addPass(AddressSanitizerPass(
+                  /*CompileKernel=*/false, Recover, UseAfterScope));
+            });
+        bool ModuleUseAfterScope = asanUseGlobalsGC(TargetTriple, CodeGenOpts);
+        bool UseOdrIndicator = CodeGenOpts.SanitizeAddressUseOdrIndicator;
+        PB.registerPipelineStartEPCallback(
+            [Recover, ModuleUseAfterScope,
+             UseOdrIndicator](ModulePassManager &MPM) {
+              MPM.addPass(ModuleAddressSanitizerPass(
+                  /*CompileKernel=*/false, Recover, ModuleUseAfterScope,
+                  UseOdrIndicator));
+            });
+      }
       if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts))
         PB.registerPipelineStartEPCallback([Options](ModulePassManager &MPM) {
           MPM.addPass(GCOVProfilerPass(*Options));
@@ -1050,6 +1111,9 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                                                CodeGenOpts.DebugPassManager);
       }
     }
+
+    if (CodeGenOpts.OptimizationLevel == 0)
+      addSanitizersAtO0(MPM, TargetTriple, LangOpts, CodeGenOpts);
   }
 
   // FIXME: We still use the legacy pass manager to do code generation. We

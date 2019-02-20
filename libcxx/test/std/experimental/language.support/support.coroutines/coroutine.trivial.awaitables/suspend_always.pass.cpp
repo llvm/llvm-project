@@ -31,7 +31,7 @@ constexpr bool check_suspend_constexpr() {
   return true;
 }
 
-int main()
+int main(int, char**)
 {
   using H = coro::coroutine_handle<>;
   using S = SuspendT;
@@ -69,4 +69,6 @@ int main()
     // suppress unused warnings for the global constexpr test variable
     ((void)constexpr_sa);
   }
+
+  return 0;
 }

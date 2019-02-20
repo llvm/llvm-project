@@ -26,7 +26,7 @@
 
 using std::experimental::pmr::memory_resource;
 
-int main()
+int main(int, char**)
 {
     static_assert(
         std::has_virtual_destructor<memory_resource>::value
@@ -55,4 +55,6 @@ int main()
         assert(TR::resource_constructed == 1);
         assert(TR::resource_destructed == 1);
     }
+
+  return 0;
 }

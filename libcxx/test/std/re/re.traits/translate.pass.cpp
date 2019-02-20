@@ -17,7 +17,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex_traits<char> t;
@@ -31,4 +31,6 @@ int main()
         assert(t.translate(L'B') == L'B');
         assert(t.translate(L'c') == L'c');
     }
+
+  return 0;
 }

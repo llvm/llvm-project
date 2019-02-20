@@ -39,6 +39,14 @@
 #define KMP_MEM_CONS_MODEL KMP_MEM_CONS_VOLATILE
 #endif
 
+#ifndef __has_cpp_attribute
+#define __has_cpp_attribute(x) 0
+#endif
+
+#ifndef __has_attribute
+#define __has_attribute(x) 0
+#endif
+
 /* ------------------------- Compiler recognition ---------------------- */
 #define KMP_COMPILER_ICC 0
 #define KMP_COMPILER_GCC 0
@@ -295,6 +303,20 @@ extern "C" {
 #endif /* CACHE_LINE */
 
 #define KMP_CACHE_PREFETCH(ADDR) /* nothing */
+
+// Define attribute that indicates that the fall through from the previous 
+// case label is intentional and should not be diagnosed by a compiler
+//   Code from libcxx/include/__config
+// Use a function like macro to imply that it must be followed by a semicolon
+#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#  define KMP_FALLTHROUGH() [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
+#  define KMP_FALLTHROUGH() [[clang::fallthrough]]
+#elif __has_attribute(fallthough) || __GNUC__ >= 7
+#  define KMP_FALLTHROUGH() __attribute__((__fallthrough__))
+#else
+#  define KMP_FALLTHROUGH() ((void)0)
+#endif
 
 // Define attribute that indicates a function does not return
 #if __cplusplus >= 201103L

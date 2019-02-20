@@ -132,7 +132,7 @@ public:
 //CHECK-NEXT: | |     `-BinaryOperator {{.*}} '_Float16' '+'
 //CHECK-NEXT: | |       |-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT: | |       | `-MemberExpr {{.*}} '_Float16' lvalue ->f1c 0x{{.*}}
-//CHECK-NEXT: | |       |   `-CXXThisExpr {{.*}} 'C1 *' this
+//CHECK-NEXT: | |       |   `-CXXThisExpr {{.*}} 'C1 *' implicit this
 //CHECK-NEXT: | |       `-ImplicitCastExpr {{.*}} '_Float16' <LValueToRValue>
 //CHECK-NEXT: | |         `-DeclRefExpr {{.*}} '_Float16' lvalue ParmVar 0x{{.*}} 'arg' '_Float16'
 //CHECK-NEXT: | |-CXXMethodDecl {{.*}} used func2c '_Float16 (_Float16)' static

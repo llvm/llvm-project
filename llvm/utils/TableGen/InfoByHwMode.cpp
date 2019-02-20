@@ -38,6 +38,11 @@ ValueTypeByHwMode::ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH) {
   }
 }
 
+ValueTypeByHwMode::ValueTypeByHwMode(Record *R, MVT T) : ValueTypeByHwMode(T) {
+  if (R->isSubClassOf("PtrValueType"))
+    PtrAddrSpace = R->getValueAsInt("AddrSpace");
+}
+
 bool ValueTypeByHwMode::operator== (const ValueTypeByHwMode &T) const {
   assert(isValid() && T.isValid() && "Invalid type in assignment");
   bool Simple = isSimple();
@@ -111,7 +116,7 @@ ValueTypeByHwMode llvm::getValueTypeByHwMode(Record *Rec,
          "Record must be derived from ValueType");
   if (Rec->isSubClassOf("HwModeSelect"))
     return ValueTypeByHwMode(Rec, CGH);
-  return ValueTypeByHwMode(llvm::getValueType(Rec));
+  return ValueTypeByHwMode(Rec, llvm::getValueType(Rec));
 }
 
 RegSizeInfo::RegSizeInfo(Record *R, const CodeGenHwModes &CGH) {

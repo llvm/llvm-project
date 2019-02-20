@@ -321,10 +321,6 @@ def main_with_tmp(builtinParameters):
     debug_group.add_argument("--show-tests", dest="showTests",
                       help="Show all discovered tests",
                       action="store_true", default=False)
-    debug_group.add_argument("--single-process", dest="singleProcess",
-                      help="Don't run tests in parallel.  Intended for debugging "
-                      "single test failures",
-                      action="store_true", default=False)
 
     opts = parser.parse_args()
     args = opts.test_paths
@@ -338,9 +334,11 @@ def main_with_tmp(builtinParameters):
 
     if opts.numThreads is None:
         opts.numThreads = lit.util.detectCPUs()
+    elif opts.numThreads <= 0:
+        parser.error("Option '--threads' or '-j' requires positive integer")
 
-    if opts.maxFailures == 0:
-        parser.error("Setting --max-failures to 0 does not have any effect.")
+    if opts.maxFailures is not None and opts.maxFailures <= 0:
+        parser.error("Option '--max-failures' requires positive integer")
 
     if opts.echoAllCommands:
         opts.showOutput = True
@@ -374,7 +372,6 @@ def main_with_tmp(builtinParameters):
         valgrindLeakCheck = opts.valgrindLeakCheck,
         valgrindArgs = opts.valgrindArgs,
         noExecute = opts.noExecute,
-        singleProcess = opts.singleProcess,
         debug = opts.debug,
         isWindows = isWindows,
         params = userParams,
@@ -506,11 +503,9 @@ def main_with_tmp(builtinParameters):
     except:
         pass
 
-    extra = ''
-    if len(run.tests) != numTotalTests:
-        extra = ' of %d' % numTotalTests
-    header = '-- Testing: %d%s tests, %d threads --'%(len(run.tests), extra,
-                                                      opts.numThreads)
+    extra = (' of %d' % numTotalTests) if (len(run.tests) != numTotalTests) else ''
+    threads = 'single process' if (opts.numThreads == 1) else ('%d threads' % opts.numThreads)
+    header = '-- Testing: %d%s tests, %s --' % (len(run.tests), extra, threads)
     progressBar = None
     if not opts.quiet:
         if opts.succinct and opts.useProgressBar:

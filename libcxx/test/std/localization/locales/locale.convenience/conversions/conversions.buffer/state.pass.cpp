@@ -17,7 +17,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::wbuffer_convert<std::codecvt_utf8<wchar_t> > B;
     {
@@ -25,4 +25,6 @@ int main()
         std::mbstate_t s = b.state();
         ((void)s);
     }
+
+  return 0;
 }

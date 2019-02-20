@@ -107,7 +107,7 @@ void test_sfinae() {
 }
 
 
-int main() {
+int main(int, char**) {
   {
     test_basic</*IsArray*/ false>();
     test_sfinae<false>();
@@ -116,4 +116,6 @@ int main() {
     test_basic</*IsArray*/ true>();
     test_sfinae<true>();
   }
+
+  return 0;
 }

@@ -11,9 +11,11 @@
 #include <chrono>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using std::chrono::hours;
 
     hours foo  =  4h;  // should fail w/conversion operator not found
+
+  return 0;
 }

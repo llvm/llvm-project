@@ -39,7 +39,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using year_month         = std::chrono::year_month;
     using year               = std::chrono::year;
@@ -149,4 +149,6 @@ int main()
                     assert(ymwdl1 == ymwdl2);
                 }
     }
+
+  return 0;
 }

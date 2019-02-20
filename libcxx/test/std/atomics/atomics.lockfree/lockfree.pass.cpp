@@ -24,7 +24,7 @@
 #include <atomic>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     assert(ATOMIC_BOOL_LOCK_FREE == 0 ||
            ATOMIC_BOOL_LOCK_FREE == 1 ||
@@ -56,4 +56,6 @@ int main()
     assert(ATOMIC_POINTER_LOCK_FREE == 0 ||
            ATOMIC_POINTER_LOCK_FREE == 1 ||
            ATOMIC_POINTER_LOCK_FREE == 2);
+
+  return 0;
 }

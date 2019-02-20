@@ -127,7 +127,7 @@ in release mode, i.e.
 
 .. code-block:: bash
 
-    % cmake -DCMAKE_BUILD_TYPE="Release"
+    % cmake -DCMAKE_BUILD_TYPE="Release" -DLLVM_ENABLE_ASSERTIONS=On
 
 If you have `Clang <http://clang.llvm.org/>`_ checked out and built, you
 can run the LLVM and Clang tests simultaneously using:

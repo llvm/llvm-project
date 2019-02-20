@@ -14,7 +14,9 @@
 #include <type_traits>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::match_results<std::string::const_iterator>, std::smatch>::value), "");
+
+  return 0;
 }

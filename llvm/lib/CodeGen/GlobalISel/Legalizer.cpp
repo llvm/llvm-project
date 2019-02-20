@@ -76,6 +76,7 @@ static bool isArtifact(const MachineInstr &MI) {
   case TargetOpcode::G_UNMERGE_VALUES:
   case TargetOpcode::G_CONCAT_VECTORS:
   case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_EXTRACT:
     return true;
   }
 }
@@ -154,11 +155,13 @@ bool Legalizer::runOnMachineFunction(MachineFunction &MF) {
       if (!isPreISelGenericOpcode(MI.getOpcode()))
         continue;
       if (isArtifact(MI))
-        ArtifactList.insert(&MI);
+        ArtifactList.deferred_insert(&MI);
       else
-        InstList.insert(&MI);
+        InstList.deferred_insert(&MI);
     }
   }
+  ArtifactList.finalize();
+  InstList.finalize();
   std::unique_ptr<MachineIRBuilder> MIRBuilder;
   GISelCSEInfo *CSEInfo = nullptr;
   bool EnableCSE = EnableCSEInLegalizer.getNumOccurrences()

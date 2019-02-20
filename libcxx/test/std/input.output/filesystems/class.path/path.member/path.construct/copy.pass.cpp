@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   static_assert(std::is_copy_constructible<path>::value, "");
   static_assert(!std::is_nothrow_copy_constructible<path>::value, "should not be noexcept");
@@ -30,4 +30,6 @@ int main() {
   path p2(p);
   assert(p.native() == s);
   assert(p2.native() == s);
+
+  return 0;
 }

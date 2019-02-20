@@ -135,6 +135,12 @@ public:
       return CGCallee(abstractInfo, functionPtr);
     }
 
+    static CGCallee
+    forDirect(llvm::FunctionCallee functionPtr,
+              const CGCalleeInfo &abstractInfo = CGCalleeInfo()) {
+      return CGCallee(abstractInfo, functionPtr.getCallee());
+    }
+
     static CGCallee forVirtual(const CallExpr *CE, GlobalDecl MD, Address Addr,
                                llvm::FunctionType *FTy) {
       CGCallee result(SpecialKind::Virtual);
@@ -198,12 +204,9 @@ public:
       assert(isVirtual());
       return VirtualInfo.Addr;
     }
-
-    llvm::FunctionType *getFunctionType() const {
-      if (isVirtual())
-        return VirtualInfo.FTy;
-      return cast<llvm::FunctionType>(
-          getFunctionPointer()->getType()->getPointerElementType());
+    llvm::FunctionType *getVirtualFunctionType() const {
+      assert(isVirtual());
+      return VirtualInfo.FTy;
     }
 
     /// If this is a delayed callee computation of some sort, prepare

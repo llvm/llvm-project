@@ -8,8 +8,8 @@
 
 #include "llvm/BinaryFormat/Wasm.h"
 
-std::string llvm::wasm::toString(wasm::WasmSymbolType type) {
-  switch (type) {
+std::string llvm::wasm::toString(wasm::WasmSymbolType Type) {
+  switch (Type) {
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
     return "WASM_SYMBOL_TYPE_FUNCTION";
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
@@ -24,8 +24,8 @@ std::string llvm::wasm::toString(wasm::WasmSymbolType type) {
   llvm_unreachable("unknown symbol type");
 }
 
-std::string llvm::wasm::relocTypetoString(uint32_t type) {
-  switch (type) {
+std::string llvm::wasm::relocTypetoString(uint32_t Type) {
+  switch (Type) {
 #define WASM_RELOC(NAME, VALUE)                                                \
   case VALUE:                                                                  \
     return #NAME;

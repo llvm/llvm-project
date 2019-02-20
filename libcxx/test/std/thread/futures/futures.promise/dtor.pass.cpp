@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -123,4 +123,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

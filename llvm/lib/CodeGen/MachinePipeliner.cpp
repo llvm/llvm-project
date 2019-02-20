@@ -2766,7 +2766,9 @@ void SwingSchedulerDAG::updateMemOperands(MachineInstr &NewMI,
     return;
   SmallVector<MachineMemOperand *, 2> NewMMOs;
   for (MachineMemOperand *MMO : NewMI.memoperands()) {
-    if (MMO->isVolatile() || (MMO->isInvariant() && MMO->isDereferenceable()) ||
+    // TODO: Figure out whether isAtomic is really necessary (see D57601).
+    if (MMO->isVolatile() || MMO->isAtomic() ||
+        (MMO->isInvariant() && MMO->isDereferenceable()) ||
         (!MMO->getValue())) {
       NewMMOs.push_back(MMO);
       continue;

@@ -18,7 +18,9 @@
 
 std::streambuf &get();
 
-int main()
+int main(int, char**)
 {
     std::streambuf sb = get(); // expected-error {{calling a protected constructor}}
+
+  return 0;
 }

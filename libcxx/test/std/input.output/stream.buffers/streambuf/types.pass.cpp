@@ -22,7 +22,7 @@
 #include <streambuf>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::streambuf::char_type, char>::value), "");
     static_assert((std::is_same<std::streambuf::traits_type, std::char_traits<char> >::value), "");
@@ -35,4 +35,6 @@ int main()
     static_assert((std::is_same<std::wstreambuf::int_type, std::char_traits<wchar_t>::int_type>::value), "");
     static_assert((std::is_same<std::wstreambuf::pos_type, std::char_traits<wchar_t>::pos_type>::value), "");
     static_assert((std::is_same<std::wstreambuf::off_type, std::char_traits<wchar_t>::off_type>::value), "");
+
+  return 0;
 }

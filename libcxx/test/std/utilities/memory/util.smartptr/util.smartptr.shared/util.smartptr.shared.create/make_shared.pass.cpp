@@ -73,7 +73,7 @@ void test_pointer_to_function() {
 void test_pointer_to_function() {}
 #endif // _LIBCPP_VERSION
 
-int main()
+int main(int, char**)
 {
     int nc = globalMemCounter.outstanding_new;
     {
@@ -107,4 +107,6 @@ int main()
     }
 #endif
     assert(A::count == 0);
+
+  return 0;
 }

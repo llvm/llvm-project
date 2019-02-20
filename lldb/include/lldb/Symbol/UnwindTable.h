@@ -22,7 +22,9 @@ namespace lldb_private {
 
 class UnwindTable {
 public:
-  UnwindTable(ObjectFile &objfile);
+  /// Create an Unwind table using the data in the given module.
+  explicit UnwindTable(Module &module);
+
   ~UnwindTable();
 
   lldb_private::DWARFCallFrameInfo *GetEHFrameInfo();
@@ -62,7 +64,7 @@ private:
   typedef collection::iterator iterator;
   typedef collection::const_iterator const_iterator;
 
-  ObjectFile &m_object_file;
+  Module &m_module;
   collection m_unwinds;
 
   bool m_initialized; // delay some initialization until ObjectFile is set up

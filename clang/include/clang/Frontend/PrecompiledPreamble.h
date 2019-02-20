@@ -283,6 +283,8 @@ public:
   /// Creates wrapper class for PPCallbacks so we can also process information
   /// about includes that are inside of a preamble
   virtual std::unique_ptr<PPCallbacks> createPPCallbacks();
+  /// The returned CommentHandler will be added to the preprocessor if not null.
+  virtual CommentHandler *getCommentHandler();
 };
 
 enum class BuildPreambleError {

@@ -19,7 +19,7 @@
 #include "../../../test_compare.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_compare<std::less<int> > Cmp;
@@ -85,4 +85,6 @@ int main()
     assert(*++i == V(3, 2));
     assert(m.key_comp() == Cmp(4));
     }
+
+  return 0;
 }

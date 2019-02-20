@@ -44,7 +44,7 @@ void RunTheExample()
     static_assert(year_month_day{local_days{year{2017}/January/32}} == year{2017}/February/1);  
 }
 
-int main()
+int main(int, char**)
 {
     using year           = std::chrono::year;
     using month          = std::chrono::month;
@@ -90,4 +90,5 @@ int main()
     assert( year_month_day{sd} == ymd); // and back
     }
 
+    return 0;
 }

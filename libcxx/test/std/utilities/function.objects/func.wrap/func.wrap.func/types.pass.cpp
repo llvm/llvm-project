@@ -98,10 +98,12 @@ void test_other_function ()
     static_assert((!has_second_argument_type<F>::value), "" );
 }
 
-int main()
+int main(int, char**)
 {
     test_nullary_function<std::function<int()>, int>();
     test_unary_function  <std::function<double(int)>, double, int>();
     test_binary_function <std::function<double(int, char)>, double, int, char>();
     test_other_function  <std::function<double(int, char, double)>, double>();
+
+  return 0;
 }

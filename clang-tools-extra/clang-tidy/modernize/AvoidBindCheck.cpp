@@ -169,7 +169,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
   Ref->printPretty(Stream, nullptr, Result.Context->getPrintingPolicy());
   Stream << "(";
   addFunctionCallArgs(Args, Stream);
-  Stream << "); };";
+  Stream << "); }";
 
   Diag << FixItHint::CreateReplacement(MatchedDecl->getSourceRange(),
                                        Stream.str());

@@ -39,7 +39,7 @@ void check() {
 
 struct T { };
 
-int main() {
+int main(int, char**) {
   check<T>();
   check<int>();
   check<float>();
@@ -47,4 +47,6 @@ int main() {
   check<T*>();
   check<int*>();
   check<float*>();
+
+  return 0;
 }

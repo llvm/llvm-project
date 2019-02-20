@@ -10,7 +10,9 @@
 #include <ext/hash_map>
 #include <string>
 
-int main()
+int main(int, char**)
 {
     assert(__gnu_cxx::hash<std::string>()(std::string()) == 0);  // error
+
+  return 0;
 }

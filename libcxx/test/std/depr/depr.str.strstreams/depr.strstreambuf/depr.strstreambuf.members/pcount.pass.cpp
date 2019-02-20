@@ -15,7 +15,7 @@
 #include <strstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::strstreambuf sb;
@@ -28,4 +28,6 @@ int main()
         assert(sb.pcount() == 2);
         sb.freeze(false);
     }
+
+  return 0;
 }

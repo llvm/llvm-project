@@ -28,7 +28,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::shared_ptr<int> p(new int(4));
@@ -37,4 +37,6 @@ int main()
         assert(*p == 3);
         assert(*r == 4);
     }
+
+  return 0;
 }

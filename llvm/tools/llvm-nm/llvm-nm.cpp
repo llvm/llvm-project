@@ -1190,10 +1190,8 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       NMSymbol S = {};
       S.Size = 0;
       S.Address = 0;
-      if (PrintSize) {
-        if (isa<ELFObjectFileBase>(&Obj))
-          S.Size = ELFSymbolRef(Sym).getSize();
-      }
+      if (isa<ELFObjectFileBase>(&Obj))
+        S.Size = ELFSymbolRef(Sym).getSize();
       if (PrintAddress && isa<ObjectFile>(Obj)) {
         SymbolRef SymRef(Sym);
         Expected<uint64_t> AddressOrErr = SymRef.getAddress();
@@ -1739,8 +1737,9 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     return;
 
   LLVMContext Context;
-  Expected<std::unique_ptr<Binary>> BinaryOrErr = createBinary(
-      BufferOrErr.get()->getMemBufferRef(), NoLLVMBitcode ? nullptr : &Context);
+  LLVMContext *ContextPtr = NoLLVMBitcode ? nullptr : &Context;
+  Expected<std::unique_ptr<Binary>> BinaryOrErr =
+      createBinary(BufferOrErr.get()->getMemBufferRef(), ContextPtr);
   if (!BinaryOrErr) {
     error(BinaryOrErr.takeError(), Filename);
     return;
@@ -1774,7 +1773,8 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     {
       Error Err = Error::success();
       for (auto &C : A->children(Err)) {
-        Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary(&Context);
+        Expected<std::unique_ptr<Binary>> ChildOrErr =
+            C.getAsBinary(ContextPtr);
         if (!ChildOrErr) {
           if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
             error(std::move(E), Filename, C);
@@ -1845,7 +1845,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
               Error Err = Error::success();
               for (auto &C : A->children(Err)) {
                 Expected<std::unique_ptr<Binary>> ChildOrErr =
-                    C.getAsBinary(&Context);
+                    C.getAsBinary(ContextPtr);
                 if (!ChildOrErr) {
                   if (auto E = isNotObjectErrorInvalidFileType(
                                        ChildOrErr.takeError())) {
@@ -1916,7 +1916,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
             Error Err = Error::success();
             for (auto &C : A->children(Err)) {
               Expected<std::unique_ptr<Binary>> ChildOrErr =
-                  C.getAsBinary(&Context);
+                  C.getAsBinary(ContextPtr);
               if (!ChildOrErr) {
                 if (auto E = isNotObjectErrorInvalidFileType(
                                      ChildOrErr.takeError()))
@@ -1983,7 +1983,7 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
         Error Err = Error::success();
         for (auto &C : A->children(Err)) {
           Expected<std::unique_ptr<Binary>> ChildOrErr =
-            C.getAsBinary(&Context);
+            C.getAsBinary(ContextPtr);
           if (!ChildOrErr) {
             if (auto E = isNotObjectErrorInvalidFileType(
                                  ChildOrErr.takeError()))

@@ -62,7 +62,9 @@ void doIOTest() {
 }
 
 
-int main() {
+int main(int, char**) {
   doIOTest<char16_t>();
   doIOTest<char32_t>();
+
+  return 0;
 }

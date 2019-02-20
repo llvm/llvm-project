@@ -38,7 +38,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     const std::ctype<char>& ct = std::use_facet<std::ctype<char> >(std::locale::classic());
     std::ios_base::iostate err = std::ios_base::goodbit;
@@ -114,4 +114,6 @@ int main()
         assert(in == input+3);
         assert(err == std::ios_base::goodbit);
     }
+
+  return 0;
 }

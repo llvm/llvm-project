@@ -58,7 +58,7 @@ TEST_CONSTEXPR bool test_constexpr() {
     }
 #endif
 
-int main()
+int main(int, char**)
 {
     int ia[] = {0, 1, 2, 2, 0, 1, 2, 3};
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
@@ -89,4 +89,6 @@ int main()
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

@@ -23,7 +23,7 @@
 
 constexpr fs::perms ME(int val) { return static_cast<fs::perms>(val); }
 
-int main() {
+int main(int, char**) {
   typedef fs::perms E;
   static_assert(std::is_enum<E>::value, "");
 
@@ -60,4 +60,6 @@ int main() {
         E::mask         == ME(07777) &&
         E::unknown      == ME(0xFFFF),
         "Expected enumeration values do not match");
+
+  return 0;
 }

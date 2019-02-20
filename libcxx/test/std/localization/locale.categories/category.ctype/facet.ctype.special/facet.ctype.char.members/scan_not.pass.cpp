@@ -19,7 +19,7 @@
 
 #include <stdio.h>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -40,4 +40,6 @@ int main()
         assert(f.scan_not(F::alnum, in.data(), in.data() + in.size()) - in.data() == 0);
         assert(f.scan_not(F::graph, in.data(), in.data() + in.size()) - in.data() == 0);
     }
+
+  return 0;
 }

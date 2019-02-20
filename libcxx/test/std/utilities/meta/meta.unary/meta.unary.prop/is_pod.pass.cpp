@@ -49,7 +49,7 @@ public:
     ~Class();
 };
 
-int main()
+int main(int, char**)
 {
     test_is_not_pod<void>();
     test_is_not_pod<int&>();
@@ -61,4 +61,6 @@ int main()
     test_is_pod<const int*>();
     test_is_pod<char[3]>();
     test_is_pod<char[]>();
+
+  return 0;
 }

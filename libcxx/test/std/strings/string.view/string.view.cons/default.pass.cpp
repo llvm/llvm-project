@@ -35,7 +35,7 @@ void test () {
     }
 }
 
-int main () {
+int main(int, char**) {
     test<std::string_view> ();
     test<std::u16string_view> ();
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
@@ -44,4 +44,6 @@ int main () {
     test<std::u32string_view> ();
     test<std::wstring_view> ();
 
+
+  return 0;
 }

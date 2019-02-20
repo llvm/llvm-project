@@ -20,6 +20,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -43,6 +44,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -66,6 +68,7 @@
 #include <vector>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
@@ -235,18 +238,20 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, bool AllowVarArgs,
-                             bool AllowAlloca, std::string Suffix)
+                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
+                             bool AllowVarArgs, bool AllowAlloca,
+                             std::string Suffix)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AllowVarArgs(AllowVarArgs),
+      BPI(BPI), AC(AC), AllowVarArgs(AllowVarArgs),
       Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
       Suffix(Suffix) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI, std::string Suffix)
+                             BranchProbabilityInfo *BPI, AssumptionCache *AC,
+                             std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AllowVarArgs(false),
+      BPI(BPI), AC(AC), AllowVarArgs(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
                                      /* AllowAlloca */ false)),
@@ -880,16 +885,15 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   return newFunction;
 }
 
-/// Scan the extraction region for lifetime markers which reference inputs.
-/// Erase these markers. Return the inputs which were referenced.
+/// Erase lifetime.start markers which reference inputs to the extraction
+/// region, and insert the referenced memory into \p LifetimesStart.
 ///
 /// The extraction region is defined by a set of blocks (\p Blocks), and a set
 /// of allocas which will be moved from the caller function into the extracted
 /// function (\p SunkAllocas).
-static SetVector<Value *>
-eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
-                             const SetVector<Value *> &SunkAllocas) {
-  SetVector<Value *> InputObjectsWithLifetime;
+static void eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
+                                         const SetVector<Value *> &SunkAllocas,
+                                         SetVector<Value *> &LifetimesStart) {
   for (BasicBlock *BB : Blocks) {
     for (auto It = BB->begin(), End = BB->end(); It != End;) {
       auto *II = dyn_cast<IntrinsicInst>(&*It);
@@ -904,44 +908,62 @@ eraseLifetimeMarkersOnInputs(const SetVector<BasicBlock *> &Blocks,
       if (SunkAllocas.count(Mem) || definedInRegion(Blocks, Mem))
         continue;
 
-      InputObjectsWithLifetime.insert(Mem);
+      if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+        LifetimesStart.insert(Mem);
       II->eraseFromParent();
     }
   }
-  return InputObjectsWithLifetime;
 }
 
 /// Insert lifetime start/end markers surrounding the call to the new function
 /// for objects defined in the caller.
-static void insertLifetimeMarkersSurroundingCall(Module *M,
-                                                 ArrayRef<Value *> Objects,
-                                                 CallInst *TheCall) {
-  if (Objects.empty())
-    return;
-
+static void insertLifetimeMarkersSurroundingCall(
+    Module *M, ArrayRef<Value *> LifetimesStart, ArrayRef<Value *> LifetimesEnd,
+    CallInst *TheCall) {
   LLVMContext &Ctx = M->getContext();
   auto Int8PtrTy = Type::getInt8PtrTy(Ctx);
   auto NegativeOne = ConstantInt::getSigned(Type::getInt64Ty(Ctx), -1);
-  auto StartFn = llvm::Intrinsic::getDeclaration(
-      M, llvm::Intrinsic::lifetime_start, Int8PtrTy);
-  auto EndFn = llvm::Intrinsic::getDeclaration(M, llvm::Intrinsic::lifetime_end,
-                                               Int8PtrTy);
   Instruction *Term = TheCall->getParent()->getTerminator();
-  for (Value *Mem : Objects) {
-    assert((!isa<Instruction>(Mem) ||
-            cast<Instruction>(Mem)->getFunction() == TheCall->getFunction()) &&
-           "Input memory not defined in original function");
-    Value *MemAsI8Ptr = nullptr;
-    if (Mem->getType() == Int8PtrTy)
-      MemAsI8Ptr = Mem;
-    else
-      MemAsI8Ptr =
-          CastInst::CreatePointerCast(Mem, Int8PtrTy, "lt.cast", TheCall);
 
-    auto StartMarker = CallInst::Create(StartFn, {NegativeOne, MemAsI8Ptr});
-    StartMarker->insertBefore(TheCall);
-    auto EndMarker = CallInst::Create(EndFn, {NegativeOne, MemAsI8Ptr});
-    EndMarker->insertBefore(Term);
+  // The memory argument to a lifetime marker must be a i8*. Cache any bitcasts
+  // needed to satisfy this requirement so they may be reused.
+  DenseMap<Value *, Value *> Bitcasts;
+
+  // Emit lifetime markers for the pointers given in \p Objects. Insert the
+  // markers before the call if \p InsertBefore, and after the call otherwise.
+  auto insertMarkers = [&](Function *MarkerFunc, ArrayRef<Value *> Objects,
+                           bool InsertBefore) {
+    for (Value *Mem : Objects) {
+      assert((!isa<Instruction>(Mem) || cast<Instruction>(Mem)->getFunction() ==
+                                            TheCall->getFunction()) &&
+             "Input memory not defined in original function");
+      Value *&MemAsI8Ptr = Bitcasts[Mem];
+      if (!MemAsI8Ptr) {
+        if (Mem->getType() == Int8PtrTy)
+          MemAsI8Ptr = Mem;
+        else
+          MemAsI8Ptr =
+              CastInst::CreatePointerCast(Mem, Int8PtrTy, "lt.cast", TheCall);
+      }
+
+      auto Marker = CallInst::Create(MarkerFunc, {NegativeOne, MemAsI8Ptr});
+      if (InsertBefore)
+        Marker->insertBefore(TheCall);
+      else
+        Marker->insertBefore(Term);
+    }
+  };
+
+  if (!LifetimesStart.empty()) {
+    auto StartFn = llvm::Intrinsic::getDeclaration(
+        M, llvm::Intrinsic::lifetime_start, Int8PtrTy);
+    insertMarkers(StartFn, LifetimesStart, /*InsertBefore=*/true);
+  }
+
+  if (!LifetimesEnd.empty()) {
+    auto EndFn = llvm::Intrinsic::getDeclaration(
+        M, llvm::Intrinsic::lifetime_end, Int8PtrTy);
+    insertMarkers(EndFn, LifetimesEnd, /*InsertBefore=*/false);
   }
 }
 
@@ -1041,7 +1063,6 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
     std::advance(OutputArgBegin, inputs.size());
 
   // Reload the outputs passed in by reference.
-  Function::arg_iterator OAI = OutputArgBegin;
   for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
     Value *Output = nullptr;
     if (AggregateArgs) {
@@ -1064,40 +1085,6 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       Instruction *inst = cast<Instruction>(Users[u]);
       if (!Blocks.count(inst->getParent()))
         inst->replaceUsesOfWith(outputs[i], load);
-    }
-
-    // Store to argument right after the definition of output value.
-    auto *OutI = dyn_cast<Instruction>(outputs[i]);
-    if (!OutI)
-      continue;
-
-    // Find proper insertion point.
-    BasicBlock::iterator InsertPt;
-    // In case OutI is an invoke, we insert the store at the beginning in the
-    // 'normal destination' BB. Otherwise we insert the store right after OutI.
-    if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
-      InsertPt = InvokeI->getNormalDest()->getFirstInsertionPt();
-    else if (auto *Phi = dyn_cast<PHINode>(OutI))
-      InsertPt = Phi->getParent()->getFirstInsertionPt();
-    else
-      InsertPt = std::next(OutI->getIterator());
-
-    assert(OAI != newFunction->arg_end() &&
-           "Number of output arguments should match "
-           "the amount of defined values");
-    if (AggregateArgs) {
-      Value *Idx[2];
-      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
-      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), &*InsertPt);
-      new StoreInst(outputs[i], GEP, &*InsertPt);
-      // Since there should be only one struct argument aggregating
-      // all the output values, we shouldn't increment OAI, which always
-      // points to the struct argument, in this case.
-    } else {
-      new StoreInst(outputs[i], &*OAI, &*InsertPt);
-      ++OAI;
     }
   }
 
@@ -1154,6 +1141,50 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
       }
   }
 
+  // Store the arguments right after the definition of output value.
+  // This should be proceeded after creating exit stubs to be ensure that invoke
+  // result restore will be placed in the outlined function.
+  Function::arg_iterator OAI = OutputArgBegin;
+  for (unsigned i = 0, e = outputs.size(); i != e; ++i) {
+    auto *OutI = dyn_cast<Instruction>(outputs[i]);
+    if (!OutI)
+      continue;
+
+    // Find proper insertion point.
+    BasicBlock::iterator InsertPt;
+    // In case OutI is an invoke, we insert the store at the beginning in the
+    // 'normal destination' BB. Otherwise we insert the store right after OutI.
+    if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
+      InsertPt = InvokeI->getNormalDest()->getFirstInsertionPt();
+    else if (auto *Phi = dyn_cast<PHINode>(OutI))
+      InsertPt = Phi->getParent()->getFirstInsertionPt();
+    else
+      InsertPt = std::next(OutI->getIterator());
+
+    Instruction *InsertBefore = &*InsertPt;
+    assert((InsertBefore->getFunction() == newFunction ||
+            Blocks.count(InsertBefore->getParent())) &&
+           "InsertPt should be in new function");
+    assert(OAI != newFunction->arg_end() &&
+           "Number of output arguments should match "
+           "the amount of defined values");
+    if (AggregateArgs) {
+      Value *Idx[2];
+      Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
+      Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
+      GetElementPtrInst *GEP = GetElementPtrInst::Create(
+          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(),
+          InsertBefore);
+      new StoreInst(outputs[i], GEP, InsertBefore);
+      // Since there should be only one struct argument aggregating
+      // all the output values, we shouldn't increment OAI, which always
+      // points to the struct argument, in this case.
+    } else {
+      new StoreInst(outputs[i], &*OAI, InsertBefore);
+      ++OAI;
+    }
+  }
+
   // Now that we've done the deed, simplify the switch instruction.
   Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
   switch (NumExitBlocks) {
@@ -1200,7 +1231,7 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
 
   // Insert lifetime markers around the reloads of any output values. The
   // allocas output values are stored in are only in-use in the codeRepl block.
-  insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, call);
+  insertLifetimeMarkersSurroundingCall(M, ReloadOutputs, ReloadOutputs, call);
 
   return call;
 }
@@ -1216,6 +1247,13 @@ void CodeExtractor::moveCodeToFunction(Function *newFunction) {
 
     // Insert this basic block into the new function
     newBlocks.push_back(Block);
+
+    // Remove @llvm.assume calls that were moved to the new function from the
+    // old function's assumption cache.
+    if (AC)
+      for (auto &I : *Block)
+        if (match(&I, m_Intrinsic<Intrinsic::assume>()))
+          AC->unregisterAssumption(cast<CallInst>(&I));
   }
 }
 
@@ -1379,11 +1417,11 @@ Function *CodeExtractor::extractCodeRegion() {
   }
 
   // Collect objects which are inputs to the extraction region and also
-  // referenced by lifetime start/end markers within it. The effects of these
+  // referenced by lifetime start markers within it. The effects of these
   // markers must be replicated in the calling function to prevent the stack
   // coloring pass from merging slots which store input objects.
-  ValueSet InputObjectsWithLifetime =
-      eraseLifetimeMarkersOnInputs(Blocks, SinkingCands);
+  ValueSet LifetimesStart;
+  eraseLifetimeMarkersOnInputs(Blocks, SinkingCands, LifetimesStart);
 
   // Construct new function based on inputs/outputs & add allocas for all defs.
   Function *newFunction =
@@ -1406,9 +1444,8 @@ Function *CodeExtractor::extractCodeRegion() {
 
   // Replicate the effects of any lifetime start/end markers which referenced
   // input objects in the extraction region by placing markers around the call.
-  insertLifetimeMarkersSurroundingCall(oldFunction->getParent(),
-                                       InputObjectsWithLifetime.getArrayRef(),
-                                       TheCall);
+  insertLifetimeMarkersSurroundingCall(
+      oldFunction->getParent(), LifetimesStart.getArrayRef(), {}, TheCall);
 
   // Propagate personality info to the new function if there is one.
   if (oldFunction->hasPersonalityFn())

@@ -38,7 +38,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using month_day = std::chrono::month_day;
     using month     = std::chrono::month;
@@ -104,4 +104,6 @@ int main()
                 assert(md1 == md2);
             }
     }
+
+  return 0;
 }

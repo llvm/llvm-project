@@ -37,7 +37,7 @@ struct some_hash
     std::size_t operator()(T const&) const;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<MoveOnly, MoveOnly> C;
@@ -64,4 +64,6 @@ int main()
         static_assert(!std::is_nothrow_destructible<C>::value, "");
     }
 #endif // _LIBCPP_VERSION
+
+  return 0;
 }

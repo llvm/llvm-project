@@ -19,7 +19,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::istringstream in(" abc\n  def\n   ghij");
@@ -77,4 +77,6 @@ int main()
         assert(s == L"   ghij");
     }
 #endif
+
+  return 0;
 }

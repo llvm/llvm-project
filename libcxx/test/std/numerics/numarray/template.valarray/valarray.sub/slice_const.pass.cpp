@@ -15,7 +15,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     int a1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
     std::valarray<int> v1(a1, sizeof(a1)/sizeof(a1[0]));
@@ -26,4 +26,6 @@ int main()
     assert(v2[2] ==  7);
     assert(v2[3] == 10);
     assert(v2[4] == 13);
+
+  return 0;
 }

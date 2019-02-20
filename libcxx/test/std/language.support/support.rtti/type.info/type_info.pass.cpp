@@ -16,7 +16,7 @@
 bool test_constructor_explicit(std::type_info const&) { return false; }
 bool test_constructor_explicit(std::string const&) { return true; }
 
-int main()
+int main(int, char**)
 {
   {
     const std::type_info& t1 = typeid(int);
@@ -36,4 +36,6 @@ int main()
     // See: https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=216201
     assert(test_constructor_explicit("abc"));
   }
+
+  return 0;
 }

@@ -16,6 +16,7 @@ def BPF_ST    : BPFOpClass<0x2>;
 def BPF_STX   : BPFOpClass<0x3>;
 def BPF_ALU   : BPFOpClass<0x4>;
 def BPF_JMP   : BPFOpClass<0x5>;
+def BPF_JMP32 : BPFOpClass<0x6>;
 def BPF_ALU64 : BPFOpClass<0x7>;
 
 class BPFSrcType<bits<1> val> {

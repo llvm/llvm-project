@@ -30,7 +30,7 @@ public:
     long operator()(long i, long j) const {return data_ + i + j;}
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::packaged_task<double(int, char)> p0(A(5));
@@ -49,4 +49,6 @@ int main()
         assert(!p0.valid());
         assert(!p.valid());
     }
+
+  return 0;
 }

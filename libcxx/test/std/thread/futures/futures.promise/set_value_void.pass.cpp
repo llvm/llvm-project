@@ -19,7 +19,7 @@
 #include <future>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef void T;
@@ -37,4 +37,6 @@ int main()
             assert(e.code() == make_error_code(std::future_errc::promise_already_satisfied));
         }
     }
+
+  return 0;
 }

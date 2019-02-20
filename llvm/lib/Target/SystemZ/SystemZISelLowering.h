@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SYSTEMZ_SYSTEMZISELLOWERING_H
 
 #include "SystemZ.h"
+#include "SystemZInstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -160,10 +161,6 @@ enum NodeType : unsigned {
 
   // Transaction end.  Just the chain operand.  Returns CC value and chain.
   TEND,
-
-  // Create a vector constant by filling byte N of the result with bit
-  // 15-N of the single operand.
-  BYTE_MASK,
 
   // Create a vector constant by replicating an element-sized RISBG-style mask.
   // The first operand specifies the starting set bit and the second operand
@@ -395,6 +392,7 @@ public:
       return TypeWidenVector;
     return TargetLoweringBase::getPreferredVectorAction(VT);
   }
+  bool isCheapToSpeculateCtlz() const override { return true; }
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &,
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(EVT VT) const override;
@@ -515,6 +513,9 @@ public:
     return true;
   }
 
+  static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask);
+  static bool analyzeFPImm(const APFloat &Imm, unsigned BitWidth,
+                 unsigned &Start, unsigned &End, const SystemZInstrInfo *TII);
 private:
   const SystemZSubtarget &Subtarget;
 

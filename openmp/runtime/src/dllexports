@@ -556,6 +556,7 @@ kmp_set_disp_num_buffers                    890
     ompc_capture_affinity                   755
     omp_pause_resource                      756
     omp_pause_resource_all                  757
+    omp_get_supported_active_levels         758
 
     OMP_NULL_ALLOCATOR                     DATA
     omp_default_mem_alloc                  DATA

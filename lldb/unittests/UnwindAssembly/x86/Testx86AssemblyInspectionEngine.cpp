@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 
+#include <memory>
 #include <vector>
 
 #include "Plugins/UnwindAssembly/x86/x86AssemblyInspectionEngine.h"
@@ -1415,6 +1416,34 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPushEBP) {
   EXPECT_EQ(-8, regloc.GetOffset());
 }
 
+TEST_F(Testx86AssemblyInspectionEngine, TestPushRBPWithREX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+
+  uint8_t data[] = {
+      0x40, 0x55, // pushq %rbp
+      0x90  // nop
+  };
+
+  AddressRange sample_range(0x1000, sizeof(data));
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+
+  std::unique_ptr<x86AssemblyInspectionEngine> engine64 = Getx86_64Inspector();
+  EXPECT_TRUE(engine64->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(2);
+
+  EXPECT_EQ(2ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rbp, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-16, regloc.GetOffset());
+}
+
 TEST_F(Testx86AssemblyInspectionEngine, TestPushESI) {
   UnwindPlan::Row::RegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
@@ -1913,6 +1942,32 @@ TEST_F(Testx86AssemblyInspectionEngine, TestPopEBP) {
   EXPECT_FALSE(row_sp->GetRegisterInfo(k_ebp, regloc));
 }
 
+TEST_F(Testx86AssemblyInspectionEngine, TestPopRBPWithREX) {
+  UnwindPlan::Row::RegisterLocation regloc;
+  UnwindPlan::RowSP row_sp;
+  AddressRange sample_range;
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  uint8_t data[] = {
+      0x40, 0x55, // pushq %rbp
+      0x40, 0x5d, // popq %rbp
+      0x90        // nop
+  };
+
+  sample_range = AddressRange(0x1000, sizeof(data));
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  row_sp = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+  EXPECT_FALSE(row_sp->GetRegisterInfo(k_rbp, regloc));
+}
+
 TEST_F(Testx86AssemblyInspectionEngine, TestPopESI) {
   UnwindPlan::Row::RegisterLocation regloc;
   UnwindPlan::RowSP row_sp;
@@ -2171,7 +2226,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplex86_64Augmented) {
   unwind_plan.SetPlanValidAddressRange(sample_range);
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  row_sp.reset(new UnwindPlan::Row);
+  row_sp = std::make_shared<UnwindPlan::Row>();
 
   // Describe offset 0
   row_sp->SetOffset(0);
@@ -2249,7 +2304,7 @@ TEST_F(Testx86AssemblyInspectionEngine, TestSimplei386ugmented) {
   unwind_plan.SetPlanValidAddressRange(sample_range);
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  row_sp.reset(new UnwindPlan::Row);
+  row_sp = std::make_shared<UnwindPlan::Row>();
 
   // Describe offset 0
   row_sp->SetOffset(0);
@@ -2498,3 +2553,173 @@ TEST_F(Testx86AssemblyInspectionEngine, TestDisassemblyJunkBytes) {
 
 }
 
+TEST_F(Testx86AssemblyInspectionEngine, TestReturnDetect) {
+  std::unique_ptr<x86AssemblyInspectionEngine> engine = Getx86_64Inspector();
+
+  // Single fragment with all four return forms.
+  // We want to verify that the unwind state is reset after each ret.
+  uint8_t data[] = {
+      0x55,             // offset  0 -- pushq %rbp
+      0x48, 0x89, 0xe5, // offset  1 -- movq %rsp, %rbp
+      0x31, 0xc0,       // offset  4 -- xorl %eax, %eax
+      0x5d,             // offset  6 -- popq %rbp
+      0xc3,             // offset  7 -- retq
+      0x31, 0xc0,       // offset  8 -- xorl %eax, %eax
+      0x5d,             // offset 10 -- popq %rbp
+      0xcb,             // offset 11 -- retf
+      0x31, 0xc0,       // offset 12 -- xorl %eax, %eax
+      0x5d,             // offset 14 -- popq %rbp
+      0xc2, 0x22, 0x11, // offset 15 -- retq 0x1122
+      0x31, 0xc0,       // offset 18 -- xorl %eax, %eax
+      0x5d,             // offset 20 -- popq %rbp
+      0xca, 0x44, 0x33, // offset 21 -- retf 0x3344
+      0x31, 0xc0,       // offset 24 -- xorl %eax, %eax
+  };
+
+  AddressRange sample_range(0x1000, sizeof(data));
+
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      data, sizeof(data), sample_range, unwind_plan));
+
+  // Expect following unwind rows:
+  //  0: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  //  1: CFA=rsp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  //  4: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  //  7: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  //  8: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  // 11: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  // 12: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  // 15: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  // 18: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  // 21: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  // 24: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+
+  EXPECT_TRUE(unwind_plan.GetInitialCFARegister() == k_rsp);
+  EXPECT_TRUE(unwind_plan.GetUnwindPlanValidAtAllInstructions() ==
+              eLazyBoolYes);
+  EXPECT_TRUE(unwind_plan.GetSourcedFromCompiler() == eLazyBoolNo);
+
+  UnwindPlan::Row::RegisterLocation regloc;
+
+  //  0: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  UnwindPlan::RowSP row_sp = unwind_plan.GetRowForFunctionOffset(0);
+  EXPECT_EQ(0ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  //  1: CFA=rsp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(1);
+  EXPECT_EQ(1ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  //  4: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(4);
+  EXPECT_EQ(4ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rbp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  //  7: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(7);
+  EXPECT_EQ(7ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  //  8: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(8);
+  EXPECT_EQ(8ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rbp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  // 11: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(11);
+  EXPECT_EQ(11ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  // 12: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(12);
+  EXPECT_EQ(12ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rbp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  // 15: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(15);
+  EXPECT_EQ(15ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  // 18: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(18);
+  EXPECT_EQ(18ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rbp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  // 21: CFA=rsp +8 => rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(21);
+  EXPECT_EQ(21ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rsp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(8, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  // 24: CFA=rbp+16 => rbp=[CFA-16] rsp=CFA+0 rip=[CFA-8]
+  row_sp = unwind_plan.GetRowForFunctionOffset(24);
+  EXPECT_EQ(24ull, row_sp->GetOffset());
+  EXPECT_TRUE(row_sp->GetCFAValue().GetRegisterNumber() == k_rbp);
+  EXPECT_TRUE(row_sp->GetCFAValue().IsRegisterPlusOffset() == true);
+  EXPECT_EQ(16, row_sp->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row_sp->GetRegisterInfo(k_rip, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+}

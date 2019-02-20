@@ -710,6 +710,17 @@ MinidumpParser::GetStreamTypeAsString(uint32_t stream_type) {
     ENUM_TO_CSTR(LinuxProcStat);
     ENUM_TO_CSTR(LinuxProcUptime);
     ENUM_TO_CSTR(LinuxProcFD);
+    ENUM_TO_CSTR(FacebookAppCustomData);
+    ENUM_TO_CSTR(FacebookBuildID);
+    ENUM_TO_CSTR(FacebookAppVersionName);
+    ENUM_TO_CSTR(FacebookJavaStack);
+    ENUM_TO_CSTR(FacebookDalvikInfo);
+    ENUM_TO_CSTR(FacebookUnwindSymbols);
+    ENUM_TO_CSTR(FacebookDumpErrorLog);
+    ENUM_TO_CSTR(FacebookAppStateLog);
+    ENUM_TO_CSTR(FacebookAbortReason);
+    ENUM_TO_CSTR(FacebookThreadName);
+    ENUM_TO_CSTR(FacebookLogcat);
   }
   return "unknown stream type";
 }

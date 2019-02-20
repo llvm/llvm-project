@@ -327,15 +327,12 @@ public:
 
 Address CodeGenFunction::emitAddrOfRealComponent(Address addr,
                                                  QualType complexType) {
-  CharUnits offset = CharUnits::Zero();
-  return Builder.CreateStructGEP(addr, 0, offset, addr.getName() + ".realp");
+  return Builder.CreateStructGEP(addr, 0, addr.getName() + ".realp");
 }
 
 Address CodeGenFunction::emitAddrOfImagComponent(Address addr,
                                                  QualType complexType) {
-  QualType eltType = complexType->castAs<ComplexType>()->getElementType();
-  CharUnits offset = getContext().getTypeSizeInChars(eltType);
-  return Builder.CreateStructGEP(addr, 1, offset, addr.getName() + ".imagp");
+  return Builder.CreateStructGEP(addr, 1, addr.getName() + ".imagp");
 }
 
 /// EmitLoadOfLValue - Given an RValue reference for a complex, emit code to
@@ -627,7 +624,8 @@ ComplexPairTy ComplexExprEmitter::EmitComplexBinOpLibCall(StringRef LibCallName,
       Args, cast<FunctionType>(FQTy.getTypePtr()), false);
 
   llvm::FunctionType *FTy = CGF.CGM.getTypes().GetFunctionType(FuncInfo);
-  llvm::Constant *Func = CGF.CGM.CreateBuiltinFunction(FTy, LibCallName);
+  llvm::FunctionCallee Func = CGF.CGM.CreateRuntimeFunction(
+      FTy, LibCallName, llvm::AttributeList(), true);
   CGCallee Callee = CGCallee::forDirect(Func, FQTy->getAs<FunctionProtoType>());
 
   llvm::CallBase *Call;

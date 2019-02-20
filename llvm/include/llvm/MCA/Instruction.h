@@ -150,9 +150,17 @@ public:
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
   unsigned getLatency() const { return WD->Latency; }
+  const WriteState *getDependentWrite() const { return DependentWrite; }
 
-  void addUser(ReadState *Use, int ReadAdvance);
-  void addUser(WriteState *Use);
+  // This method adds Use to the set of data dependent reads. IID is the
+  // instruction identifier associated with this write. ReadAdvance is the
+  // number of cycles to subtract from the latency of this data dependency.
+  // Use is in a RAW dependency with this write.
+  void addUser(unsigned IID, ReadState *Use, int ReadAdvance);
+
+  // Use is a younger register write that is in a false dependency with this
+  // write. IID is the instruction identifier associated with this write.
+  void addUser(unsigned IID, WriteState *Use);
 
   unsigned getDependentWriteCyclesLeft() const {
     return DependentWriteCyclesLeft;
@@ -168,13 +176,20 @@ public:
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
   bool isWriteZero() const { return WritesZero; }
   bool isEliminated() const { return IsEliminated; }
+
+  bool isReady() const {
+    if (DependentWrite)
+      return false;
+    unsigned CyclesLeft = getDependentWriteCyclesLeft();
+    return !CyclesLeft || CyclesLeft < getLatency();
+  }
+
   bool isExecuted() const {
     return CyclesLeft != UNKNOWN_CYCLES && CyclesLeft <= 0;
   }
 
-  const WriteState *getDependentWrite() const { return DependentWrite; }
-  void setDependentWrite(WriteState *Other) { DependentWrite = Other; }
-  void writeStartEvent(unsigned Cycles) {
+  void setDependentWrite(const WriteState *Other) { DependentWrite = Other; }
+  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles) {
     DependentWriteCyclesLeft = Cycles;
     DependentWrite = nullptr;
   }
@@ -190,7 +205,7 @@ public:
 
   // On every cycle, update CyclesLeft and notify dependent users.
   void cycleEvent();
-  void onInstructionIssued();
+  void onInstructionIssued(unsigned IID);
 
 #ifndef NDEBUG
   void dump() const;
@@ -239,6 +254,7 @@ public:
   unsigned getRegisterID() const { return RegisterID; }
   unsigned getRegisterFileID() const { return PRFID; }
 
+  bool isPending() const { return !IndependentFromDef && CyclesLeft > 0; }
   bool isReady() const { return IsReady; }
   bool isImplicitRead() const { return RD->isImplicitRead(); }
 
@@ -246,7 +262,7 @@ public:
   void setIndependentFromDef() { IndependentFromDef = true; }
 
   void cycleEvent();
-  void writeStartEvent(unsigned Cycles);
+  void writeStartEvent(unsigned IID, unsigned RegID, unsigned Cycles);
   void setDependentWrites(unsigned Writes) {
     DependentWrites = Writes;
     IsReady = !Writes;
@@ -329,6 +345,9 @@ struct InstrDesc {
   // A list of buffered resources consumed by this instruction.
   SmallVector<uint64_t, 4> Buffers;
 
+  unsigned UsedProcResUnits;
+  unsigned UsedProcResGroups;
+
   unsigned MaxLatency;
   // Number of MicroOps for this instruction.
   unsigned NumMicroOps;
@@ -401,6 +420,7 @@ public:
   // Returns true if this instruction is a candidate for move elimination.
   bool isOptimizableMove() const { return IsOptimizableMove; }
   void setOptimizableMove() { IsOptimizableMove = true; }
+  bool isMemOp() const { return Desc.MayLoad || Desc.MayStore; }
 };
 
 /// An instruction propagated through the simulated instruction pipeline.
@@ -409,12 +429,13 @@ public:
 /// that are sent to the various components of the simulated hardware pipeline.
 class Instruction : public InstructionBase {
   enum InstrStage {
-    IS_INVALID,   // Instruction in an invalid state.
-    IS_AVAILABLE, // Instruction dispatched but operands are not ready.
-    IS_READY,     // Instruction dispatched and operands ready.
-    IS_EXECUTING, // Instruction issued.
-    IS_EXECUTED,  // Instruction executed. Values are written back.
-    IS_RETIRED    // Instruction retired.
+    IS_INVALID,    // Instruction in an invalid state.
+    IS_DISPATCHED, // Instruction dispatched but operands are not ready.
+    IS_PENDING,    // Instruction is not ready, but operand latency is known.
+    IS_READY,      // Instruction dispatched and operands ready.
+    IS_EXECUTING,  // Instruction issued.
+    IS_EXECUTED,   // Instruction executed. Values are written back.
+    IS_RETIRED     // Instruction retired.
   };
 
   // The current instruction stage.
@@ -427,10 +448,13 @@ class Instruction : public InstructionBase {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
+  uint64_t CriticalResourceMask;
+  unsigned CriticalMemDep;
+
 public:
   Instruction(const InstrDesc &D)
       : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
-        RCUTokenID(0) {}
+        RCUTokenID(0), CriticalResourceMask(0), CriticalMemDep(0) {}
 
   unsigned getRCUTokenID() const { return RCUTokenID; }
   int getCyclesLeft() const { return CyclesLeft; }
@@ -441,18 +465,21 @@ public:
   void dispatch(unsigned RCUTokenID);
 
   // Instruction issued. Transition to the IS_EXECUTING state, and update
-  // all the definitions.
-  void execute();
+  // all the register definitions.
+  void execute(unsigned IID);
 
-  // Force a transition from the IS_AVAILABLE state to the IS_READY state if
-  // input operands are all ready. State transitions normally occur at the
-  // beginning of a new cycle (see method cycleEvent()). However, the scheduler
-  // may decide to promote instructions from the wait queue to the ready queue
-  // as the result of another issue event.  This method is called every time the
-  // instruction might have changed in state.
+  // Force a transition from the IS_DISPATCHED state to the IS_READY or
+  // IS_PENDING state. State transitions normally occur either at the beginning
+  // of a new cycle (see method cycleEvent()), or as a result of another issue
+  // event. This method is called every time the instruction might have changed
+  // in state. It internally delegates to method updateDispatched() and
+  // updateWaiting().
   void update();
+  bool updateDispatched();
+  bool updatePending();
 
-  bool isDispatched() const { return Stage == IS_AVAILABLE; }
+  bool isDispatched() const { return Stage == IS_DISPATCHED; }
+  bool isPending() const { return Stage == IS_PENDING; }
   bool isReady() const { return Stage == IS_READY; }
   bool isExecuting() const { return Stage == IS_EXECUTING; }
   bool isExecuted() const { return Stage == IS_EXECUTED; }
@@ -464,13 +491,20 @@ public:
                   [](const WriteState &W) { return W.isEliminated(); });
   }
 
-  // Forces a transition from state IS_AVAILABLE to state IS_EXECUTED.
+  // Forces a transition from state IS_DISPATCHED to state IS_EXECUTED.
   void forceExecuted();
 
   void retire() {
     assert(isExecuted() && "Instruction is in an invalid state!");
     Stage = IS_RETIRED;
   }
+
+  void updateCriticalResourceMask(uint64_t BusyResourceUnits) {
+    CriticalResourceMask |= BusyResourceUnits;
+  }
+  uint64_t getCriticalResourceMask() const { return CriticalResourceMask; }
+  void setCriticalMemDep(unsigned IID) { CriticalMemDep = IID; }
+  unsigned getCriticalMemDep() const { return CriticalMemDep; }
 
   void cycleEvent();
 };
@@ -540,7 +574,7 @@ public:
     return !WS || WS->isExecuted();
   }
 
-  bool isValid() const { return Data.first != INVALID_IID && Data.second; }
+  bool isValid() const { return Data.second && Data.first != INVALID_IID; }
   bool operator==(const WriteRef &Other) const { return Data == Other.Data; }
 
 #ifndef NDEBUG

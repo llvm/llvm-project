@@ -29,7 +29,7 @@ test(const T& a, const T& b, C c, const T& x, const T& y)
 }
 
 
-int main()
+int main(int, char**)
 {
     {
     int x = 0;
@@ -63,4 +63,6 @@ int main()
     static_assert(p2.second == y, "");
     }
 #endif
+
+  return 0;
 }

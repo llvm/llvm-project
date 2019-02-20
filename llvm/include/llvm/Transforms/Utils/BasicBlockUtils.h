@@ -17,9 +17,9 @@
 // FIXME: Move to this file: BasicBlock::removePredecessor, BB::splitBasicBlock
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/InstrTypes.h"
 #include <cassert>
 
@@ -39,15 +39,27 @@ class ReturnInst;
 class TargetLibraryInfo;
 class Value;
 
+/// Replace contents of every block in \p BBs with single unreachable
+/// instruction. If \p Updates is specified, collect all necessary DT updates
+/// into this vector. If \p KeepOneInputPHIs is true, one-input Phis in
+/// successors of blocks being deleted will be preserved.
+void DetatchDeadBlocks(ArrayRef <BasicBlock *> BBs,
+                       SmallVectorImpl<DominatorTree::UpdateType> *Updates,
+                       bool KeepOneInputPHIs = false);
+
 /// Delete the specified block, which must have no predecessors.
-void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
+void DeleteDeadBlock(BasicBlock *BB, DomTreeUpdater *DTU = nullptr,
+                     bool KeepOneInputPHIs = false);
 
 /// Delete the specified blocks from \p BB. The set of deleted blocks must have
 /// no predecessors that are not being deleted themselves. \p BBs must have no
 /// duplicating blocks. If there are loops among this set of blocks, all
 /// relevant loop info updates should be done before this function is called.
-void DeleteDeadBlocks(SmallVectorImpl <BasicBlock *> &BBs,
-                      DomTreeUpdater *DTU = nullptr);
+/// If \p KeepOneInputPHIs is true, one-input Phis in successors of blocks
+/// being deleted will be preserved.
+void DeleteDeadBlocks(ArrayRef <BasicBlock *> BBs,
+                      DomTreeUpdater *DTU = nullptr,
+                      bool KeepOneInputPHIs = false);
 
 /// We know that BB has one predecessor. If there are any single-entry PHI nodes
 /// in it, fold them away. This handles the case when all entries to the PHI
@@ -94,7 +106,7 @@ struct CriticalEdgeSplittingOptions {
   LoopInfo *LI;
   MemorySSAUpdater *MSSAU;
   bool MergeIdenticalEdges = false;
-  bool DontDeleteUselessPHIs = false;
+  bool KeepOneInputPHIs = false;
   bool PreserveLCSSA = false;
 
   CriticalEdgeSplittingOptions(DominatorTree *DT = nullptr,
@@ -107,8 +119,8 @@ struct CriticalEdgeSplittingOptions {
     return *this;
   }
 
-  CriticalEdgeSplittingOptions &setDontDeleteUselessPHIs() {
-    DontDeleteUselessPHIs = true;
+  CriticalEdgeSplittingOptions &setKeepOneInputPHIs() {
+    KeepOneInputPHIs = true;
     return *this;
   }
 
@@ -258,7 +270,8 @@ ReturnInst *FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
 ///   SplitBefore
 ///   Tail
 ///
-/// If Unreachable is true, then ThenBlock ends with
+/// If \p ThenBlock is not specified, a new block will be created for it.
+/// If \p Unreachable is true, the newly created block will end with
 /// UnreachableInst, otherwise it branches to Tail.
 /// Returns the NewBasicBlock's terminator.
 ///
@@ -267,7 +280,8 @@ Instruction *SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
                                        bool Unreachable,
                                        MDNode *BranchWeights = nullptr,
                                        DominatorTree *DT = nullptr,
-                                       LoopInfo *LI = nullptr);
+                                       LoopInfo *LI = nullptr,
+                                       BasicBlock *ThenBlock = nullptr);
 
 /// SplitBlockAndInsertIfThenElse is similar to SplitBlockAndInsertIfThen,
 /// but also creates the ElseBlock.

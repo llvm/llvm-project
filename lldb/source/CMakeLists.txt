@@ -15,29 +15,29 @@ foreach(file
   endif()
 endforeach()
 
-if(DEFINED lldb_vc)
-  set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/SVNVersion.inc")
-  set(get_svn_script "${LLVM_CMAKE_PATH}/GetSVN.cmake")
+set(version_inc "${CMAKE_CURRENT_BINARY_DIR}/VCSVersion.inc")
+set(generate_vcs_version_script "${LLVM_CMAKE_PATH}/GenerateVersionFromVCS.cmake")
 
-  # Create custom target to generate the VC revision include.
-  add_custom_command(OUTPUT "${version_inc}"
-    DEPENDS "${lldb_vc}" "${get_svn_script}"
-    COMMAND
-    ${CMAKE_COMMAND} "-DFIRST_SOURCE_DIR=${LLDB_SOURCE_DIR}"
-                     "-DFIRST_NAME=LLDB"
-                     "-DHEADER_FILE=${version_inc}"
-                     -P "${get_svn_script}")
-
-  # Mark the generated header as being generated.
-  set_source_files_properties("${version_inc}"
-    PROPERTIES GENERATED TRUE
-               HEADER_FILE_ONLY TRUE)
-
-  # Tell Version.cpp that it needs to build with -DHAVE_SVN_VERSION_INC.
-  set_property(SOURCE lldb.cpp APPEND PROPERTY 
-               COMPILE_DEFINITIONS "HAVE_SVN_VERSION_INC")
-  list(APPEND lldbBase_SOURCES ${version_inc})
+if(lldb_vc)
+  set(lldb_source_dir ${LLDB_SOURCE_DIR})
 endif()
+
+add_custom_command(OUTPUT "${version_inc}"
+  DEPENDS "${lldb_vc}" "${generate_vcs_version_script}"
+  COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
+                           "-DLLDB_SOURCE_DIR=${LLDB_SOURCE_DIR}"
+                           "-DHEADER_FILE=${version_inc}"
+                           -P "${generate_vcs_version_script}")
+
+# Mark the generated header as being generated.
+set_source_files_properties("${version_inc}"
+  PROPERTIES GENERATED TRUE
+             HEADER_FILE_ONLY TRUE)
+
+set_property(SOURCE lldb.cpp APPEND PROPERTY
+             COMPILE_DEFINITIONS "HAVE_VCS_VERSION_INC")
+
+list(APPEND lldbBase_SOURCES ${version_inc})
 
 if(APPLE)
   set(apple_version_inc "${CMAKE_CURRENT_BINARY_DIR}/AppleVersion.inc")

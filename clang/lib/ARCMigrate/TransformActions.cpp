@@ -313,7 +313,9 @@ void TransformActionsImpl::removeStmt(Stmt *S) {
   assert(IsInTransaction && "Actions only allowed during a transaction");
   ActionData data;
   data.Kind = Act_RemoveStmt;
-  data.S = S->IgnoreImplicit(); // important for uniquing
+  if (auto *E = dyn_cast<Expr>(S))
+    S = E->IgnoreImplicit(); // important for uniquing
+  data.S = S;
   CachedActions.push_back(data);
 }
 

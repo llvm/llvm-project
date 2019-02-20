@@ -51,7 +51,7 @@ private:
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
     int i = 67;
@@ -82,4 +82,6 @@ int main()
     assert(p->get_char() == 'f');
     }
     assert(A::count == 0);
+
+  return 0;
 }

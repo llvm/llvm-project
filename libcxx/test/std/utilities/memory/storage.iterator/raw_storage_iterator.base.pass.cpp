@@ -36,7 +36,7 @@ public:
     A* operator& () DELETE_FUNCTION;
 };
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 14
     typedef std::aligned_storage<3*sizeof(A), std::alignment_of<A>::value>::type
@@ -54,4 +54,6 @@ int main()
         assert(it.base() == ap + 1);  // next place to write
     }
 #endif
+
+  return 0;
 }

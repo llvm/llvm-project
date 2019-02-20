@@ -1120,6 +1120,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 bool
 operator==(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
 {
+    static_assert (sizeof...(_Tp) == sizeof...(_Up), "Can't compare tuples of different sizes");
     return __tuple_equal<sizeof...(_Tp)>()(__x, __y);
 }
 
@@ -1163,6 +1164,7 @@ inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
 bool
 operator<(const tuple<_Tp...>& __x, const tuple<_Up...>& __y)
 {
+    static_assert (sizeof...(_Tp) == sizeof...(_Up), "Can't compare tuples of different sizes");
     return __tuple_less<sizeof...(_Tp)>()(__x, __y);
 }
 

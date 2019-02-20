@@ -51,7 +51,7 @@ public:
 
 struct A; // incomplete
 
-int main()
+int main(int, char**)
 {
     test_is_not_unsigned<void>();
     test_is_not_unsigned<int&>();
@@ -71,4 +71,6 @@ int main()
     test_is_unsigned<__uint128_t>();
     test_is_not_unsigned<__int128_t>();
 #endif
+
+  return 0;
 }

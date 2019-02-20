@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | llvm-readobj -r -s -symbols | FileCheck %s
+; RUN: llc -filetype=obj -thread-model=single %s -o - | llvm-readobj -r -s -symbols | FileCheck %s
 
 ; CHECK: Format: WASM
 ; CHECK-NEXT:Arch: wasm32
@@ -133,74 +133,103 @@
 ; CHECK-NEXT:]
 ; CHECK-NEXT:Relocations [
 ; CHECK-NEXT:  Section (6) DATA {
-; CHECK-NEXT:    0x6 R_WEBASSEMBLY_MEMORY_ADDR_I32 myextern 0
-; CHECK-NEXT:    0xF R_WEBASSEMBLY_TABLE_INDEX_I32 f2
+; CHECK-NEXT:    0x6 R_WASM_MEMORY_ADDR_I32 myextern 0
+; CHECK-NEXT:    0xF R_WASM_TABLE_INDEX_I32 f2
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section (9) .debug_info {
-; CHECK-NEXT:    0x6 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_abbrev 0
-; CHECK-NEXT:    0xC R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 0
-; CHECK-NEXT:    0x12 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 55
-; CHECK-NEXT:    0x16 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_line 0
-; CHECK-NEXT:    0x1A R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 62
-; CHECK-NEXT:    0x1E R_WEBASSEMBLY_FUNCTION_OFFSET_I32 f2 0
-; CHECK-NEXT:    0x27 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 105
-; CHECK-NEXT:    0x33 R_WEBASSEMBLY_MEMORY_ADDR_I32 foo 0
-; CHECK-NEXT:    0x3D R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 109
-; CHECK-NEXT:    0x44 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 113
-; CHECK-NEXT:    0x50 R_WEBASSEMBLY_MEMORY_ADDR_I32 ptr2 0
-; CHECK-NEXT:    0x5B R_WEBASSEMBLY_FUNCTION_OFFSET_I32 f2 0
-; CHECK-NEXT:    0x63 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_str 118
+; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_abbrev 0
+; CHECK-NEXT:    0xC R_WASM_SECTION_OFFSET_I32 .debug_str 0
+; CHECK-NEXT:    0x12 R_WASM_SECTION_OFFSET_I32 .debug_str 55
+; CHECK-NEXT:    0x16 R_WASM_SECTION_OFFSET_I32 .debug_line 0
+; CHECK-NEXT:    0x1A R_WASM_SECTION_OFFSET_I32 .debug_str 62
+; CHECK-NEXT:    0x1E R_WASM_FUNCTION_OFFSET_I32 f2 0
+; CHECK-NEXT:    0x27 R_WASM_SECTION_OFFSET_I32 .debug_str 105
+; CHECK-NEXT:    0x33 R_WASM_MEMORY_ADDR_I32 foo 0
+; CHECK-NEXT:    0x3D R_WASM_SECTION_OFFSET_I32 .debug_str 109
+; CHECK-NEXT:    0x44 R_WASM_SECTION_OFFSET_I32 .debug_str 113
+; CHECK-NEXT:    0x50 R_WASM_MEMORY_ADDR_I32 ptr2 0
+; CHECK-NEXT:    0x5B R_WASM_FUNCTION_OFFSET_I32 f2 0
+; CHECK-NEXT:    0x63 R_WASM_SECTION_OFFSET_I32 .debug_str 118
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section (11) .debug_pubnames {
-; CHECK-NEXT:    0x6 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_info 0
+; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section (12) .debug_pubtypes {
-; CHECK-NEXT:    0x6 R_WEBASSEMBLY_SECTION_OFFSET_I32 .debug_info 0
+; CHECK-NEXT:    0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Section (13) .debug_line {
-; CHECK-NEXT:    0x2B R_WEBASSEMBLY_FUNCTION_OFFSET_I32 f2 0
+; CHECK-NEXT:    0x2B R_WASM_FUNCTION_OFFSET_I32 f2 0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 ; CHECK-NEXT:Symbols [
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: f2
 ; CHECK-NEXT:    Type: FUNCTION (0x0)
-; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:    Flags [ (0x4)
+; CHECK-NEXT:      VISIBILITY_HIDDEN (0x4)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    ElementIndex: 0x0
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: foo
 ; CHECK-NEXT:    Type: DATA (0x1)
-; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:    Flags [ (0x4)
+; CHECK-NEXT:      VISIBILITY_HIDDEN (0x4)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    Offset: 0x0
+; CHECK-NEXT:    Segment: 0x0
+; CHECK-NEXT:    Size: 0x4
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: myextern
 ; CHECK-NEXT:    Type: DATA (0x1)
-; CHECK-NEXT:    Flags: 0x10
+; CHECK-NEXT:    Flags [ (0x10)
+; CHECK-NEXT:      UNDEFINED (0x10)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    ImportName:
+; CHECK-NEXT:    ImportModule:
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: ptr2
 ; CHECK-NEXT:    Type: DATA (0x1)
-; CHECK-NEXT:    Flags: 0x4
+; CHECK-NEXT:    Flags [ (0x4)
+; CHECK-NEXT:      VISIBILITY_HIDDEN (0x4)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    Offset: 0x0
+; CHECK-NEXT:    Segment: 0x1
+; CHECK-NEXT:    Size: 0x4
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_str
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    ElementIndex: 0x6
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_abbrev
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    ElementIndex: 0x7
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_info
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    ElementIndex: 0x8
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Symbol {
 ; CHECK-NEXT:    Name: .debug_line
 ; CHECK-NEXT:    Type: SECTION (0x3)
-; CHECK-NEXT:    Flags: 0x2
+; CHECK-NEXT:    Flags [ (0x2)
+; CHECK-NEXT:      BINDING_LOCAL (0x2)
+; CHECK-NEXT:    ]
+; CHECK-NEXT:    ElementIndex: 0xC
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:]
 

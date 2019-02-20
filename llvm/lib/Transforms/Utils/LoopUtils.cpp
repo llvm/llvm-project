@@ -14,6 +14,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -26,7 +27,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DIBuilder.h"
-#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -64,6 +64,9 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
       if (L->contains(PredBB)) {
         if (isa<IndirectBrInst>(PredBB->getTerminator()))
           // We cannot rewrite exiting edges from an indirectbr.
+          return false;
+        if (isa<CallBrInst>(PredBB->getTerminator()))
+          // We cannot rewrite exiting edges from a callbr.
           return false;
 
         InLoopPredecessors.push_back(PredBB);
@@ -378,16 +381,16 @@ TransformationMode llvm::hasVectorizeTransformation(Loop *L) {
   Optional<int> InterleaveCount =
       getOptionalIntLoopAttribute(L, "llvm.loop.interleave.count");
 
-  if (Enable == true) {
-    // 'Forcing' vector width and interleave count to one effectively disables
-    // this tranformation.
-    if (VectorizeWidth == 1 && InterleaveCount == 1)
-      return TM_SuppressedByUser;
-    return TM_ForcedByUser;
-  }
+  // 'Forcing' vector width and interleave count to one effectively disables
+  // this tranformation.
+  if (Enable == true && VectorizeWidth == 1 && InterleaveCount == 1)
+    return TM_SuppressedByUser;
 
   if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
     return TM_Disable;
+
+  if (Enable == true)
+    return TM_ForcedByUser;
 
   if (VectorizeWidth == 1 && InterleaveCount == 1)
     return TM_Disable;

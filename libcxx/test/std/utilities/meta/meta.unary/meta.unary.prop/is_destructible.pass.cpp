@@ -97,7 +97,7 @@ struct DeletedVirtualPrivateDestructor   { private:   virtual ~DeletedVirtualPri
 #endif
 
 
-int main()
+int main(int, char**)
 {
     test_is_destructible<A>();
     test_is_destructible<int&>();
@@ -142,4 +142,6 @@ int main()
     test_is_not_destructible<NotEmpty>();
 #endif
 
+
+  return 0;
 }

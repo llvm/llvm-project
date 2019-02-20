@@ -69,7 +69,7 @@ void test()
     test0<S>({1,2,3}, False, {1,2,3});
 }
 
-int main()
+int main(int, char**)
 {
     test<std::unordered_set<int>>();
     test<std::unordered_set<int, std::hash<int>, std::equal_to<int>, min_allocator<int>>> ();
@@ -77,4 +77,6 @@ int main()
 
     test<std::unordered_set<long>>();
     test<std::unordered_set<double>>();
+
+  return 0;
 }

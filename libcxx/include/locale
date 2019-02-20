@@ -546,7 +546,7 @@ __num_get<_CharT>::__stage2_float_loop(_CharT __ct, bool& __in_units, char& __ex
         __exp = 'P';
     else if ((__x & 0x5F) == __exp)
     {
-        __exp |= 0x80;
+        __exp |= (char) 0x80;
         if (__in_units)
         {
             __in_units = false;

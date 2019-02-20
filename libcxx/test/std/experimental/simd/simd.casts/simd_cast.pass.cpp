@@ -42,4 +42,6 @@ static_assert(
         ex::simd<int64_t, ex::simd_abi::scalar>>::value,
     "");
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

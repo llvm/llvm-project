@@ -21,7 +21,7 @@
 #include <type_traits>
 #include <cstdint>
 
-int main()
+int main(int, char**)
 {
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     static_assert((std::is_same<std::char_traits<char8_t>::char_type,  char8_t>::value), "");
@@ -30,4 +30,6 @@ int main()
     static_assert((std::is_same<std::char_traits<char8_t>::pos_type,   std::u16streampos>::value), "");
     static_assert((std::is_same<std::char_traits<char8_t>::state_type, std::mbstate_t>::value), "");
 #endif
+
+  return 0;
 }

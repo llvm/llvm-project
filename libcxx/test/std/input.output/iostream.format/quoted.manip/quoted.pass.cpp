@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11
+
 // <iomanip>
 
 // quoted
@@ -14,10 +16,6 @@
 #include <sstream>
 #include <string>
 #include <cassert>
-
-#include "test_macros.h"
-
-#if TEST_STD_VER > 11
 
 template <class CharT, class Traits>
 bool is_skipws ( const std::basic_istream<CharT, Traits>& is ) {
@@ -123,7 +121,7 @@ void test_padding () {
 }
 
 
-int main()
+int main(int, char**)
 {
     both_ways ( "" );   // This is a compilation check
 
@@ -173,8 +171,6 @@ int main()
     assert ( unquote (  "" ) ==  "" ); // nothing there
     assert ( unquote ( L"" ) == L"" ); // nothing there
     test_padding ();
-    }
 
-#else
-int main() {}
-#endif
+    return 0;
+}

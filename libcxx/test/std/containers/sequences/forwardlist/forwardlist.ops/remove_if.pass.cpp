@@ -24,7 +24,7 @@ bool g(int i)
     return i < 3;
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -152,4 +152,6 @@ int main()
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
 #endif
+
+  return 0;
 }

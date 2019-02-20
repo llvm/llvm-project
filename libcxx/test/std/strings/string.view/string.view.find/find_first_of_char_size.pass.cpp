@@ -35,7 +35,7 @@ test(const S& s, typename S::value_type c, typename S::size_type x)
         assert(x < s.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -79,4 +79,6 @@ int main()
     static_assert (sv2.find_first_of( 'e', 5 ) == SV::npos, "" );
     }
 #endif
+
+  return 0;
 }

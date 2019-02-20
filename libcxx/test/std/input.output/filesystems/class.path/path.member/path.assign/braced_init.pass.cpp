@@ -22,9 +22,11 @@
 #include "count_new.hpp"
 
 
-int main() {
+int main(int, char**) {
   using namespace fs;
   path p("abc");
   p = {};
   assert(p.native() == "");
+
+  return 0;
 }

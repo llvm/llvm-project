@@ -117,30 +117,6 @@ void Stmt::EnableStatistics() {
   StatisticsEnabled = true;
 }
 
-Stmt *Stmt::IgnoreImplicit() {
-  Stmt *s = this;
-
-  Stmt *lasts = nullptr;
-
-  while (s != lasts) {
-    lasts = s;
-
-    if (auto *fe = dyn_cast<FullExpr>(s))
-      s = fe->getSubExpr();
-
-    if (auto *mte = dyn_cast<MaterializeTemporaryExpr>(s))
-      s = mte->GetTemporaryExpr();
-
-    if (auto *bte = dyn_cast<CXXBindTemporaryExpr>(s))
-      s = bte->getSubExpr();
-
-    if (auto *ice = dyn_cast<ImplicitCastExpr>(s))
-      s = ice->getSubExpr();
-  }
-
-  return s;
-}
-
 /// Skip no-op (attributed, compound) container stmts and skip captured
 /// stmt at the top, if \a IgnoreCaptured is true.
 Stmt *Stmt::IgnoreContainers(bool IgnoreCaptured) {
@@ -342,6 +318,23 @@ CompoundStmt *CompoundStmt::CreateEmpty(const ASTContext &C,
   CompoundStmt *New = new (Mem) CompoundStmt(EmptyShell());
   New->CompoundStmtBits.NumStmts = NumStmts;
   return New;
+}
+
+const Expr *ValueStmt::getExprStmt() const {
+  const Stmt *S = this;
+  do {
+    if (const auto *E = dyn_cast<Expr>(S))
+      return E;
+
+    if (const auto *LS = dyn_cast<LabelStmt>(S))
+      S = LS->getSubStmt();
+    else if (const auto *AS = dyn_cast<AttributedStmt>(S))
+      S = AS->getSubStmt();
+    else
+      llvm_unreachable("unknown kind of ValueStmt");
+  } while (isa<ValueStmt>(S));
+
+  return nullptr;
 }
 
 const char *LabelStmt::getName() const {

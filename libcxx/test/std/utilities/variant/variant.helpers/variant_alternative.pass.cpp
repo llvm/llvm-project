@@ -55,7 +55,7 @@ template <class V, size_t I, class E> void test() {
                 "");
 }
 
-int main() {
+int main(int, char**) {
   {
     using V = std::variant<int, void *, const void *, long double>;
     test<V, 0, int>();
@@ -73,4 +73,6 @@ int main() {
     test<V, 4, long double>();
   }
 #endif
+
+  return 0;
 }

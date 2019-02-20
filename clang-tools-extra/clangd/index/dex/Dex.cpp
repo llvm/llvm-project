@@ -42,7 +42,6 @@ const Token RestrictedForCodeCompletion =
 // Returns the tokens which are given symbols's characteristics. For example,
 // trigrams and scopes.
 // FIXME(kbobyrev): Support more token types:
-// * Types
 // * Namespace proximity
 std::vector<Token> generateSearchTokens(const Symbol &Sym) {
   std::vector<Token> Result = generateIdentifierTrigrams(Sym.Name);
@@ -54,47 +53,9 @@ std::vector<Token> generateSearchTokens(const Symbol &Sym) {
       Result.emplace_back(Token::Kind::ProximityURI, ProximityURI);
   if (Sym.Flags & Symbol::IndexedForCodeCompletion)
     Result.emplace_back(RestrictedForCodeCompletion);
+  if (!Sym.Type.empty())
+    Result.emplace_back(Token::Kind::Type, Sym.Type);
   return Result;
-}
-
-// Constructs BOOST iterators for Path Proximities.
-std::unique_ptr<Iterator> createFileProximityIterator(
-    llvm::ArrayRef<std::string> ProximityPaths,
-    const llvm::DenseMap<Token, PostingList> &InvertedIndex,
-    const Corpus &Corpus) {
-  std::vector<std::unique_ptr<Iterator>> BoostingIterators;
-  // Deduplicate parent URIs extracted from the ProximityPaths.
-  llvm::StringSet<> ParentURIs;
-  llvm::StringMap<SourceParams> Sources;
-  for (const auto &Path : ProximityPaths) {
-    Sources[Path] = SourceParams();
-    auto PathURI = URI::create(Path);
-    const auto PathProximityURIs = generateProximityURIs(PathURI.toString());
-    for (const auto &ProximityURI : PathProximityURIs)
-      ParentURIs.insert(ProximityURI);
-  }
-  // Use SymbolRelevanceSignals for symbol relevance evaluation: use defaults
-  // for all parameters except for Proximity Path distance signal.
-  SymbolRelevanceSignals PathProximitySignals;
-  // DistanceCalculator will find the shortest distance from ProximityPaths to
-  // any URI extracted from the ProximityPaths.
-  URIDistance DistanceCalculator(Sources);
-  PathProximitySignals.FileProximityMatch = &DistanceCalculator;
-  // Try to build BOOST iterator for each Proximity Path provided by
-  // ProximityPaths. Boosting factor should depend on the distance to the
-  // Proximity Path: the closer processed path is, the higher boosting factor.
-  for (const auto &ParentURI : ParentURIs.keys()) {
-    Token Tok(Token::Kind::ProximityURI, ParentURI);
-    const auto It = InvertedIndex.find(Tok);
-    if (It != InvertedIndex.end()) {
-      // FIXME(kbobyrev): Append LIMIT on top of every BOOST iterator.
-      PathProximitySignals.SymbolURI = ParentURI;
-      BoostingIterators.push_back(Corpus.boost(
-          It->second.iterator(&It->first), PathProximitySignals.evaluate()));
-    }
-  }
-  BoostingIterators.push_back(Corpus.all());
-  return Corpus.unionOf(std::move(BoostingIterators));
 }
 
 } // namespace
@@ -141,6 +102,57 @@ std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
                                    : It->second.iterator(&It->first);
 }
 
+// Constructs BOOST iterators for Path Proximities.
+std::unique_ptr<Iterator> Dex::createFileProximityIterator(
+    llvm::ArrayRef<std::string> ProximityPaths) const {
+  std::vector<std::unique_ptr<Iterator>> BoostingIterators;
+  // Deduplicate parent URIs extracted from the ProximityPaths.
+  llvm::StringSet<> ParentURIs;
+  llvm::StringMap<SourceParams> Sources;
+  for (const auto &Path : ProximityPaths) {
+    Sources[Path] = SourceParams();
+    auto PathURI = URI::create(Path);
+    const auto PathProximityURIs = generateProximityURIs(PathURI.toString());
+    for (const auto &ProximityURI : PathProximityURIs)
+      ParentURIs.insert(ProximityURI);
+  }
+  // Use SymbolRelevanceSignals for symbol relevance evaluation: use defaults
+  // for all parameters except for Proximity Path distance signal.
+  SymbolRelevanceSignals PathProximitySignals;
+  // DistanceCalculator will find the shortest distance from ProximityPaths to
+  // any URI extracted from the ProximityPaths.
+  URIDistance DistanceCalculator(Sources);
+  PathProximitySignals.FileProximityMatch = &DistanceCalculator;
+  // Try to build BOOST iterator for each Proximity Path provided by
+  // ProximityPaths. Boosting factor should depend on the distance to the
+  // Proximity Path: the closer processed path is, the higher boosting factor.
+  for (const auto &ParentURI : ParentURIs.keys()) {
+    // FIXME(kbobyrev): Append LIMIT on top of every BOOST iterator.
+    auto It = iterator(Token(Token::Kind::ProximityURI, ParentURI));
+    if (It->kind() != Iterator::Kind::False) {
+      PathProximitySignals.SymbolURI = ParentURI;
+      BoostingIterators.push_back(
+          Corpus.boost(std::move(It), PathProximitySignals.evaluate()));
+    }
+  }
+  BoostingIterators.push_back(Corpus.all());
+  return Corpus.unionOf(std::move(BoostingIterators));
+}
+
+// Constructs BOOST iterators for preferred types.
+std::unique_ptr<Iterator>
+Dex::createTypeBoostingIterator(llvm::ArrayRef<std::string> Types) const {
+  std::vector<std::unique_ptr<Iterator>> BoostingIterators;
+  SymbolRelevanceSignals PreferredTypeSignals;
+  PreferredTypeSignals.TypeMatchesPreferred = true;
+  auto Boost = PreferredTypeSignals.evaluate();
+  for (const auto &T : Types)
+    BoostingIterators.push_back(
+        Corpus.boost(iterator(Token(Token::Kind::Type, T)), Boost));
+  BoostingIterators.push_back(Corpus.all());
+  return Corpus.unionOf(std::move(BoostingIterators));
+}
+
 /// Constructs iterators over tokens extracted from the query and exhausts it
 /// while applying Callback to each symbol in the order of decreasing quality
 /// of the matched symbols.
@@ -174,8 +186,9 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));
 
   // Add proximity paths boosting (all symbols, some boosted).
-  Criteria.push_back(
-      createFileProximityIterator(Req.ProximityPaths, InvertedIndex, Corpus));
+  Criteria.push_back(createFileProximityIterator(Req.ProximityPaths));
+  // Add boosting for preferred types.
+  Criteria.push_back(createTypeBoostingIterator(Req.PreferredTypes));
 
   if (Req.RestrictForCodeCompletion)
     Criteria.push_back(iterator(RestrictedForCodeCompletion));

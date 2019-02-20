@@ -72,7 +72,7 @@ enum Enum {zero, one};
 typedef void (*FunctionPtr)();
 
 
-int main()
+int main(int, char**)
 {
     test_is_arithmetic<short>();
     test_is_arithmetic<unsigned short>();
@@ -103,4 +103,6 @@ int main()
     test_is_not_arithmetic<bit_zero>();
     test_is_not_arithmetic<NotEmpty>();
     test_is_not_arithmetic<Abstract>();
+
+  return 0;
 }

@@ -309,7 +309,7 @@ void test_nullptr() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   {
     test_basic</*IsArray*/ false>();
     test_nullptr<false>();
@@ -324,4 +324,6 @@ int main() {
     test_sfinae_runtime();
     test_noexcept<true>();
   }
+
+  return 0;
 }

@@ -87,28 +87,21 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
   # This variable makes sure that e.g. llvm-lit is found.
   set(LLVM_MAIN_SRC_DIR ${LLVM_BUILD_MAIN_SRC_DIR})
+  set(LLVM_CMAKE_PATH ${LLVM_MAIN_SRC_DIR}/cmake/modules)
 
   if(APPLE)
     set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
   endif()
 
-  set(SAFE_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-  set(SAFE_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
-
   include(CheckLibraryExists)
   include(CheckCCompilerFlag)
 
-  check_library_exists(c fopen "" LLVM_HAS_C_LIB)
-  check_c_compiler_flag(-nodefaultlibs LLVM_HAS_NODEFAULTLIBS_FLAG)
-  if(LLVM_HAS_NODEFAULTLIBS_FLAG)
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nodefaultlibs")
-    if(LLVM_HAS_C_LIB)
-      list(APPEND CMAKE_REQUIRED_LIBRARIES c)
-    endif()
-  endif()
+  # We don't have libc++ (yet).
+  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 
   # Avoid checking whether the compiler is working.
   set(LLVM_COMPILER_CHECKED ON)
+
   # Enable warnings, otherwise -w gets added to the cflags by HandleLLVMOptions
   # resulting in unjustified successes by check_cxx_compiler_flag.
   set(LLVM_ENABLE_WARNINGS ON)
@@ -116,9 +109,13 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
   # Handle common options used by all runtimes.
   include(AddLLVM)
   include(HandleLLVMOptions)
+  include(FindPythonInterp)
 
-  set(CMAKE_REQUIRED_FLAGS ${SAFE_CMAKE_REQUIRED_FLAGS})
-  set(CMAKE_REQUIRED_LIBRARIES ${SAFE_CMAKE_REQUIRED_LIBRARIES})
+  # Remove the -nostdlib++ option we've added earlier.
+  string(REPLACE "-nostdlib++" "" CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS}")
+
+  # This can be used to detect whether we're in the runtimes build.
+  set(RUNTIMES_BUILD ON)
 
   foreach(entry ${runtimes})
     get_filename_component(projName ${entry} NAME)
@@ -126,8 +123,6 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     # TODO: Clean this up as part of an interface standardization
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
-    # The subdirectories need to treat this as standalone builds
-    set(${canon_name}_STANDALONE_BUILD On)
 
     if(LLVM_RUNTIMES_LIBDIR_SUFFIX)
       set(${canon_name}_LIBDIR_SUFFIX "${LLVM_RUNTIMES_LIBDIR_SUFFIX}" CACHE STRING "" FORCE)
@@ -135,7 +130,7 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
 
     # Setting a variable to let sub-projects detect which other projects
     # will be included under here.
-    set(HAVE_${canon_name} On)
+    set(HAVE_${canon_name} ON)
   endforeach()
 
   # We do this in two loops so that HAVE_* is set for each runtime before the
@@ -394,11 +389,9 @@ else() # if this is included from LLVM's CMake
     endforeach()
 
     foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
-      if(NOT "${target_name}:${target_name}-${component}" IN_LIST extra_targets)
-        list(APPEND ${name}_extra_targets
-          "${target_name}:${target_name}-${component}"
-          "${target_name}:${target_name}-install-${component}")
-      endif()
+      set(${component}-${name} ${component})
+      set(install-${component}-${name} ${component})
+      list(APPEND ${name}_extra_targets ${component}-${name} install-${component}-${name})
     endforeach()
 
     if(LLVM_INCLUDE_TESTS)

@@ -19,7 +19,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-mc-asm-info"
 
-WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() {}
+WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.
 
 WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T) {
   CodePointerSize = CalleeSaveStackSlotSize = T.isArch64Bit() ? 8 : 4;

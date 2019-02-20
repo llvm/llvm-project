@@ -377,7 +377,12 @@ bool SanitizerCoverageModule::runOnModule(Module &M) {
 
   Constant *SanCovLowestStackConstant =
       M.getOrInsertGlobal(SanCovLowestStackName, IntptrTy);
-  SanCovLowestStack = cast<GlobalVariable>(SanCovLowestStackConstant);
+  SanCovLowestStack = dyn_cast<GlobalVariable>(SanCovLowestStackConstant);
+  if (!SanCovLowestStack) {
+    C->emitError(StringRef("'") + SanCovLowestStackName +
+                 "' should not be declared by the user");
+    return true;
+  }
   SanCovLowestStack->setThreadLocalMode(
       GlobalValue::ThreadLocalMode::InitialExecTLSModel);
   if (Options.StackDepth && !SanCovLowestStack->isDeclaration())

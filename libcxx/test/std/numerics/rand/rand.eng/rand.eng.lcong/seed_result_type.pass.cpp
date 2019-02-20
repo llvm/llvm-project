@@ -30,10 +30,12 @@ test1()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test1<unsigned short>();
     test1<unsigned int>();
     test1<unsigned long>();
     test1<unsigned long long>();
+
+  return 0;
 }

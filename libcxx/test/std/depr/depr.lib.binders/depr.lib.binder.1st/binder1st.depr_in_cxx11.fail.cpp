@@ -24,7 +24,9 @@
 #include "../test_func.h"
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::binder1st<test_func> B1ST; // expected-error{{'binder1st<test_func>' is deprecated}}
+
+  return 0;
 }

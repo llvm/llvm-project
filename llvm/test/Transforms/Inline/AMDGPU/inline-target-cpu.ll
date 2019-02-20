@@ -78,6 +78,17 @@ define i32 @call_func_without_loadstoreopt() #9 {
   ret i32 %call
 }
 
+define i32 @enable_codeobjectv3() #10 {
+  ret i32 999
+}
+
+; CHECK-LABEL: @disable_codeobjectv3_call_codeobjectv3(
+; CHECK-NEXT: ret i32 999
+define i32 @disable_codeobjectv3_call_codeobjectv3() #11 {
+  %call = call i32 @enable_codeobjectv3()
+  ret i32 %call
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "target-cpu"="fiji" }
 attributes #2 = { nounwind "target-cpu"="fiji" "target-features"="+fp32-denormals" }
@@ -88,3 +99,5 @@ attributes #6 = { nounwind "target-features"="-half-rate-64-ops" }
 attributes #7 = { nounwind "target-features"="+half-rate-64-ops" }
 attributes #8 = { nounwind "target-features"="-load-store-opt" }
 attributes #9 = { nounwind "target-features"="+load-store-opt" }
+attributes #10 = { nounwind "target-features"="+code-object-v3" }
+attributes #11 = { nounwind "target-features"="-code-object-v3" }

@@ -45,7 +45,7 @@ test()
     test_imp<T>(std::is_floating_point<T>());
 }
 
-int main()
+int main(int, char**)
 {
     test<bool>();
     test<char>();
@@ -74,4 +74,6 @@ int main()
     test<float>();
     test<double>();
     test<long double>();
+
+  return 0;
 }

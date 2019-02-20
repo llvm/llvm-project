@@ -23,7 +23,7 @@
 #include <type_traits>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::basic_regex<char>::value_type, char>::value), "");
     static_assert((std::is_same<std::basic_regex<char>::traits_type, std::regex_traits<char> >::value), "");
@@ -38,4 +38,6 @@ int main()
     static_assert((std::is_same<std::basic_regex<wchar_t>::flag_type,
                                 std::regex_constants::syntax_option_type>::value), "");
     static_assert((std::is_same<std::basic_regex<wchar_t>::locale_type, std::locale>::value), "");
+
+  return 0;
 }

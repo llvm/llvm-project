@@ -186,7 +186,7 @@ struct RefQual
 
 #endif // TEST_STD_VER >= 11
 
-int main()
+int main(int, char**)
 {
     // check basic functionality
     {
@@ -253,4 +253,6 @@ int main()
         assert(rq.rv_called == 1);
     }
 #endif  // TEST_STD_VER >= 11
+
+  return 0;
 }

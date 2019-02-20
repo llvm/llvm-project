@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         bool a[] = {0, 1, 1, 0, 1, 0, 0};
@@ -45,4 +45,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

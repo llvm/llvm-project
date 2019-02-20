@@ -35,7 +35,7 @@ std::pair<std::string, std::string> get_temp_file_names() {
   return names;
 }
 
-int main()
+int main(int, char**)
 {
     std::pair<std::string, std::string> temp_files = get_temp_file_names();
     std::string& temp1 = temp_files.first;
@@ -95,4 +95,6 @@ int main()
         assert(x == 3.25);
     }
     std::remove(temp2.c_str());
+
+  return 0;
 }

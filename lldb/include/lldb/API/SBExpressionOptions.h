@@ -97,9 +97,6 @@ public:
   void SetAllowJIT(bool allow);
 
 protected:
-  SBExpressionOptions(
-      lldb_private::EvaluateExpressionOptions &expression_options);
-
   lldb_private::EvaluateExpressionOptions *get() const;
 
   lldb_private::EvaluateExpressionOptions &ref() const;
@@ -110,7 +107,7 @@ protected:
 
 private:
   // This auto_pointer is made in the constructor and is always valid.
-  mutable std::unique_ptr<lldb_private::EvaluateExpressionOptions> m_opaque_ap;
+  mutable std::unique_ptr<lldb_private::EvaluateExpressionOptions> m_opaque_up;
 };
 
 } // namespace lldb

@@ -27,7 +27,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::linear_congruential_engine<unsigned, 48271, 0, 2147483647> E;
@@ -40,4 +40,6 @@ int main()
         is >> e2;
         assert(e1 == e2);
     }
+
+  return 0;
 }

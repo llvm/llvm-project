@@ -67,7 +67,9 @@ constexpr int test()
     return 0;
 }
 
-int main()
+int main(int, char**)
 {
     static_assert(test() == 0);
+
+  return 0;
 }

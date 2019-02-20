@@ -110,7 +110,7 @@ void g3(std::ios_base::event ev, std::ios_base& stream, int index)
     }
 }
 
-int main()
+int main(int, char**)
 {
     testbuf sb1;
     std::ios ios1(&sb1);
@@ -190,4 +190,6 @@ int main()
     assert(ios1.tie() == (std::ostream*)2);
     assert(ios1.fill() == '2');
 #endif
+
+  return 0;
 }

@@ -24,7 +24,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex phone_numbers("\\d{3}-\\d{4}");
@@ -104,4 +104,6 @@ int main()
         assert(r.base() == buf+12);
         assert(buf == std::string("123-555-1234"));
     }
+
+  return 0;
 }

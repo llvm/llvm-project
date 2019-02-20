@@ -24,4 +24,6 @@ void f(const P&)
 {
 }
 
-int main() { f(2); }
+int main(int, char**) { f(2); 
+  return 0;
+}

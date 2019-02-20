@@ -15,7 +15,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -29,4 +29,6 @@ int main()
         assert(f.tolower('a') == 'a');
         assert(f.tolower('1') == '1');
     }
+
+  return 0;
 }

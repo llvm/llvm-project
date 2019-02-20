@@ -15,11 +15,13 @@
 
 void f() {}
 
-int main()
+int main(int, char**)
 {
 #ifndef _LIBCPP_HAS_QUICK_EXIT
     std::at_quick_exit(f);
 #else
 #error
 #endif
+
+  return 0;
 }

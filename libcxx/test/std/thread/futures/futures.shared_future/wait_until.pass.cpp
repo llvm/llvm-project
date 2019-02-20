@@ -62,7 +62,7 @@ void func5(std::promise<void> p)
     set_worker_thread_state(WorkerThreadState::Exiting);
 }
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::high_resolution_clock Clock;
     {
@@ -128,4 +128,6 @@ int main()
         assert(f.valid());
         assert(t1-t0 < ms(5));
     }
+
+  return 0;
 }

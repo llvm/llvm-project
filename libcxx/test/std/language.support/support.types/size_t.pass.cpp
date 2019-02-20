@@ -15,7 +15,7 @@
 //  2. be the same sizeof as void*.
 //  3. be an unsigned integral.
 
-int main()
+int main(int, char**)
 {
     static_assert(sizeof(std::size_t) == sizeof(void*),
                   "sizeof(std::size_t) == sizeof(void*)");
@@ -23,4 +23,6 @@ int main()
                   "std::is_unsigned<std::size_t>::value");
     static_assert(std::is_integral<std::size_t>::value,
                   "std::is_integral<std::size_t>::value");
+
+  return 0;
 }

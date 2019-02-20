@@ -67,6 +67,7 @@ add_lldb_library(lldbUtility
   RegisterValue.cpp
   RegularExpression.cpp
   Reproducer.cpp
+  ReproducerInstrumentation.cpp
   Scalar.cpp
   SelectHelper.cpp
   SharingPtr.cpp

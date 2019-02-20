@@ -26,8 +26,10 @@ test(C c)
     assert(&r == &i);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::vector<int>());
     test(nasty_vector<int>());
+
+  return 0;
 }

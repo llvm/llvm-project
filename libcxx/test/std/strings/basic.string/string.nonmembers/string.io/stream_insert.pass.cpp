@@ -19,7 +19,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::ostringstream out;
@@ -87,4 +87,6 @@ int main()
         assert(L"   " + s == out.str());
     }
 #endif
+
+  return 0;
 }

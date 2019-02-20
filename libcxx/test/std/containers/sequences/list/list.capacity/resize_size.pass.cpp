@@ -15,7 +15,7 @@
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::list<int> l(5, 2);
@@ -77,4 +77,6 @@ int main()
     }
 #endif  // __LIBCPP_MOVE
 #endif
+
+  return 0;
 }

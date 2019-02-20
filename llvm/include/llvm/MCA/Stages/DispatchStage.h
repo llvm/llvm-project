@@ -61,8 +61,6 @@ class DispatchStage final : public Stage {
   bool canDispatch(const InstRef &IR) const;
   Error dispatch(InstRef IR);
 
-  void updateRAWDependencies(ReadState &RS, const MCSubtargetInfo &STI);
-
   void notifyInstructionDispatched(const InstRef &IR,
                                    ArrayRef<unsigned> UsedPhysRegs,
                                    unsigned uOps) const;

@@ -69,7 +69,9 @@ void test_emplaceable_concept() {
 
 
 
-int main()
+int main(int, char**)
 {
     test_emplaceable_concept();
+
+  return 0;
 }

@@ -187,11 +187,10 @@ void RetainCountChecker::checkPostStmt(const CastExpr *CE,
 
   QualType QT = CE->getType();
   ObjKind K;
-  if (coreFoundation::isCFObjectRef(QT)) {
-    K = ObjKind::CF;
-  } else {
-    assert(cocoa::isCocoaObjectRef(QT));
+  if (QT->isObjCObjectPointerType()) {
     K = ObjKind::ObjC;
+  } else {
+    K = ObjKind::CF;
   }
 
   ArgEffect AE = ArgEffect(IncRef, K);

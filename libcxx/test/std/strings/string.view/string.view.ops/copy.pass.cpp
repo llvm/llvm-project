@@ -77,7 +77,7 @@ void test ( const CharT *s ) {
 
 }
 
-int main () {
+int main(int, char**) {
     test ( "ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE" );
     test ( "ABCDE");
     test ( "a" );
@@ -99,4 +99,6 @@ int main () {
     test ( U"a" );
     test ( U"" );
 #endif
+
+  return 0;
 }

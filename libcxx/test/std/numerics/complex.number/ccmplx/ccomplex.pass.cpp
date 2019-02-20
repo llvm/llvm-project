@@ -10,8 +10,10 @@
 
 #include <ccomplex>
 
-int main()
+int main(int, char**)
 {
     std::complex<double> d;
     (void)d;
+
+  return 0;
 }

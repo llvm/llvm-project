@@ -12,7 +12,7 @@
 
 #include <system_error>
 
-int main()
+int main(int, char**)
 {
     static_assert(static_cast<int>(std::errc::address_family_not_supported) == EAFNOSUPPORT, "");
     static_assert(static_cast<int>(std::errc::address_in_use) == EADDRINUSE, "");
@@ -100,4 +100,6 @@ int main()
     static_assert(static_cast<int>(std::errc::too_many_symbolic_link_levels) == ELOOP, "");
     static_assert(static_cast<int>(std::errc::value_too_large) == EOVERFLOW, "");
     static_assert(static_cast<int>(std::errc::wrong_protocol_type) == EPROTOTYPE, "");
+
+  return 0;
 }

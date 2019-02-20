@@ -45,7 +45,7 @@ struct CountAssign {
 int CountAssign::copied = 0;
 int CountAssign::moved = 0;
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::pair<std::unique_ptr<int>, int> P;
@@ -92,4 +92,6 @@ int main()
         assert(CountAssign::moved == 1);
         assert(CountAssign::copied == 0);
     }
+
+  return 0;
 }

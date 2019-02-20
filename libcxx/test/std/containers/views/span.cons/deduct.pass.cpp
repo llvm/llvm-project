@@ -40,7 +40,7 @@
 // Disable the missing braces warning for this reason.
 #include "disable_missing_braces_warning.h"
 
-int main ()
+int main(int, char**)
 {
     {
     int arr[] = {1,2,3};
@@ -83,4 +83,6 @@ int main ()
     assert((size_t)s.size() == str.size());
     assert((std::equal(s.begin(), s.end(), std::begin(s), std::end(s))));
     }
+
+  return 0;
 }

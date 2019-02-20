@@ -26,7 +26,7 @@ void test_remove_extent()
 }
 
 
-int main()
+int main(int, char**)
 {
     test_remove_extent<int, int> ();
     test_remove_extent<const Enum, const Enum> ();
@@ -40,4 +40,6 @@ int main()
     test_remove_extent<const int[2][3], const int[3]> ();
     test_remove_extent<int[1][2][3], int[2][3]> ();
     test_remove_extent<const int[1][2][3], const int[2][3]> ();
+
+  return 0;
 }

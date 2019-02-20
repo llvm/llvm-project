@@ -25,10 +25,12 @@ struct alignas(32) A {
     int field;
 };
 
-int main()
+int main(int, char**)
 {
     std::pair<A*, std::ptrdiff_t> ip = std::get_temporary_buffer<A>(5);
     assert(!(ip.first == nullptr) ^ (ip.second == 0));
     assert(reinterpret_cast<uintptr_t>(ip.first) % alignof(A) == 0);
     std::return_temporary_buffer(ip.first);
+
+  return 0;
 }

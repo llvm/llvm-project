@@ -27,7 +27,7 @@ struct test
     base::int_type underflow() {return base::underflow();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         char buf[10] = "123";
@@ -47,4 +47,6 @@ int main()
         assert(sb.underflow() == '4');
         assert(sb.underflow() == '4');
     }
+
+  return 0;
 }

@@ -16,7 +16,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     int a1[] = {1, 3, 7, 9, 10};
@@ -48,4 +48,6 @@ int main()
     assert(c2.empty());
     }
 #endif
+
+  return 0;
 }

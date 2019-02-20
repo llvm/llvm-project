@@ -26,8 +26,10 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     const test t;
     assert(t.getloc().name() == std::string("C"));
+
+  return 0;
 }

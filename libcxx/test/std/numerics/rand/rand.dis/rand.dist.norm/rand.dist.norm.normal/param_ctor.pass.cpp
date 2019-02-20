@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::normal_distribution<> D;
@@ -40,4 +40,6 @@ int main()
         assert(p.mean() == 10);
         assert(p.stddev() == 5);
     }
+
+  return 0;
 }

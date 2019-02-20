@@ -1,4 +1,4 @@
-# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-inconsistencies-output-file="" -analysis-numpoints=1 | FileCheck %s
+# RUN: llvm-exegesis -mode=analysis -benchmarks-file=%s -analysis-clusters-output-file=- -analysis-numpoints=1 | FileCheck %s
 
 # REQUIRES: asserts
 # (sched class name is NDEBUG only)

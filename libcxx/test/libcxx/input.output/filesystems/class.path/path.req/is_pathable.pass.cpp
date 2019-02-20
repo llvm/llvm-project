@@ -95,9 +95,11 @@ struct MakeTestType {
   }
 };
 
-int main() {
+int main(int, char**) {
   MakeTestType<char>::Test();
   MakeTestType<wchar_t>::Test();
   MakeTestType<char16_t>::Test();
   MakeTestType<char32_t>::Test();
+
+  return 0;
 }

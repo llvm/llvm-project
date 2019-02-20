@@ -145,18 +145,18 @@ public:
   ~ModuleDependencyCollector() override { writeFileMap(); }
 
   StringRef getDest() { return DestDir; }
-  bool insertSeen(StringRef Filename) { return Seen.insert(Filename).second; }
-  void addFile(StringRef Filename, StringRef FileDst = {});
+  virtual bool insertSeen(StringRef Filename) { return Seen.insert(Filename).second; }
+  virtual void addFile(StringRef Filename, StringRef FileDst = {});
 
-  void addFileMapping(StringRef VPath, StringRef RPath) {
+  virtual void addFileMapping(StringRef VPath, StringRef RPath) {
     VFSWriter.addFileMapping(VPath, RPath);
   }
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
 
-  void writeFileMap();
-  bool hasErrors() { return HasErrors; }
+  virtual void writeFileMap();
+  virtual bool hasErrors() { return HasErrors; }
 };
 
 /// AttachDependencyGraphGen - Create a dependency graph generator, and attach

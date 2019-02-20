@@ -19,7 +19,7 @@
 struct True  { static constexpr bool value = true; };
 struct False { static constexpr bool value = false; };
 
-int main()
+int main(int, char**)
 {
     static_assert (!std::negation<std::true_type >::value, "" );
     static_assert ( std::negation<std::false_type>::value, "" );
@@ -35,4 +35,6 @@ int main()
 
     static_assert ( std::negation<std::negation<std::true_type >>::value, "" );
     static_assert (!std::negation<std::negation<std::false_type>>::value, "" );
+
+  return 0;
 }

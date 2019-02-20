@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     unsigned a[5] = {5, 4, 3, 2, 1};
     std::seed_seq s(a, a+5);
@@ -28,4 +28,6 @@ int main()
     assert(b[2] == 3);
     assert(b[3] == 2);
     assert(b[4] == 1);
+
+  return 0;
 }

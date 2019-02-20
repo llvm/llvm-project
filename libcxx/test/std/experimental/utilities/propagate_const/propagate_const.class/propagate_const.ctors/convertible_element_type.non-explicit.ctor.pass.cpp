@@ -25,7 +25,9 @@ void f(const P& p)
   assert(*p==2);
 }
 
-int main() {
+int main(int, char**) {
   f(X(2));
+
+  return 0;
 }
 

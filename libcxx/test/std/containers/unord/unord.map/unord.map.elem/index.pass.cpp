@@ -28,7 +28,7 @@
 #include "container_test_types.h"
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_map<int, std::string> C;
@@ -159,4 +159,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

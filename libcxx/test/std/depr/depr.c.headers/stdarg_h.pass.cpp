@@ -30,8 +30,10 @@
 #error va_start not defined
 #endif
 
-int main()
+int main(int, char**)
 {
     va_list va;
     ((void)va);
+
+  return 0;
 }

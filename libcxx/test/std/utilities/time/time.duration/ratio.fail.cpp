@@ -22,8 +22,10 @@ public:
     static const int den = D;
 };
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::duration<int, Ratio<1> > D;
     D d;
+
+  return 0;
 }

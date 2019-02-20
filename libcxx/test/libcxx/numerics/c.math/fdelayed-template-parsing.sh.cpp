@@ -18,10 +18,12 @@
 
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
   assert(std::isfinite(1.0));
   assert(!std::isinf(1.0));
   assert(!std::isnan(1.0));
+
+  return 0;
 }
 
 using namespace std;

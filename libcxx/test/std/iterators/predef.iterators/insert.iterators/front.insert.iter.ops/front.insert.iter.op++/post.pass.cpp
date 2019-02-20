@@ -28,8 +28,10 @@ test(C c)
     assert(c.back() == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::list<int>());
     test(nasty_list<int>());
+
+  return 0;
 }

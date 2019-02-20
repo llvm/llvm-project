@@ -44,7 +44,7 @@ private:
   const IfStmt *If = nullptr;
 };
 
-REGISTER_TWEAK(SwapIfBranches);
+REGISTER_TWEAK(SwapIfBranches)
 
 bool SwapIfBranches::prepare(const Selection &Inputs) {
   for (const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();

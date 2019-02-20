@@ -167,6 +167,17 @@ E: sunfish@mozilla.com
 D: Miscellaneous bug fixes
 D: WebAssembly Backend
 
+N: Renato Golin
+E: rengolin@systemcall.eu
+E: renato.golin@linaro.org
+E: rengolin@gmail.com
+D: ARM/AArch64 back-end improvements
+D: Loop Vectorizer improvements
+D: Regression and Test Suite improvements
+D: Linux compatibility (GNU, musl, etc)
+D: Initial Linux kernel / Android support effort
+I: rengolin
+
 N: David Goodwin
 E: david@goodwinz.net
 D: Thumb-2 code generator

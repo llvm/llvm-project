@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
@@ -82,4 +82,6 @@ int main()
         assert(c3.get_allocator() == A());
         LIBCPP_ASSERT(c1.size() == 0);
     }
+
+  return 0;
 }

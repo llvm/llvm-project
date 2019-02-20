@@ -2237,7 +2237,8 @@ public:
 
   VTableContextBase *getVTableContext();
 
-  MangleContext *createMangleContext();
+  /// If \p T is null pointer, assume the target in ASTContext.
+  MangleContext *createMangleContext(const TargetInfo *T = nullptr);
 
   void DeepCollectObjCIvars(const ObjCInterfaceDecl *OI, bool leafClass,
                             SmallVectorImpl<const ObjCIvarDecl*> &Ivars) const;
@@ -2499,6 +2500,11 @@ public:
   /// If \p LHS > \p RHS, returns 1.  If \p LHS == \p RHS, returns 0.  If
   /// \p LHS < \p RHS, return -1.
   int getFloatingTypeOrder(QualType LHS, QualType RHS) const;
+
+  /// Compare the rank of two floating point types as above, but compare equal
+  /// if both types have the same floating-point semantics on the target (i.e.
+  /// long double and double on AArch64 will return 0).
+  int getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const;
 
   /// Return a real floating point or a complex type (based on
   /// \p typeDomain/\p typeSize).

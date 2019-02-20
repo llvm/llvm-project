@@ -28,7 +28,7 @@ void test_all()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_all<0>();
     test_all<1>();
@@ -39,4 +39,6 @@ int main()
     test_all<64>();
     test_all<65>();
     test_all<1000>();
+
+  return 0;
 }

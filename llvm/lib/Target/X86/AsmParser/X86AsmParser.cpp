@@ -1114,8 +1114,7 @@ bool X86AsmParser::ParseRegister(unsigned &RegNo,
   }
 
   // Parse "%st" as "%st(0)" and "%st(1)", which is multiple tokens.
-  if (RegNo == 0 && (Tok.getString() == "st" || Tok.getString() == "ST")) {
-    RegNo = X86::ST0;
+  if (RegNo == X86::ST0) {
     Parser.Lex(); // Eat 'st'
 
     // Check to see if we have '(4)' after %st.
@@ -1655,6 +1654,8 @@ X86AsmParser::ParseRoundingModeOp(SMLoc Start) {
   const AsmToken &Tok = Parser.getTok();
   // Eat "{" and mark the current place.
   const SMLoc consumedToken = consumeToken();
+  if (Tok.isNot(AsmToken::Identifier))
+    return ErrorOperand(Tok.getLoc(), "Expected an identifier after {");
   if (Tok.getIdentifier().startswith("r")){
     int rndMode = StringSwitch<int>(Tok.getIdentifier())
       .Case("rn", X86::STATIC_ROUNDING::TO_NEAREST_INT)
@@ -2865,8 +2866,7 @@ static const char *getSubtargetFeatureName(uint64_t Val);
 void X86AsmParser::EmitInstruction(MCInst &Inst, OperandVector &Operands,
                                    MCStreamer &Out) {
   Instrumentation->InstrumentAndEmitInstruction(
-      Inst, Operands, getContext(), MII, Out,
-      getParser().shouldPrintSchedInfo());
+      Inst, Operands, getContext(), MII, Out);
 }
 
 bool X86AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,

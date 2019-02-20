@@ -23,7 +23,7 @@ void func(std::promise<std::unique_ptr<int>> p)
     p.set_value_at_thread_exit(std::unique_ptr<int>(new int(5)));
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::promise<std::unique_ptr<int>> p;
@@ -31,4 +31,6 @@ int main()
         std::thread(func, std::move(p)).detach();
         assert(*f.get() == 5);
     }
+
+  return 0;
 }

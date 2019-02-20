@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "test_comparisons.h"
 
-int main()
+int main(int, char**)
 {
     using weekday      = std::chrono::weekday;
     using weekday_last = std::chrono::weekday_last;
@@ -39,4 +39,6 @@ int main()
     for (unsigned i = 0; i < 6; ++i)
         for (unsigned j = 0; j < 6; ++j)
             assert(testComparisons2Values<weekday_last>(weekday{i}, weekday{j}));
+
+  return 0;
 }

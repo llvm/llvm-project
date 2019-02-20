@@ -15,7 +15,7 @@
 #include <iostream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
 #if 0
     std::cout << "Hello World!\n";
@@ -30,4 +30,6 @@ int main()
     assert(std::cin.tie() == &std::cout);
 #endif
 #endif
+
+  return 0;
 }

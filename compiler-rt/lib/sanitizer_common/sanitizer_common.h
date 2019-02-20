@@ -101,10 +101,11 @@ void *MmapOrDieOnFatalError(uptr size, const char *mem_type);
 bool MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name = nullptr)
      WARN_UNUSED_RESULT;
 void *MmapNoReserveOrDie(uptr size, const char *mem_type);
-void *MmapFixedOrDie(uptr fixed_addr, uptr size);
+void *MmapFixedOrDie(uptr fixed_addr, uptr size, const char *name = nullptr);
 // Behaves just like MmapFixedOrDie, but tolerates out of memory condition, in
 // that case returns nullptr.
-void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size);
+void *MmapFixedOrDieOnFatalError(uptr fixed_addr, uptr size,
+                                 const char *name = nullptr);
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name = nullptr);
 void *MmapNoAccess(uptr size);
 // Map aligned chunk of address space; size and alignment are powers of two.
@@ -140,8 +141,8 @@ void RunFreeHooks(const void *ptr);
 class ReservedAddressRange {
  public:
   uptr Init(uptr size, const char *name = nullptr, uptr fixed_addr = 0);
-  uptr Map(uptr fixed_addr, uptr size);
-  uptr MapOrDie(uptr fixed_addr, uptr size);
+  uptr Map(uptr fixed_addr, uptr size, const char *name = nullptr);
+  uptr MapOrDie(uptr fixed_addr, uptr size, const char *name = nullptr);
   void Unmap(uptr addr, uptr size);
   void *base() const { return base_; }
   uptr size() const { return size_; }

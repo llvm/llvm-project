@@ -25,7 +25,7 @@
 #include "test_macros.h"
 
 
-int main() {
+int main(int, char**) {
     using namespace fs;
     using D = directory_iterator;
     ASSERT_SAME_TYPE(D::value_type, directory_entry);
@@ -33,4 +33,6 @@ int main() {
     ASSERT_SAME_TYPE(D::pointer, const directory_entry*);
     ASSERT_SAME_TYPE(D::reference, const directory_entry&);
     ASSERT_SAME_TYPE(D::iterator_category, std::input_iterator_tag);
+
+  return 0;
 }

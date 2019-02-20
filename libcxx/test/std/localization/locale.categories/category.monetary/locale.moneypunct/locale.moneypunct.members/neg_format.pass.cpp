@@ -50,7 +50,7 @@ public:
         : std::moneypunct<wchar_t, true>(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         Fnf f(1);
@@ -84,4 +84,6 @@ int main()
         assert(p.field[2] == std::money_base::none);
         assert(p.field[3] == std::money_base::value);
     }
+
+  return 0;
 }

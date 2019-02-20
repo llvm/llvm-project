@@ -15,7 +15,7 @@
 
 #include <optional>
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     using std::nullopt_t;
@@ -36,4 +36,6 @@ int main()
     static_assert (noexcept(nullopt <= o1), "");
     static_assert (noexcept(o1 <= nullopt), "");
     }
+
+  return 0;
 }

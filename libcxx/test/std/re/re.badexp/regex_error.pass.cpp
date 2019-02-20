@@ -21,7 +21,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::regex_error e(std::regex_constants::error_collate);
@@ -93,4 +93,6 @@ int main()
         assert(e.what() == std::string("There was insufficient memory to determine whether the regular "
                "expression could match the specified character sequence."));
     }
+
+  return 0;
 }

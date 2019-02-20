@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::negative_binomial_distribution<> D;
@@ -28,4 +28,6 @@ int main()
         assert(p.k() == 6);
         assert(p.p() == .7);
     }
+
+  return 0;
 }

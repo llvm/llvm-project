@@ -40,8 +40,10 @@ void test() {
     static_assert( std::is_same<Res, typename ex::detected_t<callFoo, T>>::value, "" );
 }
 
-int main () {
+int main(int, char**) {
     test<yesFoo, int>();
     test<noFoo, ex::nonesuch>();  // lookup failure returns nonesuch
     test<wrongFoo, std::string>();
+
+  return 0;
 }

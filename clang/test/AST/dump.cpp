@@ -56,7 +56,7 @@ struct S {
 // CHECK-NEXT: |       | `-DeclRefExpr {{.+}} <col:48> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 // CHECK-NEXT: |       |-OMPSharedClause {{.+}} <col:51, col:59>
 // CHECK-NEXT: |       | `-MemberExpr {{.+}} <col:58> 'int' lvalue ->b
-// CHECK-NEXT: |       |   `-CXXThisExpr {{.+}} <col:58> 'S *' this
+// CHECK-NEXT: |       |   `-CXXThisExpr {{.+}} <col:58> 'S *' implicit this
 // CHECK-NEXT: |       |-OMPScheduleClause {{.+}} <col:61, col:79>
 // CHECK-NEXT: |       | `-ImplicitCastExpr {{.+}} <col:78> 'int' <LValueToRValue>
 // CHECK-NEXT: |       |   `-DeclRefExpr {{.+}} <col:78> 'int' lvalue OMPCapturedExpr {{.+}} '.capture_expr.' 'int'

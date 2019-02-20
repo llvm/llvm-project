@@ -256,13 +256,11 @@ static void addDefsUsesToList(const MachineInstr &MI,
 
 static bool memAccessesCanBeReordered(MachineBasicBlock::iterator A,
                                       MachineBasicBlock::iterator B,
-                                      const SIInstrInfo *TII,
                                       AliasAnalysis *AA) {
   // RAW or WAR - cannot reorder
   // WAW - cannot reorder
   // RAR - safe to reorder
-  return !(A->mayStore() || B->mayStore()) ||
-         TII->areMemAccessesTriviallyDisjoint(*A, *B, AA);
+  return !(A->mayStore() || B->mayStore()) || !A->mayAlias(AA, *B, true);
 }
 
 // Add MI and its defs to the lists if MI reads one of the defs that are
@@ -294,13 +292,13 @@ static bool addToListsIfDependent(MachineInstr &MI, DenseSet<unsigned> &RegDefs,
 
 static bool canMoveInstsAcrossMemOp(MachineInstr &MemOp,
                                     ArrayRef<MachineInstr *> InstsToMove,
-                                    const SIInstrInfo *TII, AliasAnalysis *AA) {
+                                    AliasAnalysis *AA) {
   assert(MemOp.mayLoadOrStore());
 
   for (MachineInstr *InstToMove : InstsToMove) {
     if (!InstToMove->mayLoadOrStore())
       continue;
-    if (!memAccessesCanBeReordered(MemOp, *InstToMove, TII, AA))
+    if (!memAccessesCanBeReordered(MemOp, *InstToMove, AA))
       return false;
   }
   return true;
@@ -566,8 +564,8 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
       }
 
       if (MBBI->mayLoadOrStore() &&
-          (!memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA) ||
-           !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))) {
+          (!memAccessesCanBeReordered(*CI.I, *MBBI, AA) ||
+           !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, AA))) {
         // We fail condition #1, but we may still be able to satisfy condition
         // #2.  Add this instruction to the move list and then we will check
         // if condition #2 holds once we have selected the matching instruction.
@@ -646,7 +644,7 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
       // move and make sure they are all safe to move down past the merged
       // instruction.
       if (widthsFit(*STM, CI) && offsetsCanBeCombined(CI))
-        if (canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))
+        if (canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, AA))
           return true;
     }
 
@@ -655,8 +653,8 @@ bool SILoadStoreOptimizer::findMatchingInst(CombineInfo &CI) {
     // it was safe to move I and also all the instruction in InstsToMove
     // down past this instruction.
     // check if we can move I across MBBI and if we can move all I's users
-    if (!memAccessesCanBeReordered(*CI.I, *MBBI, TII, AA) ||
-        !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, TII, AA))
+    if (!memAccessesCanBeReordered(*CI.I, *MBBI, AA) ||
+        !canMoveInstsAcrossMemOp(*MBBI, CI.InstsToMove, AA))
       break;
   }
   return false;

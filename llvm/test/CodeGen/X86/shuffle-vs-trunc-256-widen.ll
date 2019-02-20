@@ -225,10 +225,9 @@ define void @trunc_v4i64_to_v4i32(<8 x i32>* %L, <4 x i32>* %S) nounwind {
 ;
 ; AVX2-SLOW-LABEL: trunc_v4i64_to_v4i32:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm0 = mem[0,2,2,3,4,6,6,7]
-; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-SLOW-NEXT:    vmovaps (%rdi), %xmm0
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],mem[0,2]
 ; AVX2-SLOW-NEXT:    vmovaps %xmm0, (%rsi)
-; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: trunc_v4i64_to_v4i32:
@@ -706,8 +705,8 @@ define <8 x i16> @trunc_v4i64_to_v4i16_with_zext_return_v8i16(<4 x i64> %vec) no
 ;
 ; AVX2-SLOW-LABEL: trunc_v4i64_to_v4i16_with_zext_return_v8i16:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
@@ -771,8 +770,8 @@ define <8 x i16> @trunc_v4i64_to_v4i16_via_v4i32_return_v8i16(<4 x i64> %vec) no
 ;
 ; AVX2-SLOW-LABEL: trunc_v4i64_to_v4i16_via_v4i32_return_v8i16:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,2,3,4,6,6,7]
-; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm1
+; AVX2-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
 ; AVX2-SLOW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq

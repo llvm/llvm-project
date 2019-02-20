@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++14
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++17
 
 void foo(int* a, int *b) {

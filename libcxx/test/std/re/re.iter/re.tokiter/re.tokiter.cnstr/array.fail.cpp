@@ -26,7 +26,7 @@
 #error
 #endif
 
-int main()
+int main(int, char**)
 {
     {
         std::regex phone_numbers("\\d{3}-(\\d{4})");
@@ -35,4 +35,6 @@ int main()
         std::cregex_token_iterator i(std::begin(phone_book), std::end(phone_book)-1,
                                      std::regex("\\d{3}-\\d{4}"), indices);
     }
+
+  return 0;
 }

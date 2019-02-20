@@ -63,7 +63,7 @@ struct LValueCallable {
 };
 #endif
 
-int main()
+int main(int, char**)
 {
     assert(globalMemCounter.checkOutstandingNewEq(0));
     {
@@ -115,4 +115,6 @@ int main()
         static_assert(!std::is_assignable<Fn&, RValueCallable>::value, "");
     }
 #endif
+
+  return 0;
 }

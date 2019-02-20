@@ -45,7 +45,7 @@ static void test(std::ios_base::fmtflags fmt, const char *expected)
     assert(ss.str() == expected);
 }
 
-int main()
+int main(int, char**)
 {
     const std::ios_base::fmtflags o = std::ios_base::oct;
     const std::ios_base::fmtflags d = std::ios_base::dec;

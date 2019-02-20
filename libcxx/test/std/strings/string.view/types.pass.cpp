@@ -67,7 +67,7 @@ test()
     static_assert((std::is_same<typename S::reverse_iterator, typename S::const_reverse_iterator>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<std::char_traits<char> >();
     test<std::char_traits<wchar_t> >();
@@ -76,4 +76,6 @@ int main()
 #endif
     static_assert((std::is_same<std::basic_string_view<char>::traits_type,
                                 std::char_traits<char> >::value), "");
+
+  return 0;
 }

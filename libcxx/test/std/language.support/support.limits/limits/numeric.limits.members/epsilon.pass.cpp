@@ -26,7 +26,7 @@ test(T expected)
     assert(std::numeric_limits<const volatile T>::epsilon() == expected);
 }
 
-int main()
+int main(int, char**)
 {
     test<bool>(false);
     test<char>(0);
@@ -55,4 +55,6 @@ int main()
     test<float>(FLT_EPSILON);
     test<double>(DBL_EPSILON);
     test<long double>(LDBL_EPSILON);
+
+  return 0;
 }

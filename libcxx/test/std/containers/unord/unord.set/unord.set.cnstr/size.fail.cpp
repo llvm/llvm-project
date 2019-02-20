@@ -23,7 +23,7 @@
 #include "../../../test_hash.h"
 #include "test_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_set<NotConstructible,
@@ -42,4 +42,6 @@ int main()
         assert(c.load_factor() == 0);
         assert(c.max_load_factor() == 1);
     }
+
+  return 0;
 }

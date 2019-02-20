@@ -39,13 +39,13 @@ static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
 }
 
 static MCInstrInfo *createMCInstrInfo() {
-  MCInstrInfo *X = new MCInstrInfo();
+  auto *X = new MCInstrInfo();
   InitWebAssemblyMCInstrInfo(X);
   return X;
 }
 
 static MCRegisterInfo *createMCRegisterInfo(const Triple & /*T*/) {
-  MCRegisterInfo *X = new MCRegisterInfo();
+  auto *X = new MCRegisterInfo();
   InitWebAssemblyMCRegisterInfo(X, 0);
   return X;
 }

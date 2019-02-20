@@ -15,7 +15,9 @@
 #include <valarray>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     std::mask_array<int> s;
+
+  return 0;
 }

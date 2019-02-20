@@ -23,6 +23,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
@@ -31,7 +32,6 @@
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -412,9 +412,9 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
   // Handle when the thread exits.
   if (exited) {
     LLDB_LOG(log,
-             "got exit signal({0}) , tid = {1} ({2} main thread), process "
+             "got exit status({0}) , tid = {1} ({2} main thread), process "
              "state = {3}",
-             signal, pid, is_main_thread ? "is" : "is not", GetState());
+             status, pid, is_main_thread ? "is" : "is not", GetState());
 
     // This is a thread that exited.  Ensure we're not tracking it anymore.
     StopTrackingThread(pid);
@@ -495,9 +495,9 @@ void NativeProcessLinux::MonitorCallback(lldb::pid_t pid, bool exited,
       const bool thread_found = StopTrackingThread(pid);
 
       LLDB_LOG(log,
-               "GetSignalInfo failed: {0}, tid = {1}, signal = {2}, "
+               "GetSignalInfo failed: {0}, tid = {1}, status = {2}, "
                "status = {3}, main_thread = {4}, thread_found: {5}",
-               info_err, pid, signal, status, is_main_thread, thread_found);
+               info_err, pid, status, status, is_main_thread, thread_found);
 
       if (is_main_thread) {
         // Notify the delegate - our process is not available but appears to
@@ -948,25 +948,25 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
   Status error;
   NativeRegisterContext& register_context = thread.GetRegisterContext();
 
-  std::unique_ptr<EmulateInstruction> emulator_ap(
+  std::unique_ptr<EmulateInstruction> emulator_up(
       EmulateInstruction::FindPlugin(m_arch, eInstructionTypePCModifying,
                                      nullptr));
 
-  if (emulator_ap == nullptr)
+  if (emulator_up == nullptr)
     return Status("Instruction emulator not found!");
 
   EmulatorBaton baton(*this, register_context);
-  emulator_ap->SetBaton(&baton);
-  emulator_ap->SetReadMemCallback(&ReadMemoryCallback);
-  emulator_ap->SetReadRegCallback(&ReadRegisterCallback);
-  emulator_ap->SetWriteMemCallback(&WriteMemoryCallback);
-  emulator_ap->SetWriteRegCallback(&WriteRegisterCallback);
+  emulator_up->SetBaton(&baton);
+  emulator_up->SetReadMemCallback(&ReadMemoryCallback);
+  emulator_up->SetReadRegCallback(&ReadRegisterCallback);
+  emulator_up->SetWriteMemCallback(&WriteMemoryCallback);
+  emulator_up->SetWriteRegCallback(&WriteRegisterCallback);
 
-  if (!emulator_ap->ReadInstruction())
+  if (!emulator_up->ReadInstruction())
     return Status("Read instruction failed!");
 
   bool emulation_result =
-      emulator_ap->EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
+      emulator_up->EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
 
   const RegisterInfo *reg_info_pc = register_context.GetRegisterInfo(
       eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
@@ -994,7 +994,7 @@ NativeProcessLinux::SetupSoftwareSingleStepping(NativeThreadLinux &thread) {
     // the size of the current opcode because the emulation of all
     // PC modifying instruction should be successful. The failure most
     // likely caused by a not supported instruction which don't modify PC.
-    next_pc = register_context.GetPC() + emulator_ap->GetOpcode().GetByteSize();
+    next_pc = register_context.GetPC() + emulator_up->GetOpcode().GetByteSize();
     next_flags = ReadFlags(register_context);
   } else {
     // The instruction emulation failed after it modified the PC. It is an

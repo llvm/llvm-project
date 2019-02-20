@@ -132,7 +132,7 @@ FunctionPass *llvm::createWebAssemblyCFGSort() {
   return new WebAssemblyCFGSort();
 }
 
-static void MaybeUpdateTerminator(MachineBasicBlock *MBB) {
+static void maybeUpdateTerminator(MachineBasicBlock *MBB) {
 #ifndef NDEBUG
   bool AnyBarrier = false;
 #endif
@@ -227,7 +227,7 @@ struct Entry {
 /// interrupted by blocks not dominated by their header.
 /// TODO: There are many opportunities for improving the heuristics here.
 /// Explore them.
-static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
+static void sortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
                        const WebAssemblyExceptionInfo &WEI,
                        const MachineDominatorTree &MDT) {
   // Prepare for a topological sort: Record the number of predecessors each
@@ -319,7 +319,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     if (!Next) {
       // If there are no more blocks to process, we're done.
       if (Ready.empty()) {
-        MaybeUpdateTerminator(MBB);
+        maybeUpdateTerminator(MBB);
         break;
       }
       for (;;) {
@@ -337,7 +337,7 @@ static void SortBlocks(MachineFunction &MF, const MachineLoopInfo &MLI,
     }
     // Move the next block into place and iterate.
     Next->moveAfter(MBB);
-    MaybeUpdateTerminator(MBB);
+    maybeUpdateTerminator(MBB);
     MBB = Next;
   }
   assert(Entries.empty() && "Active sort region list not finished");
@@ -403,7 +403,7 @@ bool WebAssemblyCFGSort::runOnMachineFunction(MachineFunction &MF) {
   MF.getRegInfo().invalidateLiveness();
 
   // Sort the blocks, with contiguous sort regions.
-  SortBlocks(MF, MLI, WEI, MDT);
+  sortBlocks(MF, MLI, WEI, MDT);
 
   return true;
 }

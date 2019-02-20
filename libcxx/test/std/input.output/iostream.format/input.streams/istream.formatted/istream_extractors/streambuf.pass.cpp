@@ -55,7 +55,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("testing...");
@@ -65,4 +65,6 @@ int main()
         assert(sb2.str() == "testing...");
         assert(is.gcount() == 10);
     }
+
+  return 0;
 }

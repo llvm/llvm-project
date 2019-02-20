@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::chi_squared_distribution<> D;
@@ -25,4 +25,6 @@ int main()
         D d(p);
         assert(d.param() == p);
     }
+
+  return 0;
 }

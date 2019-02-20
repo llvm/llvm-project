@@ -39,7 +39,7 @@ test(S s)
 }
 
 
-int main()
+int main(int, char**)
 {
     typedef std::string_view    string_view;
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
@@ -90,4 +90,6 @@ int main()
     static_assert (   *wsv.cbegin() ==   wsv[0], "" );
     }
 #endif
+
+  return 0;
 }

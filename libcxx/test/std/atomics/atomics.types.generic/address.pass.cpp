@@ -136,7 +136,9 @@ void test()
     do_test<volatile A, T>();
 }
 
-int main()
+int main(int, char**)
 {
     test<std::atomic<int*>, int*>();
+
+  return 0;
 }

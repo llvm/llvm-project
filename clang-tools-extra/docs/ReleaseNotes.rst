@@ -79,12 +79,28 @@ Improvements to clang-tidy
   Checks for casts of ``absl::Duration`` conversion functions, and recommends
   the right conversion function instead.
 
+- New :doc:`abseil-duration-unnecessary-conversion
+  <clang-tidy/checks/abseil-duration-unnecessary-conversion>` check.
+
+  Finds and fixes cases where ``absl::Duration`` values are being converted to
+  numeric types and back again.
+
 - New :doc:`google-readability-avoid-underscore-in-googletest-name
   <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
   check.
 
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
+
+- The :doc:`bugprone-argument-comment
+  <clang-tidy/checks/bugprone-argument-comment>` now supports
+  `CommentBoolLiterals`, `CommentIntegerLiterals`,  `CommentFloatLiterals`,
+  `CommentUserDefiniedLiterals`, `CommentStringLiterals`,
+  `CommentCharacterLiterals` & `CommentNullPtrs` options.
+
+- The `Acronyms` and `IncludeDefaultAcronyms` options for the
+  :doc:`objc-property-declaration <clang-tidy/checks/objc-property-declaration>`
+  check have been removed.
 
 Improvements to include-fixer
 -----------------------------

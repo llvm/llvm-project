@@ -36,7 +36,7 @@ struct test_buf
     virtual int_type underflow() {return base::underflow();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         test_buf<char> f;
@@ -121,4 +121,6 @@ int main()
         assert(f.sbumpc() == 0x4E53);
         assert(f.sbumpc() == static_cast<Traits::int_type>(-1));
     }
+
+  return 0;
 }

@@ -15,7 +15,7 @@
 #include <strstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::strstreambuf sb;
@@ -24,4 +24,6 @@ int main()
         sb.freeze(false);
         assert(sb.sputc('a') == 'a');
     }
+
+  return 0;
 }

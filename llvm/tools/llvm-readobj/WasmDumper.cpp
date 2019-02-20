@@ -40,6 +40,19 @@ static const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #undef ENUM_ENTRY
 };
 
+static const EnumEntry<unsigned> WasmSymbolFlags[] = {
+#define ENUM_ENTRY(X)                                                          \
+  { #X, wasm::WASM_SYMBOL_##X }
+  ENUM_ENTRY(BINDING_GLOBAL),
+  ENUM_ENTRY(BINDING_WEAK),
+  ENUM_ENTRY(BINDING_LOCAL),
+  ENUM_ENTRY(VISIBILITY_DEFAULT),
+  ENUM_ENTRY(VISIBILITY_HIDDEN),
+  ENUM_ENTRY(UNDEFINED),
+  ENUM_ENTRY(EXPORTED),
+#undef ENUM_ENTRY
+};
+
 class WasmDumper : public ObjDumper {
 public:
   WasmDumper(const WasmObjectFile *Obj, ScopedPrinter &Writer)
@@ -80,11 +93,11 @@ void WasmDumper::printRelocation(const SectionRef &Section,
 
   bool HasAddend = false;
   switch (RelocType) {
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-  case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-  case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-  case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
+  case wasm::R_WASM_MEMORY_ADDR_LEB:
+  case wasm::R_WASM_MEMORY_ADDR_SLEB:
+  case wasm::R_WASM_MEMORY_ADDR_I32:
+  case wasm::R_WASM_FUNCTION_OFFSET_I32:
+  case wasm::R_WASM_SECTION_OFFSET_I32:
     HasAddend = true;
     break;
   default:
@@ -209,7 +222,19 @@ void WasmDumper::printSymbol(const SymbolRef &Sym) {
   WasmSymbol Symbol = Obj->getWasmSymbol(Sym.getRawDataRefImpl());
   W.printString("Name", Symbol.Info.Name);
   W.printEnum("Type", Symbol.Info.Kind, makeArrayRef(WasmSymbolTypes));
-  W.printHex("Flags", Symbol.Info.Flags);
+  W.printFlags("Flags", Symbol.Info.Flags, makeArrayRef(WasmSymbolFlags));
+
+  if (Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) {
+    W.printString("ImportName", Symbol.Info.ImportName);
+    W.printString("ImportModule", Symbol.Info.ImportModule);
+  }
+  if (Symbol.Info.Kind != wasm::WASM_SYMBOL_TYPE_DATA) {
+    W.printHex("ElementIndex", Symbol.Info.ElementIndex);
+  } else if (!(Symbol.Info.Flags & wasm::WASM_SYMBOL_UNDEFINED)) {
+    W.printHex("Offset", Symbol.Info.DataRef.Offset);
+    W.printHex("Segment", Symbol.Info.DataRef.Segment);
+    W.printHex("Size", Symbol.Info.DataRef.Size);
+  }
 }
 
 } // namespace
@@ -219,7 +244,7 @@ namespace llvm {
 std::error_code createWasmDumper(const object::ObjectFile *Obj,
                                  ScopedPrinter &Writer,
                                  std::unique_ptr<ObjDumper> &Result) {
-  const WasmObjectFile *WasmObj = dyn_cast<WasmObjectFile>(Obj);
+  const auto *WasmObj = dyn_cast<WasmObjectFile>(Obj);
   assert(WasmObj && "createWasmDumper called with non-wasm object");
 
   Result.reset(new WasmDumper(WasmObj, Writer));

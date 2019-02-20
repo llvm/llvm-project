@@ -381,8 +381,11 @@ void PPCInstPrinter::printBranchOperand(const MCInst *MI, unsigned OpNo,
 
   // Branches can take an immediate operand.  This is used by the branch
   // selection pass to print .+8, an eight byte displacement from the PC.
-  O << ".+";
-  printAbsBranchOperand(MI, OpNo, O);
+  O << ".";
+  int32_t Imm = SignExtend32<32>((unsigned)MI->getOperand(OpNo).getImm() << 2);
+  if (Imm >= 0)
+    O << "+";
+  O << Imm;
 }
 
 void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,

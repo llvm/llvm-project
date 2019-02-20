@@ -558,16 +558,13 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         continue;
 
       LLVM_DEBUG(if (dump_intrs) {
-        dbgs() << "\tFor the Pattern (" << (int)P << ") these instructions could be removed\n";
-        for (auto const *InstrPtr : DelInstrs) {
-          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
+        dbgs() << "\tFor the Pattern (" << (int)P
+               << ") these instructions could be removed\n";
+        for (auto const *InstrPtr : DelInstrs)
           InstrPtr->print(dbgs(), false, false, false, TII);
-        }
         dbgs() << "\tThese instructions could replace the removed ones\n";
-        for (auto const *InstrPtr : InsInstrs) {
-          dbgs() << "\t\t" << STI->getSchedInfoStr(*InstrPtr) << ": ";
+        for (auto const *InstrPtr : InsInstrs)
           InstrPtr->print(dbgs(), false, false, false, TII);
-        }
       });
 
       bool SubstituteAlways = false;

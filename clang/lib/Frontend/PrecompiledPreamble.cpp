@@ -18,6 +18,7 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/StringExtras.h"
@@ -346,6 +347,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
       Callbacks.createPPCallbacks();
   if (DelegatedPPCallbacks)
     Clang->getPreprocessor().addPPCallbacks(std::move(DelegatedPPCallbacks));
+  if (auto CommentHandler = Callbacks.getCommentHandler())
+    Clang->getPreprocessor().addCommentHandler(CommentHandler);
 
   Act->Execute();
 
@@ -742,6 +745,7 @@ void PreambleCallbacks::HandleTopLevelDecl(DeclGroupRef DG) {}
 std::unique_ptr<PPCallbacks> PreambleCallbacks::createPPCallbacks() {
   return nullptr;
 }
+CommentHandler *PreambleCallbacks::getCommentHandler() { return nullptr; }
 
 static llvm::ManagedStatic<BuildPreambleErrorCategory> BuildPreambleErrCategory;
 

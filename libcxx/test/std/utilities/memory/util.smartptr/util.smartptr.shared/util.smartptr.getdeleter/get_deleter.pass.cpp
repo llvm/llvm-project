@@ -27,7 +27,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
         {
@@ -63,4 +63,6 @@ int main()
         std::default_delete<A>* d = std::get_deleter<std::default_delete<A> >(p);
         assert(d == 0);
     }
+
+  return 0;
 }

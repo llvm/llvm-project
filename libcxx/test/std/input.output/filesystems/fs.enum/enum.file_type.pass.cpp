@@ -21,7 +21,7 @@
 
 constexpr fs::file_type ME(int val) { return static_cast<fs::file_type>(val); }
 
-int main() {
+int main(int, char**) {
   typedef fs::file_type E;
   static_assert(std::is_enum<E>::value, "");
 
@@ -43,4 +43,6 @@ int main() {
           E::socket == ME(7) &&
           E::unknown == ME(8),
         "Expected enumeration values do not match");
+
+  return 0;
 }

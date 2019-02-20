@@ -679,11 +679,15 @@ void WhitespaceManager::appendIndentText(std::string &Text,
   case FormatStyle::UT_Always: {
     unsigned FirstTabWidth =
         Style.TabWidth - WhitespaceStartColumn % Style.TabWidth;
-    // Indent with tabs only when there's at least one full tab.
-    if (FirstTabWidth + Style.TabWidth <= Spaces) {
-      Spaces -= FirstTabWidth;
-      Text.append("\t");
+    // Insert only spaces when we want to end up before the next tab.
+    if (Spaces < FirstTabWidth || Spaces == 1) {
+      Text.append(Spaces, ' ');
+      break;
     }
+    // Align to the next tab.
+    Spaces -= FirstTabWidth;
+    Text.append("\t");
+
     Text.append(Spaces / Style.TabWidth, '\t');
     Text.append(Spaces % Style.TabWidth, ' ');
     break;

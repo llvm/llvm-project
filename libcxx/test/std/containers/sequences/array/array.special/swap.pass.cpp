@@ -35,7 +35,7 @@ std::false_type can_swap_imp(...);
 template <class Tp>
 struct can_swap : std::is_same<decltype(can_swap_imp<Tp>(0)), void> {};
 
-int main()
+int main(int, char**)
 {
     {
         typedef double T;
@@ -81,4 +81,6 @@ int main()
         static_assert(!can_swap<C1&>::value, "");
     }
 #endif
+
+  return 0;
 }

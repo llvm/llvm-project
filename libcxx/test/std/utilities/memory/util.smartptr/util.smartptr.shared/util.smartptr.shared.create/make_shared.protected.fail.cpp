@@ -22,7 +22,9 @@ protected:
    S () {};  // ctor is protected
 };
 
-int main()
+int main(int, char**)
 {
     std::shared_ptr<S> p = std::make_shared<S>();  // expected-error-re@memory:* {{static_assert failed{{.*}} "Can't construct object in make_shared"}}
+
+  return 0;
 }

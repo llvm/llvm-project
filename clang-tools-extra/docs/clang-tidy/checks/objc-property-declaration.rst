@@ -40,15 +40,3 @@ lowercase letters followed by a '_' to avoid naming conflict. For example:
    @property(nonatomic, assign) int abc_lowerCamelCase;
 
 The corresponding style rule: https://developer.apple.com/library/content/qa/qa1908/_index.html
-
-
-Options
--------
-
-.. option:: Acronyms
-
-   This option is deprecated and ignored.
-
-.. option:: IncludeDefaultAcronyms
-
-   This option is deprecated and ignored.

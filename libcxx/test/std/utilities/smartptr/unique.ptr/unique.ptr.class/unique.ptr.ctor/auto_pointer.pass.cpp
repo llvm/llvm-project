@@ -61,7 +61,7 @@ void test_sfinae() {
   }
 }
 
-int main() {
+int main(int, char**) {
   {
     B* p = new B;
     std::auto_ptr<B> ap(p);
@@ -93,4 +93,6 @@ int main() {
   }
 #endif
   test_sfinae();
+
+  return 0;
 }

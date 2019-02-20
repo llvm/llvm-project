@@ -58,8 +58,10 @@ void test_libcxx_macros()
 //  ===== C++17 features =====
 }
 
-int main()
+int main(int, char**)
 {
     test_noexcept();
     test_libcxx_macros();
+
+  return 0;
 }

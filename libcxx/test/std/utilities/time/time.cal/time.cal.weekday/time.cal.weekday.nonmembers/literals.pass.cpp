@@ -24,7 +24,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 
     ASSERT_SAME_TYPE(const std::chrono::weekday, decltype(std::chrono::Sunday));
@@ -58,4 +58,6 @@ int main()
     assert(static_cast<unsigned>(std::chrono::Thursday)  ==  4);
     assert(static_cast<unsigned>(std::chrono::Friday)    ==  5);
     assert(static_cast<unsigned>(std::chrono::Saturday)  ==  6);
+
+  return 0;
 }

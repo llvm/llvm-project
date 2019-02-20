@@ -264,7 +264,7 @@ void test2()
     test(S("abcdefghijklmnopqrst"), 20, 0, SV("12345678901234567890"), S("abcdefghijklmnopqrst12345678901234567890"));
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -282,4 +282,6 @@ int main()
     test2<S, SV>();
     }
 #endif
+
+  return 0;
 }

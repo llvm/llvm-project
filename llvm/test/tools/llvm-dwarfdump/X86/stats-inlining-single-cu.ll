@@ -5,7 +5,7 @@
 ; The results for both tests should be identical.
 
 ; CHECK:      "source functions":4,
-; CHECK-SAME: "inlined functions":5,
+; CHECK-SAME: "inlined functions":2,
 ; CHECK-SAME: "unique source variables":4
 ; CHECK-SAME: "source variables":6
 ; CHECK-SAME: "variables with location":6

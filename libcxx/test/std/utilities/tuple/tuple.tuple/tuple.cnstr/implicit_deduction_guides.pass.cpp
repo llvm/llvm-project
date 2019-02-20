@@ -149,7 +149,9 @@ void test_empty_specialization()
   }
 }
 
-int main() {
+int main(int, char**) {
   test_primary_template();
   test_empty_specialization();
+
+  return 0;
 }

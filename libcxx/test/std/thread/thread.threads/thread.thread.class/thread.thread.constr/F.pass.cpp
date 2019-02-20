@@ -144,7 +144,7 @@ void test_throwing_new_during_thread_creation() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_throwing_new_during_thread_creation();
     {
@@ -200,4 +200,6 @@ int main()
         t.join();
     }
 #endif
+
+  return 0;
 }

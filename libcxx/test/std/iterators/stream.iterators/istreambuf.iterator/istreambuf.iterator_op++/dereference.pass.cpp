@@ -16,7 +16,7 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::istringstream inf("abc");
@@ -36,4 +36,6 @@ int main()
         ++i;
         assert(*i == L'c');
     }
+
+  return 0;
 }

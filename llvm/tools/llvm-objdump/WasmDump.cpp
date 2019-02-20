@@ -18,7 +18,7 @@ using namespace llvm;
 using namespace object;
 
 void llvm::printWasmFileHeader(const object::ObjectFile *Obj) {
-  const WasmObjectFile *File = dyn_cast<const WasmObjectFile>(Obj);
+  const auto *File = dyn_cast<const WasmObjectFile>(Obj);
 
   outs() << "Program Header:\n";
   outs() << "Version: 0x";
@@ -36,7 +36,7 @@ llvm::getWasmRelocationValueString(const WasmObjectFile *Obj,
   raw_string_ostream Fmt(FmtBuf);
   if (SI == Obj->symbol_end()) {
     // Not all wasm relocations have symbols associated with them.
-    // In particular R_WEBASSEMBLY_TYPE_INDEX_LEB.
+    // In particular R_WASM_TYPE_INDEX_LEB.
     Fmt << Rel.Index;
   } else {
     Expected<StringRef> SymNameOrErr = SI->getName();

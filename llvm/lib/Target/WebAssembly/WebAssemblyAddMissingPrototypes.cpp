@@ -89,22 +89,24 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
     Function *NewF = nullptr;
     for (Use &U : F.uses()) {
       LLVM_DEBUG(dbgs() << "prototype-less use: " << F.getName() << "\n");
+      LLVM_DEBUG(dbgs() << *U.getUser() << "\n");
       if (auto *BC = dyn_cast<BitCastOperator>(U.getUser())) {
         if (auto *DestType = dyn_cast<FunctionType>(
                 BC->getDestTy()->getPointerElementType())) {
           if (!NewType) {
             // Create a new function with the correct type
             NewType = DestType;
+            LLVM_DEBUG(dbgs() << "found function type: " << *NewType << "\n");
             NewF = Function::Create(NewType, F.getLinkage(), F.getName() + ".fixed_sig");
             NewF->setAttributes(F.getAttributes());
             NewF->removeFnAttr("no-prototype");
             Replacements.emplace_back(&F, NewF);
-          } else {
-            if (NewType != DestType) {
-              report_fatal_error("Prototypeless function used with "
-                                 "conflicting signatures: " +
-                                 F.getName());
-            }
+          } else if (NewType != DestType) {
+            errs() << "warning: prototype-less function used with "
+                      "conflicting signatures: "
+                   << F.getName() << "\n";
+            LLVM_DEBUG(dbgs() << "  " << *DestType << "\n");
+            LLVM_DEBUG(dbgs() << "  "<<  *NewType << "\n");
           }
         }
       }

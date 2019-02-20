@@ -52,9 +52,11 @@ test()
     static_assert((std::is_same<typename R::iterator_category, typename T::iterator_category>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<char*> >();
     test<random_access_iterator<char*> >();
     test<char*>();
+
+  return 0;
 }

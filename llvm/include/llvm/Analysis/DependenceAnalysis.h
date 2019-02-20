@@ -274,6 +274,10 @@ template <typename T> class ArrayRef;
                    LoopInfo *LI)
         : AA(AA), SE(SE), LI(LI), F(F) {}
 
+    /// Handle transitive invalidation when the cached analysis results go away.
+    bool invalidate(Function &F, const PreservedAnalyses &PA,
+                    FunctionAnalysisManager::Invalidator &Inv);
+
     /// depends - Tests for a dependence between the Src and Dst instructions.
     /// Returns NULL if no dependence; otherwise, returns a Dependence (or a
     /// FullDependence) with as much information as can be gleaned.

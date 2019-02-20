@@ -551,7 +551,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
     case eFormatFloat: {
       TargetSP target_sp;
-      bool used_apfloat = false;
+      bool used_upfloat = false;
       if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
       if (target_sp) {
@@ -600,13 +600,13 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
             if (!sv.empty()) {
               s->Printf("%*.*s", (int)sv.size(), (int)sv.size(), sv.data());
-              used_apfloat = true;
+              used_upfloat = true;
             }
           }
         }
       }
 
-      if (!used_apfloat) {
+      if (!used_upfloat) {
         std::ostringstream ss;
         if (item_byte_size == sizeof(float) || item_byte_size == 2) {
           float f;

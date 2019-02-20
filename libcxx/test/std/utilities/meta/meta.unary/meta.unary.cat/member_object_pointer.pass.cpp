@@ -49,10 +49,12 @@ class Class
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_member_object_pointer<int Class::*>();
 
 //  LWG#2582
     static_assert(!std::is_member_object_pointer<incomplete_type>::value, "");
+
+  return 0;
 }

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -fexceptions -verify %s
+// RUN: %clang_cc1 -std=c++2a  -verify %s
 
 namespace std {
   using size_t = decltype(sizeof(0));
@@ -58,11 +59,13 @@ namespace delete_selection {
     C();
     void *operator new(std::size_t);
     void operator delete(void*) = delete;
-    void operator delete(C *, std::destroying_delete_t) = delete;
+    void operator delete(C *, std::destroying_delete_t) = delete; // expected-note 0-1 {{deleted here}}
   };
-  // FIXME: This should be ill-formed, but we incorrectly decide that overload
-  // resolution failed (because it selected a deleted function) and thus no
-  // 'operator delete' should be called.
+  // TODO: We only diagnose the use of a deleted operator delete when exceptions
+  // are enabled. Otherwise we don't bother doing the lookup.
+#ifdef __EXCEPTIONS
+  // expected-error@+2 {{attempt to use a deleted function}}
+#endif
   C *new_C() { return new C; }
 
   struct D {

@@ -62,7 +62,7 @@ FunctionPass *llvm::createWebAssemblyPrepareForLiveIntervals() {
 }
 
 // Test whether the given register has an ARGUMENT def.
-static bool HasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
+static bool hasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
   for (const auto &Def : MRI.def_instructions(Reg))
     if (WebAssembly::isArgument(Def))
       return true;
@@ -94,15 +94,15 @@ bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(
   //
   // TODO: This is fairly heavy-handed; find a better approach.
   //
-  for (unsigned i = 0, e = MRI.getNumVirtRegs(); i < e; ++i) {
-    unsigned Reg = TargetRegisterInfo::index2VirtReg(i);
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I < E; ++I) {
+    unsigned Reg = TargetRegisterInfo::index2VirtReg(I);
 
     // Skip unused registers.
     if (MRI.use_nodbg_empty(Reg))
       continue;
 
     // Skip registers that have an ARGUMENT definition.
-    if (HasArgumentDef(Reg, MRI))
+    if (hasArgumentDef(Reg, MRI))
       continue;
 
     BuildMI(Entry, Entry.begin(), DebugLoc(),

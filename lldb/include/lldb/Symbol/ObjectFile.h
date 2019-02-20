@@ -408,10 +408,10 @@ public:
   /// bytes for the object file (or memory for memory based object files).
   ///
   /// @return
-  ///     Returns \b true if a UUID was successfully extracted into
-  ///     \a uuid, \b false otherwise.
+  ///     The object file's UUID. In case of an error, an empty UUID is
+  ///     returned.
   //------------------------------------------------------------------
-  virtual bool GetUUID(lldb_private::UUID *uuid) = 0;
+  virtual UUID GetUUID() = 0;
 
   //------------------------------------------------------------------
   /// Gets the symbol file spec list for this object file.
@@ -476,20 +476,6 @@ public:
   ///     false otherwise.
   //------------------------------------------------------------------
   virtual bool ParseHeader() = 0;
-
-  //------------------------------------------------------------------
-  /// Returns a reference to the UnwindTable for this ObjectFile
-  ///
-  /// The UnwindTable contains FuncUnwinders objects for any function in this
-  /// ObjectFile.  If a FuncUnwinders object hasn't been created yet (i.e. the
-  /// function has yet to be unwound in a stack walk), it will be created when
-  /// requested.  Specifically, we do not create FuncUnwinders objects for
-  /// functions until they are needed.
-  ///
-  /// @return
-  ///     Returns the unwind table for this object file.
-  //------------------------------------------------------------------
-  virtual lldb_private::UnwindTable &GetUnwindTable() { return m_unwind_table; }
 
   //------------------------------------------------------------------
   /// Returns if the function bounds for symbols in this symbol file are
@@ -774,13 +760,10 @@ protected:
                          ///determined).
   DataExtractor
       m_data; ///< The data for this object file so things can be parsed lazily.
-  lldb_private::UnwindTable m_unwind_table; /// < Table of FuncUnwinders objects
-                                            /// created for this ObjectFile's
-                                            /// functions
   lldb::ProcessWP m_process_wp;
   const lldb::addr_t m_memory_addr;
-  std::unique_ptr<lldb_private::SectionList> m_sections_ap;
-  std::unique_ptr<lldb_private::Symtab> m_symtab_ap;
+  std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  std::unique_ptr<lldb_private::Symtab> m_symtab_up;
   uint32_t m_synthetic_symbol_idx;
 
   //------------------------------------------------------------------

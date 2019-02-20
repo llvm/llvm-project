@@ -80,7 +80,7 @@ struct G {
     };
 };
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::allocator_traits<A<char> >::rebind_alloc<double>, ReboundA<double> >::value), "");
@@ -97,4 +97,6 @@ int main()
     static_assert((std::is_same<std::allocator_traits<D<int, char> >::rebind_alloc<double>::other, D<double, char> >::value), "");
     static_assert((std::is_same<std::allocator_traits<E<char> >::rebind_alloc<double>::other, E<double> >::value), "");
 #endif
+
+  return 0;
 }

@@ -20,7 +20,7 @@
 #include "filesystem_test_helper.hpp"
 
 // This is mainly tested via the member append functions.
-int main()
+int main(int, char**)
 {
   using namespace fs;
   path p1("abc");
@@ -30,4 +30,6 @@ int main()
 
   path p4 = p1 / "def";
   assert(p4 == "abc/def");
+
+  return 0;
 }

@@ -50,7 +50,7 @@ void testN(int start, int N, int M)
     assert(c2 == c1_save);
 }
 
-int main()
+int main(int, char**)
 {
     {
         int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
@@ -106,4 +106,6 @@ int main()
         assert(c2.get_allocator() == A());
     }
 #endif
+
+  return 0;
 }

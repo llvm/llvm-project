@@ -71,7 +71,7 @@ public:
   uint32_t GetSize();
 
 private:
-  std::unique_ptr<lldb_private::TypeEnumMemberListImpl> m_opaque_ap;
+  std::unique_ptr<lldb_private::TypeEnumMemberListImpl> m_opaque_up;
 };
 
 } // namespace lldb

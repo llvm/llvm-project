@@ -76,7 +76,7 @@ public:
 
 TEST_CONSTEXPR  C gC;
 
-int main()
+int main(int, char**)
 {
     A a;
     test(&a+1, A());
@@ -115,4 +115,6 @@ int main()
     {
         ((void)gC);
     }
+
+  return 0;
 }

@@ -80,7 +80,7 @@ void use_placeholders_to_prevent_unused_warning() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     use_placeholders_to_prevent_unused_warning();
     test(std::placeholders::_1);
@@ -93,4 +93,6 @@ int main()
     test(std::placeholders::_8);
     test(std::placeholders::_9);
     test(std::placeholders::_10);
+
+  return 0;
 }

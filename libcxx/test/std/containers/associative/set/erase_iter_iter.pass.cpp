@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::set<int> M;
@@ -137,4 +137,6 @@ int main()
         assert(i == m.end());
     }
 #endif
+
+  return 0;
 }

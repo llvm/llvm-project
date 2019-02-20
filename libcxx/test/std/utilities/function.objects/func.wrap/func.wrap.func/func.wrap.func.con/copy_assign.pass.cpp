@@ -48,7 +48,7 @@ int g(int) { return 0; }
 int g2(int, int) { return 2; }
 int g3(int, int, int) { return 3; }
 
-int main() {
+int main(int, char**) {
   assert(globalMemCounter.checkOutstandingNewEq(0));
   {
     std::function<int(int)> f = A();
@@ -134,4 +134,6 @@ int main() {
     assert(f.target<int (*)(int)>() == 0);
   }
 #endif
+
+  return 0;
 }

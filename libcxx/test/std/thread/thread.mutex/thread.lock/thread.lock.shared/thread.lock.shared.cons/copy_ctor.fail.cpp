@@ -17,8 +17,10 @@
 
 std::shared_timed_mutex m;
 
-int main()
+int main(int, char**)
 {
     std::shared_lock<std::shared_timed_mutex> lk0(m);
     std::shared_lock<std::shared_timed_mutex> lk = lk0;
+
+  return 0;
 }

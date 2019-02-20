@@ -336,17 +336,17 @@ private:
   uint64_t visitWasm(uint32_t Rel, RelocationRef R, uint64_t Value) {
     if (ObjToVisit.getArch() == Triple::wasm32) {
       switch (Rel) {
-      case wasm::R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-      case wasm::R_WEBASSEMBLY_TABLE_INDEX_SLEB:
-      case wasm::R_WEBASSEMBLY_TABLE_INDEX_I32:
-      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
-      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_SLEB:
-      case wasm::R_WEBASSEMBLY_MEMORY_ADDR_I32:
-      case wasm::R_WEBASSEMBLY_TYPE_INDEX_LEB:
-      case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
-      case wasm::R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
-      case wasm::R_WEBASSEMBLY_SECTION_OFFSET_I32:
-      case wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB:
+      case wasm::R_WASM_FUNCTION_INDEX_LEB:
+      case wasm::R_WASM_TABLE_INDEX_SLEB:
+      case wasm::R_WASM_TABLE_INDEX_I32:
+      case wasm::R_WASM_MEMORY_ADDR_LEB:
+      case wasm::R_WASM_MEMORY_ADDR_SLEB:
+      case wasm::R_WASM_MEMORY_ADDR_I32:
+      case wasm::R_WASM_TYPE_INDEX_LEB:
+      case wasm::R_WASM_GLOBAL_INDEX_LEB:
+      case wasm::R_WASM_FUNCTION_OFFSET_I32:
+      case wasm::R_WASM_SECTION_OFFSET_I32:
+      case wasm::R_WASM_EVENT_INDEX_LEB:
         // For wasm section, its offset at 0 -- ignoring Value
         return 0;
       }

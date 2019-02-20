@@ -19,7 +19,9 @@
 
 #include "../../rep.h"
 
-int main()
+int main(int, char**)
 {
     std::chrono::duration<Rep> d(1);
+
+  return 0;
 }

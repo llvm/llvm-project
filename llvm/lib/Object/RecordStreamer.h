@@ -46,8 +46,7 @@ private:
 public:
   RecordStreamer(MCContext &Context, const Module &M);
 
-  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                       bool) override;
+  void EmitInstruction(const MCInst &Inst, const MCSubtargetInfo &STI) override;
   void EmitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) override;
   bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;

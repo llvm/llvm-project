@@ -11,7 +11,9 @@
 
 #include <vector>
 
-int main()
+int main(int, char**)
 {
     std::vector<int, std::allocator<long> > v;
+
+  return 0;
 }

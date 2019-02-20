@@ -18,7 +18,7 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::string what_arg("test message");
     std::system_error se(static_cast<int>(std::errc::not_a_directory),
@@ -27,4 +27,6 @@ int main()
     std::string what_message(se.what());
     assert(what_message.find(what_arg) != std::string::npos);
     assert(what_message.find("Not a directory") != std::string::npos);
+
+  return 0;
 }

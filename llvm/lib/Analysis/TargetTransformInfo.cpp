@@ -162,6 +162,10 @@ bool TargetTransformInfo::shouldFavorPostInc() const {
   return TTIImpl->shouldFavorPostInc();
 }
 
+bool TargetTransformInfo::shouldFavorBackedgeIndex(const Loop *L) const {
+  return TTIImpl->shouldFavorBackedgeIndex(L);
+}
+
 bool TargetTransformInfo::isLegalMaskedStore(Type *DataType) const {
   return TTIImpl->isLegalMaskedStore(DataType);
 }

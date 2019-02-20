@@ -22,7 +22,6 @@ add_llvm_library(LLVMCore
   DiagnosticInfo.cpp
   DiagnosticPrinter.cpp
   Dominators.cpp
-  DomTreeUpdater.cpp
   Function.cpp
   GVMaterializer.cpp
   Globals.cpp

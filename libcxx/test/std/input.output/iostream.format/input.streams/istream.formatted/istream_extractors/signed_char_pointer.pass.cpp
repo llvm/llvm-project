@@ -38,7 +38,7 @@ public:
     CharT* egptr() const {return base::egptr();}
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb("   abcdefghijk    ");
@@ -103,4 +103,6 @@ int main()
         assert(std::string((char*)s) == "");
     }
 #endif
+
+  return 0;
 }

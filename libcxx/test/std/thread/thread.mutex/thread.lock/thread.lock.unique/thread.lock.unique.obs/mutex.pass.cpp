@@ -19,7 +19,7 @@
 
 std::mutex m;
 
-int main()
+int main(int, char**)
 {
     std::unique_lock<std::mutex> lk0;
     assert(lk0.mutex() == nullptr);
@@ -27,4 +27,6 @@ int main()
     assert(lk1.mutex() == &m);
     lk1.unlock();
     assert(lk1.mutex() == &m);
+
+  return 0;
 }

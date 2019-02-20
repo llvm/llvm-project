@@ -29,7 +29,7 @@ void test_reset_all()
         assert(!v[i]);
 }
 
-int main()
+int main(int, char**)
 {
     test_reset_all<0>();
     test_reset_all<1>();
@@ -40,4 +40,6 @@ int main()
     test_reset_all<64>();
     test_reset_all<65>();
     test_reset_all<1000>();
+
+  return 0;
 }

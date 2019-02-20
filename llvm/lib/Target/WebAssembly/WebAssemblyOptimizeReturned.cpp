@@ -36,11 +36,11 @@ class OptimizeReturned final : public FunctionPass,
 
   bool runOnFunction(Function &F) override;
 
-  DominatorTree *DT;
+  DominatorTree *DT = nullptr;
 
 public:
   static char ID;
-  OptimizeReturned() : FunctionPass(ID), DT(nullptr) {}
+  OptimizeReturned() : FunctionPass(ID) {}
 
   void visitCallSite(CallSite CS);
 };
@@ -56,10 +56,10 @@ FunctionPass *llvm::createWebAssemblyOptimizeReturned() {
 }
 
 void OptimizeReturned::visitCallSite(CallSite CS) {
-  for (unsigned i = 0, e = CS.getNumArgOperands(); i < e; ++i)
-    if (CS.paramHasAttr(i, Attribute::Returned)) {
+  for (unsigned I = 0, E = CS.getNumArgOperands(); I < E; ++I)
+    if (CS.paramHasAttr(I, Attribute::Returned)) {
       Instruction *Inst = CS.getInstruction();
-      Value *Arg = CS.getArgOperand(i);
+      Value *Arg = CS.getArgOperand(I);
       // Ignore constants, globals, undef, etc.
       if (isa<Constant>(Arg))
         continue;

@@ -16,11 +16,13 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         const std::error_condition ec1(6, std::generic_category());
         const std::error_condition ec2(7, std::generic_category());
         assert(ec1 < ec2);
     }
+
+  return 0;
 }

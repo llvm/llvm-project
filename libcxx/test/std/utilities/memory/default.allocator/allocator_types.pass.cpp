@@ -33,7 +33,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::allocator<char>::size_type, std::size_t>::value), "");
     static_assert((std::is_same<std::allocator<char>::difference_type, std::ptrdiff_t>::value), "");
@@ -53,4 +53,6 @@ int main()
     a2 = a;
     std::allocator<int> a3 = a2;
     ((void)a3);
+
+  return 0;
 }

@@ -52,15 +52,15 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   // Print any additional variadic operands.
   const MCInstrDesc &Desc = MII.get(MI->getOpcode());
   if (Desc.isVariadic())
-    for (auto i = Desc.getNumOperands(), e = MI->getNumOperands(); i < e; ++i) {
+    for (auto I = Desc.getNumOperands(), E = MI->getNumOperands(); I < E; ++I) {
       // FIXME: For CALL_INDIRECT_VOID, don't print a leading comma, because
       // we have an extra flags operand which is not currently printed, for
       // compatiblity reasons.
-      if (i != 0 && ((MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID &&
+      if (I != 0 && ((MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID &&
                       MI->getOpcode() != WebAssembly::CALL_INDIRECT_VOID_S) ||
-                     i != Desc.getNumOperands()))
+                     I != Desc.getNumOperands()))
         OS << ", ";
-      printOperand(MI, i, OS);
+      printOperand(MI, I, OS);
     }
 
   // Print any added annotation.
@@ -192,13 +192,13 @@ static std::string toString(const APFloat &FP) {
 
   // Use C99's hexadecimal floating-point representation.
   static const size_t BufBytes = 128;
-  char buf[BufBytes];
+  char Buf[BufBytes];
   auto Written = FP.convertToHexString(
-      buf, /*hexDigits=*/0, /*upperCase=*/false, APFloat::rmNearestTiesToEven);
+      Buf, /*hexDigits=*/0, /*upperCase=*/false, APFloat::rmNearestTiesToEven);
   (void)Written;
   assert(Written != 0);
   assert(Written < BufBytes);
-  return buf;
+  return Buf;
 }
 
 void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,

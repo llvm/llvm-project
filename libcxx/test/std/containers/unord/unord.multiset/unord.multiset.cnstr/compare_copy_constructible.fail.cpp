@@ -23,6 +23,8 @@ private:
     };
 
 
-int main() {
+int main(int, char**) {
     std::unordered_multiset<int, std::hash<int>, Comp<int> > m;
+
+  return 0;
 }

@@ -15,7 +15,7 @@
 struct A { virtual ~A() {} };
 struct B : A {};
 
-int main() {
+int main(int, char**) {
 #if defined(TEST_HAS_NO_RTTI)
     A* ptr = new B;
     (void)dynamic_cast<B*>(ptr); // expected-error{{cannot use dynamic_cast}}
@@ -25,4 +25,6 @@ int main() {
 #error RTTI enabled
 // expected-error@-1{{RTTI enabled}}
 #endif
+
+  return 0;
 }

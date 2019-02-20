@@ -78,6 +78,7 @@ def execute_command_verbose(cmd, cwd=None, verbose=False):
         sys.stderr.write('%s\n' % report)
         if exitCode != 0:
             exit_with_cleanups(exitCode)
+    return out
 
 def main():
     parser = ArgumentParser(
@@ -119,15 +120,15 @@ def main():
     global temp_directory_root
     temp_directory_root = tempfile.mkdtemp('.libcxx.merge.archives')
 
+    files = []
     for arc in archives:
-        execute_command_verbose([ar_exe, 'x', arc], cwd=temp_directory_root,
-                                verbose=args.verbose)
+        execute_command_verbose([ar_exe, 'x', arc],
+                                cwd=temp_directory_root, verbose=args.verbose)
+        out = execute_command_verbose([ar_exe, 't', arc])
+        files.extend(out.splitlines())
 
-    files = glob.glob(os.path.join(temp_directory_root, '*.o*'))
-    if not files:
-        print_and_exit('Failed to glob for %s' % temp_directory_root)
-    cmd = [ar_exe, 'qcs', args.output] + files
-    execute_command_verbose(cmd, cwd=temp_directory_root, verbose=args.verbose)
+    execute_command_verbose([ar_exe, 'rcsD', args.output] + files,
+                            cwd=temp_directory_root, verbose=args.verbose)
 
 
 if __name__ == '__main__':

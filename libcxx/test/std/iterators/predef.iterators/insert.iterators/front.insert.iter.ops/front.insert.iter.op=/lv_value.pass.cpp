@@ -39,8 +39,10 @@ public:
         {return x.data_ == y.data_;}
 };
 
-int main()
+int main(int, char**)
 {
     test(std::list<Copyable>());
     test(nasty_list<Copyable>());
+
+  return 0;
 }

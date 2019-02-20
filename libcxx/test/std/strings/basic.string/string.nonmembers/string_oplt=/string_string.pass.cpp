@@ -24,7 +24,7 @@ test(const S& lhs, const S& rhs, bool x)
     assert((lhs <= rhs) == x);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -66,4 +66,6 @@ int main()
     test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrst"), true);
     }
 #endif
+
+  return 0;
 }

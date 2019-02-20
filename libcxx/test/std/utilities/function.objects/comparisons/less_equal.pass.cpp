@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "pointer_comparison_test_helper.hpp"
 
-int main()
+int main(int, char**)
 {
     typedef std::less_equal<int> F;
     const F f = F();
@@ -49,4 +49,6 @@ int main()
     constexpr bool bar = std::less_equal<> () (36.0, 36);
     static_assert ( bar, "" );
 #endif
+
+  return 0;
 }

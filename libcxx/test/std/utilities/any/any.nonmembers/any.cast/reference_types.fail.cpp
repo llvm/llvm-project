@@ -21,7 +21,7 @@
 using std::any;
 using std::any_cast;
 
-int main()
+int main(int, char**)
 {
     any a(1);
 
@@ -50,4 +50,6 @@ int main()
 
     // expected-error-re@any:* 1 {{static_assert failed{{.*}} "_ValueType may not be a reference."}}
     any_cast<int const &&>(&a2); // expected-note {{requested here}}
+
+  return 0;
 }

@@ -36,9 +36,11 @@ test(int i)
     ((void)result); // Prevent unused warning
 }
 
-int main()
+int main(int, char**)
 {
     test(0);
     test(2);
     test(10);
+
+  return 0;
 }

@@ -35,7 +35,9 @@ void test_enum()
 
 enum Enum {zero, one};
 
-int main()
+int main(int, char**)
 {
     test_enum<Enum>();
+
+  return 0;
 }

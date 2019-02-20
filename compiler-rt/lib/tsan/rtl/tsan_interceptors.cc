@@ -153,7 +153,7 @@ const int SIG_SETMASK = 2;
 #endif
 
 #define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED \
-  (!cur_thread()->is_inited)
+  (cur_thread_init(), !cur_thread()->is_inited)
 
 namespace __tsan {
 struct SignalDesc {
@@ -398,7 +398,7 @@ static int setup_at_exit_wrapper(ThreadState *thr, uptr pc, void(*f)(),
 
 #if !SANITIZER_ANDROID
 TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return 0;
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
@@ -408,7 +408,7 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
 #endif
 
 TSAN_INTERCEPTOR(int, __cxa_atexit, void (*f)(void *a), void *arg, void *dso) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return 0;
   SCOPED_TSAN_INTERCEPTOR(__cxa_atexit, f, arg, dso);
   return setup_at_exit_wrapper(thr, pc, (void(*)())f, arg, dso);
@@ -454,7 +454,7 @@ static void on_exit_wrapper(int status, void *arg) {
 }
 
 TSAN_INTERCEPTOR(int, on_exit, void(*f)(int, void*), void *arg) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return 0;
   SCOPED_TSAN_INTERCEPTOR(on_exit, f, arg);
   AtExitCtx *ctx = (AtExitCtx*)InternalAlloc(sizeof(AtExitCtx));
@@ -554,6 +554,7 @@ static void LongJmp(ThreadState *thr, uptr *env) {
 
 // FIXME: put everything below into a common extern "C" block?
 extern "C" void __tsan_setjmp(uptr sp, uptr mangled_sp) {
+  cur_thread_init();
   SetJmp(cur_thread(), sp, mangled_sp);
 }
 
@@ -664,7 +665,7 @@ TSAN_INTERCEPTOR(void, _longjmp, uptr *env, int val) {
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, malloc, uptr size) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return InternalAlloc(size);
   void *p = 0;
   {
@@ -681,7 +682,7 @@ TSAN_INTERCEPTOR(void*, __libc_memalign, uptr align, uptr sz) {
 }
 
 TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return InternalCalloc(size, n);
   void *p = 0;
   {
@@ -693,7 +694,7 @@ TSAN_INTERCEPTOR(void*, calloc, uptr size, uptr n) {
 }
 
 TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return InternalRealloc(p, size);
   if (p)
     invoke_free_hook(p);
@@ -708,7 +709,7 @@ TSAN_INTERCEPTOR(void*, realloc, void *p, uptr size) {
 TSAN_INTERCEPTOR(void, free, void *p) {
   if (p == 0)
     return;
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return InternalFree(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(free, p);
@@ -718,7 +719,7 @@ TSAN_INTERCEPTOR(void, free, void *p) {
 TSAN_INTERCEPTOR(void, cfree, void *p) {
   if (p == 0)
     return;
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return InternalFree(p);
   invoke_free_hook(p);
   SCOPED_INTERCEPTOR_RAW(cfree, p);
@@ -807,14 +808,14 @@ TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(void*, aligned_alloc, uptr align, uptr sz) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return InternalAlloc(sz, nullptr, align);
   SCOPED_INTERCEPTOR_RAW(aligned_alloc, align, sz);
   return user_aligned_alloc(thr, pc, align, sz);
 }
 
 TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return InternalAlloc(sz, nullptr, GetPageSizeCached());
   SCOPED_INTERCEPTOR_RAW(valloc, sz);
   return user_valloc(thr, pc, sz);
@@ -823,7 +824,7 @@ TSAN_INTERCEPTOR(void*, valloc, uptr sz) {
 
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
-  if (UNLIKELY(cur_thread()->in_symbolizer)) {
+  if (in_symbolizer()) {
     uptr PageSize = GetPageSizeCached();
     sz = sz ? RoundUpTo(sz, PageSize) : PageSize;
     return InternalAlloc(sz, nullptr, PageSize);
@@ -838,7 +839,7 @@ TSAN_INTERCEPTOR(void*, pvalloc, uptr sz) {
 
 #if !SANITIZER_MAC
 TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
-  if (UNLIKELY(cur_thread()->in_symbolizer)) {
+  if (in_symbolizer()) {
     void *p = InternalAlloc(sz, nullptr, align);
     if (!p)
       return errno_ENOMEM;
@@ -942,6 +943,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
   void *param = p->param;
   int tid = 0;
   {
+    cur_thread_init();
     ThreadState *thr = cur_thread();
     // Thread-local state is not initialized yet.
     ScopedIgnoreInterceptors ignore;
@@ -958,7 +960,7 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
       internal_sched_yield();
     Processor *proc = ProcCreate();
     ProcWire(proc, thr);
-    ThreadStart(thr, tid, GetTid(), /*workerthread*/ false);
+    ThreadStart(thr, tid, GetTid(), ThreadType::Regular);
     atomic_store(&p->tid, 0, memory_order_release);
   }
   void *res = callback(param);
@@ -1048,6 +1050,16 @@ TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
     ThreadDetach(thr, pc, tid);
   }
   return res;
+}
+
+TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
+  {
+    SCOPED_INTERCEPTOR_RAW(pthread_exit, retval);
+#if !SANITIZER_MAC && !SANITIZER_ANDROID
+    CHECK_EQ(thr, &cur_thread_placeholder);
+#endif
+  }
+  REAL(pthread_exit)(retval);
 }
 
 #if SANITIZER_LINUX
@@ -1974,6 +1986,7 @@ static bool is_sync_signal(ThreadSignalContext *sctx, int sig) {
 void ALWAYS_INLINE rtl_generic_sighandler(bool sigact, int sig,
                                           __sanitizer_siginfo *info,
                                           void *ctx) {
+  cur_thread_init();
   ThreadState *thr = cur_thread();
   ThreadSignalContext *sctx = SigCtx(thr);
   if (sig < 0 || sig >= kSigCount) {
@@ -2090,7 +2103,7 @@ TSAN_INTERCEPTOR(int, getaddrinfo, void *node, void *service,
 }
 
 TSAN_INTERCEPTOR(int, fork, int fake) {
-  if (UNLIKELY(cur_thread()->in_symbolizer))
+  if (in_symbolizer())
     return REAL(fork)(fake);
   SCOPED_INTERCEPTOR_RAW(fork, fake);
   ForkBefore(thr, pc);
@@ -2203,18 +2216,6 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #include "sanitizer_common/sanitizer_platform_interceptors.h"
 // Causes interceptor recursion (getaddrinfo() and fopen())
 #undef SANITIZER_INTERCEPT_GETADDRINFO
-// There interceptors do not seem to be strictly necessary for tsan.
-// But we see cases where the interceptors consume 70% of execution time.
-// Memory blocks passed to fgetgrent_r are "written to" by tsan several times.
-// First, there is some recursion (getgrnam_r calls fgetgrent_r), and each
-// function "writes to" the buffer. Then, the same memory is "written to"
-// twice, first as buf and then as pwbufp (both of them refer to the same
-// addresses).
-#undef SANITIZER_INTERCEPT_GETPWENT
-#undef SANITIZER_INTERCEPT_GETPWENT_R
-#undef SANITIZER_INTERCEPT_FGETPWENT
-#undef SANITIZER_INTERCEPT_GETPWNAM_AND_FRIENDS
-#undef SANITIZER_INTERCEPT_GETPWNAM_R_AND_FRIENDS
 // We define our own.
 #if SANITIZER_INTERCEPT_TLS_GET_ADDR
 #define NEED_TLS_GET_ADDR
@@ -2676,6 +2677,7 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_create);
   TSAN_INTERCEPT(pthread_join);
   TSAN_INTERCEPT(pthread_detach);
+  TSAN_INTERCEPT(pthread_exit);
   #if SANITIZER_LINUX
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);

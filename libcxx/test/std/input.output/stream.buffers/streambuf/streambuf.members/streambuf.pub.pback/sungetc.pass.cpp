@@ -38,7 +38,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         test t;
@@ -52,4 +52,6 @@ int main()
         assert(t.sungetc() == 'a');
         assert(pbackfail_called == 2);
     }
+
+  return 0;
 }

@@ -17,7 +17,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale loc;
@@ -27,4 +27,6 @@ int main()
         std::locale loc(LOCALE_en_US_UTF_8);
         assert(loc.name() == LOCALE_en_US_UTF_8);
     }
+
+  return 0;
 }

@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::student_t_distribution<> D;
@@ -25,4 +25,6 @@ int main()
         D d(p);
         assert(d.n() == 0.25);
     }
+
+  return 0;
 }

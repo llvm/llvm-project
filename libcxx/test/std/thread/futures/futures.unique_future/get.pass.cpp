@@ -61,7 +61,7 @@ void func6(std::promise<void> p)
     p.set_exception(std::make_exception_ptr('c'));
 }
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -150,4 +150,6 @@ int main()
         }
 #endif
     }
+
+  return 0;
 }

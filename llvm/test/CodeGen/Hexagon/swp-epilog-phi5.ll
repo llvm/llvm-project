@@ -9,8 +9,8 @@
 
 ; CHECK: loop0
 ; CHECK: [[REG0:r([0-9]+)]] += mpyi
-; CHECK-NOT: r{{[0-9]+}} += add([[REG0]],#8)
-; CHECK: endloop1
+; CHECK: [[REG2:r([0-9]+)]] = add([[REG1:r([0-9]+)]],add([[REG0]],#8
+; CHECK: endloop0
 
 %s.0 = type { %s.1*, %s.4*, %s.7*, i8*, i8, i32, %s.8*, i32, i32, i32, i8, i8, i32, i32, double, i8, i8, i8, i8, i8, i8, i8, i8, i32, i8, i8, i8, i32, i32, i32, i32, i32, i32, i8**, i32, i32, i32, i32, i32, [64 x i32]*, [4 x %s.9*], [4 x %s.10*], [4 x %s.10*], i32, %s.23*, i8, i8, [16 x i8], [16 x i8], [16 x i8], i32, i8, i8, i8, i8, i16, i16, i8, i8, i8, %s.11*, i32, i32, i32, i32, i8*, i32, [4 x %s.23*], i32, i32, i32, [10 x i32], i32, i32, i32, i32, i32, %s.12*, %s.13*, %s.14*, %s.15*, %s.16*, %s.17*, %s.18*, %s.19*, %s.20*, %s.21*, %s.22* }
 %s.1 = type { void (%s.2*)*, void (%s.2*, i32)*, void (%s.2*)*, void (%s.2*, i8*)*, void (%s.2*)*, i32, %s.3, i32, i32, i8**, i32, i8**, i32, i32 }

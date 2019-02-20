@@ -45,7 +45,7 @@ void test_integral()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_integral<bool>();
     test_integral<char>();
@@ -67,4 +67,6 @@ int main()
 
 //  LWG#2582
     static_assert(!std::is_integral<incomplete_type>::value, "");
+
+  return 0;
 }

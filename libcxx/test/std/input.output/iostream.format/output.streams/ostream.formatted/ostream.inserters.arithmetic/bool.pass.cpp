@@ -48,7 +48,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ostream os((std::streambuf*)0);
@@ -87,4 +87,6 @@ int main()
         os << b;
         assert(sb.str() == "false");
     }
+
+  return 0;
 }

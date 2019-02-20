@@ -15,9 +15,11 @@
 #include <chrono>
 #include <ctime>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock C;
     std::time_t t1 = C::to_time_t(C::now());
     ((void)t1);
+
+  return 0;
 }

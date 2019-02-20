@@ -39,7 +39,7 @@ void test_op_and()
     assert((v1 & v2) == (v3 &= v2));
 }
 
-int main()
+int main(int, char**)
 {
     test_op_and<0>();
     test_op_and<1>();
@@ -50,4 +50,6 @@ int main()
     test_op_and<64>();
     test_op_and<65>();
     test_op_and<1000>();
+
+  return 0;
 }

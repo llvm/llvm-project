@@ -26,10 +26,12 @@
 #include <__debug>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
   try {
     _LIBCPP_ASSERT(false, "foo");
     assert(false);
   } catch (...) {}
+
+  return 0;
 }

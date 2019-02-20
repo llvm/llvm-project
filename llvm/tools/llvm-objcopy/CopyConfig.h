@@ -14,9 +14,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Regex.h"
 // Necessary for llvm::DebugCompressionType::None
 #include "llvm/Target/TargetOptions.h"
-#include <string>
 #include <vector>
 
 namespace llvm {
@@ -48,6 +49,17 @@ enum class DiscardType {
   Locals, // --discard-locals (-X)
 };
 
+class NameOrRegex {
+  StringRef Name;
+  // Regex is shared between multiple CopyConfig instances.
+  std::shared_ptr<Regex> R;
+
+public:
+  NameOrRegex(StringRef Pattern, bool IsRegex);
+  bool operator==(StringRef S) const { return R ? R->match(S) : Name == S; }
+  bool operator!=(StringRef S) const { return !operator==(S); }
+};
+
 // Configuration for copying/stripping a single file.
 struct CopyConfig {
   // Main input/output options
@@ -73,15 +85,16 @@ struct CopyConfig {
   // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
-  std::vector<StringRef> KeepSection;
-  std::vector<StringRef> OnlySection;
-  std::vector<StringRef> SymbolsToGlobalize;
-  std::vector<StringRef> SymbolsToKeep;
-  std::vector<StringRef> SymbolsToLocalize;
-  std::vector<StringRef> SymbolsToRemove;
-  std::vector<StringRef> SymbolsToWeaken;
-  std::vector<StringRef> ToRemove;
-  std::vector<std::string> SymbolsToKeepGlobal;
+  std::vector<NameOrRegex> KeepSection;
+  std::vector<NameOrRegex> OnlySection;
+  std::vector<NameOrRegex> SymbolsToGlobalize;
+  std::vector<NameOrRegex> SymbolsToKeep;
+  std::vector<NameOrRegex> SymbolsToLocalize;
+  std::vector<NameOrRegex> SymbolsToRemove;
+  std::vector<NameOrRegex> UnneededSymbolsToRemove;
+  std::vector<NameOrRegex> SymbolsToWeaken;
+  std::vector<NameOrRegex> ToRemove;
+  std::vector<NameOrRegex> SymbolsToKeepGlobal;
 
   // Map options
   StringMap<SectionRename> SectionsToRename;
@@ -112,6 +125,7 @@ struct CopyConfig {
 // will contain one or more CopyConfigs.
 struct DriverConfig {
   SmallVector<CopyConfig, 1> CopyConfigs;
+  BumpPtrAllocator Alloc;
 };
 
 // ParseObjcopyOptions returns the config and sets the input arguments. If a

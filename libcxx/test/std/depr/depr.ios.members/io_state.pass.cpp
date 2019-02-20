@@ -20,10 +20,12 @@
 #include <strstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER <= 14
     std::strstream::io_state b = std::strstream::eofbit;
     assert(b == std::ios::eofbit);
 #endif
+
+  return 0;
 }

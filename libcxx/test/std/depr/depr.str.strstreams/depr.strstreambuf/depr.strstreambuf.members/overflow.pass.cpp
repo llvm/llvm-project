@@ -20,7 +20,7 @@
 #include <string>
 #include <strstream>
 
-int main() {
+int main(int, char**) {
   std::ostrstream oss;
   std::string s;
 

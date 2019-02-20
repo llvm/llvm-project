@@ -50,7 +50,7 @@ void fuzz_tests()  // patterns that the fuzzer has found
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::cmatch m;
@@ -85,4 +85,6 @@ int main()
         assert(m.str(0) == "");
     }
     fuzz_tests();
+
+  return 0;
 }

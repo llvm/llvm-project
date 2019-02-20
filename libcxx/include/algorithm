@@ -1610,6 +1610,18 @@ __unwrap_iter(__wrap_iter<_Tp*> __i)
     return __i.base();
 }
 
+template <class _Tp>
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_IF_NODEBUG
+typename enable_if
+<
+    is_trivially_copy_assignable<_Tp>::value,
+    const _Tp*
+>::type
+__unwrap_iter(__wrap_iter<const _Tp*> __i)
+{
+    return __i.base();
+}
+
 #else
 
 template <class _Tp>

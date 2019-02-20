@@ -3672,6 +3672,10 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImemcmp:
     return Builtin::BImemcmp;
 
+  case Builtin::BI__builtin_bcmp:
+  case Builtin::BIbcmp:
+    return Builtin::BIbcmp;
+
   case Builtin::BI__builtin_strncpy:
   case Builtin::BI__builtin___strncpy_chk:
   case Builtin::BIstrncpy:
@@ -3712,6 +3716,8 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BImemmove;
       else if (FnInfo->isStr("memcmp"))
         return Builtin::BImemcmp;
+      else if (FnInfo->isStr("bcmp"))
+        return Builtin::BIbcmp;
       else if (FnInfo->isStr("strncpy"))
         return Builtin::BIstrncpy;
       else if (FnInfo->isStr("strncmp"))

@@ -42,7 +42,7 @@ struct GoodHashNoDefault {
   size_t operator()(T const&) const { return 0; }
 };
 
-int main() {
+int main(int, char**) {
 
   {
     using Set = std::unordered_set<VT>;
@@ -66,4 +66,6 @@ int main() {
     using Set = std::unordered_set<int, GoodHashNoDefault>;
     Set s(/*bucketcount*/42, GoodHashNoDefault(nullptr));
   }
+
+  return 0;
 }

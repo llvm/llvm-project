@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 
 #if TEST_STD_VER > 17
@@ -40,4 +40,6 @@ int main()
                   std::alignment_of<void*>::value,
                   "std::alignment_of<std::max_align_t>::value >= "
                   "std::alignment_of<void*>::value");
+
+  return 0;
 }

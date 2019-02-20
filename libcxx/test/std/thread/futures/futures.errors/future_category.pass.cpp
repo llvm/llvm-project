@@ -16,8 +16,10 @@
 #include <cstring>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     const std::error_category& ec = std::future_category();
     assert(std::strcmp(ec.name(), "future") == 0);
+
+  return 0;
 }

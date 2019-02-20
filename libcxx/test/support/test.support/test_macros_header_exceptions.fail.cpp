@@ -12,7 +12,7 @@
 
 #include "test_macros.h"
 
-int main() {
+int main(int, char**) {
 #if defined(TEST_HAS_NO_EXCEPTIONS)
     try { ((void)0); } catch (...) {} // expected-error {{exceptions disabled}}
 #else
@@ -20,4 +20,6 @@ int main() {
 #error exceptions enabled
 // expected-error@-1 {{exceptions enabled}}
 #endif
+
+  return 0;
 }

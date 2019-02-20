@@ -1,4 +1,4 @@
-UNSUPPORTED: windows,freebsd
+UNSUPPORTED: freebsd
 
 RUN: %cpp_compiler %S/CxxStringEqTest.cpp -o %t-CxxStringEqTest
 

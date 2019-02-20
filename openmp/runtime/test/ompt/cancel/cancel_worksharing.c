@@ -1,7 +1,7 @@
 // RUN: %libomp-compile && env OMP_CANCELLATION=true %libomp-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
 // Current GOMP interface implementation does not support cancellation; icc 16 does not distinguish between sections and loops
-// XFAIL: gcc, icc-16
+// XFAIL: icc-16
 
 #include "callback.h"
 #include <unistd.h>

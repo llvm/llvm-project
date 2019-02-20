@@ -16,7 +16,7 @@
 #include <locale>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     {
@@ -45,4 +45,6 @@ int main()
         assert(f.compare(ib+1, ib+3, ia, ia+sa) == 1);
         assert(f.compare(ia, ia+3, ib, ib+3) == 0);
     }
+
+  return 0;
 }

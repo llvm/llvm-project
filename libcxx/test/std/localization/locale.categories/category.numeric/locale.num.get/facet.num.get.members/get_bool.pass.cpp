@@ -51,7 +51,7 @@ protected:
     virtual string_type do_falsename() const {return "ab";}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     std::ios ios(0);
@@ -226,4 +226,6 @@ int main()
         assert(err == ios.goodbit);
         assert(b == true);
     }
+
+  return 0;
 }

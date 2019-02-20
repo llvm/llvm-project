@@ -29,7 +29,7 @@ test()
 
 struct A {};
 
-int main()
+int main(int, char**)
 {
     test<int>();
     test<unsigned>();
@@ -39,4 +39,6 @@ int main()
     test<double>();
     test<long double>();
     test<A>();
+
+  return 0;
 }

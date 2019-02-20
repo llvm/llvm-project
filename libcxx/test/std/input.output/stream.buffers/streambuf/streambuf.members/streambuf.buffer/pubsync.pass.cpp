@@ -23,10 +23,12 @@ struct test
     test() {}
 };
 
-int main()
+int main(int, char**)
 {
     {
         test<char> t;
         assert(t.pubsync() == 0);
     }
+
+  return 0;
 }

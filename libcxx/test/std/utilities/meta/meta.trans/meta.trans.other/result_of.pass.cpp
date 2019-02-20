@@ -92,7 +92,7 @@ void test_no_result()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     typedef NotDerived ND;
     { // functor object
@@ -366,4 +366,6 @@ int main()
 #endif
     test_no_result<PMD(ND&)>();
     }
+
+  return 0;
 }

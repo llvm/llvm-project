@@ -24,7 +24,7 @@
 #include <cstddef>
 
 
-int main()
+int main(int, char**)
 {
 //  Test the explicit deduction guides
     {
@@ -41,4 +41,6 @@ int main()
 
 //  Test the implicit deduction guides
 
+
+  return 0;
 }

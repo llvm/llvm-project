@@ -15,9 +15,11 @@
 #include <system_error>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::error_condition ec;
     assert(ec.value() == 0);
     assert(ec.category() == std::generic_category());
+
+  return 0;
 }

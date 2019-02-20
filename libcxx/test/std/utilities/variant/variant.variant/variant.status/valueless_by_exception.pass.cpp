@@ -25,7 +25,7 @@
 #include "variant_test_helpers.hpp"
 
 
-int main() {
+int main(int, char**) {
   {
     using V = std::variant<int, long>;
     constexpr V v;
@@ -50,4 +50,6 @@ int main() {
     assert(v.valueless_by_exception());
   }
 #endif
+
+  return 0;
 }

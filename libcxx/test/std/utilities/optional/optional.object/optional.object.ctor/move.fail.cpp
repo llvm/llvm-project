@@ -28,9 +28,11 @@ struct S {
     };
 
 
-int main()
+int main(int, char**)
 {
     static_assert (!std::is_trivially_move_constructible_v<S>, "" );
     constexpr std::optional<S> o1;
     constexpr std::optional<S> o2 = std::move(o1);  // not constexpr
+
+  return 0;
 }

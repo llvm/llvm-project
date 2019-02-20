@@ -33,7 +33,7 @@ constexpr bool testConstexpr()
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using day  = std::chrono::day;
     using days = std::chrono::days;
@@ -55,4 +55,6 @@ int main()
         assert(static_cast<unsigned>(d1) == i + 12);
         assert(static_cast<unsigned>(d2) == i + 12);
     }
+
+  return 0;
 }

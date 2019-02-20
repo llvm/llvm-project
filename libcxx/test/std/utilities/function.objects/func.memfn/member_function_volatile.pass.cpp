@@ -69,9 +69,11 @@ test2(F f)
     }
 }
 
-int main()
+int main(int, char**)
 {
     test0(std::mem_fn(&A::test0));
     test1(std::mem_fn(&A::test1));
     test2(std::mem_fn(&A::test2));
+
+  return 0;
 }

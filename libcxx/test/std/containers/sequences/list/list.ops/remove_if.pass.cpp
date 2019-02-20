@@ -29,7 +29,7 @@ bool g(int i)
 
 typedef unary_counting_predicate<bool(*)(int), int> Predicate;
 
-int main()
+int main(int, char**)
 {
     {
     int a1[] = {1, 2, 3, 4};
@@ -60,4 +60,6 @@ int main()
     assert(cp.count() == 4);
     }
 #endif
+
+  return 0;
 }

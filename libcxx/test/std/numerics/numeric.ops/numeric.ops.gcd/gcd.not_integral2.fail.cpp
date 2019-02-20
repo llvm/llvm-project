@@ -18,7 +18,9 @@
 #include <numeric>
 
 
-int main()
+int main(int, char**)
 {
     std::gcd(4, 6.0);
+
+  return 0;
 }

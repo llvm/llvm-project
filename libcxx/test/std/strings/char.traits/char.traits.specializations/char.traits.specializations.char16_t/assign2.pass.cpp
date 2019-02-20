@@ -27,7 +27,7 @@ constexpr bool test_constexpr()
 }
 #endif
 
-int main()
+int main(int, char**)
 {
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
 #if TEST_STD_VER >= 11
@@ -40,4 +40,6 @@ int main()
     static_assert(test_constexpr(), "" );
 #endif
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+
+  return 0;
 }

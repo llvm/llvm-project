@@ -14,4 +14,6 @@
 
 // expected-error@experimental/string_view:* {{"<experimental/string_view> has been removed. Use <string_view> instead."}}
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

@@ -52,7 +52,7 @@ private:
   typedef int difference_type;
 };
 
-int main()
+int main(int, char**)
 {
     static_assert((std::is_same<std::pointer_traits<A>::difference_type, char>::value), "");
     static_assert((std::is_same<std::pointer_traits<B>::difference_type, std::ptrdiff_t>::value), "");
@@ -62,4 +62,6 @@ int main()
 #if TEST_STD_VER >= 11
     static_assert((std::is_same<std::pointer_traits<F<int>>::difference_type, std::ptrdiff_t>::value), "");
 #endif
+
+  return 0;
 }

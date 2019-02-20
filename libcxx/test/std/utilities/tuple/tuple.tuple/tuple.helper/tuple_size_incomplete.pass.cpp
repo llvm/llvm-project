@@ -50,7 +50,7 @@ void test_incomplete() {
 }
 
 
-int main()
+int main(int, char**)
 {
   test_complete<std::tuple<> >();
   test_complete<std::tuple<int&> >();
@@ -63,4 +63,6 @@ int main()
   test_incomplete<int>();
   test_incomplete<std::tuple<int>&>();
   test_incomplete<Dummy2>();
+
+  return 0;
 }

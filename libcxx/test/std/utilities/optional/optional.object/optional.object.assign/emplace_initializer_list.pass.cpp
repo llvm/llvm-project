@@ -69,7 +69,7 @@ public:
 
 bool Z::dtor_called = false;
 
-int main()
+int main(int, char**)
 {
     {
         X x;
@@ -117,4 +117,6 @@ int main()
         }
     }
 #endif
+
+  return 0;
 }

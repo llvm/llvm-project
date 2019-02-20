@@ -27,7 +27,7 @@ public:
         : F(refs) {}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     char str[200];
@@ -328,4 +328,6 @@ int main()
         std::string ex(str, iter.base());
         assert(ex == "%");
     }
+
+  return 0;
 }

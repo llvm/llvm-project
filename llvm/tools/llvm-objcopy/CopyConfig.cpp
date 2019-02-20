@@ -18,9 +18,10 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/StringSaver.h"
 #include <memory>
-#include <string>
 
 namespace llvm {
 namespace objcopy {
@@ -225,8 +226,10 @@ static const MachineInfo &getOutputFormatMachineInfo(StringRef Format) {
   return Iter->getValue();
 }
 
-static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
-                                     StringRef Filename) {
+static void addSymbolsFromFile(std::vector<NameOrRegex> &Symbols,
+                               BumpPtrAllocator &Alloc, StringRef Filename,
+                               bool UseRegex) {
+  StringSaver Saver(Alloc);
   SmallVector<StringRef, 16> Lines;
   auto BufOrErr = MemoryBuffer::getFile(Filename);
   if (!BufOrErr)
@@ -238,14 +241,52 @@ static void addGlobalSymbolsFromFile(std::vector<std::string> &Symbols,
     // it's not empty.
     auto TrimmedLine = Line.split('#').first.trim();
     if (!TrimmedLine.empty())
-      Symbols.push_back(TrimmedLine.str());
+      Symbols.emplace_back(Saver.save(TrimmedLine), UseRegex);
   }
 }
 
+NameOrRegex::NameOrRegex(StringRef Pattern, bool IsRegex) {
+  if (!IsRegex) {
+    Name = Pattern;
+    return;
+  }
+
+  SmallVector<char, 32> Data;
+  R = std::make_shared<Regex>(
+      ("^" + Pattern.ltrim('^').rtrim('$') + "$").toStringRef(Data));
+}
+
+static Error addSymbolsToRenameFromFile(StringMap<StringRef> &SymbolsToRename,
+                                        BumpPtrAllocator &Alloc,
+                                        StringRef Filename) {
+  StringSaver Saver(Alloc);
+  SmallVector<StringRef, 16> Lines;
+  auto BufOrErr = MemoryBuffer::getFile(Filename);
+  if (!BufOrErr)
+    return createFileError(Filename, BufOrErr.getError());
+
+  BufOrErr.get()->getBuffer().split(Lines, '\n');
+  size_t NumLines = Lines.size();
+  for (size_t LineNo = 0; LineNo < NumLines; ++LineNo) {
+    StringRef TrimmedLine = Lines[LineNo].split('#').first.trim();
+    if (TrimmedLine.empty())
+      continue;
+
+    std::pair<StringRef, StringRef> Pair = Saver.save(TrimmedLine).split(' ');
+    StringRef NewName = Pair.second.trim();
+    if (NewName.empty())
+      return createStringError(errc::invalid_argument,
+                               "%s:%zu: missing new symbol name",
+                               Filename.str().c_str(), LineNo + 1);
+    SymbolsToRename.insert({Pair.first, NewName});
+  }
+  return Error::success();
+}
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
 DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
+  DriverConfig DC;
   ObjcopyOptTable T;
   unsigned MissingArgumentIndex, MissingArgumentCount;
   llvm::opt::InputArgList InputArgs =
@@ -289,6 +330,7 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
        InputArgs.hasArg(OBJCOPY_output_target)))
     error("--target cannot be used with --input-target or --output-target");
 
+  bool UseRegex = InputArgs.hasArg(OBJCOPY_regex);
   if (InputArgs.hasArg(OBJCOPY_target)) {
     Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
     Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
@@ -343,6 +385,11 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       error("Multiple redefinition of symbol " + Old2New.first);
   }
 
+  for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbols))
+    if (Error E = addSymbolsToRenameFromFile(Config.SymbolsToRename, DC.Alloc,
+                                             Arg->getValue()))
+      error(std::move(E));
+
   for (auto Arg : InputArgs.filtered(OBJCOPY_rename_section)) {
     SectionRename SR = parseRenameSectionValue(StringRef(Arg->getValue()));
     if (!Config.SectionsToRename.try_emplace(SR.OriginalName, SR).second)
@@ -368,11 +415,11 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   }
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
-    Config.ToRemove.push_back(Arg->getValue());
+    Config.ToRemove.emplace_back(Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_section))
-    Config.KeepSection.push_back(Arg->getValue());
+    Config.KeepSection.emplace_back(Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_only_section))
-    Config.OnlySection.push_back(Arg->getValue());
+    Config.OnlySection.emplace_back(Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_section))
     Config.AddSection.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_dump_section))
@@ -397,19 +444,37 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   Config.DecompressDebugSections =
       InputArgs.hasArg(OBJCOPY_decompress_debug_sections);
   for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbol))
-    Config.SymbolsToLocalize.push_back(Arg->getValue());
+    Config.SymbolsToLocalize.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_localize_symbols))
+    addSymbolsFromFile(Config.SymbolsToLocalize, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbol))
-    Config.SymbolsToKeepGlobal.push_back(Arg->getValue());
+    Config.SymbolsToKeepGlobal.emplace_back(Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_global_symbols))
-    addGlobalSymbolsFromFile(Config.SymbolsToKeepGlobal, Arg->getValue());
+    addSymbolsFromFile(Config.SymbolsToKeepGlobal, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbol))
-    Config.SymbolsToGlobalize.push_back(Arg->getValue());
+    Config.SymbolsToGlobalize.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_globalize_symbols))
+    addSymbolsFromFile(Config.SymbolsToGlobalize, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbol))
-    Config.SymbolsToWeaken.push_back(Arg->getValue());
+    Config.SymbolsToWeaken.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_weaken_symbols))
+    addSymbolsFromFile(Config.SymbolsToWeaken, DC.Alloc, Arg->getValue(),
+                       UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbol))
-    Config.SymbolsToRemove.push_back(Arg->getValue());
+    Config.SymbolsToRemove.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_symbols))
+    addSymbolsFromFile(Config.SymbolsToRemove, DC.Alloc, Arg->getValue(),
+                       UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbol))
+    Config.UnneededSymbolsToRemove.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_strip_unneeded_symbols))
+    addSymbolsFromFile(Config.UnneededSymbolsToRemove, DC.Alloc,
+                       Arg->getValue(), UseRegex);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
-    Config.SymbolsToKeep.push_back(Arg->getValue());
+    Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegex);
 
   Config.DeterministicArchives = InputArgs.hasFlag(
       OBJCOPY_enable_deterministic_archives,
@@ -426,7 +491,6 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   if (Config.DecompressDebugSections && !zlib::isAvailable())
     error("LLVM was not compiled with LLVM_ENABLE_ZLIB: cannot decompress.");
 
-  DriverConfig DC;
   DC.CopyConfigs.push_back(std::move(Config));
   return DC;
 }
@@ -469,6 +533,7 @@ DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
     error("Multiple input files cannot be used in combination with -o");
 
   CopyConfig Config;
+  bool UseRegexp = InputArgs.hasArg(STRIP_regex);
   Config.StripDebug = InputArgs.hasArg(STRIP_strip_debug);
 
   if (InputArgs.hasArg(STRIP_discard_all, STRIP_discard_locals))
@@ -482,16 +547,16 @@ DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
   Config.KeepFileSymbols = InputArgs.hasArg(STRIP_keep_file_symbols);
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_section))
-    Config.KeepSection.push_back(Arg->getValue());
+    Config.KeepSection.emplace_back(Arg->getValue(), UseRegexp);
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
-    Config.ToRemove.push_back(Arg->getValue());
+    Config.ToRemove.emplace_back(Arg->getValue(), UseRegexp);
 
   for (auto Arg : InputArgs.filtered(STRIP_strip_symbol))
-    Config.SymbolsToRemove.push_back(Arg->getValue());
+    Config.SymbolsToRemove.emplace_back(Arg->getValue(), UseRegexp);
 
   for (auto Arg : InputArgs.filtered(STRIP_keep_symbol))
-    Config.SymbolsToKeep.push_back(Arg->getValue());
+    Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegexp);
 
   if (!Config.StripDebug && !Config.StripUnneeded &&
       Config.DiscardMode == DiscardType::None && !Config.StripAllGNU && Config.SymbolsToRemove.empty())

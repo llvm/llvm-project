@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::binomial_distribution<> D;
@@ -36,4 +36,6 @@ int main()
         assert(d.t() == 3);
         assert(d.p() == 0.75);
     }
+
+  return 0;
 }

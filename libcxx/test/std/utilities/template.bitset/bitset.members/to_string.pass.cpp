@@ -153,7 +153,7 @@ void test_to_string()
 }
 }
 
-int main()
+int main(int, char**)
 {
     test_to_string<0>();
     test_to_string<1>();
@@ -164,4 +164,6 @@ int main()
     test_to_string<64>();
     test_to_string<65>();
     test_to_string<1000>();
+
+  return 0;
 }

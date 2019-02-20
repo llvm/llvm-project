@@ -17,7 +17,7 @@
 #include <limits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::cauchy_distribution<> D;
@@ -28,4 +28,6 @@ int main()
         assert(p.a() == .75);
         assert(p.b() == 6);
     }
+
+  return 0;
 }

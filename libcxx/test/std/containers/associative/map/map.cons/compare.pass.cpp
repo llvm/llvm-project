@@ -20,7 +20,7 @@
 #include "../../../test_compare.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef test_compare<std::less<int> > C;
@@ -38,4 +38,6 @@ int main()
     assert(m.key_comp() == C(3));
     }
 #endif
+
+  return 0;
 }

@@ -24,4 +24,6 @@ constexpr P p(1);
 
 constexpr const int *ptr_1 = p;
 
-int main() { assert(*ptr_1 == 1); }
+int main(int, char**) { assert(*ptr_1 == 1); 
+  return 0;
+}

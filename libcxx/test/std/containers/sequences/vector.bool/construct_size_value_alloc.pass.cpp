@@ -30,10 +30,12 @@ test(typename C::size_type n, const typename C::value_type& x,
         assert(*i == x);
 }
 
-int main()
+int main(int, char**)
 {
     test<std::vector<bool> >(50, true, std::allocator<bool>());
 #if TEST_STD_VER >= 11
     test<std::vector<bool, min_allocator<bool>> >(50, true, min_allocator<bool>());
 #endif
+
+  return 0;
 }

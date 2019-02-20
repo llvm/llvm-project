@@ -17,7 +17,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 //  ensure that the macros that are supposed to be defined in <utility> are defined.
 
@@ -28,4 +28,6 @@ int main()
 # error "__cpp_lib_fooby has an invalid value"
 #endif
 */
+
+  return 0;
 }

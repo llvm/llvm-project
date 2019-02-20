@@ -158,7 +158,8 @@ void test_layout() {
     static_assert(offsetof(PairT, first) == 0, "");
 }
 
-int main() {
+int main(int, char**) {
     test_trivial();
     test_layout();
+    return 0;
 }

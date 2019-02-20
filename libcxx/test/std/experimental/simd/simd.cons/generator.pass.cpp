@@ -82,9 +82,11 @@ void test_generator() {
   }
 }
 
-int main() {
+int main(int, char**) {
   // TODO: adjust the tests when this assertion fails.
   assert(ex::native_simd<int32_t>::size() >= 4);
   test_generator<ex::native_simd<int32_t>>();
   test_generator<ex::fixed_size_simd<int32_t, 4>>();
+
+  return 0;
 }

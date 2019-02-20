@@ -181,8 +181,8 @@ void asan_register_worker_thread(int parent_tid, StackTrace *stack) {
     t = AsanThread::Create(/* start_routine */ nullptr, /* arg */ nullptr,
                            parent_tid, stack, /* detached */ true);
     t->Init();
-    asanThreadRegistry().StartThread(t->tid(), GetTid(),
-                                     /* workerthread */ true, 0);
+    asanThreadRegistry().StartThread(t->tid(), GetTid(), ThreadType::Worker,
+                                     nullptr);
     SetCurrentThread(t);
   }
 }

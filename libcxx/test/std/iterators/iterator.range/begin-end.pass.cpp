@@ -135,7 +135,7 @@ void test_const_array( const T (&array)[Sz] ) {
 #endif
     }
 
-int main(){
+int main(int, char**) {
     std::vector<int> v; v.push_back(1);
     std::list<int> l;   l.push_back(2);
     std::array<int, 1> a; a[0] = 3;
@@ -197,4 +197,6 @@ int main(){
         static_assert ( *std::crbegin(c) == 4, "" );
     }
 #endif
+
+  return 0;
 }

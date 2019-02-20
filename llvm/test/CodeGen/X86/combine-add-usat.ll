@@ -77,9 +77,9 @@ define <8 x i16> @combine_constfold_undef_v8i16() {
 define i32 @combine_constant_i32(i32 %a0) {
 ; CHECK-LABEL: combine_constant_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addl $1, %edi
+; CHECK-NEXT:    incl %edi
 ; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovael %edi, %eax
+; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = call i32 @llvm.uadd.sat.i32(i32 1, i32 %a0)
   ret i32 %1

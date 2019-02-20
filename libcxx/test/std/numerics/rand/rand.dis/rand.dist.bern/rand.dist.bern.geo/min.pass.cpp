@@ -16,11 +16,13 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::geometric_distribution<> D;
         D d(.5);
         assert(d.min() == 0);
     }
+
+  return 0;
 }

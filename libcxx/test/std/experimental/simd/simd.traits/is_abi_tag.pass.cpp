@@ -109,4 +109,6 @@ static_assert(!ex::is_abi_tag_v<ex::simd<float>>, "");
 static_assert(!ex::is_abi_tag_v<ex::simd_mask<int>>, "");
 static_assert(!ex::is_abi_tag_v<ex::simd_mask<float>>, "");
 
-int main() {}
+int main(int, char**) {
+  return 0;
+}

@@ -51,8 +51,9 @@ test_with_iterator()
 }
 
 
-int main()
+int main(int, char**)
 {
     test_with_iterator<random_access_iterator<int*> >();
     test_with_iterator<int*>();
+    return 0;
 }

@@ -75,7 +75,7 @@ tests(const C& c, int p, int f, int l)
     assert(distance(c.begin(), c.end()) == size_t1);
 }
 
-int main()
+int main(int, char**)
 {
     {
     // splicing different containers
@@ -165,4 +165,6 @@ int main()
     }
     }
 #endif
+
+  return 0;
 }

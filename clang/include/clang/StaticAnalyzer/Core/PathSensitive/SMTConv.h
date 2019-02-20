@@ -15,7 +15,7 @@
 
 #include "clang/AST/Expr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTSolver.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SMTAPI.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 
 namespace clang {

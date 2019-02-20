@@ -31,7 +31,7 @@ namespace clangd {
 static llvm::cl::opt<bool>
     UseDex("use-dex-index",
            llvm::cl::desc("Use experimental Dex dynamic index."),
-           llvm::cl::init(false), llvm::cl::Hidden);
+           llvm::cl::init(true), llvm::cl::Hidden);
 
 static llvm::cl::opt<Path> CompileCommandsDir(
     "compile-commands-dir",
@@ -163,7 +163,7 @@ static llvm::cl::opt<Path> IndexFile(
     "index-file",
     llvm::cl::desc(
         "Index file to build the static index. The file must have been created "
-        "by a compatible clangd-index.\n"
+        "by a compatible clangd-indexer.\n"
         "WARNING: This option is experimental only, and will be removed "
         "eventually. Don't rely on it."),
     llvm::cl::init(""), llvm::cl::Hidden);
@@ -203,9 +203,15 @@ static llvm::cl::opt<bool> EnableFunctionArgSnippets(
 
 static llvm::cl::opt<std::string> ClangTidyChecks(
     "clang-tidy-checks",
-    llvm::cl::desc("List of clang-tidy checks to run (this will override "
-                   ".clang-tidy files)"),
+    llvm::cl::desc(
+        "List of clang-tidy checks to run (this will override "
+        ".clang-tidy files). Only meaningful when -clang-tidy flag is on."),
     llvm::cl::init(""));
+
+static llvm::cl::opt<bool> EnableClangTidy(
+    "clang-tidy",
+    llvm::cl::desc("Enable clang-tidy diagnostics."),
+    llvm::cl::init(false));
 
 static llvm::cl::opt<bool> SuggestMissingIncludes(
     "suggest-missing-includes",
@@ -441,13 +447,16 @@ int main(int argc, char *argv[]) {
   }
 
   // Create an empty clang-tidy option.
-  auto OverrideClangTidyOptions = tidy::ClangTidyOptions::getDefaults();
-  OverrideClangTidyOptions.Checks = ClangTidyChecks;
-  tidy::FileOptionsProvider ClangTidyOptProvider(
-      tidy::ClangTidyGlobalOptions(),
-      /* Default */ tidy::ClangTidyOptions::getDefaults(),
-      /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
-  Opts.ClangTidyOptProvider = &ClangTidyOptProvider;
+  std::unique_ptr<tidy::ClangTidyOptionsProvider> ClangTidyOptProvider;
+  if (EnableClangTidy) {
+    auto OverrideClangTidyOptions = tidy::ClangTidyOptions::getDefaults();
+    OverrideClangTidyOptions.Checks = ClangTidyChecks;
+    ClangTidyOptProvider = llvm::make_unique<tidy::FileOptionsProvider>(
+        tidy::ClangTidyGlobalOptions(),
+        /* Default */ tidy::ClangTidyOptions::getDefaults(),
+        /* Override */ OverrideClangTidyOptions, FSProvider.getFileSystem());
+  }
+  Opts.ClangTidyOptProvider = ClangTidyOptProvider.get();
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   ClangdLSPServer LSPServer(
       *TransportLayer, FSProvider, CCOpts, CompileCommandsDirPath,

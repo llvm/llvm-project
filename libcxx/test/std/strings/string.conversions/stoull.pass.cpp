@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::stoull("0") == 0);
     assert(std::stoull(L"0") == 0);
@@ -112,4 +112,6 @@ int main()
         assert(idx == 0);
     }
 #endif
+
+  return 0;
 }

@@ -354,7 +354,7 @@ void test2()
 }
 
 
-int main()
+int main(int, char**)
 {
     test0();
     test1();
@@ -449,4 +449,6 @@ int main()
     static_assert ( sv2.compare(0, 6, "abcde") == 0, "" );
     }
 #endif
+
+  return 0;
 }

@@ -57,7 +57,7 @@ void f()
     assert(d < ms(200));  // within 200ms
 }
 
-int main()
+int main(int, char**)
 {
     m.lock();
     std::vector<std::thread> v;
@@ -67,4 +67,6 @@ int main()
     m.unlock();
     for (auto& t : v)
         t.join();
+
+  return 0;
 }

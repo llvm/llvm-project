@@ -301,7 +301,7 @@ test1()
 
 #endif  // TEST_STD_VER >= 11
 
-int main()
+int main(int, char**)
 {
     test<bidirectional_iterator<std::pair<int,int>*> >();
     test<random_access_iterator<std::pair<int,int>*> >();
@@ -310,4 +310,6 @@ int main()
 #if TEST_STD_VER >= 11
     test1<bidirectional_iterator<std::unique_ptr<int>*> >();
 #endif
+
+  return 0;
 }

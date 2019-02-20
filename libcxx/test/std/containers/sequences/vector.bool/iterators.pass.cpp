@@ -22,7 +22,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef bool T;
@@ -120,4 +120,6 @@ int main()
         assert (ii1 - cii == 0);
     }
 #endif
+
+  return 0;
 }

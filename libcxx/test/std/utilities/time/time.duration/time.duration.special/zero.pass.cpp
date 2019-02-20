@@ -39,8 +39,10 @@ void test()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<std::chrono::duration<int> >();
     test<std::chrono::duration<Rep> >();
+
+  return 0;
 }

@@ -327,7 +327,7 @@ namespace update_rbrace_loc_crash {
   struct A {};
   template <typename T, typename F, int... I>
   std::initializer_list<T> ExplodeImpl(F p1, A<int, I...>) {
-    // expected-error@+1 {{reference to type 'const update_rbrace_loc_crash::Incomplete' could not bind to an rvalue of type 'void'}}
+    // expected-error@+1 {{reference to incomplete type 'const update_rbrace_loc_crash::Incomplete' could not bind to an rvalue of type 'void'}}
     return {p1(I)...};
   }
   template <typename T, int N, typename F>

@@ -68,7 +68,7 @@ constexpr int carr1[] = {1,2,3,4};
           int   arr[] = {5,6,7};
 std::string   sarr [] = { "ABC", "DEF", "GHI", "JKL", "MNO"};
 
-int main ()
+int main(int, char**)
 {
     {
     using Sp = std::span<const int>;
@@ -132,4 +132,6 @@ int main ()
     testRuntimeSpan<Sp, 4>(Sp{sarr});
     testRuntimeSpan<Sp, 5>(Sp{sarr});
     }
+
+  return 0;
 }

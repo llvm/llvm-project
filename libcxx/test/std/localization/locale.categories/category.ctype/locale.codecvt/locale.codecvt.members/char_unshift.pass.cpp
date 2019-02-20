@@ -20,7 +20,7 @@
 
 typedef std::codecvt<char, char, std::mbstate_t> F;
 
-int main()
+int main(int, char**)
 {
     std::locale l = std::locale::classic();
     std::vector<char> to(3);
@@ -29,4 +29,6 @@ int main()
     char* to_next = 0;
     assert(f.unshift(mbs, to.data(), to.data() + to.size(), to_next) == F::noconv);
     assert(to_next == to.data());
+
+  return 0;
 }

@@ -18,9 +18,11 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::mt19937_64 e;
     e.discard(9999);
     assert(e() == 9981545732273789042ull);
+
+  return 0;
 }

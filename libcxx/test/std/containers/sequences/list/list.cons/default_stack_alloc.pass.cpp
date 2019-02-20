@@ -15,7 +15,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::list<int> l;
@@ -44,4 +44,6 @@ int main()
         assert(std::distance(l.begin(), l.end()) == 0);
     }
 #endif
+
+  return 0;
 }

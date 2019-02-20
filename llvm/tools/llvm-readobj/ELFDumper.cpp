@@ -19,6 +19,7 @@
 #include "llvm-readobj.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
@@ -651,16 +652,6 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
   if (!Sec)
     return;
 
-  // The number of entries in the section SHT_GNU_verdef
-  // is determined by DT_VERDEFNUM tag.
-  unsigned VerDefsNum = 0;
-  for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table()) {
-    if (Dyn.d_tag == DT_VERDEFNUM) {
-      VerDefsNum = Dyn.d_un.d_val;
-      break;
-    }
-  }
-
   const uint8_t *SecStartAddress =
       (const uint8_t *)Obj->base() + Sec->sh_offset;
   const uint8_t *SecEndAddress = SecStartAddress + Sec->sh_size;
@@ -668,6 +659,7 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
   const typename ELFO::Elf_Shdr *StrTab =
       unwrapOrError(Obj->getSection(Sec->sh_link));
 
+  unsigned VerDefsNum = Sec->sh_info;
   while (VerDefsNum--) {
     if (P + sizeof(VerDef) > SecEndAddress)
       report_fatal_error("invalid offset in the section");
@@ -710,19 +702,12 @@ static void printVersionDependencySection(ELFDumper<ELFT> *Dumper,
   if (!Sec)
     return;
 
-  unsigned VerNeedNum = 0;
-  for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table()) {
-    if (Dyn.d_tag == DT_VERNEEDNUM) {
-      VerNeedNum = Dyn.d_un.d_val;
-      break;
-    }
-  }
-
   const uint8_t *SecData = (const uint8_t *)Obj->base() + Sec->sh_offset;
   const typename ELFO::Elf_Shdr *StrTab =
       unwrapOrError(Obj->getSection(Sec->sh_link));
 
   const uint8_t *P = SecData;
+  unsigned VerNeedNum = Sec->sh_info;
   for (unsigned I = 0; I < VerNeedNum; ++I) {
     const VerNeed *Need = reinterpret_cast<const VerNeed *>(P);
     DictScope Entry(W, "Dependency");
@@ -3316,6 +3301,7 @@ void GNUStyle<ELFT>::printProgramHeaders(const ELFO *Obj) {
 template <class ELFT>
 void GNUStyle<ELFT>::printSectionMapping(const ELFO *Obj) {
   OS << "\n Section to Segment mapping:\n  Segment Sections...\n";
+  DenseSet<const Elf_Shdr *> BelongsToSegment;
   int Phnum = 0;
   for (const Elf_Phdr &Phdr : unwrapOrError(Obj->program_headers())) {
     std::string Sections;
@@ -3330,10 +3316,23 @@ void GNUStyle<ELFT>::printSectionMapping(const ELFO *Obj) {
                           Phdr.p_type != ELF::PT_TLS;
       if (!TbssInNonTLS && checkTLSSections(Phdr, Sec) &&
           checkoffsets(Phdr, Sec) && checkVMA(Phdr, Sec) &&
-          checkPTDynamic(Phdr, Sec) && (Sec.sh_type != ELF::SHT_NULL))
+          checkPTDynamic(Phdr, Sec) && (Sec.sh_type != ELF::SHT_NULL)) {
         Sections += unwrapOrError(Obj->getSectionName(&Sec)).str() + " ";
+        BelongsToSegment.insert(&Sec);
+      }
     }
     OS << Sections << "\n";
+    OS.flush();
+  }
+
+  // Display sections that do not belong to a segment.
+  std::string Sections;
+  for (const Elf_Shdr &Sec : unwrapOrError(Obj->sections())) {
+    if (BelongsToSegment.find(&Sec) == BelongsToSegment.end())
+      Sections += unwrapOrError(Obj->getSectionName(&Sec)).str() + ' ';
+  }
+  if (!Sections.empty()) {
+    OS << "   None  " << Sections << '\n';
     OS.flush();
   }
 }
@@ -3642,6 +3641,16 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
                                   ArrayRef<uint8_t> Data) {
   std::string str;
   raw_string_ostream OS(str);
+  uint32_t PrData;
+  auto DumpBit = [&](uint32_t Flag, StringRef Name) {
+    if (PrData & Flag) {
+      PrData &= ~Flag;
+      OS << Name;
+      if (PrData)
+        OS << ", ";
+    }
+  };
+
   switch (Type) {
   default:
     OS << format("<application-specific type 0x%x>", Type);
@@ -3661,33 +3670,87 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
       OS << format(" <corrupt length: 0x%x>", DataSize);
     return OS.str();
   case GNU_PROPERTY_X86_FEATURE_1_AND:
-    OS << "X86 features: ";
-    if (DataSize != 4 && DataSize != 8) {
+    OS << "x86 feature: ";
+    if (DataSize != 4) {
       OS << format("<corrupt length: 0x%x>", DataSize);
       return OS.str();
     }
-    uint64_t CFProtection =
-        (DataSize == 4)
-            ? support::endian::read32<ELFT::TargetEndianness>(Data.data())
-            : support::endian::read64<ELFT::TargetEndianness>(Data.data());
-    if (CFProtection == 0) {
-      OS << "none";
+    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (PrData == 0) {
+      OS << "<None>";
       return OS.str();
     }
-    if (CFProtection & GNU_PROPERTY_X86_FEATURE_1_IBT) {
-      OS << "IBT";
-      CFProtection &= ~GNU_PROPERTY_X86_FEATURE_1_IBT;
-      if (CFProtection)
-        OS << ", ";
+    DumpBit(GNU_PROPERTY_X86_FEATURE_1_IBT, "IBT");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_1_SHSTK, "SHSTK");
+    if (PrData)
+      OS << format("<unknown flags: 0x%x>", PrData);
+    return OS.str();
+  case GNU_PROPERTY_X86_ISA_1_NEEDED:
+  case GNU_PROPERTY_X86_ISA_1_USED:
+    OS << "x86 ISA "
+       << (Type == GNU_PROPERTY_X86_ISA_1_NEEDED ? "needed: " : "used: ");
+    if (DataSize != 4) {
+      OS << format("<corrupt length: 0x%x>", DataSize);
+      return OS.str();
     }
-    if (CFProtection & GNU_PROPERTY_X86_FEATURE_1_SHSTK) {
-      OS << "SHSTK";
-      CFProtection &= ~GNU_PROPERTY_X86_FEATURE_1_SHSTK;
-      if (CFProtection)
-        OS << ", ";
+    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (PrData == 0) {
+      OS << "<None>";
+      return OS.str();
     }
-    if (CFProtection)
-      OS << format("<unknown flags: 0x%llx>", CFProtection);
+    DumpBit(GNU_PROPERTY_X86_ISA_1_CMOV, "CMOV");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE, "SSE");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE2, "SSE2");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE3, "SSE3");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_SSSE3, "SSSE3");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE4_1, "SSE4_1");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_SSE4_2, "SSE4_2");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX, "AVX");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX2, "AVX2");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_FMA, "FMA");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512F, "AVX512F");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512CD, "AVX512CD");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512ER, "AVX512ER");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512PF, "AVX512PF");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512VL, "AVX512VL");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512DQ, "AVX512DQ");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512BW, "AVX512BW");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_4FMAPS, "AVX512_4FMAPS");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_4VNNIW, "AVX512_4VNNIW");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_BITALG, "AVX512_BITALG");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_IFMA, "AVX512_IFMA");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_VBMI, "AVX512_VBMI");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_VBMI2, "AVX512_VBMI2");
+    DumpBit(GNU_PROPERTY_X86_ISA_1_AVX512_VNNI, "AVX512_VNNI");
+    if (PrData)
+      OS << format("<unknown flags: 0x%x>", PrData);
+    return OS.str();
+    break;
+  case GNU_PROPERTY_X86_FEATURE_2_NEEDED:
+  case GNU_PROPERTY_X86_FEATURE_2_USED:
+    OS << "x86 feature "
+       << (Type == GNU_PROPERTY_X86_FEATURE_2_NEEDED ? "needed: " : "used: ");
+    if (DataSize != 4) {
+      OS << format("<corrupt length: 0x%x>", DataSize);
+      return OS.str();
+    }
+    PrData = support::endian::read32<ELFT::TargetEndianness>(Data.data());
+    if (PrData == 0) {
+      OS << "<None>";
+      return OS.str();
+    }
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_X86, "x86");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_X87, "x87");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_MMX, "MMX");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XMM, "XMM");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_YMM, "YMM");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_ZMM, "ZMM");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_FXSR, "FXSR");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVE, "XSAVE");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEOPT, "XSAVEOPT");
+    DumpBit(GNU_PROPERTY_X86_FEATURE_2_XSAVEC, "XSAVEC");
+    if (PrData)
+      OS << format("<unknown flags: 0x%x>", PrData);
     return OS.str();
   }
 }

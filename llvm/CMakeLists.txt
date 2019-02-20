@@ -104,27 +104,60 @@ endif()
 # LLVM_EXTERNAL_${project}_SOURCE_DIR using LLVM_ALL_PROJECTS
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
-set(LLVM_ALL_PROJECTS "clang;libcxx;libcxxabi;libunwind;lldb;compiler-rt;lld;polly;debuginfo-tests")
+set(LLVM_ALL_PROJECTS "clang;clang-tools-extra;compiler-rt;debuginfo-tests;libclc;libcxx;libcxxabi;libunwind;lld;lldb;llgo;llvm;openmp;parallel-libs;polly;pstl")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
 	"Semicolon-separated list of projects to build (${LLVM_ALL_PROJECTS}), or \"all\".")
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
-foreach(proj ${LLVM_ENABLE_PROJECTS})
-  set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
-  if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
-    message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
-  endif()
-  string(TOUPPER "${proj}" upper_proj)
-  STRING(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
-  set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
-  # There is a widely spread opinion that clang-tools-extra should be merged
-  # into clang. The following simulates it by always enabling clang-tools-extra
-  # when enabling clang.
-  if (proj STREQUAL "clang")
-    set(LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../clang-tools-extra")
-  endif()
-endforeach()
+
+# LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
+# `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
+# several reasons:
+#
+# * As an indicator that the `LLVM_ENABLE_PROJECTS` list is now the single
+# source of truth for which projects to build. This means we will ignore user
+# supplied `LLVM_TOOL_<project>_BUILD` CMake cache variables and overwrite
+# them.
+#
+# * The case where the user previously had `LLVM_ENABLE_PROJECTS` set to a
+# non-empty list but now the user wishes to disable building all other projects
+# by setting `LLVM_ENABLE_PROJECTS` to an empty string. In that case we still
+# need to set the `LLVM_TOOL_${upper_proj}_BUILD` variables so that we disable
+# building all the projects that were previously enabled.
+set(LLVM_ENABLE_PROJECTS_USED OFF CACHE BOOL "")
+mark_as_advanced(LLVM_ENABLE_PROJECTS_USED)
+
+if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
+  set(LLVM_ENABLE_PROJECTS_USED ON CACHE BOOL "" FORCE)
+  foreach(proj ${LLVM_ALL_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
+    string(TOUPPER "${proj}" upper_proj)
+    string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
+    if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
+      message(STATUS "${proj} project is enabled")
+      set(SHOULD_ENABLE_PROJECT TRUE)
+      set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+      if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
+        message(FATAL_ERROR "LLVM_ENABLE_PROJECTS requests ${proj} but directory not found: ${PROJ_DIR}")
+      endif()
+      set(LLVM_EXTERNAL_${upper_proj}_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
+    else()
+      message(STATUS "${proj} project is disabled")
+      set(SHOULD_ENABLE_PROJECT FALSE)
+    endif()
+    # Force `LLVM_TOOL_${upper_proj}_BUILD` variables to have values that
+    # corresponds with `LLVM_ENABLE_PROJECTS`. This prevents the user setting
+    # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point
+    # we should deprecate allowing users to set these variables by turning them
+    # into normal CMake variables rather than cache variables.
+    set(LLVM_TOOL_${upper_proj}_BUILD
+      ${SHOULD_ENABLE_PROJECT}
+      CACHE
+      BOOL "Whether to build ${upper_proj} as part of LLVM" FORCE
+    )
+  endforeach()
+endif()
+unset(SHOULD_ENABLE_PROJECT)
 
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
@@ -200,7 +233,7 @@ endif()
 include(VersionFromVCS)
 
 option(LLVM_APPEND_VC_REV
-  "Embed the version control system revision id in LLVM" ON)
+  "Embed the version control system revision in LLVM" ON)
 
 set(PACKAGE_NAME LLVM)
 set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
@@ -383,8 +416,11 @@ option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
   "Enable abi-breaking checks.  Can be WITH_ASSERTS, FORCE_ON or FORCE_OFF.")
 
-option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
+option(LLVM_FORCE_USE_OLD_TOOLCHAIN
        "Set to ON to force using an old, unsupported host toolchain." OFF)
+
+option(LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN
+       "Set to ON to only warn when using a toolchain which is about to be deprecated, instead of emitting an error." OFF)
 
 option(LLVM_USE_INTEL_JITEVENTS
   "Use Intel JIT API to inform Intel(R) VTune(TM) Amplifier XE 2011 about JIT code"
@@ -752,13 +788,12 @@ set(LLVM_SRPM_USER_BINARY_SPECFILE ${CMAKE_CURRENT_SOURCE_DIR}/llvm.spec.in
 set(LLVM_SRPM_BINARY_SPECFILE ${CMAKE_CURRENT_BINARY_DIR}/llvm.spec)
 set(LLVM_SRPM_DIR "${CMAKE_CURRENT_BINARY_DIR}/srpm")
 
-# SVN_REVISION and GIT_COMMIT get set by the call to add_version_info_from_vcs.
-# DUMMY_VAR contains a version string which we don't care about.
-add_version_info_from_vcs(DUMMY_VAR)
-if ( SVN_REVISION )
-  set(LLVM_RPM_SPEC_REVISION "r${SVN_REVISION}")
-elseif ( GIT_COMMIT )
-  set (LLVM_RPM_SPEC_REVISION "g${GIT_COMMIT}")
+get_source_info(${CMAKE_CURRENT_SOURCE_DIR} revision repository)
+string(LENGTH "${revision}" revision_length)
+if(revision MATCHES "^[0-9]+$" AND revision_length LESS 40)
+  set(LLVM_RPM_SPEC_REVISION "r${revision}")
+else()
+  set(LLVM_RPM_SPEC_REVISION "${revision}")
 endif()
 
 configure_file(

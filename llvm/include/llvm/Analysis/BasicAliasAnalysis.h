@@ -144,6 +144,8 @@ private:
   using LocPair = std::pair<MemoryLocation, MemoryLocation>;
   using AliasCacheTy = SmallDenseMap<LocPair, AliasResult, 8>;
   AliasCacheTy AliasCache;
+  using IsCapturedCacheTy = SmallDenseMap<const Value *, bool, 8>;
+  IsCapturedCacheTy IsCapturedCache;
 
   /// Tracks phi nodes we have visited.
   ///

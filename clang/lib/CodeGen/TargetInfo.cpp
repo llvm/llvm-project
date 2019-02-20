@@ -309,10 +309,9 @@ static Address emitVoidPtrDirectVAArg(CodeGenFunction &CGF,
 
   // Advance the pointer past the argument, then store that back.
   CharUnits FullDirectSize = DirectSize.alignTo(SlotSize);
-  llvm::Value *NextPtr =
-    CGF.Builder.CreateConstInBoundsByteGEP(Addr.getPointer(), FullDirectSize,
-                                           "argp.next");
-  CGF.Builder.CreateStore(NextPtr, VAListAddr);
+  Address NextPtr =
+      CGF.Builder.CreateConstInBoundsByteGEP(Addr, FullDirectSize, "argp.next");
+  CGF.Builder.CreateStore(NextPtr.getPointer(), VAListAddr);
 
   // If the argument is smaller than a slot, and this is a big-endian
   // target, the argument will be right-adjusted in its slot.
@@ -765,7 +764,13 @@ public:
       if (const auto *Attr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);
         llvm::AttrBuilder B;
-        B.addAttribute("wasm-import-module", Attr->getImportModuleName());
+        B.addAttribute("wasm-import-module", Attr->getImportModule());
+        Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
+      }
+      if (const auto *Attr = FD->getAttr<WebAssemblyImportNameAttr>()) {
+        llvm::Function *Fn = cast<llvm::Function>(GV);
+        llvm::AttrBuilder B;
+        B.addAttribute("wasm-import-name", Attr->getImportName());
         Fn->addAttributes(llvm::AttributeList::FunctionIndex, B);
       }
     }
@@ -3636,8 +3641,8 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
 
 static Address EmitX86_64VAArgFromMemory(CodeGenFunction &CGF,
                                          Address VAListAddr, QualType Ty) {
-  Address overflow_arg_area_p = CGF.Builder.CreateStructGEP(
-      VAListAddr, 2, CharUnits::fromQuantity(8), "overflow_arg_area_p");
+  Address overflow_arg_area_p =
+      CGF.Builder.CreateStructGEP(VAListAddr, 2, "overflow_arg_area_p");
   llvm::Value *overflow_arg_area =
     CGF.Builder.CreateLoad(overflow_arg_area_p, "overflow_arg_area");
 
@@ -3708,18 +3713,14 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   Address gp_offset_p = Address::invalid(), fp_offset_p = Address::invalid();
   llvm::Value *gp_offset = nullptr, *fp_offset = nullptr;
   if (neededInt) {
-    gp_offset_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 0, CharUnits::Zero(),
-                                    "gp_offset_p");
+    gp_offset_p = CGF.Builder.CreateStructGEP(VAListAddr, 0, "gp_offset_p");
     gp_offset = CGF.Builder.CreateLoad(gp_offset_p, "gp_offset");
     InRegs = llvm::ConstantInt::get(CGF.Int32Ty, 48 - neededInt * 8);
     InRegs = CGF.Builder.CreateICmpULE(gp_offset, InRegs, "fits_in_gp");
   }
 
   if (neededSSE) {
-    fp_offset_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 1, CharUnits::fromQuantity(4),
-                                    "fp_offset_p");
+    fp_offset_p = CGF.Builder.CreateStructGEP(VAListAddr, 1, "fp_offset_p");
     fp_offset = CGF.Builder.CreateLoad(fp_offset_p, "fp_offset");
     llvm::Value *FitsInFP =
       llvm::ConstantInt::get(CGF.Int32Ty, 176 - neededSSE * 16);
@@ -3748,8 +3749,7 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   // loads than necessary. Can we clean this up?
   llvm::Type *LTy = CGF.ConvertTypeForMem(Ty);
   llvm::Value *RegSaveArea = CGF.Builder.CreateLoad(
-      CGF.Builder.CreateStructGEP(VAListAddr, 3, CharUnits::fromQuantity(16)),
-                                  "reg_save_area");
+      CGF.Builder.CreateStructGEP(VAListAddr, 3), "reg_save_area");
 
   Address RegAddr = Address::invalid();
   if (neededInt && neededSSE) {
@@ -3775,16 +3775,13 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     llvm::Value *V = CGF.Builder.CreateAlignedLoad(
         TyLo, CGF.Builder.CreateBitCast(RegLoAddr, PTyLo),
         CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyLo)));
-    CGF.Builder.CreateStore(V,
-                    CGF.Builder.CreateStructGEP(Tmp, 0, CharUnits::Zero()));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
 
     // Copy the second element.
     V = CGF.Builder.CreateAlignedLoad(
         TyHi, CGF.Builder.CreateBitCast(RegHiAddr, PTyHi),
         CharUnits::fromQuantity(getDataLayout().getABITypeAlignment(TyHi)));
-    CharUnits Offset = CharUnits::fromQuantity(
-                   getDataLayout().getStructLayout(ST)->getElementOffset(1));
-    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1, Offset));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
   } else if (neededInt) {
@@ -3831,12 +3828,10 @@ Address X86_64ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     Tmp = CGF.Builder.CreateElementBitCast(Tmp, ST);
     V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
         RegAddrLo, ST->getStructElementType(0)));
-    CGF.Builder.CreateStore(V,
-                   CGF.Builder.CreateStructGEP(Tmp, 0, CharUnits::Zero()));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 0));
     V = CGF.Builder.CreateLoad(CGF.Builder.CreateElementBitCast(
         RegAddrHi, ST->getStructElementType(1)));
-    CGF.Builder.CreateStore(V,
-          CGF.Builder.CreateStructGEP(Tmp, 1, CharUnits::fromQuantity(8)));
+    CGF.Builder.CreateStore(V, CGF.Builder.CreateStructGEP(Tmp, 1));
 
     RegAddr = CGF.Builder.CreateElementBitCast(Tmp, LTy);
   }
@@ -4178,9 +4173,9 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   // The calling convention either uses 1-2 GPRs or 1 FPR.
   Address NumRegsAddr = Address::invalid();
   if (isInt || IsSoftFloatABI) {
-    NumRegsAddr = Builder.CreateStructGEP(VAList, 0, CharUnits::Zero(), "gpr");
+    NumRegsAddr = Builder.CreateStructGEP(VAList, 0, "gpr");
   } else {
-    NumRegsAddr = Builder.CreateStructGEP(VAList, 1, CharUnits::One(), "fpr");
+    NumRegsAddr = Builder.CreateStructGEP(VAList, 1, "fpr");
   }
 
   llvm::Value *NumRegs = Builder.CreateLoad(NumRegsAddr, "numUsedRegs");
@@ -4208,8 +4203,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
   {
     CGF.EmitBlock(UsingRegs);
 
-    Address RegSaveAreaPtr =
-      Builder.CreateStructGEP(VAList, 4, CharUnits::fromQuantity(8));
+    Address RegSaveAreaPtr = Builder.CreateStructGEP(VAList, 4);
     RegAddr = Address(Builder.CreateLoad(RegSaveAreaPtr),
                       CharUnits::fromQuantity(8));
     assert(RegAddr.getElementType() == CGF.Int8Ty);
@@ -4257,8 +4251,7 @@ Address PPC32_SVR4_ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAList,
       Size = CGF.getPointerSize();
     }
 
-    Address OverflowAreaAddr =
-      Builder.CreateStructGEP(VAList, 3, CharUnits::fromQuantity(4));
+    Address OverflowAreaAddr = Builder.CreateStructGEP(VAList, 3);
     Address OverflowArea(Builder.CreateLoad(OverflowAreaAddr, "argp.cur"),
                          OverflowAreaAlign);
     // Round up address of argument to alignment
@@ -5298,25 +5291,18 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   Address reg_offs_p = Address::invalid();
   llvm::Value *reg_offs = nullptr;
   int reg_top_index;
-  CharUnits reg_top_offset;
   int RegSize = IsIndirect ? 8 : TyInfo.first.getQuantity();
   if (!IsFPR) {
     // 3 is the field number of __gr_offs
-    reg_offs_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 3, CharUnits::fromQuantity(24),
-                                    "gr_offs_p");
+    reg_offs_p = CGF.Builder.CreateStructGEP(VAListAddr, 3, "gr_offs_p");
     reg_offs = CGF.Builder.CreateLoad(reg_offs_p, "gr_offs");
     reg_top_index = 1; // field number for __gr_top
-    reg_top_offset = CharUnits::fromQuantity(8);
     RegSize = llvm::alignTo(RegSize, 8);
   } else {
     // 4 is the field number of __vr_offs.
-    reg_offs_p =
-        CGF.Builder.CreateStructGEP(VAListAddr, 4, CharUnits::fromQuantity(28),
-                                    "vr_offs_p");
+    reg_offs_p = CGF.Builder.CreateStructGEP(VAListAddr, 4, "vr_offs_p");
     reg_offs = CGF.Builder.CreateLoad(reg_offs_p, "vr_offs");
     reg_top_index = 2; // field number for __vr_top
-    reg_top_offset = CharUnits::fromQuantity(16);
     RegSize = 16 * NumRegs;
   }
 
@@ -5378,8 +5364,8 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   CGF.EmitBlock(InRegBlock);
 
   llvm::Value *reg_top = nullptr;
-  Address reg_top_p = CGF.Builder.CreateStructGEP(VAListAddr, reg_top_index,
-                                                  reg_top_offset, "reg_top_p");
+  Address reg_top_p =
+      CGF.Builder.CreateStructGEP(VAListAddr, reg_top_index, "reg_top_p");
   reg_top = CGF.Builder.CreateLoad(reg_top_p, "reg_top");
   Address BaseAddr(CGF.Builder.CreateInBoundsGEP(reg_top, reg_offs),
                    CharUnits::fromQuantity(IsFPR ? 16 : 8));
@@ -5419,8 +5405,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
         CGF.Builder.CreateConstInBoundsByteGEP(BaseAddr, BaseOffset);
       LoadAddr = CGF.Builder.CreateElementBitCast(LoadAddr, BaseTy);
 
-      Address StoreAddr =
-        CGF.Builder.CreateConstArrayGEP(Tmp, i, BaseTyInfo.first);
+      Address StoreAddr = CGF.Builder.CreateConstArrayGEP(Tmp, i);
 
       llvm::Value *Elem = CGF.Builder.CreateLoad(LoadAddr);
       CGF.Builder.CreateStore(Elem, StoreAddr);
@@ -5449,8 +5434,7 @@ Address AArch64ABIInfo::EmitAAPCSVAArg(Address VAListAddr,
   //=======================================
   CGF.EmitBlock(OnStackBlock);
 
-  Address stack_p = CGF.Builder.CreateStructGEP(VAListAddr, 0,
-                                                CharUnits::Zero(), "stack_p");
+  Address stack_p = CGF.Builder.CreateStructGEP(VAListAddr, 0, "stack_p");
   llvm::Value *OnStackPtr = CGF.Builder.CreateLoad(stack_p, "stack");
 
   // Again, stack arguments may need realignment. In this case both integer and
@@ -6593,8 +6577,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     // Vector arguments are always passed in the high bits of a
     // single (8 byte) or double (16 byte) stack slot.
     Address OverflowArgAreaPtr =
-      CGF.Builder.CreateStructGEP(VAListAddr, 2, CharUnits::fromQuantity(16),
-                                  "overflow_arg_area_ptr");
+        CGF.Builder.CreateStructGEP(VAListAddr, 2, "overflow_arg_area_ptr");
     Address OverflowArgArea =
       Address(CGF.Builder.CreateLoad(OverflowArgAreaPtr, "overflow_arg_area"),
               TyInfo.second);
@@ -6626,9 +6609,8 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
     RegPadding = Padding; // values are passed in the low bits of a GPR
   }
 
-  Address RegCountPtr = CGF.Builder.CreateStructGEP(
-      VAListAddr, RegCountField, RegCountField * CharUnits::fromQuantity(8),
-      "reg_count_ptr");
+  Address RegCountPtr =
+      CGF.Builder.CreateStructGEP(VAListAddr, RegCountField, "reg_count_ptr");
   llvm::Value *RegCount = CGF.Builder.CreateLoad(RegCountPtr, "reg_count");
   llvm::Value *MaxRegsV = llvm::ConstantInt::get(IndexTy, MaxRegs);
   llvm::Value *InRegs = CGF.Builder.CreateICmpULT(RegCount, MaxRegsV,
@@ -6651,8 +6633,7 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   llvm::Value *RegOffset =
     CGF.Builder.CreateAdd(ScaledRegCount, RegBase, "reg_offset");
   Address RegSaveAreaPtr =
-      CGF.Builder.CreateStructGEP(VAListAddr, 3, CharUnits::fromQuantity(24),
-                                  "reg_save_area_ptr");
+      CGF.Builder.CreateStructGEP(VAListAddr, 3, "reg_save_area_ptr");
   llvm::Value *RegSaveArea =
     CGF.Builder.CreateLoad(RegSaveAreaPtr, "reg_save_area");
   Address RawRegAddr(CGF.Builder.CreateGEP(RegSaveArea, RegOffset,
@@ -6672,8 +6653,8 @@ Address SystemZABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CGF.EmitBlock(InMemBlock);
 
   // Work out the address of a stack argument.
-  Address OverflowArgAreaPtr = CGF.Builder.CreateStructGEP(
-      VAListAddr, 2, CharUnits::fromQuantity(16), "overflow_arg_area_ptr");
+  Address OverflowArgAreaPtr =
+      CGF.Builder.CreateStructGEP(VAListAddr, 2, "overflow_arg_area_ptr");
   Address OverflowArgArea =
     Address(CGF.Builder.CreateLoad(OverflowArgAreaPtr, "overflow_arg_area"),
             PaddedSize);
@@ -7782,8 +7763,23 @@ public:
 };
 }
 
+static bool requiresAMDGPUProtectedVisibility(const Decl *D,
+                                              llvm::GlobalValue *GV) {
+  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
+    return false;
+
+  return D->hasAttr<OpenCLKernelAttr>() ||
+         (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
+         (isa<VarDecl>(D) && D->hasAttr<CUDADeviceAttr>());
+}
+
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
+  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+    GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+    GV->setDSOLocal(true);
+  }
+
   if (GV->isDeclaration())
     return;
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
@@ -8205,9 +8201,8 @@ Address SparcV9ABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   }
 
   // Update VAList.
-  llvm::Value *NextPtr =
-    Builder.CreateConstInBoundsByteGEP(Addr.getPointer(), Stride, "ap.next");
-  Builder.CreateStore(NextPtr, VAListAddr);
+  Address NextPtr = Builder.CreateConstInBoundsByteGEP(Addr, Stride, "ap.next");
+  Builder.CreateStore(NextPtr.getPointer(), VAListAddr);
 
   return Builder.CreateBitCast(ArgAddr, ArgPtrTy, "arg.addr");
 }
@@ -8560,9 +8555,8 @@ Address XCoreABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
   // Increment the VAList.
   if (!ArgSize.isZero()) {
-    llvm::Value *APN =
-      Builder.CreateConstInBoundsByteGEP(AP.getPointer(), ArgSize);
-    Builder.CreateStore(APN, VAListAddr);
+    Address APN = Builder.CreateConstInBoundsByteGEP(AP, ArgSize);
+    Builder.CreateStore(APN.getPointer(), VAListAddr);
   }
 
   return Val;

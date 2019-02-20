@@ -10,7 +10,7 @@
 
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
+#include "lldb/Host/ProcessLaunchInfo.h"
 
 using namespace lldb;
 using namespace lldb_private;

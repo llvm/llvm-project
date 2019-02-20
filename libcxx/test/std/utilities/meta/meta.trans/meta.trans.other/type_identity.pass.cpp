@@ -22,7 +22,7 @@ void test_type_identity()
     static_assert((std::is_same<         std::type_identity_t<T>,     T>::value), "");
 }
 
-int main()
+int main(int, char**)
 {
     test_type_identity<void>();
     test_type_identity<int>();
@@ -36,4 +36,6 @@ int main()
     test_type_identity<int(int) volatile>();
     test_type_identity<int(int)  &>();
     test_type_identity<int(int) &&>();
+
+  return 0;
 }

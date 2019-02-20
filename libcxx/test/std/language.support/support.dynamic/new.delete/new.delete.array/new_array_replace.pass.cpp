@@ -44,7 +44,7 @@ struct A
     ~A() {--A_constructed;}
 };
 
-int main()
+int main(int, char**)
 {
     A *ap = new A[3];
     DoNotOptimize(ap);
@@ -55,4 +55,6 @@ int main()
     DoNotOptimize(ap);
     assert(A_constructed == 0);
     assert(new_called == 0);
+
+  return 0;
 }

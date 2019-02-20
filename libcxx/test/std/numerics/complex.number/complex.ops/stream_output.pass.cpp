@@ -16,10 +16,12 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::complex<double> c(1, 2);
     std::ostringstream os;
     os << c;
     assert(os.str() == "(1,2)");
+
+  return 0;
 }

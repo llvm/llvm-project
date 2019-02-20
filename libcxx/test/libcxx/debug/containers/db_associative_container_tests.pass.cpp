@@ -51,7 +51,7 @@ private:
   // FIXME Add tests here
 };
 
-int main()
+int main(int, char**)
 {
   using SetAlloc = test_allocator<int>;
   using MapAlloc = test_allocator<std::pair<const int, int>>;
@@ -66,4 +66,6 @@ int main()
     AssociativeContainerChecks<
         std::multimap<int, int, std::less<int>, MapAlloc>, CT_MultiMap>::run();
   }
+
+  return 0;
 }

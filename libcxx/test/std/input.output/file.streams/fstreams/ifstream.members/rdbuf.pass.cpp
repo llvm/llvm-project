@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ifstream fs("test.dat");
@@ -28,4 +28,6 @@ int main()
         std::wfilebuf* fb = fs.rdbuf();
         assert(fb->sgetc() == L'r');
     }
+
+  return 0;
 }

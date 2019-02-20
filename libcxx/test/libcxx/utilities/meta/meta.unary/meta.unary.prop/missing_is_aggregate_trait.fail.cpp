@@ -15,7 +15,7 @@
 
 #include <type_traits>
 
-int main ()
+int main(int, char**)
 {
 #ifdef _LIBCPP_HAS_NO_IS_AGGREGATE
   // This should not compile when _LIBCPP_HAS_NO_IS_AGGREGATE is defined.
@@ -24,4 +24,6 @@ int main ()
 #else
 #error Forcing failure...
 #endif
+
+  return 0;
 }

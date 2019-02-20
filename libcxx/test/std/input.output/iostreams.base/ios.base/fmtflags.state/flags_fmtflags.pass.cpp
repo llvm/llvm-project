@@ -25,11 +25,13 @@ public:
     }
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(t.flags() == (test::skipws | test::dec));
     test::fmtflags f = t.flags(test::hex | test::right);
     assert(f == (test::skipws | test::dec));
     assert(t.flags() == (test::hex | test::right));
+
+  return 0;
 }

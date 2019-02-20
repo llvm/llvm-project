@@ -20,7 +20,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::istream_iterator<int> io;
@@ -36,4 +36,6 @@ int main()
         j = *i;
         assert(j == 1);
     }
+
+  return 0;
 }

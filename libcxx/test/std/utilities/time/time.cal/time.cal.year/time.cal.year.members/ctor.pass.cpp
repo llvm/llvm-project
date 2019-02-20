@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year = std::chrono::year;
 
@@ -42,4 +42,6 @@ int main()
         year year(i);
         assert(static_cast<int>(year) == i);
     }
+
+  return 0;
 }

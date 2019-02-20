@@ -131,12 +131,13 @@ struct WasmFunction {
 };
 
 struct WasmDataSegment {
-  uint32_t MemoryIndex;
-  WasmInitExpr Offset;
+  uint32_t InitFlags;
+  uint32_t MemoryIndex; // present if InitFlags & WASM_SEGMENT_HAS_MEMINDEX
+  WasmInitExpr Offset; // present if InitFlags & WASM_SEGMENT_IS_PASSIVE == 0
   ArrayRef<uint8_t> Content;
   StringRef Name; // from the "segment info" section
   uint32_t Alignment;
-  uint32_t Flags;
+  uint32_t LinkerFlags;
   uint32_t Comdat; // from the "comdat info" section
 };
 
@@ -170,7 +171,8 @@ struct WasmSymbolInfo {
   StringRef Name;
   uint8_t Kind;
   uint32_t Flags;
-  StringRef Module; // For undefined symbols the module name of the import
+  StringRef ImportModule; // For undefined symbols the module of the import
+  StringRef ImportName;   // For undefined symbols the name of the import
   union {
     // For function or global symbols, the index in function or global index
     // space.
@@ -246,6 +248,11 @@ enum : unsigned {
   WASM_LIMITS_FLAG_IS_SHARED = 0x2,
 };
 
+enum : unsigned {
+  WASM_SEGMENT_IS_PASSIVE = 0x01,
+  WASM_SEGMENT_HAS_MEMINDEX = 0x02,
+};
+
 // Kind codes used in the custom "name" section
 enum : unsigned {
   WASM_NAMES_FUNCTION = 0x1,
@@ -289,6 +296,8 @@ const unsigned WASM_SYMBOL_BINDING_LOCAL = 0x2;
 const unsigned WASM_SYMBOL_VISIBILITY_DEFAULT = 0x0;
 const unsigned WASM_SYMBOL_VISIBILITY_HIDDEN = 0x4;
 const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
+const unsigned WASM_SYMBOL_EXPORTED = 0x20;
+const unsigned WASM_SYMBOL_EXPLICIT_NAME = 0x40;
 
 #define WASM_RELOC(name, value) name = value,
 
@@ -309,13 +318,13 @@ enum class ValType {
 };
 
 struct WasmSignature {
-  SmallVector<wasm::ValType, 1> Returns;
-  SmallVector<wasm::ValType, 4> Params;
+  SmallVector<ValType, 1> Returns;
+  SmallVector<ValType, 4> Params;
   // Support empty and tombstone instances, needed by DenseMap.
   enum { Plain, Empty, Tombstone } State = Plain;
 
-  WasmSignature(SmallVector<wasm::ValType, 1> &&InReturns,
-                SmallVector<wasm::ValType, 4> &&InParams)
+  WasmSignature(SmallVector<ValType, 1> &&InReturns,
+                SmallVector<ValType, 4> &&InParams)
       : Returns(InReturns), Params(InParams) {}
   WasmSignature() = default;
 };
@@ -338,7 +347,7 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
   return !(LHS == RHS);
 }
 
-std::string toString(wasm::WasmSymbolType type);
+std::string toString(WasmSymbolType type);
 std::string relocTypetoString(uint32_t type);
 
 } // end namespace wasm

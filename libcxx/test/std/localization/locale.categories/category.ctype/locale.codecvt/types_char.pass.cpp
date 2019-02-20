@@ -24,7 +24,7 @@
 #include <type_traits>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     typedef std::codecvt<char, char, std::mbstate_t> F;
     static_assert((std::is_base_of<std::locale::facet, F>::value), "");
@@ -37,4 +37,6 @@ int main()
     const F& f = std::use_facet<F>(l);
     ((void)f); // Prevent unused warning
     (void)F::id;
+
+  return 0;
 }

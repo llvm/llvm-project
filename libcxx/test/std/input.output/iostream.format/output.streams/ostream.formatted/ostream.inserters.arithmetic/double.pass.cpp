@@ -48,7 +48,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ostream os((std::streambuf*)0);
@@ -79,4 +79,6 @@ int main()
         os << n;
         assert(sb.str() == "-10.5");
     }
+
+  return 0;
 }

@@ -9,13 +9,7 @@
 
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 
-// XFAIL: availability=macosx10.13
-// XFAIL: availability=macosx10.12
-// XFAIL: availability=macosx10.11
-// XFAIL: availability=macosx10.10
-// XFAIL: availability=macosx10.9
-// XFAIL: availability=macosx10.8
-// XFAIL: availability=macosx10.7
+// XFAIL: dylib-has-no-bad_variant_access
 
 
 // <variant>
@@ -35,11 +29,13 @@ public:
 #include <type_traits>
 #include <variant>
 
-int main() {
+int main(int, char**) {
   static_assert(std::is_base_of<std::exception, std::bad_variant_access>::value,
                 "");
   static_assert(noexcept(std::bad_variant_access{}), "must be noexcept");
   static_assert(noexcept(std::bad_variant_access{}.what()), "must be noexcept");
   std::bad_variant_access ex;
   assert(ex.what());
+
+  return 0;
 }

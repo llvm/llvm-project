@@ -41,7 +41,7 @@ void test_op_xor_eq()
         assert(v1[i] == (v3[i] != v2[i]));
 }
 
-int main()
+int main(int, char**)
 {
     test_op_xor_eq<0>();
     test_op_xor_eq<1>();
@@ -52,4 +52,6 @@ int main()
     test_op_xor_eq<64>();
     test_op_xor_eq<65>();
     test_op_xor_eq<1000>();
+
+  return 0;
 }

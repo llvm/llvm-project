@@ -19,7 +19,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multiset<int> C;
@@ -86,4 +86,6 @@ int main()
         assert(*r.first == 50);
     }
 #endif
+
+  return 0;
 }

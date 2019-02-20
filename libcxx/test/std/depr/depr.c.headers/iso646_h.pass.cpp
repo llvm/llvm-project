@@ -10,7 +10,9 @@
 
 #include <iso646.h>
 
-int main()
+int main(int, char**)
 {
     // Nothing to test
+
+  return 0;
 }

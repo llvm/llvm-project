@@ -102,13 +102,13 @@ define i32 @test2(i32* %ptr) nounwind {
 ; X32-NEXT:    calll external
 ; X32-NEXT:    addl $4, %esp
 ; X32-NEXT:    testb %bl, %bl
-; X32-NEXT:    je .LBB1_1
-; X32-NEXT:  # %bb.2: # %else
-; X32-NEXT:    xorl %eax, %eax
+; X32-NEXT:    jne .LBB1_2
+; X32-NEXT:  # %bb.1: # %then
+; X32-NEXT:    movl $64, %eax
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
-; X32-NEXT:  .LBB1_1: # %then
-; X32-NEXT:    movl $64, %eax
+; X32-NEXT:  .LBB1_2: # %else
+; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    popl %ebx
 ; X32-NEXT:    retl
 ;
@@ -120,13 +120,13 @@ define i32 @test2(i32* %ptr) nounwind {
 ; X64-NEXT:    movl $42, %edi
 ; X64-NEXT:    callq external
 ; X64-NEXT:    testb %bl, %bl
-; X64-NEXT:    je .LBB1_1
-; X64-NEXT:  # %bb.2: # %else
-; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    jne .LBB1_2
+; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    movl $64, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
-; X64-NEXT:  .LBB1_1: # %then
-; X64-NEXT:    movl $64, %eax
+; X64-NEXT:  .LBB1_2: # %else
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
 entry:

@@ -833,9 +833,6 @@ public:
   /// Enable the MachineScheduler pass for all X86 subtargets.
   bool enableMachineScheduler() const override { return true; }
 
-  // TODO: Update the regression tests and return true.
-  bool supportPrintSchedInfo() const override { return false; }
-
   bool enableEarlyIfConversion() const override;
 
   AntiDepBreakMode getAntiDepBreakMode() const override {

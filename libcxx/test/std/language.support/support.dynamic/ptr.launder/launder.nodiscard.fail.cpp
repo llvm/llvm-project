@@ -19,8 +19,10 @@
 
 #include "test_macros.h"
 
-int main ()
+int main(int, char**)
 {
     int *p = nullptr;
     std::launder(p);  // expected-error {{ignoring return value of function declared with 'nodiscard' attribute}}
+
+  return 0;
 }

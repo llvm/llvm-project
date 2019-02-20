@@ -229,7 +229,8 @@ unsigned getEUsPerCU(const MCSubtargetInfo *STI) {
 
 unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
                                unsigned FlatWorkGroupSize) {
-  if (!STI->getFeatureBits().test(FeatureGCN))
+  assert(FlatWorkGroupSize != 0);
+  if (STI->getTargetTriple().getArch() != Triple::amdgcn)
     return 8;
   unsigned N = getWavesPerWorkGroup(STI, FlatWorkGroupSize);
   if (N == 1)

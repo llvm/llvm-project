@@ -16,6 +16,7 @@
 #include "llvm/Support/Mutex.h"
 
 #include "IDebugDelegate.h"
+#include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
 
 namespace lldb_private {
 
@@ -89,6 +90,8 @@ public:
                              MemoryRegionInfo &info) override;
 
   lldb::addr_t GetImageInfoAddress() override;
+
+  DynamicLoaderWindowsDYLD *GetDynamicLoader() override;
 
   // IDebugDelegate overrides.
   void OnExitProcess(uint32_t exit_code) override;

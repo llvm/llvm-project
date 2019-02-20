@@ -18,6 +18,7 @@ add_llvm_unittest(ADTTests
   DenseSetTest.cpp
   DepthFirstIteratorTest.cpp
   EquivalenceClassesTest.cpp
+  FallibleIteratorTest.cpp
   FoldingSet.cpp
   FunctionExtrasTest.cpp
   FunctionRefTest.cpp
@@ -70,5 +71,7 @@ add_llvm_unittest(ADTTests
   TwineTest.cpp
   VariadicFunctionTest.cpp
   )
+
+target_link_libraries(ADTTests PRIVATE LLVMTestingSupport)
 
 add_dependencies(ADTTests intrinsics_gen)

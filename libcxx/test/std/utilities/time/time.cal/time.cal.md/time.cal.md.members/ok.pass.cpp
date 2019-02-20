@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using day       = std::chrono::day;
     using month     = std::chrono::month;
@@ -51,4 +51,6 @@ int main()
 //  If the month is not ok, all the days are bad
     for (unsigned i = 1; i <= 35; ++i)
         assert(!(month_day{month{13}, day{i}}.ok()));
+
+  return 0;
 }

@@ -16,7 +16,7 @@
 #include <random>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::ranlux24_base Engine;
@@ -25,4 +25,6 @@ int main()
         Adaptor a(e);
         assert(a.base() == e);
     }
+
+  return 0;
 }

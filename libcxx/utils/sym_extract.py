@@ -27,14 +27,27 @@ def main():
     parser.add_argument('--only-stdlib-symbols', dest='only_stdlib',
                         help="Filter all symbols not related to the stdlib",
                         action='store_true', default=False)
+    parser.add_argument('--defined-only', dest='defined_only',
+                        help="Filter all symbols that are not defined",
+                        action='store_true', default=False)
+    parser.add_argument('--undefined-only', dest='undefined_only',
+                        help="Filter all symbols that are defined",
+                        action='store_true', default=False)
+
     args = parser.parse_args()
+    assert not (args.undefined_only and args.defined_only)
     if args.output is not None:
         print('Extracting symbols from %s to %s.'
               % (args.library, args.output))
     syms = extract.extract_symbols(args.library)
     if args.only_stdlib:
         syms, other_syms = util.filter_stdlib_symbols(syms)
-    util.write_syms(syms, out=args.output, names_only=args.names_only)
+    filter = lambda x: x
+    if args.defined_only:
+      filter = lambda l: list([x for x in l if x['is_defined']])
+    if args.undefined_only:
+      filter = lambda l: list([x for x in l if not x['is_defined']])
+    util.write_syms(syms, out=args.output, names_only=args.names_only, filter=filter)
 
 
 if __name__ == '__main__':

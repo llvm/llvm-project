@@ -16,7 +16,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
 #ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
     {
@@ -38,4 +38,6 @@ int main()
     // test/libcxx/input.output/file.streams/fstreams/ofstream.cons/wchar_pointer.pass.cpp
     // which creates writable files.
 #endif
+
+  return 0;
 }

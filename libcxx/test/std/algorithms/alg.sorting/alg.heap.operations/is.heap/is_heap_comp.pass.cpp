@@ -526,11 +526,13 @@ void test()
     assert(std::is_heap(i246, i246+7, std::greater<int>()) == (std::is_heap_until(i246, i246+7, std::greater<int>()) == i246+7));
 }
 
-int main()
+int main(int, char**)
 {
     test();
 
 #if TEST_STD_VER > 17
     static_assert(test_constexpr());
 #endif
+
+  return 0;
 }

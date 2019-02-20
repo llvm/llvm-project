@@ -67,22 +67,6 @@ public:
 /// resources. This class is also responsible for tracking the progress of
 /// instructions from the dispatch stage, until the write-back stage.
 ///
-/// An instruction dispatched to the Scheduler is initially placed into either
-/// the 'WaitSet' or the 'ReadySet' depending on the availability of the input
-/// operands.
-///
-/// An instruction is moved from the WaitSet to the ReadySet when register
-/// operands become available, and all memory dependencies are met.
-/// Instructions that are moved from the WaitSet to the ReadySet transition
-/// in state from 'IS_AVAILABLE' to 'IS_READY'.
-///
-/// On every cycle, the Scheduler checks if it can promote instructions from the
-/// WaitSet to the ReadySet.
-///
-/// An Instruction is moved from the ReadySet the `IssuedSet` when it is issued
-/// to a (one or more) pipeline(s). This event also causes an instruction state
-/// transition (i.e. from state IS_READY, to state IS_EXECUTING). An Instruction
-/// leaves the IssuedSet when it reaches the write-back stage.
 class Scheduler : public HardwareUnit {
   LSUnit &LSU;
 
@@ -92,9 +76,54 @@ class Scheduler : public HardwareUnit {
   // Hardware resources that are managed by this scheduler.
   std::unique_ptr<ResourceManager> Resources;
 
+  // Instructions dispatched to the Scheduler are internally classified based on
+  // the instruction stage (see Instruction::InstrStage).
+  //
+  // An Instruction dispatched to the Scheduler is added to the WaitSet if not
+  // all its register operands are available, and at least one latency is
+  // unknown.  By construction, the WaitSet only contains instructions that are
+  // in the IS_DISPATCHED stage.
+  //
+  // An Instruction transitions from the WaitSet to the PendingSet if the
+  // instruction is not ready yet, but the latency of every register read is
+  // known.  Instructions in the PendingSet can only be in the IS_PENDING or
+  // IS_READY stage.  Only IS_READY instructions that are waiting on memory
+  // dependencies can be added to the PendingSet.
+  //
+  // Instructions in the PendingSet are immediately dominated only by
+  // instructions that have already been issued to the underlying pipelines.  In
+  // the presence of bottlenecks caused by data dependencies, the PendingSet can
+  // be inspected to identify problematic data dependencies between
+  // instructions.
+  //
+  // An instruction is moved to the ReadySet when all register operands become
+  // available, and all memory dependencies are met.  Instructions that are
+  // moved from the PendingSet to the ReadySet must transition to the 'IS_READY'
+  // stage.
+  //
+  // On every cycle, the Scheduler checks if it can promote instructions from the
+  // PendingSet to the ReadySet.
+  //
+  // An Instruction is moved from the ReadySet to the `IssuedSet` when it starts
+  // exection. This event also causes an instruction state transition (i.e. from
+  // state IS_READY, to state IS_EXECUTING). An Instruction leaves the IssuedSet
+  // only when it reaches the write-back stage.
   std::vector<InstRef> WaitSet;
+  std::vector<InstRef> PendingSet;
   std::vector<InstRef> ReadySet;
   std::vector<InstRef> IssuedSet;
+
+  // A mask of busy resource units. It defaults to the empty set (i.e. a zero
+  // mask), and it is cleared at the beginning of every cycle.
+  // It is updated every time the scheduler fails to issue an instruction from
+  // the ready set due to unavailable pipeline resources.
+  // Each bit of the mask represents an unavailable resource.
+  uint64_t BusyResourceUnits;
+
+  // Counts the number of instructions dispatched during this cycle that are
+  // added to the pending set. This information is used by the bottleneck
+  // analysis when analyzing instructions in the pending set.
+  unsigned NumDispatchedToThePendingSet;
 
   /// Verify the given selection strategy and set the Strategy member
   /// accordingly.  If no strategy is provided, the DefaultSchedulerStrategy is
@@ -111,9 +140,14 @@ class Scheduler : public HardwareUnit {
   // vector 'Executed'.
   void updateIssuedSet(SmallVectorImpl<InstRef> &Executed);
 
-  // Try to promote instructions from WaitSet to ReadySet.
+  // Try to promote instructions from the PendingSet to the ReadySet.
   // Add promoted instructions to the 'Ready' vector in input.
-  void promoteToReadySet(SmallVectorImpl<InstRef> &Ready);
+  // Returns true if at least one instruction was promoted.
+  bool promoteToReadySet(SmallVectorImpl<InstRef> &Ready);
+
+  // Try to promote instructions from the WaitSet to the PendingSet.
+  // Returns true if at least one instruction was promoted.
+  bool promoteToPendingSet();
 
 public:
   Scheduler(const MCSchedModel &Model, LSUnit &Lsu)
@@ -126,7 +160,8 @@ public:
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : LSU(Lsu), Resources(std::move(RM)) {
+      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0),
+        NumDispatchedToThePendingSet(0) {
     initializeStrategy(std::move(SelectStrategy));
   }
 
@@ -155,11 +190,7 @@ public:
   /// Returns true if instruction IR is ready to be issued to the underlying
   /// pipelines. Note that this operation cannot fail; it assumes that a
   /// previous call to method `isAvailable(IR)` returned `SC_AVAILABLE`.
-  void dispatch(const InstRef &IR);
-
-  /// Returns true if IR is ready to be executed by the underlying pipelines.
-  /// This method assumes that IR has been previously dispatched.
-  bool isReady(const InstRef &IR) const;
+  bool dispatch(const InstRef &IR);
 
   /// Issue an instruction and populates a vector of used pipeline resources,
   /// and a vector of instructions that transitioned to the ready state as a
@@ -193,6 +224,16 @@ public:
   /// instruction reference if there are no ready instructions, or if processor
   /// resources are not available.
   InstRef select();
+
+  /// Returns a mask of busy resources. Each bit of the mask identifies a unique
+  /// processor resource unit. In the absence of bottlenecks caused by resource
+  /// pressure, the mask value returned by this method is always zero.
+  uint64_t getBusyResourceUnits() const { return BusyResourceUnits; }
+  bool arePipelinesFullyUsed() const {
+    return !Resources->getAvailableProcResUnits();
+  }
+  bool isReadySetEmpty() const { return ReadySet.empty(); }
+  bool isWaitSetEmpty() const { return WaitSet.empty(); }
 
 #ifndef NDEBUG
   // Update the ready queues.

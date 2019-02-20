@@ -24,7 +24,9 @@
 #include "../test_func.h"
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     std::bind2nd(test_func(1), 5); // expected-error{{'bind2nd<test_func, int>' is deprecated}}
+
+  return 0;
 }

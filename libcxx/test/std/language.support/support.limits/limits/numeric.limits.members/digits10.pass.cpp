@@ -29,7 +29,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::is_bounded, "digits10 test 8");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, 0>();
     test<char, 2>();
@@ -58,4 +58,6 @@ int main()
     test<float, FLT_DIG>();
     test<double, DBL_DIG>();
     test<long double, LDBL_DIG>();
+
+  return 0;
 }

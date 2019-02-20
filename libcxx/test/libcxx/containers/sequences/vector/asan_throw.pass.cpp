@@ -219,7 +219,7 @@ void test_resize_param() {
   assert(is_contiguous_container_asan_correct(v));
 }
 
-int main() {
+int main(int, char**) {
   test_push_back();
   test_emplace_back();
   test_insert_range();
@@ -230,4 +230,6 @@ int main() {
   test_insert_n2();
   test_resize();
   test_resize_param();
+
+  return 0;
 }

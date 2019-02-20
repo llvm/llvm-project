@@ -759,10 +759,10 @@
 # CHECK: strl %eax
 0x66 0x0f 0x00 0xc8
 
-# CHECK: fsubp %st(1)
+# CHECK: fsubp %st, %st(1)
 0xde 0xe1
 
-# CHECK: fsubp %st(2)
+# CHECK: fsubp %st, %st(2)
 0xde 0xe2
 
 # CHECKX: nop

@@ -121,6 +121,10 @@ public:
                         const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                         bool KillSrc, unsigned Opcode,
                         llvm::ArrayRef<unsigned> Indices) const;
+  void copyGPRRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+                       DebugLoc DL, unsigned DestReg, unsigned SrcReg,
+                       bool KillSrc, unsigned Opcode, unsigned ZeroReg,
+                       llvm::ArrayRef<unsigned> Indices) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
                    const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
                    bool KillSrc) const override;

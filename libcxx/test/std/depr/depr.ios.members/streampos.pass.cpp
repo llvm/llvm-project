@@ -20,9 +20,11 @@
 #include <ios>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
 #if TEST_STD_VER <= 14
     static_assert((std::is_same<std::ios_base::streampos, std::streampos>::value), "");
 #endif
+
+  return 0;
 }

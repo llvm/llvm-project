@@ -22,7 +22,9 @@
 #include <memory>
 #include <type_traits>
 
-int main()
+int main(int, char**)
 {
     std::auto_ptr<int> p;
+
+  return 0;
 }

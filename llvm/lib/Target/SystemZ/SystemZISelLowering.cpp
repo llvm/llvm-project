@@ -249,6 +249,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
   // We have native support for a 64-bit CTLZ, via FLOGR.
   setOperationAction(ISD::CTLZ, MVT::i32, Promote);
+  setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ, MVT::i64, Legal);
 
   // Give LowerOperation the chance to replace 64-bit ORs with subregs.
@@ -576,9 +577,39 @@ bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   return false;
 }
 
+
+// Return true if Imm can be generated with a vector instruction, such as VGM.
+bool SystemZTargetLowering::
+analyzeFPImm(const APFloat &Imm, unsigned BitWidth, unsigned &Start,
+             unsigned &End, const SystemZInstrInfo *TII) {
+  APInt IntImm = Imm.bitcastToAPInt();
+  if (IntImm.getActiveBits() > 64)
+    return false;
+
+  // See if this immediate could be generated with VGM.
+  bool Success = TII->isRxSBGMask(IntImm.getZExtValue(), BitWidth, Start, End);
+  if (!Success)
+    return false;
+  // isRxSBGMask returns the bit numbers for a full 64-bit value,
+  // with 0 denoting 1 << 63 and 63 denoting 1.  Convert them to
+  // bit numbers for an BitsPerElement value, so that 0 denotes
+  // 1 << (BitsPerElement-1).
+  Start -= 64 - BitWidth;
+  End -= 64 - BitWidth;
+  return true;
+}
+
 bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   // We can load zero using LZ?R and negative zero using LZ?R;LC?BR.
-  return Imm.isZero() || Imm.isNegZero();
+  if (Imm.isZero() || Imm.isNegZero())
+    return true;
+
+  if (!Subtarget.hasVector())
+    return false;
+  const SystemZInstrInfo *TII =
+      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  unsigned Start, End;
+  return analyzeFPImm(Imm, VT.getSizeInBits(), Start, End, TII);
 }
 
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
@@ -2510,9 +2541,8 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
     break;
   }
   if (Invert) {
-    SDValue Mask = DAG.getNode(SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-                               DAG.getConstant(65535, DL, MVT::i32));
-    Mask = DAG.getNode(ISD::BITCAST, DL, VT, Mask);
+    SDValue Mask =
+      DAG.getSplatBuildVector(VT, DL, DAG.getConstant(-1, DL, MVT::i64));
     Cmp = DAG.getNode(ISD::XOR, DL, VT, Cmp, Mask);
   }
   return Cmp;
@@ -3330,14 +3360,14 @@ SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
       break;
     }
     case 32: {
-      SDValue Tmp = DAG.getNode(SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-                                DAG.getConstant(0, DL, MVT::i32));
+      SDValue Tmp = DAG.getSplatBuildVector(MVT::v16i8, DL,
+                                            DAG.getConstant(0, DL, MVT::i32));
       Op = DAG.getNode(SystemZISD::VSUM, DL, VT, Op, Tmp);
       break;
     }
     case 64: {
-      SDValue Tmp = DAG.getNode(SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-                                DAG.getConstant(0, DL, MVT::i32));
+      SDValue Tmp = DAG.getSplatBuildVector(MVT::v16i8, DL,
+                                            DAG.getConstant(0, DL, MVT::i32));
       Op = DAG.getNode(SystemZISD::VSUM, DL, MVT::v4i32, Op, Tmp);
       Op = DAG.getNode(SystemZISD::VSUM, DL, VT, Op, Tmp);
       break;
@@ -4259,10 +4289,10 @@ static SDValue joinDwords(SelectionDAG &DAG, const SDLoc &DL, SDValue Op0,
   return DAG.getNode(SystemZISD::JOIN_DWORDS, DL, MVT::v2i64, Op0, Op1);
 }
 
-// Try to represent constant BUILD_VECTOR node BVN using a
-// SystemZISD::BYTE_MASK-style mask.  Store the mask value in Mask
-// on success.
-static bool tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask) {
+// Try to represent constant BUILD_VECTOR node BVN using a BYTE MASK style
+// mask.  Store the mask value in Mask on success.
+bool SystemZTargetLowering::
+tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask) {
   EVT ElemVT = BVN->getValueType(0).getVectorElementType();
   unsigned BytesPerElement = ElemVT.getStoreSize();
   for (unsigned I = 0, E = BVN->getNumOperands(); I != E; ++I) {
@@ -4541,13 +4571,11 @@ SDValue SystemZTargetLowering::lowerBUILD_VECTOR(SDValue Op,
     // Try using VECTOR GENERATE BYTE MASK.  This is the architecturally-
     // preferred way of creating all-zero and all-one vectors so give it
     // priority over other methods below.
-    uint64_t Mask = 0;
-    if (tryBuildVectorByteMask(BVN, Mask)) {
-      SDValue Op = DAG.getNode(
-          SystemZISD::BYTE_MASK, DL, MVT::v16i8,
-          DAG.getConstant(Mask, DL, MVT::i32, false, true /*isOpaque*/));
-      return DAG.getNode(ISD::BITCAST, DL, VT, Op);
-    }
+    uint64_t Mask;
+    if (ISD::isBuildVectorAllZeros(Op.getNode()) ||
+        ISD::isBuildVectorAllOnes(Op.getNode()) ||
+        (VT.isInteger() && tryBuildVectorByteMask(BVN, Mask)))
+      return Op;
 
     // Try using some form of replication.
     APInt SplatBits, SplatUndef;
@@ -5027,7 +5055,6 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);
     OPCODE(TEND);
-    OPCODE(BYTE_MASK);
     OPCODE(ROTATE_MASK);
     OPCODE(REPLICATE);
     OPCODE(JOIN_DWORDS);
@@ -5339,8 +5366,7 @@ SDValue SystemZTargetLowering::combineMERGE(
   SDValue Op1 = N->getOperand(1);
   if (Op0.getOpcode() == ISD::BITCAST)
     Op0 = Op0.getOperand(0);
-  if (Op0.getOpcode() == SystemZISD::BYTE_MASK &&
-      cast<ConstantSDNode>(Op0.getOperand(0))->getZExtValue() == 0) {
+  if (ISD::isBuildVectorAllZeros(Op0.getNode())) {
     // (z_merge_* 0, 0) -> 0.  This is mostly useful for using VLLEZF
     // for v4f32.
     if (Op1 == N->getOperand(0))
@@ -5479,6 +5505,10 @@ SDValue SystemZTargetLowering::combineJOIN_DWORDS(
 
 SDValue SystemZTargetLowering::combineFP_ROUND(
     SDNode *N, DAGCombinerInfo &DCI) const {
+
+  if (!Subtarget.hasVector())
+    return SDValue();
+
   // (fpround (extract_vector_elt X 0))
   // (fpround (extract_vector_elt X 1)) ->
   // (extract_vector_elt (VROUND X) 0)
@@ -5526,6 +5556,10 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
 
 SDValue SystemZTargetLowering::combineFP_EXTEND(
     SDNode *N, DAGCombinerInfo &DCI) const {
+
+  if (!Subtarget.hasVector())
+    return SDValue();
+
   // (fpextend (extract_vector_elt X 0))
   // (fpextend (extract_vector_elt X 2)) ->
   // (extract_vector_elt (VEXTEND X) 0)
@@ -5617,55 +5651,96 @@ SDValue SystemZTargetLowering::combineBSWAP(
 static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   // We have a SELECT_CCMASK or BR_CCMASK comparing the condition code
   // set by the CCReg instruction using the CCValid / CCMask masks,
-  // If the CCReg instruction is itself a (ICMP (SELECT_CCMASK)) testing
-  // the condition code set by some other instruction, see whether we
-  // can directly use that condition code.
-  bool Invert = false;
+  // If the CCReg instruction is itself a ICMP testing the condition
+  // code set by some other instruction, see whether we can directly
+  // use that condition code.
 
-  // Verify that we have an appropriate mask for a EQ or NE comparison.
+  // Verify that we have an ICMP against some constant.
   if (CCValid != SystemZ::CCMASK_ICMP)
     return false;
-  if (CCMask == SystemZ::CCMASK_CMP_NE)
-    Invert = !Invert;
-  else if (CCMask != SystemZ::CCMASK_CMP_EQ)
-    return false;
-
-  // Verify that we have an ICMP that is the user of a SELECT_CCMASK.
-  SDNode *ICmp = CCReg.getNode();
+  auto *ICmp = CCReg.getNode();
   if (ICmp->getOpcode() != SystemZISD::ICMP)
     return false;
-  SDNode *Select = ICmp->getOperand(0).getNode();
-  if (Select->getOpcode() != SystemZISD::SELECT_CCMASK)
+  auto *CompareLHS = ICmp->getOperand(0).getNode();
+  auto *CompareRHS = dyn_cast<ConstantSDNode>(ICmp->getOperand(1));
+  if (!CompareRHS)
     return false;
 
-  // Verify that the ICMP compares against one of select values.
-  auto *CompareVal = dyn_cast<ConstantSDNode>(ICmp->getOperand(1));
-  if (!CompareVal)
-    return false;
-  auto *TrueVal = dyn_cast<ConstantSDNode>(Select->getOperand(0));
-  if (!TrueVal)
-    return false;
-  auto *FalseVal = dyn_cast<ConstantSDNode>(Select->getOperand(1));
-  if (!FalseVal)
-    return false;
-  if (CompareVal->getZExtValue() == FalseVal->getZExtValue())
-    Invert = !Invert;
-  else if (CompareVal->getZExtValue() != TrueVal->getZExtValue())
-    return false;
+  // Optimize the case where CompareLHS is a SELECT_CCMASK.
+  if (CompareLHS->getOpcode() == SystemZISD::SELECT_CCMASK) {
+    // Verify that we have an appropriate mask for a EQ or NE comparison.
+    bool Invert = false;
+    if (CCMask == SystemZ::CCMASK_CMP_NE)
+      Invert = !Invert;
+    else if (CCMask != SystemZ::CCMASK_CMP_EQ)
+      return false;
 
-  // Compute the effective CC mask for the new branch or select.
-  auto *NewCCValid = dyn_cast<ConstantSDNode>(Select->getOperand(2));
-  auto *NewCCMask = dyn_cast<ConstantSDNode>(Select->getOperand(3));
-  if (!NewCCValid || !NewCCMask)
-    return false;
-  CCValid = NewCCValid->getZExtValue();
-  CCMask = NewCCMask->getZExtValue();
-  if (Invert)
-    CCMask ^= CCValid;
+    // Verify that the ICMP compares against one of select values.
+    auto *TrueVal = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(0));
+    if (!TrueVal)
+      return false;
+    auto *FalseVal = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(1));
+    if (!FalseVal)
+      return false;
+    if (CompareRHS->getZExtValue() == FalseVal->getZExtValue())
+      Invert = !Invert;
+    else if (CompareRHS->getZExtValue() != TrueVal->getZExtValue())
+      return false;
 
-  // Return the updated CCReg link.
-  CCReg = Select->getOperand(4);
-  return true;
+    // Compute the effective CC mask for the new branch or select.
+    auto *NewCCValid = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(2));
+    auto *NewCCMask = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(3));
+    if (!NewCCValid || !NewCCMask)
+      return false;
+    CCValid = NewCCValid->getZExtValue();
+    CCMask = NewCCMask->getZExtValue();
+    if (Invert)
+      CCMask ^= CCValid;
+
+    // Return the updated CCReg link.
+    CCReg = CompareLHS->getOperand(4);
+    return true;
+  }
+
+  // Optimize the case where CompareRHS is (SRA (SHL (IPM))).
+  if (CompareLHS->getOpcode() == ISD::SRA) {
+    auto *SRACount = dyn_cast<ConstantSDNode>(CompareLHS->getOperand(1));
+    if (!SRACount || SRACount->getZExtValue() != 30)
+      return false;
+    auto *SHL = CompareLHS->getOperand(0).getNode();
+    if (SHL->getOpcode() != ISD::SHL)
+      return false;
+    auto *SHLCount = dyn_cast<ConstantSDNode>(SHL->getOperand(1));
+    if (!SHLCount || SHLCount->getZExtValue() != 30 - SystemZ::IPM_CC)
+      return false;
+    auto *IPM = SHL->getOperand(0).getNode();
+    if (IPM->getOpcode() != SystemZISD::IPM)
+      return false;
+
+    // Avoid introducing CC spills (because SRA would clobber CC).
+    if (!CompareLHS->hasOneUse())
+      return false;
+    // Verify that the ICMP compares against zero.
+    if (CompareRHS->getZExtValue() != 0)
+      return false;
+
+    // Compute the effective CC mask for the new branch or select.
+    switch (CCMask) {
+    case SystemZ::CCMASK_CMP_EQ: break;
+    case SystemZ::CCMASK_CMP_NE: break;
+    case SystemZ::CCMASK_CMP_LT: CCMask = SystemZ::CCMASK_CMP_GT; break;
+    case SystemZ::CCMASK_CMP_GT: CCMask = SystemZ::CCMASK_CMP_LT; break;
+    case SystemZ::CCMASK_CMP_LE: CCMask = SystemZ::CCMASK_CMP_GE; break;
+    case SystemZ::CCMASK_CMP_GE: CCMask = SystemZ::CCMASK_CMP_LE; break;
+    default: return false;
+    }
+
+    // Return the updated CCReg link.
+    CCReg = IPM->getOperand(0);
+    return true;
+  }
+
+  return false;
 }
 
 SDValue SystemZTargetLowering::combineBR_CCMASK(

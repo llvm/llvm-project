@@ -25,7 +25,7 @@ test()
     static_assert(std::numeric_limits<const volatile T>::min_exponent == expected, "min_exponent test 4");
 }
 
-int main()
+int main(int, char**)
 {
     test<bool, 0>();
     test<char, 0>();
@@ -54,4 +54,6 @@ int main()
     test<float, FLT_MIN_EXP>();
     test<double, DBL_MIN_EXP>();
     test<long double, LDBL_MIN_EXP>();
+
+  return 0;
 }

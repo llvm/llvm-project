@@ -602,7 +602,7 @@ void test_lwg2767() {
     }
 }
 
-int main()
+int main(int, char**)
 {
     constructor_tests();
     return_type_tests();
@@ -612,4 +612,6 @@ int main()
     call_operator_forwarding_test();
     call_operator_noexcept_test();
     test_lwg2767();
+
+  return 0;
 }

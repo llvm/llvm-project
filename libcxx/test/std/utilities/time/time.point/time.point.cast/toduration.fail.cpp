@@ -18,10 +18,12 @@
 
 #include <chrono>
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock Clock;
     typedef std::chrono::time_point<Clock, std::chrono::milliseconds> FromTimePoint;
     typedef std::chrono::time_point<Clock, std::chrono::minutes> ToTimePoint;
     std::chrono::time_point_cast<ToTimePoint>(FromTimePoint(std::chrono::milliseconds(3)));
+
+  return 0;
 }

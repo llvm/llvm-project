@@ -95,7 +95,9 @@ void test_const_Types_lazy_sfinae()
     assert(std::get<0>(t).value == 42);
 }
 
-int main() {
+int main(int, char**) {
     test_tuple_like_lazy_sfinae();
     test_const_Types_lazy_sfinae();
+
+  return 0;
 }

@@ -4183,6 +4183,18 @@ TEST_F(FormatTest, BreaksFunctionDeclarations) {
                Style);
 }
 
+TEST_F(FormatTest, DontBreakBeforeQualifiedOperator) {
+  // Regression test for https://bugs.llvm.org/show_bug.cgi?id=40516:
+  // Prefer keeping `::` followed by `operator` together.
+  EXPECT_EQ("const aaaa::bbbbbbb &\n"
+            "ccccccccc::operator++() {\n"
+            "  stuff();\n"
+            "}",
+            format("const aaaa::bbbbbbb\n"
+                   "&ccccccccc::operator++() { stuff(); }",
+                   getLLVMStyleWithColumns(40)));
+}
+
 TEST_F(FormatTest, TrailingReturnType) {
   verifyFormat("auto foo() -> int;\n");
   verifyFormat("struct S {\n"
@@ -8738,6 +8750,9 @@ TEST_F(FormatTest, ConfigurableUseOfTab) {
                "\t\t    parameter1,  \\\n"
                "\t\t    parameter2); \\\n"
                "\t}",
+               Tab);
+  verifyFormat("int a;\t      // x\n"
+               "int bbbbbbbb; // x\n",
                Tab);
 
   Tab.TabWidth = 4;

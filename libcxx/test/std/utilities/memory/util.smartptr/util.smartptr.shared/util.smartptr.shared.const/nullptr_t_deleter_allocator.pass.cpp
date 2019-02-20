@@ -27,7 +27,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
     std::shared_ptr<A> p(nullptr, test_deleter<A>(3), test_allocator<A>(5));
@@ -81,4 +81,6 @@ int main()
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
 #endif
+
+  return 0;
 }

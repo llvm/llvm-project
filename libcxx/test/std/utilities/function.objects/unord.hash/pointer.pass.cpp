@@ -52,8 +52,10 @@ void test_nullptr()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<int*>();
     test_nullptr();
+
+  return 0;
 }

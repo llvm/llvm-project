@@ -40,7 +40,7 @@ protected:
     virtual std::string do_grouping() const {return std::string("\1\2\3");}
 };
 
-int main()
+int main(int, char**)
 {
     const my_facet f(1);
     std::ios ios(0);
@@ -79,4 +79,6 @@ int main()
         assert(err == ios.goodbit);
         assert(v == 0xFFFFFFFF);
     }
+
+  return 0;
 }

@@ -245,8 +245,7 @@ void AsanThread::Init(const InitOptions *options) {
 thread_return_t AsanThread::ThreadStart(
     tid_t os_id, atomic_uintptr_t *signal_thread_is_registered) {
   Init();
-  asanThreadRegistry().StartThread(tid(), os_id, /*workerthread*/ false,
-                                   nullptr);
+  asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
   if (signal_thread_is_registered)
     atomic_store(signal_thread_is_registered, 1, memory_order_release);
 

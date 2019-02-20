@@ -14,7 +14,7 @@
 
 #include <optional>
 
-int main()
+int main(int, char**)
 {
     using std::optional;
     using std::in_place_t;
@@ -22,4 +22,6 @@ int main()
 
     optional<in_place_t> opt; // expected-note {{requested here}}
     // expected-error@optional:* {{"instantiation of optional with in_place_t is ill-formed"}}
+
+  return 0;
 }

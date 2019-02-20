@@ -23,7 +23,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l;
@@ -61,4 +61,6 @@ int main()
 #endif
         }
     }
+
+  return 0;
 }

@@ -31,7 +31,7 @@
 #include <cassert>
 
 
-int main()
+int main(int, char**)
 {
     typedef std::__libcpp_debug_exception ExType;
     {
@@ -52,4 +52,6 @@ int main()
         } catch (ExType const&) {
         }
     }
+
+  return 0;
 }

@@ -18,7 +18,7 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -74,4 +74,6 @@ int main()
         assert(n == 4);
     }
 #endif
+
+  return 0;
 }

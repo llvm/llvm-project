@@ -17,7 +17,7 @@
 #include <cassert>
 #include "platform_support.h"
 
-int main()
+int main(int, char**)
 {
 #ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
     std::wstring temp = get_wide_temp_file_name();
@@ -42,4 +42,6 @@ int main()
     }
     _wremove(temp.c_str());
 #endif
+
+  return 0;
 }

@@ -33,7 +33,7 @@ protected:
     }
 };
 
-int main()
+int main(int, char**)
 {
     {
         std::ostream os((std::streambuf*)0);
@@ -57,4 +57,6 @@ int main()
         assert(bool(s));
         assert(sync_called == 1);
     }
+
+  return 0;
 }

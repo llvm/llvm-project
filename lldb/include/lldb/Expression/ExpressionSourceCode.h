@@ -36,7 +36,8 @@ public:
   const char *GetName() const { return m_name.c_str(); }
 
   bool GetText(std::string &text, lldb::LanguageType wrapping_language,
-               bool static_method, ExecutionContext &exe_ctx) const;
+               bool static_method, ExecutionContext &exe_ctx,
+               bool add_locals) const;
 
   // Given a string returned by GetText, find the beginning and end of the body
   // passed to CreateWrapped. Return true if the bounds could be found.  This

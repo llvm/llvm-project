@@ -24,7 +24,7 @@
 
 struct Empty {};
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::tuple<int> T;
@@ -64,4 +64,6 @@ int main()
         assert(std::get<2>(t) == 5);
         assert(d == 2.5);
     }
+
+  return 0;
 }

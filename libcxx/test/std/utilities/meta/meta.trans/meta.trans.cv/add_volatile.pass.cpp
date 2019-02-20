@@ -32,7 +32,7 @@ void test_add_volatile()
     test_add_volatile_imp<const volatile T, const volatile T>();
 }
 
-int main()
+int main(int, char**)
 {
     test_add_volatile<void>();
     test_add_volatile<int>();
@@ -41,4 +41,6 @@ int main()
     test_add_volatile<const int&>();
     test_add_volatile<int*>();
     test_add_volatile<const int*>();
+
+  return 0;
 }

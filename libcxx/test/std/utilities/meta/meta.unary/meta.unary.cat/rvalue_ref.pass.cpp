@@ -38,11 +38,13 @@ void test_rvalue_ref()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_rvalue_ref<int&&>();
     test_rvalue_ref<const int&&>();
 
 //  LWG#2582
     static_assert(!std::is_rvalue_reference<incomplete_type>::value, "");
+
+  return 0;
 }

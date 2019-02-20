@@ -125,7 +125,7 @@ public:
 
   bool ParseImportedModules(
       const lldb_private::SymbolContext &sc,
-      std::vector<lldb_private::ConstString> &imported_modules) override;
+      std::vector<lldb_private::SourceModule> &imported_modules) override;
 
   size_t ParseBlocksRecursive(lldb_private::Function &func) override;
 
@@ -489,7 +489,7 @@ protected:
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<DWARFDebugInfo> m_info;
   std::unique_ptr<DWARFDebugLine> m_line;
-  std::unique_ptr<GlobalVariableMap> m_global_aranges_ap;
+  std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>
       DebugMacrosMap;

@@ -2556,205 +2556,197 @@ QualType Expr::findBoundMemberType(const Expr *expr) {
   return QualType();
 }
 
-Expr* Expr::IgnoreParens() {
-  Expr* E = this;
-  while (true) {
-    if (ParenExpr* P = dyn_cast<ParenExpr>(E)) {
-      E = P->getSubExpr();
-      continue;
-    }
-    if (UnaryOperator* P = dyn_cast<UnaryOperator>(E)) {
-      if (P->getOpcode() == UO_Extension) {
-        E = P->getSubExpr();
-        continue;
-      }
-    }
-    if (GenericSelectionExpr* P = dyn_cast<GenericSelectionExpr>(E)) {
-      if (!P->isResultDependent()) {
-        E = P->getResultExpr();
-        continue;
-      }
-    }
-    if (ChooseExpr* P = dyn_cast<ChooseExpr>(E)) {
-      if (!P->isConditionDependent()) {
-        E = P->getChosenSubExpr();
-        continue;
-      }
-    }
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
-      continue;
-    }
-    return E;
-  }
+static Expr *IgnoreImpCastsSingleStep(Expr *E) {
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    return ICE->getSubExpr();
+
+  if (auto *FE = dyn_cast<FullExpr>(E))
+    return FE->getSubExpr();
+
+  return E;
 }
 
-/// IgnoreParenCasts - Ignore parentheses and casts.  Strip off any ParenExpr
-/// or CastExprs or ImplicitCastExprs, returning their operand.
-Expr *Expr::IgnoreParenCasts() {
-  Expr *E = this;
-  while (true) {
-    E = E->IgnoreParens();
-    if (CastExpr *P = dyn_cast<CastExpr>(E)) {
-      E = P->getSubExpr();
-      continue;
-    }
-    if (MaterializeTemporaryExpr *Materialize
-                                      = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      E = Materialize->GetTemporaryExpr();
-      continue;
-    }
-    if (SubstNonTypeTemplateParmExpr *NTTP
-                                  = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
-      E = NTTP->getReplacement();
-      continue;
-    }
-    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
-      E = FE->getSubExpr();
-      continue;
-    }
-    return E;
-  }
+static Expr *IgnoreImpCastsExtraSingleStep(Expr *E) {
+  // FIXME: Skip MaterializeTemporaryExpr and SubstNonTypeTemplateParmExpr in
+  // addition to what IgnoreImpCasts() skips to account for the current
+  // behaviour of IgnoreParenImpCasts().
+  Expr *SubE = IgnoreImpCastsSingleStep(E);
+  if (SubE != E)
+    return SubE;
+
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    return MTE->GetTemporaryExpr();
+
+  if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
+    return NTTP->getReplacement();
+
+  return E;
 }
 
-Expr *Expr::IgnoreCasts() {
-  Expr *E = this;
-  while (true) {
-    if (CastExpr *P = dyn_cast<CastExpr>(E)) {
-      E = P->getSubExpr();
-      continue;
-    }
-    if (MaterializeTemporaryExpr *Materialize
-        = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      E = Materialize->GetTemporaryExpr();
-      continue;
-    }
-    if (SubstNonTypeTemplateParmExpr *NTTP
-        = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
-      E = NTTP->getReplacement();
-      continue;
-    }
-    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
-      E = FE->getSubExpr();
-      continue;
-    }
-    return E;
-  }
+static Expr *IgnoreCastsSingleStep(Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    return CE->getSubExpr();
+
+  if (auto *FE = dyn_cast<FullExpr>(E))
+    return FE->getSubExpr();
+
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    return MTE->GetTemporaryExpr();
+
+  if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
+    return NTTP->getReplacement();
+
+  return E;
 }
 
-/// IgnoreParenLValueCasts - Ignore parentheses and lvalue-to-rvalue
-/// casts.  This is intended purely as a temporary workaround for code
-/// that hasn't yet been rewritten to do the right thing about those
-/// casts, and may disappear along with the last internal use.
-Expr *Expr::IgnoreParenLValueCasts() {
-  Expr *E = this;
-  while (true) {
-    E = E->IgnoreParens();
-    if (CastExpr *P = dyn_cast<CastExpr>(E)) {
-      if (P->getCastKind() == CK_LValueToRValue) {
-        E = P->getSubExpr();
-        continue;
-      }
-    } else if (MaterializeTemporaryExpr *Materialize
-                                      = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      E = Materialize->GetTemporaryExpr();
-      continue;
-    } else if (SubstNonTypeTemplateParmExpr *NTTP
-                                  = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
-      E = NTTP->getReplacement();
-      continue;
-    } else if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
-      E = FE->getSubExpr();
-      continue;
-    }
-    break;
+static Expr *IgnoreLValueCastsSingleStep(Expr *E) {
+  // Skip what IgnoreCastsSingleStep skips, except that only
+  // lvalue-to-rvalue casts are skipped.
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() != CK_LValueToRValue)
+      return E;
+
+  return IgnoreCastsSingleStep(E);
+}
+
+static Expr *IgnoreBaseCastsSingleStep(Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() == CK_DerivedToBase ||
+        CE->getCastKind() == CK_UncheckedDerivedToBase ||
+        CE->getCastKind() == CK_NoOp)
+      return CE->getSubExpr();
+
+  return E;
+}
+
+static Expr *IgnoreImplicitSingleStep(Expr *E) {
+  Expr *SubE = IgnoreImpCastsSingleStep(E);
+  if (SubE != E)
+    return SubE;
+
+  if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
+    return MTE->GetTemporaryExpr();
+
+  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+    return BTE->getSubExpr();
+
+  return E;
+}
+
+static Expr *IgnoreParensSingleStep(Expr *E) {
+  if (auto *PE = dyn_cast<ParenExpr>(E))
+    return PE->getSubExpr();
+
+  if (auto *UO = dyn_cast<UnaryOperator>(E)) {
+    if (UO->getOpcode() == UO_Extension)
+      return UO->getSubExpr();
+  }
+
+  else if (auto *GSE = dyn_cast<GenericSelectionExpr>(E)) {
+    if (!GSE->isResultDependent())
+      return GSE->getResultExpr();
+  }
+
+  else if (auto *CE = dyn_cast<ChooseExpr>(E)) {
+    if (!CE->isConditionDependent())
+      return CE->getChosenSubExpr();
+  }
+
+  else if (auto *CE = dyn_cast<ConstantExpr>(E))
+    return CE->getSubExpr();
+
+  return E;
+}
+
+static Expr *IgnoreNoopCastsSingleStep(const ASTContext &Ctx, Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E)) {
+    // We ignore integer <-> casts that are of the same width, ptr<->ptr and
+    // ptr<->int casts of the same width. We also ignore all identity casts.
+    Expr *SubExpr = CE->getSubExpr();
+    bool IsIdentityCast =
+        Ctx.hasSameUnqualifiedType(E->getType(), SubExpr->getType());
+    bool IsSameWidthCast =
+        (E->getType()->isPointerType() || E->getType()->isIntegralType(Ctx)) &&
+        (SubExpr->getType()->isPointerType() ||
+         SubExpr->getType()->isIntegralType(Ctx)) &&
+        (Ctx.getTypeSize(E->getType()) == Ctx.getTypeSize(SubExpr->getType()));
+
+    if (IsIdentityCast || IsSameWidthCast)
+      return SubExpr;
+  }
+
+  else if (auto *NTTP = dyn_cast<SubstNonTypeTemplateParmExpr>(E))
+    return NTTP->getReplacement();
+
+  return E;
+}
+
+static Expr *IgnoreExprNodesImpl(Expr *E) { return E; }
+template <typename FnTy, typename... FnTys>
+static Expr *IgnoreExprNodesImpl(Expr *E, FnTy &&Fn, FnTys &&... Fns) {
+  return IgnoreExprNodesImpl(Fn(E), std::forward<FnTys>(Fns)...);
+}
+
+/// Given an expression E and functions Fn_1,...,Fn_n : Expr * -> Expr *,
+/// Recursively apply each of the functions to E until reaching a fixed point.
+/// Note that a null E is valid; in this case nothing is done.
+template <typename... FnTys>
+static Expr *IgnoreExprNodes(Expr *E, FnTys &&... Fns) {
+  Expr *LastE = nullptr;
+  while (E != LastE) {
+    LastE = E;
+    E = IgnoreExprNodesImpl(E, std::forward<FnTys>(Fns)...);
   }
   return E;
 }
 
-Expr *Expr::ignoreParenBaseCasts() {
-  Expr *E = this;
-  while (true) {
-    E = E->IgnoreParens();
-    if (CastExpr *CE = dyn_cast<CastExpr>(E)) {
-      if (CE->getCastKind() == CK_DerivedToBase ||
-          CE->getCastKind() == CK_UncheckedDerivedToBase ||
-          CE->getCastKind() == CK_NoOp) {
-        E = CE->getSubExpr();
-        continue;
-      }
-    }
+Expr *Expr::IgnoreImpCasts() {
+  return IgnoreExprNodes(this, IgnoreImpCastsSingleStep);
+}
 
-    return E;
-  }
+Expr *Expr::IgnoreCasts() {
+  return IgnoreExprNodes(this, IgnoreCastsSingleStep);
+}
+
+Expr *Expr::IgnoreImplicit() {
+  return IgnoreExprNodes(this, IgnoreImplicitSingleStep);
+}
+
+Expr *Expr::IgnoreParens() {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep);
 }
 
 Expr *Expr::IgnoreParenImpCasts() {
-  Expr *E = this;
-  while (true) {
-    E = E->IgnoreParens();
-    if (ImplicitCastExpr *P = dyn_cast<ImplicitCastExpr>(E)) {
-      E = P->getSubExpr();
-      continue;
-    }
-    if (MaterializeTemporaryExpr *Materialize
-                                      = dyn_cast<MaterializeTemporaryExpr>(E)) {
-      E = Materialize->GetTemporaryExpr();
-      continue;
-    }
-    if (SubstNonTypeTemplateParmExpr *NTTP
-                                  = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
-      E = NTTP->getReplacement();
-      continue;
-    }
-    return E;
-  }
+  return IgnoreExprNodes(this, IgnoreParensSingleStep,
+                         IgnoreImpCastsExtraSingleStep);
+}
+
+Expr *Expr::IgnoreParenCasts() {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep, IgnoreCastsSingleStep);
 }
 
 Expr *Expr::IgnoreConversionOperator() {
-  if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(this)) {
+  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(this)) {
     if (MCE->getMethodDecl() && isa<CXXConversionDecl>(MCE->getMethodDecl()))
       return MCE->getImplicitObjectArgument();
   }
   return this;
 }
 
-/// IgnoreParenNoopCasts - Ignore parentheses and casts that do not change the
-/// value (including ptr->int casts of the same size).  Strip off any
-/// ParenExpr or CastExprs, returning their operand.
-Expr *Expr::IgnoreParenNoopCasts(ASTContext &Ctx) {
-  Expr *E = this;
-  while (true) {
-    E = E->IgnoreParens();
+Expr *Expr::IgnoreParenLValueCasts() {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep,
+                         IgnoreLValueCastsSingleStep);
+}
 
-    if (CastExpr *P = dyn_cast<CastExpr>(E)) {
-      // We ignore integer <-> casts that are of the same width, ptr<->ptr and
-      // ptr<->int casts of the same width.  We also ignore all identity casts.
-      Expr *SE = P->getSubExpr();
+Expr *Expr::ignoreParenBaseCasts() {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep,
+                         IgnoreBaseCastsSingleStep);
+}
 
-      if (Ctx.hasSameUnqualifiedType(E->getType(), SE->getType())) {
-        E = SE;
-        continue;
-      }
-
-      if ((E->getType()->isPointerType() ||
-           E->getType()->isIntegralType(Ctx)) &&
-          (SE->getType()->isPointerType() ||
-           SE->getType()->isIntegralType(Ctx)) &&
-          Ctx.getTypeSize(E->getType()) == Ctx.getTypeSize(SE->getType())) {
-        E = SE;
-        continue;
-      }
-    }
-
-    if (SubstNonTypeTemplateParmExpr *NTTP
-                                  = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
-      E = NTTP->getReplacement();
-      continue;
-    }
-
-    return E;
-  }
+Expr *Expr::IgnoreParenNoopCasts(const ASTContext &Ctx) {
+  return IgnoreExprNodes(this, IgnoreParensSingleStep, [&Ctx](Expr *E) {
+    return IgnoreNoopCastsSingleStep(Ctx, E);
+  });
 }
 
 bool Expr::isDefaultArgument() const {

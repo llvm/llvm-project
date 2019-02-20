@@ -16,7 +16,7 @@
 #include <streambuf>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::streambuf* sb = 0;
@@ -44,4 +44,6 @@ int main()
         assert(ios.fill() == ' ');
         assert(ios.getloc() == std::locale());
     }
+
+  return 0;
 }

@@ -144,16 +144,43 @@ static StringInitFailureKind IsStringInit(Expr *init, QualType declType,
 static void updateStringLiteralType(Expr *E, QualType Ty) {
   while (true) {
     E->setType(Ty);
-    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E))
+    E->setValueKind(VK_RValue);
+    if (isa<StringLiteral>(E) || isa<ObjCEncodeExpr>(E)) {
       break;
-    else if (ParenExpr *PE = dyn_cast<ParenExpr>(E))
+    } else if (ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
       E = PE->getSubExpr();
-    else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E))
+    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      assert(UO->getOpcode() == UO_Extension);
       E = UO->getSubExpr();
-    else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E))
+    } else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E)) {
       E = GSE->getResultExpr();
-    else
+    } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
+      E = CE->getChosenSubExpr();
+    } else {
       llvm_unreachable("unexpected expr in string literal init");
+    }
+  }
+}
+
+/// Fix a compound literal initializing an array so it's correctly marked
+/// as an rvalue.
+static void updateGNUCompoundLiteralRValue(Expr *E) {
+  while (true) {
+    E->setValueKind(VK_RValue);
+    if (isa<CompoundLiteralExpr>(E)) {
+      break;
+    } else if (ParenExpr *PE = dyn_cast<ParenExpr>(E)) {
+      E = PE->getSubExpr();
+    } else if (UnaryOperator *UO = dyn_cast<UnaryOperator>(E)) {
+      assert(UO->getOpcode() == UO_Extension);
+      E = UO->getSubExpr();
+    } else if (GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(E)) {
+      E = GSE->getResultExpr();
+    } else if (ChooseExpr *CE = dyn_cast<ChooseExpr>(E)) {
+      E = CE->getChosenSubExpr();
+    } else {
+      llvm_unreachable("unexpected expr in array compound literal init");
+    }
   }
 }
 
@@ -4670,19 +4697,23 @@ static void TryReferenceInitializationCore(Sema &S,
     //   applied.
     // Postpone address space conversions to after the temporary materialization
     // conversion to allow creating temporaries in the alloca address space.
-    auto AS1 = T1Quals.getAddressSpace();
-    auto AS2 = T2Quals.getAddressSpace();
-    T1Quals.removeAddressSpace();
-    T2Quals.removeAddressSpace();
-    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1Quals);
-    if (T1Quals != T2Quals)
+    auto T1QualsIgnoreAS = T1Quals;
+    auto T2QualsIgnoreAS = T2Quals;
+    if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
+      T1QualsIgnoreAS.removeAddressSpace();
+      T2QualsIgnoreAS.removeAddressSpace();
+    }
+    QualType cv1T4 = S.Context.getQualifiedType(cv2T2, T1QualsIgnoreAS);
+    if (T1QualsIgnoreAS != T2QualsIgnoreAS)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_RValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
-    if (AS1 != AS2) {
-      T1Quals.addAddressSpace(AS1);
-      QualType cv1AST4 = S.Context.getQualifiedType(cv2T2, T1Quals);
-      Sequence.AddQualificationConversionStep(cv1AST4, ValueKind);
+    // Add addr space conversion if required.
+    if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
+      auto T4Quals = cv1T4.getQualifiers();
+      T4Quals.addAddressSpace(T1Quals.getAddressSpace());
+      QualType cv1T4WithAS = S.Context.getQualifiedType(T2, T4Quals);
+      Sequence.AddQualificationConversionStep(cv1T4WithAS, ValueKind);
     }
 
     //   In any case, the reference is bound to the resulting glvalue (or to
@@ -5537,8 +5568,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
     // array from a compound literal that creates an array of the same
     // type, so long as the initializer has no side effects.
     if (!S.getLangOpts().CPlusPlus && Initializer &&
-        (isa<ConstantExpr>(Initializer->IgnoreParens()) ||
-         isa<CompoundLiteralExpr>(Initializer->IgnoreParens())) &&
+        isa<CompoundLiteralExpr>(Initializer->IgnoreParens()) &&
         Initializer->getType()->isArrayType()) {
       const ArrayType *SourceAT
         = Context.getAsArrayType(Initializer->getType());
@@ -7951,6 +7981,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
       S.Diag(Kind.getLocation(), diag::ext_array_init_copy)
         << Step->Type << CurInit.get()->getType()
         << CurInit.get()->getSourceRange();
+      updateGNUCompoundLiteralRValue(CurInit.get());
       LLVM_FALLTHROUGH;
     case SK_ArrayInit:
       // If the destination type is an incomplete array type, update the
@@ -8450,6 +8481,7 @@ bool InitializationSequence::Diagnose(Sema &S,
   case FK_ReferenceInitFailed:
     S.Diag(Kind.getLocation(), diag::err_reference_bind_failed)
       << DestType.getNonReferenceType()
+      << DestType.getNonReferenceType()->isIncompleteType()
       << OnlyArg->isLValue()
       << OnlyArg->getType()
       << Args[0]->getSourceRange();

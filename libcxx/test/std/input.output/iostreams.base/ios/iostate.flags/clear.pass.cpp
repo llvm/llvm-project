@@ -20,7 +20,7 @@
 
 struct testbuf : public std::streambuf {};
 
-int main()
+int main(int, char**)
 {
     {
         std::ios ios(0);
@@ -66,4 +66,6 @@ int main()
         ios.clear(std::ios::eofbit);
         assert(ios.rdstate() == std::ios::eofbit);
     }
+
+  return 0;
 }

@@ -29,7 +29,7 @@ struct some_alloc
     some_alloc(const some_alloc&);
 };
 
-int main()
+int main(int, char**)
 {
 #if defined(_LIBCPP_VERSION)
     {
@@ -49,4 +49,6 @@ int main()
         static_assert(!std::is_nothrow_move_constructible<C>::value, "");
     }
 #endif // _LIBCPP_VERSION
+
+  return 0;
 }

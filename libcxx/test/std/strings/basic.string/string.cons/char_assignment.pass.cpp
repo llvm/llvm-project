@@ -28,7 +28,7 @@ test(S s1, typename S::value_type s2)
     assert(s1.capacity() >= s1.size());
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -46,4 +46,6 @@ int main()
     test(S("1234567890123456789012345678901234567890123456789012345678901234567890"), 'a');
     }
 #endif
+
+  return 0;
 }

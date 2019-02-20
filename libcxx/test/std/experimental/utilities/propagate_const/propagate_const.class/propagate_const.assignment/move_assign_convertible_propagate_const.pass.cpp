@@ -18,7 +18,7 @@
 
 using std::experimental::propagate_const;
 
-int main() {
+int main(int, char**) {
 
   typedef propagate_const<X> PX;
   typedef propagate_const<MoveConstructibleFromX> PY;
@@ -29,4 +29,6 @@ int main() {
   py1=std::move(px2);
 
   assert(*py1==2);
+
+  return 0;
 }

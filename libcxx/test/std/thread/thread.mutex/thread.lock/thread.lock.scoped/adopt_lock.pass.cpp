@@ -31,7 +31,7 @@ struct TestMutex {
     TestMutex& operator=(TestMutex const&) = delete;
 };
 
-int main()
+int main(int, char**)
 {
     {
         using LG = std::scoped_lock<>;
@@ -68,4 +68,6 @@ int main()
         assert(!m1.locked && !m2.locked && !m3.locked);
     }
 
+
+  return 0;
 }

@@ -147,7 +147,7 @@ public:
   /// Insts is a list of loads and stores to promote, and Name is the basename
   /// for the PHIs to insert. After this is complete, the loads and stores are
   /// removed from the code.
-  void run(const SmallVectorImpl<Instruction *> &Insts) const;
+  void run(const SmallVectorImpl<Instruction *> &Insts);
 
   /// Return true if the specified instruction is in the Inst list.
   ///
@@ -158,7 +158,7 @@ public:
 
   /// This hook is invoked after all the stores are found and inserted as
   /// available values.
-  virtual void doExtraRewritesBeforeFinalDeletion() const {}
+  virtual void doExtraRewritesBeforeFinalDeletion() {}
 
   /// Clients can choose to implement this to get notified right before
   /// a load is RAUW'd another value.

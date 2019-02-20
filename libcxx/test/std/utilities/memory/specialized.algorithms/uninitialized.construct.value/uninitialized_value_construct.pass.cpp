@@ -102,9 +102,11 @@ void test_value_initialized()
     assert(pool[4] == 0);
 }
 
-int main()
+int main(int, char**)
 {
     test_counted();
     test_value_initialized();
     test_ctor_throws();
+
+  return 0;
 }

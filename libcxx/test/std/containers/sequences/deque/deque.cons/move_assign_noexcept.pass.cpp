@@ -31,7 +31,7 @@ struct some_alloc
     some_alloc(const some_alloc&);
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::deque<MoveOnly> C;
@@ -51,4 +51,6 @@ int main()
         static_assert(!std::is_nothrow_move_assignable<C>::value, "");
     }
 #endif // _LIBCPP_VERSION
+
+  return 0;
 }

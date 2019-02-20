@@ -9,9 +9,13 @@
 #include "Merge.h"
 #include "Logger.h"
 #include "Trace.h"
+#include "index/Index.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <iterator>
 
 namespace clang {
 namespace clangd {
@@ -114,6 +118,23 @@ void MergedIndex::refs(const RefsRequest &Req,
   });
 }
 
+// Returns true if \p L is (strictly) preferred to \p R (e.g. by file paths). If
+// neither is preferred, this returns false.
+bool prefer(const SymbolLocation &L, const SymbolLocation &R) {
+  if (!L)
+    return false;
+  if (!R)
+    return true;
+  auto HasCodeGenSuffix = [](const SymbolLocation &Loc) {
+    constexpr static const char *CodegenSuffixes[] = {".proto"};
+    return std::any_of(std::begin(CodegenSuffixes), std::end(CodegenSuffixes),
+                       [&](llvm::StringRef Suffix) {
+                         return llvm::StringRef(Loc.FileURI).endswith(Suffix);
+                       });
+  };
+  return HasCodeGenSuffix(L) && !HasCodeGenSuffix(R);
+}
+
 Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
   assert(L.ID == R.ID);
   // We prefer information from TUs that saw the definition.
@@ -128,12 +149,11 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
   Symbol S = PreferR ? R : L;        // The target symbol we're merging into.
   const Symbol &O = PreferR ? L : R; // The "other" less-preferred symbol.
 
-  // For each optional field, fill it from O if missing in S.
-  // (It might be missing in O too, but that's a no-op).
-  if (!S.Definition)
-    S.Definition = O.Definition;
-  if (!S.CanonicalDeclaration)
+  // Only use locations in \p O if it's (strictly) preferred.
+  if (prefer(O.CanonicalDeclaration, S.CanonicalDeclaration))
     S.CanonicalDeclaration = O.CanonicalDeclaration;
+  if (prefer(O.Definition, S.Definition))
+    S.Definition = O.Definition;
   S.References += O.References;
   if (S.Signature == "")
     S.Signature = O.Signature;

@@ -34,7 +34,7 @@ MipsELFStreamer::MipsELFStreamer(MCContext &Context,
 }
 
 void MipsELFStreamer::EmitInstruction(const MCInst &Inst,
-                                      const MCSubtargetInfo &STI, bool) {
+                                      const MCSubtargetInfo &STI) {
   MCELFStreamer::EmitInstruction(Inst, STI);
 
   MCContext &Context = getContext();

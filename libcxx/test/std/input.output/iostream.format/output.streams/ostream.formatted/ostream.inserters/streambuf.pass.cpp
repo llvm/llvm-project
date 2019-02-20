@@ -55,7 +55,7 @@ protected:
         }
 };
 
-int main()
+int main(int, char**)
 {
     {
         testbuf<char> sb;
@@ -65,4 +65,6 @@ int main()
         os << &sb2;
         assert(sb.str() == "testing...");
     }
+
+  return 0;
 }

@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month              = std::chrono::month;
     using weekday            = std::chrono::weekday;
@@ -38,4 +38,6 @@ int main()
         month_weekday_last mdl(month{i}, weekday_last{Tuesday});
         assert( static_cast<unsigned>(mdl.month()) == i);
     }
+
+  return 0;
 }

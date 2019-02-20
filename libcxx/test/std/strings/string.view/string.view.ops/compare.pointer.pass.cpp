@@ -32,7 +32,7 @@ test( const CharT *s1, const CharT *s2, int expected)
     test1 ( sv1, s2, expected );
 }
 
-int main()
+int main(int, char**)
 {
     {
     test("", "", 0);
@@ -123,4 +123,6 @@ int main()
     static_assert ( sv2.compare("abcde") == 0, "" );
     }
 #endif
+
+  return 0;
 }

@@ -1998,6 +1998,13 @@ void Parser::ParseCXXSimpleTypeSpecifier(DeclSpec &DS) {
   case tok::kw_bool:
     DS.SetTypeSpecType(DeclSpec::TST_bool, Loc, PrevSpec, DiagID, Policy);
     break;
+#define GENERIC_IMAGE_TYPE(ImgType, Id)                                        \
+  case tok::kw_##ImgType##_t:                                                  \
+    DS.SetTypeSpecType(DeclSpec::TST_##ImgType##_t, Loc, PrevSpec, DiagID,     \
+                       Policy);                                                \
+    break;
+#include "clang/Basic/OpenCLImageTypes.def"
+
   case tok::annot_decltype:
   case tok::kw_decltype:
     DS.SetRangeEnd(ParseDecltypeSpecifier(DS));

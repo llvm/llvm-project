@@ -253,7 +253,9 @@ void test_allocator_and_new_match() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   test_libcpp_dealloc();
   test_allocator_and_new_match();
+
+  return 0;
 }

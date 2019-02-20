@@ -35,7 +35,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::regex_constants::match_default == 0);
     assert(std::regex_constants::match_not_bol != 0);
@@ -125,4 +125,6 @@ int main()
     e1 &= e2;
     e1 |= e2;
     e1 ^= e2;
+
+  return 0;
 }

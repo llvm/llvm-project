@@ -35,11 +35,10 @@ void foo(){
   // SPIR: %[[block_captured:.*]] = getelementptr inbounds <{ i32, i32, i8 addrspace(4)*, i32 }>, <{ i32, i32, i8 addrspace(4)*, i32 }>* %[[block]], i32 0, i32 3
   // SPIR: %[[i_value:.*]] = load i32, i32* %i
   // SPIR: store i32 %[[i_value]], i32* %[[block_captured]],
-  // SPIR: %[[blk_ptr:.*]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32 }>* %[[block]] to i32 ()*
-  // SPIR: %[[blk_gen_ptr:.*]] = addrspacecast i32 ()* %[[blk_ptr]] to i32 () addrspace(4)*
-  // SPIR: store i32 () addrspace(4)* %[[blk_gen_ptr]], i32 () addrspace(4)** %[[block_B:.*]],
-  // SPIR: %[[blk_gen_ptr:.*]] = load i32 () addrspace(4)*, i32 () addrspace(4)** %[[block_B]]
-  // SPIR: %[[block_literal:.*]] = bitcast i32 () addrspace(4)* %[[blk_gen_ptr]] to %struct.__opencl_block_literal_generic addrspace(4)*
+  // SPIR: %[[blk_ptr:.*]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32 }>* %[[block]] to %struct.__opencl_block_literal_generic*
+  // SPIR: %[[blk_gen_ptr:.*]] = addrspacecast %struct.__opencl_block_literal_generic* %[[blk_ptr]] to %struct.__opencl_block_literal_generic addrspace(4)*
+  // SPIR: store %struct.__opencl_block_literal_generic addrspace(4)* %[[blk_gen_ptr]], %struct.__opencl_block_literal_generic addrspace(4)** %[[block_B:.*]],
+  // SPIR: %[[block_literal:.*]] = load %struct.__opencl_block_literal_generic addrspace(4)*, %struct.__opencl_block_literal_generic addrspace(4)** %[[block_B]]
   // SPIR: %[[invoke_addr:.*]] = getelementptr inbounds %struct.__opencl_block_literal_generic, %struct.__opencl_block_literal_generic addrspace(4)* %[[block_literal]], i32 0, i32 2
   // SPIR: %[[blk_gen_ptr:.*]] = bitcast %struct.__opencl_block_literal_generic addrspace(4)* %[[block_literal]] to i8 addrspace(4)*
   // SPIR: %[[invoke_func_ptr:.*]] = load i8 addrspace(4)*, i8 addrspace(4)* addrspace(4)* %[[invoke_addr]]
@@ -50,11 +49,10 @@ void foo(){
   // AMDGCN: %[[block_captured:.*]] = getelementptr inbounds <{ i32, i32, i8*, i32 }>, <{ i32, i32, i8*, i32 }> addrspace(5)* %[[block]], i32 0, i32 3
   // AMDGCN: %[[i_value:.*]] = load i32, i32 addrspace(5)* %i
   // AMDGCN: store i32 %[[i_value]], i32 addrspace(5)* %[[block_captured]],
-  // AMDGCN: %[[blk_ptr:.*]] = bitcast <{ i32, i32, i8*, i32 }> addrspace(5)* %[[block]] to i32 () addrspace(5)*
-  // AMDGCN: %[[blk_gen_ptr:.*]] = addrspacecast i32 () addrspace(5)* %[[blk_ptr]] to i32 ()*
-  // AMDGCN: store i32 ()* %[[blk_gen_ptr]], i32 ()* addrspace(5)* %[[block_B:.*]],
-  // AMDGCN: %[[blk_gen_ptr:.*]] = load i32 ()*, i32 ()* addrspace(5)* %[[block_B]]
-  // AMDGCN: %[[block_literal:.*]] = bitcast i32 ()* %[[blk_gen_ptr]] to %struct.__opencl_block_literal_generic*
+  // AMDGCN: %[[blk_ptr:.*]] = bitcast <{ i32, i32, i8*, i32 }> addrspace(5)* %[[block]] to %struct.__opencl_block_literal_generic addrspace(5)*
+  // AMDGCN: %[[blk_gen_ptr:.*]] = addrspacecast %struct.__opencl_block_literal_generic addrspace(5)* %[[blk_ptr]] to %struct.__opencl_block_literal_generic*
+  // AMDGCN: store %struct.__opencl_block_literal_generic* %[[blk_gen_ptr]], %struct.__opencl_block_literal_generic* addrspace(5)* %[[block_B:.*]],
+  // AMDGCN: %[[block_literal:.*]] = load %struct.__opencl_block_literal_generic*, %struct.__opencl_block_literal_generic* addrspace(5)* %[[block_B]]
   // AMDGCN: %[[invoke_addr:.*]] = getelementptr inbounds %struct.__opencl_block_literal_generic, %struct.__opencl_block_literal_generic* %[[block_literal]], i32 0, i32 2
   // AMDGCN: %[[blk_gen_ptr:.*]] = bitcast %struct.__opencl_block_literal_generic* %[[block_literal]] to i8*
   // AMDGCN: %[[invoke_func_ptr:.*]] = load i8*, i8** %[[invoke_addr]]

@@ -14,4 +14,11 @@ void radar14415662(RDar14415662 *f, char x, int y) {
   x = y; // expected-warning {{implicit conversion loses integer precision: 'int' to 'char'}}
 }
 
+__attribute__((objc_root_class)) @interface DoubleProp
+@property double d;
+@end
 
+void use_double_prop(DoubleProp *dp) {
+  double local = 42;
+  dp.d += local; // no warning
+}

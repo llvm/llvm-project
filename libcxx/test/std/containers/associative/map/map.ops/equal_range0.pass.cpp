@@ -25,7 +25,7 @@
 
 #include "is_transparent.h"
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::map<int, double, transparent_less> M;
@@ -41,4 +41,6 @@ int main()
     P result = example.equal_range(C2Int{5});
     assert(result.first == result.second);
     }
+
+  return 0;
 }

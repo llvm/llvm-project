@@ -18,7 +18,9 @@
 
 namespace ex = std::experimental::pmr;
 
-int main()
+int main(int, char**)
 {
     ex::memory_resource m; // expected-error {{variable type 'ex::memory_resource' is an abstract class}}
+
+  return 0;
 }

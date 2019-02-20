@@ -156,6 +156,7 @@ namespace clang {
   class OMPDeclareReductionDecl;
   class OMPDeclareSimdDecl;
   class OMPClause;
+  struct OMPVarListLocTy;
   struct OverloadCandidate;
   class OverloadCandidateSet;
   class OverloadExpr;
@@ -1403,7 +1404,6 @@ public:
   void PopCompoundScope();
 
   sema::CompoundScopeInfo &getCurCompoundScope() const;
-  bool isCurCompoundStmtAStmtExpr() const;
 
   bool hasAnyUnrecoverableErrorsInThisFunction() const;
 
@@ -4533,6 +4533,8 @@ public:
   void ActOnStartStmtExpr();
   ExprResult ActOnStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
                            SourceLocation RPLoc); // "({..})"
+  // Handle the final expression in a statement expression.
+  ExprResult ActOnStmtExprResult(ExprResult E);
   void ActOnStmtExprError();
 
   // __builtin_offsetof(type, identifier(.identifier|[expr])*)
@@ -6211,9 +6213,21 @@ public:
   // C++ Templates [C++ 14]
   //
   void FilterAcceptableTemplateNames(LookupResult &R,
-                                     bool AllowFunctionTemplates = true);
+                                     bool AllowFunctionTemplates = true,
+                                     bool AllowDependent = true);
   bool hasAnyAcceptableTemplateNames(LookupResult &R,
-                                     bool AllowFunctionTemplates = true);
+                                     bool AllowFunctionTemplates = true,
+                                     bool AllowDependent = true);
+  /// Try to interpret the lookup result D as a template-name.
+  ///
+  /// \param D A declaration found by name lookup.
+  /// \param AllowFunctionTemplates Whether function templates should be
+  ///        considered valid results.
+  /// \param AllowDependent Whether unresolved using declarations (that might
+  ///        name templates) should be considered valid results.
+  NamedDecl *getAsTemplateNameDecl(NamedDecl *D,
+                                   bool AllowFunctionTemplates = true,
+                                   bool AllowDependent = true);
 
   bool LookupTemplateName(LookupResult &R, Scope *S, CXXScopeSpec &SS,
                           QualType ObjectType, bool EnteringContext,
@@ -8763,6 +8777,9 @@ private:
   /// Pop OpenMP function region for non-capturing function.
   void popOpenMPFunctionRegion(const sema::FunctionScopeInfo *OldFSI);
 
+  /// Check whether we're allowed to call Callee from the current function.
+  void checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
+
   /// Checks if a type or a declaration is disabled due to the owning extension
   /// being disabled, and emits diagnostic messages if it is disabled.
   /// \param D type or declaration to be checked.
@@ -9334,15 +9351,13 @@ public:
 
   OMPClause *ActOnOpenMPVarListClause(
       OpenMPClauseKind Kind, ArrayRef<Expr *> Vars, Expr *TailExpr,
-      SourceLocation StartLoc, SourceLocation LParenLoc,
-      SourceLocation ColonLoc, SourceLocation EndLoc,
-      CXXScopeSpec &ReductionIdScopeSpec,
-      const DeclarationNameInfo &ReductionId, OpenMPDependClauseKind DepKind,
+      const OMPVarListLocTy &Locs, SourceLocation ColonLoc,
+      CXXScopeSpec &ReductionOrMapperIdScopeSpec,
+      DeclarationNameInfo &ReductionOrMapperId, OpenMPDependClauseKind DepKind,
       OpenMPLinearClauseKind LinKind,
       ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
-      ArrayRef<SourceLocation> MapTypeModifiersLoc,
-      OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
-      SourceLocation DepLinMapLoc);
+      ArrayRef<SourceLocation> MapTypeModifiersLoc, OpenMPMapClauseKind MapType,
+      bool IsMapTypeImplicit, SourceLocation DepLinMapLoc);
   /// Called on well-formed 'private' clause.
   OMPClause *ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
                                       SourceLocation StartLoc,
@@ -9426,10 +9441,12 @@ public:
   OMPClause *
   ActOnOpenMPMapClause(ArrayRef<OpenMPMapModifierKind> MapTypeModifiers,
                        ArrayRef<SourceLocation> MapTypeModifiersLoc,
+                       CXXScopeSpec &MapperIdScopeSpec,
+                       DeclarationNameInfo &MapperId,
                        OpenMPMapClauseKind MapType, bool IsMapTypeImplicit,
                        SourceLocation MapLoc, SourceLocation ColonLoc,
-                       ArrayRef<Expr *> VarList, SourceLocation StartLoc,
-                       SourceLocation LParenLoc, SourceLocation EndLoc);
+                       ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+                       ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'num_teams' clause.
   OMPClause *ActOnOpenMPNumTeamsClause(Expr *NumTeams, SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
@@ -9455,24 +9472,16 @@ public:
       SourceLocation KindLoc, SourceLocation EndLoc);
   /// Called on well-formed 'to' clause.
   OMPClause *ActOnOpenMPToClause(ArrayRef<Expr *> VarList,
-                                 SourceLocation StartLoc,
-                                 SourceLocation LParenLoc,
-                                 SourceLocation EndLoc);
+                                 const OMPVarListLocTy &Locs);
   /// Called on well-formed 'from' clause.
   OMPClause *ActOnOpenMPFromClause(ArrayRef<Expr *> VarList,
-                                   SourceLocation StartLoc,
-                                   SourceLocation LParenLoc,
-                                   SourceLocation EndLoc);
+                                   const OMPVarListLocTy &Locs);
   /// Called on well-formed 'use_device_ptr' clause.
   OMPClause *ActOnOpenMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
-                                           SourceLocation StartLoc,
-                                           SourceLocation LParenLoc,
-                                           SourceLocation EndLoc);
+                                           const OMPVarListLocTy &Locs);
   /// Called on well-formed 'is_device_ptr' clause.
   OMPClause *ActOnOpenMPIsDevicePtrClause(ArrayRef<Expr *> VarList,
-                                          SourceLocation StartLoc,
-                                          SourceLocation LParenLoc,
-                                          SourceLocation EndLoc);
+                                          const OMPVarListLocTy &Locs);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {
@@ -10111,7 +10120,7 @@ public:
   /// compilation, this is currently only enabled for CUDA compilations.
   llvm::DenseMap<CanonicalDeclPtr<FunctionDecl>,
                  std::vector<PartialDiagnosticAt>>
-      CUDADeferredDiags;
+      DeviceDeferredDiags;
 
   /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
   /// key in a hashtable, both the FD and location are hashed.
@@ -10132,21 +10141,22 @@ public:
   /// map.
   llvm::DenseMap</* Callee = */ CanonicalDeclPtr<FunctionDecl>,
                  /* Caller = */ FunctionDeclAndLoc>
-      CUDAKnownEmittedFns;
+      DeviceKnownEmittedFns;
 
-  /// A partial call graph maintained during CUDA compilation to support
-  /// deferred diagnostics.
+  /// A partial call graph maintained during CUDA/OpenMP device code compilation
+  /// to support deferred diagnostics.
   ///
   /// Functions are only added here if, at the time they're considered, they are
   /// not known-emitted.  As soon as we discover that a function is
   /// known-emitted, we remove it and everything it transitively calls from this
-  /// set and add those functions to CUDAKnownEmittedFns.
+  /// set and add those functions to DeviceKnownEmittedFns.
   llvm::DenseMap</* Caller = */ CanonicalDeclPtr<FunctionDecl>,
                  /* Callees = */ llvm::MapVector<CanonicalDeclPtr<FunctionDecl>,
                                                  SourceLocation>>
-      CUDACallGraph;
+      DeviceCallGraph;
 
-  /// Diagnostic builder for CUDA errors which may or may not be deferred.
+  /// Diagnostic builder for CUDA/OpenMP devices errors which may or may not be
+  /// deferred.
   ///
   /// In CUDA, there exist constructs (e.g. variable-length arrays, try/catch)
   /// which are not allowed to appear inside __device__ functions and are
@@ -10160,7 +10170,7 @@ public:
   /// diagnostic, or no diagnostic at all, according to an argument you pass to
   /// its constructor, thus simplifying the process of creating these "maybe
   /// deferred" diagnostics.
-  class CUDADiagBuilder {
+  class DeviceDiagBuilder {
   public:
     enum Kind {
       /// Emit no diagnostics.
@@ -10177,25 +10187,25 @@ public:
       K_Deferred
     };
 
-    CUDADiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
-                    FunctionDecl *Fn, Sema &S);
-    ~CUDADiagBuilder();
+    DeviceDiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
+                      FunctionDecl *Fn, Sema &S);
+    ~DeviceDiagBuilder();
 
     /// Convertible to bool: True if we immediately emitted an error, false if
     /// we didn't emit an error or we created a deferred error.
     ///
     /// Example usage:
     ///
-    ///   if (CUDADiagBuilder(...) << foo << bar)
+    ///   if (DeviceDiagBuilder(...) << foo << bar)
     ///     return ExprError();
     ///
     /// But see CUDADiagIfDeviceCode() and CUDADiagIfHostCode() -- you probably
-    /// want to use these instead of creating a CUDADiagBuilder yourself.
+    /// want to use these instead of creating a DeviceDiagBuilder yourself.
     operator bool() const { return ImmediateDiag.hasValue(); }
 
     template <typename T>
-    friend const CUDADiagBuilder &operator<<(const CUDADiagBuilder &Diag,
-                                             const T &Value) {
+    friend const DeviceDiagBuilder &operator<<(const DeviceDiagBuilder &Diag,
+                                               const T &Value) {
       if (Diag.ImmediateDiag.hasValue())
         *Diag.ImmediateDiag << Value;
       else if (Diag.PartialDiag.hasValue())
@@ -10216,7 +10226,15 @@ public:
     llvm::Optional<PartialDiagnostic> PartialDiag;
   };
 
-  /// Creates a CUDADiagBuilder that emits the diagnostic if the current context
+  /// Indicate that this function (and thus everything it transtively calls)
+  /// will be codegen'ed, and emit any deferred diagnostics on this function and
+  /// its (transitive) callees.
+  void markKnownEmitted(
+      Sema &S, FunctionDecl *OrigCaller, FunctionDecl *OrigCallee,
+      SourceLocation OrigLoc,
+      const llvm::function_ref<bool(Sema &, FunctionDecl *)> IsKnownEmitted);
+
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current context
   /// is "used as device code".
   ///
   /// - If CurContext is a __host__ function, does not emit any diagnostics.
@@ -10232,13 +10250,32 @@ public:
   ///  if (CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget())
   ///    return ExprError();
   ///  // Otherwise, continue parsing as normal.
-  CUDADiagBuilder CUDADiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
+  DeviceDiagBuilder CUDADiagIfDeviceCode(SourceLocation Loc, unsigned DiagID);
 
-  /// Creates a CUDADiagBuilder that emits the diagnostic if the current context
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current context
   /// is "used as host code".
   ///
   /// Same as CUDADiagIfDeviceCode, with "host" and "device" switched.
-  CUDADiagBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
+  DeviceDiagBuilder CUDADiagIfHostCode(SourceLocation Loc, unsigned DiagID);
+
+  /// Creates a DeviceDiagBuilder that emits the diagnostic if the current
+  /// context is "used as device code".
+  ///
+  /// - If CurContext is a `declare target` function or it is known that the
+  /// function is emitted for the device, emits the diagnostics immediately.
+  /// - If CurContext is a non-`declare target` function and we are compiling
+  ///   for the device, creates a diagnostic which is emitted if and when we
+  ///   realize that the function will be codegen'ed.
+  ///
+  /// Example usage:
+  ///
+  ///  // Variable-length arrays are not allowed in NVPTX device code.
+  ///  if (diagIfOpenMPDeviceCode(Loc, diag::err_vla_unsupported))
+  ///    return ExprError();
+  ///  // Otherwise, continue parsing as normal.
+  DeviceDiagBuilder diagIfOpenMPDeviceCode(SourceLocation Loc, unsigned DiagID);
+
+  DeviceDiagBuilder targetDiag(SourceLocation Loc, unsigned DiagID);
 
   enum CUDAFunctionTarget {
     CFT_Device,

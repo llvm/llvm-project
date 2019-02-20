@@ -31,9 +31,6 @@ enum class DurationScale : std::uint8_t {
 /// constructing a `Duration` for that scale.
 llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
 
-/// Returns the Time factory function name for a given `Scale`.
-llvm::StringRef getTimeFactoryForScale(DurationScale scale);
-
 // Determine if `Node` represents a literal floating point or integral zero.
 bool IsLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
                    const Expr &Node);
@@ -75,6 +72,9 @@ llvm::Optional<DurationScale> getScaleForTimeInverse(llvm::StringRef Name);
 const std::pair<llvm::StringRef, llvm::StringRef> &
 getDurationInverseForScale(DurationScale Scale);
 
+/// Returns the Time inverse function name for a given `Scale`.
+llvm::StringRef getTimeInverseForScale(DurationScale scale);
+
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.
 std::string rewriteExprFromNumberToDuration(
@@ -107,7 +107,7 @@ AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
 }
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
-                     TimeFactoryFunction) {
+                     TimeConversionFunction) {
   using namespace clang::ast_matchers;
   return functionDecl(hasAnyName(
       "::absl::ToUnixHours", "::absl::ToUnixMinutes", "::absl::ToUnixSeconds",

@@ -18,7 +18,9 @@
 
 #include "../test_func.h"
 
-int main()
+int main(int, char**)
 {
     assert(std::bind1st(test_func(1), 5)(10.) == -5.);
+
+  return 0;
 }

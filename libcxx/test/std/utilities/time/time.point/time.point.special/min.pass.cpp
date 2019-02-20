@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::chrono::system_clock Clock;
     typedef std::chrono::milliseconds Duration;
@@ -27,4 +27,6 @@ int main()
     ASSERT_NOEXCEPT(       TP::max());
 #endif
     assert(TP::min() == TP(Duration::min()));
+
+  return 0;
 }

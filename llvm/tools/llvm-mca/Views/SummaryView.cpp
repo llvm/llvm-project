@@ -27,8 +27,13 @@ SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
     : SM(Model), Source(S), DispatchWidth(Width), LastInstructionIdx(0),
       TotalCycles(0), NumMicroOps(0),
       ProcResourceUsage(Model.getNumProcResourceKinds(), 0),
-      ProcResourceMasks(Model.getNumProcResourceKinds()) {
+      ProcResourceMasks(Model.getNumProcResourceKinds()),
+      ResIdx2ProcResID(Model.getNumProcResourceKinds(), 0) {
   computeProcResourceMasks(SM, ProcResourceMasks);
+  for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
+    unsigned Index = getResourceStateIndex(ProcResourceMasks[I]);
+    ResIdx2ProcResID[Index] = I;
+  }
 }
 
 void SummaryView::onEvent(const HWInstructionEvent &Event) {
@@ -50,11 +55,8 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
   NumMicroOps += Desc.NumMicroOps;
   for (const std::pair<uint64_t, const ResourceUsage> &RU : Desc.Resources) {
     if (RU.second.size()) {
-      const auto It = find(ProcResourceMasks, RU.first);
-      assert(It != ProcResourceMasks.end() &&
-             "Invalid processor resource mask!");
-      ProcResourceUsage[std::distance(ProcResourceMasks.begin(), It)] +=
-          RU.second.size();
+      unsigned ProcResID = ResIdx2ProcResID[getResourceStateIndex(RU.first)];
+      ProcResourceUsage[ProcResID] += RU.second.size();
     }
   }
 }

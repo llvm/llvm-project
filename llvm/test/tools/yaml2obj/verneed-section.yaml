@@ -1,0 +1,73 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readelf -V %t | FileCheck %s
+
+# Check we are able to handle the SHT_GNU_verneed sections.
+
+# CHECK:      SHT_GNU_verneed {
+# CHECK-NEXT:   Dependency {
+# CHECK-NEXT:     Version: 1
+# CHECK-NEXT:     Count: 2
+# CHECK-NEXT:     FileName: dso.so.0
+# CHECK-NEXT:     Entry {
+# CHECK-NEXT:       Hash: 1937
+# CHECK-NEXT:       Flags: 0xA
+# CHECK-NEXT:       Index: 3
+# CHECK-NEXT:       Name: v1
+# CHECK-NEXT:     }
+# CHECK-NEXT:     Entry {
+# CHECK-NEXT:       Hash: 1938
+# CHECK-NEXT:       Flags: 0xB
+# CHECK-NEXT:       Index: 4
+# CHECK-NEXT:       Name: v2
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Dependency {
+# CHECK-NEXT:     Version: 1
+# CHECK-NEXT:     Count: 1
+# CHECK-NEXT:     FileName: dso.so.1
+# CHECK-NEXT:     Entry {
+# CHECK-NEXT:       Hash: 1939
+# CHECK-NEXT:       Flags: 0xC
+# CHECK-NEXT:       Index: 2
+# CHECK-NEXT:       Name: v3
+# CHECK-NEXT:     }
+# CHECK-NEXT:   }
+# CHECK-NEXT: }
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000201000
+Sections:
+  - Name:            .gnu.version_r
+    Type:            SHT_GNU_verneed
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x0000000000200250
+    Link:            .dynstr
+    AddressAlign:    0x0000000000000004
+    Info:            0x0000000000000002
+    Dependencies:
+      - Version:         1
+        File:            dso.so.0
+        Entries:
+          - Name:            v1
+            Hash:            1937
+            Flags:           10
+            Other:           3
+          - Name:            v2
+            Hash:            1938
+            Flags:           11
+            Other:           4
+      - Version:         1
+        File:            dso.so.1
+        Entries:
+          - Name:            v3
+            Hash:            1939
+            Flags:           12
+            Other:           2
+DynamicSymbols:
+  Global:
+    - Name:            f1

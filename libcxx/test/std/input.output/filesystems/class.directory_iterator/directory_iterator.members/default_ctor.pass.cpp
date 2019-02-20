@@ -22,7 +22,7 @@
 #include "test_macros.h"
 
 
-int main() {
+int main(int, char**) {
     {
         static_assert(std::is_nothrow_default_constructible<fs::directory_iterator>::value, "");
     }
@@ -31,4 +31,6 @@ int main() {
         const fs::directory_iterator d2;
         assert(d1 == d2);
     }
+
+  return 0;
 }

@@ -18,7 +18,9 @@
 #include <numeric>
 
 
-int main()
+int main(int, char**)
 {
     std::lcm(2.0, 4);
+
+  return 0;
 }

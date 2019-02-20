@@ -15,9 +15,11 @@
 #include <experimental/filesystem>
 #include <type_traits>
 
-int main() {
+int main(int, char**) {
   static_assert(std::is_same<
           std::experimental::filesystem::path,
           std::experimental::filesystem::v1::path
       >::value, "");
+
+  return 0;
 }

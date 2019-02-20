@@ -53,7 +53,7 @@ struct some_alloc2
     typedef std::true_type is_always_equal;
 };
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::string C;
@@ -81,4 +81,6 @@ int main()
         static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 #endif
+
+  return 0;
 }

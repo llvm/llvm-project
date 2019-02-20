@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using year                    = std::chrono::year;
     using month                   = std::chrono::month;
@@ -69,4 +69,6 @@ int main()
         year_month_weekday_last ym{year{i}, January, weekday_last{Tuesday}};
         assert((ym.ok() == year{i}.ok()));
     }
+
+  return 0;
 }

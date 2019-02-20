@@ -45,7 +45,7 @@ void test_floating_point()
 
 struct incomplete_type;
 
-int main()
+int main(int, char**)
 {
     test_floating_point<float>();
     test_floating_point<double>();
@@ -53,4 +53,6 @@ int main()
 
 //  LWG#2582
     static_assert(!std::is_floating_point<incomplete_type>::value, "");
+
+  return 0;
 }

@@ -375,6 +375,8 @@ class TypePromotionTransaction;
         SmallVectorImpl<Instruction *> &SpeculativelyMovedExts);
     bool splitBranchCondition(Function &F);
     bool simplifyOffsetableRelocate(Instruction &I);
+
+    bool tryToSinkFreeOperands(Instruction *I);
   };
 
 } // end anonymous namespace
@@ -652,6 +654,16 @@ bool CodeGenPrepare::isMergingEmptyBlockProfitable(BasicBlock *BB,
       !(BB->getSinglePredecessor() &&
         BB->getSinglePredecessor()->getSingleSuccessor()))
     return false;
+
+  // Skip merging if the block's successor is also a successor to any callbr
+  // that leads to this block.
+  // FIXME: Is this really needed? Is this a correctness issue?
+  for (pred_iterator PI = pred_begin(BB), E = pred_end(BB); PI != E; ++PI) {
+    if (auto *CBI = dyn_cast<CallBrInst>((*PI)->getTerminator()))
+      for (unsigned i = 0, e = CBI->getNumSuccessors(); i != e; ++i)
+        if (DestBB == CBI->getSuccessor(i))
+          return false;
+  }
 
   // Try to skip merging if the unique predecessor of BB is terminated by a
   // switch or indirect branch instruction, and BB is used as an incoming block
@@ -1147,54 +1159,121 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
-/// Try to combine CI into a call to the llvm.uadd.with.overflow intrinsic if
-/// possible.
-///
-/// Return true if any changes were made.
-static bool CombineUAddWithOverflow(CmpInst *CI) {
+static void replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
+                                        Instruction *InsertPt,
+                                        Intrinsic::ID IID) {
+  Value *Arg0 = BO->getOperand(0);
+  Value *Arg1 = BO->getOperand(1);
+
+  // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
+  if (BO->getOpcode() == Instruction::Add &&
+      IID == Intrinsic::usub_with_overflow) {
+    assert(isa<Constant>(Arg1) && "Unexpected input for usubo");
+    Arg1 = ConstantExpr::getNeg(cast<Constant>(Arg1));
+  }
+
+  IRBuilder<> Builder(InsertPt);
+  Value *MathOV = Builder.CreateBinaryIntrinsic(IID, Arg0, Arg1);
+  Value *Math = Builder.CreateExtractValue(MathOV, 0, "math");
+  Value *OV = Builder.CreateExtractValue(MathOV, 1, "ov");
+  BO->replaceAllUsesWith(Math);
+  Cmp->replaceAllUsesWith(OV);
+  BO->eraseFromParent();
+  Cmp->eraseFromParent();
+}
+
+/// Try to combine the compare into a call to the llvm.uadd.with.overflow
+/// intrinsic. Return true if any changes were made.
+static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
+                                      const DataLayout &DL) {
   Value *A, *B;
-  Instruction *AddI;
-  if (!match(CI,
-             m_UAddWithOverflow(m_Value(A), m_Value(B), m_Instruction(AddI))))
+  BinaryOperator *Add;
+  if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add))))
     return false;
 
-  Type *Ty = AddI->getType();
-  if (!isa<IntegerType>(Ty))
+  if (!TLI.shouldFormOverflowOp(ISD::UADDO,
+                                TLI.getValueType(DL, Add->getType())))
     return false;
 
-  // We don't want to move around uses of condition values this late, so we we
+  // We don't want to move around uses of condition values this late, so we
   // check if it is legal to create the call to the intrinsic in the basic
-  // block containing the icmp:
-
-  if (AddI->getParent() != CI->getParent() && !AddI->hasOneUse())
+  // block containing the icmp.
+  if (Add->getParent() != Cmp->getParent() && !Add->hasOneUse())
     return false;
 
 #ifndef NDEBUG
   // Someday m_UAddWithOverflow may get smarter, but this is a safe assumption
   // for now:
-  if (AddI->hasOneUse())
-    assert(*AddI->user_begin() == CI && "expected!");
+  if (Add->hasOneUse())
+    assert(*Add->user_begin() == Cmp && "expected!");
 #endif
 
-  Module *M = CI->getModule();
-  Function *F = Intrinsic::getDeclaration(M, Intrinsic::uadd_with_overflow, Ty);
+  Instruction *InPt = Add->hasOneUse() ? cast<Instruction>(Cmp)
+                                       : cast<Instruction>(Add);
+  replaceMathCmpWithIntrinsic(Add, Cmp, InPt, Intrinsic::uadd_with_overflow);
+  return true;
+}
 
-  auto *InsertPt = AddI->hasOneUse() ? CI : AddI;
+static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
+                                      const DataLayout &DL, bool &ModifiedDT) {
+  // Convert (A u> B) to (A u< B) to simplify pattern matching.
+  Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (Pred == ICmpInst::ICMP_UGT) {
+    std::swap(A, B);
+    Pred = ICmpInst::ICMP_ULT;
+  }
+  // Convert special-case: (A == 0) is the same as (A u< 1).
+  if (Pred == ICmpInst::ICMP_EQ && match(B, m_ZeroInt())) {
+    B = ConstantInt::get(B->getType(), 1);
+    Pred = ICmpInst::ICMP_ULT;
+  }
+  // Convert special-case: (A != 0) is the same as (0 u< A).
+  if (Pred == ICmpInst::ICMP_NE && match(B, m_ZeroInt())) {
+    std::swap(A, B);
+    Pred = ICmpInst::ICMP_ULT;
+  }
+  if (Pred != ICmpInst::ICMP_ULT)
+    return false;
 
-  DebugLoc Loc = CI->getDebugLoc();
-  auto *UAddWithOverflow =
-      CallInst::Create(F, {A, B}, "uadd.overflow", InsertPt);
-  UAddWithOverflow->setDebugLoc(Loc);
-  auto *UAdd = ExtractValueInst::Create(UAddWithOverflow, 0, "uadd", InsertPt);
-  UAdd->setDebugLoc(Loc);
-  auto *Overflow =
-      ExtractValueInst::Create(UAddWithOverflow, 1, "overflow", InsertPt);
-  Overflow->setDebugLoc(Loc);
+  // Walk the users of a variable operand of a compare looking for a subtract or
+  // add with that same operand. Also match the 2nd operand of the compare to
+  // the add/sub, but that may be a negated constant operand of an add.
+  Value *CmpVariableOperand = isa<Constant>(A) ? B : A;
+  BinaryOperator *Sub = nullptr;
+  for (User *U : CmpVariableOperand->users()) {
+    // A - B, A u< B --> usubo(A, B)
+    if (match(U, m_Sub(m_Specific(A), m_Specific(B)))) {
+      Sub = cast<BinaryOperator>(U);
+      break;
+    }
 
-  CI->replaceAllUsesWith(Overflow);
-  AddI->replaceAllUsesWith(UAdd);
-  CI->eraseFromParent();
-  AddI->eraseFromParent();
+    // A + (-C), A u< C (canonicalized form of (sub A, C))
+    const APInt *CmpC, *AddC;
+    if (match(U, m_Add(m_Specific(A), m_APInt(AddC))) &&
+        match(B, m_APInt(CmpC)) && *AddC == -(*CmpC)) {
+      Sub = cast<BinaryOperator>(U);
+      break;
+    }
+  }
+  if (!Sub)
+    return false;
+
+  if (!TLI.shouldFormOverflowOp(ISD::USUBO,
+                                TLI.getValueType(DL, Sub->getType())))
+    return false;
+
+  // Pattern matched and profitability checked. Check dominance to determine the
+  // insertion point for an intrinsic that replaces the subtract and compare.
+  DominatorTree DT(*Sub->getFunction());
+  bool SubDominates = DT.dominates(Sub, Cmp);
+  if (!SubDominates && !DT.dominates(Cmp, Sub))
+    return false;
+  Instruction *InPt = SubDominates ? cast<Instruction>(Sub)
+                                   : cast<Instruction>(Cmp);
+  replaceMathCmpWithIntrinsic(Sub, Cmp, InPt, Intrinsic::usub_with_overflow);
+  // Reset callers - do not crash by iterating over a dead instruction.
+  ModifiedDT = true;
   return true;
 }
 
@@ -1204,18 +1283,19 @@ static bool CombineUAddWithOverflow(CmpInst *CI) {
 /// lose; some adjustment may be wanted there.
 ///
 /// Return true if any changes are made.
-static bool SinkCmpExpression(CmpInst *CI, const TargetLowering *TLI) {
-  BasicBlock *DefBB = CI->getParent();
+static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
+  if (TLI.hasMultipleConditionRegisters())
+    return false;
 
   // Avoid sinking soft-FP comparisons, since this can move them into a loop.
-  if (TLI && TLI->useSoftFloat() && isa<FCmpInst>(CI))
+  if (TLI.useSoftFloat() && isa<FCmpInst>(Cmp))
     return false;
 
   // Only insert a cmp in each block once.
   DenseMap<BasicBlock*, CmpInst*> InsertedCmps;
 
   bool MadeChange = false;
-  for (Value::user_iterator UI = CI->user_begin(), E = CI->user_end();
+  for (Value::user_iterator UI = Cmp->user_begin(), E = Cmp->user_end();
        UI != E; ) {
     Use &TheUse = UI.getUse();
     Instruction *User = cast<Instruction>(*UI);
@@ -1229,6 +1309,7 @@ static bool SinkCmpExpression(CmpInst *CI, const TargetLowering *TLI) {
 
     // Figure out which BB this cmp is used in.
     BasicBlock *UserBB = User->getParent();
+    BasicBlock *DefBB = Cmp->getParent();
 
     // If this user is in the same block as the cmp, don't change the cmp.
     if (UserBB == DefBB) continue;
@@ -1240,10 +1321,11 @@ static bool SinkCmpExpression(CmpInst *CI, const TargetLowering *TLI) {
       BasicBlock::iterator InsertPt = UserBB->getFirstInsertionPt();
       assert(InsertPt != UserBB->end());
       InsertedCmp =
-          CmpInst::Create(CI->getOpcode(), CI->getPredicate(),
-                          CI->getOperand(0), CI->getOperand(1), "", &*InsertPt);
+          CmpInst::Create(Cmp->getOpcode(), Cmp->getPredicate(),
+                          Cmp->getOperand(0), Cmp->getOperand(1), "",
+                          &*InsertPt);
       // Propagate the debug info.
-      InsertedCmp->setDebugLoc(CI->getDebugLoc());
+      InsertedCmp->setDebugLoc(Cmp->getDebugLoc());
     }
 
     // Replace a use of the cmp with a use of the new cmp.
@@ -1253,19 +1335,23 @@ static bool SinkCmpExpression(CmpInst *CI, const TargetLowering *TLI) {
   }
 
   // If we removed all uses, nuke the cmp.
-  if (CI->use_empty()) {
-    CI->eraseFromParent();
+  if (Cmp->use_empty()) {
+    Cmp->eraseFromParent();
     MadeChange = true;
   }
 
   return MadeChange;
 }
 
-static bool OptimizeCmpExpression(CmpInst *CI, const TargetLowering *TLI) {
-  if (SinkCmpExpression(CI, TLI))
+static bool optimizeCmp(CmpInst *Cmp, const TargetLowering &TLI,
+                        const DataLayout &DL, bool &ModifiedDT) {
+  if (sinkCmpExpression(Cmp, TLI))
     return true;
 
-  if (CombineUAddWithOverflow(CI))
+  if (combineToUAddWithOverflow(Cmp, TLI, DL))
+    return true;
+
+  if (combineToUSubWithOverflow(Cmp, TLI, DL, ModifiedDT))
     return true;
 
   return false;
@@ -1748,6 +1834,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, bool &ModifiedDT) {
       InsertedInsts.insert(ExtVal);
       return true;
     }
+
     case Intrinsic::launder_invariant_group:
     case Intrinsic::strip_invariant_group: {
       Value *ArgVal = II->getArgOperand(0);
@@ -5969,6 +6056,48 @@ bool CodeGenPrepare::optimizeShuffleVectorInst(ShuffleVectorInst *SVI) {
   return MadeChange;
 }
 
+bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
+  // If the operands of I can be folded into a target instruction together with
+  // I, duplicate and sink them.
+  SmallVector<Use *, 4> OpsToSink;
+  if (!TLI || !TLI->shouldSinkOperands(I, OpsToSink))
+    return false;
+
+  // OpsToSink can contain multiple uses in a use chain (e.g.
+  // (%u1 with %u1 = shufflevector), (%u2 with %u2 = zext %u1)). The dominating
+  // uses must come first, which means they are sunk first, temporarily creating
+  // invalid IR. This will be fixed once their dominated users are sunk and
+  // updated.
+  BasicBlock *TargetBB = I->getParent();
+  bool Changed = false;
+  SmallVector<Use *, 4> ToReplace;
+  for (Use *U : OpsToSink) {
+    auto *UI = cast<Instruction>(U->get());
+    if (UI->getParent() == TargetBB || isa<PHINode>(UI))
+      continue;
+    ToReplace.push_back(U);
+  }
+
+  SmallPtrSet<Instruction *, 4> MaybeDead;
+  for (Use *U : ToReplace) {
+    auto *UI = cast<Instruction>(U->get());
+    Instruction *NI = UI->clone();
+    MaybeDead.insert(UI);
+    LLVM_DEBUG(dbgs() << "Sinking " << *UI << " to user " << *I << "\n");
+    NI->insertBefore(I);
+    InsertedInsts.insert(NI);
+    U->set(NI);
+    Changed = true;
+  }
+
+  // Remove instructions that are dead after sinking.
+  for (auto *I : MaybeDead)
+    if (!I->hasNUsesOrMore(1))
+      I->eraseFromParent();
+
+  return Changed;
+}
+
 bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
   if (!TLI || !DL)
     return false;
@@ -6711,9 +6840,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     return false;
   }
 
-  if (CmpInst *CI = dyn_cast<CmpInst>(I))
-    if (!TLI || !TLI->hasMultipleConditionRegisters())
-      return OptimizeCmpExpression(CI, TLI);
+  if (auto *Cmp = dyn_cast<CmpInst>(I))
+    if (TLI && optimizeCmp(Cmp, *TLI, *DL, ModifiedDT))
+      return true;
 
   if (LoadInst *LI = dyn_cast<LoadInst>(I)) {
     LI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
@@ -6782,6 +6911,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, bool &ModifiedDT) {
     }
     return false;
   }
+
+  if (tryToSinkFreeOperands(I))
+    return true;
 
   if (CallInst *CI = dyn_cast<CallInst>(I))
     return optimizeCallInst(CI, ModifiedDT);

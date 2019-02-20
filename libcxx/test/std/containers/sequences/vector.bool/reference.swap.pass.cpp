@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
 
     bool a[] = {false, true, false, true};
@@ -35,4 +35,6 @@ int main()
     v.swap(r1, r2);
     assert( r1);
     assert(!r2);
+
+  return 0;
 }

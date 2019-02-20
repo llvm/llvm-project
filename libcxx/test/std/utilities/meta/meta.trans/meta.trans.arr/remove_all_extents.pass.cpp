@@ -25,7 +25,7 @@ void test_remove_all_extents()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test_remove_all_extents<int, int> ();
     test_remove_all_extents<const Enum, const Enum> ();
@@ -39,4 +39,6 @@ int main()
     test_remove_all_extents<const int[2][3], const int> ();
     test_remove_all_extents<int[1][2][3], int> ();
     test_remove_all_extents<const int[1][2][3], const int> ();
+
+  return 0;
 }

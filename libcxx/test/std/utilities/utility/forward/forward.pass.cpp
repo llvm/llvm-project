@@ -41,7 +41,7 @@ constexpr bool test_constexpr_forward() {
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     A a;
     const A ca = A();
@@ -87,4 +87,6 @@ int main()
     static_assert(std::forward<const int&>(i2) == 42, "");
     }
 #endif
+
+  return 0;
 }

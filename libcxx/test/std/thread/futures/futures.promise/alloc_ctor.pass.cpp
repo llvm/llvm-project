@@ -22,7 +22,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     assert(test_alloc_base::alloc_count == 0);
     {
@@ -81,4 +81,6 @@ int main()
         std::future<void> f = p.get_future();
         assert(f.valid());
     }
+
+  return 0;
 }

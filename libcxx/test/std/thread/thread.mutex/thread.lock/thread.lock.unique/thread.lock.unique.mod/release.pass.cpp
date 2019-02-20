@@ -30,7 +30,7 @@ int mutex::unlock_count = 0;
 
 mutex m;
 
-int main()
+int main(int, char**)
 {
     std::unique_lock<mutex> lk(m);
     assert(lk.mutex() == &m);
@@ -42,4 +42,6 @@ int main()
     assert(lk.owns_lock() == false);
     assert(mutex::lock_count == 1);
     assert(mutex::unlock_count == 0);
+
+  return 0;
 }

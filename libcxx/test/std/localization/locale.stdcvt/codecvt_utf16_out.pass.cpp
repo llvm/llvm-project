@@ -346,7 +346,9 @@ void TestHelper<CharT, 4>::test() {
   }
 }
 
-int main() {
+int main(int, char**) {
   TestHelper<char32_t>::test();
   TestHelper<wchar_t>::test();
+
+  return 0;
 }

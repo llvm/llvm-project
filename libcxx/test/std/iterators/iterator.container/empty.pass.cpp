@@ -60,7 +60,7 @@ void test_const_array( const T (&array)[Sz] )
     assert (!std::empty(array));
 }
 
-int main()
+int main(int, char**)
 {
     std::vector<int> v; v.push_back(1);
     std::list<int>   l; l.push_back(2);
@@ -85,4 +85,6 @@ int main()
 
     static constexpr int arrA [] { 1, 2, 3 };
     test_const_array ( arrA );
+
+  return 0;
 }

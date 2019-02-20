@@ -18,10 +18,18 @@
 
 namespace llvm {
 
+struct MemorySanitizerOptions {
+  MemorySanitizerOptions() = default;
+  MemorySanitizerOptions(int TrackOrigins, bool Recover, bool Kernel)
+      : TrackOrigins(TrackOrigins), Recover(Recover), Kernel(Kernel) {}
+  int TrackOrigins = 0;
+  bool Recover = false;
+  bool Kernel = false;
+};
+
 // Insert MemorySanitizer instrumentation (detection of uninitialized reads)
-FunctionPass *createMemorySanitizerLegacyPassPass(int TrackOrigins = 0,
-                                        bool Recover = false,
-                                        bool EnableKmsan = false);
+FunctionPass *
+createMemorySanitizerLegacyPassPass(MemorySanitizerOptions Options = {});
 
 /// A function pass for msan instrumentation.
 ///
@@ -30,17 +38,12 @@ FunctionPass *createMemorySanitizerLegacyPassPass(int TrackOrigins = 0,
 /// yet, the pass inserts the declarations. Otherwise the existing globals are
 /// used.
 struct MemorySanitizerPass : public PassInfoMixin<MemorySanitizerPass> {
-  MemorySanitizerPass(int TrackOrigins = 0, bool Recover = false,
-                      bool EnableKmsan = false)
-      : TrackOrigins(TrackOrigins), Recover(Recover), EnableKmsan(EnableKmsan) {
-  }
+  MemorySanitizerPass(MemorySanitizerOptions Options) : Options(Options) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 
 private:
-  int TrackOrigins;
-  bool Recover;
-  bool EnableKmsan;
+  MemorySanitizerOptions Options;
 };
 }
 

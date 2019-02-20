@@ -18,7 +18,6 @@ unittest("IRTests") {
     "ConstantsTest.cpp",
     "DebugInfoTest.cpp",
     "DebugTypeODRUniquingTest.cpp",
-    "DomTreeUpdaterTest.cpp",
     "DominatorTreeBatchUpdatesTest.cpp",
     "DominatorTreeTest.cpp",
     "FunctionTest.cpp",

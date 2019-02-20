@@ -25,7 +25,7 @@ const char * test_cases[] = {
 const size_t k_num_tests = sizeof(test_cases)/sizeof(test_cases[0]);
 
 
-int main ()
+int main(int, char**)
 {
 	for (size_t i = 0; i < k_num_tests; ++i)
 		{

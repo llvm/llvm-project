@@ -456,7 +456,7 @@ bool TargetInfo::isValidGCCRegisterName(StringRef Name) const {
   }
 
   // Check register names.
-  if (std::find(Names.begin(), Names.end(), Name) != Names.end())
+  if (llvm::is_contained(Names, Name))
     return true;
 
   // Check any additional names that we have.

@@ -980,8 +980,7 @@ define <8 x i64> @combine_vpermvar_insertion_as_broadcast_v8i64(i64 %a0) {
 ;
 ; X64-LABEL: combine_vpermvar_insertion_as_broadcast_v8i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovq %rdi, %xmm0
-; X64-NEXT:    vpbroadcastq %xmm0, %zmm0
+; X64-NEXT:    vpbroadcastq %rdi, %zmm0
 ; X64-NEXT:    retq
   %1 = insertelement <8 x i64> undef, i64 %a0, i32 0
   %2 = call <8 x i64> @llvm.x86.avx512.permvar.di.512(<8 x i64> %1, <8 x i64> zeroinitializer)

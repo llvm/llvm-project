@@ -42,7 +42,7 @@ void test_index_const()
     }
 }
 
-int main()
+int main(int, char**)
 {
     test_index_const<0>();
     test_index_const<1>();
@@ -53,4 +53,6 @@ int main()
     test_index_const<64>();
     test_index_const<65>();
     test_index_const<1000>();
+
+  return 0;
 }

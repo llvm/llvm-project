@@ -173,6 +173,9 @@ class Preprocessor {
   IdentifierInfo *Ident__is_target_os;             // __is_target_os
   IdentifierInfo *Ident__is_target_environment;    // __is_target_environment
 
+  // Weak, only valid (and set) while InMacroArgs is true.
+  Token* ArgMacro;
+
   SourceLocation DATELoc, TIMELoc;
 
   // Next __COUNTER__ value, starts at 0.
@@ -1854,7 +1857,8 @@ public:
                               SmallVectorImpl<char> *SearchPath,
                               SmallVectorImpl<char> *RelativePath,
                               ModuleMap::KnownHeader *SuggestedModule,
-                              bool *IsMapped, bool SkipCache = false);
+                              bool *IsMapped, bool *IsFrameworkFound,
+                              bool SkipCache = false);
 
   /// Get the DirectoryLookup structure used to find the current
   /// FileEntry, if CurLexer is non-null and if applicable.

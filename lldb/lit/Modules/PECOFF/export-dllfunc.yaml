@@ -7,7 +7,7 @@
 # RUN: lldb-test object-file -dep-modules %t.dll | FileCheck -check-prefix=DEPS %s
 
 
-# BASIC-CHECK: Showing 3 sections
+# BASIC-CHECK: Showing 3 subsections
 # BASIC-CHECK:  Index: 0
 # BASIC-CHECK:  Name: .text
 # BASIC-CHECK:  Type: code

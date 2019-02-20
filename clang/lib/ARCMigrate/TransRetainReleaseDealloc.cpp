@@ -269,8 +269,8 @@ private:
 
     if (prevChildS != childE) {
       prevStmt = *prevChildS;
-      if (prevStmt)
-        prevStmt = prevStmt->IgnoreImplicit();
+      if (auto *E = dyn_cast_or_null<Expr>(prevStmt))
+        prevStmt = E->IgnoreImplicit();
     }
 
     if (currChildS == childE)
@@ -280,8 +280,8 @@ private:
       return std::make_pair(prevStmt, nextStmt);
 
     nextStmt = *currChildS;
-    if (nextStmt)
-      nextStmt = nextStmt->IgnoreImplicit();
+    if (auto *E = dyn_cast_or_null<Expr>(nextStmt))
+      nextStmt = E->IgnoreImplicit();
 
     return std::make_pair(prevStmt, nextStmt);
   }

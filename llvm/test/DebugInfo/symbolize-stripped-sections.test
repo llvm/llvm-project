@@ -1,0 +1,11 @@
+RUN: llvm-symbolizer --obj=%p/Inputs/llvm-symbolizer-test.elf-x86-64 0x401140 \
+RUN:   | FileCheck %s --check-prefix=UNSTRIPPED
+
+RUN: llvm-objcopy --strip-sections %p/Inputs/llvm-symbolizer-test.elf-x86-64 %t.elf
+RUN: llvm-symbolizer --obj=%t.elf 0x401140 | FileCheck %s --check-prefix=STRIPPED
+
+UNSTRIPPED:      main
+UNSTRIPPED-NEXT: llvm-symbolizer-test.c:10:0
+
+STRIPPED:        ??
+STRIPPED-NEXT:   ??:0:0

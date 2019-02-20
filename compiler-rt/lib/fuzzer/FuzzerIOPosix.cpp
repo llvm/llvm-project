@@ -78,6 +78,28 @@ void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
     *Epoch = E;
 }
 
+
+void IterateDirRecursive(const std::string &Dir,
+                         void (*DirPreCallback)(const std::string &Dir),
+                         void (*DirPostCallback)(const std::string &Dir),
+                         void (*FileCallback)(const std::string &Dir)) {
+  DirPreCallback(Dir);
+  DIR *D = opendir(Dir.c_str());
+  if (!D) return;
+  while (auto E = readdir(D)) {
+    std::string Path = DirPlusFile(Dir, E->d_name);
+    if (E->d_type == DT_REG || E->d_type == DT_LNK ||
+        (E->d_type == DT_UNKNOWN && IsFile(Path)))
+      FileCallback(Path);
+    else if ((E->d_type == DT_DIR ||
+             (E->d_type == DT_UNKNOWN && IsDirectory(Path))) &&
+             *E->d_name != '.')
+      IterateDirRecursive(Path, DirPreCallback, DirPostCallback, FileCallback);
+  }
+  closedir(D);
+  DirPostCallback(Dir);
+}
+
 char GetSeparator() {
   return '/';
 }
@@ -136,9 +158,16 @@ bool IsInterestingCoverageFile(const std::string &FileName) {
   return true;
 }
 
-
 void RawPrint(const char *Str) {
   write(2, Str, strlen(Str));
+}
+
+void MkDir(const std::string &Path) {
+  mkdir(Path.c_str(), 0700);
+}
+
+void RmDir(const std::string &Path) {
+  rmdir(Path.c_str());
 }
 
 }  // namespace fuzzer

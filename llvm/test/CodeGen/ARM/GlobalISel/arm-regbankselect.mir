@@ -521,7 +521,7 @@ registers:
   - { id: 0, class: _ }
 body:             |
   bb.0:
-    %0(s32) = G_CONSTANT 42
+    %0(s32) = G_CONSTANT i32 42
     $r0 = COPY %0(s32)
     BX_RET 14, $noreg, implicit $r0
 ...

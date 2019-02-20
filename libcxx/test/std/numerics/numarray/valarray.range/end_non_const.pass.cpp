@@ -18,7 +18,7 @@
 #include <cassert>
 #include <cstddef>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -29,4 +29,6 @@ int main()
         assert(v[v.size()-1] == 10);
         assert(static_cast<std::size_t>(end(v) - begin(v)) == v.size());
     }
+
+  return 0;
 }

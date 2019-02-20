@@ -109,7 +109,7 @@ void signal_me() {
 typedef std::chrono::system_clock Clock;
 typedef std::chrono::milliseconds MS;
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   assert(argc == 2);
   int id = std::stoi(argv[1]);
   assert(id >= 1 && id <= 6);
@@ -130,4 +130,6 @@ int main(int argc, char** argv) {
     }
   } catch (...) {}
   assert(false);
+
+  return 0;
 }

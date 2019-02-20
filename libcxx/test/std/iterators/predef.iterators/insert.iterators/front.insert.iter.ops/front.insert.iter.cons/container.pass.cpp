@@ -23,8 +23,10 @@ test(C c)
     std::front_insert_iterator<C> i(c);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::list<int>());
     test(nasty_list<int>());
+
+  return 0;
 }

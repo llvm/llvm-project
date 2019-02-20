@@ -72,11 +72,13 @@ float fyield(int x) { yielded_values.push_back(x); return static_cast<float>(x +
 void Do1(func<int> f) { yield(f()); }
 void Do2(func<double> f) { yield(static_cast<int>(f())); }
 
-int main() {
+int main(int, char**) {
   Do1([] { return yield(43); });
   assert((yielded_values == std::vector<int>{43, 44}));
 
   yielded_values = {};
   Do2([] { return fyield(44); });
   assert((yielded_values == std::vector<int>{44, 46}));
+
+  return 0;
 }

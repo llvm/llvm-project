@@ -32,7 +32,7 @@ test(S& s, typename S::const_iterator p, typename S::value_type c, S expected)
         assert(i == p);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string S;
@@ -72,4 +72,6 @@ int main()
     test(s, s.begin()+6, 'C', S("a567ABC1432dcb"));
     }
 #endif
+
+  return 0;
 }

@@ -23,7 +23,7 @@
 #include "test_iterators.h"
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::unordered_multimap<int, std::string> C;
@@ -118,4 +118,6 @@ int main()
         assert(static_cast<std::size_t>(std::distance(c.cbegin(), c.cend())) == c.size());
     }
 #endif
+
+  return 0;
 }

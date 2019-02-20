@@ -22,7 +22,7 @@
 namespace llvm {
 class APInt;
 template <typename T> class ArrayRef;
-class CallSite;
+class CallBase;
 class Constant;
 class ConstantExpr;
 class ConstantVector;
@@ -30,7 +30,6 @@ class DataLayout;
 class Function;
 class GlobalValue;
 class Instruction;
-class ImmutableCallSite;
 class TargetLibraryInfo;
 class Type;
 
@@ -138,11 +137,11 @@ Constant *ConstantFoldLoadThroughGEPIndices(Constant *C,
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
-bool canConstantFoldCallTo(ImmutableCallSite CS, const Function *F);
+bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
 /// with the specified arguments, returning null if unsuccessful.
-Constant *ConstantFoldCall(ImmutableCallSite CS, Function *F,
+Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                            ArrayRef<Constant *> Operands,
                            const TargetLibraryInfo *TLI = nullptr);
 
@@ -154,7 +153,7 @@ Constant *ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
 
 /// Check whether the given call has no side-effects.
 /// Specifically checks for math routimes which sometimes set errno.
-bool isMathLibCallNoop(CallSite CS, const TargetLibraryInfo *TLI);
+bool isMathLibCallNoop(const CallBase *Call, const TargetLibraryInfo *TLI);
 }
 
 #endif

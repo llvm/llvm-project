@@ -26,7 +26,7 @@ UDT<long double> ldt;
 UDT<int> it;
 UDT<unsigned long> uit;
 
-int main()
+int main(int, char**)
 {
     {
         std::real(ft); // expected-error {{no matching function}}
@@ -70,4 +70,6 @@ int main()
         std::proj(it); // expected-error {{no matching function}}
         std::proj(uit); // expected-error {{no matching function}}
     }
+
+  return 0;
 }

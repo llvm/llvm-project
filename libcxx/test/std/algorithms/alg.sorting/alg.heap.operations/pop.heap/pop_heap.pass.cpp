@@ -35,7 +35,9 @@ void test(int N)
     delete [] ia;
 }
 
-int main()
+int main(int, char**)
 {
     test(1000);
+
+  return 0;
 }

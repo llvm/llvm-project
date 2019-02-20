@@ -47,7 +47,7 @@ struct Nasty
 
 int Nasty::counter_ = 0;
 
-int main()
+int main(int, char**)
 {
     {
     const int N = 5;
@@ -85,4 +85,6 @@ int main()
         }
     }
 
+
+  return 0;
 }

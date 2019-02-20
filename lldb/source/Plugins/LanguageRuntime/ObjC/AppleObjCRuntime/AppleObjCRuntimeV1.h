@@ -147,7 +147,7 @@ protected:
 
   HashTableSignature m_hash_signature;
   lldb::addr_t m_isa_hash_table_ptr;
-  std::unique_ptr<DeclVendor> m_decl_vendor_ap;
+  std::unique_ptr<DeclVendor> m_decl_vendor_up;
 
 private:
   AppleObjCRuntimeV1(Process *process);

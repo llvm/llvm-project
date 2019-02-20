@@ -25,6 +25,10 @@
 BUILTIN(__builtin_wasm_memory_size, "zIi", "n")
 BUILTIN(__builtin_wasm_memory_grow, "zIiz", "n")
 
+// Bulk memory builtins
+TARGET_BUILTIN(__builtin_wasm_memory_init, "vIUiIUiv*UiUi", "", "bulk-memory")
+TARGET_BUILTIN(__builtin_wasm_data_drop, "vIUi", "", "bulk-memory")
+
 // Floating point min/max
 BUILTIN(__builtin_wasm_min_f32, "fff", "nc")
 BUILTIN(__builtin_wasm_max_f32, "fff", "nc")

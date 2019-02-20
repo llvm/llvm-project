@@ -414,10 +414,8 @@ ValueEnumerator::ValueEnumerator(const Module &M,
           EnumerateMetadata(&F, MD->getMetadata());
         }
         EnumerateType(I.getType());
-        if (const CallInst *CI = dyn_cast<CallInst>(&I))
-          EnumerateAttributes(CI->getAttributes());
-        else if (const InvokeInst *II = dyn_cast<InvokeInst>(&I))
-          EnumerateAttributes(II->getAttributes());
+        if (const auto *Call = dyn_cast<CallBase>(&I))
+          EnumerateAttributes(Call->getAttributes());
 
         // Enumerate metadata attached with this instruction.
         MDs.clear();

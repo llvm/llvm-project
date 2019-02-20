@@ -72,7 +72,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_rvalue_reference<int&&>();
 
@@ -93,4 +93,6 @@ int main()
     test_is_not_rvalue_reference<NotEmpty>();
     test_is_not_rvalue_reference<Abstract>();
     test_is_not_rvalue_reference<incomplete_type>();
+
+  return 0;
 }

@@ -2102,9 +2102,13 @@ SDValue SelectionDAG::GetDemandedBits(SDValue V, const APInt &Mask) {
     break;
   case ISD::AND: {
     // X & -1 -> X (ignoring bits which aren't demanded).
-    ConstantSDNode *AndVal = isConstOrConstSplat(V.getOperand(1));
-    if (AndVal && Mask.isSubsetOf(AndVal->getAPIntValue()))
-      return V.getOperand(0);
+    // Also handle the case where masked out bits in X are known to be zero.
+    if (ConstantSDNode *RHSC = isConstOrConstSplat(V.getOperand(1))) {
+      const APInt &AndVal = RHSC->getAPIntValue();
+      if (Mask.isSubsetOf(AndVal) ||
+          Mask.isSubsetOf(computeKnownBits(V.getOperand(0)).Zero | AndVal))
+        return V.getOperand(0);
+    }
     break;
   }
   case ISD::ANY_EXTEND: {
@@ -6382,32 +6386,6 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
   return SDValue(N, 0);
 }
 
-SDValue SelectionDAG::getAtomicCmpSwap(
-    unsigned Opcode, const SDLoc &dl, EVT MemVT, SDVTList VTs, SDValue Chain,
-    SDValue Ptr, SDValue Cmp, SDValue Swp, MachinePointerInfo PtrInfo,
-    unsigned Alignment, AtomicOrdering SuccessOrdering,
-    AtomicOrdering FailureOrdering, SyncScope::ID SSID) {
-  assert(Opcode == ISD::ATOMIC_CMP_SWAP ||
-         Opcode == ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS);
-  assert(Cmp.getValueType() == Swp.getValueType() && "Invalid Atomic Op Types");
-
-  if (Alignment == 0)  // Ensure that codegen never sees alignment 0
-    Alignment = getEVTAlignment(MemVT);
-
-  MachineFunction &MF = getMachineFunction();
-
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad |
-               MachineMemOperand::MOStore;
-  MachineMemOperand *MMO =
-    MF.getMachineMemOperand(PtrInfo, Flags, MemVT.getStoreSize(), Alignment,
-                            AAMDNodes(), nullptr, SSID, SuccessOrdering,
-                            FailureOrdering);
-
-  return getAtomicCmpSwap(Opcode, dl, MemVT, VTs, Chain, Ptr, Cmp, Swp, MMO);
-}
-
 SDValue SelectionDAG::getAtomicCmpSwap(unsigned Opcode, const SDLoc &dl,
                                        EVT MemVT, SDVTList VTs, SDValue Chain,
                                        SDValue Ptr, SDValue Cmp, SDValue Swp,
@@ -6418,35 +6396,6 @@ SDValue SelectionDAG::getAtomicCmpSwap(unsigned Opcode, const SDLoc &dl,
 
   SDValue Ops[] = {Chain, Ptr, Cmp, Swp};
   return getAtomic(Opcode, dl, MemVT, VTs, Ops, MMO);
-}
-
-SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
-                                SDValue Chain, SDValue Ptr, SDValue Val,
-                                const Value *PtrVal, unsigned Alignment,
-                                AtomicOrdering Ordering,
-                                SyncScope::ID SSID) {
-  if (Alignment == 0)  // Ensure that codegen never sees alignment 0
-    Alignment = getEVTAlignment(MemVT);
-
-  MachineFunction &MF = getMachineFunction();
-  // An atomic store does not load. An atomic load does not store.
-  // (An atomicrmw obviously both loads and stores.)
-  // For now, atomics are considered to be volatile always, and they are
-  // chained as such.
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile;
-  if (Opcode != ISD::ATOMIC_STORE)
-    Flags |= MachineMemOperand::MOLoad;
-  if (Opcode != ISD::ATOMIC_LOAD)
-    Flags |= MachineMemOperand::MOStore;
-
-  MachineMemOperand *MMO =
-    MF.getMachineMemOperand(MachinePointerInfo(PtrVal), Flags,
-                            MemVT.getStoreSize(), Alignment, AAMDNodes(),
-                            nullptr, SSID, Ordering);
-
-  return getAtomic(Opcode, dl, MemVT, Chain, Ptr, Val, MMO);
 }
 
 SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
@@ -8622,9 +8571,9 @@ ConstantFPSDNode *llvm::isConstOrConstSplatFP(SDValue N, bool AllowUndefs) {
   return nullptr;
 }
 
-bool llvm::isNullOrNullSplat(SDValue N) {
+bool llvm::isNullOrNullSplat(SDValue N, bool AllowUndefs) {
   // TODO: may want to use peekThroughBitcast() here.
-  ConstantSDNode *C = isConstOrConstSplat(N);
+  ConstantSDNode *C = isConstOrConstSplat(N, AllowUndefs);
   return C && C->isNullValue();
 }
 
@@ -8971,6 +8920,50 @@ SDValue SelectionDAG::UnrollVectorOp(SDNode *N, unsigned ResNE) {
 
   EVT VecVT = EVT::getVectorVT(*getContext(), EltVT, ResNE);
   return getBuildVector(VecVT, dl, Scalars);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
+    SDNode *N, unsigned ResNE) {
+  unsigned Opcode = N->getOpcode();
+  assert((Opcode == ISD::UADDO || Opcode == ISD::SADDO ||
+          Opcode == ISD::USUBO || Opcode == ISD::SSUBO ||
+          Opcode == ISD::UMULO || Opcode == ISD::SMULO) &&
+         "Expected an overflow opcode");
+
+  EVT ResVT = N->getValueType(0);
+  EVT OvVT = N->getValueType(1);
+  EVT ResEltVT = ResVT.getVectorElementType();
+  EVT OvEltVT = OvVT.getVectorElementType();
+  SDLoc dl(N);
+
+  // If ResNE is 0, fully unroll the vector op.
+  unsigned NE = ResVT.getVectorNumElements();
+  if (ResNE == 0)
+    ResNE = NE;
+  else if (NE > ResNE)
+    NE = ResNE;
+
+  SmallVector<SDValue, 8> LHSScalars;
+  SmallVector<SDValue, 8> RHSScalars;
+  ExtractVectorElements(N->getOperand(0), LHSScalars, 0, NE);
+  ExtractVectorElements(N->getOperand(1), RHSScalars, 0, NE);
+
+  SDVTList VTs = getVTList(ResEltVT, OvEltVT);
+  SmallVector<SDValue, 8> ResScalars;
+  SmallVector<SDValue, 8> OvScalars;
+  for (unsigned i = 0; i < NE; ++i) {
+    SDValue Res = getNode(Opcode, dl, VTs, LHSScalars[i], RHSScalars[i]);
+    ResScalars.push_back(Res);
+    OvScalars.push_back(SDValue(Res.getNode(), 1));
+  }
+
+  ResScalars.append(ResNE - NE, getUNDEF(ResEltVT));
+  OvScalars.append(ResNE - NE, getUNDEF(OvEltVT));
+
+  EVT NewResVT = EVT::getVectorVT(*getContext(), ResEltVT, ResNE);
+  EVT NewOvVT = EVT::getVectorVT(*getContext(), OvEltVT, ResNE);
+  return std::make_pair(getBuildVector(NewResVT, dl, ResScalars),
+                        getBuildVector(NewOvVT, dl, OvScalars));
 }
 
 bool SelectionDAG::areNonVolatileConsecutiveLoads(LoadSDNode *LD,

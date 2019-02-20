@@ -17,7 +17,7 @@
 #include <fstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::ifstream fs1("test.dat");
@@ -39,4 +39,6 @@ int main()
         fs2 >> x;
         assert(x == 3.25);
     }
+
+  return 0;
 }

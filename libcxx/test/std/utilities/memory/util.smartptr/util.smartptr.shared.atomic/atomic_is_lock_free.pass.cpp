@@ -23,10 +23,12 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         const std::shared_ptr<int> p(new int(3));
         assert(std::atomic_is_lock_free(&p) == false);
     }
+
+  return 0;
 }

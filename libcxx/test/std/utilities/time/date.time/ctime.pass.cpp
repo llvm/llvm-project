@@ -29,7 +29,7 @@
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 #endif
 
-int main()
+int main(int, char**)
 {
     std::clock_t c = 0;
     std::size_t s = 0;
@@ -60,4 +60,6 @@ int main()
     static_assert((std::is_same<decltype(std::localtime(&t)), std::tm*>::value), "");
 #endif
     static_assert((std::is_same<decltype(std::strftime(str,s,"",&tm)), std::size_t>::value), "");
+
+  return 0;
 }

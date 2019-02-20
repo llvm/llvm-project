@@ -18,7 +18,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::codecvt_utf8<wchar_t> Codecvt;
@@ -36,4 +36,6 @@ int main()
         static_assert( std::is_constructible<Myconv, Codecvt*>::value, "");
 #endif
     }
+
+  return 0;
 }

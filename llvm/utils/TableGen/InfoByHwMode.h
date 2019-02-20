@@ -119,6 +119,7 @@ struct InfoByHwMode {
 
 struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH);
+  ValueTypeByHwMode(Record *R, MVT T);
   ValueTypeByHwMode(MVT T) { Map.insert({DefaultMode,T}); }
   ValueTypeByHwMode() = default;
 
@@ -134,6 +135,11 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
   static StringRef getMVTName(MVT T);
   void writeToStream(raw_ostream &OS) const;
   void dump() const;
+
+  unsigned PtrAddrSpace = std::numeric_limits<unsigned>::max();
+  bool isPointer() const {
+    return PtrAddrSpace != std::numeric_limits<unsigned>::max();
+  }
 };
 
 ValueTypeByHwMode getValueTypeByHwMode(Record *Rec,

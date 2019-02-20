@@ -24,7 +24,7 @@ make(int n)
     return c;
 }
 
-int main()
+int main(int, char**)
 {
     std::vector<int> v = make<std::vector<int> >(5);
     std::priority_queue<int, std::vector<int>, std::greater<int> > qo(std::greater<int>(), v);
@@ -32,4 +32,6 @@ int main()
     q = qo;
     assert(q.size() == 5);
     assert(q.top() == 0);
+
+  return 0;
 }

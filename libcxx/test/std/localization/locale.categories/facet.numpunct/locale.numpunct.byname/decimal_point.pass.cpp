@@ -20,7 +20,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l("C");
@@ -61,4 +61,6 @@ int main()
             assert(np.decimal_point() == L',');
         }
     }
+
+  return 0;
 }

@@ -508,6 +508,7 @@ def ValistBase : Checker<"ValistBase">,
 
 def UninitializedChecker : Checker<"Uninitialized">,
   HelpText<"Check for usages of uninitialized (or already released) va_lists.">,
+  Dependencies<[ValistBase]>,
   Documentation<NotDocumented>;
 
 def UnterminatedChecker : Checker<"Unterminated">,
@@ -619,6 +620,13 @@ def vfork : Checker<"vfork">,
 def UncheckedReturn : Checker<"UncheckedReturn">,
   HelpText<"Warn on uses of functions whose return values must be always "
            "checked">,
+  Dependencies<[SecuritySyntaxChecker]>,
+  Documentation<HasDocumentation>;
+
+def DeprecatedOrUnsafeBufferHandling :
+  Checker<"DeprecatedOrUnsafeBufferHandling">,
+  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+           "functions">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
@@ -811,6 +819,14 @@ def GCDAntipattern : Checker<"GCDAntipattern">,
            "Dispatch">,
   Documentation<NotDocumented>;
 } // end "optin.performance"
+
+let ParentPackage = OSXOptIn in {
+
+def OSObjectCStyleCast : Checker<"OSObjectCStyleCast">,
+  HelpText<"Checker for C-style casts of OSObjects">,
+  Documentation<NotDocumented>;
+
+} // end "optin.osx"
 
 let ParentPackage = CocoaAlpha in {
 

@@ -131,7 +131,8 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const DataLayout &DL) {
   auto allMMOsOkay = [&]() {
     for (const MachineMemOperand *MMO : MI->memoperands()) {
-      if (MMO->isVolatile())
+      // TODO: Figure out whether isAtomic is really necessary (see D57601).
+      if (MMO->isVolatile() || MMO->isAtomic())
         return false;
 
       if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {

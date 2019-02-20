@@ -14,6 +14,8 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Stream.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -28,14 +30,14 @@ SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs)
     : m_opaque_sp() {
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_sp.reset(new TypeEnumMemberImpl(rhs.ref()));
+      m_opaque_sp = std::make_shared<TypeEnumMemberImpl>(rhs.ref());
   }
 }
 
 SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_sp.reset(new TypeEnumMemberImpl(rhs.ref()));
+      m_opaque_sp = std::make_shared<TypeEnumMemberImpl>(rhs.ref());
   }
   return *this;
 }
@@ -74,7 +76,7 @@ void SBTypeEnumMember::reset(TypeEnumMemberImpl *type_member_impl) {
 
 TypeEnumMemberImpl &SBTypeEnumMember::ref() {
   if (m_opaque_sp.get() == NULL)
-    m_opaque_sp.reset(new TypeEnumMemberImpl());
+    m_opaque_sp = std::make_shared<TypeEnumMemberImpl>();
   return *m_opaque_sp.get();
 }
 
@@ -83,22 +85,22 @@ const TypeEnumMemberImpl &SBTypeEnumMember::ref() const {
 }
 
 SBTypeEnumMemberList::SBTypeEnumMemberList()
-    : m_opaque_ap(new TypeEnumMemberListImpl()) {}
+    : m_opaque_up(new TypeEnumMemberListImpl()) {}
 
 SBTypeEnumMemberList::SBTypeEnumMemberList(const SBTypeEnumMemberList &rhs)
-    : m_opaque_ap(new TypeEnumMemberListImpl()) {
+    : m_opaque_up(new TypeEnumMemberListImpl()) {
   for (uint32_t i = 0,
                 rhs_size = const_cast<SBTypeEnumMemberList &>(rhs).GetSize();
        i < rhs_size; i++)
     Append(const_cast<SBTypeEnumMemberList &>(rhs).GetTypeEnumMemberAtIndex(i));
 }
 
-bool SBTypeEnumMemberList::IsValid() { return (m_opaque_ap != NULL); }
+bool SBTypeEnumMemberList::IsValid() { return (m_opaque_up != NULL); }
 
 SBTypeEnumMemberList &SBTypeEnumMemberList::
 operator=(const SBTypeEnumMemberList &rhs) {
   if (this != &rhs) {
-    m_opaque_ap.reset(new TypeEnumMemberListImpl());
+    m_opaque_up.reset(new TypeEnumMemberListImpl());
     for (uint32_t i = 0,
                   rhs_size = const_cast<SBTypeEnumMemberList &>(rhs).GetSize();
          i < rhs_size; i++)
@@ -110,17 +112,17 @@ operator=(const SBTypeEnumMemberList &rhs) {
 
 void SBTypeEnumMemberList::Append(SBTypeEnumMember enum_member) {
   if (enum_member.IsValid())
-    m_opaque_ap->Append(enum_member.m_opaque_sp);
+    m_opaque_up->Append(enum_member.m_opaque_sp);
 }
 
 SBTypeEnumMember
 SBTypeEnumMemberList::GetTypeEnumMemberAtIndex(uint32_t index) {
-  if (m_opaque_ap)
-    return SBTypeEnumMember(m_opaque_ap->GetTypeEnumMemberAtIndex(index));
+  if (m_opaque_up)
+    return SBTypeEnumMember(m_opaque_up->GetTypeEnumMemberAtIndex(index));
   return SBTypeEnumMember();
 }
 
-uint32_t SBTypeEnumMemberList::GetSize() { return m_opaque_ap->GetSize(); }
+uint32_t SBTypeEnumMemberList::GetSize() { return m_opaque_up->GetSize(); }
 
 SBTypeEnumMemberList::~SBTypeEnumMemberList() {}
 

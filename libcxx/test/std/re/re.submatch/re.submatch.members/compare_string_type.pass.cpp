@@ -16,7 +16,7 @@
 #include <cassert>
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef char CharT;
@@ -44,4 +44,6 @@ int main()
         assert(sm.compare(string()) > 0);
         assert(sm.compare(string(L"123")) == 0);
     }
+
+  return 0;
 }

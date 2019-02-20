@@ -11,7 +11,9 @@
 
 #include <set>
 
-int main()
+int main(int, char**)
 {
     std::set<int, std::less<int>, std::allocator<long> > s;
+
+  return 0;
 }

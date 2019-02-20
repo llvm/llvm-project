@@ -23,7 +23,7 @@
 
 #include "platform_support.h" // locale name macros
 
-int main()
+int main(int, char**)
 {
     {
         std::locale l(LOCALE_en_US_UTF_8);
@@ -243,4 +243,6 @@ int main()
             assert( (m[6] & F::graph));
         }
     }
+
+  return 0;
 }

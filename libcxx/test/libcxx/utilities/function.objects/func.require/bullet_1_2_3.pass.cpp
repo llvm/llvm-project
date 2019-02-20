@@ -271,7 +271,7 @@ void test_derived_from_ref_wrap() {
 }
 #endif
 
-int main() {
+int main(int, char**) {
     typedef void*& R;
     typedef ArgType A;
     TestCase<R(),                                   0, Q_None>::run();
@@ -367,4 +367,6 @@ int main() {
 
     test_derived_from_ref_wrap();
 #endif
+
+  return 0;
 }

@@ -74,6 +74,10 @@ def discard_all
       HelpText<"Remove all local symbols except file and section symbols">;
 def x : Flag<["-"], "x">, Alias<discard_all>;
 
+def regex
+    : Flag<["-", "--"], "regex">,
+      HelpText<"Permit regular expressions in name comparison">;
+
 def version : Flag<["-", "--"], "version">,
               HelpText<"Print the version and exit.">;
 def V : Flag<["-"], "V">, Alias<version>;

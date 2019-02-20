@@ -44,7 +44,7 @@ private:
 
 };
 
-int main()
+int main(int, char**)
 {
     {
     A* p1 = new A(1);
@@ -98,4 +98,6 @@ int main()
         std::swap(p, p2);
     }
 #endif
+
+  return 0;
 }

@@ -39,7 +39,7 @@ struct legacy
     legacy(const legacy&);
 };
 
-int main()
+int main(int, char**)
 {
     int i = 0;
     const int ci = 0;
@@ -71,4 +71,6 @@ int main()
     static_assert(i2 == 23, "" );
 #endif
 
+
+  return 0;
 }

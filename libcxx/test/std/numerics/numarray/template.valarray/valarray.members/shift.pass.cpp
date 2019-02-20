@@ -15,7 +15,7 @@
 #include <valarray>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         typedef int T;
@@ -123,4 +123,6 @@ int main()
         for (unsigned i = 0; i < N1; ++i)
             assert(v2[i] == a2[i]);
     }
+
+  return 0;
 }

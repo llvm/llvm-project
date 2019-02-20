@@ -27,7 +27,7 @@ void signal_handler(int signal)
     std::_Exit(EXIT_FAILURE);
 }
 
-int main()
+int main(int, char**)
 {
   if (std::signal(SIGABRT, signal_handler) != SIG_ERR)
     _LIBCPP_ASSERT(false, "foo");

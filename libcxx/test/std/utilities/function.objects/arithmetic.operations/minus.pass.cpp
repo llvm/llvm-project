@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     typedef std::minus<int> F;
     const F f = F();
@@ -37,4 +37,6 @@ int main()
     constexpr double bar = std::minus<> () (3.0, 2);
     static_assert ( bar == 1.0, "" );
 #endif
+
+  return 0;
 }

@@ -227,10 +227,11 @@ llvm::Function *CodeGenModule::codegenCXXStructor(const CXXMethodDecl *MD,
   return Fn;
 }
 
-llvm::Constant *CodeGenModule::getAddrOfCXXStructor(
+llvm::FunctionCallee CodeGenModule::getAddrAndTypeOfCXXStructor(
     const CXXMethodDecl *MD, StructorType Type, const CGFunctionInfo *FnInfo,
     llvm::FunctionType *FnType, bool DontDefer,
     ForDefinition_t IsForDefinition) {
+
   GlobalDecl GD;
   if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
     GD = GlobalDecl(CD, toCXXCtorType(Type));
@@ -249,9 +250,10 @@ llvm::Constant *CodeGenModule::getAddrOfCXXStructor(
     FnType = getTypes().GetFunctionType(*FnInfo);
   }
 
-  return GetOrCreateLLVMFunction(
+  llvm::Constant *Ptr = GetOrCreateLLVMFunction(
       getMangledName(GD), FnType, GD, /*ForVTable=*/false, DontDefer,
       /*isThunk=*/false, /*ExtraAttrs=*/llvm::AttributeList(), IsForDefinition);
+  return {FnType, Ptr};
 }
 
 static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,

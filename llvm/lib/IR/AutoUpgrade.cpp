@@ -482,6 +482,11 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
     }
   }
 
+  if (Name == "seh.recoverfp") {
+    NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::eh_recoverfp);
+    return true;
+  }
+
   return false;
 }
 
@@ -555,10 +560,6 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     if (Name == "aarch64.thread.pointer" || Name == "arm.thread.pointer") {
       NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::thread_pointer);
-      return true;
-    }
-    if (Name == "x86.seh.recoverfp") {
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::eh_recoverfp);
       return true;
     }
     break;
@@ -742,7 +743,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     // address space.
     if (Name.startswith("objectsize.")) {
       Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->arg_size() == 2 ||
+      if (F->arg_size() == 2 || F->arg_size() == 3 ||
           F->getName() != Intrinsic::getName(Intrinsic::objectsize, Tys)) {
         rename(F);
         NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::objectsize,
@@ -3460,7 +3461,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
                                    ? Builder.getFalse()
                                    : CI->getArgOperand(2);
     Value *Dynamic =
-        CI->getNumArgOperands() < 3 ? Builder.getFalse() : CI->getArgOperand(3);
+        CI->getNumArgOperands() < 4 ? Builder.getFalse() : CI->getArgOperand(3);
     NewCall = Builder.CreateCall(
         NewFn, {CI->getArgOperand(0), CI->getArgOperand(1), NullIsUnknownSize, Dynamic});
     break;

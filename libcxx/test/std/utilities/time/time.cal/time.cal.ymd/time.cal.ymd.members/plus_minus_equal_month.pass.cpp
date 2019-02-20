@@ -32,7 +32,7 @@ constexpr bool testConstexpr(D d1)
     return true;
 }
 
-int main()
+int main(int, char**)
 {
     using year           = std::chrono::year;
     using month          = std::chrono::month;
@@ -66,4 +66,6 @@ int main()
         assert(ym.year() == y);
         assert(ym.day()  == d);
     }
+
+  return 0;
 }

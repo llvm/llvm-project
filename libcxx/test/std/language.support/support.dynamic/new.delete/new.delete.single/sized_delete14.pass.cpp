@@ -48,7 +48,7 @@ void operator delete(void* p, std::size_t) TEST_NOEXCEPT
     std::free(p);
 }
 
-int main()
+int main(int, char**)
 {
     int *x = new int(42);
     DoNotOptimize(x);
@@ -61,4 +61,6 @@ int main()
     assert(0 == unsized_delete_called);
     assert(1 == sized_delete_called);
     assert(0 == unsized_delete_nothrow_called);
+
+  return 0;
 }

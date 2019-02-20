@@ -85,11 +85,13 @@ test2()
 
 #endif
 
-int main()
+int main(int, char**)
 {
     test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
 #if TEST_STD_VER >= 11
     test2<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
     test2<std::basic_string<char, std::char_traits<char>, explicit_allocator<char> > >();
 #endif
+
+  return 0;
 }

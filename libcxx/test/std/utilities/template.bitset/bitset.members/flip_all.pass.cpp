@@ -40,7 +40,7 @@ void test_flip_all()
         assert(v2[i] == ~v1[i]);
 }
 
-int main()
+int main(int, char**)
 {
     test_flip_all<0>();
     test_flip_all<1>();
@@ -51,4 +51,6 @@ int main()
     test_flip_all<64>();
     test_flip_all<65>();
     test_flip_all<1000>();
+
+  return 0;
 }

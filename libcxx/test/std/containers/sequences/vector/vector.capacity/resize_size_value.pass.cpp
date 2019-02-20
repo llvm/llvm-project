@@ -16,7 +16,7 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::vector<int> v(100);
@@ -73,4 +73,6 @@ int main()
         assert(is_contiguous_container_asan_correct(v));
     }
 #endif
+
+  return 0;
 }

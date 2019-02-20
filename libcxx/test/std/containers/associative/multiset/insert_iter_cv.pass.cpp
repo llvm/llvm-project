@@ -17,7 +17,7 @@
 
 #include "min_allocator.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::multiset<int> M;
@@ -69,4 +69,6 @@ int main()
         assert(*r == 3);
     }
 #endif
+
+  return 0;
 }

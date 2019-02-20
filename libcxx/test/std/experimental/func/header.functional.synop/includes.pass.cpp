@@ -14,7 +14,9 @@
 
 #include <experimental/functional>
 
-int main()
+int main(int, char**)
 {
   std::function<int(int)> x;
+
+  return 0;
 }

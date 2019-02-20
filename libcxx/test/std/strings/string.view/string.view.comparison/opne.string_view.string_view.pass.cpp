@@ -26,7 +26,7 @@ test(S lhs, S rhs, bool x)
     assert((rhs != lhs) == x);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -58,4 +58,6 @@ int main()
     static_assert (   sv1 != sv3,  "" );
     }
 #endif
+
+  return 0;
 }

@@ -38,6 +38,7 @@ public:
   void printSrcIdx(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printDstIdx(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU8Imm(const MCInst *MI, unsigned Op, raw_ostream &O);
+  void printSTiRegOperand(const MCInst *MI, unsigned OpNo, raw_ostream &OS);
 
   void printanymem(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
     printMemReference(MI, OpNo, O);

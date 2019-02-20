@@ -19,7 +19,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     using month_weekday   = std::chrono::month_weekday;
     using month           = std::chrono::month;
@@ -47,4 +47,6 @@ int main()
 //  If the month is not ok, all the weekday_indexed are bad
     for (unsigned i = 1; i <= 10; ++i)
         assert(!(month_weekday{month{13}, weekday_indexed{Sunday, i}}.ok()));
+
+  return 0;
 }

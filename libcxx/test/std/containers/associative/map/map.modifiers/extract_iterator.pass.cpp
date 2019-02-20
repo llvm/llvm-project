@@ -40,7 +40,7 @@ void test(Container& c)
     assert(c.size() == 0);
 }
 
-int main()
+int main(int, char**)
 {
     {
         using map_type = std::map<int, int>;
@@ -63,4 +63,6 @@ int main()
         min_alloc_map m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
         test(m);
     }
+
+  return 0;
 }

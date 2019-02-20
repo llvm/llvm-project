@@ -2771,7 +2771,7 @@ QualType ASTContext::getFunctionTypeWithExceptionSpec(
 
   // Anything else must be a function type. Rebuild it with the new exception
   // specification.
-  const auto *Proto = cast<FunctionProtoType>(Orig);
+  const auto *Proto = Orig->getAs<FunctionProtoType>();
   return getFunctionType(
       Proto->getReturnType(), Proto->getParamTypes(),
       Proto->getExtProtoInfo().withExceptionSpec(ESI));
@@ -5606,6 +5606,12 @@ int ASTContext::getFloatingTypeOrder(QualType LHS, QualType RHS) const {
   if (LHSR > RHSR)
     return 1;
   return -1;
+}
+
+int ASTContext::getFloatingTypeSemanticOrder(QualType LHS, QualType RHS) const {
+  if (&getFloatTypeSemantics(LHS) == &getFloatTypeSemantics(RHS))
+    return 0;
+  return getFloatingTypeOrder(LHS, RHS);
 }
 
 /// getIntegerRank - Return an integer conversion rank (C99 6.3.1.1p1). This
@@ -9981,8 +9987,10 @@ VTableContextBase *ASTContext::getVTableContext() {
   return VTContext.get();
 }
 
-MangleContext *ASTContext::createMangleContext() {
-  switch (Target->getCXXABI().getKind()) {
+MangleContext *ASTContext::createMangleContext(const TargetInfo *T) {
+  if (!T)
+    T = Target;
+  switch (T->getCXXABI().getKind()) {
   case TargetCXXABI::GenericAArch64:
   case TargetCXXABI::GenericItanium:
   case TargetCXXABI::GenericARM:

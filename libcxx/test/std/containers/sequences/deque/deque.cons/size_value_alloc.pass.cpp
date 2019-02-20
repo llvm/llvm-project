@@ -30,7 +30,7 @@ test(unsigned n, const T& x, const Allocator& a)
         assert(*i == x);
 }
 
-int main()
+int main(int, char**)
 {
     {
     std::allocator<int> a;
@@ -64,4 +64,6 @@ int main()
     test(4097, 157, a);
     }
 #endif
+
+  return 0;
 }

@@ -599,9 +599,10 @@ void SearchableTableEmitter::collectTableEntries(
     for (auto &Field : Table.Fields) {
       auto TI = dyn_cast<TypedInit>(EntryRec->getValueInit(Field.Name));
       if (!TI) {
-        PrintFatalError(Twine("Record '") + EntryRec->getName() +
-                        "' in table '" + Table.Name + "' is missing field '" +
-                        Field.Name + "'");
+        PrintFatalError(EntryRec->getLoc(),
+                        Twine("Record '") + EntryRec->getName() +
+                            "' in table '" + Table.Name +
+                            "' is missing field '" + Field.Name + "'");
       }
       if (!Field.RecType) {
         Field.RecType = TI->getType();
@@ -653,8 +654,8 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     StringRef FilterClass = EnumRec->getValueAsString("FilterClass");
     Enum->Class = Records.getClass(FilterClass);
     if (!Enum->Class)
-      PrintFatalError(Twine("Enum FilterClass '") + FilterClass +
-                      "' does not exist");
+      PrintFatalError(EnumRec->getLoc(), Twine("Enum FilterClass '") +
+                                             FilterClass + "' does not exist");
 
     collectEnumEntries(*Enum, NameField, ValueField,
                        Records.getAllDerivedDefinitions(FilterClass));
@@ -674,9 +675,10 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
 
       if (auto TypeOfVal = TableRec->getValue(("TypeOf_" + FieldName).str())) {
         if (!parseFieldType(Table->Fields.back(), TypeOfVal->getValue())) {
-          PrintFatalError(Twine("Table '") + Table->Name +
-                          "' has bad 'TypeOf_" + FieldName + "': " +
-                          TypeOfVal->getValue()->getAsString());
+          PrintFatalError(TableRec->getLoc(),
+                          Twine("Table '") + Table->Name +
+                              "' has bad 'TypeOf_" + FieldName +
+                              "': " + TypeOfVal->getValue()->getAsString());
         }
       }
     }
@@ -704,8 +706,10 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     Record *TableRec = IndexRec->getValueAsDef("Table");
     auto It = TableMap.find(TableRec);
     if (It == TableMap.end())
-      PrintFatalError(Twine("SearchIndex '") + IndexRec->getName() +
-                      "' refers to non-existing table '" + TableRec->getName());
+      PrintFatalError(IndexRec->getLoc(),
+                      Twine("SearchIndex '") + IndexRec->getName() +
+                          "' refers to non-existing table '" +
+                          TableRec->getName());
 
     GenericTable &Table = *It->second;
     Table.Indices.push_back(parseSearchIndex(

@@ -43,7 +43,7 @@ struct A
 
 int A::count = 0;
 
-int main()
+int main(int, char**)
 {
     {
         std::auto_ptr<A> ptr(new A);
@@ -94,4 +94,6 @@ int main()
     assert(A::count == 0);
     assert(globalMemCounter.checkOutstandingNewEq(0));
 #endif // !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(DISABLE_NEW_COUNT)
+
+  return 0;
 }

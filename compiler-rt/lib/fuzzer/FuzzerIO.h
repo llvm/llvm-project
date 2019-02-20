@@ -39,6 +39,8 @@ std::string DirName(const std::string &FileName);
 // Returns path to a TmpDir.
 std::string TmpDir();
 
+std::string TempPath(const char *Extension);
+
 bool IsInterestingCoverageFile(const std::string &FileName);
 
 void DupAndCloseStderr();
@@ -46,6 +48,7 @@ void DupAndCloseStderr();
 void CloseStdout();
 
 void Printf(const char *Fmt, ...);
+void VPrintf(bool Verbose, const char *Fmt, ...);
 
 // Print using raw syscalls, useful when printing at early init stages.
 void RawPrint(const char *Str);
@@ -56,6 +59,16 @@ size_t FileSize(const std::string &Path);
 
 void ListFilesInDirRecursive(const std::string &Dir, long *Epoch,
                              Vector<std::string> *V, bool TopDir);
+
+void RmDirRecursive(const std::string &Dir);
+
+// Iterate files and dirs inside Dir, recursively.
+// Call DirPreCallback/DirPostCallback on dirs before/after
+// calling FileCallback on files.
+void IterateDirRecursive(const std::string &Dir,
+                         void (*DirPreCallback)(const std::string &Dir),
+                         void (*DirPostCallback)(const std::string &Dir),
+                         void (*FileCallback)(const std::string &Dir));
 
 struct SizedFile {
   std::string File;
@@ -80,6 +93,9 @@ void RemoveFile(const std::string &Path);
 void DiscardOutput(int Fd);
 
 intptr_t GetHandleFromFd(int fd);
+
+void MkDir(const std::string &Path);
+void RmDir(const std::string &Path);
 
 }  // namespace fuzzer
 

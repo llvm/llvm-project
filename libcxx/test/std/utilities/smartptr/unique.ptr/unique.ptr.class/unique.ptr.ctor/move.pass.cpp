@@ -159,7 +159,7 @@ void test_noexcept() {
 #endif
 }
 
-int main() {
+int main(int, char**) {
   {
     test_basic</*IsArray*/ false>();
     test_sfinae<int>();
@@ -170,4 +170,6 @@ int main() {
     test_sfinae<int[]>();
     test_noexcept<int[]>();
   }
+
+  return 0;
 }

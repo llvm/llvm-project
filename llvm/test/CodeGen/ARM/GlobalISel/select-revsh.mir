@@ -40,7 +40,7 @@ body:             |
     %5(s32) = G_CONSTANT i32 8
     %6(s32) = G_LSHR %0(s32), %5(s32)
 
-    %7(s32) = G_CONSTANT 255
+    %7(s32) = G_CONSTANT i32 255
     %8(s32) = G_AND %6(s32), %7(s32)
 
     %9(s32) = G_OR %4(s32), %8(s32)
@@ -88,7 +88,7 @@ body:             |
     %5(s32) = G_CONSTANT i32 8
     %6(s32) = G_LSHR %0(s32), %5(s32)
 
-    %7(s32) = G_CONSTANT 255
+    %7(s32) = G_CONSTANT i32 255
     %8(s32) = G_AND %6(s32), %7(s32)
 
     %9(s32) = G_OR %8(s32), %4(s32)
@@ -134,7 +134,7 @@ body:             |
     %5(s32) = G_CONSTANT i32 8
     %6(s32) = G_LSHR %0(s32), %5(s32)
 
-    %7(s32) = G_CONSTANT 255
+    %7(s32) = G_CONSTANT i32 255
     %8(s32) = G_AND %6(s32), %7(s32)
 
     %9(s32) = G_OR %4(s32), %8(s32)

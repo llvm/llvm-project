@@ -40,7 +40,7 @@ test()
     assert(h(s1) != h(s2));
 }
 
-int main()
+int main(int, char**)
 {
     test<std::string>();
 #if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
@@ -51,4 +51,6 @@ int main()
     test<std::u32string>();
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
     test<std::wstring>();
+
+  return 0;
 }

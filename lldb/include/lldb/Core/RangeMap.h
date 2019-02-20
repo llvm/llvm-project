@@ -715,6 +715,7 @@ public:
 
   // Clients must ensure that "i" is a valid index prior to calling this
   // function
+  Entry &GetEntryRef(size_t i) { return m_entries[i]; }
   const Entry &GetEntryRef(size_t i) const { return m_entries[i]; }
 
   static bool BaseLessThan(const Entry &lhs, const Entry &rhs) {

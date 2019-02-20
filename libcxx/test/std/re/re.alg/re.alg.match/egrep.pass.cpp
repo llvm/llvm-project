@@ -21,7 +21,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-int main()
+int main(int, char**)
 {
     {
         std::cmatch m;
@@ -78,4 +78,6 @@ int main()
         assert(m.position(0) == 0);
         assert(m.str(0) == "tourna");
     }
+
+  return 0;
 }

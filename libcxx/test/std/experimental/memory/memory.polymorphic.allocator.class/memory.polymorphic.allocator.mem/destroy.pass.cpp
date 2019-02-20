@@ -32,7 +32,7 @@ struct destroyable
     ~destroyable() { --count; }
 };
 
-int main()
+int main(int, char**)
 {
     typedef ex::polymorphic_allocator<double> A;
     {
@@ -48,4 +48,6 @@ int main()
         assert(count == 0);
         std::free(ptr);
     }
+
+  return 0;
 }

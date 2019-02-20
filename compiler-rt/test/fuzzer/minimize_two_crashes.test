@@ -1,5 +1,5 @@
 # Test that the minimizer stops when it sees a different bug.
-UNSUPPORTED: freebsd,windows
+UNSUPPORTED: freebsd
 
 # TODO: Find out why test fails on Darwin with -O2.
 RUN: %cpp_compiler -O0 %S/TwoDifferentBugsTest.cpp -o %t-TwoDifferentBugsTest

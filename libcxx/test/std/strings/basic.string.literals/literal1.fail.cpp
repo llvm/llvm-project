@@ -12,9 +12,11 @@
 #include <string>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     using std::string;
 
     string foo  =   ""s;  // should fail w/conversion operator not found
+
+  return 0;
 }

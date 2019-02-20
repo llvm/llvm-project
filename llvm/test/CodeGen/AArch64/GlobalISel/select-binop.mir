@@ -152,7 +152,7 @@ body:             |
     ; CHECK: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri [[COPY]], 1, 0
     ; CHECK: $x0 = COPY [[ADDXri]]
     %0(s64) = COPY $x0
-    %1(s64) = G_CONSTANT i32 1
+    %1(s64) = G_CONSTANT i64 1
     %2(s64) = G_ADD %0, %1
     $x0 = COPY %2(s64)
 ...

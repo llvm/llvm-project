@@ -201,7 +201,7 @@ exit:
 }
 
 ; CHECK-LABEL: promote_arg_pass_to_call
-; CHECK-NOT: uxt
+; CHECK: uxtb
 define i16 @promote_arg_pass_to_call(i16 zeroext %arg1, i16 zeroext %arg2) {
   %conv = add nuw i16 %arg1, 15
   %mul = mul nuw nsw i16 %conv, 3

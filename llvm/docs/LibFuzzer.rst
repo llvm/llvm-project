@@ -646,10 +646,20 @@ coverage set of the process (since the fuzzer is in-process). In other words, by
 using more external dependencies we will slow down the fuzzer while the main
 reason for it to exist is extreme speed.
 
-Q. What about Windows then? The fuzzer contains code that does not build on Windows.
+Q. Does libFuzzer Support Windows?
 ------------------------------------------------------------------------------------
 
-Volunteers are welcome.
+Yes, libFuzzer now supports Windows. Initial support was added in r341082.
+Any build of Clang 9 supports it. You can download a build of Clang for Windows
+that has libFuzzer from
+`LLVM Snapshot Builds <https://llvm.org/builds/>`_.
+
+Using libFuzzer on Windows without ASAN is unsupported. Building fuzzers with the
+``/MD`` (dynamic runtime library) compile option is unsupported. Support for these
+may be added in the future. Linking fuzzers with the ``/INCREMENTAL`` link option
+(or the ``/DEBUG`` option which implies it) is also unsupported.
+
+Send any questions or comments to the mailing list: libfuzzer(#)googlegroups.com
 
 Q. When libFuzzer is not a good solution for a problem?
 ---------------------------------------------------------
@@ -680,6 +690,13 @@ small inputs, each input takes < 10ms to run, and the library code is not expect
 to crash on invalid inputs.
 Examples: regular expression matchers, text or binary format parsers, compression,
 network, crypto.
+
+Q. LibFuzzer crashes on my complicated fuzz target (but works fine for me on smaller targets).
+----------------------------------------------------------------------------------------------
+
+Check if your fuzz target uses ``dlclose``.
+Currently, libFuzzer doesn't support targets that call ``dlclose``,
+this may be fixed in future.
 
 
 Trophies

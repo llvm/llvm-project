@@ -40,7 +40,7 @@ test()
     return opt->test();
 }
 
-int main()
+int main(int, char**)
 {
     {
         std::optional<X> opt; ((void)opt);
@@ -68,4 +68,6 @@ int main()
         assert(false);
     }
 #endif  // _LIBCPP_DEBUG
+
+  return 0;
 }

@@ -26,10 +26,12 @@ test(const String& p, unsigned mc)
     assert(r.mark_count() == mc);
 }
 
-int main()
+int main(int, char**)
 {
     test(std::string("\\(a\\)"), 0);
     test(std::string("\\(a[bc]\\)"), 0);
     test(std::string("\\(a\\([bc]\\)\\)"), 0);
     test(std::string("(a([bc]))"), 2);
+
+  return 0;
 }

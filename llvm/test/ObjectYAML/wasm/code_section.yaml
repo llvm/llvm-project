@@ -20,10 +20,10 @@ Sections:
       - 1
   - Type:            CODE
     Relocations:
-      - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+      - Type:            R_WASM_TABLE_INDEX_SLEB
         Index:           0
         Offset:          0x00000006
-      - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+      - Type:            R_WASM_FUNCTION_INDEX_LEB
         Index:           1
         Offset:          0x00000025
     Functions:
@@ -69,10 +69,10 @@ Sections:
 # CHECK:          - I64
 # CHECK:  - Type:            CODE
 # CHECK:    Relocations:
-# CHECK:      - Type:            R_WEBASSEMBLY_TABLE_INDEX_SLEB
+# CHECK:      - Type:            R_WASM_TABLE_INDEX_SLEB
 # CHECK:        Index:           0
 # CHECK:        Offset:          0x00000006
-# CHECK:      - Type:            R_WEBASSEMBLY_FUNCTION_INDEX_LEB
+# CHECK:      - Type:            R_WASM_FUNCTION_INDEX_LEB
 # CHECK:        Index:           1
 # CHECK:        Offset:          0x00000025
 # CHECK:    Functions:

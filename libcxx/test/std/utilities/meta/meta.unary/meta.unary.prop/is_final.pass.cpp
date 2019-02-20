@@ -48,7 +48,7 @@ void test_is_not_final()
 #endif
 }
 
-int main ()
+int main(int, char**)
 {
     test_is_not_final<int>();
     test_is_not_final<int*>();
@@ -58,4 +58,6 @@ int main ()
     test_is_not_final<U1*>();
     test_is_final    <U2>();
     test_is_not_final<U2*>();
+
+  return 0;
 }

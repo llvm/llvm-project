@@ -66,7 +66,7 @@ void test()
     assert(std::is_sorted(v.begin(), v.end()));
 }
 
-int main()
+int main(int, char**)
 {
     test();
 
@@ -82,4 +82,6 @@ int main()
     assert(*v[2] == 2);
     }
 #endif
+
+  return 0;
 }

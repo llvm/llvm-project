@@ -86,6 +86,10 @@ TEST(HighlightsTest, All) {
           auto *X = &[[foo]];
         }
       )cpp",
+
+      R"cpp(// Function parameter in decl
+        void foo(int [[^bar]]);
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -178,6 +182,26 @@ TEST(LocateSymbol, WithIndex) {
   EXPECT_THAT(
       LocateWithIndex(Test),
       ElementsAre(Sym("Forward", SymbolHeader.range("forward"), Test.range())));
+}
+
+TEST(LocateSymbol, WithIndexPreferredLocation) {
+  Annotations SymbolHeader(R"cpp(
+        class $[[Proto]] {};
+      )cpp");
+  TestTU TU;
+  TU.HeaderCode = SymbolHeader.code();
+  TU.HeaderFilename = "x.proto"; // Prefer locations in codegen files.
+  auto Index = TU.index();
+
+  Annotations Test(R"cpp(// only declaration in AST.
+        // Shift to make range different.
+        class [[Proto]];
+        P^roto* create();
+      )cpp");
+
+  auto AST = TestTU::withCode(Test.code()).build();
+  auto Locs = clangd::locateSymbolAt(AST, Test.point(), Index.get());
+  EXPECT_THAT(Locs, ElementsAre(Sym("Proto", SymbolHeader.range())));
 }
 
 TEST(LocateSymbol, All) {
@@ -325,6 +349,58 @@ TEST(LocateSymbol, All) {
          #define FF() class [[Test]] {};
          FF();
          void f() { T^est a; }
+      )cpp",
+
+      R"cpp(// explicit template specialization
+        template <typename T>
+        struct Foo { void bar() {} };
+
+        template <>
+        struct [[Foo]]<int> { void bar() {} };
+
+        void foo() {
+          Foo<char> abc;
+          Fo^o<int> b;
+        }
+      )cpp",
+
+      R"cpp(// implicit template specialization
+        template <typename T>
+        struct [[Foo]] { void bar() {} };
+        template <>
+        struct Foo<int> { void bar() {} };
+        void foo() {
+          Fo^o<char> abc;
+          Foo<int> b;
+        }
+      )cpp",
+
+      R"cpp(// partial template specialization
+        template <typename T>
+        struct Foo { void bar() {} };
+        template <typename T>
+        struct [[Foo]]<T*> { void bar() {} };
+        ^Foo<int*> x;
+      )cpp",
+
+      R"cpp(// function template specializations
+        template <class T>
+        void foo(T) {}
+        template <>
+        void [[foo]](int) {}
+        void bar() {
+          fo^o(10);
+        }
+      )cpp",
+
+      R"cpp(// variable template decls
+        template <class T>
+        T var = T();
+
+        template <>
+        double [[var]]<int> = 10;
+
+        double y = va^r<int>;
       )cpp",
   };
   for (const char *Test : Tests) {

@@ -34,7 +34,7 @@ void operator delete(void* p, const std::nothrow_t&) TEST_NOEXCEPT
     std::free(p);
 }
 
-int main()
+int main(int, char**)
 {
     int *x = new int(42);
     DoNotOptimize(x);
@@ -45,4 +45,6 @@ int main()
     DoNotOptimize(x);
     assert(1 == delete_called);
     assert(0 == delete_nothrow_called);
+
+  return 0;
 }

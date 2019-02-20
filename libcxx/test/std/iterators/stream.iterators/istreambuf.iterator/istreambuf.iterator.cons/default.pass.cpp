@@ -21,7 +21,7 @@
 
 #include "test_macros.h"
 
-int main()
+int main(int, char**)
 {
     {
         typedef std::istreambuf_iterator<char> T;
@@ -41,4 +41,6 @@ int main()
         (void)it2;
 #endif
     }
+
+  return 0;
 }

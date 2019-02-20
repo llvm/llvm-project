@@ -77,6 +77,8 @@ void test_sfinae() {
 }
 
 
-int main() {
+int main(int, char**) {
   test_sfinae();
+
+  return 0;
 }

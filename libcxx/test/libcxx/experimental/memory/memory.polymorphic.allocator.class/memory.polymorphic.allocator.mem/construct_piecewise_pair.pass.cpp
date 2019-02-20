@@ -103,7 +103,7 @@ struct CountCopiesAllocV2 {
 };
 
 
-int main()
+int main(int, char**)
 {
     {
         using T = CountCopies;
@@ -167,4 +167,6 @@ int main()
         assert(p.first.alloc == h.M);
         assert(p.second.count == 2);
     }
+
+  return 0;
 }

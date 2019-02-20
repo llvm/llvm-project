@@ -354,7 +354,7 @@ define i64 @bzhi64_a0(i64 %val, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_a0:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -439,7 +439,7 @@ define i64 @bzhi64_a1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; X64-BMI1NOTBM-LABEL: bzhi64_a1_indexzext:
 ; X64-BMI1NOTBM:       # %bb.0:
 ; X64-BMI1NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -534,7 +534,7 @@ define i64 @bzhi64_a2_load(i64* %w, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_a2_load:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, (%rdi), %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -629,7 +629,7 @@ define i64 @bzhi64_a3_load_indexzext(i64* %w, i8 zeroext %numlowbits) nounwind {
 ; X64-BMI1NOTBM-LABEL: bzhi64_a3_load_indexzext:
 ; X64-BMI1NOTBM:       # %bb.0:
 ; X64-BMI1NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, (%rdi), %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -716,7 +716,7 @@ define i64 @bzhi64_a4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_a4_commutative:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -1060,7 +1060,7 @@ define i64 @bzhi64_b0(i64 %val, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_b0:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -1144,7 +1144,7 @@ define i64 @bzhi64_b1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; X64-BMI1NOTBM-LABEL: bzhi64_b1_indexzext:
 ; X64-BMI1NOTBM:       # %bb.0:
 ; X64-BMI1NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -1234,7 +1234,7 @@ define i64 @bzhi64_b2_load(i64* %w, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_b2_load:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, (%rdi), %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -1324,7 +1324,7 @@ define i64 @bzhi64_b3_load_indexzext(i64* %w, i8 zeroext %numlowbits) nounwind {
 ; X64-BMI1NOTBM-LABEL: bzhi64_b3_load_indexzext:
 ; X64-BMI1NOTBM:       # %bb.0:
 ; X64-BMI1NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, (%rdi), %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -1410,7 +1410,7 @@ define i64 @bzhi64_b4_commutative(i64 %val, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_b4_commutative:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -3120,7 +3120,7 @@ define i64 @bzhi64_d0(i64 %val, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_d0:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -3258,7 +3258,7 @@ define i64 @bzhi64_d1_indexzext(i64 %val, i8 %numlowbits) nounwind {
 ; X64-BMI1NOTBM-LABEL: bzhi64_d1_indexzext:
 ; X64-BMI1NOTBM:       # %bb.0:
 ; X64-BMI1NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, %rdi, %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -3400,7 +3400,7 @@ define i64 @bzhi64_d2_load(i64* %w, i64 %numlowbits) nounwind {
 ;
 ; X64-BMI1NOTBM-LABEL: bzhi64_d2_load:
 ; X64-BMI1NOTBM:       # %bb.0:
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, (%rdi), %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;
@@ -3542,7 +3542,7 @@ define i64 @bzhi64_d3_load_indexzext(i64* %w, i8 %numlowbits) nounwind {
 ; X64-BMI1NOTBM-LABEL: bzhi64_d3_load_indexzext:
 ; X64-BMI1NOTBM:       # %bb.0:
 ; X64-BMI1NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-BMI1NOTBM-NEXT:    shlq $8, %rsi
+; X64-BMI1NOTBM-NEXT:    shll $8, %esi
 ; X64-BMI1NOTBM-NEXT:    bextrq %rsi, (%rdi), %rax
 ; X64-BMI1NOTBM-NEXT:    retq
 ;

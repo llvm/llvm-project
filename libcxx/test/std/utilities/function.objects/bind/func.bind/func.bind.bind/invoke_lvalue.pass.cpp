@@ -280,10 +280,12 @@ test3()
     assert(b);
 }
 
-int main()
+int main(int, char**)
 {
     test_void_1();
     test_int_1();
     test_void_2();
     test3();
+
+  return 0;
 }

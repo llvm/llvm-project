@@ -23,7 +23,7 @@
 
 constexpr fs::directory_options ME(int val) { return static_cast<fs::directory_options>(val); }
 
-int main() {
+int main(int, char**) {
   typedef fs::directory_options E;
   static_assert(std::is_enum<E>::value, "");
 
@@ -41,4 +41,6 @@ int main() {
         E::skip_permission_denied   == ME(2),
         "Expected enumeration values do not match");
 
+
+  return 0;
 }

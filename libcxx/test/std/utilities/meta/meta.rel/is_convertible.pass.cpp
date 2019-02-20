@@ -60,7 +60,7 @@ class CannotInstantiate {
   enum { X = T::ThisExpressionWillBlowUp };
 };
 
-int main()
+int main(int, char**)
 {
     // void
     test_is_convertible<void,void> ();
@@ -259,4 +259,6 @@ int main()
     // Ensure that CannotInstantiate is not instantiated by is_convertible when it is not needed.
     // For example CannotInstantiate is instatiated as a part of ADL lookup for arguments of type CannotInstantiate*.
     static_assert((std::is_convertible<CannotInstantiate<int>*, CannotInstantiate<int>*>::value), "");
+
+  return 0;
 }

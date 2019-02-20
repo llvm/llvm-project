@@ -63,7 +63,7 @@ private:
 };
 
 
-int main ()
+int main(int, char**)
 {
 
 //  Making non-const spans from const sources (a temporary binds to `const &`)
@@ -129,4 +129,6 @@ int main ()
     std::span<      volatile int,1> s7{cv}; // expected-error {{no matching constructor for initialization of 'std::span<volatile int, 1>'}}
     }
 
+
+  return 0;
 }

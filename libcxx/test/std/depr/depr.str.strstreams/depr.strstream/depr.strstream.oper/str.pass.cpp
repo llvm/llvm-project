@@ -15,7 +15,7 @@
 #include <strstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     {
         std::strstream out;
@@ -23,4 +23,6 @@ int main()
         assert(out.str() == std::string("123 4.5 dog"));
         out.freeze(false);
     }
+
+  return 0;
 }

@@ -70,7 +70,7 @@ struct incomplete_type;
 
 typedef void (*FunctionPtr)();
 
-int main()
+int main(int, char**)
 {
     test_is_union<Union>();
 
@@ -91,4 +91,6 @@ int main()
     test_is_not_union<NotEmpty>();
     test_is_not_union<Abstract>();
     test_is_not_union<incomplete_type>();
+
+  return 0;
 }

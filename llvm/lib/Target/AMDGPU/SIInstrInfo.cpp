@@ -140,7 +140,8 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
-    return true;
+    // No implicit operands.
+    return MI.getNumOperands() == MI.getDesc().getNumOperands();
   default:
     return false;
   }
@@ -2213,17 +2214,6 @@ bool SIInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
   // XXX - Can we relax this between address spaces?
   if (MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
-
-  if (AA && MIa.hasOneMemOperand() && MIb.hasOneMemOperand()) {
-    const MachineMemOperand *MMOa = *MIa.memoperands_begin();
-    const MachineMemOperand *MMOb = *MIb.memoperands_begin();
-    if (MMOa->getValue() && MMOb->getValue()) {
-      MemoryLocation LocA(MMOa->getValue(), MMOa->getSize(), MMOa->getAAInfo());
-      MemoryLocation LocB(MMOb->getValue(), MMOb->getSize(), MMOb->getAAInfo());
-      if (!AA->alias(LocA, LocB))
-        return true;
-    }
-  }
 
   // TODO: Should we check the address space from the MachineMemOperand? That
   // would allow us to distinguish objects we know don't alias based on the
@@ -5312,7 +5302,8 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 0;
   case TargetOpcode::BUNDLE:
     return getInstBundleSize(MI);
-  case TargetOpcode::INLINEASM: {
+  case TargetOpcode::INLINEASM:
+  case TargetOpcode::INLINEASM_BR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
@@ -5644,4 +5635,30 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
       return MI;
   }
   return nullptr;
+}
+
+bool llvm::isEXECMaskConstantBetweenDefAndUses(unsigned VReg,
+                                               MachineRegisterInfo &MRI) {
+  assert(MRI.isSSA() && "Must be run on SSA");
+  auto *TRI = MRI.getTargetRegisterInfo();
+
+  auto *DefI = MRI.getVRegDef(VReg);
+  auto *BB = DefI->getParent();
+
+  DenseSet<MachineInstr*> Uses;
+  for (auto &Use : MRI.use_nodbg_operands(VReg)) {
+    auto *I = Use.getParent();
+    if (I->getParent() != BB)
+      return false;
+    Uses.insert(I);
+  }
+
+  auto E = BB->end();
+  for (auto I = std::next(DefI->getIterator()); I != E; ++I) {
+    Uses.erase(&*I);
+    // don't check the last use
+    if (Uses.empty() || I->modifiesRegister(AMDGPU::EXEC, TRI))
+      break;
+  }
+  return Uses.empty();
 }

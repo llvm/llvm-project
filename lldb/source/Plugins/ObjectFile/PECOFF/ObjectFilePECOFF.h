@@ -111,11 +111,13 @@ public:
 
   lldb_private::ArchSpec GetArchitecture() override;
 
-  bool GetUUID(lldb_private::UUID *uuid) override;
+  lldb_private::UUID GetUUID() override;
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
   virtual lldb_private::Address GetEntryPointAddress() override;
+
+  lldb_private::Address GetBaseAddress() override;
 
   ObjectFile::Type CalculateType() override;
 

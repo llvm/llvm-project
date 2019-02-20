@@ -79,7 +79,7 @@ test()
     test_larger_sorts<Iter>(1009);
 }
 
-int main()
+int main(int, char**)
 {
     int i = 0;
     std::partial_sort_copy(&i, &i, &i, &i+5);
@@ -89,4 +89,6 @@ int main()
     test<bidirectional_iterator<const int*> >();
     test<random_access_iterator<const int*> >();
     test<const int*>();
+
+  return 0;
 }

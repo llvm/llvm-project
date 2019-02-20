@@ -25,45 +25,28 @@ define <4 x i32> @test_urem_odd_vec_i32(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-; Like test_urem_odd_vec_i32, but with 4 x i16 vectors.
-define <4 x i16> @test_urem_odd_vec_i16(<4 x i16> %X) nounwind readnone {
+; Like test_urem_odd_vec_i32, but with 8 x i16 vectors.
+define <8 x i16> @test_urem_odd_vec_i16(<8 x i16> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_odd_vec_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #52429
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    movk w9, #52428, lsl #16
-; CHECK-NEXT:    umull x12, w8, w9
-; CHECK-NEXT:    lsr x12, x12, #34
-; CHECK-NEXT:    umov w10, v0.h[0]
-; CHECK-NEXT:    add w12, w12, w12, lsl #2
-; CHECK-NEXT:    sub w8, w8, w12
-; CHECK-NEXT:    umull x12, w10, w9
-; CHECK-NEXT:    lsr x12, x12, #34
-; CHECK-NEXT:    umov w11, v0.h[2]
-; CHECK-NEXT:    add w12, w12, w12, lsl #2
-; CHECK-NEXT:    sub w10, w10, w12
-; CHECK-NEXT:    umull x12, w11, w9
-; CHECK-NEXT:    lsr x12, x12, #34
-; CHECK-NEXT:    add w12, w12, w12, lsl #2
-; CHECK-NEXT:    sub w11, w11, w12
-; CHECK-NEXT:    umov w12, v0.h[3]
-; CHECK-NEXT:    umull x9, w12, w9
-; CHECK-NEXT:    lsr x9, x9, #34
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    add w9, w9, w9, lsl #2
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    sub w9, w12, w9
-; CHECK-NEXT:    mov v0.h[2], w11
-; CHECK-NEXT:    mov v0.h[3], w9
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
-; CHECK-NEXT:    movi v1.4h, #1
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    mov w8, #52429
+; CHECK-NEXT:    dup v2.8h, w8
+; CHECK-NEXT:    umull2 v3.4s, v0.8h, v2.8h
+; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
+; CHECK-NEXT:    uzp2 v2.8h, v2.8h, v3.8h
+; CHECK-NEXT:    movi v1.8h, #5
+; CHECK-NEXT:    ushr v2.8h, v2.8h, #2
+; CHECK-NEXT:    mls v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    cmeq v0.8h, v0.8h, #0
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i16> %X, <i16 5, i16 5, i16 5, i16 5>
-  %cmp = icmp eq <4 x i16> %urem, <i16 0, i16 0, i16 0, i16 0>
-  %ret = zext <4 x i1> %cmp to <4 x i16>
-  ret <4 x i16> %ret
+  %urem = urem <8 x i16> %X, <i16 5, i16 5, i16 5, i16 5,
+                              i16 5, i16 5, i16 5, i16 5>
+  %cmp = icmp eq <8 x i16> %urem, <i16 0, i16 0, i16 0, i16 0,
+                                   i16 0, i16 0, i16 0, i16 0>
+  %ret = zext <8 x i1> %cmp to <8 x i16>
+  ret <8 x i16> %ret
 }
 
 ; Tests BuildUREMEqFold for 4 x i32 splat vectors with even divisor.
@@ -92,48 +75,31 @@ define <4 x i32> @test_urem_even_vec_i32(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-; Like test_urem_even_vec_i32, but with 4 x i16 vectors.
+; Like test_urem_even_vec_i32, but with 8 x i16 vectors.
 ; i16 is not legal for ROTR on AArch64, but ROTR also cannot be promoted to i32,
 ; so this would crash if BuildUREMEqFold was applied.
-define <4 x i16> @test_urem_even_vec_i16(<4 x i16> %X) nounwind readnone {
+define <8 x i16> @test_urem_even_vec_i16(<8 x i16> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_even_vec_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    mov w9, #9363
-; CHECK-NEXT:    movk w9, #37449, lsl #16
-; CHECK-NEXT:    umov w10, v0.h[0]
-; CHECK-NEXT:    umov w11, v0.h[2]
-; CHECK-NEXT:    umov w12, v0.h[3]
-; CHECK-NEXT:    ubfx w13, w8, #1, #15
-; CHECK-NEXT:    ubfx w14, w10, #1, #15
-; CHECK-NEXT:    ubfx w15, w11, #1, #15
-; CHECK-NEXT:    ubfx w16, w12, #1, #15
-; CHECK-NEXT:    umull x13, w13, w9
-; CHECK-NEXT:    umull x14, w14, w9
-; CHECK-NEXT:    umull x15, w15, w9
-; CHECK-NEXT:    umull x9, w16, w9
-; CHECK-NEXT:    orr w16, wzr, #0xe
-; CHECK-NEXT:    lsr x13, x13, #34
-; CHECK-NEXT:    msub w8, w13, w16, w8
-; CHECK-NEXT:    lsr x13, x14, #34
-; CHECK-NEXT:    msub w10, w13, w16, w10
-; CHECK-NEXT:    lsr x13, x15, #34
-; CHECK-NEXT:    fmov s0, w10
-; CHECK-NEXT:    msub w11, w13, w16, w11
-; CHECK-NEXT:    lsr x9, x9, #34
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    msub w9, w9, w16, w12
-; CHECK-NEXT:    mov v0.h[2], w11
-; CHECK-NEXT:    mov v0.h[3], w9
-; CHECK-NEXT:    cmeq v0.4h, v0.4h, #0
-; CHECK-NEXT:    movi v1.4h, #1
-; CHECK-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    mov w8, #18725
+; CHECK-NEXT:    ushr v1.8h, v0.8h, #1
+; CHECK-NEXT:    dup v3.8h, w8
+; CHECK-NEXT:    umull2 v4.4s, v1.8h, v3.8h
+; CHECK-NEXT:    umull v1.4s, v1.4h, v3.4h
+; CHECK-NEXT:    uzp2 v1.8h, v1.8h, v4.8h
+; CHECK-NEXT:    movi v2.8h, #14
+; CHECK-NEXT:    ushr v1.8h, v1.8h, #1
+; CHECK-NEXT:    mls v0.8h, v1.8h, v2.8h
+; CHECK-NEXT:    cmeq v0.8h, v0.8h, #0
+; CHECK-NEXT:    movi v1.8h, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i16> %X, <i16 14, i16 14, i16 14, i16 14>
-  %cmp = icmp eq <4 x i16> %urem, <i16 0, i16 0, i16 0, i16 0>
-  %ret = zext <4 x i1> %cmp to <4 x i16>
-  ret <4 x i16> %ret
+  %urem = urem <8 x i16> %X, <i16 14, i16 14, i16 14, i16 14,
+                              i16 14, i16 14, i16 14, i16 14>
+  %cmp = icmp eq <8 x i16> %urem, <i16 0, i16 0, i16 0, i16 0,
+                                   i16 0, i16 0, i16 0, i16 0>
+  %ret = zext <8 x i1> %cmp to <8 x i16>
+  ret <8 x i16> %ret
 }
 
 ; We should not proceed with this fold if the divisor is 1 or -1

@@ -18,7 +18,7 @@
 #include <cassert>
 #include "any_helpers.h"
 
-int main()
+int main(int, char**)
 {
     using std::any;
     {
@@ -37,4 +37,6 @@ int main()
         any const a(l);
         assert(a.type() == typeid(large));
     }
+
+  return 0;
 }

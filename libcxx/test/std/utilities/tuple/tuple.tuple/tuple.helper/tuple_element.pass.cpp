@@ -39,7 +39,7 @@ void test()
 #endif
 }
 
-int main()
+int main(int, char**)
 {
     test<std::tuple<int>, 0, int>();
     test<std::tuple<char, int>, 0, char>();
@@ -47,4 +47,6 @@ int main()
     test<std::tuple<int*, char, int>, 0, int*>();
     test<std::tuple<int*, char, int>, 1, char>();
     test<std::tuple<int*, char, int>, 2, int>();
+
+  return 0;
 }

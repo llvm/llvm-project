@@ -159,15 +159,12 @@ public:
 // PartialSection represents a group of chunks that contribute to an
 // OutputSection. Collating a collection of PartialSections of same name and
 // characteristics constitutes the OutputSection.
-class PartialSection {
+class PartialSectionKey {
 public:
-  PartialSection(StringRef N, uint32_t Chars)
-      : Name(N), Characteristics(Chars) {}
   StringRef Name;
   unsigned Characteristics;
-  std::vector<Chunk *> Chunks;
 
-  bool operator<(const PartialSection &Other) const {
+  bool operator<(const PartialSectionKey &Other) const {
     int C = Name.compare(Other.Name);
     if (C == 1)
       return false;
@@ -177,10 +174,13 @@ public:
   }
 };
 
-struct PartialLess {
-  bool operator()(PartialSection *L, PartialSection *R) const {
-    return *L < *R;
-  }
+class PartialSection {
+public:
+  PartialSection(StringRef N, uint32_t Chars)
+      : Name(N), Characteristics(Chars) {}
+  StringRef Name;
+  unsigned Characteristics;
+  std::vector<Chunk *> Chunks;
 };
 
 // The writer writes a SymbolTable result to a file.
@@ -234,7 +234,7 @@ private:
   uint32_t getSizeOfInitializedData();
 
   std::unique_ptr<FileOutputBuffer> &Buffer;
-  std::set<PartialSection *, PartialLess> PartialSections;
+  std::map<PartialSectionKey, PartialSection *> PartialSections;
   std::vector<OutputSection *> OutputSections;
   std::vector<char> Strtab;
   std::vector<llvm::object::coff_symbol16> OutputSymtab;
@@ -335,16 +335,31 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
 // Check whether the target address S is in range from a relocation
 // of type RelType at address P.
 static bool isInRange(uint16_t RelType, uint64_t S, uint64_t P, int Margin) {
-  assert(Config->Machine == ARMNT);
-  int64_t Diff = AbsoluteDifference(S, P + 4) + Margin;
-  switch (RelType) {
-  case IMAGE_REL_ARM_BRANCH20T:
-    return isInt<21>(Diff);
-  case IMAGE_REL_ARM_BRANCH24T:
-  case IMAGE_REL_ARM_BLX23T:
-    return isInt<25>(Diff);
-  default:
-    return true;
+  if (Config->Machine == ARMNT) {
+    int64_t Diff = AbsoluteDifference(S, P + 4) + Margin;
+    switch (RelType) {
+    case IMAGE_REL_ARM_BRANCH20T:
+      return isInt<21>(Diff);
+    case IMAGE_REL_ARM_BRANCH24T:
+    case IMAGE_REL_ARM_BLX23T:
+      return isInt<25>(Diff);
+    default:
+      return true;
+    }
+  } else if (Config->Machine == ARM64) {
+    int64_t Diff = AbsoluteDifference(S, P) + Margin;
+    switch (RelType) {
+    case IMAGE_REL_ARM64_BRANCH26:
+      return isInt<28>(Diff);
+    case IMAGE_REL_ARM64_BRANCH19:
+      return isInt<21>(Diff);
+    case IMAGE_REL_ARM64_BRANCH14:
+      return isInt<16>(Diff);
+    default:
+      return true;
+    }
+  } else {
+    llvm_unreachable("Unexpected architecture");
   }
 }
 
@@ -356,7 +371,17 @@ getThunk(DenseMap<uint64_t, Defined *> &LastThunks, Defined *Target, uint64_t P,
   Defined *&LastThunk = LastThunks[Target->getRVA()];
   if (LastThunk && isInRange(Type, LastThunk->getRVA(), P, Margin))
     return {LastThunk, false};
-  RangeExtensionThunk *C = make<RangeExtensionThunk>(Target);
+  Chunk *C;
+  switch (Config->Machine) {
+  case ARMNT:
+    C = make<RangeExtensionThunkARM>(Target);
+    break;
+  case ARM64:
+    C = make<RangeExtensionThunkARM64>(Target);
+    break;
+  default:
+    llvm_unreachable("Unexpected architecture");
+  }
   Defined *D = make<DefinedSynthetic>("", C);
   LastThunk = D;
   return {D, true};
@@ -373,14 +398,14 @@ getThunk(DenseMap<uint64_t, Defined *> &LastThunks, Defined *Target, uint64_t P,
 // After adding thunks, we verify that all relocations are in range (with
 // no extra margin requirements). If this failed, we restart (throwing away
 // the previously created thunks) and retry with a wider margin.
-static bool createThunks(std::vector<Chunk *> &Chunks, int Margin) {
+static bool createThunks(OutputSection *OS, int Margin) {
   bool AddressesChanged = false;
   DenseMap<uint64_t, Defined *> LastThunks;
   size_t ThunksSize = 0;
   // Recheck Chunks.size() each iteration, since we can insert more
   // elements into it.
-  for (size_t I = 0; I != Chunks.size(); ++I) {
-    SectionChunk *SC = dyn_cast_or_null<SectionChunk>(Chunks[I]);
+  for (size_t I = 0; I != OS->Chunks.size(); ++I) {
+    SectionChunk *SC = dyn_cast_or_null<SectionChunk>(OS->Chunks[I]);
     if (!SC)
       continue;
     size_t ThunkInsertionSpot = I + 1;
@@ -417,7 +442,8 @@ static bool createThunks(std::vector<Chunk *> &Chunks, int Margin) {
         Chunk *ThunkChunk = Thunk->getChunk();
         ThunkChunk->setRVA(
             ThunkInsertionRVA); // Estimate of where it will be located.
-        Chunks.insert(Chunks.begin() + ThunkInsertionSpot, ThunkChunk);
+        ThunkChunk->setOutputSection(OS);
+        OS->Chunks.insert(OS->Chunks.begin() + ThunkInsertionSpot, ThunkChunk);
         ThunkInsertionSpot++;
         ThunksSize += ThunkChunk->getSize();
         ThunkInsertionRVA += ThunkChunk->getSize();
@@ -457,7 +483,7 @@ static bool verifyRanges(const std::vector<Chunk *> Chunks) {
 // Assign addresses and add thunks if necessary.
 void Writer::finalizeAddresses() {
   assignAddresses();
-  if (Config->Machine != ARMNT)
+  if (Config->Machine != ARMNT && Config->Machine != ARM64)
     return;
 
   size_t OrigNumChunks = 0;
@@ -506,7 +532,7 @@ void Writer::finalizeAddresses() {
     // to avoid things going out of range due to the added thunks.
     bool AddressesChanged = false;
     for (OutputSection *Sec : OutputSections)
-      AddressesChanged |= createThunks(Sec->Chunks, Margin);
+      AddressesChanged |= createThunks(Sec, Margin);
     // If the verification above thought we needed thunks, we should have
     // added some.
     assert(AddressesChanged);
@@ -602,7 +628,8 @@ bool Writer::fixGnuImportChunks() {
 
   // Make sure all .idata$* section chunks are mapped as RDATA in order to
   // be sorted into the same sections as our own synthesized .idata chunks.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     if (!PSec->Name.startswith(".idata"))
       continue;
     if (PSec->Characteristics == RDATA)
@@ -616,7 +643,8 @@ bool Writer::fixGnuImportChunks() {
   bool HasIdata = false;
   // Sort all .idata$* chunks, grouping chunks from the same library,
   // with alphabetical ordering of the object fils within a library.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     if (!PSec->Name.startswith(".idata"))
       continue;
 
@@ -747,8 +775,8 @@ void Writer::createSections() {
 
   // Process an /order option.
   if (!Config->Order.empty())
-    for (PartialSection *PSec : PartialSections)
-      sortBySectionOrder(PSec->Chunks);
+    for (auto It : PartialSections)
+      sortBySectionOrder(It.second->Chunks);
 
   if (HasIdata)
     locateImportTables();
@@ -757,7 +785,8 @@ void Writer::createSections() {
   // '$' and all following characters in input section names are
   // discarded when determining output section. So, .text$foo
   // contributes to .text, for example. See PE/COFF spec 3.2.
-  for (PartialSection *PSec : PartialSections) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
     StringRef Name = getOutputSectionName(PSec->Name);
     uint32_t OutChars = PSec->Characteristics;
 
@@ -1745,19 +1774,16 @@ void Writer::addBaserelBlocks(std::vector<Baserel> &V) {
 
 PartialSection *Writer::createPartialSection(StringRef Name,
                                              uint32_t OutChars) {
-  PartialSection *PSec = findPartialSection(Name, OutChars);
+  PartialSection *&PSec = PartialSections[{Name, OutChars}];
   if (PSec)
     return PSec;
   PSec = make<PartialSection>(Name, OutChars);
-  PartialSections.insert(PSec);
   return PSec;
 }
 
 PartialSection *Writer::findPartialSection(StringRef Name, uint32_t OutChars) {
-  auto It = find_if(PartialSections, [&](PartialSection *P) {
-    return P->Name == Name && P->Characteristics == OutChars;
-  });
+  auto It = PartialSections.find({Name, OutChars});
   if (It != PartialSections.end())
-    return *It;
+    return It->second;
   return nullptr;
 }

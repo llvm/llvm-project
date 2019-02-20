@@ -140,7 +140,7 @@ void test1()
     test(S("abcdeabcdeabcdeabcde"), S("abcdeabcdeabcdeabcde"), 0);
 }
 
-int main()
+int main(int, char**)
 {
     {
     typedef std::string_view S;
@@ -161,4 +161,6 @@ int main()
     static_assert (sv2.find(sv2, 1 ) == SV::npos, "" );
     }
 #endif
+
+  return 0;
 }

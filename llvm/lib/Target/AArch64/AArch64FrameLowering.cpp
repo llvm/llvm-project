@@ -1554,6 +1554,7 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
         // Funclets access the locals contained in the parent's stack frame
         // via the frame pointer, so we have to use the FP in the parent
         // function.
+        (void) Subtarget;
         assert(
             Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv()) &&
             "Funclets should only be present on Win64");

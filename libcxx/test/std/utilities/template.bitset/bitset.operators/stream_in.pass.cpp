@@ -16,10 +16,12 @@
 #include <sstream>
 #include <cassert>
 
-int main()
+int main(int, char**)
 {
     std::istringstream in("01011010");
     std::bitset<8> b;
     in >> b;
     assert(b.to_ulong() == 0x5A);
+
+  return 0;
 }

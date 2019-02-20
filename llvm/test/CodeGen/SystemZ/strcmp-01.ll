@@ -9,12 +9,12 @@ define i32 @f1(i8 *%src1, i8 *%src2) {
 ; CHECK-LABEL: f1:
 ; CHECK: lhi %r0, 0
 ; CHECK: [[LABEL:\.[^:]*]]:
-; CHECK: clst %r2, %r3
+; CHECK: clst %r3, %r2
 ; CHECK-NEXT: jo [[LABEL]]
 ; CHECK-NEXT: %bb.{{[0-9]+}}
-; CHECK-NEXT: ipm [[REG:%r[0-5]]]
-; CHECK: srl [[REG]], 28
-; CHECK: rll %r2, [[REG]], 31
+; CHECK-NEXT: ipm %r2
+; CHECK: sll %r2, 2
+; CHECK: sra %r2, 30
 ; CHECK: br %r14
   %res = call i32 @strcmp(i8 *%src1, i8 *%src2)
   ret i32 %res
@@ -25,7 +25,7 @@ define void @f2(i8 *%src1, i8 *%src2, i32 *%dest) {
 ; CHECK-LABEL: f2:
 ; CHECK: lhi %r0, 0
 ; CHECK: [[LABEL:\.[^:]*]]:
-; CHECK: clst %r2, %r3
+; CHECK: clst %r3, %r2
 ; CHECK-NEXT: jo [[LABEL]]
 ; CHECK-NEXT: %bb.{{[0-9]+}}
 ; CHECK-NEXT: ber %r14
@@ -48,12 +48,12 @@ define i32 @f3(i8 *%src1, i8 *%src2, i32 *%dest) {
 ; CHECK-LABEL: f3:
 ; CHECK: lhi %r0, 0
 ; CHECK: [[LABEL:\.[^:]*]]:
-; CHECK: clst %r2, %r3
+; CHECK: clst %r3, %r2
 ; CHECK-NEXT: jo [[LABEL]]
 ; CHECK-NEXT: %bb.{{[0-9]+}}
-; CHECK-NEXT: ipm [[REG:%r[0-5]]]
-; CHECK: srl [[REG]], 28
-; CHECK: rll %r2, [[REG]], 31
+; CHECK-NEXT: ipm %r2
+; CHECK: sll %r2, 2
+; CHECK: sra %r2, 30
 ; CHECK: blr %r14
 ; CHECK: br %r14
 entry:

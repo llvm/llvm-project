@@ -8,4 +8,6 @@
 
 #include <string_view>
 
-int main () {}
+int main(int, char**) {
+  return 0;
+}

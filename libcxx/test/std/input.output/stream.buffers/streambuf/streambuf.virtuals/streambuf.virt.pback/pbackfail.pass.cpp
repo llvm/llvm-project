@@ -24,8 +24,10 @@ struct test
     test() {}
 };
 
-int main()
+int main(int, char**)
 {
     test t;
     assert(t.sputbackc('A') == -1);
+
+  return 0;
 }
