@@ -1441,6 +1441,40 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
   }
 }
 
+TEST(GoTo, WithSysRoot) {
+#ifdef _WIN32
+  const char *CustomRoot = "C:\\sys\\root\\";
+#else
+  const char *CustomRoot = "/sys/root/";
+#endif
+  Annotations Main(R"cpp(
+      #include "header.h"
+      int main() {
+        return f^oo();
+      })cpp");
+  Annotations Header("int [[foo]](){return 42;}");
+
+  MockCompilationDatabase CDB;
+  CDB.ExtraClangFlags = {"--sysroot", CustomRoot};
+  IgnoreDiagnostics DiagConsumer;
+  MockFSProvider FS;
+  ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
+
+  // Fill the filesystem.
+  auto FooCpp = testPath("foo.cpp");
+  FS.Files[FooCpp] = Main.code();
+  llvm::SmallString<128> HeaderPath(CustomRoot);
+  llvm::sys::path::append(HeaderPath, "include", "header.h");
+  FS.Files[HeaderPath] = Header.code();
+
+  runAddDocument(Server, FooCpp, Main.code());
+
+  // Go to a definition in main source file.
+  auto Locations = runLocateSymbolAt(Server, FooCpp, Main.point());
+  EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
+  EXPECT_THAT(*Locations, ElementsAre(Sym("foo", Header.range())));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
