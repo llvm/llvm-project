@@ -358,7 +358,7 @@ template <class T>
 void wontInitialize(const T &);
 
 class PassingToUnknownFunctionTest1 {
-  int a, b;
+  int a, b; // expected-note{{uninitialized field 'this->b'}}
 
 public:
   PassingToUnknownFunctionTest1() {
@@ -368,8 +368,7 @@ public:
   }
 
   PassingToUnknownFunctionTest1(int) {
-    mayInitialize(a);
-    // All good!
+    mayInitialize(a); // expected-warning{{1 uninitialized field at the end of the constructor call}}
   }
 
   PassingToUnknownFunctionTest1(int, int) {

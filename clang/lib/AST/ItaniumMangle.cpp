@@ -33,12 +33,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define MANGLE_CHECKER 0
-
-#if MANGLE_CHECKER
-#include <cxxabi.h>
-#endif
-
 using namespace clang;
 
 namespace {
@@ -323,7 +317,7 @@ class CXXNameMangler {
                        AdditionalAbiTags->end());
       }
 
-      llvm::sort(TagList.begin(), TagList.end());
+      llvm::sort(TagList);
       TagList.erase(std::unique(TagList.begin(), TagList.end()), TagList.end());
 
       writeSortedUniqueAbiTags(Out, TagList);
@@ -339,7 +333,7 @@ class CXXNameMangler {
     }
 
     const AbiTagList &getSortedUniqueUsedAbiTags() {
-      llvm::sort(UsedAbiTags.begin(), UsedAbiTags.end());
+      llvm::sort(UsedAbiTags);
       UsedAbiTags.erase(std::unique(UsedAbiTags.begin(), UsedAbiTags.end()),
                         UsedAbiTags.end());
       return UsedAbiTags;
@@ -415,17 +409,6 @@ public:
         SeqID(Outer.SeqID), FunctionTypeDepth(Outer.FunctionTypeDepth),
         AbiTagsRoot(AbiTags), Substitutions(Outer.Substitutions) {}
 
-#if MANGLE_CHECKER
-  ~CXXNameMangler() {
-    if (Out.str()[0] == '\01')
-      return;
-
-    int status = 0;
-    char *result = abi::__cxa_demangle(Out.str().str().c_str(), 0, 0, &status);
-    assert(status == 0 && "Could not demangle mangled name!");
-    free(result);
-  }
-#endif
   raw_ostream &getStream() { return Out; }
 
   void disableDerivedAbiTags() { DisableDerivedAbiTags = true; }
@@ -721,10 +704,8 @@ void CXXNameMangler::mangleFunctionEncodingBareType(const FunctionDecl *FD) {
   if (FD->hasAttr<EnableIfAttr>()) {
     FunctionTypeDepthState Saved = FunctionTypeDepth.push();
     Out << "Ua9enable_ifI";
-    // FIXME: specific_attr_iterator iterates in reverse order. Fix that and use
-    // it here.
-    for (AttrVec::const_reverse_iterator I = FD->getAttrs().rbegin(),
-                                         E = FD->getAttrs().rend();
+    for (AttrVec::const_iterator I = FD->getAttrs().begin(),
+                                 E = FD->getAttrs().end();
          I != E; ++I) {
       EnableIfAttr *EIA = dyn_cast<EnableIfAttr>(*I);
       if (!EIA)
@@ -1522,8 +1503,7 @@ void CXXNameMangler::mangleNestedName(const NamedDecl *ND,
 
   Out << 'N';
   if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(ND)) {
-    Qualifiers MethodQuals =
-        Qualifiers::fromCVRUMask(Method->getTypeQualifiers());
+    Qualifiers MethodQuals = Method->getTypeQualifiers();
     // We do not consider restrict a distinguishing attribute for overloading
     // purposes so we must not mangle it.
     MethodQuals.removeRestrict();
@@ -2654,6 +2634,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::OCLReserveID:
     Out << "13ocl_reserveid";
     break;
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  case BuiltinType::Id: \
+    type_name = "ocl_" #ExtType; \
+    Out << type_name.size() << type_name; \
+    break;
+#include "clang/Basic/OpenCLExtensionTypes.def"
   }
 }
 
@@ -2662,16 +2648,12 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_C:
     return "";
 
-  case CC_X86StdCall:
-  case CC_X86FastCall:
-  case CC_X86ThisCall:
   case CC_X86VectorCall:
   case CC_X86Pascal:
-  case CC_Win64:
-  case CC_X86_64SysV:
   case CC_X86RegCall:
   case CC_AAPCS:
   case CC_AAPCS_VFP:
+  case CC_AArch64VectorCall:
   case CC_IntelOclBicc:
   case CC_SpirFunction:
   case CC_OpenCLKernel:
@@ -2680,6 +2662,22 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
     // FIXME: we should be mangling all of the above.
     return "";
 
+  case CC_X86ThisCall:
+    // FIXME: To match mingw GCC, thiscall should only be mangled in when it is
+    // used explicitly. At this point, we don't have that much information in
+    // the AST, since clang tends to bake the convention into the canonical
+    // function type. thiscall only rarely used explicitly, so don't mangle it
+    // for now.
+    return "";
+
+  case CC_X86StdCall:
+    return "stdcall";
+  case CC_X86FastCall:
+    return "fastcall";
+  case CC_X86_64SysV:
+    return "sysv_abi";
+  case CC_Win64:
+    return "ms_abi";
   case CC_Swift:
     return "swiftcall";
   }
@@ -2737,7 +2735,7 @@ void CXXNameMangler::mangleType(const FunctionProtoType *T) {
 
   // Mangle CV-qualifiers, if present.  These are 'this' qualifiers,
   // e.g. "const" in "int (A::*)() const".
-  mangleQualifiers(Qualifiers::fromCVRUMask(T->getTypeQuals()));
+  mangleQualifiers(T->getTypeQuals());
 
   // Mangle instantiation-dependent exception-specification, if present,
   // per cxx-abi-dev proposal on 2016-10-11.
@@ -3526,6 +3524,10 @@ recurse:
   case Expr::CXXInheritedCtorInitExprClass:
     llvm_unreachable("unexpected statement kind");
 
+  case Expr::ConstantExprClass:
+    E = cast<ConstantExpr>(E)->getSubExpr();
+    goto recurse;
+
   // FIXME: invent manglings for all these.
   case Expr::BlockExprClass:
   case Expr::ChooseExprClass:
@@ -3883,6 +3885,7 @@ recurse:
     case UETT_SizeOf:
       Out << 's';
       break;
+    case UETT_PreferredAlignOf:
     case UETT_AlignOf:
       Out << 'a';
       break;

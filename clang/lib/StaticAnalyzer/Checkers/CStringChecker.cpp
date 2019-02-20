@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "InterCheckerAPI.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -124,6 +124,7 @@ public:
   void evalStdCopyBackward(CheckerContext &C, const CallExpr *CE) const;
   void evalStdCopyCommon(CheckerContext &C, const CallExpr *CE) const;
   void evalMemset(CheckerContext &C, const CallExpr *CE) const;
+  void evalBzero(CheckerContext &C, const CallExpr *CE) const;
 
   // Utility methods
   std::pair<ProgramStateRef , ProgramStateRef >
@@ -158,7 +159,7 @@ public:
   static bool SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
                               const MemRegion *MR);
 
-  static bool memsetAux(const Expr *DstBuffer, const Expr *CharE,
+  static bool memsetAux(const Expr *DstBuffer, SVal CharE,
                         const Expr *Size, CheckerContext &C,
                         ProgramStateRef &State);
 
@@ -1005,11 +1006,10 @@ bool CStringChecker::SummarizeRegion(raw_ostream &os, ASTContext &Ctx,
   }
 }
 
-bool CStringChecker::memsetAux(const Expr *DstBuffer, const Expr *CharE,
+bool CStringChecker::memsetAux(const Expr *DstBuffer, SVal CharVal,
                                const Expr *Size, CheckerContext &C,
                                ProgramStateRef &State) {
   SVal MemVal = C.getSVal(DstBuffer);
-  SVal CharVal = C.getSVal(CharE);
   SVal SizeVal = C.getSVal(Size);
   const MemRegion *MR = MemVal.getAsRegion();
   if (!MR)
@@ -2184,10 +2184,56 @@ void CStringChecker::evalMemset(CheckerContext &C, const CallExpr *CE) const {
   // According to the values of the arguments, bind the value of the second
   // argument to the destination buffer and set string length, or just
   // invalidate the destination buffer.
-  if (!memsetAux(Mem, CharE, Size, C, State))
+  if (!memsetAux(Mem, C.getSVal(CharE), Size, C, State))
     return;
 
   State = State->BindExpr(CE, LCtx, MemVal);
+  C.addTransition(State);
+}
+
+void CStringChecker::evalBzero(CheckerContext &C, const CallExpr *CE) const {
+  if (CE->getNumArgs() != 2)
+    return;
+
+  CurrentFunctionDescription = "memory clearance function";
+
+  const Expr *Mem = CE->getArg(0);
+  const Expr *Size = CE->getArg(1);
+  SVal Zero = C.getSValBuilder().makeZeroVal(C.getASTContext().IntTy);
+
+  ProgramStateRef State = C.getState();
+  
+  // See if the size argument is zero.
+  SVal SizeVal = C.getSVal(Size);
+  QualType SizeTy = Size->getType();
+
+  ProgramStateRef StateZeroSize, StateNonZeroSize;
+  std::tie(StateZeroSize, StateNonZeroSize) =
+    assumeZero(C, State, SizeVal, SizeTy);
+
+  // If the size is zero, there won't be any actual memory access,
+  // In this case we just return.
+  if (StateZeroSize && !StateNonZeroSize) {
+    C.addTransition(StateZeroSize);
+    return;
+  }
+
+  // Get the value of the memory area.
+  SVal MemVal = C.getSVal(Mem);
+
+  // Ensure the memory area is not null.
+  // If it is NULL there will be a NULL pointer dereference.
+  State = checkNonNull(C, StateNonZeroSize, Mem, MemVal);
+  if (!State)
+    return;
+
+  State = CheckBufferAccess(C, State, Size, Mem);
+  if (!State)
+    return;
+
+  if (!memsetAux(Mem, Zero, Size, C, State))
+    return;
+
   C.addTransition(State);
 }
 
@@ -2243,7 +2289,8 @@ static CStringChecker::FnCheck identifyCall(const CallExpr *CE,
     return &CStringChecker::evalMemcmp;
   else if (C.isCLibraryFunction(FDecl, "memmove"))
     return &CStringChecker::evalMemmove;
-  else if (C.isCLibraryFunction(FDecl, "memset"))
+  else if (C.isCLibraryFunction(FDecl, "memset") ||
+           C.isCLibraryFunction(FDecl, "explicit_memset"))
     return &CStringChecker::evalMemset;
   else if (C.isCLibraryFunction(FDecl, "strcpy"))
     return &CStringChecker::evalStrcpy;
@@ -2277,10 +2324,9 @@ static CStringChecker::FnCheck identifyCall(const CallExpr *CE,
     return &CStringChecker::evalBcopy;
   else if (C.isCLibraryFunction(FDecl, "bcmp"))
     return &CStringChecker::evalMemcmp;
-  else if (isCPPStdLibraryFunction(FDecl, "copy"))
-    return &CStringChecker::evalStdCopy;
-  else if (isCPPStdLibraryFunction(FDecl, "copy_backward"))
-    return &CStringChecker::evalStdCopyBackward;
+  else if (C.isCLibraryFunction(FDecl, "bzero") ||
+           C.isCLibraryFunction(FDecl, "explicit_bzero"))
+    return &CStringChecker::evalBzero;
 
   return nullptr;
 }
@@ -2430,18 +2476,26 @@ void CStringChecker::checkDeadSymbols(SymbolReaper &SR,
   C.addTransition(state);
 }
 
+void ento::registerCStringModeling(CheckerManager &Mgr) {
+  Mgr.registerChecker<CStringChecker>();
+}
+
+bool ento::shouldRegisterCStringModeling(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
-    CStringChecker *checker = mgr.registerChecker<CStringChecker>();           \
+    CStringChecker *checker = mgr.getChecker<CStringChecker>();                \
     checker->Filter.Check##name = true;                                        \
     checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
   REGISTER_CHECKER(CStringNullArg)
   REGISTER_CHECKER(CStringOutOfBounds)
   REGISTER_CHECKER(CStringBufferOverlap)
 REGISTER_CHECKER(CStringNotNullTerm)
-
-  void ento::registerCStringCheckerBasic(CheckerManager &Mgr) {
-    Mgr.registerChecker<CStringChecker>();
-  }

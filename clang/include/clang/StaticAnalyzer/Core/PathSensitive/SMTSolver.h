@@ -226,23 +226,23 @@ public:
   /// operation
   virtual SMTExprRef mkFPtoFP(const SMTExprRef &From, const SMTSortRef &To) = 0;
 
-  /// Creates a floating-point conversion from floatint-point to signed
-  /// bitvector operation
-  virtual SMTExprRef mkFPtoSBV(const SMTExprRef &From,
-                               const SMTSortRef &To) = 0;
-
-  /// Creates a floating-point conversion from floatint-point to unsigned
-  /// bitvector operation
-  virtual SMTExprRef mkFPtoUBV(const SMTExprRef &From,
-                               const SMTSortRef &To) = 0;
-
   /// Creates a floating-point conversion from signed bitvector to
   /// floatint-point operation
-  virtual SMTExprRef mkSBVtoFP(const SMTExprRef &From, unsigned ToWidth) = 0;
+  virtual SMTExprRef mkSBVtoFP(const SMTExprRef &From,
+                               const SMTSortRef &To) = 0;
 
   /// Creates a floating-point conversion from unsigned bitvector to
   /// floatint-point operation
-  virtual SMTExprRef mkUBVtoFP(const SMTExprRef &From, unsigned ToWidth) = 0;
+  virtual SMTExprRef mkUBVtoFP(const SMTExprRef &From,
+                               const SMTSortRef &To) = 0;
+
+  /// Creates a floating-point conversion from floatint-point to signed
+  /// bitvector operation
+  virtual SMTExprRef mkFPtoSBV(const SMTExprRef &From, unsigned ToWidth) = 0;
+
+  /// Creates a floating-point conversion from floatint-point to unsigned
+  /// bitvector operation
+  virtual SMTExprRef mkFPtoUBV(const SMTExprRef &From, unsigned ToWidth) = 0;
 
   /// Creates a new symbol, given a name and a sort
   virtual SMTExprRef mkSymbol(const char *Name, SMTSortRef Sort) = 0;
@@ -272,18 +272,6 @@ public:
   /// Given an expression extract the value of this operand in the model.
   virtual bool getInterpretation(const SMTExprRef &Exp,
                                  llvm::APFloat &Float) = 0;
-
-  /// Construct an SMTExprRef value from a boolean.
-  virtual SMTExprRef fromBoolean(const bool Bool) = 0;
-
-  /// Construct an SMTExprRef value from a finite APFloat.
-  virtual SMTExprRef fromAPFloat(const llvm::APFloat &Float) = 0;
-
-  /// Construct an SMTExprRef value from an APSInt.
-  virtual SMTExprRef fromAPSInt(const llvm::APSInt &Int) = 0;
-
-  /// Construct an SMTExprRef value from an integer.
-  virtual SMTExprRef fromInt(const char *Int, uint64_t BitWidth) = 0;
 
   /// Check if the constraints are satisfiable
   virtual Optional<bool> check() const = 0;

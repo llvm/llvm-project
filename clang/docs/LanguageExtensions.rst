@@ -112,18 +112,22 @@ of ``cxx_rvalue_references``.
 ``__has_cpp_attribute``
 -----------------------
 
-This function-like macro takes a single argument that is the name of a
-C++11-style attribute. The argument can either be a single identifier, or a
-scoped identifier. If the attribute is supported, a nonzero value is returned.
-If the attribute is a standards-based attribute, this macro returns a nonzero
-value based on the year and month in which the attribute was voted into the
-working draft. If the attribute is not supported by the current compliation
-target, this macro evaluates to 0.  It can be used like this:
+This function-like macro is available in C++2a by default, and is provided as an
+extension in earlier language standards. It takes a single argument that is the
+name of a double-square-bracket-style attribute. The argument can either be a
+single identifier or a scoped identifier. If the attribute is supported, a
+nonzero value is returned. If the attribute is a standards-based attribute, this
+macro returns a nonzero value based on the year and month in which the attribute
+was voted into the working draft. See `WG21 SD-6
+<https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations>`_
+for the list of values returned for standards-based attributes. If the attribute
+is not supported by the current compliation target, this macro evaluates to 0.
+It can be used like this:
 
 .. code-block:: c++
 
-  #ifndef __has_cpp_attribute         // Optional of course.
-    #define __has_cpp_attribute(x) 0  // Compatibility with non-clang compilers.
+  #ifndef __has_cpp_attribute         // For backwards compatibility
+    #define __has_cpp_attribute(x) 0
   #endif
 
   ...
@@ -134,10 +138,11 @@ target, this macro evaluates to 0.  It can be used like this:
   #endif
   ...
 
-The attribute identifier (but not scope) can also be specified with a preceding
-and following ``__`` (double underscore) to avoid interference from a macro with
-the same name.  For instance, ``gnu::__const__`` can be used instead of
-``gnu::const``.
+The attribute scope tokens ``clang`` and ``_Clang`` are interchangeable, as are
+the attribute scope tokens ``gnu`` and ``__gnu__``. Attribute tokens in either
+of these namespaces can be specified with a preceding and following ``__``
+(double underscore) to avoid interference from a macro with the same name. For
+instance, ``gnu::__const__`` can be used instead of ``gnu::const``.
 
 ``__has_c_attribute``
 ---------------------
@@ -162,11 +167,11 @@ current compilation target, this macro evaluates to 0. It can be used like this:
   #endif
   ...
 
-The attribute identifier (but not scope) can also be specified with a preceding
-and following ``__`` (double underscore) to avoid interference from a macro with
-the same name.  For instance, ``gnu::__const__`` can be used instead of
-``gnu::const``.
-
+The attribute scope tokens ``clang`` and ``_Clang`` are interchangeable, as are
+the attribute scope tokens ``gnu`` and ``__gnu__``. Attribute tokens in either
+of these namespaces can be specified with a preceding and following ``__``
+(double underscore) to avoid interference from a macro with the same name. For
+instance, ``gnu::__const__`` can be used instead of ``gnu::const``.
 
 ``__has_attribute``
 -------------------
@@ -590,7 +595,7 @@ which does not provide them.  The features which can be tested are listed here.
 Since Clang 3.4, the C++ SD-6 feature test macros are also supported.
 These are macros with names of the form ``__cpp_<feature_name>``, and are
 intended to be a portable way to query the supported features of the compiler.
-See `the C++ status page <http://clang.llvm.org/cxx_status.html#ts>`_ for
+See `the C++ status page <https://clang.llvm.org/cxx_status.html#ts>`_ for
 information on the version of SD-6 supported by each Clang release, and the
 macros provided by that revision of the recommendations.
 
@@ -1013,7 +1018,7 @@ Modules
 Use ``__has_feature(modules)`` to determine if Modules have been enabled.
 For example, compiling code with ``-fmodules`` enables the use of Modules.
 
-More information could be found `here <http://clang.llvm.org/docs/Modules.html>`_.
+More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
 Checks for Type Trait Primitives
 ================================
@@ -1353,7 +1358,7 @@ In Objective-C, functions and methods are generally assumed to follow the
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
 to allow these exceptions to be documented. This are used by ARC and the
-`static analyzer <http://clang-analyzer.llvm.org>`_ Some exceptions may be
+`static analyzer <https://clang-analyzer.llvm.org>`_ Some exceptions may be
 better described using the ``objc_method_family`` attribute instead.
 
 **Usage**: The ``ns_returns_retained``, ``ns_returns_not_retained``,
@@ -1390,7 +1395,7 @@ method; it specifies that the method expects its ``self`` parameter to have a
   - (void) baz:(id) __attribute__((ns_consumed)) x;
 
 Further examples of these attributes are available in the static analyzer's `list of annotations for analysis
-<http://clang-analyzer.llvm.org/annotations.html#cocoa_mem>`_.
+<https://clang-analyzer.llvm.org/annotations.html#cocoa_mem>`_.
 
 Query for these features with ``__has_attribute(ns_consumed)``,
 ``__has_attribute(ns_returns_retained)``, etc.
@@ -1411,7 +1416,7 @@ Objective-C methods.  If such a check was missed, the program would compile
 fine, run fine on newer systems, but crash on older systems.
 
 As of LLVM 5.0, ``-Wunguarded-availability`` uses the `availability attributes
-<http://clang.llvm.org/docs/AttributeReference.html#availability>`_ together
+<https://clang.llvm.org/docs/AttributeReference.html#availability>`_ together
 with the new ``@available()`` keyword to assist with this issue.
 When a method that's introduced in the OS newer than the target OS is called, a
 -Wunguarded-availability warning is emitted if that call is not guarded:
@@ -1454,7 +1459,7 @@ More than one platform can be listed in ``@available()``:
 
 If the caller of ``my_fun()`` already checks that ``my_fun()`` is only called
 on 10.12, then add an `availability attribute
-<http://clang.llvm.org/docs/AttributeReference.html#availability>`_ to it,
+<https://clang.llvm.org/docs/AttributeReference.html#availability>`_ to it,
 which will also suppress the warning and require that calls to my_fun() are
 checked:
 
@@ -1739,6 +1744,70 @@ The '``__builtin_bitreverse``' family of builtins is used to reverse
 the bitpattern of an integer value; for example ``0b10110110`` becomes
 ``0b01101101``.
 
+``__builtin_rotateleft``
+------------------------
+
+* ``__builtin_rotateleft8``
+* ``__builtin_rotateleft16``
+* ``__builtin_rotateleft32``
+* ``__builtin_rotateleft64``
+
+**Syntax**:
+
+.. code-block:: c++
+
+     __builtin_rotateleft32(x, y)
+
+**Examples**:
+
+.. code-block:: c++
+
+      uint8_t rot_x = __builtin_rotateleft8(x, y);
+      uint16_t rot_x = __builtin_rotateleft16(x, y);
+      uint32_t rot_x = __builtin_rotateleft32(x, y);
+      uint64_t rot_x = __builtin_rotateleft64(x, y);
+
+**Description**:
+
+The '``__builtin_rotateleft``' family of builtins is used to rotate
+the bits in the first argument by the amount in the second argument. 
+For example, ``0b10000110`` rotated left by 11 becomes ``0b00110100``.
+The shift value is treated as an unsigned amount modulo the size of
+the arguments. Both arguments and the result have the bitwidth specified
+by the name of the builtin.
+
+``__builtin_rotateright``
+_------------------------
+
+* ``__builtin_rotateright8``
+* ``__builtin_rotateright16``
+* ``__builtin_rotateright32``
+* ``__builtin_rotateright64``
+
+**Syntax**:
+
+.. code-block:: c++
+
+     __builtin_rotateright32(x, y)
+
+**Examples**:
+
+.. code-block:: c++
+
+      uint8_t rot_x = __builtin_rotateright8(x, y);
+      uint16_t rot_x = __builtin_rotateright16(x, y);
+      uint32_t rot_x = __builtin_rotateright32(x, y);
+      uint64_t rot_x = __builtin_rotateright64(x, y);
+
+**Description**:
+
+The '``__builtin_rotateright``' family of builtins is used to rotate
+the bits in the first argument by the amount in the second argument. 
+For example, ``0b10000110`` rotated right by 3 becomes ``0b11010000``.
+The shift value is treated as an unsigned amount modulo the size of
+the arguments. Both arguments and the result have the bitwidth specified
+by the name of the builtin.
+
 ``__builtin_unreachable``
 -------------------------
 
@@ -1977,7 +2046,7 @@ Floating point builtins
 Returns the platform specific canonical encoding of a floating point
 number. This canonicalization is useful for implementing certain
 numeric primitives such as frexp. See `LLVM canonicalize intrinsic
-<http://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic>`_ for
+<https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic>`_ for
 more information on the semantics.
 
 String builtins
@@ -2191,7 +2260,7 @@ standard library to implement `std::experimental::coroutine_handle` type.
 
 Other coroutine builtins are either for internal clang use or for use during
 development of the coroutine feature. See `Coroutines in LLVM
-<http://llvm.org/docs/Coroutines.html#intrinsics>`_ for
+<https://llvm.org/docs/Coroutines.html#intrinsics>`_ for
 more information on their semantics. Note that builtins matching the intrinsics
 that take token as the first parameter (llvm.coro.begin, llvm.coro.alloc, 
 llvm.coro.free and llvm.coro.suspend) omit the token parameter and fill it to
@@ -2298,9 +2367,9 @@ Extensions for Static Analysis
 
 Clang supports additional attributes that are useful for documenting program
 invariants and rules for static analysis tools, such as the `Clang Static
-Analyzer <http://clang-analyzer.llvm.org/>`_. These attributes are documented
+Analyzer <https://clang-analyzer.llvm.org/>`_. These attributes are documented
 in the analyzer's `list of source-level annotations
-<http://clang-analyzer.llvm.org/annotations.html>`_.
+<https://clang-analyzer.llvm.org/annotations.html>`_.
 
 
 Extensions for Dynamic Analysis
@@ -2628,6 +2697,36 @@ The ``__declspec`` style syntax is also supported:
 A single push directive accepts only one attribute regardless of the syntax
 used.
 
+Because multiple push directives can be nested, if you're writing a macro that
+expands to ``_Pragma("clang attribute")`` it's good hygiene (though not
+required) to add a namespace to your push/pop directives. A pop directive with a
+namespace will pop the innermost push that has that same namespace. This will
+ensure that another macro's ``pop`` won't inadvertently pop your attribute. Note
+that an ``pop`` without a namespace will pop the innermost ``push`` without a
+namespace. ``push``es with a namespace can only be popped by ``pop`` with the
+same namespace. For instance:
+
+.. code-block:: c++
+
+   #define ASSUME_NORETURN_BEGIN _Pragma("clang attribute AssumeNoreturn.push ([[noreturn]], apply_to = function)")
+   #define ASSUME_NORETURN_END   _Pragma("clang attribute AssumeNoreturn.pop")
+
+   #define ASSUME_UNAVAILABLE_BEGIN _Pragma("clang attribute Unavailable.push (__attribute__((unavailable)), apply_to=function)")
+   #define ASSUME_UNAVAILABLE_END   _Pragma("clang attribute Unavailable.pop")
+
+
+   ASSUME_NORETURN_BEGIN
+   ASSUME_UNAVAILABLE_BEGIN
+   void function(); // function has [[noreturn]] and __attribute__((unavailable))
+   ASSUME_NORETURN_END
+   void other_function(); // function has __attribute__((unavailable))
+   ASSUME_UNAVAILABLE_END
+
+Without the namespaces on the macros, ``other_function`` will be annotated with
+``[[noreturn]]`` instead of ``__attribute__((unavailable))``. This may seem like
+a contrived example, but its very possible for this kind of situation to appear
+in real code if the pragmas are spread out across a large file.
+
 Subject Match Rules
 -------------------
 
@@ -2807,3 +2906,29 @@ Specifying Linker Options on ELF Targets
 The ``#pragma comment(lib, ...)`` directive is supported on all ELF targets.
 The second parameter is the library name (without the traditional Unix prefix of
 ``lib``).  This allows you to provide an implicit link of dependent libraries.
+
+Evaluating Object Size Dynamically
+==================================
+
+Clang supports the builtin ``__builtin_dynamic_object_size``, the semantics are
+the same as GCC's ``__builtin_object_size`` (which Clang also supports), but
+``__builtin_dynamic_object_size`` can evaluate the object's size at runtime.
+``__builtin_dynamic_object_size`` is meant to be used as a drop-in replacement
+for ``__builtin_object_size`` in libraries that support it.
+
+For instance, here is a program that ``__builtin_dynamic_object_size`` will make
+safer:
+
+.. code-block:: c
+
+  void copy_into_buffer(size_t size) {
+    char* buffer = malloc(size);
+    strlcpy(buffer, "some string", strlen("some string"));
+    // Previous line preprocesses to:
+    // __builtin___strlcpy_chk(buffer, "some string", strlen("some string"), __builtin_object_size(buffer, 0))
+  }
+
+Since the size of ``buffer`` can't be known at compile time, Clang will fold
+``__builtin_object_size(buffer, 0)`` into ``-1``. However, if this was written
+as ``__builtin_dynamic_object_size(buffer, 0)``, Clang will fold it into
+``size``, providing some extra runtime safety.

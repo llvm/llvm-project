@@ -44,6 +44,8 @@ public:
     Lang_CXX98,
     Lang_CXX11,
     Lang_CXX14,
+    Lang_CXX17,
+    Lang_CXX2a,
     Lang_OBJC,
     Lang_OBJCXX11,
     Lang_CXX = Lang_CXX98
@@ -60,6 +62,8 @@ public:
       case Lang_CXX98: Args.push_back("-std=c++98"); break;
       case Lang_CXX11: Args.push_back("-std=c++11"); break;
       case Lang_CXX14: Args.push_back("-std=c++14"); break;
+      case Lang_CXX17: Args.push_back("-std=c++17"); break;
+      case Lang_CXX2a: Args.push_back("-std=c++2a"); break;
       case Lang_OBJC:
         Args.push_back("-ObjC");
         Args.push_back("-fobjc-runtime=macosx-10.12.0");

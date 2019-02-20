@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/FrontendTool/Utils.h"
 #include "clang/ARCMigrate/ARCMTActions.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Config/config.h"
@@ -23,11 +22,13 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/FrontendTool/Utils.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Rewrite/Frontend/FrontendActions.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace clang;
@@ -62,8 +63,9 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return llvm::make_unique<GenerateModuleFromModuleMapAction>();
   case GenerateModuleInterface:
     return llvm::make_unique<GenerateModuleInterfaceAction>();
+  case GenerateHeaderModule:
+    return llvm::make_unique<GenerateHeaderModuleAction>();
   case GeneratePCH:            return llvm::make_unique<GeneratePCHAction>();
-  case GeneratePTH:            return llvm::make_unique<GeneratePTHAction>();
   case InitOnly:               return llvm::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return llvm::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return llvm::make_unique<DumpModuleInfoAction>();
@@ -89,7 +91,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return nullptr;
   }
 
-  case PrintDeclContext:       return llvm::make_unique<DeclContextPrintAction>();
   case PrintPreamble:          return llvm::make_unique<PrintPreambleAction>();
   case PrintPreprocessedInput: {
     if (CI.getPreprocessorOutputOpts().RewriteIncludes ||
@@ -188,7 +189,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -help.
   if (Clang->getFrontendOpts().ShowHelp) {
     std::unique_ptr<OptTable> Opts = driver::createDriverOptTable();
-    Opts->PrintHelp(llvm::outs(), "clang -cc1",
+    Opts->PrintHelp(llvm::outs(), "clang -cc1 [options] file...",
                     "LLVM 'Clang' Compiler: http://clang.llvm.org",
                     /*Include=*/driver::options::CC1Option,
                     /*Exclude=*/0, /*ShowAllAliases=*/false);
@@ -243,7 +244,11 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   // Honor -analyzer-checker-help.
   // This should happen AFTER plugins have been loaded!
   if (Clang->getAnalyzerOpts()->ShowCheckerHelp) {
-    ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins);
+    ento::printCheckerHelp(llvm::outs(),
+                           Clang->getFrontendOpts().Plugins,
+                           *Clang->getAnalyzerOpts(),
+                           Clang->getDiagnostics(),
+                           Clang->getLangOpts());
     return true;
   }
 
@@ -251,7 +256,9 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
     ento::printEnabledCheckerList(llvm::outs(),
                                   Clang->getFrontendOpts().Plugins,
-                                  *Clang->getAnalyzerOpts());
+                                  *Clang->getAnalyzerOpts(),
+                                  Clang->getDiagnostics(),
+                                  Clang->getLangOpts());
   }
 
   // Honor -analyzer-config-help.
@@ -270,7 +277,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     return false;
   bool Success = Clang->ExecuteAction(*Act);
   if (Clang->getFrontendOpts().DisableFree)
-    BuryPointer(std::move(Act));
+    llvm::BuryPointer(std::move(Act));
   return Success;
 }
 

@@ -75,6 +75,10 @@ template<typename T> struct A {};
 template<typename T> using C = T;
 using baz = C<A<void>>;
 
+auto autoTemplPointer = &autoTemplRefParam;
+
+outer::Foo<bool> parameter;
+outer::inner::Bar construct(&parameter);
 // RUN: c-index-test -test-print-type %s -std=c++14 | FileCheck %s
 // CHECK: Namespace=outer:1:11 (Definition) [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: ClassTemplate=Foo:4:8 (Definition) [type=] [typekind=Invalid] [isPOD=0]
@@ -182,3 +186,5 @@ using baz = C<A<void>>;
 // CHECK: UnexposedExpr=templRefParam:71:40 [type=const Specialization<Specialization<bool> &>] [typekind=Unexposed] const [templateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [canonicaltype=const Specialization<Specialization<bool> &>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [isPOD=1]
 // CHECK: DeclRefExpr=templRefParam:71:40 [type=Specialization<Specialization<bool> &>] [typekind=Unexposed] [templateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [canonicaltype=Specialization<Specialization<bool> &>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=Specialization<bool> &] [typekind=LValueReference]] [isPOD=1]
 // CHECK: TypeAliasDecl=baz:76:7 (Definition) [type=baz] [typekind=Typedef] [templateargs/1= [type=A<void>] [typekind=Unexposed]] [canonicaltype=A<void>] [canonicaltypekind=Record] [canonicaltemplateargs/1= [type=void] [typekind=Void]] [isPOD=0]
+// CHECK: VarDecl=autoTemplPointer:78:6 (Definition) [type=Specialization<Specialization<bool> &> *] [typekind=Auto] [canonicaltype=Specialization<Specialization<bool> &> *] [canonicaltypekind=Pointer] [isPOD=1] [pointeetype=Specialization<Specialization<bool> &>] [pointeekind=Record]
+// CHECK: CallExpr=Bar:17:3 [type=outer::inner::Bar] [typekind=Elaborated] [canonicaltype=outer::inner::Bar] [canonicaltypekind=Record] [args= [outer::Foo<bool> *] [Pointer]] [isPOD=0] [nbFields=3]

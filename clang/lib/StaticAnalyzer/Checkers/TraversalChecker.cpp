@@ -11,7 +11,7 @@
 // as it builds the ExplodedGraph.
 //
 //===----------------------------------------------------------------------===//
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -47,7 +47,7 @@ void TraversalDumper::checkBranchCondition(const Stmt *Condition,
   // It is mildly evil to print directly to llvm::outs() rather than emitting
   // warnings, but this ensures things do not get filtered out by the rest of
   // the static analyzer machinery.
-  SourceLocation Loc = Parent->getLocStart();
+  SourceLocation Loc = Parent->getBeginLoc();
   llvm::outs() << C.getSourceManager().getSpellingLineNumber(Loc) << " "
                << Parent->getStmtClassName() << "\n";
 }
@@ -63,6 +63,10 @@ void TraversalDumper::checkEndFunction(const ReturnStmt *RS,
 
 void ento::registerTraversalDumper(CheckerManager &mgr) {
   mgr.registerChecker<TraversalDumper>();
+}
+
+bool ento::shouldRegisterTraversalDumper(const LangOptions &LO) {
+  return true;
 }
 
 //------------------------------------------------------------------------------
@@ -111,4 +115,8 @@ void CallDumper::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
 
 void ento::registerCallDumper(CheckerManager &mgr) {
   mgr.registerChecker<CallDumper>();
+}
+
+bool ento::shouldRegisterCallDumper(const LangOptions &LO) {
+  return true;
 }

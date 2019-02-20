@@ -130,12 +130,12 @@ static bool isConditionValid(const Expr *E, ASTContext &Context,
     return false;
 
   // RHS must be a constant and unique.
-  llvm::APSInt Value;
-  if (!RHS->EvaluateAsInt(Value, Context))
+  Expr::EvalResult Result;
+  if (!RHS->EvaluateAsInt(Result, Context))
     return false;
   // Only allow constant that fix into 64 bits.
-  if (Value.getMinSignedBits() > 64 ||
-      !RHSValues.insert(Value.getExtValue()).second)
+  if (Result.Val.getInt().getMinSignedBits() > 64 ||
+      !RHSValues.insert(Result.Val.getInt().getExtValue()).second)
     return false;
 
   // LHS must be identical to the other LHS expressions.
@@ -169,14 +169,14 @@ RefactoringOperationResult clang::tooling::initiateIfSwitchConversionOperation(
   // Find the ranges in which initiation can be performed and verify that the
   // ifs don't have any initialization expressions or condition variables.
   SmallVector<SourceRange, 4> Ranges;
-  SourceLocation RangeStart = If->getLocStart();
+  SourceLocation RangeStart = If->getBeginLoc();
   const IfStmt *CurrentIf = If;
   const SourceManager &SM = Context.getSourceManager();
   while (true) {
     const Stmt *Then = CurrentIf->getThen();
     Ranges.emplace_back(RangeStart,
                         findLastLocationOfSourceConstruct(
-                            CurrentIf->getCond()->getLocEnd(), Then, SM));
+                            CurrentIf->getCond()->getEndLoc(), Then, SM));
     const auto *Else = CurrentIf->getElse();
     if (!Else)
       break;
@@ -303,7 +303,7 @@ struct CasePlacement {
   CasePlacement(const IfStmt *If, const SourceManager &SM,
                 bool AreBracesNeeded) {
     CaseStartLoc = SM.getSpellingLoc(isa<CompoundStmt>(If->getThen())
-                                         ? If->getThen()->getLocEnd()
+                                         ? If->getThen()->getEndLoc()
                                          : If->getElseLoc());
     SourceLocation BodyEndLoc = findLastNonCompoundLocation(If->getThen());
     NeedsNewLine = BodyEndLoc.isValid()
@@ -345,17 +345,17 @@ addCaseReplacements(const IfStmt *If, const CasePlacement &CaseInfo,
   assert(!CaseValues.empty());
   Replacements.emplace_back(
       SourceRange(CaseInfo.CaseStartLoc,
-                  SM.getSpellingLoc(CaseValues[0]->getLocStart())),
+                  SM.getSpellingLoc(CaseValues[0]->getBeginLoc())),
       CaseInfo.getCaseReplacementString());
 
   SourceLocation PrevCaseEnd = getPreciseTokenLocEnd(
-      SM.getSpellingLoc(CaseValues[0]->getLocEnd()), SM, LangOpts);
+      SM.getSpellingLoc(CaseValues[0]->getEndLoc()), SM, LangOpts);
   for (const Expr *CaseValue : llvm::makeArrayRef(CaseValues).drop_front()) {
     Replacements.emplace_back(
-        SourceRange(PrevCaseEnd, SM.getSpellingLoc(CaseValue->getLocStart())),
+        SourceRange(PrevCaseEnd, SM.getSpellingLoc(CaseValue->getBeginLoc())),
         StringRef(":\ncase "));
     PrevCaseEnd = getPreciseTokenLocEnd(
-        SM.getSpellingLoc(CaseValue->getLocEnd()), SM, LangOpts);
+        SM.getSpellingLoc(CaseValue->getEndLoc()), SM, LangOpts);
   }
 
   AreBracesNeeded = areBracesNeeded(If->getThen());
@@ -365,12 +365,12 @@ addCaseReplacements(const IfStmt *If, const CasePlacement &CaseInfo,
         SourceRange(
             PrevCaseEnd,
             getPreciseTokenLocEnd(
-                SM.getSpellingLoc(If->getThen()->getLocStart()), SM, LangOpts)),
+                SM.getSpellingLoc(If->getThen()->getBeginLoc()), SM, LangOpts)),
         ColonReplacement);
   } else {
     // Find the location of the if's ')'
     SourceLocation End = findClosingParenLocEnd(
-        SM.getSpellingLoc(If->getCond()->getLocEnd()), SM, LangOpts);
+        SM.getSpellingLoc(If->getCond()->getEndLoc()), SM, LangOpts);
     if (!End.isValid())
       return llvm::make_error<RefactoringOperationError>(
           "couldn't find the location of ')'");
@@ -392,14 +392,14 @@ IfSwitchConversionOperation::perform(ASTContext &Context,
   // should be preserved.
   const Expr *LHS = getConditionFirstLHS(If->getCond());
   assert(LHS && "Missing == expression");
-  Replacements.emplace_back(SourceRange(SM.getSpellingLoc(If->getLocStart()),
-                                        SM.getSpellingLoc(LHS->getLocStart())),
+  Replacements.emplace_back(SourceRange(SM.getSpellingLoc(If->getBeginLoc()),
+                                        SM.getSpellingLoc(LHS->getBeginLoc())),
                             StringRef("switch ("));
 
   bool AreBracesNeeded = false;
   if (auto Error = addCaseReplacements(
           If, CasePlacement(getPreciseTokenLocEnd(
-                  SM.getSpellingLoc(LHS->getLocEnd()), SM, LangOpts)),
+                  SM.getSpellingLoc(LHS->getEndLoc()), SM, LangOpts)),
           AreBracesNeeded, Replacements, SM, LangOpts))
     return std::move(Error);
 
@@ -422,7 +422,7 @@ IfSwitchConversionOperation::perform(ASTContext &Context,
     AreBracesNeeded = areBracesNeeded(Else);
 
     SourceLocation EndLoc = getPreciseTokenLocEnd(
-        SM.getSpellingLoc(isa<CompoundStmt>(Else) ? Else->getLocStart()
+        SM.getSpellingLoc(isa<CompoundStmt>(Else) ? Else->getBeginLoc()
                                                   : CurrentIf->getElseLoc()),
         SM, LangOpts);
     Replacements.emplace_back(SourceRange(DefaultInfo.CaseStartLoc, EndLoc),
@@ -438,7 +438,7 @@ IfSwitchConversionOperation::perform(ASTContext &Context,
   std::string TerminatingReplacement;
   llvm::raw_string_ostream OS(TerminatingReplacement);
   if (!isa<CompoundStmt>(LastBody)) {
-    TerminatingReplacementLoc = LastBody->getLocEnd();
+    TerminatingReplacementLoc = LastBody->getEndLoc();
     // Try to adjust the location in order to preserve any trailing comments on
     // the last line of the last body.
     if (!TerminatingReplacementLoc.isMacroID())
@@ -450,7 +450,7 @@ IfSwitchConversionOperation::perform(ASTContext &Context,
     if (AreBracesNeeded)
       OS << "\n}";
   } else {
-    TerminatingReplacementLoc = LastBody->getLocEnd();
+    TerminatingReplacementLoc = LastBody->getEndLoc();
     if (IsLastBreakNeeded)
       OS << "break;\n";
     if (AreBracesNeeded)

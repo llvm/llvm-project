@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -408,4 +408,8 @@ void StreamChecker::checkDeadSymbols(SymbolReaper &SymReaper,
 
 void ento::registerStreamChecker(CheckerManager &mgr) {
   mgr.registerChecker<StreamChecker>();
+}
+
+bool ento::shouldRegisterStreamChecker(const LangOptions &LO) {
+  return true;
 }

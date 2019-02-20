@@ -176,6 +176,16 @@ public:
   /// Return whether this visitor should traverse post-order.
   bool shouldTraversePostOrder() const { return false; }
 
+  /// Recursively visits an entire AST, starting from the top-level Decls
+  /// in the AST traversal scope (by default, the TranslationUnitDecl).
+  /// \returns false if visitation was terminated early.
+  bool TraverseAST(ASTContext &AST) {
+    for (Decl *D : AST.getTraversalScope())
+      if (!getDerived().TraverseDecl(D))
+        return false;
+    return true;
+  }
+
   /// Recursively visit a statement or expression, by
   /// dispatching to Traverse*() based on the argument's dynamic type.
   ///
@@ -1589,6 +1599,12 @@ DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlists()) {
     TRY_TO(TraverseStmt(I));
   }
+ })
+ 
+DEF_TRAVERSE_DECL(OMPRequiresDecl, {
+  for (auto *C : D->clauselists()) {
+    TRY_TO(TraverseOMPClause(C));
+  }
 })
 
 DEF_TRAVERSE_DECL(OMPDeclareReductionDecl, {
@@ -2174,6 +2190,8 @@ DEF_TRAVERSE_STMT(ObjCAutoreleasePoolStmt, {})
 
 DEF_TRAVERSE_STMT(CXXForRangeStmt, {
   if (!getDerived().shouldVisitImplicitCode()) {
+    if (S->getInit())
+      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInit());
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getLoopVarStmt());
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getRangeInit());
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
@@ -2190,6 +2208,8 @@ DEF_TRAVERSE_STMT(MSDependentExistsStmt, {
 DEF_TRAVERSE_STMT(ReturnStmt, {})
 DEF_TRAVERSE_STMT(SwitchStmt, {})
 DEF_TRAVERSE_STMT(WhileStmt, {})
+
+DEF_TRAVERSE_STMT(ConstantExpr, {})
 
 DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
   TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));
@@ -2394,27 +2414,20 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
   TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
   FunctionProtoTypeLoc Proto = TL.getAsAdjusted<FunctionProtoTypeLoc>();
 
-  if (S->hasExplicitParameters() && S->hasExplicitResultType()) {
-    // Visit the whole type.
-    TRY_TO(TraverseTypeLoc(TL));
-  } else {
-    if (S->hasExplicitParameters()) {
-      // Visit parameters.
-      for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I) {
-        TRY_TO(TraverseDecl(Proto.getParam(I)));
-      }
-    } else if (S->hasExplicitResultType()) {
-      TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
-    }
-
-    auto *T = Proto.getTypePtr();
-    for (const auto &E : T->exceptions()) {
-      TRY_TO(TraverseType(E));
-    }
-
-    if (Expr *NE = T->getNoexceptExpr())
-      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(NE);
+  if (S->hasExplicitParameters()) {
+    // Visit parameters.
+    for (unsigned I = 0, N = Proto.getNumParams(); I != N; ++I)
+      TRY_TO(TraverseDecl(Proto.getParam(I)));
   }
+  if (S->hasExplicitResultType())
+    TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
+
+  auto *T = Proto.getTypePtr();
+  for (const auto &E : T->exceptions())
+    TRY_TO(TraverseType(E));
+
+  if (Expr *NE = T->getNoexceptExpr())
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(NE);
 
   ReturnValue = TRAVERSE_STMT_BASE(LambdaBody, LambdaExpr, S, Queue);
   ShouldVisitChildren = false;
@@ -2850,6 +2863,36 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDefaultClause(OMPDefaultClause *) {
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPProcBindClause(OMPProcBindClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPUnifiedAddressClause(
+    OMPUnifiedAddressClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPUnifiedSharedMemoryClause(
+    OMPUnifiedSharedMemoryClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPReverseOffloadClause(
+    OMPReverseOffloadClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDynamicAllocatorsClause(
+    OMPDynamicAllocatorsClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPAtomicDefaultMemOrderClause(
+    OMPAtomicDefaultMemOrderClause *) {
   return true;
 }
 

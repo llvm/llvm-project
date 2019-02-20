@@ -25,7 +25,7 @@ The checks have small runtime cost and no impact on address space layout or ABI.
 How to build
 ============
 
-Build LLVM/Clang with `CMake <http://llvm.org/docs/CMake.html>`_.
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_.
 
 Usage
 =====
@@ -89,10 +89,21 @@ Available checks are:
   -  ``-fsanitize=function``: Indirect call of a function through a
      function pointer of the wrong type (Darwin/Linux, C++ and x86/x86_64
      only).
-  -  ``-fsanitize=implicit-integer-truncation``: Implicit conversion from
+  -  ``-fsanitize=implicit-unsigned-integer-truncation``,
+     ``-fsanitize=implicit-signed-integer-truncation``: Implicit conversion from
      integer of larger bit width to smaller bit width, if that results in data
      loss. That is, if the demoted value, after casting back to the original
      width, is not equal to the original value before the downcast.
+     The ``-fsanitize=implicit-unsigned-integer-truncation`` handles conversions
+     between two ``unsigned`` types, while
+     ``-fsanitize=implicit-signed-integer-truncation`` handles the rest of the
+     conversions - when either one, or both of the types are signed.
+     Issues caught by these sanitizers are not undefined behavior,
+     but are often unintentional.
+  -  ``-fsanitize=implicit-integer-sign-change``: Implicit conversion between
+     integer types, if that changes the sign of the value. That is, if the the
+     original value was negative and the new value is positive (or zero),
+     or the original value was positive, and the new value is negative.
      Issues caught by this sanitizer are not undefined behavior,
      but are often unintentional.
   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
@@ -131,7 +142,7 @@ Available checks are:
      result of a signed integer computation cannot be represented in its type.
      This includes all the checks covered by ``-ftrapv``, as well as checks for
      signed division overflow (``INT_MIN/-1``), but not checks for
-     lossy implicit conversions performed after the computation
+     lossy implicit conversions performed before the computation
      (see ``-fsanitize=implicit-conversion``). Both of these two issues are
      handled by ``-fsanitize=implicit-conversion`` group of checks.
   -  ``-fsanitize=unreachable``: If control flow reaches an unreachable
@@ -140,7 +151,7 @@ Available checks are:
      the result of an unsigned integer computation cannot be represented in its
      type. Unlike signed integer overflow, this is not undefined behavior, but
      it is often unintentional. This sanitizer does not check for lossy implicit
-     conversions performed after such a computation
+     conversions performed before such a computation
      (see ``-fsanitize=implicit-conversion``).
   -  ``-fsanitize=vla-bound``: A variable-length array whose bound
      does not evaluate to a positive value.
@@ -156,13 +167,24 @@ You can also use the following check groups:
      ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
+  -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
+     conversions. Enables ``implicit-signed-integer-truncation`` and
+     ``implicit-unsigned-integer-truncation``.
+  -  ``-fsanitize=implicit-integer-arithmetic-value-change``: Catches implicit
+     conversions that change the arithmetic value of the integer. Enables
+     ``implicit-signed-integer-truncation`` and ``implicit-integer-sign-change``.
+  -  ``-fsanitize=implicit-conversion``: Checks for suspicious
+     behaviour of implicit conversions. Enables
+     ``implicit-unsigned-integer-truncation``,
+     ``implicit-signed-integer-truncation`` and
+     ``implicit-integer-sign-change``.
   -  ``-fsanitize=integer``: Checks for undefined or suspicious integer
      behavior (e.g. unsigned integer overflow).
      Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
-     ``shift``, ``integer-divide-by-zero``, and ``implicit-integer-truncation``.
-  -  ``-fsanitize=implicit-conversion``: Checks for suspicious behaviours of
-     implicit conversions.
-     Currently, only ``-fsanitize=implicit-integer-truncation`` is implemented.
+     ``shift``, ``integer-divide-by-zero``,
+     ``implicit-unsigned-integer-truncation``,
+     ``implicit-signed-integer-truncation`` and
+     ``implicit-integer-sign-change``.
   -  ``-fsanitize=nullability``: Enables ``nullability-arg``,
      ``nullability-assign``, and ``nullability-return``. While violating
      nullability does not have undefined behavior, it is often unintentional,
@@ -266,7 +288,7 @@ There are several limitations:
 Supported Platforms
 ===================
 
-UndefinedBehaviorSanitizer is supported on the following OS:
+UndefinedBehaviorSanitizer is supported on the following operating systems:
 
 * Android
 * Linux
@@ -274,6 +296,11 @@ UndefinedBehaviorSanitizer is supported on the following OS:
 * FreeBSD
 * OpenBSD
 * OS X 10.6 onwards
+* Windows
+
+The runtime library is relatively portable and platform independent. If the OS
+you need is not listed above, UndefinedBehaviorSanitizer may already work for
+it, or could be made to work with a minor porting effort.
 
 Current Status
 ==============
@@ -296,6 +323,7 @@ Example
 -------
 
 For a file called ``/code/library/file.cpp``, here is what would be emitted:
+
 * Default (No flag, or ``-fsanitize-undefined-strip-path-components=0``): ``/code/library/file.cpp``
 * ``-fsanitize-undefined-strip-path-components=1``: ``code/library/file.cpp``
 * ``-fsanitize-undefined-strip-path-components=2``: ``library/file.cpp``

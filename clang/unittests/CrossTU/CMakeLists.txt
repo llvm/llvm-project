@@ -13,5 +13,6 @@ target_link_libraries(CrossTUTests
   clangBasic
   clangCrossTU
   clangFrontend
+  clangSerialization
   clangTooling
   )

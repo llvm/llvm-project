@@ -5,10 +5,10 @@
 //
 // RUN: rm -rf %t/SDKs/MacOSX10.10.sdk
 // RUN: mkdir -p %t/SDKs/MacOSX10.10.sdk
-// RUN: %clang -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
+// RUN: %clang -m64 -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=INFER_SDK_VERSION %s
 // RUN: sed -e 's/10\.14/10\.8/g' %S/Inputs/MacOSX10.14.sdk/SDKSettings.json > %t/SDKs/MacOSX10.10.sdk/SDKSettings.json
-// RUN: %clang -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
+// RUN: %clang -m64 -isysroot %t/SDKs/MacOSX10.10.sdk -c -### %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=INFER_DEPLOYMENT_TARGET_VERSION %s
 // REQUIRES: system-darwin && native
 //

@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MPIChecker.h"
-#include "../ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 
 namespace clang {
 namespace ento {
@@ -187,4 +187,8 @@ void MPIChecker::allRegionsUsedByWait(
 // Registers the checker for static analysis.
 void clang::ento::registerMPIChecker(CheckerManager &MGR) {
   MGR.registerChecker<clang::ento::mpi::MPIChecker>();
+}
+
+bool clang::ento::shouldRegisterMPIChecker(const LangOptions &LO) {
+  return true;
 }

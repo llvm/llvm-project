@@ -48,7 +48,7 @@ class S8 : public S7<S1> {
 
 public:
   S8(int v) : S7<S1>(v){
-#pragma omp parallel for simd private(a) private(this->a) private(S7<S1>::a) 
+#pragma omp parallel for simd private(a) private(this->a) private(S7 <S1>::a)
     for (int k = 0; k < a.a; ++k)
       ++this->a.a;
   }

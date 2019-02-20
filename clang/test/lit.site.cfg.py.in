@@ -26,7 +26,7 @@ config.enable_shared = @ENABLE_SHARED@
 config.enable_backtrace = @ENABLE_BACKTRACES@
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@PYTHON_EXECUTABLE@"
-config.use_z3_solver = "@USE_Z3_SOLVER@"
+config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")
 
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
@@ -35,13 +35,13 @@ try:
     config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
     config.llvm_shlib_dir = config.llvm_shlib_dir % lit_config.params
     config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
-    config.use_z3_solver = lit_config.params['USE_Z3_SOLVER']
 except KeyError:
     e = sys.exc_info()[1]
     key, = e.args
     lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
-@LIT_SITE_CFG_IN_FOOTER@
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CLANG_SOURCE_DIR@/test/lit.cfg.py")

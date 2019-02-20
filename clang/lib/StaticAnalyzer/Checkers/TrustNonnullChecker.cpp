@@ -19,7 +19,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Analysis/SelectorExtras.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -249,7 +249,10 @@ private:
 
 } // end empty namespace
 
-
 void ento::registerTrustNonnullChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<TrustNonnullChecker>(Mgr.getASTContext());
+}
+
+bool ento::shouldRegisterTrustNonnullChecker(const LangOptions &LO) {
+  return true;
 }

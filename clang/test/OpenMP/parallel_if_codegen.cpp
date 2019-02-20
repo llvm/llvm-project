@@ -55,9 +55,9 @@ int tmain(T Arg) {
 
 // CHECK-LABEL: define {{.*}}i{{[0-9]+}} @main()
 int main() {
-// CHECK: [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(
 // CHECK: store i32 0, i32* [[ZERO_ADDR2:%.+]],
 // CHECK: store i32 0, i32* [[ZERO_ADDR1:%.+]],
+// CHECK: [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(
 // CHECK: call {{.*}}void {{.+}} @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{.+}} 0, void {{.+}}* [[CAP_FN4:@.+]] to void
 #pragma omp parallel if (true)
   fn4();
@@ -96,9 +96,9 @@ int main() {
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.+}} @{{.+}}tmain
-// CHECK: [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(
 // CHECK: store i32 0, i32* [[ZERO_ADDR2:%.+]],
 // CHECK: store i32 0, i32* [[ZERO_ADDR1:%.+]],
+// CHECK: [[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(
 // CHECK: call {{.*}}void {{.+}} @__kmpc_fork_call(%{{.+}}* @{{.+}}, i{{.+}} 0, void {{.+}}* [[CAP_FN1:@.+]] to void
 // CHECK: call {{.*}}void @__kmpc_serialized_parallel(%{{.+}}* @{{.+}}, i32 [[GTID]])
 // CHECK: call void [[CAP_FN2:@.+]](i32* [[ZERO_ADDR1]], i32* [[ZERO_ADDR1]])

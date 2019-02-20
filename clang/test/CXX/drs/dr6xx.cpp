@@ -492,7 +492,13 @@ namespace dr647 { // dr647: yes
   struct C {
     constexpr C(NonLiteral);
     constexpr C(NonLiteral, int) {} // expected-error {{not a literal type}}
-    constexpr C() try {} catch (...) {} // expected-error {{function try block}}
+    constexpr C() try {} catch (...) {}
+#if __cplusplus <= 201703L
+    // expected-error@-2 {{function try block in constexpr constructor is a C++2a extension}}
+#endif
+#if __cplusplus < 201402L
+    // expected-error@-5 {{use of this statement in a constexpr constructor is a C++14 extension}}
+#endif
   };
 
   struct D {
@@ -757,8 +763,8 @@ namespace dr666 { // dr666: yes
 #if __cplusplus >= 201103L
 namespace dr667 { // dr667: yes
   struct A {
-    A() = default;
-    int &r;
+    A() = default; // expected-warning {{explicitly defaulted default constructor is implicitly deleted}}
+    int &r; // expected-note {{because field 'r' of reference type 'int &' would not be initialized}}
   };
   static_assert(!__is_trivially_constructible(A), "");
 

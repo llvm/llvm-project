@@ -40,6 +40,7 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTests/NestedNameSpecifiers.cpp
   RecursiveASTVisitorTests/ParenExpr.cpp
   RecursiveASTVisitorTests/TemplateArgumentLocTraverser.cpp
+  RecursiveASTVisitorTests/TraversalScope.cpp
   RecursiveASTVisitorTestDeclVisitor.cpp
   RecursiveASTVisitorTestPostOrderVisitor.cpp
   RecursiveASTVisitorTestTypeLocVisitor.cpp
@@ -60,6 +61,7 @@ target_link_libraries(ToolingTests
   clangFrontend
   clangLex
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   clangToolingInclusions

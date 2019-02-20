@@ -12,7 +12,7 @@
 // to be freed using a call to SecKeychainItemFreeContent.
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -661,4 +661,8 @@ void MacOSKeychainAPIChecker::printState(raw_ostream &Out,
 
 void ento::registerMacOSKeychainAPIChecker(CheckerManager &mgr) {
   mgr.registerChecker<MacOSKeychainAPIChecker>();
+}
+
+bool ento::shouldRegisterMacOSKeychainAPIChecker(const LangOptions &LO) {
+  return true;
 }

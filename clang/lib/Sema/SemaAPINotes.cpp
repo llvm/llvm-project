@@ -72,10 +72,10 @@ static void applyNullability(Sema &S, Decl *decl, NullabilityKind nullability,
 
   // Check the nullability specifier on this type.
   QualType origType = type;
-  S.checkNullabilityTypeSpecifier(type, nullability, decl->getLocation(),
-                                  /*isContextSensitive=*/false,
-                                  isa<ParmVarDecl>(decl), /*implicit=*/true,
-                                  /*overrideExisting=*/true);
+  S.checkImplicitNullabilityTypeSpecifier(type, nullability,
+                                          decl->getLocation(),
+                                          isa<ParmVarDecl>(decl),
+                                          /*overrideExisting=*/true);
   if (type.getTypePtr() == origType.getTypePtr())
     return;
 
@@ -280,6 +280,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                                                          info.UnavailableMsg),
                                               /*Strict=*/false,
                                               /*Replacement=*/StringRef(),
+                                              /*Priority=*/Sema::AP_Explicit,
                                               /*SpellingIndex*/0);
     },
     [](const Decl *decl) {
@@ -386,7 +387,8 @@ static void ProcessAPINotes(Sema &S, Decl *D,
         // Make adjustments to parameter types.
         if (isa<ParmVarDecl>(var)) {
           type = S.adjustParameterTypeForObjCAutoRefCount(type,
-                                                          D->getLocation());
+                                                          D->getLocation(),
+                                                          typeInfo);
           type = S.Context.getAdjustedParameterType(type);
         }
 

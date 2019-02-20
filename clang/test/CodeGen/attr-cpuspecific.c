@@ -1,100 +1,258 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,LINUX
+// RUN: %clang_cc1 -triple x86_64-windows-pc -fms-compatibility -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,WINDOWS
 
+#ifdef _WIN64
+#define ATTR(X) __declspec(X)
+#else
+#define ATTR(X) __attribute__((X))
+#endif // _MSC_VER
 
 // Each called version should have an IFunc.
-// CHECK: @SingleVersion.ifunc = ifunc void (), void ()* ()* @SingleVersion.resolver
-// CHECK: @TwoVersions.ifunc = ifunc void (), void ()* ()* @TwoVersions.resolver
-// CHECK: @TwoVersionsSameAttr.ifunc = ifunc void (), void ()* ()* @TwoVersionsSameAttr.resolver
-// CHECK: @ThreeVersionsSameAttr.ifunc = ifunc void (), void ()* ()* @ThreeVersionsSameAttr.resolver
+// LINUX: @SingleVersion.ifunc = ifunc void (), void ()* ()* @SingleVersion.resolver
+// LINUX: @TwoVersions.ifunc = ifunc void (), void ()* ()* @TwoVersions.resolver
+// LINUX: @TwoVersionsSameAttr.ifunc = ifunc void (), void ()* ()* @TwoVersionsSameAttr.resolver
+// LINUX: @ThreeVersionsSameAttr.ifunc = ifunc void (), void ()* ()* @ThreeVersionsSameAttr.resolver
 
-__attribute__((cpu_specific(ivybridge)))
+ATTR(cpu_specific(ivybridge))
 void SingleVersion(void){}
-// CHECK: define void @SingleVersion.S() #[[S:[0-9]+]]
+// LINUX: define void @SingleVersion.S() #[[S:[0-9]+]]
+// WINDOWS: define dso_local void @SingleVersion.S() #[[S:[0-9]+]]
 
-__attribute__((cpu_specific(ivybridge)))
+ATTR(cpu_specific(ivybridge))
 void NotCalled(void){}
-// CHECK: define void @NotCalled.S() #[[S]]
+// LINUX: define void @NotCalled.S() #[[S]]
+// WINDOWS: define dso_local void @NotCalled.S() #[[S:[0-9]+]]
 
-// Done before any of the implementations.
-__attribute__((cpu_dispatch(ivybridge, knl)))
+// Done before any of the implementations.  Also has an undecorated forward
+// declaration.
 void TwoVersions(void);
-// CHECK: define void ()* @TwoVersions.resolver()
-// CHECK: call void @__cpu_indicator_init
-// CHECK: ret void ()* @TwoVersions.Z
-// CHECK: ret void ()* @TwoVersions.S
-// CHECK: call void @llvm.trap
-// CHECK: unreachable
 
-__attribute__((cpu_specific(ivybridge)))
+ATTR(cpu_dispatch(ivybridge, knl))
+void TwoVersions(void);
+// LINUX: define void ()* @TwoVersions.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret void ()* @TwoVersions.Z
+// LINUX: ret void ()* @TwoVersions.S
+// LINUX: call void @llvm.trap
+// LINUX: unreachable
+
+// WINDOWS: define dso_local void @TwoVersions()
+// WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: call void @TwoVersions.Z()
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @TwoVersions.S()
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @llvm.trap
+// WINDOWS: unreachable
+
+ATTR(cpu_specific(ivybridge))
 void TwoVersions(void){}
-// CHECK: define void @TwoVersions.S() #[[S]]
+// CHECK: define {{.*}}void @TwoVersions.S() #[[S]]
 
-__attribute__((cpu_specific(knl)))
+ATTR(cpu_specific(knl))
 void TwoVersions(void){}
-// CHECK: define void @TwoVersions.Z() #[[K:[0-9]+]]
+// CHECK: define {{.*}}void @TwoVersions.Z() #[[K:[0-9]+]]
 
-__attribute__((cpu_specific(ivybridge, knl)))
+ATTR(cpu_specific(ivybridge, knl))
 void TwoVersionsSameAttr(void){}
-// CHECK: define void @TwoVersionsSameAttr.S() #[[S]]
-// CHECK: define void @TwoVersionsSameAttr.Z() #[[K]]
+// CHECK: define {{.*}}void @TwoVersionsSameAttr.S() #[[S]]
+// CHECK: define {{.*}}void @TwoVersionsSameAttr.Z() #[[K]]
 
-__attribute__((cpu_specific(atom, ivybridge, knl)))
+ATTR(cpu_specific(atom, ivybridge, knl))
 void ThreeVersionsSameAttr(void){}
-// CHECK: define void @ThreeVersionsSameAttr.O() #[[O:[0-9]+]]
-// CHECK: define void @ThreeVersionsSameAttr.S() #[[S]]
-// CHECK: define void @ThreeVersionsSameAttr.Z() #[[K]]
+// CHECK: define {{.*}}void @ThreeVersionsSameAttr.O() #[[O:[0-9]+]]
+// CHECK: define {{.*}}void @ThreeVersionsSameAttr.S() #[[S]]
+// CHECK: define {{.*}}void @ThreeVersionsSameAttr.Z() #[[K]]
 
 void usages() {
   SingleVersion();
-  // CHECK: @SingleVersion.ifunc()
+  // LINUX: @SingleVersion.ifunc()
+  // WINDOWS: @SingleVersion()
   TwoVersions();
-  // CHECK: @TwoVersions.ifunc()
+  // LINUX: @TwoVersions.ifunc()
+  // WINDOWS: @TwoVersions()
   TwoVersionsSameAttr();
-  // CHECK: @TwoVersionsSameAttr.ifunc()
+  // LINUX: @TwoVersionsSameAttr.ifunc()
+  // WINDOWS: @TwoVersionsSameAttr()
   ThreeVersionsSameAttr();
-  // CHECK: @ThreeVersionsSameAttr.ifunc()
+  // LINUX: @ThreeVersionsSameAttr.ifunc()
+  // WINDOWS: @ThreeVersionsSameAttr()
 }
 
 // has an extra config to emit!
-__attribute__((cpu_dispatch(ivybridge, knl, atom)))
+ATTR(cpu_dispatch(ivybridge, knl, atom))
 void TwoVersionsSameAttr(void);
-// CHECK: define void ()* @TwoVersionsSameAttr.resolver()
-// CHECK: ret void ()* @TwoVersionsSameAttr.Z
-// CHECK: ret void ()* @TwoVersionsSameAttr.S
-// CHECK: ret void ()* @TwoVersionsSameAttr.O
-// CHECK: call void @llvm.trap
-// CHECK: unreachable
+// LINUX: define void ()* @TwoVersionsSameAttr.resolver()
+// LINUX: ret void ()* @TwoVersionsSameAttr.Z
+// LINUX: ret void ()* @TwoVersionsSameAttr.S
+// LINUX: ret void ()* @TwoVersionsSameAttr.O
+// LINUX: call void @llvm.trap
+// LINUX: unreachable
 
-__attribute__((cpu_dispatch(atom, ivybridge, knl)))
+// WINDOWS: define dso_local void @TwoVersionsSameAttr()
+// WINDOWS: call void @TwoVersionsSameAttr.Z
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @TwoVersionsSameAttr.S
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @TwoVersionsSameAttr.O
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @llvm.trap
+// WINDOWS: unreachable
+
+ATTR(cpu_dispatch(atom, ivybridge, knl))
 void ThreeVersionsSameAttr(void){}
-// CHECK: define void ()* @ThreeVersionsSameAttr.resolver()
-// CHECK: call void @__cpu_indicator_init
-// CHECK: ret void ()* @ThreeVersionsSameAttr.Z
-// CHECK: ret void ()* @ThreeVersionsSameAttr.S
-// CHECK: ret void ()* @ThreeVersionsSameAttr.O
-// CHECK: call void @llvm.trap
-// CHECK: unreachable
+// LINUX: define void ()* @ThreeVersionsSameAttr.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret void ()* @ThreeVersionsSameAttr.Z
+// LINUX: ret void ()* @ThreeVersionsSameAttr.S
+// LINUX: ret void ()* @ThreeVersionsSameAttr.O
+// LINUX: call void @llvm.trap
+// LINUX: unreachable
+
+// WINDOWS: define dso_local void @ThreeVersionsSameAttr()
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: call void @ThreeVersionsSameAttr.Z
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @ThreeVersionsSameAttr.S
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @ThreeVersionsSameAttr.O
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @llvm.trap
+// WINDOWS: unreachable
 
 // No Cpu Specific options.
-__attribute__((cpu_dispatch(atom, ivybridge, knl)))
+ATTR(cpu_dispatch(atom, ivybridge, knl))
 void NoSpecifics(void);
-// CHECK: define void ()* @NoSpecifics.resolver()
-// CHECK: call void @__cpu_indicator_init
-// CHECK: ret void ()* @NoSpecifics.Z
-// CHECK: ret void ()* @NoSpecifics.S
-// CHECK: ret void ()* @NoSpecifics.O
-// CHECK: call void @llvm.trap
-// CHECK: unreachable
+// LINUX: define void ()* @NoSpecifics.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret void ()* @NoSpecifics.Z
+// LINUX: ret void ()* @NoSpecifics.S
+// LINUX: ret void ()* @NoSpecifics.O
+// LINUX: call void @llvm.trap
+// LINUX: unreachable
 
-__attribute__((cpu_dispatch(atom, generic, ivybridge, knl)))
+// WINDOWS: define dso_local void @NoSpecifics()
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: call void @NoSpecifics.Z
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @NoSpecifics.S
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @NoSpecifics.O
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @llvm.trap
+// WINDOWS: unreachable
+
+ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
 void HasGeneric(void);
-// CHECK: define void ()* @HasGeneric.resolver()
-// CHECK: call void @__cpu_indicator_init
-// CHECK: ret void ()* @HasGeneric.Z
-// CHECK: ret void ()* @HasGeneric.S
-// CHECK: ret void ()* @HasGeneric.O
-// CHECK: ret void ()* @HasGeneric.A
-// CHECK-NOT: call void @llvm.trap
+// LINUX: define void ()* @HasGeneric.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret void ()* @HasGeneric.Z
+// LINUX: ret void ()* @HasGeneric.S
+// LINUX: ret void ()* @HasGeneric.O
+// LINUX: ret void ()* @HasGeneric.A
+// LINUX-NOT: call void @llvm.trap
+
+// WINDOWS: define dso_local void @HasGeneric()
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: call void @HasGeneric.Z
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @HasGeneric.S
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @HasGeneric.O
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @HasGeneric.A
+// WINDOWS-NEXT: ret void
+// WINDOWS-NOT: call void @llvm.trap
+
+ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
+void HasParams(int i, double d);
+// LINUX: define void (i32, double)* @HasParams.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret void (i32, double)* @HasParams.Z
+// LINUX: ret void (i32, double)* @HasParams.S
+// LINUX: ret void (i32, double)* @HasParams.O
+// LINUX: ret void (i32, double)* @HasParams.A
+// LINUX-NOT: call void @llvm.trap
+
+// WINDOWS: define dso_local void @HasParams(i32, double)
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: call void @HasParams.Z(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @HasParams.S(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @HasParams.O(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @HasParams.A(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+// WINDOWS-NOT: call void @llvm.trap
+
+ATTR(cpu_dispatch(atom, generic, ivybridge, knl))
+int HasParamsAndReturn(int i, double d);
+// LINUX: define i32 (i32, double)* @HasParamsAndReturn.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.Z
+// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.S
+// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.O
+// LINUX: ret i32 (i32, double)* @HasParamsAndReturn.A
+// LINUX-NOT: call void @llvm.trap
+
+// WINDOWS: define dso_local i32 @HasParamsAndReturn(i32, double)
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: %[[RET:.+]] = musttail call i32 @HasParamsAndReturn.Z(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS: %[[RET:.+]] = musttail call i32 @HasParamsAndReturn.S(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS: %[[RET:.+]] = musttail call i32 @HasParamsAndReturn.O(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS: %[[RET:.+]] = musttail call i32 @HasParamsAndReturn.A(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS-NOT: call void @llvm.trap
+
+ATTR(cpu_dispatch(atom, generic, pentium))
+int GenericAndPentium(int i, double d);
+// LINUX: define i32 (i32, double)* @GenericAndPentium.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret i32 (i32, double)* @GenericAndPentium.O
+// LINUX: ret i32 (i32, double)* @GenericAndPentium.B
+// LINUX-NOT: ret i32 (i32, double)* @GenericAndPentium.A
+// LINUX-NOT: call void @llvm.trap
+
+// WINDOWS: define dso_local i32 @GenericAndPentium(i32, double)
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: %[[RET:.+]] = musttail call i32 @GenericAndPentium.O(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS: %[[RET:.+]] = musttail call i32 @GenericAndPentium.B(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS-NOT: call i32 @GenericAndPentium.A
+// WINDOWS-NOT: call void @llvm.trap
+
+ATTR(cpu_dispatch(atom, pentium))
+int DispatchFirst(void);
+// LINUX: define i32 ()* @DispatchFirst.resolver
+// LINUX: ret i32 ()* @DispatchFirst.O
+// LINUX: ret i32 ()* @DispatchFirst.B
+
+// WINDOWS: define dso_local i32 @DispatchFirst()
+// WINDOWS: %[[RET:.+]] = musttail call i32 @DispatchFirst.O()
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS: %[[RET:.+]] = musttail call i32 @DispatchFirst.B()
+// WINDOWS-NEXT: ret i32 %[[RET]]
+
+ATTR(cpu_specific(atom))
+int DispatchFirst(void) {return 0;}
+// LINUX: define i32 @DispatchFirst.O
+// LINUX: ret i32 0
+
+// WINDOWS: define dso_local i32 @DispatchFirst.O()
+// WINDOWS: ret i32 0
+
+ATTR(cpu_specific(pentium))
+int DispatchFirst(void) {return 1;}
+// LINUX: define i32 @DispatchFirst.B
+// LINUX: ret i32 1
+
+// WINDOWS: define dso_local i32 @DispatchFirst.B
+// WINDOWS: ret i32 1
 
 // CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+f16c,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+cmov,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"

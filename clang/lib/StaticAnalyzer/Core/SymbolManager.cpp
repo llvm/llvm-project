@@ -405,7 +405,7 @@ void SymbolReaper::markLive(SymbolRef sym) {
 }
 
 void SymbolReaper::markLive(const MemRegion *region) {
-  RegionRoots.insert(region);
+  RegionRoots.insert(region->getBaseRegion());
   markElementIndicesLive(region);
 }
 
@@ -426,10 +426,14 @@ void SymbolReaper::markInUse(SymbolRef sym) {
 }
 
 bool SymbolReaper::isLiveRegion(const MemRegion *MR) {
+  // TODO: For now, liveness of a memory region is equivalent to liveness of its
+  // base region. In fact we can do a bit better: say, if a particular FieldDecl
+  // is not used later in the path, we can diagnose a leak of a value within
+  // that field earlier than, say, the variable that contains the field dies.
+  MR = MR->getBaseRegion();
+
   if (RegionRoots.count(MR))
     return true;
-
-  MR = MR->getBaseRegion();
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(MR))
     return isLive(SR->getSymbol());

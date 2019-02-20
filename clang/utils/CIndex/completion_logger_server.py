@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import, division, print_function
 import sys
 from socket import *
 from time import strftime
@@ -6,7 +7,7 @@ import datetime
 
 def main():
   if len(sys.argv) < 4:
-    print "completion_logger_server.py <listen address> <listen port> <log file>"
+    print("completion_logger_server.py <listen address> <listen port> <log file>")
     exit(1)
 
   host = sys.argv[1]
@@ -18,7 +19,7 @@ def main():
   UDPSock = socket(AF_INET,SOCK_DGRAM)
   UDPSock.bind(addr)
   
-  print "Listing on {0}:{1} and logging to '{2}'".format(host, port, sys.argv[3])
+  print("Listing on {0}:{1} and logging to '{2}'".format(host, port, sys.argv[3]))
 
   # Open the logging file.
   f = open(sys.argv[3], "a")

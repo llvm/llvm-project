@@ -1,9 +1,14 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -o - %s -O1 | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -o - %s -O1 | FileCheck %s 
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -disable-llvm-passes -o - -x c++ %s -O1 | FileCheck %s 
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm -o - %s -O0 | FileCheck %s --check-prefix=CHECK_O0
 
 // When optimizing, the builtin should be converted to metadata.
 // When not optimizing, there should be no metadata created for the builtin.
 // In both cases, the builtin should be removed from the code.
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void foo();
 void branch(int x) {
@@ -41,6 +46,11 @@ int unpredictable_switch(int x) {
 
   return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif
+
 
 // CHECK: [[METADATA]] = !{}
 

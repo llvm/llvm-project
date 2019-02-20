@@ -43,7 +43,7 @@ __declspec(dllexport) extern int ExternGlobalDecl;
 
 // M64-DAG: @__ImageBase = external dso_local constant i8
 
-// GNU-DAG: @_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global
+// GNU-DAG: @_ZTVN10__cxxabiv117__class_type_infoE = external global
 
 // dllexport implies a definition.
 // MSC-DAG: @"?GlobalDef@@3HA" = dso_local dllexport global i32 0, align 4
@@ -137,7 +137,7 @@ class __declspec(dllexport) i : h<> {};
 // Declarations are not exported.
 
 // MSC-DAG: @"??$VarTmplImplicitDef@UImplicitInst_Exported@@@@3HA" = external dso_local global
-// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external dso_local global
+// GNU-DAG: @_Z18VarTmplImplicitDefI21ImplicitInst_ExportedE          = external global
 template<typename T> __declspec(dllexport) extern int VarTmplImplicitDef;
 USEVAR(VarTmplImplicitDef<ImplicitInst_Exported>)
 
@@ -797,7 +797,7 @@ struct __declspec(dllexport) PR23308 {
 };
 void PR23308::f(InternalLinkageType*) {}
 long use(PR23308* p) { p->f(nullptr); }
-// M32-DAG: define internal x86_thiscallcc void @"?f@PR23308@@QAEXPAUInternalLinkageType@?A@@@Z"
+// M32-DAG: define internal x86_thiscallcc void @"?f@PR23308@@QAEXPAUInternalLinkageType@?A0x{{[^@]*}}@@@Z"
 
 template <typename T> struct PR23770BaseTemplate { void f() {} };
 template <typename T> struct PR23770DerivedTemplate : PR23770BaseTemplate<int> {};
@@ -1011,6 +1011,18 @@ struct __declspec(dllexport) LayerTreeImpl {
 };
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.LayerTreeImpl::ElementLayers"* @"??0ElementLayers@LayerTreeImpl@@QAE@XZ"
 // M64-DAG: define weak_odr dso_local dllexport %"struct.LayerTreeImpl::ElementLayers"* @"??0ElementLayers@LayerTreeImpl@@QEAA@XZ"
+
+namespace pr39496 {
+// Make sure dll attribute are inherited by static locals also in template
+// specializations.
+template <typename> struct __declspec(dllexport) S { int foo() { static int x; return x++; } };
+int foo() { S<int> s; return s.foo(); }
+// MSC-DAG: @"?x@?{{1|2}}??foo@?$S@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = weak_odr dso_local dllexport global i32 0, comdat, align 4
+
+template <typename> struct T { int foo() { static int x; return x++; } };
+template struct __declspec(dllexport) T<int>;
+// MSC-DAG: @"?x@?{{1|2}}??foo@?$T@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = weak_odr dso_local dllexport global i32 0, comdat, align 4
+}
 
 class __declspec(dllexport) ACE_Shared_Object {
 public:

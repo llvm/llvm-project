@@ -47,21 +47,21 @@
 // CXX11:#define __cplusplus 201103L
 // CXX11:#define __private_extern__ extern
 //
-// 
+//
 // RUN: %clang_cc1 -x c++ -std=c++98 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX98 %s
-// 
+//
 // CXX98:#define __GNUG__ {{.*}}
 // CXX98:#define __GXX_RTTI 1
 // CXX98:#define __GXX_WEAK__ 1
 // CXX98:#define __cplusplus 199711L
 // CXX98:#define __private_extern__ extern
 //
-// 
+//
 // RUN: %clang_cc1 -fdeprecated-macro -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix DEPRECATED %s
 //
 // DEPRECATED:#define __DEPRECATED 1
 //
-// 
+//
 // RUN: %clang_cc1 -std=c99 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C99 %s
 //
 // C99:#define __STDC_VERSION__ 199901L
@@ -71,7 +71,7 @@
 // C99-NOT: __GXX_WEAK__
 // C99-NOT: __cplusplus
 //
-// 
+//
 // RUN: %clang_cc1 -std=c11 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
 // RUN: %clang_cc1 -std=c1x -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
 // RUN: %clang_cc1 -std=iso9899:2011 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C11 %s
@@ -86,7 +86,7 @@
 // C11-NOT: __GXX_WEAK__
 // C11-NOT: __cplusplus
 //
-// 
+//
 // RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix COMMON %s
 //
 // COMMON:#define __CONSTANT_CFSTRINGS__ 1
@@ -113,7 +113,7 @@
 // RUN: %clang_cc1 -E -dM -triple=x86_64-pc-linux-gnu < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -triple=x86_64-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
 // RUN: %clang_cc1 -E -dM -triple=armv7a-apple-darwin < /dev/null | FileCheck -match-full-lines -check-prefix C-DEFAULT %s
-// 
+//
 // C-DEFAULT:#define __STDC_VERSION__ 201112L
 //
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
@@ -158,12 +158,12 @@
 // GXX98:#define __cplusplus 199711L
 // GXX98:#define __private_extern__ extern
 //
-// 
+//
 // RUN: %clang_cc1 -std=iso9899:199409 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix C94 %s
 //
 // C94:#define __STDC_VERSION__ 199409L
 //
-// 
+//
 // RUN: %clang_cc1 -fms-extensions -triple i686-pc-win32 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix MSEXT %s
 //
 // MSEXT-NOT:#define __STDC__
@@ -185,7 +185,7 @@
 // MSEXT-CXX-NOWCHAR-NOT:#define _WCHAR_T_DEFINED 1
 // MSEXT-CXX-NOWCHAR:#define __BOOL_DEFINED 1
 //
-// 
+//
 // RUN: %clang_cc1 -x objective-c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix OBJC %s
 //
 // OBJC:#define OBJC_NEW_PROPERTIES 1
@@ -197,7 +197,7 @@
 //
 // OBJCGC:#define __OBJC_GC__ 1
 //
-// 
+//
 // RUN: %clang_cc1 -x objective-c -fobjc-exceptions -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix NONFRAGILE %s
 //
 // NONFRAGILE:#define OBJC_ZEROCOST_EXCEPTIONS 1
@@ -246,9 +246,9 @@
 //
 // PASCAL:#define __PASCAL_STRINGS__ 1
 //
-// 
+//
 // RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix SCHAR %s
-// 
+//
 // SCHAR:#define __STDC__ 1
 // SCHAR-NOT:#define __UNSIGNED_CHAR__
 // SCHAR:#define __clang__ 1
@@ -1331,10 +1331,10 @@
 // AARCH64-DARWIN: #define __INT_FAST32_FMTi__ "i"
 // AARCH64-DARWIN: #define __INT_FAST32_MAX__ 2147483647
 // AARCH64-DARWIN: #define __INT_FAST32_TYPE__ int
-// AARCH64-DARWIN: #define __INT_FAST64_FMTd__ "ld"
-// AARCH64-DARWIN: #define __INT_FAST64_FMTi__ "li"
-// AARCH64-DARWIN: #define __INT_FAST64_MAX__ 9223372036854775807L
-// AARCH64-DARWIN: #define __INT_FAST64_TYPE__ long int
+// AARCH64-DARWIN: #define __INT_FAST64_FMTd__ "lld"
+// AARCH64-DARWIN: #define __INT_FAST64_FMTi__ "lli"
+// AARCH64-DARWIN: #define __INT_FAST64_MAX__ 9223372036854775807LL
+// AARCH64-DARWIN: #define __INT_FAST64_TYPE__ long long int
 // AARCH64-DARWIN: #define __INT_FAST8_FMTd__ "hhd"
 // AARCH64-DARWIN: #define __INT_FAST8_FMTi__ "hhi"
 // AARCH64-DARWIN: #define __INT_FAST8_MAX__ 127
@@ -1347,10 +1347,10 @@
 // AARCH64-DARWIN: #define __INT_LEAST32_FMTi__ "i"
 // AARCH64-DARWIN: #define __INT_LEAST32_MAX__ 2147483647
 // AARCH64-DARWIN: #define __INT_LEAST32_TYPE__ int
-// AARCH64-DARWIN: #define __INT_LEAST64_FMTd__ "ld"
-// AARCH64-DARWIN: #define __INT_LEAST64_FMTi__ "li"
-// AARCH64-DARWIN: #define __INT_LEAST64_MAX__ 9223372036854775807L
-// AARCH64-DARWIN: #define __INT_LEAST64_TYPE__ long int
+// AARCH64-DARWIN: #define __INT_LEAST64_FMTd__ "lld"
+// AARCH64-DARWIN: #define __INT_LEAST64_FMTi__ "lli"
+// AARCH64-DARWIN: #define __INT_LEAST64_MAX__ 9223372036854775807LL
+// AARCH64-DARWIN: #define __INT_LEAST64_TYPE__ long long int
 // AARCH64-DARWIN: #define __INT_LEAST8_FMTd__ "hhd"
 // AARCH64-DARWIN: #define __INT_LEAST8_FMTi__ "hhi"
 // AARCH64-DARWIN: #define __INT_LEAST8_MAX__ 127
@@ -1418,16 +1418,16 @@
 // AARCH64-DARWIN: #define __UINT_FAST16_TYPE__ unsigned short
 // AARCH64-DARWIN: #define __UINT_FAST32_MAX__ 4294967295U
 // AARCH64-DARWIN: #define __UINT_FAST32_TYPE__ unsigned int
-// AARCH64-DARWIN: #define __UINT_FAST64_MAX__ 18446744073709551615UL
-// AARCH64-DARWIN: #define __UINT_FAST64_TYPE__ long unsigned int
+// AARCH64-DARWIN: #define __UINT_FAST64_MAX__ 18446744073709551615ULL
+// AARCH64-DARWIN: #define __UINT_FAST64_TYPE__ long long unsigned int
 // AARCH64-DARWIN: #define __UINT_FAST8_MAX__ 255
 // AARCH64-DARWIN: #define __UINT_FAST8_TYPE__ unsigned char
 // AARCH64-DARWIN: #define __UINT_LEAST16_MAX__ 65535
 // AARCH64-DARWIN: #define __UINT_LEAST16_TYPE__ unsigned short
 // AARCH64-DARWIN: #define __UINT_LEAST32_MAX__ 4294967295U
 // AARCH64-DARWIN: #define __UINT_LEAST32_TYPE__ unsigned int
-// AARCH64-DARWIN: #define __UINT_LEAST64_MAX__ 18446744073709551615UL
-// AARCH64-DARWIN: #define __UINT_LEAST64_TYPE__ long unsigned int
+// AARCH64-DARWIN: #define __UINT_LEAST64_MAX__ 18446744073709551615ULL
+// AARCH64-DARWIN: #define __UINT_LEAST64_TYPE__ long long unsigned int
 // AARCH64-DARWIN: #define __UINT_LEAST8_MAX__ 255
 // AARCH64-DARWIN: #define __UINT_LEAST8_TYPE__ unsigned char
 // AARCH64-DARWIN: #define __USER_LABEL_PREFIX__ _
@@ -1553,7 +1553,7 @@
 // AARCH64-MSVC: #define __SIZEOF_SHORT__ 2
 // AARCH64-MSVC: #define __SIZEOF_SIZE_T__ 8
 // AARCH64-MSVC: #define __SIZEOF_WCHAR_T__ 2
-// AARCH64-MSVC: #define __SIZEOF_WINT_T__ 4
+// AARCH64-MSVC: #define __SIZEOF_WINT_T__ 2
 // AARCH64-MSVC: #define __SIZE_MAX__ 18446744073709551615ULL
 // AARCH64-MSVC: #define __SIZE_TYPE__ long long unsigned int
 // AARCH64-MSVC: #define __SIZE_WIDTH__ 64
@@ -1602,8 +1602,8 @@
 // AARCH64-MSVC: #define __WCHAR_TYPE__ unsigned short
 // AARCH64-MSVC: #define __WCHAR_UNSIGNED__ 1
 // AARCH64-MSVC: #define __WCHAR_WIDTH__ 16
-// AARCH64-MSVC: #define __WINT_TYPE__ int
-// AARCH64-MSVC: #define __WINT_WIDTH__ 32
+// AARCH64-MSVC: #define __WINT_TYPE__ unsigned short
+// AARCH64-MSVC: #define __WINT_WIDTH__ 16
 // AARCH64-MSVC: #define __aarch64__ 1
 
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-none < /dev/null | FileCheck -match-full-lines -check-prefix ARM %s
@@ -2590,6 +2590,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-none-eabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-eabi < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-eabihf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-none-elf < /dev/null | FileCheck -match-full-lines -check-prefix ARM-NONE-EABI %s
 // ARM-NONE-EABI: #define __ELF__ 1
 
 // No MachO targets use the full EABI, even if AAPCS is used.
@@ -3442,7 +3443,7 @@
 // MIPS32BE:#define __mips 32
 // MIPS32BE:#define __mips__ 1
 // MIPS32BE:#define __mips_abicalls 1
-// MIPS32BE:#define __mips_fpr 32
+// MIPS32BE:#define __mips_fpr 0
 // MIPS32BE:#define __mips_hard_float 1
 // MIPS32BE:#define __mips_o32 1
 // MIPS32BE:#define _mips 1
@@ -3649,7 +3650,7 @@
 // MIPS32EL:#define __mips 32
 // MIPS32EL:#define __mips__ 1
 // MIPS32EL:#define __mips_abicalls 1
-// MIPS32EL:#define __mips_fpr 32
+// MIPS32EL:#define __mips_fpr 0
 // MIPS32EL:#define __mips_hard_float 1
 // MIPS32EL:#define __mips_o32 1
 // MIPS32EL:#define _mips 1
@@ -4900,6 +4901,41 @@
 // RUN:   | FileCheck -match-full-lines -check-prefix NOMIPS-ABS2008 %s
 // NOMIPS-ABS2008-NOT:#define __mips_abs2008 1
 //
+// RUN: %clang_cc1  \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-NOFP %s
+// MIPS32-NOFP:#define __mips_fpr 0
+//
+// RUN: %clang_cc1 -target-feature +fpxx \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFPXX %s
+// MIPS32-MFPXX:#define __mips_fpr 0
+//
+// RUN: %clang_cc1 -target-cpu mips32r6 -target-feature +fpxx \
+// RUN:   -E -dM -triple=mips-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS32R6-MFPXX %s
+// MIPS32R6-MFPXX:#define __mips_fpr 0
+//
+// RUN: %clang_cc1  \
+// RUN:   -E -dM -triple=mips64-none-none < /dev/null \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS64-NOFP %s
+// MIPS64-NOFP:#define __mips_fpr 64
+//
+// RUN: not %clang_cc1 -target-feature -fp64 \
+// RUN:   -E -dM -triple=mips64-none-none < /dev/null 2>&1 \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS64-MFP32 %s
+// MIPS64-MFP32:error: option '-mfpxx' cannot be specified with 'mips64r2'
+//
+// RUN: not %clang_cc1 -target-feature +fpxx \
+// RUN:   -E -dM -triple=mips64-none-none < /dev/null 2>&1 \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS64-MFPXX %s
+// MIPS64-MFPXX:error: '-mfpxx' can only be used with the 'o32' ABI
+//
+// RUN: not %clang_cc1 -target-cpu mips64r6 -target-feature +fpxx \
+// RUN:   -E -dM -triple=mips64-none-none < /dev/null 2>&1 \
+// RUN:   | FileCheck -match-full-lines -check-prefix MIPS64R6-MFPXX %s
+// MIPS64R6-MFPXX:error: '-mfpxx' can only be used with the 'o32' ABI
+//
 // RUN: %clang_cc1 -target-feature -fp64 \
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFP32 %s
@@ -4916,7 +4952,7 @@
 // RUN:   -E -dM -triple=mips-none-none < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix MIPS32-MFP32SF %s
 // MIPS32-MFP32SF:#define _MIPS_FPSET 32
-// MIPS32-MFP32SF:#define __mips_fpr 32
+// MIPS32-MFP32SF:#define __mips_fpr 0
 //
 // RUN: %clang_cc1 -target-feature +fp64 \
 // RUN:   -E -dM -triple=mips64-none-none < /dev/null \
@@ -7943,6 +7979,7 @@
 // X86_64:#define __WINT_WIDTH__ 32
 // X86_64:#define __amd64 1
 // X86_64:#define __amd64__ 1
+// X86_64:#define __code_model_small_ 1
 // X86_64:#define __x86_64 1
 // X86_64:#define __x86_64__ 1
 //
@@ -7952,7 +7989,10 @@
 // X86_64H:#define __x86_64__ 1
 // X86_64H:#define __x86_64h 1
 // X86_64H:#define __x86_64h__ 1
-
+//
+// RUN: %clang -xc - -E -dM -mcmodel=medium --target=i386-unknown-linux < /dev/null | FileCheck -match-full-lines -check-prefix X86_MEDIUM %s
+// X86_MEDIUM:#define __code_model_medium_ 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 %s
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=x86_64-none-none-gnux32 < /dev/null | FileCheck -match-full-lines -check-prefix X32 -check-prefix X32-CXX %s
 //
@@ -9019,7 +9059,7 @@
 // ANDROID:#define __ANDROID__ 1
 //
 // RUN: %clang_cc1 -x c++ -triple i686-linux-android -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix I386-ANDROID-CXX %s
-// I386-ANDROID-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 4U
+// I386-ANDROID-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 8U
 //
 // RUN: %clang_cc1 -x c++ -triple x86_64-linux-android -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix X86_64-ANDROID-CXX %s
 // X86_64-ANDROID-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
@@ -9795,7 +9835,7 @@
 // AVR:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // AVR:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 1
 // AVR:#define __GXX_ABI_VERSION 1002
-// AVR:#define __INT16_C_SUFFIX__ 
+// AVR:#define __INT16_C_SUFFIX__
 // AVR:#define __INT16_MAX__ 32767
 // AVR:#define __INT16_TYPE__ short
 // AVR:#define __INT32_C_SUFFIX__ L
@@ -9804,7 +9844,7 @@
 // AVR:#define __INT64_C_SUFFIX__ LL
 // AVR:#define __INT64_MAX__ 9223372036854775807LL
 // AVR:#define __INT64_TYPE__ long long int
-// AVR:#define __INT8_C_SUFFIX__ 
+// AVR:#define __INT8_C_SUFFIX__
 // AVR:#define __INT8_MAX__ 127
 // AVR:#define __INT8_TYPE__ signed char
 // AVR:#define __INTMAX_C_SUFFIX__ LL
@@ -9879,7 +9919,7 @@
 // AVR:#define __UINT64_C_SUFFIX__ ULL
 // AVR:#define __UINT64_MAX__ 18446744073709551615ULL
 // AVR:#define __UINT64_TYPE__ long long unsigned int
-// AVR:#define __UINT8_C_SUFFIX__ 
+// AVR:#define __UINT8_C_SUFFIX__
 // AVR:#define __UINT8_MAX__ 255
 // AVR:#define __UINT8_TYPE__ unsigned char
 // AVR:#define __UINTMAX_C_SUFFIX__ ULL
@@ -9903,7 +9943,7 @@
 // AVR:#define __UINT_LEAST64_TYPE__ long long unsigned int
 // AVR:#define __UINT_LEAST8_MAX__ 255
 // AVR:#define __UINT_LEAST8_TYPE__ unsigned char
-// AVR:#define __USER_LABEL_PREFIX__ 
+// AVR:#define __USER_LABEL_PREFIX__
 // AVR:#define __WCHAR_MAX__ 32767
 // AVR:#define __WCHAR_TYPE__ int
 // AVR:#define __WINT_TYPE__ int

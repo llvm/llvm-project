@@ -28,13 +28,12 @@
 
 namespace llvm {
 class Triple;
-}
-
-namespace clang {
-
 namespace vfs {
 class FileSystem;
 }
+} // namespace llvm
+
+namespace clang {
 
 namespace driver {
 
@@ -61,7 +60,7 @@ class Driver {
 
   DiagnosticsEngine &Diags;
 
-  IntrusiveRefCntPtr<vfs::FileSystem> VFS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 
   enum DriverMode {
     GCCMode,
@@ -228,9 +227,6 @@ private:
   unsigned CheckInputsExist : 1;
 
 public:
-  /// Use lazy precompiled headers for PCH support.
-  unsigned CCCUsePCH : 1;
-
   /// Force clang to emit reproducer for driver invocation. This is enabled
   /// indirectly by setting FORCE_CLANG_DIAGNOSTICS_CRASH environment variable
   /// or when using the -gen-reproducer driver flag.
@@ -284,7 +280,7 @@ private:
 public:
   Driver(StringRef ClangExecutable, StringRef TargetTriple,
          DiagnosticsEngine &Diags,
-         IntrusiveRefCntPtr<vfs::FileSystem> VFS = nullptr);
+         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// @name Accessors
   /// @{
@@ -298,7 +294,7 @@ public:
 
   const DiagnosticsEngine &getDiags() const { return Diags; }
 
-  vfs::FileSystem &getVFS() const { return *VFS; }
+  llvm::vfs::FileSystem &getVFS() const { return *VFS; }
 
   bool getCheckInputsExist() const { return CheckInputsExist; }
 

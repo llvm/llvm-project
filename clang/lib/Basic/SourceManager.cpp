@@ -195,8 +195,7 @@ llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
 }
 
 unsigned LineTableInfo::getLineTableFilenameID(StringRef Name) {
-  auto IterBool =
-      FilenameIDs.insert(std::make_pair(Name, FilenamesByID.size()));
+  auto IterBool = FilenameIDs.try_emplace(Name, FilenamesByID.size());
   if (IterBool.second)
     FilenamesByID.push_back(&*IterBool.first);
   return IterBool.first->second;
@@ -1217,65 +1216,22 @@ static void ComputeLineNumbers(DiagnosticsEngine &Diag, ContentCache *FI,
 
   const unsigned char *Buf = (const unsigned char *)Buffer->getBufferStart();
   const unsigned char *End = (const unsigned char *)Buffer->getBufferEnd();
-  unsigned Offs = 0;
+  unsigned I = 0;
   while (true) {
     // Skip over the contents of the line.
-    const unsigned char *NextBuf = (const unsigned char *)Buf;
+    while (Buf[I] != '\n' && Buf[I] != '\r' && Buf[I] != '\0')
+      ++I;
 
-#ifdef __SSE2__
-    // Try to skip to the next newline using SSE instructions. This is very
-    // performance sensitive for programs with lots of diagnostics and in -E
-    // mode.
-    __m128i CRs = _mm_set1_epi8('\r');
-    __m128i LFs = _mm_set1_epi8('\n');
-
-    // First fix up the alignment to 16 bytes.
-    while (((uintptr_t)NextBuf & 0xF) != 0) {
-      if (*NextBuf == '\n' || *NextBuf == '\r' || *NextBuf == '\0')
-        goto FoundSpecialChar;
-      ++NextBuf;
-    }
-
-    // Scan 16 byte chunks for '\r' and '\n'. Ignore '\0'.
-    while (NextBuf+16 <= End) {
-      const __m128i Chunk = *(const __m128i*)NextBuf;
-      __m128i Cmp = _mm_or_si128(_mm_cmpeq_epi8(Chunk, CRs),
-                                 _mm_cmpeq_epi8(Chunk, LFs));
-      unsigned Mask = _mm_movemask_epi8(Cmp);
-
-      // If we found a newline, adjust the pointer and jump to the handling code.
-      if (Mask != 0) {
-        NextBuf += llvm::countTrailingZeros(Mask);
-        goto FoundSpecialChar;
-      }
-      NextBuf += 16;
-    }
-#endif
-
-    while (*NextBuf != '\n' && *NextBuf != '\r' && *NextBuf != '\0')
-      ++NextBuf;
-
-#ifdef __SSE2__
-FoundSpecialChar:
-#endif
-    Offs += NextBuf-Buf;
-    Buf = NextBuf;
-
-    if (Buf[0] == '\n' || Buf[0] == '\r') {
-      // If this is \n\r or \r\n, skip both characters.
-      if ((Buf[1] == '\n' || Buf[1] == '\r') && Buf[0] != Buf[1]) {
-        ++Offs;
-        ++Buf;
-      }
-      ++Offs;
-      ++Buf;
-      LineOffsets.push_back(Offs);
+    if (Buf[I] == '\n' || Buf[I] == '\r') {
+      // If this is \r\n, skip both characters.
+      if (Buf[I] == '\r' && Buf[I+1] == '\n')
+        ++I;
+      ++I;
+      LineOffsets.push_back(I);
     } else {
-      // Otherwise, this is a null.  If end of file, exit.
-      if (Buf == End) break;
-      // Otherwise, skip the null.
-      ++Offs;
-      ++Buf;
+      // Otherwise, this is a NUL. If end of file, exit.
+      if (Buf+I == End) break;
+      ++I;
     }
   }
 
@@ -1965,9 +1921,7 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
   // Uses IncludedLocMap to retrieve/cache the decomposed loc.
 
   using DecompTy = std::pair<FileID, unsigned>;
-  using MapTy = llvm::DenseMap<FileID, DecompTy>;
-  std::pair<MapTy::iterator, bool>
-    InsertOp = IncludedLocMap.insert(std::make_pair(FID, DecompTy()));
+  auto InsertOp = IncludedLocMap.try_emplace(FID);
   DecompTy &DecompLoc = InsertOp.first->second;
   if (!InsertOp.second)
     return DecompLoc; // already in map.
@@ -2263,8 +2217,8 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
   // This is referenced by `FileMgr` and will be released by `FileMgr` when it
   // is deleted.
-  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,

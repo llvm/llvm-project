@@ -29,6 +29,6 @@
 // CHECK-DAG: "-fcuda-is-device"
 // CHECK-NOT: "-f{{[^"]*coverage.*}}"
 // CHECK-NOT: "-fprofile{{[^"]*}}"
-// CHECK: "-triple" "x86_64--linux-gnu"
+// CHECK: "-triple" "x86_64-unknown-linux-gnu"
 // PROF-DAG: "-fprofile{{.*}}"
 // GCOV-DAG: "-f{{(coverage|emit-coverage).*}}"

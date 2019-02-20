@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <memory>
 #include <string>
@@ -45,6 +46,10 @@ struct IndexingOptions {
     = SystemSymbolFilterKind::DeclarationsOnly;
   bool IndexFunctionLocals = false;
   bool IndexImplicitInstantiation = false;
+  // Whether to index macro definitions in the Preprocesor when preprocessor
+  // callback is not available (e.g. after parsing has finished). Note that
+  // macro references are not available in Proprocessor.
+  bool IndexMacrosInPreprocessor = false;
 };
 
 struct RecordingOptions {
@@ -68,13 +73,12 @@ createIndexingAction(std::shared_ptr<IndexDataConsumer> DataConsumer,
                      std::unique_ptr<FrontendAction> WrappedAction);
 
 /// Recursively indexes all decls in the AST.
-/// Note that this does not index macros.
 void indexASTUnit(ASTUnit &Unit, IndexDataConsumer &DataConsumer,
                   IndexingOptions Opts);
 
 /// Recursively indexes \p Decls.
-/// Note that this does not index macros.
-void indexTopLevelDecls(ASTContext &Ctx, ArrayRef<const Decl *> Decls,
+void indexTopLevelDecls(ASTContext &Ctx, Preprocessor &PP,
+                        ArrayRef<const Decl *> Decls,
                         IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 
 /// Creates a PPCallbacks that indexes macros and feeds macros to \p Consumer.
@@ -83,7 +87,6 @@ std::unique_ptr<PPCallbacks> indexMacrosCallback(IndexDataConsumer &Consumer,
                                                  IndexingOptions Opts);
 
 /// Recursively indexes all top-level decls in the module.
-/// FIXME: make this index macros as well.
 void indexModuleFile(serialization::ModuleFile &Mod, ASTReader &Reader,
                      IndexDataConsumer &DataConsumer, IndexingOptions Opts);
 

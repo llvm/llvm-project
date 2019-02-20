@@ -18,12 +18,12 @@
 // FIXME: The context of this definition should be the CU/file scope, not the class.
 // CHECK: !DISubprogram(name: "func", {{.*}} scope: [[FOO]]
 // CHECK-SAME:          type: [[SUBROUTINE_TYPE]]
-// CHECK-SAME:          isDefinition: true
+// CHECK-SAME:          DISPFlagDefinition
 // CHECK-SAME:          declaration: [[FUNC_DECL:![0-9]*]]
 // CHECK: [[FUNC_DECL]] = !DISubprogram(name: "func",
 // CHECK-SAME:                          scope: [[FOO]]
 // CHECK-SAME:                          type: [[SUBROUTINE_TYPE]]
-// CHECK-SAME:                          isDefinition: false
+// CHECK-SAME:                          spFlags: 0
 
 struct foo {
   static auto func();

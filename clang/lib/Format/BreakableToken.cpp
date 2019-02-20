@@ -67,10 +67,11 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
                                              unsigned ContentStartColumn,
                                              unsigned ColumnLimit,
                                              unsigned TabWidth,
-                                             encoding::Encoding Encoding) {
-  LLVM_DEBUG(llvm::dbgs() << "Comment split: \"" << Text << ", " << ColumnLimit
-                          << "\", Content start: " << ContentStartColumn
-                          << "\n");
+                                             encoding::Encoding Encoding,
+                                             const FormatStyle &Style) {
+  LLVM_DEBUG(llvm::dbgs() << "Comment split: \"" << Text
+                          << "\", Column limit: " << ColumnLimit
+                          << ", Content start: " << ContentStartColumn << "\n");
   if (ColumnLimit <= ContentStartColumn + 1)
     return BreakableToken::Split(StringRef::npos, 0);
 
@@ -89,12 +90,21 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
 
   StringRef::size_type SpaceOffset = Text.find_last_of(Blanks, MaxSplitBytes);
 
-  // Do not split before a number followed by a dot: this would be interpreted
-  // as a numbered list, which would prevent re-flowing in subsequent passes.
   static auto *const kNumberedListRegexp = new llvm::Regex("^[1-9][0-9]?\\.");
-  if (SpaceOffset != StringRef::npos &&
-      kNumberedListRegexp->match(Text.substr(SpaceOffset).ltrim(Blanks)))
-    SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
+  while (SpaceOffset != StringRef::npos) {
+    // Do not split before a number followed by a dot: this would be interpreted
+    // as a numbered list, which would prevent re-flowing in subsequent passes.
+    if (kNumberedListRegexp->match(Text.substr(SpaceOffset).ltrim(Blanks)))
+      SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
+    // In JavaScript, some @tags can be followed by {, and machinery that parses
+    // these comments will fail to understand the comment if followed by a line
+    // break. So avoid ever breaking before a {.
+    else if (Style.Language == FormatStyle::LK_JavaScript &&
+             SpaceOffset + 1 < Text.size() && Text[SpaceOffset + 1] == '{')
+      SpaceOffset = Text.find_last_of(Blanks, SpaceOffset);
+    else
+      break;
+  }
 
   if (SpaceOffset == StringRef::npos ||
       // Don't break at leading whitespace.
@@ -109,6 +119,12 @@ static BreakableToken::Split getCommentSplit(StringRef Text,
         Blanks, std::max<unsigned>(MaxSplitBytes, FirstNonWhitespace));
   }
   if (SpaceOffset != StringRef::npos && SpaceOffset != 0) {
+    // adaptStartOfLine will break after lines starting with /** if the comment
+    // is broken anywhere. Avoid emitting this break twice here.
+    // Example: in /** longtextcomesherethatbreaks */ (with ColumnLimit 20) will
+    // insert a break after /**, so this code must not insert the same break.
+    if (SpaceOffset == 1 && Text[SpaceOffset - 1] == '*')
+      return BreakableToken::Split(StringRef::npos, 0);
     StringRef BeforeCut = Text.substr(0, SpaceOffset).rtrim(Blanks);
     StringRef AfterCut = Text.substr(SpaceOffset).ltrim(Blanks);
     return BreakableToken::Split(BeforeCut.size(),
@@ -260,7 +276,7 @@ BreakableComment::getSplit(unsigned LineIndex, unsigned TailOffset,
     return Split(StringRef::npos, 0);
   return getCommentSplit(Content[LineIndex].substr(TailOffset),
                          ContentStartColumn, ColumnLimit, Style.TabWidth,
-                         Encoding);
+                         Encoding, Style);
 }
 
 void BreakableComment::compressWhitespace(
@@ -620,6 +636,8 @@ void BreakableBlockComment::adaptStartOfLine(
     if (DelimitersOnNewline) {
       // Since we're breaking at index 1 below, the break position and the
       // break length are the same.
+      // Note: this works because getCommentSplit is careful never to split at
+      // the beginning of a line.
       size_t BreakLength = Lines[0].substr(1).find_first_not_of(Blanks);
       if (BreakLength != StringRef::npos)
         insertBreak(LineIndex, 0, Split(1, BreakLength), /*ContentIndent=*/0,

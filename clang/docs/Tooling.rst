@@ -9,7 +9,7 @@ the different ways to write clang tools, and their pros and cons.
 LibClang
 --------
 
-`LibClang <http://clang.llvm.org/doxygen/group__CINDEX.html>`_ is a stable high
+`LibClang <https://clang.llvm.org/doxygen/group__CINDEX.html>`_ is a stable high
 level C interface to clang.  When in doubt LibClang is probably the interface
 you want to use.  Consider the other interfaces only when you have a good
 reason not to use LibClang.

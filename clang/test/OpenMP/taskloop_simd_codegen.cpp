@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 // CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 0, i64 0, i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 0, i64 0, i8* null)
 // CHECK: call void @__kmpc_end_taskgroup(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
 #pragma omp taskloop simd priority(argc)
   for (int i = 0; i < 10; ++i)
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
 // CHECK: [[GRAINSIZE:%.+]] = zext i32 %{{.+}} to i64
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 1, i64 [[GRAINSIZE]], i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 1, i64 [[GRAINSIZE]], i8* null)
 #pragma omp taskloop simd nogroup grainsize(argc) simdlen(4)
   for (int i = 0; i < 10; ++i)
     ;
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
 // CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], [[TD_TY]]* [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 [[IF_INT]], i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 2, i64 4, i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 [[IF_INT]], i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 2, i64 4, i8* null)
 // CHECK: call void @__kmpc_end_taskgroup(%struct.ident_t* [[DEFLOC]], i32 [[GTID]])
   int i;
 #pragma omp taskloop simd if(argc) shared(argc, argv) collapse(2) num_tasks(4) safelen(32)
@@ -83,17 +83,17 @@ int main(int argc, char **argv) {
 // CHECK: [[LB_I32:%.+]] = trunc i64 [[LB_VAL]] to i32
 // CHECK: store i32 [[LB_I32]], i32* [[CNT:%.+]],
 // CHECK: br label
-// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP1:!.+]]
+// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.access.group
 // CHECK: [[VAL_I64:%.+]] = sext i32 [[VAL]] to i64
-// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
+// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.access.group
 // CHECK: [[CMP:%.+]] = icmp ule i64 [[VAL_I64]], [[UB_VAL]]
 // CHECK: br i1 [[CMP]], label %{{.+}}, label %{{.+}}
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
-// CHECK: store i32 %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
+// CHECK: store i32 %{{.*}}!llvm.access.group
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
 // CHECK: add nsw i32 %{{.+}}, 1
-// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP1]]
-// CHECK: br label %{{.*}}!llvm.loop [[LOOP1]]
+// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.access.group
+// CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
 // CHECK: define internal i32 [[TASK2]](
@@ -113,17 +113,17 @@ int main(int argc, char **argv) {
 // CHECK: [[LB_I32:%.+]] = trunc i64 [[LB_VAL]] to i32
 // CHECK: store i32 [[LB_I32]], i32* [[CNT:%.+]],
 // CHECK: br label
-// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP2:!.+]]
+// CHECK: [[VAL:%.+]] = load i32, i32* [[CNT]],{{.*}}!llvm.access.group
 // CHECK: [[VAL_I64:%.+]] = sext i32 [[VAL]] to i64
-// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
+// CHECK: [[UB_VAL:%.+]] = load i64, i64* [[UB]],{{.*}}!llvm.access.group
 // CHECK: [[CMP:%.+]] = icmp ule i64 [[VAL_I64]], [[UB_VAL]]
 // CHECK: br i1 [[CMP]], label %{{.+}}, label %{{.+}}
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
-// CHECK: store i32 %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
-// CHECK: load i32, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
+// CHECK: store i32 %{{.*}}!llvm.access.group
+// CHECK: load i32, i32* %{{.*}}!llvm.access.group
 // CHECK: add nsw i32 %{{.+}}, 1
-// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.mem.parallel_loop_access [[LOOP2]]
-// CHECK: br label %{{.*}}!llvm.loop [[LOOP2]]
+// CHECK: store i32 %{{.+}}, i32* %{{.*}}!llvm.access.group
+// CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
 // CHECK: define internal i32 [[TASK3]](
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
 // CHECK: [[LB_VAL:%.+]] = load i64, i64* [[LB]],
 // CHECK: store i64 [[LB_VAL]], i64* [[CNT:%.+]],
 // CHECK: br label
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 
@@ -162,7 +162,7 @@ struct S {
 // CHECK: store i64 1, i64* [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, i64* [[ST]],
 // CHECK: [[NUM_TASKS:%.+]] = zext i32 %{{.+}} to i64
-// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 0, i32 2, i64 [[NUM_TASKS]], i8* null)
+// CHECK: call void @__kmpc_taskloop(%struct.ident_t* [[DEFLOC]], i32 [[GTID]], i8* [[TASKV]], i32 1, i64* [[DOWN]], i64* [[UP]], i64 [[ST_VAL]], i32 1, i32 2, i64 [[NUM_TASKS]], i8* null)
 #pragma omp taskloop simd shared(c) num_tasks(a) simdlen(8) safelen(64)
     for (a = 0; a < c; ++a)
       ;
@@ -192,14 +192,14 @@ struct S {
 // CHECK: [[CMP:%.+]] = icmp ule i64 [[VAL_I64]], [[UB_VAL]]
 // CHECK: br i1 [[CMP]], label %{{.+}}, label %{{.+}}
 // CHECK: load i32, i32* %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: store i32 %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: load i32, i32* %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: add nsw i32 %{{.+}}, 1
 // CHECK: store i32 %{{.+}}, i32* %
-// CHECK-NOT: !llvm.mem.parallel_loop_access
+// CHECK-NOT: !llvm.access.group
 // CHECK: br label %{{.*}}!llvm.loop
 // CHECK: ret i32 0
 

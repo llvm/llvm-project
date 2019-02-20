@@ -32,6 +32,9 @@
 #import "A.h"
 #import <Z/Z.h>
 
+// Make sure we correctly handle paths that resemble frameworks, but aren't.
+#import "NotAFramework/Headers/Headers/Thing1.h"
+
 int bar() { return foo(); }
 
 // expected-warning@Inputs/double-quotes/A.framework/Headers/A.h:1{{double-quoted include "A0.h" in framework header, expected angle-bracketed instead}}

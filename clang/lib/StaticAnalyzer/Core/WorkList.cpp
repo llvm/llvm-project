@@ -152,7 +152,7 @@ public:
     auto BE = N->getLocation().getAs<BlockEntrance>();
 
     if (!BE) {
-      // Assume the choice of the order of the preceeding block entrance was
+      // Assume the choice of the order of the preceding block entrance was
       // correct.
       StackUnexplored.push_back(U);
     } else {

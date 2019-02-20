@@ -28,7 +28,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
@@ -757,15 +757,15 @@ ObjCDeallocChecker::ObjCDeallocChecker()
 
   MissingReleaseBugType.reset(
       new BugType(this, "Missing ivar release (leak)",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 
   ExtraReleaseBugType.reset(
       new BugType(this, "Extra ivar release",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 
   MistakenDeallocBugType.reset(
       new BugType(this, "Mistaken dealloc",
-                  categories::MemoryCoreFoundationObjectiveC));
+                  categories::MemoryRefCount));
 }
 
 void ObjCDeallocChecker::initIdentifierInfoAndSelectors(
@@ -1093,4 +1093,8 @@ void ento::registerObjCDeallocChecker(CheckerManager &Mgr) {
     return;
 
   Mgr.registerChecker<ObjCDeallocChecker>();
+}
+
+bool ento::shouldRegisterObjCDeallocChecker(const LangOptions &LO) {
+  return true;
 }

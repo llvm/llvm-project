@@ -14,6 +14,14 @@ void f(NSArray *a) {
   for (auto thisKey : keys) { } // expected-warning{{'auto' deduced as 'id' in declaration of 'thisKey'}}
 }
 
+void for_init_stmt() {
+  for (id keys; id key : keys) {} // expected-warning{{extension}} expected-error{{not supported}}
+}
+template<typename T> void for_init_stmt_tmpl() {
+  for (T keys; id key : keys) {} // expected-warning{{extension}} expected-error{{not supported}}
+}
+template void for_init_stmt_tmpl<id>(); // expected-note {{in instantiation of}}
+
 template<typename Collection>
 void ft(Collection col) {
   for (id x : col) { }

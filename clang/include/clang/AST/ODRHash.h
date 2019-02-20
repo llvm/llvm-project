@@ -13,6 +13,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_CLANG_AST_ODRHASH_H
+#define LLVM_CLANG_AST_ODRHASH_H
+
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
@@ -80,7 +83,7 @@ public:
   void AddIdentifierInfo(const IdentifierInfo *II);
   void AddNestedNameSpecifier(const NestedNameSpecifier *NNS);
   void AddTemplateName(TemplateName Name);
-  void AddDeclarationName(DeclarationName Name);
+  void AddDeclarationName(DeclarationName Name, bool TreatAsDecl = false);
   void AddTemplateArgument(TemplateArgument TA);
   void AddTemplateParameterList(const TemplateParameterList *TPL);
 
@@ -88,6 +91,11 @@ public:
   void AddBoolean(bool value);
 
   static bool isWhitelistedDecl(const Decl* D, const DeclContext *Parent);
+
+private:
+  void AddDeclarationNameImpl(DeclarationName Name);
 };
 
 }  // end namespace clang
+
+#endif

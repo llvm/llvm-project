@@ -203,16 +203,171 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
       Features.push_back("-crc");
   }
 
+  // Handle (arch-dependent) fp16fml/fullfp16 relationship.
+  // FIXME: this fp16fml option handling will be reimplemented after the
+  // TargetParser rewrite.
+  const auto ItRNoFullFP16 = std::find(Features.rbegin(), Features.rend(), "-fullfp16");
+  const auto ItRFP16FML = std::find(Features.rbegin(), Features.rend(), "+fp16fml");
+  if (std::find(Features.begin(), Features.end(), "+v8.4a") != Features.end()) {
+    const auto ItRFullFP16  = std::find(Features.rbegin(), Features.rend(), "+fullfp16");
+    if (ItRFullFP16 < ItRNoFullFP16 && ItRFullFP16 < ItRFP16FML) {
+      // Only entangled feature that can be to the right of this +fullfp16 is -fp16fml.
+      // Only append the +fp16fml if there is no -fp16fml after the +fullfp16.
+      if (std::find(Features.rbegin(), ItRFullFP16, "-fp16fml") == ItRFullFP16)
+        Features.push_back("+fp16fml");
+    }
+    else
+      goto fp16_fml_fallthrough;
+  }
+  else {
+fp16_fml_fallthrough:
+    // In both of these cases, putting the 'other' feature on the end of the vector will
+    // result in the same effect as placing it immediately after the current feature.
+    if (ItRNoFullFP16 < ItRFP16FML)
+      Features.push_back("-fp16fml");
+    else if (ItRNoFullFP16 > ItRFP16FML)
+      Features.push_back("+fullfp16");
+  }
+
+  // FIXME: this needs reimplementation too after the TargetParser rewrite
+  //
+  // Context sensitive meaning of Crypto:
+  // 1) For Arch >= ARMv8.4a:  crypto = sm4 + sha3 + sha2 + aes
+  // 2) For Arch <= ARMv8.3a:  crypto = sha2 + aes
+  const auto ItBegin = Features.begin();
+  const auto ItEnd = Features.end();
+  const auto ItRBegin = Features.rbegin();
+  const auto ItREnd = Features.rend();
+  const auto ItRCrypto = std::find(ItRBegin, ItREnd, "+crypto");
+  const auto ItRNoCrypto = std::find(ItRBegin, ItREnd, "-crypto");
+  const auto HasCrypto  = ItRCrypto != ItREnd;
+  const auto HasNoCrypto = ItRNoCrypto != ItREnd;
+  const ptrdiff_t PosCrypto = ItRCrypto - ItRBegin;
+  const ptrdiff_t PosNoCrypto = ItRNoCrypto - ItRBegin;
+
+  bool NoCrypto = false;
+  if (HasCrypto && HasNoCrypto) {
+    if (PosNoCrypto < PosCrypto)
+      NoCrypto = true;
+  }
+
+  if (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd) {
+    if (HasCrypto && !NoCrypto) {
+      // Check if we have NOT disabled an algorithm with something like:
+      //   +crypto, -algorithm
+      // And if "-algorithm" does not occur, we enable that crypto algorithm.
+      const bool HasSM4  = (std::find(ItBegin, ItEnd, "-sm4") == ItEnd);
+      const bool HasSHA3 = (std::find(ItBegin, ItEnd, "-sha3") == ItEnd);
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "-sha2") == ItEnd);
+      const bool HasAES  = (std::find(ItBegin, ItEnd, "-aes") == ItEnd);
+      if (HasSM4)
+        Features.push_back("+sm4");
+      if (HasSHA3)
+        Features.push_back("+sha3");
+      if (HasSHA2)
+        Features.push_back("+sha2");
+      if (HasAES)
+        Features.push_back("+aes");
+    } else if (HasNoCrypto) {
+      // Check if we have NOT enabled a crypto algorithm with something like:
+      //   -crypto, +algorithm
+      // And if "+algorithm" does not occur, we disable that crypto algorithm.
+      const bool HasSM4  = (std::find(ItBegin, ItEnd, "+sm4") != ItEnd);
+      const bool HasSHA3 = (std::find(ItBegin, ItEnd, "+sha3") != ItEnd);
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "+sha2") != ItEnd);
+      const bool HasAES  = (std::find(ItBegin, ItEnd, "+aes") != ItEnd);
+      if (!HasSM4)
+        Features.push_back("-sm4");
+      if (!HasSHA3)
+        Features.push_back("-sha3");
+      if (!HasSHA2)
+        Features.push_back("-sha2");
+      if (!HasAES)
+        Features.push_back("-aes");
+    }
+  } else {
+    if (HasCrypto && !NoCrypto) {
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "-sha2") == ItEnd);
+      const bool HasAES = (std::find(ItBegin, ItEnd, "-aes") == ItEnd);
+      if (HasSHA2)
+        Features.push_back("+sha2");
+      if (HasAES)
+        Features.push_back("+aes");
+    } else if (HasNoCrypto) {
+      const bool HasSHA2 = (std::find(ItBegin, ItEnd, "+sha2") != ItEnd);
+      const bool HasAES  = (std::find(ItBegin, ItEnd, "+aes") != ItEnd);
+      const bool HasV82a = (std::find(ItBegin, ItEnd, "+v8.2a") != ItEnd);
+      const bool HasV83a = (std::find(ItBegin, ItEnd, "+v8.3a") != ItEnd);
+      const bool HasV84a = (std::find(ItBegin, ItEnd, "+v8.4a") != ItEnd);
+      if (!HasSHA2)
+        Features.push_back("-sha2");
+      if (!HasAES)
+        Features.push_back("-aes");
+      if (HasV82a || HasV83a || HasV84a) {
+        Features.push_back("-sm4");
+        Features.push_back("-sha3");
+      }
+    }
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                options::OPT_munaligned_access))
     if (A->getOption().matches(options::OPT_mno_unaligned_access))
       Features.push_back("+strict-align");
+
+  if (Args.hasArg(options::OPT_ffixed_x1))
+    Features.push_back("+reserve-x1");
+
+  if (Args.hasArg(options::OPT_ffixed_x2))
+    Features.push_back("+reserve-x2");
+
+  if (Args.hasArg(options::OPT_ffixed_x3))
+    Features.push_back("+reserve-x3");
+
+  if (Args.hasArg(options::OPT_ffixed_x4))
+    Features.push_back("+reserve-x4");
+
+  if (Args.hasArg(options::OPT_ffixed_x5))
+    Features.push_back("+reserve-x5");
+
+  if (Args.hasArg(options::OPT_ffixed_x6))
+    Features.push_back("+reserve-x6");
+
+  if (Args.hasArg(options::OPT_ffixed_x7))
+    Features.push_back("+reserve-x7");
 
   if (Args.hasArg(options::OPT_ffixed_x18))
     Features.push_back("+reserve-x18");
 
   if (Args.hasArg(options::OPT_ffixed_x20))
     Features.push_back("+reserve-x20");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x8))
+    Features.push_back("+call-saved-x8");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x9))
+    Features.push_back("+call-saved-x9");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x10))
+    Features.push_back("+call-saved-x10");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x11))
+    Features.push_back("+call-saved-x11");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x12))
+    Features.push_back("+call-saved-x12");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x13))
+    Features.push_back("+call-saved-x13");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x14))
+    Features.push_back("+call-saved-x14");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x15))
+    Features.push_back("+call-saved-x15");
+
+  if (Args.hasArg(options::OPT_fcall_saved_x18))
+    Features.push_back("+call-saved-x18");
 
   if (Args.hasArg(options::OPT_mno_neg_immediates))
     Features.push_back("+no-neg-immediates");

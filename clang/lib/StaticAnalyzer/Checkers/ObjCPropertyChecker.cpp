@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 
@@ -78,4 +78,8 @@ void ObjCPropertyChecker::checkCopyMutable(const ObjCPropertyDecl *D,
 
 void ento::registerObjCPropertyChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ObjCPropertyChecker>();
+}
+
+bool ento::shouldRegisterObjCPropertyChecker(const LangOptions &LO) {
+  return true;
 }

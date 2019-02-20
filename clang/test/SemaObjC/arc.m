@@ -410,7 +410,7 @@ void test16(void) {
   [v test16_6: 0];
 }
 
-@class Test17; // expected-note 2{{forward declaration of class here}}
+@class Test17; // expected-note 3{{forward declaration of class here}}
 @protocol Test17p
 - (void) test17;
 + (void) test17;

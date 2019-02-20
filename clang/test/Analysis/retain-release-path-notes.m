@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -analyzer-output=text -verify %s
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.coreFoundation.CFRetainRelease,osx.cocoa.ClassRelease,osx.cocoa.RetainCount -analyzer-store=region -analyzer-output=plist-multi-file %s -o %t
-// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/retain-release-path-notes.m.plist
+// RUN: cat %t | %diff_plist %S/Inputs/expected-plists/retain-release-path-notes.m.plist -
 
 /***
 This file is for testing the path-sensitive notes for retain/release errors.
@@ -49,7 +49,7 @@ void creationViaAlloc () {
 }
 
 void creationViaCFCreate () {
-  CFTypeRef leaked = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type CFTypeRef with a +1 retain count}}
+  CFTypeRef leaked = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type 'CFTypeRef' with a +1 retain count}}
   return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
 
@@ -68,7 +68,7 @@ void acquisitionViaProperty (Foo *foo) {
 }
 
 void acquisitionViaCFFunction () {
-  CFTypeRef leaked = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type CFTypeRef with a +0 retain count}}
+  CFTypeRef leaked = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type 'CFTypeRef' with a +0 retain count}}
   CFRetain(leaked); // expected-note{{Reference count incremented. The object now has a +1 retain count}}
   return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
@@ -99,19 +99,19 @@ void autoreleaseUnowned (Foo *foo) {
 }
 
 void makeCollectableIgnored() {
-  CFTypeRef leaked = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type CFTypeRef with a +1 retain count}}
+  CFTypeRef leaked = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type 'CFTypeRef' with a +1 retain count}}
   CFMakeCollectable(leaked);
   NSMakeCollectable(leaked);
   return; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
 }
 
 CFTypeRef CFCopyRuleViolation () {
-  CFTypeRef object = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type CFTypeRef with a +0 retain count}}
+  CFTypeRef object = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type 'CFTypeRef' with a +0 retain count}}
   return object; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}} expected-note{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
 }
 
 CFTypeRef CFGetRuleViolation () {
-  CFTypeRef object = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type CFTypeRef with a +1 retain count}}
+  CFTypeRef object = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type 'CFTypeRef' with a +1 retain count}}
   return object; // expected-warning{{leak}} expected-note{{Object leaked: object allocated and stored into 'object' is returned from a function whose name ('CFGetRuleViolation') does not contain 'Copy' or 'Create'.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation}}
 }
 
@@ -227,7 +227,7 @@ static int Cond;
                                 // expected-note@-1 {{Method returns an instance of MyObj with a +1 retain count}}
                                 // expected-note@-2 {{Calling 'initX'}}
                                 // expected-note@-3 {{Returning from 'initX'}}
-                                // expected-note@-4 {{Object leaked: allocated object of type MyObj * is not referenced later in this execution path and has a retain count of +1}}
+                                // expected-note@-4 {{Object leaked: allocated object of type 'MyObj *' is not referenced later in this execution path and has a retain count of +1}}
   // initI is inlined because the allocation happens within initY
   id y = [[MyObj alloc] initY];
                                 // expected-note@-1 {{Calling 'initY'}}
@@ -244,20 +244,20 @@ static int Cond;
 
 
 void CFOverAutorelease() {
-  CFTypeRef object = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type CFTypeRef with a +1 retain count}}
+  CFTypeRef object = CFCreateSomething(); // expected-note{{Call to function 'CFCreateSomething' returns a Core Foundation object of type 'CFTypeRef' with a +1 retain count}}
   CFAutorelease(object); // expected-note{{Object autoreleased}}
   CFAutorelease(object); // expected-note{{Object autoreleased}}
   return; // expected-warning{{Object autoreleased too many times}} expected-note{{Object was autoreleased 2 times but the object has a +1 retain count}}
 }
 
 void CFAutoreleaseUnowned() {
-  CFTypeRef object = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type CFTypeRef with a +0 retain count}}
+  CFTypeRef object = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type 'CFTypeRef' with a +0 retain count}}
   CFAutorelease(object); // expected-note{{Object autoreleased}}
   return; // expected-warning{{Object autoreleased too many times}} expected-note{{Object was autoreleased but has a +0 retain count}}
 }
 
 void CFAutoreleaseUnownedMixed() {
-  CFTypeRef object = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type CFTypeRef with a +0 retain count}}
+  CFTypeRef object = CFGetSomething(); // expected-note{{Call to function 'CFGetSomething' returns a Core Foundation object of type 'CFTypeRef' with a +0 retain count}}
   CFAutorelease(object); // expected-note{{Object autoreleased}}
   [(id)object autorelease]; // expected-note{{Object autoreleased}}
   return; // expected-warning{{Object autoreleased too many times}} expected-note{{Object was autoreleased 2 times but the object has a +0 retain count}}

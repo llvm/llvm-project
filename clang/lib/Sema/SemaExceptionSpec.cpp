@@ -64,7 +64,7 @@ bool Sema::isLibstdcxxEagerExceptionSpecHack(const Declarator &D) {
   }
 
   // Only apply this hack within a system header.
-  if (!Context.getSourceManager().isInSystemHeader(D.getLocStart()))
+  if (!Context.getSourceManager().isInSystemHeader(D.getBeginLoc()))
     return false;
 
   return llvm::StringSwitch<bool>(RD->getIdentifier()->getName())
@@ -230,6 +230,16 @@ Sema::UpdateExceptionSpec(FunctionDecl *FD,
     Context.adjustExceptionSpec(Redecl, ESI);
 }
 
+static bool exceptionSpecNotKnownYet(const FunctionDecl *FD) {
+  auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD)
+    return false;
+
+  auto EST = MD->getType()->castAs<FunctionProtoType>()->getExceptionSpecType();
+  return EST == EST_Unparsed ||
+         (EST == EST_Unevaluated && MD->getParent()->isBeingDefined());
+}
+
 static bool CheckEquivalentExceptionSpecImpl(
     Sema &S, const PartialDiagnostic &DiagID, const PartialDiagnostic &NoteID,
     const FunctionProtoType *Old, SourceLocation OldLoc,
@@ -276,6 +286,14 @@ bool Sema::CheckEquivalentExceptionSpec(FunctionDecl *Old, FunctionDecl *New) {
   if (getLangOpts().MicrosoftExt) {
     DiagID = diag::ext_mismatched_exception_spec;
     ReturnValueOnError = false;
+  }
+
+  // If we're befriending a member function of a class that's currently being
+  // defined, we might not be able to work out its exception specification yet.
+  // If not, defer the check until later.
+  if (exceptionSpecNotKnownYet(Old) || exceptionSpecNotKnownYet(New)) {
+    DelayedEquivalentExceptionSpecChecks.push_back({New, Old});
+    return false;
   }
 
   // Check the types as written: they must match before any exception
@@ -904,26 +922,21 @@ bool Sema::CheckOverridingFunctionExceptionSpec(const CXXMethodDecl *New,
   if (New->getType()->castAs<FunctionProtoType>()->getExceptionSpecType() ==
       EST_Unparsed)
     return false;
-  if (getLangOpts().CPlusPlus11 && isa<CXXDestructorDecl>(New)) {
-    // Don't check uninstantiated template destructors at all. We can only
-    // synthesize correct specs after the template is instantiated.
-    if (New->getParent()->isDependentType())
-      return false;
-    if (New->getParent()->isBeingDefined()) {
-      // The destructor might be updated once the definition is finished. So
-      // remember it and check later.
-      DelayedExceptionSpecChecks.push_back(std::make_pair(New, Old));
-      return false;
-    }
-  }
-  // If the old exception specification hasn't been parsed yet, remember that
-  // we need to perform this check when we get to the end of the outermost
+
+  // Don't check uninstantiated template destructors at all. We can only
+  // synthesize correct specs after the template is instantiated.
+  if (isa<CXXDestructorDecl>(New) && New->getParent()->isDependentType())
+    return false;
+
+  // If the old exception specification hasn't been parsed yet, or the new
+  // exception specification can't be computed yet, remember that we need to
+  // perform this check when we get to the end of the outermost
   // lexically-surrounding class.
-  if (Old->getType()->castAs<FunctionProtoType>()->getExceptionSpecType() ==
-      EST_Unparsed) {
-    DelayedExceptionSpecChecks.push_back(std::make_pair(New, Old));
+  if (exceptionSpecNotKnownYet(Old) || exceptionSpecNotKnownYet(New)) {
+    DelayedOverridingExceptionSpecChecks.push_back({New, Old});
     return false;
   }
+
   unsigned DiagID = diag::err_override_exception_spec;
   if (getLangOpts().MicrosoftExt)
     DiagID = diag::ext_override_exception_spec;
@@ -992,7 +1005,7 @@ static CanThrowResult canCalleeThrow(Sema &S, const Expr *E, const Decl *D) {
   if (!FT)
     return CT_Can;
 
-  FT = S.ResolveExceptionSpec(E->getLocStart(), FT);
+  FT = S.ResolveExceptionSpec(E->getBeginLoc(), FT);
   if (!FT)
     return CT_Can;
 
@@ -1038,6 +1051,9 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   //   [Can throw] if in a potentially-evaluated context the expression would
   //   contain:
   switch (E->getStmtClass()) {
+  case Expr::ConstantExprClass:
+    return canThrow(cast<ConstantExpr>(E)->getSubExpr());
+
   case Expr::CXXThrowExprClass:
     //   - a potentially evaluated throw-expression
     return CT_Can;

@@ -16,7 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -186,4 +186,8 @@ void ObjCContainersChecker::printState(raw_ostream &OS, ProgramStateRef State,
 /// Register checker.
 void ento::registerObjCContainersChecker(CheckerManager &mgr) {
   mgr.registerChecker<ObjCContainersChecker>();
+}
+
+bool ento::shouldRegisterObjCContainersChecker(const LangOptions &LO) {
+  return true;
 }

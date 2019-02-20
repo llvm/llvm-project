@@ -108,7 +108,7 @@ Configuring Style in Code
 
 When using ``clang::format::reformat(...)`` functions, the format is specified
 by supplying the `clang::format::FormatStyle
-<http://clang.llvm.org/doxygen/structclang_1_1format_1_1FormatStyle.html>`_
+<https://clang.llvm.org/doxygen/structclang_1_1format_1_1FormatStyle.html>`_
 structure.
 
 
@@ -131,7 +131,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LLVM``
     A style complying with the `LLVM coding standards
-    <http://llvm.org/docs/CodingStandards.html>`_
+    <https://llvm.org/docs/CodingStandards.html>`_
   * ``Google``
     A style complying with `Google's C++ style guide
     <http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml>`_
@@ -908,20 +908,17 @@ the configuration (without a prefix: ``Auto``).
 
       try {
         foo();
-      } catch () {
+      }
+      catch () {
       }
       void foo() { bar(); }
-      class foo
-      {
+      class foo {
       };
       if (foo()) {
-      } else {
       }
-      enum X : int
-      {
-        A,
-        B
-      };
+      else {
+      }
+      enum X : int { A, B };
 
   * ``BS_Allman`` (in configuration: ``Allman``)
     Always break before braces.
@@ -1134,21 +1131,17 @@ the configuration (without a prefix: ``Auto``).
   .. code-block:: c++
 
     true:
-    FitsOnOneLine::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
-
-    DoesntFit::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
-          aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
-          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+    SomeClass::Constructor()
+        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+      return 0;
+    }
 
     false:
-    FitsOnOneLine::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
-
-    DoesntFit::Constructor()
-        : aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa),
-          aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}
+    SomeClass::Constructor()
+        : aaaaaaaa(aaaaaaaa), aaaaaaaa(aaaaaaaa),
+          aaaaaaaa(aaaaaaaaaaaaaaaaaaaaaaaaa) {
+      return 0;
+    }
 
 **ConstructorInitializerIndentWidth** (``unsigned``)
   The number of characters to use for indentation of constructor
@@ -1297,7 +1290,7 @@ the configuration (without a prefix: ``Auto``).
   If none of the regular expressions match, INT_MAX is assigned as
   category. The main header for a source file automatically gets category 0.
   so that it is generally kept at the beginning of the ``#includes``
-  (http://llvm.org/docs/CodingStandards.html#include-style). However, you
+  (https://llvm.org/docs/CodingStandards.html#include-style). However, you
   can also assign negative priorities if you have certain headers that
   always need to be first.
 
@@ -1401,6 +1394,39 @@ the configuration (without a prefix: ``Auto``).
      false:
      LoooooooooooooooooooooooooooooooooooooooongReturnType
      LoooooooooooooooooooooooooooooooongFunctionDeclaration();
+
+**JavaImportGroups** (``std::vector<std::string>``)
+  A vector of prefixes ordered by the desired groups for Java imports.
+
+  Each group is separated by a newline. Static imports will also follow the
+  same grouping convention above all non-static imports. One group's prefix
+  can be a subset of another - the longest prefix is always matched. Within
+  a group, the imports are ordered lexicographically.
+
+  In the .clang-format configuration file, this can be configured like
+  in the following yaml example. This will result in imports being
+  formatted as in the Java example below.
+
+  .. code-block:: yaml
+
+    JavaImportGroups: ['com.example', 'com', 'org']
+
+
+  .. code-block:: java
+
+     import static com.example.function1;
+
+     import static com.test.function2;
+
+     import static org.example.function3;
+
+     import com.example.ClassA;
+     import com.example.Test;
+     import com.example.a.ClassB;
+
+     import com.test.ClassC;
+
+     import org.example.ClassD;
 
 **JavaScriptQuotes** (``JavaScriptQuoteStyle``)
   The JavaScriptQuoteStyle to use for JavaScript strings.
@@ -1978,6 +2004,16 @@ the configuration (without a prefix: ``Auto``).
     Automatic detection based on the input.
 
 
+
+**StatementMacros** (``std::vector<std::string>``)
+  A vector of macros that should be interpreted as complete
+  statements.
+
+  Typical macros are expressions, and require a semi-colon to be
+  added; sometimes this is not the case, and this allows to make
+  clang-format aware of such cases.
+
+  For example: Q_UNUSED
 
 **TabWidth** (``unsigned``)
   The number of columns used for tab stops.

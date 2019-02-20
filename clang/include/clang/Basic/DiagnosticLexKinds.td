@@ -122,6 +122,9 @@ def ext_unicode_whitespace : ExtWarn<
 def warn_utf8_symbol_homoglyph : Warning<
   "treating Unicode character <U+%0> as identifier character rather than "
   "as '%1' symbol">, InGroup<DiagGroup<"unicode-homoglyph">>;
+def warn_utf8_symbol_zero_width : Warning<
+  "identifier contains Unicode character <U+%0> that is invisible in "
+  "some environments">, InGroup<DiagGroup<"unicode-zero-width">>;
 
 def err_hex_escape_no_digits : Error<
   "\\%0 used with no following hex digits">;
@@ -254,13 +257,6 @@ def warn_bad_character_encoding : ExtWarn<
   InGroup<InvalidSourceEncoding>;
 def err_lexing_string : Error<"failure when lexing a string">;
 def err_placeholder_in_source : Error<"editor placeholder in source file">;
-
-
-//===----------------------------------------------------------------------===//
-// PTH Diagnostics
-//===----------------------------------------------------------------------===//
-def err_invalid_pth_file : Error<
-    "invalid or corrupt PTH file '%0'">;
 
 //===----------------------------------------------------------------------===//
 // Preprocessor Diagnostics
@@ -409,11 +405,22 @@ def err_pp_through_header_not_found : Error<
 def err_pp_through_header_not_seen : Error<
   "#include of '%0' not seen while attempting to "
   "%select{create|use}1 precompiled header">, DefaultFatal;
+def err_pp_pragma_hdrstop_not_seen : Error<
+  "#pragma hdrstop not seen while attempting to use precompiled header">,
+  DefaultFatal;
 def warn_pp_macro_def_mismatch_with_pch : Warning<
   "definition of macro %0 does not match definition in precompiled header">,
   InGroup<ClangClPch>;
-def err_pp_file_not_found_not_fatal : Error<
+def warn_pp_hdrstop_filename_ignored : Warning<
+  "#pragma hdrstop filename not supported, "
+  "/Fp can be used to specify precompiled header filename">,
+  InGroup<ClangClPch>;
+def err_pp_file_not_found_angled_include_not_fatal : Error<
   "'%0' file not found with <angled> include; use \"quotes\" instead">;
+def err_pp_file_not_found_typo_not_fatal
+    : Error<"'%0' file not found, did you mean '%1'?">;
+def note_pp_framework_without_header : Note<
+  "did not find header '%0' in framework '%1' (loaded from '%2')">;
 def err_pp_error_opening_file : Error<
   "error opening file '%0': %1">, DefaultFatal;
 def err_pp_empty_filename : Error<"empty filename">;
@@ -558,8 +565,6 @@ def err_pp_module_end_without_module_begin : Error<
   "'#pragma clang module end'">;
 def note_pp_module_begin_here : Note<
   "entering module '%0' due to this pragma">;
-def err_pp_module_build_pth : Error<
-  "'#pragma clang module build' not supported in pretokenized header">;
 def err_pp_module_build_missing_end : Error<
   "no matching '#pragma clang module endbuild' for this '#pragma clang module build'">;
 

@@ -23,7 +23,7 @@
 //===----------------------------------------------------------------------===//
 //
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -202,4 +202,8 @@ void RunLoopAutoreleaseLeakChecker::checkASTCodeBody(const Decl *D,
 
 void ento::registerRunLoopAutoreleaseLeakChecker(CheckerManager &mgr) {
   mgr.registerChecker<RunLoopAutoreleaseLeakChecker>();
+}
+
+bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(const LangOptions &LO) {
+  return true;
 }

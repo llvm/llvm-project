@@ -1,3 +1,8 @@
+import os
+from clang.cindex import Config
+if 'CLANG_LIBRARY_PATH' in os.environ:
+    Config.set_library_path(os.environ['CLANG_LIBRARY_PATH'])
+
 import gc
 import unittest
 
@@ -436,3 +441,28 @@ class TestType(unittest.TestCase):
 
         self.assertIsNotNone(testInteger, "Could not find testInteger.")
         self.assertEqual(testInteger.type.get_address_space(), 2)
+
+    def test_template_arguments(self):
+        source = """
+        class Foo {
+        };
+        template <typename T>
+        class Template {
+        };
+        Template<Foo> instance;
+        int bar;
+        """
+        tu = get_tu(source, lang='cpp')
+
+        # Varible with a template argument.
+        cursor = get_cursor(tu, 'instance')
+        cursor_type = cursor.type
+        self.assertEqual(cursor.kind, CursorKind.VAR_DECL)
+        self.assertEqual(cursor_type.spelling, 'Template<Foo>')
+        self.assertEqual(cursor_type.get_num_template_arguments(), 1)
+        template_type = cursor_type.get_template_argument_type(0)
+        self.assertEqual(template_type.spelling, 'Foo')
+
+        # Variable without a template argument.
+        cursor = get_cursor(tu, 'bar')
+        self.assertEqual(cursor.get_num_template_arguments(), -1)

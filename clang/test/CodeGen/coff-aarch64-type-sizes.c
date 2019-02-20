@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple aarch64-windows -emit-llvm -w -o - %s | FileCheck %s
 
 // CHECK: target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
-// CHECK: target triple = "aarch64--windows-msvc"
+// CHECK: target triple = "aarch64-unknown-windows-msvc"
 
 int check_short() {
   return sizeof(short);

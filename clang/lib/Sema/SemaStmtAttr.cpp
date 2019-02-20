@@ -16,7 +16,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Sema/DelayedDiagnostic.h"
 #include "clang/Sema/Lookup.h"
-#include "clang/Sema/LoopHint.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -29,7 +28,7 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                        A.getAttributeSpellingListIndex());
   if (!isa<NullStmt>(St)) {
     S.Diag(A.getRange().getBegin(), diag::err_fallthrough_attr_wrong_target)
-        << Attr.getSpelling() << St->getLocStart();
+        << Attr.getSpelling() << St->getBeginLoc();
     if (isa<SwitchCase>(St)) {
       SourceLocation L = S.getLocForEndOfToken(Range.getEnd());
       S.Diag(L, diag::note_fallthrough_insert_semi_fixit)
@@ -56,8 +55,7 @@ static Attr *handleFallThroughAttr(Sema &S, Stmt *St, const ParsedAttr &A,
 static Attr *handleSuppressAttr(Sema &S, Stmt *St, const ParsedAttr &A,
                                 SourceRange Range) {
   if (A.getNumArgs() < 1) {
-    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments)
-        << A.getName() << 1;
+    S.Diag(A.getLoc(), diag::err_attribute_too_few_arguments) << A << 1;
     return nullptr;
   }
 
@@ -101,7 +99,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
             .Case("unroll_and_jam", "#pragma unroll_and_jam")
             .Case("nounroll_and_jam", "#pragma nounroll_and_jam")
             .Default("#pragma clang loop");
-    S.Diag(St->getLocStart(), diag::err_pragma_loop_precedes_nonloop) << Pragma;
+    S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop) << Pragma;
     return nullptr;
   }
 
@@ -155,7 +153,7 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
         Option == LoopHintAttr::InterleaveCount ||
         Option == LoopHintAttr::UnrollCount) {
       assert(ValueExpr && "Attribute must have a valid value expression.");
-      if (S.CheckLoopHintExpr(ValueExpr, St->getLocStart()))
+      if (S.CheckLoopHintExpr(ValueExpr, St->getBeginLoc()))
         return nullptr;
       State = LoopHintAttr::Numeric;
     } else if (Option == LoopHintAttr::Vectorize ||
@@ -284,8 +282,7 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
   unsigned NumArgs = A.getNumArgs();
 
   if (NumArgs > 1) {
-    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A.getName()
-                                                               << 1;
+    S.Diag(A.getLoc(), diag::err_attribute_too_many_arguments) << A << 1;
     return nullptr;
   }
 
@@ -297,7 +294,7 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
 
     if (!E->isIntegerConstantExpr(ArgVal, S.Context)) {
       S.Diag(A.getLoc(), diag::err_attribute_argument_type)
-          << A.getName() << AANT_ArgumentIntegerConstant << E->getSourceRange();
+          << A << AANT_ArgumentIntegerConstant << E->getSourceRange();
       return nullptr;
     }
 
@@ -306,7 +303,7 @@ static Attr *handleOpenCLUnrollHint(Sema &S, Stmt *St, const ParsedAttr &A,
     if (Val <= 0) {
       S.Diag(A.getRange().getBegin(),
              diag::err_attribute_requires_positive_integer)
-          << A.getName();
+          << A << /* positive */ 0;
       return nullptr;
     }
     UnrollFactor = Val;
@@ -319,9 +316,10 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
                                   SourceRange Range) {
   switch (A.getKind()) {
   case ParsedAttr::UnknownAttribute:
-    S.Diag(A.getLoc(), A.isDeclspecAttribute() ?
-           diag::warn_unhandled_ms_attribute_ignored :
-           diag::warn_unknown_attribute_ignored) << A.getName();
+    S.Diag(A.getLoc(), A.isDeclspecAttribute()
+                           ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
+                           : (unsigned)diag::warn_unknown_attribute_ignored)
+        << A.getName();
     return nullptr;
   case ParsedAttr::AT_FallThrough:
     return handleFallThroughAttr(S, St, A, Range);
@@ -335,7 +333,7 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     // if we're here, then we parsed a known attribute, but didn't recognize
     // it as a statement attribute => it is declaration attribute
     S.Diag(A.getRange().getBegin(), diag::err_decl_attribute_invalid_on_stmt)
-        << A.getName() << St->getLocStart();
+        << A.getName() << St->getBeginLoc();
     return nullptr;
   }
 }

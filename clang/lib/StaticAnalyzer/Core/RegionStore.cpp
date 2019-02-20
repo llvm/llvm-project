@@ -347,11 +347,9 @@ public:
     : StoreManager(mgr), Features(f),
       RBFactory(mgr.getAllocator()), CBFactory(mgr.getAllocator()),
       SmallStructLimit(0) {
-    if (SubEngine *Eng = StateMgr.getOwningEngine()) {
-      AnalyzerOptions &Options = Eng->getAnalysisManager().options;
-      SmallStructLimit =
-        Options.RegionStoreSmallStructLimit;
-    }
+    SubEngine &Eng = StateMgr.getOwningEngine();
+    AnalyzerOptions &Options = Eng.getAnalysisManager().options;
+    SmallStructLimit = Options.RegionStoreSmallStructLimit;
   }
 
 
@@ -1330,11 +1328,11 @@ RegionStoreManager::invalidateRegions(Store store,
   case GFK_All:
     B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind,
                                Ex, Count, LCtx, B, Invalidated);
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case GFK_SystemOnly:
     B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind,
                                Ex, Count, LCtx, B, Invalidated);
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case GFK_None:
     break;
   }
@@ -2393,7 +2391,10 @@ RegionStoreManager::bindAggregate(RegionBindingsConstRef B,
 namespace {
 class RemoveDeadBindingsWorker
     : public ClusterAnalysis<RemoveDeadBindingsWorker> {
-  SmallVector<const SymbolicRegion *, 12> Postponed;
+  using ChildrenListTy = SmallVector<const SymbolDerived *, 4>;
+  using MapParentsToDerivedTy = llvm::DenseMap<SymbolRef, ChildrenListTy>;
+
+  MapParentsToDerivedTy ParentsToDerived;
   SymbolReaper &SymReaper;
   const StackFrameContext *CurrentLCtx;
 
@@ -2414,8 +2415,10 @@ public:
 
   bool AddToWorkList(const MemRegion *R);
 
-  bool UpdatePostponed();
   void VisitBinding(SVal V);
+
+private:
+  void populateWorklistFromSymbol(SymbolRef s);
 };
 }
 
@@ -2435,10 +2438,11 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
   }
 
   if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(baseR)) {
-    if (SymReaper.isLive(SR->getSymbol()))
+    if (SymReaper.isLive(SR->getSymbol())) {
       AddToWorkList(SR, &C);
-    else
-      Postponed.push_back(SR);
+    } else if (const auto *SD = dyn_cast<SymbolDerived>(SR->getSymbol())) {
+      ParentsToDerived[SD->getParentSymbol()].push_back(SD);
+    }
 
     return;
   }
@@ -2451,7 +2455,7 @@ void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
   // CXXThisRegion in the current or parent location context is live.
   if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
     const auto *StackReg =
-        cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
+      cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
     const StackFrameContext *RegCtx = StackReg->getStackFrame();
     if (CurrentLCtx &&
         (RegCtx == CurrentLCtx || RegCtx->isParentOf(CurrentLCtx)))
@@ -2495,6 +2499,15 @@ void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
   // If V is a region, then add it to the worklist.
   if (const MemRegion *R = V.getAsRegion()) {
     AddToWorkList(R);
+
+    if (const auto *TVR = dyn_cast<TypedValueRegion>(R)) {
+      DefinedOrUnknownSVal RVS =
+          RM.getSValBuilder().getRegionValueSymbolVal(TVR);
+      if (const MemRegion *SR = RVS.getAsRegion()) {
+        AddToWorkList(SR);
+      }
+    }
+
     SymReaper.markLive(R);
 
     // All regions captured by a block are also live.
@@ -2508,25 +2521,30 @@ void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
 
 
   // Update the set of live symbols.
-  for (auto SI = V.symbol_begin(), SE = V.symbol_end(); SI!=SE; ++SI)
+  for (auto SI = V.symbol_begin(), SE = V.symbol_end(); SI != SE; ++SI) {
+    populateWorklistFromSymbol(*SI);
+
+    for (const auto *SD : ParentsToDerived[*SI])
+      populateWorklistFromSymbol(SD);
+
     SymReaper.markLive(*SI);
+  }
 }
 
-bool RemoveDeadBindingsWorker::UpdatePostponed() {
-  // See if any postponed SymbolicRegions are actually live now, after
-  // having done a scan.
-  bool Changed = false;
+void RemoveDeadBindingsWorker::populateWorklistFromSymbol(SymbolRef S) {
+  if (const auto *SD = dyn_cast<SymbolData>(S)) {
+    if (Loc::isLocType(SD->getType()) && !SymReaper.isLive(SD)) {
+      const SymbolicRegion *SR = RM.getRegionManager().getSymbolicRegion(SD);
 
-  for (auto I = Postponed.begin(), E = Postponed.end(); I != E; ++I) {
-    if (const SymbolicRegion *SR = *I) {
-      if (SymReaper.isLive(SR->getSymbol())) {
-        Changed |= AddToWorkList(SR);
-        *I = nullptr;
-      }
+      if (B.contains(SR))
+        AddToWorkList(SR);
+
+      const SymbolicRegion *SHR =
+          RM.getRegionManager().getSymbolicHeapRegion(SD);
+      if (B.contains(SHR))
+        AddToWorkList(SHR);
     }
   }
-
-  return Changed;
 }
 
 StoreRef RegionStoreManager::removeDeadBindings(Store store,
@@ -2542,7 +2560,7 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
     W.AddToWorkList(*I);
   }
 
-  do W.RunWorkList(); while (W.UpdatePostponed());
+  W.RunWorkList();
 
   // We have now scanned the store, marking reachable regions and symbols
   // as live.  We now remove all the regions that are dead from the store

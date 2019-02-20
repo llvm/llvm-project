@@ -74,8 +74,8 @@ bool trans::isPlusOneAssign(const BinaryOperator *E) {
 bool trans::isPlusOne(const Expr *E) {
   if (!E)
     return false;
-  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
-    E = EWC->getSubExpr();
+  if (const FullExpr *FE = dyn_cast<FullExpr>(E))
+    E = FE->getSubExpr();
 
   if (const ObjCMessageExpr *
         ME = dyn_cast<ObjCMessageExpr>(E->IgnoreParenCasts()))
@@ -359,7 +359,7 @@ MigrationContext::~MigrationContext() {
 bool MigrationContext::isGCOwnedNonObjC(QualType T) {
   while (!T.isNull()) {
     if (const AttributedType *AttrT = T->getAs<AttributedType>()) {
-      if (AttrT->getAttrKind() == AttributedType::attr_objc_ownership)
+      if (AttrT->getAttrKind() == attr::ObjCOwnership)
         return !AttrT->getModifiedType()->isObjCRetainableType();
     }
 

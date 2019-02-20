@@ -37,10 +37,8 @@ int __attribute__((cpu_dispatch(atom))) redecl2(void) { }
 // expected-note@-2 {{previous definition is here}}
 int __attribute__((cpu_dispatch(atom))) redecl2(void) { }
 
-int redecl3(void);
-// expected-error@-1 {{function declaration is missing 'cpu_specific' or 'cpu_dispatch' attribute in a multiversioned function}}
-// expected-note@+1 {{function multiversioning caused by this declaration}}
-int __attribute__((cpu_dispatch(atom))) redecl3(void) {}
+int allow_fwd_decl(void);
+int __attribute__((cpu_dispatch(atom))) allow_fwd_decl(void) {}
 
 int __attribute__((cpu_specific(atom))) redecl4(void);
 // expected-error@+1 {{function declaration is missing 'cpu_specific' or 'cpu_dispatch' attribute in a multiversioned function}}

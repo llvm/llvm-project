@@ -166,6 +166,20 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 }
 
+TEST(FormatTestObjCStyle, AvoidDetectingDesignatedInitializersAsObjCInHeaders) {
+  auto Style = getStyle("LLVM", "a.h", "none",
+                        "static const char *names[] = {[0] = \"foo\",\n"
+                        "[kBar] = \"bar\"};");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+
+  Style = getStyle("LLVM", "a.h", "none",
+                   "static const char *names[] = {[0] EQ \"foo\",\n"
+                   "[kBar] EQ \"bar\"};");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_Cpp, Style->Language);
+}
+
 TEST_F(FormatTestObjC, FormatObjCTryCatch) {
   verifyFormat("@try {\n"
                "  f();\n"
@@ -584,6 +598,16 @@ TEST_F(FormatTestObjC, FormatObjCMethodDeclarations) {
                "             aaaaa:(a)yyy\n"
                "               bbb:(d)cccc;");
   verifyFormat("- (void)drawRectOn:(id)surface ofSize:(aaa)height:(bbb)width;");
+
+  // BraceWrapping AfterFunction is respected for ObjC methods 
+  Style = getGoogleStyle(FormatStyle::LK_ObjC);
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterFunction = true;
+  verifyFormat("@implementation Foo\n"
+               "- (void)foo:(id)bar\n"
+               "{\n"
+               "}\n"
+               "@end\n");
 }
 
 TEST_F(FormatTestObjC, FormatObjCMethodExpr) {

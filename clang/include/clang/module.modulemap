@@ -5,6 +5,12 @@ module Clang_Analysis {
   textual header "Analysis/Analyses/ThreadSafetyOps.def"
 
   module * { export * }
+
+  // FIXME: Exclude these headers to avoid pulling all of the AST matchers
+  // library into clang. Due to inline key functions in the headers,
+  // importing the AST matchers library gives a link dependency on the AST
+  // matchers (and thus the AST), which clang-format should not have.
+  exclude header "Analysis/Analyses/ExprMutationAnalyzer.h"
 }
 
 module Clang_AST {
@@ -41,11 +47,13 @@ module Clang_Basic {
   textual header "Basic/BuiltinsX86.def"
   textual header "Basic/BuiltinsX86_64.def"
   textual header "Basic/BuiltinsXCore.def"
+  textual header "Basic/CodeGenOptions.def"
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/Features.def"
   textual header "Basic/LangOptions.def"
   textual header "Basic/OpenCLExtensions.def"
   textual header "Basic/OpenCLImageTypes.def"
+  textual header "Basic/OpenCLExtensionTypes.def"
   textual header "Basic/OpenMPKinds.def"
   textual header "Basic/OperatorKinds.def"
   textual header "Basic/Sanitizers.def"
@@ -95,17 +103,6 @@ module Clang_Frontend {
   textual header "Frontend/LangStandards.def"
 
   module * { export * }
-
-  // FIXME: This violates layers.
-  exclude header "Frontend/PCHContainerOperations.h"
-}
-
-// Used in clangBasic
-module Clang_Frontend_CodeGenOptions {
-  requires cplusplus
-  header "Frontend/CodeGenOptions.h"
-  textual header "Frontend/CodeGenOptions.def"
-  export *
 }
 
 module Clang_FrontendTool { requires cplusplus umbrella "FrontendTool" module * { export * } }

@@ -98,7 +98,6 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasMOVBE = false;
   bool HasPREFETCHWT1 = false;
   bool HasRDPID = false;
-  bool HasRetpoline = false;
   bool HasRetpolineExternalThunk = false;
   bool HasLAHFSAHF = false;
   bool HasWBNOINVD = false;
@@ -226,6 +225,7 @@ public:
     case 'Y':
       if ((++I != E) && ((*I == '0') || (*I == 'z')))
         return "xmm0";
+      break;
     default:
       break;
     }
@@ -291,9 +291,6 @@ public:
     return checkCPUKind(CPU = getCPUKind(Name));
   }
 
-  bool supportsMultiVersioning() const override {
-    return getTriple().isOSBinFormatELF();
-  }
   unsigned multiVersionSortPriority(StringRef Name) const override;
 
   bool setFPMath(StringRef Name) override;
@@ -350,11 +347,9 @@ public:
          (1 << TargetInfo::LongDouble));
 
     // x86-32 has atomics up to 8 bytes
-    CPUKind Kind = getCPUKind(Opts.CPU);
-    if (Kind >= CK_i586 || Kind == CK_Generic)
-      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-    else if (Kind >= CK_i486)
-      MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
+    // FIXME: Check that we actually have cmpxchg8b before setting
+    // MaxAtomicInlineWidth. (cmpxchg8b is an i586 instruction.)
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
 
   BuiltinVaListKind getBuiltinVaListKind() const override {

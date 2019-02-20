@@ -11,9 +11,9 @@
 #define LLVM_CLANG_DRIVER_DARWIN_SDK_INFO_H
 
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace driver {
@@ -33,7 +33,7 @@ private:
 ///
 /// \returns an error if the SDKSettings.json file is invalid, None if the
 /// SDK has no SDKSettings.json, or a valid \c DarwinSDKInfo otherwise.
-Expected<Optional<DarwinSDKInfo>> parseDarwinSDKInfo(clang::vfs::FileSystem &VFS,
+Expected<Optional<DarwinSDKInfo>> parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS,
                                                      StringRef SDKRootPath);
 
 } // end namespace driver

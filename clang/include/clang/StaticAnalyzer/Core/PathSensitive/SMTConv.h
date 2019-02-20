@@ -246,7 +246,7 @@ public:
       // Logical operators
     case BO_LAnd:
     case BO_LOr:
-      return fromBinOp(Solver, LHS, Op, RHS, false);
+      return fromBinOp(Solver, LHS, Op, RHS, /*isSigned=*/false);
 
     default:;
     }
@@ -294,14 +294,14 @@ public:
     if (FromTy->isIntegralOrEnumerationType() && ToTy->isRealFloatingType()) {
       SMTSortRef Sort = Solver->getFloatSort(ToBitWidth);
       return FromTy->isSignedIntegerOrEnumerationType()
-                 ? Solver->mkFPtoSBV(Exp, Sort)
-                 : Solver->mkFPtoUBV(Exp, Sort);
+                 ? Solver->mkSBVtoFP(Exp, Sort)
+                 : Solver->mkUBVtoFP(Exp, Sort);
     }
 
     if (FromTy->isRealFloatingType() && ToTy->isIntegralOrEnumerationType())
       return ToTy->isSignedIntegerOrEnumerationType()
-                 ? Solver->mkSBVtoFP(Exp, ToBitWidth)
-                 : Solver->mkUBVtoFP(Exp, ToBitWidth);
+                 ? Solver->mkFPtoSBV(Exp, ToBitWidth)
+                 : Solver->mkFPtoUBV(Exp, ToBitWidth);
 
     llvm_unreachable("Unsupported explicit type cast!");
   }
@@ -379,14 +379,14 @@ public:
           getSymExpr(Solver, Ctx, SIE->getLHS(), &LTy, hasComparison);
       llvm::APSInt NewRInt;
       std::tie(NewRInt, RTy) = fixAPSInt(Ctx, SIE->getRHS());
-      SMTExprRef RHS = Solver->fromAPSInt(NewRInt);
+      SMTExprRef RHS = Solver->mkBitvector(NewRInt, NewRInt.getBitWidth());
       return getBinExpr(Solver, Ctx, LHS, LTy, Op, RHS, RTy, RetTy);
     }
 
     if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
       llvm::APSInt NewLInt;
       std::tie(NewLInt, LTy) = fixAPSInt(Ctx, ISE->getLHS());
-      SMTExprRef LHS = Solver->fromAPSInt(NewLInt);
+      SMTExprRef LHS = Solver->mkBitvector(NewLInt, NewLInt.getBitWidth());
       SMTExprRef RHS =
           getSymExpr(Solver, Ctx, ISE->getRHS(), &RTy, hasComparison);
       return getBinExpr(Solver, Ctx, LHS, LTy, Op, RHS, RTy, RetTy);
@@ -466,7 +466,7 @@ public:
       llvm::APFloat Zero =
           llvm::APFloat::getZero(Ctx.getFloatTypeSemantics(Ty));
       return fromFloatBinOp(Solver, Exp, Assumption ? BO_EQ : BO_NE,
-                            Solver->fromAPFloat(Zero));
+                            Solver->mkFloat(Zero));
     }
 
     if (Ty->isIntegralOrEnumerationType() || Ty->isAnyPointerType() ||
@@ -477,8 +477,10 @@ public:
       if (Ty->isBooleanType())
         return Assumption ? fromUnOp(Solver, UO_LNot, Exp) : Exp;
 
-      return fromBinOp(Solver, Exp, Assumption ? BO_EQ : BO_NE,
-                       Solver->fromInt("0", Ctx.getTypeSize(Ty)), isSigned);
+      return fromBinOp(
+          Solver, Exp, Assumption ? BO_EQ : BO_NE,
+          Solver->mkBitvector(llvm::APSInt("0"), Ctx.getTypeSize(Ty)),
+          isSigned);
     }
 
     llvm_unreachable("Unsupported type for zero value!");
@@ -493,7 +495,8 @@ public:
     QualType FromTy;
     llvm::APSInt NewFromInt;
     std::tie(NewFromInt, FromTy) = fixAPSInt(Ctx, From);
-    SMTExprRef FromExp = Solver->fromAPSInt(NewFromInt);
+    SMTExprRef FromExp =
+        Solver->mkBitvector(NewFromInt, NewFromInt.getBitWidth());
 
     // Convert symbol
     QualType SymTy;
@@ -507,7 +510,7 @@ public:
     QualType ToTy;
     llvm::APSInt NewToInt;
     std::tie(NewToInt, ToTy) = fixAPSInt(Ctx, To);
-    SMTExprRef ToExp = Solver->fromAPSInt(NewToInt);
+    SMTExprRef ToExp = Solver->mkBitvector(NewToInt, NewToInt.getBitWidth());
     assert(FromTy == ToTy && "Range values have different types!");
 
     // Construct two (in)equalities, and a logical and/or

@@ -171,7 +171,6 @@ void foo() {
   // CHECK-CC4-NEXT: COMPLETION: volatile
   // CHECK-CC4-NEXT: COMPLETION: wchar_t
   // CHECK-CC4-NEXT: COMPLETION: X : X
-  // CHECK-CC4-NEXT: COMPLETION: y : [#int#]y
   // CHECK-CC4-NEXT: COMPLETION: z : [#void#]z(<#int#>)
 
   // RUN: %clang_cc1 -fsyntax-only -fno-rtti -code-completion-patterns -code-completion-at=%s:6:14 -std=gnu++98 %s -o - | FileCheck -check-prefix=CHECK-NO-RTTI %s

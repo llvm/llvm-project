@@ -86,13 +86,13 @@ void edit::fillInMissingSwitchEnumCases(
     }
     const auto *CS = cast<CaseStmt>(Case);
     if (const auto *LHS = CS->getLHS()) {
-      llvm::APSInt Value;
-      if (!LHS->EvaluateAsInt(Value, Context))
+      Expr::EvalResult Result;
+      if (!LHS->EvaluateAsInt(Result, Context))
         continue;
       // Only allow constant that fix into 64 bits.
-      if (Value.getMinSignedBits() > 64)
+      if (Result.Val.getInt().getMinSignedBits() > 64)
         continue;
-      CoveredEnumCases[Value.getSExtValue()] =
+      CoveredEnumCases[Result.Val.getInt().getSExtValue()] =
           CaseInfo{Case, NextCase, CaseIndex};
       // The cases in the switch are ordered back to front, so the last
       //  case is actually the first enum case in the switch.
@@ -134,9 +134,9 @@ void edit::fillInMissingSwitchEnumCases(
           // Note: Switch cases are ordered back to front, so the last default
           // case would be the first case in the switch statement.
           if (DefaultCase && DefaultCase == Switch->getSwitchCaseList())
-            InsertionLoc = DefaultCase->getLocStart();
+            InsertionLoc = DefaultCase->getBeginLoc();
           else
-            InsertionLoc = Switch->getBody()->getLocEnd();
+            InsertionLoc = Switch->getBody()->getEndLoc();
         }
         Consumer(FixItHint::CreateInsertion(
             Context.getSourceManager().getSpellingLoc(InsertionLoc), OS.str()));
@@ -160,7 +160,7 @@ void edit::fillInMissingSwitchEnumCases(
   // order of enum case values defined in the enum.
   if (useCaseBasedOrdering(CoveredEnumCaseValues, CoveredEnumCases)) {
     // Start inserting before the first covered case.
-    SourceLocation InsertionLoc = FirstCoveredEnumCase->getLocStart();
+    SourceLocation InsertionLoc = FirstCoveredEnumCase->getBeginLoc();
 
     for (const auto &EnumCase : EnumCases) {
       if (!CoveredEnumCases.count(EnumCase.second)) {
@@ -175,7 +175,7 @@ void edit::fillInMissingSwitchEnumCases(
       auto It = CoveredEnumCases.find(EnumCase.second);
       assert(It != CoveredEnumCases.end() && "Missing enum case");
       const CaseInfo &Case = It->second;
-      InsertionLoc = Case.NextCase ? Case.NextCase->getLocStart()
+      InsertionLoc = Case.NextCase ? Case.NextCase->getBeginLoc()
                                    : /*Insert before end*/ SourceLocation();
     }
     CreateReplacementForMissingCaseGroup(UncoveredEnumCases, InsertionLoc);

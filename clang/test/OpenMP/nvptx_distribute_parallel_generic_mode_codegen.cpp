@@ -21,12 +21,17 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-// CHECK: @__omp_offloading_{{.*}}_main_l17_exec_mode = weak constant i8 1
+// CHECK: [[MEM_TY:%.+]] = type { [128 x i8] }
+// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
+// CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 84
+// CHECK-DAG: @__omp_offloading_{{.*}}_main_l17_exec_mode = weak constant i8 1
 
 // CHECK-LABEL: define internal void @__omp_offloading_{{.*}}_main_l17_worker(
 
 // CHECK: define weak void @__omp_offloading_{{.*}}_main_l17([10 x i32]* dereferenceable(40) %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i{{64|32}} %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}})
-// CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} 84, i16 0)
+// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} 84, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: [[PTR:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[STACK:%.+]] = bitcast i8* [[PTR]] to %struct._globalized_locals_ty*
 // CHECK: [[ARGC:%.+]] = load i32, i32* %{{.+}}, align
 // CHECK: [[ARGC_ADDR:%.+]] = getelementptr inbounds %struct._globalized_locals_ty, %struct._globalized_locals_ty* [[STACK]], i{{32|64}} 0, i{{32|64}} 0
@@ -41,7 +46,7 @@ int main(int argc, char **argv) {
 
 // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @
 
-// CHECK: call void @__kmpc_data_sharing_pop_stack(i8* [[PTR]])
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 1)
 
 // CHECK: define internal void [[PARALLEL]](
 // CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(

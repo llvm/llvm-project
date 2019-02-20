@@ -111,9 +111,9 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // handled somewhere else.
   Args.ClaimAllArgs(options::OPT_w);
 
-  if (getToolChain().getArch() == llvm::Triple::mips64)
+  if (ToolChain.getArch() == llvm::Triple::mips64)
     CmdArgs.push_back("-EB");
-  else if (getToolChain().getArch() == llvm::Triple::mips64el)
+  else if (ToolChain.getArch() == llvm::Triple::mips64el)
     CmdArgs.push_back("-EL");
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_shared)) {
@@ -138,7 +138,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
-  if (Args.hasArg(options::OPT_nopie))
+  if (Args.hasArg(options::OPT_nopie) || Args.hasArg(options::OPT_pg))
     CmdArgs.push_back("-nopie");
 
   if (Output.isFilename()) {
@@ -149,44 +149,40 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+    const char *crt0 = nullptr;
+    const char *crtbegin = nullptr;
     if (!Args.hasArg(options::OPT_shared)) {
       if (Args.hasArg(options::OPT_pg))
-        CmdArgs.push_back(
-            Args.MakeArgString(getToolChain().GetFilePath("gcrt0.o")));
+        crt0 = "gcrt0.o";
       else if (Args.hasArg(options::OPT_static) &&
                !Args.hasArg(options::OPT_nopie))
-        CmdArgs.push_back(
-            Args.MakeArgString(getToolChain().GetFilePath("rcrt0.o")));
+        crt0 = "rcrt0.o";
       else
-        CmdArgs.push_back(
-            Args.MakeArgString(getToolChain().GetFilePath("crt0.o")));
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtbegin.o")));
+        crt0 = "crt0.o";
+      crtbegin = "crtbegin.o";
     } else {
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtbeginS.o")));
+      crtbegin = "crtbeginS.o";
     }
+
+    if (crt0)
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crt0)));
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
   }
 
-  std::string Triple = getToolChain().getTripleString();
-  if (Triple.substr(0, 6) == "x86_64")
-    Triple.replace(0, 6, "amd64");
-  CmdArgs.push_back(
-      Args.MakeArgString("-L/usr/lib/gcc-lib/" + Triple + "/4.2.1"));
-  CmdArgs.push_back(Args.MakeArgString("-L/usr/lib"));
-
-  Args.AddAllArgs(CmdArgs, {options::OPT_L, options::OPT_T_Group,
-                            options::OPT_e, options::OPT_s, options::OPT_t,
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+  ToolChain.AddFilePathLibArgs(Args, CmdArgs);
+  Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_e,
+                            options::OPT_s, options::OPT_t,
                             options::OPT_Z_Flag, options::OPT_r});
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     if (D.CCCIsCXX()) {
-      if (getToolChain().ShouldLinkCXXStdlib(Args))
-        getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
+        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
       if (Args.hasArg(options::OPT_pg))
         CmdArgs.push_back("-lm_p");
       else
@@ -202,7 +198,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
     // FIXME: For some reason GCC passes -lgcc before adding
     // the default system libraries. Just mimic this for now.
-    CmdArgs.push_back("-lgcc");
+    CmdArgs.push_back("-lcompiler_rt");
 
     if (Args.hasArg(options::OPT_pthread)) {
       if (!Args.hasArg(options::OPT_shared) && Args.hasArg(options::OPT_pg))
@@ -218,21 +214,22 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-lc");
     }
 
-    CmdArgs.push_back("-lgcc");
+    CmdArgs.push_back("-lcompiler_rt");
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+    const char *crtend = nullptr;
     if (!Args.hasArg(options::OPT_shared))
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtend.o")));
+      crtend = "crtend.o";
     else
-      CmdArgs.push_back(
-          Args.MakeArgString(getToolChain().GetFilePath("crtendS.o")));
+      crtend = "crtendS.o";
+
+    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
   }
 
   const char *Exec = Args.MakeArgString(
-      !NeedsSanitizerDeps ? getToolChain().GetLinkerPath()
-                          : getToolChain().GetProgramPath("ld.lld"));
+      !NeedsSanitizerDeps ? ToolChain.GetLinkerPath()
+                          : ToolChain.GetProgramPath("ld.lld"));
   C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
 }
 
@@ -257,8 +254,7 @@ SanitizerMask OpenBSD::getSupportedSanitizers() const {
 OpenBSD::OpenBSD(const Driver &D, const llvm::Triple &Triple,
                  const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
-  getFilePaths().push_back(getDriver().Dir + "/../lib");
-  getFilePaths().push_back("/usr/lib");
+  getFilePaths().push_back(getDriver().SysRoot + "/usr/lib");
 }
 
 void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,

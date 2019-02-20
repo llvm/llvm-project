@@ -40,7 +40,7 @@
 
 // CHECK-DAG: %struct.ident_t = type { i32, i32, i32, i32, i8* }
 // CHECK-DAG: [[STR:@.+]] = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00"
-// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
+// CHECK-DAG: [[DEF_LOC:@.+]] = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* [[STR]], i32 0, i32 0) }
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
@@ -74,7 +74,11 @@
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
+// CHECK-DAG: @{{.*}} = weak constant i8 0
 
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
@@ -836,4 +840,21 @@ int bar(int n){
 // CHECK:       define internal {{.*}}void [[OMP_OUTLINED7]](i32* noalias %.global_tid., i32* noalias %.bound_tid., i[[SZ]] %{{.+}}, i[[SZ]] %{{.+}}, [10 x i32]* {{.+}})
 // To reduce complexity, we're only going as far as validating the signature of the outlined parallel function.
 
+void foo1() {
+  const int n = 0;
+  #pragma omp target teams shared(n)
+  #pragma omp parallel firstprivate(n)
+  (void)n;
+}
+void foo() {
+  const int n = 0;
+  #pragma omp target teams firstprivate(n)
+  #pragma omp parallel shared(n)
+  (void)n;
+}
+
+// define {{.*}}void @__omp_offloading_{{.*}}foo1{{.*}}_l841(i[[SZ]] %{{.+}})
+// define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i[[SZ]] %{{.+}})
+// define {{.*}}void @__omp_offloading_{{.*}}foo1{{.*}}_l847(i[[SZ]] %{{.+}})
+// define internal void {{@.+}}(i32* {{.+}}, i32* {{.+}}, i32* dereferenceable{{.+}})
 #endif

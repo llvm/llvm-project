@@ -125,12 +125,7 @@ getNamespaceToken(const AnnotatedLine *Line,
     if (StartLineIndex > 0)
       NamespaceTok = AnnotatedLines[StartLineIndex - 1]->First;
   }
-  // Detect "(inline)? namespace" in the beginning of a line.
-  if (NamespaceTok->is(tok::kw_inline))
-    NamespaceTok = NamespaceTok->getNextNonComment();
-  if (!NamespaceTok || NamespaceTok->isNot(tok::kw_namespace))
-    return nullptr;
-  return NamespaceTok;
+  return NamespaceTok->getNamespaceToken();
 }
 
 NamespaceEndCommentsFixer::NamespaceEndCommentsFixer(const Environment &Env,

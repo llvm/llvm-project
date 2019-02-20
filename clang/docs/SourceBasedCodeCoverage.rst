@@ -156,7 +156,7 @@ line-oriented report, try:
 The ``llvm-cov`` tool supports specifying a custom demangler, writing out
 reports in a directory structure, and generating html reports. For the full
 list of options, please refer to the `command guide
-<http://llvm.org/docs/CommandGuide/llvm-cov.html>`_.
+<https://llvm.org/docs/CommandGuide/llvm-cov.html>`_.
 
 A few final notes:
 

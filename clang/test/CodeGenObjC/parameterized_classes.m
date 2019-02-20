@@ -61,11 +61,11 @@ void printMe(NSString *name) { }
 // CHECK-LABEL: define void @blockTest
 void blockTest(NSMutableArray<void (^)(void)> *array, NSString *name) {
   // CHECK-NOT: ret void
-  // CHECK: call i8* @objc_retainBlock
+  // CHECK: call i8* @llvm.objc.retainBlock
   [array addObject: ^ { printMe(name); }];
   // CHECK-NOT: ret void
   array[0] = ^ { printMe(name); };
-  // CHECK: call i8* @objc_retainBlock
+  // CHECK: call i8* @llvm.objc.retainBlock
   // CHECK: ret void
 }
 
@@ -80,7 +80,7 @@ void blockTest(NSMutableArray<void (^)(void)> *array, NSString *name) {
 // CHECK: %[[V5:.*]] = bitcast i8* %[[ADDPTR]] to %[[IVARTY]]**
 // CHECK: %[[V6:.*]] = bitcast %[[IVARTY]]** %[[V5]] to i8**
 // CHECK: %[[V7:.*]] = bitcast %[[IVARTY]]* %[[V2]] to i8*
-// CHECK: call void @objc_storeStrong(i8** %[[V6]], i8* %[[V7]])
+// CHECK: call void @llvm.objc.storeStrong(i8** %[[V6]], i8* %[[V7]])
 
 @interface Base<DestType> : NSObject {
   DestType _destination;

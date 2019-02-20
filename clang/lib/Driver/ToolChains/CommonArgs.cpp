@@ -14,13 +14,13 @@
 #include "Arch/PPC.h"
 #include "Arch/SystemZ.h"
 #include "Arch/X86.h"
+#include "HIP.h"
 #include "Hexagon.h"
 #include "InputInfo.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Compilation.h"
@@ -51,6 +51,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 
 using namespace clang::driver;
@@ -559,6 +560,40 @@ static bool addSanitizerDynamicList(const ToolChain &TC, const ArgList &Args,
   return false;
 }
 
+static void addSanitizerLibPath(const ToolChain &TC, const ArgList &Args,
+                                ArgStringList &CmdArgs, StringRef Name) {
+  for (const auto &LibPath : TC.getLibraryPaths()) {
+    if (!LibPath.empty()) {
+      SmallString<128> P(LibPath);
+      llvm::sys::path::append(P, Name);
+      if (TC.getVFS().exists(P))
+        CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + P));
+    }
+  }
+}
+
+void tools::addSanitizerPathLibArgs(const ToolChain &TC, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  const SanitizerArgs &SanArgs = TC.getSanitizerArgs();
+  if (SanArgs.needsAsanRt()) {
+    addSanitizerLibPath(TC, Args, CmdArgs, "asan");
+  }
+  if (SanArgs.needsHwasanRt()) {
+    addSanitizerLibPath(TC, Args, CmdArgs, "hwasan");
+  }
+  if (SanArgs.needsLsanRt()) {
+    addSanitizerLibPath(TC, Args, CmdArgs, "lsan");
+  }
+  if (SanArgs.needsMsanRt()) {
+    addSanitizerLibPath(TC, Args, CmdArgs, "msan");
+  }
+  if (SanArgs.needsTsanRt()) {
+    addSanitizerLibPath(TC, Args, CmdArgs, "tsan");
+  }
+}
+
+
+
 void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
                                      ArgStringList &CmdArgs) {
   // Force linking against the system libraries sanitizers depends on
@@ -568,19 +603,19 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
       !TC.getTriple().isAndroid()) {
     CmdArgs.push_back("-lpthread");
-    if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+    if (!TC.getTriple().isOSOpenBSD())
       CmdArgs.push_back("-lrt");
   }
   CmdArgs.push_back("-lm");
   // There's no libdl on all OSes.
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
-      TC.getTriple().getOS() != llvm::Triple::OpenBSD &&
-      TC.getTriple().getOS() != llvm::Triple::RTEMS)
+  if (!TC.getTriple().isOSFreeBSD() &&
+      !TC.getTriple().isOSNetBSD() &&
+      !TC.getTriple().isOSOpenBSD() &&
+       TC.getTriple().getOS() != llvm::Triple::RTEMS)
     CmdArgs.push_back("-ldl");
   // Required for backtrace on some OSes
-  if (TC.getTriple().getOS() == llvm::Triple::NetBSD ||
-      TC.getTriple().getOS() == llvm::Triple::FreeBSD)
+  if (TC.getTriple().isOSFreeBSD() ||
+      TC.getTriple().isOSNetBSD())
     CmdArgs.push_back("-lexecinfo");
 }
 
@@ -755,13 +790,13 @@ bool tools::addXRayRuntime(const ToolChain&TC, const ArgList &Args, ArgStringLis
 void tools::linkXRayRuntimeDeps(const ToolChain &TC, ArgStringList &CmdArgs) {
   CmdArgs.push_back("--no-as-needed");
   CmdArgs.push_back("-lpthread");
-  if (TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+  if (!TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-lrt");
   CmdArgs.push_back("-lm");
 
-  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD &&
-      TC.getTriple().getOS() != llvm::Triple::NetBSD &&
-      TC.getTriple().getOS() != llvm::Triple::OpenBSD)
+  if (!TC.getTriple().isOSFreeBSD() &&
+      !TC.getTriple().isOSNetBSD() &&
+      !TC.getTriple().isOSOpenBSD())
     CmdArgs.push_back("-ldl");
 }
 
@@ -773,21 +808,18 @@ bool tools::areOptimizationsEnabled(const ArgList &Args) {
   return false;
 }
 
-const char *tools::SplitDebugName(const ArgList &Args, const InputInfo &Input) {
-  Arg *FinalOutput = Args.getLastArg(options::OPT_o);
-  if (FinalOutput && Args.hasArg(options::OPT_c)) {
-    SmallString<128> T(FinalOutput->getValue());
-    llvm::sys::path::replace_extension(T, "dwo");
-    return Args.MakeArgString(T);
-  } else {
-    // Use the compilation dir.
-    SmallString<128> T(
-        Args.getLastArgValue(options::OPT_fdebug_compilation_dir));
-    SmallString<128> F(llvm::sys::path::stem(Input.getBaseInput()));
-    llvm::sys::path::replace_extension(F, "dwo");
-    T += F;
-    return Args.MakeArgString(F);
-  }
+const char *tools::SplitDebugName(const ArgList &Args,
+                                  const InputInfo &Output) {
+  SmallString<128> F(Output.isFilename()
+                         ? Output.getFilename()
+                         : llvm::sys::path::stem(Output.getBaseInput()));
+
+  if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
+    if (StringRef(A->getValue()) == "single")
+      return Args.MakeArgString(F);
+
+  llvm::sys::path::replace_extension(F, "dwo");
+  return Args.MakeArgString(F);
 }
 
 void tools::SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
@@ -901,7 +933,7 @@ tools::ParsePICArgs(const ToolChain &ToolChain, const ArgList &Args) {
   }
 
   // OpenBSD-specific defaults for PIE
-  if (Triple.getOS() == llvm::Triple::OpenBSD) {
+  if (Triple.isOSOpenBSD()) {
     switch (ToolChain.getArch()) {
     case llvm::Triple::arm:
     case llvm::Triple::aarch64:
@@ -1126,23 +1158,42 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   bool IsIAMCU = Triple.isOSIAMCU();
   bool StaticLibgcc = Args.hasArg(options::OPT_static_libgcc) ||
                       Args.hasArg(options::OPT_static);
-  if (!D.CCCIsCXX())
+
+  // The driver ignores -shared-libgcc and therefore treats such cases as
+  // unspecified.  Breaking out the two variables as below makes the current
+  // behavior explicit.
+  bool UnspecifiedLibgcc = !StaticLibgcc;
+  bool SharedLibgcc = !StaticLibgcc;
+
+  // Gcc adds libgcc arguments in various ways:
+  //
+  // gcc <none>: -lgcc --as-needed -lgcc_s --no-as-needed
+  // g++ <none>:                   -lgcc_s               -lgcc
+  // gcc shared:                   -lgcc_s               -lgcc
+  // g++ shared:                   -lgcc_s               -lgcc
+  // gcc static: -lgcc             -lgcc_eh
+  // g++ static: -lgcc             -lgcc_eh
+  //
+  // Also, certain targets need additional adjustments.
+
+  bool LibGccFirst = (D.CCCIsCC() && UnspecifiedLibgcc) || StaticLibgcc;
+  if (LibGccFirst)
     CmdArgs.push_back("-lgcc");
 
-  if (StaticLibgcc || isAndroid) {
-    if (D.CCCIsCXX())
-      CmdArgs.push_back("-lgcc");
-  } else {
-    if (!D.CCCIsCXX() && !isCygMing)
-      CmdArgs.push_back("--as-needed");
-    CmdArgs.push_back("-lgcc_s");
-    if (!D.CCCIsCXX() && !isCygMing)
-      CmdArgs.push_back("--no-as-needed");
-  }
+  bool AsNeeded = D.CCCIsCC() && !StaticLibgcc && !isAndroid && !isCygMing;
+  if (AsNeeded)
+    CmdArgs.push_back("--as-needed");
 
-  if (StaticLibgcc && !isAndroid && !IsIAMCU)
+  if ((UnspecifiedLibgcc || SharedLibgcc) && !isAndroid)
+    CmdArgs.push_back("-lgcc_s");
+
+  else if (StaticLibgcc && !isAndroid && !IsIAMCU)
     CmdArgs.push_back("-lgcc_eh");
-  else if (!Args.hasArg(options::OPT_shared) && D.CCCIsCXX())
+
+  if (AsNeeded)
+    CmdArgs.push_back("--no-as-needed");
+
+  if (!LibGccFirst)
     CmdArgs.push_back("-lgcc");
 
   // According to Android ABI, we have to link with libdl if we are
@@ -1318,6 +1369,18 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
   if (!JA.isHostOffloading(Action::OFK_HIP))
     return;
 
+  InputInfoList DeviceInputs;
+  for (const auto &II : Inputs) {
+    const Action *A = II.getAction();
+    // Is this a device linking action?
+    if (A && isa<LinkJobAction>(A) && A->isDeviceOffloading(Action::OFK_HIP)) {
+      DeviceInputs.push_back(II);
+    }
+  }
+
+  if (DeviceInputs.empty())
+    return;
+
   // Create temporary linker script. Keep it if save-temps is enabled.
   const char *LKS;
   SmallString<256> Name = llvm::sys::path::filename(Output.getFilename());
@@ -1345,39 +1408,12 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
          "Wrong platform");
   (void)HIPTC;
 
-  // Construct clang-offload-bundler command to bundle object files for
-  // for different GPU archs.
-  ArgStringList BundlerArgs;
-  BundlerArgs.push_back(Args.MakeArgString("-type=o"));
-
-  // ToDo: Remove the dummy host binary entry which is required by
-  // clang-offload-bundler.
-  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux";
-  std::string BundlerInputArg = "-inputs=/dev/null";
-
-  for (const auto &II : Inputs) {
-    const Action *A = II.getAction();
-    // Is this a device linking action?
-    if (A && isa<LinkJobAction>(A) && A->isDeviceOffloading(Action::OFK_HIP)) {
-      BundlerTargetArg = BundlerTargetArg + ",hip-amdgcn-amd-amdhsa-" +
-                         StringRef(A->getOffloadingArch()).str();
-      BundlerInputArg = BundlerInputArg + "," + II.getFilename();
-    }
-  }
-  BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
-  BundlerArgs.push_back(Args.MakeArgString(BundlerInputArg));
-
-  std::string BundleFileName = C.getDriver().GetTemporaryPath("BUNDLE", "o");
+  // The output file name needs to persist through the compilation, therefore
+  // it needs to be created through MakeArgString.
+  std::string BundleFileName = C.getDriver().GetTemporaryPath("BUNDLE", "hipfb");
   const char *BundleFile =
       C.addTempFile(C.getArgs().MakeArgString(BundleFileName.c_str()));
-  auto BundlerOutputArg =
-      Args.MakeArgString(std::string("-outputs=").append(BundleFile));
-  BundlerArgs.push_back(BundlerOutputArg);
-
-  SmallString<128> BundlerPath(C.getDriver().Dir);
-  llvm::sys::path::append(BundlerPath, "clang-offload-bundler");
-  const char *Bundler = Args.MakeArgString(BundlerPath);
-  C.addCommand(llvm::make_unique<Command>(JA, T, Bundler, BundlerArgs, Inputs));
+  AMDGCN::constructHIPFatbinCommand(C, JA, BundleFile, DeviceInputs, Args, T);
 
   // Add commands to embed target binaries. We ensure that each section and
   // image is 16-byte aligned. This is not mandatory, but increases the
@@ -1396,6 +1432,10 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
   LksStream << "  {\n";
   LksStream << "    PROVIDE_HIDDEN(__hip_fatbin = .);\n";
   LksStream << "    " << BundleFileName << "\n";
+  LksStream << "  }\n";
+  LksStream << "  /DISCARD/ :\n";
+  LksStream << "  {\n";
+  LksStream << "    * ( __CLANG_OFFLOAD_BUNDLE__* )\n";
   LksStream << "  }\n";
   LksStream << "}\n";
   LksStream << "INSERT BEFORE .data\n";

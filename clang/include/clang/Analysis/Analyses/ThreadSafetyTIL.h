@@ -1643,10 +1643,10 @@ private:
   friend class SCFG;
 
   // assign unique ids to all instructions
-  int renumberInstrs(int id);
+  unsigned renumberInstrs(unsigned id);
 
-  int topologicalSort(SimpleArray<BasicBlock *> &Blocks, int ID);
-  int topologicalFinalSort(SimpleArray<BasicBlock *> &Blocks, int ID);
+  unsigned topologicalSort(SimpleArray<BasicBlock *> &Blocks, unsigned ID);
+  unsigned topologicalFinalSort(SimpleArray<BasicBlock *> &Blocks, unsigned ID);
   void computeDominator();
   void computePostDominator();
 
@@ -1657,7 +1657,7 @@ private:
   SCFG *CFGPtr = nullptr;
 
   // Unique ID for this BB in the containing CFG. IDs are in topological order.
-  int BlockID : 31;
+  unsigned BlockID : 31;
 
   // Bit to determine if a block has been visited during a traversal.
   bool Visited : 1;

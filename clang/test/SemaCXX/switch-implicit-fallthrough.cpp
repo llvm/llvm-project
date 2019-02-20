@@ -314,3 +314,18 @@ int fallthrough_targets(int n) {
   }
   return n;
 }
+
+int fallthrough_alt_spelling(int n) {
+  switch (n) {
+  case 0:
+    n++;
+    [[clang::fallthrough]];
+  case 1:
+    n++;
+    [[clang::__fallthrough__]];
+  case 2:
+    n++;
+    break;
+  }
+  return n;
+}

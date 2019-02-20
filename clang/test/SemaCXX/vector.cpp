@@ -17,14 +17,14 @@ void f0_test(char16 c16, longlong16 ll16, char16_e c16e, longlong16_e ll16e) {
   f0(ll16e);
 }
 
-int &f1(char16); // expected-note 2{{candidate function}}
-float &f1(longlong16); // expected-note 2{{candidate function}}
+int &f1(char16);
+float &f1(longlong16);
 
 void f1_test(char16 c16, longlong16 ll16, char16_e c16e, longlong16_e ll16e) {
   int &ir1 = f1(c16);
   float &fr1 = f1(ll16);
-  f1(c16e); // expected-error{{call to 'f1' is ambiguous}}
-  f1(ll16e); // expected-error{{call to 'f1' is ambiguous}}
+  int &ir2 = f1(c16e);
+  float &fr2 = f1(ll16e);
 }
 
 void f2(char16_e); // expected-note{{no known conversion from 'longlong16_e' (vector of 2 'long long' values) to 'char16_e' (vector of 16 'char' values) for 1st argument}} \

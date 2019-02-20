@@ -6,8 +6,8 @@
 int getJ();
 
 int foo() {
-  int *x = 0;
-  return *x;
+  int *x = 0, *y = 0;
+  return *x + *y;
 }
 
 // CHECK: digraph "Exploded Graph" {

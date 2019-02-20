@@ -34,6 +34,15 @@ bar:
   return &&bar;  // expected-warning {{returning address of label, which is local}}
 }
 
+// PR38569: Don't warn when returning a label from a statement expression.
+void test10_logpc(void*);
+void test10a() {
+  test10_logpc(({
+    my_pc:
+      &&my_pc;
+  }));
+}
+
 // PR6034
 void test11(int bit) {
   switch (bit)

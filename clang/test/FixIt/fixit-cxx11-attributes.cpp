@@ -49,3 +49,6 @@ namespace BaseSpecifier {
   // CHECK: fix-it:"{{.*}}":{[[@LINE-4]]:26-[[@LINE-4]]:26}:"[{{\[}}d]]"
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:33-[[@LINE-2]]:39}:""
 }
+
+[[__clang__::annotate("test")]] void annotate3();  // expected-warning {{'__clang__' is a predefined macro name, not an attribute scope specifier; did you mean '_Clang' instead?}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:12}:"_Clang"

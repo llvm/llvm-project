@@ -397,29 +397,25 @@ TEST_F(FormatTestProto, FormatsService) {
 }
 
 TEST_F(FormatTestProto, ExtendingMessage) {
-  verifyFormat("extend .foo.Bar {\n"
-               "}");
+  verifyFormat("extend .foo.Bar {}");
 }
 
 TEST_F(FormatTestProto, FormatsImports) {
   verifyFormat("import \"a.proto\";\n"
                "import \"b.proto\";\n"
                "// comment\n"
-               "message A {\n"
-               "}");
+               "message A {}");
 
   verifyFormat("import public \"a.proto\";\n"
                "import \"b.proto\";\n"
                "// comment\n"
-               "message A {\n"
-               "}");
+               "message A {}");
 
   // Missing semicolons should not confuse clang-format.
   verifyFormat("import \"a.proto\"\n"
                "import \"b.proto\"\n"
                "// comment\n"
-               "message A {\n"
-               "}");
+               "message A {}");
 }
 
 TEST_F(FormatTestProto, KeepsLongStringLiteralsOnSameLine) {

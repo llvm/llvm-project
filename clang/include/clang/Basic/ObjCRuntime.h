@@ -173,6 +173,96 @@ public:
     llvm_unreachable("bad kind");
   }
 
+  /// Does this runtime provide ARC entrypoints that are likely to be faster
+  /// than an ordinary message send of the appropriate selector?
+  ///
+  /// The ARC entrypoints are guaranteed to be equivalent to just sending the
+  /// corresponding message.  If the entrypoint is implemented naively as just a
+  /// message send, using it is a trade-off: it sacrifices a few cycles of
+  /// overhead to save a small amount of code.  However, it's possible for
+  /// runtimes to detect and special-case classes that use "standard"
+  /// retain/release behavior; if that's dynamically a large proportion of all
+  /// retained objects, using the entrypoint will also be faster than using a
+  /// message send.
+  ///
+  /// When this method returns true, Clang will turn non-super message sends of
+  /// certain selectors into calls to the correspond entrypoint:
+  ///   retain => objc_retain
+  ///   release => objc_release
+  ///   autorelease => objc_autorelease
+  bool shouldUseARCFunctionsForRetainRelease() const {
+    switch (getKind()) {
+    case FragileMacOSX:
+      return false;
+    case MacOSX:
+      return getVersion() >= VersionTuple(10, 10);
+    case iOS:
+      return getVersion() >= VersionTuple(8);
+    case WatchOS:
+      return true;
+    case GCC:
+      return false;
+    case GNUstep:
+      return false;
+    case ObjFW:
+      return false;
+    }
+    llvm_unreachable("bad kind");
+  }
+
+  /// Does this runtime provide entrypoints that are likely to be faster
+  /// than an ordinary message send of the "alloc" selector?
+  ///
+  /// The "alloc" entrypoint is guaranteed to be equivalent to just sending the
+  /// corresponding message.  If the entrypoint is implemented naively as just a
+  /// message send, using it is a trade-off: it sacrifices a few cycles of
+  /// overhead to save a small amount of code.  However, it's possible for
+  /// runtimes to detect and special-case classes that use "standard"
+  /// alloc behavior; if that's dynamically a large proportion of all
+  /// objects, using the entrypoint will also be faster than using a message
+  /// send.
+  ///
+  /// When this method returns true, Clang will turn non-super message sends of
+  /// certain selectors into calls to the corresponding entrypoint:
+  ///   alloc => objc_alloc
+  ///   allocWithZone:nil => objc_allocWithZone
+  bool shouldUseRuntimeFunctionsForAlloc() const {
+    switch (getKind()) {
+    case FragileMacOSX:
+      return false;
+    case MacOSX:
+      return getVersion() >= VersionTuple(10, 10);
+    case iOS:
+      return getVersion() >= VersionTuple(8);
+    case WatchOS:
+      return true;
+
+    case GCC:
+      return false;
+    case GNUstep:
+      return false;
+    case ObjFW:
+      return false;
+    }
+    llvm_unreachable("bad kind");
+  }
+
+  /// Does this runtime provide the objc_alloc_init entrypoint? This can apply
+  /// the same optimization as objc_alloc, but also sends an -init message,
+  /// reducing code size on the caller.
+  bool shouldUseRuntimeFunctionForCombinedAllocInit() const {
+    switch (getKind()) {
+    case MacOSX:
+      return getVersion() >= VersionTuple(10, 14, 4);
+    case iOS:
+      return getVersion() >= VersionTuple(12, 2);
+    case WatchOS:
+      return getVersion() >= VersionTuple(5, 2);
+    default:
+      return false;
+    }
+  }
+
   /// Does this runtime supports optimized setter entrypoints?
   bool hasOptimizedSetter() const {
     switch (getKind()) {

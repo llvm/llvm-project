@@ -29,17 +29,20 @@ void Y::doSomething() {
   // RUN: c-index-test -code-completion-at=%s:30:9 %s | FileCheck -check-prefix=CHECK-SUPER-ACCESS %s
   this->;
 
+  // RUN: c-index-test -code-completion-at=%s:33:3 %s | FileCheck -check-prefix=CHECK-SUPER-ACCESS-IMPLICIT %s
+  
+
   Z that;
-  // RUN: c-index-test -code-completion-at=%s:34:8 %s | FileCheck -check-prefix=CHECK-ACCESS %s
+  // RUN: c-index-test -code-completion-at=%s:37:8 %s | FileCheck -check-prefix=CHECK-ACCESS %s
   that.
 }
 
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{TypedText doSomething}{LeftParen (}{RightParen )} (34)
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func1}{LeftParen (}{RightParen )} (36)
-// CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func2}{LeftParen (}{RightParen )} (36)
+// CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func2}{LeftParen (}{RightParen )} (36){{$}}
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType void}{Informative X::}{TypedText func3}{LeftParen (}{RightParen )} (36) (inaccessible)
 // CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member1} (37)
-// CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member2} (37)
+// CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member2} (37){{$}}
 // CHECK-SUPER-ACCESS: FieldDecl:{ResultType int}{Informative X::}{TypedText member3} (37) (inaccessible)
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType Y &}{TypedText operator=}{LeftParen (}{Placeholder const Y &}{RightParen )} (79)
 // CHECK-SUPER-ACCESS: CXXMethod:{ResultType X &}{Text X::}{TypedText operator=}{LeftParen (}{Placeholder const X &}{RightParen )} (81)
@@ -47,6 +50,14 @@ void Y::doSomething() {
 // CHECK-SUPER-ACCESS: StructDecl:{TypedText Y}{Text ::} (75)
 // CHECK-SUPER-ACCESS: CXXDestructor:{ResultType void}{Informative X::}{TypedText ~X}{LeftParen (}{RightParen )} (81)
 // CHECK-SUPER-ACCESS: CXXDestructor:{ResultType void}{TypedText ~Y}{LeftParen (}{RightParen )} (79)
+
+// CHECK-SUPER-ACCESS-IMPLICIT: CXXMethod:{ResultType void}{TypedText doSomething}{LeftParen (}{RightParen )} (34)
+// CHECK-SUPER-ACCESS-IMPLICIT: CXXMethod:{ResultType void}{TypedText func1}{LeftParen (}{RightParen )} (36)
+// CHECK-SUPER-ACCESS-IMPLICIT: CXXMethod:{ResultType void}{TypedText func2}{LeftParen (}{RightParen )} (36){{$}}
+// CHECK-SUPER-ACCESS-IMPLICIT: CXXMethod:{ResultType void}{TypedText func3}{LeftParen (}{RightParen )} (36) (inaccessible)
+// CHECK-SUPER-ACCESS-IMPLICIT: FieldDecl:{ResultType int}{TypedText member1} (37)
+// CHECK-SUPER-ACCESS-IMPLICIT: FieldDecl:{ResultType int}{TypedText member2} (37){{$}}
+// CHECK-SUPER-ACCESS-IMPLICIT: FieldDecl:{ResultType int}{TypedText member3} (37) (inaccessible)
 
 // CHECK-ACCESS: CXXMethod:{ResultType void}{TypedText func1}{LeftParen (}{RightParen )} (34)
 // CHECK-ACCESS: CXXMethod:{ResultType void}{TypedText func2}{LeftParen (}{RightParen )} (34) (inaccessible)
@@ -69,9 +80,9 @@ public:
 };
 
 void f(P x, Q y) {
-  // RUN: c-index-test -code-completion-at=%s:73:5 %s | FileCheck -check-prefix=CHECK-USING-INACCESSIBLE %s
+  // RUN: c-index-test -code-completion-at=%s:84:5 %s | FileCheck -check-prefix=CHECK-USING-INACCESSIBLE %s
   x.; // member is inaccessible
-  // RUN: c-index-test -code-completion-at=%s:75:5 %s | FileCheck -check-prefix=CHECK-USING-ACCESSIBLE %s
+  // RUN: c-index-test -code-completion-at=%s:86:5 %s | FileCheck -check-prefix=CHECK-USING-ACCESSIBLE %s
   y.; // member is accessible
 }
 
@@ -102,11 +113,11 @@ class D : public C {
 };
 
 void D::f(::B *that) {
-  // RUN: c-index-test -code-completion-at=%s:106:9 %s | FileCheck -check-prefix=CHECK-PRIVATE-SUPER-THIS %s
+  // RUN: c-index-test -code-completion-at=%s:117:9 %s | FileCheck -check-prefix=CHECK-PRIVATE-SUPER-THIS %s
   this->;
 // CHECK-PRIVATE-SUPER-THIS: FieldDecl:{ResultType int}{Informative B::}{TypedText member} (37) (inaccessible)
 
-  // RUN: c-index-test -code-completion-at=%s:110:9 %s | FileCheck -check-prefix=CHECK-PRIVATE-SUPER-THAT %s
+  // RUN: c-index-test -code-completion-at=%s:121:9 %s | FileCheck -check-prefix=CHECK-PRIVATE-SUPER-THAT %s
   that->;
 // CHECK-PRIVATE-SUPER-THAT: FieldDecl:{ResultType int}{TypedText member} (35) (inaccessible)
 }

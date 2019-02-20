@@ -1,42 +1,10 @@
 // RUN: %clang_analyze_cc1 -fblocks -analyze -analyzer-output=text\
 // RUN:                    -analyzer-checker=core,osx -verify %s
 
-struct OSMetaClass;
-
-#define OS_CONSUME __attribute__((os_consumed))
-#define OS_RETURNS_RETAINED __attribute__((os_returns_retained))
-#define OS_RETURNS_NOT_RETAINED __attribute__((os_returns_not_retained))
-#define OS_CONSUMES_THIS __attribute__((os_consumes_this))
-
-#define OSTypeID(type)   (type::metaClass)
-
-#define OSDynamicCast(type, inst)   \
-    ((type *) OSMetaClassBase::safeMetaCast((inst), OSTypeID(type)))
-
-using size_t = decltype(sizeof(int));
-
-struct OSObject {
-  virtual void retain();
-  virtual void release() {};
-  virtual void free();
-  virtual ~OSObject(){}
-
-  unsigned int foo() { return 42; }
-
-  virtual OS_RETURNS_NOT_RETAINED OSObject *identity();
-
-  static OSObject *generateObject(int);
-
-  static OSObject *getObject();
-  static OSObject *GetObject();
-
-  static void * operator new(size_t size);
-
-  static const OSMetaClass * const metaClass;
-};
+#include "os_object_base.h"
+#include "os_smart_ptr.h"
 
 struct OSIterator : public OSObject {
-
   static const OSMetaClass * const metaClass;
 };
 
@@ -63,9 +31,11 @@ struct OSArray : public OSObject {
   static OSArray *withCapacity(unsigned int capacity);
   static void consumeArray(OS_CONSUME OSArray * array);
 
-  static OSArray* consumeArrayHasCode(OS_CONSUME OSArray * array) {
-    return nullptr;
+  static OSArray* consumeArrayHasCode(OS_CONSUME OSArray * array) { // expected-note{{Parameter 'array' starts at +1, as it is marked as consuming}}
+    return nullptr; // expected-warning{{Potential leak of an object of type 'OSArray'}}
+// expected-note@-1{{Object leaked: allocated object of type 'OSArray' is not referenced later in this execution path and has a retain count of +1}}
   }
+
 
   static OS_RETURNS_NOT_RETAINED OSArray *MaskedGetter();
   static OS_RETURNS_RETAINED OSArray *getOoopsActuallyCreate();
@@ -86,15 +56,203 @@ struct OtherStruct {
   OtherStruct(OSArray *arr);
 };
 
-struct OSMetaClassBase {
-  static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
-};
+bool test_meta_cast_no_leak(OSMetaClassBase *arg) {
+  return arg && arg->metaCast("blah") != nullptr;
+}
 
-typedef unsigned long MYTYPE;
+static void consumedMismatch(OS_CONSUME OSObject *a,
+                             OSObject *b) { // expected-note{{Parameter 'b' starts at +0}}
+  a->release();
+  b->retain(); // expected-note{{Reference count incremented. The object now has a +1 retain count}}
+} // expected-warning{{Potential leak of an object of type 'OSObject'}}
+// expected-note@-1{{Object leaked: allocated object of type 'OSObject' is not referenced later in this execution path and has a retain count of +1}}
 
 void escape(void *);
-void escape_with_source(MYTYPE p) {}
+void escape_with_source(void *p) {}
 bool coin();
+
+typedef int kern_return_t;
+typedef kern_return_t IOReturn;
+typedef kern_return_t OSReturn;
+#define kOSReturnSuccess  0
+#define kIOReturnSuccess 0
+
+bool write_into_out_param_on_success(OS_RETURNS_RETAINED OSObject **obj);
+
+void use_out_param() {
+  OSObject *obj;
+  if (write_into_out_param_on_success(&obj)) {
+    obj->release();
+  }
+}
+
+void use_out_param_leak() {
+  OSObject *obj;
+  write_into_out_param_on_success(&obj); // expected-note-re{{Call to function 'write_into_out_param_on_success' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'obj' (assuming the call returns non-zero){{$}}}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+ // expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+bool write_into_out_param_on_failure(OS_RETURNS_RETAINED_ON_ZERO OSObject **obj);
+
+void use_out_param_leak2() {
+  OSObject *obj;
+  write_into_out_param_on_failure(&obj); // expected-note-re{{Call to function 'write_into_out_param_on_failure' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'obj' (assuming the call returns zero){{$}}}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+ // expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+void use_out_param_on_failure() {
+  OSObject *obj;
+  if (!write_into_out_param_on_failure(&obj)) {
+    obj->release();
+  }
+}
+
+IOReturn write_into_out_param_on_nonzero(OS_RETURNS_RETAINED_ON_NONZERO OSObject **obj);
+
+void use_out_param_on_nonzero() {
+  OSObject *obj;
+  if (write_into_out_param_on_nonzero(&obj) != kIOReturnSuccess) {
+    obj->release();
+  }
+}
+
+bool write_into_two_out_params(OS_RETURNS_RETAINED OSObject **a,
+                               OS_RETURNS_RETAINED OSObject **b);
+
+void use_write_into_two_out_params() {
+  OSObject *obj1;
+  OSObject *obj2;
+  if (write_into_two_out_params(&obj1, &obj2)) {
+    obj1->release();
+    obj2->release();
+  }
+}
+
+void use_write_two_out_params_leak() {
+  OSObject *obj1;
+  OSObject *obj2;
+  write_into_two_out_params(&obj1, &obj2); // expected-note-re{{Call to function 'write_into_two_out_params' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'a' (assuming the call returns non-zero){{$}}}}
+                                           // expected-note-re@-1{{Call to function 'write_into_two_out_params' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'b' (assuming the call returns non-zero){{$}}}}
+} // expected-warning{{Potential leak of an object stored into 'obj1'}}
+  // expected-warning@-1{{Potential leak of an object stored into 'obj2'}}
+  // expected-note@-2{{Object leaked: object allocated and stored into 'obj1' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-note@-3{{Object leaked: object allocated and stored into 'obj2' is not referenced later in this execution path and has a retain count of +1}}
+
+void always_write_into_two_out_params(OS_RETURNS_RETAINED OSObject **a,
+                                      OS_RETURNS_RETAINED OSObject **b);
+
+void use_always_write_into_two_out_params() {
+  OSObject *obj1;
+  OSObject *obj2;
+  always_write_into_two_out_params(&obj1, &obj2);
+  obj1->release();
+  obj2->release();
+}
+
+void use_always_write_into_two_out_params_leak() {
+  OSObject *obj1;
+  OSObject *obj2;
+  always_write_into_two_out_params(&obj1, &obj2); // expected-note-re{{Call to function 'always_write_into_two_out_params' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'a'{{$}}}}
+                                                  // expected-note-re@-1{{Call to function 'always_write_into_two_out_params' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'b'{{$}}}}
+} // expected-warning{{Potential leak of an object stored into 'obj1'}}
+  // expected-warning@-1{{Potential leak of an object stored into 'obj2'}}
+  // expected-note@-2{{Object leaked: object allocated and stored into 'obj1' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-note@-3{{Object leaked: object allocated and stored into 'obj2' is not referenced later in this execution path and has a retain count of +1}}
+
+char *write_into_out_param_on_nonnull(OS_RETURNS_RETAINED OSObject **obj);
+
+void use_out_param_osreturn_on_nonnull() {
+  OSObject *obj;
+  if (write_into_out_param_on_nonnull(&obj)) {
+    obj->release();
+  }
+}
+
+void use_out_param_leak_osreturn_on_nonnull() {
+  OSObject *obj;
+  write_into_out_param_on_nonnull(&obj); // expected-note-re{{Call to function 'write_into_out_param_on_nonnull' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'obj' (assuming the call returns non-zero){{$}}}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+  // expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+bool write_optional_out_param(OS_RETURNS_RETAINED OSObject **obj=nullptr);
+
+void use_optional_out_param() {
+  if (write_optional_out_param()) {};
+}
+
+OSReturn write_into_out_param_on_os_success(OS_RETURNS_RETAINED OSObject **obj);
+
+void write_into_non_retained_out_param(OS_RETURNS_NOT_RETAINED OSObject **obj);
+
+void use_write_into_non_retained_out_param() {
+  OSObject *obj;
+  write_into_non_retained_out_param(&obj);
+}
+
+void use_write_into_non_retained_out_param_uaf() {
+  OSObject *obj;
+  write_into_non_retained_out_param(&obj); // expected-note-re{{Call to function 'write_into_non_retained_out_param' writes an OSObject of type 'OSObject' with a +0 retain count into an out parameter 'obj'{{$}}}}
+  obj->release(); // expected-warning{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
+                  // expected-note@-1{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
+}
+
+void always_write_into_out_param(OS_RETURNS_RETAINED OSObject **obj);
+
+void pass_through_out_param(OSObject **obj) {
+  always_write_into_out_param(obj);
+}
+
+void always_write_into_out_param_has_source(OS_RETURNS_RETAINED OSObject **obj) {
+  *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+}
+
+void use_always_write_into_out_param_has_source_leak() {
+  OSObject *obj;
+  always_write_into_out_param_has_source(&obj); // expected-note{{Calling 'always_write_into_out_param_has_source'}}
+                                                // expected-note@-1{{Returning from 'always_write_into_out_param_has_source'}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+  // expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+void use_void_out_param_osreturn() {
+  OSObject *obj;
+  always_write_into_out_param(&obj);
+  obj->release();
+}
+
+void use_void_out_param_osreturn_leak() {
+  OSObject *obj;
+  always_write_into_out_param(&obj); // expected-note-re{{Call to function 'always_write_into_out_param' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'obj'{{$}}}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+  // expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+void use_out_param_osreturn() {
+  OSObject *obj;
+  if (write_into_out_param_on_os_success(&obj) == kOSReturnSuccess) {
+    obj->release();
+  }
+}
+
+void use_out_param_leak_osreturn() {
+  OSObject *obj;
+  write_into_out_param_on_os_success(&obj); // expected-note-re{{Call to function 'write_into_out_param_on_os_success' writes an OSObject of type 'OSObject' with a +1 retain count into an out parameter 'obj' (assuming the call returns zero){{$}}}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+  // expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+void cleanup(OSObject **obj);
+
+void test_cleanup_escaping() {
+  __attribute__((cleanup(cleanup))) OSObject *obj;
+  always_write_into_out_param(&obj); // no-warning, the value has escaped.
+}
+
+struct StructWithField {
+  OSObject *obj;
+
+  void initViaOutParamCall() { // no warning on writing into fields
+    always_write_into_out_param(&obj);
+  }
+
+};
 
 bool os_consume_violation_two_args(OS_CONSUME OSObject *obj, bool extra) {
   if (coin()) { // expected-note{{Assuming the condition is false}}
@@ -102,7 +260,7 @@ bool os_consume_violation_two_args(OS_CONSUME OSObject *obj, bool extra) {
     escape(obj);
     return true;
   }
-  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function does not consume the reference}}
+  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function did not consume the reference}}
 }
 
 bool os_consume_violation(OS_CONSUME OSObject *obj) {
@@ -111,7 +269,7 @@ bool os_consume_violation(OS_CONSUME OSObject *obj) {
     escape(obj);
     return true;
   }
-  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function does not consume the reference}}
+  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function did not consume the reference}}
 }
 
 void os_consume_ok(OS_CONSUME OSObject *obj) {
@@ -119,14 +277,14 @@ void os_consume_ok(OS_CONSUME OSObject *obj) {
 }
 
 void use_os_consume_violation() {
-  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type OSObject with a +1 retain count}}
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
   os_consume_violation(obj); // expected-note{{Calling 'os_consume_violation'}}
                              // expected-note@-1{{Returning from 'os_consume_violation'}}
 } // expected-note{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
   // expected-warning@-1{{Potential leak of an object stored into 'obj'}}
 
 void use_os_consume_violation_two_args() {
-  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type OSObject with a +1 retain count}}
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
   os_consume_violation_two_args(obj, coin()); // expected-note{{Calling 'os_consume_violation_two_args'}}
                              // expected-note@-1{{Returning from 'os_consume_violation_two_args'}}
 } // expected-note{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
@@ -145,7 +303,7 @@ void test_escaping_into_voidstar() {
 void test_escape_has_source() {
   OSObject *obj = new OSObject;
   if (obj)
-    escape_with_source((MYTYPE)obj);
+    escape_with_source(obj);
   return;
 }
 
@@ -197,7 +355,7 @@ void check_free_no_error() {
 }
 
 void check_free_use_after_free() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
   arr->free(); // expected-note{{Object released}}
   arr->retain(); // expected-warning{{Reference-counted object is used after it is released}}
@@ -205,13 +363,13 @@ void check_free_use_after_free() {
 }
 
 unsigned int check_leak_explicit_new() {
-  OSArray *arr = new OSArray; // expected-note{{Operator 'new' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = new OSArray; // expected-note{{Operator 'new' returns an OSObject of type 'OSArray' with a +1 retain count}}
   return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
                           // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
 }
 
 unsigned int check_leak_factory() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
                           // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
 }
@@ -230,18 +388,18 @@ void check_custom_iterator_rule(OSArray *arr) {
 }
 
 void check_iterator_leak(OSArray *arr) {
-  arr->getIterator(); // expected-note{{Call to method 'OSArray::getIterator' returns an OSObject of type OSIterator with a +1 retain count}}
-} // expected-note{{Object leaked: allocated object of type OSIterator is not referenced later}}
-  // expected-warning@-1{{Potential leak of an object of type OSIterator}}
+  arr->getIterator(); // expected-note{{Call to method 'OSArray::getIterator' returns an OSObject of type 'OSIterator' with a +1 retain count}}
+} // expected-note{{Object leaked: allocated object of type 'OSIterator' is not referenced later}}
+  // expected-warning@-1{{Potential leak of an object of type 'OSIterator}}'
 
 void check_no_invalidation() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   OtherStruct::doNothingToArray(arr);
 } // expected-warning{{Potential leak of an object stored into 'arr'}}
   // expected-note@-1{{Object leaked}}
 
 void check_no_invalidation_other_struct() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   OtherStruct other(arr); // expected-warning{{Potential leak}}
                           // expected-note@-1{{Object leaked}}
 }
@@ -268,8 +426,8 @@ struct ArrayOwner : public OSObject {
 };
 
 OSArray *generateArray() {
-  return OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
-                                    // expected-note@-1{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  return OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
+                                    // expected-note@-1{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
 }
 
 unsigned int check_leak_good_error_message() {
@@ -287,7 +445,7 @@ unsigned int check_leak_msg_temporary() {
   return generateArray()->getCount(); // expected-warning{{Potential leak of an object}}
                                       // expected-note@-1{{Calling 'generateArray'}}
                                       // expected-note@-2{{Returning from 'generateArray'}}
-                                      // expected-note@-3{{Object leaked: allocated object of type OSArray is not referenced later in this execution path and has a retain count of +1}}
+                                      // expected-note@-3{{Object leaked: allocated object of type 'OSArray' is not referenced later in this execution path and has a retain count of +1}}
 }
 
 void check_confusing_getters() {
@@ -339,7 +497,7 @@ unsigned int check_dynamic_cast_no_null_on_orig(OSObject *obj) {
 
 void check_dynamic_cast_null_branch(OSObject *obj) {
   OSArray *arr1 = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject}}
-  OSArray *arr = OSDynamicCast(OSArray, obj);
+  OSArray *arr = OSDynamicCast(OSArray, obj); // expected-note{{Assuming dynamic cast returns null due to type mismatch}}
   if (!arr) // expected-note{{Taking true branch}}
     return; // expected-warning{{Potential leak of an object stored into 'arr1'}}
             // expected-note@-1{{Object leaked}}
@@ -350,20 +508,21 @@ void check_dynamic_cast_null_check() {
   OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1)); // expected-note{{Call to method 'OSObject::generateObject' returns an OSObject}}
     // expected-warning@-1{{Potential leak of an object}}
     // expected-note@-2{{Object leaked}}
+    // expected-note@-3{{Assuming dynamic cast returns null due to type mismatch}}
   if (!arr)
     return;
   arr->release();
 }
 
 void use_after_release() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   arr->release(); // expected-note{{Object released}}
   arr->getCount(); // expected-warning{{Reference-counted object is used after it is released}}
                    // expected-note@-1{{Reference-counted object is used after it is released}}
 }
 
 void potential_leak() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type 'OSArray' with a +1 retain count}}
   arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
   arr->release(); // expected-note{{Reference count decremented. The object now has a +1 retain count}}
   arr->getCount();
@@ -414,7 +573,7 @@ unsigned int no_warn_ok_release(ArrayOwner *owner) {
 }
 
 unsigned int warn_on_overrelease_with_unknown_source(ArrayOwner *owner) {
-  OSArray *arr = owner->getArraySourceUnknown(); // expected-note{{Call to method 'ArrayOwner::getArraySourceUnknown' returns an OSObject of type OSArray with a +0 retain count}}
+  OSArray *arr = owner->getArraySourceUnknown(); // expected-note{{Call to method 'ArrayOwner::getArraySourceUnknown' returns an OSObject of type 'OSArray' with a +0 retain count}}
   arr->release(); // expected-warning{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
                   // expected-note@-1{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
   return arr->getCount();
@@ -434,3 +593,89 @@ void test_escape_to_unknown_block(Blk blk) {
   blk(getObject()); // no-crash
 }
 
+using OSObjectPtr = os::smart_ptr<OSObject>;
+
+void test_smart_ptr_uaf() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  {
+    OSObjectPtr p(obj); // expected-note{{Calling constructor for 'smart_ptr<OSObject>'}}
+   // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
+    // expected-note@os_smart_ptr.h:13{{Taking true branch}}
+    // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
+    // expected-note@os_smart_ptr.h:71{{Reference count incremented. The object now has a +2 retain count}}
+    // expected-note@os_smart_ptr.h:14{{Returning from 'smart_ptr::_retain'}}
+  } // expected-note{{Calling '~smart_ptr'}}
+  // expected-note@os_smart_ptr.h:35{{Taking true branch}}
+  // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
+  // expected-note@os_smart_ptr.h:76{{Reference count decremented. The object now has a +1 retain count}}
+  // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
+ // expected-note@-5{{Returning from '~smart_ptr'}}
+  obj->release(); // expected-note{{Object released}}
+  obj->release(); // expected-warning{{Reference-counted object is used after it is released}}
+// expected-note@-1{{Reference-counted object is used after it is released}}
+}
+
+void test_smart_ptr_leak() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  {
+    OSObjectPtr p(obj); // expected-note{{Calling constructor for 'smart_ptr<OSObject>'}}
+   // expected-note@-1{{Returning from constructor for 'smart_ptr<OSObject>'}}
+    // expected-note@os_smart_ptr.h:13{{Taking true branch}}
+    // expected-note@os_smart_ptr.h:14{{Calling 'smart_ptr::_retain'}}
+    // expected-note@os_smart_ptr.h:71{{Reference count incremented. The object now has a +2 retain count}}
+    // expected-note@os_smart_ptr.h:14{{Returning from 'smart_ptr::_retain'}}
+  } // expected-note{{Calling '~smart_ptr'}}
+  // expected-note@os_smart_ptr.h:35{{Taking true branch}}
+  // expected-note@os_smart_ptr.h:36{{Calling 'smart_ptr::_release'}}
+  // expected-note@os_smart_ptr.h:76{{Reference count decremented. The object now has a +1 retain count}}
+  // expected-note@os_smart_ptr.h:36{{Returning from 'smart_ptr::_release'}}
+ // expected-note@-5{{Returning from '~smart_ptr'}}
+} // expected-warning{{Potential leak of an object stored into 'obj'}}
+// expected-note@-1{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+
+void test_smart_ptr_no_leak() {
+  OSObject *obj = new OSObject;
+  {
+    OSObjectPtr p(obj);
+  }
+  obj->release();
+}
+
+OSObject *getRuleViolation() {
+  return new OSObject; // expected-warning{{Potential leak of an object of type 'OSObject'}}
+// expected-note@-1{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+// expected-note@-2{{Object leaked: allocated object of type 'OSObject' is returned from a function whose name ('getRuleViolation') starts with 'get'}}
+}
+
+OSObject *createRuleViolation(OSObject *param) { // expected-note{{Parameter 'param' starts at +0}}
+  return param; // expected-warning{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
+  // expected-note@-1{{Object with a +0 retain count returned to caller where a +1 (owning) retain count is expected}}
+}
+
+void test_ostypealloc_correct_diagnostic_name() {
+  OSArray *arr = OSTypeAlloc(OSArray); // expected-note{{Call to method 'OSMetaClass::alloc' returns an OSObject of type 'OSArray' with a +1 retain count}}
+  arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
+  arr->release(); // expected-note{{Reference count decremented. The object now has a +1 retain count}}
+} // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
+
+void escape_elsewhere(OSObject *obj);
+
+void test_free_on_escaped_object_diagnostics() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type 'OSObject' with a +1 retain count}}
+  escape_elsewhere(obj); // expected-note{{Object is now not exclusively owned}}
+  obj->free(); // expected-note{{'free' called on an object that may be referenced elsewhere}}
+  // expected-warning@-1{{'free' called on an object that may be referenced elsewhere}}
+}
+
+void test_tagged_retain_no_leak() {
+  OSObject *obj = new OSObject;
+  obj->taggedRelease();
+}
+
+void test_tagged_retain_no_uaf() {
+  OSObject *obj = new OSObject;
+  obj->taggedRetain();
+  obj->release();
+  obj->release();
+}

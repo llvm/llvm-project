@@ -22,6 +22,19 @@ inline int add3(int x) {
 // CHECK: [[X]] = !DIGlobalVariableExpression(var: [[XV:.*]], expr: !DIExpression())
 // CHECK: [[XV]] = distinct !DIGlobalVariable(name: "x",
 // CHECK-SAME:                                type: ![[OUTER_FOO_INNER_ID:[0-9]+]]
+//
+// CHECK: {{![0-9]+}} = distinct !DIGlobalVariable(
+// CHECK-SAME: name: "var"
+// CHECK-SAME: templateParams: {{![0-9]+}}
+// CHECK: !DITemplateTypeParameter(name: "T", type: [[TY:![0-9]+]])
+// CHECK: {{![0-9]+}} = distinct !DIGlobalVariable(
+// CHECK-SAME: name: "var"
+// CHECK-SAME: templateParams: {{![0-9]+}}
+// CHECK: !DITemplateTypeParameter(name: "P", type: {{![0-9]+}})
+// CHECK: {{![0-9]+}} = distinct !DIGlobalVariable(
+// CHECK-SAME: name: "varray"
+// CHECK-SAME: templateParams: {{![0-9]+}}
+// CHECK: !DITemplateValueParameter(name: "N", type: [[TY]], value: i32 1)
 
 // CHECK: ![[OUTER_FOO_INNER_ID:[0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "inner"{{.*}}, identifier:
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "foo"
@@ -103,3 +116,15 @@ void f2() {
 // declaration/reference in the compile unit.
 // CHECK: !DISubprogram(name: "MyClass"
 // CHECK-SAME:          scope: [[C]]
+
+template <typename T>
+T var = T();
+template <typename P>
+P var<P *> = P();
+template <typename T, int N>
+T varray[N];
+void f3() {
+  var<int> = 1;
+  var<int *> = 1;
+  varray<int, 1>[0] = 1;
+}

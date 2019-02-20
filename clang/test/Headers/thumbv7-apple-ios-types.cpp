@@ -45,11 +45,11 @@ static_assert(check_type<unsigned int, 4, 4>::value, "unsigned int is wrong");
 static_assert(check_type<long, 4, 4>::value, "long is wrong");
 static_assert(check_type<unsigned long, 4, 4>::value, "unsigned long is wrong");
 
-static_assert(check_type<long long, 8, 8>::value, "long long is wrong");
-static_assert(check_type<unsigned long long, 8, 8>::value, "unsigned long long is wrong");
+static_assert(check_type<long long, 4, 8>::value, "long long is wrong");
+static_assert(check_type<unsigned long long, 4, 8>::value, "unsigned long long is wrong");
 
 static_assert(check_type<float, 4, 4>::value, "float is wrong");
-static_assert(check_type<double, 8, 8>::value, "double is wrong");
+static_assert(check_type<double, 4, 8>::value, "double is wrong");
 static_assert(check_type<long double, 4, 8>::value, "long double is wrong");
 
 static_assert(check_type<void *, 4, 4>::value, "'void *' is wrong");

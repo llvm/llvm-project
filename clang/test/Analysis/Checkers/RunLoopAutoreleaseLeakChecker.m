@@ -1,9 +1,15 @@
-// UNSUPPORTED: system-windows
-// RUN: %clang_analyze_cc1 -fobjc-arc -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak %s -triple x86_64-darwin -verify
-// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP1=1 -fobjc-arc -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak %s -triple x86_64-darwin -verify
-// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP2=1 -fobjc-arc -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak %s -triple x86_64-darwin -verify
-// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP3=1 -fobjc-arc -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak %s -triple x86_64-darwin -verify
-// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP4=1 -fobjc-arc -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak %s -triple x86_64-darwin -verify
+// RUN: %clang_analyze_cc1 -fobjc-arc -triple x86_64-darwin\
+// RUN:   -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak -verify %s
+// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP1=1 -fobjc-arc -triple x86_64-darwin\
+// RUN:   -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak -verify %s
+// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP2=1 -fobjc-arc -triple x86_64-darwin\
+// RUN:   -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak -verify %s
+// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP3=1 -fobjc-arc -triple x86_64-darwin\
+// RUN:   -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak -verify %s
+// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP4=1 -fobjc-arc -triple x86_64-darwin\
+// RUN:   -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak -verify %s
+// RUN: %clang_analyze_cc1 -DEXTRA=1 -DAP5=1 -fobjc-arc -triple x86_64-darwin\
+// RUN:   -analyzer-checker=core,osx.cocoa.RunLoopAutoreleaseLeak -verify %s
 
 #include "../Inputs/system-header-simulator-for-objc-dealloc.h"
 
@@ -120,5 +126,36 @@ int main() {
     (void) object;
     xpc_main();
     return 0;
+}
+#endif
+
+#ifdef AP5
+@class NSString;
+@class NSConstantString;
+#define CF_BRIDGED_TYPE(T)    __attribute__((objc_bridge(T)))
+typedef const CF_BRIDGED_TYPE(id) void * CFTypeRef;
+typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
+
+typedef enum { WARNING } Level;
+id do_log(Level, const char *);
+#define log(level, msg) __extension__({ (do_log(level, msg)); })
+
+@interface I
+- foo;
+@end
+
+CFStringRef processString(const __NSConstantString *, void *);
+
+#define CFSTR __builtin___CFStringMakeConstantString
+
+int main() {
+  I *i;
+  @autoreleasepool {
+    NSString *s1 = (__bridge_transfer NSString *)processString(0, 0);
+    NSString *s2 = (__bridge_transfer NSString *)processString((CFSTR("")), ((void *)0));
+    log(WARNING, "Hello world!");
+  }
+  [[NSRunLoop mainRunLoop] run];
+  [i foo]; // no-crash // expected-warning{{Temporary objects allocated in the autorelease pool of last resort followed by the launch of main run loop may never get released; consider moving them to a separate autorelease pool}}
 }
 #endif

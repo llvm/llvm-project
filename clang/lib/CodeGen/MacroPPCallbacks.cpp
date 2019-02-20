@@ -14,7 +14,8 @@
 #include "MacroPPCallbacks.h"
 #include "CGDebugInfo.h"
 #include "clang/CodeGen/ModuleBuilder.h"
-#include "clang/Parse/Parser.h"
+#include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/Preprocessor.h"
 
 using namespace clang;
 
@@ -88,16 +89,6 @@ SourceLocation MacroPPCallbacks::getCorrectLocation(SourceLocation Loc) {
   return SourceLocation();
 }
 
-static bool isBuiltinFile(SourceManager &SM, SourceLocation Loc) {
-  StringRef Filename(SM.getPresumedLoc(Loc).getFilename());
-  return Filename.equals("<built-in>");
-}
-
-static bool isCommandLineFile(SourceManager &SM, SourceLocation Loc) {
-  StringRef Filename(SM.getPresumedLoc(Loc).getFilename());
-  return Filename.equals("<command line>");
-}
-
 void MacroPPCallbacks::updateStatusToNextScope() {
   switch (Status) {
   case NoScope:
@@ -127,7 +118,7 @@ void MacroPPCallbacks::FileEntered(SourceLocation Loc) {
     updateStatusToNextScope();
     return;
   case BuiltinScope:
-    if (isCommandLineFile(PP.getSourceManager(), Loc))
+    if (PP.getSourceManager().isWrittenInCommandLineFile(Loc))
       return;
     updateStatusToNextScope();
     LLVM_FALLTHROUGH;
@@ -147,7 +138,7 @@ void MacroPPCallbacks::FileExited(SourceLocation Loc) {
   default:
     llvm_unreachable("Do not expect to exit a file from current scope");
   case BuiltinScope:
-    if (!isBuiltinFile(PP.getSourceManager(), Loc))
+    if (!PP.getSourceManager().isWrittenInBuiltinFile(Loc))
       // Skip next scope and change status to MainFileScope.
       Status = MainFileScope;
     return;

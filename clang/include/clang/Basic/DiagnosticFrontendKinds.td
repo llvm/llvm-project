@@ -63,16 +63,6 @@ def note_fe_backend_invalid_loc : Note<"could "
 
 def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 
-def remark_sanitize_address_insert_extra_padding_accepted : Remark<
-    "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,
-    InGroup<SanitizeAddressRemarks>;
-def remark_sanitize_address_insert_extra_padding_rejected : Remark<
-    "-fsanitize-address-field-padding ignored for %0 because it "
-    "%select{is not C++|is packed|is a union|is trivially copyable|"
-    "has trivial destructor|is standard layout|is in a blacklisted file|"
-    "is blacklisted}1">, ShowInSystemHeader,
-    InGroup<SanitizeAddressRemarks>;
-
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
 def err_fe_stdout_binary : Error<"unable to change standard output to binary">,
@@ -99,8 +89,6 @@ def err_fe_unable_to_interface_with_target : Error<
     "unable to interface with target machine">;
 def err_fe_unable_to_open_output : Error<
     "unable to open output file '%0': '%1'">;
-def err_fe_pth_file_has_no_source_header : Error<
-    "PTH file '%0' does not designate an original source header file for -include-pth">;
 def warn_fe_macro_contains_embedded_newline : Warning<
     "macro '%0' contains embedded newline; text after the newline is ignored">;
 def warn_fe_cc_print_header_failure : Warning<
@@ -172,11 +160,6 @@ def warn_unknown_warning_specifier : Warning<
     "unknown %0 warning specifier: '%1'">,
     InGroup<UnknownWarningOption>;
 
-def err_unknown_analyzer_checker : Error<
-    "no analyzer checkers are associated with '%0'">;
-def note_suggest_disabling_all_checkers : Note<
-    "use -analyzer-disable-all-checks to disable all static analyzer checkers">;
-
 def warn_incompatible_analyzer_plugin_api : Warning<
     "checker plugin '%0' is not compatible with this version of the analyzer">,
     InGroup<DiagGroup<"analyzer-incompatible-plugin"> >;
@@ -187,6 +170,8 @@ def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
 def err_module_interface_requires_modules_ts : Error<
   "module interface compilation requires '-fmodules-ts'">;
+def err_header_module_requires_modules : Error<
+  "header module compilation requires '-fmodules' or '-fmodules-ts'">;
 def warn_module_config_mismatch : Warning<
   "module file %0 cannot be loaded due to a configuration mismatch with the current "
   "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
@@ -224,6 +209,10 @@ def remark_module_build_done : Remark<"finished building module '%0'">,
 def err_modules_embed_file_not_found :
   Error<"file '%0' specified by '-fmodules-embed-file=' not found">,
   DefaultFatal;
+def err_module_header_file_not_found :
+  Error<"module header file '%0' not found">, DefaultFatal;
+def err_module_header_file_invalid :
+  Error<"unexpected module header file input '%0'">, DefaultFatal;
 
 def remark_index_producing_module_file_data : Remark<"producing index data for "
   "module file '%0'">,
@@ -245,4 +234,49 @@ def warn_stdlibcxx_not_found : Warning<
   "include path for stdlibc++ headers not found; pass '-stdlib=libc++' on the "
   "command line to use the libc++ standard library instead">,
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
+
+def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
+def err_function_needs_feature : Error<
+  "always_inline function %1 requires target feature '%2', but would "
+  "be inlined into function %0 that is compiled without support for '%2'">;
+
+def err_alias_to_undefined : Error<
+  "%select{alias|ifunc}0 must point to a defined "
+  "%select{variable or |}1function">;
+def warn_alias_to_weak_alias : Warning<
+  "%select{alias|ifunc}2 will always resolve to %0 even if weak definition of "
+  "%1 is overridden">,
+  InGroup<IgnoredAttributes>;
+def err_duplicate_mangled_name : Error<
+  "definition with same mangled name '%0' as another definition">;
+def err_cyclic_alias : Error<
+  "%select{alias|ifunc}0 definition is part of a cycle">;
+def err_ifunc_resolver_return : Error<
+  "ifunc resolver function must return a pointer">;
+
+def warn_atomic_op_misaligned : Warning<
+  "%select{large|misaligned}0 atomic operation may incur "
+  "significant performance penalty">, InGroup<DiagGroup<"atomic-alignment">>;
+
+def warn_alias_with_section : Warning<
+  "%select{alias|ifunc}1 will not be in section '%0' but in the same section "
+  "as the %select{aliasee|resolver}2">,
+  InGroup<IgnoredAttributes>;
+
+let CategoryName = "Instrumentation Issue" in {
+def warn_profile_data_out_of_date : Warning<
+  "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"
+  " mismatched data that will be ignored">,
+  InGroup<ProfileInstrOutOfDate>;
+def warn_profile_data_missing : Warning<
+  "profile data may be incomplete: of %0 function%s0, %1 %plural{1:has|:have}1"
+  " no data">,
+  InGroup<ProfileInstrMissing>,
+  DefaultIgnore;
+def warn_profile_data_unprofiled : Warning<
+  "no profile data available for file \"%0\"">,
+  InGroup<ProfileInstrUnprofiled>;
+
+} // end of instrumentation issue category
+
 }

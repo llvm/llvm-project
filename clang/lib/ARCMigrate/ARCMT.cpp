@@ -190,8 +190,6 @@ createInvocationForMigration(CompilerInvocation &origCI,
       PPOpts.Includes.insert(PPOpts.Includes.begin(), OriginalFile);
     PPOpts.ImplicitPCHInclude.clear();
   }
-  // FIXME: Get the original header of a PTH as well.
-  CInvok->getPreprocessorOpts().ImplicitPTHInclude.clear();
   std::string define = getARCMTMacroName();
   define += '=';
   CInvok->getPreprocessorOpts().addMacroDef(define);
@@ -241,7 +239,7 @@ bool arcmt::checkForManualIssues(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagClient, bool emitPremigrationARCErrors,
     StringRef plistOut) {
-  if (!origCI.getLangOpts()->ObjC1)
+  if (!origCI.getLangOpts()->ObjC)
     return false;
 
   LangOptions::GCMode OrigGCMode = origCI.getLangOpts()->getGC();
@@ -342,7 +340,7 @@ applyTransforms(CompilerInvocation &origCI, const FrontendInputFile &Input,
                 std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                 DiagnosticConsumer *DiagClient, StringRef outputDir,
                 bool emitPremigrationARCErrors, StringRef plistOut) {
-  if (!origCI.getLangOpts()->ObjC1)
+  if (!origCI.getLangOpts()->ObjC)
     return false;
 
   LangOptions::GCMode OrigGCMode = origCI.getLangOpts()->getGC();

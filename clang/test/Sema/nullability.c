@@ -20,8 +20,8 @@ typedef int * _Null_unspecified null_unspecified_int_ptr;
 typedef int * _Nonnull _Nonnull redundant_1; // expected-warning{{duplicate nullability specifier '_Nonnull'}}
 
 // Conflicting nullability type specifiers.
-typedef int * _Nonnull _Nullable conflicting_1; // expected-error{{nullability specifier '_Nonnull' conflicts with existing specifier '_Nullable'}}
-typedef int * _Null_unspecified _Nonnull conflicting_2; // expected-error{{nullability specifier '_Null_unspecified' conflicts with existing specifier '_Nonnull'}}
+typedef int * _Nonnull _Nullable conflicting_1; // expected-error{{nullability specifier '_Nullable' conflicts with existing specifier '_Nonnull'}}
+typedef int * _Null_unspecified _Nonnull conflicting_2; // expected-error{{nullability specifier '_Nonnull' conflicts with existing specifier '_Null_unspecified'}}
 
 // Redundant nullability specifiers via a typedef are okay.
 typedef nonnull_int_ptr _Nonnull redundant_okay_1;

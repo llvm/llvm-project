@@ -50,8 +50,8 @@ void test(int *List, int Length, int Value) {
 #pragma nounroll_and_jam
 /* expected-error {{expected a for, while, or do-while loop to follow '#pragma nounroll_and_jam'}} */ int l = Length;
 
-/* expected-error {{incompatible directives '#pragma nounroll_and_jam' and '#pragma unroll_and_jam(4)'}} */ #pragma unroll_and_jam 4
-#pragma nounroll_and_jam
+#pragma unroll_and_jam 4
+/* expected-error {{incompatible directives '#pragma nounroll_and_jam' and '#pragma unroll_and_jam(4)'}} */ #pragma nounroll_and_jam
   for (int i = 0; i < Length; i++) {
     for (int j = 0; j < Length; j++) {
       List[i * Length + j] = Value;

@@ -12,4 +12,5 @@ target_link_libraries(arcmt-test
   clangBasic
   clangFrontend
   clangLex
+  clangSerialization
   )

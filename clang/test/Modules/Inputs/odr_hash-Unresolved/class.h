@@ -6,6 +6,7 @@ class S {
   void run() {
     int x;
     A::Check(&Field, 1);
+    A::Check(&Field, 1);
   }
 };
 #endif

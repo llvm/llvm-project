@@ -140,6 +140,34 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
       Features.push_back("+ssse3");
   }
 
+  // Translate the high level `-mretpoline` flag to the specific target feature
+  // flags. We also detect if the user asked for retpoline external thunks but
+  // failed to ask for retpolines themselves (through any of the different
+  // flags). This is a bit hacky but keeps existing usages working. We should
+  // consider deprecating this and instead warn if the user requests external
+  // retpoline thunks and *doesn't* request some form of retpolines.
+  if (Args.hasArgNoClaim(options::OPT_mretpoline, options::OPT_mno_retpoline,
+                         options::OPT_mspeculative_load_hardening,
+                         options::OPT_mno_speculative_load_hardening)) {
+    if (Args.hasFlag(options::OPT_mretpoline, options::OPT_mno_retpoline,
+                     false)) {
+      Features.push_back("+retpoline-indirect-calls");
+      Features.push_back("+retpoline-indirect-branches");
+    } else if (Args.hasFlag(options::OPT_mspeculative_load_hardening,
+                            options::OPT_mno_speculative_load_hardening,
+                            false)) {
+      // On x86, speculative load hardening relies on at least using retpolines
+      // for indirect calls.
+      Features.push_back("+retpoline-indirect-calls");
+    }
+  } else if (Args.hasFlag(options::OPT_mretpoline_external_thunk,
+                          options::OPT_mno_retpoline_external_thunk, false)) {
+    // FIXME: Add a warning about failing to specify `-mretpoline` and
+    // eventually switch to an error here.
+    Features.push_back("+retpoline-indirect-calls");
+    Features.push_back("+retpoline-indirect-branches");
+  }
+
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   handleTargetFeaturesGroup(Args, Features, options::OPT_m_x86_Features_Group);

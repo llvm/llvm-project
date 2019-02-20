@@ -22,15 +22,15 @@ void test0(_Bool cond) {
   // CHECK-NEXT: store i1 true, i1* [[RELCOND]]
   // CHECK-NEXT: br label
   // CHECK:      [[T0:%.*]] = phi i8* [ null, {{%.*}} ], [ [[CALL]], {{%.*}} ]
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @objc_retain(i8* [[T0]]) [[NUW:#[0-9]+]]
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]]) [[NUW:#[0-9]+]]
   // CHECK-NEXT: store i8* [[T1]], i8** [[X]],
   // CHECK-NEXT: [[REL:%.*]] = load i1, i1* [[RELCOND]]
   // CHECK-NEXT: br i1 [[REL]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[RELVAL]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T0]]) [[NUW]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]]) [[NUW]]
   // CHECK-NEXT: br label
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[X]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T0]]) [[NUW]]
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]]) [[NUW]]
   // CHECK-NEXT: [[XPTR2:%.*]] = bitcast i8** [[X]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[XPTR2]])
   // CHECK-NEXT: ret void
@@ -58,7 +58,7 @@ void test1(int cond) {
   // CHECK-NEXT: store i8* null, i8** [[STRONG]]
   // CHECK-NEXT: [[WEAKPTR1:%.*]] = bitcast i8** [[WEAK]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 8, i8* [[WEAKPTR1]])
-  // CHECK-NEXT: call i8* @objc_initWeak(i8** [[WEAK]], i8* null)
+  // CHECK-NEXT: call i8* @llvm.objc.initWeak(i8** [[WEAK]], i8* null)
 
   // CHECK-NEXT: [[T0:%.*]] = load i32, i32* [[COND]]
   // CHECK-NEXT: [[T1:%.*]] = icmp ne i32 [[T0]], 0
@@ -74,11 +74,11 @@ void test1(int cond) {
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP1]]
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @objc_retain(i8* [[T0]])
-  // CHECK-NEXT: call void (...) @clang.arc.use(i8* [[W]]) [[NUW]]
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]])
+  // CHECK-NEXT: call void (...) @llvm.objc.clang.arc.use(i8* [[W]]) [[NUW]]
   // CHECK-NEXT: [[T2:%.*]] = load i8*, i8** [[ARG]]
   // CHECK-NEXT: store i8* [[T1]], i8** [[ARG]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T2]])
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T2]])
   // CHECK-NEXT: br label
 
   // CHECK:      [[T0:%.*]] = load i32, i32* [[COND]]
@@ -88,7 +88,7 @@ void test1(int cond) {
   // CHECK-NEXT: [[T1:%.*]] = select i1 [[T0]], i8** null, i8** [[TEMP2]]
   // CHECK-NEXT: store i1 false, i1* [[CONDCLEANUP]]
   // CHECK-NEXT: br i1 [[T0]],
-  // CHECK:      [[T0:%.*]] = call i8* @objc_loadWeakRetained(i8** [[ARG]])
+  // CHECK:      [[T0:%.*]] = call i8* @llvm.objc.loadWeakRetained(i8** [[ARG]])
   // CHECK-NEXT: store i8* [[T0]], i8** [[CONDCLEANUPSAVE]]
   // CHECK-NEXT: store i1 true, i1* [[CONDCLEANUP]]
   // CHECK-NEXT: store i8* [[T0]], i8** [[TEMP2]]
@@ -97,10 +97,10 @@ void test1(int cond) {
   // CHECK-NEXT: [[T0:%.*]] = icmp eq i8** [[ARG]], null
   // CHECK-NEXT: br i1 [[T0]],
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[TEMP2]]
-  // CHECK-NEXT: call i8* @objc_storeWeak(i8** [[ARG]], i8* [[T0]])
+  // CHECK-NEXT: call i8* @llvm.objc.storeWeak(i8** [[ARG]], i8* [[T0]])
   // CHECK-NEXT: br label
 
-  // CHECK:      call void @objc_destroyWeak(i8** [[WEAK]])
+  // CHECK:      call void @llvm.objc.destroyWeak(i8** [[WEAK]])
   // CHECK:      [[WEAKPTR2:%.*]] = bitcast i8** [[WEAK]] to i8*
   // CHECK:      call void @llvm.lifetime.end.p0i8(i64 8, i8* [[WEAKPTR2]])
   // CHECK:      [[STRONGPTR2:%.*]] = bitcast i8** [[STRONG]] to i8*
@@ -130,21 +130,21 @@ void test2(int cond) {
   // CHECK-NEXT: br i1
   //   Within true branch, cleanup enabled.
   // CHECK:      [[T0:%.*]] = call i8* @test2_producer()
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @objc_retainAutoreleasedReturnValue(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* [[T0]])
   // CHECK-NEXT: store i8* [[T1]], i8** [[CLEANUP_SAVE]]
   // CHECK-NEXT: store i1 true, i1* [[RUN_CLEANUP]]
   // CHECK-NEXT: br label
   //   Join point for conditional operator; retain immediately.
   // CHECK:      [[T0:%.*]] = phi i8* [ [[T1]], {{%.*}} ], [ null, {{%.*}} ]
-  // CHECK-NEXT: [[RESULT:%.*]] = call i8* @objc_retain(i8* [[T0]])
+  // CHECK-NEXT: [[RESULT:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]])
   //   Leaving full-expression; run conditional cleanup.
   // CHECK-NEXT: [[T0:%.*]] = load i1, i1* [[RUN_CLEANUP]]
   // CHECK-NEXT: br i1 [[T0]]
   // CHECK:      [[T0:%.*]] = load i8*, i8** [[CLEANUP_SAVE]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T0]])
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]])
   // CHECK-NEXT: br label
   //   And way down at the end of the loop:
-  // CHECK:      call void @objc_release(i8* [[RESULT]])
+  // CHECK:      call void @llvm.objc.release(i8* [[RESULT]])
 }
 
 // CHECK: attributes [[NUW]] = { nounwind }

@@ -238,8 +238,8 @@ static const Stmt *LookThroughStmt(const Stmt *S) {
   while (S) {
     if (const Expr *Ex = dyn_cast<Expr>(S))
       S = Ex->IgnoreParens();
-    if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(S)) {
-      S = EWC->getSubExpr();
+    if (const FullExpr *FE = dyn_cast<FullExpr>(S)) {
+      S = FE->getSubExpr();
       continue;
     }
     if (const OpaqueValueExpr *OVE = dyn_cast<OpaqueValueExpr>(S)) {
@@ -627,7 +627,7 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
        it != ei; ++it) {
     vec.push_back(it->first);
   }
-  llvm::sort(vec.begin(), vec.end(), [](const CFGBlock *A, const CFGBlock *B) {
+  llvm::sort(vec, [](const CFGBlock *A, const CFGBlock *B) {
     return A->getBlockID() < B->getBlockID();
   });
 
@@ -647,9 +647,8 @@ void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
       declVec.push_back(*si);
     }
 
-    llvm::sort(declVec.begin(), declVec.end(),
-               [](const Decl *A, const Decl *B) {
-      return A->getLocStart() < B->getLocStart();
+    llvm::sort(declVec, [](const Decl *A, const Decl *B) {
+      return A->getBeginLoc() < B->getBeginLoc();
     });
 
     for (std::vector<const VarDecl*>::iterator di = declVec.begin(),

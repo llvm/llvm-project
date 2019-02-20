@@ -40,6 +40,7 @@
 
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
+// CHECK-DAG: [[S2:%.+]] = type { i32, i32, i32 }
 // CHECK-DAG: [[ENTTY:%.+]] = type { i8*, i8*, i[[SZ:32|64]], i32, i32 }
 // CHECK-DAG: [[DEVTY:%.+]] = type { i8*, i8*, [[ENTTY]]*, [[ENTTY]]* }
 // CHECK-DAG: [[DSCTY:%.+]] = type { i32, [[DEVTY]]*, [[ENTTY]]*, [[ENTTY]]* }
@@ -48,8 +49,8 @@
 
 // CHECK-DAG: $[[REGFN:\.omp_offloading\..+]] = comdat
 
-// We have 8 target regions, but only 7 that actually will generate offloading
-// code and have mapped arguments, and only 5 have all-constant map sizes.
+// We have 9 target regions, but only 8 that actually will generate offloading
+// code and have mapped arguments, and only 6 have all-constant map sizes.
 
 // CHECK-DAG: [[SIZET:@.+]] = private unnamed_addr constant [2 x i[[SZ]]] [i[[SZ]] 0, i[[SZ]] 4]
 // CHECK-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
@@ -63,6 +64,9 @@
 // CHECK-DAG: [[SIZET6:@.+]] = private unnamed_addr constant [4 x i[[SZ]]] [i[[SZ]] 4, i[[SZ]] 2, i[[SZ]] 1, i[[SZ]] 40]
 // CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i64] [i64 800, i64 800, i64 800, i64 547]
 // CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [6 x i64] [i64 32, i64 281474976711171, i64 800, i64 288, i64 288, i64 547]
+// CHECK-DAG: [[SIZET9:@.+]] = private unnamed_addr constant [1 x i[[SZ]]] [i[[SZ]] 12]
+// CHECK-DAG: [[MAPT10:@.+]] = private unnamed_addr constant [1 x i64] [i64 35]
+// CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
@@ -71,6 +75,7 @@
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 
+// TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
@@ -691,6 +696,31 @@ int bar(int n){
 
 // CHECK:       [[IFEND]]
 
+// CHECK: define {{.*}}@{{.*}}zee{{.*}}
+
+// CHECK:       [[LOCAL_THIS:%.+]] = alloca [[S2]]*
+// CHECK:       [[BP:%.+]] = alloca [1 x i8*]
+// CHECK:       [[P:%.+]] = alloca [1 x i8*]
+// CHECK:       [[LOCAL_THIS1:%.+]] = load [[S2]]*, [[S2]]** [[LOCAL_THIS]]
+// CHECK:       [[ARR_IDX:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
+// CHECK:       [[ARR_IDX2:%.+]] = getelementptr inbounds [[S2]], [[S2]]* [[LOCAL_THIS1]], i[[SZ]] 0
+
+// CHECK-DAG:   [[BPADDR0:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0    
+// CHECK-DAG:   [[PADDR0:%.+]] =  getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
+// CHECK-DAG:   [[CBPADDR0:%.+]] = bitcast i8** [[BPADDR0]] to [[S2]]**
+// CHECK-DAG:   [[CPADDR0:%.+]] = bitcast i8** [[PADDR0]] to [[S2]]**
+// CHECK-DAG:   store [[S2]]* [[ARR_IDX]], [[S2]]** [[CBPADDR0]]
+// CHECK-DAG:   store [[S2]]* [[ARR_IDX2]], [[S2]]** [[CPADDR0]]
+
+// CHECK:       [[BPR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[BP]], i32 0, i32 0
+// CHECK:       [[PR:%.+]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[P]], i32 0, i32 0
+// CHECK:       [[RET:%.+]] = call i32 @__tgt_target(i64 -1, i8* @{{[^,]+}}, i32 1, i8** [[BPR:%[^,]+]], i8** [[PR:%[^,]+]], i[[SZ]]* getelementptr inbounds ([1 x i[[SZ]]], [1 x i[[SZ]]]* [[SIZET9]], i32 0, i32 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* [[MAPT10]], i32 0, i32 0))
+// CHECK-NEXT:  [[ERROR:%.+]] = icmp ne i32 [[RET]], 0
+// CHECK-NEXT:  br i1 [[ERROR]], label %[[FAIL:[^,]+]], label %[[END:[^,]+]]
+// CHECK:       [[FAIL]]
+// CHECK:       call void [[HVT0:@.+]]([[S2]]* [[LOCAL_THIS1]])
+// CHECK-NEXT:  br label %[[END]]
+// CHECK:       [[END]]
 
 // Check that the offloading functions are emitted and that the arguments are
 // correct and loaded correctly for the target regions of the callees of bar().
@@ -765,4 +795,20 @@ void bar () {
 pragma_target
 {}
 }
+
+class S2 {
+  int a, b, c;
+
+public:
+  void zee() {
+    #pragma omp target map(this[0])
+      a++;
+  }
+};
+
+int main () {
+  S2 bar;
+  bar.zee();
+}
+
 #endif

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/TargetInfo.h"
@@ -29,10 +29,10 @@ static bool isArc4RandomAvailable(const ASTContext &Ctx) {
   const llvm::Triple &T = Ctx.getTargetInfo().getTriple();
   return T.getVendor() == llvm::Triple::Apple ||
          T.getOS() == llvm::Triple::CloudABI ||
-         T.getOS() == llvm::Triple::FreeBSD ||
-         T.getOS() == llvm::Triple::NetBSD ||
-         T.getOS() == llvm::Triple::OpenBSD ||
-         T.getOS() == llvm::Triple::DragonFly;
+         T.isOSFreeBSD() ||
+         T.isOSNetBSD() ||
+         T.isOSOpenBSD() ||
+         T.isOSDragonFly();
 }
 
 namespace {
@@ -188,7 +188,7 @@ void WalkAST::VisitForStmt(ForStmt *FS) {
 }
 
 //===----------------------------------------------------------------------===//
-// Check: floating poing variable used as loop counter.
+// Check: floating point variable used as loop counter.
 // Originally: <rdar://problem/6336718>
 // Implements: CERT security coding advisory FLP-30.
 //===----------------------------------------------------------------------===//
@@ -597,9 +597,10 @@ void WalkAST::checkCall_mkstemp(const CallExpr *CE, const FunctionDecl *FD) {
   unsigned suffix = 0;
   if (ArgSuffix.second >= 0) {
     const Expr *suffixEx = CE->getArg((unsigned)ArgSuffix.second);
-    llvm::APSInt Result;
-    if (!suffixEx->EvaluateAsInt(Result, BR.getContext()))
+    Expr::EvalResult EVResult;
+    if (!suffixEx->EvaluateAsInt(EVResult, BR.getContext()))
       return;
+    llvm::APSInt Result = EVResult.Val.getInt();
     // FIXME: Issue a warning.
     if (Result.isNegative())
       return;
@@ -650,14 +651,14 @@ void WalkAST::checkCall_strcpy(const CallExpr *CE, const FunctionDecl *FD) {
 
   const auto *Target = CE->getArg(0)->IgnoreImpCasts(),
              *Source = CE->getArg(1)->IgnoreImpCasts();
-  if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Target))
-    if (const auto *Array = dyn_cast<ConstantArrayType>(DeclRef->getType())) {
-      uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
-      if (const auto *String = dyn_cast<StringLiteral>(Source)) {
-        if (ArraySize >= String->getLength() + 1)
-          return;
-      }
+
+  if (const auto *Array = dyn_cast<ConstantArrayType>(Target->getType())) {
+    uint64_t ArraySize = BR.getContext().getTypeSize(Array) / 8;
+    if (const auto *String = dyn_cast<StringLiteral>(Source)) {
+      if (ArraySize >= String->getLength() + 1)
+        return;
     }
+  }
 
   // Issue a warning.
   PathDiagnosticLocation CELoc =
@@ -905,12 +906,23 @@ public:
 };
 }
 
+void ento::registerSecuritySyntaxChecker(CheckerManager &mgr) {
+  mgr.registerChecker<SecuritySyntaxChecker>();
+}
+
+bool ento::shouldRegisterSecuritySyntaxChecker(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name)                                                 \
   void ento::register##name(CheckerManager &mgr) {                             \
-    SecuritySyntaxChecker *checker =                                           \
-        mgr.registerChecker<SecuritySyntaxChecker>();                          \
+    SecuritySyntaxChecker *checker =  mgr.getChecker<SecuritySyntaxChecker>(); \
     checker->filter.check_##name = true;                                       \
     checker->filter.checkName_##name = mgr.getCurrentCheckName();              \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name(const LangOptions &LO) {                     \
+    return true;                                                               \
   }
 
 REGISTER_CHECKER(bcmp)

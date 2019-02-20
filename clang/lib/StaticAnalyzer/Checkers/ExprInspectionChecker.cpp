@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/SValExplainer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -299,7 +299,7 @@ void ExprInspectionChecker::analyzerHashDump(const CallExpr *CE,
                                              CheckerContext &C) const {
   const LangOptions &Opts = C.getLangOpts();
   const SourceManager &SM = C.getSourceManager();
-  FullSourceLoc FL(CE->getArg(0)->getLocStart(), SM);
+  FullSourceLoc FL(CE->getArg(0)->getBeginLoc(), SM);
   std::string HashContent =
       GetIssueString(SM, FL, getCheckName().getName(), "Category",
                      C.getLocationContext()->getDecl(), Opts);
@@ -332,6 +332,7 @@ void ExprInspectionChecker::analyzerDenote(const CallExpr *CE,
   C.addTransition(C.getState()->set<DenotedSymbols>(Sym, E));
 }
 
+namespace {
 class SymbolExpressor
     : public SymExprVisitor<SymbolExpressor, Optional<std::string>> {
   ProgramStateRef State;
@@ -380,6 +381,7 @@ public:
     return None;
   }
 };
+} // namespace
 
 void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
                                             CheckerContext &C) const {
@@ -406,4 +408,8 @@ void ExprInspectionChecker::analyzerExpress(const CallExpr *CE,
 
 void ento::registerExprInspectionChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<ExprInspectionChecker>();
+}
+
+bool ento::shouldRegisterExprInspectionChecker(const LangOptions &LO) {
+  return true;
 }

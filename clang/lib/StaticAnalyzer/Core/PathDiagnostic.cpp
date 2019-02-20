@@ -536,7 +536,7 @@ PathDiagnosticConsumer::FilesMade::getFiles(const PathDiagnostic &PD) {
 static SourceLocation getValidSourceLocation(const Stmt* S,
                                              LocationOrAnalysisDeclContext LAC,
                                              bool UseEnd = false) {
-  SourceLocation L = UseEnd ? S->getLocEnd() : S->getLocStart();
+  SourceLocation L = UseEnd ? S->getEndLoc() : S->getBeginLoc();
   assert(!LAC.isNull() && "A valid LocationContext or AnalysisDeclContext should "
                           "be passed to PathDiagnosticLocation upon creation.");
 
@@ -562,13 +562,13 @@ static SourceLocation getValidSourceLocation(const Stmt* S,
       if (!Parent) {
         const Stmt *Body = ADC->getBody();
         if (Body)
-          L = Body->getLocStart();
+          L = Body->getBeginLoc();
         else
-          L = ADC->getDecl()->getLocEnd();
+          L = ADC->getDecl()->getEndLoc();
         break;
       }
 
-      L = UseEnd ? Parent->getLocEnd() : Parent->getLocStart();
+      L = UseEnd ? Parent->getEndLoc() : Parent->getBeginLoc();
     } while (!L.isValid());
   }
 
@@ -635,7 +635,7 @@ getLocationForCaller(const StackFrameContext *SFC,
 PathDiagnosticLocation
 PathDiagnosticLocation::createBegin(const Decl *D,
                                     const SourceManager &SM) {
-  return PathDiagnosticLocation(D->getLocStart(), SM, SingleLocK);
+  return PathDiagnosticLocation(D->getBeginLoc(), SM, SingleLocK);
 }
 
 PathDiagnosticLocation
@@ -695,7 +695,7 @@ PathDiagnosticLocation::createDeclBegin(const LocationContext *LC,
   // FIXME: Should handle CXXTryStmt if analyser starts supporting C++.
   if (const auto *CS = dyn_cast_or_null<CompoundStmt>(LC->getDecl()->getBody()))
     if (!CS->body_empty()) {
-      SourceLocation Loc = (*CS->body_begin())->getLocStart();
+      SourceLocation Loc = (*CS->body_begin())->getBeginLoc();
       return PathDiagnosticLocation(Loc, SM, SingleLocK);
     }
 
@@ -735,13 +735,19 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
     return getLocationForCaller(CEE->getCalleeContext(),
                                 CEE->getLocationContext(),
                                 SMng);
+  } else if (auto CEB = P.getAs<CallExitBegin>()) {
+    if (const ReturnStmt *RS = CEB->getReturnStmt())
+      return PathDiagnosticLocation::createBegin(RS, SMng,
+                                                 CEB->getLocationContext());
+    return PathDiagnosticLocation(
+        CEB->getLocationContext()->getDecl()->getSourceRange().getEnd(), SMng);
   } else if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>()) {
     CFGElement BlockFront = BE->getBlock()->front();
     if (auto StmtElt = BlockFront.getAs<CFGStmt>()) {
-      return PathDiagnosticLocation(StmtElt->getStmt()->getLocStart(), SMng);
+      return PathDiagnosticLocation(StmtElt->getStmt()->getBeginLoc(), SMng);
     } else if (auto NewAllocElt = BlockFront.getAs<CFGNewAllocator>()) {
       return PathDiagnosticLocation(
-          NewAllocElt->getAllocatorExpr()->getLocStart(), SMng);
+          NewAllocElt->getAllocatorExpr()->getBeginLoc(), SMng);
     }
     llvm_unreachable("Unexpected CFG element at front of block");
   } else {
@@ -853,7 +859,7 @@ PathDiagnosticLocation
     if (P.getAs<PostStmtPurgeDeadSymbols>())
       return PathDiagnosticLocation::createEnd(S, SM, LC);
 
-    if (S->getLocStart().isValid())
+    if (S->getBeginLoc().isValid())
       return PathDiagnosticLocation(S, SM, LC);
     return PathDiagnosticLocation(getValidSourceLocation(S, LC), SM);
   }
@@ -912,7 +918,7 @@ PathDiagnosticRange
           const auto *DS = cast<DeclStmt>(S);
           if (DS->isSingleDecl()) {
             // Should always be the case, but we'll be defensive.
-            return SourceRange(DS->getLocStart(),
+            return SourceRange(DS->getBeginLoc(),
                                DS->getSingleDecl()->getLocation());
           }
           break;

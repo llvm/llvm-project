@@ -48,6 +48,7 @@ add_clang_library(clangDriver
   ToolChains/Haiku.cpp
   ToolChains/HIP.cpp
   ToolChains/Hexagon.cpp
+  ToolChains/Hurd.cpp
   ToolChains/Linux.cpp
   ToolChains/MipsLinux.cpp
   ToolChains/MinGW.cpp
@@ -58,7 +59,7 @@ add_clang_library(clangDriver
   ToolChains/NetBSD.cpp
   ToolChains/OpenBSD.cpp
   ToolChains/PS4CPU.cpp
-  ToolChains/RISCV.cpp
+  ToolChains/RISCVToolchain.cpp
   ToolChains/Solaris.cpp
   ToolChains/TCE.cpp
   ToolChains/WebAssembly.cpp

@@ -25,7 +25,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerHelpers.h"
@@ -215,4 +215,8 @@ void VforkChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
 
 void ento::registerVforkChecker(CheckerManager &mgr) {
   mgr.registerChecker<VforkChecker>();
+}
+
+bool ento::shouldRegisterVforkChecker(const LangOptions &LO) {
+  return true;
 }

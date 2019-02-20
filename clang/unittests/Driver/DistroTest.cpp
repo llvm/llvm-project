@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Distro.h"
-#include "clang/Basic/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 using namespace clang;
@@ -25,7 +25,7 @@ namespace {
 // accidentally result in incorrect distribution guess.
 
 TEST(DistroTest, DetectUbuntu) {
-  vfs::InMemoryFileSystem UbuntuTrustyFileSystem;
+  llvm::vfs::InMemoryFileSystem UbuntuTrustyFileSystem;
   // Ubuntu uses Debian Sid version.
   UbuntuTrustyFileSystem.addFile("/etc/debian_version", 0,
       llvm::MemoryBuffer::getMemBuffer("jessie/sid\n"));
@@ -51,8 +51,9 @@ TEST(DistroTest, DetectUbuntu) {
   ASSERT_FALSE(UbuntuTrusty.IsRedhat());
   ASSERT_FALSE(UbuntuTrusty.IsOpenSUSE());
   ASSERT_FALSE(UbuntuTrusty.IsDebian());
+  ASSERT_FALSE(UbuntuTrusty.IsGentoo());
 
-  vfs::InMemoryFileSystem UbuntuYakketyFileSystem;
+  llvm::vfs::InMemoryFileSystem UbuntuYakketyFileSystem;
   UbuntuYakketyFileSystem.addFile("/etc/debian_version", 0,
       llvm::MemoryBuffer::getMemBuffer("stretch/sid\n"));
   UbuntuYakketyFileSystem.addFile("/etc/lsb-release", 0,
@@ -80,10 +81,11 @@ TEST(DistroTest, DetectUbuntu) {
   ASSERT_FALSE(UbuntuYakkety.IsRedhat());
   ASSERT_FALSE(UbuntuYakkety.IsOpenSUSE());
   ASSERT_FALSE(UbuntuYakkety.IsDebian());
+  ASSERT_FALSE(UbuntuYakkety.IsGentoo());
 }
 
 TEST(DistroTest, DetectRedhat) {
-  vfs::InMemoryFileSystem Fedora25FileSystem;
+  llvm::vfs::InMemoryFileSystem Fedora25FileSystem;
   Fedora25FileSystem.addFile("/etc/system-release-cpe", 0,
       llvm::MemoryBuffer::getMemBuffer("cpe:/o:fedoraproject:fedora:25\n"));
   // Both files are symlinks to fedora-release.
@@ -114,8 +116,9 @@ TEST(DistroTest, DetectRedhat) {
   ASSERT_TRUE(Fedora25.IsRedhat());
   ASSERT_FALSE(Fedora25.IsOpenSUSE());
   ASSERT_FALSE(Fedora25.IsDebian());
+  ASSERT_FALSE(Fedora25.IsGentoo());
 
-  vfs::InMemoryFileSystem CentOS7FileSystem;
+  llvm::vfs::InMemoryFileSystem CentOS7FileSystem;
   CentOS7FileSystem.addFile("/etc/system-release-cpe", 0,
       llvm::MemoryBuffer::getMemBuffer("cpe:/o:centos:centos:7\n"));
   // Both files are symlinks to centos-release.
@@ -150,10 +153,11 @@ TEST(DistroTest, DetectRedhat) {
   ASSERT_TRUE(CentOS7.IsRedhat());
   ASSERT_FALSE(CentOS7.IsOpenSUSE());
   ASSERT_FALSE(CentOS7.IsDebian());
+  ASSERT_FALSE(CentOS7.IsGentoo());
 }
 
 TEST(DistroTest, DetectOpenSUSE) {
-  vfs::InMemoryFileSystem OpenSUSELeap421FileSystem;
+  llvm::vfs::InMemoryFileSystem OpenSUSELeap421FileSystem;
   OpenSUSELeap421FileSystem.addFile("/etc/SuSE-release", 0,
       llvm::MemoryBuffer::getMemBuffer("openSUSE 42.1 (x86_64)\n"
                                        "VERSION = 42.1\n"
@@ -177,8 +181,9 @@ TEST(DistroTest, DetectOpenSUSE) {
   ASSERT_FALSE(OpenSUSELeap421.IsRedhat());
   ASSERT_TRUE(OpenSUSELeap421.IsOpenSUSE());
   ASSERT_FALSE(OpenSUSELeap421.IsDebian());
+  ASSERT_FALSE(OpenSUSELeap421.IsGentoo());
 
-  vfs::InMemoryFileSystem OpenSUSE132FileSystem;
+  llvm::vfs::InMemoryFileSystem OpenSUSE132FileSystem;
   OpenSUSE132FileSystem.addFile("/etc/SuSE-release", 0,
       llvm::MemoryBuffer::getMemBuffer("openSUSE 13.2 (x86_64)\n"
                                        "VERSION = 13.2\n"
@@ -202,8 +207,9 @@ TEST(DistroTest, DetectOpenSUSE) {
   ASSERT_FALSE(OpenSUSE132.IsRedhat());
   ASSERT_TRUE(OpenSUSE132.IsOpenSUSE());
   ASSERT_FALSE(OpenSUSE132.IsDebian());
+  ASSERT_FALSE(OpenSUSE132.IsGentoo());
 
-  vfs::InMemoryFileSystem SLES10FileSystem;
+  llvm::vfs::InMemoryFileSystem SLES10FileSystem;
   SLES10FileSystem.addFile("/etc/SuSE-release", 0,
       llvm::MemoryBuffer::getMemBuffer("SUSE Linux Enterprise Server 10 (x86_64)\n"
                                        "VERSION = 10\n"
@@ -218,10 +224,11 @@ TEST(DistroTest, DetectOpenSUSE) {
   ASSERT_FALSE(SLES10.IsRedhat());
   ASSERT_FALSE(SLES10.IsOpenSUSE());
   ASSERT_FALSE(SLES10.IsDebian());
+  ASSERT_FALSE(SLES10.IsGentoo());
 }
 
 TEST(DistroTest, DetectDebian) {
-  vfs::InMemoryFileSystem DebianJessieFileSystem;
+  llvm::vfs::InMemoryFileSystem DebianJessieFileSystem;
   DebianJessieFileSystem.addFile("/etc/debian_version", 0,
                                  llvm::MemoryBuffer::getMemBuffer("8.6\n"));
   DebianJessieFileSystem.addFile("/etc/os-release", 0,
@@ -240,8 +247,9 @@ TEST(DistroTest, DetectDebian) {
   ASSERT_FALSE(DebianJessie.IsRedhat());
   ASSERT_FALSE(DebianJessie.IsOpenSUSE());
   ASSERT_TRUE(DebianJessie.IsDebian());
+  ASSERT_FALSE(DebianJessie.IsGentoo());
 
-  vfs::InMemoryFileSystem DebianStretchSidFileSystem;
+  llvm::vfs::InMemoryFileSystem DebianStretchSidFileSystem;
   DebianStretchSidFileSystem.addFile("/etc/debian_version", 0,
                                  llvm::MemoryBuffer::getMemBuffer("stretch/sid\n"));
   DebianStretchSidFileSystem.addFile("/etc/os-release", 0,
@@ -258,10 +266,11 @@ TEST(DistroTest, DetectDebian) {
   ASSERT_FALSE(DebianStretchSid.IsRedhat());
   ASSERT_FALSE(DebianStretchSid.IsOpenSUSE());
   ASSERT_TRUE(DebianStretchSid.IsDebian());
+  ASSERT_FALSE(DebianStretchSid.IsGentoo());
 }
 
 TEST(DistroTest, DetectExherbo) {
-  vfs::InMemoryFileSystem ExherboFileSystem;
+  llvm::vfs::InMemoryFileSystem ExherboFileSystem;
   ExherboFileSystem.addFile("/etc/exherbo-release", 0, // (ASCII art)
                                  llvm::MemoryBuffer::getMemBuffer(""));
   ExherboFileSystem.addFile("/etc/os-release", 0,
@@ -279,10 +288,11 @@ TEST(DistroTest, DetectExherbo) {
   ASSERT_FALSE(Exherbo.IsRedhat());
   ASSERT_FALSE(Exherbo.IsOpenSUSE());
   ASSERT_FALSE(Exherbo.IsDebian());
+  ASSERT_FALSE(Exherbo.IsGentoo());
 }
 
 TEST(DistroTest, DetectArchLinux) {
-  vfs::InMemoryFileSystem ArchLinuxFileSystem;
+  llvm::vfs::InMemoryFileSystem ArchLinuxFileSystem;
   ArchLinuxFileSystem.addFile("/etc/arch-release", 0, // (empty)
                                  llvm::MemoryBuffer::getMemBuffer(""));
   ArchLinuxFileSystem.addFile("/etc/os-release", 0,
@@ -300,6 +310,32 @@ TEST(DistroTest, DetectArchLinux) {
   ASSERT_FALSE(ArchLinux.IsRedhat());
   ASSERT_FALSE(ArchLinux.IsOpenSUSE());
   ASSERT_FALSE(ArchLinux.IsDebian());
+  ASSERT_FALSE(ArchLinux.IsGentoo());
+}
+
+TEST(DistroTest, DetectGentoo) {
+  llvm::vfs::InMemoryFileSystem GentooFileSystem;
+  GentooFileSystem.addFile(
+      "/etc/gentoo-release", 0,
+      llvm::MemoryBuffer::getMemBuffer("Gentoo Base System release 2.6"));
+  GentooFileSystem.addFile(
+      "/etc/os-release", 0,
+      llvm::MemoryBuffer::getMemBuffer(
+          "NAME=Gentoo\n"
+          "ID=gentoo\n"
+          "PRETTY_NAME=\"Gentoo/Linux\"\n"
+          "ANSI_COLOR=\"1;32\"\n"
+          "HOME_URL=\"https://www.gentoo.org/\"\n"
+          "SUPPORT_URL=\"https://www.gentoo.org/support/\"\n"
+          "BUG_REPORT_URL=\"https://bugs.gentoo.org/\"\n"));
+
+  Distro Gentoo{GentooFileSystem};
+  ASSERT_EQ(Distro(Distro::Gentoo), Gentoo);
+  ASSERT_FALSE(Gentoo.IsUbuntu());
+  ASSERT_FALSE(Gentoo.IsRedhat());
+  ASSERT_FALSE(Gentoo.IsOpenSUSE());
+  ASSERT_FALSE(Gentoo.IsDebian());
+  ASSERT_TRUE(Gentoo.IsGentoo());
 }
 
 } // end anonymous namespace

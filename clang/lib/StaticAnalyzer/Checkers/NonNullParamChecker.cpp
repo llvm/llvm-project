@@ -15,7 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Attr.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -216,4 +216,8 @@ std::unique_ptr<BugReport> NonNullParamChecker::genReportReferenceToNullPointer(
 
 void ento::registerNonNullParamChecker(CheckerManager &mgr) {
   mgr.registerChecker<NonNullParamChecker>();
+}
+
+bool ento::shouldRegisterNonNullParamChecker(const LangOptions &LO) {
+  return true;
 }

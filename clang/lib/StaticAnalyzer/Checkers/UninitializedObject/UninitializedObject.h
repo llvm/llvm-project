@@ -21,7 +21,7 @@
 //     `-analyzer-config alpha.cplusplus.UninitializedObject:Pedantic=true`.
 //
 //   - "NotesAsWarnings" (boolean). If set to true, the checker will emit a
-//     warning for each uninitalized field, as opposed to emitting one warning
+//     warning for each uninitialized field, as opposed to emitting one warning
 //     per constructor call, and listing the uninitialized fields that belongs
 //     to it in notes. Defaults to false.
 //
@@ -234,7 +234,7 @@ private:
   //   * every node is an object that is
   //     - a union
   //     - a non-union record
-  //     - dereferencable (see isDereferencableType())
+  //     - dereferenceable (see isDereferencableType())
   //     - an array
   //     - of a primitive type (see isPrimitiveType())
   //   * the parent of each node is the object that contains it
@@ -275,7 +275,7 @@ private:
   //   this->iptr (pointee uninit)
   //   this->bptr (pointer uninit)
   //
-  // We'll traverse each node of the above graph with the appropiate one of
+  // We'll traverse each node of the above graph with the appropriate one of
   // these methods:
 
   /// Checks the region of a union object, and returns true if no field is

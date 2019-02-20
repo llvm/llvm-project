@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device \
 // RUN:   -emit-llvm -o /dev/null -verify -verify-ignore-unexpected=note
 
-// XFAIL: *
-
 // Note: This test won't work with -fsyntax-only, because some of these errors
 // are emitted during codegen.
 
@@ -43,12 +41,12 @@ struct T {
   operator Dummy() { return Dummy(); }
   // expected-note@-1 {{'operator Dummy' declared here}}
 
-  __host__ void operator delete(void*);
-  __device__ void operator delete(void*, size_t);
+  __host__ void operator delete(void *) { host_fn(); };
+  __device__ void operator delete(void*, __SIZE_TYPE__);
 };
 
 struct U {
-  __device__ void operator delete(void*, size_t) = delete;
+  __device__ void operator delete(void*, __SIZE_TYPE__) = delete;
   __host__ __device__ void operator delete(void*);
 };
 

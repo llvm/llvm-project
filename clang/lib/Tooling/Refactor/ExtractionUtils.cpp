@@ -113,7 +113,7 @@ public:
         if (StmtReachabilityChecker::areAllExpressionsReachableFrom(
                 I->first, Expressions) &&
             I->second) {
-          Loc = I->second->getLocStart();
+          Loc = I->second->getBeginLoc();
           break;
         }
       }

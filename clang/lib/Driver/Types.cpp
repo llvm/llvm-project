@@ -312,9 +312,11 @@ ID types::lookupHeaderTypeForSourceType(ID Id) {
   default:
     return Id;
 
+  // FIXME: Handle preprocessed input types.
   case types::TY_C:
     return types::TY_CHeader;
   case types::TY_CXX:
+  case types::TY_CXXModule:
     return types::TY_CXXHeader;
   case types::TY_ObjC:
     return types::TY_ObjCHeader;

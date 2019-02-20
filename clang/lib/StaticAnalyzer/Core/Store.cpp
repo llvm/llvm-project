@@ -88,7 +88,7 @@ const MemRegion *StoreManager::castRegion(const MemRegion *R, QualType CastToTy)
       return R;
 
     // We don't know what to make of it.  Return a NULL region, which
-    // will be interpretted as UnknownVal.
+    // will be interpreted as UnknownVal.
     return nullptr;
   }
 

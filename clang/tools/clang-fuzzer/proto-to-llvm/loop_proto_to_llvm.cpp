@@ -15,6 +15,7 @@
 
 #include "loop_proto_to_llvm.h"
 #include "cxx_loop_proto.pb.h"
+#include "../handle-llvm/input_arrays.h"
 
 // The following is needed to convert protos in human-readable form
 #include <google/protobuf/text_format.h>
@@ -29,10 +30,22 @@ std::string BinopToString(std::ostream &os, const BinaryOp &x);
 std::string StateSeqToString(std::ostream &os, const StatementSeq &x);
 
 // Counter variable to generate new LLVM IR variable names and wrapper function
-std::string get_var() {
+static std::string get_var() {
   static int ctr = 0;
   return "%var" + std::to_string(ctr++);
 }
+
+static bool inner_loop = false;
+class InnerLoop {
+  public:
+  InnerLoop() {
+    inner_loop = true;
+  }
+  ~InnerLoop() {
+    inner_loop = false;
+  }
+};
+
 
 // Proto to LLVM.
 
@@ -40,6 +53,7 @@ std::string ConstToString(const Const &x) {
   return std::to_string(x.val());
 }
 std::string VarRefToString(std::ostream &os, const VarRef &x) {
+  std::string which_loop = inner_loop ? "inner" : "outer";
   std::string arr;
   switch(x.arr()) {
   case VarRef::ARR_A:
@@ -53,7 +67,8 @@ std::string VarRefToString(std::ostream &os, const VarRef &x) {
     break;
   }
   std::string ptr_var = get_var();
-  os << ptr_var << " = getelementptr i32, i32* " << arr << ", i64 %ct\n";
+  os << ptr_var << " = getelementptr inbounds i32, i32* " << arr
+     << ", i64 %" << which_loop << "_ct\n";
   return ptr_var;
 }
 std::string RvalueToString(std::ostream &os, const Rvalue &x) {
@@ -121,22 +136,61 @@ std::ostream &operator<<(std::ostream &os, const StatementSeq &x) {
   }
   return os;
 }
+void NestedLoopToString(std::ostream &os, const LoopFunction &x) {
+  os << "target triple = \"x86_64-unknown-linux-gnu\"\n"
+     << "define void @foo(i32* %a, i32* %b, i32* noalias %c, i64 %s) {\n"
+     << "outer_loop_start:\n"
+     << "%cmp = icmp sgt i64 %s, 0\n"
+     << "br i1 %cmp, label %inner_loop_start, label %end\n"
+     << "outer_loop:\n"
+     << x.outer_statements()
+     << "%o_ct_new = add i64 %outer_ct, 1\n"
+     << "%jmp_outer = icmp eq i64 %o_ct_new, %s\n"
+     << "br i1 %jmp_outer, label %end, label %inner_loop_start\n"
+     << "inner_loop_start:\n"
+     << "%outer_ct = phi i64 [%o_ct_new, %outer_loop], [0, %outer_loop_start]\n"
+     << "br label %inner_loop\n"
+     << "inner_loop:\n"
+     << "%inner_ct = phi i64 [0, %inner_loop_start], [%i_ct_new, %inner_loop]\n";
+  {
+    InnerLoop IL;
+    os << x.inner_statements();
+  }
+  os << "%i_ct_new = add i64 %inner_ct, 1\n"
+     << "%jmp_inner = icmp eq i64 %i_ct_new, %s\n"
+     << "br i1 %jmp_inner, label %outer_loop, label %inner_loop, !llvm.loop !0\n"
+     << "end:\n"
+     << "ret void\n"
+     << "}\n"
+     << "!0 = distinct !{!0, !1, !2}\n"
+     << "!1 = !{!\"llvm.loop.vectorize.enable\", i1 true}\n"
+     << "!2 = !{!\"llvm.loop.vectorize.width\", i32 " << kArraySize << "}\n";
+}
+void SingleLoopToString(std::ostream &os, const LoopFunction &x) {
+  os << "target triple = \"x86_64-unknown-linux-gnu\"\n"
+     << "define void @foo(i32* %a, i32* %b, i32* noalias %c, i64 %s) {\n"
+     << "%cmp = icmp sgt i64 %s, 0\n"
+     << "br i1 %cmp, label %start, label %end\n"
+     << "start:\n"
+     << "br label %loop\n"
+     << "end:\n"
+     << "ret void\n"
+     << "loop:\n"
+     << "%outer_ct = phi i64 [ %ctnew, %loop ], [ 0, %start ]\n"
+     << x.outer_statements()
+     << "%ctnew = add i64 %outer_ct, 1\n"
+     << "%j = icmp eq i64 %ctnew, %s\n"
+     << "br i1 %j, label %end, label %loop, !llvm.loop !0\n}\n"
+     << "!0 = distinct !{!0, !1, !2}\n"
+     << "!1 = !{!\"llvm.loop.vectorize.enable\", i1 true}\n"
+     << "!2 = !{!\"llvm.loop.vectorize.width\", i32 " << kArraySize << "}\n";
+}
 std::ostream &operator<<(std::ostream &os, const LoopFunction &x) {
-  return os << "define void @foo(i32* %a, i32* %b, i32* noalias %c, i64 %s) {\n"
-            << "%i = alloca i64\n"
-            << "store i64 0, i64* %i\n"
-            << "br label %loop\n\n"
-            << "loop:\n"
-            << "%ct = load i64, i64* %i\n"
-            << "%comp = icmp eq i64 %ct, %s\n"
-            << "br i1 %comp, label %endloop, label %body\n\n"
-            << "body:\n"
-            << x.statements()
-            << "%z = add i64 1, %ct\n"
-            << "store i64 %z, i64* %i\n"
-            << "br label %loop\n\n"
-            << "endloop:\n"
-            << "ret void\n}\n";
+  if (x.has_inner_statements())
+    NestedLoopToString(os, x);
+  else
+    SingleLoopToString(os, x);
+  return os;
 }
 
 // ---------------------------------

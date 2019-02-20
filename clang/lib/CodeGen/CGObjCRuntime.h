@@ -17,6 +17,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGOBJCRUNTIME_H
 #include "CGBuilder.h"
 #include "CGCall.h"
+#include "CGCleanup.h"
 #include "CGValue.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/IdentifierTable.h" // Selector
@@ -140,6 +141,8 @@ public:
   /// Runtimes which don't support this should add the appropriate
   /// error to Sema.
   virtual llvm::Constant *GetEHType(QualType T) = 0;
+
+  virtual CatchTypeInfo getCatchAllTypeInfo() { return { nullptr, 0 }; }
 
   /// Generate a constant string object.
   virtual ConstantAddress GenerateConstantString(const StringLiteral *) = 0;

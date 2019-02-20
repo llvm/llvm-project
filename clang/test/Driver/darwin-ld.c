@@ -152,83 +152,64 @@
 // RUN: FileCheck -check-prefix=LINK_NO_IOS_ARM64_CRT1 %s < %t.log
 // LINK_NO_IOS_ARM64_CRT1-NOT: crt
 
-// RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: %clang -target x86_64-apple-ios6.0 -miphoneos-version-min=6.0 -fprofile-instr-generate -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_IOSSIM_PROFILE %s < %t.log
 // LINK_IOSSIM_PROFILE: {{ld(.exe)?"}}
 // LINK_IOSSIM_PROFILE: libclang_rt.profile_iossim.a
+// LINK_IOSSIM_PROFILE: libclang_rt.ios.a
 
-// FIXME: Currently the builtin library is only added to the command line if it,
-// so we can't check for it here
-// FIXME_LINK_IOSSIM_PROFILE: libclang_rt.ios.a
-
-// RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -### %t.o 2> %t.log
+// RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_TVOS_ARM64 %s < %t.log
 // LINK_TVOS_ARM64: {{ld(.exe)?"}}
 // LINK_TVOS_ARM64: -tvos_version_min
 // LINK_TVOS_ARM64-NOT: crt
 // LINK_TVOS_ARM64-NOT: lgcc_s.1
-// FIXME: This library does not get built unless the tvOS SDK is
-// installed, and the driver will not try to link it if it does not exist.
-// This should be reenabled when the tvOS SDK becomes a standard part
-// of Xcode.
-// FIXME_LINK_TVOS_ARM64: libclang_rt.tvos.a
+// LINK_TVOS_ARM64: libclang_rt.tvos.a
 
-// RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -fprofile-instr-generate -resource-dir=%S/Inputs/resource_dir  -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_TVOS_PROFILE %s < %t.log
 // LINK_TVOS_PROFILE: {{ld(.exe)?"}}
-// FIXME: These libraries do not get built unless the tvOS SDK is
-// installed, and the driver will not try to link them if they do not exist.
-// This should be reenabled when the tvOS SDK becomes a standard part
-// of Xcode.
-// FIXME_LINK_TVOS_PROFILE: libclang_rt.profile_tvos.a
-// FIXME_LINK_TVOS_PROFILE: libclang_rt.tvos.a
+// LINK_TVOS_PROFILE: libclang_rt.profile_tvos.a
+// LINK_TVOS_PROFILE: libclang_rt.tvos.a
 
-// RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -### %t.o -lcc_kext 2> %t.log
+// RUN: %clang -target arm64-apple-tvos8.3 -mtvos-version-min=8.3 -resource-dir=%S/Inputs/resource_dir -### %t.o -lcc_kext 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_TVOS_KEXT %s < %t.log
 // LINK_TVOS_KEXT: {{ld(.exe)?"}}
-// FIXME: These libraries do not get built unless the tvOS SDK is
-// installed, and the driver will not try to link them if they do not exist.
-// This should be reenabled when the tvOS SDK becomes a standard part
-// of Xcode.
-// FIXME_LINK_TVOS_KEXT: libclang_rt.cc_kext_tvos.a
-// FIXME_LINK_TVOS_KEXT: libclang_rt.tvos.a
+// LINK_TVOS_KEXT: libclang_rt.cc_kext_tvos.a
+// LINK_TVOS_KEXT: libclang_rt.tvos.a
 
-// RUN: %clang -target armv7k-apple-watchos2.0 -mwatchos-version-min=2.0 -### %t.o 2> %t.log
+// RUN: %clang -target armv7k-apple-watchos2.0 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_ARM %s < %t.log
 // LINK_WATCHOS_ARM: {{ld(.exe)?"}}
 // LINK_WATCHOS_ARM: -watchos_version_min
 // LINK_WATCHOS_ARM-NOT: crt
 // LINK_WATCHOS_ARM-NOT: lgcc_s.1
-// FIXME: This library does not get built unless the watchOS SDK is
-// installed, and the driver will not try to link it if it does not exist.
-// This should be reenabled when the watchOS SDK becomes a standard part
-// of Xcode.
-// FIXME_LINK_WATCHOS_ARM: libclang_rt.watchos.a
+// LINK_WATCHOS_ARM: libclang_rt.watchos.a
 
-// RUN: %clang -target armv7k-apple-watchos2.0 -mwatchos-version-min=2.0 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: %clang -target armv7k-apple-watchos2.0 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_PROFILE %s < %t.log
 // LINK_WATCHOS_PROFILE: {{ld(.exe)?"}}
-// FIXME: These libraries do not get built unless the watchOS SDK is
-// installed, and the driver will not try to link them if they do not exist.
-// This should be reenabled when the watchOS SDK becomes a standard part
-// of Xcode.
-// FIXME_LINK_WATCHOS_PROFILE: libclang_rt.profile_watchos.a
-// FIXME_LINK_WATCHOS_PROFILE: libclang_rt.watchos.a
+// LINK_WATCHOS_PROFILE: libclang_rt.profile_watchos.a
+// LINK_WATCHOS_PROFILE: libclang_rt.watchos.a
 
-// RUN: %clang -target armv7k-apple-watchos2.0 -mwatchos-version-min=2.0 -### %t.o -lcc_kext 2> %t.log
+// RUN: %clang -target armv7k-apple-watchos2.0 -mwatchos-version-min=2.0 -resource-dir=%S/Inputs/resource_dir -### %t.o -lcc_kext 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_WATCHOS_KEXT %s < %t.log
 // LINK_WATCHOS_KEXT: {{ld(.exe)?"}}
-// FIXME: These libraries do not get built unless the watchOS SDK is
-// installed, and the driver will not try to link them if they do not exist.
-// This should be reenabled when the watchOS SDK becomes a standard part
-// of Xcode.
-// FIXME_LINK_WATCHOS_KEXT: libclang_rt.cc_kext_watchos.a
-// FIXME_LINK_WATCHOS_KEXT: libclang_rt.watchos.a
+// LINK_WATCHOS_KEXT: libclang_rt.cc_kext_watchos.a
+// LINK_WATCHOS_KEXT: libclang_rt.watchos.a
 
 // RUN: %clang -target i386-apple-darwin12 -pg -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_PG %s < %t.log
 // LINK_PG: -lgcrt1.o
 // LINK_PG: -no_new_main
+
+// RUN: %clang -target i386-apple-darwin13 -pg -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT_OSX %s < %t.log
+// LINK_PG_NO_SUPPORT_OSX: error: the clang compiler does not support -pg option on versions of OS X
+
+// RUN: %clang -target x86_64-apple-ios5.0 -pg -### %t.o 2> %t.log
+// RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT %s < %t.log
+// LINK_PG_NO_SUPPORT: error: the clang compiler does not support -pg option on Darwin
 
 // Check that clang links with libgcc_s.1 for iOS 4 and earlier, but not arm64.
 // RUN: %clang -target armv7-apple-ios4.0 -miphoneos-version-min=4.0 -### %t.o 2> %t.log

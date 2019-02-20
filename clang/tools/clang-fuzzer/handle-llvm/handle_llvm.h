@@ -19,7 +19,7 @@
 
 namespace clang_fuzzer {
 void HandleLLVM(const std::string &S,
-               const std::vector<const char *> &ExtraArgs);
+                const std::vector<const char *> &ExtraArgs);
 } // namespace clang_fuzzer
 
 #endif

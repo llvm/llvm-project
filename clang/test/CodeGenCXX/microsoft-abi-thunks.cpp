@@ -160,5 +160,5 @@ struct E : D {
 E::E() {}
 E e;
 // Class with internal linkage has internal linkage thunks.
-// CODEGEN: define internal x86_thiscallcc %struct.C* @"?goo@E@?A@@QAEPAUB@@XZ"
+// CODEGEN: define internal x86_thiscallcc %struct.C* @"?goo@E@?A0x{{[^@]*}}@@QAEPAUB@@XZ"
 }

@@ -1,5 +1,4 @@
-// RUN: %clang_cc1 -std=c++14 -debug-info-kind=limited \
-// RUN:   -triple %itanium_abi_triple \
+// RUN: %clang_cc1 -debug-info-kind=limited -triple %itanium_abi_triple \
 // RUN:   -fdebug-prefix-map=%S=/SOURCE_ROOT %s -emit-llvm -o - | FileCheck %s
 
 template <typename T> void b(T) {}

@@ -53,6 +53,10 @@ def ext_extra_semi_cxx11 : Extension<
 def warn_extra_semi_after_mem_fn_def : Warning<
   "extra ';' after member function definition">,
   InGroup<ExtraSemi>, DefaultIgnore;
+def warn_null_statement : Warning<
+  "empty expression statement has no effect; "
+  "remove unnecessary ';' to silence this warning">,
+  InGroup<ExtraSemiStmt>, DefaultIgnore;
 
 def ext_thread_before : Extension<"'__thread' before '%0'">;
 def ext_keyword_as_ident : ExtWarn<
@@ -88,9 +92,12 @@ def err_enumerator_unnamed_no_def : Error<
 def ext_cxx11_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a C++11 extension">,
   InGroup<CXX11>;
-def ext_c_enum_fixed_underlying_type : Extension<
+def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
+def ext_clang_c_enum_fixed_underlying_type : Extension<
+  "enumeration types with a fixed underlying type are a Clang extension">,
+  InGroup<DiagGroup<"fixed-enum-extension">>;
 def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -219,6 +226,11 @@ def ext_nested_namespace_definition : ExtWarn<
 def warn_cxx14_compat_nested_namespace_definition : Warning<
   "nested namespace definition is incompatible with C++ standards before C++17">,
   InGroup<CXXPre17Compat>, DefaultIgnore;
+def ext_inline_nested_namespace_definition : ExtWarn<
+  "inline nested namespace definition is a C++2a extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_inline_nested_namespace_definition : Warning<
+  "inline nested namespace definition is incompatible with C++ standards before"
+  " C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
 def err_inline_nested_namespace_definition : Error<
   "nested namespace definition cannot be 'inline'">;
 def err_expected_semi_after_attribute_list : Error<
@@ -331,6 +343,10 @@ def err_expected_parentheses_around_typename : Error<
 def err_expected_case_before_expression: Error<
   "expected 'case' keyword before expression">;
 
+def ext_warn_gnu_final : ExtWarn<
+  "__final is a GNU extension, consider using C++11 final">,
+  InGroup<GccCompat>;
+
 // Declarations.
 def err_typename_requires_specqual : Error<
   "type name requires a specifier or qualifier">;
@@ -358,6 +374,12 @@ def ext_c11_static_assert : Extension<
 def warn_cxx98_compat_static_assert : Warning<
   "static_assert declarations are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def ext_static_assert_no_message : ExtWarn<
+  "static_assert with no message is a C++17 extension">, InGroup<CXX17>;
+def warn_cxx14_compat_static_assert_no_message : Warning<
+  "static_assert with no message is incompatible with C++ standards before "
+  "C++17">,
+  DefaultIgnore, InGroup<CXXPre17Compat>;
 def err_function_definition_not_allowed : Error<
   "function definition is not allowed here">;
 def err_expected_end_of_enumerator : Error<
@@ -488,6 +510,13 @@ def err_dynamic_and_noexcept_specification : Error<
   "cannot have both throw() and noexcept() clause on the same function">;
 def err_except_spec_unparsed : Error<
   "unexpected end of exception specification">;
+def ext_dynamic_exception_spec : ExtWarn<
+  "ISO C++17 does not allow dynamic exception specifications">,
+  InGroup<DynamicExceptionSpec>, DefaultError;
+def warn_exception_spec_deprecated : Warning<
+  "dynamic exception specifications are deprecated">,
+  InGroup<DeprecatedDynamicExceptionSpec>, DefaultIgnore;
+def note_exception_spec_deprecated : Note<"use '%0' instead">;
 def warn_cxx98_compat_noexcept_decl : Warning<
   "noexcept specifications are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
@@ -540,6 +569,15 @@ def ext_init_statement : ExtWarn<
 def warn_cxx14_compat_init_statement : Warning<
   "%select{if|switch}0 initialization statements are incompatible with "
   "C++ standards before C++17">, DefaultIgnore, InGroup<CXXPre17Compat>;
+def ext_for_range_init_stmt : ExtWarn<
+  "range-based for loop initialization statements are a C++2a extension">,
+  InGroup<CXX2a>;
+def warn_cxx17_compat_for_range_init_stmt : Warning<
+  "range-based for loop initialization statements are incompatible with "
+  "C++ standards before C++2a">, DefaultIgnore, InGroup<CXXPre2aCompat>;
+def warn_empty_init_statement : Warning<
+  "empty initialization statement of '%select{if|switch|range-based for}0' "
+  "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;
@@ -566,6 +604,9 @@ def warn_cxx98_compat_noexcept_expr : Warning<
 def warn_cxx98_compat_nullptr : Warning<
   "'nullptr' is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
 
+def warn_wrong_clang_attr_namespace : Warning<
+  "'__clang__' is a predefined macro name, not an attribute scope specifier; "
+  "did you mean '_Clang' instead?">, InGroup<IgnoredAttributes>;
 def ext_ns_enum_attribute : Extension<
   "attributes on %select{a namespace|an enumerator}0 declaration are "
   "a C++17 extension">, InGroup<CXX17>;
@@ -1059,6 +1100,13 @@ def err_pragma_attribute_unknown_subject_sub_rule : Error<
   "sub-rules: %3}2">;
 def err_pragma_attribute_duplicate_subject : Error<
   "duplicate attribute subject matcher '%0'">;
+def err_pragma_attribute_expected_period : Error<
+  "expected '.' after pragma attribute namespace %0">;
+def err_pragma_attribute_namespace_on_attribute : Error<
+  "namespace can only apply to 'push' or 'pop' directives">;
+def note_pragma_attribute_namespace_on_attribute : Note<
+  "omit the namespace to add attributes to the most-recently"
+  " pushed attribute group">;
 
 def err_opencl_unroll_hint_on_non_loop : Error<
   "OpenCL only supports 'opencl_unroll_hint' attribute on for, while, and do statements">;
@@ -1116,15 +1164,19 @@ def err_omp_decl_in_declare_simd : Error<
 def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
 def err_omp_unknown_map_type_modifier : Error<
-  "incorrect map type modifier, expected 'always'">;
+  "incorrect map type modifier, expected 'always' or 'close'">;
 def err_omp_map_type_missing : Error<
   "missing map type">;
+def err_omp_map_type_modifier_missing : Error<
+  "missing map type modifier">;
 def err_omp_declare_simd_inbranch_notinbranch : Error<
   "unexpected '%0' clause, '%1' is specified already">;
 def err_expected_end_declare_target : Error<
   "expected '#pragma omp end declare target'">;
 def err_omp_declare_target_unexpected_clause: Error<
   "unexpected '%0' clause, only 'to' or 'link' clauses expected">;
+def err_omp_expected_clause: Error<
+  "expected at least one clause on '#pragma omp %0' directive">;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

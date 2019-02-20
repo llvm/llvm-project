@@ -49,7 +49,7 @@ public:
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute simd private(a) private(this->a) private(s.a) // expected-error {{expected variable name or data member of current class}}
-    for (int k = 0; k < s.a; ++k)
+    for (int k = 0; k < s.a; ++k) // expected-warning {{Non-trivial type 'S5' is mapped, only trivial types are guaranteed to be mapped correctly}}
       ++s.a;
     return *this;
   }

@@ -51,7 +51,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -1055,4 +1055,8 @@ void ento::registerStdCLibraryFunctionsChecker(CheckerManager &mgr) {
   // which would register various checkers with the help of the same Checker
   // class, turning on different function summaries.
   mgr.registerChecker<StdLibraryFunctionsChecker>();
+}
+
+bool ento::shouldRegisterStdCLibraryFunctionsChecker(const LangOptions &LO) {
+  return true;
 }

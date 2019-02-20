@@ -75,6 +75,11 @@ void verifyfeaturestrings() {
   (void)__builtin_cpu_supports("avx5124vnniw");
   (void)__builtin_cpu_supports("avx5124fmaps");
   (void)__builtin_cpu_supports("avx512vpopcntdq");
+  (void)__builtin_cpu_supports("avx512vbmi2");
+  (void)__builtin_cpu_supports("gfni");
+  (void)__builtin_cpu_supports("vpclmulqdq");
+  (void)__builtin_cpu_supports("avx512vnni");
+  (void)__builtin_cpu_supports("avx512bitalg");
 }
 
 void verifycpustrings() {
@@ -95,7 +100,11 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("cannonlake");
   (void)__builtin_cpu_is("core2");
   (void)__builtin_cpu_is("corei7");
+  (void)__builtin_cpu_is("goldmont");
+  (void)__builtin_cpu_is("goldmont-plus");
   (void)__builtin_cpu_is("haswell");
+  (void)__builtin_cpu_is("icelake-client");
+  (void)__builtin_cpu_is("icelake-server");
   (void)__builtin_cpu_is("intel");
   (void)__builtin_cpu_is("istanbul");
   (void)__builtin_cpu_is("ivybridge");
@@ -108,6 +117,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("skylake");
   (void)__builtin_cpu_is("skylake-avx512");
   (void)__builtin_cpu_is("slm");
+  (void)__builtin_cpu_is("tremont");
   (void)__builtin_cpu_is("westmere");
   (void)__builtin_cpu_is("znver1");
 }

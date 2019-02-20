@@ -25,7 +25,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -185,7 +185,7 @@ private:
   const SymbolicRegion *getTrackRegion(SVal Val,
                                        bool CheckSuperRegion = false) const;
 
-  /// Returns true if the call is diagnosable in the currrent analyzer
+  /// Returns true if the call is diagnosable in the current analyzer
   /// configuration.
   bool isDiagnosableCall(const CallEvent &Call) const {
     if (NoDiagnoseCallsToSystemHeaders && Call.isInSystemHeader())
@@ -310,7 +310,7 @@ NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
 
   // Retrieve the associated statement.
   const Stmt *S = TrackedNullab->getNullabilitySource();
-  if (!S || S->getLocStart().isInvalid()) {
+  if (!S || S->getBeginLoc().isInvalid()) {
     S = PathDiagnosticLocation::getStmt(N);
   }
 
@@ -767,7 +767,7 @@ void NullabilityChecker::checkPostCall(const CallEvent &Call,
   // CG headers are misannotated. Do not warn for symbols that are the results
   // of CG calls.
   const SourceManager &SM = C.getSourceManager();
-  StringRef FilePath = SM.getFilename(SM.getSpellingLoc(Decl->getLocStart()));
+  StringRef FilePath = SM.getFilename(SM.getSpellingLoc(Decl->getBeginLoc()));
   if (llvm::sys::path::filename(FilePath).startswith("CG")) {
     State = State->set<NullabilityMap>(Region, Nullability::Contradicted);
     C.addTransition(State);
@@ -1192,16 +1192,28 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
   }
 }
 
+void ento::registerNullabilityBase(CheckerManager &mgr) {
+  mgr.registerChecker<NullabilityChecker>();
+}
+
+bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
+  return true;
+}
+
 #define REGISTER_CHECKER(name, trackingRequired)                               \
   void ento::register##name##Checker(CheckerManager &mgr) {                    \
-    NullabilityChecker *checker = mgr.registerChecker<NullabilityChecker>();   \
+    NullabilityChecker *checker = mgr.getChecker<NullabilityChecker>();        \
     checker->Filter.Check##name = true;                                        \
     checker->Filter.CheckName##name = mgr.getCurrentCheckName();               \
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
-        mgr.getAnalyzerOptions().getCheckerBooleanOption(                             \
+        mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
                       "NoDiagnoseCallsToSystemHeaders", false, checker, true); \
+  }                                                                            \
+                                                                               \
+  bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \
+    return true;                                                               \
   }
 
 // The checks are likely to be turned on by default and it is possible to do

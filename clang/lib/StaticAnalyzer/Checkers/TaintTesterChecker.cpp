@@ -10,7 +10,7 @@
 // This checker can be used for testing how taint data is propagated.
 //
 //===----------------------------------------------------------------------===//
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -59,4 +59,8 @@ void TaintTesterChecker::checkPostStmt(const Expr *E,
 
 void ento::registerTaintTesterChecker(CheckerManager &mgr) {
   mgr.registerChecker<TaintTesterChecker>();
+}
+
+bool ento::shouldRegisterTaintTesterChecker(const LangOptions &LO) {
+  return true;
 }

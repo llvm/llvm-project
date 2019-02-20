@@ -676,7 +676,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
   // - System headers: don't run any checks.
   SourceManager &SM = Ctx->getSourceManager();
   const Stmt *Body = D->getBody();
-  SourceLocation SL = Body ? Body->getLocStart() : D->getLocation();
+  SourceLocation SL = Body ? Body->getBeginLoc() : D->getLocation();
   SL = SM.getExpansionLoc(SL);
 
   if (!Opts->AnalyzeAll && !Mgr->isInCodeFile(SL)) {

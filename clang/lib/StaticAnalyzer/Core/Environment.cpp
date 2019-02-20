@@ -44,6 +44,9 @@ static const Expr *ignoreTransparentExprs(const Expr *E) {
   case Stmt::ExprWithCleanupsClass:
     E = cast<ExprWithCleanups>(E)->getSubExpr();
     break;
+  case Stmt::ConstantExprClass:
+    E = cast<ConstantExpr>(E)->getSubExpr();
+    break;
   case Stmt::CXXBindTemporaryExprClass:
     E = cast<CXXBindTemporaryExpr>(E)->getSubExpr();
     break;
@@ -89,6 +92,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   case Stmt::ExprWithCleanupsClass:
   case Stmt::GenericSelectionExprClass:
   case Stmt::OpaqueValueExprClass:
+  case Stmt::ConstantExprClass:
   case Stmt::ParenExprClass:
   case Stmt::SubstNonTypeTemplateParmExprClass:
     llvm_unreachable("Should have been handled by ignoreTransparentExprs");

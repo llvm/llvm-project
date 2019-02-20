@@ -42,11 +42,6 @@ namespace serialization {
   class ModuleFile;
 }
 
-using llvm::SmallVector;
-using llvm::SmallVectorImpl;
-using llvm::StringRef;
-using serialization::ModuleFile;
-
 /// A global index for a set of module files, providing information about
 /// the identifiers within those module files.
 ///
@@ -59,6 +54,8 @@ using serialization::ModuleFile;
 /// imported, and can be queried to determine which modules the current
 /// translation could or should load to fix a problem.
 class GlobalModuleIndex {
+  using ModuleFile = serialization::ModuleFile;
+
   /// Buffer containing the index file, which is lazily accessed so long
   /// as the global module index is live.
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
@@ -147,7 +144,7 @@ public:
   /// \returns A pair containing the global module index (if it exists) and
   /// the error code.
   static std::pair<GlobalModuleIndex *, ErrorCode>
-  readIndex(StringRef Path);
+  readIndex(llvm::StringRef Path);
 
   /// Returns an iterator for identifiers stored in the index table.
   ///
@@ -158,12 +155,12 @@ public:
   ///
   /// \param ModuleFiles Will be populated with the set of module files that
   /// have been indexed.
-  void getKnownModules(SmallVectorImpl<ModuleFile *> &ModuleFiles);
+  void getKnownModules(llvm::SmallVectorImpl<ModuleFile *> &ModuleFiles);
 
   /// Retrieve the set of module files on which the given module file
   /// directly depends.
   void getModuleDependencies(ModuleFile *File,
-                             SmallVectorImpl<ModuleFile *> &Dependencies);
+                             llvm::SmallVectorImpl<ModuleFile *> &Dependencies);
 
   /// A set of module files in which we found a result.
   typedef llvm::SmallPtrSet<ModuleFile *, 4> HitSet;
@@ -177,7 +174,7 @@ public:
   /// information about this name.
   ///
   /// \returns true if the identifier is known to the index, false otherwise.
-  bool lookupIdentifier(StringRef Name, HitSet &Hits);
+  bool lookupIdentifier(llvm::StringRef Name, HitSet &Hits);
 
   /// Note that the given module file has been loaded.
   ///
@@ -200,7 +197,7 @@ public:
   /// which the global index will be written.
   static ErrorCode writeIndex(FileManager &FileMgr,
                               const PCHContainerReader &PCHContainerRdr,
-                              StringRef Path);
+                              llvm::StringRef Path);
 };
 }
 

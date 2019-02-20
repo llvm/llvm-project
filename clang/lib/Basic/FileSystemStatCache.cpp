@@ -12,17 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileSystemStatCache.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include <utility>
 
 using namespace clang;
 
 void FileSystemStatCache::anchor() {}
 
-static void copyStatusToFileData(const vfs::Status &Status,
+static void copyStatusToFileData(const llvm::vfs::Status &Status,
                                  FileData &Data) {
   Data.Name = Status.getName();
   Data.Size = Status.getSize();
@@ -44,8 +44,9 @@ static void copyStatusToFileData(const vfs::Status &Status,
 /// implementation can optionally fill in FileDescriptor with a valid
 /// descriptor and the client guarantees that it will close it.
 bool FileSystemStatCache::get(StringRef Path, FileData &Data, bool isFile,
-                              std::unique_ptr<vfs::File> *F,
-                              FileSystemStatCache *Cache, vfs::FileSystem &FS) {
+                              std::unique_ptr<llvm::vfs::File> *F,
+                              FileSystemStatCache *Cache,
+                              llvm::vfs::FileSystem &FS) {
   LookupResult R;
   bool isForDir = !isFile;
 
@@ -55,7 +56,7 @@ bool FileSystemStatCache::get(StringRef Path, FileData &Data, bool isFile,
   else if (isForDir || !F) {
     // If this is a directory or a file descriptor is not needed and we have
     // no cache, just go to the file system.
-    llvm::ErrorOr<vfs::Status> Status = FS.status(Path);
+    llvm::ErrorOr<llvm::vfs::Status> Status = FS.status(Path);
     if (!Status) {
       R = CacheMissing;
     } else {
@@ -79,7 +80,7 @@ bool FileSystemStatCache::get(StringRef Path, FileData &Data, bool isFile,
       // Otherwise, the open succeeded.  Do an fstat to get the information
       // about the file.  We'll end up returning the open file descriptor to the
       // client to do what they please with it.
-      llvm::ErrorOr<vfs::Status> Status = (*OwnedFile)->status();
+      llvm::ErrorOr<llvm::vfs::Status> Status = (*OwnedFile)->status();
       if (Status) {
         R = CacheExists;
         copyStatusToFileData(*Status, Data);
@@ -111,19 +112,19 @@ bool FileSystemStatCache::get(StringRef Path, FileData &Data, bool isFile,
 
 MemorizeStatCalls::LookupResult
 MemorizeStatCalls::getStat(StringRef Path, FileData &Data, bool isFile,
-                           std::unique_ptr<vfs::File> *F, vfs::FileSystem &FS) {
-  LookupResult Result = statChained(Path, Data, isFile, F, FS);
-
-  // Do not cache failed stats, it is easy to construct common inconsistent
-  // situations if we do, and they are not important for PCH performance (which
-  // currently only needs the stats to construct the initial FileManager
-  // entries).
-  if (Result == CacheMissing)
-    return Result;
+                           std::unique_ptr<llvm::vfs::File> *F,
+                           llvm::vfs::FileSystem &FS) {
+  if (get(Path, Data, isFile, F, nullptr, FS)) {
+    // Do not cache failed stats, it is easy to construct common inconsistent
+    // situations if we do, and they are not important for PCH performance
+    // (which currently only needs the stats to construct the initial
+    // FileManager entries).
+    return CacheMissing;
+  }
 
   // Cache file 'stat' results and directories with absolutely paths.
   if (!Data.IsDirectory || llvm::sys::path::is_absolute(Path))
     StatCalls[Path] = Data;
 
-  return Result;
+  return CacheExists;
 }

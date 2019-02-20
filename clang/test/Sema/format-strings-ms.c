@@ -49,7 +49,7 @@ void w_test(wchar_t c, wchar_t *s) {
   scanf("%S", s);
 
   double bad;
-  printf("%wc", bad); // expected-warning{{format specifies type 'wint_t' (aka 'int') but the argument has type 'double'}}
+  printf("%wc", bad); // expected-warning{{format specifies type 'wint_t' (aka 'unsigned short') but the argument has type 'double'}}
   printf("%wC", bad); // expected-warning{{format specifies type 'wchar_t' (aka 'unsigned short') but the argument has type 'double'}}
   printf("%C", bad); // expected-warning{{format specifies type 'wchar_t' (aka 'unsigned short') but the argument has type 'double'}}
   printf("%ws", bad); // expected-warning{{format specifies type 'wchar_t *' (aka 'unsigned short *') but the argument has type 'double'}}

@@ -25,6 +25,7 @@ target_link_libraries(clang-interpreter
   clangCodeGen
   clangDriver
   clangFrontend
+  clangSerialization
   )
 
 export_executable_symbols(clang-interpreter)

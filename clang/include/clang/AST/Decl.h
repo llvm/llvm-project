@@ -81,7 +81,7 @@ class VarTemplateDecl;
 /// A client can read the relevant info using TypeLoc wrappers, e.g:
 /// @code
 /// TypeLoc TL = TypeSourceInfo->getTypeLoc();
-/// TL.getStartLoc().print(OS, SrcMgr);
+/// TL.getBeginLoc().print(OS, SrcMgr);
 /// @endcode
 class alignas(8) TypeSourceInfo {
   // Contains a memory block after the class, used for type source information,
@@ -614,7 +614,7 @@ public:
     return SourceRange(LocStart, RBraceLoc);
   }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return LocStart; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LocStart; }
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setLocStart(SourceLocation L) { LocStart = L; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
@@ -735,7 +735,7 @@ public:
 
   SourceRange getSourceRange() const override LLVM_READONLY;
 
-  SourceLocation getLocStart() const LLVM_READONLY {
+  SourceLocation getBeginLoc() const LLVM_READONLY {
     return getOuterLocStart();
   }
 
@@ -866,8 +866,12 @@ private:
     unsigned SClass : 3;
     unsigned TSCSpec : 2;
     unsigned InitStyle : 2;
+
+    /// Whether this variable is an ARC pseudo-__strong variable; see
+    /// isARCPseudoStrong() for details.
+    unsigned ARCPseudoStrong : 1;
   };
-  enum { NumVarDeclBits = 7 };
+  enum { NumVarDeclBits = 8 };
 
 protected:
   enum { NumParameterIndexBits = 8 };
@@ -939,10 +943,6 @@ protected:
 
     /// Whether this variable is the for-in loop declaration in Objective-C.
     unsigned ObjCForDecl : 1;
-
-    /// Whether this variable is an ARC pseudo-__strong
-    /// variable;  see isARCPseudoStrong() for details.
-    unsigned ARCPseudoStrong : 1;
 
     /// Whether this variable is (C++1z) inline.
     unsigned IsInline : 1;
@@ -1349,17 +1349,15 @@ public:
     NonParmVarDeclBits.ObjCForDecl = FRD;
   }
 
-  /// Determine whether this variable is an ARC pseudo-__strong
-  /// variable.  A pseudo-__strong variable has a __strong-qualified
-  /// type but does not actually retain the object written into it.
-  /// Generally such variables are also 'const' for safety.
-  bool isARCPseudoStrong() const {
-    return isa<ParmVarDecl>(this) ? false : NonParmVarDeclBits.ARCPseudoStrong;
-  }
-  void setARCPseudoStrong(bool ps) {
-    assert(!isa<ParmVarDecl>(this));
-    NonParmVarDeclBits.ARCPseudoStrong = ps;
-  }
+  /// Determine whether this variable is an ARC pseudo-__strong variable. A
+  /// pseudo-__strong variable has a __strong-qualified type but does not
+  /// actually retain the object written into it. Generally such variables are
+  /// also 'const' for safety. There are 3 cases where this will be set, 1) if
+  /// the variable is annotated with the objc_externally_retained attribute, 2)
+  /// if its 'self' in a non-init method, or 3) if its the variable in an for-in
+  /// loop.
+  bool isARCPseudoStrong() const { return VarDeclBits.ARCPseudoStrong; }
+  void setARCPseudoStrong(bool PS) { VarDeclBits.ARCPseudoStrong = PS; }
 
   /// Whether this variable is (C++1z) inline.
   bool isInline() const {
@@ -1719,6 +1717,13 @@ private:
   unsigned getParameterIndexLarge() const;
 };
 
+enum class MultiVersionKind {
+  None,
+  Target,
+  CPUSpecific,
+  CPUDispatch
+};
+
 /// Represents a function declaration or definition.
 ///
 /// Since a given function can be declared several times in a program,
@@ -1729,8 +1734,11 @@ private:
 /// contains all of the information known about the function. Other,
 /// previous declarations of the function are available via the
 /// getPreviousDecl() chain.
-class FunctionDecl : public DeclaratorDecl, public DeclContext,
+class FunctionDecl : public DeclaratorDecl,
+                     public DeclContext,
                      public Redeclarable<FunctionDecl> {
+  // This class stores some data in DeclContext::FunctionDeclBits
+  // to save some space. Use the provided accessors to access it.
 public:
   /// The kind of templated function a FunctionDecl can be.
   enum TemplatedKind {
@@ -1749,64 +1757,6 @@ private:
 
   LazyDeclStmtPtr Body;
 
-  // FIXME: This can be packed into the bitfields in DeclContext.
-  // NOTE: VC++ packs bitfields poorly if the types differ.
-  unsigned SClass : 3;
-  unsigned IsInline : 1;
-  unsigned IsInlineSpecified : 1;
-
-protected:
-  // This is shared by CXXConstructorDecl, CXXConversionDecl, and
-  // CXXDeductionGuideDecl.
-  unsigned IsExplicitSpecified : 1;
-
-private:
-  unsigned IsVirtualAsWritten : 1;
-  unsigned IsPure : 1;
-  unsigned HasInheritedPrototype : 1;
-  unsigned HasWrittenPrototype : 1;
-  unsigned IsDeleted : 1;
-  unsigned IsTrivial : 1; // sunk from CXXMethodDecl
-
-  /// This flag indicates whether this function is trivial for the purpose of
-  /// calls. This is meaningful only when this function is a copy/move
-  /// constructor or a destructor.
-  unsigned IsTrivialForCall : 1;
-
-  unsigned IsDefaulted : 1; // sunk from CXXMethoDecl
-  unsigned IsExplicitlyDefaulted : 1; //sunk from CXXMethodDecl
-  unsigned HasImplicitReturnZero : 1;
-  unsigned IsLateTemplateParsed : 1;
-  unsigned IsConstexpr : 1;
-  unsigned InstantiationIsPending : 1;
-
-  /// Indicates if the function uses __try.
-  unsigned UsesSEHTry : 1;
-
-  /// Indicates if the function was a definition but its body was
-  /// skipped.
-  unsigned HasSkippedBody : 1;
-
-  /// Indicates if the function declaration will have a body, once we're done
-  /// parsing it.
-  unsigned WillHaveBody : 1;
-
-  /// Indicates that this function is a multiversioned function using attribute
-  /// 'target'.
-  unsigned IsMultiVersion : 1;
-
-protected:
-  /// [C++17] Only used by CXXDeductionGuideDecl. Declared here to avoid
-  /// increasing the size of CXXDeductionGuideDecl by the size of an unsigned
-  /// int as opposed to adding a single bit to FunctionDecl.
-  /// Indicates that the Deduction Guide is the implicitly generated 'copy
-  /// deduction candidate' (is used during overload resolution).
-  unsigned IsCopyDeductionCandidate : 1;
-
-private:
-
-  /// Store the ODRHash after first calculation.
-  unsigned HasODRHash : 1;
   unsigned ODRHash;
 
   /// End part of this FunctionDecl's source range.
@@ -1876,27 +1826,22 @@ private:
 
   void setParams(ASTContext &C, ArrayRef<ParmVarDecl *> NewParamInfo);
 
+  // This is unfortunately needed because ASTDeclWriter::VisitFunctionDecl
+  // need to access this bit but we want to avoid making ASTDeclWriter
+  // a friend of FunctionDeclBitfields just for this.
+  bool isDeletedBit() const { return FunctionDeclBits.IsDeleted; }
+
+  /// Whether an ODRHash has been stored.
+  bool hasODRHash() const { return FunctionDeclBits.HasODRHash; }
+
+  /// State that an ODRHash has been stored.
+  void setHasODRHash(bool B = true) { FunctionDeclBits.HasODRHash = B; }
+
 protected:
   FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool isInlineSpecified,
-               bool isConstexprSpecified)
-      : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
-                       StartLoc),
-        DeclContext(DK), redeclarable_base(C), SClass(S),
-        IsInline(isInlineSpecified), IsInlineSpecified(isInlineSpecified),
-        IsExplicitSpecified(false), IsVirtualAsWritten(false), IsPure(false),
-        HasInheritedPrototype(false), HasWrittenPrototype(true),
-        IsDeleted(false), IsTrivial(false), IsTrivialForCall(false),
-        IsDefaulted(false),
-        IsExplicitlyDefaulted(false), HasImplicitReturnZero(false),
-        IsLateTemplateParsed(false), IsConstexpr(isConstexprSpecified),
-        InstantiationIsPending(false), UsesSEHTry(false), HasSkippedBody(false),
-        WillHaveBody(false), IsMultiVersion(false),
-        IsCopyDeductionCandidate(false), HasODRHash(false), ODRHash(0),
-        EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
-    assert(T.isNull() || T->isFunctionType());
-  }
+               bool isConstexprSpecified);
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2035,13 +1980,13 @@ public:
   /// This does not determine whether the function has been defined (e.g., in a
   /// previous definition); for that information, use isDefined.
   bool isThisDeclarationADefinition() const {
-    return IsDeleted || IsDefaulted || Body || HasSkippedBody ||
-           IsLateTemplateParsed || WillHaveBody || hasDefiningAttr();
+    return isDeletedAsWritten() || isDefaulted() || Body || hasSkippedBody() ||
+           isLateTemplateParsed() || willHaveBody() || hasDefiningAttr();
   }
 
   /// Returns whether this specific declaration of the function has a body.
   bool doesThisDeclarationHaveABody() const {
-    return Body || IsLateTemplateParsed;
+    return Body || isLateTemplateParsed();
   }
 
   void setBody(Stmt *B);
@@ -2051,62 +1996,102 @@ public:
   bool isVariadic() const;
 
   /// Whether this function is marked as virtual explicitly.
-  bool isVirtualAsWritten() const { return IsVirtualAsWritten; }
-  void setVirtualAsWritten(bool V) { IsVirtualAsWritten = V; }
+  bool isVirtualAsWritten() const {
+    return FunctionDeclBits.IsVirtualAsWritten;
+  }
+
+  /// State that this function is marked as virtual explicitly.
+  void setVirtualAsWritten(bool V) { FunctionDeclBits.IsVirtualAsWritten = V; }
 
   /// Whether this virtual function is pure, i.e. makes the containing class
   /// abstract.
-  bool isPure() const { return IsPure; }
+  bool isPure() const { return FunctionDeclBits.IsPure; }
   void setPure(bool P = true);
 
   /// Whether this templated function will be late parsed.
-  bool isLateTemplateParsed() const { return IsLateTemplateParsed; }
-  void setLateTemplateParsed(bool ILT = true) { IsLateTemplateParsed = ILT; }
+  bool isLateTemplateParsed() const {
+    return FunctionDeclBits.IsLateTemplateParsed;
+  }
+
+  /// State that this templated function will be late parsed.
+  void setLateTemplateParsed(bool ILT = true) {
+    FunctionDeclBits.IsLateTemplateParsed = ILT;
+  }
 
   /// Whether this function is "trivial" in some specialized C++ senses.
   /// Can only be true for default constructors, copy constructors,
   /// copy assignment operators, and destructors.  Not meaningful until
   /// the class has been fully built by Sema.
-  bool isTrivial() const { return IsTrivial; }
-  void setTrivial(bool IT) { IsTrivial = IT; }
+  bool isTrivial() const { return FunctionDeclBits.IsTrivial; }
+  void setTrivial(bool IT) { FunctionDeclBits.IsTrivial = IT; }
 
-  bool isTrivialForCall() const { return IsTrivialForCall; }
-  void setTrivialForCall(bool IT) { IsTrivialForCall = IT; }
+  bool isTrivialForCall() const { return FunctionDeclBits.IsTrivialForCall; }
+  void setTrivialForCall(bool IT) { FunctionDeclBits.IsTrivialForCall = IT; }
 
   /// Whether this function is defaulted per C++0x. Only valid for
   /// special member functions.
-  bool isDefaulted() const { return IsDefaulted; }
-  void setDefaulted(bool D = true) { IsDefaulted = D; }
+  bool isDefaulted() const { return FunctionDeclBits.IsDefaulted; }
+  void setDefaulted(bool D = true) { FunctionDeclBits.IsDefaulted = D; }
 
   /// Whether this function is explicitly defaulted per C++0x. Only valid
   /// for special member functions.
-  bool isExplicitlyDefaulted() const { return IsExplicitlyDefaulted; }
-  void setExplicitlyDefaulted(bool ED = true) { IsExplicitlyDefaulted = ED; }
+  bool isExplicitlyDefaulted() const {
+    return FunctionDeclBits.IsExplicitlyDefaulted;
+  }
+
+  /// State that this function is explicitly defaulted per C++0x. Only valid
+  /// for special member functions.
+  void setExplicitlyDefaulted(bool ED = true) {
+    FunctionDeclBits.IsExplicitlyDefaulted = ED;
+  }
 
   /// Whether falling off this function implicitly returns null/zero.
   /// If a more specific implicit return value is required, front-ends
   /// should synthesize the appropriate return statements.
-  bool hasImplicitReturnZero() const { return HasImplicitReturnZero; }
-  void setHasImplicitReturnZero(bool IRZ) { HasImplicitReturnZero = IRZ; }
+  bool hasImplicitReturnZero() const {
+    return FunctionDeclBits.HasImplicitReturnZero;
+  }
+
+  /// State that falling off this function implicitly returns null/zero.
+  /// If a more specific implicit return value is required, front-ends
+  /// should synthesize the appropriate return statements.
+  void setHasImplicitReturnZero(bool IRZ) {
+    FunctionDeclBits.HasImplicitReturnZero = IRZ;
+  }
 
   /// Whether this function has a prototype, either because one
   /// was explicitly written or because it was "inherited" by merging
   /// a declaration without a prototype with a declaration that has a
   /// prototype.
   bool hasPrototype() const {
-    return HasWrittenPrototype || HasInheritedPrototype;
+    return hasWrittenPrototype() || hasInheritedPrototype();
   }
 
-  bool hasWrittenPrototype() const { return HasWrittenPrototype; }
+  /// Whether this function has a written prototype.
+  bool hasWrittenPrototype() const {
+    return FunctionDeclBits.HasWrittenPrototype;
+  }
+
+  /// State that this function has a written prototype.
+  void setHasWrittenPrototype(bool P = true) {
+    FunctionDeclBits.HasWrittenPrototype = P;
+  }
 
   /// Whether this function inherited its prototype from a
   /// previous declaration.
-  bool hasInheritedPrototype() const { return HasInheritedPrototype; }
-  void setHasInheritedPrototype(bool P = true) { HasInheritedPrototype = P; }
+  bool hasInheritedPrototype() const {
+    return FunctionDeclBits.HasInheritedPrototype;
+  }
+
+  /// State that this function inherited its prototype from a
+  /// previous declaration.
+  void setHasInheritedPrototype(bool P = true) {
+    FunctionDeclBits.HasInheritedPrototype = P;
+  }
 
   /// Whether this is a (C++11) constexpr function or constexpr constructor.
-  bool isConstexpr() const { return IsConstexpr; }
-  void setConstexpr(bool IC) { IsConstexpr = IC; }
+  bool isConstexpr() const { return FunctionDeclBits.IsConstexpr; }
+  void setConstexpr(bool IC) { FunctionDeclBits.IsConstexpr = IC; }
 
   /// Whether the instantiation of this function is pending.
   /// This bit is set when the decision to instantiate this function is made
@@ -2114,12 +2099,19 @@ public:
   /// cases where instantiation did not happen because the template definition
   /// was not seen in this TU. This bit remains set in those cases, under the
   /// assumption that the instantiation will happen in some other TU.
-  bool instantiationIsPending() const { return InstantiationIsPending; }
-  void setInstantiationIsPending(bool IC) { InstantiationIsPending = IC; }
+  bool instantiationIsPending() const {
+    return FunctionDeclBits.InstantiationIsPending;
+  }
+
+  /// State that the instantiation of this function is pending.
+  /// (see instantiationIsPending)
+  void setInstantiationIsPending(bool IC) {
+    FunctionDeclBits.InstantiationIsPending = IC;
+  }
 
   /// Indicates the function uses __try.
-  bool usesSEHTry() const { return UsesSEHTry; }
-  void setUsesSEHTry(bool UST) { UsesSEHTry = UST; }
+  bool usesSEHTry() const { return FunctionDeclBits.UsesSEHTry; }
+  void setUsesSEHTry(bool UST) { FunctionDeclBits.UsesSEHTry = UST; }
 
   /// Whether this function has been deleted.
   ///
@@ -2140,9 +2132,15 @@ public:
   /// };
   /// @endcode
   // If a function is deleted, its first declaration must be.
-  bool isDeleted() const { return getCanonicalDecl()->IsDeleted; }
-  bool isDeletedAsWritten() const { return IsDeleted && !IsDefaulted; }
-  void setDeletedAsWritten(bool D = true) { IsDeleted = D; }
+  bool isDeleted() const {
+    return getCanonicalDecl()->FunctionDeclBits.IsDeleted;
+  }
+
+  bool isDeletedAsWritten() const {
+    return FunctionDeclBits.IsDeleted && !isDefaulted();
+  }
+
+  void setDeletedAsWritten(bool D = true) { FunctionDeclBits.IsDeleted = D; }
 
   /// Determines whether this function is "main", which is the
   /// entry point into an executable program.
@@ -2213,21 +2211,31 @@ public:
   bool isNoReturn() const;
 
   /// True if the function was a definition but its body was skipped.
-  bool hasSkippedBody() const { return HasSkippedBody; }
-  void setHasSkippedBody(bool Skipped = true) { HasSkippedBody = Skipped; }
+  bool hasSkippedBody() const { return FunctionDeclBits.HasSkippedBody; }
+  void setHasSkippedBody(bool Skipped = true) {
+    FunctionDeclBits.HasSkippedBody = Skipped;
+  }
 
   /// True if this function will eventually have a body, once it's fully parsed.
-  bool willHaveBody() const { return WillHaveBody; }
-  void setWillHaveBody(bool V = true) { WillHaveBody = V; }
+  bool willHaveBody() const { return FunctionDeclBits.WillHaveBody; }
+  void setWillHaveBody(bool V = true) { FunctionDeclBits.WillHaveBody = V; }
 
   /// True if this function is considered a multiversioned function.
-  bool isMultiVersion() const { return getCanonicalDecl()->IsMultiVersion; }
+  bool isMultiVersion() const {
+    return getCanonicalDecl()->FunctionDeclBits.IsMultiVersion;
+  }
 
   /// Sets the multiversion state for this declaration and all of its
   /// redeclarations.
   void setIsMultiVersion(bool V = true) {
-    getCanonicalDecl()->IsMultiVersion = V;
+    getCanonicalDecl()->FunctionDeclBits.IsMultiVersion = V;
   }
+
+  /// Gets the kind of multiversioning attribute this declaration has. Note that
+  /// this can return a value even if the function is not multiversion, such as
+  /// the case of 'target'.
+  MultiVersionKind getMultiVersionKind() const;
+
 
   /// True if this function is a multiversioned dispatch function as a part of
   /// the cpu_specific/cpu_dispatch functionality.
@@ -2235,6 +2243,10 @@ public:
   /// True if this function is a multiversioned processor specific function as a
   /// part of the cpu_specific/cpu_dispatch functionality.
   bool isCPUSpecificMultiVersion() const;
+
+  /// True if this function is a multiversioned dispatch function as a part of
+  /// the target functionality.
+  bool isTargetMultiVersion() const;
 
   void setPreviousDeclaration(FunctionDecl * PrevDecl);
 
@@ -2287,8 +2299,7 @@ public:
   unsigned getMinRequiredArguments() const;
 
   QualType getReturnType() const {
-    assert(getType()->getAs<FunctionType>() && "Expected a FunctionType!");
-    return getType()->getAs<FunctionType>()->getReturnType();
+    return getType()->castAs<FunctionType>()->getReturnType();
   }
 
   /// Attempt to compute an informative source range covering the
@@ -2296,47 +2307,62 @@ public:
   /// limited representation in the AST.
   SourceRange getReturnTypeSourceRange() const;
 
+  /// Get the declared return type, which may differ from the actual return
+  /// type if the return type is deduced.
+  QualType getDeclaredReturnType() const {
+    auto *TSI = getTypeSourceInfo();
+    QualType T = TSI ? TSI->getType() : getType();
+    return T->castAs<FunctionType>()->getReturnType();
+  }
+
   /// Attempt to compute an informative source range covering the
   /// function exception specification, if any.
   SourceRange getExceptionSpecSourceRange() const;
 
   /// Determine the type of an expression that calls this function.
   QualType getCallResultType() const {
-    assert(getType()->getAs<FunctionType>() && "Expected a FunctionType!");
-    return getType()->getAs<FunctionType>()->getCallResultType(getASTContext());
+    return getType()->castAs<FunctionType>()->getCallResultType(
+        getASTContext());
   }
-
-  /// Returns the WarnUnusedResultAttr that is either declared on this
-  /// function, or its return type declaration.
-  const Attr *getUnusedResultAttr() const;
-
-  /// Returns true if this function or its return type has the
-  /// warn_unused_result attribute.
-  bool hasUnusedResultAttr() const { return getUnusedResultAttr() != nullptr; }
 
   /// Returns the storage class as written in the source. For the
   /// computed linkage of symbol, see getLinkage.
-  StorageClass getStorageClass() const { return StorageClass(SClass); }
+  StorageClass getStorageClass() const {
+    return static_cast<StorageClass>(FunctionDeclBits.SClass);
+  }
+
+  /// Sets the storage class as written in the source.
+  void setStorageClass(StorageClass SClass) {
+    FunctionDeclBits.SClass = SClass;
+  }
 
   /// Determine whether the "inline" keyword was specified for this
   /// function.
-  bool isInlineSpecified() const { return IsInlineSpecified; }
+  bool isInlineSpecified() const { return FunctionDeclBits.IsInlineSpecified; }
 
   /// Set whether the "inline" keyword was specified for this function.
   void setInlineSpecified(bool I) {
-    IsInlineSpecified = I;
-    IsInline = I;
+    FunctionDeclBits.IsInlineSpecified = I;
+    FunctionDeclBits.IsInline = I;
   }
 
   /// Flag that this function is implicitly inline.
-  void setImplicitlyInline() {
-    IsInline = true;
-  }
+  void setImplicitlyInline(bool I = true) { FunctionDeclBits.IsInline = I; }
 
   /// Determine whether this function should be inlined, because it is
   /// either marked "inline" or "constexpr" or is a member function of a class
   /// that was defined in the class body.
-  bool isInlined() const { return IsInline; }
+  bool isInlined() const { return FunctionDeclBits.IsInline; }
+
+  /// Whether this function is marked as explicit explicitly.
+  bool isExplicitSpecified() const {
+    return FunctionDeclBits.IsExplicitSpecified;
+  }
+
+  /// State that this function is marked as explicit explicitly.
+  void setExplicitSpecified(bool ExpSpec = true) {
+    FunctionDeclBits.IsExplicitSpecified = ExpSpec;
+  }
 
   bool isInlineDefinitionExternallyVisible() const;
 
@@ -2871,7 +2897,7 @@ public:
   const Type *getTypeForDecl() const { return TypeForDecl; }
   void setTypeForDecl(const Type *TD) { TypeForDecl = TD; }
 
-  SourceLocation getLocStart() const LLVM_READONLY { return LocStart; }
+  SourceLocation getBeginLoc() const LLVM_READONLY { return LocStart; }
   void setLocStart(SourceLocation L) { LocStart = L; }
   SourceRange getSourceRange() const override LLVM_READONLY {
     if (LocStart.isValid())
@@ -3034,62 +3060,14 @@ public:
 };
 
 /// Represents the declaration of a struct/union/class/enum.
-class TagDecl
-  : public TypeDecl, public DeclContext, public Redeclarable<TagDecl> {
+class TagDecl : public TypeDecl,
+                public DeclContext,
+                public Redeclarable<TagDecl> {
+  // This class stores some data in DeclContext::TagDeclBits
+  // to save some space. Use the provided accessors to access it.
 public:
   // This is really ugly.
   using TagKind = TagTypeKind;
-
-private:
-  // FIXME: This can be packed into the bitfields in Decl.
-  /// The TagKind enum.
-  unsigned TagDeclKind : 3;
-
-  /// True if this is a definition ("struct foo {};"), false if it is a
-  /// declaration ("struct foo;").  It is not considered a definition
-  /// until the definition has been fully processed.
-  unsigned IsCompleteDefinition : 1;
-
-protected:
-  /// True if this is currently being defined.
-  unsigned IsBeingDefined : 1;
-
-private:
-  /// True if this tag declaration is "embedded" (i.e., defined or declared
-  /// for the very first time) in the syntax of a declarator.
-  unsigned IsEmbeddedInDeclarator : 1;
-
-  /// True if this tag is free standing, e.g. "struct foo;".
-  unsigned IsFreeStanding : 1;
-
-protected:
-  // These are used by (and only defined for) EnumDecl.
-  unsigned NumPositiveBits : 8;
-  unsigned NumNegativeBits : 8;
-
-  /// True if this tag declaration is a scoped enumeration. Only
-  /// possible in C++11 mode.
-  unsigned IsScoped : 1;
-
-  /// If this tag declaration is a scoped enum,
-  /// then this is true if the scoped enum was declared using the class
-  /// tag, false if it was declared with the struct tag. No meaning is
-  /// associated if this tag declaration is not a scoped enum.
-  unsigned IsScopedUsingClassTag : 1;
-
-  /// True if this is an enumeration with fixed underlying type. Only
-  /// possible in C++11, Microsoft extensions, or Objective C mode.
-  unsigned IsFixed : 1;
-
-  /// Indicates whether it is possible for declarations of this kind
-  /// to have an out-of-date definition.
-  ///
-  /// This option is only enabled when modules are enabled.
-  unsigned MayHaveOutOfDateDef : 1;
-
-  /// Has the full definition of this type been required by a use somewhere in
-  /// the TU.
-  unsigned IsCompleteDefinitionRequired : 1;
 
 private:
   SourceRange BraceRange;
@@ -3117,16 +3095,7 @@ private:
 protected:
   TagDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
           SourceLocation L, IdentifierInfo *Id, TagDecl *PrevDecl,
-          SourceLocation StartL)
-      : TypeDecl(DK, DC, L, Id, StartL), DeclContext(DK), redeclarable_base(C),
-        TagDeclKind(TK), IsCompleteDefinition(false), IsBeingDefined(false),
-        IsEmbeddedInDeclarator(false), IsFreeStanding(false),
-        IsCompleteDefinitionRequired(false),
-        TypedefNameDeclOrQualifier((TypedefNameDecl *)nullptr) {
-    assert((DK != Enum || TK == TTK_Enum) &&
-           "EnumDecl not matched with TTK_Enum");
-    setPreviousDecl(PrevDecl);
-  }
+          SourceLocation StartL);
 
   using redeclarable_base = Redeclarable<TagDecl>;
 
@@ -3147,6 +3116,17 @@ protected:
   /// This is a helper function for derived classes.
   void completeDefinition();
 
+  /// True if this decl is currently being defined.
+  void setBeingDefined(bool V = true) { TagDeclBits.IsBeingDefined = V; }
+
+  /// Indicates whether it is possible for declarations of this kind
+  /// to have an out-of-date definition.
+  ///
+  /// This option is only enabled when modules are enabled.
+  void setMayHaveOutOfDateDef(bool V = true) {
+    TagDeclBits.MayHaveOutOfDateDef = V;
+  }
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
@@ -3166,7 +3146,7 @@ public:
 
   /// Return SourceLocation representing start of source
   /// range ignoring outer template declarations.
-  SourceLocation getInnerLocStart() const { return getLocStart(); }
+  SourceLocation getInnerLocStart() const { return getBeginLoc(); }
 
   /// Return SourceLocation representing start of source
   /// range taking into account any outer template declarations.
@@ -3185,32 +3165,53 @@ public:
   }
 
   /// Return true if this decl has its body fully specified.
-  bool isCompleteDefinition() const {
-    return IsCompleteDefinition;
+  bool isCompleteDefinition() const { return TagDeclBits.IsCompleteDefinition; }
+
+  /// True if this decl has its body fully specified.
+  void setCompleteDefinition(bool V = true) {
+    TagDeclBits.IsCompleteDefinition = V;
   }
 
   /// Return true if this complete decl is
   /// required to be complete for some existing use.
   bool isCompleteDefinitionRequired() const {
-    return IsCompleteDefinitionRequired;
+    return TagDeclBits.IsCompleteDefinitionRequired;
+  }
+
+  /// True if this complete decl is
+  /// required to be complete for some existing use.
+  void setCompleteDefinitionRequired(bool V = true) {
+    TagDeclBits.IsCompleteDefinitionRequired = V;
   }
 
   /// Return true if this decl is currently being defined.
-  bool isBeingDefined() const {
-    return IsBeingDefined;
-  }
+  bool isBeingDefined() const { return TagDeclBits.IsBeingDefined; }
 
+  /// True if this tag declaration is "embedded" (i.e., defined or declared
+  /// for the very first time) in the syntax of a declarator.
   bool isEmbeddedInDeclarator() const {
-    return IsEmbeddedInDeclarator;
-  }
-  void setEmbeddedInDeclarator(bool isInDeclarator) {
-    IsEmbeddedInDeclarator = isInDeclarator;
+    return TagDeclBits.IsEmbeddedInDeclarator;
   }
 
-  bool isFreeStanding() const { return IsFreeStanding; }
-  void setFreeStanding(bool isFreeStanding = true) {
-    IsFreeStanding = isFreeStanding;
+  /// True if this tag declaration is "embedded" (i.e., defined or declared
+  /// for the very first time) in the syntax of a declarator.
+  void setEmbeddedInDeclarator(bool isInDeclarator) {
+    TagDeclBits.IsEmbeddedInDeclarator = isInDeclarator;
   }
+
+  /// True if this tag is free standing, e.g. "struct foo;".
+  bool isFreeStanding() const { return TagDeclBits.IsFreeStanding; }
+
+  /// True if this tag is free standing, e.g. "struct foo;".
+  void setFreeStanding(bool isFreeStanding = true) {
+    TagDeclBits.IsFreeStanding = isFreeStanding;
+  }
+
+  /// Indicates whether it is possible for declarations of this kind
+  /// to have an out-of-date definition.
+  ///
+  /// This option is only enabled when modules are enabled.
+  bool mayHaveOutOfDateDef() const { return TagDeclBits.MayHaveOutOfDateDef; }
 
   /// Whether this declaration declares a type that is
   /// dependent, i.e., a type that somehow depends on template
@@ -3234,21 +3235,15 @@ public:
   ///  the struct/union/class/enum.
   TagDecl *getDefinition() const;
 
-  void setCompleteDefinition(bool V) { IsCompleteDefinition = V; }
-
-  void setCompleteDefinitionRequired(bool V = true) {
-    IsCompleteDefinitionRequired = V;
-  }
-
   StringRef getKindName() const {
     return TypeWithKeyword::getTagTypeKindName(getTagKind());
   }
 
   TagKind getTagKind() const {
-    return TagKind(TagDeclKind);
+    return static_cast<TagKind>(TagDeclBits.TagDeclKind);
   }
 
-  void setTagKind(TagKind TK) { TagDeclKind = TK; }
+  void setTagKind(TagKind TK) { TagDeclBits.TagDeclKind = TK; }
 
   bool isStruct() const { return getTagKind() == TTK_Struct; }
   bool isInterface() const { return getTagKind() == TTK_Interface; }
@@ -3328,6 +3323,9 @@ public:
 /// with a fixed underlying type, and in C we allow them to be forward-declared
 /// with no underlying type as an extension.
 class EnumDecl : public TagDecl {
+  // This class stores some data in DeclContext::EnumDeclBits
+  // to save some space. Use the provided accessors to access it.
+
   /// This represent the integer type that the enum corresponds
   /// to for code generation purposes.  Note that the enumerator constants may
   /// have a different type than this does.
@@ -3356,28 +3354,50 @@ class EnumDecl : public TagDecl {
   MemberSpecializationInfo *SpecializationInfo = nullptr;
 
   /// Store the ODRHash after first calculation.
-  unsigned HasODRHash : 1;
+  /// The corresponding flag HasODRHash is in EnumDeclBits
+  /// and can be accessed with the provided accessors.
   unsigned ODRHash;
 
   EnumDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
            SourceLocation IdLoc, IdentifierInfo *Id, EnumDecl *PrevDecl,
-           bool Scoped, bool ScopedUsingClassTag, bool Fixed)
-      : TagDecl(Enum, TTK_Enum, C, DC, IdLoc, Id, PrevDecl, StartLoc) {
-    assert(Scoped || !ScopedUsingClassTag);
-    IntegerType = (const Type *)nullptr;
-    NumNegativeBits = 0;
-    NumPositiveBits = 0;
-    IsScoped = Scoped;
-    IsScopedUsingClassTag = ScopedUsingClassTag;
-    IsFixed = Fixed;
-    HasODRHash = false;
-    ODRHash = 0;
-  }
+           bool Scoped, bool ScopedUsingClassTag, bool Fixed);
 
   void anchor() override;
 
   void setInstantiationOfMemberEnum(ASTContext &C, EnumDecl *ED,
                                     TemplateSpecializationKind TSK);
+
+  /// Sets the width in bits required to store all the
+  /// non-negative enumerators of this enum.
+  void setNumPositiveBits(unsigned Num) {
+    EnumDeclBits.NumPositiveBits = Num;
+    assert(EnumDeclBits.NumPositiveBits == Num && "can't store this bitcount");
+  }
+
+  /// Returns the width in bits required to store all the
+  /// negative enumerators of this enum. (see getNumNegativeBits)
+  void setNumNegativeBits(unsigned Num) { EnumDeclBits.NumNegativeBits = Num; }
+
+  /// True if this tag declaration is a scoped enumeration. Only
+  /// possible in C++11 mode.
+  void setScoped(bool Scoped = true) { EnumDeclBits.IsScoped = Scoped; }
+
+  /// If this tag declaration is a scoped enum,
+  /// then this is true if the scoped enum was declared using the class
+  /// tag, false if it was declared with the struct tag. No meaning is
+  /// associated if this tag declaration is not a scoped enum.
+  void setScopedUsingClassTag(bool ScopedUCT = true) {
+    EnumDeclBits.IsScopedUsingClassTag = ScopedUCT;
+  }
+
+  /// True if this is an Objective-C, C++11, or
+  /// Microsoft-style enumeration with a fixed underlying type.
+  void setFixed(bool Fixed = true) { EnumDeclBits.IsFixed = Fixed; }
+
+  /// True if a valid hash is stored in ODRHash.
+  bool hasODRHash() const { return EnumDeclBits.HasODRHash; }
+  void setHasODRHash(bool Hash = true) { EnumDeclBits.HasODRHash = Hash; }
+
 public:
   friend class ASTDeclReader;
 
@@ -3482,13 +3502,7 @@ public:
 
   /// Returns the width in bits required to store all the
   /// non-negative enumerators of this enum.
-  unsigned getNumPositiveBits() const {
-    return NumPositiveBits;
-  }
-  void setNumPositiveBits(unsigned Num) {
-    NumPositiveBits = Num;
-    assert(NumPositiveBits == Num && "can't store this bitcount");
-  }
+  unsigned getNumPositiveBits() const { return EnumDeclBits.NumPositiveBits; }
 
   /// Returns the width in bits required to store all the
   /// negative enumerators of this enum.  These widths include
@@ -3499,28 +3513,19 @@ public:
   ///                       -1     1111111                     1
   ///                      -10     1110110                     5
   ///                     -101     1001011                     8
-  unsigned getNumNegativeBits() const {
-    return NumNegativeBits;
-  }
-  void setNumNegativeBits(unsigned Num) {
-    NumNegativeBits = Num;
-  }
+  unsigned getNumNegativeBits() const { return EnumDeclBits.NumNegativeBits; }
 
   /// Returns true if this is a C++11 scoped enumeration.
-  bool isScoped() const {
-    return IsScoped;
-  }
+  bool isScoped() const { return EnumDeclBits.IsScoped; }
 
   /// Returns true if this is a C++11 scoped enumeration.
   bool isScopedUsingClassTag() const {
-    return IsScopedUsingClassTag;
+    return EnumDeclBits.IsScopedUsingClassTag;
   }
 
   /// Returns true if this is an Objective-C, C++11, or
   /// Microsoft-style enumeration with a fixed underlying type.
-  bool isFixed() const {
-    return IsFixed;
-  }
+  bool isFixed() const { return EnumDeclBits.IsFixed; }
 
   unsigned getODRHash();
 
@@ -3585,7 +3590,10 @@ public:
 ///   union Y { int A, B; };     // Has body with members A and B (FieldDecls).
 /// This decl will be marked invalid if *any* members are invalid.
 class RecordDecl : public TagDecl {
+  // This class stores some data in DeclContext::RecordDeclBits
+  // to save some space. Use the provided accessors to access it.
 public:
+  friend class DeclContext;
   /// Enum that represents the different ways arguments are passed to and
   /// returned from function calls. This takes into account the target-specific
   /// and version-specific rules along with the rules determined by the
@@ -3608,46 +3616,6 @@ public:
     /// indirectly.
     APK_CanNeverPassInRegs
   };
-
-private:
-  friend class DeclContext;
-
-  // FIXME: This can be packed into the bitfields in Decl.
-  /// This is true if this struct ends with a flexible
-  /// array member (e.g. int X[]) or if this union contains a struct that does.
-  /// If so, this cannot be contained in arrays or other structs as a member.
-  unsigned HasFlexibleArrayMember : 1;
-
-  /// Whether this is the type of an anonymous struct or union.
-  unsigned AnonymousStructOrUnion : 1;
-
-  /// This is true if this struct has at least one member
-  /// containing an Objective-C object pointer type.
-  unsigned HasObjectMember : 1;
-
-  /// This is true if struct has at least one member of
-  /// 'volatile' type.
-  unsigned HasVolatileMember : 1;
-
-  /// Whether the field declarations of this record have been loaded
-  /// from external storage. To avoid unnecessary deserialization of
-  /// methods/nested types we allow deserialization of just the fields
-  /// when needed.
-  mutable unsigned LoadedFieldsFromExternalStorage : 1;
-
-  /// Basic properties of non-trivial C structs.
-  unsigned NonTrivialToPrimitiveDefaultInitialize : 1;
-  unsigned NonTrivialToPrimitiveCopy : 1;
-  unsigned NonTrivialToPrimitiveDestroy : 1;
-
-  /// Indicates whether this struct is destroyed in the callee.
-  ///
-  /// Please note that MSVC won't merge adjacent bitfields if they don't have
-  /// the same type.
-  unsigned ParamDestroyedInCallee : 1;
-
-  /// Represents the way this type is passed to a function.
-  unsigned ArgPassingRestrictions : 2;
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -3675,8 +3643,13 @@ public:
     return const_cast<RecordDecl*>(this)->getMostRecentDecl();
   }
 
-  bool hasFlexibleArrayMember() const { return HasFlexibleArrayMember; }
-  void setHasFlexibleArrayMember(bool V) { HasFlexibleArrayMember = V; }
+  bool hasFlexibleArrayMember() const {
+    return RecordDeclBits.HasFlexibleArrayMember;
+  }
+
+  void setHasFlexibleArrayMember(bool V) {
+    RecordDeclBits.HasFlexibleArrayMember = V;
+  }
 
   /// Whether this is an anonymous struct or union. To be an anonymous
   /// struct or union, it must have been declared without a name and
@@ -3689,47 +3662,54 @@ public:
   ///  union X { int i; float f; };
   ///  union { int i; float f; } obj;
   /// @endcode
-  bool isAnonymousStructOrUnion() const { return AnonymousStructOrUnion; }
-  void setAnonymousStructOrUnion(bool Anon) {
-    AnonymousStructOrUnion = Anon;
+  bool isAnonymousStructOrUnion() const {
+    return RecordDeclBits.AnonymousStructOrUnion;
   }
 
-  bool hasObjectMember() const { return HasObjectMember; }
-  void setHasObjectMember (bool val) { HasObjectMember = val; }
+  void setAnonymousStructOrUnion(bool Anon) {
+    RecordDeclBits.AnonymousStructOrUnion = Anon;
+  }
 
-  bool hasVolatileMember() const { return HasVolatileMember; }
-  void setHasVolatileMember (bool val) { HasVolatileMember = val; }
+  bool hasObjectMember() const { return RecordDeclBits.HasObjectMember; }
+  void setHasObjectMember(bool val) { RecordDeclBits.HasObjectMember = val; }
+
+  bool hasVolatileMember() const { return RecordDeclBits.HasVolatileMember; }
+
+  void setHasVolatileMember(bool val) {
+    RecordDeclBits.HasVolatileMember = val;
+  }
 
   bool hasLoadedFieldsFromExternalStorage() const {
-    return LoadedFieldsFromExternalStorage;
+    return RecordDeclBits.LoadedFieldsFromExternalStorage;
   }
-  void setHasLoadedFieldsFromExternalStorage(bool val) {
-    LoadedFieldsFromExternalStorage = val;
+
+  void setHasLoadedFieldsFromExternalStorage(bool val) const {
+    RecordDeclBits.LoadedFieldsFromExternalStorage = val;
   }
 
   /// Functions to query basic properties of non-trivial C structs.
   bool isNonTrivialToPrimitiveDefaultInitialize() const {
-    return NonTrivialToPrimitiveDefaultInitialize;
+    return RecordDeclBits.NonTrivialToPrimitiveDefaultInitialize;
   }
 
   void setNonTrivialToPrimitiveDefaultInitialize(bool V) {
-    NonTrivialToPrimitiveDefaultInitialize = V;
+    RecordDeclBits.NonTrivialToPrimitiveDefaultInitialize = V;
   }
 
   bool isNonTrivialToPrimitiveCopy() const {
-    return NonTrivialToPrimitiveCopy;
+    return RecordDeclBits.NonTrivialToPrimitiveCopy;
   }
 
   void setNonTrivialToPrimitiveCopy(bool V) {
-    NonTrivialToPrimitiveCopy = V;
+    RecordDeclBits.NonTrivialToPrimitiveCopy = V;
   }
 
   bool isNonTrivialToPrimitiveDestroy() const {
-    return NonTrivialToPrimitiveDestroy;
+    return RecordDeclBits.NonTrivialToPrimitiveDestroy;
   }
 
   void setNonTrivialToPrimitiveDestroy(bool V) {
-    NonTrivialToPrimitiveDestroy = V;
+    RecordDeclBits.NonTrivialToPrimitiveDestroy = V;
   }
 
   /// Determine whether this class can be passed in registers. In C++ mode,
@@ -3740,19 +3720,19 @@ public:
   }
 
   ArgPassingKind getArgPassingRestrictions() const {
-    return static_cast<ArgPassingKind>(ArgPassingRestrictions);
+    return static_cast<ArgPassingKind>(RecordDeclBits.ArgPassingRestrictions);
   }
 
   void setArgPassingRestrictions(ArgPassingKind Kind) {
-    ArgPassingRestrictions = static_cast<uint8_t>(Kind);
+    RecordDeclBits.ArgPassingRestrictions = Kind;
   }
 
   bool isParamDestroyedInCallee() const {
-    return ParamDestroyedInCallee;
+    return RecordDeclBits.ParamDestroyedInCallee;
   }
 
   void setParamDestroyedInCallee(bool V) {
-    ParamDestroyedInCallee = V;
+    RecordDeclBits.ParamDestroyedInCallee = V;
   }
 
   /// Determines whether this declaration represents the
@@ -3875,6 +3855,8 @@ public:
 /// unnamed FunctionDecl.  For example:
 /// ^{ statement-body }   or   ^(int arg1, float arg2){ statement-body }
 class BlockDecl : public Decl, public DeclContext {
+  // This class stores some data in DeclContext::BlockDeclBits
+  // to save some space. Use the provided accessors to access it.
 public:
   /// A class which contains all the information about a particular
   /// captured value.
@@ -3923,16 +3905,6 @@ public:
   };
 
 private:
-  // FIXME: This can be packed into the bitfields in Decl.
-  bool IsVariadic : 1;
-  bool CapturesCXXThis : 1;
-  bool BlockMissingReturnType : 1;
-  bool IsConversionFromLambda : 1;
-
-  /// A bit that indicates this block is passed directly to a function as a
-  /// non-escaping parameter.
-  bool DoesNotEscape : 1;
-
   /// A new[]'d array of pointers to ParmVarDecls for the formal
   /// parameters of this function.  This is null if a prototype or if there are
   /// no formals.
@@ -3949,10 +3921,7 @@ private:
   Decl *ManglingContextDecl = nullptr;
 
 protected:
-  BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
-      : Decl(Block, DC, CaretLoc), DeclContext(Block), IsVariadic(false),
-        CapturesCXXThis(false), BlockMissingReturnType(true),
-        IsConversionFromLambda(false), DoesNotEscape(false) {}
+  BlockDecl(DeclContext *DC, SourceLocation CaretLoc);
 
 public:
   static BlockDecl *Create(ASTContext &C, DeclContext *DC, SourceLocation L);
@@ -3960,8 +3929,8 @@ public:
 
   SourceLocation getCaretLocation() const { return getLocation(); }
 
-  bool isVariadic() const { return IsVariadic; }
-  void setIsVariadic(bool value) { IsVariadic = value; }
+  bool isVariadic() const { return BlockDeclBits.IsVariadic; }
+  void setIsVariadic(bool value) { BlockDeclBits.IsVariadic = value; }
 
   CompoundStmt *getCompoundBody() const { return (CompoundStmt*) Body; }
   Stmt *getBody() const override { return (Stmt*) Body; }
@@ -4004,7 +3973,7 @@ public:
 
   /// True if this block (or its nested blocks) captures
   /// anything of local storage from its enclosing scopes.
-  bool hasCaptures() const { return NumCaptures != 0 || CapturesCXXThis; }
+  bool hasCaptures() const { return NumCaptures || capturesCXXThis(); }
 
   /// Returns the number of captured variables.
   /// Does not include an entry for 'this'.
@@ -4017,15 +3986,27 @@ public:
   capture_const_iterator capture_begin() const { return captures().begin(); }
   capture_const_iterator capture_end() const { return captures().end(); }
 
-  bool capturesCXXThis() const { return CapturesCXXThis; }
-  bool blockMissingReturnType() const { return BlockMissingReturnType; }
-  void setBlockMissingReturnType(bool val) { BlockMissingReturnType = val; }
+  bool capturesCXXThis() const { return BlockDeclBits.CapturesCXXThis; }
+  void setCapturesCXXThis(bool B = true) { BlockDeclBits.CapturesCXXThis = B; }
 
-  bool isConversionFromLambda() const { return IsConversionFromLambda; }
-  void setIsConversionFromLambda(bool val) { IsConversionFromLambda = val; }
+  bool blockMissingReturnType() const {
+    return BlockDeclBits.BlockMissingReturnType;
+  }
 
-  bool doesNotEscape() const { return DoesNotEscape; }
-  void setDoesNotEscape(bool B = true) { DoesNotEscape = B; }
+  void setBlockMissingReturnType(bool val = true) {
+    BlockDeclBits.BlockMissingReturnType = val;
+  }
+
+  bool isConversionFromLambda() const {
+    return BlockDeclBits.IsConversionFromLambda;
+  }
+
+  void setIsConversionFromLambda(bool val = true) {
+    BlockDeclBits.IsConversionFromLambda = val;
+  }
+
+  bool doesNotEscape() const { return BlockDeclBits.DoesNotEscape; }
+  void setDoesNotEscape(bool B = true) { BlockDeclBits.DoesNotEscape = B; }
 
   bool capturesVariable(const VarDecl *var) const;
 
@@ -4251,16 +4232,16 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
 
-  SourceLocation getLocEnd() const LLVM_READONLY {
+  SourceLocation getEndLoc() const LLVM_READONLY {
     if (RBraceLoc.isValid())
       return RBraceLoc;
     // No braces: get the end location of the (only) declaration in context
     // (if present).
-    return decls_empty() ? getLocation() : decls_begin()->getLocEnd();
+    return decls_empty() ? getLocation() : decls_begin()->getEndLoc();
   }
 
   SourceRange getSourceRange() const override LLVM_READONLY {
-    return SourceRange(getLocation(), getLocEnd());
+    return SourceRange(getLocation(), getEndLoc());
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

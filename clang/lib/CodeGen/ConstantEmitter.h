@@ -38,6 +38,9 @@ private:
   /// Whether the constant-emission failed.
   bool Failed = false;
 
+  /// Whether we're in a constant context.
+  bool InConstantContext = false;
+
   /// The AST address space where this (non-abstract) initializer is going.
   /// Used for generating appropriate placeholders.
   LangAS DestAddressSpace;

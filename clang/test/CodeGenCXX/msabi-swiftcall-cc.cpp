@@ -12,8 +12,8 @@ void (__attribute__((__swiftcall__)) *p)();
 namespace {
 void __attribute__((__swiftcall__)) __attribute__((__used__)) f() { }
 }
-// CHECK-DAG: @"?f@?A@@YSXXZ"
-// CHECK-64-DAG: @"?f@?A@@YSXXZ"
+// CHECK-DAG: @"?f@?A0x{{[^@]*}}@@YSXXZ"
+// CHECK-64-DAG: @"?f@?A0x{{[^@]*}}@@YSXXZ"
 
 namespace n {
 void __attribute__((__swiftcall__)) f() {}
@@ -44,8 +44,8 @@ void (__attribute__((__preserve_most__)) *q)();
 namespace {
 void __attribute__((__preserve_most__)) __attribute__((__used__)) g() {}
 }
-// CHECK-DAG: @"?g@?A@@YUXXZ"
-// CHECK-64-DAG: @"?g@?A@@YUXXZ"
+// CHECK-DAG: @"?g@?A0x{{[^@]*}}@@YUXXZ"
+// CHECK-64-DAG: @"?g@?A0x{{[^@]*}}@@YUXXZ"
 
 namespace n {
 void __attribute__((__preserve_most__)) g() {}

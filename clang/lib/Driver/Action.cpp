@@ -26,6 +26,7 @@ const char *Action::getClassName(ActionClass AC) {
     return "offload";
   case PreprocessJobClass: return "preprocessor";
   case PrecompileJobClass: return "precompiler";
+  case HeaderModulePrecompileJobClass: return "header-module-precompiler";
   case AnalyzeJobClass: return "analyzer";
   case MigrateJobClass: return "migrator";
   case CompileJobClass: return "compiler";
@@ -319,6 +320,19 @@ void PrecompileJobAction::anchor() {}
 PrecompileJobAction::PrecompileJobAction(Action *Input, types::ID OutputType)
     : JobAction(PrecompileJobClass, Input, OutputType) {}
 
+PrecompileJobAction::PrecompileJobAction(ActionClass Kind, Action *Input,
+                                         types::ID OutputType)
+    : JobAction(Kind, Input, OutputType) {
+  assert(isa<PrecompileJobAction>((Action*)this) && "invalid action kind");
+}
+
+void HeaderModulePrecompileJobAction::anchor() {}
+
+HeaderModulePrecompileJobAction::HeaderModulePrecompileJobAction(
+    Action *Input, types::ID OutputType, const char *ModuleName)
+    : PrecompileJobAction(HeaderModulePrecompileJobClass, Input, OutputType),
+      ModuleName(ModuleName) {}
+
 void AnalyzeJobAction::anchor() {}
 
 AnalyzeJobAction::AnalyzeJobAction(Action *Input, types::ID OutputType)
@@ -382,7 +396,7 @@ VerifyPCHJobAction::VerifyPCHJobAction(Action *Input, types::ID Type)
 void OffloadBundlingJobAction::anchor() {}
 
 OffloadBundlingJobAction::OffloadBundlingJobAction(ActionList &Inputs)
-    : JobAction(OffloadBundlingJobClass, Inputs, Inputs.front()->getType()) {}
+    : JobAction(OffloadBundlingJobClass, Inputs, Inputs.back()->getType()) {}
 
 void OffloadUnbundlingJobAction::anchor() {}
 

@@ -95,8 +95,11 @@ and making the wording as clear as possible.</p>
 GCC and Clang diagnostic:</p>
 
 <pre>
-  $ <b>gcc-4.2 -fsyntax-only t.c</b>
-  t.c:7: error: invalid operands to binary + (have 'int' and 'struct A')
+  $ <b>gcc-4.9 -fsyntax-only t.c</b>
+  t.c: In function 'int f(int, int)':
+  t.c:7:39: error: invalid operands to binary + (have 'int' and 'struct A')
+     return y + func(y ? ((SomeA.X + 40) + SomeA) / 42 + SomeA.X : SomeA.X);
+                                         ^
   $ <b>clang -fsyntax-only t.c</b>
   t.c:7:39: error: invalid operands to binary expression ('int' and 'struct A')
   <span style="color:darkgreen">  return y + func(y ? ((SomeA.X + 40) + SomeA) / 42 + SomeA.X : SomeA.X);</span>

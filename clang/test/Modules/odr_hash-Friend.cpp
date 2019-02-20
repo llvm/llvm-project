@@ -9,7 +9,7 @@
 // RUN:  -fmodules \
 // RUN:  -fimplicit-module-maps \
 // RUN:  -fmodules-cache-path=%t/modules.cache \
-// RUN:  -std=c++11 -x c++ %s -verify -DTEST1 -fcolor-diagnostics
+// RUN:  -std=c++11 -x c++ %s -verify -DTEST1
 
 // RUN: %clang_cc1 \
 // RUN:  -I %S/Inputs/odr_hash-Friend \
@@ -17,7 +17,7 @@
 // RUN:  -fmodules \
 // RUN:  -fimplicit-module-maps \
 // RUN:  -fmodules-cache-path=%t/modules.cache \
-// RUN:  -std=c++11 -x c++ %s -verify -DTEST2 -fcolor-diagnostics
+// RUN:  -std=c++11 -x c++ %s -verify -DTEST2
 
 // RUN: %clang_cc1 \
 // RUN:  -I %S/Inputs/odr_hash-Friend \
@@ -25,7 +25,7 @@
 // RUN:  -fmodules \
 // RUN:  -fimplicit-module-maps \
 // RUN:  -fmodules-cache-path=%t/modules.cache \
-// RUN:  -std=c++11 -x c++ %s -verify -DTEST3 -fcolor-diagnostics
+// RUN:  -std=c++11 -x c++ %s -verify -DTEST3
 
 // RUN: %clang_cc1 \
 // RUN:  -I %S/Inputs/odr_hash-Friend \
@@ -33,7 +33,7 @@
 // RUN:  -fmodules \
 // RUN:  -fimplicit-module-maps \
 // RUN:  -fmodules-cache-path=%t/modules.cache \
-// RUN:  -std=c++11 -x c++ %s -verify -DTEST3 -fcolor-diagnostics
+// RUN:  -std=c++11 -x c++ %s -verify -DTEST3
 
 // RUN: %clang_cc1 \
 // RUN:  -I %S/Inputs/odr_hash-Friend \
@@ -41,7 +41,7 @@
 // RUN:  -fmodules \
 // RUN:  -fimplicit-module-maps \
 // RUN:  -fmodules-cache-path=%t/modules.cache \
-// RUN:  -std=c++11 -x c++ %s -verify -DTEST3 -fcolor-diagnostics
+// RUN:  -std=c++11 -x c++ %s -verify -DTEST3
 
 #if defined(TEST1)
 #include "Box.h"

@@ -14,7 +14,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/CFGStmtMap.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -56,7 +56,7 @@ class AnalysisOrderChecker
 
   bool isCallbackEnabled(ProgramStateRef State, StringRef CallbackName) const {
     AnalyzerOptions &Opts = State->getStateManager().getOwningEngine()
-                                 ->getAnalysisManager().getAnalyzerOptions();
+                                 .getAnalysisManager().getAnalyzerOptions();
     return isCallbackEnabled(Opts, CallbackName);
   }
 
@@ -175,4 +175,8 @@ public:
 
 void ento::registerAnalysisOrderChecker(CheckerManager &mgr) {
   mgr.registerChecker<AnalysisOrderChecker>();
+}
+
+bool ento::shouldRegisterAnalysisOrderChecker(const LangOptions &LO) {
+  return true;
 }

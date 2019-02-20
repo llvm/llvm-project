@@ -19,7 +19,6 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/MacroInfo.h"
-#include "clang/Lex/PTHManager.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -76,13 +75,6 @@ bool Preprocessor::EnterSourceFile(FileID FID, const DirectoryLookup *CurDir,
   if (MaxIncludeStackDepth < IncludeMacroStack.size())
     MaxIncludeStackDepth = IncludeMacroStack.size();
 
-  if (PTH) {
-    if (PTHLexer *PL = PTH->CreateLexer(FID)) {
-      EnterSourceFileWithPTH(PL, CurDir);
-      return false;
-    }
-  }
-
   // Get the MemoryBuffer for this FID, if it fails, we fail.
   bool Invalid = false;
   const llvm::MemoryBuffer *InputFile =
@@ -128,31 +120,6 @@ void Preprocessor::EnterSourceFileWithLexer(Lexer *TheLexer,
 
     Callbacks->FileChanged(CurLexer->getFileLoc(),
                            PPCallbacks::EnterFile, FileType);
-  }
-}
-
-/// EnterSourceFileWithPTH - Add a source file to the top of the include stack
-/// and start getting tokens from it using the PTH cache.
-void Preprocessor::EnterSourceFileWithPTH(PTHLexer *PL,
-                                          const DirectoryLookup *CurDir) {
-
-  if (CurPPLexer || CurTokenLexer)
-    PushIncludeMacroStack();
-
-  CurDirLookup = CurDir;
-  CurPTHLexer.reset(PL);
-  CurPPLexer = CurPTHLexer.get();
-  CurLexerSubmodule = nullptr;
-  if (CurLexerKind != CLK_LexAfterModuleImport)
-    CurLexerKind = CLK_PTHLexer;
-
-  // Notify the client, if desired, that we are in a new source file.
-  if (Callbacks) {
-    FileID FID = CurPPLexer->getFileID();
-    SourceLocation EnterLoc = SourceMgr.getLocForStartOfFile(FID);
-    SrcMgr::CharacteristicKind FileType =
-      SourceMgr.getFileCharacteristic(EnterLoc);
-    Callbacks->FileChanged(EnterLoc, PPCallbacks::EnterFile, FileType);
   }
 }
 
@@ -304,20 +271,21 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
 
   ModuleMap &ModMap = getHeaderSearchInfo().getModuleMap();
   const DirectoryEntry *Dir = Mod.getUmbrellaDir().Entry;
-  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
   std::error_code EC;
-  for (vfs::recursive_directory_iterator Entry(FS, Dir->getName(), EC), End;
+  for (llvm::vfs::recursive_directory_iterator Entry(FS, Dir->getName(), EC),
+       End;
        Entry != End && !EC; Entry.increment(EC)) {
     using llvm::StringSwitch;
 
     // Check whether this entry has an extension typically associated with
     // headers.
-    if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->getName()))
+    if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->path()))
              .Cases(".h", ".H", ".hh", ".hpp", true)
              .Default(false))
       continue;
 
-    if (const FileEntry *Header = getFileManager().getFile(Entry->getName()))
+    if (const FileEntry *Header = getFileManager().getFile(Entry->path()))
       if (!getSourceManager().hasFileInfo(Header)) {
         if (!ModMap.isHeaderInUnavailableModule(Header)) {
           // Find the relative path that would access this header.
@@ -339,7 +307,6 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
 
   // If we have an unclosed module region from a pragma at the end of a
   // module, complain and close it now.
-  // FIXME: This is not correct if we are building a module from PTH.
   const bool LeavingSubmodule = CurLexer && CurLexerSubmodule;
   if ((LeavingSubmodule || IncludeMacroStack.empty()) &&
       !BuildingSubmoduleStack.empty() &&
@@ -436,15 +403,10 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
     if (isCodeCompletionEnabled() && CurPPLexer &&
         SourceMgr.getLocForStartOfFile(CurPPLexer->getFileID()) ==
             CodeCompletionFileLoc) {
-      if (CurLexer) {
-        Result.startToken();
-        CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
-        CurLexer.reset();
-      } else {
-        assert(CurPTHLexer && "Got EOF but no current lexer set!");
-        CurPTHLexer->getEOF(Result);
-        CurPTHLexer.reset();
-      }
+      assert(CurLexer && "Got EOF but no current lexer set!");
+      Result.startToken();
+      CurLexer->FormTokenWithChars(Result, CurLexer->BufferEnd, tok::eof);
+      CurLexer.reset();
 
       CurPPLexer = nullptr;
       recomputeCurLexerKind();
@@ -522,37 +484,32 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   }
 
   // If this is the end of the main file, form an EOF token.
-  if (CurLexer) {
-    const char *EndPos = getCurLexerEndPos();
-    Result.startToken();
-    CurLexer->BufferPtr = EndPos;
-    CurLexer->FormTokenWithChars(Result, EndPos, tok::eof);
+  assert(CurLexer && "Got EOF but no current lexer set!");
+  const char *EndPos = getCurLexerEndPos();
+  Result.startToken();
+  CurLexer->BufferPtr = EndPos;
+  CurLexer->FormTokenWithChars(Result, EndPos, tok::eof);
 
-    if (isCodeCompletionEnabled()) {
-      // Inserting the code-completion point increases the source buffer by 1,
-      // but the main FileID was created before inserting the point.
-      // Compensate by reducing the EOF location by 1, otherwise the location
-      // will point to the next FileID.
-      // FIXME: This is hacky, the code-completion point should probably be
-      // inserted before the main FileID is created.
-      if (CurLexer->getFileLoc() == CodeCompletionFileLoc)
-        Result.setLocation(Result.getLocation().getLocWithOffset(-1));
-    }
-
-    if (creatingPCHWithThroughHeader() && !LeavingPCHThroughHeader) {
-      // Reached the end of the compilation without finding the through header.
-      Diag(CurLexer->getFileLoc(), diag::err_pp_through_header_not_seen)
-          << PPOpts->PCHThroughHeader << 0;
-    }
-
-    if (!isIncrementalProcessingEnabled())
-      // We're done with lexing.
-      CurLexer.reset();
-  } else {
-    assert(CurPTHLexer && "Got EOF but no current lexer set!");
-    CurPTHLexer->getEOF(Result);
-    CurPTHLexer.reset();
+  if (isCodeCompletionEnabled()) {
+    // Inserting the code-completion point increases the source buffer by 1,
+    // but the main FileID was created before inserting the point.
+    // Compensate by reducing the EOF location by 1, otherwise the location
+    // will point to the next FileID.
+    // FIXME: This is hacky, the code-completion point should probably be
+    // inserted before the main FileID is created.
+    if (CurLexer->getFileLoc() == CodeCompletionFileLoc)
+      Result.setLocation(Result.getLocation().getLocWithOffset(-1));
   }
+
+  if (creatingPCHWithThroughHeader() && !LeavingPCHThroughHeader) {
+    // Reached the end of the compilation without finding the through header.
+    Diag(CurLexer->getFileLoc(), diag::err_pp_through_header_not_seen)
+        << PPOpts->PCHThroughHeader << 0;
+  }
+
+  if (!isIncrementalProcessingEnabled())
+    // We're done with lexing.
+    CurLexer.reset();
 
   if (!isIncrementalProcessingEnabled())
     CurPPLexer = nullptr;

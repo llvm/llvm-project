@@ -454,7 +454,7 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
   QualType SingleTy;
 
   auto &Opts =
-    StateMgr.getOwningEngine()->getAnalysisManager().getAnalyzerOptions();
+    StateMgr.getOwningEngine().getAnalysisManager().getAnalyzerOptions();
 
   // FIXME: After putting complexity threshold to the symbols we can always
   //        rearrange additive operations but rearrange comparisons only if
@@ -625,7 +625,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       case BO_LE:
       case BO_GE:
         op = BinaryOperator::reverseComparisonOp(op);
-        // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       case BO_EQ:
       case BO_NE:
       case BO_Add:
@@ -639,7 +639,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         // (~0)>>a
         if (LHSValue.isAllOnesValue() && LHSValue.isSigned())
           return evalCastFromNonLoc(lhs, resultTy);
-        // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       case BO_Shl:
         // 0<<a and 0>>a
         if (LHSValue == 0)

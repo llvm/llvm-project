@@ -48,6 +48,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
+#include "clang/Basic/FixedPoint.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -192,7 +193,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
       isa<ObjCPropertyDecl>(D) ||
       isa<RedeclarableTemplateDecl>(D) ||
       isa<ClassTemplateSpecializationDecl>(D))
-    DeclLoc = D->getLocStart();
+    DeclLoc = D->getBeginLoc();
   else {
     DeclLoc = D->getLocation();
     if (DeclLoc.isMacroID()) {
@@ -200,7 +201,7 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
         // If location of the typedef name is in a macro, it is because being
         // declared via a macro. Try using declaration's starting location as
         // the "declaration location".
-        DeclLoc = D->getLocStart();
+        DeclLoc = D->getBeginLoc();
       } else if (const auto *TD = dyn_cast<TagDecl>(D)) {
         // If location of the tag decl is inside a macro, but the spelling of
         // the tag name comes from a macro argument, it looks like a special
@@ -795,11 +796,10 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       CommentCommandTraits(BumpAlloc, LOpts.CommentOpts),
       CompCategories(this_()), LastSDM(nullptr, 0) {
   TUDecl = TranslationUnitDecl::Create(*this);
+  TraversalScope = {TUDecl};
 }
 
 ASTContext::~ASTContext() {
-  ReleaseParentMapEntries();
-
   // Release the DenseMaps associated with DeclContext objects.
   // FIXME: Is this the ideal solution?
   ReleaseDeclContextMaps();
@@ -837,22 +837,80 @@ ASTContext::~ASTContext() {
     Value.second->~PerModuleInitializers();
 }
 
-void ASTContext::ReleaseParentMapEntries() {
-  if (!PointerParents) return;
-  for (const auto &Entry : *PointerParents) {
-    if (Entry.second.is<ast_type_traits::DynTypedNode *>()) {
-      delete Entry.second.get<ast_type_traits::DynTypedNode *>();
-    } else if (Entry.second.is<ParentVector *>()) {
-      delete Entry.second.get<ParentVector *>();
+class ASTContext::ParentMap {
+  /// Contains parents of a node.
+  using ParentVector = llvm::SmallVector<ast_type_traits::DynTypedNode, 2>;
+
+  /// Maps from a node to its parents. This is used for nodes that have
+  /// pointer identity only, which are more common and we can save space by
+  /// only storing a unique pointer to them.
+  using ParentMapPointers = llvm::DenseMap<
+      const void *,
+      llvm::PointerUnion4<const Decl *, const Stmt *,
+                          ast_type_traits::DynTypedNode *, ParentVector *>>;
+
+  /// Parent map for nodes without pointer identity. We store a full
+  /// DynTypedNode for all keys.
+  using ParentMapOtherNodes = llvm::DenseMap<
+      ast_type_traits::DynTypedNode,
+      llvm::PointerUnion4<const Decl *, const Stmt *,
+                          ast_type_traits::DynTypedNode *, ParentVector *>>;
+
+  ParentMapPointers PointerParents;
+  ParentMapOtherNodes OtherParents;
+  class ASTVisitor;
+
+  static ast_type_traits::DynTypedNode
+  getSingleDynTypedNodeFromParentMap(ParentMapPointers::mapped_type U) {
+    if (const auto *D = U.dyn_cast<const Decl *>())
+      return ast_type_traits::DynTypedNode::create(*D);
+    if (const auto *S = U.dyn_cast<const Stmt *>())
+      return ast_type_traits::DynTypedNode::create(*S);
+    return *U.get<ast_type_traits::DynTypedNode *>();
+  }
+
+  template <typename NodeTy, typename MapTy>
+  static ASTContext::DynTypedNodeList getDynNodeFromMap(const NodeTy &Node,
+                                                        const MapTy &Map) {
+    auto I = Map.find(Node);
+    if (I == Map.end()) {
+      return llvm::ArrayRef<ast_type_traits::DynTypedNode>();
+    }
+    if (const auto *V = I->second.template dyn_cast<ParentVector *>()) {
+      return llvm::makeArrayRef(*V);
+    }
+    return getSingleDynTypedNodeFromParentMap(I->second);
+  }
+
+public:
+  ParentMap(ASTContext &Ctx);
+  ~ParentMap() {
+    for (const auto &Entry : PointerParents) {
+      if (Entry.second.is<ast_type_traits::DynTypedNode *>()) {
+        delete Entry.second.get<ast_type_traits::DynTypedNode *>();
+      } else if (Entry.second.is<ParentVector *>()) {
+        delete Entry.second.get<ParentVector *>();
+      }
+    }
+    for (const auto &Entry : OtherParents) {
+      if (Entry.second.is<ast_type_traits::DynTypedNode *>()) {
+        delete Entry.second.get<ast_type_traits::DynTypedNode *>();
+      } else if (Entry.second.is<ParentVector *>()) {
+        delete Entry.second.get<ParentVector *>();
+      }
     }
   }
-  for (const auto &Entry : *OtherParents) {
-    if (Entry.second.is<ast_type_traits::DynTypedNode *>()) {
-      delete Entry.second.get<ast_type_traits::DynTypedNode *>();
-    } else if (Entry.second.is<ParentVector *>()) {
-      delete Entry.second.get<ParentVector *>();
-    }
+
+  DynTypedNodeList getParents(const ast_type_traits::DynTypedNode &Node) {
+    if (Node.getNodeKind().hasPointerIdentity())
+      return getDynNodeFromMap(Node.getMemoizationData(), PointerParents);
+    return getDynNodeFromMap(Node, OtherParents);
   }
+};
+
+void ASTContext::setTraversalScope(const std::vector<Decl *> &TopLevelDecls) {
+  TraversalScope = TopLevelDecls;
+  Parents.reset();
 }
 
 void ASTContext::AddDeallocation(void (*Callback)(void*), void *Data) {
@@ -885,7 +943,9 @@ void ASTContext::PrintStats() const {
 #define TYPE(Name, Parent)                                              \
   if (counts[Idx])                                                      \
     llvm::errs() << "    " << counts[Idx] << " " << #Name               \
-                 << " types\n";                                         \
+                 << " types, " << sizeof(Name##Type) << " each "        \
+                 << "(" << counts[Idx] * sizeof(Name##Type)             \
+                 << " bytes)\n";                                        \
   TotalBytes += counts[Idx] * sizeof(Name##Type);                       \
   ++Idx;
 #define ABSTRACT_TYPE(Name, Parent)
@@ -929,14 +989,11 @@ void ASTContext::mergeDefinitionIntoModule(NamedDecl *ND, Module *M,
     if (auto *Listener = getASTMutationListener())
       Listener->RedefinedHiddenDefinition(ND, M);
 
-  if (getLangOpts().ModulesLocalVisibility)
-    MergedDefModules[ND].push_back(M);
-  else
-    ND->setVisibleDespiteOwningModule();
+  MergedDefModules[cast<NamedDecl>(ND->getCanonicalDecl())].push_back(M);
 }
 
 void ASTContext::deduplicateMergedDefinitonsFor(NamedDecl *ND) {
-  auto It = MergedDefModules.find(ND);
+  auto It = MergedDefModules.find(cast<NamedDecl>(ND->getCanonicalDecl()));
   if (It == MergedDefModules.end())
     return;
 
@@ -1241,6 +1298,10 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
     InitBuiltinType(OCLClkEventTy, BuiltinType::OCLClkEvent);
     InitBuiltinType(OCLQueueTy, BuiltinType::OCLQueue);
     InitBuiltinType(OCLReserveIDTy, BuiltinType::OCLReserveID);
+
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+    InitBuiltinType(Id##Ty, BuiltinType::Id);
+#include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
   // Builtin type for __objc_yes and __objc_no
@@ -1892,6 +1953,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
     case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  case BuiltinType::Id:
+#include "clang/Basic/OpenCLExtensionTypes.def"
       AS = getTargetAddressSpace(
           Target->getOpenCLTypeAddrSpace(getOpenCLTypeKind(T)));
       Width = Target->getPointerWidth(AS);
@@ -2295,12 +2359,11 @@ structHasUniqueObjectRepresentations(const ASTContext &Context,
       }
     }
 
-    llvm::sort(
-        Bases.begin(), Bases.end(), [&](const std::pair<QualType, int64_t> &L,
-                                        const std::pair<QualType, int64_t> &R) {
-          return Layout.getBaseClassOffset(L.first->getAsCXXRecordDecl()) <
-                 Layout.getBaseClassOffset(R.first->getAsCXXRecordDecl());
-        });
+    llvm::sort(Bases, [&](const std::pair<QualType, int64_t> &L,
+                          const std::pair<QualType, int64_t> &R) {
+      return Layout.getBaseClassOffset(L.first->getAsCXXRecordDecl()) <
+             Layout.getBaseClassOffset(R.first->getAsCXXRecordDecl());
+    });
 
     for (const auto Base : Bases) {
       int64_t BaseOffset = Context.toBits(
@@ -3698,30 +3761,20 @@ QualType ASTContext::getFunctionTypeInternal(
     assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
   }
 
-  // FunctionProtoType objects are allocated with extra bytes after
-  // them for three variable size arrays at the end:
-  //  - parameter types
-  //  - exception types
-  //  - extended parameter information
-  // Instead of the exception types, there could be a noexcept
-  // expression, or information used to resolve the exception
-  // specification.
-  size_t Size =
-      sizeof(FunctionProtoType) + NumArgs * sizeof(QualType) +
-      FunctionProtoType::getExceptionSpecSize(
-          EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
+  // Compute the needed size to hold this FunctionProtoType and the
+  // various trailing objects.
+  auto ESH = FunctionProtoType::getExceptionSpecSize(
+      EPI.ExceptionSpec.Type, EPI.ExceptionSpec.Exceptions.size());
+  size_t Size = FunctionProtoType::totalSizeToAlloc<
+      QualType, FunctionType::FunctionTypeExtraBitfields,
+      FunctionType::ExceptionType, Expr *, FunctionDecl *,
+      FunctionProtoType::ExtParameterInfo, Qualifiers>(
+      NumArgs, FunctionProtoType::hasExtraBitfields(EPI.ExceptionSpec.Type),
+      ESH.NumExceptionType, ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
+      EPI.ExtParameterInfos ? NumArgs : 0,
+      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
-  // Put the ExtParameterInfos last.  If all were equal, it would make
-  // more sense to put these before the exception specification, because
-  // it's much easier to skip past them compared to the elaborate switch
-  // required to skip the exception specification.  However, all is not
-  // equal; ExtParameterInfos are used to model very uncommon features,
-  // and it's better not to burden the more common paths.
-  if (EPI.ExtParameterInfos) {
-    Size += NumArgs * sizeof(FunctionProtoType::ExtParameterInfo);
-  }
-
-  auto *FTP = (FunctionProtoType *) Allocate(Size, TypeAlignment);
+  auto *FTP = (FunctionProtoType *)Allocate(Size, TypeAlignment);
   FunctionProtoType::ExtProtoInfo newEPI = EPI;
   new (FTP) FunctionProtoType(ResultTy, ArgArray, Canonical, newEPI);
   Types.push_back(FTP);
@@ -3873,7 +3926,7 @@ QualType ASTContext::getEnumType(const EnumDecl *Decl) const {
   return QualType(newType, 0);
 }
 
-QualType ASTContext::getAttributedType(AttributedType::Kind attrKind,
+QualType ASTContext::getAttributedType(attr::Kind attrKind,
                                        QualType modifiedType,
                                        QualType equivalentType) {
   llvm::FoldingSetNodeID id;
@@ -4133,8 +4186,10 @@ QualType ASTContext::getElaboratedType(ElaboratedTypeKeyword Keyword,
     (void)CheckT;
   }
 
-  T = new (*this, TypeAlignment)
-      ElaboratedType(Keyword, NNS, NamedType, Canon, OwnedTagDecl);
+  void *Mem = Allocate(ElaboratedType::totalSizeToAlloc<TagDecl *>(!!OwnedTagDecl),
+                       TypeAlignment);
+  T = new (Mem) ElaboratedType(Keyword, NNS, NamedType, Canon, OwnedTagDecl);
+
   Types.push_back(T);
   ElaboratedTypes.InsertNode(T, InsertPos);
   return QualType(T, 0);
@@ -4265,7 +4320,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) {
     Arg = TemplateArgument(ArgType);
   } else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
     Expr *E = new (*this) DeclRefExpr(
-        NTTP, /*enclosing*/false,
+        *this, NTTP, /*enclosing*/ false,
         NTTP->getType().getNonLValueExprType(*this),
         Expr::getValueKindForType(NTTP->getType()), NTTP->getLocation());
 
@@ -4541,8 +4596,8 @@ ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
     if (!protocols.empty()) {
       // Apply the protocol qualifers.
       bool hasError;
-      Canonical = applyObjCProtocolQualifiers(Canonical, protocols, hasError,
-          true/*allowOnPointerType*/);
+      Canonical = getCanonicalType(applyObjCProtocolQualifiers(
+          Canonical, protocols, hasError, true /*allowOnPointerType*/));
       assert(!hasError && "Error when apply protocol qualifier to bound type");
     }
   }
@@ -5097,7 +5152,7 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2) {
     return true;
   }
 
-  if (getLangOpts().ObjC1) {
+  if (getLangOpts().ObjC) {
     const auto *T1OPType = T1->getAs<ObjCObjectPointerType>();
     const auto *T2OPType = T2->getAs<ObjCObjectPointerType>();
     if (T1OPType && T2OPType) {
@@ -6034,7 +6089,7 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
 bool ASTContext::getByrefLifetime(QualType Ty,
                               Qualifiers::ObjCLifetime &LifeTime,
                               bool &HasByrefExtendedLayout) const {
-  if (!getLangOpts().ObjC1 ||
+  if (!getLangOpts().ObjC ||
       getLangOpts().getGC() != LangOptions::NonGC)
     return false;
 
@@ -6506,6 +6561,9 @@ static char getObjCEncodingForPrimitiveKind(const ASTContext *C,
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
     case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+    case BuiltinType::Id:
+#include "clang/Basic/OpenCLExtensionTypes.def"
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:
     case BuiltinType::OCLQueue:
@@ -7712,7 +7770,7 @@ Qualifiers::GC ASTContext::getObjCGCAttrKind(QualType Ty) const {
   if (getLangOpts().getGC() == LangOptions::NonGC)
     return Qualifiers::GCNone;
 
-  assert(getLangOpts().ObjC1);
+  assert(getLangOpts().ObjC);
   Qualifiers::GC GCAttrs = Ty.getObjCGCAttr();
 
   // Default behaviour under objective-C's gc is for ObjC pointers
@@ -8068,7 +8126,7 @@ void getIntersectionOfProtocols(ASTContext &Context,
   // Also add the protocols associated with the LHS interface.
   Context.CollectInheritedProtocols(LHS->getInterface(), LHSProtocolSet);
 
-  // Add all of the protocls for the RHS.
+  // Add all of the protocols for the RHS.
   llvm::SmallPtrSet<ObjCProtocolDecl *, 8> RHSProtocolSet;
 
   // Start with the protocol qualifiers.
@@ -9419,9 +9477,11 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
       // qualified with an address space.
       char *End;
       unsigned AddrSpace = strtoul(Str, &End, 10);
-      if (End != Str && AddrSpace != 0) {
-        Type = Context.getAddrSpaceQualType(Type,
-                                            getLangASFromTargetAS(AddrSpace));
+      if (End != Str) {
+        // Note AddrSpace == 0 is not the same as an unspecified address space.
+        Type = Context.getAddrSpaceQualType(
+          Type,
+          Context.getLangASForBuiltinAddressSpace(AddrSpace));
         Str = End;
       }
       if (c == '*')
@@ -9752,6 +9812,14 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
         cast<FunctionDecl>(D)->getTemplateSpecializationKind() ==
             TSK_ExplicitInstantiationDefinition;
 
+    // Implicit member function definitions, such as operator= might not be
+    // marked as template specializations, since they're not coming from a
+    // template but synthesized directly on the class.
+    IsExpInstDef |=
+        isa<CXXMethodDecl>(D) &&
+        cast<CXXMethodDecl>(D)->getParent()->getTemplateSpecializationKind() ==
+            TSK_ExplicitInstantiationDefinition;
+
     if (getExternalSource()->DeclIsFromPCHWithObjectFile(D) && !IsExpInstDef)
       return false;
   }
@@ -9801,6 +9869,12 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
   const auto *VD = cast<VarDecl>(D);
   assert(VD->isFileVarDecl() && "Expected file scoped var");
 
+  // If the decl is marked as `declare target to`, it should be emitted for the
+  // host and for the device.
+  if (LangOpts.OpenMP &&
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
+    return true;
+
   if (VD->isThisDeclarationADefinition() == VarDecl::DeclarationOnly &&
       !isMSStaticDataMemberInlineDefinition(VD))
     return false;
@@ -9832,27 +9906,18 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
         if (DeclMustBeEmitted(BindingVD))
           return true;
 
-  // If the decl is marked as `declare target`, it should be emitted.
-  for (const auto *Decl : D->redecls()) {
-    if (!Decl->hasAttrs())
-      continue;
-    if (const auto *Attr = Decl->getAttr<OMPDeclareTargetDeclAttr>())
-      if (Attr->getMapType() != OMPDeclareTargetDeclAttr::MT_Link)
-        return true;
-  }
-
   return false;
 }
 
 void ASTContext::forEachMultiversionedFunctionVersion(
     const FunctionDecl *FD,
-    llvm::function_ref<void(const FunctionDecl *)> Pred) const {
+    llvm::function_ref<void(FunctionDecl *)> Pred) const {
   assert(FD->isMultiVersion() && "Only valid for multiversioned functions");
   llvm::SmallDenseSet<const FunctionDecl*, 4> SeenDecls;
-  FD = FD->getCanonicalDecl();
+  FD = FD->getMostRecentDecl();
   for (auto *CurDecl :
        FD->getDeclContext()->getRedeclContext()->lookup(FD->getDeclName())) {
-    FunctionDecl *CurFD = CurDecl->getAsFunction()->getCanonicalDecl();
+    FunctionDecl *CurFD = CurDecl->getAsFunction()->getMostRecentDecl();
     if (CurFD && hasSameType(CurFD->getType(), FD->getType()) &&
         std::end(SeenDecls) == llvm::find(SeenDecls, CurFD)) {
       SeenDecls.insert(CurFD);
@@ -10089,21 +10154,10 @@ bool ASTContext::AtomicUsesUnsupportedLibcall(const AtomicExpr *E) const {
   return (Size != Align || toBits(sizeChars) > MaxInlineWidthInBits);
 }
 
-static ast_type_traits::DynTypedNode getSingleDynTypedNodeFromParentMap(
-    ASTContext::ParentMapPointers::mapped_type U) {
-  if (const auto *D = U.dyn_cast<const Decl *>())
-    return ast_type_traits::DynTypedNode::create(*D);
-  if (const auto *S = U.dyn_cast<const Stmt *>())
-    return ast_type_traits::DynTypedNode::create(*S);
-  return *U.get<ast_type_traits::DynTypedNode *>();
-}
-
-namespace {
-
 /// Template specializations to abstract away from pointers and TypeLocs.
 /// @{
 template <typename T>
-ast_type_traits::DynTypedNode createDynTypedNode(const T &Node) {
+static ast_type_traits::DynTypedNode createDynTypedNode(const T &Node) {
   return ast_type_traits::DynTypedNode::create(*Node);
 }
 template <>
@@ -10117,160 +10171,121 @@ createDynTypedNode(const NestedNameSpecifierLoc &Node) {
 }
 /// @}
 
-  /// A \c RecursiveASTVisitor that builds a map from nodes to their
-  /// parents as defined by the \c RecursiveASTVisitor.
-  ///
-  /// Note that the relationship described here is purely in terms of AST
-  /// traversal - there are other relationships (for example declaration context)
-  /// in the AST that are better modeled by special matchers.
-  ///
-  /// FIXME: Currently only builds up the map using \c Stmt and \c Decl nodes.
-  class ParentMapASTVisitor : public RecursiveASTVisitor<ParentMapASTVisitor> {
-  public:
-    /// Builds and returns the translation unit's parent map.
-    ///
-    ///  The caller takes ownership of the returned \c ParentMap.
-    static std::pair<ASTContext::ParentMapPointers *,
-                     ASTContext::ParentMapOtherNodes *>
-    buildMap(TranslationUnitDecl &TU) {
-      ParentMapASTVisitor Visitor(new ASTContext::ParentMapPointers,
-                                  new ASTContext::ParentMapOtherNodes);
-      Visitor.TraverseDecl(&TU);
-      return std::make_pair(Visitor.Parents, Visitor.OtherParents);
-    }
+/// A \c RecursiveASTVisitor that builds a map from nodes to their
+/// parents as defined by the \c RecursiveASTVisitor.
+///
+/// Note that the relationship described here is purely in terms of AST
+/// traversal - there are other relationships (for example declaration context)
+/// in the AST that are better modeled by special matchers.
+///
+/// FIXME: Currently only builds up the map using \c Stmt and \c Decl nodes.
+class ASTContext::ParentMap::ASTVisitor
+    : public RecursiveASTVisitor<ASTVisitor> {
+public:
+  ASTVisitor(ParentMap &Map) : Map(Map) {}
 
-  private:
-    friend class RecursiveASTVisitor<ParentMapASTVisitor>;
+private:
+  friend class RecursiveASTVisitor<ASTVisitor>;
 
-    using VisitorBase = RecursiveASTVisitor<ParentMapASTVisitor>;
+  using VisitorBase = RecursiveASTVisitor<ASTVisitor>;
 
-    ParentMapASTVisitor(ASTContext::ParentMapPointers *Parents,
-                        ASTContext::ParentMapOtherNodes *OtherParents)
-        : Parents(Parents), OtherParents(OtherParents) {}
+  bool shouldVisitTemplateInstantiations() const { return true; }
 
-    bool shouldVisitTemplateInstantiations() const {
+  bool shouldVisitImplicitCode() const { return true; }
+
+  template <typename T, typename MapNodeTy, typename BaseTraverseFn,
+            typename MapTy>
+  bool TraverseNode(T Node, MapNodeTy MapNode, BaseTraverseFn BaseTraverse,
+                    MapTy *Parents) {
+    if (!Node)
       return true;
-    }
-
-    bool shouldVisitImplicitCode() const {
-      return true;
-    }
-
-    template <typename T, typename MapNodeTy, typename BaseTraverseFn,
-              typename MapTy>
-    bool TraverseNode(T Node, MapNodeTy MapNode,
-                      BaseTraverseFn BaseTraverse, MapTy *Parents) {
-      if (!Node)
-        return true;
-      if (ParentStack.size() > 0) {
-        // FIXME: Currently we add the same parent multiple times, but only
-        // when no memoization data is available for the type.
-        // For example when we visit all subexpressions of template
-        // instantiations; this is suboptimal, but benign: the only way to
-        // visit those is with hasAncestor / hasParent, and those do not create
-        // new matches.
-        // The plan is to enable DynTypedNode to be storable in a map or hash
-        // map. The main problem there is to implement hash functions /
-        // comparison operators for all types that DynTypedNode supports that
-        // do not have pointer identity.
-        auto &NodeOrVector = (*Parents)[MapNode];
-        if (NodeOrVector.isNull()) {
-          if (const auto *D = ParentStack.back().get<Decl>())
-            NodeOrVector = D;
-          else if (const auto *S = ParentStack.back().get<Stmt>())
-            NodeOrVector = S;
-          else
-            NodeOrVector =
-                new ast_type_traits::DynTypedNode(ParentStack.back());
-        } else {
-          if (!NodeOrVector.template is<ASTContext::ParentVector *>()) {
-            auto *Vector = new ASTContext::ParentVector(
-                1, getSingleDynTypedNodeFromParentMap(NodeOrVector));
-            delete NodeOrVector
-                    .template dyn_cast<ast_type_traits::DynTypedNode *>();
-            NodeOrVector = Vector;
-          }
-
-          auto *Vector =
-              NodeOrVector.template get<ASTContext::ParentVector *>();
-          // Skip duplicates for types that have memoization data.
-          // We must check that the type has memoization data before calling
-          // std::find() because DynTypedNode::operator== can't compare all
-          // types.
-          bool Found = ParentStack.back().getMemoizationData() &&
-                       std::find(Vector->begin(), Vector->end(),
-                                 ParentStack.back()) != Vector->end();
-          if (!Found)
-            Vector->push_back(ParentStack.back());
+    if (ParentStack.size() > 0) {
+      // FIXME: Currently we add the same parent multiple times, but only
+      // when no memoization data is available for the type.
+      // For example when we visit all subexpressions of template
+      // instantiations; this is suboptimal, but benign: the only way to
+      // visit those is with hasAncestor / hasParent, and those do not create
+      // new matches.
+      // The plan is to enable DynTypedNode to be storable in a map or hash
+      // map. The main problem there is to implement hash functions /
+      // comparison operators for all types that DynTypedNode supports that
+      // do not have pointer identity.
+      auto &NodeOrVector = (*Parents)[MapNode];
+      if (NodeOrVector.isNull()) {
+        if (const auto *D = ParentStack.back().get<Decl>())
+          NodeOrVector = D;
+        else if (const auto *S = ParentStack.back().get<Stmt>())
+          NodeOrVector = S;
+        else
+          NodeOrVector = new ast_type_traits::DynTypedNode(ParentStack.back());
+      } else {
+        if (!NodeOrVector.template is<ParentVector *>()) {
+          auto *Vector = new ParentVector(
+              1, getSingleDynTypedNodeFromParentMap(NodeOrVector));
+          delete NodeOrVector
+              .template dyn_cast<ast_type_traits::DynTypedNode *>();
+          NodeOrVector = Vector;
         }
+
+        auto *Vector = NodeOrVector.template get<ParentVector *>();
+        // Skip duplicates for types that have memoization data.
+        // We must check that the type has memoization data before calling
+        // std::find() because DynTypedNode::operator== can't compare all
+        // types.
+        bool Found = ParentStack.back().getMemoizationData() &&
+                     std::find(Vector->begin(), Vector->end(),
+                               ParentStack.back()) != Vector->end();
+        if (!Found)
+          Vector->push_back(ParentStack.back());
       }
-      ParentStack.push_back(createDynTypedNode(Node));
-      bool Result = BaseTraverse();
-      ParentStack.pop_back();
-      return Result;
     }
-
-    bool TraverseDecl(Decl *DeclNode) {
-      return TraverseNode(DeclNode, DeclNode,
-                          [&] { return VisitorBase::TraverseDecl(DeclNode); },
-                          Parents);
-    }
-
-    bool TraverseStmt(Stmt *StmtNode) {
-      return TraverseNode(StmtNode, StmtNode,
-                          [&] { return VisitorBase::TraverseStmt(StmtNode); },
-                          Parents);
-    }
-
-    bool TraverseTypeLoc(TypeLoc TypeLocNode) {
-      return TraverseNode(
-          TypeLocNode, ast_type_traits::DynTypedNode::create(TypeLocNode),
-          [&] { return VisitorBase::TraverseTypeLoc(TypeLocNode); },
-          OtherParents);
-    }
-
-    bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) {
-      return TraverseNode(
-          NNSLocNode, ast_type_traits::DynTypedNode::create(NNSLocNode),
-          [&] {
-            return VisitorBase::TraverseNestedNameSpecifierLoc(NNSLocNode);
-          },
-          OtherParents);
-    }
-
-    ASTContext::ParentMapPointers *Parents;
-    ASTContext::ParentMapOtherNodes *OtherParents;
-    llvm::SmallVector<ast_type_traits::DynTypedNode, 16> ParentStack;
-  };
-
-} // namespace
-
-template <typename NodeTy, typename MapTy>
-static ASTContext::DynTypedNodeList getDynNodeFromMap(const NodeTy &Node,
-                                                      const MapTy &Map) {
-  auto I = Map.find(Node);
-  if (I == Map.end()) {
-    return llvm::ArrayRef<ast_type_traits::DynTypedNode>();
+    ParentStack.push_back(createDynTypedNode(Node));
+    bool Result = BaseTraverse();
+    ParentStack.pop_back();
+    return Result;
   }
-  if (const auto *V =
-          I->second.template dyn_cast<ASTContext::ParentVector *>()) {
-    return llvm::makeArrayRef(*V);
+
+  bool TraverseDecl(Decl *DeclNode) {
+    return TraverseNode(
+        DeclNode, DeclNode, [&] { return VisitorBase::TraverseDecl(DeclNode); },
+        &Map.PointerParents);
   }
-  return getSingleDynTypedNodeFromParentMap(I->second);
+
+  bool TraverseStmt(Stmt *StmtNode) {
+    return TraverseNode(
+        StmtNode, StmtNode, [&] { return VisitorBase::TraverseStmt(StmtNode); },
+        &Map.PointerParents);
+  }
+
+  bool TraverseTypeLoc(TypeLoc TypeLocNode) {
+    return TraverseNode(
+        TypeLocNode, ast_type_traits::DynTypedNode::create(TypeLocNode),
+        [&] { return VisitorBase::TraverseTypeLoc(TypeLocNode); },
+        &Map.OtherParents);
+  }
+
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLocNode) {
+    return TraverseNode(
+        NNSLocNode, ast_type_traits::DynTypedNode::create(NNSLocNode),
+        [&] { return VisitorBase::TraverseNestedNameSpecifierLoc(NNSLocNode); },
+        &Map.OtherParents);
+  }
+
+  ParentMap &Map;
+  llvm::SmallVector<ast_type_traits::DynTypedNode, 16> ParentStack;
+};
+
+ASTContext::ParentMap::ParentMap(ASTContext &Ctx) {
+  ASTVisitor(*this).TraverseAST(Ctx);
 }
 
 ASTContext::DynTypedNodeList
 ASTContext::getParents(const ast_type_traits::DynTypedNode &Node) {
-  if (!PointerParents) {
-    // We always need to run over the whole translation unit, as
+  if (!Parents)
+    // We build the parent map for the traversal scope (usually whole TU), as
     // hasAncestor can escape any subtree.
-    auto Maps = ParentMapASTVisitor::buildMap(*getTranslationUnitDecl());
-    PointerParents.reset(Maps.first);
-    OtherParents.reset(Maps.second);
-  }
-  if (Node.getNodeKind().hasPointerIdentity())
-    return getDynNodeFromMap(Node.getMemoizationData(), *PointerParents);
-  return getDynNodeFromMap(Node, *OtherParents);
+    Parents = llvm::make_unique<ParentMap>(*this);
+  return Parents->getParents(Node);
 }
 
 bool
@@ -10355,6 +10370,16 @@ QualType ASTContext::getCorrespondingSaturatedType(QualType Ty) const {
     case BuiltinType::ULongFract:
       return SatUnsignedLongFractTy;
   }
+}
+
+LangAS ASTContext::getLangASForBuiltinAddressSpace(unsigned AS) const {
+  if (LangOpts.OpenCL)
+    return getTargetInfo().getOpenCLBuiltinAddressSpace(AS);
+
+  if (LangOpts.CUDA)
+    return getTargetInfo().getCUDABuiltinAddressSpace(AS);
+
+  return getLangASFromTargetAS(AS);
 }
 
 // Explicitly instantiate this in case a Redeclarable<T> is used from a TU that
@@ -10453,4 +10478,23 @@ unsigned char ASTContext::getFixedPointIBits(QualType Ty) const {
     case BuiltinType::SatULongFract:
       return 0;
   }
+}
+
+FixedPointSemantics ASTContext::getFixedPointSemantics(QualType Ty) const {
+  assert(Ty->isFixedPointType());
+  bool isSigned = Ty->isSignedFixedPointType();
+  return FixedPointSemantics(
+      static_cast<unsigned>(getTypeSize(Ty)), getFixedPointScale(Ty), isSigned,
+      Ty->isSaturatedFixedPointType(),
+      !isSigned && getTargetInfo().doUnsignedFixedPointTypesHavePadding());
+}
+
+APFixedPoint ASTContext::getFixedPointMax(QualType Ty) const {
+  assert(Ty->isFixedPointType());
+  return APFixedPoint::getMax(getFixedPointSemantics(Ty));
+}
+
+APFixedPoint ASTContext::getFixedPointMin(QualType Ty) const {
+  assert(Ty->isFixedPointType());
+  return APFixedPoint::getMin(getFixedPointSemantics(Ty));
 }

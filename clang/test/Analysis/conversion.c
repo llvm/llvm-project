@@ -160,7 +160,7 @@ typedef struct FILE {} FILE; int getc(FILE *stream);
 # define EOF (-1)
 char reply_string[8192];
 FILE *cin;
-extern int dostuff (void);
+extern int dostuff(void);
 int libraryFunction2() {
   int c, n;
   int dig;

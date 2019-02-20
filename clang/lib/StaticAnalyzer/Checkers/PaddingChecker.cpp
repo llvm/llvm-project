@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecordLayout.h"
@@ -260,7 +260,7 @@ public:
     };
     std::transform(RD->field_begin(), RD->field_end(),
                    std::back_inserter(Fields), GatherSizesAndAlignments);
-    llvm::sort(Fields.begin(), Fields.end());
+    llvm::sort(Fields);
     // This lets us skip over vptrs and non-virtual bases,
     // so that we can just worry about the fields in our object.
     // Note that this does cause us to miss some cases where we
@@ -350,4 +350,8 @@ public:
 
 void ento::registerPaddingChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<PaddingChecker>();
+}
+
+bool ento::shouldRegisterPaddingChecker(const LangOptions &LO) {
+  return true;
 }

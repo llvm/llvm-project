@@ -208,9 +208,9 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
                                               E = SortedGroups.end();
        I != E; ++I) {
     MutableArrayRef<const Record *> GroupDiags = (*I)->DiagsInGroup;
-    llvm::sort(GroupDiags.begin(), GroupDiags.end(), beforeThanCompare);
+    llvm::sort(GroupDiags, beforeThanCompare);
   }
-  llvm::sort(SortedGroups.begin(), SortedGroups.end(), beforeThanCompareGroups);
+  llvm::sort(SortedGroups, beforeThanCompareGroups);
 
   // Warn about the same group being used anonymously in multiple places.
   for (SmallVectorImpl<GroupInfo *>::const_iterator I = SortedGroups.begin(),
@@ -1595,10 +1595,10 @@ void EmitClangDiagsIndexName(RecordKeeper &Records, raw_ostream &OS) {
     Index.push_back(RecordIndexElement(R));
   }
 
-  llvm::sort(Index.begin(), Index.end(),
+  llvm::sort(Index,
              [](const RecordIndexElement &Lhs, const RecordIndexElement &Rhs) {
                return Lhs.Name < Rhs.Name;
-            });
+             });
 
   for (unsigned i = 0, e = Index.size(); i != e; ++i) {
     const RecordIndexElement &R = Index[i];
@@ -1694,7 +1694,7 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
 
   std::vector<Record*> DiagGroups =
       Records.getAllDerivedDefinitions("DiagGroup");
-  llvm::sort(DiagGroups.begin(), DiagGroups.end(), diagGroupBeforeByName);
+  llvm::sort(DiagGroups, diagGroupBeforeByName);
 
   DiagGroupParentMap DGParentMap(Records);
 
@@ -1713,10 +1713,8 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
                               DiagsInPedanticSet.end());
     RecordVec GroupsInPedantic(GroupsInPedanticSet.begin(),
                                GroupsInPedanticSet.end());
-    llvm::sort(DiagsInPedantic.begin(), DiagsInPedantic.end(),
-               beforeThanCompare);
-    llvm::sort(GroupsInPedantic.begin(), GroupsInPedantic.end(),
-               beforeThanCompare);
+    llvm::sort(DiagsInPedantic, beforeThanCompare);
+    llvm::sort(GroupsInPedantic, beforeThanCompare);
     PedDiags.DiagsInGroup.insert(PedDiags.DiagsInGroup.end(),
                                  DiagsInPedantic.begin(),
                                  DiagsInPedantic.end());
@@ -1765,7 +1763,7 @@ void EmitClangDiagDocs(RecordKeeper &Records, raw_ostream &OS) {
         OS << "Also controls ";
 
       bool First = true;
-      llvm::sort(GroupInfo.SubGroups.begin(), GroupInfo.SubGroups.end());
+      llvm::sort(GroupInfo.SubGroups);
       for (const auto &Name : GroupInfo.SubGroups) {
         if (!First) OS << ", ";
         OS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";

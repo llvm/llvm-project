@@ -17,7 +17,7 @@ using namespace clang::driver;
 using namespace clang;
 
 Expected<Optional<DarwinSDKInfo>>
-driver::parseDarwinSDKInfo(vfs::FileSystem &VFS, StringRef SDKRootPath) {
+driver::parseDarwinSDKInfo(llvm::vfs::FileSystem &VFS, StringRef SDKRootPath) {
   llvm::SmallString<256> Filepath = SDKRootPath;
   llvm::sys::path::append(Filepath, "SDKSettings.json");
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =

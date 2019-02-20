@@ -362,9 +362,9 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
       return None;
 
     ASTContext &Ctx = getContext();
-    llvm::APSInt Result;
+    Expr::EvalResult Result;
     if (E->EvaluateAsInt(Result, Ctx))
-      return makeIntVal(Result);
+      return makeIntVal(Result.Val.getInt());
 
     if (Loc::isLocType(E->getType()))
       if (E->isNullPointerConstant(Ctx, Expr::NPC_ValueDependentIsNotNull))
@@ -384,7 +384,7 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
   // TODO: When the Max Complexity is reached, we should conjure a symbol
   // instead of generating an Unknown value and propagate the taint info to it.
   const unsigned MaxComp = StateMgr.getOwningEngine()
-                               ->getAnalysisManager()
+                               .getAnalysisManager()
                                .options.MaxSymbolComplexity;
 
   if (symLHS && symRHS &&

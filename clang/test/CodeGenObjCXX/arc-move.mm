@@ -6,7 +6,7 @@ void simple_move(__strong id &x, __strong id &y) {
   // CHECK: store i8* null
   // CHECK: = load i8*, i8**
   // CHECK: store i8*
-  // CHECK-NEXT: call void @objc_release
+  // CHECK-NEXT: call void @llvm.objc.release
   x = static_cast<__strong id&&>(y);
   // CHECK-NEXT: ret void
 }
@@ -39,7 +39,7 @@ void library_move(__strong id &x, __strong id &y) {
   // CHECK: load i8**, i8***
   // CHECK-NEXT: load i8*, i8**
   // CHECK-NEXT: store i8*
-  // CHECK-NEXT: call void @objc_release
+  // CHECK-NEXT: call void @llvm.objc.release
   // CHECK-NEXT: ret void
   x = move(y);
 }
@@ -66,7 +66,7 @@ void library_move(__strong id &y) {
   // CHECK-NEXT: [[IPTR2:%.*]] = bitcast i32* [[I]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 4, i8* [[IPTR2]])
   // CHECK-NEXT: [[OBJ:%[a-zA-Z0-9]+]] = load i8*, i8** [[X]]
-  // CHECK-NEXT: call void @objc_release(i8* [[OBJ]])
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[OBJ]])
   // CHECK-NEXT: [[XPTR2:%.*]] = bitcast i8** [[X]] to i8*
   // CHECK-NEXT: call void @llvm.lifetime.end.p0i8(i64 8, i8* [[XPTR2]])
   // CHECK-NEXT: ret void
@@ -77,9 +77,9 @@ void const_move(const __strong id &x) {
   // CHECK:      [[Y:%.*]] = alloca i8*,
   // CHECK:      [[X:%.*]] = call dereferenceable({{[0-9]+}}) i8** @_Z4moveIRU8__strongKP11objc_objectEON16remove_referenceIT_E4typeEOS5_(
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[X]]
-  // CHECK-NEXT: [[T1:%.*]] = call i8* @objc_retain(i8* [[T0]])
+  // CHECK-NEXT: [[T1:%.*]] = call i8* @llvm.objc.retain(i8* [[T0]])
   // CHECK-NEXT: store i8* [[T1]], i8** [[Y]]
   // CHECK-NEXT: [[T0:%.*]] = load i8*, i8** [[Y]]
-  // CHECK-NEXT: call void @objc_release(i8* [[T0]])
+  // CHECK-NEXT: call void @llvm.objc.release(i8* [[T0]])
   id y = move(x);
 }

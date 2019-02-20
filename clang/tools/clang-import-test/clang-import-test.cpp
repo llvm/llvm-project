@@ -182,8 +182,7 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
       Inv->getHeaderSearchOpts().UseLibcxx = true;
     }
     if (isObjC(Id)) {
-      Inv->getLangOpts()->ObjC1 = 1;
-      Inv->getLangOpts()->ObjC2 = 1;
+      Inv->getLangOpts()->ObjC = 1;
     }
   }
   Inv->getLangOpts()->Bool = true;
@@ -194,6 +193,10 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   Inv->getLangOpts()->ThreadsafeStatics = false;
   Inv->getLangOpts()->AccessControl = false;
   Inv->getLangOpts()->DollarIdents = true;
+  Inv->getLangOpts()->Exceptions = true;
+  Inv->getLangOpts()->CXXExceptions = true;
+  // Needed for testing dynamic_cast.
+  Inv->getLangOpts()->RTTI = true;
   Inv->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
   Inv->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
 

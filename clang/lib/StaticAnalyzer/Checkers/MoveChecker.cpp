@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -737,4 +737,8 @@ void ento::registerMoveChecker(CheckerManager &mgr) {
   MoveChecker *chk = mgr.registerChecker<MoveChecker>();
   chk->setAggressiveness(
       mgr.getAnalyzerOptions().getCheckerStringOption("WarnOn", "", chk));
+}
+
+bool ento::shouldRegisterMoveChecker(const LangOptions &LO) {
+  return true;
 }

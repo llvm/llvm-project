@@ -174,10 +174,21 @@
 // CHECK-V7M:     __ARM_FEATURE_SAT 1
 // CHECK-V7M:     __ARM_FEATURE_UNALIGNED 1
 
-// RUN: %clang -target arm-none-linux-eabi -march=armv7e-m -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V7EM
+// RUN: %clang -target arm-none-linux-eabi -march=armv7-m -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-NODSP
+// RUN: %clang -target arm-none-linux-eabi -march=armv7e-m -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-DSP
+// RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m3 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-NODSP
+// RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m4 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-DSP
+// RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m7 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-DSP
+// RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m0plus -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-NODSP
+// RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m23 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-NODSP
+// RUN: %clang --target=arm-arm-none-eabi -mcpu=cortex-m33 -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-DSP
+// RUN: %clang --target=arm-arm-none-eabi -march=armv8m.main+dsp -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-M-DSP
 
-// CHECK-V7EM: __ARM_FEATURE_DSP 1
-// CHECK-V7EM: __ARM_FEATURE_SIMD32 1
+// CHECK-M-DSP: __ARM_FEATURE_DSP 1
+// CHECK-M-DSP: __ARM_FEATURE_SIMD32 1
+
+// CHECK-M-NODSP-NOT: __ARM_FEATURE_DSP 1
+// CHECK-M-NODSP-NOT: __ARM_FEATURE_SIMD32 1
 
 // RUN: %clang -target arm-none-linux-eabi -march=armv8-a -x c -E -dM %s -o - | FileCheck %s -check-prefix CHECK-V8A
 

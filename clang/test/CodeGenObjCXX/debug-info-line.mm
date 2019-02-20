@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-gnu -fcxx-exceptions -fexceptions -debug-info-kind=line-tables-only -fblocks -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-gnu -fcxx-exceptions -fexceptions -debug-info-kind=line-directives-only -fblocks -emit-llvm %s -o - | FileCheck %s
 
 void fn();
 

@@ -85,16 +85,19 @@ def _SLASH_GA : CLFlag<"GA">, Alias<ftlsmodel_EQ>, AliasArgs<["local-exec"]>,
   HelpText<"Assume thread-local variables are defined in the executable">;
 def _SLASH_GR : CLFlag<"GR">, HelpText<"Enable emission of RTTI data">;
 def _SLASH_GR_ : CLFlag<"GR-">, HelpText<"Disable emission of RTTI data">;
+def _SLASH_GF : CLIgnoredFlag<"GF">, HelpText<"Enable string pooling (default)">;
 def _SLASH_GF_ : CLFlag<"GF-">, HelpText<"Disable string pooling">,
   Alias<fwritable_strings>;
-def _SLASH_GS : CLFlag<"GS">, HelpText<"Enable buffer security check">;
+def _SLASH_GS : CLFlag<"GS">, HelpText<"Enable buffer security check (default)">;
 def _SLASH_GS_ : CLFlag<"GS-">, HelpText<"Disable buffer security check">;
-def _SLASH_Gs : CLJoined<"Gs">, HelpText<"Set stack probe size">,
-  Alias<mstack_probe_size>;
+def : CLFlag<"Gs">, HelpText<"Use stack probes (default)">,
+  Alias<mstack_probe_size>, AliasArgs<["4096"]>;
+def _SLASH_Gs : CLJoined<"Gs">,
+  HelpText<"Set stack probe size (default 4096)">, Alias<mstack_probe_size>;
 def _SLASH_Gy : CLFlag<"Gy">, HelpText<"Put each function in its own section">,
   Alias<ffunction_sections>;
 def _SLASH_Gy_ : CLFlag<"Gy-">,
-  HelpText<"Don't put each function in its own section">,
+  HelpText<"Don't put each function in its own section (default)">,
   Alias<fno_function_sections>;
 def _SLASH_Gw : CLFlag<"Gw">, HelpText<"Put each data item in its own section">,
   Alias<fdata_sections>;
@@ -109,18 +112,43 @@ def _SLASH_I : CLJoinedOrSeparate<"I">,
   Alias<I>;
 def _SLASH_J : CLFlag<"J">, HelpText<"Make char type unsigned">,
   Alias<funsigned_char>;
-def _SLASH_O0 : CLFlag<"O0">, Alias<O0>;
-// /Oy- is handled by the /O option because /Oy- only has an effect on 32-bit.
-def _SLASH_O : CLJoined<"O">, HelpText<"Optimization level">;
-def _SLASH_Od : CLFlag<"Od">, HelpText<"Disable optimization">, Alias<O0>;
-def _SLASH_Oi : CLFlag<"Oi">, HelpText<"Enable use of builtin functions">,
-  Alias<fbuiltin>;
-def _SLASH_Oi_ : CLFlag<"Oi-">, HelpText<"Disable use of builtin functions">,
-  Alias<fno_builtin>;
-def _SLASH_Os : CLFlag<"Os">, HelpText<"Optimize for size">, Alias<O>,
-  AliasArgs<["s"]>;
-def _SLASH_Ot : CLFlag<"Ot">, HelpText<"Optimize for speed">, Alias<O>,
-  AliasArgs<["2"]>;
+
+// The _SLASH_O option handles all the /O flags, but we also provide separate
+// aliased options to provide separate help messages.
+def _SLASH_O : CLJoined<"O">,
+  HelpText<"Set multiple /O flags at once; e.g. '/O2y-' is the same as '/O2 /y-'">,
+  MetaVarName<"<flags>">;
+// FIXME: Not sure why we have -O0 here; MSVC doesn't support that.
+def : CLFlag<"O0">, Alias<O0>, HelpText<"Disable optimization">;
+def : CLFlag<"O1">, Alias<_SLASH_O>, AliasArgs<["1"]>,
+  HelpText<"Optimize for size (equivalent to /Og /Os /Oy /Ob2 /GF /Gy)">;
+def : CLFlag<"O2">, Alias<_SLASH_O>, AliasArgs<["2"]>,
+  HelpText<"Optimize for speed (equivalent to /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
+def : CLFlag<"Ob0">, Alias<_SLASH_O>, AliasArgs<["b0"]>,
+  HelpText<"Disable function inlining">;
+def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
+  HelpText<"Only inline functions which are (explicitly or implicitly) marked inline">;
+def : CLFlag<"Ob2">, Alias<_SLASH_O>, AliasArgs<["b2"]>,
+  HelpText<"Inline functions as deemed beneficial by the compiler">;
+def : CLFlag<"Od">, Alias<_SLASH_O>, AliasArgs<["d"]>,
+  HelpText<"Disable optimization">;
+def : CLFlag<"Og">, Alias<_SLASH_O>, AliasArgs<["g"]>,
+  HelpText<"No effect">;
+def : CLFlag<"Oi">, Alias<_SLASH_O>, AliasArgs<["i"]>,
+  HelpText<"Enable use of builtin functions">;
+def : CLFlag<"Oi-">, Alias<_SLASH_O>, AliasArgs<["i-"]>,
+  HelpText<"Disable use of builtin functions">;
+def : CLFlag<"Os">, Alias<_SLASH_O>, AliasArgs<["s"]>,
+  HelpText<"Optimize for size">;
+def : CLFlag<"Ot">, Alias<_SLASH_O>, AliasArgs<["t"]>,
+  HelpText<"Optimize for speed">;
+def : CLFlag<"Ox">, Alias<_SLASH_O>, AliasArgs<["x"]>,
+  HelpText<"Deprecated (equivalent to /Og /Oi /Ot /Oy /Ob2); use /O2 instead">;
+def : CLFlag<"Oy">, Alias<_SLASH_O>, AliasArgs<["y"]>,
+  HelpText<"Enable frame pointer omission (x86 only)">;
+def : CLFlag<"Oy-">, Alias<_SLASH_O>, AliasArgs<["y-"]>,
+  HelpText<"Disable frame pointer omission (x86 only, default)">;
+
 def _SLASH_QUESTION : CLFlag<"?">, Alias<help>,
   HelpText<"Display available options">;
 def _SLASH_Qvec : CLFlag<"Qvec">,
@@ -130,6 +158,10 @@ def _SLASH_Qvec_ : CLFlag<"Qvec-">,
 def _SLASH_showIncludes : CLFlag<"showIncludes">,
   HelpText<"Print info about included files to stderr">,
   Alias<show_includes>;
+def _SLASH_showFilenames : CLFlag<"showFilenames">,
+  HelpText<"Print the name of each compiled file">;
+def _SLASH_showFilenames_ : CLFlag<"showFilenames-">,
+  HelpText<"Don't print the name of each compiled file (default)">;
 def _SLASH_source_charset : CLCompileJoined<"source-charset:">,
   HelpText<"Source encoding, supports only UTF-8">, Alias<finput_charset_EQ>;
 def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
@@ -240,8 +272,8 @@ def _SLASH_Fi : CLCompileJoined<"Fi">,
 def _SLASH_Fo : CLCompileJoined<"Fo">,
   HelpText<"Set output object file, or directory (ends in / or \\) (with /c)">,
   MetaVarName<"<file or directory>">;
-def _SLASH_Guard : CLJoined<"guard:">,
-  HelpText<"Enable Control Flow Guard with /guard:cf">;
+def _SLASH_guard : CLJoined<"guard:">,
+  HelpText<"Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks">;
 def _SLASH_GX : CLFlag<"GX">,
   HelpText<"Enable exception handling">;
 def _SLASH_GX_ : CLFlag<"GX-">,
@@ -303,6 +335,10 @@ def _SLASH_Yu : CLJoined<"Yu">,
   MetaVarName<"<filename>">;
 def _SLASH_Y_ : CLFlag<"Y-">,
   HelpText<"Disable precompiled headers, overrides /Yc and /Yu">;
+def _SLASH_Zc_dllexportInlines : CLFlag<"Zc:dllexportInlines">,
+  HelpText<"dllexport/dllimport inline member functions of dllexport/import classes (default)">;
+def _SLASH_Zc_dllexportInlines_ : CLFlag<"Zc:dllexportInlines-">,
+  HelpText<"Don't dllexport/dllimport inline member functions of dllexport/import classes">;
 def _SLASH_Fp : CLJoined<"Fp">,
   HelpText<"Set pch filename (with /Yc and /Yu)">, MetaVarName<"<filename>">;
 
@@ -328,10 +364,9 @@ def _SLASH_errorReport : CLIgnoredJoined<"errorReport">;
 def _SLASH_FC : CLIgnoredFlag<"FC">;
 def _SLASH_Fd : CLIgnoredJoined<"Fd">;
 def _SLASH_FS : CLIgnoredFlag<"FS">;
-def _SLASH_GF : CLIgnoredFlag<"GF">;
+def _SLASH_JMC : CLIgnoredFlag<"JMC">;
 def _SLASH_kernel_ : CLIgnoredFlag<"kernel-">;
 def _SLASH_nologo : CLIgnoredFlag<"nologo">;
-def _SLASH_Og : CLIgnoredFlag<"Og">;
 def _SLASH_openmp_ : CLIgnoredFlag<"openmp-">;
 def _SLASH_permissive_ : CLIgnoredFlag<"permissive-">;
 def _SLASH_RTC : CLIgnoredJoined<"RTC">;

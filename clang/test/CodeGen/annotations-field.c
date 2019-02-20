@@ -21,7 +21,6 @@ int main(int argc, char **argv) {
 // CHECK-NEXT: call i8* @llvm.ptr.annotation.p0i8({{.*}}str{{.*}}str{{.*}}i32 8)
 // CHECK-NEXT: bitcast i8* {{.*}} to i32*
     gf.v = argc;
-// CHECK: bitcast i32* getelementptr inbounds (%struct.foo, %struct.foo* @gf, i32 0, i32 0) to i8*
-// CHECK-NEXT: call i8* @llvm.ptr.annotation.p0i8({{.*}}str{{.*}}str{{.*}}i32 8)
+// CHECK: call i8* @llvm.ptr.annotation.p0i8(i8* bitcast (%struct.foo* @gf to i8*), {{.*}}str{{.*}}str{{.*}}i32 8)
     return 0;
 }

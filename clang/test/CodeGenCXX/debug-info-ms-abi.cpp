@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=i686-pc-windows-msvc -debug-info-kind=limited -gcodeview -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=i686-pc-windows-msvc -debug-info-kind=limited -gcodeview -gcodeview-ghash -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,GHASH
 
 // Tests that certain miscellaneous features work in the MS ABI.
 
@@ -29,19 +30,25 @@ Foo::Nested n;
 // CHECK: ![[vptr_ty]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[vshape]], size: 32
 
 // CHECK: ![[f]] = !DISubprogram(name: "f",
-// CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 0,
+// CHECK-SAME: containingType: ![[Foo]], virtualIndex: 0,
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagIntroducedVirtual,
+// CHECK-SAME: spFlags: DISPFlagVirtual
 
 // CHECK: ![[g]] = !DISubprogram(name: "g",
-// CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 1,
+// CHECK-SAME: containingType: ![[Foo]], virtualIndex: 1,
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagIntroducedVirtual,
+// CHECK-SAME: spFlags: DISPFlagVirtual
 
 // CHECK: ![[h]] = !DISubprogram(name: "h",
-// CHECK-SAME: containingType: ![[Foo]], virtuality: DW_VIRTUALITY_virtual, virtualIndex: 2,
+// CHECK-SAME: containingType: ![[Foo]], virtualIndex: 2,
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagIntroducedVirtual,
+// CHECK-SAME: spFlags: DISPFlagVirtual
 
 // CHECK: ![[i]] = !DISubprogram(name: "i",
 // CHECK-SAME: flags: DIFlagPrototyped | DIFlagStaticMember
 // CHECK-NEXT: ![[dummy:[0-9]+]] = !DISubroutineType(types: ![[Signature:[0-9]+]])
 // CHECK: ![[Signature]] = !{null, ![[BasicInt:[0-9]+]], ![[BasicInt]]}
 // CHECK: ![[BasicInt]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+
+// CHECK: !{{[0-9]+}} = !{i32 2, !"CodeView", i32 1}
+// GHASH: !{{[0-9]+}} = !{i32 2, !"CodeViewGHash", i32 1}

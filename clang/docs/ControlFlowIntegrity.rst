@@ -45,7 +45,7 @@ Experimental support for :ref:`cross-DSO control flow integrity
 <cfi-cross-dso>` exists that does not require classes to have hidden LTO
 visibility. This cross-DSO support has unstable ABI at this time.
 
-.. _gold plugin: http://llvm.org/docs/GoldPlugin.html
+.. _gold plugin: https://llvm.org/docs/GoldPlugin.html
 
 .. _cfi-schemes:
 

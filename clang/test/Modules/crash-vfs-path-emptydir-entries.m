@@ -1,7 +1,7 @@
 // REQUIRES: crash-recovery, shell
 
 // FIXME: This XFAIL is cargo-culted from crash-report.c. Do we need it?
-// XFAIL: mingw32
+// XFAIL: windows-gnu
 
 // Test clang can collect symbolic link headers used in modules.
 // crash reproducer if there's a symbolic link header file used in a module.

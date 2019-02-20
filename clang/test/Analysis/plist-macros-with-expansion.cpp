@@ -6,7 +6,7 @@
 //
 // Check the actual plist output.
 //   RUN: cat %t.plist | %diff_plist \
-//   RUN:   %S/Inputs/expected-plists/plist-macros-with-expansion.cpp.plist
+//   RUN:   %S/Inputs/expected-plists/plist-macros-with-expansion.cpp.plist -
 //
 // Check the macro expansions from the plist output here, to make the test more
 // understandable.

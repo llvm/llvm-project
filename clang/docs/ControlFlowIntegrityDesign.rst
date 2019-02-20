@@ -93,8 +93,8 @@ the bit vectors for the whole program. It currently does this using LLVM's
 `type metadata`_ mechanism together with link-time optimization.
 
 .. _address point: http://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
-.. _type metadata: http://llvm.org/docs/TypeMetadata.html
-.. _ByteArrayBuilder: http://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
+.. _type metadata: https://llvm.org/docs/TypeMetadata.html
+.. _ByteArrayBuilder: https://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
 
 Optimizations
 -------------
@@ -196,7 +196,7 @@ those sub-hierarchies need to be (see "Stripping Leading/Trailing Zeros in Bit
 Vectors" above). The `GlobalLayoutBuilder`_ class is responsible for laying
 out the globals efficiently to minimize the sizes of the underlying bitsets.
 
-.. _GlobalLayoutBuilder: http://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
+.. _GlobalLayoutBuilder: https://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
 
 Alignment
 ~~~~~~~~~
@@ -273,6 +273,154 @@ Eliminating Bit Vector Checks for All-Ones Bit Vectors
 If the bit vector is all ones, the bit vector check is redundant; we simply
 need to check that the address is in range and well aligned. This is more
 likely to occur if the virtual tables are padded.
+
+Forward-Edge CFI for Virtual Calls by Interleaving Virtual Tables
+-----------------------------------------------------------------
+
+Dimitar et. al. proposed a novel approach that interleaves virtual tables in [1]_.  
+This approach is more efficient in terms of space because padding and bit vectors are no longer needed. 
+At the same time, it is also more efficient in terms of performance because in the interleaved layout 
+address points of the virtual tables are consecutive, thus the validity check of a virtual 
+vtable pointer is always a range check. 
+
+At a high level, the interleaving scheme consists of three steps: 1) split virtual table groups into 
+separate virtual tables, 2) order virtual tables by a pre-order traversal of the class hierarchy 
+and 3) interleave virtual tables.
+
+The interleaving scheme implemented in LLVM is inspired by [1]_ but has its own
+enhancements (more in `Interleave virtual tables`_).
+
+.. [1] `Protecting C++ Dynamic Dispatch Through VTable Interleaving <https://cseweb.ucsd.edu/~lerner/papers/ivtbl-ndss16.pdf>`_. Dimitar Bounov, Rami Gökhan Kıcı, Sorin Lerner.
+
+Split virtual table groups into separate virtual tables
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Itanium C++ ABI glues multiple individual virtual tables for a class into a combined virtual table (virtual table group). 
+The interleaving scheme, however, can only work with individual virtual tables so it must split the combined virtual tables first.
+In comparison, the old scheme does not require the splitting but it is more efficient when the combined virtual tables have been split.
+The `GlobalSplit`_ pass is responsible for splitting combined virtual tables into individual ones. 
+
+.. _GlobalSplit: https://llvm.org/viewvc/llvm-project/llvm/trunk/lib/Transforms/IPO/GlobalSplit.cpp?view=markup
+
+Order virtual tables by a pre-order traversal of the class hierarchy 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This step is common to both the old scheme described above and the interleaving scheme. 
+For the interleaving scheme, since the combined virtual tables have been split in the previous step, 
+this step ensures that for any class all the compatible virtual tables will appear consecutively. 
+For the old scheme, the same property may not hold since it may work on combined virtual tables. 
+
+For example, consider the following four C++ classes:
+
+.. code-block:: c++
+
+  struct A {
+    virtual void f1();
+  };
+
+  struct B : A {
+    virtual void f1();
+    virtual void f2();
+  };
+
+  struct C : A {
+    virtual void f1();
+    virtual void f3();
+  };
+
+  struct D : B {
+    virtual void f1();
+    virtual void f2();
+  };
+
+This step will arrange the virtual tables for A, B, C, and D in the order of *vtable-of-A, vtable-of-B, vtable-of-D, vtable-of-C*.
+
+Interleave virtual tables
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This step is where the interleaving scheme deviates from the old scheme. Instead of laying out 
+whole virtual tables in the previously computed order, the interleaving scheme lays out table 
+entries of the virtual tables strategically to ensure the following properties:  
+
+(1) offset-to-top and RTTI fields layout property
+
+The Itanium C++ ABI specifies that offset-to-top and RTTI fields appear at the offsets behind the 
+address point. Note that libraries like libcxxabi do assume this property. 
+
+(2) virtual function entry layout property
+
+For each virtual function the distance between an virtual table entry for this function and the corresponding 
+address point is always the same. This property ensures that dynamic dispatch still works with the interleaving layout.
+
+Note that the interleaving scheme in the CFI implementation guarantees both properties above whereas the original scheme proposed   
+in [1]_ only guarantees the second property. 
+
+To illustrate how the interleaving algorithm works, let us continue with the running example.
+The algorithm first separates all the virtual table entries into two work lists. To do so, 
+it starts by allocating two work lists, one initialized with all the offset-to-top entries of virtual tables in the order 
+computed in the last step, one initialized with all the RTTI entries in the same order. 
+
+.. csv-table:: Work list 1 Layout 
+  :header: 0, 1, 2, 3
+  
+  A::offset-to-top, B::offset-to-top, D::offset-to-top, C::offset-to-top
+
+
+.. csv-table:: Work list 2 layout
+  :header: 0, 1, 2, 3,
+  
+  &A::rtti, &B::rtti, &D::rtti, &C::rtti 
+
+Then for each virtual function the algorithm goes through all the virtual tables in the previously computed order
+to collect all the related entries into a virtual function list. 
+After this step, there are the following virtual function lists:
+
+.. csv-table:: f1 list 
+  :header: 0, 1, 2, 3
+
+  &A::f1, &B::f1, &D::f1, &C::f1
+
+
+.. csv-table:: f2 list 
+  :header: 0, 1
+
+  &B::f2, &D::f2
+
+
+.. csv-table:: f3 list 
+  :header: 0
+
+  &C::f3
+
+Next, the algorithm picks the longest remaining virtual function list and appends the whole list to the shortest work list
+until no function lists are left, and pads the shorter work list so that they are of the same length. 
+In the example, f1 list will be first added to work list 1, then f2 list will be added 
+to work list 2, and finally f3 list will be added to the work list 2. Since work list 1 now has one more entry than 
+work list 2, a padding entry is added to the latter. After this step, the two work lists look like: 
+
+.. csv-table:: Work list 1 Layout 
+  :header: 0, 1, 2, 3, 4, 5, 6, 7
+
+  A::offset-to-top, B::offset-to-top, D::offset-to-top, C::offset-to-top, &A::f1, &B::f1, &D::f1, &C::f1
+
+
+.. csv-table:: Work list 2 layout
+  :header: 0, 1, 2, 3, 4, 5, 6, 7
+
+  &A::rtti, &B::rtti, &D::rtti, &C::rtti, &B::f2, &D::f2, &C::f3, padding  
+
+Finally, the algorithm merges the two work lists into the interleaved layout by alternatingly 
+moving the head of each list to the final layout. After this step, the final interleaved layout looks like:
+
+.. csv-table:: Interleaved layout
+  :header: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 
+
+  A::offset-to-top, &A::rtti, B::offset-to-top, &B::rtti, D::offset-to-top, &D::rtti, C::offset-to-top, &C::rtti, &A::f1, &B::f2, &B::f1, &D::f2, &D::f1, &C::f3, &C::f1, padding
+
+In the above interleaved layout, each virtual table's offset-to-top and RTTI are always adjacent, which shows that the layout has the first property.
+For the second property, let us look at f2 as an example. In the interleaved layout,
+there are two entries for f2: B::f2 and D::f2. The distance between &B::f2 
+and its address point D::offset-to-top (the entry immediately after &B::rtti) is 5 entry-length, so is the distance between &D::f2 and C::offset-to-top (the entry immediately after &D::rtti).
 
 Forward-Edge CFI for Indirect Function Calls
 ============================================

@@ -47,7 +47,7 @@ extern const int f;
 class S4 {
   int a;
   S4();
-  S4(const S4 &s4); // expected-note 2 {{implicitly declared private here}}
+  S4(const S4 &s4); // expected-note 16 {{implicitly declared private here}}
 
 public:
   S4(int v) : a(v) {}
@@ -55,7 +55,7 @@ public:
 class S5 {
   int a;
   S5() : a(0) {}
-  S5(const S5 &s5) : a(s5.a) {} // expected-note 2 {{implicitly declared private here}}
+  S5(const S5 &s5) : a(s5.a) {} // expected-note 16 {{implicitly declared private here}}
 
 public:
   S5(int v) : a(v) {}
@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 #pragma omp task firstprivate(da)
 #pragma omp task firstprivate(S2::S2s)
 #pragma omp task firstprivate(S2::S2sc)
-#pragma omp task firstprivate(e, g)          // expected-error 2 {{calling a private constructor of class 'S4'}} expected-error 2 {{calling a private constructor of class 'S5'}}
+#pragma omp task firstprivate(e, g)          // expected-error 16 {{calling a private constructor of class 'S4'}} expected-error 16 {{calling a private constructor of class 'S5'}}
 #pragma omp task firstprivate(h, B::x)       // expected-error 2 {{threadprivate or thread local variable cannot be firstprivate}}
 #pragma omp task private(i), firstprivate(i) // expected-error {{private variable cannot be firstprivate}} expected-note{{defined as private}}
   foo();

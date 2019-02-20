@@ -555,15 +555,15 @@ public:
   MemRegionManager& getRegionManager() {
     return svalBuilder->getRegionManager();
   }
-  const MemRegionManager& getRegionManager() const {
+  const MemRegionManager &getRegionManager() const {
     return svalBuilder->getRegionManager();
   }
 
   CallEventManager &getCallEventManager() { return *CallEventMgr; }
 
-  StoreManager& getStoreManager() { return *StoreMgr; }
-  ConstraintManager& getConstraintManager() { return *ConstraintMgr; }
-  SubEngine* getOwningEngine() { return Eng; }
+  StoreManager &getStoreManager() { return *StoreMgr; }
+  ConstraintManager &getConstraintManager() { return *ConstraintMgr; }
+  SubEngine &getOwningEngine() { return *Eng; }
 
   ProgramStateRef removeDeadBindings(ProgramStateRef St,
                                     const StackFrameContext *LCtx,

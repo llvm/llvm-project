@@ -214,12 +214,12 @@ T tmain(T argc) {
 #pragma omp for reduction(+ : fl) // expected-error 2 {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel private(qa)  // expected-note 2 {{defined as private}}
-#pragma omp for reduction(+ : qa[1], get()[0]) // expected-error 2 {{reduction variable must be shared}} expected-error {{expected variable name as a base of the array subscript}}
+#pragma omp parallel private(qa)
+#pragma omp for reduction(+ : qa[1], get()[0]) // expected-error {{expected variable name as a base of the array subscript}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel shared(qa)
-#pragma omp for reduction(+ : qa[1], qa[0]) // expected-error 2 {{variable can appear only once in OpenMP 'reduction' clause}} expected-note 2 {{previously referenced here}}
+#pragma omp for reduction(+ : qa[1], qa[0])
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel reduction(* : fl) // expected-note 2 {{defined as reduction}}
@@ -379,12 +379,12 @@ int main(int argc, char **argv) {
 #pragma omp for reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp parallel private(argv)  // expected-note {{defined as private}}
-#pragma omp for reduction(+ : argv[1], get()[0]) // expected-error {{reduction variable must be shared}} expected-error {{expected variable name as a base of the array subscript}}
+#pragma omp parallel private(argv)
+#pragma omp for reduction(+ : argv[1], get()[0]) // expected-error {{expected variable name as a base of the array subscript}} expected-error {{invalid operands to binary expression ('char *' and 'char *')}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel shared(qa)
-#pragma omp for reduction(+ : qa[1], qa[0]) // expected-error {{variable can appear only once in OpenMP 'reduction' clause}} expected-note {{previously referenced here}}
+#pragma omp for reduction(+ : qa[1], qa[0])
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel reduction(* : fl) // expected-note {{defined as reduction}}

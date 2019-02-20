@@ -127,3 +127,26 @@ namespace PR12118 {
     static_assert(sizeof(f({0})) == sizeof(one), "bad overload");
   }
 }
+
+namespace excess_braces_sfinae {
+  using valid = int&;
+  using invalid = float&;
+
+  template<typename T> valid braces1(decltype(T{0})*);
+  template<typename T> invalid braces1(...);
+
+  template<typename T> valid braces2(decltype(T{{0}})*);
+  template<typename T> invalid braces2(...);
+
+  template<typename T> valid braces3(decltype(T{{{0}}})*);
+  template<typename T> invalid braces3(...);
+
+  valid a = braces1<int>(0);
+  invalid b = braces2<int>(0);
+  invalid c = braces3<int>(0);
+
+  struct X { int n; };
+  valid d = braces1<X>(0);
+  valid e = braces2<X>(0);
+  invalid f = braces3<X>(0);
+}

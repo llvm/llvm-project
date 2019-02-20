@@ -612,7 +612,7 @@ public:
                               toZ3Expr(*From).AST, toZ3Sort(*To).Sort)));
   }
 
-  SMTExprRef mkFPtoSBV(const SMTExprRef &From, const SMTSortRef &To) override {
+  SMTExprRef mkSBVtoFP(const SMTExprRef &From, const SMTSortRef &To) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context,
@@ -620,7 +620,7 @@ public:
                                toZ3Expr(*From).AST, toZ3Sort(*To).Sort)));
   }
 
-  SMTExprRef mkFPtoUBV(const SMTExprRef &From, const SMTSortRef &To) override {
+  SMTExprRef mkUBVtoFP(const SMTExprRef &From, const SMTSortRef &To) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context,
@@ -628,14 +628,14 @@ public:
                                  toZ3Expr(*From).AST, toZ3Sort(*To).Sort)));
   }
 
-  SMTExprRef mkSBVtoFP(const SMTExprRef &From, unsigned ToWidth) override {
+  SMTExprRef mkFPtoSBV(const SMTExprRef &From, unsigned ToWidth) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context, Z3_mk_fpa_to_sbv(Context.Context, toZ3Expr(*RoundingMode).AST,
                                   toZ3Expr(*From).AST, ToWidth)));
   }
 
-  SMTExprRef mkUBVtoFP(const SMTExprRef &From, unsigned ToWidth) override {
+  SMTExprRef mkFPtoUBV(const SMTExprRef &From, unsigned ToWidth) override {
     SMTExprRef RoundingMode = getFloatRoundingMode();
     return newExprRef(Z3Expr(
         Context, Z3_mk_fpa_to_ubv(Context.Context, toZ3Expr(*RoundingMode).AST,
@@ -688,36 +688,6 @@ public:
   SMTExprRef getFloatRoundingMode() override {
     // TODO: Don't assume nearest ties to even rounding mode
     return newExprRef(Z3Expr(Context, Z3_mk_fpa_rne(Context.Context)));
-  }
-
-  SMTExprRef fromBoolean(const bool Bool) override {
-    Z3_ast AST =
-        Bool ? Z3_mk_true(Context.Context) : Z3_mk_false(Context.Context);
-    return newExprRef(Z3Expr(Context, AST));
-  }
-
-  SMTExprRef fromAPFloat(const llvm::APFloat &Float) override {
-    SMTSortRef Sort =
-        getFloatSort(llvm::APFloat::semanticsSizeInBits(Float.getSemantics()));
-
-    llvm::APSInt Int = llvm::APSInt(Float.bitcastToAPInt(), false);
-    SMTExprRef Z3Int = fromAPSInt(Int);
-    return newExprRef(Z3Expr(
-        Context, Z3_mk_fpa_to_fp_bv(Context.Context, toZ3Expr(*Z3Int).AST,
-                                    toZ3Sort(*Sort).Sort)));
-  }
-
-  SMTExprRef fromAPSInt(const llvm::APSInt &Int) override {
-    SMTSortRef Sort = getBitvectorSort(Int.getBitWidth());
-    Z3_ast AST = Z3_mk_numeral(Context.Context, Int.toString(10).c_str(),
-                               toZ3Sort(*Sort).Sort);
-    return newExprRef(Z3Expr(Context, AST));
-  }
-
-  SMTExprRef fromInt(const char *Int, uint64_t BitWidth) override {
-    SMTSortRef Sort = getBitvectorSort(BitWidth);
-    Z3_ast AST = Z3_mk_numeral(Context.Context, Int, toZ3Sort(*Sort).Sort);
-    return newExprRef(Z3Expr(Context, AST));
   }
 
   bool toAPFloat(const SMTSortRef &Sort, const SMTExprRef &AST,

@@ -77,11 +77,11 @@ id test(I3 *i3) {
 // CHECK-CC4-NEXT: ObjCPropertyDecl:{ResultType id}{TypedText Prop4}
 
 // RUN: c-index-test -code-completion-at=%s:29:13 %s | FileCheck -check-prefix=CHECK-CC5 %s
-// CHECK-CC5: ObjCPropertyDecl:{ResultType int}{TypedText Prop0} (35)
-// CHECK-CC5-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText Prop1} (35)
-// CHECK-CC5-NEXT: ObjCPropertyDecl:{ResultType float}{TypedText Prop2} (35)
+// CHECK-CC5: ObjCPropertyDecl:{ResultType int}{TypedText Prop0} (37)
+// CHECK-CC5-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText Prop1} (37)
+// CHECK-CC5-NEXT: ObjCPropertyDecl:{ResultType float}{TypedText Prop2} (37)
 // CHECK-CC5-NEXT: ObjCPropertyDecl:{ResultType id}{TypedText Prop3} (35)
-// CHECK-CC5-NEXT: ObjCPropertyDecl:{ResultType id}{TypedText Prop4} (35)
+// CHECK-CC5-NEXT: ObjCPropertyDecl:{ResultType id}{TypedText Prop4} (37)
 
 // RUN: c-index-test -code-completion-at=%s:9:11 %s | FileCheck -check-prefix=CHECK-CC6 %s
 // CHECK-CC6: ObjCInterfaceDecl:{TypedText MyClass} (50)
@@ -93,7 +93,7 @@ id test(I3 *i3) {
 // CHECK-CC7: ObjCIvarDecl:{ResultType id}{TypedText Prop2_} (7)
 
 // RUN: c-index-test -code-completion-at=%s:57:13 -fobjc-nonfragile-abi %s | FileCheck -check-prefix=CHECK-CC8 %s
-// CHECK-CC8: ObjCPropertyDecl:{ResultType int}{TypedText Prop5} (35)
+// CHECK-CC8: ObjCPropertyDecl:{ResultType int}{TypedText Prop5} (37)
 
 @interface ClassProperties
 
@@ -157,12 +157,12 @@ void classProperties() {
 // CHECK-CC9-NOT: instanceProperty
 
 // RUN: c-index-test -code-completion-at=%s:145:28 -fobjc-nonfragile-abi %s | FileCheck -check-prefix=CHECK-CC10 %s
-// CHECK-CC10: ObjCPropertyDecl:{ResultType int}{TypedText explicit} (35)
-// CHECK-CC10-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText explicitInProtocol} (35)
-// CHECK-CC10-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText explicitReadonly} (35)
-// CHECK-CC10-NEXT: ObjCClassMethodDecl:{ResultType int}{TypedText implicit} (37)
-// CHECK-CC10-NEXT: ObjCClassMethodDecl:{ResultType int}{TypedText implicitInCategory} (37)
-// CHECK-CC10-NEXT: ObjCClassMethodDecl:{ResultType int}{TypedText implicitReadonly} (37)
+// CHECK-CC10: ObjCPropertyDecl:{ResultType int}{TypedText explicit} (37)
+// CHECK-CC10-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText explicitInProtocol} (37)
+// CHECK-CC10-NEXT: ObjCPropertyDecl:{ResultType int}{TypedText explicitReadonly} (37)
+// CHECK-CC10-NEXT: ObjCClassMethodDecl:{ResultType int}{TypedText implicit} (39)
+// CHECK-CC10-NEXT: ObjCClassMethodDecl:{ResultType int}{TypedText implicitInCategory} (39)
+// CHECK-CC10-NEXT: ObjCClassMethodDecl:{ResultType int}{TypedText implicitReadonly} (39)
 // CHECK-CC10-NEXT: ObjCPropertyDecl:{ResultType ClassProperties *}{TypedText shadowedImplicit} (35)
 // CHECK-CC10-NOT: implicitInstance
 // CHECK-CC10-NOT: noProperty

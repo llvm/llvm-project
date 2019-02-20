@@ -24,7 +24,7 @@ Typical slowdown introduced by AddressSanitizer is **2x**.
 How to build
 ============
 
-Build LLVM/Clang with `CMake <http://llvm.org/docs/CMake.html>`_.
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_.
 
 Usage
 =====
@@ -265,7 +265,7 @@ Limitations
 * On 64-bit platforms AddressSanitizer maps (but not reserves) 16+ Terabytes of
   virtual address space. This means that tools like ``ulimit`` may not work as
   usually expected.
-* Static linking is not supported.
+* Static linking of executables is not supported.
 
 Supported Platforms
 ===================
@@ -278,6 +278,7 @@ AddressSanitizer is supported on:
 * Android ARM
 * NetBSD i386/x86\_64
 * FreeBSD i386/x86\_64 (tested on FreeBSD 11-current)
+* Windows 8.1+ (i386/x86\_64)
 
 Ports to various other platforms are in progress.
 
@@ -287,6 +288,9 @@ Current Status
 AddressSanitizer is fully functional on supported platforms starting from LLVM
 3.1. The test suite is integrated into CMake build and can be run with ``make
 check-asan`` command.
+
+The Windows port is functional and is used by Chrome and Firefox, but it is not
+as well supported as the other ports.
 
 More Information
 ================

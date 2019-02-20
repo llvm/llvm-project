@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/ParentMap.h"
@@ -262,7 +262,7 @@ public:
     currentBlock = block;
 
     // Skip statements in macros.
-    if (S->getLocStart().isMacroID())
+    if (S->getBeginLoc().isMacroID())
       return;
 
     // Only cover dead stores from regular assignments.  ++/-- dead stores
@@ -329,9 +329,8 @@ public:
             return;
 
           if (const Expr *E = V->getInit()) {
-            while (const ExprWithCleanups *exprClean =
-                    dyn_cast<ExprWithCleanups>(E))
-              E = exprClean->getSubExpr();
+            while (const FullExpr *FE = dyn_cast<FullExpr>(E))
+              E = FE->getSubExpr();
 
             // Look through transitive assignments, e.g.:
             // int x = y = 0;
@@ -479,4 +478,8 @@ public:
 
 void ento::registerDeadStoresChecker(CheckerManager &mgr) {
   mgr.registerChecker<DeadStoresChecker>();
+}
+
+bool ento::shouldRegisterDeadStoresChecker(const LangOptions &LO) {
+  return true;
 }

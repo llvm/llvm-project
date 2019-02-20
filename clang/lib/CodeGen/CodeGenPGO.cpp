@@ -544,6 +544,8 @@ struct ComputeRegionCounts : public ConstStmtVisitor<ComputeRegionCounts> {
 
   void VisitCXXForRangeStmt(const CXXForRangeStmt *S) {
     RecordStmtCount(S);
+    if (S->getInit())
+      Visit(S->getInit());
     Visit(S->getLoopVarStmt());
     Visit(S->getRangeStmt());
     Visit(S->getBeginStmt());
@@ -815,7 +817,7 @@ bool CodeGenPGO::skipRegionMappingForDecl(const Decl *D) {
 
   // Don't map the functions in system headers.
   const auto &SM = CGM.getContext().getSourceManager();
-  auto Loc = D->getBody()->getLocStart();
+  auto Loc = D->getBody()->getBeginLoc();
   return SM.isInSystemHeader(Loc);
 }
 

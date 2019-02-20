@@ -45,6 +45,8 @@ class SourceManager;
 /// A mechanism to observe the actions of the module map parser as it
 /// reads module map files.
 class ModuleMapCallbacks {
+  virtual void anchor();
+
 public:
   virtual ~ModuleMapCallbacks() = default;
 
@@ -56,14 +58,6 @@ public:
   /// \param IsSystem Whether this is a module map from a system include path.
   virtual void moduleMapFileRead(SourceLocation FileStart,
                                  const FileEntry &File, bool IsSystem) {}
-
-  /// Called when a module map file matches a module lookup
-  ///
-  /// \param File The file itself.
-  /// \param M The module found that matches this module map.
-  /// \param IsSystem Whether this is a module map from a system include path.
-  virtual void moduleMapFoundForModule(const FileEntry &File, const Module *M,
-                                       bool IsSystem) {}
 
   /// Called when a header is added during module map parsing.
   ///
@@ -100,9 +94,9 @@ class ModuleMap {
   /// named LangOpts::CurrentModule, if we've loaded it).
   Module *SourceModule = nullptr;
 
-  /// The global module for the current TU, if we still own it. (Ownership is
-  /// transferred if/when we create an enclosing module.
-  std::unique_ptr<Module> PendingGlobalModule;
+  /// Submodules of the current module that have not yet been attached to it.
+  /// (Ownership is transferred if/when we create an enclosing module.)
+  llvm::SmallVector<std::unique_ptr<Module>, 8> PendingSubmodules;
 
   /// The top-level modules that are known.
   llvm::StringMap<Module *> Modules;
@@ -530,8 +524,7 @@ public:
                                                bool IsFramework,
                                                bool IsExplicit);
 
-  /// Create a 'global module' for a C++ Modules TS module interface
-  /// unit.
+  /// Create a 'global module' for a C++ Modules TS module interface unit.
   ///
   /// We model the global module as a submodule of the module interface unit.
   /// Unfortunately, we can't create the module interface unit's Module until
@@ -547,6 +540,9 @@ public:
   /// \returns The newly-created module.
   Module *createModuleForInterfaceUnit(SourceLocation Loc, StringRef Name,
                                        Module *GlobalModule);
+
+  /// Create a header module from the specified list of headers.
+  Module *createHeaderModule(StringRef Name, ArrayRef<Module::Header> Headers);
 
   /// Infer the contents of a framework module map from the given
   /// framework directory.
@@ -591,7 +587,7 @@ public:
   /// getContainingModuleMapFile().
   const FileEntry *getModuleMapFileForUniquing(const Module *M) const;
 
-  void setInferredModuleAllowedBy(Module *M, const FileEntry *ModuleMap);
+  void setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap);
 
   /// Get any module map files other than getModuleMapFileForUniquing(M)
   /// that define submodules of a top-level module \p M. This is cheaper than

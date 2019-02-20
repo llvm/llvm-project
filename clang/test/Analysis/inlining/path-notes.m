@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount -analyzer-output=text -analyzer-config suppress-null-return-paths=false -fblocks -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount -analyzer-output=plist-multi-file -analyzer-config suppress-null-return-paths=false -fblocks %s -o %t.plist
-// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/path-notes.m.plist
+// RUN: cat %t.plist | %diff_plist %S/Inputs/expected-plists/path-notes.m.plist -
 
 typedef struct dispatch_queue_s *dispatch_queue_t;
 typedef void (^dispatch_block_t)(void);

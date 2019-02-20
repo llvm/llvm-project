@@ -55,4 +55,4 @@
 
 // RUN: ln -fs %clang %t/arm-linux-gnueabi-clang
 // RUN: %t/arm-linux-gnueabi-clang -### %s 2>&1 | FileCheck -check-prefix=TARGET %s
-// TARGET: Target: arm--linux-gnueabi
+// TARGET: Target: arm-unknown-linux-gnueabi

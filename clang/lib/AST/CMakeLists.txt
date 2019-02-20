@@ -10,6 +10,7 @@ add_clang_library(clangAST
   ASTDiagnostic.cpp
   ASTDumper.cpp
   ASTImporter.cpp
+  ASTImporterLookupTable.cpp
   ASTStructuralEquivalence.cpp
   ASTTypeTraits.cpp
   AttrImpl.cpp
@@ -39,6 +40,7 @@ add_clang_library(clangAST
   ExprObjC.cpp
   ExternalASTMerger.cpp
   ExternalASTSource.cpp
+  FormatString.cpp
   InheritViz.cpp
   ItaniumCXXABI.cpp
   ItaniumMangle.cpp
@@ -48,12 +50,15 @@ add_clang_library(clangAST
   NestedNameSpecifier.cpp
   NSAPI.cpp
   ODRHash.cpp
+  OSLog.cpp
   OpenMPClause.cpp
   ParentMap.cpp
+  PrintfFormatString.cpp
   QualTypeNames.cpp
   RawCommentList.cpp
   RecordLayout.cpp
   RecordLayoutBuilder.cpp
+  ScanfFormatString.cpp
   SelectorLocationsKind.cpp
   Stmt.cpp
   StmtCXX.cpp
@@ -65,6 +70,7 @@ add_clang_library(clangAST
   StmtViz.cpp
   TemplateBase.cpp
   TemplateName.cpp
+  TextNodeDumper.cpp
   Type.cpp
   TypeLoc.cpp
   TypePrinter.cpp

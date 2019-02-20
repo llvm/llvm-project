@@ -99,8 +99,8 @@ public:
       LexicallyNestedDeclarations.clear();
       for (++I; I != E; ++I) {
         Decl *Sibling = *I;
-        if (!SM.isBeforeInTranslationUnit(Sibling->getLocStart(),
-                                          Child->getLocEnd()))
+        if (!SM.isBeforeInTranslationUnit(Sibling->getBeginLoc(),
+                                          Child->getEndLoc()))
           break;
         if (!BaseType::canIgnoreChildDeclWhileTraversingDeclContext(Sibling))
           LexicallyNestedDeclarations.push_back(Sibling);

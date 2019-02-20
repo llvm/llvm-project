@@ -22,6 +22,13 @@ vector double fd, fd2;
 
 vector float ff, ff2;
 
+// Verify that __vector is also recognized
+__vector float ff3;
+
+// Verify operation of vec_step
+int res_ff[vec_step(ff) == 4 ? 1 : -1];
+
+
 void foo(void)
 {
   // -------------------------------------------------------------------------

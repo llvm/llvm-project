@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -61,4 +61,8 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
 
 void ento::registerUndefinedArraySubscriptChecker(CheckerManager &mgr) {
   mgr.registerChecker<UndefinedArraySubscriptChecker>();
+}
+
+bool ento::shouldRegisterUndefinedArraySubscriptChecker(const LangOptions &LO) {
+  return true;
 }

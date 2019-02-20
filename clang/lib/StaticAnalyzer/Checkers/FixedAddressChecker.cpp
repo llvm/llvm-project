@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -64,4 +64,8 @@ void FixedAddressChecker::checkPreStmt(const BinaryOperator *B,
 
 void ento::registerFixedAddressChecker(CheckerManager &mgr) {
   mgr.registerChecker<FixedAddressChecker>();
+}
+
+bool ento::shouldRegisterFixedAddressChecker(const LangOptions &LO) {
+  return true;
 }

@@ -131,6 +131,36 @@ def err_nullability_conflicting : Error<
 
 }
 
+// OpenCL Section 6.8.g
+def err_opencl_unknown_type_specifier : Error<
+  "OpenCL %select{C|C++}0 version %1 does not support the '%2' "
+  "%select{type qualifier|storage class specifier}3">;
+
+def warn_unknown_attribute_ignored : Warning<
+  "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
+def err_use_of_tag_name_without_tag : Error<
+  "must use '%1' tag to refer to type %0%select{| in this scope}2">;
+
+def duplicate_declspec : TextSubstitution<
+  "duplicate '%0' declaration specifier">;
+
+def ext_duplicate_declspec : Extension<"%sub{duplicate_declspec}0">,
+  InGroup<DuplicateDeclSpecifier>;
+def ext_warn_duplicate_declspec : ExtWarn<"%sub{duplicate_declspec}0">,
+  InGroup<DuplicateDeclSpecifier>;
+def warn_duplicate_declspec : Warning<"%sub{duplicate_declspec}0">,
+  InGroup<DuplicateDeclSpecifier>;
+
+def err_friend_decl_spec : Error<"'%0' is invalid in friend declarations">;
+
+def err_invalid_member_in_interface : Error<
+  "%select{data member |non-public member function |static member function |"
+          "user-declared constructor|user-declared destructor|operator |"
+          "nested class }0%1 is not permitted within an interface type">;
+
+def err_attribute_uuid_malformed_guid : Error<
+  "uuid attribute contains a malformed GUID">;
+
 // Sema && Lex
 def ext_c99_longlong : Extension<
   "'long long' is an extension when C99 mode is not enabled">,
@@ -172,6 +202,8 @@ def err_too_large_for_fixed_point : Error<
   "this value is too large for this fixed point type">;
 def err_fixed_point_not_enabled : Error<"compile with "
   "'-ffixed-point' to enable fixed point types">;
+def err_unimplemented_conversion_with_fixed_point_type : Error<
+  "conversion between fixed point and %0 is not yet supported">;
 
 // SEH
 def err_seh_expected_handler : Error<
@@ -187,6 +219,16 @@ def err_seh___finally_block : Error<
 def note_invalid_subexpr_in_const_expr : Note<
   "subexpression not valid in a constant expression">;
 
+// Sema && Frontend
+let CategoryName = "Inline Assembly Issue" in {
+  def err_asm_invalid_type_in_input : Error<
+    "invalid type %0 in asm input for constraint '%1'">;
+}
+
+// Sema && Serialization
+def warn_dup_category_def : Warning<
+  "duplicate definition of category %1 on interface %0">;
+
 // Targets
 
 def err_target_unknown_triple : Error<
@@ -199,6 +241,9 @@ def err_target_unknown_abi : Error<"unknown target ABI '%0'">;
 def err_target_unsupported_abi : Error<"ABI '%0' is not supported on CPU '%1'">;
 def err_target_unsupported_abi_for_triple : Error<
   "ABI '%0' is not supported for '%1'">;
+def err_unsupported_abi_for_opt : Error<"'%0' can only be used with the '%1' ABI">;
+def err_mips_fp64_req : Error<
+    "'%0' can only be used if the target supports the mfhc1 and mthc1 instructions">;
 def err_target_unknown_fpmath : Error<"unknown FP unit '%0'">;
 def err_target_unsupported_fpmath : Error<
     "the '%0' unit is not supported with this instruction set">;
@@ -258,4 +303,10 @@ def err_openclcxx_not_supported : Error<
 // OpenMP
 def err_omp_more_one_clause : Error<
   "directive '#pragma omp %0' cannot contain more than one '%1' clause%select{| with '%3' name modifier| with 'source' dependence}2">;
+
+// Static Analyzer Core
+def err_unknown_analyzer_checker : Error<
+    "no analyzer checkers are associated with '%0'">;
+def note_suggest_disabling_all_checkers : Note<
+    "use -analyzer-disable-all-checks to disable all static analyzer checkers">;
 }

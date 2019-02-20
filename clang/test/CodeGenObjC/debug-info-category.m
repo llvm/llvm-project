@@ -36,17 +36,18 @@
 
 // CHECK: ![[STRUCT:.*]] = !DICompositeType(tag: DW_TAG_structure_type, name: "Foo"
 
-// DWARF5: !DISubprogram(name: "-[Foo integer]", scope: ![[STRUCT]], {{.*}}isDefinition: false
-// DWARF5: !DISubprogram(name: "-[Foo integer:]", scope: ![[STRUCT]], {{.*}}isDefinition: false
-// DWARF5: !DISubprogram(name: "+[Foo(Bar) zero:]", scope: ![[STRUCT]], {{.*}}isDefinition: false
-// DWARF5: !DISubprogram(name: "-[Foo(Bar) add:]", scope: ![[STRUCT]], {{.*}}isDefinition: false
+// Verify "not a definition" by showing spFlags doesn't have DISPFlagDefinition.
+// DWARF5: !DISubprogram(name: "-[Foo integer]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
+// DWARF5: !DISubprogram(name: "-[Foo integer:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
+// DWARF5: !DISubprogram(name: "+[Foo(Bar) zero:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
+// DWARF5: !DISubprogram(name: "-[Foo(Bar) add:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
 
-// DWARF4-NOT: !DISubprogram(name: "-[Foo integer]", scope: ![[STRUCT]], {{.*}}isDefinition: false
-// DWARF4-NOT: !DISubprogram(name: "-[Foo integer:]", scope: ![[STRUCT]], {{.*}}isDefinition: false
-// DWARF4-NOT: !DISubprogram(name: "+[Foo(Bar) zero:]", scope: ![[STRUCT]], {{.*}}isDefinition: false
-// DWARF4-NOT: !DISubprogram(name: "-[Foo(Bar) add:]", scope: ![[STRUCT]], {{.*}}isDefinition: false
+// DWARF4-NOT: !DISubprogram(name: "-[Foo integer]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
+// DWARF4-NOT: !DISubprogram(name: "-[Foo integer:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
+// DWARF4-NOT: !DISubprogram(name: "+[Foo(Bar) zero:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
+// DWARF4-NOT: !DISubprogram(name: "-[Foo(Bar) add:]", scope: ![[STRUCT]], {{.*}} spFlags: DISPFlagLocalToUnit,
 
-// CHECK: = distinct !DISubprogram(name: "-[Foo integer]"{{.*}}isDefinition: true
-// CHECK: = distinct !DISubprogram(name: "-[Foo integer:]"{{.*}}isDefinition: true
-// CHECK: = distinct !DISubprogram(name: "+[Foo(Bar) zero:]"{{.*}}isDefinition: true
-// CHECK: = distinct !DISubprogram(name: "-[Foo(Bar) add:]"{{.*}}isDefinition: true
+// CHECK: = distinct !DISubprogram(name: "-[Foo integer]"{{.*}} DISPFlagDefinition
+// CHECK: = distinct !DISubprogram(name: "-[Foo integer:]"{{.*}} DISPFlagDefinition
+// CHECK: = distinct !DISubprogram(name: "+[Foo(Bar) zero:]"{{.*}} DISPFlagDefinition
+// CHECK: = distinct !DISubprogram(name: "-[Foo(Bar) add:]"{{.*}} DISPFlagDefinition

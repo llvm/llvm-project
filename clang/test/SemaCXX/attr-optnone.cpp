@@ -71,3 +71,11 @@ struct B2 {
   static void bar();
 };
 
+// Verify that we can handle the [[_Clang::optnone]] and
+// [[__clang__::optnone]] spellings, as well as [[clang::__optnone__]].
+[[_Clang::optnone]] int foo3();
+[[__clang__::optnone]] int foo4(); // expected-warning {{'__clang__' is a predefined macro name, not an attribute scope specifier; did you mean '_Clang' instead?}}
+[[clang::__optnone__]] int foo5();
+[[_Clang::__optnone__]] int foo6();
+
+[[_Clang::optnone]] int foo7; // expected-warning {{'optnone' attribute only applies to functions}}

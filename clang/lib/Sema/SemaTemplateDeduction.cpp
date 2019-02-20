@@ -178,6 +178,8 @@ getDeducedParameterFromExpr(TemplateDeductionInfo &Info, Expr *E) {
   while (true) {
     if (ImplicitCastExpr *IC = dyn_cast<ImplicitCastExpr>(E))
       E = IC->getSubExpr();
+    else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E))
+      E = CE->getSubExpr();
     else if (SubstNonTypeTemplateParmExpr *Subst =
                dyn_cast<SubstNonTypeTemplateParmExpr>(E))
       E = Subst->getReplacement();
@@ -3076,7 +3078,7 @@ Sema::SubstituteExplicitTemplateArguments(
     //   "pointer to cv-qualifier-seq X" between the optional cv-qualifer-seq
     //   and the end of the function-definition, member-declarator, or
     //   declarator.
-    unsigned ThisTypeQuals = 0;
+    Qualifiers ThisTypeQuals;
     CXXRecordDecl *ThisContext = nullptr;
     if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(Function)) {
       ThisContext = Method->getParent();
@@ -4423,11 +4425,15 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
   if (const AutoType *AT = Type.getType()->getAs<AutoType>()) {
     if (AT->isDecltypeAuto()) {
       if (isa<InitListExpr>(Init)) {
-        Diag(Init->getLocStart(), diag::err_decltype_auto_initializer_list);
+        Diag(Init->getBeginLoc(), diag::err_decltype_auto_initializer_list);
         return DAR_FailedAlreadyDiagnosed;
       }
 
-      QualType Deduced = BuildDecltypeType(Init, Init->getLocStart(), false);
+      ExprResult ER = CheckPlaceholderExpr(Init);
+      if (ER.isInvalid())
+        return DAR_FailedAlreadyDiagnosed;
+      Init = ER.get();
+      QualType Deduced = BuildDecltypeType(Init, Init->getBeginLoc(), false);
       if (Deduced.isNull())
         return DAR_FailedAlreadyDiagnosed;
       // FIXME: Support a non-canonical deduced type for 'auto'.
@@ -4438,7 +4444,7 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
       return DAR_Succeeded;
     } else if (!getLangOpts().CPlusPlus) {
       if (isa<InitListExpr>(Init)) {
-        Diag(Init->getLocStart(), diag::err_auto_init_list_from_c);
+        Diag(Init->getBeginLoc(), diag::err_auto_init_list_from_c);
         return DAR_FailedAlreadyDiagnosed;
       }
     }
@@ -4655,8 +4661,7 @@ AddImplicitObjectParameterType(ASTContext &Context,
   // The standard doesn't say explicitly, but we pick the appropriate kind of
   // reference type based on [over.match.funcs]p4.
   QualType ArgTy = Context.getTypeDeclType(Method->getParent());
-  ArgTy = Context.getQualifiedType(ArgTy,
-                        Qualifiers::fromCVRMask(Method->getTypeQualifiers()));
+  ArgTy = Context.getQualifiedType(ArgTy, Method->getTypeQualifiers());
   if (Method->getRefQualifier() == RQ_RValue)
     ArgTy = Context.getRValueReferenceType(ArgTy);
   else
@@ -5225,6 +5230,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   while (true) {
     if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E))
       E = ICE->getSubExpr();
+    else if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(E))
+      E = CE->getSubExpr();
     else if (const SubstNonTypeTemplateParmExpr *Subst =
                dyn_cast<SubstNonTypeTemplateParmExpr>(E))
       E = Subst->getReplacement();

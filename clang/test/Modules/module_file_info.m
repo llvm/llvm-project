@@ -20,7 +20,7 @@
 
 // CHECK: Language options:
 // CHECK:   C99: Yes
-// CHECK:   Objective-C 1: Yes
+// CHECK:   Objective-C: Yes
 // CHECK:   modules extension to C: Yes
 // CHECK:   Module features:
 // CHECK:     myfeature

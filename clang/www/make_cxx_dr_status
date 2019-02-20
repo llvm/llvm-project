@@ -108,7 +108,7 @@ def availability(issue):
   if status == 'unknown':
     avail = 'Unknown'
     avail_style = ' class="none"'
-  elif status == '7':
+  elif status == '8':
     avail = 'SVN'
     avail_style = ' class="svn"'
   elif re.match('^[0-9]+\.?[0-9]*', status):

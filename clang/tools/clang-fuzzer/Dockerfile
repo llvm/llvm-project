@@ -35,3 +35,7 @@ RUN mkdir build1 && cd build1 && cmake -GNinja -DCMAKE_BUILD_TYPE=Release ../llv
 RUN cd build1 && ninja clang-fuzzer
 RUN cd build1 && ninja clang-proto-fuzzer
 RUN cd build1 && ninja clang-proto-to-cxx
+RUN cd build1 && ninja clang-loop-proto-to-cxx
+RUN cd build1 && ninja clang-loop-proto-to-llvm
+RUN cd build1 && ninja clang-loop-proto-fuzzer
+RUN cd build1 && ninja clang-llvm-proto-fuzzer

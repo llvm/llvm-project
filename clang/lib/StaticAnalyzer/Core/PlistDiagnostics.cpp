@@ -646,7 +646,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
           if (UPDLoc.isValid()) {
             FullSourceLoc UFunL(
                 SM.getExpansionLoc(
-                    D->getUniqueingDecl()->getBody()->getLocStart()),
+                    D->getUniqueingDecl()->getBody()->getBeginLoc()),
                 SM);
             o << "  <key>issue_hash_function_offset</key><string>"
               << L.getExpansionLineNumber() - UFunL.getExpansionLineNumber()
@@ -654,7 +654,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
 
           // Otherwise, use the location on which the bug is reported.
           } else {
-            FullSourceLoc FunL(SM.getExpansionLoc(Body->getLocStart()), SM);
+            FullSourceLoc FunL(SM.getExpansionLoc(Body->getBeginLoc()), SM);
             o << "  <key>issue_hash_function_offset</key><string>"
               << L.getExpansionLineNumber() - FunL.getExpansionLineNumber()
               << "</string>\n";
@@ -861,7 +861,7 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
     assert(II &&
           "This token is an identifier but has no IdentifierInfo!");
 
-    // If this token is a macro that should be expanded inside the currect
+    // If this token is a macro that should be expanded inside the current
     // macro.
     if (const MacroInfo *MI =
                          getMacroInfoForLocation(PP, SM, II, T.getLocation())) {
@@ -869,7 +869,7 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
 
       // If this is a function-like macro, skip its arguments, as
       // getExpandedMacro() already printed them. If this is the case, let's
-      // first jumo to the '(' token.
+      // first jump to the '(' token.
       if (MI->getNumParams() != 0)
         It = getMatchingRParen(++It, E);
       continue;
@@ -960,7 +960,7 @@ static MacroNameAndArgs getMacroNameAndArgs(SourceLocation ExpanLoc,
   //   CALL_FN(someFunctionName(param1, param2))
   // we will find tok::l_paren, tok::r_paren, and tok::comma that do not divide
   // actual macro arguments, or do not represent the macro argument's closing
-  // parantheses, so we'll count how many parantheses aren't closed yet.
+  // parentheses, so we'll count how many parentheses aren't closed yet.
   // If ParanthesesDepth
   //   * = 0, then there are no more arguments to lex.
   //   * = 1, then if we find a tok::comma, we can start lexing the next arg.

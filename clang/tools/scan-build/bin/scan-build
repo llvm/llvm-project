@@ -58,6 +58,7 @@ my %Options = (
   KeepEmpty => 0,            # Don't remove output directory even with 0 results.
   EnableCheckers => {},
   DisableCheckers => {},
+  Excludes => [],
   UseCC => undef,            # C compiler to use for compilation.
   UseCXX => undef,           # C++ compiler to use for compilation.
   AnalyzerTarget => undef,
@@ -420,6 +421,20 @@ sub ScanFile {
          # The file no longer exists: use the original path.
          $BugFile = $1;
       }
+
+      # Get just the path
+      my $p = dirname($BugFile);
+      # Check if the path is found in the list of exclude
+      if (grep { $p =~ m/$_/ } @{$Options{Excludes}}) {
+         if ($Options{Verbose}) {
+             Diag("File '$BugFile' deleted: part of an ignored directory.\n");
+         }
+
+       # File in an ignored directory. Remove it
+       unlink("$Dir/$FName");
+       return;
+      }
+
       UpdatePrefix($BugFile);
     }
     elsif (/<!-- BUGPATHLENGTH (.*) -->$/) {
@@ -1079,7 +1094,7 @@ sub RunBuildCommand {
   if ($Cmd =~ /(.*\/?gcc[^\/]*$)/ or
       $Cmd =~ /(.*\/?cc[^\/]*$)/ or
       $Cmd =~ /(.*\/?llvm-gcc[^\/]*$)/ or
-      $Cmd =~ /(.*\/?clang$)/ or
+      $Cmd =~ /(.*\/?clang[^\/]*$)/ or
       $Cmd =~ /(.*\/?ccc-analyzer[^\/]*$)/) {
 
     if (!($Cmd =~ /ccc-analyzer/) and !defined $ENV{"CCC_CC"}) {
@@ -1178,6 +1193,11 @@ OPTIONS:
 
    Display the description of defects in the list
 
+ -sarif
+
+  By default the output of scan-build is a set of HTML files. This option
+  outputs the results in SARIF format.
+ 
  -plist
 
    By default the output of scan-build is a set of HTML files. This option
@@ -1192,7 +1212,13 @@ OPTIONS:
 
    By default, the exit status of scan-build is the same as the executed build
    command. Specifying this option causes the exit status of scan-build to be 1
-   if it found potential bugs and 0 otherwise.
+   if it found potential bugs and the exit status of the build itself otherwise.
+
+ --exclude <path>
+
+   Do not run static analyzer against files found in this
+   directory (You can specify this option multiple times).
+   Could be useful when project contains 3rd party libraries.
 
  --use-cc [compiler path]
  --use-cc=[compiler path]
@@ -1644,6 +1670,12 @@ sub ProcessArgs {
       next;
     }
 
+    if ($arg eq "-sarif") {
+      shift @$Args;
+      $Options{OutputFormat} = "sarif";
+      next;
+    }
+
     if ($arg eq "-plist") {
       shift @$Args;
       $Options{OutputFormat} = "plist";
@@ -1695,6 +1727,15 @@ sub ProcessArgs {
       # Store $NumArgs to preserve the order the checkers were disabled.
       $Options{DisableCheckers}{$Checker} = $NumArgs;
       delete $Options{EnableCheckers}{$Checker};
+      next;
+    }
+
+    if ($arg eq "--exclude") {
+      shift @$Args;
+      my $arg = shift @$Args;
+      # Remove the trailing slash if any
+      $arg =~ s|/$||;
+      push @{$Options{Excludes}}, $arg;
       next;
     }
 
@@ -1813,13 +1854,13 @@ Diag("Using '$Clang' for static analysis\n");
 SetHtmlEnv(\@ARGV, $Options{OutputDir});
 
 my @AnalysesToRun;
-foreach (sort { $Options{EnableCheckers}{$a} <=> $Options{EnableCheckers}{$b} } 
-         keys %{$Options{EnableCheckers}}) { 
+foreach (sort { $Options{EnableCheckers}{$a} <=> $Options{EnableCheckers}{$b} }
+         keys %{$Options{EnableCheckers}}) {
   # Push checkers in order they were enabled.
   push @AnalysesToRun, "-analyzer-checker", $_;
 }
-foreach (sort { $Options{DisableCheckers}{$a} <=> $Options{DisableCheckers}{$b} } 
-         keys %{$Options{DisableCheckers}}) { 
+foreach (sort { $Options{DisableCheckers}{$a} <=> $Options{DisableCheckers}{$b} }
+         keys %{$Options{DisableCheckers}}) {
   # Push checkers in order they were disabled.
   push @AnalysesToRun, "-analyzer-disable-checker", $_;
 }
@@ -1858,9 +1899,12 @@ my $ExitStatus = RunBuildCommand(\@ARGV, $Options{IgnoreErrors}, $Options{KeepCC
 	                        $Cmd, $CmdCXX, \%EnvVars);
 
 if (defined $Options{OutputFormat}) {
-  if ($Options{OutputFormat} =~ /plist/) {
+  if ($Options{OutputFormat} =~ /plist/ ||
+      $Options{OutputFormat} =~ /sarif/) {
     Diag "Analysis run complete.\n";
-    Diag "Analysis results (plist files) deposited in '$Options{OutputDir}'\n";
+    Diag "Analysis results (" .
+      ($Options{OutputFormat} =~ /plist/ ? "plist" : "sarif") .
+      " files) deposited in '$Options{OutputDir}'\n";
   }
   if ($Options{OutputFormat} =~ /html/) {
     # Postprocess the HTML directory.
@@ -1878,7 +1922,7 @@ if (defined $Options{OutputFormat}) {
 
     if ($Options{ExitStatusFoundBugs}) {
       exit 1 if ($NumBugs > 0);
-      exit 0;
+      exit $ExitStatus;
     }
   }
 }

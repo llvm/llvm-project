@@ -39,20 +39,20 @@ typedef signed char BOOL;
 @end
 
 // CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean1
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean2
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean3
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean4
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean5
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean6
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean7
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean8
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean9
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object1
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object2
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object3
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object4
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object5
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object6
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object7
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object8
-// CHECK-NEXT: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object9
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean2
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean3
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean4
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean5
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean6
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean7
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean8
+// CHECK: @{{.*}} = private unnamed_addr constant [10 x i8] c"_boolean9
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object1
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object2
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object3
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object4
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object5
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object6
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object7
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object8
+// CHECK: @{{.*}} = private unnamed_addr constant [9 x i8] c"_object9

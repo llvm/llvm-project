@@ -20,7 +20,8 @@
 // CHECK-NEXT: cfg-temporary-dtors = true
 // CHECK-NEXT: crosscheck-with-z3 = false
 // CHECK-NEXT: ctu-dir = ""
-// CHECK-NEXT: ctu-index-name = externalFnMap.txt
+// CHECK-NEXT: ctu-index-name = externalDefMap.txt
+// CHECK-NEXT: display-ctu-progress = false
 // CHECK-NEXT: eagerly-assume = true
 // CHECK-NEXT: elide-constructors = true
 // CHECK-NEXT: expand-macros = false
@@ -51,4 +52,4 @@
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: widen-loops = false
 // CHECK-NEXT: [stats]
-// CHECK-NEXT: num-entries = 48
+// CHECK-NEXT: num-entries = 49

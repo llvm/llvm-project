@@ -60,7 +60,7 @@ enum BlockLiteralFlags {
   BLOCK_IS_GLOBAL =         (1 << 28),
   BLOCK_USE_STRET =         (1 << 29),
   BLOCK_HAS_SIGNATURE  =    (1 << 30),
-  BLOCK_HAS_EXTENDED_LAYOUT = (1 << 31)
+  BLOCK_HAS_EXTENDED_LAYOUT = (1u << 31)
 };
 class BlockFlags {
   uint32_t flags;

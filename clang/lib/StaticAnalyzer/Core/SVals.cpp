@@ -171,6 +171,10 @@ const TypedValueRegion *nonloc::LazyCompoundVal::getRegion() const {
   return static_cast<const LazyCompoundValData*>(Data)->getRegion();
 }
 
+bool nonloc::PointerToMember::isNullMemberPointer() const {
+  return getPTMData().isNull();
+}
+
 const DeclaratorDecl *nonloc::PointerToMember::getDecl() const {
   const auto PTMD = this->getPTMData();
   if (PTMD.isNull())

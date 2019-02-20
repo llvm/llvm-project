@@ -69,6 +69,12 @@ public:
   /// address space.
   bool NVPTXUseShortPointers = false;
 
+  // The code model to be used as specified by the user. Corresponds to
+  // CodeModel::Model enum defined in include/llvm/Support/CodeGen.h, plus
+  // "default" for the case when the user has not explicitly specified a
+  // code model.
+  std::string CodeModel;
+
   /// The version of the SDK which was used during the compilation.
   llvm::VersionTuple SDKVersion;
 };

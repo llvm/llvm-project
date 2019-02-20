@@ -155,6 +155,15 @@ TEST_F(FormatTestJava, ClassDeclarations) {
                "  void doStuff(int theStuff);\n"
                "  void doMoreStuff(int moreStuff);\n"
                "}");
+  verifyFormat("class A {\n"
+               "  public @interface SomeInterface {\n"
+               "    int stuff;\n"
+               "    void doMoreStuff(int moreStuff);\n"
+               "  }\n"
+               "}");
+  verifyFormat("class A {\n"
+               "  public @interface SomeInterface {}\n"
+               "}");
 }
 
 TEST_F(FormatTestJava, AnonymousClasses) {
@@ -441,6 +450,22 @@ TEST_F(FormatTestJava, MethodDeclarations) {
   verifyFormat("void methodName(\n"
                "    Object arg1, Object arg2) {}",
                getStyleWithColumns(40));
+}
+
+TEST_F(FormatTestJava, MethodReference) {
+  EXPECT_EQ(
+      "private void foo() {\n"
+      "  f(this::methodReference);\n"
+      "  f(C.super::methodReference);\n"
+      "  Consumer<String> c = System.out::println;\n"
+      "  Iface<Integer> mRef = Ty::<Integer>meth;\n"
+      "}",
+      format("private void foo() {\n"
+             "  f(this ::methodReference);\n"
+             "  f(C.super ::methodReference);\n"
+             "  Consumer<String> c = System.out ::println;\n"
+             "  Iface<Integer> mRef = Ty :: <Integer> meth;\n"
+             "}"));
 }
 
 TEST_F(FormatTestJava, CppKeywords) {

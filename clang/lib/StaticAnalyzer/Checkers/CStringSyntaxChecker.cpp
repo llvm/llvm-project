@@ -12,7 +12,7 @@
 //    of bytes to copy.
 //
 //===----------------------------------------------------------------------===//
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
@@ -154,6 +154,8 @@ bool WalkAST::containsBadStrncatPattern(const CallExpr *CE) {
 bool WalkAST::containsBadStrlcpyStrlcatPattern(const CallExpr *CE) {
   if (CE->getNumArgs() != 3)
     return false;
+  const FunctionDecl *FD = CE->getDirectCallee();
+  bool Append = CheckerContext::isCLibraryFunction(FD, "strlcat");
   const Expr *DstArg = CE->getArg(0);
   const Expr *LenArg = CE->getArg(2);
 
@@ -193,8 +195,13 @@ bool WalkAST::containsBadStrlcpyStrlcatPattern(const CallExpr *CE) {
         ASTContext &C = BR.getContext();
         uint64_t BufferLen = C.getTypeSize(Buffer) / 8;
         auto RemainingBufferLen = BufferLen - DstOff;
-        if (RemainingBufferLen < ILRawVal)
-          return true;
+        if (Append) {
+          if (RemainingBufferLen <= ILRawVal)
+            return true;
+        } else {
+          if (RemainingBufferLen < ILRawVal)
+            return true;
+        }
       }
     }
   }
@@ -283,3 +290,6 @@ void ento::registerCStringSyntaxChecker(CheckerManager &mgr) {
   mgr.registerChecker<CStringSyntaxChecker>();
 }
 
+bool ento::shouldRegisterCStringSyntaxChecker(const LangOptions &LO) {
+  return true;
+}

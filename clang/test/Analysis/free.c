@@ -1,5 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-store=region -analyzer-checker=core,unix.Malloc -fblocks -verify %s
-// RUN: %clang_analyze_cc1 -analyzer-store=region -analyzer-checker=core,unix.Malloc -fblocks -verify -analyzer-config unix.Malloc:Optimistic=true %s
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-store=region \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.Malloc
+//
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-store=region \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=unix.Malloc \
+// RUN:   -analyzer-config unix.DynamicMemoryModeling:Optimistic=true
 typedef __typeof(sizeof(int)) size_t;
 void free(void *);
 void *alloca(size_t);

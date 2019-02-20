@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -89,6 +89,9 @@ void ObjCAtSyncChecker::checkPreStmt(const ObjCAtSynchronizedStmt *S,
 }
 
 void ento::registerObjCAtSyncChecker(CheckerManager &mgr) {
-  if (mgr.getLangOpts().ObjC2)
-    mgr.registerChecker<ObjCAtSyncChecker>();
+  mgr.registerChecker<ObjCAtSyncChecker>();
+}
+
+bool ento::shouldRegisterObjCAtSyncChecker(const LangOptions &LO) {
+  return LO.ObjC;
 }

@@ -24,6 +24,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -773,6 +774,9 @@ class SymbolicRegion : public SubRegion {
     assert(s->getType()->isAnyPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
+
+    // populateWorklistFromSymbol() relies on this assertion, and needs to be
+    // updated if more cases are introduced.
     assert(isa<UnknownSpaceRegion>(sreg) || isa<HeapSpaceRegion>(sreg));
   }
 
@@ -1078,7 +1082,7 @@ public:
   void dump() const;
 };
 
-/// ElementRegin is used to represent both array elements and casts.
+/// ElementRegion is used to represent both array elements and casts.
 class ElementRegion : public TypedValueRegion {
   friend class MemRegionManager;
 

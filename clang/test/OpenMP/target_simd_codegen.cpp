@@ -342,7 +342,7 @@ int foo(int n) {
 // CHECK-64:    [[AA_CADDR:%.+]] = bitcast i[[SZ]]* [[AA_ADDR]] to i32*
 // CHECK-64:    [[AA:%.+]] = load i32, i32* [[AA_CADDR]], align
 // CHECK-32:    [[AA:%.+]] = load i32, i32* [[AA_ADDR]], align
-// CHECK:       !llvm.mem.parallel_loop_access
+// CHECK:       !llvm.access.group
 // CHECK:       !llvm.loop
 // CHECK:       ret void
 // CHECK-NEXT:  }

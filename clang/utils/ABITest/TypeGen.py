@@ -1,4 +1,5 @@
 """Flexible enumeration of C types."""
+from __future__ import division, print_function
 
 from Enumeration import *
 
@@ -17,7 +18,7 @@ from Enumeration import *
 ###
 # Actual type types
 
-class Type:
+class Type(object):
     def isBitField(self):
         return False
 
@@ -99,7 +100,8 @@ class RecordType(Type):
                             ' '.join(map(getField, self.fields)))
 
     def getTypedefDef(self, name, printer):
-        def getField((i, t)):
+        def getField(it):
+            i, t = it
             if t.isBitField():
                 if t.isPaddingBitField():
                     return '%s : 0;'%(printer.getTypeName(t),)
@@ -108,7 +110,7 @@ class RecordType(Type):
                                                t.getBitFieldSize())
             else:
                 return '%s field%d;'%(printer.getTypeName(t),i)
-        fields = map(getField, enumerate(self.fields))
+        fields = [getField(f) for f in enumerate(self.fields)]
         # Name the struct for more readable LLVM IR.
         return 'typedef %s %s { %s } %s;'%(('struct','union')[self.isUnion],
                                            name, ' '.join(fields), name)
@@ -233,7 +235,7 @@ def fact(n):
 
 # Compute the number of combinations (n choose k)
 def num_combinations(n, k): 
-    return fact(n) / (fact(k) * fact(n - k))
+    return fact(n) // (fact(k) * fact(n - k))
 
 # Enumerate the combinations choosing k elements from the list of values
 def combinations(values, k):
@@ -241,7 +243,7 @@ def combinations(values, k):
     # combinations, selections of a sequence
     if k==0: yield []
     else:
-        for i in xrange(len(values)-k+1):
+        for i in range(len(values)-k+1):
             for cc in combinations(values[i+1:],k-1):
                 yield [values[i]]+cc
 
@@ -370,7 +372,7 @@ class RecordTypeGenerator(TypeGenerator):
         isUnion,I = False,N
         if self.useUnion:
             isUnion,I = (I&1),I>>1
-        fields = map(self.typeGen.get,getNthTuple(I,self.maxSize,self.typeGen.cardinality))
+        fields = [self.typeGen.get(f) for f in getNthTuple(I,self.maxSize,self.typeGen.cardinality)]
         return RecordType(N, isUnion, fields)
 
 class FunctionTypeGenerator(TypeGenerator):
@@ -403,7 +405,7 @@ class FunctionTypeGenerator(TypeGenerator):
         else:
             retTy = None
             argIndices = getNthTuple(N, self.maxSize, self.typeGen.cardinality)
-        args = map(self.typeGen.get, argIndices)
+        args = [self.typeGen.get(i) for i in argIndices]
         return FunctionType(N, retTy, args)
 
 class AnyTypeGenerator(TypeGenerator):
@@ -435,7 +437,7 @@ class AnyTypeGenerator(TypeGenerator):
             if (self._cardinality is aleph0) or prev==self._cardinality:
                 break
         else:
-            raise RuntimeError,"Infinite loop in setting cardinality"
+            raise RuntimeError("Infinite loop in setting cardinality")
 
     def generateType(self, N):
         index,M = getNthPairVariableBounds(N, self.bounds)
@@ -461,15 +463,15 @@ def test():
     atg.addGenerator( btg )
     atg.addGenerator( RecordTypeGenerator(fields0, False, 4) )
     atg.addGenerator( etg )
-    print 'Cardinality:',atg.cardinality
+    print('Cardinality:',atg.cardinality)
     for i in range(100):
         if i == atg.cardinality:
             try:
                 atg.get(i)
-                raise RuntimeError,"Cardinality was wrong"
+                raise RuntimeError("Cardinality was wrong")
             except AssertionError:
                 break
-        print '%4d: %s'%(i, atg.get(i))
+        print('%4d: %s'%(i, atg.get(i)))
 
 if __name__ == '__main__':
     test()

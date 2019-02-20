@@ -815,7 +815,7 @@ protected:
                     ProgramStateRef St, const LocationContext *LCtx)
       : CXXInstanceCall(DD, St, LCtx) {
     Data = DtorDataTy(Target, IsBaseDestructor).getOpaqueValue();
-    Location = Trigger->getLocEnd();
+    Location = Trigger->getEndLoc();
   }
 
   CXXDestructorCall(const CXXDestructorCall &Other) = default;
@@ -1138,8 +1138,15 @@ class CallEventManager {
 public:
   CallEventManager(llvm::BumpPtrAllocator &alloc) : Alloc(alloc) {}
 
+  /// Gets an outside caller given a callee context.
   CallEventRef<>
   getCaller(const StackFrameContext *CalleeCtx, ProgramStateRef State);
+
+  /// Gets a call event for a function call, Objective-C method call,
+  /// or a 'new' call.
+  CallEventRef<>
+  getCall(const Stmt *S, ProgramStateRef State,
+          const LocationContext *LC);
 
   CallEventRef<>
   getSimpleCall(const CallExpr *E, ProgramStateRef State,

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/Analysis/Analyses/Dominators.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/CallGraph.h"
@@ -48,6 +48,10 @@ void ento::registerDominatorsTreeDumper(CheckerManager &mgr) {
   mgr.registerChecker<DominatorsTreeDumper>();
 }
 
+bool ento::shouldRegisterDominatorsTreeDumper(const LangOptions &LO) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // LiveVariablesDumper
 //===----------------------------------------------------------------------===//
@@ -66,6 +70,10 @@ public:
 
 void ento::registerLiveVariablesDumper(CheckerManager &mgr) {
   mgr.registerChecker<LiveVariablesDumper>();
+}
+
+bool ento::shouldRegisterLiveVariablesDumper(const LangOptions &LO) {
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -87,6 +95,10 @@ void ento::registerLiveStatementsDumper(CheckerManager &mgr) {
   mgr.registerChecker<LiveStatementsDumper>();
 }
 
+bool ento::shouldRegisterLiveStatementsDumper(const LangOptions &LO) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // CFGViewer
 //===----------------------------------------------------------------------===//
@@ -105,6 +117,10 @@ public:
 
 void ento::registerCFGViewer(CheckerManager &mgr) {
   mgr.registerChecker<CFGViewer>();
+}
+
+bool ento::shouldRegisterCFGViewer(const LangOptions &LO) {
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -133,6 +149,10 @@ void ento::registerCFGDumper(CheckerManager &mgr) {
   mgr.registerChecker<CFGDumper>();
 }
 
+bool ento::shouldRegisterCFGDumper(const LangOptions &LO) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // CallGraphViewer
 //===----------------------------------------------------------------------===//
@@ -151,6 +171,10 @@ public:
 
 void ento::registerCallGraphViewer(CheckerManager &mgr) {
   mgr.registerChecker<CallGraphViewer>();
+}
+
+bool ento::shouldRegisterCallGraphViewer(const LangOptions &LO) {
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -173,6 +197,9 @@ void ento::registerCallGraphDumper(CheckerManager &mgr) {
   mgr.registerChecker<CallGraphDumper>();
 }
 
+bool ento::shouldRegisterCallGraphDumper(const LangOptions &LO) {
+  return true;
+}
 
 //===----------------------------------------------------------------------===//
 // ConfigDumper
@@ -214,6 +241,10 @@ void ento::registerConfigDumper(CheckerManager &mgr) {
   mgr.registerChecker<ConfigDumper>();
 }
 
+bool ento::shouldRegisterConfigDumper(const LangOptions &LO) {
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // ExplodedGraph Viewer
 //===----------------------------------------------------------------------===//
@@ -233,3 +264,6 @@ void ento::registerExplodedGraphViewer(CheckerManager &mgr) {
   mgr.registerChecker<ExplodedGraphViewer>();
 }
 
+bool ento::shouldRegisterExplodedGraphViewer(const LangOptions &LO) {
+  return true;
+}

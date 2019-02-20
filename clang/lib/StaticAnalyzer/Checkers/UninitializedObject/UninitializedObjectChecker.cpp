@@ -18,7 +18,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "UninitializedObject.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -233,7 +233,7 @@ bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain,
 
   assert((PointeeR || !isDereferencableType(FR->getDecl()->getType())) &&
          "One must also pass the pointee region as a parameter for "
-         "dereferencable fields!");
+         "dereferenceable fields!");
 
   if (State->contains<AnalyzedRegions>(FR))
     return false;
@@ -535,4 +535,8 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
   ChOpts.IgnoredRecordsWithFieldPattern =
       AnOpts.getCheckerStringOption("IgnoreRecordsWithField",
                                /*DefaultVal*/ "", Chk);
+}
+
+bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {
+  return true;
 }
