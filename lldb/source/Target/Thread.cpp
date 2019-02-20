@@ -1633,15 +1633,13 @@ void Thread::CalculateExecutionContext(ExecutionContext &exe_ctx) {
 }
 
 StackFrameListSP Thread::GetStackFrameList() {
-  StackFrameListSP frame_list_sp;
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
   if (!m_curr_frames_sp)
-    frame_list_sp =
+    m_curr_frames_sp =
         std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
 
-  frame_list_sp = m_curr_frames_sp;
-  return frame_list_sp;
+  return m_curr_frames_sp;
 }
 
 void Thread::ClearStackFrames() {
