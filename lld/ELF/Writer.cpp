@@ -288,10 +288,8 @@ template <class ELFT> static void createSyntheticSections() {
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ProgramHeaders->Alignment = Config->Wordsize;
 
-  if (needsInterpSection()) {
-    In.Interp = createInterpSection();
-    Add(In.Interp);
-  }
+  if (needsInterpSection())
+    Add(createInterpSection());
 
   if (Config->Strip != StripPolicy::All) {
     In.StrTab = make<StringTableSection>(".strtab", false);
@@ -384,10 +382,8 @@ template <class ELFT> static void createSyntheticSections() {
   In.IgotPlt = make<IgotPltSection>();
   Add(In.IgotPlt);
 
-  if (Config->GdbIndex) {
-    In.GdbIndex = GdbIndexSection::create<ELFT>();
-    Add(In.GdbIndex);
-  }
+  if (Config->GdbIndex)
+    Add(GdbIndexSection::create<ELFT>());
 
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
