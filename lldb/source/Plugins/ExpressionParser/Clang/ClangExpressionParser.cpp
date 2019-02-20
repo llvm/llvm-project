@@ -56,15 +56,15 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
-#include "ClangDiagnostic.h"
-#include "ClangExpressionParser.h"
-
 #include "ClangASTSource.h"
+#include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
+#include "ClangExpressionParser.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
 #include "IRForTarget.h"
+#include "ModuleDependencyCollector.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
@@ -87,6 +87,7 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
@@ -293,6 +294,18 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   // 1. Create a new compiler instance.
   m_compiler.reset(new CompilerInstance());
 
+  // When capturing a reproducer, hook up the file collector with clang to
+  // collector modules and headers.
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+    m_compiler->setModuleDepCollector(
+        std::make_shared<ModuleDependencyCollectorAdaptor>(
+            fp.GetFileCollector()));
+    DependencyOutputOptions &opts = m_compiler->getDependencyOutputOpts();
+    opts.IncludeSystemHeaders = true;
+    opts.IncludeModuleFiles = true;
+  }
+
   // Register the support for object-file-wrapped Clang modules.
   std::shared_ptr<clang::PCHContainerOperations> pch_operations =
       m_compiler->getPCHContainerOperations();
@@ -302,7 +315,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
       llvm::make_unique<ObjectFilePCHContainerReader>());
 
   // 2. Install the target.
-
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
   bool overridden_target_opts = false;
