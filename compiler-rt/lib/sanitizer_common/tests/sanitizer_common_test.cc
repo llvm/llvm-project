@@ -438,4 +438,9 @@ TEST(SanitizerCommon, ReservedAddressRangeUnmap) {
   EXPECT_DEATH(address_range.Unmap(base_addr + (PageSize * 2), PageSize), ".*");
 }
 
+TEST(SanitizerCommon, ReadBinaryNameCached) {
+  char buf[256];
+  EXPECT_NE((uptr)0, ReadBinaryNameCached(buf, sizeof(buf)));
+}
+
 }  // namespace __sanitizer

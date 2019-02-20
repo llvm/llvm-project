@@ -79,6 +79,81 @@ bool BaseIndexOffset::equalBaseIndex(const BaseIndexOffset &Other,
   return false;
 }
 
+bool BaseIndexOffset::computeAliasing(const BaseIndexOffset &BasePtr0,
+                                      const int64_t NumBytes0,
+                                      const BaseIndexOffset &BasePtr1,
+                                      const int64_t NumBytes1,
+                                      const SelectionDAG &DAG, bool &IsAlias) {
+  if (!(BasePtr0.getBase().getNode() && BasePtr1.getBase().getNode()))
+    return false;
+  int64_t PtrDiff;
+  if (BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff)) {
+    // BasePtr1 is PtrDiff away from BasePtr0. They alias if none of the
+    // following situations arise:
+    IsAlias = !(
+        // [----BasePtr0----]
+        //                         [---BasePtr1--]
+        // ========PtrDiff========>
+        (NumBytes0 <= PtrDiff) ||
+        //                     [----BasePtr0----]
+        // [---BasePtr1--]
+        // =====(-PtrDiff)====>
+        (PtrDiff + NumBytes1 <= 0)); // i.e. NumBytes1 < -PtrDiff.
+    return true;
+  }
+  // If both BasePtr0 and BasePtr1 are FrameIndexes, we will not be
+  // able to calculate their relative offset if at least one arises
+  // from an alloca. However, these allocas cannot overlap and we
+  // can infer there is no alias.
+  if (auto *A = dyn_cast<FrameIndexSDNode>(BasePtr0.getBase()))
+    if (auto *B = dyn_cast<FrameIndexSDNode>(BasePtr1.getBase())) {
+      MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+      // If the base are the same frame index but the we couldn't find a
+      // constant offset, (indices are different) be conservative.
+      if (A != B && (!MFI.isFixedObjectIndex(A->getIndex()) ||
+                     !MFI.isFixedObjectIndex(B->getIndex()))) {
+        IsAlias = false;
+        return true;
+      }
+    }
+
+  bool IsFI0 = isa<FrameIndexSDNode>(BasePtr0.getBase());
+  bool IsFI1 = isa<FrameIndexSDNode>(BasePtr1.getBase());
+  bool IsGV0 = isa<GlobalAddressSDNode>(BasePtr0.getBase());
+  bool IsGV1 = isa<GlobalAddressSDNode>(BasePtr1.getBase());
+  bool IsCV0 = isa<ConstantPoolSDNode>(BasePtr0.getBase());
+  bool IsCV1 = isa<ConstantPoolSDNode>(BasePtr1.getBase());
+
+  // If of mismatched base types or checkable indices we can check
+  // they do not alias.
+  if ((BasePtr0.getIndex() == BasePtr1.getIndex() || (IsFI0 != IsFI1) ||
+       (IsGV0 != IsGV1) || (IsCV0 != IsCV1)) &&
+      (IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1)) {
+    IsAlias = false;
+    return true;
+  }
+  return false; // Cannot determine whether the pointers alias.
+}
+
+bool BaseIndexOffset::contains(int64_t Size, const BaseIndexOffset &Other,
+                               int64_t OtherSize,
+                               const SelectionDAG &DAG) const {
+  int64_t Offset;
+  if (!equalBaseIndex(Other, DAG, Offset))
+    return false;
+  if (Offset >= 0) {
+    // Other is after *this:
+    // [-------*this---------]
+    //            [---Other--]
+    // ==Offset==>
+    return Offset + OtherSize <= Size;
+  }
+  // Other starts strictly before *this, it cannot be fully contained.
+  //    [-------*this---------]
+  // [--Other--]
+  return false;
+}
+
 /// Parses tree in Ptr for base, index, offset addresses.
 BaseIndexOffset BaseIndexOffset::match(const LSBaseSDNode *N,
                                        const SelectionDAG &DAG) {

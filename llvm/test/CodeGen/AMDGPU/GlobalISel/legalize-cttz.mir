@@ -91,3 +91,67 @@ body: |
     %3:_(s32) = G_ZEXT %2
     $vgpr0 = COPY %3
 ...
+
+---
+name: cttz_v2s32_v2s32
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    ; CHECK-LABEL: name: cttz_v2s32_v2s32
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[UV]](s32)
+    ; CHECK: [[CTTZ1:%[0-9]+]]:_(s32) = G_CTTZ [[UV1]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CTTZ]](s32), [[CTTZ1]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x s32>) = G_CTTZ %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: cttz_v2s32_v2s64
+
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-LABEL: name: cttz_v2s32_v2s64
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
+    ; CHECK: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[UV]](s64)
+    ; CHECK: [[CTTZ1:%[0-9]+]]:_(s32) = G_CTTZ [[UV1]](s64)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CTTZ]](s32), [[CTTZ1]](s32)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x s32>) = G_CTTZ %0
+    $vgpr0_vgpr1 = COPY %1
+...
+
+---
+name: cttz_v2s16_v2s16
+
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: cttz_v2s16_v2s16
+    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
+    ; CHECK: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<2 x s16>)
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UV]](s16)
+    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[C]]
+    ; CHECK: [[CTTZ:%[0-9]+]]:_(s32) = G_CTTZ [[OR]](s32)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[CTTZ]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY1]](s32)
+    ; CHECK: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UV1]](s16)
+    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
+    ; CHECK: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT1]], [[C1]]
+    ; CHECK: [[CTTZ1:%[0-9]+]]:_(s32) = G_CTTZ [[OR1]](s32)
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[CTTZ1]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY2]](s32)
+    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16)
+    ; CHECK: $vgpr0 = COPY [[BUILD_VECTOR]](<2 x s16>)
+    %0:_(<2 x s16>) = COPY $vgpr0
+    %1:_(<2 x s16>) = G_CTTZ %0
+    $vgpr0 = COPY %1
+...

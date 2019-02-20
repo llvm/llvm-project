@@ -420,6 +420,7 @@ public:
   // Returns true if this instruction is a candidate for move elimination.
   bool isOptimizableMove() const { return IsOptimizableMove; }
   void setOptimizableMove() { IsOptimizableMove = true; }
+  bool isMemOp() const { return Desc.MayLoad || Desc.MayStore; }
 };
 
 /// An instruction propagated through the simulated instruction pipeline.
@@ -447,10 +448,13 @@ class Instruction : public InstructionBase {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
+  uint64_t CriticalResourceMask;
+  unsigned CriticalMemDep;
+
 public:
   Instruction(const InstrDesc &D)
       : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
-        RCUTokenID(0) {}
+        RCUTokenID(0), CriticalResourceMask(0), CriticalMemDep(0) {}
 
   unsigned getRCUTokenID() const { return RCUTokenID; }
   int getCyclesLeft() const { return CyclesLeft; }
@@ -494,6 +498,13 @@ public:
     assert(isExecuted() && "Instruction is in an invalid state!");
     Stage = IS_RETIRED;
   }
+
+  void updateCriticalResourceMask(uint64_t BusyResourceUnits) {
+    CriticalResourceMask |= BusyResourceUnits;
+  }
+  uint64_t getCriticalResourceMask() const { return CriticalResourceMask; }
+  void setCriticalMemDep(unsigned IID) { CriticalMemDep = IID; }
+  unsigned getCriticalMemDep() const { return CriticalMemDep; }
 
   void cycleEvent();
 };

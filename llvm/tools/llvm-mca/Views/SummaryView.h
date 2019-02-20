@@ -55,6 +55,9 @@ class SummaryView : public View {
   // declared by the scheduling model.
   llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
 
+  // Used to map resource indices to actual processor resource IDs.
+  llvm::SmallVector<unsigned, 8> ResIdx2ProcResID;
+
   // Compute the reciprocal throughput for the analyzed code block.
   // The reciprocal block throughput is computed as the MAX between:
   //   - NumMicroOps / DispatchWidth

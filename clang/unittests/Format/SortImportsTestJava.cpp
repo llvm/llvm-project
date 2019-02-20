@@ -262,6 +262,14 @@ TEST_F(SortImportsTestJava, NoNewlineAtEnd) {
                  "import org.a;"));
 }
 
+TEST_F(SortImportsTestJava, NoReplacementsForValidImports) {
+  // Identical #includes have led to a failure with an unstable sort.
+  std::string Code = "import org.a;\n"
+                     "import org.b;\n";
+  EXPECT_TRUE(
+      sortIncludes(FmtStyle, Code, GetCodeRange(Code), "input.java").empty());
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

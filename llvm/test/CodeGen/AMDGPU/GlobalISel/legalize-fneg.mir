@@ -246,13 +246,23 @@ body: |
     ; GFX9: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
     ; GFX9: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF1]](<4 x s16>), 0
-    ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT]](<3 x s16>), 0
+    ; GFX9: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT]](<3 x s16>), 0
+    ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
     ; GFX9: [[FNEG:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[EXTRACT2]]
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[EXTRACT1]], [[FNEG]](<2 x s16>), 0
-    ; GFX9: [[EXTRACT3:%[0-9]+]]:_(s16) = G_EXTRACT [[EXTRACT]](<3 x s16>), 32
-    ; GFX9: [[FNEG1:%[0-9]+]]:_(s16) = G_FNEG [[EXTRACT3]]
-    ; GFX9: [[INSERT1:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[INSERT]], [[FNEG1]](s16), 32
-    ; GFX9: S_NOP 0, implicit [[INSERT1]](<3 x s16>)
+    ; GFX9: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT1]], [[FNEG]](<2 x s16>), 0
+    ; GFX9: [[EXTRACT3:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT2]](<4 x s16>), 0
+    ; GFX9: [[DEF4:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF4]], [[EXTRACT]](<3 x s16>), 0
+    ; GFX9: [[EXTRACT4:%[0-9]+]]:_(s16) = G_EXTRACT [[INSERT3]](<4 x s16>), 32
+    ; GFX9: [[FNEG1:%[0-9]+]]:_(s16) = G_FNEG [[EXTRACT4]]
+    ; GFX9: [[DEF5:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF5]], [[EXTRACT3]](<3 x s16>), 0
+    ; GFX9: [[INSERT5:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT4]], [[FNEG1]](s16), 32
+    ; GFX9: [[EXTRACT5:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT5]](<4 x s16>), 0
+    ; GFX9: S_NOP 0, implicit [[EXTRACT5]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_FNEG %0
     S_NOP 0, implicit %1

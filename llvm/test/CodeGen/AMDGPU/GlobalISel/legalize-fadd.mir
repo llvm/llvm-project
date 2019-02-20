@@ -346,15 +346,29 @@ body: |
     ; GFX9: [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF1]](<4 x s16>), 0
     ; GFX9: [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; GFX9: [[EXTRACT2:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF2]](<4 x s16>), 0
-    ; GFX9: [[EXTRACT3:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT]](<3 x s16>), 0
-    ; GFX9: [[EXTRACT4:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[DEF3:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF3]], [[EXTRACT]](<3 x s16>), 0
+    ; GFX9: [[EXTRACT3:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
+    ; GFX9: [[DEF4:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF4]], [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[EXTRACT4:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT1]](<4 x s16>), 0
     ; GFX9: [[FADD:%[0-9]+]]:_(<2 x s16>) = G_FADD [[EXTRACT3]], [[EXTRACT4]]
-    ; GFX9: [[INSERT:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[EXTRACT2]], [[FADD]](<2 x s16>), 0
-    ; GFX9: [[EXTRACT5:%[0-9]+]]:_(s16) = G_EXTRACT [[EXTRACT]](<3 x s16>), 32
-    ; GFX9: [[EXTRACT6:%[0-9]+]]:_(s16) = G_EXTRACT [[EXTRACT1]](<3 x s16>), 32
-    ; GFX9: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[EXTRACT5]], [[EXTRACT6]]
-    ; GFX9: [[INSERT1:%[0-9]+]]:_(<3 x s16>) = G_INSERT [[INSERT]], [[FADD1]](s16), 32
-    ; GFX9: S_NOP 0, implicit [[INSERT1]](<3 x s16>)
+    ; GFX9: [[DEF5:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF5]], [[EXTRACT2]](<3 x s16>), 0
+    ; GFX9: [[INSERT3:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT2]], [[FADD]](<2 x s16>), 0
+    ; GFX9: [[EXTRACT5:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT3]](<4 x s16>), 0
+    ; GFX9: [[DEF6:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT4:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF6]], [[EXTRACT]](<3 x s16>), 0
+    ; GFX9: [[EXTRACT6:%[0-9]+]]:_(s16) = G_EXTRACT [[INSERT4]](<4 x s16>), 32
+    ; GFX9: [[DEF7:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT5:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF7]], [[EXTRACT1]](<3 x s16>), 0
+    ; GFX9: [[EXTRACT7:%[0-9]+]]:_(s16) = G_EXTRACT [[INSERT5]](<4 x s16>), 32
+    ; GFX9: [[FADD1:%[0-9]+]]:_(s16) = G_FADD [[EXTRACT6]], [[EXTRACT7]]
+    ; GFX9: [[DEF8:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; GFX9: [[INSERT6:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF8]], [[EXTRACT5]](<3 x s16>), 0
+    ; GFX9: [[INSERT7:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[INSERT6]], [[FADD1]](s16), 32
+    ; GFX9: [[EXTRACT8:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[INSERT7]](<4 x s16>), 0
+    ; GFX9: S_NOP 0, implicit [[EXTRACT8]](<3 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<3 x s16>) = G_IMPLICIT_DEF
     %2:_(<3 x s16>) = G_FADD %0, %1

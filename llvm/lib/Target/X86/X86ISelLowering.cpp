@@ -31712,15 +31712,10 @@ static SDValue combineX86ShufflesRecursively(
   if (2 < OpInputs.size())
     return SDValue();
 
-  SDValue Input0 = (OpInputs.size() > 0 ? OpInputs[0] : SDValue());
-  SDValue Input1 = (OpInputs.size() > 1 ? OpInputs[1] : SDValue());
-
   // Add the inputs to the Ops list, avoiding duplicates.
   SmallVector<SDValue, 16> Ops(SrcOps.begin(), SrcOps.end());
 
   auto AddOp = [&Ops](SDValue Input, int InsertionPoint) -> int {
-    if (!Input)
-      return -1;
     // Attempt to find an existing match.
     SDValue InputBC = peekThroughBitcasts(Input);
     for (int i = 0, e = Ops.size(); i < e; ++i)
@@ -31736,8 +31731,9 @@ static SDValue combineX86ShufflesRecursively(
     return Ops.size() - 1;
   };
 
-  int InputIdx0 = AddOp(Input0, SrcOpIndex);
-  int InputIdx1 = AddOp(Input1, -1);
+  SmallVector<int, 2> OpInputIdx;
+  for (SDValue OpInput : OpInputs)
+    OpInputIdx.push_back(AddOp(OpInput, OpInputIdx.empty() ? SrcOpIndex : -1));
 
   assert(((RootMask.size() > OpMask.size() &&
            RootMask.size() % OpMask.size() == 0) ||
@@ -31810,11 +31806,11 @@ static SDValue combineX86ShufflesRecursively(
 
     OpMaskedIdx = OpMaskedIdx & (MaskWidth - 1);
     if (OpMask[OpIdx] < (int)OpMask.size()) {
-      assert(0 <= InputIdx0 && "Unknown target shuffle input");
-      OpMaskedIdx += InputIdx0 * MaskWidth;
+      assert(0 <= OpInputIdx[0] && "Unknown target shuffle input");
+      OpMaskedIdx += OpInputIdx[0] * MaskWidth;
     } else {
-      assert(0 <= InputIdx1 && "Unknown target shuffle input");
-      OpMaskedIdx += InputIdx1 * MaskWidth;
+      assert(0 <= OpInputIdx[1] && "Unknown target shuffle input");
+      OpMaskedIdx += OpInputIdx[1] * MaskWidth;
     }
 
     Mask[i] = OpMaskedIdx;
