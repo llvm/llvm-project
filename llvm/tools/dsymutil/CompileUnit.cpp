@@ -56,12 +56,11 @@ void CompileUnit::markEverythingAsKept() {
 }
 
 uint64_t CompileUnit::computeNextUnitOffset() {
-  NextUnitOffset = StartOffset + 11 /* Header size */;
-  // The root DIE might be null, meaning that the Unit had nothing to
-  // contribute to the linked output. In that case, we will emit the
-  // unit header without any actual DIE.
-  if (NewUnit)
+  NextUnitOffset = StartOffset;
+  if (NewUnit) {
+    NextUnitOffset += 11 /* Header size */;
     NextUnitOffset += NewUnit->getUnitDie().getSize();
+  }
   return NextUnitOffset;
 }
 
