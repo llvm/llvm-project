@@ -298,9 +298,8 @@ static void SwiftTerminate() {
 #endif
 }
 
-llvm::Error
-SystemInitializerFull::Initialize(const InitializerOptions &options) {
-  if (auto e = SystemInitializerCommon::Initialize(options))
+llvm::Error SystemInitializerFull::Initialize() {
+  if (auto e = SystemInitializerCommon::Initialize())
     return e;
 
   breakpad::ObjectFileBreakpad::Initialize();
