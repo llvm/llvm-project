@@ -10,7 +10,7 @@ int main()
     print_ids(0);
 
   omp_nest_lock_t nest_lock;
-  printf("%" PRIu64 ": &nest_lock: %lli\n", ompt_get_thread_data()->value, (long long) &nest_lock);
+  printf("%" PRIu64 ": &nest_lock: %lli\n", ompt_get_thread_data()->value, (ompt_wait_id_t) &nest_lock);
   omp_init_nest_lock(&nest_lock);
   print_fuzzy_address(1);
   omp_set_nest_lock(&nest_lock);
