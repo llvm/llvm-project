@@ -1,6 +1,6 @@
 # Check that subsequent .loc 0 0 directives are collapsed.
 
-# RUN: llc -O2 -filetype=asm -mtriple=x86_64-apple-macosx10.9.0 -o - %s | FileCheck %s
+# RUN: llc -start-before=machine-cp -O2 -filetype=asm -mtriple=x86_64-apple-macosx10.9.0 -o - %s | FileCheck %s
 
 # CHECK: Ltmp0:
 # CHECK: .loc 1 0 0 prologue_end
