@@ -109,18 +109,23 @@ bool Scheduler::promoteToReadySet(SmallVectorImpl<InstRef> &Ready) {
     if (!IR)
       break;
 
+    // Check if there are still unsolved memory dependencies.
+    Instruction &IS = *IR.getInstruction();
+    if (IS.isMemOp()) {
+      unsigned CriticalMemDep = LSU.isReady(IR);
+      if (CriticalMemDep != IR.getSourceIndex()) {
+        IS.setCriticalMemDep(CriticalMemDep);
+        ++I;
+        continue;
+      }
+    }
+
     // Check if this instruction is now ready. In case, force
     // a transition in state using method 'update()'.
-    Instruction &IS = *IR.getInstruction();
-    if (!IS.isReady())
-      IS.updatePending();
-
-    // Check if there are still unsolved data dependencies.
-    if (!isReady(IR)) {
+    if (!IS.isReady() && !IS.updatePending()) {
       ++I;
       continue;
     }
-
     LLVM_DEBUG(dbgs() << "[SCHEDULER]: Instruction #" << IR
                       << " promoted to the READY set.\n");
 
@@ -169,11 +174,12 @@ bool Scheduler::promoteToPendingSet() {
 InstRef Scheduler::select() {
   unsigned QueueIndex = ReadySet.size();
   for (unsigned I = 0, E = ReadySet.size(); I != E; ++I) {
-    const InstRef &IR = ReadySet[I];
+    InstRef &IR = ReadySet[I];
     if (QueueIndex == ReadySet.size() ||
         Strategy->compare(IR, ReadySet[QueueIndex])) {
       const InstrDesc &D = IR.getInstruction()->getDesc();
       uint64_t BusyResourceMask = Resources->checkAvailability(D);
+      IR.getInstruction()->updateCriticalResourceMask(BusyResourceMask);
       BusyResourceUnits |= BusyResourceMask;
       if (!BusyResourceMask)
         QueueIndex = I;
@@ -221,10 +227,8 @@ void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
   // Release consumed resources.
   Resources->cycleEvent(Freed);
 
-  // Propagate the cycle event to the 'Issued' and 'Wait' sets.
   for (InstRef &IR : IssuedSet)
     IR.getInstruction()->cycleEvent();
-
   updateIssuedSet(Executed);
 
   for (InstRef &IR : PendingSet)
@@ -236,6 +240,7 @@ void Scheduler::cycleEvent(SmallVectorImpl<ResourceRef> &Freed,
   promoteToPendingSet();
   promoteToReadySet(Ready);
 
+  NumDispatchedToThePendingSet = 0;
   BusyResourceUnits = 0;
 }
 
@@ -249,26 +254,28 @@ bool Scheduler::mustIssueImmediately(const InstRef &IR) const {
   return Desc.MustIssueImmediately;
 }
 
-void Scheduler::dispatch(const InstRef &IR) {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
+bool Scheduler::dispatch(const InstRef &IR) {
+  const Instruction &IS = *IR.getInstruction();
+  const InstrDesc &Desc = IS.getDesc();
   Resources->reserveBuffers(Desc.Buffers);
 
   // If necessary, reserve queue entries in the load-store unit (LSU).
-  bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-  if (IsMemOp)
+  if (IS.isMemOp())
     LSU.dispatch(IR);
 
-  if (IR.getInstruction()->isPending()) {
+  if (IS.isPending()) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR
                       << " to the PendingSet\n");
     PendingSet.push_back(IR);
-    return;
+    ++NumDispatchedToThePendingSet;
+    return false;
   }
 
-  if (!isReady(IR)) {
+  if (!IS.isReady() ||
+      (IS.isMemOp() && LSU.isReady(IR) != IR.getSourceIndex())) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
     WaitSet.push_back(IR);
-    return;
+    return false;
   }
 
   // Don't add a zero-latency instruction to the Ready queue.
@@ -283,13 +290,8 @@ void Scheduler::dispatch(const InstRef &IR) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the ReadySet\n");
     ReadySet.push_back(IR);
   }
-}
 
-bool Scheduler::isReady(const InstRef &IR) const {
-  const InstrDesc &Desc = IR.getInstruction()->getDesc();
-  bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-  return IR.getInstruction()->isReady() &&
-         (!IsMemOp || LSU.isReady(IR) == IR.getSourceIndex());
+  return true;
 }
 
 } // namespace mca

@@ -475,6 +475,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   case ELF::EM_MIPS:
     ECase(SHT_MIPS_REGINFO);
     ECase(SHT_MIPS_OPTIONS);
+    ECase(SHT_MIPS_DWARF);
     ECase(SHT_MIPS_ABIFLAGS);
     break;
   default:
@@ -830,9 +831,6 @@ StringRef MappingTraits<ELFYAML::Symbol>::validate(IO &IO,
   }
   if (Symbol.Index && *Symbol.Index == ELFYAML::ELF_SHN(ELF::SHN_XINDEX)) {
     return "Large indexes are not supported";
-  }
-  if (Symbol.Index && *Symbol.Index < ELFYAML::ELF_SHN(ELF::SHN_LORESERVE)) {
-    return "Use a section name to define which section a symbol is defined in";
   }
   return StringRef();
 }

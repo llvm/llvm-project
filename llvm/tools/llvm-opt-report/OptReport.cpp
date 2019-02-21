@@ -13,6 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/OptRemarks.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -27,7 +28,6 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm-c/OptRemarks.h"
 #include <cstdlib>
 #include <map>
 #include <set>

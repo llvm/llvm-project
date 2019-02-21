@@ -1535,6 +1535,11 @@ public:
   /// vector op and fill the end of the resulting vector with UNDEFS.
   SDValue UnrollVectorOp(SDNode *N, unsigned ResNE = 0);
 
+  /// Like UnrollVectorOp(), but for the [US](ADD|SUB|MUL)O family of opcodes.
+  /// This is a separate function because those opcodes have two results.
+  std::pair<SDValue, SDValue> UnrollVectorOverflowOp(SDNode *N,
+                                                     unsigned ResNE = 0);
+
   /// Return true if loads are next to each other and can be
   /// merged. Check that both are nonvolatile and if LD is loading
   /// 'Bytes' bytes from a location that is 'Dist' units away from the

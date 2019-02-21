@@ -467,11 +467,11 @@ body: |
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
     ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s8>) = G_TRUNC [[DEF]](<4 x s32>)
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s8>) = G_EXTRACT [[TRUNC]](<4 x s8>), 0
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s8>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s8>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s8>), 0
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s8) = G_EXTRACT [[INSERT]](<4 x s8>), 16
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT1]](s8)
-    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<3 x s16>) = G_ANYEXT [[EXTRACT]](<3 x s8>)
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[ANYEXT]](<3 x s16>), 32
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[EXTRACT1]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC1]](s8)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT1]](s32)
     %0:_(<3 x s8>) = G_IMPLICIT_DEF
     %1:_(s8) = G_EXTRACT %0, 16
     %2:_(s32) = G_ANYEXT %1
@@ -486,11 +486,11 @@ body: |
     ; CHECK: [[DEF:%[0-9]+]]:_(<6 x s32>) = G_IMPLICIT_DEF
     ; CHECK: [[TRUNC:%[0-9]+]]:_(<6 x s1>) = G_TRUNC [[DEF]](<6 x s32>)
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<5 x s1>) = G_EXTRACT [[TRUNC]](<6 x s1>), 0
-    ; CHECK: [[DEF1:%[0-9]+]]:_(<6 x s1>) = G_IMPLICIT_DEF
-    ; CHECK: [[INSERT:%[0-9]+]]:_(<6 x s1>) = G_INSERT [[DEF1]], [[EXTRACT]](<5 x s1>), 0
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s1) = G_EXTRACT [[INSERT]](<6 x s1>), 4
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT1]](s1)
-    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(<5 x s16>) = G_ANYEXT [[EXTRACT]](<5 x s1>)
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[ANYEXT]](<5 x s16>), 64
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[EXTRACT1]](s16)
+    ; CHECK: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[TRUNC1]](s1)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT1]](s32)
     %0:_(<5 x s1>) = G_IMPLICIT_DEF
     %1:_(s1) = G_EXTRACT %0, 4
     %2:_(s32) = G_ANYEXT %1
@@ -704,8 +704,10 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_extract_s1_s8_offset0
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY1]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s1) = G_EXTRACT [[TRUNC]](s8), 0
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT]](s1)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s8) = G_TRUNC %0
     %2:_(s1) = G_EXTRACT %1, 0
@@ -720,11 +722,9 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_extract_s1_s8_offset2
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[TRUNC]], [[TRUNC1]](s16)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR]](s16)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[EXTRACT:%[0-9]+]]:_(s1) = G_EXTRACT [[TRUNC]](s8), 2
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT]](s1)
     ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s8) = G_TRUNC %0
@@ -759,7 +759,9 @@ body: |
     ; CHECK-LABEL: name: extract_s16_v3s16_offset0
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(s16) = G_EXTRACT [[INSERT]](<4 x s16>), 0
     ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[EXTRACT1]](s16)
     ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
@@ -842,7 +844,9 @@ body: |
     ; CHECK-LABEL: name: extract_v2s16_v3s16_offset0
     ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[DEF]](<4 x s16>), 0
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[EXTRACT]](<3 x s16>), 0
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<4 x s16>), 0
     ; CHECK: $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
     %0:_(<3 x s16>) = G_IMPLICIT_DEF
     %1:_(<2 x s16>) = G_EXTRACT %0, 0
@@ -858,7 +862,10 @@ body: |
     ; CHECK: [[DEF:%[0-9]+]]:_(<6 x s32>) = G_IMPLICIT_DEF
     ; CHECK: [[TRUNC:%[0-9]+]]:_(<6 x s16>) = G_TRUNC [[DEF]](<6 x s32>)
     ; CHECK: [[EXTRACT:%[0-9]+]]:_(<5 x s16>) = G_EXTRACT [[TRUNC]](<6 x s16>), 0
-    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[EXTRACT]](<5 x s16>), 0
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<6 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<6 x s16>) = G_TRUNC [[DEF1]](<6 x s32>)
+    ; CHECK: [[INSERT:%[0-9]+]]:_(<6 x s16>) = G_INSERT [[TRUNC1]], [[EXTRACT]](<5 x s16>), 0
+    ; CHECK: [[EXTRACT1:%[0-9]+]]:_(<2 x s16>) = G_EXTRACT [[INSERT]](<6 x s16>), 0
     ; CHECK: $vgpr0 = COPY [[EXTRACT1]](<2 x s16>)
     %0:_(<5 x s16>) = G_IMPLICIT_DEF
     %1:_(<2 x s16>) = G_EXTRACT %0, 0

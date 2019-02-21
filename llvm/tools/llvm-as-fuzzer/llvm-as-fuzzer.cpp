@@ -1,4 +1,4 @@
-//===--- fuzz-llvm-as.cpp - Fuzzer for llvm-as using lib/Fuzzer -----------===//
+//===-- llvm-as-fuzzer.cpp - Fuzzer for llvm-as using lib/Fuzzer ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -19,8 +19,8 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <csetjmp>
 

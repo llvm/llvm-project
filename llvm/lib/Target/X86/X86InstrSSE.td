@@ -6510,17 +6510,35 @@ let Predicates = [HasAVX2] in {
 // Emulate vXi32/vXi64 blends with vXf32/vXf64.
 // ExecutionDomainFixPass will cleanup domains later on.
 let Predicates = [HasAVX] in {
-def : Pat<(X86Blendi (v4i64 VR256:$src1), (v4i64 VR256:$src2), (iPTR imm:$src3)),
+def : Pat<(X86Blendi (v4i64 VR256:$src1), (v4i64 VR256:$src2), imm:$src3),
           (VBLENDPDYrri VR256:$src1, VR256:$src2, imm:$src3)>;
-def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), (iPTR imm:$src3)),
+def : Pat<(X86Blendi VR256:$src1, (loadv4i64 addr:$src2), imm:$src3),
+          (VBLENDPDYrmi VR256:$src1, addr:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (loadv4i64 addr:$src2), VR256:$src1, imm:$src3),
+          (VBLENDPDYrmi VR256:$src1, addr:$src2, (BlendCommuteImm4 imm:$src3))>;
+
+def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), imm:$src3),
           (VBLENDPDrri VR128:$src1, VR128:$src2, imm:$src3)>;
+def : Pat<(X86Blendi VR128:$src1, (loadv2i64 addr:$src2), imm:$src3),
+          (VBLENDPDrmi VR128:$src1, addr:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (loadv2i64 addr:$src2), VR128:$src1, imm:$src3),
+          (VBLENDPDrmi VR128:$src1, addr:$src2, (BlendCommuteImm2 imm:$src3))>;
 }
 
 let Predicates = [HasAVX1Only] in {
-def : Pat<(X86Blendi (v8i32 VR256:$src1), (v8i32 VR256:$src2), (iPTR imm:$src3)),
+def : Pat<(X86Blendi (v8i32 VR256:$src1), (v8i32 VR256:$src2), imm:$src3),
           (VBLENDPSYrri VR256:$src1, VR256:$src2, imm:$src3)>;
-def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), (iPTR imm:$src3)),
+def : Pat<(X86Blendi VR256:$src1, (loadv8i32 addr:$src2), imm:$src3),
+          (VBLENDPSYrmi VR256:$src1, addr:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (loadv8i32 addr:$src2), VR256:$src1, imm:$src3),
+          (VBLENDPSYrmi VR256:$src1, addr:$src2, (BlendCommuteImm8 imm:$src3))>;
+
+def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), imm:$src3),
           (VBLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
+def : Pat<(X86Blendi VR128:$src1, (loadv4i32 VR128:$src2), imm:$src3),
+          (VBLENDPSrmi VR128:$src1, addr:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (loadv4i32 VR128:$src2), VR128:$src1, imm:$src3),
+          (VBLENDPSrmi VR128:$src1, addr:$src2, (BlendCommuteImm4 imm:$src3))>;
 }
 
 defm BLENDPS : SS41I_blend_rmi<0x0C, "blendps", X86Blendi, v4f32,
@@ -6534,10 +6552,19 @@ defm PBLENDW : SS41I_blend_rmi<0x0E, "pblendw", X86Blendi, v8i16,
                                SchedWriteBlend.XMM, BlendCommuteImm8>;
 
 let Predicates = [UseSSE41] in {
-def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), (iPTR imm:$src3)),
+def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), imm:$src3),
           (BLENDPDrri VR128:$src1, VR128:$src2, imm:$src3)>;
-def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), (iPTR imm:$src3)),
+def : Pat<(X86Blendi VR128:$src1, (memopv2i64 addr:$src2), imm:$src3),
+          (BLENDPDrmi VR128:$src1, addr:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (memopv2i64 addr:$src2), VR128:$src1, imm:$src3),
+          (BLENDPDrmi VR128:$src1, addr:$src2, (BlendCommuteImm2 imm:$src3))>;
+
+def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), imm:$src3),
           (BLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
+def : Pat<(X86Blendi VR128:$src1, (memopv4i32 addr:$src2), imm:$src3),
+          (BLENDPSrmi VR128:$src1,addr:$src2, imm:$src3)>;
+def : Pat<(X86Blendi (memopv4i32 addr:$src2), VR128:$src1, imm:$src3),
+          (BLENDPSrmi VR128:$src1,addr:$src2, (BlendCommuteImm4 imm:$src3))>;
 }
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
@@ -6551,6 +6578,13 @@ def : Pat<(insert_subvector (v8f32 VR256:$src1), (v4f32 VR128:$src2), (iPTR 0)),
           (VBLENDPSYrri VR256:$src1,
                         (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
                                        VR128:$src2, sub_xmm), 0xf)>;
+
+def : Pat<(insert_subvector (loadv4f64 addr:$src2), (v2f64 VR128:$src1), (iPTR 0)),
+          (VBLENDPDYrmi (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xc)>;
+def : Pat<(insert_subvector (loadv8f32 addr:$src2), (v4f32 VR128:$src1), (iPTR 0)),
+          (VBLENDPSYrmi (INSERT_SUBREG (v8f32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
 }
 
 /// SS41I_quaternary_vx - AVX SSE 4.1 with 4 operators
@@ -7804,6 +7838,19 @@ def : Pat<(insert_subvector (v32i8 VR256:$src1), (v16i8 VR128:$src2), (iPTR 0)),
           (VPBLENDDYrri VR256:$src1,
                         (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
                                        VR128:$src2, sub_xmm), 0xf)>;
+
+def : Pat<(insert_subvector (loadv8i32 addr:$src2), (v4i32 VR128:$src1), (iPTR 0)),
+          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
+def : Pat<(insert_subvector (loadv4i64 addr:$src2), (v2i64 VR128:$src1), (iPTR 0)),
+          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
+def : Pat<(insert_subvector (loadv16i16 addr:$src2), (v8i16 VR128:$src1), (iPTR 0)),
+          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
+def : Pat<(insert_subvector (loadv32i8 addr:$src2), (v16i8 VR128:$src1), (iPTR 0)),
+          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
 }
 
 let Predicates = [HasAVX1Only] in {
@@ -7823,6 +7870,19 @@ def : Pat<(insert_subvector (v32i8 VR256:$src1), (v16i8 VR128:$src2), (iPTR 0)),
           (VBLENDPSYrri VR256:$src1,
                         (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
                                        VR128:$src2, sub_xmm), 0xf)>;
+
+def : Pat<(insert_subvector (loadv8i32 addr:$src2), (v4i32 VR128:$src1), (iPTR 0)),
+          (VBLENDPSYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
+def : Pat<(insert_subvector (loadv4i64 addr:$src2), (v2i64 VR128:$src1), (iPTR 0)),
+          (VBLENDPSYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
+def : Pat<(insert_subvector (loadv16i16 addr:$src2), (v8i16 VR128:$src1), (iPTR 0)),
+          (VBLENDPSYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
+def : Pat<(insert_subvector (loadv32i8 addr:$src2), (v16i8 VR128:$src1), (iPTR 0)),
+          (VBLENDPSYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
+                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
 }
 
 //===----------------------------------------------------------------------===//
