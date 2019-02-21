@@ -79,6 +79,10 @@ static cl::opt<bool>
                          cl::desc("Instrument allocation functions"),
                          cl::Hidden);
 
+static cl::opt<bool> ClInterpose("csi-interpose", cl::init(true),
+                                 cl::desc("Enable function interpositioning"),
+                                 cl::Hidden);
+
 static cl::opt<std::string> ClToolBitcode(
     "csi-tool-bitcode", cl::init(""),
     cl::desc("Path to the tool bitcode file for compile-time instrumentation"),
@@ -403,9 +407,10 @@ void FrontEndDataTable::add(uint64_t ID, const DISubprogram *Subprog) {
 void FrontEndDataTable::add(uint64_t ID, int32_t Line, int32_t Column,
                             StringRef Filename, StringRef Directory,
                             StringRef Name) {
-  assert(LocalIdToSourceLocationMap.find(ID) ==
+  // TODO: This assert is too strong for unwind basic blocks' FED.
+  /*assert(LocalIdToSourceLocationMap.find(ID) ==
              LocalIdToSourceLocationMap.end() &&
-         "Id already exists in FED table.");
+         "Id already exists in FED table."); */
   LocalIdToSourceLocationMap[ID] = {Name, Line, Column, Filename, Directory};
 }
 
@@ -911,15 +916,17 @@ void CSIImpl::interposeCall(Instruction *I) {
     Called = II->getCalledFunction();
 
   // Should we interpose this call?
-  if (Called) {
+  if (Called && Called->getName().size() > 0) {
     bool shouldInterpose =
         Config->DoesFunctionRequireInterposition(Called->getName());
 
     if (shouldInterpose) {
+      Function *interpositionFunction = getInterpositionFunction(Called);
+      assert(interpositionFunction != nullptr);
       if (CallInst *CI = dyn_cast<CallInst>(I)) {
-        CI->setCalledFunction(getInterpositionFunction(Called));
+        CI->setCalledFunction(interpositionFunction);
       } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
-        II->setCalledFunction(getInterpositionFunction(Called));
+        II->setCalledFunction(interpositionFunction);
       }
     }
   }
@@ -1063,14 +1070,20 @@ void CSIImpl::instrumentSync(SyncInst *SI,
   CallInst *call = insertHookCallInSuccessorBB(
       SI->getSuccessor(0), SI->getParent(), CsiAfterSync, {SyncID, TrackVar},
       {DefaultID,
-       Constant::getIntegerValue(IntegerType::getInt32Ty(SI->getContext()),
-                                 APInt(32, 0))});
+       ConstantPointerNull::get(
+           IntegerType::getInt32Ty(SI->getContext())->getPointerTo())});
 
   // Reset the tracking variable to 0.
-  IRB.SetInsertPoint(call->getNextNode());
-  IRB.CreateStore(Constant::getIntegerValue(
-                      IntegerType::getInt32Ty(SI->getContext()), APInt(32, 0)),
-                  TrackVar);
+  if (call != nullptr) {
+    callsAfterSync.insert({SI->getSuccessor(0), call});
+    IRB.SetInsertPoint(call->getNextNode());
+    IRB.CreateStore(
+        Constant::getIntegerValue(IntegerType::getInt32Ty(SI->getContext()),
+                                  APInt(32, 0)),
+        TrackVar);
+  } else {
+    assert(callsAfterSync.find(SI->getSuccessor(0)) != callsAfterSync.end());
+  }
 }
 
 void CSIImpl::instrumentAlloca(Instruction *I) {
@@ -1661,7 +1674,8 @@ void llvm::CSIImpl::linkInToolFromBitcode(const std::string &bitcodePath) {
     if (m) {
       toolModule = std::move(m);
     } else {
-      llvm::errs() << "Error loading bitcode: " << error.getMessage() << "\n";
+      llvm::errs() << "Error loading bitcode (" << bitcodePath
+                   << "): " << error.getMessage() << "\n";
       report_fatal_error(error.getMessage());
     }
 
@@ -1889,7 +1903,9 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return;
 
+  // TODO: This needs to be fixed.
   setupCalls(F);
+
   setupBlocks(F, TLI);
 
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
@@ -2120,6 +2136,8 @@ bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
   };
 
   bool res = CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI, Options).run();
+
+  llvm::errs() << "Verifying module\n";
   verifyModule(M, &llvm::errs());
 
   return res;

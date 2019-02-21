@@ -1017,6 +1017,7 @@ protected:
   DenseMap<StringRef, uint64_t> FuncOffsetMap;
 
   DenseMap<BasicBlock *, SmallVector<PHINode *, 4>> ArgPHIs;
+  DenseMap<BasicBlock *, CallInst *> callsAfterSync;
   std::unique_ptr<InstrumentationConfig> Config;
 
   // Declarations of interposition functions.
