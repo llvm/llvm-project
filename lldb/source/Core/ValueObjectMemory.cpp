@@ -117,7 +117,7 @@ ConstString ValueObjectMemory::GetTypeName() {
 
 ConstString ValueObjectMemory::GetDisplayTypeName() {
   if (m_type_sp)
-    return m_type_sp->GetForwardCompilerType().GetDisplayTypeName();
+    return m_type_sp->GetForwardCompilerType().GetDisplayTypeName(GetFrameSP());
   return m_compiler_type.GetDisplayTypeName();
 }
 

@@ -320,9 +320,10 @@ ConstString CompilerType::GetTypeName() const {
   return ConstString("<invalid>");
 }
 
-ConstString CompilerType::GetDisplayTypeName() const {
+ConstString
+CompilerType::GetDisplayTypeName(lldb::StackFrameSP frame_sp) const {
   if (IsValid()) {
-    return m_type_system->GetDisplayTypeName(m_type);
+    return m_type_system->GetDisplayTypeName(m_type, frame_sp);
   }
   return ConstString();
 }
