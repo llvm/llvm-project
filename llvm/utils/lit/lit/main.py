@@ -26,7 +26,6 @@ def main(builtinParameters = {}):
     userParams = create_user_parameters(builtinParameters, opts)
     isWindows = platform.system() == 'Windows'
 
-    # Create the global config object.
     litConfig = lit.LitConfig.LitConfig(
         progname = os.path.basename(sys.argv[0]),
         path = opts.path,
@@ -42,7 +41,6 @@ def main(builtinParameters = {}):
         maxFailures = opts.maxFailures,
         echo_all_commands = opts.echoAllCommands)
 
-    # Perform test discovery.
     tests = lit.discovery.find_tests_for_inputs(litConfig, opts.test_paths)
 
     # Command line overrides configuration for maxIndividualTestTime.
@@ -60,7 +58,6 @@ def main(builtinParameters = {}):
         print_suites_or_tests(tests, opts)
         return
 
-    # Select and order the tests.
     numTotalTests = len(tests)
 
     if opts.filter:
@@ -68,38 +65,28 @@ def main(builtinParameters = {}):
 
     determine_order(tests, opts)
 
-    # Then optionally restrict our attention to a shard of the tests.
     if opts.shard:
         (run, shards) = opts.shard
         tests = filter_by_shard(tests, run, shards, litConfig)
 
-    # Finally limit the number of tests, if desired.
     if opts.maxTests is not None:
         tests = tests[:opts.maxTests]
 
-    # Don't create more workers than tests.
     opts.numWorkers = min(len(tests), opts.numWorkers)
 
-    testing_time = run_tests(tests, litConfig, opts, numTotalTests)
+    elapsed = run_tests(tests, litConfig, opts, numTotalTests)
 
-    # move into print_summary
-    if not opts.quiet:
-        print('Testing Time: %.2fs' % (testing_time,))
+    print_summary(tests, elapsed, opts)
 
-    print_summary(tests, opts)
-
-    # Write out the test data, if requested.
     if opts.output_path:
-        write_test_results(tests, litConfig, testing_time, opts.output_path)
+        write_test_results(tests, litConfig, elapsed, opts.output_path)
     if opts.xunit_output_file:
         write_test_results_xunit(tests, opts)
 
-    # If we encountered any additional errors, exit abnormally.
     if litConfig.numErrors:
         sys.stderr.write('\n%d error(s), exiting.\n' % litConfig.numErrors)
         sys.exit(2)
 
-    # Warn about warnings.
     if litConfig.numWarnings:
         sys.stderr.write('\n%d warning(s) in tests.\n' % litConfig.numWarnings)
 
@@ -241,7 +228,10 @@ def run_tests_in_tmp_dir(run_callback, litConfig):
                 # FIXME: Re-try after timeout on Windows.
                 litConfig.warning("Failed to delete temp directory '%s'" % tmp_dir)
 
-def print_summary(tests, opts):
+def print_summary(tests, elapsed, opts):
+    if not opts.quiet:
+        print('Testing Time: %.2fs' % elapsed)
+
     byCode = {}
     for test in tests:
         if test.result.code not in byCode:
@@ -288,12 +278,12 @@ def print_summary(tests, opts):
         if N:
             print('  %s: %d' % (name,N))
 
-def write_test_results(tests, lit_config, testing_time, output_path):
+def write_test_results(tests, lit_config, elapsed, output_path):
     # Construct the data we will write.
     data = {}
     # Encode the current lit version as a schema version.
     data['__version__'] = lit.__versioninfo__
-    data['elapsed'] = testing_time
+    data['elapsed'] = elapsed
     # FIXME: Record some information on the lit configuration used?
     # FIXME: Record information from the individual test suites?
 
