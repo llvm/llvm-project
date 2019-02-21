@@ -38,15 +38,19 @@ LegalityPredicate LegalityPredicates::typePairInSet(
   };
 }
 
-LegalityPredicate LegalityPredicates::typePairAndMemSizeInSet(
+LegalityPredicate LegalityPredicates::typePairAndMemDescInSet(
     unsigned TypeIdx0, unsigned TypeIdx1, unsigned MMOIdx,
-    std::initializer_list<TypePairAndMemSize> TypesAndMemSizeInit) {
-  SmallVector<TypePairAndMemSize, 4> TypesAndMemSize = TypesAndMemSizeInit;
+    std::initializer_list<TypePairAndMemDesc> TypesAndMemDescInit) {
+  SmallVector<TypePairAndMemDesc, 4> TypesAndMemDesc = TypesAndMemDescInit;
   return [=](const LegalityQuery &Query) {
-    TypePairAndMemSize Match = {Query.Types[TypeIdx0], Query.Types[TypeIdx1],
-                                Query.MMODescrs[MMOIdx].SizeInBits};
-    return std::find(TypesAndMemSize.begin(), TypesAndMemSize.end(), Match) !=
-           TypesAndMemSize.end();
+    TypePairAndMemDesc Match = {Query.Types[TypeIdx0], Query.Types[TypeIdx1],
+                                Query.MMODescrs[MMOIdx].SizeInBits,
+                                Query.MMODescrs[MMOIdx].AlignInBits};
+    return std::find_if(
+      TypesAndMemDesc.begin(), TypesAndMemDesc.end(),
+      [=](const TypePairAndMemDesc &Entry) ->bool {
+        return Match.isCompatible(Entry);
+      }) != TypesAndMemDesc.end();
   };
 }
 

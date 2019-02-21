@@ -206,9 +206,6 @@ def           : FPUnaryOpDynFrmAlias<FCVT_S_LU, "fcvt.s.lu", FPR32, GPR>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtF] in {
-// TODO flw
-// TODO fsw
-
 def : InstAlias<"fmv.s $rd, $rs",  (FSGNJ_S  FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fabs.s $rd, $rs", (FSGNJX_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
 def : InstAlias<"fneg.s $rd, $rs", (FSGNJN_S FPR32:$rd, FPR32:$rs, FPR32:$rs)>;
@@ -244,6 +241,9 @@ def : InstAlias<"fsflagsi $imm",      (CSRRWI      X0, 0x001, uimm5:$imm), 2>;
 // spellings should be supported by standard tools.
 def : MnemonicAlias<"fmv.s.x", "fmv.w.x">;
 def : MnemonicAlias<"fmv.x.s", "fmv.x.w">;
+
+def PseudoFLW  : PseudoFloatLoad<"flw", FPR32>;
+def PseudoFSW  : PseudoStore<"fsw", FPR32>;
 } // Predicates = [HasStdExtF]
 
 //===----------------------------------------------------------------------===//

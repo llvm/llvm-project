@@ -24,6 +24,7 @@ set(HWASAN_RTL_HEADERS
   hwasan_flags.h
   hwasan_flags.inc
   hwasan_interface_internal.h
+  hwasan_malloc_bisect.h
   hwasan_mapping.h
   hwasan_poisoning.h
   hwasan_report.h
@@ -55,7 +56,7 @@ append_list_if(COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC
   -ftls-model=initial-exec HWASAN_DYNAMIC_CFLAGS)
 append_list_if(MSVC /DEBUG HWASAN_DYNAMIC_LINK_FLAGS)
 
-set(HWASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARY} ${SANITIZER_COMMON_LINK_LIBS})
+set(HWASAN_DYNAMIC_LIBS ${SANITIZER_CXX_ABI_LIBRARIES} ${SANITIZER_COMMON_LINK_LIBS})
 
 append_list_if(COMPILER_RT_HAS_LIBDL dl HWASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBRT rt HWASAN_DYNAMIC_LIBS)

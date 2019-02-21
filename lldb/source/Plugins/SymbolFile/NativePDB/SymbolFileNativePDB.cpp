@@ -315,7 +315,7 @@ uint32_t SymbolFileNativePDB::CalculateAbilities() {
 }
 
 void SymbolFileNativePDB::InitializeObject() {
-  m_obj_load_address = m_obj_file->GetFileOffset();
+  m_obj_load_address = m_obj_file->GetBaseAddress().GetFileAddress();
   m_index->SetLoadAddress(m_obj_load_address);
   m_index->ParseSectionContribs();
 

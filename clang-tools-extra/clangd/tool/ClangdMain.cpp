@@ -163,7 +163,7 @@ static llvm::cl::opt<Path> IndexFile(
     "index-file",
     llvm::cl::desc(
         "Index file to build the static index. The file must have been created "
-        "by a compatible clangd-index.\n"
+        "by a compatible clangd-indexer.\n"
         "WARNING: This option is experimental only, and will be removed "
         "eventually. Don't rely on it."),
     llvm::cl::init(""), llvm::cl::Hidden);

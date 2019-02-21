@@ -124,6 +124,11 @@ private:
   /// result elements, and replacing the vreg of the operand in place.
   void moreElementsVectorDst(MachineInstr &MI, LLT MoreTy, unsigned OpIdx);
 
+  /// Legalize a single operand \p OpIdx of the machine instruction \p MI as a
+  /// Use by producing a vector with undefined high elements, extracting the
+  /// original vector type, and replacing the vreg of the operand in place.
+  void moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy, unsigned OpIdx);
+
   LegalizeResult
   widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx, LLT WideTy);
   LegalizeResult

@@ -96,6 +96,8 @@ def err_drv_clang_unsupported : Error<
   "the clang compiler does not support '%0'">;
 def err_drv_clang_unsupported_opt_cxx_darwin_i386 : Error<
   "the clang compiler does not support '%0' for C++ on Darwin/i386">;
+def err_drv_clang_unsupported_opt_pg_darwin: Error<
+  "the clang compiler does not support -pg option on %select{Darwin|versions of OS X 10.9 and later}0">;
 def err_drv_clang_unsupported_opt_faltivec : Error<
   "the clang compiler does not support '%0', %1">;
 def err_drv_command_failed : Error<

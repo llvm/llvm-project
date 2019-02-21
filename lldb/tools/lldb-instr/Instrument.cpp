@@ -104,8 +104,7 @@ static std::string GetRegisterConstructorMacro(StringRef Class,
                                                StringRef Signature) {
   std::string Macro;
   llvm::raw_string_ostream OS(Macro);
-  OS << "LLDB_REGISTER_CONSTRUCTOR(" << Class << ", (" << Signature
-     << "));\n\n";
+  OS << "LLDB_REGISTER_CONSTRUCTOR(" << Class << ", (" << Signature << "));\n";
   return OS.str();
 }
 
@@ -120,6 +119,33 @@ static std::string GetRegisterMethodMacro(StringRef Result, StringRef Class,
   return OS.str();
 }
 
+class SBReturnVisitor : public RecursiveASTVisitor<SBReturnVisitor> {
+public:
+  SBReturnVisitor(Rewriter &R) : MyRewriter(R) {}
+
+  bool VisitReturnStmt(ReturnStmt *Stmt) {
+    Expr *E = Stmt->getRetValue();
+
+    if (E->getBeginLoc().isMacroID())
+      return false;
+
+    SourceRange R(E->getBeginLoc(), E->getEndLoc());
+
+    StringRef WrittenExpr = Lexer::getSourceText(
+        CharSourceRange::getTokenRange(R), MyRewriter.getSourceMgr(),
+        MyRewriter.getLangOpts());
+
+    std::string ReplacementText =
+        "LLDB_RECORD_RESULT(" + WrittenExpr.str() + ")";
+    MyRewriter.ReplaceText(R, ReplacementText);
+
+    return true;
+  }
+
+private:
+  Rewriter &MyRewriter;
+};
+
 class SBVisitor : public RecursiveASTVisitor<SBVisitor> {
 public:
   SBVisitor(Rewriter &R, ASTContext &Context)
@@ -130,6 +156,15 @@ public:
     // comment for details.
     if (ShouldSkip(Decl))
       return false;
+
+    // Skip CXXMethodDecls that already starts with a macro. This should make
+    // it easier to rerun the tool to find missing macros.
+    Stmt *Body = Decl->getBody();
+    for (auto &C : Body->children()) {
+      if (C->getBeginLoc().isMacroID())
+        return false;
+      break;
+    }
 
     // Print 'bool' instead of '_Bool'.
     PrintingPolicy Policy(Context.getLangOpts());
@@ -182,14 +217,6 @@ public:
           Decl->isStatic(), Decl->isConst());
     }
 
-    // If this CXXMethodDecl already starts with a macro we're done.
-    Stmt *Body = Decl->getBody();
-    for (auto &C : Body->children()) {
-      if (C->getBeginLoc().isMacroID())
-        return false;
-      break;
-    }
-
     // Insert the macro at the beginning of the function. We don't attempt to
     // fix the formatting and instead rely on clang-format to fix it after the
     // tool has run. This is also the reason that the macros end with two
@@ -199,6 +226,13 @@ public:
         Body->getBeginLoc(), 0, MyRewriter.getSourceMgr(),
         MyRewriter.getLangOpts());
     MyRewriter.InsertTextAfter(InsertLoc, Macro);
+
+    // If the function returns a class or struct, we need to wrap its return
+    // statement(s).
+    if (ReturnType->isStructureOrClassType()) {
+      SBReturnVisitor Visitor(MyRewriter);
+      Visitor.TraverseDecl(Decl);
+    }
 
     return true;
   }
@@ -210,8 +244,9 @@ private:
   ///  1. Decls outside the main source file,
   ///  2. Decls that are only present in the source file,
   ///  3. Decls that are not definitions,
-  ///  4. Non-public decls,
-  ///  5. Destructors.
+  ///  4. Non-public methods,
+  ///  5. Variadic methods.
+  ///  6. Destructors.
   bool ShouldSkip(CXXMethodDecl *Decl) {
     // Skip anything outside the main file.
     if (!MyRewriter.getSourceMgr().isInMainFile(Decl->getBeginLoc()))
@@ -228,9 +263,13 @@ private:
     if (!Body)
       return true;
 
-    // Skip non-public decls.
+    // Skip non-public methods.
     AccessSpecifier AS = Decl->getAccess();
     if (AS != AccessSpecifier::AS_public)
+      return true;
+
+    // Skip variadic methods.
+    if (Decl->isVariadic())
       return true;
 
     // Skip destructors.
@@ -265,10 +304,18 @@ class SBAction : public ASTFrontendAction {
 public:
   SBAction() = default;
 
-  void EndSourceFileAction() override { MyRewriter.overwriteChangedFiles(); }
+  bool BeginSourceFileAction(CompilerInstance &CI) override {
+    llvm::outs() << "{\n";
+    return true;
+  }
+
+  void EndSourceFileAction() override {
+    llvm::outs() << "}\n";
+    MyRewriter.overwriteChangedFiles();
+  }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef file) override {
+                                                 StringRef File) override {
     MyRewriter.setSourceMgr(CI.getSourceManager(), CI.getLangOpts());
     return llvm::make_unique<SBConsumer>(MyRewriter, CI.getASTContext());
   }

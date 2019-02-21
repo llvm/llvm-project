@@ -5505,6 +5505,10 @@ SDValue SystemZTargetLowering::combineJOIN_DWORDS(
 
 SDValue SystemZTargetLowering::combineFP_ROUND(
     SDNode *N, DAGCombinerInfo &DCI) const {
+
+  if (!Subtarget.hasVector())
+    return SDValue();
+
   // (fpround (extract_vector_elt X 0))
   // (fpround (extract_vector_elt X 1)) ->
   // (extract_vector_elt (VROUND X) 0)
@@ -5552,6 +5556,10 @@ SDValue SystemZTargetLowering::combineFP_ROUND(
 
 SDValue SystemZTargetLowering::combineFP_EXTEND(
     SDNode *N, DAGCombinerInfo &DCI) const {
+
+  if (!Subtarget.hasVector())
+    return SDValue();
+
   // (fpextend (extract_vector_elt X 0))
   // (fpextend (extract_vector_elt X 2)) ->
   // (extract_vector_elt (VEXTEND X) 0)

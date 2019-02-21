@@ -150,6 +150,11 @@ OPTIONS
 
  Display the version of llvm-cov.
 
+.. option:: -x, --hash-filenames
+
+ Use md5 hash of file name when naming the coverage output files. The source
+ file name will be suffixed by ``##`` followed by MD5 hash calculated for it.
+
 EXIT STATUS
 ^^^^^^^^^^^
 

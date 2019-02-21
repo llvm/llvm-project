@@ -207,8 +207,7 @@ define <4 x i64> @QQ64(i64* %ptr) nounwind uwtable readnone ssp {
 ; X32-LABEL: QQ64:
 ; X32:       ## %bb.0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X32-NEXT:    vbroadcastsd (%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: QQ64:
@@ -1368,8 +1367,7 @@ define void @isel_crash_4q(i64* %cV_R.addr) {
 ; X32-NEXT:    movl 8(%ebp), %eax
 ; X32-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X32-NEXT:    vmovaps %ymm0, (%esp)
-; X32-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    vbroadcastsd %xmm1, %ymm1
+; X32-NEXT:    vbroadcastsd (%eax), %ymm1
 ; X32-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; X32-NEXT:    vmovaps %ymm1, {{[0-9]+}}(%esp)
 ; X32-NEXT:    movl %ebp, %esp

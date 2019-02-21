@@ -400,7 +400,7 @@ bool LiveVariables::HandlePhysRegKill(unsigned Reg, MachineInstr *MI) {
                                                 true/*IsImp*/, true/*IsKill*/));
     else {
       MachineOperand *MO =
-        LastRefOrPartRef->findRegisterDefOperand(Reg, false, TRI);
+        LastRefOrPartRef->findRegisterDefOperand(Reg, false, false, TRI);
       bool NeedEC = MO->isEarlyClobber() && MO->getReg() != Reg;
       // If the last reference is the last def, then it's not used at all.
       // That is, unless we are currently processing the last reference itself.

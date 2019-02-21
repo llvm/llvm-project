@@ -80,24 +80,26 @@ class Scheduler : public HardwareUnit {
   // the instruction stage (see Instruction::InstrStage).
   //
   // An Instruction dispatched to the Scheduler is added to the WaitSet if not
-  // all its register operands are available, and at least one latency is unknown.
-  // By construction, the WaitSet only contains instructions that are in the
-  // IS_DISPATCHED stage.
+  // all its register operands are available, and at least one latency is
+  // unknown.  By construction, the WaitSet only contains instructions that are
+  // in the IS_DISPATCHED stage.
   //
   // An Instruction transitions from the WaitSet to the PendingSet if the
-  // instruction is not ready yet, but the latency of every register read is known.
-  // Instructions in the PendingSet are expected to be in the IS_PENDING stage.
+  // instruction is not ready yet, but the latency of every register read is
+  // known.  Instructions in the PendingSet can only be in the IS_PENDING or
+  // IS_READY stage.  Only IS_READY instructions that are waiting on memory
+  // dependencies can be added to the PendingSet.
   //
   // Instructions in the PendingSet are immediately dominated only by
-  // instructions that have already been issued to the underlying pipelines.
-  // In the presence of bottlenecks caused by data dependencies, the PendingSet
-  // can be inspected to identify problematic data dependencies between
+  // instructions that have already been issued to the underlying pipelines.  In
+  // the presence of bottlenecks caused by data dependencies, the PendingSet can
+  // be inspected to identify problematic data dependencies between
   // instructions.
   //
   // An instruction is moved to the ReadySet when all register operands become
   // available, and all memory dependencies are met.  Instructions that are
-  // moved from the PendingSet to the ReadySet transition in state from
-  // 'IS_PENDING' to 'IS_READY'.
+  // moved from the PendingSet to the ReadySet must transition to the 'IS_READY'
+  // stage.
   //
   // On every cycle, the Scheduler checks if it can promote instructions from the
   // PendingSet to the ReadySet.
@@ -117,6 +119,11 @@ class Scheduler : public HardwareUnit {
   // the ready set due to unavailable pipeline resources.
   // Each bit of the mask represents an unavailable resource.
   uint64_t BusyResourceUnits;
+
+  // Counts the number of instructions dispatched during this cycle that are
+  // added to the pending set. This information is used by the bottleneck
+  // analysis when analyzing instructions in the pending set.
+  unsigned NumDispatchedToThePendingSet;
 
   /// Verify the given selection strategy and set the Strategy member
   /// accordingly.  If no strategy is provided, the DefaultSchedulerStrategy is
@@ -153,7 +160,8 @@ public:
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0) {
+      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0),
+        NumDispatchedToThePendingSet(0) {
     initializeStrategy(std::move(SelectStrategy));
   }
 
@@ -182,11 +190,7 @@ public:
   /// Returns true if instruction IR is ready to be issued to the underlying
   /// pipelines. Note that this operation cannot fail; it assumes that a
   /// previous call to method `isAvailable(IR)` returned `SC_AVAILABLE`.
-  void dispatch(const InstRef &IR);
-
-  /// Returns true if IR is ready to be executed by the underlying pipelines.
-  /// This method assumes that IR has been previously dispatched.
-  bool isReady(const InstRef &IR) const;
+  bool dispatch(const InstRef &IR);
 
   /// Issue an instruction and populates a vector of used pipeline resources,
   /// and a vector of instructions that transitioned to the ready state as a

@@ -221,38 +221,32 @@ define void @fptosi_8f64_8i16() #0 {
 }
 
 define void @fptosi_8f64_8i8() #0 {
-; SSE-LABEL: @fptosi_8f64_8i8(
-; SSE-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 0), align 8
-; SSE-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 1), align 8
-; SSE-NEXT:    [[A2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 2), align 8
-; SSE-NEXT:    [[A3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 3), align 8
-; SSE-NEXT:    [[A4:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4), align 8
-; SSE-NEXT:    [[A5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 5), align 8
-; SSE-NEXT:    [[A6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 6), align 8
-; SSE-NEXT:    [[A7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 7), align 8
-; SSE-NEXT:    [[CVT0:%.*]] = fptosi double [[A0]] to i8
-; SSE-NEXT:    [[CVT1:%.*]] = fptosi double [[A1]] to i8
-; SSE-NEXT:    [[CVT2:%.*]] = fptosi double [[A2]] to i8
-; SSE-NEXT:    [[CVT3:%.*]] = fptosi double [[A3]] to i8
-; SSE-NEXT:    [[CVT4:%.*]] = fptosi double [[A4]] to i8
-; SSE-NEXT:    [[CVT5:%.*]] = fptosi double [[A5]] to i8
-; SSE-NEXT:    [[CVT6:%.*]] = fptosi double [[A6]] to i8
-; SSE-NEXT:    [[CVT7:%.*]] = fptosi double [[A7]] to i8
-; SSE-NEXT:    store i8 [[CVT0]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 0), align 1
-; SSE-NEXT:    store i8 [[CVT1]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 1), align 1
-; SSE-NEXT:    store i8 [[CVT2]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 2), align 1
-; SSE-NEXT:    store i8 [[CVT3]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 3), align 1
-; SSE-NEXT:    store i8 [[CVT4]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 4), align 1
-; SSE-NEXT:    store i8 [[CVT5]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 5), align 1
-; SSE-NEXT:    store i8 [[CVT6]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 6), align 1
-; SSE-NEXT:    store i8 [[CVT7]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 7), align 1
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: @fptosi_8f64_8i8(
-; AVX-NEXT:    [[TMP1:%.*]] = load <8 x double>, <8 x double>* bitcast ([8 x double]* @src64 to <8 x double>*), align 8
-; AVX-NEXT:    [[TMP2:%.*]] = fptosi <8 x double> [[TMP1]] to <8 x i8>
-; AVX-NEXT:    store <8 x i8> [[TMP2]], <8 x i8>* bitcast ([64 x i8]* @dst8 to <8 x i8>*), align 1
-; AVX-NEXT:    ret void
+; CHECK-LABEL: @fptosi_8f64_8i8(
+; CHECK-NEXT:    [[A0:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 0), align 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 1), align 8
+; CHECK-NEXT:    [[A2:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 2), align 8
+; CHECK-NEXT:    [[A3:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 3), align 8
+; CHECK-NEXT:    [[A4:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 4), align 8
+; CHECK-NEXT:    [[A5:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 5), align 8
+; CHECK-NEXT:    [[A6:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 6), align 8
+; CHECK-NEXT:    [[A7:%.*]] = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 7), align 8
+; CHECK-NEXT:    [[CVT0:%.*]] = fptosi double [[A0]] to i8
+; CHECK-NEXT:    [[CVT1:%.*]] = fptosi double [[A1]] to i8
+; CHECK-NEXT:    [[CVT2:%.*]] = fptosi double [[A2]] to i8
+; CHECK-NEXT:    [[CVT3:%.*]] = fptosi double [[A3]] to i8
+; CHECK-NEXT:    [[CVT4:%.*]] = fptosi double [[A4]] to i8
+; CHECK-NEXT:    [[CVT5:%.*]] = fptosi double [[A5]] to i8
+; CHECK-NEXT:    [[CVT6:%.*]] = fptosi double [[A6]] to i8
+; CHECK-NEXT:    [[CVT7:%.*]] = fptosi double [[A7]] to i8
+; CHECK-NEXT:    store i8 [[CVT0]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 0), align 1
+; CHECK-NEXT:    store i8 [[CVT1]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 1), align 1
+; CHECK-NEXT:    store i8 [[CVT2]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 2), align 1
+; CHECK-NEXT:    store i8 [[CVT3]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 3), align 1
+; CHECK-NEXT:    store i8 [[CVT4]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 4), align 1
+; CHECK-NEXT:    store i8 [[CVT5]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 5), align 1
+; CHECK-NEXT:    store i8 [[CVT6]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 6), align 1
+; CHECK-NEXT:    store i8 [[CVT7]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 7), align 1
+; CHECK-NEXT:    ret void
 ;
   %a0 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 0), align 8
   %a1 = load double, double* getelementptr inbounds ([8 x double], [8 x double]* @src64, i32 0, i64 1), align 8
@@ -461,9 +455,30 @@ define void @fptosi_8f32_8i16() #0 {
 
 define void @fptosi_8f32_8i8() #0 {
 ; CHECK-LABEL: @fptosi_8f32_8i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, <8 x float>* bitcast ([16 x float]* @src32 to <8 x float>*), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fptosi <8 x float> [[TMP1]] to <8 x i8>
-; CHECK-NEXT:    store <8 x i8> [[TMP2]], <8 x i8>* bitcast ([64 x i8]* @dst8 to <8 x i8>*), align 1
+; CHECK-NEXT:    [[A0:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 0), align 4
+; CHECK-NEXT:    [[A1:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 1), align 4
+; CHECK-NEXT:    [[A2:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 2), align 4
+; CHECK-NEXT:    [[A3:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 3), align 4
+; CHECK-NEXT:    [[A4:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 4), align 4
+; CHECK-NEXT:    [[A5:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 5), align 4
+; CHECK-NEXT:    [[A6:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 6), align 4
+; CHECK-NEXT:    [[A7:%.*]] = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 7), align 4
+; CHECK-NEXT:    [[CVT0:%.*]] = fptosi float [[A0]] to i8
+; CHECK-NEXT:    [[CVT1:%.*]] = fptosi float [[A1]] to i8
+; CHECK-NEXT:    [[CVT2:%.*]] = fptosi float [[A2]] to i8
+; CHECK-NEXT:    [[CVT3:%.*]] = fptosi float [[A3]] to i8
+; CHECK-NEXT:    [[CVT4:%.*]] = fptosi float [[A4]] to i8
+; CHECK-NEXT:    [[CVT5:%.*]] = fptosi float [[A5]] to i8
+; CHECK-NEXT:    [[CVT6:%.*]] = fptosi float [[A6]] to i8
+; CHECK-NEXT:    [[CVT7:%.*]] = fptosi float [[A7]] to i8
+; CHECK-NEXT:    store i8 [[CVT0]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 0), align 1
+; CHECK-NEXT:    store i8 [[CVT1]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 1), align 1
+; CHECK-NEXT:    store i8 [[CVT2]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 2), align 1
+; CHECK-NEXT:    store i8 [[CVT3]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 3), align 1
+; CHECK-NEXT:    store i8 [[CVT4]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 4), align 1
+; CHECK-NEXT:    store i8 [[CVT5]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 5), align 1
+; CHECK-NEXT:    store i8 [[CVT6]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 6), align 1
+; CHECK-NEXT:    store i8 [[CVT7]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @dst8, i32 0, i64 7), align 1
 ; CHECK-NEXT:    ret void
 ;
   %a0 = load float, float* getelementptr inbounds ([16 x float], [16 x float]* @src32, i32 0, i64 0), align 4

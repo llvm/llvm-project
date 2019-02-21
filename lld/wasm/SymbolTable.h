@@ -49,6 +49,8 @@ public:
 
   Symbol *find(StringRef Name);
 
+  void replace(StringRef Name, Symbol* Sym);
+
   void trace(StringRef Name);
 
   Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
@@ -79,12 +81,15 @@ public:
   DefinedFunction *addSyntheticFunction(StringRef Name, uint32_t Flags,
                                         InputFunction *Function);
 
+  void handleSymbolVariants();
   void handleWeakUndefines();
 
 private:
   std::pair<Symbol *, bool> insert(StringRef Name, const InputFile *File);
   std::pair<Symbol *, bool> insertName(StringRef Name);
 
+  bool getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
+                          const InputFile *File, Symbol **Out);
   InputFunction *replaceWithUnreachable(Symbol *Sym, const WasmSignature &Sig,
                                         StringRef DebugName);
 
@@ -93,6 +98,10 @@ private:
   // ever added.
   llvm::DenseMap<llvm::CachedHashStringRef, int> SymMap;
   std::vector<Symbol *> SymVector;
+
+  // For certain symbols types, e.g. function symbols, we allow for muliple
+  // variants of the same symbol with different signatures.
+  llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> SymVariants;
 
   llvm::DenseSet<llvm::CachedHashStringRef> Comdats;
 

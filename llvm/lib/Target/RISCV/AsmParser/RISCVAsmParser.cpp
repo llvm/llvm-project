@@ -20,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
@@ -78,8 +79,21 @@ class RISCVAsmParser : public MCTargetAsmParser {
   // synthesize the desired immedate value into the destination register.
   void emitLoadImm(unsigned DestReg, int64_t Value, MCStreamer &Out);
 
+  // Helper to emit a combination of AUIPC and SecondOpcode. Used to implement
+  // helpers such as emitLoadLocalAddress and emitLoadAddress.
+  void emitAuipcInstPair(MCOperand DestReg, MCOperand TmpReg,
+                         const MCExpr *Symbol, RISCVMCExpr::VariantKind VKHi,
+                         unsigned SecondOpcode, SMLoc IDLoc, MCStreamer &Out);
+
   // Helper to emit pseudo instruction "lla" used in PC-rel addressing.
   void emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+
+  // Helper to emit pseudo instruction "la" used in GOT/PC-rel addressing.
+  void emitLoadAddress(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+
+  // Helper to emit pseudo load/store instruction with a symbol.
+  void emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
+                           MCStreamer &Out, bool HasTmpReg);
 
   /// Helper for processing MC instructions that have been successfully matched
   /// by MatchAndEmitInstruction. Modifications to the emitted instructions,
@@ -504,10 +518,12 @@ public:
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     if (!IsConstantImm) {
       IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm);
-      return IsValid && VK == RISCVMCExpr::VK_RISCV_PCREL_HI;
+      return IsValid && (VK == RISCVMCExpr::VK_RISCV_PCREL_HI ||
+                         VK == RISCVMCExpr::VK_RISCV_GOT_HI);
     } else {
       return isUInt<20>(Imm) && (VK == RISCVMCExpr::VK_RISCV_None ||
-                                 VK == RISCVMCExpr::VK_RISCV_PCREL_HI);
+                                 VK == RISCVMCExpr::VK_RISCV_PCREL_HI ||
+                                 VK == RISCVMCExpr::VK_RISCV_GOT_HI);
     }
   }
 
@@ -860,8 +876,8 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidUImm20AUIPC:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 20) - 1,
-        "operand must be a symbol with %pcrel_hi() modifier or an integer in "
-        "the range");
+        "operand must be a symbol with a %pcrel_hi/%got_pcrel_hi modifier "
+        "or an integer in the range");
   case Match_InvalidSImm21Lsb0JAL:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 20), (1 << 20) - 2,
@@ -1093,11 +1109,22 @@ OperandMatchResultTy RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
     return MatchOperand_NoMatch;
 
   StringRef Identifier;
+  AsmToken Tok = getLexer().getTok();
+
   if (getParser().parseIdentifier(Identifier))
     return MatchOperand_ParseFail;
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+
+  if (Sym->isVariable()) {
+    const MCExpr *V = Sym->getVariableValue(/*SetUsed=*/false);
+    if (!isa<MCSymbolRefExpr>(V)) {
+      getLexer().UnLex(Tok); // Put back if it's not a bare symbol.
+      return MatchOperand_NoMatch;
+    }
+    Res = V;
+  } else
+    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return MatchOperand_Success;
 }
@@ -1407,42 +1434,101 @@ void RISCVAsmParser::emitLoadImm(unsigned DestReg, int64_t Value,
   }
 }
 
-void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
-                                          MCStreamer &Out) {
-  // The local load address pseudo-instruction "lla" is used in PC-relative
-  // addressing of symbols:
-  //   lla rdest, symbol
-  // expands to
-  //   TmpLabel: AUIPC rdest, %pcrel_hi(symbol)
-  //             ADDI rdest, %pcrel_lo(TmpLabel)
+void RISCVAsmParser::emitAuipcInstPair(MCOperand DestReg, MCOperand TmpReg,
+                                       const MCExpr *Symbol,
+                                       RISCVMCExpr::VariantKind VKHi,
+                                       unsigned SecondOpcode, SMLoc IDLoc,
+                                       MCStreamer &Out) {
+  // A pair of instructions for PC-relative addressing; expands to
+  //   TmpLabel: AUIPC TmpReg, VKHi(symbol)
+  //             OP DestReg, TmpReg, %pcrel_lo(TmpLabel)
   MCContext &Ctx = getContext();
 
   MCSymbol *TmpLabel = Ctx.createTempSymbol(
       "pcrel_hi", /* AlwaysAddSuffix */ true, /* CanBeUnnamed */ false);
   Out.EmitLabel(TmpLabel);
 
-  MCOperand DestReg = Inst.getOperand(0);
-  const RISCVMCExpr *Symbol = RISCVMCExpr::create(
-      Inst.getOperand(1).getExpr(), RISCVMCExpr::VK_RISCV_PCREL_HI, Ctx);
-
+  const RISCVMCExpr *SymbolHi = RISCVMCExpr::create(Symbol, VKHi, Ctx);
   emitToStreamer(
-      Out, MCInstBuilder(RISCV::AUIPC).addOperand(DestReg).addExpr(Symbol));
+      Out, MCInstBuilder(RISCV::AUIPC).addOperand(TmpReg).addExpr(SymbolHi));
 
   const MCExpr *RefToLinkTmpLabel =
       RISCVMCExpr::create(MCSymbolRefExpr::create(TmpLabel, Ctx),
                           RISCVMCExpr::VK_RISCV_PCREL_LO, Ctx);
 
-  emitToStreamer(Out, MCInstBuilder(RISCV::ADDI)
+  emitToStreamer(Out, MCInstBuilder(SecondOpcode)
                           .addOperand(DestReg)
-                          .addOperand(DestReg)
+                          .addOperand(TmpReg)
                           .addExpr(RefToLinkTmpLabel));
+}
+
+void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
+                                          MCStreamer &Out) {
+  // The load local address pseudo-instruction "lla" is used in PC-relative
+  // addressing of local symbols:
+  //   lla rdest, symbol
+  // expands to
+  //   TmpLabel: AUIPC rdest, %pcrel_hi(symbol)
+  //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
+  MCOperand DestReg = Inst.getOperand(0);
+  const MCExpr *Symbol = Inst.getOperand(1).getExpr();
+  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_RISCV_PCREL_HI,
+                    RISCV::ADDI, IDLoc, Out);
+}
+
+void RISCVAsmParser::emitLoadAddress(MCInst &Inst, SMLoc IDLoc,
+                                     MCStreamer &Out) {
+  // The load address pseudo-instruction "la" is used in PC-relative and
+  // GOT-indirect addressing of global symbols:
+  //   la rdest, symbol
+  // expands to either (for non-PIC)
+  //   TmpLabel: AUIPC rdest, %pcrel_hi(symbol)
+  //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
+  // or (for PIC)
+  //   TmpLabel: AUIPC rdest, %got_pcrel_hi(symbol)
+  //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
+  MCOperand DestReg = Inst.getOperand(0);
+  const MCExpr *Symbol = Inst.getOperand(1).getExpr();
+  unsigned SecondOpcode;
+  RISCVMCExpr::VariantKind VKHi;
+  // FIXME: Should check .option (no)pic when implemented
+  if (getContext().getObjectFileInfo()->isPositionIndependent()) {
+    SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
+    VKHi = RISCVMCExpr::VK_RISCV_GOT_HI;
+  } else {
+    SecondOpcode = RISCV::ADDI;
+    VKHi = RISCVMCExpr::VK_RISCV_PCREL_HI;
+  }
+  emitAuipcInstPair(DestReg, DestReg, Symbol, VKHi, SecondOpcode, IDLoc, Out);
+}
+
+void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
+                                         SMLoc IDLoc, MCStreamer &Out,
+                                         bool HasTmpReg) {
+  // The load/store pseudo-instruction does a pc-relative load with
+  // a symbol.
+  //
+  // The expansion looks like this
+  //
+  //   TmpLabel: AUIPC tmp, %pcrel_hi(symbol)
+  //             [S|L]X    rd, %pcrel_lo(TmpLabel)(tmp)
+  MCOperand DestReg = Inst.getOperand(0);
+  unsigned SymbolOpIdx = HasTmpReg ? 2 : 1;
+  unsigned TmpRegOpIdx = HasTmpReg ? 1 : 0;
+  MCOperand TmpReg = Inst.getOperand(TmpRegOpIdx);
+  const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
+  emitAuipcInstPair(DestReg, TmpReg, Symbol, RISCVMCExpr::VK_RISCV_PCREL_HI,
+                    Opcode, IDLoc, Out);
 }
 
 bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
                                         MCStreamer &Out) {
   Inst.setLoc(IDLoc);
 
-  if (Inst.getOpcode() == RISCV::PseudoLI) {
+  switch (Inst.getOpcode()) {
+  default:
+    break;
+  case RISCV::PseudoLI: {
     unsigned Reg = Inst.getOperand(0).getReg();
     const MCOperand &Op1 = Inst.getOperand(1);
     if (Op1.isExpr()) {
@@ -1462,8 +1548,57 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       Imm = SignExtend64<32>(Imm);
     emitLoadImm(Reg, Imm, Out);
     return false;
-  } else if (Inst.getOpcode() == RISCV::PseudoLLA) {
+  }
+  case RISCV::PseudoLLA:
     emitLoadLocalAddress(Inst, IDLoc, Out);
+    return false;
+  case RISCV::PseudoLA:
+    emitLoadAddress(Inst, IDLoc, Out);
+    return false;
+  case RISCV::PseudoLB:
+    emitLoadStoreSymbol(Inst, RISCV::LB, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoLBU:
+    emitLoadStoreSymbol(Inst, RISCV::LBU, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoLH:
+    emitLoadStoreSymbol(Inst, RISCV::LH, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoLHU:
+    emitLoadStoreSymbol(Inst, RISCV::LHU, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoLW:
+    emitLoadStoreSymbol(Inst, RISCV::LW, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoLWU:
+    emitLoadStoreSymbol(Inst, RISCV::LWU, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoLD:
+    emitLoadStoreSymbol(Inst, RISCV::LD, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoFLW:
+    emitLoadStoreSymbol(Inst, RISCV::FLW, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoFLD:
+    emitLoadStoreSymbol(Inst, RISCV::FLD, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoSB:
+    emitLoadStoreSymbol(Inst, RISCV::SB, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoSH:
+    emitLoadStoreSymbol(Inst, RISCV::SH, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoSW:
+    emitLoadStoreSymbol(Inst, RISCV::SW, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoSD:
+    emitLoadStoreSymbol(Inst, RISCV::SD, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoFSW:
+    emitLoadStoreSymbol(Inst, RISCV::FSW, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoFSD:
+    emitLoadStoreSymbol(Inst, RISCV::FSD, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   }
 

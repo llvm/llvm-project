@@ -190,6 +190,7 @@ private:
 
 struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   using SetType = MachineValueTypeSet;
+  std::vector<unsigned> AddrSpaces;
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
@@ -226,6 +227,15 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
     return Map.size() == 1 && Map.begin()->first == DefaultMode;
   }
 
+  bool isPointer() const {
+    return getValueTypeByHwMode().isPointer();
+  }
+
+  unsigned getPtrAddrSpace() const {
+    assert(isPointer());
+    return getValueTypeByHwMode().PtrAddrSpace;
+  }
+
   bool insert(const ValueTypeByHwMode &VVT);
   bool constrain(const TypeSetByHwMode &VTS);
   template <typename Predicate> bool constrain(Predicate P);
@@ -242,6 +252,7 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
   bool validate() const;
 
 private:
+  unsigned PtrAddrSpace = std::numeric_limits<unsigned>::max();
   /// Intersect two sets. Return true if anything has changed.
   bool intersect(SetType &Out, const SetType &In);
 };

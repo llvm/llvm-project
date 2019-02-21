@@ -2299,8 +2299,8 @@ CGDebugInfo::getOrCreateModuleRef(ExternalASTSource::ASTSourceDescriptor Mod,
   // When a module name is specified as -fmodule-name, that module gets a
   // clang::Module object, but it won't actually be built or imported; it will
   // be textual.
-  if (CreateSkeletonCU && IsRootModule && Mod.getASTFile().empty())
-    assert((!M || (M->Name == CGM.getLangOpts().ModuleName)) &&
+  if (CreateSkeletonCU && IsRootModule && Mod.getASTFile().empty() && M)
+    assert(StringRef(M->Name).startswith(CGM.getLangOpts().ModuleName) &&
            "clang module without ASTFile must be specified by -fmodule-name");
 
   if (CreateSkeletonCU && IsRootModule && !Mod.getASTFile().empty()) {

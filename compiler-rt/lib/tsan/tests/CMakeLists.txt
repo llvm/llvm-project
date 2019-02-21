@@ -14,6 +14,12 @@ set(TSAN_UNITTEST_CFLAGS
   -DGTEST_HAS_RTTI=0)
 
 set(TSAN_TEST_ARCH ${TSAN_SUPPORTED_ARCH})
+
+set(LINK_FLAGS)
+foreach(lib ${SANITIZER_TEST_CXX_LIBRARIES})
+  list(APPEND LINK_FLAGS -l${lib})
+endforeach()
+
 if(APPLE)
 
   # Create a static library for test dependencies.
@@ -33,12 +39,12 @@ if(APPLE)
   darwin_filter_host_archs(TSAN_SUPPORTED_ARCH TSAN_TEST_ARCH)
   list(APPEND TSAN_UNITTEST_CFLAGS ${DARWIN_osx_CFLAGS})
 
-  set(LINK_FLAGS "-lc++")
   list(APPEND LINK_FLAGS ${DARWIN_osx_LINK_FLAGS})
   add_weak_symbols("ubsan" LINK_FLAGS)
   add_weak_symbols("sanitizer_common" LINK_FLAGS)
 else()
-  set(LINK_FLAGS "-fsanitize=thread;-lstdc++;-lm")
+  list(APPEND LINK_FLAGS -fsanitize=thread)
+  list(APPEND LINK_FLAGS -lm)
 endif()
 
 set(TSAN_RTL_HEADERS)

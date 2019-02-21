@@ -764,6 +764,36 @@ void LegalizerHelper::moreElementsVectorDst(MachineInstr &MI, LLT WideTy,
   MO.setReg(DstExt);
 }
 
+void LegalizerHelper::moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy,
+                                            unsigned OpIdx) {
+  MachineOperand &MO = MI.getOperand(OpIdx);
+
+  LLT OldTy = MRI.getType(MO.getReg());
+  unsigned OldElts = OldTy.getNumElements();
+  unsigned NewElts = MoreTy.getNumElements();
+
+  unsigned NumParts = NewElts / OldElts;
+
+  // Use concat_vectors if the result is a multiple of the number of elements.
+  if (NumParts * OldElts == NewElts) {
+    SmallVector<unsigned, 8> Parts;
+    Parts.push_back(MO.getReg());
+
+    unsigned ImpDef = MIRBuilder.buildUndef(OldTy).getReg(0);
+    for (unsigned I = 1; I != NumParts; ++I)
+      Parts.push_back(ImpDef);
+
+    auto Concat = MIRBuilder.buildConcatVectors(MoreTy, Parts);
+    MO.setReg(Concat.getReg(0));
+    return;
+  }
+
+  unsigned MoreReg = MRI.createGenericVirtualRegister(MoreTy);
+  unsigned ImpDef = MIRBuilder.buildUndef(MoreTy).getReg(0);
+  MIRBuilder.buildInsert(MoreReg, ImpDef, MO.getReg(), 0);
+  MO.setReg(MoreReg);
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
                                         LLT WideTy) {
@@ -846,20 +876,62 @@ LegalizerHelper::widenScalarUnmergeValues(MachineInstr &MI, unsigned TypeIdx,
 LegalizerHelper::LegalizeResult
 LegalizerHelper::widenScalarExtract(MachineInstr &MI, unsigned TypeIdx,
                                     LLT WideTy) {
-  if (TypeIdx != 1)
-    return UnableToLegalize;
-
+  unsigned DstReg = MI.getOperand(0).getReg();
   unsigned SrcReg = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(SrcReg);
+
+  LLT DstTy = MRI.getType(DstReg);
+  unsigned Offset = MI.getOperand(2).getImm();
+
+  if (TypeIdx == 0) {
+    if (SrcTy.isVector() || DstTy.isVector())
+      return UnableToLegalize;
+
+    SrcOp Src(SrcReg);
+    if (SrcTy.isPointer()) {
+      // Extracts from pointers can be handled only if they are really just
+      // simple integers.
+      const DataLayout &DL = MIRBuilder.getDataLayout();
+      if (DL.isNonIntegralAddressSpace(SrcTy.getAddressSpace()))
+        return UnableToLegalize;
+
+      LLT SrcAsIntTy = LLT::scalar(SrcTy.getSizeInBits());
+      Src = MIRBuilder.buildPtrToInt(SrcAsIntTy, Src);
+      SrcTy = SrcAsIntTy;
+    }
+
+    if (DstTy.isPointer())
+      return UnableToLegalize;
+
+    if (Offset == 0) {
+      // Avoid a shift in the degenerate case.
+      MIRBuilder.buildTrunc(DstReg,
+                            MIRBuilder.buildAnyExtOrTrunc(WideTy, Src));
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
+    // Do a shift in the source type.
+    LLT ShiftTy = SrcTy;
+    if (WideTy.getSizeInBits() > SrcTy.getSizeInBits()) {
+      Src = MIRBuilder.buildAnyExt(WideTy, Src);
+      ShiftTy = WideTy;
+    } else if (WideTy.getSizeInBits() > SrcTy.getSizeInBits())
+      return UnableToLegalize;
+
+    auto LShr = MIRBuilder.buildLShr(
+      ShiftTy, Src, MIRBuilder.buildConstant(ShiftTy, Offset));
+    MIRBuilder.buildTrunc(DstReg, LShr);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   if (!SrcTy.isVector())
     return UnableToLegalize;
 
-  unsigned DstReg = MI.getOperand(0).getReg();
-  LLT DstTy = MRI.getType(DstReg);
   if (DstTy != SrcTy.getElementType())
     return UnableToLegalize;
 
-  unsigned Offset = MI.getOperand(2).getImm();
   if (Offset % SrcTy.getScalarSizeInBits() != 0)
     return UnableToLegalize;
 
@@ -1176,7 +1248,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   }
   case TargetOpcode::G_BRCOND:
     Observer.changingInstr(MI);
-    widenScalarSrc(MI, WideTy, 0, TargetOpcode::G_ANYEXT);
+    widenScalarSrc(MI, WideTy, 0, MIRBuilder.getBoolExtOp(false, false));
     Observer.changedInstr(MI);
     return Legalized;
 
@@ -1596,7 +1668,6 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
       unsigned PartInsertReg = MRI.createGenericVirtualRegister(DstTy);
       MIRBuilder.buildInsert(PartInsertReg, AccumDstReg, PartDstReg, Offset);
       AccumDstReg = PartInsertReg;
-      Offset += NarrowSize;
     }
 
     // Handle the remaining element sized leftover piece.
@@ -2062,6 +2133,11 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_SHL:
   case G_LSHR:
   case G_ASHR:
+  case G_CTLZ:
+  case G_CTLZ_ZERO_UNDEF:
+  case G_CTTZ:
+  case G_CTTZ_ZERO_UNDEF:
+  case G_CTPOP:
     return fewerElementsVectorMultiEltType(MI, TypeIdx, NarrowTy);
   case G_ZEXT:
   case G_SEXT:
@@ -2316,6 +2392,43 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   }
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_OR:
+  case TargetOpcode::G_XOR: {
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 1);
+    moreElementsVectorSrc(MI, MoreTy, 2);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_EXTRACT:
+    if (TypeIdx != 1)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 1);
+    Observer.changedInstr(MI);
+    return Legalized;
+  case TargetOpcode::G_INSERT:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 1);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  case TargetOpcode::G_SELECT:
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    if (MRI.getType(MI.getOperand(1).getReg()).isVector())
+      return UnableToLegalize;
+
+    Observer.changingInstr(MI);
+    moreElementsVectorSrc(MI, MoreTy, 2);
+    moreElementsVectorSrc(MI, MoreTy, 3);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
   default:
     return UnableToLegalize;
   }

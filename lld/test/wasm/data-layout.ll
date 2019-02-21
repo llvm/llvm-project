@@ -37,20 +37,20 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:         - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   7
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1024
 ; CHECK-NEXT:         Content:         '0100000000000000000000000000000003000000000000002804000024040000'
 ; CHECK-NEXT:       - SectionOffset:   45
-; CHECK-NEXT:         MemoryIndex:     0
+; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1056
 ; CHECK-NEXT:         Content:         '0000000000000000'
 ; CHECK-NEXT:       - SectionOffset:   59
-; CHECK-NEXT:         MemoryIndex:     0
-; CHECK-NEXT:         Offset:          
+; CHECK-NEXT:         InitFlags:       0
+; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1064
 ; CHECK-NEXT:         Content:         68656C6C6F0A00
@@ -93,37 +93,37 @@ target triple = "wasm32-unknown-unknown"
 ; RELOC-NEXT:         Addend:          4
 ; RELOC-NEXT:     Segments:
 ; RELOC-NEXT:       - SectionOffset:   6
-; RELOC-NEXT:         MemoryIndex:     0
+; RELOC-NEXT:         InitFlags:       0
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           0
 ; RELOC-NEXT:         Content:         '01000000'
 ; RELOC-NEXT:       - SectionOffset:   15
-; RELOC-NEXT:         MemoryIndex:     0
+; RELOC-NEXT:         InitFlags:       0
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           16
 ; RELOC-NEXT:         Content:         '03000000'
 ; RELOC-NEXT:       - SectionOffset:   24
-; RELOC-NEXT:         MemoryIndex:     0
+; RELOC-NEXT:         InitFlags:       0
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           24
 ; RELOC-NEXT:         Content:         '28000000'
 ; RELOC-NEXT:       - SectionOffset:   33
-; RELOC-NEXT:         MemoryIndex:     0
-; RELOC-NEXT:         Offset:          
+; RELOC-NEXT:         InitFlags:       0
+; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           28
 ; RELOC-NEXT:         Content:         '0000000000000000'
 ; RELOC-NEXT:       - SectionOffset:   46
-; RELOC-NEXT:         MemoryIndex:     0
-; RELOC-NEXT:         Offset:          
+; RELOC-NEXT:         InitFlags:       0
+; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           36
 ; RELOC-NEXT:         Content:         '20000000'
 ; RELOC-NEXT:       - SectionOffset:   55
-; RELOC-NEXT:         MemoryIndex:     0
+; RELOC-NEXT:         InitFlags:       0
 ; RELOC-NEXT:         Offset:
 ; RELOC-NEXT:           Opcode:          I32_CONST
 ; RELOC-NEXT:           Value:           40

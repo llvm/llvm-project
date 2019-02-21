@@ -478,20 +478,6 @@ public:
   virtual bool ParseHeader() = 0;
 
   //------------------------------------------------------------------
-  /// Returns a reference to the UnwindTable for this ObjectFile
-  ///
-  /// The UnwindTable contains FuncUnwinders objects for any function in this
-  /// ObjectFile.  If a FuncUnwinders object hasn't been created yet (i.e. the
-  /// function has yet to be unwound in a stack walk), it will be created when
-  /// requested.  Specifically, we do not create FuncUnwinders objects for
-  /// functions until they are needed.
-  ///
-  /// @return
-  ///     Returns the unwind table for this object file.
-  //------------------------------------------------------------------
-  virtual lldb_private::UnwindTable &GetUnwindTable() { return m_unwind_table; }
-
-  //------------------------------------------------------------------
   /// Returns if the function bounds for symbols in this symbol file are
   /// likely accurate.
   ///
@@ -774,9 +760,6 @@ protected:
                          ///determined).
   DataExtractor
       m_data; ///< The data for this object file so things can be parsed lazily.
-  lldb_private::UnwindTable m_unwind_table; /// < Table of FuncUnwinders objects
-                                            /// created for this ObjectFile's
-                                            /// functions
   lldb::ProcessWP m_process_wp;
   const lldb::addr_t m_memory_addr;
   std::unique_ptr<lldb_private::SectionList> m_sections_up;

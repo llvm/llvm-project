@@ -400,7 +400,7 @@ uptr internal_readlink(const char *path, char *buf, uptr bufsize) {
   return internal_syscall(SYSCALL(readlinkat), AT_FDCWD, (uptr)path, (uptr)buf,
                           bufsize);
 #else
-  return internal_syscall(SYSCALL(readlink), path, buf, bufsize);
+  return internal_syscall(SYSCALL(readlink), (uptr)path, (uptr)buf, bufsize);
 #endif
 }
 

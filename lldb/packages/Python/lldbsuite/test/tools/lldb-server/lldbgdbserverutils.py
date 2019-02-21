@@ -1,7 +1,7 @@
 """Module for supporting unit testing of the lldb-server debug monitor exe.
 """
 
-from __future__ import print_function
+from __future__ import division, print_function
 
 
 import os
@@ -412,7 +412,7 @@ def pack_register_hex(endian, value, byte_size=None):
             value = value >> 8
         if byte_size:
             # Add zero-fill to the right/end (MSB side) of the value.
-            retval += "00" * (byte_size - len(retval) / 2)
+            retval += "00" * (byte_size - len(retval) // 2)
         return retval
 
     elif endian == 'big':
@@ -422,7 +422,7 @@ def pack_register_hex(endian, value, byte_size=None):
             value = value >> 8
         if byte_size:
             # Add zero-fill to the left/front (MSB side) of the value.
-            retval = ("00" * (byte_size - len(retval) / 2)) + retval
+            retval = ("00" * (byte_size - len(retval) // 2)) + retval
         return retval
 
     else:

@@ -89,6 +89,19 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     // understanding of the linker.
     uint64_t VA = IS->getVA(Offset);
 
+    // MIPS relocatable files can mix regular and microMIPS code.
+    // Linker needs to distinguish such code. To do so microMIPS
+    // symbols has the `STO_MIPS_MICROMIPS` flag in the `st_other`
+    // field. Unfortunately, the `MIPS::relocateOne()` method has
+    // a symbol value only. To pass type of the symbol (regular/microMIPS)
+    // to that routine as well as other places where we write
+    // a symbol value as-is (.dynamic section, `Elf_Ehdr::e_entry`
+    // field etc) do the same trick as compiler uses to mark microMIPS
+    // for CPU - set the less-significant bit.
+    if (Config->EMachine == EM_MIPS && isMicroMips() &&
+        ((Sym.StOther & STO_MIPS_MICROMIPS) || Sym.NeedsPltAddr))
+      VA |= 1;
+
     if (D.isTls() && !Config->Relocatable) {
       // Use the address of the TLS segment's first section rather than the
       // segment's address, because segment addresses aren't initialized until
@@ -149,7 +162,14 @@ uint64_t Symbol::getPPC64LongBranchOffset() const {
 
 uint64_t Symbol::getPltVA() const {
   PltSection *Plt = IsInIplt ? In.Iplt : In.Plt;
-  return Plt->getVA() + Plt->HeaderSize + PltIndex * Target->PltEntrySize;
+  uint64_t OutVA =
+      Plt->getVA() + Plt->HeaderSize + PltIndex * Target->PltEntrySize;
+  // While linking microMIPS code PLT code are always microMIPS
+  // code. Set the less-significant bit to track that fact.
+  // See detailed comment in the `getSymVA` function.
+  if (Config->EMachine == EM_MIPS && isMicroMips())
+    OutVA |= 1;
+  return OutVA;
 }
 
 uint64_t Symbol::getPPC64LongBranchTableVA() const {

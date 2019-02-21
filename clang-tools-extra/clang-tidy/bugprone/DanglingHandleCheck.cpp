@@ -163,9 +163,8 @@ void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
 
   // Return a temporary.
   Finder->addMatcher(
-      returnStmt(
-          has(ignoringParenImpCasts(exprWithCleanups(has(ignoringParenImpCasts(
-              handleFrom(IsAHandle, handleFromTemporaryValue(IsAHandle))))))))
+      returnStmt(has(exprWithCleanups(has(ignoringParenImpCasts(handleFrom(
+                     IsAHandle, handleFromTemporaryValue(IsAHandle)))))))
           .bind("bad_stmt"),
       this);
 }

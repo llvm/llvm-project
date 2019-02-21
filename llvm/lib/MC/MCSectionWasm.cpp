@@ -62,7 +62,8 @@ void MCSectionWasm::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   printName(OS, getSectionName());
   OS << ",\"";
 
-  // TODO: Print section flags.
+  if (IsPassive)
+    OS << "passive";
 
   OS << '"';
 

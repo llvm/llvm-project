@@ -11,3 +11,6 @@ vfmsub213ps %zmm8, %zmm8, %zmm8 {rn-sae}
 
 // ERR: invalid operand for instruction
 cvtsd2sil  {rn-sae}, %xmm1, %eax
+
+// ERR: Expected an identifier after {
+cvtsd2sil  {{sae}, %xmm1, %eax

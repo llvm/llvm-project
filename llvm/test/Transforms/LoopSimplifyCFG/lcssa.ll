@@ -154,3 +154,41 @@ bb8:                                              ; preds = %bb4, %bb2
 bb10:                                             ; preds = %bb2
   ret void
 }
+
+define void @memlcssa() {
+; CHECK-LABEL: @memlcssa(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 0, label [[ENTRY_SPLIT:%.*]] [
+; CHECK-NEXT:    i32 1, label [[DEFAULT_BB:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       entry-split:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[FOR_BODY]]
+; CHECK:       default.bb:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %exit, %entry
+  br label %switch.bb
+
+switch.bb:                                        ; preds = %for.body
+  switch i2 1, label %default.bb [
+  i2 1, label %case.bb
+  ]
+
+case.bb:                                          ; preds = %switch
+  br label %exit
+
+default.bb:                                       ; preds = %switch
+  unreachable
+
+exit:                                             ; preds = %case.bb
+  call void @foo()
+  br label %for.body
+}
+
+declare void @foo()

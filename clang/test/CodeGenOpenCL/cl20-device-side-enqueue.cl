@@ -11,7 +11,7 @@ typedef struct {int a;} ndrange_t;
 
 // For a block global variable, first emit the block literal as a global variable, then emit the block variable itself.
 // COMMON: [[BL_GLOBAL:@__block_literal_global[^ ]*]] = internal addrspace(1) constant { i32, i32, i8 addrspace(4)* } { i32 {{[0-9]+}}, i32 {{[0-9]+}}, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*, i8 addrspace(3)*)* [[INV_G:@[^ ]+]] to i8*) to i8 addrspace(4)*) }
-// COMMON: @block_G =  addrspace(1) constant void (i8 addrspace(3)*) addrspace(4)* addrspacecast (void (i8 addrspace(3)*) addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* [[BL_GLOBAL]] to void (i8 addrspace(3)*) addrspace(1)*) to void (i8 addrspace(3)*) addrspace(4)*)
+// COMMON: @block_G = addrspace(1) constant %struct.__opencl_block_literal_generic addrspace(4)* addrspacecast (%struct.__opencl_block_literal_generic addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* [[BL_GLOBAL]] to %struct.__opencl_block_literal_generic addrspace(1)*) to %struct.__opencl_block_literal_generic addrspace(4)*)
 
 // For anonymous blocks without captures, emit block literals as global variable.
 // COMMON: [[BLG1:@__block_literal_global[^ ]*]] = internal addrspace(1) constant { i32, i32, i8 addrspace(4)* } { i32 {{[0-9]+}}, i32 {{[0-9]+}}, i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*, i8 addrspace(3)*)* {{@[^ ]+}} to i8*) to i8 addrspace(4)*) }
@@ -77,9 +77,9 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
   // COMMON: store i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* [[INVL1:@__device_side_enqueue_block_invoke[^ ]*]] to i8*) to i8 addrspace(4)*), i8 addrspace(4)** %block.invoke
-  // B32: [[BL:%[0-9]+]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block to void ()*
-  // B64: [[BL:%[0-9]+]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 }>* %block to void ()*
-  // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast void ()* [[BL]] to i8 addrspace(4)*
+  // B32: [[BL:%[0-9]+]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32, i32 addrspace(1)* }>* %block to %struct.__opencl_block_literal_generic*
+  // B64: [[BL:%[0-9]+]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32 addrspace(1)*, i32 addrspace(1)*, i32 }>* %block to %struct.__opencl_block_literal_generic*
+  // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast %struct.__opencl_block_literal_generic* [[BL]] to i8 addrspace(4)*
   // COMMON-LABEL: call i32 @__enqueue_kernel_basic(
   // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVLK1:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
@@ -95,8 +95,8 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: [[WAIT_EVNT:%[0-9]+]] = addrspacecast %opencl.clk_event_t{{.*}}** %event_wait_list to %opencl.clk_event_t{{.*}}* addrspace(4)*
   // COMMON: [[EVNT:%[0-9]+]] = addrspacecast %opencl.clk_event_t{{.*}}** %clk_event to %opencl.clk_event_t{{.*}}* addrspace(4)*
   // COMMON: store i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* [[INVL2:@__device_side_enqueue_block_invoke[^ ]*]] to i8*) to i8 addrspace(4)*), i8 addrspace(4)** %block.invoke
-  // COMMON: [[BL:%[0-9]+]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32{{.*}}, i32{{.*}}, i32{{.*}} }>* %block3 to void ()*
-  // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast void ()* [[BL]] to i8 addrspace(4)*
+  // COMMON: [[BL:%[0-9]+]] = bitcast <{ i32, i32, i8 addrspace(4)*, i32{{.*}}, i32{{.*}}, i32{{.*}} }>* %block3 to %struct.__opencl_block_literal_generic*
+  // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast %struct.__opencl_block_literal_generic* [[BL]] to i8 addrspace(4)*
   // COMMON-LABEL: call i32 @__enqueue_kernel_basic_events
   // COMMON-SAME: (%opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]],  %struct.ndrange_t* {{.*}}, i32 2, %opencl.clk_event_t{{.*}}* addrspace(4)* [[WAIT_EVNT]], %opencl.clk_event_t{{.*}}* addrspace(4)* [[EVNT]],
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVLK2:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),
@@ -300,13 +300,13 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // Emits global block literal [[BLG8]] and invoke function [[INVG8]].
   // The full type of these expressions are long (and repeated elsewhere), so we
   // capture it as part of the regex for convenience and clarity.
-  // COMMON: store void () addrspace(4)* addrspacecast (void () addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* [[BLG8]] to void () addrspace(1)*) to void () addrspace(4)*), void () addrspace(4)** %block_A
+  // COMMON: store %struct.__opencl_block_literal_generic addrspace(4)* addrspacecast (%struct.__opencl_block_literal_generic addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* [[BLG8]] to %struct.__opencl_block_literal_generic addrspace(1)*) to %struct.__opencl_block_literal_generic addrspace(4)*), %struct.__opencl_block_literal_generic addrspace(4)** %block_A
   void (^const block_A)(void) = ^{
     return;
   };
 
   // Emits global block literal [[BLG9]] and invoke function [[INVG9]].
-  // COMMON: store void (i8 addrspace(3)*) addrspace(4)* addrspacecast (void (i8 addrspace(3)*) addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* [[BLG9]] to void (i8 addrspace(3)*) addrspace(1)*) to void (i8 addrspace(3)*) addrspace(4)*), void (i8 addrspace(3)*) addrspace(4)** %block_B
+  // COMMON: store %struct.__opencl_block_literal_generic addrspace(4)* addrspacecast (%struct.__opencl_block_literal_generic addrspace(1)* bitcast ({ i32, i32, i8 addrspace(4)* } addrspace(1)* [[BLG9]] to %struct.__opencl_block_literal_generic addrspace(1)*) to %struct.__opencl_block_literal_generic addrspace(4)*), %struct.__opencl_block_literal_generic addrspace(4)** %block_B
   void (^const block_B)(local void *) = ^(local void *a) {
     return;
   };
@@ -346,7 +346,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
   // COMMON: store i8 addrspace(4)* addrspacecast (i8* bitcast (void (i8 addrspace(4)*)* [[INVL3:@__device_side_enqueue_block_invoke[^ ]*]] to i8*) to i8 addrspace(4)*), i8 addrspace(4)** %block.invoke
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
-  // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast void ()* {{.*}} to i8 addrspace(4)*
+  // COMMON: [[BL_I8:%[0-9]+]] = addrspacecast %struct.__opencl_block_literal_generic* {{.*}} to i8 addrspace(4)*
   // COMMON-LABEL: call i32 @__enqueue_kernel_basic(
   // COMMON-SAME: %opencl.queue_t{{.*}}* [[DEF_Q]], i32 [[FLAGS]], %struct.ndrange_t* byval [[NDR]]{{([0-9]+)?}},
   // COMMON-SAME: i8 addrspace(4)* addrspacecast (i8* bitcast ({{.*}} [[INVLK3:[^ ]+_kernel]] to i8*) to i8 addrspace(4)*),

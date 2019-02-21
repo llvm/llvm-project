@@ -4,4 +4,6 @@ from lldbsuite.test import decorators
 lldbinline.MakeInlineTest(
     __file__, globals(), [
         decorators.expectedFailureAll(
-            compiler="gcc")])
+            compiler="gcc"),
+        # rdar://problem/48128064
+        decorators.skipIfDarwin])

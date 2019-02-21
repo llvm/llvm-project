@@ -15414,25 +15414,28 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   if (StoreSDNode *ST1 = dyn_cast<StoreSDNode>(Chain)) {
     if (ST->isUnindexed() && !ST->isVolatile() && ST1->isUnindexed() &&
-        !ST1->isVolatile() && ST1->getBasePtr() == Ptr &&
-        ST->getMemoryVT() == ST1->getMemoryVT()) {
-      // If this is a store followed by a store with the same value to the same
-      // location, then the store is dead/noop.
-      if (ST1->getValue() == Value) {
-        // The store is dead, remove it.
+        !ST1->isVolatile()) {
+      if (ST1->getBasePtr() == Ptr && ST1->getValue() == Value &&
+          ST->getMemoryVT() == ST1->getMemoryVT()) {
+        // If this is a store followed by a store with the same value to the
+        // same location, then the store is dead/noop.
         return Chain;
       }
 
-      // If this is a store who's preceeding store to the same location
-      // and no one other node is chained to that store we can effectively
-      // drop the store. Do not remove stores to undef as they may be used as
-      // data sinks.
       if (OptLevel != CodeGenOpt::None && ST1->hasOneUse() &&
           !ST1->getBasePtr().isUndef()) {
-        // ST1 is fully overwritten and can be elided. Combine with it's chain
-        // value.
-        CombineTo(ST1, ST1->getChain());
-        return SDValue();
+        const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
+        const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
+        unsigned STByteSize = ST->getMemoryVT().getSizeInBits() / 8;
+        unsigned ChainByteSize = ST1->getMemoryVT().getSizeInBits() / 8;
+        // If this is a store who's preceeding store to a subset of the current
+        // location and no one other node is chained to that store we can
+        // effectively drop the store. Do not remove stores to undef as they may
+        // be used as data sinks.
+        if (STBase.contains(STByteSize, ChainBase, ChainByteSize, DAG)) {
+          CombineTo(ST1, ST1->getChain());
+          return SDValue();
+        }
       }
     }
   }
@@ -19235,41 +19238,11 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   unsigned NumBytes1 = Op1->getMemoryVT().getStoreSize();
 
   // Check for BaseIndexOffset matching.
-  BaseIndexOffset BasePtr0 = BaseIndexOffset::match(Op0, DAG);
-  BaseIndexOffset BasePtr1 = BaseIndexOffset::match(Op1, DAG);
-  int64_t PtrDiff;
-  if (BasePtr0.getBase().getNode() && BasePtr1.getBase().getNode()) {
-    if (BasePtr0.equalBaseIndex(BasePtr1, DAG, PtrDiff))
-      return !((NumBytes0 <= PtrDiff) || (PtrDiff + NumBytes1 <= 0));
-
-    // If both BasePtr0 and BasePtr1 are FrameIndexes, we will not be
-    // able to calculate their relative offset if at least one arises
-    // from an alloca. However, these allocas cannot overlap and we
-    // can infer there is no alias.
-    if (auto *A = dyn_cast<FrameIndexSDNode>(BasePtr0.getBase()))
-      if (auto *B = dyn_cast<FrameIndexSDNode>(BasePtr1.getBase())) {
-        MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
-        // If the base are the same frame index but the we couldn't find a
-        // constant offset, (indices are different) be conservative.
-        if (A != B && (!MFI.isFixedObjectIndex(A->getIndex()) ||
-                       !MFI.isFixedObjectIndex(B->getIndex())))
-          return false;
-      }
-
-    bool IsFI0 = isa<FrameIndexSDNode>(BasePtr0.getBase());
-    bool IsFI1 = isa<FrameIndexSDNode>(BasePtr1.getBase());
-    bool IsGV0 = isa<GlobalAddressSDNode>(BasePtr0.getBase());
-    bool IsGV1 = isa<GlobalAddressSDNode>(BasePtr1.getBase());
-    bool IsCV0 = isa<ConstantPoolSDNode>(BasePtr0.getBase());
-    bool IsCV1 = isa<ConstantPoolSDNode>(BasePtr1.getBase());
-
-    // If of mismatched base types or checkable indices we can check
-    // they do not alias.
-    if ((BasePtr0.getIndex() == BasePtr1.getIndex() || (IsFI0 != IsFI1) ||
-         (IsGV0 != IsGV1) || (IsCV0 != IsCV1)) &&
-        (IsFI0 || IsGV0 || IsCV0) && (IsFI1 || IsGV1 || IsCV1))
-      return false;
-  }
+  bool IsAlias;
+  if (BaseIndexOffset::computeAliasing(
+          BaseIndexOffset::match(Op0, DAG), NumBytes0,
+          BaseIndexOffset::match(Op1, DAG), NumBytes1, DAG, IsAlias))
+    return IsAlias;
 
   // If we know required SrcValue1 and SrcValue2 have relatively large
   // alignment compared to the size and offset of the access, we may be able

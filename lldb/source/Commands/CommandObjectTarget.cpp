@@ -3533,8 +3533,7 @@ protected:
         start_addr = abi->FixCodeAddress(start_addr);
 
       FuncUnwindersSP func_unwinders_sp(
-          sc.module_sp->GetObjectFile()
-              ->GetUnwindTable()
+          sc.module_sp->GetUnwindTable()
               .GetUncachedFuncUnwindersContainingAddress(start_addr, sc));
       if (!func_unwinders_sp)
         continue;

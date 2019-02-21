@@ -57,6 +57,8 @@ class ELFDumper {
   ErrorOr<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
+  ErrorOr<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
+  ErrorOr<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::Group *> dumpGroup(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::MipsABIFlags *> dumpMipsABIFlags(const Elf_Shdr *Shdr);
 
@@ -179,6 +181,20 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
     case ELF::SHT_NOBITS: {
       ErrorOr<ELFYAML::NoBitsSection *> S = dumpNoBitsSection(&Sec);
+      if (std::error_code EC = S.getError())
+        return EC;
+      Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
+      break;
+    }
+    case ELF::SHT_GNU_versym: {
+      ErrorOr<ELFYAML::SymverSection *> S = dumpSymverSection(&Sec);
+      if (std::error_code EC = S.getError())
+        return EC;
+      Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
+      break;
+    }
+    case ELF::SHT_GNU_verneed: {
+      ErrorOr<ELFYAML::VerneedSection *> S = dumpVerneedSection(&Sec);
       if (std::error_code EC = S.getError())
         return EC;
       Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
@@ -439,6 +455,81 @@ ELFDumper<ELFT>::dumpNoBitsSection(const Elf_Shdr *Shdr) {
   if (std::error_code EC = dumpCommonSection(Shdr, *S))
     return EC;
   S->Size = Shdr->sh_size;
+
+  return S.release();
+}
+
+template <class ELFT>
+ErrorOr<ELFYAML::SymverSection *>
+ELFDumper<ELFT>::dumpSymverSection(const Elf_Shdr *Shdr) {
+  typedef typename ELFT::Half Elf_Half;
+
+  auto S = make_unique<ELFYAML::SymverSection>();
+  if (std::error_code EC = dumpCommonSection(Shdr, *S))
+    return EC;
+
+  auto VersionsOrErr = Obj.template getSectionContentsAsArray<Elf_Half>(Shdr);
+  if (!VersionsOrErr)
+    return errorToErrorCode(VersionsOrErr.takeError());
+  for (const Elf_Half &E : *VersionsOrErr)
+    S->Entries.push_back(E);
+
+  return S.release();
+}
+
+template <class ELFT>
+ErrorOr<ELFYAML::VerneedSection *>
+ELFDumper<ELFT>::dumpVerneedSection(const Elf_Shdr *Shdr) {
+  typedef typename ELFT::Verneed Elf_Verneed;
+  typedef typename ELFT::Vernaux Elf_Vernaux;
+
+  auto S = make_unique<ELFYAML::VerneedSection>();
+  if (std::error_code EC = dumpCommonSection(Shdr, *S))
+    return EC;
+
+  S->Info = Shdr->sh_info;
+
+  auto Contents = Obj.getSectionContents(Shdr);
+  if (!Contents)
+    return errorToErrorCode(Contents.takeError());
+
+  auto StringTableShdrOrErr = Obj.getSection(Shdr->sh_link);
+  if (!StringTableShdrOrErr)
+    return errorToErrorCode(StringTableShdrOrErr.takeError());
+
+  auto StringTableOrErr = Obj.getStringTable(*StringTableShdrOrErr);
+  if (!StringTableOrErr)
+    return errorToErrorCode(StringTableOrErr.takeError());
+
+  llvm::ArrayRef<uint8_t> Data = *Contents;
+  const uint8_t *Buf = Data.data();
+  while (Buf) {
+    const Elf_Verneed *Verneed = reinterpret_cast<const Elf_Verneed *>(Buf);
+
+    ELFYAML::VerneedEntry Entry;
+    Entry.Version = Verneed->vn_version;
+    Entry.File =
+        StringRef(StringTableOrErr->drop_front(Verneed->vn_file).data());
+
+    const uint8_t *BufAux = Buf + Verneed->vn_aux;
+    while (BufAux) {
+      const Elf_Vernaux *Vernaux =
+          reinterpret_cast<const Elf_Vernaux *>(BufAux);
+
+      ELFYAML::VernauxEntry Aux;
+      Aux.Hash = Vernaux->vna_hash;
+      Aux.Flags = Vernaux->vna_flags;
+      Aux.Other = Vernaux->vna_other;
+      Aux.Name =
+          StringRef(StringTableOrErr->drop_front(Vernaux->vna_name).data());
+
+      Entry.AuxV.push_back(Aux);
+      BufAux = Vernaux->vna_next ? BufAux + Vernaux->vna_next : nullptr;
+    }
+
+    S->VerneedV.push_back(Entry);
+    Buf = Verneed->vn_next ? Buf + Verneed->vn_next : nullptr;
+  }
 
   return S.release();
 }

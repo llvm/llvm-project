@@ -557,10 +557,16 @@ static Relocation *getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
 
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
-  auto Range = std::equal_range(IS->Relocations.begin(), IS->Relocations.end(),
-                                D->Value, RelocationOffsetComparator{});
-  for (auto It = std::get<0>(Range); It != std::get<1>(Range); ++It)
-    if (isRelExprOneOf<R_PC>(It->Expr))
+  Relocation R;
+  R.Offset = D->Value;
+  auto Range =
+      std::equal_range(IS->Relocations.begin(), IS->Relocations.end(), R,
+                       [](const Relocation &LHS, const Relocation &RHS) {
+                         return LHS.Offset < RHS.Offset;
+                       });
+
+  for (auto It = Range.first; It != Range.second; ++It)
+    if (It->Expr == R_PC)
       return &*It;
 
   error("R_RISCV_PCREL_LO12 relocation points to " + IS->getObjMsg(D->Value) +
@@ -600,8 +606,6 @@ static int64_t getTlsTpOffset() {
 static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
-  case R_INVALID:
-    return 0;
   case R_ABS:
   case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:

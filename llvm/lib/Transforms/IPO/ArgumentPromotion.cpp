@@ -217,6 +217,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
                                   F->getName());
   NF->copyAttributesFrom(F);
   NF->copyMetadata(F, 0);
+  F->clearMetadata();
 
   LLVM_DEBUG(dbgs() << "ARG PROMOTION:  Promoting to:" << *NF << "\n"
                     << "From: " << *F);
@@ -471,6 +472,7 @@ doPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
     std::advance(I2, ArgIndices.size());
   }
 
+  assert(F->isDeclaration());
   return NF;
 }
 

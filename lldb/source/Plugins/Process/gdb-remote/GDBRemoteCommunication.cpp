@@ -979,8 +979,11 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
 
         g_debugserver_file_spec = debugserver_file_spec;
       } else {
-        debugserver_file_spec =
-            platform->LocateExecutable(DEBUGSERVER_BASENAME);
+        if (platform)
+          debugserver_file_spec =
+              platform->LocateExecutable(DEBUGSERVER_BASENAME);
+        else
+          debugserver_file_spec.Clear();
         if (debugserver_file_spec) {
           // Platform::LocateExecutable() wouldn't return a path if it doesn't
           // exist
@@ -1284,9 +1287,10 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
 
   std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor());
-  if (conn_up->Connect(remote_addr, nullptr) != lldb::eConnectionStatusSuccess)
-    return llvm::make_error<llvm::StringError>("Unable to connect",
-                                               llvm::inconvertibleErrorCode());
+  Status status;
+  if (conn_up->Connect(remote_addr, &status) != lldb::eConnectionStatusSuccess)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Unable to connect: %s", status.AsCString());
 
   client.SetConnection(conn_up.release());
   if (llvm::Error error = accept_status.get().ToError())

@@ -45,6 +45,13 @@ public:
       return false;                                                            \
   } while (0)
 
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TTPL) {
+    SourceLocation Loc = TTPL.getNameLoc();
+    TemplateTypeParmDecl *TTPD = TTPL.getDecl();
+    return IndexCtx.handleReference(TTPD, Loc, Parent, ParentDC,
+                                    SymbolRoleSet());
+  }
+
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
     SourceLocation Loc = TL.getNameLoc();
     TypedefNameDecl *ND = TL.getTypedefNameDecl();
@@ -129,10 +136,10 @@ public:
   template<typename TypeLocType>
   bool HandleTemplateSpecializationTypeLoc(TypeLocType TL) {
     if (const auto *T = TL.getTypePtr()) {
-      if (IndexCtx.shouldIndexImplicitInstantiation()) {
-        if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
-          IndexCtx.handleReference(RD, TL.getTemplateNameLoc(),
-                                   Parent, ParentDC, SymbolRoleSet(), Relations);
+      if (CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
+        if (!RD->isImplicit() || IndexCtx.shouldIndexImplicitInstantiation()) {
+          IndexCtx.handleReference(RD, TL.getTemplateNameLoc(), Parent,
+                                   ParentDC, SymbolRoleSet(), Relations);
           return true;
         }
       }

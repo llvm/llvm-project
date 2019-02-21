@@ -42,6 +42,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   IgnoredExceptions.insert(IgnoredExceptionsVec.begin(),
                            IgnoredExceptionsVec.end());
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
+  Tracer.ignoreBadAlloc(true);
 }
 
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
@@ -70,7 +71,8 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   if (!MatchedDecl)
     return;
 
-  if (Tracer.throwsException(MatchedDecl))
+  if (Tracer.analyze(MatchedDecl).getBehaviour() ==
+      utils::ExceptionAnalyzer::State::Throwing)
     // FIXME: We should provide more information about the exact location where
     // the exception is thrown, maybe the full path the exception escapes
     diag(MatchedDecl->getLocation(),

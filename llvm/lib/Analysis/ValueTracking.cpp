@@ -4347,7 +4347,8 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     // is guaranteed to return.
     return CS.onlyReadsMemory() || CS.onlyAccessesArgMemory() ||
            match(I, m_Intrinsic<Intrinsic::assume>()) ||
-           match(I, m_Intrinsic<Intrinsic::sideeffect>());
+           match(I, m_Intrinsic<Intrinsic::sideeffect>()) ||
+           match(I, m_Intrinsic<Intrinsic::experimental_widenable_condition>());
   }
 
   // Other instructions return normally.

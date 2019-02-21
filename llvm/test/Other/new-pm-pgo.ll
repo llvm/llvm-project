@@ -13,7 +13,6 @@
 ; GEN: Running pass: PGOInstrumentationGen
 ; USE: Running pass: PGOInstrumentationUse
 ; USE: Running pass: PGOIndirectCallPromotion
-; SPLIT: Running pass: HotColdSplittingPass
 ; USE: Running pass: PGOMemOPSizeOpt
 ; SAMPLE_USE_O: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
 ; SAMPLE_USE_PRE_LINK: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
@@ -27,6 +26,7 @@
 ; SAMPLE_USE_POST_LINK-NOT: Running pass: GlobalOptPass
 ; SAMPLE_USE_POST_LINK: Running pass: PGOIndirectCallPromotion
 ; SAMPLE_GEN: Running pass: ModuleToFunctionPassAdaptor<{{.*}}AddDiscriminatorsPass{{.*}}>
+; SPLIT: Running pass: HotColdSplittingPass
 
 define void @foo() {
   ret void

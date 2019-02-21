@@ -1170,7 +1170,7 @@ PreservedAnalyses ModuleAddressSanitizerPass::run(Module &M,
 INITIALIZE_PASS(ASanGlobalsMetadataWrapperPass, "asan-globals-md",
                 "Read metadata to mark which globals should be instrumented "
                 "when running ASan.",
-                false, true);
+                false, true)
 
 char AddressSanitizerLegacyPass::ID = 0;
 

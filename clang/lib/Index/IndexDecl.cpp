@@ -672,6 +672,8 @@ public:
         shouldIndexTemplateParameterDefaultValue(Parent)) {
       const TemplateParameterList *Params = D->getTemplateParameters();
       for (const NamedDecl *TP : *Params) {
+        if (IndexCtx.shouldIndexTemplateParameters())
+          IndexCtx.handleDecl(TP);
         if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(TP)) {
           if (TTP->hasDefaultArgument())
             IndexCtx.indexTypeSourceInfo(TTP->getDefaultArgumentInfo(), Parent);

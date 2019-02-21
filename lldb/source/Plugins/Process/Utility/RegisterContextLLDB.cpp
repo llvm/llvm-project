@@ -239,9 +239,8 @@ void RegisterContextLLDB::InitializeZerothFrame() {
 
     if (m_sym_ctx_valid) {
       func_unwinders_sp =
-          pc_module_sp->GetObjectFile()
-              ->GetUnwindTable()
-              .GetFuncUnwindersContainingAddress(m_current_pc, m_sym_ctx);
+          pc_module_sp->GetUnwindTable().GetFuncUnwindersContainingAddress(
+              m_current_pc, m_sym_ctx);
     }
 
     if (func_unwinders_sp.get() != nullptr)
@@ -672,9 +671,8 @@ UnwindPlanSP RegisterContextLLDB::GetFastUnwindPlanForFrame() {
     return unwind_plan_sp;
 
   FuncUnwindersSP func_unwinders_sp(
-      pc_module_sp->GetObjectFile()
-          ->GetUnwindTable()
-          .GetFuncUnwindersContainingAddress(m_current_pc, m_sym_ctx));
+      pc_module_sp->GetUnwindTable().GetFuncUnwindersContainingAddress(
+          m_current_pc, m_sym_ctx));
   if (!func_unwinders_sp)
     return unwind_plan_sp;
 
@@ -775,9 +773,8 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
   FuncUnwindersSP func_unwinders_sp;
   if (m_sym_ctx_valid) {
     func_unwinders_sp =
-        pc_module_sp->GetObjectFile()
-            ->GetUnwindTable()
-            .GetFuncUnwindersContainingAddress(m_current_pc, m_sym_ctx);
+        pc_module_sp->GetUnwindTable().GetFuncUnwindersContainingAddress(
+            m_current_pc, m_sym_ctx);
   }
 
   // No FuncUnwinders available for this pc (stripped function symbols, lldb
@@ -795,7 +792,7 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
     // Even with -fomit-frame-pointer, we can try eh_frame to get back on
     // track.
     DWARFCallFrameInfo *eh_frame =
-        pc_module_sp->GetObjectFile()->GetUnwindTable().GetEHFrameInfo();
+        pc_module_sp->GetUnwindTable().GetEHFrameInfo();
     if (eh_frame) {
       unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (eh_frame->GetUnwindPlan(m_current_pc, *unwind_plan_sp))
@@ -805,7 +802,7 @@ UnwindPlanSP RegisterContextLLDB::GetFullUnwindPlanForFrame() {
     }
 
     ArmUnwindInfo *arm_exidx =
-        pc_module_sp->GetObjectFile()->GetUnwindTable().GetArmUnwindInfo();
+        pc_module_sp->GetUnwindTable().GetArmUnwindInfo();
     if (arm_exidx) {
       unwind_plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (arm_exidx->GetUnwindPlan(exe_ctx.GetTargetRef(), m_current_pc,

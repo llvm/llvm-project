@@ -32,9 +32,9 @@ OK_0: MERGE-OUTER: 3 new files with {{.*}} new features added
 RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
 RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
 RUN: echo STARTED 0 1 >> %t/MCF
-RUN: echo DONE 0 11 >> %t/MCF
+RUN: echo FT 0 11 >> %t/MCF
 RUN: echo STARTED 1 2 >> %t/MCF
-RUN: echo DONE 1 12 >> %t/MCF
+RUN: echo FT 1 12 >> %t/MCF
 RUN: %run %t/T.exe -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=OK_2
 OK_2: MERGE-OUTER: control file ok, 3 files total, first not processed file 2
 OK_2: MERGE-OUTER: 3 new files with {{.*}} new features added
@@ -42,10 +42,10 @@ OK_2: MERGE-OUTER: 3 new files with {{.*}} new features added
 RUN: rm -f %t/T1/*; cp %t/T0/* %t/T1
 RUN: echo 3 > %t/MCF; echo 0 >> %t/MCF; echo %t/T1/1 >> %t/MCF; echo %t/T1/2 >> %t/MCF; echo %t/T1/3 >> %t/MCF
 RUN: echo STARTED 0 1 >> %t/MCF
-RUN: echo DONE 0 11 >> %t/MCF
+RUN: echo FT 0 11 >> %t/MCF
 RUN: echo STARTED 1 2 >> %t/MCF
-RUN: echo DONE 1 12 >> %t/MCF
+RUN: echo FT 1 12 >> %t/MCF
 RUN: echo STARTED 2 2 >> %t/MCF
-RUN: echo DONE 2 13 >> %t/MCF
+RUN: echo FT 2 13 >> %t/MCF
 RUN: %run %t/T.exe -merge=1 %t/T1 %t/T2 -merge_control_file=%t/MCF 2>&1 | FileCheck %s --check-prefix=OK_3
 OK_3: MERGE-OUTER: nothing to do, merge has been completed before

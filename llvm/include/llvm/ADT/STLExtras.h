@@ -1576,6 +1576,19 @@ bool hasNItemsOrMore(
   return true;
 }
 
+/// Returns a raw pointer that represents the same address as the argument.
+///
+/// The late bound return should be removed once we move to C++14 to better
+/// align with the C++20 declaration. Also, this implementation can be removed
+/// once we move to C++20 where it's defined as std::to_addres()
+///
+/// The std::pointer_traits<>::to_address(p) variations of these overloads has
+/// not been implemented.
+template <class Ptr> auto to_address(const Ptr &P) -> decltype(P.operator->()) {
+  return P.operator->();
+}
+template <class T> constexpr T *to_address(T *P) { return P; }
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_STLEXTRAS_H

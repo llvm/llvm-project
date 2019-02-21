@@ -35,7 +35,7 @@ def use_lldb_substitutions(config):
     primary_tools = [
         ToolSubst('%lldb',
                   command=FindTool('lldb'),
-                  extra_args=['-S',
+                  extra_args=['--no-lldbinit', '-S',
                               os.path.join(config.test_source_root,
                                            'lit-lldb-init')]),
         lldbmi,

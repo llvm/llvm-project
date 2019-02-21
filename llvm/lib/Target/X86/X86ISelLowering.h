@@ -922,7 +922,7 @@ namespace llvm {
     }
 
     /// Handle Lowering flag assembly outputs.
-    SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue *Flag, SDLoc DL,
+    SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Flag, SDLoc DL,
                                         const AsmOperandInfo &Constraint,
                                         SelectionDAG &DAG) const override;
 
@@ -1070,6 +1070,11 @@ namespace llvm {
     /// the vector equivalent, so this always makes sense if the scalar op is
     /// supported.
     bool shouldScalarizeBinop(SDValue) const override;
+
+    /// Overflow nodes should get combined/lowered to optimal instructions
+    /// (they should allow eliminating explicit compares by getting flags from
+    /// math ops).
+    bool shouldFormOverflowOp(unsigned Opcode, EVT VT) const override;
 
     bool storeOfVectorConstantIsCheap(EVT MemVT, unsigned NumElem,
                                       unsigned AddrSpace) const override {

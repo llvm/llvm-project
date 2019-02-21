@@ -124,6 +124,11 @@ int gcovMain(int argc, const char *argv[]) {
                                       "(requires -b)"));
   cl::alias UncondBranchA("unconditional-branches", cl::aliasopt(UncondBranch));
 
+  cl::opt<bool> HashFilenames("x", cl::Grouping, cl::init(false),
+                              cl::desc("Hash long pathnames"));
+  cl::alias HashFilenamesA("hash-filenames", cl::aliasopt(HashFilenames));
+
+
   cl::OptionCategory DebugCat("Internal and debugging options");
   cl::opt<bool> DumpGCOV("dump", cl::init(false), cl::cat(DebugCat),
                          cl::desc("Dump the gcov file to stderr"));
@@ -135,7 +140,8 @@ int gcovMain(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
 
   GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
-                        PreservePaths, UncondBranch, LongNames, NoOutput);
+                        PreservePaths, UncondBranch, LongNames, NoOutput,
+                        HashFilenames);
 
   for (const auto &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,

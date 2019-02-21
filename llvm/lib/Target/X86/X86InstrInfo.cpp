@@ -588,96 +588,12 @@ bool X86InstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   return true;
 }
 
-bool X86InstrInfo::isSafeToClobberEFLAGS(MachineBasicBlock &MBB,
-                                         MachineBasicBlock::iterator I) const {
-  MachineBasicBlock::iterator E = MBB.end();
-
-  // For compile time consideration, if we are not able to determine the
-  // safety after visiting 4 instructions in each direction, we will assume
-  // it's not safe.
-  MachineBasicBlock::iterator Iter = I;
-  for (unsigned i = 0; Iter != E && i < 4; ++i) {
-    bool SeenDef = false;
-    for (unsigned j = 0, e = Iter->getNumOperands(); j != e; ++j) {
-      MachineOperand &MO = Iter->getOperand(j);
-      if (MO.isRegMask() && MO.clobbersPhysReg(X86::EFLAGS))
-        SeenDef = true;
-      if (!MO.isReg())
-        continue;
-      if (MO.getReg() == X86::EFLAGS) {
-        if (MO.isUse())
-          return false;
-        SeenDef = true;
-      }
-    }
-
-    if (SeenDef)
-      // This instruction defines EFLAGS, no need to look any further.
-      return true;
-    ++Iter;
-    // Skip over debug instructions.
-    while (Iter != E && Iter->isDebugInstr())
-      ++Iter;
-  }
-
-  // It is safe to clobber EFLAGS at the end of a block of no successor has it
-  // live in.
-  if (Iter == E) {
-    for (MachineBasicBlock *S : MBB.successors())
-      if (S->isLiveIn(X86::EFLAGS))
-        return false;
-    return true;
-  }
-
-  MachineBasicBlock::iterator B = MBB.begin();
-  Iter = I;
-  for (unsigned i = 0; i < 4; ++i) {
-    // If we make it to the beginning of the block, it's safe to clobber
-    // EFLAGS iff EFLAGS is not live-in.
-    if (Iter == B)
-      return !MBB.isLiveIn(X86::EFLAGS);
-
-    --Iter;
-    // Skip over debug instructions.
-    while (Iter != B && Iter->isDebugInstr())
-      --Iter;
-
-    bool SawKill = false;
-    for (unsigned j = 0, e = Iter->getNumOperands(); j != e; ++j) {
-      MachineOperand &MO = Iter->getOperand(j);
-      // A register mask may clobber EFLAGS, but we should still look for a
-      // live EFLAGS def.
-      if (MO.isRegMask() && MO.clobbersPhysReg(X86::EFLAGS))
-        SawKill = true;
-      if (MO.isReg() && MO.getReg() == X86::EFLAGS) {
-        if (MO.isDef()) return MO.isDead();
-        if (MO.isKill()) SawKill = true;
-      }
-    }
-
-    if (SawKill)
-      // This instruction kills EFLAGS and doesn't redefine it, so
-      // there's no need to look further.
-      return true;
-  }
-
-  // Conservative answer.
-  return false;
-}
-
 void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator I,
                                  unsigned DestReg, unsigned SubIdx,
                                  const MachineInstr &Orig,
                                  const TargetRegisterInfo &TRI) const {
-  bool ClobbersEFLAGS = false;
-  for (const MachineOperand &MO : Orig.operands()) {
-    if (MO.isReg() && MO.isDef() && MO.getReg() == X86::EFLAGS) {
-      ClobbersEFLAGS = true;
-      break;
-    }
-  }
-
+  bool ClobbersEFLAGS = Orig.modifiesRegister(X86::EFLAGS, &TRI);
   if (ClobbersEFLAGS && !isSafeToClobberEFLAGS(MBB, I)) {
     // The instruction clobbers EFLAGS. Re-materialize as MOV32ri to avoid side
     // effects.
@@ -4323,7 +4239,8 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 /// FIXME: This should be turned into a TSFlags.
 ///
 static bool hasPartialRegUpdate(unsigned Opcode,
-                                const X86Subtarget &Subtarget) {
+                                const X86Subtarget &Subtarget,
+                                bool ForLoadFold = false) {
   switch (Opcode) {
   case X86::CVTSI2SSrr:
   case X86::CVTSI2SSrm:
@@ -4333,6 +4250,9 @@ static bool hasPartialRegUpdate(unsigned Opcode,
   case X86::CVTSI2SDrm:
   case X86::CVTSI642SDrr:
   case X86::CVTSI642SDrm:
+    // Load folding won't effect the undef register update since the input is
+    // a GPR.
+    return !ForLoadFold;
   case X86::CVTSD2SSrr:
   case X86::CVTSD2SSrm:
   case X86::CVTSS2SDrr:
@@ -4409,7 +4329,7 @@ unsigned X86InstrInfo::getPartialRegUpdateClearance(
 
 // Return true for any instruction the copies the high bits of the first source
 // operand into the unused high bits of the destination operand.
-static bool hasUndefRegUpdate(unsigned Opcode) {
+static bool hasUndefRegUpdate(unsigned Opcode, bool ForLoadFold = false) {
   switch (Opcode) {
   case X86::VCVTSI2SSrr:
   case X86::VCVTSI2SSrm:
@@ -4427,38 +4347,6 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTSI642SDrm:
   case X86::VCVTSI642SDrr_Int:
   case X86::VCVTSI642SDrm_Int:
-  case X86::VCVTSD2SSrr:
-  case X86::VCVTSD2SSrm:
-  case X86::VCVTSD2SSrr_Int:
-  case X86::VCVTSD2SSrm_Int:
-  case X86::VCVTSS2SDrr:
-  case X86::VCVTSS2SDrm:
-  case X86::VCVTSS2SDrr_Int:
-  case X86::VCVTSS2SDrm_Int:
-  case X86::VRCPSSr:
-  case X86::VRCPSSr_Int:
-  case X86::VRCPSSm:
-  case X86::VRCPSSm_Int:
-  case X86::VROUNDSDr:
-  case X86::VROUNDSDm:
-  case X86::VROUNDSDr_Int:
-  case X86::VROUNDSDm_Int:
-  case X86::VROUNDSSr:
-  case X86::VROUNDSSm:
-  case X86::VROUNDSSr_Int:
-  case X86::VROUNDSSm_Int:
-  case X86::VRSQRTSSr:
-  case X86::VRSQRTSSr_Int:
-  case X86::VRSQRTSSm:
-  case X86::VRSQRTSSm_Int:
-  case X86::VSQRTSSr:
-  case X86::VSQRTSSr_Int:
-  case X86::VSQRTSSm:
-  case X86::VSQRTSSm_Int:
-  case X86::VSQRTSDr:
-  case X86::VSQRTSDr_Int:
-  case X86::VSQRTSDm:
-  case X86::VSQRTSDm_Int:
   // AVX-512
   case X86::VCVTSI2SSZrr:
   case X86::VCVTSI2SSZrm:
@@ -4499,6 +4387,42 @@ static bool hasUndefRegUpdate(unsigned Opcode) {
   case X86::VCVTUSI642SDZrr_Int:
   case X86::VCVTUSI642SDZrrb_Int:
   case X86::VCVTUSI642SDZrm_Int:
+    // Load folding won't effect the undef register update since the input is
+    // a GPR.
+    return !ForLoadFold;
+  case X86::VCVTSD2SSrr:
+  case X86::VCVTSD2SSrm:
+  case X86::VCVTSD2SSrr_Int:
+  case X86::VCVTSD2SSrm_Int:
+  case X86::VCVTSS2SDrr:
+  case X86::VCVTSS2SDrm:
+  case X86::VCVTSS2SDrr_Int:
+  case X86::VCVTSS2SDrm_Int:
+  case X86::VRCPSSr:
+  case X86::VRCPSSr_Int:
+  case X86::VRCPSSm:
+  case X86::VRCPSSm_Int:
+  case X86::VROUNDSDr:
+  case X86::VROUNDSDm:
+  case X86::VROUNDSDr_Int:
+  case X86::VROUNDSDm_Int:
+  case X86::VROUNDSSr:
+  case X86::VROUNDSSm:
+  case X86::VROUNDSSr_Int:
+  case X86::VROUNDSSm_Int:
+  case X86::VRSQRTSSr:
+  case X86::VRSQRTSSr_Int:
+  case X86::VRSQRTSSm:
+  case X86::VRSQRTSSm_Int:
+  case X86::VSQRTSSr:
+  case X86::VSQRTSSr_Int:
+  case X86::VSQRTSSm:
+  case X86::VSQRTSSm_Int:
+  case X86::VSQRTSDr:
+  case X86::VSQRTSDr_Int:
+  case X86::VSQRTSDm:
+  case X86::VSQRTSDm_Int:
+  // AVX-512
   case X86::VCVTSD2SSZrr:
   case X86::VCVTSD2SSZrr_Int:
   case X86::VCVTSD2SSZrrb_Int:
@@ -4819,8 +4743,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
   return nullptr;
 }
 
-static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF, MachineInstr &MI) {
-  if (MF.getFunction().optForSize() || !hasUndefRegUpdate(MI.getOpcode()) ||
+static bool shouldPreventUndefRegUpdateMemFold(MachineFunction &MF,
+                                               MachineInstr &MI) {
+  if (!hasUndefRegUpdate(MI.getOpcode(), /*ForLoadFold*/true) ||
       !MI.getOperand(1).isReg())
     return false;
 
@@ -4856,7 +4781,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
@@ -5024,7 +4949,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
@@ -5224,7 +5149,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
 
   // Avoid partial and undef register update stalls unless optimizing for size.
   if (!MF.getFunction().optForSize() &&
-      (hasPartialRegUpdate(MI.getOpcode(), Subtarget) ||
+      (hasPartialRegUpdate(MI.getOpcode(), Subtarget, /*ForLoadFold*/true) ||
        shouldPreventUndefRegUpdateMemFold(MF, MI)))
     return nullptr;
 
