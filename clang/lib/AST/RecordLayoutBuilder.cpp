@@ -2989,7 +2989,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   bool ShouldBeRandomized = D->getAttr<RandomizeLayoutAttr>() != nullptr;
   if (ShouldBeRandomized) {
-	  Randstruct randstruct;
+	  Randstruct randstruct(RandstructSeed);
 	  randstruct.reorganizeFields(*this, D);
   }
 

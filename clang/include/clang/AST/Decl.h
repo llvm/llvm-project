@@ -76,6 +76,7 @@ class TypeAliasTemplateDecl;
 class TypeLoc;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
+extern std::string RandstructSeed;
 
 /// A container of type source information.
 ///

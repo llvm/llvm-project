@@ -24,6 +24,13 @@
 
 namespace clang {
 
+
+RecordFieldReorganizer::RecordFieldReorganizer(std::string seed) {
+  RandomSeed = seed;
+}
+
+Randstruct::Randstruct(std::string seed) : RecordFieldReorganizer(seed) {};
+
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) const {
   // Save original fields for asserting later that a subclass hasn't
@@ -95,7 +102,8 @@ const size_t CACHE_LINE = 64;
 
 SmallVector<FieldDecl *, 64> Bucket::randomize() {
   // FIXME use seed
-  auto rng = std::default_random_engine{};
+  std::seed_seq Seq(clang::RandstructSeed.begin(), clang::RandstructSeed.end());
+  auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
 }
@@ -142,7 +150,8 @@ bool BitfieldRun::canFit(size_t size) const {
 bool BitfieldRun::isBitfieldRun() const { return true; }
 
 SmallVector<Decl *, 64> randomize(SmallVector<Decl *, 64> fields) {
-  auto rng = std::default_random_engine{};
+  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
 }
@@ -231,7 +240,8 @@ SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
     buckets.push_back(std::move(currentBitfieldRun));
   }
 
-  auto rng = std::default_random_engine{};
+  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(buckets), std::end(buckets), rng);
 
   // Produce the new ordering of the elements from our buckets.
