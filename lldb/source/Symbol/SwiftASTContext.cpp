@@ -2987,15 +2987,6 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       GetDiagnosticEngine().addConsumer(
           *new swift::PrintingDiagnosticConsumer());
     }
-    // Install the serialized module loader.
-    std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
-        swift::SerializedModuleLoader::create(*m_ast_context_ap));
-
-    if (serialized_module_loader_ap) {
-      m_serialized_module_loader =
-          (swift::SerializedModuleLoader *)serialized_module_loader_ap.get();
-      m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
-    }
 
     // Install the parseable interface module loader.
     std::string ModuleCachePath = GetClangImporterOptions().ModuleCachePath;
@@ -3010,6 +3001,16 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       m_parseable_module_loader =
       (swift::ParseableInterfaceModuleLoader *)parseable_module_loader_ap.get();
       m_ast_context_ap->addModuleLoader(std::move(parseable_module_loader_ap));
+    }
+
+    // Install the serialized module loader.
+    std::unique_ptr<swift::ModuleLoader> serialized_module_loader_ap(
+        swift::SerializedModuleLoader::create(*m_ast_context_ap));
+
+    if (serialized_module_loader_ap) {
+      m_serialized_module_loader =
+          (swift::SerializedModuleLoader *)serialized_module_loader_ap.get();
+      m_ast_context_ap->addModuleLoader(std::move(serialized_module_loader_ap));
     }
 
     // Set up the required state for the evaluator in the TypeChecker.
