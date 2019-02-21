@@ -36,22 +36,31 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
         self.build()
         self.do_test()
 
+    @decorators.swiftTest
+    def test_swift_interface_fallback(self):
+        """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
+        self.build()
+        # install invalid modules in the build directory first to check we still fall back to the .swiftinterface
+        modules = ['AA.swiftmodule', 'BB.swiftmodule', 'CC.swiftmodule']
+        for module in modules:
+            open(self.getBuildArtifact(module), 'w').close()
+        self.do_test()
 
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
 
-
     def do_test(self):
-        # The custom module cache location
+        # The custom swift module cache location
         swift_mod_cache = self.getBuildArtifact("MCP")
 
-        # Clear the module cache (populated by the Makefile build)
+        # Clear the swift module cache (populated by the Makefile build)
         shutil.rmtree(swift_mod_cache)
         self.assertFalse(os.path.isdir(swift_mod_cache),
                          "module cache should not exist")
 
-        # Update the settings to use the custom module cache location
+        # Update the settings to use the custom module cache location.
+        # Note: the clang module cache path setting is used for this currently.
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"' % swift_mod_cache)
 
         # Set a breakpoint in and launch the main executable
@@ -97,9 +106,6 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
 
         # Import C for the first time
         self.runCmd("expr import CC")
-
-        # Not clear why this doesn't work here, when it does with a dylib...
-        lldbutil.check_expression(self, self.frame, "Baz.baz()", None, use_summary=False)
 
         # Check we still have a single .swiftmodule in the cache for A and B
         # and that there is now one for C too

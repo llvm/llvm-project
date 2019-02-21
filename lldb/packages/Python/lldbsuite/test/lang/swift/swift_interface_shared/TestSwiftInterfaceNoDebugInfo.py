@@ -36,17 +36,26 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         self.build()
         self.do_test()
 
+    @decorators.swiftTest
+    def test_swift_interface_fallback(self):
+        """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
+        self.build()
+        # Install invalid modules in the build directory first to check we
+        # still fall back to the .swiftinterface.
+        modules = ['AA.swiftmodule', 'BB.swiftmodule', 'CC.swiftmodule']
+        for module in modules:
+            open(self.getBuildArtifact(module), 'w').close()
+        self.do_test()
 
     def setUp(self):
         TestBase.setUp(self)
         self.main_source = "main.swift"
 
-
     def do_test(self):
-        # The custom module cache location
+        # The custom swift module cache location
         swift_mod_cache = self.getBuildArtifact("MCP")
 
-        # Clear the module cache (populated by the Makefile build)
+        # Clear the swift module cache (populated by the Makefile build)
         shutil.rmtree(swift_mod_cache)
         self.assertFalse(os.path.isdir(swift_mod_cache),
                          "module cache should not exist")
