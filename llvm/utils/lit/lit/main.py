@@ -182,7 +182,7 @@ def run_tests(tests, litConfig, opts, numTotalTests):
                              progress_callback, opts.maxTime)
 
     try:
-        elapsed = run_tests_in_tmp_dir(run.execute, litConfig)
+        elapsed = execute_in_tmp_dir(run, litConfig)
     except KeyboardInterrupt:
         #TODO(yln): should we attempt to cleanup the progress bar here?
         sys.exit(2)
@@ -195,7 +195,7 @@ def run_tests(tests, litConfig, opts, numTotalTests):
     display.finish()
     return elapsed
 
-def run_tests_in_tmp_dir(run_callback, litConfig):
+def execute_in_tmp_dir(run, litConfig):
     # Create a temp directory inside the normal temp directory so that we can
     # try to avoid temporary test file leaks. The user can avoid this behavior
     # by setting LIT_PRESERVES_TMP in the environment, so they can easily use
@@ -216,7 +216,7 @@ def run_tests_in_tmp_dir(run_callback, litConfig):
     # scanning for stale temp directories, and deleting temp directories whose
     # lit process has died.
     try:
-        return run_callback()
+        return run.execute()
     finally:
         if tmp_dir:
             try:
