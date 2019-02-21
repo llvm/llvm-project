@@ -62,6 +62,24 @@ Non-comprehensive list of changes in this release
 
 * Added support for labels as offsets in ``.reloc`` directive.
 
+* Support for precise identification of X86 instructions with memory operands,
+  by using debug information. This supports profile-driven cache prefetching.
+  It is enabled with the ``-x86-discriminate-memops`` LLVM Flag.
+
+* Support for profile-driven software cache prefetching on X86. This is part of
+  a larger system, consisting of: an offline cache prefetches recommender,
+  AutoFDO tooling, and LLVM. In this system, a binary compiled with
+  ``-x86-discriminate-memops`` is run under the observation of the recommender.
+  The recommender identifies certain memory access instructions by their binary
+  file address, and recommends a prefetch of a specific type (NTA, T0, etc) be
+  performed at a specified fixed offset from such an instruction's memory
+  operand. Next, this information needs to be converted to the AutoFDO syntax
+  and the resulting profile may be passed back to the compiler with the LLVM
+  flag ``-prefetch-hints-file``, together with the exact same set of
+  compilation parameters used for the original binary. More information is
+  available in the `RFC
+  <https://lists.llvm.org/pipermail/llvm-dev/2018-November/127461.html>`_.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
