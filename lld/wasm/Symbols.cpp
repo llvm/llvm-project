@@ -45,6 +45,14 @@ WasmSymbolType Symbol::getWasmType() const {
   llvm_unreachable("invalid symbol kind");
 }
 
+const WasmSignature *Symbol::getSignature() const {
+  if (auto* F = dyn_cast<FunctionSymbol>(this))
+    return F->Signature;
+  if (auto *L = dyn_cast<LazySymbol>(this))
+    return L->Signature;
+  return nullptr;
+}
+
 InputChunk *Symbol::getChunk() const {
   if (auto *F = dyn_cast<DefinedFunction>(this))
     return F->Function;
