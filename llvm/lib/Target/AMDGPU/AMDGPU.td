@@ -721,16 +721,12 @@ def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
   AssemblerPredicate<"FeatureAddNoCarryInsts">;
 
-def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">,
-  AssemblerPredicate<"!FeatureAddNoCarryInsts">;
+def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<"Feature16BitInsts">;
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<"FeatureVOP3P">;
-
-def NotHasVOP3PInsts : Predicate<"!Subtarget->hasVOP3PInsts()">,
-  AssemblerPredicate<"!FeatureVOP3P">;
 
 def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<"FeatureSDWA,FeatureVolcanicIslands">;

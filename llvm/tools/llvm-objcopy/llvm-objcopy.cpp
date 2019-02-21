@@ -183,70 +183,86 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
                           Config.DeterministicArchives, Ar.isThin());
 }
 
-static void restoreDateOnFile(StringRef Filename,
-                              const sys::fs::file_status &Stat) {
+static Error restoreDateOnFile(StringRef Filename,
+                               const sys::fs::file_status &Stat) {
   int FD;
 
   if (auto EC =
           sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
-    reportError(Filename, EC);
+    return createFileError(Filename, EC);
 
   if (auto EC = sys::fs::setLastAccessAndModificationTime(
           FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
-    reportError(Filename, EC);
+    return createFileError(Filename, EC);
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
-    reportError(Filename, EC);
+    return createFileError(Filename, EC);
+
+  return Error::success();
 }
 
 /// The function executeObjcopy does the higher level dispatch based on the type
 /// of input (raw binary, archive or single object file) and takes care of the
 /// format-agnostic modifications, i.e. preserving dates.
-static void executeObjcopy(const CopyConfig &Config) {
+static Error executeObjcopy(const CopyConfig &Config) {
   sys::fs::file_status Stat;
   if (Config.PreserveDates)
     if (auto EC = sys::fs::status(Config.InputFilename, Stat))
-      reportError(Config.InputFilename, EC);
+      return createFileError(Config.InputFilename, EC);
 
   if (Config.InputFormat == "binary") {
     auto BufOrErr = MemoryBuffer::getFile(Config.InputFilename);
     if (!BufOrErr)
-      reportError(Config.InputFilename, BufOrErr.getError());
+      return createFileError(Config.InputFilename, BufOrErr.getError());
     FileBuffer FB(Config.OutputFilename);
     if (Error E = executeObjcopyOnRawBinary(Config, *BufOrErr->get(), FB))
-      error(std::move(E));
+      return E;
   } else {
     Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
         createBinary(Config.InputFilename);
     if (!BinaryOrErr)
-      reportError(Config.InputFilename, BinaryOrErr.takeError());
+      return createFileError(Config.InputFilename, BinaryOrErr.takeError());
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary())) {
       if (Error E = executeObjcopyOnArchive(Config, *Ar))
-        error(std::move(E));
+        return E;
     } else {
       FileBuffer FB(Config.OutputFilename);
       if (Error E = executeObjcopyOnBinary(Config,
                                            *BinaryOrErr.get().getBinary(), FB))
-        error(std::move(E));
+        return E;
     }
   }
 
   if (Config.PreserveDates) {
-    restoreDateOnFile(Config.OutputFilename, Stat);
+    if (Error E = restoreDateOnFile(Config.OutputFilename, Stat))
+      return E;
     if (!Config.SplitDWO.empty())
-      restoreDateOnFile(Config.SplitDWO, Stat);
+      if (Error E = restoreDateOnFile(Config.SplitDWO, Stat))
+        return E;
   }
+
+  return Error::success();
 }
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
-  DriverConfig DriverConfig;
-  if (sys::path::stem(ToolName).contains("strip"))
-    DriverConfig = parseStripOptions(makeArrayRef(argv + 1, argc));
-  else
-    DriverConfig = parseObjcopyOptions(makeArrayRef(argv + 1, argc));
-  for (const CopyConfig &CopyConfig : DriverConfig.CopyConfigs)
-    executeObjcopy(CopyConfig);
+  bool IsStrip = sys::path::stem(ToolName).contains("strip");
+  Expected<DriverConfig> DriverConfig =
+      IsStrip ? parseStripOptions(makeArrayRef(argv + 1, argc))
+              : parseObjcopyOptions(makeArrayRef(argv + 1, argc));
+  if (!DriverConfig) {
+    logAllUnhandledErrors(DriverConfig.takeError(),
+                          WithColor::error(errs(), ToolName));
+    return 1;
+  }
+  for (const CopyConfig &CopyConfig : DriverConfig->CopyConfigs) {
+    if (Error E = executeObjcopy(CopyConfig)) {
+      logAllUnhandledErrors(std::move(E), WithColor::error(errs(), ToolName));
+      return 1;
+    }
+  }
+
+  return 0;
 }

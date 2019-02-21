@@ -6506,6 +6506,36 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
   return SDValue(N, 0);
 }
 
+SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
+                                      SDValue Chain, int FrameIndex,
+                                      int64_t Size, int64_t Offset) {
+  const unsigned Opcode = IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END;
+  const auto VTs = getVTList(MVT::Other);
+  SDValue Ops[2] = {
+      Chain,
+      getFrameIndex(FrameIndex,
+                    getTargetLoweringInfo().getFrameIndexTy(getDataLayout()),
+                    true)};
+
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, Opcode, VTs, Ops);
+  ID.AddInteger(FrameIndex);
+  ID.AddInteger(Size);
+  ID.AddInteger(Offset);
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
+    return SDValue(E, 0);
+
+  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(
+      Opcode, dl.getIROrder(), dl.getDebugLoc(), VTs, Size, Offset);
+  createOperands(N, Ops);
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
 /// InferPointerInfo - If the specified ptr/offset is a frame index, infer a
 /// MachinePointerInfo record from it.  This is particularly useful because the
 /// code generator has many cases where it doesn't bother passing in a

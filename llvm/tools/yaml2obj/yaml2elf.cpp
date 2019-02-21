@@ -164,6 +164,9 @@ class ELFState {
                            const ELFYAML::VerneedSection &Section,
                            ContiguousBlobAccumulator &CBA);
   bool writeSectionContent(Elf_Shdr &SHeader,
+                           const ELFYAML::VerdefSection &Section,
+                           ContiguousBlobAccumulator &CBA);
+  bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::MipsABIFlags &Section,
                            ContiguousBlobAccumulator &CBA);
   void writeSectionContent(Elf_Shdr &SHeader,
@@ -310,6 +313,8 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
     } else if (auto S = dyn_cast<ELFYAML::SymverSection>(Sec.get())) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::VerneedSection>(Sec.get())) {
+      writeSectionContent(SHeader, *S, CBA);
+    } else if (auto S = dyn_cast<ELFYAML::VerdefSection>(Sec.get())) {
       writeSectionContent(SHeader, *S, CBA);
     } else
       llvm_unreachable("Unknown section type");
@@ -587,6 +592,51 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 
 template <class ELFT>
 bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+                                         const ELFYAML::VerdefSection &Section,
+                                         ContiguousBlobAccumulator &CBA) {
+  typedef typename ELFT::Verdef Elf_Verdef;
+  typedef typename ELFT::Verdaux Elf_Verdaux;
+  raw_ostream &OS =
+      CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
+
+  uint64_t AuxCnt = 0;
+  for (size_t I = 0; I < Section.Entries.size(); ++I) {
+    const ELFYAML::VerdefEntry &E = Section.Entries[I];
+
+    Elf_Verdef VerDef;
+    VerDef.vd_version = E.Version;
+    VerDef.vd_flags = E.Flags;
+    VerDef.vd_ndx = E.VersionNdx;
+    VerDef.vd_hash = E.Hash;
+    VerDef.vd_aux = sizeof(Elf_Verdef);
+    VerDef.vd_cnt = E.VerNames.size();
+    if (I == Section.Entries.size() - 1)
+      VerDef.vd_next = 0;
+    else
+      VerDef.vd_next =
+          sizeof(Elf_Verdef) + E.VerNames.size() * sizeof(Elf_Verdaux);
+    OS.write((const char *)&VerDef, sizeof(Elf_Verdef));
+
+    for (size_t J = 0; J < E.VerNames.size(); ++J, ++AuxCnt) {
+      Elf_Verdaux VernAux;
+      VernAux.vda_name = DotDynstr.getOffset(E.VerNames[J]);
+      if (J == E.VerNames.size() - 1)
+        VernAux.vda_next = 0;
+      else
+        VernAux.vda_next = sizeof(Elf_Verdaux);
+      OS.write((const char *)&VernAux, sizeof(Elf_Verdaux));
+    }
+  }
+
+  SHeader.sh_size = Section.Entries.size() * sizeof(Elf_Verdef) +
+                    AuxCnt * sizeof(Elf_Verdaux);
+  SHeader.sh_info = Section.Info;
+
+  return true;
+}
+
+template <class ELFT>
+bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::VerneedSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
  typedef typename ELFT::Verneed Elf_Verneed;
@@ -746,16 +796,19 @@ template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
   // Add the dynamic symbol names to .dynstr section.
   AddSymbols(DotDynstr, Doc.DynamicSymbols);
 
-  // SHT_GNU_verneed section also adds strings to .dynstr section.
+  // SHT_GNU_verdef and SHT_GNU_verneed sections might also
+  // add strings to .dynstr section.
   for (const std::unique_ptr<ELFYAML::Section> &Sec : Doc.Sections) {
-    auto VerNeed = dyn_cast<ELFYAML::VerneedSection>(Sec.get());
-    if (!VerNeed)
-      continue;
-
-    for (const ELFYAML::VerneedEntry &VE : VerNeed->VerneedV) {
-      DotDynstr.add(VE.File);
-      for (const ELFYAML::VernauxEntry &Aux : VE.AuxV)
-        DotDynstr.add(Aux.Name);
+    if (auto VerNeed = dyn_cast<ELFYAML::VerneedSection>(Sec.get())) {
+      for (const ELFYAML::VerneedEntry &VE : VerNeed->VerneedV) {
+        DotDynstr.add(VE.File);
+        for (const ELFYAML::VernauxEntry &Aux : VE.AuxV)
+          DotDynstr.add(Aux.Name);
+      }
+    } else if (auto VerDef = dyn_cast<ELFYAML::VerdefSection>(Sec.get())) {
+      for (const ELFYAML::VerdefEntry &E : VerDef->Entries)
+        for (StringRef Name : E.VerNames)
+          DotDynstr.add(Name);
     }
   }
 

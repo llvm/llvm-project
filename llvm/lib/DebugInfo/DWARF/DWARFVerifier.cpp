@@ -502,7 +502,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       bool Error = llvm::any_of(Expression, [](DWARFExpression::Operation &Op) {
         return Op.isError();
       });
-      if (Error)
+      if (Error || !Expression.verify(U))
         ReportError("DIE contains invalid DWARF expression:");
     };
     if (Optional<ArrayRef<uint8_t>> Expr = AttrValue.Value.getAsBlock()) {

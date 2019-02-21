@@ -1367,12 +1367,12 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
-/// IsEligibleForTailCallOptimization - Check whether the call is eligible
+/// isEligibleForTailCallOptimization - Check whether the call is eligible
 /// for tail call optimization.
 /// Note: This is modelled after ARM's IsEligibleForTailCallOptimization.
-bool RISCVTargetLowering::IsEligibleForTailCallOptimization(
-  CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
-  const SmallVector<CCValAssign, 16> &ArgLocs) const {
+bool RISCVTargetLowering::isEligibleForTailCallOptimization(
+    CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
+    const SmallVector<CCValAssign, 16> &ArgLocs) const {
 
   auto &Callee = CLI.Callee;
   auto CalleeCC = CLI.CallConv;
@@ -1475,8 +1475,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Check if it's really possible to do a tail call.
   if (IsTailCall)
-    IsTailCall = IsEligibleForTailCallOptimization(ArgCCInfo, CLI, MF,
-                                                   ArgLocs);
+    IsTailCall = isEligibleForTailCallOptimization(ArgCCInfo, CLI, MF, ArgLocs);
 
   if (IsTailCall)
     ++NumTailCalls;

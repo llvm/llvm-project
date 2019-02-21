@@ -57,4 +57,4 @@ Sections:
 # WRITE-NEXT:     SHF_WRITE (0x1)
 # CHECK-NEXT:   ]
 
-# BAD-FLAG: Unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, debug, code, data, rom, share, contents, merge, strings.
+# BAD-FLAG: Unrecognized section flag 'xyzzy'. Flags supported for GNU compatibility: alloc, load, noload, readonly, debug, code, data, rom, share, contents, merge, strings

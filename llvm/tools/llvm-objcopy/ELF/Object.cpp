@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -49,7 +50,8 @@ template <class ELFT> void ELFWriter<ELFT>::writePhdr(const Segment &Seg) {
   Phdr.p_align = Seg.Align;
 }
 
-Error SectionBase::removeSectionReferences(const SectionBase *Sec) {
+Error SectionBase::removeSectionReferences(
+    function_ref<bool(const SectionBase *)> ToRemove) {
   return Error::success();
 }
 
@@ -432,17 +434,17 @@ void SymbolTableSection::addSymbol(Twine Name, uint8_t Bind, uint8_t Type,
   Size += this->EntrySize;
 }
 
-Error SymbolTableSection::removeSectionReferences(const SectionBase *Sec) {
-  if (SectionIndexTable == Sec)
+Error SymbolTableSection::removeSectionReferences(
+    function_ref<bool(const SectionBase *)> ToRemove) {
+  if (ToRemove(SectionIndexTable))
     SectionIndexTable = nullptr;
-  if (SymbolNames == Sec) {
+  if (ToRemove(SymbolNames))
     return createStringError(llvm::errc::invalid_argument,
                              "String table %s cannot be removed because it is "
                              "referenced by the symbol table %s",
                              SymbolNames->Name.data(), this->Name.data());
-  }
   return removeSymbols(
-      [Sec](const Symbol &Sym) { return Sym.DefinedIn == Sec; });
+      [ToRemove](const Symbol &Sym) { return ToRemove(Sym.DefinedIn); });
 }
 
 void SymbolTableSection::updateSymbols(function_ref<void(Symbol &)> Callable) {
@@ -546,8 +548,8 @@ void SymbolTableSection::accept(MutableSectionVisitor &Visitor) {
 
 template <class SymTabType>
 Error RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
-    const SectionBase *Sec) {
-  if (Symbols == Sec)
+    function_ref<bool(const SectionBase *)> ToRemove) {
+  if (ToRemove(Symbols))
     return createStringError(llvm::errc::invalid_argument,
                              "Symbol table %s cannot be removed because it is "
                              "referenced by the relocation section %s.",
@@ -646,8 +648,9 @@ void DynamicRelocationSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
-Error Section::removeSectionReferences(const SectionBase *Sec) {
-  if (LinkSection == Sec)
+Error Section::removeSectionReferences(
+    function_ref<bool(const SectionBase *)> ToRemove) {
+  if (ToRemove(LinkSection))
     return createStringError(llvm::errc::invalid_argument,
                              "Section %s cannot be removed because it is "
                              "referenced by the section %s",
@@ -1351,13 +1354,19 @@ Error Object::removeSections(
   // Now make sure there are no remaining references to the sections that will
   // be removed. Sometimes it is impossible to remove a reference so we emit
   // an error here instead.
+  std::unordered_set<const SectionBase *> RemoveSections;
+  RemoveSections.reserve(std::distance(Iter, std::end(Sections)));
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
-    for (auto &KeepSec : make_range(std::begin(Sections), Iter))
-      if (Error E = KeepSec->removeSectionReferences(RemoveSec.get()))
-        return E;
+    RemoveSections.insert(RemoveSec.get());
   }
+  for (auto &KeepSec : make_range(std::begin(Sections), Iter))
+    if (Error E = KeepSec->removeSectionReferences(
+            [&RemoveSections](const SectionBase *Sec) {
+              return RemoveSections.find(Sec) != RemoveSections.end();
+            }))
+      return E;
   // Now finally get rid of them all togethor.
   Sections.erase(Iter, std::end(Sections));
   return Error::success();

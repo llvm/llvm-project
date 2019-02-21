@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
 // Necessary for llvm::DebugCompressionType::None
 #include "llvm/Target/TargetOptions.h"
@@ -131,12 +132,12 @@ struct DriverConfig {
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
-DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr);
+Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr);
 
 // ParseStripOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseStripOptions will print the help messege and
 // exit.
-DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr);
+Expected<DriverConfig> parseStripOptions(ArrayRef<const char *> ArgsArr);
 
 } // namespace objcopy
 } // namespace llvm

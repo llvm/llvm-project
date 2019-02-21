@@ -285,11 +285,15 @@ TEST(LocateSymbol, All) {
         }
       )cpp",
 
-      /* FIXME: clangIndex doesn't handle template type parameters
       R"cpp(// Template type parameter
-        template <[[typename T]]>
+        template <typename [[T]]>
         void foo() { ^T t; }
-      )cpp", */
+      )cpp",
+
+      R"cpp(// Template template type parameter
+        template <template<typename> class [[T]]>
+        void foo() { ^T<int> t; }
+      )cpp",
 
       R"cpp(// Namespace
         namespace $decl[[ns]] {
@@ -402,6 +406,16 @@ TEST(LocateSymbol, All) {
 
         double y = va^r<int>;
       )cpp",
+
+      R"cpp(// No implicit constructors
+        class X {
+          X(X&& x) = default;
+        };
+        X [[makeX]]() {}
+        void foo() {
+          auto x = m^akeX();
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
@@ -449,20 +463,25 @@ TEST(LocateSymbol, Ambiguous) {
       Foo c = $3^f();
       $4^g($5^f());
       g($6^str);
+      Foo ab$7^c;
+      Foo ab$8^cd("asdf");
+      Foo foox = Fo$9^o("asdf");
     }
   )cpp");
   auto AST = TestTU::withCode(T.code()).build();
   // Ordered assertions are deliberate: we expect a predictable order.
-  EXPECT_THAT(locateSymbolAt(AST, T.point("1")),
-              ElementsAre(Sym("str"), Sym("Foo")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("1")), ElementsAre(Sym("str")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("2")), ElementsAre(Sym("str")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("3")),
-              ElementsAre(Sym("f"), Sym("Foo")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("3")), ElementsAre(Sym("f")));
   EXPECT_THAT(locateSymbolAt(AST, T.point("4")), ElementsAre(Sym("g")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("5")),
-              ElementsAre(Sym("f"), Sym("Foo")));
-  EXPECT_THAT(locateSymbolAt(AST, T.point("6")),
-              ElementsAre(Sym("str"), Sym("Foo"), Sym("Foo")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("5")), ElementsAre(Sym("f")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("6")), ElementsAre(Sym("str")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("7")), ElementsAre(Sym("abc")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("8")),
+              ElementsAre(Sym("Foo"), Sym("abcd")));
+  EXPECT_THAT(locateSymbolAt(AST, T.point("9")),
+              // First one is class definition, second is the constructor.
+              ElementsAre(Sym("Foo"), Sym("Foo")));
 }
 
 TEST(LocateSymbol, RelPathsInCompileCommand) {
