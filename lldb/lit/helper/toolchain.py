@@ -24,7 +24,7 @@ def use_lldb_substitutions(config):
 
     build_script = os.path.dirname(__file__)
     build_script = os.path.join(build_script, 'build.py')
-    build_script_args = [build_script, 
+    build_script_args = [build_script,
                         '--compiler=any', # Default to best compiler
                         '--arch=' + str(config.lldb_bitness)]
     if config.lldb_lit_tools_dir:
@@ -44,6 +44,7 @@ def use_lldb_substitutions(config):
                   extra_args=dsargs,
                   unresolved='ignore'),
         'lldb-test',
+        'lldb-instr',
         ToolSubst('%build',
                   command="'" + sys.executable + "'",
                   extra_args=build_script_args)

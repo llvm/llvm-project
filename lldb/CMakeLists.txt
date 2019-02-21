@@ -36,6 +36,10 @@ if(APPLE)
   add_definitions(-DLLDB_USE_OS_LOG)
 endif()
 
+if (WIN32)
+  add_definitions(-D_ENABLE_EXTENDED_ALIGNED_STORAGE)
+endif()
+
 add_subdirectory(docs)
 if (NOT LLDB_DISABLE_PYTHON)
   add_subdirectory(scripts)
@@ -88,6 +92,10 @@ if(LLDB_INCLUDE_TESTS)
 
   if(TARGET lldb-mi)
     list(APPEND LLDB_TEST_DEPS lldb-mi)
+  endif()
+
+  if(TARGET lldb-instr)
+    list(APPEND LLDB_TEST_DEPS lldb-instr)
   endif()
 
   if(NOT LLDB_BUILT_STANDALONE)

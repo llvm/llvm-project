@@ -14,6 +14,8 @@
 #include <sys/sysctl.h>
 #include <sys/types.h>
 
+#include <memory>
+
 #include "DNB.h"
 #include "DNBLog.h"
 #include "DNBTimer.h"
@@ -338,7 +340,7 @@ extern "C" int debug_server_main(int fd) {
 
   signal(SIGPIPE, signal_handler);
 
-  g_remoteSP.reset(new RNBRemote);
+  g_remoteSP = std::make_shared<RNBRemote>();
 
   RNBRemote *remote = g_remoteSP.get();
   if (remote == NULL) {

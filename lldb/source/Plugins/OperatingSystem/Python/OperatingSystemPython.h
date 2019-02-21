@@ -83,7 +83,7 @@ protected:
   DynamicRegisterInfo *GetDynamicRegisterInfo();
 
   lldb::ValueObjectSP m_thread_list_valobj_sp;
-  std::unique_ptr<DynamicRegisterInfo> m_register_info_ap;
+  std::unique_ptr<DynamicRegisterInfo> m_register_info_up;
   lldb_private::ScriptInterpreter *m_interpreter;
   lldb_private::StructuredData::ObjectSP m_python_object_sp;
 };

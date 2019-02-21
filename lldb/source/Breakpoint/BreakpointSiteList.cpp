@@ -85,7 +85,7 @@ public:
   BreakpointSiteIDMatches(lldb::break_id_t break_id) : m_break_id(break_id) {}
 
   bool operator()(std::pair<lldb::addr_t, BreakpointSiteSP> val_pair) const {
-    return m_break_id == val_pair.second.get()->GetID();
+    return m_break_id == val_pair.second->GetID();
   }
 
 private:
@@ -157,7 +157,7 @@ void BreakpointSiteList::Dump(Stream *s) const {
   collection::const_iterator pos;
   collection::const_iterator end = m_bp_site_list.end();
   for (pos = m_bp_site_list.begin(); pos != end; ++pos)
-    pos->second.get()->Dump(s);
+    pos->second->Dump(s);
   s->IndentLess();
 }
 

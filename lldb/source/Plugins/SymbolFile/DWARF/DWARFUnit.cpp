@@ -846,8 +846,8 @@ SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() const {
 dw_offset_t DWARFUnit::GetBaseObjOffset() const { return m_base_obj_offset; }
 
 const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
-  if (m_func_aranges_ap.get() == NULL) {
-    m_func_aranges_ap.reset(new DWARFDebugAranges());
+  if (m_func_aranges_up == NULL) {
+    m_func_aranges_up.reset(new DWARFDebugAranges());
     Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
 
     if (log) {
@@ -860,19 +860,19 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
     const DWARFDebugInfoEntry *die = DIEPtr();
     if (die)
       die->BuildFunctionAddressRangeTable(m_dwarf, this,
-                                          m_func_aranges_ap.get());
+                                          m_func_aranges_up.get());
 
     if (m_dwo_symbol_file) {
       DWARFUnit *dwo_cu = m_dwo_symbol_file->GetCompileUnit();
       const DWARFDebugInfoEntry *dwo_die = dwo_cu->DIEPtr();
       if (dwo_die)
         dwo_die->BuildFunctionAddressRangeTable(m_dwo_symbol_file.get(), dwo_cu,
-                                                m_func_aranges_ap.get());
+                                                m_func_aranges_up.get());
     }
 
     const bool minimize = false;
-    m_func_aranges_ap->Sort(minimize);
+    m_func_aranges_up->Sort(minimize);
   }
-  return *m_func_aranges_ap.get();
+  return *m_func_aranges_up;
 }
 

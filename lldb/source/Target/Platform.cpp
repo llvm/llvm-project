@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <csignal>
 #include <fstream>
+#include <memory>
 #include <vector>
 
 #include "llvm/Support/FileSystem.h"
@@ -78,7 +79,7 @@ ConstString PlatformProperties::GetSettingName() {
 }
 
 PlatformProperties::PlatformProperties() {
-  m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+  m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
   m_collection_sp->Initialize(g_properties);
 
   auto module_cache_dir = GetModuleCacheDirectory();

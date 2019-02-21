@@ -17,6 +17,8 @@
 
 #include "RegisterContextMacOSXFrameBackchain.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -65,8 +67,8 @@ UnwindMacOSXFrameBackchain::DoCreateRegisterContextForFrame(StackFrame *frame) {
   uint32_t concrete_idx = frame->GetConcreteFrameIndex();
   const uint32_t frame_count = GetFrameCount();
   if (concrete_idx < frame_count)
-    reg_ctx_sp.reset(new RegisterContextMacOSXFrameBackchain(
-        m_thread, concrete_idx, m_cursors[concrete_idx]));
+    reg_ctx_sp = std::make_shared<RegisterContextMacOSXFrameBackchain>(
+        m_thread, concrete_idx, m_cursors[concrete_idx]);
   return reg_ctx_sp;
 }
 

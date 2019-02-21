@@ -62,12 +62,10 @@ ClangUserExpression::ClangUserExpression(
     ResultType desired_type, const EvaluateExpressionOptions &options)
     : LLVMUserExpression(exe_scope, expr, prefix, language, desired_type,
                          options),
-      m_type_system_helper(*m_target_wp.lock().get(),
-                           options.GetExecutionPolicy() ==
-                               eExecutionPolicyTopLevel),
+      m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
+                                                    eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()) {
   m_language_flags |= eLanguageFlagEnforceValidObject;
-
   switch (m_language) {
   case lldb::eLanguageTypeC_plus_plus:
     m_allow_cxx = true;
@@ -481,13 +479,13 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   // Parse the expression
   //
 
-  m_materializer_ap.reset(new Materializer());
+  m_materializer_up.reset(new Materializer());
 
   ResetDeclMap(exe_ctx, m_result_delegate, keep_result_in_memory);
 
   OnExit on_exit([this]() { ResetDeclMap(); });
 
-  if (!DeclMap()->WillParse(exe_ctx, m_materializer_ap.get())) {
+  if (!DeclMap()->WillParse(exe_ctx, m_materializer_up.get())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "current process state is unsuitable for expression parsing");
@@ -676,13 +674,13 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   // Parse the expression
   //
 
-  m_materializer_ap.reset(new Materializer());
+  m_materializer_up.reset(new Materializer());
 
   ResetDeclMap(exe_ctx, m_result_delegate, /*keep result in memory*/ true);
 
   OnExit on_exit([this]() { ResetDeclMap(); });
 
-  if (!DeclMap()->WillParse(exe_ctx, m_materializer_ap.get())) {
+  if (!DeclMap()->WillParse(exe_ctx, m_materializer_up.get())) {
     diagnostic_manager.PutString(
         eDiagnosticSeverityError,
         "current process state is unsuitable for expression parsing");
@@ -810,7 +808,7 @@ ClangUserExpression::ClangUserExpressionHelper::ASTTransformer(
 }
 
 void ClangUserExpression::ClangUserExpressionHelper::CommitPersistentDecls() {
-  if (m_result_synthesizer_up.get()) {
+  if (m_result_synthesizer_up) {
     m_result_synthesizer_up->CommitPersistentDecls();
   }
 }

@@ -20,6 +20,8 @@
 
 #include "llvm/ADT/APSInt.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -42,7 +44,7 @@ SBType::SBType(const SBType &rhs) : m_opaque_sp() {
 }
 
 // SBType::SBType (TypeImpl* impl) :
-//    m_opaque_ap(impl)
+//    m_opaque_up(impl)
 //{}
 //
 bool SBType::operator==(SBType &rhs) {
@@ -82,7 +84,7 @@ SBType::~SBType() {}
 
 TypeImpl &SBType::ref() {
   if (m_opaque_sp.get() == NULL)
-    m_opaque_sp.reset(new TypeImpl());
+    m_opaque_sp = std::make_shared<TypeImpl>();
   return *m_opaque_sp;
 }
 
@@ -454,20 +456,20 @@ lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
   return eTemplateArgumentKindNull;
 }
 
-SBTypeList::SBTypeList() : m_opaque_ap(new TypeListImpl()) {}
+SBTypeList::SBTypeList() : m_opaque_up(new TypeListImpl()) {}
 
 SBTypeList::SBTypeList(const SBTypeList &rhs)
-    : m_opaque_ap(new TypeListImpl()) {
+    : m_opaque_up(new TypeListImpl()) {
   for (uint32_t i = 0, rhs_size = const_cast<SBTypeList &>(rhs).GetSize();
        i < rhs_size; i++)
     Append(const_cast<SBTypeList &>(rhs).GetTypeAtIndex(i));
 }
 
-bool SBTypeList::IsValid() { return (m_opaque_ap != NULL); }
+bool SBTypeList::IsValid() { return (m_opaque_up != NULL); }
 
 SBTypeList &SBTypeList::operator=(const SBTypeList &rhs) {
   if (this != &rhs) {
-    m_opaque_ap.reset(new TypeListImpl());
+    m_opaque_up.reset(new TypeListImpl());
     for (uint32_t i = 0, rhs_size = const_cast<SBTypeList &>(rhs).GetSize();
          i < rhs_size; i++)
       Append(const_cast<SBTypeList &>(rhs).GetTypeAtIndex(i));
@@ -477,75 +479,75 @@ SBTypeList &SBTypeList::operator=(const SBTypeList &rhs) {
 
 void SBTypeList::Append(SBType type) {
   if (type.IsValid())
-    m_opaque_ap->Append(type.m_opaque_sp);
+    m_opaque_up->Append(type.m_opaque_sp);
 }
 
 SBType SBTypeList::GetTypeAtIndex(uint32_t index) {
-  if (m_opaque_ap)
-    return SBType(m_opaque_ap->GetTypeAtIndex(index));
+  if (m_opaque_up)
+    return SBType(m_opaque_up->GetTypeAtIndex(index));
   return SBType();
 }
 
-uint32_t SBTypeList::GetSize() { return m_opaque_ap->GetSize(); }
+uint32_t SBTypeList::GetSize() { return m_opaque_up->GetSize(); }
 
 SBTypeList::~SBTypeList() {}
 
-SBTypeMember::SBTypeMember() : m_opaque_ap() {}
+SBTypeMember::SBTypeMember() : m_opaque_up() {}
 
 SBTypeMember::~SBTypeMember() {}
 
-SBTypeMember::SBTypeMember(const SBTypeMember &rhs) : m_opaque_ap() {
+SBTypeMember::SBTypeMember(const SBTypeMember &rhs) : m_opaque_up() {
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_ap.reset(new TypeMemberImpl(rhs.ref()));
+      m_opaque_up.reset(new TypeMemberImpl(rhs.ref()));
   }
 }
 
 lldb::SBTypeMember &SBTypeMember::operator=(const lldb::SBTypeMember &rhs) {
   if (this != &rhs) {
     if (rhs.IsValid())
-      m_opaque_ap.reset(new TypeMemberImpl(rhs.ref()));
+      m_opaque_up.reset(new TypeMemberImpl(rhs.ref()));
   }
   return *this;
 }
 
-bool SBTypeMember::IsValid() const { return m_opaque_ap.get(); }
+bool SBTypeMember::IsValid() const { return m_opaque_up.get(); }
 
 const char *SBTypeMember::GetName() {
-  if (m_opaque_ap)
-    return m_opaque_ap->GetName().GetCString();
+  if (m_opaque_up)
+    return m_opaque_up->GetName().GetCString();
   return NULL;
 }
 
 SBType SBTypeMember::GetType() {
   SBType sb_type;
-  if (m_opaque_ap) {
-    sb_type.SetSP(m_opaque_ap->GetTypeImpl());
+  if (m_opaque_up) {
+    sb_type.SetSP(m_opaque_up->GetTypeImpl());
   }
   return sb_type;
 }
 
 uint64_t SBTypeMember::GetOffsetInBytes() {
-  if (m_opaque_ap)
-    return m_opaque_ap->GetBitOffset() / 8u;
+  if (m_opaque_up)
+    return m_opaque_up->GetBitOffset() / 8u;
   return 0;
 }
 
 uint64_t SBTypeMember::GetOffsetInBits() {
-  if (m_opaque_ap)
-    return m_opaque_ap->GetBitOffset();
+  if (m_opaque_up)
+    return m_opaque_up->GetBitOffset();
   return 0;
 }
 
 bool SBTypeMember::IsBitfield() {
-  if (m_opaque_ap)
-    return m_opaque_ap->GetIsBitfield();
+  if (m_opaque_up)
+    return m_opaque_up->GetIsBitfield();
   return false;
 }
 
 uint32_t SBTypeMember::GetBitfieldSizeInBits() {
-  if (m_opaque_ap)
-    return m_opaque_ap->GetBitfieldBitSize();
+  if (m_opaque_up)
+    return m_opaque_up->GetBitfieldBitSize();
   return 0;
 }
 
@@ -553,23 +555,23 @@ bool SBTypeMember::GetDescription(lldb::SBStream &description,
                                   lldb::DescriptionLevel description_level) {
   Stream &strm = description.ref();
 
-  if (m_opaque_ap) {
-    const uint32_t bit_offset = m_opaque_ap->GetBitOffset();
+  if (m_opaque_up) {
+    const uint32_t bit_offset = m_opaque_up->GetBitOffset();
     const uint32_t byte_offset = bit_offset / 8u;
     const uint32_t byte_bit_offset = bit_offset % 8u;
-    const char *name = m_opaque_ap->GetName().GetCString();
+    const char *name = m_opaque_up->GetName().GetCString();
     if (byte_bit_offset)
       strm.Printf("+%u + %u bits: (", byte_offset, byte_bit_offset);
     else
       strm.Printf("+%u: (", byte_offset);
 
-    TypeImplSP type_impl_sp(m_opaque_ap->GetTypeImpl());
+    TypeImplSP type_impl_sp(m_opaque_up->GetTypeImpl());
     if (type_impl_sp)
       type_impl_sp->GetDescription(strm, description_level);
 
     strm.Printf(") %s", name);
-    if (m_opaque_ap->GetIsBitfield()) {
-      const uint32_t bitfield_bit_size = m_opaque_ap->GetBitfieldBitSize();
+    if (m_opaque_up->GetIsBitfield()) {
+      const uint32_t bitfield_bit_size = m_opaque_up->GetBitfieldBitSize();
       strm.Printf(" : %u", bitfield_bit_size);
     }
   } else {
@@ -579,16 +581,16 @@ bool SBTypeMember::GetDescription(lldb::SBStream &description,
 }
 
 void SBTypeMember::reset(TypeMemberImpl *type_member_impl) {
-  m_opaque_ap.reset(type_member_impl);
+  m_opaque_up.reset(type_member_impl);
 }
 
 TypeMemberImpl &SBTypeMember::ref() {
-  if (m_opaque_ap == NULL)
-    m_opaque_ap.reset(new TypeMemberImpl());
-  return *m_opaque_ap;
+  if (m_opaque_up == NULL)
+    m_opaque_up.reset(new TypeMemberImpl());
+  return *m_opaque_up;
 }
 
-const TypeMemberImpl &SBTypeMember::ref() const { return *m_opaque_ap; }
+const TypeMemberImpl &SBTypeMember::ref() const { return *m_opaque_up; }
 
 SBTypeMemberFunction::SBTypeMemberFunction() : m_opaque_sp() {}
 
@@ -682,7 +684,7 @@ void SBTypeMemberFunction::reset(TypeMemberFunctionImpl *type_member_impl) {
 
 TypeMemberFunctionImpl &SBTypeMemberFunction::ref() {
   if (!m_opaque_sp)
-    m_opaque_sp.reset(new TypeMemberFunctionImpl());
+    m_opaque_sp = std::make_shared<TypeMemberFunctionImpl>();
   return *m_opaque_sp.get();
 }
 

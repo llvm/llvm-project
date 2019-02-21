@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileSymtab.h"
+
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -18,6 +19,8 @@
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Timer.h"
+
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -123,9 +126,9 @@ CompUnitSP SymbolFileSymtab::ParseCompileUnitAtIndex(uint32_t idx) {
     const Symbol *cu_symbol =
         m_obj_file->GetSymtab()->SymbolAtIndex(m_source_indexes[idx]);
     if (cu_symbol)
-      cu_sp.reset(new CompileUnit(m_obj_file->GetModule(), NULL,
+      cu_sp = std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr,
                                   cu_symbol->GetName().AsCString(), 0,
-                                  eLanguageTypeUnknown, eLazyBoolNo));
+                                            eLanguageTypeUnknown, eLazyBoolNo);
   }
   return cu_sp;
 }

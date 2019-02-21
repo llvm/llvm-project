@@ -22,7 +22,7 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          lldb_private::LazyBool is_optimized)
     : ModuleChild(module_sp), FileSpec(pathname), UserID(cu_sym_id),
       m_user_data(user_data), m_language(language), m_flags(0),
-      m_support_files(), m_line_table_ap(), m_variables(),
+      m_support_files(), m_line_table_up(), m_variables(),
       m_is_optimized(is_optimized) {
   if (language != eLanguageTypeUnknown)
     m_flags.Set(flagsParsedLanguage);
@@ -35,7 +35,7 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          lldb_private::LazyBool is_optimized)
     : ModuleChild(module_sp), FileSpec(fspec), UserID(cu_sym_id),
       m_user_data(user_data), m_language(language), m_flags(0),
-      m_support_files(), m_line_table_ap(), m_variables(),
+      m_support_files(), m_line_table_up(), m_variables(),
       m_is_optimized(is_optimized) {
   if (language != eLanguageTypeUnknown)
     m_flags.Set(flagsParsedLanguage);
@@ -189,7 +189,7 @@ lldb::LanguageType CompileUnit::GetLanguage() {
 }
 
 LineTable *CompileUnit::GetLineTable() {
-  if (m_line_table_ap.get() == nullptr) {
+  if (m_line_table_up == nullptr) {
     if (m_flags.IsClear(flagsParsedLineTable)) {
       m_flags.Set(flagsParsedLineTable);
       SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor();
@@ -197,7 +197,7 @@ LineTable *CompileUnit::GetLineTable() {
         symbol_vendor->ParseLineTable(*this);
     }
   }
-  return m_line_table_ap.get();
+  return m_line_table_up.get();
 }
 
 void CompileUnit::SetLineTable(LineTable *line_table) {
@@ -205,7 +205,7 @@ void CompileUnit::SetLineTable(LineTable *line_table) {
     m_flags.Clear(flagsParsedLineTable);
   else
     m_flags.Set(flagsParsedLineTable);
-  m_line_table_ap.reset(line_table);
+  m_line_table_up.reset(line_table);
 }
 
 DebugMacros *CompileUnit::GetDebugMacros() {

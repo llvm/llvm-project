@@ -23,6 +23,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/UnwindAssembly.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -110,8 +112,8 @@ UnwindPlanSP FuncUnwinders::GetEHFrameUnwindPlan(Target &target,
       current_pc.SetOffset(current_pc.GetOffset() + current_offset);
     DWARFCallFrameInfo *eh_frame = m_unwind_table.GetEHFrameInfo();
     if (eh_frame) {
-      m_unwind_plan_eh_frame_sp.reset(
-          new UnwindPlan(lldb::eRegisterKindGeneric));
+      m_unwind_plan_eh_frame_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (!eh_frame->GetUnwindPlan(current_pc, *m_unwind_plan_eh_frame_sp))
         m_unwind_plan_eh_frame_sp.reset();
     }
@@ -132,8 +134,8 @@ UnwindPlanSP FuncUnwinders::GetDebugFrameUnwindPlan(Target &target,
       current_pc.SetOffset(current_pc.GetOffset() + current_offset);
     DWARFCallFrameInfo *debug_frame = m_unwind_table.GetDebugFrameInfo();
     if (debug_frame) {
-      m_unwind_plan_debug_frame_sp.reset(
-          new UnwindPlan(lldb::eRegisterKindGeneric));
+      m_unwind_plan_debug_frame_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (!debug_frame->GetUnwindPlan(current_pc,
                                       *m_unwind_plan_debug_frame_sp))
         m_unwind_plan_debug_frame_sp.reset();
@@ -155,8 +157,8 @@ UnwindPlanSP FuncUnwinders::GetArmUnwindUnwindPlan(Target &target,
       current_pc.SetOffset(current_pc.GetOffset() + current_offset);
     ArmUnwindInfo *arm_unwind_info = m_unwind_table.GetArmUnwindInfo();
     if (arm_unwind_info) {
-      m_unwind_plan_arm_unwind_sp.reset(
-          new UnwindPlan(lldb::eRegisterKindGeneric));
+      m_unwind_plan_arm_unwind_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (!arm_unwind_info->GetUnwindPlan(target, current_pc,
                                           *m_unwind_plan_arm_unwind_sp))
         m_unwind_plan_arm_unwind_sp.reset();
@@ -189,7 +191,8 @@ UnwindPlanSP FuncUnwinders::GetEHFrameAugmentedUnwindPlan(Target &target,
   if (!eh_frame_plan)
     return m_unwind_plan_eh_frame_augmented_sp;
 
-  m_unwind_plan_eh_frame_augmented_sp.reset(new UnwindPlan(*eh_frame_plan));
+  m_unwind_plan_eh_frame_augmented_sp =
+      std::make_shared<UnwindPlan>(*eh_frame_plan);
 
   // Augment the eh_frame instructions with epilogue descriptions if necessary
   // so the UnwindPlan can be used at any instruction in the function.
@@ -231,8 +234,8 @@ FuncUnwinders::GetDebugFrameAugmentedUnwindPlan(Target &target, Thread &thread,
   if (!debug_frame_plan)
     return m_unwind_plan_debug_frame_augmented_sp;
 
-  m_unwind_plan_debug_frame_augmented_sp.reset(
-      new UnwindPlan(*debug_frame_plan));
+  m_unwind_plan_debug_frame_augmented_sp =
+      std::make_shared<UnwindPlan>(*debug_frame_plan);
 
   // Augment the debug_frame instructions with epilogue descriptions if
   // necessary so the UnwindPlan can be used at any instruction in the
@@ -262,7 +265,8 @@ UnwindPlanSP FuncUnwinders::GetAssemblyUnwindPlan(Target &target,
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
-    m_unwind_plan_assembly_sp.reset(new UnwindPlan(lldb::eRegisterKindGeneric));
+    m_unwind_plan_assembly_sp =
+        std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
     if (!assembly_profiler_sp->GetNonCallSiteUnwindPlanFromAssembly(
             m_range, thread, *m_unwind_plan_assembly_sp)) {
       m_unwind_plan_assembly_sp.reset();
@@ -364,7 +368,8 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanFastUnwind(Target &target,
 
   UnwindAssemblySP assembly_profiler_sp(GetUnwindAssemblyProfiler(target));
   if (assembly_profiler_sp) {
-    m_unwind_plan_fast_sp.reset(new UnwindPlan(lldb::eRegisterKindGeneric));
+    m_unwind_plan_fast_sp =
+        std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
     if (!assembly_profiler_sp->GetFastUnwindPlan(m_range, thread,
                                                  *m_unwind_plan_fast_sp)) {
       m_unwind_plan_fast_sp.reset();
@@ -385,8 +390,8 @@ UnwindPlanSP FuncUnwinders::GetUnwindPlanArchitectureDefault(Thread &thread) {
   if (process_sp) {
     ABI *abi = process_sp->GetABI().get();
     if (abi) {
-      m_unwind_plan_arch_default_sp.reset(
-          new UnwindPlan(lldb::eRegisterKindGeneric));
+      m_unwind_plan_arch_default_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (!abi->CreateDefaultUnwindPlan(*m_unwind_plan_arch_default_sp)) {
         m_unwind_plan_arch_default_sp.reset();
       }
@@ -410,8 +415,8 @@ FuncUnwinders::GetUnwindPlanArchitectureDefaultAtFunctionEntry(Thread &thread) {
   if (process_sp) {
     ABI *abi = process_sp->GetABI().get();
     if (abi) {
-      m_unwind_plan_arch_default_at_func_entry_sp.reset(
-          new UnwindPlan(lldb::eRegisterKindGeneric));
+      m_unwind_plan_arch_default_at_func_entry_sp =
+          std::make_shared<UnwindPlan>(lldb::eRegisterKindGeneric);
       if (!abi->CreateFunctionEntryUnwindPlan(
               *m_unwind_plan_arch_default_at_func_entry_sp)) {
         m_unwind_plan_arch_default_at_func_entry_sp.reset();

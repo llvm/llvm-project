@@ -892,8 +892,10 @@ main(int argc, char const *argv[])
                          << '\n';
   }
 
-  SBInitializerOptions options;
+  // Remember if we're in replay mode for later.
+  bool replay = false;
 
+  SBInitializerOptions options;
   if (auto *arg = input_args.getLastArg(OPT_capture)) {
     auto arg_value = arg->getValue();
     options.SetReproducerPath(arg_value);
@@ -904,6 +906,7 @@ main(int argc, char const *argv[])
     auto arg_value = arg->getValue();
     options.SetReplayReproducer(true);
     options.SetReproducerPath(arg_value);
+    replay = true;
   }
 
   SBError error = SBDebugger::Initialize(options);

@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cctype>
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
@@ -57,15 +55,15 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
-#include "ClangDiagnostic.h"
-#include "ClangExpressionParser.h"
-
 #include "ClangASTSource.h"
+#include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
+#include "ClangExpressionParser.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
 #include "IRForTarget.h"
+#include "ModuleDependencyCollector.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"
@@ -88,9 +86,13 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+
+#include <cctype>
+#include <memory>
 
 using namespace clang;
 using namespace llvm;
@@ -291,6 +293,22 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   // 1. Create a new compiler instance.
   m_compiler.reset(new CompilerInstance());
 
+  // When capturing a reproducer, hook up the file collector with clang to
+  // collector modules and headers.
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
+    repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
+    m_compiler->setModuleDepCollector(
+        std::make_shared<ModuleDependencyCollectorAdaptor>(
+            fp.GetFileCollector()));
+    DependencyOutputOptions &opts = m_compiler->getDependencyOutputOpts();
+    opts.IncludeSystemHeaders = true;
+    opts.IncludeModuleFiles = true;
+  }
+
+  // Make sure clang uses the same VFS as LLDB.
+  m_compiler->setVirtualFileSystem(
+      FileSystem::Instance().GetVirtualFileSystem());
+
   // Register the support for object-file-wrapped Clang modules.
   std::shared_ptr<clang::PCHContainerOperations> pch_operations =
       m_compiler->getPCHContainerOperations();
@@ -300,7 +318,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
       llvm::make_unique<ObjectFilePCHContainerReader>());
 
   // 2. Install the target.
-
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
   bool overridden_target_opts = false;
@@ -535,14 +552,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   m_compiler->getDiagnostics().setClient(new ClangDiagnosticManagerAdapter);
 
   // 7. Set up the source management objects inside the compiler
-
-  clang::FileSystemOptions file_system_options;
-  m_file_manager.reset(new clang::FileManager(file_system_options));
-
-  if (!m_compiler->hasSourceManager())
-    m_compiler->createSourceManager(*m_file_manager.get());
-
   m_compiler->createFileManager();
+  if (!m_compiler->hasSourceManager())
+    m_compiler->createSourceManager(m_compiler->getFileManager());
   m_compiler->createPreprocessor(TU_Complete);
 
   if (ClangModulesDeclVendor *decl_vendor =
@@ -885,7 +897,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     std::string temp_source_path;
     if (ExpressionSourceCode::SaveExpressionTextToTempFile(
             expr_text, *m_expr.GetOptions(), temp_source_path)) {
-      auto file = m_file_manager->getFile(temp_source_path);
+      auto file = m_compiler->getFileManager().getFile(temp_source_path);
       if (file) {
         source_mgr.setMainFileID(
             source_mgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
@@ -923,9 +935,9 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
       if (file.Write(expr_text, bytes_written).Success()) {
         if (bytes_written == expr_text_len) {
           file.Close();
-          source_mgr.setMainFileID(
-              source_mgr.createFileID(m_file_manager->getFile(result_path),
-                                      SourceLocation(), SrcMgr::C_User));
+          source_mgr.setMainFileID(source_mgr.createFileID(
+              m_compiler->getFileManager().getFile(result_path),
+              SourceLocation(), SrcMgr::C_User));
           created_main_file = true;
         }
       }
@@ -1125,16 +1137,16 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
   lldb_private::Status err;
 
-  std::unique_ptr<llvm::Module> llvm_module_ap(
+  std::unique_ptr<llvm::Module> llvm_module_up(
       m_code_generator->ReleaseModule());
 
-  if (!llvm_module_ap.get()) {
+  if (!llvm_module_up) {
     err.SetErrorToGenericError();
     err.SetErrorString("IR doesn't contain a module");
     return err;
   }
 
-  for (llvm::Function &function : *llvm_module_ap.get()) {
+  for (llvm::Function &function : *llvm_module_up.get()) {
     llvm::AttributeList attributes = function.getAttributes();
     llvm::AttrBuilder attributes_to_remove;
 
@@ -1150,7 +1162,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   if (execution_policy != eExecutionPolicyTopLevel) {
     // Find the actual name of the function (it's often mangled somehow)
 
-    if (!FindFunctionInModule(function_name, llvm_module_ap.get(),
+    if (!FindFunctionInModule(function_name, llvm_module_up.get(),
                               m_expr.FunctionName())) {
       err.SetErrorToGenericError();
       err.SetErrorStringWithFormat("Couldn't find %s() in the module",
@@ -1191,14 +1203,14 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
                   "expression module '%s'",
                   __FUNCTION__, m_expr.FunctionName());
 
-    custom_passes.EarlyPasses->run(*llvm_module_ap);
+    custom_passes.EarlyPasses->run(*llvm_module_up);
   }
 
-  execution_unit_sp.reset(
-      new IRExecutionUnit(m_llvm_context, // handed off here
-                          llvm_module_ap, // handed off here
-                          function_name, exe_ctx.GetTargetSP(), sc,
-                          m_compiler->getTargetOpts().Features));
+  execution_unit_sp = std::make_shared<IRExecutionUnit>(
+      m_llvm_context, // handed off here
+      llvm_module_up, // handed off here
+      function_name, exe_ctx.GetTargetSP(), sc,
+      m_compiler->getTargetOpts().Features);
 
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());

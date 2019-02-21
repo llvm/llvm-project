@@ -49,7 +49,7 @@ protected:
   void SetOptions(const lldb_private::TypeSummaryOptions *lldb_object_ptr);
 
 private:
-  std::unique_ptr<lldb_private::TypeSummaryOptions> m_opaque_ap;
+  std::unique_ptr<lldb_private::TypeSummaryOptions> m_opaque_up;
 };
 
 class SBTypeSummary {

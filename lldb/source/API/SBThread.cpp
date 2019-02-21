@@ -44,6 +44,8 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/lldb-enumerations.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -290,7 +292,7 @@ bool SBThread::GetStopReasonExtendedInfoAsJSON(lldb::SBStream &stream) {
 SBThreadCollection
 SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
   ThreadCollectionSP threads;
-  threads.reset(new ThreadCollection());
+  threads = std::make_shared<ThreadCollection>();
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);

@@ -131,7 +131,7 @@ void ClangExpressionDeclMap::DidParse() {
   if (log)
     ClangASTMetrics::DumpCounters(log);
 
-  if (m_parser_vars.get()) {
+  if (m_parser_vars) {
     for (size_t entity_index = 0, num_entities = m_found_entities.GetSize();
          entity_index < num_entities; ++entity_index) {
       ExpressionVariableSP var_sp(

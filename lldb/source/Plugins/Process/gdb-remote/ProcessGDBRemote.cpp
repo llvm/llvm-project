@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <csignal>
 #include <map>
+#include <memory>
 #include <mutex>
 #include <sstream>
 
@@ -124,7 +125,7 @@ public:
   }
 
   PluginProperties() : Properties() {
-    m_collection_sp.reset(new OptionValueProperties(GetSettingName()));
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
     m_collection_sp->Initialize(g_properties);
   }
 
@@ -152,7 +153,7 @@ typedef std::shared_ptr<PluginProperties> ProcessKDPPropertiesSP;
 static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
   static ProcessKDPPropertiesSP g_settings_sp;
   if (!g_settings_sp)
-    g_settings_sp.reset(new PluginProperties());
+    g_settings_sp = std::make_shared<PluginProperties>();
   return g_settings_sp;
 }
 
@@ -246,7 +247,7 @@ ProcessGDBRemote::CreateInstance(lldb::TargetSP target_sp,
                                  const FileSpec *crash_file_path) {
   lldb::ProcessSP process_sp;
   if (crash_file_path == NULL)
-    process_sp.reset(new ProcessGDBRemote(target_sp, listener_sp));
+    process_sp = std::make_shared<ProcessGDBRemote>(target_sp, listener_sp);
   return process_sp;
 }
 
@@ -1019,14 +1020,14 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
     if (log)
       log->Printf("ProcessGDBRemote::%s Connecting to %s", __FUNCTION__,
                   connect_url.str().c_str());
-    std::unique_ptr<ConnectionFileDescriptor> conn_ap(
+    std::unique_ptr<ConnectionFileDescriptor> conn_up(
         new ConnectionFileDescriptor());
-    if (conn_ap.get()) {
+    if (conn_up) {
       const uint32_t max_retry_count = 50;
       uint32_t retry_count = 0;
       while (!m_gdb_comm.IsConnected()) {
-        if (conn_ap->Connect(connect_url, &error) == eConnectionStatusSuccess) {
-          m_gdb_comm.SetConnection(conn_ap.release());
+        if (conn_up->Connect(connect_url, &error) == eConnectionStatusSuccess) {
+          m_gdb_comm.SetConnection(conn_up.release());
           break;
         } else if (error.WasInterrupted()) {
           // If we were interrupted, don't keep retrying.
@@ -1708,7 +1709,7 @@ bool ProcessGDBRemote::UpdateThreadList(ThreadList &old_thread_list,
       ThreadSP thread_sp(
           old_thread_list_copy.RemoveThreadByProtocolID(tid, false));
       if (!thread_sp) {
-        thread_sp.reset(new ThreadGDBRemote(*this, tid));
+        thread_sp = std::make_shared<ThreadGDBRemote>(*this, tid);
         LLDB_LOGV(log, "Making new thread: {0} for thread ID: {1:x}.",
                   thread_sp.get(), thread_sp->GetID());
       } else {
@@ -1824,7 +1825,7 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
 
       if (!thread_sp) {
         // Create the thread if we need to
-        thread_sp.reset(new ThreadGDBRemote(*this, tid));
+        thread_sp = std::make_shared<ThreadGDBRemote>(*this, tid);
         m_thread_list_real.AddThread(thread_sp);
       }
     }
@@ -4031,9 +4032,9 @@ bool ProcessGDBRemote::StopNoticingNewThreads() {
 }
 
 DynamicLoader *ProcessGDBRemote::GetDynamicLoader() {
-  if (m_dyld_ap.get() == NULL)
-    m_dyld_ap.reset(DynamicLoader::FindPlugin(this, NULL));
-  return m_dyld_ap.get();
+  if (m_dyld_up.get() == NULL)
+    m_dyld_up.reset(DynamicLoader::FindPlugin(this, NULL));
+  return m_dyld_up.get();
 }
 
 Status ProcessGDBRemote::SendEventData(const char *data) {
@@ -4060,8 +4061,8 @@ const DataBufferSP ProcessGDBRemote::GetAuxvData() {
     if (m_gdb_comm.SendPacketsAndConcatenateResponses("qXfer:auxv:read::",
                                                       response_string) ==
         GDBRemoteCommunication::PacketResult::Success)
-      buf.reset(new DataBufferHeap(response_string.c_str(),
-                                   response_string.length()));
+      buf = std::make_shared<DataBufferHeap>(response_string.c_str(),
+                                             response_string.length());
   }
   return buf;
 }
@@ -5424,7 +5425,7 @@ public:
 
 CommandObject *ProcessGDBRemote::GetPluginCommandObject() {
   if (!m_command_sp)
-    m_command_sp.reset(new CommandObjectMultiwordProcessGDBRemote(
-        GetTarget().GetDebugger().GetCommandInterpreter()));
+    m_command_sp = std::make_shared<CommandObjectMultiwordProcessGDBRemote>(
+        GetTarget().GetDebugger().GetCommandInterpreter());
   return m_command_sp.get();
 }

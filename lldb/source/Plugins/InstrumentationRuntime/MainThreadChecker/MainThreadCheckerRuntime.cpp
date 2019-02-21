@@ -27,6 +27,8 @@
 #include "swift/AST/NameLookup.h"
 #include "swift/ClangImporter/ClangImporter.h"
 
+#include <memory>
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -317,7 +319,7 @@ lldb::ThreadCollectionSP
 MainThreadCheckerRuntime::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP info) {
   ThreadCollectionSP threads;
-  threads.reset(new ThreadCollection());
+  threads = std::make_shared<ThreadCollection>();
   
   ProcessSP process_sp = GetProcessSP();
   

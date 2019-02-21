@@ -125,12 +125,12 @@ bool BreakpointOptions::NullCallback(void *baton,
 BreakpointOptions::BreakpointOptions(bool all_flags_set)
     : m_callback(BreakpointOptions::NullCallback), m_callback_baton_sp(),
       m_baton_is_command_baton(false), m_callback_is_synchronous(false),
-      m_enabled(true), m_one_shot(false), m_ignore_count(0), m_thread_spec_ap(),
+      m_enabled(true), m_one_shot(false), m_ignore_count(0), m_thread_spec_up(),
       m_condition_text(), m_condition_text_hash(0), m_auto_continue(false),
       m_set_flags(0) {
-        if (all_flags_set)
-          m_set_flags.Set(~((Flags::ValueType) 0));
-      }
+  if (all_flags_set)
+    m_set_flags.Set(~((Flags::ValueType)0));
+}
 
 BreakpointOptions::BreakpointOptions(const char *condition, bool enabled,
                                      int32_t ignore, bool one_shot, 
@@ -155,11 +155,10 @@ BreakpointOptions::BreakpointOptions(const BreakpointOptions &rhs)
       m_baton_is_command_baton(rhs.m_baton_is_command_baton),
       m_callback_is_synchronous(rhs.m_callback_is_synchronous),
       m_enabled(rhs.m_enabled), m_one_shot(rhs.m_one_shot),
-      m_ignore_count(rhs.m_ignore_count), m_thread_spec_ap(),
-      m_auto_continue(rhs.m_auto_continue),
-      m_set_flags(rhs.m_set_flags) {
-  if (rhs.m_thread_spec_ap.get() != nullptr)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
+      m_ignore_count(rhs.m_ignore_count), m_thread_spec_up(),
+      m_auto_continue(rhs.m_auto_continue), m_set_flags(rhs.m_set_flags) {
+  if (rhs.m_thread_spec_up != nullptr)
+    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
   m_condition_text = rhs.m_condition_text;
   m_condition_text_hash = rhs.m_condition_text_hash;
 }
@@ -176,8 +175,8 @@ operator=(const BreakpointOptions &rhs) {
   m_enabled = rhs.m_enabled;
   m_one_shot = rhs.m_one_shot;
   m_ignore_count = rhs.m_ignore_count;
-  if (rhs.m_thread_spec_ap.get() != nullptr)
-    m_thread_spec_ap.reset(new ThreadSpec(*rhs.m_thread_spec_ap.get()));
+  if (rhs.m_thread_spec_up != nullptr)
+    m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
   m_condition_text = rhs.m_condition_text;
   m_condition_text_hash = rhs.m_condition_text_hash;
   m_auto_continue = rhs.m_auto_continue;
@@ -228,12 +227,11 @@ void BreakpointOptions::CopyOverSetOptions(const BreakpointOptions &incoming)
     m_auto_continue = incoming.m_auto_continue;
     m_set_flags.Set(eAutoContinue);
   }
-  if (incoming.m_set_flags.Test(eThreadSpec) && incoming.m_thread_spec_ap)
-  {
-    if (!m_thread_spec_ap)
-      m_thread_spec_ap.reset(new ThreadSpec(*incoming.m_thread_spec_ap.get()));
+  if (incoming.m_set_flags.Test(eThreadSpec) && incoming.m_thread_spec_up) {
+    if (!m_thread_spec_up)
+      m_thread_spec_up.reset(new ThreadSpec(*incoming.m_thread_spec_up));
     else
-      *m_thread_spec_ap.get() = *incoming.m_thread_spec_ap.get();
+      *m_thread_spec_up = *incoming.m_thread_spec_up;
     m_set_flags.Set(eThreadSpec);
   }
 }
@@ -327,7 +325,7 @@ std::unique_ptr<BreakpointOptions> BreakpointOptions::CreateFromStructuredData(
   auto bp_options = llvm::make_unique<BreakpointOptions>(
       condition_ref.str().c_str(), enabled, 
       ignore_count, one_shot, auto_continue);
-  if (cmd_data_up.get()) {
+  if (cmd_data_up) {
     if (cmd_data_up->interpreter == eScriptLanguageNone)
       bp_options->SetCommandDataCallback(cmd_data_up);
     else {
@@ -404,9 +402,9 @@ StructuredData::ObjectSP BreakpointOptions::SerializeToStructuredData() {
           BreakpointOptions::CommandData::GetSerializationKey(), commands_sp);
     }
   }
-  if (m_set_flags.Test(eThreadSpec) && m_thread_spec_ap) {
+  if (m_set_flags.Test(eThreadSpec) && m_thread_spec_up) {
     StructuredData::ObjectSP thread_spec_sp =
-        m_thread_spec_ap->SerializeToStructuredData();
+        m_thread_spec_up->SerializeToStructuredData();
     options_dict_sp->AddItem(ThreadSpec::GetSerializationKey(), thread_spec_sp);
   }
 
@@ -521,17 +519,16 @@ const char *BreakpointOptions::GetConditionText(size_t *hash) const {
 }
 
 const ThreadSpec *BreakpointOptions::GetThreadSpecNoCreate() const {
-  return m_thread_spec_ap.get();
+  return m_thread_spec_up.get();
 }
 
 ThreadSpec *BreakpointOptions::GetThreadSpec() {
-  if (m_thread_spec_ap.get() == nullptr)
-  {
+  if (m_thread_spec_up == nullptr) {
     m_set_flags.Set(eThreadSpec);
-    m_thread_spec_ap.reset(new ThreadSpec());
+    m_thread_spec_up.reset(new ThreadSpec());
   }
 
-  return m_thread_spec_ap.get();
+  return m_thread_spec_up.get();
 }
 
 void BreakpointOptions::SetThreadID(lldb::tid_t thread_id) {
@@ -541,7 +538,7 @@ void BreakpointOptions::SetThreadID(lldb::tid_t thread_id) {
 
 void BreakpointOptions::SetThreadSpec(
     std::unique_ptr<ThreadSpec> &thread_spec_up) {
-  m_thread_spec_ap = std::move(thread_spec_up);
+  m_thread_spec_up = std::move(thread_spec_up);
   m_set_flags.Set(eThreadSpec);
 }
 
@@ -573,8 +570,8 @@ void BreakpointOptions::GetDescription(Stream *s,
     if (m_auto_continue)
       s->Printf("auto-continue ");
 
-    if (m_thread_spec_ap.get())
-      m_thread_spec_ap->GetDescription(s, level);
+    if (m_thread_spec_up)
+      m_thread_spec_up->GetDescription(s, level);
 
     if (level == lldb::eDescriptionLevelFull) {
       s->IndentLess();
@@ -679,7 +676,7 @@ bool BreakpointOptions::BreakpointOptionsCallbackFunction(
 void BreakpointOptions::Clear()
 {
   m_set_flags.Clear();
-  m_thread_spec_ap.release();
+  m_thread_spec_up.release();
   m_one_shot = false;
   m_ignore_count = 0;
   m_auto_continue = false;

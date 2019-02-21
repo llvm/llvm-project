@@ -398,10 +398,10 @@ private:
   bool m_is_indirect;
   Address m_address;   ///< The address defining this location.
   Breakpoint &m_owner; ///< The breakpoint that produced this object.
-  std::unique_ptr<BreakpointOptions> m_options_ap; ///< Breakpoint options
-                                                   ///pointer, nullptr if we're
-                                                   ///using our breakpoint's
-                                                   ///options.
+  std::unique_ptr<BreakpointOptions> m_options_up; ///< Breakpoint options
+                                                   /// pointer, nullptr if we're
+                                                   /// using our breakpoint's
+                                                   /// options.
   lldb::BreakpointSiteSP m_bp_site_sp; ///< Our breakpoint site (it may be
                                        ///shared by more than one location.)
   lldb::UserExpressionSP m_user_expression_sp; ///< The compiled expression to

@@ -32,7 +32,7 @@ using namespace std;
 // Constructor
 //----------------------------------------------------------------------
 DWARFDebugInfo::DWARFDebugInfo()
-    : m_dwarf2Data(NULL), m_compile_units(), m_cu_aranges_ap() {}
+    : m_dwarf2Data(NULL), m_compile_units(), m_cu_aranges_up() {}
 
 //----------------------------------------------------------------------
 // SetDwarfData
@@ -43,10 +43,10 @@ void DWARFDebugInfo::SetDwarfData(SymbolFileDWARF *dwarf2Data) {
 }
 
 DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
-  if (m_cu_aranges_ap.get() == NULL && m_dwarf2Data) {
+  if (m_cu_aranges_up == NULL && m_dwarf2Data) {
     Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_ARANGES));
 
-    m_cu_aranges_ap.reset(new DWARFDebugAranges());
+    m_cu_aranges_up.reset(new DWARFDebugAranges());
     const DWARFDataExtractor &debug_aranges_data =
         m_dwarf2Data->get_debug_aranges_data();
     if (debug_aranges_data.GetByteSize() > 0) {
@@ -55,13 +55,13 @@ DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
             "DWARFDebugInfo::GetCompileUnitAranges() for \"%s\" from "
             ".debug_aranges",
             m_dwarf2Data->GetObjectFile()->GetFileSpec().GetPath().c_str());
-      m_cu_aranges_ap->Extract(debug_aranges_data);
+      m_cu_aranges_up->Extract(debug_aranges_data);
     }
 
     // Make a list of all CUs represented by the arange data in the file.
     std::set<dw_offset_t> cus_with_data;
-    for (size_t n = 0; n < m_cu_aranges_ap.get()->GetNumRanges(); n++) {
-      dw_offset_t offset = m_cu_aranges_ap.get()->OffsetAtIndex(n);
+    for (size_t n = 0; n < m_cu_aranges_up->GetNumRanges(); n++) {
+      dw_offset_t offset = m_cu_aranges_up->OffsetAtIndex(n);
       if (offset != DW_INVALID_OFFSET)
         cus_with_data.insert(offset);
     }
@@ -82,14 +82,14 @@ DWARFDebugAranges &DWARFDebugInfo::GetCompileUnitAranges() {
                 m_dwarf2Data->GetObjectFile()->GetFileSpec().GetPath().c_str());
           printed = true;
         }
-        cu->BuildAddressRangeTable(m_dwarf2Data, m_cu_aranges_ap.get());
+        cu->BuildAddressRangeTable(m_dwarf2Data, m_cu_aranges_up.get());
       }
     }
 
     const bool minimize = true;
-    m_cu_aranges_ap->Sort(minimize);
+    m_cu_aranges_up->Sort(minimize);
   }
-  return *m_cu_aranges_ap.get();
+  return *m_cu_aranges_up;
 }
 
 void DWARFDebugInfo::ParseCompileUnitHeadersIfNeeded() {

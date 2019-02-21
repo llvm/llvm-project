@@ -5,9 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#include <string>
-
 #include "CommandObjectFrame.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -44,6 +41,9 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
+
+#include <memory>
+#include <string>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -526,9 +526,9 @@ protected:
           ConstString(m_option_variable.summary.GetCurrentValue()),
           summary_format_sp);
     else if (!m_option_variable.summary_string.IsCurrentValueEmpty())
-      summary_format_sp.reset(new StringSummaryFormat(
+      summary_format_sp = std::make_shared<StringSummaryFormat>(
           TypeSummaryImpl::Flags(),
-          m_option_variable.summary_string.GetCurrentValue()));
+          m_option_variable.summary_string.GetCurrentValue());
 
     DumpValueObjectOptions options(m_varobj_options.GetAsDumpOptions(
         eLanguageRuntimeDescriptionDisplayVerbosityFull, eFormatDefault,
