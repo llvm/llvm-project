@@ -10,11 +10,10 @@
 #include <CoreServices/CoreServices.h>
 
 struct DirectoryWatcher::Implementation {
-  bool initialize(StringRef Path, EventReceiver Receiver,
-                  bool waitInitialSync, std::string &Error);
-  ~Implementation() {
-    stopFSEventStream();
-  };
+  bool initialize(StringRef Path, EventReceiver Receiver, bool waitInitialSync,
+                  std::string &Error);
+  ~Implementation() { stopFSEventStream(); };
+
 private:
   FSEventStreamRef EventStream = nullptr;
 
@@ -30,35 +29,35 @@ struct EventStreamContextData {
   DirectoryWatcher::EventReceiver Receiver;
   std::shared_ptr<DirectoryScan> InitialScan;
 
-  EventStreamContextData(std::string watchedPath, DirectoryWatcher::EventReceiver receiver,
+  EventStreamContextData(std::string watchedPath,
+                         DirectoryWatcher::EventReceiver receiver,
                          std::shared_ptr<DirectoryScan> initialScanPtr)
-  : WatchedPath(std::move(watchedPath)),
-    Receiver(std::move(receiver)),
-    InitialScan(std::move(initialScanPtr)) {
-  }
+      : WatchedPath(std::move(watchedPath)), Receiver(std::move(receiver)),
+        InitialScan(std::move(initialScanPtr)) {}
 
   static void dispose(const void *ctx) {
-    delete static_cast<const EventStreamContextData*>(ctx);
+    delete static_cast<const EventStreamContextData *>(ctx);
   }
 };
-}
+} // namespace
 
-static void eventStreamCallback(
-                       ConstFSEventStreamRef stream,
-                       void *clientCallBackInfo,
-                       size_t numEvents,
-                       void *eventPaths,
-                       const FSEventStreamEventFlags eventFlags[],
-                       const FSEventStreamEventId eventIds[]) {
-  auto *ctx = static_cast<EventStreamContextData*>(clientCallBackInfo);
+static void eventStreamCallback(ConstFSEventStreamRef stream,
+                                void *clientCallBackInfo, size_t numEvents,
+                                void *eventPaths,
+                                const FSEventStreamEventFlags eventFlags[],
+                                const FSEventStreamEventId eventIds[]) {
+  auto *ctx = static_cast<EventStreamContextData *>(clientCallBackInfo);
 
   std::vector<DirectoryWatcher::Event> Events;
   for (size_t i = 0; i < numEvents; ++i) {
     StringRef path = ((const char **)eventPaths)[i];
     const FSEventStreamEventFlags flags = eventFlags[i];
     if (!(flags & kFSEventStreamEventFlagItemIsFile)) {
-      if ((flags & kFSEventStreamEventFlagItemRemoved) && path == ctx->WatchedPath) {
-        DirectoryWatcher::Event Evt{DirectoryWatcher::EventKind::DirectoryDeleted, path, llvm::sys::TimePoint<>{} };
+      if ((flags & kFSEventStreamEventFlagItemRemoved) &&
+          path == ctx->WatchedPath) {
+        DirectoryWatcher::Event Evt{
+            DirectoryWatcher::EventKind::DirectoryDeleted, path,
+            llvm::sys::TimePoint<>{}};
         Events.push_back(Evt);
         break;
       }
@@ -113,15 +112,17 @@ static void eventStreamCallback(
   }
 }
 
-bool DirectoryWatcher::Implementation::setupFSEventStream(StringRef path,
-                                                          EventReceiver receiver,
-                                                          dispatch_queue_t queue,
-                                                          std::shared_ptr<DirectoryScan> initialScanPtr) {
+bool DirectoryWatcher::Implementation::setupFSEventStream(
+    StringRef path, EventReceiver receiver, dispatch_queue_t queue,
+    std::shared_ptr<DirectoryScan> initialScanPtr) {
   if (path.empty())
     return true;
 
-  CFMutableArrayRef pathsToWatch = CFArrayCreateMutable(nullptr, 0, &kCFTypeArrayCallBacks);
-  CFStringRef cfPathStr = CFStringCreateWithBytes(nullptr, (const UInt8 *)path.data(), path.size(), kCFStringEncodingUTF8, false);
+  CFMutableArrayRef pathsToWatch =
+      CFArrayCreateMutable(nullptr, 0, &kCFTypeArrayCallBacks);
+  CFStringRef cfPathStr =
+      CFStringCreateWithBytes(nullptr, (const UInt8 *)path.data(), path.size(),
+                              kCFStringEncodingUTF8, false);
   CFArrayAppendValue(pathsToWatch, cfPathStr);
   CFRelease(cfPathStr);
   CFAbsoluteTime latency = 0.0; // Latency in seconds.
@@ -138,9 +139,8 @@ bool DirectoryWatcher::Implementation::setupFSEventStream(StringRef path,
       realPath = path;
   }
 
-  EventStreamContextData *ctxData =
-    new EventStreamContextData(std::move(realPath), std::move(receiver),
-                               std::move(initialScanPtr));
+  EventStreamContextData *ctxData = new EventStreamContextData(
+      std::move(realPath), std::move(receiver), std::move(initialScanPtr));
   FSEventStreamContext context;
   context.version = 0;
   context.info = ctxData;
@@ -148,14 +148,10 @@ bool DirectoryWatcher::Implementation::setupFSEventStream(StringRef path,
   context.release = EventStreamContextData::dispose;
   context.copyDescription = nullptr;
 
-  EventStream = FSEventStreamCreate(nullptr,
-                                    eventStreamCallback,
-                                    &context,
-                                    pathsToWatch,
-                                    kFSEventStreamEventIdSinceNow,
-                                    latency,
-                                    kFSEventStreamCreateFlagFileEvents |
-                                    kFSEventStreamCreateFlagNoDefer);
+  EventStream = FSEventStreamCreate(
+      nullptr, eventStreamCallback, &context, pathsToWatch,
+      kFSEventStreamEventIdSinceNow, latency,
+      kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagNoDefer);
   CFRelease(pathsToWatch);
   if (!EventStream) {
     return true;
@@ -175,10 +171,13 @@ void DirectoryWatcher::Implementation::stopFSEventStream() {
 }
 
 bool DirectoryWatcher::Implementation::initialize(StringRef Path,
-    EventReceiver Receiver, bool waitInitialSync, std::string &Error) {
+                                                  EventReceiver Receiver,
+                                                  bool waitInitialSync,
+                                                  std::string &Error) {
   auto initialScan = std::make_shared<DirectoryScan>();
 
-  dispatch_queue_t queue = dispatch_queue_create("DirectoryWatcher", DISPATCH_QUEUE_SERIAL);
+  dispatch_queue_t queue =
+      dispatch_queue_create("DirectoryWatcher", DISPATCH_QUEUE_SERIAL);
   dispatch_semaphore_t initScanSema = dispatch_semaphore_create(0);
   dispatch_semaphore_t setupFSEventsSema = dispatch_semaphore_create(0);
 
@@ -206,7 +205,8 @@ bool DirectoryWatcher::Implementation::initialize(StringRef Path,
   dispatch_release(queue);
 
   if (fsErr) {
-    raw_string_ostream(Error) << "failed to setup FSEvents stream for path: " << Path;
+    raw_string_ostream(Error)
+        << "failed to setup FSEvents stream for path: " << Path;
     return true;
   }
 

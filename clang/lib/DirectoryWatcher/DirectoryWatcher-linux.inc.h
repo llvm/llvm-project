@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Errno.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Mutex.h"
+#include "llvm/Support/Path.h"
+#include <sys/inotify.h>
 #include <thread>
 #include <unistd.h>
-#include <sys/inotify.h>
 
 namespace {
 
@@ -30,7 +30,8 @@ class EventQueue {
 
   DirectoryWatcher::Event toDirEvent(const INotifyEvent &evt) {
     llvm::sys::TimePoint<> modTime{};
-    if (evt.Status.hasValue()) modTime = evt.Status->getLastModificationTime();
+    if (evt.Status.hasValue())
+      modTime = evt.Status->getLastModificationTime();
     return DirectoryWatcher::Event{evt.K, evt.Filename, modTime};
   }
 
@@ -76,14 +77,12 @@ public:
     PendingEvents.clear();
   }
 };
-}  // namespace
+} // namespace
 
 struct DirectoryWatcher::Implementation {
-  bool initialize(StringRef Path, EventReceiver Receiver,
-                  bool waitInitialSync, std::string &Error);
-  ~Implementation() {
-    stopListening();
-  };
+  bool initialize(StringRef Path, EventReceiver Receiver, bool waitInitialSync,
+                  std::string &Error);
+  ~Implementation() { stopListening(); };
 
 private:
   int inotifyFD = -1;
@@ -93,8 +92,8 @@ private:
 
 static void runWatcher(std::string pathToWatch, int inotifyFD,
                        std::shared_ptr<EventQueue> evtQueue) {
-  #define EVT_BUF_LEN (30 * (sizeof(struct inotify_event) + NAME_MAX + 1))
-  char buf[EVT_BUF_LEN] __attribute__ ((aligned(8)));
+#define EVT_BUF_LEN (30 * (sizeof(struct inotify_event) + NAME_MAX + 1))
+  char buf[EVT_BUF_LEN] __attribute__((aligned(8)));
 
   while (1) {
     ssize_t numRead = read(inotifyFD, buf, EVT_BUF_LEN);
@@ -155,16 +154,16 @@ bool DirectoryWatcher::Implementation::initialize(StringRef Path,
     return true;
   };
 
-	auto evtQueue = std::make_shared<EventQueue>(std::move(Receiver));
+  auto evtQueue = std::make_shared<EventQueue>(std::move(Receiver));
 
   inotifyFD = inotify_init();
   if (inotifyFD == -1)
     return error("inotify_init failed");
 
   std::string pathToWatch = Path;
-  int wd = inotify_add_watch(
-      inotifyFD, pathToWatch.c_str(),
-      IN_MOVED_TO | IN_DELETE | IN_MODIFY | IN_DELETE_SELF | IN_ONLYDIR);
+  int wd = inotify_add_watch(inotifyFD, pathToWatch.c_str(),
+                             IN_MOVED_TO | IN_DELETE | IN_MODIFY |
+                                 IN_DELETE_SELF | IN_ONLYDIR);
   if (wd == -1)
     return error("inotify_add_watch failed");
 

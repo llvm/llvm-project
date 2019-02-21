@@ -16,13 +16,13 @@
 using namespace clang;
 using namespace clang::index;
 
-void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles,
-                                       unsigned Offset,
+void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles, unsigned Offset,
                                        const Decl *D,
                                        ArrayRef<SymbolRelation> Relations) {
-  assert(D->isCanonicalDecl());
+  assert(D->isCanonicalDecl() &&
+         "Occurrences should be associated with their canonical decl");
 
-  auto IsNextOccurence = [&]()->bool {
+  auto IsNextOccurence = [&]() -> bool {
     if (Decls.empty())
       return true;
     auto &Last = Decls.back();
@@ -39,7 +39,7 @@ void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles,
   Decls.insert(It, std::move(NewInfo));
 }
 
-void FileIndexRecord::print(llvm::raw_ostream &OS) {
+void FileIndexRecord::print(llvm::raw_ostream &OS) const {
   OS << "DECLS BEGIN ---\n";
   for (auto &DclInfo : Decls) {
     auto D = DclInfo.Dcl;

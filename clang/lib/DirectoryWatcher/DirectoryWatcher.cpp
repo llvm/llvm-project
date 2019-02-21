@@ -46,11 +46,12 @@ template <> struct DenseMapInfo<sys::fs::UniqueID> {
         std::make_pair(val.getDevice(), val.getFile()));
   }
 
-  static bool isEqual(const sys::fs::UniqueID &LHS, const sys::fs::UniqueID &RHS) {
+  static bool isEqual(const sys::fs::UniqueID &LHS,
+                      const sys::fs::UniqueID &RHS) {
     return LHS == RHS;
   }
 };
-}
+} // namespace llvm
 
 namespace {
 /// Used for initial directory scan.
@@ -65,12 +66,14 @@ struct DirectoryScan {
     using namespace llvm::sys;
 
     std::error_code EC;
-    for (auto It = fs::directory_iterator(Path, EC), End = fs::directory_iterator();
-           !EC && It != End; It.increment(EC)) {
+    for (auto It = fs::directory_iterator(Path, EC),
+              End = fs::directory_iterator();
+         !EC && It != End; It.increment(EC)) {
       auto status = getFileStatus(It->path());
       if (!status.hasValue())
         continue;
-      Files.push_back(std::make_tuple(It->path(), status->getLastModificationTime()));
+      Files.push_back(
+          std::make_tuple(It->path(), status->getLastModificationTime()));
       FileIDSet.insert(status->getUniqueID());
     }
   }
@@ -78,29 +81,30 @@ struct DirectoryScan {
   std::vector<DirectoryWatcher::Event> getAsFileEvents() const {
     std::vector<DirectoryWatcher::Event> Events;
     for (const auto &info : Files) {
-      DirectoryWatcher::Event Event{DirectoryWatcher::EventKind::Added, std::get<0>(info), std::get<1>(info)};
+      DirectoryWatcher::Event Event{DirectoryWatcher::EventKind::Added,
+                                    std::get<0>(info), std::get<1>(info)};
       Events.push_back(std::move(Event));
     }
     return Events;
   }
 };
-}
+} // namespace
 
 // Add platform-specific functionality.
 
 #if !defined(__has_include)
-# define __has_include(x) 0
+#define __has_include(x) 0
 #endif
 
-#if __has_include(<CoreServices/CoreServices.h>)
-# include "DirectoryWatcher-mac.inc.h"
+#if __has_include(<CoreServices/FSEvents.h>)
+#include "DirectoryWatcher-mac.inc.h"
 #elif __has_include(<sys/inotify.h>)
-# include "DirectoryWatcher-linux.inc.h"
+#include "DirectoryWatcher-linux.inc.h"
 #else
 
 struct DirectoryWatcher::Implementation {
-  bool initialize(StringRef Path, EventReceiver Receiver,
-                  bool waitInitialSync, std::string &Error) {
+  bool initialize(StringRef Path, EventReceiver Receiver, bool waitInitialSync,
+                  std::string &Error) {
     Error = "directory listening not supported for this platform";
     return true;
   }
@@ -108,16 +112,13 @@ struct DirectoryWatcher::Implementation {
 
 #endif
 
+DirectoryWatcher::DirectoryWatcher() : Impl(*new Implementation()) {}
 
-DirectoryWatcher::DirectoryWatcher()
-  : Impl(*new Implementation()) {}
+DirectoryWatcher::~DirectoryWatcher() { delete &Impl; }
 
-DirectoryWatcher::~DirectoryWatcher() {
-  delete &Impl;
-}
-
-std::unique_ptr<DirectoryWatcher> DirectoryWatcher::create(StringRef Path,
-        EventReceiver Receiver, bool waitInitialSync, std::string &Error) {
+std::unique_ptr<DirectoryWatcher>
+DirectoryWatcher::create(StringRef Path, EventReceiver Receiver,
+                         bool waitInitialSync, std::string &Error) {
   using namespace llvm::sys;
 
   if (!fs::exists(Path)) {
@@ -143,7 +144,8 @@ std::unique_ptr<DirectoryWatcher> DirectoryWatcher::create(StringRef Path,
   std::unique_ptr<DirectoryWatcher> DirWatch;
   DirWatch.reset(new DirectoryWatcher());
   auto &Impl = DirWatch->Impl;
-  bool hasError = Impl.initialize(Path, std::move(Receiver), waitInitialSync, Error);
+  bool hasError =
+      Impl.initialize(Path, std::move(Receiver), waitInitialSync, Error);
   if (hasError)
     return nullptr;
 
