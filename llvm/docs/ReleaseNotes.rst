@@ -93,9 +93,15 @@ Non-comprehensive list of changes in this release
 Changes to the LLVM IR
 ----------------------
 
+* Function attribute ``speculative_load_hardening`` has been introduced to
+  allow indicating that `Speculative Load Hardening
+  <SpeculativeLoadHardening.html>`_ must be enabled for the function body.
+
 
 Changes to the AArch64 Target
 -----------------------------
+
+* Support for Speculative Load Hardening has been added.
 
 * Initial support for the Tiny code model, where code and its statically
   defined symbols must live within 1MB of each other.
