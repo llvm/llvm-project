@@ -130,6 +130,9 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- ``-mspeculative-load-hardening`` Clang now has an option to enable
+  Speculative Load Hardening.
+
 - ``-fprofile-filter-files=[regexes]`` and ``-fprofile-exclude-files=[regexes]``.
 
   Clang has now options to filter or exclude some files when
@@ -171,7 +174,9 @@ New Pragmas in Clang
 Attribute Changes in Clang
 --------------------------
 
-- ...
+* Clang now supports enabling/disabling speculative load hardening on a
+  per-function basis using the function attribute
+  ``speculative_load_hardening``/``no_speculative_load_hardening``.
 
 Windows Support
 ---------------
