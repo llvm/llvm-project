@@ -25,19 +25,19 @@ regBankSelected: true
 # VI:   S_LOAD_DWORD_IMM [[PTR]], 1020, 0
 
 # Immediate overflow for SI
-# SI: [[K1024:%[0-9]+]]:sreg_32 = S_MOV_B32 1024
+# SI: [[K1024:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1024
 # SI: S_LOAD_DWORD_SGPR [[PTR]], [[K1024]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 256, 0
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1024, 0
 
 # Max immediate offset for VI
-# SI: [[K1048572:%[0-9]+]]:sreg_32 = S_MOV_B32 1048572
+# SI: [[K1048572:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048572
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262143
 # VI: S_LOAD_DWORD_IMM [[PTR]], 1048572
 
 #
 # Immediate overflow for VI
-# SIVI: [[K1048576:%[0-9]+]]:sreg_32 = S_MOV_B32 1048576
+# SIVI: [[K1048576:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 1048576
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K1048576]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262144, 0
 
@@ -69,7 +69,7 @@ regBankSelected: true
 # GCN: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 
 # Max 32-bit byte offset
-# SIVI: [[K4294967292:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
+# SIVI: [[K4294967292:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 4294967292
 # SIVI: S_LOAD_DWORD_SGPR [[PTR]], [[K4294967292]], 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741823, 0
 
@@ -87,6 +87,14 @@ regBankSelected: true
 # SIVI: S_LOAD_DWORD_IMM [[ADD_PTR]], 0, 0
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741824, 0
 
+# Pointer loads
+# GCN: [[AS0:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0
+# GCN: $sgpr0_sgpr1 = COPY [[AS0]]
+# GCN: [[AS1:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0
+# GCN: $sgpr0_sgpr1 = COPY [[AS1]]
+# GCN: [[AS4:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0
+# GCN: $sgpr0_sgpr1 = COPY [[AS4]]
+
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -95,48 +103,57 @@ body: |
 
     %1:sgpr(s64) = G_CONSTANT i64 4
     %2:sgpr(p4) = G_GEP %0, %1
-    %3:sgpr(s32) = G_LOAD %2 :: (load 4 from %ir.const0)
+    %3:sgpr(s32) = G_LOAD %2 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %3
 
     %4:sgpr(s64) = G_CONSTANT i64 1020
     %5:sgpr(p4) = G_GEP %0, %4
-    %6:sgpr(s32) = G_LOAD %5 :: (load 4 from %ir.const0)
+    %6:sgpr(s32) = G_LOAD %5 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %6
 
     %7:sgpr(s64) = G_CONSTANT i64 1024
     %8:sgpr(p4) = G_GEP %0, %7
-    %9:sgpr(s32) = G_LOAD %8 :: (load 4 from %ir.const0)
+    %9:sgpr(s32) = G_LOAD %8 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %9
 
     %10:sgpr(s64) = G_CONSTANT i64 1048572
     %11:sgpr(p4) = G_GEP %0, %10
-    %12:sgpr(s32) = G_LOAD %11 :: (load 4 from %ir.const0)
+    %12:sgpr(s32) = G_LOAD %11 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %12
 
     %13:sgpr(s64) = G_CONSTANT i64 1048576
     %14:sgpr(p4) = G_GEP %0, %13
-    %15:sgpr(s32) = G_LOAD %14 :: (load 4 from %ir.const0)
+    %15:sgpr(s32) = G_LOAD %14 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %15
 
     %16:sgpr(s64) = G_CONSTANT i64 17179869180
     %17:sgpr(p4) = G_GEP %0, %16
-    %18:sgpr(s32) = G_LOAD %17 :: (load 4 from %ir.const0)
+    %18:sgpr(s32) = G_LOAD %17 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %18
 
     %19:sgpr(s64) = G_CONSTANT i64 17179869184
     %20:sgpr(p4) = G_GEP %0, %19
-    %21:sgpr(s32) = G_LOAD %20 :: (load 4 from %ir.const0)
+    %21:sgpr(s32) = G_LOAD %20 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %21
 
     %22:sgpr(s64) = G_CONSTANT i64 4294967292
     %23:sgpr(p4) = G_GEP %0, %22
-    %24:sgpr(s32) = G_LOAD %23 :: (load 4 from %ir.const0)
+    %24:sgpr(s32) = G_LOAD %23 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %24
 
     %25:sgpr(s64) = G_CONSTANT i64 4294967296
     %26:sgpr(p4) = G_GEP %0, %25
-    %27:sgpr(s32) = G_LOAD %26 :: (load 4 from %ir.const0)
+    %27:sgpr(s32) = G_LOAD %26 :: (load 4 from %ir.const0, addrspace 4)
     $sgpr0 = COPY %27
+
+    %28:sgpr(p0) = G_LOAD %0 :: (load 8 from %ir.const0, addrspace 4)
+    $sgpr0_sgpr1 = COPY %28
+
+    %29:sgpr(p1) = G_LOAD %0 :: (load 8 from %ir.const0, addrspace 4)
+    $sgpr0_sgpr1 = COPY %29
+
+    %30:sgpr(p4) = G_LOAD %0 :: (load 8 from %ir.const0, addrspace 4)
+    $sgpr0_sgpr1 = COPY %30
 
 ...
 ---

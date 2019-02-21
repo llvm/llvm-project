@@ -1137,19 +1137,22 @@ static void AddLibgcc(const llvm::Triple &Triple, const Driver &D,
   bool isCygMing = Triple.isOSCygMing();
   bool IsIAMCU = Triple.isOSIAMCU();
   bool StaticLibgcc = Args.hasArg(options::OPT_static_libgcc) ||
-                      Args.hasArg(options::OPT_static);
+                      Args.hasArg(options::OPT_static) ||
+                      Args.hasArg(options::OPT_static_pie);
 
   bool SharedLibgcc = Args.hasArg(options::OPT_shared_libgcc);
   bool UnspecifiedLibgcc = !StaticLibgcc && !SharedLibgcc;
 
   // Gcc adds libgcc arguments in various ways:
   //
-  // gcc <none>: -lgcc --as-needed -lgcc_s --no-as-needed
-  // g++ <none>:                   -lgcc_s               -lgcc
-  // gcc shared:                   -lgcc_s               -lgcc
-  // g++ shared:                   -lgcc_s               -lgcc
-  // gcc static: -lgcc             -lgcc_eh
-  // g++ static: -lgcc             -lgcc_eh
+  // gcc <none>:     -lgcc --as-needed -lgcc_s --no-as-needed
+  // g++ <none>:                       -lgcc_s               -lgcc
+  // gcc shared:                       -lgcc_s               -lgcc
+  // g++ shared:                       -lgcc_s               -lgcc
+  // gcc static:     -lgcc             -lgcc_eh
+  // g++ static:     -lgcc             -lgcc_eh
+  // gcc static-pie: -lgcc             -lgcc_eh
+  // g++ static-pie: -lgcc             -lgcc_eh
   //
   // Also, certain targets need additional adjustments.
 

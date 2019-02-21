@@ -55,9 +55,6 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
   if (isa<ParmVarDecl>(D))
     return true;
 
-  if (isa<TemplateTemplateParmDecl>(D))
-    return true;
-
   if (isa<ObjCTypeParamDecl>(D))
     return true;
 

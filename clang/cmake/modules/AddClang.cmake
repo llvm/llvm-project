@@ -103,7 +103,7 @@ macro(add_clang_library name)
         ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
         RUNTIME DESTINATION bin)
 
-      if (NOT CMAKE_CONFIGURATION_TYPES)
+      if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
                                  DEPENDS ${name}
                                  COMPONENT ${name})
@@ -147,7 +147,7 @@ macro(add_clang_tool name)
       RUNTIME DESTINATION bin
       COMPONENT ${name})
 
-    if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT LLVM_ENABLE_IDE)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})

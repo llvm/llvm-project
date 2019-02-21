@@ -355,6 +355,8 @@ private:
     BasicBlock *NewPreheader = Preheader->splitBasicBlock(
         Preheader->getTerminator(),
         Twine(Preheader->getName()).concat("-split"));
+    if (MSSAU)
+      MSSAU->removeEdge(Preheader, L.getHeader());
     DTUpdates.push_back({DominatorTree::Delete, Preheader, L.getHeader()});
     DTUpdates.push_back({DominatorTree::Insert, NewPreheader, L.getHeader()});
     DTUpdates.push_back({DominatorTree::Insert, Preheader, NewPreheader});

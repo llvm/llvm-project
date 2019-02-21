@@ -1651,18 +1651,18 @@ let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
 
 // v8.2-A FP16 fused multiply-add long instructions.
 let ArchGuard = "defined(__ARM_FEATURE_FP16FML) && defined(__aarch64__)" in {
-  def VFMLAL_LOW  : SInst<"vfmlal_low", "ffHH", "UiQUi">;
-  def VFMLSL_LOW  : SInst<"vfmlsl_low", "ffHH", "UiQUi">;
-  def VFMLAL_HIGH : SInst<"vfmlal_high", "ffHH", "UiQUi">;
-  def VFMLSL_HIGH : SInst<"vfmlsl_high", "ffHH", "UiQUi">;
+  def VFMLAL_LOW  : SInst<"vfmlal_low",  "ffHH", "hQh">;
+  def VFMLSL_LOW  : SInst<"vfmlsl_low",  "ffHH", "hQh">;
+  def VFMLAL_HIGH : SInst<"vfmlal_high", "ffHH", "hQh">;
+  def VFMLSL_HIGH : SInst<"vfmlsl_high", "ffHH", "hQh">;
 
-  def VFMLAL_LANE_LOW  : SOpInst<"vfmlal_lane_low", "ffH0i", "UiQUi", OP_FMLAL_LN>;
-  def VFMLSL_LANE_LOW  : SOpInst<"vfmlsl_lane_low", "ffH0i", "UiQUi", OP_FMLSL_LN>;
-  def VFMLAL_LANE_HIGH : SOpInst<"vfmlal_lane_high", "ffH0i", "UiQUi", OP_FMLAL_LN_Hi>;
-  def VFMLSL_LANE_HIGH : SOpInst<"vfmlsl_lane_high", "ffH0i", "UiQUi", OP_FMLSL_LN_Hi>;
+  def VFMLAL_LANE_LOW  : SOpInst<"vfmlal_lane_low",  "ffH0i", "hQh", OP_FMLAL_LN>;
+  def VFMLSL_LANE_LOW  : SOpInst<"vfmlsl_lane_low",  "ffH0i", "hQh", OP_FMLSL_LN>;
+  def VFMLAL_LANE_HIGH : SOpInst<"vfmlal_lane_high", "ffH0i", "hQh", OP_FMLAL_LN_Hi>;
+  def VFMLSL_LANE_HIGH : SOpInst<"vfmlsl_lane_high", "ffH0i", "hQh", OP_FMLSL_LN_Hi>;
 
-  def VFMLAL_LANEQ_LOW  : SOpInst<"vfmlal_laneq_low", "ffH1i", "UiQUi", OP_FMLAL_LN>;
-  def VFMLSL_LANEQ_LOW  : SOpInst<"vfmlsl_laneq_low", "ffH1i", "UiQUi", OP_FMLSL_LN>;
-  def VFMLAL_LANEQ_HIGH : SOpInst<"vfmlal_laneq_high", "ffH1i", "UiQUi", OP_FMLAL_LN_Hi>;
-  def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "ffH1i", "UiQUi", OP_FMLSL_LN_Hi>;
+  def VFMLAL_LANEQ_LOW  : SOpInst<"vfmlal_laneq_low",  "ffH1i", "hQh", OP_FMLAL_LN>;
+  def VFMLSL_LANEQ_LOW  : SOpInst<"vfmlsl_laneq_low",  "ffH1i", "hQh", OP_FMLSL_LN>;
+  def VFMLAL_LANEQ_HIGH : SOpInst<"vfmlal_laneq_high", "ffH1i", "hQh", OP_FMLAL_LN_Hi>;
+  def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "ffH1i", "hQh", OP_FMLSL_LN_Hi>;
 }

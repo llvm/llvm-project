@@ -1513,6 +1513,9 @@ Error OperandMatcher::addTypeCheckPredicate(const TypeSetByHwMode &VTy,
 
   if (OperandIsAPointer)
     addPredicate<PointerToAnyOperandMatcher>(OpTyOrNone->get().getSizeInBits());
+  else if (VTy.isPointer())
+    addPredicate<LLTOperandMatcher>(LLT::pointer(VTy.getPtrAddrSpace(),
+                                                 OpTyOrNone->get().getSizeInBits()));
   else
     addPredicate<LLTOperandMatcher>(*OpTyOrNone);
   return Error::success();

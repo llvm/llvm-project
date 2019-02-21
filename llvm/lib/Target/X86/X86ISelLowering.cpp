@@ -20184,6 +20184,8 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   std::tie(Value, Overflow) = getX86XALUOOp(Cond, Op, DAG);
 
   SDValue SetCC = getSETCC(Cond, Overflow, DL, DAG);
+  if (Op->getValueType(1) != MVT::i8)
+    SetCC = DAG.getNode(ISD::ZERO_EXTEND, DL, Op->getValueType(1), SetCC);
   return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), Value, SetCC);
 }
 
@@ -31805,13 +31807,9 @@ static SDValue combineX86ShufflesRecursively(
             : (OpMask[OpIdx] << OpRatioLog2) + (RootMaskedIdx & (OpRatio - 1));
 
     OpMaskedIdx = OpMaskedIdx & (MaskWidth - 1);
-    if (OpMask[OpIdx] < (int)OpMask.size()) {
-      assert(0 <= OpInputIdx[0] && "Unknown target shuffle input");
-      OpMaskedIdx += OpInputIdx[0] * MaskWidth;
-    } else {
-      assert(0 <= OpInputIdx[1] && "Unknown target shuffle input");
-      OpMaskedIdx += OpInputIdx[1] * MaskWidth;
-    }
+    int InputIdx = OpMask[OpIdx] / (int)OpMask.size();
+    assert(0 <= OpInputIdx[InputIdx] && "Unknown target shuffle input");
+    OpMaskedIdx += OpInputIdx[InputIdx] * MaskWidth;
 
     Mask[i] = OpMaskedIdx;
   }
@@ -42513,7 +42511,7 @@ static X86::CondCode parseConstraintCode(llvm::StringRef Constraint) {
                            .Case("{@ccbe}", X86::COND_BE)
                            .Case("{@ccc}", X86::COND_B)
                            .Case("{@cce}", X86::COND_E)
-                           .Case("{@ccz}", X86::COND_NE)
+                           .Case("{@ccz}", X86::COND_E)
                            .Case("{@ccg}", X86::COND_G)
                            .Case("{@ccge}", X86::COND_GE)
                            .Case("{@ccl}", X86::COND_L)

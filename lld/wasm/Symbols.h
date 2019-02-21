@@ -105,6 +105,8 @@ public:
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
 
+  const WasmSignature* getSignature() const;
+
 protected:
   Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
       : IsUsedInRegularObj(false), ForceExport(false), Traced(false),

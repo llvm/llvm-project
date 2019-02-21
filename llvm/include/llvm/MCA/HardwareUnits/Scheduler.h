@@ -160,7 +160,8 @@ public:
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0) {
+      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0),
+        NumDispatchedToThePendingSet(0) {
     initializeStrategy(std::move(SelectStrategy));
   }
 

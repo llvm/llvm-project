@@ -119,7 +119,7 @@ class IRPromoter {
   // This defines the max range of the values that we allow in the promoted
   // tree.
   IntegerType *OrigTy = nullptr;
-  SmallPtrSetImpl<Value*> *Visited;
+  SetVector<Value*> *Visited;
   SmallPtrSetImpl<Value*> *Sources;
   SmallPtrSetImpl<Instruction*> *Sinks;
   SmallPtrSetImpl<Instruction*> *SafeToPromote;
@@ -138,7 +138,7 @@ public:
 
 
   void Mutate(Type *OrigTy,
-              SmallPtrSetImpl<Value*> &Visited,
+              SetVector<Value*> &Visited,
               SmallPtrSetImpl<Value*> &Sources,
               SmallPtrSetImpl<Instruction*> &Sinks,
               SmallPtrSetImpl<Instruction*> &SafeToPromote);
@@ -498,7 +498,7 @@ void IRPromoter::PrepareConstants() {
 
       if (auto *Const = dyn_cast<ConstantInt>(I->getOperand(1))) {
         if (!Const->isNegative())
-          break;
+          continue;
 
         unsigned Opc = I->getOpcode();
         if (Opc != Instruction::Add && Opc != Instruction::Sub)
@@ -755,7 +755,7 @@ void IRPromoter::ConvertTruncs() {
 }
 
 void IRPromoter::Mutate(Type *OrigTy,
-                        SmallPtrSetImpl<Value*> &Visited,
+                        SetVector<Value*> &Visited,
                         SmallPtrSetImpl<Value*> &Sources,
                         SmallPtrSetImpl<Instruction*> &Sinks,
                         SmallPtrSetImpl<Instruction*> &SafeToPromote) {
@@ -935,7 +935,7 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
   SetVector<Value*> WorkList;
   SmallPtrSet<Value*, 8> Sources;
   SmallPtrSet<Instruction*, 4> Sinks;
-  SmallPtrSet<Value*, 16> CurrentVisited;
+  SetVector<Value*> CurrentVisited;
   WorkList.insert(V);
 
   // Return true if V was added to the worklist as a supported instruction,

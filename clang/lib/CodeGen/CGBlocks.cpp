@@ -1253,52 +1253,49 @@ RValue CodeGenFunction::EmitBlockCallExpr(const CallExpr *E,
                                           ReturnValueSlot ReturnValue) {
   const BlockPointerType *BPT =
     E->getCallee()->getType()->getAs<BlockPointerType>();
-
   llvm::Value *BlockPtr = EmitScalarExpr(E->getCallee());
-
-  // Get a pointer to the generic block literal.
-  // For OpenCL we generate generic AS void ptr to be able to reuse the same
-  // block definition for blocks with captures generated as private AS local
-  // variables and without captures generated as global AS program scope
-  // variables.
-  unsigned AddrSpace = 0;
-  if (getLangOpts().OpenCL)
-    AddrSpace = getContext().getTargetAddressSpace(LangAS::opencl_generic);
-
-  llvm::Type *BlockLiteralTy =
-      llvm::PointerType::get(CGM.getGenericBlockLiteralType(), AddrSpace);
-
-  // Bitcast the callee to a block literal.
-  BlockPtr =
-      Builder.CreatePointerCast(BlockPtr, BlockLiteralTy, "block.literal");
-
-  // Get the function pointer from the literal.
-  llvm::Value *FuncPtr =
-      Builder.CreateStructGEP(CGM.getGenericBlockLiteralType(), BlockPtr,
-                              CGM.getLangOpts().OpenCL ? 2 : 3);
-
-  // Add the block literal.
+  llvm::Type *GenBlockTy = CGM.getGenericBlockLiteralType();
+  llvm::Value *Func = nullptr;
+  QualType FnType = BPT->getPointeeType();
+  ASTContext &Ctx = getContext();
   CallArgList Args;
 
-  QualType VoidPtrQualTy = getContext().VoidPtrTy;
-  llvm::Type *GenericVoidPtrTy = VoidPtrTy;
   if (getLangOpts().OpenCL) {
-    GenericVoidPtrTy = CGM.getOpenCLRuntime().getGenericVoidPointerType();
-    VoidPtrQualTy =
-        getContext().getPointerType(getContext().getAddrSpaceQualType(
-            getContext().VoidTy, LangAS::opencl_generic));
+    // For OpenCL, BlockPtr is already casted to generic block literal.
+
+    // First argument of a block call is a generic block literal casted to
+    // generic void pointer, i.e. i8 addrspace(4)*
+    llvm::Value *BlockDescriptor = Builder.CreatePointerCast(
+        BlockPtr, CGM.getOpenCLRuntime().getGenericVoidPointerType());
+    QualType VoidPtrQualTy = Ctx.getPointerType(
+        Ctx.getAddrSpaceQualType(Ctx.VoidTy, LangAS::opencl_generic));
+    Args.add(RValue::get(BlockDescriptor), VoidPtrQualTy);
+    // And the rest of the arguments.
+    EmitCallArgs(Args, FnType->getAs<FunctionProtoType>(), E->arguments());
+
+    // We *can* call the block directly unless it is a function argument.
+    if (!isa<ParmVarDecl>(E->getCalleeDecl()))
+      Func = CGM.getOpenCLRuntime().getInvokeFunction(E->getCallee());
+    else {
+      llvm::Value *FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 2);
+      Func = Builder.CreateAlignedLoad(FuncPtr, getPointerAlign());
+    }
+  } else {
+    // Bitcast the block literal to a generic block literal.
+    BlockPtr = Builder.CreatePointerCast(
+        BlockPtr, llvm::PointerType::get(GenBlockTy, 0), "block.literal");
+    // Get pointer to the block invoke function
+    llvm::Value *FuncPtr = Builder.CreateStructGEP(GenBlockTy, BlockPtr, 3);
+
+    // First argument is a block literal casted to a void pointer
+    BlockPtr = Builder.CreatePointerCast(BlockPtr, VoidPtrTy);
+    Args.add(RValue::get(BlockPtr), Ctx.VoidPtrTy);
+    // And the rest of the arguments.
+    EmitCallArgs(Args, FnType->getAs<FunctionProtoType>(), E->arguments());
+
+    // Load the function.
+    Func = Builder.CreateAlignedLoad(FuncPtr, getPointerAlign());
   }
-
-  BlockPtr = Builder.CreatePointerCast(BlockPtr, GenericVoidPtrTy);
-  Args.add(RValue::get(BlockPtr), VoidPtrQualTy);
-
-  QualType FnType = BPT->getPointeeType();
-
-  // And the rest of the arguments.
-  EmitCallArgs(Args, FnType->getAs<FunctionProtoType>(), E->arguments());
-
-  // Load the function.
-  llvm::Value *Func = Builder.CreateAlignedLoad(FuncPtr, getPointerAlign());
 
   const FunctionType *FuncTy = FnType->castAs<FunctionType>();
   const CGFunctionInfo &FnInfo =

@@ -198,11 +198,10 @@ private:
       auto E = SM.getDecomposedLoc(R.getEnd());
       if (B.first != SelFile || E.first != SelFile)
         continue;
-      assert(R.isTokenRange());
       // Try to cover up to the next token, spaces between children don't count.
       if (auto Tok = Lexer::findNextToken(R.getEnd(), SM, LangOpts))
         E.second = SM.getFileOffset(Tok->getLocation());
-      else
+      else if (R.isTokenRange())
         E.second += Lexer::MeasureTokenLength(R.getEnd(), SM, LangOpts);
       ChildRanges.push_back({B.second, E.second});
     }

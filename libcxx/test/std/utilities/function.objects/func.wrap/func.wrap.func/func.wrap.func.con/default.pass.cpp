@@ -10,7 +10,7 @@
 
 // class function<R(ArgTypes...)>
 
-// explicit function();
+// function();
 
 #include <functional>
 #include <cassert>

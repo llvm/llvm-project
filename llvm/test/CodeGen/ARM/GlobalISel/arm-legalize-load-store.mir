@@ -2,6 +2,7 @@
 # RUN: llc -mtriple thumb-- -mattr=+v6t2 -run-pass=legalizer %s -o - | FileCheck %s
 --- |
   define void @test_legal_loads_stores() { ret void }
+  define void @test_load_from_stack() { ret void }
 
   define void @test_gep() { ret void }
 ...
@@ -48,6 +49,36 @@ body:             |
     %6(p0) = G_LOAD %0(p0) :: (load 4)
     G_STORE %6(p0), %0(p0) :: (store 4)
     BX_RET 14, $noreg
+...
+---
+name:            test_load_from_stack
+# CHECK-LABEL: name: test_load_from_stack
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+fixedStack:
+  - { id: 0, offset: 0, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 1, offset: 4, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  - { id: 2, offset: 8, size: 4, alignment: 4, isImmutable: true, isAliased: false }
+  # CHECK: id: [[FRAME_INDEX:[0-9]+]], type: default, offset: 8
+body:             |
+  bb.0:
+    liveins: $r0, $r1, $r2, $r3
+
+    ; This is legal, so we should find it unchanged in the output
+    ; CHECK: [[FIVREG:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[FRAME_INDEX]]
+    ; CHECK: {{%[0-9]+}}:_(s32) = G_LOAD [[FIVREG]](p0) :: (load 4)
+    %0(p0) = G_FRAME_INDEX %fixed-stack.2
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    $r0 = COPY %1(s32)
+    BX_RET 14, $noreg, implicit $r0
 ...
 ---
 name:            test_gep

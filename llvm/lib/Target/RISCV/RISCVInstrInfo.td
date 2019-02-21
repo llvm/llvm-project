@@ -619,6 +619,24 @@ def : InstAlias<"sfence.vma",     (SFENCE_VMA      X0, X0)>;
 def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
 
 let EmitPriority = 0 in {
+def : InstAlias<"lb $rd, (${rs1})",
+                (LB  GPR:$rd, GPR:$rs1, 0)>;
+def : InstAlias<"lh $rd, (${rs1})",
+                (LH  GPR:$rd, GPR:$rs1, 0)>;
+def : InstAlias<"lw $rd, (${rs1})",
+                (LW  GPR:$rd, GPR:$rs1, 0)>;
+def : InstAlias<"lbu $rd, (${rs1})",
+                (LBU  GPR:$rd, GPR:$rs1, 0)>;
+def : InstAlias<"lhu $rd, (${rs1})",
+                (LHU  GPR:$rd, GPR:$rs1, 0)>;
+
+def : InstAlias<"sb $rs2, (${rs1})",
+                (SB  GPR:$rs2, GPR:$rs1, 0)>;
+def : InstAlias<"sh $rs2, (${rs1})",
+                (SH  GPR:$rs2, GPR:$rs1, 0)>;
+def : InstAlias<"sw $rs2, (${rs1})",
+                (SW  GPR:$rs2, GPR:$rs1, 0)>;
+
 def : InstAlias<"add $rd, $rs1, $imm12",
                 (ADDI  GPR:$rd, GPR:$rs1, simm12:$imm12)>;
 def : InstAlias<"and $rd, $rs1, $imm12",
@@ -634,6 +652,13 @@ def : InstAlias<"srl $rd, $rs1, $shamt",
 def : InstAlias<"sra $rd, $rs1, $shamt",
                 (SRAI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
 let Predicates = [IsRV64] in {
+def : InstAlias<"lwu $rd, (${rs1})",
+                (LWU  GPR:$rd, GPR:$rs1, 0)>;
+def : InstAlias<"ld $rd, (${rs1})",
+                (LD  GPR:$rd, GPR:$rs1, 0)>;
+def : InstAlias<"sd $rs2, (${rs1})",
+                (SD  GPR:$rs2, GPR:$rs1, 0)>;
+
 def : InstAlias<"addw $rd, $rs1, $imm12",
                 (ADDIW  GPR:$rd, GPR:$rs1, simm12:$imm12)>;
 def : InstAlias<"sllw $rd, $rs1, $shamt",

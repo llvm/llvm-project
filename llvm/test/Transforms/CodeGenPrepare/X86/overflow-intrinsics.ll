@@ -285,10 +285,11 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, i32* %p) {
 
 define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
 ; CHECK-LABEL: @usubo_ne_constant0_op1_i32(
-; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i32, i1 } @llvm.usub.with.overflow.i32(i32 0, i32 [[X:%.*]])
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i32, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i32 [[MATH]], i32* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %s = sub i32 0, %x
   %ov = icmp ne i32 %x, 0
