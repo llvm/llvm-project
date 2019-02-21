@@ -102,7 +102,7 @@ template <typename T> void exit_if_not_equal(T val, T ref, const char *name) {
       exit(1);
     }
   } else {
-    if (std::abs(val - ref) != 0) {
+    if ((val - ref) != 0) {
       std::cout << "Unexpected result for " << name << ": " << (long)val
                 << " expected value: " << (long)ref << std::endl;
       exit(1);
@@ -118,7 +118,7 @@ void exit_if_not_equal_vec(vec<T, N> val, vec<T, N> ref, const char *name) {
               << " expected value: " << utils<T, N>::stringify_vec(ref)
               << std::endl;
 
-    exit(0);
+    exit(1);
   }
 }
 
