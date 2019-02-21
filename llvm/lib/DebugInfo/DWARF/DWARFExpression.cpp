@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Format.h"
@@ -97,6 +98,9 @@ static DescVector getDescriptions() {
   Descriptions[DW_OP_addrx] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_addr_index] = Desc(Op::Dwarf4, Op::SizeLEB);
   Descriptions[DW_OP_GNU_const_index] = Desc(Op::Dwarf4, Op::SizeLEB);
+
+  Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
+
   return Descriptions;
 }
 
@@ -171,6 +175,9 @@ bool DWARFExpression::Operation::extract(DataExtractor Data, uint16_t Version,
       else
         Operands[Operand] = Data.getULEB128(&Offset);
       break;
+    case Operation::BaseTypeRef:
+      Operands[Operand] = Data.getULEB128(&Offset);
+      break;
     case Operation::SizeBlock:
       // We need a size, so this cannot be the first operand
       if (Operand == 0)
@@ -222,6 +229,7 @@ static bool prettyPrintRegisterOp(raw_ostream &OS, uint8_t Opcode,
 bool DWARFExpression::Operation::print(raw_ostream &OS,
                                        const DWARFExpression *Expr,
                                        const MCRegisterInfo *RegInfo,
+                                       DWARFUnit *U,
                                        bool isEH) {
   if (Error) {
     OS << "<decoding error>";
@@ -245,7 +253,17 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
     if (Size == Operation::SizeNA)
       break;
 
-    if (Size == Operation::SizeBlock) {
+    if (Size == Operation::BaseTypeRef && U) {
+      auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
+      if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
+        OS << format(" (0x%08x)", U->getOffset() + Operands[Operand]);
+        if (auto Name = Die.find(dwarf::DW_AT_name))
+          OS << " \"" << Name->getAsCString() << "\"";
+      } else {
+        OS << format(" <invalid base_type ref: 0x%" PRIx64 ">",
+                     Operands[Operand]);
+      }
+    } else if (Size == Operation::SizeBlock) {
       uint32_t Offset = Operands[Operand];
       for (unsigned i = 0; i < Operands[Operand - 1]; ++i)
         OS << format(" 0x%02x", Expr->Data.getU8(&Offset));
@@ -260,9 +278,9 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
 }
 
 void DWARFExpression::print(raw_ostream &OS, const MCRegisterInfo *RegInfo,
-                            bool IsEH) const {
+                            DWARFUnit *U, bool IsEH) const {
   for (auto &Op : *this) {
-    if (!Op.print(OS, this, RegInfo, IsEH)) {
+    if (!Op.print(OS, this, RegInfo, U, IsEH)) {
       uint32_t FailOffset = Op.getEndOffset();
       while (FailOffset < Data.getData().size())
         OS << format(" %02x", Data.getU8(&FailOffset));
@@ -271,6 +289,34 @@ void DWARFExpression::print(raw_ostream &OS, const MCRegisterInfo *RegInfo,
     if (Op.getEndOffset() < Data.getData().size())
       OS << ", ";
   }
+}
+
+bool DWARFExpression::Operation::verify(DWARFUnit *U) {
+
+  for (unsigned Operand = 0; Operand < 2; ++Operand) {
+    unsigned Size = Desc.Op[Operand];
+
+    if (Size == Operation::SizeNA)
+      break;
+
+    if (Size == Operation::BaseTypeRef) {
+      auto Die = U->getDIEForOffset(U->getOffset() + Operands[Operand]);
+      if (!Die || Die.getTag() != dwarf::DW_TAG_base_type) {
+        Error = true;
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+bool DWARFExpression::verify(DWARFUnit *U) {
+  for (auto &Op : *this)
+    if (!Op.verify(U))
+      return false;
+
+  return true;
 }
 
 } // namespace llvm

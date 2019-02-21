@@ -42,7 +42,8 @@ public:
       SizeAddr = 5,
       SizeRefAddr = 6,
       SizeBlock = 7, ///< Preceding operand contains block size
-      SignBit = 0x8,
+      BaseTypeRef = 8,
+      SignBit = 0x80,
       SignedSize1 = SignBit | Size1,
       SignedSize2 = SignBit | Size2,
       SignedSize4 = SignBit | Size4,
@@ -55,7 +56,8 @@ public:
       DwarfNA, ///< Serves as a marker for unused entries
       Dwarf2 = 2,
       Dwarf3,
-      Dwarf4
+      Dwarf4,
+      Dwarf5
     };
 
     /// Description of the encoding of one expression Op.
@@ -87,8 +89,9 @@ public:
     bool extract(DataExtractor Data, uint16_t Version, uint8_t AddressSize,
                  uint32_t Offset);
     bool isError() { return Error; }
-    bool print(raw_ostream &OS, const DWARFExpression *U,
-               const MCRegisterInfo *RegInfo, bool isEH);
+    bool print(raw_ostream &OS, const DWARFExpression *Expr,
+               const MCRegisterInfo *RegInfo, DWARFUnit *U, bool isEH);
+    bool verify(DWARFUnit *U);
   };
 
   /// An iterator to go through the expression operations.
@@ -131,8 +134,10 @@ public:
   iterator begin() const { return iterator(this, 0); }
   iterator end() const { return iterator(this, Data.getData().size()); }
 
-  void print(raw_ostream &OS, const MCRegisterInfo *RegInfo,
+  void print(raw_ostream &OS, const MCRegisterInfo *RegInfo, DWARFUnit *U,
              bool IsEH = false) const;
+
+  bool verify(DWARFUnit *U);
 
 private:
   DataExtractor Data;
