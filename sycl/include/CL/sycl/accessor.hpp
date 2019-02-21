@@ -67,8 +67,8 @@ public:
 
   dataT &operator[](size_t index) {
     ids[accessorDim - 1] = index;
-    return accRef.__impl()->Data[getOffsetForId(
-      accRef.__impl()->Range, ids, accRef.__impl()->Offset)];
+    return accRef.__get_impl()->Data[getOffsetForId(
+      accRef.__get_impl()->Range, ids, accRef.__get_impl()->Offset)];
   }
 };
 
@@ -89,8 +89,8 @@ public:
   typename detail::remove_AS<dataT>::type
   operator[](size_t index) {
     ids[accessorDim - 1] = index;
-    return accRef.__impl()->Data[getOffsetForId(
-      accRef.__impl()->Range, ids, accRef.__impl()->Offset)];
+    return accRef.__get_impl()->Data[getOffsetForId(
+      accRef.__get_impl()->Range, ids, accRef.__get_impl()->Offset)];
   }
 };
 
@@ -307,11 +307,11 @@ protected:
   using _ImplT =
       accessor_impl<dataT, dimensions, accessMode, accessTarget, isPlaceholder>;
 
-  const _ImplT *__impl() const {
+  const _ImplT *__get_impl() const {
     return reinterpret_cast<const _ImplT *>(this);
   }
 
-  _ImplT *__impl() { return reinterpret_cast<_ImplT *>(this); }
+  _ImplT *__get_impl() { return reinterpret_cast<_ImplT *>(this); }
 
   static_assert(
       std::is_same<typename DeviceValueType<dataT, accessTarget>::type,
@@ -347,15 +347,15 @@ SYCL_ACCESSOR_SUBCLASS(accessor_common, accessor_base, true /* always */) {
   size_t get_size() const { return this->get_count() * sizeof(dataT); }
 
   // Returns the number of accessed elements.
-  size_t get_count() const { return this->__impl()->get_count(); }
+  size_t get_count() const { return this->__get_impl()->get_count(); }
 
   template <int Dimensions = dimensions>
   typename std::enable_if<(Dimensions > 0), range<Dimensions>>::type
-  get_range() const { return this->__impl()->Range; }
+  get_range() const { return this->__get_impl()->Range; }
 
   template <int Dimensions = dimensions>
   typename std::enable_if<(Dimensions > 0), id<Dimensions>>::type
-  get_offset() const { return this->__impl()->Offset; }
+  get_offset() const { return this->__get_impl()->Offset; }
 };
 
 SYCL_ACCESSOR_SUBCLASS(accessor_opdata_w, accessor_common,
@@ -365,7 +365,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_opdata_w, accessor_common,
                         accessMode == access::mode::discard_read_write) &&
                        dimensions == 0) {
   operator dataT &() const {
-    return this->__impl()->Data[0];
+    return this->__get_impl()->Data[0];
   }
 };
 
@@ -376,7 +376,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_wn, accessor_opdata_w,
                         accessMode == access::mode::discard_read_write) &&
                        dimensions > 0) {
   dataT &operator[](id<dimensions> index) const {
-    return this->__impl()->Data[getOffsetForId(
+    return this->__get_impl()->Data[getOffsetForId(
       this->get_range(), index, this->get_offset())];
   }
 
@@ -407,7 +407,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_w, accessor_subscript_wn,
       getOffsetForId(this->get_range(), index, this->get_offset()));
   }
   dataT &operator[](size_t index) const {
-    return this->__impl()->Data[index];
+    return this->__get_impl()->Data[index];
   }
 };
 
@@ -415,7 +415,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_opdata_r, accessor_subscript_w,
                        accessMode == access::mode::read && dimensions == 0) {
   using PureType = typename detail::remove_AS<dataT>::type;
   operator PureType() const {
-    return this->__impl()->Data[0];
+    return this->__get_impl()->Data[0];
   }
 };
 
@@ -423,7 +423,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_rn, accessor_opdata_r,
                        accessMode == access::mode::read && dimensions > 0) {
   typename detail::remove_AS<dataT>::type
   operator[](id<dimensions> index) const {
-    return this->__impl()->Data[getOffsetForId(
+    return this->__get_impl()->Data[getOffsetForId(
       this->get_range(), index, this->get_offset())];
   }
 
@@ -446,7 +446,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_r, accessor_subscript_rn,
   }
   typename detail::remove_AS<dataT>::type
   operator[](size_t index) const {
-    return this->__impl()->Data[index];
+    return this->__get_impl()->Data[index];
   }
 };
 
@@ -468,7 +468,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_atomic_eq0, accessor_subscript_r,
       getAddressSpace<accessTarget>::value;
   operator atomic<PureType, addressSpace>() const {
     return atomic<PureType, addressSpace>(
-        multi_ptr<PureType, addressSpace>(&(this->__impl()->Data[0])));
+        multi_ptr<PureType, addressSpace>(&(this->__get_impl()->Data[0])));
   }
 };
 
@@ -481,8 +481,8 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_atomic_gt0,
       getAddressSpace<accessTarget>::value;
   atomic<PureType, addressSpace> operator[](id<dimensions> index) const {
     return atomic<PureType, addressSpace>(
-        multi_ptr<PureType, addressSpace>(&(this->__impl()->Data[getOffsetForId(
-            this->__impl()->Range, index, this->__impl()->Offset)])));
+        multi_ptr<PureType, addressSpace>(&(this->__get_impl()->Data[getOffsetForId(
+            this->__get_impl()->Range, index, this->__get_impl()->Offset)])));
   }
 };
 
@@ -495,7 +495,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_subscript_atomic_eq1,
       getAddressSpace<accessTarget>::value;
   atomic<PureType, addressSpace> operator[](size_t index) const {
     return atomic<PureType, addressSpace>(
-        multi_ptr<PureType, addressSpace>(&(this->__impl()->Data[index])));
+        multi_ptr<PureType, addressSpace>(&(this->__get_impl()->Data[index])));
   }
 };
 
@@ -510,7 +510,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_pointer, accessor_subscript_atomic_eq1, true) {
   typename std::enable_if<(AccessTarget == access::target::host_buffer),
                           dataT *>::type
   get_pointer() const {
-    return this->__impl()->Data;
+    return this->__get_impl()->Data;
   }
   /* Available only when: accessTarget == access::target::global_buffer */
   template <typename DataT = typename detail::remove_AS<dataT>::type,
@@ -518,7 +518,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_pointer, accessor_subscript_atomic_eq1, true) {
   typename std::enable_if<(AccessTarget == access::target::global_buffer),
                           global_ptr<DataT>>::type
   get_pointer() const {
-    return global_ptr<DataT>(this->__impl()->Data);
+    return global_ptr<DataT>(this->__get_impl()->Data);
   }
   /* Available only when: accessTarget == access::target::constant_buffer */
   template <typename DataT = typename detail::remove_AS<dataT>::type,
@@ -526,7 +526,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_pointer, accessor_subscript_atomic_eq1, true) {
   typename std::enable_if<(AccessTarget == access::target::constant_buffer),
                           constant_ptr<DataT>>::type
   get_pointer() const {
-    return constant_ptr<DataT>(this->__impl()->Data);
+    return constant_ptr<DataT>(this->__get_impl()->Data);
   }
   /* Available only when: accessTarget == access::target::local */
   template <typename DataT = typename detail::remove_AS<dataT>::type,
@@ -534,7 +534,7 @@ SYCL_ACCESSOR_SUBCLASS(accessor_pointer, accessor_subscript_atomic_eq1, true) {
   typename std::enable_if<(AccessTarget == access::target::local),
                           local_ptr<DataT>>::type
   get_pointer() const {
-    return local_ptr<DataT>(this->__impl()->Data);
+    return local_ptr<DataT>(this->__get_impl()->Data);
   }
 };
 
