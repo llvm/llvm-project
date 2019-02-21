@@ -180,12 +180,8 @@ TEST(SymbolInfoTests, All) {
             func_baz1(f^f);
           }
         )cpp",
-              {
-                  CreateExpectedSymbolDetails(
-                      "ff", "func_baz2", "c:TestTU.cpp@218@F@func_baz2#@ff"),
-                  CreateExpectedSymbolDetails(
-                      "bar", "bar::", "c:@S@bar@F@bar#&1$@S@foo#"),
-              }},
+              {CreateExpectedSymbolDetails(
+                  "ff", "func_baz2", "c:TestTU.cpp@218@F@func_baz2#@ff")}},
           {
               R"cpp( // Type reference - declaration
           struct foo;
