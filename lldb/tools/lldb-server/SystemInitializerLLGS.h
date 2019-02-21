@@ -14,8 +14,7 @@
 
 class SystemInitializerLLGS : public lldb_private::SystemInitializerCommon {
 public:
-  llvm::Error
-  Initialize(const lldb_private::InitializerOptions &options) override;
+  llvm::Error Initialize() override;
   void Terminate() override;
 };
 
