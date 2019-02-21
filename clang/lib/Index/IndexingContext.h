@@ -76,6 +76,8 @@ public:
 
   bool shouldIndexParametersInDeclarations() const;
 
+  bool shouldIndexTemplateParameters() const;
+
   static bool isTemplateImplicitInstantiation(const Decl *D);
 
   bool handleDecl(const Decl *D, SymbolRoleSet Roles = SymbolRoleSet(),

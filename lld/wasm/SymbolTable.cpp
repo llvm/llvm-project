@@ -26,38 +26,6 @@ using namespace lld::wasm;
 
 SymbolTable *lld::wasm::Symtab;
 
-static char encodeValType(ValType Type) {
-  switch (Type) {
-  case ValType::I32:
-    return 'i';
-  case ValType::I64:
-    return 'j';
-  case ValType::F32:
-    return 'f';
-  case ValType::F64:
-    return 'd';
-  case ValType::V128:
-    return 'V';
-  case ValType::EXCEPT_REF:
-    return 'e';
-  }
-  llvm_unreachable("invalid wasm type");
-}
-
-static std::string encodeSignature(const WasmSignature &Sig) {
-  std::string S = ":";
-  for (ValType Type : Sig.Returns)
-    S += encodeValType(Type);
-  S += ':';
-  for (ValType Type : Sig.Params)
-    S += encodeValType(Type);
-  return S;
-}
-
-static StringRef getVariantName(StringRef BaseName, const WasmSignature &Sig) {
-  return Saver.save(BaseName + encodeSignature(Sig));
-}
-
 void SymbolTable::addFile(InputFile *File) {
   log("Processing: " + toString(File));
   if (Config->Trace)
@@ -514,7 +482,6 @@ bool SymbolTable::addComdat(StringRef Name) {
 bool SymbolTable::getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
                                      const InputFile *File, Symbol **Out) {
   LLVM_DEBUG(dbgs() << "getFunctionVariant: " << Sym->getName() << " -> "
-                    << getVariantName(Sym->getName(), *Sig)
                     << " " << toString(*Sig) << "\n");
   Symbol *Variant = nullptr;
 
@@ -626,11 +593,12 @@ void SymbolTable::handleSymbolVariants() {
     std::vector<Symbol *> &Variants = Pair.second;
 
 #ifndef NDEBUG
-    dbgs() << "symbol with (" << Variants.size()
-                      << ") variants: " << SymName << "\n";
+    LLVM_DEBUG(dbgs() << "symbol with (" << Variants.size()
+                      << ") variants: " << SymName << "\n");
     for (auto *S: Variants) {
       auto *F = cast<FunctionSymbol>(S);
-      dbgs() << " variant: " + F->getName() << " " << toString(*F->Signature) << "\n";
+      LLVM_DEBUG(dbgs() << " variant: " + F->getName() << " "
+                        << toString(*F->Signature) << "\n");
     }
 #endif
 

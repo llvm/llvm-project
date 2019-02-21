@@ -216,6 +216,30 @@ TEST(IndexTest, IndexTemplateInstantiationPartial) {
                              DeclAt(Position(5, 12)))));
 }
 
+TEST(IndexTest, IndexTypeParmDecls) {
+  std::string Code = R"cpp(
+    template <typename T, int I, template<typename> class C, typename NoRef>
+    struct Foo {
+      T t = I;
+      C<int> x;
+    };
+  )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols, AllOf(Not(Contains(QName("Foo::T"))),
+                                    Not(Contains(QName("Foo::I"))),
+                                    Not(Contains(QName("Foo::C"))),
+                                    Not(Contains(QName("Foo::NoRef")))));
+
+  Opts.IndexTemplateParameters = true;
+  Index->Symbols.clear();
+  tooling::runToolOnCode(new IndexAction(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols,
+              AllOf(Contains(QName("Foo::T")), Contains(QName("Foo::I")),
+                    Contains(QName("Foo::C")), Contains(QName("Foo::NoRef"))));
+}
+
 } // namespace
 } // namespace index
 } // namespace clang

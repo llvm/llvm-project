@@ -1493,6 +1493,14 @@ void Sema::markKnownEmitted(
   }
 }
 
+Sema::DeviceDiagBuilder Sema::targetDiag(SourceLocation Loc,
+                                         unsigned DiagID) {
+  if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)
+    return diagIfOpenMPDeviceCode(Loc, DiagID);
+  return DeviceDiagBuilder(DeviceDiagBuilder::K_Immediate, Loc, DiagID,
+                           getCurFunctionDecl(), *this);
+}
+
 /// Looks through the macro-expansion chain for the given
 /// location, looking for a macro expansion with the given name.
 /// If one is found, returns true and sets the location to that

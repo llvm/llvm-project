@@ -51,6 +51,7 @@ struct IndexingOptions {
   bool IndexMacrosInPreprocessor = false;
   // Has no effect if IndexFunctionLocals are false.
   bool IndexParametersInDeclarations = false;
+  bool IndexTemplateParameters = false;
 };
 
 struct RecordingOptions {
