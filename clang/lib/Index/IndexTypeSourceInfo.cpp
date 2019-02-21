@@ -45,6 +45,13 @@ public:
       return false;                                                            \
   } while (0)
 
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TTPL) {
+    SourceLocation Loc = TTPL.getNameLoc();
+    TemplateTypeParmDecl *TTPD = TTPL.getDecl();
+    return IndexCtx.handleReference(TTPD, Loc, Parent, ParentDC,
+                                    SymbolRoleSet());
+  }
+
   bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
     SourceLocation Loc = TL.getNameLoc();
     TypedefNameDecl *ND = TL.getTypedefNameDecl();

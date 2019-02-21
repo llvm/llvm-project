@@ -43,6 +43,13 @@ fgt.d x4, f5, f6
 # CHECK-ALIAS: fle.d t2, fs1, fs0
 fge.d x7, f8, f9
 
+# CHECK-INST: fld ft0, 0(a0)
+# CHECK-ALIAS: fld ft0, 0(a0)
+fld f0, (x10)
+# CHECK-INST: fsd ft0, 0(a0)
+# CHECK-ALIAS: fsd ft0, 0(a0)
+fsd f0, (x10)
+
 ##===----------------------------------------------------------------------===##
 ## Aliases which omit the rounding mode.
 ##===----------------------------------------------------------------------===##

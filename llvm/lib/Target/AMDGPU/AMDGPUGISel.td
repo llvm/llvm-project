@@ -12,6 +12,10 @@
 
 include "AMDGPU.td"
 
+def p0 : PtrValueType<i64, 0>;
+def p1 : PtrValueType<i64, 1>;
+def p4 : PtrValueType<i64, 4>;
+
 def sd_vsrc0 : ComplexPattern<i32, 1, "">;
 def gi_vsrc0 :
     GIComplexOperandMatcher<s32, "selectVSRC0">,
@@ -33,6 +37,18 @@ def gi_vop3mods :
 def gi_vop3omods :
     GIComplexOperandMatcher<s32, "selectVOP3OMods">,
     GIComplexPatternEquiv<VOP3OMods>;
+
+def gi_smrd_imm :
+    GIComplexOperandMatcher<s64, "selectSmrdImm">,
+    GIComplexPatternEquiv<SMRDImm>;
+
+def gi_smrd_imm32 :
+    GIComplexOperandMatcher<s64, "selectSmrdImm32">,
+    GIComplexPatternEquiv<SMRDImm32>;
+
+def gi_smrd_sgpr :
+    GIComplexOperandMatcher<s64, "selectSmrdSgpr">,
+    GIComplexPatternEquiv<SMRDSgpr>;
 
 class GISelSop2Pat <
   SDPatternOperator node,
@@ -134,3 +150,11 @@ defm : GISelVop2IntrPat <int_maxnum, V_MAX_F32_e32, f32>;
 def : GISelVop3Pat2ModsPat <int_maxnum, V_MAX_F64, f64>;
 defm : GISelVop2IntrPat <int_minnum, V_MIN_F32_e32, f32>;
 def : GISelVop3Pat2ModsPat <int_minnum, V_MIN_F64, f64>;
+
+// Since GlobalISel is more flexible then SelectionDAG, I think we can get
+// away with adding patterns for integer types and not legalizing all
+// loads and stores to vector types.  This should help simplify the load/store
+// legalization.
+foreach Ty = [i64, p0, p1, p4] in {
+  defm : SMRD_Pattern <"S_LOAD_DWORDX2",  Ty>;
+}

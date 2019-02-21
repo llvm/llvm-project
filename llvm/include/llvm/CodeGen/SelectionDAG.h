@@ -1016,6 +1016,12 @@ public:
                               ArrayRef<SDValue> Ops, EVT MemVT,
                               MachineMemOperand *MMO);
 
+  /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
+  /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
+  /// offsets `Offset` and `Offset + Size`.
+  SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
+                          int FrameIndex, int64_t Size, int64_t Offset = -1);
+
   /// Create a MERGE_VALUES node from the given operands.
   SDValue getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl);
 
@@ -1534,6 +1540,11 @@ public:
   /// If the  ResNE is greater than the width of the vector op, unroll the
   /// vector op and fill the end of the resulting vector with UNDEFS.
   SDValue UnrollVectorOp(SDNode *N, unsigned ResNE = 0);
+
+  /// Like UnrollVectorOp(), but for the [US](ADD|SUB|MUL)O family of opcodes.
+  /// This is a separate function because those opcodes have two results.
+  std::pair<SDValue, SDValue> UnrollVectorOverflowOp(SDNode *N,
+                                                     unsigned ResNE = 0);
 
   /// Return true if loads are next to each other and can be
   /// merged. Check that both are nonvolatile and if LD is loading

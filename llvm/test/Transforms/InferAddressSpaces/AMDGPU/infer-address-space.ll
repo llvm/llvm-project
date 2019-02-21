@@ -168,6 +168,15 @@ exit:                                             ; preds = %loop
   ret void
 }
 
+; CHECK-LABEL: @select_bug(
+; CHECK: %add.ptr157 = getelementptr inbounds i64, i64* undef, i64 select (i1 icmp ne (i32* inttoptr (i64 4873 to i32*), i32* null), i64 73, i64 93)
+; CHECK: %cmp169 = icmp uge i64* undef, %add.ptr157
+define void @select_bug() #0 {
+  %add.ptr157 = getelementptr inbounds i64, i64* undef, i64 select (i1 icmp ne (i32* inttoptr (i64 4873 to i32*), i32* null), i64 73, i64 93)
+  %cmp169 = icmp uge i64* undef, %add.ptr157
+  unreachable
+}
+
 declare void @llvm.amdgcn.s.barrier() #1
 declare void @use(float) #0
 

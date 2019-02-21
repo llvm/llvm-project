@@ -111,11 +111,9 @@ define i1 @usubo_eq_constant1_op1_i32(i32 %x, i32* %p) nounwind {
 define i1 @usubo_ne_constant0_op1_i32(i32 %x, i32* %p) {
 ; CHECK-LABEL: usubo_ne_constant0_op1_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movl %ecx, (%rsi)
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    movl %edi, (%rsi)
 ; CHECK-NEXT:    retq
   %s = sub i32 0, %x
   %ov = icmp ne i32 %x, 0

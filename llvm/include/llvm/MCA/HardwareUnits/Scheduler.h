@@ -120,6 +120,11 @@ class Scheduler : public HardwareUnit {
   // Each bit of the mask represents an unavailable resource.
   uint64_t BusyResourceUnits;
 
+  // Counts the number of instructions dispatched during this cycle that are
+  // added to the pending set. This information is used by the bottleneck
+  // analysis when analyzing instructions in the pending set.
+  unsigned NumDispatchedToThePendingSet;
+
   /// Verify the given selection strategy and set the Strategy member
   /// accordingly.  If no strategy is provided, the DefaultSchedulerStrategy is
   /// used.
@@ -155,7 +160,8 @@ public:
 
   Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0) {
+      : LSU(Lsu), Resources(std::move(RM)), BusyResourceUnits(0),
+        NumDispatchedToThePendingSet(0) {
     initializeStrategy(std::move(SelectStrategy));
   }
 
@@ -184,11 +190,7 @@ public:
   /// Returns true if instruction IR is ready to be issued to the underlying
   /// pipelines. Note that this operation cannot fail; it assumes that a
   /// previous call to method `isAvailable(IR)` returned `SC_AVAILABLE`.
-  void dispatch(const InstRef &IR);
-
-  /// Returns true if IR is ready to be executed by the underlying pipelines.
-  /// This method assumes that IR has been previously dispatched.
-  bool isReady(const InstRef &IR) const;
+  bool dispatch(const InstRef &IR);
 
   /// Issue an instruction and populates a vector of used pipeline resources,
   /// and a vector of instructions that transitioned to the ready state as a

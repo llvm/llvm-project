@@ -173,12 +173,16 @@ TEST(SemaCodeCompleteTest, VisitedNSForValidQualifiedId) {
                                               "foo::(anonymous)"));
 }
 
-TEST(SemaCodeCompleteTest, VisitedNSForInvalideQualifiedId) {
+TEST(SemaCodeCompleteTest, VisitedNSForInvalidQualifiedId) {
   auto VisitedNS = runCodeCompleteOnCode(R"cpp(
-     namespace ns { foo::^ }
+     namespace na {}
+     namespace ns1 {
+     using namespace na;
+     foo::^
+     }
   )cpp")
                        .VisitedNamespaces;
-  EXPECT_TRUE(VisitedNS.empty());
+  EXPECT_THAT(VisitedNS, UnorderedElementsAre("ns1", "na"));
 }
 
 TEST(SemaCodeCompleteTest, VisitedNSWithoutQualifier) {
