@@ -14760,6 +14760,9 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
   if (FPT && isUnresolvedExceptionSpec(FPT->getExceptionSpecType()))
     ResolveExceptionSpec(Loc, FPT);
 
+  if (getLangOpts().CUDA)
+    CheckCUDACall(Loc, Func);
+
   // If we don't need to mark the function as used, and we don't need to
   // try to provide a definition, there's nothing more to do.
   if ((Func->isUsed(/*CheckUsedAttr=*/false) || !OdrUse) &&

@@ -675,6 +675,11 @@ Sema::DeviceDiagBuilder Sema::CUDADiagIfHostCode(SourceLocation Loc,
 bool Sema::CheckCUDACall(SourceLocation Loc, FunctionDecl *Callee) {
   assert(getLangOpts().CUDA && "Should only be called during CUDA compilation");
   assert(Callee && "Callee may not be null.");
+
+  auto &ExprEvalCtx = ExprEvalContexts.back();
+  if (ExprEvalCtx.isUnevaluated() || ExprEvalCtx.isConstantEvaluated())
+    return true;
+
   // FIXME: Is bailing out early correct here?  Should we instead assume that
   // the caller is a global initializer?
   FunctionDecl *Caller = dyn_cast<FunctionDecl>(CurContext);
