@@ -318,7 +318,6 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
       llvm::make_unique<ObjectFilePCHContainerReader>());
 
   // 2. Install the target.
-
   lldb::LanguageType frame_lang =
       expr.Language(); // defaults to lldb::eLanguageTypeUnknown
   bool overridden_target_opts = false;
@@ -898,7 +897,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     std::string temp_source_path;
     if (ExpressionSourceCode::SaveExpressionTextToTempFile(
             expr_text, *m_expr.GetOptions(), temp_source_path)) {
-      auto file = m_file_manager->getFile(temp_source_path);
+      auto file = m_compiler->getFileManager().getFile(temp_source_path);
       if (file) {
         source_mgr.setMainFileID(
             source_mgr.createFileID(file, SourceLocation(), SrcMgr::C_User));
@@ -1147,7 +1146,7 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
     return err;
   }
 
-  for (llvm::Function &function : *llvm_module_ap.get()) {
+  for (llvm::Function &function : *llvm_module_up.get()) {
     llvm::AttributeList attributes = function.getAttributes();
     llvm::AttrBuilder attributes_to_remove;
 

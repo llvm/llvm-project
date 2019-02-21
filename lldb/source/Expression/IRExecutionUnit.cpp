@@ -1213,7 +1213,7 @@ uint32_t IRExecutionUnit::GetAddressByteSize() const {
 
 void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
                                      lldb_private::Symtab &symtab) {
-  if (m_execution_engine_ap) {
+  if (m_execution_engine_up) {
     uint32_t symbol_id = 0;
     lldb_private::SectionList *section_list = obj_file->GetSectionList();
     for (llvm::Function &function : *m_module) {
@@ -1222,7 +1222,7 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
         continue;
 
       const lldb::addr_t function_addr =
-          (intptr_t)m_execution_engine_ap->getPointerToFunction(&function);
+          (intptr_t)m_execution_engine_up->getPointerToFunction(&function);
 
       if (function_addr != 0) {
         lldb::SectionSP section_sp(
@@ -1265,7 +1265,7 @@ void IRExecutionUnit::PopulateSymtab(lldb_private::ObjectFile *obj_file,
       if (global_name.empty())
         continue;
       const lldb::addr_t global_addr =
-          m_execution_engine_ap->getGlobalValueAddress(global_name.str());
+          m_execution_engine_up->getGlobalValueAddress(global_name.str());
       if (global_addr != 0) {
         lldb::SectionSP section_sp(
             section_list->FindSectionContainingFileAddress(global_addr));
@@ -1339,7 +1339,7 @@ lldb::ModuleSP IRExecutionUnit::CreateJITModule(const char *name,
     return jit_module_sp;
 
   // Only create a JIT module if we are going to run it in the target
-  if (m_execution_engine_ap) {
+  if (m_execution_engine_up) {
     ExecutionContext exe_ctx(GetBestExecutionContextScope());
     Target *target = exe_ctx.GetTargetPtr();
     if (target) {

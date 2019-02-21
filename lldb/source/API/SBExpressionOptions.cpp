@@ -120,20 +120,20 @@ void SBExpressionOptions::SetCancelCallback(
 }
 
 bool SBExpressionOptions::GetPlaygroundTransformEnabled() const {
-  return m_opaque_ap->GetPlaygroundTransformEnabled();
+  return m_opaque_up->GetPlaygroundTransformEnabled();
 }
 
 void SBExpressionOptions::SetPlaygroundTransformEnabled(
     bool enable_playground_transform) {
-  m_opaque_ap->SetPlaygroundTransformEnabled(enable_playground_transform);
+  m_opaque_up->SetPlaygroundTransformEnabled(enable_playground_transform);
 }
 
 bool SBExpressionOptions::GetREPLMode() const {
-  return m_opaque_ap->GetREPLEnabled();
+  return m_opaque_up->GetREPLEnabled();
 }
 
 void SBExpressionOptions::SetREPLMode(bool enable_repl_mode) {
-  m_opaque_ap->SetREPLEnabled(enable_repl_mode);
+  m_opaque_up->SetREPLEnabled(enable_repl_mode);
   // Don't trap exceptions in the REPL.  That would make it impossible
   // to call any swift code whose underlying framework used exceptions.
   if (enable_repl_mode == true)

@@ -67,7 +67,6 @@ ClangUserExpression::ClangUserExpression(
                                                     eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
   m_language_flags |= eLanguageFlagEnforceValidObject;
-
   switch (m_language) {
   case lldb::eLanguageTypeC_plus_plus:
     m_allow_cxx = true;

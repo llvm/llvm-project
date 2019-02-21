@@ -9,7 +9,6 @@ list(APPEND swift_lldb_framework_tools
   repl_swift
 )
 
-#set(LLVM_ENABLE_MODULES        ON CACHE BOOL "" FORCE)
 set(LLVM_EXTERNALIZE_DEBUGINFO OFF CACHE BOOL "" FORCE)
 set(LLVM_TARGETS_TO_BUILD      X86;ARM;AArch64 CACHE STRING "" FORCE)
 

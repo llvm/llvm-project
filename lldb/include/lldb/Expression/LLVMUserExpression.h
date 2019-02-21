@@ -60,7 +60,7 @@ public:
   bool CanInterpret() override { return m_can_interpret; }
 
   virtual Materializer *GetMaterializer() override {
-    return m_materializer_ap.get();
+    return m_materializer_up.get();
   }
 
   //------------------------------------------------------------------
