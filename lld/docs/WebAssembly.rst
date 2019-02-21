@@ -95,6 +95,26 @@ behavior of a traditional ELF linker, and in particular the ELF port of lld.
 For more specific details on how this is achieved see the tool conventions on
 linking_.
 
+Function Signatrues
+~~~~~~~~~~~~~~~~~~~
+
+One way in which the WebAssembly linker differs from traditional native linkers
+is that function signature checking is strict in WebAssembly.  It is a
+validation error for a module to contain to call site that doesn't agree with
+the target signature.  Even though this is undefined behavior in C/C++ its not
+uncommon to find this in real world C/C++ programs.  For example, a call site in
+one complication unit which calls a function defined in another complication
+unit but with too many arguments.
+
+In order not to generate such invalid modules lld has two modes of handling such
+mismatches: it can simply error out or it can create stub functions that will
+trap at runtime (functions that contain only an ``unreachable`` instruction)
+and use these stub functions at the otherwise invalid call sites.
+
+The the default befviour is to generate these stub function and to produce
+a warning.  The ``--falal-warnings`` flag can be used to disable this behaviour
+and error out if mismatched are found.
+
 Imports and Exports
 ~~~~~~~~~~~~~~~~~~~
 

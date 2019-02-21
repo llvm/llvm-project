@@ -111,14 +111,15 @@ private:
   }
 
   ABIArgInfo(Kind K)
-      : TheKind(K), PaddingInReg(false), InReg(false), SuppressSRet(false) {
-  }
+      : TypeData(nullptr), PaddingType(nullptr), DirectOffset(0), TheKind(K),
+        PaddingInReg(false), InAllocaSRet(false), IndirectByVal(false),
+        IndirectRealign(false), SRetAfterThis(false), InReg(false),
+        CanBeFlattened(false), SignExt(false), SuppressSRet(false) {}
+}
 
-public:
-  ABIArgInfo()
-      : TypeData(nullptr), PaddingType(nullptr), DirectOffset(0),
-        TheKind(Direct), PaddingInReg(false), InReg(false),
-        SuppressSRet(false) {}
+public : ABIArgInfo()
+    : ABIArgInfo(Direct) {
+}
 
   static ABIArgInfo getDirect(llvm::Type *T = nullptr, unsigned Offset = 0,
                               llvm::Type *Padding = nullptr,

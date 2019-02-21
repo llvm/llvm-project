@@ -11,7 +11,7 @@
 // XFAIL: netbsd && !asan
 
 // FIXME(dliew): Make this test work with other sanitizers
-// XFAIL: darwin && (lsan || tsan || ubsan)
+// XFAIL: darwin && (tsan || ubsan)
 
 volatile int *null = 0;
 

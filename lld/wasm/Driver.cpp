@@ -534,17 +534,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   for (auto *Arg : Args.filtered(OPT_undefined))
     handleUndefined(Arg->getValue());
 
-  // Handle the `--export <sym>` options
-  // This works like --undefined but also exports the symbol if its found
-  for (auto *Arg : Args.filtered(OPT_export)) {
-    Symbol *Sym = handleUndefined(Arg->getValue());
-    if (Sym && Sym->isDefined())
-      Sym->ForceExport = true;
-    else if (!Config->AllowUndefined)
-      error(Twine("symbol exported via --export not found: ") +
-            Arg->getValue());
-  }
-
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
     if (!Config->Shared && !Config->Entry.empty()) {
@@ -555,14 +544,15 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
         error("entry symbol not defined (pass --no-entry to supress): " +
               Config->Entry);
     }
-
-    // Make sure we have resolved all symbols.
-    if (!Config->AllowUndefined)
-      Symtab->reportRemainingUndefines();
   }
 
   if (errorCount())
     return;
+
+  // Handle the `--export <sym>` options
+  // This works like --undefined but also exports the symbol if its found
+  for (auto *Arg : Args.filtered(OPT_export))
+    handleUndefined(Arg->getValue());
 
   // Do link-time optimization if given files are LLVM bitcode files.
   // This compiles bitcode files into real object files.
@@ -570,10 +560,30 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (errorCount())
     return;
 
-  // Add synthetic dummies for weak undefined functions.  Must happen
-  // after LTO otherwise functions may not yet have signatures.
-  if (!Config->Relocatable)
+  // Resolve any variant symbols that were created due to signature
+  // mismatchs.
+  Symtab->handleSymbolVariants();
+  if (errorCount())
+    return;
+
+  for (auto *Arg : Args.filtered(OPT_export)) {
+    Symbol *Sym = Symtab->find(Arg->getValue());
+    if (Sym && Sym->isDefined())
+      Sym->ForceExport = true;
+    else if (!Config->AllowUndefined)
+      error(Twine("symbol exported via --export not found: ") +
+            Arg->getValue());
+  }
+
+  if (!Config->Relocatable) {
+    // Add synthetic dummies for weak undefined functions.  Must happen
+    // after LTO otherwise functions may not yet have signatures.
     Symtab->handleWeakUndefines();
+
+    // Make sure we have resolved all symbols.
+    if (!Config->AllowUndefined)
+      Symtab->reportRemainingUndefines();
+  }
 
   if (EntrySym)
     EntrySym->setHidden(false);

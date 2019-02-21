@@ -140,6 +140,7 @@ class VectorLegalizer {
   SDValue ExpandFunnelShift(SDValue Op);
   SDValue ExpandROT(SDValue Op);
   SDValue ExpandFMINNUM_FMAXNUM(SDValue Op);
+  SDValue ExpandMULO(SDValue Op);
   SDValue ExpandAddSubSat(SDValue Op);
   SDValue ExpandFixedPointMul(SDValue Op);
   SDValue ExpandStrictFPOp(SDValue Op);
@@ -418,6 +419,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::UMAX:
   case ISD::SMUL_LOHI:
   case ISD::UMUL_LOHI:
+  case ISD::SMULO:
+  case ISD::UMULO:
   case ISD::FCANONICALIZE:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
@@ -779,6 +782,9 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return ExpandFMINNUM_FMAXNUM(Op);
+  case ISD::UMULO:
+  case ISD::SMULO:
+    return ExpandMULO(Op);
   case ISD::USUBSAT:
   case ISD::SSUBSAT:
   case ISD::UADDSAT:
@@ -1214,6 +1220,16 @@ SDValue VectorLegalizer::ExpandFMINNUM_FMAXNUM(SDValue Op) {
   if (SDValue Expanded = TLI.expandFMINNUM_FMAXNUM(Op.getNode(), DAG))
     return Expanded;
   return DAG.UnrollVectorOp(Op.getNode());
+}
+
+SDValue VectorLegalizer::ExpandMULO(SDValue Op) {
+  SDValue Result, Overflow;
+  if (!TLI.expandMULO(Op.getNode(), Result, Overflow, DAG))
+    std::tie(Result, Overflow) = DAG.UnrollVectorOverflowOp(Op.getNode());
+
+  AddLegalizedOperand(Op.getValue(0), Result);
+  AddLegalizedOperand(Op.getValue(1), Overflow);
+  return Op.getResNo() ? Overflow : Result;
 }
 
 SDValue VectorLegalizer::ExpandAddSubSat(SDValue Op) {

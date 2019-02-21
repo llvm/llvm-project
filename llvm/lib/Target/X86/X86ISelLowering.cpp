@@ -20184,6 +20184,8 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   std::tie(Value, Overflow) = getX86XALUOOp(Cond, Op, DAG);
 
   SDValue SetCC = getSETCC(Cond, Overflow, DL, DAG);
+  if (Op->getValueType(1) != MVT::i8)
+    SetCC = DAG.getNode(ISD::ZERO_EXTEND, DL, Op->getValueType(1), SetCC);
   return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), Value, SetCC);
 }
 
