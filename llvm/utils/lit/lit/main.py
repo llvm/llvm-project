@@ -16,14 +16,14 @@ import lit.run
 import lit.Test
 import lit.util
 
-def main(builtinParameters = {}):
+def main(builtin_params = {}):
     opts = lit.cl_arguments.parse_args()
 
     if opts.show_version:
         print("lit %s" % (lit.__version__,))
         return
 
-    userParams = create_user_parameters(builtinParameters, opts)
+    params = create_params(builtin_params, opts.user_params)
     isWindows = platform.system() == 'Windows'
 
     litConfig = lit.LitConfig.LitConfig(
@@ -36,7 +36,7 @@ def main(builtinParameters = {}):
         noExecute = opts.noExecute,
         debug = opts.debug,
         isWindows = isWindows,
-        params = userParams,
+        params = params,
         config_prefix = opts.configPrefix,
         maxFailures = opts.maxFailures,
         echo_all_commands = opts.echoAllCommands)
@@ -95,15 +95,13 @@ def main(builtinParameters = {}):
         sys.exit(1)
 
 
-def create_user_parameters(builtinParameters, opts):
-    userParams = dict(builtinParameters)
-    for entry in opts.userParameters:
-        if '=' not in entry:
-            name,val = entry,''
-        else:
-            name,val = entry.split('=', 1)
-        userParams[name] = val
-    return userParams
+def create_params(builtin_params, user_params):
+    def parse(p):
+        return p.split('=', 1) if '=' in p else (p, '')
+
+    params = dict(builtin_params)
+    params.update([parse(p) for p in user_params])
+    return params
 
 def print_suites_or_tests(tests, opts):
     # Aggregate the tests by suite.
