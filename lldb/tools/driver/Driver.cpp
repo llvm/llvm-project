@@ -13,6 +13,7 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
+#include "lldb/API/SBReproducer.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 
@@ -892,26 +893,31 @@ main(int argc, char const *argv[])
                          << '\n';
   }
 
-  SBInitializerOptions options;
   if (auto *arg = input_args.getLastArg(OPT_capture)) {
     auto arg_value = arg->getValue();
-    options.SetReproducerPath(arg_value);
-    options.SetCaptureReproducer(true);
+    const char *error = SBReproducer::Capture(arg_value);
+    if (error) {
+      WithColor::error() << "reproducer capture failed: " << error << '\n';
+      return 1;
+    }
   }
 
   if (auto *arg = input_args.getLastArg(OPT_replay)) {
     auto arg_value = arg->getValue();
-    options.SetReplayReproducer(true);
-    options.SetReproducerPath(arg_value);
+    const char *error = SBReproducer::Replay(arg_value);
+    if (error) {
+      WithColor::error() << "reproducer replay failed: " << error << '\n';
+      return 1;
+    }
+    // FIXME: Return once SBReproducer::Replay actually performs the replay.
   }
 
-  SBError error = SBDebugger::Initialize(options);
+  SBError error = SBDebugger::InitializeWithErrorHandling();
   if (error.Fail()) {
     WithColor::error() << "initialization failed: " << error.GetCString()
                        << '\n';
     return 1;
   }
-
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
   signal(SIGINT, sigint_handler);

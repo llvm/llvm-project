@@ -31,19 +31,42 @@ using namespace lldb_private::repro;
 
 SBRegistry::SBRegistry() {}
 
-bool SBReproducer::Replay() {
-  repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
-  if (!loader)
-    return false;
+const char *SBReproducer::Capture(const char *path) {
+  static std::string error;
+  if (auto e =
+          Reproducer::Initialize(ReproducerMode::Capture, FileSpec(path))) {
+    error = llvm::toString(std::move(e));
+    return error.c_str();
+  }
+  return nullptr;
+}
 
+const char *SBReproducer::Replay(const char *path) {
+  static std::string error;
+  if (auto e = Reproducer::Initialize(ReproducerMode::Replay, FileSpec(path))) {
+    error = llvm::toString(std::move(e));
+    return error.c_str();
+  }
+
+  repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
+  if (!loader) {
+    error = "unable to get replay loader.";
+    return error.c_str();
+  }
+
+  // FIXME: Enable the following code once the SB reproducer has landed.
+#if 0
   FileSpec file = loader->GetFile<SBInfo>();
-  if (!file)
-    return false;
+  if (!file) {
+    error = "unable to get replay data from reproducer.";
+    return error.c_str();
+  }
 
   SBRegistry registry;
   registry.Replay(file);
+#endif
 
-  return true;
+  return nullptr;
 }
 
 char lldb_private::repro::SBProvider::ID = 0;

@@ -47,8 +47,7 @@ SystemInitializerCommon::SystemInitializerCommon() {}
 
 SystemInitializerCommon::~SystemInitializerCommon() {}
 
-llvm::Error
-SystemInitializerCommon::Initialize(const InitializerOptions &options) {
+llvm::Error SystemInitializerCommon::Initialize() {
 #if defined(_MSC_VER)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
   if (disable_crash_dialog_var &&
@@ -71,15 +70,12 @@ SystemInitializerCommon::Initialize(const InitializerOptions &options) {
   }
 #endif
 
-  // Initialize the reproducer.
-  ReproducerMode mode = ReproducerMode::Off;
-  if (options.reproducer_capture)
-    mode = ReproducerMode::Capture;
-  if (options.reproducer_replay)
-    mode = ReproducerMode::Replay;
-
-  if (auto e = Reproducer::Initialize(mode, FileSpec(options.reproducer_path)))
-    return e;
+  // If the reproducer wasn't initialized before, we can safely assume it's
+  // off.
+  if (!Reproducer::Initialized()) {
+    if (auto e = Reproducer::Initialize(ReproducerMode::Off, llvm::None))
+      return e;
+  }
 
   // Initialize the file system.
   auto &r = repro::Reproducer::Instance();

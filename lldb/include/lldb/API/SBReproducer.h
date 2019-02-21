@@ -9,13 +9,17 @@
 #ifndef LLDB_API_SBREPRODUCER_H
 #define LLDB_API_SBREPRODUCER_H
 
-#include "lldb/lldb-defines.h"
+#include "lldb/API/SBDefines.h"
 
 namespace lldb {
 
+/// The SBReproducer class is special because it bootstraps the capture and
+/// replay of SB API calls. As a result we cannot rely on any other SB objects
+/// in the interface or implementation of this class.
 class LLDB_API SBReproducer {
 public:
-  static bool Replay();
+  static const char *Capture(const char *path);
+  static const char *Replay(const char *path);
 };
 
 } // namespace lldb
