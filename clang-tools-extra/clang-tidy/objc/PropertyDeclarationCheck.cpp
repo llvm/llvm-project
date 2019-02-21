@@ -80,7 +80,8 @@ std::string validPropertyNameRegex(bool UsedInMatcher) {
 }
 
 bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {
-  auto RegexExp = llvm::Regex("^[a-zA-Z]+_[a-zA-Z0-9][a-zA-Z0-9_]+$");
+  auto RegexExp =
+      llvm::Regex("^[a-zA-Z][a-zA-Z0-9]*_[a-zA-Z0-9][a-zA-Z0-9_]+$");
   return RegexExp.match(PropertyName);
 }
 
@@ -91,8 +92,7 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   if (Prefix.lower() != Prefix) {
     return false;
   }
-  auto RegexExp =
-      llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
+  auto RegexExp = llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
 }  // namespace
@@ -101,13 +101,12 @@ void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // this check should only be applied to ObjC sources.
   if (!getLangOpts().ObjC) return;
 
-  Finder->addMatcher(
-      objcPropertyDecl(
-          // the property name should be in Lower Camel Case like
-          // 'lowerCamelCase'
-          unless(matchesName(validPropertyNameRegex(true))))
-          .bind("property"),
-      this);
+  Finder->addMatcher(objcPropertyDecl(
+                         // the property name should be in Lower Camel Case like
+                         // 'lowerCamelCase'
+                         unless(matchesName(validPropertyNameRegex(true))))
+                         .bind("property"),
+                     this);
 }
 
 void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {

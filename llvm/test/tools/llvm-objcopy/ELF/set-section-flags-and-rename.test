@@ -10,5 +10,5 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 
-# SET-FOO: --set-section-flags=.foo conflicts with --rename-section=.foo=.bar.
-# SET-BAR: --set-section-flags=.bar conflicts with --rename-section=.foo=.bar.
+# SET-FOO: --set-section-flags=.foo conflicts with --rename-section=.foo=.bar
+# SET-BAR: --set-section-flags=.bar conflicts with --rename-section=.foo=.bar

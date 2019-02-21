@@ -10,4 +10,4 @@ FileHeader:
   Type:            ET_EXEC
   Machine:         EM_386
 
-# BAD-OUTPUT-FORMAT: Invalid output format: 'xyz'.
+# BAD-OUTPUT-FORMAT: Invalid output format: 'xyz'

@@ -1,0 +1,77 @@
+# Show that llvm-readobj can print the type of symbol for all known symbol types
+# and also for unknown types, both in the os/processor specific ranges and not,
+# for both GNU and LLVM styles.
+
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj --symbols %t | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --symbols %t | FileCheck %s --check-prefix=GNU
+
+# LLVM: Name: notype
+# LLVM: Type: None
+# LLVM: Name: object
+# LLVM: Type: Object
+# LLVM: Name: func
+# LLVM: Type: Function
+# LLVM: Name: .text
+# LLVM: Type: Section
+# LLVM: Name: file
+# LLVM: Type: File
+# LLVM: Name: common
+# LLVM: Type: Common
+# LLVM: Name: tls
+# LLVM: Type: TLS
+# LLVM: Name: gnu_ifunc
+# LLVM: Type: GNU_IFunc
+# LLVM: Name: os_specific
+# LLVM: Type: 0xB
+# LLVM: Name: proc_specific
+# LLVM: Type: 0xD
+# LLVM: Name: unknown
+# LLVM: Type: 0x7
+
+# GNU: NOTYPE  {{.*}} notype
+# GNU: OBJECT  {{.*}} object
+# GNU: FUNC    {{.*}} func
+# GNU: SECTION {{.*}} .text
+# GNU: FILE    {{.*}} file
+# GNU: COMMON  {{.*}} common
+# GNU: TLS     {{.*}} tls
+# GNU: IFUNC   {{.*}} gnu_ifunc
+# GNU: b       {{.*}} os_specific
+# GNU: d       {{.*}} proc_specific
+# GNU: 7       {{.*}} unknown
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  Global:
+    - Name: notype
+      Type: STT_NOTYPE
+    - Name: object
+      Type: STT_OBJECT
+    - Name: func
+      Type: STT_FUNC
+    - Name: .text
+      Type: STT_SECTION
+      Section: .text
+    - Name: file
+      Type: STT_FILE
+    - Name: common
+      Type: STT_COMMON
+    - Name: tls
+      Type: STT_TLS
+    - Name: gnu_ifunc
+      Type: STT_GNU_IFUNC
+    - Name: os_specific
+      Type: 11
+    - Name: proc_specific
+      Type: 13
+    - Name: unknown
+      Type: 7

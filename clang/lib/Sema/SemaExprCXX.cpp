@@ -752,10 +752,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
   if (!getLangOpts().CXXExceptions &&
       !getSourceManager().isInSystemHeader(OpLoc)) {
     // Delay error emission for the OpenMP device code.
-    if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)
-      diagIfOpenMPDeviceCode(OpLoc, diag::err_exceptions_disabled) << "throw";
-    else
-      Diag(OpLoc, diag::err_exceptions_disabled) << "throw";
+    targetDiag(OpLoc, diag::err_exceptions_disabled) << "throw";
   }
 
   // Exceptions aren't allowed in CUDA device code.

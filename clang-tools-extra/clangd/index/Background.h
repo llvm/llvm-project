@@ -54,7 +54,7 @@ public:
       llvm::unique_function<BackgroundIndexStorage *(llvm::StringRef)>;
 
   // Creates an Index Storage that saves shards into disk. Index storage uses
-  // CDBDirectory + ".clangd-index/" as the folder to save shards.
+  // CDBDirectory + ".clangd/index/" as the folder to save shards.
   static Factory createDiskBackedStorageFactory();
 };
 

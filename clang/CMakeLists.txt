@@ -552,7 +552,7 @@ endif()
 add_custom_target(clang-libraries)
 set_target_properties(clang-libraries PROPERTIES FOLDER "Misc")
 
-if(NOT CMAKE_CONFIGURATION_TYPES)
+if(NOT LLVM_ENABLE_IDE)
   add_llvm_install_targets(install-clang-libraries
                            DEPENDS clang-libraries
                            COMPONENT clang-libraries)
@@ -563,7 +563,7 @@ if(CLANG_LIBS)
   list(REMOVE_DUPLICATES CLANG_LIBS)
   foreach(lib ${CLANG_LIBS})
     add_dependencies(clang-libraries ${lib})
-    if(NOT CMAKE_CONFIGURATION_TYPES)
+    if(NOT LLVM_ENABLE_IDE)
       add_dependencies(install-clang-libraries install-${lib})
     endif()
   endforeach()

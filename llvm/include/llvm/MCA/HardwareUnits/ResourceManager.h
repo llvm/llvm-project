@@ -334,8 +334,12 @@ class ResourceManager {
   // Used to quickly identify groups that own a particular resource unit.
   std::vector<uint64_t> Resource2Groups;
 
-  // A table to map processor resource IDs to processor resource masks.
+  // A table that maps processor resource IDs to processor resource masks.
   SmallVector<uint64_t, 8> ProcResID2Mask;
+
+  // A table that maps resource indices to actual processor resource IDs in the
+  // scheduling model.
+  SmallVector<unsigned, 8> ResIndex2ProcResID;
 
   // Keeps track of which resources are busy, and how many cycles are left
   // before those become usable again.

@@ -48,14 +48,30 @@ public:
   SDValue getIndex() { return Index; }
   SDValue getIndex() const { return Index; }
 
+  // Returns true if `Other` and `*this` are both some offset from the same base
+  // pointer. In that case, `Off` is set to the offset between `*this` and
+  // `Other` (negative if `Other` is before `*this`).
+  bool equalBaseIndex(const BaseIndexOffset &Other, const SelectionDAG &DAG,
+                      int64_t &Off) const;
+
   bool equalBaseIndex(const BaseIndexOffset &Other,
                       const SelectionDAG &DAG) const {
     int64_t Off;
     return equalBaseIndex(Other, DAG, Off);
   }
 
-  bool equalBaseIndex(const BaseIndexOffset &Other, const SelectionDAG &DAG,
-                      int64_t &Off) const;
+  // Returns true if `Other` (with size `OtherSize`) can be proven to be fully
+  // contained in `*this` (with size `Size`).
+  bool contains(int64_t Size, const BaseIndexOffset &Other, int64_t OtherSize,
+                const SelectionDAG &DAG) const;
+
+  // Returns true `BasePtr0` and `BasePtr1` can be proven to alias/not alias, in
+  // which case `IsAlias` is set to true/false.
+  static bool computeAliasing(const BaseIndexOffset &BasePtr0,
+                              const int64_t NumBytes0,
+                              const BaseIndexOffset &BasePtr1,
+                              const int64_t NumBytes1, const SelectionDAG &DAG,
+                              bool &IsAlias);
 
   /// Parses tree in Ptr for base, index, offset addresses.
   static BaseIndexOffset match(const LSBaseSDNode *N, const SelectionDAG &DAG);

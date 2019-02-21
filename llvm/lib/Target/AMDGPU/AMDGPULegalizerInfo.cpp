@@ -149,6 +149,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   setAction({G_BRCOND, S1}, Legal);
 
+  // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
+  // elements for v3s16
+  getActionDefinitionsBuilder(G_PHI)
+    .legalFor({S32, S64, V2S16, V4S16, S1, S128, S256})
+    .legalFor(AllS32Vectors)
+    .legalFor(AllS64Vectors)
+    .legalFor(AddrSpaces64)
+    .legalFor(AddrSpaces32)
+    .clampScalar(0, S32, S256)
+    .widenScalarToNextPow2(0, 32)
+    .legalIf(isPointer(0));
+
+
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_UMULH, G_SMULH})
     .legalFor({S32})
     .clampScalar(0, S32, S32)
@@ -306,8 +319,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                                G_CTPOP})
     .legalFor({{S32, S32}, {S32, S64}})
     .clampScalar(0, S32, S32)
-    .clampScalar(1, S32, S64);
-  // TODO: Scalarize
+    .clampScalar(1, S32, S64)
+    .scalarize(0)
+    .widenScalarToNextPow2(0, 32)
+    .widenScalarToNextPow2(1, 32);
 
   // TODO: Expand for > s32
   getActionDefinitionsBuilder(G_BSWAP)
@@ -516,22 +531,32 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
         return Query.Types[0] != EltTy;
       });
 
-  // FIXME: Doesn't handle extract of illegal sizes.
-  getActionDefinitionsBuilder({G_EXTRACT, G_INSERT})
+  for (unsigned Op : {G_EXTRACT, G_INSERT}) {
+    unsigned BigTyIdx = Op == G_EXTRACT ? 1 : 0;
+    unsigned LitTyIdx = Op == G_EXTRACT ? 0 : 1;
+
+    // FIXME: Doesn't handle extract of illegal sizes.
+    getActionDefinitionsBuilder(Op)
       .legalIf([=](const LegalityQuery &Query) {
-        const LLT &Ty0 = Query.Types[0];
-        const LLT &Ty1 = Query.Types[1];
-        return (Ty0.getSizeInBits() % 16 == 0) &&
-               (Ty1.getSizeInBits() % 16 == 0);
-      })
-      .moreElementsIf(isSmallOddVector(1), oneMoreElement(1))
+          const LLT BigTy = Query.Types[BigTyIdx];
+          const LLT LitTy = Query.Types[LitTyIdx];
+          return (BigTy.getSizeInBits() % 32 == 0) &&
+                 (LitTy.getSizeInBits() % 16 == 0);
+        })
       .widenScalarIf(
-          [=](const LegalityQuery &Query) {
-            const LLT Ty1 = Query.Types[1];
-            return Ty1.isVector() && Ty1.getScalarSizeInBits() < 16;
-          },
-          LegalizeMutations::widenScalarOrEltToNextPow2(1, 16))
-    .clampScalar(0, S16, S256);
+        [=](const LegalityQuery &Query) {
+          const LLT BigTy = Query.Types[BigTyIdx];
+          return (BigTy.getScalarSizeInBits() < 16);
+        },
+        LegalizeMutations::widenScalarOrEltToNextPow2(BigTyIdx, 16))
+      .widenScalarIf(
+        [=](const LegalityQuery &Query) {
+          const LLT LitTy = Query.Types[LitTyIdx];
+          return (LitTy.getScalarSizeInBits() < 16);
+        },
+        LegalizeMutations::widenScalarOrEltToNextPow2(LitTyIdx, 16))
+      .moreElementsIf(isSmallOddVector(BigTyIdx), oneMoreElement(BigTyIdx));
+  }
 
   // TODO: vectors of pointers
   getActionDefinitionsBuilder(G_BUILD_VECTOR)

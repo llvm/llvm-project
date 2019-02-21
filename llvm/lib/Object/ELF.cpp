@@ -219,8 +219,8 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     switch (Type) {
       STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_REGINFO);
       STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_OPTIONS);
-      STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_ABIFLAGS);
       STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_DWARF);
+      STRINGIFY_ENUM_CASE(ELF, SHT_MIPS_ABIFLAGS);
     }
     break;
   default:

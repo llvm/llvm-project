@@ -2,7 +2,7 @@
 
 // Test that symbolizer does not crash on frame with large function name.
 
-// FIXME(dliew): Make this test work on Darwin with LSan
+// On Darwin LSan reports a false positive
 // XFAIL: darwin && lsan
 
 #include <sanitizer/common_interface_defs.h>

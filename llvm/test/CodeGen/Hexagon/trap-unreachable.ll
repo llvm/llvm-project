@@ -1,5 +1,7 @@
 ; RUN: llc -march=hexagon -trap-unreachable < %s | FileCheck %s
-; CHECK: trap
+
+; Trap is implemented via a misaligned load.
+; CHECK: memd(##3134984174)
 
 define void @fred() #0 {
   unreachable

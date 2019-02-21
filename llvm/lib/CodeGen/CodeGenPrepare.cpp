@@ -1228,6 +1228,11 @@ static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
     B = ConstantInt::get(B->getType(), 1);
     Pred = ICmpInst::ICMP_ULT;
   }
+  // Convert special-case: (A != 0) is the same as (0 u< A).
+  if (Pred == ICmpInst::ICMP_NE && match(B, m_ZeroInt())) {
+    std::swap(A, B);
+    Pred = ICmpInst::ICMP_ULT;
+  }
   if (Pred != ICmpInst::ICMP_ULT)
     return false;
 

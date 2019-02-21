@@ -4156,175 +4156,175 @@ struct RedeclChain : ASTImporterOptionSpecificTestBase {
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, Function, ,
-    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition);
+    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, Class, ,
-    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition);
+    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, Variable, ,
-    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition);
+    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, FunctionTemplate, DISABLED_,
-    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition);
+    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, ClassTemplate, ,
-    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition);
+    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, FunctionTemplateSpec, ,
-    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition);
+    PrototypeShouldBeImportedAsAPrototypeWhenThereIsNoDefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
-    RedeclChain, Function, , DefinitionShouldBeImportedAsADefinition);
+    RedeclChain, Function, , DefinitionShouldBeImportedAsADefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
-    RedeclChain, Class, , DefinitionShouldBeImportedAsADefinition);
+    RedeclChain, Class, , DefinitionShouldBeImportedAsADefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
-    RedeclChain, Variable, , DefinitionShouldBeImportedAsADefinition);
+    RedeclChain, Variable, , DefinitionShouldBeImportedAsADefinition)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, FunctionTemplate, DISABLED_,
-    DefinitionShouldBeImportedAsADefinition);
+    DefinitionShouldBeImportedAsADefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
-    RedeclChain, ClassTemplate, , DefinitionShouldBeImportedAsADefinition);
+    RedeclChain, ClassTemplate, , DefinitionShouldBeImportedAsADefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(
     RedeclChain, FunctionTemplateSpec, ,
-    DefinitionShouldBeImportedAsADefinition);
+    DefinitionShouldBeImportedAsADefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportPrototypeAfterImportedPrototype);
+                                        ImportPrototypeAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, ,
-                                        ImportPrototypeAfterImportedPrototype);
+                                        ImportPrototypeAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportPrototypeAfterImportedPrototype);
+                                        ImportPrototypeAfterImportedPrototype)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
                                         DISABLED_,
-                                        ImportPrototypeAfterImportedPrototype);
+                                        ImportPrototypeAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, ClassTemplate, ,
-                                        ImportPrototypeAfterImportedPrototype);
+                                        ImportPrototypeAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec, ,
-                                        ImportPrototypeAfterImportedPrototype);
+                                        ImportPrototypeAfterImportedPrototype)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportDefinitionAfterImportedPrototype);
+                                        ImportDefinitionAfterImportedPrototype)
 // FIXME This does not pass, possible error with Class import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, DISABLED_,
-                                        ImportDefinitionAfterImportedPrototype);
+                                        ImportDefinitionAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportDefinitionAfterImportedPrototype);
+                                        ImportDefinitionAfterImportedPrototype)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
                                         DISABLED_,
-                                        ImportDefinitionAfterImportedPrototype);
+                                        ImportDefinitionAfterImportedPrototype)
 // FIXME This does not pass, possible error with ClassTemplate import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, ClassTemplate, DISABLED_,
-                                        ImportDefinitionAfterImportedPrototype);
+                                        ImportDefinitionAfterImportedPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec, ,
-                                        ImportDefinitionAfterImportedPrototype);
+                                        ImportDefinitionAfterImportedPrototype)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportPrototypeAfterImportedDefinition);
+                                        ImportPrototypeAfterImportedDefinition)
 // FIXME This does not pass, possible error with Class import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, DISABLED_,
-                                        ImportPrototypeAfterImportedDefinition);
+                                        ImportPrototypeAfterImportedDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportPrototypeAfterImportedDefinition);
+                                        ImportPrototypeAfterImportedDefinition)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
                                         DISABLED_,
-                                        ImportPrototypeAfterImportedDefinition);
+                                        ImportPrototypeAfterImportedDefinition)
 // FIXME This does not pass, possible error with ClassTemplate import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, ClassTemplate, DISABLED_,
-                                        ImportPrototypeAfterImportedDefinition);
+                                        ImportPrototypeAfterImportedDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec, ,
-                                        ImportPrototypeAfterImportedDefinition);
+                                        ImportPrototypeAfterImportedDefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportPrototypes);
-ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, , ImportPrototypes);
+                                        ImportPrototypes)
+ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, , ImportPrototypes)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportPrototypes);
+                                        ImportPrototypes)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
-                                        DISABLED_, ImportPrototypes);
+                                        DISABLED_, ImportPrototypes)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, ClassTemplate, ,
-                                        ImportPrototypes);
+                                        ImportPrototypes)
 // FIXME This does not pass, possible error with Spec import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec,
-                                        DISABLED_, ImportPrototypes);
+                                        DISABLED_, ImportPrototypes)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportDefinitions);
+                                        ImportDefinitions)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, ,
-                                        ImportDefinitions);
+                                        ImportDefinitions)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportDefinitions);
+                                        ImportDefinitions)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
-                                        DISABLED_, ImportDefinitions);
+                                        DISABLED_, ImportDefinitions)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, ClassTemplate, ,
-                                        ImportDefinitions);
+                                        ImportDefinitions)
 // FIXME This does not pass, possible error with Spec import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec,
-                                        DISABLED_, ImportDefinitions);
+                                        DISABLED_, ImportDefinitions)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportDefinitionThenPrototype);
+                                        ImportDefinitionThenPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, ,
-                                        ImportDefinitionThenPrototype);
+                                        ImportDefinitionThenPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportDefinitionThenPrototype);
+                                        ImportDefinitionThenPrototype)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
                                         DISABLED_,
-                                        ImportDefinitionThenPrototype);
+                                        ImportDefinitionThenPrototype)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, ClassTemplate, ,
-                                        ImportDefinitionThenPrototype);
+                                        ImportDefinitionThenPrototype)
 // FIXME This does not pass, possible error with Spec import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec,
                                         DISABLED_,
-                                        ImportDefinitionThenPrototype);
+                                        ImportDefinitionThenPrototype)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportPrototypeThenDefinition);
+                                        ImportPrototypeThenDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Class, ,
-                                        ImportPrototypeThenDefinition);
+                                        ImportPrototypeThenDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportPrototypeThenDefinition);
+                                        ImportPrototypeThenDefinition)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
                                         DISABLED_,
-                                        ImportPrototypeThenDefinition);
+                                        ImportPrototypeThenDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, ClassTemplate, ,
-                                        ImportPrototypeThenDefinition);
+                                        ImportPrototypeThenDefinition)
 // FIXME This does not pass, possible error with Spec import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec,
                                         DISABLED_,
-                                        ImportPrototypeThenDefinition);
+                                        ImportPrototypeThenDefinition)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        WholeRedeclChainIsImportedAtOnce);
+                                        WholeRedeclChainIsImportedAtOnce)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        WholeRedeclChainIsImportedAtOnce);
+                                        WholeRedeclChainIsImportedAtOnce)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
                                         DISABLED_,
-                                        WholeRedeclChainIsImportedAtOnce);
+                                        WholeRedeclChainIsImportedAtOnce)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec, ,
-                                        WholeRedeclChainIsImportedAtOnce);
+                                        WholeRedeclChainIsImportedAtOnce)
 
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Function, ,
-                                        ImportPrototypeThenProtoAndDefinition);
+                                        ImportPrototypeThenProtoAndDefinition)
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, Variable, ,
-                                        ImportPrototypeThenProtoAndDefinition);
+                                        ImportPrototypeThenProtoAndDefinition)
 // FIXME Enable this test, once we import function templates chains correctly.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplate,
                                         DISABLED_,
-                                        ImportPrototypeThenProtoAndDefinition);
+                                        ImportPrototypeThenProtoAndDefinition)
 // FIXME This does not pass, possible error with Spec import.
 ASTIMPORTER_INSTANTIATE_TYPED_TEST_CASE(RedeclChain, FunctionTemplateSpec,
                                         DISABLED_,
-                                        ImportPrototypeThenProtoAndDefinition);
+                                        ImportPrototypeThenProtoAndDefinition)
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, RedeclChainFunction,
                         DefaultTestValuesForRunOptions, );

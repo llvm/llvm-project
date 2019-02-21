@@ -81,6 +81,11 @@ Symbol *SymbolTable::find(StringRef Name) {
   return SymVector[It->second];
 }
 
+void SymbolTable::replace(StringRef Name, Symbol* Sym) {
+  auto It = SymMap.find(CachedHashStringRef(Name));
+  SymVector[It->second] = Sym;
+}
+
 std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
   bool Trace = false;
   auto P = SymMap.insert({CachedHashStringRef(Name), (int)SymVector.size()});
@@ -123,29 +128,19 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
 }
 
 // Check the type of new symbol matches that of the symbol is replacing.
-// For functions this can also involve verifying that the signatures match.
-static void checkFunctionType(Symbol *Existing, const InputFile *File,
-                              const WasmSignature *NewSig) {
-  auto ExistingFunction = dyn_cast<FunctionSymbol>(Existing);
-  if (!ExistingFunction) {
-    reportTypeError(Existing, File, WASM_SYMBOL_TYPE_FUNCTION);
-    return;
-  }
-
+// Returns true if the function types match, false is there is a singature
+// mismatch.
+bool signatureMatches(FunctionSymbol *Existing, const WasmSignature *NewSig) {
   if (!NewSig)
-    return;
+    return true;
 
-  const WasmSignature *OldSig = ExistingFunction->Signature;
+  const WasmSignature *OldSig = Existing->Signature;
   if (!OldSig) {
-    ExistingFunction->Signature = NewSig;
-    return;
+    Existing->Signature = NewSig;
+    return true;
   }
 
-  if (*NewSig != *OldSig)
-    warn("function signature mismatch: " + Existing->getName() +
-         "\n>>> defined as " + toString(*OldSig) + " in " +
-         toString(Existing->getFile()) + "\n>>> defined as " +
-         toString(*NewSig) + " in " + toString(File));
+  return *NewSig == *OldSig;
 }
 
 static void checkGlobalType(const Symbol *Existing, const InputFile *File,
@@ -255,26 +250,45 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
+  auto Replace = [&](Symbol* Sym) {
+    // If the new defined function doesn't have signture (i.e. bitcode
+    // functions) but the old symbol does, then preserve the old signature
+    const WasmSignature *OldSig = S->getSignature();
+    auto* NewSym = replaceSymbol<DefinedFunction>(Sym, Name, Flags, File, Function);
+    if (!NewSym->Signature)
+      NewSym->Signature = OldSig;
+  };
+
   if (WasInserted || S->isLazy()) {
-    replaceSymbol<DefinedFunction>(S, Name, Flags, File, Function);
+    Replace(S);
     return S;
   }
 
-  if (Function)
-    checkFunctionType(S, File, &Function->Signature);
-
-  if (shouldReplace(S, File, Flags)) {
-    // If the new defined function doesn't have signture (i.e. bitcode
-    // functions) but the old symbol does then preserve the old signature
-    const WasmSignature *OldSig = nullptr;
-    if (auto* F = dyn_cast<FunctionSymbol>(S))
-      OldSig = F->Signature;
-    if (auto *L = dyn_cast<LazySymbol>(S))
-      OldSig = L->Signature;
-    auto NewSym = replaceSymbol<DefinedFunction>(S, Name, Flags, File, Function);
-    if (!NewSym->Signature)
-      NewSym->Signature = OldSig;
+  auto ExistingFunction = dyn_cast<FunctionSymbol>(S);
+  if (!ExistingFunction) {
+    reportTypeError(S, File, WASM_SYMBOL_TYPE_FUNCTION);
+    return S;
   }
+
+  if (Function && !signatureMatches(ExistingFunction, &Function->Signature)) {
+    Symbol* Variant;
+    if (getFunctionVariant(S, &Function->Signature, File, &Variant))
+      // New variant, always replace
+      Replace(Variant);
+    else if (shouldReplace(S, File, Flags))
+      // Variant already exists, replace it after checking shouldReplace
+      Replace(Variant);
+
+    // This variant we found take the place in the symbol table as the primary
+    // variant.
+    replace(Name, Variant);
+    return Variant;
+  }
+
+  // Existing function with matching signature.
+  if (shouldReplace(S, File, Flags))
+    Replace(S);
+
   return S;
 }
 
@@ -287,15 +301,19 @@ Symbol *SymbolTable::addDefinedData(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  if (WasInserted || S->isLazy()) {
+  auto Replace = [&]() {
     replaceSymbol<DefinedData>(S, Name, Flags, File, Segment, Address, Size);
+  };
+
+  if (WasInserted || S->isLazy()) {
+    Replace();
     return S;
   }
 
   checkDataType(S, File);
 
   if (shouldReplace(S, File, Flags))
-    replaceSymbol<DefinedData>(S, Name, Flags, File, Segment, Address, Size);
+    Replace();
   return S;
 }
 
@@ -307,15 +325,19 @@ Symbol *SymbolTable::addDefinedGlobal(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  if (WasInserted || S->isLazy()) {
+  auto Replace = [&]() {
     replaceSymbol<DefinedGlobal>(S, Name, Flags, File, Global);
+  };
+
+  if (WasInserted || S->isLazy()) {
+    Replace();
     return S;
   }
 
   checkGlobalType(S, File, &Global->getType());
 
   if (shouldReplace(S, File, Flags))
-    replaceSymbol<DefinedGlobal>(S, Name, Flags, File, Global);
+    Replace();
   return S;
 }
 
@@ -327,15 +349,19 @@ Symbol *SymbolTable::addDefinedEvent(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  if (WasInserted || S->isLazy()) {
+  auto Replace = [&]() {
     replaceSymbol<DefinedEvent>(S, Name, Flags, File, Event);
+  };
+
+  if (WasInserted || S->isLazy()) {
+    Replace();
     return S;
   }
 
   checkEventType(S, File, &Event->getType(), &Event->Signature);
 
   if (shouldReplace(S, File, Flags))
-    replaceSymbol<DefinedEvent>(S, Name, Flags, File, Event);
+    Replace();
   return S;
 }
 
@@ -350,13 +376,25 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  if (WasInserted)
+  auto Replace = [&]() {
     replaceSymbol<UndefinedFunction>(S, Name, ImportName, ImportModule, Flags,
                                      File, Sig);
+  };
+
+  if (WasInserted)
+    Replace();
   else if (auto *Lazy = dyn_cast<LazySymbol>(S))
     Lazy->fetch();
-  else
-    checkFunctionType(S, File, Sig);
+  else {
+    auto ExistingFunction = dyn_cast<FunctionSymbol>(S);
+    if (!ExistingFunction) {
+      reportTypeError(S, File, WASM_SYMBOL_TYPE_FUNCTION);
+      return S;
+    }
+    if (!signatureMatches(ExistingFunction, Sig))
+      if (getFunctionVariant(S, Sig, File, &S))
+        Replace();
+  }
 
   return S;
 }
@@ -438,6 +476,43 @@ bool SymbolTable::addComdat(StringRef Name) {
   return Comdats.insert(CachedHashStringRef(Name)).second;
 }
 
+// The new signature doesn't match.  Create a variant to the symbol with the
+// signature encoded in the name and return that instead.  These symbols are
+// then unified later in handleSymbolVariants.
+bool SymbolTable::getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
+                                     const InputFile *File, Symbol **Out) {
+  LLVM_DEBUG(dbgs() << "getFunctionVariant: " << Sym->getName() << " -> "
+                    << " " << toString(*Sig) << "\n");
+  Symbol *Variant = nullptr;
+
+  // Linear search through symbol variants.  Should never be more than two
+  // or three entries here.
+  auto &Variants = SymVariants[CachedHashStringRef(Sym->getName())];
+  if (Variants.size() == 0)
+    Variants.push_back(Sym);
+
+  for (Symbol* V : Variants) {
+    if (*V->getSignature() == *Sig) {
+      Variant = V;
+      break;
+    }
+  }
+
+  bool WasAdded = !Variant;
+  if (WasAdded) {
+    // Create a new variant;
+    LLVM_DEBUG(dbgs() << "added new variant\n");
+    Variant = reinterpret_cast<Symbol *>(make<SymbolUnion>());
+    Variants.push_back(Variant);
+  } else {
+    LLVM_DEBUG(dbgs() << "variant already exists: " << toString(*Variant) << "\n");
+    assert(*Variant->getSignature() == *Sig);
+  }
+
+  *Out = Variant;
+  return WasAdded;
+}
+
 // Set a flag for --trace-symbol so that we can print out a log message
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {
@@ -451,14 +526,16 @@ static const uint8_t UnreachableFn[] = {
 
 // Replace the given symbol body with an unreachable function.
 // This is used by handleWeakUndefines in order to generate a callable
-// equivalent of an undefined function.
+// equivalent of an undefined function and also handleSymbolVariants for
+// undefined functions that don't match the signature of the definition.
 InputFunction *SymbolTable::replaceWithUnreachable(Symbol *Sym,
                                                    const WasmSignature &Sig,
                                                    StringRef DebugName) {
   auto *Func = make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
   Func->setBody(UnreachableFn);
   SyntheticFunctions.emplace_back(Func);
-  replaceSymbol<DefinedFunction>(Sym, Sym->getName(), Sym->getFlags(), nullptr, Func);
+  replaceSymbol<DefinedFunction>(Sym, Sym->getName(), Sym->getFlags(), nullptr,
+                                 Func);
   return Func;
 }
 
@@ -471,21 +548,15 @@ void SymbolTable::handleWeakUndefines() {
     if (!Sym->isUndefWeak())
       continue;
 
-    const WasmSignature *Sig = nullptr;
-
-    if (auto *FuncSym = dyn_cast<FunctionSymbol>(Sym)) {
+    const WasmSignature *Sig = Sym->getSignature();
+    if (!Sig) {
       // It is possible for undefined functions not to have a signature (eg. if
       // added via "--undefined"), but weak undefined ones do have a signature.
-      assert(FuncSym->Signature);
-      Sig = FuncSym->Signature;
-    } else if (auto *LazySym = dyn_cast<LazySymbol>(Sym)) {
-      // Lazy symbols may not be functions and therefore can have a null
-      // signature.
-      Sig = LazySym->Signature;
-    }
-
-    if (!Sig)
+      // Lazy symbols may not be functions and therefore Sig can still be null
+      // in some circumstantce.
+      assert(!isa<FunctionSymbol>(Sym));
       continue;
+    }
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
@@ -496,5 +567,67 @@ void SymbolTable::handleWeakUndefines() {
     Func->setTableIndex(0);
     // Hide our dummy to prevent export.
     Sym->setHidden(true);
+  }
+}
+
+static void reportFunctionSignatureMismatch(StringRef SymName,
+                                            FunctionSymbol *A,
+                                            FunctionSymbol *B, bool Error) {
+  std::string msg = ("function signature mismatch: " + SymName +
+                     "\n>>> defined as " + toString(*A->Signature) + " in " +
+                     toString(A->getFile()) + "\n>>> defined as " +
+                     toString(*B->Signature) + " in " + toString(B->getFile()))
+                        .str();
+  if (Error)
+    error(msg);
+  else
+    warn(msg);
+}
+
+// Remove any variant symbols that were created due to function signature
+// mismatches.
+void SymbolTable::handleSymbolVariants() {
+  for (auto Pair : SymVariants) {
+    // Push the initial symbol onto the list of variants.
+    StringRef SymName = Pair.first.val();
+    std::vector<Symbol *> &Variants = Pair.second;
+
+#ifndef NDEBUG
+    LLVM_DEBUG(dbgs() << "symbol with (" << Variants.size()
+                      << ") variants: " << SymName << "\n");
+    for (auto *S: Variants) {
+      auto *F = cast<FunctionSymbol>(S);
+      LLVM_DEBUG(dbgs() << " variant: " + F->getName() << " "
+                        << toString(*F->Signature) << "\n");
+    }
+#endif
+
+    // Find the one definition.
+    DefinedFunction *Defined = nullptr;
+    for (auto *Symbol : Variants) {
+      if (auto F = dyn_cast<DefinedFunction>(Symbol)) {
+        Defined = F;
+        break;
+      }
+    }
+
+    // If there are no definitions, and the undefined symbols disagree on
+    // the signature, there is not we can do since we don't know which one
+    // to use as the signature on the import.
+    if (!Defined) {
+      reportFunctionSignatureMismatch(SymName,
+                                      cast<FunctionSymbol>(Variants[0]),
+                                      cast<FunctionSymbol>(Variants[1]), true);
+      return;
+    }
+
+    for (auto *Symbol : Variants) {
+      if (Symbol != Defined) {
+        auto *F = cast<FunctionSymbol>(Symbol);
+        reportFunctionSignatureMismatch(SymName, F, Defined, false);
+        StringRef DebugName = Saver.save("unreachable:" + toString(*F));
+        replaceWithUnreachable(F, *F->Signature, DebugName);
+      }
+    }
   }
 }

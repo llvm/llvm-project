@@ -10275,6 +10275,8 @@ public:
   ///  // Otherwise, continue parsing as normal.
   DeviceDiagBuilder diagIfOpenMPDeviceCode(SourceLocation Loc, unsigned DiagID);
 
+  DeviceDiagBuilder targetDiag(SourceLocation Loc, unsigned DiagID);
+
   enum CUDAFunctionTarget {
     CFT_Device,
     CFT_Global,

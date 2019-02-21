@@ -232,6 +232,11 @@ TEST(SelectionTest, Selected) {
           }]]]]
         }
       )cpp",
+      R"cpp(
+          template <class T>
+          struct unique_ptr {};
+          void foo(^$C[[unique_ptr<unique_ptr<$C[[int]]>>]]^ a) {}
+      )cpp",
   };
   for (const char *C : Cases) {
     Annotations Test(C);

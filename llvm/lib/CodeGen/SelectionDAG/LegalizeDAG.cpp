@@ -3321,9 +3321,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::UMULO:
   case ISD::SMULO: {
-    auto Pair = TLI.expandMULO(Node, DAG);
-    Results.push_back(Pair.first);
-    Results.push_back(Pair.second);
+    SDValue Result, Overflow;
+    if (TLI.expandMULO(Node, Result, Overflow, DAG)) {
+      Results.push_back(Result);
+      Results.push_back(Overflow);
+    }
     break;
   }
   case ISD::BUILD_PAIR: {

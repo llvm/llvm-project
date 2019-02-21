@@ -121,6 +121,7 @@ struct Section {
     RawContent,
     Relocation,
     NoBits,
+    Verdef,
     Verneed,
     Symver,
     MipsABIFlags
@@ -203,6 +204,25 @@ struct SymverSection : Section {
   }
 };
 
+struct VerdefEntry {
+  uint16_t Version;
+  uint16_t Flags;
+  uint16_t VersionNdx;
+  uint32_t Hash;
+  std::vector<StringRef> VerNames;
+};
+
+struct VerdefSection : Section {
+  std::vector<VerdefEntry> Entries;
+  llvm::yaml::Hex64 Info;
+
+  VerdefSection() : Section(SectionKind::Verdef) {}
+
+  static bool classof(const Section *S) {
+    return S->Kind == SectionKind::Verdef;
+  }
+};
+
 struct Group : Section {
   // Members of a group contain a flag and a list of section indices
   // that are part of the group.
@@ -274,6 +294,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::DynamicEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::ProgramHeader)
 LLVM_YAML_IS_SEQUENCE_VECTOR(std::unique_ptr<llvm::ELFYAML::Section>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Symbol)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VerdefEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VernauxEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::VerneedEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::ELFYAML::Relocation)
@@ -417,6 +438,10 @@ struct MappingTraits<ELFYAML::LocalGlobalWeakSymbols> {
 
 template <> struct MappingTraits<ELFYAML::DynamicEntry> {
   static void mapping(IO &IO, ELFYAML::DynamicEntry &Rel);
+};
+
+template <> struct MappingTraits<ELFYAML::VerdefEntry> {
+  static void mapping(IO &IO, ELFYAML::VerdefEntry &E);
 };
 
 template <> struct MappingTraits<ELFYAML::VerneedEntry> {
