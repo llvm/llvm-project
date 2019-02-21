@@ -42,6 +42,15 @@ DWARFASTParserSwift::DWARFASTParserSwift(SwiftASTContext &ast) : m_ast(ast) {}
 
 DWARFASTParserSwift::~DWARFASTParserSwift() {}
 
+static llvm::StringRef GetTypedefName(const DWARFDIE &die) {
+  if (die.Tag() != DW_TAG_typedef)
+    return {};
+  DWARFDIE type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
+  if (!type_die.IsValid())
+    return {};
+  return llvm::StringRef::withNullAsEmpty(type_die.GetName());
+}
+
 lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
                                                      const DWARFDIE &die,
                                                      Log *log,
@@ -154,32 +163,19 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     }
   }
 
+  ConstString preferred_name;
   if (!compiler_type && name) {
-    if (name.GetStringRef().startswith("$") ||
-        name.GetStringRef().startswith(
-            SwiftLanguageRuntime::GetCurrentMangledName("_TtBp")
-                .c_str())) { // This is the RawPointerType, need to figure out
-                             // its name from the AST.
+    // Handle Archetypes, which are typedefs to RawPointerType.
+    if (GetTypedefName(die).startswith("$sBp")) {
       swift::ASTContext *swift_ast_ctx = m_ast.GetASTContext();
-      if (swift_ast_ctx)
-        compiler_type = {swift_ast_ctx->TheRawPointerType};
-      else {
-        if (log) {
-          const char *file_name = "<unknown>";
-          SymbolFile *sym_file = m_ast.GetSymbolFile();
-          if (sym_file) {
-            ObjectFile *obj_file = sym_file->GetObjectFile();
-            if (obj_file) {
-              ModuleSP module_sp = obj_file->GetModule();
-              if (module_sp)
-                file_name = module_sp->GetFileSpec().GetFilename().AsCString();
-            }
-          }
-          log->Printf("Got null AST context while looking up %s in %s.",
-                      name.AsCString(), file_name);
-        }
-        return TypeSP();
+      if (!swift_ast_ctx) {
+        if (log)
+          log->Printf("Empty Swift AST context while looking up %s.",
+                      name.AsCString());
+        return {};
       }
+      preferred_name = name;
+      compiler_type = {swift_ast_ctx->TheRawPointerType};
     }
   }
 
@@ -200,7 +196,8 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 
   if (compiler_type) {
     type_sp = TypeSP(new Type(
-        die.GetID(), die.GetDWARF(), compiler_type.GetTypeName(),
+        die.GetID(), die.GetDWARF(),
+        preferred_name ? preferred_name : compiler_type.GetTypeName(),
         is_clang_type ? dwarf_byte_size
                       : compiler_type.GetByteSize(nullptr).getValueOr(0),
         NULL, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
