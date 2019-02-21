@@ -213,14 +213,14 @@ TEST(SymbolInfoTests, All) {
             T^T t;
           };
         )cpp",
-              {/* not implemented */}},
+              {CreateExpectedSymbolDetails("TT", "bar::", "c:TestTU.cpp@65")}},
           {
               R"cpp( // Template parameter reference - type param
           template<int NN> struct bar {
             int a = N^N;
           };
         )cpp",
-              {/* not implemented */}},
+              {CreateExpectedSymbolDetails("NN", "bar::", "c:TestTU.cpp@65")}},
           {
               R"cpp( // Class member reference - objec
           struct foo {

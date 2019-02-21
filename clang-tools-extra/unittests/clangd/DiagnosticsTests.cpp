@@ -311,6 +311,7 @@ TEST(IncludeFixerTest, IncompleteType) {
   Annotations Test(R"cpp(
 $insert[[]]namespace ns {
   class X;
+  $nested[[X::]]Nested n;
 }
 class Y : $base[[public ns::X]] {};
 int main() {
@@ -326,6 +327,10 @@ int main() {
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
+          AllOf(Diag(Test.range("nested"),
+                     "incomplete type 'ns::X' named in nested name specifier"),
+                WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
+                            "Add include \"x.h\" for symbol ns::X"))),
           AllOf(Diag(Test.range("base"), "base class has incomplete type"),
                 WithFix(Fix(Test.range("insert"), "#include \"x.h\"\n",
                             "Add include \"x.h\" for symbol ns::X"))),

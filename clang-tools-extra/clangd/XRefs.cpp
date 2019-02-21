@@ -39,7 +39,8 @@ const Decl *getDefinition(const Decl *D) {
   if (const auto *FD = dyn_cast<FunctionDecl>(D))
     return FD->getDefinition();
   // Only a single declaration is allowed.
-  if (isa<ValueDecl>(D)) // except cases above
+  if (isa<ValueDecl>(D) || isa<TemplateTypeParmDecl>(D) ||
+      isa<TemplateTemplateParmDecl>(D)) // except cases above
     return D;
   // Multiple definitions are allowed.
   return nullptr; // except cases above
@@ -243,6 +244,7 @@ IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
   IndexOpts.IndexParametersInDeclarations = true;
+  IndexOpts.IndexTemplateParameters = true;
   indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
                      AST.getLocalTopLevelDecls(), DeclMacrosFinder, IndexOpts);
 
@@ -441,6 +443,7 @@ findRefs(const std::vector<const Decl *> &Decls, ParsedAST &AST) {
       index::IndexingOptions::SystemSymbolFilterKind::All;
   IndexOpts.IndexFunctionLocals = true;
   IndexOpts.IndexParametersInDeclarations = true;
+  IndexOpts.IndexTemplateParameters = true;
   indexTopLevelDecls(AST.getASTContext(), AST.getPreprocessor(),
                      AST.getLocalTopLevelDecls(), RefFinder, IndexOpts);
   return std::move(RefFinder).take();
