@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,alpha.osx.MIG\
+// RUN: %clang_analyze_cc1 -w -analyzer-checker=core,osx.MIG\
 // RUN:                       -analyzer-output=text -fblocks -verify %s
 
 typedef unsigned uint32_t;
