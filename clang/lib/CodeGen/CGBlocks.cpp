@@ -2029,6 +2029,8 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
   llvm::Function *Fn =
     llvm::Function::Create(LTy, llvm::GlobalValue::LinkOnceODRLinkage,
                            FuncName, &CGM.getModule());
+  if (CGM.supportsCOMDAT())
+    Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
 
   IdentifierInfo *II = &C.Idents.get(FuncName);
 
@@ -2220,6 +2222,8 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
   llvm::Function *Fn =
     llvm::Function::Create(LTy, llvm::GlobalValue::LinkOnceODRLinkage,
                            FuncName, &CGM.getModule());
+  if (CGM.supportsCOMDAT())
+    Fn->setComdat(CGM.getModule().getOrInsertComdat(FuncName));
 
   IdentifierInfo *II = &C.Idents.get(FuncName);
 
