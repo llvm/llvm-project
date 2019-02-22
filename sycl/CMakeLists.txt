@@ -32,7 +32,7 @@ set ( LLVM_INST_INC_DIRECTORY "lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/i
 find_package(OpenCL REQUIRED)
 
 include_directories(${OpenCL_INCLUDE_DIRS})
-link_libraries(OpenCL)
+link_libraries(${OpenCL_LIBRARY})
 
 # Configure SYCL version macro
 set(sycl_inc_dir ${CMAKE_CURRENT_SOURCE_DIR}/include/CL)
@@ -103,7 +103,6 @@ add_library("${SYCLLibrary}" SHARED
 
 include_directories("${SYCLLibrary}" "${includeRootPath}")
 
-target_link_libraries("${SYCLLibrary}" "${OpenCL_LIBRARIES}")
 set_target_properties("${SYCLLibrary}" PROPERTIES LINKER_LANGUAGE CXX)
 
 # Workaround for bug in GCC version 5.

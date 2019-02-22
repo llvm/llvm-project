@@ -2,13 +2,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(OpenCL REQUIRED)
-
-# All projects need this include directory
-include_directories(${OpenCL_INCLUDE_DIRS})
-
-link_libraries(OpenCL)
-
 add_executable(get_device_count_by_type get_device_count_by_type.cpp)
 
 #Minimum supported version of Intel's OCL GPU and CPU devices
