@@ -60,7 +60,7 @@
 // CHECK-NEXT: InternalLinkage (SubjectMatchRule_variable, SubjectMatchRule_function, SubjectMatchRule_record)
 // CHECK-NEXT: LTOVisibilityPublic (SubjectMatchRule_record)
 // CHECK-NEXT: Lockable (SubjectMatchRule_record)
-// CHECK-NEXT: MIGServerRoutine (SubjectMatchRule_function)
+// CHECK-NEXT: MIGServerRoutine (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_block)
 // CHECK-NEXT: MSStruct (SubjectMatchRule_record)
 // CHECK-NEXT: MicroMips (SubjectMatchRule_function)
 // CHECK-NEXT: MinSize (SubjectMatchRule_function, SubjectMatchRule_objc_method)
