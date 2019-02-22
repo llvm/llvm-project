@@ -19,11 +19,11 @@
 #include "Decl.h"
 
 namespace clang {
+
 // FIXME: Find a better alternative to SmallVector with hardcoded size!
 
 class RecordFieldReorganizer {
 public:
-  RecordFieldReorganizer(std::string seed);
   virtual ~RecordFieldReorganizer() = default;
   void reorganizeFields(const ASTContext &C, const RecordDecl *D) const;
 
@@ -32,14 +32,11 @@ protected:
                           SmallVector<Decl *, 64> &NewOrder) const = 0;
 
 private:
-  std::string RandomSeed;
   void commit(const RecordDecl *D,
               SmallVectorImpl<Decl *> &NewFieldOrder) const;
 };
 
 class Randstruct : public RecordFieldReorganizer {
-public:
-  Randstruct(std::string seed);
 protected:
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
                           SmallVector<Decl *, 64> &NewOrder) const override;

@@ -25,13 +25,6 @@
 
 namespace clang {
 
-
-RecordFieldReorganizer::RecordFieldReorganizer(std::string seed) {
-  RandomSeed = seed;
-}
-
-Randstruct::Randstruct(std::string seed) : RecordFieldReorganizer(seed) {};
-
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) const {
   // Save original fields for asserting later that a subclass hasn't
