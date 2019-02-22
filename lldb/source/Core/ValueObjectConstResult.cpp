@@ -220,7 +220,7 @@ ConstString ValueObjectConstResult::GetTypeName() {
 }
 
 ConstString ValueObjectConstResult::GetDisplayTypeName() {
-  return GetCompilerType().GetDisplayTypeName();
+  return GetCompilerType().GetDisplayTypeName(GetFrameSP());
 }
 
 bool ValueObjectConstResult::UpdateValue() {

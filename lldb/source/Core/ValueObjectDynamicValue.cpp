@@ -86,7 +86,7 @@ ConstString ValueObjectDynamicValue::GetDisplayTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
     if (m_dynamic_type_info.HasType())
-      return GetCompilerType().GetDisplayTypeName();
+      return GetCompilerType().GetDisplayTypeName(GetFrameSP());
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }

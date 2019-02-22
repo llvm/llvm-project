@@ -188,7 +188,8 @@ void FormatManager::GetPossibleMatches(
     entries.push_back(
         {type_name, reason, did_strip_ptr, did_strip_ref, did_strip_typedef});
 
-    ConstString display_type_name(compiler_type.GetDisplayTypeName());
+    lldb::StackFrameSP frame_sp = valobj.GetFrameSP();
+    ConstString display_type_name(compiler_type.GetDisplayTypeName(frame_sp));
     if (display_type_name != type_name)
       entries.push_back({display_type_name, reason, did_strip_ptr,
                          did_strip_ref, did_strip_typedef});

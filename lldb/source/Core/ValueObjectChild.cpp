@@ -84,7 +84,7 @@ ConstString ValueObjectChild::GetQualifiedTypeName() {
 }
 
 ConstString ValueObjectChild::GetDisplayTypeName() {
-  ConstString display_name = GetCompilerType().GetDisplayTypeName();
+  ConstString display_name = GetCompilerType().GetDisplayTypeName(GetFrameSP());
   AdjustForBitfieldness(display_name, m_bitfield_bit_size);
   return display_name;
 }
