@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/RandstructSeed.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "TestModuleFileExtension.h"
 #include "clang/Basic/Builtins.h"
@@ -91,9 +92,6 @@
 #include <utility>
 #include <vector>
 
-namespace clang {
-  std::string RandstructSeed;
-}
 using namespace clang;
 using namespace driver;
 using namespace options;
@@ -117,7 +115,6 @@ CompilerInvocationBase::CompilerInvocationBase(const CompilerInvocationBase &X)
       PreprocessorOpts(new PreprocessorOptions(X.getPreprocessorOpts())) {}
 
 CompilerInvocationBase::~CompilerInvocationBase() = default;
-//std::string RandstructSeed;
 
 //===----------------------------------------------------------------------===//
 // Deserialization (from args)
@@ -1674,7 +1671,8 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ActionName = A->getValue();
   }
   if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed_EQ)) {
-    clang::RandstructSeed = A->getValue();
+    llvm::errs() << "ParseFrontendArgs; " << RandstructSeed << "\n";
+    RandstructSeed = A->getValue();
   }
   Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
   for (const auto *AA : Args.filtered(OPT_plugin_arg))

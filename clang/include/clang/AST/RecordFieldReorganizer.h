@@ -19,8 +19,6 @@
 #include "Decl.h"
 
 namespace clang {
-  //std::string RandstructSeed;
-
 // FIXME: Find a better alternative to SmallVector with hardcoded size!
 
 class RecordFieldReorganizer {

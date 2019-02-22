@@ -19,7 +19,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
-extern std::string RandstructSeed;
 class ObjCRuntime;
 namespace driver {
 
