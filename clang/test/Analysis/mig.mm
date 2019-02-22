@@ -1,19 +1,54 @@
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=core,alpha.osx.MIG\
 // RUN:                       -analyzer-output=text -fblocks -verify %s
 
+typedef unsigned uint32_t;
+
 // XNU APIs.
 
 typedef int kern_return_t;
 #define KERN_SUCCESS 0
 #define KERN_ERROR 1
+#define MIG_NO_REPLY (-305)
 
 typedef unsigned mach_port_name_t;
 typedef unsigned vm_address_t;
 typedef unsigned vm_size_t;
+typedef void *ipc_space_t;
+typedef unsigned long io_user_reference_t;
 
 kern_return_t vm_deallocate(mach_port_name_t, vm_address_t, vm_size_t);
+kern_return_t mach_vm_deallocate(mach_port_name_t, vm_address_t, vm_size_t);
+void mig_deallocate(vm_address_t, vm_size_t);
+kern_return_t mach_port_deallocate(ipc_space_t, mach_port_name_t);
 
 #define MIG_SERVER_ROUTINE __attribute__((mig_server_routine))
+
+// IOKit wrappers.
+
+class OSObject;
+typedef kern_return_t IOReturn;
+#define kIOReturnError 1
+
+enum {
+  kOSAsyncRef64Count = 8,
+};
+
+typedef io_user_reference_t OSAsyncReference64[kOSAsyncRef64Count];
+
+struct IOExternalMethodArguments {
+  io_user_reference_t *asyncReference;
+};
+
+struct IOExternalMethodDispatch {};
+
+class IOUserClient {
+public:
+  static IOReturn releaseAsyncReference64(OSAsyncReference64);
+
+  MIG_SERVER_ROUTINE
+  virtual IOReturn externalMethod(uint32_t selector, IOExternalMethodArguments *arguments,
+                                  IOExternalMethodDispatch *dispatch = 0, OSObject *target = 0, void *reference = 0);
+};
 
 
 // Tests.
@@ -123,3 +158,52 @@ void test_block_with_weird_return_type() {
         return Empty{}; // no-crash
       };
 }
+
+// Test various APIs.
+MIG_SERVER_ROUTINE
+kern_return_t test_mach_vm_deallocate(mach_port_name_t port, vm_address_t address, vm_size_t size) {
+  mach_vm_deallocate(port, address, size); // expected-note{{Value passed through parameter 'address' is deallocated}}
+  return KERN_ERROR;                 // expected-warning{{MIG callback fails with error after deallocating argument value}}
+                                     // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
+}
+
+MIG_SERVER_ROUTINE
+kern_return_t test_mach_port_deallocate(ipc_space_t space,
+                                        mach_port_name_t port) {
+  mach_port_deallocate(space, port); // expected-note{{Value passed through parameter 'port' is deallocated}}
+  return KERN_ERROR;                 // expected-warning{{MIG callback fails with error after deallocating argument value}}
+                                     // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
+}
+
+MIG_SERVER_ROUTINE
+kern_return_t test_mig_deallocate(vm_address_t address, vm_size_t size) {
+  mig_deallocate(address, size); // expected-note{{Value passed through parameter 'address' is deallocated}}
+  return KERN_ERROR;             // expected-warning{{MIG callback fails with error after deallocating argument value}}
+                                 // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
+}
+
+// Let's try the C++11 attribute spelling syntax as well.
+[[clang::mig_server_routine]]
+IOReturn test_releaseAsyncReference64(IOExternalMethodArguments *arguments) {
+  IOUserClient::releaseAsyncReference64(arguments->asyncReference); // expected-note{{Value passed through parameter 'arguments' is deallocated}}
+  return kIOReturnError;                                            // expected-warning{{MIG callback fails with error after deallocating argument value}}
+                                                                    // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
+}
+
+MIG_SERVER_ROUTINE
+kern_return_t test_no_reply(ipc_space_t space, mach_port_name_t port) {
+  mach_port_deallocate(space, port);
+  return MIG_NO_REPLY; // no-warning
+}
+
+class MyClient: public IOUserClient {
+  // The MIG_SERVER_ROUTINE annotation is intentionally skipped.
+  // It should be picked up from the superclass.
+  IOReturn externalMethod(uint32_t selector, IOExternalMethodArguments *arguments,
+                          IOExternalMethodDispatch *dispatch = 0, OSObject *target = 0, void *reference = 0) override {
+
+    releaseAsyncReference64(arguments->asyncReference); // expected-note{{Value passed through parameter 'arguments' is deallocated}}
+    return kIOReturnError;                              // expected-warning{{MIG callback fails with error after deallocating argument value}}
+                                                        // expected-note@-1{{MIG callback fails with error after deallocating argument value}}
+  }
+};

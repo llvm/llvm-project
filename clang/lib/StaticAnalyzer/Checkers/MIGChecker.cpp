@@ -8,13 +8,14 @@
 //
 // This file defines MIGChecker, a Mach Interface Generator calling convention
 // checker. Namely, in MIG callback implementation the following rules apply:
-// - When a server routine returns KERN_SUCCESS, it must take ownership of
-//   resources (and eventually release them).
-// - Additionally, when returning KERN_SUCCESS, all out-parameters must be
+// - When a server routine returns an error code that represents success, it
+//   must take ownership of resources passed to it (and eventually release
+//   them).
+// - Additionally, when returning success, all out-parameters must be
 //   initialized.
-// - When it returns anything except KERN_SUCCESS it must not take ownership,
-//   because the message and its descriptors will be destroyed by the server
-//   function.
+// - When it returns any other error code, it must not take ownership,
+//   because the message and its out-of-line parameters will be destroyed
+//   by the client that called the function.
 // For now we only check the last rule, as its violations lead to dangerous
 // use-after-free exploits.
 //
@@ -37,7 +38,29 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
   BugType BT{this, "Use-after-free (MIG calling convention violation)",
              categories::MemoryError};
 
-  CallDescription vm_deallocate { "vm_deallocate", 3 };
+  // The checker knows that an out-of-line object is deallocated if it is
+  // passed as an argument to one of these functions. If this object is
+  // additionally an argument of a MIG routine, the checker keeps track of that
+  // information and issues a warning when an error is returned from the
+  // respective routine.
+  std::vector<std::pair<CallDescription, unsigned>> Deallocators = {
+#define CALL(required_args, deallocated_arg, ...)                              \
+  {{{__VA_ARGS__}, required_args}, deallocated_arg}
+      // E.g., if the checker sees a C function 'vm_deallocate' that is
+      // defined on class 'IOUserClient' that has exactly 3 parameters, it knows
+      // that argument #1 (starting from 0, i.e. the second argument) is going
+      // to be consumed in the sense of the MIG consume-on-success convention.
+      CALL(3, 1, "vm_deallocate"),
+      CALL(3, 1, "mach_vm_deallocate"),
+      CALL(2, 0, "mig_deallocate"),
+      CALL(2, 1, "mach_port_deallocate"),
+      // E.g., if the checker sees a method 'releaseAsyncReference64()' that is
+      // defined on class 'IOUserClient' that takes exactly 1 argument, it knows
+      // that the argument is going to be consumed in the sense of the MIG
+      // consume-on-success convention.
+      CALL(1, 0, "IOUserClient", "releaseAsyncReference64"),
+#undef CALL
+  };
 
   void checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const;
 
@@ -100,10 +123,23 @@ static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C) {
   if (!Sym)
     return nullptr;
 
-  const auto *VR = dyn_cast_or_null<VarRegion>(Sym->getOriginRegion());
-  if (VR && VR->hasStackParametersStorage() &&
-         VR->getStackFrame()->inTopFrame())
-    return cast<ParmVarDecl>(VR->getDecl());
+  // If we optimistically assume that the MIG routine never re-uses the storage
+  // that was passed to it as arguments when it invalidates it (but at most when
+  // it assigns to parameter variables directly), this procedure correctly
+  // determines if the value was loaded from the transitive closure of MIG
+  // routine arguments in the heap.
+  while (const MemRegion *MR = Sym->getOriginRegion()) {
+    const auto *VR = dyn_cast<VarRegion>(MR);
+    if (VR && VR->hasStackParametersStorage() &&
+           VR->getStackFrame()->inTopFrame())
+      return cast<ParmVarDecl>(VR->getDecl());
+
+    const SymbolicRegion *SR = MR->getSymbolicBase();
+    if (!SR)
+      return nullptr;
+
+    Sym = SR->getSymbol();
+  }
 
   return nullptr;
 }
@@ -133,6 +169,12 @@ static bool isInMIGCall(CheckerContext &C) {
   if (D->hasAttr<MIGServerRoutineAttr>())
     return true;
 
+  // See if there's an annotated method in the superclass.
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
+    for (const auto *OMD: MD->overridden_methods())
+      if (OMD->hasAttr<MIGServerRoutineAttr>())
+        return true;
+
   return false;
 }
 
@@ -140,19 +182,41 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   if (!isInMIGCall(C))
     return;
 
-  if (!Call.isGlobalCFunction())
+  auto I = std::find_if(Deallocators.begin(), Deallocators.end(),
+                        [&](const std::pair<CallDescription, unsigned> &Item) {
+                          return Call.isCalled(Item.first);
+                        });
+  if (I == Deallocators.end())
     return;
 
-  if (!Call.isCalled(vm_deallocate))
-    return;
-
-  // TODO: Unhardcode "1".
-  SVal Arg = Call.getArgSVal(1);
+  unsigned ArgIdx = I->second;
+  SVal Arg = Call.getArgSVal(ArgIdx);
   const ParmVarDecl *PVD = getOriginParam(Arg, C);
   if (!PVD)
     return;
 
   C.addTransition(C.getState()->set<ReleasedParameter>(PVD));
+}
+
+// Returns true if V can potentially represent a "successful" kern_return_t.
+static bool mayBeSuccess(SVal V, CheckerContext &C) {
+  ProgramStateRef State = C.getState();
+
+  // Can V represent KERN_SUCCESS?
+  if (!State->isNull(V).isConstrainedFalse())
+    return true;
+
+  SValBuilder &SVB = C.getSValBuilder();
+  ASTContext &ACtx = C.getASTContext();
+
+  // Can V represent MIG_NO_REPLY?
+  static const int MigNoReply = -305;
+  V = SVB.evalEQ(C.getState(), V, SVB.makeIntVal(MigNoReply, ACtx.IntTy));
+  if (!State->isNull(V).isConstrainedTrue())
+    return true;
+
+  // If none of the above, it's definitely an error.
+  return false;
 }
 
 void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
@@ -180,7 +244,7 @@ void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
     return;
 
   SVal V = C.getSVal(RS);
-  if (!State->isNonNull(V).isConstrainedTrue())
+  if (mayBeSuccess(V, C))
     return;
 
   ExplodedNode *N = C.generateErrorNode();
