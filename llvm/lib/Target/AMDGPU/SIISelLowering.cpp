@@ -1862,7 +1862,6 @@ SDValue SITargetLowering::LowerFormalArguments(
   const Function &Fn = MF.getFunction();
   FunctionType *FType = MF.getFunction().getFunctionType();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (Subtarget->isAmdHsaOS() && AMDGPU::isShader(CallConv)) {
     DiagnosticInfoUnsupported NoGraphicsHSA(
@@ -1870,11 +1869,6 @@ SDValue SITargetLowering::LowerFormalArguments(
     DAG.getContext()->diagnose(NoGraphicsHSA);
     return DAG.getEntryNode();
   }
-
-  // Create stack objects that are used for emitting debugger prologue if
-  // "amdgpu-debugger-emit-prologue" attribute was specified.
-  if (ST.debuggerEmitPrologue())
-    createDebuggerPrologueStackObjects(MF);
 
   SmallVector<ISD::InputArg, 16> Splits;
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -3960,32 +3954,6 @@ unsigned SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   // break, if_break, else_break are all only used as inputs to loop, not
   // directly as branch conditions.
   return 0;
-}
-
-void SITargetLowering::createDebuggerPrologueStackObjects(
-    MachineFunction &MF) const {
-  // Create stack objects that are used for emitting debugger prologue.
-  //
-  // Debugger prologue writes work group IDs and work item IDs to scratch memory
-  // at fixed location in the following format:
-  //   offset 0:  work group ID x
-  //   offset 4:  work group ID y
-  //   offset 8:  work group ID z
-  //   offset 16: work item ID x
-  //   offset 20: work item ID y
-  //   offset 24: work item ID z
-  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  int ObjectIdx = 0;
-
-  // For each dimension:
-  for (unsigned i = 0; i < 3; ++i) {
-    // Create fixed stack object for work group ID.
-    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4, true);
-    Info->setDebuggerWorkGroupIDStackObjectIndex(i, ObjectIdx);
-    // Create fixed stack object for work item ID.
-    ObjectIdx = MF.getFrameInfo().CreateFixedObject(4, i * 4 + 16, true);
-    Info->setDebuggerWorkItemIDStackObjectIndex(i, ObjectIdx);
-  }
 }
 
 bool SITargetLowering::shouldEmitFixup(const GlobalValue *GV) const {

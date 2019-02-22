@@ -4522,7 +4522,8 @@ CodeGenModule::GetAddrOfConstantStringFromLiteral(const StringLiteral *S,
     if (auto GV = *Entry) {
       if (Alignment.getQuantity() > GV->getAlignment())
         GV->setAlignment(Alignment.getQuantity());
-      return ConstantAddress(GV, Alignment);
+      return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
+                             Alignment);
     }
   }
 
@@ -4584,7 +4585,8 @@ ConstantAddress CodeGenModule::GetAddrOfConstantCString(
     if (auto GV = *Entry) {
       if (Alignment.getQuantity() > GV->getAlignment())
         GV->setAlignment(Alignment.getQuantity());
-      return ConstantAddress(GV, Alignment);
+      return ConstantAddress(castStringLiteralToDefaultAddressSpace(*this, GV),
+                             Alignment);
     }
   }
 

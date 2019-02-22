@@ -2043,7 +2043,7 @@ void Verifier::verifyFrameRecoverIndices() {
     unsigned MaxRecoveredIndex = Counts.second.second;
     Assert(MaxRecoveredIndex <= EscapedObjectCount,
            "all indices passed to llvm.localrecover must be less than the "
-           "number of arguments passed ot llvm.localescape in the parent "
+           "number of arguments passed to llvm.localescape in the parent "
            "function",
            F);
   }

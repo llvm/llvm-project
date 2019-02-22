@@ -75,6 +75,7 @@ write_lit_config("lit_site_cfg") {
     "HAVE_OCAML_OUNIT=0",
     "OCAMLFIND=OCAMLFIND-NOTFOUND",
     "OCAMLFLAGS=",
+    "LLVM_BUILD_EXAMPLES=0",
   ]
 
   if (host_cpu == "x64") {

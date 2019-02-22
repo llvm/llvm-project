@@ -248,7 +248,7 @@ arm::FloatABI arm::getARMFloatABI(const ToolChain &TC, const ArgList &Args) {
         ABI = FloatABI::SoftFP;
         break;
       case llvm::Triple::Android:
-        ABI = (SubArch == 7) ? FloatABI::SoftFP : FloatABI::Soft;
+        ABI = (SubArch >= 7) ? FloatABI::SoftFP : FloatABI::Soft;
         break;
       default:
         // Assume "soft", but warn the user we are guessing.

@@ -1658,8 +1658,8 @@ multiclass Int16Med3Pat<Instruction med3Inst,
 
 def : FPMed3Pat<f32, V_MED3_F32>;
 
-let OtherPredicates = [isGFX9] in {
+let OtherPredicates = [isGFX9Plus] in {
 def : FP16Med3Pat<f16, V_MED3_F16>;
 defm : Int16Med3Pat<V_MED3_I16, smin, smax, smax_oneuse, smin_oneuse>;
 defm : Int16Med3Pat<V_MED3_U16, umin, umax, umax_oneuse, umin_oneuse>;
-} // End Predicates = [isGFX9]
+} // End Predicates = [isGFX9Plus]

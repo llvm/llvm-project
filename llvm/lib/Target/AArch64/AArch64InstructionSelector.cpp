@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -74,6 +75,14 @@ private:
   bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
+
+  void collectShuffleMaskIndices(MachineInstr &I, MachineRegisterInfo &MRI,
+                                 SmallVectorImpl<int> &Idxs) const;
+  bool selectShuffleVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
+
+  unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
+  MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
+                                         MachineIRBuilder &MIRBuilder) const;
 
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
 
@@ -1696,6 +1705,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return selectMergeValues(I, MRI);
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(I, MRI);
+  case TargetOpcode::G_SHUFFLE_VECTOR:
+    return selectShuffleVector(I, MRI);
   }
 
   return false;
@@ -1909,6 +1920,125 @@ bool AArch64InstructionSelector::selectUnmergeValues(
   }
 
   RBI.constrainGenericRegister(CopyTo, *RC, MRI);
+  I.eraseFromParent();
+  return true;
+}
+
+void AArch64InstructionSelector::collectShuffleMaskIndices(
+    MachineInstr &I, MachineRegisterInfo &MRI,
+    SmallVectorImpl<int> &Idxs) const {
+  MachineInstr *MaskDef = MRI.getVRegDef(I.getOperand(3).getReg());
+  assert(
+      MaskDef->getOpcode() == TargetOpcode::G_BUILD_VECTOR &&
+      "G_SHUFFLE_VECTOR should have a constant mask operand as G_BUILD_VECTOR");
+  // Find the constant indices.
+  for (unsigned i = 1, e = MaskDef->getNumOperands(); i < e; ++i) {
+    MachineInstr *ScalarDef = MRI.getVRegDef(MaskDef->getOperand(i).getReg());
+    assert(ScalarDef && "Could not find vreg def of shufflevec index op");
+    // Look through copies.
+    while (ScalarDef->getOpcode() == TargetOpcode::COPY) {
+      ScalarDef = MRI.getVRegDef(ScalarDef->getOperand(1).getReg());
+      assert(ScalarDef && "Could not find def of copy operand");
+    }
+    assert(ScalarDef->getOpcode() == TargetOpcode::G_CONSTANT);
+    Idxs.push_back(ScalarDef->getOperand(1).getCImm()->getSExtValue());
+  }
+}
+
+unsigned
+AArch64InstructionSelector::emitConstantPoolEntry(Constant *CPVal,
+                                                  MachineFunction &MF) const {
+  Type *CPTy = CPVal->getType()->getPointerTo();
+  unsigned Align = MF.getDataLayout().getPrefTypeAlignment(CPTy);
+  if (Align == 0)
+    Align = MF.getDataLayout().getTypeAllocSize(CPTy);
+
+  MachineConstantPool *MCP = MF.getConstantPool();
+  return MCP->getConstantPoolIndex(CPVal, Align);
+}
+
+MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
+    Constant *CPVal, MachineIRBuilder &MIRBuilder) const {
+  unsigned CPIdx = emitConstantPoolEntry(CPVal, MIRBuilder.getMF());
+
+  auto Adrp =
+      MIRBuilder.buildInstr(AArch64::ADRP, {&AArch64::GPR64RegClass}, {})
+          .addConstantPoolIndex(CPIdx, 0, AArch64II::MO_PAGE);
+  auto Load =
+      MIRBuilder.buildInstr(AArch64::LDRQui, {&AArch64::FPR128RegClass}, {Adrp})
+          .addConstantPoolIndex(CPIdx, 0,
+                                AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+  constrainSelectedInstRegOperands(*Adrp, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*Load, TII, TRI, RBI);
+  return &*Load;
+}
+
+bool AArch64InstructionSelector::selectShuffleVector(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+  unsigned Src1Reg = I.getOperand(1).getReg();
+  const LLT Src1Ty = MRI.getType(Src1Reg);
+  unsigned Src2Reg = I.getOperand(2).getReg();
+  const LLT Src2Ty = MRI.getType(Src2Reg);
+
+  MachineBasicBlock &MBB = *I.getParent();
+  MachineFunction &MF = *MBB.getParent();
+  LLVMContext &Ctx = MF.getFunction().getContext();
+
+  // G_SHUFFLE_VECTOR doesn't really have a strictly enforced constant mask
+  // operand, it comes in as a normal vector value which we have to analyze to
+  // find the mask indices.
+  SmallVector<int, 8> Mask;
+  collectShuffleMaskIndices(I, MRI, Mask);
+  assert(!Mask.empty() && "Expected to find mask indices");
+
+  // G_SHUFFLE_VECTOR is weird in that the source operands can be scalars, if
+  // it's originated from a <1 x T> type. Those should have been lowered into
+  // G_BUILD_VECTOR earlier.
+  if (!Src1Ty.isVector() || !Src2Ty.isVector()) {
+    LLVM_DEBUG(dbgs() << "Could not select a \"scalar\" G_SHUFFLE_VECTOR\n");
+    return false;
+  }
+
+  unsigned BytesPerElt = DstTy.getElementType().getSizeInBits() / 8;
+
+  SmallVector<Constant *, 64> CstIdxs;
+  for (int Val : Mask) {
+    for (unsigned Byte = 0; Byte < BytesPerElt; ++Byte) {
+      unsigned Offset = Byte + Val * BytesPerElt;
+      CstIdxs.emplace_back(ConstantInt::get(Type::getInt8Ty(Ctx), Offset));
+    }
+  }
+
+  if (DstTy.getSizeInBits() != 128) {
+    assert(DstTy.getSizeInBits() == 64 && "Unexpected shuffle result ty");
+    // This case can be done with TBL1.
+    return false;
+  }
+
+  // Use a constant pool to load the index vector for TBL.
+  Constant *CPVal = ConstantVector::get(CstIdxs);
+  MachineIRBuilder MIRBuilder(I);
+  MachineInstr *IndexLoad = emitLoadFromConstantPool(CPVal, MIRBuilder);
+  if (!IndexLoad) {
+    LLVM_DEBUG(dbgs() << "Could not load from a constant pool");
+    return false;
+  }
+
+  // For TBL2 we need to emit a REG_SEQUENCE to tie together two consecutive
+  // Q registers for regalloc.
+  auto RegSeq = MIRBuilder
+                    .buildInstr(TargetOpcode::REG_SEQUENCE,
+                                {&AArch64::QQRegClass}, {Src1Reg})
+                    .addImm(AArch64::qsub0)
+                    .addUse(Src2Reg)
+                    .addImm(AArch64::qsub1);
+
+  auto TBL2 =
+      MIRBuilder.buildInstr(AArch64::TBLv16i8Two, {I.getOperand(0).getReg()},
+                            {RegSeq, IndexLoad->getOperand(0).getReg()});
+  constrainSelectedInstRegOperands(*RegSeq, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*TBL2, TII, TRI, RBI);
   I.eraseFromParent();
   return true;
 }

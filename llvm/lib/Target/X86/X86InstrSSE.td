@@ -6535,9 +6535,9 @@ def : Pat<(X86Blendi (loadv8i32 addr:$src2), VR256:$src1, imm:$src3),
 
 def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), imm:$src3),
           (VBLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
-def : Pat<(X86Blendi VR128:$src1, (loadv4i32 VR128:$src2), imm:$src3),
+def : Pat<(X86Blendi VR128:$src1, (loadv4i32 addr:$src2), imm:$src3),
           (VBLENDPSrmi VR128:$src1, addr:$src2, imm:$src3)>;
-def : Pat<(X86Blendi (loadv4i32 VR128:$src2), VR128:$src1, imm:$src3),
+def : Pat<(X86Blendi (loadv4i32 addr:$src2), VR128:$src1, imm:$src3),
           (VBLENDPSrmi VR128:$src1, addr:$src2, (BlendCommuteImm4 imm:$src3))>;
 }
 
@@ -6562,9 +6562,9 @@ def : Pat<(X86Blendi (memopv2i64 addr:$src2), VR128:$src1, imm:$src3),
 def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), imm:$src3),
           (BLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
 def : Pat<(X86Blendi VR128:$src1, (memopv4i32 addr:$src2), imm:$src3),
-          (BLENDPSrmi VR128:$src1,addr:$src2, imm:$src3)>;
+          (BLENDPSrmi VR128:$src1, addr:$src2, imm:$src3)>;
 def : Pat<(X86Blendi (memopv4i32 addr:$src2), VR128:$src1, imm:$src3),
-          (BLENDPSrmi VR128:$src1,addr:$src2, (BlendCommuteImm4 imm:$src3))>;
+          (BLENDPSrmi VR128:$src1, addr:$src2, (BlendCommuteImm4 imm:$src3))>;
 }
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is

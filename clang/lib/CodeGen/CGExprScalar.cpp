@@ -125,11 +125,19 @@ struct BinOpInfo {
     return true;
   }
 
-  /// Check if either operand is a fixed point type, in which case, this
+  /// Check if either operand is a fixed point type or integer type, with at
+  /// least one being a fixed point type. In any case, this
   /// operation did not follow usual arithmetic conversion and both operands may
   /// not be the same.
   bool isFixedPointBinOp() const {
-    return isa<BinaryOperator>(E) && Ty->isFixedPointType();
+    // We cannot simply check the result type since comparison operations return
+    // an int.
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+      QualType LHSType = BinOp->getLHS()->getType();
+      QualType RHSType = BinOp->getRHS()->getType();
+      return LHSType->isFixedPointType() || RHSType->isFixedPointType();
+    }
+    return false;
   }
 };
 
@@ -3372,8 +3380,6 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
   using llvm::ConstantInt;
 
   const auto *BinOp = cast<BinaryOperator>(op.E);
-  assert((BinOp->getOpcode() == BO_Add || BinOp->getOpcode() == BO_Sub) &&
-         "Expected operation to be addition or subtraction");
 
   // The result is a fixed point type and at least one of the operands is fixed
   // point while the other is either fixed point or an int. This resulting type
@@ -3421,17 +3427,30 @@ Value *ScalarExprEmitter::EmitFixedPointBinOp(const BinOpInfo &op) {
     }
     break;
   }
+  case BO_LT:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSLT(FullLHS, FullRHS)
+                                      : Builder.CreateICmpULT(FullLHS, FullRHS);
+  case BO_GT:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSGT(FullLHS, FullRHS)
+                                      : Builder.CreateICmpUGT(FullLHS, FullRHS);
+  case BO_LE:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSLE(FullLHS, FullRHS)
+                                      : Builder.CreateICmpULE(FullLHS, FullRHS);
+  case BO_GE:
+    return CommonFixedSema.isSigned() ? Builder.CreateICmpSGE(FullLHS, FullRHS)
+                                      : Builder.CreateICmpUGE(FullLHS, FullRHS);
+  case BO_EQ:
+    // For equality operations, we assume any padding bits on unsigned types are
+    // zero'd out. They could be overwritten through non-saturating operations
+    // that cause overflow, but this leads to undefined behavior.
+    return Builder.CreateICmpEQ(FullLHS, FullRHS);
+  case BO_NE:
+    return Builder.CreateICmpNE(FullLHS, FullRHS);
   case BO_Mul:
   case BO_Div:
   case BO_Shl:
   case BO_Shr:
   case BO_Cmp:
-  case BO_LT:
-  case BO_GT:
-  case BO_LE:
-  case BO_GE:
-  case BO_EQ:
-  case BO_NE:
   case BO_LAnd:
   case BO_LOr:
   case BO_MulAssign:
@@ -3714,8 +3733,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     Result = CGF.CGM.getCXXABI().EmitMemberPointerComparison(
                    CGF, LHS, RHS, MPT, E->getOpcode() == BO_NE);
   } else if (!LHSTy->isAnyComplexType() && !RHSTy->isAnyComplexType()) {
-    Value *LHS = Visit(E->getLHS());
-    Value *RHS = Visit(E->getRHS());
+    BinOpInfo BOInfo = EmitBinOps(E);
+    Value *LHS = BOInfo.LHS;
+    Value *RHS = BOInfo.RHS;
 
     // If AltiVec, the comparison results in a numeric type, so we use
     // intrinsics comparing vectors and giving 0 or 1 as a result
@@ -3793,7 +3813,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
                                   E->getExprLoc());
     }
 
-    if (LHS->getType()->isFPOrFPVectorTy()) {
+    if (BOInfo.isFixedPointBinOp()) {
+      Result = EmitFixedPointBinOp(BOInfo);
+    } else if (LHS->getType()->isFPOrFPVectorTy()) {
       Result = Builder.CreateFCmp(FCmpOpc, LHS, RHS, "cmp");
     } else if (LHSTy->hasSignedIntegerRepresentation()) {
       Result = Builder.CreateICmp(SICmpOpc, LHS, RHS, "cmp");

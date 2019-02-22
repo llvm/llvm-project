@@ -721,7 +721,7 @@ ReturnInst *llvm::FoldReturnIntoUncondBranch(ReturnInst *RI, BasicBlock *BB,
   UncondBranch->eraseFromParent();
 
   if (DTU)
-    DTU->deleteEdge(Pred, BB);
+    DTU->applyUpdates({{DominatorTree::Delete, Pred, BB}});
 
   return cast<ReturnInst>(NewRet);
 }

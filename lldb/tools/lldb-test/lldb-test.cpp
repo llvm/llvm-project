@@ -963,7 +963,7 @@ int main(int argc, const char *argv[]) {
 
   SystemLifetimeManager DebuggerLifetime;
   if (auto e = DebuggerLifetime.Initialize(
-          llvm::make_unique<SystemInitializerTest>(), {}, nullptr)) {
+          llvm::make_unique<SystemInitializerTest>(), nullptr)) {
     WithColor::error() << "initialization failed: " << toString(std::move(e))
                        << '\n';
     return 1;

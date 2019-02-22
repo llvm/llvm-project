@@ -19,6 +19,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
@@ -46,6 +47,7 @@ using namespace llvm::PatternMatch;
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                                   MemorySSAUpdater *MSSAU,
                                    bool PreserveLCSSA) {
   bool Changed = false;
 
@@ -81,7 +83,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
       return false;
 
     auto *NewExitBB = SplitBlockPredecessors(
-        BB, InLoopPredecessors, ".loopexit", DT, LI, nullptr, PreserveLCSSA);
+        BB, InLoopPredecessors, ".loopexit", DT, LI, MSSAU, PreserveLCSSA);
 
     if (!NewExitBB)
       LLVM_DEBUG(
@@ -533,10 +535,9 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   if (DT) {
     // Update the dominator tree by informing it about the new edge from the
-    // preheader to the exit.
-    DTU.insertEdge(Preheader, ExitBlock);
-    // Inform the dominator tree about the removed edge.
-    DTU.deleteEdge(Preheader, L->getHeader());
+    // preheader to the exit and the removed edge.
+    DTU.applyUpdates({{DominatorTree::Insert, Preheader, ExitBlock},
+                      {DominatorTree::Delete, Preheader, L->getHeader()}});
   }
 
   // Use a map to unique and a vector to guarantee deterministic ordering.

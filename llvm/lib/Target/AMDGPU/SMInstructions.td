@@ -284,18 +284,18 @@ defm S_BUFFER_STORE_DWORDX4 : SM_Pseudo_Stores <
 def S_MEMTIME : SM_Time_Pseudo <"s_memtime", int_amdgcn_s_memtime>;
 def S_DCACHE_INV : SM_Inval_Pseudo <"s_dcache_inv", int_amdgcn_s_dcache_inv>;
 
-let SubtargetPredicate = isCIVI in {
+let SubtargetPredicate = isGFX7Plus in {
 def S_DCACHE_INV_VOL : SM_Inval_Pseudo <"s_dcache_inv_vol", int_amdgcn_s_dcache_inv_vol>;
-} // let SubtargetPredicate = isCIVI
+} // let SubtargetPredicate = isGFX7Plus
 
-let SubtargetPredicate = isVI in {
+let SubtargetPredicate = isGFX8Plus in {
 def S_DCACHE_WB     : SM_Inval_Pseudo <"s_dcache_wb", int_amdgcn_s_dcache_wb>;
 def S_DCACHE_WB_VOL : SM_Inval_Pseudo <"s_dcache_wb_vol", int_amdgcn_s_dcache_wb_vol>;
 def S_MEMREALTIME   : SM_Time_Pseudo <"s_memrealtime", int_amdgcn_s_memrealtime>;
 
 defm S_ATC_PROBE        : SM_Pseudo_Probe <"s_atc_probe", SReg_64>;
 defm S_ATC_PROBE_BUFFER : SM_Pseudo_Probe <"s_atc_probe_buffer", SReg_128>;
-} // SubtargetPredicate = isVI
+} // SubtargetPredicate = isGFX8Plus
 
 let SubtargetPredicate = HasFlatScratchInsts, Uses = [FLAT_SCR] in {
 defm S_SCRATCH_LOAD_DWORD    : SM_Pseudo_Loads <"s_scratch_load_dword",   SReg_64, SReg_32_XM0_XEXEC>;
@@ -367,7 +367,7 @@ defm S_ATOMIC_DEC_X2              : SM_Pseudo_Atomics <"s_atomic_dec_x2", SReg_6
 
 } // let SubtargetPredicate = HasScalarAtomics
 
-let SubtargetPredicate = isGFX9 in {
+let SubtargetPredicate = isGFX9Plus in {
 defm S_DCACHE_DISCARD    : SM_Pseudo_Discards <"s_dcache_discard">;
 defm S_DCACHE_DISCARD_X2 : SM_Pseudo_Discards <"s_dcache_discard_x2">;
 }
@@ -385,7 +385,7 @@ class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
   , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI>
   , Enc32 {
 
-  let AssemblerPredicates = [isSICI];
+  let AssemblerPredicates = [isGFX6GFX7];
   let DecoderNamespace = "SICI";
 
   let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, ?);
@@ -439,7 +439,7 @@ class SMEM_Real_vi <bits<8> op, SM_Pseudo ps>
   , Enc64 {
   bit glc;
 
-  let AssemblerPredicates = [isVI];
+  let AssemblerPredicates = [isGFX8Plus];
   let DecoderNamespace = "VI";
 
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
@@ -628,7 +628,7 @@ class SMRD_Real_Load_IMM_ci <bits<5> op, SM_Load_Pseudo ps> :
   SM_Real<ps>,
   Enc64 {
 
-  let AssemblerPredicates = [isCIOnly];
+  let AssemblerPredicates = [isGFX7];
   let DecoderNamespace = "CI";
   let InOperandList = (ins ps.BaseClass:$sbase, smrd_literal_offset:$offset, GLC:$glc);
 
@@ -665,7 +665,7 @@ class SMRD_Real_ci <bits<5> op, SM_Pseudo ps>
   , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI>
   , Enc32 {
 
-  let AssemblerPredicates = [isCIOnly];
+  let AssemblerPredicates = [isGFX7];
   let DecoderNamespace = "CI";
 
   let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, ?);
@@ -717,7 +717,7 @@ multiclass SMRD_Pattern <string Instr, ValueType vt> {
   def : GCNPat <
     (smrd_load (SMRDImm32 i64:$sbase, i32:$offset)),
     (vt (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, 0))> {
-    let OtherPredicates = [isCIOnly];
+    let OtherPredicates = [isGFX7];
   }
 
   // 3. SGPR offset
@@ -744,7 +744,7 @@ multiclass SMLoad_Pattern <string Instr, ValueType vt> {
   def : GCNPat <
     (vt (SIsbuffer_load v4i32:$sbase, (SMRDBufferImm32 i32:$offset), i1:$glc)),
     (!cast<InstSI>(Instr#"_IMM_ci") $sbase, $offset, (as_i1imm $glc))> {
-    let OtherPredicates = [isCIOnly];
+    let OtherPredicates = [isGFX7];
   }
 
   // 3. Offset loaded in an 32bit SGPR
@@ -778,18 +778,18 @@ defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;
 } // End let AddedComplexity = 100
 
-let OtherPredicates = [isSICI] in {
+let OtherPredicates = [isGFX6GFX7] in {
 def : GCNPat <
   (i64 (readcyclecounter)),
   (S_MEMTIME)
 >;
 }
 
-let OtherPredicates = [isVI] in {
+let OtherPredicates = [isGFX8Plus] in {
 
 def : GCNPat <
   (i64 (readcyclecounter)),
   (S_MEMREALTIME)
 >;
 
-} // let OtherPredicates = [isVI]
+} // let OtherPredicates = [isGFX8Plus]

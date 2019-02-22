@@ -128,7 +128,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Builder.CreateBr(Destination);
       BI->eraseFromParent();
       if (DTU)
-        DTU->deleteEdgeRelaxed(BB, OldDest);
+        DTU->applyUpdates({{DominatorTree::Delete, BB, OldDest}},
+                          /*ForceRemoveDuplicates*/ true);
       return true;
     }
 
@@ -204,7 +205,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         i = SI->removeCase(i);
         e = SI->case_end();
         if (DTU)
-          DTU->deleteEdgeRelaxed(ParentBB, DefaultDest);
+          DTU->applyUpdates({{DominatorTree::Delete, ParentBB, DefaultDest}},
+                            /*ForceRemoveDuplicates*/ true);
         continue;
       }
 
@@ -664,7 +666,8 @@ void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
     if (PhiIt != OldPhiIt) PhiIt = &BB->front();
   }
   if (DTU)
-    DTU->deleteEdgeRelaxed(Pred, BB);
+    DTU->applyUpdates({{DominatorTree::Delete, Pred, BB}},
+                      /*ForceRemoveDuplicates*/ true);
 }
 
 /// MergeBasicBlockIntoOnlyPred - DestBB is a block with one predecessor and its
@@ -1967,7 +1970,8 @@ static void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr) {
   UnwindDestBB->removePredecessor(BB);
   II->eraseFromParent();
   if (DTU)
-    DTU->deleteEdgeRelaxed(BB, UnwindDestBB);
+    DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}},
+                      /*ForceRemoveDuplicates*/ true);
 }
 
 BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
@@ -2114,7 +2118,8 @@ static bool markAliveBlocks(Function &F,
           UnwindDestBB->removePredecessor(II->getParent());
           II->eraseFromParent();
           if (DTU)
-            DTU->deleteEdgeRelaxed(BB, UnwindDestBB);
+            DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDestBB}},
+                              /*ForceRemoveDuplicates*/ true);
         } else
           changeToCall(II, DTU);
         Changed = true;
@@ -2203,7 +2208,8 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   TI->replaceAllUsesWith(NewTI);
   TI->eraseFromParent();
   if (DTU)
-    DTU->deleteEdgeRelaxed(BB, UnwindDest);
+    DTU->applyUpdates({{DominatorTree::Delete, BB, UnwindDest}},
+                      /*ForceRemoveDuplicates*/ true);
 }
 
 /// removeUnreachableBlocks - Remove blocks that are not reachable, even

@@ -366,7 +366,7 @@ static void splitCallSite(
     assert(Splits.size() == 2 && "Expected exactly 2 splits!");
     for (unsigned i = 0; i < Splits.size(); i++) {
       Splits[i]->getTerminator()->eraseFromParent();
-      DTU.deleteEdge(Splits[i], TailBB);
+      DTU.applyUpdates({{DominatorTree::Delete, Splits[i], TailBB}});
     }
 
     // Erase the tail block once done with musttail patching

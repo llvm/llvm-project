@@ -12,7 +12,6 @@
 #include <stdio.h>
 
 #include "lldb/API/SBDefines.h"
-#include "lldb/API/SBInitializerOptions.h"
 #include "lldb/API/SBPlatform.h"
 
 namespace lldb {
@@ -45,7 +44,8 @@ public:
   lldb::SBDebugger &operator=(const lldb::SBDebugger &rhs);
 
   static void Initialize();
-  static lldb::SBError Initialize(SBInitializerOptions &options);
+
+  static lldb::SBError InitializeWithErrorHandling();
 
   static void Terminate();
 
