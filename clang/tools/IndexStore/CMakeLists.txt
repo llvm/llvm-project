@@ -9,6 +9,7 @@ set(SOURCES
   )
 
 set(LIBS
+  clangIndex
   clangIndexDataStore
 )
 
