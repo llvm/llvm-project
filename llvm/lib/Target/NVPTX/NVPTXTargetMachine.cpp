@@ -170,11 +170,11 @@ public:
   void addFastRegAlloc() override;
   void addOptimizedRegAlloc() override;
 
-  bool addRegAssignmentFast() override {
+  bool addRegAssignAndRewriteFast() override {
     llvm_unreachable("should not be used");
   }
 
-  bool addRegAssignmentOptimized() override {
+  bool addRegAssignAndRewriteOptimized() override {
     llvm_unreachable("should not be used");
   }
 
