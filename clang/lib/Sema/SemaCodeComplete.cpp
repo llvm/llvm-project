@@ -5019,7 +5019,20 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   if (SS.isInvalid()) {
     CodeCompletionContext CC(CodeCompletionContext::CCC_Symbol);
     CC.setCXXScopeSpecifier(SS);
-    HandleCodeCompleteResults(this, CodeCompleter, CC, nullptr, 0);
+    // As SS is invalid, we try to collect accessible contexts from the current
+    // scope with a dummy lookup so that the completion consumer can try to
+    // guess what the specified scope is.
+    ResultBuilder DummyResults(*this, CodeCompleter->getAllocator(),
+                               CodeCompleter->getCodeCompletionTUInfo(), CC);
+    if (S->getEntity()) {
+      CodeCompletionDeclConsumer Consumer(DummyResults, S->getEntity(),
+                                          BaseType);
+      LookupVisibleDecls(S, LookupOrdinaryName, Consumer,
+                         /*IncludeGlobalScope=*/false,
+                         /*LoadExternal=*/false);
+    }
+    HandleCodeCompleteResults(this, CodeCompleter,
+                              DummyResults.getCompletionContext(), nullptr, 0);
     return;
   }
   // Always pretend to enter a context to ensure that a dependent type

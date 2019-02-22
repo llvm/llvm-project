@@ -145,7 +145,8 @@ void use_pointers() {
 // Test that we build the correct number of calls to cudaSetupArgument followed
 // by a call to cudaLaunch.
 
-// LNX: define{{.*}}kernelfunc
+// CUDA-LABEL: define{{.*}}kernelfunc
+// HIP-LABEL: define{{.*}}@_Z10kernelfunciii.stub
 
 // New launch sequence stores arguments into local buffer and passes array of
 // pointers to them directly to cudaLaunchKernel

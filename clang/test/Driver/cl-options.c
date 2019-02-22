@@ -623,6 +623,7 @@
 // RUN:     -fmerge-all-constants \
 // RUN:     -no-canonical-prefixes \
 // RUN:     -march=skylake \
+// RUN:     -fbracket-depth=123 \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 
