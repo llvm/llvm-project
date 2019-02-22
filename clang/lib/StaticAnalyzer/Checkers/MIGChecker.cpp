@@ -32,15 +32,30 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>> {
+class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>,
+                                  check::EndFunction> {
   BugType BT{this, "Use-after-free (MIG calling convention violation)",
              categories::MemoryError};
 
   CallDescription vm_deallocate { "vm_deallocate", 3 };
 
+  void checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const;
+
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
+
+  // HACK: We're making two attempts to find the bug: checkEndFunction
+  // should normally be enough but it fails when the return value is a literal
+  // that never gets put into the Environment and ends of function with multiple
+  // returns get agglutinated across returns, preventing us from obtaining
+  // the return value. The problem is similar to https://reviews.llvm.org/D25326
+  // but now we step into it in the top-level function.
+  void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
+    checkReturnAux(RS, C);
+  }
+  void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const {
+    checkReturnAux(RS, C);
+  }
 
   class Visitor : public BugReporterVisitor {
   public:
@@ -140,7 +155,7 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
   C.addTransition(C.getState()->set<ReleasedParameter>(PVD));
 }
 
-void MIGChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
+void MIGChecker::checkReturnAux(const ReturnStmt *RS, CheckerContext &C) const {
   // It is very unlikely that a MIG callback will be called from anywhere
   // within the project under analysis and the caller isn't itself a routine
   // that follows the MIG calling convention. Therefore we're safe to believe
