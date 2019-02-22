@@ -24,7 +24,6 @@ public:
   ~SystemLifetimeManager();
 
   llvm::Error Initialize(std::unique_ptr<SystemInitializer> initializer,
-                         const InitializerOptions &options,
                          LoadPluginCallbackType plugin_callback);
   void Terminate();
 

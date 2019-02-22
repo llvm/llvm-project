@@ -19,4 +19,4 @@
 # RUN:     %t.txt %t.4.txt 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=BAD-FLAG
 
-# BAD-FLAG: --target cannot be used with --input-target or --output-target.
+# BAD-FLAG: --target cannot be used with --input-target or --output-target

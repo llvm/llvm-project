@@ -1273,6 +1273,12 @@ SDValue SelectionDAG::getIntPtrConstant(uint64_t Val, const SDLoc &DL,
   return getConstant(Val, DL, TLI->getPointerTy(getDataLayout()), isTarget);
 }
 
+SDValue SelectionDAG::getShiftAmountConstant(uint64_t Val, EVT VT,
+                                             const SDLoc &DL, bool LegalTypes) {
+  EVT ShiftVT = TLI->getShiftAmountTy(VT, getDataLayout(), LegalTypes);
+  return getConstant(Val, DL, ShiftVT);
+}
+
 SDValue SelectionDAG::getConstantFP(const APFloat &V, const SDLoc &DL, EVT VT,
                                     bool isTarget) {
   return getConstantFP(*ConstantFP::get(*getContext(), V), DL, VT, isTarget);

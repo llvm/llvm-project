@@ -62,13 +62,13 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    imull $60000, 24(%ebx), %ecx # imm = 0xEA60
 ; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    fldl 28(%ebx)
-; CHECK-NEXT:    fmuls {{\.LCPI.*}}
 ; CHECK-NEXT:    fnstcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    orl $3072, %eax # imm = 0xC00
 ; CHECK-NEXT:    movw %ax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %ecx, %eax
 ; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    fmuls {{\.LCPI.*}}
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    fldcw {{[0-9]+}}(%esp)

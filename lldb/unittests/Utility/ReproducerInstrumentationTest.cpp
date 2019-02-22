@@ -41,6 +41,8 @@ struct Pod {
   unsigned long long k = 7;
   unsigned long l = 8;
   unsigned short m = 9;
+
+  Pod() {}
 };
 
 class TestingRegistry : public Registry {

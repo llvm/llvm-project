@@ -19,6 +19,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
@@ -46,6 +47,7 @@ using namespace llvm::PatternMatch;
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
+                                   MemorySSAUpdater *MSSAU,
                                    bool PreserveLCSSA) {
   bool Changed = false;
 
@@ -81,7 +83,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
       return false;
 
     auto *NewExitBB = SplitBlockPredecessors(
-        BB, InLoopPredecessors, ".loopexit", DT, LI, nullptr, PreserveLCSSA);
+        BB, InLoopPredecessors, ".loopexit", DT, LI, MSSAU, PreserveLCSSA);
 
     if (!NewExitBB)
       LLVM_DEBUG(

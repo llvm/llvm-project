@@ -267,7 +267,8 @@ static void rewritePHINodesForExitAndUnswitchedBlocks(BasicBlock &ExitBB,
 /// loops reachable and need to move the current loop up the loop nest or even
 /// to an entirely separate nest.
 static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
-                                 DominatorTree &DT, LoopInfo &LI) {
+                                 DominatorTree &DT, LoopInfo &LI,
+                                 MemorySSAUpdater *MSSAU) {
   // If the loop is already at the top level, we can't hoist it anywhere.
   Loop *OldParentL = L.getParentLoop();
   if (!OldParentL)
@@ -328,7 +329,8 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
     // unswitching it is possible to get new non-dedicated exits out of parent
     // loop so let's conservatively form dedicated exit blocks and figure out
     // if we can optimize later.
-    formDedicatedExitBlocks(OldContainingL, &DT, &LI, /*PreserveLCSSA*/ true);
+    formDedicatedExitBlocks(OldContainingL, &DT, &LI, MSSAU,
+                            /*PreserveLCSSA*/ true);
   }
 }
 
@@ -535,7 +537,10 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // If this was full unswitching, we may have changed the nesting relationship
   // for this loop so hoist it to its correct parent if needed.
   if (FullUnswitch)
-    hoistLoopToNewParent(L, *NewPH, DT, LI);
+    hoistLoopToNewParent(L, *NewPH, DT, LI, MSSAU);
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 
   LLVM_DEBUG(dbgs() << "    done: unswitching trivial branch...\n");
   ++NumTrivial;
@@ -804,7 +809,10 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
 
   // We may have changed the nesting relationship for this loop so hoist it to
   // its correct parent if needed.
-  hoistLoopToNewParent(L, *NewPH, DT, LI);
+  hoistLoopToNewParent(L, *NewPH, DT, LI, MSSAU);
+
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
 
   ++NumTrivial;
   ++NumSwitches;
@@ -2239,7 +2247,7 @@ static void unswitchNontrivialInvariants(
     // introduced new, non-dedicated exits. At least try to re-form dedicated
     // exits for these loops. This may fail if they couldn't have dedicated
     // exits to start with.
-    formDedicatedExitBlocks(&UpdateL, &DT, &LI, /*PreserveLCSSA*/ true);
+    formDedicatedExitBlocks(&UpdateL, &DT, &LI, MSSAU, /*PreserveLCSSA*/ true);
   };
 
   // For non-child cloned loops and hoisted loops, we just need to update LCSSA

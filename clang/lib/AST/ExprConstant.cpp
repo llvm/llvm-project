@@ -9144,6 +9144,22 @@ EvaluateComparisonBinaryOperator(EvalInfo &Info, const BinaryOperator *E,
     return Success(CCR::Equal, E);
   }
 
+  if (LHSTy->isFixedPointType() || RHSTy->isFixedPointType()) {
+    APFixedPoint LHSFX(Info.Ctx.getFixedPointSemantics(LHSTy));
+    APFixedPoint RHSFX(Info.Ctx.getFixedPointSemantics(RHSTy));
+
+    bool LHSOK = EvaluateFixedPointOrInteger(E->getLHS(), LHSFX, Info);
+    if (!LHSOK && !Info.noteFailure())
+      return false;
+    if (!EvaluateFixedPointOrInteger(E->getRHS(), RHSFX, Info) || !LHSOK)
+      return false;
+    if (LHSFX < RHSFX)
+      return Success(CCR::Less, E);
+    if (LHSFX > RHSFX)
+      return Success(CCR::Greater, E);
+    return Success(CCR::Equal, E);
+  }
+
   if (LHSTy->isAnyComplexType() || RHSTy->isAnyComplexType()) {
     ComplexValue LHS, RHS;
     bool LHSOK;

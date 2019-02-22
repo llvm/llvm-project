@@ -200,7 +200,6 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSILowerControlFlowPass(*PR);
   initializeSIInsertSkipsPass(*PR);
   initializeSIMemoryLegalizerPass(*PR);
-  initializeSIDebuggerInsertNopsPass(*PR);
   initializeSIOptimizeExecMaskingPass(*PR);
   initializeSIFixWWMLivenessPass(*PR);
   initializeSIFormMemoryClausesPass(*PR);
@@ -918,7 +917,6 @@ void GCNPassConfig::addPreEmitPass() {
   addPass(&PostRAHazardRecognizerID);
 
   addPass(&SIInsertSkipsPassID);
-  addPass(createSIDebuggerInsertNopsPass());
   addPass(&BranchRelaxationPassID);
 }
 

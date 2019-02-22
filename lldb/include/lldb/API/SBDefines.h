@@ -50,7 +50,6 @@ class LLDB_API SBFileSpecList;
 class LLDB_API SBFrame;
 class LLDB_API SBFunction;
 class LLDB_API SBHostOS;
-class LLDB_API SBInitializerOptions;
 class LLDB_API SBInstruction;
 class LLDB_API SBInstructionList;
 class LLDB_API SBLanguageRuntime;

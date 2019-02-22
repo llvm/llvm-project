@@ -295,8 +295,6 @@ protected:
   bool HasApertureRegs;
   bool EnableXNACK;
   bool TrapHandler;
-  bool DebuggerInsertNops;
-  bool DebuggerEmitPrologue;
 
   // Used as options.
   bool EnableHugePrivateBuffer;
@@ -789,18 +787,6 @@ public:
 
   bool enableSIScheduler() const {
     return EnableSIScheduler;
-  }
-
-  bool debuggerSupported() const {
-    return debuggerInsertNops() && debuggerEmitPrologue();
-  }
-
-  bool debuggerInsertNops() const {
-    return DebuggerInsertNops;
-  }
-
-  bool debuggerEmitPrologue() const {
-    return DebuggerEmitPrologue;
   }
 
   bool loadStoreOptEnabled() const {

@@ -1148,7 +1148,6 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   uint64_t StartOffset = W.OS.tell();
 
   LLVM_DEBUG(dbgs() << "WasmObjectWriter::writeObject\n");
-  MCContext &Ctx = Asm.getContext();
 
   // Collect information from the available symbols.
   SmallVector<WasmFunction, 4> Functions;
@@ -1164,22 +1163,18 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
   // For now, always emit the memory import, since loads and stores are not
   // valid without it. In the future, we could perhaps be more clever and omit
   // it if there are no loads or stores.
-  auto *MemorySym =
-      cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__linear_memory"));
   wasm::WasmImport MemImport;
-  MemImport.Module = MemorySym->getImportModule();
-  MemImport.Field = MemorySym->getImportName();
+  MemImport.Module = "env";
+  MemImport.Field = "__linear_memory";
   MemImport.Kind = wasm::WASM_EXTERNAL_MEMORY;
   Imports.push_back(MemImport);
 
   // For now, always emit the table section, since indirect calls are not
   // valid without it. In the future, we could perhaps be more clever and omit
   // it if there are no indirect calls.
-  auto *TableSym =
-      cast<MCSymbolWasm>(Ctx.getOrCreateSymbol("__indirect_function_table"));
   wasm::WasmImport TableImport;
-  TableImport.Module = TableSym->getImportModule();
-  TableImport.Field = TableSym->getImportName();
+  TableImport.Module = "env";
+  TableImport.Field = "__indirect_function_table";
   TableImport.Kind = wasm::WASM_EXTERNAL_TABLE;
   TableImport.Table.ElemType = wasm::WASM_TYPE_FUNCREF;
   Imports.push_back(TableImport);
