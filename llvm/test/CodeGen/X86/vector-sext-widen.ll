@@ -5897,3 +5897,163 @@ define <2 x i32> @sext_2i8_to_2i32(<2 x i8>* %addr) {
   ret <2 x i32>%z
 }
 
+define <4 x i32> @sext_4i17_to_4i32(<4 x i17>* %ptr) {
+; SSE2-LABEL: sext_4i17_to_4i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq (%rdi), %rax
+; SSE2-NEXT:    movq %rax, %rcx
+; SSE2-NEXT:    shlq $30, %rcx
+; SSE2-NEXT:    sarq $47, %rcx
+; SSE2-NEXT:    movd %ecx, %xmm1
+; SSE2-NEXT:    movq %rax, %rcx
+; SSE2-NEXT:    shlq $47, %rcx
+; SSE2-NEXT:    sarq $47, %rcx
+; SSE2-NEXT:    movd %ecx, %xmm0
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movl 8(%rdi), %ecx
+; SSE2-NEXT:    shll $13, %ecx
+; SSE2-NEXT:    movq %rax, %rdx
+; SSE2-NEXT:    shrq $51, %rdx
+; SSE2-NEXT:    orl %ecx, %edx
+; SSE2-NEXT:    shlq $47, %rdx
+; SSE2-NEXT:    sarq $47, %rdx
+; SSE2-NEXT:    movd %edx, %xmm1
+; SSE2-NEXT:    shlq $13, %rax
+; SSE2-NEXT:    sarq $47, %rax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: sext_4i17_to_4i32:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movq (%rdi), %rax
+; SSSE3-NEXT:    movq %rax, %rcx
+; SSSE3-NEXT:    shlq $30, %rcx
+; SSSE3-NEXT:    sarq $47, %rcx
+; SSSE3-NEXT:    movd %ecx, %xmm1
+; SSSE3-NEXT:    movq %rax, %rcx
+; SSSE3-NEXT:    shlq $47, %rcx
+; SSSE3-NEXT:    sarq $47, %rcx
+; SSSE3-NEXT:    movd %ecx, %xmm0
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    movl 8(%rdi), %ecx
+; SSSE3-NEXT:    shll $13, %ecx
+; SSSE3-NEXT:    movq %rax, %rdx
+; SSSE3-NEXT:    shrq $51, %rdx
+; SSSE3-NEXT:    orl %ecx, %edx
+; SSSE3-NEXT:    shlq $47, %rdx
+; SSSE3-NEXT:    sarq $47, %rdx
+; SSSE3-NEXT:    movd %edx, %xmm1
+; SSSE3-NEXT:    shlq $13, %rax
+; SSSE3-NEXT:    sarq $47, %rax
+; SSSE3-NEXT:    movd %eax, %xmm2
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: sext_4i17_to_4i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq (%rdi), %rax
+; SSE41-NEXT:    movq %rax, %rcx
+; SSE41-NEXT:    shlq $30, %rcx
+; SSE41-NEXT:    sarq $47, %rcx
+; SSE41-NEXT:    movq %rax, %rdx
+; SSE41-NEXT:    shlq $47, %rdx
+; SSE41-NEXT:    sarq $47, %rdx
+; SSE41-NEXT:    movd %edx, %xmm0
+; SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
+; SSE41-NEXT:    movq %rax, %rcx
+; SSE41-NEXT:    shlq $13, %rcx
+; SSE41-NEXT:    sarq $47, %rcx
+; SSE41-NEXT:    pinsrd $2, %ecx, %xmm0
+; SSE41-NEXT:    movl 8(%rdi), %ecx
+; SSE41-NEXT:    shll $13, %ecx
+; SSE41-NEXT:    shrq $51, %rax
+; SSE41-NEXT:    orl %ecx, %eax
+; SSE41-NEXT:    shlq $47, %rax
+; SSE41-NEXT:    sarq $47, %rax
+; SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: sext_4i17_to_4i32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    shlq $30, %rcx
+; AVX-NEXT:    sarq $47, %rcx
+; AVX-NEXT:    movq %rax, %rdx
+; AVX-NEXT:    shlq $47, %rdx
+; AVX-NEXT:    sarq $47, %rdx
+; AVX-NEXT:    vmovd %edx, %xmm0
+; AVX-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
+; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    shlq $13, %rcx
+; AVX-NEXT:    sarq $47, %rcx
+; AVX-NEXT:    vpinsrd $2, %ecx, %xmm0, %xmm0
+; AVX-NEXT:    movl 8(%rdi), %ecx
+; AVX-NEXT:    shll $13, %ecx
+; AVX-NEXT:    shrq $51, %rax
+; AVX-NEXT:    orl %ecx, %eax
+; AVX-NEXT:    shlq $47, %rax
+; AVX-NEXT:    sarq $47, %rax
+; AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; X32-SSE2-LABEL: sext_4i17_to_4i32:
+; X32-SSE2:       # %bb.0:
+; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE2-NEXT:    movl (%eax), %ecx
+; X32-SSE2-NEXT:    movl 4(%eax), %edx
+; X32-SSE2-NEXT:    movl 8(%eax), %eax
+; X32-SSE2-NEXT:    shldl $13, %edx, %eax
+; X32-SSE2-NEXT:    shll $15, %eax
+; X32-SSE2-NEXT:    sarl $15, %eax
+; X32-SSE2-NEXT:    movd %eax, %xmm0
+; X32-SSE2-NEXT:    movl %edx, %eax
+; X32-SSE2-NEXT:    shll $13, %eax
+; X32-SSE2-NEXT:    sarl $15, %eax
+; X32-SSE2-NEXT:    movd %eax, %xmm1
+; X32-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X32-SSE2-NEXT:    shldl $15, %ecx, %edx
+; X32-SSE2-NEXT:    shll $15, %ecx
+; X32-SSE2-NEXT:    sarl $15, %ecx
+; X32-SSE2-NEXT:    movd %ecx, %xmm0
+; X32-SSE2-NEXT:    shll $15, %edx
+; X32-SSE2-NEXT:    sarl $15, %edx
+; X32-SSE2-NEXT:    movd %edx, %xmm2
+; X32-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X32-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X32-SSE2-NEXT:    retl
+;
+; X32-SSE41-LABEL: sext_4i17_to_4i32:
+; X32-SSE41:       # %bb.0:
+; X32-SSE41-NEXT:    pushl %esi
+; X32-SSE41-NEXT:    .cfi_def_cfa_offset 8
+; X32-SSE41-NEXT:    .cfi_offset %esi, -8
+; X32-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-SSE41-NEXT:    movl (%eax), %ecx
+; X32-SSE41-NEXT:    movl 4(%eax), %edx
+; X32-SSE41-NEXT:    movl %edx, %esi
+; X32-SSE41-NEXT:    movl 8(%eax), %eax
+; X32-SSE41-NEXT:    shldl $13, %edx, %eax
+; X32-SSE41-NEXT:    shldl $15, %ecx, %edx
+; X32-SSE41-NEXT:    shll $15, %edx
+; X32-SSE41-NEXT:    sarl $15, %edx
+; X32-SSE41-NEXT:    shll $15, %ecx
+; X32-SSE41-NEXT:    sarl $15, %ecx
+; X32-SSE41-NEXT:    movd %ecx, %xmm0
+; X32-SSE41-NEXT:    pinsrd $1, %edx, %xmm0
+; X32-SSE41-NEXT:    shll $13, %esi
+; X32-SSE41-NEXT:    sarl $15, %esi
+; X32-SSE41-NEXT:    pinsrd $2, %esi, %xmm0
+; X32-SSE41-NEXT:    shll $15, %eax
+; X32-SSE41-NEXT:    sarl $15, %eax
+; X32-SSE41-NEXT:    pinsrd $3, %eax, %xmm0
+; X32-SSE41-NEXT:    popl %esi
+; X32-SSE41-NEXT:    .cfi_def_cfa_offset 4
+; X32-SSE41-NEXT:    retl
+  %a = load <4 x i17>, <4 x i17>* %ptr
+  %b = sext <4 x i17> %a to <4 x i32>
+  ret <4 x i32> %b
+}

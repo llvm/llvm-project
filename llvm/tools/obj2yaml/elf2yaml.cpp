@@ -284,6 +284,13 @@ ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
     return errorToErrorCode(SymbolNameOrErr.takeError());
   S.Name = SymbolNameOrErr.get();
 
+  if (Sym->st_shndx >= ELF::SHN_LORESERVE) {
+    if (Sym->st_shndx == ELF::SHN_XINDEX)
+      return obj2yaml_error::not_implemented;
+    S.Index = (ELFYAML::ELF_SHN)Sym->st_shndx;
+    return obj2yaml_error::success;
+  }
+
   auto ShdrOrErr = Obj.getSection(Sym, SymTab, ShndxTable);
   if (!ShdrOrErr)
     return errorToErrorCode(ShdrOrErr.takeError());

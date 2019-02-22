@@ -3667,8 +3667,6 @@ SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {
 
 
 SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
-  SDValue InOp0 = N->getOperand(0);
-  EVT InVT = InOp0.getValueType();
 
   EVT OutVT = N->getValueType(0);
   EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
@@ -3678,6 +3676,12 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
 
   SDLoc dl(N);
   SDValue BaseIdx = N->getOperand(1);
+
+  SDValue InOp0 = N->getOperand(0);
+  if (getTypeAction(InOp0.getValueType()) == TargetLowering::TypePromoteInteger)
+    InOp0 = GetPromotedInteger(N->getOperand(0));
+
+  EVT InVT = InOp0.getValueType();
 
   SmallVector<SDValue, 8> Ops;
   Ops.reserve(OutNumElems);
@@ -3689,7 +3693,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
     SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
       InVT.getVectorElementType(), N->getOperand(0), Index);
 
-    SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutVTElem, Ext);
+    SDValue Op = DAG.getAnyExtOrTrunc(Ext, dl, NOutVTElem);
     // Insert the converted element to the new vector.
     Ops.push_back(Op);
   }
