@@ -1010,6 +1010,7 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
 
 const FunctionCodeRegion *
 MemRegionManager::getFunctionCodeRegion(const NamedDecl *FD) {
+  // To think: should we canonicalize the declaration here?
   return getSubRegion<FunctionCodeRegion>(FD, getCodeRegion());
 }
 
