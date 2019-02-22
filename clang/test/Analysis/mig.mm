@@ -56,6 +56,31 @@ kern_return_t release_twice(mach_port_name_t port, vm_address_t addr1, vm_addres
                      // expected-note@-1{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
 }
 
+// Make sure we find the bug when the object is destroyed within an
+// automatic destructor.
+MIG_SERVER_ROUTINE
+kern_return_t test_vm_deallocate_in_automatic_dtor(mach_port_name_t port, vm_address_t address, vm_size_t size) {
+  struct WillDeallocate {
+    mach_port_name_t port;
+    vm_address_t address;
+    vm_size_t size;
+    ~WillDeallocate() {
+      vm_deallocate(port, address, size); // expected-note{{Value passed through parameter 'address' is deallocated}}
+    }
+  } will_deallocate{port, address, size};
+
+ if (size > 10) {
+    // expected-note@-1{{Assuming 'size' is > 10}}
+    // expected-note@-2{{Taking true branch}}
+    return KERN_ERROR;
+    // expected-note@-1{{Calling '~WillDeallocate'}}
+    // expected-note@-2{{Returning from '~WillDeallocate'}}
+    // expected-warning@-3{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+    // expected-note@-4   {{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+  }
+  return KERN_SUCCESS;
+}
+
 // Check that we work on Objective-C messages and blocks.
 @interface I
 - (kern_return_t)fooAtPort:(mach_port_name_t)port withAddress:(vm_address_t)address ofSize:(vm_size_t)size;
