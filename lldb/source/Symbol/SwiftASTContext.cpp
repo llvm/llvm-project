@@ -102,6 +102,7 @@
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
@@ -112,6 +113,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
@@ -5339,19 +5341,62 @@ ConstString SwiftASTContext::GetTypeName(void *type) {
   return ConstString(type_name);
 }
 
-ConstString SwiftASTContext::GetDisplayTypeName(void *type) {
-  std::string type_name(GetTypeName(type).AsCString(""));
+/// Build a dictionary of Archetype names that appear in \p type.
+static llvm::DenseMap<swift::CanType, swift::Identifier>
+GetArchetypeNames(swift::Type type, swift::ASTContext &ast_ctx,
+                  lldb::StackFrameSP frame_sp) {
+  llvm::DenseMap<swift::CanType, swift::Identifier> dict;
 
+  swift::Type swift_type(GetSwiftType(type));
+  assert(&swift_type->getASTContext() == &ast_ctx);
+  StackFrame *frame = frame_sp.get();
+  if (!frame)
+    return dict;
+
+  swift_type.visit([&](swift::Type type) {
+    if (!type->isTypeParameter())
+      return;
+
+    StreamString type_name;
+    if (!SwiftLanguageRuntime::GetAbstractTypeName(type_name, type))
+      return;
+
+    StreamString type_metadata_ptr_var_name;
+    type_metadata_ptr_var_name.Printf("$%s", type_name.GetString());
+    VariableList *var_list = frame->GetVariableList(false);
+    if (!var_list)
+      return;
+
+    VariableSP var_sp(var_list->FindVariable(
+        ConstString(type_metadata_ptr_var_name.GetData())));
+    if (!var_sp)
+      return;
+
+    Type *archetype_type = var_sp->GetType();
+    if (!archetype_type)
+      return;
+
+    ConstString name = archetype_type->GetName();
+    swift::Identifier ident = ast_ctx.getIdentifier(name.GetStringRef());
+    dict.insert({type->getCanonicalType(), ident});
+  });
+  return dict;
+}
+
+ConstString SwiftASTContext::GetDisplayTypeName(void *type,
+                                                lldb::StackFrameSP frame_sp) {
+  VALID_OR_RETURN(ConstString("<invalid Swift context>"));
+  std::string type_name(GetTypeName(type).AsCString(""));
   if (type) {
     swift::Type swift_type(GetSwiftType(type));
-
     swift::PrintOptions print_options;
     print_options.FullyQualifiedTypes = false;
     print_options.SynthesizeSugarOnTypes = true;
     print_options.FullyQualifiedTypesIfAmbiguous = true;
+    auto dict = GetArchetypeNames(swift_type, *GetASTContext(), frame_sp);
+    print_options.AlternativeTypeNames = &dict;
     type_name = swift_type.getString(print_options);
   }
-
   return ConstString(type_name);
 }
 
@@ -5874,42 +5919,6 @@ SwiftASTContext::GetUnboundType(lldb::opaque_compiler_type_t type) {
     }
   }
 
-  return {GetSwiftType(type)};
-}
-
-CompilerType
-SwiftASTContext::MapIntoContext(lldb::StackFrameSP &frame_sp,
-                                lldb::opaque_compiler_type_t type) {
-  VALID_OR_RETURN(CompilerType());
-  if (!type)
-    return {};
-  if (!frame_sp)
-    return {GetSwiftType(type)};
-
-  swift::CanType swift_can_type(GetCanonicalSwiftType(type));
-  assert(&swift_can_type->getASTContext() == GetASTContext());
-  const SymbolContext &sc(frame_sp->GetSymbolContext(eSymbolContextFunction));
-  if (!sc.function || (swift_can_type && !swift_can_type->hasTypeParameter()))
-    return {GetSwiftType(type)};
-  auto *ctx = llvm::dyn_cast_or_null<SwiftASTContext>(
-      sc.function->GetCompilerType().GetTypeSystem());
-  if (!ctx)
-    return {GetSwiftType(type)};
-
-  // FIXME: we need the innermost non-inlined function.
-  auto function_name = sc.GetFunctionName(Mangled::ePreferMangled);
-  std::string error;
-  swift::Decl *func_decl = swift::ide::getDeclFromMangledSymbolName(
-      *ctx->GetASTContext(), function_name.GetStringRef(), error);
-  if (!error.empty()) {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-    if (log)
-      log->Printf("Failed to getDeclFromMangledSymbolName(\"%s\"): %s\n",
-                  function_name.AsCString(), error.c_str());
-  }
-
-  if (auto *dc = llvm::dyn_cast_or_null<swift::DeclContext>(func_decl))
-    return {dc->mapTypeIntoContext(swift_can_type)};
   return {GetSwiftType(type)};
 }
 
