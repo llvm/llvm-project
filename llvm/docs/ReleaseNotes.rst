@@ -237,6 +237,14 @@ Changes to the C API
 Changes to the DAG infrastructure
 ---------------------------------
 
+Changes to LLDB
+===============
+* Printed source code is now syntax highlighted in the terminal (only for C
+  languages).
+
+* The expression command now supports tab completing expressions.
+
+
 External Open Source Projects Using LLVM 8
 ==========================================
 
