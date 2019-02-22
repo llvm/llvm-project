@@ -6469,11 +6469,12 @@ SDValue DAGCombiner::distributeTruncateThroughAnd(SDNode *N) {
   assert(N->getOperand(0).getOpcode() == ISD::AND);
 
   // (truncate:TruncVT (and N00, N01C)) -> (and (truncate:TruncVT N00), TruncC)
-  if (N->hasOneUse() && N->getOperand(0).hasOneUse()) {
+  EVT TruncVT = N->getValueType(0);
+  if (N->hasOneUse() && N->getOperand(0).hasOneUse() &&
+      TLI.isTypeDesirableForOp(ISD::AND, TruncVT)) {
     SDValue N01 = N->getOperand(0).getOperand(1);
     if (isConstantOrConstantVector(N01, /* NoOpaques */ true)) {
       SDLoc DL(N);
-      EVT TruncVT = N->getValueType(0);
       SDValue N00 = N->getOperand(0).getOperand(0);
       SDValue Trunc00 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N00);
       SDValue Trunc01 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N01);

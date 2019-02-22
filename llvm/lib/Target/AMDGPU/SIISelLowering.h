@@ -174,8 +174,6 @@ private:
 
   unsigned isCFIntrinsic(const SDNode *Intr) const;
 
-  void createDebuggerPrologueStackObjects(MachineFunction &MF) const;
-
   /// \returns True if fixup needs to be emitted for given global value \p GV,
   /// false otherwise.
   bool shouldEmitFixup(const GlobalValue *GV) const;

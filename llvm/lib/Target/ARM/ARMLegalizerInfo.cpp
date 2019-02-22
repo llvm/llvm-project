@@ -138,6 +138,8 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
               {s32, p0, 32, 8},
               {p0, p0, 32, 8}});
 
+  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
+
   auto &PhiBuilder =
       getActionDefinitionsBuilder(G_PHI)
           .legalFor({s32, p0})
@@ -155,7 +157,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   }
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
-  getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
   if (ST.hasV5TOps()) {
     getActionDefinitionsBuilder(G_CTLZ)

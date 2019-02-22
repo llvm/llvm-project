@@ -1,2 +1,40 @@
+# Test case where input file does not exit.
 RUN: not llvm-readobj %t.blah 2>&1 | FileCheck --check-prefix=ENOENT %s
 ENOENT: {{.*}}.blah: {{[Nn]}}o such file or directory
+
+# Test case where input file is too small to be a recognised object file.
+RUN: touch %t.empty
+RUN: not llvm-readobj %t.empty 2>&1 | FileCheck --check-prefix=EMPTY %s
+EMPTY: {{.*}}.empty: The file was not recognized as a valid object file
+
+# Test that unrecognised files in archives are ignored.
+RUN: rm -f %t.a
+RUN: llvm-ar rc %t.a %t.empty
+RUN: llvm-readobj --all %t.a 2>&1 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
+NO-OUTPUT-NOT: {{.}}
+
+# Test case where no switches are specified.
+RUN: llvm-readobj %p/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=HEADER %s
+RUN: llvm-readelf %p/Inputs/trivial.obj.elf-x86-64 | FileCheck --check-prefix=NO-OUTPUT --allow-empty %s
+HEADER: File: {{.*}}trivial.obj.elf-x86-64
+HEADER: Format: ELF64-x86-64
+HEADER: Arch: x86_64
+HEADER: AddressSize: 64bit
+
+# Test case where switch it not recognised.
+RUN: not llvm-readobj --unknown-switch 2>&1 | FileCheck --check-prefix=UNKNOWN %s
+UNKNOWN: Unknown command line argument '--unknown-switch'
+
+# Test version switch.
+RUN: llvm-readobj --version | FileCheck %s --check-prefix=VERSION
+RUN: llvm-readelf --version | FileCheck %s --check-prefix=VERSION
+# In default configuration we could match "LLVM version", but the "LLVM" part
+# can be changed with PACKAGE_NAME in CMake, so we match only version.
+VERSION: version
+
+# Test help switch.
+RUN: llvm-readobj --help | FileCheck %s --check-prefixes=HELP,USAGE-OBJ
+RUN: llvm-readelf --help | FileCheck %s --check-prefixes=HELP,USAGE-ELF
+HELP: OVERVIEW: LLVM Object Reader
+USAGE-OBJ: llvm-readobj{{.*}} [options] <input object files>
+USAGE-ELF: llvm-readelf{{.*}} [options] <input object files>

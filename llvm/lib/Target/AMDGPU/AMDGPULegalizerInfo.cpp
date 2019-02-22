@@ -149,6 +149,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
 
   setAction({G_BRCOND, S1}, Legal);
 
+  // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
+  // elements for v3s16
+  getActionDefinitionsBuilder(G_PHI)
+    .legalFor({S32, S64, V2S16, V4S16, S1, S128, S256})
+    .legalFor(AllS32Vectors)
+    .legalFor(AllS64Vectors)
+    .legalFor(AddrSpaces64)
+    .legalFor(AddrSpaces32)
+    .clampScalar(0, S32, S256)
+    .widenScalarToNextPow2(0, 32)
+    .legalIf(isPointer(0));
+
+
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_UMULH, G_SMULH})
     .legalFor({S32})
     .clampScalar(0, S32, S32)
@@ -307,7 +320,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor({{S32, S32}, {S32, S64}})
     .clampScalar(0, S32, S32)
     .clampScalar(1, S32, S64)
-    .scalarize(0);
+    .scalarize(0)
+    .widenScalarToNextPow2(0, 32)
+    .widenScalarToNextPow2(1, 32);
 
   // TODO: Expand for > s32
   getActionDefinitionsBuilder(G_BSWAP)

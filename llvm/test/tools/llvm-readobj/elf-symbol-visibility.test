@@ -1,0 +1,63 @@
+# Show that llvm-readobj prints the symbol visibility where recognised, or
+# something sensible when not, for both GNU and LLVM output.
+
+# Use --dyn-symbols because it is only possible to hand-craft symbols with
+# non-standard st_other values for .dynsym.
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj --symbols --dyn-symbols %t | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --symbols --dyn-symbols %t | FileCheck %s --check-prefix=GNU
+
+# LLVM:      Name: default
+# LLVM:      Other: 0
+# LLVM:      Name: internal
+# LLVM:      Other [ (0x1)
+# LLVM-NEXT:   STV_INTERNAL (0x1)
+# LLVM-NEXT: ]
+# LLVM:      Name: hidden
+# LLVM:      Other [ (0x2)
+# LLVM-NEXT:   STV_HIDDEN (0x2)
+# LLVM-NEXT: ]
+# LLVM:      Name: protected
+# LLVM:      Other [ (0x3)
+# LLVM-NEXT:   STV_PROTECTED (0x3)
+# LLVM-NEXT: ]
+# LLVM:      Name: other
+# LLVM:      Other [ (0x4)
+# LLVM-NEXT: ]
+
+# FIXME - the "other" symbol should print something indicating its non-zero st_other value.
+# See https://bugs.llvm.org/show_bug.cgi?id=40785.
+# GNU:      DEFAULT   {{.*}} other
+# GNU:      DEFAULT   {{.*}} default
+# GNU-NEXT: INTERNAL  {{.*}} internal
+# GNU-NEXT: HIDDEN    {{.*}} hidden
+# GNU-NEXT: PROTECTED {{.*}} protected
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name: .dynstr
+    Type: SHT_STRTAB
+    #\0other\0
+    Content: "006f7468657200"
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    Link: .dynstr
+    EntSize: 16
+    # Null symbol
+    # Symbol with st_name = 1, st_other = 0x4
+    Content: "0000000000000000000000000000000001000000000000000000000000040000"
+Symbols:
+  Global:
+    - Name: default
+      Visibility: STV_DEFAULT
+    - Name: internal
+      Visibility: STV_INTERNAL
+    - Name: hidden
+      Visibility: STV_HIDDEN
+    - Name: protected
+      Visibility: STV_PROTECTED

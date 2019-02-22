@@ -692,8 +692,21 @@ bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
                            "unable to map instruction", MI);
         return false;
       }
+
+      // It's possible the mapping changed control flow, and moved the following
+      // instruction to a new block, so figure out the new parent.
+      if (MII != End) {
+        MachineBasicBlock *NextInstBB = MII->getParent();
+        if (NextInstBB != MBB) {
+          LLVM_DEBUG(dbgs() << "Instruction mapping changed control flow\n");
+          MBB = NextInstBB;
+          MIRBuilder.setMBB(*MBB);
+          End = MBB->end();
+        }
+      }
     }
   }
+
   OptMode = SaveOptMode;
   return false;
 }

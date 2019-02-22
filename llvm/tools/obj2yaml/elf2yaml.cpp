@@ -57,6 +57,7 @@ class ELFDumper {
   ErrorOr<ELFYAML::RawContentSection *>
   dumpContentSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::NoBitsSection *> dumpNoBitsSection(const Elf_Shdr *Shdr);
+  ErrorOr<ELFYAML::VerdefSection *> dumpVerdefSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::SymverSection *> dumpSymverSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::VerneedSection *> dumpVerneedSection(const Elf_Shdr *Shdr);
   ErrorOr<ELFYAML::Group *> dumpGroup(const Elf_Shdr *Shdr);
@@ -181,6 +182,13 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
     case ELF::SHT_NOBITS: {
       ErrorOr<ELFYAML::NoBitsSection *> S = dumpNoBitsSection(&Sec);
+      if (std::error_code EC = S.getError())
+        return EC;
+      Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
+      break;
+    }
+    case ELF::SHT_GNU_verdef: {
+      ErrorOr<ELFYAML::VerdefSection *> S = dumpVerdefSection(&Sec);
       if (std::error_code EC = S.getError())
         return EC;
       Y->Sections.push_back(std::unique_ptr<ELFYAML::Section>(S.get()));
@@ -455,6 +463,56 @@ ELFDumper<ELFT>::dumpNoBitsSection(const Elf_Shdr *Shdr) {
   if (std::error_code EC = dumpCommonSection(Shdr, *S))
     return EC;
   S->Size = Shdr->sh_size;
+
+  return S.release();
+}
+
+template <class ELFT>
+ErrorOr<ELFYAML::VerdefSection *>
+ELFDumper<ELFT>::dumpVerdefSection(const Elf_Shdr *Shdr) {
+  typedef typename ELFT::Verdef Elf_Verdef;
+  typedef typename ELFT::Verdaux Elf_Verdaux;
+
+  auto S = make_unique<ELFYAML::VerdefSection>();
+  if (std::error_code EC = dumpCommonSection(Shdr, *S))
+    return EC;
+
+  S->Info = Shdr->sh_info;
+
+  auto StringTableShdrOrErr = Obj.getSection(Shdr->sh_link);
+  if (!StringTableShdrOrErr)
+    return errorToErrorCode(StringTableShdrOrErr.takeError());
+
+  auto StringTableOrErr = Obj.getStringTable(*StringTableShdrOrErr);
+  if (!StringTableOrErr)
+    return errorToErrorCode(StringTableOrErr.takeError());
+
+  auto Contents = Obj.getSectionContents(Shdr);
+  if (!Contents)
+    return errorToErrorCode(Contents.takeError());
+
+  llvm::ArrayRef<uint8_t> Data = *Contents;
+  const uint8_t *Buf = Data.data();
+  while (Buf) {
+    const Elf_Verdef *Verdef = reinterpret_cast<const Elf_Verdef *>(Buf);
+    ELFYAML::VerdefEntry Entry;
+    Entry.Version = Verdef->vd_version;
+    Entry.Flags = Verdef->vd_flags;
+    Entry.VersionNdx = Verdef->vd_ndx;
+    Entry.Hash = Verdef->vd_hash;
+
+    const uint8_t *BufAux = Buf + Verdef->vd_aux;
+    while (BufAux) {
+      const Elf_Verdaux *Verdaux =
+          reinterpret_cast<const Elf_Verdaux *>(BufAux);
+      Entry.VerNames.push_back(
+          StringTableOrErr->drop_front(Verdaux->vda_name).data());
+      BufAux = Verdaux->vda_next ? BufAux + Verdaux->vda_next : nullptr;
+    }
+
+    S->Entries.push_back(Entry);
+    Buf = Verdef->vd_next ? Buf + Verdef->vd_next : nullptr;
+  }
 
   return S.release();
 }

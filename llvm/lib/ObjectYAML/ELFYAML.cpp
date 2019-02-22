@@ -868,6 +868,12 @@ static void sectionMapping(IO &IO, ELFYAML::NoBitsSection &Section) {
   IO.mapOptional("Size", Section.Size, Hex64(0));
 }
 
+static void sectionMapping(IO &IO, ELFYAML::VerdefSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapRequired("Info", Section.Info);
+  IO.mapRequired("Entries", Section.Entries);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::SymverSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Entries", Section.Entries);
@@ -956,6 +962,11 @@ void MappingTraits<std::unique_ptr<ELFYAML::Section>>::mapping(
       Section.reset(new ELFYAML::MipsABIFlags());
     sectionMapping(IO, *cast<ELFYAML::MipsABIFlags>(Section.get()));
     break;
+  case ELF::SHT_GNU_verdef:
+    if (!IO.outputting())
+      Section.reset(new ELFYAML::VerdefSection());
+    sectionMapping(IO, *cast<ELFYAML::VerdefSection>(Section.get()));
+    break;
   case ELF::SHT_GNU_versym:
     if (!IO.outputting())
       Section.reset(new ELFYAML::SymverSection());
@@ -1012,6 +1023,17 @@ void MappingTraits<ELFYAML::DynamicEntry>::mapping(IO &IO,
 
   IO.mapRequired("Tag", Rel.Tag);
   IO.mapRequired("Value", Rel.Val);
+}
+
+void MappingTraits<ELFYAML::VerdefEntry>::mapping(IO &IO,
+                                                  ELFYAML::VerdefEntry &E) {
+  assert(IO.getContext() && "The IO context is not initialized");
+
+  IO.mapRequired("Version", E.Version);
+  IO.mapRequired("Flags", E.Flags);
+  IO.mapRequired("VersionNdx", E.VersionNdx);
+  IO.mapRequired("Hash", E.Hash);
+  IO.mapRequired("Names", E.VerNames);
 }
 
 void MappingTraits<ELFYAML::VerneedEntry>::mapping(IO &IO,

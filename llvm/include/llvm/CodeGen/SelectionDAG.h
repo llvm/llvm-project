@@ -1016,6 +1016,12 @@ public:
                               ArrayRef<SDValue> Ops, EVT MemVT,
                               MachineMemOperand *MMO);
 
+  /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
+  /// (`IsStart==false`) the lifetime of the portion of `FrameIndex` between
+  /// offsets `Offset` and `Offset + Size`.
+  SDValue getLifetimeNode(bool IsStart, const SDLoc &dl, SDValue Chain,
+                          int FrameIndex, int64_t Size, int64_t Offset = -1);
+
   /// Create a MERGE_VALUES node from the given operands.
   SDValue getMergeValues(ArrayRef<SDValue> Ops, const SDLoc &dl);
 

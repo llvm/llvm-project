@@ -579,24 +579,6 @@ def FeatureISAVersion9_0_9 : FeatureSet<
    FeatureCodeObjectV3]>;
 
 //===----------------------------------------------------------------------===//
-// Debugger related subtarget features.
-//===----------------------------------------------------------------------===//
-
-def FeatureDebuggerInsertNops : SubtargetFeature<
-  "amdgpu-debugger-insert-nops",
-  "DebuggerInsertNops",
-  "true",
-  "Insert one nop instruction for each high level source statement"
->;
-
-def FeatureDebuggerEmitPrologue : SubtargetFeature<
-  "amdgpu-debugger-emit-prologue",
-  "DebuggerEmitPrologue",
-  "true",
-  "Emit debugger prologue"
->;
-
-//===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
@@ -675,23 +657,30 @@ def NullALU : InstrItinClass;
 // Predicate helper class
 //===----------------------------------------------------------------------===//
 
-def isSICI : Predicate<
-  "Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
-  "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS"
->, AssemblerPredicate<"!FeatureGCN3Encoding">;
+def isGFX6GFX7 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
+            "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
+  AssemblerPredicate<"!FeatureGCN3Encoding">;
 
-def isVI : Predicate <
-  "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate<"FeatureGCN3Encoding">;
+def isGFX7Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
+  AssemblerPredicate<"FeatureCIInsts">;
 
-def isGFX9 : Predicate <
-  "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
+def isGFX8Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate<"FeatureVIInsts">;
+
+def isGFX9Plus :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<"FeatureGFX9Insts">;
 
-// TODO: Either the name to be changed or we simply use IsCI!
-def isCIVI : Predicate <
-  "Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate<"FeatureCIInsts">;
+def isGFX7 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
+  AssemblerPredicate<"!FeatureGCN3Encoding,FeatureCIInsts">;
+
+def isGFX8 :
+  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate<"FeatureGCN3Encoding,FeatureVIInsts,!FeatureGFX9Insts">;
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<"FeatureFlatAddressSpace">;
@@ -721,16 +710,12 @@ def HasDSAddTid : Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9
 def HasAddNoCarryInsts : Predicate<"Subtarget->hasAddNoCarry()">,
   AssemblerPredicate<"FeatureAddNoCarryInsts">;
 
-def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">,
-  AssemblerPredicate<"!FeatureAddNoCarryInsts">;
+def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<"Feature16BitInsts">;
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<"FeatureVOP3P">;
-
-def NotHasVOP3PInsts : Predicate<"!Subtarget->hasVOP3PInsts()">,
-  AssemblerPredicate<"!FeatureVOP3P">;
 
 def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<"FeatureSDWA,FeatureVolcanicIslands">;

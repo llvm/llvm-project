@@ -98,6 +98,7 @@ private:
     unsigned LOAD8;
 
     unsigned ADDrr;
+    unsigned ADDri;
 
     // Used for G_ICMP
     unsigned CMPrr;
@@ -300,6 +301,7 @@ ARMInstructionSelector::OpcodeCache::OpcodeCache(const ARMSubtarget &STI) {
   STORE_OPCODE(LOAD8, LDRBi12);
 
   STORE_OPCODE(ADDrr, ADDrr);
+  STORE_OPCODE(ADDri, ADDri);
 
   STORE_OPCODE(CMPrr, CMPrr);
   STORE_OPCODE(MOVi, MOVi);
@@ -967,7 +969,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
   case G_FRAME_INDEX:
     // Add 0 to the given frame index and hope it will eventually be folded into
     // the user(s).
-    I.setDesc(TII.get(ARM::ADDri));
+    I.setDesc(TII.get(Opcodes.ADDri));
     MIB.addImm(0).add(predOps(ARMCC::AL)).add(condCodeOp());
     break;
   case G_GLOBAL_VALUE:

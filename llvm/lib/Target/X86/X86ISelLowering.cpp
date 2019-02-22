@@ -17636,28 +17636,41 @@ static bool useVectorCast(unsigned Opcode, MVT FromVT, MVT ToVT,
 /// round-trip between XMM and GPR.
 static SDValue vectorizeExtractedCast(SDValue Cast, SelectionDAG &DAG,
                                       const X86Subtarget &Subtarget) {
-  // TODO: The limitation for extracting from the 0-element is not required,
-  // but if we extract from some other element, it will require shuffling to
-  // get the result into the right place.
   // TODO: This could be enhanced to handle smaller integer types by peeking
   // through an extend.
   SDValue Extract = Cast.getOperand(0);
   MVT DestVT = Cast.getSimpleValueType();
   if (Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      !isNullConstant(Extract.getOperand(1)))
+      !isa<ConstantSDNode>(Extract.getOperand(1)))
     return SDValue();
 
+  // See if we have a 128-bit vector cast op for this type of cast.
   SDValue VecOp = Extract.getOperand(0);
   MVT FromVT = VecOp.getSimpleValueType();
-  MVT ToVT = MVT::getVectorVT(DestVT, FromVT.getVectorNumElements());
-  if (!useVectorCast(Cast.getOpcode(), FromVT, ToVT, Subtarget))
+  unsigned NumEltsInXMM = 128 / FromVT.getScalarSizeInBits();
+  MVT Vec128VT = MVT::getVectorVT(FromVT.getScalarType(), NumEltsInXMM);
+  MVT ToVT = MVT::getVectorVT(DestVT, NumEltsInXMM);
+  if (!useVectorCast(Cast.getOpcode(), Vec128VT, ToVT, Subtarget))
     return SDValue();
 
-  // cast (extract V, Y) --> extract (cast V), Y
+  // If we are extracting from a non-zero element, first shuffle the source
+  // vector to allow extracting from element zero.
   SDLoc DL(Cast);
+  if (!isNullConstant(Extract.getOperand(1))) {
+    SmallVector<int, 16> Mask(FromVT.getVectorNumElements(), -1);
+    Mask[0] = Extract.getConstantOperandVal(1);
+    VecOp = DAG.getVectorShuffle(FromVT, DL, VecOp, DAG.getUNDEF(FromVT), Mask);
+  }
+  // If the source vector is wider than 128-bits, extract the low part. Do not
+  // create an unnecessarily wide vector cast op.
+  if (FromVT != Vec128VT)
+    VecOp = extract128BitVector(VecOp, 0, DAG, DL);
+
+  // cast (extelt V, 0) --> extelt (cast (extract_subv V)), 0
+  // cast (extelt V, C) --> extelt (cast (extract_subv (shuffle V, [C...]))), 0
   SDValue VCast = DAG.getNode(Cast.getOpcode(), DL, ToVT, VecOp);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, DestVT, VCast,
-                     Extract.getOperand(1));
+                     DAG.getIntPtrConstant(0, DL));
 }
 
 SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
@@ -31807,13 +31820,9 @@ static SDValue combineX86ShufflesRecursively(
             : (OpMask[OpIdx] << OpRatioLog2) + (RootMaskedIdx & (OpRatio - 1));
 
     OpMaskedIdx = OpMaskedIdx & (MaskWidth - 1);
-    if (OpMask[OpIdx] < (int)OpMask.size()) {
-      assert(0 <= OpInputIdx[0] && "Unknown target shuffle input");
-      OpMaskedIdx += OpInputIdx[0] * MaskWidth;
-    } else {
-      assert(0 <= OpInputIdx[1] && "Unknown target shuffle input");
-      OpMaskedIdx += OpInputIdx[1] * MaskWidth;
-    }
+    int InputIdx = OpMask[OpIdx] / (int)OpMask.size();
+    assert(0 <= OpInputIdx[InputIdx] && "Unknown target shuffle input");
+    OpMaskedIdx += OpInputIdx[InputIdx] * MaskWidth;
 
     Mask[i] = OpMaskedIdx;
   }
@@ -42515,7 +42524,7 @@ static X86::CondCode parseConstraintCode(llvm::StringRef Constraint) {
                            .Case("{@ccbe}", X86::COND_BE)
                            .Case("{@ccc}", X86::COND_B)
                            .Case("{@cce}", X86::COND_E)
-                           .Case("{@ccz}", X86::COND_NE)
+                           .Case("{@ccz}", X86::COND_E)
                            .Case("{@ccg}", X86::COND_G)
                            .Case("{@ccge}", X86::COND_GE)
                            .Case("{@ccl}", X86::COND_L)

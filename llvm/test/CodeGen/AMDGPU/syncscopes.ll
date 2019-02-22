@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -stop-before=si-debugger-insert-nops < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -stop-after=si-insert-skips < %s | FileCheck --check-prefix=GCN %s
 
 ; GCN-LABEL: name: syncscopes
 ; GCN: FLAT_STORE_DWORD killed renamable $vgpr1_vgpr2, killed renamable $vgpr0, 0, 0, 0, implicit $exec, implicit $flat_scr :: (volatile store syncscope("agent") seq_cst 4 into %ir.agent_out)
