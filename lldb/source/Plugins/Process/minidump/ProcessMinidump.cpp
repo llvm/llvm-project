@@ -123,13 +123,8 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   if (!AllData)
     return nullptr;
 
-  auto minidump_parser = MinidumpParser::Create(AllData);
-  // check if the parser object is valid
-  if (!minidump_parser)
-    return nullptr;
-
   return std::make_shared<ProcessMinidump>(target_sp, listener_sp, *crash_file,
-                                           minidump_parser.getValue());
+                                           std::move(AllData));
 }
 
 bool ProcessMinidump::CanDebug(lldb::TargetSP target_sp,
@@ -140,9 +135,9 @@ bool ProcessMinidump::CanDebug(lldb::TargetSP target_sp,
 ProcessMinidump::ProcessMinidump(lldb::TargetSP target_sp,
                                  lldb::ListenerSP listener_sp,
                                  const FileSpec &core_file,
-                                 MinidumpParser minidump_parser)
-    : Process(target_sp, listener_sp), m_minidump_parser(minidump_parser),
-      m_core_file(core_file), m_is_wow64(false) {}
+                                 DataBufferSP core_data)
+    : Process(target_sp, listener_sp), m_core_file(core_file),
+      m_core_data(std::move(core_data)), m_is_wow64(false) {}
 
 ProcessMinidump::~ProcessMinidump() {
   Clear();
@@ -168,12 +163,12 @@ void ProcessMinidump::Terminate() {
 }
 
 Status ProcessMinidump::DoLoadCore() {
-  Status error;
+  auto expected_parser = MinidumpParser::Create(m_core_data);
+  if (!expected_parser)
+    return Status(expected_parser.takeError());
+  m_minidump_parser = std::move(*expected_parser);
 
-  // Minidump parser initialization & consistency checks
-  error = m_minidump_parser.Initialize();
-  if (error.Fail())
-    return error;
+  Status error;
 
   // Do we support the minidump's architecture?
   ArchSpec arch = GetArchitecture();
@@ -192,11 +187,11 @@ Status ProcessMinidump::DoLoadCore() {
   }
   GetTarget().SetArchitecture(arch, true /*set_platform*/);
 
-  m_thread_list = m_minidump_parser.GetThreads();
-  m_active_exception = m_minidump_parser.GetExceptionStream();
+  m_thread_list = m_minidump_parser->GetThreads();
+  m_active_exception = m_minidump_parser->GetExceptionStream();
   ReadModuleList();
 
-  llvm::Optional<lldb::pid_t> pid = m_minidump_parser.GetPid();
+  llvm::Optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
   if (!pid) {
     error.SetErrorString("failed to parse PID");
     return error;
@@ -267,7 +262,7 @@ size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
 size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
 
-  llvm::ArrayRef<uint8_t> mem = m_minidump_parser.GetMemory(addr, size);
+  llvm::ArrayRef<uint8_t> mem = m_minidump_parser->GetMemory(addr, size);
   if (mem.empty()) {
     error.SetErrorString("could not parse memory info");
     return 0;
@@ -279,7 +274,7 @@ size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
 
 ArchSpec ProcessMinidump::GetArchitecture() {
   if (!m_is_wow64) {
-    return m_minidump_parser.GetArchitecture();
+    return m_minidump_parser->GetArchitecture();
   }
 
   llvm::Triple triple;
@@ -291,13 +286,13 @@ ArchSpec ProcessMinidump::GetArchitecture() {
 
 Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                             MemoryRegionInfo &range_info) {
-  range_info = m_minidump_parser.GetMemoryRegionInfo(load_addr);
+  range_info = m_minidump_parser->GetMemoryRegionInfo(load_addr);
   return Status();
 }
 
 Status ProcessMinidump::GetMemoryRegions(
     lldb_private::MemoryRegionInfos &region_list) {
-  region_list = m_minidump_parser.GetMemoryRegions();
+  region_list = m_minidump_parser->GetMemoryRegions();
   return Status();
 }
 
@@ -316,9 +311,9 @@ bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
 
     llvm::ArrayRef<uint8_t> context;
     if (!m_is_wow64)
-      context = m_minidump_parser.GetThreadContext(context_location);
+      context = m_minidump_parser->GetThreadContext(context_location);
     else
-      context = m_minidump_parser.GetThreadContextWow64(thread);
+      context = m_minidump_parser->GetThreadContextWow64(thread);
 
     lldb::ThreadSP thread_sp(new ThreadMinidump(*this, thread, context));
     new_thread_list.AddThread(thread_sp);
@@ -328,11 +323,11 @@ bool ProcessMinidump::UpdateThreadList(ThreadList &old_thread_list,
 
 void ProcessMinidump::ReadModuleList() {
   std::vector<const MinidumpModule *> filtered_modules =
-      m_minidump_parser.GetFilteredModuleList();
+      m_minidump_parser->GetFilteredModuleList();
 
   for (auto module : filtered_modules) {
     llvm::Optional<std::string> name =
-        m_minidump_parser.GetMinidumpString(module->module_name_rva);
+        m_minidump_parser->GetMinidumpString(module->module_name_rva);
 
     if (!name)
       continue;
@@ -353,7 +348,7 @@ void ProcessMinidump::ReadModuleList() {
       m_is_wow64 = true;
     }
 
-    const auto uuid = m_minidump_parser.GetModuleUUID(module);
+    const auto uuid = m_minidump_parser->GetModuleUUID(module);
     auto file_spec = FileSpec(name.getValue(), GetArchitecture().GetTriple());
     FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
@@ -666,7 +661,7 @@ public:
         m_interpreter.GetExecutionContext().GetProcessPtr());
     result.SetStatus(eReturnStatusSuccessFinishResult);
     Stream &s = result.GetOutputStream();
-    MinidumpParser &minidump = process->m_minidump_parser;
+    MinidumpParser &minidump = *process->m_minidump_parser;
     if (DumpDirectory()) {
       s.Printf("RVA        SIZE       TYPE       MinidumpStreamType\n");
       s.Printf("---------- ---------- ---------- --------------------------\n");

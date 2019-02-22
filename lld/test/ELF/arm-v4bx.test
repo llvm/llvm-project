@@ -27,7 +27,6 @@ Sections:
     Info:            .text
     Relocations:
       - Offset:          0x0000000000000000
-        Symbol:          ''
         Type:            R_ARM_V4BX
 Symbols:
   Global:

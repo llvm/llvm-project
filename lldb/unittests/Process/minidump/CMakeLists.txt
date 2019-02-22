@@ -9,6 +9,7 @@ add_lldb_unittest(LLDBMinidumpTests
     lldbPluginProcessUtility
     lldbPluginProcessMinidump
     lldbUtilityHelpers
+    LLVMTestingSupport
   LINK_COMPONENTS
     Support
   )
