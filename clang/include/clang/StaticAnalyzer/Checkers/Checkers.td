@@ -813,6 +813,14 @@ def GCDAntipattern : Checker<"GCDAntipattern">,
   Documentation<NotDocumented>;
 } // end "optin.performance"
 
+let ParentPackage = OSXOptIn in {
+
+def OSObjectCStyleCast : Checker<"OSObjectCStyleCast">,
+  HelpText<"Checker for C-style casts of OSObjects">,
+  Documentation<NotDocumented>;
+
+} // end "optin.osx"
+
 let ParentPackage = CocoaAlpha in {
 
 def IvarInvalidationModeling : Checker<"IvarInvalidationModeling">,
