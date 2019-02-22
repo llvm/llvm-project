@@ -822,6 +822,15 @@ def OSObjectCStyleCast : Checker<"OSObjectCStyleCast">,
 
 } // end "optin.osx"
 
+let ParentPackage = OSXAlpha in {
+
+def MIGChecker : Checker<"MIG">,
+  HelpText<"Find violations of the Mach Interface Generator "
+           "calling convention">,
+  Documentation<NotDocumented>;
+
+} // end "alpha.osx"
+
 let ParentPackage = CocoaAlpha in {
 
 def IvarInvalidationModeling : Checker<"IvarInvalidationModeling">,
