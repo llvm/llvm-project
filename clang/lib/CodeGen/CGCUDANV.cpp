@@ -227,12 +227,6 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
     emitDeviceStubBodyNew(CGF, Args);
   else
     emitDeviceStubBodyLegacy(CGF, Args);
-
-  // Postfix kernel stub names with .stub to differentiate them from kernel
-  // names in device binaries. This is to facilitate the debugger to find
-  // the correct symbols for kernels in the device binary.
-  if (CGF.getLangOpts().HIP)
-    CGF.CurFn->setName(CGF.CurFn->getName() + ".stub");
 }
 
 // CUDA 9.0+ uses new way to launch kernels. Parameters are packed in a local
