@@ -41,19 +41,56 @@ class MIGChecker : public Checker<check::PostCall, check::PreStmt<ReturnStmt>> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
+
+  class Visitor : public BugReporterVisitor {
+  public:
+    void Profile(llvm::FoldingSetNodeID &ID) const {
+      static int X = 0;
+      ID.AddPointer(&X);
+    }
+
+    std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+        BugReporterContext &BRC, BugReport &R);
+  };
 };
 } // end anonymous namespace
 
-REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, bool)
+// FIXME: It's a 'const ParmVarDecl *' but there's no ready-made GDM traits
+// specialization for this sort of types.
+REGISTER_TRAIT_WITH_PROGRAMSTATE(ReleasedParameter, const void *)
 
-static bool isCurrentArgSVal(SVal V, CheckerContext &C) {
+std::shared_ptr<PathDiagnosticPiece>
+MIGChecker::Visitor::VisitNode(const ExplodedNode *N, BugReporterContext &BRC,
+                               BugReport &R) {
+  const auto *NewPVD = static_cast<const ParmVarDecl *>(
+      N->getState()->get<ReleasedParameter>());
+  const auto *OldPVD = static_cast<const ParmVarDecl *>(
+      N->getFirstPred()->getState()->get<ReleasedParameter>());
+  if (OldPVD == NewPVD)
+    return nullptr;
+
+  assert(NewPVD && "What is deallocated cannot be un-deallocated!");
+  SmallString<64> Str;
+  llvm::raw_svector_ostream OS(Str);
+  OS << "Value passed through parameter '" << NewPVD->getName()
+     << "' is deallocated";
+
+  PathDiagnosticLocation Loc =
+      PathDiagnosticLocation::create(N->getLocation(), BRC.getSourceManager());
+  return std::make_shared<PathDiagnosticEventPiece>(Loc, OS.str());
+}
+
+static const ParmVarDecl *getOriginParam(SVal V, CheckerContext &C) {
   SymbolRef Sym = V.getAsSymbol();
   if (!Sym)
-    return false;
+    return nullptr;
 
   const auto *VR = dyn_cast_or_null<VarRegion>(Sym->getOriginRegion());
-  return VR && VR->hasStackParametersStorage() &&
-         VR->getStackFrame()->inTopFrame();
+  if (VR && VR->hasStackParametersStorage() &&
+         VR->getStackFrame()->inTopFrame())
+    return cast<ParmVarDecl>(VR->getDecl());
+
+  return nullptr;
 }
 
 static bool isInMIGCall(CheckerContext &C) {
@@ -96,8 +133,11 @@ void MIGChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
 
   // TODO: Unhardcode "1".
   SVal Arg = Call.getArgSVal(1);
-  if (isCurrentArgSVal(Arg, C))
-    C.addTransition(C.getState()->set<ReleasedParameter>(true));
+  const ParmVarDecl *PVD = getOriginParam(Arg, C);
+  if (!PVD)
+    return;
+
+  C.addTransition(C.getState()->set<ReleasedParameter>(PVD));
 }
 
 void MIGChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
@@ -139,6 +179,9 @@ void MIGChecker::checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const {
       "deallocate it again",
       N);
 
+  R->addRange(RS->getSourceRange());
+  bugreporter::trackExpressionValue(N, RS->getRetValue(), *R, false);
+  R->addVisitor(llvm::make_unique<Visitor>());
   C.emitReport(std::move(R));
 }
 

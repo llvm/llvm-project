@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -w -analyzer-checker=core,alpha.osx.MIG\
-// RUN:                    -fblocks -verify %s
+// RUN:                       -analyzer-output=text -fblocks -verify %s
 
 // XNU APIs.
 
@@ -20,9 +20,11 @@ kern_return_t vm_deallocate(mach_port_name_t, vm_address_t, vm_size_t);
 
 MIG_SERVER_ROUTINE
 kern_return_t basic_test(mach_port_name_t port, vm_address_t address, vm_size_t size) {
-  vm_deallocate(port, address, size);
-  if (size > 10) {
+  vm_deallocate(port, address, size); // expected-note{{Value passed through parameter 'address' is deallocated}}
+  if (size > 10) { // expected-note{{Assuming 'size' is > 10}}
+                   // expected-note@-1{{Taking true branch}}
     return KERN_ERROR; // expected-warning{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+											 // expected-note@-1{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
   }
   return KERN_SUCCESS;
 }
@@ -42,6 +44,18 @@ kern_return_t no_crash(mach_port_name_t port, vm_address_t address, vm_size_t si
   vm_deallocate(port, address, size);
 }
 
+// When releasing two parameters, add a note for both of them.
+// Also when returning a variable, explain why do we think that it contains
+// a non-success code.
+MIG_SERVER_ROUTINE
+kern_return_t release_twice(mach_port_name_t port, vm_address_t addr1, vm_address_t addr2, vm_size_t size) {
+  kern_return_t ret = KERN_ERROR; // expected-note{{'ret' initialized to 1}}
+  vm_deallocate(port, addr1, size); // expected-note{{Value passed through parameter 'addr1' is deallocated}}
+  vm_deallocate(port, addr2, size); // expected-note{{Value passed through parameter 'addr2' is deallocated}}
+  return ret; // expected-warning{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+                     // expected-note@-1{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+}
+
 // Check that we work on Objective-C messages and blocks.
 @interface I
 - (kern_return_t)fooAtPort:(mach_port_name_t)port withAddress:(vm_address_t)address ofSize:(vm_size_t)size;
@@ -51,8 +65,9 @@ kern_return_t no_crash(mach_port_name_t port, vm_address_t address, vm_size_t si
 - (kern_return_t)fooAtPort:(mach_port_name_t)port
                withAddress:(vm_address_t)address
                     ofSize:(vm_size_t)size MIG_SERVER_ROUTINE {
-  vm_deallocate(port, address, size);
+  vm_deallocate(port, address, size); // expected-note{{Value passed through parameter 'address' is deallocated}}
   return KERN_ERROR; // expected-warning{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+                     // expected-note@-1{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
 }
 @end
 
@@ -60,8 +75,9 @@ void test_block() {
   kern_return_t (^block)(mach_port_name_t, vm_address_t, vm_size_t) =
       ^MIG_SERVER_ROUTINE (mach_port_name_t port,
                            vm_address_t address, vm_size_t size) {
-        vm_deallocate(port, address, size);
+        vm_deallocate(port, address, size); // expected-note{{Value passed through parameter 'address' is deallocated}}
         return KERN_ERROR; // expected-warning{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
+                           // expected-note@-1{{MIG callback fails with error after deallocating argument value. This is a use-after-free vulnerability because the caller will try to deallocate it again}}
       };
 }
 
