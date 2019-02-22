@@ -303,7 +303,7 @@ defm V_MOVRELSD_B32 : VOP1Inst <"v_movrelsd_b32", VOP_NO_EXT<VOP_I32_I32>>;
 defm V_MOV_FED_B32 : VOP1Inst <"v_mov_fed_b32", VOP_I32_I32>;
 
 // These instruction only exist on SI and CI
-let SubtargetPredicate = isSICI in {
+let SubtargetPredicate = isGFX6GFX7 in {
 
 let SchedRW = [WriteQuarterRate32] in {
 defm V_LOG_CLAMP_F32 : VOP1Inst <"v_log_clamp_f32", VOP_F32_F32, int_amdgcn_log_clamp>;
@@ -318,10 +318,10 @@ defm V_RCP_CLAMP_F64 : VOP1Inst <"v_rcp_clamp_f64", VOP_F64_F64>;
 defm V_RSQ_CLAMP_F64 : VOP1Inst <"v_rsq_clamp_f64", VOP_F64_F64, AMDGPUrsq_clamp>;
 } // End SchedRW = [WriteDouble]
 
-} // End SubtargetPredicate = isSICI
+} // End SubtargetPredicate = isGFX6GFX7
 
 
-let SubtargetPredicate = isCIVI in {
+let SubtargetPredicate = isGFX7Plus in {
 
 let SchedRW = [WriteDoubleAdd] in {
 defm V_TRUNC_F64 : VOP1Inst <"v_trunc_f64", VOP_F64_F64, ftrunc>;
@@ -335,7 +335,7 @@ defm V_LOG_LEGACY_F32 : VOP1Inst <"v_log_legacy_f32", VOP_F32_F32>;
 defm V_EXP_LEGACY_F32 : VOP1Inst <"v_exp_legacy_f32", VOP_F32_F32>;
 } // End SchedRW = [WriteQuarterRate32]
 
-} // End SubtargetPredicate = isCIVI
+} // End SubtargetPredicate = isGFX7Plus
 
 
 let SubtargetPredicate = Has16BitInsts in {
@@ -390,7 +390,7 @@ def VOP_SWAP_I32 : VOPProfile<[i32, i32, i32, untyped]> {
   let Ins64 = (ins);
 }
 
-let SubtargetPredicate = isGFX9 in {
+let SubtargetPredicate = isGFX9Plus in {
   let Constraints = "$vdst = $src1, $vdst1 = $src0",
       DisableEncoding="$vdst1,$src1",
       SchedRW = [Write64Bit, Write64Bit] in {
@@ -404,7 +404,7 @@ defm V_SAT_PK_U8_I16    : VOP1Inst<"v_sat_pk_u8_i16", VOP_I32_I32>;
 defm V_CVT_NORM_I16_F16 : VOP1Inst<"v_cvt_norm_i16_f16", VOP_I16_F16>;
 defm V_CVT_NORM_U16_F16 : VOP1Inst<"v_cvt_norm_u16_f16", VOP_I16_F16>;
 
-} // End SubtargetPredicate = isGFX9
+} // End SubtargetPredicate = isGFX9Plus
 
 //===----------------------------------------------------------------------===//
 // Target
@@ -415,7 +415,7 @@ defm V_CVT_NORM_U16_F16 : VOP1Inst<"v_cvt_norm_u16_f16", VOP_I16_F16>;
 //===----------------------------------------------------------------------===//
 
 multiclass VOP1_Real_si <bits<9> op> {
-  let AssemblerPredicates = [isSICI], DecoderNamespace = "SICI" in {
+  let AssemblerPredicates = [isGFX6GFX7], DecoderNamespace = "SICI" in {
     def _e32_si :
       VOP1_Real<!cast<VOP1_Pseudo>(NAME#"_e32"), SIEncodingFamily.SI>,
       VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32").Pfl>;
@@ -490,7 +490,7 @@ defm V_MOVRELSD_B32      : VOP1_Real_si <0x44>;
 //===----------------------------------------------------------------------===//
 
 multiclass VOP1_Real_ci <bits<9> op> {
-  let AssemblerPredicates = [isCIOnly], DecoderNamespace = "CI" in {
+  let AssemblerPredicates = [isGFX7], DecoderNamespace = "CI" in {
     def _e32_ci :
       VOP1_Real<!cast<VOP1_Pseudo>(NAME#"_e32"), SIEncodingFamily.SI>,
       VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32").Pfl>;
@@ -521,7 +521,7 @@ class VOP1_DPPe <bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
 }
 
 multiclass VOP1Only_Real_vi <bits<10> op> {
-  let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
+  let AssemblerPredicates = [isGFX8Plus], DecoderNamespace = "VI" in {
     def _vi :
       VOP1_Real<!cast<VOP1_Pseudo>(NAME), SIEncodingFamily.VI>,
       VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME).Pfl>;
@@ -529,7 +529,7 @@ multiclass VOP1Only_Real_vi <bits<10> op> {
 }
 
 multiclass VOP1_Real_e32e64_vi <bits<10> op> {
-  let AssemblerPredicates = [isVI], DecoderNamespace = "VI" in {
+  let AssemblerPredicates = [isGFX8Plus], DecoderNamespace = "VI" in {
     def _e32_vi :
       VOP1_Real<!cast<VOP1_Pseudo>(NAME#"_e32"), SIEncodingFamily.VI>,
       VOP1e<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32").Pfl>;
@@ -646,7 +646,7 @@ def V_MOV_B32_indirect : VPseudoInstSI<(outs),
   PseudoInstExpansion<(V_MOV_B32_e32_vi getVALUDstForVT<i32>.ret:$vdst,
                                         getVOPSrc0ForVT<i32>.ret:$src0)> {
   let VOP1 = 1;
-  let SubtargetPredicate = isVI;
+  let SubtargetPredicate = isGFX8Plus;
 }
 
 // This is a pseudo variant of the v_movreld_b32 instruction in which the
@@ -669,7 +669,7 @@ def V_MOVRELD_B32_V4 : V_MOVRELD_B32_pseudo<VReg_128>;
 def V_MOVRELD_B32_V8 : V_MOVRELD_B32_pseudo<VReg_256>;
 def V_MOVRELD_B32_V16 : V_MOVRELD_B32_pseudo<VReg_512>;
 
-let OtherPredicates = [isVI] in {
+let OtherPredicates = [isGFX8Plus] in {
 
 def : GCNPat <
   (i32 (int_amdgcn_mov_dpp i32:$src, imm:$dpp_ctrl, imm:$row_mask, imm:$bank_mask,
@@ -709,14 +709,14 @@ def : GCNPat <
   (EXTRACT_SUBREG $src, sub0)
 >;
 
-} // End OtherPredicates = [isVI]
+} // End OtherPredicates = [isGFX8Plus]
 
 //===----------------------------------------------------------------------===//
 // GFX9
 //===----------------------------------------------------------------------===//
 
 multiclass VOP1_Real_gfx9 <bits<10> op> {
-  let AssemblerPredicates = [isGFX9], DecoderNamespace = "GFX9" in {
+  let AssemblerPredicates = [isGFX9Plus], DecoderNamespace = "GFX9" in {
     defm NAME : VOP1_Real_e32e64_vi <op>;
   }
 

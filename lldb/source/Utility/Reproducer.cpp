@@ -51,6 +51,8 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
   return Error::success();
 }
 
+bool Reproducer::Initialized() { return InstanceImpl().operator bool(); }
+
 void Reproducer::Terminate() {
   lldbassert(InstanceImpl() && "Already terminated.");
   InstanceImpl().reset();

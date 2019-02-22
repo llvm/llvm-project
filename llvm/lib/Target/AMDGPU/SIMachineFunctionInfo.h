@@ -123,12 +123,6 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // unit. Minimum - first, maximum - second.
   std::pair<unsigned, unsigned> WavesPerEU = {0, 0};
 
-  // Stack object indices for work group IDs.
-  std::array<int, 3> DebuggerWorkGroupIDStackObjectIndices = {{0, 0, 0}};
-
-  // Stack object indices for work item IDs.
-  std::array<int, 3> DebuggerWorkItemIDStackObjectIndices = {{0, 0, 0}};
-
   DenseMap<const Value *,
            std::unique_ptr<const AMDGPUBufferPseudoSourceValue>> BufferPSVs;
   DenseMap<const Value *,
@@ -562,30 +556,6 @@ public:
   /// \returns Default/requested maximum number of waves per execution unit.
   unsigned getMaxWavesPerEU() const {
     return WavesPerEU.second;
-  }
-
-  /// \returns Stack object index for \p Dim's work group ID.
-  int getDebuggerWorkGroupIDStackObjectIndex(unsigned Dim) const {
-    assert(Dim < 3);
-    return DebuggerWorkGroupIDStackObjectIndices[Dim];
-  }
-
-  /// Sets stack object index for \p Dim's work group ID to \p ObjectIdx.
-  void setDebuggerWorkGroupIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
-    assert(Dim < 3);
-    DebuggerWorkGroupIDStackObjectIndices[Dim] = ObjectIdx;
-  }
-
-  /// \returns Stack object index for \p Dim's work item ID.
-  int getDebuggerWorkItemIDStackObjectIndex(unsigned Dim) const {
-    assert(Dim < 3);
-    return DebuggerWorkItemIDStackObjectIndices[Dim];
-  }
-
-  /// Sets stack object index for \p Dim's work item ID to \p ObjectIdx.
-  void setDebuggerWorkItemIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
-    assert(Dim < 3);
-    DebuggerWorkItemIDStackObjectIndices[Dim] = ObjectIdx;
   }
 
   /// \returns SGPR used for \p Dim's work group ID.

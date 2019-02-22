@@ -124,11 +124,10 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
 }
 
 void SBDebugger::Initialize() {
-  SBInitializerOptions options;
-  SBDebugger::Initialize(options);
+  SBError ignored = SBDebugger::InitializeWithErrorHandling();
 }
 
-lldb::SBError SBDebugger::Initialize(SBInitializerOptions &options) {
+lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log)
@@ -136,8 +135,7 @@ lldb::SBError SBDebugger::Initialize(SBInitializerOptions &options) {
 
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          llvm::make_unique<SystemInitializerFull>(), *options.m_opaque_up,
-          LoadPlugin)) {
+          llvm::make_unique<SystemInitializerFull>(), LoadPlugin)) {
     error.SetError(Status(std::move(e)));
   }
   return error;

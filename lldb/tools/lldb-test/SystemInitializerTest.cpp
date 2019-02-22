@@ -112,9 +112,8 @@ SystemInitializerTest::SystemInitializerTest() {}
 
 SystemInitializerTest::~SystemInitializerTest() {}
 
-llvm::Error
-SystemInitializerTest::Initialize(const InitializerOptions &options) {
-  if (auto e = SystemInitializerCommon::Initialize(options))
+llvm::Error SystemInitializerTest::Initialize() {
+  if (auto e = SystemInitializerCommon::Initialize())
     return e;
 
   breakpad::ObjectFileBreakpad::Initialize();

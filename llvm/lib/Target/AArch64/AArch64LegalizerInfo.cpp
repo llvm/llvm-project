@@ -461,6 +461,28 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       {s32, s64, v8s8, v16s8, v4s16, v8s16, v2s32, v4s32})
       .scalarize(1);
 
+  getActionDefinitionsBuilder(G_SHUFFLE_VECTOR)
+      .legalIf([=](const LegalityQuery &Query) {
+        const LLT &DstTy = Query.Types[0];
+        const LLT &SrcTy = Query.Types[1];
+        // For now just support the TBL2 variant which needs the source vectors
+        // to be the same size as the dest.
+        if (DstTy != SrcTy)
+          return false;
+        for (auto &Ty : {v2s32, v4s32, v2s64}) {
+          if (DstTy == Ty)
+            return true;
+        }
+        return false;
+      })
+      // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors), we
+      // just want those lowered into G_BUILD_VECTOR
+      .lowerIf([=](const LegalityQuery &Query) {
+        return !Query.Types[1].isVector();
+      })
+      .clampNumElements(0, v4s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

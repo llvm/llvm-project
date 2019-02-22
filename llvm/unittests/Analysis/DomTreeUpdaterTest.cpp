@@ -71,8 +71,9 @@ TEST(DomTreeUpdater, EagerUpdateBasicOperations) {
   SwitchInst *SI = dyn_cast<SwitchInst>(BB0->getTerminator());
   ASSERT_NE(SI, nullptr) << "Couldn't get SwitchInst.";
 
-  DTU.insertEdgeRelaxed(BB0, BB0);
-  DTU.deleteEdgeRelaxed(BB0, BB0);
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, BB0, BB0}, {DominatorTree::Delete, BB0, BB0}},
+      /*ForceRemoveDuplicates*/ true);
 
   // Delete edge bb0 -> bb3 and push the update twice to verify duplicate
   // entries are discarded.
@@ -105,9 +106,10 @@ TEST(DomTreeUpdater, EagerUpdateBasicOperations) {
   ASSERT_FALSE(DTU.hasPendingUpdates());
 
   // Invalid Insert: no edge bb1 -> bb2 after change to bb0.
-  DTU.insertEdgeRelaxed(BB1, BB2);
   // Invalid Delete: edge exists bb0 -> bb1 after change to bb0.
-  DTU.deleteEdgeRelaxed(BB0, BB1);
+  DTU.applyUpdates(
+      {{DominatorTree::Insert, BB1, BB2}, {DominatorTree::Delete, BB0, BB1}},
+      /*ForceRemoveDuplicates*/ true);
 
   // DTU working with Eager UpdateStrategy does not need to flush.
   ASSERT_TRUE(DT.verify());
@@ -182,7 +184,8 @@ TEST(DomTreeUpdater, EagerUpdateReplaceEntryBB) {
   EXPECT_EQ(F->begin()->getName(), NewEntry->getName());
   EXPECT_TRUE(&F->getEntryBlock() == NewEntry);
 
-  DTU.insertEdgeRelaxed(NewEntry, BB0);
+  DTU.applyUpdates({{DominatorTree::Insert, NewEntry, BB0}},
+                   /*ForceRemoveDuplicates*/ true);
 
   // Changing the Entry BB requires a full recalculation of DomTree.
   DTU.recalculate(*F);
@@ -251,7 +254,7 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   BasicBlock *BB3 = &*FI++;
 
   // Test discards of self-domination update.
-  DTU.deleteEdge(BB0, BB0);
+  DTU.applyUpdates({{DominatorTree::Delete, BB0, BB0}});
   ASSERT_FALSE(DTU.hasPendingDomTreeUpdates());
 
   // Delete edge bb0 -> bb3 and push the update twice to verify duplicate
@@ -358,8 +361,10 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   //   +-> succ
   //
   // While the final CFG form is functionally identical the updates to
-  // DTU are not. In the first case we must have DTU.insertEdge(Pred1, Succ)
-  // while in the latter case we must *NOT* have DTU.insertEdge(Pred1, Succ).
+  // DTU are not. In the first case we must have
+  // DTU.applyUpdates({{DominatorTree::Insert, Pred1, Succ}}) while in the
+  // latter case we must *NOT* have DTU.applyUpdates({{DominatorTree::Insert,
+  // Pred1, Succ}}).
 
   // CFG Change: bb0 now only has bb0 -> bb1 and bb0 -> bb3. We are preparing to
   // remove bb2.
@@ -412,9 +417,9 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   ASSERT_TRUE(isa<UnreachableInst>(BB1->getTerminator()));
   EXPECT_EQ(BB1->getParent(), F);
 
-  // Update the DTU. In this case we don't call DTU.insertEdge(BB0, BB3) because
-  // the edge previously existed at the start of this test when DT was first
-  // created.
+  // Update the DTU. In this case we don't submit {DominatorTree::Insert, BB0,
+  // BB3} because the edge previously existed at the start of this test when DT
+  // was first created.
   Updates.push_back({DominatorTree::Delete, BB0, BB1});
   Updates.push_back({DominatorTree::Delete, BB1, BB3});
 
@@ -467,7 +472,7 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
   BasicBlock *BB2 = &*FI++;
   BasicBlock *BB3 = &*FI++;
   // Test discards of self-domination update.
-  DTU.deleteEdge(BB0, BB0);
+  DTU.applyUpdates({{DominatorTree::Delete, BB0, BB0}});
 
   // Delete edge bb0 -> bb3 and push the update twice to verify duplicate
   // entries are discarded.
@@ -558,7 +563,7 @@ TEST(DomTreeUpdater, LazyUpdateReplaceEntryBB) {
   // Insert the new edge between new_entry -> bb0. Without this the
   // recalculate() call below will not actually recalculate the DT as there
   // are no changes pending and no blocks deleted.
-  DTU.insertEdge(NewEntry, BB0);
+  DTU.applyUpdates({{DominatorTree::Insert, NewEntry, BB0}});
 
   // Changing the Entry BB requires a full recalculation.
   DTU.recalculate(*F);

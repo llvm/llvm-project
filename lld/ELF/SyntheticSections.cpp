@@ -1514,9 +1514,8 @@ void RelocationBaseSection::finalizeContents() {
   // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
   // relocations due to IFUNC (e.g. strcpy). sh_link will be set to 0 in that
   // case.
-  InputSection *SymTab = Config->Relocatable ? In.SymTab : In.DynSymTab;
-  if (SymTab && SymTab->getParent())
-    getParent()->Link = SymTab->getParent()->SectionIndex;
+  if (In.DynSymTab && In.DynSymTab->getParent())
+    getParent()->Link = In.DynSymTab->getParent()->SectionIndex;
   else
     getParent()->Link = 0;
 

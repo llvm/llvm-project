@@ -136,7 +136,8 @@ public:
   /// DEBUG mode. CAUTION! This function has to be called *after* making the
   /// update on the actual CFG. It is illegal to submit any update that has
   /// already been applied. }
-  void insertEdge(BasicBlock *From, BasicBlock *To);
+  LLVM_ATTRIBUTE_DEPRECATED(void insertEdge(BasicBlock *From, BasicBlock *To),
+                            "Use applyUpdates() instead.");
 
   /// \deprecated {Submit an edge insertion to all available trees.
   /// Under either Strategy, an invalid update will be discard silently.
@@ -146,7 +147,9 @@ public:
   /// want to discard an invalid update.
   /// CAUTION! It is illegal to submit any update that has already been
   /// submitted. }
-  void insertEdgeRelaxed(BasicBlock *From, BasicBlock *To);
+  LLVM_ATTRIBUTE_DEPRECATED(void insertEdgeRelaxed(BasicBlock *From,
+                                                   BasicBlock *To),
+                            "Use applyUpdates() instead.");
 
   /// \deprecated { Submit an edge deletion to all available trees. The Eager
   /// Strategy flushes this update immediately while the Lazy Strategy queues
@@ -155,7 +158,8 @@ public:
   /// CAUTION! This function has to be called *after* making the update on the
   /// actual CFG. It is illegal to submit any update that has already been
   /// submitted. }
-  void deleteEdge(BasicBlock *From, BasicBlock *To);
+  LLVM_ATTRIBUTE_DEPRECATED(void deleteEdge(BasicBlock *From, BasicBlock *To),
+                            "Use applyUpdates() instead.");
 
   /// \deprecated { Submit an edge deletion to all available trees.
   /// Under either Strategy, an invalid update will be discard silently.
@@ -165,7 +169,9 @@ public:
   /// want to discard an invalid update.
   /// CAUTION! It is illegal to submit any update that has already been
   /// submitted. }
-  void deleteEdgeRelaxed(BasicBlock *From, BasicBlock *To);
+  LLVM_ATTRIBUTE_DEPRECATED(void deleteEdgeRelaxed(BasicBlock *From,
+                                                   BasicBlock *To),
+                            "Use applyUpdates() instead.");
 
   /// Delete DelBB. DelBB will be removed from its Parent and
   /// erased from available trees if it exists and finally get deleted.
