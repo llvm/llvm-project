@@ -108,4 +108,19 @@ int main(int argc, char *argv[]) {
   status = amd_comgr_do_action(AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR,
                                dataAction, dataSetIn, dataSetPreproc);
   checkError(status, "amd_comgr_do_action");
+
+  status = amd_comgr_destroy_data_set(dataSetPreproc);
+  checkError(status, "amd_comgr_destroy_data_set");
+  status = amd_comgr_destroy_action_info(dataAction);
+  checkError(status, "amd_comgr_destroy_action_info");
+  status = amd_comgr_release_data(dataInclude3);
+  checkError(status, "amd_comgr_release_data");
+  status = amd_comgr_release_data(dataInclude2);
+  checkError(status, "amd_comgr_release_data");
+  status = amd_comgr_release_data(dataInclude1);
+  checkError(status, "amd_comgr_release_data");
+  status = amd_comgr_release_data(dataSource);
+  checkError(status, "amd_comgr_release_data");
+  status = amd_comgr_destroy_data_set(dataSetIn);
+  checkError(status, "amd_comgr_destroy_data_set");
 }

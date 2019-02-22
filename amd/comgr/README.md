@@ -58,6 +58,11 @@ Visual Studio:
     $ msbuild ALL_BUILD.vcxproj
     $ msbuild RUN_TESTS.vcxproj
 
+Optionally,
+[AddressSanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
+may be enabled during development via `-DENABLE_ASAN=On` during the `cmake`
+step.
+
 Depend on the Code Object Manager
 ---------------------------------
 

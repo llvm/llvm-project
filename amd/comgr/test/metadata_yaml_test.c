@@ -97,6 +97,9 @@ int main(int argc, char *argv[]) {
     int indent = 0;
     status = amd_comgr_iterate_map_metadata(meta, print_entry, (void *)&indent);
     checkError(status, "amd_comgr_iterate_map_metadata");
+
+    status = amd_comgr_destroy_metadata(meta);
+    checkError(status, "amd_comgr_destroy_metadata");
   }
 
   {

@@ -26,6 +26,16 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # FIXME: Remove when yaml-cpp is removed from the build.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
+if (ENABLE_ASAN)
+  set(ASAN_LINKER_FLAGS "-fsanitize=address")
+  set(ASAN_COMPILER_FLAGS "-fno-omit-frame-pointer ${ASAN_LINKER_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${ASAN_COMPILER_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_COMPILER_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${ASAN_LINKER_FLAGS}")
+  set(CMAKE_SHARED_LINKER_FLAGS
+    "${CMAKE_SHARED_LINKER_FLAGS} ${ASAN_LINKER_FLAGS}")
+endif()
+
 set(AMD_COMGR_PRIVATE_COMPILE_OPTIONS)
 set(AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS)
 set(AMD_COMGR_PUBLIC_LINKER_OPTIONS)
@@ -39,17 +49,20 @@ if (UNIX)
   if (CMAKE_BUILD_TYPE MATCHES Debug)
     list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS -g)
   endif()
-  if (ENABLE_ASAN)
-    list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS
-      -fno-omit-frame-pointer -fsanitize=address)
-  endif()
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS
     _GNU_SOURCE __STDC_LIMIT_MACROS __STDC_CONSTANT_MACROS)
   list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS -pthread)
   if (NOT APPLE)
     list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
-      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap"
-      -Wl,--no-undefined)
+      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap")
+    # When building a shared library with -fsanitize=address we can't be
+    # strict about undefined symbol references, as Clang won't include
+    # libasan in the link, see
+    # https://clang.llvm.org/docs/AddressSanitizer.html
+    if (NOT ENABLE_ASAN)
+      list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
+        -Wl,--no-undefined)
+    endif()
   endif()
 else()
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "/W0")
