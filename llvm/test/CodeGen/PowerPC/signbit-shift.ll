@@ -69,9 +69,8 @@ define i32 @sext_ifpos(i32 %x) {
 define i32 @add_sext_ifpos(i32 %x) {
 ; CHECK-LABEL: add_sext_ifpos:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    nor 3, 3, 3
-; CHECK-NEXT:    srawi 3, 3, 31
-; CHECK-NEXT:    addi 3, 3, 42
+; CHECK-NEXT:    srwi 3, 3, 31
+; CHECK-NEXT:    addi 3, 3, 41
 ; CHECK-NEXT:    blr
   %c = icmp sgt i32 %x, -1
   %e = sext i1 %c to i32
