@@ -1715,8 +1715,6 @@ Status Process::Resume() {
   return error;
 }
 
-static const char *g_resume_sync_name = "lldb.Process.ResumeSynchronous.hijack";
-
 Status Process::ResumeSynchronous(Stream *stream) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_STATE |
                                                   LIBLLDB_LOG_PROCESS));
@@ -1730,7 +1728,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   }
 
   ListenerSP listener_sp(
-      Listener::MakeListener(g_resume_sync_name));
+      Listener::MakeListener("lldb.Process.ResumeSynchronous.hijack"));
   HijackProcessEvents(listener_sp);
 
   Status error = PrivateResume();
@@ -1752,11 +1750,6 @@ Status Process::ResumeSynchronous(Stream *stream) {
   RestoreProcessEvents();
 
   return error;
-}
-
-bool Process::IsHijackedForSynchronousResume() {
-  const char *hijacker_name = GetHijackingListenerName();
-  return strcmp(hijacker_name, g_resume_sync_name) == 0;
 }
 
 StateType Process::GetPrivateState() { return m_private_state.GetValue(); }
@@ -4397,20 +4390,11 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
         // public resume.
         process_sp->PrivateResume();
       } else {
-        bool hijacked = 
-            process_sp->IsHijackedForEvent(eBroadcastBitStateChanged)
-            && !process_sp->IsHijackedForSynchronousResume();
-
-        if (!hijacked) {
-          // If we didn't restart, run the Stop Hooks here.
-          // Don't do that if state changed events aren't hooked up to the
-          // public (or SyncResume) broadcasters.  StopHooks are just for 
-          // real public stops.  They might also restart the target, 
-          // so watch for that.
-          process_sp->GetTarget().RunStopHooks();
-          if (process_sp->GetPrivateState() == eStateRunning)
-            SetRestarted(true);
-        }
+        // If we didn't restart, run the Stop Hooks here: They might also
+        // restart the target, so watch for that.
+        process_sp->GetTarget().RunStopHooks();
+        if (process_sp->GetPrivateState() == eStateRunning)
+          SetRestarted(true);
       }
     }
   }

@@ -2825,14 +2825,12 @@ void Target::RunStopHooks() {
 
   StopHookCollection::iterator pos, end = m_stop_hooks.end();
 
-  // If there aren't any active stop hooks, don't bother either.
-  // Also see if any of the active hooks want to auto-continue.
+  // If there aren't any active stop hooks, don't bother either:
   bool any_active_hooks = false;
-  bool auto_continue = false;
-  for (auto hook : m_stop_hooks) {
-    if (hook.second->IsActive()) {
+  for (pos = m_stop_hooks.begin(); pos != end; pos++) {
+    if ((*pos).second->IsActive()) {
       any_active_hooks = true;
-      auto_continue |= hook.second->GetAutoContinue();
+      break;
     }
   }
   if (!any_active_hooks)
@@ -2868,7 +2866,6 @@ void Target::RunStopHooks() {
   bool hooks_ran = false;
   bool print_hook_header = (m_stop_hooks.size() != 1);
   bool print_thread_header = (num_exe_ctx != 1);
-  bool did_restart = false;
 
   for (pos = m_stop_hooks.begin(); keep_going && pos != end; pos++) {
     // result.Clear();
@@ -2913,13 +2910,10 @@ void Target::RunStopHooks() {
         options.SetPrintResults(true);
         options.SetAddToHistory(false);
 
-        // Force Async:
-        bool old_async = GetDebugger().GetAsyncExecution();
-        GetDebugger().SetAsyncExecution(true);
         GetDebugger().GetCommandInterpreter().HandleCommands(
             cur_hook_sp->GetCommands(), &exc_ctx_with_reasons[i], options,
             result);
-        GetDebugger().SetAsyncExecution(old_async);
+
         // If the command started the target going again, we should bag out of
         // running the stop hooks.
         if ((result.GetStatus() == eReturnStatusSuccessContinuingNoResult) ||
@@ -2928,19 +2922,13 @@ void Target::RunStopHooks() {
           StopHookCollection::iterator tmp = pos;
           if (++tmp != end)
             result.AppendMessageWithFormat("\nAborting stop hooks, hook %" PRIu64
-                                           " set the program running.\n"
-                                           "  Consider using '-G true' to make "
-                                           "stop hooks auto-continue.\n",
+                                           " set the program running.\n",
                                            cur_hook_sp->GetID());
           keep_going = false;
-          did_restart = true;
         }
       }
     }
   }
-  // Finally, if auto-continue was requested, do it now:
-  if (!did_restart && auto_continue)
-    m_process_sp->PrivateResume();
 
   result.GetImmediateOutputStream()->Flush();
   result.GetImmediateErrorStream()->Flush();
@@ -3472,13 +3460,12 @@ void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
 //--------------------------------------------------------------
 Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
     : UserID(uid), m_target_sp(target_sp), m_commands(), m_specifier_sp(),
-      m_thread_spec_up() {}
+      m_thread_spec_up(), m_active(true) {}
 
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
       m_commands(rhs.m_commands), m_specifier_sp(rhs.m_specifier_sp),
-      m_thread_spec_up(), m_active(rhs.m_active),
-      m_auto_continue(rhs.m_auto_continue) {
+      m_thread_spec_up(), m_active(rhs.m_active) {
   if (rhs.m_thread_spec_up)
     m_thread_spec_up.reset(new ThreadSpec(*rhs.m_thread_spec_up));
 }
@@ -3504,9 +3491,6 @@ void Target::StopHook::GetDescription(Stream *s,
     s->Indent("State: enabled\n");
   else
     s->Indent("State: disabled\n");
-
-  if (m_auto_continue)
-    s->Indent("AutoContinue on\n");
 
   if (m_specifier_sp) {
     s->Indent();

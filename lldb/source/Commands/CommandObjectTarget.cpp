@@ -4570,7 +4570,7 @@ private:
 
 static constexpr OptionDefinition g_target_stop_hook_add_options[] = {
     // clang-format off
-  { LLDB_OPT_SET_ALL, false, "one-liner",    'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOneLiner,                                         "Add a command for the stop hook.  Can be specified more than once, and commands will be run in the order they appear." },
+  { LLDB_OPT_SET_ALL, false, "one-liner",    'o', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeOneLiner,                                         "Specify a one-line breakpoint command inline. Be sure to surround it with quotes." },
   { LLDB_OPT_SET_ALL, false, "shlib",        's', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eModuleCompletion, eArgTypeShlibName,    "Set the module within which the stop-hook is to be run." },
   { LLDB_OPT_SET_ALL, false, "thread-index", 'x', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeThreadIndex,                                      "The stop hook is run only for the thread whose index matches this argument." },
   { LLDB_OPT_SET_ALL, false, "thread-id",    't', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeThreadID,                                         "The stop hook is run only for the thread whose TID matches this argument." },
@@ -4581,7 +4581,6 @@ static constexpr OptionDefinition g_target_stop_hook_add_options[] = {
   { LLDB_OPT_SET_1,   false, "end-line",     'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeLineNum,                                          "Set the end of the line range for which the stop-hook is to be run." },
   { LLDB_OPT_SET_2,   false, "classname",    'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeClassName,                                        "Specify the class within which the stop-hook is to be run." },
   { LLDB_OPT_SET_3,   false, "name",         'n', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName, "Set the function name within which the stop hook will be run." },
-  { LLDB_OPT_SET_ALL, false, "auto-continue",'G', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,     "The breakpoint will auto-continue after running its commands." },
     // clang-format on
 };
 
@@ -4622,17 +4621,6 @@ public:
         m_sym_ctx_specified = true;
         break;
 
-      case 'G': {
-        bool value, success;
-        value = OptionArgParser::ToBoolean(option_arg, false, &success);
-        if (success) {
-          m_auto_continue = value;
-        } else
-          error.SetErrorStringWithFormat(
-              "invalid boolean value '%s' passed for -G option",
-              option_arg.str().c_str());
-      }
-      break;
       case 'l':
         if (option_arg.getAsInteger(0, m_line_start)) {
           error.SetErrorStringWithFormat("invalid start line number: \"%s\"",
@@ -4688,7 +4676,7 @@ public:
 
       case 'o':
         m_use_one_liner = true;
-        m_one_liner.push_back(option_arg);
+        m_one_liner = option_arg;
         break;
 
       default:
@@ -4717,7 +4705,6 @@ public:
 
       m_use_one_liner = false;
       m_one_liner.clear();
-      m_auto_continue = false;
     }
 
     std::string m_class_name;
@@ -4736,8 +4723,7 @@ public:
     bool m_thread_specified;
     // Instance variables to hold the values for one_liner options.
     bool m_use_one_liner;
-    std::vector<std::string> m_one_liner;
-    bool m_auto_continue;
+    std::string m_one_liner;
   };
 
   CommandObjectTargetStopHookAdd(CommandInterpreter &interpreter)
@@ -4862,13 +4848,10 @@ protected:
 
         new_hook_sp->SetThreadSpecifier(thread_spec);
       }
-      
-      new_hook_sp->SetAutoContinue(m_options.m_auto_continue);
       if (m_options.m_use_one_liner) {
-        // Use one-liners.
-        for (auto cmd : m_options.m_one_liner)
-          new_hook_sp->GetCommandPointer()->AppendString(
-            cmd.c_str());
+        // Use one-liner.
+        new_hook_sp->GetCommandPointer()->AppendString(
+            m_options.m_one_liner.c_str());
         result.AppendMessageWithFormat("Stop hook #%" PRIu64 " added.\n",
                                        new_hook_sp->GetID());
       } else {

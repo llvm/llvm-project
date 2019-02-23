@@ -16,7 +16,6 @@ std::default_random_engine g_random_engine{std::random_device{}()};
 std::uniform_int_distribution<> g_distribution{0, 3000};
 
 uint32_t g_val = 0;
-uint32_t lldb_val = 0;
 
 uint32_t
 access_pool (bool flag = false)
@@ -63,8 +62,7 @@ thread_func (uint32_t thread_index)
 int main (int argc, char const *argv[])
 {
     std::thread threads[3];
-    // Break here to set up the stop hook
-    printf("Stop hooks engaged.\n");
+
     // Create 3 threads
     for (auto &thread : threads)
         thread = std::thread{thread_func, std::distance(threads, &thread)};
@@ -73,7 +71,5 @@ int main (int argc, char const *argv[])
     for (auto &thread : threads)
         thread.join();
 
-    // print lldb_val so we can check it here.
-    printf ("lldb_val was set to: %d.\n", lldb_val);
     return 0;
 }

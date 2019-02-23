@@ -1266,10 +1266,6 @@ public:
 
     void SetIsActive(bool is_active) { m_active = is_active; }
 
-    void SetAutoContinue(bool auto_continue) {m_auto_continue = auto_continue;}
-
-    bool GetAutoContinue() const { return m_auto_continue; }
-
     void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
 
   private:
@@ -1277,8 +1273,7 @@ public:
     StringList m_commands;
     lldb::SymbolContextSpecifierSP m_specifier_sp;
     std::unique_ptr<ThreadSpec> m_thread_spec_up;
-    bool m_active = true;
-    bool m_auto_continue = false;
+    bool m_active;
 
     // Use CreateStopHook to make a new empty stop hook. The GetCommandPointer
     // and fill it with commands, and SetSpecifier to set the specifier shared

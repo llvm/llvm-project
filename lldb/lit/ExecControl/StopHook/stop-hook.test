@@ -11,7 +11,6 @@
 # string, so the test "passes" despite the fact that the commands failed
 # llvm.org/pr40119
 # UNSUPPORTED: system-windows
-# XFAIL: system-linux
 
 break set -f stop-hook.c -p "// Set breakpoint here to test target stop-hook"
 break set -f stop-hook.c -p "// Another breakpoint which is outside of the stop-hook range"
@@ -47,7 +46,9 @@ target stop-hook list
 run
 # Stopping inside of the stop hook range
 # CHECK: (lldb) run
+# CHECK-NEXT: Process {{.*}} launched:
 # CHECK-NEXT: (void *) $0 = 0x
+# CHECK-NEXT: Process {{.*}} stopped
 
 thread step-over
 # Stepping inside of the stop hook range

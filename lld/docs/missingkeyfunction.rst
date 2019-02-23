@@ -4,7 +4,8 @@ Missing Key Function
 If your build failed with a linker error something like this::
 
   foo.cc:28: error: undefined reference to 'vtable for C'
-  the vtable symbol may be undefined because the class is missing its key function (see https://lld.llvm.org/missingkeyfunction)
+  the vtable symbol may be undefined because the class is missing its key function
+  (see https://lld.llvm.org/missingkeyfunction)
 
 it's likely that your class C has a key function (defined by the ABI as the first
 non-pure, non-inline, virtual function), but you haven't actually defined it.
