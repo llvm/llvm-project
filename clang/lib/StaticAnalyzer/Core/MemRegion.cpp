@@ -845,6 +845,7 @@ getStackOrCaptureRegionForDeclContext(const LocationContext *LC,
 
 const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const LocationContext *LC) {
+  D = D->getCanonicalDecl();
   const MemRegion *sReg = nullptr;
 
   if (D->hasGlobalStorage() && !D->isStaticLocal()) {
@@ -931,6 +932,7 @@ const VarRegion* MemRegionManager::getVarRegion(const VarDecl *D,
 
 const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
                                                 const MemRegion *superR) {
+  D = D->getCanonicalDecl();
   return getSubRegion<VarRegion>(D, superR);
 }
 
@@ -1008,6 +1010,7 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
 
 const FunctionCodeRegion *
 MemRegionManager::getFunctionCodeRegion(const NamedDecl *FD) {
+  // To think: should we canonicalize the declaration here?
   return getSubRegion<FunctionCodeRegion>(FD, getCodeRegion());
 }
 

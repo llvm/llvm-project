@@ -774,9 +774,6 @@ class SymbolicRegion : public SubRegion {
     assert(s->getType()->isAnyPointerType() ||
            s->getType()->isReferenceType() ||
            s->getType()->isBlockPointerType());
-
-    // populateWorklistFromSymbol() relies on this assertion, and needs to be
-    // updated if more cases are introduced.
     assert(isa<UnknownSpaceRegion>(sreg) || isa<HeapSpaceRegion>(sreg));
   }
 
@@ -912,7 +909,7 @@ protected:
   DeclRegion(const ValueDecl *d, const MemRegion *sReg, Kind k)
       : TypedValueRegion(sReg, k), D(d) {
     assert(classof(this));
-    assert(d);
+    assert(d && d->isCanonicalDecl());
   }
 
   static void ProfileRegion(llvm::FoldingSetNodeID& ID, const Decl *D,

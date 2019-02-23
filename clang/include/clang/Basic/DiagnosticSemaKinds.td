@@ -8775,6 +8775,11 @@ def err_opencl_builtin_expected_type : Error<
 def ext_opencl_ext_vector_type_rgba_selector: ExtWarn<
   "vector component name '%0' is an OpenCL version 2.2 feature">,
   InGroup<OpenCLUnsupportedRGBA>;
+
+// MIG routine annotations.
+def warn_mig_server_routine_does_not_return_kern_return_t : Warning<
+  "'mig_server_routine' attribute only applies to routines that return a kern_return_t">,
+  InGroup<IgnoredAttributes>;
 } // end of sema category
 
 let CategoryName = "API Notes Issue" in {

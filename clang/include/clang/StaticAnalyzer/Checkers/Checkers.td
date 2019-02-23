@@ -509,6 +509,7 @@ def ValistBase : Checker<"ValistBase">,
 
 def UninitializedChecker : Checker<"Uninitialized">,
   HelpText<"Check for usages of uninitialized (or already released) va_lists.">,
+  Dependencies<[ValistBase]>,
   Documentation<NotDocumented>;
 
 def UnterminatedChecker : Checker<"Unterminated">,
@@ -705,6 +706,11 @@ def MacOSKeychainAPIChecker : Checker<"SecKeychainAPI">,
   HelpText<"Check for proper uses of Secure Keychain APIs">,
   Documentation<HasDocumentation>;
 
+def MIGChecker : Checker<"MIG">,
+  HelpText<"Find violations of the Mach Interface Generator "
+           "calling convention">,
+  Documentation<NotDocumented>;
+
 def ObjCPropertyChecker : Checker<"ObjCProperty">,
   HelpText<"Check for proper uses of Objective-C properties">,
   Documentation<NotDocumented>;
@@ -812,6 +818,14 @@ def GCDAntipattern : Checker<"GCDAntipattern">,
            "Dispatch">,
   Documentation<NotDocumented>;
 } // end "optin.performance"
+
+let ParentPackage = OSXOptIn in {
+
+def OSObjectCStyleCast : Checker<"OSObjectCStyleCast">,
+  HelpText<"Checker for C-style casts of OSObjects">,
+  Documentation<NotDocumented>;
+
+} // end "optin.osx"
 
 let ParentPackage = CocoaAlpha in {
 

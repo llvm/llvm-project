@@ -109,3 +109,18 @@ void recordinit()
     S3 s3;
     *(s3.p - 1) = 0; // expected-warning{{Dereference of null pointer}}
 }
+
+extern int ext_int;
+
+void update_original_declaration() {
+  ext_int = 2;
+}
+
+extern int ext_int;
+
+int test_redeclaration() {
+  ext_int = 1;
+  update_original_declaration();
+  int int_int = 3 / (ext_int - 1); // no-warning
+  return int_int / (ext_int - 2); // expected-warning{{Division by zero}}
+}
