@@ -4331,12 +4331,11 @@ define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mem_mask6(<8 x doub
 define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mem_mask7(<8 x double>* %vp, <4 x double> %vec2, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_8xdouble_to_4xdouble_perm_mem_mask7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd (%rdi), %ymm2
-; CHECK-NEXT:    vmovapd {{.*#+}} ymm3 = [0,5,2,5]
-; CHECK-NEXT:    vpermi2pd 32(%rdi), %ymm2, %ymm3
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpeqpd %ymm2, %ymm1, %k1
-; CHECK-NEXT:    vmovapd %ymm3, %ymm0 {%k1}
+; CHECK-NEXT:    vbroadcastsd 40(%rdi), %ymm2
+; CHECK-NEXT:    vblendpd {{.*#+}} ymm2 = mem[0],ymm2[1],mem[2],ymm2[3]
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %ymm3, %ymm1, %k1
+; CHECK-NEXT:    vmovapd %ymm2, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 0, i32 5, i32 2, i32 5>
@@ -4348,12 +4347,11 @@ define <4 x double> @test_masked_8xdouble_to_4xdouble_perm_mem_mask7(<8 x double
 define <4 x double> @test_masked_z_8xdouble_to_4xdouble_perm_mem_mask7(<8 x double>* %vp, <4 x double> %mask) {
 ; CHECK-LABEL: test_masked_z_8xdouble_to_4xdouble_perm_mem_mask7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovapd (%rdi), %ymm2
-; CHECK-NEXT:    vmovapd {{.*#+}} ymm1 = [0,5,2,5]
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqpd %ymm3, %ymm0, %k1
-; CHECK-NEXT:    vpermi2pd 32(%rdi), %ymm2, %ymm1 {%k1} {z}
-; CHECK-NEXT:    vmovapd %ymm1, %ymm0
+; CHECK-NEXT:    vbroadcastsd 40(%rdi), %ymm1
+; CHECK-NEXT:    vblendpd {{.*#+}} ymm1 = mem[0],ymm1[1],mem[2],ymm1[3]
+; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vcmpeqpd %ymm2, %ymm0, %k1
+; CHECK-NEXT:    vmovapd %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec = load <8 x double>, <8 x double>* %vp
   %shuf = shufflevector <8 x double> %vec, <8 x double> undef, <4 x i32> <i32 0, i32 5, i32 2, i32 5>
