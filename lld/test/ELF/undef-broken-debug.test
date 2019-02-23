@@ -62,6 +62,13 @@ Sections:
     Content:         '0111001017000000'
 
 Symbols:
+  Local:
+    - Name:            .debug_abbrev
+      Type:            STT_SECTION
+      Section:         .debug_abbrev
+    - Name:            .debug_line
+      Type:            STT_SECTION
+      Section:         .debug_line
   Global:
     - Name:            _start
       Section:         .text

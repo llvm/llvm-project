@@ -1117,7 +1117,18 @@ void Writer::assignAddresses() {
       addBaserels();
     uint64_t RawSize = 0, VirtualSize = 0;
     Sec->Header.VirtualAddress = RVA;
+
+    // If /FUNCTIONPADMIN is used, functions are padded in order to create a
+    // hotpatchable image.
+    const bool IsCodeSection =
+        (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE) &&
+        (Sec->Header.Characteristics & IMAGE_SCN_MEM_READ) &&
+        (Sec->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE);
+    uint32_t Padding = IsCodeSection ? Config->FunctionPadMin : 0;
+
     for (Chunk *C : Sec->Chunks) {
+      if (Padding && C->isHotPatchable())
+        VirtualSize += Padding;
       VirtualSize = alignTo(VirtualSize, C->Alignment);
       C->setRVA(RVA + VirtualSize);
       C->OutputSectionOff = VirtualSize;

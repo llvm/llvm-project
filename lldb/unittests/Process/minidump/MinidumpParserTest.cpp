@@ -21,6 +21,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 // C includes
@@ -41,13 +42,11 @@ public:
     std::string filename = GetInputFilePath(minidump_filename);
     auto BufferPtr = FileSystem::Instance().CreateDataBuffer(filename, -1, 0);
     ASSERT_NE(BufferPtr, nullptr);
-    llvm::Optional<MinidumpParser> optional_parser =
+    llvm::Expected<MinidumpParser> expected_parser =
         MinidumpParser::Create(BufferPtr);
-    ASSERT_TRUE(optional_parser.hasValue());
-    parser.reset(new MinidumpParser(optional_parser.getValue()));
+    ASSERT_THAT_EXPECTED(expected_parser, llvm::Succeeded());
+    parser = std::move(*expected_parser);
     ASSERT_GT(parser->GetData().size(), 0UL);
-    auto result = parser->Initialize();
-    ASSERT_TRUE(result.Success()) << result.AsCString();
   }
 
   void InvalidMinidump(const char *minidump_filename, uint64_t load_size) {
@@ -56,16 +55,10 @@ public:
         FileSystem::Instance().CreateDataBuffer(filename, load_size, 0);
     ASSERT_NE(BufferPtr, nullptr);
 
-    llvm::Optional<MinidumpParser> optional_parser =
-        MinidumpParser::Create(BufferPtr);
-    ASSERT_TRUE(optional_parser.hasValue());
-    parser.reset(new MinidumpParser(optional_parser.getValue()));
-    ASSERT_GT(parser->GetData().size(), 0UL);
-    auto result = parser->Initialize();
-    ASSERT_TRUE(result.Fail());
+    EXPECT_THAT_EXPECTED(MinidumpParser::Create(BufferPtr), llvm::Failed());
   }
 
-  std::unique_ptr<MinidumpParser> parser;
+  llvm::Optional<MinidumpParser> parser;
 };
 
 TEST_F(MinidumpParserTest, GetThreadsAndGetThreadContext) {
@@ -246,10 +239,9 @@ TEST_F(MinidumpParserTest, GetExceptionStream) {
   ASSERT_EQ(11UL, exception_stream->exception_record.exception_code);
 }
 
-void check_mem_range_exists(std::unique_ptr<MinidumpParser> &parser,
-                            const uint64_t range_start,
+void check_mem_range_exists(MinidumpParser &parser, const uint64_t range_start,
                             const uint64_t range_size) {
-  llvm::Optional<minidump::Range> range = parser->FindMemoryRange(range_start);
+  llvm::Optional<minidump::Range> range = parser.FindMemoryRange(range_start);
   ASSERT_TRUE(range.hasValue()) << "There is no range containing this address";
   EXPECT_EQ(range_start, range->start);
   EXPECT_EQ(range_start + range_size, range->start + range->range_ref.size());
@@ -263,10 +255,10 @@ TEST_F(MinidumpParserTest, FindMemoryRange) {
   EXPECT_FALSE(parser->FindMemoryRange(0x00).hasValue());
   EXPECT_FALSE(parser->FindMemoryRange(0x2a).hasValue());
 
-  check_mem_range_exists(parser, 0x401d46, 256);
+  check_mem_range_exists(*parser, 0x401d46, 256);
   EXPECT_FALSE(parser->FindMemoryRange(0x401d46 + 256).hasValue());
 
-  check_mem_range_exists(parser, 0x7ffceb34a000, 12288);
+  check_mem_range_exists(*parser, 0x7ffceb34a000, 12288);
   EXPECT_FALSE(parser->FindMemoryRange(0x7ffceb34a000 + 12288).hasValue());
 }
 
@@ -288,22 +280,21 @@ TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
   // There are a lot of ranges in the file, just testing with some of them
   EXPECT_FALSE(parser->FindMemoryRange(0x00).hasValue());
   EXPECT_FALSE(parser->FindMemoryRange(0x2a).hasValue());
-  check_mem_range_exists(parser, 0x10000, 65536); // first range
-  check_mem_range_exists(parser, 0x40000, 4096);
+  check_mem_range_exists(*parser, 0x10000, 65536); // first range
+  check_mem_range_exists(*parser, 0x40000, 4096);
   EXPECT_FALSE(parser->FindMemoryRange(0x40000 + 4096).hasValue());
-  check_mem_range_exists(parser, 0x77c12000, 8192);
-  check_mem_range_exists(parser, 0x7ffe0000, 4096); // last range
+  check_mem_range_exists(*parser, 0x77c12000, 8192);
+  check_mem_range_exists(*parser, 0x7ffe0000, 4096); // last range
   EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).hasValue());
 }
 
-void check_region(std::unique_ptr<MinidumpParser> &parser,
-                  lldb::addr_t addr, lldb::addr_t start, lldb::addr_t end,
-                  MemoryRegionInfo::OptionalBool read,
+void check_region(MinidumpParser &parser, lldb::addr_t addr, lldb::addr_t start,
+                  lldb::addr_t end, MemoryRegionInfo::OptionalBool read,
                   MemoryRegionInfo::OptionalBool write,
                   MemoryRegionInfo::OptionalBool exec,
                   MemoryRegionInfo::OptionalBool mapped,
                   ConstString name = ConstString()) {
-  auto range_info = parser->GetMemoryRegionInfo(addr);
+  auto range_info = parser.GetMemoryRegionInfo(addr);
   EXPECT_EQ(start, range_info.GetRange().GetRangeBase());
   EXPECT_EQ(end, range_info.GetRange().GetRangeEnd());
   EXPECT_EQ(read, range_info.GetReadable());
@@ -314,8 +305,7 @@ void check_region(std::unique_ptr<MinidumpParser> &parser,
 }
 
 // Same as above function where addr == start
-void check_region(std::unique_ptr<MinidumpParser> &parser,
-                  lldb::addr_t start, lldb::addr_t end,
+void check_region(MinidumpParser &parser, lldb::addr_t start, lldb::addr_t end,
                   MemoryRegionInfo::OptionalBool read,
                   MemoryRegionInfo::OptionalBool write,
                   MemoryRegionInfo::OptionalBool exec,
@@ -332,21 +322,21 @@ constexpr auto unknown = MemoryRegionInfo::eDontKnow;
 TEST_F(MinidumpParserTest, GetMemoryRegionInfo) {
   SetUpData("fizzbuzz_wow64.dmp");
 
-  check_region(parser, 0x00000000, 0x00010000, no, no, no, no);
-  check_region(parser, 0x00010000, 0x00020000, yes, yes, no, yes);
-  check_region(parser, 0x00020000, 0x00030000, yes, yes, no, yes);
-  check_region(parser, 0x00030000, 0x00031000, yes, yes, no, yes);
-  check_region(parser, 0x00031000, 0x00040000, no, no, no, no);
-  check_region(parser, 0x00040000, 0x00041000, yes, no, no, yes);
+  check_region(*parser, 0x00000000, 0x00010000, no, no, no, no);
+  check_region(*parser, 0x00010000, 0x00020000, yes, yes, no, yes);
+  check_region(*parser, 0x00020000, 0x00030000, yes, yes, no, yes);
+  check_region(*parser, 0x00030000, 0x00031000, yes, yes, no, yes);
+  check_region(*parser, 0x00031000, 0x00040000, no, no, no, no);
+  check_region(*parser, 0x00040000, 0x00041000, yes, no, no, yes);
 
   // Check addresses contained inside ranges
-  check_region(parser, 0x00000001, 0x00000000, 0x00010000, no, no, no, no);
-  check_region(parser, 0x0000ffff, 0x00000000, 0x00010000, no, no, no, no);
-  check_region(parser, 0x00010001, 0x00010000, 0x00020000, yes, yes, no, yes);
-  check_region(parser, 0x0001ffff, 0x00010000, 0x00020000, yes, yes, no, yes);
+  check_region(*parser, 0x00000001, 0x00000000, 0x00010000, no, no, no, no);
+  check_region(*parser, 0x0000ffff, 0x00000000, 0x00010000, no, no, no, no);
+  check_region(*parser, 0x00010001, 0x00010000, 0x00020000, yes, yes, no, yes);
+  check_region(*parser, 0x0001ffff, 0x00010000, 0x00020000, yes, yes, no, yes);
 
   // Test that an address after the last entry maps to rest of the memory space
-  check_region(parser, 0x7fff0000, 0x7fff0000, UINT64_MAX, no, no, no, no);
+  check_region(*parser, 0x7fff0000, 0x7fff0000, UINT64_MAX, no, no, no, no);
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemoryList) {
@@ -356,11 +346,11 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemoryList) {
 
   // Test addres before the first entry comes back with nothing mapped up
   // to first valid region info
-  check_region(parser, 0x00000000, 0x00001000, no, no, no, no);
-  check_region(parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
-  check_region(parser, 0x00001010, 0x00002000, no, no, no, no);
-  check_region(parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
-  check_region(parser, 0x00002020, UINT64_MAX, no, no, no, no);
+  check_region(*parser, 0x00000000, 0x00001000, no, no, no, no);
+  check_region(*parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
+  check_region(*parser, 0x00001010, 0x00002000, no, no, no, no);
+  check_region(*parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
+  check_region(*parser, 0x00002020, UINT64_MAX, no, no, no, no);
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
@@ -370,11 +360,11 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
 
   // Test addres before the first entry comes back with nothing mapped up
   // to first valid region info
-  check_region(parser, 0x00000000, 0x00001000, no, no, no, no);
-  check_region(parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
-  check_region(parser, 0x00001010, 0x00002000, no, no, no, no);
-  check_region(parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
-  check_region(parser, 0x00002020, UINT64_MAX, no, no, no, no);
+  check_region(*parser, 0x00000000, 0x00001000, no, no, no, no);
+  check_region(*parser, 0x00001000, 0x00001010, yes, unknown, unknown, yes);
+  check_region(*parser, 0x00001010, 0x00002000, no, no, no, no);
+  check_region(*parser, 0x00002000, 0x00002020, yes, unknown, unknown, yes);
+  check_region(*parser, 0x00002020, UINT64_MAX, no, no, no, no);
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
@@ -389,27 +379,27 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMaps) {
   ConstString c("/system/lib/liblog.so");
   ConstString d("/system/lib/libc.so");
   ConstString n;
-  check_region(parser, 0x00000000, 0x400d9000, no , no , no , no , n);
-  check_region(parser, 0x400d9000, 0x400db000, yes, no , yes, yes, a);
-  check_region(parser, 0x400db000, 0x400dc000, yes, no , no , yes, a);
-  check_region(parser, 0x400dc000, 0x400dd000, yes, yes, no , yes, n);
-  check_region(parser, 0x400dd000, 0x400ec000, yes, no , yes, yes, b);
-  check_region(parser, 0x400ec000, 0x400ed000, yes, no , no , yes, n);
-  check_region(parser, 0x400ed000, 0x400ee000, yes, no , no , yes, b);
-  check_region(parser, 0x400ee000, 0x400ef000, yes, yes, no , yes, b);
-  check_region(parser, 0x400ef000, 0x400fb000, yes, yes, no , yes, n);
-  check_region(parser, 0x400fb000, 0x400fc000, yes, no , yes, yes, c);
-  check_region(parser, 0x400fc000, 0x400fd000, yes, yes, yes, yes, c);
-  check_region(parser, 0x400fd000, 0x400ff000, yes, no , yes, yes, c);
-  check_region(parser, 0x400ff000, 0x40100000, yes, no , no , yes, c);
-  check_region(parser, 0x40100000, 0x40101000, yes, yes, no , yes, c);
-  check_region(parser, 0x40101000, 0x40122000, yes, no , yes, yes, d);
-  check_region(parser, 0x40122000, 0x40123000, yes, yes, yes, yes, d);
-  check_region(parser, 0x40123000, 0x40167000, yes, no , yes, yes, d);
-  check_region(parser, 0x40167000, 0x40169000, yes, no , no , yes, d);
-  check_region(parser, 0x40169000, 0x4016b000, yes, yes, no , yes, d);
-  check_region(parser, 0x4016b000, 0x40176000, yes, yes, no , yes, n);
-  check_region(parser, 0x40176000, UINT64_MAX, no , no , no , no , n);
+  check_region(*parser, 0x00000000, 0x400d9000, no, no, no, no, n);
+  check_region(*parser, 0x400d9000, 0x400db000, yes, no, yes, yes, a);
+  check_region(*parser, 0x400db000, 0x400dc000, yes, no, no, yes, a);
+  check_region(*parser, 0x400dc000, 0x400dd000, yes, yes, no, yes, n);
+  check_region(*parser, 0x400dd000, 0x400ec000, yes, no, yes, yes, b);
+  check_region(*parser, 0x400ec000, 0x400ed000, yes, no, no, yes, n);
+  check_region(*parser, 0x400ed000, 0x400ee000, yes, no, no, yes, b);
+  check_region(*parser, 0x400ee000, 0x400ef000, yes, yes, no, yes, b);
+  check_region(*parser, 0x400ef000, 0x400fb000, yes, yes, no, yes, n);
+  check_region(*parser, 0x400fb000, 0x400fc000, yes, no, yes, yes, c);
+  check_region(*parser, 0x400fc000, 0x400fd000, yes, yes, yes, yes, c);
+  check_region(*parser, 0x400fd000, 0x400ff000, yes, no, yes, yes, c);
+  check_region(*parser, 0x400ff000, 0x40100000, yes, no, no, yes, c);
+  check_region(*parser, 0x40100000, 0x40101000, yes, yes, no, yes, c);
+  check_region(*parser, 0x40101000, 0x40122000, yes, no, yes, yes, d);
+  check_region(*parser, 0x40122000, 0x40123000, yes, yes, yes, yes, d);
+  check_region(*parser, 0x40123000, 0x40167000, yes, no, yes, yes, d);
+  check_region(*parser, 0x40167000, 0x40169000, yes, no, no, yes, d);
+  check_region(*parser, 0x40169000, 0x4016b000, yes, yes, no, yes, d);
+  check_region(*parser, 0x4016b000, 0x40176000, yes, yes, no, yes, n);
+  check_region(*parser, 0x40176000, UINT64_MAX, no, no, no, no, n);
 }
 
 // Windows Minidump tests
