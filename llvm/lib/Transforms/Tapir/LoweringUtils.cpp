@@ -345,7 +345,7 @@ void llvm::getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
       if (isSuccessorOfDetachedRethrow(B))
         continue;
 
-      DEBUG(dbgs() << "Adding task block " << B->getName() << "\n");
+      LLVM_DEBUG(dbgs() << "Adding task block " << B->getName() << "\n");
       TaskBlocks.push_back(B);
 
       // Record the blocks terminated by reattaches and detached rethrows.
@@ -394,6 +394,7 @@ Function *llvm::createHelperForTask(
   // Use a fast calling convention for the helper.
   Helper->setCallingConv(CallingConv::Fast);
   // Inlining the helper function is not legal.
+  Helper->removeFnAttr(Attribute::AlwaysInline);
   Helper->addFnAttr(Attribute::NoInline);
   // Note that the address of the helper is unimportant.
   Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
