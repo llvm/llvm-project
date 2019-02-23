@@ -151,6 +151,12 @@ void elf::printHelp() {
   outs() << Config->ProgName << ": supported targets: elf\n";
 }
 
+static std::string rewritePath(StringRef S) {
+  if (fs::exists(S))
+    return relativeToRoot(S);
+  return S;
+}
+
 // Reconstructs command line arguments so that so that you can re-run
 // the same command with the same inputs. This is for --reproduce.
 std::string elf::createResponseFile(const opt::InputArgList &Args) {

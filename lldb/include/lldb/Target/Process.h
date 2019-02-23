@@ -2540,6 +2540,8 @@ public:
   ///
   //------------------------------------------------------------------
   void RestoreProcessEvents();
+  
+  bool IsHijackedForSynchronousResume();
 
   const lldb::ABISP &GetABI();
 
