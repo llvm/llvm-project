@@ -45,7 +45,7 @@
 #endif
 
 
-#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
+#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201703L
     #ifndef FLT_DECIMAL_DIG
         #error "Mandatory macro FLT_DECIMAL_DIG is missing."
     #elif   FLT_DECIMAL_DIG < 6
@@ -215,7 +215,7 @@ _Static_assert(FLT_MANT_DIG == __FLT_MANT_DIG__, "");
 _Static_assert(DBL_MANT_DIG == __DBL_MANT_DIG__, "");
 _Static_assert(LDBL_MANT_DIG == __LDBL_MANT_DIG__, "");
 
-#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201103L
+#if __STDC_VERSION__ >= 201112L || !defined(__STRICT_ANSI__) || __cplusplus >= 201703L
 _Static_assert(FLT_DECIMAL_DIG == __FLT_DECIMAL_DIG__, "");
 _Static_assert(DBL_DECIMAL_DIG == __DBL_DECIMAL_DIG__, "");
 _Static_assert(LDBL_DECIMAL_DIG == __LDBL_DECIMAL_DIG__, "");

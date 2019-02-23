@@ -6847,7 +6847,11 @@ void OMPClauseWriter::VisitOMPToClause(OMPToClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddNestedNameSpecifierLoc(C->getMapperQualifierLoc());
+  Record.AddDeclarationNameInfo(C->getMapperIdInfo());
   for (auto *E : C->varlists())
+    Record.AddStmt(E);
+  for (auto *E : C->mapperlists())
     Record.AddStmt(E);
   for (auto *D : C->all_decls())
     Record.AddDeclRef(D);

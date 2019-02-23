@@ -1175,7 +1175,7 @@ def err_omp_declare_target_unexpected_clause: Error<
 def err_omp_expected_clause: Error<
   "expected at least one clause on '#pragma omp %0' directive">;
 def err_omp_mapper_illegal_identifier : Error<
-  "illegal identifier on 'omp declare mapper' directive">;
+  "illegal OpenMP user-defined mapper identifier">;
 def err_omp_mapper_expected_declarator : Error<
   "expected declarator on 'omp declare mapper' directive">;
 

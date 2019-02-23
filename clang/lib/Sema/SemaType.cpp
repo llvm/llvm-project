@@ -2236,15 +2236,13 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   }
 
   if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
-    if (getLangOpts().CUDA) {
-      // CUDA device code doesn't support VLAs.
-      CUDADiagIfDeviceCode(Loc, diag::err_cuda_vla) << CurrentCUDATarget();
-    } else if (!getLangOpts().OpenMP ||
-               shouldDiagnoseTargetSupportFromOpenMP()) {
-      // Some targets don't support VLAs.
-      Diag(Loc, diag::err_vla_unsupported);
-      return QualType();
-    }
+    // CUDA device code and some other targets don't support VLAs.
+    targetDiag(Loc, (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                        ? diag::err_cuda_vla
+                        : diag::err_vla_unsupported)
+        << ((getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
+                ? CurrentCUDATarget()
+                : CFT_InvalidTarget);
   }
 
   // If this is not C99, extwarn about VLA's and C99 array size modifiers.

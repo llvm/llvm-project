@@ -9537,8 +9537,11 @@ public:
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation MLoc,
       SourceLocation KindLoc, SourceLocation EndLoc);
   /// Called on well-formed 'to' clause.
-  OMPClause *ActOnOpenMPToClause(ArrayRef<Expr *> VarList,
-                                 const OMPVarListLocTy &Locs);
+  OMPClause *
+  ActOnOpenMPToClause(ArrayRef<Expr *> VarList, CXXScopeSpec &MapperIdScopeSpec,
+                      DeclarationNameInfo &MapperId,
+                      const OMPVarListLocTy &Locs,
+                      ArrayRef<Expr *> UnresolvedMappers = llvm::None);
   /// Called on well-formed 'from' clause.
   OMPClause *ActOnOpenMPFromClause(ArrayRef<Expr *> VarList,
                                    const OMPVarListLocTy &Locs);
@@ -10255,6 +10258,8 @@ public:
 
     DeviceDiagBuilder(Kind K, SourceLocation Loc, unsigned DiagID,
                       FunctionDecl *Fn, Sema &S);
+    DeviceDiagBuilder(DeviceDiagBuilder &&D);
+    DeviceDiagBuilder(const DeviceDiagBuilder &) = default;
     ~DeviceDiagBuilder();
 
     /// Convertible to bool: True if we immediately emitted an error, false if
@@ -10274,8 +10279,9 @@ public:
                                                const T &Value) {
       if (Diag.ImmediateDiag.hasValue())
         *Diag.ImmediateDiag << Value;
-      else if (Diag.PartialDiag.hasValue())
-        *Diag.PartialDiag << Value;
+      else if (Diag.PartialDiagId.hasValue())
+        Diag.S.DeviceDeferredDiags[Diag.Fn][*Diag.PartialDiagId].second
+            << Value;
       return Diag;
     }
 
@@ -10289,7 +10295,7 @@ public:
     // Invariant: At most one of these Optionals has a value.
     // FIXME: Switch these to a Variant once that exists.
     llvm::Optional<SemaDiagnosticBuilder> ImmediateDiag;
-    llvm::Optional<PartialDiagnostic> PartialDiag;
+    llvm::Optional<unsigned> PartialDiagId;
   };
 
   /// Indicate that this function (and thus everything it transtively calls)

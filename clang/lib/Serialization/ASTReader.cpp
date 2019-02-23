@@ -12382,6 +12382,10 @@ void OMPClauseReader::VisitOMPDefaultmapClause(OMPDefaultmapClause *C) {
 
 void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
+  C->setMapperQualifierLoc(Record.readNestedNameSpecifierLoc());
+  DeclarationNameInfo DNI;
+  Record.readDeclarationNameInfo(DNI);
+  C->setMapperIdInfo(DNI);
   auto NumVars = C->varlist_size();
   auto UniqueDecls = C->getUniqueDeclarationsNum();
   auto TotalLists = C->getTotalComponentListNum();
@@ -12392,6 +12396,12 @@ void OMPClauseReader::VisitOMPToClause(OMPToClause *C) {
   for (unsigned i = 0; i != NumVars; ++i)
     Vars.push_back(Record.readSubExpr());
   C->setVarRefs(Vars);
+
+  SmallVector<Expr *, 16> UDMappers;
+  UDMappers.reserve(NumVars);
+  for (unsigned I = 0; I < NumVars; ++I)
+    UDMappers.push_back(Record.readSubExpr());
+  C->setUDMapperRefs(UDMappers);
 
   SmallVector<ValueDecl *, 16> Decls;
   Decls.reserve(UniqueDecls);
