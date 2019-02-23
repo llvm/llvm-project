@@ -1354,11 +1354,18 @@ static bool LocalBaseObj(Value *Addr, const DataLayout &DL, LoopInfo *LI,
 
   // If any base object is not an alloca or allocation function, then it's not
   // local.
-  for (const Value *BaseObj : BaseObjs)
-    if (!isa<AllocaInst>(BaseObj) && !isAllocationFn(BaseObj, TLI)) {
-      LLVM_DEBUG(dbgs() << "Non-local base object " << *BaseObj << "\n");
-      return false;
-    }
+  for (const Value *BaseObj : BaseObjs) {
+    // if (!isa<AllocaInst>(BaseObj) && !isAllocationFn(BaseObj, TLI)) {
+    if (isa<AllocaInst>(BaseObj) || isNoAliasCall(BaseObj))
+      continue;
+
+    if (const Argument *A = dyn_cast<Argument>(BaseObj))
+      if (A->hasByValAttr() || A->hasNoAliasAttr())
+        continue;
+
+    LLVM_DEBUG(dbgs() << "Non-local base object " << *BaseObj << "\n");
+    return false;
+  }
 
   return true;
 }
@@ -1442,9 +1449,6 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
     // For this analysis, we consider all global values to be captured.
     return true;
 
-  if (PointerMayBeCaptured(Addr, false, false))
-    return true;
-
   // Check for detached uses of the underlying base objects.
   SmallVector<Value *, 1> BaseObjs;
   GetUnderlyingObjects(Addr, BaseObjs, DL, LI, 0);
@@ -1455,18 +1459,36 @@ static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
 
   for (const Value *BaseObj : BaseObjs) {
     // Skip any null objects
-    if (const Constant *C = dyn_cast<Constant>(BaseObj))
-      if (C->isNullValue())
+    if (const Constant *C = dyn_cast<Constant>(BaseObj)) {
+      // if (C->isNullValue())
+      //   continue;
+      // Is this value a constant that cannot be derived from any pointer
+      // value (we need to exclude constant expressions, for example, that
+      // are formed from arithmetic on global symbols).
+      bool IsNonPtrConst = isa<ConstantInt>(C) || isa<ConstantFP>(C) ||
+                           isa<ConstantPointerNull>(C) ||
+                           isa<ConstantDataVector>(C) || isa<UndefValue>(C);
+      if (IsNonPtrConst)
         continue;
+    }
 
     // If the base object is not an instruction, conservatively return true.
-    if (!isa<Instruction>(BaseObj))
-      return true;
+    if (!isa<Instruction>(BaseObj)) {
+      if (const Argument *A = dyn_cast<Argument>(BaseObj)) {
+        if (!A->hasByValAttr() && !A->hasNoAliasAttr())
+          return true;
+      } else
+        return true;
+    }
 
     // If the base object might have a detached use, return true.
     if (MightHaveDetachedUse(cast<Instruction>(BaseObj), TI))
       return true;
   }
+
+  // Perform normal pointer-capture analysis.
+  if (PointerMayBeCaptured(Addr, false, false))
+    return true;
 
   return false;
 }
