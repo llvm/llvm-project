@@ -346,7 +346,7 @@ def warn_unnecessary_packed : Warning<
 
 // RandStruct implementation
 def warn_randomize_attr_conflict : Warning<
-  "struct declared with 'randomize_layout' and 'no_randomize_layout' attributes. "
-  "attribute 'no_randomize_layout' takes precedence ">;
+  "struct declared with 'randomize_layout' and 'no_randomize_layout' attributes;"
+  "attribute 'no_randomize_layout' takes precedence">;
 
 }
