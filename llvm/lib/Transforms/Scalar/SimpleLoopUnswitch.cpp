@@ -793,9 +793,8 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     DTUpdates.push_back({DT.Insert, OldPH, UnswitchedExitBB});
   }
   for (auto SplitUnswitchedPair : SplitExitBBMap) {
-    auto *UnswitchedBB = SplitUnswitchedPair.second;
-    DTUpdates.push_back({DT.Delete, ParentBB, UnswitchedBB});
-    DTUpdates.push_back({DT.Insert, OldPH, UnswitchedBB});
+    DTUpdates.push_back({DT.Delete, ParentBB, SplitUnswitchedPair.first});
+    DTUpdates.push_back({DT.Insert, OldPH, SplitUnswitchedPair.second});
   }
   DT.applyUpdates(DTUpdates);
 

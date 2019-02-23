@@ -18,13 +18,13 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: test0
 ; CHECK:   try
-; CHECK:   call      foo@FUNCTION
+; CHECK:   call      foo
 ; CHECK:   catch     $[[EXCEPT_REF:[0-9]+]]=
 ; CHECK:   block i32
-; CHECK:   br_on_exn 0, __cpp_exception@EVENT, $[[EXCEPT_REF]]
+; CHECK:   br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
 ; CHECK:   rethrow
 ; CHECK:   end_block
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION
+; CHECK:   i32.call  $drop=, _Unwind_CallPersonality
 ; CHECK:   end_try
 ; CHECK:   return
 define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
@@ -86,21 +86,21 @@ try.cont:                                         ; preds = %entry, %catch, %cat
 
 ; CHECK-LABEL: test1
 ; CHECK:   try
-; CHECK:   call      foo@FUNCTION
+; CHECK:   call      foo
 ; CHECK:   catch
-; CHECK:   br_on_exn 0, __cpp_exception@EVENT
+; CHECK:   br_on_exn 0, __cpp_exception
 ; CHECK:   rethrow
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION
+; CHECK:   i32.call  $drop=, _Unwind_CallPersonality
 ; CHECK:   try
-; CHECK:   call      foo@FUNCTION
+; CHECK:   call      foo
 ; CHECK:   catch
-; CHECK:   br_on_exn   0, __cpp_exception@EVENT
+; CHECK:   br_on_exn   0, __cpp_exception
 ; CHECK:   rethrow
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality@FUNCTION
+; CHECK:   i32.call  $drop=, _Unwind_CallPersonality
 ; CHECK:   try
-; CHECK:   i32.call  $drop=, __cxa_begin_catch@FUNCTION
+; CHECK:   i32.call  $drop=, __cxa_begin_catch
 ; CHECK:   try
-; CHECK:   call      foo@FUNCTION
+; CHECK:   call      foo
 ; CHECK:   catch     $drop=
 ; CHECK:   rethrow
 ; CHECK:   end_try
@@ -196,21 +196,21 @@ unreachable:                                      ; preds = %rethrow5
 
 ; CHECK-LABEL: test2
 ; CHECK:   try
-; CHECK:   call      foo@FUNCTION
+; CHECK:   call      foo
 ; CHECK:   catch
-; CHECK:   br_on_exn   0, __cpp_exception@EVENT
+; CHECK:   br_on_exn   0, __cpp_exception
 ; CHECK:   rethrow
 ; CHECK:   loop
 ; CHECK:   try
-; CHECK:   call      foo@FUNCTION
+; CHECK:   call      foo
 ; CHECK:   catch     $drop=
 ; CHECK:   try
-; CHECK:   call      __cxa_end_catch@FUNCTION
+; CHECK:   call      __cxa_end_catch
 ; CHECK:   catch
-; CHECK:   br_on_exn   0, __cpp_exception@EVENT
-; CHECK:   call      __clang_call_terminate@FUNCTION, 0
+; CHECK:   br_on_exn   0, __cpp_exception
+; CHECK:   call      __clang_call_terminate, 0
 ; CHECK:   unreachable
-; CHECK:   call      __clang_call_terminate@FUNCTION
+; CHECK:   call      __clang_call_terminate
 ; CHECK:   unreachable
 ; CHECK:   end_try
 ; CHECK:   rethrow

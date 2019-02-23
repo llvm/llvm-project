@@ -63,7 +63,13 @@ public:
   // Returns true if `Other` (with size `OtherSize`) can be proven to be fully
   // contained in `*this` (with size `Size`).
   bool contains(int64_t Size, const BaseIndexOffset &Other, int64_t OtherSize,
-                const SelectionDAG &DAG) const;
+                const SelectionDAG &DAG) const {
+    int64_t Offset;
+    return contains(Size, Other, OtherSize, DAG, Offset);
+  }
+
+  bool contains(int64_t Size, const BaseIndexOffset &Other, int64_t OtherSize,
+                const SelectionDAG &DAG, int64_t &Offset) const;
 
   // Returns true `BasePtr0` and `BasePtr1` can be proven to alias/not alias, in
   // which case `IsAlias` is set to true/false.

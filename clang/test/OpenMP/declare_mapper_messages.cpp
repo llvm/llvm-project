@@ -29,7 +29,7 @@ public:
 #pragma omp declare mapper(bb: vec v) private(v)                        // expected-error {{expected at least one clause on '#pragma omp declare mapper' directive}} // expected-error {{unexpected OpenMP clause 'private' in directive '#pragma omp declare mapper'}}
 #pragma omp declare mapper(cc: vec v) map(v) (                          // expected-warning {{extra tokens at the end of '#pragma omp declare mapper' are ignored}}
 
-#pragma omp declare mapper(++: vec v) map(v.len)                        // expected-error {{illegal identifier on 'omp declare mapper' directive}}
+#pragma omp declare mapper(++: vec v) map(v.len)                        // expected-error {{illegal OpenMP user-defined mapper identifier}}
 #pragma omp declare mapper(id1: vec v) map(v.len, temp)                 // expected-error {{only variable v is allowed in map clauses of this 'omp declare mapper' directive}}
 #pragma omp declare mapper(default : vec kk) map(kk.data[0:2])          // expected-note {{previous definition is here}}
 #pragma omp declare mapper(vec v) map(v.len)                            // expected-error {{redefinition of user-defined mapper for type 'vec' with name 'default'}}
@@ -74,9 +74,9 @@ int fun(int arg) {
       {}
 #pragma omp target map(mapper(ab) :vv)                                  // expected-error {{missing map type}} expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}}
       {}
-#pragma omp target map(mapper(N2::) :vv)                                // expected-error {{use of undeclared identifier 'N2'}} expected-error {{illegal identifier on 'omp declare mapper' directive}}
+#pragma omp target map(mapper(N2::) :vv)                                // expected-error {{use of undeclared identifier 'N2'}} expected-error {{illegal OpenMP user-defined mapper identifier}}
       {}
-#pragma omp target map(mapper(N1::) :vv)                                // expected-error {{illegal identifier on 'omp declare mapper' directive}}
+#pragma omp target map(mapper(N1::) :vv)                                // expected-error {{illegal OpenMP user-defined mapper identifier}}
       {}
 #pragma omp target map(mapper(aa) :vv)                                  // expected-error {{missing map type}}
       {}
@@ -86,6 +86,19 @@ int fun(int arg) {
       {}
 #pragma omp target map(mapper(N1::stack<int>::id) to:vv)
       {}
+
+#pragma omp target update to(mapper)                                    // expected-error {{expected '(' after 'mapper'}} expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper()                                   // expected-error {{illegal OpenMP user-defined mapper identifier}} expected-error {{expected expression}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper:vv)                                 // expected-error {{expected '(' after 'mapper'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper(:vv)                                // expected-error {{illegal OpenMP user-defined mapper identifier}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper(aa :vv)                             // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper(N2:: :vv)                           // expected-error {{use of undeclared identifier 'N2'}} expected-error {{illegal OpenMP user-defined mapper identifier}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper(N1:: :vv)                           // expected-error {{illegal OpenMP user-defined mapper identifier}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper(N1::aa) :vv)                        // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'aa'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper(ab):vv)                             // expected-error {{cannot find a valid user-defined mapper for type 'vec' with name 'ab'}} expected-error {{expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'}}
+#pragma omp target update to(mapper(aa) a:vv)                           // expected-warning {{missing ':' after ) - ignoring}}
+#pragma omp target update to(mapper(aa):vv)
+#pragma omp target update to(mapper(N1::stack<int>::id) :vv)
     }
 #pragma omp declare mapper(id: vec v) map(v.len)                        // expected-error {{redefinition of user-defined mapper for type 'vec' with name 'id'}}
   }

@@ -267,4 +267,68 @@ define i1 @illegal_type(i17 %x, i17* %p) {
   ret i1 %ov
 }
 
+; The overflow check may be against the input rather than the sum.
+
+define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
+; CHECK-LABEL: uaddo_i64_increment_alt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq 1(%rdi), %rax
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    cmpq $-1, %rdi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
+  %a = add i64 %x, 1
+  store i64 %a, i64* %p
+  %ov = icmp eq i64 %x, -1
+  ret i1 %ov
+}
+
+; Make sure insertion is done correctly based on dominance.
+
+define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
+; CHECK-LABEL: uaddo_i64_increment_alt_dom:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq $-1, %rdi
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    incq %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    retq
+  %ov = icmp eq i64 %x, -1
+  %a = add i64 %x, 1
+  store i64 %a, i64* %p
+  ret i1 %ov
+}
+
+; The overflow check may be against the input rather than the sum.
+
+define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
+; CHECK-LABEL: uaddo_i64_decrement_alt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    leaq -1(%rdi), %rax
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %a = add i64 %x, -1
+  store i64 %a, i64* %p
+  %ov = icmp ne i64 %x, 0
+  ret i1 %ov
+}
+
+; Make sure insertion is done correctly based on dominance.
+
+define i1 @uaddo_i64_decrement_alt_dom(i64 %x, i64* %p) {
+; CHECK-LABEL: uaddo_i64_decrement_alt_dom:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    decq %rdi
+; CHECK-NEXT:    movq %rdi, (%rsi)
+; CHECK-NEXT:    retq
+  %ov = icmp ne i64 %x, 0
+  %a = add i64 %x, -1
+  store i64 %a, i64* %p
+  ret i1 %ov
+}
+
 declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64)

@@ -830,7 +830,7 @@ defm BUFFER_LOAD_DWORDX4 : MUBUF_Pseudo_Loads <
 // This is not described in AMD documentation,
 // but 'lds' versions of these opcodes are available
 // in at least GFX8+ chips. See Bug 37653.
-let SubtargetPredicate = isGFX8Plus in {
+let SubtargetPredicate = isVI in {
 defm BUFFER_LOAD_DWORDX2_LDS : MUBUF_Pseudo_Loads <
   "buffer_load_dwordx2", VReg_64, v2i32, null_frag, 0, 1
 >;
@@ -939,7 +939,7 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
   "buffer_atomic_dec_x2", VReg_64, i64, atomic_dec_global
 >;
 
-let SubtargetPredicate = isGFX8Plus in {
+let SubtargetPredicate = isVI in {
 def BUFFER_STORE_LDS_DWORD : MUBUF_Pseudo_Store_Lds <"buffer_store_lds_dword">;
 }
 
@@ -1040,7 +1040,7 @@ let SubtargetPredicate = HasPackedD16VMem, D16Buf = 1 in {
   defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyzw", VReg_64>;
 } // End HasPackedD16VMem.
 
-let SubtargetPredicate = isGFX7Plus in {
+let SubtargetPredicate = isCIVI in {
 
 //===----------------------------------------------------------------------===//
 // Instruction definitions for CI and newer.
@@ -1052,7 +1052,7 @@ let SubtargetPredicate = isGFX7Plus in {
 def BUFFER_WBINVL1_VOL : MUBUF_Invalidate <"buffer_wbinvl1_vol",
                                            int_amdgcn_buffer_wbinvl1_vol>;
 
-} // End let SubtargetPredicate = isGFX7Plus
+} // End let SubtargetPredicate = isCIVI
 
 //===----------------------------------------------------------------------===//
 // MUBUF Patterns
@@ -1319,7 +1319,7 @@ multiclass MUBUFLoad_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Ins
   >;
 }
 
-let SubtargetPredicate = isGFX6GFX7 in {
+let SubtargetPredicate = isSICI in {
 def : MUBUFLoad_PatternADDR64 <BUFFER_LOAD_SBYTE_ADDR64, i32, sextloadi8_constant>;
 def : MUBUFLoad_PatternADDR64 <BUFFER_LOAD_UBYTE_ADDR64, i32, az_extloadi8_constant>;
 def : MUBUFLoad_PatternADDR64 <BUFFER_LOAD_SSHORT_ADDR64, i32, sextloadi16_constant>;
@@ -1327,7 +1327,7 @@ def : MUBUFLoad_PatternADDR64 <BUFFER_LOAD_USHORT_ADDR64, i32, az_extloadi16_con
 
 defm : MUBUFLoad_Atomic_Pattern <BUFFER_LOAD_DWORD_ADDR64, BUFFER_LOAD_DWORD_OFFSET, i32, mubuf_load_atomic>;
 defm : MUBUFLoad_Atomic_Pattern <BUFFER_LOAD_DWORDX2_ADDR64, BUFFER_LOAD_DWORDX2_OFFSET, i64, mubuf_load_atomic>;
-} // End SubtargetPredicate = isGFX6GFX7
+} // End SubtargetPredicate = isSICI
 
 multiclass MUBUFLoad_Pattern <MUBUF_Pseudo Instr_OFFSET, ValueType vt,
                                PatFrag ld> {
@@ -1457,10 +1457,10 @@ multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo In
     (Instr_OFFSET $val, $rsrc, $soffset, (as_i16imm $offset), 0, 0, 0)
   >;
 }
-let SubtargetPredicate = isGFX6GFX7 in {
+let SubtargetPredicate = isSICI in {
 defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORD_ADDR64, BUFFER_STORE_DWORD_OFFSET, i32, store_atomic_global>;
 defm : MUBUFStore_Atomic_Pattern <BUFFER_STORE_DWORDX2_ADDR64, BUFFER_STORE_DWORDX2_OFFSET, i64, store_atomic_global>;
-} // End Predicates = isGFX6GFX7
+} // End Predicates = isSICI
 
 
 multiclass MUBUFStore_Pattern <MUBUF_Pseudo Instr_OFFSET, ValueType vt,
@@ -1644,7 +1644,7 @@ class MUBUF_Real_si <bits<7> op, MUBUF_Pseudo ps> :
   MUBUF_Real<op, ps>,
   Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI> {
-  let AssemblerPredicate=isGFX6GFX7;
+  let AssemblerPredicate=isSICI;
   let DecoderNamespace="SICI";
 
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);
@@ -1771,7 +1771,7 @@ class MTBUF_Real_si <bits<3> op, MTBUF_Pseudo ps> :
   MTBUF_Real<ps>,
   Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI> {
-  let AssemblerPredicate=isGFX6GFX7;
+  let AssemblerPredicate=isSICI;
   let DecoderNamespace="SICI";
 
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);
@@ -1815,7 +1815,7 @@ defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Real_AllAddr_si <7>;
 
 class MUBUF_Real_ci <bits<7> op, MUBUF_Pseudo ps> :
   MUBUF_Real_si<op, ps> {
-  let AssemblerPredicate=isGFX7;
+  let AssemblerPredicate=isCIOnly;
   let DecoderNamespace="CI";
 }
 
@@ -1830,7 +1830,7 @@ class MUBUF_Real_vi <bits<7> op, MUBUF_Pseudo ps> :
   MUBUF_Real<op, ps>,
   Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate=isGFX8Plus;
+  let AssemblerPredicate=isVI;
   let DecoderNamespace="VI";
 
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);
@@ -2005,7 +2005,7 @@ class MTBUF_Real_vi <bits<4> op, MTBUF_Pseudo ps> :
   MTBUF_Real<ps>,
   Enc64,
   SIMCInstr<ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate=isGFX8Plus;
+  let AssemblerPredicate=isVI;
   let DecoderNamespace="VI";
 
   let Inst{11-0}  = !if(ps.has_offset, offset, ?);

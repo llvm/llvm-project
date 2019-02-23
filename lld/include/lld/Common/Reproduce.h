@@ -27,10 +27,6 @@ std::string relativeToRoot(StringRef Path);
 // Quote a given string if it contains a space character.
 std::string quote(StringRef S);
 
-// Rewrite the given path if a file exists with that pathname, otherwise
-// returns the original path.
-std::string rewritePath(StringRef S);
-
 // Returns the string form of the given argument.
 std::string toString(const llvm::opt::Arg &Arg);
 }

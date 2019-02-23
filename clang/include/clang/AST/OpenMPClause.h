@@ -158,8 +158,11 @@ public:
 
 /// This structure contains most locations needed for by an OMPVarListClause.
 struct OMPVarListLocTy {
+  /// Starting location of the clause (the clause keyword).
   SourceLocation StartLoc;
+  /// Location of '('.
   SourceLocation LParenLoc;
+  /// Ending location of the clause.
   SourceLocation EndLoc;
   OMPVarListLocTy() = default;
   OMPVarListLocTy(SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -3609,9 +3612,13 @@ protected:
 /// This structure contains all sizes needed for by an
 /// OMPMappableExprListClause.
 struct OMPMappableExprListSizeTy {
+  /// Number of expressions listed.
   unsigned NumVars;
+  /// Number of unique base declarations.
   unsigned NumUniqueDeclarations;
+  /// Number of component lists.
   unsigned NumComponentLists;
+  /// Total number of expression components.
   unsigned NumComponents;
   OMPMappableExprListSizeTy() = default;
   OMPMappableExprListSizeTy(unsigned NumVars, unsigned NumUniqueDeclarations,
@@ -4969,6 +4976,10 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
 
   /// Build clause with number of variables \a NumVars.
   ///
+  /// \param MapperQualifierLoc C++ nested name specifier for the associated
+  /// user-defined mapper.
+  /// \param MapperIdInfo The identifier of associated user-defined mapper.
+  /// \param MapType Map type.
   /// \param Locs Locations needed to build a mappable clause. It includes 1)
   /// StartLoc: starting location of the clause (the clause keyword); 2)
   /// LParenLoc: location of '('; 3) EndLoc: ending location of the clause.
@@ -4977,9 +4988,12 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   /// NumUniqueDeclarations: number of unique base declarations in this clause;
   /// 3) NumComponentLists: number of component lists in this clause; and 4)
   /// NumComponents: total number of expression components in the clause.
-  explicit OMPToClause(const OMPVarListLocTy &Locs,
+  explicit OMPToClause(NestedNameSpecifierLoc MapperQualifierLoc,
+                       DeclarationNameInfo MapperIdInfo,
+                       const OMPVarListLocTy &Locs,
                        const OMPMappableExprListSizeTy &Sizes)
-      : OMPMappableExprListClause(OMPC_to, Locs, Sizes) {}
+      : OMPMappableExprListClause(OMPC_to, Locs, Sizes, &MapperQualifierLoc,
+                                  &MapperIdInfo) {}
 
   /// Build an empty clause.
   ///
@@ -4994,7 +5008,9 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   /// Define the sizes of each trailing object array except the last one. This
   /// is required for TrailingObjects to work properly.
   size_t numTrailingObjects(OverloadToken<Expr *>) const {
-    return varlist_size();
+    // There are varlist_size() of expressions, and varlist_size() of
+    // user-defined mappers.
+    return 2 * varlist_size();
   }
   size_t numTrailingObjects(OverloadToken<ValueDecl *>) const {
     return getUniqueDeclarationsNum();
@@ -5013,10 +5029,18 @@ public:
   /// \param Vars The original expression used in the clause.
   /// \param Declarations Declarations used in the clause.
   /// \param ComponentLists Component lists used in the clause.
+  /// \param UDMapperRefs References to user-defined mappers associated with
+  /// expressions used in the clause.
+  /// \param UDMQualifierLoc C++ nested name specifier for the associated
+  /// user-defined mapper.
+  /// \param MapperId The identifier of associated user-defined mapper.
   static OMPToClause *Create(const ASTContext &C, const OMPVarListLocTy &Locs,
                              ArrayRef<Expr *> Vars,
                              ArrayRef<ValueDecl *> Declarations,
-                             MappableExprComponentListsRef ComponentLists);
+                             MappableExprComponentListsRef ComponentLists,
+                             ArrayRef<Expr *> UDMapperRefs,
+                             NestedNameSpecifierLoc UDMQualifierLoc,
+                             DeclarationNameInfo MapperId);
 
   /// Creates an empty clause with the place for \a NumVars variables.
   ///

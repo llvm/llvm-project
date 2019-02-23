@@ -158,6 +158,66 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, i16* %p) {
   ret i1 %ov
 }
 
+; The overflow check may be against the input rather than the sum.
+
+define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_increment_alt(
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[X:%.*]], 1
+; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp eq i64 [[X]], -1
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %a = add i64 %x, 1
+  store i64 %a, i64* %p
+  %ov = icmp eq i64 %x, -1
+  ret i1 %ov
+}
+
+; Make sure insertion is done correctly based on dominance.
+
+define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_increment_alt_dom(
+; CHECK-NEXT:    [[OV:%.*]] = icmp eq i64 [[X:%.*]], -1
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[X]], 1
+; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %ov = icmp eq i64 %x, -1
+  %a = add i64 %x, 1
+  store i64 %a, i64* %p
+  ret i1 %ov
+}
+
+; The overflow check may be against the input rather than the sum.
+
+define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_decrement_alt(
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[X:%.*]], -1
+; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
+; CHECK-NEXT:    [[OV:%.*]] = icmp ne i64 [[X]], 0
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %a = add i64 %x, -1
+  store i64 %a, i64* %p
+  %ov = icmp ne i64 %x, 0
+  ret i1 %ov
+}
+
+; Make sure insertion is done correctly based on dominance.
+
+define i1 @uaddo_i64_decrement_alt_dom(i64 %x, i64* %p) {
+; CHECK-LABEL: @uaddo_i64_decrement_alt_dom(
+; CHECK-NEXT:    [[OV:%.*]] = icmp ne i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = add i64 [[X]], -1
+; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+  %ov = icmp ne i64 %x, 0
+  %a = add i64 %x, -1
+  store i64 %a, i64* %p
+  ret i1 %ov
+}
+
 ; No transform for illegal types.
 
 define i1 @uaddo_i42_increment_illegal_type(i42 %x, i42* %p) {

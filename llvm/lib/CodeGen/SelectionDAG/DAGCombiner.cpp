@@ -13978,7 +13978,7 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
   if (NotMaskTZ && NotMaskTZ/8 % MaskedBytes) return Result;
 
   // For narrowing to be valid, it must be the case that the load the
-  // immediately preceeding memory operation before the store.
+  // immediately preceding memory operation before the store.
   if (LD == Chain.getNode())
     ; // ok.
   else if (Chain->getOpcode() == ISD::TokenFactor &&
@@ -15429,7 +15429,7 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
         const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
         unsigned STByteSize = ST->getMemoryVT().getSizeInBits() / 8;
         unsigned ChainByteSize = ST1->getMemoryVT().getSizeInBits() / 8;
-        // If this is a store who's preceeding store to a subset of the current
+        // If this is a store who's preceding store to a subset of the current
         // location and no one other node is chained to that store we can
         // effectively drop the store. Do not remove stores to undef as they may
         // be used as data sinks.
@@ -15437,6 +15437,33 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
           CombineTo(ST1, ST1->getChain());
           return SDValue();
         }
+
+        // If ST stores to a subset of preceding store's write set, we may be
+        // able to fold ST's value into the preceding stored value. As we know
+        // the other uses of ST1's chain are unconcerned with ST, this folding
+        // will not affect those nodes.
+        int64_t Offset;
+        if (ChainBase.contains(ChainByteSize, STBase, STByteSize, DAG,
+                               Offset)) {
+          SDValue ChainValue = ST1->getValue();
+          if (auto *C1 = dyn_cast<ConstantSDNode>(ChainValue)) {
+            if (auto *C = dyn_cast<ConstantSDNode>(Value)) {
+              APInt Val = C1->getAPIntValue();
+              APInt InsertVal = C->getAPIntValue().zextOrTrunc(STByteSize * 8);
+              // FIXME: Handle Big-endian mode.
+              if (!DAG.getDataLayout().isBigEndian()) {
+                Val.insertBits(InsertVal, Offset * 8);
+                SDValue NewSDVal =
+                    DAG.getConstant(Val, SDLoc(C), ChainValue.getValueType(),
+                                    C1->isTargetOpcode(), C1->isOpaque());
+                SDNode *NewST1 = DAG.UpdateNodeOperands(
+                    ST1, ST1->getChain(), NewSDVal, ST1->getOperand(2),
+                    ST1->getOperand(3));
+                return CombineTo(ST, SDValue(NewST1, 0));
+              }
+            }
+          }
+        } // End ST subset of ST1 case.
       }
     }
   }

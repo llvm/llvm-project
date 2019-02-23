@@ -535,10 +535,9 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   if (DT) {
     // Update the dominator tree by informing it about the new edge from the
-    // preheader to the exit.
-    DTU.insertEdge(Preheader, ExitBlock);
-    // Inform the dominator tree about the removed edge.
-    DTU.deleteEdge(Preheader, L->getHeader());
+    // preheader to the exit and the removed edge.
+    DTU.applyUpdates({{DominatorTree::Insert, Preheader, ExitBlock},
+                      {DominatorTree::Delete, Preheader, L->getHeader()}});
   }
 
   // Use a map to unique and a vector to guarantee deterministic ordering.

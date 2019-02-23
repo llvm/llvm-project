@@ -128,7 +128,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Builder.CreateBr(Destination);
       BI->eraseFromParent();
       if (DTU)
-        DTU->deleteEdgeRelaxed(BB, OldDest);
+        DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, OldDest}});
       return true;
     }
 
@@ -204,7 +204,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
         i = SI->removeCase(i);
         e = SI->case_end();
         if (DTU)
-          DTU->deleteEdgeRelaxed(ParentBB, DefaultDest);
+          DTU->applyUpdatesPermissive(
+              {{DominatorTree::Delete, ParentBB, DefaultDest}});
         continue;
       }
 
@@ -252,7 +253,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       if (DeleteDeadConditions)
         RecursivelyDeleteTriviallyDeadInstructions(Cond, TLI);
       if (DTU)
-        DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+        DTU->applyUpdatesPermissive(Updates);
       return true;
     }
 
@@ -330,7 +331,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       }
 
       if (DTU)
-        DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+        DTU->applyUpdatesPermissive(Updates);
       return true;
     }
   }
@@ -664,7 +665,7 @@ void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
     if (PhiIt != OldPhiIt) PhiIt = &BB->front();
   }
   if (DTU)
-    DTU->deleteEdgeRelaxed(Pred, BB);
+    DTU->applyUpdatesPermissive({{DominatorTree::Delete, Pred, BB}});
 }
 
 /// MergeBasicBlockIntoOnlyPred - DestBB is a block with one predecessor and its
@@ -733,7 +734,7 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
            isa<UnreachableInst>(PredBB->getTerminator()) &&
            "The successor list of PredBB isn't empty before "
            "applying corresponding DTU updates.");
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     DTU->deleteBB(PredBB);
     // Recalculation of DomTree is needed when updating a forward DomTree and
     // the Entry BB is replaced.
@@ -1075,7 +1076,7 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                            "applying corresponding DTU updates.");
 
   if (DTU) {
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     DTU->deleteBB(BB);
   } else {
     BB->eraseFromParent(); // Delete the old basic block.
@@ -1939,7 +1940,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
     ++NumInstrsRemoved;
   }
   if (DTU)
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
   return NumInstrsRemoved;
 }
 
@@ -1967,7 +1968,7 @@ static void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr) {
   UnwindDestBB->removePredecessor(BB);
   II->eraseFromParent();
   if (DTU)
-    DTU->deleteEdgeRelaxed(BB, UnwindDestBB);
+    DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, UnwindDestBB}});
 }
 
 BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
@@ -2114,7 +2115,8 @@ static bool markAliveBlocks(Function &F,
           UnwindDestBB->removePredecessor(II->getParent());
           II->eraseFromParent();
           if (DTU)
-            DTU->deleteEdgeRelaxed(BB, UnwindDestBB);
+            DTU->applyUpdatesPermissive(
+                {{DominatorTree::Delete, BB, UnwindDestBB}});
         } else
           changeToCall(II, DTU);
         Changed = true;
@@ -2203,7 +2205,7 @@ void llvm::removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU) {
   TI->replaceAllUsesWith(NewTI);
   TI->eraseFromParent();
   if (DTU)
-    DTU->deleteEdgeRelaxed(BB, UnwindDest);
+    DTU->applyUpdatesPermissive({{DominatorTree::Delete, BB, UnwindDest}});
 }
 
 /// removeUnreachableBlocks - Remove blocks that are not reachable, even
@@ -2268,7 +2270,7 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
   }
 
   if (DTU) {
-    DTU->applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+    DTU->applyUpdatesPermissive(Updates);
     bool Deleted = false;
     for (auto *BB : DeadBlockSet) {
       if (DTU->isBBPendingDeletion(BB))

@@ -1159,17 +1159,31 @@ static bool OptimizeNoopCopyExpression(CastInst *CI, const TargetLowering &TLI,
   return SinkCast(CI);
 }
 
-static void replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
-                                        Instruction *InsertPt,
+static bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
                                         Intrinsic::ID IID) {
+  // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
   Value *Arg0 = BO->getOperand(0);
   Value *Arg1 = BO->getOperand(1);
-
-  // We allow matching the canonical IR (add X, C) back to (usubo X, -C).
   if (BO->getOpcode() == Instruction::Add &&
       IID == Intrinsic::usub_with_overflow) {
     assert(isa<Constant>(Arg1) && "Unexpected input for usubo");
     Arg1 = ConstantExpr::getNeg(cast<Constant>(Arg1));
+  }
+
+  Instruction *InsertPt;
+  if (BO->hasOneUse() && BO->user_back() == Cmp) {
+    // If the math is only used by the compare, insert at the compare to keep
+    // the condition in the same block as its users. (CGP aggressively sinks
+    // compares to help out SDAG.)
+    InsertPt = Cmp;
+  } else {
+    // The math and compare may be independent instructions. Check dominance to
+    // determine the insertion point for the intrinsic.
+    DominatorTree DT(*BO->getFunction());
+    bool MathDominates = DT.dominates(BO, Cmp);
+    if (!MathDominates && !DT.dominates(Cmp, BO))
+      return false;
+    InsertPt = MathDominates ? cast<Instruction>(BO) : cast<Instruction>(Cmp);
   }
 
   IRBuilder<> Builder(InsertPt);
@@ -1180,12 +1194,13 @@ static void replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
   Cmp->replaceAllUsesWith(OV);
   BO->eraseFromParent();
   Cmp->eraseFromParent();
+  return true;
 }
 
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
 static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
-                                      const DataLayout &DL) {
+                                      const DataLayout &DL, bool &ModifiedDT) {
   Value *A, *B;
   BinaryOperator *Add;
   if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add))))
@@ -1208,9 +1223,11 @@ static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
     assert(*Add->user_begin() == Cmp && "expected!");
 #endif
 
-  Instruction *InPt = Add->hasOneUse() ? cast<Instruction>(Cmp)
-                                       : cast<Instruction>(Add);
-  replaceMathCmpWithIntrinsic(Add, Cmp, InPt, Intrinsic::uadd_with_overflow);
+  if (!replaceMathCmpWithIntrinsic(Add, Cmp, Intrinsic::uadd_with_overflow))
+    return false;
+
+  // Reset callers - do not crash by iterating over a dead instruction.
+  ModifiedDT = true;
   return true;
 }
 
@@ -1263,15 +1280,9 @@ static bool combineToUSubWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
                                 TLI.getValueType(DL, Sub->getType())))
     return false;
 
-  // Pattern matched and profitability checked. Check dominance to determine the
-  // insertion point for an intrinsic that replaces the subtract and compare.
-  DominatorTree DT(*Sub->getFunction());
-  bool SubDominates = DT.dominates(Sub, Cmp);
-  if (!SubDominates && !DT.dominates(Cmp, Sub))
+  if (!replaceMathCmpWithIntrinsic(Sub, Cmp, Intrinsic::usub_with_overflow))
     return false;
-  Instruction *InPt = SubDominates ? cast<Instruction>(Sub)
-                                   : cast<Instruction>(Cmp);
-  replaceMathCmpWithIntrinsic(Sub, Cmp, InPt, Intrinsic::usub_with_overflow);
+
   // Reset callers - do not crash by iterating over a dead instruction.
   ModifiedDT = true;
   return true;
@@ -1348,7 +1359,7 @@ static bool optimizeCmp(CmpInst *Cmp, const TargetLowering &TLI,
   if (sinkCmpExpression(Cmp, TLI))
     return true;
 
-  if (combineToUAddWithOverflow(Cmp, TLI, DL))
+  if (combineToUAddWithOverflow(Cmp, TLI, DL, ModifiedDT))
     return true;
 
   if (combineToUSubWithOverflow(Cmp, TLI, DL, ModifiedDT))

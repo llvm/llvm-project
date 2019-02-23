@@ -1418,6 +1418,10 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   }
   Config->Wordsize = Config->is64() ? 8 : 4;
 
+  // Handle /functionpadmin
+  for (auto *Arg : Args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
+    parseFunctionPadMin(Arg, Config->Machine);
+
   // Input files can be Windows resource files (.res files). We use
   // WindowsResource to convert resource files to a regular COFF file,
   // then link the resulting file normally.

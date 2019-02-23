@@ -302,10 +302,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_Hexagon_LD_PLT: return "LDPLT";
   case VK_Hexagon_IE: return "IE";
   case VK_Hexagon_IE_GOT: return "IEGOT";
-  case VK_WebAssembly_FUNCTION: return "FUNCTION";
-  case VK_WebAssembly_GLOBAL: return "GLOBAL";
   case VK_WebAssembly_TYPEINDEX: return "TYPEINDEX";
-  case VK_WebAssembly_EVENT: return "EVENT";
   case VK_AMDGPU_GOTPCREL32_LO: return "gotpcrel32@lo";
   case VK_AMDGPU_GOTPCREL32_HI: return "gotpcrel32@hi";
   case VK_AMDGPU_REL32_LO: return "rel32@lo";
@@ -418,10 +415,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("lo8", VK_AVR_LO8)
     .Case("hi8", VK_AVR_HI8)
     .Case("hlo8", VK_AVR_HLO8)
-    .Case("function", VK_WebAssembly_FUNCTION)
-    .Case("global", VK_WebAssembly_GLOBAL)
     .Case("typeindex", VK_WebAssembly_TYPEINDEX)
-    .Case("event", VK_WebAssembly_EVENT)
     .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
     .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)
     .Case("rel32@lo", VK_AMDGPU_REL32_LO)

@@ -136,9 +136,8 @@ bool BaseIndexOffset::computeAliasing(const BaseIndexOffset &BasePtr0,
 }
 
 bool BaseIndexOffset::contains(int64_t Size, const BaseIndexOffset &Other,
-                               int64_t OtherSize,
-                               const SelectionDAG &DAG) const {
-  int64_t Offset;
+                               int64_t OtherSize, const SelectionDAG &DAG,
+                               int64_t &Offset) const {
   if (!equalBaseIndex(Other, DAG, Offset))
     return false;
   if (Offset >= 0) {

@@ -71,14 +71,14 @@ void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
   if (!WillUseFastUnwind(request_fast_unwind)) {
 #if SANITIZER_CAN_SLOW_UNWIND
     if (context)
-      SlowUnwindStackWithContext(pc, context, max_depth);
+      UnwindSlow(pc, context, max_depth);
     else
-      SlowUnwindStack(pc, max_depth);
+      UnwindSlow(pc, max_depth);
 #else
     UNREACHABLE("slow unwind requested but not available");
 #endif
   } else {
-    FastUnwindStack(pc, bp, stack_top, stack_bottom, max_depth);
+    UnwindFast(pc, bp, stack_top, stack_bottom, max_depth);
   }
 }
 
