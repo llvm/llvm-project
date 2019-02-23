@@ -142,6 +142,10 @@ TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
 
     ValueToValueMapTy VMap;
     TaskToOutline[T] = outlineTask(T, TaskInputs[T], VMap, &AC, &DT);
+    // If the detach for task T does not catch an exception from the task, then
+    // the outlined function cannot throw.
+    if (!T->getDetach()->hasUnwindDest())
+      TaskToOutline[T].Outline->setDoesNotThrow();
     // Update subtask outline info to reflect the fact that their spawner was
     // outlined.
     for (Task *SubT : T->subtasks())

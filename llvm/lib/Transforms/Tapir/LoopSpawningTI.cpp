@@ -946,6 +946,10 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
                  nullptr, nullptr, nullptr);
 
   assert(Returns.empty() && "Returns cloned when cloning detached CFG.");
+  // If the Tapir loop has no unwind destination, then the outlined function
+  // cannot throw.
+  if (nullptr == TL->getUnwindDest())
+    Helper->setDoesNotThrow();
 
   // Update cloned loop condition to use the end-iteration argument.
   unsigned TripCountIdx = 0;
