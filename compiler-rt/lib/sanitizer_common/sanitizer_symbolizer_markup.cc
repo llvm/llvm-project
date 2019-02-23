@@ -117,7 +117,7 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
                                              : _URC_NO_REASON);
 }
 
-void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
+void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   size = 0;
   UnwindTraceArg arg = {this, Min(max_depth + 1, kStackTraceMax)};
@@ -132,7 +132,7 @@ void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
   trace_buffer[0] = pc;
 }
 
-void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
+void BufferedStackTrace::UnwindSlow(uptr pc, void *context,
                                                     u32 max_depth) {
   CHECK_NE(context, nullptr);
   UNREACHABLE("signal context doesn't exist");

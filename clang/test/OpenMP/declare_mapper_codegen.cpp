@@ -26,10 +26,12 @@ public:
 
 #pragma omp declare mapper(id: C s) map(s.a)
 
-// CHECK-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l49.region_id = weak constant i8 0
+// CHECK-LABEL: @.__omp_offloading_{{.*}}foo{{.*}}_l52.region_id = weak constant i8 0
 
-// CHECK-DAG: [[SIZES:@.+]] = {{.+}}constant [1 x i{{64|32}}] [i{{64|32}} 4]
-// CHECK-DAG: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 35]
+// CHECK: [[SIZES:@.+]] = {{.+}}constant [1 x i[[sz:64|32]]] [i{{64|32}} 4]
+// CHECK: [[TYPES:@.+]] = {{.+}}constant [1 x i64] [i64 35]
+// CHECK: [[TSIZES:@.+]] = {{.+}}constant [1 x i[[sz]]] [i[[sz]] 4]
+// CHECK: [[TTYPES:@.+]] = {{.+}}constant [1 x i64] [i64 33]
 
 // CHECK-LABEL: foo{{.*}}(
 void foo(int a){
@@ -46,11 +48,22 @@ void foo(int a){
   // CHECK-DAG: [[CP1:%.+]] = bitcast i8** [[P1]] to %class.C**
   // CHECK-DAG: store %class.C* [[VAL:%[^,]+]], %class.C** [[CBP1]]
   // CHECK-DAG: store %class.C* [[VAL]], %class.C** [[CP1]]
+  // CHECK: call void [[KERNEL:@.+]](%class.C* [[VAL]])
   #pragma omp target map(mapper(id),tofrom: c)
   {
    ++c.a;
   }
-  // CHECK: call void [[KERNEL:@.+]](%class.C* [[VAL]])
+
+  // CHECK-DAG: call void @__tgt_target_data_update(i64 -1, i32 1, i8** [[TGEPBP:%.+]], i8** [[TGEPP:%.+]], i[[sz]]* getelementptr {{.+}}[1 x i[[sz]]]* [[TSIZES]], i32 0, i32 0), {{.+}}getelementptr {{.+}}[1 x i64]* [[TTYPES]]{{.+}})
+  // CHECK-DAG: [[TGEPBP]] = getelementptr inbounds {{.+}}[[TBP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
+  // CHECK-DAG: [[TGEPP]] = getelementptr inbounds {{.+}}[[TP:%[^,]+]], i{{.+}} 0, i{{.+}} 0
+  // CHECK-DAG: [[TBP0:%.+]] = getelementptr inbounds {{.+}}[[TBP]], i{{.+}} 0, i{{.+}} 0
+  // CHECK-DAG: [[TP0:%.+]] = getelementptr inbounds {{.+}}[[TP]], i{{.+}} 0, i{{.+}} 0
+  // CHECK-DAG: [[TCBP0:%.+]] = bitcast i8** [[TBP0]] to %class.C**
+  // CHECK-DAG: [[TCP0:%.+]] = bitcast i8** [[TP0]] to %class.C**
+  // CHECK-DAG: store %class.C* [[VAL]], %class.C** [[TCBP0]]
+  // CHECK-DAG: store %class.C* [[VAL]], %class.C** [[TCP0]]
+  #pragma omp target update to(mapper(id): c)
 }
 
 

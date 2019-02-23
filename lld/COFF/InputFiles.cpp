@@ -19,6 +19,9 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
+#include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Casting.h"
@@ -34,6 +37,7 @@
 
 using namespace llvm;
 using namespace llvm::COFF;
+using namespace llvm::codeview;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 
@@ -124,6 +128,7 @@ void ObjFile::parse() {
   // Read section and symbol tables.
   initializeChunks();
   initializeSymbols();
+  initializeFlags();
 }
 
 const coff_section* ObjFile::getSection(uint32_t I) {
@@ -596,6 +601,59 @@ MachineTypes ObjFile::getMachineType() {
   if (COFFObj)
     return static_cast<MachineTypes>(COFFObj->getMachine());
   return IMAGE_FILE_MACHINE_UNKNOWN;
+}
+
+ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef SecName) {
+  if (SectionChunk *Sec = SectionChunk::findByName(DebugChunks, SecName))
+    return Sec->consumeDebugMagic();
+  return {};
+}
+
+// OBJ files systematically store critical informations in a .debug$S stream,
+// even if the TU was compiled with no debug info. At least two records are
+// always there. S_OBJNAME stores a 32-bit signature, which is loaded into the
+// PCHSignature member. S_COMPILE3 stores compile-time cmd-line flags. This is
+// currently used to initialize the HotPatchable member.
+void ObjFile::initializeFlags() {
+  ArrayRef<uint8_t> Data = getDebugSection(".debug$S");
+  if (Data.empty())
+    return;
+
+  DebugSubsectionArray Subsections;
+
+  BinaryStreamReader Reader(Data, support::little);
+  ExitOnError ExitOnErr;
+  ExitOnErr(Reader.readArray(Subsections, Data.size()));
+
+  for (const DebugSubsectionRecord &SS : Subsections) {
+    if (SS.kind() != DebugSubsectionKind::Symbols)
+      continue;
+
+    unsigned Offset = 0;
+
+    // Only parse the first two records. We are only looking for S_OBJNAME
+    // and S_COMPILE3, and they usually appear at the beginning of the
+    // stream.
+    for (unsigned I = 0; I < 2; ++I) {
+      Expected<CVSymbol> Sym = readSymbolFromStream(SS.getRecordData(), Offset);
+      if (!Sym) {
+        consumeError(Sym.takeError());
+        return;
+      }
+      if (Sym->kind() == SymbolKind::S_COMPILE3) {
+        auto CS =
+            cantFail(SymbolDeserializer::deserializeAs<Compile3Sym>(Sym.get()));
+        HotPatchable =
+            (CS.Flags & CompileSym3Flags::HotPatch) != CompileSym3Flags::None;
+      }
+      if (Sym->kind() == SymbolKind::S_OBJNAME) {
+        auto ObjName = cantFail(SymbolDeserializer::deserializeAs<ObjNameSym>(
+            Sym.get()));
+        PCHSignature = ObjName.Signature;
+      }
+      Offset += Sym->length();
+    }
+  }
 }
 
 StringRef ltrim1(StringRef S, const char *Chars) {

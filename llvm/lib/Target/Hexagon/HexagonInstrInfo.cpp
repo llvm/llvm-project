@@ -1342,7 +1342,7 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addImm(0xBADC0FEE)  // Misaligned load.
         .addMemOperand(MMO);
       MBB.erase(MI);
-      break;
+      return true;
     }
 
     case Hexagon::PS_tailcall_i:

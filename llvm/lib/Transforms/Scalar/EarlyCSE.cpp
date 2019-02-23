@@ -1169,8 +1169,7 @@ bool EarlyCSE::run() {
       CurrentGeneration, DT.getRootNode(),
       DT.getRootNode()->begin(), DT.getRootNode()->end()));
 
-  // Save the current generation.
-  unsigned LiveOutGeneration = CurrentGeneration;
+  assert(!CurrentGeneration && "Create a new EarlyCSE instance to rerun it.");
 
   // Process the stack.
   while (!nodesToProcess.empty()) {
@@ -1201,9 +1200,6 @@ bool EarlyCSE::run() {
       nodesToProcess.pop_back();
     }
   } // while (!nodes...)
-
-  // Reset the current generation.
-  CurrentGeneration = LiveOutGeneration;
 
   return Changed;
 }

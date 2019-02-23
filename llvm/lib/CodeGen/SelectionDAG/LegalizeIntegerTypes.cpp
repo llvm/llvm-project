@@ -1445,19 +1445,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
   SDValue Carry = N->getOperand(2);
   SDLoc DL(N);
 
-  auto VT = getSetCCResultType(LHS.getValueType());
-  TargetLoweringBase::BooleanContent BoolType = TLI.getBooleanContents(VT);
-  switch (BoolType) {
-  case TargetLoweringBase::UndefinedBooleanContent:
-    Carry = DAG.getAnyExtOrTrunc(Carry, DL, VT);
-    break;
-  case TargetLoweringBase::ZeroOrOneBooleanContent:
-    Carry = DAG.getZExtOrTrunc(Carry, DL, VT);
-    break;
-  case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
-    Carry = DAG.getSExtOrTrunc(Carry, DL, VT);
-    break;
-  }
+  Carry = PromoteTargetBoolean(Carry, LHS.getValueType());
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
 }

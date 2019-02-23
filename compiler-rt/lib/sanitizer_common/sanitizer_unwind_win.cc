@@ -24,7 +24,7 @@
 using namespace __sanitizer;
 
 #if !SANITIZER_GO
-void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
+void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   // FIXME: CaptureStackBackTrace might be too slow for us.
   // FIXME: Compare with StackWalk64.
@@ -39,7 +39,7 @@ void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
   PopStackFrames(pc_location);
 }
 
-void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
+void BufferedStackTrace::UnwindSlow(uptr pc, void *context,
   u32 max_depth) {
   CONTEXT ctx = *(CONTEXT *)context;
   STACKFRAME64 stack_frame;

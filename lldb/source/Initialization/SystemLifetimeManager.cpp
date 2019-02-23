@@ -25,7 +25,7 @@ SystemLifetimeManager::~SystemLifetimeManager() {
 
 llvm::Error SystemLifetimeManager::Initialize(
     std::unique_ptr<SystemInitializer> initializer,
-    const InitializerOptions &options, LoadPluginCallbackType plugin_callback) {
+    LoadPluginCallbackType plugin_callback) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   if (!m_initialized) {
     assert(!m_initializer && "Attempting to call "
@@ -34,7 +34,7 @@ llvm::Error SystemLifetimeManager::Initialize(
     m_initialized = true;
     m_initializer = std::move(initializer);
 
-    if (auto e = m_initializer->Initialize(options))
+    if (auto e = m_initializer->Initialize())
       return e;
 
     Debugger::Initialize(plugin_callback);

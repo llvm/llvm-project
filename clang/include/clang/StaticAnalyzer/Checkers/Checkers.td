@@ -712,6 +712,11 @@ def MacOSKeychainAPIChecker : Checker<"SecKeychainAPI">,
   HelpText<"Check for proper uses of Secure Keychain APIs">,
   Documentation<HasDocumentation>;
 
+def MIGChecker : Checker<"MIG">,
+  HelpText<"Find violations of the Mach Interface Generator "
+           "calling convention">,
+  Documentation<NotDocumented>;
+
 def ObjCPropertyChecker : Checker<"ObjCProperty">,
   HelpText<"Check for proper uses of Objective-C properties">,
   Documentation<NotDocumented>;

@@ -46,7 +46,9 @@ target stop-hook list
 run
 # Stopping inside of the stop hook range
 # CHECK: (lldb) run
+# CHECK-NEXT: Process {{.*}} launched:
 # CHECK-NEXT: (void *) $0 = 0x
+# CHECK-NEXT: Process {{.*}} stopped
 
 thread step-over
 # Stepping inside of the stop hook range

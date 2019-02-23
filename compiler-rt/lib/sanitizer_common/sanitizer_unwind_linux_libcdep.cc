@@ -27,7 +27,7 @@
 
 namespace __sanitizer {
 
-//------------------------- SlowUnwindStack -----------------------------------
+//---------------------------- UnwindSlow --------------------------------------
 
 typedef struct {
   uptr absolute_pc;
@@ -119,7 +119,7 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   return UNWIND_CONTINUE;
 }
 
-void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
+void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   size = 0;
   UnwindTraceArg arg = {this, Min(max_depth + 1, kStackTraceMax)};
@@ -138,11 +138,11 @@ void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
   trace_buffer[0] = pc;
 }
 
-void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
+void BufferedStackTrace::UnwindSlow(uptr pc, void *context,
                                                     u32 max_depth) {
   CHECK_GE(max_depth, 2);
   if (!unwind_backtrace_signal_arch) {
-    SlowUnwindStack(pc, max_depth);
+    UnwindSlow(pc, max_depth);
     return;
   }
 

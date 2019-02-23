@@ -654,23 +654,21 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
       LoadChains.push_back(ScalarLoad.getValue(1));
     }
 
-    // Extract bits, pack and extend/trunc them into destination type.
-    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
-    SDValue SrcEltBitMask = DAG.getConstant((1U << SrcEltBits) - 1, dl, WideVT);
-
     unsigned BitOffset = 0;
     unsigned WideIdx = 0;
     unsigned WideBits = WideVT.getSizeInBits();
 
-    for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
-      SDValue Lo, Hi, ShAmt;
+    // Extract bits, pack and extend/trunc them into destination type.
+    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
+    SDValue SrcEltBitMask = DAG.getConstant(
+        APInt::getLowBitsSet(WideBits, SrcEltBits), dl, WideVT);
 
-      if (BitOffset < WideBits) {
-        ShAmt = DAG.getConstant(
-            BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-        Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-        Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
-      }
+    for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
+      assert(BitOffset < WideBits && "Unexpected offset!");
+
+      SDValue ShAmt = DAG.getConstant(
+          BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
+      SDValue Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
 
       BitOffset += SrcEltBits;
       if (BitOffset >= WideBits) {
@@ -680,13 +678,13 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
           ShAmt = DAG.getConstant(
               SrcEltBits - BitOffset, dl,
               TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
-          Hi = DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-          Hi = DAG.getNode(ISD::AND, dl, WideVT, Hi, SrcEltBitMask);
+          SDValue Hi =
+              DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
+          Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
         }
       }
 
-      if (Hi.getNode())
-        Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
+      Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
 
       switch (ExtType) {
       default: llvm_unreachable("Unknown extended-load op!");

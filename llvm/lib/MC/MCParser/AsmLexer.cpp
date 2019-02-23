@@ -556,7 +556,7 @@ AsmToken AsmLexer::LexToken() {
     AsmToken TokenBuf[2];
     MutableArrayRef<AsmToken> Buf(TokenBuf, 2);
     size_t num = peekTokens(Buf, true);
-    // There cannot be a space preceeding this
+    // There cannot be a space preceding this
     if (IsAtStartOfLine && num == 2 && TokenBuf[0].is(AsmToken::Integer) &&
         TokenBuf[1].is(AsmToken::String)) {
       CurPtr = TokStart; // reset curPtr;

@@ -62,7 +62,7 @@ define void @test_01() {
 ; CHECK-NEXT:    switch i32 0, label [[FOR_COND_SPLIT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[FOR_COND_LOOPEXIT]]
 ; CHECK-NEXT:    ]
-; CHECK:       for.cond-split:
+; CHECK:       for.cond.split:
 ; CHECK-NEXT:    [[INC41_LCSSA3_LCSSA:%.*]] = phi i16 [ [[INC41_LCSSA3]], [[FOR_COND]] ]
 ; CHECK-NEXT:    br label [[WHILE_COND:%.*]]
 ; CHECK:       while.cond:
@@ -96,7 +96,7 @@ define void @bar() {
 ; CHECK-NEXT:    switch i32 0, label [[BB_SPLIT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[BB10:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       bb-split:
+; CHECK:       bb.split:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ [[TMP7:%.*]], [[BB6:%.*]] ], [ undef, [[BB_SPLIT]] ]
@@ -161,7 +161,7 @@ define void @memlcssa() {
 ; CHECK-NEXT:    switch i32 0, label [[ENTRY_SPLIT:%.*]] [
 ; CHECK-NEXT:    i32 1, label [[DEFAULT_BB:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       entry-split:
+; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    call void @foo()

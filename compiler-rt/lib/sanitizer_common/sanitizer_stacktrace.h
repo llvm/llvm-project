@@ -105,11 +105,10 @@ struct BufferedStackTrace : public StackTrace {
   }
 
  private:
-  void FastUnwindStack(uptr pc, uptr bp, uptr stack_top, uptr stack_bottom,
-                       u32 max_depth);
-  void SlowUnwindStack(uptr pc, u32 max_depth);
-  void SlowUnwindStackWithContext(uptr pc, void *context,
-                                  u32 max_depth);
+  void UnwindFast(uptr pc, uptr bp, uptr stack_top, uptr stack_bottom,
+                  u32 max_depth);
+  void UnwindSlow(uptr pc, u32 max_depth);
+  void UnwindSlow(uptr pc, void *context, u32 max_depth);
   void PopStackFrames(uptr count);
   uptr LocatePcInTrace(uptr pc);
 

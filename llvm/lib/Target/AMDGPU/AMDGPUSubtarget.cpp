@@ -174,8 +174,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasApertureRegs(false),
     EnableXNACK(false),
     TrapHandler(false),
-    DebuggerInsertNops(false),
-    DebuggerEmitPrologue(false),
 
     EnableHugePrivateBuffer(false),
     EnableLoadStoreOpt(false),

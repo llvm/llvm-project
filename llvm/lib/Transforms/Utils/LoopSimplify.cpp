@@ -317,7 +317,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
 
   // Split edges to exit blocks from the inner loop, if they emerged in the
   // process of separating the outer one.
-  formDedicatedExitBlocks(L, DT, LI, PreserveLCSSA);
+  formDedicatedExitBlocks(L, DT, LI, nullptr, PreserveLCSSA);
 
   if (PreserveLCSSA) {
     // Fix LCSSA form for L. Some values, which previously were only used inside
@@ -530,7 +530,7 @@ ReprocessLoop:
   // predecessors that are inside of the loop.  This check guarantees that the
   // loop preheader/header will dominate the exit blocks.  If the exit block has
   // predecessors from outside of the loop, split the edge now.
-  if (formDedicatedExitBlocks(L, DT, LI, PreserveLCSSA))
+  if (formDedicatedExitBlocks(L, DT, LI, nullptr, PreserveLCSSA))
     Changed = true;
 
   // If the header has more than two predecessors at this point (from the
