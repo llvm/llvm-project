@@ -458,6 +458,7 @@ void DACSpawning::implementDACIterSpawnOnHelper(
       // Use a fast calling convention for the outline.
       RecurCall->setCallingConv(CallingConv::Fast);
       RecurCall->setDebugLoc(TLDebugLoc);
+      RecurCall->setDoesNotThrow();
     } else {
       InvokeInst *RecurCall;
       BasicBlock *CallDest = SplitBlock(RecurDet, RecurDet->getTerminator());

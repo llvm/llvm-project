@@ -483,6 +483,7 @@ Instruction *llvm::replaceDetachWithCallToOutline(Task *T,
     // Use a fast calling convention for the outline.
     TopCall->setCallingConv(CallingConv::Fast);
     TopCall->setDebugLoc(DI->getDebugLoc());
+    TopCall->setDoesNotThrow();
     // Replace the detach with an unconditional branch to its continuation.
     ReplaceInstWithInst(DI, BranchInst::Create(Out.ReplRet));
     return TopCall;
@@ -621,6 +622,7 @@ Instruction *llvm::replaceLoopWithCallToOutline(TapirLoopInfo *TL,
     // Use a fast calling convention for the outline.
     TopCall->setCallingConv(CallingConv::Fast);
     TopCall->setDebugLoc(TL->getDebugLoc());
+    TopCall->setDoesNotThrow();
     // Replace the loop with an unconditional branch to its exit.
     L->getHeader()->removePredecessor(Out.ReplCall->getParent());
     ReplaceInstWithInst(Out.ReplCall, BranchInst::Create(Out.ReplRet));
