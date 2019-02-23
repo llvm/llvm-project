@@ -34,6 +34,7 @@ protected:
 private:
   void commit(const RecordDecl *D,
               SmallVectorImpl<Decl *> &NewFieldOrder) const;
+  bool autostructselect(const SmallVector<Decl *,64> fields) const;
 };
 
 class Randstruct : public RecordFieldReorganizer {
