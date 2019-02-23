@@ -88,6 +88,12 @@ bool Spindle::succInSameTask(const Spindle *Succ) const {
   }
 }
 
+/// Return true if the successor spindle Succ is part of the same task as this
+/// spindle.
+bool Spindle::succInSubTask(const Spindle *Succ) const {
+  return (Succ->getParentTask()->getParentTask() == getParentTask());
+}
+
 //===----------------------------------------------------------------------===//
 // Task implementation
 //

@@ -106,6 +106,10 @@ public:
   /// spindle.
   bool succInSameTask(const Spindle *Succ) const;
 
+  /// Return true if the successor spindle Succ is part of the same task as this
+  /// spindle.
+  bool succInSubTask(const Spindle *Succ) const;
+
   /// Get a list of the basic blocks which make up this task.
   ArrayRef<BasicBlock *> getBlocks() const {
     return Blocks;
@@ -973,7 +977,10 @@ public:
   /// Return true if this function is "serial," meaning it does not itself
   /// perform a detach.  This method does not preclude functions called by this
   /// function from performing a detach.
-  bool isSerial() const { return getRootTask()->isSerial(); }
+  bool isSerial() const {
+    assert(getRootTask() && "Null root task\n");
+    return getRootTask()->isSerial();
+  }
 
   /// iterator/begin/end - The interface to the top-level tasks in the current
   /// function.
