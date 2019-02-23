@@ -114,7 +114,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
   bool HasFeature = llvm::StringSwitch<bool>(Feature)
                         .Case("altivec", LangOpts.AltiVec)
                         .Case("blocks", LangOpts.Blocks)
-                        .Case("coroutines", LangOpts.CoroutinesTS)
+                        .Case("coroutines", LangOpts.Coroutines)
                         .Case("cplusplus", LangOpts.CPlusPlus)
                         .Case("cplusplus11", LangOpts.CPlusPlus11)
                         .Case("cplusplus14", LangOpts.CPlusPlus14)
