@@ -490,7 +490,7 @@ defm FLAT_ATOMIC_INC_X2     : FLAT_Atomic_Pseudo <"flat_atomic_inc_x2",
 defm FLAT_ATOMIC_DEC_X2     : FLAT_Atomic_Pseudo <"flat_atomic_dec_x2",
                                 VReg_64, i64, atomic_dec_flat>;
 
-let SubtargetPredicate = isGFX7Plus in { // CI Only flat instructions : FIXME Only?
+let SubtargetPredicate = isCI in { // CI Only flat instructions : FIXME Only?
 
 defm FLAT_ATOMIC_FCMPSWAP    : FLAT_Atomic_Pseudo <"flat_atomic_fcmpswap",
                                 VGPR_32, f32, null_frag, v2f32, VReg_64>;
@@ -510,7 +510,7 @@ defm FLAT_ATOMIC_FMIN_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmin_x2",
 defm FLAT_ATOMIC_FMAX_X2     : FLAT_Atomic_Pseudo <"flat_atomic_fmax_x2",
                                 VReg_64, f64>;
 
-} // End SubtargetPredicate = isGFX7Plus
+} // End SubtargetPredicate = isCI
 
 let SubtargetPredicate = HasFlatGlobalInsts in {
 defm GLOBAL_LOAD_UBYTE    : FLAT_Global_Load_Pseudo <"global_load_ubyte", VGPR_32>;
@@ -916,7 +916,7 @@ def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
 class FLAT_Real_ci <bits<7> op, FLAT_Pseudo ps> :
   FLAT_Real <op, ps>,
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.SI> {
-  let AssemblerPredicate = isGFX7;
+  let AssemblerPredicate = isCIOnly;
   let DecoderNamespace="CI";
 }
 
@@ -984,7 +984,7 @@ defm FLAT_ATOMIC_FMAX_X2       : FLAT_Real_Atomics_ci <0x60, FLAT_ATOMIC_FMAX_X2
 class FLAT_Real_vi <bits<7> op, FLAT_Pseudo ps> :
   FLAT_Real <op, ps>,
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.VI> {
-  let AssemblerPredicate = isGFX8Plus;
+  let AssemblerPredicate = isVI;
   let DecoderNamespace="VI";
 }
 

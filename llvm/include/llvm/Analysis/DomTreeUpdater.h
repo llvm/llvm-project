@@ -103,8 +103,24 @@ public:
   /// Although GenericDomTree provides several update primitives,
   /// it is not encouraged to use these APIs directly.
 
-  /// Submit updates to all available trees. Under Eager UpdateStrategy with
-  /// ForceRemoveDuplicates enabled or under Lazy UpdateStrategy, it will
+  /// Submit updates to all available trees.
+  /// The Eager Strategy flushes updates immediately while the Lazy Strategy
+  /// queues the updates.
+  ///
+  /// Note: The "existence" of an edge in a CFG refers to the CFG which DTU is
+  /// in sync with + all updates before that single update.
+  ///
+  /// CAUTION!
+  /// 1. It is required for the state of the LLVM IR to be updated
+  /// *before* submitting the updates because the internal update routine will
+  /// analyze the current state of the CFG to determine whether an update
+  /// is valid.
+  /// 2. It is illegal to submit any update that has already been submitted,
+  /// i.e., you are supposed not to insert an existent edge or delete a
+  /// nonexistent edge.
+  void applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates);
+
+  /// Submit updates to all available trees. It will also
   /// 1. discard duplicated updates,
   /// 2. remove invalid updates. (Invalid updates means deletion of an edge that
   /// still exists or insertion of an edge that does not exist.)
@@ -122,8 +138,10 @@ public:
   /// 2. It is illegal to submit any update that has already been submitted,
   /// i.e., you are supposed not to insert an existent edge or delete a
   /// nonexistent edge.
-  void applyUpdates(ArrayRef<DominatorTree::UpdateType> Updates,
-                    bool ForceRemoveDuplicates = false);
+  /// 3. It is only legal to submit updates to an edge in the order CFG changes
+  /// are made. The order you submit updates on different edges is not
+  /// restricted.
+  void applyUpdatesPermissive(ArrayRef<DominatorTree::UpdateType> Updates);
 
   /// Notify DTU that the entry block was replaced.
   /// Recalculate all available trees and flush all BasicBlocks
@@ -149,7 +167,7 @@ public:
   /// submitted. }
   LLVM_ATTRIBUTE_DEPRECATED(void insertEdgeRelaxed(BasicBlock *From,
                                                    BasicBlock *To),
-                            "Use applyUpdates() instead.");
+                            "Use applyUpdatesPermissive() instead.");
 
   /// \deprecated { Submit an edge deletion to all available trees. The Eager
   /// Strategy flushes this update immediately while the Lazy Strategy queues
@@ -171,7 +189,7 @@ public:
   /// submitted. }
   LLVM_ATTRIBUTE_DEPRECATED(void deleteEdgeRelaxed(BasicBlock *From,
                                                    BasicBlock *To),
-                            "Use applyUpdates() instead.");
+                            "Use applyUpdatesPermissive() instead.");
 
   /// Delete DelBB. DelBB will be removed from its Parent and
   /// erased from available trees if it exists and finally get deleted.
@@ -259,11 +277,6 @@ private:
 
   /// Returns true if at least one BasicBlock is deleted.
   bool forceFlushDeletedBB();
-
-  /// Deduplicate and remove unnecessary updates (no-ops) when using Lazy
-  /// UpdateStrategy. Returns true if the update is queued for update.
-  bool applyLazyUpdate(DominatorTree::UpdateKind Kind, BasicBlock *From,
-                       BasicBlock *To);
 
   /// Helper function to apply all pending DomTree updates.
   void applyDomTreeUpdates();

@@ -750,7 +750,6 @@ void WebAssemblyCFGStackify::releaseMemory() {
 }
 
 bool WebAssemblyCFGStackify::runOnMachineFunction(MachineFunction &MF) {
-  errs() << "Function: " << MF.getName() << "\n";
   LLVM_DEBUG(dbgs() << "********** CFG Stackifying **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');

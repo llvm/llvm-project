@@ -263,14 +263,14 @@ multiclass MIMG_Atomic_Helper_m <mimg op, string asm, RegisterClass data_rc,
     def _si : MIMG_Atomic_Helper<asm, data_rc, addr_rc, "SICI", enableDasm>,
               SIMCInstr<NAME, SIEncodingFamily.SI>,
               MIMGe<op.SI> {
-      let AssemblerPredicates = [isGFX6GFX7];
+      let AssemblerPredicates = [isSICI];
       let DisableDecoder = DisableSIDecoder;
     }
 
     def _vi : MIMG_Atomic_Helper<asm, data_rc, addr_rc, "VI", enableDasm>,
               SIMCInstr<NAME, SIEncodingFamily.VI>,
               MIMGe<op.VI> {
-      let AssemblerPredicates = [isGFX8Plus];
+      let AssemblerPredicates = [isVI];
       let DisableDecoder = DisableVIDecoder;
       let MIMGEncoding = MIMGEncGfx8;
     }

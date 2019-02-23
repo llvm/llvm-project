@@ -709,7 +709,8 @@ define <4 x i32> @PR19721(<4 x i32> %i) {
 ; X64-AVX512-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
 ; X64-AVX512-NEXT:    andq %rax, %rcx
 ; X64-AVX512-NEXT:    vmovq %rcx, %xmm1
-; X64-AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; X64-AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
+; X64-AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; X64-AVX512-NEXT:    retq
   %bc = bitcast <4 x i32> %i to i128
   %insert = and i128 %bc, -4294967296

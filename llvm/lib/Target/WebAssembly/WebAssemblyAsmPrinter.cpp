@@ -332,15 +332,6 @@ void WebAssemblyAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   }
 }
 
-const MCExpr *WebAssemblyAsmPrinter::lowerConstant(const Constant *CV) {
-  if (const auto *GV = dyn_cast<GlobalValue>(CV))
-    if (GV->getValueType()->isFunctionTy()) {
-      return MCSymbolRefExpr::create(
-          getSymbol(GV), MCSymbolRefExpr::VK_WebAssembly_FUNCTION, OutContext);
-    }
-  return AsmPrinter::lowerConstant(CV);
-}
-
 bool WebAssemblyAsmPrinter::PrintAsmOperand(const MachineInstr *MI,
                                             unsigned OpNo, unsigned AsmVariant,
                                             const char *ExtraCode,

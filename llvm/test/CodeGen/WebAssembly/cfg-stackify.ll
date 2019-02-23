@@ -1286,7 +1286,7 @@ bb50:
 ; OPT-NEXT:   i32.const   $push
 ; OPT-NEXT:   i32.eqz     $push{{.*}}=, $pop{{.*}}{{$}}
 ; OPT-NEXT:   br_if       0, $pop{{.*}}{{$}}
-; OPT-NEXT:   call        test15_callee1@FUNCTION{{$}}
+; OPT-NEXT:   call        test15_callee1{{$}}
 ; OPT-NEXT:   br          1{{$}}
 ; OPT-NEXT: .LBB24_2:
 ; OPT-NEXT:   end_block

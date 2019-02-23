@@ -558,12 +558,13 @@ void WasmObjectWriter::recordRelocation(MCAssembler &Asm,
 }
 
 static const MCSymbolWasm *resolveSymbol(const MCSymbolWasm &Symbol) {
-  if (Symbol.isVariable()) {
-    const MCExpr *Expr = Symbol.getVariableValue();
+  const MCSymbolWasm* Ret = &Symbol;
+  while (Ret->isVariable()) {
+    const MCExpr *Expr = Ret->getVariableValue();
     auto *Inner = cast<MCSymbolRefExpr>(Expr);
-    return cast<MCSymbolWasm>(&Inner->getSymbol());
+    Ret = cast<MCSymbolWasm>(&Inner->getSymbol());
   }
-  return &Symbol;
+  return Ret;
 }
 
 // Compute a value to write into the code at the location covered
@@ -1422,12 +1423,12 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
     LLVM_DEBUG(dbgs() << WS.getName() << ": weak alias of '" << *ResolvedSym
                       << "'\n");
 
-    if (WS.isFunction()) {
+    if (ResolvedSym->isFunction()) {
       assert(WasmIndices.count(ResolvedSym) > 0);
       uint32_t WasmIndex = WasmIndices.find(ResolvedSym)->second;
       WasmIndices[&WS] = WasmIndex;
       LLVM_DEBUG(dbgs() << "  -> index:" << WasmIndex << "\n");
-    } else if (WS.isData()) {
+    } else if (ResolvedSym->isData()) {
       assert(DataLocations.count(ResolvedSym) > 0);
       const wasm::WasmDataReference &Ref =
           DataLocations.find(ResolvedSym)->second;
@@ -1556,15 +1557,16 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       assert(Fixup.getKind() ==
              MCFixup::getKindForSize(is64Bit() ? 8 : 4, false));
       const MCExpr *Expr = Fixup.getValue();
-      auto *Sym = dyn_cast<MCSymbolRefExpr>(Expr);
-      if (!Sym)
+      auto *SymRef = dyn_cast<MCSymbolRefExpr>(Expr);
+      if (!SymRef)
         report_fatal_error("fixups in .init_array should be symbol references");
-      if (Sym->getKind() != MCSymbolRefExpr::VK_WebAssembly_FUNCTION)
-        report_fatal_error("symbols in .init_array should be for functions");
-      if (Sym->getSymbol().getIndex() == InvalidIndex)
+      const auto &TargetSym = cast<const MCSymbolWasm>(SymRef->getSymbol());
+      if (TargetSym.getIndex() == InvalidIndex)
         report_fatal_error("symbols in .init_array should exist in symbtab");
+      if (!TargetSym.isFunction())
+        report_fatal_error("symbols in .init_array should be for functions");
       InitFuncs.push_back(
-          std::make_pair(Priority, Sym->getSymbol().getIndex()));
+          std::make_pair(Priority, TargetSym.getIndex()));
     }
   }
 

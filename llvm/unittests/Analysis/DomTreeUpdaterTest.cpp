@@ -71,9 +71,9 @@ TEST(DomTreeUpdater, EagerUpdateBasicOperations) {
   SwitchInst *SI = dyn_cast<SwitchInst>(BB0->getTerminator());
   ASSERT_NE(SI, nullptr) << "Couldn't get SwitchInst.";
 
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, BB0, BB0}, {DominatorTree::Delete, BB0, BB0}},
-      /*ForceRemoveDuplicates*/ true);
+  DTU.applyUpdatesPermissive(
+      {{DominatorTree::Insert, BB0, BB0}, {DominatorTree::Delete, BB0, BB0}});
+  ASSERT_FALSE(DTU.hasPendingUpdates());
 
   // Delete edge bb0 -> bb3 and push the update twice to verify duplicate
   // entries are discarded.
@@ -102,14 +102,13 @@ TEST(DomTreeUpdater, EagerUpdateBasicOperations) {
   // queued for deletion.
   ASSERT_FALSE(isa<UnreachableInst>(BB3->getTerminator()));
   EXPECT_FALSE(DTU.isBBPendingDeletion(BB3));
-  DTU.applyUpdates(Updates, /*ForceRemoveDuplicates*/ true);
+  DTU.applyUpdatesPermissive(Updates);
   ASSERT_FALSE(DTU.hasPendingUpdates());
 
   // Invalid Insert: no edge bb1 -> bb2 after change to bb0.
   // Invalid Delete: edge exists bb0 -> bb1 after change to bb0.
-  DTU.applyUpdates(
-      {{DominatorTree::Insert, BB1, BB2}, {DominatorTree::Delete, BB0, BB1}},
-      /*ForceRemoveDuplicates*/ true);
+  DTU.applyUpdatesPermissive(
+      {{DominatorTree::Insert, BB1, BB2}, {DominatorTree::Delete, BB0, BB1}});
 
   // DTU working with Eager UpdateStrategy does not need to flush.
   ASSERT_TRUE(DT.verify());
@@ -184,8 +183,7 @@ TEST(DomTreeUpdater, EagerUpdateReplaceEntryBB) {
   EXPECT_EQ(F->begin()->getName(), NewEntry->getName());
   EXPECT_TRUE(&F->getEntryBlock() == NewEntry);
 
-  DTU.applyUpdates({{DominatorTree::Insert, NewEntry, BB0}},
-                   /*ForceRemoveDuplicates*/ true);
+  DTU.applyUpdates({{DominatorTree::Insert, NewEntry, BB0}});
 
   // Changing the Entry BB requires a full recalculation of DomTree.
   DTU.recalculate(*F);
@@ -254,7 +252,7 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
   BasicBlock *BB3 = &*FI++;
 
   // Test discards of self-domination update.
-  DTU.applyUpdates({{DominatorTree::Delete, BB0, BB0}});
+  DTU.applyUpdatesPermissive({{DominatorTree::Insert, BB0, BB0}});
   ASSERT_FALSE(DTU.hasPendingDomTreeUpdates());
 
   // Delete edge bb0 -> bb3 and push the update twice to verify duplicate
@@ -277,7 +275,7 @@ TEST(DomTreeUpdater, LazyUpdateDTBasicOperations) {
 
   // Verify. Updates to DTU must be applied *after* all changes to the CFG
   // (including block deletion).
-  DTU.applyUpdates(Updates);
+  DTU.applyUpdatesPermissive(Updates);
   ASSERT_TRUE(DTU.getDomTree().verify());
 
   // Deletion of a BasicBlock is an immediate event. We remove all uses to the
@@ -362,9 +360,9 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   //
   // While the final CFG form is functionally identical the updates to
   // DTU are not. In the first case we must have
-  // DTU.applyUpdates({{DominatorTree::Insert, Pred1, Succ}}) while in the
-  // latter case we must *NOT* have DTU.applyUpdates({{DominatorTree::Insert,
-  // Pred1, Succ}}).
+  // DTU.applyUpdates({{DominatorTree::Insert, Pred1, Succ}}) while in
+  // the latter case we must *NOT* have
+  // DTU.applyUpdates({{DominatorTree::Insert, Pred1, Succ}}).
 
   // CFG Change: bb0 now only has bb0 -> bb1 and bb0 -> bb3. We are preparing to
   // remove bb2.
@@ -384,9 +382,9 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
         BasicBlocks.end());
   };
   ASSERT_EQ(BasicBlocks.size(), static_cast<size_t>(2));
-  // Remove bb2 from F. This has to happen before the call to applyUpdates() for
-  // DTU to detect there is no longer an edge between bb2 -> bb3. The deleteBB()
-  // method converts bb2's TI into "unreachable".
+  // Remove bb2 from F. This has to happen before the call to
+  // applyUpdates() for DTU to detect there is no longer an edge between
+  // bb2 -> bb3. The deleteBB() method converts bb2's TI into "unreachable".
   ASSERT_FALSE(isa<UnreachableInst>(BB2->getTerminator()));
   EXPECT_FALSE(DTU.isBBPendingDeletion(BB2));
   DTU.callbackDeleteBB(BB2, Eraser);
@@ -407,9 +405,9 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   BranchInst::Create(BB3, BB0);
   EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
 
-  // Remove bb1 from F. This has to happen before the call to applyUpdates() for
-  // DTU to detect there is no longer an edge between bb1 -> bb3. The deleteBB()
-  // method converts bb1's TI into "unreachable".
+  // Remove bb1 from F. This has to happen before the call to
+  // applyUpdates() for DTU to detect there is no longer an edge between
+  // bb1 -> bb3. The deleteBB() method converts bb1's TI into "unreachable".
   ASSERT_FALSE(isa<UnreachableInst>(BB1->getTerminator()));
   EXPECT_FALSE(DTU.isBBPendingDeletion(BB1));
   DTU.callbackDeleteBB(BB1, Eraser);
@@ -424,7 +422,7 @@ TEST(DomTreeUpdater, LazyUpdateDTInheritedPreds) {
   Updates.push_back({DominatorTree::Delete, BB1, BB3});
 
   // Verify everything.
-  DTU.applyUpdates(Updates);
+  DTU.applyUpdatesPermissive(Updates);
   ASSERT_EQ(BasicBlocks.size(), static_cast<size_t>(2));
   DTU.flush();
   ASSERT_EQ(BasicBlocks.size(), static_cast<size_t>(0));
@@ -509,7 +507,7 @@ TEST(DomTreeUpdater, LazyUpdateBasicOperations) {
 
   // Verify. Updates to DTU must be applied *after* all changes to the CFG
   // (including block deletion).
-  DTU.applyUpdates(Updates);
+  DTU.applyUpdatesPermissive(Updates);
   ASSERT_TRUE(DTU.getDomTree().verify());
   ASSERT_TRUE(DTU.hasPendingUpdates());
   ASSERT_TRUE(DTU.hasPendingPostDomTreeUpdates());
@@ -648,8 +646,7 @@ TEST(DomTreeUpdater, LazyUpdateStepTest) {
   SwitchInst *SI = dyn_cast<SwitchInst>(BB0->getTerminator());
   ASSERT_NE(SI, nullptr) << "Couldn't get SwitchInst.";
 
-  // Delete edge bb0 -> bb3 and push the update twice to verify duplicate
-  // entries are discarded.
+  // Delete edge bb0 -> bb3.
   std::vector<DominatorTree::UpdateType> Updates;
   Updates.reserve(1);
   Updates.push_back({DominatorTree::Delete, BB0, BB3});
@@ -694,7 +691,7 @@ TEST(DomTreeUpdater, LazyUpdateStepTest) {
       ++i;
   }
 
-  DTU.applyUpdates(Updates);
+  DTU.applyUpdatesPermissive(Updates);
   // flush PostDomTree
   ASSERT_TRUE(DTU.getPostDomTree().verify());
   ASSERT_FALSE(DTU.hasPendingPostDomTreeUpdates());
@@ -728,4 +725,70 @@ TEST(DomTreeUpdater, NoTreeTest) {
   ASSERT_TRUE(DTU.hasPendingDeletedBB());
   DTU.recalculate(*F);
   ASSERT_FALSE(DTU.hasPendingDeletedBB());
+}
+
+TEST(DomTreeUpdater, LazyUpdateDeduplicationTest) {
+  StringRef FuncName = "f";
+  StringRef ModuleString = R"(
+                           define i32 @f() {
+                           bb0:
+                              br label %bb1
+                           bb1:
+                              ret i32 1
+                           bb2:
+                              ret i32 1
+                           }
+                           )";
+  // Make the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+  Function *F = M->getFunction(FuncName);
+
+  // Make the DTU.
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(&DT, nullptr, DomTreeUpdater::UpdateStrategy::Lazy);
+  ASSERT_TRUE(DTU.getDomTree().verify());
+
+  Function::iterator FI = F->begin();
+  BasicBlock *BB0 = &*FI++;
+  BasicBlock *BB1 = &*FI++;
+  BasicBlock *BB2 = &*FI++;
+
+  // CFG Change: remove bb0 -> bb1 and add back bb0 -> bb1.
+  EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
+  BB0->getTerminator()->eraseFromParent();
+  BranchInst::Create(BB1, BB0);
+  EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
+
+  // Update the DTU and simulate duplicates.
+  DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB0, BB1},
+                              {DominatorTree::Delete, BB0, BB1},
+                              {DominatorTree::Insert, BB0, BB1},
+                              {DominatorTree::Insert, BB0, BB1},
+                              {DominatorTree::Insert, BB0, BB1}});
+
+  // The above operations result in a no-op.
+  ASSERT_FALSE(DTU.hasPendingUpdates());
+
+  // Update the DTU. Simulate an invalid update.
+  DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB0, BB1}});
+  ASSERT_FALSE(DTU.hasPendingUpdates());
+
+  // CFG Change: remove bb0 -> bb1.
+  EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
+  BB0->getTerminator()->eraseFromParent();
+
+  // Update the DTU and simulate invalid updates.
+  DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB0, BB1},
+                              {DominatorTree::Insert, BB0, BB1},
+                              {DominatorTree::Delete, BB0, BB1},
+                              {DominatorTree::Insert, BB0, BB1},
+                              {DominatorTree::Insert, BB0, BB1}});
+  ASSERT_TRUE(DTU.hasPendingUpdates());
+
+  // CFG Change: add bb0 -> bb2.
+  BranchInst::Create(BB2, BB0);
+  EXPECT_EQ(BB0->getTerminator()->getNumSuccessors(), 1u);
+  DTU.applyUpdates({{DominatorTree::Insert, BB0, BB2}});
+  ASSERT_TRUE(DTU.getDomTree().verify());
 }

@@ -657,30 +657,23 @@ def NullALU : InstrItinClass;
 // Predicate helper class
 //===----------------------------------------------------------------------===//
 
-def isGFX6GFX7 :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
-            "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate<"!FeatureGCN3Encoding">;
+def isSICI : Predicate<
+  "Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS ||"
+  "Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS"
+>, AssemblerPredicate<"!FeatureGCN3Encoding">;
 
-def isGFX7Plus :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate<"FeatureCIInsts">;
+def isVI : Predicate <
+  "Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
+  AssemblerPredicate<"FeatureGCN3Encoding">;
 
-def isGFX8Plus :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate<"FeatureVIInsts">;
-
-def isGFX9Plus :
-  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
+def isGFX9 : Predicate <
+  "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<"FeatureGFX9Insts">;
 
-def isGFX7 :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::SEA_ISLANDS">,
-  AssemblerPredicate<"!FeatureGCN3Encoding,FeatureCIInsts">;
-
-def isGFX8 :
-  Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS">,
-  AssemblerPredicate<"FeatureGCN3Encoding,FeatureVIInsts,!FeatureGFX9Insts">;
+// TODO: Either the name to be changed or we simply use IsCI!
+def isCIVI : Predicate <
+  "Subtarget->getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS">,
+  AssemblerPredicate<"FeatureCIInsts">;
 
 def HasFlatAddressSpace : Predicate<"Subtarget->hasFlatAddressSpace()">,
   AssemblerPredicate<"FeatureFlatAddressSpace">;
