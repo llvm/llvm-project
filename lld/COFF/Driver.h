@@ -158,6 +158,9 @@ void parseMerge(StringRef);
 void parseSection(StringRef);
 void parseAligncomm(StringRef);
 
+// Parses a string in the form of "[:<integer>]"
+void parseFunctionPadMin(llvm::opt::Arg *A, llvm::COFF::MachineTypes Machine);
+
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 void parseManifest(StringRef Arg);
 

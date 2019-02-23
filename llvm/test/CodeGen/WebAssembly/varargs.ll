@@ -105,7 +105,7 @@ declare void @callee(...)
 
 ; CHECK-LABEL: caller_none:
 ; CHECK:      i32.const $push0=, 0
-; CHECK-NEXT: call callee@FUNCTION, $pop0
+; CHECK-NEXT: call callee, $pop0
 ; CHECK-NEXT: return{{$}}
 define void @caller_none() {
   call void (...) @callee()
@@ -149,7 +149,7 @@ declare void @callee_with_nonlegal_fixed(fp128, ...) nounwind
 ; CHECK: i64.const       $push[[L0:[0-9]+]]=, 0
 ; CHECK: i64.const       $push[[L1:[0-9]+]]=, 0
 ; CHECK: i32.const       $push[[L2:[0-9]+]]=, 0
-; CHECK: call            callee_with_nonlegal_fixed@FUNCTION, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
+; CHECK: call            callee_with_nonlegal_fixed, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
 define void @call_nonlegal_fixed() nounwind {
   call void (fp128, ...) @callee_with_nonlegal_fixed(fp128 0xL00000000000000000000000000000000)
   ret void

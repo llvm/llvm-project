@@ -654,13 +654,14 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
       LoadChains.push_back(ScalarLoad.getValue(1));
     }
 
-    // Extract bits, pack and extend/trunc them into destination type.
-    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
-    SDValue SrcEltBitMask = DAG.getConstant((1U << SrcEltBits) - 1, dl, WideVT);
-
     unsigned BitOffset = 0;
     unsigned WideIdx = 0;
     unsigned WideBits = WideVT.getSizeInBits();
+
+    // Extract bits, pack and extend/trunc them into destination type.
+    unsigned SrcEltBits = SrcEltVT.getSizeInBits();
+    SDValue SrcEltBitMask = DAG.getConstant(
+        APInt::getLowBitsSet(WideBits, SrcEltBits), dl, WideVT);
 
     for (unsigned Idx = 0; Idx != NumElem; ++Idx) {
       assert(BitOffset < WideBits && "Unexpected offset!");
@@ -668,7 +669,6 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
       SDValue ShAmt = DAG.getConstant(
           BitOffset, dl, TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
       SDValue Lo = DAG.getNode(ISD::SRL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-      Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
 
       BitOffset += SrcEltBits;
       if (BitOffset >= WideBits) {
@@ -680,10 +680,11 @@ SDValue VectorLegalizer::ExpandLoad(SDValue Op) {
               TLI.getShiftAmountTy(WideVT, DAG.getDataLayout()));
           SDValue Hi =
               DAG.getNode(ISD::SHL, dl, WideVT, LoadVals[WideIdx], ShAmt);
-          Hi = DAG.getNode(ISD::AND, dl, WideVT, Hi, SrcEltBitMask);
           Lo = DAG.getNode(ISD::OR, dl, WideVT, Lo, Hi);
         }
       }
+
+      Lo = DAG.getNode(ISD::AND, dl, WideVT, Lo, SrcEltBitMask);
 
       switch (ExtType) {
       default: llvm_unreachable("Unknown extended-load op!");

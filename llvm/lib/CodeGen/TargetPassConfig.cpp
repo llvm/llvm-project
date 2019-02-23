@@ -407,7 +407,7 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
     TM.Options.EnableIPRA = EnableIPRA;
   else {
     // If not explicitly specified, use target default.
-    TM.Options.EnableIPRA = TM.useIPRA();
+    TM.Options.EnableIPRA |= TM.useIPRA();
   }
 
   if (TM.Options.EnableIPRA)
@@ -1037,10 +1037,6 @@ bool TargetPassConfig::getOptimizeRegAlloc() const {
   }
   llvm_unreachable("Invalid optimize-regalloc state");
 }
-
-/// RegisterRegAlloc's global Registry tracks allocator registration.
-MachinePassRegistry<RegisterRegAlloc::FunctionPassCtor>
-    RegisterRegAlloc::Registry;
 
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.

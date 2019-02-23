@@ -684,9 +684,7 @@ define <2 x double> @uitofp_4i32_to_2f64(<4 x i32> %a) {
 ;
 ; AVX512VL-LABEL: uitofp_4i32_to_2f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: uitofp_4i32_to_2f64:
@@ -699,9 +697,7 @@ define <2 x double> @uitofp_4i32_to_2f64(<4 x i32> %a) {
 ;
 ; AVX512VLDQ-LABEL: uitofp_4i32_to_2f64:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %cvt = uitofp <4 x i32> %a to <4 x double>
   %shuf = shufflevector <4 x double> %cvt, <4 x double> undef, <2 x i32> <i32 0, i32 1>
@@ -5699,9 +5695,7 @@ define double @extract0_uitofp_v4i32_f64(<4 x i32> %x) nounwind {
 ;
 ; AVX512VL-LABEL: extract0_uitofp_v4i32_f64:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: extract0_uitofp_v4i32_f64:
@@ -5714,9 +5708,7 @@ define double @extract0_uitofp_v4i32_f64(<4 x i32> %x) nounwind {
 ;
 ; AVX512VLDQ-LABEL: extract0_uitofp_v4i32_f64:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %e = extractelement <4 x i32> %x, i32 0
   %r = uitofp i32 %e to double
@@ -5855,9 +5847,7 @@ define double @extract3_uitofp_v4i32_f64(<4 x i32> %x) nounwind {
 ; AVX512VL-LABEL: extract3_uitofp_v4i32_f64:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: extract3_uitofp_v4i32_f64:
@@ -5871,9 +5861,7 @@ define double @extract3_uitofp_v4i32_f64(<4 x i32> %x) nounwind {
 ; AVX512VLDQ-LABEL: extract3_uitofp_v4i32_f64:
 ; AVX512VLDQ:       # %bb.0:
 ; AVX512VLDQ-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512VLDQ-NEXT:    vcvtudq2pd %xmm0, %ymm0
-; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; AVX512VLDQ-NEXT:    vzeroupper
+; AVX512VLDQ-NEXT:    vcvtudq2pd %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %e = extractelement <4 x i32> %x, i32 3
   %r = uitofp i32 %e to double

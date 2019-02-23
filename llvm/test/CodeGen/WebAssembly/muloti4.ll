@@ -14,6 +14,6 @@ entry:
   ret i128 %X
 }
 
-; CHECK: call __muloti4@FUNCTION, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}{{$}}
+; CHECK: call __muloti4, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}{{$}}
 
 declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128) nounwind readnone

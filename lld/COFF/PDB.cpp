@@ -308,30 +308,6 @@ static void pdbMakeAbsolute(SmallVectorImpl<char> &FileName) {
   FileName = std::move(AbsoluteFileName);
 }
 
-static SectionChunk *findByName(ArrayRef<SectionChunk *> Sections,
-                                StringRef Name) {
-  for (SectionChunk *C : Sections)
-    if (C->getSectionName() == Name)
-      return C;
-  return nullptr;
-}
-
-static ArrayRef<uint8_t> consumeDebugMagic(ArrayRef<uint8_t> Data,
-                                           StringRef SecName) {
-  // First 4 bytes are section magic.
-  if (Data.size() < 4)
-    fatal(SecName + " too short");
-  if (support::endian::read32le(Data.data()) != COFF::DEBUG_SECTION_MAGIC)
-    fatal(SecName + " has an invalid magic");
-  return Data.slice(4);
-}
-
-static ArrayRef<uint8_t> getDebugSection(ObjFile *File, StringRef SecName) {
-  if (SectionChunk *Sec = findByName(File->getDebugChunks(), SecName))
-    return consumeDebugMagic(Sec->getContents(), SecName);
-  return {};
-}
-
 // A COFF .debug$H section is currently a clang extension.  This function checks
 // if a .debug$H section is in a format that we expect / understand, so that we
 // can ignore any sections which are coincidentally also named .debug$H but do
@@ -349,7 +325,8 @@ static bool canUseDebugH(ArrayRef<uint8_t> DebugH) {
 }
 
 static Optional<ArrayRef<uint8_t>> getDebugH(ObjFile *File) {
-  SectionChunk *Sec = findByName(File->getDebugChunks(), ".debug$H");
+  SectionChunk *Sec =
+      SectionChunk::findByName(File->getDebugChunks(), ".debug$H");
   if (!Sec)
     return llvm::None;
   ArrayRef<uint8_t> Contents = Sec->getContents();
@@ -381,51 +358,17 @@ static void addTypeInfo(pdb::TpiStreamBuilder &TpiBuilder,
   });
 }
 
-// OBJs usually start their symbol stream with a S_OBJNAME record. This record
-// also contains the signature/key of the current PCH session. The signature
-// must be same for all objects which depend on the precompiled object.
-// Recompiling the precompiled headers will generate a new PCH key and thus
-// invalidate all the dependent objects.
-static uint32_t extractPCHSignature(ObjFile *File) {
-  auto DbgIt = find_if(File->getDebugChunks(), [](SectionChunk *C) {
-    return C->getSectionName() == ".debug$S";
-  });
-  if (!DbgIt)
-    return 0;
-
-  ArrayRef<uint8_t> Contents =
-      consumeDebugMagic((*DbgIt)->getContents(), ".debug$S");
-  DebugSubsectionArray Subsections;
-  BinaryStreamReader Reader(Contents, support::little);
-  ExitOnErr(Reader.readArray(Subsections, Contents.size()));
-
-  for (const DebugSubsectionRecord &SS : Subsections) {
-    if (SS.kind() != DebugSubsectionKind::Symbols)
-      continue;
-
-    // If it's there, the S_OBJNAME record shall come first in the stream.
-    Expected<CVSymbol> Sym = readSymbolFromStream(SS.getRecordData(), 0);
-    if (!Sym) {
-      consumeError(Sym.takeError());
-      continue;
-    }
-    if (auto ObjName = SymbolDeserializer::deserializeAs<ObjNameSym>(Sym.get()))
-      return ObjName->Signature;
-  }
-  return 0;
-}
-
 Expected<const CVIndexMap &>
 PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   ScopedTimer T(TypeMergingTimer);
 
   bool IsPrecompiledHeader = false;
 
-  ArrayRef<uint8_t> Data = getDebugSection(File, ".debug$T");
+  ArrayRef<uint8_t> Data = File->getDebugSection(".debug$T");
   if (Data.empty()) {
     // Try again, Microsoft precompiled headers use .debug$P instead of
     // .debug$T
-    Data = getDebugSection(File, ".debug$P");
+    Data = File->getDebugSection(".debug$P");
     IsPrecompiledHeader = true;
   }
   if (Data.empty())
@@ -434,7 +377,7 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   // Precompiled headers objects need to save the index map for further
   // reference by other objects which use the precompiled headers.
   if (IsPrecompiledHeader) {
-    uint32_t PCHSignature = extractPCHSignature(File);
+    uint32_t PCHSignature = File->PCHSignature.getValueOr(0);
     if (PCHSignature == 0)
       fatal("No signature found for the precompiled headers OBJ (" +
             File->getName() + ")");
@@ -1176,7 +1119,7 @@ translateStringTableIndex(uint32_t ObjIndex,
 void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
   DebugSubsectionArray Subsections;
 
-  ArrayRef<uint8_t> RelocatedDebugContents = consumeDebugMagic(
+  ArrayRef<uint8_t> RelocatedDebugContents = SectionChunk::consumeDebugMagic(
       relocateDebugChunk(Linker.Alloc, DebugS), DebugS.getSectionName());
 
   BinaryStreamReader Reader(RelocatedDebugContents, support::little);
@@ -1676,7 +1619,7 @@ static bool findLineTable(const SectionChunk *C, uint32_t Addr,
     }
 
     ArrayRef<uint8_t> Contents =
-        consumeDebugMagic(DbgC->getContents(), ".debug$S");
+        SectionChunk::consumeDebugMagic(DbgC->getContents(), ".debug$S");
     DebugSubsectionArray Subsections;
     BinaryStreamReader Reader(Contents, support::little);
     ExitOnErr(Reader.readArray(Subsections, Contents.size()));
