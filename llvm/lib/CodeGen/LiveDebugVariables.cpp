@@ -619,7 +619,7 @@ bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
     } else {
       // The DBG_VALUE is only valid if either Reg is live out from Idx, or Reg
       // is defined dead at Idx (where Idx is the slot index for the instruction
-      // preceeding the DBG_VALUE).
+      // preceding the DBG_VALUE).
       const LiveInterval &LI = LIS->getInterval(Reg);
       LiveQueryResult LRQ = LI.Query(Idx);
       if (!LRQ.valueOutOrDead()) {

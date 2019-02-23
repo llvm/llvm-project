@@ -1,11 +1,21 @@
 ; RUN: opt -lowerswitch -S < %s | FileCheck %s
 
 ; Test that we don't crash and have a different basic block for each incoming edge.
-define void @test0() {
+define void @test0(i32 %mode) {
 ; CHECK-LABEL: @test0
-; CHECK: %merge = phi i64 [ 1, %BB3 ], [ 0, %NodeBlock5 ], [ 0, %LeafBlock1 ], [ 0, %NewDefault ]
+;
+; CHECK: icmp eq i32 %mode, 4
+; CHECK-NEXT: label %BB3, label %NewDefault
+;
+; CHECK: icmp eq i32 %mode, 2
+; CHECK-NEXT: label %BB3, label %NewDefault
+;
+; CHECK: icmp eq i32 %mode, 0
+; CHECK-NEXT: label %BB3, label %NewDefault
+;
+; CHECK: %merge = phi i64 [ 1, %BB3 ], [ 0, %NewDefault ]
 BB1:
-  switch i32 undef, label %BB2 [
+  switch i32 %mode, label %BB2 [
     i32 3, label %BB2
     i32 5, label %BB2
     i32 0, label %BB3
@@ -24,13 +34,13 @@ BB3:
 ; Test switch cases that are merged into a single case during lowerswitch
 ; (take 84 and 85 below) - check that the number of incoming phi values match
 ; the number of branches.
-define void @test1() {
+define void @test1(i32 %mode) {
 ; CHECK-LABEL: @test1
 entry:
   br label %bb1
 
 bb1:
-  switch i32 undef, label %bb1 [
+  switch i32 %mode, label %bb1 [
     i32 84, label %bb3
     i32 85, label %bb3
     i32 86, label %bb2
@@ -190,7 +200,7 @@ define void @test2(i32 %mode) {
 ; Test that the PHI node in for.cond should have one entry for each predecessor
 ; of its parent basic block after lowerswitch merged several cases into a new
 ; default block.
-define void @test3() {
+define void @test3(i32 %mode) {
 ; CHECK-LABEL: @test3
 entry:
   br label %lbl1
@@ -232,7 +242,7 @@ for.body7:                                        ; preds = %for.end
   br label %cleanup
 
 cleanup:                                          ; preds = %for.body7, %if.then4, %if.then
-  switch i32 undef, label %unreachable [
+  switch i32 %mode, label %unreachable [
     i32 0, label %for.cond
     i32 2, label %lbl1
     i32 5, label %for.cond
@@ -245,10 +255,10 @@ unreachable:                                      ; preds = %cleanup
 
 ; Test that the PHI node in cleanup17 is removed as the switch default block is
 ; not reachable.
-define void @test4() {
+define void @test4(i32 %mode) {
 ; CHECK-LABEL: @test4
 entry:
-  switch i32 undef, label %cleanup17 [
+  switch i32 %mode, label %cleanup17 [
     i32 0, label %return
     i32 9, label %return
   ]
@@ -267,7 +277,7 @@ return:
 
 ; Test that the PHI node in for.inc is updated correctly as the switch is
 ; replaced with a single branch to for.inc
-define void @test5() {
+define void @test5(i32 %mode) {
 ; CHECK-LABEL: @test5
 entry:
   br i1 undef, label %cleanup10, label %cleanup10.thread
@@ -276,7 +286,7 @@ cleanup10.thread:
   br label %for.inc
 
 cleanup10:
-  switch i32 undef, label %unreachable [
+  switch i32 %mode, label %unreachable [
     i32 0, label %for.inc
     i32 4, label %for.inc
   ]

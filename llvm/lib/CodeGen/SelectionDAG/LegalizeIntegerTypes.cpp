@@ -1445,19 +1445,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
   SDValue Carry = N->getOperand(2);
   SDLoc DL(N);
 
-  auto VT = getSetCCResultType(LHS.getValueType());
-  TargetLoweringBase::BooleanContent BoolType = TLI.getBooleanContents(VT);
-  switch (BoolType) {
-  case TargetLoweringBase::UndefinedBooleanContent:
-    Carry = DAG.getAnyExtOrTrunc(Carry, DL, VT);
-    break;
-  case TargetLoweringBase::ZeroOrOneBooleanContent:
-    Carry = DAG.getZExtOrTrunc(Carry, DL, VT);
-    break;
-  case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
-    Carry = DAG.getSExtOrTrunc(Carry, DL, VT);
-    break;
-  }
+  Carry = PromoteTargetBoolean(Carry, LHS.getValueType());
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
 }
@@ -3667,6 +3655,8 @@ SDValue DAGTypeLegalizer::ExpandIntOp_ATOMIC_STORE(SDNode *N) {
 
 
 SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
+  SDValue InOp0 = N->getOperand(0);
+  EVT InVT = InOp0.getValueType();
 
   EVT OutVT = N->getValueType(0);
   EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
@@ -3676,12 +3666,6 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
 
   SDLoc dl(N);
   SDValue BaseIdx = N->getOperand(1);
-
-  SDValue InOp0 = N->getOperand(0);
-  if (getTypeAction(InOp0.getValueType()) == TargetLowering::TypePromoteInteger)
-    InOp0 = GetPromotedInteger(N->getOperand(0));
-
-  EVT InVT = InOp0.getValueType();
 
   SmallVector<SDValue, 8> Ops;
   Ops.reserve(OutNumElems);
@@ -3693,7 +3677,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
     SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
       InVT.getVectorElementType(), N->getOperand(0), Index);
 
-    SDValue Op = DAG.getAnyExtOrTrunc(Ext, dl, NOutVTElem);
+    SDValue Op = DAG.getNode(ISD::ANY_EXTEND, dl, NOutVTElem, Ext);
     // Insert the converted element to the new vector.
     Ops.push_back(Op);
   }

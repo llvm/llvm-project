@@ -3918,7 +3918,7 @@ void Verifier::verifyDominatesUse(Instruction &I, unsigned i) {
   }
 
   // Quick check whether the def has already been encountered in the same block.
-  // PHI nodes are not checked to prevent accepting preceeding PHIs, because PHI
+  // PHI nodes are not checked to prevent accepting preceding PHIs, because PHI
   // uses are defined to happen on the incoming edge, not at the instruction.
   //
   // FIXME: If this operand is a MetadataAsValue (wrapping a LocalAsMetadata)

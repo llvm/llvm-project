@@ -215,6 +215,18 @@ TEST(DiagnosticsTest, InsideMacros) {
                                "'int *' with an rvalue of type 'int'")));
 }
 
+TEST(DiagnosticsTest, NoFixItInMacro) {
+  Annotations Test(R"cpp(
+    #define Define(name) void name() {}
+
+    [[Define]](main)
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(AllOf(Diag(Test.range(), "'main' must return 'int'"),
+                                Not(WithFix(_)))));
+}
+
 TEST(DiagnosticsTest, ToLSP) {
   clangd::Diag D;
   D.Message = "something terrible happened";

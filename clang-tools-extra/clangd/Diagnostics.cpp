@@ -335,6 +335,11 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
 
     llvm::SmallVector<TextEdit, 1> Edits;
     for (auto &FixIt : Info.getFixItHints()) {
+      // Follow clang's behavior, don't apply FixIt to the code in macros,
+      // we are less certain it is the right fix.
+      if (FixIt.RemoveRange.getBegin().isMacroID() ||
+          FixIt.RemoveRange.getEnd().isMacroID())
+        return false;
       if (!isInsideMainFile(FixIt.RemoveRange.getBegin(),
                             Info.getSourceManager()))
         return false;

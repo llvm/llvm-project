@@ -103,7 +103,7 @@ void ReportMmapWriteExec(int prot) {
   GET_CALLER_PC_BP_SP;
   (void)sp;
   bool fast = common_flags()->fast_unwind_on_fatal;
-  if (fast)
+  if (StackTrace::WillUseFastUnwind(fast))
     GetThreadStackTopAndBottom(false, &top, &bottom);
   stack->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, fast);
 

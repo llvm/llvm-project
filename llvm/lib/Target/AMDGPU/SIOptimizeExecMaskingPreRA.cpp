@@ -374,8 +374,7 @@ bool SIOptimizeExecMaskingPreRA::runOnMachineFunction(MachineFunction &MF) {
         if (!MRI.reg_empty(Reg))
           LIS->createAndComputeVirtRegInterval(Reg);
       } else {
-        for (MCRegUnitIterator U(Reg, TRI); U.isValid(); ++U)
-          LIS->removeRegUnit(*U);
+        LIS->removeAllRegUnitsForPhysReg(Reg);
       }
     }
   }

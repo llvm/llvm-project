@@ -32,6 +32,8 @@ def errorlimit : P<"errorlimit",
 def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
+def functionpadmin : F<"functionpadmin">;
+def functionpadmin_opt : P<"functionpadmin", "Prepares an image for hotpatching">;
 def guard   : P<"guard", "Control flow guard">;
 def heap    : P<"heap", "Size of the heap">;
 def ignore : P<"ignore", "Specify warning codes to ignore">;
@@ -178,7 +180,6 @@ multiclass QB<string name> {
   def _no : F<name#":no">;
 }
 
-def functionpadmin : F<"functionpadmin">;
 def ignoreidl : F<"ignoreidl">;
 def nologo : F<"nologo">;
 def throwingnew : F<"throwingnew">;

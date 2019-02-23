@@ -117,6 +117,8 @@ public:
   ArrayRef<SectionChunk *> getGuardLJmpChunks() { return GuardLJmpChunks; }
   ArrayRef<Symbol *> getSymbols() { return Symbols; }
 
+  ArrayRef<uint8_t> getDebugSection(StringRef SecName);
+
   // Returns a Symbol object for the SymbolIndex'th symbol in the
   // underlying object file.
   Symbol *getSymbol(uint32_t SymbolIndex) {
@@ -156,6 +158,9 @@ public:
   // precompiled object. Any difference indicates out-of-date objects.
   llvm::Optional<uint32_t> PCHSignature;
 
+  // Tells whether this file was compiled with /hotpatch
+  bool HotPatchable = false;
+
 private:
   const coff_section* getSection(uint32_t I);
   const coff_section *getSection(COFFSymbolRef Sym) {
@@ -164,6 +169,7 @@ private:
 
   void initializeChunks();
   void initializeSymbols();
+  void initializeFlags();
 
   SectionChunk *
   readSection(uint32_t SectionNumber,

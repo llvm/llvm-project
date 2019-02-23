@@ -373,7 +373,7 @@ static bool processSwitch(SwitchInst *SI, LazyValueInfo *LVI,
       ++NumDeadCases;
       Changed = true;
       if (--SuccessorsCount[Succ] == 0)
-        DTU.applyUpdates({{DominatorTree::Delete, BB, Succ}});
+        DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB, Succ}});
       continue;
     }
     if (State == LazyValueInfo::True) {

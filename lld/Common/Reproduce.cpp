@@ -48,12 +48,6 @@ std::string lld::quote(StringRef S) {
   return S;
 }
 
-std::string lld::rewritePath(StringRef S) {
-  if (fs::exists(S))
-    return relativeToRoot(S);
-  return S;
-}
-
 std::string lld::toString(const opt::Arg &Arg) {
   std::string K = Arg.getSpelling();
   if (Arg.getNumValues() == 0)
