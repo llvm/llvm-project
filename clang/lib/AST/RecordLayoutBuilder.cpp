@@ -22,6 +22,8 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MathExtras.h"
 
+//std::string RandstructSeed = "myrandomseed";
+
 using namespace clang;
 
 namespace {

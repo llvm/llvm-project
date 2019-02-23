@@ -24,6 +24,8 @@
 // FIXME: Find a better alternative to SmallVector with hardcoded size!
 
 namespace clang {
+std::string RandstructSeed = "someseed";
+char cstr[128];
 
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) const {
@@ -96,9 +98,10 @@ const size_t CACHE_LINE = 64;
 
 SmallVector<FieldDecl *, 64> Bucket::randomize() {
   // FIXME use seed
-  llvm::errs() << "Bucket::randomize(); " << ::RandstructSeed << " at " << &RandstructSeed << " \n";
+  llvm::errs() << "Bucket::randomize(); " << RandstructSeed << " at " << &RandstructSeed << " : " << RandstructSeed.size() << " \n";
+  llvm::errs() << "Bucket::randomize(); cstr" << std::string(cstr) << " at " << cstr << " : " << std::string(cstr).size() << " \n";
   //llvm::errs() << "I am Bucket::randomize() and RandomSeed is " << RandomSeed << "\n";
-  std::seed_seq Seq(::RandstructSeed.begin(), ::RandstructSeed.end());
+  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
   auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;

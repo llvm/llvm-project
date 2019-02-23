@@ -46,12 +46,13 @@
 #include <unistd.h> // For getuid().
 #endif
 
+//std::string RandstructSeed = "initialseedstring";
+
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-std::string RandstructSeed = "initialseedstring";
 
 static void CheckPreprocessingOptions(const Driver &D, const ArgList &Args) {
   if (Arg *A =
@@ -4411,10 +4412,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -frandstruct-seed
   if (Arg *A = Args.getLastArg(options::OPT_frandstruct_seed_EQ)) {
     //CmdArgs.push_back(A->getValue());
-    llvm::errs() << "I am handling switch; " << RandstructSeed << " at " << &RandstructSeed << " : " << RandstructSeed.size() << "\n";
-    RandstructSeed = A->getValue(0);
-    llvm::errs() << "I am handling switch; " << RandstructSeed << " at " << &RandstructSeed << " : " << RandstructSeed.size() << "\n";
+    llvm::errs() << "handling switch; " << RandstructSeed << " at " << &RandstructSeed << " : " << RandstructSeed.size() << "\n";
+    RandstructSeed.assign(A->getValue(0));
+    strcpy(cstr,A->getValue(0));
+    llvm::errs() << "cstr: " << std::string(cstr) << "\n";
+    llvm::errs() << "handling switch; " << RandstructSeed << " at " << &RandstructSeed << " : " << RandstructSeed.size() << "\n";
   }
+  llvm::errs() << "handling switch; " << RandstructSeed << " at " << &RandstructSeed << " : " << RandstructSeed.size() << "\n";
 
   // -fvisibility= and -fvisibility-ms-compat are of a piece.
   if (const Arg *A = Args.getLastArg(options::OPT_fvisibility_EQ,

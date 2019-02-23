@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/RandstructSeed.h"
+//#include "clang/AST/RandstructSeed.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "TestModuleFileExtension.h"
 #include "clang/Basic/Builtins.h"
@@ -1670,10 +1670,12 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ProgramAction = frontend::PluginAction;
     Opts.ActionName = A->getValue();
   }
+/*
   if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed_EQ)) {
     llvm::errs() << "ParseFrontendArgs; " << RandstructSeed << "\n";
     RandstructSeed = A->getValue();
   }
+*/
   Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
   for (const auto *AA : Args.filtered(OPT_plugin_arg))
     Opts.PluginArgs[AA->getValue(0)].emplace_back(AA->getValue(1));
