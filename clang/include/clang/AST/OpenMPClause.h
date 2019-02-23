@@ -4979,7 +4979,6 @@ class OMPToClause final : public OMPMappableExprListClause<OMPToClause>,
   /// \param MapperQualifierLoc C++ nested name specifier for the associated
   /// user-defined mapper.
   /// \param MapperIdInfo The identifier of associated user-defined mapper.
-  /// \param MapType Map type.
   /// \param Locs Locations needed to build a mappable clause. It includes 1)
   /// StartLoc: starting location of the clause (the clause keyword); 2)
   /// LParenLoc: location of '('; 3) EndLoc: ending location of the clause.
