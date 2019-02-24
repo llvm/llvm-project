@@ -4102,44 +4102,42 @@ def ClangRandstructDocs : Documentation {
   let Heading = "randomize_layout, no_randomize_layout";
   let Content = [{
 The attributes ``randomize_layout`` and ``no_randomize_layout`` can be applied
-to a C struct or class(???).
+to a record.
 
-``randomize_layout`` instructs the compiler to randomize the memory location 
-of the member variables of the struct or class(???). Functions will not be 
-shuffled, unless in the event that the member is a function pointer, then it 
-will be shuffled as a normal member variable.
+``randomize_layout`` instructs the compiler to randomize the memory layout 
+of the member variables of the record.
 
 Conversely, ``no_randomize_layout`` is used to indicate that if using the 
-Automatic Strucuture Selection feature of the Randstruct implementation, the 
-compiler should not shuffle the members of the struct.
+automatic strucuture selection feature of the Randstruct implementation, the 
+compiler should not shuffle the members of the record.
 
-If in the event that a struct or class(???) is labeled with both attributes, 
-the compiler will emit a warning indicating that these two cannot be used on 
-the same struct of class(???). The default behavior in this case is to not 
-randomize the struct, as the attribute ``no_randomize_layout`` takes precedence 
-over ``randomize_layout``.
+In the event that a record is labeled with both attributes, the compiler will
+emit a warning indicating that these two cannot be used on the same record.
+The default behavior in this case is to not randomize the struct, as the
+attribute ``no_randomize_layout`` takes precedence over ``randomize_layout``.
+This is implementation defined behavior.
 
 .. code-block:: c
 
   // Indicates that this struct should be randomized by Randstruct implementation.
-  struct __attribute__((randomize_layout)) s {
+  struct s {
     char *a;
     char *b;
     char *c;
-  };
+  }__attribute__((randomize_layout));
   
   // Indicates that this struct should NOT be randomized by Randstruct implementation.
-  struct __attribute__((no_randomize_layout)) s {
+  struct s {
     char *a;
     char *b;
     char *c;
-  };
+  }__attribute__((no_randomize_layout));
 
   // Emits compiler warning. Struct is NOT randomized by Randstruct implementation. 
-  struct __attribute__((randomize_layout)) __attribute__((no_randomize_layout)) s {
+  struct s {
     char *a;
     char *b;
     char *c;
-  };
+  }__attribute__((randomize_layout)) __attribute__((no_randomize_layout));
 }];
 }
