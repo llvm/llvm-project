@@ -1197,6 +1197,31 @@ static bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, CmpInst *Cmp,
   return true;
 }
 
+/// Match special-case patterns that check for unsigned add overflow.
+static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
+                                                   BinaryOperator *&Add) {
+  // Add = add A, 1; Cmp = icmp eq A,-1 (overflow if A is max val)
+  // Add = add A,-1; Cmp = icmp ne A, 0 (overflow if A is non-zero)
+  Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (Pred == ICmpInst::ICMP_EQ && match(B, m_AllOnes()))
+    B = ConstantInt::get(B->getType(), 1);
+  else if (Pred == ICmpInst::ICMP_NE && match(B, m_ZeroInt()))
+    B = ConstantInt::get(B->getType(), -1);
+  else
+    return false;
+
+  // Check the users of the variable operand of the compare looking for an add
+  // with the adjusted constant.
+  for (User *U : A->users()) {
+    if (match(U, m_Add(m_Specific(A), m_Specific(B)))) {
+      Add = cast<BinaryOperator>(U);
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
 static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
@@ -1204,7 +1229,8 @@ static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
   Value *A, *B;
   BinaryOperator *Add;
   if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add))))
-    return false;
+    if (!matchUAddWithOverflowConstantEdgeCases(Cmp, Add))
+      return false;
 
   if (!TLI.shouldFormOverflowOp(ISD::UADDO,
                                 TLI.getValueType(DL, Add->getType())))
@@ -1215,13 +1241,6 @@ static bool combineToUAddWithOverflow(CmpInst *Cmp, const TargetLowering &TLI,
   // block containing the icmp.
   if (Add->getParent() != Cmp->getParent() && !Add->hasOneUse())
     return false;
-
-#ifndef NDEBUG
-  // Someday m_UAddWithOverflow may get smarter, but this is a safe assumption
-  // for now:
-  if (Add->hasOneUse())
-    assert(*Add->user_begin() == Cmp && "expected!");
-#endif
 
   if (!replaceMathCmpWithIntrinsic(Add, Cmp, Intrinsic::uadd_with_overflow))
     return false;

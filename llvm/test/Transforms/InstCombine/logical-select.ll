@@ -515,10 +515,10 @@ define <4 x i32> @vec_sel_xor(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c) {
 define <4 x i32> @vec_sel_xor_multi_use(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c) {
 ; CHECK-LABEL: @vec_sel_xor_multi_use(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[C:%.*]], <i1 true, i1 false, i1 false, i1 false>
-; CHECK-NEXT:    [[MASK_FLIP1:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i1> [[C]], <i1 false, i1 true, i1 true, i1 true>
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add <4 x i32> [[TMP3]], [[MASK_FLIP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[ADD:%.*]] = sub <4 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret <4 x i32> [[ADD]]
 ;
   %mask = sext <4 x i1> %c to <4 x i32>
