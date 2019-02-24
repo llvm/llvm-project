@@ -1118,6 +1118,12 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     return BinaryOperator::CreateSub(RHS, A);
   }
 
+  // Canonicalize sext to zext for better value tracking potential.
+  // add A, sext(B) --> sub A, zext(B)
+  if (match(&I, m_c_Add(m_Value(A), m_OneUse(m_SExt(m_Value(B))))) &&
+      B->getType()->isIntOrIntVectorTy(1))
+    return BinaryOperator::CreateSub(A, Builder.CreateZExt(B, Ty));
+
   // A + -B  -->  A - B
   if (match(RHS, m_Neg(m_Value(B))))
     return BinaryOperator::CreateSub(LHS, B);

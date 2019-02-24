@@ -162,10 +162,11 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, i16* %p) {
 
 define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
 ; CHECK-LABEL: @uaddo_i64_increment_alt(
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[X:%.*]], 1
-; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp eq i64 [[X]], -1
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %a = add i64 %x, 1
   store i64 %a, i64* %p
@@ -177,10 +178,11 @@ define i1 @uaddo_i64_increment_alt(i64 %x, i64* %p) {
 
 define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
 ; CHECK-LABEL: @uaddo_i64_increment_alt_dom(
-; CHECK-NEXT:    [[OV:%.*]] = icmp eq i64 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[X]], 1
-; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %ov = icmp eq i64 %x, -1
   %a = add i64 %x, 1
@@ -192,10 +194,11 @@ define i1 @uaddo_i64_increment_alt_dom(i64 %x, i64* %p) {
 
 define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
 ; CHECK-LABEL: @uaddo_i64_decrement_alt(
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[X:%.*]], -1
-; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
-; CHECK-NEXT:    [[OV:%.*]] = icmp ne i64 [[X]], 0
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 -1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %a = add i64 %x, -1
   store i64 %a, i64* %p
@@ -207,10 +210,11 @@ define i1 @uaddo_i64_decrement_alt(i64 %x, i64* %p) {
 
 define i1 @uaddo_i64_decrement_alt_dom(i64 %x, i64* %p) {
 ; CHECK-LABEL: @uaddo_i64_decrement_alt_dom(
-; CHECK-NEXT:    [[OV:%.*]] = icmp ne i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[A:%.*]] = add i64 [[X]], -1
-; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]]
-; CHECK-NEXT:    ret i1 [[OV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 [[X:%.*]], i64 -1)
+; CHECK-NEXT:    [[MATH:%.*]] = extractvalue { i64, i1 } [[TMP1]], 0
+; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i64, i1 } [[TMP1]], 1
+; CHECK-NEXT:    store i64 [[MATH]], i64* [[P:%.*]]
+; CHECK-NEXT:    ret i1 [[OV1]]
 ;
   %ov = icmp ne i64 %x, 0
   %a = add i64 %x, -1

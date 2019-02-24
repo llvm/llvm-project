@@ -1254,7 +1254,8 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       DataSegments.emplace_back();
       WasmDataSegment &Segment = DataSegments.back();
       Segment.Name = SectionName;
-      Segment.InitFlags = Section.getPassive() ? wasm::WASM_SEGMENT_IS_PASSIVE : 0;
+      Segment.InitFlags =
+          Section.getPassive() ? (uint32_t)wasm::WASM_SEGMENT_IS_PASSIVE : 0;
       Segment.Offset = DataSize;
       Segment.Section = &Section;
       addData(Segment.Data, Section);
