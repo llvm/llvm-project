@@ -1670,7 +1670,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ProgramAction = frontend::PluginAction;
     Opts.ActionName = A->getValue();
   }
-  if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed_EQ)) {
+  if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed)) {
     llvm::errs() << "ParseFrontendArgs; " << RandstructSeed << "\n";
     RandstructSeed = A->getValue(0);
     strcpy(cstr, A->getValue(0));
