@@ -335,16 +335,16 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
 
   if (ResponseFile == nullptr) {
     Argv.push_back(Executable);
+    if (!RandstructSeed.empty())
+    {
+      //Args.push_back("-frandstruct-seed=" + RandstructSeed);
+      Argv.push_back("-frandstruct-seed");
+      Argv.push_back( RandstructSeed );
+    }
     Argv.append(Arguments.begin(), Arguments.end());
     Argv.push_back(nullptr);
 
     auto Args = llvm::toStringRefArray(Argv.data());
-    if (!RandstructSeed.empty())
-    {
-      //Args.push_back("-frandstruct-seed=" + RandstructSeed);
-      Args.push_back("-frandstruct-seed");
-      Args.push_back("IAMSEED");
-    }
     return llvm::sys::ExecuteAndWait(
         Executable, Args, Env, Redirects, /*secondsToWait*/ 0,
         /*memoryLimit*/ 0, ErrMsg, ExecutionFailed);
