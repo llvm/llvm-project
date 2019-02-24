@@ -342,7 +342,8 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
     if (!RandstructSeed.empty())
     {
       //Args.push_back("-frandstruct-seed=" + RandstructSeed);
-      Args.push_back("-frandstruct-seed=IAMASEED");
+      Args.push_back("-frandstruct-seed");
+      Args.push_back("IAMSEED");
     }
     return llvm::sys::ExecuteAndWait(
         Executable, Args, Env, Redirects, /*secondsToWait*/ 0,
