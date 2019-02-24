@@ -25,8 +25,7 @@ define <2 x i32> @select_0_or_1_from_bool_vec(<2 x i1> %x) {
 
 define i32 @select_C_minus_1_or_C_from_bool(i1 %x) {
 ; CHECK-LABEL: @select_C_minus_1_or_C_from_bool(
-; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[EXT]], 42
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[X:%.*]], i32 41, i32 42
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %ext = sext i1 %x to i32
@@ -36,8 +35,7 @@ define i32 @select_C_minus_1_or_C_from_bool(i1 %x) {
 
 define <2 x i32> @select_C_minus_1_or_C_from_bool_vec(<2 x i1> %x) {
 ; CHECK-LABEL: @select_C_minus_1_or_C_from_bool_vec(
-; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i1> [[X:%.*]] to <2 x i32>
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i32> [[EXT]], <i32 42, i32 43>
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> <i32 41, i32 42>, <2 x i32> <i32 42, i32 43>
 ; CHECK-NEXT:    ret <2 x i32> [[ADD]]
 ;
   %ext = sext <2 x i1> %x to <2 x i32>

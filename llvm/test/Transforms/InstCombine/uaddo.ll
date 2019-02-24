@@ -151,3 +151,32 @@ define i32 @uaddo_wrong_pred2(i32 %x, i32 %y, i32 %z) {
   ret i32 %r
 }
 
+; icmp canonicalization should be consistent for these cases.
+; Either the compare depends on the sum or not.
+
+define i1 @uaddo_1(i8 %x, i8* %p) {
+; CHECK-LABEL: @uaddo_1(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    store i8 [[A]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i8 [[A]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = add i8 %x, 1
+  store i8 %a, i8* %p
+  %c = icmp ult i8 %a, 1
+  ret i1 %c
+}
+
+define i1 @uaddo_neg1(i8 %x, i8* %p) {
+; CHECK-LABEL: @uaddo_neg1(
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X:%.*]], -1
+; CHECK-NEXT:    store i8 [[A]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %a = add i8 %x, -1
+  store i8 %a, i8* %p
+  %c = icmp ne i8 %a, -1
+  ret i1 %c
+}
+
