@@ -4094,4 +4094,52 @@ Likewise, when applied to a strong local variable, that variable becomes
 ``const`` and is considered externally-retained.
 
 When compiled without ``-fobjc-arc``, this attribute is ignored.
-}]; }
+}]; 
+}
+
+def ClangRandstructDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "randomize_layout, no_randomize_layout";
+  let Content = [{
+The attributes ``randomize_layout`` and ``no_randomize_layout`` can be applied
+to a C struct or class(???).
+
+``randomize_layout`` instructs the compiler to randomize the memory location 
+of the member variables of the struct or class(???). Functions will not be 
+shuffled, unless in the event that the member is a function pointer, then it 
+will be shuffled as a normal member variable.
+
+Conversely, ``no_randomize_layout`` is used to indicate that if using the 
+Automatic Strucuture Selection feature of the Randstruct implementation, the 
+compiler should not shuffle the members of the struct.
+
+If in the event that a struct or class(???) is labeled with both attributes, 
+the compiler will emit a warning indicating that these two cannot be used on 
+the same struct of class(???). The default behavior in this case is to not 
+randomize the struct, as the attribute ``no_randomize_layout`` takes precedence 
+over ``randomize_layout``.
+
+.. code-block:: c
+
+  // Indicates that this struct should be randomized by Randstruct implementation.
+  struct __attribute__((randomize_layout)) s {
+    char *a;
+    char *b;
+    char *c;
+  };
+  
+  // Indicates that this struct should NOT be randomized by Randstruct implementation.
+  struct __attribute__((no_randomize_layout)) s {
+    char *a;
+    char *b;
+    char *c;
+  };
+
+  // Emits compiler warning. Struct is NOT randomized by Randstruct implementation. 
+  struct __attribute__((randomize_layout)) __attribute__((no_randomize_layout)) s {
+    char *a;
+    char *b;
+    char *c;
+  };
+}];
+}
