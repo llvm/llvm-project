@@ -339,7 +339,8 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
     if (!RandstructSeed.empty())
     {
       //Args.push_back("-frandstruct-seed=" + RandstructSeed);
-      Argv.push_back( ("-frandstruct-seed=" + RandstructSeed).c_str() );
+      Argv.push_back( "-frandstruct-seed" );
+      Argv.push_back( RandstructSeed.c_str() );
     }
     Argv.push_back(nullptr);
 
