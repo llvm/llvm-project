@@ -49,7 +49,7 @@ void interleave_test(int *List, int Length) {
 // CHECK: ![[ACCESS_GROUP_2]] = distinct !{}
 // CHECK: ![[LOOP1_HINTS]] = distinct !{![[LOOP1_HINTS]], ![[INTERLEAVE_1:[0-9]+]], ![[INTENABLE_1:[0-9]+]], ![[UNROLL_DISABLE:[0-9]+]], ![[PARALLEL_ACCESSES_7:[0-9]+]]}
 // CHECK: ![[INTERLEAVE_1]] = !{!"llvm.loop.interleave.count", i32 1}
-// CHCCK: ![[INTENABLE_1]] = !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK: ![[INTENABLE_1]] = !{!"llvm.loop.vectorize.enable", i1 true}
 // CHECK: ![[UNROLL_DISABLE]] = !{!"llvm.loop.unroll.disable"}
 // CHECK: ![[PARALLEL_ACCESSES_7]] = !{!"llvm.loop.parallel_accesses", ![[ACCESS_GROUP_2]]}
 // CHECK: ![[ACCESS_GROUP_8]] = distinct !{}
