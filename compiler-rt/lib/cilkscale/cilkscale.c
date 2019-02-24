@@ -236,7 +236,7 @@ void __csi_detach(const csi_id_t detach_id) {
 }
 
 CILKTOOL_API
-void __csi_task(const csi_id_t task_id, const csi_id_t detach_id, void *sp) {
+void __csi_task(const csi_id_t task_id, const csi_id_t detach_id) {
   context_stack_t *stack;
 #if SERIAL_TOOL
   stack = &(ctx_stack);

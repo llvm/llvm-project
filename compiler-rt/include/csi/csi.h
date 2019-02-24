@@ -158,8 +158,7 @@ WEAK void __csi_after_store(const csi_id_t store_id,
 
 WEAK void __csi_detach(const csi_id_t detach_id);
 
-WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id,
-                     void *sp);
+WEAK void __csi_task(const csi_id_t task_id, const csi_id_t detach_id);
 
 WEAK void __csi_task_exit(const csi_id_t task_exit_id,
                           const csi_id_t task_id,
