@@ -1465,17 +1465,17 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     int8_t Mask;
     switch (MI.getOpcode()) {
     default: llvm_unreachable("Unreachable!");
-    case X86::BLENDPDrri:    Mask = 0x03; break;
-    case X86::BLENDPSrri:    Mask = 0x0F; break;
-    case X86::PBLENDWrri:    Mask = 0xFF; break;
-    case X86::VBLENDPDrri:   Mask = 0x03; break;
-    case X86::VBLENDPSrri:   Mask = 0x0F; break;
-    case X86::VBLENDPDYrri:  Mask = 0x0F; break;
-    case X86::VBLENDPSYrri:  Mask = 0xFF; break;
-    case X86::VPBLENDDrri:   Mask = 0x0F; break;
-    case X86::VPBLENDWrri:   Mask = 0xFF; break;
-    case X86::VPBLENDDYrri:  Mask = 0xFF; break;
-    case X86::VPBLENDWYrri:  Mask = 0xFF; break;
+    case X86::BLENDPDrri:    Mask = (int8_t)0x03; break;
+    case X86::BLENDPSrri:    Mask = (int8_t)0x0F; break;
+    case X86::PBLENDWrri:    Mask = (int8_t)0xFF; break;
+    case X86::VBLENDPDrri:   Mask = (int8_t)0x03; break;
+    case X86::VBLENDPSrri:   Mask = (int8_t)0x0F; break;
+    case X86::VBLENDPDYrri:  Mask = (int8_t)0x0F; break;
+    case X86::VBLENDPSYrri:  Mask = (int8_t)0xFF; break;
+    case X86::VPBLENDDrri:   Mask = (int8_t)0x0F; break;
+    case X86::VPBLENDWrri:   Mask = (int8_t)0xFF; break;
+    case X86::VPBLENDDYrri:  Mask = (int8_t)0xFF; break;
+    case X86::VPBLENDWYrri:  Mask = (int8_t)0xFF; break;
     }
     // Only the least significant bits of Imm are used.
     // Using int8_t to ensure it will be sign extended to the int64_t that
