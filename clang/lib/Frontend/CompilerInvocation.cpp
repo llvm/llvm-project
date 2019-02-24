@@ -1672,6 +1672,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   }
   if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed)) {
     RandstructSeed = A->getValue(0);
+    Args.eraseArg(OPT_frandstruct_seed);
   }
   Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
   for (const auto *AA : Args.filtered(OPT_plugin_arg))
