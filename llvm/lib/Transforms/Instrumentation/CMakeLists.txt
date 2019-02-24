@@ -18,6 +18,7 @@ add_llvm_library(LLVMInstrumentation
   ThreadSanitizer.cpp
   HWAddressSanitizer.cpp
   ComprehensiveStaticInstrumentation.cpp
+  SurgicalInstrumentationConfig.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms
