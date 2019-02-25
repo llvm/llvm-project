@@ -4411,8 +4411,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -frandstruct-seed
   if (Arg *A = Args.getLastArg(options::OPT_frandstruct_seed_EQ)) {
-    CmdArgs.push_back("-frandstruct");
-    CmdArgs.push_back(A->getValue(0));
+    CmdArgs.push_back("-frandstruct=" + A->getValue(0));
+    //CmdArgs.push_back(A->getValue(0));
     RandstructSeed.assign(A->getValue(0));
   }
 

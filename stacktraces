@@ -1,0 +1,48 @@
+################
+ConstructJob
+#0  clang::driver::Command::Command (this=0xbcaf570, Source=..., Creator=..., 
+    Executable=0xbcae440 "/home/cantrel2/projects/llvm-project/seedarg/build/bin/clang", Arguments=..., Inputs=...)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/Job.cpp:44
+#1  0x000000000443cc68 in llvm::make_unique<clang::driver::Command, clang::driver::JobAction const&, clang::driver::tools::Clang const&, char const*&, llvm::SmallVector<char const*, 16u>&, llvm::SmallVector<clang::driver::InputInfo, 4u> const&> (args=..., args=..., args=..., args=..., args=...)
+    at /home/cantrel2/projects/llvm-project/seedarg/llvm/include/llvm/ADT/STLExtras.h:1349
+#2  0x000000000442b7e8 in clang::driver::tools::Clang::ConstructJob (
+    this=0xbcd8780, C=..., JA=..., Output=..., Inputs=..., Args=..., 
+    LinkingOutput=0x0)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/ToolChains/Clang.cpp:5380
+#3  0x00000000043d022e in clang::driver::Driver::BuildJobsForActionNoCache (
+    this=0x7fffffffc648, C=..., A=0xbcd8530, TC=0xbcacce0, BoundArch=..., 
+    AtTopLevel=false, MultipleArchs=false, LinkingOutput=0x0, 
+    CachedResults=std::map with 1 element = {...}, 
+    TargetDeviceOffloadKind=clang::driver::Action::OFK_None)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/Driver.cpp:4160
+#4  0x00000000043ce7af in clang::driver::Driver::BuildJobsForAction (
+---Type <return> to continue, or q <return> to quit---
+    this=0x7fffffffc648, C=..., A=0xbcd8530, TC=0xbcacce0, BoundArch=..., 
+    AtTopLevel=false, MultipleArchs=false, LinkingOutput=0x0, 
+    CachedResults=std::map with 1 element = {...}, 
+    TargetDeviceOffloadKind=clang::driver::Action::OFK_None)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/Driver.cpp:3897
+#5  0x00000000043cf304 in clang::driver::Driver::BuildJobsForActionNoCache (
+    this=0x7fffffffc648, C=..., A=0xbcd8590, TC=0xbcacce0, BoundArch=..., 
+    AtTopLevel=true, MultipleArchs=false, LinkingOutput=0x0, 
+    CachedResults=std::map with 1 element = {...}, 
+    TargetDeviceOffloadKind=clang::driver::Action::OFK_None)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/Driver.cpp:4035
+#6  0x00000000043ce7af in clang::driver::Driver::BuildJobsForAction (
+    this=0x7fffffffc648, C=..., A=0xbcd8590, TC=0xbcacce0, BoundArch=..., 
+    AtTopLevel=true, MultipleArchs=false, LinkingOutput=0x0, 
+    CachedResults=std::map with 1 element = {...}, 
+    TargetDeviceOffloadKind=clang::driver::Action::OFK_None)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/Driver.cpp:3897
+#7  0x00000000043c84be in clang::driver::Driver::BuildJobs (
+    this=0x7fffffffc648, C=...)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/Driver.cpp:---Type <return> to continue, or q <return> to quit---
+3509
+#8  0x00000000043c43a8 in clang::driver::Driver::BuildCompilation (
+    this=0x7fffffffc648, ArgList=...)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/lib/Driver/Driver.cpp:1119
+#9  0x0000000001296ecd in main (argc_=3, argv_=0x7fffffffdd48)
+    at /home/cantrel2/projects/llvm-project/seedarg/clang/tools/driver/driver.cpp:457
+
+
+#######################
