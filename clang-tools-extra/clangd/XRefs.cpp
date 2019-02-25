@@ -558,13 +558,30 @@ static Hover getHoverContents(QualType T, ASTContext &ASTCtx) {
   return H;
 }
 
-/// Generate a \p Hover object given the macro \p MacroInf.
-static Hover getHoverContents(llvm::StringRef MacroName) {
+/// Generate a \p Hover object given the macro \p MacroDecl.
+static Hover getHoverContents(MacroDecl Decl, ParsedAST &AST) {
+  SourceManager &SM = AST.getASTContext().getSourceManager();
+  std::string Definition = Decl.Name;
+
+  // Try to get the full definition, not just the name
+  SourceLocation StartLoc = Decl.Info->getDefinitionLoc();
+  SourceLocation EndLoc = Decl.Info->getDefinitionEndLoc();
+  if (EndLoc.isValid()) {
+    EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, SM,
+                                        AST.getASTContext().getLangOpts());
+    bool Invalid;
+    StringRef Buffer = SM.getBufferData(SM.getFileID(StartLoc), &Invalid);
+    if (!Invalid) {
+      unsigned StartOffset = SM.getFileOffset(StartLoc);
+      unsigned EndOffset = SM.getFileOffset(EndLoc);
+      if (EndOffset <= Buffer.size() && StartOffset < EndOffset)
+        Definition = Buffer.substr(StartOffset, EndOffset - StartOffset).str();
+    }
+  }
+
   Hover H;
-
-  H.contents.value = "#define ";
-  H.contents.value += MacroName;
-
+  H.contents.kind = MarkupKind::PlainText;
+  H.contents.value = "#define " + Definition;
   return H;
 }
 
@@ -688,7 +705,7 @@ llvm::Optional<Hover> getHover(ParsedAST &AST, Position Pos) {
   auto Symbols = getSymbolAtPosition(AST, SourceLocationBeg);
 
   if (!Symbols.Macros.empty())
-    return getHoverContents(Symbols.Macros[0].Name);
+    return getHoverContents(Symbols.Macros[0], AST);
 
   if (!Symbols.Decls.empty())
     return getHoverContents(Symbols.Decls[0]);

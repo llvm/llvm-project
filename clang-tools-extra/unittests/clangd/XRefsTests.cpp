@@ -743,7 +743,25 @@ TEST(Hover, All) {
             #define MACRO 2
             #undef macro
           )cpp",
-          "#define MACRO",
+          "#define MACRO 1",
+      },
+      {
+          R"cpp(// Macro
+            #define MACRO 0
+            #define MACRO2 ^MACRO
+          )cpp",
+          "#define MACRO 0",
+      },
+      {
+          R"cpp(// Macro
+            #define MACRO {\
+              return 0;\
+            }
+            int main() ^MACRO
+          )cpp",
+          R"cpp(#define MACRO {\
+              return 0;\
+            })cpp",
       },
       {
           R"cpp(// Forward class declaration
