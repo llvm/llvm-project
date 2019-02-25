@@ -4408,9 +4408,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -frandstruct-seed parent process
   if (Arg *A = Args.getLastArg(options::OPT_frandstruct_seed_EQ)) {
-    CmdArgs.push_back( ("-frandstruct=" + std::string(A->getValue(0))).c_str() );
-    //CmdArgs.push_back(A->getValue(0));
-    //CmdArgs.push_back( A->
+    //CmdArgs.push_back( ("-frandstruct=" + std::string(A->getValue(0))).c_str() );
+    //CmdArgs.push_back( (A->getSpelling() + std::string(A->getValue(0))) );
+    CmdArgs.push_back( "-frandstruct" );
+    CmdArgs.push_back(A->getValue(0));
     RandstructSeed.assign(A->getValue(0));
   }
 
