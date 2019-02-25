@@ -582,23 +582,27 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
 
 /// Promote the overflow flag of an overflowing arithmetic node.
 SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
-  // Simply change the return type of the boolean result.
+  // Change the return type of the boolean result while obeying
+  // getSetCCResultType.
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(1));
-  EVT ValueVTs[] = { N->getValueType(0), NVT };
+  EVT VT = N->getValueType(0);
+  EVT SVT = getSetCCResultType(VT);
   SDValue Ops[3] = { N->getOperand(0), N->getOperand(1) };
   unsigned NumOps = N->getNumOperands();
   assert(NumOps <= 3 && "Too many operands");
   if (NumOps == 3)
     Ops[2] = N->getOperand(2);
 
-  SDValue Res = DAG.getNode(N->getOpcode(), SDLoc(N),
-                            DAG.getVTList(ValueVTs), makeArrayRef(Ops, NumOps));
+  SDLoc dl(N);
+  SDValue Res = DAG.getNode(N->getOpcode(), dl, DAG.getVTList(VT, SVT),
+                            makeArrayRef(Ops, NumOps));
 
   // Modified the sum result - switch anything that used the old sum to use
   // the new one.
   ReplaceValueWith(SDValue(N, 0), Res);
 
-  return SDValue(Res.getNode(), 1);
+  // Convert to the expected type.
+  return DAG.getBoolExtOrTrunc(Res.getValue(1), dl, NVT, VT);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSAT(SDNode *N) {

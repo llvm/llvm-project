@@ -233,24 +233,24 @@ define <8 x i32> @umulo_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16>* %p2) noun
 define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64>* %p2) nounwind {
 ; CHECK-LABEL: umulo_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov x10, d1
-; CHECK-NEXT:    fmov x11, d0
 ; CHECK-NEXT:    mov x8, v1.d[1]
-; CHECK-NEXT:    mov x9, v0.d[1]
-; CHECK-NEXT:    umulh x12, x11, x10
-; CHECK-NEXT:    mul x10, x11, x10
-; CHECK-NEXT:    cmp xzr, x12
-; CHECK-NEXT:    umulh x11, x9, x8
-; CHECK-NEXT:    mul x8, x9, x8
-; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    fmov x9, d1
+; CHECK-NEXT:    mov x10, v0.d[1]
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    umulh x12, x11, x9
+; CHECK-NEXT:    mul x9, x11, x9
+; CHECK-NEXT:    umulh x11, x10, x8
 ; CHECK-NEXT:    cmp xzr, x11
-; CHECK-NEXT:    fmov d1, x10
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    cset w9, ne
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    csetm x11, ne
+; CHECK-NEXT:    cmp xzr, x12
+; CHECK-NEXT:    csetm x12, ne
+; CHECK-NEXT:    fmov d0, x12
+; CHECK-NEXT:    mul x8, x10, x8
+; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    mov v0.d[1], x11
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    mov v1.d[1], x8
 ; CHECK-NEXT:    str q1, [x0]
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i64>, <2 x i1>} @llvm.umul.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0
@@ -276,19 +276,16 @@ define <4 x i32> @umulo_v4i24(<4 x i24> %a0, <4 x i24> %a1, <4 x i24>* %p2) noun
 ; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    cmeq v0.4s, v1.4s, #0
 ; CHECK-NEXT:    cmeq v1.4s, v2.4s, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-NEXT:    sturh w8, [x0, #9]
 ; CHECK-NEXT:    lsr w8, w8, #16
-; CHECK-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    mvn v1.16b, v1.16b
 ; CHECK-NEXT:    strh w9, [x0, #6]
 ; CHECK-NEXT:    sturh w10, [x0, #3]
 ; CHECK-NEXT:    lsr w9, w9, #16
 ; CHECK-NEXT:    lsr w10, w10, #16
 ; CHECK-NEXT:    strb w8, [x0, #11]
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    lsr w8, w11, #16
 ; CHECK-NEXT:    strh w11, [x0]
 ; CHECK-NEXT:    strb w9, [x0, #8]

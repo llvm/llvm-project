@@ -30,23 +30,11 @@ define <2 x i64> @insert_v2i64_x1(<2 x i64> %a) {
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: insert_v2i64_x1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_v2i64_x1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: insert_v2i64_x1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX512-NEXT:    retq
+; AVX-LABEL: insert_v2i64_x1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; AVX-NEXT:    retq
   %1 = insertelement <2 x i64> %a, i64 -1, i32 0
   ret <2 x i64> %1
 }
