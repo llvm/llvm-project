@@ -24,6 +24,7 @@
 // FIXME: Find a better alternative to SmallVector with hardcoded size!
 
 namespace clang {
+std::string RandstructSeed = "";
 
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) const {
