@@ -1057,6 +1057,12 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__CLANG_CUDA_APPROX_TRANSCENDENTALS__");
   }
 
+  // Define a macro indicating that the source file is being compiled with a
+  // SYCL device compiler which doesn't produce host binary.
+  if (LangOpts.SYCLIsDevice) {
+    Builder.defineMacro("__SYCL_DEVICE_ONLY__", "1");
+  }
+
   // OpenCL definitions.
   if (LangOpts.OpenCL) {
 #define OPENCLEXT(Ext)                                                         \

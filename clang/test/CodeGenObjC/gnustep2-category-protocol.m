@@ -5,7 +5,7 @@
 // to a protocol in a binary.
 
 // CHECK: @._OBJC_PROTOCOL_Y = global 
-// CHEKC-SAME: section "__objc_protocols", comdat, align 8
+// CHECK-SAME: section "__objc_protocols", comdat, align 8
 
 
 @interface X
