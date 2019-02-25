@@ -123,8 +123,8 @@ amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
   amd_comgr_metadata_node_t son;
   amd_comgr_status_t status;
   size_t size;
-  char keybuf[50];
-  char buf[50];
+  char *keybuf;
+  char *valbuf;
   int *indent = (int *)data;
 
   // assume key to be string in this test function
@@ -134,6 +134,9 @@ amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
     return AMD_COMGR_STATUS_ERROR;
   status = amd_comgr_get_metadata_string(key, &size, NULL);
   checkError(status, "amd_comgr_get_metadata_string");
+  keybuf = (char *)calloc(size, sizeof(char));
+  if (!keybuf)
+    fail("calloc");
   status = amd_comgr_get_metadata_string(key, &size, keybuf);
   checkError(status, "amd_comgr_get_metadata_string");
 
@@ -147,9 +150,13 @@ amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
     printf("%s  :  ", size ? keybuf : "");
     status = amd_comgr_get_metadata_string(value, &size, NULL);
     checkError(status, "amd_comgr_get_metadata_string");
-    status = amd_comgr_get_metadata_string(value, &size, buf);
+    valbuf = (char *)calloc(size, sizeof(char));
+    if (!valbuf)
+      fail("calloc");
+    status = amd_comgr_get_metadata_string(value, &size, valbuf);
     checkError(status, "amd_comgr_get_metadata_string");
-    printf(" %s\n", buf);
+    printf(" %s\n", valbuf);
+    free(valbuf);
     break;
   }
   case AMD_COMGR_METADATA_KIND_LIST: {
@@ -179,9 +186,11 @@ amd_comgr_status_t print_entry(amd_comgr_metadata_node_t key,
     break;
   }
   default:
+    free(keybuf);
     return AMD_COMGR_STATUS_ERROR;
   } // switch
 
+  free(keybuf);
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
