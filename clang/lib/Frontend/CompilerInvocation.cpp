@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/RandstructSeed.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "TestModuleFileExtension.h"
 #include "clang/Basic/Builtins.h"
@@ -1673,7 +1672,6 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   // child process handle arguments
   if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed)) {
     RandstructSeed = A->getValue(0);
-    //Args.eraseArg(OPT_frandstruct_seed); do we need to erase it?
   }
   Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
   for (const auto *AA : Args.filtered(OPT_plugin_arg))

@@ -335,7 +335,6 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
   if (ResponseFile == nullptr) {
     Argv.push_back(Executable);
     Argv.append(Arguments.begin(), Arguments.end());
-
     Argv.push_back(nullptr);
 
     auto Args = llvm::toStringRefArray(Argv.data());
