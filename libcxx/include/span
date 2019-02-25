@@ -225,20 +225,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY constexpr span(      array<value_type, _Extent>& __arr) noexcept : __data{__arr.data()} {}
     _LIBCPP_INLINE_VISIBILITY constexpr span(const array<value_type, _Extent>& __arr) noexcept : __data{__arr.data()} {}
 
-    template <class _Container>
-    inline _LIBCPP_INLINE_VISIBILITY
-        constexpr span(      _Container& __c,
-            enable_if_t<__is_span_compatible_container<_Container, _Tp>::value, nullptr_t> = nullptr)
-        : __data{_VSTD::data(__c)}
-        { _LIBCPP_ASSERT(_Extent == _VSTD::size(__c), "size mismatch in span's constructor (container)"); }
-
-    template <class _Container>
-    inline _LIBCPP_INLINE_VISIBILITY
-        constexpr span(const _Container& __c,
-            enable_if_t<__is_span_compatible_container<const _Container, _Tp>::value, nullptr_t> = nullptr)
-        : __data{_VSTD::data(__c)}
-        { _LIBCPP_ASSERT(_Extent == _VSTD::size(__c), "size mismatch in span's constructor (const container)"); }
-
     template <class _OtherElementType>
     inline _LIBCPP_INLINE_VISIBILITY
         constexpr span(const span<_OtherElementType, _Extent>& __other,

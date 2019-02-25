@@ -558,7 +558,7 @@ bool CMICmnLLDBDebugger::UnregisterForEvent(
       ClientGetMaskForAllClients(vBroadcasterClass);
   MIuint newEventMask = 0;
   for (MIuint i = 0; i < 32; i++) {
-    const MIuint bit = 1 << i;
+    const MIuint bit = MIuint(1) << i;
     const MIuint clientBit = bit & clientsEventMask;
     const MIuint othersBit = bit & otherClientsEventMask;
     if ((clientBit != 0) && (othersBit == 0)) {
