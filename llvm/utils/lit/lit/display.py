@@ -45,7 +45,7 @@ class ProgressDisplay(object):
     def update(self, test):
         self.completed += 1
 
-        show_result = test.result.code.isFailure or \
+        show_result = test.isFailure() or \
                 self.opts.showAllOutput or \
                 (not self.opts.quiet and not self.opts.succinct)
         if show_result:
@@ -65,9 +65,9 @@ class ProgressDisplay(object):
                                      self.completed, self.numTests))
 
         # Show the test failure output, if requested.
-        if (test.result.code.isFailure and self.opts.showOutput) or \
+        if (test.isFailure() and self.opts.showOutput) or \
            self.opts.showAllOutput:
-            if test.result.code.isFailure:
+            if test.isFailure():
                 print("%s TEST '%s' FAILED %s" % ('*'*20, test.getFullName(),
                                                   '*'*20))
             out = test.result.output
