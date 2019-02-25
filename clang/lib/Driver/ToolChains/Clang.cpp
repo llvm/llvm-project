@@ -46,13 +46,10 @@
 #include <unistd.h> // For getuid().
 #endif
 
-//std::string RandstructSeed = "initialseedstring";
-
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
-
 
 static void CheckPreprocessingOptions(const Driver &D, const ArgList &Args) {
   if (Arg *A =
@@ -4409,7 +4406,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Twine(N)));
   }
 
-  // -frandstruct-seed
+  // -frandstruct-seed parent process
   if (Arg *A = Args.getLastArg(options::OPT_frandstruct_seed_EQ)) {
     CmdArgs.push_back( ("-frandstruct=" + std::string(A->getValue(0))).c_str() );
     //CmdArgs.push_back(A->getValue(0));

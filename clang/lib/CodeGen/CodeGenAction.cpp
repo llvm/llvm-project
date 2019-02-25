@@ -1043,7 +1043,6 @@ void CodeGenAction::ExecuteAction() {
     return;
   }
 
-  //llvm::errs() << "CodeGenAction::ExecuteAction(); " << std::string(cstr) << "\n";
   // Otherwise follow the normal AST path.
   this->ASTFrontendAction::ExecuteAction();
 }

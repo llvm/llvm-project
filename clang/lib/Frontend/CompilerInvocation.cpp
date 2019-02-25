@@ -1670,6 +1670,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ProgramAction = frontend::PluginAction;
     Opts.ActionName = A->getValue();
   }
+  // child process handle arguments
   if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed)) {
     RandstructSeed = A->getValue(0);
     Args.eraseArg(OPT_frandstruct_seed);
