@@ -3,6 +3,5 @@
 #include <string>
 namespace clang {
 extern std::string RandstructSeed;
-extern char cstr[128];
 }
 #endif

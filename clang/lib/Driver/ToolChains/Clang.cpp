@@ -4412,7 +4412,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     //CmdArgs.push_back( (A->getSpelling() + std::string(A->getValue(0))) );
     CmdArgs.push_back( "-frandstruct-seed" );
     CmdArgs.push_back(A->getValue(0));
-    RandstructSeed.assign(A->getValue(0));
+    //RandstructSeed.assign(A->getValue(0));
   }
 
   // -fvisibility= and -fvisibility-ms-compat are of a piece.
@@ -5375,7 +5375,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     C.addCommand(llvm::make_unique<ForceSuccessCommand>(JA, *this, Exec,
                                                         CmdArgs, Inputs));
   } else {
-    // this is where first job is added
     C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }
 

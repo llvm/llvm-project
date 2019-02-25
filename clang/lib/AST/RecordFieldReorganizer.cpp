@@ -24,8 +24,6 @@
 // FIXME: Find a better alternative to SmallVector with hardcoded size!
 
 namespace clang {
-std::string RandstructSeed = "someseed";
-char cstr[128];
 
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) const {
@@ -147,6 +145,7 @@ bool BitfieldRun::canFit(size_t size) const {
 bool BitfieldRun::isBitfieldRun() const { return true; }
 
 SmallVector<Decl *, 64> randomize(SmallVector<Decl *, 64> fields) {
+  llvm::errs() << "randomize(); " << RandstructSeed << " at " << &RandstructSeed << " : " << RandstructSeed.size() << " \n";
   std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
   auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
