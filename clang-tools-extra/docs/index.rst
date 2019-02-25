@@ -20,7 +20,7 @@ Contents
    modularize
    pp-trace
    clang-rename
-   clangd
+   clangd/index
    clang-doc
 
 

@@ -45,9 +45,13 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   if (IsIndexMainAST) {
     // We only collect refs when indexing main AST.
     CollectorOpts.RefFilter = RefKind::All;
+    // Comments for main file can always be obtained from sema, do not store
+    // them in the index.
+    CollectorOpts.StoreAllDocumentation = false;
   } else {
     IndexOpts.IndexMacrosInPreprocessor = true;
     CollectorOpts.CollectMacro = true;
+    CollectorOpts.StoreAllDocumentation = true;
   }
 
   SymbolCollector Collector(std::move(CollectorOpts));
