@@ -27,10 +27,15 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
           callee(cxxMethodDecl(ofClass(classTemplateSpecializationDecl(
               hasName("::std::basic_string"),
               hasTemplateArgument(0, refersToType(qualType().bind("type"))))))),
-          hasArgument(1,
-                      ignoringImpCasts(expr(hasType(isInteger()),
-                                            unless(hasType(isAnyCharacter())))
-                                           .bind("expr"))),
+          hasArgument(
+              1,
+              ignoringImpCasts(
+                  expr(hasType(isInteger()), unless(hasType(isAnyCharacter())),
+                       // Ignore calls to tolower/toupper (see PR27723).
+                       unless(callExpr(callee(functionDecl(
+                           hasAnyName("tolower", "std::tolower", "toupper",
+                                      "std::toupper"))))))
+                      .bind("expr"))),
           unless(isInTemplateInstantiation())),
       this);
 }

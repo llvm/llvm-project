@@ -43,10 +43,11 @@ static inline bool MI_char_summary_provider(lldb::SBValue value,
 
   lldb::BasicType type_code = value_type.GetBasicType();
   if (type_code == lldb::eBasicTypeSignedChar)
-    stream.Printf("%d %s", (int)value.GetValueAsSigned(), value.GetValue());
+    stream.Printf("%d %s", (int)value.GetValueAsSigned(),
+                  CMIUtilString::WithNullAsEmpty(value.GetValue()));
   else if (type_code == lldb::eBasicTypeUnsignedChar)
     stream.Printf("%u %s", (unsigned)value.GetValueAsUnsigned(),
-                  value.GetValue());
+                  CMIUtilString::WithNullAsEmpty(value.GetValue()));
   else
     return false;
 

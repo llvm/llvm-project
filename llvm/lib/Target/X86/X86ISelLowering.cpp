@@ -40972,20 +40972,38 @@ static SDValue combineCMP(SDNode *N, SelectionDAG &DAG) {
   return Op.getValue(1);
 }
 
-static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG) {
+static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
+                                TargetLowering::DAGCombinerInfo &DCI) {
   assert((X86ISD::ADD == N->getOpcode() || X86ISD::SUB == N->getOpcode()) &&
          "Expected X86ISD::ADD or X86ISD::SUB");
 
-  // If we don't use the flag result, simplify back to a simple ADD/SUB.
-  if (N->hasAnyUseOfValue(1))
-    return SDValue();
-
-  SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  SDValue Res = DAG.getNode(X86ISD::ADD == N->getOpcode() ? ISD::ADD : ISD::SUB,
-                            DL, LHS.getSimpleValueType(), LHS, RHS);
-  return DAG.getMergeValues({Res, DAG.getConstant(0, DL, MVT::i32)}, DL);
+  MVT VT = LHS.getSimpleValueType();
+  unsigned GenericOpc = X86ISD::ADD == N->getOpcode() ? ISD::ADD : ISD::SUB;
+
+  // If we don't use the flag result, simplify back to a generic ADD/SUB.
+  if (!N->hasAnyUseOfValue(1)) {
+    SDLoc DL(N);
+    SDValue Res = DAG.getNode(GenericOpc, DL, VT, LHS, RHS);
+    return DAG.getMergeValues({Res, DAG.getConstant(0, DL, MVT::i32)}, DL);
+  }
+
+  // Fold any similar generic ADD/SUB opcodes to reuse this node.
+  auto MatchGeneric = [&](SDValue N0, SDValue N1, bool Negate) {
+    // TODO: Add SUB(RHS, LHS) -> SUB(0, SUB(LHS, RHS)) negation support, this
+    // currently causes regressions as we don't have broad x86sub combines.
+    if (Negate)
+      return;
+    SDValue Ops[] = {N0, N1};
+    SDVTList VTs = DAG.getVTList(N->getValueType(0));
+    if (SDNode *GenericAddSub = DAG.getNodeIfExists(GenericOpc, VTs, Ops))
+      DCI.CombineTo(GenericAddSub, SDValue(N, 0));
+  };
+  MatchGeneric(LHS, RHS, false);
+  MatchGeneric(RHS, LHS, X86ISD::SUB == N->getOpcode());
+
+  return SDValue();
 }
 
 static SDValue combineSBB(SDNode *N, SelectionDAG &DAG) {
@@ -42198,7 +42216,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ADD:            return combineAdd(N, DAG, Subtarget);
   case ISD::SUB:            return combineSub(N, DAG, Subtarget);
   case X86ISD::ADD:
-  case X86ISD::SUB:         return combineX86AddSub(N, DAG);
+  case X86ISD::SUB:         return combineX86AddSub(N, DAG, DCI);
   case X86ISD::SBB:         return combineSBB(N, DAG);
   case X86ISD::ADC:         return combineADC(N, DAG, DCI);
   case ISD::MUL:            return combineMul(N, DAG, DCI, Subtarget);

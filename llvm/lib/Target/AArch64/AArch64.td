@@ -482,6 +482,18 @@ def ProcA75     : SubtargetFeature<"a75", "ARMProcFamily", "CortexA75",
                                    FeaturePerfMon
                                    ]>;
 
+def ProcA76     : SubtargetFeature<"a76", "ARMProcFamily", "CortexA76",
+                                   "Cortex-A76 ARM processors", [
+                                    HasV8_2aOps,
+                                    FeatureFPARMv8,
+                                    FeatureNEON,
+                                    FeatureRCPC,
+                                    FeatureCrypto,
+                                    FeatureFullFP16,
+                                    FeatureDotProd,
+                                    FeatureSSBS
+                                    ]>;
+
 // Note that cyclone does not fuse AES instructions, but newer apple chips do
 // perform the fusion and cyclone is used by default when targetting apple OSes.
 def ProcCyclone : SubtargetFeature<"cyclone", "ARMProcFamily", "Cyclone",
@@ -693,10 +705,11 @@ def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
 def : ProcessorModel<"cortex-a55", CortexA53Model, [ProcA55]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
-// FIXME: Cortex-A72, Cortex-A73 and Cortex-A75 are currently modeled as a Cortex-A57.
 def : ProcessorModel<"cortex-a72", CortexA57Model, [ProcA72]>;
 def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cortex-a75", CortexA57Model, [ProcA75]>;
+def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
+def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;

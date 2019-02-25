@@ -284,6 +284,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA72:
   case CortexA73:
   case CortexA75:
+  case CortexA76:
   case CortexR4:
   case CortexR4F:
   case CortexR5:

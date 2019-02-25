@@ -141,6 +141,7 @@ struct Section {
 
 struct DynamicSection : Section {
   std::vector<DynamicEntry> Entries;
+  Optional<yaml::BinaryRef> Content;
 
   DynamicSection() : Section(SectionKind::Dynamic) {}
 

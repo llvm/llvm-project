@@ -267,6 +267,65 @@ template <class ELFT> void printProgramHeaders(const ELFFile<ELFT> *o) {
   outs() << "\n";
 }
 
+template <class ELFT>
+void printSymbolVersionDependency(ArrayRef<uint8_t> Contents,
+                                  StringRef StrTab) {
+  typedef ELFFile<ELFT> ELFO;
+  typedef typename ELFO::Elf_Verneed Elf_Verneed;
+  typedef typename ELFO::Elf_Vernaux Elf_Vernaux;
+
+  outs() << "Version References:\n";
+
+  const uint8_t *Buf = Contents.data();
+  while (Buf) {
+    const Elf_Verneed *Verneed = reinterpret_cast<const Elf_Verneed *>(Buf);
+    outs() << "  required from "
+           << StringRef(StrTab.drop_front(Verneed->vn_file).data()) << ":\n";
+
+    const uint8_t *BufAux = Buf + Verneed->vn_aux;
+    while (BufAux) {
+      const Elf_Vernaux *Vernaux =
+          reinterpret_cast<const Elf_Vernaux *>(BufAux);
+      outs() << "    "
+             << format("0x%08" PRIx32 " ", (uint32_t)Vernaux->vna_hash)
+             << format("0x%02" PRIx16 " ", (uint16_t)Vernaux->vna_flags)
+             << format("%02" PRIu16 " ", (uint16_t)Vernaux->vna_other)
+             << StringRef(StrTab.drop_front(Vernaux->vna_name).data()) << '\n';
+      BufAux = Vernaux->vna_next ? BufAux + Vernaux->vna_next : nullptr;
+    }
+    Buf = Verneed->vn_next ? Buf + Verneed->vn_next : nullptr;
+  }
+}
+
+template <class ELFT>
+void printSymbolVersionInfo(const ELFFile<ELFT> *Elf, StringRef FileName) {
+  typedef typename ELFT::Shdr Elf_Shdr;
+
+  auto SectionsOrError = Elf->sections();
+  if (!SectionsOrError)
+    report_error(FileName, SectionsOrError.takeError());
+
+  for (const Elf_Shdr &Shdr : *SectionsOrError) {
+    if (Shdr.sh_type != ELF::SHT_GNU_verneed)
+      continue;
+
+    auto ContentsOrError = Elf->getSectionContents(&Shdr);
+    if (!ContentsOrError)
+      report_error(FileName, ContentsOrError.takeError());
+
+    auto StrTabSecOrError = Elf->getSection(Shdr.sh_link);
+    if (!StrTabSecOrError)
+      report_error(FileName, StrTabSecOrError.takeError());
+
+    auto StrTabOrError = Elf->getStringTable(*StrTabSecOrError);
+    if (!StrTabOrError)
+      report_error(FileName, StrTabOrError.takeError());
+
+    printSymbolVersionDependency<ELFT>(*ContentsOrError, *StrTabOrError);
+    // TODO: Implement symbol version definitions dumper.
+  }
+}
+
 void llvm::printELFFileHeader(const object::ObjectFile *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     printProgramHeaders(ELFObj->getELFFile());
@@ -287,4 +346,15 @@ void llvm::printELFDynamicSection(const object::ObjectFile *Obj) {
     printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
     printDynamicSection(ELFObj->getELFFile(), Obj->getFileName());
+}
+
+void llvm::printELFSymbolVersionInfo(const object::ObjectFile *Obj) {
+  if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
+    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
+  else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
+    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
+  else if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(Obj))
+    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
+  else if (const auto *ELFObj = dyn_cast<ELF64BEObjectFile>(Obj))
+    printSymbolVersionInfo(ELFObj->getELFFile(), Obj->getFileName());
 }

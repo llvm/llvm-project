@@ -237,3 +237,11 @@ defm build_id_link_output
 def regex
     : Flag<["-", "--"], "regex">,
       HelpText<"Permit regular expressions in name comparison">;
+
+defm add_symbol
+    : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "
+         "global, local, weak, default, hidden, file, section, object, "
+         "function, indirect-function. Accepted but ignored for "
+         "compatibility: debug, constructor, warning, indirect, synthetic, "
+         "unique-object, before.">,
+      MetaVarName<"name=[section:]value[,flags]">;

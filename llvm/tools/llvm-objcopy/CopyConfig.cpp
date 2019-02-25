@@ -13,7 +13,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Object/ELFTypes.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
@@ -204,6 +203,76 @@ parseSetSectionFlagValue(StringRef FlagValue) {
   SFU.NewFlags = *ParsedFlagSet;
 
   return SFU;
+}
+
+static NewSymbolInfo parseNewSymbolInfo(StringRef FlagValue) {
+  // Parse value given with --add-symbol option and create the
+  // new symbol if possible. The value format for --add-symbol is:
+  //
+  // <name>=[<section>:]<value>[,<flags>]
+  //
+  // where:
+  // <name> - symbol name, can be empty string
+  // <section> - optional section name. If not given ABS symbol is created
+  // <value> - symbol value, can be decimal or hexadecimal number prefixed
+  //           with 0x.
+  // <flags> - optional flags affecting symbol type, binding or visibility:
+  //           The following are currently supported:
+  //
+  //           global, local, weak, default, hidden, file, section, object,
+  //           indirect-function.
+  //
+  //           The following flags are ignored and provided for GNU
+  //           compatibility only:
+  //
+  //           warning, debug, constructor, indirect, synthetic,
+  //           unique-object, before=<symbol>.
+  NewSymbolInfo SI;
+  StringRef Value;
+  std::tie(SI.SymbolName, Value) = FlagValue.split('=');
+  if (Value.empty())
+    error("bad format for --add-symbol, missing '=' after '" + SI.SymbolName +
+          "'");
+
+  if (Value.contains(':')) {
+    std::tie(SI.SectionName, Value) = Value.split(':');
+    if (SI.SectionName.empty() || Value.empty())
+      error(
+          "bad format for --add-symbol, missing section name or symbol value");
+  }
+
+  SmallVector<StringRef, 6> Flags;
+  Value.split(Flags, ',');
+  if (Flags[0].getAsInteger(0, SI.Value))
+    error("bad symbol value: '" + Flags[0] + "'");
+
+  typedef std::function<void(void)> Functor;
+  size_t NumFlags = Flags.size();
+  for (size_t I = 1; I < NumFlags; ++I)
+    static_cast<Functor>(
+        StringSwitch<Functor>(Flags[I])
+            .CaseLower("global", [&SI] { SI.Bind = ELF::STB_GLOBAL; })
+            .CaseLower("local", [&SI] { SI.Bind = ELF::STB_LOCAL; })
+            .CaseLower("weak", [&SI] { SI.Bind = ELF::STB_WEAK; })
+            .CaseLower("default", [&SI] { SI.Visibility = ELF::STV_DEFAULT; })
+            .CaseLower("hidden", [&SI] { SI.Visibility = ELF::STV_HIDDEN; })
+            .CaseLower("file", [&SI] { SI.Type = ELF::STT_FILE; })
+            .CaseLower("section", [&SI] { SI.Type = ELF::STT_SECTION; })
+            .CaseLower("object", [&SI] { SI.Type = ELF::STT_OBJECT; })
+            .CaseLower("function", [&SI] { SI.Type = ELF::STT_FUNC; })
+            .CaseLower("indirect-function",
+                       [&SI] { SI.Type = ELF::STT_GNU_IFUNC; })
+            .CaseLower("debug", [] {})
+            .CaseLower("constructor", [] {})
+            .CaseLower("warning", [] {})
+            .CaseLower("indirect", [] {})
+            .CaseLower("synthetic", [] {})
+            .CaseLower("unique-object", [] {})
+            .StartsWithLower("before", [] {})
+            .Default([&] {
+              error("unsupported flag '" + Flags[I] + "' for --add-symbol");
+            }))();
+  return SI;
 }
 
 static const StringMap<MachineInfo> ArchMap{
@@ -539,6 +608,8 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       return std::move(E);
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_symbol))
     Config.SymbolsToKeep.emplace_back(Arg->getValue(), UseRegex);
+  for (auto Arg : InputArgs.filtered(OBJCOPY_add_symbol))
+    Config.SymbolsToAdd.push_back(parseNewSymbolInfo(Arg->getValue()));
 
   Config.DeterministicArchives = InputArgs.hasFlag(
       OBJCOPY_enable_deterministic_archives,

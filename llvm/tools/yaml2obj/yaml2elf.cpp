@@ -169,7 +169,7 @@ class ELFState {
   bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::MipsABIFlags &Section,
                            ContiguousBlobAccumulator &CBA);
-  void writeSectionContent(Elf_Shdr &SHeader,
+  bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::DynamicSection &Section,
                            ContiguousBlobAccumulator &CBA);
   bool hasDynamicSymbols() const;
@@ -309,7 +309,8 @@ bool ELFState<ELFT>::initSectionHeaders(std::vector<Elf_Shdr> &SHeaders,
       // so just to setup the section offset.
       CBA.getOSAndAlignedOffset(SHeader.sh_offset, SHeader.sh_addralign);
     } else if (auto S = dyn_cast<ELFYAML::DynamicSection>(Sec.get())) {
-      writeSectionContent(SHeader, *S, CBA);
+      if (!writeSectionContent(SHeader, *S, CBA))
+        return false;
     } else if (auto S = dyn_cast<ELFYAML::SymverSection>(Sec.get())) {
       writeSectionContent(SHeader, *S, CBA);
     } else if (auto S = dyn_cast<ELFYAML::VerneedSection>(Sec.get())) {
@@ -713,7 +714,7 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 }
 
 template <class ELFT>
-void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
+bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
                                          const ELFYAML::DynamicSection &Section,
                                          ContiguousBlobAccumulator &CBA) {
   typedef typename ELFT::uint uintX_t;
@@ -721,7 +722,18 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   assert(Section.Type == llvm::ELF::SHT_DYNAMIC &&
          "Section type is not SHT_DYNAMIC");
 
-  SHeader.sh_size = 2 * sizeof(uintX_t) * Section.Entries.size();
+  if (!Section.Entries.empty() && Section.Content) {
+    WithColor::error()
+        << "Cannot specify both raw content and explicit entries "
+           "for dynamic section '"
+        << Section.Name << "'.\n";
+    return false;
+  }
+
+  if (Section.Content)
+    SHeader.sh_size = Section.Content->binary_size();
+  else
+    SHeader.sh_size = 2 * sizeof(uintX_t) * Section.Entries.size();
   if (Section.EntSize)
     SHeader.sh_entsize = *Section.EntSize;
   else
@@ -732,6 +744,10 @@ void ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
     support::endian::write<uintX_t>(OS, DE.Tag, ELFT::TargetEndianness);
     support::endian::write<uintX_t>(OS, DE.Val, ELFT::TargetEndianness);
   }
+  if (Section.Content)
+    Section.Content->writeAsBinary(OS);
+
+  return true;
 }
 
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
