@@ -212,6 +212,12 @@ public:
         return WrapperFrontendAction::CreateASTConsumer(CI, InFile);
       }
 
+      bool BeginInvocation(CompilerInstance &CI) override {
+        // Make the compiler parse all comments.
+        CI.getLangOpts().CommentOpts.ParseAllComments = true;
+        return WrapperFrontendAction::BeginInvocation(CI);
+      }
+
     private:
       index::IndexingOptions IndexOpts;
       CommentHandler *PragmaHandler;
@@ -708,6 +714,31 @@ TEST_F(SymbolCollectorTest, SymbolsInMainFile) {
               UnorderedElementsAre(QName("Foo"), QName("f1"), QName("f2"),
                                    QName("ff"), QName("foo"), QName("foo::Bar"),
                                    QName("main_f")));
+}
+
+TEST_F(SymbolCollectorTest, Documentation) {
+  const std::string Header = R"(
+    // Doc Foo
+    class Foo {
+      // Doc f
+      int f();
+    };
+  )";
+  CollectorOpts.StoreAllDocumentation = false;
+  runSymbolCollector(Header, /* Main */ "");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("Foo"), Doc("Doc Foo"), ForCodeCompletion(true)),
+                  AllOf(QName("Foo::f"), Doc(""), ReturnType(""),
+                        ForCodeCompletion(false))));
+
+  CollectorOpts.StoreAllDocumentation = true;
+  runSymbolCollector(Header, /* Main */ "");
+  EXPECT_THAT(Symbols,
+              UnorderedElementsAre(
+                  AllOf(QName("Foo"), Doc("Doc Foo"), ForCodeCompletion(true)),
+                  AllOf(QName("Foo::f"), Doc("Doc f"), ReturnType(""),
+                        ForCodeCompletion(false))));
 }
 
 TEST_F(SymbolCollectorTest, ClassMembers) {

@@ -84,10 +84,15 @@ static cl::opt<unsigned> AnalysisNumPoints(
     "analysis-numpoints",
     cl::desc("minimum number of points in an analysis cluster"), cl::init(3));
 
-static cl::opt<float>
-    AnalysisEpsilon("analysis-epsilon",
-                    cl::desc("dbscan epsilon for analysis clustering"),
-                    cl::init(0.1));
+static cl::opt<float> AnalysisClusteringEpsilon(
+    "analysis-clustering-epsilon",
+    cl::desc("dbscan epsilon for benchmark point clustering"), cl::init(0.1));
+
+static cl::opt<float> AnalysisInconsistencyEpsilon(
+    "analysis-inconsistency-epsilon",
+    cl::desc("epsilon for detection of when the cluster is different from the "
+             "LLVM schedule profile values"),
+    cl::init(0.1));
 
 static cl::opt<std::string>
     AnalysisClustersOutputFile("analysis-clusters-output-file", cl::desc(""),
@@ -444,9 +449,11 @@ static void analysisMain() {
   std::unique_ptr<llvm::MCInstrInfo> InstrInfo(TheTarget->createMCInstrInfo());
 
   const auto Clustering = ExitOnErr(InstructionBenchmarkClustering::create(
-      Points, AnalysisNumPoints, AnalysisEpsilon, InstrInfo->getNumOpcodes()));
+      Points, AnalysisNumPoints, AnalysisClusteringEpsilon,
+      InstrInfo->getNumOpcodes()));
 
   const Analysis Analyzer(*TheTarget, std::move(InstrInfo), Clustering,
+                          AnalysisInconsistencyEpsilon,
                           AnalysisDisplayUnstableOpcodes);
 
   maybeRunAnalysis<Analysis::PrintClusters>(Analyzer, "analysis clusters",

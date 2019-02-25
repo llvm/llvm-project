@@ -805,6 +805,11 @@ public:
   ConstRange<SectionBase> sections() const {
     return make_pointee_range(Sections);
   }
+  SectionBase *findSection(StringRef Name) {
+    auto SecIt =
+        find_if(Sections, [&](const SecPtr &Sec) { return Sec->Name == Name; });
+    return SecIt == Sections.end() ? nullptr : SecIt->get();
+  }
   Range<Segment> segments() { return make_pointee_range(Segments); }
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }
 

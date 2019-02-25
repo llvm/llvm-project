@@ -44,7 +44,7 @@ body: |
 
 # CHECK-LABEL: name: func1
 # CHECK:    %6:spr = PHI %0, %bb.1, %2, %bb.2
-# CHEKC:    %7:spr = COPY %6
+# CHECK:    %7:spr = COPY %6
 ---
 name: func1
 tracksRegLiveness: true

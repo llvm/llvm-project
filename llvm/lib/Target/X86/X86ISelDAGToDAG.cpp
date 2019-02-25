@@ -1137,15 +1137,23 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
   if (AM.hasSymbolicDisplacement())
     return true;
 
+  bool IsRIPRelTLS = false;
   bool IsRIPRel = N.getOpcode() == X86ISD::WrapperRIP;
+  if (IsRIPRel) {
+    SDValue Val = N.getOperand(0);
+    if (Val.getOpcode() == ISD::TargetGlobalTLSAddress)
+      IsRIPRelTLS = true;
+  }
 
-  // We can't use an addressing mode in the 64-bit large code model. In the
-  // medium code model, we use can use an mode when RIP wrappers are present.
-  // That signifies access to globals that are known to be "near", such as the
-  // GOT itself.
+  // We can't use an addressing mode in the 64-bit large code model.
+  // Global TLS addressing is an exception. In the medium code model,
+  // we use can use a mode when RIP wrappers are present.
+  // That signifies access to globals that are known to be "near",
+  // such as the GOT itself.
   CodeModel::Model M = TM.getCodeModel();
   if (Subtarget->is64Bit() &&
-      (M == CodeModel::Large || (M == CodeModel::Medium && !IsRIPRel)))
+      ((M == CodeModel::Large && !IsRIPRelTLS) ||
+       (M == CodeModel::Medium && !IsRIPRel)))
     return true;
 
   // Base and index reg must be 0 in order to use %rip as base.
