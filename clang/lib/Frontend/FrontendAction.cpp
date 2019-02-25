@@ -931,7 +931,6 @@ bool FrontendAction::Execute() {
     llvm::TimeRegion Timer(CI.getFrontendTimer());
     ExecuteAction();
   }
-  //llvm::errs() << "FrontendAction::Execute(); " << std::string(cstr) << "\n";
   else ExecuteAction();
 
   // If we are supposed to rebuild the global module index, do so now unless
