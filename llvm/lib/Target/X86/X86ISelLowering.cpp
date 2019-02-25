@@ -20209,8 +20209,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   std::tie(Value, Overflow) = getX86XALUOOp(Cond, Op, DAG);
 
   SDValue SetCC = getSETCC(Cond, Overflow, DL, DAG);
-  if (Op->getValueType(1) != MVT::i8)
-    SetCC = DAG.getNode(ISD::ZERO_EXTEND, DL, Op->getValueType(1), SetCC);
+  assert(Op->getValueType(1) == MVT::i8 && "Unexpected VT!");
   return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), Value, SetCC);
 }
 
@@ -40328,6 +40327,20 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineOrCmpEqZeroToCtlzSrl(N, DAG, DCI, Subtarget))
     return R;
+
+  // TODO: Combine with any target/faux shuffle.
+  if (N0.getOpcode() == X86ISD::PACKUS && N0.getValueSizeInBits() == 128 &&
+      VT.getScalarSizeInBits() == N0.getOperand(0).getScalarValueSizeInBits()) {
+    SDValue N00 = N0.getOperand(0);
+    SDValue N01 = N0.getOperand(1);
+    unsigned NumSrcElts = N00.getValueType().getVectorNumElements();
+    unsigned NumSrcEltBits = N00.getScalarValueSizeInBits();
+    APInt ZeroMask = APInt::getHighBitsSet(NumSrcEltBits, NumSrcEltBits / 2);
+    if ((N00.isUndef() || DAG.MaskedValueIsZero(N00, ZeroMask)) &&
+        (N01.isUndef() || DAG.MaskedValueIsZero(N01, ZeroMask))) {
+      return concatSubVectors(N00, N01, VT, NumSrcElts * 2, DAG, dl, 128);
+    }
+  }
 
   return SDValue();
 }

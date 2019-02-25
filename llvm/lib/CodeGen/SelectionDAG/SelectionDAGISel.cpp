@@ -2757,6 +2757,14 @@ CheckCondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
 }
 
 LLVM_ATTRIBUTE_ALWAYS_INLINE static inline bool
+CheckChild2CondCode(const unsigned char *MatcherTable, unsigned &MatcherIndex,
+                    SDValue N) {
+  if (2 >= N.getNumOperands())
+    return false;
+  return ::CheckCondCode(MatcherTable, MatcherIndex, N.getOperand(2));
+}
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE static inline bool
 CheckValueType(const unsigned char *MatcherTable, unsigned &MatcherIndex,
                SDValue N, const TargetLowering *TLI, const DataLayout &DL) {
   MVT::SimpleValueType VT = (MVT::SimpleValueType)MatcherTable[MatcherIndex++];
@@ -2870,6 +2878,9 @@ static unsigned IsPredicateKnownToFail(const unsigned char *Table,
     return Index;
   case SelectionDAGISel::OPC_CheckCondCode:
     Result = !::CheckCondCode(Table, Index, N);
+    return Index;
+  case SelectionDAGISel::OPC_CheckChild2CondCode:
+    Result = !::CheckChild2CondCode(Table, Index, N);
     return Index;
   case SelectionDAGISel::OPC_CheckValueType:
     Result = !::CheckValueType(Table, Index, N, SDISel.TLI,
@@ -3358,6 +3369,9 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     case OPC_CheckCondCode:
       if (!::CheckCondCode(MatcherTable, MatcherIndex, N)) break;
+      continue;
+    case OPC_CheckChild2CondCode:
+      if (!::CheckChild2CondCode(MatcherTable, MatcherIndex, N)) break;
       continue;
     case OPC_CheckValueType:
       if (!::CheckValueType(MatcherTable, MatcherIndex, N, TLI,

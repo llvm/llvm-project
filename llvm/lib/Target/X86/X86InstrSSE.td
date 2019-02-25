@@ -6397,6 +6397,50 @@ def BlendCommuteImm8 : SDNodeXForm<imm, [{
   return getI8Imm(Imm ^ 0xff, SDLoc(N));
 }]>;
 
+// Turn a 4-bit blendi immediate to 8-bit for use with pblendw.
+def BlendScaleImm4 : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue();
+  uint8_t NewImm = 0;
+  for (unsigned i = 0; i != 4; ++i) {
+    if (Imm & (1 << i))
+      NewImm |= 0x3 << (i * 2);
+  }
+  return getI8Imm(NewImm, SDLoc(N));
+}]>;
+
+// Turn a 2-bit blendi immediate to 8-bit for use with pblendw.
+def BlendScaleImm2 : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue();
+  uint8_t NewImm = 0;
+  for (unsigned i = 0; i != 2; ++i) {
+    if (Imm & (1 << i))
+      NewImm |= 0xf << (i * 4);
+  }
+  return getI8Imm(NewImm, SDLoc(N));
+}]>;
+
+// Turn a 4-bit blendi immediate to 8-bit for use with pblendw and invert it.
+def BlendScaleCommuteImm4 : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue();
+  uint8_t NewImm = 0;
+  for (unsigned i = 0; i != 4; ++i) {
+    if (Imm & (1 << i))
+      NewImm |= 0x3 << (i * 2);
+  }
+  return getI8Imm(NewImm ^ 0xff, SDLoc(N));
+}]>;
+
+// Turn a 2-bit blendi immediate to 8-bit for use with pblendw and invert it.
+def BlendScaleCommuteImm2 : SDNodeXForm<imm, [{
+  uint8_t Imm = N->getZExtValue();
+  uint8_t NewImm = 0;
+  for (unsigned i = 0; i != 2; ++i) {
+    if (Imm & (1 << i))
+      NewImm |= 0xf << (i * 4);
+  }
+  return getI8Imm(NewImm ^ 0xff, SDLoc(N));
+}]>;
+
 let Predicates = [HasAVX] in {
   let isCommutable = 0 in {
     defm VMPSADBW : SS41I_binop_rmi_int<0x42, "vmpsadbw", int_x86_sse41_mpsadbw,
@@ -6507,7 +6551,7 @@ let Predicates = [HasAVX2] in {
                                    VEX_4V, VEX_L, VEX_WIG;
 }
 
-// Emulate vXi32/vXi64 blends with vXf32/vXf64.
+// Emulate vXi32/vXi64 blends with vXf32/vXf64 or pblendw.
 // ExecutionDomainFixPass will cleanup domains later on.
 let Predicates = [HasAVX] in {
 def : Pat<(X86Blendi (v4i64 VR256:$src1), (v4i64 VR256:$src2), imm:$src3),
@@ -6517,12 +6561,14 @@ def : Pat<(X86Blendi VR256:$src1, (loadv4i64 addr:$src2), imm:$src3),
 def : Pat<(X86Blendi (loadv4i64 addr:$src2), VR256:$src1, imm:$src3),
           (VBLENDPDYrmi VR256:$src1, addr:$src2, (BlendCommuteImm4 imm:$src3))>;
 
+// Use pblendw for 128-bit integer to keep it in the integer domain and prevent
+// it from becoming movsd via commuting under optsize.
 def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), imm:$src3),
-          (VBLENDPDrri VR128:$src1, VR128:$src2, imm:$src3)>;
+          (VPBLENDWrri VR128:$src1, VR128:$src2, (BlendScaleImm2 imm:$src3))>;
 def : Pat<(X86Blendi VR128:$src1, (loadv2i64 addr:$src2), imm:$src3),
-          (VBLENDPDrmi VR128:$src1, addr:$src2, imm:$src3)>;
+          (VPBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleImm2 imm:$src3))>;
 def : Pat<(X86Blendi (loadv2i64 addr:$src2), VR128:$src1, imm:$src3),
-          (VBLENDPDrmi VR128:$src1, addr:$src2, (BlendCommuteImm2 imm:$src3))>;
+          (VPBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleCommuteImm2 imm:$src3))>;
 }
 
 let Predicates = [HasAVX1Only] in {
@@ -6533,12 +6579,14 @@ def : Pat<(X86Blendi VR256:$src1, (loadv8i32 addr:$src2), imm:$src3),
 def : Pat<(X86Blendi (loadv8i32 addr:$src2), VR256:$src1, imm:$src3),
           (VBLENDPSYrmi VR256:$src1, addr:$src2, (BlendCommuteImm8 imm:$src3))>;
 
+// Use pblendw for 128-bit integer to keep it in the integer domain and prevent
+// it from becoming movss via commuting under optsize.
 def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), imm:$src3),
-          (VBLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
+          (VPBLENDWrri VR128:$src1, VR128:$src2, (BlendScaleImm4 imm:$src3))>;
 def : Pat<(X86Blendi VR128:$src1, (loadv4i32 addr:$src2), imm:$src3),
-          (VBLENDPSrmi VR128:$src1, addr:$src2, imm:$src3)>;
+          (VPBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleImm4 imm:$src3))>;
 def : Pat<(X86Blendi (loadv4i32 addr:$src2), VR128:$src1, imm:$src3),
-          (VBLENDPSrmi VR128:$src1, addr:$src2, (BlendCommuteImm4 imm:$src3))>;
+          (VPBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleCommuteImm4 imm:$src3))>;
 }
 
 defm BLENDPS : SS41I_blend_rmi<0x0C, "blendps", X86Blendi, v4f32,
@@ -6552,19 +6600,21 @@ defm PBLENDW : SS41I_blend_rmi<0x0E, "pblendw", X86Blendi, v8i16,
                                SchedWriteBlend.XMM, BlendCommuteImm8>;
 
 let Predicates = [UseSSE41] in {
+// Use pblendw for 128-bit integer to keep it in the integer domain and prevent
+// it from becoming movss via commuting under optsize.
 def : Pat<(X86Blendi (v2i64 VR128:$src1), (v2i64 VR128:$src2), imm:$src3),
-          (BLENDPDrri VR128:$src1, VR128:$src2, imm:$src3)>;
+          (PBLENDWrri VR128:$src1, VR128:$src2, (BlendScaleImm2 imm:$src3))>;
 def : Pat<(X86Blendi VR128:$src1, (memopv2i64 addr:$src2), imm:$src3),
-          (BLENDPDrmi VR128:$src1, addr:$src2, imm:$src3)>;
+          (PBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleImm2 imm:$src3))>;
 def : Pat<(X86Blendi (memopv2i64 addr:$src2), VR128:$src1, imm:$src3),
-          (BLENDPDrmi VR128:$src1, addr:$src2, (BlendCommuteImm2 imm:$src3))>;
+          (PBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleCommuteImm2 imm:$src3))>;
 
 def : Pat<(X86Blendi (v4i32 VR128:$src1), (v4i32 VR128:$src2), imm:$src3),
-          (BLENDPSrri VR128:$src1, VR128:$src2, imm:$src3)>;
+          (PBLENDWrri VR128:$src1, VR128:$src2, (BlendScaleImm4 imm:$src3))>;
 def : Pat<(X86Blendi VR128:$src1, (memopv4i32 addr:$src2), imm:$src3),
-          (BLENDPSrmi VR128:$src1, addr:$src2, imm:$src3)>;
+          (PBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleImm4 imm:$src3))>;
 def : Pat<(X86Blendi (memopv4i32 addr:$src2), VR128:$src1, imm:$src3),
-          (BLENDPSrmi VR128:$src1, addr:$src2, (BlendCommuteImm4 imm:$src3))>;
+          (PBLENDWrmi VR128:$src1, addr:$src2, (BlendScaleCommuteImm4 imm:$src3))>;
 }
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is

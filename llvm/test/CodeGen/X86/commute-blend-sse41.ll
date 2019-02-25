@@ -54,11 +54,11 @@ define <4 x i32> @commute_fold_blend_v4i32(<4 x i32>* %a, <4 x i32> %b) {
 define void @baz(<2 x i64>* %arg, %struct.spam* %arg1) optsize {
 ; CHECK-LABEL: baz:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movapd (%rdi), %xmm0
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [3,3]
-; CHECK-NEXT:    andpd %xmm0, %xmm1
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; CHECK-NEXT:    movupd %xmm1, (%rsi)
+; CHECK-NEXT:    movaps (%rdi), %xmm0
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [3,3]
+; CHECK-NEXT:    andps %xmm0, %xmm1
+; CHECK-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
+; CHECK-NEXT:    movups %xmm1, (%rsi)
 ; CHECK-NEXT:    retq
 bb:
   %tmp = load <2 x i64>, <2 x i64>* %arg, align 16

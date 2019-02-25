@@ -8984,13 +8984,19 @@ std::pair<SDValue, SDValue> SelectionDAG::UnrollVectorOverflowOp(
   ExtractVectorElements(N->getOperand(0), LHSScalars, 0, NE);
   ExtractVectorElements(N->getOperand(1), RHSScalars, 0, NE);
 
-  SDVTList VTs = getVTList(ResEltVT, OvEltVT);
+  EVT SVT = TLI->getSetCCResultType(getDataLayout(), *getContext(), ResEltVT);
+  SDVTList VTs = getVTList(ResEltVT, SVT);
   SmallVector<SDValue, 8> ResScalars;
   SmallVector<SDValue, 8> OvScalars;
   for (unsigned i = 0; i < NE; ++i) {
     SDValue Res = getNode(Opcode, dl, VTs, LHSScalars[i], RHSScalars[i]);
+    SDValue Ov =
+        getSelect(dl, OvEltVT, Res.getValue(1),
+                  getBoolConstant(true, dl, OvEltVT, ResVT),
+                  getConstant(0, dl, OvEltVT));
+
     ResScalars.push_back(Res);
-    OvScalars.push_back(SDValue(Res.getNode(), 1));
+    OvScalars.push_back(Ov);
   }
 
   ResScalars.append(ResNE - NE, getUNDEF(ResEltVT));
