@@ -733,7 +733,7 @@ bool HexagonExpandCondsets::isPredicable(MachineInstr *MI) {
     HasDef = true;
   }
   for (auto &Mo : MI->memoperands())
-    if (Mo->isVolatile())
+    if (Mo->isVolatile() || Mo->isAtomic())
       return false;
   return true;
 }

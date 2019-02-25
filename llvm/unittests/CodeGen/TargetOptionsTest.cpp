@@ -1,4 +1,5 @@
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -43,7 +44,6 @@ std::unique_ptr<TargetMachine> createTargetMachine(bool EnableIPRA) {
 typedef std::function<void(bool)> TargetOptionsTest;
 
 static void targetOptionsTest(bool EnableIPRA) {
-  LLVMContext Context;
   std::unique_ptr<TargetMachine> TM = createTargetMachine(EnableIPRA);
   // This test is designed for the X86 backend; stop if it is not available.
   if (!TM)
@@ -51,10 +51,12 @@ static void targetOptionsTest(bool EnableIPRA) {
   legacy::PassManager PM;
   LLVMTargetMachine *LLVMTM = static_cast<LLVMTargetMachine *>(TM.get());
 
-  TargetPassConfig &TPC = *LLVMTM->createPassConfig(PM);
+  TargetPassConfig *TPC = LLVMTM->createPassConfig(PM);
   (void)TPC;
 
   ASSERT_TRUE(TM->Options.EnableIPRA == EnableIPRA);
+
+  delete TPC;
 }
 
 } // End of anonymous namespace.

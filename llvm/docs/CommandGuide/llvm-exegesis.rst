@@ -219,10 +219,15 @@ OPTIONS
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode).
 
-.. option:: -analysis-epsilon=<dbscan epsilon parameter>
+.. option:: -analysis-clustering-epsilon=<dbscan epsilon parameter>
 
- Specify the numPoints parameters to be used for DBSCAN clustering
+ Specify the epsilon parameter used for clustering of benchmark points
  (`analysis` mode).
+
+.. option:: -analysis-inconsistency-epsilon=<epsilon>
+
+ Specify the epsilon parameter used for detection of when the cluster
+ is different from the LLVM schedule profile values (`analysis` mode).
 
 .. option:: -analysis-display-unstable-clusters
 

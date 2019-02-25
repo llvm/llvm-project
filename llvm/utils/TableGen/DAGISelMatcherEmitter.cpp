@@ -554,6 +554,11 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
        << cast<CheckCondCodeMatcher>(N)->getCondCodeName() << ",\n";
     return 2;
 
+  case Matcher::CheckChild2CondCode:
+    OS << "OPC_CheckChild2CondCode, ISD::"
+       << cast<CheckChild2CondCodeMatcher>(N)->getCondCodeName() << ",\n";
+    return 2;
+
   case Matcher::CheckValueType:
     OS << "OPC_CheckValueType, MVT::"
        << cast<CheckValueTypeMatcher>(N)->getTypeName() << ",\n";
@@ -995,6 +1000,7 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
   case Matcher::CheckInteger: return "OPC_CheckInteger"; break;
   case Matcher::CheckChildInteger: return "OPC_CheckChildInteger"; break;
   case Matcher::CheckCondCode: return "OPC_CheckCondCode"; break;
+  case Matcher::CheckChild2CondCode: return "OPC_CheckChild2CondCode"; break;
   case Matcher::CheckValueType: return "OPC_CheckValueType"; break;
   case Matcher::CheckComplexPat: return "OPC_CheckComplexPat"; break;
   case Matcher::CheckAndImm: return "OPC_CheckAndImm"; break;

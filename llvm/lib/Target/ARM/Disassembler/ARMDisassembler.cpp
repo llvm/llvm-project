@@ -119,7 +119,7 @@ private:
   mutable ITStatus ITBlock;
 
   DecodeStatus AddThumbPredicate(MCInst&) const;
-  void UpdateThumbVFPPredicate(MCInst&) const;
+  void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
 };
 
 } // end anonymous namespace
@@ -630,6 +630,8 @@ ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
   for (unsigned i = 0; i < NumOps; ++i, ++I) {
     if (I == MI.end()) break;
     if (OpInfo[i].isPredicate()) {
+      if (CC != ARMCC::AL && !ARMInsts[MI.getOpcode()].isPredicable())
+        Check(S, SoftFail);
       I = MI.insert(I, MCOperand::createImm(CC));
       ++I;
       if (CC == ARMCC::AL)
@@ -655,7 +657,8 @@ ThumbDisassembler::AddThumbPredicate(MCInst &MI) const {
 // mode, the auto-generated decoder will give them an (incorrect)
 // predicate operand.  We need to rewrite these operands based on the IT
 // context as a post-pass.
-void ThumbDisassembler::UpdateThumbVFPPredicate(MCInst &MI) const {
+void ThumbDisassembler::UpdateThumbVFPPredicate(
+  DecodeStatus &S, MCInst &MI) const {
   unsigned CC;
   CC = ITBlock.getITCC();
   if (CC == 0xF)
@@ -668,6 +671,8 @@ void ThumbDisassembler::UpdateThumbVFPPredicate(MCInst &MI) const {
   unsigned short NumOps = ARMInsts[MI.getOpcode()].NumOperands;
   for (unsigned i = 0; i < NumOps; ++i, ++I) {
     if (OpInfo[i].isPredicate() ) {
+      if (CC != ARMCC::AL && !ARMInsts[MI.getOpcode()].isPredicable())
+        Check(S, SoftFail);
       I->setImm(CC);
       ++I;
       if (CC == ARMCC::AL)
@@ -773,7 +778,7 @@ DecodeStatus ThumbDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         decodeInstruction(DecoderTableVFP32, MI, Insn32, Address, this, STI);
     if (Result != MCDisassembler::Fail) {
       Size = 4;
-      UpdateThumbVFPPredicate(MI);
+      UpdateThumbVFPPredicate(Result, MI);
       return Result;
     }
   }
@@ -1110,16 +1115,19 @@ static DecodeStatus DecodeDPairSpacedRegisterClass(MCInst &Inst,
 
 static DecodeStatus DecodePredicateOperand(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder) {
+  DecodeStatus S = MCDisassembler::Success;
   if (Val == 0xF) return MCDisassembler::Fail;
   // AL predicate is not allowed on Thumb1 branches.
   if (Inst.getOpcode() == ARM::tBcc && Val == 0xE)
     return MCDisassembler::Fail;
+  if (Val != ARMCC::AL && !ARMInsts[Inst.getOpcode()].isPredicable())
+    Check(S, MCDisassembler::SoftFail);
   Inst.addOperand(MCOperand::createImm(Val));
   if (Val == ARMCC::AL) {
     Inst.addOperand(MCOperand::createReg(0));
   } else
     Inst.addOperand(MCOperand::createReg(ARM::CPSR));
-  return MCDisassembler::Success;
+  return S;
 }
 
 static DecodeStatus DecodeCCOutOperand(MCInst &Inst, unsigned Val,

@@ -138,8 +138,8 @@ void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   trace_buffer[0] = pc;
 }
 
-void BufferedStackTrace::UnwindSlow(uptr pc, void *context,
-                                                    u32 max_depth) {
+void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
+  CHECK(context);
   CHECK_GE(max_depth, 2);
   if (!unwind_backtrace_signal_arch) {
     UnwindSlow(pc, max_depth);

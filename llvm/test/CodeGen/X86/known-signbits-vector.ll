@@ -89,7 +89,7 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,32768,0,0,1,0,0,0]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147483648,0,1,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
@@ -115,7 +115,7 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,0,0,0,8,0,0,0]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,0,8,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsllq $20, %xmm0, %xmm0
@@ -231,7 +231,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,0,0,0,8,0,0,0]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,0,8,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
@@ -272,7 +272,7 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X32-NEXT:    vpsrlq $60, %xmm0, %xmm2
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
 ; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
-; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,0,0,0,8,0,0,0]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,0,8,0]
 ; X32-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    vpmovsxdq %xmm1, %xmm1
@@ -322,7 +322,7 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X32-NEXT:    vpmovsxdq 8(%ebp), %xmm4
 ; X32-NEXT:    vextractf128 $1, %ymm2, %xmm5
 ; X32-NEXT:    vpsrlq $33, %xmm5, %xmm5
-; X32-NEXT:    vmovdqa {{.*#+}} xmm6 = [0,16384,0,0,1,0,0,0]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm6 = [1073741824,0,1,0]
 ; X32-NEXT:    vpxor %xmm6, %xmm5, %xmm5
 ; X32-NEXT:    vpsubq %xmm6, %xmm5, %xmm5
 ; X32-NEXT:    vpsrlq $33, %xmm2, %xmm2

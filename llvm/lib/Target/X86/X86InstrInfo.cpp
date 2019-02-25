@@ -1462,23 +1462,25 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VPBLENDWrri:
   case X86::VPBLENDDYrri:
   case X86::VPBLENDWYrri:{
-    unsigned Mask;
+    int8_t Mask;
     switch (MI.getOpcode()) {
     default: llvm_unreachable("Unreachable!");
-    case X86::BLENDPDrri:    Mask = 0x03; break;
-    case X86::BLENDPSrri:    Mask = 0x0F; break;
-    case X86::PBLENDWrri:    Mask = 0xFF; break;
-    case X86::VBLENDPDrri:   Mask = 0x03; break;
-    case X86::VBLENDPSrri:   Mask = 0x0F; break;
-    case X86::VBLENDPDYrri:  Mask = 0x0F; break;
-    case X86::VBLENDPSYrri:  Mask = 0xFF; break;
-    case X86::VPBLENDDrri:   Mask = 0x0F; break;
-    case X86::VPBLENDWrri:   Mask = 0xFF; break;
-    case X86::VPBLENDDYrri:  Mask = 0xFF; break;
-    case X86::VPBLENDWYrri:  Mask = 0xFF; break;
+    case X86::BLENDPDrri:    Mask = (int8_t)0x03; break;
+    case X86::BLENDPSrri:    Mask = (int8_t)0x0F; break;
+    case X86::PBLENDWrri:    Mask = (int8_t)0xFF; break;
+    case X86::VBLENDPDrri:   Mask = (int8_t)0x03; break;
+    case X86::VBLENDPSrri:   Mask = (int8_t)0x0F; break;
+    case X86::VBLENDPDYrri:  Mask = (int8_t)0x0F; break;
+    case X86::VBLENDPSYrri:  Mask = (int8_t)0xFF; break;
+    case X86::VPBLENDDrri:   Mask = (int8_t)0x0F; break;
+    case X86::VPBLENDWrri:   Mask = (int8_t)0xFF; break;
+    case X86::VPBLENDDYrri:  Mask = (int8_t)0xFF; break;
+    case X86::VPBLENDWYrri:  Mask = (int8_t)0xFF; break;
     }
     // Only the least significant bits of Imm are used.
-    unsigned Imm = MI.getOperand(3).getImm() & Mask;
+    // Using int8_t to ensure it will be sign extended to the int64_t that
+    // setImm takes in order to match isel behavior.
+    int8_t Imm = MI.getOperand(3).getImm() & Mask;
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.getOperand(3).setImm(Mask ^ Imm);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
@@ -1593,7 +1595,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
     // Flip permute source immediate.
     // Imm & 0x02: lo = if set, select Op1.lo/hi else Op0.lo/hi.
     // Imm & 0x20: hi = if set, select Op1.lo/hi else Op0.lo/hi.
-    unsigned Imm = MI.getOperand(3).getImm() & 0xFF;
+    int8_t Imm = MI.getOperand(3).getImm() & 0xFF;
     auto &WorkingMI = cloneIfNew(MI);
     WorkingMI.getOperand(3).setImm(Imm ^ 0x22);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,

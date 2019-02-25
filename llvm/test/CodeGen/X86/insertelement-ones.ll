@@ -30,23 +30,11 @@ define <2 x i64> @insert_v2i64_x1(<2 x i64> %a) {
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: insert_v2i64_x1:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: insert_v2i64_x1:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: insert_v2i64_x1:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; AVX512-NEXT:    retq
+; AVX-LABEL: insert_v2i64_x1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; AVX-NEXT:    retq
   %1 = insertelement <2 x i64> %a, i64 -1, i32 0
   ret <2 x i64> %1
 }
@@ -291,10 +279,7 @@ define <16 x i16> @insert_v16i16_x12345x789ABCDEx(<16 x i16> %a) {
 ; AVX2-LABEL: insert_v16i16_x12345x789ABCDEx:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm1[6],ymm2[7,8,9,10,11,12,13],ymm1[14],ymm2[15]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX2-NEXT:    vpblendw {{.*#+}} ymm2 = ymm1[0],ymm0[1,2,3,4,5],ymm1[6],ymm0[7],ymm1[8],ymm0[9,10,11,12,13],ymm1[14],ymm0[15]
 ; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; AVX2-NEXT:    retq
@@ -302,10 +287,7 @@ define <16 x i16> @insert_v16i16_x12345x789ABCDEx(<16 x i16> %a) {
 ; AVX512-LABEL: insert_v16i16_x12345x789ABCDEx:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512-NEXT:    vpblendw {{.*#+}} ymm2 = ymm1[0],ymm0[1,2,3,4,5,6,7],ymm1[8],ymm0[9,10,11,12,13,14,15]
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5,6,7]
-; AVX512-NEXT:    vpblendw {{.*#+}} ymm2 = ymm2[0,1,2,3,4,5],ymm1[6],ymm2[7,8,9,10,11,12,13],ymm1[14],ymm2[15]
-; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
+; AVX512-NEXT:    vpblendw {{.*#+}} ymm2 = ymm1[0],ymm0[1,2,3,4,5],ymm1[6],ymm0[7],ymm1[8],ymm0[9,10,11,12,13],ymm1[14],ymm0[15]
 ; AVX512-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm1[7],ymm0[8,9,10,11,12,13,14],ymm1[15]
 ; AVX512-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3],ymm0[4,5,6,7]
 ; AVX512-NEXT:    retq

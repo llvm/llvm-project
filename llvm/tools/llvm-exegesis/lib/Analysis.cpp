@@ -170,8 +170,11 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
 Analysis::Analysis(const llvm::Target &Target,
                    std::unique_ptr<llvm::MCInstrInfo> InstrInfo,
                    const InstructionBenchmarkClustering &Clustering,
+                   double AnalysisInconsistencyEpsilon,
                    bool AnalysisDisplayUnstableOpcodes)
     : Clustering_(Clustering), InstrInfo_(std::move(InstrInfo)),
+      AnalysisInconsistencyEpsilonSquared_(AnalysisInconsistencyEpsilon *
+                                           AnalysisInconsistencyEpsilon),
       AnalysisDisplayUnstableOpcodes_(AnalysisDisplayUnstableOpcodes) {
   if (Clustering.getPoints().empty())
     return;
@@ -301,7 +304,8 @@ void Analysis::printSchedClassClustersHtml(
   OS << "</tr>";
   for (const SchedClassCluster &Cluster : Clusters) {
     OS << "<tr class=\""
-       << (Cluster.measurementsMatch(*SubtargetInfo_, RSC, Clustering_)
+       << (Cluster.measurementsMatch(*SubtargetInfo_, RSC, Clustering_,
+                                     AnalysisInconsistencyEpsilonSquared_)
                ? "good-cluster"
                : "bad-cluster")
        << "\"><td>";
@@ -461,7 +465,8 @@ static unsigned findProcResIdx(const llvm::MCSubtargetInfo &STI,
 
 bool Analysis::SchedClassCluster::measurementsMatch(
     const llvm::MCSubtargetInfo &STI, const ResolvedSchedClass &RSC,
-    const InstructionBenchmarkClustering &Clustering) const {
+    const InstructionBenchmarkClustering &Clustering,
+    const double AnalysisInconsistencyEpsilonSquared_) const {
   const size_t NumMeasurements = Representative.size();
   std::vector<BenchmarkMeasure> ClusterCenterPoint(NumMeasurements);
   std::vector<BenchmarkMeasure> SchedClassPoint(NumMeasurements);
@@ -520,7 +525,8 @@ bool Analysis::SchedClassCluster::measurementsMatch(
     llvm_unreachable("unimplemented measurement matching mode");
     return false;
   }
-  return Clustering.isNeighbour(ClusterCenterPoint, SchedClassPoint);
+  return Clustering.isNeighbour(ClusterCenterPoint, SchedClassPoint,
+                                AnalysisInconsistencyEpsilonSquared_);
 }
 
 void Analysis::printSchedClassDescHtml(const ResolvedSchedClass &RSC,
@@ -689,7 +695,8 @@ llvm::Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
     if (llvm::all_of(SchedClassClusters,
                      [this, &RSCAndPoints](const SchedClassCluster &C) {
                        return C.measurementsMatch(
-                           *SubtargetInfo_, RSCAndPoints.RSC, Clustering_);
+                           *SubtargetInfo_, RSCAndPoints.RSC, Clustering_,
+                           AnalysisInconsistencyEpsilonSquared_);
                      }))
       continue; // Nothing weird.
 

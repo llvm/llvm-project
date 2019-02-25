@@ -50,10 +50,8 @@ define <3 x i32> @uaddo_v3i32(<3 x i32> %a0, <3 x i32> %a1, <3 x i32>* %p2) noun
 ; CHECK-LABEL: uaddo_v3i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NEXT:    add x8, x0, #8 // =8
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    st1 { v1.s }[2], [x8]
 ; CHECK-NEXT:    str d1, [x0]
 ; CHECK-NEXT:    ret
@@ -70,8 +68,6 @@ define <4 x i32> @uaddo_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32>* %p2) noun
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<4 x i32>, <4 x i1>} @llvm.uadd.with.overflow.v4i32(<4 x i32> %a0, <4 x i32> %a1)
@@ -85,37 +81,33 @@ define <4 x i32> @uaddo_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32>* %p2) noun
 define <6 x i32> @uaddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) nounwind {
 ; CHECK-LABEL: uaddo_v6i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov s0, w6
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    mov v0.s[1], w7
-; CHECK-NEXT:    ldr s2, [sp, #16]
-; CHECK-NEXT:    ld1 { v0.s }[2], [x8]
-; CHECK-NEXT:    add x9, sp, #8 // =8
-; CHECK-NEXT:    add x10, sp, #24 // =24
-; CHECK-NEXT:    fmov s1, w0
-; CHECK-NEXT:    ld1 { v2.s }[1], [x10]
-; CHECK-NEXT:    ld1 { v0.s }[3], [x9]
-; CHECK-NEXT:    mov v1.s[1], w1
-; CHECK-NEXT:    fmov s3, w4
+; CHECK-NEXT:    fmov s2, w6
+; CHECK-NEXT:    ldr s0, [sp, #16]
+; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    mov v2.s[1], w7
+; CHECK-NEXT:    ld1 { v2.s }[2], [x9]
+; CHECK-NEXT:    add x8, sp, #24 // =24
+; CHECK-NEXT:    add x10, sp, #8 // =8
+; CHECK-NEXT:    ld1 { v0.s }[1], [x8]
+; CHECK-NEXT:    fmov s3, w0
 ; CHECK-NEXT:    ldr x11, [sp, #32]
-; CHECK-NEXT:    mov v1.s[2], w2
-; CHECK-NEXT:    mov v3.s[1], w5
-; CHECK-NEXT:    mov v1.s[3], w3
-; CHECK-NEXT:    add v2.4s, v3.4s, v2.4s
+; CHECK-NEXT:    ld1 { v2.s }[3], [x10]
+; CHECK-NEXT:    fmov s1, w4
+; CHECK-NEXT:    mov v3.s[1], w1
+; CHECK-NEXT:    mov v1.s[1], w5
+; CHECK-NEXT:    mov v3.s[2], w2
+; CHECK-NEXT:    mov v3.s[3], w3
 ; CHECK-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    cmhi v3.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    cmhi v1.4s, v1.4s, v0.4s
-; CHECK-NEXT:    str d2, [x11, #16]
-; CHECK-NEXT:    xtn v2.4h, v3.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    mov w5, v2.s[1]
-; CHECK-NEXT:    mov w1, v1.s[1]
-; CHECK-NEXT:    mov w2, v1.s[2]
-; CHECK-NEXT:    mov w3, v1.s[3]
-; CHECK-NEXT:    fmov w4, s2
-; CHECK-NEXT:    fmov w0, s1
+; CHECK-NEXT:    str d0, [x11, #16]
+; CHECK-NEXT:    add v0.4s, v3.4s, v2.4s
+; CHECK-NEXT:    cmhi v2.4s, v3.4s, v0.4s
+; CHECK-NEXT:    mov w5, v1.s[1]
+; CHECK-NEXT:    mov w1, v2.s[1]
+; CHECK-NEXT:    mov w2, v2.s[2]
+; CHECK-NEXT:    mov w3, v2.s[3]
+; CHECK-NEXT:    fmov w4, s1
+; CHECK-NEXT:    fmov w0, s2
 ; CHECK-NEXT:    str q0, [x11]
 ; CHECK-NEXT:    ret
   %t = call {<6 x i32>, <6 x i1>} @llvm.uadd.with.overflow.v6i32(<6 x i32> %a0, <6 x i32> %a1)
@@ -129,14 +121,10 @@ define <6 x i32> @uaddo_v6i32(<6 x i32> %a0, <6 x i32> %a1, <6 x i32>* %p2) noun
 define <8 x i32> @uaddo_v8i32(<8 x i32> %a0, <8 x i32> %a1, <8 x i32>* %p2) nounwind {
 ; CHECK-LABEL: uaddo_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v3.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    cmhi v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    add v3.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
+; CHECK-NEXT:    cmhi v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    stp q2, q3, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<8 x i32>, <8 x i1>} @llvm.uadd.with.overflow.v8i32(<8 x i32> %a0, <8 x i32> %a1)

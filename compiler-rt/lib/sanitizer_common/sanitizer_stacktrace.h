@@ -58,7 +58,7 @@ struct StackTrace {
   static bool WillUseFastUnwind(bool request_fast_unwind) {
     if (!SANITIZER_CAN_FAST_UNWIND)
       return false;
-    else if (!SANITIZER_CAN_SLOW_UNWIND)
+    if (!SANITIZER_CAN_SLOW_UNWIND)
       return true;
     return request_fast_unwind;
   }

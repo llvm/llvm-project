@@ -1663,30 +1663,30 @@ Error MachOObjectFile::checkSymbolTable() const {
       NStrx = STE.n_strx;
       NValue = STE.n_value;
     }
-    if ((NType & MachO::N_STAB) == 0 &&
-        (NType & MachO::N_TYPE) == MachO::N_SECT) {
-      if (NSect == 0 || NSect > Sections.size())
-        return malformedError("bad section index: " + Twine((int)NSect) +
-                              " for symbol at index " + Twine(SymbolIndex));
-    }
-    if ((NType & MachO::N_STAB) == 0 &&
-        (NType & MachO::N_TYPE) == MachO::N_INDR) {
-      if (NValue >= S.strsize)
-        return malformedError("bad n_value: " + Twine((int)NValue) + " past "
-                              "the end of string table, for N_INDR symbol at "
-                              "index " + Twine(SymbolIndex));
-    }
-    if ((Flags & MachO::MH_TWOLEVEL) == MachO::MH_TWOLEVEL &&
-        (((NType & MachO::N_TYPE) == MachO::N_UNDF && NValue == 0) ||
-         (NType & MachO::N_TYPE) == MachO::N_PBUD)) {
-      uint32_t LibraryOrdinal = MachO::GET_LIBRARY_ORDINAL(NDesc);
-      if (LibraryOrdinal != 0 &&
-          LibraryOrdinal != MachO::EXECUTABLE_ORDINAL &&
-          LibraryOrdinal != MachO::DYNAMIC_LOOKUP_ORDINAL &&
-          LibraryOrdinal - 1 >= Libraries.size() ) {
-        return malformedError("bad library ordinal: " + Twine(LibraryOrdinal) +
-                            " for symbol at index " + Twine(SymbolIndex));
+    if ((NType & MachO::N_STAB) == 0) {
+      if ((NType & MachO::N_TYPE) == MachO::N_SECT) {
+        if (NSect == 0 || NSect > Sections.size())
+          return malformedError("bad section index: " + Twine((int)NSect) +
+                                " for symbol at index " + Twine(SymbolIndex));
       }
+      if ((NType & MachO::N_TYPE) == MachO::N_INDR) {
+        if (NValue >= S.strsize)
+          return malformedError("bad n_value: " + Twine((int)NValue) + " past "
+                                "the end of string table, for N_INDR symbol at "
+                                "index " + Twine(SymbolIndex));
+      }
+      if ((Flags & MachO::MH_TWOLEVEL) == MachO::MH_TWOLEVEL &&
+          (((NType & MachO::N_TYPE) == MachO::N_UNDF && NValue == 0) ||
+           (NType & MachO::N_TYPE) == MachO::N_PBUD)) {
+            uint32_t LibraryOrdinal = MachO::GET_LIBRARY_ORDINAL(NDesc);
+            if (LibraryOrdinal != 0 &&
+                LibraryOrdinal != MachO::EXECUTABLE_ORDINAL &&
+                LibraryOrdinal != MachO::DYNAMIC_LOOKUP_ORDINAL &&
+                LibraryOrdinal - 1 >= Libraries.size() ) {
+              return malformedError("bad library ordinal: " + Twine(LibraryOrdinal) +
+                                    " for symbol at index " + Twine(SymbolIndex));
+            }
+          }
     }
     if (NStrx >= S.strsize)
       return malformedError("bad string table index: " + Twine((int)NStrx) +

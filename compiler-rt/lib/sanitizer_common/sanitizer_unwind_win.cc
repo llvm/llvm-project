@@ -39,8 +39,9 @@ void BufferedStackTrace::UnwindSlow(uptr pc, u32 max_depth) {
   PopStackFrames(pc_location);
 }
 
-void BufferedStackTrace::UnwindSlow(uptr pc, void *context,
-  u32 max_depth) {
+void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
+  CHECK(context);
+  CHECK_GE(max_depth, 2);
   CONTEXT ctx = *(CONTEXT *)context;
   STACKFRAME64 stack_frame;
   memset(&stack_frame, 0, sizeof(stack_frame));

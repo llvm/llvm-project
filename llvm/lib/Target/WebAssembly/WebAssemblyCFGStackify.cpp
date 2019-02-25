@@ -449,11 +449,11 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
     MF.push_back(Label);
     Iter = std::next(MachineFunction::iterator(Bottom));
   }
-  MachineBasicBlock *AfterTry = &*Iter;
+  MachineBasicBlock *Cont = &*Iter;
 
-  assert(AfterTry != &MF.front());
+  assert(Cont != &MF.front());
   MachineBasicBlock *LayoutPred =
-      &*std::prev(MachineFunction::iterator(AfterTry));
+      &*std::prev(MachineFunction::iterator(Cont));
 
   // If the nearest common dominator is inside a more deeply nested context,
   // walk out to the nearest scope which isn't more deeply nested.
@@ -545,7 +545,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   // Decide where in Header to put the END_TRY.
   BeforeSet.clear();
   AfterSet.clear();
-  for (const auto &MI : *AfterTry) {
+  for (const auto &MI : *Cont) {
 #ifndef NDEBUG
     // END_TRY should precede existing LOOP markers.
     if (MI.getOpcode() == WebAssembly::LOOP)
@@ -572,14 +572,14 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   }
 
   // Mark the end of the TRY.
-  InsertPos = getEarliestInsertPos(AfterTry, BeforeSet, AfterSet);
+  InsertPos = getEarliestInsertPos(Cont, BeforeSet, AfterSet);
   MachineInstr *End =
-      BuildMI(*AfterTry, InsertPos, Bottom->findBranchDebugLoc(),
+      BuildMI(*Cont, InsertPos, Bottom->findBranchDebugLoc(),
               TII.get(WebAssembly::END_TRY));
   registerTryScope(Begin, End, &MBB);
 
   // Track the farthest-spanning scope that ends at this point.
-  int Number = AfterTry->getNumber();
+  int Number = Cont->getNumber();
   if (!ScopeTops[Number] ||
       ScopeTops[Number]->getNumber() > Header->getNumber())
     ScopeTops[Number] = Header;
@@ -695,12 +695,6 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
       MachineInstr &MI = *I;
       switch (MI.getOpcode()) {
       case WebAssembly::BLOCK:
-        assert(ScopeTops[Stack.back()->getNumber()]->getNumber() <=
-                   MBB.getNumber() &&
-               "Block/try should be balanced");
-        Stack.pop_back();
-        break;
-
       case WebAssembly::TRY:
         assert(ScopeTops[Stack.back()->getNumber()]->getNumber() <=
                    MBB.getNumber() &&
