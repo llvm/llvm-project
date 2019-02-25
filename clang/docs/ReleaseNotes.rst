@@ -41,7 +41,7 @@ Major New Features
   example, due to renaming a class or namespace).
   See the :ref:`UsersManual <profile_remapping>` for details.
 
-- Clang has new options to initialize automatic variables with either a pattern or with zeroes. The default is still that automatic variables are uninitialized. This isn't meant to change the semantics of C and C++. Rather, it's meant to be a last resort when programmers inadvertently have some undefined behavior in their code. These options aim to make undefined behavior hurt less, which security-minded people will be very happy about. Notably, this means that there's no inadvertent information leak when:
+- Clang has new options to initialize automatic variables with a pattern. The default is still that automatic variables are uninitialized. This isn't meant to change the semantics of C and C++. Rather, it's meant to be a last resort when programmers inadvertently have some undefined behavior in their code. These options aim to make undefined behavior hurt less, which security-minded people will be very happy about. Notably, this means that there's no inadvertent information leak when:
 
     * The compiler re-uses stack slots, and a value is used uninitialized.
 
@@ -64,8 +64,6 @@ Major New Features
     * ``-ftrivial-auto-var-init=uninitialized`` (the default)
 
     * ``-ftrivial-auto-var-init=pattern``
-
-    * ``-ftrivial-auto-var-init=zero`` ``-enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang``
 
   There is also a new attribute to request a variable to not be initialized, mainly to disable initialization of large stack arrays when deemed too expensive:
 
