@@ -56,8 +56,7 @@ class Display(object):
     def finish(self):
         if self.progress_bar:
             self.progress_bar.clear()
-        elif self.opts.succinct:
-            sys.stdout.write('\n')
+        sys.stdout.write('\n')
 
     def print_result(self, test):
         if self.progress_bar:
