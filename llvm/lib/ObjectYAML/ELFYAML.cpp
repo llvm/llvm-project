@@ -855,6 +855,7 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
 static void sectionMapping(IO &IO, ELFYAML::DynamicSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Entries", Section.Entries);
+  IO.mapOptional("Content", Section.Content);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::RawContentSection &Section) {

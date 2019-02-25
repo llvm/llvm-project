@@ -1,5 +1,5 @@
 This file is a partial list of people who have contributed to the LLVM
-project.  If you have contributed a patch or made some other contribution to
+project. If you have contributed a patch or made some other contribution to
 LLVM, please submit a patch to this file to add yourself, and it will be
 done!
 
