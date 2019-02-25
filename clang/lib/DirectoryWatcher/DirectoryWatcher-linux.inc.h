@@ -91,11 +91,11 @@ private:
 
 static void runWatcher(std::string pathToWatch, int inotifyFD,
                        std::shared_ptr<EventQueue> evtQueue) {
-#define EVT_BUF_LEN (30 * (sizeof(struct inotify_event) + NAME_MAX + 1))
-  char buf[EVT_BUF_LEN] __attribute__((aligned(8)));
+  constexpr size_t EventBufferLength = 30 * (sizeof(struct inotify_event) + NAME_MAX + 1);
+  char buf[EventBufferLength] __attribute__((aligned(8)));
 
   while (1) {
-    ssize_t numRead = read(inotifyFD, buf, EVT_BUF_LEN);
+    ssize_t numRead = read(inotifyFD, buf, EventBufferLength);
     if (numRead == -1) {
       if (errno == EINTR)
         continue;
