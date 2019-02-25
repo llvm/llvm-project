@@ -1,8 +1,0 @@
-set follow-fork-mode child
-set print pretty on
-break RandFieldReorganizer.cpp:103
-break RandFieldReorganizer.cpp:152
-break RandFieldReorganizer.cpp:159
-break CompilerInvocation.cpp:1673
-break Clang.cpp:4413
-break RecordLayoutBuild.cpp:2993

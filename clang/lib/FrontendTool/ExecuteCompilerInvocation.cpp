@@ -268,7 +268,6 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   std::unique_ptr<FrontendAction> Act(CreateFrontendAction(*Clang));
   if (!Act)
     return false;
-  //llvm::errs() << "cstr: " << std::string(clang::cstr) << "\n";
   bool Success = Clang->ExecuteAction(*Act);
   if (Clang->getFrontendOpts().DisableFree)
     llvm::BuryPointer(std::move(Act));

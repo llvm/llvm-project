@@ -336,11 +336,12 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
   if (ResponseFile == nullptr) {
     Argv.push_back(Executable);
     Argv.append(Arguments.begin(), Arguments.end());
-    if (!RandstructSeed.empty())
+    // If this is the clang tool, and seed is empty, push argument back
+    // FIXME: figure out where Arguments are set, and put this there
+    if ( ("clang" == (*this).getCreator().getName() ) && !RandstructSeed.empty())
     {
       //Args.push_back("-frandstruct-seed=" + RandstructSeed);
-      Argv.push_back( "-frandstruct-seed" );
-      Argv.push_back( RandstructSeed.c_str() );
+      Argv.push_back( ("-frandstruct-seed=" + RandstructSeed).c_str() );
     }
     Argv.push_back(nullptr);
 

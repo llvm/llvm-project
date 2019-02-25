@@ -4411,7 +4411,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -frandstruct-seed
   if (Arg *A = Args.getLastArg(options::OPT_frandstruct_seed_EQ)) {
-    //CmdArgs.push_back(A->getValue());
+    CmdArgs.push_back("-frandstruct");
+    CmdArgs.push_back(A->getValue(0));
     RandstructSeed.assign(A->getValue(0));
   }
 
@@ -5375,6 +5376,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     C.addCommand(llvm::make_unique<ForceSuccessCommand>(JA, *this, Exec,
                                                         CmdArgs, Inputs));
   } else {
+    // this is where first job is added
     C.addCommand(llvm::make_unique<Command>(JA, *this, Exec, CmdArgs, Inputs));
   }
 
