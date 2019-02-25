@@ -11,7 +11,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
 Introduction
 ============
 
-This document contains the release notes for the Clang C/C++/Objective-C
+This document contains the release notes for the Clang C/C++/Objective-C/OpenCL
 frontend, part of the LLVM Compiler Infrastructure, release 8.0.0. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
@@ -259,10 +259,60 @@ Objective-C Language Changes in Clang
 
 ...
 
-OpenCL C Language Changes in Clang
-----------------------------------
+OpenCL Kernel Language Changes in Clang
+---------------------------------------
 
-...
+Misc:
+
+- Improved address space support with Clang builtins.
+
+- Improved various diagnostics for vectors with element types from extensions;
+  values used in attributes; duplicate address spaces.
+
+- Allow blocks to capture arrays.
+
+- Allow zero assignment and comparisons between variables of ``queue_t`` type.
+
+- Improved diagnostics of formatting specifiers and argument promotions for
+  vector types in ``printf``.
+
+- Fixed return type of enqueued kernel and pipe builtins.
+
+- Fixed address space of ``clk_event_t`` generated in the IR.
+
+- Fixed address space when passing/returning structs.
+
+Header file fixes:
+
+- Added missing extension guards around several builtin function overloads.
+
+- Fixed serialization support when registering vendor extensions using pragmas.
+
+- Fixed OpenCL version in declarations of builtin functions with sampler-less
+  image accesses.
+
+New vendor extensions added:
+
+- ``cl_intel_planar_yuv``
+
+- ``cl_intel_device_side_avc_motion_estimation``
+
+
+C++ for OpenCL:
+
+- Added support of address space conversions in C style casts.
+
+- Enabled address spaces for references.
+
+- Fixed use of address spaces in templates: address space deduction and diagnostics.
+
+- Changed default address space to work with C++ specific concepts: class members,
+  template parameters, etc.
+
+- Added generic address space by default to the generated hidden 'this' parameter.
+
+- Extend overload ranking rules for address spaces.
+
 
 ABI Changes in Clang
 --------------------
