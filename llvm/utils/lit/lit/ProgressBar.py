@@ -241,7 +241,7 @@ class ProgressBar:
         self.useETA = useETA
         if self.useETA:
             self.startTime = time.time()
-        self.update(0, '')
+        # self.update(0, '')
 
     def update(self, percent, message):
         if self.cleared:
