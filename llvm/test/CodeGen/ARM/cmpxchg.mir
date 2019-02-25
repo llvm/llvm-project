@@ -10,7 +10,7 @@ body: |
     ; CHECK: bb.0:
     ; CHECK:   liveins: $r0_r1, $r4_r5, $r3, $lr
     ; CHECK: bb.1:
-    ; CHEKC:   liveins: $r4_r5, $r3
+    ; CHECK:   liveins: $r4_r5, $r3
     ; CHECK:   $r0_r1 = LDREXD $r3, 14, $noreg
     ; CHECK:   CMPrr killed $r0, $r4, 14, $noreg, implicit-def $cpsr
     ; CHECK:   CMPrr killed $r1, $r5, 0, killed $cpsr, implicit-def $cpsr

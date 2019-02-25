@@ -11,11 +11,11 @@ define void @PR25858_i32(%WideUInt32* sret, %WideUInt32*, %WideUInt32*) nounwind
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%ecx), %esi
-; X86-NEXT:    movl 4(%ecx), %ecx
-; X86-NEXT:    subl (%edx), %esi
-; X86-NEXT:    sbbl 4(%edx), %ecx
-; X86-NEXT:    movl %ecx, 4(%eax)
+; X86-NEXT:    movl (%edx), %esi
+; X86-NEXT:    movl 4(%edx), %edx
+; X86-NEXT:    subl (%ecx), %esi
+; X86-NEXT:    sbbl 4(%ecx), %edx
+; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl $4
@@ -249,35 +249,24 @@ define i32 @PR40483_sub3(i32*, i32) nounwind {
 define i32 @PR40483_sub4(i32*, i32) nounwind {
 ; X86-LABEL: PR40483_sub4:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl (%esi), %edi
-; X86-NEXT:    movl %edi, %ecx
-; X86-NEXT:    subl %edx, %ecx
+; X86-NEXT:    movl (%edx), %ecx
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    subl %edx, %edi
-; X86-NEXT:    movl %edi, (%esi)
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, (%edx)
 ; X86-NEXT:    jae .LBB6_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    orl %ecx, %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB6_2:
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR40483_sub4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl (%rdi), %ecx
-; X64-NEXT:    movl %ecx, %edx
-; X64-NEXT:    subl %esi, %edx
-; X64-NEXT:    orl %edx, %edx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    subl %esi, %ecx
-; X64-NEXT:    movl %ecx, (%rdi)
-; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    movl (%rdi), %eax
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    cmovael %ecx, %eax
 ; X64-NEXT:    retq
   %3 = load i32, i32* %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)

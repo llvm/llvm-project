@@ -46,7 +46,8 @@ void InstructionBenchmarkClustering::rangeQuery(
     const auto &PMeasurements = Points_[P].Measurements;
     if (PMeasurements.empty()) // Error point.
       continue;
-    if (isNeighbour(PMeasurements, QMeasurements)) {
+    if (isNeighbour(PMeasurements, QMeasurements,
+                    AnalysisClusteringEpsilonSquared_)) {
       Neighbors.push_back(P);
     }
   }
@@ -54,8 +55,9 @@ void InstructionBenchmarkClustering::rangeQuery(
 
 InstructionBenchmarkClustering::InstructionBenchmarkClustering(
     const std::vector<InstructionBenchmark> &Points,
-    const double EpsilonSquared)
-    : Points_(Points), EpsilonSquared_(EpsilonSquared),
+    const double AnalysisClusteringEpsilonSquared)
+    : Points_(Points),
+      AnalysisClusteringEpsilonSquared_(AnalysisClusteringEpsilonSquared),
       NoiseCluster_(ClusterId::noise()), ErrorCluster_(ClusterId::error()) {}
 
 llvm::Error InstructionBenchmarkClustering::validateAndSetup() {
@@ -245,8 +247,10 @@ void InstructionBenchmarkClustering::stabilize(unsigned NumOpcodes) {
 llvm::Expected<InstructionBenchmarkClustering>
 InstructionBenchmarkClustering::create(
     const std::vector<InstructionBenchmark> &Points, const size_t MinPts,
-    const double Epsilon, llvm::Optional<unsigned> NumOpcodes) {
-  InstructionBenchmarkClustering Clustering(Points, Epsilon * Epsilon);
+    const double AnalysisClusteringEpsilon,
+    llvm::Optional<unsigned> NumOpcodes) {
+  InstructionBenchmarkClustering Clustering(
+      Points, AnalysisClusteringEpsilon * AnalysisClusteringEpsilon);
   if (auto Error = Clustering.validateAndSetup()) {
     return std::move(Error);
   }

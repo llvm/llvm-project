@@ -34,6 +34,9 @@ public:
   static CMIUtilString FormatValist(const CMIUtilString &vrFormating,
                                     va_list vArgs);
   static bool IsAllValidAlphaAndNumeric(const char *vpText);
+  static const char *WithNullAsEmpty(const char *vpText) {
+    return vpText ? vpText : "";
+  }
   static bool Compare(const CMIUtilString &vrLhs, const CMIUtilString &vrRhs);
   static CMIUtilString ConvertToPrintableASCII(const char vChar,
                                                bool bEscapeQuotes = false);

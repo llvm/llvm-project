@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Regex.h"
@@ -61,6 +62,15 @@ public:
   bool operator!=(StringRef S) const { return !operator==(S); }
 };
 
+struct NewSymbolInfo {
+  StringRef SymbolName;
+  StringRef SectionName;
+  uint64_t Value = 0;
+  uint8_t Type = ELF::STT_NOTYPE;
+  uint8_t Bind = ELF::STB_GLOBAL;
+  uint8_t Visibility = ELF::STV_DEFAULT;
+};
+
 // Configuration for copying/stripping a single file.
 struct CopyConfig {
   // Main input/output options
@@ -86,6 +96,7 @@ struct CopyConfig {
   // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
+  std::vector<NewSymbolInfo> SymbolsToAdd;
   std::vector<NameOrRegex> KeepSection;
   std::vector<NameOrRegex> OnlySection;
   std::vector<NameOrRegex> SymbolsToGlobalize;
