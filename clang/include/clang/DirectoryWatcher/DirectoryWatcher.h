@@ -49,7 +49,6 @@ public:
   struct Event {
     EventKind Kind;
     std::string Filename;
-    llvm::sys::TimePoint<> ModTime;
   };
 
   typedef std::function<void(ArrayRef<Event> Events, bool isInitial)>

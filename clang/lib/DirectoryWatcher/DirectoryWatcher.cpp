@@ -81,7 +81,7 @@ struct DirectoryScan {
     std::vector<DirectoryWatcher::Event> Events;
     for (const auto &info : Files) {
       DirectoryWatcher::Event Event{DirectoryWatcher::EventKind::Added,
-                                    std::get<0>(info), std::get<1>(info)};
+                                    std::get<0>(info)};
       Events.push_back(std::move(Event));
     }
     return Events;

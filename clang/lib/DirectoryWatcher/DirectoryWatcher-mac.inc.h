@@ -55,8 +55,7 @@ static void eventStreamCallback(ConstFSEventStreamRef stream,
       if ((flags & kFSEventStreamEventFlagItemRemoved) &&
           path == ctx->WatchedPath) {
         DirectoryWatcher::Event Evt{
-            DirectoryWatcher::EventKind::DirectoryDeleted, path,
-            llvm::sys::TimePoint<>{}};
+            DirectoryWatcher::EventKind::DirectoryDeleted, path};
         Events.push_back(Evt);
         break;
       }
@@ -96,10 +95,7 @@ static void eventStreamCallback(ConstFSEventStreamRef stream,
       }
     }
 
-    llvm::sys::TimePoint<> modTime{};
-    if (statusOpt.hasValue())
-      modTime = statusOpt->getLastModificationTime();
-    DirectoryWatcher::Event Evt{K, path, modTime};
+    DirectoryWatcher::Event Evt{K, path};
     Events.push_back(Evt);
   }
 
