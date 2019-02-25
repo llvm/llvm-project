@@ -337,7 +337,7 @@ CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
 $(warning failed to set the shared clang module cache dir)
 endif
 
-SWIFT_MODULE_CACHE_FLAGS = -module-cache-path $(CLANG_MODULE_CACHE_DIR)
+SWIFT_MODULE_CACHE_FLAGS ?= -module-cache-path $(CLANG_MODULE_CACHE_DIR)
 SWIFTFLAGS += $(SWIFT_MODULE_CACHE_FLAGS)
 
 MANDATORY_MODULE_BUILD_CFLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
@@ -686,7 +686,11 @@ endif
 else # OS = Linux
 $(EXE): $(MODULENAME).swiftmodule.o $(OBJECTS)
 	@echo "### Linking" $(EXE)
+ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
+	$(SWIFTC) $(LD_EXTRAS) $(patsubst %.swiftmodule.o,,$^) $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+else
 	$(SWIFTC) $(LD_EXTRAS) $^ $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+endif
 
 $(MODULENAME).swiftmodule.o: $(MODULENAME).swiftmodule
 	@echo "### Wrapping swift module"
@@ -697,6 +701,7 @@ $(MODULENAME).swiftmodule: $(OBJECTS) $(DYLIB_OBJECTS)
 	@echo "### Merging swift modules for $(MODULENAME)"
 	$(SWIFT_FE) $(SWIFT_FEFLAGS) -merge-modules \
 	  -emit-module $(patsubst %.swift,%.partial.swiftmodule,$(SWIFT_SOURCES) $(DYLIB_SWIFT_SOURCES)) \
+	  -emit-parseable-module-interface-path $(BUILDDIR)/$(MODULENAME).swiftinterface \
 	  -parse-as-library -sil-merge-partial-modules \
 	  -disable-diagnostic-passes -disable-sil-perf-optzns \
 	  -module-name $(MODULENAME) \
@@ -742,6 +747,7 @@ endif
 ifneq "$(ARCHIVE_NAME)" ""
 ifeq "$(OS)" "Darwin"
 $(ARCHIVE_NAME) : $(ARCHIVE_OBJECTS)
+	@echo "### Creating archive $(ARCHIVE_NAME)"
 	$(AR) $(ARFLAGS) $(ARCHIVE_NAME) $(ARCHIVE_OBJECTS)
 	$(RM) $(ARCHIVE_OBJECTS)
 else
@@ -753,11 +759,17 @@ endif
 # Make the dylib
 #----------------------------------------------------------------------
 ifeq "$(USESWIFTDRIVER)" "1"
+ifeq "$(OS)" "Darwin"
+LD_SWIFT_FLAGS=-Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
+	  -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@)
+endif
 $(DYLIB_FILENAME) : $(DYLIB_OBJECTS)
 	@echo "### Linking dynamic library $(DYLIB_NAME)"
-	$(SWIFTC) $(LD_EXTRAS) -o $@ $^ -Xlinker -dylib \
-	  -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule \
-	  -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@)
+ifneq "$(EXCLUDE_WRAPPED_SWIFTMODULE)" ""
+	$(SWIFTC) -emit-library $(LD_SWIFT_FLAGS) $(LD_EXTRAS) -o $@ $(patsubst %.swiftmodule.o,,$^)
+else
+	$(SWIFTC) -emit-library $(LD_SWIFT_FLAGS) $(LD_EXTRAS) -o $@ $^
+endif
 else
 $(DYLIB_OBJECTS) : CFLAGS += -DCOMPILING_LLDB_TEST_DLL
 
