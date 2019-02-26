@@ -910,9 +910,9 @@ template <unsigned> struct __static_assert_check {};
 #endif
 
 #ifdef __GNUC__
-#  define _NOALIAS __attribute__((__malloc__))
+#  define _LIBCPP_NOALIAS __attribute__((__malloc__))
 #else
-#  define _NOALIAS
+#  define _LIBCPP_NOALIAS
 #endif
 
 #if __has_feature(cxx_explicit_conversions) || defined(__IBMCPP__) || \
