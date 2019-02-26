@@ -1,6 +1,6 @@
 import multiprocessing
-import time
 import os
+import time
 
 import lit.Test
 import lit.util
@@ -51,18 +51,14 @@ class Run(object):
         # Larger timeouts (one year, positive infinity) don't work on Windows.
         one_week = 7 * 24 * 60 * 60  # days * hours * minutes * seconds
         timeout = self.timeout or one_week
+        deadline = time.time() + timeout
 
-        start = time.time()
-        deadline = start + timeout
         self._execute(deadline)
-        end = time.time()
 
         # Mark any tests that weren't run as UNRESOLVED.
         for test in self.tests:
             if test.result is None:
                 test.setResult(lit.Test.Result(lit.Test.UNRESOLVED, '', 0.0))
-
-        return end - start
 
     # TODO(yln): as the comment says.. this is racing with the main thread waiting
     # for results
