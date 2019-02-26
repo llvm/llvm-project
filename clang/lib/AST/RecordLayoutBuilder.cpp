@@ -2988,12 +2988,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   const ASTRecordLayout *NewEntry = nullptr;
   
   bool ShouldBeRandomized = D->getAttr<RandomizeLayoutAttr>() != nullptr;
-  bool NotToBeRandomized = D->getAttr<NoRandomizeLayoutAttr>() != nullptr;
    
-  if (ShouldBeRandomized && NotToBeRandomized) {
-    getDiagnostics().Report(D->getLocation(), diag::warn_randomize_attr_conflict);
-  }
-  else if (ShouldBeRandomized) {
+  if (ShouldBeRandomized) {
     Randstruct randstruct;
     randstruct.reorganizeFields(*this,D);
   }
