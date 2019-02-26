@@ -13,6 +13,7 @@
 
 #include "clang/AST/RecordFieldReorganizer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/RandstructSeed.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -23,6 +24,7 @@
 // FIXME: Find a better alternative to SmallVector with hardcoded size!
 
 namespace clang {
+std::string RandstructSeed = "";
 
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) const {
@@ -95,7 +97,8 @@ const size_t CACHE_LINE = 64;
 
 SmallVector<FieldDecl *, 64> Bucket::randomize() {
   // FIXME use seed
-  auto rng = std::default_random_engine{};
+  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
 }
@@ -141,13 +144,16 @@ bool BitfieldRun::canFit(size_t size) const {
 
 bool BitfieldRun::isBitfieldRun() const { return true; }
 
-SmallVector<Decl *, 64> randomize(SmallVector<Decl *, 64> fields) {
-  auto rng = std::default_random_engine{};
+SmallVector<Decl *, 64> Randstruct::randomize(SmallVector<Decl *, 64> fields) {
+  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
 }
 
-SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
+Randstruct::Randstruct(std::String Seed) { RandstructSeed = Seed; }
+
+SmallVector<Decl *, 64> Randstruct::perfrandomize(const ASTContext &ctx,
                                       SmallVector<Decl *, 64> fields) {
   // All of the buckets produced by best-effort cache-line algorithm.
   std::vector<std::unique_ptr<Bucket>> buckets;
@@ -231,7 +237,8 @@ SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
     buckets.push_back(std::move(currentBitfieldRun));
   }
 
-  auto rng = std::default_random_engine{};
+  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(buckets), std::end(buckets), rng);
 
   // Produce the new ordering of the elements from our buckets.
