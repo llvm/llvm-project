@@ -35,11 +35,6 @@ void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
     mutateGuard.insert(f);
     fields.push_back(f);
   }
-  if(D->getAttr<RandomizeLayoutAttr>() == nullptr){
-    if(!autostructselect(fields)){
-      return;
-    }
-  }
   // Now allow subclass implementations to reorder the fields
   reorganize(C, D, fields);
 
@@ -53,20 +48,6 @@ void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
   }
 
   commit(D, fields);
-}
-bool RecordFieldReorganizer::autostructselect(const SmallVector<Decl *, 64> fields) const {
-
-  bool Select = true;
-  for (auto f : fields){
-    auto t = f->getFunctionType();
-    auto s = ((FieldDecl *)f)->getNameAsString();
-    llvm::errs() << "Function " << s << " type: " << t << "\n";    
-    if(t == nullptr){
-      Select = false;
-      break;
-    }
-  }
-  return Select;
 }
 void RecordFieldReorganizer::commit(
     const RecordDecl *D, SmallVectorImpl<Decl *> &NewFieldOrder) const {
@@ -266,5 +247,10 @@ void Randstruct::reorganize(const ASTContext &C, const RecordDecl *D,
   SmallVector<Decl *, 64> randomized = perfrandomize(C, NewOrder);
   NewOrder = randomized;
 }
-
+bool Randstruct::isTriviallyRandomizable(const RecordDecl *D) const {
+  for (auto f : D->fields()){
+    if(f->getFunctionType()  == nullptr){ return false; }
+  }
+  return true;
+}
 } // namespace clang

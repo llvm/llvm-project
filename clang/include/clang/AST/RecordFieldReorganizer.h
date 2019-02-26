@@ -38,6 +38,8 @@ private:
 };
 
 class Randstruct : public RecordFieldReorganizer {
+public:
+  bool isTriviallyRandomizable(const RecordDecl *D) const;
 protected:
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
                           SmallVector<Decl *, 64> &NewOrder) const override;
