@@ -80,6 +80,8 @@ Non-comprehensive list of changes in this release
   available in the `RFC
   <https://lists.llvm.org/pipermail/llvm-dev/2018-November/127461.html>`_.
 
+* Windows support for libFuzzer (x86_64).
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
