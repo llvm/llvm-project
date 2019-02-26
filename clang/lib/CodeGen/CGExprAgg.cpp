@@ -1298,6 +1298,12 @@ void
 AggExprEmitter::VisitCXXConstructExpr(const CXXConstructExpr *E) {
   AggValueSlot Slot = EnsureSlot(E->getType());
   CGF.EmitCXXConstructExpr(E, Slot);
+  if (CGF.IsSpawned) {
+    assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
+           "Processing _Cilk_spawn of expression did not produce a detach.");
+    CGF.IsSpawned = false;
+    CGF.PopDetachScope();
+  }
 }
 
 void AggExprEmitter::VisitCXXInheritedCtorInitExpr(

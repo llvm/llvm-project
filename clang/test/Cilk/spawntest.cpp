@@ -95,4 +95,3 @@ int spawn_assign_eval_order_tests(int n) {
   Arr[i++] += _Cilk_spawn bar(i); // expected-warning {{unsequenced modification and access to 'i'}}
   return 0;
 }
-

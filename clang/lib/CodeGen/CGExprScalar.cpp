@@ -231,12 +231,21 @@ class ScalarExprEmitter
   CodeGenFunction &CGF;
   CGBuilderTy &Builder;
   bool IgnoreResultAssign;
+  bool DoSpawnedInit = false;
+  LValue LValueToSpawnInit;
   llvm::LLVMContext &VMContext;
 public:
 
   ScalarExprEmitter(CodeGenFunction &cgf, bool ira=false)
     : CGF(cgf), Builder(CGF.Builder), IgnoreResultAssign(ira),
       VMContext(cgf.getLLVMContext()) {
+  }
+
+  ScalarExprEmitter(CodeGenFunction &cgf, LValue LValueToSpawnInit,
+                    bool ira=false)
+      : CGF(cgf), Builder(CGF.Builder), IgnoreResultAssign(ira),
+        DoSpawnedInit(true), LValueToSpawnInit(LValueToSpawnInit),
+        VMContext(cgf.getLLVMContext()) {
   }
 
   //===--------------------------------------------------------------------===//
@@ -453,7 +462,19 @@ public:
   }
   Value *VisitCilkSpawnExpr(CilkSpawnExpr *CSE) {
     CGF.PushDetachScope();
-    return Visit(CSE->getSpawnedExpr());
+    Value *V = Visit(CSE->getSpawnedExpr());
+    if (DoSpawnedInit) {
+      assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
+             "Processing _Cilk_spawn of expression did not produce detach.");
+      LValue LV = LValueToSpawnInit;
+      CGF.EmitNullabilityCheck(LV, V, CSE->getExprLoc());
+      CGF.EmitStoreThroughLValue(RValue::get(V), LV, true);
+
+      // Pop the detach scope
+      CGF.IsSpawned = false;
+      CGF.PopDetachScope();
+    }
+    return V;
   }
 
   // Leaves.
@@ -4467,6 +4488,20 @@ Value *CodeGenFunction::EmitScalarExpr(const Expr *E, bool IgnoreResultAssign) {
 
   return ScalarExprEmitter(*this, IgnoreResultAssign)
       .Visit(const_cast<Expr *>(E));
+}
+
+void CodeGenFunction::EmitScalarExprIntoLValue(const Expr *E, LValue dest,
+                                               bool isInit) {
+  assert(E && hasScalarEvaluationKind(E->getType()) &&
+         "Invalid scalar expression to emit");
+
+  if (IsSpawned && isInit) {
+    ScalarExprEmitter(*this, dest).Visit(const_cast<Expr *>(E));
+    return;
+  }
+  Value *V = ScalarExprEmitter(*this).Visit(const_cast<Expr *>(E));
+  EmitNullabilityCheck(dest, V, E->getExprLoc());
+  EmitStoreThroughLValue(RValue::get(V), dest, isInit);
 }
 
 /// Emit a conversion from the specified type to the specified destination type,
