@@ -3309,7 +3309,7 @@ ArchSpec ObjectFileELF::GetArchitecture() {
   }
 
   if (CalculateType() == eTypeCoreFile &&
-      m_arch_spec.TripleOSIsUnspecifiedUnknown()) {
+      !m_arch_spec.TripleOSWasSpecified()) {
     // Core files don't have section headers yet they have PT_NOTE program
     // headers that might shed more light on the architecture
     for (const elf::ELFProgramHeader &H : ProgramHeaders()) {
