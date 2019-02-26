@@ -6,8 +6,11 @@
 // XFAIL: lsan
 // XFAIL: ubsan
 
-#include <string.h>
 #include <assert.h>
+#include <string.h>
+#if defined(_GNU_SOURCE)
+#include <strings.h> // for bcmp
+#endif
 
 bool seen_memcmp, seen_strncmp, seen_strncasecmp, seen_strcmp, seen_strcasecmp,
     seen_strstr, seen_strcasestr, seen_memmem;
@@ -58,6 +61,13 @@ int main() {
 
   int_sink = memcmp(s1, s2, sizeof(s2));
   assert(seen_memcmp);
+
+#if defined(_GNU_SOURCE) || defined(__NetBSD__) || defined(__FreeBSD__) || \
+    defined(__OpenBSD__)
+  seen_memcmp = false;
+  int_sink = bcmp(s1, s2, sizeof(s2));
+  assert(seen_memcmp);
+#endif
 
   int_sink = strncmp(s1, s2, sizeof(s2));
   assert(seen_strncmp);

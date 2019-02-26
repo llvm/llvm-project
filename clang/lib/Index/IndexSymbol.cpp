@@ -316,6 +316,10 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Lang = SymbolLanguage::CXX;
       Info.Properties |= (SymbolPropertySet)SymbolProperty::Generic;
       break;
+    case Decl::Using:
+      Info.Kind = SymbolKind::Using;
+      Info.Lang = SymbolLanguage::CXX;
+      break;
     case Decl::Binding:
       Info.Kind = SymbolKind::Variable;
       Info.Lang = SymbolLanguage::CXX;

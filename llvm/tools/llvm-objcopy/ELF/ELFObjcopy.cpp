@@ -574,6 +574,8 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
                                Sec ? SYMBOL_SIMPLE_INDEX : SHN_ABS, 0);
   }
 
+  if (Config.EntryExpr)
+    Obj.Entry = Config.EntryExpr(Obj.Entry);
   return Error::success();
 }
 

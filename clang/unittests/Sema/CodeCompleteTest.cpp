@@ -442,4 +442,41 @@ TEST(PreferredTypeTest, ParenExpr) {
   )cpp";
   EXPECT_THAT(collectPreferredTypes(Code), Each("const int *"));
 }
+
+TEST(PreferredTypeTest, FunctionArguments) {
+  StringRef Code = R"cpp(
+    void foo(const int*);
+
+    void bar(const int*);
+    void bar(const int*, int b);
+
+    struct vector {
+      const int *data();
+    };
+    void test() {
+      foo(^(^(^(^vec^tor^().^da^ta^()))));
+      bar(^(^(^(^vec^tor^().^da^ta^()))));
+    }
+  )cpp";
+  EXPECT_THAT(collectPreferredTypes(Code), Each("const int *"));
+
+  Code = R"cpp(
+    void bar(int, volatile double *);
+    void bar(int, volatile double *, int, int);
+
+    struct vector {
+      double *data();
+    };
+
+    struct class_members {
+      void bar(int, volatile double *);
+      void bar(int, volatile double *, int, int);
+    };
+    void test() {
+      bar(10, ^(^(^(^vec^tor^().^da^ta^()))));
+      class_members().bar(10, ^(^(^(^vec^tor^().^da^ta^()))));
+    }
+  )cpp";
+  EXPECT_THAT(collectPreferredTypes(Code), Each("volatile double *"));
+}
 } // namespace

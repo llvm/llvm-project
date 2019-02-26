@@ -9238,6 +9238,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("typedef void (*cb)(int);", NoSpace);
   verifyFormat("T A::operator()();", NoSpace);
   verifyFormat("X A::operator++(T);", NoSpace);
+  verifyFormat("auto lambda = []() { return 0; };", NoSpace);
 
   FormatStyle Space = getLLVMStyle();
   Space.SpaceBeforeParens = FormatStyle::SBPO_Always;
@@ -9285,6 +9286,7 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeParens) {
   verifyFormat("typedef void (*cb) (int);", Space);
   verifyFormat("T A::operator() ();", Space);
   verifyFormat("X A::operator++ (T);", Space);
+  verifyFormat("auto lambda = [] () { return 0; };", Space);
 }
 
 TEST_F(FormatTest, ConfigurableSpacesInParentheses) {

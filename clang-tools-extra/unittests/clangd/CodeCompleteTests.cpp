@@ -17,6 +17,7 @@
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestIndex.h"
+#include "TestTU.h"
 #include "index/MemIndex.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/Support/Error.h"
@@ -2312,6 +2313,26 @@ TEST(CompletionTest, WorksWithNullType) {
     }
   )cpp");
   EXPECT_THAT(R.Completions, ElementsAre(Named("loopVar")));
+}
+
+TEST(CompletionTest, UsingDecl) {
+  const char *Header(R"cpp(
+    void foo(int);
+    namespace std {
+      using ::foo;
+    })cpp");
+  const char *Source(R"cpp(
+    void bar() {
+      std::^;
+    })cpp");
+  auto Index = TestTU::withHeaderCode(Header).index();
+  clangd::CodeCompleteOptions Opts;
+  Opts.Index = Index.get();
+  Opts.AllScopes = true;
+  auto R = completions(Source, {}, Opts);
+  EXPECT_THAT(R.Completions,
+              ElementsAre(AllOf(Scope("std::"), Named("foo"),
+                                Kind(CompletionItemKind::Reference))));
 }
 
 } // namespace

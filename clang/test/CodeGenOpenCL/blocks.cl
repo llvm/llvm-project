@@ -90,6 +90,12 @@ int get42() {
   return blockArgFunc(^{return 42;});
 }
 
+// COMMON-LABEL: define {{.*}}@call_block
+// call {{.*}}@__call_block_block_invoke
+int call_block() {
+  return ^int(int num) { return num; } (11);
+}
+
 // CHECK-DEBUG: !DIDerivedType(tag: DW_TAG_member, name: "__size"
 // CHECK-DEBUG: !DIDerivedType(tag: DW_TAG_member, name: "__align"
 

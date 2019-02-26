@@ -891,6 +891,9 @@ long long clang_Type_getAlignOf(CXType T) {
     return CXTypeLayoutError_Incomplete;
   if (QT->isDependentType())
     return CXTypeLayoutError_Dependent;
+  if (const auto *Deduced = dyn_cast<DeducedType>(QT))
+    if (Deduced->getDeducedType().isNull())
+      return CXTypeLayoutError_Undeduced;
   // Exceptions by GCC extension - see ASTContext.cpp:1313 getTypeInfoImpl
   // if (QT->isFunctionType()) return 4; // Bug #15511 - should be 1
   // if (QT->isVoidType()) return 1;
@@ -928,6 +931,9 @@ long long clang_Type_getSizeOf(CXType T) {
     return CXTypeLayoutError_Dependent;
   if (!QT->isConstantSizeType())
     return CXTypeLayoutError_NotConstantSize;
+  if (const auto *Deduced = dyn_cast<DeducedType>(QT))
+    if (Deduced->getDeducedType().isNull())
+      return CXTypeLayoutError_Undeduced;
   // [gcc extension] lib/AST/ExprConstant.cpp:1372
   //                 HandleSizeof : {voidtype,functype} == 1
   // not handled by ASTContext.cpp:1313 getTypeInfoImpl

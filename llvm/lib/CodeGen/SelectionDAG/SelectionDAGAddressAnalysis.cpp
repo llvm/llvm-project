@@ -135,9 +135,10 @@ bool BaseIndexOffset::computeAliasing(const BaseIndexOffset &BasePtr0,
   return false; // Cannot determine whether the pointers alias.
 }
 
-bool BaseIndexOffset::contains(int64_t Size, const BaseIndexOffset &Other,
-                               int64_t OtherSize, const SelectionDAG &DAG,
-                               int64_t &Offset) const {
+bool BaseIndexOffset::contains(const SelectionDAG &DAG, int64_t BitSize,
+                               const BaseIndexOffset &Other,
+                               int64_t OtherBitSize, int64_t &BitOffset) const {
+  int64_t Offset;
   if (!equalBaseIndex(Other, DAG, Offset))
     return false;
   if (Offset >= 0) {
@@ -145,7 +146,8 @@ bool BaseIndexOffset::contains(int64_t Size, const BaseIndexOffset &Other,
     // [-------*this---------]
     //            [---Other--]
     // ==Offset==>
-    return Offset + OtherSize <= Size;
+    BitOffset = 8 * Offset;
+    return BitOffset + OtherBitSize <= BitSize;
   }
   // Other starts strictly before *this, it cannot be fully contained.
   //    [-------*this---------]
