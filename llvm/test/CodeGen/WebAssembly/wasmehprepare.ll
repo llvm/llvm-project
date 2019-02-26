@@ -6,11 +6,19 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: @__wasm_lpad_context = external global { i32, i8*, i32 }
 
 @_ZTIi = external constant i8*
-%struct.Cleanup = type { i8 }
+%struct.Temp = type { i8 }
 
 ; A single 'catch (int)' clause.
 ; A wasm.catch() call, wasm.lsda() call, and personality call to generate a
 ; selector should all be genereated after the catchpad.
+;
+; void foo();
+; void test0() {
+;   try {
+;     foo();
+;   } catch (int) {
+;   }
+; }
 define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 ; CHECK-LABEL: @test0()
 entry:
@@ -53,11 +61,23 @@ try.cont:                                         ; preds = %entry, %catch
   ret void
 }
 
-; Two try-catches, one of them is with a single 'catch (...)' clause.
+; Two try-catches.
 ; For the catchpad with a single 'catch (...)', only a wasm.catch() call should
 ; be generated after the catchpad; wasm.landingpad.index() and personality call
 ; should NOT be generated. For the other catchpad, the argument of
 ; wasm.landingpad.index() should be not 1 but 0.
+;
+; void foo();
+; void test1() {
+;   try {
+;     foo();
+;   } catch (...) {
+;   }
+;   try {
+;     foo();
+;   } catch (int) {
+;   }
+; }
 define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 ; CHECK-LABEL: @test1()
 entry:
@@ -112,8 +132,20 @@ try.cont7:                                        ; preds = %try.cont, %catch4
   ret void
 }
 
-; A nested try-catch within a catch. Within the nested catchpad, wasm.lsda()
-; call should NOT be generated.
+; A nested try-catch within a catch.
+;
+; void foo();
+; void test2() {
+;   try {
+;     foo();
+;   } catch (int) {
+;     try {
+;       foo();
+;     } catch (int) {
+;     }
+;   }
+; }
+; Within the nested catchpad, wasm.lsda() call should NOT be generated.
 define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 ; CHECK-LABEL: @test2()
 entry:
@@ -189,6 +221,15 @@ unreachable:                                      ; preds = %rethrow5
 
 ; A cleanuppad with a call to __clang_call_terminate().
 ; A call to wasm.catch() should be generated after the cleanuppad.
+;
+; void foo();
+; void test3() {
+;   try {
+;     foo();
+;   } catch (...) {
+;     foo();
+;   }
+; }
 define void @test3() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 ; CHECK-LABEL: @test3
 entry:
@@ -234,10 +275,37 @@ terminate:                                        ; preds = %ehcleanup
 
 ; PHI demotion test. Only the phi before catchswitch should be demoted; the phi
 ; before cleanuppad should NOT.
+;
+; void foo();
+; int bar(int) noexcept;
+; struct Temp {
+;   ~Temp() {}
+; };
+;
+; void test4() {
+;   int num;
+;   try {
+;     Temp t;
+;     num = 1;
+;     foo();
+;     num = 2;
+;     foo();
+;   } catch (...) {
+;     bar(num);
+;   }
+;   try {
+;     foo();
+;     num = 1;
+;     foo();
+;     num = 2;
+;   } catch (...) {
+;     bar(num);
+;   }
+; }
 define void @test4() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 ; CHECK-LABEL: @test4
 entry:
-  %c = alloca %struct.Cleanup, align 1
+  %t = alloca %struct.Temp, align 1
   invoke void @foo()
           to label %invoke.cont unwind label %ehcleanup
 
@@ -246,13 +314,13 @@ invoke.cont:                                      ; preds = %entry
           to label %invoke.cont1 unwind label %ehcleanup
 
 invoke.cont1:                                     ; preds = %invoke.cont
-  %call = call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* %c)
+  %call = call %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* %t)
   br label %try.cont
 
 ehcleanup:                                        ; preds = %invoke.cont, %entry
   %num.0 = phi i32 [ 2, %invoke.cont ], [ 1, %entry ]
   %0 = cleanuppad within none []
-  %call2 = call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* %c) [ "funclet"(token %0) ]
+  %call2 = call %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* %t) [ "funclet"(token %0) ]
   cleanupret from %0 unwind label %catch.dispatch
 ; CHECK: ehcleanup:
 ; CHECK-NEXT:   = phi
@@ -265,7 +333,7 @@ catch.start:                                      ; preds = %catch.dispatch
   %3 = call i8* @llvm.wasm.get.exception(token %2)
   %4 = call i32 @llvm.wasm.get.ehselector(token %2)
   %5 = call i8* @__cxa_begin_catch(i8* %3) [ "funclet"(token %2) ]
-  call void @func(i32 %num.0) [ "funclet"(token %2) ]
+  call void @bar(i32 %num.0) [ "funclet"(token %2) ]
   call void @__cxa_end_catch() [ "funclet"(token %2) ]
   catchret from %2 to label %try.cont
 
@@ -288,7 +356,7 @@ catch.start6:                                     ; preds = %catch.dispatch5
   %8 = call i8* @llvm.wasm.get.exception(token %7)
   %9 = call i32 @llvm.wasm.get.ehselector(token %7)
   %10 = call i8* @__cxa_begin_catch(i8* %8) [ "funclet"(token %7) ]
-  call void @func(i32 %num.1) [ "funclet"(token %7) ]
+  call void @bar(i32 %num.1) [ "funclet"(token %7) ]
   call void @__cxa_end_catch() [ "funclet"(token %7) ]
   catchret from %7 to label %try.cont10
 
@@ -353,8 +421,8 @@ merge:                                            ; preds = %bb.true.0, %bb.fals
 }
 
 declare void @foo()
-declare void @func(i32)
-declare %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* returned)
+declare void @bar(i32)
+declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* returned)
 declare i32 @__gxx_wasm_personality_v0(...)
 declare i8* @llvm.wasm.get.exception(token)
 declare i32 @llvm.wasm.get.ehselector(token)

@@ -1915,8 +1915,12 @@ public:
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
   OMPClause *RebuildOMPFromClause(ArrayRef<Expr *> VarList,
-                                  const OMPVarListLocTy &Locs) {
-    return getSema().ActOnOpenMPFromClause(VarList, Locs);
+                                  CXXScopeSpec &MapperIdScopeSpec,
+                                  DeclarationNameInfo &MapperId,
+                                  const OMPVarListLocTy &Locs,
+                                  ArrayRef<Expr *> UnresolvedMappers) {
+    return getSema().ActOnOpenMPFromClause(VarList, MapperIdScopeSpec, MapperId,
+                                           Locs, UnresolvedMappers);
   }
 
   /// Build a new OpenMP 'use_device_ptr' clause.
@@ -8976,16 +8980,16 @@ OMPClause *TreeTransform<Derived>::TransformOMPToClause(OMPToClause *C) {
 
 template <typename Derived>
 OMPClause *TreeTransform<Derived>::TransformOMPFromClause(OMPFromClause *C) {
-  llvm::SmallVector<Expr *, 16> Vars;
-  Vars.reserve(C->varlist_size());
-  for (auto *VE : C->varlists()) {
-    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
-    if (EVar.isInvalid())
-      return 0;
-    Vars.push_back(EVar.get());
-  }
   OMPVarListLocTy Locs(C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
-  return getDerived().RebuildOMPFromClause(Vars, Locs);
+  llvm::SmallVector<Expr *, 16> Vars;
+  CXXScopeSpec MapperIdScopeSpec;
+  DeclarationNameInfo MapperIdInfo;
+  llvm::SmallVector<Expr *, 16> UnresolvedMappers;
+  if (transformOMPMappableExprListClause<Derived, OMPFromClause>(
+          *this, C, Vars, MapperIdScopeSpec, MapperIdInfo, UnresolvedMappers))
+    return nullptr;
+  return getDerived().RebuildOMPFromClause(
+      Vars, MapperIdScopeSpec, MapperIdInfo, Locs, UnresolvedMappers);
 }
 
 template <typename Derived>

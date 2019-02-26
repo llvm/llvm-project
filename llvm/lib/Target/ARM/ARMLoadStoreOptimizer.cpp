@@ -1580,7 +1580,9 @@ static bool isMemoryOp(const MachineInstr &MI) {
   const MachineMemOperand &MMO = **MI.memoperands_begin();
 
   // Don't touch volatile memory accesses - we may be changing their order.
-  if (MMO.isVolatile())
+  // TODO: We could allow unordered and monotonic atomics here, but we need to
+  // make sure the resulting ldm/stm is correctly marked as atomic. 
+  if (MMO.isVolatile() || MMO.isAtomic())
     return false;
 
   // Unaligned ldr/str is emulated by some kernels, but unaligned ldm/stm is
@@ -2144,7 +2146,8 @@ ARMPreAllocLoadStoreOpt::CanFormLdStDWord(MachineInstr *Op0, MachineInstr *Op1,
   // At the moment, we ignore the memoryoperand's value.
   // If we want to use AliasAnalysis, we should check it accordingly.
   if (!Op0->hasOneMemOperand() ||
-      (*Op0->memoperands_begin())->isVolatile())
+      (*Op0->memoperands_begin())->isVolatile() ||
+      (*Op0->memoperands_begin())->isAtomic())
     return false;
 
   unsigned Align = (*Op0->memoperands_begin())->getAlignment();

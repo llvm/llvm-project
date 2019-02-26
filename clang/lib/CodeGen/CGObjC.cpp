@@ -433,8 +433,9 @@ tryEmitSpecializedAllocInit(CodeGenFunction &CGF, const ObjCMessageExpr *OME) {
 
   // Match the exact pattern '[[MyClass alloc] init]'.
   Selector Sel = OME->getSelector();
-  if (!OME->isInstanceMessage() || !OME->getType()->isObjCObjectPointerType() ||
-      !Sel.isUnarySelector() || Sel.getNameForSlot(0) != "init")
+  if (OME->getReceiverKind() != ObjCMessageExpr::Instance ||
+      !OME->getType()->isObjCObjectPointerType() || !Sel.isUnarySelector() ||
+      Sel.getNameForSlot(0) != "init")
     return None;
 
   // Okay, this is '[receiver init]', check if 'receiver' is '[cls alloc]'.

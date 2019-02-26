@@ -17,7 +17,8 @@ bb0:
 bb1:
 ; CHECK:       # %bb.1: # %bb1
 ; CHECK-NEXT:    lw $[[REG2:[0-9]+]], [[SPILL]]($sp) # 4-byte Folded Reload
-; CHECK-NEXT:    bgtz $[[REG2]], $BB0_3
+; CHECK-NEXT:    andi $[[REG3:[0-9]+]], $[[REG2]], 1
+; CHECK-NEXT:    bgtz $[[REG3]], $BB0_3
   br i1 %2, label %bb2, label %bb3
 bb2:
 ; CHECK:         $BB0_3: # %bb2

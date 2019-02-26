@@ -308,11 +308,12 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
 void AMDGPURegisterBankInfo::split64BitValueForMapping(
   MachineIRBuilder &B,
   SmallVector<unsigned, 2> &Regs,
+  LLT HalfTy,
   unsigned Reg) const {
-  LLT S32 = LLT::scalar(32);
+  assert(HalfTy.getSizeInBits() == 32);
   MachineRegisterInfo *MRI = B.getMRI();
-  unsigned LoLHS = MRI->createGenericVirtualRegister(S32);
-  unsigned HiLHS = MRI->createGenericVirtualRegister(S32);
+  unsigned LoLHS = MRI->createGenericVirtualRegister(HalfTy);
+  unsigned HiLHS = MRI->createGenericVirtualRegister(HalfTy);
   const RegisterBank *Bank = getRegBank(Reg, *MRI, *TRI);
   MRI->setRegBank(LoLHS, *Bank);
   MRI->setRegBank(HiLHS, *Bank);
@@ -326,6 +327,25 @@ void AMDGPURegisterBankInfo::split64BitValueForMapping(
     .addUse(Reg);
 }
 
+/// Replace the current type each register in \p Regs has with \p NewTy
+static void setRegsToType(MachineRegisterInfo &MRI, ArrayRef<unsigned> Regs,
+                          LLT NewTy) {
+  for (unsigned Reg : Regs) {
+    assert(MRI.getType(Reg).getSizeInBits() == NewTy.getSizeInBits());
+    MRI.setType(Reg, NewTy);
+  }
+}
+
+static LLT getHalfSizedType(LLT Ty) {
+  if (Ty.isVector()) {
+    assert(Ty.getNumElements() % 2 == 0);
+    return LLT::scalarOrVector(Ty.getNumElements() / 2, Ty.getElementType());
+  }
+
+  assert(Ty.getSizeInBits() % 2 == 0);
+  return LLT::scalar(Ty.getSizeInBits() / 2);
+}
+
 void AMDGPURegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   MachineInstr &MI = OpdMapper.getMI();
@@ -337,6 +357,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     LLT DstTy = MRI.getType(DstReg);
     if (DstTy.getSizeInBits() != 64)
       break;
+
+    LLT HalfTy = getHalfSizedType(DstTy);
 
     SmallVector<unsigned, 2> DefRegs(OpdMapper.getVRegs(0));
     SmallVector<unsigned, 1> Src0Regs(OpdMapper.getVRegs(1));
@@ -357,10 +379,17 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     }
 
     if (Src1Regs.empty())
-      split64BitValueForMapping(B, Src1Regs, MI.getOperand(2).getReg());
+      split64BitValueForMapping(B, Src1Regs, HalfTy, MI.getOperand(2).getReg());
+    else {
+      setRegsToType(MRI, Src1Regs, HalfTy);
+    }
 
     if (Src2Regs.empty())
-      split64BitValueForMapping(B, Src2Regs, MI.getOperand(3).getReg());
+      split64BitValueForMapping(B, Src2Regs, HalfTy, MI.getOperand(3).getReg());
+    else
+      setRegsToType(MRI, Src2Regs, HalfTy);
+
+    setRegsToType(MRI, DefRegs, HalfTy);
 
     B.buildSelect(DefRegs[0], Src0Regs[0], Src1Regs[0], Src2Regs[0]);
     B.buildSelect(DefRegs[1], Src0Regs[0], Src1Regs[1], Src2Regs[1]);
@@ -375,9 +404,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // 64-bit and is only available on the SALU, so split into 2 32-bit ops if
     // there is a VGPR input.
     unsigned DstReg = MI.getOperand(0).getReg();
-    if (MRI.getType(DstReg).getSizeInBits() != 64)
+    LLT DstTy = MRI.getType(DstReg);
+    if (DstTy.getSizeInBits() != 64)
       break;
 
+    LLT HalfTy = getHalfSizedType(DstTy);
     SmallVector<unsigned, 2> DefRegs(OpdMapper.getVRegs(0));
     SmallVector<unsigned, 2> Src0Regs(OpdMapper.getVRegs(1));
     SmallVector<unsigned, 2> Src1Regs(OpdMapper.getVRegs(2));
@@ -398,10 +429,16 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MachineIRBuilder B(MI);
 
     if (Src0Regs.empty())
-      split64BitValueForMapping(B, Src0Regs, MI.getOperand(1).getReg());
+      split64BitValueForMapping(B, Src0Regs, HalfTy, MI.getOperand(1).getReg());
+    else
+      setRegsToType(MRI, Src0Regs, HalfTy);
 
     if (Src1Regs.empty())
-      split64BitValueForMapping(B, Src1Regs, MI.getOperand(2).getReg());
+      split64BitValueForMapping(B, Src1Regs, HalfTy, MI.getOperand(2).getReg());
+    else
+      setRegsToType(MRI, Src1Regs, HalfTy);
+
+    setRegsToType(MRI, DefRegs, HalfTy);
 
     B.buildInstr(Opc)
       .addDef(DefRegs[0])

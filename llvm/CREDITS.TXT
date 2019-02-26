@@ -525,3 +525,7 @@ D: PowerPC Backend Developer
 N: Kang Zhang
 E: shkzhang@cn.ibm.com
 D: PowerPC Backend Developer
+
+N: Zheng Chen
+E: czhengsz@cn.ibm.com
+D: PowerPC Backend Developer

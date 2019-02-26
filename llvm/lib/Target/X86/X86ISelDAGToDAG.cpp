@@ -399,6 +399,19 @@ namespace {
       return getI8Imm((Index * VecVT.getScalarSizeInBits()) / VecWidth, DL);
     }
 
+    // Helper to detect unneeded and instructions on shift amounts. Called
+    // from PatFrags in tablegen.
+    bool isUnneededShiftMask(SDNode *N, unsigned Width) const {
+      assert(N->getOpcode() == ISD::AND && "Unexpected opcode");
+      const APInt &Val = cast<ConstantSDNode>(N->getOperand(1))->getAPIntValue();
+
+      if (Val.countTrailingOnes() >= Width)
+        return true;
+
+      APInt Mask = Val | CurDAG->computeKnownBits(N->getOperand(0)).Zero;
+      return Mask.countTrailingOnes() >= Width;
+    }
+
     /// Return an SDNode that returns the value of the global base register.
     /// Output instructions required to initialize the global base register,
     /// if necessary.
