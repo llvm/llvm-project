@@ -1011,6 +1011,16 @@ def : ProcessorModel<"cortex-m33", CortexM3Model,       [ARMv8mMainline,
                                                          FeatureHasSlowFPVMLx,
                                                          FeatureHasNoBranchPredictor]>;
 
+def : ProcessorModel<"cortex-m35p", CortexM3Model,      [ARMv8mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8,
+                                                         FeatureD16,
+                                                         FeatureVFPOnlySP,
+                                                         FeaturePrefLoopAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureHasNoBranchPredictor]>;
+
+
 def : ProcNoItin<"cortex-a32",                           [ARMv8a,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,

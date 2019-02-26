@@ -570,6 +570,106 @@ define i9 @fshr_zero_shift_guard_inverted_swapped(i9 %x, i9 %y, i9 %sh) {
   ret i9 %s
 }
 
+; When the shift amount is 0, fshl returns its 1st parameter (x), so the guard is not needed.
+
+define i8 @rotl_zero_shift_guard(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotl_zero_shift_guard(
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SH:%.*]])
+; CHECK-NEXT:    ret i8 [[F]]
+;
+  %c = icmp eq i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshl returns its 1st parameter (x), so the guard is not needed.
+
+define i8 @rotl_zero_shift_guard_swapped(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotl_zero_shift_guard_swapped(
+; CHECK-NEXT:    [[F:%.*]] = call i8 @llvm.fshl.i8(i8 [[X:%.*]], i8 [[X]], i8 [[SH:%.*]])
+; CHECK-NEXT:    ret i8 [[F]]
+;
+  %c = icmp ne i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %f, i8 %x
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshl returns its 1st parameter (x), so everything is deleted.
+
+define i8 @rotl_zero_shift_guard_inverted(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotl_zero_shift_guard_inverted(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %c = icmp eq i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %f, i8 %x
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshl returns its 1st parameter (x), so everything is deleted.
+
+define i8 @rotl_zero_shift_guard_inverted_swapped(i8 %x, i8 %sh) {
+; CHECK-LABEL: @rotl_zero_shift_guard_inverted_swapped(
+; CHECK-NEXT:    ret i8 [[X:%.*]]
+;
+  %c = icmp ne i8 %sh, 0
+  %f = call i8 @llvm.fshl.i8(i8 %x, i8 %x, i8 %sh)
+  %s = select i1 %c, i8 %x, i8 %f
+  ret i8 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (x), so the guard is not needed.
+
+define i9 @rotr_zero_shift_guard(i9 %x, i9 %sh) {
+; CHECK-LABEL: @rotr_zero_shift_guard(
+; CHECK-NEXT:    [[F:%.*]] = call i9 @llvm.fshr.i9(i9 [[X:%.*]], i9 [[X]], i9 [[SH:%.*]])
+; CHECK-NEXT:    ret i9 [[F]]
+;
+  %c = icmp eq i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %x, i9 %sh)
+  %s = select i1 %c, i9 %x, i9 %f
+  ret i9 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (x), so the guard is not needed.
+
+define i9 @rotr_zero_shift_guard_swapped(i9 %x, i9 %sh) {
+; CHECK-LABEL: @rotr_zero_shift_guard_swapped(
+; CHECK-NEXT:    [[F:%.*]] = call i9 @llvm.fshr.i9(i9 [[X:%.*]], i9 [[X]], i9 [[SH:%.*]])
+; CHECK-NEXT:    ret i9 [[F]]
+;
+  %c = icmp ne i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %x, i9 %sh)
+  %s = select i1 %c, i9 %f, i9 %x
+  ret i9 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (x), so everything is deleted.
+
+define i9 @rotr_zero_shift_guard_inverted(i9 %x, i9 %sh) {
+; CHECK-LABEL: @rotr_zero_shift_guard_inverted(
+; CHECK-NEXT:    ret i9 [[X:%.*]]
+;
+  %c = icmp eq i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %x, i9 %sh)
+  %s = select i1 %c, i9 %f, i9 %x
+  ret i9 %s
+}
+
+; When the shift amount is 0, fshr returns its 2nd parameter (x), so everything is deleted.
+
+define i9 @rotr_zero_shift_guard_inverted_swapped(i9 %x, i9 %sh) {
+; CHECK-LABEL: @rotr_zero_shift_guard_inverted_swapped(
+; CHECK-NEXT:    ret i9 [[X:%.*]]
+;
+  %c = icmp ne i9 %sh, 0
+  %f = call i9 @llvm.fshr.i9(i9 %x, i9 %x, i9 %sh)
+  %s = select i1 %c, i9 %x, i9 %f
+  ret i9 %s
+}
+
 ; Negative test - make sure we're matching the correct parameter of fshl.
 
 define i8 @fshl_zero_shift_guard_wrong_select_op(i8 %x, i8 %y, i8 %sh) {

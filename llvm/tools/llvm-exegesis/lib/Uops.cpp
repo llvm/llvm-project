@@ -123,6 +123,50 @@ void UopsSnippetGenerator::instantiateMemoryOperands(
          "not enough scratch space");
 }
 
+static std::vector<InstructionTemplate> generateSnippetUsingStaticRenaming(
+    const LLVMState &State, const InstructionTemplate &IT,
+    const ArrayRef<const Variable *> TiedVariables,
+    const BitVector *ScratchSpaceAliasedRegs) {
+  std::vector<InstructionTemplate> Instructions;
+  // Assign registers to variables in a round-robin manner. This is simple but
+  // ensures that the most register-constrained variable does not get starved.
+  std::vector<BitVector> PossibleRegsForVar;
+  for (const Variable *Var : TiedVariables) {
+    assert(Var);
+    const Operand &Op = IT.Instr.getPrimaryOperand(*Var);
+    assert(Op.isReg());
+    BitVector PossibleRegs = State.getRATC().emptyRegisters();
+    if (ScratchSpaceAliasedRegs) {
+      PossibleRegs |= *ScratchSpaceAliasedRegs;
+    }
+    PossibleRegs.flip();
+    PossibleRegs &= Op.getRegisterAliasing().sourceBits();
+    PossibleRegsForVar.push_back(std::move(PossibleRegs));
+  }
+  SmallVector<int, 2> Iterators(TiedVariables.size(), 0);
+  while (true) {
+    InstructionTemplate TmpIT = IT;
+    // Find a possible register for each variable in turn, marking the
+    // register as taken.
+    for (size_t VarId = 0; VarId < TiedVariables.size(); ++VarId) {
+      const int NextPossibleReg =
+          PossibleRegsForVar[VarId].find_next(Iterators[VarId]);
+      if (NextPossibleReg <= 0) {
+        return Instructions;
+      }
+      TmpIT.getValueFor(*TiedVariables[VarId]) =
+          llvm::MCOperand::createReg(NextPossibleReg);
+      // Bump iterator.
+      Iterators[VarId] = NextPossibleReg;
+      // Prevent other variables from using the register.
+      for (BitVector &OtherPossibleRegs : PossibleRegsForVar) {
+        OtherPossibleRegs.reset(NextPossibleReg);
+      }
+    }
+    Instructions.push_back(std::move(TmpIT));
+  }
+}
+
 llvm::Expected<std::vector<CodeTemplate>>
 UopsSnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
   CodeTemplate CT;
@@ -162,23 +206,9 @@ UopsSnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
   }
   const auto TiedVariables = getVariablesWithTiedOperands(Instr);
   if (!TiedVariables.empty()) {
-    if (TiedVariables.size() > 1)
-      return llvm::make_error<llvm::StringError>(
-          "Infeasible : don't know how to handle several tied variables",
-          llvm::inconvertibleErrorCode());
-    const Variable *Var = TiedVariables.front();
-    assert(Var);
-    const Operand &Op = Instr.getPrimaryOperand(*Var);
-    assert(Op.isReg());
-    CT.Info = "instruction has tied variables using static renaming.";
-    for (const llvm::MCPhysReg Reg :
-         Op.getRegisterAliasing().sourceBits().set_bits()) {
-      if (ScratchSpaceAliasedRegs && ScratchSpaceAliasedRegs->test(Reg))
-        continue; // Do not use the scratch memory address register.
-      InstructionTemplate TmpIT = IT;
-      TmpIT.getValueFor(*Var) = llvm::MCOperand::createReg(Reg);
-      CT.Instructions.push_back(std::move(TmpIT));
-    }
+    CT.Info = "instruction has tied variables, using static renaming.";
+    CT.Instructions = generateSnippetUsingStaticRenaming(
+        State, IT, TiedVariables, ScratchSpaceAliasedRegs);
     instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
     return getSingleton(std::move(CT));
   }

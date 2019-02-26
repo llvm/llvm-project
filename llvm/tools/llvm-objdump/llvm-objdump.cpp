@@ -293,6 +293,15 @@ cl::alias DisassembleZeroesShort("z",
                                  cl::NotHidden, cl::Grouping,
                                  cl::aliasopt(DisassembleZeroes));
 
+static cl::list<std::string>
+    DisassemblerOptions("disassembler-options",
+                        cl::desc("Pass target specific disassembler options"),
+                        cl::value_desc("options"), cl::CommaSeparated);
+static cl::alias
+    DisassemblerOptionsShort("M", cl::desc("Alias for --disassembler-options"),
+                             cl::NotHidden, cl::Prefix, cl::CommaSeparated,
+                             cl::aliasopt(DisassemblerOptions));
+
 static StringRef ToolName;
 
 typedef std::vector<std::tuple<uint64_t, StringRef, uint8_t>> SectionSymbolsTy;
@@ -1472,6 +1481,10 @@ static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
 
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
   SourcePrinter SP(Obj, TheTarget->getName());
+
+  for (StringRef Opt : DisassemblerOptions)
+    if (!IP->applyTargetSpecificCLOption(Opt))
+      error("Unrecognized disassembler option: " + Opt);
 
   disassembleObject(TheTarget, Obj, Ctx, DisAsm.get(), MIA.get(), IP.get(),
                     STI.get(), PIP, SP, InlineRelocs);

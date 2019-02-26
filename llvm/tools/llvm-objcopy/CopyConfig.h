@@ -113,6 +113,12 @@ struct CopyConfig {
   StringMap<SectionFlagsUpdate> SetSectionFlags;
   StringMap<StringRef> SymbolsToRename;
 
+  // ELF entry point address expression. The input parameter is an entry point
+  // address in the input ELF file. The entry address in the output file is
+  // calculated with EntryExpr(input_address), when either --set-start or
+  // --change-start is used.
+  std::function<uint64_t(uint64_t)> EntryExpr;
+
   // Boolean options
   bool DeterministicArchives = true;
   bool ExtractDWO = false;

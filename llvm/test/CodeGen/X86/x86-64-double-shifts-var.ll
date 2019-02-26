@@ -13,8 +13,9 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver3 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=bdver4 | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver1 | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s
 
-; Verify that for the X86_64 processors that are known to have poor latency 
+; Verify that for the X86_64 processors that are known to have poor latency
 ; double precision shift instructions we do not generate 'shld' or 'shrd'
 ; instructions.
 
@@ -25,7 +26,7 @@
 
 define i64 @lshift(i64 %a, i64 %b, i32 %c) nounwind readnone {
 entry:
-; CHECK-NOT: shld 
+; CHECK-NOT: shld
   %sh_prom = zext i32 %c to i64
   %shl = shl i64 %a, %sh_prom
   %sub = sub nsw i32 64, %c

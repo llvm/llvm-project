@@ -58,7 +58,7 @@ static void checkList(List *L, ListItem *I1, ListItem *I2 = nullptr,
   EXPECT_TRUE(L->empty());
 }
 
-TEST(ScudoSandalone, IntrusiveList) {
+TEST(ScudoListTest, IntrusiveList) {
   ListItem Items[6];
   EXPECT_EQ(StaticList.size(), 0U);
 
@@ -167,7 +167,7 @@ TEST(ScudoSandalone, IntrusiveList) {
   EXPECT_TRUE(L2.empty());
 }
 
-TEST(ScudoStandalone, IntrusiveListAppendEmpty) {
+TEST(ScudoListTest, IntrusiveListAppendEmpty) {
   ListItem I;
   List L;
   L.clear();

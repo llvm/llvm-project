@@ -2579,6 +2579,14 @@ TEST(MemorySanitizer, sigprocmask) {
   EXPECT_NOT_POISONED(s);
 }
 
+TEST(MemorySanitizer, pthread_sigmask) {
+  sigset_t s;
+  EXPECT_POISONED(s);
+  int res = pthread_sigmask(SIG_BLOCK, 0, &s);
+  ASSERT_EQ(0, res);
+  EXPECT_NOT_POISONED(s);
+}
+
 struct StructWithDtor {
   ~StructWithDtor();
 };

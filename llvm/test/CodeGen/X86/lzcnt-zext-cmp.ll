@@ -5,6 +5,8 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=btver2 -mattr=-fast-lzcnt | FileCheck --check-prefix=ALL --check-prefix=NOFASTLZCNT %s
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=znver1 | FileCheck --check-prefix=ALL --check-prefix=FASTLZCNT %s
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=znver1 -mattr=-fast-lzcnt | FileCheck --check-prefix=ALL --check-prefix=NOFASTLZCNT %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=znver2 | FileCheck --check-prefix=ALL --check-prefix=FASTLZCNT %s
+; RUN: llc < %s -mtriple=x86_64-pc-linux -mcpu=znver2 -mattr=-fast-lzcnt | FileCheck --check-prefix=ALL --check-prefix=NOFASTLZCNT %s
 
 ; Test one 32-bit input, output is 32-bit, no transformations expected.
 define i32 @test_zext_cmp0(i32 %a) {

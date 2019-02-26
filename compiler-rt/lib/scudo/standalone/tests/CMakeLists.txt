@@ -34,11 +34,14 @@ macro(add_scudo_unittest testname)
   if(COMPILER_RT_HAS_SCUDO_STANDALONE)
     foreach(arch ${SCUDO_TEST_ARCH})
       set(ScudoUnitTestsObjects)
+      add_library("RTScudoStandalone.test.${arch}"
+        $<TARGET_OBJECTS:RTScudoStandalone.${arch}>)
       generate_compiler_rt_tests(ScudoUnitTestsObjects ScudoUnitTests
         "${testname}-${arch}-Test" ${arch}
-        SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE} 
+        SOURCES ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         COMPILE_DEPS ${TEST_HEADERS}
         DEPS gtest scudo_standalone
+        RUNTIME RTScudoStandalone.test.${arch}
         CFLAGS ${SCUDO_UNITTEST_CFLAGS}
         LINK_FLAGS ${LINK_FLAGS})
     endforeach()
@@ -48,6 +51,8 @@ endmacro()
 set(SCUDO_UNIT_TEST_SOURCES
   atomic_test.cc
   list_test.cc
+  map_test.cc
+  mutex_test.cc
   scudo_unit_test_main.cc)
 
 add_scudo_unittest(ScudoUnitTest

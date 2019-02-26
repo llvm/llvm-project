@@ -350,13 +350,16 @@ public:
 void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
   if (isa<BlockDecl>(S.CurContext)) {
     if (sema::BlockScopeInfo *BSI = S.getCurBlock()) {
+      ComputeType = nullptr;
       Type = BSI->ReturnType;
       ExpectedLoc = Tok;
     }
   } else if (const auto *Function = dyn_cast<FunctionDecl>(S.CurContext)) {
+    ComputeType = nullptr;
     Type = Function->getReturnType();
     ExpectedLoc = Tok;
   } else if (const auto *Method = dyn_cast<ObjCMethodDecl>(S.CurContext)) {
+    ComputeType = nullptr;
     Type = Method->getReturnType();
     ExpectedLoc = Tok;
   }
@@ -364,7 +367,15 @@ void PreferredTypeBuilder::enterReturn(Sema &S, SourceLocation Tok) {
 
 void PreferredTypeBuilder::enterVariableInit(SourceLocation Tok, Decl *D) {
   auto *VD = llvm::dyn_cast_or_null<ValueDecl>(D);
+  ComputeType = nullptr;
   Type = VD ? VD->getType() : QualType();
+  ExpectedLoc = Tok;
+}
+
+void PreferredTypeBuilder::enterFunctionArgument(
+    SourceLocation Tok, llvm::function_ref<QualType()> ComputeType) {
+  this->ComputeType = ComputeType;
+  Type = QualType();
   ExpectedLoc = Tok;
 }
 
@@ -480,13 +491,14 @@ static QualType getPreferredTypeOfUnaryArg(Sema &S, QualType ContextType,
   case tok::kw___imag:
     return QualType();
   default:
-    assert(false && "unhnalded unary op");
+    assert(false && "unhandled unary op");
     return QualType();
   }
 }
 
 void PreferredTypeBuilder::enterBinary(Sema &S, SourceLocation Tok, Expr *LHS,
                                        tok::TokenKind Op) {
+  ComputeType = nullptr;
   Type = getPreferredTypeOfBinaryRHS(S, LHS, Op);
   ExpectedLoc = Tok;
 }
@@ -495,30 +507,38 @@ void PreferredTypeBuilder::enterMemAccess(Sema &S, SourceLocation Tok,
                                           Expr *Base) {
   if (!Base)
     return;
-  Type = this->get(Base->getBeginLoc());
+  // Do we have expected type for Base?
+  if (ExpectedLoc != Base->getBeginLoc())
+    return;
+  // Keep the expected type, only update the location.
   ExpectedLoc = Tok;
+  return;
 }
 
 void PreferredTypeBuilder::enterUnary(Sema &S, SourceLocation Tok,
                                       tok::TokenKind OpKind,
                                       SourceLocation OpLoc) {
+  ComputeType = nullptr;
   Type = getPreferredTypeOfUnaryArg(S, this->get(OpLoc), OpKind);
   ExpectedLoc = Tok;
 }
 
 void PreferredTypeBuilder::enterSubscript(Sema &S, SourceLocation Tok,
                                           Expr *LHS) {
+  ComputeType = nullptr;
   Type = S.getASTContext().IntTy;
   ExpectedLoc = Tok;
 }
 
 void PreferredTypeBuilder::enterTypeCast(SourceLocation Tok,
                                          QualType CastType) {
+  ComputeType = nullptr;
   Type = !CastType.isNull() ? CastType.getCanonicalType() : QualType();
   ExpectedLoc = Tok;
 }
 
 void PreferredTypeBuilder::enterCondition(Sema &S, SourceLocation Tok) {
+  ComputeType = nullptr;
   Type = S.getASTContext().BoolTy;
   ExpectedLoc = Tok;
 }

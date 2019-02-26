@@ -186,7 +186,7 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj) {
       Config.PreserveDates || Config.StripDWO || Config.StripNonAlloc ||
       Config.StripSections || Config.Weaken || Config.DecompressDebugSections ||
       Config.DiscardMode == DiscardType::Locals ||
-      !Config.SymbolsToAdd.empty()) {
+      !Config.SymbolsToAdd.empty() || Config.EntryExpr) {
     return createStringError(llvm::errc::invalid_argument,
                              "Option not supported by llvm-objcopy for COFF");
   }
