@@ -210,7 +210,7 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
-- clang-cl now supports the use of the precompiled header options /Yc and /Yu
+- clang-cl now supports the use of the precompiled header options ``/Yc`` and ``/Yu``
   without the filename argument. When these options are used without the
   filename, a `#pragma hdrstop` inside the source marks the end of the
   precompiled code.
@@ -229,7 +229,8 @@ Windows Support
 
 - Allow using Address Sanitizer and Undefined Behaviour Sanitizer on MinGW.
 
-- ...
+- Structured Exception Handling support for ARM64 Windows. The ARM64 Windows
+  target is in pretty good shape now.
 
 
 C Language Changes in Clang
