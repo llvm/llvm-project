@@ -4099,7 +4099,6 @@ When compiled without ``-fobjc-arc``, this attribute is ignored.
 
 def ClangRandstructDocs : Documentation {
   let Category = DocCatVariable;
-  let Heading = "randomize_layout;
   let Content = [{
 The attribute ``randomize_layout`` can be applied to the declaration of
 a record. ``randomize_layout`` instructs the compiler to randomize the memory layout 
