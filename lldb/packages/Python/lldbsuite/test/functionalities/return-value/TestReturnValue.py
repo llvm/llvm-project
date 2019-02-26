@@ -37,7 +37,6 @@ class ReturnValueTestCase(TestBase):
         archs=["i386"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054828")
     def test_with_python(self):
         """Test getting return values from stepping out."""
         self.build()
