@@ -1358,6 +1358,8 @@ Decl *Expr::getReferencedDeclOfCallee() {
     return DRE->getDecl();
   if (MemberExpr *ME = dyn_cast<MemberExpr>(CEE))
     return ME->getMemberDecl();
+  if (auto *BE = dyn_cast<BlockExpr>(CEE))
+    return BE->getBlockDecl();
 
   return nullptr;
 }

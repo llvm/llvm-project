@@ -41,8 +41,6 @@
 namespace llvm {
 namespace object {
 
-extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[8];
-
 class elf_symbol_iterator;
 
 class ELFObjectFileBase : public ObjectFile {
@@ -150,17 +148,6 @@ public:
   uint8_t getELFType() const {
     return getObject()->getSymbolELFType(getRawDataRefImpl());
   }
-
-  void getELFTypeName(StringRef &TN) const {
-    uint8_t et = getELFType();
-    TN = "";
-    for (auto &ee : ElfSymbolTypes) {
-      if (ee.Value == et) {
-        TN = ee.AltName;
-        break;
-      }
-    }
-  }
 };
 
 class elf_symbol_iterator : public symbol_iterator {
@@ -257,7 +244,6 @@ protected:
   Expected<section_iterator> getSymbolSection(const Elf_Sym *Symb,
                                               const Elf_Shdr *SymTab) const;
   Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
-  int getSymbolSectionIndex(DataRefImpl Symb) const override;
 
   void moveSectionNext(DataRefImpl &Sec) const override;
   std::error_code getSectionName(DataRefImpl Sec,
@@ -667,13 +653,6 @@ ELFObjectFile<ELFT>::getSymbolSection(DataRefImpl Symb) const {
     return SymTabOrErr.takeError();
   const Elf_Shdr *SymTab = *SymTabOrErr;
   return getSymbolSection(Sym, SymTab);
-}
-
-template <class ELFT>
-int
-ELFObjectFile<ELFT>::getSymbolSectionIndex(DataRefImpl Symb) const {
-  const Elf_Sym *Sym = getSymbol(Symb);
-  return Sym->st_shndx;
 }
 
 template <class ELFT>

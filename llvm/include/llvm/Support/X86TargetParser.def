@@ -98,6 +98,7 @@ X86_CPU_SUBTYPE_COMPAT("skylake-avx512", INTEL_COREI7_SKYLAKE_AVX512, "skylake-a
 X86_CPU_SUBTYPE_COMPAT("cannonlake",     INTEL_COREI7_CANNONLAKE,     "cannonlake")
 X86_CPU_SUBTYPE_COMPAT("icelake-client", INTEL_COREI7_ICELAKE_CLIENT, "icelake-client")
 X86_CPU_SUBTYPE_COMPAT("icelake-server", INTEL_COREI7_ICELAKE_SERVER, "icelake-server")
+X86_CPU_SUBTYPE_COMPAT("znver2",         AMDFAM17H_ZNVER2,            "znver2")
 // Entries below this are not in libgcc/compiler-rt.
 X86_CPU_SUBTYPE       ("core2",          INTEL_CORE2_65)
 X86_CPU_SUBTYPE       ("penryn",         INTEL_CORE2_45)

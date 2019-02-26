@@ -33,18 +33,29 @@ if(ANDROID)
   append_list_if(COMPILER_RT_HAS_Z_GLOBAL -Wl,-z,global SCUDO_LINK_FLAGS)
 endif()
 
-set(SCUDO_SOURCES empty.cc)
+set(SCUDO_SOURCES
+  common.cc
+  fuchsia.cc
+  linux.cc)
 
 set(SCUDO_HEADERS
   platform.h
   internal_defs.h
   atomic_helpers.h
-  list.h)
+  list.h
+  mutex.h
+  linux.h)
 
 if(COMPILER_RT_HAS_SCUDO_STANDALONE)
+  add_compiler_rt_object_libraries(RTScudoStandalone
+    ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
+    SOURCES ${SCUDO_SOURCES}
+    ADDITIONAL_HEADERS ${SCUDO_HEADERS}
+    CFLAGS ${SCUDO_CFLAGS})
+
   add_compiler_rt_runtime(clang_rt.scudo_standalone
     STATIC
-    ARCHS ${SCUDO_SUPPORTED_ARCH}
+    ARCHS ${SCUDO_STANDALONE_SUPPORTED_ARCH}
     SOURCES ${SCUDO_SOURCES}
     ADDITIONAL_HEADERS ${SCUDO_HEADERS}
     CFLAGS ${SCUDO_CFLAGS}

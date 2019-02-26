@@ -238,6 +238,16 @@ def regex
     : Flag<["-", "--"], "regex">,
       HelpText<"Permit regular expressions in name comparison">;
 
+defm set_start : Eq<"set-start", "Set the start address to <addr>. Overrides "
+                    "any previous --change-start or --adjust-start values.">,
+                 MetaVarName<"addr">;
+defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be "                        
+                       "specified multiple times, all values will be applied "
+                       "cumulatively.">,
+                    MetaVarName<"incr">;
+def adjust_start : JoinedOrSeparate<["-", "--"], "adjust-start">,
+                   Alias<change_start>;
+
 defm add_symbol
     : Eq<"add-symbol", "Add new symbol <name> to .symtab. Accepted flags: "
          "global, local, weak, default, hidden, file, section, object, "

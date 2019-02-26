@@ -37,10 +37,13 @@ void Scheduler::dump() const {
 }
 #endif
 
-Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
+Scheduler::Status Scheduler::isAvailable(const InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
 
-  switch (Resources->canBeDispatched(Desc.Buffers)) {
+  ResourceStateEvent RSE = Resources->canBeDispatched(Desc.Buffers);
+  HadTokenStall = RSE != RS_BUFFER_AVAILABLE;
+
+  switch (RSE) {
   case ResourceStateEvent::RS_BUFFER_UNAVAILABLE:
     return Scheduler::SC_BUFFERS_FULL;
   case ResourceStateEvent::RS_RESERVED:
@@ -50,7 +53,10 @@ Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
   }
 
   // Give lower priority to LSUnit stall events.
-  switch (LSU.isAvailable(IR)) {
+  LSUnit::Status LSS = LSU.isAvailable(IR);
+  HadTokenStall = LSS != LSUnit::LSU_AVAILABLE;
+
+  switch (LSS) {
   case LSUnit::LSU_LQUEUE_FULL:
     return Scheduler::SC_LOAD_QUEUE_FULL;
   case LSUnit::LSU_SQUEUE_FULL:

@@ -11,6 +11,8 @@
 
 #include "platform.h"
 
+#include <stdint.h>
+
 #ifndef SCUDO_DEBUG
 #define SCUDO_DEBUG 0
 #endif
@@ -31,6 +33,8 @@
 #define INLINE inline
 #define ALWAYS_INLINE inline __attribute__((always_inline))
 #define ALIAS(x) __attribute__((alias(x)))
+// Please only use the ALIGNED macro before the type. Using ALIGNED after the
+// variable declaration is not portable.
 #define ALIGNED(x) __attribute__((aligned(x)))
 #define FORMAT(f, a) __attribute__((format(printf, f, a)))
 #define NOINLINE __attribute__((noinline))
@@ -61,42 +65,29 @@ typedef signed short s16;
 typedef signed int s32;
 typedef signed long long s64;
 
-// Various integer constants.
+// The following two functions have platform specific implementations.
+void outputRaw(const char *Buffer);
+void NORETURN die();
 
-#undef __INT64_C
-#undef __UINT64_C
-#undef UINTPTR_MAX
-#if SCUDO_WORDSIZE == 64U
-#define __INT64_C(c) c##L
-#define __UINT64_C(c) c##UL
-#define UINTPTR_MAX (18446744073709551615UL)
-#else
-#define __INT64_C(c) c##LL
-#define __UINT64_C(c) c##ULL
-#define UINTPTR_MAX (4294967295U)
-#endif // SCUDO_WORDSIZE == 64U
-#undef INT32_MIN
-#define INT32_MIN (-2147483647 - 1)
-#undef INT32_MAX
-#define INT32_MAX (2147483647)
-#undef UINT32_MAX
-#define UINT32_MAX (4294967295U)
-#undef INT64_MIN
-#define INT64_MIN (-__INT64_C(9223372036854775807) - 1)
-#undef INT64_MAX
-#define INT64_MAX (__INT64_C(9223372036854775807))
-#undef UINT64_MAX
-#define UINT64_MAX (__UINT64_C(18446744073709551615))
+#define RAW_CHECK_MSG(Expr, Msg)                                               \
+  do {                                                                         \
+    if (UNLIKELY(!(Expr))) {                                                   \
+      outputRaw(Msg);                                                          \
+      die();                                                                   \
+    }                                                                          \
+  } while (false)
 
-enum LinkerInitialized { LINKER_INITIALIZED = 0 };
+#define RAW_CHECK(Expr) RAW_CHECK_MSG(Expr, #Expr)
 
-// Various CHECK related macros.
-
-#define COMPILER_CHECK(Pred) static_assert(Pred, "")
-
-// TODO(kostyak): implement at a later check-in.
+// TODO(kostyak): use reportCheckFailed when checked-in.
 #define CHECK_IMPL(c1, op, c2)                                                 \
   do {                                                                         \
+    u64 v1 = (u64)(c1);                                                        \
+    u64 v2 = (u64)(c2);                                                        \
+    if (UNLIKELY(!(v1 op v2))) {                                               \
+      outputRaw("CHECK failed: (" #c1 ") " #op " (" #c2 ")\n");                \
+      die();                                                                   \
+    }                                                                          \
   } while (false)
 
 #define CHECK(a) CHECK_IMPL((a), !=, 0)
@@ -125,10 +116,16 @@ enum LinkerInitialized { LINKER_INITIALIZED = 0 };
 #define DCHECK_GE(a, b)
 #endif
 
-// TODO(kostyak): implement at a later check-in.
+// The superfluous die() call effectively makes this macro NORETURN.
 #define UNREACHABLE(msg)                                                       \
   do {                                                                         \
-  } while (false)
+    CHECK(0 && msg);                                                           \
+    die();                                                                     \
+  } while (0)
+
+#define COMPILER_CHECK(Pred) static_assert(Pred, "")
+
+enum LinkerInitialized { LINKER_INITIALIZED = 0 };
 
 } // namespace scudo
 

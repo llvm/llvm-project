@@ -331,9 +331,6 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
     // Namespace alias
     namespace baz = bar;
 
-    // FIXME: using declaration is not supported as the IndexAction will ignore
-    // implicit declarations (the implicit using shadow declaration) by default,
-    // and there is no way to customize this behavior at the moment.
     using bar::v2;
     } // namespace foo
   )";
@@ -360,6 +357,7 @@ TEST_F(SymbolCollectorTest, CollectSymbols) {
                    AllOf(QName("foo::int32_t"), ForCodeCompletion(true)),
                    AllOf(QName("foo::v1"), ForCodeCompletion(true)),
                    AllOf(QName("foo::bar::v2"), ForCodeCompletion(true)),
+                   AllOf(QName("foo::v2"), ForCodeCompletion(true)),
                    AllOf(QName("foo::baz"), ForCodeCompletion(true))}));
 }
 
@@ -1147,6 +1145,16 @@ TEST_F(SymbolCollectorTest, ImplementationDetail) {
               UnorderedElementsAre(
                   AllOf(QName("X_Y_Decl"), ImplementationDetail()),
                   AllOf(QName("Public"), Not(ImplementationDetail()))));
+}
+
+TEST_F(SymbolCollectorTest, UsingDecl) {
+  const char *Header = R"(
+  void foo();
+  namespace std {
+    using ::foo;
+  })";
+  runSymbolCollector(Header, /**/ "");
+  EXPECT_THAT(Symbols, Contains(QName("std::foo")));
 }
 
 } // namespace

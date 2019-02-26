@@ -121,6 +121,10 @@ class ComposedSubRegIndex<SubRegIndex A, SubRegIndex B>
 // this register class when printing.
 class RegAltNameIndex {
   string Namespace = "";
+
+  // A set to be used if the name for a register is not defined in this set.
+  // This allows creating name sets with only a few alternative names.
+  RegAltNameIndex FallbackRegAltNameIndex = ?;
 }
 def NoRegAltName : RegAltNameIndex;
 

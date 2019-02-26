@@ -286,6 +286,8 @@ TEST(TargetParserTest, testARMCPU) {
                          ARM::AEK_HWDIVTHUMB, "8-M.Baseline"));
   EXPECT_TRUE(testARMCPU("cortex-m33", "armv8-m.main", "fpv5-sp-d16",
                          ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "8-M.Mainline"));
+  EXPECT_TRUE(testARMCPU("cortex-m35p", "armv8-m.main", "fpv5-sp-d16",
+                         ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP, "8-M.Mainline"));
   EXPECT_TRUE(testARMCPU("iwmmxt", "iwmmxt", "none",
                          ARM::AEK_NONE, "iwmmxt"));
   EXPECT_TRUE(testARMCPU("xscale", "xscale", "none",
@@ -295,7 +297,7 @@ TEST(TargetParserTest, testARMCPU) {
                          "7-S"));
 }
 
-static constexpr unsigned NumARMCPUArchs = 84;
+static constexpr unsigned NumARMCPUArchs = 85;
 
 TEST(TargetParserTest, testARMCPUArchList) {
   SmallVector<StringRef, NumARMCPUArchs> List;

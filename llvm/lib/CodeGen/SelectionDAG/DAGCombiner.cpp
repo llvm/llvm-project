@@ -15427,13 +15427,13 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
           !ST1->getBasePtr().isUndef()) {
         const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
         const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
-        unsigned STByteSize = ST->getMemoryVT().getSizeInBits() / 8;
-        unsigned ChainByteSize = ST1->getMemoryVT().getSizeInBits() / 8;
+        unsigned STBitSize = ST->getMemoryVT().getSizeInBits();
+        unsigned ChainBitSize = ST1->getMemoryVT().getSizeInBits();
         // If this is a store who's preceding store to a subset of the current
         // location and no one other node is chained to that store we can
         // effectively drop the store. Do not remove stores to undef as they may
         // be used as data sinks.
-        if (STBase.contains(STByteSize, ChainBase, ChainByteSize, DAG)) {
+        if (STBase.contains(DAG, STBitSize, ChainBase, ChainBitSize)) {
           CombineTo(ST1, ST1->getChain());
           return SDValue();
         }
@@ -15442,17 +15442,17 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
         // able to fold ST's value into the preceding stored value. As we know
         // the other uses of ST1's chain are unconcerned with ST, this folding
         // will not affect those nodes.
-        int64_t Offset;
-        if (ChainBase.contains(ChainByteSize, STBase, STByteSize, DAG,
-                               Offset)) {
+        int64_t BitOffset;
+        if (ChainBase.contains(DAG, ChainBitSize, STBase, STBitSize,
+                               BitOffset)) {
           SDValue ChainValue = ST1->getValue();
           if (auto *C1 = dyn_cast<ConstantSDNode>(ChainValue)) {
             if (auto *C = dyn_cast<ConstantSDNode>(Value)) {
               APInt Val = C1->getAPIntValue();
-              APInt InsertVal = C->getAPIntValue().zextOrTrunc(STByteSize * 8);
+              APInt InsertVal = C->getAPIntValue().zextOrTrunc(STBitSize);
               // FIXME: Handle Big-endian mode.
               if (!DAG.getDataLayout().isBigEndian()) {
-                Val.insertBits(InsertVal, Offset * 8);
+                Val.insertBits(InsertVal, BitOffset);
                 SDValue NewSDVal =
                     DAG.getConstant(Val, SDLoc(C), ChainValue.getValueType(),
                                     C1->isTargetOpcode(), C1->isOpaque());

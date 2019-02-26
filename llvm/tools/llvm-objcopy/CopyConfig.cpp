@@ -371,6 +371,14 @@ static Error addSymbolsToRenameFromFile(StringMap<StringRef> &SymbolsToRename,
   }
   return Error::success();
 }
+
+template <class T> static ErrorOr<T> getAsInteger(StringRef Val) {
+  T Result;
+  if (Val.getAsInteger(0, Result))
+    return errc::invalid_argument;
+  return Result;
+}
+
 // ParseObjcopyOptions returns the config and sets the input arguments. If a
 // help flag is set then ParseObjcopyOptions will print the help messege and
 // exit.
@@ -616,6 +624,27 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       OBJCOPY_disable_deterministic_archives, /*default=*/true);
 
   Config.PreserveDates = InputArgs.hasArg(OBJCOPY_preserve_dates);
+
+  for (auto Arg : InputArgs)
+    if (Arg->getOption().matches(OBJCOPY_set_start)) {
+      auto EAddr = getAsInteger<uint64_t>(Arg->getValue());
+      if (!EAddr)
+        return createStringError(
+            EAddr.getError(), "bad entry point address: '%s'", Arg->getValue());
+
+      Config.EntryExpr = [EAddr](uint64_t) { return *EAddr; };
+    } else if (Arg->getOption().matches(OBJCOPY_change_start)) {
+      auto EIncr = getAsInteger<int64_t>(Arg->getValue());
+      if (!EIncr)
+        return createStringError(EIncr.getError(),
+                                 "bad entry point increment: '%s'",
+                                 Arg->getValue());
+      auto Expr = Config.EntryExpr ? std::move(Config.EntryExpr)
+                                   : [](uint64_t A) { return A; };
+      Config.EntryExpr = [Expr, EIncr](uint64_t EAddr) {
+        return Expr(EAddr) + *EIncr;
+      };
+    }
 
   if (Config.DecompressDebugSections &&
       Config.CompressionType != DebugCompressionType::None) {

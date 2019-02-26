@@ -725,6 +725,17 @@ static Value *canonicalizeSaturatedAdd(ICmpInst *Cmp, Value *TVal, Value *FVal,
     Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, FVal, Y);
     return Builder.CreateSelect(NewCmp, TVal, FVal);
   }
+  // The 'not' op may be included in the sum but not the compare.
+  X = Cmp0;
+  Y = Cmp1;
+  if (match(FVal, m_c_Add(m_Not(m_Specific(X)), m_Specific(Y)))) {
+    // Change the comparison to use the sum (false value of the select). That is
+    // a canonical pattern match form for uadd.with.overflow:
+    // (X u< Y) ? -1 : (~X + Y) --> ((~X + Y) u< Y) ? -1 : (~X + Y)
+    // (X u< Y) ? -1 : (Y + ~X) --> ((Y + ~X) u< Y) ? -1 : (Y + ~X)
+    Value *NewCmp = Builder.CreateICmp(ICmpInst::ICMP_ULT, FVal, Y);
+    return Builder.CreateSelect(NewCmp, TVal, FVal);
+  }
 
   return nullptr;
 }

@@ -286,6 +286,7 @@ def z_vector_insert     : SDNode<"ISD::INSERT_VECTOR_ELT",
                                  SDT_ZInsertVectorElt>;
 def z_vector_extract    : SDNode<"ISD::EXTRACT_VECTOR_ELT",
                                  SDT_ZExtractVectorElt>;
+def z_byte_mask         : SDNode<"SystemZISD::BYTE_MASK", SDT_ZReplicate>;
 def z_rotate_mask       : SDNode<"SystemZISD::ROTATE_MASK", SDT_ZRotateMask>;
 def z_replicate         : SDNode<"SystemZISD::REPLICATE", SDT_ZReplicate>;
 def z_join_dwords       : SDNode<"SystemZISD::JOIN_DWORDS", SDT_ZJoinDwords>;
