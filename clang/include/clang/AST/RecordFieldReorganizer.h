@@ -39,6 +39,7 @@ private:
 
 class Randstruct : public RecordFieldReorganizer {
 public:
+  //Automatic Structure selection
   bool isTriviallyRandomizable(const RecordDecl *D) const;
 protected:
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
