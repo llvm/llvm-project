@@ -94,19 +94,6 @@
 
 using namespace clang;
 
-unsigned ASTContext::NumImplicitDefaultConstructors;
-unsigned ASTContext::NumImplicitDefaultConstructorsDeclared;
-unsigned ASTContext::NumImplicitCopyConstructors;
-unsigned ASTContext::NumImplicitCopyConstructorsDeclared;
-unsigned ASTContext::NumImplicitMoveConstructors;
-unsigned ASTContext::NumImplicitMoveConstructorsDeclared;
-unsigned ASTContext::NumImplicitCopyAssignmentOperators;
-unsigned ASTContext::NumImplicitCopyAssignmentOperatorsDeclared;
-unsigned ASTContext::NumImplicitMoveAssignmentOperators;
-unsigned ASTContext::NumImplicitMoveAssignmentOperatorsDeclared;
-unsigned ASTContext::NumImplicitDestructors;
-unsigned ASTContext::NumImplicitDestructorsDeclared;
-
 enum FloatingRank {
   Float16Rank, HalfRank, FloatRank, DoubleRank, LongDoubleRank, Float128Rank
 };
