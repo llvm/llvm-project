@@ -15,29 +15,10 @@ class ConstVariableTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(
-        oslist=["freebsd", "linux"],
-        compiler="clang", compiler_version=["<", "3.5"])
-    @expectedFailureAll(
-        oslist=["freebsd", "linux"],
-        compiler="clang", compiler_version=["=", "3.7"])
-    @expectedFailureAll(
-        oslist=["freebsd", "linux"],
-        compiler="clang", compiler_version=["=", "3.8"])
-    @expectedFailureAll(oslist=["freebsd", "linux"], compiler="icc")
     @expectedFailureAll(archs=['mips', 'mipsel', 'mips64', 'mips64el'])
-    @expectedFailureAll(
-        oslist=["linux"],
-        archs=[
-            'arm',
-            'aarch64'],
-        bugnumber="llvm.org/pr27883")
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
-    @expectedFailureAll(
-        debug_info="dwo", 
-        bugnumber="rdar://problem/30100738")
     def test_and_run_command(self):
         """Test interpreted and JITted expressions on constant values."""
         self.build()

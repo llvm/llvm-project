@@ -30,7 +30,6 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     @skipIfOutOfTreeDebugserver # rdar://38480016
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
@@ -61,7 +60,6 @@ class RegisterCommandsTestCase(TestBase):
     # problem
     @skipIfTargetAndroid(archs=["i386"])
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_register_write(self):
@@ -74,7 +72,6 @@ class RegisterCommandsTestCase(TestBase):
     @expectedFailureAndroid(archs=["i386"])
     @skipIfFreeBSD  # llvm.org/pr25057
     @skipIf(archs=no_match(['amd64', 'i386', 'x86_64']))
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     @expectedFailureDarwin(bugnumber="<rdar://problem/34092153>")  # CI bots need to use updated debugserver to match ftag size change in r311579.
     @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
@@ -85,7 +82,6 @@ class RegisterCommandsTestCase(TestBase):
 
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
-    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://29054801")
     @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_register_expressions(self):
