@@ -37,15 +37,7 @@ private:
 };
 
 class Randstruct : public RecordFieldReorganizer {
-public:
-  Randstruct(std::string seed) : Seq(seed.begin(), seed.end()), rng(Seq) {}
-private:
-  std::seed_seq Seq;
-  std::default_random_engine rng;
 protected:
-  virtual SmallVector<FieldDecl *, 64> randomize() override;
-  SmallVector<Decl *, 64> Randstruct::perfrandomize(const ASTContext &ctx,
-                                      SmallVector<Decl *, 64> fields);
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
                           SmallVector<Decl *, 64> &NewOrder) const override;
 };
