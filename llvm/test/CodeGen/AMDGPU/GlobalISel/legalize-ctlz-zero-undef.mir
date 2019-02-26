@@ -205,8 +205,10 @@ body: |
     ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[USUBO]](s32), [[USUBE]](s32)
     ; CHECK: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[MV]](s64)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C2]]
-    ; CHECK: $vgpr0_vgpr1 = COPY [[AND1]](s64)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY [[C2]](s64)
+    ; CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[COPY3]]
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY [[AND1]](s64)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY4]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s33) = G_CTLZ_ZERO_UNDEF %1

@@ -5,45 +5,62 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-%struct.Cleanup = type { i8 }
+%struct.Temp = type { i8 }
 
 @_ZTIi = external constant i8*
 
 ; CHECK-LABEL: test_throw:
-; CHECK: throw __cpp_exception, $0
-; CHECK-NOT:  unreachable
+; CHECK:     throw __cpp_exception, $0
+; CHECK-NOT: unreachable
 define void @test_throw(i8* %p) {
   call void @llvm.wasm.throw(i32 0, i8* %p)
   ret void
 }
 
 ; CHECK-LABEL: test_rethrow:
-; CHECK:      rethrow
-; CHECK-NOT:  unreachable
+; CHECK:     rethrow
+; CHECK-NOT: unreachable
 define void @test_rethrow(i8* %p) {
   call void @llvm.wasm.rethrow()
   ret void
 }
 
-; CHECK-LABEL: test_catch_rethrow:
-; CHECK:   global.get  ${{.+}}=, __stack_pointer
-; CHECK:   try
-; CHECK:   call      foo
-; CHECK:   catch     $[[EXCEPT_REF:[0-9]+]]=
-; CHECK:   global.set  __stack_pointer
-; CHECK:   block i32
-; CHECK:   br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
-; CHECK:   rethrow
-; CHECK:   end_block
-; CHECK:   extract_exception $[[EXN:[0-9]+]]=
-; CHECK-DAG:   i32.store  __wasm_lpad_context
-; CHECK-DAG:   i32.store  __wasm_lpad_context+4
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality, $[[EXN]]
-; CHECK:   i32.call  $drop=, __cxa_begin_catch
-; CHECK:   call      __cxa_end_catch
-; CHECK:   call      __cxa_rethrow
-; CHECK:   end_try
-define void @test_catch_rethrow() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; Simple test with a try-catch
+;
+; void foo();
+; void test_catch() {
+;   try {
+;     foo();
+;   } catch (int) {
+;   }
+; }
+
+; CHECK-LABEL: test_catch:
+; CHECK:     global.get  ${{.+}}=, __stack_pointer
+; CHECK:     block
+; CHECK:       try
+; CHECK:         call      foo
+; CHECK:         br        0
+; CHECK:       catch     $[[EXCEPT_REF:[0-9]+]]=
+; CHECK:         global.set  __stack_pointer
+; CHECK:         block i32
+; CHECK:           br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
+; CHECK:           rethrow
+; CHECK:         end_block
+; CHECK:         extract_exception $[[EXN:[0-9]+]]=
+; CHECK-DAG:     i32.store  __wasm_lpad_context
+; CHECK-DAG:     i32.store  __wasm_lpad_context+4
+; CHECK:         i32.call  $drop=, _Unwind_CallPersonality, $[[EXN]]
+; CHECK:         block
+; CHECK:           br_if     0
+; CHECK:           i32.call  $drop=, __cxa_begin_catch
+; CHECK:           call      __cxa_end_catch
+; CHECK:           br        1
+; CHECK:         end_block
+; CHECK:         call      __cxa_rethrow
+; CHECK:       end_try
+; CHECK:     end_block
+define void @test_catch() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -72,40 +89,88 @@ try.cont:                                         ; preds = %entry, %catch
   ret void
 }
 
+; Destructor (cleanup) test
+;
+; void foo();
+; struct Temp {
+;   ~Temp() {}
+; };
+; void test_cleanup() {
+;   Temp t;
+;   foo();
+; }
+
 ; CHECK-LABEL: test_cleanup:
+; CHECK: block
 ; CHECK:   try
-; CHECK:   call      foo
+; CHECK:     call      foo
+; CHECK:     br        0
 ; CHECK:   catch
-; CHECK:   global.set  __stack_pointer
-; CHECK:   i32.call  $drop=, _ZN7CleanupD1Ev
-; CHECK:   rethrow
+; CHECK:     global.set  __stack_pointer
+; CHECK:     i32.call  $drop=, _ZN4TempD2Ev
+; CHECK:     rethrow
 ; CHECK:   end_try
+; CHECK: end_block
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
-  %c = alloca %struct.Cleanup, align 1
+  %t = alloca %struct.Temp, align 1
   invoke void @foo()
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
-  %call = call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* %c)
+  %call = call %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* %t)
   ret void
 
 ehcleanup:                                        ; preds = %entry
   %0 = cleanuppad within none []
-  %call1 = call %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* %c) [ "funclet"(token %0) ]
+  %call1 = call %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* %t) [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 
+; Calling a function that may throw within a 'catch (...)' generates a
+; temrinatepad, because __cxa_end_catch() also can throw within 'catch (...)'.
+;
+; void foo();
+; void test_terminatepad() {
+;   try {
+;     foo();
+;   } catch (...) {
+;     foo();
+;   }
+; }
+
 ; CHECK-LABEL: test_terminatepad
+; CHECK: block
+; CHECK:   try
+; CHECK:     call      foo
+; CHECK:     br        0
 ; CHECK:   catch
-; CHECK:   block     i32
-; CHECK:   br_on_exn   0, __cpp_exception
-; CHECK:   call      __clang_call_terminate, 0
-; CHECK:   unreachable
-; CHECK:   end_block
-; CHECK:   extract_exception
-; CHECK:   call      __clang_call_terminate
-; CHECK:   unreachable
+; CHECK:     i32.call  $drop=, __cxa_begin_catch
+; CHECK:     block
+; CHECK:       try
+; CHECK:         call      foo
+; CHECK:         br        0
+; CHECK:       catch
+; CHECK:         block
+; CHECK:           try
+; CHECK:             call      __cxa_end_catch
+; CHECK:             br        0
+; CHECK:           catch
+; CHECK:             block     i32
+; CHECK:               br_on_exn   0, __cpp_exception
+; CHECK:               call      __clang_call_terminate, 0
+; CHECK:               unreachable
+; CHECK:             end_block
+; CHECK:             call      __clang_call_terminate
+; CHECK:             unreachable
+; CHECK:           end_try
+; CHECK:         end_block
+; CHECK:         rethrow
+; CHECK:       end_try
+; CHECK:     end_block
+; CHECK:     call      __cxa_end_catch
+; CHECK:   end_try
+; CHECK: end_block
 define void @test_terminatepad() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -149,23 +214,47 @@ terminate:                                        ; preds = %ehcleanup
 ; should not have a prologue, and BBs ending with a catchret/cleanupret should
 ; not have an epilogue. This is separate from __stack_pointer restoring
 ; instructions after a catch instruction.
+;
+; void bar(int) noexcept;
+; void test_no_prolog_epilog_in_ehpad() {
+;   int stack_var = 0;
+;   bar(stack_var);
+;   try {
+;     foo();
+;   } catch (int) {
+;     foo();
+;   }
+; }
 
 ; CHECK-LABEL: test_no_prolog_epilog_in_ehpad
-; CHECK:  try
-; CHECK:  call      foo
-; CHECK:  catch
-; CHECK-NOT:  global.get  $push{{.+}}=, __stack_pointer
-; CHECK:  global.set  __stack_pointer
-; CHECK:  try
-; CHECK:  call      foo
-; CHECK:  catch
-; CHECK-NOT:  global.get  $push{{.+}}=, __stack_pointer
-; CHECK:  global.set  __stack_pointer
-; CHECK:  call      __cxa_end_catch
-; CHECK-NOT:  global.set  __stack_pointer, $pop{{.+}}
-; CHECK:  end_try
-; CHECK-NOT:  global.set  __stack_pointer, $pop{{.+}}
-; CHECK:  end_try
+; CHECK:     block
+; CHECK:       try
+; CHECK:         call      foo
+; CHECK:         br        0
+; CHECK:       catch
+; CHECK-NOT:     global.get  $push{{.+}}=, __stack_pointer
+; CHECK:         global.set  __stack_pointer
+; CHECK:         block
+; CHECK:           block
+; CHECK:             br_if     0
+; CHECK:             i32.call  $drop=, __cxa_begin_catch
+; CHECK:             try
+; CHECK:               call      foo
+; CHECK:               br        2
+; CHECK:             catch
+; CHECK-NOT:           global.get  $push{{.+}}=, __stack_pointer
+; CHECK:               global.set  __stack_pointer
+; CHECK:               call      __cxa_end_catch
+; CHECK:               rethrow
+; CHECK-NOT:           global.set  __stack_pointer, $pop{{.+}}
+; CHECK:             end_try
+; CHECK:           end_block
+; CHECK:           call      __cxa_rethrow
+; CHECK:         end_block
+; CHECK-NOT:     global.set  __stack_pointer, $pop{{.+}}
+; CHECK:         call      __cxa_end_catch
+; CHECK:       end_try
+; CHECK:     end_block
 define void @test_no_prolog_epilog_in_ehpad() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   %stack_var = alloca i32, align 4
@@ -210,14 +299,28 @@ ehcleanup:                                        ; preds = %catch
 
 ; When a function does not have stack-allocated objects, it does not need to
 ; store SP back to __stack_pointer global at the epilog.
+;
+; void foo();
+; void test_no_sp_writeback() {
+;   try {
+;     foo();
+;   } catch (...) {
+;   }
+; }
 
-; CHECK-LABEL: no_sp_writeback
-; CHECK:  try
-; CHECK:  call foo
-; CHECK:  end_try
-; CHECK-NOT:  global.set  __stack_pointer
-; CHECK:  return
-define void @no_sp_writeback() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+; CHECK-LABEL: test_no_sp_writeback
+; CHECK:     block
+; CHECK:       try
+; CHECK:         call      foo
+; CHECK:         br        0
+; CHECK:       catch
+; CHECK:         i32.call  $drop=, __cxa_begin_catch
+; CHECK:         call      __cxa_end_catch
+; CHECK:       end_try
+; CHECK:     end_block
+; CHECK-NOT: global.set  __stack_pointer
+; CHECK:     return
+define void @test_no_sp_writeback() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -237,6 +340,26 @@ try.cont:                                         ; preds = %entry, %catch.start
   ret void
 }
 
+; When the result of @llvm.wasm.get.exception is not used. This is created to
+; fix a bug in LateEHPrepare and this should not crash.
+define void @test_get_exception_wo_use() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+entry:
+  invoke void @foo()
+          to label %try.cont unwind label %catch.dispatch
+
+catch.dispatch:                                   ; preds = %entry
+  %0 = catchswitch within none [label %catch.start] unwind to caller
+
+catch.start:                                      ; preds = %catch.dispatch
+  %1 = catchpad within %0 [i8* null]
+  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  catchret from %1 to label %try.cont
+
+try.cont:                                         ; preds = %entry, %catch.start
+  ret void
+}
+
 declare void @foo()
 declare void @bar(i32*)
 declare i32 @__gxx_wasm_personality_v0(...)
@@ -249,7 +372,7 @@ declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
 declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
-declare %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* returned)
+declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* returned)
 
 ; CHECK: __cpp_exception:
 ; CHECK: .eventtype  __cpp_exception i32

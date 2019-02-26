@@ -3,7 +3,9 @@
 
 %struct.interrupt_frame = type { i32, i32, i32, i32, i32 }
 
-@llvm.used = appending global [4 x i8*] [i8* bitcast (void (%struct.interrupt_frame*)* @test_isr_no_ecode to i8*), i8* bitcast (void (%struct.interrupt_frame*, i32)* @test_isr_ecode to i8*), i8* bitcast (void (%struct.interrupt_frame*, i32)* @test_isr_clobbers to i8*), i8* bitcast (void (%struct.interrupt_frame*)* @test_isr_x87 to i8*)], section "llvm.metadata"
+@sink_address = global i32* null
+@sink_i32 = global i32 0
+
 
 ; Spills eax, putting original esp at +4.
 ; No stack adjustment if declared with no error code
@@ -93,3 +95,67 @@ entry:
   store x86_fp80 %add, x86_fp80* @f80, align 4
   ret void
 }
+
+; Use a frame pointer to check the offsets. No return address, arguments start
+; at EBP+4.
+define dso_local x86_intrcc void @test_fp_1(%struct.interrupt_frame* %p) #0 {
+  ; CHECK-LABEL: test_fp_1:
+  ; CHECK: # %bb.0: # %entry
+  ; CHECK-NEXT: pushl %ebp
+  ; CHECK-NEXT: movl %esp, %ebp
+  ; CHECK: cld
+  ; CHECK-DAG: leal 4(%ebp), %[[R1:[^ ]*]]
+  ; CHECK-DAG: leal 20(%ebp), %[[R2:[^ ]*]]
+  ; CHECK: movl %[[R1]], sink_address
+  ; CHECK: movl %[[R2]], sink_address
+  ; CHECK: popl %ebp
+  ; CHECK: iretl
+entry:
+  %arrayidx = getelementptr inbounds %struct.interrupt_frame, %struct.interrupt_frame* %p, i32 0, i32 0
+  %arrayidx2 = getelementptr inbounds %struct.interrupt_frame, %struct.interrupt_frame* %p, i32 0, i32 4
+  store volatile i32* %arrayidx, i32** @sink_address
+  store volatile i32* %arrayidx2, i32** @sink_address
+  ret void
+}
+
+; The error code is between EBP and the interrupt_frame.
+define dso_local x86_intrcc void @test_fp_2(%struct.interrupt_frame* %p, i32 %err) #0 {
+  ; CHECK-LABEL: test_fp_2:
+  ; CHECK: # %bb.0: # %entry
+  ; CHECK-NEXT: pushl %ebp
+  ; CHECK-NEXT: movl %esp, %ebp
+  ; CHECK: cld
+  ; CHECK-DAG: movl 4(%ebp), %[[R3:[^ ]*]]
+  ; CHECK-DAG: leal 8(%ebp), %[[R1:[^ ]*]]
+  ; CHECK-DAG: leal 24(%ebp), %[[R2:[^ ]*]]
+  ; CHECK: movl %[[R1]], sink_address
+  ; CHECK: movl %[[R2]], sink_address
+  ; CHECK: movl %[[R3]], sink_i32
+  ; CHECK: popl %ebp
+  ; CHECK: iretl
+entry:
+  %arrayidx = getelementptr inbounds %struct.interrupt_frame, %struct.interrupt_frame* %p, i32 0, i32 0
+  %arrayidx2 = getelementptr inbounds %struct.interrupt_frame, %struct.interrupt_frame* %p, i32 0, i32 4
+  store volatile i32* %arrayidx, i32** @sink_address
+  store volatile i32* %arrayidx2, i32** @sink_address
+  store volatile i32 %err, i32* @sink_i32
+  ret void
+}
+
+; Test argument copy elision when copied to a local alloca.
+define x86_intrcc void @test_copy_elide(%struct.interrupt_frame* %frame, i32 %err) #0 {
+  ; CHECK-LABEL: test_copy_elide:
+  ; CHECK: # %bb.0: # %entry
+  ; CHECK-NEXT: pushl %ebp
+  ; CHECK-NEXT: movl %esp, %ebp
+  ; CHECK: cld
+  ; CHECK: leal 4(%ebp), %[[R1:[^ ]*]]
+  ; CHECK: movl %[[R1]], sink_address
+entry:
+  %err.addr = alloca i32, align 4
+  store i32 %err, i32* %err.addr, align 4
+  store volatile i32* %err.addr, i32** @sink_address
+  ret void
+}
+
+attributes #0 = { nounwind "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" }

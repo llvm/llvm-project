@@ -26,40 +26,91 @@ declare i16 @llvm.smul.fix.i16(i16, i16, i32)
 declare i8  @llvm.smul.fix.i8 (i8 , i8 , i32)
 
 define void @smul_v8i64() {
-; CHECK-LABEL: @smul_v8i64(
-; CHECK-NEXT:    [[A0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[A1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 3), align 8
-; CHECK-NEXT:    [[A4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4), align 8
-; CHECK-NEXT:    [[A5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 5), align 8
-; CHECK-NEXT:    [[A6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6), align 8
-; CHECK-NEXT:    [[A7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 7), align 8
-; CHECK-NEXT:    [[B0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[B1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[B2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2), align 8
-; CHECK-NEXT:    [[B3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 3), align 8
-; CHECK-NEXT:    [[B4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4), align 8
-; CHECK-NEXT:    [[B5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 5), align 8
-; CHECK-NEXT:    [[B6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6), align 8
-; CHECK-NEXT:    [[B7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 7), align 8
-; CHECK-NEXT:    [[R0:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A0]], i64 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A1]], i64 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A2]], i64 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A3]], i64 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A4]], i64 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A5]], i64 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A6]], i64 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i64 @llvm.smul.fix.i64(i64 [[A7]], i64 [[B7]], i32 3)
-; CHECK-NEXT:    store i64 [[R0]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 0), align 8
-; CHECK-NEXT:    store i64 [[R1]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 1), align 8
-; CHECK-NEXT:    store i64 [[R2]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2), align 8
-; CHECK-NEXT:    store i64 [[R3]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 3), align 8
-; CHECK-NEXT:    store i64 [[R4]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4), align 8
-; CHECK-NEXT:    store i64 [[R5]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 5), align 8
-; CHECK-NEXT:    store i64 [[R6]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6), align 8
-; CHECK-NEXT:    store i64 [[R7]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 7), align 8
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @smul_v8i64(
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @a64 to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @b64 to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP1]], <2 x i64> [[TMP5]], i32 3)
+; SSE-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP2]], <2 x i64> [[TMP6]], i32 3)
+; SSE-NEXT:    [[TMP11:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP3]], <2 x i64> [[TMP7]], i32 3)
+; SSE-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP8]], i32 3)
+; SSE-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* bitcast ([8 x i64]* @c64 to <2 x i64>*), align 8
+; SSE-NEXT:    store <2 x i64> [[TMP10]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2) to <2 x i64>*), align 8
+; SSE-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <2 x i64>*), align 8
+; SSE-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6) to <2 x i64>*), align 8
+; SSE-NEXT:    ret void
+;
+; SLM-LABEL: @smul_v8i64(
+; SLM-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @a64 to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @b64 to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP1]], <2 x i64> [[TMP5]], i32 3)
+; SLM-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP2]], <2 x i64> [[TMP6]], i32 3)
+; SLM-NEXT:    [[TMP11:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP3]], <2 x i64> [[TMP7]], i32 3)
+; SLM-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP8]], i32 3)
+; SLM-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* bitcast ([8 x i64]* @c64 to <2 x i64>*), align 8
+; SLM-NEXT:    store <2 x i64> [[TMP10]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2) to <2 x i64>*), align 8
+; SLM-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <2 x i64>*), align 8
+; SLM-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6) to <2 x i64>*), align 8
+; SLM-NEXT:    ret void
+;
+; AVX1-LABEL: @smul_v8i64(
+; AVX1-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @a64 to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @b64 to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP1]], <2 x i64> [[TMP5]], i32 3)
+; AVX1-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP2]], <2 x i64> [[TMP6]], i32 3)
+; AVX1-NEXT:    [[TMP11:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP3]], <2 x i64> [[TMP7]], i32 3)
+; AVX1-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.smul.fix.v2i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP8]], i32 3)
+; AVX1-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* bitcast ([8 x i64]* @c64 to <2 x i64>*), align 8
+; AVX1-NEXT:    store <2 x i64> [[TMP10]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2) to <2 x i64>*), align 8
+; AVX1-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <2 x i64>*), align 8
+; AVX1-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6) to <2 x i64>*), align 8
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @smul_v8i64(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @a64 to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @b64 to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> [[TMP1]], <4 x i64> [[TMP3]], i32 3)
+; AVX2-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> [[TMP2]], <4 x i64> [[TMP4]], i32 3)
+; AVX2-NEXT:    store <4 x i64> [[TMP5]], <4 x i64>* bitcast ([8 x i64]* @c64 to <4 x i64>*), align 8
+; AVX2-NEXT:    store <4 x i64> [[TMP6]], <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: @smul_v8i64(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <8 x i64>, <8 x i64>* bitcast ([8 x i64]* @a64 to <8 x i64>*), align 8
+; AVX512-NEXT:    [[TMP2:%.*]] = load <8 x i64>, <8 x i64>* bitcast ([8 x i64]* @b64 to <8 x i64>*), align 8
+; AVX512-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.smul.fix.v8i64(<8 x i64> [[TMP1]], <8 x i64> [[TMP2]], i32 3)
+; AVX512-NEXT:    store <8 x i64> [[TMP3]], <8 x i64>* bitcast ([8 x i64]* @c64 to <8 x i64>*), align 8
+; AVX512-NEXT:    ret void
+;
+; AVX256BW-LABEL: @smul_v8i64(
+; AVX256BW-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @a64 to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @b64 to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> [[TMP1]], <4 x i64> [[TMP3]], i32 3)
+; AVX256BW-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.smul.fix.v4i64(<4 x i64> [[TMP2]], <4 x i64> [[TMP4]], i32 3)
+; AVX256BW-NEXT:    store <4 x i64> [[TMP5]], <4 x i64>* bitcast ([8 x i64]* @c64 to <4 x i64>*), align 8
+; AVX256BW-NEXT:    store <4 x i64> [[TMP6]], <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX256BW-NEXT:    ret void
 ;
   %a0 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 0), align 8
   %a1 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 1), align 8
@@ -97,72 +148,187 @@ define void @smul_v8i64() {
 }
 
 define void @smul_v16i32() {
-; CHECK-LABEL: @smul_v16i32(
-; CHECK-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; CHECK-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; CHECK-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; CHECK-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; CHECK-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; CHECK-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; CHECK-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; CHECK-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
-; CHECK-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
-; CHECK-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
-; CHECK-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
-; CHECK-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
-; CHECK-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
-; CHECK-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
-; CHECK-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
-; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
-; CHECK-NEXT:    [[R8:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
-; CHECK-NEXT:    [[R9:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
-; CHECK-NEXT:    [[R10:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
-; CHECK-NEXT:    [[R11:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
-; CHECK-NEXT:    [[R12:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
-; CHECK-NEXT:    [[R13:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
-; CHECK-NEXT:    [[R14:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
-; CHECK-NEXT:    [[R15:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
-; CHECK-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; CHECK-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; CHECK-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; CHECK-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; CHECK-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; CHECK-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; CHECK-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; CHECK-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; CHECK-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; CHECK-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; CHECK-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; CHECK-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; CHECK-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; CHECK-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; CHECK-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @smul_v16i32(
+; SSE-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @a32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP5:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([16 x i32]* @b32 to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP7:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP8:%.*]] = load <4 x i32>, <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    [[TMP9:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP1]], <4 x i32> [[TMP5]], i32 3)
+; SSE-NEXT:    [[TMP10:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP2]], <4 x i32> [[TMP6]], i32 3)
+; SSE-NEXT:    [[TMP11:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP3]], <4 x i32> [[TMP7]], i32 3)
+; SSE-NEXT:    [[TMP12:%.*]] = call <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> [[TMP4]], <4 x i32> [[TMP8]], i32 3)
+; SSE-NEXT:    store <4 x i32> [[TMP9]], <4 x i32>* bitcast ([16 x i32]* @c32 to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP10]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP11]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <4 x i32>*), align 4
+; SSE-NEXT:    store <4 x i32> [[TMP12]], <4 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12) to <4 x i32>*), align 4
+; SSE-NEXT:    ret void
+;
+; SLM-LABEL: @smul_v16i32(
+; SLM-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
+; SLM-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
+; SLM-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
+; SLM-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
+; SLM-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
+; SLM-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
+; SLM-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
+; SLM-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
+; SLM-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
+; SLM-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
+; SLM-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
+; SLM-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
+; SLM-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
+; SLM-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
+; SLM-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
+; SLM-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
+; SLM-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
+; SLM-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
+; SLM-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
+; SLM-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
+; SLM-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
+; SLM-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
+; SLM-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
+; SLM-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
+; SLM-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
+; SLM-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
+; SLM-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
+; SLM-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
+; SLM-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
+; SLM-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
+; SLM-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[R0:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
+; SLM-NEXT:    [[R1:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
+; SLM-NEXT:    [[R2:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
+; SLM-NEXT:    [[R3:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
+; SLM-NEXT:    [[R4:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
+; SLM-NEXT:    [[R5:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
+; SLM-NEXT:    [[R6:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
+; SLM-NEXT:    [[R7:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
+; SLM-NEXT:    [[R8:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
+; SLM-NEXT:    [[R9:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
+; SLM-NEXT:    [[R10:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
+; SLM-NEXT:    [[R11:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
+; SLM-NEXT:    [[R12:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
+; SLM-NEXT:    [[R13:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
+; SLM-NEXT:    [[R14:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
+; SLM-NEXT:    [[R15:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
+; SLM-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
+; SLM-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
+; SLM-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
+; SLM-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
+; SLM-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
+; SLM-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
+; SLM-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
+; SLM-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
+; SLM-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
+; SLM-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
+; SLM-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
+; SLM-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
+; SLM-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
+; SLM-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
+; SLM-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
+; SLM-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SLM-NEXT:    ret void
+;
+; AVX1-LABEL: @smul_v16i32(
+; AVX1-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
+; AVX1-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
+; AVX1-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
+; AVX1-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
+; AVX1-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
+; AVX1-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
+; AVX1-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
+; AVX1-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
+; AVX1-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
+; AVX1-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
+; AVX1-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
+; AVX1-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
+; AVX1-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
+; AVX1-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
+; AVX1-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
+; AVX1-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
+; AVX1-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
+; AVX1-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
+; AVX1-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
+; AVX1-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
+; AVX1-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
+; AVX1-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
+; AVX1-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
+; AVX1-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
+; AVX1-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
+; AVX1-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
+; AVX1-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
+; AVX1-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
+; AVX1-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
+; AVX1-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
+; AVX1-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
+; AVX1-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
+; AVX1-NEXT:    [[R0:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
+; AVX1-NEXT:    [[R1:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
+; AVX1-NEXT:    [[R2:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
+; AVX1-NEXT:    [[R3:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
+; AVX1-NEXT:    [[R4:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
+; AVX1-NEXT:    [[R5:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
+; AVX1-NEXT:    [[R6:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
+; AVX1-NEXT:    [[R7:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
+; AVX1-NEXT:    [[R8:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
+; AVX1-NEXT:    [[R9:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
+; AVX1-NEXT:    [[R10:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
+; AVX1-NEXT:    [[R11:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
+; AVX1-NEXT:    [[R12:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
+; AVX1-NEXT:    [[R13:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
+; AVX1-NEXT:    [[R14:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
+; AVX1-NEXT:    [[R15:%.*]] = call i32 @llvm.smul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
+; AVX1-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
+; AVX1-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
+; AVX1-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
+; AVX1-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
+; AVX1-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
+; AVX1-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
+; AVX1-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
+; AVX1-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
+; AVX1-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
+; AVX1-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
+; AVX1-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
+; AVX1-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
+; AVX1-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
+; AVX1-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
+; AVX1-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
+; AVX1-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @smul_v16i32(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @b32 to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP4:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP1]], <8 x i32> [[TMP3]], i32 3)
+; AVX2-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP4]], i32 3)
+; AVX2-NEXT:    store <8 x i32> [[TMP5]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX2-NEXT:    store <8 x i32> [[TMP6]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: @smul_v16i32(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @a32 to <16 x i32>*), align 4
+; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @b32 to <16 x i32>*), align 4
+; AVX512-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.smul.fix.v16i32(<16 x i32> [[TMP1]], <16 x i32> [[TMP2]], i32 3)
+; AVX512-NEXT:    store <16 x i32> [[TMP3]], <16 x i32>* bitcast ([16 x i32]* @c32 to <16 x i32>*), align 4
+; AVX512-NEXT:    ret void
+;
+; AVX256BW-LABEL: @smul_v16i32(
+; AVX256BW-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @b32 to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP4:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP1]], <8 x i32> [[TMP3]], i32 3)
+; AVX256BW-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.smul.fix.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP4]], i32 3)
+; AVX256BW-NEXT:    store <8 x i32> [[TMP5]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX256BW-NEXT:    store <8 x i32> [[TMP6]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX256BW-NEXT:    ret void
 ;
   %a0  = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0 ), align 4
   %a1  = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1 ), align 4
@@ -232,136 +398,65 @@ define void @smul_v16i32() {
 }
 
 define void @smul_v32i16() {
-; CHECK-LABEL: @smul_v32i16(
-; CHECK-NEXT:    [[A0:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 0), align 2
-; CHECK-NEXT:    [[A1:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 1), align 2
-; CHECK-NEXT:    [[A2:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 2), align 2
-; CHECK-NEXT:    [[A3:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 3), align 2
-; CHECK-NEXT:    [[A4:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 4), align 2
-; CHECK-NEXT:    [[A5:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 5), align 2
-; CHECK-NEXT:    [[A6:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 6), align 2
-; CHECK-NEXT:    [[A7:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 7), align 2
-; CHECK-NEXT:    [[A8:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8), align 2
-; CHECK-NEXT:    [[A9:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 9), align 2
-; CHECK-NEXT:    [[A10:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 10), align 2
-; CHECK-NEXT:    [[A11:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 11), align 2
-; CHECK-NEXT:    [[A12:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 12), align 2
-; CHECK-NEXT:    [[A13:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 13), align 2
-; CHECK-NEXT:    [[A14:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 14), align 2
-; CHECK-NEXT:    [[A15:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 15), align 2
-; CHECK-NEXT:    [[A16:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16), align 2
-; CHECK-NEXT:    [[A17:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 17), align 2
-; CHECK-NEXT:    [[A18:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 18), align 2
-; CHECK-NEXT:    [[A19:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 19), align 2
-; CHECK-NEXT:    [[A20:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 20), align 2
-; CHECK-NEXT:    [[A21:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 21), align 2
-; CHECK-NEXT:    [[A22:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 22), align 2
-; CHECK-NEXT:    [[A23:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 23), align 2
-; CHECK-NEXT:    [[A24:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24), align 2
-; CHECK-NEXT:    [[A25:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 25), align 2
-; CHECK-NEXT:    [[A26:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 26), align 2
-; CHECK-NEXT:    [[A27:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 27), align 2
-; CHECK-NEXT:    [[A28:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 28), align 2
-; CHECK-NEXT:    [[A29:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 29), align 2
-; CHECK-NEXT:    [[A30:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 30), align 2
-; CHECK-NEXT:    [[A31:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 31), align 2
-; CHECK-NEXT:    [[B0:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 0), align 2
-; CHECK-NEXT:    [[B1:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 1), align 2
-; CHECK-NEXT:    [[B2:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 2), align 2
-; CHECK-NEXT:    [[B3:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 3), align 2
-; CHECK-NEXT:    [[B4:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 4), align 2
-; CHECK-NEXT:    [[B5:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 5), align 2
-; CHECK-NEXT:    [[B6:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 6), align 2
-; CHECK-NEXT:    [[B7:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 7), align 2
-; CHECK-NEXT:    [[B8:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8), align 2
-; CHECK-NEXT:    [[B9:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 9), align 2
-; CHECK-NEXT:    [[B10:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 10), align 2
-; CHECK-NEXT:    [[B11:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 11), align 2
-; CHECK-NEXT:    [[B12:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 12), align 2
-; CHECK-NEXT:    [[B13:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 13), align 2
-; CHECK-NEXT:    [[B14:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 14), align 2
-; CHECK-NEXT:    [[B15:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 15), align 2
-; CHECK-NEXT:    [[B16:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16), align 2
-; CHECK-NEXT:    [[B17:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 17), align 2
-; CHECK-NEXT:    [[B18:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 18), align 2
-; CHECK-NEXT:    [[B19:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 19), align 2
-; CHECK-NEXT:    [[B20:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 20), align 2
-; CHECK-NEXT:    [[B21:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 21), align 2
-; CHECK-NEXT:    [[B22:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 22), align 2
-; CHECK-NEXT:    [[B23:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 23), align 2
-; CHECK-NEXT:    [[B24:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24), align 2
-; CHECK-NEXT:    [[B25:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 25), align 2
-; CHECK-NEXT:    [[B26:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 26), align 2
-; CHECK-NEXT:    [[B27:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 27), align 2
-; CHECK-NEXT:    [[B28:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 28), align 2
-; CHECK-NEXT:    [[B29:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 29), align 2
-; CHECK-NEXT:    [[B30:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 30), align 2
-; CHECK-NEXT:    [[B31:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 31), align 2
-; CHECK-NEXT:    [[R0:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A0]], i16 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A1]], i16 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A2]], i16 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A3]], i16 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A4]], i16 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A5]], i16 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A6]], i16 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A7]], i16 [[B7]], i32 3)
-; CHECK-NEXT:    [[R8:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A8]], i16 [[B8]], i32 3)
-; CHECK-NEXT:    [[R9:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A9]], i16 [[B9]], i32 3)
-; CHECK-NEXT:    [[R10:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A10]], i16 [[B10]], i32 3)
-; CHECK-NEXT:    [[R11:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A11]], i16 [[B11]], i32 3)
-; CHECK-NEXT:    [[R12:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A12]], i16 [[B12]], i32 3)
-; CHECK-NEXT:    [[R13:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A13]], i16 [[B13]], i32 3)
-; CHECK-NEXT:    [[R14:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A14]], i16 [[B14]], i32 3)
-; CHECK-NEXT:    [[R15:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A15]], i16 [[B15]], i32 3)
-; CHECK-NEXT:    [[R16:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A16]], i16 [[B16]], i32 3)
-; CHECK-NEXT:    [[R17:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A17]], i16 [[B17]], i32 3)
-; CHECK-NEXT:    [[R18:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A18]], i16 [[B18]], i32 3)
-; CHECK-NEXT:    [[R19:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A19]], i16 [[B19]], i32 3)
-; CHECK-NEXT:    [[R20:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A20]], i16 [[B20]], i32 3)
-; CHECK-NEXT:    [[R21:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A21]], i16 [[B21]], i32 3)
-; CHECK-NEXT:    [[R22:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A22]], i16 [[B22]], i32 3)
-; CHECK-NEXT:    [[R23:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A23]], i16 [[B23]], i32 3)
-; CHECK-NEXT:    [[R24:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A24]], i16 [[B24]], i32 3)
-; CHECK-NEXT:    [[R25:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A25]], i16 [[B25]], i32 3)
-; CHECK-NEXT:    [[R26:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A26]], i16 [[B26]], i32 3)
-; CHECK-NEXT:    [[R27:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A27]], i16 [[B27]], i32 3)
-; CHECK-NEXT:    [[R28:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A28]], i16 [[B28]], i32 3)
-; CHECK-NEXT:    [[R29:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A29]], i16 [[B29]], i32 3)
-; CHECK-NEXT:    [[R30:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A30]], i16 [[B30]], i32 3)
-; CHECK-NEXT:    [[R31:%.*]] = call i16 @llvm.smul.fix.i16(i16 [[A31]], i16 [[B31]], i32 3)
-; CHECK-NEXT:    store i16 [[R0]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 0), align 2
-; CHECK-NEXT:    store i16 [[R1]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 1), align 2
-; CHECK-NEXT:    store i16 [[R2]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 2), align 2
-; CHECK-NEXT:    store i16 [[R3]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 3), align 2
-; CHECK-NEXT:    store i16 [[R4]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 4), align 2
-; CHECK-NEXT:    store i16 [[R5]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 5), align 2
-; CHECK-NEXT:    store i16 [[R6]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 6), align 2
-; CHECK-NEXT:    store i16 [[R7]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 7), align 2
-; CHECK-NEXT:    store i16 [[R8]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8), align 2
-; CHECK-NEXT:    store i16 [[R9]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 9), align 2
-; CHECK-NEXT:    store i16 [[R10]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 10), align 2
-; CHECK-NEXT:    store i16 [[R11]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 11), align 2
-; CHECK-NEXT:    store i16 [[R12]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 12), align 2
-; CHECK-NEXT:    store i16 [[R13]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 13), align 2
-; CHECK-NEXT:    store i16 [[R14]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 14), align 2
-; CHECK-NEXT:    store i16 [[R15]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 15), align 2
-; CHECK-NEXT:    store i16 [[R16]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16), align 2
-; CHECK-NEXT:    store i16 [[R17]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 17), align 2
-; CHECK-NEXT:    store i16 [[R18]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 18), align 2
-; CHECK-NEXT:    store i16 [[R19]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 19), align 2
-; CHECK-NEXT:    store i16 [[R20]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 20), align 2
-; CHECK-NEXT:    store i16 [[R21]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 21), align 2
-; CHECK-NEXT:    store i16 [[R22]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 22), align 2
-; CHECK-NEXT:    store i16 [[R23]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 23), align 2
-; CHECK-NEXT:    store i16 [[R24]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24), align 2
-; CHECK-NEXT:    store i16 [[R25]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 25), align 2
-; CHECK-NEXT:    store i16 [[R26]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 26), align 2
-; CHECK-NEXT:    store i16 [[R27]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 27), align 2
-; CHECK-NEXT:    store i16 [[R28]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 28), align 2
-; CHECK-NEXT:    store i16 [[R29]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 29), align 2
-; CHECK-NEXT:    store i16 [[R30]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 30), align 2
-; CHECK-NEXT:    store i16 [[R31]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 31), align 2
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @smul_v32i16(
+; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @a16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP4:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP5:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @b16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP6:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP7:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP8:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP9:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP1]], <8 x i16> [[TMP5]], i32 3)
+; SSE-NEXT:    [[TMP10:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP6]], i32 3)
+; SSE-NEXT:    [[TMP11:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP3]], <8 x i16> [[TMP7]], i32 3)
+; SSE-NEXT:    [[TMP12:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP4]], <8 x i16> [[TMP8]], i32 3)
+; SSE-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* bitcast ([32 x i16]* @c16 to <8 x i16>*), align 2
+; SSE-NEXT:    store <8 x i16> [[TMP10]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    store <8 x i16> [[TMP11]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <8 x i16>*), align 2
+; SSE-NEXT:    store <8 x i16> [[TMP12]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24) to <8 x i16>*), align 2
+; SSE-NEXT:    ret void
+;
+; SLM-LABEL: @smul_v32i16(
+; SLM-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @a16 to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP4:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP5:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @b16 to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP6:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP7:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP8:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP9:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP1]], <8 x i16> [[TMP5]], i32 3)
+; SLM-NEXT:    [[TMP10:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP6]], i32 3)
+; SLM-NEXT:    [[TMP11:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP3]], <8 x i16> [[TMP7]], i32 3)
+; SLM-NEXT:    [[TMP12:%.*]] = call <8 x i16> @llvm.smul.fix.v8i16(<8 x i16> [[TMP4]], <8 x i16> [[TMP8]], i32 3)
+; SLM-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* bitcast ([32 x i16]* @c16 to <8 x i16>*), align 2
+; SLM-NEXT:    store <8 x i16> [[TMP10]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8) to <8 x i16>*), align 2
+; SLM-NEXT:    store <8 x i16> [[TMP11]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <8 x i16>*), align 2
+; SLM-NEXT:    store <8 x i16> [[TMP12]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24) to <8 x i16>*), align 2
+; SLM-NEXT:    ret void
+;
+; AVX-LABEL: @smul_v32i16(
+; AVX-NEXT:    [[TMP1:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @a16 to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP2:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP3:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @b16 to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP4:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.smul.fix.v16i16(<16 x i16> [[TMP1]], <16 x i16> [[TMP3]], i32 3)
+; AVX-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.smul.fix.v16i16(<16 x i16> [[TMP2]], <16 x i16> [[TMP4]], i32 3)
+; AVX-NEXT:    store <16 x i16> [[TMP5]], <16 x i16>* bitcast ([32 x i16]* @c16 to <16 x i16>*), align 2
+; AVX-NEXT:    store <16 x i16> [[TMP6]], <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX-NEXT:    ret void
+;
+; AVX512-LABEL: @smul_v32i16(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @a16 to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP3:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @b16 to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP4:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.smul.fix.v16i16(<16 x i16> [[TMP1]], <16 x i16> [[TMP3]], i32 3)
+; AVX512-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.smul.fix.v16i16(<16 x i16> [[TMP2]], <16 x i16> [[TMP4]], i32 3)
+; AVX512-NEXT:    store <16 x i16> [[TMP5]], <16 x i16>* bitcast ([32 x i16]* @c16 to <16 x i16>*), align 2
+; AVX512-NEXT:    store <16 x i16> [[TMP6]], <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX512-NEXT:    ret void
 ;
   %a0  = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 0 ), align 2
   %a1  = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 1 ), align 2
@@ -496,262 +591,22 @@ define void @smul_v32i16() {
 
 define void @smul_v64i8() {
 ; CHECK-LABEL: @smul_v64i8(
-; CHECK-NEXT:    [[A0:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 0), align 1
-; CHECK-NEXT:    [[A1:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 1), align 1
-; CHECK-NEXT:    [[A2:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 2), align 1
-; CHECK-NEXT:    [[A3:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 3), align 1
-; CHECK-NEXT:    [[A4:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 4), align 1
-; CHECK-NEXT:    [[A5:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 5), align 1
-; CHECK-NEXT:    [[A6:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 6), align 1
-; CHECK-NEXT:    [[A7:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 7), align 1
-; CHECK-NEXT:    [[A8:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 8), align 1
-; CHECK-NEXT:    [[A9:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 9), align 1
-; CHECK-NEXT:    [[A10:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 10), align 1
-; CHECK-NEXT:    [[A11:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 11), align 1
-; CHECK-NEXT:    [[A12:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 12), align 1
-; CHECK-NEXT:    [[A13:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 13), align 1
-; CHECK-NEXT:    [[A14:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 14), align 1
-; CHECK-NEXT:    [[A15:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 15), align 1
-; CHECK-NEXT:    [[A16:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 16), align 1
-; CHECK-NEXT:    [[A17:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 17), align 1
-; CHECK-NEXT:    [[A18:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 18), align 1
-; CHECK-NEXT:    [[A19:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 19), align 1
-; CHECK-NEXT:    [[A20:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 20), align 1
-; CHECK-NEXT:    [[A21:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 21), align 1
-; CHECK-NEXT:    [[A22:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 22), align 1
-; CHECK-NEXT:    [[A23:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 23), align 1
-; CHECK-NEXT:    [[A24:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 24), align 1
-; CHECK-NEXT:    [[A25:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 25), align 1
-; CHECK-NEXT:    [[A26:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 26), align 1
-; CHECK-NEXT:    [[A27:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 27), align 1
-; CHECK-NEXT:    [[A28:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 28), align 1
-; CHECK-NEXT:    [[A29:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 29), align 1
-; CHECK-NEXT:    [[A30:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 30), align 1
-; CHECK-NEXT:    [[A31:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 31), align 1
-; CHECK-NEXT:    [[A32:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32), align 1
-; CHECK-NEXT:    [[A33:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 33), align 1
-; CHECK-NEXT:    [[A34:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 34), align 1
-; CHECK-NEXT:    [[A35:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 35), align 1
-; CHECK-NEXT:    [[A36:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 36), align 1
-; CHECK-NEXT:    [[A37:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 37), align 1
-; CHECK-NEXT:    [[A38:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 38), align 1
-; CHECK-NEXT:    [[A39:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 39), align 1
-; CHECK-NEXT:    [[A40:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 40), align 1
-; CHECK-NEXT:    [[A41:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 41), align 1
-; CHECK-NEXT:    [[A42:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 42), align 1
-; CHECK-NEXT:    [[A43:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 43), align 1
-; CHECK-NEXT:    [[A44:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 44), align 1
-; CHECK-NEXT:    [[A45:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 45), align 1
-; CHECK-NEXT:    [[A46:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 46), align 1
-; CHECK-NEXT:    [[A47:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 47), align 1
-; CHECK-NEXT:    [[A48:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 48), align 1
-; CHECK-NEXT:    [[A49:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 49), align 1
-; CHECK-NEXT:    [[A50:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 50), align 1
-; CHECK-NEXT:    [[A51:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 51), align 1
-; CHECK-NEXT:    [[A52:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 52), align 1
-; CHECK-NEXT:    [[A53:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 53), align 1
-; CHECK-NEXT:    [[A54:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 54), align 1
-; CHECK-NEXT:    [[A55:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 55), align 1
-; CHECK-NEXT:    [[A56:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 56), align 1
-; CHECK-NEXT:    [[A57:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 57), align 1
-; CHECK-NEXT:    [[A58:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 58), align 1
-; CHECK-NEXT:    [[A59:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 59), align 1
-; CHECK-NEXT:    [[A60:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 60), align 1
-; CHECK-NEXT:    [[A61:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 61), align 1
-; CHECK-NEXT:    [[A62:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 62), align 1
-; CHECK-NEXT:    [[A63:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 63), align 1
-; CHECK-NEXT:    [[B0:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 0), align 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 1), align 1
-; CHECK-NEXT:    [[B2:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 2), align 1
-; CHECK-NEXT:    [[B3:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 3), align 1
-; CHECK-NEXT:    [[B4:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 4), align 1
-; CHECK-NEXT:    [[B5:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 5), align 1
-; CHECK-NEXT:    [[B6:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 6), align 1
-; CHECK-NEXT:    [[B7:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 7), align 1
-; CHECK-NEXT:    [[B8:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 8), align 1
-; CHECK-NEXT:    [[B9:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 9), align 1
-; CHECK-NEXT:    [[B10:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 10), align 1
-; CHECK-NEXT:    [[B11:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 11), align 1
-; CHECK-NEXT:    [[B12:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 12), align 1
-; CHECK-NEXT:    [[B13:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 13), align 1
-; CHECK-NEXT:    [[B14:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 14), align 1
-; CHECK-NEXT:    [[B15:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 15), align 1
-; CHECK-NEXT:    [[B16:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 16), align 1
-; CHECK-NEXT:    [[B17:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 17), align 1
-; CHECK-NEXT:    [[B18:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 18), align 1
-; CHECK-NEXT:    [[B19:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 19), align 1
-; CHECK-NEXT:    [[B20:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 20), align 1
-; CHECK-NEXT:    [[B21:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 21), align 1
-; CHECK-NEXT:    [[B22:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 22), align 1
-; CHECK-NEXT:    [[B23:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 23), align 1
-; CHECK-NEXT:    [[B24:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 24), align 1
-; CHECK-NEXT:    [[B25:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 25), align 1
-; CHECK-NEXT:    [[B26:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 26), align 1
-; CHECK-NEXT:    [[B27:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 27), align 1
-; CHECK-NEXT:    [[B28:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 28), align 1
-; CHECK-NEXT:    [[B29:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 29), align 1
-; CHECK-NEXT:    [[B30:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 30), align 1
-; CHECK-NEXT:    [[B31:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 31), align 1
-; CHECK-NEXT:    [[B32:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32), align 1
-; CHECK-NEXT:    [[B33:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 33), align 1
-; CHECK-NEXT:    [[B34:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 34), align 1
-; CHECK-NEXT:    [[B35:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 35), align 1
-; CHECK-NEXT:    [[B36:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 36), align 1
-; CHECK-NEXT:    [[B37:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 37), align 1
-; CHECK-NEXT:    [[B38:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 38), align 1
-; CHECK-NEXT:    [[B39:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 39), align 1
-; CHECK-NEXT:    [[B40:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 40), align 1
-; CHECK-NEXT:    [[B41:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 41), align 1
-; CHECK-NEXT:    [[B42:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 42), align 1
-; CHECK-NEXT:    [[B43:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 43), align 1
-; CHECK-NEXT:    [[B44:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 44), align 1
-; CHECK-NEXT:    [[B45:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 45), align 1
-; CHECK-NEXT:    [[B46:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 46), align 1
-; CHECK-NEXT:    [[B47:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 47), align 1
-; CHECK-NEXT:    [[B48:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 48), align 1
-; CHECK-NEXT:    [[B49:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 49), align 1
-; CHECK-NEXT:    [[B50:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 50), align 1
-; CHECK-NEXT:    [[B51:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 51), align 1
-; CHECK-NEXT:    [[B52:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 52), align 1
-; CHECK-NEXT:    [[B53:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 53), align 1
-; CHECK-NEXT:    [[B54:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 54), align 1
-; CHECK-NEXT:    [[B55:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 55), align 1
-; CHECK-NEXT:    [[B56:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 56), align 1
-; CHECK-NEXT:    [[B57:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 57), align 1
-; CHECK-NEXT:    [[B58:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 58), align 1
-; CHECK-NEXT:    [[B59:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 59), align 1
-; CHECK-NEXT:    [[B60:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 60), align 1
-; CHECK-NEXT:    [[B61:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 61), align 1
-; CHECK-NEXT:    [[B62:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 62), align 1
-; CHECK-NEXT:    [[B63:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 63), align 1
-; CHECK-NEXT:    [[R0:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A0]], i8 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A1]], i8 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A2]], i8 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A3]], i8 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A4]], i8 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A5]], i8 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A6]], i8 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A7]], i8 [[B7]], i32 3)
-; CHECK-NEXT:    [[R8:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A8]], i8 [[B8]], i32 3)
-; CHECK-NEXT:    [[R9:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A9]], i8 [[B9]], i32 3)
-; CHECK-NEXT:    [[R10:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A10]], i8 [[B10]], i32 3)
-; CHECK-NEXT:    [[R11:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A11]], i8 [[B11]], i32 3)
-; CHECK-NEXT:    [[R12:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A12]], i8 [[B12]], i32 3)
-; CHECK-NEXT:    [[R13:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A13]], i8 [[B13]], i32 3)
-; CHECK-NEXT:    [[R14:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A14]], i8 [[B14]], i32 3)
-; CHECK-NEXT:    [[R15:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A15]], i8 [[B15]], i32 3)
-; CHECK-NEXT:    [[R16:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A16]], i8 [[B16]], i32 3)
-; CHECK-NEXT:    [[R17:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A17]], i8 [[B17]], i32 3)
-; CHECK-NEXT:    [[R18:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A18]], i8 [[B18]], i32 3)
-; CHECK-NEXT:    [[R19:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A19]], i8 [[B19]], i32 3)
-; CHECK-NEXT:    [[R20:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A20]], i8 [[B20]], i32 3)
-; CHECK-NEXT:    [[R21:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A21]], i8 [[B21]], i32 3)
-; CHECK-NEXT:    [[R22:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A22]], i8 [[B22]], i32 3)
-; CHECK-NEXT:    [[R23:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A23]], i8 [[B23]], i32 3)
-; CHECK-NEXT:    [[R24:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A24]], i8 [[B24]], i32 3)
-; CHECK-NEXT:    [[R25:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A25]], i8 [[B25]], i32 3)
-; CHECK-NEXT:    [[R26:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A26]], i8 [[B26]], i32 3)
-; CHECK-NEXT:    [[R27:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A27]], i8 [[B27]], i32 3)
-; CHECK-NEXT:    [[R28:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A28]], i8 [[B28]], i32 3)
-; CHECK-NEXT:    [[R29:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A29]], i8 [[B29]], i32 3)
-; CHECK-NEXT:    [[R30:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A30]], i8 [[B30]], i32 3)
-; CHECK-NEXT:    [[R31:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A31]], i8 [[B31]], i32 3)
-; CHECK-NEXT:    [[R32:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A32]], i8 [[B32]], i32 3)
-; CHECK-NEXT:    [[R33:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A33]], i8 [[B33]], i32 3)
-; CHECK-NEXT:    [[R34:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A34]], i8 [[B34]], i32 3)
-; CHECK-NEXT:    [[R35:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A35]], i8 [[B35]], i32 3)
-; CHECK-NEXT:    [[R36:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A36]], i8 [[B36]], i32 3)
-; CHECK-NEXT:    [[R37:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A37]], i8 [[B37]], i32 3)
-; CHECK-NEXT:    [[R38:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A38]], i8 [[B38]], i32 3)
-; CHECK-NEXT:    [[R39:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A39]], i8 [[B39]], i32 3)
-; CHECK-NEXT:    [[R40:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A40]], i8 [[B40]], i32 3)
-; CHECK-NEXT:    [[R41:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A41]], i8 [[B41]], i32 3)
-; CHECK-NEXT:    [[R42:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A42]], i8 [[B42]], i32 3)
-; CHECK-NEXT:    [[R43:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A43]], i8 [[B43]], i32 3)
-; CHECK-NEXT:    [[R44:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A44]], i8 [[B44]], i32 3)
-; CHECK-NEXT:    [[R45:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A45]], i8 [[B45]], i32 3)
-; CHECK-NEXT:    [[R46:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A46]], i8 [[B46]], i32 3)
-; CHECK-NEXT:    [[R47:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A47]], i8 [[B47]], i32 3)
-; CHECK-NEXT:    [[R48:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A48]], i8 [[B48]], i32 3)
-; CHECK-NEXT:    [[R49:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A49]], i8 [[B49]], i32 3)
-; CHECK-NEXT:    [[R50:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A50]], i8 [[B50]], i32 3)
-; CHECK-NEXT:    [[R51:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A51]], i8 [[B51]], i32 3)
-; CHECK-NEXT:    [[R52:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A52]], i8 [[B52]], i32 3)
-; CHECK-NEXT:    [[R53:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A53]], i8 [[B53]], i32 3)
-; CHECK-NEXT:    [[R54:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A54]], i8 [[B54]], i32 3)
-; CHECK-NEXT:    [[R55:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A55]], i8 [[B55]], i32 3)
-; CHECK-NEXT:    [[R56:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A56]], i8 [[B56]], i32 3)
-; CHECK-NEXT:    [[R57:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A57]], i8 [[B57]], i32 3)
-; CHECK-NEXT:    [[R58:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A58]], i8 [[B58]], i32 3)
-; CHECK-NEXT:    [[R59:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A59]], i8 [[B59]], i32 3)
-; CHECK-NEXT:    [[R60:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A60]], i8 [[B60]], i32 3)
-; CHECK-NEXT:    [[R61:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A61]], i8 [[B61]], i32 3)
-; CHECK-NEXT:    [[R62:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A62]], i8 [[B62]], i32 3)
-; CHECK-NEXT:    [[R63:%.*]] = call i8 @llvm.smul.fix.i8(i8 [[A63]], i8 [[B63]], i32 3)
-; CHECK-NEXT:    store i8 [[R0]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 0), align 1
-; CHECK-NEXT:    store i8 [[R1]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 1), align 1
-; CHECK-NEXT:    store i8 [[R2]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 2), align 1
-; CHECK-NEXT:    store i8 [[R3]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 3), align 1
-; CHECK-NEXT:    store i8 [[R4]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 4), align 1
-; CHECK-NEXT:    store i8 [[R5]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 5), align 1
-; CHECK-NEXT:    store i8 [[R6]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 6), align 1
-; CHECK-NEXT:    store i8 [[R7]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 7), align 1
-; CHECK-NEXT:    store i8 [[R8]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 8), align 1
-; CHECK-NEXT:    store i8 [[R9]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 9), align 1
-; CHECK-NEXT:    store i8 [[R10]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 10), align 1
-; CHECK-NEXT:    store i8 [[R11]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 11), align 1
-; CHECK-NEXT:    store i8 [[R12]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 12), align 1
-; CHECK-NEXT:    store i8 [[R13]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 13), align 1
-; CHECK-NEXT:    store i8 [[R14]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 14), align 1
-; CHECK-NEXT:    store i8 [[R15]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 15), align 1
-; CHECK-NEXT:    store i8 [[R16]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 16), align 1
-; CHECK-NEXT:    store i8 [[R17]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 17), align 1
-; CHECK-NEXT:    store i8 [[R18]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 18), align 1
-; CHECK-NEXT:    store i8 [[R19]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 19), align 1
-; CHECK-NEXT:    store i8 [[R20]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 20), align 1
-; CHECK-NEXT:    store i8 [[R21]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 21), align 1
-; CHECK-NEXT:    store i8 [[R22]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 22), align 1
-; CHECK-NEXT:    store i8 [[R23]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 23), align 1
-; CHECK-NEXT:    store i8 [[R24]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 24), align 1
-; CHECK-NEXT:    store i8 [[R25]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 25), align 1
-; CHECK-NEXT:    store i8 [[R26]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 26), align 1
-; CHECK-NEXT:    store i8 [[R27]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 27), align 1
-; CHECK-NEXT:    store i8 [[R28]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 28), align 1
-; CHECK-NEXT:    store i8 [[R29]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 29), align 1
-; CHECK-NEXT:    store i8 [[R30]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 30), align 1
-; CHECK-NEXT:    store i8 [[R31]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 31), align 1
-; CHECK-NEXT:    store i8 [[R32]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32), align 1
-; CHECK-NEXT:    store i8 [[R33]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 33), align 1
-; CHECK-NEXT:    store i8 [[R34]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 34), align 1
-; CHECK-NEXT:    store i8 [[R35]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 35), align 1
-; CHECK-NEXT:    store i8 [[R36]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 36), align 1
-; CHECK-NEXT:    store i8 [[R37]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 37), align 1
-; CHECK-NEXT:    store i8 [[R38]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 38), align 1
-; CHECK-NEXT:    store i8 [[R39]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 39), align 1
-; CHECK-NEXT:    store i8 [[R40]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 40), align 1
-; CHECK-NEXT:    store i8 [[R41]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 41), align 1
-; CHECK-NEXT:    store i8 [[R42]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 42), align 1
-; CHECK-NEXT:    store i8 [[R43]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 43), align 1
-; CHECK-NEXT:    store i8 [[R44]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 44), align 1
-; CHECK-NEXT:    store i8 [[R45]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 45), align 1
-; CHECK-NEXT:    store i8 [[R46]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 46), align 1
-; CHECK-NEXT:    store i8 [[R47]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 47), align 1
-; CHECK-NEXT:    store i8 [[R48]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 48), align 1
-; CHECK-NEXT:    store i8 [[R49]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 49), align 1
-; CHECK-NEXT:    store i8 [[R50]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 50), align 1
-; CHECK-NEXT:    store i8 [[R51]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 51), align 1
-; CHECK-NEXT:    store i8 [[R52]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 52), align 1
-; CHECK-NEXT:    store i8 [[R53]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 53), align 1
-; CHECK-NEXT:    store i8 [[R54]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 54), align 1
-; CHECK-NEXT:    store i8 [[R55]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 55), align 1
-; CHECK-NEXT:    store i8 [[R56]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 56), align 1
-; CHECK-NEXT:    store i8 [[R57]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 57), align 1
-; CHECK-NEXT:    store i8 [[R58]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 58), align 1
-; CHECK-NEXT:    store i8 [[R59]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 59), align 1
-; CHECK-NEXT:    store i8 [[R60]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 60), align 1
-; CHECK-NEXT:    store i8 [[R61]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 61), align 1
-; CHECK-NEXT:    store i8 [[R62]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 62), align 1
-; CHECK-NEXT:    store i8 [[R63]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 63), align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @a8 to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 48) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @b8 to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 48) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i8> @llvm.smul.fix.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP5]], i32 3)
+; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i8> @llvm.smul.fix.v16i8(<16 x i8> [[TMP2]], <16 x i8> [[TMP6]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i8> @llvm.smul.fix.v16i8(<16 x i8> [[TMP3]], <16 x i8> [[TMP7]], i32 3)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.smul.fix.v16i8(<16 x i8> [[TMP4]], <16 x i8> [[TMP8]], i32 3)
+; CHECK-NEXT:    store <16 x i8> [[TMP9]], <16 x i8>* bitcast ([64 x i8]* @c8 to <16 x i8>*), align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP10]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32) to <16 x i8>*), align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP12]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 48) to <16 x i8>*), align 1
 ; CHECK-NEXT:    ret void
 ;
   %a0  = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 0 ), align 1
@@ -1019,40 +874,91 @@ declare i16 @llvm.umul.fix.i16(i16, i16, i32)
 declare i8  @llvm.umul.fix.i8 (i8 , i8 , i32)
 
 define void @umul_v8i64() {
-; CHECK-LABEL: @umul_v8i64(
-; CHECK-NEXT:    [[A0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[A1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[A2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2), align 8
-; CHECK-NEXT:    [[A3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 3), align 8
-; CHECK-NEXT:    [[A4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4), align 8
-; CHECK-NEXT:    [[A5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 5), align 8
-; CHECK-NEXT:    [[A6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6), align 8
-; CHECK-NEXT:    [[A7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 7), align 8
-; CHECK-NEXT:    [[B0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 0), align 8
-; CHECK-NEXT:    [[B1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 1), align 8
-; CHECK-NEXT:    [[B2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2), align 8
-; CHECK-NEXT:    [[B3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 3), align 8
-; CHECK-NEXT:    [[B4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4), align 8
-; CHECK-NEXT:    [[B5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 5), align 8
-; CHECK-NEXT:    [[B6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6), align 8
-; CHECK-NEXT:    [[B7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 7), align 8
-; CHECK-NEXT:    [[R0:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A0]], i64 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A1]], i64 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A2]], i64 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A3]], i64 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A4]], i64 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A5]], i64 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A6]], i64 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i64 @llvm.umul.fix.i64(i64 [[A7]], i64 [[B7]], i32 3)
-; CHECK-NEXT:    store i64 [[R0]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 0), align 8
-; CHECK-NEXT:    store i64 [[R1]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 1), align 8
-; CHECK-NEXT:    store i64 [[R2]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2), align 8
-; CHECK-NEXT:    store i64 [[R3]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 3), align 8
-; CHECK-NEXT:    store i64 [[R4]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4), align 8
-; CHECK-NEXT:    store i64 [[R5]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 5), align 8
-; CHECK-NEXT:    store i64 [[R6]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6), align 8
-; CHECK-NEXT:    store i64 [[R7]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 7), align 8
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @umul_v8i64(
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @a64 to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @b64 to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6) to <2 x i64>*), align 8
+; SSE-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP1]], <2 x i64> [[TMP5]], i32 3)
+; SSE-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP2]], <2 x i64> [[TMP6]], i32 3)
+; SSE-NEXT:    [[TMP11:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP3]], <2 x i64> [[TMP7]], i32 3)
+; SSE-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP8]], i32 3)
+; SSE-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* bitcast ([8 x i64]* @c64 to <2 x i64>*), align 8
+; SSE-NEXT:    store <2 x i64> [[TMP10]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2) to <2 x i64>*), align 8
+; SSE-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <2 x i64>*), align 8
+; SSE-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6) to <2 x i64>*), align 8
+; SSE-NEXT:    ret void
+;
+; SLM-LABEL: @umul_v8i64(
+; SLM-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @a64 to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @b64 to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6) to <2 x i64>*), align 8
+; SLM-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP1]], <2 x i64> [[TMP5]], i32 3)
+; SLM-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP2]], <2 x i64> [[TMP6]], i32 3)
+; SLM-NEXT:    [[TMP11:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP3]], <2 x i64> [[TMP7]], i32 3)
+; SLM-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP8]], i32 3)
+; SLM-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* bitcast ([8 x i64]* @c64 to <2 x i64>*), align 8
+; SLM-NEXT:    store <2 x i64> [[TMP10]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2) to <2 x i64>*), align 8
+; SLM-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <2 x i64>*), align 8
+; SLM-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6) to <2 x i64>*), align 8
+; SLM-NEXT:    ret void
+;
+; AVX1-LABEL: @umul_v8i64(
+; AVX1-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @a64 to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @b64 to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6) to <2 x i64>*), align 8
+; AVX1-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP1]], <2 x i64> [[TMP5]], i32 3)
+; AVX1-NEXT:    [[TMP10:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP2]], <2 x i64> [[TMP6]], i32 3)
+; AVX1-NEXT:    [[TMP11:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP3]], <2 x i64> [[TMP7]], i32 3)
+; AVX1-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.umul.fix.v2i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP8]], i32 3)
+; AVX1-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* bitcast ([8 x i64]* @c64 to <2 x i64>*), align 8
+; AVX1-NEXT:    store <2 x i64> [[TMP10]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2) to <2 x i64>*), align 8
+; AVX1-NEXT:    store <2 x i64> [[TMP11]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <2 x i64>*), align 8
+; AVX1-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6) to <2 x i64>*), align 8
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @umul_v8i64(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @a64 to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @b64 to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX2-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> [[TMP1]], <4 x i64> [[TMP3]], i32 3)
+; AVX2-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> [[TMP2]], <4 x i64> [[TMP4]], i32 3)
+; AVX2-NEXT:    store <4 x i64> [[TMP5]], <4 x i64>* bitcast ([8 x i64]* @c64 to <4 x i64>*), align 8
+; AVX2-NEXT:    store <4 x i64> [[TMP6]], <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: @umul_v8i64(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <8 x i64>, <8 x i64>* bitcast ([8 x i64]* @a64 to <8 x i64>*), align 8
+; AVX512-NEXT:    [[TMP2:%.*]] = load <8 x i64>, <8 x i64>* bitcast ([8 x i64]* @b64 to <8 x i64>*), align 8
+; AVX512-NEXT:    [[TMP3:%.*]] = call <8 x i64> @llvm.umul.fix.v8i64(<8 x i64> [[TMP1]], <8 x i64> [[TMP2]], i32 3)
+; AVX512-NEXT:    store <8 x i64> [[TMP3]], <8 x i64>* bitcast ([8 x i64]* @c64 to <8 x i64>*), align 8
+; AVX512-NEXT:    ret void
+;
+; AVX256BW-LABEL: @umul_v8i64(
+; AVX256BW-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @a64 to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @b64 to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP4:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX256BW-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> [[TMP1]], <4 x i64> [[TMP3]], i32 3)
+; AVX256BW-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.umul.fix.v4i64(<4 x i64> [[TMP2]], <4 x i64> [[TMP4]], i32 3)
+; AVX256BW-NEXT:    store <4 x i64> [[TMP5]], <4 x i64>* bitcast ([8 x i64]* @c64 to <4 x i64>*), align 8
+; AVX256BW-NEXT:    store <4 x i64> [[TMP6]], <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <4 x i64>*), align 8
+; AVX256BW-NEXT:    ret void
 ;
   %a0 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 0), align 8
   %a1 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 1), align 8
@@ -1090,72 +996,235 @@ define void @umul_v8i64() {
 }
 
 define void @umul_v16i32() {
-; CHECK-LABEL: @umul_v16i32(
-; CHECK-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
-; CHECK-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
-; CHECK-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
-; CHECK-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
-; CHECK-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
-; CHECK-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
-; CHECK-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
-; CHECK-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
-; CHECK-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
-; CHECK-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
-; CHECK-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
-; CHECK-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
-; CHECK-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
-; CHECK-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
-; CHECK-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
-; CHECK-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
-; CHECK-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
-; CHECK-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
-; CHECK-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
-; CHECK-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
-; CHECK-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
-; CHECK-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
-; CHECK-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
-; CHECK-NEXT:    [[R0:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
-; CHECK-NEXT:    [[R8:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
-; CHECK-NEXT:    [[R9:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
-; CHECK-NEXT:    [[R10:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
-; CHECK-NEXT:    [[R11:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
-; CHECK-NEXT:    [[R12:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
-; CHECK-NEXT:    [[R13:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
-; CHECK-NEXT:    [[R14:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
-; CHECK-NEXT:    [[R15:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
-; CHECK-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
-; CHECK-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
-; CHECK-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
-; CHECK-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
-; CHECK-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
-; CHECK-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
-; CHECK-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
-; CHECK-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
-; CHECK-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
-; CHECK-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
-; CHECK-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
-; CHECK-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
-; CHECK-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
-; CHECK-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
-; CHECK-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
-; CHECK-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @umul_v16i32(
+; SSE-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
+; SSE-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
+; SSE-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
+; SSE-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
+; SSE-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
+; SSE-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
+; SSE-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
+; SSE-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
+; SSE-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
+; SSE-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
+; SSE-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
+; SSE-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
+; SSE-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
+; SSE-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
+; SSE-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
+; SSE-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
+; SSE-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
+; SSE-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
+; SSE-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
+; SSE-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
+; SSE-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
+; SSE-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
+; SSE-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
+; SSE-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
+; SSE-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
+; SSE-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
+; SSE-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
+; SSE-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
+; SSE-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
+; SSE-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
+; SSE-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
+; SSE-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
+; SSE-NEXT:    [[R0:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
+; SSE-NEXT:    [[R1:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
+; SSE-NEXT:    [[R2:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
+; SSE-NEXT:    [[R3:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
+; SSE-NEXT:    [[R4:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
+; SSE-NEXT:    [[R5:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
+; SSE-NEXT:    [[R6:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
+; SSE-NEXT:    [[R7:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
+; SSE-NEXT:    [[R8:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
+; SSE-NEXT:    [[R9:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
+; SSE-NEXT:    [[R10:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
+; SSE-NEXT:    [[R11:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
+; SSE-NEXT:    [[R12:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
+; SSE-NEXT:    [[R13:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
+; SSE-NEXT:    [[R14:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
+; SSE-NEXT:    [[R15:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
+; SSE-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
+; SSE-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
+; SSE-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
+; SSE-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
+; SSE-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
+; SSE-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
+; SSE-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
+; SSE-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
+; SSE-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
+; SSE-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
+; SSE-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
+; SSE-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
+; SSE-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
+; SSE-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
+; SSE-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
+; SSE-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SSE-NEXT:    ret void
+;
+; SLM-LABEL: @umul_v16i32(
+; SLM-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
+; SLM-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
+; SLM-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
+; SLM-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
+; SLM-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
+; SLM-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
+; SLM-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
+; SLM-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
+; SLM-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
+; SLM-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
+; SLM-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
+; SLM-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
+; SLM-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
+; SLM-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
+; SLM-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
+; SLM-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
+; SLM-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
+; SLM-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
+; SLM-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
+; SLM-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
+; SLM-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
+; SLM-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
+; SLM-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
+; SLM-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
+; SLM-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
+; SLM-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
+; SLM-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
+; SLM-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
+; SLM-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
+; SLM-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
+; SLM-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
+; SLM-NEXT:    [[R0:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
+; SLM-NEXT:    [[R1:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
+; SLM-NEXT:    [[R2:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
+; SLM-NEXT:    [[R3:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
+; SLM-NEXT:    [[R4:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
+; SLM-NEXT:    [[R5:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
+; SLM-NEXT:    [[R6:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
+; SLM-NEXT:    [[R7:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
+; SLM-NEXT:    [[R8:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
+; SLM-NEXT:    [[R9:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
+; SLM-NEXT:    [[R10:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
+; SLM-NEXT:    [[R11:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
+; SLM-NEXT:    [[R12:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
+; SLM-NEXT:    [[R13:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
+; SLM-NEXT:    [[R14:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
+; SLM-NEXT:    [[R15:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
+; SLM-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
+; SLM-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
+; SLM-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
+; SLM-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
+; SLM-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
+; SLM-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
+; SLM-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
+; SLM-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
+; SLM-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
+; SLM-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
+; SLM-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
+; SLM-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
+; SLM-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
+; SLM-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
+; SLM-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
+; SLM-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; SLM-NEXT:    ret void
+;
+; AVX1-LABEL: @umul_v16i32(
+; AVX1-NEXT:    [[A0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0), align 4
+; AVX1-NEXT:    [[A1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1), align 4
+; AVX1-NEXT:    [[A2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 2), align 4
+; AVX1-NEXT:    [[A3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 3), align 4
+; AVX1-NEXT:    [[A4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 4), align 4
+; AVX1-NEXT:    [[A5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 5), align 4
+; AVX1-NEXT:    [[A6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 6), align 4
+; AVX1-NEXT:    [[A7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 7), align 4
+; AVX1-NEXT:    [[A8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8), align 4
+; AVX1-NEXT:    [[A9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 9), align 4
+; AVX1-NEXT:    [[A10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 10), align 4
+; AVX1-NEXT:    [[A11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 11), align 4
+; AVX1-NEXT:    [[A12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 12), align 4
+; AVX1-NEXT:    [[A13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 13), align 4
+; AVX1-NEXT:    [[A14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 14), align 4
+; AVX1-NEXT:    [[A15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 15), align 4
+; AVX1-NEXT:    [[B0:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 0), align 4
+; AVX1-NEXT:    [[B1:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 1), align 4
+; AVX1-NEXT:    [[B2:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 2), align 4
+; AVX1-NEXT:    [[B3:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 3), align 4
+; AVX1-NEXT:    [[B4:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 4), align 4
+; AVX1-NEXT:    [[B5:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 5), align 4
+; AVX1-NEXT:    [[B6:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 6), align 4
+; AVX1-NEXT:    [[B7:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 7), align 4
+; AVX1-NEXT:    [[B8:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8), align 4
+; AVX1-NEXT:    [[B9:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 9), align 4
+; AVX1-NEXT:    [[B10:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 10), align 4
+; AVX1-NEXT:    [[B11:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 11), align 4
+; AVX1-NEXT:    [[B12:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 12), align 4
+; AVX1-NEXT:    [[B13:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 13), align 4
+; AVX1-NEXT:    [[B14:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 14), align 4
+; AVX1-NEXT:    [[B15:%.*]] = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 15), align 4
+; AVX1-NEXT:    [[R0:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A0]], i32 [[B0]], i32 3)
+; AVX1-NEXT:    [[R1:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A1]], i32 [[B1]], i32 3)
+; AVX1-NEXT:    [[R2:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A2]], i32 [[B2]], i32 3)
+; AVX1-NEXT:    [[R3:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A3]], i32 [[B3]], i32 3)
+; AVX1-NEXT:    [[R4:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A4]], i32 [[B4]], i32 3)
+; AVX1-NEXT:    [[R5:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A5]], i32 [[B5]], i32 3)
+; AVX1-NEXT:    [[R6:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A6]], i32 [[B6]], i32 3)
+; AVX1-NEXT:    [[R7:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A7]], i32 [[B7]], i32 3)
+; AVX1-NEXT:    [[R8:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A8]], i32 [[B8]], i32 3)
+; AVX1-NEXT:    [[R9:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A9]], i32 [[B9]], i32 3)
+; AVX1-NEXT:    [[R10:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A10]], i32 [[B10]], i32 3)
+; AVX1-NEXT:    [[R11:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A11]], i32 [[B11]], i32 3)
+; AVX1-NEXT:    [[R12:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A12]], i32 [[B12]], i32 3)
+; AVX1-NEXT:    [[R13:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A13]], i32 [[B13]], i32 3)
+; AVX1-NEXT:    [[R14:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A14]], i32 [[B14]], i32 3)
+; AVX1-NEXT:    [[R15:%.*]] = call i32 @llvm.umul.fix.i32(i32 [[A15]], i32 [[B15]], i32 3)
+; AVX1-NEXT:    store i32 [[R0]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 0), align 4
+; AVX1-NEXT:    store i32 [[R1]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 1), align 4
+; AVX1-NEXT:    store i32 [[R2]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 2), align 4
+; AVX1-NEXT:    store i32 [[R3]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 3), align 4
+; AVX1-NEXT:    store i32 [[R4]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 4), align 4
+; AVX1-NEXT:    store i32 [[R5]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 5), align 4
+; AVX1-NEXT:    store i32 [[R6]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 6), align 4
+; AVX1-NEXT:    store i32 [[R7]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 7), align 4
+; AVX1-NEXT:    store i32 [[R8]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8), align 4
+; AVX1-NEXT:    store i32 [[R9]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 9), align 4
+; AVX1-NEXT:    store i32 [[R10]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 10), align 4
+; AVX1-NEXT:    store i32 [[R11]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 11), align 4
+; AVX1-NEXT:    store i32 [[R12]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 12), align 4
+; AVX1-NEXT:    store i32 [[R13]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 13), align 4
+; AVX1-NEXT:    store i32 [[R14]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 14), align 4
+; AVX1-NEXT:    store i32 [[R15]], i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 15), align 4
+; AVX1-NEXT:    ret void
+;
+; AVX2-LABEL: @umul_v16i32(
+; AVX2-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @b32 to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP4:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX2-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.umul.fix.v8i32(<8 x i32> [[TMP1]], <8 x i32> [[TMP3]], i32 3)
+; AVX2-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.umul.fix.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP4]], i32 3)
+; AVX2-NEXT:    store <8 x i32> [[TMP5]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX2-NEXT:    store <8 x i32> [[TMP6]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX2-NEXT:    ret void
+;
+; AVX512-LABEL: @umul_v16i32(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @a32 to <16 x i32>*), align 4
+; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x i32>, <16 x i32>* bitcast ([16 x i32]* @b32 to <16 x i32>*), align 4
+; AVX512-NEXT:    [[TMP3:%.*]] = call <16 x i32> @llvm.umul.fix.v16i32(<16 x i32> [[TMP1]], <16 x i32> [[TMP2]], i32 3)
+; AVX512-NEXT:    store <16 x i32> [[TMP3]], <16 x i32>* bitcast ([16 x i32]* @c32 to <16 x i32>*), align 4
+; AVX512-NEXT:    ret void
+;
+; AVX256BW-LABEL: @umul_v16i32(
+; AVX256BW-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @a32 to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([16 x i32]* @b32 to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP4:%.*]] = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @b32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX256BW-NEXT:    [[TMP5:%.*]] = call <8 x i32> @llvm.umul.fix.v8i32(<8 x i32> [[TMP1]], <8 x i32> [[TMP3]], i32 3)
+; AVX256BW-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.umul.fix.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP4]], i32 3)
+; AVX256BW-NEXT:    store <8 x i32> [[TMP5]], <8 x i32>* bitcast ([16 x i32]* @c32 to <8 x i32>*), align 4
+; AVX256BW-NEXT:    store <8 x i32> [[TMP6]], <8 x i32>* bitcast (i32* getelementptr inbounds ([16 x i32], [16 x i32]* @c32, i32 0, i64 8) to <8 x i32>*), align 4
+; AVX256BW-NEXT:    ret void
 ;
   %a0  = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 0 ), align 4
   %a1  = load i32, i32* getelementptr inbounds ([16 x i32], [16 x i32]* @a32, i32 0, i64 1 ), align 4
@@ -1225,136 +1294,65 @@ define void @umul_v16i32() {
 }
 
 define void @umul_v32i16() {
-; CHECK-LABEL: @umul_v32i16(
-; CHECK-NEXT:    [[A0:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 0), align 2
-; CHECK-NEXT:    [[A1:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 1), align 2
-; CHECK-NEXT:    [[A2:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 2), align 2
-; CHECK-NEXT:    [[A3:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 3), align 2
-; CHECK-NEXT:    [[A4:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 4), align 2
-; CHECK-NEXT:    [[A5:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 5), align 2
-; CHECK-NEXT:    [[A6:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 6), align 2
-; CHECK-NEXT:    [[A7:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 7), align 2
-; CHECK-NEXT:    [[A8:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8), align 2
-; CHECK-NEXT:    [[A9:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 9), align 2
-; CHECK-NEXT:    [[A10:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 10), align 2
-; CHECK-NEXT:    [[A11:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 11), align 2
-; CHECK-NEXT:    [[A12:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 12), align 2
-; CHECK-NEXT:    [[A13:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 13), align 2
-; CHECK-NEXT:    [[A14:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 14), align 2
-; CHECK-NEXT:    [[A15:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 15), align 2
-; CHECK-NEXT:    [[A16:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16), align 2
-; CHECK-NEXT:    [[A17:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 17), align 2
-; CHECK-NEXT:    [[A18:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 18), align 2
-; CHECK-NEXT:    [[A19:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 19), align 2
-; CHECK-NEXT:    [[A20:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 20), align 2
-; CHECK-NEXT:    [[A21:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 21), align 2
-; CHECK-NEXT:    [[A22:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 22), align 2
-; CHECK-NEXT:    [[A23:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 23), align 2
-; CHECK-NEXT:    [[A24:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24), align 2
-; CHECK-NEXT:    [[A25:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 25), align 2
-; CHECK-NEXT:    [[A26:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 26), align 2
-; CHECK-NEXT:    [[A27:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 27), align 2
-; CHECK-NEXT:    [[A28:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 28), align 2
-; CHECK-NEXT:    [[A29:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 29), align 2
-; CHECK-NEXT:    [[A30:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 30), align 2
-; CHECK-NEXT:    [[A31:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 31), align 2
-; CHECK-NEXT:    [[B0:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 0), align 2
-; CHECK-NEXT:    [[B1:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 1), align 2
-; CHECK-NEXT:    [[B2:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 2), align 2
-; CHECK-NEXT:    [[B3:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 3), align 2
-; CHECK-NEXT:    [[B4:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 4), align 2
-; CHECK-NEXT:    [[B5:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 5), align 2
-; CHECK-NEXT:    [[B6:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 6), align 2
-; CHECK-NEXT:    [[B7:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 7), align 2
-; CHECK-NEXT:    [[B8:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8), align 2
-; CHECK-NEXT:    [[B9:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 9), align 2
-; CHECK-NEXT:    [[B10:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 10), align 2
-; CHECK-NEXT:    [[B11:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 11), align 2
-; CHECK-NEXT:    [[B12:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 12), align 2
-; CHECK-NEXT:    [[B13:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 13), align 2
-; CHECK-NEXT:    [[B14:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 14), align 2
-; CHECK-NEXT:    [[B15:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 15), align 2
-; CHECK-NEXT:    [[B16:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16), align 2
-; CHECK-NEXT:    [[B17:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 17), align 2
-; CHECK-NEXT:    [[B18:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 18), align 2
-; CHECK-NEXT:    [[B19:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 19), align 2
-; CHECK-NEXT:    [[B20:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 20), align 2
-; CHECK-NEXT:    [[B21:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 21), align 2
-; CHECK-NEXT:    [[B22:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 22), align 2
-; CHECK-NEXT:    [[B23:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 23), align 2
-; CHECK-NEXT:    [[B24:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24), align 2
-; CHECK-NEXT:    [[B25:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 25), align 2
-; CHECK-NEXT:    [[B26:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 26), align 2
-; CHECK-NEXT:    [[B27:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 27), align 2
-; CHECK-NEXT:    [[B28:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 28), align 2
-; CHECK-NEXT:    [[B29:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 29), align 2
-; CHECK-NEXT:    [[B30:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 30), align 2
-; CHECK-NEXT:    [[B31:%.*]] = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 31), align 2
-; CHECK-NEXT:    [[R0:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A0]], i16 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A1]], i16 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A2]], i16 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A3]], i16 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A4]], i16 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A5]], i16 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A6]], i16 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A7]], i16 [[B7]], i32 3)
-; CHECK-NEXT:    [[R8:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A8]], i16 [[B8]], i32 3)
-; CHECK-NEXT:    [[R9:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A9]], i16 [[B9]], i32 3)
-; CHECK-NEXT:    [[R10:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A10]], i16 [[B10]], i32 3)
-; CHECK-NEXT:    [[R11:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A11]], i16 [[B11]], i32 3)
-; CHECK-NEXT:    [[R12:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A12]], i16 [[B12]], i32 3)
-; CHECK-NEXT:    [[R13:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A13]], i16 [[B13]], i32 3)
-; CHECK-NEXT:    [[R14:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A14]], i16 [[B14]], i32 3)
-; CHECK-NEXT:    [[R15:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A15]], i16 [[B15]], i32 3)
-; CHECK-NEXT:    [[R16:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A16]], i16 [[B16]], i32 3)
-; CHECK-NEXT:    [[R17:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A17]], i16 [[B17]], i32 3)
-; CHECK-NEXT:    [[R18:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A18]], i16 [[B18]], i32 3)
-; CHECK-NEXT:    [[R19:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A19]], i16 [[B19]], i32 3)
-; CHECK-NEXT:    [[R20:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A20]], i16 [[B20]], i32 3)
-; CHECK-NEXT:    [[R21:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A21]], i16 [[B21]], i32 3)
-; CHECK-NEXT:    [[R22:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A22]], i16 [[B22]], i32 3)
-; CHECK-NEXT:    [[R23:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A23]], i16 [[B23]], i32 3)
-; CHECK-NEXT:    [[R24:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A24]], i16 [[B24]], i32 3)
-; CHECK-NEXT:    [[R25:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A25]], i16 [[B25]], i32 3)
-; CHECK-NEXT:    [[R26:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A26]], i16 [[B26]], i32 3)
-; CHECK-NEXT:    [[R27:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A27]], i16 [[B27]], i32 3)
-; CHECK-NEXT:    [[R28:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A28]], i16 [[B28]], i32 3)
-; CHECK-NEXT:    [[R29:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A29]], i16 [[B29]], i32 3)
-; CHECK-NEXT:    [[R30:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A30]], i16 [[B30]], i32 3)
-; CHECK-NEXT:    [[R31:%.*]] = call i16 @llvm.umul.fix.i16(i16 [[A31]], i16 [[B31]], i32 3)
-; CHECK-NEXT:    store i16 [[R0]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 0), align 2
-; CHECK-NEXT:    store i16 [[R1]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 1), align 2
-; CHECK-NEXT:    store i16 [[R2]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 2), align 2
-; CHECK-NEXT:    store i16 [[R3]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 3), align 2
-; CHECK-NEXT:    store i16 [[R4]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 4), align 2
-; CHECK-NEXT:    store i16 [[R5]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 5), align 2
-; CHECK-NEXT:    store i16 [[R6]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 6), align 2
-; CHECK-NEXT:    store i16 [[R7]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 7), align 2
-; CHECK-NEXT:    store i16 [[R8]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8), align 2
-; CHECK-NEXT:    store i16 [[R9]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 9), align 2
-; CHECK-NEXT:    store i16 [[R10]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 10), align 2
-; CHECK-NEXT:    store i16 [[R11]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 11), align 2
-; CHECK-NEXT:    store i16 [[R12]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 12), align 2
-; CHECK-NEXT:    store i16 [[R13]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 13), align 2
-; CHECK-NEXT:    store i16 [[R14]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 14), align 2
-; CHECK-NEXT:    store i16 [[R15]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 15), align 2
-; CHECK-NEXT:    store i16 [[R16]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16), align 2
-; CHECK-NEXT:    store i16 [[R17]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 17), align 2
-; CHECK-NEXT:    store i16 [[R18]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 18), align 2
-; CHECK-NEXT:    store i16 [[R19]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 19), align 2
-; CHECK-NEXT:    store i16 [[R20]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 20), align 2
-; CHECK-NEXT:    store i16 [[R21]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 21), align 2
-; CHECK-NEXT:    store i16 [[R22]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 22), align 2
-; CHECK-NEXT:    store i16 [[R23]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 23), align 2
-; CHECK-NEXT:    store i16 [[R24]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24), align 2
-; CHECK-NEXT:    store i16 [[R25]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 25), align 2
-; CHECK-NEXT:    store i16 [[R26]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 26), align 2
-; CHECK-NEXT:    store i16 [[R27]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 27), align 2
-; CHECK-NEXT:    store i16 [[R28]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 28), align 2
-; CHECK-NEXT:    store i16 [[R29]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 29), align 2
-; CHECK-NEXT:    store i16 [[R30]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 30), align 2
-; CHECK-NEXT:    store i16 [[R31]], i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 31), align 2
-; CHECK-NEXT:    ret void
+; SSE-LABEL: @umul_v32i16(
+; SSE-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @a16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP4:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP5:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @b16 to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP6:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP7:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP8:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24) to <8 x i16>*), align 2
+; SSE-NEXT:    [[TMP9:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP1]], <8 x i16> [[TMP5]], i32 3)
+; SSE-NEXT:    [[TMP10:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP6]], i32 3)
+; SSE-NEXT:    [[TMP11:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP3]], <8 x i16> [[TMP7]], i32 3)
+; SSE-NEXT:    [[TMP12:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP4]], <8 x i16> [[TMP8]], i32 3)
+; SSE-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* bitcast ([32 x i16]* @c16 to <8 x i16>*), align 2
+; SSE-NEXT:    store <8 x i16> [[TMP10]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8) to <8 x i16>*), align 2
+; SSE-NEXT:    store <8 x i16> [[TMP11]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <8 x i16>*), align 2
+; SSE-NEXT:    store <8 x i16> [[TMP12]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24) to <8 x i16>*), align 2
+; SSE-NEXT:    ret void
+;
+; SLM-LABEL: @umul_v32i16(
+; SLM-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @a16 to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 8) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP3:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP4:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 24) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP5:%.*]] = load <8 x i16>, <8 x i16>* bitcast ([32 x i16]* @b16 to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP6:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 8) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP7:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP8:%.*]] = load <8 x i16>, <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 24) to <8 x i16>*), align 2
+; SLM-NEXT:    [[TMP9:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP1]], <8 x i16> [[TMP5]], i32 3)
+; SLM-NEXT:    [[TMP10:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP2]], <8 x i16> [[TMP6]], i32 3)
+; SLM-NEXT:    [[TMP11:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP3]], <8 x i16> [[TMP7]], i32 3)
+; SLM-NEXT:    [[TMP12:%.*]] = call <8 x i16> @llvm.umul.fix.v8i16(<8 x i16> [[TMP4]], <8 x i16> [[TMP8]], i32 3)
+; SLM-NEXT:    store <8 x i16> [[TMP9]], <8 x i16>* bitcast ([32 x i16]* @c16 to <8 x i16>*), align 2
+; SLM-NEXT:    store <8 x i16> [[TMP10]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 8) to <8 x i16>*), align 2
+; SLM-NEXT:    store <8 x i16> [[TMP11]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <8 x i16>*), align 2
+; SLM-NEXT:    store <8 x i16> [[TMP12]], <8 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 24) to <8 x i16>*), align 2
+; SLM-NEXT:    ret void
+;
+; AVX-LABEL: @umul_v32i16(
+; AVX-NEXT:    [[TMP1:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @a16 to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP2:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP3:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @b16 to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP4:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.umul.fix.v16i16(<16 x i16> [[TMP1]], <16 x i16> [[TMP3]], i32 3)
+; AVX-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.umul.fix.v16i16(<16 x i16> [[TMP2]], <16 x i16> [[TMP4]], i32 3)
+; AVX-NEXT:    store <16 x i16> [[TMP5]], <16 x i16>* bitcast ([32 x i16]* @c16 to <16 x i16>*), align 2
+; AVX-NEXT:    store <16 x i16> [[TMP6]], <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX-NEXT:    ret void
+;
+; AVX512-LABEL: @umul_v32i16(
+; AVX512-NEXT:    [[TMP1:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @a16 to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP2:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP3:%.*]] = load <16 x i16>, <16 x i16>* bitcast ([32 x i16]* @b16 to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP4:%.*]] = load <16 x i16>, <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @b16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX512-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.umul.fix.v16i16(<16 x i16> [[TMP1]], <16 x i16> [[TMP3]], i32 3)
+; AVX512-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.umul.fix.v16i16(<16 x i16> [[TMP2]], <16 x i16> [[TMP4]], i32 3)
+; AVX512-NEXT:    store <16 x i16> [[TMP5]], <16 x i16>* bitcast ([32 x i16]* @c16 to <16 x i16>*), align 2
+; AVX512-NEXT:    store <16 x i16> [[TMP6]], <16 x i16>* bitcast (i16* getelementptr inbounds ([32 x i16], [32 x i16]* @c16, i32 0, i64 16) to <16 x i16>*), align 2
+; AVX512-NEXT:    ret void
 ;
   %a0  = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 0 ), align 2
   %a1  = load i16, i16* getelementptr inbounds ([32 x i16], [32 x i16]* @a16, i32 0, i64 1 ), align 2
@@ -1489,262 +1487,22 @@ define void @umul_v32i16() {
 
 define void @umul_v64i8() {
 ; CHECK-LABEL: @umul_v64i8(
-; CHECK-NEXT:    [[A0:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 0), align 1
-; CHECK-NEXT:    [[A1:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 1), align 1
-; CHECK-NEXT:    [[A2:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 2), align 1
-; CHECK-NEXT:    [[A3:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 3), align 1
-; CHECK-NEXT:    [[A4:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 4), align 1
-; CHECK-NEXT:    [[A5:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 5), align 1
-; CHECK-NEXT:    [[A6:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 6), align 1
-; CHECK-NEXT:    [[A7:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 7), align 1
-; CHECK-NEXT:    [[A8:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 8), align 1
-; CHECK-NEXT:    [[A9:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 9), align 1
-; CHECK-NEXT:    [[A10:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 10), align 1
-; CHECK-NEXT:    [[A11:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 11), align 1
-; CHECK-NEXT:    [[A12:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 12), align 1
-; CHECK-NEXT:    [[A13:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 13), align 1
-; CHECK-NEXT:    [[A14:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 14), align 1
-; CHECK-NEXT:    [[A15:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 15), align 1
-; CHECK-NEXT:    [[A16:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 16), align 1
-; CHECK-NEXT:    [[A17:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 17), align 1
-; CHECK-NEXT:    [[A18:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 18), align 1
-; CHECK-NEXT:    [[A19:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 19), align 1
-; CHECK-NEXT:    [[A20:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 20), align 1
-; CHECK-NEXT:    [[A21:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 21), align 1
-; CHECK-NEXT:    [[A22:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 22), align 1
-; CHECK-NEXT:    [[A23:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 23), align 1
-; CHECK-NEXT:    [[A24:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 24), align 1
-; CHECK-NEXT:    [[A25:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 25), align 1
-; CHECK-NEXT:    [[A26:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 26), align 1
-; CHECK-NEXT:    [[A27:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 27), align 1
-; CHECK-NEXT:    [[A28:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 28), align 1
-; CHECK-NEXT:    [[A29:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 29), align 1
-; CHECK-NEXT:    [[A30:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 30), align 1
-; CHECK-NEXT:    [[A31:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 31), align 1
-; CHECK-NEXT:    [[A32:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32), align 1
-; CHECK-NEXT:    [[A33:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 33), align 1
-; CHECK-NEXT:    [[A34:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 34), align 1
-; CHECK-NEXT:    [[A35:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 35), align 1
-; CHECK-NEXT:    [[A36:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 36), align 1
-; CHECK-NEXT:    [[A37:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 37), align 1
-; CHECK-NEXT:    [[A38:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 38), align 1
-; CHECK-NEXT:    [[A39:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 39), align 1
-; CHECK-NEXT:    [[A40:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 40), align 1
-; CHECK-NEXT:    [[A41:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 41), align 1
-; CHECK-NEXT:    [[A42:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 42), align 1
-; CHECK-NEXT:    [[A43:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 43), align 1
-; CHECK-NEXT:    [[A44:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 44), align 1
-; CHECK-NEXT:    [[A45:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 45), align 1
-; CHECK-NEXT:    [[A46:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 46), align 1
-; CHECK-NEXT:    [[A47:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 47), align 1
-; CHECK-NEXT:    [[A48:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 48), align 1
-; CHECK-NEXT:    [[A49:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 49), align 1
-; CHECK-NEXT:    [[A50:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 50), align 1
-; CHECK-NEXT:    [[A51:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 51), align 1
-; CHECK-NEXT:    [[A52:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 52), align 1
-; CHECK-NEXT:    [[A53:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 53), align 1
-; CHECK-NEXT:    [[A54:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 54), align 1
-; CHECK-NEXT:    [[A55:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 55), align 1
-; CHECK-NEXT:    [[A56:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 56), align 1
-; CHECK-NEXT:    [[A57:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 57), align 1
-; CHECK-NEXT:    [[A58:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 58), align 1
-; CHECK-NEXT:    [[A59:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 59), align 1
-; CHECK-NEXT:    [[A60:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 60), align 1
-; CHECK-NEXT:    [[A61:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 61), align 1
-; CHECK-NEXT:    [[A62:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 62), align 1
-; CHECK-NEXT:    [[A63:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 63), align 1
-; CHECK-NEXT:    [[B0:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 0), align 1
-; CHECK-NEXT:    [[B1:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 1), align 1
-; CHECK-NEXT:    [[B2:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 2), align 1
-; CHECK-NEXT:    [[B3:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 3), align 1
-; CHECK-NEXT:    [[B4:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 4), align 1
-; CHECK-NEXT:    [[B5:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 5), align 1
-; CHECK-NEXT:    [[B6:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 6), align 1
-; CHECK-NEXT:    [[B7:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 7), align 1
-; CHECK-NEXT:    [[B8:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 8), align 1
-; CHECK-NEXT:    [[B9:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 9), align 1
-; CHECK-NEXT:    [[B10:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 10), align 1
-; CHECK-NEXT:    [[B11:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 11), align 1
-; CHECK-NEXT:    [[B12:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 12), align 1
-; CHECK-NEXT:    [[B13:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 13), align 1
-; CHECK-NEXT:    [[B14:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 14), align 1
-; CHECK-NEXT:    [[B15:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 15), align 1
-; CHECK-NEXT:    [[B16:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 16), align 1
-; CHECK-NEXT:    [[B17:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 17), align 1
-; CHECK-NEXT:    [[B18:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 18), align 1
-; CHECK-NEXT:    [[B19:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 19), align 1
-; CHECK-NEXT:    [[B20:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 20), align 1
-; CHECK-NEXT:    [[B21:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 21), align 1
-; CHECK-NEXT:    [[B22:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 22), align 1
-; CHECK-NEXT:    [[B23:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 23), align 1
-; CHECK-NEXT:    [[B24:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 24), align 1
-; CHECK-NEXT:    [[B25:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 25), align 1
-; CHECK-NEXT:    [[B26:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 26), align 1
-; CHECK-NEXT:    [[B27:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 27), align 1
-; CHECK-NEXT:    [[B28:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 28), align 1
-; CHECK-NEXT:    [[B29:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 29), align 1
-; CHECK-NEXT:    [[B30:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 30), align 1
-; CHECK-NEXT:    [[B31:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 31), align 1
-; CHECK-NEXT:    [[B32:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32), align 1
-; CHECK-NEXT:    [[B33:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 33), align 1
-; CHECK-NEXT:    [[B34:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 34), align 1
-; CHECK-NEXT:    [[B35:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 35), align 1
-; CHECK-NEXT:    [[B36:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 36), align 1
-; CHECK-NEXT:    [[B37:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 37), align 1
-; CHECK-NEXT:    [[B38:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 38), align 1
-; CHECK-NEXT:    [[B39:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 39), align 1
-; CHECK-NEXT:    [[B40:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 40), align 1
-; CHECK-NEXT:    [[B41:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 41), align 1
-; CHECK-NEXT:    [[B42:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 42), align 1
-; CHECK-NEXT:    [[B43:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 43), align 1
-; CHECK-NEXT:    [[B44:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 44), align 1
-; CHECK-NEXT:    [[B45:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 45), align 1
-; CHECK-NEXT:    [[B46:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 46), align 1
-; CHECK-NEXT:    [[B47:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 47), align 1
-; CHECK-NEXT:    [[B48:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 48), align 1
-; CHECK-NEXT:    [[B49:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 49), align 1
-; CHECK-NEXT:    [[B50:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 50), align 1
-; CHECK-NEXT:    [[B51:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 51), align 1
-; CHECK-NEXT:    [[B52:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 52), align 1
-; CHECK-NEXT:    [[B53:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 53), align 1
-; CHECK-NEXT:    [[B54:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 54), align 1
-; CHECK-NEXT:    [[B55:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 55), align 1
-; CHECK-NEXT:    [[B56:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 56), align 1
-; CHECK-NEXT:    [[B57:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 57), align 1
-; CHECK-NEXT:    [[B58:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 58), align 1
-; CHECK-NEXT:    [[B59:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 59), align 1
-; CHECK-NEXT:    [[B60:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 60), align 1
-; CHECK-NEXT:    [[B61:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 61), align 1
-; CHECK-NEXT:    [[B62:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 62), align 1
-; CHECK-NEXT:    [[B63:%.*]] = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 63), align 1
-; CHECK-NEXT:    [[R0:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A0]], i8 [[B0]], i32 3)
-; CHECK-NEXT:    [[R1:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A1]], i8 [[B1]], i32 3)
-; CHECK-NEXT:    [[R2:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A2]], i8 [[B2]], i32 3)
-; CHECK-NEXT:    [[R3:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A3]], i8 [[B3]], i32 3)
-; CHECK-NEXT:    [[R4:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A4]], i8 [[B4]], i32 3)
-; CHECK-NEXT:    [[R5:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A5]], i8 [[B5]], i32 3)
-; CHECK-NEXT:    [[R6:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A6]], i8 [[B6]], i32 3)
-; CHECK-NEXT:    [[R7:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A7]], i8 [[B7]], i32 3)
-; CHECK-NEXT:    [[R8:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A8]], i8 [[B8]], i32 3)
-; CHECK-NEXT:    [[R9:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A9]], i8 [[B9]], i32 3)
-; CHECK-NEXT:    [[R10:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A10]], i8 [[B10]], i32 3)
-; CHECK-NEXT:    [[R11:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A11]], i8 [[B11]], i32 3)
-; CHECK-NEXT:    [[R12:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A12]], i8 [[B12]], i32 3)
-; CHECK-NEXT:    [[R13:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A13]], i8 [[B13]], i32 3)
-; CHECK-NEXT:    [[R14:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A14]], i8 [[B14]], i32 3)
-; CHECK-NEXT:    [[R15:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A15]], i8 [[B15]], i32 3)
-; CHECK-NEXT:    [[R16:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A16]], i8 [[B16]], i32 3)
-; CHECK-NEXT:    [[R17:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A17]], i8 [[B17]], i32 3)
-; CHECK-NEXT:    [[R18:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A18]], i8 [[B18]], i32 3)
-; CHECK-NEXT:    [[R19:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A19]], i8 [[B19]], i32 3)
-; CHECK-NEXT:    [[R20:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A20]], i8 [[B20]], i32 3)
-; CHECK-NEXT:    [[R21:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A21]], i8 [[B21]], i32 3)
-; CHECK-NEXT:    [[R22:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A22]], i8 [[B22]], i32 3)
-; CHECK-NEXT:    [[R23:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A23]], i8 [[B23]], i32 3)
-; CHECK-NEXT:    [[R24:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A24]], i8 [[B24]], i32 3)
-; CHECK-NEXT:    [[R25:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A25]], i8 [[B25]], i32 3)
-; CHECK-NEXT:    [[R26:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A26]], i8 [[B26]], i32 3)
-; CHECK-NEXT:    [[R27:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A27]], i8 [[B27]], i32 3)
-; CHECK-NEXT:    [[R28:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A28]], i8 [[B28]], i32 3)
-; CHECK-NEXT:    [[R29:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A29]], i8 [[B29]], i32 3)
-; CHECK-NEXT:    [[R30:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A30]], i8 [[B30]], i32 3)
-; CHECK-NEXT:    [[R31:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A31]], i8 [[B31]], i32 3)
-; CHECK-NEXT:    [[R32:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A32]], i8 [[B32]], i32 3)
-; CHECK-NEXT:    [[R33:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A33]], i8 [[B33]], i32 3)
-; CHECK-NEXT:    [[R34:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A34]], i8 [[B34]], i32 3)
-; CHECK-NEXT:    [[R35:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A35]], i8 [[B35]], i32 3)
-; CHECK-NEXT:    [[R36:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A36]], i8 [[B36]], i32 3)
-; CHECK-NEXT:    [[R37:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A37]], i8 [[B37]], i32 3)
-; CHECK-NEXT:    [[R38:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A38]], i8 [[B38]], i32 3)
-; CHECK-NEXT:    [[R39:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A39]], i8 [[B39]], i32 3)
-; CHECK-NEXT:    [[R40:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A40]], i8 [[B40]], i32 3)
-; CHECK-NEXT:    [[R41:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A41]], i8 [[B41]], i32 3)
-; CHECK-NEXT:    [[R42:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A42]], i8 [[B42]], i32 3)
-; CHECK-NEXT:    [[R43:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A43]], i8 [[B43]], i32 3)
-; CHECK-NEXT:    [[R44:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A44]], i8 [[B44]], i32 3)
-; CHECK-NEXT:    [[R45:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A45]], i8 [[B45]], i32 3)
-; CHECK-NEXT:    [[R46:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A46]], i8 [[B46]], i32 3)
-; CHECK-NEXT:    [[R47:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A47]], i8 [[B47]], i32 3)
-; CHECK-NEXT:    [[R48:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A48]], i8 [[B48]], i32 3)
-; CHECK-NEXT:    [[R49:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A49]], i8 [[B49]], i32 3)
-; CHECK-NEXT:    [[R50:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A50]], i8 [[B50]], i32 3)
-; CHECK-NEXT:    [[R51:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A51]], i8 [[B51]], i32 3)
-; CHECK-NEXT:    [[R52:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A52]], i8 [[B52]], i32 3)
-; CHECK-NEXT:    [[R53:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A53]], i8 [[B53]], i32 3)
-; CHECK-NEXT:    [[R54:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A54]], i8 [[B54]], i32 3)
-; CHECK-NEXT:    [[R55:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A55]], i8 [[B55]], i32 3)
-; CHECK-NEXT:    [[R56:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A56]], i8 [[B56]], i32 3)
-; CHECK-NEXT:    [[R57:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A57]], i8 [[B57]], i32 3)
-; CHECK-NEXT:    [[R58:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A58]], i8 [[B58]], i32 3)
-; CHECK-NEXT:    [[R59:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A59]], i8 [[B59]], i32 3)
-; CHECK-NEXT:    [[R60:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A60]], i8 [[B60]], i32 3)
-; CHECK-NEXT:    [[R61:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A61]], i8 [[B61]], i32 3)
-; CHECK-NEXT:    [[R62:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A62]], i8 [[B62]], i32 3)
-; CHECK-NEXT:    [[R63:%.*]] = call i8 @llvm.umul.fix.i8(i8 [[A63]], i8 [[B63]], i32 3)
-; CHECK-NEXT:    store i8 [[R0]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 0), align 1
-; CHECK-NEXT:    store i8 [[R1]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 1), align 1
-; CHECK-NEXT:    store i8 [[R2]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 2), align 1
-; CHECK-NEXT:    store i8 [[R3]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 3), align 1
-; CHECK-NEXT:    store i8 [[R4]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 4), align 1
-; CHECK-NEXT:    store i8 [[R5]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 5), align 1
-; CHECK-NEXT:    store i8 [[R6]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 6), align 1
-; CHECK-NEXT:    store i8 [[R7]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 7), align 1
-; CHECK-NEXT:    store i8 [[R8]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 8), align 1
-; CHECK-NEXT:    store i8 [[R9]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 9), align 1
-; CHECK-NEXT:    store i8 [[R10]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 10), align 1
-; CHECK-NEXT:    store i8 [[R11]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 11), align 1
-; CHECK-NEXT:    store i8 [[R12]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 12), align 1
-; CHECK-NEXT:    store i8 [[R13]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 13), align 1
-; CHECK-NEXT:    store i8 [[R14]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 14), align 1
-; CHECK-NEXT:    store i8 [[R15]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 15), align 1
-; CHECK-NEXT:    store i8 [[R16]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 16), align 1
-; CHECK-NEXT:    store i8 [[R17]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 17), align 1
-; CHECK-NEXT:    store i8 [[R18]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 18), align 1
-; CHECK-NEXT:    store i8 [[R19]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 19), align 1
-; CHECK-NEXT:    store i8 [[R20]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 20), align 1
-; CHECK-NEXT:    store i8 [[R21]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 21), align 1
-; CHECK-NEXT:    store i8 [[R22]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 22), align 1
-; CHECK-NEXT:    store i8 [[R23]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 23), align 1
-; CHECK-NEXT:    store i8 [[R24]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 24), align 1
-; CHECK-NEXT:    store i8 [[R25]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 25), align 1
-; CHECK-NEXT:    store i8 [[R26]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 26), align 1
-; CHECK-NEXT:    store i8 [[R27]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 27), align 1
-; CHECK-NEXT:    store i8 [[R28]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 28), align 1
-; CHECK-NEXT:    store i8 [[R29]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 29), align 1
-; CHECK-NEXT:    store i8 [[R30]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 30), align 1
-; CHECK-NEXT:    store i8 [[R31]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 31), align 1
-; CHECK-NEXT:    store i8 [[R32]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32), align 1
-; CHECK-NEXT:    store i8 [[R33]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 33), align 1
-; CHECK-NEXT:    store i8 [[R34]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 34), align 1
-; CHECK-NEXT:    store i8 [[R35]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 35), align 1
-; CHECK-NEXT:    store i8 [[R36]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 36), align 1
-; CHECK-NEXT:    store i8 [[R37]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 37), align 1
-; CHECK-NEXT:    store i8 [[R38]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 38), align 1
-; CHECK-NEXT:    store i8 [[R39]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 39), align 1
-; CHECK-NEXT:    store i8 [[R40]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 40), align 1
-; CHECK-NEXT:    store i8 [[R41]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 41), align 1
-; CHECK-NEXT:    store i8 [[R42]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 42), align 1
-; CHECK-NEXT:    store i8 [[R43]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 43), align 1
-; CHECK-NEXT:    store i8 [[R44]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 44), align 1
-; CHECK-NEXT:    store i8 [[R45]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 45), align 1
-; CHECK-NEXT:    store i8 [[R46]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 46), align 1
-; CHECK-NEXT:    store i8 [[R47]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 47), align 1
-; CHECK-NEXT:    store i8 [[R48]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 48), align 1
-; CHECK-NEXT:    store i8 [[R49]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 49), align 1
-; CHECK-NEXT:    store i8 [[R50]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 50), align 1
-; CHECK-NEXT:    store i8 [[R51]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 51), align 1
-; CHECK-NEXT:    store i8 [[R52]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 52), align 1
-; CHECK-NEXT:    store i8 [[R53]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 53), align 1
-; CHECK-NEXT:    store i8 [[R54]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 54), align 1
-; CHECK-NEXT:    store i8 [[R55]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 55), align 1
-; CHECK-NEXT:    store i8 [[R56]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 56), align 1
-; CHECK-NEXT:    store i8 [[R57]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 57), align 1
-; CHECK-NEXT:    store i8 [[R58]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 58), align 1
-; CHECK-NEXT:    store i8 [[R59]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 59), align 1
-; CHECK-NEXT:    store i8 [[R60]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 60), align 1
-; CHECK-NEXT:    store i8 [[R61]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 61), align 1
-; CHECK-NEXT:    store i8 [[R62]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 62), align 1
-; CHECK-NEXT:    store i8 [[R63]], i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 63), align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @a8 to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 32) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 48) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x i8>, <16 x i8>* bitcast ([64 x i8]* @b8 to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 32) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @b8, i32 0, i64 48) to <16 x i8>*), align 1
+; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i8> @llvm.umul.fix.v16i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP5]], i32 3)
+; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i8> @llvm.umul.fix.v16i8(<16 x i8> [[TMP2]], <16 x i8> [[TMP6]], i32 3)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i8> @llvm.umul.fix.v16i8(<16 x i8> [[TMP3]], <16 x i8> [[TMP7]], i32 3)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i8> @llvm.umul.fix.v16i8(<16 x i8> [[TMP4]], <16 x i8> [[TMP8]], i32 3)
+; CHECK-NEXT:    store <16 x i8> [[TMP9]], <16 x i8>* bitcast ([64 x i8]* @c8 to <16 x i8>*), align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP10]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 16) to <16 x i8>*), align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP11]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 32) to <16 x i8>*), align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP12]], <16 x i8>* bitcast (i8* getelementptr inbounds ([64 x i8], [64 x i8]* @c8, i32 0, i64 48) to <16 x i8>*), align 1
 ; CHECK-NEXT:    ret void
 ;
   %a0  = load i8, i8* getelementptr inbounds ([64 x i8], [64 x i8]* @a8, i32 0, i64 0 ), align 1

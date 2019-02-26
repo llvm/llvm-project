@@ -67,11 +67,10 @@ private:
 
   // Helper to generate an equivalent of scalar_to_vector into a new register,
   // returned via 'Dst'.
-  bool emitScalarToVector(unsigned &Dst, const LLT DstTy,
-                          const TargetRegisterClass *DstRC, unsigned Scalar,
-                          MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator MBBI,
-                          MachineRegisterInfo &MRI) const;
+  MachineInstr *emitScalarToVector(const LLT DstTy,
+                                   const TargetRegisterClass *DstRC,
+                                   unsigned Scalar,
+                                   MachineIRBuilder &MIRBuilder) const;
   bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectMergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI) const;
@@ -1712,26 +1711,19 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   return false;
 }
 
-bool AArch64InstructionSelector::emitScalarToVector(
-    unsigned &Dst, const LLT DstTy, const TargetRegisterClass *DstRC,
-    unsigned Scalar, MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MBBI, MachineRegisterInfo &MRI) const {
-  Dst = MRI.createVirtualRegister(DstRC);
-
-  unsigned UndefVec = MRI.createVirtualRegister(DstRC);
-  MachineInstr &UndefMI = *BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
-                                   TII.get(TargetOpcode::IMPLICIT_DEF))
-                               .addDef(UndefVec);
+MachineInstr *AArch64InstructionSelector::emitScalarToVector(
+    const LLT DstTy, const TargetRegisterClass *DstRC, unsigned Scalar,
+    MachineIRBuilder &MIRBuilder) const {
+  auto Undef = MIRBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF, {DstRC}, {});
 
   auto BuildFn = [&](unsigned SubregIndex) {
-    MachineInstr &InsMI = *BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
-                                   TII.get(TargetOpcode::INSERT_SUBREG))
-                               .addDef(Dst)
-                               .addUse(UndefVec)
-                               .addUse(Scalar)
-                               .addImm(SubregIndex);
-    constrainSelectedInstRegOperands(UndefMI, TII, TRI, RBI);
-    return constrainSelectedInstRegOperands(InsMI, TII, TRI, RBI);
+    auto Ins =
+        MIRBuilder
+            .buildInstr(TargetOpcode::INSERT_SUBREG, {DstRC}, {Undef, Scalar})
+            .addImm(SubregIndex);
+    constrainSelectedInstRegOperands(*Undef, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*Ins, TII, TRI, RBI);
+    return &*Ins;
   };
 
   switch (DstTy.getElementType().getSizeInBits()) {
@@ -1742,7 +1734,7 @@ bool AArch64InstructionSelector::emitScalarToVector(
   case 64:
     return BuildFn(AArch64::dsub);
   default:
-    return false;
+    return nullptr;
   }
 }
 
@@ -2077,59 +2069,48 @@ bool AArch64InstructionSelector::selectBuildVector(
     }
   }
 
-  unsigned DstVec = 0;
+  MachineIRBuilder MIRBuilder(I);
 
   const TargetRegisterClass *DstRC = &AArch64::FPR128RegClass;
-  if (!emitScalarToVector(DstVec, DstTy, DstRC, I.getOperand(1).getReg(),
-                          *I.getParent(), I.getIterator(), MRI))
+  MachineInstr *ScalarToVec =
+      emitScalarToVector(DstTy, DstRC, I.getOperand(1).getReg(), MIRBuilder);
+  if (!ScalarToVec)
     return false;
 
+  unsigned DstVec = ScalarToVec->getOperand(0).getReg();
   unsigned DstSize = DstTy.getSizeInBits();
 
   // Keep track of the last MI we inserted. Later on, we might be able to save
   // a copy using it.
   MachineInstr *PrevMI = nullptr;
   for (unsigned i = 2, e = DstSize / EltSize + 1; i < e; ++i) {
-    unsigned InsDef;
-
     // Note that if we don't do a subregister copy, we end up making one more
     // of these than we need.
-    InsDef = MRI.createVirtualRegister(DstRC);
+    unsigned InsDef = MRI.createVirtualRegister(DstRC);
     unsigned LaneIdx = i - 1;
     if (RB.getID() == AArch64::FPRRegBankID) {
-      unsigned ImpDef = MRI.createVirtualRegister(DstRC);
-      MachineInstr &ImpDefMI = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                        TII.get(TargetOpcode::IMPLICIT_DEF))
-                                    .addDef(ImpDef);
-      unsigned InsSubDef = MRI.createVirtualRegister(DstRC);
-      MachineInstr &InsSubMI = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                        TII.get(TargetOpcode::INSERT_SUBREG))
-                                    .addDef(InsSubDef)
-                                    .addUse(ImpDef)
-                                    .addUse(I.getOperand(i).getReg())
-                                    .addImm(SubregIdx);
-      MachineInstr &InsEltMI =
-          *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc))
-               .addDef(InsDef)
-               .addUse(DstVec)
-               .addImm(LaneIdx)
-               .addUse(InsSubDef)
-               .addImm(0);
-      constrainSelectedInstRegOperands(ImpDefMI, TII, TRI, RBI);
-      constrainSelectedInstRegOperands(InsSubMI, TII, TRI, RBI);
-      constrainSelectedInstRegOperands(InsEltMI, TII, TRI, RBI);
+      auto ImpDef =
+          MIRBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF, {DstRC}, {});
+      auto InsSub = MIRBuilder
+                        .buildInstr(TargetOpcode::INSERT_SUBREG, {DstRC},
+                                    {ImpDef, I.getOperand(i)})
+                        .addImm(SubregIdx);
+      auto InsElt = MIRBuilder.buildInstr(Opc, {InsDef}, {DstVec})
+                        .addImm(LaneIdx)
+                        .addUse(InsSub.getReg(0))
+                        .addImm(0);
+      constrainSelectedInstRegOperands(*ImpDef, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(*InsSub, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(*InsElt, TII, TRI, RBI);
       DstVec = InsDef;
-      PrevMI = &InsEltMI;
+      PrevMI = &*InsElt;
     } else {
-      MachineInstr &InsMI =
-          *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc))
-               .addDef(InsDef)
-               .addUse(DstVec)
-               .addImm(LaneIdx)
-               .addUse(I.getOperand(i).getReg());
-      constrainSelectedInstRegOperands(InsMI, TII, TRI, RBI);
+      auto Ins = MIRBuilder.buildInstr(Opc, {InsDef}, {DstVec})
+                     .addImm(LaneIdx)
+                     .addUse(I.getOperand(i).getReg());
+      constrainSelectedInstRegOperands(*Ins, TII, TRI, RBI);
       DstVec = InsDef;
-      PrevMI = &InsMI;
+      PrevMI = &*Ins;
     }
   }
 
@@ -2162,6 +2143,8 @@ bool AArch64InstructionSelector::selectBuildVector(
     unsigned Reg = MRI.createVirtualRegister(RC);
     unsigned DstReg = I.getOperand(0).getReg();
 
+    // MIRBuilder doesn't let us create uses with subregs & flags, so use
+    // BuildMI here instead.
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
         .addUse(DstVec, 0, SubReg);

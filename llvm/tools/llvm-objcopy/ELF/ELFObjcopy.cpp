@@ -566,6 +566,16 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   if (!Config.AddGnuDebugLink.empty())
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
 
+  for (const NewSymbolInfo &SI : Config.SymbolsToAdd) {
+    SectionBase *Sec = Obj.findSection(SI.SectionName);
+    uint64_t Value = Sec ? Sec->Addr + SI.Value : SI.Value;
+    Obj.SymbolTable->addSymbol(SI.SymbolName, SI.Bind, SI.Type, Sec, Value,
+                               SI.Visibility,
+                               Sec ? SYMBOL_SIMPLE_INDEX : SHN_ABS, 0);
+  }
+
+  if (Config.EntryExpr)
+    Obj.Entry = Config.EntryExpr(Obj.Entry);
   return Error::success();
 }
 
