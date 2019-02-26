@@ -4405,9 +4405,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Twine(N)));
   }
 
-  // -frandstruct-seed parent process
-  if (Arg *A = Args.getLastArg(options::OPT_frandstruct_seed_EQ)) {
-    CmdArgs.push_back( "-frandstruct-seed" );
+  // -randstruct-seed parent process
+  if (Arg *A = Args.getLastArg(options::OPT_randstruct_seed_EQ)) {
+    CmdArgs.push_back( "-randstruct-seed" );
     CmdArgs.push_back(A->getValue(0));
   }
 
