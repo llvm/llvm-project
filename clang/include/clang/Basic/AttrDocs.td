@@ -4094,4 +4094,22 @@ Likewise, when applied to a strong local variable, that variable becomes
 ``const`` and is considered externally-retained.
 
 When compiled without ``-fobjc-arc``, this attribute is ignored.
-}]; }
+}]; 
+}
+
+def ClangRandstructDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The attribute ``randomize_layout`` can be applied to the declaration of
+a record. ``randomize_layout`` instructs the compiler to randomize the memory layout 
+of the member variables of the record.
+.. code-block:: c
+
+  // Indicates that this struct should be randomized by Randstruct implementation.
+  struct s {
+    char *a;
+    char *b;
+    char *c;
+  }__attribute__((randomize_layout));
+}];
+}
