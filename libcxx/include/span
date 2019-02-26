@@ -42,8 +42,10 @@ public:
     using index_type = ptrdiff_t;
     using difference_type = ptrdiff_t;
     using pointer = element_type*;
+    using const_pointer = const element_type*;
     using reference = element_type&;
     using iterator = implementation-defined;
+    using const_reference = const element_type&;
     using const_iterator = implementation-defined;
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -88,7 +90,8 @@ public:
 
     // [span.elem], span element access
     constexpr reference operator[](index_type idx) const;
-    constexpr reference operator()(index_type idx) const;
+    constexpr reference front() const;
+    constexpr reference back() const;
     constexpr pointer data() const noexcept;
 
     // [span.iterators], span iterator support
@@ -195,9 +198,9 @@ public:
     using index_type             = ptrdiff_t;
     using difference_type        = ptrdiff_t;
     using pointer                = _Tp *;
-    using const_pointer          = const _Tp *; // not in standard
+    using const_pointer          = const _Tp *;
     using reference              = _Tp &;
-    using const_reference        = const _Tp &; // not in standard
+    using const_reference        = const _Tp &;
     using iterator               =  __wrap_iter<pointer>;
     using const_iterator         =  __wrap_iter<const_pointer>;
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
@@ -221,20 +224,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY constexpr span(element_type (&__arr)[_Extent])          noexcept : __data{__arr} {}
     _LIBCPP_INLINE_VISIBILITY constexpr span(      array<value_type, _Extent>& __arr) noexcept : __data{__arr.data()} {}
     _LIBCPP_INLINE_VISIBILITY constexpr span(const array<value_type, _Extent>& __arr) noexcept : __data{__arr.data()} {}
-
-    template <class _Container>
-    inline _LIBCPP_INLINE_VISIBILITY
-        constexpr span(      _Container& __c,
-            enable_if_t<__is_span_compatible_container<_Container, _Tp>::value, nullptr_t> = nullptr)
-        : __data{_VSTD::data(__c)}
-        { _LIBCPP_ASSERT(_Extent == _VSTD::size(__c), "size mismatch in span's constructor (container)"); }
-
-    template <class _Container>
-    inline _LIBCPP_INLINE_VISIBILITY
-        constexpr span(const _Container& __c,
-            enable_if_t<__is_span_compatible_container<const _Container, _Tp>::value, nullptr_t> = nullptr)
-        : __data{_VSTD::data(__c)}
-        { _LIBCPP_ASSERT(_Extent == _VSTD::size(__c), "size mismatch in span's constructor (const container)"); }
 
     template <class _OtherElementType>
     inline _LIBCPP_INLINE_VISIBILITY
@@ -319,10 +308,16 @@ public:
         return __data[__idx];
     }
 
-    _LIBCPP_INLINE_VISIBILITY constexpr reference operator()(index_type __idx) const noexcept
+    _LIBCPP_INLINE_VISIBILITY constexpr reference front() const noexcept
     {
-        _LIBCPP_ASSERT(__idx >= 0 && __idx < size(), "span<T,N>() index out of bounds");
-        return __data[__idx];
+        static_assert(_Extent > 0, "span<T,N>[].front() on empty span");
+        return __data[0];
+    }
+
+    _LIBCPP_INLINE_VISIBILITY constexpr reference back() const noexcept
+    {
+        static_assert(_Extent > 0, "span<T,N>[].back() on empty span");
+        return __data[size()-1];
     }
 
     _LIBCPP_INLINE_VISIBILITY constexpr pointer data()                         const noexcept { return __data; }
@@ -367,9 +362,9 @@ public:
     using index_type             = ptrdiff_t;
     using difference_type        = ptrdiff_t;
     using pointer                = _Tp *;
-    using const_pointer          = const _Tp *; // not in standard
+    using const_pointer          = const _Tp *;
     using reference              = _Tp &;
-    using const_reference        = const _Tp &; // not in standard
+    using const_reference        = const _Tp &;
     using iterator               =  __wrap_iter<pointer>;
     using const_iterator         =  __wrap_iter<const_pointer>;
     using reverse_iterator       = _VSTD::reverse_iterator<iterator>;
@@ -484,11 +479,18 @@ public:
         return __data[__idx];
     }
 
-    _LIBCPP_INLINE_VISIBILITY constexpr reference operator()(index_type __idx) const noexcept
+    _LIBCPP_INLINE_VISIBILITY constexpr reference front() const noexcept
     {
-        _LIBCPP_ASSERT(__idx >= 0 && __idx < size(), "span<T>() index out of bounds");
-        return __data[__idx];
+        _LIBCPP_ASSERT(!empty(), "span<T>[].front() on empty span");
+        return __data[0];
     }
+
+    _LIBCPP_INLINE_VISIBILITY constexpr reference back() const noexcept
+    {
+        _LIBCPP_ASSERT(!empty(), "span<T>[].back() on empty span");
+        return __data[size()-1];
+    }
+
 
     _LIBCPP_INLINE_VISIBILITY constexpr pointer data()                         const noexcept { return __data; }
 

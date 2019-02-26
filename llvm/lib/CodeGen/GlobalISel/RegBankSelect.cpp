@@ -171,19 +171,23 @@ bool RegBankSelect::repairReg(
     assert(ValMapping.partsAllUniform() && "irregular breakdowns not supported");
 
     LLT RegTy = MRI->getType(MO.getReg());
-    assert(!RegTy.isPointer() && "not implemented");
-
-    // FIXME: We could handle split vectors with concat_vectors easily, but this
-    // would require an agreement on the type of registers with the
-    // target. Currently createVRegs just uses scalar types, and expects the
-    // target code to replace this type (which we won't know about here)
-    assert((RegTy.isScalar() ||
-            RegTy.getNumElements() == ValMapping.NumBreakDowns) &&
-           "only basic vector breakdowns currently supported");
-
     if (MO.isDef()) {
-      unsigned MergeOp = RegTy.isScalar() ?
-        TargetOpcode::G_MERGE_VALUES : TargetOpcode::G_BUILD_VECTOR;
+      unsigned MergeOp;
+      if (RegTy.isVector()) {
+        if (ValMapping.NumBreakDowns == RegTy.getNumElements())
+          MergeOp = TargetOpcode::G_BUILD_VECTOR;
+        else {
+          assert(
+              (ValMapping.BreakDown[0].Length * ValMapping.NumBreakDowns ==
+               RegTy.getSizeInBits()) &&
+              (ValMapping.BreakDown[0].Length % RegTy.getScalarSizeInBits() ==
+               0) &&
+              "don't understand this value breakdown");
+
+          MergeOp = TargetOpcode::G_CONCAT_VECTORS;
+        }
+      } else
+        MergeOp = TargetOpcode::G_MERGE_VALUES;
 
       auto MergeBuilder =
         MIRBuilder.buildInstrNoInsert(MergeOp)

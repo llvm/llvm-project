@@ -174,6 +174,9 @@ public:
   /// end_sections() if it is undefined or is an absolute symbol.
   Expected<section_iterator> getSection() const;
 
+  // Get the section index of the section of this symbol
+  int getSectionIndex() const;
+
   const ObjectFile *getObject() const;
 };
 
@@ -228,6 +231,7 @@ protected:
   virtual Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const = 0;
   virtual Expected<section_iterator>
   getSymbolSection(DataRefImpl Symb) const = 0;
+  virtual int getSymbolSectionIndex(DataRefImpl Symb) const { return -1; }
 
   // Same as above for SectionRef.
   friend class SectionRef;
@@ -373,6 +377,10 @@ inline uint32_t SymbolRef::getAlignment() const {
 
 inline uint64_t SymbolRef::getCommonSize() const {
   return getObject()->getCommonSymbolSize(getRawDataRefImpl());
+}
+
+inline int SymbolRef::getSectionIndex() const {
+  return getObject()->getSymbolSectionIndex(getRawDataRefImpl());
 }
 
 inline Expected<section_iterator> SymbolRef::getSection() const {

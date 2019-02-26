@@ -20,6 +20,8 @@
 //  using difference_type        = ptrdiff_t;
 //  using pointer                = element_type *;
 //  using reference              = element_type &;
+//  using const_pointe           = const element_type *;
+//  using const_reference        = const element_type &;
 //  using iterator               = implementation-defined;
 //  using const_iterator         = implementation-defined;
 //  using reverse_iterator       = std::reverse_iterator<iterator>;
@@ -69,7 +71,9 @@ void testSpan()
     ASSERT_SAME_TYPE(typename S::index_type,      std::ptrdiff_t);
     ASSERT_SAME_TYPE(typename S::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(typename S::pointer,         ElementType *);
+    ASSERT_SAME_TYPE(typename S::const_pointer,   const ElementType *);
     ASSERT_SAME_TYPE(typename S::reference,       ElementType &);
+    ASSERT_SAME_TYPE(typename S::const_reference, const ElementType &);
 
     static_assert(S::extent == Size); // check that it exists
 

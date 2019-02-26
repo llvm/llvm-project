@@ -21,9 +21,6 @@
 //    and prefer it over others.) When only limited coverage information is
 //    available (just from one binary), don't try to guess any region counts.
 
-// FIXME: Fails with: "Failed to load coverage: No coverage data found"
-// XFAIL: windows
-
 struct A {
   A() {}    // V1: [[@LINE]]{{ *}}|{{ *}}1
             // V1-ONLY: [[@LINE+1]]{{ *}}|{{ *}}|

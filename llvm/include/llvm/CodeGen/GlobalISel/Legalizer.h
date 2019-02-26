@@ -54,6 +54,11 @@ public:
         MachineFunctionProperties::Property::Legalized);
   }
 
+  MachineFunctionProperties getClearedProperties() const override {
+    return MachineFunctionProperties()
+      .set(MachineFunctionProperties::Property::NoPHIs);
+  }
+
   bool combineExtracts(MachineInstr &MI, MachineRegisterInfo &MRI,
                        const TargetInstrInfo &TII);
 

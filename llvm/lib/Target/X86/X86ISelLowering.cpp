@@ -2976,22 +2976,6 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
   else
     ValVT = VA.getValVT();
 
-  // Calculate SP offset of interrupt parameter, re-arrange the slot normally
-  // taken by a return address.
-  int Offset = 0;
-  if (CallConv == CallingConv::X86_INTR) {
-    // X86 interrupts may take one or two arguments.
-    // On the stack there will be no return address as in regular call.
-    // Offset of last argument need to be set to -4/-8 bytes.
-    // Where offset of the first argument out of two, should be set to 0 bytes.
-    Offset = (Subtarget.is64Bit() ? 8 : 4) * ((i + 1) % Ins.size() - 1);
-    if (Subtarget.is64Bit() && Ins.size() == 2) {
-      // The stack pointer needs to be realigned for 64 bit handlers with error
-      // code, so the argument offset changes by 8 bytes.
-      Offset += 8;
-    }
-  }
-
   // FIXME: For now, all byval parameter objects are marked mutable. This can be
   // changed with more analysis.
   // In case of tail call optimization mark all arguments mutable. Since they
@@ -3004,10 +2988,6 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
     // can be improved with deeper analysis.
     int FI = MFI.CreateFixedObject(Bytes, VA.getLocMemOffset(), isImmutable,
                                    /*isAliased=*/true);
-    // Adjust SP offset of interrupt parameter.
-    if (CallConv == CallingConv::X86_INTR) {
-      MFI.setObjectOffset(FI, Offset);
-    }
     return DAG.getFrameIndex(FI, PtrVT);
   }
 
@@ -3060,11 +3040,6 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
     MFI.setObjectZExt(FI, true);
   } else if (VA.getLocInfo() == CCValAssign::SExt) {
     MFI.setObjectSExt(FI, true);
-  }
-
-  // Adjust SP offset of interrupt parameter.
-  if (CallConv == CallingConv::X86_INTR) {
-    MFI.setObjectOffset(FI, Offset);
   }
 
   SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
@@ -3155,14 +3130,6 @@ SDValue X86TargetLowering::LowerFormalArguments(
   assert(
       !(isVarArg && canGuaranteeTCO(CallConv)) &&
       "Var args not supported with calling conv' regcall, fastcc, ghc or hipe");
-
-  if (CallConv == CallingConv::X86_INTR) {
-    bool isLegal = Ins.size() == 1 ||
-                   (Ins.size() == 2 && ((Is64Bit && Ins[1].VT == MVT::i64) ||
-                                        (!Is64Bit && Ins[1].VT == MVT::i32)));
-    if (!isLegal)
-      report_fatal_error("X86 interrupts may take one or two arguments");
-  }
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;

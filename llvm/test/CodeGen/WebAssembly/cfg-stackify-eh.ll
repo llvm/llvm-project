@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
+; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -disable-block-placement -verify-machineinstrs -fast-isel=false -machine-sink-split-probability-threshold=0 -cgp-freq-ratio-to-skip-merge=1000 -exception-model=wasm -mattr=+exception-handling | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -7,26 +7,37 @@ target triple = "wasm32-unknown-unknown"
 @_ZTId = external constant i8*
 
 ; Simple test case with two catch clauses
+;
+; void foo();
 ; void test0() {
 ;   try {
 ;     foo();
-;   } catch (int n) {
-;     bar();
-;   } catch (double d) {
+;   } catch (int) {
+;   } catch (double) {
 ;   }
 ; }
 
 ; CHECK-LABEL: test0
+; CHECK: block
 ; CHECK:   try
-; CHECK:   call      foo
-; CHECK:   catch     $[[EXCEPT_REF:[0-9]+]]=
-; CHECK:   block i32
-; CHECK:   br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
-; CHECK:   rethrow
-; CHECK:   end_block
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality
-; CHECK:   end_try
-; CHECK:   return
+; CHECK:     call      foo
+; CHECK:     br        0                               # 0: down to label1
+; CHECK:   catch
+; CHECK:     block
+; CHECK:       br_if     0, {{.*}}                     # 0: down to label3
+; CHECK:       i32.call  $drop=, __cxa_begin_catch
+; CHECK:       call      __cxa_end_catch
+; CHECK:       br        1                             # 1: down to label1
+; CHECK:     end_block                                 # label3:
+; CHECK:     block
+; CHECK:       br_if     0, {{.*}}                     # 0: down to label4
+; CHECK:       i32.call  $drop=, __cxa_begin_catch
+; CHECK:       call      __cxa_end_catch
+; CHECK:       br        1                             # 1: down to label1
+; CHECK:     end_block                                 # label4:
+; CHECK:     call      __cxa_rethrow
+; CHECK:   end_try                                     # label1:
+; CHECK: end_block
 define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -45,21 +56,16 @@ catch.start:                                      ; preds = %catch.dispatch
 
 catch2:                                           ; preds = %catch.start
   %5 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
-  %6 = bitcast i8* %5 to i32*
-  %7 = load i32, i32* %6, align 4
-  call void @bar() [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
 catch.fallthrough:                                ; preds = %catch.start
-  %8 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTId to i8*))
-  %matches1 = icmp eq i32 %3, %8
+  %6 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTId to i8*))
+  %matches1 = icmp eq i32 %3, %6
   br i1 %matches1, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.fallthrough
-  %9 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
-  %10 = bitcast i8* %9 to double*
-  %11 = load double, double* %10, align 8
+  %7 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
@@ -75,41 +81,17 @@ try.cont:                                         ; preds = %entry, %catch, %cat
 ; void test1() {
 ;   try {
 ;     foo();
-;   } catch (int n) {
+;   } catch (int) {
 ;     try {
 ;       foo();
-;     } catch (int n) {
+;     } catch (int) {
 ;       foo();
 ;     }
 ;   }
 ; }
 
 ; CHECK-LABEL: test1
-; CHECK:   try
-; CHECK:   call      foo
-; CHECK:   catch
-; CHECK:   br_on_exn 0, __cpp_exception
-; CHECK:   rethrow
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality
-; CHECK:   try
-; CHECK:   call      foo
-; CHECK:   catch
-; CHECK:   br_on_exn   0, __cpp_exception
-; CHECK:   rethrow
-; CHECK:   i32.call  $drop=, _Unwind_CallPersonality
-; CHECK:   try
-; CHECK:   i32.call  $drop=, __cxa_begin_catch
-; CHECK:   try
-; CHECK:   call      foo
-; CHECK:   catch     $drop=
-; CHECK:   rethrow
-; CHECK:   end_try
-; CHECK:   catch     $drop=
-; CHECK:   rethrow
-; CHECK:   end_try
-; CHECK:   end_try
-; CHECK:   end_try
-; CHECK:   return
+; TODO Fill in CHECK lines once we fix ScopeTops info bug in D58605
 define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -195,29 +177,39 @@ unreachable:                                      ; preds = %rethrow5
 ; }
 
 ; CHECK-LABEL: test2
+; CHECK: block
 ; CHECK:   try
-; CHECK:   call      foo
+; CHECK:     call      foo
+; CHECK:     br        0                               # 0: down to label17
 ; CHECK:   catch
-; CHECK:   br_on_exn   0, __cpp_exception
-; CHECK:   rethrow
-; CHECK:   loop
-; CHECK:   try
-; CHECK:   call      foo
-; CHECK:   catch     $drop=
-; CHECK:   try
-; CHECK:   call      __cxa_end_catch
-; CHECK:   catch
-; CHECK:   br_on_exn   0, __cpp_exception
-; CHECK:   call      __clang_call_terminate, 0
-; CHECK:   unreachable
-; CHECK:   call      __clang_call_terminate
-; CHECK:   unreachable
-; CHECK:   end_try
-; CHECK:   rethrow
-; CHECK:   end_try
-; CHECK:   end_loop
-; CHECK:   end_try
-; CHECK:   return
+; CHECK:     i32.call  $drop=, __cxa_begin_catch
+; CHECK:     loop                                      # label19:
+; CHECK:       block
+; CHECK:         block
+; CHECK:           br_if     0, {{.*}}                 # 0: down to label21
+; CHECK:           try
+; CHECK:             call      foo
+; CHECK:             br        2                       # 2: down to label20
+; CHECK:           catch
+; CHECK:             block
+; CHECK:               try
+; CHECK:                 call      __cxa_end_catch
+; CHECK:                 br        0                   # 0: down to label24
+; CHECK:               catch
+; CHECK:                 call      __clang_call_terminate
+; CHECK:                 unreachable
+; CHECK:               end_try                         # label24:
+; CHECK:             end_block
+; CHECK:             rethrow                           # to caller
+; CHECK:           end_try
+; CHECK:         end_block                             # label21:
+; CHECK:         call      __cxa_end_catch
+; CHECK:         br        2                           # 2: down to label17
+; CHECK:       end_block                               # label20:
+; CHECK:       br        0                             # 0: up to label19
+; CHECK:     end_loop
+; CHECK:   end_try                                     # label17:
+; CHECK: end_block
 define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()

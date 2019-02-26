@@ -2161,13 +2161,20 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 
     if (Tok.is(tok::colon))
       Data.ColonLoc = ConsumeToken();
-  } else if (Kind == OMPC_to) {
+  } else if (Kind == OMPC_to || Kind == OMPC_from) {
     if (Tok.is(tok::identifier)) {
       bool IsMapperModifier = false;
-      auto Modifier = static_cast<OpenMPToModifierKind>(
-          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)));
-      if (Modifier == OMPC_TO_MODIFIER_mapper)
-        IsMapperModifier = true;
+      if (Kind == OMPC_to) {
+        auto Modifier = static_cast<OpenMPToModifierKind>(
+            getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)));
+        if (Modifier == OMPC_TO_MODIFIER_mapper)
+          IsMapperModifier = true;
+      } else {
+        auto Modifier = static_cast<OpenMPFromModifierKind>(
+            getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)));
+        if (Modifier == OMPC_FROM_MODIFIER_mapper)
+          IsMapperModifier = true;
+      }
       if (IsMapperModifier) {
         // Parse the mapper modifier.
         ConsumeToken();
@@ -2282,7 +2289,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///    to-clause:
 ///       'to' '(' [ mapper '(' mapper-identifier ')' ':' ] list ')'
 ///    from-clause:
-///       'from' '(' list ')'
+///       'from' '(' [ mapper '(' mapper-identifier ')' ':' ] list ')'
 ///    use_device_ptr-clause:
 ///       'use_device_ptr' '(' list ')'
 ///    is_device_ptr-clause:

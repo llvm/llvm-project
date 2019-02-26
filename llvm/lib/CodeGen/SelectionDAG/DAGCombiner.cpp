@@ -17404,7 +17404,7 @@ static SDValue partitionShuffleOfConcats(SDNode *N, SelectionDAG &DAG) {
     for (int i = 0; i != (int)NumElemsPerConcat; ++i) {
       if (IsUndefMaskElt(SubMask[i]))
         continue;
-      if ((SubMask[i] % NumElemsPerConcat) != i)
+      if ((SubMask[i] % (int)NumElemsPerConcat) != i)
         return SDValue();
       int EltOpIdx = SubMask[i] / NumElemsPerConcat;
       if (0 <= OpIdx && EltOpIdx != OpIdx)
