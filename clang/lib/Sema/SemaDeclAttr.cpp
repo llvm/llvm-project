@@ -245,11 +245,11 @@ static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
       !Expr->isIntegerConstantExpr(I, S.Context)) {
     if (Idx != UINT_MAX)
       S.Diag(getAttrLoc(AI), diag::err_attribute_argument_n_type)
-          << AI << Idx << AANT_ArgumentIntegerConstant
+          << &AI << Idx << AANT_ArgumentIntegerConstant
           << Expr->getSourceRange();
     else
       S.Diag(getAttrLoc(AI), diag::err_attribute_argument_type)
-          << AI << AANT_ArgumentIntegerConstant << Expr->getSourceRange();
+          << &AI << AANT_ArgumentIntegerConstant << Expr->getSourceRange();
     return false;
   }
 
@@ -261,7 +261,7 @@ static bool checkUInt32Argument(Sema &S, const AttrInfo &AI, const Expr *Expr,
 
   if (StrictlyUnsigned && I.isSigned() && I.isNegative()) {
     S.Diag(getAttrLoc(AI), diag::err_attribute_requires_positive_integer)
-        << AI << /*non-negative*/ 1;
+        << &AI << /*non-negative*/ 1;
     return false;
   }
 
@@ -5853,64 +5853,115 @@ static void handleInterruptAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
 }
 
-static void handleAMDGPUFlatWorkGroupSizeAttr(Sema &S, Decl *D,
-                                              const ParsedAttr &AL) {
+static bool
+checkAMDGPUFlatWorkGroupSizeArguments(Sema &S, Expr *MinExpr, Expr *MaxExpr,
+                                      const AMDGPUFlatWorkGroupSizeAttr &Attr) {
+  // Accept template arguments for now as they depend on something else.
+  // We'll get to check them when they eventually get instantiated.
+  if (MinExpr->isValueDependent() || MaxExpr->isValueDependent())
+    return false;
+
   uint32_t Min = 0;
-  Expr *MinExpr = AL.getArgAsExpr(0);
-  if (MinExpr->isEvaluatable(S.Context) &&
-      !checkUInt32Argument(S, AL, MinExpr, Min))
-    return;
+  if (!checkUInt32Argument(S, Attr, MinExpr, Min, 0))
+    return true;
 
   uint32_t Max = 0;
-  Expr *MaxExpr = AL.getArgAsExpr(1);
-  if (MaxExpr->isEvaluatable(S.Context) &&
-      !checkUInt32Argument(S, AL, MaxExpr, Max))
-    return;
+  if (!checkUInt32Argument(S, Attr, MaxExpr, Max, 1))
+    return true;
 
-  if (MinExpr->isEvaluatable(S.Context) && MaxExpr->isEvaluatable(S.Context)) {
-    if (Min == 0 && Max != 0) {
-      S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 0;
-      return;
-    }
-    if (Min > Max) {
-      S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 1;
-      return;
-    }
+  if (Min == 0 && Max != 0) {
+    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
+        << &Attr << 0;
+    return true;
+  }
+  if (Min > Max) {
+    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
+        << &Attr << 1;
+    return true;
   }
 
-  D->addAttr(::new (S.Context) AMDGPUFlatWorkGroupSizeAttr(
-      AL.getLoc(), S.Context, MinExpr, MaxExpr,
-      AL.getAttributeSpellingListIndex()));
+  return false;
+}
+
+void Sema::addAMDGPUFlatWorkGroupSizeAttr(SourceRange AttrRange, Decl *D,
+                                          Expr *MinExpr, Expr *MaxExpr,
+                                          unsigned SpellingListIndex) {
+  AMDGPUFlatWorkGroupSizeAttr TmpAttr(AttrRange, Context, MinExpr, MaxExpr,
+                                      SpellingListIndex);
+
+  if (checkAMDGPUFlatWorkGroupSizeArguments(*this, MinExpr, MaxExpr, TmpAttr))
+    return;
+
+  D->addAttr(::new (Context) AMDGPUFlatWorkGroupSizeAttr(
+      AttrRange, Context, MinExpr, MaxExpr, SpellingListIndex));
+}
+
+static void handleAMDGPUFlatWorkGroupSizeAttr(Sema &S, Decl *D,
+                                              const ParsedAttr &AL) {
+  Expr *MinExpr = AL.getArgAsExpr(0);
+  Expr *MaxExpr = AL.getArgAsExpr(1);
+
+  S.addAMDGPUFlatWorkGroupSizeAttr(AL.getRange(), D, MinExpr, MaxExpr,
+                                   AL.getAttributeSpellingListIndex());
+}
+
+static bool checkAMDGPUWavesPerEUArguments(Sema &S, Expr *MinExpr,
+                                           Expr *MaxExpr,
+                                           const AMDGPUWavesPerEUAttr &Attr) {
+  if (S.DiagnoseUnexpandedParameterPack(MinExpr) ||
+      (MaxExpr && S.DiagnoseUnexpandedParameterPack(MaxExpr)))
+    return true;
+
+  // Accept template arguments for now as they depend on something else.
+  // We'll get to check them when they eventually get instantiated.
+  if (MinExpr->isValueDependent() || (MaxExpr && MaxExpr->isValueDependent()))
+    return false;
+
+  uint32_t Min = 0;
+  if (!checkUInt32Argument(S, Attr, MinExpr, Min, 0))
+    return true;
+
+  uint32_t Max = 0;
+  if (MaxExpr && !checkUInt32Argument(S, Attr, MaxExpr, Max, 1))
+    return true;
+
+  if (Min == 0 && Max != 0) {
+    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
+        << &Attr << 0;
+    return true;
+  }
+  if (Max != 0 && Min > Max) {
+    S.Diag(Attr.getLocation(), diag::err_attribute_argument_invalid)
+        << &Attr << 1;
+    return true;
+  }
+
+  return false;
+}
+
+void Sema::addAMDGPUWavesPerEUAttr(SourceRange AttrRange, Decl *D,
+                                   Expr *MinExpr, Expr *MaxExpr,
+                                   unsigned SpellingListIndex) {
+  AMDGPUWavesPerEUAttr TmpAttr(AttrRange, Context, MinExpr, MaxExpr,
+                               SpellingListIndex);
+
+  if (checkAMDGPUWavesPerEUArguments(*this, MinExpr, MaxExpr, TmpAttr))
+    return;
+
+  D->addAttr(::new (Context) AMDGPUWavesPerEUAttr(AttrRange, Context, MinExpr,
+                                                  MaxExpr, SpellingListIndex));
 }
 
 static void handleAMDGPUWavesPerEUAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
-  uint32_t Min = 0;
+  if (!checkAttributeAtLeastNumArgs(S, AL, 1) ||
+      !checkAttributeAtMostNumArgs(S, AL, 2))
+    return;
+
   Expr *MinExpr = AL.getArgAsExpr(0);
-  if (MinExpr->isEvaluatable(S.Context) &&
-      !checkUInt32Argument(S, AL, MinExpr, Min))
-    return;
+  Expr *MaxExpr = (AL.getNumArgs() > 1) ? AL.getArgAsExpr(1) : nullptr;
 
-  Expr *MaxExpr = nullptr;
-  uint32_t Max = 0;
-  if (AL.getNumArgs() == 2) {
-    MaxExpr = AL.getArgAsExpr(1);
-    if (MaxExpr->isEvaluatable(S.Context) &&
-        !checkUInt32Argument(S, AL, MaxExpr, Max))
-      return;
-  }
-
-  if (Min == 0 && Max != 0) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 0;
-    return;
-  }
-  if (Max != 0 && Min > Max) {
-    S.Diag(AL.getLoc(), diag::err_attribute_argument_invalid) << AL << 1;
-    return;
-  }
-
-  D->addAttr(::new (S.Context)
-                 AMDGPUWavesPerEUAttr(AL.getLoc(), S.Context, MinExpr, MaxExpr,
-                                      AL.getAttributeSpellingListIndex()));
+  S.addAMDGPUWavesPerEUAttr(AL.getRange(), D, MinExpr, MaxExpr,
+                            AL.getAttributeSpellingListIndex());
 }
 
 static void handleAMDGPUNumSGPRAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
