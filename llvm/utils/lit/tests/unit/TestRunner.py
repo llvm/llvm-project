@@ -3,12 +3,12 @@
 # END.
 
 
-import unittest
-import platform
 import os.path
-import tempfile
+import platform
+import unittest
 
-import lit
+import lit.discovery
+import lit.LitConfig
 import lit.Test as Test
 from lit.TestRunner import ParserKind, IntegratedTestKeywordParser, \
                            parseIntegratedTestScript
