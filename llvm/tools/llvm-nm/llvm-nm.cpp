@@ -262,6 +262,8 @@ struct NMSymbol {
   uint64_t Size;
   char TypeChar;
   StringRef Name;
+  StringRef SectionName;
+  StringRef TypeName;
   BasicSymbolRef Sym;
   // The Sym field above points to the native symbol in the object file,
   // for Mach-O when we are creating symbols from the dyld info the above
@@ -882,8 +884,13 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
       std::string PaddedName(Name);
       while (PaddedName.length() < 20)
         PaddedName += " ";
+      std::string TNPad = "";
+      int TNL = I->TypeName.size();
+      while ((TNPad.length() + TNL) < 18)
+        TNPad += " ";
       outs() << PaddedName << "|" << SymbolAddrStr << "|   " << I->TypeChar
-             << "  |                  |" << SymbolSizeStr << "|     |\n";
+             << "  |" << TNPad << I->TypeName << "|" << SymbolSizeStr
+             << "|     |" << I->SectionName << "\n";
     }
   }
 
@@ -1078,7 +1085,37 @@ static bool isObject(SymbolicFile &Obj, basic_symbol_iterator I) {
              : elf_symbol_iterator(I)->getELFType() == ELF::STT_OBJECT;
 }
 
-static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {
+// For ELF object files, Set TypeName to the symbol typename, to be printed
+// in the 'Type' column of the SYSV format output.
+static void getNMTypeName(SymbolicFile &Obj, basic_symbol_iterator I,
+                          StringRef &TypeName) {
+  if (isa<ELFObjectFileBase>(&Obj)) {
+    elf_symbol_iterator SymI(I);
+    SymI->getELFTypeName(TypeName);
+  }
+}
+
+// Return Posix nm class type tag (single letter), but also set SecName and
+// section and name, to be used in format=sysv output.
+static char getNMClassTagAndSectionName(SymbolicFile &Obj,
+                                        basic_symbol_iterator I,
+                                        StringRef &SecName) {
+  if (isa<ELFObjectFileBase>(&Obj)) {
+    elf_symbol_iterator SymI(I);
+
+    Expected<elf_section_iterator> SecIOrErr = SymI->getSection();
+    if (!SecIOrErr) {
+      consumeError(SecIOrErr.takeError());
+      return '?';
+    }
+    int SI = SymI->getSectionIndex();
+    if (SI == 0) {
+      SecName = "*UND*";
+    } else {
+      elf_section_iterator secT = *SecIOrErr;
+      secT->getName(SecName);
+    }
+  }
   uint32_t Symflags = I->getFlags();
   if ((Symflags & object::SymbolRef::SF_Weak) && !isa<MachOObjectFile>(Obj)) {
     char Ret = isObject(Obj, I) ? 'v' : 'w';
@@ -1088,8 +1125,10 @@ static char getNMTypeChar(SymbolicFile &Obj, basic_symbol_iterator I) {
   if (Symflags & object::SymbolRef::SF_Undefined)
     return 'U';
 
-  if (Symflags & object::SymbolRef::SF_Common)
+  if (Symflags & object::SymbolRef::SF_Common) {
+    SecName = "*COM*";
     return 'C';
+  }
 
   char Ret = '?';
   if (Symflags & object::SymbolRef::SF_Absolute)
@@ -1201,7 +1240,8 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
         }
         S.Address = *AddressOrErr;
       }
-      S.TypeChar = getNMTypeChar(Obj, Sym);
+      getNMTypeName(Obj, Sym, S.TypeName);
+      S.TypeChar = getNMClassTagAndSectionName(Obj, Sym, S.SectionName);
       std::error_code EC = Sym.printName(OS);
       if (EC && MachO)
         OS << "bad string index";

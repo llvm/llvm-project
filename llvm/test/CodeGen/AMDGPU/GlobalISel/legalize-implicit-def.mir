@@ -213,6 +213,92 @@ body: |
 ...
 
 ---
+name: test_implicit_def_v5s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v5s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<5 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: S_NOP 0, implicit [[DEF]](<5 x s32>)
+    %0:_(<5 x s32>) = G_IMPLICIT_DEF
+    S_NOP 0, implicit %0
+...
+
+---
+name: test_implicit_def_v6s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v6s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<6 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: S_NOP 0, implicit [[DEF]](<6 x s32>)
+    %0:_(<6 x s32>) = G_IMPLICIT_DEF
+    S_NOP 0, implicit %0
+...
+
+---
+name: test_implicit_def_v7s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v7s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<7 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: S_NOP 0, implicit [[DEF]](<7 x s32>)
+    %0:_(<7 x s32>) = G_IMPLICIT_DEF
+    S_NOP 0, implicit %0
+...
+
+---
+name: test_implicit_def_v8s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v8s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<8 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[DEF]](<8 x s32>)
+    %0:_(<8 x s32>) = G_IMPLICIT_DEF
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %0
+...
+
+---
+name: test_implicit_def_v16s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v16s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[DEF]](<16 x s32>)
+    %0:_(<16 x s32>) = G_IMPLICIT_DEF
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %0
+...
+
+---
+name: test_implicit_def_v17s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v17s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<17 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: S_NOP 0, implicit [[DEF]](<17 x s32>)
+    %0:_(<17 x s32>) = G_IMPLICIT_DEF
+    S_NOP 0, implicit %0
+...
+
+---
+name: test_implicit_def_v32s32
+body: |
+  bb.0:
+
+    ; CHECK-LABEL: name: test_implicit_def_v32s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[DEF1:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
+    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s32>) = G_CONCAT_VECTORS [[DEF]](<16 x s32>), [[DEF1]](<16 x s32>)
+    ; CHECK: S_NOP 0, implicit [[CONCAT_VECTORS]](<32 x s32>)
+    %0:_(<32 x s32>) = G_IMPLICIT_DEF
+    S_NOP 0, implicit %0
+...
+
+---
 name: test_implicit_def_v2s1
 body: |
   bb.0:

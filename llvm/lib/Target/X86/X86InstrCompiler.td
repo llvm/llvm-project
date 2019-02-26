@@ -1715,40 +1715,43 @@ def : Pat<(shl GR16:$src1, (i8 1)), (ADD16rr GR16:$src1, GR16:$src1)>;
 def : Pat<(shl GR32:$src1, (i8 1)), (ADD32rr GR32:$src1, GR32:$src1)>;
 def : Pat<(shl GR64:$src1, (i8 1)), (ADD64rr GR64:$src1, GR64:$src1)>;
 
-// Helper imms to check if a mask doesn't change significant shift/rotate bits.
-def immShift8 : ImmLeaf<i8, [{
-  return countTrailingOnes<uint64_t>(Imm) >= 3;
+def shiftMask8 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
+  return isUnneededShiftMask(N, 3);
 }]>;
-def immShift16 : ImmLeaf<i8, [{
-  return countTrailingOnes<uint64_t>(Imm) >= 4;
+
+def shiftMask16 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
+  return isUnneededShiftMask(N, 4);
 }]>;
-def immShift32 : ImmLeaf<i8, [{
-  return countTrailingOnes<uint64_t>(Imm) >= 5;
+
+def shiftMask32 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
+  return isUnneededShiftMask(N, 5);
 }]>;
-def immShift64 : ImmLeaf<i8, [{
-  return countTrailingOnes<uint64_t>(Imm) >= 6;
+
+def shiftMask64 : PatFrag<(ops node:$lhs), (and node:$lhs, imm), [{
+  return isUnneededShiftMask(N, 6);
 }]>;
+
 
 // Shift amount is implicitly masked.
 multiclass MaskedShiftAmountPats<SDNode frag, string name> {
   // (shift x (and y, 31)) ==> (shift x, y)
-  def : Pat<(frag GR8:$src1, (and CL, immShift32)),
+  def : Pat<(frag GR8:$src1, (shiftMask32 CL)),
             (!cast<Instruction>(name # "8rCL") GR8:$src1)>;
-  def : Pat<(frag GR16:$src1, (and CL, immShift32)),
+  def : Pat<(frag GR16:$src1, (shiftMask32 CL)),
             (!cast<Instruction>(name # "16rCL") GR16:$src1)>;
-  def : Pat<(frag GR32:$src1, (and CL, immShift32)),
+  def : Pat<(frag GR32:$src1, (shiftMask32 CL)),
             (!cast<Instruction>(name # "32rCL") GR32:$src1)>;
-  def : Pat<(store (frag (loadi8 addr:$dst), (and CL, immShift32)), addr:$dst),
+  def : Pat<(store (frag (loadi8 addr:$dst), (shiftMask32 CL)), addr:$dst),
             (!cast<Instruction>(name # "8mCL") addr:$dst)>;
-  def : Pat<(store (frag (loadi16 addr:$dst), (and CL, immShift32)), addr:$dst),
+  def : Pat<(store (frag (loadi16 addr:$dst), (shiftMask32 CL)), addr:$dst),
             (!cast<Instruction>(name # "16mCL") addr:$dst)>;
-  def : Pat<(store (frag (loadi32 addr:$dst), (and CL, immShift32)), addr:$dst),
+  def : Pat<(store (frag (loadi32 addr:$dst), (shiftMask32 CL)), addr:$dst),
             (!cast<Instruction>(name # "32mCL") addr:$dst)>;
 
   // (shift x (and y, 63)) ==> (shift x, y)
-  def : Pat<(frag GR64:$src1, (and CL, immShift64)),
+  def : Pat<(frag GR64:$src1, (shiftMask64 CL)),
             (!cast<Instruction>(name # "64rCL") GR64:$src1)>;
-  def : Pat<(store (frag (loadi64 addr:$dst), (and CL, immShift64)), addr:$dst),
+  def : Pat<(store (frag (loadi64 addr:$dst), (shiftMask64 CL)), addr:$dst),
             (!cast<Instruction>(name # "64mCL") addr:$dst)>;
 }
 
@@ -1764,23 +1767,23 @@ defm : MaskedShiftAmountPats<sra, "SAR">;
 // not tracking flags for these nodes.
 multiclass MaskedRotateAmountPats<SDNode frag, string name> {
   // (rot x (and y, BitWidth - 1)) ==> (rot x, y)
-  def : Pat<(frag GR8:$src1, (and CL, immShift8)),
+  def : Pat<(frag GR8:$src1, (shiftMask8 CL)),
   (!cast<Instruction>(name # "8rCL") GR8:$src1)>;
-  def : Pat<(frag GR16:$src1, (and CL, immShift16)),
+  def : Pat<(frag GR16:$src1, (shiftMask16 CL)),
   (!cast<Instruction>(name # "16rCL") GR16:$src1)>;
-  def : Pat<(frag GR32:$src1, (and CL, immShift32)),
+  def : Pat<(frag GR32:$src1, (shiftMask32 CL)),
   (!cast<Instruction>(name # "32rCL") GR32:$src1)>;
-  def : Pat<(store (frag (loadi8 addr:$dst), (and CL, immShift8)), addr:$dst),
+  def : Pat<(store (frag (loadi8 addr:$dst), (shiftMask8 CL)), addr:$dst),
   (!cast<Instruction>(name # "8mCL") addr:$dst)>;
-  def : Pat<(store (frag (loadi16 addr:$dst), (and CL, immShift16)), addr:$dst),
+  def : Pat<(store (frag (loadi16 addr:$dst), (shiftMask16 CL)), addr:$dst),
   (!cast<Instruction>(name # "16mCL") addr:$dst)>;
-  def : Pat<(store (frag (loadi32 addr:$dst), (and CL, immShift32)), addr:$dst),
+  def : Pat<(store (frag (loadi32 addr:$dst), (shiftMask32 CL)), addr:$dst),
   (!cast<Instruction>(name # "32mCL") addr:$dst)>;
 
   // (rot x (and y, 63)) ==> (rot x, y)
-  def : Pat<(frag GR64:$src1, (and CL, immShift64)),
+  def : Pat<(frag GR64:$src1, (shiftMask64 CL)),
   (!cast<Instruction>(name # "64rCL") GR64:$src1)>;
-  def : Pat<(store (frag (loadi64 addr:$dst), (and CL, immShift64)), addr:$dst),
+  def : Pat<(store (frag (loadi64 addr:$dst), (shiftMask64 CL)), addr:$dst),
   (!cast<Instruction>(name # "64mCL") addr:$dst)>;
 }
 
@@ -1791,13 +1794,13 @@ defm : MaskedRotateAmountPats<rotr, "ROR">;
 // Double shift amount is implicitly masked.
 multiclass MaskedDoubleShiftAmountPats<SDNode frag, string name> {
   // (shift x (and y, 31)) ==> (shift x, y)
-  def : Pat<(frag GR16:$src1, GR16:$src2, (and CL, immShift32)),
+  def : Pat<(frag GR16:$src1, GR16:$src2, (shiftMask32 CL)),
             (!cast<Instruction>(name # "16rrCL") GR16:$src1, GR16:$src2)>;
-  def : Pat<(frag GR32:$src1, GR32:$src2, (and CL, immShift32)),
+  def : Pat<(frag GR32:$src1, GR32:$src2, (shiftMask32 CL)),
             (!cast<Instruction>(name # "32rrCL") GR32:$src1, GR32:$src2)>;
 
   // (shift x (and y, 63)) ==> (shift x, y)
-  def : Pat<(frag GR64:$src1, GR64:$src2, (and CL, immShift64)),
+  def : Pat<(frag GR64:$src1, GR64:$src2, (shiftMask32 CL)),
             (!cast<Instruction>(name # "64rrCL") GR64:$src1, GR64:$src2)>;
 }
 
@@ -1806,57 +1809,57 @@ defm : MaskedDoubleShiftAmountPats<X86shrd, "SHRD">;
 
 let Predicates = [HasBMI2] in {
   let AddedComplexity = 1 in {
-    def : Pat<(sra GR32:$src1, (and GR8:$src2, immShift32)),
+    def : Pat<(sra GR32:$src1, (shiftMask32 GR8:$src2)),
               (SARX32rr GR32:$src1,
                         (INSERT_SUBREG
                           (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(sra GR64:$src1, (and GR8:$src2, immShift64)),
+    def : Pat<(sra GR64:$src1, (shiftMask64 GR8:$src2)),
               (SARX64rr GR64:$src1,
                         (INSERT_SUBREG
                           (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-    def : Pat<(srl GR32:$src1, (and GR8:$src2, immShift32)),
+    def : Pat<(srl GR32:$src1, (shiftMask32 GR8:$src2)),
               (SHRX32rr GR32:$src1,
                         (INSERT_SUBREG
                           (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(srl GR64:$src1, (and GR8:$src2, immShift64)),
+    def : Pat<(srl GR64:$src1, (shiftMask64 GR8:$src2)),
               (SHRX64rr GR64:$src1,
                         (INSERT_SUBREG
                           (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-    def : Pat<(shl GR32:$src1, (and GR8:$src2, immShift32)),
+    def : Pat<(shl GR32:$src1, (shiftMask32 GR8:$src2)),
               (SHLX32rr GR32:$src1,
                         (INSERT_SUBREG
                           (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-    def : Pat<(shl GR64:$src1, (and GR8:$src2, immShift64)),
+    def : Pat<(shl GR64:$src1, (shiftMask64 GR8:$src2)),
               (SHLX64rr GR64:$src1,
                         (INSERT_SUBREG
                           (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
   }
 
-  def : Pat<(sra (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+  def : Pat<(sra (loadi32 addr:$src1), (shiftMask32 GR8:$src2)),
             (SARX32rm addr:$src1,
                       (INSERT_SUBREG
                         (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(sra (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+  def : Pat<(sra (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
             (SARX64rm addr:$src1,
                       (INSERT_SUBREG
                         (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-  def : Pat<(srl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+  def : Pat<(srl (loadi32 addr:$src1), (shiftMask32 GR8:$src2)),
             (SHRX32rm addr:$src1,
                       (INSERT_SUBREG
                         (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(srl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+  def : Pat<(srl (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
             (SHRX64rm addr:$src1,
                       (INSERT_SUBREG
                         (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
-  def : Pat<(shl (loadi32 addr:$src1), (and GR8:$src2, immShift32)),
+  def : Pat<(shl (loadi32 addr:$src1), (shiftMask32 GR8:$src2)),
             (SHLX32rm addr:$src1,
                       (INSERT_SUBREG
                         (i32 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(shl (loadi64 addr:$src1), (and GR8:$src2, immShift64)),
+  def : Pat<(shl (loadi64 addr:$src1), (shiftMask64 GR8:$src2)),
             (SHLX64rm addr:$src1,
                       (INSERT_SUBREG
                         (i64 (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
@@ -1865,7 +1868,7 @@ let Predicates = [HasBMI2] in {
 // Use BTR/BTS/BTC for clearing/setting/toggling a bit in a variable location.
 multiclass one_bit_patterns<RegisterClass RC, ValueType VT, Instruction BTR,
                             Instruction BTS, Instruction BTC,
-                            ImmLeaf ImmShift> {
+                            PatFrag ShiftMask> {
   def : Pat<(and RC:$src1, (rotl -2, GR8:$src2)),
             (BTR RC:$src1,
                  (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
@@ -1877,20 +1880,20 @@ multiclass one_bit_patterns<RegisterClass RC, ValueType VT, Instruction BTR,
                  (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 
   // Similar to above, but removing unneeded masking of the shift amount.
-  def : Pat<(and RC:$src1, (rotl -2, (and GR8:$src2, ImmShift))),
+  def : Pat<(and RC:$src1, (rotl -2, (ShiftMask GR8:$src2))),
             (BTR RC:$src1,
                  (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(or RC:$src1, (shl 1, (and GR8:$src2, ImmShift))),
+  def : Pat<(or RC:$src1, (shl 1, (ShiftMask GR8:$src2))),
             (BTS RC:$src1,
                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
-  def : Pat<(xor RC:$src1, (shl 1, (and GR8:$src2, ImmShift))),
+  def : Pat<(xor RC:$src1, (shl 1, (ShiftMask GR8:$src2))),
             (BTC RC:$src1,
                 (INSERT_SUBREG (VT (IMPLICIT_DEF)), GR8:$src2, sub_8bit))>;
 }
 
-defm : one_bit_patterns<GR16, i16, BTR16rr, BTS16rr, BTC16rr, immShift16>;
-defm : one_bit_patterns<GR32, i32, BTR32rr, BTS32rr, BTC32rr, immShift32>;
-defm : one_bit_patterns<GR64, i64, BTR64rr, BTS64rr, BTC64rr, immShift64>;
+defm : one_bit_patterns<GR16, i16, BTR16rr, BTS16rr, BTC16rr, shiftMask16>;
+defm : one_bit_patterns<GR32, i32, BTR32rr, BTS32rr, BTC32rr, shiftMask32>;
+defm : one_bit_patterns<GR64, i64, BTR64rr, BTS64rr, BTC64rr, shiftMask64>;
 
 
 // (anyext (setcc_carry)) -> (setcc_carry)

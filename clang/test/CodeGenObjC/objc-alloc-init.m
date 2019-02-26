@@ -26,3 +26,16 @@ void f() {
   // EITHER: call {{.*}} @objc_msgSend
 }
 @end
+
+// rdar://48247290
+@interface Base
+-(instancetype)init;
+@end
+
+@interface Derived : Base
+@end
+@implementation Derived
+-(void)meth {
+  [super init];
+}
+@end
