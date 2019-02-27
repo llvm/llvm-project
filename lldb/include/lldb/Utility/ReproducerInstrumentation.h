@@ -18,15 +18,24 @@
 
 #include <map>
 
+// Define LLDB_REPRO_INSTR_TRACE to trace to stderr instead of LLDB's log
+// infrastructure. This is useful when you need to see traces before the logger
+// is initialized or enabled.
+#define LLDB_REPRO_INSTR_TRACE
+
 #define LLDB_REGISTER_CONSTRUCTOR(Class, Signature)                            \
-  Register<Class * Signature>(&construct<Class Signature>::doit)
+  Register<Class * Signature>(&construct<Class Signature>::doit, "", #Class,   \
+                              #Class, #Signature)
 #define LLDB_REGISTER_METHOD(Result, Class, Method, Signature)                 \
-  Register(&invoke<Result(Class::*) Signature>::method<&Class::Method>::doit)
+  Register(&invoke<Result(Class::*) Signature>::method<&Class::Method>::doit,  \
+           #Result, #Class, #Method, #Signature)
 #define LLDB_REGISTER_METHOD_CONST(Result, Class, Method, Signature)           \
   Register(&invoke<Result(Class::*)                                            \
-                       Signature const>::method_const<&Class::Method>::doit)
+                       Signature const>::method_const<&Class::Method>::doit,   \
+           #Result, #Class, #Method, #Signature)
 #define LLDB_REGISTER_STATIC_METHOD(Result, Class, Method, Signature)          \
-  Register<Result Signature>(static_cast<Result(*) Signature>(&Class::Method))
+  Register<Result Signature>(static_cast<Result(*) Signature>(&Class::Method), \
+                             #Result, #Class, #Method, #Signature)
 
 #define LLDB_RECORD_CONSTRUCTOR(Class, Signature, ...)                         \
   LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
@@ -224,6 +233,9 @@ public:
 
   /// Deserialize and interpret value as T.
   template <typename T> T Deserialize() {
+#ifdef LLDB_REPRO_INSTR_TRACE
+    llvm::errs() << "Deserializing with " << LLVM_PRETTY_FUNCTION << "\n";
+#endif
     return Read<T>(typename serializer_tag<T>::type());
   }
 
@@ -371,19 +383,41 @@ struct DefaultReplayer<void(Args...)> : public Replayer {
 /// IDs can be serialized and deserialized to replay a function. Functions need
 /// to be registered with the registry for this to work.
 class Registry {
+private:
+  struct SignatureStr {
+    SignatureStr(llvm::StringRef result = {}, llvm::StringRef scope = {},
+                 llvm::StringRef name = {}, llvm::StringRef args = {})
+        : result(result), scope(scope), name(name), args(args) {}
+
+    std::string ToString() const;
+
+    llvm::StringRef result;
+    llvm::StringRef scope;
+    llvm::StringRef name;
+    llvm::StringRef args;
+  };
+
 public:
   Registry() = default;
   virtual ~Registry() = default;
 
   /// Register a default replayer for a function.
-  template <typename Signature> void Register(Signature *f) {
-    DoRegister(uintptr_t(f), llvm::make_unique<DefaultReplayer<Signature>>(f));
+  template <typename Signature>
+  void Register(Signature *f, llvm::StringRef result = {},
+                llvm::StringRef scope = {}, llvm::StringRef name = {},
+                llvm::StringRef args = {}) {
+    DoRegister(uintptr_t(f), llvm::make_unique<DefaultReplayer<Signature>>(f),
+               SignatureStr(result, scope, name, args));
   }
 
   /// Register a replayer that invokes a custom function with the same
   /// signature as the replayed function.
-  template <typename Signature> void Register(Signature *f, Signature *g) {
-    DoRegister(uintptr_t(f), llvm::make_unique<DefaultReplayer<Signature>>(g));
+  template <typename Signature>
+  void Register(Signature *f, Signature *g, llvm::StringRef result = {},
+                llvm::StringRef scope = {}, llvm::StringRef name = {},
+                llvm::StringRef args = {}) {
+    DoRegister(uintptr_t(f), llvm::make_unique<DefaultReplayer<Signature>>(g),
+               SignatureStr(result, scope, name, args));
   }
 
   /// Replay functions from a file.
@@ -397,15 +431,19 @@ public:
 
 protected:
   /// Register the given replayer for a function (and the ID mapping).
-  void DoRegister(uintptr_t RunID, std::unique_ptr<Replayer> replayer);
+  void DoRegister(uintptr_t RunID, std::unique_ptr<Replayer> replayer,
+                  SignatureStr signature);
 
 private:
+  std::string GetSignature(unsigned id);
+  Replayer *GetReplayer(unsigned id);
+
   /// Mapping of function addresses to replayers and their ID.
   std::map<uintptr_t, std::pair<std::unique_ptr<Replayer>, unsigned>>
       m_replayers;
 
   /// Mapping of IDs to replayer instances.
-  std::map<unsigned, Replayer *> m_ids;
+  std::map<unsigned, std::pair<Replayer *, SignatureStr>> m_ids;
 };
 
 /// To be used as the "Runtime ID" of a constructor. It also invokes the
@@ -551,8 +589,12 @@ public:
 
     unsigned id = m_registry.GetID(uintptr_t(f));
 
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording ({0}) '{1}'",
+#ifndef LLDB_REPRO_INSTR_TRACE
+    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording {0}: {1}",
              id, m_pretty_func);
+#else
+    llvm::errs() << "Recording " << id << ": " << m_pretty_func << "\n";
+#endif
 
     m_serializer.SerializeAll(id);
     m_serializer.SerializeAll(args...);
@@ -574,8 +616,12 @@ public:
 
     unsigned id = m_registry.GetID(uintptr_t(f));
 
-    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording ({0}) '{1}'",
+#ifndef LLDB_REPRO_INSTR_TRACE
+    LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "Recording {0}: {1}",
              id, m_pretty_func);
+#else
+    llvm::errs() << "Recording " << id << ": " << m_pretty_func << "\n";
+#endif
 
     m_serializer.SerializeAll(id);
     m_serializer.SerializeAll(args...);

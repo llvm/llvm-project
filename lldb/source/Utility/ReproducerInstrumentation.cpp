@@ -43,29 +43,54 @@ bool Registry::Replay(const FileSpec &file) {
 }
 
 bool Registry::Replay(llvm::StringRef buffer) {
+#ifndef LLDB_REPRO_INSTR_TRACE
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_API);
+#endif
 
   Deserializer deserializer(buffer);
   while (deserializer.HasData(1)) {
     unsigned id = deserializer.Deserialize<unsigned>();
-    LLDB_LOG(log, "Replaying function #{0}", id);
-    m_ids[id]->operator()(deserializer);
+
+#ifndef LLDB_REPRO_INSTR_TRACE
+    LLDB_LOG(log, "Replaying {0}: {1}", id, GetSignature(id));
+#else
+    llvm::errs() << "Replaying " << id << ": " << GetSignature(id) << "\n";
+#endif
+
+    GetReplayer(id)->operator()(deserializer);
   }
 
   return true;
 }
 
-void Registry::DoRegister(uintptr_t RunID, std::unique_ptr<Replayer> replayer) {
+void Registry::DoRegister(uintptr_t RunID, std::unique_ptr<Replayer> replayer,
+                          SignatureStr signature) {
   const unsigned id = m_replayers.size() + 1;
   assert(m_replayers.find(RunID) == m_replayers.end());
   m_replayers[RunID] = std::make_pair(std::move(replayer), id);
-  m_ids[id] = m_replayers[RunID].first.get();
+  m_ids[id] =
+      std::make_pair(m_replayers[RunID].first.get(), std::move(signature));
 }
 
 unsigned Registry::GetID(uintptr_t addr) {
   unsigned id = m_replayers[addr].second;
   assert(id != 0 && "Forgot to add function to registry?");
   return id;
+}
+
+std::string Registry::GetSignature(unsigned id) {
+  assert(m_ids.count(id) != 0 && "ID not in registry");
+  return m_ids[id].second.ToString();
+}
+
+Replayer *Registry::GetReplayer(unsigned id) {
+  assert(m_ids.count(id) != 0 && "ID not in registry");
+  return m_ids[id].first;
+}
+
+std::string Registry::SignatureStr::ToString() const {
+  return (result + (result.empty() ? "" : " ") + scope + "::" + name + args)
+      .str();
 }
 
 unsigned ObjectToIndex::GetIndexForObjectImpl(const void *object) {
