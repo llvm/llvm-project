@@ -8477,7 +8477,8 @@ SDValue SITargetLowering::reassociateScalarOps(SDNode *N,
 
   // If either operand is constant this will conflict with
   // DAGCombiner::ReassociateOps().
-  if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))
+  if (DAG.isConstantIntBuildVectorOrConstantInt(Op0) ||
+      DAG.isConstantIntBuildVectorOrConstantInt(Op1))
     return SDValue();
 
   SDLoc SL(N);

@@ -1143,8 +1143,8 @@ def : Proc<"bdver4", [
   FeatureMacroFusion
 ]>;
 
-// Znver1
-def: ProcessorModel<"znver1", Znver1Model, [
+// AMD Zen Processors common ISAs
+def ZNFeatures : ProcessorFeatures<[], [
   FeatureADX,
   FeatureAES,
   FeatureAVX2,
@@ -1182,6 +1182,19 @@ def: ProcessorModel<"znver1", Znver1Model, [
   FeatureXSAVEC,
   FeatureXSAVEOPT,
   FeatureXSAVES]>;
+
+class Znver1Proc<string Name> : ProcModel<Name, Znver1Model,
+                                         ZNFeatures.Value, [
+]>;
+def : Znver1Proc<"znver1">;
+
+class Znver2Proc<string Name> : ProcModel<Name, Znver1Model,
+                                         ZNFeatures.Value, [
+  FeatureCLWB,
+  FeatureRDPID,
+  FeatureWBNOINVD
+]>;
+def : Znver2Proc<"znver2">;
 
 def : Proc<"geode",           [FeatureX87, FeatureSlowUAMem16, Feature3DNowA]>;
 

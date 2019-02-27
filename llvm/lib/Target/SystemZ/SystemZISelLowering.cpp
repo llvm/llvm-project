@@ -577,26 +577,118 @@ bool SystemZTargetLowering::isFMAFasterThanFMulAndFAdd(EVT VT) const {
   return false;
 }
 
-
-// Return true if Imm can be generated with a vector instruction, such as VGM.
-bool SystemZTargetLowering::
-analyzeFPImm(const APFloat &Imm, unsigned BitWidth, unsigned &Start,
-             unsigned &End, const SystemZInstrInfo *TII) {
-  APInt IntImm = Imm.bitcastToAPInt();
-  if (IntImm.getActiveBits() > 64)
+// Return true if the constant can be generated with a vector instruction,
+// such as VGM, VGMB or VREPI.
+bool SystemZVectorConstantInfo::isVectorConstantLegal(
+    const SystemZSubtarget &Subtarget) {
+  const SystemZInstrInfo *TII =
+      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
+  if (!Subtarget.hasVector() ||
+      (isFP128 && !Subtarget.hasVectorEnhancements1()))
     return false;
 
-  // See if this immediate could be generated with VGM.
-  bool Success = TII->isRxSBGMask(IntImm.getZExtValue(), BitWidth, Start, End);
-  if (!Success)
+  // Try using VECTOR GENERATE BYTE MASK.  This is the architecturally-
+  // preferred way of creating all-zero and all-one vectors so give it
+  // priority over other methods below.
+  unsigned Mask = 0;
+  unsigned I = 0;
+  for (; I < SystemZ::VectorBytes; ++I) {
+    uint64_t Byte = IntBits.lshr(I * 8).trunc(8).getZExtValue();
+    if (Byte == 0xff)
+      Mask |= 1ULL << I;
+    else if (Byte != 0)
+      break;
+  }
+  if (I == SystemZ::VectorBytes) {
+    Opcode = SystemZISD::BYTE_MASK;
+    OpVals.push_back(Mask);
+    VecVT = MVT::getVectorVT(MVT::getIntegerVT(8), 16);
+    return true;
+  }
+
+  if (SplatBitSize > 64)
     return false;
-  // isRxSBGMask returns the bit numbers for a full 64-bit value,
-  // with 0 denoting 1 << 63 and 63 denoting 1.  Convert them to
-  // bit numbers for an BitsPerElement value, so that 0 denotes
-  // 1 << (BitsPerElement-1).
-  Start -= 64 - BitWidth;
-  End -= 64 - BitWidth;
-  return true;
+
+  auto tryValue = [&](uint64_t Value) -> bool {
+    // Try VECTOR REPLICATE IMMEDIATE
+    int64_t SignedValue = SignExtend64(Value, SplatBitSize);
+    if (isInt<16>(SignedValue)) {
+      OpVals.push_back(((unsigned) SignedValue));
+      Opcode = SystemZISD::REPLICATE;
+      VecVT = MVT::getVectorVT(MVT::getIntegerVT(SplatBitSize),
+                               SystemZ::VectorBits / SplatBitSize);
+      return true;
+    }
+    // Try VECTOR GENERATE MASK
+    unsigned Start, End;
+    if (TII->isRxSBGMask(Value, SplatBitSize, Start, End)) {
+      // isRxSBGMask returns the bit numbers for a full 64-bit value, with 0
+      // denoting 1 << 63 and 63 denoting 1.  Convert them to bit numbers for
+      // an SplatBitSize value, so that 0 denotes 1 << (SplatBitSize-1).
+      OpVals.push_back(Start - (64 - SplatBitSize));
+      OpVals.push_back(End - (64 - SplatBitSize));
+      Opcode = SystemZISD::ROTATE_MASK;
+      VecVT = MVT::getVectorVT(MVT::getIntegerVT(SplatBitSize),
+                               SystemZ::VectorBits / SplatBitSize);
+      return true;
+    }
+    return false;
+  };
+
+  // First try assuming that any undefined bits above the highest set bit
+  // and below the lowest set bit are 1s.  This increases the likelihood of
+  // being able to use a sign-extended element value in VECTOR REPLICATE
+  // IMMEDIATE or a wraparound mask in VECTOR GENERATE MASK.
+  uint64_t SplatBitsZ = SplatBits.getZExtValue();
+  uint64_t SplatUndefZ = SplatUndef.getZExtValue();
+  uint64_t Lower =
+      (SplatUndefZ & ((uint64_t(1) << findFirstSet(SplatBitsZ)) - 1));
+  uint64_t Upper =
+      (SplatUndefZ & ~((uint64_t(1) << findLastSet(SplatBitsZ)) - 1));
+  if (tryValue(SplatBitsZ | Upper | Lower))
+    return true;
+
+  // Now try assuming that any undefined bits between the first and
+  // last defined set bits are set.  This increases the chances of
+  // using a non-wraparound mask.
+  uint64_t Middle = SplatUndefZ & ~Upper & ~Lower;
+  return tryValue(SplatBitsZ | Middle);
+}
+
+SystemZVectorConstantInfo::SystemZVectorConstantInfo(APFloat FPImm) {
+  IntBits = FPImm.bitcastToAPInt().zextOrSelf(128);
+  isFP128 = (&FPImm.getSemantics() == &APFloat::IEEEquad());
+
+  // Find the smallest splat.
+  SplatBits = FPImm.bitcastToAPInt();
+  unsigned Width = SplatBits.getBitWidth();
+  while (Width > 8) {
+    unsigned HalfSize = Width / 2;
+    APInt HighValue = SplatBits.lshr(HalfSize).trunc(HalfSize);
+    APInt LowValue = SplatBits.trunc(HalfSize);
+
+    // If the two halves do not match, stop here.
+    if (HighValue != LowValue || 8 > HalfSize)
+      break;
+
+    SplatBits = HighValue;
+    Width = HalfSize;
+  }
+  SplatUndef = 0;
+  SplatBitSize = Width;
+}
+
+SystemZVectorConstantInfo::SystemZVectorConstantInfo(BuildVectorSDNode *BVN) {
+  assert(BVN->isConstant() && "Expected a constant BUILD_VECTOR");
+  bool HasAnyUndefs;
+
+  // Get IntBits by finding the 128 bit splat.
+  BVN->isConstantSplat(IntBits, SplatUndef, SplatBitSize, HasAnyUndefs, 128,
+                       true);
+
+  // Get SplatBits by finding the 8 bit or greater splat.
+  BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs, 8,
+                       true);
 }
 
 bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
@@ -604,12 +696,7 @@ bool SystemZTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT) const {
   if (Imm.isZero() || Imm.isNegZero())
     return true;
 
-  if (!Subtarget.hasVector())
-    return false;
-  const SystemZInstrInfo *TII =
-      static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
-  unsigned Start, End;
-  return analyzeFPImm(Imm, VT.getSizeInBits(), Start, End, TII);
+  return SystemZVectorConstantInfo(Imm).isVectorConstantLegal(Subtarget);
 }
 
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
@@ -4289,78 +4376,6 @@ static SDValue joinDwords(SelectionDAG &DAG, const SDLoc &DL, SDValue Op0,
   return DAG.getNode(SystemZISD::JOIN_DWORDS, DL, MVT::v2i64, Op0, Op1);
 }
 
-// Try to represent constant BUILD_VECTOR node BVN using a BYTE MASK style
-// mask.  Store the mask value in Mask on success.
-bool SystemZTargetLowering::
-tryBuildVectorByteMask(BuildVectorSDNode *BVN, uint64_t &Mask) {
-  EVT ElemVT = BVN->getValueType(0).getVectorElementType();
-  unsigned BytesPerElement = ElemVT.getStoreSize();
-  for (unsigned I = 0, E = BVN->getNumOperands(); I != E; ++I) {
-    SDValue Op = BVN->getOperand(I);
-    if (!Op.isUndef()) {
-      uint64_t Value;
-      if (Op.getOpcode() == ISD::Constant)
-        Value = cast<ConstantSDNode>(Op)->getZExtValue();
-      else if (Op.getOpcode() == ISD::ConstantFP)
-        Value = (cast<ConstantFPSDNode>(Op)->getValueAPF().bitcastToAPInt()
-                 .getZExtValue());
-      else
-        return false;
-      for (unsigned J = 0; J < BytesPerElement; ++J) {
-        uint64_t Byte = (Value >> (J * 8)) & 0xff;
-        if (Byte == 0xff)
-          Mask |= 1ULL << ((E - I - 1) * BytesPerElement + J);
-        else if (Byte != 0)
-          return false;
-      }
-    }
-  }
-  return true;
-}
-
-// Try to load a vector constant in which BitsPerElement-bit value Value
-// is replicated to fill the vector.  VT is the type of the resulting
-// constant, which may have elements of a different size from BitsPerElement.
-// Return the SDValue of the constant on success, otherwise return
-// an empty value.
-static SDValue tryBuildVectorReplicate(SelectionDAG &DAG,
-                                       const SystemZInstrInfo *TII,
-                                       const SDLoc &DL, EVT VT, uint64_t Value,
-                                       unsigned BitsPerElement) {
-  // Signed 16-bit values can be replicated using VREPI.
-  // Mark the constants as opaque or DAGCombiner will convert back to
-  // BUILD_VECTOR.
-  int64_t SignedValue = SignExtend64(Value, BitsPerElement);
-  if (isInt<16>(SignedValue)) {
-    MVT VecVT = MVT::getVectorVT(MVT::getIntegerVT(BitsPerElement),
-                                 SystemZ::VectorBits / BitsPerElement);
-    SDValue Op = DAG.getNode(
-        SystemZISD::REPLICATE, DL, VecVT,
-        DAG.getConstant(SignedValue, DL, MVT::i32, false, true /*isOpaque*/));
-    return DAG.getNode(ISD::BITCAST, DL, VT, Op);
-  }
-  // See whether rotating the constant left some N places gives a value that
-  // is one less than a power of 2 (i.e. all zeros followed by all ones).
-  // If so we can use VGM.
-  unsigned Start, End;
-  if (TII->isRxSBGMask(Value, BitsPerElement, Start, End)) {
-    // isRxSBGMask returns the bit numbers for a full 64-bit value,
-    // with 0 denoting 1 << 63 and 63 denoting 1.  Convert them to
-    // bit numbers for an BitsPerElement value, so that 0 denotes
-    // 1 << (BitsPerElement-1).
-    Start -= 64 - BitsPerElement;
-    End -= 64 - BitsPerElement;
-    MVT VecVT = MVT::getVectorVT(MVT::getIntegerVT(BitsPerElement),
-                                 SystemZ::VectorBits / BitsPerElement);
-    SDValue Op = DAG.getNode(
-        SystemZISD::ROTATE_MASK, DL, VecVT,
-        DAG.getConstant(Start, DL, MVT::i32, false, true /*isOpaque*/),
-        DAG.getConstant(End, DL, MVT::i32, false, true /*isOpaque*/));
-    return DAG.getNode(ISD::BITCAST, DL, VT, Op);
-  }
-  return SDValue();
-}
-
 // If a BUILD_VECTOR contains some EXTRACT_VECTOR_ELTs, it's usually
 // better to use VECTOR_SHUFFLEs on them, only using BUILD_VECTOR for
 // the non-EXTRACT_VECTOR_ELT elements.  See if the given BUILD_VECTOR
@@ -4561,54 +4576,13 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
 
 SDValue SystemZTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  const SystemZInstrInfo *TII =
-    static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
   auto *BVN = cast<BuildVectorSDNode>(Op.getNode());
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
 
   if (BVN->isConstant()) {
-    // Try using VECTOR GENERATE BYTE MASK.  This is the architecturally-
-    // preferred way of creating all-zero and all-one vectors so give it
-    // priority over other methods below.
-    uint64_t Mask;
-    if (ISD::isBuildVectorAllZeros(Op.getNode()) ||
-        ISD::isBuildVectorAllOnes(Op.getNode()) ||
-        (VT.isInteger() && tryBuildVectorByteMask(BVN, Mask)))
+    if (SystemZVectorConstantInfo(BVN).isVectorConstantLegal(Subtarget))
       return Op;
-
-    // Try using some form of replication.
-    APInt SplatBits, SplatUndef;
-    unsigned SplatBitSize;
-    bool HasAnyUndefs;
-    if (BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs,
-                             8, true) &&
-        SplatBitSize <= 64) {
-      // First try assuming that any undefined bits above the highest set bit
-      // and below the lowest set bit are 1s.  This increases the likelihood of
-      // being able to use a sign-extended element value in VECTOR REPLICATE
-      // IMMEDIATE or a wraparound mask in VECTOR GENERATE MASK.
-      uint64_t SplatBitsZ = SplatBits.getZExtValue();
-      uint64_t SplatUndefZ = SplatUndef.getZExtValue();
-      uint64_t Lower = (SplatUndefZ
-                        & ((uint64_t(1) << findFirstSet(SplatBitsZ)) - 1));
-      uint64_t Upper = (SplatUndefZ
-                        & ~((uint64_t(1) << findLastSet(SplatBitsZ)) - 1));
-      uint64_t Value = SplatBitsZ | Upper | Lower;
-      SDValue Op = tryBuildVectorReplicate(DAG, TII, DL, VT, Value,
-                                           SplatBitSize);
-      if (Op.getNode())
-        return Op;
-
-      // Now try assuming that any undefined bits between the first and
-      // last defined set bits are set.  This increases the chances of
-      // using a non-wraparound mask.
-      uint64_t Middle = SplatUndefZ & ~Upper & ~Lower;
-      Value = SplatBitsZ | Middle;
-      Op = tryBuildVectorReplicate(DAG, TII, DL, VT, Value, SplatBitSize);
-      if (Op.getNode())
-        return Op;
-    }
 
     // Fall back to loading it from memory.
     return SDValue();
@@ -5055,6 +5029,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(TBEGIN);
     OPCODE(TBEGIN_NOFLOAT);
     OPCODE(TEND);
+    OPCODE(BYTE_MASK);
     OPCODE(ROTATE_MASK);
     OPCODE(REPLICATE);
     OPCODE(JOIN_DWORDS);
