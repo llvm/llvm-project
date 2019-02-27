@@ -20,6 +20,7 @@
 #include <io.h>
 #include <psapi.h>
 #include <stdlib.h>
+#include <TraceLoggingProvider.h>
 
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
@@ -31,6 +32,13 @@
 #if defined(PSAPI_VERSION) && PSAPI_VERSION == 1
 #pragma comment(lib, "psapi")
 #endif
+//  Windows trace logging provider init
+#pragma comment(lib, "advapi32.lib")
+TRACELOGGING_DECLARE_PROVIDER(g_asan_provider);
+// GUID must be the same in utils/AddressSanitizerLoggingProvider.wprp
+TRACELOGGING_DEFINE_PROVIDER(g_asan_provider, "AddressSanitizerLoggingProvider",
+                             (0x6c6c766d, 0x3846, 0x4e6a, 0xa4, 0xfb, 0x5b,
+                              0x53, 0x0b, 0xd0, 0xf3, 0xfa));
 
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in
@@ -652,6 +660,7 @@ int Atexit(void (*function)(void)) {
 }
 
 static int RunAtexit() {
+  TraceLoggingUnregister(g_asan_provider);
   int ret = 0;
   for (uptr i = 0; i < atexit_functions.size(); ++i) {
     ret |= atexit(atexit_functions[i]);
@@ -749,6 +758,7 @@ uptr internal_sched_yield() {
 }
 
 void internal__exit(int exitcode) {
+  TraceLoggingUnregister(g_asan_provider);
   // ExitProcess runs some finalizers, so use TerminateProcess to avoid that.
   // The debugger doesn't stop on TerminateProcess like it does on ExitProcess,
   // so add our own breakpoint here.
@@ -1068,6 +1078,30 @@ u32 GetNumberOfCPUs() {
   SYSTEM_INFO sysinfo = {};
   GetNativeSystemInfo(&sysinfo);
   return sysinfo.dwNumberOfProcessors;
+}
+
+// TODO: Rename this project-wide to PlatformLogInit
+void AndroidLogInit(void) {
+  HRESULT hr = TraceLoggingRegister(g_asan_provider);
+  if (!SUCCEEDED(hr))
+    return;
+}
+
+void SetAbortMessage(const char *) {}
+
+void LogFullErrorReport(const char *buffer) {
+  if (common_flags()->log_to_syslog) {
+    InternalMmapVector<wchar_t> filename;
+    DWORD filename_length = 0;
+    do {
+      filename.resize(filename.size() + 0x100);
+      filename_length =
+          GetModuleFileName(NULL, filename.begin(), filename.size());
+    } while (filename_length >= filename.size());
+    TraceLoggingWrite(g_asan_provider, "AsanReportEvent",
+                      TraceLoggingValue(filename.begin(), "ExecutableName"),
+                      TraceLoggingValue(buffer, "AsanReportContents"));
+  }
 }
 
 }  // namespace __sanitizer

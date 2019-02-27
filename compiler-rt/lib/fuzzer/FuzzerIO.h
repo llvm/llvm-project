@@ -97,6 +97,8 @@ intptr_t GetHandleFromFd(int fd);
 void MkDir(const std::string &Path);
 void RmDir(const std::string &Path);
 
+const std::string &getDevNull();
+
 }  // namespace fuzzer
 
 #endif  // LLVM_FUZZER_IO_H

@@ -39,12 +39,13 @@ set(SCUDO_SOURCES
   linux.cc)
 
 set(SCUDO_HEADERS
-  platform.h
-  internal_defs.h
   atomic_helpers.h
+  internal_defs.h
+  linux.h
   list.h
   mutex.h
-  linux.h)
+  platform.h
+  vector.h)
 
 if(COMPILER_RT_HAS_SCUDO_STANDALONE)
   add_compiler_rt_object_libraries(RTScudoStandalone

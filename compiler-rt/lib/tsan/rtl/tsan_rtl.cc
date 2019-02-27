@@ -331,9 +331,11 @@ static void OnStackUnwind(const SignalContext &sig, const void *,
   uptr top = 0;
   uptr bottom = 0;
   bool fast = common_flags()->fast_unwind_on_fatal;
-  if (StackTrace::WillUseFastUnwind(fast))
+  if (StackTrace::WillUseFastUnwind(fast)) {
     GetThreadStackTopAndBottom(false, &top, &bottom);
-  stack->Unwind(kStackTraceMax, sig.pc, sig.bp, sig.context, top, bottom, fast);
+    stack->Unwind(kStackTraceMax, sig.pc, sig.bp, nullptr, top, bottom, true);
+  } else
+    stack->Unwind(kStackTraceMax, sig.pc, 0, sig.context, 0, 0, false);
 }
 
 static void TsanOnDeadlySignal(int signo, void *siginfo, void *context) {
