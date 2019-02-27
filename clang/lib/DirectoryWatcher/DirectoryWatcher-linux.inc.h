@@ -97,6 +97,8 @@ static void runWatcher(std::string pathToWatch, int inotifyFD,
   while (1) {
     ssize_t numRead = read(inotifyFD, buf, EVT_BUF_LEN);
     if (numRead == -1) {
+      if (errno == EINTR)
+        continue;
       return; // watcher is stopped.
     }
 
