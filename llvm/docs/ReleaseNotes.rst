@@ -12,7 +12,7 @@ This document contains the release notes for the LLVM Compiler Infrastructure,
 release 8.0.0.  Here we describe the status of LLVM, including major improvements
 from the previous release, improvements in various subprojects of LLVM, and
 some of the current users of the code.  All LLVM releases may be downloaded
-from the `LLVM releases web site <https://llvm.org/releases/>`_.
+from the `LLVM releases web site <https://releases.llvm.org/>`_.
 
 For more information about LLVM, including information about the latest
 release, please check out the `main LLVM web site <https://llvm.org/>`_.  If you
@@ -39,14 +39,19 @@ setting the ``LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN`` CMake variable to
 ``ON``.
 
 
+Known Issues
+============
+
+These are issues that couldn't be fixed before the release. See the bug reports
+for the latest status.
+
+* `PR40547 <https://llvm.org/pr40547>`_ Clang gets miscompiled by trunk GCC.
+
+* `PR40761 <https://llvm.org/pr40761>`_ "asan-dynamic" doesn't work on FreeBSD.
+
+
 Non-comprehensive list of changes in this release
 =================================================
-.. NOTE
-   For small 1-3 sentence descriptions, just add an entry at the end of
-   this list. If your description won't fit comfortably in one bullet
-   point (e.g. maybe you would like to give an example of the
-   functionality, or simply have a lot to talk about), see the `NOTE` below
-   for adding a new subsection.
 
 * The **llvm-cov** tool can now export lcov trace files using the
   `-format=lcov` option of the `export` command.
@@ -82,16 +87,6 @@ Non-comprehensive list of changes in this release
 
 * Windows support for libFuzzer (x86_64).
 
-.. NOTE
-   If you would like to document a larger change, then you can add a
-   subsection about it right here. You can copy the following boilerplate
-   and un-indent it (the indentation causes it to be inside this comment).
-
-   Special New Feature
-   -------------------
-
-   Makes programs 10x faster by doing Special New Thing.
-
 Changes to the LLVM IR
 ----------------------
 
@@ -112,16 +107,11 @@ Changes to the AArch64 Target
   on ARM.
 
 
-Changes to the ARM Backend
---------------------------
-
- During this release ...
-
-
 Changes to the Hexagon Target
 -----------------------------
 
 * Added support for Hexagon/HVX V66 ISA.
+
 
 Changes to the MIPS Target
 --------------------------
@@ -144,6 +134,7 @@ Changes to the MIPS Target
 
 * Numerous bug fixes and code cleanups.
 
+
 Changes to the PowerPC Target
 -----------------------------
 
@@ -155,7 +146,7 @@ Changes to the PowerPC Target
 
 * Better overload rules for compatible vector type parameter
 
-* Support constraint ‘wi’, modifier ‘x’ and VSX registers in inline asm
+* Support constraint 'wi', modifier 'x' and VSX registers in inline asm
 
 * More ``__float128`` support
 
@@ -200,15 +191,6 @@ Changes to the X86 Target
 * ADCX instruction will no longer be emitted. This instruction is rarely better
   than the legacy ADC instruction and just increased code size.
 
-Changes to the AMDGPU Target
------------------------------
-
- During this release ...
-
-Changes to the AVR Target
------------------------------
-
- During this release ...
 
 Changes to the WebAssembly Target
 ---------------------------------
@@ -222,25 +204,16 @@ use for it will be to add support for returning small structs as multiple
 return values, once the underlying WebAssembly platform itself supports it.
 Additionally, multithreading support is not yet included in the stable ABI.
 
+
 Changes to the Nios2 Target
 ---------------------------
 
 * The Nios2 target was removed from this release.
 
-Changes to the OCaml bindings
------------------------------
-
-
-
-Changes to the C API
---------------------
-
-
-Changes to the DAG infrastructure
----------------------------------
 
 Changes to LLDB
 ===============
+
 * Printed source code is now syntax highlighted in the terminal (only for C
   languages).
 
