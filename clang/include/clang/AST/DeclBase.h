@@ -1662,6 +1662,11 @@ class DeclContext {
     /// A bit that indicates this block is passed directly to a function as a
     /// non-escaping parameter.
     uint64_t DoesNotEscape : 1;
+
+    /// A bit that indicates whether it's possible to avoid coying this block to
+    /// the heap when it initializes or is assigned to a local variable with
+    /// automatic storage.
+    uint64_t CanAvoidCopyToHeap : 1;
   };
 
   /// Number of non-inherited bits in BlockDeclBitfields.
