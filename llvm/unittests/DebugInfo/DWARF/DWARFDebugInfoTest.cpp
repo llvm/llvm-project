@@ -1556,128 +1556,123 @@ TEST(DWARFDebugInfo, TestFindRecurse) {
 TEST(DWARFDebugInfo, TestDwarfToFunctions) {
   // Test all of the dwarf::toXXX functions that take a
   // Optional<DWARFFormValue> and extract the values from it.
-  DWARFFormValue FormVal;
   uint64_t InvalidU64 = 0xBADBADBADBADBADB;
   int64_t InvalidS64 = 0xBADBADBADBADBADB;
+
   // First test that we don't get valid values back when using an optional with
   // no value.
-  Optional<DWARFFormValue> FormValOpt;
-  EXPECT_FALSE(toString(FormValOpt).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt).hasValue());
-  EXPECT_EQ(nullptr, toString(FormValOpt, nullptr));
-  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toAddress(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidS64, toSigned(FormValOpt, InvalidS64));
+  Optional<DWARFFormValue> FormValOpt1 = DWARFFormValue();
+  EXPECT_FALSE(toString(FormValOpt1).hasValue());
+  EXPECT_FALSE(toUnsigned(FormValOpt1).hasValue());
+  EXPECT_FALSE(toReference(FormValOpt1).hasValue());
+  EXPECT_FALSE(toSigned(FormValOpt1).hasValue());
+  EXPECT_FALSE(toAddress(FormValOpt1).hasValue());
+  EXPECT_FALSE(toSectionOffset(FormValOpt1).hasValue());
+  EXPECT_FALSE(toBlock(FormValOpt1).hasValue());
+  EXPECT_EQ(nullptr, toString(FormValOpt1, nullptr));
+  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidU64, toReference(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt1, InvalidU64));
+  EXPECT_EQ(InvalidS64, toSigned(FormValOpt1, InvalidS64));
 
   // Test successful and unsuccessful address decoding.
   uint64_t Address = 0x100000000ULL;
-  FormVal.setForm(DW_FORM_addr);
-  FormVal.setUValue(Address);
-  FormValOpt = FormVal;
+  Optional<DWARFFormValue> FormValOpt2 =
+      DWARFFormValue::createFromUValue(DW_FORM_addr, Address);
 
-  EXPECT_FALSE(toString(FormValOpt).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt).hasValue());
-  EXPECT_TRUE(toAddress(FormValOpt).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt).hasValue());
-  EXPECT_EQ(nullptr, toString(FormValOpt, nullptr));
-  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt, InvalidU64));
-  EXPECT_EQ(Address, toAddress(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidS64, toSigned(FormValOpt, InvalidU64));
+  EXPECT_FALSE(toString(FormValOpt2).hasValue());
+  EXPECT_FALSE(toUnsigned(FormValOpt2).hasValue());
+  EXPECT_FALSE(toReference(FormValOpt2).hasValue());
+  EXPECT_FALSE(toSigned(FormValOpt2).hasValue());
+  EXPECT_TRUE(toAddress(FormValOpt2).hasValue());
+  EXPECT_FALSE(toSectionOffset(FormValOpt2).hasValue());
+  EXPECT_FALSE(toBlock(FormValOpt2).hasValue());
+  EXPECT_EQ(nullptr, toString(FormValOpt2, nullptr));
+  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt2, InvalidU64));
+  EXPECT_EQ(InvalidU64, toReference(FormValOpt2, InvalidU64));
+  EXPECT_EQ(Address, toAddress(FormValOpt2, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt2, InvalidU64));
+  EXPECT_EQ(InvalidS64, toSigned(FormValOpt2, InvalidU64));
 
   // Test successful and unsuccessful unsigned constant decoding.
   uint64_t UData8 = 0x1020304050607080ULL;
-  FormVal.setForm(DW_FORM_udata);
-  FormVal.setUValue(UData8);
-  FormValOpt = FormVal;
+  Optional<DWARFFormValue> FormValOpt3 =
+      DWARFFormValue::createFromUValue(DW_FORM_udata, UData8);
 
-  EXPECT_FALSE(toString(FormValOpt).hasValue());
-  EXPECT_TRUE(toUnsigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt).hasValue());
-  EXPECT_TRUE(toSigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt).hasValue());
-  EXPECT_EQ(nullptr, toString(FormValOpt, nullptr));
-  EXPECT_EQ(UData8, toUnsigned(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toAddress(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt, InvalidU64));
-  EXPECT_EQ((int64_t)UData8, toSigned(FormValOpt, InvalidU64));
+  EXPECT_FALSE(toString(FormValOpt3).hasValue());
+  EXPECT_TRUE(toUnsigned(FormValOpt3).hasValue());
+  EXPECT_FALSE(toReference(FormValOpt3).hasValue());
+  EXPECT_TRUE(toSigned(FormValOpt3).hasValue());
+  EXPECT_FALSE(toAddress(FormValOpt3).hasValue());
+  EXPECT_FALSE(toSectionOffset(FormValOpt3).hasValue());
+  EXPECT_FALSE(toBlock(FormValOpt3).hasValue());
+  EXPECT_EQ(nullptr, toString(FormValOpt3, nullptr));
+  EXPECT_EQ(UData8, toUnsigned(FormValOpt3, InvalidU64));
+  EXPECT_EQ(InvalidU64, toReference(FormValOpt3, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt3, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt3, InvalidU64));
+  EXPECT_EQ((int64_t)UData8, toSigned(FormValOpt3, InvalidU64));
 
   // Test successful and unsuccessful reference decoding.
   uint32_t RefData = 0x11223344U;
-  FormVal.setForm(DW_FORM_ref_addr);
-  FormVal.setUValue(RefData);
-  FormValOpt = FormVal;
+  Optional<DWARFFormValue> FormValOpt4 =
+      DWARFFormValue::createFromUValue(DW_FORM_ref_addr, RefData);
 
-  EXPECT_FALSE(toString(FormValOpt).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt).hasValue());
-  EXPECT_TRUE(toReference(FormValOpt).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt).hasValue());
-  EXPECT_EQ(nullptr, toString(FormValOpt, nullptr));
-  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt, InvalidU64));
-  EXPECT_EQ(RefData, toReference(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toAddress(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidS64, toSigned(FormValOpt, InvalidU64));
+  EXPECT_FALSE(toString(FormValOpt4).hasValue());
+  EXPECT_FALSE(toUnsigned(FormValOpt4).hasValue());
+  EXPECT_TRUE(toReference(FormValOpt4).hasValue());
+  EXPECT_FALSE(toSigned(FormValOpt4).hasValue());
+  EXPECT_FALSE(toAddress(FormValOpt4).hasValue());
+  EXPECT_FALSE(toSectionOffset(FormValOpt4).hasValue());
+  EXPECT_FALSE(toBlock(FormValOpt4).hasValue());
+  EXPECT_EQ(nullptr, toString(FormValOpt4, nullptr));
+  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt4, InvalidU64));
+  EXPECT_EQ(RefData, toReference(FormValOpt4, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt4, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt4, InvalidU64));
+  EXPECT_EQ(InvalidS64, toSigned(FormValOpt4, InvalidU64));
 
   // Test successful and unsuccessful signed constant decoding.
   int64_t SData8 = 0x1020304050607080ULL;
-  FormVal.setForm(DW_FORM_udata);
-  FormVal.setSValue(SData8);
-  FormValOpt = FormVal;
+  Optional<DWARFFormValue> FormValOpt5 =
+      DWARFFormValue::createFromSValue(DW_FORM_udata, SData8);
 
-  EXPECT_FALSE(toString(FormValOpt).hasValue());
-  EXPECT_TRUE(toUnsigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt).hasValue());
-  EXPECT_TRUE(toSigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt).hasValue());
-  EXPECT_FALSE(toBlock(FormValOpt).hasValue());
-  EXPECT_EQ(nullptr, toString(FormValOpt, nullptr));
-  EXPECT_EQ((uint64_t)SData8, toUnsigned(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toAddress(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt, InvalidU64));
-  EXPECT_EQ(SData8, toSigned(FormValOpt, InvalidU64));
+  EXPECT_FALSE(toString(FormValOpt5).hasValue());
+  EXPECT_TRUE(toUnsigned(FormValOpt5).hasValue());
+  EXPECT_FALSE(toReference(FormValOpt5).hasValue());
+  EXPECT_TRUE(toSigned(FormValOpt5).hasValue());
+  EXPECT_FALSE(toAddress(FormValOpt5).hasValue());
+  EXPECT_FALSE(toSectionOffset(FormValOpt5).hasValue());
+  EXPECT_FALSE(toBlock(FormValOpt5).hasValue());
+  EXPECT_EQ(nullptr, toString(FormValOpt5, nullptr));
+  EXPECT_EQ((uint64_t)SData8, toUnsigned(FormValOpt5, InvalidU64));
+  EXPECT_EQ(InvalidU64, toReference(FormValOpt5, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt5, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt5, InvalidU64));
+  EXPECT_EQ(SData8, toSigned(FormValOpt5, InvalidU64));
 
   // Test successful and unsuccessful block decoding.
   uint8_t Data[] = { 2, 3, 4 };
   ArrayRef<uint8_t> Array(Data);
-  FormVal.setForm(DW_FORM_block1);
-  FormVal.setBlockValue(Array);
-  FormValOpt = FormVal;
+  Optional<DWARFFormValue> FormValOpt6 =
+      DWARFFormValue::createFromBlockValue(DW_FORM_block1, Array);
 
-  EXPECT_FALSE(toString(FormValOpt).hasValue());
-  EXPECT_FALSE(toUnsigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toReference(FormValOpt).hasValue());
-  EXPECT_FALSE(toSigned(FormValOpt).hasValue());
-  EXPECT_FALSE(toAddress(FormValOpt).hasValue());
-  EXPECT_FALSE(toSectionOffset(FormValOpt).hasValue());
-  auto BlockOpt = toBlock(FormValOpt);
+  EXPECT_FALSE(toString(FormValOpt6).hasValue());
+  EXPECT_FALSE(toUnsigned(FormValOpt6).hasValue());
+  EXPECT_FALSE(toReference(FormValOpt6).hasValue());
+  EXPECT_FALSE(toSigned(FormValOpt6).hasValue());
+  EXPECT_FALSE(toAddress(FormValOpt6).hasValue());
+  EXPECT_FALSE(toSectionOffset(FormValOpt6).hasValue());
+  auto BlockOpt = toBlock(FormValOpt6);
   EXPECT_TRUE(BlockOpt.hasValue());
   EXPECT_EQ(*BlockOpt, Array);
-  EXPECT_EQ(nullptr, toString(FormValOpt, nullptr));
-  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toReference(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toAddress(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt, InvalidU64));
-  EXPECT_EQ(InvalidS64, toSigned(FormValOpt, InvalidU64));
+  EXPECT_EQ(nullptr, toString(FormValOpt6, nullptr));
+  EXPECT_EQ(InvalidU64, toUnsigned(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidU64, toReference(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidU64, toAddress(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidU64, toSectionOffset(FormValOpt6, InvalidU64));
+  EXPECT_EQ(InvalidS64, toSigned(FormValOpt6, InvalidU64));
 
   // Test
 }
