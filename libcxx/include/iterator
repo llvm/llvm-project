@@ -399,6 +399,11 @@ template <class C> constexpr auto crend(const C& c) -> decltype(std::rend(c));  
 // 24.8, container access:
 template <class C> constexpr auto size(const C& c) -> decltype(c.size());         // C++17
 template <class T, size_t N> constexpr size_t size(const T (&array)[N]) noexcept; // C++17
+
+template <class C> constexpr auto ssize(const C& c)
+    -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;				       // C++20
+template <class T, ptrdiff_t> constexpr ptrdiff_t ssize(const T (&array)[N]) noexcept; // C++20
+
 template <class C> constexpr auto empty(const C& c) -> decltype(c.empty());       // C++17
 template <class T, size_t N> constexpr bool empty(const T (&array)[N]) noexcept;  // C++17
 template <class E> constexpr bool empty(initializer_list<E> il) noexcept;         // C++17
@@ -1857,6 +1862,19 @@ _NOEXCEPT_(noexcept(__c.size()))
 template <class _Tp, size_t _Sz>
 inline _LIBCPP_INLINE_VISIBILITY
 constexpr size_t size(const _Tp (&)[_Sz]) noexcept { return _Sz; }
+
+#if _LIBCPP_STD_VER > 17
+template <class _Cont>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr auto ssize(const _Cont& __c)
+_NOEXCEPT_(noexcept(static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size())))
+->                              common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>
+{ return            static_cast<common_type_t<ptrdiff_t, make_signed_t<decltype(__c.size())>>>(__c.size()); }
+
+template <class _Tp, ptrdiff_t _Sz>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr ptrdiff_t ssize(const _Tp (&)[_Sz]) noexcept { return _Sz; }
+#endif
 
 template <class _Cont>
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY
