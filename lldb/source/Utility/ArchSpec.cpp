@@ -903,9 +903,8 @@ void ArchSpec::MergeFrom(const ArchSpec &other) {
       UpdateCore();
   }
   if (!TripleEnvironmentWasSpecified() &&
-      other.TripleEnvironmentWasSpecified() && !TripleVendorWasSpecified()) {
-    if (other.TripleVendorWasSpecified())
-      GetTriple().setEnvironment(other.GetTriple().getEnvironment());
+      other.TripleEnvironmentWasSpecified()) {
+    GetTriple().setEnvironment(other.GetTriple().getEnvironment());
   }
   // If this and other are both arm ArchSpecs and this ArchSpec is a generic
   // "some kind of arm" spec but the other ArchSpec is a specific arm core,
