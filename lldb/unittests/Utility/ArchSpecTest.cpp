@@ -232,3 +232,76 @@ TEST(ArchSpecTest, OperatorBool) {
   EXPECT_FALSE(ArchSpec());
   EXPECT_TRUE(ArchSpec("x86_64-pc-linux"));
 }
+
+TEST(ArchSpecTest, TripleComponentsWereSpecified) {
+  {
+    ArchSpec A("");
+    ArchSpec B("-");
+    ArchSpec C("--");
+    ArchSpec D("---");
+
+    ASSERT_FALSE(A.TripleVendorWasSpecified());
+    ASSERT_FALSE(A.TripleOSWasSpecified());
+    ASSERT_FALSE(A.TripleEnvironmentWasSpecified());
+
+    ASSERT_FALSE(B.TripleVendorWasSpecified());
+    ASSERT_FALSE(B.TripleOSWasSpecified());
+    ASSERT_FALSE(B.TripleEnvironmentWasSpecified());
+
+    ASSERT_FALSE(C.TripleVendorWasSpecified());
+    ASSERT_FALSE(C.TripleOSWasSpecified());
+    ASSERT_FALSE(C.TripleEnvironmentWasSpecified());
+
+    ASSERT_FALSE(D.TripleVendorWasSpecified());
+    ASSERT_FALSE(D.TripleOSWasSpecified());
+    ASSERT_FALSE(D.TripleEnvironmentWasSpecified());
+  }
+  {
+    // TODO: llvm::Triple::normalize treats the missing components from these
+    // triples as specified unknown components instead of unspecified
+    // components. We need to either change the behavior in llvm or work around
+    // this in lldb.
+    ArchSpec A("armv7");
+    ArchSpec B("armv7-");
+    ArchSpec C("armv7--");
+    ArchSpec D("armv7---");
+
+    ASSERT_FALSE(A.TripleVendorWasSpecified());
+    ASSERT_FALSE(A.TripleOSWasSpecified());
+    ASSERT_FALSE(A.TripleEnvironmentWasSpecified());
+
+    ASSERT_TRUE(B.TripleVendorWasSpecified());
+    ASSERT_FALSE(B.TripleOSWasSpecified());
+    ASSERT_FALSE(B.TripleEnvironmentWasSpecified());
+
+    ASSERT_TRUE(C.TripleVendorWasSpecified());
+    ASSERT_TRUE(C.TripleOSWasSpecified());
+    ASSERT_FALSE(C.TripleEnvironmentWasSpecified());
+
+    ASSERT_TRUE(D.TripleVendorWasSpecified());
+    ASSERT_TRUE(D.TripleOSWasSpecified());
+    ASSERT_TRUE(D.TripleEnvironmentWasSpecified());
+  }
+  {
+    ArchSpec A("x86_64-unknown");
+    ArchSpec B("powerpc-unknown-linux");
+    ArchSpec C("i386-pc-windows-msvc");
+    ArchSpec D("aarch64-unknown-linux-android");
+
+    ASSERT_TRUE(A.TripleVendorWasSpecified());
+    ASSERT_FALSE(A.TripleOSWasSpecified());
+    ASSERT_FALSE(A.TripleEnvironmentWasSpecified());
+
+    ASSERT_TRUE(B.TripleVendorWasSpecified());
+    ASSERT_TRUE(B.TripleOSWasSpecified());
+    ASSERT_FALSE(B.TripleEnvironmentWasSpecified());
+
+    ASSERT_TRUE(C.TripleVendorWasSpecified());
+    ASSERT_TRUE(C.TripleOSWasSpecified());
+    ASSERT_TRUE(C.TripleEnvironmentWasSpecified());
+
+    ASSERT_TRUE(D.TripleVendorWasSpecified());
+    ASSERT_TRUE(D.TripleOSWasSpecified());
+    ASSERT_TRUE(D.TripleEnvironmentWasSpecified());
+  }
+}

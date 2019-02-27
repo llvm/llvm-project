@@ -22,7 +22,7 @@
 
 
 template <typename Span>
-constexpr bool testConstexprSpan(Span sp, ptrdiff_t sz)
+constexpr bool testConstexprSpan(Span sp, size_t sz)
 {
     ASSERT_NOEXCEPT(sp.size());
     return sp.size() == sz;
@@ -30,7 +30,7 @@ constexpr bool testConstexprSpan(Span sp, ptrdiff_t sz)
 
 
 template <typename Span>
-void testRuntimeSpan(Span sp, ptrdiff_t sz)
+void testRuntimeSpan(Span sp, size_t sz)
 {
     ASSERT_NOEXCEPT(sp.size());
     assert(sp.size() == sz);

@@ -24,7 +24,7 @@
 
 int main(int, char**)
 {
-    std::span<int, 2> s; // expected-error-re@span:* {{static_assert failed{{( due to requirement '2[LL]{0,2} == 0')?}} "Can't default construct a statically sized span with size > 0"}}
+    std::span<int, 2> s; // expected-error-re@span:* {{static_assert failed{{( due to requirement '.*')?}} "Can't default construct a statically sized span with size > 0"}}
 
 //  TODO: This is what I want:
 // eXpected-error {{no matching constructor for initialization of 'std::span<int, 2>'}}
