@@ -4405,6 +4405,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Twine(N)));
   }
 
+  // -frandstruct-seed parent process
+  if (Arg *A = Args.getLastArg(options::OPT_frandstruct_seed_EQ)) {
+    CmdArgs.push_back( "-frandstruct-seed" );
+    CmdArgs.push_back(A->getValue(0));
+  }
+
   // -fvisibility= and -fvisibility-ms-compat are of a piece.
   if (const Arg *A = Args.getLastArg(options::OPT_fvisibility_EQ,
                                      options::OPT_fvisibility_ms_compat)) {

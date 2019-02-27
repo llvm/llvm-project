@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/RandstructSeed.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -2988,8 +2989,8 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   const ASTRecordLayout *NewEntry = nullptr;
   Randstruct randstruct;
   bool ShouldBeRandomized = randstruct.isTriviallyRandomizable(D) || D->getAttr<RandomizeLayoutAttr>() != nullptr;
-  if(ShouldBeRandomized){
-    randstruct.reorganizeFields(*this, D);  
+  if (ShouldBeRandomized) {
+    randstruct.reorganizeFields(*this,D);
   }
 
   if (isMsLayout(*this)) {
