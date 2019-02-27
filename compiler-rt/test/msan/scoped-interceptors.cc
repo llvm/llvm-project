@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
     case '2': {
       int cmp = memcmp(uninit, uninit, sizeof(uninit));  // BOOM
       break;
-      // CASE-2: Uninitialized bytes in MemcmpInterceptorCommon
+      // CASE-2: Uninitialized bytes in __interceptor_memcmp
     }
     case '3': {
       size_t len = strlen(uninit);  // BOOM

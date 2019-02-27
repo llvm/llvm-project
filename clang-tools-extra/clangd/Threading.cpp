@@ -9,6 +9,8 @@
 #include <pthread.h>
 #elif defined(__APPLE__)
 #include <sys/resource.h>
+#elif defined (_WIN32)
+#include <Windows.h>
 #endif
 
 namespace clang {
@@ -129,6 +131,11 @@ void setCurrentThreadPriority(ThreadPriority Priority) {
               Priority == ThreadPriority::Low && !AvoidThreadStarvation
                   ? PRIO_DARWIN_BG
                   : 0);
+#elif defined(_WIN32)
+  SetThreadPriority(GetCurrentThread(),
+                    Priority == ThreadPriority::Low && !AvoidThreadStarvation
+                        ? THREAD_MODE_BACKGROUND_BEGIN
+                        : THREAD_MODE_BACKGROUND_END);
 #endif
 }
 

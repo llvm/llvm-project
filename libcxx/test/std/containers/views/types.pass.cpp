@@ -16,7 +16,7 @@
 //  // constants and types
 //  using element_type           = ElementType;
 //  using value_type             = remove_cv_t<ElementType>;
-//  using index_type             = ptrdiff_t;
+//  using index_type             = size_t;
 //  using difference_type        = ptrdiff_t;
 //  using pointer                = element_type *;
 //  using reference              = element_type &;
@@ -63,12 +63,12 @@ void testConstIterator()
     ASSERT_SAME_TYPE(typename ItT::difference_type,   typename S::difference_type);
 }
 
-template <typename S, typename ElementType, std::ptrdiff_t Size>
+template <typename S, typename ElementType, std::size_t Size>
 void testSpan()
 {
     ASSERT_SAME_TYPE(typename S::element_type,    ElementType);
     ASSERT_SAME_TYPE(typename S::value_type,      std::remove_cv_t<ElementType>);
-    ASSERT_SAME_TYPE(typename S::index_type,      std::ptrdiff_t);
+    ASSERT_SAME_TYPE(typename S::index_type,      std::size_t);
     ASSERT_SAME_TYPE(typename S::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(typename S::pointer,         ElementType *);
     ASSERT_SAME_TYPE(typename S::const_pointer,   const ElementType *);
@@ -87,10 +87,10 @@ void testSpan()
 template <typename T>
 void test()
 {
-    testSpan<std::span<               T>,                T, -1>();
-    testSpan<std::span<const          T>, const          T, -1>();
-    testSpan<std::span<      volatile T>,       volatile T, -1>();
-    testSpan<std::span<const volatile T>, const volatile T, -1>();
+    testSpan<std::span<               T>,                T, std::dynamic_extent>();
+    testSpan<std::span<const          T>, const          T, std::dynamic_extent>();
+    testSpan<std::span<      volatile T>,       volatile T, std::dynamic_extent>();
+    testSpan<std::span<const volatile T>, const volatile T, std::dynamic_extent>();
 
     testSpan<std::span<               T, 5>,                T, 5>();
     testSpan<std::span<const          T, 5>, const          T, 5>();

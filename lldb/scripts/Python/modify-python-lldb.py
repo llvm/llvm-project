@@ -75,117 +75,6 @@ one_liner_docstring_pattern = re.compile(
     '^(%s|%s)""".*"""$' %
     (TWO_SPACES, EIGHT_SPACES))
 
-#
-# lldb_helpers and lldb_iter() should appear before our first SB* class definition.
-#
-lldb_helpers = '''
-# ==================================
-# Helper function for SBModule class
-# ==================================
-def in_range(symbol, section):
-    """Test whether a symbol is within the range of a section."""
-    symSA = symbol.GetStartAddress().GetFileAddress()
-    symEA = symbol.GetEndAddress().GetFileAddress()
-    secSA = section.GetFileAddress()
-    secEA = secSA + section.GetByteSize()
-
-    if symEA != LLDB_INVALID_ADDRESS:
-        if secSA <= symSA and symEA <= secEA:
-            return True
-        else:
-            return False
-    else:
-        if secSA <= symSA and symSA < secEA:
-            return True
-        else:
-            return False
-'''
-
-lldb_iter_def = '''
-# ===================================
-# Iterator for lldb container objects
-# ===================================
-def lldb_iter(obj, getsize, getelem):
-    """A generator adaptor to support iteration for lldb container objects."""
-    size = getattr(obj, getsize)
-    elem = getattr(obj, getelem)
-    for i in range(size()):
-        yield elem(i)
-
-# ==============================================================================
-# The modify-python-lldb.py script is responsible for post-processing this SWIG-
-# generated lldb.py module.  It is responsible for adding the above lldb_iter()
-# function definition as well as the supports, in the following, for iteration
-# protocol: __iter__, rich comparison methods: __eq__ and __ne__, truth value
-# testing (and built-in operation bool()): __nonzero__, and built-in function
-# len(): __len__.
-# ==============================================================================
-'''
-
-#
-# linked_list_iter() is a special purpose iterator to treat the SBValue as the
-# head of a list data structure, where you specify the child member name which
-# points to the next item on the list and you specify the end-of-list function
-# which takes an SBValue and returns True if EOL is reached and False if not.
-#
-linked_list_iter_def = '''
-    def __eol_test__(val):
-        """Default function for end of list test takes an SBValue object.
-
-        Return True if val is invalid or it corresponds to a null pointer.
-        Otherwise, return False.
-        """
-        if not val or val.GetValueAsUnsigned() == 0:
-            return True
-        else:
-            return False
-
-    # ==================================================
-    # Iterator for lldb.SBValue treated as a linked list
-    # ==================================================
-    def linked_list_iter(self, next_item_name, end_of_list_test=__eol_test__):
-        """Generator adaptor to support iteration for SBValue as a linked list.
-
-        linked_list_iter() is a special purpose iterator to treat the SBValue as
-        the head of a list data structure, where you specify the child member
-        name which points to the next item on the list and you specify the
-        end-of-list test function which takes an SBValue for an item and returns
-        True if EOL is reached and False if not.
-
-        linked_list_iter() also detects infinite loop and bails out early.
-
-        The end_of_list_test arg, if omitted, defaults to the __eol_test__
-        function above.
-
-        For example,
-
-        # Get Frame #0.
-        ...
-
-        # Get variable 'task_head'.
-        task_head = frame0.FindVariable('task_head')
-        ...
-
-        for t in task_head.linked_list_iter('next'):
-            print t
-        """
-        if end_of_list_test(self):
-            return
-        item = self
-        visited = set()
-        try:
-            while not end_of_list_test(item) and not item.GetValueAsUnsigned() in visited:
-                visited.add(item.GetValueAsUnsigned())
-                yield item
-                # Prepare for the next iteration.
-                item = item.GetChildMemberWithName(next_item_name)
-        except:
-            # Exception occurred.  Stop the generator.
-            pass
-
-        return
-'''
-
 # This supports the iteration protocol.
 iter_def = "    def __iter__(self): return lldb_iter(self, '%s', '%s')"
 module_iter = "    def module_iter(self): return lldb_iter(self, '%s', '%s')"
@@ -338,9 +227,6 @@ DEFINING_ITERATOR = 2
 DEFINING_EQUALITY = 4
 CLEANUP_DOCSTRING = 8
 
-# The lldb_iter_def only needs to be inserted once.
-lldb_iter_defined = False
-
 # Our FSM begins its life in the NORMAL state, and transitions to the
 # DEFINING_ITERATOR and/or DEFINING_EQUALITY state whenever it encounters the
 # beginning of certain class definitions, see dictionaries 'd' and 'e' above.
@@ -378,13 +264,6 @@ for line in content.splitlines():
 
     if state == NORMAL:
         match = class_pattern.search(line)
-        # Inserts lldb_helpers and the lldb_iter() definition before the first
-        # class definition.
-        if not lldb_iter_defined and match:
-            new_content.add_line(lldb_helpers)
-            new_content.add_line(lldb_iter_def)
-            lldb_iter_defined = True
-
         # If we are at the beginning of the class definitions, prepare to
         # transition to the DEFINING_ITERATOR/DEFINING_EQUALITY state for the
         # right class names.
@@ -423,10 +302,6 @@ for line in content.splitlines():
                 new_content.add_line(compile_unit_iter %
                                      d[cls + '-compile-unit'])
                 new_content.add_line(d[cls + '-symbol-in-section'])
-
-            # This special purpose iterator is for SBValue only!!!
-            if cls == "SBValue":
-                new_content.add_line(linked_list_iter_def)
 
             # Next state will be NORMAL.
             state = NORMAL

@@ -205,14 +205,25 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *S,
                                                   uint64_t Offset) {
   llvm::call_once(InitDwarfLine, [this]() { initializeDwarf(); });
 
+  // Detect SectionIndex for specified section.
+  uint64_t SectionIndex = object::SectionedAddress::UndefSection;
+  ArrayRef<InputSectionBase *> Sections = S->File->getSections();
+  for (uint64_t CurIndex = 0; CurIndex < Sections.size(); ++CurIndex) {
+    if (S == Sections[CurIndex]) {
+      SectionIndex = CurIndex;
+      break;
+    }
+  }
+
   // Use fake address calcuated by adding section file offset and offset in
   // section. See comments for ObjectInfo class.
   DILineInfo Info;
-  for (const llvm::DWARFDebugLine::LineTable *LT : LineTables)
+  for (const llvm::DWARFDebugLine::LineTable *LT : LineTables) {
     if (LT->getFileLineInfoForAddress(
-            S->getOffsetInFile() + Offset, nullptr,
+            {S->getOffsetInFile() + Offset, SectionIndex}, nullptr,
             DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, Info))
       return Info;
+  }
   return None;
 }
 

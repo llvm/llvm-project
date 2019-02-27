@@ -98,6 +98,7 @@ void verifycpustrings() {
   (void)__builtin_cpu_is("btver1");
   (void)__builtin_cpu_is("btver2");
   (void)__builtin_cpu_is("cannonlake");
+  (void)__builtin_cpu_is("cascadelake");
   (void)__builtin_cpu_is("core2");
   (void)__builtin_cpu_is("corei7");
   (void)__builtin_cpu_is("goldmont");

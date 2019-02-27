@@ -480,11 +480,11 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
       MS->EmitIntValue(dwarf::DW_LNS_extended_op, 1);
       MS->EmitULEB128IntValue(PointerSize + 1);
       MS->EmitIntValue(dwarf::DW_LNE_set_address, 1);
-      MS->EmitIntValue(Row.Address, PointerSize);
+      MS->EmitIntValue(Row.Address.Address, PointerSize);
       LineSectionSize += 2 + PointerSize + getULEB128Size(PointerSize + 1);
       AddressDelta = 0;
     } else {
-      AddressDelta = (Row.Address - Address) / MinInstLength;
+      AddressDelta = (Row.Address.Address - Address) / MinInstLength;
     }
 
     // FIXME: code copied and transformed from MCDwarf.cpp::EmitDwarfLineTable.
@@ -540,7 +540,7 @@ void DwarfStreamer::emitLineTableForUnit(MCDwarfLineTableParams Params,
       MS->EmitBytes(EncodingOS.str());
       LineSectionSize += EncodingBuffer.size();
       EncodingBuffer.resize(0);
-      Address = Row.Address;
+      Address = Row.Address.Address;
       LastLine = Row.Line;
       RowsSinceLastSequence++;
     } else {

@@ -601,6 +601,61 @@ public:
             child.SetSyntheticChildrenGenerated(True)
             return child
 
+        def __eol_test(val):
+            """Default function for end of list test takes an SBValue object.
+
+            Return True if val is invalid or it corresponds to a null pointer.
+            Otherwise, return False.
+            """
+            if not val or val.GetValueAsUnsigned() == 0:
+                return True
+            else:
+                return False
+
+        # ==================================================
+        # Iterator for lldb.SBValue treated as a linked list
+        # ==================================================
+        def linked_list_iter(self, next_item_name, end_of_list_test=__eol_test):
+            """Generator adaptor to support iteration for SBValue as a linked list.
+
+            linked_list_iter() is a special purpose iterator to treat the SBValue as
+            the head of a list data structure, where you specify the child member
+            name which points to the next item on the list and you specify the
+            end-of-list test function which takes an SBValue for an item and returns
+            True if EOL is reached and False if not.
+
+            linked_list_iter() also detects infinite loop and bails out early.
+
+            The end_of_list_test arg, if omitted, defaults to the __eol_test
+            function above.
+
+            For example,
+
+            # Get Frame #0.
+            ...
+
+            # Get variable 'task_head'.
+            task_head = frame0.FindVariable('task_head')
+            ...
+
+            for t in task_head.linked_list_iter('next'):
+                print t
+            """
+            if end_of_list_test(self):
+                return
+            item = self
+            visited = set()
+            try:
+                while not end_of_list_test(item) and not item.GetValueAsUnsigned() in visited:
+                    visited.add(item.GetValueAsUnsigned())
+                    yield item
+                    # Prepare for the next iteration.
+                    item = item.GetChildMemberWithName(next_item_name)
+            except:
+                # Exception occurred.  Stop the generator.
+                pass
+
+            return
     %}
 
 };

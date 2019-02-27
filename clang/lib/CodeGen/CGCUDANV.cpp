@@ -218,6 +218,7 @@ std::string CGNVCUDARuntime::getDeviceSideName(const Decl *D) {
 void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
                                      FunctionArgList &Args) {
   assert(getDeviceSideName(CGF.CurFuncDecl) == CGF.CurFn->getName() ||
+         getDeviceSideName(CGF.CurFuncDecl) + ".stub" == CGF.CurFn->getName() ||
          CGF.CGM.getContext().getTargetInfo().getCXXABI() !=
              CGF.CGM.getContext().getAuxTargetInfo()->getCXXABI());
 

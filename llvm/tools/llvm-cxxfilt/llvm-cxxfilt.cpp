@@ -78,19 +78,50 @@ static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
   return Result;
 }
 
+// Split 'Source' on any character that fails to pass 'IsLegalChar'.  The
+// returned vector consists of pairs where 'first' is the delimited word, and
+// 'second' are the delimiters following that word.
+static void SplitStringDelims(
+    StringRef Source,
+    SmallVectorImpl<std::pair<StringRef, StringRef>> &OutFragments,
+    function_ref<bool(char)> IsLegalChar) {
+  // The beginning of the input string.
+  const auto Head = Source.begin();
+
+  // Obtain any leading delimiters.
+  auto Start = std::find_if(Head, Source.end(), IsLegalChar);
+  if (Start != Head)
+    OutFragments.push_back({"", Source.slice(0, Start - Head)});
+
+  // Capture each word and the delimiters following that word.
+  while (Start != Source.end()) {
+    Start = std::find_if(Start, Source.end(), IsLegalChar);
+    auto End = std::find_if_not(Start, Source.end(), IsLegalChar);
+    auto DEnd = std::find_if(End, Source.end(), IsLegalChar);
+    OutFragments.push_back({Source.slice(Start - Head, End - Head),
+                            Source.slice(End - Head, DEnd - Head)});
+    Start = DEnd;
+  }
+}
+
+// This returns true if 'C' is a character that can show up in an
+// Itanium-mangled string.
+static bool IsLegalItaniumChar(char C) {
+  // Itanium CXX ABI [External Names]p5.1.1:
+  // '$' and '.' in mangled names are reserved for private implementations.
+  return isalnum(C) || C == '.' || C == '$' || C == '_';
+}
+
 // If 'Split' is true, then 'Mangled' is broken into individual words and each
 // word is demangled.  Otherwise, the entire string is treated as a single
 // mangled item.  The result is output to 'OS'.
 static void demangleLine(llvm::raw_ostream &OS, StringRef Mangled, bool Split) {
   std::string Result;
   if (Split) {
-    SmallVector<StringRef, 16> Words;
-    SplitString(Mangled, Words);
-    for (auto Word : Words)
-      Result += demangle(OS, Word) + ' ';
-    // Remove the trailing space character.
-    if (Result.back() == ' ')
-      Result.pop_back();
+    SmallVector<std::pair<StringRef, StringRef>, 16> Words;
+    SplitStringDelims(Mangled, Words, IsLegalItaniumChar);
+    for (const auto &Word : Words)
+      Result += demangle(OS, Word.first) + Word.second.str();
   } else
     Result = demangle(OS, Mangled);
   OS << Result << '\n';

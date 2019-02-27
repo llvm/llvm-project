@@ -2,20 +2,21 @@ include_directories(..)
 
 # Runtime library sources and build flags.
 set(HWASAN_RTL_SOURCES
-  hwasan.cc
-  hwasan_allocator.cc
-  hwasan_dynamic_shadow.cc
-  hwasan_interceptors.cc
-  hwasan_linux.cc
-  hwasan_memintrinsics.cc
-  hwasan_poisoning.cc
-  hwasan_report.cc
-  hwasan_thread.cc
-  hwasan_thread_list.cc
+  hwasan.cpp
+  hwasan_allocator.cpp
+  hwasan_dynamic_shadow.cpp
+  hwasan_interceptors.cpp
+  hwasan_linux.cpp
+  hwasan_memintrinsics.cpp
+  hwasan_poisoning.cpp
+  hwasan_report.cpp
+  hwasan_thread.cpp
+  hwasan_thread_list.cpp
   )
 
 set(HWASAN_RTL_CXX_SOURCES
-  hwasan_new_delete.cc)
+  hwasan_new_delete.cpp
+  )
 
 set(HWASAN_RTL_HEADERS
   hwasan.h

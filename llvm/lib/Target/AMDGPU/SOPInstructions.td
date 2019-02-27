@@ -9,6 +9,7 @@
 def GPRIdxModeMatchClass : AsmOperandClass {
   let Name = "GPRIdxMode";
   let PredicateMethod = "isGPRIdxMode";
+  let ParserMethod = "parseGPRIdxMode";
   let RenderMethod = "addImmOperands";
 }
 
