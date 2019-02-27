@@ -1258,6 +1258,7 @@ def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
 def fmerge_all_constants : Flag<["-"], "fmerge-all-constants">, Group<f_Group>,
   Flags<[CC1Option, CoreOption]>, HelpText<"Allow merging of constants">;
 def fmessage_length_EQ : Joined<["-"], "fmessage-length=">, Group<f_Group>;
+def randstruct_seed_EQ : Joined<["-"], "randstruct-seed=">, Group<f_Group>;
 def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">;
 def fms_compatibility : Flag<["-"], "fms-compatibility">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
@@ -1750,6 +1751,9 @@ def freroll_loops : Flag<["-"], "freroll-loops">, Group<f_Group>,
   HelpText<"Turn on loop reroller">, Flags<[CC1Option]>;
 def fno_reroll_loops : Flag<["-"], "fno-reroll-loops">, Group<f_Group>,
   HelpText<"Turn off loop reroller">;
+def randstruct_auto : Flag<["-"], "randstruct-auto">,
+  HelpText<"Enable automatic structure selection for field randomization; "
+           "disabled with no_randomize_layout">, Flags<[CC1Option]>;
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Flags<[CC1Option]>;
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,

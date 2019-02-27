@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/RandstructSeed.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -2986,10 +2987,18 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   if (Entry) return *Entry;
 
   const ASTRecordLayout *NewEntry = nullptr;
-  bool ShouldBeRandomized = Randstruct::isTriviallyRandomizable(D) || D->getAttr<RandomizeLayoutAttr>() != nullptr;
-  if(ShouldBeRandomized){
-    Randstruct randstruct;
-    randstruct.reorganizeFields(*this, D);  
+
+  bool ShouldBeRandomized = (RandstructAutoSelect && Randstruct::isTriviallyRandomizable(D)) || D->getAttr<RandomizeLayoutAttr>() != nullptr;
+  if (ShouldBeRandomized) {
+    // There is no technical benefit to randomizing the fields of a union
+    // since they all share the same offset of zero.
+    if (D->isUnion()) {
+      getDiagnostics().Report(D->getLocation(), diag::warn_randomize_attr_union);
+    }
+    else {
+      Randstruct randstruct;
+      randstruct.reorganizeFields(*this,D);
+    }
   }
 
   if (isMsLayout(*this)) {

@@ -117,6 +117,7 @@
 // CHECK-NEXT: Overloadable (SubjectMatchRule_function)
 // CHECK-NEXT: ParamTypestate (SubjectMatchRule_variable_is_parameter)
 // CHECK-NEXT: PassObjectSize (SubjectMatchRule_variable_is_parameter)
+// CHECK-NEXT: RandomizeLayout (SubjectMatchRule_record)
 // CHECK-NEXT: RenderScriptKernel (SubjectMatchRule_function)
 // CHECK-NEXT: ReqdWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: RequireConstantInit (SubjectMatchRule_variable_is_global)
