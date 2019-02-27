@@ -1317,6 +1317,46 @@ The ``ifunc`` attribute may only be used on a function declaration.  A function 
 Not all targets support this attribute. ELF target support depends on both the linker and runtime linker, and is available in at least lld 4.0 and later, binutils 2.20.1 and later, glibc v2.11.1 and later, and FreeBSD 9.1 and later. Non-ELF targets currently do not support this attribute.
 
 
+import_module
+-------------
+.. csv-table:: Supported Syntaxes
+   :header: "GNU", "C++11", "C2x", "``__declspec``", "Keyword", "``#pragma``", "``#pragma clang attribute``"
+
+   "``import_module``","``clang::import_module``","``clang::import_module``","","","","Yes"
+
+Clang supports the ``__attribute__((import_module(<module_name>)))`` 
+attribute for the WebAssembly target. This attribute may be attached to a
+function declaration, where it modifies how the symbol is to be imported
+within the WebAssembly linking environment.
+
+WebAssembly imports use a two-level namespace scheme, consisting of a module
+name, which typically identifies a module from which to import, and a field
+name, which typically identifies a field from that module to import. By
+default, module names for C/C++ symbols are assigned automatically by the
+linker. This attribute can be used to override the default behavior, and
+reuqest a specific module name be used instead.
+
+
+import_name
+-----------
+.. csv-table:: Supported Syntaxes
+   :header: "GNU", "C++11", "C2x", "``__declspec``", "Keyword", "``#pragma``", "``#pragma clang attribute``"
+
+   "``import_name``","``clang::import_name``","``clang::import_name``","","","","Yes"
+
+Clang supports the ``__attribute__((import_name(<name>)))`` 
+attribute for the WebAssembly target. This attribute may be attached to a
+function declaration, where it modifies how the symbol is to be imported
+within the WebAssembly linking environment.
+
+WebAssembly imports use a two-level namespace scheme, consisting of a module
+name, which typically identifies a module from which to import, and a field
+name, which typically identifies a field from that module to import. By
+default, field names for C/C++ symbols are the same as their C/C++ symbol
+names. This attribute can be used to override the default behavior, and
+reuqest a specific field name be used instead.
+
+
 internal_linkage
 ----------------
 .. csv-table:: Supported Syntaxes
