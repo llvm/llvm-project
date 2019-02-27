@@ -220,7 +220,10 @@ ConstString ValueObjectConstResult::GetTypeName() {
 }
 
 ConstString ValueObjectConstResult::GetDisplayTypeName() {
-  return GetCompilerType().GetDisplayTypeName(GetFrameSP());
+  const SymbolContext *sc = nullptr;
+  if (GetFrameSP())
+    sc = &GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
+  return GetCompilerType().GetDisplayTypeName(sc);
 }
 
 bool ValueObjectConstResult::UpdateValue() {

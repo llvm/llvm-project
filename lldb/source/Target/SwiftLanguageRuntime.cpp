@@ -85,6 +85,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 static constexpr std::chrono::seconds g_po_function_timeout(15);
+static const char *g_dollar_tau_underscore = u8"$\u03C4_";
 
 namespace lldb_private {
 swift::Type GetSwiftType(void *opaque_ptr) {
@@ -695,26 +696,88 @@ bool SwiftLanguageRuntime::IsSwiftMangledName(const char *name) {
   return swift::Demangle::isSwiftSymbol(name);
 }
 
-std::string SwiftLanguageRuntime::DemangleSymbolAsString (const char *symbol,
-                                                          bool simplified) {
-  if (simplified) {
-    swift::Demangle::DemangleOptions options(swift::Demangle::DemangleOptions::
-                                             SimplifiedUIDemangleOptions());
-    return swift::Demangle::demangleSymbolAsString(
-        symbol, strlen(symbol), options);
-  } else
-    return swift::Demangle::demangleSymbolAsString(symbol, strlen(symbol));
+void SwiftLanguageRuntime::GetArchetypeNamesForFunction(
+    const SymbolContext &const_sc,
+    llvm::DenseMap<SwiftLanguageRuntime::ArchetypePath, StringRef> &dict) {
+  // This terrifying cast avoids having too many differences with llvm.org.
+  SymbolContext &sc = const_cast<SymbolContext &>(const_sc);
+
+  // While building the Symtab itself the symbol context is incomplete.
+  if (!sc.function && sc.module_sp && sc.symbol) {
+    SymbolContextList sc_list;
+    bool symbols_okay = false;
+    bool inlines_okay = false;
+    bool append = false;
+    size_t num_matches = sc.module_sp->FindFunctions(
+        sc.symbol->GetMangled().GetMangledName(), nullptr,
+        lldb::eFunctionNameTypeBase, inlines_okay, symbols_okay, append,
+        sc_list);
+    for (size_t idx = 0; idx < num_matches; idx++) {
+      sc_list.GetContextAtIndex(idx, sc);
+      if (sc.function)
+        break;
+    }
+  }
+
+  Block *block = sc.GetFunctionBlock();
+  if (!block)
+    return;
+
+  bool can_create = true;
+  VariableListSP var_list = block->GetBlockVariableList(can_create);
+  if (!var_list)
+    return;
+
+  for (unsigned i = 0; i < var_list->GetSize(); ++i) {
+    VariableSP var_sp = var_list->GetVariableAtIndex(i);
+    StringRef name = var_sp->GetName().GetStringRef();
+    if (!name.consume_front(g_dollar_tau_underscore))
+      continue;
+
+    uint64_t depth;
+    if (name.consumeInteger(10, depth))
+      continue;
+
+    if (!name.consume_front("_"))
+      continue;
+
+    uint64_t index;
+    if (name.consumeInteger(10, index))
+      continue;
+
+    if (!name.empty())
+      continue;
+
+    Type *archetype = var_sp->GetType();
+    if (!archetype)
+      continue;
+
+    dict.insert({{depth, index}, archetype->GetName().GetStringRef()});
+  }
 }
 
-std::string SwiftLanguageRuntime::DemangleSymbolAsString (const ConstString &symbol,
-                                                          bool simplified) {
-  if (simplified) {
-    swift::Demangle::DemangleOptions options(swift::Demangle::DemangleOptions::
-                                             SimplifiedUIDemangleOptions());
-    return swift::Demangle::demangleSymbolAsString(
-        symbol.GetStringRef(), options);
-  } else
-    return swift::Demangle::demangleSymbolAsString(symbol.GetStringRef());
+std::string
+SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, bool simplified,
+                                             const SymbolContext *sc) {
+  bool did_init = false;
+  llvm::DenseMap<ArchetypePath, StringRef> dict;
+  swift::Demangle::DemangleOptions options;
+  if (simplified)
+    options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
+
+  if (sc) {
+    options.ArchetypeName = [&](uint64_t index, uint64_t depth) {
+      if (!did_init) {
+        GetArchetypeNamesForFunction(*sc, dict);
+        did_init = true;
+      }
+      auto it = dict.find({depth, index});
+      if (it != dict.end())
+        return it->second.str();
+      return swift::Demangle::archetypeName(index, depth);
+    };
+  }
+  return swift::Demangle::demangleSymbolAsString(symbol, options);
 }
 
 bool SwiftLanguageRuntime::IsSwiftClassName(const char *name)
@@ -2281,9 +2344,8 @@ bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
 }
 
 bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
-  llvm::StringRef g_dollar_tau(u8"$\u03C4_");
   auto valobj_name = valobj.GetName().GetStringRef();
-  if (valobj_name.startswith(g_dollar_tau))
+  if (valobj_name.startswith(g_dollar_tau_underscore))
     return true;
 
   auto valobj_type_name = valobj.GetTypeName().GetStringRef();

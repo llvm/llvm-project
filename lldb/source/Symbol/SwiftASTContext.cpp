@@ -5355,47 +5355,31 @@ ConstString SwiftASTContext::GetTypeName(void *type) {
 /// Build a dictionary of Archetype names that appear in \p type.
 static llvm::DenseMap<swift::CanType, swift::Identifier>
 GetArchetypeNames(swift::Type type, swift::ASTContext &ast_ctx,
-                  lldb::StackFrameSP frame_sp) {
+                  const SymbolContext *sc) {
   llvm::DenseMap<swift::CanType, swift::Identifier> dict;
 
   swift::Type swift_type(GetSwiftType(type));
   assert(&swift_type->getASTContext() == &ast_ctx);
-  StackFrame *frame = frame_sp.get();
-  if (!frame)
+  if (!sc)
     return dict;
 
+  llvm::DenseMap<std::pair<uint64_t, uint64_t>, StringRef> archetype_names;
+  SwiftLanguageRuntime::GetArchetypeNamesForFunction(*sc, archetype_names);
   swift_type.visit([&](swift::Type type) {
-    if (!type->isTypeParameter())
+    if (!type->isTypeParameter() || dict.count(type->getCanonicalType()))
       return;
-
-    StreamString type_name;
-    if (!SwiftLanguageRuntime::GetAbstractTypeName(type_name, type))
-      return;
-
-    StreamString type_metadata_ptr_var_name;
-    type_metadata_ptr_var_name.Printf("$%s", type_name.GetString());
-    VariableList *var_list = frame->GetVariableList(false);
-    if (!var_list)
-      return;
-
-    VariableSP var_sp(var_list->FindVariable(
-        ConstString(type_metadata_ptr_var_name.GetData())));
-    if (!var_sp)
-      return;
-
-    Type *archetype_type = var_sp->GetType();
-    if (!archetype_type)
-      return;
-
-    ConstString name = archetype_type->GetName();
-    swift::Identifier ident = ast_ctx.getIdentifier(name.GetStringRef());
-    dict.insert({type->getCanonicalType(), ident});
+    auto *param = type->getAs<swift::GenericTypeParamType>();
+    auto it = archetype_names.find({param->getDepth(), param->getIndex()});
+    if (it != archetype_names.end()) {
+      swift::Identifier ident = ast_ctx.getIdentifier(it->second);
+      dict.insert({type->getCanonicalType(), ident});
+    }
   });
   return dict;
 }
 
 ConstString SwiftASTContext::GetDisplayTypeName(void *type,
-                                                lldb::StackFrameSP frame_sp) {
+                                                const SymbolContext *sc) {
   VALID_OR_RETURN(ConstString("<invalid Swift context>"));
   std::string type_name(GetTypeName(type).AsCString(""));
   if (type) {
@@ -5404,7 +5388,7 @@ ConstString SwiftASTContext::GetDisplayTypeName(void *type,
     print_options.FullyQualifiedTypes = false;
     print_options.SynthesizeSugarOnTypes = true;
     print_options.FullyQualifiedTypesIfAmbiguous = true;
-    auto dict = GetArchetypeNames(swift_type, *GetASTContext(), frame_sp);
+    auto dict = GetArchetypeNames(swift_type, *GetASTContext(), sc);
     print_options.AlternativeTypeNames = &dict;
     type_name = swift_type.getString(print_options);
   }
