@@ -90,14 +90,11 @@ struct DirectoryScan {
 } // namespace
 
 // Add platform-specific functionality.
+#include "Config.inc"
 
-#if !defined(__has_include)
-#define __has_include(x) 0
-#endif
-
-#if __has_include(<CoreServices/CoreServices.h>)
+#if HAVE_CORESERVICES
 #include "DirectoryWatcher-mac.inc.h"
-#elif __has_include(<sys/inotify.h>)
+#elif HAVE_INOTIFY
 #include "DirectoryWatcher-linux.inc.h"
 #else
 
