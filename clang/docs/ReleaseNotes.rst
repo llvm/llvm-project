@@ -17,8 +17,8 @@ describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see `the LLVM
 documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM
-releases may be downloaded from the `LLVM releases web
-site <https://llvm.org/releases/>`_.
+releases may be downloaded
+from the `LLVM releases web site <https://releases.llvm.org/>`_.
 
 For more information about Clang or LLVM, including information about the
 latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or the
@@ -175,23 +175,13 @@ New Compiler Flags
   be controlled by the ``-mrelax-pic-calls`` and ``-mno-relax-pic-calls``
   options.
 
-- ...
-
-Deprecated Compiler Flags
--------------------------
-
-The following options are deprecated and ignored. They will be removed in
-future versions of Clang.
-
-- ...
-
 Modified Compiler Flags
 -----------------------
 
-- As of clang 8, `alignof` and `_Alignof` return the ABI alignment of a type,
-  as opposed to the preferred alignment. `__alignof` still returns the
-  preferred alignment. `-fclang-abi-compat=7` (and previous) will make
-  `alignof` and `_Alignof` return preferred alignment again.
+- As of clang 8, ``alignof`` and ``_Alignof`` return the ABI alignment of a type,
+  as opposed to the preferred alignment. ``__alignof`` still returns the
+  preferred alignment. ``-fclang-abi-compat=7`` (and previous) will make
+  ``alignof`` and ``_Alignof`` return preferred alignment again.
 
 
 New Pragmas in Clang
@@ -232,33 +222,6 @@ Windows Support
 - Structured Exception Handling support for ARM64 Windows. The ARM64 Windows
   target is in pretty good shape now.
 
-
-C Language Changes in Clang
----------------------------
-
-- ...
-
-...
-
-C11 Feature Support
-^^^^^^^^^^^^^^^^^^^
-
-...
-
-C++ Language Changes in Clang
------------------------------
-
-- ...
-
-C++1z Feature Support
-^^^^^^^^^^^^^^^^^^^^^
-
-...
-
-Objective-C Language Changes in Clang
--------------------------------------
-
-...
 
 OpenCL Kernel Language Changes in Clang
 ---------------------------------------
@@ -318,17 +281,17 @@ C++ for OpenCL:
 ABI Changes in Clang
 --------------------
 
-- `_Alignof` and `alignof` now return the ABI alignment of a type, as opposed
+- ``_Alignof`` and ``alignof`` now return the ABI alignment of a type, as opposed
   to the preferred alignment.
 
   - This is more in keeping with the language of the standards, as well as
     being compatible with gcc
-  - `__alignof` and `__alignof__` still return the preferred alignment of
+  - ``__alignof`` and ``__alignof__`` still return the preferred alignment of
     a type
   - This shouldn't break any ABI except for things that explicitly ask for
-    `alignas(alignof(T))`.
+    ``alignas(alignof(T))``.
   - If you have interfaces that break with this change, you may wish to switch
-    to `alignas(__alignof(T))`, instead of using the `-fclang-abi-compat`
+    to ``alignas(__alignof(T))``, instead of using the ``-fclang-abi-compat``
     switch.
 
 OpenMP Support in Clang
@@ -365,42 +328,6 @@ New features supported for Cuda devices:
 
 - General performance improvement.
 
-CUDA Support in Clang
----------------------
-
-
-Internal API Changes
---------------------
-
-These are major API changes that have happened since the 7.0.0 release of
-Clang. If upgrading an external codebase that uses Clang as a library,
-this section should help get you past the largest hurdles of upgrading.
-
--  ...
-
-AST Matchers
-------------
-
-- ...
-
-clang-format
-------------
-
-
-- ...
-
-libclang
---------
-
-...
-
-
-Static Analyzer
----------------
-
-- ...
-
-...
 
 .. _release-notes-ubsan:
 
@@ -477,25 +404,6 @@ Undefined Behavior Sanitizer (UBSan)
           data[x] *= data[x];
       }
 
-Core Analysis Improvements
-==========================
-
-- ...
-
-New Issues Found
-================
-
-- ...
-
-Python Binding Changes
-----------------------
-
-The following methods have been added:
-
--  ...
-
-Significant Known Problems
-==========================
 
 Additional Information
 ======================
