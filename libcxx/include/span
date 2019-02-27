@@ -561,7 +561,7 @@ auto as_bytes(span<_Tp, _Extent> __s) noexcept
 template <class _Tp, size_t _Extent>
 _LIBCPP_INLINE_VISIBILITY
 auto as_writeable_bytes(span<_Tp, _Extent> __s) noexcept
--> typename enable_if_t<!is_const_v<_Tp>, decltype(__s.__as_writeable_bytes())>
+-> enable_if_t<!is_const_v<_Tp>, decltype(__s.__as_writeable_bytes())>
 { return __s.__as_writeable_bytes(); }
 
 template <class _Tp, size_t _Extent>
