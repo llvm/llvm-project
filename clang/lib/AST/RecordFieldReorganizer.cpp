@@ -27,7 +27,7 @@ namespace clang {
 std::string RandstructSeed = "";
 
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
-                                              const RecordDecl *D) const {
+                                              const RecordDecl *D) {
   // Save original fields for asserting later that a subclass hasn't
   // sabotaged the RecordDecl by removing or adding fields
   std::set<Decl *> mutateGuard;
@@ -67,7 +67,7 @@ class Bucket {
 public:
   virtual ~Bucket() = default;
   /// Returns a randomized version of the bucket.
-  virtual SmallVector<FieldDecl *, 64> randomize();
+  virtual SmallVector<FieldDecl *, 64> randomize(std::default_random_engine rng);
   /// Checks if an added element would fit in a cache line.
   virtual bool canFit(size_t size) const;
   /// Adds a field to the bucket.
@@ -87,7 +87,7 @@ protected:
 /// exceed the size of a cache line.
 class BitfieldRun : public Bucket {
 public:
-  virtual SmallVector<FieldDecl *, 64> randomize() override;
+  virtual SmallVector<FieldDecl *, 64> randomize(std::default_random_engine rng) override;
   virtual bool canFit(size_t size) const override;
   virtual bool isBitfieldRun() const override;
 };
@@ -95,10 +95,10 @@ public:
 // FIXME: Is there a way to detect this? (i.e. on 32bit system vs 64?)
 const size_t CACHE_LINE = 64;
 
-SmallVector<FieldDecl *, 64> Bucket::randomize() {
+SmallVector<FieldDecl *, 64> Bucket::randomize(std::default_random_engine rng) {
   // FIXME use seed
-  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
-  auto rng = std::default_random_engine{Seq};
+  //std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  //auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
 }
@@ -132,7 +132,7 @@ bool Bucket::full() const {
 
 bool Bucket::empty() const { return size == 0; }
 
-SmallVector<FieldDecl *, 64> BitfieldRun::randomize() {
+SmallVector<FieldDecl *, 64> BitfieldRun::randomize(std::default_random_engine rng) {
   // Keep bit fields adjacent, we will not scramble them.
   return fields;
 }
@@ -144,15 +144,15 @@ bool BitfieldRun::canFit(size_t size) const {
 
 bool BitfieldRun::isBitfieldRun() const { return true; }
 
-SmallVector<Decl *, 64> randomize(SmallVector<Decl *, 64> fields) {
-  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
-  auto rng = std::default_random_engine{Seq};
+SmallVector<Decl *, 64> Randstruct::randomize(SmallVector<Decl *, 64> fields) {
+  //std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  //auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(fields), std::end(fields), rng);
   return fields;
 }
 
-SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
-                                      SmallVector<Decl *, 64> fields) {
+SmallVector<Decl *, 64> Randstruct::perfrandomize(const ASTContext &ctx,
+                                     SmallVector<Decl *, 64> fields) {
   // All of the buckets produced by best-effort cache-line algorithm.
   std::vector<std::unique_ptr<Bucket>> buckets;
 
@@ -235,14 +235,14 @@ SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
     buckets.push_back(std::move(currentBitfieldRun));
   }
 
-  std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
-  auto rng = std::default_random_engine{Seq};
+  //std::seed_seq Seq(RandstructSeed.begin(), RandstructSeed.end());
+  //auto rng = std::default_random_engine{Seq};
   std::shuffle(std::begin(buckets), std::end(buckets), rng);
 
   // Produce the new ordering of the elements from our buckets.
   SmallVector<Decl *, 64> finalOrder;
   for (auto &bucket : buckets) {
-    auto randomized = bucket->randomize();
+    auto randomized = bucket->randomize(rng);
     finalOrder.insert(finalOrder.end(), randomized.begin(), randomized.end());
   }
 
@@ -250,7 +250,7 @@ SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
 }
 
 void Randstruct::reorganize(const ASTContext &C, const RecordDecl *D,
-                            SmallVector<Decl *, 64> &NewOrder) const {
+                            SmallVector<Decl *, 64> &NewOrder) {
   SmallVector<Decl *, 64> randomized = perfrandomize(C, NewOrder);
   NewOrder = randomized;
 }

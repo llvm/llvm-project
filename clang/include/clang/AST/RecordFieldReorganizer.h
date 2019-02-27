@@ -17,6 +17,7 @@
 #define LLVM_CLANG_LIB_AST_RECORDFIELDREORGANIZER_H
 
 #include "Decl.h"
+#include <random>
 
 namespace clang {
 
@@ -25,11 +26,11 @@ namespace clang {
 class RecordFieldReorganizer {
 public:
   virtual ~RecordFieldReorganizer() = default;
-  void reorganizeFields(const ASTContext &C, const RecordDecl *D) const;
+  void reorganizeFields(const ASTContext &C, const RecordDecl *D);
 
 protected:
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
-                          SmallVector<Decl *, 64> &NewOrder) const = 0;
+                          SmallVector<Decl *, 64> &NewOrder) = 0;
 
 private:
   void commit(const RecordDecl *D,
@@ -37,9 +38,16 @@ private:
 };
 
 class Randstruct : public RecordFieldReorganizer {
+public:
+  std::seed_seq Seq;
+  std::default_random_engine rng;
+  Randstruct(std::string seed) : Seq(seed.begin(), seed.end()), rng(Seq) {}
 protected:
+  SmallVector<Decl *, 64> randomize(SmallVector<Decl *, 64> fields);
+  SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
+                                      SmallVector<Decl *, 64> fields);
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
-                          SmallVector<Decl *, 64> &NewOrder) const override;
+                          SmallVector<Decl *, 64> &NewOrder) override;
 };
 
 } // namespace clang
