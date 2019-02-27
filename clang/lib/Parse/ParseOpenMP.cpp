@@ -424,21 +424,19 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
     CommaLocsTy CommaLocs;
 
     SourceLocation LParLoc = T.getOpenLocation();
-    if (ParseExpressionList(
-            Exprs, CommaLocs, [this, OmpPrivParm, LParLoc, &Exprs] {
-              QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
-                  getCurScope(),
-                  OmpPrivParm->getType()->getCanonicalTypeInternal(),
-                  OmpPrivParm->getLocation(), Exprs, LParLoc);
-              CalledSignatureHelp = true;
-              Actions.CodeCompleteExpression(getCurScope(), PreferredType);
-            })) {
-      if (PP.isCodeCompletionReached() && !CalledSignatureHelp) {
-        Actions.ProduceConstructorSignatureHelp(
-            getCurScope(), OmpPrivParm->getType()->getCanonicalTypeInternal(),
-            OmpPrivParm->getLocation(), Exprs, LParLoc);
-        CalledSignatureHelp = true;
-      }
+    auto RunSignatureHelp = [this, OmpPrivParm, LParLoc, &Exprs]() {
+      QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
+          getCurScope(), OmpPrivParm->getType()->getCanonicalTypeInternal(),
+          OmpPrivParm->getLocation(), Exprs, LParLoc);
+      CalledSignatureHelp = true;
+      return PreferredType;
+    };
+    if (ParseExpressionList(Exprs, CommaLocs, [&] {
+          PreferredType.enterFunctionArgument(Tok.getLocation(),
+                                              RunSignatureHelp);
+        })) {
+      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+        RunSignatureHelp();
       Actions.ActOnInitializerError(OmpPrivParm);
       SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
     } else {
@@ -893,7 +891,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>, OMPC_unknown + 1>
     FirstClauses(OMPC_unknown + 1);
     if (Tok.is(tok::annot_pragma_openmp_end)) {
-      Diag(Tok, diag::err_omp_expected_clause) 
+      Diag(Tok, diag::err_omp_expected_clause)
           << getOpenMPDirectiveName(OMPD_requires);
       break;
     }
@@ -2039,7 +2037,7 @@ static OpenMPMapClauseKind isMapType(Parser &P) {
 
 /// Parse map-type in map clause.
 /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
-/// where, map-type ::= to | from | tofrom | alloc | release | delete 
+/// where, map-type ::= to | from | tofrom | alloc | release | delete
 static void parseMapType(Parser &P, Parser::OpenMPVarListDataTy &Data) {
   Token Tok = P.getCurToken();
   if (Tok.is(tok::colon)) {

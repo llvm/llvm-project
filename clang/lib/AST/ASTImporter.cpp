@@ -552,6 +552,7 @@ namespace clang {
     // Importing expressions
     ExpectedStmt VisitExpr(Expr *E);
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
+    ExpectedStmt VisitChooseExpr(ChooseExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
     ExpectedStmt VisitPredefinedExpr(PredefinedExpr *E);
     ExpectedStmt VisitDeclRefExpr(DeclRefExpr *E);
@@ -6135,6 +6136,33 @@ ExpectedStmt ASTNodeImporter::VisitVAArgExpr(VAArgExpr *E) {
       E->isMicrosoftABI());
 }
 
+ExpectedStmt ASTNodeImporter::VisitChooseExpr(ChooseExpr *E) {
+  auto Imp = importSeq(E->getCond(), E->getLHS(), E->getRHS(),
+                       E->getBuiltinLoc(), E->getRParenLoc(), E->getType());
+  if (!Imp)
+    return Imp.takeError();
+
+  Expr *ToCond;
+  Expr *ToLHS;
+  Expr *ToRHS;
+  SourceLocation ToBuiltinLoc, ToRParenLoc;
+  QualType ToType;
+  std::tie(ToCond, ToLHS, ToRHS, ToBuiltinLoc, ToRParenLoc, ToType) = *Imp;
+
+  ExprValueKind VK = E->getValueKind();
+  ExprObjectKind OK = E->getObjectKind();
+
+  bool TypeDependent = ToCond->isTypeDependent();
+  bool ValueDependent = ToCond->isValueDependent();
+
+  // The value of CondIsTrue only matters if the value is not
+  // condition-dependent.
+  bool CondIsTrue = !E->isConditionDependent() && E->isConditionTrue();
+
+  return new (Importer.getToContext())
+      ChooseExpr(ToBuiltinLoc, ToCond, ToLHS, ToRHS, ToType, VK, OK,
+                 ToRParenLoc, CondIsTrue, TypeDependent, ValueDependent);
+}
 
 ExpectedStmt ASTNodeImporter::VisitGNUNullExpr(GNUNullExpr *E) {
   ExpectedType TypeOrErr = import(E->getType());

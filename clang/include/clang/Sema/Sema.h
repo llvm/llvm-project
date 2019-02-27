@@ -288,6 +288,14 @@ public:
   void enterCondition(Sema &S, SourceLocation Tok);
   void enterReturn(Sema &S, SourceLocation Tok);
   void enterVariableInit(SourceLocation Tok, Decl *D);
+  /// Computing a type for the function argument may require running
+  /// overloading, so we postpone its computation until it is actually needed.
+  ///
+  /// Clients should be very careful when using this funciton, as it stores a
+  /// function_ref, clients should make sure all calls to get() with the same
+  /// location happen while function_ref is alive.
+  void enterFunctionArgument(SourceLocation Tok,
+                             llvm::function_ref<QualType()> ComputeType);
 
   void enterParenExpr(SourceLocation Tok, SourceLocation LParLoc);
   void enterUnary(Sema &S, SourceLocation Tok, tok::TokenKind OpKind,
@@ -299,8 +307,12 @@ public:
   void enterTypeCast(SourceLocation Tok, QualType CastType);
 
   QualType get(SourceLocation Tok) const {
-    if (Tok == ExpectedLoc)
+    if (Tok != ExpectedLoc)
+      return QualType();
+    if (!Type.isNull())
       return Type;
+    if (ComputeType)
+      return ComputeType();
     return QualType();
   }
 
@@ -309,6 +321,9 @@ private:
   SourceLocation ExpectedLoc;
   /// Expected type for a token starting at ExpectedLoc.
   QualType Type;
+  /// A function to compute expected type at ExpectedLoc. It is only considered
+  /// if Type is null.
+  llvm::function_ref<QualType()> ComputeType;
 };
 
 /// Sema - This implements semantic analysis and AST building for C.
@@ -8725,6 +8740,16 @@ public:
   void AddXConsumedAttr(Decl *D, SourceRange SR, unsigned SpellingIndex,
                         RetainOwnershipKind K, bool IsTemplateInstantiation);
 
+  /// addAMDGPUFlatWorkGroupSizeAttr - Adds an amdgpu_flat_work_group_size
+  /// attribute to a particular declaration.
+  void addAMDGPUFlatWorkGroupSizeAttr(SourceRange AttrRange, Decl *D, Expr *Min,
+                                      Expr *Max, unsigned SpellingListIndex);
+
+  /// addAMDGPUWavePersEUAttr - Adds an amdgpu_waves_per_eu attribute to a
+  /// particular declaration.
+  void addAMDGPUWavesPerEUAttr(SourceRange AttrRange, Decl *D, Expr *Min,
+                               Expr *Max, unsigned SpellingListIndex);
+
   bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
 
   //===--------------------------------------------------------------------===//
@@ -9346,7 +9371,7 @@ public:
                                        SourceLocation StartLoc,
                                        SourceLocation LParenLoc,
                                        SourceLocation EndLoc);
-  
+
   OMPClause *ActOnOpenMPSingleExprWithArgClause(
       OpenMPClauseKind Kind, ArrayRef<unsigned> Arguments, Expr *Expr,
       SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -9401,7 +9426,7 @@ public:
   /// Called on well-formed 'unified_address' clause.
   OMPClause *ActOnOpenMPUnifiedSharedMemoryClause(SourceLocation StartLoc,
                                                   SourceLocation EndLoc);
-  
+
   /// Called on well-formed 'reverse_offload' clause.
   OMPClause *ActOnOpenMPReverseOffloadClause(SourceLocation StartLoc,
                                              SourceLocation EndLoc);

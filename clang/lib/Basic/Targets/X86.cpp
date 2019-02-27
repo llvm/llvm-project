@@ -347,6 +347,11 @@ bool X86TargetInfo::initFeatureMap(
     setFeatureEnabledImpl(Features, "sahf", true);
     break;
 
+  case CK_ZNVER2:
+    setFeatureEnabledImpl(Features, "clwb", true);
+    setFeatureEnabledImpl(Features, "rdpid", true);
+    setFeatureEnabledImpl(Features, "wbnoinvd", true);
+    LLVM_FALLTHROUGH;
   case CK_ZNVER1:
     setFeatureEnabledImpl(Features, "adx", true);
     setFeatureEnabledImpl(Features, "aes", true);
@@ -1029,6 +1034,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     break;
   case CK_ZNVER1:
     defineCPUMacros(Builder, "znver1");
+    break;
+  case CK_ZNVER2:
+    defineCPUMacros(Builder, "znver2");
     break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");

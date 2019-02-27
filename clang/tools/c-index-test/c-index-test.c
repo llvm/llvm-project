@@ -1674,6 +1674,34 @@ static enum CXChildVisitResult PrintType(CXCursor cursor, CXCursor p,
   return CXChildVisit_Recurse;
 }
 
+static void PrintSingleTypeSize(CXType T, const char *TypeKindFormat,
+                                const char *SizeFormat,
+                                const char *AlignFormat) {
+  PrintTypeAndTypeKind(T, TypeKindFormat);
+  /* Print the type sizeof if applicable. */
+  {
+    long long Size = clang_Type_getSizeOf(T);
+    if (Size >= 0 || Size < -1 ) {
+      printf(SizeFormat, Size);
+    }
+  }
+  /* Print the type alignof if applicable. */
+  {
+    long long Align = clang_Type_getAlignOf(T);
+    if (Align >= 0 || Align < -1) {
+      printf(AlignFormat, Align);
+    }
+  }
+
+  /* Print the return type if it exists. */
+  {
+    CXType RT = clang_getResultType(T);
+    if (RT.kind != CXType_Invalid)
+      PrintSingleTypeSize(RT, " [resulttype=%s] [resulttypekind=%s]",
+                              " [resultsizeof=%lld]", " [resultalignof=%lld]");
+  }
+}
+
 static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
                                              CXClientData d) {
   CXType T;
@@ -1682,21 +1710,8 @@ static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
     return CXChildVisit_Recurse;
   T = clang_getCursorType(cursor);
   PrintCursor(cursor, NULL);
-  PrintTypeAndTypeKind(T, " [type=%s] [typekind=%s]");
-  /* Print the type sizeof if applicable. */
-  {
-    long long Size = clang_Type_getSizeOf(T);
-    if (Size >= 0 || Size < -1 ) {
-      printf(" [sizeof=%lld]", Size);
-    }
-  }
-  /* Print the type alignof if applicable. */
-  {
-    long long Align = clang_Type_getAlignOf(T);
-    if (Align >= 0 || Align < -1) {
-      printf(" [alignof=%lld]", Align);
-    }
-  }
+  PrintSingleTypeSize(T, " [type=%s] [typekind=%s]", " [sizeof=%lld]",
+                      " [alignof=%lld]");
   /* Print the record field offset if applicable. */
   {
     CXString FieldSpelling = clang_getCursorSpelling(cursor);
@@ -1734,7 +1749,9 @@ static enum CXChildVisitResult PrintTypeSize(CXCursor cursor, CXCursor p,
     if (IsBitfield)
       printf(" [BitFieldSize=%d]", clang_getFieldDeclBitWidth(cursor));
   }
+
   printf("\n");
+
   return CXChildVisit_Recurse;
 }
 
