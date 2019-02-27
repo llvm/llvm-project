@@ -1,0 +1,48 @@
+# If the offset and/or size fields of the PT_DYNAMIC field become corrupted,
+# it will be impossible to read the dynamic segment validly. This test shows
+# that a sensible error message is given in this situation.
+
+# Creating such a malformed file is hard. The easiest way to simulate it is to
+# truncate the file. Note that the section headers must first be stripped or
+# llvm-readobj will fail to parse the file due to the section header table
+# offset pointing outside the file.
+
+# RUN: yaml2obj %s -o %t.base
+# RUN: llvm-objcopy --strip-sections %t.base %t.stripped
+
+# Test case where the size is too large to fit in the file, but the start is
+# within the file.
+# RUN: cp %t.stripped %t.truncated1
+# RUN: %python -c "with open(r'%t.truncated1', 'r+') as f: f.truncate(0x1001)"
+# RUN: not llvm-readobj %t.truncated1 --dynamic-table 2>&1 | FileCheck %s
+
+# Test case where the offset is too large to be in the file.
+# RUN: cp %t.stripped %t.truncated2
+# RUN: %python -c "with open(r'%t.truncated2', 'r+') as f: f.truncate(0xFFF)"
+# RUN: not llvm-readobj %t.truncated2 --dynamic-table 2>&1 | FileCheck %s
+
+# CHECK: Error reading file: Invalid data was encountered while parsing the file.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Entries:
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic

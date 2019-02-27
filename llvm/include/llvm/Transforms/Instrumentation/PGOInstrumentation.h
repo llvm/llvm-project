@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include <cstdint>
 #include <string>
 
@@ -27,22 +28,50 @@ class Instruction;
 class Module;
 
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.
+// We use this pass to create COMDAT profile variables for context
+// sensitive PGO (CSPGO). The reason to have a pass for this is CSPGO
+// can be run after LTO/ThinLTO linking. Lld linker needs to see
+// all the COMDAT variables before linking. So we have this pass
+// always run before linking for CSPGO.
+class PGOInstrumentationGenCreateVar
+    : public PassInfoMixin<PGOInstrumentationGenCreateVar> {
+public:
+  PGOInstrumentationGenCreateVar(std::string CSInstrName = "")
+      : CSInstrName(CSInstrName) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
+    createProfileFileNameVar(M, CSInstrName);
+    createIRLevelProfileFlagVar(M, /* IsCS */ true);
+    return PreservedAnalyses::all();
+  }
+
+private:
+  std::string CSInstrName;
+};
+
+/// The instrumentation (profile-instr-gen) pass for IR based PGO.
 class PGOInstrumentationGen : public PassInfoMixin<PGOInstrumentationGen> {
 public:
+  PGOInstrumentationGen(bool IsCS = false) : IsCS(IsCS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  // If this is a context sensitive instrumentation.
+  bool IsCS;
 };
 
 /// The profile annotation (profile-instr-use) pass for IR based PGO.
 class PGOInstrumentationUse : public PassInfoMixin<PGOInstrumentationUse> {
 public:
   PGOInstrumentationUse(std::string Filename = "",
-                        std::string RemappingFilename = "");
+                        std::string RemappingFilename = "", bool IsCS = false);
 
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   std::string ProfileFileName;
   std::string ProfileRemappingFileName;
+  // If this is a context sensitive instrumentation.
+  bool IsCS;
 };
 
 /// The indirect function call promotion pass.

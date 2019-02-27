@@ -53,6 +53,26 @@ static const TargetRegisterClass *getRC32(MachineOperand &MO,
   return RC;
 }
 
+// Pass the registers of RC as hints while making sure that if any of these
+// registers are copy hints (and therefore already in Hints), hint them
+// first.
+static void addHints(ArrayRef<MCPhysReg> Order,
+                     SmallVectorImpl<MCPhysReg> &Hints,
+                     const TargetRegisterClass *RC,
+                     const MachineRegisterInfo *MRI) {
+  SmallSet<unsigned, 4> CopyHints;
+  CopyHints.insert(Hints.begin(), Hints.end());
+  Hints.clear();
+  for (MCPhysReg Reg : Order)
+    if (CopyHints.count(Reg) &&
+        RC->contains(Reg) && !MRI->isReserved(Reg))
+      Hints.push_back(Reg);
+  for (MCPhysReg Reg : Order)
+    if (!CopyHints.count(Reg) &&
+        RC->contains(Reg) && !MRI->isReserved(Reg))
+      Hints.push_back(Reg);
+}
+
 bool
 SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
                                            ArrayRef<MCPhysReg> Order,
@@ -75,7 +95,7 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
       if (!DoneRegs.insert(Reg).second)
         continue;
 
-      for (auto &Use : MRI->use_instructions(Reg))
+      for (auto &Use : MRI->use_instructions(Reg)) {
         // For LOCRMux, see if the other operand is already a high or low
         // register, and in that case give the correpsonding hints for
         // VirtReg. LOCR instructions need both operands in either high or
@@ -87,19 +107,7 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
             TRI->getCommonSubClass(getRC32(FalseMO, VRM, MRI),
                                    getRC32(TrueMO, VRM, MRI));
           if (RC && RC != &SystemZ::GRX32BitRegClass) {
-            // Pass the registers of RC as hints while making sure that if
-            // any of these registers are copy hints, hint them first.
-            SmallSet<unsigned, 4> CopyHints;
-            CopyHints.insert(Hints.begin(), Hints.end());
-            Hints.clear();
-            for (MCPhysReg Reg : Order)
-              if (CopyHints.count(Reg) &&
-                  RC->contains(Reg) && !MRI->isReserved(Reg))
-                Hints.push_back(Reg);
-            for (MCPhysReg Reg : Order)
-              if (!CopyHints.count(Reg) &&
-                  RC->contains(Reg) && !MRI->isReserved(Reg))
-                Hints.push_back(Reg);
+            addHints(Order, Hints, RC, MRI);
             // Return true to make these hints the only regs available to
             // RA. This may mean extra spilling but since the alternative is
             // a jump sequence expansion of the LOCRMux, it is preferred.
@@ -111,7 +119,22 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
             (TrueMO.getReg() == Reg ? FalseMO.getReg() : TrueMO.getReg());
           if (MRI->getRegClass(OtherReg) == &SystemZ::GRX32BitRegClass)
             Worklist.push_back(OtherReg);
-        }
+        } // end LOCRMux
+        else if (Use.getOpcode() == SystemZ::CHIMux ||
+                 Use.getOpcode() == SystemZ::CFIMux) {
+          if (Use.getOperand(1).getImm() == 0) {
+            bool OnlyLMuxes = true;
+            for (MachineInstr &DefMI : MRI->def_instructions(VirtReg))
+              if (DefMI.getOpcode() != SystemZ::LMux)
+                OnlyLMuxes = false;
+            if (OnlyLMuxes) {
+              addHints(Order, Hints, &SystemZ::GR32BitRegClass, MRI);
+              // Return false to make these hints preferred but not obligatory.
+              return false;
+            }
+          }
+        } // end CHIMux / CFIMux
+      }
     }
   }
 

@@ -276,19 +276,22 @@ std::vector<InputFile *> BitcodeCompiler::compile() {
   if (!Config->ThinLTOCacheDir.empty())
     pruneCache(Config->ThinLTOCacheDir, Config->ThinLTOCachePolicy);
 
-  std::vector<InputFile *> Ret;
-  for (unsigned I = 0; I != MaxTasks; ++I) {
-    if (Buf[I].empty())
-      continue;
-    if (Config->SaveTemps) {
-      if (I == 0)
-        saveBuffer(Buf[I], Config->OutputFile + ".lto.o");
-      else
-        saveBuffer(Buf[I], Config->OutputFile + Twine(I) + ".lto.o");
-    }
-    InputFile *Obj = createObjectFile(MemoryBufferRef(Buf[I], "lto.tmp"));
-    Ret.push_back(Obj);
+  if (!Config->LTOObjPath.empty()) {
+    saveBuffer(Buf[0], Config->LTOObjPath);
+    for (unsigned I = 1; I != MaxTasks; ++I)
+      saveBuffer(Buf[I], Config->LTOObjPath + Twine(I));
   }
+
+  if (Config->SaveTemps) {
+    saveBuffer(Buf[0], Config->OutputFile + ".lto.o");
+    for (unsigned I = 1; I != MaxTasks; ++I)
+      saveBuffer(Buf[I], Config->OutputFile + Twine(I) + ".lto.o");
+  }
+
+  std::vector<InputFile *> Ret;
+  for (unsigned I = 0; I != MaxTasks; ++I)
+    if (!Buf[I].empty())
+      Ret.push_back(createObjectFile(MemoryBufferRef(Buf[I], "lto.tmp")));
 
   for (std::unique_ptr<MemoryBuffer> &File : Files)
     if (File)

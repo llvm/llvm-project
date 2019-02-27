@@ -67,7 +67,7 @@ int main(int, char**)
     assert(!(std::span<int, 5>(iArr2, 5).empty()));
 
     std::string s;
-    assert( ((std::span<std::string>(&s, (std::ptrdiff_t) 0)).empty()));
+    assert( ((std::span<std::string>(&s, (std::size_t) 0)).empty()));
     assert(!((std::span<std::string>(&s, 1).empty())));
 
   return 0;

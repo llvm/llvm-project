@@ -21,6 +21,7 @@ Contents
    pp-trace
    clang-rename
    clangd/index
+   clangd/DeveloperDocumentation
    clang-doc
 
 

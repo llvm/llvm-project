@@ -570,15 +570,14 @@ public:
 // that code between the two symbol table types.
 template <class SymTabType>
 class RelocSectionWithSymtabBase : public RelocationSectionBase {
-  SymTabType *Symbols = nullptr;
   void setSymTab(SymTabType *SymTab) { Symbols = SymTab; }
 
 protected:
   RelocSectionWithSymtabBase() = default;
 
+  SymTabType *Symbols = nullptr;
+
 public:
-  Error removeSectionReferences(
-      function_ref<bool(const SectionBase *)> ToRemove) override;
   void initialize(SectionTableRef SecTable) override;
   void finalize() override;
 };
@@ -593,6 +592,8 @@ public:
   void addRelocation(Relocation Rel) { Relocations.push_back(Rel); }
   void accept(SectionVisitor &Visitor) const override;
   void accept(MutableSectionVisitor &Visitor) override;
+  Error removeSectionReferences(
+      function_ref<bool(const SectionBase *)> ToRemove) override;
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;
   void markSymbols() override;
 

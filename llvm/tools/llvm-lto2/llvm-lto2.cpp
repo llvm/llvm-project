@@ -104,6 +104,15 @@ static cl::opt<std::string>
     SamplePGOFile("lto-sample-profile-file",
                   cl::desc("Specify a SamplePGO profile file"));
 
+static cl::opt<std::string>
+    CSPGOFile("lto-cspgo-profile-file",
+              cl::desc("Specify a context sensitive PGO profile file"));
+
+static cl::opt<bool>
+    RunCSIRInstr("lto-cspgo-gen",
+                 cl::desc("Run PGO context sensitive IR instrumentation"),
+                 cl::init(false), cl::Hidden);
+
 static cl::opt<bool>
     UseNewPM("use-new-pm",
              cl::desc("Run LTO passes using the new pass manager"),
@@ -214,6 +223,8 @@ static int run(int argc, char **argv) {
   Conf.RemarksWithHotness = OptRemarksWithHotness;
 
   Conf.SampleProfile = SamplePGOFile;
+  Conf.CSIRProfile = CSPGOFile;
+  Conf.RunCSIRInstr = RunCSIRInstr;
 
   // Run a custom pipeline, if asked for.
   Conf.OptPipeline = OptPipeline;

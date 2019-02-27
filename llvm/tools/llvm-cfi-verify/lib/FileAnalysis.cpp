@@ -254,7 +254,8 @@ FileAnalysis::getDirectControlFlowXRefs(const Instr &InstrMeta) const {
   return CFCrossReferences;
 }
 
-const std::set<uint64_t> &FileAnalysis::getIndirectInstructions() const {
+const std::set<object::SectionedAddress> &
+FileAnalysis::getIndirectInstructions() const {
   return IndirectInstructions;
 }
 
@@ -268,8 +269,10 @@ const MCInstrAnalysis *FileAnalysis::getMCInstrAnalysis() const {
   return MIA.get();
 }
 
-Expected<DIInliningInfo> FileAnalysis::symbolizeInlinedCode(uint64_t Address) {
+Expected<DIInliningInfo>
+FileAnalysis::symbolizeInlinedCode(object::SectionedAddress Address) {
   assert(Symbolizer != nullptr && "Symbolizer is invalid.");
+
   return Symbolizer->symbolizeInlinedCode(Object->getFileName(), Address);
 }
 
@@ -457,13 +460,14 @@ Error FileAnalysis::parseCodeSections() {
 
     ArrayRef<uint8_t> SectionBytes((const uint8_t *)SectionContents.data(),
                                    Section.getSize());
-    parseSectionContents(SectionBytes, Section.getAddress());
+    parseSectionContents(SectionBytes,
+                         {Section.getAddress(), Section.getIndex()});
   }
   return Error::success();
 }
 
 void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
-                                        uint64_t SectionAddress) {
+                                        object::SectionedAddress Address) {
   assert(Symbolizer && "Symbolizer is uninitialised.");
   MCInst Instruction;
   Instr InstrMeta;
@@ -477,7 +481,7 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
 
     Byte += InstructionSize;
 
-    uint64_t VMAddress = SectionAddress + Byte - InstructionSize;
+    uint64_t VMAddress = Address.Address + Byte - InstructionSize;
     InstrMeta.Instruction = Instruction;
     InstrMeta.VMAddress = VMAddress;
     InstrMeta.InstructionSize = InstructionSize;
@@ -509,8 +513,8 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
 
     // Check if this instruction exists in the range of the DWARF metadata.
     if (!IgnoreDWARFFlag) {
-      auto LineInfo =
-          Symbolizer->symbolizeCode(Object->getFileName(), VMAddress);
+      auto LineInfo = Symbolizer->symbolizeCode(
+          Object->getFileName(), {VMAddress, Address.SectionIndex});
       if (!LineInfo) {
         handleAllErrors(LineInfo.takeError(), [](const ErrorInfoBase &E) {
           errs() << "Symbolizer failed to get line: " << E.message() << "\n";
@@ -522,7 +526,7 @@ void FileAnalysis::parseSectionContents(ArrayRef<uint8_t> SectionBytes,
         continue;
     }
 
-    IndirectInstructions.insert(VMAddress);
+    IndirectInstructions.insert({VMAddress, Address.SectionIndex});
   }
 }
 

@@ -569,7 +569,8 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
     if (!ProfileGenFile.empty())
       Options.InstrProfileOutput = ProfileGenFile;
     Options.DoCounterPromotion = true;
-    MPM.addPass(InstrProfiling(Options));
+    Options.UseBFIInPromotion = false;
+    MPM.addPass(InstrProfiling(Options, false));
   }
 
   if (!ProfileUseFile.empty())
@@ -1082,7 +1083,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   // FIXME: Is this really an optimization rather than a canonicalization?
   MPM.addPass(ReversePostOrderFunctionAttrsPass());
 
-  // Use inragne annotations on GEP indices to split globals where beneficial.
+  // Use in-range annotations on GEP indices to split globals where beneficial.
   MPM.addPass(GlobalSplitPass());
 
   // Run whole program optimization of virtual call when the list of callees

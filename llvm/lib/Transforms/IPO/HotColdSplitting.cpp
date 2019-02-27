@@ -111,10 +111,11 @@ bool unlikelyExecuted(BasicBlock &BB) {
   if (BB.isEHPad() || isa<ResumeInst>(BB.getTerminator()))
     return true;
 
-  // The block is cold if it calls/invokes a cold function.
+  // The block is cold if it calls/invokes a cold function. However, do not
+  // mark sanitizer traps as cold.
   for (Instruction &I : BB)
     if (auto CS = CallSite(&I))
-      if (CS.hasFnAttr(Attribute::Cold))
+      if (CS.hasFnAttr(Attribute::Cold) && !CS->getMetadata("nosanitize"))
         return true;
 
   // The block is cold if it has an unreachable terminator, unless it's
@@ -233,6 +234,12 @@ bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
     return false;
 
   if (F.hasFnAttribute(Attribute::NoInline))
+    return false;
+
+  if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
+      F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+      F.hasFnAttribute(Attribute::SanitizeThread) ||
+      F.hasFnAttribute(Attribute::SanitizeMemory))
     return false;
 
   return true;

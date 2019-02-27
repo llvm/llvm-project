@@ -3908,27 +3908,44 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
                                            Pred == ICmpInst::ICMP_EQ))
         return V;
 
-    // Test for zero-shift-guard-ops around funnel shifts. These are used to
-    // avoid UB from oversized shifts in raw IR rotate patterns, but the
-    // intrinsics do not have that problem.
+    // Test for a bogus zero-shift-guard-op around funnel-shift or rotate.
     Value *ShAmt;
     auto isFsh = m_CombineOr(m_Intrinsic<Intrinsic::fshl>(m_Value(X), m_Value(),
                                                           m_Value(ShAmt)),
                              m_Intrinsic<Intrinsic::fshr>(m_Value(), m_Value(X),
                                                           m_Value(ShAmt)));
-    // (ShAmt != 0) ? fshl(X, *, ShAmt) : X --> fshl(X, *, ShAmt)
-    // (ShAmt != 0) ? fshr(*, X, ShAmt) : X --> fshr(*, X, ShAmt)
     // (ShAmt == 0) ? fshl(X, *, ShAmt) : X --> X
     // (ShAmt == 0) ? fshr(*, X, ShAmt) : X --> X
-    if (match(TrueVal, isFsh) && FalseVal == X && CmpLHS == ShAmt)
-      return Pred == ICmpInst::ICMP_NE ? TrueVal : X;
-
-    // (ShAmt == 0) ? X : fshl(X, *, ShAmt) --> fshl(X, *, ShAmt)
-    // (ShAmt == 0) ? X : fshr(*, X, ShAmt) --> fshr(*, X, ShAmt)
+    if (match(TrueVal, isFsh) && FalseVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_EQ)
+      return X;
     // (ShAmt != 0) ? X : fshl(X, *, ShAmt) --> X
     // (ShAmt != 0) ? X : fshr(*, X, ShAmt) --> X
-    if (match(FalseVal, isFsh) && TrueVal == X && CmpLHS == ShAmt)
-      return Pred == ICmpInst::ICMP_EQ ? FalseVal : X;
+    if (match(FalseVal, isFsh) && TrueVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_NE)
+      return X;
+
+    // Test for a zero-shift-guard-op around rotates. These are used to
+    // avoid UB from oversized shifts in raw IR rotate patterns, but the
+    // intrinsics do not have that problem.
+    // We do not allow this transform for the general funnel shift case because
+    // that would not preserve the poison safety of the original code.
+    auto isRotate = m_CombineOr(m_Intrinsic<Intrinsic::fshl>(m_Value(X),
+                                                             m_Deferred(X),
+                                                             m_Value(ShAmt)),
+                                m_Intrinsic<Intrinsic::fshr>(m_Value(X),
+                                                             m_Deferred(X),
+                                                             m_Value(ShAmt)));
+    // (ShAmt != 0) ? fshl(X, X, ShAmt) : X --> fshl(X, X, ShAmt)
+    // (ShAmt != 0) ? fshr(X, X, ShAmt) : X --> fshr(X, X, ShAmt)
+    if (match(TrueVal, isRotate) && FalseVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_NE)
+      return TrueVal;
+    // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+    // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+    if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
+        Pred == ICmpInst::ICMP_EQ)
+      return FalseVal;
   }
 
   // Check for other compares that behave like bit test.

@@ -1,0 +1,202 @@
+# RUN: yaml2obj %s > %t
+# RUN: llvm-objdump -p %t | FileCheck %s
+
+# CHECK:      Dynamic Section:
+# CHECK-NEXT:   NEEDED               D
+# CHECK-NEXT:   PLTRELSZ             0x0000000000000010
+# CHECK-NEXT:   PLTGOT               0x0000000000001000
+# CHECK-NEXT:   HASH                 0x0000000000001000
+# CHECK-NEXT:   STRTAB               0x0000000000001000
+# CHECK-NEXT:   SYMTAB               0x0000000000001000
+# CHECK-NEXT:   RELA                 0x0000000000001000
+# CHECK-NEXT:   RELASZ               0x0000000000000010
+# CHECK-NEXT:   RELAENT              0x0000000000000789
+# CHECK-NEXT:   STRSZ                0x0000000000000010
+# CHECK-NEXT:   SYMENT               0x0000000000000987
+# CHECK-NEXT:   INIT                 0x0000000000001000
+# CHECK-NEXT:   FINI                 0x0000000000001000
+# CHECK-NEXT:   SONAME               U
+# CHECK-NEXT:   RPATH                f
+# CHECK-NEXT:   SYMBOLIC             0x1234567890abcdef
+# CHECK-NEXT:   REL                  0x0000000000001000
+# CHECK-NEXT:   RELSZ                0x0000000000000010
+# CHECK-NEXT:   RELENT               0x0000000000000123
+# CHECK-NEXT:   PLTREL               0x0000000000000007
+# CHECK-NEXT:   DEBUG                0xfedcba0987654321
+# CHECK-NEXT:   TEXTREL              0x1122334455667788
+# CHECK-NEXT:   JMPREL               0x0000000000001000
+# CHECK-NEXT:   BIND_NOW             0x8877665544332211
+# CHECK-NEXT:   INIT_ARRAY           0x0000000000001000
+# CHECK-NEXT:   FINI_ARRAY           0x0000000000001000
+# CHECK-NEXT:   INIT_ARRAYSZ         0x0000000000000010
+# CHECK-NEXT:   FINI_ARRAYSZ         0x0000000000000010
+# CHECK-NEXT:   RUNPATH              w
+# CHECK-NEXT:   FLAGS                0xaabbccddeeff9900
+# CHECK-NEXT:   PREINIT_ARRAY        0x0000000000001000
+# CHECK-NEXT:   PREINIT_ARRAYSZ      0x0000000000000010
+# CHECK-NEXT:   SYMTAB_SHNDX         0x0000000000001000
+# CHECK-NEXT:   RELRSZ               0x0000000000000010
+# CHECK-NEXT:   RELR                 0x0000000000001000
+# CHECK-NEXT:   RELRENT              0x0000000000004321
+# CHECK-NEXT:   ANDROID_REL          0x0000000000001000
+# CHECK-NEXT:   ANDROID_RELSZ        0x0000000000000010
+# CHECK-NEXT:   ANDROID_RELA         0x0000000000001000
+# CHECK-NEXT:   ANDROID_RELASZ       0x0000000000000010
+# CHECK-NEXT:   ANDROID_RELR         0x0000000000001000
+# CHECK-NEXT:   ANDROID_RELRSZ       0x0000000000000010
+# CHECK-NEXT:   ANDROID_RELRENT      0x0000000000001234
+# CHECK-NEXT:   GNU_HASH             0x0000000000001000
+# CHECK-NEXT:   TLSDESC_PLT          0x0000000000001000
+# CHECK-NEXT:   TLSDESC_GOT          0x0000000000001000
+# CHECK-NEXT:   RELACOUNT            0x0000000000000000
+# CHECK-NEXT:   RELCOUNT             0x0000000000000000
+# CHECK-NEXT:   FLAGS_1              0x0000000087654321
+# CHECK-NEXT:   VERSYM               0x0000000000001000
+# CHECK-NEXT:   VERDEF               0x0000000000001000
+# CHECK-NEXT:   VERDEFNUM            0x0000000000000000
+# CHECK-NEXT:   VERNEED              0x0000000000001000
+# CHECK-NEXT:   VERNEEDNUM           0x0000000000000000
+# CHECK-NEXT:   AUXILIARY            D
+# CHECK-NEXT:   FILTER               U
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Link:    1
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x1
+     - Tag:   DT_PLTRELSZ
+       Value: 0x10
+     - Tag:   DT_PLTGOT
+       Value: 0x1000
+     - Tag:   DT_HASH
+       Value: 0x1000
+     - Tag:   DT_STRTAB
+       Value: 0x1000
+     - Tag:   DT_SYMTAB
+       Value: 0x1000
+     - Tag:   DT_RELA
+       Value: 0x1000
+     - Tag:   DT_RELASZ
+       Value: 0x10
+     - Tag:   DT_RELAENT
+       Value: 0x789
+     - Tag:   DT_STRSZ
+       Value: 0x10
+     - Tag:   DT_SYMENT
+       Value: 0x987
+     - Tag:   DT_INIT
+       Value: 0x1000
+     - Tag:   DT_FINI
+       Value: 0x1000
+     - Tag:   DT_SONAME
+       Value: 0x3
+     - Tag:   DT_RPATH
+       Value: 0x5
+     - Tag:   DT_SYMBOLIC
+       Value: 0x1234567890abcdef
+     - Tag:   DT_REL
+       Value: 0x1000
+     - Tag:   DT_RELSZ
+       Value: 0x10
+     - Tag:   DT_RELENT
+       Value: 0x123
+     - Tag:   DT_PLTREL
+       Value: 0x7
+     - Tag:   DT_DEBUG
+       Value: 0xfedcba0987654321
+     - Tag:   DT_TEXTREL
+       Value: 0x1122334455667788
+     - Tag:   DT_JMPREL
+       Value: 0x1000
+     - Tag:   DT_BIND_NOW
+       Value: 0x8877665544332211
+     - Tag:   DT_INIT_ARRAY
+       Value: 0x1000
+     - Tag:   DT_FINI_ARRAY
+       Value: 0x1000
+     - Tag:   DT_INIT_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_FINI_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_RUNPATH
+       Value: 0x7
+     - Tag:   DT_FLAGS
+       Value: 0xaabbccddeeff9900
+     - Tag:   DT_PREINIT_ARRAY
+       Value: 0x1000
+     - Tag:   DT_PREINIT_ARRAYSZ
+       Value: 0x10
+     - Tag:   DT_SYMTAB_SHNDX
+       Value: 0x1000
+     - Tag:   DT_RELRSZ
+       Value: 0x10
+     - Tag:   DT_RELR
+       Value: 0x1000
+     - Tag:   DT_RELRENT
+       Value: 0x4321
+     - Tag:   DT_ANDROID_REL
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELSZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELA
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELASZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELR
+       Value: 0x1000
+     - Tag:   DT_ANDROID_RELRSZ
+       Value: 0x10
+     - Tag:   DT_ANDROID_RELRENT
+       Value: 0x1234
+     - Tag:   DT_GNU_HASH
+       Value: 0x1000
+     - Tag:   DT_TLSDESC_PLT
+       Value: 0x1000
+     - Tag:   DT_TLSDESC_GOT
+       Value: 0x1000
+     - Tag:   DT_RELACOUNT
+       Value: 0x0
+     - Tag:   DT_RELCOUNT
+       Value: 0x0
+     - Tag:   DT_FLAGS_1
+       Value: 0x87654321
+     - Tag:   DT_VERSYM
+       Value: 0x1000
+     - Tag:   DT_VERDEF
+       Value: 0x1000
+     - Tag:   DT_VERDEFNUM
+       Value: 0x0
+     - Tag:   DT_VERNEED
+       Value: 0x1000
+     - Tag:   DT_VERNEEDNUM
+       Value: 0x0
+     - Tag:   DT_AUXILIARY
+       Value: 0x1
+     - Tag:   DT_FILTER
+       Value: 0x3
+     - Tag:   DT_NULL
+       Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic

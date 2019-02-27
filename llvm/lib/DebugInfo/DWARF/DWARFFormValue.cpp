@@ -77,6 +77,34 @@ static const DWARFFormValue::FormClass DWARF5FormClasses[] = {
 
 };
 
+DWARFFormValue DWARFFormValue::createFromSValue(dwarf::Form F, int64_t V) {
+  return DWARFFormValue(F, ValueType(V));
+}
+
+DWARFFormValue DWARFFormValue::createFromUValue(dwarf::Form F, uint64_t V) {
+  return DWARFFormValue(F, ValueType(V));
+}
+
+DWARFFormValue DWARFFormValue::createFromPValue(dwarf::Form F, const char *V) {
+  return DWARFFormValue(F, ValueType(V));
+}
+
+DWARFFormValue DWARFFormValue::createFromBlockValue(dwarf::Form F,
+                                                    ArrayRef<uint8_t> D) {
+  ValueType V;
+  V.uval = D.size();
+  V.data = D.data();
+  return DWARFFormValue(F, V);
+}
+
+DWARFFormValue DWARFFormValue::createFromUnit(dwarf::Form F, const DWARFUnit *U,
+                                              uint32_t *OffsetPtr) {
+  DWARFFormValue FormValue(F);
+  FormValue.extractValue(U->getDebugInfoExtractor(), OffsetPtr,
+                         U->getFormParams(), U);
+  return FormValue;
+}
+
 bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
                                uint32_t *OffsetPtr,
                                const dwarf::FormParams Params) {
@@ -332,7 +360,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
 
 void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,
                                           DIDumpOptions DumpOpts,
-                                          SectionedAddress SA) const {
+                                          object::SectionedAddress SA) const {
   OS << format("0x%016" PRIx64, SA.Address);
   dumpAddressSection(U->getContext().getDWARFObj(), OS, DumpOpts,
                      SA.SectionIndex);
@@ -369,7 +397,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_addrx3:
   case DW_FORM_addrx4:
   case DW_FORM_GNU_addr_index: {
-    Optional<SectionedAddress> A = U->getAddrOffsetSectionItem(UValue);
+    Optional<object::SectionedAddress> A = U->getAddrOffsetSectionItem(UValue);
     if (!A || DumpOpts.Verbose)
       AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
     if (U == nullptr)
@@ -590,14 +618,15 @@ Optional<uint64_t> DWARFFormValue::getAsAddress() const {
     return SA->Address;
   return None;
 }
-Optional<SectionedAddress> DWARFFormValue::getAsSectionedAddress() const {
+Optional<object::SectionedAddress>
+DWARFFormValue::getAsSectionedAddress() const {
   if (!isFormClass(FC_Address))
     return None;
   if (Form == DW_FORM_GNU_addr_index || Form == DW_FORM_addrx) {
     uint32_t Index = Value.uval;
     if (!U)
       return None;
-    Optional<SectionedAddress> SA = U->getAddrOffsetSectionItem(Index);
+    Optional<object::SectionedAddress> SA = U->getAddrOffsetSectionItem(Index);
     if (!SA)
       return None;
     return SA;

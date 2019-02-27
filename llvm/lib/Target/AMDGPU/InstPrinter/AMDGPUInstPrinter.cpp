@@ -934,23 +934,24 @@ void AMDGPUInstPrinter::printInterpAttrChan(const MCInst *MI, unsigned OpNum,
 void AMDGPUInstPrinter::printVGPRIndexMode(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
+  using namespace llvm::AMDGPU::VGPRIndexMode;
   unsigned Val = MI->getOperand(OpNo).getImm();
-  if (Val == 0) {
-    O << " 0";
-    return;
+
+  if ((Val & ~ENABLE_MASK) != 0) {
+    O << " " << formatHex(static_cast<uint64_t>(Val));
+  } else {
+    O << " gpr_idx(";
+    bool NeedComma = false;
+    for (unsigned ModeId = ID_MIN; ModeId <= ID_MAX; ++ModeId) {
+      if (Val & (1 << ModeId)) {
+        if (NeedComma)
+          O << ',';
+        O << IdSymbolic[ModeId];
+        NeedComma = true;
+      }
+    }
+    O << ')';
   }
-
-  if (Val & VGPRIndexMode::DST_ENABLE)
-    O << " dst";
-
-  if (Val & VGPRIndexMode::SRC0_ENABLE)
-    O << " src0";
-
-  if (Val & VGPRIndexMode::SRC1_ENABLE)
-    O << " src1";
-
-  if (Val & VGPRIndexMode::SRC2_ENABLE)
-    O << " src2";
 }
 
 void AMDGPUInstPrinter::printMemOperand(const MCInst *MI, unsigned OpNo,

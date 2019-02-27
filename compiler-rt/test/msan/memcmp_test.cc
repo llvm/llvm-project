@@ -13,6 +13,6 @@ int main(int argc, char **argv) {
   if (!res)
     printf("equals");
   return 0;
-  // CHECK: Uninitialized bytes in MemcmpInterceptorCommon at offset 3
+  // CHECK: Uninitialized bytes in __interceptor_memcmp at offset 3
   // CHECK: MemorySanitizer: use-of-uninitialized-value
 }

@@ -55,18 +55,18 @@ int main(int, char**)
 //      On darwin i386, ptrdiff_t is the same as int.
         constexpr std::span<const int> spans[] = {
             {},
-            {carr1, static_cast<std::ptrdiff_t>(0)},
-            {carr1,     1},
-            {carr1,     2},
-            {carr1,     3},
-            {carr1,     4},
-            {carr2, static_cast<std::ptrdiff_t>(0)},
-            {carr2,     1},
-            {carr2,     2},
-            {carr2,     3},
-            {carr3, static_cast<std::ptrdiff_t>(0)},
-            {carr3,     1},
-            {carr3,     2}
+            {carr1, static_cast<std::size_t>(0)},
+            {carr1,     1U},
+            {carr1,     2U},
+            {carr1,     3U},
+            {carr1,     4U},
+            {carr2, static_cast<std::size_t>(0)},
+            {carr2,     1U},
+            {carr2,     2U},
+            {carr2,     3U},
+            {carr3, static_cast<std::size_t>(0)},
+            {carr3,     1U},
+            {carr3,     2U}
             };
 
         static_assert(std::size(spans) == 13, "" );

@@ -569,9 +569,9 @@ static Error handleArgs(const CopyConfig &Config, Object &Obj,
   for (const NewSymbolInfo &SI : Config.SymbolsToAdd) {
     SectionBase *Sec = Obj.findSection(SI.SectionName);
     uint64_t Value = Sec ? Sec->Addr + SI.Value : SI.Value;
-    Obj.SymbolTable->addSymbol(SI.SymbolName, SI.Bind, SI.Type, Sec, Value,
-                               SI.Visibility,
-                               Sec ? SYMBOL_SIMPLE_INDEX : SHN_ABS, 0);
+    Obj.SymbolTable->addSymbol(
+        SI.SymbolName, SI.Bind, SI.Type, Sec, Value, SI.Visibility,
+        Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
   }
 
   if (Config.EntryExpr)

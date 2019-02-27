@@ -17,7 +17,7 @@ TEST(TimerTest, CategoryTimes) {
   Timer::ResetCategoryTimes();
   {
     static Timer::Category tcat("CAT1");
-    Timer t(tcat, "");
+    Timer t(tcat, ".");
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   StreamString ss;
@@ -32,10 +32,10 @@ TEST(TimerTest, CategoryTimesNested) {
   Timer::ResetCategoryTimes();
   {
     static Timer::Category tcat1("CAT1");
-    Timer t1(tcat1, "");
+    Timer t1(tcat1, ".");
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     // Explicitly testing the same category as above.
-    Timer t2(tcat1, "");
+    Timer t2(tcat1, ".");
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   StreamString ss;
@@ -52,10 +52,10 @@ TEST(TimerTest, CategoryTimes2) {
   Timer::ResetCategoryTimes();
   {
     static Timer::Category tcat1("CAT1");
-    Timer t1(tcat1, "");
+    Timer t1(tcat1, ".");
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     static Timer::Category tcat2("CAT2");
-    Timer t2(tcat2, "");
+    Timer t2(tcat2, ".");
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
   StreamString ss;

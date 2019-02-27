@@ -759,7 +759,7 @@ public:
   ///
   /// \returns the DIEUnit that represents the compile or type unit that owns
   /// this DIE, or NULL if this DIE hasn't been added to a unit DIE.
-  const DIEUnit *getUnit() const;
+  DIEUnit *getUnit() const;
 
   void setOffset(unsigned O) { Offset = O; }
   void setSize(unsigned S) { Size = S; }

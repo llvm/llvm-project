@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DHOST -triple x86_64-unknown-linux-gnu
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DHOST -DHOST_USED -triple x86_64-unknown-linux-gnu
-// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE_NOT_USED -triple nvptx-unknown-cuda
-// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE -triple nvptx-unknown-cuda
-// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE -DDEVICE_USED -triple nvptx-unknown-cuda
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DHOST -triple x86_64-unknown-linux-gnu -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -verify %s -DHOST -DHOST_USED -triple x86_64-unknown-linux-gnu -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE_NOT_USED -triple nvptx-unknown-cuda -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE -triple nvptx-unknown-cuda -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fcuda-is-device -verify %s -DDEVICE -DDEVICE_USED -triple nvptx-unknown-cuda -Wuninitialized
 
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target

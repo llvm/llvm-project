@@ -582,7 +582,7 @@ static void dumpArchive(const Archive *Arc, ScopedPrinter &Writer) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = Child.getAsBinary();
     if (!ChildOrErr) {
       if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError())) {
-        reportError(Arc->getFileName(), ChildOrErr.takeError());
+        reportError(Arc->getFileName(), std::move(E));
       }
       continue;
     }

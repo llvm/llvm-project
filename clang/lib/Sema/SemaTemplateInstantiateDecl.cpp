@@ -344,6 +344,51 @@ static void instantiateOMPDeclareSimdDeclAttr(
       Attr.getRange());
 }
 
+static void instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const AMDGPUFlatWorkGroupSizeAttr &Attr, Decl *New) {
+  // Both min and max expression are constant expressions.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Result = S.SubstExpr(Attr.getMin(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *MinExpr = Result.getAs<Expr>();
+
+  Result = S.SubstExpr(Attr.getMax(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *MaxExpr = Result.getAs<Expr>();
+
+  S.addAMDGPUFlatWorkGroupSizeAttr(Attr.getLocation(), New, MinExpr, MaxExpr,
+                                   Attr.getSpellingListIndex());
+}
+
+static void instantiateDependentAMDGPUWavesPerEUAttr(
+    Sema &S, const MultiLevelTemplateArgumentList &TemplateArgs,
+    const AMDGPUWavesPerEUAttr &Attr, Decl *New) {
+  // Both min and max expression are constant expressions.
+  EnterExpressionEvaluationContext Unevaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
+
+  ExprResult Result = S.SubstExpr(Attr.getMin(), TemplateArgs);
+  if (Result.isInvalid())
+    return;
+  Expr *MinExpr = Result.getAs<Expr>();
+
+  Expr *MaxExpr = nullptr;
+  if (auto Max = Attr.getMax()) {
+    Result = S.SubstExpr(Max, TemplateArgs);
+    if (Result.isInvalid())
+      return;
+    MaxExpr = Result.getAs<Expr>();
+  }
+
+  S.addAMDGPUWavesPerEUAttr(Attr.getLocation(), New, MinExpr, MaxExpr,
+                            Attr.getSpellingListIndex());
+}
+
 void Sema::InstantiateAttrsForDecl(
     const MultiLevelTemplateArgumentList &TemplateArgs, const Decl *Tmpl,
     Decl *New, LateInstantiatedAttrVec *LateAttrs,
@@ -435,6 +480,18 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
     if (const auto *OMPAttr = dyn_cast<OMPDeclareSimdDeclAttr>(TmplAttr)) {
       instantiateOMPDeclareSimdDeclAttr(*this, TemplateArgs, *OMPAttr, New);
       continue;
+    }
+
+    if (const AMDGPUFlatWorkGroupSizeAttr *AMDGPUFlatWorkGroupSize =
+            dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(TmplAttr)) {
+      instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
+          *this, TemplateArgs, *AMDGPUFlatWorkGroupSize, New);
+    }
+
+    if (const AMDGPUWavesPerEUAttr *AMDGPUFlatWorkGroupSize =
+            dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
+      instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
+                                               *AMDGPUFlatWorkGroupSize, New);
     }
 
     // Existing DLL attribute on the instantiation takes precedence.

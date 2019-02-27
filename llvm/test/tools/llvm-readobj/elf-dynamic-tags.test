@@ -1,0 +1,280 @@
+# Show that all non-machine specific tags can be read and printed correctly.
+# RUN: yaml2obj %s > %t
+# RUN: llvm-readobj --dynamic-table %t | FileCheck %s --check-prefix=LLVM
+# RUN: llvm-readelf --dynamic-table %t | FileCheck %s --check-prefix=GNU
+
+# LLVM:      DynamicSection [ (60 entries)
+# LLVM-NEXT:   Tag                Type                 Name/Value
+# LLVM-NEXT:   0x0000000000000001 NEEDED               Shared library: [D]
+# LLVM-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
+# LLVM-NEXT:   0x0000000000000003 PLTGOT               0x1000
+# LLVM-NEXT:   0x0000000000000004 HASH                 0x1000
+# LLVM-NEXT:   0x0000000000000005 STRTAB               0x1000
+# LLVM-NEXT:   0x0000000000000006 SYMTAB               0x1000
+# LLVM-NEXT:   0x0000000000000007 RELA                 0x1000
+# LLVM-NEXT:   0x0000000000000008 RELASZ               16 (bytes)
+# LLVM-NEXT:   0x0000000000000009 RELAENT              1929 (bytes)
+# LLVM-NEXT:   0x000000000000000A STRSZ                16 (bytes)
+# LLVM-NEXT:   0x000000000000000B SYMENT               2439 (bytes)
+# LLVM-NEXT:   0x000000000000000C INIT                 0x1000
+# LLVM-NEXT:   0x000000000000000D FINI                 0x1000
+# LLVM-NEXT:   0x000000000000000E SONAME               Library soname: [U]
+# LLVM-NEXT:   0x000000000000000F RPATH                f
+# LLVM-NEXT:   0x0000000000000010 SYMBOLIC             0x1234567890ABCDEF
+# LLVM-NEXT:   0x0000000000000011 REL                  0x1000
+# LLVM-NEXT:   0x0000000000000012 RELSZ                16 (bytes)
+# LLVM-NEXT:   0x0000000000000013 RELENT               291 (bytes)
+# LLVM-NEXT:   0x0000000000000014 PLTREL               RELA
+# LLVM-NEXT:   0x0000000000000015 DEBUG                0xFEDCBA0987654321
+# LLVM-NEXT:   0x0000000000000016 TEXTREL              0x1122334455667788
+# LLVM-NEXT:   0x0000000000000017 JMPREL               0x1000
+# LLVM-NEXT:   0x0000000000000018 BIND_NOW             0x8877665544332211
+# LLVM-NEXT:   0x0000000000000019 INIT_ARRAY           0x1000
+# LLVM-NEXT:   0x000000000000001A FINI_ARRAY           0x1000
+# LLVM-NEXT:   0x000000000000001B INIT_ARRAYSZ         16 (bytes)
+# LLVM-NEXT:   0x000000000000001C FINI_ARRAYSZ         16 (bytes)
+# LLVM-NEXT:   0x000000000000001D RUNPATH              w
+# LLVM-NEXT:   0x000000000000001E FLAGS                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS {{$}}
+# LLVM-NEXT:   0x0000000000000020 PREINIT_ARRAY        0x1000
+# LLVM-NEXT:   0x0000000000000021 PREINIT_ARRAYSZ      16 (bytes)
+# LLVM-NEXT:   0x0000000000000022 SYMTAB_SHNDX         0x1000
+# LLVM-NEXT:   0x0000000000000023 RELRSZ               0x10
+# LLVM-NEXT:   0x0000000000000024 RELR                 0x1000
+# LLVM-NEXT:   0x0000000000000025 RELRENT              0x4321
+# LLVM-NEXT:   0x000000006000000F ANDROID_REL          0x1000
+# LLVM-NEXT:   0x0000000060000010 ANDROID_RELSZ        16 (bytes)
+# LLVM-NEXT:   0x0000000060000011 ANDROID_RELA         0x1000
+# LLVM-NEXT:   0x0000000060000012 ANDROID_RELASZ       16 (bytes)
+# LLVM-NEXT:   0x000000006FFFE000 ANDROID_RELR         0x1000
+# LLVM-NEXT:   0x000000006FFFE001 ANDROID_RELRSZ       0x10
+# LLVM-NEXT:   0x000000006FFFE003 ANDROID_RELRENT      0x1234
+# LLVM-NEXT:   0x000000006FFFFEF5 GNU_HASH             0x1000
+# LLVM-NEXT:   0x000000006FFFFEF6 TLSDESC_PLT          0x1000
+# LLVM-NEXT:   0x000000006FFFFEF7 TLSDESC_GOT          0x1000
+# LLVM-NEXT:   0x000000006FFFFFF9 RELACOUNT            0
+# LLVM-NEXT:   0x000000006FFFFFFA RELCOUNT             0
+# LLVM-NEXT:   0x000000006FFFFFFB FLAGS_1              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON {{$}}
+# LLVM-NEXT:   0x000000006FFFFFF0 VERSYM               0x1000
+# LLVM-NEXT:   0x000000006FFFFFFC VERDEF               0x1000
+# LLVM-NEXT:   0x000000006FFFFFFD VERDEFNUM            0
+# LLVM-NEXT:   0x000000006FFFFFFE VERNEED              0x1000
+# LLVM-NEXT:   0x000000006FFFFFFF VERNEEDNUM           0
+# LLVM-NEXT:   0x000000007FFFFFFD AUXILIARY            Auxiliary library: [D]
+# LLVM-NEXT:   0x000000007FFFFFFF FILTER               Filter library: [U]
+# LLVM-NEXT:   0x0000000012345678 unknown              0x8765432187654321
+# LLVM-NEXT:   0x000000006ABCDEF0 unknown              0x9988776655443322
+# LLVM-NEXT:   0x0000000076543210 unknown              0x5555666677778888
+# LLVM-NEXT:   0x0000000000000000 NULL                 0x0
+# LLVM-NEXT: ]
+
+# GNU:      DynamicSection [ (60 entries)
+# GNU-NEXT:   Tag                Type                 Name/Value
+# GNU-NEXT:   0x0000000000000001 NEEDED               Shared library: [D]
+# GNU-NEXT:   0x0000000000000002 PLTRELSZ             16 (bytes)
+# GNU-NEXT:   0x0000000000000003 PLTGOT               0x1000
+# GNU-NEXT:   0x0000000000000004 HASH                 0x1000
+# GNU-NEXT:   0x0000000000000005 STRTAB               0x1000
+# GNU-NEXT:   0x0000000000000006 SYMTAB               0x1000
+# GNU-NEXT:   0x0000000000000007 RELA                 0x1000
+# GNU-NEXT:   0x0000000000000008 RELASZ               16 (bytes)
+# GNU-NEXT:   0x0000000000000009 RELAENT              1929 (bytes)
+# GNU-NEXT:   0x000000000000000a STRSZ                16 (bytes)
+# GNU-NEXT:   0x000000000000000b SYMENT               2439 (bytes)
+# GNU-NEXT:   0x000000000000000c INIT                 0x1000
+# GNU-NEXT:   0x000000000000000d FINI                 0x1000
+# GNU-NEXT:   0x000000000000000e SONAME               Library soname: [U]
+# GNU-NEXT:   0x000000000000000f RPATH                f
+# GNU-NEXT:   0x0000000000000010 SYMBOLIC             0x1234567890abcdef
+# GNU-NEXT:   0x0000000000000011 REL                  0x1000
+# GNU-NEXT:   0x0000000000000012 RELSZ                16 (bytes)
+# GNU-NEXT:   0x0000000000000013 RELENT               291 (bytes)
+# GNU-NEXT:   0x0000000000000014 PLTREL               RELA
+# GNU-NEXT:   0x0000000000000015 DEBUG                0xfedcba0987654321
+# GNU-NEXT:   0x0000000000000016 TEXTREL              0x1122334455667788
+# GNU-NEXT:   0x0000000000000017 JMPREL               0x1000
+# GNU-NEXT:   0x0000000000000018 BIND_NOW             0x8877665544332211
+# GNU-NEXT:   0x0000000000000019 INIT_ARRAY           0x1000
+# GNU-NEXT:   0x000000000000001a FINI_ARRAY           0x1000
+# GNU-NEXT:   0x000000000000001b INIT_ARRAYSZ         16 (bytes)
+# GNU-NEXT:   0x000000000000001c FINI_ARRAYSZ         16 (bytes)
+# GNU-NEXT:   0x000000000000001d RUNPATH              w
+# GNU-NEXT:   0x000000000000001e FLAGS                ORIGIN SYMBOLIC TEXTREL BIND_NOW STATIC_TLS {{$}}
+# GNU-NEXT:   0x0000000000000020 PREINIT_ARRAY        0x1000
+# GNU-NEXT:   0x0000000000000021 PREINIT_ARRAYSZ      16 (bytes)
+# GNU-NEXT:   0x0000000000000022 SYMTAB_SHNDX         0x1000
+# GNU-NEXT:   0x0000000000000023 RELRSZ               0x10
+# GNU-NEXT:   0x0000000000000024 RELR                 0x1000
+# GNU-NEXT:   0x0000000000000025 RELRENT              0x4321
+# GNU-NEXT:   0x000000006000000f ANDROID_REL          0x1000
+# GNU-NEXT:   0x0000000060000010 ANDROID_RELSZ        16 (bytes)
+# GNU-NEXT:   0x0000000060000011 ANDROID_RELA         0x1000
+# GNU-NEXT:   0x0000000060000012 ANDROID_RELASZ       16 (bytes)
+# GNU-NEXT:   0x000000006fffe000 ANDROID_RELR         0x1000
+# GNU-NEXT:   0x000000006fffe001 ANDROID_RELRSZ       0x10
+# GNU-NEXT:   0x000000006fffe003 ANDROID_RELRENT      0x1234
+# GNU-NEXT:   0x000000006ffffef5 GNU_HASH             0x1000
+# GNU-NEXT:   0x000000006ffffef6 TLSDESC_PLT          0x1000
+# GNU-NEXT:   0x000000006ffffef7 TLSDESC_GOT          0x1000
+# GNU-NEXT:   0x000000006ffffff9 RELACOUNT            0
+# GNU-NEXT:   0x000000006ffffffa RELCOUNT             0
+# GNU-NEXT:   0x000000006ffffffb FLAGS_1              NOW GLOBAL GROUP NODELETE LOADFLTR INITFIRST NOOPEN ORIGIN DIRECT TRANS INTERPOSE NODEFLIB NODUMP CONFALT ENDFILTEE DISPRELDNE DISPRELPND NODIRECT IGNMULDEF NOKSYMS NOHDR EDITED NORELOC SYMINTPOSE GLOBAUDIT SINGLETON {{$}}
+# GNU-NEXT:   0x000000006ffffff0 VERSYM               0x1000
+# GNU-NEXT:   0x000000006ffffffc VERDEF               0x1000
+# GNU-NEXT:   0x000000006ffffffd VERDEFNUM            0
+# GNU-NEXT:   0x000000006ffffffe VERNEED              0x1000
+# GNU-NEXT:   0x000000006fffffff VERNEEDNUM           0
+# GNU-NEXT:   0x000000007ffffffd AUXILIARY            Auxiliary library: [D]
+# GNU-NEXT:   0x000000007fffffff FILTER               Filter library: [U]
+# GNU-NEXT:   0x0000000012345678 unknown              0x8765432187654321
+# GNU-NEXT:   0x000000006abcdef0 unknown              0x9988776655443322
+# GNU-NEXT:   0x0000000076543210 unknown              0x5555666677778888
+# GNU-NEXT:   0x0000000000000000 NULL                 0x0
+# GNU-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+    Content: "004400550066007700"
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_NEEDED
+        Value: 0x1
+      - Tag:   DT_PLTRELSZ
+        Value: 0x10
+      - Tag:   DT_PLTGOT
+        Value: 0x1000
+      - Tag:   DT_HASH
+        Value: 0x1000
+      - Tag:   DT_STRTAB
+        Value: 0x1000
+      - Tag:   DT_SYMTAB
+        Value: 0x1000
+      - Tag:   DT_RELA
+        Value: 0x1000
+      - Tag:   DT_RELASZ
+        Value: 0x10
+      - Tag:   DT_RELAENT
+        Value: 0x789
+      - Tag:   DT_STRSZ
+        Value: 0x10
+      - Tag:   DT_SYMENT
+        Value: 0x987
+      - Tag:   DT_INIT
+        Value: 0x1000
+      - Tag:   DT_FINI
+        Value: 0x1000
+      - Tag:   DT_SONAME
+        Value: 0x3
+      - Tag:   DT_RPATH
+        Value: 0x5
+      - Tag:   DT_SYMBOLIC
+        Value: 0x1234567890abcdef
+      - Tag:   DT_REL
+        Value: 0x1000
+      - Tag:   DT_RELSZ
+        Value: 0x10
+      - Tag:   DT_RELENT
+        Value: 0x123
+      - Tag:   DT_PLTREL
+        Value: 0x7
+      - Tag:   DT_DEBUG
+        Value: 0xfedcba0987654321
+      - Tag:   DT_TEXTREL
+        Value: 0x1122334455667788
+      - Tag:   DT_JMPREL
+        Value: 0x1000
+      - Tag:   DT_BIND_NOW
+        Value: 0x8877665544332211
+      - Tag:   DT_INIT_ARRAY
+        Value: 0x1000
+      - Tag:   DT_FINI_ARRAY
+        Value: 0x1000
+      - Tag:   DT_INIT_ARRAYSZ
+        Value: 0x10
+      - Tag:   DT_FINI_ARRAYSZ
+        Value: 0x10
+      - Tag:   DT_RUNPATH
+        Value: 0x7
+      - Tag:   DT_FLAGS
+        Value: 0xffffffffffffffff
+      - Tag:   DT_PREINIT_ARRAY
+        Value: 0x1000
+      - Tag:   DT_PREINIT_ARRAYSZ
+        Value: 0x10
+      - Tag:   DT_SYMTAB_SHNDX
+        Value: 0x1000
+      - Tag:   DT_RELRSZ
+        Value: 0x10
+      - Tag:   DT_RELR
+        Value: 0x1000
+      - Tag:   DT_RELRENT
+        Value: 0x4321
+      - Tag:   DT_ANDROID_REL
+        Value: 0x1000
+      - Tag:   DT_ANDROID_RELSZ
+        Value: 0x10
+      - Tag:   DT_ANDROID_RELA
+        Value: 0x1000
+      - Tag:   DT_ANDROID_RELASZ
+        Value: 0x10
+      - Tag:   DT_ANDROID_RELR
+        Value: 0x1000
+      - Tag:   DT_ANDROID_RELRSZ
+        Value: 0x10
+      - Tag:   DT_ANDROID_RELRENT
+        Value: 0x1234
+      - Tag:   DT_GNU_HASH
+        Value: 0x1000
+      - Tag:   DT_TLSDESC_PLT
+        Value: 0x1000
+      - Tag:   DT_TLSDESC_GOT
+        Value: 0x1000
+      - Tag:   DT_RELACOUNT
+        Value: 0x0
+      - Tag:   DT_RELCOUNT
+        Value: 0x0
+      - Tag:   DT_FLAGS_1
+        Value: 0xffffffffffffffff
+      - Tag:   DT_VERSYM
+        Value: 0x1000
+      - Tag:   DT_VERDEF
+        Value: 0x1000
+      - Tag:   DT_VERDEFNUM
+        Value: 0x0
+      - Tag:   DT_VERNEED
+        Value: 0x1000
+      - Tag:   DT_VERNEEDNUM
+        Value: 0x0
+      - Tag:   DT_AUXILIARY
+        Value: 0x1
+      - Tag:   DT_FILTER
+        Value: 0x3
+      # Show behaviour for unknown values in special and un-marked ranges.
+      - Tag:   0x12345678
+        Value: 0x8765432187654321
+      - Tag:   0x6abcdef0
+        Value: 0x9988776655443322
+      - Tag:   0x76543210
+        Value: 0x5555666677778888
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic

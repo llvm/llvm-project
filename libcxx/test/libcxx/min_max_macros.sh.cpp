@@ -101,6 +101,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <exception>
 TEST_MACROS();
+#include <filesystem>
+TEST_MACROS();
 #include <float.h>
 TEST_MACROS();
 #include <forward_list>
