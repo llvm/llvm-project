@@ -1095,8 +1095,10 @@ TEST(CompletionTest, UnresolvedQualifierIdQuery) {
       } // namespace ns
   )cpp");
 
-  EXPECT_THAT(Requests, ElementsAre(Field(&FuzzyFindRequest::Scopes,
-                                          UnorderedElementsAre("bar::"))));
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(
+                  &FuzzyFindRequest::Scopes,
+                  UnorderedElementsAre("a::bar::", "ns::bar::", "bar::"))));
 }
 
 TEST(CompletionTest, UnresolvedNestedQualifierIdQuery) {
@@ -2333,6 +2335,35 @@ TEST(CompletionTest, UsingDecl) {
   EXPECT_THAT(R.Completions,
               ElementsAre(AllOf(Scope("std::"), Named("foo"),
                                 Kind(CompletionItemKind::Reference))));
+}
+
+TEST(CompletionTest, ScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    void f() { b::X^ }
+    }
+  )cpp",
+                             {cls("a::b::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
+}
+
+TEST(CompletionTest, NestedScopeIsUnresolved) {
+  clangd::CodeCompleteOptions Opts = {};
+  Opts.AllScopes = true;
+
+  auto Results = completions(R"cpp(
+    namespace a {
+    namespace b {}
+    void f() { b::c::X^ }
+    }
+  )cpp",
+                             {cls("a::b::c::XYZ")}, Opts);
+  EXPECT_THAT(Results.Completions,
+              UnorderedElementsAre(AllOf(Qualifier(""), Named("XYZ"))));
 }
 
 } // namespace
