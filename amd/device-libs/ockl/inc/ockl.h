@@ -441,6 +441,8 @@ extern __attribute__((const)) uint __ockl_get_work_dim(void);
 extern __attribute__((const)) size_t __ockl_get_enqueued_local_size(uint);
 extern __attribute__((const)) size_t __ockl_get_global_linear_id(void);
 extern __attribute__((const)) size_t __ockl_get_local_linear_id(void);
+extern __attribute__((const)) int  __ockl_readuplane_i32(int, int);
+extern __attribute__((const)) long  __ockl_readuplane_i64(long, int);
 
 extern __attribute__((const)) bool OCKL_MANGLE_T(is_local,addr)(const void *);
 extern __attribute__((const)) bool OCKL_MANGLE_T(is_private,addr)(const void *);
