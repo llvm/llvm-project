@@ -227,8 +227,9 @@ public:
 
   // Defaults to GetTypeName(type).  Override if your language desires
   // specialized behavior.
+  // \param sc  An optional symbol context of the function the type appears in.
   virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
-                                         lldb::StackFrameSP frame_sp = {});
+                                         const SymbolContext *sc = nullptr);
 
   // Defaults to GetTypeName(type).  Override if your language desires
   // specialized behavior.

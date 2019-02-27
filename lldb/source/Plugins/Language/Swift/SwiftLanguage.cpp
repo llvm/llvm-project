@@ -1495,7 +1495,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
   case Language::FunctionNameRepresentation::eNameWithNoArgs: {
     if (sc->function) {
       if (sc->function->GetLanguage() == eLanguageTypeSwift) {
-        if (ConstString cs = sc->function->GetDisplayName()) {
+        if (ConstString cs = sc->function->GetDisplayName(sc)) {
           s.Printf("%s", cs.AsCString());
           return true;
         }
@@ -1506,10 +1506,10 @@ bool SwiftLanguage::GetFunctionDisplayName(
   case Language::FunctionNameRepresentation::eNameWithArgs: {
     if (sc->function) {
       if (sc->function->GetLanguage() == eLanguageTypeSwift) {
-        if (const char *cstr = sc->function->GetDisplayName().AsCString()) {
+        if (const char *cstr =
+                sc->function->GetDisplayName(sc).AsCString()) {
           ExecutionContextScope *exe_scope =
               exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL;
-
           const InlineFunctionInfo *inline_info = NULL;
           VariableListSP variable_list_sp;
           bool get_function_vars = true;

@@ -536,8 +536,7 @@ public:
 
   ConstString GetTypeName(void *type) override;
 
-  ConstString GetDisplayTypeName(void *type,
-                                 lldb::StackFrameSP frame_sp) override;
+  ConstString GetDisplayTypeName(void *type, const SymbolContext *sc) override;
 
   ConstString GetTypeSymbolName(void *type) override;
 

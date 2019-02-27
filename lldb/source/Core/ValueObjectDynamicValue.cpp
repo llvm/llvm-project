@@ -85,8 +85,12 @@ ConstString ValueObjectDynamicValue::GetQualifiedTypeName() {
 ConstString ValueObjectDynamicValue::GetDisplayTypeName() {
   const bool success = UpdateValueIfNeeded(false);
   if (success) {
-    if (m_dynamic_type_info.HasType())
-      return GetCompilerType().GetDisplayTypeName(GetFrameSP());
+    if (m_dynamic_type_info.HasType()) {
+      const SymbolContext *sc = nullptr;
+      if (GetFrameSP())
+        sc = &GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
+      return GetCompilerType().GetDisplayTypeName(sc);
+    }
     if (m_dynamic_type_info.HasName())
       return m_dynamic_type_info.GetName();
   }
