@@ -1671,7 +1671,7 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     Opts.ActionName = A->getValue();
   }
   // child process handle arguments
-  if (const Arg* A = Args.getLastArg(OPT_frandstruct_seed)) {
+  if (const Arg* A = Args.getLastArg(OPT_randstruct_seed)) {
     RandstructSeed = A->getValue(0);
   }
   Opts.AddPluginActions = Args.getAllArgValues(OPT_add_plugin);
