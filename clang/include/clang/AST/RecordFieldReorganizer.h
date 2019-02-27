@@ -34,12 +34,11 @@ protected:
 private:
   void commit(const RecordDecl *D,
               SmallVectorImpl<Decl *> &NewFieldOrder) const;
-  bool autostructselect(const SmallVector<Decl *,64> fields) const;
 };
 
 class Randstruct : public RecordFieldReorganizer {
-public:
-  //Automatic Structure selection
+public:  
+/// Determines if the Record can be safely and easily randomized based on certain criteria (see implementation).
   bool isTriviallyRandomizable(const RecordDecl *D) const;
 protected:
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
