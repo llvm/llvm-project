@@ -48,7 +48,6 @@ public:
     for (unsigned i = 0, e = filenames.size(); i < e; ++i) {
       StringRef fname = filenames[i];
       DirectoryWatcher::EventKind kind = kinds[i];
-      file_status stat = stats[i];
       auto it = std::find_if(evts.begin(), evts.end(),
                              [&](const DirectoryWatcher::Event &evt) -> bool {
                                return path::filename(evt.Filename) == fname;
@@ -62,10 +61,6 @@ public:
                              std::to_string((int)it->Kind) + ", expected ") +
                        std::to_string((int)kind));
       }
-      if (it->Kind != DirectoryWatcher::EventKind::Removed &&
-          it->ModTime != stat.getLastModificationTime())
-        hadError =
-            err(Twine("filename '" + fname + "' has different mod time"));
       evts.erase(it);
     }
     for (const auto &evt : evts) {

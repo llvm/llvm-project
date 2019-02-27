@@ -12,6 +12,7 @@
 #include "../lib/Index/IndexDataStoreUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Chrono.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
@@ -126,7 +127,7 @@ bool IndexDataStoreImpl::startEventListening(bool waitInitialSync, std::string &
         UnitName = StringRef();
         break;
       }
-      UnitEvents.push_back(IndexDataStore::UnitEvent{K, UnitName, evt.ModTime});
+      UnitEvents.push_back(IndexDataStore::UnitEvent{K, UnitName, llvm::sys::TimePoint<>{}});
     }
 
     if (auto handler = localUnitEventHandlerData->getHandler()) {

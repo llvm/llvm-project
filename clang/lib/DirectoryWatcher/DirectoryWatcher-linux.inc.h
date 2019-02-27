@@ -28,10 +28,7 @@ class EventQueue {
   std::vector<INotifyEvent> PendingEvents;
 
   DirectoryWatcher::Event toDirEvent(const INotifyEvent &evt) {
-    llvm::sys::TimePoint<> modTime{};
-    if (evt.Status.hasValue())
-      modTime = evt.Status->getLastModificationTime();
-    return DirectoryWatcher::Event{evt.K, evt.Filename, modTime};
+    return DirectoryWatcher::Event{evt.K, evt.Filename};
   }
 
 public:
