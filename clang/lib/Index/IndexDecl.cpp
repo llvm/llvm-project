@@ -325,6 +325,7 @@ public:
   }
 
   bool VisitMSPropertyDecl(const MSPropertyDecl *D) {
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     handleDeclarator(D);
     return true;
   }
