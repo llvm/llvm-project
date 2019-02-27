@@ -2989,7 +2989,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   const ASTRecordLayout *NewEntry = nullptr;
 
   Randstruct randstruct;
-  bool ShouldBeRandomized = randstruct.isTriviallyRandomizable(D) || D->getAttr<RandomizeLayoutAttr>() != nullptr;
+  bool ShouldBeRandomized = (RandstructAutoSelect && randstruct.isTriviallyRandomizable(D)) || D->getAttr<RandomizeLayoutAttr>() != nullptr;
   if (ShouldBeRandomized) {
     // There is no technical benefit to randomizing the fields of a union
     // since they all share the same offset of zero.

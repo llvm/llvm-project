@@ -25,6 +25,7 @@
 
 namespace clang {
 std::string RandstructSeed = "";
+bool RandstructAutoSelect = false;
 
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) const {
