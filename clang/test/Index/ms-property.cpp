@@ -1,4 +1,4 @@
-// RUN: c-index-test core -print-source-symbols -- -fms-extensions -fno-ms-compatibility %s | FileCheck %s
+// RUN: c-index-test core -print-source-symbols -- -target x86_64-apple-darwin10 -fms-extensions -fno-ms-compatibility %s | FileCheck %s
 
 // CHECK: [[@LINE+1]]:8 | struct/C++ | Simple | [[Simple_USR:.*]] | <no-cgname> | Def | rel: 0
 struct Simple {
