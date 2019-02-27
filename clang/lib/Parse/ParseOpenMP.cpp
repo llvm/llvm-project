@@ -424,21 +424,19 @@ void Parser::ParseOpenMPReductionInitializerForDecl(VarDecl *OmpPrivParm) {
     CommaLocsTy CommaLocs;
 
     SourceLocation LParLoc = T.getOpenLocation();
-    if (ParseExpressionList(
-            Exprs, CommaLocs, [this, OmpPrivParm, LParLoc, &Exprs] {
-              QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
-                  getCurScope(),
-                  OmpPrivParm->getType()->getCanonicalTypeInternal(),
-                  OmpPrivParm->getLocation(), Exprs, LParLoc);
-              CalledSignatureHelp = true;
-              Actions.CodeCompleteExpression(getCurScope(), PreferredType);
-            })) {
-      if (PP.isCodeCompletionReached() && !CalledSignatureHelp) {
-        Actions.ProduceConstructorSignatureHelp(
-            getCurScope(), OmpPrivParm->getType()->getCanonicalTypeInternal(),
-            OmpPrivParm->getLocation(), Exprs, LParLoc);
-        CalledSignatureHelp = true;
-      }
+    auto RunSignatureHelp = [this, OmpPrivParm, LParLoc, &Exprs]() {
+      QualType PreferredType = Actions.ProduceConstructorSignatureHelp(
+          getCurScope(), OmpPrivParm->getType()->getCanonicalTypeInternal(),
+          OmpPrivParm->getLocation(), Exprs, LParLoc);
+      CalledSignatureHelp = true;
+      return PreferredType;
+    };
+    if (ParseExpressionList(Exprs, CommaLocs, [&] {
+          PreferredType.enterFunctionArgument(Tok.getLocation(),
+                                              RunSignatureHelp);
+        })) {
+      if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
+        RunSignatureHelp();
       Actions.ActOnInitializerError(OmpPrivParm);
       SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
     } else {
@@ -893,7 +891,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
     SmallVector<llvm::PointerIntPair<OMPClause *, 1, bool>, OMPC_unknown + 1>
     FirstClauses(OMPC_unknown + 1);
     if (Tok.is(tok::annot_pragma_openmp_end)) {
-      Diag(Tok, diag::err_omp_expected_clause) 
+      Diag(Tok, diag::err_omp_expected_clause)
           << getOpenMPDirectiveName(OMPD_requires);
       break;
     }
@@ -2039,7 +2037,7 @@ static OpenMPMapClauseKind isMapType(Parser &P) {
 
 /// Parse map-type in map clause.
 /// map([ [map-type-modifier[,] [map-type-modifier[,] ...] map-type : ] list)
-/// where, map-type ::= to | from | tofrom | alloc | release | delete 
+/// where, map-type ::= to | from | tofrom | alloc | release | delete
 static void parseMapType(Parser &P, Parser::OpenMPVarListDataTy &Data) {
   Token Tok = P.getCurToken();
   if (Tok.is(tok::colon)) {
@@ -2161,13 +2159,20 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 
     if (Tok.is(tok::colon))
       Data.ColonLoc = ConsumeToken();
-  } else if (Kind == OMPC_to) {
+  } else if (Kind == OMPC_to || Kind == OMPC_from) {
     if (Tok.is(tok::identifier)) {
       bool IsMapperModifier = false;
-      auto Modifier = static_cast<OpenMPToModifierKind>(
-          getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)));
-      if (Modifier == OMPC_TO_MODIFIER_mapper)
-        IsMapperModifier = true;
+      if (Kind == OMPC_to) {
+        auto Modifier = static_cast<OpenMPToModifierKind>(
+            getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)));
+        if (Modifier == OMPC_TO_MODIFIER_mapper)
+          IsMapperModifier = true;
+      } else {
+        auto Modifier = static_cast<OpenMPFromModifierKind>(
+            getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)));
+        if (Modifier == OMPC_FROM_MODIFIER_mapper)
+          IsMapperModifier = true;
+      }
       if (IsMapperModifier) {
         // Parse the mapper modifier.
         ConsumeToken();
@@ -2282,7 +2287,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///    to-clause:
 ///       'to' '(' [ mapper '(' mapper-identifier ')' ':' ] list ')'
 ///    from-clause:
-///       'from' '(' list ')'
+///       'from' '(' [ mapper '(' mapper-identifier ')' ':' ] list ')'
 ///    use_device_ptr-clause:
 ///       'use_device_ptr' '(' list ')'
 ///    is_device_ptr-clause:

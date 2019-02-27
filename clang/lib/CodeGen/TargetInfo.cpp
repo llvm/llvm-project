@@ -7797,8 +7797,16 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
 
   const auto *FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>();
   if (ReqdWGS || FlatWGS) {
-    unsigned Min = FlatWGS ? FlatWGS->getMin() : 0;
-    unsigned Max = FlatWGS ? FlatWGS->getMax() : 0;
+    unsigned Min = 0;
+    unsigned Max = 0;
+    if (FlatWGS) {
+      Min = FlatWGS->getMin()
+                ->EvaluateKnownConstInt(M.getContext())
+                .getExtValue();
+      Max = FlatWGS->getMax()
+                ->EvaluateKnownConstInt(M.getContext())
+                .getExtValue();
+    }
     if (ReqdWGS && Min == 0 && Max == 0)
       Min = Max = ReqdWGS->getXDim() * ReqdWGS->getYDim() * ReqdWGS->getZDim();
 
@@ -7812,8 +7820,12 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   }
 
   if (const auto *Attr = FD->getAttr<AMDGPUWavesPerEUAttr>()) {
-    unsigned Min = Attr->getMin();
-    unsigned Max = Attr->getMax();
+    unsigned Min =
+        Attr->getMin()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+    unsigned Max = Attr->getMax() ? Attr->getMax()
+                                        ->EvaluateKnownConstInt(M.getContext())
+                                        .getExtValue()
+                                  : 0;
 
     if (Min != 0) {
       assert((Max == 0 || Min <= Max) && "Min must be less than or equal Max");

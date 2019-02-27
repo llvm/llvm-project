@@ -175,6 +175,7 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
   Opts.CollectIncludePath = true;
   Opts.CountReferences = true;
   Opts.Origin = SymbolOrigin::Static;
+  Opts.StoreAllDocumentation = false;
   if (RefsCallback != nullptr) {
     Opts.RefFilter = RefKind::All;
     Opts.RefsInHeaders = true;

@@ -324,6 +324,7 @@ public:
   }
 
   bool VisitMSPropertyDecl(const MSPropertyDecl *D) {
+    TRY_DECL(D, IndexCtx.handleDecl(D));
     handleDeclarator(D);
     return true;
   }
@@ -580,9 +581,10 @@ public:
   }
 
   bool VisitUsingDecl(const UsingDecl *D) {
+    IndexCtx.handleDecl(D);
+
     const DeclContext *DC = D->getDeclContext()->getRedeclContext();
     const NamedDecl *Parent = dyn_cast<NamedDecl>(DC);
-
     IndexCtx.indexNestedNameSpecifierLoc(D->getQualifierLoc(), Parent,
                                          D->getLexicalDeclContext());
     for (const auto *I : D->shadows())

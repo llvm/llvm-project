@@ -771,14 +771,14 @@ void CodeGenPGO::assignRegionCounters(GlobalDecl GD, llvm::Function *Fn) {
   // If so, instrument only base variant, others are implemented by delegation
   // to the base one, it would be counted twice otherwise.
   if (CGM.getTarget().getCXXABI().hasConstructorVariants()) {
-    if (isa<CXXDestructorDecl>(D) && GD.getDtorType() != Dtor_Base)
-      return;
-
     if (const auto *CCD = dyn_cast<CXXConstructorDecl>(D))
       if (GD.getCtorType() != Ctor_Base &&
           CodeGenFunction::IsConstructorDelegationValid(CCD))
         return;
   }
+  if (isa<CXXDestructorDecl>(D) && GD.getDtorType() != Dtor_Base)
+    return;
+
   CGM.ClearUnusedCoverageMapping(D);
   setFuncName(Fn);
 

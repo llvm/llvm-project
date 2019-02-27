@@ -1169,8 +1169,16 @@ public:
 
   /// Collect for each module the list of Summaries it defines (GUID ->
   /// Summary).
-  void collectDefinedGVSummariesPerModule(
-      StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries) const;
+  template <class Map>
+  void
+  collectDefinedGVSummariesPerModule(Map &ModuleToDefinedGVSummaries) const {
+    for (auto &GlobalList : *this) {
+      auto GUID = GlobalList.first;
+      for (auto &Summary : GlobalList.second.SummaryList) {
+        ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
+      }
+    }
+  }
 
   /// Print to an output stream.
   void print(raw_ostream &OS, bool IsForDebug = false) const;

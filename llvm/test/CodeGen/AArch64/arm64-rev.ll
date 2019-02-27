@@ -47,6 +47,36 @@ entry:
   ret i32 %2
 }
 
+define i32 @test_rev_w_srl16_load(i16 *%a) {
+; CHECK-LABEL: test_rev_w_srl16_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i16, i16 *%a
+  %1 = zext i16 %0 to i32
+  %2 = tail call i32 @llvm.bswap.i32(i32 %1)
+  %3 = lshr i32 %2, 16
+  ret i32 %3
+}
+
+define i32 @test_rev_w_srl16_add(i8 %a, i8 %b) {
+; CHECK-LABEL: test_rev_w_srl16_add:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    and w8, w0, #0xff
+; CHECK-NEXT:    add w8, w8, w1, uxtb
+; CHECK-NEXT:    rev16 w0, w8
+; CHECK-NEXT:    ret
+entry:
+  %0 = zext i8 %a to i32
+  %1 = zext i8 %b to i32
+  %2 = add i32 %0, %1
+  %3 = tail call i32 @llvm.bswap.i32(i32 %2)
+  %4 = lshr i32 %3, 16
+  ret i32 %4
+}
+
 ; Canonicalize (srl (bswap x), 32) to (rotr (bswap x), 32) if the high 32-bits
 ; of %a are zero. This optimizes rev + lsr 32 to rev32.
 define i64 @test_rev_x_srl32(i32 %a) {
@@ -60,6 +90,34 @@ entry:
   %1 = tail call i64 @llvm.bswap.i64(i64 %0)
   %2 = lshr i64 %1, 32
   ret i64 %2
+}
+
+define i64 @test_rev_x_srl32_load(i32 *%a) {
+; CHECK-LABEL: test_rev_x_srl32_load:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    rev32 x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %0 = load i32, i32 *%a
+  %1 = zext i32 %0 to i64
+  %2 = tail call i64 @llvm.bswap.i64(i64 %1)
+  %3 = lshr i64 %2, 32
+  ret i64 %3
+}
+
+define i64 @test_rev_x_srl32_shift(i64 %a) {
+; CHECK-LABEL: test_rev_x_srl32_shift:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ubfx x8, x0, #2, #29
+; CHECK-NEXT:    rev32 x0, x8
+; CHECK-NEXT:    ret
+entry:
+  %0 = shl i64 %a, 33
+  %1 = lshr i64 %0, 35
+  %2 = tail call i64 @llvm.bswap.i64(i64 %1)
+  %3 = lshr i64 %2, 32
+  ret i64 %3
 }
 
 declare i32 @llvm.bswap.i32(i32) nounwind readnone

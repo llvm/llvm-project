@@ -160,3 +160,24 @@ entry:
   %add = add i128 %b, %a
   ret i128 %add
 }
+
+declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32)
+define void @uadd_with_overflow(i32 %lhs, i32 %rhs, i32* %padd, i1* %pcarry_flag) {
+; MIPS32-LABEL: uadd_with_overflow:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    addu $4, $4, $5
+; MIPS32-NEXT:    sltu $5, $4, $5
+; MIPS32-NEXT:    lui $1, 0
+; MIPS32-NEXT:    ori $1, $1, 1
+; MIPS32-NEXT:    and $1, $5, $1
+; MIPS32-NEXT:    sb $1, 0($7)
+; MIPS32-NEXT:    sw $4, 0($6)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+  %res = call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %lhs, i32 %rhs)
+  %carry_flag = extractvalue { i32, i1 } %res, 1
+  %add = extractvalue { i32, i1 } %res, 0
+  store i1 %carry_flag, i1* %pcarry_flag
+  store i32 %add, i32* %padd
+  ret void
+}

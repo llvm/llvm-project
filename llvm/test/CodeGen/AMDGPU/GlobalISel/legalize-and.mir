@@ -148,6 +148,29 @@ body: |
 ...
 
 ---
+name: test_and_s48
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: test_and_s48
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[COPY]](s64)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY [[COPY1]](s64)
+    ; CHECK: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[COPY3]]
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY [[AND]](s64)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY4]](s64)
+    %0:_(s64) = COPY $vgpr0_vgpr1
+    %1:_(s64) = COPY $vgpr2_vgpr3
+    %2:_(s48) = G_TRUNC %0
+    %3:_(s48) = G_TRUNC %1
+    %4:_(s48) = G_AND %2, %3
+    %5:_(s64) = G_ANYEXT %4
+    $vgpr0_vgpr1 = COPY %5
+...
+
+---
 name: test_and_v2s32
 body: |
   bb.0:

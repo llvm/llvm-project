@@ -167,7 +167,8 @@ TEST(SymbolInfoTests, All) {
         )cpp",
               {CreateExpectedSymbolDetails("foo", "", "c:@F@foo#"),
                CreateExpectedSymbolDetails("foo", "", "c:@F@foo#b#"),
-               CreateExpectedSymbolDetails("foo", "", "c:@F@foo#I#")}},
+               CreateExpectedSymbolDetails("foo", "", "c:@F@foo#I#"),
+               CreateExpectedSymbolDetails("foo", "bar::", "c:@N@bar@UD@foo")}},
           {
               R"cpp( // Multiple symbols returned - implicit conversion
           struct foo {};

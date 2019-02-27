@@ -191,8 +191,10 @@ body: |
     ; CHECK: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[CTPOP]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 4294967295
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY [[ZEXT]](s64)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[C1]]
-    ; CHECK: $vgpr0_vgpr1 = COPY [[AND1]](s64)
+    ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY [[C1]](s64)
+    ; CHECK: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY2]], [[COPY3]]
+    ; CHECK: [[COPY4:%[0-9]+]]:_(s64) = COPY [[AND1]](s64)
+    ; CHECK: $vgpr0_vgpr1 = COPY [[COPY4]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s33) = G_TRUNC %0
     %2:_(s33) = G_CTPOP %1

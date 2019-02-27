@@ -222,18 +222,22 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto *EHInfo = MF.getWasmEHFuncInfo();
   SmallVector<MachineInstr *, 16> ExtractInstrs;
+  SmallVector<MachineInstr *, 8> ToDelete;
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
       if (MI.getOpcode() == WebAssembly::EXTRACT_EXCEPTION_I32) {
         if (MI.getOperand(0).isDead())
-          MI.eraseFromParent();
+          ToDelete.push_back(&MI);
         else
           ExtractInstrs.push_back(&MI);
       }
     }
   }
+  bool Changed = !ToDelete.empty() || !ExtractInstrs.empty();
+  for (auto *MI : ToDelete)
+    MI->eraseFromParent();
   if (ExtractInstrs.empty())
-    return false;
+    return Changed;
 
   // Find terminate pads.
   SmallSet<MachineBasicBlock *, 8> TerminatePads;

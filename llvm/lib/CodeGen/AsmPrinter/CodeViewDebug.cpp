@@ -363,8 +363,8 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
   return recordTypeIndexForDINode(SP, TI);
 }
 
-static bool isTrivial(const DICompositeType *DCTy) {
-  return ((DCTy->getFlags() & DINode::FlagTrivial) == DINode::FlagTrivial);
+static bool isNonTrivial(const DICompositeType *DCTy) {
+  return ((DCTy->getFlags() & DINode::FlagNonTrivial) == DINode::FlagNonTrivial);
 }
 
 static FunctionOptions
@@ -379,12 +379,12 @@ getFunctionOptions(const DISubroutineType *Ty,
   }
 
   if (auto *ReturnDCTy = dyn_cast_or_null<DICompositeType>(ReturnTy)) {
-    if (!isTrivial(ReturnDCTy))
+    if (isNonTrivial(ReturnDCTy))
       FO |= FunctionOptions::CxxReturnUdt;
   }
 
   // DISubroutineType is unnamed. Use DISubprogram's i.e. SPName in comparison.
-  if (ClassTy && !isTrivial(ClassTy) && SPName == ClassTy->getName()) {
+  if (ClassTy && isNonTrivial(ClassTy) && SPName == ClassTy->getName()) {
     FO |= FunctionOptions::Constructor;
 
   // TODO: put the FunctionOptions::ConstructorWithVirtualBases flag.
@@ -2185,6 +2185,14 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
 
   if (ContainsNestedClass)
     CO |= ClassOptions::ContainsNestedClass;
+
+  // MSVC appears to set this flag by searching any destructor or method with
+  // FunctionOptions::Constructor among the emitted members. Clang AST has all
+  // the members, however special member functions are not yet emitted into 
+  // debug information. For now checking a class's non-triviality seems enough.
+  // FIXME: not true for a nested unnamed struct.
+  if (isNonTrivial(Ty))
+    CO |= ClassOptions::HasConstructorOrDestructor;
 
   std::string FullName = getFullyQualifiedName(Ty);
 

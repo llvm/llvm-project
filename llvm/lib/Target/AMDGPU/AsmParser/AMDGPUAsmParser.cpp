@@ -173,6 +173,7 @@ public:
     ImmTyNegLo,
     ImmTyNegHi,
     ImmTySwizzle,
+    ImmTyGprIdxMode,
     ImmTyHigh
   };
 
@@ -694,6 +695,7 @@ public:
     case ImmTyNegLo: OS << "NegLo"; break;
     case ImmTyNegHi: OS << "NegHi"; break;
     case ImmTySwizzle: OS << "Swizzle"; break;
+    case ImmTyGprIdxMode: OS << "GprIdxMode"; break;
     case ImmTyHigh: OS << "High"; break;
     }
   }
@@ -1128,6 +1130,9 @@ public:
   bool parseSwizzleBroadcast(int64_t &Imm);
   bool parseSwizzleSwap(int64_t &Imm);
   bool parseSwizzleReverse(int64_t &Imm);
+
+  OperandMatchResultTy parseGPRIdxMode(OperandVector &Operands);
+  int64_t parseGPRIdxMacro();
 
   void cvtMubuf(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, false, false); }
   void cvtMubufAtomic(MCInst &Inst, const OperandVector &Operands) { cvtMubufImpl(Inst, Operands, true, false); }
@@ -4649,6 +4654,88 @@ AMDGPUOperand::isSwizzle() const {
 }
 
 //===----------------------------------------------------------------------===//
+// VGPR Index Mode
+//===----------------------------------------------------------------------===//
+
+int64_t AMDGPUAsmParser::parseGPRIdxMacro() {
+
+  using namespace llvm::AMDGPU::VGPRIndexMode;
+
+  if (trySkipToken(AsmToken::RParen)) {
+    return OFF;
+  }
+
+  int64_t Imm = 0;
+
+  while (true) {
+    unsigned Mode = 0;
+    SMLoc S = Parser.getTok().getLoc();
+
+    for (unsigned ModeId = ID_MIN; ModeId <= ID_MAX; ++ModeId) {
+      if (trySkipId(IdSymbolic[ModeId])) {
+        Mode = 1 << ModeId;
+        break;
+      }
+    }
+
+    if (Mode == 0) {
+      Error(S, (Imm == 0)?
+               "expected a VGPR index mode or a closing parenthesis" :
+               "expected a VGPR index mode");
+      break;
+    }
+
+    if (Imm & Mode) {
+      Error(S, "duplicate VGPR index mode");
+      break;
+    }
+    Imm |= Mode;
+
+    if (trySkipToken(AsmToken::RParen))
+      break;
+    if (!skipToken(AsmToken::Comma,
+                   "expected a comma or a closing parenthesis"))
+      break;
+  }
+
+  return Imm;
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseGPRIdxMode(OperandVector &Operands) {
+
+  int64_t Imm = 0;
+  SMLoc S = Parser.getTok().getLoc();
+
+  if (getLexer().getKind() == AsmToken::Identifier &&
+      Parser.getTok().getString() == "gpr_idx" &&
+      getLexer().peekTok().is(AsmToken::LParen)) {
+
+    Parser.Lex();
+    Parser.Lex();
+
+    // If parse failed, trigger an error but do not return error code
+    // to avoid excessive error messages.
+    Imm = parseGPRIdxMacro();
+
+  } else {
+    if (getParser().parseAbsoluteExpression(Imm))
+      return MatchOperand_NoMatch;
+    if (Imm < 0 || !isUInt<4>(Imm)) {
+      Error(S, "invalid immediate: only 4-bit values are legal");
+    }
+  }
+
+  Operands.push_back(
+      AMDGPUOperand::CreateImm(this, Imm, S, AMDGPUOperand::ImmTyGprIdxMode));
+  return MatchOperand_Success;
+}
+
+bool AMDGPUOperand::isGPRIdxMode() const {
+  return isImmTy(ImmTyGprIdxMode);
+}
+
+//===----------------------------------------------------------------------===//
 // sopp branch targets
 //===----------------------------------------------------------------------===//
 
@@ -5287,10 +5374,6 @@ bool AMDGPUOperand::isDPPCtrl() const {
            (Imm == DppCtrl::BCAST31);
   }
   return false;
-}
-
-bool AMDGPUOperand::isGPRIdxMode() const {
-  return isImm() && isUInt<4>(getImm());
 }
 
 bool AMDGPUOperand::isS16Imm() const {

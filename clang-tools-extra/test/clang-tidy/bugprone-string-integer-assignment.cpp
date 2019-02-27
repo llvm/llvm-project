@@ -11,7 +11,13 @@ struct basic_string {
 
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
+
+int tolower(int i);
+int toupper(int i);
 }
+
+int tolower(int i);
+int toupper(int i);
 
 typedef int MyArcaneChar;
 
@@ -50,4 +56,7 @@ int main() {
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: an integer is interpreted as a chara
 // CHECK-FIXES: {{^}}  as = 6;{{$}}
 
+  s += toupper(x);
+  s += tolower(x);
+  s += std::tolower(x);
 }

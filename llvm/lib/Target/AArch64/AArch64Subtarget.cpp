@@ -82,6 +82,7 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA72:
   case CortexA73:
   case CortexA75:
+  case CortexA76:
     PrefFunctionAlignment = 4;
     break;
   case Cyclone:

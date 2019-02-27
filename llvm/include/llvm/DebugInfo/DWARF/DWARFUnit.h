@@ -217,7 +217,7 @@ class DWARFUnit {
   Optional<DWARFDebugRnglistTable> RngListTable;
 
   mutable const DWARFAbbreviationDeclarationSet *Abbrevs;
-  llvm::Optional<SectionedAddress> BaseAddr;
+  llvm::Optional<object::SectionedAddress> BaseAddr;
   /// The compile unit debug information entry items.
   std::vector<DWARFDebugInfoEntry> DieArray;
 
@@ -304,7 +304,8 @@ public:
     RangeSectionBase = Base;
   }
 
-  Optional<SectionedAddress> getAddrOffsetSectionItem(uint32_t Index) const;
+  Optional<object::SectionedAddress>
+  getAddrOffsetSectionItem(uint32_t Index) const;
   Optional<uint64_t> getStringOffsetSectionItem(uint32_t Index) const;
 
   DWARFDataExtractor getDebugInfoExtractor() const;
@@ -375,7 +376,7 @@ public:
     llvm_unreachable("Invalid UnitType.");
   }
 
-  llvm::Optional<SectionedAddress> getBaseAddress();
+  llvm::Optional<object::SectionedAddress> getBaseAddress();
 
   DWARFDie getUnitDIE(bool ExtractUnitDIEOnly = true) {
     extractDIEsIfNeeded(ExtractUnitDIEOnly);

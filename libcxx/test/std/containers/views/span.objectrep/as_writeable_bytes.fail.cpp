@@ -40,7 +40,7 @@ int main(int, char**)
     std::as_writeable_bytes(std::span<const long, 0>());        // expected-error {{no matching function for call to 'as_writeable_bytes'}}
     std::as_writeable_bytes(std::span<const double, 0>());      // expected-error {{no matching function for call to 'as_writeable_bytes'}}
     std::as_writeable_bytes(std::span<const A, 0>());           // expected-error {{no matching function for call to 'as_writeable_bytes'}}
-    std::as_writeable_bytes(std::span<const std::string, 0>()); // expected-error {{no matching function for call to 'as_writeable_bytes'}}
+    std::as_writeable_bytes(std::span<const std::string, (size_t)0>()); // expected-error {{no matching function for call to 'as_writeable_bytes'}}
 
     std::as_writeable_bytes(std::span<const int>   (iArr2, 1));     // expected-error {{no matching function for call to 'as_writeable_bytes'}}
     std::as_writeable_bytes(std::span<const int, 1>(iArr2 + 5, 1)); // expected-error {{no matching function for call to 'as_writeable_bytes'}}

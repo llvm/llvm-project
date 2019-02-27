@@ -83,6 +83,8 @@ T foo(T a) {
   { fd.b.k++; }
 #pragma omp target update to(mapper(id): fd)
 #pragma omp target update to(mapper(idd): fd.b)
+#pragma omp target update from(mapper(id): fd)
+#pragma omp target update from(mapper(idd): fd.b)
   return 0;
 }
 
@@ -97,6 +99,8 @@ T foo(T a) {
 // CHECK: #pragma omp target map(mapper(idd),alloc: fd.b)
 // CHECK: #pragma omp target update to(mapper(id): fd)
 // CHECK: #pragma omp target update to(mapper(idd): fd.b)
+// CHECK: #pragma omp target update from(mapper(id): fd)
+// CHECK: #pragma omp target update from(mapper(idd): fd.b)
 // CHECK: }
 // CHECK: template<> int foo<int>(int a) {
 // CHECK: #pragma omp declare mapper (id : struct foodat v) map(tofrom: v.a)
@@ -109,6 +113,8 @@ T foo(T a) {
 // CHECK: #pragma omp target map(mapper(idd),alloc: fd.b)
 // CHECK: #pragma omp target update to(mapper(id): fd)
 // CHECK: #pragma omp target update to(mapper(idd): fd.b)
+// CHECK: #pragma omp target update from(mapper(id): fd)
+// CHECK: #pragma omp target update from(mapper(idd): fd.b)
 // CHECK: }
 
 // CHECK: int main() {
@@ -130,6 +136,11 @@ int main() {
 // CHECK: #pragma omp target update to(mapper(N1::id): vc)
 #pragma omp target update to(mapper(dat<double>::id): vvv)
 // CHECK: #pragma omp target update to(mapper(dat<double>::id): vvv)
+
+#pragma omp target update from(mapper(N1::id) : vc)
+// CHECK: #pragma omp target update from(mapper(N1::id): vc)
+#pragma omp target update from(mapper(dat<double>::id): vvv)
+// CHECK: #pragma omp target update from(mapper(dat<double>::id): vvv)
 
 #pragma omp declare mapper(id: N1::vec v) map(v.len)
 // CHECK: #pragma omp declare mapper (id : N1::vec v) map(tofrom: v.len)

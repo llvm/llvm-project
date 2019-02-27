@@ -27,6 +27,13 @@
 
 
 template<typename C>
+void test_container( C& c)
+{
+//  Can't say noexcept here because the container might not be
+    assert ( std::size(c)   == c.size());
+}
+
+template<typename C>
 void test_const_container( const C& c )
 {
 //  Can't say noexcept here because the container might not be
@@ -36,23 +43,14 @@ void test_const_container( const C& c )
 template<typename T>
 void test_const_container( const std::initializer_list<T>& c)
 {
-//  ASSERT_NOEXCEPT(std::size(c));
-//  For some reason, there isn't a std::size() for initializer lists
-    assert ( std::size(c)   == c.size());
-}
-
-template<typename C>
-void test_container( C& c)
-{
-//  Can't say noexcept here because the container might not be
+    LIBCPP_ASSERT_NOEXCEPT(std::size(c)); // our std::size is conditionally noexcept
     assert ( std::size(c)   == c.size());
 }
 
 template<typename T>
 void test_container( std::initializer_list<T>& c )
 {
-//  ASSERT_NOEXCEPT(std::size(c));
-//  For some reason, there isn't a std::size() for initializer lists
+    LIBCPP_ASSERT_NOEXCEPT(std::size(c)); // our std::size is conditionally noexcept
     assert ( std::size(c)   == c.size());
 }
 

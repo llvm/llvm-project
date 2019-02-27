@@ -45,7 +45,7 @@ void checkStoreLoad() {
   EXPECT_EQ(Val.Magic1, (Type)-3);
 }
 
-TEST(ScudoStandalone, AtomicStoreLoad) {
+TEST(ScudoAtomicTest, AtomicStoreLoad) {
   checkStoreLoad<atomic_u8, memory_order_relaxed, memory_order_relaxed>();
   checkStoreLoad<atomic_u8, memory_order_consume, memory_order_relaxed>();
   checkStoreLoad<atomic_u8, memory_order_acquire, memory_order_relaxed>();
@@ -101,7 +101,7 @@ template <typename T> void checkAtomicCompareExchange() {
   }
 }
 
-TEST(ScudoStandalone, AtomicCompareExchangeTest) {
+TEST(ScudoAtomicTest, AtomicCompareExchangeTest) {
   checkAtomicCompareExchange<atomic_u8>();
   checkAtomicCompareExchange<atomic_u16>();
   checkAtomicCompareExchange<atomic_u32>();

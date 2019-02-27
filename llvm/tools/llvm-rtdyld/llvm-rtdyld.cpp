@@ -367,6 +367,8 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
         }
         uint64_t Addr = *AddrOrErr;
 
+        object::SectionedAddress Address;
+
         uint64_t Size = P.second;
         // If we're not using the debug object, compute the address of the
         // symbol in memory (rather than that in the unrelocated object file)
@@ -381,16 +383,20 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
           object::section_iterator Sec = *SecOrErr;
           StringRef SecName;
           Sec->getName(SecName);
+          Address.SectionIndex = Sec->getIndex();
           uint64_t SectionLoadAddress =
             LoadedObjInfo->getSectionLoadAddress(*Sec);
           if (SectionLoadAddress != 0)
             Addr += SectionLoadAddress - Sec->getAddress();
-        }
+        } else if (auto SecOrErr = Sym.getSection())
+          Address.SectionIndex = SecOrErr.get()->getIndex();
 
         outs() << "Function: " << *Name << ", Size = " << Size
                << ", Addr = " << Addr << "\n";
 
-        DILineInfoTable Lines = Context->getLineInfoForAddressRange(Addr, Size);
+        Address.Address = Addr;
+        DILineInfoTable Lines =
+            Context->getLineInfoForAddressRange(Address, Size);
         for (auto &D : Lines) {
           outs() << "  Line info @ " << D.first - Addr << ": "
                  << D.second.FileName << ", line:" << D.second.Line << "\n";

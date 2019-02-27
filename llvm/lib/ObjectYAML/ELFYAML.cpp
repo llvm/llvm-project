@@ -662,19 +662,44 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
 
 void ScalarEnumerationTraits<ELFYAML::ELF_DYNTAG>::enumeration(
     IO &IO, ELFYAML::ELF_DYNTAG &Value) {
-  assert(IO.getContext() && "The IO context is not initialized");
+  const auto *Object = static_cast<ELFYAML::Object *>(IO.getContext());
+  assert(Object && "The IO context is not initialized");
 
-// TODO: For simplicity we do not handle target specific flags. They are
-// still supported and will be shown as a raw numeric values in the output.
+// Disable architecture specific tags by default. We might enable them below.
 #define MIPS_DYNAMIC_TAG(name, value)
 #define HEXAGON_DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG(name, value)
-// Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
+// Ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 
 #define STRINGIFY(X) (#X)
 #define DYNAMIC_TAG(X, Y) IO.enumCase(Value, STRINGIFY(DT_##X), ELF::DT_##X);
+  switch (Object->Header.Machine) {
+  case ELF::EM_MIPS:
+#undef MIPS_DYNAMIC_TAG
+#define MIPS_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
 #include "llvm/BinaryFormat/DynamicTags.def"
+#undef MIPS_DYNAMIC_TAG
+#define MIPS_DYNAMIC_TAG(name, value)
+    break;
+  case ELF::EM_HEXAGON:
+#undef HEXAGON_DYNAMIC_TAG
+#define HEXAGON_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef HEXAGON_DYNAMIC_TAG
+#define HEXAGON_DYNAMIC_TAG(name, value)
+    break;
+  case ELF::EM_PPC64:
+#undef PPC64_DYNAMIC_TAG
+#define PPC64_DYNAMIC_TAG(name, value) DYNAMIC_TAG(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef PPC64_DYNAMIC_TAG
+#define PPC64_DYNAMIC_TAG(name, value)
+    break;
+  default:
+#include "llvm/BinaryFormat/DynamicTags.def"
+    break;
+  }
 
 #undef MIPS_DYNAMIC_TAG
 #undef HEXAGON_DYNAMIC_TAG

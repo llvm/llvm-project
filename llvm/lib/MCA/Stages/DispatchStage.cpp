@@ -59,7 +59,10 @@ bool DispatchStage::checkRCU(const InstRef &IR) const {
 }
 
 bool DispatchStage::canDispatch(const InstRef &IR) const {
-  return checkRCU(IR) && checkPRF(IR) && checkNextStage(IR);
+  bool CanDispatch = checkRCU(IR);
+  CanDispatch &= checkPRF(IR);
+  CanDispatch &= checkNextStage(IR);
+  return CanDispatch;
 }
 
 Error DispatchStage::dispatch(InstRef IR) {

@@ -15427,13 +15427,13 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
           !ST1->getBasePtr().isUndef()) {
         const BaseIndexOffset STBase = BaseIndexOffset::match(ST, DAG);
         const BaseIndexOffset ChainBase = BaseIndexOffset::match(ST1, DAG);
-        unsigned STByteSize = ST->getMemoryVT().getSizeInBits() / 8;
-        unsigned ChainByteSize = ST1->getMemoryVT().getSizeInBits() / 8;
+        unsigned STBitSize = ST->getMemoryVT().getSizeInBits();
+        unsigned ChainBitSize = ST1->getMemoryVT().getSizeInBits();
         // If this is a store who's preceding store to a subset of the current
         // location and no one other node is chained to that store we can
         // effectively drop the store. Do not remove stores to undef as they may
         // be used as data sinks.
-        if (STBase.contains(STByteSize, ChainBase, ChainByteSize, DAG)) {
+        if (STBase.contains(DAG, STBitSize, ChainBase, ChainBitSize)) {
           CombineTo(ST1, ST1->getChain());
           return SDValue();
         }
@@ -15442,17 +15442,17 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
         // able to fold ST's value into the preceding stored value. As we know
         // the other uses of ST1's chain are unconcerned with ST, this folding
         // will not affect those nodes.
-        int64_t Offset;
-        if (ChainBase.contains(ChainByteSize, STBase, STByteSize, DAG,
-                               Offset)) {
+        int64_t BitOffset;
+        if (ChainBase.contains(DAG, ChainBitSize, STBase, STBitSize,
+                               BitOffset)) {
           SDValue ChainValue = ST1->getValue();
           if (auto *C1 = dyn_cast<ConstantSDNode>(ChainValue)) {
             if (auto *C = dyn_cast<ConstantSDNode>(Value)) {
               APInt Val = C1->getAPIntValue();
-              APInt InsertVal = C->getAPIntValue().zextOrTrunc(STByteSize * 8);
+              APInt InsertVal = C->getAPIntValue().zextOrTrunc(STBitSize);
               // FIXME: Handle Big-endian mode.
               if (!DAG.getDataLayout().isBigEndian()) {
-                Val.insertBits(InsertVal, Offset * 8);
+                Val.insertBits(InsertVal, BitOffset);
                 SDValue NewSDVal =
                     DAG.getConstant(Val, SDLoc(C), ChainValue.getValueType(),
                                     C1->isTargetOpcode(), C1->isOpaque());
@@ -17366,20 +17366,24 @@ static SDValue partitionShuffleOfConcats(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(N);
+  ArrayRef<int> Mask = SVN->getMask();
 
   SmallVector<SDValue, 4> Ops;
   EVT ConcatVT = N0.getOperand(0).getValueType();
   unsigned NumElemsPerConcat = ConcatVT.getVectorNumElements();
   unsigned NumConcats = NumElts / NumElemsPerConcat;
 
+  auto IsUndefMaskElt = [](int i) { return i == -1; };
+
   // Special case: shuffle(concat(A,B)) can be more efficiently represented
   // as concat(shuffle(A,B),UNDEF) if the shuffle doesn't set any of the high
   // half vector elements.
   if (NumElemsPerConcat * 2 == NumElts && N1.isUndef() &&
-      std::all_of(SVN->getMask().begin() + NumElemsPerConcat,
-                  SVN->getMask().end(), [](int i) { return i == -1; })) {
-    N0 = DAG.getVectorShuffle(ConcatVT, SDLoc(N), N0.getOperand(0), N0.getOperand(1),
-                              makeArrayRef(SVN->getMask().begin(), NumElemsPerConcat));
+      llvm::all_of(Mask.slice(NumElemsPerConcat, NumElemsPerConcat),
+                   IsUndefMaskElt)) {
+    N0 = DAG.getVectorShuffle(ConcatVT, SDLoc(N), N0.getOperand(0),
+                              N0.getOperand(1),
+                              Mask.slice(0, NumElemsPerConcat));
     N1 = DAG.getUNDEF(ConcatVT);
     return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, N0, N1);
   }
@@ -17387,35 +17391,32 @@ static SDValue partitionShuffleOfConcats(SDNode *N, SelectionDAG &DAG) {
   // Look at every vector that's inserted. We're looking for exact
   // subvector-sized copies from a concatenated vector
   for (unsigned I = 0; I != NumConcats; ++I) {
-    // Make sure we're dealing with a copy.
     unsigned Begin = I * NumElemsPerConcat;
-    bool AllUndef = true, NoUndef = true;
-    for (unsigned J = Begin; J != Begin + NumElemsPerConcat; ++J) {
-      if (SVN->getMaskElt(J) >= 0)
-        AllUndef = false;
-      else
-        NoUndef = false;
+    ArrayRef<int> SubMask = Mask.slice(Begin, NumElemsPerConcat);
+
+    // Make sure we're dealing with a copy.
+    if (llvm::all_of(SubMask, IsUndefMaskElt)) {
+      Ops.push_back(DAG.getUNDEF(ConcatVT));
+      continue;
     }
 
-    if (NoUndef) {
-      if (SVN->getMaskElt(Begin) % NumElemsPerConcat != 0)
+    int OpIdx = -1;
+    for (int i = 0; i != (int)NumElemsPerConcat; ++i) {
+      if (IsUndefMaskElt(SubMask[i]))
+        continue;
+      if ((SubMask[i] % (int)NumElemsPerConcat) != i)
         return SDValue();
-
-      for (unsigned J = 1; J != NumElemsPerConcat; ++J)
-        if (SVN->getMaskElt(Begin + J - 1) + 1 != SVN->getMaskElt(Begin + J))
-          return SDValue();
-
-      unsigned FirstElt = SVN->getMaskElt(Begin) / NumElemsPerConcat;
-      if (FirstElt < N0.getNumOperands())
-        Ops.push_back(N0.getOperand(FirstElt));
-      else
-        Ops.push_back(N1.getOperand(FirstElt - N0.getNumOperands()));
-
-    } else if (AllUndef) {
-      Ops.push_back(DAG.getUNDEF(N0.getOperand(0).getValueType()));
-    } else { // Mixed with general masks and undefs, can't do optimization.
-      return SDValue();
+      int EltOpIdx = SubMask[i] / NumElemsPerConcat;
+      if (0 <= OpIdx && EltOpIdx != OpIdx)
+        return SDValue();
+      OpIdx = EltOpIdx;
     }
+    assert(0 <= OpIdx && "Unknown concat_vectors op");
+
+    if (OpIdx < (int)N0.getNumOperands())
+      Ops.push_back(N0.getOperand(OpIdx));
+    else
+      Ops.push_back(N1.getOperand(OpIdx - N0.getNumOperands()));
   }
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
