@@ -80,11 +80,6 @@ Improvements to clang-query
     disable output detailed-ast
     m functionDecl()
 
-Improvements to clang-rename
-----------------------------
-
-The improvements are...
-
 Improvements to clang-tidy
 --------------------------
 
