@@ -324,6 +324,14 @@ SymbolInfo index::getSymbolInfo(const Decl *D) {
       Info.Kind = SymbolKind::Variable;
       Info.Lang = SymbolLanguage::CXX;
       break;
+    case Decl::MSProperty:
+      Info.Kind = SymbolKind::InstanceProperty;
+      if (const CXXRecordDecl *CXXRec =
+              dyn_cast<CXXRecordDecl>(D->getDeclContext())) {
+        if (!CXXRec->isCLike())
+          Info.Lang = SymbolLanguage::CXX;
+      }
+      break;
     default:
       break;
     }

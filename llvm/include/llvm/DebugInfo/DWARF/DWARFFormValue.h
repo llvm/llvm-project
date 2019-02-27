@@ -41,6 +41,9 @@ public:
 private:
   struct ValueType {
     ValueType() { uval = 0; }
+    ValueType(int64_t V) : sval(V) {}
+    ValueType(uint64_t V) : uval(V) {}
+    ValueType(const char *V) : cstr(V) {}
 
     union {
       uint64_t uval;
@@ -55,20 +58,22 @@ private:
   ValueType Value;              /// Contains all data for the form.
   const DWARFUnit *U = nullptr; /// Remember the DWARFUnit at extract time.
   const DWARFContext *C = nullptr; /// Context for extract time.
+
+  DWARFFormValue(dwarf::Form F, ValueType V) : Form(F), Value(V) {}
+
 public:
   DWARFFormValue(dwarf::Form F = dwarf::Form(0)) : Form(F) {}
 
+  static DWARFFormValue createFromSValue(dwarf::Form F, int64_t V);
+  static DWARFFormValue createFromUValue(dwarf::Form F, uint64_t V);
+  static DWARFFormValue createFromPValue(dwarf::Form F, const char *V);
+  static DWARFFormValue createFromBlockValue(dwarf::Form F,
+                                             ArrayRef<uint8_t> D);
+  static DWARFFormValue createFromUnit(dwarf::Form F, const DWARFUnit *Unit,
+                                       uint32_t *OffsetPtr);
+
   dwarf::Form getForm() const { return Form; }
   uint64_t getRawUValue() const { return Value.uval; }
-  void setForm(dwarf::Form F) { Form = F; }
-  void setUValue(uint64_t V) { Value.uval = V; }
-  void setSValue(int64_t V) { Value.sval = V; }
-  void setPValue(const char *V) { Value.cstr = V; }
-
-  void setBlockValue(const ArrayRef<uint8_t> &Data) {
-    Value.data = Data.data();
-    setUValue(Data.size());
-  }
 
   bool isFormClass(FormClass FC) const;
   const DWARFUnit *getUnit() const { return U; }

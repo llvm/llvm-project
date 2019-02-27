@@ -563,6 +563,17 @@ TEST_P(ImportExpr, ImportStringLiteral) {
           stringLiteral(hasType(asString("const char [7]"))))));
 }
 
+TEST_P(ImportExpr, ImportChooseExpr) {
+  MatchVerifier<Decl> Verifier;
+
+  // This case tests C code that is not condition-dependent and has a true
+  // condition.
+  testImport(
+    "void declToImport() { (void)__builtin_choose_expr(1, 2, 3); }",
+    Lang_C, "", Lang_C, Verifier,
+    functionDecl(hasDescendant(chooseExpr())));
+}
+
 TEST_P(ImportExpr, ImportGNUNullExpr) {
   MatchVerifier<Decl> Verifier;
   testImport(
@@ -1310,6 +1321,29 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportCorrectTemplatedDecl) {
       cast<CXXRecordDecl>(Import(From->getTemplatedDecl(), Lang_CXX));
   EXPECT_TRUE(ToTemplated1);
   ASSERT_EQ(ToTemplated1, ToTemplated);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportChooseExpr) {
+  // This tests the import of isConditionTrue directly to make sure the importer
+  // gets it right.
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+    "void declToImport() { (void)__builtin_choose_expr(1, 0, 1); }",
+    Lang_C, "", Lang_C);
+
+  auto ToResults = match(chooseExpr().bind("choose"), To->getASTContext());
+  auto FromResults = match(chooseExpr().bind("choose"), From->getASTContext());
+
+  const ChooseExpr *FromChooseExpr =
+      selectFirst<ChooseExpr>("choose", FromResults);
+  ASSERT_TRUE(FromChooseExpr);
+
+  const ChooseExpr *ToChooseExpr = selectFirst<ChooseExpr>("choose", ToResults);
+  ASSERT_TRUE(ToChooseExpr);
+
+  EXPECT_EQ(FromChooseExpr->isConditionTrue(), ToChooseExpr->isConditionTrue());
+  EXPECT_EQ(FromChooseExpr->isConditionDependent(),
+            ToChooseExpr->isConditionDependent());
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,

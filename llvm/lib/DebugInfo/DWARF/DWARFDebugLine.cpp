@@ -144,8 +144,8 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
     StringRef S = DebugLineData.getCStrRef(OffsetPtr);
     if (S.empty())
       break;
-    DWARFFormValue Dir(dwarf::DW_FORM_string);
-    Dir.setPValue(S.data());
+    DWARFFormValue Dir =
+        DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, S.data());
     IncludeDirectories.push_back(Dir);
   }
 
@@ -154,8 +154,8 @@ parseV2DirFileTables(const DWARFDataExtractor &DebugLineData,
     if (Name.empty())
       break;
     DWARFDebugLine::FileNameEntry FileEntry;
-    FileEntry.Name.setForm(dwarf::DW_FORM_string);
-    FileEntry.Name.setPValue(Name.data());
+    FileEntry.Name =
+        DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, Name.data());
     FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
     FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
     FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);
@@ -594,8 +594,8 @@ Error DWARFDebugLine::LineTable::parse(
         {
           FileNameEntry FileEntry;
           const char *Name = DebugLineData.getCStr(OffsetPtr);
-          FileEntry.Name.setForm(dwarf::DW_FORM_string);
-          FileEntry.Name.setPValue(Name);
+          FileEntry.Name =
+              DWARFFormValue::createFromPValue(dwarf::DW_FORM_string, Name);
           FileEntry.DirIdx = DebugLineData.getULEB128(OffsetPtr);
           FileEntry.ModTime = DebugLineData.getULEB128(OffsetPtr);
           FileEntry.Length = DebugLineData.getULEB128(OffsetPtr);

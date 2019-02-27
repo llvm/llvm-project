@@ -17,6 +17,12 @@ class _Display(object):
         if self.failedCount == self.maxFailures:
             self.provider.cancel()
 
+# No-operation semaphore for supporting `None` for parallelism_groups.
+#   lit_config.parallelism_groups['my_group'] = None
+class NopSemaphore(object):
+    def acquire(self): pass
+    def release(self): pass
+
 class Run(object):
     """
     This class represents a concrete, configured testing run.
@@ -26,11 +32,10 @@ class Run(object):
         self.lit_config = lit_config
         self.tests = tests
         # Set up semaphores to limit parallelism of certain classes of tests.
-        # For example, some ASan tests require lots of virtual memory and run
-        # faster with less parallelism on OS X.
-        self.parallelism_semaphores = \
-                {k: multiprocessing.BoundedSemaphore(v) for k, v in
-                 self.lit_config.parallelism_groups.items()}
+        self.parallelism_semaphores = {
+                k : NopSemaphore() if v is None else
+                    multiprocessing.BoundedSemaphore(v)
+                for k, v in lit_config.parallelism_groups.items()}
 
     def execute_tests_in_pool(self, jobs, max_time):
         # We need to issue many wait calls, so compute the final deadline and

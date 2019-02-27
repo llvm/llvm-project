@@ -37,29 +37,26 @@ define void @test_rethrow(i8* %p) {
 
 ; CHECK-LABEL: test_catch:
 ; CHECK:     global.get  ${{.+}}=, __stack_pointer
-; CHECK:     block
-; CHECK:       try
-; CHECK:         call      foo
-; CHECK:         br        0
-; CHECK:       catch     $[[EXCEPT_REF:[0-9]+]]=
-; CHECK:         global.set  __stack_pointer
-; CHECK:         block i32
-; CHECK:           br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
-; CHECK:           rethrow
-; CHECK:         end_block
-; CHECK:         extract_exception $[[EXN:[0-9]+]]=
-; CHECK-DAG:     i32.store  __wasm_lpad_context
-; CHECK-DAG:     i32.store  __wasm_lpad_context+4
-; CHECK:         i32.call  $drop=, _Unwind_CallPersonality, $[[EXN]]
-; CHECK:         block
-; CHECK:           br_if     0
-; CHECK:           i32.call  $drop=, __cxa_begin_catch
-; CHECK:           call      __cxa_end_catch
-; CHECK:           br        1
-; CHECK:         end_block
-; CHECK:         call      __cxa_rethrow
-; CHECK:       end_try
-; CHECK:     end_block
+; CHECK:     try
+; CHECK:       call      foo
+; CHECK:     catch     $[[EXCEPT_REF:[0-9]+]]=
+; CHECK:       global.set  __stack_pointer
+; CHECK:       block i32
+; CHECK:         br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
+; CHECK:         rethrow
+; CHECK:       end_block
+; CHECK:       extract_exception $[[EXN:[0-9]+]]=
+; CHECK-DAG:   i32.store  __wasm_lpad_context
+; CHECK-DAG:   i32.store  __wasm_lpad_context+4
+; CHECK:       i32.call  $drop=, _Unwind_CallPersonality, $[[EXN]]
+; CHECK:       block
+; CHECK:         br_if     0
+; CHECK:         i32.call  $drop=, __cxa_begin_catch
+; CHECK:         call      __cxa_end_catch
+; CHECK:         br        1
+; CHECK:       end_block
+; CHECK:       call      __cxa_rethrow
+; CHECK:     end_try
 define void @test_catch() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -101,16 +98,13 @@ try.cont:                                         ; preds = %entry, %catch
 ; }
 
 ; CHECK-LABEL: test_cleanup:
-; CHECK: block
-; CHECK:   try
-; CHECK:     call      foo
-; CHECK:     br        0
-; CHECK:   catch
-; CHECK:     global.set  __stack_pointer
-; CHECK:     i32.call  $drop=, _ZN4TempD2Ev
-; CHECK:     rethrow
-; CHECK:   end_try
-; CHECK: end_block
+; CHECK: try
+; CHECK:   call      foo
+; CHECK: catch
+; CHECK:   global.set  __stack_pointer
+; CHECK:   i32.call  $drop=, _ZN4TempD2Ev
+; CHECK:   rethrow
+; CHECK: end_try
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   %t = alloca %struct.Temp, align 1
@@ -140,37 +134,28 @@ ehcleanup:                                        ; preds = %entry
 ; }
 
 ; CHECK-LABEL: test_terminatepad
-; CHECK: block
+; CHECK: try
+; CHECK:   call      foo
+; CHECK: catch
+; CHECK:   i32.call  $drop=, __cxa_begin_catch
 ; CHECK:   try
 ; CHECK:     call      foo
-; CHECK:     br        0
 ; CHECK:   catch
-; CHECK:     i32.call  $drop=, __cxa_begin_catch
-; CHECK:     block
-; CHECK:       try
-; CHECK:         call      foo
-; CHECK:         br        0
-; CHECK:       catch
-; CHECK:         block
-; CHECK:           try
-; CHECK:             call      __cxa_end_catch
-; CHECK:             br        0
-; CHECK:           catch
-; CHECK:             block     i32
-; CHECK:               br_on_exn   0, __cpp_exception
-; CHECK:               call      __clang_call_terminate, 0
-; CHECK:               unreachable
-; CHECK:             end_block
-; CHECK:             call      __clang_call_terminate
-; CHECK:             unreachable
-; CHECK:           end_try
-; CHECK:         end_block
-; CHECK:         rethrow
-; CHECK:       end_try
-; CHECK:     end_block
-; CHECK:     call      __cxa_end_catch
+; CHECK:     try
+; CHECK:       call      __cxa_end_catch
+; CHECK:     catch
+; CHECK:       block     i32
+; CHECK:         br_on_exn   0, __cpp_exception
+; CHECK:         call      __clang_call_terminate, 0
+; CHECK:         unreachable
+; CHECK:       end_block
+; CHECK:       call      __clang_call_terminate
+; CHECK:       unreachable
+; CHECK:     end_try
+; CHECK:     rethrow
 ; CHECK:   end_try
-; CHECK: end_block
+; CHECK:   call      __cxa_end_catch
+; CHECK: end_try
 define void @test_terminatepad() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -227,34 +212,30 @@ terminate:                                        ; preds = %ehcleanup
 ; }
 
 ; CHECK-LABEL: test_no_prolog_epilog_in_ehpad
-; CHECK:     block
-; CHECK:       try
-; CHECK:         call      foo
-; CHECK:         br        0
-; CHECK:       catch
-; CHECK-NOT:     global.get  $push{{.+}}=, __stack_pointer
-; CHECK:         global.set  __stack_pointer
+; CHECK:     try
+; CHECK:       call      foo
+; CHECK:     catch
+; CHECK-NOT:   global.get  $push{{.+}}=, __stack_pointer
+; CHECK:       global.set  __stack_pointer
+; CHECK:       block
 ; CHECK:         block
-; CHECK:           block
-; CHECK:             br_if     0
-; CHECK:             i32.call  $drop=, __cxa_begin_catch
-; CHECK:             try
-; CHECK:               call      foo
-; CHECK:               br        2
-; CHECK:             catch
-; CHECK-NOT:           global.get  $push{{.+}}=, __stack_pointer
-; CHECK:               global.set  __stack_pointer
-; CHECK:               call      __cxa_end_catch
-; CHECK:               rethrow
-; CHECK-NOT:           global.set  __stack_pointer, $pop{{.+}}
-; CHECK:             end_try
-; CHECK:           end_block
-; CHECK:           call      __cxa_rethrow
+; CHECK:           br_if     0
+; CHECK:           i32.call  $drop=, __cxa_begin_catch
+; CHECK:           try
+; CHECK:             call      foo
+; CHECK:           catch
+; CHECK-NOT:         global.get  $push{{.+}}=, __stack_pointer
+; CHECK:             global.set  __stack_pointer
+; CHECK:             call      __cxa_end_catch
+; CHECK:             rethrow
+; CHECK-NOT:         global.set  __stack_pointer, $pop{{.+}}
+; CHECK:           end_try
 ; CHECK:         end_block
-; CHECK-NOT:     global.set  __stack_pointer, $pop{{.+}}
-; CHECK:         call      __cxa_end_catch
-; CHECK:       end_try
-; CHECK:     end_block
+; CHECK:         call      __cxa_rethrow
+; CHECK:       end_block
+; CHECK-NOT:   global.set  __stack_pointer, $pop{{.+}}
+; CHECK:       call      __cxa_end_catch
+; CHECK:     end_try
 define void @test_no_prolog_epilog_in_ehpad() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   %stack_var = alloca i32, align 4
@@ -309,15 +290,12 @@ ehcleanup:                                        ; preds = %catch
 ; }
 
 ; CHECK-LABEL: test_no_sp_writeback
-; CHECK:     block
-; CHECK:       try
-; CHECK:         call      foo
-; CHECK:         br        0
-; CHECK:       catch
-; CHECK:         i32.call  $drop=, __cxa_begin_catch
-; CHECK:         call      __cxa_end_catch
-; CHECK:       end_try
-; CHECK:     end_block
+; CHECK:     try
+; CHECK:       call      foo
+; CHECK:     catch
+; CHECK:       i32.call  $drop=, __cxa_begin_catch
+; CHECK:       call      __cxa_end_catch
+; CHECK:     end_try
 ; CHECK-NOT: global.set  __stack_pointer
 ; CHECK:     return
 define void @test_no_sp_writeback() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {

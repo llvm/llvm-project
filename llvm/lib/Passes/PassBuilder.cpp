@@ -1082,7 +1082,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   // FIXME: Is this really an optimization rather than a canonicalization?
   MPM.addPass(ReversePostOrderFunctionAttrsPass());
 
-  // Use inragne annotations on GEP indices to split globals where beneficial.
+  // Use in-range annotations on GEP indices to split globals where beneficial.
   MPM.addPass(GlobalSplitPass());
 
   // Run whole program optimization of virtual call when the list of callees

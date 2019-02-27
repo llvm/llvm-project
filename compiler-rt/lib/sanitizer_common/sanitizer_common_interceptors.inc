@@ -819,14 +819,16 @@ INTERCEPTOR(void *, memcpy, void *dst, const void *src, uptr size) {
 #endif
 
 #if SANITIZER_INTERCEPT_MEMCMP
+
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_memcmp, uptr called_pc,
                               const void *s1, const void *s2, uptr n,
                               int result)
 
-// Common code for `memcmp` and `bcmp`.
-int MemcmpInterceptorCommon(void *ctx,
-                            int (*real_fn)(const void *, const void *, uptr),
-                            const void *a1, const void *a2, uptr size) {
+INTERCEPTOR(int, memcmp, const void *a1, const void *a2, uptr size) {
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return internal_memcmp(a1, a2, size);
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, memcmp, a1, a2, size);
   if (common_flags()->intercept_memcmp) {
     if (common_flags()->strict_memcmp) {
       // Check the entire regions even if the first bytes of the buffers are
@@ -852,37 +854,15 @@ int MemcmpInterceptorCommon(void *ctx,
       return r;
     }
   }
-  int result = real_fn(a1, a2, size);
+  int result = REAL(memcmp(a1, a2, size));
   CALL_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_memcmp, GET_CALLER_PC(), a1,
                              a2, size, result);
   return result;
 }
 
-INTERCEPTOR(int, memcmp, const void *a1, const void *a2, uptr size) {
-  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
-    return internal_memcmp(a1, a2, size);
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, memcmp, a1, a2, size);
-  return MemcmpInterceptorCommon(ctx, REAL(memcmp), a1, a2, size);
-}
-
 #define INIT_MEMCMP COMMON_INTERCEPT_FUNCTION(memcmp)
 #else
 #define INIT_MEMCMP
-#endif
-
-#if SANITIZER_INTERCEPT_BCMP
-INTERCEPTOR(int, bcmp, const void *a1, const void *a2, uptr size) {
-  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
-    return internal_memcmp(a1, a2, size);
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, bcmp, a1, a2, size);
-  return MemcmpInterceptorCommon(ctx, REAL(bcmp), a1, a2, size);
-}
-
-#define INIT_BCMP COMMON_INTERCEPT_FUNCTION(bcmp)
-#else
-#define INIT_BCMP
 #endif
 
 #if SANITIZER_INTERCEPT_MEMCHR
@@ -9512,7 +9492,6 @@ static void InitializeCommonInterceptors() {
   INIT_MEMCPY;
   INIT_MEMCHR;
   INIT_MEMCMP;
-  INIT_BCMP;
   INIT_MEMRCHR;
   INIT_MEMMEM;
   INIT_READ;

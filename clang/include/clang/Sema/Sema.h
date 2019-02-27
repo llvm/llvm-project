@@ -8674,6 +8674,16 @@ public:
   void AddXConsumedAttr(Decl *D, SourceRange SR, unsigned SpellingIndex,
                         RetainOwnershipKind K, bool IsTemplateInstantiation);
 
+  /// addAMDGPUFlatWorkGroupSizeAttr - Adds an amdgpu_flat_work_group_size
+  /// attribute to a particular declaration.
+  void addAMDGPUFlatWorkGroupSizeAttr(SourceRange AttrRange, Decl *D, Expr *Min,
+                                      Expr *Max, unsigned SpellingListIndex);
+
+  /// addAMDGPUWavePersEUAttr - Adds an amdgpu_waves_per_eu attribute to a
+  /// particular declaration.
+  void addAMDGPUWavesPerEUAttr(SourceRange AttrRange, Decl *D, Expr *Min,
+                               Expr *Max, unsigned SpellingListIndex);
+
   bool checkNSReturnsRetainedReturnType(SourceLocation loc, QualType type);
 
   //===--------------------------------------------------------------------===//

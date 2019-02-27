@@ -20,10 +20,10 @@ set(LLVM_OPTIONAL_SOURCES Conversion.cpp XPCTransport.cpp)
 
 add_clang_library(clangdXpcJsonConversions
   Conversion.cpp
+  LINK_LIBS clangDaemon
   )
 
 add_clang_library(clangdXpcTransport
   XPCTransport.cpp
-  DEPENDS clangdXpcJsonConversions
-  LINK_LIBS clangdXpcJsonConversions
+  LINK_LIBS clangDaemon clangdXpcJsonConversions
   )

@@ -1071,10 +1071,11 @@ Currently, only the following parameter attributes are defined:
 
 ``align <n>``
     This indicates that the pointer value may be assumed by the optimizer to
-    have the specified alignment.
+    have the specified alignment.  If the pointer value does not have the
+    specified alignment, behavior is undefined.
 
     Note that this attribute has additional semantics when combined with the
-    ``byval`` attribute.
+    ``byval`` attribute, which are documented there.
 
 .. _noalias:
 
@@ -11325,8 +11326,11 @@ Semantics:
 The '``llvm.memcpy.*``' intrinsics copy a block of memory from the
 source location to the destination location, which are not allowed to
 overlap. It copies "len" bytes of memory over. If the argument is known
-to be aligned to some boundary, this can be specified as the fourth
-argument, otherwise it should be set to 0 or 1 (both meaning no alignment).
+to be aligned to some boundary, this can be specified as an attribute on
+the argument.
+
+If "len" is 0, the pointers may be NULL or dangling. However, they must still
+be appropriately aligned.
 
 .. _int_memmove:
 
@@ -11380,8 +11384,11 @@ Semantics:
 The '``llvm.memmove.*``' intrinsics copy a block of memory from the
 source location to the destination location, which may overlap. It
 copies "len" bytes of memory over. If the argument is known to be
-aligned to some boundary, this can be specified as the fourth argument,
-otherwise it should be set to 0 or 1 (both meaning no alignment).
+aligned to some boundary, this can be specified as an attribute on
+the argument.
+
+If "len" is 0, the pointers may be NULL or dangling. However, they must still
+be appropriately aligned.
 
 .. _int_memset:
 
@@ -11431,7 +11438,12 @@ Semantics:
 """"""""""
 
 The '``llvm.memset.*``' intrinsics fill "len" bytes of memory starting
-at the destination location.
+at the destination location. If the argument is known to be
+aligned to some boundary, this can be specified as an attribute on
+the argument.
+
+If "len" is 0, the pointers may be NULL or dangling. However, they must still
+be appropriately aligned.
 
 '``llvm.sqrt.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
