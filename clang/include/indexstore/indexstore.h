@@ -68,6 +68,10 @@
 # define __has_feature(x) 0
 #endif
 
+#ifndef __has_attribute
+# define __has_attribute(x) 0
+#endif
+
 #if __has_feature(blocks)
 # define INDEXSTORE_HAS_BLOCKS 1
 #else
