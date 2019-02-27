@@ -79,14 +79,8 @@ ConstString ValueObjectVariable::GetTypeName() {
 
 ConstString ValueObjectVariable::GetDisplayTypeName() {
   Type *var_type = m_variable_sp->GetType();
-  if (var_type) {
-    CompilerType fwd_type = var_type->GetForwardCompilerType();
-    // FIXME: This is probably not the best place to do this.
-    auto ts = fwd_type.GetTypeSystem();
-    auto qual_type = fwd_type.GetOpaqueQualType();
-    auto stack_frame_sp = GetFrameSP();
-    return ts->MapIntoContext(stack_frame_sp, qual_type).GetDisplayTypeName();
-  }
+  if (var_type)
+    return var_type->GetForwardCompilerType().GetDisplayTypeName(GetFrameSP());
   return ConstString();
 }
 

@@ -227,7 +227,8 @@ public:
 
   // Defaults to GetTypeName(type).  Override if your language desires
   // specialized behavior.
-  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type);
+  virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
+                                         lldb::StackFrameSP frame_sp = {});
 
   // Defaults to GetTypeName(type).  Override if your language desires
   // specialized behavior.
@@ -465,10 +466,6 @@ public:
   virtual CompilerType GetTypedefedType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) = 0;
-  virtual CompilerType MapIntoContext(lldb::StackFrameSP &frame_sp,
-                                      lldb::opaque_compiler_type_t type) {
-    return {this, type};
-  };
 
   virtual bool IsVectorType(lldb::opaque_compiler_type_t type,
                             CompilerType *element_type, uint64_t *size) = 0;

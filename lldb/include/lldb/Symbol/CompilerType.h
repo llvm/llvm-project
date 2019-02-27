@@ -172,7 +172,7 @@ public:
 
   ConstString GetTypeName() const;
 
-  ConstString GetDisplayTypeName() const;
+  ConstString GetDisplayTypeName(lldb::StackFrameSP = {}) const;
 
   ConstString GetTypeSymbolName() const;
 

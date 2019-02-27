@@ -150,7 +150,8 @@ Status TypeSystem::IsCompatible() {
   return Status();
 }
 
-ConstString TypeSystem::GetDisplayTypeName(void *type) {
+ConstString TypeSystem::GetDisplayTypeName(void *type,
+                                           lldb::StackFrameSP frame_sp) {
   return GetTypeName(type);
 }
 
