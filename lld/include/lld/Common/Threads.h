@@ -80,6 +80,13 @@ inline void parallelForEachN(size_t Begin, size_t End,
     for_each_n(llvm::parallel::seq, Begin, End, Fn);
 }
 
+template <typename R, class FuncTy> void parallelSort(R &&Range, FuncTy Fn) {
+  if (ThreadsEnabled)
+    sort(llvm::parallel::par, std::begin(Range), std::end(Range), Fn);
+  else
+    sort(llvm::parallel::seq, std::begin(Range), std::end(Range), Fn);
+}
+
 } // namespace lld
 
 #endif

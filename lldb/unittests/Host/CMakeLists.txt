@@ -9,7 +9,6 @@ set (FILES
   ProcessLaunchInfoTest.cpp
   SocketAddressTest.cpp
   SocketTest.cpp
-  SymbolsTest.cpp
   TaskPoolTest.cpp
 )
 
