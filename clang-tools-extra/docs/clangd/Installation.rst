@@ -350,6 +350,8 @@ Clangd will assume the compile command is ``clang $FLAGS some_file.cc``.
 Creating this file by hand is a reasonable place to start if your project is
 quite simple.
 
+.. _project-wide-index:
+
 Project-wide Index
 ==================
 

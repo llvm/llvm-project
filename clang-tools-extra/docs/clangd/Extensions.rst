@@ -38,6 +38,8 @@ provided) or source file (if a header was provided).
 
 If the corresponding file can't be determined, ``""`` is returned.
 
+.. _lsp-extension-file-status:
+
 File status
 ===========
 
@@ -63,6 +65,8 @@ Parameter: ``FileStatus`` object with properties:
 **New initialization option**: ``initializationOptions.clangdFileStatus : bool``
 
 Enables receiving ``textDocument/clangd.fileStatus`` notifications.
+
+.. _lsp-extension-compilation-commands:
 
 Compilation commands
 ====================
@@ -133,6 +137,8 @@ same code will always have the same category.
 
 Requests that clangd send ``Diagnostic.category``.
 
+.. _lsp-extension-code-actions-in-diagnostics:
+
 Inline fixes for diagnostics
 ============================
 
@@ -149,6 +155,8 @@ All the code actions that address this diagnostic.
 **New client capability**: ``textDocument.publishDiagnostics.codeActionsInline : bool``
 
 Requests clangd to send ``Diagnostic.codeActions``.
+
+.. _lsp-extension-symbol-info:
 
 Symbol info request
 ===================

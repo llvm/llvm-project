@@ -32,7 +32,57 @@ infrastructure are described first, followed by tool-specific sections.
 Improvements to clangd
 ----------------------
 
-The improvements are...
+- clangd now adds namespace qualifiers in code completion, for example, if you
+  type "``vec``", the list of completions will include "``std::vector``".
+
+  See also: `r343248 <https://reviews.llvm.org/rL343248>`__.
+
+- When a :ref:`global index <project-wide-index>` is available, clangd will use it to augment the
+  results of "go to definition" and "find references" queries. Global index
+  also enables global code completion, which suggests symbols that are not
+  imported in the current file and automatically inserts the missing
+  ``#include`` directives.
+
+- clangd stores the symbol index on disk in a new compact binary serialization
+  format.  It is 10x more compact than YAML and 40% more compact than gzipped
+  YAML.
+
+  See also: `r341375 <https://reviews.llvm.org/rL341375>`__.
+
+- clangd has a new efficient symbol index suitable for complex and fuzzy
+  queries and large code bases (e.g., LLVM, Chromium).  This index is used for
+  code completion, go to definition, and cross-references.  The architecture of
+  the index allows for complex and fuzzy retrieval criteria and sophisticated
+  scoring.
+
+  See also: `discussion on the mailing list
+  <http://lists.llvm.org/pipermail/cfe-dev/2018-July/058487.html>`__, `design
+  doc
+  <https://docs.google.com/document/d/1C-A6PGT6TynyaX4PXyExNMiGmJ2jL1UwV91Kyx11gOI/edit>`__.
+
+- clangd has a new LSP extension that communicates information about activity
+  on clangd's per-file worker thread.  This information can be displayed to
+  users to let them know that the language server is busy with something.  For
+  example, in clangd, building the AST blocks many other operations.
+
+  More info: :ref:`lsp-extension-file-status`.
+
+- clangd has a new LSP extension that allows the client to supply the
+  compilation commands over LSP, instead of finding compile_commands.json on
+  disk.
+
+  More info: :ref:`lsp-extension-compilation-commands`.
+
+- clangd has a new LSP extension that allows the client to request fixes to be
+  sent together with diagnostics, instead of asynchronously.
+
+  More info: :ref:`lsp-extension-code-actions-in-diagnostics`.
+
+- clangd has a new LSP extension that allows the client to resolve a symbol in
+  a light-weight manner, without retrieving further information (like
+  definition location, which may require consulting an index).
+
+  More info: :ref:`lsp-extension-symbol-info`.
 
 
 Improvements to clang-query
