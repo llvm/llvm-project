@@ -536,7 +536,8 @@ public:
 
   ConstString GetTypeName(void *type) override;
 
-  ConstString GetDisplayTypeName(void *type) override;
+  ConstString GetDisplayTypeName(void *type,
+                                 lldb::StackFrameSP frame_sp) override;
 
   ConstString GetTypeSymbolName(void *type) override;
 
@@ -722,9 +723,6 @@ public:
   CompilerType GetTypedefedType(void *type) override;
 
   CompilerType GetUnboundType(lldb::opaque_compiler_type_t type) override;
-  CompilerType MapIntoContext(lldb::StackFrameSP &frame_sp,
-                              lldb::opaque_compiler_type_t type) override;
-
 
   bool IsVectorType(void *type, CompilerType *element_type,
                     uint64_t *size) override;
