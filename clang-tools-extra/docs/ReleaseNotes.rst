@@ -14,8 +14,8 @@ Introduction
 This document contains the release notes for the Extra Clang Tools, part of the
 Clang release 8.0.0. Here we describe the status of the Extra Clang Tools in
 some detail, including major improvements from the previous release and new
-feature work. All LLVM releases may be downloaded from the `LLVM releases web
-site <https://llvm.org/releases/>`_.
+feature work. All LLVM releases may be downloaded
+from the `LLVM releases web site <https://releases.llvm.org/>`_.
 
 For more information about Clang or LLVM, including information about
 the latest release, please see the `Clang Web Site <https://clang.llvm.org>`_ or
@@ -28,20 +28,12 @@ Some of the major new features and improvements to Extra Clang Tools are listed
 here. Generic improvements to Extra Clang Tools as a whole or to its underlying
 infrastructure are described first, followed by tool-specific sections.
 
-Major New Features
-------------------
-
-...
 
 Improvements to clangd
 ----------------------
 
 The improvements are...
 
-Improvements to clang-doc
--------------------------
-
-The improvements are...
 
 Improvements to clang-query
 ---------------------------
@@ -291,13 +283,3 @@ Improvements to clang-tidy
 - The :doc:`readability-uppercase-literal-suffix
   <clang-tidy/checks/readability-uppercase-literal-suffix>` check does not warn
   about literal suffixes inside macros anymore by default.
-
-Improvements to include-fixer
------------------------------
-
-The improvements are...
-
-Improvements to modularize
---------------------------
-
-The improvements are...
