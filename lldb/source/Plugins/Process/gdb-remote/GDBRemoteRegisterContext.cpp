@@ -207,6 +207,14 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
         if (buffer_sp->GetByteSize() >= m_reg_data.GetByteSize()) {
           SetAllRegisterValid(true);
           return true;
+        } else {
+          Log *log(ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet(GDBR_LOG_THREAD |
+                                                                GDBR_LOG_PACKETS));
+          if (log)
+            log->Printf ("error: GDBRemoteRegisterContext::ReadRegisterBytes tried to read the "
+                        "entire register context at once, expected at least %" PRId64 " bytes "
+                        "but only got %" PRId64 " bytes.", m_reg_data.GetByteSize(),
+                        buffer_sp->GetByteSize());
         }
       }
       return false;
