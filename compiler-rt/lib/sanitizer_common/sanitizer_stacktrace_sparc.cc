@@ -23,8 +23,7 @@ namespace __sanitizer {
 
 void BufferedStackTrace::UnwindFast(uptr pc, uptr bp, uptr stack_top,
                                     uptr stack_bottom, u32 max_depth) {
-  // CHECK_NE(stack_bottom, 0);
-  // CHECK_GT(stack_top, stack_bottom);
+  // TODO(yln): add arg sanity check for stack_top/stack_bottom
   CHECK_GE(max_depth, 2);
   const uptr kPageSize = GetPageSizeCached();
   trace_buffer[0] = pc;
