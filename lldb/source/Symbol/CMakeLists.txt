@@ -1,3 +1,9 @@
+set(LLVM_OPTIONAL_SOURCES LocateSymbolFileMacOSX.cpp)
+
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  set(PLATFORM_SOURCES LocateSymbolFileMacOSX.cpp)
+endif()
+
 add_lldb_library(lldbSymbol
   ArmUnwindInfo.cpp
   Block.cpp
@@ -18,6 +24,7 @@ add_lldb_library(lldbSymbol
   FuncUnwinders.cpp
   LineEntry.cpp
   LineTable.cpp
+  LocateSymbolFile.cpp
   ObjectFile.cpp
   SwiftASTContext.cpp
   Symbol.cpp
@@ -34,6 +41,8 @@ add_lldb_library(lldbSymbol
   Variable.cpp
   VariableList.cpp
   VerifyDecl.cpp
+
+  ${PLATFORM_SOURCES}
 
   LINK_LIBS
     swiftAST
