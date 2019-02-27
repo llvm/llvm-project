@@ -27,7 +27,7 @@ INLINE constexpr uptr roundUpTo(uptr X, uptr Boundary) {
   return (X + Boundary - 1) & ~(Boundary - 1);
 }
 
-INLINE constexpr uptr RoundDownTo(uptr X, uptr Boundary) {
+INLINE constexpr uptr roundDownTo(uptr X, uptr Boundary) {
   return X & ~(Boundary - 1);
 }
 

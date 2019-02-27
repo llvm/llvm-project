@@ -360,7 +360,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
 
 void DWARFFormValue::dumpSectionedAddress(raw_ostream &OS,
                                           DIDumpOptions DumpOpts,
-                                          SectionedAddress SA) const {
+                                          object::SectionedAddress SA) const {
   OS << format("0x%016" PRIx64, SA.Address);
   dumpAddressSection(U->getContext().getDWARFObj(), OS, DumpOpts,
                      SA.SectionIndex);
@@ -397,7 +397,7 @@ void DWARFFormValue::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   case DW_FORM_addrx3:
   case DW_FORM_addrx4:
   case DW_FORM_GNU_addr_index: {
-    Optional<SectionedAddress> A = U->getAddrOffsetSectionItem(UValue);
+    Optional<object::SectionedAddress> A = U->getAddrOffsetSectionItem(UValue);
     if (!A || DumpOpts.Verbose)
       AddrOS << format("indexed (%8.8x) address = ", (uint32_t)UValue);
     if (U == nullptr)
@@ -618,14 +618,15 @@ Optional<uint64_t> DWARFFormValue::getAsAddress() const {
     return SA->Address;
   return None;
 }
-Optional<SectionedAddress> DWARFFormValue::getAsSectionedAddress() const {
+Optional<object::SectionedAddress>
+DWARFFormValue::getAsSectionedAddress() const {
   if (!isFormClass(FC_Address))
     return None;
   if (Form == DW_FORM_GNU_addr_index || Form == DW_FORM_addrx) {
     uint32_t Index = Value.uval;
     if (!U)
       return None;
-    Optional<SectionedAddress> SA = U->getAddrOffsetSectionItem(Index);
+    Optional<object::SectionedAddress> SA = U->getAddrOffsetSectionItem(Index);
     if (!SA)
       return None;
     return SA;

@@ -68,7 +68,7 @@ void DWARFDebugRangeList::dump(raw_ostream &OS) const {
 }
 
 DWARFAddressRangesVector DWARFDebugRangeList::getAbsoluteRanges(
-    llvm::Optional<SectionedAddress> BaseAddr) const {
+    llvm::Optional<object::SectionedAddress> BaseAddr) const {
   DWARFAddressRangesVector Res;
   for (const RangeListEntry &RLE : Entries) {
     if (RLE.isBaseAddressSelectionEntry(AddressSize)) {

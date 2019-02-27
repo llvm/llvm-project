@@ -1734,17 +1734,17 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
     // it is marked as end_sequence in the input (because in that
     // case, the relocation offset is accurate and that entry won't
     // serve as the start of another function).
-    if (CurrRange == InvalidRange || Row.Address < CurrRange.start() ||
-        Row.Address > CurrRange.stop() ||
-        (Row.Address == CurrRange.stop() && !Row.EndSequence)) {
+    if (CurrRange == InvalidRange || Row.Address.Address < CurrRange.start() ||
+        Row.Address.Address > CurrRange.stop() ||
+        (Row.Address.Address == CurrRange.stop() && !Row.EndSequence)) {
       // We just stepped out of a known range. Insert a end_sequence
       // corresponding to the end of the range.
       uint64_t StopAddress = CurrRange != InvalidRange
                                  ? CurrRange.stop() + CurrRange.value()
                                  : -1ULL;
-      CurrRange = FunctionRanges.find(Row.Address);
+      CurrRange = FunctionRanges.find(Row.Address.Address);
       bool CurrRangeValid =
-          CurrRange != InvalidRange && CurrRange.start() <= Row.Address;
+          CurrRange != InvalidRange && CurrRange.start() <= Row.Address.Address;
       if (!CurrRangeValid) {
         CurrRange = InvalidRange;
         if (StopAddress != -1ULL) {
@@ -1754,13 +1754,13 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
           // for now do as dsymutil.
           // FIXME: Understand exactly what cases this addresses and
           // potentially remove it along with the Ranges map.
-          auto Range = Ranges.lower_bound(Row.Address);
+          auto Range = Ranges.lower_bound(Row.Address.Address);
           if (Range != Ranges.begin() && Range != Ranges.end())
             --Range;
 
-          if (Range != Ranges.end() && Range->first <= Row.Address &&
-              Range->second.HighPC >= Row.Address) {
-            StopAddress = Row.Address + Range->second.Offset;
+          if (Range != Ranges.end() && Range->first <= Row.Address.Address &&
+              Range->second.HighPC >= Row.Address.Address) {
+            StopAddress = Row.Address.Address + Range->second.Offset;
           }
         }
       }
@@ -1768,7 +1768,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
         // Insert end sequence row with the computed end address, but
         // the same line as the previous one.
         auto NextLine = Seq.back();
-        NextLine.Address = StopAddress;
+        NextLine.Address.Address = StopAddress;
         NextLine.EndSequence = 1;
         NextLine.PrologueEnd = 0;
         NextLine.BasicBlock = 0;
@@ -1786,7 +1786,7 @@ void DwarfLinker::patchLineTableForUnit(CompileUnit &Unit,
       continue;
 
     // Relocate row address and add it to the current sequence.
-    Row.Address += CurrRange.value();
+    Row.Address.Address += CurrRange.value();
     Seq.emplace_back(Row);
 
     if (Row.EndSequence)

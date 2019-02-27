@@ -7448,15 +7448,17 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
       if (RepeatSize > ScalarSize)
         RepeatVT = EVT::getVectorVT(*DAG.getContext(), RepeatVT,
                                     RepeatSize / ScalarSize);
-      if (SDValue RepeatLoad = EltsFromConsecutiveLoads(
-              RepeatVT, RepeatedLoads, DL, DAG, Subtarget, isAfterLegalize)) {
-        EVT BroadcastVT =
-            EVT::getVectorVT(*DAG.getContext(), RepeatVT.getScalarType(),
-                             VT.getSizeInBits() / ScalarSize);
-        unsigned Opcode = RepeatSize > ScalarSize ? X86ISD::SUBV_BROADCAST
-                                                  : X86ISD::VBROADCAST;
-        SDValue Broadcast = DAG.getNode(Opcode, DL, BroadcastVT, RepeatLoad);
-        return DAG.getBitcast(VT, Broadcast);
+      EVT BroadcastVT =
+          EVT::getVectorVT(*DAG.getContext(), RepeatVT.getScalarType(),
+                           VT.getSizeInBits() / ScalarSize);
+      if (TLI.isTypeLegal(BroadcastVT)) {
+        if (SDValue RepeatLoad = EltsFromConsecutiveLoads(
+                RepeatVT, RepeatedLoads, DL, DAG, Subtarget, isAfterLegalize)) {
+          unsigned Opcode = RepeatSize > ScalarSize ? X86ISD::SUBV_BROADCAST
+                                                    : X86ISD::VBROADCAST;
+          SDValue Broadcast = DAG.getNode(Opcode, DL, BroadcastVT, RepeatLoad);
+          return DAG.getBitcast(VT, Broadcast);
+        }
       }
     }
   }

@@ -1,0 +1,51 @@
+## Check we cannot remove a section containing symbols
+## referenced by relocations contained in the object.
+
+# RUN: yaml2obj %s > %t1
+# RUN: not llvm-objcopy -R .data %t1 2>&1 | FileCheck %s
+# CHECK: error: Section .data cannot be removed because of symbol 'foo' used by the relocation patching offset 0x1 from section .rela.text.
+
+## Check the behavior when we also remove the relocation section.
+## We have no reference in this case and hence no error should be emitted.
+
+# RUN: yaml2obj %s > %t2
+# RUN: llvm-objcopy -R .data -R .rela.text %t2 %t3
+# RUN: llvm-objdump --section-headers %t3 | FileCheck %s --check-prefix=NOSEC
+# NOSEC-NOT: .data
+# NOSEC-NOT: .rela.text
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x0000000000000004
+    Content:         E800000000
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x0000000000000008
+    EntSize:         0x0000000000000018
+    Info:            .text
+    Relocations:     
+      - Offset:          0x0000000000000001
+        Symbol:          foo
+        Type:            R_X86_64_GOTPCREL
+        Addend:          -4
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x0000000000000001
+    Content:         '0102'
+Symbols:         
+  Local:           
+    - Name:            foo
+      Section:         .data
+      Value:           0x0000000000000001
+DynamicSymbols:  {}
+...

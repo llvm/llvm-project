@@ -230,6 +230,50 @@ define <2 x i8> @test_vector_uadd_neg_nneg(<2 x i8> %a) {
   ret <2 x i8> %r
 }
 
+define i8 @test_scalar_uadd_never_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = and i8 [[A:%.*]], -127
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A_MASKED]], i8 1)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a_masked = and i8 %a, 129
+  %r = call i8 @llvm.uadd.sat.i8(i8 %a_masked, i8 1)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_uadd_never_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = and <2 x i8> [[A:%.*]], <i8 -127, i8 -127>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 1, i8 1>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a_masked = and <2 x i8> %a, <i8 129, i8 129>
+  %r = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 1, i8 1>)
+  ret <2 x i8> %r
+}
+
+define i8 @test_scalar_uadd_always_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_uadd_always_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = or i8 [[A:%.*]], -64
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A_MASKED]], i8 64)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a_masked = or i8 %a, 192
+  %r = call i8 @llvm.uadd.sat.i8(i8 %a_masked, i8 64)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_uadd_always_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_uadd_always_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = or <2 x i8> [[A:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 64, i8 64>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a_masked = or <2 x i8> %a, <i8 192, i8 192>
+  %r = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 64, i8 64>)
+  ret <2 x i8> %r
+}
+
 ; neg sadd nneg never overflows.
 define i8 @test_scalar_sadd_neg_nneg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_neg_nneg(
@@ -565,6 +609,50 @@ define <2 x i8> @test_vector_usub_nneg_nneg(<2 x i8> %a) {
 ;
   %a_nneg = and <2 x i8> %a, <i8 127, i8 127>
   %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a_nneg, <2 x i8> <i8 10, i8 20>)
+  ret <2 x i8> %r
+}
+
+define i8 @test_scalar_usub_never_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = or i8 [[A:%.*]], 64
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A_MASKED]], i8 10)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a_masked = or i8 %a, 64
+  %r = call i8 @llvm.usub.sat.i8(i8 %a_masked, i8 10)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_usub_never_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_never_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = or <2 x i8> [[A:%.*]], <i8 64, i8 64>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 10, i8 10>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a_masked = or <2 x i8> %a, <i8 64, i8 64>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 10, i8 10>)
+  ret <2 x i8> %r
+}
+
+define i8 @test_scalar_usub_always_overflows(i8 %a) {
+; CHECK-LABEL: @test_scalar_usub_always_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = and i8 [[A:%.*]], 64
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A_MASKED]], i8 100)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a_masked = and i8 %a, 64
+  %r = call i8 @llvm.usub.sat.i8(i8 %a_masked, i8 100)
+  ret i8 %r
+}
+
+define <2 x i8> @test_vector_usub_always_overflows(<2 x i8> %a) {
+; CHECK-LABEL: @test_vector_usub_always_overflows(
+; CHECK-NEXT:    [[A_MASKED:%.*]] = and <2 x i8> [[A:%.*]], <i8 64, i8 64>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 100, i8 100>)
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %a_masked = and <2 x i8> %a, <i8 64, i8 64>
+  %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 100, i8 100>)
   ret <2 x i8> %r
 }
 

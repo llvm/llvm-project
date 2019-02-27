@@ -1,0 +1,29 @@
+# Show that llvm-readobj can handle an empty .dynamic section.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj --dynamic-table %t.o | FileCheck %s --check-prefix LLVM
+# RUN: llvm-readelf --dynamic-table %t.o | FileCheck %s --check-prefix GNU --allow-empty
+
+# LLVM: File: {{.*}}.o
+# LLVM-NOT: DynamicSection
+# GNU-NOT: {{.}}
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .dynamic
+    Type:         SHT_DYNAMIC
+    Address:      0x1000
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic

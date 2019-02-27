@@ -546,14 +546,25 @@ void SymbolTableSection::accept(MutableSectionVisitor &Visitor) {
   Visitor.visit(*this);
 }
 
-template <class SymTabType>
-Error RelocSectionWithSymtabBase<SymTabType>::removeSectionReferences(
+Error RelocationSection::removeSectionReferences(
     function_ref<bool(const SectionBase *)> ToRemove) {
   if (ToRemove(Symbols))
     return createStringError(llvm::errc::invalid_argument,
                              "Symbol table %s cannot be removed because it is "
                              "referenced by the relocation section %s.",
                              Symbols->Name.data(), this->Name.data());
+
+  for (const Relocation &R : Relocations) {
+    if (!R.RelocSymbol->DefinedIn || !ToRemove(R.RelocSymbol->DefinedIn))
+      continue;
+    return createStringError(
+        llvm::errc::invalid_argument,
+        "Section %s cannot be removed because of symbol '%s' "
+        "used by the relocation patching offset 0x%" PRIx64 " from section %s.",
+        R.RelocSymbol->DefinedIn->Name.data(), R.RelocSymbol->Name.c_str(),
+        R.Offset, this->Name.data());
+  }
+
   return Error::success();
 }
 
@@ -1361,12 +1372,20 @@ Error Object::removeSections(
       Segment->removeSection(RemoveSec.get());
     RemoveSections.insert(RemoveSec.get());
   }
-  for (auto &KeepSec : make_range(std::begin(Sections), Iter))
+
+  // For each section that remains alive, we want to remove the dead references.
+  // This either might update the content of the section (e.g. remove symbols
+  // from symbol table that belongs to removed section) or trigger an error if
+  // a live section critically depends on a section being removed somehow
+  // (e.g. the removed section is referenced by a relocation).
+  for (auto &KeepSec : make_range(std::begin(Sections), Iter)) {
     if (Error E = KeepSec->removeSectionReferences(
             [&RemoveSections](const SectionBase *Sec) {
               return RemoveSections.find(Sec) != RemoveSections.end();
             }))
       return E;
+  }
+
   // Now finally get rid of them all togethor.
   Sections.erase(Iter, std::end(Sections));
   return Error::success();

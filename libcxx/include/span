@@ -522,20 +522,52 @@ private:
     index_type __size;
 };
 
+//  tuple interface
+template <class _Tp, size_t _Size>
+struct _LIBCPP_TEMPLATE_VIS tuple_size<span<_Tp, _Size>>
+    : public integral_constant<size_t, _Size> {};
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS tuple_size<span<_Tp, dynamic_extent>>; // declared but not defined
+
+
+template <size_t _Ip, class _Tp, size_t _Size>
+class _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, span<_Tp, _Size>>
+{
+    static_assert( dynamic_extent != _Size, "std::tuple_element<> not supported for std::span<T, dynamic_extent>");
+    static_assert(_Ip < _Size, "Index out of bounds in std::tuple_element<> (std::span)");
+public:
+    typedef _Tp type;
+};
+
+template <size_t _Ip, class _Tp, size_t _Size>
+_LIBCPP_INLINE_VISIBILITY constexpr
+_Tp&
+get(span<_Tp, _Size> __s) noexcept
+{
+    static_assert( dynamic_extent != _Size, "std::get<> not supported for std::span<T, dynamic_extent>");
+    static_assert(_Ip < _Size, "Index out of bounds in std::get<> (std::span)");
+    return __s[_Ip];
+}
+
+
 //  as_bytes & as_writeable_bytes
 template <class _Tp, size_t _Extent>
-    auto as_bytes(span<_Tp, _Extent> __s) noexcept
-    -> decltype(__s.__as_bytes())
-    { return __s.__as_bytes(); }
+_LIBCPP_INLINE_VISIBILITY
+auto as_bytes(span<_Tp, _Extent> __s) noexcept
+-> decltype(__s.__as_bytes())
+{ return    __s.__as_bytes(); }
 
 template <class _Tp, size_t _Extent>
-    auto as_writeable_bytes(span<_Tp, _Extent> __s) noexcept
-    -> typename enable_if<!is_const_v<_Tp>, decltype(__s.__as_writeable_bytes())>::type
-    { return __s.__as_writeable_bytes(); }
+_LIBCPP_INLINE_VISIBILITY
+auto as_writeable_bytes(span<_Tp, _Extent> __s) noexcept
+-> enable_if_t<!is_const_v<_Tp>, decltype(__s.__as_writeable_bytes())>
+{ return __s.__as_writeable_bytes(); }
 
 template <class _Tp, size_t _Extent>
-    constexpr void swap(span<_Tp, _Extent> &__lhs, span<_Tp, _Extent> &__rhs) noexcept
-    { __lhs.swap(__rhs); }
+_LIBCPP_INLINE_VISIBILITY
+constexpr void swap(span<_Tp, _Extent> &__lhs, span<_Tp, _Extent> &__rhs) noexcept
+{ __lhs.swap(__rhs); }
 
 
 //  Deduction guides
