@@ -192,10 +192,6 @@ bool DirectoryWatcher::Implementation::initialize(StringRef Path,
 void DirectoryWatcher::Implementation::stopListening() {
   if (inotifyFD == -1)
     return;
-  while (true) {
-    if (close(inotifyFD) == -1 && errno == EINTR)
-      continue;
-    break;
-  }
+  close(inotifyFD);
   inotifyFD = -1;
 }
