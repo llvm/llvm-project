@@ -1914,35 +1914,29 @@ template <> void ELFDumper<ELF32LE>::printUnwindInfo() {
 
 template<class ELFT>
 void ELFDumper<ELFT>::printDynamicTable() {
-  auto I = dynamic_table().begin();
-  auto E = dynamic_table().end();
+  // A valid .dynamic section contains an array of entries terminated with
+  // a DT_NULL entry. However, sometimes the section content may continue
+  // past the DT_NULL entry, so to dump the section correctly, we first find
+  // the end of the entries by iterating over them.
+  size_t Size = 0;
+  Elf_Dyn_Range DynTableEntries = dynamic_table();
+  for (; Size < DynTableEntries.size();)
+    if (DynTableEntries[Size++].getTag() == DT_NULL)
+      break;
 
-  if (I == E)
-    return;
-
-  --E;
-  while (I != E && E->getTag() == ELF::DT_NULL)
-    --E;
-  if (E->getTag() != ELF::DT_NULL)
-    ++E;
-  ++E;
-
-  ptrdiff_t Total = std::distance(I, E);
-  if (Total == 0)
+  if (!Size)
     return;
 
   raw_ostream &OS = W.getOStream();
-  W.startLine() << "DynamicSection [ (" << Total << " entries)\n";
+  W.startLine() << "DynamicSection [ (" << Size << " entries)\n";
 
   bool Is64 = ELFT::Is64Bits;
-
   W.startLine()
      << "  Tag" << (Is64 ? "                " : "        ") << "Type"
      << "                 " << "Name/Value\n";
-  while (I != E) {
-    const Elf_Dyn &Entry = *I;
+  for (size_t I = 0; I < Size; ++I) {
+    const Elf_Dyn &Entry = DynTableEntries[I];
     uintX_t Tag = Entry.getTag();
-    ++I;
     W.startLine() << "  " << format_hex(Tag, Is64 ? 18 : 10, opts::Output != opts::GNU) << " "
                   << format("%-21s", getTypeString(ObjF->getELFFile()->getHeader()->e_machine, Tag));
     printValue(Tag, Entry.getVal());

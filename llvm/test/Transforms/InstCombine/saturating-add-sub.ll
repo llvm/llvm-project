@@ -233,7 +233,7 @@ define <2 x i8> @test_vector_uadd_neg_nneg(<2 x i8> %a) {
 define i8 @test_scalar_uadd_never_overflows(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_never_overflows(
 ; CHECK-NEXT:    [[A_MASKED:%.*]] = and i8 [[A:%.*]], -127
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A_MASKED]], i8 1)
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i8 [[A_MASKED]], 1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_masked = and i8 %a, 129
@@ -244,7 +244,7 @@ define i8 @test_scalar_uadd_never_overflows(i8 %a) {
 define <2 x i8> @test_vector_uadd_never_overflows(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_uadd_never_overflows(
 ; CHECK-NEXT:    [[A_MASKED:%.*]] = and <2 x i8> [[A:%.*]], <i8 -127, i8 -127>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 1, i8 1>)
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i8> [[A_MASKED]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_masked = and <2 x i8> %a, <i8 129, i8 129>
@@ -254,9 +254,7 @@ define <2 x i8> @test_vector_uadd_never_overflows(<2 x i8> %a) {
 
 define i8 @test_scalar_uadd_always_overflows(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_always_overflows(
-; CHECK-NEXT:    [[A_MASKED:%.*]] = or i8 [[A:%.*]], -64
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A_MASKED]], i8 64)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %a_masked = or i8 %a, 192
   %r = call i8 @llvm.uadd.sat.i8(i8 %a_masked, i8 64)
@@ -265,9 +263,7 @@ define i8 @test_scalar_uadd_always_overflows(i8 %a) {
 
 define <2 x i8> @test_vector_uadd_always_overflows(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_uadd_always_overflows(
-; CHECK-NEXT:    [[A_MASKED:%.*]] = or <2 x i8> [[A:%.*]], <i8 -64, i8 -64>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 64, i8 64>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %a_masked = or <2 x i8> %a, <i8 192, i8 192>
   %r = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 64, i8 64>)

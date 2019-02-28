@@ -186,6 +186,9 @@ private:
   LegalizeResult
   fewerElementsVectorSelect(MachineInstr &MI, unsigned TypeIdx, LLT NarrowTy);
 
+  LegalizeResult fewerElementsVectorPhi(MachineInstr &MI,
+                                        unsigned TypeIdx, LLT NarrowTy);
+
   LegalizeResult moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
                                        LLT MoreTy);
 

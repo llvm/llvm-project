@@ -470,7 +470,7 @@ define i64 @add_nuw_zext_add_extra_use_2(i8 %x, i8* %p) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 42
 ; CHECK-NEXT:    store i8 [[ADD]], i8* [[P:%.*]], align 1
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ADD]] to i64
-; CHECK-NEXT:    [[R:%.*]] = add nsw i64 [[EXT]], -356
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[EXT]], -356
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %add = add nuw i8 %x, 42

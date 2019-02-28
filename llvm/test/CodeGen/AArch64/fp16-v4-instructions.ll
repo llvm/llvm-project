@@ -304,15 +304,7 @@ define <4 x i1> @test_fcmp_une(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_une:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ne
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ne
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ne
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ne
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmeq v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp une <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -330,15 +322,8 @@ define <4 x i1> @test_fcmp_ueq(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_ueq:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp ueq <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -354,15 +339,7 @@ define <4 x i1> @test_fcmp_ugt(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_ugt:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, hi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, hi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, hi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, hi
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmge v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp ugt <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -378,15 +355,7 @@ define <4 x i1> @test_fcmp_uge(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_uge:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, pl
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, pl
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, pl
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, pl
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp uge <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -402,15 +371,7 @@ define <4 x i1> @test_fcmp_ult(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_ult:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, lt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, lt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, lt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, lt
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmge v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp ult <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -426,15 +387,7 @@ define <4 x i1> @test_fcmp_ule(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_ule:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, le
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, le
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, le
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, le
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp ule <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -452,15 +405,8 @@ define <4 x i1> @test_fcmp_uno(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_uno:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vs
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vs
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vs
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vs
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmge v{{[0-9]}}.4h, v{{[0-9]}}.4h
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp uno <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -477,15 +423,8 @@ define <4 x i1> @test_fcmp_one(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_one:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp one <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -500,15 +439,7 @@ define <4 x i1> @test_fcmp_oeq(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_oeq:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, eq
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmeq v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp oeq <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -523,15 +454,7 @@ define <4 x i1> @test_fcmp_ogt(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_ogt:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, gt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, gt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, gt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, gt
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp ogt <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -546,15 +469,7 @@ define <4 x i1> @test_fcmp_oge(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_oge:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ge
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ge
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ge
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ge
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmge v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp oge <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -569,15 +484,7 @@ define <4 x i1> @test_fcmp_olt(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_olt:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, mi
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp olt <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -592,15 +499,7 @@ define <4 x i1> @test_fcmp_ole(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_ole:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ls
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ls
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ls
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, ls
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmge v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp ole <4 x half> %a, %b
   ret <4 x i1> %1
 }
@@ -617,15 +516,8 @@ define <4 x i1> @test_fcmp_ord(<4 x half> %a, <4 x half> %b) #0 {
 
 ; CHECK-FP16-LABEL: test_fcmp_ord:
 ; CHECK-FP16-NOT:   fcvt
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vc
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vc
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vc
-; CHECK-FP16:       fcmp  h{{.}}, h{{.}}
-; CHECK-FP16:       csetm {{.*}}, vc
-; CHECK-FP16:       ret
+; CHECK-FP16:       fcmge v{{[0-9]}}.4h, v{{[0-9]}}.4h
+; CHECK-FP16:       fcmgt v{{[0-9]}}.4h, v{{[0-9]}}.4h
   %1 = fcmp ord <4 x half> %a, %b
   ret <4 x i1> %1
 }

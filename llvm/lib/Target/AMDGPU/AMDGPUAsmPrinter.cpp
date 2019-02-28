@@ -773,9 +773,19 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         } else {
           // We force CodeGen to run in SCC order, so the callee's register
           // usage etc. should be the cumulative usage of all callees.
+
           auto I = CallGraphResourceInfo.find(Callee);
-          assert(I != CallGraphResourceInfo.end() &&
-                 "callee should have been handled before caller");
+          if (I == CallGraphResourceInfo.end()) {
+            // Avoid crashing on undefined behavior with an illegal call to a
+            // kernel. If a callsite's calling convention doesn't match the
+            // function's, it's undefined behavior. If the callsite calling
+            // convention does match, that would have errored earlier.
+            // FIXME: The verifier shouldn't allow this.
+            if (AMDGPU::isEntryFunctionCC(Callee->getCallingConv()))
+              report_fatal_error("invalid call to entry function");
+
+            llvm_unreachable("callee should have been handled before caller");
+          }
 
           MaxSGPR = std::max(I->second.NumExplicitSGPR - 1, MaxSGPR);
           MaxVGPR = std::max(I->second.NumVGPR - 1, MaxVGPR);

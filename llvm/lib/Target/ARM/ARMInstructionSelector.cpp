@@ -112,6 +112,13 @@ private:
     unsigned TSTri;
     unsigned Bcc;
 
+    // Used for G_GLOBAL_VALUE
+    unsigned MOVi32imm;
+    unsigned ConstPoolLoad;
+    unsigned MOV_ga_pcrel;
+    unsigned LDRLIT_ga_pcrel;
+    unsigned LDRLIT_ga_abs;
+
     OpcodeCache(const ARMSubtarget &STI);
   } const Opcodes;
 
@@ -312,6 +319,12 @@ ARMInstructionSelector::OpcodeCache::OpcodeCache(const ARMSubtarget &STI) {
 
   STORE_OPCODE(TSTri, TSTri);
   STORE_OPCODE(Bcc, Bcc);
+
+  STORE_OPCODE(MOVi32imm, MOVi32imm);
+  ConstPoolLoad = isThumb ? ARM::t2LDRpci : ARM::LDRi12;
+  STORE_OPCODE(MOV_ga_pcrel, MOV_ga_pcrel);
+  LDRLIT_ga_pcrel = isThumb ? ARM::tLDRLIT_ga_pcrel : ARM::LDRLIT_ga_pcrel;
+  LDRLIT_ga_abs = isThumb ? ARM::tLDRLIT_ga_abs : ARM::LDRLIT_ga_abs;
 #undef MAP_OPCODE
 }
 
@@ -609,7 +622,9 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
   auto addOpsForConstantPoolLoad = [&MF, Alignment,
                                     Size](MachineInstrBuilder &MIB,
                                           const GlobalValue *GV, bool IsSBREL) {
-    assert(MIB->getOpcode() == ARM::LDRi12 && "Unsupported instruction");
+    assert((MIB->getOpcode() == ARM::LDRi12 ||
+            MIB->getOpcode() == ARM::t2LDRpci) &&
+           "Unsupported instruction");
     auto ConstPool = MF.getConstantPool();
     auto CPIndex =
         // For SB relative entries we need a target-specific constant pool.
@@ -619,21 +634,37 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
                   ARMConstantPoolConstant::Create(GV, ARMCP::SBREL), Alignment)
             : ConstPool->getConstantPoolIndex(GV, Alignment);
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
-        .addMemOperand(
-            MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),
-                                    MachineMemOperand::MOLoad, Size, Alignment))
-        .addImm(0)
-        .add(predOps(ARMCC::AL));
+        .addMemOperand(MF.getMachineMemOperand(
+            MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
+            Size, Alignment));
+    if (MIB->getOpcode() == ARM::LDRi12)
+      MIB.addImm(0);
+    MIB.add(predOps(ARMCC::AL));
+  };
+
+  auto addGOTMemOperand = [this, &MF, Alignment](MachineInstrBuilder &MIB) {
+    MIB.addMemOperand(MF.getMachineMemOperand(
+        MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad,
+        TM.getProgramPointerSize(), Alignment));
   };
 
   if (TM.isPositionIndependent()) {
     bool Indirect = STI.isGVIndirectSymbol(GV);
+
+    // For ARM mode, we have different pseudoinstructions for direct accesses
+    // and indirect accesses, and the ones for indirect accesses include the
+    // load from GOT. For Thumb mode, we use the same pseudoinstruction for both
+    // direct and indirect accesses, and we need to manually generate the load
+    // from GOT.
+    bool UseOpcodeThatLoads = Indirect && !STI.isThumb();
+
     // FIXME: Taking advantage of MOVT for ELF is pretty involved, so we don't
     // support it yet. See PR28229.
-    unsigned Opc =
-        UseMovt && !STI.isTargetELF()
-            ? (Indirect ? ARM::MOV_ga_pcrel_ldr : ARM::MOV_ga_pcrel)
-            : (Indirect ? ARM::LDRLIT_ga_pcrel_ldr : ARM::LDRLIT_ga_pcrel);
+    unsigned Opc = UseMovt && !STI.isTargetELF()
+                       ? (UseOpcodeThatLoads ? ARM::MOV_ga_pcrel_ldr
+                                             : Opcodes.MOV_ga_pcrel)
+                       : (UseOpcodeThatLoads ? ARM::LDRLIT_ga_pcrel_ldr
+                                             : Opcodes.LDRLIT_ga_pcrel);
     MIB->setDesc(TII.get(Opc));
 
     int TargetFlags = ARMII::MO_NO_FLAG;
@@ -643,17 +674,35 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
       TargetFlags |= ARMII::MO_GOT;
     MIB->getOperand(1).setTargetFlags(TargetFlags);
 
-    if (Indirect)
-      MIB.addMemOperand(MF.getMachineMemOperand(
-          MachinePointerInfo::getGOT(MF), MachineMemOperand::MOLoad,
-          TM.getProgramPointerSize(), Alignment));
+    if (Indirect) {
+      if (!UseOpcodeThatLoads) {
+        auto ResultReg = MIB->getOperand(0).getReg();
+        auto AddressReg = MRI.createVirtualRegister(&ARM::GPRRegClass);
+
+        MIB->getOperand(0).setReg(AddressReg);
+
+        auto InsertBefore = std::next(MIB->getIterator());
+        auto MIBLoad = BuildMI(MBB, InsertBefore, MIB->getDebugLoc(),
+                               TII.get(Opcodes.LOAD32))
+                           .addDef(ResultReg)
+                           .addReg(AddressReg)
+                           .addImm(0)
+                           .add(predOps(ARMCC::AL));
+        addGOTMemOperand(MIBLoad);
+
+        if (!constrainSelectedInstRegOperands(*MIBLoad, TII, TRI, RBI))
+          return false;
+      } else {
+        addGOTMemOperand(MIB);
+      }
+    }
 
     return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   }
 
   bool isReadOnly = STI.getTargetLowering()->isReadOnly(GV);
   if (STI.isROPI() && isReadOnly) {
-    unsigned Opc = UseMovt ? ARM::MOV_ga_pcrel : ARM::LDRLIT_ga_pcrel;
+    unsigned Opc = UseMovt ? Opcodes.MOV_ga_pcrel : Opcodes.LDRLIT_ga_pcrel;
     MIB->setDesc(TII.get(Opc));
     return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   }
@@ -662,19 +711,19 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     MachineInstrBuilder OffsetMIB;
     if (UseMovt) {
       OffsetMIB = BuildMI(MBB, *MIB, MIB->getDebugLoc(),
-                          TII.get(ARM::MOVi32imm), Offset);
+                          TII.get(Opcodes.MOVi32imm), Offset);
       OffsetMIB.addGlobalAddress(GV, /*Offset*/ 0, ARMII::MO_SBREL);
     } else {
       // Load the offset from the constant pool.
-      OffsetMIB =
-          BuildMI(MBB, *MIB, MIB->getDebugLoc(), TII.get(ARM::LDRi12), Offset);
+      OffsetMIB = BuildMI(MBB, *MIB, MIB->getDebugLoc(),
+                          TII.get(Opcodes.ConstPoolLoad), Offset);
       addOpsForConstantPoolLoad(OffsetMIB, GV, /*IsSBREL*/ true);
     }
     if (!constrainSelectedInstRegOperands(*OffsetMIB, TII, TRI, RBI))
       return false;
 
     // Add the offset to the SB register.
-    MIB->setDesc(TII.get(ARM::ADDrr));
+    MIB->setDesc(TII.get(Opcodes.ADDrr));
     MIB->RemoveOperand(1);
     MIB.addReg(ARM::R9) // FIXME: don't hardcode R9
         .addReg(Offset)
@@ -686,18 +735,18 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
 
   if (STI.isTargetELF()) {
     if (UseMovt) {
-      MIB->setDesc(TII.get(ARM::MOVi32imm));
+      MIB->setDesc(TII.get(Opcodes.MOVi32imm));
     } else {
       // Load the global's address from the constant pool.
-      MIB->setDesc(TII.get(ARM::LDRi12));
+      MIB->setDesc(TII.get(Opcodes.ConstPoolLoad));
       MIB->RemoveOperand(1);
       addOpsForConstantPoolLoad(MIB, GV, /*IsSBREL*/ false);
     }
   } else if (STI.isTargetMachO()) {
     if (UseMovt)
-      MIB->setDesc(TII.get(ARM::MOVi32imm));
+      MIB->setDesc(TII.get(Opcodes.MOVi32imm));
     else
-      MIB->setDesc(TII.get(ARM::LDRLIT_ga_abs));
+      MIB->setDesc(TII.get(Opcodes.LDRLIT_ga_abs));
   } else {
     LLVM_DEBUG(dbgs() << "Object format not supported yet\n");
     return false;

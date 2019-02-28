@@ -41777,6 +41777,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                       ArrayRef<SDValue> Ops, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI,
                                       const X86Subtarget &Subtarget) {
+  assert(Subtarget.hasAVX() && "AVX assumed for concat_vectors");
+
   if (llvm::all_of(Ops, [](SDValue Op) { return Op.isUndef(); }))
     return DAG.getUNDEF(VT);
 
@@ -41811,8 +41813,16 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         Op0.getOpcode() == X86ISD::SUBV_BROADCAST)
       return DAG.getNode(Op0.getOpcode(), DL, VT, Op0.getOperand(0));
 
+    // concat_vectors(movddup(x),movddup(x)) -> broadcast(x)
+    if (Op0.getOpcode() == X86ISD::MOVDDUP && VT == MVT::v4f64 &&
+        (Subtarget.hasAVX2() || MayFoldLoad(Op0.getOperand(0))))
+      return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
+                         DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f64,
+                                     Op0.getOperand(0),
+                                     DAG.getIntPtrConstant(0, DL)));
+
     // concat_vectors(scalar_to_vector(x),scalar_to_vector(x)) -> broadcast(x)
-    if (Op0.getOpcode() == ISD::SCALAR_TO_VECTOR && Subtarget.hasAVX() &&
+    if (Op0.getOpcode() == ISD::SCALAR_TO_VECTOR &&
         (Subtarget.hasAVX2() ||
          (VT.getScalarSizeInBits() >= 32 && MayFoldLoad(Op0.getOperand(0)))) &&
         Op0.getOperand(0).getValueType() == VT.getScalarType())

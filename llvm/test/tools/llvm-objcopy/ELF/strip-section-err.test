@@ -3,7 +3,7 @@
 
 # RUN: yaml2obj %s > %t1
 # RUN: not llvm-objcopy -R .data %t1 2>&1 | FileCheck %s
-# CHECK: error: Section .data cannot be removed because of symbol 'foo' used by the relocation patching offset 0x1 from section .rela.text.
+# CHECK: error: Section .data can't be removed: (.text+0x1) has relocation against symbol 'foo'
 
 ## Check the behavior when we also remove the relocation section.
 ## We have no reference in this case and hence no error should be emitted.

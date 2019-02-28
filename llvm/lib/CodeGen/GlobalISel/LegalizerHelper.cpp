@@ -34,8 +34,10 @@ using namespace LegalizeActions;
 /// Returns the number of \p NarrowTy elements needed to reconstruct \p OrigTy,
 /// with any leftover piece as type \p LeftoverTy
 ///
-/// Returns -1 if the breakdown is not satisfiable.
-static int getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
+/// Returns -1 in the first element of the pair if the breakdown is not
+/// satisfiable.
+static std::pair<int, int>
+getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
   assert(!LeftoverTy.isValid() && "this is an out argument");
 
   unsigned Size = OrigTy.getSizeInBits();
@@ -45,18 +47,19 @@ static int getNarrowTypeBreakDown(LLT OrigTy, LLT NarrowTy, LLT &LeftoverTy) {
   assert(Size > NarrowSize);
 
   if (LeftoverSize == 0)
-    return NumParts;
+    return {NumParts, 0};
 
   if (NarrowTy.isVector()) {
     unsigned EltSize = OrigTy.getScalarSizeInBits();
     if (LeftoverSize % EltSize != 0)
-      return -1;
+      return {-1, -1};
     LeftoverTy = LLT::scalarOrVector(LeftoverSize / EltSize, EltSize);
   } else {
     LeftoverTy = LLT::scalar(LeftoverSize);
   }
 
-  return NumParts;
+  int NumLeftover = LeftoverSize / LeftoverTy.getSizeInBits();
+  return std::make_pair(NumParts, NumLeftover);
 }
 
 LegalizerHelper::LegalizerHelper(MachineFunction &MF,
@@ -1759,10 +1762,12 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
   LLT DstTy = MRI.getType(DstReg);
   LLT LeftoverTy0;
 
+  int NumParts, NumLeftover;
   // All of the operands need to have the same number of elements, so if we can
   // determine a type breakdown for the result type, we can for all of the
   // source types.
-  int NumParts = getNarrowTypeBreakDown(DstTy, NarrowTy0, LeftoverTy0);
+  std::tie(NumParts, NumLeftover)
+    = getNarrowTypeBreakDown(DstTy, NarrowTy0, LeftoverTy0);
   if (NumParts < 0)
     return UnableToLegalize;
 
@@ -2018,6 +2023,73 @@ LegalizerHelper::fewerElementsVectorSelect(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::fewerElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
+                                        LLT NarrowTy) {
+  const unsigned DstReg = MI.getOperand(0).getReg();
+  LLT PhiTy = MRI.getType(DstReg);
+  LLT LeftoverTy;
+
+  // All of the operands need to have the same number of elements, so if we can
+  // determine a type breakdown for the result type, we can for all of the
+  // source types.
+  int NumParts, NumLeftover;
+  std::tie(NumParts, NumLeftover)
+    = getNarrowTypeBreakDown(PhiTy, NarrowTy, LeftoverTy);
+  if (NumParts < 0)
+    return UnableToLegalize;
+
+  SmallVector<unsigned, 4> DstRegs, LeftoverDstRegs;
+  SmallVector<MachineInstrBuilder, 4> NewInsts;
+
+  const int TotalNumParts = NumParts + NumLeftover;
+
+  // Insert the new phis in the result block first.
+  for (int I = 0; I != TotalNumParts; ++I) {
+    LLT Ty = I < NumParts ? NarrowTy : LeftoverTy;
+    unsigned PartDstReg = MRI.createGenericVirtualRegister(Ty);
+    NewInsts.push_back(MIRBuilder.buildInstr(TargetOpcode::G_PHI)
+                       .addDef(PartDstReg));
+    if (I < NumParts)
+      DstRegs.push_back(PartDstReg);
+    else
+      LeftoverDstRegs.push_back(PartDstReg);
+  }
+
+  MachineBasicBlock *MBB = MI.getParent();
+  MIRBuilder.setInsertPt(*MBB, MBB->getFirstNonPHI());
+  insertParts(DstReg, PhiTy, NarrowTy, DstRegs, LeftoverTy, LeftoverDstRegs);
+
+  SmallVector<unsigned, 4> PartRegs, LeftoverRegs;
+
+  // Insert code to extract the incoming values in each predecessor block.
+  for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+    PartRegs.clear();
+    LeftoverRegs.clear();
+
+    unsigned SrcReg = MI.getOperand(I).getReg();
+    MachineBasicBlock &OpMBB = *MI.getOperand(I + 1).getMBB();
+    MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+
+    LLT Unused;
+    if (!extractParts(SrcReg, PhiTy, NarrowTy, Unused, PartRegs,
+                      LeftoverRegs))
+      return UnableToLegalize;
+
+    // Add the newly created operand splits to the existing instructions. The
+    // odd-sized pieces are ordered after the requested NarrowTyArg sized
+    // pieces.
+    for (int J = 0; J != TotalNumParts; ++J) {
+      MachineInstrBuilder MIB = NewInsts[J];
+      MIB.addUse(J < NumParts ? PartRegs[J] : LeftoverRegs[J - NumParts]);
+      MIB.addMBB(&OpMBB);
+    }
+  }
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
                                       LLT NarrowTy) {
   // FIXME: Don't know how to handle secondary types yet.
@@ -2038,14 +2110,17 @@ LegalizerHelper::reduceLoadStoreWidth(MachineInstr &MI, unsigned TypeIdx,
   LLT ValTy = MRI.getType(ValReg);
 
   int NumParts = -1;
+  int NumLeftover = -1;
   LLT LeftoverTy;
   SmallVector<unsigned, 8> NarrowRegs, NarrowLeftoverRegs;
   if (IsLoad) {
-    NumParts = getNarrowTypeBreakDown(ValTy, NarrowTy, LeftoverTy);
+    std::tie(NumParts, NumLeftover) = getNarrowTypeBreakDown(ValTy, NarrowTy, LeftoverTy);
   } else {
     if (extractParts(ValReg, ValTy, NarrowTy, LeftoverTy, NarrowRegs,
-                     NarrowLeftoverRegs))
+                     NarrowLeftoverRegs)) {
       NumParts = NarrowRegs.size();
+      NumLeftover = NarrowLeftoverRegs.size();
+    }
   }
 
   if (NumParts == -1)
@@ -2169,6 +2244,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
     return fewerElementsVectorCmp(MI, TypeIdx, NarrowTy);
   case G_SELECT:
     return fewerElementsVectorSelect(MI, TypeIdx, NarrowTy);
+  case G_PHI:
+    return fewerElementsVectorPhi(MI, TypeIdx, NarrowTy);
   case G_LOAD:
   case G_STORE:
     return reduceLoadStoreWidth(MI, TypeIdx, NarrowTy);

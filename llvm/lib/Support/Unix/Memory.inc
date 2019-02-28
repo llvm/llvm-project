@@ -45,7 +45,7 @@ extern "C" void __clear_cache(void *, void*);
 namespace {
 
 int getPosixProtectionFlags(unsigned Flags) {
-  switch (Flags) {
+  switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {
   case llvm::sys::Memory::MF_READ:
     return PROT_READ;
   case llvm::sys::Memory::MF_WRITE:
@@ -114,6 +114,7 @@ Memory::allocateMappedMemory(size_t NumBytes,
   if (Start && Start % PageSize)
     Start += PageSize - Start % PageSize;
 
+  // FIXME: Handle huge page requests (MF_HUGE_HINT).
   void *Addr = ::mmap(reinterpret_cast<void *>(Start), NumBytes, Protect,
                       MMFlags, fd, 0);
   if (Addr == MAP_FAILED) {
@@ -127,6 +128,7 @@ Memory::allocateMappedMemory(size_t NumBytes,
   MemoryBlock Result;
   Result.Address = Addr;
   Result.Size = NumBytes;
+  Result.Flags = PFlags;
 
   // Rely on protectMappedMemory to invalidate instruction cache.
   if (PFlags & MF_EXEC) {
