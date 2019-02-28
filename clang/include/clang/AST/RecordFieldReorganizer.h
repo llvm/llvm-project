@@ -41,17 +41,14 @@ class Randstruct : public RecordFieldReorganizer {
 private:
   std::seed_seq Seq;
   std::default_random_engine rng;
-
 public:
   Randstruct(std::string seed) : Seq(seed.begin(), seed.end()), rng(Seq) {}
-  /// Determines if the Record can be safely and easily randomized based on
-  /// certain criteria (see implementation).
+/// Determines if the Record can be safely and easily randomized based on certain criteria (see implementation).
   static bool isTriviallyRandomizable(const RecordDecl *D);
-
 protected:
   SmallVector<Decl *, 64> randomize(SmallVector<Decl *, 64> fields);
   SmallVector<Decl *, 64> perfrandomize(const ASTContext &ctx,
-                                        SmallVector<Decl *, 64> fields);
+                                      SmallVector<Decl *, 64> fields);
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
                           SmallVector<Decl *, 64> &NewOrder) override;
 };
