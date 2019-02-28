@@ -53,8 +53,8 @@ int main() {
 
   std::basic_string<MyArcaneChar> as;
   as = 6;
-// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: an integer is interpreted as a chara
-// CHECK-FIXES: {{^}}  as = 6;{{$}}
+  as = static_cast<MyArcaneChar>(6);
+  as = 'a';
 
   s += toupper(x);
   s += tolower(x);

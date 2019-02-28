@@ -26,7 +26,8 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
                 hasOverloadedOperatorName("+=")),
           callee(cxxMethodDecl(ofClass(classTemplateSpecializationDecl(
               hasName("::std::basic_string"),
-              hasTemplateArgument(0, refersToType(qualType().bind("type"))))))),
+              hasTemplateArgument(0, refersToType(hasCanonicalType(
+                                         qualType().bind("type")))))))),
           hasArgument(
               1,
               ignoringImpCasts(
@@ -34,7 +35,11 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
                        // Ignore calls to tolower/toupper (see PR27723).
                        unless(callExpr(callee(functionDecl(
                            hasAnyName("tolower", "std::tolower", "toupper",
-                                      "std::toupper"))))))
+                                      "std::toupper"))))),
+                       // Do not warn if assigning e.g. `CodePoint` to
+                       // `basic_string<CodePoint>`
+                       unless(hasType(qualType(
+                           hasCanonicalType(equalsBoundNode("type"))))))
                       .bind("expr"))),
           unless(isInTemplateInstantiation())),
       this);
