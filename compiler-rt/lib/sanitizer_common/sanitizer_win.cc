@@ -1080,7 +1080,7 @@ u32 GetNumberOfCPUs() {
   return sysinfo.dwNumberOfProcessors;
 }
 
-// TODO: Rename this project-wide to PlatformLogInit
+// TODO(mcgov): Rename this project-wide to PlatformLogInit
 void AndroidLogInit(void) {
   HRESULT hr = TraceLoggingRegister(g_asan_provider);
   if (!SUCCEEDED(hr))

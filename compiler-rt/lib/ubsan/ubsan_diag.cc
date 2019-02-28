@@ -28,7 +28,7 @@ using namespace __ubsan;
 
 // Weak linkage: UBSan is combined with runtimes that already provide this
 // functionality (e.g., ASan) as well as runtimes that lack it (e.g., scudo).
-SANITIZER_WEAK_ATTRIBUTE
+SANITIZER_WEAK_CXX_DEFAULT_IMPL
 void __sanitizer::GetStackTrace(BufferedStackTrace *stack, uptr max_depth,
                                 uptr pc, uptr bp, void *context, bool fast) {
   uptr top = 0;

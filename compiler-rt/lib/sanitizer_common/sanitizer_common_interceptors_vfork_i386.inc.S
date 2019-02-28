@@ -13,8 +13,12 @@ ASM_WRAPPER_NAME(vfork):
         mov     %ecx, (%eax)
         add     $16, %esp
 
-
-        call    *_ZN14__interception10real_vforkE
+        call    .L0$pb
+.L0$pb:
+        pop     %eax
+.Ltmp0:
+        add     $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %eax
+        call    *_ZN14__interception10real_vforkE@GOTOFF(%eax)
 
         // Restore return address from the spill area.
         sub     $16, %esp
