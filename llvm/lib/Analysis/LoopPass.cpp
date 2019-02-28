@@ -383,13 +383,17 @@ void LoopPass::assignPassManager(PMStack &PMS,
   LPPM->add(this);
 }
 
+static std::string getDescription(const Loop &L) {
+  return "loop";
+}
+
 bool LoopPass::skipLoop(const Loop *L) const {
   const Function *F = L->getHeader()->getParent();
   if (!F)
     return false;
   // Check the opt bisect limit.
-  LLVMContext &Context = F->getContext();
-  if (!Context.getOptPassGate().shouldRunPass(this, *L))
+  OptPassGate &Gate = F->getContext().getOptPassGate();
+  if (Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(*L)))
     return true;
   // Check for the OptimizeNone attribute.
   if (F->hasFnAttribute(Attribute::OptimizeNone)) {

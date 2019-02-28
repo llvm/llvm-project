@@ -1385,7 +1385,10 @@ class AtomicSDNode : public MemSDNode {
 public:
   AtomicSDNode(unsigned Opc, unsigned Order, const DebugLoc &dl, SDVTList VTL,
                EVT MemVT, MachineMemOperand *MMO)
-      : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {}
+    : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
+    assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
+            MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
+  }
 
   const SDValue &getBasePtr() const { return getOperand(1); }
   const SDValue &getVal() const { return getOperand(2); }
@@ -2138,6 +2141,8 @@ public:
       : MemSDNode(NodeTy, Order, dl, VTs, MemVT, MMO) {
     LSBaseSDNodeBits.AddressingMode = AM;
     assert(getAddressingMode() == AM && "Value truncated");
+    assert((!MMO->isAtomic() || MMO->isVolatile()) &&
+           "use an AtomicSDNode instead for non-volatile atomics");
   }
 
   const SDValue &getOffset() const {

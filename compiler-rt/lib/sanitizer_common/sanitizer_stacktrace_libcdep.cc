@@ -57,6 +57,8 @@ void StackTrace::Print() const {
 void BufferedStackTrace::Unwind(u32 max_depth, uptr pc, uptr bp, void *context,
                                 uptr stack_top, uptr stack_bottom,
                                 bool request_fast_unwind) {
+  // Ensures all call sites get what they requested.
+  CHECK_EQ(request_fast_unwind, WillUseFastUnwind(request_fast_unwind));
   top_frame_bp = (max_depth > 0) ? bp : 0;
   // Avoid doing any work for small max_depth.
   if (max_depth == 0) {

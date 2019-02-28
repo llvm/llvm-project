@@ -17,6 +17,7 @@ add_clang_library(clangTidyAbseilModule
   RedundantStrcatCallsCheck.cpp
   StrCatAppendCheck.cpp
   StringFindStartswithCheck.cpp
+  TimeSubtractionCheck.cpp
   UpgradeDurationConversionsCheck.cpp
 
   LINK_LIBS

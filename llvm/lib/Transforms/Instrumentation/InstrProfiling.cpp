@@ -743,30 +743,23 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
 
   // Move the name variable to the right section. Place them in a COMDAT group
   // if the associated function is a COMDAT. This will make sure that only one
-  // copy of counters of the COMDAT function will be emitted after linking.
+  // copy of counters of the COMDAT function will be emitted after linking. Keep
+  // in mind that this pass may run before the inliner, so we need to create a
+  // new comdat group for the counters and profiling data. If we use the comdat
+  // of the parent function, that will result in relocations against discarded
+  // sections.
   Comdat *Cmdt = nullptr;
   GlobalValue::LinkageTypes CounterLinkage = Linkage;
   if (needsComdatForCounter(*Fn, *M)) {
+    StringRef CmdtPrefix = getInstrProfComdatPrefix();
     if (TT.isOSBinFormatCOFF()) {
-      // There are two cases that need a comdat on COFF:
-      // 1. Functions that already have comdats (standard case)
-      // 2. available_externally functions (dllimport and C99 inline)
-      // In the first case, put all the data in the original function comdat. In
-      // the second case, create a new comdat group using the counter as the
-      // leader. It's linkage must be external, so use linkonce_odr linkage in
-      // that case.
-      if (Comdat *C = Fn->getComdat()) {
-        Cmdt = C;
-      } else {
-        Cmdt = M->getOrInsertComdat(
-            getVarName(Inc, getInstrProfCountersVarPrefix()));
-        CounterLinkage = GlobalValue::LinkOnceODRLinkage;
-      }
-    } else {
-      // For other platforms that use comdats (ELF), make a new comdat group for
-      // all the profile data. It will be deduplicated within the current DSO.
-      Cmdt = M->getOrInsertComdat(getVarName(Inc, getInstrProfComdatPrefix()));
+      // For COFF, the comdat group name must be the name of a symbol in the
+      // group. Use the counter variable name, and upgrade its linkage to
+      // something externally visible, like linkonce_odr.
+      CmdtPrefix = getInstrProfCountersVarPrefix();
+      CounterLinkage = GlobalValue::LinkOnceODRLinkage;
     }
+    Cmdt = M->getOrInsertComdat(getVarName(Inc, CmdtPrefix));
   }
 
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();

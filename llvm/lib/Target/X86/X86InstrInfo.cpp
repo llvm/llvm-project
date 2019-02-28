@@ -2818,7 +2818,7 @@ canInsertSelect(const MachineBasicBlock &MBB,
   if (Cond.size() != 1)
     return false;
   // We cannot do the composite conditions, at least not in SSA form.
-  if ((X86::CondCode)Cond[0].getImm() > X86::COND_S)
+  if ((X86::CondCode)Cond[0].getImm() > X86::LAST_VALID_COND)
     return false;
 
   // Check register classes.

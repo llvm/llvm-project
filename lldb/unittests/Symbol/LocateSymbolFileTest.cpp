@@ -11,7 +11,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "lldb/Host/Symbols.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 
 using namespace lldb_private;
 

@@ -4008,6 +4008,13 @@ public:
   bool doesNotEscape() const { return BlockDeclBits.DoesNotEscape; }
   void setDoesNotEscape(bool B = true) { BlockDeclBits.DoesNotEscape = B; }
 
+  bool canAvoidCopyToHeap() const {
+    return BlockDeclBits.CanAvoidCopyToHeap;
+  }
+  void setCanAvoidCopyToHeap(bool B = true) {
+    BlockDeclBits.CanAvoidCopyToHeap = B;
+  }
+
   bool capturesVariable(const VarDecl *var) const;
 
   void setCaptures(ASTContext &Context, ArrayRef<Capture> Captures,

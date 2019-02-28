@@ -227,6 +227,11 @@ INTERCEPTOR(int, pthread_create, void *th, void *attr,
 }
 #endif
 
+#if HWASAN_WITH_INTERCEPTORS
+DEFINE_REAL(int, vfork);
+DECLARE_EXTERN_INTERCEPTOR_AND_WRAPPER(int, vfork);
+#endif
+
 static void BeforeFork() {
   StackDepotLockAll();
 }
@@ -266,9 +271,12 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(fork);
 
 #if HWASAN_WITH_INTERCEPTORS
+#if defined(__linux__)
+  INTERCEPT_FUNCTION(vfork);
+#endif  // __linux__
 #if !defined(__aarch64__)
   INTERCEPT_FUNCTION(pthread_create);
-#endif
+#endif  // __aarch64__
   INTERCEPT_FUNCTION(realloc);
   INTERCEPT_FUNCTION(free);
 #endif

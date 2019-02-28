@@ -71,6 +71,11 @@ bool IsFile(const std::string &Path) {
   return IsFile(Path, Att);
 }
 
+static bool IsDir(DWORD FileAttrs) {
+  if (FileAttrs == INVALID_FILE_ATTRIBUTES) return false;
+  return FileAttrs & FILE_ATTRIBUTE_DIRECTORY;
+}
+
 std::string Basename(const std::string &Path) {
   size_t Pos = Path.find_last_of("/\\");
   if (Pos == std::string::npos) return Path;
@@ -81,8 +86,10 @@ std::string Basename(const std::string &Path) {
 size_t FileSize(const std::string &Path) {
   WIN32_FILE_ATTRIBUTE_DATA attr;
   if (!GetFileAttributesExA(Path.c_str(), GetFileExInfoStandard, &attr)) {
-    Printf("GetFileAttributesExA() failed for \"%s\" (Error code: %lu).\n",
-           Path.c_str(), GetLastError());
+    DWORD LastError = GetLastError();
+    if (LastError != ERROR_FILE_NOT_FOUND)
+      Printf("GetFileAttributesExA() failed for \"%s\" (Error code: %lu).\n",
+             Path.c_str(), LastError);
     return 0;
   }
   ULARGE_INTEGER size;
@@ -145,8 +152,51 @@ void IterateDirRecursive(const std::string &Dir,
                          void (*DirPreCallback)(const std::string &Dir),
                          void (*DirPostCallback)(const std::string &Dir),
                          void (*FileCallback)(const std::string &Dir)) {
-  // Unimplemented.
-  // TODO: implement, and then implement ListFilesInDirRecursive via this one.
+  // TODO(metzman): Implement ListFilesInDirRecursive via this function.
+  DirPreCallback(Dir);
+
+  DWORD DirAttrs = GetFileAttributesA(Dir.c_str());
+  if (!IsDir(DirAttrs)) return;
+
+  std::string TargetDir(Dir);
+  assert(!TargetDir.empty());
+  if (TargetDir.back() != '\\') TargetDir.push_back('\\');
+  TargetDir.push_back('*');
+
+  WIN32_FIND_DATAA FindInfo;
+  // Find the directory's first file.
+  HANDLE FindHandle = FindFirstFileA(TargetDir.c_str(), &FindInfo);
+  if (FindHandle == INVALID_HANDLE_VALUE) {
+    DWORD LastError = GetLastError();
+    if (LastError != ERROR_FILE_NOT_FOUND) {
+      // If the directory isn't empty, then something abnormal is going on.
+      Printf("FindFirstFileA failed for %s (Error code: %lu).\n", Dir.c_str(),
+             LastError);
+    }
+    return;
+  }
+
+  do {
+    std::string Path = DirPlusFile(Dir, FindInfo.cFileName);
+    DWORD PathAttrs = FindInfo.dwFileAttributes;
+    if (IsDir(PathAttrs)) {
+      // Is Path the current directory (".") or the parent ("..")?
+      if (strcmp(FindInfo.cFileName, ".") == 0 ||
+          strcmp(FindInfo.cFileName, "..") == 0)
+        continue;
+      IterateDirRecursive(Path, DirPreCallback, DirPostCallback, FileCallback);
+    } else if (PathAttrs != INVALID_FILE_ATTRIBUTES) {
+      FileCallback(Path);
+    }
+  } while (FindNextFileA(FindHandle, &FindInfo));
+
+  DWORD LastError = GetLastError();
+  if (LastError != ERROR_NO_MORE_FILES)
+    Printf("FindNextFileA failed for %s (Error code: %lu).\n", Dir.c_str(),
+           LastError);
+
+  FindClose(FindHandle);
+  DirPostCallback(Dir);
 }
 
 char GetSeparator() {
@@ -346,11 +396,20 @@ void RawPrint(const char *Str) {
 }
 
 void MkDir(const std::string &Path) {
-  Printf("MkDir: unimplemented\n");
+  if (CreateDirectoryA(Path.c_str(), nullptr)) return;
+  Printf("CreateDirectoryA failed for %s (Error code: %lu).\n", Path.c_str(),
+         GetLastError());
 }
 
 void RmDir(const std::string &Path) {
-  Printf("RmDir: unimplemented\n");
+  if (RemoveDirectoryA(Path.c_str())) return;
+  Printf("RemoveDirectoryA failed for %s (Error code: %lu).\n", Path.c_str(),
+         GetLastError());
+}
+
+const std::string &getDevNull() {
+  static const std::string devNull = "NUL";
+  return devNull;
 }
 
 }  // namespace fuzzer
