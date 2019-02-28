@@ -1,7 +1,7 @@
 // Test that we print the dynamic type of the object contained within an
 // optional.
 
-// REQUIRES: darwin
+// REQUIRES: system-darwin
 
 // RUN: %lldb --repl < %s 2>&1 | FileCheck %s
 

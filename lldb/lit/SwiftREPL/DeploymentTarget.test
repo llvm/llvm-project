@@ -1,5 +1,5 @@
 // Test that the REPL can call a *really* new function.
-// REQUIRES: darwin
+// REQUIRES: system-darwin
 
 // RUN: echo -n "@available(macOS " >%t.swift
 // RUN: python -c 'from __future__ import print_function; import platform; print(platform.mac_ver()[0],end="")' >>%t.swift
