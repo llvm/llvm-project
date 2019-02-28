@@ -255,7 +255,7 @@ void Randstruct::reorganize(const ASTContext &C, const RecordDecl *D,
 }
 bool Randstruct::isTriviallyRandomizable(const RecordDecl *D) {
   for (auto f : D->fields()){
-    //If an element of the structure does not have a 
+    //If an element of the structure does not have a
     //function type is not a function pointer
     if(f->getFunctionType() == nullptr){ return false; }
   }

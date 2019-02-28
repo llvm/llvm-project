@@ -37,7 +37,7 @@ private:
 };
 
 class Randstruct : public RecordFieldReorganizer {
-public:  
+public:
 /// Determines if the Record can be safely and easily randomized based on certain criteria (see implementation).
   static bool isTriviallyRandomizable(const RecordDecl *D);
 protected:
