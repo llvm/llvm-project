@@ -91,7 +91,7 @@ def main(builtin_params={}):
 
     executed_tests = [t for t in filtered_tests if t.result]
 
-    print_summary(executed_tests, elapsed, opts)
+    print_results(executed_tests, elapsed, opts)
 
     if opts.output_path:
         #TODO(yln): pass in discovered_tests
@@ -239,35 +239,35 @@ def execute_in_tmp_dir(run, lit_config):
                 lit_config.warning("Failed to delete temp directory '%s'" % tmp_dir)
 
 
-def print_summary(tests, elapsed, opts):
-    # Status code, summary label, group label
-    groups = [
-        # Successes
-        (lit.Test.UNSUPPORTED, 'Unsupported Tests  ', 'Unsupported'),
-        (lit.Test.PASS,        'Expected Passes    ', ''),
-        (lit.Test.FLAKYPASS,   'Passes With Retry  ', ''),
-        (lit.Test.XFAIL,       'Expected Failures  ', 'Expected Failing'),
-        # Failures
-        (lit.Test.UNRESOLVED,  'Unresolved Tests   ', 'Unresolved'),
-        (lit.Test.TIMEOUT,     'Individual Timeouts', 'Timed Out'),
-        (lit.Test.FAIL,        'Unexpected Failures', 'Failing'),
-        (lit.Test.XPASS,       'Unexpected Passes  ', 'Unexpected Passing')]
+# Status code, summary label, group label
+failure_codes = [
+    (lit.Test.UNRESOLVED,  'Unresolved Tests',    'Unresolved'),
+    (lit.Test.TIMEOUT,     'Individual Timeouts', 'Timed Out'),
+    (lit.Test.FAIL,        'Unexpected Failures', 'Failing'),
+    (lit.Test.XPASS,       'Unexpected Passes',   'Unexpected Passing')
+]
 
-    by_code = {code: [] for (code, _, _) in groups}
+all_codes = [
+    (lit.Test.UNSUPPORTED, 'Unsupported Tests', 'Unsupported'),
+    (lit.Test.PASS,        'Expected Passes',   ''),
+    (lit.Test.FLAKYPASS,   'Passes With Retry', ''),
+    (lit.Test.XFAIL,       'Expected Failures', 'Expected Failing'),
+] + failure_codes
+
+
+def print_results(tests, elapsed, opts):
+    tests_by_code = {code: [] for (code, _, _) in all_codes}
     for test in tests:
-        by_code[test.result.code].append(test)
+        tests_by_code[test.result.code].append(test)
 
-    for (code, _, group_label) in groups:
-        print_group(code, group_label, by_code[code], opts)
+    for (code, _, group_label) in all_codes:
+        print_group(code, group_label, tests_by_code[code], opts)
 
     if opts.timeTests and tests:
         test_times = [(t.getFullName(), t.result.elapsed) for t in tests]
         lit.util.printHistogram(test_times, title='Tests')
 
-    if not opts.quiet:
-        print('\nTesting Time: %.2fs' % elapsed)
-    for (code, summary_label, _) in groups:
-        print_group_summary(code, summary_label, by_code[code], opts.quiet)
+    print_summary(tests_by_code, opts.quiet, elapsed)
 
 
 def print_group(code, label, tests, opts):
@@ -286,10 +286,23 @@ def print_group(code, label, tests, opts):
     sys.stdout.write('\n')
 
 
-def print_group_summary(code, label, tests, quiet):
-    count = len(tests)
-    if count and (code.isFailure or not quiet):
-        print('  %s: %d' % (label, count))
+def print_summary(tests_by_code, quiet, elapsed):
+    if not quiet:
+        print('\nTesting Time: %.2fs' % elapsed)
+
+    codes = failure_codes if quiet else all_codes
+    groups = [(label, len(tests_by_code[code])) for code, label, _ in codes]
+    groups = [(label, count) for label, count in groups if count]
+    if not groups:
+        return
+
+    max_label_len = max(len(label) for label, _ in groups)
+    max_count_len = max(len(str(count)) for _, count in groups)
+
+    for (label, count) in groups:
+        label = label.ljust(max_label_len)
+        count = str(count).rjust(max_count_len)
+        print('  %s: %s' % (label, count))
 
 
 def write_test_results(tests, lit_config, elapsed, output_path):
