@@ -56,6 +56,7 @@ void L(int i, int j) {
   static const int Invalid1 = 1;
   static const int Invalid2 = 42;
   static const int Invalid3 = 0;
+  static const long long Invalid4 = 0x1000000ff;
   static const int Valid1 = 0xff;
   static const int Valid2 = 0xffff;
   static const int Valid3 = 0xffffffff;
@@ -71,6 +72,9 @@ void L(int i, int j) {
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "L"(Invalid3)); // expected-error{{value '0' out of range for constraint 'L'}}
+  __asm__("xorl %0,%2"
+          : "=r"(i)
+          : "0"(i), "L"(Invalid4)); // expected-error{{value '4294967551' out of range for constraint 'L'}}
   __asm__("xorl %0,%2"
           : "=r"(i)
           : "0"(i), "L"(Valid1)); // expected-no-error
