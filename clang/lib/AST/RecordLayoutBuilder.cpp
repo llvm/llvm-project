@@ -2996,7 +2996,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
       getDiagnostics().Report(D->getLocation(), diag::warn_randomize_attr_union);
     }
     else {
-      Randstruct randstruct;
+      Randstruct randstruct(RandstructSeed);
       randstruct.reorganizeFields(*this,D);
     }
   }
