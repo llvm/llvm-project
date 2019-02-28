@@ -1128,12 +1128,9 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
       Q.DL.getTypeSizeInBits(ScalarTy);
 
     assert(SrcBitWidth && "SrcBitWidth can't be zero");
-    Known = Known.zextOrTrunc(SrcBitWidth);
+    Known = Known.zextOrTrunc(SrcBitWidth, false);
     computeKnownBits(I->getOperand(0), Known, Depth + 1, Q);
-    Known = Known.zextOrTrunc(BitWidth);
-    // Any top bits are known to be zero.
-    if (BitWidth > SrcBitWidth)
-      Known.Zero.setBitsFrom(SrcBitWidth);
+    Known = Known.zextOrTrunc(BitWidth, true /* ExtendedBitsAreKnownZero */);
     break;
   }
   case Instruction::BitCast: {
@@ -4044,21 +4041,17 @@ OverflowResult llvm::computeOverflowForUnsignedAdd(
     bool UseInstrInfo) {
   KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT,
                                         nullptr, UseInstrInfo);
-  if (LHSKnown.isNonNegative() || LHSKnown.isNegative()) {
-    KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT,
-                                          nullptr, UseInstrInfo);
+  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT,
+                                        nullptr, UseInstrInfo);
 
-    if (LHSKnown.isNegative() && RHSKnown.isNegative()) {
-      // The sign bit is set in both cases: this MUST overflow.
-      return OverflowResult::AlwaysOverflows;
-    }
-
-    if (LHSKnown.isNonNegative() && RHSKnown.isNonNegative()) {
-      // The sign bit is clear in both cases: this CANNOT overflow.
-      return OverflowResult::NeverOverflows;
-    }
-  }
-
+  // a + b overflows iff a > ~b. Determine whether this is never/always true
+  // based on the min/max values achievable under the known bits constraint.
+  APInt MinLHS = LHSKnown.One, MaxLHS = ~LHSKnown.Zero;
+  APInt MinInvRHS = RHSKnown.Zero, MaxInvRHS = ~RHSKnown.One;
+  if (MaxLHS.ule(MinInvRHS))
+    return OverflowResult::NeverOverflows;
+  if (MinLHS.ugt(MaxInvRHS))
+    return OverflowResult::AlwaysOverflows;
   return OverflowResult::MayOverflow;
 }
 

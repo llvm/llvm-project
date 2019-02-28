@@ -732,14 +732,15 @@ void PrintCurrentStackSlow(uptr pc) {
   uptr bp = 0;
   uptr top = 0;
   uptr bottom = 0;
-  if (__sanitizer::StackTrace::WillUseFastUnwind(false)) {
-    bp = GET_CURRENT_FRAME();
-    __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
-  }
   BufferedStackTrace *ptrace =
       new(internal_alloc(MBlockStackTrace, sizeof(BufferedStackTrace)))
           BufferedStackTrace();
-  ptrace->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, false);
+  if (__sanitizer::StackTrace::WillUseFastUnwind(false)) {
+    bp = GET_CURRENT_FRAME();
+    __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
+    ptrace->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, true);
+  } else
+    ptrace->Unwind(kStackTraceMax, pc, 0, nullptr, 0, 0, false);
   for (uptr i = 0; i < ptrace->size / 2; i++) {
     uptr tmp = ptrace->trace_buffer[i];
     ptrace->trace_buffer[i] = ptrace->trace_buffer[ptrace->size - i - 1];

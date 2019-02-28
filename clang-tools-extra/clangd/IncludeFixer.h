@@ -12,6 +12,7 @@
 #include "Diagnostics.h"
 #include "Headers.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"

@@ -85,12 +85,23 @@ Improvements to clang-tidy
   Finds and fixes cases where ``absl::Duration`` values are being converted to
   numeric types and back again.
 
+- New :doc:`abseil-time-subtraction
+  <clang-tidy/checks/abseil-time-subtraction>` check.
+
+  Finds and fixes ``absl::Time`` subtraction expressions to do subtraction
+  in the Time domain instead of the numeric domain.
+
 - New :doc:`google-readability-avoid-underscore-in-googletest-name
   <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
   check.
 
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
+
+- New alias :doc:`cppcoreguidelines-explicit-virtual-functions
+  <clang-tidy/checks/cppcoreguidelines-explicit-virtual-functions>` to
+  :doc:`modernize-use-override
+  <clang-tidy/checks/modernize-use-override>` was added.
 
 - The :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone-argument-comment>` now supports

@@ -107,7 +107,7 @@ define i16 @ripple_nsw1(i16 %x, i16 %y) {
 ; CHECK-LABEL: @ripple_nsw1(
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[B:%.*]] = and i16 [[X:%.*]], -16385
-; CHECK-NEXT:    [[C:%.*]] = add nsw i16 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i16 [[A]], [[B]]
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = and i16 %y, 1
@@ -121,7 +121,7 @@ define i16 @ripple_nsw2(i16 %x, i16 %y) {
 ; CHECK-LABEL: @ripple_nsw2(
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[B:%.*]] = and i16 [[X:%.*]], -16385
-; CHECK-NEXT:    [[C:%.*]] = add nsw i16 [[B]], [[A]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = and i16 %y, 1
@@ -134,7 +134,7 @@ define i16 @ripple_nsw3(i16 %x, i16 %y) {
 ; CHECK-LABEL: @ripple_nsw3(
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[Y:%.*]], -21845
 ; CHECK-NEXT:    [[B:%.*]] = and i16 [[X:%.*]], 21843
-; CHECK-NEXT:    [[C:%.*]] = add nsw i16 [[A]], [[B]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i16 [[A]], [[B]]
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = and i16 %y, 43691
@@ -148,7 +148,7 @@ define i16 @ripple_nsw4(i16 %x, i16 %y) {
 ; CHECK-LABEL: @ripple_nsw4(
 ; CHECK-NEXT:    [[A:%.*]] = and i16 [[Y:%.*]], -21845
 ; CHECK-NEXT:    [[B:%.*]] = and i16 [[X:%.*]], 21843
-; CHECK-NEXT:    [[C:%.*]] = add nsw i16 [[B]], [[A]]
+; CHECK-NEXT:    [[C:%.*]] = add nuw nsw i16 [[B]], [[A]]
 ; CHECK-NEXT:    ret i16 [[C]]
 ;
   %a = and i16 %y, 43691

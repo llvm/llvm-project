@@ -22,7 +22,7 @@
 namespace {
 
 DWORD getWindowsProtectionFlags(unsigned Flags) {
-  switch (Flags) {
+  switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {
   // Contrary to what you might expect, the Windows page protection flags
   // are not a bitwise combination of RWX values
   case llvm::sys::Memory::MF_READ:
@@ -47,6 +47,9 @@ DWORD getWindowsProtectionFlags(unsigned Flags) {
   return PAGE_NOACCESS;
 }
 
+// While we'd be happy to allocate single pages, the Windows allocation
+// granularity may be larger than a single page (in practice, it is 64K)
+// so mapping less than that will create an unreachable fragment of memory.
 size_t getAllocationGranularity() {
   SYSTEM_INFO  Info;
   ::GetSystemInfo(&Info);
@@ -54,6 +57,38 @@ size_t getAllocationGranularity() {
     return Info.dwPageSize;
   else
     return Info.dwAllocationGranularity;
+}
+
+// Large/huge memory pages need explicit process permissions in order to be
+// used. See https://blogs.msdn.microsoft.com/oldnewthing/20110128-00/?p=11643
+// Also large pages need to be manually enabled on your OS. If all this is
+// sucessfull, we return the minimal large memory page size.
+static size_t enableProcessLargePages() {
+  HANDLE Token = 0;
+  size_t LargePageMin = GetLargePageMinimum();
+  if (LargePageMin)
+    OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY,
+                     &Token);
+  if (!Token)
+    return 0;
+  LUID Luid;
+  if (!LookupPrivilegeValue(0, SE_LOCK_MEMORY_NAME, &Luid)) {
+    CloseHandle(Token);
+    return 0;
+  }
+  TOKEN_PRIVILEGES TP{};
+  TP.PrivilegeCount = 1;
+  TP.Privileges[0].Luid = Luid;
+  TP.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+  if (!AdjustTokenPrivileges(Token, FALSE, &TP, 0, 0, 0)) {
+    CloseHandle(Token);
+    return 0;
+  }
+  DWORD E = GetLastError();
+  CloseHandle(Token);
+  if (E == ERROR_SUCCESS)
+    return LargePageMin;
+  return 0;
 }
 
 } // namespace
@@ -74,19 +109,20 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   if (NumBytes == 0)
     return MemoryBlock();
 
-  // While we'd be happy to allocate single pages, the Windows allocation
-  // granularity may be larger than a single page (in practice, it is 64K)
-  // so mapping less than that will create an unreachable fragment of memory.
-  // Avoid using one-time initialization of static locals here, since they
-  // aren't thread safe with MSVC.
-  static volatile size_t GranularityCached;
-  size_t Granularity = GranularityCached;
-  if (Granularity == 0) {
-    Granularity = getAllocationGranularity();
-    GranularityCached = Granularity;
+  static size_t DefaultGranularity = getAllocationGranularity();
+  static size_t LargePageGranularity = enableProcessLargePages();
+
+  DWORD AllocType = MEM_RESERVE | MEM_COMMIT;
+  bool HugePages = false;
+  size_t Granularity = DefaultGranularity;
+
+  if ((Flags & MF_HUGE_HINT) && LargePageGranularity > 0) {
+    AllocType |= MEM_LARGE_PAGES;
+    HugePages = true;
+    Granularity = LargePageGranularity;
   }
 
-  const size_t NumBlocks = (NumBytes+Granularity-1)/Granularity;
+  size_t NumBlocks = (NumBytes + Granularity - 1) / Granularity;
 
   uintptr_t Start = NearBlock ? reinterpret_cast<uintptr_t>(NearBlock->base()) +
                                 NearBlock->size()
@@ -99,13 +135,12 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
 
   DWORD Protect = getWindowsProtectionFlags(Flags);
 
-  void *PA = ::VirtualAlloc(reinterpret_cast<void*>(Start),
-                            NumBlocks*Granularity,
-                            MEM_RESERVE | MEM_COMMIT, Protect);
+  void *PA = ::VirtualAlloc(reinterpret_cast<void *>(Start),
+                            NumBlocks * Granularity, AllocType, Protect);
   if (PA == NULL) {
-    if (NearBlock) {
-      // Try again without the NearBlock hint
-      return allocateMappedMemory(NumBytes, NULL, Flags, EC);
+    if (NearBlock || HugePages) {
+      // Try again without the NearBlock hint and without large memory pages
+      return allocateMappedMemory(NumBytes, NULL, Flags & ~MF_HUGE_HINT, EC);
     }
     EC = mapWindowsError(::GetLastError());
     return MemoryBlock();
@@ -114,6 +149,7 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   MemoryBlock Result;
   Result.Address = PA;
   Result.Size = NumBlocks*Granularity;
+  Result.Flags = (Flags & ~MF_HUGE_HINT) | (HugePages ? MF_HUGE_HINT : 0);
 
   if (Flags & MF_EXEC)
     Memory::InvalidateInstructionCache(Result.Address, Result.Size);

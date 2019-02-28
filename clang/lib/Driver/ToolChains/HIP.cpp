@@ -162,7 +162,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
   // AMDGPUPromoteAlloca pass which cause invalid memory access in PyTorch.
   // Remove this once the issue is fixed.
   ArgStringList LlcArgs{InputFileName, "-mtriple=amdgcn-amd-amdhsa",
-                        "-filetype=obj",
+                        "-filetype=obj", "-mattr=-code-object-v3",
                         "-disable-promote-alloca-to-lds",
                         Args.MakeArgString("-mcpu=" + SubArchName)};
 
@@ -171,7 +171,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
   handleTargetFeaturesGroup(
     Args, Features, options::OPT_m_amdgpu_Features_Group);
 
-  // Add features to mattr such as code-object-v3 and xnack
+  // Add features to mattr such as xnack
   std::string MAttrString = "-mattr=";
   for(auto OneFeature : Features) {
     MAttrString.append(Args.MakeArgString(OneFeature));

@@ -6,6 +6,7 @@ set(HWASAN_RTL_SOURCES
   hwasan_allocator.cpp
   hwasan_dynamic_shadow.cpp
   hwasan_interceptors.cpp
+  hwasan_interceptors_vfork.S
   hwasan_linux.cpp
   hwasan_memintrinsics.cpp
   hwasan_poisoning.cpp

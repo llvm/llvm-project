@@ -3,7 +3,7 @@ RUN:      '_Z3Foo"'   \
 RUN:      '_Z3Foo#'   \
 RUN:      '_Z3Foo%'   \
 RUN:      '_Z3Foo&'   \
-RUN:      "_Z3Foo'"   \
+RUN:      "\"_Z3Foo'\"" \
 RUN:      '_Z3Foo('   \
 RUN:      '_Z3Foo)'   \
 RUN:      '_Z3Foo*'   \
@@ -23,7 +23,7 @@ RUN:      '_Z3Foo\'   \
 RUN:      '_Z3Foo]'   \
 RUN:      '_Z3Foo^'   \
 RUN:      '_Z3Foo`'   \
-RUN:      '_Z3Foo{'   \
+RUN:      "\"_Z3Foo{\"" \
 RUN:      '_Z3Foo|'   \
 RUN:      '_Z3Foo}'   \
 RUN:      '_Z3Foo~,,' \

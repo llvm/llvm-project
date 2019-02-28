@@ -105,6 +105,13 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT___STRDUP 0
 #endif
 
+#if SANITIZER_LINUX && (defined(__arm__) || defined(__aarch64__) || \
+                        defined(__i386__) || defined(__x86_64__))
+# define ASAN_INTERCEPT_VFORK 1
+#else
+# define ASAN_INTERCEPT_VFORK 0
+#endif
+
 DECLARE_REAL(int, memcmp, const void *a1, const void *a2, uptr size)
 DECLARE_REAL(char*, strchr, const char *str, int c)
 DECLARE_REAL(SIZE_T, strlen, const char *s)

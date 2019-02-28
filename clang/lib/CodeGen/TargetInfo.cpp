@@ -6268,9 +6268,55 @@ private:
   static void addNVVMMetadata(llvm::Function *F, StringRef Name, int Operand);
 };
 
+/// Checks if the type is unsupported directly by the current target.
+static bool isUnsupportedType(ASTContext &Context, QualType T) {
+  if (!Context.getTargetInfo().hasFloat16Type() && T->isFloat16Type())
+    return true;
+  if (!Context.getTargetInfo().hasFloat128Type() && T->isFloat128Type())
+    return true;
+  if (!Context.getTargetInfo().hasInt128Type() && T->isIntegerType() &&
+      Context.getTypeSize(T) > 64)
+    return true;
+  if (const auto *AT = T->getAsArrayTypeUnsafe())
+    return isUnsupportedType(Context, AT->getElementType());
+  const auto *RT = T->getAs<RecordType>();
+  if (!RT)
+    return false;
+  const RecordDecl *RD = RT->getDecl();
+
+  // If this is a C++ record, check the bases first.
+  if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    for (const CXXBaseSpecifier &I : CXXRD->bases())
+      if (isUnsupportedType(Context, I.getType()))
+        return true;
+
+  for (const FieldDecl *I : RD->fields())
+    if (isUnsupportedType(Context, I->getType()))
+      return true;
+  return false;
+}
+
+/// Coerce the given type into an array with maximum allowed size of elements.
+static ABIArgInfo coerceToIntArrayWithLimit(QualType Ty, ASTContext &Context,
+                                            llvm::LLVMContext &LLVMContext,
+                                            unsigned MaxSize) {
+  // Alignment and Size are measured in bits.
+  const uint64_t Size = Context.getTypeSize(Ty);
+  const uint64_t Alignment = Context.getTypeAlign(Ty);
+  const unsigned Div = std::min<unsigned>(MaxSize, Alignment);
+  llvm::Type *IntType = llvm::Type::getIntNTy(LLVMContext, Div);
+  const uint64_t NumElements = (Size + Div - 1) / Div;
+  return ABIArgInfo::getDirect(llvm::ArrayType::get(IntType, NumElements));
+}
+
 ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
   if (RetTy->isVoidType())
     return ABIArgInfo::getIgnore();
+
+  if (getContext().getLangOpts().OpenMP &&
+      getContext().getLangOpts().OpenMPIsDevice &&
+      isUnsupportedType(getContext(), RetTy))
+    return coerceToIntArrayWithLimit(RetTy, getContext(), getVMContext(), 64);
 
   // note: this is different from default ABI
   if (!RetTy->isScalarType())

@@ -186,7 +186,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     Updates.push_back({DominatorTree::Delete, PredBB, BB});
     for (auto I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
       Updates.push_back({DominatorTree::Delete, BB, *I});
-      Updates.push_back({DominatorTree::Insert, PredBB, *I});
+      // This successor of BB may already have PredBB as a predecessor.
+      if (llvm::find(successors(PredBB), *I) == succ_end(PredBB))
+        Updates.push_back({DominatorTree::Insert, PredBB, *I});
     }
   }
 

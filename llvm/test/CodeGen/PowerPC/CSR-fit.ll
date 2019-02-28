@@ -11,49 +11,49 @@ define dso_local signext i32 @caller1(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-LABEL: caller1:
 ; CHECK-PWR8:       # %bb.0: # %entry
 ; CHECK-PWR8-NEXT:    mflr r0
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
-; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset r14, -144
 ; CHECK-PWR8-NEXT:    .cfi_offset r15, -136
-; CHECK-PWR8-NEXT:    std r14, 32(r1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    std r15, 40(r1) # 8-byte Folded Spill
+; CHECK-PWR8-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
+; CHECK-PWR8-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
+; CHECK-PWR8-NEXT:    std r0, 16(r1)
+; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
-; CHECK-PWR8-NEXT:    ld r15, 40(r1) # 8-byte Folded Reload
-; CHECK-PWR8-NEXT:    ld r14, 32(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR8-NEXT:    mtlr r0
+; CHECK-PWR8-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
+; CHECK-PWR8-NEXT:    ld r14, -144(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: caller1:
 ; CHECK-PWR9:       # %bb.0: # %entry
 ; CHECK-PWR9-NEXT:    mflr r0
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
-; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR9-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR9-NEXT:    .cfi_offset r14, -144
 ; CHECK-PWR9-NEXT:    .cfi_offset r15, -136
-; CHECK-PWR9-NEXT:    std r14, 32(r1) # 8-byte Folded Spill
-; CHECK-PWR9-NEXT:    std r15, 40(r1) # 8-byte Folded Spill
+; CHECK-PWR9-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
+; CHECK-PWR9-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
+; CHECK-PWR9-NEXT:    std r0, 16(r1)
+; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
-; CHECK-PWR9-NEXT:    ld r15, 40(r1) # 8-byte Folded Reload
-; CHECK-PWR9-NEXT:    ld r14, 32(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR9-NEXT:    mtlr r0
+; CHECK-PWR9-NEXT:    ld r15, -136(r1) # 8-byte Folded Reload
+; CHECK-PWR9-NEXT:    ld r14, -144(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    blr
 entry:
   %0 = tail call i32 asm "add $0, $1, $2", "=r,r,r,~{r14},~{r15}"(i32 %a, i32 %b)
@@ -65,49 +65,49 @@ define dso_local signext i32 @caller2(i32 signext %a, i32 signext %b) local_unna
 ; CHECK-PWR8-LABEL: caller2:
 ; CHECK-PWR8:       # %bb.0: # %entry
 ; CHECK-PWR8-NEXT:    mflr r0
-; CHECK-PWR8-NEXT:    std r0, 16(r1)
-; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR8-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-PWR8-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR8-NEXT:    .cfi_offset f14, -144
 ; CHECK-PWR8-NEXT:    .cfi_offset f15, -136
-; CHECK-PWR8-NEXT:    stfd f14, 32(r1) # 8-byte Folded Spill
-; CHECK-PWR8-NEXT:    stfd f15, 40(r1) # 8-byte Folded Spill
+; CHECK-PWR8-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
+; CHECK-PWR8-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
+; CHECK-PWR8-NEXT:    std r0, 16(r1)
+; CHECK-PWR8-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR8-NEXT:    #APP
 ; CHECK-PWR8-NEXT:    add r3, r3, r4
 ; CHECK-PWR8-NEXT:    #NO_APP
 ; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    bl callee
 ; CHECK-PWR8-NEXT:    nop
-; CHECK-PWR8-NEXT:    lfd f15, 40(r1) # 8-byte Folded Reload
-; CHECK-PWR8-NEXT:    lfd f14, 32(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    addi r1, r1, 176
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR8-NEXT:    mtlr r0
+; CHECK-PWR8-NEXT:    lfd f15, -136(r1) # 8-byte Folded Reload
+; CHECK-PWR8-NEXT:    lfd f14, -144(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    blr
 ;
 ; CHECK-PWR9-LABEL: caller2:
 ; CHECK-PWR9:       # %bb.0: # %entry
 ; CHECK-PWR9-NEXT:    mflr r0
-; CHECK-PWR9-NEXT:    std r0, 16(r1)
-; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR9-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-PWR9-NEXT:    .cfi_offset lr, 16
 ; CHECK-PWR9-NEXT:    .cfi_offset f14, -144
 ; CHECK-PWR9-NEXT:    .cfi_offset f15, -136
-; CHECK-PWR9-NEXT:    stfd f14, 32(r1) # 8-byte Folded Spill
-; CHECK-PWR9-NEXT:    stfd f15, 40(r1) # 8-byte Folded Spill
+; CHECK-PWR9-NEXT:    stfd f14, -144(r1) # 8-byte Folded Spill
+; CHECK-PWR9-NEXT:    stfd f15, -136(r1) # 8-byte Folded Spill
+; CHECK-PWR9-NEXT:    std r0, 16(r1)
+; CHECK-PWR9-NEXT:    stdu r1, -176(r1)
 ; CHECK-PWR9-NEXT:    #APP
 ; CHECK-PWR9-NEXT:    add r3, r3, r4
 ; CHECK-PWR9-NEXT:    #NO_APP
 ; CHECK-PWR9-NEXT:    extsw r3, r3
 ; CHECK-PWR9-NEXT:    bl callee
 ; CHECK-PWR9-NEXT:    nop
-; CHECK-PWR9-NEXT:    lfd f15, 40(r1) # 8-byte Folded Reload
-; CHECK-PWR9-NEXT:    lfd f14, 32(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    addi r1, r1, 176
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR9-NEXT:    mtlr r0
+; CHECK-PWR9-NEXT:    lfd f15, -136(r1) # 8-byte Folded Reload
+; CHECK-PWR9-NEXT:    lfd f14, -144(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-NEXT:    blr
 entry:
   %0 = tail call i32 asm "add $0, $1, $2", "=r,r,r,~{f14},~{f15}"(i32 %a, i32 %b)

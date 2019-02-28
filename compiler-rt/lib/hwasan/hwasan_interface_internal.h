@@ -117,6 +117,9 @@ SANITIZER_INTERFACE_ATTRIBUTE
 void __hwasan_handle_longjmp(const void *sp_dst);
 
 SANITIZER_INTERFACE_ATTRIBUTE
+void __hwasan_handle_vfork(const void *sp_dst);
+
+SANITIZER_INTERFACE_ATTRIBUTE
 u16 __sanitizer_unaligned_load16(const uu16 *p);
 
 SANITIZER_INTERFACE_ATTRIBUTE
