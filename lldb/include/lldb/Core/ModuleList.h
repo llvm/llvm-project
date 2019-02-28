@@ -81,6 +81,8 @@ public:
   bool GetUseDWARFImporter() const;
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(llvm::StringRef path);
+  SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
+  bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
   bool GetEnableExternalLookup() const;
 }; 
 

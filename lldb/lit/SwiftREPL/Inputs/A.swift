@@ -19,3 +19,8 @@ public struct MyPoint {
     return x*x + y*y
   }
 }
+
+public struct FromInterface {}
+public struct OtherType {}
+
+public let testValue = FromInterface()
