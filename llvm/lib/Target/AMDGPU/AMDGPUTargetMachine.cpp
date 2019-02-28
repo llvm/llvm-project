@@ -122,11 +122,11 @@ static cl::opt<bool, true> LateCFGStructurize(
   cl::location(AMDGPUTargetMachine::EnableLateStructurizeCFG),
   cl::Hidden);
 
-static cl::opt<bool, true> EnableAMDGPUFunctionCalls(
+static cl::opt<bool, true> EnableAMDGPUFunctionCallsOpt(
   "amdgpu-function-calls",
   cl::desc("Enable AMDGPU function call support"),
   cl::location(AMDGPUTargetMachine::EnableFunctionCalls),
-  cl::init(false),
+  cl::init(true),
   cl::Hidden);
 
 // Enable lib calls simplifications
@@ -361,11 +361,11 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
 
   bool EnableOpt = getOptLevel() > CodeGenOpt::None;
   bool Internalize = InternalizeSymbols;
-  bool EarlyInline = EarlyInlineAll && EnableOpt && !EnableAMDGPUFunctionCalls;
+  bool EarlyInline = EarlyInlineAll && EnableOpt && !EnableFunctionCalls;
   bool AMDGPUAA = EnableAMDGPUAliasAnalysis && EnableOpt;
   bool LibCallSimplify = EnableLibCallSimplify && EnableOpt;
 
-  if (EnableAMDGPUFunctionCalls) {
+  if (EnableFunctionCalls) {
     delete Builder.Inliner;
     Builder.Inliner = createAMDGPUFunctionInliningPass();
   }
@@ -426,6 +426,11 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
                                      CodeGenOpt::Level OL, bool JIT)
     : AMDGPUTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL) {
   setRequiresStructuredCFG(true);
+
+  // Override the default since calls aren't supported for r600.
+  if (EnableFunctionCalls &&
+      EnableAMDGPUFunctionCallsOpt.getNumOccurrences() == 0)
+    EnableFunctionCalls = false;
 }
 
 const R600Subtarget *R600TargetMachine::getSubtargetImpl(

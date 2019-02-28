@@ -104,9 +104,6 @@ struct SymbolizerScope {
   ~SymbolizerScope() { ExitSymbolizer(); }
 };
 
-void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
-                   void *context, bool request_fast_unwind);
-
 // Returns a "chained" origin id, pointing to the given stack trace followed by
 // the previous origin id.
 u32 ChainOrigin(u32 id, StackTrace *stack);

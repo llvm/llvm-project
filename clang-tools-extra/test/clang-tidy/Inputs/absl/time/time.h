@@ -70,6 +70,8 @@ Time FromUnixMillis(int64_t);
 Time FromUnixMicros(int64_t);
 Time FromUnixNanos(int64_t);
 
+Time Now();
+
 // Relational Operators
 constexpr bool operator<(Duration lhs, Duration rhs);
 constexpr bool operator>(Duration lhs, Duration rhs);

@@ -53,6 +53,7 @@ set(SCUDO_UNIT_TEST_SOURCES
   list_test.cc
   map_test.cc
   mutex_test.cc
+  vector_test.cc
   scudo_unit_test_main.cc)
 
 add_scudo_unittest(ScudoUnitTest

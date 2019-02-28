@@ -857,8 +857,10 @@ public:
     }
     bool isValidAsmImmediate(const llvm::APInt &Value) const {
       if (!ImmSet.empty())
-        return ImmSet.count(Value.getZExtValue()) != 0;
-      return !ImmRange.isConstrained || (Value.sge(ImmRange.Min) && Value.sle(ImmRange.Max));
+        return Value.isSignedIntN(32) &&
+               ImmSet.count(Value.getZExtValue()) != 0;
+      return !ImmRange.isConstrained ||
+             (Value.sge(ImmRange.Min) && Value.sle(ImmRange.Max));
     }
 
     void setIsReadWrite() { Flags |= CI_ReadWrite; }

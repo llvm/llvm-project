@@ -424,8 +424,15 @@ protected:
     switch (msgSend_types[inst]) {
     case eMsgSend:
     case eMsgSend_fpret:
-      target_object = call_inst->getArgOperand(0);
-      selector = call_inst->getArgOperand(1);
+      // On arm64, clang uses objc_msgSend for scalar and struct return
+      // calls.  The call instruction will record which was used.
+      if (call_inst->hasStructRetAttr()) {
+        target_object = call_inst->getArgOperand(1);
+        selector = call_inst->getArgOperand(2);
+      } else {
+        target_object = call_inst->getArgOperand(0);
+        selector = call_inst->getArgOperand(1);
+      }
       break;
     case eMsgSend_stret:
       target_object = call_inst->getArgOperand(1);

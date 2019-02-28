@@ -8289,14 +8289,21 @@ FileID ASTImporter::Import(FileID FromID) {
       // than mmap the files several times.
       const FileEntry *Entry =
           ToFileManager.getFile(Cache->OrigEntry->getName());
-      if (!Entry)
-        return {};
-      ToID = ToSM.createFileID(Entry, ToIncludeLoc,
-                               FromSLoc.getFile().getFileCharacteristic());
-    } else {
+      // FIXME: The filename may be a virtual name that does probably not
+      // point to a valid file and we get no Entry here. In this case try with
+      // the memory buffer below.
+      if (Entry)
+        ToID = ToSM.createFileID(Entry, ToIncludeLoc,
+                                 FromSLoc.getFile().getFileCharacteristic());
+    }
+    if (ToID.isInvalid()) {
       // FIXME: We want to re-use the existing MemoryBuffer!
-      const llvm::MemoryBuffer *FromBuf =
-          Cache->getBuffer(FromContext.getDiagnostics(), FromSM);
+      bool Invalid = true;
+      const llvm::MemoryBuffer *FromBuf = Cache->getBuffer(
+          FromContext.getDiagnostics(), FromSM, SourceLocation{}, &Invalid);
+      if (!FromBuf || Invalid)
+        return {};
+
       std::unique_ptr<llvm::MemoryBuffer> ToBuf =
           llvm::MemoryBuffer::getMemBufferCopy(FromBuf->getBuffer(),
                                                FromBuf->getBufferIdentifier());
@@ -8304,6 +8311,8 @@ FileID ASTImporter::Import(FileID FromID) {
                                FromSLoc.getFile().getFileCharacteristic());
     }
   }
+
+  assert(ToID.isValid() && "Unexpected invalid fileID was created.");
 
   ImportedFileIDs[FromID] = ToID;
   return ToID;

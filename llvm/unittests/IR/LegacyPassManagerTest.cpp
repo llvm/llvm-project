@@ -400,7 +400,12 @@ namespace llvm {
     struct CustomOptPassGate : public OptPassGate {
       bool Skip;
       CustomOptPassGate(bool Skip) : Skip(Skip) { }
-      bool shouldRunPass(const Pass *P, const Module &U) { return !Skip; }
+      bool shouldRunPass(const Pass *P, StringRef IRDescription) {
+        if (P->getPassKind() == PT_Module)
+          return !Skip;
+        return OptPassGate::shouldRunPass(P, IRDescription);
+      }
+      bool isEnabled() const { return true; }
     };
 
     // Optional module pass.

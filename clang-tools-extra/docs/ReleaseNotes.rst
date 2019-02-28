@@ -85,6 +85,12 @@ Improvements to clang-tidy
   Finds and fixes cases where ``absl::Duration`` values are being converted to
   numeric types and back again.
 
+- New :doc:`abseil-time-subtraction
+  <clang-tidy/checks/abseil-time-subtraction>` check.
+
+  Finds and fixes ``absl::Time`` subtraction expressions to do subtraction
+  in the Time domain instead of the numeric domain.
+
 - New :doc:`google-readability-avoid-underscore-in-googletest-name
   <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
   check.

@@ -698,6 +698,17 @@ struct SemiNCAInfo {
     return true;
   }
 
+  static bool isPermutation(const SmallVectorImpl<NodePtr> &A,
+                            const SmallVectorImpl<NodePtr> &B) {
+    if (A.size() != B.size())
+      return false;
+    SmallPtrSet<NodePtr, 4> Set(A.begin(), A.end());
+    for (NodePtr N : B)
+      if (Set.count(N) == 0)
+        return false;
+    return true;
+  }
+
   // Updates the set of roots after insertion or deletion. This ensures that
   // roots are the same when after a series of updates and when the tree would
   // be built from scratch.
@@ -711,9 +722,8 @@ struct SemiNCAInfo {
       return;
 
     // Recalculate the set of roots.
-    auto Roots = FindRoots(DT, BUI);
-    if (DT.Roots.size() != Roots.size() ||
-        !std::is_permutation(DT.Roots.begin(), DT.Roots.end(), Roots.begin())) {
+    RootsT Roots = FindRoots(DT, BUI);
+    if (!isPermutation(DT.Roots, Roots)) {
       // The roots chosen in the CFG have changed. This is because the
       // incremental algorithm does not really know or use the set of roots and
       // can make a different (implicit) decision about which node within an
@@ -724,7 +734,6 @@ struct SemiNCAInfo {
       // It may be possible to update the tree without recalculating it, but
       // we do not know yet how to do it, and it happens rarely in practise.
       CalculateFromScratch(DT, BUI);
-      return;
     }
   }
 
@@ -1264,9 +1273,7 @@ struct SemiNCAInfo {
     }
 
     RootsT ComputedRoots = FindRoots(DT, nullptr);
-    if (DT.Roots.size() != ComputedRoots.size() ||
-        !std::is_permutation(DT.Roots.begin(), DT.Roots.end(),
-                             ComputedRoots.begin())) {
+    if (!isPermutation(DT.Roots, ComputedRoots)) {
       errs() << "Tree has different roots than freshly computed ones!\n";
       errs() << "\tPDT roots: ";
       for (const NodePtr N : DT.Roots) errs() << BlockNamePrinter(N) << ", ";

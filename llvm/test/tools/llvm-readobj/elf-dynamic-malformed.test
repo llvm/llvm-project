@@ -1,0 +1,173 @@
+# Test handling of a dynamic section size which is not a multiple of its entry size.
+# RUN: yaml2obj %s --docnum=1 -o %t.bad-size
+# RUN: not llvm-readobj --dynamic-table %t.bad-size 2>&1 | FileCheck %s --check-prefix ERR-SIZE
+# RUN: not llvm-readelf --dynamic-table %t.bad-size 2>&1 | FileCheck %s --check-prefix ERR-SIZE
+
+# ERR-SIZE: Error reading file: Invalid entity size.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Content: "01234567"
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+
+# Test handling of a .dynamic section with an invalid entsize (i.e. not 2 * sizeof(Elf_Dyn)).
+# RUN: yaml2obj %s --docnum=2 -o %t.bad-entsize
+# RUN: llvm-readobj --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE
+# RUN: llvm-readelf --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE
+
+# BAD-ENTSIZE:      DynamicSection [ (2 entries)
+# BAD-ENTSIZE-NEXT:   Tag                Type                 Name/Value
+# BAD-ENTSIZE-NEXT:   0x0000000000000015 DEBUG                0x0
+# BAD-ENTSIZE-NEXT:   0x0000000000000000 NULL                 0x0
+# BAD-ENTSIZE-NEXT: ]
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    EntSize: 0x2
+    Entries:
+      - Tag:   DT_DEBUG
+        Value: 0
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+
+# Test handling of string references pointing past the end of the dynamic string table. In this case,
+# we have a DT_NEEDED tag pointing at offset 1 in a 1-byte string table.
+# RUN: yaml2obj %s --docnum=3 -o %t.bad-string
+# RUN: not llvm-readobj --dynamic-table %t.bad-string 2>&1 | FileCheck %s --check-prefix BAD-STRING
+# RUN: not llvm-readelf --dynamic-table %t.bad-string 2>&1 | FileCheck %s --check-prefix BAD-STRING
+
+# BAD-STRING: Error reading file: Invalid dynamic string table reference.
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1010
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x1000
+      - Tag:   DT_STRSZ
+        Value: 1
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynstr
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1010
+    Sections:
+      - Section: .dynamic
+
+# Test handling of DT_STRTAB pointing outside the file's address space.
+# RUN: yaml2obj %s --docnum=4 -o %t.bad-strtab
+# RUN: not llvm-readobj --dynamic-table %t.bad-strtab 2>&1 | FileCheck %s --check-prefix BAD-STRTAB
+# RUN: not llvm-readelf --dynamic-table %t.bad-strtab 2>&1 | FileCheck %s --check-prefix BAD-STRTAB
+
+# BAD-STRTAB: LLVM ERROR: Virtual address is not in any segment
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0x2000000
+      - Tag:   DT_STRSZ
+        Value: 10
+      - Tag:   DT_NEEDED
+        Value: 1
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+
+# Test handling of other d_ptr tags pointing outside the file's address space.
+# RUN: yaml2obj %s --docnum=5 -o %t.bad-rela
+# RUN: not llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefix BAD-RELA
+# RUN: not llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefix BAD-RELA
+
+# BAD-RELA: LLVM ERROR: Virtual address is not in any segment
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Entries:
+      - Tag:   DT_RELA
+        Value: 0x1000000
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+  - Type: PT_DYNAMIC
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic

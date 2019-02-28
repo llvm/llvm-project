@@ -163,6 +163,9 @@ def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;
 def dash_dash_version : Flag<["--"], "version">,
   HelpText<"Print version information">;
+defm threads: B<"threads",
+    "Run the linker multi-threaded (default)",
+    "Do not run the linker multi-threaded">;
 
 // Flags for debugging
 def lldmap : F<"lldmap">;

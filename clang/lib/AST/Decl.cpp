@@ -4265,6 +4265,7 @@ BlockDecl::BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
   setBlockMissingReturnType(true);
   setIsConversionFromLambda(false);
   setDoesNotEscape(false);
+  setCanAvoidCopyToHeap(false);
 }
 
 void BlockDecl::setParams(ArrayRef<ParmVarDecl *> NewParamInfo) {

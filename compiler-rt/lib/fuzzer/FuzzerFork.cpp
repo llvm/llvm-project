@@ -304,12 +304,12 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   }
   Stop = true;
 
-  // The workers have already finished doing useful work, or
-  // we were interrupted. Either way, cleanup up now.
-  RmDirRecursive(Env.TempDir);
-
   for (auto &T : Threads)
     T.join();
+
+  // The workers have terminated. Don't try to remove the directory before they
+  // terminate to avoid a race condition preventing cleanup on Windows.
+  RmDirRecursive(Env.TempDir);
 
   // Use the exit code from the last child process.
   Printf("INFO: exiting: %d time: %zds\n", ExitCode,
@@ -318,4 +318,3 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
 }
 
 } // namespace fuzzer
-
