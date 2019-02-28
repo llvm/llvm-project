@@ -1,4 +1,5 @@
 include(CheckCXXSymbolExists)
+include(CheckTypeSize)
 
 # BEGIN Swift Mods
 # We want this in a cmake cache
@@ -123,6 +124,29 @@ endif()
 if (LLDB_DISABLE_CURSES)
   add_definitions( -DLLDB_DISABLE_CURSES )
 endif()
+
+if (LLDB_DISABLE_LIBEDIT)
+  add_definitions( -DLLDB_DISABLE_LIBEDIT )
+else()
+  find_package(LibEdit REQUIRED)
+
+  # Check if we libedit capable of handling wide characters (built with
+  # '--enable-widec').
+  set(CMAKE_REQUIRED_LIBRARIES ${libedit_LIBRARIES})
+  set(CMAKE_REQUIRED_INCLUDES ${libedit_INCLUDE_DIRS})
+  check_symbol_exists(el_winsertstr histedit.h LLDB_EDITLINE_USE_WCHAR)
+  set(CMAKE_EXTRA_INCLUDE_FILES histedit.h)
+  check_type_size(el_rfunc_t LLDB_EL_RFUNC_T_SIZE)
+  if (LLDB_EL_RFUNC_T_SIZE STREQUAL "")
+    set(LLDB_HAVE_EL_RFUNC_T 0)
+  else()
+    set(LLDB_HAVE_EL_RFUNC_T 1)
+  endif()
+  set(CMAKE_REQUIRED_LIBRARIES)
+  set(CMAKE_REQUIRED_INCLUDES)
+  set(CMAKE_EXTRA_INCLUDE_FILES)
+endif()
+
 
 # On Windows, we can't use the normal FindPythonLibs module that comes with CMake,
 # for a number of reasons.
