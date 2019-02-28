@@ -1037,6 +1037,48 @@ define <4 x double> @splat_concat4(double %d) {
   ret <4 x double> %5
 }
 
+define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
+; X32-AVX2-LABEL: broadcast_v16i32:
+; X32-AVX2:       ## %bb.0:
+; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-AVX2-NEXT:    vbroadcastss (%ecx), %ymm0
+; X32-AVX2-NEXT:    vmovups %ymm0, 32(%eax)
+; X32-AVX2-NEXT:    vmovups %ymm0, (%eax)
+; X32-AVX2-NEXT:    vzeroupper
+; X32-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: broadcast_v16i32:
+; X64-AVX2:       ## %bb.0:
+; X64-AVX2-NEXT:    vbroadcastss (%rdi), %ymm0
+; X64-AVX2-NEXT:    vmovups %ymm0, 32(%rsi)
+; X64-AVX2-NEXT:    vmovups %ymm0, (%rsi)
+; X64-AVX2-NEXT:    vzeroupper
+; X64-AVX2-NEXT:    retq
+;
+; X32-AVX512VL-LABEL: broadcast_v16i32:
+; X32-AVX512VL:       ## %bb.0:
+; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-AVX512VL-NEXT:    vbroadcastss (%ecx), %zmm0
+; X32-AVX512VL-NEXT:    vmovups %zmm0, (%eax)
+; X32-AVX512VL-NEXT:    vzeroupper
+; X32-AVX512VL-NEXT:    retl
+;
+; X64-AVX512VL-LABEL: broadcast_v16i32:
+; X64-AVX512VL:       ## %bb.0:
+; X64-AVX512VL-NEXT:    vbroadcastss (%rdi), %zmm0
+; X64-AVX512VL-NEXT:    vmovups %zmm0, (%rsi)
+; X64-AVX512VL-NEXT:    vzeroupper
+; X64-AVX512VL-NEXT:    retq
+  %1 = load i32, i32* %a, align 4
+  %2 = insertelement <8 x i32> undef, i32 %1, i32 0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> zeroinitializer
+  %4 = shufflevector <8 x i32> undef, <8 x i32> %3, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <16 x i32> %4, <16 x i32>* %b, align 4
+  ret void
+}
+
 ; Test cases for <rdar://problem/16074331>.
 ; Instruction selection for broacast instruction fails if
 ; the load cannot be folded into the broadcast.

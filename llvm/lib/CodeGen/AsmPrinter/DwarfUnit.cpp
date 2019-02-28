@@ -1114,7 +1114,8 @@ DIE *DwarfUnit::getOrCreateSubprogramDIE(const DISubprogram *SP, bool Minimal) {
   if (SP->isDefinition())
     return &SPDie;
 
-  applySubprogramAttributes(SP, SPDie);
+  static_cast<DwarfUnit *>(SPDie.getUnit())
+      ->applySubprogramAttributes(SP, SPDie);
   return &SPDie;
 }
 

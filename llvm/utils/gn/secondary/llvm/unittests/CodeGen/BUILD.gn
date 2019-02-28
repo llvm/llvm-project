@@ -21,6 +21,8 @@ unittest("CodeGenTests") {
     "MachineInstrTest.cpp",
     "MachineOperandTest.cpp",
     "ScalableVectorMVTsTest.cpp",
+    "TargetOptionsTest.cpp",
     "TypeTraitsTest.cpp",
   ]
+  has_custom_main = true
 }

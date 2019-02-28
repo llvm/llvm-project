@@ -180,14 +180,30 @@ namespace SIOutMods {
   };
 }
 
+namespace AMDGPU {
 namespace VGPRIndexMode {
-  enum {
-    SRC0_ENABLE = 1 << 0,
-    SRC1_ENABLE = 1 << 1,
-    SRC2_ENABLE = 1 << 2,
-    DST_ENABLE = 1 << 3
-  };
-}
+
+enum Id { // id of symbolic names
+  ID_SRC0 = 0,
+  ID_SRC1,
+  ID_SRC2,
+  ID_DST,
+
+  ID_MIN = ID_SRC0,
+  ID_MAX = ID_DST
+};
+
+enum EncBits {
+  OFF = 0,
+  SRC0_ENABLE = 1 << ID_SRC0,
+  SRC1_ENABLE = 1 << ID_SRC1,
+  SRC2_ENABLE = 1 << ID_SRC2,
+  DST_ENABLE = 1 << ID_DST,
+  ENABLE_MASK = SRC0_ENABLE | SRC1_ENABLE | SRC2_ENABLE | DST_ENABLE
+};
+
+} // namespace VGPRIndexMode
+} // namespace AMDGPU
 
 namespace AMDGPUAsmVariants {
   enum {

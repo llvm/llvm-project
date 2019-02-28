@@ -30,6 +30,13 @@ namespace Swizzle { // Symbolic names for the swizzle(...) syntax.
 extern const char* const IdSymbolic[];
 
 } // namespace Swizzle
+
+namespace VGPRIndexMode { // Symbolic names for the gpr_idx(...) syntax.
+
+extern const char* const IdSymbolic[];
+
+} // namespace VGPRIndexMode
+
 } // namespace AMDGPU
 } // namespace llvm
 

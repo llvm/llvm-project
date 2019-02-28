@@ -856,6 +856,32 @@ define <4 x double> @broadcast_shuffle1032(double* %p) {
   ret <4 x double> %4
 }
 
+define void @broadcast_v16i32(i32* %a, <16 x i32>* %b) {
+; X32-LABEL: broadcast_v16i32:
+; X32:       ## %bb.0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    vbroadcastss (%ecx), %ymm0
+; X32-NEXT:    vmovups %ymm0, 32(%eax)
+; X32-NEXT:    vmovups %ymm0, (%eax)
+; X32-NEXT:    vzeroupper
+; X32-NEXT:    retl
+;
+; X64-LABEL: broadcast_v16i32:
+; X64:       ## %bb.0:
+; X64-NEXT:    vbroadcastss (%rdi), %ymm0
+; X64-NEXT:    vmovups %ymm0, 32(%rsi)
+; X64-NEXT:    vmovups %ymm0, (%rsi)
+; X64-NEXT:    vzeroupper
+; X64-NEXT:    retq
+  %1 = load i32, i32* %a, align 4
+  %2 = insertelement <8 x i32> undef, i32 %1, i32 0
+  %3 = shufflevector <8 x i32> %2, <8 x i32> undef, <8 x i32> zeroinitializer
+  %4 = shufflevector <8 x i32> undef, <8 x i32> %3, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
+  store <16 x i32> %4, <16 x i32>* %b, align 4
+  ret void
+}
+
 ;
 ; When VBROADCAST replaces an existing load, ensure it still respects lifetime dependencies.
 ;

@@ -2068,6 +2068,8 @@ bool llvm::promoteLoopAccessesToScalars(
   // stores in the loop.
   Promoter.run(LoopUses);
 
+  if (MSSAU && VerifyMemorySSA)
+    MSSAU->getMemorySSA()->verifyMemorySSA();
   // If the SSAUpdater didn't use the load in the preheader, just zap it now.
   if (PreheaderLoad->use_empty())
     eraseInstruction(*PreheaderLoad, *SafetyInfo, CurAST, MSSAU);

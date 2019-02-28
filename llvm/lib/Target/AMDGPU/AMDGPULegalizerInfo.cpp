@@ -159,6 +159,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     .legalFor(AddrSpaces32)
     .clampScalar(0, S32, S256)
     .widenScalarToNextPow2(0, 32)
+    .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
     .legalIf(isPointer(0));
 
 

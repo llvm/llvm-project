@@ -30,14 +30,14 @@ PDBContext::PDBContext(const COFFObjectFile &Object,
 
 void PDBContext::dump(raw_ostream &OS, DIDumpOptions DumpOpts){}
 
-DILineInfo PDBContext::getLineInfoForAddress(uint64_t Address,
+DILineInfo PDBContext::getLineInfoForAddress(object::SectionedAddress Address,
                                              DILineInfoSpecifier Specifier) {
   DILineInfo Result;
-  Result.FunctionName = getFunctionName(Address, Specifier.FNKind);
+  Result.FunctionName = getFunctionName(Address.Address, Specifier.FNKind);
 
   uint32_t Length = 1;
   std::unique_ptr<PDBSymbol> Symbol =
-      Session->findSymbolByAddress(Address, PDB_SymType::None);
+      Session->findSymbolByAddress(Address.Address, PDB_SymType::None);
   if (auto Func = dyn_cast_or_null<PDBSymbolFunc>(Symbol.get())) {
     Length = Func->getLength();
   } else if (auto Data = dyn_cast_or_null<PDBSymbolData>(Symbol.get())) {
@@ -46,7 +46,7 @@ DILineInfo PDBContext::getLineInfoForAddress(uint64_t Address,
 
   // If we couldn't find a symbol, then just assume 1 byte, so that we get
   // only the line number of the first instruction.
-  auto LineNumbers = Session->findLineNumbersByAddress(Address, Length);
+  auto LineNumbers = Session->findLineNumbersByAddress(Address.Address, Length);
   if (!LineNumbers || LineNumbers->getChildCount() == 0)
     return Result;
 
@@ -63,26 +63,27 @@ DILineInfo PDBContext::getLineInfoForAddress(uint64_t Address,
 }
 
 DILineInfoTable
-PDBContext::getLineInfoForAddressRange(uint64_t Address, uint64_t Size,
+PDBContext::getLineInfoForAddressRange(object::SectionedAddress Address,
+                                       uint64_t Size,
                                        DILineInfoSpecifier Specifier) {
   if (Size == 0)
     return DILineInfoTable();
 
   DILineInfoTable Table;
-  auto LineNumbers = Session->findLineNumbersByAddress(Address, Size);
+  auto LineNumbers = Session->findLineNumbersByAddress(Address.Address, Size);
   if (!LineNumbers || LineNumbers->getChildCount() == 0)
     return Table;
 
   while (auto LineInfo = LineNumbers->getNext()) {
-    DILineInfo LineEntry =
-        getLineInfoForAddress(LineInfo->getVirtualAddress(), Specifier);
+    DILineInfo LineEntry = getLineInfoForAddress(
+        {LineInfo->getVirtualAddress(), Address.SectionIndex}, Specifier);
     Table.push_back(std::make_pair(LineInfo->getVirtualAddress(), LineEntry));
   }
   return Table;
 }
 
 DIInliningInfo
-PDBContext::getInliningInfoForAddress(uint64_t Address,
+PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
                                       DILineInfoSpecifier Specifier) {
   DIInliningInfo InlineInfo;
   DILineInfo Frame = getLineInfoForAddress(Address, Specifier);

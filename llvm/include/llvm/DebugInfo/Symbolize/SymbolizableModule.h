@@ -24,13 +24,14 @@ class SymbolizableModule {
 public:
   virtual ~SymbolizableModule() = default;
 
-  virtual DILineInfo symbolizeCode(uint64_t ModuleOffset,
+  virtual DILineInfo symbolizeCode(object::SectionedAddress ModuleOffset,
                                    FunctionNameKind FNKind,
                                    bool UseSymbolTable) const = 0;
-  virtual DIInliningInfo symbolizeInlinedCode(uint64_t ModuleOffset,
-                                              FunctionNameKind FNKind,
-                                              bool UseSymbolTable) const = 0;
-  virtual DIGlobal symbolizeData(uint64_t ModuleOffset) const = 0;
+  virtual DIInliningInfo
+  symbolizeInlinedCode(object::SectionedAddress ModuleOffset,
+                       FunctionNameKind FNKind, bool UseSymbolTable) const = 0;
+  virtual DIGlobal
+  symbolizeData(object::SectionedAddress ModuleOffset) const = 0;
 
   // Return true if this is a 32-bit x86 PE COFF module.
   virtual bool isWin32Module() const = 0;

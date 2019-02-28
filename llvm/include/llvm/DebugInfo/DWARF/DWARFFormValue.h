@@ -79,7 +79,7 @@ public:
   const DWARFUnit *getUnit() const { return U; }
   void dump(raw_ostream &OS, DIDumpOptions DumpOpts = DIDumpOptions()) const;
   void dumpSectionedAddress(raw_ostream &OS, DIDumpOptions DumpOpts,
-                            SectionedAddress SA) const;
+                            object::SectionedAddress SA) const;
   static void dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
                                  DIDumpOptions DumpOpts, uint64_t SectionIndex);
 
@@ -108,7 +108,7 @@ public:
   Optional<int64_t> getAsSignedConstant() const;
   Optional<const char *> getAsCString() const;
   Optional<uint64_t> getAsAddress() const;
-  Optional<SectionedAddress> getAsSectionedAddress() const;
+  Optional<object::SectionedAddress> getAsSectionedAddress() const;
   Optional<uint64_t> getAsSectionOffset() const;
   Optional<ArrayRef<uint8_t>> getAsBlock() const;
   Optional<uint64_t> getAsCStringOffset() const;
@@ -246,7 +246,7 @@ inline Optional<uint64_t> toAddress(const Optional<DWARFFormValue> &V) {
   return None;
 }
 
-inline Optional<SectionedAddress>
+inline Optional<object::SectionedAddress>
 toSectionedAddress(const Optional<DWARFFormValue> &V) {
   if (V)
     return V->getAsSectionedAddress();

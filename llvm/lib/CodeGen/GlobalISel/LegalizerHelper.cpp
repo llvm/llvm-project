@@ -2393,6 +2393,25 @@ LegalizerHelper::narrowScalarShift(MachineInstr &MI, unsigned TypeIdx,
 }
 
 LegalizerHelper::LegalizeResult
+LegalizerHelper::moreElementsVectorPhi(MachineInstr &MI, unsigned TypeIdx,
+                                       LLT MoreTy) {
+  assert(TypeIdx == 0 && "Expecting only Idx 0");
+
+  Observer.changingInstr(MI);
+  for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+    MachineBasicBlock &OpMBB = *MI.getOperand(I + 1).getMBB();
+    MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+    moreElementsVectorSrc(MI, MoreTy, I);
+  }
+
+  MachineBasicBlock &MBB = *MI.getParent();
+  MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
+  moreElementsVectorDst(MI, MoreTy, 0);
+  Observer.changedInstr(MI);
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
 LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
                                     LLT MoreTy) {
   MIRBuilder.setInstr(MI);
@@ -2441,6 +2460,8 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_PHI:
+    return moreElementsVectorPhi(MI, TypeIdx, MoreTy);
   default:
     return UnableToLegalize;
   }

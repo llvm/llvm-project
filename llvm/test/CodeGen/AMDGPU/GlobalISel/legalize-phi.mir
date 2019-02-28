@@ -102,7 +102,80 @@ body: |
     $vgpr0 = COPY %6
     S_SETPC_B64 undef $sgpr30_sgpr31
 ...
+
 ---
+name: test_phi_v3s16
+tracksRegLiveness: true
+
+body: |
+  ; CHECK-LABEL: name: test_phi_v3s16
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
+  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
+  ; CHECK:   [[EXTRACT:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[COPY]](<4 x s16>), 0
+  ; CHECK:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[EXTRACT]](<3 x s16>), 0
+  ; CHECK:   G_BRCOND [[ICMP]](s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors: %bb.2(0x80000000)
+  ; CHECK:   [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
+  ; CHECK:   [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[EXTRACT]](<3 x s16>)
+  ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
+  ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT]], [[ANYEXT1]]
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ADD]](s32)
+  ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
+  ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
+  ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT2]], [[ANYEXT3]]
+  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ADD1]](s32)
+  ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
+  ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
+  ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT4]], [[ANYEXT5]]
+  ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[ADD2]](s32)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16)
+  ; CHECK:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[BUILD_VECTOR]](<3 x s16>), 0
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.2:
+  ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[INSERT]](<4 x s16>), %bb.0, [[INSERT1]](<4 x s16>), %bb.1
+  ; CHECK:   [[EXTRACT1:%[0-9]+]]:_(<3 x s16>) = G_EXTRACT [[PHI]](<4 x s16>), 0
+  ; CHECK:   [[DEF2:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
+  ; CHECK:   [[INSERT2:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF2]], [[EXTRACT1]](<3 x s16>), 0
+  ; CHECK:   $vgpr0_vgpr1 = COPY [[INSERT2]](<4 x s16>)
+  ; CHECK:   S_SETPC_B64 undef $sgpr30_sgpr31
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0_vgpr1, $vgpr2
+
+    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %1:_(s32) = COPY $vgpr2
+    %2:_(s32) = G_CONSTANT i32 0
+    %3:_(s1) = G_ICMP intpred(eq), %1, %2
+    %4:_(<3 x s16>) = G_EXTRACT %0, 0
+    G_BRCOND %3, %bb.1
+    G_BR %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    %5:_(<3 x s16>) = G_ADD %4, %4
+    G_BR %bb.2
+
+  bb.2:
+    %6:_(<3 x s16>) = G_PHI %4, %bb.0, %5, %bb.1
+    %7:_(<4 x s16>) = G_IMPLICIT_DEF
+    %8:_(<4 x s16>) = G_INSERT %7, %6, 0
+    $vgpr0_vgpr1 = COPY %8
+    S_SETPC_B64 undef $sgpr30_sgpr31
+...
+
+---
+
 name: test_phi_v4s16
 tracksRegLiveness: true
 

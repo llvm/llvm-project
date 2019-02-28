@@ -2911,7 +2911,7 @@ static MachineBasicBlock::iterator emitLoadM0FromVGPRLoop(
         .addImm(Offset);
     }
     unsigned IdxMode = IsIndirectSrc ?
-      VGPRIndexMode::SRC0_ENABLE : VGPRIndexMode::DST_ENABLE;
+      AMDGPU::VGPRIndexMode::SRC0_ENABLE : AMDGPU::VGPRIndexMode::DST_ENABLE;
     MachineInstr *SetOn =
       BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
       .addReg(IdxReg, RegState::Kill)
@@ -3042,7 +3042,7 @@ static bool setM0ToIndexFromSGPR(const SIInstrInfo *TII,
 
   if (UseGPRIdxMode) {
     unsigned IdxMode = IsIndirectSrc ?
-      VGPRIndexMode::SRC0_ENABLE : VGPRIndexMode::DST_ENABLE;
+      AMDGPU::VGPRIndexMode::SRC0_ENABLE : AMDGPU::VGPRIndexMode::DST_ENABLE;
     if (Offset == 0) {
       MachineInstr *SetOn =
           BuildMI(*MBB, I, DL, TII->get(AMDGPU::S_SET_GPR_IDX_ON))
