@@ -144,40 +144,19 @@ action_is_valid(
   return false;
 }
 
-static amd_comgr_status_t disassemble_object(DisassemHelper &helper,
-                                             StringRef cpu, DataObject *input,
-                                             DataObject *resp) {
-  amd_comgr_status_t status;
-
-  status = (amd_comgr_status_t)helper.DisassembleAction(input->data,
-                                                        input->size, cpu);
-  if (status)
-    return status;
-
-  std::string &result = helper.get_result();
-
-  resp->data_kind = AMD_COMGR_DATA_KIND_SOURCE;
-  status = resp->SetData(result);
-  result.clear();
-
-  if (status)
-    return status;
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
 static amd_comgr_status_t
 dispatch_disassemble_action(amd_comgr_action_kind_t action_kind,
                             DataAction *action_info, DataSet *input_set,
-                            DataSet *result_set) {
-  amd_comgr_status_t status;
-  bool byte_disassem =
-      action_kind == AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE;
-  DisassemHelper helper(byte_disassem);
+                            DataSet *result_set, raw_ostream &LogS) {
+  amd_comgr_data_set_t ResultSetT = DataSet::Convert(result_set);
+
+  std::string Out;
+  raw_string_ostream OutS(Out);
+  DisassemHelper Helper(OutS, LogS);
 
   TargetIdentifier Ident;
-  if ((status = ParseTargetIdentifier(action_info->isa_name, Ident)))
-    return status;
+  if (auto Status = ParseTargetIdentifier(action_info->isa_name, Ident))
+    return Status;
 
   // Handle the data object in set relevant to the action only
   auto objects =
@@ -193,25 +172,31 @@ dispatch_disassemble_action(amd_comgr_action_kind_t action_kind,
           return true;
         return false;
       });
+  std::string Options = "-disassemble -mcpu=";
+  Options.append(Ident.Processor);
+  if (action_info->action_options) {
+    Options.append(" ");
+    Options.append(action_info->action_options);
+  }
   // Loop through the input data set, perform actions and add result
   // to output data set.
   for (auto input : objects) {
-    amd_comgr_data_t result;
-    status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_LOG, &result);
-    if (status != AMD_COMGR_STATUS_SUCCESS)
-      return status;
-    ScopedDataObjectReleaser SDOR(result);
+    if (auto Status = Helper.DisassembleAction(StringRef(input->data, input->size), Options))
+      return Status;
 
-    DataObject *resp = DataObject::Convert(result);
-    resp->SetName(std::string(input->name) + ".s");
-    status = disassemble_object(helper, Ident.Processor, input, resp);
-    if (status != AMD_COMGR_STATUS_SUCCESS)
-      return status;
-
-    amd_comgr_data_set_t amd_result_set = DataSet::Convert(result_set);
-    status = amd_comgr_data_set_add(amd_result_set, result);
-    if (status != AMD_COMGR_STATUS_SUCCESS)
-      return status;
+    amd_comgr_data_t ResultT;
+    if (auto Status =
+            amd_comgr_create_data(AMD_COMGR_DATA_KIND_SOURCE, &ResultT))
+      return Status;
+    ScopedDataObjectReleaser ResultSDOR(ResultT);
+    DataObject *Result = DataObject::Convert(ResultT);
+    if (auto Status = Result->SetName(std::string(input->name) + ".s"))
+      return Status;
+    if (auto Status = Result->SetData(OutS.str()))
+      return Status;
+    Out.clear();
+    if (auto Status = amd_comgr_data_set_add(ResultSetT, ResultT))
+      return Status;
   }
 
   return AMD_COMGR_STATUS_SUCCESS;
@@ -220,41 +205,28 @@ dispatch_disassemble_action(amd_comgr_action_kind_t action_kind,
 static amd_comgr_status_t
 dispatch_compiler_action(amd_comgr_action_kind_t action_kind,
                          DataAction *action_info, DataSet *input_set,
-                         DataSet *result_set) {
-  AMDGPUCompiler Compiler(action_info, input_set, result_set);
-  amd_comgr_status_t CompilerStatus;
+                         DataSet *result_set, raw_ostream &LogS) {
+  AMDGPUCompiler Compiler(action_info, input_set, result_set, LogS);
   switch (action_kind) {
   case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
-    CompilerStatus = Compiler.PreprocessToSource();
-    break;
+    return Compiler.PreprocessToSource();
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
-    CompilerStatus = Compiler.CompileToBitcode();
-    break;
+    return Compiler.CompileToBitcode();
   case AMD_COMGR_ACTION_LINK_BC_TO_BC:
-    CompilerStatus = Compiler.LinkBitcodeToBitcode();
-    break;
+    return Compiler.LinkBitcodeToBitcode();
   case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
-    CompilerStatus = Compiler.CodeGenBitcodeToRelocatable();
-    break;
+    return Compiler.CodeGenBitcodeToRelocatable();
   case AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY:
-    CompilerStatus = Compiler.CodeGenBitcodeToAssembly();
-    break;
+    return Compiler.CodeGenBitcodeToAssembly();
   case AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE:
-    CompilerStatus = Compiler.AssembleToRelocatable();
-    break;
+    return Compiler.AssembleToRelocatable();
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
-    CompilerStatus = Compiler.LinkToRelocatable();
-    break;
+    return Compiler.LinkToRelocatable();
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
-    CompilerStatus = Compiler.LinkToExecutable();
-    break;
+    return Compiler.LinkToExecutable();
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
-
-  amd_comgr_status_t LogsStatus = Compiler.AddLogs();
-
-  return CompilerStatus ? CompilerStatus : LogsStatus;
 }
 
 static amd_comgr_status_t
@@ -330,6 +302,16 @@ void COMGR::EnsureLLVMInitialized() {
   LLVMInitializeAMDGPUAsmParser();
   LLVMInitializeAMDGPUAsmPrinter();
   LLVMInitialized = true;
+}
+
+void COMGR::ClearLLVMOptions() {
+  cl::ResetAllOptionOccurrences();
+  for (auto SC : cl::getRegisteredSubcommands()) {
+    for (auto &OM : SC->OptionsMap) {
+      cl::Option *O = OM.second;
+      O->setDefault();
+    }
+  }
 }
 
 DataObject::DataObject(amd_comgr_data_kind_t kind)
@@ -1041,12 +1023,17 @@ amd_comgr_do_action(
 
   EnsureLLVMInitialized();
 
+  std::string Log;
+  raw_string_ostream LogS(Log);
+
+  amd_comgr_status_t ActionStatus;
   switch (action_kind) {
   case AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE:
   case AMD_COMGR_ACTION_DISASSEMBLE_EXECUTABLE_TO_SOURCE:
   case AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE:
-    return dispatch_disassemble_action(action_kind, actioninfop, insetp,
-                                       outsetp);
+    ActionStatus = dispatch_disassemble_action(action_kind, actioninfop, insetp,
+                                       outsetp, LogS);
+    break;
   case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
   case AMD_COMGR_ACTION_LINK_BC_TO_BC:
@@ -1055,13 +1042,32 @@ amd_comgr_do_action(
   case AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE:
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
-    return dispatch_compiler_action(action_kind, actioninfop, insetp, outsetp);
+    ActionStatus = dispatch_compiler_action(action_kind, actioninfop, insetp, outsetp,
+                                    LogS);
+    break;
   case AMD_COMGR_ACTION_ADD_PRECOMPILED_HEADERS:
   case AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES:
-    return dispatch_add_action(action_kind, actioninfop, insetp, outsetp);
+    ActionStatus = dispatch_add_action(action_kind, actioninfop, insetp, outsetp);
+    break;
   default:
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+    ActionStatus = AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
+
+  if (actioninfop->logging) {
+    amd_comgr_data_t LogT;
+    if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_LOG, &LogT))
+      return Status;
+    ScopedDataObjectReleaser LogSDOR(LogT);
+    DataObject *Log = DataObject::Convert(LogT);
+    if (auto Status = Log->SetName("comgr.log"))
+      return Status;
+    if (auto Status = Log->SetData(LogS.str()))
+      return Status;
+    if (auto Status = amd_comgr_data_set_add(result_set, LogT))
+      return Status;
+  }
+
+  return ActionStatus;
 }
 
 // API functions on metadata

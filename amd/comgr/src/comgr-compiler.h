@@ -64,8 +64,8 @@ public:
 
 /// Manages executing Compiler-related actions.
 ///
-/// @warning No more than one public method, other than @p AddLogs, should be
-/// called on a constructed object before it is destructed.
+/// @warning No more than one public method should be called on a constructed
+/// object before it is destructed.
 class AMDGPUCompiler {
   struct AMDGPUCompilerDiagnosticHandler : public DiagnosticHandler {
     AMDGPUCompiler *Compiler = nullptr;
@@ -107,8 +107,7 @@ class AMDGPUCompiler {
   llvm::SmallString<128> InputDir;
   llvm::SmallString<128> OutputDir;
   llvm::SmallString<128> IncludeDir;
-  std::string Log;
-  llvm::raw_string_ostream LogS;
+  llvm::raw_ostream &LogS;
 
   amd_comgr_status_t CreateTmpDirs();
   amd_comgr_status_t RemoveTmpDirs();
@@ -122,7 +121,7 @@ class AMDGPUCompiler {
   amd_comgr_status_t AddTargetIdentifierFlags(llvm::StringRef IdentStr);
 
 public:
-  AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet);
+  AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet, raw_ostream &LogS);
   ~AMDGPUCompiler();
 
   amd_comgr_status_t PreprocessToSource();
@@ -133,8 +132,6 @@ public:
   amd_comgr_status_t AssembleToRelocatable();
   amd_comgr_status_t LinkToRelocatable();
   amd_comgr_status_t LinkToExecutable();
-
-  amd_comgr_status_t AddLogs();
 };
 }
 

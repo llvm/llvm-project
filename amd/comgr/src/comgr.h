@@ -86,6 +86,9 @@ amd_comgr_status_t ParseTargetIdentifier(llvm::StringRef IdentStr,
 /// once in this process.
 void EnsureLLVMInitialized();
 
+/// Reset all `llvm::cl` options to their default values.
+void ClearLLVMOptions();
+
 struct DataObject {
 
   // Allocate a new DataObject and return a pointer to it.

@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     checkError(status, "amd_cogmr_create_data_set");
 
     // File 1
-    status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BYTES, &dataIn1);
+    status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataIn1);
     checkError(status, "amd_comgr_create_data");
     status = amd_comgr_set_data(dataIn1, size1, buf1);
     checkError(status, "amd_comgr_set_data");
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     checkError(status, "amd_cogmr_data_set_add");
 
     // File 2
-    status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BYTES, &dataIn2);
+    status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_RELOCATABLE, &dataIn2);
     checkError(status, "amd_comgr_create_data_2");
     status = amd_comgr_set_data(dataIn2, size2, buf2);
     checkError(status, "amd_comgr_set_data");
@@ -94,13 +94,10 @@ int main(int argc, char *argv[])
     checkError(status, "amd_comgr_action_info_set_isa_name");
 
     // Do disassembly action
-    status = amd_comgr_do_action(AMD_COMGR_ACTION_DISASSEMBLE_BYTES_TO_SOURCE,
+    status = amd_comgr_do_action(AMD_COMGR_ACTION_DISASSEMBLE_RELOCATABLE_TO_SOURCE,
                                  dataAction, dataSetIn, dataSetOut);
     checkError(status, "amd_comgr_do_action");
 
-    // Remove data object from set, destroy
-    status = amd_comgr_data_set_remove(dataSetIn, AMD_COMGR_DATA_KIND_BYTES);
-    checkError(status, "amd_cogmr_data_set_remove");
     status = amd_comgr_destroy_data_set(dataSetIn);
     checkError(status, "amd_comgr_destroy_data_set");
 

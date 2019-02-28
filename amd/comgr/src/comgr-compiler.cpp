@@ -535,17 +535,6 @@ static void InitializeCommandLineArgs(SmallVectorImpl<const char *> &Args) {
   Args.push_back("");
 }
 
-// Reset -mllvm options
-static void ClearLLVMOptions() {
-  cl::ResetAllOptionOccurrences();
-  for (auto SC : cl::getRegisteredSubcommands()) {
-    for (auto &OM : SC->OptionsMap) {
-      cl::Option *O = OM.second;
-      O->setDefault();
-    }
-  }
-}
-
 // Parse -mllvm options
 static amd_comgr_status_t ParseLLVMOptions(const std::vector<std::string>& Options) {
   std::vector<const char*> LLVMArgs;
@@ -794,19 +783,6 @@ amd_comgr_status_t AMDGPUCompiler::AddTargetIdentifierFlags(llvm::StringRef Iden
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t AMDGPUCompiler::AddLogs() {
-  if (!ActionInfo->logging)
-    return AMD_COMGR_STATUS_SUCCESS;
-  amd_comgr_data_t LogT;
-  if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_LOG, &LogT))
-    return Status;
-  ScopedDataObjectReleaser SDOR(LogT);
-  DataObject *LogP = DataObject::Convert(LogT);
-  LogP->SetName("comgr.log");
-  LogP->SetData(LogS.str());
-  return amd_comgr_data_set_add(OutSetT, LogT);
-}
-
 amd_comgr_status_t AMDGPUCompiler::PreprocessToSource() {
   if (auto Status = CreateTmpDirs())
     return Status;
@@ -1048,9 +1024,9 @@ amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
 }
 
 AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
-                               DataSet *OutSet)
+                               DataSet *OutSet, raw_ostream &LogS)
     : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::Convert(OutSet)),
-      LogS(Log) {
+      LogS(LogS) {
   InitializeCommandLineArgs(Args);
   ParseOptions();
 }

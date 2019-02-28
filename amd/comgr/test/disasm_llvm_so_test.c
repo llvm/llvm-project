@@ -99,9 +99,6 @@ int main(int argc, char *argv[])
                             dataAction, dataSetIn, dataSetOut);
     checkError(status, "amd_comgr_do_action");
 
-    // Remove data object from set, destroy
-    status = amd_comgr_data_set_remove(dataSetIn, AMD_COMGR_DATA_KIND_EXECUTABLE);
-    checkError(status, "amd_cogmr_data_set_remove");
     status = amd_comgr_destroy_data_set(dataSetIn);
     checkError(status, "amd_comgr_destroy_data_set");
 

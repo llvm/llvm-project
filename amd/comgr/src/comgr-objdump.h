@@ -39,14 +39,12 @@
 #ifndef COMGR_OBJDUMP_H
 #define COMGR_OBJDUMP_H
 
+#include "comgr.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Object/Archive.h"
-
-// ELFDump.cpp
-void printELFFileHeader(const llvm::object::ObjectFile *o);
 
 namespace llvm {
 class StringRef;
@@ -60,50 +58,11 @@ namespace object {
   class RelocationRef;
 }
 
-extern std::string TripleName;
-extern std::string ArchName;
-extern std::string MCPU;
-extern std::vector<std::string> MAttrs;
-extern std::vector<std::string> FilterSections;
-extern bool Disassemble;
-extern bool DisassembleAll;
-extern bool NoShowRawInsn;
-extern bool NoLeadingAddr;
-extern bool PrivateHeaders;
-extern bool FirstPrivateHeader;
-extern bool ExportsTrie;
-extern bool Rebase;
-extern bool Bind;
-extern bool LazyBind;
-extern bool WeakBind;
-extern bool RawClangAST;
-extern bool UniversalHeaders;
-extern bool ArchiveHeaders;
-extern bool IndirectSymbols;
-extern bool DataInCode;
-extern bool LinkOptHints;
-extern bool InfoPlist;
-extern bool DylibsUsed;
-extern bool DylibId;
-extern bool ObjcMetaData;
-extern std::string DisSymName;
-extern bool NonVerbose;
-extern bool Relocations;
-extern bool SectionHeaders;
-extern bool SectionContents;
-extern bool SymbolTable;
-extern bool UnwindInfo;
-extern bool PrintImmHex;
-extern DIDumpType DwarfDumpType;
-
 class DisassemHelper {
-  private:
-  std::string result_buffer;
-  bool byte_stream;
+private:
+  raw_ostream &OutS;
+  raw_ostream &ErrS;
 
-  // Various helper functions.
-
-  // llvm-objdump.cpp
   void DisassembleObject(const object::ObjectFile *Obj, bool InlineRelocs);
   void PrintUnwindInfo(const object::ObjectFile *o);
   void printExportsTrie(const object::ObjectFile *o);
@@ -124,28 +83,13 @@ class DisassemHelper {
   void DumpArchive(const object::Archive *a);
   void DumpInput(StringRef file);
 
-  // llvm-elfdump.cpp
-  //template <class ELFT>
-  //void printProgramHeaders(const ELFFile<ELFT> *o);
   void printELFFileHeader(const object::ObjectFile *Obj);
 
 public:
-  raw_string_ostream *SOS;
+  DisassemHelper(raw_ostream &OutS, raw_ostream &ErrS)
+      : OutS(OutS), ErrS(ErrS) {}
 
-  DisassemHelper(bool byte_dis) : byte_stream(byte_dis) {
-    result_buffer.clear();
-    SOS = new raw_string_ostream(result_buffer);
-  }
-
-  ~DisassemHelper() {
-    result_buffer.clear();
-    delete SOS;
-  }
-
-  std::string &get_result() { return result_buffer; }
-
-  int DisassembleAction(char *inp, size_t in_size, StringRef cpu);
-  int DisassembleAction_2(char *inp, size_t in_size);
+  amd_comgr_status_t DisassembleAction(StringRef Input, StringRef Options);
 }; // DisassemHelper
 
 } // end namespace llvm
