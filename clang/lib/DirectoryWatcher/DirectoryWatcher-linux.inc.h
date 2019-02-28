@@ -104,8 +104,7 @@ static void runWatcher(std::string pathToWatch, int inotifyFD,
 
     SmallVector<INotifyEvent, 8> iEvents;
     for (char *p = buf; p < buf + numRead;) {
-      assert(p + sizeof(struct inotify_event) <= buf + numRead && "a whole inotify_event was read");
-      struct inotify_event *ievt = dynamic_cast<struct inotify_event *>(p);
+      struct inotify_event *ievt = (struct inotify_event *)p;
       p += sizeof(struct inotify_event) + ievt->len;
 
       if (ievt->mask & IN_DELETE_SELF) {
