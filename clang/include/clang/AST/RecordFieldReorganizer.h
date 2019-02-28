@@ -37,6 +37,9 @@ private:
 };
 
 class Randstruct : public RecordFieldReorganizer {
+public:  
+/// Determines if the Record can be safely and easily randomized based on certain criteria (see implementation).
+  static bool isTriviallyRandomizable(const RecordDecl *D);
 protected:
   virtual void reorganize(const ASTContext &C, const RecordDecl *D,
                           SmallVector<Decl *, 64> &NewOrder) const override;

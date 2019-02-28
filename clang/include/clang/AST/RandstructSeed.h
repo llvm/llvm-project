@@ -3,5 +3,6 @@
 #include <string>
 namespace clang {
 extern std::string RandstructSeed;
+extern bool RandstructAutoSelect;
 }
 #endif
