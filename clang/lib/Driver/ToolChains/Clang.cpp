@@ -4411,6 +4411,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue(0));
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_randstruct_auto)) {
+    CmdArgs.push_back( "-randstruct-auto" );
+  }
+
   // -fvisibility= and -fvisibility-ms-compat are of a piece.
   if (const Arg *A = Args.getLastArg(options::OPT_fvisibility_EQ,
                                      options::OPT_fvisibility_ms_compat)) {

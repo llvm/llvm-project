@@ -25,6 +25,7 @@
 
 namespace clang {
 std::string RandstructSeed = "";
+bool RandstructAutoSelect = false;
 
 void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
                                               const RecordDecl *D) {
@@ -37,7 +38,6 @@ void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
     mutateGuard.insert(f);
     fields.push_back(f);
   }
-
   // Now allow subclass implementations to reorder the fields
   reorganize(C, D, fields);
 
@@ -52,7 +52,6 @@ void RecordFieldReorganizer::reorganizeFields(const ASTContext &C,
 
   commit(D, fields);
 }
-
 void RecordFieldReorganizer::commit(
     const RecordDecl *D, SmallVectorImpl<Decl *> &NewFieldOrder) const {
   Decl *First, *Last;
@@ -254,5 +253,12 @@ void Randstruct::reorganize(const ASTContext &C, const RecordDecl *D,
   SmallVector<Decl *, 64> randomized = perfrandomize(C, NewOrder);
   NewOrder = randomized;
 }
-
+bool Randstruct::isTriviallyRandomizable(const RecordDecl *D) {
+  for (auto f : D->fields()){
+    //If an element of the structure does not have a 
+    //function type is not a function pointer
+    if(f->getFunctionType() == nullptr){ return false; }
+  }
+  return true;
+}
 } // namespace clang
