@@ -115,15 +115,16 @@ static void runWatcher(std::string pathToWatch, int inotifyFD,
         break;
       }
 
-      DirectoryWatcher::EventKind K = [&ievt](){
-        if (ievt->mask & IN_MODIFY)
-          return DirectoryWatcher::EventKind::Modified;
-        if (ievt->mask & IN_MOVED_TO)
-          return DirectoryWatcher::EventKind::Added;
-        if (ievt->mask & IN_DELETE)
-          return DirectoryWatcher::EventKind::Removed;
-        llvm_unreachable("Unknown event type.");
-      }();
+      DirectoryWatcher::EventKind K = DirectoryWatcher::EventKind::Added;
+      if (ievt->mask & IN_MODIFY) {
+        K = DirectoryWatcher::EventKind::Modified;
+      }
+      if (ievt->mask & IN_MOVED_TO) {
+        K = DirectoryWatcher::EventKind::Added;
+      }
+      if (ievt->mask & IN_DELETE) {
+        K = DirectoryWatcher::EventKind::Removed;
+      }
 
       assert(ievt->len > 0 && "expected a filename from inotify");
       SmallString<256> fullPath{pathToWatch};
