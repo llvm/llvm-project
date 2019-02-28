@@ -1,8 +1,9 @@
 //===- DirectoryWatcher-linux.inc.h - Linux-platform directory listening --===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,7 +29,10 @@ class EventQueue {
   std::vector<INotifyEvent> PendingEvents;
 
   DirectoryWatcher::Event toDirEvent(const INotifyEvent &evt) {
-    return DirectoryWatcher::Event{evt.K, evt.Filename};
+    llvm::sys::TimePoint<> modTime{};
+    if (evt.Status.hasValue())
+      modTime = evt.Status->getLastModificationTime();
+    return DirectoryWatcher::Event{evt.K, evt.Filename, modTime};
   }
 
 public:
@@ -88,16 +92,18 @@ private:
 
 static void runWatcher(std::string pathToWatch, int inotifyFD,
                        std::shared_ptr<EventQueue> evtQueue) {
-  constexpr size_t EventBufferLength = 30 * (sizeof(struct inotify_event) + NAME_MAX + 1);
-  char buf[EventBufferLength] __attribute__((aligned(8)));
+#define EVT_BUF_LEN (30 * (sizeof(struct inotify_event) + NAME_MAX + 1))
+  char buf[EVT_BUF_LEN] __attribute__((aligned(8)));
 
   while (1) {
-    ssize_t numRead = llvm::RetryAfterSignal(-1, read, inotifyFD, buf, EventBufferLength);
+    ssize_t numRead = read(inotifyFD, buf, EVT_BUF_LEN);
+    if (numRead == -1) {
+      return; // watcher is stopped.
+    }
 
     SmallVector<INotifyEvent, 8> iEvents;
     for (char *p = buf; p < buf + numRead;) {
-      assert(p + sizeof(struct inotify_event) <= buf + numRead && "a whole inotify_event was read");
-      struct inotify_event *ievt = dynamic_cast<struct inotify_event *>(p);
+      struct inotify_event *ievt = (struct inotify_event *)p;
       p += sizeof(struct inotify_event) + ievt->len;
 
       if (ievt->mask & IN_DELETE_SELF) {
@@ -107,21 +113,27 @@ static void runWatcher(std::string pathToWatch, int inotifyFD,
         break;
       }
 
-      DirectoryWatcher::EventKind K = [&ievt](){
-        if (ievt->mask & IN_MODIFY)
-          return DirectoryWatcher::EventKind::Modified;
-        if (ievt->mask & IN_MOVED_TO)
-          return DirectoryWatcher::EventKind::Added;
-        if (ievt->mask & IN_DELETE)
-          return DirectoryWatcher::EventKind::Removed;
-        llvm_unreachable("Unknown event type.");
-      }();
+      DirectoryWatcher::EventKind K = DirectoryWatcher::EventKind::Added;
+      if (ievt->mask & IN_MODIFY) {
+        K = DirectoryWatcher::EventKind::Modified;
+      }
+      if (ievt->mask & IN_MOVED_TO) {
+        K = DirectoryWatcher::EventKind::Added;
+      }
+      if (ievt->mask & IN_DELETE) {
+        K = DirectoryWatcher::EventKind::Removed;
+      }
 
       assert(ievt->len > 0 && "expected a filename from inotify");
       SmallString<256> fullPath{pathToWatch};
       sys::path::append(fullPath, ievt->name);
 
       Optional<sys::fs::file_status> statusOpt;
+      if (K != DirectoryWatcher::EventKind::Removed) {
+        statusOpt = getFileStatus(fullPath);
+        if (!statusOpt.hasValue())
+          K = DirectoryWatcher::EventKind::Removed;
+      }
       INotifyEvent iEvt{K, fullPath.str(), statusOpt};
       iEvents.push_back(iEvt);
     }
@@ -178,6 +190,6 @@ bool DirectoryWatcher::Implementation::initialize(StringRef Path,
 void DirectoryWatcher::Implementation::stopListening() {
   if (inotifyFD == -1)
     return;
-  llvm::RetryAfterSignal(-1, close, inotifyFD);
+  close(inotifyFD);
   inotifyFD = -1;
 }

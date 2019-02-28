@@ -1,8 +1,9 @@
 //===- unittests/DirectoryWatcher/DirectoryWatcherTest.cpp ----------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
@@ -48,6 +49,7 @@ public:
     for (unsigned i = 0, e = filenames.size(); i < e; ++i) {
       StringRef fname = filenames[i];
       DirectoryWatcher::EventKind kind = kinds[i];
+      file_status stat = stats[i];
       auto it = std::find_if(evts.begin(), evts.end(),
                              [&](const DirectoryWatcher::Event &evt) -> bool {
                                return path::filename(evt.Filename) == fname;
@@ -61,6 +63,10 @@ public:
                              std::to_string((int)it->Kind) + ", expected ") +
                        std::to_string((int)kind));
       }
+      if (it->Kind != DirectoryWatcher::EventKind::Removed &&
+          it->ModTime != stat.getLastModificationTime())
+        hadError =
+            err(Twine("filename '" + fname + "' has different mod time"));
       evts.erase(it);
     }
     for (const auto &evt : evts) {

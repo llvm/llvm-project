@@ -1,8 +1,9 @@
 //===- DirectoryWatcher-mac.inc.h - Mac-platform directory listening ------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 
@@ -55,7 +56,8 @@ static void eventStreamCallback(ConstFSEventStreamRef stream,
       if ((flags & kFSEventStreamEventFlagItemRemoved) &&
           path == ctx->WatchedPath) {
         DirectoryWatcher::Event Evt{
-            DirectoryWatcher::EventKind::DirectoryDeleted, path};
+            DirectoryWatcher::EventKind::DirectoryDeleted, path,
+            llvm::sys::TimePoint<>{}};
         Events.push_back(Evt);
         break;
       }
@@ -95,7 +97,10 @@ static void eventStreamCallback(ConstFSEventStreamRef stream,
       }
     }
 
-    DirectoryWatcher::Event Evt{K, path};
+    llvm::sys::TimePoint<> modTime{};
+    if (statusOpt.hasValue())
+      modTime = statusOpt->getLastModificationTime();
+    DirectoryWatcher::Event Evt{K, path, modTime};
     Events.push_back(Evt);
   }
 

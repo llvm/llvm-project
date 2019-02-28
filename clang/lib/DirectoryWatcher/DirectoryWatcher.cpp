@@ -1,8 +1,9 @@
 //===- DirectoryWatcher.cpp - Listens for directory file changes ----------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -81,7 +82,7 @@ struct DirectoryScan {
     std::vector<DirectoryWatcher::Event> Events;
     for (const auto &info : Files) {
       DirectoryWatcher::Event Event{DirectoryWatcher::EventKind::Added,
-                                    std::get<0>(info)};
+                                    std::get<0>(info), std::get<1>(info)};
       Events.push_back(std::move(Event));
     }
     return Events;
@@ -90,11 +91,14 @@ struct DirectoryScan {
 } // namespace
 
 // Add platform-specific functionality.
-#include "Config.inc"
 
-#if HAVE_CORESERVICES
+#if !defined(__has_include)
+#define __has_include(x) 0
+#endif
+
+#if __has_include(<CoreServices/CoreServices.h>)
 #include "DirectoryWatcher-mac.inc.h"
-#elif HAVE_INOTIFY
+#elif __has_include(<sys/inotify.h>)
 #include "DirectoryWatcher-linux.inc.h"
 #else
 
