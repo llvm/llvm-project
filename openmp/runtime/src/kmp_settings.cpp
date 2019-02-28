@@ -629,6 +629,19 @@ static void __kmp_stg_print_teams_thread_limit(kmp_str_buf_t *buffer,
 } // __kmp_stg_print_teams_thread_limit
 
 // -----------------------------------------------------------------------------
+// KMP_USE_YIELD
+static void __kmp_stg_parse_use_yield(char const *name, char const *value,
+                                      void *data) {
+  __kmp_stg_parse_int(name, value, 0, 2, &__kmp_use_yield);
+  __kmp_use_yield_exp_set = 1;
+} // __kmp_stg_parse_use_yield
+
+static void __kmp_stg_print_use_yield(kmp_str_buf_t *buffer, char const *name,
+                                      void *data) {
+  __kmp_stg_print_int(buffer, name, __kmp_use_yield);
+} // __kmp_stg_print_use_yield
+
+// -----------------------------------------------------------------------------
 // KMP_BLOCKTIME
 
 static void __kmp_stg_parse_blocktime(char const *name, char const *value,
@@ -745,18 +758,24 @@ static void __kmp_stg_parse_wait_policy(char const *name, char const *value,
       __kmp_library = library_serial;
     } else if (__kmp_str_match("throughput", 2, value)) { /* TH */
       __kmp_library = library_throughput;
+      if (blocktime_str == NULL) {
+        // KMP_BLOCKTIME not specified, so set default to 0.
+        __kmp_dflt_blocktime = 0;
+      }
     } else if (__kmp_str_match("turnaround", 2, value)) { /* TU */
       __kmp_library = library_turnaround;
     } else if (__kmp_str_match("dedicated", 1, value)) { /* D */
       __kmp_library = library_turnaround;
     } else if (__kmp_str_match("multiuser", 1, value)) { /* M */
       __kmp_library = library_throughput;
+      if (blocktime_str == NULL) {
+        // KMP_BLOCKTIME not specified, so set default to 0.
+        __kmp_dflt_blocktime = 0;
+      }
     } else {
       KMP_WARNING(StgInvalidValue, name, value);
     }
   }
-  __kmp_aux_set_library(__kmp_library);
-
 } // __kmp_stg_parse_wait_policy
 
 static void __kmp_stg_print_wait_policy(kmp_str_buf_t *buffer, char const *name,
@@ -3944,77 +3963,7 @@ static void __kmp_stg_print_par_range_env(kmp_str_buf_t *buffer,
   }
 } // __kmp_stg_print_par_range_env
 
-// -----------------------------------------------------------------------------
-// KMP_YIELD_CYCLE, KMP_YIELD_ON, KMP_YIELD_OFF
-
-static void __kmp_stg_parse_yield_cycle(char const *name, char const *value,
-                                        void *data) {
-  int flag = __kmp_yield_cycle;
-  __kmp_stg_parse_bool(name, value, &flag);
-  __kmp_yield_cycle = flag;
-} // __kmp_stg_parse_yield_cycle
-
-static void __kmp_stg_print_yield_cycle(kmp_str_buf_t *buffer, char const *name,
-                                        void *data) {
-  __kmp_stg_print_bool(buffer, name, __kmp_yield_cycle);
-} // __kmp_stg_print_yield_cycle
-
-static void __kmp_stg_parse_yield_on(char const *name, char const *value,
-                                     void *data) {
-  __kmp_stg_parse_int(name, value, 2, INT_MAX, &__kmp_yield_on_count);
-} // __kmp_stg_parse_yield_on
-
-static void __kmp_stg_print_yield_on(kmp_str_buf_t *buffer, char const *name,
-                                     void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_yield_on_count);
-} // __kmp_stg_print_yield_on
-
-static void __kmp_stg_parse_yield_off(char const *name, char const *value,
-                                      void *data) {
-  __kmp_stg_parse_int(name, value, 2, INT_MAX, &__kmp_yield_off_count);
-} // __kmp_stg_parse_yield_off
-
-static void __kmp_stg_print_yield_off(kmp_str_buf_t *buffer, char const *name,
-                                      void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_yield_off_count);
-} // __kmp_stg_print_yield_off
-
 #endif
-
-// -----------------------------------------------------------------------------
-// KMP_INIT_WAIT, KMP_NEXT_WAIT
-
-static void __kmp_stg_parse_init_wait(char const *name, char const *value,
-                                      void *data) {
-  int wait;
-  KMP_ASSERT((__kmp_init_wait & 1) == 0);
-  wait = __kmp_init_wait / 2;
-  __kmp_stg_parse_int(name, value, KMP_MIN_INIT_WAIT, KMP_MAX_INIT_WAIT, &wait);
-  __kmp_init_wait = wait * 2;
-  KMP_ASSERT((__kmp_init_wait & 1) == 0);
-  __kmp_yield_init = __kmp_init_wait;
-} // __kmp_stg_parse_init_wait
-
-static void __kmp_stg_print_init_wait(kmp_str_buf_t *buffer, char const *name,
-                                      void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_init_wait);
-} // __kmp_stg_print_init_wait
-
-static void __kmp_stg_parse_next_wait(char const *name, char const *value,
-                                      void *data) {
-  int wait;
-  KMP_ASSERT((__kmp_next_wait & 1) == 0);
-  wait = __kmp_next_wait / 2;
-  __kmp_stg_parse_int(name, value, KMP_MIN_NEXT_WAIT, KMP_MAX_NEXT_WAIT, &wait);
-  __kmp_next_wait = wait * 2;
-  KMP_ASSERT((__kmp_next_wait & 1) == 0);
-  __kmp_yield_next = __kmp_next_wait;
-} // __kmp_stg_parse_next_wait
-
-static void __kmp_stg_print_next_wait(kmp_str_buf_t *buffer, char const *name,
-                                      void *data) {
-  __kmp_stg_print_int(buffer, name, __kmp_next_wait);
-} //__kmp_stg_print_next_wait
 
 // -----------------------------------------------------------------------------
 // KMP_GTID_MODE
@@ -4726,6 +4675,8 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"KMP_ALL_THREADS", __kmp_stg_parse_device_thread_limit, NULL, NULL, 0, 0},
     {"KMP_BLOCKTIME", __kmp_stg_parse_blocktime, __kmp_stg_print_blocktime,
      NULL, 0, 0},
+    {"KMP_USE_YIELD", __kmp_stg_parse_use_yield, __kmp_stg_print_use_yield,
+     NULL, 0, 0},
     {"KMP_DUPLICATE_LIB_OK", __kmp_stg_parse_duplicate_lib_ok,
      __kmp_stg_print_duplicate_lib_ok, NULL, 0, 0},
     {"KMP_LIBRARY", __kmp_stg_parse_wait_policy, __kmp_stg_print_wait_policy,
@@ -4830,12 +4781,6 @@ static kmp_setting_t __kmp_stg_table[] = {
 
     {"KMP_PAR_RANGE", __kmp_stg_parse_par_range_env,
      __kmp_stg_print_par_range_env, NULL, 0, 0},
-    {"KMP_YIELD_CYCLE", __kmp_stg_parse_yield_cycle,
-     __kmp_stg_print_yield_cycle, NULL, 0, 0},
-    {"KMP_YIELD_ON", __kmp_stg_parse_yield_on, __kmp_stg_print_yield_on, NULL,
-     0, 0},
-    {"KMP_YIELD_OFF", __kmp_stg_parse_yield_off, __kmp_stg_print_yield_off,
-     NULL, 0, 0},
 #endif // KMP_DEBUG
 
     {"KMP_ALIGN_ALLOC", __kmp_stg_parse_align_alloc,
@@ -4927,10 +4872,6 @@ static kmp_setting_t __kmp_stg_table[] = {
 #endif /* USE_ITT_BUILD && USE_ITT_NOTIFY */
     {"KMP_MALLOC_POOL_INCR", __kmp_stg_parse_malloc_pool_incr,
      __kmp_stg_print_malloc_pool_incr, NULL, 0, 0},
-    {"KMP_INIT_WAIT", __kmp_stg_parse_init_wait, __kmp_stg_print_init_wait,
-     NULL, 0, 0},
-    {"KMP_NEXT_WAIT", __kmp_stg_parse_next_wait, __kmp_stg_print_next_wait,
-     NULL, 0, 0},
     {"KMP_GTID_MODE", __kmp_stg_parse_gtid_mode, __kmp_stg_print_gtid_mode,
      NULL, 0, 0},
     {"OMP_DYNAMIC", __kmp_stg_parse_omp_dynamic, __kmp_stg_print_omp_dynamic,

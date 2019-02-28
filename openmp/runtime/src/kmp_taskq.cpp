@@ -51,7 +51,7 @@ static void __kmp_taskq_eo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
 
     taskq = tq->tq_curr_thunk[tid]->th.th_shareds->sv_queue;
 
-    KMP_WAIT_YIELD(&taskq->tq_tasknum_serving, my_token, KMP_EQ, NULL);
+    KMP_WAIT(&taskq->tq_tasknum_serving, my_token, KMP_EQ, NULL);
     KMP_MB();
   }
 }
@@ -95,7 +95,7 @@ static void __kmp_taskq_check_ordered(kmp_int32 gtid, kmpc_thunk_t *thunk) {
   taskq = thunk->th.th_shareds->sv_queue;
 
   if (taskq->tq_tasknum_serving <= my_token) {
-    KMP_WAIT_YIELD(&taskq->tq_tasknum_serving, my_token, KMP_GE, NULL);
+    KMP_WAIT(&taskq->tq_tasknum_serving, my_token, KMP_GE, NULL);
     KMP_MB();
     taskq->tq_tasknum_serving = my_token + 1;
     KMP_MB();
@@ -1056,8 +1056,7 @@ static void __kmp_remove_queue_from_tree(kmp_taskq_t *tq, kmp_int32 global_tid,
     while (queue->tq_ref_count > 1) {
       __kmp_release_lock(&queue->tq.tq_parent->tq_link_lck, global_tid);
 
-      KMP_WAIT_YIELD((volatile kmp_uint32 *)&queue->tq_ref_count, 1, KMP_LE,
-                     NULL);
+      KMP_WAIT((volatile kmp_uint32 *)&queue->tq_ref_count, 1, KMP_LE, NULL);
 
       __kmp_acquire_lock(&queue->tq.tq_parent->tq_link_lck, global_tid);
       // Make sure data structures are in consistent state before querying them
@@ -1538,8 +1537,6 @@ void __kmpc_end_taskq(ident_t *loc, kmp_int32 global_tid,
   in_parallel = (queue->tq_flags & TQF_PARALLEL_CONTEXT);
 
   if (in_parallel) {
-    kmp_uint32 spins;
-
     /* this is just a safeguard to release the waiting threads if */
     /* the outermost taskq never queues a task                    */
 
@@ -1556,12 +1553,10 @@ void __kmpc_end_taskq(ident_t *loc, kmp_int32 global_tid,
 
     do {
       /* wait until something is available to dequeue */
-      KMP_INIT_YIELD(spins);
-
       while ((queue->tq_nfull == 0) && (queue->tq_taskq_slot == NULL) &&
              (!__kmp_taskq_has_any_children(queue)) &&
              (!(queue->tq_flags & TQF_ALL_TASKS_QUEUED))) {
-        KMP_YIELD_WHEN(TRUE, spins);
+        KMP_CPU_PAUSE();
       }
 
       /* check to see if we can execute tasks in the queue */
@@ -1628,7 +1623,6 @@ void __kmpc_end_taskq(ident_t *loc, kmp_int32 global_tid,
 
       /* WAIT until all tasks are finished and no child queues exist before
        * proceeding */
-      KMP_INIT_YIELD(spins);
 
       while (!__kmp_taskq_tasks_finished(queue) ||
              __kmp_taskq_has_any_children(queue)) {
@@ -1643,7 +1637,8 @@ void __kmpc_end_taskq(ident_t *loc, kmp_int32 global_tid,
                                         in_parallel);
         }
 
-        KMP_YIELD_WHEN(thunk == NULL, spins);
+        if (thunk == NULL)
+          KMP_CPU_PAUSE();
 
         __kmp_find_and_remove_finished_child_taskq(tq, global_tid, queue);
       }
@@ -1669,8 +1664,6 @@ void __kmpc_end_taskq(ident_t *loc, kmp_int32 global_tid,
 
     // Outermost Queue: steal work from descendants until all tasks are finished
 
-    KMP_INIT_YIELD(spins);
-
     while (!__kmp_taskq_tasks_finished(queue)) {
       thunk = __kmp_find_task_in_descendant_queue(global_tid, queue);
 
@@ -1683,7 +1676,8 @@ void __kmpc_end_taskq(ident_t *loc, kmp_int32 global_tid,
         __kmp_execute_task_from_queue(tq, loc, global_tid, thunk, in_parallel);
       }
 
-      KMP_YIELD_WHEN(thunk == NULL, spins);
+      if (thunk == NULL)
+        KMP_CPU_PAUSE();
     }
 
     /* Need this barrier to prevent destruction of queue before threads have all

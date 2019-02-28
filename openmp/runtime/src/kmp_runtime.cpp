@@ -327,7 +327,7 @@ void __kmp_infinite_loop(void) {
   static int done = FALSE;
 
   while (!done) {
-    KMP_YIELD(1);
+    KMP_YIELD(TRUE);
   }
 }
 
@@ -672,24 +672,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved) {
 #endif /* KMP_OS_WINDOWS */
 #endif /* KMP_DYNAMIC_LIB */
 
-/* Change the library type to "status" and return the old type */
-/* called from within initialization routines where __kmp_initz_lock is held */
-int __kmp_change_library(int status) {
-  int old_status;
-
-  old_status = __kmp_yield_init &
-               1; // check whether KMP_LIBRARY=throughput (even init count)
-
-  if (status) {
-    __kmp_yield_init |= 1; // throughput => turnaround (odd init count)
-  } else {
-    __kmp_yield_init &= ~1; // turnaround => throughput (even init count)
-  }
-
-  return old_status; // return previous setting of whether
-  // KMP_LIBRARY=throughput
-}
-
 /* __kmp_parallel_deo -- Wait until it's our turn. */
 void __kmp_parallel_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
   int gtid = *gtid_ref;
@@ -708,8 +690,8 @@ void __kmp_parallel_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
 #ifdef BUILD_PARALLEL_ORDERED
   if (!team->t.t_serialized) {
     KMP_MB();
-    KMP_WAIT_YIELD(&team->t.t_ordered.dt.t_value, __kmp_tid_from_gtid(gtid),
-                   KMP_EQ, NULL);
+    KMP_WAIT(&team->t.t_ordered.dt.t_value, __kmp_tid_from_gtid(gtid), KMP_EQ,
+             NULL);
     KMP_MB();
   }
 #endif /* BUILD_PARALLEL_ORDERED */
@@ -7735,13 +7717,14 @@ void __kmp_aux_set_library(enum library_type arg) {
   switch (__kmp_library) {
   case library_serial: {
     KMP_INFORM(LibraryIsSerial);
-    (void)__kmp_change_library(TRUE);
   } break;
   case library_turnaround:
-    (void)__kmp_change_library(TRUE);
+    if (__kmp_use_yield == 1 && !__kmp_use_yield_exp_set)
+      __kmp_use_yield = 2; // only yield when oversubscribed
     break;
   case library_throughput:
-    (void)__kmp_change_library(FALSE);
+    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
+      __kmp_dflt_blocktime = 200;
     break;
   default:
     KMP_FATAL(UnknownLibraryType, arg);

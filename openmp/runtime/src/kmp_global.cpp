@@ -62,11 +62,6 @@ int __kmp_version = 0;
 std::atomic<kmp_int32> __kmp_team_counter = ATOMIC_VAR_INIT(0);
 std::atomic<kmp_int32> __kmp_task_counter = ATOMIC_VAR_INIT(0);
 
-unsigned int __kmp_init_wait =
-    KMP_DEFAULT_INIT_WAIT; /* initial number of spin-tests   */
-unsigned int __kmp_next_wait =
-    KMP_DEFAULT_NEXT_WAIT; /* susequent number of spin-tests */
-
 size_t __kmp_stksize = KMP_DEFAULT_STKSIZE;
 #if KMP_USE_MONITOR
 size_t __kmp_monitor_stksize = 0; // auto adjust
@@ -395,21 +390,16 @@ int __kmp_env_blocktime = FALSE; /* KMP_BLOCKTIME specified? */
 int __kmp_env_checks = FALSE; /* KMP_CHECKS specified?    */
 int __kmp_env_consistency_check = FALSE; /* KMP_CONSISTENCY_CHECK specified? */
 
+// From KMP_USE_YIELD:
+// 0 = never yield;
+// 1 = always yield (default);
+// 2 = yield only if oversubscribed
+kmp_int32 __kmp_use_yield = 1;
+// This will be 1 if KMP_USE_YIELD environment variable was set explicitly
+kmp_int32 __kmp_use_yield_exp_set = 0;
+
 kmp_uint32 __kmp_yield_init = KMP_INIT_WAIT;
 kmp_uint32 __kmp_yield_next = KMP_NEXT_WAIT;
-
-#if KMP_USE_MONITOR
-kmp_uint32 __kmp_yielding_on = 1;
-#endif
-#if KMP_OS_CNK
-kmp_uint32 __kmp_yield_cycle = 0;
-#else
-kmp_uint32 __kmp_yield_cycle = 1; /* Yield-cycle is on by default */
-#endif
-kmp_int32 __kmp_yield_on_count =
-    10; /* By default, yielding is on for 10 monitor periods. */
-kmp_int32 __kmp_yield_off_count =
-    1; /* By default, yielding is off for 1 monitor periods. */
 
 /* ------------------------------------------------------ */
 /* STATE mostly syncronized with global lock */
