@@ -1,8 +1,9 @@
 //===- DirectoryWatcher.h - Listens for directory file changes --*- C++ -*-===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
-// See https://llvm.org/LICENSE.txt for license information.
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
 /// \file
@@ -49,6 +50,7 @@ public:
   struct Event {
     EventKind Kind;
     std::string Filename;
+    llvm::sys::TimePoint<> ModTime;
   };
 
   typedef std::function<void(ArrayRef<Event> Events, bool isInitial)>
@@ -73,4 +75,4 @@ private:
 
 } // namespace clang
 
-#endif // LLVM_CLANG_DIRECTORYWATCHER_DIRECTORYWATCHER_H
+#endif

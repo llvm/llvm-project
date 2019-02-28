@@ -1,4 +1,4 @@
-//===--- FileIndexRecord.cpp - Index data per file --------------*- C++ -*-===//
+//===--- FileIndexRecord.cpp - Index data per file ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -35,7 +35,6 @@ void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles, unsigned Offset,
   }
 
   DeclOccurrence NewInfo(Roles, Offset, D, Relations);
-  // We keep Decls in order as we need to access them in this order in all cases.
   auto It = std::upper_bound(Decls.begin(), Decls.end(), NewInfo);
   Decls.insert(It, std::move(NewInfo));
 }
@@ -43,7 +42,7 @@ void FileIndexRecord::addDeclOccurence(SymbolRoleSet Roles, unsigned Offset,
 void FileIndexRecord::print(llvm::raw_ostream &OS) const {
   OS << "DECLS BEGIN ---\n";
   for (auto &DclInfo : Decls) {
-    const Decl *D = DclInfo.Dcl;
+    auto D = DclInfo.Dcl;
     SourceManager &SM = D->getASTContext().getSourceManager();
     SourceLocation Loc = SM.getFileLoc(D->getLocation());
     PresumedLoc PLoc = SM.getPresumedLoc(Loc);
