@@ -313,9 +313,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
       else
         FormValue.dump(OS, DumpOpts);
     }
-  } else if (Attr == DW_AT_location || Attr == DW_AT_frame_base ||
-             Attr == DW_AT_data_member_location ||
-             Attr == DW_AT_GNU_call_site_value)
+  } else if (DWARFAttribute::mayHaveLocationDescription(Attr))
     dumpLocation(OS, FormValue, U, sizeof(BaseIndent) + Indent + 4, DumpOpts);
   else
     FormValue.dump(OS, DumpOpts);
@@ -702,4 +700,40 @@ DWARFDie::attribute_iterator &DWARFDie::attribute_iterator::operator++() {
   if (auto AbbrDecl = Die.getAbbreviationDeclarationPtr())
     updateForIndex(*AbbrDecl, Index + 1);
   return *this;
+}
+
+bool DWARFAttribute::mayHaveLocationDescription(dwarf::Attribute Attr) {
+  switch (Attr) {
+  // From the DWARF v5 specification.
+  case DW_AT_location:
+  case DW_AT_byte_size:
+  case DW_AT_bit_size:
+  case DW_AT_string_length:
+  case DW_AT_lower_bound:
+  case DW_AT_return_addr:
+  case DW_AT_bit_stride:
+  case DW_AT_upper_bound:
+  case DW_AT_count:
+  case DW_AT_data_member_location:
+  case DW_AT_frame_base:
+  case DW_AT_segment:
+  case DW_AT_static_link:
+  case DW_AT_use_location:
+  case DW_AT_vtable_elem_location:
+  case DW_AT_allocated:
+  case DW_AT_associated:
+  case DW_AT_byte_stride:
+  case DW_AT_rank:
+  case DW_AT_call_value:
+  case DW_AT_call_origin:
+  case DW_AT_call_target:
+  case DW_AT_call_target_clobbered:
+  case DW_AT_call_data_location:
+  case DW_AT_call_data_value:
+  // Extensions.
+  case DW_AT_GNU_call_site_value:
+    return true;
+  default:
+    return false;
+  }
 }
