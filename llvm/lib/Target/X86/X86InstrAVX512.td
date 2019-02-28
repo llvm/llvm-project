@@ -6427,118 +6427,22 @@ multiclass avx512_var_shift_w<bits<8> opc, string OpcodeStr,
   }
 }
 
-defm VPSLLV : avx512_var_shift_types<0x47, "vpsllv", shl, SchedWriteVarVecShift>,
-              avx512_var_shift_w<0x12, "vpsllvw", shl, SchedWriteVarVecShift>;
+defm VPSLLV : avx512_var_shift_types<0x47, "vpsllv", X86vshlv, SchedWriteVarVecShift>,
+              avx512_var_shift_w<0x12, "vpsllvw", X86vshlv, SchedWriteVarVecShift>;
 
-defm VPSRAV : avx512_var_shift_types<0x46, "vpsrav", sra, SchedWriteVarVecShift>,
-              avx512_var_shift_w<0x11, "vpsravw", sra, SchedWriteVarVecShift>;
+defm VPSRAV : avx512_var_shift_types<0x46, "vpsrav", X86vsrav, SchedWriteVarVecShift>,
+              avx512_var_shift_w<0x11, "vpsravw", X86vsrav, SchedWriteVarVecShift>;
 
-defm VPSRLV : avx512_var_shift_types<0x45, "vpsrlv", srl, SchedWriteVarVecShift>,
-              avx512_var_shift_w<0x10, "vpsrlvw", srl, SchedWriteVarVecShift>;
+defm VPSRLV : avx512_var_shift_types<0x45, "vpsrlv", X86vsrlv, SchedWriteVarVecShift>,
+              avx512_var_shift_w<0x10, "vpsrlvw", X86vsrlv, SchedWriteVarVecShift>;
 
 defm VPRORV : avx512_var_shift_types<0x14, "vprorv", rotr, SchedWriteVarVecShift>;
 defm VPROLV : avx512_var_shift_types<0x15, "vprolv", rotl, SchedWriteVarVecShift>;
 
-defm : avx512_var_shift_lowering<avx512vl_i64_info, "VPSRAVQ", sra, [HasAVX512, NoVLX]>;
-defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSLLVW", shl, [HasBWI, NoVLX]>;
-defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRAVW", sra, [HasBWI, NoVLX]>;
-defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRLVW", srl, [HasBWI, NoVLX]>;
-
-// Special handing for handling VPSRAV intrinsics.
-multiclass avx512_var_shift_int_lowering<string InstrStr, SDNode OpNode,
-                                         X86VectorVTInfo _, list<Predicate> p> {
-  let Predicates = p in {
-    def : Pat<(_.VT (OpNode _.RC:$src1, _.RC:$src2)),
-              (!cast<Instruction>(InstrStr#_.ZSuffix#rr) _.RC:$src1,
-               _.RC:$src2)>;
-    def : Pat<(_.VT (OpNode _.RC:$src1, (_.LdFrag addr:$src2))),
-              (!cast<Instruction>(InstrStr#_.ZSuffix##rm)
-               _.RC:$src1, addr:$src2)>;
-    def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                     (OpNode _.RC:$src1, _.RC:$src2), _.RC:$src0)),
-              (!cast<Instruction>(InstrStr#_.ZSuffix#rrk) _.RC:$src0,
-               _.KRC:$mask, _.RC:$src1, _.RC:$src2)>;
-    def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                     (OpNode _.RC:$src1, (_.LdFrag addr:$src2)),
-                     _.RC:$src0)),
-              (!cast<Instruction>(InstrStr#_.ZSuffix##rmk) _.RC:$src0,
-               _.KRC:$mask, _.RC:$src1, addr:$src2)>;
-    def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                     (OpNode _.RC:$src1, _.RC:$src2), _.ImmAllZerosV)),
-              (!cast<Instruction>(InstrStr#_.ZSuffix#rrkz) _.KRC:$mask,
-               _.RC:$src1, _.RC:$src2)>;
-    def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                     (OpNode _.RC:$src1, (_.LdFrag addr:$src2)),
-                     _.ImmAllZerosV)),
-              (!cast<Instruction>(InstrStr#_.ZSuffix##rmkz) _.KRC:$mask,
-               _.RC:$src1, addr:$src2)>;
-  }
-}
-
-multiclass avx512_var_shift_int_lowering_mb<string InstrStr, SDNode OpNode,
-                                            X86VectorVTInfo _,
-                                            list<Predicate> p> :
-           avx512_var_shift_int_lowering<InstrStr, OpNode, _, p> {
-  let Predicates = p in {
-    def : Pat<(_.VT (OpNode _.RC:$src1,
-                     (X86VBroadcast (_.ScalarLdFrag addr:$src2)))),
-              (!cast<Instruction>(InstrStr#_.ZSuffix##rmb)
-               _.RC:$src1, addr:$src2)>;
-    def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                     (OpNode _.RC:$src1,
-                      (X86VBroadcast (_.ScalarLdFrag addr:$src2))),
-                     _.RC:$src0)),
-              (!cast<Instruction>(InstrStr#_.ZSuffix##rmbk) _.RC:$src0,
-               _.KRC:$mask, _.RC:$src1, addr:$src2)>;
-    def : Pat<(_.VT (vselect _.KRCWM:$mask,
-                     (OpNode _.RC:$src1,
-                      (X86VBroadcast (_.ScalarLdFrag addr:$src2))),
-                     _.ImmAllZerosV)),
-              (!cast<Instruction>(InstrStr#_.ZSuffix##rmbkz) _.KRC:$mask,
-               _.RC:$src1, addr:$src2)>;
-  }
-}
-
-multiclass avx512_var_shift_int_lowering_vl<string InstrStr, SDNode OpNode,
-                                            AVX512VLVectorVTInfo VTInfo,
-                                            Predicate p> {
-  defm : avx512_var_shift_int_lowering<InstrStr, OpNode, VTInfo.info512, [p]>;
-  defm : avx512_var_shift_int_lowering<InstrStr, OpNode, VTInfo.info256,
-                                       [HasVLX, p]>;
-  defm : avx512_var_shift_int_lowering<InstrStr, OpNode, VTInfo.info128,
-                                       [HasVLX, p]>;
-}
-
-multiclass avx512_var_shift_int_lowering_mb_vl<string InstrStr, SDNode OpNode,
-                                               AVX512VLVectorVTInfo VTInfo,
-                                               Predicate p> {
-  defm : avx512_var_shift_int_lowering_mb<InstrStr, OpNode, VTInfo.info512, [p]>;
-  defm : avx512_var_shift_int_lowering_mb<InstrStr, OpNode, VTInfo.info256,
-                                          [HasVLX, p]>;
-  defm : avx512_var_shift_int_lowering_mb<InstrStr, OpNode, VTInfo.info128,
-                                          [HasVLX, p]>;
-}
-
-defm : avx512_var_shift_int_lowering_vl<"VPSRAVW", X86vsrav, avx512vl_i16_info,
-                                        HasBWI>;
-defm : avx512_var_shift_int_lowering_mb_vl<"VPSRAVD", X86vsrav,
-                                           avx512vl_i32_info, HasAVX512>;
-defm : avx512_var_shift_int_lowering_mb_vl<"VPSRAVQ", X86vsrav,
-                                           avx512vl_i64_info, HasAVX512>;
-
-defm : avx512_var_shift_int_lowering_vl<"VPSRLVW", X86vsrlv, avx512vl_i16_info,
-                                        HasBWI>;
-defm : avx512_var_shift_int_lowering_mb_vl<"VPSRLVD", X86vsrlv,
-                                           avx512vl_i32_info, HasAVX512>;
-defm : avx512_var_shift_int_lowering_mb_vl<"VPSRLVQ", X86vsrlv,
-                                           avx512vl_i64_info, HasAVX512>;
-
-defm : avx512_var_shift_int_lowering_vl<"VPSLLVW", X86vshlv, avx512vl_i16_info,
-                                        HasBWI>;
-defm : avx512_var_shift_int_lowering_mb_vl<"VPSLLVD", X86vshlv,
-                                           avx512vl_i32_info, HasAVX512>;
-defm : avx512_var_shift_int_lowering_mb_vl<"VPSLLVQ", X86vshlv,
-                                           avx512vl_i64_info, HasAVX512>;
+defm : avx512_var_shift_lowering<avx512vl_i64_info, "VPSRAVQ", X86vsrav, [HasAVX512, NoVLX]>;
+defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSLLVW", X86vshlv, [HasBWI, NoVLX]>;
+defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRAVW", X86vsrav, [HasBWI, NoVLX]>;
+defm : avx512_var_shift_lowering<avx512vl_i16_info, "VPSRLVW", X86vsrlv, [HasBWI, NoVLX]>;
 
 
 // Use 512bit VPROL/VPROLI version to implement v2i64/v4i64 + v4i32/v8i32 in case NoVLX.

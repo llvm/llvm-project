@@ -557,12 +557,12 @@ Error RelocationSection::removeSectionReferences(
   for (const Relocation &R : Relocations) {
     if (!R.RelocSymbol->DefinedIn || !ToRemove(R.RelocSymbol->DefinedIn))
       continue;
-    return createStringError(
-        llvm::errc::invalid_argument,
-        "Section %s cannot be removed because of symbol '%s' "
-        "used by the relocation patching offset 0x%" PRIx64 " from section %s.",
-        R.RelocSymbol->DefinedIn->Name.data(), R.RelocSymbol->Name.c_str(),
-        R.Offset, this->Name.data());
+    return createStringError(llvm::errc::invalid_argument,
+                             "Section %s can't be removed: (%s+0x%" PRIx64
+                             ") has relocation against symbol '%s'",
+                             R.RelocSymbol->DefinedIn->Name.data(),
+                             SecToApplyRel->Name.data(), R.Offset,
+                             R.RelocSymbol->Name.c_str());
   }
 
   return Error::success();

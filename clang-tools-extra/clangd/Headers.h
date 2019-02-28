@@ -12,7 +12,7 @@
 #include "Path.h"
 #include "Protocol.h"
 #include "SourceCode.h"
-#include "index/Index.h"
+#include "index/Symbol.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"

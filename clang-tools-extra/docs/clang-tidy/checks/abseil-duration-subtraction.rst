@@ -21,13 +21,13 @@ Examples:
   // Suggestion - Subtraction in the absl::Duration domain instead
   double result = absl::ToDoubleSeconds(d - absl::Seconds(x));
 
-
   // Original - Subtraction of two Durations in the double domain
   absl::Duration d1, d2;
   double result = absl::ToDoubleSeconds(d1) - absl::ToDoubleSeconds(d2);
 
   // Suggestion - Subtraction in the absl::Duration domain instead
   double result = absl::ToDoubleSeconds(d1 - d2);
+
 
 Note: As with other ``clang-tidy`` checks, it is possible that multiple fixes
 may overlap (as in the case of nested expressions), so not all occurences can

@@ -21,6 +21,8 @@ entry:
   br label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
+; CHECK-LABEL: for.body.lr.ph:
+; CHECK-NEXT: %addr.promoted = load i32, i32* %addr, align 1
   br label %for.header
 
 for.header:
@@ -59,6 +61,8 @@ entry:
   br label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
+; CHECK-LABEL: for.body.lr.ph:
+; CHECK-NEXT: %addr.promoted = load i32, i32* %addr, align 1
   br label %for.header
 
 for.header:

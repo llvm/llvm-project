@@ -19,9 +19,14 @@ namespace modernize {
 class UseOverrideCheck : public ClangTidyCheck {
 public:
   UseOverrideCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+      : ClangTidyCheck(Name, Context),
+        IgnoreDestructors(Options.get("IgnoreDestructors", false)) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const bool IgnoreDestructors;
 };
 
 } // namespace modernize

@@ -17,9 +17,20 @@ namespace clang {
 namespace tidy {
 namespace modernize {
 
+void UseOverrideCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreDestructors", IgnoreDestructors);
+}
+
 void UseOverrideCheck::registerMatchers(MatchFinder *Finder) {
   // Only register the matcher for C++11.
-  if (getLangOpts().CPlusPlus11)
+  if (!getLangOpts().CPlusPlus11)
+    return;
+
+  if (IgnoreDestructors)
+    Finder->addMatcher(
+        cxxMethodDecl(isOverride(), unless(cxxDestructorDecl())).bind("method"),
+        this);
+  else
     Finder->addMatcher(cxxMethodDecl(isOverride()).bind("method"), this);
 }
 

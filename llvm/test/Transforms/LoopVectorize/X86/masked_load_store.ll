@@ -2028,7 +2028,7 @@ define void @foo4(double* %A, double* %B, i32* %trigger)  {
 ; AVX512-NEXT:    br i1 [[TMP23]], label [[FOR_BODY_PREHEADER]], label [[VECTOR_BODY]], !llvm.loop !49
 ; AVX512:       for.body.preheader:
 ; AVX512-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 9984, [[VECTOR_BODY]] ]
-; AVX512-NEXT:    [[TMP24:%.*]] = sub nsw i64 9999, [[INDVARS_IV_PH]]
+; AVX512-NEXT:    [[TMP24:%.*]] = sub nuw nsw i64 9999, [[INDVARS_IV_PH]]
 ; AVX512-NEXT:    br label [[FOR_BODY_PROL:%.*]]
 ; AVX512:       for.body.prol:
 ; AVX512-NEXT:    [[INDVARS_IV_PROL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_PROL:%.*]], [[FOR_INC_PROL:%.*]] ], [ [[INDVARS_IV_PH]], [[FOR_BODY_PREHEADER]] ]

@@ -11,6 +11,7 @@
 #include "Compiler.h"
 #include "Logger.h"
 #include "SourceCode.h"
+#include "Symbol.h"
 #include "Threading.h"
 #include "Trace.h"
 #include "URI.h"
