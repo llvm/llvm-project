@@ -127,6 +127,11 @@ static void runWatcher(std::string pathToWatch, int inotifyFD,
       sys::path::append(fullPath, ievt->name);
 
       Optional<sys::fs::file_status> statusOpt;
+      if (K != DirectoryWatcher::EventKind::Removed) {
+        statusOpt = getFileStatus(fullPath);
+        if (!statusOpt.hasValue())
+          K = DirectoryWatcher::EventKind::Removed;
+      }
       INotifyEvent iEvt{K, fullPath.str(), statusOpt};
       iEvents.push_back(iEvt);
     }
