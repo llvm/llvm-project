@@ -22,7 +22,7 @@ namespace dsymutil {
 
 static std::pair<StringRef, StringRef>
 getArchiveAndObjectName(StringRef Filename) {
-  StringRef Archive = Filename.substr(0, Filename.find('('));
+  StringRef Archive = Filename.substr(0, Filename.rfind('('));
   StringRef Object = Filename.substr(Archive.size() + 1).drop_back();
   return {Archive, Object};
 }
