@@ -3386,20 +3386,9 @@ ValueObjectSP
 SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
                                           ConstString variable_name) {
   ProcessSP process_sp(frame_sp->GetThread()->GetProcess());
-  ABISP abi_sp(process_sp->GetABI());
-  ValueList argument_values;
-  Value input_value;
   Status error;
   Target *target = frame_sp->CalculateTarget().get();
   ValueObjectSP error_valobj_sp;
-
-  ClangASTContext *clang_ast_context = target->GetScratchClangASTContext();
-  CompilerType clang_void_ptr_type =
-      clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
-
-  input_value.SetValueType(Value::eValueTypeScalar);
-  input_value.SetCompilerType(clang_void_ptr_type);
-  argument_values.PushValue(input_value);
 
   auto *runtime = process_sp->GetSwiftLanguageRuntime();
   if (!runtime)
