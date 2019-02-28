@@ -66,7 +66,8 @@ class Bucket {
 public:
   virtual ~Bucket() = default;
   /// Returns a randomized version of the bucket.
-  virtual SmallVector<FieldDecl *, 64> randomize(std::default_random_engine rng);
+  virtual SmallVector<FieldDecl *, 64>
+  randomize(std::default_random_engine rng);
   /// Checks if an added element would fit in a cache line.
   virtual bool canFit(size_t size) const;
   /// Adds a field to the bucket.
@@ -86,7 +87,8 @@ protected:
 /// exceed the size of a cache line.
 class BitfieldRun : public Bucket {
 public:
-  virtual SmallVector<FieldDecl *, 64> randomize(std::default_random_engine rng) override;
+  virtual SmallVector<FieldDecl *, 64>
+  randomize(std::default_random_engine rng) override;
   virtual bool canFit(size_t size) const override;
   virtual bool isBitfieldRun() const override;
 };
@@ -128,7 +130,8 @@ bool Bucket::full() const {
 
 bool Bucket::empty() const { return size == 0; }
 
-SmallVector<FieldDecl *, 64> BitfieldRun::randomize(std::default_random_engine rng) {
+SmallVector<FieldDecl *, 64>
+BitfieldRun::randomize(std::default_random_engine rng) {
   // Keep bit fields adjacent, we will not scramble them.
   return fields;
 }
@@ -145,8 +148,9 @@ SmallVector<Decl *, 64> Randstruct::randomize(SmallVector<Decl *, 64> fields) {
   return fields;
 }
 
-SmallVector<Decl *, 64> Randstruct::perfrandomize(const ASTContext &ctx,
-                                      SmallVector<Decl *, 64> fields) {
+SmallVector<Decl *, 64>
+Randstruct::perfrandomize(const ASTContext &ctx,
+                          SmallVector<Decl *, 64> fields) {
   // All of the buckets produced by best-effort cache-line algorithm.
   std::vector<std::unique_ptr<Bucket>> buckets;
 
@@ -247,10 +251,12 @@ void Randstruct::reorganize(const ASTContext &C, const RecordDecl *D,
   NewOrder = randomized;
 }
 bool Randstruct::isTriviallyRandomizable(const RecordDecl *D) {
-  for (auto f : D->fields()){
-    //If an element of the structure does not have a 
-    //function type is not a function pointer
-    if(f->getFunctionType() == nullptr){ return false; }
+  for (auto f : D->fields()) {
+    // If an element of the structure does not have a
+    // function type is not a function pointer
+    if (f->getFunctionType() == nullptr) {
+      return false;
+    }
   }
   return true;
 }
