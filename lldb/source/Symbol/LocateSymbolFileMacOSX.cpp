@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Symbols.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 
 #include <dirent.h>
 #include <pwd.h>
@@ -54,7 +54,7 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
       log->Printf("Spotlight lookup for .dSYM bundles is disabled.");
     return 0;
   }
-  
+
   return_module_spec = module_spec;
   return_module_spec.GetFileSpec().Clear();
   return_module_spec.GetSymbolFileSpec().Clear();
@@ -422,8 +422,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
               source_path.RemoveLastPathComponent();
               source_path.RemoveLastPathComponent();
               module_spec.GetSourceMappingList().Append(
-                ConstString(build_path.GetPath().c_str()),
-                ConstString(source_path.GetPath().c_str()), true);
+                  ConstString(build_path.GetPath().c_str()),
+                  ConstString(source_path.GetPath().c_str()), true);
             }
           }
         }
@@ -433,7 +433,6 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
           free(values);
       }
     }
-
 
     // If we have a DBGBuildSourcePath + DBGSourcePath pair, append them to the
     // source remappings list.

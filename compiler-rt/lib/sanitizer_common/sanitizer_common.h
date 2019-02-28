@@ -804,7 +804,7 @@ enum AndroidApiLevel {
 
 void WriteToSyslog(const char *buffer);
 
-#if SANITIZER_MAC
+#if SANITIZER_MAC || SANITIZER_WINDOWS
 void LogFullErrorReport(const char *buffer);
 #else
 INLINE void LogFullErrorReport(const char *buffer) {}
@@ -818,7 +818,7 @@ INLINE void WriteOneLineToSyslog(const char *s) {}
 INLINE void LogMessageOnPrintf(const char *str) {}
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX || SANITIZER_WINDOWS
 // Initialize Android logging. Any writes before this are silently lost.
 void AndroidLogInit();
 void SetAbortMessage(const char *);

@@ -26,7 +26,8 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
                 hasOverloadedOperatorName("+=")),
           callee(cxxMethodDecl(ofClass(classTemplateSpecializationDecl(
               hasName("::std::basic_string"),
-              hasTemplateArgument(0, refersToType(qualType().bind("type"))))))),
+              hasTemplateArgument(0, refersToType(hasCanonicalType(
+                                         qualType().bind("type")))))))),
           hasArgument(
               1,
               ignoringImpCasts(
@@ -34,16 +35,49 @@ void StringIntegerAssignmentCheck::registerMatchers(MatchFinder *Finder) {
                        // Ignore calls to tolower/toupper (see PR27723).
                        unless(callExpr(callee(functionDecl(
                            hasAnyName("tolower", "std::tolower", "toupper",
-                                      "std::toupper"))))))
+                                      "std::toupper"))))),
+                       // Do not warn if assigning e.g. `CodePoint` to
+                       // `basic_string<CodePoint>`
+                       unless(hasType(qualType(
+                           hasCanonicalType(equalsBoundNode("type"))))))
                       .bind("expr"))),
           unless(isInTemplateInstantiation())),
       this);
+}
+
+static bool isLikelyCharExpression(const Expr *Argument,
+                                   const ASTContext &Ctx) {
+  const auto *BinOp = dyn_cast<BinaryOperator>(Argument);
+  if (!BinOp)
+    return false;
+  const auto *LHS = BinOp->getLHS()->IgnoreParenImpCasts();
+  const auto *RHS = BinOp->getRHS()->IgnoreParenImpCasts();
+  // <expr> & <mask>, mask is a compile time constant.
+  Expr::EvalResult RHSVal;
+  if (BinOp->getOpcode() == BO_And &&
+      (RHS->EvaluateAsInt(RHSVal, Ctx, Expr::SE_AllowSideEffects) ||
+       LHS->EvaluateAsInt(RHSVal, Ctx, Expr::SE_AllowSideEffects)))
+    return true;
+  // <char literal> + (<expr> % <mod>), where <base> is a char literal.
+  const auto IsCharPlusModExpr = [](const Expr *L, const Expr *R) {
+    const auto *ROp = dyn_cast<BinaryOperator>(R);
+    return ROp && ROp->getOpcode() == BO_Rem && isa<CharacterLiteral>(L);
+  };
+  if (BinOp->getOpcode() == BO_Add) {
+    if (IsCharPlusModExpr(LHS, RHS) || IsCharPlusModExpr(RHS, LHS))
+      return true;
+  }
+  return false;
 }
 
 void StringIntegerAssignmentCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Argument = Result.Nodes.getNodeAs<Expr>("expr");
   SourceLocation Loc = Argument->getBeginLoc();
+
+  // Try to detect a few common expressions to reduce false positives.
+  if (isLikelyCharExpression(Argument, *Result.Context))
+    return;
 
   auto Diag =
       diag(Loc, "an integer is interpreted as a character code when assigning "

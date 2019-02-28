@@ -13701,13 +13701,13 @@ void ARMTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     EVT VT = Op.getValueType();
     const unsigned DstSz = VT.getScalarSizeInBits();
     const unsigned SrcSz = VecVT.getVectorElementType().getSizeInBits();
+    (void)SrcSz;
     assert(SrcSz == Known.getBitWidth());
     assert(DstSz > SrcSz);
     if (Op.getOpcode() == ARMISD::VGETLANEs)
       Known = Known.sext(DstSz);
     else {
-      Known = Known.zext(DstSz);
-      Known.Zero.setBitsFrom(SrcSz);
+      Known = Known.zext(DstSz, true /* extended bits are known zero */);
     }
     assert(DstSz == Known.getBitWidth());
     break;

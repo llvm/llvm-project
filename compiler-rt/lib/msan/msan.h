@@ -312,9 +312,6 @@ struct SymbolizerScope {
 void PrintWarning(uptr pc, uptr bp);
 void PrintWarningWithOrigin(uptr pc, uptr bp, u32 origin);
 
-void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
-                   void *context, bool request_fast_unwind);
-
 // Unpoison first n function arguments.
 void UnpoisonParam(uptr n);
 void UnpoisonThreadLocalState();

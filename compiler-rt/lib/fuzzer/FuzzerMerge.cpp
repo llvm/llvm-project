@@ -331,7 +331,7 @@ void CrashResistantMerge(const Vector<std::string> &Args,
     Cmd.addFlag("merge_control_file", CFPath);
     Cmd.addFlag("merge_inner", "1");
     if (!V) {
-      Cmd.setOutputFile("/dev/null");  // TODO: need to handle this on Windows?
+      Cmd.setOutputFile(getDevNull());
       Cmd.combineOutAndErr();
     }
     auto ExitCode = ExecuteCommand(Cmd);

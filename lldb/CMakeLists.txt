@@ -22,12 +22,6 @@ else()
   add_definitions( -DLLDB_CONFIGURATION_RELEASE )
 endif()
 
-if (LLDB_DISABLE_LIBEDIT)
-  add_definitions( -DLLDB_DISABLE_LIBEDIT )
-else()
-  find_package(LibEdit REQUIRED)
-endif()
-
 if(APPLE)
   add_definitions(-DLLDB_USE_OS_LOG)
 endif()

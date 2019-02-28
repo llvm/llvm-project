@@ -31,6 +31,10 @@ enum class DurationScale : std::uint8_t {
 /// constructing a `Duration` for that scale.
 llvm::StringRef getDurationFactoryForScale(DurationScale Scale);
 
+/// Given a 'Scale', return the appropriate factory function call for
+/// constructing a `Time` for that scale.
+llvm::StringRef getTimeFactoryForScale(DurationScale scale);
+
 // Determine if `Node` represents a literal floating point or integral zero.
 bool IsLiteralZero(const ast_matchers::MatchFinder::MatchResult &Result,
                    const Expr &Node);
@@ -78,6 +82,12 @@ llvm::StringRef getTimeInverseForScale(DurationScale scale);
 /// Assuming `Node` has type `double` or `int` representing a time interval of
 /// `Scale`, return the expression to make it a suitable `Duration`.
 std::string rewriteExprFromNumberToDuration(
+    const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
+    const Expr *Node);
+
+/// Assuming `Node` has a type `int` representing a time instant of `Scale`
+/// since The Epoch, return the expression to make it a suitable `Time`.
+std::string rewriteExprFromNumberToTime(
     const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
     const Expr *Node);
 

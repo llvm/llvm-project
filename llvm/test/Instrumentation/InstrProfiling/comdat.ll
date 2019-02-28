@@ -17,8 +17,8 @@ $foo_inline = comdat any
 
 ; ELF: @__profc_foo_inline = linkonce_odr hidden global{{.*}}, section "__llvm_prf_cnts", comdat($__profv_foo_inline), align 8
 ; ELF: @__profd_foo_inline = linkonce_odr hidden global{{.*}}, section "__llvm_prf_data", comdat($__profv_foo_inline), align 8
-; COFF: @__profc_foo_inline = internal global{{.*}}, section ".lprfc$M", comdat($foo_inline), align 8
-; COFF: @__profd_foo_inline = internal global{{.*}}, section ".lprfd$M", comdat($foo_inline), align 8
+; COFF: @__profc_foo_inline = linkonce_odr dso_local global{{.*}}, section ".lprfc$M", comdat, align 8
+; COFF: @__profd_foo_inline = internal global{{.*}}, section ".lprfd$M", comdat($__profc_foo_inline), align 8
 define weak_odr void @foo_inline() comdat {
   call void @llvm.instrprof.increment(i8* getelementptr inbounds ([10 x i8], [10 x i8]* @__profn_foo_inline, i32 0, i32 0), i64 0, i32 1, i32 0)
   ret void

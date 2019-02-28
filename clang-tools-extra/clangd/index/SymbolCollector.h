@@ -10,6 +10,7 @@
 
 #include "CanonicalIncludes.h"
 #include "Index.h"
+#include "SymbolOrigin.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
@@ -143,4 +144,5 @@ private:
 
 } // namespace clangd
 } // namespace clang
+
 #endif

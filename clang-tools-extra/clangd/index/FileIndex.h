@@ -20,6 +20,7 @@
 #include "MemIndex.h"
 #include "Merge.h"
 #include "index/CanonicalIncludes.h"
+#include "index/Symbol.h"
 #include "clang/Lex/Preprocessor.h"
 #include <memory>
 

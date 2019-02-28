@@ -159,7 +159,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
     llvm::StringRef OutputFilePrefix, const char *InputFileName) const {
   // Construct llc command.
   ArgStringList LlcArgs{InputFileName, "-mtriple=amdgcn-amd-amdhsa",
-                        "-filetype=obj",
+                        "-filetype=obj", "-mattr=-code-object-v3",
                         Args.MakeArgString("-mcpu=" + SubArchName)};
 
   // Extract all the -m options
@@ -167,7 +167,7 @@ const char *AMDGCN::Linker::constructLlcCommand(
   handleTargetFeaturesGroup(
     Args, Features, options::OPT_m_amdgpu_Features_Group);
 
-  // Add features to mattr such as code-object-v3 and xnack
+  // Add features to mattr such as xnack
   std::string MAttrString = "-mattr=";
   for(auto OneFeature : Features) {
     MAttrString.append(Args.MakeArgString(OneFeature));

@@ -7779,8 +7779,8 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
 
   // Make v4f16 (only) fcmp operations utilise vector instructions
   // v8f16 support will be a litle more complicated
-  if (LHS.getValueType().getVectorElementType() == MVT::f16) {
-    if (!FullFP16 && LHS.getValueType().getVectorNumElements() == 4) {
+  if (!FullFP16 && LHS.getValueType().getVectorElementType() == MVT::f16) {
+    if (LHS.getValueType().getVectorNumElements() == 4) {
       LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, LHS);
       RHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::v4f32, RHS);
       SDValue NewSetcc = DAG.getSetCC(dl, MVT::v4i16, LHS, RHS, CC);
@@ -7790,8 +7790,8 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
       return SDValue();
   }
 
-  assert(LHS.getValueType().getVectorElementType() == MVT::f32 ||
-         LHS.getValueType().getVectorElementType() == MVT::f64);
+  assert((!FullFP16 && LHS.getValueType().getVectorElementType() != MVT::f16) ||
+          LHS.getValueType().getVectorElementType() != MVT::f128);
 
   // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't totally
   // clean.  Some of them require two branches to implement.

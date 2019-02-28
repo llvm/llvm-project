@@ -848,9 +848,6 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(EVT SrcVT, EVT DestVT) const {
 CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
                                                   bool IsVarArg) {
   switch (CC) {
-  case CallingConv::AMDGPU_KERNEL:
-  case CallingConv::SPIR_KERNEL:
-    llvm_unreachable("kernels should not be handled here");
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
@@ -863,8 +860,10 @@ CCAssignFn *AMDGPUCallLowering::CCAssignFnForCall(CallingConv::ID CC,
   case CallingConv::Fast:
   case CallingConv::Cold:
     return CC_AMDGPU_Func;
+  case CallingConv::AMDGPU_KERNEL:
+  case CallingConv::SPIR_KERNEL:
   default:
-    report_fatal_error("Unsupported calling convention.");
+    report_fatal_error("Unsupported calling convention for call");
   }
 }
 

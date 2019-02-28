@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Symbols.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
+
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -66,8 +67,8 @@ static bool FileAtPathContainsArchAndUUID(const FileSpec &file_fspec,
 
 // Given a binary exec_fspec, and a ModuleSpec with an architecture/uuid,
 // return true if there is a matching dSYM bundle next to the exec_fspec,
-// and return that value in dsym_fspec.  
-// If there is a .dSYM.yaa compressed archive next to the exec_fspec, 
+// and return that value in dsym_fspec.
+// If there is a .dSYM.yaa compressed archive next to the exec_fspec,
 // call through Symbols::DownloadObjectAndSymbolFile to download the
 // expanded/uncompressed dSYM and return that filepath in dsym_fspec.
 
@@ -99,9 +100,9 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
 
     // See if we have "../CF.framework" - so we'll look for
     // CF.framework.dSYM/Contents/Resources/DWARF/CF
-    // We need to drop the last suffix after '.' to match 
+    // We need to drop the last suffix after '.' to match
     // 'CF' in the DWARF subdir.
-    std::string binary_name (filename.AsCString());
+    std::string binary_name(filename.AsCString());
     auto last_dot = binary_name.find_last_of('.');
     if (last_dot != std::string::npos) {
       binary_name.erase(last_dot);
@@ -152,11 +153,13 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
   const FileSpec &exec_fspec = module_spec.GetFileSpec();
   if (exec_fspec) {
-    if (::LookForDsymNextToExecutablePath (module_spec, exec_fspec, dsym_fspec)) {
-        if (log) {
-          log->Printf("dSYM with matching UUID & arch found at %s", dsym_fspec.GetPath().c_str());
-        }
-        return true;
+    if (::LookForDsymNextToExecutablePath(module_spec, exec_fspec,
+                                          dsym_fspec)) {
+      if (log) {
+        log->Printf("dSYM with matching UUID & arch found at %s",
+                    dsym_fspec.GetPath().c_str());
+      }
+      return true;
     } else {
       FileSpec parent_dirs = exec_fspec;
 
@@ -182,7 +185,8 @@ static bool LocateDSYMInVincinityOfExecutable(const ModuleSpec &module_spec,
         if (fn == nullptr)
           break;
         if (::strchr(fn, '.') != nullptr) {
-          if (::LookForDsymNextToExecutablePath (module_spec, parent_dirs, dsym_fspec)) {
+          if (::LookForDsymNextToExecutablePath(module_spec, parent_dirs,
+                                                dsym_fspec)) {
             if (log) {
               log->Printf("dSYM with matching UUID & arch found at %s",
                           dsym_fspec.GetPath().c_str());
@@ -262,7 +266,8 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
     // Add module directory.
     FileSpec module_file_spec = module_spec.GetFileSpec();
     // We keep the unresolved pathname if it fails.
-    FileSystem::Instance().ResolveSymbolicLink(module_file_spec, module_file_spec);
+    FileSystem::Instance().ResolveSymbolicLink(module_file_spec,
+                                               module_file_spec);
 
     const ConstString &file_dir = module_file_spec.GetDirectory();
     {
@@ -306,7 +311,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
       //   /usr/lib/debug/.build-id/ff/e7fe727889ad82bb153de2ad065b2189693315.debug
       uuid_str = module_uuid.GetAsString("");
       std::transform(uuid_str.begin(), uuid_str.end(), uuid_str.begin(),
-          ::tolower);
+                     ::tolower);
       uuid_str.insert(2, 1, '/');
       uuid_str = uuid_str + ".debug";
     }

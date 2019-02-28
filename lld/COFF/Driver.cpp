@@ -19,6 +19,7 @@
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Optional.h"
@@ -986,6 +987,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     printHelp(ArgsArr[0]);
     return;
   }
+
+  lld::ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_threads_no, true);
 
   if (Args.hasArg(OPT_show_timing))
     Config->ShowTiming = true;

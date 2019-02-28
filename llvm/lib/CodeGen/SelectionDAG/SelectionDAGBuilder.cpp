@@ -4417,10 +4417,10 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
 
   auto Alignment = DAG.getEVTAlignment(MemVT);
 
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad |
-               MachineMemOperand::MOStore;
+  auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= DAG.getTargetLoweringInfo().getMMOFlags(I);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO =
@@ -4468,12 +4468,10 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   auto MemVT = getValue(I.getValOperand()).getSimpleValueType();
   auto Alignment = DAG.getEVTAlignment(MemVT);
 
-  // For now, atomics are considered to be volatile always, and they are
-  // chained as such.
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile |
-    MachineMemOperand::MOLoad |  MachineMemOperand::MOStore;
+  auto Flags = MachineMemOperand::MOLoad |  MachineMemOperand::MOStore;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= DAG.getTargetLoweringInfo().getMMOFlags(I);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO =
@@ -4518,12 +4516,15 @@ void SelectionDAGBuilder::visitAtomicLoad(const LoadInst &I) {
       I.getAlignment() < VT.getStoreSize())
     report_fatal_error("Cannot generate unaligned atomic load");
 
+  auto Flags = MachineMemOperand::MOLoad;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= TLI.getMMOFlags(I);
+
   MachineMemOperand *MMO =
       DAG.getMachineFunction().
       getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()),
-                           MachineMemOperand::MOVolatile |
-                           MachineMemOperand::MOLoad,
-                           VT.getStoreSize(),
+                           Flags, VT.getStoreSize(),
                            I.getAlignment() ? I.getAlignment() :
                                               DAG.getEVTAlignment(VT),
                            AAMDNodes(), nullptr, SSID, Order);
@@ -4554,11 +4555,10 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   if (I.getAlignment() < VT.getStoreSize())
     report_fatal_error("Cannot generate unaligned atomic store");
 
-  // For now, atomics are considered to be volatile always, and they are
-  // chained as such.
-  // FIXME: Volatile isn't really correct; we should keep track of atomic
-  // orderings in the memoperand.
-  auto Flags = MachineMemOperand::MOVolatile |  MachineMemOperand::MOStore;
+  auto Flags = MachineMemOperand::MOStore;
+  if (I.isVolatile())
+    Flags |= MachineMemOperand::MOVolatile;
+  Flags |= TLI.getMMOFlags(I);
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO =

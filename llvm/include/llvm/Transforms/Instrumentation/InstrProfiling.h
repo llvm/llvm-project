@@ -34,7 +34,7 @@ using LoadStorePair = std::pair<Instruction *, Instruction *>;
 /// instrumentation pass.
 class InstrProfiling : public PassInfoMixin<InstrProfiling> {
 public:
-  InstrProfiling() = default;
+  InstrProfiling() : IsCS(false) {}
   InstrProfiling(const InstrProfOptions &Options, bool IsCS = false)
       : Options(Options), IsCS(IsCS) {}
 

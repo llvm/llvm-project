@@ -50,6 +50,7 @@
 
 # Overwrite one of the members with a member of a different size to show that
 # the size field in the member header is not relevant.
+# RUN: rm -f %t/2.o
 # RUN: cp %t/1.o %t/2.o
 # RUN: llvm-readobj --file-headers %t.a | FileCheck %s --check-prefix=RESIZED
 

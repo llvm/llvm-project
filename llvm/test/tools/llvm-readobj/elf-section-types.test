@@ -63,14 +63,20 @@
 # LLVM: Type: Unknown (0x1000)
 # LLVM: Name: loos
 # LLVM: Type: Unknown (0x60000000)
+# LLVM: Name: fooos
+# LLVM: Type: Unknown (0x60000F00)
 # LLVM: Name: hios
 # LLVM: Type: SHT_GNU_versym
 # LLVM: Name: loproc
 # LLVM: Type: Unknown (0x70000000)
+# LLVM: Name: fooproc
+# LLVM: Type: Unknown (0x70000F00)
 # LLVM: Name: hiproc
 # LLVM: Type: Unknown (0x7FFFFFFF)
 # LLVM: Name: louser
 # LLVM: Type: Unknown (0x80000000)
+# LLVM: Name: foouser
+# LLVM: Type: Unknown (0x80000F00)
 # LLVM: Name: hiuser
 # LLVM: Type: Unknown (0xFFFFFFFF)
 # LLVM: Name: .symtab
@@ -94,10 +100,8 @@
 # GNU-NEXT: group                   GROUP
 # GNU-NEXT: symtab_shndx            SYMTAB SECTION INDICES
 # GNU-NEXT: relr                    RELR
-## FIXME: These next two lines should print something like ANDROID_REL and ANDROID_RELA.
-## See https://bugs.llvm.org/show_bug.cgi?id=40773.
-# GNU-NEXT: android_rel                      0000000000000000
-# GNU-NEXT: android_rela                     0000000000000000
+# GNU-NEXT: android_rel             ANDROID_REL
+# GNU-NEXT: android_rela            ANDROID_RELA
 # GNU-NEXT: android_relr            RELR
 # GNU-NEXT: llvm_odrtab             LLVM_ODRTAB
 # GNU-NEXT: linker_options          LLVM_LINKER_OPTIONS
@@ -107,8 +111,18 @@
 # GNU-NEXT: gnu_hash                GNU_HASH
 # GNU-NEXT: gnu_verdef              VERDEF
 # GNU-NEXT: gnu_verneed             VERNEED
-## TODO: Add testing for unknown section types in GNU output style.
-## See https://bugs.llvm.org/show_bug.cgi?id=40773.
+# GNU-NEXT: unknown                 0x1000: <unknown>
+# GNU-NEXT: loos                    LOOS+0x0
+# GNU-NEXT: fooos                   LOOS+0xF00
+# GNU-NEXT: hios                    VERSYM
+# GNU-NEXT: loproc                  LOPROC+0x0
+# GNU-NEXT: fooproc                 LOPROC+0xF00
+# GNU-NEXT: hiproc                  LOPROC+0xFFFFFFF
+# GNU-NEXT: louser                  LOUSER+0x0
+# GNU-NEXT: foouser                 LOUSER+0xF00
+# GNU-NEXT: hiuser                  LOUSER+0x7FFFFFFF
+# GNU-NEXT: .symtab                 SYMTAB
+# GNU-NEXT: .strtab                 STRTAB
 
 --- !ELF
 FileHeader:
@@ -186,15 +200,21 @@ Sections:
     Type: 0x1000
   - Name: loos
     Type: 0x60000000
+  - Name: fooos
+    Type: 0x60000F00
   - Name: hios
     Type: 0x6fffffff
     Entries: []
   - Name: loproc
     Type: 0x70000000
+  - Name: fooproc
+    Type: 0x70000F00
   - Name: hiproc
     Type: 0x7fffffff
   - Name: louser
     Type: 0x80000000
+  - Name: foouser
+    Type: 0x80000F00
   - Name: hiuser
     Type: 0xffffffff
 Symbols:

@@ -269,12 +269,17 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
       // Also make sure we skip ourselves to avoid self references.
       if (isa<MemoryUse>(U.getUser()) || U.getUser() == MD)
         continue;
+      // Defs are automatically unoptimized when the user is set to MD below,
+      // because the isOptimized() call will fail to find the same ID.
       U.set(MD);
     }
   }
 
   // and that def is now our defining access.
   MD->setDefiningAccess(DefBefore);
+
+  // Remember the index where we may insert new phis below.
+  unsigned NewPhiIndex = InsertedPHIs.size();
 
   SmallVector<WeakVH, 8> FixupList(InsertedPHIs.begin(), InsertedPHIs.end());
   if (!DefBeforeSameBlock) {
@@ -289,8 +294,48 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     // backwards to find the def.  To make that work, we'd have to track whether
     // getDefRecursive only ever used the single predecessor case.  These types
     // of paths also only exist in between CFG simplifications.
+
+    // If this is the first def in the block and this insert is in an arbitrary
+    // place, compute IDF and place phis.
+    auto Iter = MD->getDefsIterator();
+    ++Iter;
+    auto IterEnd = MSSA->getBlockDefs(MD->getBlock())->end();
+    if (Iter == IterEnd) {
+      ForwardIDFCalculator IDFs(*MSSA->DT);
+      SmallVector<BasicBlock *, 32> IDFBlocks;
+      SmallPtrSet<BasicBlock *, 2> DefiningBlocks;
+      DefiningBlocks.insert(MD->getBlock());
+      IDFs.setDefiningBlocks(DefiningBlocks);
+      IDFs.calculate(IDFBlocks);
+      SmallVector<AssertingVH<MemoryPhi>, 4> NewInsertedPHIs;
+      for (auto *BBIDF : IDFBlocks)
+        if (!MSSA->getMemoryAccess(BBIDF))
+          NewInsertedPHIs.push_back(MSSA->createMemoryPhi(BBIDF));
+
+      for (auto &MPhi : NewInsertedPHIs) {
+        auto *BBIDF = MPhi->getBlock();
+        for (auto *Pred : predecessors(BBIDF)) {
+          DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> CachedPreviousDef;
+          MPhi->addIncoming(getPreviousDefFromEnd(Pred, CachedPreviousDef),
+                            Pred);
+        }
+      }
+
+      // Re-take the index where we're adding the new phis, because the above
+      // call to getPreviousDefFromEnd, may have inserted into InsertedPHIs.
+      NewPhiIndex = InsertedPHIs.size();
+      for (auto &MPhi : NewInsertedPHIs) {
+        InsertedPHIs.push_back(&*MPhi);
+        FixupList.push_back(&*MPhi);
+      }
+    }
+
     FixupList.push_back(MD);
   }
+
+  // Remember the index where we stopped inserting new phis above, since the
+  // fixupDefs call in the loop below may insert more, that are already minimal.
+  unsigned NewPhiIndexEnd = InsertedPHIs.size();
 
   while (!FixupList.empty()) {
     unsigned StartingPHISize = InsertedPHIs.size();
@@ -299,6 +344,15 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
     // Put any new phis on the fixup list, and process them
     FixupList.append(InsertedPHIs.begin() + StartingPHISize, InsertedPHIs.end());
   }
+
+  // Optimize potentially non-minimal phis added in this method.
+  for (unsigned Idx = NewPhiIndex; Idx < NewPhiIndexEnd; ++Idx) {
+    if (auto *MPhi = cast_or_null<MemoryPhi>(InsertedPHIs[Idx])) {
+      auto OperRange = MPhi->operands();
+      tryRemoveTrivialPhi(MPhi, OperRange);
+    }
+  }
+
   // Now that all fixups are done, rename all uses if we are asked.
   if (RenameUses) {
     SmallPtrSet<BasicBlock *, 16> Visited;

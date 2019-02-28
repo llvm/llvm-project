@@ -121,6 +121,12 @@ static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
   return frame > stack_bottom && frame < stack_top - 2 * sizeof (uhwptr);
 }
 
+// Get the stack trace with the given pc and bp.
+// The pc will be in the position 0 of the resulting stack trace.
+// The bp may refer to the current frame or to the caller's frame.
+void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
+                   void *context, bool request_fast_unwind);
+
 }  // namespace __sanitizer
 
 // Use this macro if you want to print stack trace with the caller

@@ -16,6 +16,7 @@
 #include "Symbols.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "lld/Common/Threads.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -1096,8 +1097,7 @@ void Writer::mergeSections() {
 // Visits all sections to initialize their relocation targets.
 void Writer::readRelocTargets() {
   for (OutputSection *Sec : OutputSections)
-    for_each(parallel::par, Sec->Chunks.begin(), Sec->Chunks.end(),
-             [&](Chunk *C) { C->readRelocTargets(); });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->readRelocTargets(); });
 }
 
 // Visits all sections to assign incremental, non-overlapping RVAs and
@@ -1613,8 +1613,7 @@ void Writer::writeSections() {
     // ADD instructions).
     if (Sec->Header.Characteristics & IMAGE_SCN_CNT_CODE)
       memset(SecBuf, 0xCC, Sec->getRawSize());
-    for_each(parallel::par, Sec->Chunks.begin(), Sec->Chunks.end(),
-             [&](Chunk *C) { C->writeTo(SecBuf); });
+    parallelForEach(Sec->Chunks, [&](Chunk *C) { C->writeTo(SecBuf); });
   }
 }
 
@@ -1682,14 +1681,16 @@ void Writer::sortExceptionTable() {
   uint8_t *End = BufAddr(LastPdata) + LastPdata->getSize();
   if (Config->Machine == AMD64) {
     struct Entry { ulittle32_t Begin, End, Unwind; };
-    sort(parallel::par, (Entry *)Begin, (Entry *)End,
-         [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
+    parallelSort(
+        MutableArrayRef<Entry>((Entry *)Begin, (Entry *)End),
+        [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
     return;
   }
   if (Config->Machine == ARMNT || Config->Machine == ARM64) {
     struct Entry { ulittle32_t Begin, Unwind; };
-    sort(parallel::par, (Entry *)Begin, (Entry *)End,
-         [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
+    parallelSort(
+        MutableArrayRef<Entry>((Entry *)Begin, (Entry *)End),
+        [](const Entry &A, const Entry &B) { return A.Begin < B.Begin; });
     return;
   }
   errs() << "warning: don't know how to handle .pdata.\n";

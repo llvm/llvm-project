@@ -1,6 +1,5 @@
 # Check that libFuzzer honors SIGUSR1/SIGUSR2
-# FIXME: Disabled on Windows for now because of reliance on posix only features
-# (eg: export, "&", pkill).
+# Disabled on Windows which does not have SIGUSR1/SIGUSR2.
 UNSUPPORTED: darwin, windows
 RUN: rm -rf %t
 RUN: mkdir -p %t

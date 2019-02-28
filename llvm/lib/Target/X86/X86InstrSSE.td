@@ -8371,7 +8371,7 @@ def : Pat<(v32i8 (X86SubVBroadcast (v16i8 VR128:$src))),
 // Variable Bit Shifts
 //
 multiclass avx2_var_shift<bits<8> opc, string OpcodeStr, SDNode OpNode,
-                          SDNode IntrinNode, ValueType vt128, ValueType vt256> {
+                          ValueType vt128, ValueType vt256> {
   def rr  : AVX28I<opc, MRMSrcReg, (outs VR128:$dst),
              (ins VR128:$src1, VR128:$src2),
              !strconcat(OpcodeStr, "\t{$src2, $src1, $dst|$dst, $src1, $src2}"),
@@ -8400,23 +8400,14 @@ multiclass avx2_var_shift<bits<8> opc, string OpcodeStr, SDNode OpNode,
                        (vt256 (load addr:$src2)))))]>,
              VEX_4V, VEX_L, Sched<[SchedWriteVarVecShift.YMM.Folded,
                                    SchedWriteVarVecShift.YMM.ReadAfterFold]>;
-
-  def : Pat<(vt128 (IntrinNode VR128:$src1, VR128:$src2)),
-            (!cast<Instruction>(NAME#"rr") VR128:$src1, VR128:$src2)>;
-  def : Pat<(vt128 (IntrinNode VR128:$src1, (load addr:$src2))),
-            (!cast<Instruction>(NAME#"rm") VR128:$src1, addr:$src2)>;
-  def : Pat<(vt256 (IntrinNode VR256:$src1, VR256:$src2)),
-            (!cast<Instruction>(NAME#"Yrr") VR256:$src1, VR256:$src2)>;
-  def : Pat<(vt256 (IntrinNode VR256:$src1, (load addr:$src2))),
-            (!cast<Instruction>(NAME#"Yrm") VR256:$src1, addr:$src2)>;
 }
 
 let Predicates = [HasAVX2, NoVLX] in {
-  defm VPSLLVD : avx2_var_shift<0x47, "vpsllvd", shl, X86vshlv, v4i32, v8i32>;
-  defm VPSLLVQ : avx2_var_shift<0x47, "vpsllvq", shl, X86vshlv, v2i64, v4i64>, VEX_W;
-  defm VPSRLVD : avx2_var_shift<0x45, "vpsrlvd", srl, X86vsrlv, v4i32, v8i32>;
-  defm VPSRLVQ : avx2_var_shift<0x45, "vpsrlvq", srl, X86vsrlv, v2i64, v4i64>, VEX_W;
-  defm VPSRAVD : avx2_var_shift<0x46, "vpsravd", sra, X86vsrav, v4i32, v8i32>;
+  defm VPSLLVD : avx2_var_shift<0x47, "vpsllvd", X86vshlv, v4i32, v8i32>;
+  defm VPSLLVQ : avx2_var_shift<0x47, "vpsllvq", X86vshlv, v2i64, v4i64>, VEX_W;
+  defm VPSRLVD : avx2_var_shift<0x45, "vpsrlvd", X86vsrlv, v4i32, v8i32>;
+  defm VPSRLVQ : avx2_var_shift<0x45, "vpsrlvq", X86vsrlv, v2i64, v4i64>, VEX_W;
+  defm VPSRAVD : avx2_var_shift<0x46, "vpsravd", X86vsrav, v4i32, v8i32>;
 }
 
 //===----------------------------------------------------------------------===//

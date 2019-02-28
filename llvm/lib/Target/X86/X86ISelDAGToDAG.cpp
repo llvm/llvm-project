@@ -753,6 +753,30 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       continue;
     }
 
+    // Replace vector shifts with their X86 specific equivalent so we don't
+    // need 2 sets of patterns.
+    switch (N->getOpcode()) {
+    case ISD::SHL:
+    case ISD::SRA:
+    case ISD::SRL:
+      if (N->getValueType(0).isVector()) {
+        unsigned NewOpc;
+        switch (N->getOpcode()) {
+        default: llvm_unreachable("Unexpected opcode!");
+        case ISD::SHL: NewOpc = X86ISD::VSHLV; break;
+        case ISD::SRA: NewOpc = X86ISD::VSRAV; break;
+        case ISD::SRL: NewOpc = X86ISD::VSRLV; break;
+        }
+        SDValue Res = CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
+                                      N->getOperand(0), N->getOperand(1));
+        --I;
+        CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+        ++I;
+        CurDAG->DeleteNode(N);
+        continue;
+      }
+    }
+
     if (OptLevel != CodeGenOpt::None &&
         // Only do this when the target can fold the load into the call or
         // jmp.

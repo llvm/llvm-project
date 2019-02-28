@@ -1110,6 +1110,7 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Record.push_back(D->blockMissingReturnType());
   Record.push_back(D->isConversionFromLambda());
   Record.push_back(D->doesNotEscape());
+  Record.push_back(D->canAvoidCopyToHeap());
   Record.push_back(D->capturesCXXThis());
   Record.push_back(D->getNumCaptures());
   for (const auto &capture : D->captures()) {

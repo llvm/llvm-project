@@ -14,6 +14,8 @@
 
 #include "Index.h"
 #include "Serialization.h"
+#include "SymbolLocation.h"
+#include "SymbolOrigin.h"
 #include "Trace.h"
 #include "dex/Dex.h"
 #include "llvm/ADT/Optional.h"
