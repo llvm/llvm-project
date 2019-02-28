@@ -710,15 +710,6 @@ static void CountLocals(
         } else {
           var_type = valobj_sp->GetCompilerType();
         }
-
-        if (var_type.IsValid() && !SwiftASTContext::IsFullyRealized(var_type)) {
-          lldb::ValueObjectSP dynamic_valobj_sp =
-              valobj_sp->GetDynamicValue(lldb::eDynamicDontRunTarget);
-
-          if (!dynamic_valobj_sp || dynamic_valobj_sp->GetError().Fail()) {
-            continue;
-          }
-        }
       }
 
       if (!var_type.IsValid()) {

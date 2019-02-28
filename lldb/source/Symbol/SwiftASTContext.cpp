@@ -5109,27 +5109,22 @@ bool SwiftASTContext::IsPossibleDynamicType(void *type,
   VALID_OR_RETURN(false);
 
   if (type && check_swift) {
-    // FIXME: use the dynamic_pointee_type.
-    Flags type_flags(GetTypeInfo(type, nullptr));
+    auto can_type = GetCanonicalSwiftType(type);
 
-    if (type_flags.AnySet(eTypeIsGenericTypeParam | eTypeIsClass |
-                          eTypeIsProtocol))
+    if (can_type->getClassOrBoundGenericClass() ||
+        can_type->isAnyExistentialType())
       return true;
 
-    if (type_flags.AnySet(eTypeIsStructUnion | eTypeIsEnumeration |
-                          eTypeIsTuple)) {
-      CompilerType compiler_type(GetCanonicalSwiftType(type));
-      return !SwiftASTContext::IsFullyRealized(compiler_type);
-    }
+    if (can_type->hasArchetype() || can_type->hasTypeParameter())
+      return true;
 
-    auto can_type = GetCanonicalSwiftType(type).getPointer();
-    if (can_type == GetASTContext()->TheRawPointerType.getPointer())
+    if (can_type == GetASTContext()->TheRawPointerType)
       return true;
-    if (can_type == GetASTContext()->TheUnknownObjectType.getPointer())
+    if (can_type == GetASTContext()->TheUnknownObjectType)
       return true;
-    if (can_type == GetASTContext()->TheNativeObjectType.getPointer())
+    if (can_type == GetASTContext()->TheNativeObjectType)
       return true;
-    if (can_type == GetASTContext()->TheBridgeObjectType.getPointer())
+    if (can_type == GetASTContext()->TheBridgeObjectType)
       return true;
   }
 
@@ -7002,26 +6997,6 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   } break;
 
   case swift::TypeKind::Tuple: {
-    // Dynamic type resolution may actually change(!) the layout of a
-    // tuple, so we need to get the offset from the static (but
-    // archetype-bound) version.
-    auto static_value = valobj->GetStaticValue();
-    auto static_type = static_value->GetCompilerType();
-    auto static_swift_type = GetCanonicalSwiftType(static_type);
-    if (swift::isa<swift::TupleType>(static_swift_type.getPointer()))
-      swift_can_type = static_swift_type;
-    if (swift_can_type->hasTypeParameter()) {
-      if (!exe_ctx)
-        return {};
-      auto *exe_scope = exe_ctx->GetBestExecutionContextScope();
-      auto *frame = exe_scope->CalculateStackFrame().get();
-      auto *runtime = exe_scope->CalculateProcess()->GetSwiftLanguageRuntime();
-      if (!frame || !runtime)
-        return {};
-      auto bound = runtime->DoArchetypeBindingForType(*frame, static_type);
-      swift_can_type = GetCanonicalSwiftType(bound);
-    }
-
     auto tuple_type = cast<swift::TupleType>(swift_can_type);
     if (idx >= tuple_type->getNumElements()) break;
 

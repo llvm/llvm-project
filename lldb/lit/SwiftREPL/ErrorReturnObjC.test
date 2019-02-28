@@ -1,0 +1,29 @@
+// Test that we can correctly print (resilient) Foundation
+// types when they're stored in REPL-defined globals.
+
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+import Foundation
+
+class ClassError : NSError {
+  required init(coder: NSCoder) { fatalError() }
+  init() {
+    super.init(domain: "ClassError", code: 10, userInfo: [:])
+  }
+  var message = "Hello error"
+}
+
+func throwsClassError() throws {
+  throw ClassError()
+}
+
+try throwsClassError()
+
+// CHECK: $E0: ClassError = {
+// CHECK:   Foundation.NSError = domain: "ClassError" - code: 10 {
+// CHECK:     _userInfo = 0 key/value pairs
+// CHECK:   }
+// CHECK:   message = "Hello error"
+// CHECK: }
