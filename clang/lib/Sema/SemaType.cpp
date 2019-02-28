@@ -1419,7 +1419,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   }
   case DeclSpec::TST_int128:
-    if (!S.Context.getTargetInfo().hasInt128Type())
+    if (!S.Context.getTargetInfo().hasInt128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == DeclSpec::TSS_unsigned)
@@ -1431,7 +1432,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // CUDA host and device may have different _Float16 support, therefore
     // do not diagnose _Float16 usage to avoid false alarm.
     // ToDo: more precise diagnostics for CUDA.
-    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA)
+    if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "_Float16";
     Result = Context.Float16Ty;
@@ -1445,7 +1447,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       Result = Context.DoubleTy;
     break;
   case DeclSpec::TST_float128:
-    if (!S.Context.getTargetInfo().hasFloat128Type())
+    if (!S.Context.getTargetInfo().hasFloat128Type() &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
     Result = Context.Float128Ty;

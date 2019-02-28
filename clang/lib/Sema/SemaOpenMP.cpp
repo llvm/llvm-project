@@ -1443,6 +1443,18 @@ void Sema::checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee) {
     DeviceCallGraph[Caller].insert({Callee, Loc});
 }
 
+void Sema::checkOpenMPDeviceExpr(const Expr *E) {
+  assert(getLangOpts().OpenMP && getLangOpts().OpenMPIsDevice &&
+         "OpenMP device compilation mode is expected.");
+  QualType Ty = E->getType();
+  if ((Ty->isFloat16Type() && !Context.getTargetInfo().hasFloat16Type()) ||
+      (Ty->isFloat128Type() && !Context.getTargetInfo().hasFloat128Type()) ||
+      (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
+       !Context.getTargetInfo().hasInt128Type()))
+    targetDiag(E->getExprLoc(), diag::err_type_unsupported)
+        << Ty << E->getSourceRange();
+}
+
 bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
   assert(LangOpts.OpenMP && "OpenMP is not allowed");
 

@@ -4045,13 +4045,13 @@ The ``gnu_inline`` changes the meaning of ``extern inline`` to use GNU inline
 semantics, meaning:
 
 * If any declaration that is declared ``inline`` is not declared ``extern``,
-then the ``inline`` keyword is just a hint. In particular, an out-of-line
-definition is still emitted for a function with external linkage, even if all
-call sites are inlined, unlike in C99 and C++ inline semantics.
+  then the ``inline`` keyword is just a hint. In particular, an out-of-line
+  definition is still emitted for a function with external linkage, even if all
+  call sites are inlined, unlike in C99 and C++ inline semantics.
 
 * If all declarations that are declared ``inline`` are also declared
-``extern``, then the function body is present only for inlining and no
-out-of-line version is emitted.
+  ``extern``, then the function body is present only for inlining and no
+  out-of-line version is emitted.
 
 Some important consequences: ``static inline`` emits an out-of-line
 version if needed, a plain ``inline`` definition emits an out-of-line version

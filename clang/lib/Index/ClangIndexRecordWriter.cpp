@@ -74,7 +74,7 @@ bool ClangIndexRecordWriter::writeRecord(StringRef Filename,
     return std::make_pair(LineNo, ColNo);
   };
 
-  for (auto &Occur : IdxRecord.getDeclOccurrences()) {
+  for (auto &Occur : IdxRecord.getDeclOccurrencesSortedByOffset()) {
     unsigned Line, Col;
     std::tie(Line, Col) = getLineCol(Occur.Offset);
     SmallVector<writer::SymbolRelation, 3> Related;

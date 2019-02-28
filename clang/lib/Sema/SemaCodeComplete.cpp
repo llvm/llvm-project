@@ -8362,10 +8362,23 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
   };
 
   // Helper: scans IncludeDir for nice files, and adds results for each.
-  auto AddFilesFromIncludeDir = [&](StringRef IncludeDir, bool IsSystem) {
+  auto AddFilesFromIncludeDir = [&](StringRef IncludeDir,
+                                    bool IsSystem,
+                                    DirectoryLookup::LookupType_t LookupType) {
     llvm::SmallString<128> Dir = IncludeDir;
-    if (!NativeRelDir.empty())
-      llvm::sys::path::append(Dir, NativeRelDir);
+    if (!NativeRelDir.empty()) {
+      if (LookupType == DirectoryLookup::LT_Framework) {
+        // For a framework dir, #include <Foo/Bar/> actually maps to
+        // a path of Foo.framework/Headers/Bar/.
+        auto Begin = llvm::sys::path::begin(NativeRelDir);
+        auto End = llvm::sys::path::end(NativeRelDir);
+
+        llvm::sys::path::append(Dir, *Begin + ".framework", "Headers");
+        llvm::sys::path::append(Dir, ++Begin, End);
+      } else {
+        llvm::sys::path::append(Dir, NativeRelDir);
+      }
+    }
 
     std::error_code EC;
     unsigned Count = 0;
@@ -8376,6 +8389,12 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       StringRef Filename = llvm::sys::path::filename(It->path());
       switch (It->type()) {
       case llvm::sys::fs::file_type::directory_file:
+        // All entries in a framework directory must have a ".framework" suffix,
+        // but the suffix does not appear in the source code's include/import.
+        if (LookupType == DirectoryLookup::LT_Framework &&
+            NativeRelDir.empty() && !Filename.consume_back(".framework"))
+          break;
+
         AddCompletion(Filename, /*IsDirectory=*/true);
         break;
       case llvm::sys::fs::file_type::regular_file:
@@ -8404,10 +8423,12 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
       // header maps are not (currently) enumerable.
       break;
     case DirectoryLookup::LT_NormalDir:
-      AddFilesFromIncludeDir(IncludeDir.getDir()->getName(), IsSystem);
+      AddFilesFromIncludeDir(IncludeDir.getDir()->getName(), IsSystem,
+                             DirectoryLookup::LT_NormalDir);
       break;
     case DirectoryLookup::LT_Framework:
-      AddFilesFromIncludeDir(IncludeDir.getFrameworkDir()->getName(), IsSystem);
+      AddFilesFromIncludeDir(IncludeDir.getFrameworkDir()->getName(), IsSystem,
+                             DirectoryLookup::LT_Framework);
       break;
     }
   };
@@ -8421,7 +8442,8 @@ void Sema::CodeCompleteIncludedFile(llvm::StringRef Dir, bool Angled) {
     // The current directory is on the include path for "quoted" includes.
     auto *CurFile = PP.getCurrentFileLexer()->getFileEntry();
     if (CurFile && CurFile->getDir())
-      AddFilesFromIncludeDir(CurFile->getDir()->getName(), false);
+      AddFilesFromIncludeDir(CurFile->getDir()->getName(), false,
+                             DirectoryLookup::LT_NormalDir);
     for (const auto &D : make_range(S.quoted_dir_begin(), S.quoted_dir_end()))
       AddFilesFromDirLookup(D, false);
   }

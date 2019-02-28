@@ -4638,8 +4638,12 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
 
   TargetInfo::CallingConvCheckResult A = TargetInfo::CCCR_OK;
   const TargetInfo &TI = Context.getTargetInfo();
-  auto *Aux = Context.getAuxTargetInfo();
+  // CUDA functions may have host and/or device attributes which indicate
+  // their targeted execution environment, therefore the calling convention
+  // of functions in CUDA should be checked against the target deduced based
+  // on their host/device attributes.
   if (LangOpts.CUDA) {
+    auto *Aux = Context.getAuxTargetInfo();
     auto CudaTarget = IdentifyCUDATarget(FD);
     bool CheckHost = false, CheckDevice = false;
     switch (CudaTarget) {

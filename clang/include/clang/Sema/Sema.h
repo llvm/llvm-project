@@ -8871,6 +8871,10 @@ private:
   /// Check whether we're allowed to call Callee from the current function.
   void checkOpenMPDeviceFunction(SourceLocation Loc, FunctionDecl *Callee);
 
+  /// Check if the expression is allowed to be used in expressions for the
+  /// OpenMP devices.
+  void checkOpenMPDeviceExpr(const Expr *E);
+
   /// Checks if a type or a declaration is disabled due to the owning extension
   /// being disabled, and emits diagnostic messages if it is disabled.
   /// \param D type or declaration to be checked.

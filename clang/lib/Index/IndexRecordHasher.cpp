@@ -153,7 +153,7 @@ public:
 
 hash_code IndexRecordHasher::hashRecord(const FileIndexRecord &Record) {
   hash_code Hash = INITIAL_HASH;
-  for (auto &Info : Record.getDeclOccurrences()) {
+  for (auto &Info : Record.getDeclOccurrencesSortedByOffset()) {
     COMBINE_HASH(Info.Roles, Info.Offset, hash(Info.Dcl));
     for (auto &Rel : Info.Relations) {
       COMBINE_HASH(hash(Rel.RelatedSymbol));
