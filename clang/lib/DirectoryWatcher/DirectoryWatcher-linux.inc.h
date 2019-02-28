@@ -92,7 +92,12 @@ static void runWatcher(std::string pathToWatch, int inotifyFD,
   char buf[EventBufferLength] __attribute__((aligned(8)));
 
   while (1) {
-    ssize_t numRead = RetryAfterSignal(-1, read, inotifyFD, buf, EventBufferLength);
+    ssize_t numRead = read(inotifyFD, buf, EventBufferLength);
+    if (numRead == -1) {
+      if (errno == EINTR)
+        continue;
+      return; // watcher is stopped.
+    }
 
     SmallVector<INotifyEvent, 8> iEvents;
     for (char *p = buf; p < buf + numRead;) {
@@ -178,6 +183,10 @@ bool DirectoryWatcher::Implementation::initialize(StringRef Path,
 void DirectoryWatcher::Implementation::stopListening() {
   if (inotifyFD == -1)
     return;
-  RetryAfterSignal(-1, close, inotifyFD);
+  while (true) {
+    if (close(inotifyFD) == -1 && errno == EINTR)
+      continue;
+    break;
+  }
   inotifyFD = -1;
 }
