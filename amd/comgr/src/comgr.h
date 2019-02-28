@@ -214,10 +214,6 @@ struct DataAction {
 };
 
 struct DataMeta {
-
-  DataMeta();
-  ~DataMeta();
-
   static amd_comgr_metadata_node_t Convert(DataMeta* meta) {
     amd_comgr_metadata_node_t handle = {
         static_cast<uint64_t>(reinterpret_cast<uintptr_t>(meta))};

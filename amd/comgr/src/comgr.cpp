@@ -381,10 +381,6 @@ amd_comgr_status_t DataAction::SetActionPath(llvm::StringRef ActionPath) {
   return SetCStr(action_path, ActionPath);
 }
 
-DataMeta::DataMeta() : node(0) {}
-
-DataMeta::~DataMeta() {}
-
 amd_comgr_metadata_kind_t DataMeta::get_metadata_kind() {
   if (msgpack_node)
     return msgpack_node->getKind();
