@@ -1753,7 +1753,7 @@ def fno_reroll_loops : Flag<["-"], "fno-reroll-loops">, Group<f_Group>,
   HelpText<"Turn off loop reroller">;
 def randstruct_auto : Flag<["-"], "randstruct-auto">,
   HelpText<"Enable automatic structure selection for field randomization; "
-           "disabled with no_randomize_layout">, Flags<[CC1Option]>;
+           "Disable for specific structures with attribute no_randomize_layout">, Flags<[CC1Option]>;
 def ftrigraphs : Flag<["-"], "ftrigraphs">, Group<f_Group>,
   HelpText<"Process trigraph sequences">, Flags<[CC1Option]>;
 def fno_trigraphs : Flag<["-"], "fno-trigraphs">, Group<f_Group>,
