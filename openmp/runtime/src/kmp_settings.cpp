@@ -975,12 +975,27 @@ static void __kmp_stg_print_warnings(kmp_str_buf_t *buffer, char const *name,
 
 static void __kmp_stg_parse_nested(char const *name, char const *value,
                                    void *data) {
-  __kmp_stg_parse_bool(name, value, &__kmp_dflt_nested);
+  int nested;
+  KMP_INFORM(EnvVarDeprecated, name, "OMP_MAX_ACTIVE_LEVELS");
+  __kmp_stg_parse_bool(name, value, &nested);
+  if (nested) {
+    if (!__kmp_dflt_max_active_levels_set)
+      __kmp_dflt_max_active_levels = KMP_MAX_ACTIVE_LEVELS_LIMIT;
+  } else { // nesting explicitly turned off
+    __kmp_dflt_max_active_levels = 1;
+    __kmp_dflt_max_active_levels_set = true;
+  }
 } // __kmp_stg_parse_nested
 
 static void __kmp_stg_print_nested(kmp_str_buf_t *buffer, char const *name,
                                    void *data) {
-  __kmp_stg_print_bool(buffer, name, __kmp_dflt_nested);
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME;
+  } else {
+    __kmp_str_buf_print(buffer, "   %s", name);
+  }
+  __kmp_str_buf_print(buffer, ": deprecated; max-active-levels-var=%d\n",
+                      __kmp_dflt_max_active_levels);
 } // __kmp_stg_print_nested
 
 static void __kmp_parse_nested_num_threads(const char *var, const char *env,
@@ -1026,6 +1041,8 @@ static void __kmp_parse_nested_num_threads(const char *var, const char *env,
       }
     }
   }
+  if (!__kmp_dflt_max_active_levels_set && total > 1)
+    __kmp_dflt_max_active_levels = KMP_MAX_ACTIVE_LEVELS_LIMIT;
   KMP_DEBUG_ASSERT(total > 0);
   if (total <= 0) {
     KMP_WARNING(NthSyntaxError, var, env);
@@ -1182,8 +1199,22 @@ static void __kmp_stg_print_task_stealing(kmp_str_buf_t *buffer,
 
 static void __kmp_stg_parse_max_active_levels(char const *name,
                                               char const *value, void *data) {
-  __kmp_stg_parse_int(name, value, 0, KMP_MAX_ACTIVE_LEVELS_LIMIT,
-                      &__kmp_dflt_max_active_levels);
+  kmp_uint64 tmp_dflt = 0;
+  char const *msg = NULL;
+  if (!__kmp_dflt_max_active_levels_set) {
+    // Don't overwrite __kmp_dflt_max_active_levels if we get an invalid setting
+    __kmp_str_to_uint(value, &tmp_dflt, &msg);
+    if (msg != NULL) { // invalid setting; print warning and ignore
+      KMP_WARNING(ParseSizeIntWarn, name, value, msg);
+    } else if (tmp_dflt > KMP_MAX_ACTIVE_LEVELS_LIMIT) {
+      // invalid setting; print warning and ignore
+      msg = KMP_I18N_STR(ValueTooLarge);
+      KMP_WARNING(ParseSizeIntWarn, name, value, msg);
+    } else { // valid setting
+      __kmp_dflt_max_active_levels = tmp_dflt;
+      __kmp_dflt_max_active_levels_set = true;
+    }
+  }
 } // __kmp_stg_parse_max_active_levels
 
 static void __kmp_stg_print_max_active_levels(kmp_str_buf_t *buffer,
@@ -1240,9 +1271,13 @@ static void __kmp_stg_print_target_offload(kmp_str_buf_t *buffer,
     value = "MANDATORY";
   else if (__kmp_target_offload == tgt_disabled)
     value = "DISABLED";
-  if (value) {
-    __kmp_str_buf_print(buffer, "   %s=%s\n", name, value);
+  KMP_DEBUG_ASSERT(value);
+  if (__kmp_env_format) {
+    KMP_STR_BUF_PRINT_NAME;
+  } else {
+    __kmp_str_buf_print(buffer, "   %s", name);
   }
+  __kmp_str_buf_print(buffer, "=%s\n", value);
 } // __kmp_stg_print_target_offload
 #endif
 
@@ -3161,6 +3196,9 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
       __kmp_nested_proc_bind.size = nelem;
     }
     __kmp_nested_proc_bind.used = nelem;
+
+    if (nelem > 1 && !__kmp_dflt_max_active_levels_set)
+      __kmp_dflt_max_active_levels = KMP_MAX_ACTIVE_LEVELS_LIMIT;
 
     // Save values in the nested proc_bind array
     int i = 0;
@@ -5248,7 +5286,7 @@ static void __kmp_aux_env_initialize(kmp_env_blk_t *block) {
   /* OMP_NESTED */
   value = __kmp_env_blk_var(block, "OMP_NESTED");
   if (value) {
-    ompc_set_nested(__kmp_dflt_nested);
+    ompc_set_nested(__kmp_dflt_max_active_levels > 1);
   }
 
   /* OMP_DYNAMIC */

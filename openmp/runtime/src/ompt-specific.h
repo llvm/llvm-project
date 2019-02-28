@@ -50,6 +50,8 @@ ompt_data_t *__ompt_get_thread_data_internal();
 static uint64_t __ompt_get_get_unique_id_internal();
 */
 
+ompt_sync_region_t __ompt_get_barrier_kind(enum barrier_type, kmp_info_t *);
+
 /*****************************************************************************
  * macros
  ****************************************************************************/

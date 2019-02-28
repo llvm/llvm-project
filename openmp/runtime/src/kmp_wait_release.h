@@ -129,11 +129,13 @@ static void __ompt_implicit_task_end(kmp_info_t *this_thr,
     void *codeptr = NULL;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
+          codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
+          codeptr);
     }
 #endif
     if (!KMP_MASTER_TID(ds_tid)) {

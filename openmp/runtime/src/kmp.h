@@ -1847,7 +1847,6 @@ typedef enum kmp_bar_pat { /* Barrier communication patterns */
 typedef struct kmp_internal_control {
   int serial_nesting_level; /* corresponds to the value of the
                                th_team_serialized field */
-  kmp_int8 nested; /* internal control for nested parallelism (per thread) */
   kmp_int8 dynamic; /* internal control for dynamic adjustment of threads (per
                        thread) */
   kmp_int8
@@ -2054,8 +2053,6 @@ typedef struct kmp_local {
   ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_intervals)
 #endif
 
-#define get__nested_2(xteam, xtid)                                             \
-  ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.nested)
 #define get__dynamic_2(xteam, xtid)                                            \
   ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.dynamic)
 #define get__nproc_2(xteam, xtid)                                              \
@@ -2076,11 +2073,6 @@ typedef struct kmp_local {
 #define set__bt_set_team(xteam, xtid, xval)                                    \
   (((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_set) = (xval))
 
-#define set__nested(xthread, xval)                                             \
-  (((xthread)->th.th_current_task->td_icvs.nested) = (xval))
-#define get__nested(xthread)                                                   \
-  (((xthread)->th.th_current_task->td_icvs.nested) ? (FTN_TRUE) : (FTN_FALSE))
-
 #define set__dynamic(xthread, xval)                                            \
   (((xthread)->th.th_current_task->td_icvs.dynamic) = (xval))
 #define get__dynamic(xthread)                                                  \
@@ -2094,6 +2086,9 @@ typedef struct kmp_local {
 
 #define set__max_active_levels(xthread, xval)                                  \
   (((xthread)->th.th_current_task->td_icvs.max_active_levels) = (xval))
+
+#define get__max_active_levels(xthread)                                        \
+  ((xthread)->th.th_current_task->td_icvs.max_active_levels)
 
 #define set__sched(xthread, xval)                                              \
   (((xthread)->th.th_current_task->td_icvs.sched) = (xval))
@@ -2821,8 +2816,6 @@ typedef struct kmp_base_root {
   // TODO: GEH - then replace r_active with t_active_levels if we can to reduce
   // the synch overhead or keeping r_active
   volatile int r_active; /* TRUE if some region in a nest has > 1 thread */
-  // GEH: This is misnamed, should be r_in_parallel
-  volatile int r_nested; // TODO: GEH - This is unused, just remove it entirely.
   // keeps a count of active parallel regions per root
   std::atomic<int> r_in_parallel;
   // GEH: This is misnamed, should be r_active_levels
@@ -3013,8 +3006,6 @@ extern int __kmp_tp_capacity; /* capacity of __kmp_threads if threadprivate is
                                  used (fixed) */
 extern int __kmp_tp_cached; /* whether threadprivate cache has been created
                                (__kmpc_threadprivate_cached()) */
-extern int __kmp_dflt_nested; /* nested parallelism enabled by default a la
-                                 OMP_NESTED */
 extern int __kmp_dflt_blocktime; /* number of milliseconds to wait before
                                     blocking (env setting) */
 #if KMP_USE_MONITOR
@@ -3056,9 +3047,12 @@ extern kmp_int16 __kmp_init_x87_fpu_control_word; // init thread's FP ctrl reg
 extern kmp_uint32 __kmp_init_mxcsr; /* init thread's mxscr */
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
-extern int __kmp_dflt_max_active_levels; /* max_active_levels for nested
-                                            parallelism enabled by default via
-                                            OMP_MAX_ACTIVE_LEVELS */
+// max_active_levels for nested parallelism enabled by default via
+// OMP_MAX_ACTIVE_LEVELS, OMP_NESTED, OMP_NUM_THREADS, and OMP_PROC_BIND
+extern int __kmp_dflt_max_active_levels;
+// Indicates whether value of __kmp_dflt_max_active_levels was already
+// explicitly set by OMP_MAX_ACTIVE_LEVELS or OMP_NESTED=false
+extern bool __kmp_dflt_max_active_levels_set;
 extern int __kmp_dispatch_num_buffers; /* max possible dynamic loops in
                                           concurrent execution per team */
 #if KMP_NESTED_HOT_TEAMS

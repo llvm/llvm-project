@@ -1872,7 +1872,7 @@ void ompc_set_nested(int flag) {
 
   __kmp_save_internal_controls(thread);
 
-  set__nested(thread, flag ? TRUE : FALSE);
+  set__max_active_levels(thread, flag ? __kmp_dflt_max_active_levels : 1);
 }
 
 void ompc_set_max_active_levels(int max_active_levels) {
