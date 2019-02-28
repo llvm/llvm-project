@@ -3410,13 +3410,17 @@ SwiftLanguageRuntime::CalculateErrorValue(StackFrameSP frame_sp,
   if (!ast_context || error.Fail())
     return error_valobj_sp;
 
+  lldb::DataBufferSP buffer(new lldb_private::DataBufferHeap(
+      arg0->GetScalar().GetBytes(), arg0->GetScalar().GetByteSize()));
+
   CompilerType swift_error_proto_type = ast_context->GetErrorType();
   if (!swift_error_proto_type.IsValid())
     return error_valobj_sp;
 
-  arg0->SetCompilerType(swift_error_proto_type);
-  error_valobj_sp =
-      ValueObjectConstResult::Create(exe_scope, *arg0, variable_name);
+  error_valobj_sp = ValueObjectConstResult::Create(
+      exe_scope, swift_error_proto_type,
+      variable_name, buffer, endian::InlHostByteOrder(),
+      exe_ctx.GetAddressByteSize());
   if (error_valobj_sp->GetError().Fail())
     return error_valobj_sp;
 
