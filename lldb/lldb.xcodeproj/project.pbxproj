@@ -483,6 +483,8 @@
 		2647B63E21C436BD00A81D15 /* Listener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2647B63D21C436BC00A81D15 /* Listener.cpp */; };
 		2647B63821C4369500A81D15 /* Listener.h in Headers */ = {isa = PBXBuildFile; fileRef = 2647B63721C4369500A81D15 /* Listener.h */; };
 		9A3D43EC1F3237F900EB767C /* ListenerTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3D43E31F3237D500EB767C /* ListenerTest.cpp */; };
+		AFF1273622276F1600C25726 /* LocateSymbolFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFF1273422276F1100C25726 /* LocateSymbolFile.cpp */; };
+		AFC3068122276F62002675EA /* LocateSymbolFileMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC3068022276F62002675EA /* LocateSymbolFileMacOSX.cpp */; };
 		255EFF741AFABA720069F277 /* LockFileBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 255EFF731AFABA720069F277 /* LockFileBase.cpp */; };
 		255EFF761AFABA950069F277 /* LockFilePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 255EFF751AFABA950069F277 /* LockFilePosix.cpp */; };
 		2689004213353E0400698AC0 /* Log.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E7F10F1B85900F91463 /* Log.cpp */; };
@@ -1003,8 +1005,6 @@
 		268900E013353E6F00698AC0 /* SymbolVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF94005711C03F6500085DB9 /* SymbolVendor.cpp */; };
 		2635879417822FC2004C30BA /* SymbolVendorELF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2635879017822E56004C30BA /* SymbolVendorELF.cpp */; };
 		268900CF13353E5F00698AC0 /* SymbolVendorMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89E210F57C5600BB2B04 /* SymbolVendorMacOSX.cpp */; };
-		2689007313353E1A00698AC0 /* Symbols.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 69A01E1F1236C5D400C660B5 /* Symbols.cpp */; };
-		2689007C13353E1A00698AC0 /* Symbols.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2689B0B5113EE47E00A4AEDB /* Symbols.cpp */; };
 		23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */; };
 		268900E113353E6F00698AC0 /* Symtab.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1F10F1B8EC00F91463 /* Symtab.cpp */; };
 		3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692E1ABB7A6D001DA9DF /* SystemInitializer.cpp */; };
@@ -2256,6 +2256,8 @@
 		2647B63D21C436BC00A81D15 /* Listener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Listener.cpp; path = source/Utility/Listener.cpp; sourceTree = "<group>"; };
 		2647B63721C4369500A81D15 /* Listener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Listener.h; path = include/lldb/Utility/Listener.h; sourceTree = "<group>"; };
 		9A3D43E31F3237D500EB767C /* ListenerTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ListenerTest.cpp; sourceTree = "<group>"; };
+		AFF1273422276F1100C25726 /* LocateSymbolFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LocateSymbolFile.cpp; path = source/Symbol/LocateSymbolFile.cpp; sourceTree = "<group>"; };
+		AFC3068022276F62002675EA /* LocateSymbolFileMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LocateSymbolFileMacOSX.cpp; path = source/Symbol/LocateSymbolFileMacOSX.cpp; sourceTree = "<group>"; };
 		255EFF731AFABA720069F277 /* LockFileBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LockFileBase.cpp; sourceTree = "<group>"; };
 		255EFF751AFABA950069F277 /* LockFilePosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LockFilePosix.cpp; sourceTree = "<group>"; };
 		255EFF711AFABA4D0069F277 /* LockFileWindows.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LockFileWindows.cpp; path = source/Host/windows/LockFileWindows.cpp; sourceTree = "<group>"; };
@@ -3206,8 +3208,6 @@
 		2635879117822E56004C30BA /* SymbolVendorELF.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolVendorELF.h; sourceTree = "<group>"; };
 		260C89E210F57C5600BB2B04 /* SymbolVendorMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolVendorMacOSX.cpp; sourceTree = "<group>"; };
 		260C89E310F57C5600BB2B04 /* SymbolVendorMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolVendorMacOSX.h; sourceTree = "<group>"; };
-		2689B0B5113EE47E00A4AEDB /* Symbols.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Symbols.cpp; path = source/Host/macosx/Symbols.cpp; sourceTree = "<group>"; };
-		69A01E1F1236C5D400C660B5 /* Symbols.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Symbols.cpp; sourceTree = "<group>"; };
 		2689B0A4113EE3CD00A4AEDB /* Symbols.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Symbols.h; path = include/lldb/Host/Symbols.h; sourceTree = "<group>"; };
 		2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolsTest.cpp; sourceTree = "<group>"; };
 		26BC7F1F10F1B8EC00F91463 /* Symtab.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Symtab.cpp; path = source/Symbol/Symtab.cpp; sourceTree = "<group>"; };
@@ -5449,6 +5449,8 @@
 				26BC7F1910F1B8EC00F91463 /* LineEntry.cpp */,
 				26BC7C5C10F1B6E900F91463 /* LineTable.h */,
 				26BC7F1A10F1B8EC00F91463 /* LineTable.cpp */,
+				AFF1273422276F1100C25726 /* LocateSymbolFile.cpp */,
+				AFC3068022276F62002675EA /* LocateSymbolFileMacOSX.cpp */,
 				26BC7C5D10F1B6E900F91463 /* ObjectContainer.h */,
 				26BC7C5E10F1B6E900F91463 /* ObjectFile.h */,
 				26BC7F4C10F1BC1A00F91463 /* ObjectFile.cpp */,
@@ -5951,7 +5953,6 @@
 				26BC7EF910F1B8AD00F91463 /* CFCString.h */,
 				3FDFE52D19A291AF009756A7 /* HostInfoMacOSX.h */,
 				3FDFE56719AF9BB2009756A7 /* HostThreadMacOSX.h */,
-				2689B0B5113EE47E00A4AEDB /* Symbols.cpp */,
 			);
 			name = MacOSX;
 			sourceTree = "<group>";
@@ -6580,7 +6581,6 @@
 				A36FF33B17D8E94600244D40 /* OptionParser.cpp */,
 				AF37E10917C861F20061E18E /* ProcessRunLock.cpp */,
 				236124A31986B4E2004EFC37 /* Socket.cpp */,
-				69A01E1F1236C5D400C660B5 /* Symbols.cpp */,
 				268DA873130095ED00C9483A /* Terminal.cpp */,
 				3FDFED2619BA6D96009756A7 /* ThreadLauncher.cpp */,
 				3FDFDDBC199C3A06009756A7 /* FileAction.cpp */,
@@ -7709,6 +7709,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 08FB7794FE84155DC02AAC07 /* lldb */;
@@ -8533,6 +8534,7 @@
 				AF116BEF20CF234B0071093F /* DebugNamesDWARFIndex.cpp in Sources */,
 				2689005E13353E0E00698AC0 /* ClangASTSource.cpp in Sources */,
 				AF8AD62E1BEC28A400150209 /* PlatformAppleTVSimulator.cpp in Sources */,
+				AFF1273622276F1600C25726 /* LocateSymbolFile.cpp in Sources */,
 				2689005F13353E0E00698AC0 /* ClangFunctionCaller.cpp in Sources */,
 				8CF5C8931EF195AE00C6D04F /* SwiftRuntimeReporting.cpp in Sources */,
 				2689006013353E0E00698AC0 /* ClangExpressionDeclMap.cpp in Sources */,
@@ -8566,7 +8568,6 @@
 				25420ED21A649D88009ADBCB /* PipeBase.cpp in Sources */,
 				AF20F7661AF18F8500751A6E /* ABISysV_arm.cpp in Sources */,
 				942612F81B952C9B00EF842E /* ObjCLanguage.cpp in Sources */,
-				2689007313353E1A00698AC0 /* Symbols.cpp in Sources */,
 				26474CBC18D0CB2D0073DEBA /* RegisterContextMach_arm.cpp in Sources */,
 				948C86D51B97764D00F3CAC3 /* SwiftHashedContainer.cpp in Sources */,
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
@@ -8585,7 +8586,6 @@
 				2689007A13353E1A00698AC0 /* CFCMutableSet.cpp in Sources */,
 				26764C971E48F482008D3573 /* ConstString.cpp in Sources */,
 				2689007B13353E1A00698AC0 /* CFCString.cpp in Sources */,
-				2689007C13353E1A00698AC0 /* Symbols.cpp in Sources */,
 				2689007D13353E2200698AC0 /* Args.cpp in Sources */,
 				2689007F13353E2200698AC0 /* CommandCompletions.cpp in Sources */,
 				945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */,
@@ -8595,6 +8595,7 @@
 				2689008013353E2200698AC0 /* CommandInterpreter.cpp in Sources */,
 				AF77E0A41A033D360096C0EA /* RegisterContextPOSIX_powerpc.cpp in Sources */,
 				4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */,
+				AFC3068122276F62002675EA /* LocateSymbolFileMacOSX.cpp in Sources */,
 				49CA96FC1E6AACC900C03FEE /* DataBufferHeap.cpp in Sources */,
 				AF9B8F33182DB52900DA866F /* SystemRuntimeMacOSX.cpp in Sources */,
 				9447DE431BD5963300E67212 /* DumpValueObjectOptions.cpp in Sources */,

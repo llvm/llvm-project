@@ -58,10 +58,14 @@ private:
 };
 
 inline InstrumentationData GetInstrumentationData() {
+  if (!lldb_private::repro::Reproducer::Initialized())
+    return {};
+
   if (auto *g = lldb_private::repro::Reproducer::Instance().GetGenerator()) {
     auto &p = g->GetOrCreate<SBProvider>();
     return {p.GetSerializer(), p.GetRegistry()};
   }
+
   return {};
 }
 
