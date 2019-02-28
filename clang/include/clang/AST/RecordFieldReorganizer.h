@@ -43,9 +43,9 @@ private:
   std::default_random_engine rng;
 
 public:
+  Randstruct(std::string seed) : Seq(seed.begin(), seed.end()), rng(Seq) {}
   /// Determines if the Record can be safely and easily randomized based on
   /// certain criteria (see implementation).
-  Randstruct(std::string seed) : Seq(seed.begin(), seed.end()), rng(Seq) {}
   static bool isTriviallyRandomizable(const RecordDecl *D);
 
 protected:
