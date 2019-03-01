@@ -611,7 +611,7 @@ define <2 x i8> @test_vector_usub_nneg_nneg(<2 x i8> %a) {
 define i8 @test_scalar_usub_never_overflows(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_never_overflows(
 ; CHECK-NEXT:    [[A_MASKED:%.*]] = or i8 [[A:%.*]], 64
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A_MASKED]], i8 10)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A_MASKED]], -10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_masked = or i8 %a, 64
@@ -622,7 +622,7 @@ define i8 @test_scalar_usub_never_overflows(i8 %a) {
 define <2 x i8> @test_vector_usub_never_overflows(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_never_overflows(
 ; CHECK-NEXT:    [[A_MASKED:%.*]] = or <2 x i8> [[A:%.*]], <i8 64, i8 64>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 10, i8 10>)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[A_MASKED]], <i8 -10, i8 -10>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_masked = or <2 x i8> %a, <i8 64, i8 64>
@@ -632,9 +632,7 @@ define <2 x i8> @test_vector_usub_never_overflows(<2 x i8> %a) {
 
 define i8 @test_scalar_usub_always_overflows(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_always_overflows(
-; CHECK-NEXT:    [[A_MASKED:%.*]] = and i8 [[A:%.*]], 64
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A_MASKED]], i8 100)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %a_masked = and i8 %a, 64
   %r = call i8 @llvm.usub.sat.i8(i8 %a_masked, i8 100)
@@ -643,9 +641,7 @@ define i8 @test_scalar_usub_always_overflows(i8 %a) {
 
 define <2 x i8> @test_vector_usub_always_overflows(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_always_overflows(
-; CHECK-NEXT:    [[A_MASKED:%.*]] = and <2 x i8> [[A:%.*]], <i8 64, i8 64>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A_MASKED]], <2 x i8> <i8 100, i8 100>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %a_masked = and <2 x i8> %a, <i8 64, i8 64>
   %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a_masked, <2 x i8> <i8 100, i8 100>)

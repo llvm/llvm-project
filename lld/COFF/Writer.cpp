@@ -1390,19 +1390,47 @@ static void addSymbolToRVASet(SymbolRVASet &RVASet, Defined *S) {
 // symbol in an executable section.
 static void maybeAddAddressTakenFunction(SymbolRVASet &AddressTakenSyms,
                                          Symbol *S) {
-  auto *D = dyn_cast_or_null<DefinedCOFF>(S);
-
-  // Ignore undefined symbols and references to non-functions (e.g. globals and
-  // labels).
-  if (!D ||
-      D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
+  if (!S)
     return;
 
-  // Mark the symbol as address taken if it's in an executable section.
-  Chunk *RefChunk = D->getChunk();
-  OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
-  if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
-    addSymbolToRVASet(AddressTakenSyms, D);
+  switch (S->kind()) {
+  case Symbol::DefinedLocalImportKind:
+  case Symbol::DefinedImportDataKind:
+    // Defines an __imp_ pointer, so it is data, so it is ignored.
+    break;
+  case Symbol::DefinedCommonKind:
+    // Common is always data, so it is ignored.
+    break;
+  case Symbol::DefinedAbsoluteKind:
+  case Symbol::DefinedSyntheticKind:
+    // Absolute is never code, synthetic generally isn't and usually isn't
+    // determinable.
+    break;
+  case Symbol::LazyKind:
+  case Symbol::UndefinedKind:
+    // Undefined symbols resolve to zero, so they don't have an RVA. Lazy
+    // symbols shouldn't have relocations.
+    break;
+
+  case Symbol::DefinedImportThunkKind:
+    // Thunks are always code, include them.
+    addSymbolToRVASet(AddressTakenSyms, cast<Defined>(S));
+    break;
+
+  case Symbol::DefinedRegularKind: {
+    // This is a regular, defined, symbol from a COFF file. Mark the symbol as
+    // address taken if the symbol type is function and it's in an executable
+    // section.
+    auto *D = cast<DefinedRegular>(S);
+    if (D->getCOFFSymbol().getComplexType() == COFF::IMAGE_SYM_DTYPE_FUNCTION) {
+      Chunk *RefChunk = D->getChunk();
+      OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
+      if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
+        addSymbolToRVASet(AddressTakenSyms, D);
+    }
+    break;
+  }
+  }
 }
 
 // Visit all relocations from all section contributions of this object file and

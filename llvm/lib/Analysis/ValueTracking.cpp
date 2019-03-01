@@ -4165,18 +4165,16 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    const Instruction *CxtI,
                                                    const DominatorTree *DT) {
   KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  if (LHSKnown.isNonNegative() || LHSKnown.isNegative()) {
-    KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
+  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
 
-    // If the LHS is negative and the RHS is non-negative, no unsigned wrap.
-    if (LHSKnown.isNegative() && RHSKnown.isNonNegative())
-      return OverflowResult::NeverOverflows;
-
-    // If the LHS is non-negative and the RHS negative, we always wrap.
-    if (LHSKnown.isNonNegative() && RHSKnown.isNegative())
-      return OverflowResult::AlwaysOverflows;
-  }
-
+  // a - b overflows iff a < b. Determine whether this is never/always true
+  // based on the min/max values achievable under the known bits constraint.
+  APInt MinLHS = LHSKnown.One, MaxLHS = ~LHSKnown.Zero;
+  APInt MinRHS = RHSKnown.One, MaxRHS = ~RHSKnown.Zero;
+  if (MinLHS.uge(MaxRHS))
+    return OverflowResult::NeverOverflows;
+  if (MaxLHS.ult(MinRHS))
+    return OverflowResult::AlwaysOverflows;
   return OverflowResult::MayOverflow;
 }
 

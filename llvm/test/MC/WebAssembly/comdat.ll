@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -thread-model=single %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

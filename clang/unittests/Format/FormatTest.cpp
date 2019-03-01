@@ -120,6 +120,15 @@ TEST_F(FormatTest, MessUp) {
   EXPECT_EQ("a\n#b c d\ne", test::messUp("a\n#b\\\nc\\\nd\ne"));
 }
 
+TEST_F(FormatTest, DefaultLLVMStyleIsCpp) {
+  EXPECT_EQ(FormatStyle::LK_Cpp, getLLVMStyle().Language);
+}
+
+TEST_F(FormatTest, LLVMStyleOverride) {
+  EXPECT_EQ(FormatStyle::LK_Proto,
+            getLLVMStyle(FormatStyle::LK_Proto).Language);
+}
+
 //===----------------------------------------------------------------------===//
 // Basic function tests.
 //===----------------------------------------------------------------------===//

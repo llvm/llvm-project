@@ -1595,8 +1595,9 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
     return false;
 
   PSI = _PSI;
-  if (M.getProfileSummary() == nullptr)
-    M.setProfileSummary(Reader->getSummary().getMD(M.getContext()));
+  if (M.getProfileSummary(/* IsCS */ false) == nullptr)
+    M.setProfileSummary(Reader->getSummary().getMD(M.getContext()),
+                        ProfileSummary::PSK_Sample);
 
   // Compute the total number of samples collected in this profile.
   for (const auto &I : Reader->getProfiles())

@@ -129,11 +129,13 @@ static void __ompt_implicit_task_end(kmp_info_t *this_thr,
     void *codeptr = NULL;
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
+          codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, tId, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, tId,
+          codeptr);
     }
 #endif
     if (!KMP_MASTER_TID(ds_tid)) {
@@ -150,8 +152,8 @@ static void __ompt_implicit_task_end(kmp_info_t *this_thr,
 }
 #endif
 
-/* Spin wait loop that first does pause, then yield, then sleep. A thread that
-   calls __kmp_wait_*  must make certain that another thread calls __kmp_release
+/* Spin wait loop that first does pause/yield, then sleep. A thread that calls
+   __kmp_wait_*  must make certain that another thread calls __kmp_release
    to wake it back up to prevent deadlocks!
 
    NOTE: We may not belong to a team at this point.  */
@@ -270,8 +272,7 @@ final_spin=FALSE)
   }
 #endif
 
-  // Setup for waiting
-  KMP_INIT_YIELD(spins);
+  KMP_INIT_YIELD(spins); // Setup for waiting
 
   if (__kmp_dflt_blocktime != KMP_MAX_BLOCKTIME
 #if OMP_50_ENABLED
@@ -368,14 +369,8 @@ final_spin=FALSE)
 
     // If we are oversubscribed, or have waited a bit (and
     // KMP_LIBRARY=throughput), then yield
-    // TODO: Should it be number of cores instead of thread contexts? Like:
-    // KMP_YIELD(TCR_4(__kmp_nth) > __kmp_ncores);
-    // Need performance improvement data to make the change...
-    if (oversubscribed) {
-      KMP_YIELD(1);
-    } else {
-      KMP_YIELD_SPIN(spins);
-    }
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+
     // Check if this thread was transferred from a team
     // to the thread pool (or vice-versa) while spinning.
     in_pool = !!TCR_4(this_thr->th.th_in_pool);

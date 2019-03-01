@@ -225,7 +225,8 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
   auto Reader = std::move(ReaderOrErr.get());
   bool IsIRProfile = Reader->isIRLevelProfile();
-  if (WC->Writer.setIsIRLevelProfile(IsIRProfile)) {
+  bool HasCSIRProfile = Reader->hasCSIRLevelProfile();
+  if (WC->Writer.setIsIRLevelProfile(IsIRProfile, HasCSIRProfile)) {
     WC->Err = make_error<StringError>(
         "Merge IR generated profile with Clang generated profile.",
         std::error_code());
@@ -669,9 +670,10 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                             uint32_t TopN, bool ShowIndirectCallTargets,
                             bool ShowMemOPSizes, bool ShowDetailedSummary,
                             std::vector<uint32_t> DetailedSummaryCutoffs,
-                            bool ShowAllFunctions, uint64_t ValueCutoff,
-                            bool OnlyListBelow, const std::string &ShowFunction,
-                            bool TextFormat, raw_fd_ostream &OS) {
+                            bool ShowAllFunctions, bool ShowCS,
+                            uint64_t ValueCutoff, bool OnlyListBelow,
+                            const std::string &ShowFunction, bool TextFormat,
+                            raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
@@ -708,6 +710,11 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     OS << ":ir\n";
 
   for (const auto &Func : *Reader) {
+    if (Reader->isIRLevelProfile()) {
+      bool FuncIsCS = NamedInstrProfRecord::hasCSFlagInHash(Func.Hash);
+      if (FuncIsCS != ShowCS)
+        continue;
+    }
     bool Show =
         ShowAllFunctions || (!ShowFunction.empty() &&
                              Func.Name.find(ShowFunction) != Func.Name.npos);
@@ -899,6 +906,8 @@ static int show_main(int argc, const char *argv[]) {
       cl::value_desc("800000,901000,999999"));
   cl::opt<bool> ShowAllFunctions("all-functions", cl::init(false),
                                  cl::desc("Details for every function"));
+  cl::opt<bool> ShowCS("showcs", cl::init(false),
+                       cl::desc("Show context sensitive counts"));
   cl::opt<std::string> ShowFunction("function",
                                     cl::desc("Details for matching functions"));
 
@@ -940,8 +949,8 @@ static int show_main(int argc, const char *argv[]) {
     return showInstrProfile(Filename, ShowCounts, TopNFunctions,
                             ShowIndirectCallTargets, ShowMemOPSizes,
                             ShowDetailedSummary, DetailedSummaryCutoffs,
-                            ShowAllFunctions, ValueCutoff, OnlyListBelow,
-                            ShowFunction, TextFormat, OS);
+                            ShowAllFunctions, ShowCS, ValueCutoff,
+                            OnlyListBelow, ShowFunction, TextFormat, OS);
   else
     return showSampleProfile(Filename, ShowCounts, ShowAllFunctions,
                              ShowFunction, OS);

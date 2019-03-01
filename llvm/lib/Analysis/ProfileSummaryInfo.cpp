@@ -79,7 +79,14 @@ static const ProfileSummaryEntry &getEntryForPercentile(SummaryEntryVector &DS,
 bool ProfileSummaryInfo::computeSummary() {
   if (Summary)
     return true;
-  auto *SummaryMD = M.getProfileSummary();
+  // First try to get context sensitive ProfileSummary.
+  auto *SummaryMD = M.getProfileSummary(/* IsCS */ true);
+  if (SummaryMD) {
+    Summary.reset(ProfileSummary::getFromMD(SummaryMD));
+    return true;
+  }
+  // This will actually return PSK_Instr or PSK_Sample summary.
+  SummaryMD = M.getProfileSummary(/* IsCS */ false);
   if (!SummaryMD)
     return false;
   Summary.reset(ProfileSummary::getFromMD(SummaryMD));

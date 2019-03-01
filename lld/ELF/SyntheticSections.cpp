@@ -509,7 +509,7 @@ void EhFrameSection::finalizeContents() {
 // to get an FDE from an address to which FDE is applied. This function
 // returns a list of such pairs.
 std::vector<EhFrameSection::FdeData> EhFrameSection::getFdeData() const {
-  uint8_t *Buf = getParent()->Loc + OutSecOff;
+  uint8_t *Buf = Out::BufferStart + getParent()->Offset + OutSecOff;
   std::vector<FdeData> Ret;
 
   uint64_t VA = In.EhFrameHdr->getVA();
@@ -595,6 +595,9 @@ void EhFrameSection::writeTo(uint8_t *Buf) {
   // getOffset() takes care of discontiguous section pieces.
   for (EhInputSection *S : Sections)
     S->relocateAlloc(Buf, nullptr);
+
+  if (In.EhFrameHdr && In.EhFrameHdr->getParent())
+    In.EhFrameHdr->write();
 }
 
 GotSection::GotSection()
@@ -2667,11 +2670,20 @@ bool GdbIndexSection::empty() const { return Chunks.empty(); }
 EhFrameHeader::EhFrameHeader()
     : SyntheticSection(SHF_ALLOC, SHT_PROGBITS, 4, ".eh_frame_hdr") {}
 
+void EhFrameHeader::writeTo(uint8_t *Buf) {
+  // Unlike most sections, the EhFrameHeader section is written while writing
+  // another section, namely EhFrameSection, which calls the write() function
+  // below from its writeTo() function. This is necessary because the contents
+  // of EhFrameHeader depend on the relocated contents of EhFrameSection and we
+  // don't know which order the sections will be written in.
+}
+
 // .eh_frame_hdr contains a binary search table of pointers to FDEs.
 // Each entry of the search table consists of two values,
 // the starting PC from where FDEs covers, and the FDE's address.
 // It is sorted by PC.
-void EhFrameHeader::writeTo(uint8_t *Buf) {
+void EhFrameHeader::write() {
+  uint8_t *Buf = Out::BufferStart + getParent()->Offset + OutSecOff;
   typedef EhFrameSection::FdeData FdeData;
 
   std::vector<FdeData> Fdes = In.EhFrame->getFdeData();

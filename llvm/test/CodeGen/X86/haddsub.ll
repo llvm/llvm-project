@@ -1366,7 +1366,7 @@ define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ; SSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
 ; SSE3-SLOW-NEXT:    addps %xmm1, %xmm2
 ; SSE3-SLOW-NEXT:    movshdup {{.*#+}} xmm0 = xmm2[1,1,3,3]
-; SSE3-SLOW-NEXT:    addps %xmm2, %xmm0
+; SSE3-SLOW-NEXT:    addss %xmm2, %xmm0
 ; SSE3-SLOW-NEXT:    retq
 ;
 ; SSE3-FAST-LABEL: fadd_reduce_v8f32:
@@ -1385,7 +1385,7 @@ define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -1408,7 +1408,7 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 ; SSE3-SLOW-NEXT:    addpd %xmm2, %xmm1
 ; SSE3-SLOW-NEXT:    movapd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; SSE3-SLOW-NEXT:    addpd %xmm1, %xmm0
+; SSE3-SLOW-NEXT:    addsd %xmm1, %xmm0
 ; SSE3-SLOW-NEXT:    retq
 ;
 ; SSE3-FAST-LABEL: fadd_reduce_v4f64:
@@ -1423,7 +1423,7 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX-SLOW-NEXT:    vaddpd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
 ;

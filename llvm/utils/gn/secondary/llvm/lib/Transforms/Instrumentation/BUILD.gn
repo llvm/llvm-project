@@ -18,6 +18,7 @@ static_library("Instrumentation") {
     "GCOVProfiling.cpp",
     "HWAddressSanitizer.cpp",
     "IndirectCallPromotion.cpp",
+    "InstrOrderFile.cpp",
     "InstrProfiling.cpp",
     "Instrumentation.cpp",
     "MemorySanitizer.cpp",

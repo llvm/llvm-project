@@ -2407,16 +2407,14 @@ static uint8_t getAbiVersion() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeHeader() {
-  uint8_t *Buf = Buffer->getBufferStart();
-
   // For executable segments, the trap instructions are written before writing
   // the header. Setting Elf header bytes to zero ensures that any unused bytes
   // in header are zero-cleared, instead of having trap instructions.
-  memset(Buf, 0, sizeof(Elf_Ehdr));
-  memcpy(Buf, "\177ELF", 4);
+  memset(Out::BufferStart, 0, sizeof(Elf_Ehdr));
+  memcpy(Out::BufferStart, "\177ELF", 4);
 
   // Write the ELF header.
-  auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Buf);
+  auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Out::BufferStart);
   EHdr->e_ident[EI_CLASS] = Config->Is64 ? ELFCLASS64 : ELFCLASS32;
   EHdr->e_ident[EI_DATA] = Config->IsLE ? ELFDATA2LSB : ELFDATA2MSB;
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
@@ -2438,7 +2436,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   }
 
   // Write the program header table.
-  auto *HBuf = reinterpret_cast<Elf_Phdr *>(Buf + EHdr->e_phoff);
+  auto *HBuf = reinterpret_cast<Elf_Phdr *>(Out::BufferStart + EHdr->e_phoff);
   for (PhdrEntry *P : Phdrs) {
     HBuf->p_type = P->p_type;
     HBuf->p_flags = P->p_flags;
@@ -2460,7 +2458,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   // the value. The sentinel values and fields are:
   // e_shnum = 0, SHdrs[0].sh_size = number of sections.
   // e_shstrndx = SHN_XINDEX, SHdrs[0].sh_link = .shstrtab section index.
-  auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Buf + EHdr->e_shoff);
+  auto *SHdrs = reinterpret_cast<Elf_Shdr *>(Out::BufferStart + EHdr->e_shoff);
   size_t Num = OutputSections.size() + 1;
   if (Num >= SHN_LORESERVE)
     SHdrs->sh_size = Num;
@@ -2494,18 +2492,19 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize, Flags);
 
-  if (!BufferOrErr)
+  if (!BufferOrErr) {
     error("failed to open " + Config->OutputFile + ": " +
           llvm::toString(BufferOrErr.takeError()));
-  else
-    Buffer = std::move(*BufferOrErr);
+    return;
+  }
+  Buffer = std::move(*BufferOrErr);
+  Out::BufferStart = Buffer->getBufferStart();
 }
 
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
-  uint8_t *Buf = Buffer->getBufferStart();
   for (OutputSection *Sec : OutputSections)
     if (Sec->Flags & SHF_ALLOC)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
+      Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 }
 
 static void fillTrap(uint8_t *I, uint8_t *End) {
@@ -2524,11 +2523,12 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
     return;
 
   // Fill the last page.
-  uint8_t *Buf = Buffer->getBufferStart();
   for (PhdrEntry *P : Phdrs)
     if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
-      fillTrap(Buf + alignDown(P->p_offset + P->p_filesz, Target->PageSize),
-               Buf + alignTo(P->p_offset + P->p_filesz, Target->PageSize));
+      fillTrap(Out::BufferStart +
+                   alignDown(P->p_offset + P->p_filesz, Target->PageSize),
+               Out::BufferStart +
+                   alignTo(P->p_offset + P->p_filesz, Target->PageSize));
 
   // Round up the file size of the last segment to the page boundary iff it is
   // an executable segment to ensure that other tools don't accidentally
@@ -2544,27 +2544,16 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 
 // Write section contents to a mmap'ed file.
 template <class ELFT> void Writer<ELFT>::writeSections() {
-  uint8_t *Buf = Buffer->getBufferStart();
-
-  OutputSection *EhFrameHdr = nullptr;
-  if (In.EhFrameHdr && !In.EhFrameHdr->empty())
-    EhFrameHdr = In.EhFrameHdr->getParent();
-
   // In -r or -emit-relocs mode, write the relocation sections first as in
   // ELf_Rel targets we might find out that we need to modify the relocated
   // section while doing it.
   for (OutputSection *Sec : OutputSections)
     if (Sec->Type == SHT_REL || Sec->Type == SHT_RELA)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
+      Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 
   for (OutputSection *Sec : OutputSections)
-    if (Sec != EhFrameHdr && Sec->Type != SHT_REL && Sec->Type != SHT_RELA)
-      Sec->writeTo<ELFT>(Buf + Sec->Offset);
-
-  // The .eh_frame_hdr depends on .eh_frame section contents, therefore
-  // it should be written after .eh_frame is written.
-  if (EhFrameHdr)
-    EhFrameHdr->writeTo<ELFT>(Buf + EhFrameHdr->Offset);
+    if (Sec->Type != SHT_REL && Sec->Type != SHT_RELA)
+      Sec->writeTo<ELFT>(Out::BufferStart + Sec->Offset);
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
@@ -2572,9 +2561,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     return;
 
   // Compute a hash of all sections of the output file.
-  uint8_t *Start = Buffer->getBufferStart();
-  uint8_t *End = Start + FileSize;
-  In.BuildId->writeBuildId({Start, End});
+  In.BuildId->writeBuildId({Out::BufferStart, FileSize});
 }
 
 template void elf::writeResult<ELF32LE>();
