@@ -59,4 +59,11 @@ int main() {
   s += toupper(x);
   s += tolower(x);
   s += std::tolower(x);
+
+  // Likely character expressions.
+  s += x & 0xff;
+  s += 0xff & x;
+
+  s += 'a' + (x % 26);
+  s += (x % 10) + 'b';
 }

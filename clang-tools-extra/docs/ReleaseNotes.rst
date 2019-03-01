@@ -98,15 +98,24 @@ Improvements to clang-tidy
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
 
+- New alias :doc:`cppcoreguidelines-explicit-virtual-functions
+  <clang-tidy/checks/cppcoreguidelines-explicit-virtual-functions>` to
+  :doc:`modernize-use-override
+  <clang-tidy/checks/modernize-use-override>` was added.
+
 - The :doc:`bugprone-argument-comment
   <clang-tidy/checks/bugprone-argument-comment>` now supports
-  `CommentBoolLiterals`, `CommentIntegerLiterals`,  `CommentFloatLiterals`,
+  `CommentBoolLiterals`, `CommentIntegerLiterals`, `CommentFloatLiterals`,
   `CommentUserDefiniedLiterals`, `CommentStringLiterals`,
   `CommentCharacterLiterals` & `CommentNullPtrs` options.
 
 - The `Acronyms` and `IncludeDefaultAcronyms` options for the
   :doc:`objc-property-declaration <clang-tidy/checks/objc-property-declaration>`
   check have been removed.
+
+- The :doc:`modernize-use-override
+  <clang-tidy/checks/modernize-use-override>` now supports `OverrideSpelling`
+  and `FinalSpelling` options.
 
 Improvements to include-fixer
 -----------------------------
