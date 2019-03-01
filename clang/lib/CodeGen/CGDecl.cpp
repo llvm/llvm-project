@@ -1250,7 +1250,8 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   if (STy && (STy == Loc.getElementType()) &&
       shouldSplitStructStore(CGM, ConstantSize)) {
     for (unsigned i = 0; i != constant->getNumOperands(); i++) {
-      Address EltPtr = Builder.CreateStructGEP(Loc, i);
+      Address EltPtr = Builder.CreateStructGEP(
+          Loc, i, CGM.getDataLayout().getStructLayout(STy));
       emitStoresForConstant(
           CGM, D, EltPtr, isVolatile, Builder,
           cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
