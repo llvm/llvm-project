@@ -45,6 +45,13 @@ class TestSwiftGlobals(TestBase):
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target, VALID_TARGET)
 
+        # Target variables. This is not actually expected to work, but
+        # also shouldn't crash.
+        g_counter = target.EvaluateExpression("g_counter")
+        self.assertTrue(
+            g_counter.IsValid(),
+            "g_counter returned a valid value object.")
+
         # Set the breakpoints
         outer_bkpt = target.BreakpointCreateBySourceRegex(
             'Set top_level breakpoint here', self.main_source_spec)
