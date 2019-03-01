@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLID_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLID_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -60,5 +61,26 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID);
 
 } // namespace clangd
 } // namespace clang
+
+namespace llvm {
+// Support SymbolIDs as DenseMap keys.
+template <> struct DenseMapInfo<clang::clangd::SymbolID> {
+  static inline clang::clangd::SymbolID getEmptyKey() {
+    static clang::clangd::SymbolID EmptyKey("EMPTYKEY");
+    return EmptyKey;
+  }
+  static inline clang::clangd::SymbolID getTombstoneKey() {
+    static clang::clangd::SymbolID TombstoneKey("TOMBSTONEKEY");
+    return TombstoneKey;
+  }
+  static unsigned getHashValue(const clang::clangd::SymbolID &Sym) {
+    return hash_value(Sym);
+  }
+  static bool isEqual(const clang::clangd::SymbolID &LHS,
+                      const clang::clangd::SymbolID &RHS) {
+    return LHS == RHS;
+  }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_SYMBOLID_H

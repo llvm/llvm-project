@@ -34,6 +34,7 @@
 #include "Trace.h"
 #include "URI.h"
 #include "index/Index.h"
+#include "index/Symbol.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LangOptions.h"

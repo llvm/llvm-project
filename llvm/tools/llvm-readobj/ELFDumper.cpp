@@ -1890,12 +1890,8 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
 
 template<class ELFT>
 void ELFDumper<ELFT>::printUnwindInfo() {
-  const unsigned Machine = ObjF->getELFFile()->getHeader()->e_machine;
-  if (Machine == EM_386 || Machine == EM_X86_64) {
-    DwarfCFIEH::PrinterContext<ELFT> Ctx(W, ObjF);
-    return Ctx.printUnwindInformation();
-  }
-  W.startLine() << "UnwindInfo not implemented.\n";
+  DwarfCFIEH::PrinterContext<ELFT> Ctx(W, ObjF);
+  Ctx.printUnwindInformation();
 }
 
 namespace {
@@ -1905,9 +1901,10 @@ template <> void ELFDumper<ELF32LE>::printUnwindInfo() {
   const unsigned Machine = Obj->getHeader()->e_machine;
   if (Machine == EM_ARM) {
     ARM::EHABI::PrinterContext<ELF32LE> Ctx(W, Obj, DotSymtabSec);
-    return Ctx.PrintUnwindInformation();
+    Ctx.PrintUnwindInformation();
   }
-  W.startLine() << "UnwindInfo not implemented.\n";
+  DwarfCFIEH::PrinterContext<ELF32LE> Ctx(W, ObjF);
+  Ctx.printUnwindInformation();
 }
 
 } // end anonymous namespace

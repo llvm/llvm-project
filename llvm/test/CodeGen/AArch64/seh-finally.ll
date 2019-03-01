@@ -36,8 +36,8 @@ define void @simple_seh() #0 personality i8* bitcast (i32 (...)* @__C_specific_h
 entry:
 ; CHECK-LABEL: simple_seh
 ; CHECK: add     x29, sp, #16
-; CHECK: orr     x1, xzr, #0xfffffffffffffffe
-; CHECK: stur    x1, [x29, #-16]
+; CHECK: orr     x0, xzr, #0xfffffffffffffffe
+; CHECK: stur    x0, [x29, #-16]
 ; CHECK: .set .Lsimple_seh$frame_escape_0, -8
 ; CHECK: ldur    w0, [x29, #-8]
 ; CHECK: bl      foo
@@ -90,8 +90,8 @@ entry:
 ; CHECK: sub     x9, sp, #64
 ; CHECK: and     sp, x9, #0xffffffffffffffe0
 ; CHECK: mov     x19, sp
-; CHECK: orr     x1, xzr, #0xfffffffffffffffe
-; CHECK: stur    x1, [x19, #16]
+; CHECK: orr     x0, xzr, #0xfffffffffffffffe
+; CHECK: stur    x0, [x19, #16]
 ; CHECK: .set .Lstack_realign$frame_escape_0, 32
 ; CHECK: ldr     w0, [x19, #32]
 ; CHECK: bl      foo

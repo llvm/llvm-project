@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -thread-model=single -wasm-keep-registers %s -o %t.o
+; RUN: llc -filetype=obj -wasm-keep-registers %s -o %t.o
 ; RUN: obj2yaml %t.o | FileCheck %s
 ; RUN: llvm-objdump -t %t.o | FileCheck --check-prefix=CHECK-SYMS %s
 

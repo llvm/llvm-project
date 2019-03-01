@@ -27,7 +27,7 @@ define double @fneg_v4f64(<4 x double> %x) nounwind {
 define float @fadd_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: fadd_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = fadd <4 x float> %x, %y
   %r = extractelement <4 x float> %v, i32 0
@@ -37,7 +37,7 @@ define float @fadd_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 define double @fadd_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: fadd_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = fadd <4 x double> %x, %y
@@ -48,7 +48,7 @@ define double @fadd_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @fsub_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: fsub_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsubps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = fsub <4 x float> %x, %y
   %r = extractelement <4 x float> %v, i32 0
@@ -58,7 +58,7 @@ define float @fsub_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 define double @fsub_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: fsub_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = fsub <4 x double> %x, %y
@@ -69,7 +69,7 @@ define double @fsub_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @fmul_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: fmul_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmulss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = fmul <4 x float> %x, %y
   %r = extractelement <4 x float> %v, i32 0
@@ -79,7 +79,7 @@ define float @fmul_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 define double @fmul_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: fmul_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmulsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = fmul <4 x double> %x, %y
@@ -90,7 +90,7 @@ define double @fmul_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @fdiv_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: fdiv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vdivps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vdivss %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = fdiv <4 x float> %x, %y
   %r = extractelement <4 x float> %v, i32 0
@@ -100,7 +100,7 @@ define float @fdiv_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 define double @fdiv_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: fdiv_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vdivpd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vdivsd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = fdiv <4 x double> %x, %y
@@ -132,7 +132,7 @@ define double @frem_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @fsqrt_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: fsqrt_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsqrtps %xmm0, %xmm0
+; CHECK-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
   %r = extractelement <4 x float> %v, i32 0
@@ -142,8 +142,7 @@ define float @fsqrt_v4f32(<4 x float> %x) nounwind {
 define double @fsqrt_v4f64(<4 x double> %x) nounwind {
 ; CHECK-LABEL: fsqrt_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsqrtpd %ymm0, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.sqrt.v4f64(<4 x double> %x)
@@ -174,7 +173,7 @@ define double @fsin_v4f64(<4 x double> %x) nounwind {
 define float @fma_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z) nounwind {
 ; CHECK-LABEL: fma_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
+; CHECK-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.fma.v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z)
   %r = extractelement <4 x float> %v, i32 0
@@ -184,7 +183,7 @@ define float @fma_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z) nounwind
 define double @fma_v4f64(<4 x double> %x, <4 x double> %y, <4 x double> %z) nounwind {
 ; CHECK-LABEL: fma_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + ymm2
+; CHECK-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
 ; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -207,8 +206,7 @@ define float @fabs_v4f32(<4 x float> %x) nounwind {
 define double @fabs_v4f64(<4 x double> %x) nounwind {
 ; CHECK-LABEL: fabs_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    vandps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.fabs.v4f64(<4 x double> %x)
@@ -219,8 +217,8 @@ define double @fabs_v4f64(<4 x double> %x) nounwind {
 define float @fmaxnum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: fmaxnum_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
-; CHECK-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmaxss %xmm0, %xmm1, %xmm2
+; CHECK-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> %y)
@@ -231,10 +229,9 @@ define float @fmaxnum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 define double @fmaxnum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: fmaxnum_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxpd %ymm0, %ymm1, %ymm2
-; CHECK-NEXT:    vcmpunordpd %ymm0, %ymm0, %ymm0
-; CHECK-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vmaxsd %xmm0, %xmm1, %xmm2
+; CHECK-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.maxnum.v4f64(<4 x double> %x, <4 x double> %y)
@@ -245,8 +242,8 @@ define double @fmaxnum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @fminnum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: fminnum_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminps %xmm0, %xmm1, %xmm2
-; CHECK-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vminss %xmm0, %xmm1, %xmm2
+; CHECK-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.minnum.v4f32(<4 x float> %x, <4 x float> %y)
@@ -257,10 +254,9 @@ define float @fminnum_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 define double @fminnum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: fminnum_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vminpd %ymm0, %ymm1, %ymm2
-; CHECK-NEXT:    vcmpunordpd %ymm0, %ymm0, %ymm0
-; CHECK-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vminsd %xmm0, %xmm1, %xmm2
+; CHECK-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.minnum.v4f64(<4 x double> %x, <4 x double> %y)
@@ -309,10 +305,8 @@ define float @copysign_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 define double @copysign_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ; CHECK-LABEL: copysign_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    vandps %xmm3, %xmm1, %xmm1
-; CHECK-NEXT:    vandps %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-NEXT:    vandps {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
@@ -324,7 +318,7 @@ define double @copysign_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 define float @floor_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: floor_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundps $9, %xmm0, %xmm0
+; CHECK-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.floor.v4f32(<4 x float> %x)
   %r = extractelement <4 x float> %v, i32 0
@@ -334,8 +328,7 @@ define float @floor_v4f32(<4 x float> %x) nounwind {
 define double @floor_v4f64(<4 x double> %x) nounwind {
 ; CHECK-LABEL: floor_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundpd $9, %ymm0, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vroundsd $9, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.floor.v4f64(<4 x double> %x)
@@ -346,7 +339,7 @@ define double @floor_v4f64(<4 x double> %x) nounwind {
 define float @ceil_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: ceil_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundps $10, %xmm0, %xmm0
+; CHECK-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.ceil.v4f32(<4 x float> %x)
   %r = extractelement <4 x float> %v, i32 0
@@ -356,8 +349,7 @@ define float @ceil_v4f32(<4 x float> %x) nounwind {
 define double @ceil_v4f64(<4 x double> %x) nounwind {
 ; CHECK-LABEL: ceil_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundpd $10, %ymm0, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vroundsd $10, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.ceil.v4f64(<4 x double> %x)
@@ -368,7 +360,7 @@ define double @ceil_v4f64(<4 x double> %x) nounwind {
 define float @trunc_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: trunc_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundps $11, %xmm0, %xmm0
+; CHECK-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.trunc.v4f32(<4 x float> %x)
   %r = extractelement <4 x float> %v, i32 0
@@ -378,8 +370,7 @@ define float @trunc_v4f32(<4 x float> %x) nounwind {
 define double @trunc_v4f64(<4 x double> %x) nounwind {
 ; CHECK-LABEL: trunc_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundpd $11, %ymm0, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.trunc.v4f64(<4 x double> %x)
@@ -390,7 +381,7 @@ define double @trunc_v4f64(<4 x double> %x) nounwind {
 define float @rint_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: rint_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundps $4, %xmm0, %xmm0
+; CHECK-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.rint.v4f32(<4 x float> %x)
   %r = extractelement <4 x float> %v, i32 0
@@ -400,8 +391,7 @@ define float @rint_v4f32(<4 x float> %x) nounwind {
 define double @rint_v4f64(<4 x double> %x) nounwind {
 ; CHECK-LABEL: rint_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundpd $4, %ymm0, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vroundsd $4, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.rint.v4f64(<4 x double> %x)
@@ -412,7 +402,7 @@ define double @rint_v4f64(<4 x double> %x) nounwind {
 define float @nearbyint_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: nearbyint_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundps $12, %xmm0, %xmm0
+; CHECK-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %v = call <4 x float> @llvm.nearbyint.v4f32(<4 x float> %x)
   %r = extractelement <4 x float> %v, i32 0
@@ -422,8 +412,7 @@ define float @nearbyint_v4f32(<4 x float> %x) nounwind {
 define double @nearbyint_v4f64(<4 x double> %x) nounwind {
 ; CHECK-LABEL: nearbyint_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vroundpd $12, %ymm0, %ymm0
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vroundsd $12, %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %v = call <4 x double> @llvm.nearbyint.v4f64(<4 x double> %x)

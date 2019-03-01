@@ -34,6 +34,7 @@ static std::size_t count_bytes(char const* filename) {
     std::size_t count = 0;
     while (std::fgetc(f) != EOF)
         ++count;
+    std::fclose(f);
     return count;
 }
 

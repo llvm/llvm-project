@@ -20,14 +20,27 @@ ASM_WRAPPER_NAME(vfork):
         add     $_GLOBAL_OFFSET_TABLE_+(.Ltmp0-.L0$pb), %eax
         call    *_ZN14__interception10real_vforkE@GOTOFF(%eax)
 
-        // Restore return address from the spill area.
+        // Restore the stack frame.
+        // 12(%esp) return address
+        // 8(%esp) spill %ebx
+        // 4(%esp) spill REAL(vfork) return value
+        // (%esp) call frame (arg0) for __*_handle_vfork
         sub     $16, %esp
+        mov     %ebx, 8(%esp)
         mov     %eax, 4(%esp)
+
+        // Form GOT address in %ebx.
+        call    .L1$pb
+.L1$pb:
+        pop     %ebx
+.Ltmp1:
+        add     $_GLOBAL_OFFSET_TABLE_+(.Ltmp1-.L1$pb), %ebx
+
+        // Restore original return address.
         call    COMMON_INTERCEPTOR_SPILL_AREA
         mov     (%eax), %ecx
         mov     %ecx, 12(%esp)
         mov     4(%esp), %eax
-
 
         // Call handle_vfork in the parent process (%rax != 0).
         test    %eax, %eax
@@ -39,6 +52,7 @@ ASM_WRAPPER_NAME(vfork):
 
 .L_exit:
         mov     4(%esp), %eax
+        mov     8(%esp), %ebx
         add     $12, %esp
         ret
 ASM_SIZE(vfork)

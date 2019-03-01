@@ -2705,8 +2705,7 @@ static inline int __kmp_execute_tasks_template(
       if (thread->th.th_task_team == NULL) {
         break;
       }
-      // Yield before executing next task
-      KMP_YIELD(__kmp_library == library_throughput);
+      KMP_YIELD(__kmp_library == library_throughput); // Yield before next task
       // If execution of a stolen task results in more tasks being placed on our
       // run queue, reset use_own_tasks
       if (!use_own_tasks && TCR_4(threads_data[tid].td.td_deque_ntasks) != 0) {
@@ -3242,10 +3241,8 @@ void __kmp_wait_to_unref_task_teams(void) {
       break;
     }
 
-    // If we are oversubscribed, or have waited a bit (and library mode is
-    // throughput), yield. Pause is in the following code.
-    KMP_YIELD(TCR_4(__kmp_nth) > __kmp_avail_proc);
-    KMP_YIELD_SPIN(spins); // Yields only if KMP_LIBRARY=throughput
+    // If oversubscribed or have waited a bit, yield.
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
   }
 }
 
@@ -3410,7 +3407,7 @@ void __kmp_tasking_barrier(kmp_team_t *team, kmp_info_t *thread, int gtid) {
         __kmp_abort_thread();
       break;
     }
-    KMP_YIELD(TRUE); // GH: We always yield here
+    KMP_YIELD(TRUE);
   }
 #if USE_ITT_BUILD
   KMP_FSYNC_SPIN_ACQUIRED(RCAST(void *, spin));

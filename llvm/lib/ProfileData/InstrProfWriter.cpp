@@ -101,6 +101,7 @@ public:
 
   support::endianness ValueProfDataEndianness = support::little;
   InstrProfSummaryBuilder *SummaryBuilder;
+  InstrProfSummaryBuilder *CSSummaryBuilder;
 
   InstrProfRecordWriterTrait() = default;
 
@@ -142,7 +143,10 @@ public:
     endian::Writer LE(Out, little);
     for (const auto &ProfileData : *V) {
       const InstrProfRecord &ProfRecord = ProfileData.second;
-      SummaryBuilder->addRecord(ProfRecord);
+      if (NamedInstrProfRecord::hasCSFlagInHash(ProfileData.first))
+        CSSummaryBuilder->addRecord(ProfRecord);
+      else
+        SummaryBuilder->addRecord(ProfRecord);
 
       LE.write<uint64_t>(ProfileData.first); // Function hash
       LE.write<uint64_t>(ProfRecord.Counts.size());
@@ -253,6 +257,8 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
 
   InstrProfSummaryBuilder ISB(ProfileSummaryBuilder::DefaultCutoffs);
   InfoObj->SummaryBuilder = &ISB;
+  InstrProfSummaryBuilder CSISB(ProfileSummaryBuilder::DefaultCutoffs);
+  InfoObj->CSSummaryBuilder = &CSISB;
 
   // Populate the hash table generator.
   for (const auto &I : FunctionData)
@@ -264,6 +270,10 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   Header.Version = IndexedInstrProf::ProfVersion::CurrentVersion;
   if (ProfileKind == PF_IRLevel)
     Header.Version |= VARIANT_MASK_IR_PROF;
+  if (ProfileKind == PF_IRLevelWithCS) {
+    Header.Version |= VARIANT_MASK_IR_PROF;
+    Header.Version |= VARIANT_MASK_CSIR_PROF;
+  }
   Header.Unused = 0;
   Header.HashType = static_cast<uint64_t>(IndexedInstrProf::HashType);
   Header.HashOffset = 0;
@@ -287,6 +297,14 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t SummaryOffset = OS.tell();
   for (unsigned I = 0; I < SummarySize / sizeof(uint64_t); I++)
     OS.write(0);
+  uint64_t CSSummaryOffset = 0;
+  uint64_t CSSummarySize = 0;
+  if (ProfileKind == PF_IRLevelWithCS) {
+    CSSummaryOffset = OS.tell();
+    CSSummarySize = SummarySize / sizeof(uint64_t);
+    for (unsigned I = 0; I < CSSummarySize; I++)
+      OS.write(0);
+  }
 
   // Write the hash table.
   uint64_t HashTableStart = Generator.Emit(OS.OS, *InfoObj);
@@ -300,13 +318,25 @@ void InstrProfWriter::writeImpl(ProfOStream &OS) {
   setSummary(TheSummary.get(), *PS);
   InfoObj->SummaryBuilder = nullptr;
 
+  // For Context Sensitive summary.
+  std::unique_ptr<IndexedInstrProf::Summary> TheCSSummary = nullptr;
+  if (ProfileKind == PF_IRLevelWithCS) {
+    TheCSSummary = IndexedInstrProf::allocSummary(SummarySize);
+    std::unique_ptr<ProfileSummary> CSPS = CSISB.getSummary();
+    setSummary(TheCSSummary.get(), *CSPS);
+  }
+  InfoObj->CSSummaryBuilder = nullptr;
+
   // Now do the final patch:
   PatchItem PatchItems[] = {
       // Patch the Header.HashOffset field.
       {HashTableStartFieldOffset, &HashTableStart, 1},
       // Patch the summary data.
       {SummaryOffset, reinterpret_cast<uint64_t *>(TheSummary.get()),
-       (int)(SummarySize / sizeof(uint64_t))}};
+       (int)(SummarySize / sizeof(uint64_t))},
+      {CSSummaryOffset, reinterpret_cast<uint64_t *>(TheCSSummary.get()),
+       (int)CSSummarySize}};
+
   OS.patch(PatchItems, sizeof(PatchItems) / sizeof(*PatchItems));
 }
 
@@ -375,6 +405,8 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
 Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   if (ProfileKind == PF_IRLevel)
     OS << "# IR level Instrumentation Flag\n:ir\n";
+  else if (ProfileKind == PF_IRLevelWithCS)
+    OS << "# CSIR level Instrumentation Flag\n:csir\n";
   InstrProfSymtab Symtab;
   for (const auto &I : FunctionData)
     if (shouldEncodeData(I.getValue()))

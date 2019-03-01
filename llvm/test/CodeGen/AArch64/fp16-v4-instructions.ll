@@ -156,21 +156,22 @@ define <4 x half> @sitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-COMMON-LABEL: sitofp_i8:
 ; CHECK-COMMON-NEXT:  shl [[OP1:v[0-9]+\.4h]], v0.4h, #8
 ; CHECK-COMMON-NEXT:  sshr [[OP2:v[0-9]+\.4h]], [[OP1]], #8
-; CHECK-COMMON-NEXT:  sshll [[OP3:v[0-9]+\.4s]], [[OP2]], #0
-; CHECK-COMMON-NEXT:  scvtf [[OP4:v[0-9]+\.4s]], [[OP3]]
-; CHECK-COMMON-NEXT:  fcvtn v0.4h, [[OP4]]
+; CHECK-FP16-NEXT:    scvtf v0.4h, [[OP2]]
+; CHECK-CVT-NEXT:     sshll [[OP3:v[0-9]+\.4s]], [[OP2]], #0
+; CHECK-CVT-NEXT:     scvtf [[OP4:v[0-9]+\.4s]], [[OP3]]
+; CHECK-CVT-NEXT:     fcvtn v0.4h, [[OP4]]
 ; CHECK-COMMON-NEXT:  ret
   %1 = sitofp <4 x i8> %a to <4 x half>
   ret <4 x half> %1
 }
 
-
 define <4 x half> @sitofp_i16(<4 x i16> %a) #0 {
 ; CHECK-COMMON-LABEL: sitofp_i16:
-; CHECK-COMMON-NEXT:  sshll [[OP1:v[0-9]+\.4s]], v0.4h, #0
-; CHECK-COMMON-NEXT:  scvtf [[OP2:v[0-9]+\.4s]], [[OP1]]
-; CHECK-COMMON-NEXT:  fcvtn v0.4h, [[OP2]]
-; CHECK-COMMON-NEXT:  ret
+; CHECK-FP16-NEXT:   scvtf v0.4h, v0.4h
+; CHECK-CVT-NEXT:    sshll [[OP1:v[0-9]+\.4s]], v0.4h, #0
+; CHECK-CVT-NEXT:    scvtf [[OP2:v[0-9]+\.4s]], [[OP1]]
+; CHECK-CVT-NEXT:    fcvtn v0.4h, [[OP2]]
+; CHECK-COMMON-NEXT: ret
   %1 = sitofp <4 x i16> %a to <4 x half>
   ret <4 x half> %1
 }
@@ -201,9 +202,10 @@ define <4 x half> @sitofp_i64(<4 x i64> %a) #0 {
 define <4 x half> @uitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-COMMON-LABEL: uitofp_i8:
 ; CHECK-COMMON-NEXT:  bic v0.4h, #255, lsl #8
-; CHECK-COMMON-NEXT:  ushll [[OP1:v[0-9]+\.4s]], v0.4h, #0
-; CHECK-COMMON-NEXT:  ucvtf [[OP2:v[0-9]+\.4s]], [[OP1]]
-; CHECK-COMMON-NEXT:  fcvtn v0.4h, [[OP2]]
+; CHECK-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-CVT-NEXT:     ushll [[OP1:v[0-9]+\.4s]], v0.4h, #0
+; CHECK-CVT-NEXT:     ucvtf [[OP2:v[0-9]+\.4s]], [[OP1]]
+; CHECK-CVT-NEXT:     fcvtn v0.4h, [[OP2]]
 ; CHECK-COMMON-NEXT:  ret
   %1 = uitofp <4 x i8> %a to <4 x half>
   ret <4 x half> %1
@@ -212,9 +214,10 @@ define <4 x half> @uitofp_i8(<4 x i8> %a) #0 {
 
 define <4 x half> @uitofp_i16(<4 x i16> %a) #0 {
 ; CHECK-COMMON-LABEL: uitofp_i16:
-; CHECK-COMMON-NEXT:  ushll [[OP1:v[0-9]+\.4s]], v0.4h, #0
-; CHECK-COMMON-NEXT:  ucvtf [[OP2:v[0-9]+\.4s]], [[OP1]]
-; CHECK-COMMON-NEXT:  fcvtn v0.4h, [[OP2]]
+; CHECK-FP16-NEXT:  ucvtf v0.4h, v0.4h
+; CHECK-CVT-NEXT:   ushll [[OP1:v[0-9]+\.4s]], v0.4h, #0
+; CHECK-CVT-NEXT:   ucvtf [[OP2:v[0-9]+\.4s]], [[OP1]]
+; CHECK-CVT-NEXT:   fcvtn v0.4h, [[OP2]]
 ; CHECK-COMMON-NEXT:  ret
   %1 = uitofp <4 x i16> %a to <4 x half>
   ret <4 x half> %1

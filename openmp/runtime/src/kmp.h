@@ -981,10 +981,6 @@ extern kmp_uint64 __kmp_now_nsec();
   (KMP_BLOCKTIME(team, tid) * KMP_USEC_PER_SEC)
 #define KMP_BLOCKING(goal, count) ((count) % 1000 != 0 || (goal) > KMP_NOW())
 #endif
-#define KMP_YIELD_NOW()                                                        \
-  (KMP_NOW_MSEC() / KMP_MAX(__kmp_dflt_blocktime, 1) %                         \
-       (__kmp_yield_on_count + __kmp_yield_off_count) <                        \
-   (kmp_uint32)__kmp_yield_on_count)
 #endif // KMP_USE_MONITOR
 
 #define KMP_MIN_STATSCOLS 40
@@ -998,14 +994,6 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_MIN_CHUNK 1
 #define KMP_MAX_CHUNK (INT_MAX - 1)
 #define KMP_DEFAULT_CHUNK 1
-
-#define KMP_MIN_INIT_WAIT 1
-#define KMP_MAX_INIT_WAIT (INT_MAX / 2)
-#define KMP_DEFAULT_INIT_WAIT 2048U
-
-#define KMP_MIN_NEXT_WAIT 1
-#define KMP_MAX_NEXT_WAIT (INT_MAX / 2)
-#define KMP_DEFAULT_NEXT_WAIT 1024U
 
 #define KMP_DFLT_DISP_NUM_BUFF 7
 #define KMP_MAX_ORDERED 8
@@ -1090,7 +1078,7 @@ extern void __kmp_x86_cpuid(int mode, int mode2, struct kmp_cpuid *p);
 extern void __kmp_x86_pause(void);
 #elif KMP_MIC
 // Performance testing on KNC (C0QS-7120 P/A/X/D, 61-core, 16 GB Memory) showed
-// regression after removal of extra PAUSE from KMP_YIELD_SPIN(). Changing
+// regression after removal of extra PAUSE from spin loops. Changing
 // the delay from 100 to 300 showed even better performance than double PAUSE
 // on Spec OMP2001 and LCPC tasking tests, no regressions on EPCC.
 static inline void __kmp_x86_pause(void) { _mm_delay_32(300); }
@@ -1115,31 +1103,54 @@ static inline void __kmp_x86_pause(void) { _mm_pause(); }
 #define KMP_INIT_YIELD(count)                                                  \
   { (count) = __kmp_yield_init; }
 
+#define KMP_OVERSUBSCRIBED                                                     \
+  (TCR_4(__kmp_nth) > (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc))
+
+#define KMP_TRY_YIELD                                                          \
+  ((__kmp_use_yield == 1) || (__kmp_use_yield == 2 && (KMP_OVERSUBSCRIBED)))
+
+#define KMP_TRY_YIELD_OVERSUB                                                  \
+  ((__kmp_use_yield == 1 || __kmp_use_yield == 2) && (KMP_OVERSUBSCRIBED))
+
 #define KMP_YIELD(cond)                                                        \
   {                                                                            \
     KMP_CPU_PAUSE();                                                           \
-    __kmp_yield((cond));                                                       \
+    if ((cond) && (KMP_TRY_YIELD))                                             \
+      __kmp_yield();                                                           \
+  }
+
+#define KMP_YIELD_OVERSUB()                                                    \
+  {                                                                            \
+    KMP_CPU_PAUSE();                                                           \
+    if ((KMP_TRY_YIELD_OVERSUB))                                               \
+      __kmp_yield();                                                           \
   }
 
 // Note the decrement of 2 in the following Macros. With KMP_LIBRARY=turnaround,
 // there should be no yielding since initial value from KMP_INIT_YIELD() is odd.
-
-#define KMP_YIELD_WHEN(cond, count)                                            \
-  {                                                                            \
-    KMP_CPU_PAUSE();                                                           \
-    (count) -= 2;                                                              \
-    if (!(count)) {                                                            \
-      __kmp_yield(cond);                                                       \
-      (count) = __kmp_yield_next;                                              \
-    }                                                                          \
-  }
 #define KMP_YIELD_SPIN(count)                                                  \
   {                                                                            \
     KMP_CPU_PAUSE();                                                           \
-    (count) -= 2;                                                              \
-    if (!(count)) {                                                            \
-      __kmp_yield(1);                                                          \
-      (count) = __kmp_yield_next;                                              \
+    if (KMP_TRY_YIELD) {                                                       \
+      (count) -= 2;                                                            \
+      if (!(count)) {                                                          \
+        __kmp_yield();                                                         \
+        (count) = __kmp_yield_next;                                            \
+      }                                                                        \
+    }                                                                          \
+  }
+
+#define KMP_YIELD_OVERSUB_ELSE_SPIN(count)                                     \
+  {                                                                            \
+    KMP_CPU_PAUSE();                                                           \
+    if ((KMP_TRY_YIELD_OVERSUB))                                               \
+      __kmp_yield();                                                           \
+    else if (__kmp_use_yield == 1) {                                           \
+      (count) -= 2;                                                            \
+      if (!(count)) {                                                          \
+        __kmp_yield();                                                         \
+        (count) = __kmp_yield_next;                                            \
+      }                                                                        \
     }                                                                          \
   }
 
@@ -1836,7 +1847,6 @@ typedef enum kmp_bar_pat { /* Barrier communication patterns */
 typedef struct kmp_internal_control {
   int serial_nesting_level; /* corresponds to the value of the
                                th_team_serialized field */
-  kmp_int8 nested; /* internal control for nested parallelism (per thread) */
   kmp_int8 dynamic; /* internal control for dynamic adjustment of threads (per
                        thread) */
   kmp_int8
@@ -2043,8 +2053,6 @@ typedef struct kmp_local {
   ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_intervals)
 #endif
 
-#define get__nested_2(xteam, xtid)                                             \
-  ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.nested)
 #define get__dynamic_2(xteam, xtid)                                            \
   ((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.dynamic)
 #define get__nproc_2(xteam, xtid)                                              \
@@ -2065,11 +2073,6 @@ typedef struct kmp_local {
 #define set__bt_set_team(xteam, xtid, xval)                                    \
   (((xteam)->t.t_threads[(xtid)]->th.th_current_task->td_icvs.bt_set) = (xval))
 
-#define set__nested(xthread, xval)                                             \
-  (((xthread)->th.th_current_task->td_icvs.nested) = (xval))
-#define get__nested(xthread)                                                   \
-  (((xthread)->th.th_current_task->td_icvs.nested) ? (FTN_TRUE) : (FTN_FALSE))
-
 #define set__dynamic(xthread, xval)                                            \
   (((xthread)->th.th_current_task->td_icvs.dynamic) = (xval))
 #define get__dynamic(xthread)                                                  \
@@ -2083,6 +2086,9 @@ typedef struct kmp_local {
 
 #define set__max_active_levels(xthread, xval)                                  \
   (((xthread)->th.th_current_task->td_icvs.max_active_levels) = (xval))
+
+#define get__max_active_levels(xthread)                                        \
+  ((xthread)->th.th_current_task->td_icvs.max_active_levels)
 
 #define set__sched(xthread, xval)                                              \
   (((xthread)->th.th_current_task->td_icvs.sched) = (xval))
@@ -2810,8 +2816,6 @@ typedef struct kmp_base_root {
   // TODO: GEH - then replace r_active with t_active_levels if we can to reduce
   // the synch overhead or keeping r_active
   volatile int r_active; /* TRUE if some region in a nest has > 1 thread */
-  // GEH: This is misnamed, should be r_in_parallel
-  volatile int r_nested; // TODO: GEH - This is unused, just remove it entirely.
   // keeps a count of active parallel regions per root
   std::atomic<int> r_in_parallel;
   // GEH: This is misnamed, should be r_active_levels
@@ -2945,10 +2949,6 @@ extern kmp_lock_t __kmp_global_lock; /* control OS/global access  */
 extern kmp_queuing_lock_t __kmp_dispatch_lock; /* control dispatch access  */
 extern kmp_lock_t __kmp_debug_lock; /* control I/O access for KMP_DEBUG */
 
-/* used for yielding spin-waits */
-extern unsigned int __kmp_init_wait; /* initial number of spin-tests   */
-extern unsigned int __kmp_next_wait; /* susequent number of spin-tests */
-
 extern enum library_type __kmp_library;
 
 extern enum sched_type __kmp_sched; /* default runtime scheduling */
@@ -2977,15 +2977,10 @@ extern int __kmp_reserve_warn; /* have we issued reserve_threads warning? */
 extern int __kmp_suspend_count; /* count inside __kmp_suspend_template() */
 #endif
 
+extern kmp_int32 __kmp_use_yield;
+extern kmp_int32 __kmp_use_yield_exp_set;
 extern kmp_uint32 __kmp_yield_init;
 extern kmp_uint32 __kmp_yield_next;
-
-#if KMP_USE_MONITOR
-extern kmp_uint32 __kmp_yielding_on;
-#endif
-extern kmp_uint32 __kmp_yield_cycle;
-extern kmp_int32 __kmp_yield_on_count;
-extern kmp_int32 __kmp_yield_off_count;
 
 /* ------------------------------------------------------------------------- */
 extern int __kmp_allThreadsSpecified;
@@ -3011,8 +3006,6 @@ extern int __kmp_tp_capacity; /* capacity of __kmp_threads if threadprivate is
                                  used (fixed) */
 extern int __kmp_tp_cached; /* whether threadprivate cache has been created
                                (__kmpc_threadprivate_cached()) */
-extern int __kmp_dflt_nested; /* nested parallelism enabled by default a la
-                                 OMP_NESTED */
 extern int __kmp_dflt_blocktime; /* number of milliseconds to wait before
                                     blocking (env setting) */
 #if KMP_USE_MONITOR
@@ -3054,9 +3047,12 @@ extern kmp_int16 __kmp_init_x87_fpu_control_word; // init thread's FP ctrl reg
 extern kmp_uint32 __kmp_init_mxcsr; /* init thread's mxscr */
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
 
-extern int __kmp_dflt_max_active_levels; /* max_active_levels for nested
-                                            parallelism enabled by default via
-                                            OMP_MAX_ACTIVE_LEVELS */
+// max_active_levels for nested parallelism enabled by default via
+// OMP_MAX_ACTIVE_LEVELS, OMP_NESTED, OMP_NUM_THREADS, and OMP_PROC_BIND
+extern int __kmp_dflt_max_active_levels;
+// Indicates whether value of __kmp_dflt_max_active_levels was already
+// explicitly set by OMP_MAX_ACTIVE_LEVELS or OMP_NESTED=false
+extern bool __kmp_dflt_max_active_levels_set;
 extern int __kmp_dispatch_num_buffers; /* max possible dynamic loops in
                                           concurrent execution per team */
 #if KMP_NESTED_HOT_TEAMS
@@ -3309,7 +3305,7 @@ extern void __kmp_push_num_teams(ident_t *loc, int gtid, int num_teams,
                                  int num_threads);
 #endif
 
-extern void __kmp_yield(int cond);
+extern void __kmp_yield();
 
 extern void __kmpc_dispatch_init_4(ident_t *loc, kmp_int32 gtid,
                                    enum sched_type schedule, kmp_int32 lb,
@@ -3374,13 +3370,11 @@ extern kmp_uint32 __kmp_neq_4(kmp_uint32 value, kmp_uint32 checker);
 extern kmp_uint32 __kmp_lt_4(kmp_uint32 value, kmp_uint32 checker);
 extern kmp_uint32 __kmp_ge_4(kmp_uint32 value, kmp_uint32 checker);
 extern kmp_uint32 __kmp_le_4(kmp_uint32 value, kmp_uint32 checker);
-extern kmp_uint32 __kmp_wait_yield_4(kmp_uint32 volatile *spinner,
-                                     kmp_uint32 checker,
-                                     kmp_uint32 (*pred)(kmp_uint32, kmp_uint32),
-                                     void *obj);
-extern void __kmp_wait_yield_4_ptr(void *spinner, kmp_uint32 checker,
-                                   kmp_uint32 (*pred)(void *, kmp_uint32),
-                                   void *obj);
+extern kmp_uint32 __kmp_wait_4(kmp_uint32 volatile *spinner, kmp_uint32 checker,
+                               kmp_uint32 (*pred)(kmp_uint32, kmp_uint32),
+                               void *obj);
+extern void __kmp_wait_4_ptr(void *spinner, kmp_uint32 checker,
+                             kmp_uint32 (*pred)(void *, kmp_uint32), void *obj);
 
 class kmp_flag_32;
 class kmp_flag_64;

@@ -327,7 +327,7 @@ void __kmp_infinite_loop(void) {
   static int done = FALSE;
 
   while (!done) {
-    KMP_YIELD(1);
+    KMP_YIELD(TRUE);
   }
 }
 
@@ -672,24 +672,6 @@ BOOL WINAPI DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpReserved) {
 #endif /* KMP_OS_WINDOWS */
 #endif /* KMP_DYNAMIC_LIB */
 
-/* Change the library type to "status" and return the old type */
-/* called from within initialization routines where __kmp_initz_lock is held */
-int __kmp_change_library(int status) {
-  int old_status;
-
-  old_status = __kmp_yield_init &
-               1; // check whether KMP_LIBRARY=throughput (even init count)
-
-  if (status) {
-    __kmp_yield_init |= 1; // throughput => turnaround (odd init count)
-  } else {
-    __kmp_yield_init &= ~1; // turnaround => throughput (even init count)
-  }
-
-  return old_status; // return previous setting of whether
-  // KMP_LIBRARY=throughput
-}
-
 /* __kmp_parallel_deo -- Wait until it's our turn. */
 void __kmp_parallel_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
   int gtid = *gtid_ref;
@@ -708,8 +690,8 @@ void __kmp_parallel_deo(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
 #ifdef BUILD_PARALLEL_ORDERED
   if (!team->t.t_serialized) {
     KMP_MB();
-    KMP_WAIT_YIELD(&team->t.t_ordered.dt.t_value, __kmp_tid_from_gtid(gtid),
-                   KMP_EQ, NULL);
+    KMP_WAIT(&team->t.t_ordered.dt.t_value, __kmp_tid_from_gtid(gtid), KMP_EQ,
+             NULL);
     KMP_MB();
   }
 #endif /* BUILD_PARALLEL_ORDERED */
@@ -1737,11 +1719,11 @@ int __kmp_fork_call(ident_t *loc, int gtid,
       // parallel out of teams construct). This code moved here from
       // __kmp_reserve_threads() to speedup nested serialized parallels.
       if (nthreads > 1) {
-        if ((!get__nested(master_th) && (root->r.r_in_parallel
+        if ((get__max_active_levels(master_th) == 1 && (root->r.r_in_parallel
 #if OMP_40_ENABLED
-                                         && !enter_teams
+                                                        && !enter_teams
 #endif /* OMP_40_ENABLED */
-                                         )) ||
+                                                        )) ||
             (__kmp_library == library_serial)) {
           KC_TRACE(10, ("__kmp_fork_call: T#%d serializing team; requested %d"
                         " threads\n",
@@ -3168,8 +3150,6 @@ static kmp_internal_control_t __kmp_get_global_icvs(void) {
 
   kmp_internal_control_t g_icvs = {
     0, // int serial_nesting_level; //corresponds to value of th_team_serialized
-    (kmp_int8)__kmp_dflt_nested, // int nested; //internal control
-    // for nested parallelism (per thread)
     (kmp_int8)__kmp_global.g.g_dynamic, // internal control for dynamic
     // adjustment of threads (per thread)
     (kmp_int8)__kmp_env_blocktime, // int bt_set; //internal control for
@@ -3225,7 +3205,6 @@ static void __kmp_initialize_root(kmp_root_t *root) {
   root->r.r_active = FALSE;
   root->r.r_in_parallel = 0;
   root->r.r_blocktime = __kmp_dflt_blocktime;
-  root->r.r_nested = __kmp_dflt_nested;
 
   /* setup the root team for this task */
   /* allocate the root team structure */
@@ -3450,7 +3429,6 @@ void __kmp_print_structure(void) {
         __kmp_print_structure_thread("    Uber Thread:  ",
                                      root->r.r_uber_thread);
         __kmp_printf("    Active?:      %2d\n", root->r.r_active);
-        __kmp_printf("    Nested?:      %2d\n", root->r.r_nested);
         __kmp_printf("    In Parallel:  %2d\n",
                      KMP_ATOMIC_LD_RLX(&root->r.r_in_parallel));
         __kmp_printf("\n");
@@ -7392,11 +7370,13 @@ void __kmp_internal_join(ident_t *id, int gtid, kmp_team_t *team) {
 
     if (ompt_enabled.ompt_callback_sync_region_wait) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region_wait)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, task_data, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,
+          codeptr);
     }
     if (ompt_enabled.ompt_callback_sync_region) {
       ompt_callbacks.ompt_callback(ompt_callback_sync_region)(
-          ompt_sync_region_barrier, ompt_scope_end, NULL, task_data, codeptr);
+          ompt_sync_region_barrier_implicit, ompt_scope_end, NULL, task_data,
+          codeptr);
     }
 #endif
     if (!KMP_MASTER_TID(ds_tid) && ompt_enabled.ompt_callback_implicit_task) {
@@ -7735,13 +7715,14 @@ void __kmp_aux_set_library(enum library_type arg) {
   switch (__kmp_library) {
   case library_serial: {
     KMP_INFORM(LibraryIsSerial);
-    (void)__kmp_change_library(TRUE);
   } break;
   case library_turnaround:
-    (void)__kmp_change_library(TRUE);
+    if (__kmp_use_yield == 1 && !__kmp_use_yield_exp_set)
+      __kmp_use_yield = 2; // only yield when oversubscribed
     break;
   case library_throughput:
-    (void)__kmp_change_library(FALSE);
+    if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME)
+      __kmp_dflt_blocktime = 200;
     break;
   default:
     KMP_FATAL(UnknownLibraryType, arg);

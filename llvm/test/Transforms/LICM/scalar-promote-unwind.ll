@@ -67,6 +67,63 @@ for.cond.cleanup:
   ret void
 }
 
+;; We can promote if the load can be proven safe to speculate, and the
+;; store safe to sink, even if the the store *isn't* must execute.
+define void @test3(i1 zeroext %y) uwtable {
+; CHECK-LABEL: @test3
+entry:
+; CHECK-LABEL: entry:
+; CHECK-NEXT:  %a = alloca i32
+; CHECK-NEXT:  %a.promoted = load i32, i32* %a, align 1
+  %a = alloca i32
+  br label %for.body
+
+for.body:
+  %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %0 = load i32, i32* %a, align 4
+  %add = add nsw i32 %0, 1
+  tail call void @f()
+  store i32 %add, i32* %a, align 4
+  %inc = add nuw nsw i32 %i.03, 1
+  %exitcond = icmp eq i32 %inc, 10000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+; CHECK-LABEL: for.cond.cleanup:
+; CHECK: store i32 %add.lcssa, i32* %a, align 1
+; CHECK-NEXT: ret void
+  ret void
+}
+
+;; Same as test3, but with unordered atomics
+;; FIXME: doing the transform w/o alignment here is wrong since we're
+;; creating an unaligned atomic which we may not be able to lower.
+define void @test3b(i1 zeroext %y) uwtable {
+; CHECK-LABEL: @test3
+entry:
+; CHECK-LABEL: entry:
+; CHECK-NEXT:  %a = alloca i32
+; CHECK-NEXT:  %a.promoted = load atomic i32, i32* %a unordered, align 1
+  %a = alloca i32
+  br label %for.body
+
+for.body:
+  %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %0 = load atomic i32, i32* %a unordered, align 4
+  %add = add nsw i32 %0, 1
+  tail call void @f()
+  store atomic i32 %add, i32* %a unordered, align 4
+  %inc = add nuw nsw i32 %i.03, 1
+  %exitcond = icmp eq i32 %inc, 10000
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+; CHECK-LABEL: for.cond.cleanup:
+; CHECK: store atomic i32 %add.lcssa, i32* %a unordered, align 1
+; CHECK-NEXT: ret void
+  ret void
+}
+
 @_ZTIi = external constant i8*
 
 ; In this test, the loop is within a try block. There is an explicit unwind edge out of the loop.

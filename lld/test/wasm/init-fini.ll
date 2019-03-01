@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -thread-model=single -o %t.o %s
-; RUN: llc -filetype=obj -thread-model=single %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
+; RUN: llc -filetype=obj -o %t.o %s
+; RUN: llc -filetype=obj %S/Inputs/global-ctor-dtor.ll -o %t.global-ctor-dtor.o
 
 target triple = "wasm32-unknown-unknown"
 

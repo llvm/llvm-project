@@ -2800,15 +2800,12 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     EVT InVT = Op.getOperand(0).getValueType();
     APInt InDemandedElts = DemandedElts.zextOrSelf(InVT.getVectorNumElements());
     Known = computeKnownBits(Op.getOperand(0), InDemandedElts, Depth + 1);
-    Known = Known.zext(BitWidth);
-    Known.Zero.setBitsFrom(InVT.getScalarSizeInBits());
+    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
     break;
   }
   case ISD::ZERO_EXTEND: {
-    EVT InVT = Op.getOperand(0).getValueType();
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known = Known.zext(BitWidth);
-    Known.Zero.setBitsFrom(InVT.getScalarSizeInBits());
+    Known = Known.zext(BitWidth, true /* ExtendedBitsAreKnownZero */);
     break;
   }
   case ISD::SIGN_EXTEND_VECTOR_INREG: {
@@ -2829,7 +2826,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::ANY_EXTEND: {
     Known = computeKnownBits(Op.getOperand(0), Depth+1);
-    Known = Known.zext(BitWidth);
+    Known = Known.zext(BitWidth, false /* ExtendedBitsAreKnownZero */);
     break;
   }
   case ISD::TRUNCATE: {
@@ -3026,7 +3023,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       Known = computeKnownBits(InVec, Depth + 1);
     }
     if (BitWidth > EltBitWidth)
-      Known = Known.zext(BitWidth);
+      Known = Known.zext(BitWidth, false /* => any extend */);
     break;
   }
   case ISD::INSERT_VECTOR_ELT: {

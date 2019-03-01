@@ -30,6 +30,7 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+uint8_t *Out::BufferStart;
 uint8_t Out::First;
 PhdrEntry *Out::TlsPhdr;
 OutputSection *Out::ElfHeader;
@@ -221,8 +222,6 @@ static void writeInt(uint8_t *Buf, uint64_t Data, uint64_t Size) {
 template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
   if (Type == SHT_NOBITS)
     return;
-
-  Loc = Buf;
 
   // If -compress-debug-section is specified and if this is a debug seciton,
   // we've already compressed section contents. If that's the case,

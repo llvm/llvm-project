@@ -4358,8 +4358,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     const Module *M = MF->getFunction().getParent();
 
     if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
-        !PPCSubTarget->isSecurePlt() || !PPCSubTarget->isTargetELF() ||
-        M->getPICLevel() == PICLevel::SmallPIC)
+        (!TM.isPositionIndependent() || !PPCSubTarget->isSecurePlt()) ||
+        !PPCSubTarget->isTargetELF() || M->getPICLevel() == PICLevel::SmallPIC)
       break;
 
     SDValue Op = N->getOperand(1);

@@ -27,6 +27,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND
   list(APPEND LIBFUZZER_UNITTEST_CFLAGS -nostdinc++)
 endif()
 
+if ("-fvisibility=hidden" IN_LIST LIBFUZZER_CFLAGS)
+  # Match visibility settings.
+  list(APPEND LIBFUZZER_UNITTEST_CFLAGS "-fvisibility=hidden")
+endif()
+
 if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
   # libFuzzer unit tests are only run on the host machine.
   set(arch ${COMPILER_RT_DEFAULT_TARGET_ARCH})

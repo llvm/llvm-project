@@ -162,7 +162,10 @@ Error TextInstrProfReader::readHeader() {
     IsIRInstr = true;
   else if (Str.equals_lower("fe"))
     IsIRInstr = false;
-  else
+  else if (Str.equals_lower("csir")) {
+    IsIRInstr = true;
+    HasCSIRLevelProfile = true;
+  } else
     return error(instrprof_error::bad_header);
 
   ++Line;
@@ -733,7 +736,7 @@ bool IndexedInstrProfReader::hasFormat(const MemoryBuffer &DataBuffer) {
 
 const unsigned char *
 IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
-                                    const unsigned char *Cur) {
+                                    const unsigned char *Cur, bool UseCS) {
   using namespace IndexedInstrProf;
   using namespace support;
 
@@ -760,10 +763,13 @@ IndexedInstrProfReader::readSummary(IndexedInstrProf::ProfVersion Version,
       DetailedSummary.emplace_back((uint32_t)Ent.Cutoff, Ent.MinBlockCount,
                                    Ent.NumBlocks);
     }
+    std::unique_ptr<llvm::ProfileSummary> &Summary =
+        UseCS ? this->CS_Summary : this->Summary;
+
     // initialize InstrProfSummary using the SummaryData from disk.
-    this->Summary = llvm::make_unique<ProfileSummary>(
-        ProfileSummary::PSK_Instr, DetailedSummary,
-        SummaryData->get(Summary::TotalBlockCount),
+    Summary = llvm::make_unique<ProfileSummary>(
+        UseCS ? ProfileSummary::PSK_CSInstr : ProfileSummary::PSK_Instr,
+        DetailedSummary, SummaryData->get(Summary::TotalBlockCount),
         SummaryData->get(Summary::MaxBlockCount),
         SummaryData->get(Summary::MaxInternalBlockCount),
         SummaryData->get(Summary::MaxFunctionCount),
@@ -805,7 +811,11 @@ Error IndexedInstrProfReader::readHeader() {
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return error(instrprof_error::unsupported_version);
 
-  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur);
+  Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+                    /* UseCS */ false);
+  if (Header->Version & VARIANT_MASK_CSIR_PROF)
+    Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
+                      /* UseCS */ true);
 
   // Read the hash type and start offset.
   IndexedInstrProf::HashT HashType = static_cast<IndexedInstrProf::HashT>(

@@ -35,6 +35,7 @@ get_property(COMPILE_FLAGS TARGET llvm-config PROPERTY COMPILE_FLAGS)
 # user may add that could affect the ABI.  We only want to extract flags
 # that have been added by the LLVM build system.
 string(REGEX MATCH "-std=[^ ]\+" LLVM_CXX_STD_FLAG ${CMAKE_CXX_FLAGS})
+string(REGEX MATCH "-stdlib=[^ ]\+" LLVM_CXX_STDLIB_FLAG ${CMAKE_CXX_FLAGS})
 string(REGEX MATCH "-std=[^ ]\+" LLVM_C_STD_FLAG ${CMAKE_C_FLAGS})
 
 # Use configure_file to create BuildVariables.inc.
@@ -42,7 +43,7 @@ set(LLVM_SRC_ROOT ${LLVM_MAIN_SRC_DIR})
 set(LLVM_OBJ_ROOT ${LLVM_BINARY_DIR})
 set(LLVM_CPPFLAGS "${LLVM_DEFINITIONS}")
 set(LLVM_CFLAGS "${LLVM_C_STD_FLAG} ${LLVM_DEFINITIONS}")
-set(LLVM_CXXFLAGS "${LLVM_CXX_STD_FLAG} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
+set(LLVM_CXXFLAGS "${LLVM_CXX_STD_FLAG} ${LLVM_CXX_STDLIB_FLAG} ${COMPILE_FLAGS} ${LLVM_DEFINITIONS}")
 set(LLVM_BUILD_SYSTEM cmake)
 set(LLVM_HAS_RTTI ${LLVM_CONFIG_HAS_RTTI})
 set(LLVM_DYLIB_VERSION "${LLVM_VERSION_MAJOR}${LLVM_VERSION_SUFFIX}")

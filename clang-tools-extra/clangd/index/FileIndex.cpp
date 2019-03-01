@@ -14,6 +14,7 @@
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
+#include "index/SymbolOrigin.h"
 #include "index/dex/Dex.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/MacroInfo.h"
