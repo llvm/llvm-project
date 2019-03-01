@@ -378,8 +378,7 @@ static void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame,
   InternalMmapVector<BufferedStackTrace> stack_buffer(1);
   BufferedStackTrace *stack = stack_buffer.data();
   stack->Reset();
-  GetStackTrace(stack, kStackTraceMax, pc, frame, uc,
-                common_flags()->fast_unwind_on_fatal);
+  stack->Unwind(pc, frame, uc, common_flags()->fast_unwind_on_fatal);
 
   bool fatal = flags()->halt_on_error || !ai.recover;
   ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store, fatal);
@@ -417,8 +416,8 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __hwasan_tag_mismatch(
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  GetStackTrace(stack, kStackTraceMax, StackTrace::GetNextInstructionPc(sig.pc),
-                sig.bp, sig.context, common_flags()->fast_unwind_on_fatal);
+  stack->Unwind(StackTrace::GetNextInstructionPc(sig.pc), sig.bp, sig.context,
+                common_flags()->fast_unwind_on_fatal);
 }
 
 void HwasanOnDeadlySignal(int signo, void *info, void *context) {

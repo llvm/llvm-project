@@ -16,6 +16,13 @@
 
 namespace __sanitizer {
 
+struct BufferedStackTrace;
+// Get the stack trace with the given pc and bp.
+// The pc will be in the position 0 of the resulting stack trace.
+// The bp may refer to the current frame or to the caller's frame.
+void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
+                   void *context, bool request_fast_unwind);
+
 static const u32 kStackTraceMax = 256;
 
 #if defined(__sparc__) || (SANITIZER_LINUX && defined(__mips__))
@@ -96,6 +103,20 @@ struct BufferedStackTrace : public StackTrace {
   BufferedStackTrace() : StackTrace(trace_buffer, 0), top_frame_bp(0) {}
 
   void Init(const uptr *pcs, uptr cnt, uptr extra_top_pc = 0);
+
+  void Unwind(uptr pc, uptr bp, void *context, bool request_fast,
+              u32 max_depth = kStackTraceMax) {
+    top_frame_bp = (max_depth > 0) ? bp : 0;
+    // Small max_depth optimization
+    if (max_depth <= 1) {
+      if (max_depth == 1)
+        trace_buffer[0] = pc;
+      size = max_depth;
+      return;
+    }
+    GetStackTrace(this, max_depth, pc, bp, context, request_fast);
+  }
+
   void Unwind(u32 max_depth, uptr pc, uptr bp, void *context, uptr stack_top,
               uptr stack_bottom, bool request_fast_unwind);
 
@@ -121,31 +142,27 @@ static inline bool IsValidFrame(uptr frame, uptr stack_top, uptr stack_bottom) {
   return frame > stack_bottom && frame < stack_top - 2 * sizeof (uhwptr);
 }
 
-// Get the stack trace with the given pc and bp.
-// The pc will be in the position 0 of the resulting stack trace.
-// The bp may refer to the current frame or to the caller's frame.
-void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
-                   void *context, bool request_fast_unwind);
-
 }  // namespace __sanitizer
 
 // Use this macro if you want to print stack trace with the caller
 // of the current function in the top frame.
-#define GET_CALLER_PC_BP_SP \
-  uptr bp = GET_CURRENT_FRAME();              \
-  uptr pc = GET_CALLER_PC();                  \
-  uptr local_stack;                           \
-  uptr sp = (uptr)&local_stack
-
 #define GET_CALLER_PC_BP \
   uptr bp = GET_CURRENT_FRAME();              \
   uptr pc = GET_CALLER_PC();
 
+#define GET_CALLER_PC_BP_SP \
+  GET_CALLER_PC_BP;                           \
+  uptr local_stack;                           \
+  uptr sp = (uptr)&local_stack
+
 // Use this macro if you want to print stack trace with the current
 // function in the top frame.
-#define GET_CURRENT_PC_BP_SP \
+#define GET_CURRENT_PC_BP \
   uptr bp = GET_CURRENT_FRAME();              \
-  uptr pc = StackTrace::GetCurrentPc();   \
+  uptr pc = StackTrace::GetCurrentPc()
+
+#define GET_CURRENT_PC_BP_SP \
+  GET_CURRENT_PC_BP;                          \
   uptr local_stack;                           \
   uptr sp = (uptr)&local_stack
 

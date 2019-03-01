@@ -38,11 +38,15 @@ void InitializeDeadlySignals() {}
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
+// TODO(yln): Temporary workaround. Will be removed.
+void ubsan_GetStackTrace(BufferedStackTrace *stack, uptr max_depth,
+                         uptr pc, uptr bp, void *context, bool fast);
+
 namespace __ubsan {
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
+  ubsan_GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
                 common_flags()->fast_unwind_on_fatal);
 }
 

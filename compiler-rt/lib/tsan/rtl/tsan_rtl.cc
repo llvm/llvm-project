@@ -328,14 +328,8 @@ static void CheckShadowMapping() {
 #if !SANITIZER_GO
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  uptr top = 0;
-  uptr bottom = 0;
-  bool fast = common_flags()->fast_unwind_on_fatal;
-  if (StackTrace::WillUseFastUnwind(fast)) {
-    GetThreadStackTopAndBottom(false, &top, &bottom);
-    stack->Unwind(kStackTraceMax, sig.pc, sig.bp, nullptr, top, bottom, true);
-  } else
-    stack->Unwind(kStackTraceMax, sig.pc, 0, sig.context, 0, 0, false);
+  stack->Unwind(sig.pc, sig.bp, sig.context,
+                common_flags()->fast_unwind_on_fatal);
 }
 
 static void TsanOnDeadlySignal(int signo, void *siginfo, void *context) {

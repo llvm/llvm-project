@@ -635,10 +635,12 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
  * version for other variants of profile. We set the lowest bit of the upper 8
  * bits (i.e. bit 56) to 1 to indicate if this is an IR-level instrumentaiton
  * generated profile, and 0 if this is a Clang FE generated profile.
+ * 1 in bit 57 indicates there are context-sensitive records in the profile.
  */
 #define VARIANT_MASKS_ALL 0xff00000000000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
+#define VARIANT_MASK_CSIR_PROF (0x1ULL << 57)
 #define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
 #define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
 
