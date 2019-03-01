@@ -1011,17 +1011,12 @@ Error DumpOutputStyle::dumpOldFpo(PDBFile &File) {
   ExitOnError Err("Error dumping old fpo data:");
   auto &Dbi = Err(File.getPDBDbiStream());
 
-  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::FPO);
-  if (Index == kInvalidStreamIndex) {
+  if (!Dbi.hasOldFpoRecords()) {
     printStreamNotPresent("FPO");
     return Error::success();
   }
 
-  std::unique_ptr<MappedBlockStream> OldFpo = File.createIndexedStream(Index);
-  BinaryStreamReader Reader(*OldFpo);
-  FixedStreamArray<object::FpoData> Records;
-  Err(Reader.readArray(Records,
-                       Reader.bytesRemaining() / sizeof(object::FpoData)));
+  const FixedStreamArray<object::FpoData>& Records = Dbi.getOldFpoRecords();
 
   P.printLine("  RVA    | Code | Locals | Params | Prolog | Saved Regs | Use "
               "BP | Has SEH | Frame Type");
@@ -1043,18 +1038,12 @@ Error DumpOutputStyle::dumpNewFpo(PDBFile &File) {
   ExitOnError Err("Error dumping new fpo data:");
   auto &Dbi = Err(File.getPDBDbiStream());
 
-  uint32_t Index = Dbi.getDebugStreamIndex(DbgHeaderType::NewFPO);
-  if (Index == kInvalidStreamIndex) {
+  if (!Dbi.hasNewFpoRecords()) {
     printStreamNotPresent("New FPO");
     return Error::success();
   }
 
-  std::unique_ptr<MappedBlockStream> NewFpo = File.createIndexedStream(Index);
-
-  DebugFrameDataSubsectionRef FDS;
-  if (auto EC = FDS.initialize(*NewFpo))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Invalid new fpo stream");
+  const DebugFrameDataSubsectionRef& FDS = Dbi.getNewFpoRecords();
 
   P.printLine("  RVA    | Code | Locals | Params | Stack | Prolog | Saved Regs "
               "| Has SEH | Has C++EH | Start | Program");
