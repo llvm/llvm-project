@@ -124,7 +124,7 @@ ELF-NEXT:     Relocations [
 ELF-NEXT:     ]
 ELF-NEXT:     Symbols [
 ELF-NEXT:       Symbol {
-ELF-NEXT:         Name: (0)
+ELF-NEXT:         Name: .text (0)
 ELF-NEXT:         Value: 0x0
 ELF-NEXT:         Size: 0
 ELF-NEXT:         Binding: Local (0x0)
