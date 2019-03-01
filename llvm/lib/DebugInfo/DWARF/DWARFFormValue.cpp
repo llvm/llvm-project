@@ -78,6 +78,34 @@ static const DWARFFormValue::FormClass DWARF5FormClasses[] = {
 
 };
 
+DWARFFormValue DWARFFormValue::createFromSValue(dwarf::Form F, int64_t V) {
+  return DWARFFormValue(F, ValueType(V));
+}
+
+DWARFFormValue DWARFFormValue::createFromUValue(dwarf::Form F, uint64_t V) {
+  return DWARFFormValue(F, ValueType(V));
+}
+
+DWARFFormValue DWARFFormValue::createFromPValue(dwarf::Form F, const char *V) {
+  return DWARFFormValue(F, ValueType(V));
+}
+
+DWARFFormValue DWARFFormValue::createFromBlockValue(dwarf::Form F,
+                                                    ArrayRef<uint8_t> D) {
+  ValueType V;
+  V.uval = D.size();
+  V.data = D.data();
+  return DWARFFormValue(F, V);
+}
+
+DWARFFormValue DWARFFormValue::createFromUnit(dwarf::Form F, const DWARFUnit *U,
+                                              uint32_t *OffsetPtr) {
+  DWARFFormValue FormValue(F);
+  FormValue.extractValue(U->getDebugInfoExtractor(), OffsetPtr,
+                         U->getFormParams(), U);
+  return FormValue;
+}
+
 bool DWARFFormValue::skipValue(dwarf::Form Form, DataExtractor DebugInfoData,
                                uint32_t *OffsetPtr,
                                const dwarf::FormParams Params) {

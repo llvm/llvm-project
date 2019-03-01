@@ -164,11 +164,11 @@ Optional<DWARFFormValue> DWARFAbbreviationDeclaration::getAttributeValue(
   for (const auto &Spec : AttributeSpecs) {
     if (*MatchAttrIndex == AttrIndex) {
       // We have arrived at the attribute to extract, extract if from Offset.
+      if (Spec.isImplicitConst())
+        return DWARFFormValue::createFromSValue(Spec.Form,
+                                                Spec.getImplicitConstValue());
+
       DWARFFormValue FormValue(Spec.Form);
-      if (Spec.isImplicitConst()) {
-        FormValue.setSValue(Spec.getImplicitConstValue());
-        return FormValue;
-      }
       if (FormValue.extractValue(DebugInfoData, &Offset, U.getFormParams(), &U))
         return FormValue;
     }
