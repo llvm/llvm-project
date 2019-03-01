@@ -488,9 +488,7 @@ void __hwasan_handle_vfork(const void *sp_dst) {
   CHECK(t);
   uptr top = t->stack_top();
   uptr bottom = t->stack_bottom();
-  static const uptr kMaxExpectedCleanupSize = 64 << 20;  // 64M
-  if (top == 0 || bottom == 0 || sp < bottom || sp >= top ||
-      sp - bottom > kMaxExpectedCleanupSize) {
+  if (top == 0 || bottom == 0 || sp < bottom || sp >= top) {
     Report(
         "WARNING: HWASan is ignoring requested __hwasan_handle_vfork: "
         "stack top: %zx; current %zx; bottom: %zx \n"

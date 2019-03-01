@@ -151,6 +151,10 @@ else()
   )
 endif()
 
+if (NOT LLDB_BUILT_STANDALONE)
+  add_dependencies(liblldb clang-headers)
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   include(LLDBFramework)
 endif()

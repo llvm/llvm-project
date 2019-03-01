@@ -304,7 +304,7 @@ extern "C" {
 
 #define KMP_CACHE_PREFETCH(ADDR) /* nothing */
 
-// Define attribute that indicates that the fall through from the previous 
+// Define attribute that indicates that the fall through from the previous
 // case label is intentional and should not be diagnosed by a compiler
 //   Code from libcxx/include/__config
 // Use a function like macro to imply that it must be followed by a semicolon
@@ -882,8 +882,8 @@ typedef void (*microtask_t)(int *gtid, int *npr, ...);
 #define VOLATILE_CAST(x) (x)
 #endif
 
-#define KMP_WAIT_YIELD __kmp_wait_yield_4
-#define KMP_WAIT_YIELD_PTR __kmp_wait_yield_4_ptr
+#define KMP_WAIT __kmp_wait_4
+#define KMP_WAIT_PTR __kmp_wait_4_ptr
 #define KMP_EQ __kmp_eq_4
 #define KMP_NEQ __kmp_neq_4
 #define KMP_LT __kmp_lt_4

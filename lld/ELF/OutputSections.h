@@ -82,9 +82,6 @@ public:
 
   void addSection(InputSection *IS);
 
-  // Location in the output buffer.
-  uint8_t *Loc = nullptr;
-
   // The following members are normally only used in linker scripts.
   MemoryRegion *MemRegion = nullptr;
   MemoryRegion *LMARegion = nullptr;
@@ -128,6 +125,7 @@ std::vector<InputSection *> getInputSections(OutputSection* OS);
 // globally accessible. Writer initializes them, so don't use them
 // until Writer is initialized.
 struct Out {
+  static uint8_t *BufferStart;
   static uint8_t First;
   static PhdrEntry *TlsPhdr;
   static OutputSection *ElfHeader;

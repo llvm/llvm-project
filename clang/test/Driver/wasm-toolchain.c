@@ -40,14 +40,19 @@
 // COMPILE: clang{{.*}}" "-cc1" {{.*}} "-internal-isystem" "/foo/include/wasm32-wasi-musl" "-internal-isystem" "/foo/include"
 
 // Thread-related command line tests.
-// - '-mthread-model' sets '-target-feature +matomics'
-// - '-phread' sets both '-target-featuer +atomics' and '-mthread-model posix'
 
-// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -mthread-model posix 2>&1 | FileCheck -check-prefix=POSIX %s
-// POSIX: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+atomics"
-
+// '-pthread' sets '-target-feature +atomics' and '-target-feature +bulk-memory'
 // RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 | FileCheck -check-prefix=PTHREAD %s
-// PTHREAD: clang{{.*}}" "-cc1" {{.*}} "-mthread-model" "posix" {{.*}} "-target-feature" "+atomics"
+// PTHREAD: clang{{.*}}" "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory"
 
-// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread -mthread-model single 2>&1 | FileCheck -check-prefix=THREAD_OPT_ERROR %s
-// THREAD_OPT_ERROR: invalid argument '-pthread' not allowed with '-mthread-model single'
+// '-pthread' not allowed with '-mno-atomics'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread -mno-atomics 2>&1 | FileCheck -check-prefix=PTHREAD_NO_ATOMICS %s
+// PTHREAD_NO_ATOMICS: invalid argument '-pthread' not allowed with '-mno-atomics'
+
+// '-pthread' not allowed with '-mno-bulk-memory'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -pthread -mno-bulk-memory 2>&1 | FileCheck -check-prefix=PTHREAD_NO_BULKMEM %s
+// PTHREAD_NO_BULKMEM: invalid argument '-pthread' not allowed with '-mno-bulk-memory'
+
+// '-matomics' not allowed with '-mno-bulk-memory'
+// RUN: %clang -### -no-canonical-prefixes -target wasm32-unknown-unknown --sysroot=/foo %s -matomics -mno-bulk-memory 2>&1 | FileCheck -check-prefix=ATOMICS_NO_BULKMEM %s
+// ATOMICS_NO_BULKMEM: invalid argument '-matomics' not allowed with '-mno-bulk-memory'

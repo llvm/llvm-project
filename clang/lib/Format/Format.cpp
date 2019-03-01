@@ -618,9 +618,9 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   return Expanded;
 }
 
-FormatStyle getLLVMStyle() {
+FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
-  LLVMStyle.Language = FormatStyle::LK_Cpp;
+  LLVMStyle.Language = Language;
   LLVMStyle.AccessModifierOffset = -2;
   LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
@@ -718,6 +718,11 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.StatementMacros.push_back("Q_UNUSED");
   LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
 
+  // Defaults that differ when not C++.
+  if (Language == FormatStyle::LK_TableGen) {
+    LLVMStyle.SpacesInContainerLiterals = false;
+  }
+
   return LLVMStyle;
 }
 
@@ -729,8 +734,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     return GoogleStyle;
   }
 
-  FormatStyle GoogleStyle = getLLVMStyle();
-  GoogleStyle.Language = Language;
+  FormatStyle GoogleStyle = getLLVMStyle(Language);
 
   GoogleStyle.AccessModifierOffset = -1;
   GoogleStyle.AlignEscapedNewlines = FormatStyle::ENAS_Left;
@@ -2344,8 +2348,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   if (!FS) {
     FS = llvm::vfs::getRealFileSystem().get();
   }
-  FormatStyle Style = getLLVMStyle();
-  Style.Language = guessLanguage(FileName, Code);
+  FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
 
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))

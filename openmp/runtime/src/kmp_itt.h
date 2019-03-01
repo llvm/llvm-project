@@ -219,7 +219,7 @@ __kmp_inline void __kmp_itt_stack_callee_leave(__itt_caller);
    with a delay (and not called at all if waiting time is small). So, in spin
    loops, do not use KMP_FSYNC_PREPARE(), but use KMP_FSYNC_SPIN_INIT() (before
    spin loop), KMP_FSYNC_SPIN_PREPARE() (whithin the spin loop), and
-   KMP_FSYNC_SPIN_ACQUIRED(). See KMP_WAIT_YIELD() for example. */
+   KMP_FSYNC_SPIN_ACQUIRED(). See KMP_WAIT() for example. */
 
 #undef KMP_FSYNC_SPIN_INIT
 #define KMP_FSYNC_SPIN_INIT(obj, spin)                                         \

@@ -224,6 +224,7 @@
 # CHECK: Exit Code: 1
 # CHECK: ***
 
+# CHECK: PASS: shtest-shell :: rm-unicode-0.txt
 # CHECK: PASS: shtest-shell :: sequencing-0.txt
 # CHECK: XFAIL: shtest-shell :: sequencing-1.txt
 # CHECK: PASS: shtest-shell :: valid-shell.txt

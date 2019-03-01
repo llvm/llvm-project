@@ -125,7 +125,6 @@ static DWARFDie resolveDIEReference(const DwarfLinker &Linker,
                                     CompileUnit *&RefCU) {
   assert(RefValue.isFormClass(DWARFFormValue::FC_Reference));
   uint64_t RefOffset = *RefValue.getAsReference();
-
   if ((RefCU = getUnitForOffset(Units, RefOffset)))
     if (const auto RefDie = RefCU->getOrigUnit().getDIEForOffset(RefOffset)) {
       // In a file with broken references, an attribute might point to a NULL
@@ -585,7 +584,7 @@ unsigned DwarfLinker::shouldKeepVariableDIE(RelocationManager &RelocMgr,
     MyInfo.InDebugMap = true;
     return Flags | TF_Keep;
   }
-
+  
   Optional<uint32_t> LocationIdx =
       Abbrev->findAttributeIndex(dwarf::DW_AT_location);
   if (!LocationIdx)
@@ -694,6 +693,9 @@ unsigned DwarfLinker::shouldKeepDIE(RelocationManager &RelocMgr,
   case dwarf::DW_TAG_label:
     return shouldKeepSubprogramDIE(RelocMgr, Ranges, DIE, DMO, Unit, MyInfo,
                                    Flags);
+  case dwarf::DW_TAG_base_type:
+    // DWARF Expressions may reference basic types, but scanning them
+    // is expensive. Basic types are tiny, so just keep all of them.
   case dwarf::DW_TAG_imported_module:
   case dwarf::DW_TAG_imported_declaration:
   case dwarf::DW_TAG_imported_unit:
@@ -745,7 +747,6 @@ void DwarfLinker::keepDIEAndDependencies(
   // Mark all DIEs referenced through attributes as kept.
   for (const auto &AttrSpec : Abbrev->attributes()) {
     DWARFFormValue Val(AttrSpec.Form);
-
     if (!Val.isFormClass(DWARFFormValue::FC_Reference) ||
         AttrSpec.Attr == dwarf::DW_AT_sibling) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
@@ -1052,15 +1053,74 @@ unsigned DwarfLinker::DIECloner::cloneDieReferenceAttribute(
   return AttrSize;
 }
 
-unsigned DwarfLinker::DIECloner::cloneBlockAttribute(DIE &Die,
-                                                     AttributeSpec AttrSpec,
-                                                     const DWARFFormValue &Val,
-                                                     unsigned AttrSize) {
+void DwarfLinker::DIECloner::cloneExpression(
+    DataExtractor &Data, DWARFExpression Expression, const DebugMapObject &DMO,
+    CompileUnit &Unit, SmallVectorImpl<uint8_t> &OutputBuffer) {
+  using Encoding = DWARFExpression::Operation::Encoding;
+
+  uint32_t OpOffset = 0;
+  for (auto &Op : Expression) {
+    auto Description = Op.getDescription();
+    // DW_OP_const_type is variable-length and has 3
+    // operands. DWARFExpression thus far only supports 2.
+    auto Op0 = Description.Op[0];
+    auto Op1 = Description.Op[1];
+    if ((Op0 == Encoding::BaseTypeRef && Op1 != Encoding::SizeNA) ||
+        (Op1 == Encoding::BaseTypeRef && Op0 != Encoding::Size1))
+      Linker.reportWarning("Unsupported DW_OP encoding.", DMO);
+
+    if ((Op0 == Encoding::BaseTypeRef && Op1 == Encoding::SizeNA) ||
+        (Op1 == Encoding::BaseTypeRef && Op0 == Encoding::Size1)) {
+      // This code assumes that the other non-typeref operand fits into 1 byte.
+      assert(OpOffset < Op.getEndOffset());
+      uint32_t ULEBsize = Op.getEndOffset() - OpOffset - 1;
+      assert(ULEBsize <= 16);
+
+      // Copy over the operation.
+      OutputBuffer.push_back(Op.getCode());
+      uint64_t RefOffset;
+      if (Op1 == Encoding::SizeNA) {
+        RefOffset = Op.getRawOperand(0);
+      } else {
+        OutputBuffer.push_back(Op.getRawOperand(0));
+        RefOffset = Op.getRawOperand(1);
+      }
+      auto RefDie = Unit.getOrigUnit().getDIEForOffset(RefOffset);
+      uint32_t RefIdx = Unit.getOrigUnit().getDIEIndex(RefDie);
+      CompileUnit::DIEInfo &Info = Unit.getInfo(RefIdx);
+      uint32_t Offset = 0;
+      if (DIE *Clone = Info.Clone)
+        Offset = Clone->getOffset();
+      else
+        Linker.reportWarning("base type ref doesn't point to DW_TAG_base_type.",
+                             DMO);
+      uint8_t ULEB[16];
+      unsigned RealSize = encodeULEB128(Offset, ULEB, ULEBsize);
+      if (RealSize > ULEBsize) {
+        // Emit the generic type as a fallback.
+        RealSize = encodeULEB128(0, ULEB, ULEBsize);
+        Linker.reportWarning("base type ref doesn't fit.", DMO);
+      }
+      assert(RealSize == ULEBsize && "padding failed");
+      ArrayRef<uint8_t> ULEBbytes(ULEB, ULEBsize);
+      OutputBuffer.append(ULEBbytes.begin(), ULEBbytes.end());
+    } else {
+      // Copy over everything else unmodified.
+      StringRef Bytes = Data.getData().slice(OpOffset, Op.getEndOffset());
+      OutputBuffer.append(Bytes.begin(), Bytes.end());
+    }
+    OpOffset = Op.getEndOffset();
+  }
+}
+
+unsigned DwarfLinker::DIECloner::cloneBlockAttribute(
+    DIE &Die, const DebugMapObject &DMO, CompileUnit &Unit,
+    AttributeSpec AttrSpec, const DWARFFormValue &Val, unsigned AttrSize,
+    bool IsLittleEndian) {
   DIEValueList *Attr;
   DIEValue Value;
   DIELoc *Loc = nullptr;
   DIEBlock *Block = nullptr;
-  // Just copy the block data over.
   if (AttrSpec.Form == dwarf::DW_FORM_exprloc) {
     Loc = new (DIEAlloc) DIELoc;
     Linker.DIELocs.push_back(Loc);
@@ -1077,10 +1137,26 @@ unsigned DwarfLinker::DIECloner::cloneBlockAttribute(DIE &Die,
   else
     Value = DIEValue(dwarf::Attribute(AttrSpec.Attr),
                      dwarf::Form(AttrSpec.Form), Block);
+
+  // If the block is a DWARF Expression, clone it into the temporary
+  // buffer using cloneExpression(), otherwise copy the data directly.
+  SmallVector<uint8_t, 32> Buffer;
   ArrayRef<uint8_t> Bytes = *Val.getAsBlock();
+  if (DWARFAttribute::mayHaveLocationDescription(AttrSpec.Attr) &&
+      (Val.isFormClass(DWARFFormValue::FC_Block) ||
+       Val.isFormClass(DWARFFormValue::FC_Exprloc))) {
+    DWARFUnit &OrigUnit = Unit.getOrigUnit();
+    DataExtractor Data(StringRef((const char *)Bytes.data(), Bytes.size()),
+                       IsLittleEndian, OrigUnit.getAddressByteSize());
+    DWARFExpression Expr(Data, OrigUnit.getVersion(),
+                         OrigUnit.getAddressByteSize());
+    cloneExpression(Data, Expr, DMO, Unit, Buffer);
+    Bytes = Buffer;
+  }
   for (auto Byte : Bytes)
     Attr->addValue(DIEAlloc, static_cast<dwarf::Attribute>(0),
                    dwarf::DW_FORM_data1, DIEInteger(Byte));
+
   // FIXME: If DIEBlock and DIELoc just reuses the Size field of
   // the DIE class, this if could be replaced by
   // Attr->setSize(Bytes.size()).
@@ -1198,8 +1274,9 @@ unsigned DwarfLinker::DIECloner::cloneScalarAttribute(
   // A more generic way to check for location attributes would be
   // nice, but it's very unlikely that any other attribute needs a
   // location list.
+  // FIXME: use DWARFAttribute::mayHaveLocationDescription().
   else if (AttrSpec.Attr == dwarf::DW_AT_location ||
-           AttrSpec.Attr == dwarf::DW_AT_frame_base)
+         AttrSpec.Attr == dwarf::DW_AT_frame_base)
     Unit.noteLocationAttribute(Patch, Info.PCOffset);
   else if (AttrSpec.Attr == dwarf::DW_AT_declaration && Value)
     Info.IsDeclaration = true;
@@ -1213,7 +1290,8 @@ unsigned DwarfLinker::DIECloner::cloneScalarAttribute(
 unsigned DwarfLinker::DIECloner::cloneAttribute(
     DIE &Die, const DWARFDie &InputDIE, const DebugMapObject &DMO,
     CompileUnit &Unit, OffsetsStringPool &StringPool, const DWARFFormValue &Val,
-    const AttributeSpec AttrSpec, unsigned AttrSize, AttributesInfo &Info) {
+    const AttributeSpec AttrSpec, unsigned AttrSize, AttributesInfo &Info,
+    bool IsLittleEndian) {
   const DWARFUnit &U = Unit.getOrigUnit();
 
   switch (AttrSpec.Form) {
@@ -1232,7 +1310,8 @@ unsigned DwarfLinker::DIECloner::cloneAttribute(
   case dwarf::DW_FORM_block2:
   case dwarf::DW_FORM_block4:
   case dwarf::DW_FORM_exprloc:
-    return cloneBlockAttribute(Die, AttrSpec, Val, AttrSize);
+    return cloneBlockAttribute(Die, DMO, Unit, AttrSpec, Val, AttrSize,
+                               IsLittleEndian);
   case dwarf::DW_FORM_addr:
     return cloneAddressAttribute(Die, AttrSpec, Val, Unit, Info);
   case dwarf::DW_FORM_data1:
@@ -1264,7 +1343,7 @@ unsigned DwarfLinker::DIECloner::cloneAttribute(
 ///
 /// \returns whether any reloc has been applied.
 bool DwarfLinker::RelocationManager::applyValidRelocs(
-    MutableArrayRef<char> Data, uint32_t BaseOffset, bool isLittleEndian) {
+    MutableArrayRef<char> Data, uint32_t BaseOffset, bool IsLittleEndian) {
   assert((NextValidReloc == 0 ||
           BaseOffset > ValidRelocs[NextValidReloc - 1].Offset) &&
          "BaseOffset should only be increasing.");
@@ -1288,7 +1367,7 @@ bool DwarfLinker::RelocationManager::applyValidRelocs(
     uint64_t Value = ValidReloc.Mapping->getValue().BinaryAddress;
     Value += ValidReloc.Addend;
     for (unsigned i = 0; i != ValidReloc.Size; ++i) {
-      unsigned Index = isLittleEndian ? i : (ValidReloc.Size - i - 1);
+      unsigned Index = IsLittleEndian ? i : (ValidReloc.Size - i - 1);
       Buf[i] = uint8_t(Value >> (Index * 8));
     }
     assert(ValidReloc.Size <= sizeof(Buf));
@@ -1370,12 +1449,10 @@ shouldSkipAttribute(DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
   }
 }
 
-DIE *DwarfLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
-                                      const DebugMapObject &DMO,
-                                      CompileUnit &Unit,
-                                      OffsetsStringPool &StringPool,
-                                      int64_t PCOffset, uint32_t OutOffset,
-                                      unsigned Flags, DIE *Die) {
+DIE *DwarfLinker::DIECloner::cloneDIE(
+    const DWARFDie &InputDIE, const DebugMapObject &DMO, CompileUnit &Unit,
+    OffsetsStringPool &StringPool, int64_t PCOffset, uint32_t OutOffset,
+    unsigned Flags, bool IsLittleEndian, DIE *Die) {
   DWARFUnit &U = Unit.getOrigUnit();
   unsigned Idx = U.getDIEIndex(InputDIE);
   CompileUnit::DIEInfo &Info = Unit.getInfo(Idx);
@@ -1481,7 +1558,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     AttrSize = Offset - AttrSize;
 
     OutOffset += cloneAttribute(*Die, InputDIE, DMO, Unit, StringPool, Val,
-                                AttrSpec, AttrSize, AttrInfo);
+                                AttrSpec, AttrSize, AttrInfo, IsLittleEndian);
   }
 
   // Look for accelerator entries.
@@ -1556,7 +1633,7 @@ DIE *DwarfLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   // Recursively clone children.
   for (auto Child : InputDIE.children()) {
     if (DIE *Clone = cloneDIE(Child, DMO, Unit, StringPool, PCOffset, OutOffset,
-                              Flags)) {
+                              Flags, IsLittleEndian)) {
       Die->addChild(Clone);
       OutOffset = Clone->getOffset() + Clone->getSize();
     }
@@ -2033,7 +2110,8 @@ bool DwarfLinker::registerModuleReference(
     const DWARFDie &CUDie, const DWARFUnit &Unit, DebugMap &ModuleMap,
     const DebugMapObject &DMO, RangesTy &Ranges, OffsetsStringPool &StringPool,
     UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
-    uint64_t ModulesEndOffset, unsigned &UnitID, unsigned Indent, bool Quiet) {
+    uint64_t ModulesEndOffset, unsigned &UnitID, bool IsLittleEndian,
+    unsigned Indent, bool Quiet) {
   std::string PCMfile = dwarf::toString(
       CUDie.find({dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}), "");
   if (PCMfile.empty())
@@ -2075,10 +2153,10 @@ bool DwarfLinker::registerModuleReference(
   // Cyclic dependencies are disallowed by Clang, but we still
   // shouldn't run into an infinite loop, so mark it as processed now.
   ClangModules.insert({PCMfile, DwoId});
-  if (Error E =
-          loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap, DMO, Ranges,
-                          StringPool, UniquingStringPool, ODRContexts,
-                          ModulesEndOffset, UnitID, Indent + 2, Quiet)) {
+  if (Error E = loadClangModule(PCMfile, PCMpath, Name, DwoId, ModuleMap, DMO,
+                                Ranges, StringPool, UniquingStringPool,
+                                ODRContexts, ModulesEndOffset, UnitID,
+                                IsLittleEndian, Indent + 2, Quiet)) {
     consumeError(std::move(E));
     return false;
   }
@@ -2112,7 +2190,8 @@ Error DwarfLinker::loadClangModule(
     uint64_t DwoId, DebugMap &ModuleMap, const DebugMapObject &DMO,
     RangesTy &Ranges, OffsetsStringPool &StringPool,
     UniquingStringPool &UniquingStringPool, DeclContextTree &ODRContexts,
-    uint64_t ModulesEndOffset, unsigned &UnitID, unsigned Indent, bool Quiet) {
+    uint64_t ModulesEndOffset, unsigned &UnitID, bool IsLittleEndian,
+    unsigned Indent, bool Quiet) {
   SmallString<80> Path(Options.PrependPath);
   if (sys::path::is_relative(Filename))
     sys::path::append(Path, ModulePath, Filename);
@@ -2174,7 +2253,8 @@ Error DwarfLinker::loadClangModule(
       continue;
     if (!registerModuleReference(CUDie, *CU, ModuleMap, DMO, Ranges, StringPool,
                                  UniquingStringPool, ODRContexts,
-                                 ModulesEndOffset, UnitID, Indent, Quiet)) {
+                                 ModulesEndOffset, UnitID, IsLittleEndian,
+                                 Indent, Quiet)) {
       if (Unit) {
         std::string Err =
             (Filename +
@@ -2218,13 +2298,14 @@ Error DwarfLinker::loadClangModule(
   UnitListTy CompileUnits;
   CompileUnits.push_back(std::move(Unit));
   DIECloner(*this, RelocMgr, DIEAlloc, CompileUnits, Options)
-      .cloneAllCompileUnits(*DwarfContext, DMO, Ranges, StringPool);
+      .cloneAllCompileUnits(*DwarfContext, DMO, Ranges, StringPool,
+                            IsLittleEndian);
   return Error::success();
 }
 
 void DwarfLinker::DIECloner::cloneAllCompileUnits(
     DWARFContext &DwarfContext, const DebugMapObject &DMO, RangesTy &Ranges,
-    OffsetsStringPool &StringPool) {
+    OffsetsStringPool &StringPool, bool IsLittleEndian) {
   if (!Linker.Streamer)
     return;
 
@@ -2240,7 +2321,8 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
       // already has a DIE inside of it.
       CurrentUnit->createOutputDIE();
       cloneDIE(InputDIE, DMO, *CurrentUnit, StringPool, 0 /* PC offset */,
-               11 /* Unit Header size */, 0, CurrentUnit->getOutputUnitDIE());
+               11 /* Unit Header size */, 0, IsLittleEndian,
+               CurrentUnit->getOutputUnitDIE());
     }
 
     Linker.OutputDebugInfoSize = CurrentUnit->computeNextUnitOffset();
@@ -2260,7 +2342,16 @@ void DwarfLinker::DIECloner::cloneAllCompileUnits(
       continue;
 
     Linker.patchRangesForUnit(*CurrentUnit, DwarfContext, DMO);
-    Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext);
+    auto ProcessExpr = [&](StringRef Bytes, SmallVectorImpl<uint8_t> &Buffer) {
+      DWARFUnit &OrigUnit = CurrentUnit->getOrigUnit();
+      DataExtractor Data(Bytes, IsLittleEndian, OrigUnit.getAddressByteSize());
+      cloneExpression(Data,
+                      DWARFExpression(Data, OrigUnit.getVersion(),
+                                      OrigUnit.getAddressByteSize()),
+                      DMO, *CurrentUnit, Buffer);
+    };
+    Linker.Streamer->emitLocationsForUnit(*CurrentUnit, DwarfContext,
+                                          ProcessExpr);
   }
 
   if (Linker.Options.NoOutput)
@@ -2490,7 +2581,8 @@ bool DwarfLinker::link(const DebugMap &Map) {
       if (CUDie && !LLVM_UNLIKELY(Options.Update))
         registerModuleReference(CUDie, *CU, ModuleMap, LinkContext.DMO,
                                 LinkContext.Ranges, OffsetsStringPool,
-                                UniquingStringPool, ODRContexts, 0, UnitID);
+                                UniquingStringPool, ODRContexts, 0, UnitID,
+                                LinkContext.DwarfContext->isLittleEndian());
     }
   }
 
@@ -2583,7 +2675,8 @@ bool DwarfLinker::link(const DebugMap &Map) {
       DIECloner(*this, LinkContext.RelocMgr, DIEAlloc, LinkContext.CompileUnits,
                 Options)
           .cloneAllCompileUnits(*LinkContext.DwarfContext, LinkContext.DMO,
-                                LinkContext.Ranges, OffsetsStringPool);
+                                LinkContext.Ranges, OffsetsStringPool,
+                                LinkContext.DwarfContext->isLittleEndian());
     if (!Options.NoOutput && !LinkContext.CompileUnits.empty() &&
         LLVM_LIKELY(!Options.Update))
       patchFrameInfoForObject(

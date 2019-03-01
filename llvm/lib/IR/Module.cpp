@@ -531,12 +531,16 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
-void Module::setProfileSummary(Metadata *M) {
-  addModuleFlag(ModFlagBehavior::Error, "ProfileSummary", M);
+void Module::setProfileSummary(Metadata *M, ProfileSummary::Kind Kind) {
+  if (Kind == ProfileSummary::PSK_CSInstr)
+    addModuleFlag(ModFlagBehavior::Error, "CSProfileSummary", M);
+  else
+    addModuleFlag(ModFlagBehavior::Error, "ProfileSummary", M);
 }
 
-Metadata *Module::getProfileSummary() {
-  return getModuleFlag("ProfileSummary");
+Metadata *Module::getProfileSummary(bool IsCS) {
+  return (IsCS ? getModuleFlag("CSProfileSummary")
+               : getModuleFlag("ProfileSummary"));
 }
 
 void Module::setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB) {
