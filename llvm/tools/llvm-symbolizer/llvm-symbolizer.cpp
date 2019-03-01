@@ -135,6 +135,11 @@ static cl::opt<int> ClPrintSourceContextLines(
 static cl::opt<bool> ClVerbose("verbose", cl::init(false),
                                cl::desc("Print verbose line info"));
 
+// -adjust-vma
+static cl::opt<unsigned long long>
+    ClAdjustVMA("adjust-vma", cl::init(0), cl::value_desc("offset"),
+                cl::desc("Add specified offset to object file addresses"));
+
 static cl::list<std::string> ClInputAddresses(cl::Positional,
                                               cl::desc("<input addresses>..."),
                                               cl::ZeroOrMore);
@@ -202,6 +207,7 @@ static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
     StringRef Delimiter = ClPrettyPrint ? ": " : "\n";
     outs() << Delimiter;
   }
+  ModuleOffset -= ClAdjustVMA;
   if (IsData) {
     auto ResOrErr = Symbolizer.symbolizeData(ModuleName, ModuleOffset);
     Printer << (error(ResOrErr) ? DIGlobal() : ResOrErr.get());

@@ -123,6 +123,12 @@ OPTIONS
 
  Strip directories when printing the file path.
 
+.. option:: -adjust-vma=<offset>
+
+ Add the specified offset to object file addresses when performing lookups. This
+ can be used to simplify lookups when the object is not loaded at a dynamically
+ relocated address.
+
 EXIT STATUS
 -----------
 
