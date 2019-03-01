@@ -6053,12 +6053,10 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     case Intrinsic::s390_vuplhw:
     case Intrinsic::s390_vuplf: {
       SDValue SrcOp = Op.getOperand(1);
-      unsigned SrcBitWidth = SrcOp.getScalarValueSizeInBits();
       APInt SrcDemE = getDemandedSrcElements(Op, DemandedElts, 0);
       Known = DAG.computeKnownBits(SrcOp, SrcDemE, Depth + 1);
       if (IsLogical) {
-        Known = Known.zext(BitWidth);
-        Known.Zero.setBitsFrom(SrcBitWidth);
+        Known = Known.zext(BitWidth, true);
       } else
         Known = Known.sext(BitWidth);
       break;
@@ -6087,7 +6085,7 @@ SystemZTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   // Known has the width of the source operand(s). Adjust if needed to match
   // the passed bitwidth.
   if (Known.getBitWidth() != BitWidth)
-    Known = Known.zextOrTrunc(BitWidth);
+    Known = Known.zextOrTrunc(BitWidth, false);
 }
 
 static unsigned computeNumSignBitsBinOp(SDValue Op, const APInt &DemandedElts,

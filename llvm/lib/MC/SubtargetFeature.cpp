@@ -122,29 +122,24 @@ std::string SubtargetFeatures::getString() const {
 
 /// For each feature that is (transitively) implied by this feature, set it.
 static
-void SetImpliedBits(FeatureBitset &Bits, const SubtargetFeatureKV &FeatureEntry,
+void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
                     ArrayRef<SubtargetFeatureKV> FeatureTable) {
   for (const SubtargetFeatureKV &FE : FeatureTable) {
-    if (FeatureEntry.Value == FE.Value) continue;
-
-    if (FeatureEntry.Implies.test(FE.Value)) {
+    if (Implies.test(FE.Value)) {
       Bits.set(FE.Value);
-      SetImpliedBits(Bits, FE, FeatureTable);
+      SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
     }
   }
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
 static
-void ClearImpliedBits(FeatureBitset &Bits,
-                      const SubtargetFeatureKV &FeatureEntry,
+void ClearImpliedBits(FeatureBitset &Bits, unsigned Value,
                       ArrayRef<SubtargetFeatureKV> FeatureTable) {
   for (const SubtargetFeatureKV &FE : FeatureTable) {
-    if (FeatureEntry.Value == FE.Value) continue;
-
-    if (FE.Implies.test(FeatureEntry.Value)) {
+    if (FE.Implies.getAsBitset().test(Value)) {
       Bits.reset(FE.Value);
-      ClearImpliedBits(Bits, FE, FeatureTable);
+      ClearImpliedBits(Bits, FE.Value, FeatureTable);
     }
   }
 }
@@ -160,12 +155,12 @@ SubtargetFeatures::ToggleFeature(FeatureBitset &Bits, StringRef Feature,
     if (Bits.test(FeatureEntry->Value)) {
       Bits.reset(FeatureEntry->Value);
       // For each feature that implies this, clear it.
-      ClearImpliedBits(Bits, *FeatureEntry, FeatureTable);
+      ClearImpliedBits(Bits, FeatureEntry->Value, FeatureTable);
     } else {
       Bits.set(FeatureEntry->Value);
 
       // For each feature that this implies, set it.
-      SetImpliedBits(Bits, *FeatureEntry, FeatureTable);
+      SetImpliedBits(Bits, FeatureEntry->Implies.getAsBitset(), FeatureTable);
     }
   } else {
     errs() << "'" << Feature << "' is not a recognized feature for this target"
@@ -187,12 +182,12 @@ void SubtargetFeatures::ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
       Bits.set(FeatureEntry->Value);
 
       // For each feature that this implies, set it.
-      SetImpliedBits(Bits, *FeatureEntry, FeatureTable);
+      SetImpliedBits(Bits, FeatureEntry->Implies.getAsBitset(), FeatureTable);
     } else {
       Bits.reset(FeatureEntry->Value);
 
       // For each feature that implies this, clear it.
-      ClearImpliedBits(Bits, *FeatureEntry, FeatureTable);
+      ClearImpliedBits(Bits, FeatureEntry->Value, FeatureTable);
     }
   } else {
     errs() << "'" << Feature << "' is not a recognized feature for this target"
@@ -225,12 +220,13 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
     // If there is a match
     if (CPUEntry) {
       // Set base feature bits
-      Bits = CPUEntry->Implies;
+      FeatureBitset CPUImplies = CPUEntry->Implies.getAsBitset();
+      Bits = CPUImplies;
 
       // Set the feature implied by this CPU feature, if any.
       for (auto &FE : FeatureTable) {
-        if (CPUEntry->Implies.test(FE.Value))
-          SetImpliedBits(Bits, FE, FeatureTable);
+        if (CPUImplies.test(FE.Value))
+          SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
       }
     } else {
       errs() << "'" << CPU << "' is not a recognized processor for this target"

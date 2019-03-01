@@ -191,8 +191,8 @@ struct SampleProfTest : ::testing::Test {
     delete PS;
 
     // Test that summary can be attached to and read back from module.
-    M.setProfileSummary(MD);
-    MD = M.getProfileSummary();
+    M.setProfileSummary(MD, ProfileSummary::PSK_Sample);
+    MD = M.getProfileSummary(/* IsCS */ false);
     ASSERT_TRUE(MD);
     PS = ProfileSummary::getFromMD(MD);
     ASSERT_TRUE(PS);

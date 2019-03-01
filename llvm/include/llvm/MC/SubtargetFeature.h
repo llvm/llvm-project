@@ -18,6 +18,7 @@
 #define LLVM_MC_SUBTARGETFEATURE_H
 
 #include "llvm/ADT/StringRef.h"
+#include <array>
 #include <bitset>
 #include <initializer_list>
 #include <string>
@@ -29,7 +30,9 @@ template <typename T> class ArrayRef;
 class raw_ostream;
 class Triple;
 
-const unsigned MAX_SUBTARGET_FEATURES = 192;
+const unsigned MAX_SUBTARGET_WORDS = 3;
+const unsigned MAX_SUBTARGET_FEATURES = MAX_SUBTARGET_WORDS * 64;
+
 /// Container class for subtarget features.
 /// This is convenient because std::bitset does not have a constructor
 /// with an initializer list of set bits.
@@ -46,6 +49,26 @@ public:
   }
 };
 
+/// Class used to store the subtarget bits in the tables created by tablegen.
+/// The std::initializer_list constructor of FeatureBitset can't be done at
+/// compile time and requires a static constructor to run at startup.
+class FeatureBitArray {
+  std::array<uint64_t, MAX_SUBTARGET_WORDS> Bits;
+
+public:
+  constexpr FeatureBitArray(const std::array<uint64_t, MAX_SUBTARGET_WORDS> &B)
+      : Bits(B) {}
+
+  FeatureBitset getAsBitset() const {
+    FeatureBitset Result;
+
+    for (unsigned i = 0, e = Bits.size(); i != e; ++i)
+      Result |= FeatureBitset(Bits[i]) << (64 * i);
+
+    return Result;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
@@ -53,7 +76,7 @@ struct SubtargetFeatureKV {
   const char *Key;                      ///< K-V key string
   const char *Desc;                     ///< Help descriptor
   unsigned Value;                       ///< K-V integer value
-  FeatureBitset Implies;                ///< K-V bit mask
+  FeatureBitArray Implies;              ///< K-V bit mask
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const {

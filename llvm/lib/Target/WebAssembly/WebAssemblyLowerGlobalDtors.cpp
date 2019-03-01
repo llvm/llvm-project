@@ -61,7 +61,7 @@ bool LowerGlobalDtors::runOnModule(Module &M) {
   LLVM_DEBUG(dbgs() << "********** Lower Global Destructors **********\n");
 
   GlobalVariable *GV = M.getGlobalVariable("llvm.global_dtors");
-  if (!GV)
+  if (!GV || !GV->hasInitializer())
     return false;
 
   const ConstantArray *InitList = dyn_cast<ConstantArray>(GV->getInitializer());

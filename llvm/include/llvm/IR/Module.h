@@ -28,6 +28,7 @@
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
@@ -868,10 +869,13 @@ public:
   /// @{
 
   /// Attach profile summary metadata to this module.
-  void setProfileSummary(Metadata *M);
+  // TODO: Remove the default paramter.
+  void setProfileSummary(Metadata *M,
+                         ProfileSummary::Kind Kind = ProfileSummary::PSK_Instr);
 
-  /// Returns profile summary metadata
-  Metadata *getProfileSummary();
+  /// Returns profile summary metadata. When IsCS is true, use the context
+  /// sensitive profile summary.
+  Metadata *getProfileSummary(bool IsCS);
   /// @}
 
   /// Returns true if PLT should be avoided for RTLib calls.

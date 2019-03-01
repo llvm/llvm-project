@@ -8,6 +8,7 @@ add_llvm_library(LLVMInstrumentation
   MemorySanitizer.cpp
   IndirectCallPromotion.cpp
   Instrumentation.cpp
+  InstrOrderFile.cpp
   InstrProfiling.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp

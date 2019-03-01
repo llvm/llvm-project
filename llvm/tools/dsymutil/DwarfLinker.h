@@ -136,7 +136,7 @@ private:
                             CompileUnit::DIEInfo &Info);
 
     bool applyValidRelocs(MutableArrayRef<char> Data, uint32_t BaseOffset,
-                          bool isLittleEndian);
+                          bool IsLittleEndian);
   };
 
   /// Keeps track of data associated with one object during linking.
@@ -200,7 +200,8 @@ private:
                                UniquingStringPool &UniquingStringPoolStringPool,
                                DeclContextTree &ODRContexts,
                                uint64_t ModulesEndOffset, unsigned &UnitID,
-                               unsigned Indent = 0, bool Quiet = false);
+                               bool IsLittleEndian, unsigned Indent = 0,
+                               bool Quiet = false);
 
   /// Recursively add the debug info in this clang module .pcm
   /// file (and all the modules imported by it in a bottom-up fashion)
@@ -211,8 +212,8 @@ private:
                         RangesTy &Ranges, OffsetsStringPool &OffsetsStringPool,
                         UniquingStringPool &UniquingStringPool,
                         DeclContextTree &ODRContexts, uint64_t ModulesEndOffset,
-                        unsigned &UnitID, unsigned Indent = 0,
-                        bool Quiet = false);
+                        unsigned &UnitID, bool IsLittleEndian,
+                        unsigned Indent = 0, bool Quiet = false);
 
   /// Flags passed to DwarfLinker::lookForDIEsToKeep
   enum TraversalFlags {
@@ -236,6 +237,8 @@ private:
                          CompileUnit &Unit, CompileUnit::DIEInfo &MyInfo,
                          unsigned Flags);
 
+  /// Check if a variable describing DIE should be kept.
+  /// \returns updated TraversalFlags.
   unsigned shouldKeepVariableDIE(RelocationManager &RelocMgr,
                                  const DWARFDie &DIE, CompileUnit &Unit,
                                  CompileUnit::DIEInfo &MyInfo, unsigned Flags);
@@ -286,14 +289,15 @@ private:
     DIE *cloneDIE(const DWARFDie &InputDIE, const DebugMapObject &DMO,
                   CompileUnit &U, OffsetsStringPool &StringPool,
                   int64_t PCOffset, uint32_t OutOffset, unsigned Flags,
-                  DIE *Die = nullptr);
+                  bool IsLittleEndian, DIE *Die = nullptr);
 
     /// Construct the output DIE tree by cloning the DIEs we
     /// chose to keep above. If there are no valid relocs, then there's
     /// nothing to clone/emit.
     void cloneAllCompileUnits(DWARFContext &DwarfContext,
                               const DebugMapObject &DMO, RangesTy &Ranges,
-                              OffsetsStringPool &StringPool);
+                              OffsetsStringPool &StringPool,
+                              bool IsLittleEndian);
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
@@ -335,7 +339,7 @@ private:
                             OffsetsStringPool &StringPool,
                             const DWARFFormValue &Val,
                             const AttributeSpec AttrSpec, unsigned AttrSize,
-                            AttributesInfo &AttrInfo);
+                            AttributesInfo &AttrInfo, bool IsLittleEndian);
 
     /// Clone a string attribute described by \p AttrSpec and add
     /// it to \p Die.
@@ -355,11 +359,18 @@ private:
                                         const DebugMapObject &DMO,
                                         CompileUnit &Unit);
 
+    /// Clone a DWARF expression that may be referencing another DIE.
+    void cloneExpression(DataExtractor &Data, DWARFExpression Expression,
+                         const DebugMapObject &DMO, CompileUnit &Unit,
+                         SmallVectorImpl<uint8_t> &OutputBuffer);
+
     /// Clone an attribute referencing another DIE and add
     /// it to \p Die.
     /// \returns the size of the new attribute.
-    unsigned cloneBlockAttribute(DIE &Die, AttributeSpec AttrSpec,
-                                 const DWARFFormValue &Val, unsigned AttrSize);
+    unsigned cloneBlockAttribute(DIE &Die, const DebugMapObject &DMO,
+                                 CompileUnit &Unit, AttributeSpec AttrSpec,
+                                 const DWARFFormValue &Val, unsigned AttrSize,
+                                 bool IsLittleEndian);
 
     /// Clone an attribute referencing another DIE and add
     /// it to \p Die.

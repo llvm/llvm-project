@@ -382,7 +382,7 @@ struct ExceptionDataRecord {
     return ((Data[0] & 0x00400000) >> 22);
   }
 
-  uint8_t EpilogueCount() const {
+  uint16_t EpilogueCount() const {
     if (HeaderWords(*this) == 1) {
       if (isAArch64)
         return (Data[0] & 0x07C00000) >> 22;

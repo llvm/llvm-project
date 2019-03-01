@@ -638,8 +638,8 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_32-NEXT:    subpd {{\.LCPI.*}}, %xmm0
 ; SSE2_32-NEXT:    movapd %xmm0, %xmm1
 ; SSE2_32-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1],xmm0[1]
-; SSE2_32-NEXT:    addpd %xmm0, %xmm1
-; SSE2_32-NEXT:    movlpd %xmm1, (%esp)
+; SSE2_32-NEXT:    addsd %xmm0, %xmm1
+; SSE2_32-NEXT:    movsd %xmm1, (%esp)
 ; SSE2_32-NEXT:    fldl (%esp)
 ; SSE2_32-NEXT:    movl %ebp, %esp
 ; SSE2_32-NEXT:    popl %ebp
@@ -652,7 +652,7 @@ define double @u64_to_d(i64 %a) nounwind {
 ; SSE2_64-NEXT:    subpd {{.*}}(%rip), %xmm1
 ; SSE2_64-NEXT:    movapd %xmm1, %xmm0
 ; SSE2_64-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; SSE2_64-NEXT:    addpd %xmm1, %xmm0
+; SSE2_64-NEXT:    addsd %xmm1, %xmm0
 ; SSE2_64-NEXT:    retq
 ;
 ; X87-LABEL: u64_to_d:

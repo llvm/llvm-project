@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -thread-model=single -mtriple=wasm32-unknown-unknown -o %t.o %s
+; RUN: llc -filetype=obj -mtriple=wasm32-unknown-unknown -o %t.o %s
 ; RUN: llvm-nm %t.o | FileCheck %s
 
 @foo = internal global i32 1, align 4
