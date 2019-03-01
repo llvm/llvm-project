@@ -111,22 +111,22 @@ struct derived : public base {};
 struct virtualderived : public virtual base, public virtual derived {};
 // PATTERN: @__const.test_matching_uninit.uninit = private unnamed_addr constant %union.matching { i32 -1431655766 }, align 4
 // PATTERN: @__const.test_matching_custom.custom = private unnamed_addr constant { float } { float 6.145500e+04 }, align 4
+// ZERO: @__const.test_matching_custom.custom = private unnamed_addr constant { float } { float 6.145500e+04 }, align 4
 union matching { int i; float f; };
 // PATTERN: @__const.test_matchingreverse_uninit.uninit = private unnamed_addr constant %union.matchingreverse { float 0xFFFFFFFFE0000000 }, align 4
 // PATTERN: @__const.test_matchingreverse_custom.custom = private unnamed_addr constant { i32 } { i32 61455 }, align 4
-// ZERO: @__const.test_matching_custom.custom = private unnamed_addr constant { float } { float 6.145500e+04 }, align 4
+// ZERO: @__const.test_matchingreverse_custom.custom = private unnamed_addr constant { i32 } { i32 61455 }, align 4
 union matchingreverse { float f; int i; };
 // PATTERN: @__const.test_unmatched_uninit.uninit = private unnamed_addr constant %union.unmatched { i32 -1431655766 }, align 4
 // PATTERN: @__const.test_unmatched_custom.custom = private unnamed_addr constant %union.unmatched { i32 1001242351 }, align 4
-// ZERO: @__const.test_matchingreverse_custom.custom = private unnamed_addr constant { i32 } { i32 61455 }, align 4
+// ZERO: @__const.test_unmatched_custom.custom = private unnamed_addr constant %union.unmatched { i32 1001242351 }, align 4
 union unmatched { char c; int i; };
 // PATTERN: @__const.test_unmatchedreverse_uninit.uninit = private unnamed_addr constant %union.unmatchedreverse { i32 -1431655766 }, align 4
 // PATTERN: @__const.test_unmatchedreverse_custom.custom = private unnamed_addr constant { i8, [3 x i8] } { i8 42, [3 x i8] zeroinitializer }, align 4
-// ZERO: @__const.test_unmatched_custom.custom = private unnamed_addr constant %union.unmatched { i32 1001242351 }, align 4
+// ZERO: @__const.test_unmatchedreverse_custom.custom = private unnamed_addr constant { i8, [3 x i8] } { i8 42, [3 x i8] zeroinitializer }, align 4
 union unmatchedreverse { int i; char c; };
 // PATTERN: @__const.test_unmatchedfp_uninit.uninit = private unnamed_addr constant %union.unmatchedfp { double 0xFFFFFFFFFFFFFFFF }, align 8
 // PATTERN: @__const.test_unmatchedfp_custom.custom = private unnamed_addr constant %union.unmatchedfp { double 0x400921FB54442D18 }, align 8
-// ZERO: @__const.test_unmatchedreverse_custom.custom = private unnamed_addr constant { i8, [3 x i8] } { i8 42, [3 x i8] zeroinitializer }, align 4
 // ZERO: @__const.test_unmatchedfp_custom.custom = private unnamed_addr constant %union.unmatchedfp { double 0x400921FB54442D18 }, align 8
 union unmatchedfp { float f; double d; };
 enum emptyenum {};
