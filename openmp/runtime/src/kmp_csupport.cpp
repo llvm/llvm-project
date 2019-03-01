@@ -683,7 +683,7 @@ void __kmpc_flush(ident_t *loc) {
   // }
   // and adding the yield here is good for at least a 10x speedup
   // when running >2 threads per core (on the NAS LU benchmark).
-  __kmp_yield(TRUE);
+  __kmp_yield();
 #endif
 #else
 #error Unknown or unsupported architecture
@@ -993,24 +993,18 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
       kmp_uint32 spins;                                                        \
       KMP_FSYNC_PREPARE(l);                                                    \
       KMP_INIT_YIELD(spins);                                                   \
-      if (TCR_4(__kmp_nth) >                                                   \
-          (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc)) {               \
-        KMP_YIELD(TRUE);                                                       \
-      } else {                                                                 \
-        KMP_YIELD_SPIN(spins);                                                 \
-      }                                                                        \
       kmp_backoff_t backoff = __kmp_spin_backoff_params;                       \
-      while (                                                                  \
-          KMP_ATOMIC_LD_RLX(&l->lk.poll) != tas_free ||                        \
-          !__kmp_atomic_compare_store_acq(&l->lk.poll, tas_free, tas_busy)) {  \
-        __kmp_spin_backoff(&backoff);                                          \
+      do {                                                                     \
         if (TCR_4(__kmp_nth) >                                                 \
             (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc)) {             \
           KMP_YIELD(TRUE);                                                     \
         } else {                                                               \
           KMP_YIELD_SPIN(spins);                                               \
         }                                                                      \
-      }                                                                        \
+        __kmp_spin_backoff(&backoff);                                          \
+      } while (                                                                \
+          KMP_ATOMIC_LD_RLX(&l->lk.poll) != tas_free ||                        \
+          !__kmp_atomic_compare_store_acq(&l->lk.poll, tas_free, tas_busy));   \
     }                                                                          \
     KMP_FSYNC_ACQUIRED(l);                                                     \
   }
@@ -1096,8 +1090,7 @@ __kmp_init_indirect_csptr(kmp_critical_name *crit, ident_t const *loc,
               KMP_LOCK_BUSY(1, futex), NULL, NULL, 0);                         \
     }                                                                          \
     KMP_MB();                                                                  \
-    KMP_YIELD(TCR_4(__kmp_nth) >                                               \
-              (__kmp_avail_proc ? __kmp_avail_proc : __kmp_xproc));            \
+    KMP_YIELD_OVERSUB();                                                       \
   }
 
 #endif // KMP_USE_FUTEX
@@ -1879,7 +1872,7 @@ void ompc_set_nested(int flag) {
 
   __kmp_save_internal_controls(thread);
 
-  set__nested(thread, flag ? TRUE : FALSE);
+  set__max_active_levels(thread, flag ? __kmp_dflt_max_active_levels : 1);
 }
 
 void ompc_set_max_active_levels(int max_active_levels) {
@@ -3976,8 +3969,8 @@ void __kmpc_doacross_init(ident_t *loc, int gtid, int num_dims,
   // __kmp_dispatch_num_buffers)
   if (idx != sh_buf->doacross_buf_idx) {
     // Shared buffer is occupied, wait for it to be free
-    __kmp_wait_yield_4((volatile kmp_uint32 *)&sh_buf->doacross_buf_idx, idx,
-                       __kmp_eq_4, NULL);
+    __kmp_wait_4((volatile kmp_uint32 *)&sh_buf->doacross_buf_idx, idx,
+                 __kmp_eq_4, NULL);
   }
 #if KMP_32_BIT_ARCH
   // Check if we are the first thread. After the CAS the first thread gets 0,

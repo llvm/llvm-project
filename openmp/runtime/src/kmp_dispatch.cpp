@@ -858,9 +858,9 @@ __kmp_dispatch_init(ident_t *loc, int gtid, enum sched_type schedule, T lb,
     KD_TRACE(100, ("__kmp_dispatch_init: T#%d before wait: my_buffer_index:%d "
                    "sh->buffer_index:%d\n",
                    gtid, my_buffer_index, sh->buffer_index));
-    __kmp_wait_yield<kmp_uint32>(&sh->buffer_index, my_buffer_index,
-                                 __kmp_eq<kmp_uint32> USE_ITT_BUILD_ARG(NULL));
-    // Note: KMP_WAIT_YIELD() cannot be used there: buffer index and
+    __kmp_wait<kmp_uint32>(&sh->buffer_index, my_buffer_index,
+                           __kmp_eq<kmp_uint32> USE_ITT_BUILD_ARG(NULL));
+    // Note: KMP_WAIT() cannot be used there: buffer index and
     // my_buffer_index are *always* 32-bit integers.
     KMP_MB(); /* is this necessary? */
     KD_TRACE(100, ("__kmp_dispatch_init: T#%d after wait: my_buffer_index:%d "
@@ -1004,8 +1004,8 @@ static void __kmp_dispatch_finish(int gtid, ident_t *loc) {
       }
 #endif
 
-      __kmp_wait_yield<UT>(&sh->u.s.ordered_iteration, lower,
-                           __kmp_ge<UT> USE_ITT_BUILD_ARG(NULL));
+      __kmp_wait<UT>(&sh->u.s.ordered_iteration, lower,
+                     __kmp_ge<UT> USE_ITT_BUILD_ARG(NULL));
       KMP_MB(); /* is this necessary? */
 #ifdef KMP_DEBUG
       {
@@ -1073,8 +1073,8 @@ static void __kmp_dispatch_finish_chunk(int gtid, ident_t *loc) {
       }
 #endif
 
-      __kmp_wait_yield<UT>(&sh->u.s.ordered_iteration, lower,
-                           __kmp_ge<UT> USE_ITT_BUILD_ARG(NULL));
+      __kmp_wait<UT>(&sh->u.s.ordered_iteration, lower,
+                     __kmp_ge<UT> USE_ITT_BUILD_ARG(NULL));
 
       KMP_MB(); /* is this necessary? */
       KD_TRACE(1000, ("__kmp_dispatch_finish_chunk: T#%d resetting "
@@ -2489,10 +2489,10 @@ kmp_uint32 __kmp_le_4(kmp_uint32 value, kmp_uint32 checker) {
 }
 
 kmp_uint32
-__kmp_wait_yield_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
-                   kmp_uint32 (*pred)(kmp_uint32, kmp_uint32),
-                   void *obj // Higher-level synchronization object, or NULL.
-                   ) {
+__kmp_wait_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
+             kmp_uint32 (*pred)(kmp_uint32, kmp_uint32),
+             void *obj // Higher-level synchronization object, or NULL.
+             ) {
   // note: we may not belong to a team at this point
   volatile kmp_uint32 *spin = spinner;
   kmp_uint32 check = checker;
@@ -2509,20 +2509,16 @@ __kmp_wait_yield_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
        split. It causes problems with infinite recursion because of exit lock */
     /* if ( TCR_4(__kmp_global.g.g_done) && __kmp_global.g.g_abort)
         __kmp_abort_thread(); */
-
-    /* if we have waited a bit, or are oversubscribed, yield */
-    /* pause is in the following code */
-    KMP_YIELD(TCR_4(__kmp_nth) > __kmp_avail_proc);
-    KMP_YIELD_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
   }
   KMP_FSYNC_SPIN_ACQUIRED(obj);
   return r;
 }
 
-void __kmp_wait_yield_4_ptr(
-    void *spinner, kmp_uint32 checker, kmp_uint32 (*pred)(void *, kmp_uint32),
-    void *obj // Higher-level synchronization object, or NULL.
-    ) {
+void __kmp_wait_4_ptr(void *spinner, kmp_uint32 checker,
+                      kmp_uint32 (*pred)(void *, kmp_uint32),
+                      void *obj // Higher-level synchronization object, or NULL.
+                      ) {
   // note: we may not belong to a team at this point
   void *spin = spinner;
   kmp_uint32 check = checker;
@@ -2534,10 +2530,9 @@ void __kmp_wait_yield_4_ptr(
   // main wait spin loop
   while (!f(spin, check)) {
     KMP_FSYNC_SPIN_PREPARE(obj);
-    /* if we have waited a bit, or are oversubscribed, yield */
+    /* if we have waited a bit, or are noversubscribed, yield */
     /* pause is in the following code */
-    KMP_YIELD(TCR_4(__kmp_nth) > __kmp_avail_proc);
-    KMP_YIELD_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
   }
   KMP_FSYNC_SPIN_ACQUIRED(obj);
 }

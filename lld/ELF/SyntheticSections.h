@@ -743,6 +743,7 @@ private:
 class EhFrameHeader final : public SyntheticSection {
 public:
   EhFrameHeader();
+  void write();
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
   bool empty() const override;
