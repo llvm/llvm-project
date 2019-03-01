@@ -1048,6 +1048,98 @@ static llvm::Constant *patternFor(CodeGenModule &CGM, llvm::Type *Ty) {
   return llvm::ConstantStruct::get(StructTy, Struct);
 }
 
+enum class IsPattern { No, Yes };
+
+/// Generate a constant filled with either a pattern or zeroes.
+static llvm::Constant *patternOrZeroFor(CodeGenModule &CGM, IsPattern isPattern,
+                                        llvm::Type *Ty) {
+  if (isPattern == IsPattern::Yes)
+    return patternFor(CGM, Ty);
+  else
+    return llvm::Constant::getNullValue(Ty);
+}
+
+static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
+                                        llvm::Constant *constant);
+
+/// Helper function for constWithPadding() to deal with padding in structures.
+static llvm::Constant *constStructWithPadding(CodeGenModule &CGM,
+                                              IsPattern isPattern,
+                                              llvm::StructType *STy,
+                                              llvm::Constant *constant) {
+  const llvm::DataLayout &DL = CGM.getDataLayout();
+  const llvm::StructLayout *Layout = DL.getStructLayout(STy);
+  llvm::Type *Int8Ty = llvm::IntegerType::getInt8Ty(CGM.getLLVMContext());
+  unsigned SizeSoFar = 0;
+  SmallVector<llvm::Constant *, 8> Values;
+  bool NestedIntact = true;
+  for (unsigned i = 0, e = STy->getNumElements(); i != e; i++) {
+    unsigned CurOff = Layout->getElementOffset(i);
+    if (SizeSoFar < CurOff) {
+      assert(!STy->isPacked());
+      auto *PadTy = llvm::ArrayType::get(Int8Ty, CurOff - SizeSoFar);
+      Values.push_back(patternOrZeroFor(CGM, isPattern, PadTy));
+    }
+    llvm::Constant *CurOp;
+    if (constant->isZeroValue())
+      CurOp = llvm::Constant::getNullValue(STy->getElementType(i));
+    else
+      CurOp = cast<llvm::Constant>(constant->getAggregateElement(i));
+    auto *NewOp = constWithPadding(CGM, isPattern, CurOp);
+    if (CurOp != NewOp)
+      NestedIntact = false;
+    Values.push_back(NewOp);
+    SizeSoFar = CurOff + DL.getTypeAllocSize(CurOp->getType());
+  }
+  unsigned TotalSize = Layout->getSizeInBytes();
+  if (SizeSoFar < TotalSize) {
+    auto *PadTy = llvm::ArrayType::get(Int8Ty, TotalSize - SizeSoFar);
+    Values.push_back(patternOrZeroFor(CGM, isPattern, PadTy));
+  }
+  if (NestedIntact && Values.size() == STy->getNumElements())
+    return constant;
+  return llvm::ConstantStruct::getAnon(Values);
+}
+
+/// Replace all padding bytes in a given constant with either a pattern byte or
+/// 0x00.
+static llvm::Constant *constWithPadding(CodeGenModule &CGM, IsPattern isPattern,
+                                        llvm::Constant *constant) {
+  llvm::Type *OrigTy = constant->getType();
+  if (const auto STy = dyn_cast<llvm::StructType>(OrigTy))
+    return constStructWithPadding(CGM, isPattern, STy, constant);
+  if (auto *STy = dyn_cast<llvm::SequentialType>(OrigTy)) {
+    llvm::SmallVector<llvm::Constant *, 8> Values;
+    unsigned Size = STy->getNumElements();
+    if (!Size)
+      return constant;
+    llvm::Type *ElemTy = STy->getElementType();
+    bool ZeroInitializer = constant->isZeroValue();
+    llvm::Constant *OpValue, *PaddedOp;
+    if (ZeroInitializer) {
+      OpValue = llvm::Constant::getNullValue(ElemTy);
+      PaddedOp = constWithPadding(CGM, isPattern, OpValue);
+    }
+    for (unsigned Op = 0; Op != Size; ++Op) {
+      if (!ZeroInitializer) {
+        OpValue = constant->getAggregateElement(Op);
+        PaddedOp = constWithPadding(CGM, isPattern, OpValue);
+      }
+      Values.push_back(PaddedOp);
+    }
+    auto *NewElemTy = Values[0]->getType();
+    if (NewElemTy == ElemTy)
+      return constant;
+    if (OrigTy->isArrayTy()) {
+      auto *ArrayTy = llvm::ArrayType::get(NewElemTy, Size);
+      return llvm::ConstantArray::get(ArrayTy, Values);
+    } else {
+      return llvm::ConstantVector::get(Values);
+    }
+  }
+  return constant;
+}
+
 static Address createUnnamedGlobalFrom(CodeGenModule &CGM, const VarDecl &D,
                                        CGBuilderTy &Builder,
                                        llvm::Constant *Constant,
@@ -1146,7 +1238,8 @@ static void emitStoresForZeroInit(CodeGenModule &CGM, const VarDecl &D,
                                   Address Loc, bool isVolatile,
                                   CGBuilderTy &Builder) {
   llvm::Type *ElTy = Loc.getElementType();
-  llvm::Constant *constant = llvm::Constant::getNullValue(ElTy);
+  llvm::Constant *constant =
+      constWithPadding(CGM, IsPattern::No, llvm::Constant::getNullValue(ElTy));
   emitStoresForConstant(CGM, D, Loc, isVolatile, Builder, constant);
 }
 
@@ -1154,7 +1247,8 @@ static void emitStoresForPatternInit(CodeGenModule &CGM, const VarDecl &D,
                                      Address Loc, bool isVolatile,
                                      CGBuilderTy &Builder) {
   llvm::Type *ElTy = Loc.getElementType();
-  llvm::Constant *constant = patternFor(CGM, ElTy);
+  llvm::Constant *constant =
+      constWithPadding(CGM, IsPattern::Yes, patternFor(CGM, ElTy));
   assert(!isa<llvm::UndefValue>(constant));
   emitStoresForConstant(CGM, D, Loc, isVolatile, Builder, constant);
 }
@@ -1170,13 +1264,11 @@ static bool containsUndef(llvm::Constant *constant) {
   return false;
 }
 
-static llvm::Constant *replaceUndef(llvm::Constant *constant) {
-  // FIXME: when doing pattern initialization, replace undef with 0xAA instead.
-  // FIXME: also replace padding between values by creating a new struct type
-  //        which has no padding.
+static llvm::Constant *replaceUndef(CodeGenModule &CGM, IsPattern isPattern,
+                                    llvm::Constant *constant) {
   auto *Ty = constant->getType();
   if (isa<llvm::UndefValue>(constant))
-    return llvm::Constant::getNullValue(Ty);
+    return patternOrZeroFor(CGM, isPattern, Ty);
   if (!(Ty->isStructTy() || Ty->isArrayTy() || Ty->isVectorTy()))
     return constant;
   if (!containsUndef(constant))
@@ -1184,7 +1276,7 @@ static llvm::Constant *replaceUndef(llvm::Constant *constant) {
   llvm::SmallVector<llvm::Constant *, 8> Values(constant->getNumOperands());
   for (unsigned Op = 0, NumOp = constant->getNumOperands(); Op != NumOp; ++Op) {
     auto *OpValue = cast<llvm::Constant>(constant->getOperand(Op));
-    Values[Op] = replaceUndef(OpValue);
+    Values[Op] = replaceUndef(CGM, isPattern, OpValue);
   }
   if (Ty->isStructTy())
     return llvm::ConstantStruct::get(cast<llvm::StructType>(Ty), Values);
@@ -1680,7 +1772,8 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
 
     case LangOptions::TrivialAutoVarInitKind::Pattern: {
       llvm::Type *ElTy = Loc.getElementType();
-      llvm::Constant *Constant = patternFor(CGM, ElTy);
+      llvm::Constant *Constant =
+          constWithPadding(CGM, IsPattern::Yes, patternFor(CGM, ElTy));
       CharUnits ConstantAlign = getContext().getTypeAlignInChars(VlaSize.Type);
       llvm::BasicBlock *SetupBB = createBasicBlock("vla-setup.loop");
       llvm::BasicBlock *LoopBB = createBasicBlock("vla-init.loop");
@@ -1726,8 +1819,14 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     assert(!capturedByInit && "constant init contains a capturing block?");
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
     if (constant && trivialAutoVarInit !=
-                        LangOptions::TrivialAutoVarInitKind::Uninitialized)
-      constant = replaceUndef(constant);
+                        LangOptions::TrivialAutoVarInitKind::Uninitialized) {
+      IsPattern isPattern =
+          (trivialAutoVarInit == LangOptions::TrivialAutoVarInitKind::Pattern)
+              ? IsPattern::Yes
+              : IsPattern::No;
+      constant = constWithPadding(CGM, isPattern,
+                                  replaceUndef(CGM, isPattern, constant));
+    }
   }
 
   if (!constant) {
