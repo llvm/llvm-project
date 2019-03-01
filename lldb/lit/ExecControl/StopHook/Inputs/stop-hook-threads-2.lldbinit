@@ -1,4 +1,5 @@
+break set -f stop-hook-threads.cpp -p "Break here to set up the stop hook"
 break set -f stop-hook-threads.cpp -p "Break here to test that the stop-hook"
 run
-target stop-hook add -x 2 -o "frame variable thread_index"
-target stop-hook add -o continue
+target stop-hook add -x 2 -o "expr lldb_val += 1" -o "thread list"
+target stop-hook add -G true -o "script print('Hit stop hook') 
