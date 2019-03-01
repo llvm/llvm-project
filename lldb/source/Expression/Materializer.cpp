@@ -946,7 +946,7 @@ public:
     if (lang == lldb::eLanguageTypeSwift)
       // We already acquired the lock in the SwiftUserExpression.
       type_system =
-          target_sp->GetScratchSwiftASTContext(type_system_error, *frame_sp)
+          target_sp->GetScratchSwiftASTContext(type_system_error, *exe_scope)
               .get();
     else
       type_system = target_sp->GetScratchTypeSystemForLanguage(
@@ -963,7 +963,7 @@ public:
     PersistentExpressionState *persistent_state;
     if (lang == lldb::eLanguageTypeSwift)
       persistent_state =
-        target_sp->GetSwiftPersistentExpressionState(*frame_sp);
+        target_sp->GetSwiftPersistentExpressionState(*exe_scope);
     else
       persistent_state = type_system->GetPersistentExpressionState();
 
