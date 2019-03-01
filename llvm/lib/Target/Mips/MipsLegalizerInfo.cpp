@@ -32,8 +32,11 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalFor({s32})
       .minScalar(0, s32);
 
-  getActionDefinitionsBuilder({G_UADDO, G_UADDE, G_USUBO, G_USUBE})
+  getActionDefinitionsBuilder({G_UADDO, G_UADDE, G_USUBO, G_USUBE, G_UMULO})
       .lowerFor({{s32, s1}});
+
+  getActionDefinitionsBuilder(G_UMULH)
+      .legalFor({s32});
 
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
       .legalForTypesWithMemDesc({{s32, p0, 8, 8},

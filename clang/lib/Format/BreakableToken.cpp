@@ -62,12 +62,10 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   return LongestPrefix;
 }
 
-static BreakableToken::Split getCommentSplit(StringRef Text,
-                                             unsigned ContentStartColumn,
-                                             unsigned ColumnLimit,
-                                             unsigned TabWidth,
-                                             encoding::Encoding Encoding,
-                                             const FormatStyle &Style) {
+static BreakableToken::Split
+getCommentSplit(StringRef Text, unsigned ContentStartColumn,
+                unsigned ColumnLimit, unsigned TabWidth,
+                encoding::Encoding Encoding, const FormatStyle &Style) {
   LLVM_DEBUG(llvm::dbgs() << "Comment split: \"" << Text
                           << "\", Column limit: " << ColumnLimit
                           << ", Content start: " << ContentStartColumn << "\n");
@@ -191,7 +189,7 @@ bool switchesFormatting(const FormatToken &Token) {
 
 unsigned
 BreakableToken::getLengthAfterCompression(unsigned RemainingTokenColumns,
-                                              Split Split) const {
+                                          Split Split) const {
   // Example: consider the content
   // lala  lala
   // - RemainingTokenColumns is the original number of columns, 10;
@@ -870,23 +868,20 @@ void BreakableLineCommentSection::reflow(unsigned LineIndex,
     // the next line.
     unsigned WhitespaceLength =
         Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data() - Offset;
-    Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex],
-                                         Offset,
+    Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
                                          /*ReplaceChars=*/WhitespaceLength,
                                          /*PreviousPostfix=*/"",
                                          /*CurrentPrefix=*/"",
                                          /*InPPDirective=*/false,
                                          /*Newlines=*/0,
                                          /*Spaces=*/0);
-
   }
   // Replace the indent and prefix of the token with the reflow prefix.
   unsigned Offset =
       Lines[LineIndex].data() - tokenAt(LineIndex).TokenText.data();
   unsigned WhitespaceLength =
       Content[LineIndex].data() - Lines[LineIndex].data();
-  Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex],
-                                       Offset,
+  Whitespaces.replaceWhitespaceInToken(*Tokens[LineIndex], Offset,
                                        /*ReplaceChars=*/WhitespaceLength,
                                        /*PreviousPostfix=*/"",
                                        /*CurrentPrefix=*/ReflowPrefix,

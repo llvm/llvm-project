@@ -2366,7 +2366,7 @@ def NoSanitize : InheritableAttr {
   let Documentation = [NoSanitizeDocs];
   let AdditionalMembers = [{
     SanitizerMask getMask() const {
-      SanitizerMask Mask = 0;
+      SanitizerMask Mask;
       for (auto SanitizerName : sanitizers()) {
         SanitizerMask ParsedMask =
             parseSanitizerValue(SanitizerName, /*AllowGroups=*/true);

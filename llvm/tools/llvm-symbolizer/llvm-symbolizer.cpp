@@ -201,7 +201,20 @@ static bool parseCommand(StringRef InputString, bool &IsData,
 static uint64_t getModuleSectionIndexForAddress(const std::string &ModuleName,
                                                 uint64_t Address) {
 
-  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(ModuleName);
+  // following ModuleName processing was copied from
+  // LLVMSymbolizer::getOrCreateModuleInfo().
+  // it needs to be refactored to avoid code duplication.
+  std::string BinaryName = ModuleName;
+  size_t ColonPos = ModuleName.find_last_of(':');
+  // Verify that substring after colon form a valid arch name.
+  if (ColonPos != std::string::npos) {
+    std::string ArchStr = ModuleName.substr(ColonPos + 1);
+    if (Triple(ArchStr).getArch() != Triple::UnknownArch) {
+      BinaryName = ModuleName.substr(0, ColonPos);
+    }
+  }
+
+  Expected<OwningBinary<Binary>> BinaryOrErr = createBinary(BinaryName);
 
   if (error(BinaryOrErr))
     return object::SectionedAddress::UndefSection;

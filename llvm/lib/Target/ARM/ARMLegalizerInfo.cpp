@@ -206,13 +206,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_FREM, G_FPOW}).libcallFor({s32, s64});
 
-  if (ST.isThumb()) {
-    // FIXME: merge with the code for non-Thumb.
-    computeTables();
-    verify(*ST.getInstrInfo());
-    return;
-  }
-
   if (ST.hasV5TOps()) {
     getActionDefinitionsBuilder(G_CTLZ)
         .legalFor({s32, s32})

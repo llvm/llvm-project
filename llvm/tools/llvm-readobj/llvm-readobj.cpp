@@ -688,7 +688,7 @@ static void registerReadelfAliases() {
     StringRef ArgName = OptEntry.getKey();
     cl::Option *Option = OptEntry.getValue();
     if (ArgName.size() == 1)
-      Option->setFormattingFlag(cl::Grouping);
+      apply(Option, cl::Grouping);
   }
 }
 
