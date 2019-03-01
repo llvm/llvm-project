@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Config/config.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cassert>
-#include <cstdlib>
 #include <cstring>
 
 #if defined(_MSC_VER)
@@ -169,14 +167,7 @@ bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
 bool findDebugBinary(const std::string &OrigPath,
                      const std::string &DebuglinkName, uint32_t CRCHash,
                      std::string &Result) {
-  std::string OrigRealPath = OrigPath;
-#if defined(HAVE_REALPATH)
-  if (char *RP = realpath(OrigPath.c_str(), nullptr)) {
-    OrigRealPath = RP;
-    free(RP);
-  }
-#endif
-  SmallString<16> OrigDir(OrigRealPath);
+  SmallString<16> OrigDir(OrigPath);
   llvm::sys::path::remove_filename(OrigDir);
   SmallString<16> DebugPath = OrigDir;
   // Try /path/to/original_binary/debuglink_name
