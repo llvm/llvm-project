@@ -1608,7 +1608,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     (void)DI->EmitDeclareOfAutoVariable(&D, address.getPointer(), Builder);
   }
 
-  if (D.hasAttr<AnnotateAttr>())
+  if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
     EmitVarAnnotations(&D, address.getPointer());
 
   // Make sure we call @llvm.lifetime.end.
