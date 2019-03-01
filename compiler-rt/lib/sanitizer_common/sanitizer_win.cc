@@ -1096,7 +1096,7 @@ void LogFullErrorReport(const char *buffer) {
     do {
       filename.resize(filename.size() + 0x100);
       filename_length =
-          GetModuleFileName(NULL, filename.begin(), filename.size());
+          GetModuleFileNameW(NULL, filename.begin(), filename.size());
     } while (filename_length >= filename.size());
     TraceLoggingWrite(g_asan_provider, "AsanReportEvent",
                       TraceLoggingValue(filename.begin(), "ExecutableName"),

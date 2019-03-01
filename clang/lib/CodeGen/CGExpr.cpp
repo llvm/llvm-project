@@ -2855,16 +2855,13 @@ enum class CheckRecoverableKind {
 }
 
 static CheckRecoverableKind getRecoverableKind(SanitizerMask Kind) {
-  assert(llvm::countPopulation(Kind) == 1);
-  switch (Kind) {
-  case SanitizerKind::Vptr:
+  assert(Kind.countPopulation() == 1);
+  if (Kind == SanitizerKind::Vptr)
     return CheckRecoverableKind::AlwaysRecoverable;
-  case SanitizerKind::Return:
-  case SanitizerKind::Unreachable:
+  else if (Kind == SanitizerKind::Return || Kind == SanitizerKind::Unreachable)
     return CheckRecoverableKind::Unrecoverable;
-  default:
+  else
     return CheckRecoverableKind::Recoverable;
-  }
 }
 
 namespace {

@@ -114,8 +114,6 @@ public:
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
-  void releaseMemory() override { Impl.releaseMemory(); }
-
 private:
   ConstantHoistingPass Impl;
 };
@@ -946,6 +944,8 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
 
   // Cleanup dead instructions.
   deleteDeadCastInst();
+
+  cleanup();
 
   return MadeChange;
 }

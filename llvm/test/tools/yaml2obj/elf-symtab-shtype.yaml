@@ -1,0 +1,21 @@
+## Check we dont crash when .symtab has type different from SHT_SYMTAB.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-readobj -sections %t | FileCheck %s
+
+## TODO: the output is still SHT_SYMTAB because we do not yet
+## support changing it.
+# CHECK:      Name: .symtab
+# CHECK-NEXT: Type: SHT_SYMTAB
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .symtab
+    Type:            SHT_DYNAMIC
+Symbols:
+  Global:
+    - Name: foo

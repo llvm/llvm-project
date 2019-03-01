@@ -551,7 +551,7 @@ static void parseSanitizerKinds(StringRef FlagName,
                                 DiagnosticsEngine &Diags, SanitizerSet &S) {
   for (const auto &Sanitizer : Sanitizers) {
     SanitizerMask K = parseSanitizerValue(Sanitizer, /*AllowGroups=*/false);
-    if (K == 0)
+    if (K == SanitizerMask())
       Diags.Report(diag::err_drv_invalid_value) << FlagName << Sanitizer;
     else
       S.set(K, true);

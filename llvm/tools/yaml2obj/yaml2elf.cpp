@@ -341,13 +341,16 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
   SHeader.sh_entsize = sizeof(Elf_Sym);
   SHeader.sh_addralign = 8;
 
-  // If .dynsym section is explicitly described in the YAML
-  // then we want to use its section address.
-  if (!IsStatic) {
-    // Take section index and ignore the SHT_NULL section.
-    unsigned SecNdx = getDotDynSymSecNo() - 1;
-    if (SecNdx < Doc.Sections.size())
-      SHeader.sh_addr = Doc.Sections[SecNdx]->Address;
+  // Get the section index ignoring the SHT_NULL section.
+  unsigned SecNdx =
+      IsStatic ? getDotSymTabSecNo() - 1 : getDotDynSymSecNo() - 1;
+  // If the symbol table section is explicitly described in the YAML
+  // then we should set the fields requested.
+  if (SecNdx < Doc.Sections.size()) {
+    ELFYAML::Section *Sec = Doc.Sections[SecNdx].get();
+    SHeader.sh_addr = Sec->Address;
+    if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec))
+      SHeader.sh_info = S->Info;
   }
 
   std::vector<Elf_Sym> Syms;
@@ -503,6 +506,7 @@ ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
   else
     SHeader.sh_entsize = 0;
   SHeader.sh_size = Section.Size;
+  SHeader.sh_info = Section.Info;
 }
 
 static bool isMips64EL(const ELFYAML::Object &Doc) {

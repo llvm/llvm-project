@@ -31,6 +31,7 @@
 #include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include <fstream>
 #include <map>
+#include <mutex>
 #include <set>
 #include <sstream>
 

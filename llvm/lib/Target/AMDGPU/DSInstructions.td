@@ -18,6 +18,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
   // Most instruction load and store data, so set this as the default.
   let mayLoad = 1;
   let mayStore = 1;
+  let maybeAtomic = 1;
 
   let hasSideEffects = 0;
   let SchedRW = [WriteLDS];

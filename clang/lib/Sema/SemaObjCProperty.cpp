@@ -2280,9 +2280,18 @@ void Sema::DiagnoseMissingDesignatedInitOverrides(
          I = DesignatedInits.begin(), E = DesignatedInits.end(); I != E; ++I) {
     const ObjCMethodDecl *MD = *I;
     if (!InitSelSet.count(MD->getSelector())) {
+      // Don't emit a diagnostic if the overriding method in the subclass is
+      // marked as unavailable.
       bool Ignore = false;
       if (auto *IMD = IFD->getInstanceMethod(MD->getSelector())) {
         Ignore = IMD->isUnavailable();
+      } else {
+        // Check the methods declared in the class extensions too.
+        for (auto *Ext : IFD->visible_extensions())
+          if (auto *IMD = Ext->getInstanceMethod(MD->getSelector())) {
+            Ignore = IMD->isUnavailable();
+            break;
+          }
       }
       if (!Ignore) {
         Diag(ImplD->getLocation(),
