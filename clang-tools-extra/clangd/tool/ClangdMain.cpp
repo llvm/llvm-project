@@ -217,7 +217,7 @@ static llvm::cl::opt<bool> SuggestMissingIncludes(
     "suggest-missing-includes",
     llvm::cl::desc("Attempts to fix diagnostic errors caused by missing "
                    "includes using index."),
-    llvm::cl::init(false));
+    llvm::cl::init(true));
 
 namespace {
 
