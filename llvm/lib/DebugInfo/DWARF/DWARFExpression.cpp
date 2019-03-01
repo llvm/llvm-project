@@ -258,7 +258,8 @@ bool DWARFExpression::Operation::print(raw_ostream &OS,
       if (Die && Die.getTag() == dwarf::DW_TAG_base_type) {
         OS << format(" (0x%08x)", U->getOffset() + Operands[Operand]);
         if (auto Name = Die.find(dwarf::DW_AT_name))
-          OS << " \"" << Name->getAsCString() << "\"";
+          if (Name->getAsCString())
+            OS << " \"" << *Name->getAsCString() << "\"";
       } else {
         OS << format(" <invalid base_type ref: 0x%" PRIx64 ">",
                      Operands[Operand]);
