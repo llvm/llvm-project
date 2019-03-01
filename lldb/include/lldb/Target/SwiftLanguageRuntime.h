@@ -202,7 +202,7 @@ public:
   using ArchetypePath = std::pair<uint64_t, uint64_t>;
   /// Populate a map with the names of all archetypes in a function's generic
   /// context.
-  static void GetArchetypeNamesForFunction(
+  static void GetGenericParameterNamesForFunction(
       const SymbolContext &sc,
       llvm::DenseMap<ArchetypePath, llvm::StringRef> &dict);
 

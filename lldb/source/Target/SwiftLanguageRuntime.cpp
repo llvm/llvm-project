@@ -695,7 +695,7 @@ bool SwiftLanguageRuntime::IsSwiftMangledName(const char *name) {
   return swift::Demangle::isSwiftSymbol(name);
 }
 
-void SwiftLanguageRuntime::GetArchetypeNamesForFunction(
+void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
     const SymbolContext &const_sc,
     llvm::DenseMap<SwiftLanguageRuntime::ArchetypePath, StringRef> &dict) {
   // This terrifying cast avoids having too many differences with llvm.org.
@@ -765,15 +765,15 @@ SwiftLanguageRuntime::DemangleSymbolAsString(StringRef symbol, bool simplified,
     options = swift::Demangle::DemangleOptions::SimplifiedUIDemangleOptions();
 
   if (sc) {
-    options.ArchetypeName = [&](uint64_t index, uint64_t depth) {
+    options.GenericParameterName = [&](uint64_t depth, uint64_t index) {
       if (!did_init) {
-        GetArchetypeNamesForFunction(*sc, dict);
+        GetGenericParameterNamesForFunction(*sc, dict);
         did_init = true;
       }
       auto it = dict.find({depth, index});
       if (it != dict.end())
         return it->second.str();
-      return swift::Demangle::archetypeName(index, depth);
+      return swift::Demangle::genericParameterName(depth, index);
     };
   }
   return swift::Demangle::demangleSymbolAsString(symbol, options);
