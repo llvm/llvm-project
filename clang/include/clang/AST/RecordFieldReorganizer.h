@@ -40,7 +40,7 @@ private:
 class Randstruct : public RecordFieldReorganizer {
 private:
   std::seed_seq Seq;
-  std::default_random_engine &rng;
+  std::default_random_engine rng;
 public:
   Randstruct(std::string seed) : Seq(seed.begin(), seed.end()), rng(Seq) {}
 /// Determines if the Record can be safely and easily randomized based on certain criteria (see implementation).
