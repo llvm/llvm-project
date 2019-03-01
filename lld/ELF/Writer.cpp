@@ -82,7 +82,7 @@ private:
 
   std::vector<PhdrEntry *> Phdrs;
 
-  size_t FileSize;
+  uint64_t FileSize;
   uint64_t SectionHeaderOff;
 };
 } // anonymous namespace
@@ -2480,7 +2480,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 // Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
   uint64_t MaxSize = Config->Is64 ? INT64_MAX : UINT32_MAX;
-  if (MaxSize < FileSize) {
+  if (FileSize != size_t(FileSize) || MaxSize < FileSize) {
     error("output file too large: " + Twine(FileSize) + " bytes");
     return;
   }
@@ -2561,7 +2561,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     return;
 
   // Compute a hash of all sections of the output file.
-  In.BuildId->writeBuildId({Out::BufferStart, FileSize});
+  In.BuildId->writeBuildId({Out::BufferStart, size_t(FileSize)});
 }
 
 template void elf::writeResult<ELF32LE>();

@@ -154,11 +154,12 @@ ompt_label_##id:
          ompt_get_thread_data()->value, ((char *)addr) - 1, ((char *)addr) - 4)
 #elif KMP_ARCH_PPC64
 // On Power the NOP instruction is 4 bytes long. In addition, the compiler
-// inserts an LD instruction which accounts for another 4 bytes. In contrast to
-// X86 this instruction is always there, even for void runtime functions.
+// inserts a second NOP instruction (another 4 bytes). For non-void runtime
+// functions Clang inserts a STW instruction (but only if compiling under
+// -fno-PIC which will be the default with Clang 8.0, another 4 bytes).
 #define print_possible_return_addresses(addr) \
-  printf("%" PRIu64 ": current_address=%p\n", ompt_get_thread_data()->value, \
-         ((char *)addr) - 8)
+  printf("%" PRIu64 ": current_address=%p or %p\n", ompt_get_thread_data()->value, \
+         ((char *)addr) - 8, ((char *)addr) - 12)
 #elif KMP_ARCH_AARCH64
 // On AArch64 the NOP instruction is 4 bytes long, can be followed by inserted
 // store instruction (another 4 bytes long).
