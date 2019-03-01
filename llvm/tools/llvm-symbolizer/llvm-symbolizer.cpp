@@ -55,8 +55,12 @@ static cl::opt<bool>
     ClPrintInlining("inlining", cl::init(true),
                     cl::desc("Print all inlined frames for a given address"));
 
+// -demangle, -C
 static cl::opt<bool>
 ClDemangle("demangle", cl::init(true), cl::desc("Demangle function names"));
+static cl::alias
+ClDemangleShort("C", cl::desc("Alias for -demangle"),
+                cl::NotHidden, cl::aliasopt(ClDemangle));
 
 static cl::opt<std::string> ClDefaultArch("default-arch", cl::init(""),
                                           cl::desc("Default architecture "
