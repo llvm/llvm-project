@@ -485,6 +485,7 @@
 		9A3D43EC1F3237F900EB767C /* ListenerTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3D43E31F3237D500EB767C /* ListenerTest.cpp */; };
 		AFF1273622276F1600C25726 /* LocateSymbolFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFF1273422276F1100C25726 /* LocateSymbolFile.cpp */; };
 		AFC3068122276F62002675EA /* LocateSymbolFileMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC3068022276F62002675EA /* LocateSymbolFileMacOSX.cpp */; };
+		AFB4C8142228A7B40018086A /* LocateSymbolFileTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB4C8122228A7AE0018086A /* LocateSymbolFileTest.cpp */; };
 		255EFF741AFABA720069F277 /* LockFileBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 255EFF731AFABA720069F277 /* LockFileBase.cpp */; };
 		255EFF761AFABA950069F277 /* LockFilePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 255EFF751AFABA950069F277 /* LockFilePosix.cpp */; };
 		2689004213353E0400698AC0 /* Log.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E7F10F1B85900F91463 /* Log.cpp */; };
@@ -1005,7 +1006,6 @@
 		268900E013353E6F00698AC0 /* SymbolVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF94005711C03F6500085DB9 /* SymbolVendor.cpp */; };
 		2635879417822FC2004C30BA /* SymbolVendorELF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2635879017822E56004C30BA /* SymbolVendorELF.cpp */; };
 		268900CF13353E5F00698AC0 /* SymbolVendorMacOSX.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89E210F57C5600BB2B04 /* SymbolVendorMacOSX.cpp */; };
-		23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */; };
 		268900E113353E6F00698AC0 /* Symtab.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1F10F1B8EC00F91463 /* Symtab.cpp */; };
 		3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692E1ABB7A6D001DA9DF /* SystemInitializer.cpp */; };
 		3F8169321ABB7A6D001DA9DF /* SystemInitializerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F81692F1ABB7A6D001DA9DF /* SystemInitializerCommon.cpp */; };
@@ -2258,6 +2258,7 @@
 		9A3D43E31F3237D500EB767C /* ListenerTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ListenerTest.cpp; sourceTree = "<group>"; };
 		AFF1273422276F1100C25726 /* LocateSymbolFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LocateSymbolFile.cpp; path = source/Symbol/LocateSymbolFile.cpp; sourceTree = "<group>"; };
 		AFC3068022276F62002675EA /* LocateSymbolFileMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LocateSymbolFileMacOSX.cpp; path = source/Symbol/LocateSymbolFileMacOSX.cpp; sourceTree = "<group>"; };
+		AFB4C8122228A7AE0018086A /* LocateSymbolFileTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LocateSymbolFileTest.cpp; sourceTree = "<group>"; };
 		255EFF731AFABA720069F277 /* LockFileBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LockFileBase.cpp; sourceTree = "<group>"; };
 		255EFF751AFABA950069F277 /* LockFilePosix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = LockFilePosix.cpp; sourceTree = "<group>"; };
 		255EFF711AFABA4D0069F277 /* LockFileWindows.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LockFileWindows.cpp; path = source/Host/windows/LockFileWindows.cpp; sourceTree = "<group>"; };
@@ -3209,7 +3210,6 @@
 		260C89E210F57C5600BB2B04 /* SymbolVendorMacOSX.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolVendorMacOSX.cpp; sourceTree = "<group>"; };
 		260C89E310F57C5600BB2B04 /* SymbolVendorMacOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SymbolVendorMacOSX.h; sourceTree = "<group>"; };
 		2689B0A4113EE3CD00A4AEDB /* Symbols.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Symbols.h; path = include/lldb/Host/Symbols.h; sourceTree = "<group>"; };
-		2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SymbolsTest.cpp; sourceTree = "<group>"; };
 		26BC7F1F10F1B8EC00F91463 /* Symtab.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Symtab.cpp; path = source/Symbol/Symtab.cpp; sourceTree = "<group>"; };
 		26BC7C6410F1B6E900F91463 /* Symtab.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Symtab.h; path = include/lldb/Symbol/Symtab.h; sourceTree = "<group>"; };
 		3F81692E1ABB7A6D001DA9DF /* SystemInitializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SystemInitializer.cpp; path = source/Initialization/SystemInitializer.cpp; sourceTree = "<group>"; };
@@ -3750,7 +3750,6 @@
 				2321F9381BDD332400BA9A93 /* CMakeLists.txt */,
 				2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */,
 				2321F93A1BDD332400BA9A93 /* SocketTest.cpp */,
-				2321F93B1BDD332400BA9A93 /* SymbolsTest.cpp */,
 				2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */,
 			);
 			path = Host;
@@ -4005,6 +4004,7 @@
 				9A2057131F3B860D00F6C293 /* TestDWARFCallFrameInfo.cpp */,
 				9A2057141F3B860D00F6C293 /* TestType.cpp */,
 				23CB150B1D66CF5600EDDDE1 /* CMakeLists.txt */,
+				AFB4C8122228A7AE0018086A /* LocateSymbolFileTest.cpp */,
 				23CB150C1D66CF5600EDDDE1 /* TestClangASTContext.cpp */,
 				AF6F1EDD2193B021008F190E /* TestSwiftASTContext.cpp */,
 			);
@@ -8179,6 +8179,7 @@
 				9A2057121F3B824B00F6C293 /* SymbolFileDWARFTests.cpp in Sources */,
 				9A20573A1F3B8E7E00F6C293 /* MainLoopTest.cpp in Sources */,
 				23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */,
+				AFB4C8142228A7B40018086A /* LocateSymbolFileTest.cpp in Sources */,
 				8C3BD9A01EF5D1FF0016C343 /* JSONTest.cpp in Sources */,
 				23CB15361D66DA9300EDDDE1 /* FileSpecTest.cpp in Sources */,
 				23E2E5251D90373D006F38BB /* ArchSpecTest.cpp in Sources */,
@@ -8218,6 +8219,7 @@
 				9A20571C1F3B867400F6C293 /* PlatformDarwinTest.cpp in Sources */,
 				4C639ECF21FA684900A7B957 /* ReproducerTest.cpp in Sources */,
 				23CB153F1D66DA9300EDDDE1 /* SymbolsTest.cpp in Sources */,
+				AFEC5FD81D94F9380076A480 /* Testx86AssemblyInspectionEngine.cpp in Sources */,
 				23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */,
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
 				9A2057031F3A605200F6C293 /* VASprintfTest.cpp in Sources */,
