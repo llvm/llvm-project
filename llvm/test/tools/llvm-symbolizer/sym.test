@@ -18,9 +18,10 @@
 #Build as : clang -g -O2 addr.c
 
 RUN: llvm-symbolizer -print-address -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck %s
-RUN: llvm-symbolizer -inlining -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck --check-prefix="PRETTY" %s 
+RUN: llvm-symbolizer -inlining -print-address -pretty-print -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s 
+RUN: llvm-symbolizer -inlining -print-address -p -obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
 RUN: echo "0x1" > %t.input
-RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck --check-prefix="ZERO" %s
+RUN: llvm-symbolizer -obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="ZERO" %s
 
 #CHECK: some text
 #CHECK: 0x40054d
