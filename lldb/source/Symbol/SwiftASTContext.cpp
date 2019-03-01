@@ -5363,14 +5363,14 @@ GetArchetypeNames(swift::Type type, swift::ASTContext &ast_ctx,
   if (!sc)
     return dict;
 
-  llvm::DenseMap<std::pair<uint64_t, uint64_t>, StringRef> archetype_names;
-  SwiftLanguageRuntime::GetArchetypeNamesForFunction(*sc, archetype_names);
+  llvm::DenseMap<std::pair<uint64_t, uint64_t>, StringRef> names;
+  SwiftLanguageRuntime::GetGenericParameterNamesForFunction(*sc, names);
   swift_type.visit([&](swift::Type type) {
     if (!type->isTypeParameter() || dict.count(type->getCanonicalType()))
       return;
     auto *param = type->getAs<swift::GenericTypeParamType>();
-    auto it = archetype_names.find({param->getDepth(), param->getIndex()});
-    if (it != archetype_names.end()) {
+    auto it = names.find({param->getDepth(), param->getIndex()});
+    if (it != names.end()) {
       swift::Identifier ident = ast_ctx.getIdentifier(it->second);
       dict.insert({type->getCanonicalType(), ident});
     }
