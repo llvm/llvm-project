@@ -600,7 +600,7 @@ static bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
 
 // Option predicates...
 static inline bool isGrouping(const Option *O) {
-  return O->getFormattingFlag() == cl::Grouping;
+  return O->getMiscFlags() & cl::Grouping;
 }
 static inline bool isPrefixedOrGrouping(const Option *O) {
   return isGrouping(O) || O->getFormattingFlag() == cl::Prefix ||
@@ -651,40 +651,46 @@ HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
   if (!PGOpt)
     return nullptr;
 
-  // If the option is a prefixed option, then the value is simply the
-  // rest of the name...  so fall through to later processing, by
-  // setting up the argument name flags and value fields.
-  if (PGOpt->getFormattingFlag() == cl::Prefix ||
-      PGOpt->getFormattingFlag() == cl::AlwaysPrefix) {
-    Value = Arg.substr(Length);
+  do {
+    StringRef MaybeValue =
+        (Length < Arg.size()) ? Arg.substr(Length) : StringRef();
     Arg = Arg.substr(0, Length);
     assert(OptionsMap.count(Arg) && OptionsMap.find(Arg)->second == PGOpt);
-    return PGOpt;
-  }
 
-  // This must be a grouped option... handle them now.  Grouping options can't
-  // have values.
-  assert(isGrouping(PGOpt) && "Broken getOptionPred!");
+    // cl::Prefix options do not preserve '=' when used separately.
+    // The behavior for them with grouped options should be the same.
+    if (MaybeValue.empty() || PGOpt->getFormattingFlag() == cl::AlwaysPrefix ||
+        (PGOpt->getFormattingFlag() == cl::Prefix && MaybeValue[0] != '=')) {
+      Value = MaybeValue;
+      return PGOpt;
+    }
 
-  do {
-    // Move current arg name out of Arg into OneArgName.
-    StringRef OneArgName = Arg.substr(0, Length);
-    Arg = Arg.substr(Length);
+    if (MaybeValue[0] == '=') {
+      Value = MaybeValue.substr(1);
+      return PGOpt;
+    }
 
-    // Because ValueRequired is an invalid flag for grouped arguments,
-    // we don't need to pass argc/argv in.
-    assert(PGOpt->getValueExpectedFlag() != cl::ValueRequired &&
-           "Option can not be cl::Grouping AND cl::ValueRequired!");
+    // This must be a grouped option.
+    assert(isGrouping(PGOpt) && "Broken getOptionPred!");
+
+    // Grouping options inside a group can't have values.
+    if (PGOpt->getValueExpectedFlag() == cl::ValueRequired) {
+      ErrorParsing |= PGOpt->error("may not occur within a group!");
+      return nullptr;
+    }
+
+    // Because the value for the option is not required, we don't need to pass
+    // argc/argv in.
     int Dummy = 0;
-    ErrorParsing |=
-        ProvideOption(PGOpt, OneArgName, StringRef(), 0, nullptr, Dummy);
+    ErrorParsing |= ProvideOption(PGOpt, Arg, StringRef(), 0, nullptr, Dummy);
 
     // Get the next grouping option.
+    Arg = MaybeValue;
     PGOpt = getOptionPred(Arg, Length, isGrouping, OptionsMap);
-  } while (PGOpt && Length != Arg.size());
+  } while (PGOpt);
 
-  // Return the last option with Arg cut down to just the last one.
-  return PGOpt;
+  // We could not find a grouping option in the remainder of Arg.
+  return nullptr;
 }
 
 static bool RequiresValue(const Option *O) {

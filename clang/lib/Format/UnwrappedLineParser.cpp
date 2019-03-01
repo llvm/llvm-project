@@ -481,7 +481,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
       break;
     case tok::identifier:
       if (!Tok->is(TT_StatementMacro))
-          break;
+        break;
       LLVM_FALLTHROUGH;
     case tok::at:
     case tok::semi:
@@ -1166,8 +1166,8 @@ void UnwrappedLineParser::parseStructuralElement() {
       case tok::objc_synchronized:
         nextToken();
         if (FormatTok->Tok.is(tok::l_paren))
-           // Skip synchronization object
-           parseParens();
+          // Skip synchronization object
+          parseParens();
         if (FormatTok->Tok.is(tok::l_brace)) {
           if (Style.BraceWrapping.AfterControlStatement)
             addUnwrappedLine();
@@ -2350,8 +2350,7 @@ void UnwrappedLineParser::parseJavaScriptEs6ImportExport() {
   }
 }
 
-void UnwrappedLineParser::parseStatementMacro()
-{
+void UnwrappedLineParser::parseStatementMacro() {
   nextToken();
   if (FormatTok->is(tok::l_paren))
     parseParens();

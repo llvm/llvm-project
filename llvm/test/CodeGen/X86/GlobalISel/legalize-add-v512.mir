@@ -41,27 +41,34 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
-
-    ; ALL-LABEL: name: test_add_v64i8
-    ; ALL: [[DEF:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
+    ; AVX1-LABEL: name: test_add_v64i8
+    ; AVX1: [[DEF:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
+    ; AVX1: [[DEF1:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
     ; AVX1: [[UV:%[0-9]+]]:_(<16 x s8>), [[UV1:%[0-9]+]]:_(<16 x s8>), [[UV2:%[0-9]+]]:_(<16 x s8>), [[UV3:%[0-9]+]]:_(<16 x s8>) = G_UNMERGE_VALUES [[DEF]](<64 x s8>)
     ; AVX1: [[UV4:%[0-9]+]]:_(<16 x s8>), [[UV5:%[0-9]+]]:_(<16 x s8>), [[UV6:%[0-9]+]]:_(<16 x s8>), [[UV7:%[0-9]+]]:_(<16 x s8>) = G_UNMERGE_VALUES [[DEF1]](<64 x s8>)
     ; AVX1: [[ADD:%[0-9]+]]:_(<16 x s8>) = G_ADD [[UV]], [[UV4]]
     ; AVX1: [[ADD1:%[0-9]+]]:_(<16 x s8>) = G_ADD [[UV1]], [[UV5]]
     ; AVX1: [[ADD2:%[0-9]+]]:_(<16 x s8>) = G_ADD [[UV2]], [[UV6]]
     ; AVX1: [[ADD3:%[0-9]+]]:_(<16 x s8>) = G_ADD [[UV3]], [[UV7]]
-    ; AVX1: [[MV:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[ADD]](<16 x s8>), [[ADD1]](<16 x s8>), [[ADD2]](<16 x s8>), [[ADD3]](<16 x s8>)
-    ; AVX1: $zmm0 = COPY [[MV]](<64 x s8>)
+    ; AVX1: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[ADD]](<16 x s8>), [[ADD1]](<16 x s8>), [[ADD2]](<16 x s8>), [[ADD3]](<16 x s8>)
+    ; AVX1: $zmm0 = COPY [[CONCAT_VECTORS]](<64 x s8>)
+    ; AVX1: RET 0
+    ; AVX512F-LABEL: name: test_add_v64i8
+    ; AVX512F: [[DEF:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
+    ; AVX512F: [[DEF1:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
     ; AVX512F: [[UV:%[0-9]+]]:_(<32 x s8>), [[UV1:%[0-9]+]]:_(<32 x s8>) = G_UNMERGE_VALUES [[DEF]](<64 x s8>)
     ; AVX512F: [[UV2:%[0-9]+]]:_(<32 x s8>), [[UV3:%[0-9]+]]:_(<32 x s8>) = G_UNMERGE_VALUES [[DEF1]](<64 x s8>)
     ; AVX512F: [[ADD:%[0-9]+]]:_(<32 x s8>) = G_ADD [[UV]], [[UV2]]
     ; AVX512F: [[ADD1:%[0-9]+]]:_(<32 x s8>) = G_ADD [[UV1]], [[UV3]]
-    ; AVX512F: [[MV:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[ADD]](<32 x s8>), [[ADD1]](<32 x s8>)
-    ; AVX512F: $zmm0 = COPY [[MV]](<64 x s8>)
+    ; AVX512F: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[ADD]](<32 x s8>), [[ADD1]](<32 x s8>)
+    ; AVX512F: $zmm0 = COPY [[CONCAT_VECTORS]](<64 x s8>)
+    ; AVX512F: RET 0
+    ; AVX512BW-LABEL: name: test_add_v64i8
+    ; AVX512BW: [[DEF:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
+    ; AVX512BW: [[DEF1:%[0-9]+]]:_(<64 x s8>) = IMPLICIT_DEF
     ; AVX512BW: [[ADD:%[0-9]+]]:_(<64 x s8>) = G_ADD [[DEF]], [[DEF1]]
     ; AVX512BW: $zmm0 = COPY [[ADD]](<64 x s8>)
-    ; ALL: RET 0
+    ; AVX512BW: RET 0
     %0(<64 x s8>) = IMPLICIT_DEF
     %1(<64 x s8>) = IMPLICIT_DEF
     %2(<64 x s8>) = G_ADD %0, %1
@@ -81,27 +88,34 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
-
-    ; ALL-LABEL: name: test_add_v32i16
-    ; ALL: [[DEF:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
+    ; AVX1-LABEL: name: test_add_v32i16
+    ; AVX1: [[DEF:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
+    ; AVX1: [[DEF1:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
     ; AVX1: [[UV:%[0-9]+]]:_(<8 x s16>), [[UV1:%[0-9]+]]:_(<8 x s16>), [[UV2:%[0-9]+]]:_(<8 x s16>), [[UV3:%[0-9]+]]:_(<8 x s16>) = G_UNMERGE_VALUES [[DEF]](<32 x s16>)
     ; AVX1: [[UV4:%[0-9]+]]:_(<8 x s16>), [[UV5:%[0-9]+]]:_(<8 x s16>), [[UV6:%[0-9]+]]:_(<8 x s16>), [[UV7:%[0-9]+]]:_(<8 x s16>) = G_UNMERGE_VALUES [[DEF1]](<32 x s16>)
     ; AVX1: [[ADD:%[0-9]+]]:_(<8 x s16>) = G_ADD [[UV]], [[UV4]]
     ; AVX1: [[ADD1:%[0-9]+]]:_(<8 x s16>) = G_ADD [[UV1]], [[UV5]]
     ; AVX1: [[ADD2:%[0-9]+]]:_(<8 x s16>) = G_ADD [[UV2]], [[UV6]]
     ; AVX1: [[ADD3:%[0-9]+]]:_(<8 x s16>) = G_ADD [[UV3]], [[UV7]]
-    ; AVX1: [[MV:%[0-9]+]]:_(<32 x s16>) = G_CONCAT_VECTORS [[ADD]](<8 x s16>), [[ADD1]](<8 x s16>), [[ADD2]](<8 x s16>), [[ADD3]](<8 x s16>)
-    ; AVX1: $zmm0 = COPY [[MV]](<32 x s16>)
+    ; AVX1: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s16>) = G_CONCAT_VECTORS [[ADD]](<8 x s16>), [[ADD1]](<8 x s16>), [[ADD2]](<8 x s16>), [[ADD3]](<8 x s16>)
+    ; AVX1: $zmm0 = COPY [[CONCAT_VECTORS]](<32 x s16>)
+    ; AVX1: RET 0
+    ; AVX512F-LABEL: name: test_add_v32i16
+    ; AVX512F: [[DEF:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
+    ; AVX512F: [[DEF1:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
     ; AVX512F: [[UV:%[0-9]+]]:_(<16 x s16>), [[UV1:%[0-9]+]]:_(<16 x s16>) = G_UNMERGE_VALUES [[DEF]](<32 x s16>)
     ; AVX512F: [[UV2:%[0-9]+]]:_(<16 x s16>), [[UV3:%[0-9]+]]:_(<16 x s16>) = G_UNMERGE_VALUES [[DEF1]](<32 x s16>)
     ; AVX512F: [[ADD:%[0-9]+]]:_(<16 x s16>) = G_ADD [[UV]], [[UV2]]
     ; AVX512F: [[ADD1:%[0-9]+]]:_(<16 x s16>) = G_ADD [[UV1]], [[UV3]]
-    ; AVX512F: [[MV:%[0-9]+]]:_(<32 x s16>) = G_CONCAT_VECTORS [[ADD]](<16 x s16>), [[ADD1]](<16 x s16>)
-    ; AVX512F: $zmm0 = COPY [[MV]](<32 x s16>)
+    ; AVX512F: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s16>) = G_CONCAT_VECTORS [[ADD]](<16 x s16>), [[ADD1]](<16 x s16>)
+    ; AVX512F: $zmm0 = COPY [[CONCAT_VECTORS]](<32 x s16>)
+    ; AVX512F: RET 0
+    ; AVX512BW-LABEL: name: test_add_v32i16
+    ; AVX512BW: [[DEF:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
+    ; AVX512BW: [[DEF1:%[0-9]+]]:_(<32 x s16>) = IMPLICIT_DEF
     ; AVX512BW: [[ADD:%[0-9]+]]:_(<32 x s16>) = G_ADD [[DEF]], [[DEF1]]
     ; AVX512BW: $zmm0 = COPY [[ADD]](<32 x s16>)
-    ; ALL: RET 0
+    ; AVX512BW: RET 0
     %0(<32 x s16>) = IMPLICIT_DEF
     %1(<32 x s16>) = IMPLICIT_DEF
     %2(<32 x s16>) = G_ADD %0, %1
@@ -121,23 +135,30 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
-
-    ; ALL-LABEL: name: test_add_v16i32
-    ; ALL: [[DEF:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
+    ; AVX1-LABEL: name: test_add_v16i32
+    ; AVX1: [[DEF:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
+    ; AVX1: [[DEF1:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
     ; AVX1: [[UV:%[0-9]+]]:_(<4 x s32>), [[UV1:%[0-9]+]]:_(<4 x s32>), [[UV2:%[0-9]+]]:_(<4 x s32>), [[UV3:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[DEF]](<16 x s32>)
     ; AVX1: [[UV4:%[0-9]+]]:_(<4 x s32>), [[UV5:%[0-9]+]]:_(<4 x s32>), [[UV6:%[0-9]+]]:_(<4 x s32>), [[UV7:%[0-9]+]]:_(<4 x s32>) = G_UNMERGE_VALUES [[DEF1]](<16 x s32>)
     ; AVX1: [[ADD:%[0-9]+]]:_(<4 x s32>) = G_ADD [[UV]], [[UV4]]
     ; AVX1: [[ADD1:%[0-9]+]]:_(<4 x s32>) = G_ADD [[UV1]], [[UV5]]
     ; AVX1: [[ADD2:%[0-9]+]]:_(<4 x s32>) = G_ADD [[UV2]], [[UV6]]
     ; AVX1: [[ADD3:%[0-9]+]]:_(<4 x s32>) = G_ADD [[UV3]], [[UV7]]
-    ; AVX1: [[MV:%[0-9]+]]:_(<16 x s32>) = G_CONCAT_VECTORS [[ADD]](<4 x s32>), [[ADD1]](<4 x s32>), [[ADD2]](<4 x s32>), [[ADD3]](<4 x s32>)
-    ; AVX1: $zmm0 = COPY [[MV]](<16 x s32>)
+    ; AVX1: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s32>) = G_CONCAT_VECTORS [[ADD]](<4 x s32>), [[ADD1]](<4 x s32>), [[ADD2]](<4 x s32>), [[ADD3]](<4 x s32>)
+    ; AVX1: $zmm0 = COPY [[CONCAT_VECTORS]](<16 x s32>)
+    ; AVX1: RET 0
+    ; AVX512F-LABEL: name: test_add_v16i32
+    ; AVX512F: [[DEF:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
+    ; AVX512F: [[DEF1:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
     ; AVX512F: [[ADD:%[0-9]+]]:_(<16 x s32>) = G_ADD [[DEF]], [[DEF1]]
     ; AVX512F: $zmm0 = COPY [[ADD]](<16 x s32>)
+    ; AVX512F: RET 0
+    ; AVX512BW-LABEL: name: test_add_v16i32
+    ; AVX512BW: [[DEF:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
+    ; AVX512BW: [[DEF1:%[0-9]+]]:_(<16 x s32>) = IMPLICIT_DEF
     ; AVX512BW: [[ADD:%[0-9]+]]:_(<16 x s32>) = G_ADD [[DEF]], [[DEF1]]
     ; AVX512BW: $zmm0 = COPY [[ADD]](<16 x s32>)
-    ; ALL: RET 0
+    ; AVX512BW: RET 0
     %0(<16 x s32>) = IMPLICIT_DEF
     %1(<16 x s32>) = IMPLICIT_DEF
     %2(<16 x s32>) = G_ADD %0, %1
@@ -157,23 +178,30 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
-
-    ; ALL-LABEL: name: test_add_v8i64
-    ; ALL: [[DEF:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
-    ; ALL: [[DEF1:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
+    ; AVX1-LABEL: name: test_add_v8i64
+    ; AVX1: [[DEF:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
+    ; AVX1: [[DEF1:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
     ; AVX1: [[UV:%[0-9]+]]:_(<2 x s64>), [[UV1:%[0-9]+]]:_(<2 x s64>), [[UV2:%[0-9]+]]:_(<2 x s64>), [[UV3:%[0-9]+]]:_(<2 x s64>) = G_UNMERGE_VALUES [[DEF]](<8 x s64>)
     ; AVX1: [[UV4:%[0-9]+]]:_(<2 x s64>), [[UV5:%[0-9]+]]:_(<2 x s64>), [[UV6:%[0-9]+]]:_(<2 x s64>), [[UV7:%[0-9]+]]:_(<2 x s64>) = G_UNMERGE_VALUES [[DEF1]](<8 x s64>)
     ; AVX1: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[UV]], [[UV4]]
     ; AVX1: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[UV1]], [[UV5]]
     ; AVX1: [[ADD2:%[0-9]+]]:_(<2 x s64>) = G_ADD [[UV2]], [[UV6]]
     ; AVX1: [[ADD3:%[0-9]+]]:_(<2 x s64>) = G_ADD [[UV3]], [[UV7]]
-    ; AVX1: [[MV:%[0-9]+]]:_(<8 x s64>) = G_CONCAT_VECTORS [[ADD]](<2 x s64>), [[ADD1]](<2 x s64>), [[ADD2]](<2 x s64>), [[ADD3]](<2 x s64>)
-    ; AVX1: $zmm0 = COPY [[MV]](<8 x s64>)
+    ; AVX1: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s64>) = G_CONCAT_VECTORS [[ADD]](<2 x s64>), [[ADD1]](<2 x s64>), [[ADD2]](<2 x s64>), [[ADD3]](<2 x s64>)
+    ; AVX1: $zmm0 = COPY [[CONCAT_VECTORS]](<8 x s64>)
+    ; AVX1: RET 0
+    ; AVX512F-LABEL: name: test_add_v8i64
+    ; AVX512F: [[DEF:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
+    ; AVX512F: [[DEF1:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
     ; AVX512F: [[ADD:%[0-9]+]]:_(<8 x s64>) = G_ADD [[DEF]], [[DEF1]]
     ; AVX512F: $zmm0 = COPY [[ADD]](<8 x s64>)
+    ; AVX512F: RET 0
+    ; AVX512BW-LABEL: name: test_add_v8i64
+    ; AVX512BW: [[DEF:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
+    ; AVX512BW: [[DEF1:%[0-9]+]]:_(<8 x s64>) = IMPLICIT_DEF
     ; AVX512BW: [[ADD:%[0-9]+]]:_(<8 x s64>) = G_ADD [[DEF]], [[DEF1]]
     ; AVX512BW: $zmm0 = COPY [[ADD]](<8 x s64>)
-    ; ALL: RET 0
+    ; AVX512BW: RET 0
     %0(<8 x s64>) = IMPLICIT_DEF
     %1(<8 x s64>) = IMPLICIT_DEF
     %2(<8 x s64>) = G_ADD %0, %1
@@ -201,12 +229,11 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1, $ymm2, $ymm3
-
-    ; ALL-LABEL: name: test_add_v64i8_2
-    ; ALL: [[COPY:%[0-9]+]]:_(<32 x s8>) = COPY $ymm0
-    ; ALL: [[COPY1:%[0-9]+]]:_(<32 x s8>) = COPY $ymm1
-    ; ALL: [[COPY2:%[0-9]+]]:_(<32 x s8>) = COPY $ymm2
-    ; ALL: [[COPY3:%[0-9]+]]:_(<32 x s8>) = COPY $ymm3
+    ; AVX1-LABEL: name: test_add_v64i8_2
+    ; AVX1: [[COPY:%[0-9]+]]:_(<32 x s8>) = COPY $ymm0
+    ; AVX1: [[COPY1:%[0-9]+]]:_(<32 x s8>) = COPY $ymm1
+    ; AVX1: [[COPY2:%[0-9]+]]:_(<32 x s8>) = COPY $ymm2
+    ; AVX1: [[COPY3:%[0-9]+]]:_(<32 x s8>) = COPY $ymm3
     ; AVX1: [[UV:%[0-9]+]]:_(<16 x s8>), [[UV1:%[0-9]+]]:_(<16 x s8>) = G_UNMERGE_VALUES [[COPY]](<32 x s8>)
     ; AVX1: [[UV2:%[0-9]+]]:_(<16 x s8>), [[UV3:%[0-9]+]]:_(<16 x s8>) = G_UNMERGE_VALUES [[COPY1]](<32 x s8>)
     ; AVX1: [[UV4:%[0-9]+]]:_(<16 x s8>), [[UV5:%[0-9]+]]:_(<16 x s8>) = G_UNMERGE_VALUES [[COPY2]](<32 x s8>)
@@ -215,21 +242,33 @@ body:             |
     ; AVX1: [[ADD1:%[0-9]+]]:_(<16 x s8>) = G_ADD [[UV1]], [[UV5]]
     ; AVX1: [[ADD2:%[0-9]+]]:_(<16 x s8>) = G_ADD [[UV2]], [[UV6]]
     ; AVX1: [[ADD3:%[0-9]+]]:_(<16 x s8>) = G_ADD [[UV3]], [[UV7]]
-    ; AVX1: [[MV:%[0-9]+]]:_(<32 x s8>) = G_CONCAT_VECTORS [[ADD]](<16 x s8>), [[ADD1]](<16 x s8>)
-    ; AVX1: [[MV1:%[0-9]+]]:_(<32 x s8>) = G_CONCAT_VECTORS [[ADD2]](<16 x s8>), [[ADD3]](<16 x s8>)
-    ; AVX1: $ymm0 = COPY [[MV]](<32 x s8>)
-    ; AVX1: $ymm1 = COPY [[MV1]](<32 x s8>)
+    ; AVX1: [[CONCAT_VECTORS:%[0-9]+]]:_(<32 x s8>) = G_CONCAT_VECTORS [[ADD]](<16 x s8>), [[ADD1]](<16 x s8>)
+    ; AVX1: [[CONCAT_VECTORS1:%[0-9]+]]:_(<32 x s8>) = G_CONCAT_VECTORS [[ADD2]](<16 x s8>), [[ADD3]](<16 x s8>)
+    ; AVX1: $ymm0 = COPY [[CONCAT_VECTORS]](<32 x s8>)
+    ; AVX1: $ymm1 = COPY [[CONCAT_VECTORS1]](<32 x s8>)
+    ; AVX1: RET 0, implicit $ymm0, implicit $ymm1
+    ; AVX512F-LABEL: name: test_add_v64i8_2
+    ; AVX512F: [[COPY:%[0-9]+]]:_(<32 x s8>) = COPY $ymm0
+    ; AVX512F: [[COPY1:%[0-9]+]]:_(<32 x s8>) = COPY $ymm1
+    ; AVX512F: [[COPY2:%[0-9]+]]:_(<32 x s8>) = COPY $ymm2
+    ; AVX512F: [[COPY3:%[0-9]+]]:_(<32 x s8>) = COPY $ymm3
     ; AVX512F: [[ADD:%[0-9]+]]:_(<32 x s8>) = G_ADD [[COPY]], [[COPY2]]
     ; AVX512F: [[ADD1:%[0-9]+]]:_(<32 x s8>) = G_ADD [[COPY1]], [[COPY3]]
     ; AVX512F: $ymm0 = COPY [[ADD]](<32 x s8>)
     ; AVX512F: $ymm1 = COPY [[ADD1]](<32 x s8>)
-    ; AVX512BW: [[MV:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[COPY]](<32 x s8>), [[COPY1]](<32 x s8>)
-    ; AVX512BW: [[MV1:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[COPY2]](<32 x s8>), [[COPY3]](<32 x s8>)
-    ; AVX512BW: [[ADD:%[0-9]+]]:_(<64 x s8>) = G_ADD [[MV]], [[MV1]]
+    ; AVX512F: RET 0, implicit $ymm0, implicit $ymm1
+    ; AVX512BW-LABEL: name: test_add_v64i8_2
+    ; AVX512BW: [[COPY:%[0-9]+]]:_(<32 x s8>) = COPY $ymm0
+    ; AVX512BW: [[COPY1:%[0-9]+]]:_(<32 x s8>) = COPY $ymm1
+    ; AVX512BW: [[COPY2:%[0-9]+]]:_(<32 x s8>) = COPY $ymm2
+    ; AVX512BW: [[COPY3:%[0-9]+]]:_(<32 x s8>) = COPY $ymm3
+    ; AVX512BW: [[CONCAT_VECTORS:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[COPY]](<32 x s8>), [[COPY1]](<32 x s8>)
+    ; AVX512BW: [[CONCAT_VECTORS1:%[0-9]+]]:_(<64 x s8>) = G_CONCAT_VECTORS [[COPY2]](<32 x s8>), [[COPY3]](<32 x s8>)
+    ; AVX512BW: [[ADD:%[0-9]+]]:_(<64 x s8>) = G_ADD [[CONCAT_VECTORS]], [[CONCAT_VECTORS1]]
     ; AVX512BW: [[UV:%[0-9]+]]:_(<32 x s8>), [[UV1:%[0-9]+]]:_(<32 x s8>) = G_UNMERGE_VALUES [[ADD]](<64 x s8>)
     ; AVX512BW: $ymm0 = COPY [[UV]](<32 x s8>)
     ; AVX512BW: $ymm1 = COPY [[UV1]](<32 x s8>)
-    ; ALL: RET 0, implicit $ymm0, implicit $ymm1
+    ; AVX512BW: RET 0, implicit $ymm0, implicit $ymm1
     %2(<32 x s8>) = COPY $ymm0
     %3(<32 x s8>) = COPY $ymm1
     %4(<32 x s8>) = COPY $ymm2

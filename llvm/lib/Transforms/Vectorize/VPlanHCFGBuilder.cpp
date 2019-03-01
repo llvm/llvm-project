@@ -63,7 +63,9 @@ private:
   void setVPBBPredsFromBB(VPBasicBlock *VPBB, BasicBlock *BB);
   void fixPhiNodes();
   VPBasicBlock *getOrCreateVPBB(BasicBlock *BB);
+#ifndef NDEBUG
   bool isExternalDef(Value *Val);
+#endif
   VPValue *getOrCreateVPOperand(Value *IRVal);
   void createVPInstructionsForVPBB(VPBasicBlock *VPBB, BasicBlock *BB);
 
@@ -118,6 +120,7 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   return VPBB;
 }
 
+#ifndef NDEBUG
 // Return true if \p Val is considered an external definition. An external
 // definition is either:
 // 1. A Value that is not an Instruction. This will be refined in the future.
@@ -153,6 +156,7 @@ bool PlainCFGBuilder::isExternalDef(Value *Val) {
   // Check whether Instruction definition is in loop body.
   return !TheLoop->contains(Inst);
 }
+#endif
 
 // Create a new VPValue or retrieve an existing one for the Instruction's
 // operand \p IRVal. This function must only be used to create/retrieve VPValues

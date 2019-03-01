@@ -729,18 +729,12 @@ void PrintCurrentStack(ThreadState *thr, uptr pc) {
 ALWAYS_INLINE
 void PrintCurrentStackSlow(uptr pc) {
 #if !SANITIZER_GO
-  uptr bp = 0;
-  uptr top = 0;
-  uptr bottom = 0;
+  uptr bp = GET_CURRENT_FRAME();
   BufferedStackTrace *ptrace =
       new(internal_alloc(MBlockStackTrace, sizeof(BufferedStackTrace)))
           BufferedStackTrace();
-  if (__sanitizer::StackTrace::WillUseFastUnwind(false)) {
-    bp = GET_CURRENT_FRAME();
-    __sanitizer::GetThreadStackTopAndBottom(false, &top, &bottom);
-    ptrace->Unwind(kStackTraceMax, pc, bp, nullptr, top, bottom, true);
-  } else
-    ptrace->Unwind(kStackTraceMax, pc, 0, nullptr, 0, 0, false);
+  ptrace->Unwind(pc, bp, nullptr, false);
+
   for (uptr i = 0; i < ptrace->size / 2; i++) {
     uptr tmp = ptrace->trace_buffer[i];
     ptrace->trace_buffer[i] = ptrace->trace_buffer[ptrace->size - i - 1];

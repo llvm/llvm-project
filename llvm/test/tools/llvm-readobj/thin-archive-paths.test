@@ -1,0 +1,33 @@
+# RUN: rm -rf %t
+# RUN: mkdir -p %t/a/b
+# RUN: cd %t
+# RUN: cp %p/Inputs/trivial.obj.elf-x86-64 a/b/1.o
+# The archive is deliberately in a different directory to the cwd, to show that
+# the member paths printed are exactly what's in the archive and not relative
+# to the cwd.
+# RUN: llvm-ar rcT a/relative.a a/b/1.o
+
+# Show that relative paths in the file header printing look sensible.
+# RUN: llvm-readobj --file-headers a/relative.a | FileCheck %s --check-prefix=REL
+# REL: File: b/1.o
+
+# Show that relative paths in an error message for both archive and member look
+# sensible.
+# RUN: rm a/b/1.o
+# RUN: not llvm-readobj --file-headers a/relative.a 2>&1 | FileCheck %s --check-prefix=ERR1
+# RUN: not llvm-readelf --file-headers a/relative.a 2>&1 | FileCheck %s --check-prefix=ERR1
+# ERR1: Error reading file: a/relative.a: 'b/1.o': {{[Nn]}}o such file or directory
+
+# RUN: mkdir -p %t/c
+# RUN: cp %p/Inputs/trivial.obj.elf-x86-64 a/b/1.o
+# RUN: llvm-ar rcT c/absolute.a %t/a/b/1.o
+
+# Show that absolute paths in the file header printing are correct.
+# RUN: llvm-readobj --file-headers c/absolute.a | FileCheck %s --check-prefix=ABS -DDIR=%t
+# ABS: File: [[DIR]]/a/b/1.o
+
+# Show that absolute paths in an error message for both archive and member are correct.
+# RUN: rm a/b/1.o
+# RUN: not llvm-readobj --file-headers %t/c/absolute.a 2>&1 | FileCheck %s --check-prefix=ERR2 -DDIR=%t
+# RUN: not llvm-readelf --file-headers %t/c/absolute.a 2>&1 | FileCheck %s --check-prefix=ERR2 -DDIR=%t
+# ERR2: Error reading file: [[DIR]]/c/absolute.a: '[[DIR]]/a/b/1.o': {{[Nn]}}o such file or directory

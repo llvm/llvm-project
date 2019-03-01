@@ -403,8 +403,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       // FIXME: We should find a more generic solution to this problem.
       !(State.Column <= NewLineColumn &&
         Style.Language == FormatStyle::LK_JavaScript) &&
-      !(Previous.closesScopeAfterBlock() &&
-        State.Column <= NewLineColumn))
+      !(Previous.closesScopeAfterBlock() && State.Column <= NewLineColumn))
     return true;
 
   // If the template declaration spans multiple lines, force wrap before the
@@ -835,8 +834,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       // about removing empty lines on closing blocks. Special case them here.
       MaxEmptyLinesToKeep = 1;
     }
-    unsigned Newlines = std::max(
-        1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
+    unsigned Newlines =
+        std::max(1u, std::min(Current.NewlinesBefore, MaxEmptyLinesToKeep));
     bool ContinuePPDirective =
         State.Line->InPPDirective && State.Line->Type != LT_ImportStatement;
     Whitespaces.replaceWhitespace(Current, Newlines, State.Column, State.Column,
@@ -1168,8 +1167,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
   State.Column += Current.ColumnWidth;
   State.NextToken = State.NextToken->Next;
 
-  unsigned Penalty =
-      handleEndOfLine(Current, State, DryRun, AllowBreak);
+  unsigned Penalty = handleEndOfLine(Current, State, DryRun, AllowBreak);
 
   if (Current.Role)
     Current.Role->formatFromToken(State, this, DryRun);
@@ -1530,9 +1528,8 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   //     that raw string prefix starts, and
   //   - if the raw string prefix does not start on a newline, it is the current
   //     indent.
-  unsigned LastStartColumn = Current.NewlinesBefore
-                                 ? FirstStartColumn - NewPrefixSize
-                                 : CurrentIndent;
+  unsigned LastStartColumn =
+      Current.NewlinesBefore ? FirstStartColumn - NewPrefixSize : CurrentIndent;
 
   std::pair<tooling::Replacements, unsigned> Fixes = internal::reformat(
       RawStringStyle, RawText, {tooling::Range(0, RawText.size())},
@@ -1589,8 +1586,9 @@ unsigned ContinuationIndenter::reformatRawStringLiteral(
   // have to manually add the penalty for the prefix R"delim( over the column
   // limit.
   unsigned PrefixExcessCharacters =
-      StartColumn + NewPrefixSize > Style.ColumnLimit ?
-      StartColumn + NewPrefixSize - Style.ColumnLimit : 0;
+      StartColumn + NewPrefixSize > Style.ColumnLimit
+          ? StartColumn + NewPrefixSize - Style.ColumnLimit
+          : 0;
   bool IsMultiline =
       ContentStartsOnNewline || (NewCode->find('\n') != std::string::npos);
   if (IsMultiline) {
@@ -1708,16 +1706,16 @@ ContinuationIndenter::getRawStringStyle(const FormatToken &Current,
   return RawStringStyle;
 }
 
-std::unique_ptr<BreakableToken> ContinuationIndenter::createBreakableToken(
-    const FormatToken &Current, LineState &State, bool AllowBreak) {
+std::unique_ptr<BreakableToken>
+ContinuationIndenter::createBreakableToken(const FormatToken &Current,
+                                           LineState &State, bool AllowBreak) {
   unsigned StartColumn = State.Column - Current.ColumnWidth;
   if (Current.isStringLiteral()) {
     // FIXME: String literal breaking is currently disabled for Java and JS, as
     // it requires strings to be merged using "+" which we don't support.
     if (Style.Language == FormatStyle::LK_Java ||
         Style.Language == FormatStyle::LK_JavaScript ||
-        !Style.BreakStringLiterals ||
-        !AllowBreak)
+        !Style.BreakStringLiterals || !AllowBreak)
       return nullptr;
 
     // Don't break string literals inside preprocessor directives (except for

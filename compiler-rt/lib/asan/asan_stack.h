@@ -42,19 +42,19 @@ u32 GetMallocContextSize();
       if (max_size > 1) stack.trace_buffer[1] = GET_CALLER_PC(); \
     }                                                            \
   } else {                                                       \
-    GetStackTrace(&stack, max_size, StackTrace::GetCurrentPc(),  \
-                  GET_CURRENT_FRAME(), 0, fast);                 \
+    stack.Unwind(StackTrace::GetCurrentPc(),                     \
+                 GET_CURRENT_FRAME(), nullptr, fast, max_size);  \
   }
 
 #define GET_STACK_TRACE_FATAL(pc, bp)              \
   BufferedStackTrace stack;                        \
-  GetStackTrace(&stack, kStackTraceMax, pc, bp, 0, \
-                common_flags()->fast_unwind_on_fatal)
+  stack.Unwind(pc, bp, nullptr,                    \
+               common_flags()->fast_unwind_on_fatal)
 
 #define GET_STACK_TRACE_SIGNAL(sig)                                        \
   BufferedStackTrace stack;                                                \
-  GetStackTrace(&stack, kStackTraceMax, (sig).pc, (sig).bp, (sig).context, \
-                common_flags()->fast_unwind_on_fatal)
+  stack.Unwind((sig).pc, (sig).bp, (sig).context,                          \
+               common_flags()->fast_unwind_on_fatal)
 
 #define GET_STACK_TRACE_FATAL_HERE                                \
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_fatal)

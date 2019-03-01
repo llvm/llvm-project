@@ -17,8 +17,8 @@
 
 #define GET_STACK_TRACE(max_size, fast)                       \
   __sanitizer::BufferedStackTrace stack;                      \
-  GetStackTrace(&stack, max_size, StackTrace::GetCurrentPc(), \
-                GET_CURRENT_FRAME(), nullptr, fast);
+  stack.Unwind(StackTrace::GetCurrentPc(),                    \
+               GET_CURRENT_FRAME(), nullptr, fast, max_size);
 
 #define GET_STACK_TRACE_FATAL \
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_fatal)

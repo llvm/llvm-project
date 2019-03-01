@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "NamespaceEndCommentsFixer.h"
 #include "UnwrappedLineFormatter.h"
+#include "NamespaceEndCommentsFixer.h"
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
 #include <queue>
@@ -690,10 +690,8 @@ public:
   /// Formats an \c AnnotatedLine and returns the penalty.
   ///
   /// If \p DryRun is \c false, directly applies the changes.
-  virtual unsigned formatLine(const AnnotatedLine &Line,
-                              unsigned FirstIndent,
-                              unsigned FirstStartColumn,
-                              bool DryRun) = 0;
+  virtual unsigned formatLine(const AnnotatedLine &Line, unsigned FirstIndent,
+                              unsigned FirstStartColumn, bool DryRun) = 0;
 
 protected:
   /// If the \p State's next token is an r_brace closing a nested block,
@@ -1008,13 +1006,10 @@ private:
 
 } // anonymous namespace
 
-unsigned
-UnwrappedLineFormatter::format(const SmallVectorImpl<AnnotatedLine *> &Lines,
-                               bool DryRun, int AdditionalIndent,
-                               bool FixBadIndentation,
-                               unsigned FirstStartColumn,
-                               unsigned NextStartColumn,
-                               unsigned LastStartColumn) {
+unsigned UnwrappedLineFormatter::format(
+    const SmallVectorImpl<AnnotatedLine *> &Lines, bool DryRun,
+    int AdditionalIndent, bool FixBadIndentation, unsigned FirstStartColumn,
+    unsigned NextStartColumn, unsigned LastStartColumn) {
   LineJoiner Joiner(Style, Keywords, Lines);
 
   // Try to look up already computed penalty in DryRun-mode.

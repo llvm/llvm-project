@@ -1,0 +1,20 @@
+# RUN: yaml2obj %s -o %t
+# RUN: obj2yaml %t | FileCheck %s
+
+## Check obj2yaml is able to dump sh_info field of a section.
+
+# CHECK:      - Name:            .test
+# CHECK-NEXT:   Type:            SHT_PROGBITS
+# CHECK-NEXT:   Content:         ''
+# CHECK-NEXT:   Info:            0x000000000000002A
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:
+  - Name:            .test
+    Type:            SHT_PROGBITS
+    Info:            42

@@ -3,6 +3,7 @@
 --- |
 
   define void @mul_i32(i32 %x, i32 %y) {entry: ret void}
+  define void @umul_with_overflow(i32 %lhs, i32 %rhs, i32* %pmul, i1* %pcarry_flag) { ret void }
 
 ...
 ---
@@ -26,5 +27,46 @@ body:             |
     %2:_(s32) = G_MUL %0, %1
     $v0 = COPY %2(s32)
     RetRA implicit $v0
+
+...
+---
+name:            umul_with_overflow
+alignment:       2
+legalized:       true
+tracksRegLiveness: true
+body:             |
+  bb.1 (%ir-block.0):
+    liveins: $a0, $a1, $a2, $a3
+
+    ; MIPS32-LABEL: name: umul_with_overflow
+    ; MIPS32: liveins: $a0, $a1, $a2, $a3
+    ; MIPS32: [[COPY:%[0-9]+]]:gprb(s32) = COPY $a0
+    ; MIPS32: [[COPY1:%[0-9]+]]:gprb(s32) = COPY $a1
+    ; MIPS32: [[COPY2:%[0-9]+]]:gprb(p0) = COPY $a2
+    ; MIPS32: [[COPY3:%[0-9]+]]:gprb(p0) = COPY $a3
+    ; MIPS32: [[MUL:%[0-9]+]]:gprb(s32) = G_MUL [[COPY]], [[COPY1]]
+    ; MIPS32: [[UMULH:%[0-9]+]]:gprb(s32) = G_UMULH [[COPY]], [[COPY1]]
+    ; MIPS32: [[C:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 0
+    ; MIPS32: [[ICMP:%[0-9]+]]:gprb(s32) = G_ICMP intpred(ne), [[UMULH]](s32), [[C]]
+    ; MIPS32: [[C1:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 1
+    ; MIPS32: [[COPY4:%[0-9]+]]:gprb(s32) = COPY [[ICMP]](s32)
+    ; MIPS32: [[AND:%[0-9]+]]:gprb(s32) = G_AND [[COPY4]], [[C1]]
+    ; MIPS32: G_STORE [[AND]](s32), [[COPY3]](p0) :: (store 1 into %ir.pcarry_flag)
+    ; MIPS32: G_STORE [[MUL]](s32), [[COPY2]](p0) :: (store 4 into %ir.pmul)
+    ; MIPS32: RetRA
+    %0:_(s32) = COPY $a0
+    %1:_(s32) = COPY $a1
+    %2:_(p0) = COPY $a2
+    %3:_(p0) = COPY $a3
+    %4:_(s32) = G_MUL %0, %1
+    %7:_(s32) = G_UMULH %0, %1
+    %8:_(s32) = G_CONSTANT i32 0
+    %9:_(s32) = G_ICMP intpred(ne), %7(s32), %8
+    %10:_(s32) = G_CONSTANT i32 1
+    %11:_(s32) = COPY %9(s32)
+    %6:_(s32) = G_AND %11, %10
+    G_STORE %6(s32), %3(p0) :: (store 1 into %ir.pcarry_flag)
+    G_STORE %4(s32), %2(p0) :: (store 4 into %ir.pmul)
+    RetRA
 
 ...
