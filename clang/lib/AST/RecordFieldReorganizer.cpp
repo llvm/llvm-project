@@ -234,7 +234,7 @@ SmallVector<Decl *, 64> Randstruct::perfrandomize(const ASTContext &ctx,
   // Produce the new ordering of the elements from our buckets.
   SmallVector<Decl *, 64> finalOrder;
   for (auto &bucket : buckets) {
-    auto randomized = bucket->randomize(&rng);
+    auto randomized = bucket->randomize(rng);
     finalOrder.insert(finalOrder.end(), randomized.begin(), randomized.end());
   }
 
