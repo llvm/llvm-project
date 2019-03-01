@@ -59,6 +59,13 @@ static cl::opt<bool>
 static cl::opt<bool>
     ClPrintInlining("inlining", cl::init(true),
                     cl::desc("Print all inlined frames for a given address"));
+static cl::alias
+    ClPrintInliningAliasI("i", cl::desc("Alias for -inlining"),
+                          cl::NotHidden, cl::aliasopt(ClPrintInlining),
+                          cl::Grouping);
+static cl::alias
+    ClPrintInliningAliasInlines("inlines", cl::desc("Alias for -inlining"),
+                                cl::NotHidden, cl::aliasopt(ClPrintInlining));
 
 // -basenames, -s
 static cl::opt<bool> ClBasenames("basenames", cl::init(false),
