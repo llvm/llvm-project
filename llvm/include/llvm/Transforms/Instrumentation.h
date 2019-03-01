@@ -150,6 +150,8 @@ struct InstrProfOptions {
 ModulePass *createInstrProfilingLegacyPass(
     const InstrProfOptions &Options = InstrProfOptions(), bool IsCS = false);
 
+ModulePass *createInstrOrderFilePass();
+
 FunctionPass *createHWAddressSanitizerPass(bool CompileKernel = false,
                                            bool Recover = false);
 

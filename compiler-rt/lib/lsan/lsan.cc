@@ -89,7 +89,7 @@ static void InitializeFlags() {
 
 static void OnStackUnwind(const SignalContext &sig, const void *,
                           BufferedStackTrace *stack) {
-  GetStackTrace(stack, kStackTraceMax, sig.pc, sig.bp, sig.context,
+  stack->Unwind(sig.pc, sig.bp, sig.context,
                 common_flags()->fast_unwind_on_fatal);
 }
 

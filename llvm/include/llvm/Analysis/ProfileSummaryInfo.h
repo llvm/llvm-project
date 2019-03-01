@@ -73,6 +73,12 @@ public:
            Summary->getKind() == ProfileSummary::PSK_Instr;
   }
 
+  /// Returns true if module \c M has context sensitive instrumentation profile.
+  bool hasCSInstrumentationProfile() {
+    return hasProfileSummary() &&
+           Summary->getKind() == ProfileSummary::PSK_CSInstr;
+  }
+
   /// Handle the invalidation of this information.
   ///
   /// When used as a result of \c ProfileSummaryAnalysis this method will be

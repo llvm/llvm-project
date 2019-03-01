@@ -158,7 +158,7 @@
     #
 
     # Regular entry points
-        __kmp_wait_yield_4
+        __kmp_wait_4
         __kmp_fork_call
         __kmp_invoke_microtask
     %ifdef KMP_USE_MONITOR

@@ -112,16 +112,15 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 
 #define GET_MALLOC_STACK_TRACE                                            \
   BufferedStackTrace stack;                                               \
-  if (hwasan_inited)                                                       \
-  GetStackTrace(&stack, common_flags()->malloc_context_size,              \
-                StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
-                common_flags()->fast_unwind_on_malloc)
+  if (hwasan_inited)                                                      \
+    stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),         \
+                 nullptr, common_flags()->fast_unwind_on_malloc,          \
+                 common_flags()->malloc_context_size)
 
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)              \
   BufferedStackTrace stack;                              \
-  if (hwasan_inited)                                       \
-  GetStackTrace(&stack, kStackTraceMax, pc, bp, nullptr, \
-                common_flags()->fast_unwind_on_fatal)
+  if (hwasan_inited)                                     \
+    stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal)
 
 #define GET_FATAL_STACK_TRACE_HERE \
   GET_FATAL_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())

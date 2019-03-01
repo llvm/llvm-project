@@ -73,9 +73,11 @@ class SubtargetEmitter {
   CodeGenSchedModels &SchedModels;
   std::string Target;
 
-  void Enumeration(raw_ostream &OS);
-  unsigned FeatureKeyValues(raw_ostream &OS);
-  unsigned CPUKeyValues(raw_ostream &OS);
+  void Enumeration(raw_ostream &OS, DenseMap<Record *, unsigned> &FeatureMap);
+  unsigned FeatureKeyValues(raw_ostream &OS,
+                            const DenseMap<Record *, unsigned> &FeatureMap);
+  unsigned CPUKeyValues(raw_ostream &OS,
+                        const DenseMap<Record *, unsigned> &FeatureMap);
   void FormItineraryStageString(const std::string &Names,
                                 Record *ItinData, std::string &ItinString,
                                 unsigned &NStages);
@@ -137,7 +139,8 @@ public:
 //
 // Enumeration - Emit the specified class as an enumeration.
 //
-void SubtargetEmitter::Enumeration(raw_ostream &OS) {
+void SubtargetEmitter::Enumeration(raw_ostream &OS,
+                                   DenseMap<Record *, unsigned> &FeatureMap) {
   // Get all records of class and sort
   std::vector<Record*> DefList =
     Records.getAllDerivedDefinitions("SubtargetFeature");
@@ -161,6 +164,9 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
 
     // Get and emit name
     OS << "  " << Def->getName() << " = " << i << ",\n";
+
+    // Save the index for this feature.
+    FeatureMap[Def] = i;
   }
 
   // Close enumeration and namespace
@@ -168,11 +174,29 @@ void SubtargetEmitter::Enumeration(raw_ostream &OS) {
   OS << "} // end namespace " << Target << "\n";
 }
 
+static void printFeatureMask(raw_ostream &OS, RecVec &FeatureList,
+                             const DenseMap<Record *, unsigned> &FeatureMap) {
+  std::array<uint64_t, MAX_SUBTARGET_WORDS> Mask = {};
+  for (unsigned j = 0, M = FeatureList.size(); j < M; ++j) {
+    unsigned Bit = FeatureMap.lookup(FeatureList[j]);
+    Mask[Bit / 64] |= 1ULL << (Bit % 64);
+  }
+
+  OS << "{ { ";
+  for (unsigned i = 0; i != Mask.size(); ++i) {
+    OS << "0x";
+    OS.write_hex(Mask[i]);
+    OS << "ULL, ";
+  }
+  OS << "} }";
+}
+
 //
 // FeatureKeyValues - Emit data of all the subtarget features.  Used by the
 // command line.
 //
-unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
+unsigned SubtargetEmitter::FeatureKeyValues(
+    raw_ostream &OS, const DenseMap<Record *, unsigned> &FeatureMap) {
   // Gather and sort all the features
   std::vector<Record*> FeatureList =
                            Records.getAllDerivedDefinitions("SubtargetFeature");
@@ -207,12 +231,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
 
     RecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
-    OS << "{";
-    for (unsigned j = 0, M = ImpliesList.size(); j < M;) {
-      OS << " " << Target << "::" << ImpliesList[j]->getName();
-      if (++j < M) OS << ",";
-    }
-    OS << " } },\n";
+    printFeatureMask(OS, ImpliesList, FeatureMap);
+
+    OS << " },\n";
     ++NumFeatures;
   }
 
@@ -226,7 +247,9 @@ unsigned SubtargetEmitter::FeatureKeyValues(raw_ostream &OS) {
 // CPUKeyValues - Emit data of all the subtarget processors.  Used by command
 // line.
 //
-unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
+unsigned
+SubtargetEmitter::CPUKeyValues(raw_ostream &OS,
+                               const DenseMap<Record *, unsigned> &FeatureMap) {
   // Gather and sort processor information
   std::vector<Record*> ProcessorList =
                           Records.getAllDerivedDefinitions("Processor");
@@ -248,12 +271,10 @@ unsigned SubtargetEmitter::CPUKeyValues(raw_ostream &OS) {
        << "\"" << Name << "\", "
        << "\"Select the " << Name << " processor\", 0, ";
 
-    OS << "{";
-    for (unsigned j = 0, M = FeatureList.size(); j < M;) {
-      OS << " " << Target << "::" << FeatureList[j]->getName();
-      if (++j < M) OS << ",";
-    }
-    OS << " } },\n";
+    printFeatureMask(OS, FeatureList, FeatureMap);
+
+    // The {{}} is for the "implies" section of this data structure.
+    OS << " },\n";
   }
 
   // End processor table
@@ -1789,8 +1810,10 @@ void SubtargetEmitter::run(raw_ostream &OS) {
   OS << "\n#ifdef GET_SUBTARGETINFO_ENUM\n";
   OS << "#undef GET_SUBTARGETINFO_ENUM\n\n";
 
+  DenseMap<Record *, unsigned> FeatureMap;
+
   OS << "namespace llvm {\n";
-  Enumeration(OS);
+  Enumeration(OS, FeatureMap);
   OS << "} // end namespace llvm\n\n";
   OS << "#endif // GET_SUBTARGETINFO_ENUM\n\n";
 
@@ -1801,9 +1824,9 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 #if 0
   OS << "namespace {\n";
 #endif
-  unsigned NumFeatures = FeatureKeyValues(OS);
+  unsigned NumFeatures = FeatureKeyValues(OS, FeatureMap);
   OS << "\n";
-  unsigned NumProcs = CPUKeyValues(OS);
+  unsigned NumProcs = CPUKeyValues(OS, FeatureMap);
   OS << "\n";
   EmitSchedModel(OS);
   OS << "\n";

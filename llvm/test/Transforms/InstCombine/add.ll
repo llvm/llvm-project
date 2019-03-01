@@ -396,9 +396,8 @@ define i8 @add_nuw_signbit(i8 %x) {
 
 define i32 @add_nsw_sext_add(i8 %x) {
 ; CHECK-LABEL: @add_nsw_sext_add(
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[ADD]] to i32
-; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[EXT]], 356
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[X:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[TMP1]], 398
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %add = add nsw i8 %x, 42
@@ -406,6 +405,8 @@ define i32 @add_nsw_sext_add(i8 %x) {
   %r = add i32 %ext, 356
   ret i32 %r
 }
+
+; Negative test - extra use of the sext means increase of instructions.
 
 define i32 @add_nsw_sext_add_extra_use_1(i8 %x, i32* %p) {
 ; CHECK-LABEL: @add_nsw_sext_add_extra_use_1(
@@ -426,8 +427,8 @@ define <2 x i32> @add_nsw_sext_add_vec_extra_use_2(<2 x i8> %x, <2 x i8>* %p) {
 ; CHECK-LABEL: @add_nsw_sext_add_vec_extra_use_2(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> [[X:%.*]], <i8 42, i8 -5>
 ; CHECK-NEXT:    store <2 x i8> [[ADD]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[EXT:%.*]] = sext <2 x i8> [[ADD]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[EXT]], <i32 356, i32 12>
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 398, i32 7>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %add = add nsw <2 x i8> %x, <i8 42, i8 -5>
@@ -439,9 +440,8 @@ define <2 x i32> @add_nsw_sext_add_vec_extra_use_2(<2 x i8> %x, <2 x i8>* %p) {
 
 define <2 x i32> @add_nuw_zext_add_vec(<2 x i16> %x) {
 ; CHECK-LABEL: @add_nuw_zext_add_vec(
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw <2 x i16> [[X:%.*]], <i16 -42, i16 5>
-; CHECK-NEXT:    [[EXT:%.*]] = zext <2 x i16> [[ADD]] to <2 x i32>
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[EXT]], <i32 356, i32 -12>
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i32>
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 65850, i32 -7>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %add = add nuw <2 x i16> %x, <i16 -42, i16 5>
@@ -449,6 +449,8 @@ define <2 x i32> @add_nuw_zext_add_vec(<2 x i16> %x) {
   %r = add <2 x i32> %ext, <i32 356, i32 -12>
   ret <2 x i32> %r
 }
+
+; Negative test - extra use of the zext means increase of instructions.
 
 define i64 @add_nuw_zext_add_extra_use_1(i8 %x, i64* %p) {
 ; CHECK-LABEL: @add_nuw_zext_add_extra_use_1(
@@ -469,8 +471,8 @@ define i64 @add_nuw_zext_add_extra_use_2(i8 %x, i8* %p) {
 ; CHECK-LABEL: @add_nuw_zext_add_extra_use_2(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 42
 ; CHECK-NEXT:    store i8 [[ADD]], i8* [[P:%.*]], align 1
-; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ADD]] to i64
-; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[EXT]], -356
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i64
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[TMP1]], -314
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %add = add nuw i8 %x, 42

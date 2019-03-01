@@ -177,6 +177,7 @@ pattern_walk1_n(_ExecutionPolicy&&, _ForwardIterator __first, _Size __n, _Functi
     return internal::brick_walk1_n(__first, __n, __f, __is_vector);
 }
 
+#if __PSTL_USE_PAR_POLICIES
 template <class _ExecutionPolicy, class _RandomAccessIterator, class _Size, class _Function, class _IsVector>
 _RandomAccessIterator
 pattern_walk1_n(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _Size __n, _Function __f,
@@ -187,6 +188,7 @@ pattern_walk1_n(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _Size 
                             std::true_type());
     return __first + __n;
 }
+#endif
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Size, class _Brick>
 _ForwardIterator
@@ -2499,6 +2501,7 @@ pattern_generate_n(_ExecutionPolicy&&, _OutputIterator __first, _Size __count, _
     return internal::brick_generate_n(__first, __count, __g, __is_vector);
 }
 
+#if __PSTL_USE_PAR_POLICIES
 template <class _ExecutionPolicy, class _OutputIterator, class _Size, class _Generator, class _IsVector>
 _OutputIterator
 pattern_generate_n(_ExecutionPolicy&& __exec, _OutputIterator __first, _Size __count, _Generator __g,
@@ -2509,6 +2512,7 @@ pattern_generate_n(_ExecutionPolicy&& __exec, _OutputIterator __first, _Size __c
     return internal::pattern_generate(std::forward<_ExecutionPolicy>(__exec), __first, __first + __count, __g,
                                       std::true_type(), __is_vector);
 }
+#endif
 
 //------------------------------------------------------------------------
 // remove

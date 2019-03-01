@@ -82,8 +82,6 @@ private:
   unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
   MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
                                          MachineIRBuilder &MIRBuilder) const;
-  MachineInstr *emitVectorConcat(unsigned Op1, unsigned Op2,
-                                 MachineIRBuilder &MIRBuilder) const;
 
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
 
@@ -1967,98 +1965,6 @@ MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
   return &*Load;
 }
 
-/// Return an <Opcode, SubregIndex> pair to do an vector elt insert of a given
-/// size and RB.
-static std::pair<unsigned, unsigned>
-getInsertVecEltOpInfo(const RegisterBank &RB, unsigned EltSize) {
-  unsigned Opc, SubregIdx;
-  if (RB.getID() == AArch64::GPRRegBankID) {
-    if (EltSize == 32) {
-      Opc = AArch64::INSvi32gpr;
-      SubregIdx = AArch64::ssub;
-    } else if (EltSize == 64) {
-      Opc = AArch64::INSvi64gpr;
-      SubregIdx = AArch64::dsub;
-    } else {
-      llvm_unreachable("invalid elt size!");
-    }
-  } else {
-    if (EltSize == 8) {
-      Opc = AArch64::INSvi8lane;
-      SubregIdx = AArch64::bsub;
-    } else if (EltSize == 16) {
-      Opc = AArch64::INSvi16lane;
-      SubregIdx = AArch64::hsub;
-    } else if (EltSize == 32) {
-      Opc = AArch64::INSvi32lane;
-      SubregIdx = AArch64::ssub;
-    } else if (EltSize == 64) {
-      Opc = AArch64::INSvi64lane;
-      SubregIdx = AArch64::dsub;
-    } else {
-      llvm_unreachable("invalid elt size!");
-    }
-  }
-  return std::make_pair(Opc, SubregIdx);
-}
-
-MachineInstr *AArch64InstructionSelector::emitVectorConcat(
-    unsigned Op1, unsigned Op2, MachineIRBuilder &MIRBuilder) const {
-  // We implement a vector concat by:
-  // 1. Use scalar_to_vector to insert the lower vector into the larger dest
-  // 2. Insert the upper vector into the destination's upper element
-  // TODO: some of this code is common with G_BUILD_VECTOR handling.
-  MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
-
-  const LLT Op1Ty = MRI.getType(Op1);
-  const LLT Op2Ty = MRI.getType(Op2);
-
-  if (Op1Ty != Op2Ty) {
-    LLVM_DEBUG(dbgs() << "Could not do vector concat of differing vector tys");
-    return nullptr;
-  }
-  assert(Op1Ty.isVector() && "Expected a vector for vector concat");
-
-  if (Op1Ty.getSizeInBits() >= 128) {
-    LLVM_DEBUG(dbgs() << "Vector concat not supported for full size vectors");
-    return nullptr;
-  }
-
-  // At the moment we just support 64 bit vector concats.
-  if (Op1Ty.getSizeInBits() != 64) {
-    LLVM_DEBUG(dbgs() << "Vector concat supported for 64b vectors");
-    return nullptr;
-  }
-
-  const LLT ScalarTy = LLT::scalar(Op1Ty.getSizeInBits());
-  const LLT &DstTy = LLT::vector(2, ScalarTy);
-  const RegisterBank &FPRBank = *RBI.getRegBank(Op1, MRI, TRI);
-  const TargetRegisterClass *DstRC =
-      getMinClassForRegBank(FPRBank, Op1Ty.getSizeInBits() * 2);
-
-  MachineInstr *WidenedOp1 = emitScalarToVector(DstTy, DstRC, Op1, MIRBuilder);
-  MachineInstr *WidenedOp2 = emitScalarToVector(DstTy, DstRC, Op2, MIRBuilder);
-  if (!WidenedOp1 || !WidenedOp2) {
-    LLVM_DEBUG(dbgs() << "Could not emit a vector from scalar value");
-    return nullptr;
-  }
-
-  // Now do the insert of the upper element.
-  unsigned InsertOpc, InsSubRegIdx;
-  std::tie(InsertOpc, InsSubRegIdx) =
-      getInsertVecEltOpInfo(FPRBank, ScalarTy.getSizeInBits());
-
-  auto InsElt =
-      MIRBuilder
-          .buildInstr(InsertOpc, {DstRC}, {WidenedOp1->getOperand(0).getReg()})
-          .addImm(1) /* Lane index */
-          .addUse(WidenedOp2->getOperand(0).getReg())
-          .addImm(0);
-
-  constrainSelectedInstRegOperands(*InsElt, TII, TRI, RBI);
-  return &*InsElt;
-}
-
 bool AArch64InstructionSelector::selectShuffleVector(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
@@ -2096,35 +2002,19 @@ bool AArch64InstructionSelector::selectShuffleVector(
     }
   }
 
-  MachineIRBuilder MIRBuilder(I);
+  if (DstTy.getSizeInBits() != 128) {
+    assert(DstTy.getSizeInBits() == 64 && "Unexpected shuffle result ty");
+    // This case can be done with TBL1.
+    return false;
+  }
 
   // Use a constant pool to load the index vector for TBL.
   Constant *CPVal = ConstantVector::get(CstIdxs);
+  MachineIRBuilder MIRBuilder(I);
   MachineInstr *IndexLoad = emitLoadFromConstantPool(CPVal, MIRBuilder);
   if (!IndexLoad) {
     LLVM_DEBUG(dbgs() << "Could not load from a constant pool");
     return false;
-  }
-
-  if (DstTy.getSizeInBits() != 128) {
-    assert(DstTy.getSizeInBits() == 64 && "Unexpected shuffle result ty");
-    // This case can be done with TBL1.
-    MachineInstr *Concat = emitVectorConcat(Src1Reg, Src2Reg, MIRBuilder);
-    if (!Concat) {
-      LLVM_DEBUG(dbgs() << "Could not do vector concat for tbl1");
-      return false;
-    }
-    auto TBL1 = MIRBuilder.buildInstr(
-        AArch64::TBLv16i8One, {&AArch64::FPR128RegClass},
-        {Concat->getOperand(0).getReg(), IndexLoad->getOperand(0).getReg()});
-    constrainSelectedInstRegOperands(*TBL1, TII, TRI, RBI);
-
-    auto Copy = BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                        TII.get(TargetOpcode::COPY), I.getOperand(0).getReg())
-                    .addUse(TBL1->getOperand(0).getReg(), 0, AArch64::dsub);
-    RBI.constrainGenericRegister(Copy.getReg(0), AArch64::FPR64RegClass, MRI);
-    I.eraseFromParent();
-    return true;
   }
 
   // For TBL2 we need to emit a REG_SEQUENCE to tie together two consecutive
@@ -2158,8 +2048,26 @@ bool AArch64InstructionSelector::selectBuildVector(
   const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
   unsigned Opc;
   unsigned SubregIdx;
-
-  std::tie(Opc, SubregIdx) = getInsertVecEltOpInfo(RB, EltSize);
+  if (RB.getID() == AArch64::GPRRegBankID) {
+    if (EltSize == 32) {
+      Opc = AArch64::INSvi32gpr;
+      SubregIdx = AArch64::ssub;
+    } else {
+      Opc = AArch64::INSvi64gpr;
+      SubregIdx = AArch64::dsub;
+    }
+  } else {
+    if (EltSize == 16) {
+      Opc = AArch64::INSvi16lane;
+      SubregIdx = AArch64::hsub;
+    } else if (EltSize == 32) {
+      Opc = AArch64::INSvi32lane;
+      SubregIdx = AArch64::ssub;
+    } else {
+      Opc = AArch64::INSvi64lane;
+      SubregIdx = AArch64::dsub;
+    }
+  }
 
   MachineIRBuilder MIRBuilder(I);
 

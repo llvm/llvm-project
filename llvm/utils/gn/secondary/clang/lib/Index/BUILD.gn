@@ -15,6 +15,7 @@ static_library("Index") {
   sources = [
     "CodegenNameGenerator.cpp",
     "CommentToXML.cpp",
+    "FileIndexRecord.cpp",
     "IndexBody.cpp",
     "IndexDecl.cpp",
     "IndexSymbol.cpp",

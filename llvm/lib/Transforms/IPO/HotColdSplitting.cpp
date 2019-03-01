@@ -664,7 +664,7 @@ bool HotColdSplitting::outlineColdRegions(Function &F, bool HasProfileSummary) {
 
 bool HotColdSplitting::run(Module &M) {
   bool Changed = false;
-  bool HasProfileSummary = M.getProfileSummary();
+  bool HasProfileSummary = (M.getProfileSummary(/* IsCS */ false) != nullptr);
   for (auto It = M.begin(), End = M.end(); It != End; ++It) {
     Function &F = *It;
 
