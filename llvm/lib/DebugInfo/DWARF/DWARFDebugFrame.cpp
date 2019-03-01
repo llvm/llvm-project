@@ -267,7 +267,7 @@ void CFIProgram::printOperand(raw_ostream &OS, const MCRegisterInfo *MRI,
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    Instr.Expression->print(OS, MRI, IsEH);
+    Instr.Expression->print(OS, MRI, nullptr, IsEH);
     break;
   }
 }
