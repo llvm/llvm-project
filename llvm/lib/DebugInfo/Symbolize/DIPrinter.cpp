@@ -19,6 +19,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
@@ -78,6 +79,8 @@ void DIPrinter::print(const DILineInfo &Info, bool Inlined) {
   std::string Filename = Info.FileName;
   if (Filename == kDILineInfoBadString)
     Filename = kBadString;
+  else if (Basenames)
+    Filename = llvm::sys::path::filename(Filename);
   if (!Verbose) {
     OS << Filename << ":" << Info.Line << ":" << Info.Column << "\n";
     printContext(Filename, Info.Line);
