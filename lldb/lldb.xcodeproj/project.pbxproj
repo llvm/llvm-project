@@ -786,6 +786,8 @@
 		9485545A1DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948554591DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp */; };
 		23D065911D4A7BEE0008EDE6 /* RenderScriptx86ABIFixups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */; };
 		AFCB1D5F219CD5EA00730AD5 /* Reproducer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */; };
+		6BAEFEA72227454400966AC1 /* Reproducer.h in Headers */ = {isa = PBXBuildFile; fileRef = 6BAEFEA62227454400966AC1 /* Reproducer.h */; };
+		6BAEFEA42227451300966AC1 /* ReproducerInstrumentation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6BAEFEA32227451300966AC1 /* ReproducerInstrumentation.cpp */; };
 		4C639ECF21FA684900A7B957 /* ReproducerTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C639EC121FA684700A7B957 /* ReproducerTest.cpp */; };
 		4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04EC211A06200015A814 /* RichManglingContext.cpp */; };
 		4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 4FBC04EE211A06820015A814 /* RichManglingContext.h */; };
@@ -870,6 +872,10 @@
 		AF0EBBEC185941360059E52F /* SBQueue.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0EBBEA185941360059E52F /* SBQueue.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AF0EBBE9185940FB0059E52F /* SBQueueItem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0EBBE7185940FB0059E52F /* SBQueueItem.cpp */; };
 		AF0EBBED185941360059E52F /* SBQueueItem.h in Headers */ = {isa = PBXBuildFile; fileRef = AF0EBBEB185941360059E52F /* SBQueueItem.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		6BAEFEAC2227459400966AC1 /* SBReproducer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6BAEFEAB2227459400966AC1 /* SBReproducer.cpp */; };
+		6BAEFEAD2227459400966AC1 /* SBReproducer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6BAEFEAB2227459400966AC1 /* SBReproducer.cpp */; };
+		6BAEFEA92227457B00966AC1 /* SBReproducer.h in Headers */ = {isa = PBXBuildFile; fileRef = 6BAEFEA82227457B00966AC1 /* SBReproducer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		6BAEFEAF2227459B00966AC1 /* SBReproducerPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 6BAEFEAE2227459B00966AC1 /* SBReproducerPrivate.h */; };
 		26B82840142D020F002DBC64 /* SBSection.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26B8283F142D020F002DBC64 /* SBSection.cpp */; };
 		26B8283D142D01E9002DBC64 /* SBSection.h in Headers */ = {isa = PBXBuildFile; fileRef = 26B8283C142D01E9002DBC64 /* SBSection.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		26680327116005DC008E1FE4 /* SBSourceManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A9831051125FC5800A56CB0 /* SBSourceManager.cpp */; };
@@ -2858,6 +2864,9 @@
 		23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RenderScriptx86ABIFixups.cpp; sourceTree = "<group>"; };
 		23D065871D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderScriptx86ABIFixups.h; sourceTree = "<group>"; };
 		AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Reproducer.cpp; path = source/Utility/Reproducer.cpp; sourceTree = "<group>"; };
+		6BAEFEA62227454400966AC1 /* Reproducer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Reproducer.h; path = include/lldb/Utility/Reproducer.h; sourceTree = "<group>"; };
+		6BAEFEA32227451300966AC1 /* ReproducerInstrumentation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReproducerInstrumentation.cpp; path = source/Utility/ReproducerInstrumentation.cpp; sourceTree = "<group>"; };
+		6BAEFEA52227453700966AC1 /* ReproducerInstrumentation.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ReproducerInstrumentation.h; path = include/lldb/Utility/ReproducerInstrumentation.h; sourceTree = "<group>"; };
 		4C639EC121FA684700A7B957 /* ReproducerTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReproducerTest.cpp; sourceTree = "<group>"; };
 		4FBC04EC211A06200015A814 /* RichManglingContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RichManglingContext.cpp; path = source/Core/RichManglingContext.cpp; sourceTree = "<group>"; };
 		4FBC04EE211A06820015A814 /* RichManglingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RichManglingContext.h; path = include/lldb/Core/RichManglingContext.h; sourceTree = "<group>"; };
@@ -2981,6 +2990,9 @@
 		AF0EBBE7185940FB0059E52F /* SBQueueItem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBQueueItem.cpp; path = source/API/SBQueueItem.cpp; sourceTree = "<group>"; };
 		AF0EBBEB185941360059E52F /* SBQueueItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBQueueItem.h; path = include/lldb/API/SBQueueItem.h; sourceTree = "<group>"; };
 		AF0EBBEF1859419F0059E52F /* SBQueueItem.i */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBQueueItem.i; sourceTree = "<group>"; };
+		6BAEFEAB2227459400966AC1 /* SBReproducer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBReproducer.cpp; path = source/API/SBReproducer.cpp; sourceTree = "<group>"; };
+		6BAEFEA82227457B00966AC1 /* SBReproducer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBReproducer.h; path = include/lldb/API/SBReproducer.h; sourceTree = "<group>"; };
+		6BAEFEAE2227459B00966AC1 /* SBReproducerPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBReproducerPrivate.h; path = source/API/SBReproducerPrivate.h; sourceTree = "<group>"; };
 		26B8283F142D020F002DBC64 /* SBSection.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBSection.cpp; path = source/API/SBSection.cpp; sourceTree = "<group>"; };
 		26B8283C142D01E9002DBC64 /* SBSection.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBSection.h; path = include/lldb/API/SBSection.h; sourceTree = "<group>"; };
 		2611FF08142D83060017FEA3 /* SBSection.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBSection.i; sourceTree = "<group>"; };
@@ -4501,9 +4513,12 @@
 				9A9831051125FC5800A56CB0 /* SBSourceManager.cpp */,
 				26C72C93124322890068DC16 /* SBStream.h */,
 				26C72C951243229A0068DC16 /* SBStream.cpp */,
+				6BAEFEAB2227459400966AC1 /* SBReproducer.cpp */,
+				6BAEFEAE2227459B00966AC1 /* SBReproducerPrivate.h */,
 				9A357670116E7B5200E8ED2F /* SBStringList.h */,
 				9A357672116E7B6400E8ED2F /* SBStringList.cpp */,
 				23DCBE9F1D63E3800084C36B /* SBStructuredData.h */,
+				6BAEFEA82227457B00966AC1 /* SBReproducer.h */,
 				23DCBEA01D63E6440084C36B /* SBStructuredData.cpp */,
 				26DE205A11618FF600A093E2 /* SBSymbol.h */,
 				26DE20641161904E00A093E2 /* SBSymbol.cpp */,
@@ -4814,10 +4829,13 @@
 				26764C9C1E48F516008D3573 /* RegularExpression.h */,
 				26764C9F1E48F528008D3573 /* RegularExpression.cpp */,
 				AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */,
+				6BAEFEA52227453700966AC1 /* ReproducerInstrumentation.h */,
+				6BAEFEA32227451300966AC1 /* ReproducerInstrumentation.cpp */,
 				26BC7D7410F1B77400F91463 /* Scalar.h */,
 				26BC7E8D10F1B85900F91463 /* Scalar.cpp */,
 				26A375841D59487700D6CBDB /* SelectHelper.h */,
 				26A3757F1D59462700D6CBDB /* SelectHelper.cpp */,
+				6BAEFEA62227454400966AC1 /* Reproducer.h */,
 				261B5A5211C3F2AD00AABD0A /* SharingPtr.cpp */,
 				4C2FAE2E135E3A70001EDE44 /* SharedCluster.h */,
 				261B5A5311C3F2AD00AABD0A /* SharingPtr.h */,
@@ -7230,6 +7248,7 @@
 				332CCB181AFF41620034D4C4 /* SBLanguageRuntime.h in Headers */,
 				26680219115FD13D008E1FE4 /* SBBreakpoint.h in Headers */,
 				2668021A115FD13D008E1FE4 /* SBBreakpointLocation.h in Headers */,
+				6BAEFEA92227457B00966AC1 /* SBReproducer.h in Headers */,
 				2668021B115FD13D008E1FE4 /* SBBroadcaster.h in Headers */,
 				2668021D115FD13D008E1FE4 /* SBCommandInterpreter.h in Headers */,
 				2668021E115FD13D008E1FE4 /* SBCommandReturnObject.h in Headers */,
@@ -7321,6 +7340,7 @@
 				2647B63121C4366300A81D15 /* ArchitectureMips.h in Headers */,
 				26C7C4841BFFEA7E009BD01F /* WindowsMiniDump.h in Headers */,
 				30B38A001CAAA6D7009524E3 /* ClangUtil.h in Headers */,
+				6BAEFEA72227454400966AC1 /* Reproducer.h in Headers */,
 				AFD65C821D9B5B2E00D93120 /* RegisterContextMinidump_x86_64.h in Headers */,
 				2647B63621C4368300A81D15 /* Broadcaster.h in Headers */,
 				238F2BA11D2C835A001FF92A /* StructuredDataPlugin.h in Headers */,
@@ -7334,6 +7354,7 @@
 				AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
 				E414F6EE21388F0300C50BC6 /* LibCxxVariant.h in Headers */,
+				6BAEFEAF2227459B00966AC1 /* SBReproducerPrivate.h in Headers */,
 				267F684B1CC02DED0086832B /* ABISysV_s390x.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8238,6 +8259,7 @@
 				9461569A14E358A6003A195C /* SBTypeFilter.cpp in Sources */,
 				9461569B14E358A6003A195C /* SBTypeFormat.cpp in Sources */,
 				262F12B51835468600AEB384 /* SBPlatform.cpp in Sources */,
+				6BAEFEAC2227459400966AC1 /* SBReproducer.cpp in Sources */,
 				9461569C14E358A6003A195C /* SBTypeSummary.cpp in Sources */,
 				940B02F619DC96E700AD0F52 /* SBExecutionContext.cpp in Sources */,
 				9461569D14E358A6003A195C /* SBTypeSynthetic.cpp in Sources */,
@@ -8559,6 +8581,7 @@
 				9418EBCD1AA910910058B02E /* VectorType.cpp in Sources */,
 				4C4EB7811E6A4DCC002035C0 /* DumpDataExtractor.cpp in Sources */,
 				4CE4EFB31E899A3400A80C06 /* RegisterContextOpenBSD_i386.cpp in Sources */,
+				6BAEFEAD2227459400966AC1 /* SBReproducer.cpp in Sources */,
 				2689007913353E1A00698AC0 /* CFCMutableDictionary.cpp in Sources */,
 				2689007A13353E1A00698AC0 /* CFCMutableSet.cpp in Sources */,
 				26764C971E48F482008D3573 /* ConstString.cpp in Sources */,
@@ -8612,6 +8635,7 @@
 				268900A013353E4200698AC0 /* ProcessGDBRemoteLog.cpp in Sources */,
 				AF9FF1F71FAA79FE00474976 /* LibCxxQueue.cpp in Sources */,
 				268900A113353E4200698AC0 /* ThreadGDBRemote.cpp in Sources */,
+				6BAEFEA42227451300966AC1 /* ReproducerInstrumentation.cpp in Sources */,
 				AFE228832060699D0042D0C8 /* DWARFUnit.cpp in Sources */,
 				AEEA34051AC88A7400AB639D /* TypeSystem.cpp in Sources */,
 				AF1729D6182C907200E0AB97 /* HistoryThread.cpp in Sources */,
