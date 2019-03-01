@@ -1,4 +1,4 @@
-//===--- LLVM.cpp - Clang+LLVM ToolChain Implementations --------*- C++ -*-===//
+//===-- Clang.cpp - Clang+LLVM ToolChain Implementations --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -3830,7 +3830,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(A->getValue());
   }
   else
-    CmdArgs.push_back(Args.MakeArgString(TC.getThreadModel(Args)));
+    CmdArgs.push_back(Args.MakeArgString(TC.getThreadModel()));
 
   Args.AddLastArg(CmdArgs, options::OPT_fveclib);
 

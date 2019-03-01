@@ -36,7 +36,7 @@ SanitizerSpecialCaseList::createOrDie(const std::vector<std::string> &Paths) {
 
 void SanitizerSpecialCaseList::createSanitizerSections() {
   for (auto &S : Sections) {
-    SanitizerMask Mask = 0;
+    SanitizerMask Mask;
 
 #define SANITIZER(NAME, ID)                                                    \
   if (S.SectionMatcher->match(NAME))                                           \

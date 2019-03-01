@@ -149,8 +149,8 @@ struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
 
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakInheritanceListStyle> {
-  static void
-  enumeration(IO &IO, FormatStyle::BreakInheritanceListStyle &Value) {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakInheritanceListStyle &Value) {
     IO.enumCase(Value, "BeforeColon", FormatStyle::BILS_BeforeColon);
     IO.enumCase(Value, "BeforeComma", FormatStyle::BILS_BeforeComma);
     IO.enumCase(Value, "AfterColon", FormatStyle::BILS_AfterColon);
@@ -179,7 +179,8 @@ struct ScalarEnumerationTraits<FormatStyle::ReturnTypeBreakingStyle> {
 
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakTemplateDeclarationsStyle> {
-  static void enumeration(IO &IO, FormatStyle::BreakTemplateDeclarationsStyle &Value) {
+  static void enumeration(IO &IO,
+                          FormatStyle::BreakTemplateDeclarationsStyle &Value) {
     IO.enumCase(Value, "No", FormatStyle::BTDS_No);
     IO.enumCase(Value, "MultiLine", FormatStyle::BTDS_MultiLine);
     IO.enumCase(Value, "Yes", FormatStyle::BTDS_Yes);
@@ -361,10 +362,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakBeforeBraces", Style.BreakBeforeBraces);
 
     bool BreakBeforeInheritanceComma = false;
-    IO.mapOptional("BreakBeforeInheritanceComma",
-                   BreakBeforeInheritanceComma);
-    IO.mapOptional("BreakInheritanceList",
-                   Style.BreakInheritanceList);
+    IO.mapOptional("BreakBeforeInheritanceComma", BreakBeforeInheritanceComma);
+    IO.mapOptional("BreakInheritanceList", Style.BreakInheritanceList);
     // If BreakBeforeInheritanceComma was specified but
     // BreakInheritance was not, initialize the latter from the
     // former for backwards compatibility.
@@ -618,9 +617,9 @@ static FormatStyle expandPresets(const FormatStyle &Style) {
   return Expanded;
 }
 
-FormatStyle getLLVMStyle() {
+FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
-  LLVMStyle.Language = FormatStyle::LK_Cpp;
+  LLVMStyle.Language = Language;
   LLVMStyle.AccessModifierOffset = -2;
   LLVMStyle.AlignEscapedNewlines = FormatStyle::ENAS_Right;
   LLVMStyle.AlignAfterOpenBracket = FormatStyle::BAS_Align;
@@ -718,6 +717,11 @@ FormatStyle getLLVMStyle() {
   LLVMStyle.StatementMacros.push_back("Q_UNUSED");
   LLVMStyle.StatementMacros.push_back("QT_REQUIRE_VERSION");
 
+  // Defaults that differ when not C++.
+  if (Language == FormatStyle::LK_TableGen) {
+    LLVMStyle.SpacesInContainerLiterals = false;
+  }
+
   return LLVMStyle;
 }
 
@@ -729,8 +733,7 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     return GoogleStyle;
   }
 
-  FormatStyle GoogleStyle = getLLVMStyle();
-  GoogleStyle.Language = Language;
+  FormatStyle GoogleStyle = getLLVMStyle(Language);
 
   GoogleStyle.AccessModifierOffset = -1;
   GoogleStyle.AlignEscapedNewlines = FormatStyle::ENAS_Left;
@@ -850,15 +853,9 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     // See styleguide for import groups:
     // https://chromium.googlesource.com/chromium/src/+/master/styleguide/java/java.md#Import-Order
     ChromiumStyle.JavaImportGroups = {
-        "android",
-        "com",
-        "dalvik",
-        "junit",
-        "org",
-        "com.google.android.apps.chrome",
-        "org.chromium",
-        "java",
-        "javax",
+        "android",      "com",  "dalvik",
+        "junit",        "org",  "com.google.android.apps.chrome",
+        "org.chromium", "java", "javax",
     };
     ChromiumStyle.SortIncludes = true;
   } else if (Language == FormatStyle::LK_JavaScript) {
@@ -1059,9 +1056,7 @@ void FormatStyle::FormatStyleSet::Add(FormatStyle Style) {
   (*Styles)[Style.Language] = std::move(Style);
 }
 
-void FormatStyle::FormatStyleSet::Clear() {
-  Styles.reset();
-}
+void FormatStyle::FormatStyleSet::Clear() { Styles.reset(); }
 
 llvm::Optional<FormatStyle>
 FormatStyle::GetLanguageStyle(FormatStyle::LanguageKind Language) const {
@@ -1853,8 +1848,7 @@ static unsigned findJavaImportGroup(const FormatStyle &Style,
 static void sortJavaImports(const FormatStyle &Style,
                             const SmallVectorImpl<JavaImportDirective> &Imports,
                             ArrayRef<tooling::Range> Ranges, StringRef FileName,
-                            StringRef Code,
-                            tooling::Replacements &Replaces) {
+                            StringRef Code, tooling::Replacements &Replaces) {
   unsigned ImportsBeginOffset = Imports.front().Offset;
   unsigned ImportsEndOffset =
       Imports.back().Offset + Imports.back().Text.size();
@@ -1961,7 +1955,8 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       if (Static.contains("static")) {
         IsStatic = true;
       }
-      ImportsInBlock.push_back({Identifier, Line, Prev, AssociatedCommentLines, IsStatic});
+      ImportsInBlock.push_back(
+          {Identifier, Line, Prev, AssociatedCommentLines, IsStatic});
       AssociatedCommentLines.clear();
     } else if (Trimmed.size() > 0 && !ImportsInBlock.empty()) {
       // Associating comments within the imports with the nearest import below
@@ -2090,7 +2085,6 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
   if (HeaderInsertions.empty() && HeadersToDelete.empty())
     return Replaces;
 
-
   StringRef FileName = Replaces.begin()->getFilePath();
   tooling::HeaderIncludes Includes(FileName, Code, Style.IncludeStyle);
 
@@ -2123,7 +2117,8 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
       auto Err = Result.add(*Replace);
       if (Err) {
         llvm::consumeError(std::move(Err));
-        unsigned NewOffset = Result.getShiftedCodePosition(Replace->getOffset());
+        unsigned NewOffset =
+            Result.getShiftedCodePosition(Replace->getOffset());
         auto Shifted = tooling::Replacement(FileName, NewOffset, 0,
                                             Replace->getReplacementText());
         Result = Result.merge(tooling::Replacements(Shifted));
@@ -2344,8 +2339,7 @@ llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   if (!FS) {
     FS = llvm::vfs::getRealFileSystem().get();
   }
-  FormatStyle Style = getLLVMStyle();
-  Style.Language = guessLanguage(FileName, Code);
+  FormatStyle Style = getLLVMStyle(guessLanguage(FileName, Code));
 
   FormatStyle FallbackStyle = getNoStyle();
   if (!getPredefinedStyle(FallbackStyleName, Style.Language, &FallbackStyle))

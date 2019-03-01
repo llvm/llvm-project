@@ -20,27 +20,6 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-void parseThreadArgs(const Driver &Driver, const ArgList &DriverArgs,
-                     bool &Pthread, StringRef &ThreadModel,
-                     bool CheckForErrors = true) {
-  // Default value for -pthread / -mthread-model options, each being false /
-  // "single".
-  Pthread =
-      DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread, false);
-  ThreadModel =
-      DriverArgs.getLastArgValue(options::OPT_mthread_model, "single");
-  if (!CheckForErrors)
-    return;
-
-  // Did user explicitly specify -mthread-model / -pthread?
-  bool HasThreadModel = DriverArgs.hasArg(options::OPT_mthread_model);
-  bool HasPthread = Pthread && DriverArgs.hasArg(options::OPT_pthread);
-  // '-pthread' cannot be used with '-mthread-model single'
-  if (HasPthread && HasThreadModel && ThreadModel == "single")
-    Driver.Diag(diag::err_drv_argument_not_allowed_with)
-        << "-pthread" << "-mthread-model single";
-}
-
 wasm::Linker::Linker(const ToolChain &TC)
     : GnuTool("wasm::Linker", "lld", TC) {}
 
@@ -145,15 +124,36 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fuse-init-array");
 
-  // Either '-mthread-model posix' or '-pthread' sets '-target-feature
-  // +atomics'. We intentionally didn't create '-matomics' and set the atomics
-  // target feature here depending on the other two options.
-  bool Pthread = false;
-  StringRef ThreadModel = "";
-  parseThreadArgs(getDriver(), DriverArgs, Pthread, ThreadModel);
-  if (Pthread || ThreadModel != "single") {
+  // '-pthread' implies '-target-feature +atomics' and
+  // '-target-feature +bulk-memory'
+  if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
+                         false)) {
+    if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
+                           false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-pthread"
+          << "-mno-atomics";
+    if (DriverArgs.hasFlag(options::OPT_mno_bulk_memory,
+                           options::OPT_mbulk_memory, false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-pthread"
+          << "-mno-bulk-memory";
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+atomics");
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+bulk-memory");
+  }
+
+  // '-matomics' implies '-mbulk-memory'
+  if (DriverArgs.hasFlag(options::OPT_matomics, options::OPT_mno_atomics,
+                         false)) {
+    if (DriverArgs.hasFlag(options::OPT_mno_bulk_memory,
+                           options::OPT_mbulk_memory, false))
+      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
+          << "-matomics"
+          << "-mno-bulk-memory";
+    CC1Args.push_back("-target-feature");
+    CC1Args.push_back("+bulk-memory");
   }
 }
 
@@ -210,17 +210,6 @@ void WebAssembly::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
   case ToolChain::CST_Libstdcxx:
     llvm_unreachable("invalid stdlib name");
   }
-}
-
-std::string WebAssembly::getThreadModel(const ArgList &DriverArgs) const {
-  // The WebAssembly MVP does not yet support threads. We set this to "posix"
-  // when '-pthread' is set.
-  bool Pthread = false;
-  StringRef ThreadModel = "";
-  parseThreadArgs(getDriver(), DriverArgs, Pthread, ThreadModel, false);
-  if (Pthread)
-    return "posix";
-  return ThreadModel;
 }
 
 Tool *WebAssembly::buildLinker() const {

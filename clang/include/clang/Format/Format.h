@@ -1849,7 +1849,8 @@ private:
 
 /// Returns a format style complying with the LLVM coding standards:
 /// http://llvm.org/docs/CodingStandards.html.
-FormatStyle getLLVMStyle();
+FormatStyle getLLVMStyle(
+    FormatStyle::LanguageKind Language = FormatStyle::LanguageKind::LK_Cpp);
 
 /// Returns a format style complying with one of Google's style guides:
 /// http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml.

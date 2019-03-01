@@ -4,17 +4,6 @@
 
 // RUN: %clang -### -c -target x86_64-linux-gnu -fgpu-rdc \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN:   -mcode-object-v3 2>&1 | FileCheck %s -check-prefix=COV3
-// RUN: %clang -### -c -target x86_64-linux-gnu -fgpu-rdc \
-// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN:   -mno-code-object-v3 2>&1 | FileCheck %s -check-prefix=NOCOV3
-
-// COV3: {{.*}}clang{{.*}}"-target-feature" "+code-object-v3"
-// NOCOV3: {{.*}}clang{{.*}}"-target-feature" "-code-object-v3"
-
-
-// RUN: %clang -### -c -target x86_64-linux-gnu -fgpu-rdc \
-// RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
 // RUN:   -mxnack 2>&1 | FileCheck %s -check-prefix=XNACK
 // RUN: %clang -### -c -target x86_64-linux-gnu -fgpu-rdc \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
@@ -37,12 +26,12 @@
 
 // RUN: %clang -### -c -target x86_64-linux-gnu -fgpu-rdc \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN:   -mcode-object-v3 -mxnack -msram-ecc \
+// RUN:   -mxnack -msram-ecc \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ALL3
 // RUN: %clang -### -c -target x86_64-linux-gnu -fgpu-rdc \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 %s \
-// RUN:   -mno-code-object-v3 -mno-xnack -mno-sram-ecc \
+// RUN:   -mno-xnack -mno-sram-ecc \
 // RUN:   2>&1 | FileCheck %s -check-prefix=NOALL3
 
-// ALL3: {{.*}}clang{{.*}}"-target-feature" "+code-object-v3" "-target-feature" "+xnack" "-target-feature" "+sram-ecc"
-// NOALL3: {{.*}}clang{{.*}}"-target-feature" "-code-object-v3" "-target-feature" "-xnack" "-target-feature" "-sram-ecc"
+// ALL3: {{.*}}clang{{.*}}"-target-feature" "+xnack" "-target-feature" "+sram-ecc"
+// NOALL3: {{.*}}clang{{.*}}"-target-feature" "-xnack" "-target-feature" "-sram-ecc"

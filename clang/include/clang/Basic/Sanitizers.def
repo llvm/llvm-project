@@ -177,7 +177,7 @@ SANITIZER("scudo", Scudo)
 
 // Magic group, containing all sanitizers. For example, "-fno-sanitize=all"
 // can be used to disable all the sanitizers.
-SANITIZER_GROUP("all", All, ~0ULL)
+SANITIZER_GROUP("all", All, ~SanitizerMask())
 
 #undef SANITIZER
 #undef SANITIZER_GROUP
