@@ -84,7 +84,10 @@ ConstString ValueObjectChild::GetQualifiedTypeName() {
 }
 
 ConstString ValueObjectChild::GetDisplayTypeName() {
-  ConstString display_name = GetCompilerType().GetDisplayTypeName(GetFrameSP());
+  const SymbolContext *sc = nullptr;
+  if (GetFrameSP())
+    sc = &GetFrameSP()->GetSymbolContext(lldb::eSymbolContextFunction);
+  ConstString display_name = GetCompilerType().GetDisplayTypeName(sc);
   AdjustForBitfieldness(display_name, m_bitfield_bit_size);
   return display_name;
 }

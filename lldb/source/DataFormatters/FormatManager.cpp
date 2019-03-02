@@ -188,8 +188,11 @@ void FormatManager::GetPossibleMatches(
     entries.push_back(
         {type_name, reason, did_strip_ptr, did_strip_ref, did_strip_typedef});
 
-    lldb::StackFrameSP frame_sp = valobj.GetFrameSP();
-    ConstString display_type_name(compiler_type.GetDisplayTypeName(frame_sp));
+    const SymbolContext *sc = nullptr;
+    if (valobj.GetFrameSP())
+      sc = &valobj.GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
+
+    ConstString display_type_name(compiler_type.GetDisplayTypeName(sc));
     if (display_type_name != type_name)
       entries.push_back({display_type_name, reason, did_strip_ptr,
                          did_strip_ref, did_strip_typedef});
