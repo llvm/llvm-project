@@ -12,7 +12,7 @@
 
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import unittest2
@@ -25,47 +25,41 @@ class TestSwiftHeadermapConflict(TestBase):
     def setUp(self):
         TestBase.setUp(self)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.add_test_categories(["swiftpr"])
+    @skipUnlessDarwin
+    @swiftTest
+    @add_test_categories(["swiftpr"])
     def test(self):
         # To ensure we hit the rebuild problem remove the cache to avoid caching.
         mod_cache = self.getBuildArtifact("my-clang-modules-cache")
         if os.path.isdir(mod_cache):
           shutil.rmtree(mod_cache)
 
+        self.runCmd("settings set symbols.use-swift-dwarfimporter false")
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
         self.build()
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'break here', lldb.SBFileSpec('main.swift'))
+        b_breakpoint = target.BreakpointCreateBySourceRegex(
+            'break here', lldb.SBFileSpec('dylib.swift'))
 
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        a_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('main.swift'))
-        process = target.LaunchSimple(None, None, os.getcwd())
 
         # This is expected to succeed because ClangImporter was set up
         # with the flags from the main executable.
         self.expect("expr foo", "expected result", substrs=["42"])
         self.assertTrue(os.path.isdir(mod_cache), "module cache exists")
 
-        b_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', lldb.SBFileSpec('dylib.swift'))
-
         process.Continue()
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, b_breakpoint)
+        threads = lldbutil.get_threads_stopped_at_breakpoint(process,
+                                                             b_breakpoint)
         frame = threads[0].GetFrameAtIndex(0)
         value = frame.EvaluateExpression("foo")
         # This is expected to fail because ClangImporter is *still*
         # set up with the flags from the main executable.
-        self.assertFalse(value.GetError().Success())
-        
+        self.assertTrue((not value.GetError().Success()) or
+                         not value.GetSummary())
+        self.runCmd("settings set symbols.use-swift-dwarfimporter true")
+      
 
 if __name__ == '__main__':
     import atexit
