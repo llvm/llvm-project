@@ -96,7 +96,9 @@ public:
   /// Emit the debug_loc contribution for \p Unit by copying the entries from
   /// \p Dwarf and offsetting them. Update the location attributes to point to
   /// the new entries.
-  void emitLocationsForUnit(const CompileUnit &Unit, DWARFContext &Dwarf);
+  void emitLocationsForUnit(
+      const CompileUnit &Unit, DWARFContext &Dwarf,
+      std::function<void(StringRef, SmallVectorImpl<uint8_t> &)> ProcessExpr);
 
   /// Emit the line table described in \p Rows into the debug_line section.
   void emitLineTableForUnit(MCDwarfLineTableParams Params,

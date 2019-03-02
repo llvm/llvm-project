@@ -16,7 +16,7 @@
 # CHECK: 0x0000000000000000      1      0      1   0             0  is_stmt
 # CHECK: 05 DW_LNS_set_column (12)
 # CHECK: 0a DW_LNS_set_prologue_end
-# CHECK: 66 address += 89,  line += 0
+# CHECK: 66 address += 6,  line += 0
 # CHECK: 0x0000000000000006      1     12      1   0             0  is_stmt prologue_end
 # CHECK: 02 DW_LNS_advance_pc (2)
 # CHECK: 00 DW_LNE_end_sequence

@@ -1,6 +1,12 @@
 RUN: grep '^ADDR:' %s | sed -s 's/ADDR: //' \
 RUN:     | llvm-symbolizer --inlining --relative-address -obj="%p/Inputs/coff-dwarf.exe" \
 RUN:     | FileCheck %s
+RUN: grep '^ADDR:' %s | sed -s 's/ADDR: //' \
+RUN:     | llvm-symbolizer --inlines --relative-address -obj="%p/Inputs/coff-dwarf.exe" \
+RUN:     | FileCheck %s
+RUN: grep '^ADDR:' %s | sed -s 's/ADDR: //' \
+RUN:     | llvm-symbolizer -i --relative-address -obj="%p/Inputs/coff-dwarf.exe" \
+RUN:     | FileCheck %s
 
 This test relies on UnDecorateSymbolName, which is Windows-only.
 REQUIRES: target-windows, system-windows

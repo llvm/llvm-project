@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Config/config.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
@@ -34,7 +33,6 @@
 #include "llvm/Support/Path.h"
 #include <algorithm>
 #include <cassert>
-#include <cstdlib>
 #include <cstring>
 
 #if defined(_MSC_VER)
@@ -168,37 +166,40 @@ bool checkFileCRC(StringRef Path, uint32_t CRCHash) {
 
 bool findDebugBinary(const std::string &OrigPath,
                      const std::string &DebuglinkName, uint32_t CRCHash,
+                     const std::string &FallbackDebugPath,
                      std::string &Result) {
-  std::string OrigRealPath = OrigPath;
-#if defined(HAVE_REALPATH)
-  if (char *RP = realpath(OrigPath.c_str(), nullptr)) {
-    OrigRealPath = RP;
-    free(RP);
-  }
-#endif
-  SmallString<16> OrigDir(OrigRealPath);
+  SmallString<16> OrigDir(OrigPath);
   llvm::sys::path::remove_filename(OrigDir);
   SmallString<16> DebugPath = OrigDir;
-  // Try /path/to/original_binary/debuglink_name
+  // Try relative/path/to/original_binary/debuglink_name
   llvm::sys::path::append(DebugPath, DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
     Result = DebugPath.str();
     return true;
   }
-  // Try /path/to/original_binary/.debug/debuglink_name
+  // Try relative/path/to/original_binary/.debug/debuglink_name
   DebugPath = OrigDir;
   llvm::sys::path::append(DebugPath, ".debug", DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
     Result = DebugPath.str();
     return true;
   }
+  // Make the path absolute so that lookups will go to
+  // "/usr/lib/debug/full/path/to/debug", not
+  // "/usr/lib/debug/to/debug"
+  llvm::sys::fs::make_absolute(OrigDir);
+  if (!FallbackDebugPath.empty()) {
+    // Try <FallbackDebugPath>/absolute/path/to/original_binary/debuglink_name
+    DebugPath = FallbackDebugPath;
+  } else {
 #if defined(__NetBSD__)
-  // Try /usr/libdata/debug/path/to/original_binary/debuglink_name
-  DebugPath = "/usr/libdata/debug";
+    // Try /usr/libdata/debug/absolute/path/to/original_binary/debuglink_name
+    DebugPath = "/usr/libdata/debug";
 #else
-  // Try /usr/lib/debug/path/to/original_binary/debuglink_name
-  DebugPath = "/usr/lib/debug";
+    // Try /usr/lib/debug/absolute/path/to/original_binary/debuglink_name
+    DebugPath = "/usr/lib/debug";
 #endif
+  }
   llvm::sys::path::append(DebugPath, llvm::sys::path::relative_path(OrigDir),
                           DebuglinkName);
   if (checkFileCRC(DebugPath, CRCHash)) {
@@ -284,7 +285,8 @@ ObjectFile *LLVMSymbolizer::lookUpDebuglinkObject(const std::string &Path,
   std::string DebugBinaryPath;
   if (!getGNUDebuglinkContents(Obj, DebuglinkName, CRCHash))
     return nullptr;
-  if (!findDebugBinary(Path, DebuglinkName, CRCHash, DebugBinaryPath))
+  if (!findDebugBinary(Path, DebuglinkName, CRCHash, Opts.FallbackDebugPath,
+                       DebugBinaryPath))
     return nullptr;
   auto DbgObjOrErr = getOrCreateObject(DebugBinaryPath, ArchName);
   if (!DbgObjOrErr) {

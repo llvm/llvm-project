@@ -11,6 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 
 #include "llvm/DebugInfo/CodeView/DebugSubsection.h"
+#include "llvm/DebugInfo/CodeView/DebugFrameDataSubsection.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleList.h"
@@ -80,7 +81,10 @@ public:
 
   FixedStreamArray<object::coff_section> getSectionHeaders() const;
 
-  FixedStreamArray<object::FpoData> getFpoRecords();
+  bool hasOldFpoRecords() const;
+  FixedStreamArray<object::FpoData> getOldFpoRecords() const;
+  bool hasNewFpoRecords() const;
+  const codeview::DebugFrameDataSubsectionRef &getNewFpoRecords() const;
 
   FixedStreamArray<SecMapEntry> getSectionMap() const;
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
@@ -91,7 +95,11 @@ private:
   Error initializeSectionContributionData();
   Error initializeSectionHeadersData(PDBFile *Pdb);
   Error initializeSectionMapData();
-  Error initializeFpoRecords(PDBFile *Pdb);
+  Error initializeOldFpoRecords(PDBFile *Pdb);
+  Error initializeNewFpoRecords(PDBFile *Pdb);
+
+  Expected<std::unique_ptr<msf::MappedBlockStream>>
+  createIndexedStreamForHeaderType(PDBFile *Pdb, DbgHeaderType Type) const;
 
   std::unique_ptr<BinaryStream> Stream;
 
@@ -117,8 +125,11 @@ private:
   std::unique_ptr<msf::MappedBlockStream> SectionHeaderStream;
   FixedStreamArray<object::coff_section> SectionHeaders;
 
-  std::unique_ptr<msf::MappedBlockStream> FpoStream;
-  FixedStreamArray<object::FpoData> FpoRecords;
+  std::unique_ptr<msf::MappedBlockStream> OldFpoStream;
+  FixedStreamArray<object::FpoData> OldFpoRecords;
+  
+  std::unique_ptr<msf::MappedBlockStream> NewFpoStream;
+  codeview::DebugFrameDataSubsectionRef NewFpoRecords;
 
   const DbiStreamHeader *Header;
 };

@@ -68,11 +68,11 @@ EXAMPLE
 OPTIONS
 -------
 
-.. option:: -obj
+.. option:: -obj, -exe, -e
 
   Path to object file to be symbolized.
 
-.. option:: -functions=[none|short|linkage]
+.. option:: -functions[=<none|short|linkage>], -f
 
   Specify the way function names are printed (omit function name,
   print short function name, or print full linkage name, respectively).
@@ -83,11 +83,15 @@ OPTIONS
  Prefer function names stored in symbol table to function names
  in debug info sections. Defaults to true.
 
-.. option:: -demangle
+.. option:: -demangle, -C
 
  Print demangled function names. Defaults to true.
 
-.. option:: -inlining 
+.. option:: -no-demangle
+
+ Don't print demangled function names.
+
+.. option:: -inlining, -inlines, -i
 
  If a source code location is in an inlined function, prints all the
  inlnied frames. Defaults to true.
@@ -106,14 +110,24 @@ OPTIONS
  location, look for the debug info at the .dSYM path provided via the
  ``-dsym-hint`` flag. This flag can be used multiple times.
 
-.. option:: -print-address
+.. option:: -print-address, -addresses, -a
 
  Print address before the source code location. Defaults to false.
 
-.. option:: -pretty-print
+.. option:: -pretty-print, -p
 
  Print human readable output. If ``-inlining`` is specified, enclosing scope is
  prefixed by (inlined by). Refer to listed examples.
+
+.. option:: -basenames, -s
+
+ Strip directories when printing the file path.
+
+.. option:: -adjust-vma=<offset>
+
+ Add the specified offset to object file addresses when performing lookups. This
+ can be used to simplify lookups when the object is not loaded at a dynamically
+ relocated address.
 
 EXIT STATUS
 -----------

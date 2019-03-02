@@ -87,7 +87,7 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
     DataExtractor Data(StringRef((const char *)Expr.data(), Expr.size()),
                        Ctx.isLittleEndian(), 0);
     DWARFExpression(Data, U->getVersion(), U->getAddressByteSize())
-        .print(OS, MRI);
+        .print(OS, MRI, U);
     return;
   }
 
@@ -103,8 +103,8 @@ static void dumpLocation(raw_ostream &OS, DWARFFormValue &FormValue,
         uint64_t BaseAddr = 0;
         if (Optional<SectionedAddress> BA = U->getBaseAddress())
           BaseAddr = BA->Address;
-        LL->dump(OS, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, BaseAddr,
-                 Indent);
+        LL->dump(OS, Ctx.isLittleEndian(), Obj.getAddressSize(), MRI, U,
+                 BaseAddr, Indent);
       } else
         OS << "error extracting location list.";
       return;
@@ -279,11 +279,7 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     OS << formatv(" [{0}]", Form);
 
   DWARFUnit *U = Die.getDwarfUnit();
-  DWARFFormValue formValue(Form);
-
-  if (!formValue.extractValue(U->getDebugInfoExtractor(), OffsetPtr,
-                              U->getFormParams(), U))
-    return;
+  DWARFFormValue FormValue = DWARFFormValue::createFromUnit(Form, U, OffsetPtr);
 
   OS << "\t(";
 
@@ -294,35 +290,33 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
     Color = HighlightColor::String;
     if (const auto *LT = U->getContext().getLineTableForUnit(U))
       if (LT->getFileNameByIndex(
-              formValue.getAsUnsignedConstant().getValue(),
+              FormValue.getAsUnsignedConstant().getValue(),
               U->getCompilationDir(),
               DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, File)) {
         File = '"' + File + '"';
         Name = File;
       }
-  } else if (Optional<uint64_t> Val = formValue.getAsUnsignedConstant())
+  } else if (Optional<uint64_t> Val = FormValue.getAsUnsignedConstant())
     Name = AttributeValueString(Attr, *Val);
 
   if (!Name.empty())
     WithColor(OS, Color) << Name;
   else if (Attr == DW_AT_decl_line || Attr == DW_AT_call_line)
-    OS << *formValue.getAsUnsignedConstant();
+    OS << *FormValue.getAsUnsignedConstant();
   else if (Attr == DW_AT_high_pc && !DumpOpts.ShowForm && !DumpOpts.Verbose &&
-           formValue.getAsUnsignedConstant()) {
+           FormValue.getAsUnsignedConstant()) {
     if (DumpOpts.ShowAddresses) {
       // Print the actual address rather than the offset.
       uint64_t LowPC, HighPC, Index;
       if (Die.getLowAndHighPC(LowPC, HighPC, Index))
         OS << format("0x%016" PRIx64, HighPC);
       else
-        formValue.dump(OS, DumpOpts);
+        FormValue.dump(OS, DumpOpts);
     }
-  } else if (Attr == DW_AT_location || Attr == DW_AT_frame_base ||
-             Attr == DW_AT_data_member_location ||
-             Attr == DW_AT_GNU_call_site_value)
-    dumpLocation(OS, formValue, U, sizeof(BaseIndent) + Indent + 4, DumpOpts);
+  } else if (DWARFAttribute::mayHaveLocationDescription(Attr))
+    dumpLocation(OS, FormValue, U, sizeof(BaseIndent) + Indent + 4, DumpOpts);
   else
-    formValue.dump(OS, DumpOpts);
+    FormValue.dump(OS, DumpOpts);
 
   std::string Space = DumpOpts.ShowAddresses ? " " : "";
 
@@ -331,25 +325,25 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin) {
     if (const char *Name =
-            Die.getAttributeValueAsReferencedDie(formValue).getName(
+            Die.getAttributeValueAsReferencedDie(FormValue).getName(
                 DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_type) {
     OS << Space << "\"";
-    dumpTypeName(OS, Die.getAttributeValueAsReferencedDie(formValue));
+    dumpTypeName(OS, Die.getAttributeValueAsReferencedDie(FormValue));
     OS << '"';
   } else if (Attr == DW_AT_APPLE_property_attribute) {
-    if (Optional<uint64_t> OptVal = formValue.getAsUnsignedConstant())
+    if (Optional<uint64_t> OptVal = FormValue.getAsUnsignedConstant())
       dumpApplePropertyAttribute(OS, *OptVal);
   } else if (Attr == DW_AT_ranges) {
     const DWARFObject &Obj = Die.getDwarfUnit()->getContext().getDWARFObj();
     // For DW_FORM_rnglistx we need to dump the offset separately, since
     // we have only dumped the index so far.
-    if (formValue.getForm() == DW_FORM_rnglistx)
+    if (FormValue.getForm() == DW_FORM_rnglistx)
       if (auto RangeListOffset =
-              U->getRnglistOffset(*formValue.getAsSectionOffset())) {
-        DWARFFormValue FV(dwarf::DW_FORM_sec_offset);
-        FV.setUValue(*RangeListOffset);
+              U->getRnglistOffset(*FormValue.getAsSectionOffset())) {
+        DWARFFormValue FV = DWARFFormValue::createFromUValue(
+            dwarf::DW_FORM_sec_offset, *RangeListOffset);
         FV.dump(OS, DumpOpts);
       }
     if (auto RangesOrError = Die.getAddressRanges())
@@ -690,14 +684,11 @@ void DWARFDie::attribute_iterator::updateForIndex(
     AttrValue.Attr = AbbrDecl.getAttrByIndex(Index);
     // Add the previous byte size of any previous attribute value.
     AttrValue.Offset += AttrValue.ByteSize;
-    AttrValue.Value.setForm(AbbrDecl.getFormByIndex(Index));
     uint32_t ParseOffset = AttrValue.Offset;
     auto U = Die.getDwarfUnit();
     assert(U && "Die must have valid DWARF unit");
-    bool b = AttrValue.Value.extractValue(U->getDebugInfoExtractor(),
-                                          &ParseOffset, U->getFormParams(), U);
-    (void)b;
-    assert(b && "extractValue cannot fail on fully parsed DWARF");
+    AttrValue.Value = DWARFFormValue::createFromUnit(
+        AbbrDecl.getFormByIndex(Index), U, &ParseOffset);
     AttrValue.ByteSize = ParseOffset - AttrValue.Offset;
   } else {
     assert(Index == NumAttrs && "Indexes should be [0, NumAttrs) only");
@@ -709,4 +700,40 @@ DWARFDie::attribute_iterator &DWARFDie::attribute_iterator::operator++() {
   if (auto AbbrDecl = Die.getAbbreviationDeclarationPtr())
     updateForIndex(*AbbrDecl, Index + 1);
   return *this;
+}
+
+bool DWARFAttribute::mayHaveLocationDescription(dwarf::Attribute Attr) {
+  switch (Attr) {
+  // From the DWARF v5 specification.
+  case DW_AT_location:
+  case DW_AT_byte_size:
+  case DW_AT_bit_size:
+  case DW_AT_string_length:
+  case DW_AT_lower_bound:
+  case DW_AT_return_addr:
+  case DW_AT_bit_stride:
+  case DW_AT_upper_bound:
+  case DW_AT_count:
+  case DW_AT_data_member_location:
+  case DW_AT_frame_base:
+  case DW_AT_segment:
+  case DW_AT_static_link:
+  case DW_AT_use_location:
+  case DW_AT_vtable_elem_location:
+  case DW_AT_allocated:
+  case DW_AT_associated:
+  case DW_AT_byte_stride:
+  case DW_AT_rank:
+  case DW_AT_call_value:
+  case DW_AT_call_origin:
+  case DW_AT_call_target:
+  case DW_AT_call_target_clobbered:
+  case DW_AT_call_data_location:
+  case DW_AT_call_data_value:
+  // Extensions.
+  case DW_AT_GNU_call_site_value:
+    return true;
+  default:
+    return false;
+  }
 }
