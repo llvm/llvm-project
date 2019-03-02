@@ -969,6 +969,20 @@ static llvm::Value *shouldUseMemSetToInitialize(llvm::Constant *Init,
   return llvm::isBytewiseValue(Init);
 }
 
+/// Decide whether we want to split a constant structure store into a sequence
+/// of its fields' stores. This may cost us code size and compilation speed,
+/// but plays better with store optimizations.
+static bool shouldSplitStructStore(CodeGenModule &CGM,
+                                   uint64_t GlobalByteSize) {
+  // Don't break structures that occupy more than one cacheline.
+  uint64_t ByteSizeLimit = 64;
+  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+    return false;
+  if (GlobalByteSize <= ByteSizeLimit)
+    return true;
+  return false;
+}
+
 static llvm::Constant *patternFor(CodeGenModule &CGM, llvm::Type *Ty) {
   // The following value is a guaranteed unmappable pointer value and has a
   // repeated byte-pattern which makes it easier to synthesize. We use it for
@@ -1201,6 +1215,8 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   // If the initializer is all or mostly the same, codegen with bzero / memset
   // then do a few stores afterward.
   uint64_t ConstantSize = CGM.getDataLayout().getTypeAllocSize(Ty);
+  if (!ConstantSize)
+    return;
   auto *SizeVal = llvm::ConstantInt::get(IntPtrTy, ConstantSize);
   if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, 0), SizeVal,
@@ -1225,6 +1241,21 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     }
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, Value), SizeVal,
                          isVolatile);
+    return;
+  }
+
+  llvm::StructType *STy = dyn_cast<llvm::StructType>(Ty);
+  // FIXME: handle the case when STy != Loc.getElementType().
+  // FIXME: handle non-struct aggregate types.
+  if (STy && (STy == Loc.getElementType()) &&
+      shouldSplitStructStore(CGM, ConstantSize)) {
+    for (unsigned i = 0; i != constant->getNumOperands(); i++) {
+      Address EltPtr = Builder.CreateStructGEP(
+          Loc, i, CGM.getDataLayout().getStructLayout(STy));
+      emitStoresForConstant(
+          CGM, D, EltPtr, isVolatile, Builder,
+          cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
+    }
     return;
   }
 
@@ -1577,7 +1608,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
     (void)DI->EmitDeclareOfAutoVariable(&D, address.getPointer(), Builder);
   }
 
-  if (D.hasAttr<AnnotateAttr>())
+  if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
     EmitVarAnnotations(&D, address.getPointer());
 
   // Make sure we call @llvm.lifetime.end.
