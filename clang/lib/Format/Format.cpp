@@ -1786,9 +1786,10 @@ tooling::Replacements sortCppIncludes(const FormatStyle &Style, StringRef Code,
         Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
 
     StringRef Trimmed = Line.trim();
-    if (Trimmed == "// clang-format off")
+    if (Trimmed == "// clang-format off" || Trimmed == "/* clang-format off */")
       FormattingOff = true;
-    else if (Trimmed == "// clang-format on")
+    else if (Trimmed == "// clang-format on" ||
+             Trimmed == "/* clang-format on */")
       FormattingOff = false;
 
     const bool EmptyLineSkipped =

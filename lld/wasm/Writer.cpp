@@ -1168,6 +1168,9 @@ void Writer::createCtorFunction() {
 // This is then used either when creating the output linking section or to
 // synthesize the "__wasm_call_ctors" function.
 void Writer::calculateInitFunctions() {
+  if (!Config->Relocatable && !WasmSym::CallCtors->isLive())
+    return;
+
   for (ObjFile *File : Symtab->ObjectFiles) {
     const WasmLinkingData &L = File->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions) {
