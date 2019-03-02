@@ -237,6 +237,16 @@ void CheckFoldableChainNodeMatcher::printImpl(raw_ostream &OS,
   OS.indent(indent) << "CheckFoldableChainNode\n";
 }
 
+void CheckImmAllOnesVMatcher::printImpl(raw_ostream &OS,
+                                        unsigned indent) const {
+  OS.indent(indent) << "CheckAllOnesV\n";
+}
+
+void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS,
+                                         unsigned indent) const {
+  OS.indent(indent) << "CheckAllZerosV\n";
+}
+
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, unsigned indent) const {
   OS.indent(indent) << "EmitInteger " << Val << " VT=" << getEnumName(VT)
                     << '\n';

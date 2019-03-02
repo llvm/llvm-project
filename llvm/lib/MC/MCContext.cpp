@@ -37,6 +37,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -564,6 +565,30 @@ void MCContext::RemapDebugPaths() {
 //===----------------------------------------------------------------------===//
 // Dwarf Management
 //===----------------------------------------------------------------------===//
+
+void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
+  // MCDwarf needs the root file as well as the compilation directory.
+  // If we find a '.file 0' directive that will supersede these values.
+  MD5::MD5Result *Cksum = nullptr;
+  if (getDwarfVersion() >= 5) {
+    MD5 Hash;
+    Cksum = (MD5::MD5Result *)allocate(sizeof(MD5::MD5Result), 1);
+    Hash.update(Buffer);
+    Hash.final(*Cksum);
+  }
+  // Canonicalize the root filename. It cannot be empty, and should not
+  // repeat the compilation dir.
+  StringRef FileName =
+      !getMainFileName().empty() ? StringRef(getMainFileName()) : InputFileName;
+  if (FileName.empty() || FileName == "-")
+    FileName = "<stdin>";
+  if (FileName.consume_front(getCompilationDir()))
+    if (llvm::sys::path::is_separator(FileName.front()))
+      FileName = FileName.drop_front();
+  assert(!FileName.empty());
+  setMCLineTableRootFile(
+      /*CUID=*/0, getCompilationDir(), FileName, Cksum, None);
+}
 
 /// getDwarfFile - takes a file name and number to place in the dwarf file and
 /// directory tables.  If the file number has already been allocated it is an

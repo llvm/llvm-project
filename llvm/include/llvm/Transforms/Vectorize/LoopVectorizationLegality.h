@@ -465,7 +465,7 @@ private:
   /// Used to emit an analysis of any legality issues.
   LoopVectorizeHints *Hints;
 
-  /// The demanded bits analsyis is used to compute the minimum type size in
+  /// The demanded bits analysis is used to compute the minimum type size in
   /// which a reduction can be computed.
   DemandedBits *DB;
 
