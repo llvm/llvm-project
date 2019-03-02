@@ -59,8 +59,7 @@
 // RUN:     -target wasm64-unknown-unknown -matomics \
 // RUN:   | FileCheck %s -check-prefix=ATOMICS
 //
-// ATOMICS-DAG:#define __wasm_atomics__ 1{{$}}
-// ATOMICS-DAG:#define __wasm_bulk_memory__ 1{{$}}
+// ATOMICS:#define __wasm_atomics__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -pthread \
@@ -69,8 +68,7 @@
 // RUN:     -target wasm64-unknown-unknown -pthread \
 // RUN:   | FileCheck %s -check-prefix=PTHREAD
 //
-// PTHREAD-DAG:#define __wasm_atomics__ 1{{$}}
-// PTHREAD-DAG:#define __wasm_bulk_memory__ 1{{$}}
+// PTHREAD:#define __wasm_atomics__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mcpu=mvp \

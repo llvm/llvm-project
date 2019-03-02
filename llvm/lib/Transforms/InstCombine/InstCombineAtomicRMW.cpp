@@ -57,15 +57,23 @@ bool isIdempotentRMW(AtomicRMWInst& RMWI) {
 }
 
 /// Return true if the given instruction always produces a value in memory
-/// equivelent to its value operand.
+/// equivalent to its value operand.
 bool isSaturating(AtomicRMWInst& RMWI) {
+  if (auto CF = dyn_cast<ConstantFP>(RMWI.getValOperand()))
+    switch(RMWI.getOperation()) {
+    case AtomicRMWInst::FAdd:
+    case AtomicRMWInst::FSub:
+      return CF->isNaN();
+    default:
+      return false;
+    };
+
   auto C = dyn_cast<ConstantInt>(RMWI.getValOperand());
   if(!C)
     return false;
 
   switch(RMWI.getOperation()) {
   default:
-    // TODO: fadd, fsub w/Nan
     return false;
   case AtomicRMWInst::Xchg:
     return true;

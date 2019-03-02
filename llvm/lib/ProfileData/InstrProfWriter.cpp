@@ -408,14 +408,30 @@ Error InstrProfWriter::writeText(raw_fd_ostream &OS) {
   else if (ProfileKind == PF_IRLevelWithCS)
     OS << "# CSIR level Instrumentation Flag\n:csir\n";
   InstrProfSymtab Symtab;
-  for (const auto &I : FunctionData)
-    if (shouldEncodeData(I.getValue()))
+
+  using FuncPair = detail::DenseMapPair<uint64_t, InstrProfRecord>;
+  using RecordType = std::pair<StringRef, FuncPair>;
+  SmallVector<RecordType, 4> OrderedFuncData;
+
+  for (const auto &I : FunctionData) {
+    if (shouldEncodeData(I.getValue())) {
       if (Error E = Symtab.addFuncName(I.getKey()))
         return E;
-
-  for (const auto &I : FunctionData)
-    if (shouldEncodeData(I.getValue()))
       for (const auto &Func : I.getValue())
-        writeRecordInText(I.getKey(), Func.first, Func.second, Symtab, OS);
+        OrderedFuncData.push_back(std::make_pair(I.getKey(), Func));
+    }
+  }
+
+  llvm::sort(OrderedFuncData, [](const RecordType &A, const RecordType &B) {
+    return std::tie(A.first, A.second.first) <
+           std::tie(B.first, B.second.first);
+  });
+
+  for (const auto &record : OrderedFuncData) {
+    const StringRef &Name = record.first;
+    const FuncPair &Func = record.second;
+    writeRecordInText(Name, Func.first, Func.second, Symtab, OS);
+  }
+
   return Error::success();
 }

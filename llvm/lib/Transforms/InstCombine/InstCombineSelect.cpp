@@ -1563,6 +1563,30 @@ static Instruction *foldSelectCmpXchg(SelectInst &SI) {
   return nullptr;
 }
 
+static Instruction *moveAddAfterMinMax(SelectPatternFlavor SPF, Value *X,
+                                       Value *Y,
+                                       InstCombiner::BuilderTy &Builder) {
+  assert (SelectPatternResult::isMinOrMax(SPF) && "Expected min/max pattern");
+  bool IsUnsigned = SPF == SelectPatternFlavor::SPF_UMIN ||
+                    SPF == SelectPatternFlavor::SPF_UMAX;
+  // TODO: If InstSimplify could fold all cases where C2 <= C1, we could change
+  // the constant value check to an assert.
+  Value *A;
+  const APInt *C1, *C2;
+  if (IsUnsigned && match(X, m_NUWAdd(m_Value(A), m_APInt(C1))) &&
+      match(Y, m_APInt(C2)) && C2->uge(*C1) && X->hasNUses(2)) {
+    // umin (add nuw A, C1), C2 --> add nuw (umin A, C2 - C1), C1
+    // umax (add nuw A, C1), C2 --> add nuw (umax A, C2 - C1), C1
+    Value *NewMinMax = createMinMax(Builder, SPF, A,
+                                    ConstantInt::get(X->getType(), *C2 - *C1));
+    return BinaryOperator::CreateNUW(BinaryOperator::Add, NewMinMax,
+                                     ConstantInt::get(X->getType(), *C1));
+  }
+  // TODO: Handle SMIN/SMAX (similar to unsigned, but the signed subtraction of
+  // the constants must not overflow).
+  return nullptr;
+}
+
 /// Reduce a sequence of min/max with a common operand.
 static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
                                         Value *RHS,
@@ -1960,6 +1984,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       if (Instruction *I = moveNotAfterMinMax(LHS, RHS))
         return I;
       if (Instruction *I = moveNotAfterMinMax(RHS, LHS))
+        return I;
+
+      if (Instruction *I = moveAddAfterMinMax(SPF, LHS, RHS, Builder))
         return I;
 
       if (Instruction *I = factorizeMinMaxTree(SPF, LHS, RHS, Builder))

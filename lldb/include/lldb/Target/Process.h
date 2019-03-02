@@ -2519,6 +2519,10 @@ public:
   ///
   //------------------------------------------------------------------
   void RestoreProcessEvents();
+  
+  bool StateChangedIsHijackedForSynchronousResume();
+
+  bool StateChangedIsExternallyHijacked();
 
   const lldb::ABISP &GetABI();
 
@@ -3210,8 +3214,6 @@ protected:
   Status StopForDestroyOrDetach(lldb::EventSP &exit_event_sp);
 
   virtual Status UpdateAutomaticSignalFiltering();
-
-  bool StateChangedIsExternallyHijacked();
 
   void LoadOperatingSystemPlugin(bool flush);
 

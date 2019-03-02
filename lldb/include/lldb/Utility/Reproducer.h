@@ -111,6 +111,50 @@ private:
   FileCollector m_collector;
 };
 
+class DataRecorder {
+public:
+  DataRecorder(FileSpec filename, std::error_code &ec)
+      : m_filename(std::move(filename)),
+        m_os(m_filename.GetPath(), ec, llvm::sys::fs::F_Text) {}
+
+  static llvm::Expected<std::unique_ptr<DataRecorder>>
+  Create(FileSpec filename);
+
+  template <typename T> void Record(const T &t, bool newline = false) {
+    m_os << t;
+    if (newline)
+      m_os << '\n';
+  }
+
+  const FileSpec &GetFilename() { return m_filename; }
+
+private:
+  FileSpec m_filename;
+  llvm::raw_fd_ostream m_os;
+};
+
+struct CommandInfo {
+  static const char *name;
+  static const char *file;
+};
+
+class CommandProvider : public Provider<CommandProvider> {
+public:
+  typedef CommandInfo info;
+
+  CommandProvider(const FileSpec &directory) : Provider(directory) {}
+
+  DataRecorder *GetNewDataRecorder();
+
+  void Keep() override;
+  void Discard() override;
+
+  static char ID;
+
+private:
+  std::vector<std::unique_ptr<DataRecorder>> m_data_recorders;
+};
+
 /// The generator is responsible for the logic needed to generate a
 /// reproducer. For doing so it relies on providers, who serialize data that
 /// is necessary for reproducing  a failure.

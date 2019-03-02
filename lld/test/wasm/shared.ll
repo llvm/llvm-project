@@ -68,7 +68,7 @@ declare void @func_external()
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          GLOBAL_GET
 ; CHECK-NEXT:           Index:           2
-; CHECK-NEXT:         Functions:       [ 2, 0 ]
+; CHECK-NEXT:         Functions:       [ 1, 0 ]
 
 ; check the data segment initialized with __memory_base global as offset
 
