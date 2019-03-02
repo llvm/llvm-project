@@ -79,8 +79,12 @@ ConstString ValueObjectVariable::GetTypeName() {
 
 ConstString ValueObjectVariable::GetDisplayTypeName() {
   Type *var_type = m_variable_sp->GetType();
-  if (var_type)
-    return var_type->GetForwardCompilerType().GetDisplayTypeName(GetFrameSP());
+  if (var_type) {
+      const SymbolContext *sc = nullptr;
+      if (GetFrameSP())
+        sc = &GetFrameSP()->GetSymbolContext(lldb::eSymbolContextFunction);
+      return var_type->GetForwardCompilerType().GetDisplayTypeName(sc);
+  }
   return ConstString();
 }
 

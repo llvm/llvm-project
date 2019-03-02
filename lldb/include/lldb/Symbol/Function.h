@@ -516,11 +516,11 @@ public:
   //------------------------------------------------------------------
   const DWARFExpression &GetFrameBaseExpression() const { return m_frame_base; }
 
-  ConstString GetName() const;
+  ConstString GetName(const SymbolContext *sc = nullptr) const;
 
-  ConstString GetNameNoArguments() const;
+  ConstString GetNameNoArguments(const SymbolContext *sc = nullptr) const;
 
-  ConstString GetDisplayName() const;
+  ConstString GetDisplayName(const SymbolContext *sc = nullptr) const;
 
   const Mangled &GetMangled() const { return m_mangled; }
 
