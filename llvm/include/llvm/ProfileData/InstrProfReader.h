@@ -501,8 +501,7 @@ public:
 
   /// Return the profile summary.
   /// \c UseCS indicates whether to use the context-sensitive summary.
-  // TODO: removed the defualt parameter.
-  ProfileSummary &getSummary(bool UseCS = false) {
+  ProfileSummary &getSummary(bool UseCS) {
     if (UseCS) {
       assert(CS_Summary && "No context sensitive summary");
       return *(CS_Summary.get());

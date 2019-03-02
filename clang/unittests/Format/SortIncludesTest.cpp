@@ -117,6 +117,43 @@ TEST_F(SortIncludesTest, SupportClangFormatOff) {
                  "// clang-format on\n"));
 }
 
+TEST_F(SortIncludesTest, SupportClangFormatOffCStyle) {
+  EXPECT_EQ("#include <a>\n"
+            "#include <b>\n"
+            "#include <c>\n"
+            "/* clang-format off */\n"
+            "#include <b>\n"
+            "#include <a>\n"
+            "#include <c>\n"
+            "/* clang-format on */\n",
+            sort("#include <b>\n"
+                 "#include <a>\n"
+                 "#include <c>\n"
+                 "/* clang-format off */\n"
+                 "#include <b>\n"
+                 "#include <a>\n"
+                 "#include <c>\n"
+                 "/* clang-format on */\n"));
+
+  // Not really turning it off
+  EXPECT_EQ("#include <a>\n"
+            "#include <b>\n"
+            "#include <c>\n"
+            "/* clang-format offically */\n"
+            "#include <a>\n"
+            "#include <b>\n"
+            "#include <c>\n"
+            "/* clang-format onwards */\n",
+            sort("#include <b>\n"
+                 "#include <a>\n"
+                 "#include <c>\n"
+                 "/* clang-format offically */\n"
+                 "#include <b>\n"
+                 "#include <a>\n"
+                 "#include <c>\n"
+                 "/* clang-format onwards */\n"));
+}
+
 TEST_F(SortIncludesTest, IncludeSortingCanBeDisabled) {
   FmtStyle.SortIncludes = false;
   EXPECT_EQ("#include \"a.h\"\n"

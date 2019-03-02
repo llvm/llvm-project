@@ -2483,7 +2483,7 @@ void CommandInterpreter::HandleCommandsFromFile(
                // or written
       debugger.GetPrompt(), llvm::StringRef(),
       false, // Not multi-line
-      debugger.GetUseColor(), 0, *this));
+      debugger.GetUseColor(), 0, *this, nullptr));
   const bool old_async_execution = debugger.GetAsyncExecution();
 
   // Set synchronous execution if we are not stopping on continue
@@ -2905,8 +2905,9 @@ void CommandInterpreter::GetLLDBCommandsFromIOHandler(
                             llvm::StringRef(), // Continuation prompt
                             true,              // Get multiple lines
                             debugger.GetUseColor(),
-                            0,          // Don't show line numbers
-                            delegate)); // IOHandlerDelegate
+                            0,         // Don't show line numbers
+                            delegate,  // IOHandlerDelegate
+                            nullptr)); // FileShadowCollector
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
@@ -2928,8 +2929,9 @@ void CommandInterpreter::GetPythonCommandsFromIOHandler(
                             llvm::StringRef(), // Continuation prompt
                             true,              // Get multiple lines
                             debugger.GetUseColor(),
-                            0,          // Don't show line numbers
-                            delegate)); // IOHandlerDelegate
+                            0,         // Don't show line numbers
+                            delegate,  // IOHandlerDelegate
+                            nullptr)); // FileShadowCollector
 
   if (io_handler_sp) {
     io_handler_sp->SetUserData(baton);
@@ -2980,8 +2982,9 @@ CommandInterpreter::GetIOHandler(bool force_create,
         llvm::StringRef(), // Continuation prompt
         false, // Don't enable multiple line input, just single line commands
         m_debugger.GetUseColor(),
-        0, // Don't show line numbers
-        *this);
+        0,     // Don't show line numbers
+        *this, // IOHandlerDelegate
+        GetDebugger().GetInputRecorder());
   }
   return m_command_io_handler_sp;
 }

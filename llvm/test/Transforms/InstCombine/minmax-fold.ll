@@ -909,9 +909,9 @@ define float @not_min_of_min(i8 %i, float %x) {
 
 define i32 @add_umin(i32 %x) {
 ; CHECK-LABEL: @add_umin(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 15
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], 42
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 42
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[X:%.*]], 27
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 27
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i32 [[TMP2]], 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 %x, 15
@@ -922,9 +922,8 @@ define i32 @add_umin(i32 %x) {
 
 define i32 @add_umin_constant_limit(i32 %x) {
 ; CHECK-LABEL: @add_umin_constant_limit(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i32 [[X:%.*]], 41
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A]], 42
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[A]], i32 42
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i32 41, i32 42
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 %x, 41
@@ -1008,9 +1007,9 @@ define i32 @add_umin_extra_use(i32 %x, i32* %p) {
 
 define <2 x i16> @add_umin_vec(<2 x i16> %x) {
 ; CHECK-LABEL: @add_umin_vec(
-; CHECK-NEXT:    [[A:%.*]] = add nuw <2 x i16> [[X:%.*]], <i16 15, i16 15>
-; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i16> [[A]], <i16 240, i16 240>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i16> [[A]], <2 x i16> <i16 240, i16 240>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i16> [[X:%.*]], <i16 225, i16 225>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i16> [[X]], <2 x i16> <i16 225, i16 225>
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw <2 x i16> [[TMP2]], <i16 15, i16 15>
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %a = add nuw <2 x i16> %x, <i16 15, i16 15>
@@ -1021,9 +1020,9 @@ define <2 x i16> @add_umin_vec(<2 x i16> %x) {
 
 define i37 @add_umax(i37 %x) {
 ; CHECK-LABEL: @add_umax(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i37 [[X:%.*]], 5
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i37 [[A]], 42
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i37 [[A]], i37 42
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i37 [[X:%.*]], 37
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i37 [[X]], i37 37
+; CHECK-NEXT:    [[R:%.*]] = add nuw i37 [[TMP2]], 5
 ; CHECK-NEXT:    ret i37 [[R]]
 ;
   %a = add nuw i37 %x, 5
@@ -1034,9 +1033,9 @@ define i37 @add_umax(i37 %x) {
 
 define i37 @add_umax_constant_limit(i37 %x) {
 ; CHECK-LABEL: @add_umax_constant_limit(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i37 [[X:%.*]], 81
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i37 [[A]], 82
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i37 [[A]], i37 82
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i37 [[X:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i37 [[X]], i37 1
+; CHECK-NEXT:    [[R:%.*]] = add nuw i37 [[TMP2]], 81
 ; CHECK-NEXT:    ret i37 [[R]]
 ;
   %a = add nuw i37 %x, 81
@@ -1050,9 +1049,7 @@ define i37 @add_umax_constant_limit(i37 %x) {
 
 define i37 @add_umax_simplify(i37 %x) {
 ; CHECK-LABEL: @add_umax_simplify(
-; CHECK-NEXT:    [[A:%.*]] = add nuw i37 [[X:%.*]], 42
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i37 [[A]], 42
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i37 [[A]], i37 42
+; CHECK-NEXT:    [[R:%.*]] = add nuw i37 [[X:%.*]], 42
 ; CHECK-NEXT:    ret i37 [[R]]
 ;
   %a = add nuw i37 %x, 42
@@ -1124,13 +1121,43 @@ define i32 @add_umax_extra_use(i32 %x, i32* %p) {
 
 define <2 x i33> @add_umax_vec(<2 x i33> %x) {
 ; CHECK-LABEL: @add_umax_vec(
-; CHECK-NEXT:    [[A:%.*]] = add nuw <2 x i33> [[X:%.*]], <i33 5, i33 5>
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt <2 x i33> [[A]], <i33 240, i33 240>
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C]], <2 x i33> [[A]], <2 x i33> <i33 240, i33 240>
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i33> [[X:%.*]], <i33 235, i33 235>
+; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[TMP1]], <2 x i33> [[X]], <2 x i33> <i33 235, i33 235>
+; CHECK-NEXT:    [[R:%.*]] = add nuw <2 x i33> [[TMP2]], <i33 5, i33 5>
 ; CHECK-NEXT:    ret <2 x i33> [[R]]
 ;
   %a = add nuw <2 x i33> %x, <i33 5, i33 5>
   %c = icmp ugt <2 x i33> %a, <i33 240, i33 240>
   %r = select <2 x i1> %c, <2 x i33> %a, <2 x i33> <i33 240, i33 240>
   ret <2 x i33> %r
+}
+
+define i8 @PR14613_umin(i8 %x) {
+; CHECK-LABEL: @PR14613_umin(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 -16
+; CHECK-NEXT:    [[U7:%.*]] = add i8 [[TMP2]], 15
+; CHECK-NEXT:    ret i8 [[U7]]
+;
+  %u4 = zext i8 %x to i32
+  %u5 = add nuw nsw i32 %u4, 15
+  %u6 = icmp ult i32 %u5, 255
+  %u7 = select i1 %u6, i32 %u5, i32 255
+  %r = trunc i32 %u7 to i8
+  ret i8 %r
+}
+
+define i8 @PR14613_umax(i8 %x) {
+; CHECK-LABEL: @PR14613_umax(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i8 [[X]], i8 -16
+; CHECK-NEXT:    [[U7:%.*]] = add nsw i8 [[TMP2]], 15
+; CHECK-NEXT:    ret i8 [[U7]]
+;
+  %u4 = zext i8 %x to i32
+  %u5 = add nuw nsw i32 %u4, 15
+  %u6 = icmp ugt i32 %u5, 255
+  %u7 = select i1 %u6, i32 %u5, i32 255
+  %r = trunc i32 %u7 to i8
+  ret i8 %r
 }

@@ -234,7 +234,7 @@ Single and multi-line expressions:
 with no newlines.  To evaluate a multi-line expression, \
 hit a return after an empty expression, and lldb will enter the multi-line expression editor. \
 Hit return on an empty line to end the multi-line expression."
-      
+
       R"(
 
 Timeouts:
@@ -560,7 +560,7 @@ void CommandObjectExpression::GetMultilineExpression() {
                             llvm::StringRef(), // Continuation prompt
                             multiple_lines, color_prompt,
                             1, // Show line numbers starting at 1
-                            *this));
+                            *this, nullptr));
 
   StreamFileSP output_sp(io_handler_sp->GetOutputStreamFile());
   if (output_sp) {

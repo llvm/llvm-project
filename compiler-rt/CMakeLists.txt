@@ -375,9 +375,13 @@ if(MSVC)
   # warning from the MS linker complaining that it can't find the 'vc140.pdb'
   # file used by our object library compilations.
   list(APPEND SANITIZER_COMMON_CFLAGS /Z7)
-  llvm_replace_compiler_option(CMAKE_CXX_FLAGS "/Z[i7I]" "/Z7")
-  llvm_replace_compiler_option(CMAKE_CXX_FLAGS_DEBUG "/Z[i7I]" "/Z7")
-  llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/Z[i7I]" "/Z7")
+  foreach(var_to_update
+    CMAKE_CXX_FLAGS
+    CMAKE_CXX_FLAGS_DEBUG
+    CMAKE_CXX_FLAGS_RELWITHDEBINFO)
+    string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
+           "${var_to_update}" "${${var_to_update}}")
+  endforeach()
 elseif(COMPILER_RT_HAS_GLINE_TABLES_ONLY_FLAG AND NOT COMPILER_RT_DEBUG)
   list(APPEND SANITIZER_COMMON_CFLAGS -gline-tables-only)
 elseif(COMPILER_RT_HAS_G_FLAG)

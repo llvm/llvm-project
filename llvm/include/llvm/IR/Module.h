@@ -869,9 +869,7 @@ public:
   /// @{
 
   /// Attach profile summary metadata to this module.
-  // TODO: Remove the default paramter.
-  void setProfileSummary(Metadata *M,
-                         ProfileSummary::Kind Kind = ProfileSummary::PSK_Instr);
+  void setProfileSummary(Metadata *M, ProfileSummary::Kind Kind);
 
   /// Returns profile summary metadata. When IsCS is true, use the context
   /// sensitive profile summary.
