@@ -124,8 +124,7 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
                          options::OPT_fno_use_init_array, true))
     CC1Args.push_back("-fuse-init-array");
 
-  // '-pthread' implies '-target-feature +atomics' and
-  // '-target-feature +bulk-memory'
+  // '-pthread' implies '-target-feature +atomics'
   if (DriverArgs.hasFlag(options::OPT_pthread, options::OPT_no_pthread,
                          false)) {
     if (DriverArgs.hasFlag(options::OPT_mno_atomics, options::OPT_matomics,
@@ -133,27 +132,8 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
       getDriver().Diag(diag::err_drv_argument_not_allowed_with)
           << "-pthread"
           << "-mno-atomics";
-    if (DriverArgs.hasFlag(options::OPT_mno_bulk_memory,
-                           options::OPT_mbulk_memory, false))
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-pthread"
-          << "-mno-bulk-memory";
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+atomics");
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+bulk-memory");
-  }
-
-  // '-matomics' implies '-mbulk-memory'
-  if (DriverArgs.hasFlag(options::OPT_matomics, options::OPT_mno_atomics,
-                         false)) {
-    if (DriverArgs.hasFlag(options::OPT_mno_bulk_memory,
-                           options::OPT_mbulk_memory, false))
-      getDriver().Diag(diag::err_drv_argument_not_allowed_with)
-          << "-matomics"
-          << "-mno-bulk-memory";
-    CC1Args.push_back("-target-feature");
-    CC1Args.push_back("+bulk-memory");
   }
 }
 
