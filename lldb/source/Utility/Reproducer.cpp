@@ -226,7 +226,7 @@ DataRecorder::Create(FileSpec filename) {
   auto recorder = llvm::make_unique<DataRecorder>(std::move(filename), ec);
   if (ec)
     return llvm::errorCodeToError(ec);
-  return recorder;
+  return std::move(recorder);
 }
 
 DataRecorder *CommandProvider::GetNewDataRecorder() {
