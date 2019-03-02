@@ -132,10 +132,6 @@ bool MipsInstructionSelector::select(MachineInstr &I,
   }
 
   if (selectImpl(I, CoverageInfo)) {
-    if (I.getOpcode() == Mips::MUL) {
-      I.getOperand(3).setIsDead(true);
-      I.getOperand(4).setIsDead(true);
-    }
     return true;
   }
 

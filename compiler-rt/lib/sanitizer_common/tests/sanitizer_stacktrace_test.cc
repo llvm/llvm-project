@@ -20,18 +20,15 @@ class FastUnwindTest : public ::testing::Test {
  protected:
   virtual void SetUp();
   virtual void TearDown();
-  bool TryFastUnwind(uptr max_depth) {
-    if (!StackTrace::WillUseFastUnwind(true))
-      return false;
-    trace.Unwind(max_depth, start_pc, (uptr)&fake_stack[0], 0, fake_top,
-                 fake_bottom, true);
-    return true;
-  }
+
+  void UnwindFast();
 
   void *mapping;
   uhwptr *fake_stack;
   const uptr fake_stack_size = 10;
   uhwptr start_pc;
+
+  uhwptr fake_bp;
   uhwptr fake_top;
   uhwptr fake_bottom;
   BufferedStackTrace trace;
@@ -62,6 +59,7 @@ void FastUnwindTest::SetUp() {
   fake_top = (uhwptr)&fake_stack[fake_stack_size + 2];
   // Bottom is one slot before the start because UnwindFast uses >.
   fake_bottom = (uhwptr)mapping;
+  fake_bp = (uptr)&fake_stack[0];
   start_pc = PC(0);
 }
 
@@ -70,9 +68,14 @@ void FastUnwindTest::TearDown() {
   UnmapOrDie(mapping, 2 * ps);
 }
 
+#if SANITIZER_CAN_FAST_UNWIND
+
+void FastUnwindTest::UnwindFast() {
+  trace.UnwindFast(start_pc, fake_bp, fake_top, fake_bottom, kStackTraceMax);
+}
+
 TEST_F(FastUnwindTest, Basic) {
-  if (!TryFastUnwind(kStackTraceMax))
-    return;
+  UnwindFast();
   // Should get all on-stack retaddrs and start_pc.
   EXPECT_EQ(6U, trace.size);
   EXPECT_EQ(start_pc, trace.trace[0]);
@@ -85,8 +88,7 @@ TEST_F(FastUnwindTest, Basic) {
 TEST_F(FastUnwindTest, FramePointerLoop) {
   // Make one fp point to itself.
   fake_stack[4] = (uhwptr)&fake_stack[4];
-  if (!TryFastUnwind(kStackTraceMax))
-    return;
+  UnwindFast();
   // Should get all on-stack retaddrs up to the 4th slot and start_pc.
   EXPECT_EQ(4U, trace.size);
   EXPECT_EQ(start_pc, trace.trace[0]);
@@ -98,8 +100,7 @@ TEST_F(FastUnwindTest, FramePointerLoop) {
 TEST_F(FastUnwindTest, MisalignedFramePointer) {
   // Make one fp misaligned.
   fake_stack[4] += 3;
-  if (!TryFastUnwind(kStackTraceMax))
-    return;
+  UnwindFast();
   // Should get all on-stack retaddrs up to the 4th slot and start_pc.
   EXPECT_EQ(4U, trace.size);
   EXPECT_EQ(start_pc, trace.trace[0]);
@@ -109,16 +110,14 @@ TEST_F(FastUnwindTest, MisalignedFramePointer) {
 }
 
 TEST_F(FastUnwindTest, OneFrameStackTrace) {
-  if (!TryFastUnwind(1))
-    return;
+  trace.Unwind(start_pc, fake_bp, nullptr, true, 1);
   EXPECT_EQ(1U, trace.size);
   EXPECT_EQ(start_pc, trace.trace[0]);
   EXPECT_EQ((uhwptr)&fake_stack[0], trace.top_frame_bp);
 }
 
 TEST_F(FastUnwindTest, ZeroFramesStackTrace) {
-  if (!TryFastUnwind(0))
-    return;
+  trace.Unwind(start_pc, fake_bp, nullptr, true, 0);
   EXPECT_EQ(0U, trace.size);
   EXPECT_EQ(0U, trace.top_frame_bp);
 }
@@ -128,8 +127,7 @@ TEST_F(FastUnwindTest, FPBelowPrevFP) {
   // current FP.
   fake_stack[0] = (uhwptr)&fake_stack[-50];
   fake_stack[1] = PC(1);
-  if (!TryFastUnwind(3))
-    return;
+  UnwindFast();
   EXPECT_EQ(2U, trace.size);
   EXPECT_EQ(PC(0), trace.trace[0]);
   EXPECT_EQ(PC(1), trace.trace[1]);
@@ -138,8 +136,7 @@ TEST_F(FastUnwindTest, FPBelowPrevFP) {
 TEST_F(FastUnwindTest, CloseToZeroFrame) {
   // Make one pc a NULL pointer.
   fake_stack[5] = 0x0;
-  if (!TryFastUnwind(kStackTraceMax))
-    return;
+  UnwindFast();
   // The stack should be truncated at the NULL pointer (and not include it).
   EXPECT_EQ(3U, trace.size);
   EXPECT_EQ(start_pc, trace.trace[0]);
@@ -148,16 +145,16 @@ TEST_F(FastUnwindTest, CloseToZeroFrame) {
   }
 }
 
+#endif // SANITIZER_CAN_FAST_UNWIND
+
 TEST(SlowUnwindTest, ShortStackTrace) {
-  if (StackTrace::WillUseFastUnwind(false))
-    return;
   BufferedStackTrace stack;
   uptr pc = StackTrace::GetCurrentPc();
   uptr bp = GET_CURRENT_FRAME();
-  stack.Unwind(0, pc, bp, 0, 0, 0, false);
+  stack.Unwind(pc, bp, nullptr, false, /*max_depth=*/0);
   EXPECT_EQ(0U, stack.size);
   EXPECT_EQ(0U, stack.top_frame_bp);
-  stack.Unwind(1, pc, bp, 0, 0, 0, false);
+  stack.Unwind(pc, bp, nullptr, false, /*max_depth=*/1);
   EXPECT_EQ(1U, stack.size);
   EXPECT_EQ(pc, stack.trace[0]);
   EXPECT_EQ(bp, stack.top_frame_bp);

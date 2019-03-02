@@ -31,23 +31,21 @@ declare i32 @ret32(i32, i64, i32) local_unnamed_addr
 ; YAML:        - Type:            EXPORT
 ; YAML:           - Name:            ret32
 ; YAML-NEXT:        Kind:            FUNCTION
-; YAML-NEXT:        Index:           3
+; YAML-NEXT:        Index:           2
 ; YAML-NEXT:      - Name:            call_ret32
 ; YAML-NEXT:        Kind:            FUNCTION
-; YAML-NEXT:        Index:           4
+; YAML-NEXT:        Index:           3
 
 ; YAML:        - Type:            CUSTOM
 ; YAML-NEXT:     Name:            name
 ; YAML-NEXT:     FunctionNames:   
 ; YAML-NEXT:       - Index:           0
-; YAML-NEXT:         Name:            __wasm_call_ctors
-; YAML-NEXT:       - Index:           1
 ; YAML-NEXT:         Name:            'unreachable:ret32'
-; YAML-NEXT:       - Index:           2
+; YAML-NEXT:       - Index:           1
 ; YAML-NEXT:         Name:            _start
-; YAML-NEXT:       - Index:           3
+; YAML-NEXT:       - Index:           2
 ; YAML-NEXT:         Name:            ret32
-; YAML-NEXT:       - Index:           4
+; YAML-NEXT:       - Index:           3
 ; YAML-NEXT:         Name:            call_ret32
 ; YAML-NEXT: ...
 

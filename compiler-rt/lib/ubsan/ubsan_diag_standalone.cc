@@ -16,15 +16,15 @@
 
 using namespace __ubsan;
 
-void __sanitizer::GetStackTrace(BufferedStackTrace *stack, uptr max_depth,
-                                uptr pc, uptr bp, void *context, bool fast) {
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   uptr top = 0;
   uptr bottom = 0;
-  if (StackTrace::WillUseFastUnwind(fast)) {
+  if (StackTrace::WillUseFastUnwind(request_fast)) {
     GetThreadStackTopAndBottom(false, &top, &bottom);
-    stack->Unwind(max_depth, pc, bp, nullptr, top, bottom, true);
+    Unwind(max_depth, pc, bp, nullptr, top, bottom, true);
   } else
-    stack->Unwind(max_depth, pc, bp, context, 0, 0, false);
+    Unwind(max_depth, pc, bp, context, 0, 0, false);
 }
 
 extern "C" {

@@ -37425,6 +37425,12 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     SDValue Sum = ShAmt1.getOperand(0);
     if (auto *SumC = dyn_cast<ConstantSDNode>(Sum)) {
       SDValue ShAmt1Op1 = ShAmt1.getOperand(1);
+      if (ShAmt1Op1.getOpcode() == ISD::AND &&
+          isa<ConstantSDNode>(ShAmt1Op1.getOperand(1)) &&
+          ShAmt1Op1.getConstantOperandVal(1) == (Bits - 1)) {
+        ShMsk1 = ShAmt1Op1;
+        ShAmt1Op1 = ShAmt1Op1.getOperand(0);
+      }
       if (ShAmt1Op1.getOpcode() == ISD::TRUNCATE)
         ShAmt1Op1 = ShAmt1Op1.getOperand(0);
       if ((SumC->getAPIntValue() == Bits ||

@@ -301,21 +301,19 @@ u32 ChainOrigin(u32 id, StackTrace *stack) {
 
 } // namespace __msan
 
-void __sanitizer::GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc,
-                                uptr bp, void *context,
-                                bool request_fast_unwind) {
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   using namespace __msan;
   MsanThread *t = GetCurrentThread();
-  if (!t || !StackTrace::WillUseFastUnwind(request_fast_unwind)) {
+  if (!t || !StackTrace::WillUseFastUnwind(request_fast)) {
     // Block reports from our interceptors during _Unwind_Backtrace.
     SymbolizerScope sym_scope;
-    return stack->Unwind(max_s, pc, bp, context, 0, 0, false);
+    return Unwind(max_depth, pc, bp, context, 0, 0, false);
   }
-  if (StackTrace::WillUseFastUnwind(request_fast_unwind))
-    stack->Unwind(max_s, pc, bp, nullptr, t->stack_top(), t->stack_bottom(),
-                  true);
+  if (StackTrace::WillUseFastUnwind(request_fast))
+    Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);
   else
-    stack->Unwind(max_s, pc, 0, context, 0, 0, false);
+    Unwind(max_depth, pc, 0, context, 0, 0, false);
 }
 
 // Interface.
