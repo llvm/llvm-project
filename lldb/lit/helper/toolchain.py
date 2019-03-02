@@ -96,7 +96,7 @@ def use_support_substitutions(config):
             sdk_path = lit.util.to_string(out)
             llvm_config.lit_config.note('using SDKROOT: %r' % sdk_path)
             flags = ['-isysroot', sdk_path]
-    elif platform.system() in ['OpenBSD', 'Linux']:
+    elif platform.system() in ['NetBSD', 'OpenBSD', 'Linux']:
         flags = ['-pthread']
 
     config.target_shared_library_suffix = '.dylib' if platform.system() in ['Darwin'] else '.so'
