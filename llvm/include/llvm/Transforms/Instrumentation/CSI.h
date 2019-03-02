@@ -845,6 +845,14 @@ protected:
     msvc_new_array_int_nothrow,
     msvc_new_array_longlong,
     msvc_new_array_longlong_nothrow,
+    ZnwjSt11align_val_t,
+    ZnwmSt11align_val_t,
+    ZnajSt11align_val_t,
+    ZnamSt11align_val_t,
+    ZnwjSt11align_val_tRKSt9nothrow_t,
+    ZnwmSt11align_val_tRKSt9nothrow_t,
+    ZnajSt11align_val_tRKSt9nothrow_t,
+    ZnamSt11align_val_tRKSt9nothrow_t,
     LAST_ALLOCFNTY
   };
 
@@ -863,37 +871,77 @@ protected:
     case LibFunc_reallocf:
       return AllocFnTy::reallocf;
     case LibFunc_Znwj:
+      // new(unsigned int);
       return AllocFnTy::Znwj;
     case LibFunc_ZnwjRKSt9nothrow_t:
+      // new(unsigned int, nothrow);
       return AllocFnTy::ZnwjRKSt9nothrow_t;
     case LibFunc_Znwm:
+      // new(unsigned long);
       return AllocFnTy::Znwm;
     case LibFunc_ZnwmRKSt9nothrow_t:
+      // new(unsigned long, nothrow);
       return AllocFnTy::ZnwmRKSt9nothrow_t;
     case LibFunc_Znaj:
+      // new[](unsigned int);
       return AllocFnTy::Znaj;
     case LibFunc_ZnajRKSt9nothrow_t:
+      // new[](unsigned int, nothrow);
       return AllocFnTy::ZnajRKSt9nothrow_t;
     case LibFunc_Znam:
+      // new[](unsigned long);
       return AllocFnTy::Znam;
     case LibFunc_ZnamRKSt9nothrow_t:
+      // new[](unsigned long, nothrow);
       return AllocFnTy::ZnamRKSt9nothrow_t;
     case LibFunc_msvc_new_int:
+      // new(unsigned int);
       return AllocFnTy::msvc_new_int;
     case LibFunc_msvc_new_int_nothrow:
+      // new(unsigned int, nothrow);
       return AllocFnTy::msvc_new_int_nothrow;
     case LibFunc_msvc_new_longlong:
+      // new(unsigned long long);
       return AllocFnTy::msvc_new_longlong;
     case LibFunc_msvc_new_longlong_nothrow:
+      // new(unsigned long long, nothrow);
       return AllocFnTy::msvc_new_longlong_nothrow;
     case LibFunc_msvc_new_array_int:
+      // new[](unsigned int);
       return AllocFnTy::msvc_new_array_int;
     case LibFunc_msvc_new_array_int_nothrow:
+      // new[](unsigned int, nothrow);
       return AllocFnTy::msvc_new_array_int_nothrow;
     case LibFunc_msvc_new_array_longlong:
+      // new[](unsigned long long);
       return AllocFnTy::msvc_new_array_longlong;
     case LibFunc_msvc_new_array_longlong_nothrow:
+      // new[](unsigned long long, nothrow);
       return AllocFnTy::msvc_new_array_longlong_nothrow;
+    case LibFunc_ZnwjSt11align_val_t:
+      // new(unsigned int, align_val_t)
+      return AllocFnTy::ZnwjSt11align_val_t;
+    case LibFunc_ZnwmSt11align_val_t:
+      // new(unsigned long, align_val_t)
+      return AllocFnTy::ZnwmSt11align_val_t;
+    case LibFunc_ZnajSt11align_val_t:
+      // new[](unsigned int, align_val_t)
+      return AllocFnTy::ZnajSt11align_val_t;
+    case LibFunc_ZnamSt11align_val_t:
+      // new[](unsigned long, align_val_t)
+      return AllocFnTy::ZnamSt11align_val_t;
+    case LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t:
+      // new(unsigned int, align_val_t, nothrow)
+      return AllocFnTy::ZnwjSt11align_val_tRKSt9nothrow_t;
+    case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+      // new(unsigned long, align_val_t, nothrow)
+      return AllocFnTy::ZnwmSt11align_val_tRKSt9nothrow_t;
+    case LibFunc_ZnajSt11align_val_tRKSt9nothrow_t:
+      // new[](unsigned int, align_val_t, nothrow)
+      return AllocFnTy::ZnajSt11align_val_tRKSt9nothrow_t;
+    case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t:
+      // new[](unsigned long, align_val_t, nothrow)
+      return AllocFnTy::ZnamSt11align_val_tRKSt9nothrow_t;
     }
   }
 
@@ -921,6 +969,10 @@ protected:
     msvc_delete_array_ptr64,
     msvc_delete_array_ptr64_nothrow,
     msvc_delete_array_ptr64_longlong,
+    ZdlPvSt11align_val_t,
+    ZdlPvSt11align_val_tRKSt9nothrow_t,
+    ZdaPvSt11align_val_t,
+    ZdaPvSt11align_val_tRKSt9nothrow_t,
     LAST_FREETY
   };
 
@@ -931,45 +983,77 @@ protected:
     case LibFunc_free:
       return FreeTy::free;
     case LibFunc_ZdlPv:
+      // void operator delete(void*);
       return FreeTy::ZdlPv;
     case LibFunc_ZdlPvRKSt9nothrow_t:
+      // void operator delete(void*, nothrow);
       return FreeTy::ZdlPvRKSt9nothrow_t;
     case LibFunc_ZdlPvj:
+      // void operator delete(void*, unsigned int);
       return FreeTy::ZdlPvj;
     case LibFunc_ZdlPvm:
+      // void operator delete(void*, unsigned long);
       return FreeTy::ZdlPvm;
     case LibFunc_ZdaPv:
+      // void operator delete[](void*);
       return FreeTy::ZdaPv;
     case LibFunc_ZdaPvRKSt9nothrow_t:
+      // void operator delete[](void*, nothrow);
       return FreeTy::ZdaPvRKSt9nothrow_t;
     case LibFunc_ZdaPvj:
+      // void operator delete[](void*, unsigned int);
       return FreeTy::ZdaPvj;
     case LibFunc_ZdaPvm:
+      // void operator delete[](void*, unsigned long);
       return FreeTy::ZdaPvm;
     case LibFunc_msvc_delete_ptr32:
+      // void operator delete(void*);
       return FreeTy::msvc_delete_ptr32;
     case LibFunc_msvc_delete_ptr32_nothrow:
+      // void operator delete(void*, nothrow);
       return FreeTy::msvc_delete_ptr32_nothrow;
     case LibFunc_msvc_delete_ptr32_int:
+      // void operator delete(void*, unsigned int);
       return FreeTy::msvc_delete_ptr32_int;
     case LibFunc_msvc_delete_ptr64:
+      // void operator delete(void*);
       return FreeTy::msvc_delete_ptr64;
     case LibFunc_msvc_delete_ptr64_nothrow:
+      // void operator delete(void*, nothrow);
       return FreeTy::msvc_delete_ptr64_nothrow;
     case LibFunc_msvc_delete_ptr64_longlong:
+      // void operator delete(void*, unsigned long long);
       return FreeTy::msvc_delete_ptr64_longlong;
     case LibFunc_msvc_delete_array_ptr32:
+      // void operator delete[](void*);
       return FreeTy::msvc_delete_array_ptr32;
     case LibFunc_msvc_delete_array_ptr32_nothrow:
+      // void operator delete[](void*, nothrow);
       return FreeTy::msvc_delete_array_ptr32_nothrow;
     case LibFunc_msvc_delete_array_ptr32_int:
+      // void operator delete[](void*, unsigned int);
       return FreeTy::msvc_delete_array_ptr32_int;
     case LibFunc_msvc_delete_array_ptr64:
+      // void operator delete[](void*);
       return FreeTy::msvc_delete_array_ptr64;
     case LibFunc_msvc_delete_array_ptr64_nothrow:
+      // void operator delete[](void*, nothrow);
       return FreeTy::msvc_delete_array_ptr64_nothrow;
     case LibFunc_msvc_delete_array_ptr64_longlong:
+      // void operator delete[](void*, unsigned long long);
       return FreeTy::msvc_delete_array_ptr64_longlong;
+    case LibFunc_ZdlPvSt11align_val_t:
+      // void operator delete(void*, align_val_t)
+      return FreeTy::ZdlPvSt11align_val_t;
+    case LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t:
+      // void operator delete(void*, align_val_t, nothrow)
+      return FreeTy::ZdlPvSt11align_val_tRKSt9nothrow_t;
+    case LibFunc_ZdaPvSt11align_val_t:
+      // void operator delete[](void*, align_val_t)
+      return FreeTy::ZdaPvSt11align_val_t;
+    case LibFunc_ZdaPvSt11align_val_tRKSt9nothrow_t:
+      // void operator delete[](void*, align_val_t, nothrow)
+      return FreeTy::ZdaPvSt11align_val_tRKSt9nothrow_t;
     }
   }
 

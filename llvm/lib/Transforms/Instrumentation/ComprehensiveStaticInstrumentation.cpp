@@ -1131,7 +1131,6 @@ void CSIImpl::getAllocFnArgs(const Instruction *I,
   switch (F) {
   default:
     return;
-    // TODO: Add aligned new's to this list after they're added to TLI.
   case LibFunc_malloc:
   case LibFunc_valloc:
   case LibFunc_Znwj:
@@ -1158,10 +1157,37 @@ void CSIImpl::getAllocFnArgs(const Instruction *I,
     // Number of elements = 1
     AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
     // Alignment = 0
-    // TODO: Fix this for aligned new's, once they're added to TLI.
     AllocFnArgs.push_back(ConstantInt::get(SizeTy, 0));
     // Old pointer = NULL
     AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+    return;
+  }
+  case LibFunc_ZnwjSt11align_val_t:
+  case LibFunc_ZnwmSt11align_val_t:
+  case LibFunc_ZnajSt11align_val_t:
+  case LibFunc_ZnamSt11align_val_t:
+  case LibFunc_ZnwjSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_ZnwmSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_ZnajSt11align_val_tRKSt9nothrow_t:
+  case LibFunc_ZnamSt11align_val_tRKSt9nothrow_t: {
+    if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+      AllocFnArgs.push_back(CI->getArgOperand(0));
+      // Number of elements = 1
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+      // Alignment
+      AllocFnArgs.push_back(CI->getArgOperand(1));
+      // Old pointer = NULL
+      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+    } else {
+      const InvokeInst *II = cast<InvokeInst>(I);
+      AllocFnArgs.push_back(II->getArgOperand(0));
+      // Number of elements = 1
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+      // Alignment
+      AllocFnArgs.push_back(II->getArgOperand(1));
+      // Old pointer = NULL
+      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+    }
     return;
   }
   case LibFunc_calloc: {
