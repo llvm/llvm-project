@@ -17,11 +17,6 @@
 namespace __sanitizer {
 
 struct BufferedStackTrace;
-// Get the stack trace with the given pc and bp.
-// The pc will be in the position 0 of the resulting stack trace.
-// The bp may refer to the current frame or to the caller's frame.
-void GetStackTrace(BufferedStackTrace *stack, uptr max_depth, uptr pc, uptr bp,
-                   void *context, bool request_fast_unwind);
 
 static const u32 kStackTraceMax = 256;
 
@@ -104,6 +99,9 @@ struct BufferedStackTrace : public StackTrace {
 
   void Init(const uptr *pcs, uptr cnt, uptr extra_top_pc = 0);
 
+  // Get the stack trace with the given pc and bp.
+  // The pc will be in the position 0 of the resulting stack trace.
+  // The bp may refer to the current frame or to the caller's frame.
   void Unwind(uptr pc, uptr bp, void *context, bool request_fast,
               u32 max_depth = kStackTraceMax) {
     top_frame_bp = (max_depth > 0) ? bp : 0;
@@ -114,7 +112,7 @@ struct BufferedStackTrace : public StackTrace {
       size = max_depth;
       return;
     }
-    GetStackTrace(this, max_depth, pc, bp, context, request_fast);
+    UnwindImpl(pc, bp, context, request_fast, max_depth);
   }
 
   void Unwind(u32 max_depth, uptr pc, uptr bp, void *context, uptr stack_top,
@@ -126,15 +124,23 @@ struct BufferedStackTrace : public StackTrace {
   }
 
  private:
+  // Every runtime defines its own implementation of this method
+  void UnwindImpl(uptr pc, uptr bp, void *context, bool request_fast,
+                  u32 max_depth);
+
+  // UnwindFast/Slow have platform-specific implementations
   void UnwindFast(uptr pc, uptr bp, uptr stack_top, uptr stack_bottom,
                   u32 max_depth);
   void UnwindSlow(uptr pc, u32 max_depth);
   void UnwindSlow(uptr pc, void *context, u32 max_depth);
+
   void PopStackFrames(uptr count);
   uptr LocatePcInTrace(uptr pc);
 
   BufferedStackTrace(const BufferedStackTrace &) = delete;
   void operator=(const BufferedStackTrace &) = delete;
+
+  friend class FastUnwindTest;
 };
 
 // Check if given pointer points into allocated stack area.

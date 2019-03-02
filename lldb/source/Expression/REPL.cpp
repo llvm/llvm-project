@@ -75,13 +75,13 @@ lldb::IOHandlerSP REPL::GetIOHandler() {
     Debugger &debugger = m_target.GetDebugger();
     m_io_handler_sp = std::make_shared<IOHandlerEditline>(
         debugger, IOHandler::Type::REPL,
-                              "lldb-repl", // Name of input reader for history
-                              llvm::StringRef("> "), // prompt
-                              llvm::StringRef(". "), // Continuation prompt
-                              true,                  // Multi-line
-                              true, // The REPL prompt is always colored
-                              1,    // Line number
-        *this);
+        "lldb-repl",           // Name of input reader for history
+        llvm::StringRef("> "), // prompt
+        llvm::StringRef(". "), // Continuation prompt
+        true,                  // Multi-line
+        true,                  // The REPL prompt is always colored
+        1,                     // Line number
+        *this, nullptr);
 
     // Don't exit if CTRL+C is pressed
     static_cast<IOHandlerEditline *>(m_io_handler_sp.get())

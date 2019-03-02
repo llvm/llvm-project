@@ -244,26 +244,24 @@ void InitInstrumentation() {
 
 } // namespace __hwasan
 
-void __sanitizer::GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc,
-                                uptr bp, void *context,
-                                bool request_fast_unwind) {
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   using namespace __hwasan;
   Thread *t = GetCurrentThread();
   if (!t) {
     // the thread is still being created.
-    stack->size = 0;
+    size = 0;
     return;
   }
-  if (!StackTrace::WillUseFastUnwind(request_fast_unwind)) {
+  if (!StackTrace::WillUseFastUnwind(request_fast)) {
     // Block reports from our interceptors during _Unwind_Backtrace.
     SymbolizerScope sym_scope;
-    return stack->Unwind(max_s, pc, bp, context, 0, 0, request_fast_unwind);
+    return Unwind(max_depth, pc, bp, context, 0, 0, request_fast);
   }
-  if (StackTrace::WillUseFastUnwind(request_fast_unwind))
-    stack->Unwind(max_s, pc, bp, nullptr, t->stack_top(), t->stack_bottom(),
-                  true);
+  if (StackTrace::WillUseFastUnwind(request_fast))
+    Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(), true);
   else
-    stack->Unwind(max_s, pc, 0, context, 0, 0, false);
+    Unwind(max_depth, pc, 0, context, 0, 0, false);
 }
 
 // Interface.

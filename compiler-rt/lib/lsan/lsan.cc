@@ -32,21 +32,21 @@ bool WordIsPoisoned(uptr addr) {
 
 }  // namespace __lsan
 
-void __sanitizer::GetStackTrace(BufferedStackTrace *stack, uptr max_depth,
-                                uptr pc, uptr bp, void *context, bool fast) {
+void __sanitizer::BufferedStackTrace::UnwindImpl(
+    uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   using namespace __lsan;
   uptr stack_top = 0, stack_bottom = 0;
   ThreadContext *t;
-  if (StackTrace::WillUseFastUnwind(fast) &&
+  if (StackTrace::WillUseFastUnwind(request_fast) &&
       (t = CurrentThreadContext())) {
     stack_top = t->stack_end();
     stack_bottom = t->stack_begin();
   }
   if (!SANITIZER_MIPS || IsValidFrame(bp, stack_top, stack_bottom)) {
-    if (StackTrace::WillUseFastUnwind(fast))
-      stack->Unwind(max_depth, pc, bp, nullptr, stack_top, stack_bottom, true);
+    if (StackTrace::WillUseFastUnwind(request_fast))
+      Unwind(max_depth, pc, bp, nullptr, stack_top, stack_bottom, true);
     else
-      stack->Unwind(max_depth, pc, 0, context, 0, 0, false);
+      Unwind(max_depth, pc, 0, context, 0, 0, false);
   }
 }
 

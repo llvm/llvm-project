@@ -15,9 +15,12 @@ main (int argc, char** argv)
   assert(__msan_test_shadow(&master, sizeof(master)) == -1);
   assert(__msan_test_shadow(&slave, sizeof(slave)) == -1);
 
-  char ttyname[255];
-  ttyname_r(master, ttyname, sizeof(ttyname));
-  assert(__msan_test_shadow(ttyname, strlen(ttyname) + 1) == -1);
+  char name[255];
+  ttyname_r(master, name, sizeof(name));
+  assert(__msan_test_shadow(name, strlen(name) + 1) == -1);
+
+  char *name_p = ttyname(master);
+  assert(__msan_test_shadow(name_p, strlen(name_p) + 1) == -1);
 
   int master2;
   forkpty(&master2, NULL, NULL, NULL);

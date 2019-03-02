@@ -20,7 +20,6 @@
 #include <io.h>
 #include <psapi.h>
 #include <stdlib.h>
-#include <TraceLoggingProvider.h>
 
 #include "sanitizer_common.h"
 #include "sanitizer_file.h"
@@ -32,6 +31,8 @@
 #if defined(PSAPI_VERSION) && PSAPI_VERSION == 1
 #pragma comment(lib, "psapi")
 #endif
+#if SANITIZER_WIN_TRACE
+#include <traceloggingprovider.h>
 //  Windows trace logging provider init
 #pragma comment(lib, "advapi32.lib")
 TRACELOGGING_DECLARE_PROVIDER(g_asan_provider);
@@ -39,6 +40,9 @@ TRACELOGGING_DECLARE_PROVIDER(g_asan_provider);
 TRACELOGGING_DEFINE_PROVIDER(g_asan_provider, "AddressSanitizerLoggingProvider",
                              (0x6c6c766d, 0x3846, 0x4e6a, 0xa4, 0xfb, 0x5b,
                               0x53, 0x0b, 0xd0, 0xf3, 0xfa));
+#else
+#define TraceLoggingUnregister(x)
+#endif
 
 // A macro to tell the compiler that this part of the code cannot be reached,
 // if the compiler supports this feature. Since we're using this in
@@ -1080,6 +1084,7 @@ u32 GetNumberOfCPUs() {
   return sysinfo.dwNumberOfProcessors;
 }
 
+#if SANITIZER_WIN_TRACE
 // TODO(mcgov): Rename this project-wide to PlatformLogInit
 void AndroidLogInit(void) {
   HRESULT hr = TraceLoggingRegister(g_asan_provider);
@@ -1103,6 +1108,7 @@ void LogFullErrorReport(const char *buffer) {
                       TraceLoggingValue(buffer, "AsanReportContents"));
   }
 }
+#endif // SANITIZER_WIN_TRACE
 
 }  // namespace __sanitizer
 
