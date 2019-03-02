@@ -38,10 +38,10 @@ entry:
 ; CHECK:        - Type:            TYPE
 ; CHECK-NEXT:     Signatures:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         ReturnType:      NORESULT
+; CHECK-NEXT:         ReturnType:      I32
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:       - Index:           1
-; CHECK-NEXT:         ReturnType:      I32
+; CHECK-NEXT:         ReturnType:      NORESULT
 ; CHECK-NEXT:         ParamTypes:
 ; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         ReturnType:      I64
@@ -75,12 +75,10 @@ entry:
 ; CHECK-NEXT:     Name:            name
 ; CHECK-NEXT:     FunctionNames:
 ; CHECK-NEXT:       - Index:           0
-; CHECK-NEXT:         Name:            __wasm_call_ctors
-; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            used_function
-; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:       - Index:           1
 ; CHECK-NEXT:         Name:            _start
-; CHECK-NEXT:       - Index:           3
+; CHECK-NEXT:       - Index:           2
 ; CHECK-NEXT:         Name:            use_global
 ; CHECK-NEXT: ...
 

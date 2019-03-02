@@ -38,32 +38,42 @@ void lld::wasm::markLive() {
   LLVM_DEBUG(dbgs() << "markLive\n");
   SmallVector<InputChunk *, 256> Q;
 
-  auto Enqueue = [&](Symbol *Sym) {
+  std::function<void(Symbol*)> Enqueue = [&](Symbol *Sym) {
     if (!Sym || Sym->isLive())
       return;
     LLVM_DEBUG(dbgs() << "markLive: " << Sym->getName() << "\n");
     Sym->markLive();
     if (InputChunk *Chunk = Sym->getChunk())
       Q.push_back(Chunk);
+
+    // The ctor functions are all referenced by the synthetic CallCtors
+    // function.  However, this function does not contain relocations so we
+    // have to manually mark the ctors as live if CallCtors itself is live.
+    if (Sym == WasmSym::CallCtors) {
+      for (const ObjFile *Obj : Symtab->ObjectFiles) {
+        const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
+        for (const WasmInitFunc &F : L.InitFunctions)
+          Enqueue(Obj->getFunctionSymbol(F.Symbol));
+      }
+    }
   };
 
   // Add GC root symbols.
   if (!Config->Entry.empty())
     Enqueue(Symtab->find(Config->Entry));
-  Enqueue(WasmSym::CallCtors);
 
   // We need to preserve any exported symbol
   for (Symbol *Sym : Symtab->getSymbols())
     if (Sym->isExported())
       Enqueue(Sym);
 
-  // The ctor functions are all used in the synthetic __wasm_call_ctors
-  // function, but since this function is created in-place it doesn't contain
-  // relocations which mean we have to manually mark the ctors.
-  for (const ObjFile *Obj : Symtab->ObjectFiles) {
-    const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
-    for (const WasmInitFunc &F : L.InitFunctions)
-      Enqueue(Obj->getFunctionSymbol(F.Symbol));
+  // For relocatable output, we need to preserve all the ctor functions
+  if (Config->Relocatable) {
+    for (const ObjFile *Obj : Symtab->ObjectFiles) {
+      const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
+      for (const WasmInitFunc &F : L.InitFunctions)
+        Enqueue(Obj->getFunctionSymbol(F.Symbol));
+    }
   }
 
   // Follow relocations to mark all reachable chunks.
