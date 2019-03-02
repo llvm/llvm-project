@@ -87,6 +87,14 @@ const char *allocfn_str[] =
    "void *operator new[](unsigned int, nothrow)",
    "void *operator new[](unsigned long long)",
    "void *operator new[](unsigned long long, nothrow)",
+   "void *operator new(unsigned int, align_val_t)",
+   "void *operator new(unsigned long, align_val_t)",
+   "void *operator new[](unsigned int, align_val_t)",
+   "void *operator new[](unsigned long, align_val_t)",
+   "void *operator new(unsigned int, align_val_t, nothrow)",
+   "void *operator new(unsigned long, align_val_t, nothrow)",
+   "void *operator new[](unsigned int, align_val_t, nothrow)",
+   "void *operator new[](unsigned long, align_val_t, nothrow)",
   };
 
 const char *free_str[] =
@@ -111,7 +119,11 @@ const char *free_str[] =
    "void operator delete[](void*, unsigned int)",
    "void operator delete[](void*)",
    "void operator delete[](void*, nothrow)",
-   "void operator delete[](void*, unsigned long long)"
+   "void operator delete[](void*, unsigned long long)",
+   "void operator delete(void*, align_val_t)",
+   "void operator delete(void*, align_val_t, nothrow)",
+   "void operator delete[](void*, align_val_t)",
+   "void operator delete[](void*, align_val_t, nothrow)",
   };
 
 // ------------------------------------------------------------------------
