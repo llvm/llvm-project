@@ -1054,7 +1054,7 @@ protected:
           llvm::StringRef(),     // Continuation prompt
           multiple_lines, color_prompt,
           0, // Don't show line numbers
-          *this));
+          *this, nullptr));
 
       if (io_handler_sp) {
         debugger.PushIOHandler(io_handler_sp);
