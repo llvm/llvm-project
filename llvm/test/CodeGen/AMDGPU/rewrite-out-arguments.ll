@@ -282,7 +282,7 @@ ret1:
 ; CHECK-NEXT: %2 = call %void_one_out_arg_v2i32_1_use @void_one_out_arg_v2i32_1_use.body(<2 x i32>* undef)
 ; CHECK-NEXT: %3 = extractvalue %void_one_out_arg_v2i32_1_use %2, 0
 ; CHECK-NEXT: store <2 x i32> %3, <2 x i32>* %0, align 8
-; CHCEK-NEXT: ret void
+; CHECK-NEXT: ret void
 define void @void_one_out_arg_v2i32_1_use(<2 x i32>* %val) #0 {
   store <2 x i32> <i32 17, i32 9>, <2 x i32>* %val
   ret void

@@ -58,6 +58,7 @@
 # CHECK-NEXT:   VERNEEDNUM           0x0000000000000000
 # CHECK-NEXT:   AUXILIARY            D
 # CHECK-NEXT:   FILTER               U
+# CHECK-NEXT:   <unknown:>0x1234abcd 0x0000000000000001
 
 --- !ELF
 FileHeader:
@@ -188,6 +189,8 @@ Sections:
        Value: 0x1
      - Tag:   DT_FILTER
        Value: 0x3
+     - Tag:   0x1234abcd
+       Value: 0x1
      - Tag:   DT_NULL
        Value: 0x0
 ProgramHeaders:

@@ -57,6 +57,45 @@
 using namespace lldb;
 using namespace lldb_private;
 
+/// Helper class for replaying commands through the reproducer.
+class CommandLoader {
+public:
+  CommandLoader(std::vector<std::string> files) : m_files(files) {}
+
+  static std::unique_ptr<CommandLoader> Create() {
+    repro::Loader *loader = repro::Reproducer::Instance().GetLoader();
+    if (!loader)
+      return {};
+
+    FileSpec file = loader->GetFile<repro::CommandInfo>();
+    if (!file)
+      return {};
+
+    auto error_or_file = llvm::MemoryBuffer::getFile(file.GetPath());
+    if (auto err = error_or_file.getError())
+      return {};
+
+    std::vector<std::string> files;
+    llvm::yaml::Input yin((*error_or_file)->getBuffer());
+    yin >> files;
+
+    if (auto err = yin.error())
+      return {};
+
+    return llvm::make_unique<CommandLoader>(std::move(files));
+  }
+
+  FILE *GetNextFile() {
+    if (m_index >= m_files.size())
+      return nullptr;
+    return FileSystem::Instance().Fopen(m_files[m_index++].c_str(), "r");
+  }
+
+private:
+  std::vector<std::string> m_files;
+  unsigned m_index = 0;
+};
+
 static llvm::sys::DynamicLibrary LoadPlugin(const lldb::DebuggerSP &debugger_sp,
                                             const FileSpec &spec,
                                             Status &error) {
@@ -269,8 +308,18 @@ void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
         static_cast<void *>(m_opaque_sp.get()), static_cast<void *>(fh),
         transfer_ownership);
 
-  if (m_opaque_sp)
-    m_opaque_sp->SetInputFileHandle(fh, transfer_ownership);
+  if (!m_opaque_sp)
+    return;
+
+  repro::DataRecorder *recorder = nullptr;
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator())
+    recorder = g->GetOrCreate<repro::CommandProvider>().GetNewDataRecorder();
+
+  static std::unique_ptr<CommandLoader> loader = CommandLoader::Create();
+  if (loader)
+    fh = loader->GetNextFile();
+
+  m_opaque_sp->SetInputFileHandle(fh, transfer_ownership, recorder);
 }
 
 void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {

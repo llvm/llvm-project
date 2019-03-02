@@ -189,7 +189,7 @@ if (LIBCXXABI_ENABLE_SHARED)
   if(COMMAND llvm_setup_rpath)
     llvm_setup_rpath(cxxabi_shared)
   endif()
-  target_link_libraries(cxxabi_shared PRIVATE ${LIBCXXABI_LIBRARIES} ${LIBCXXABI_SHARED_LIBRARIES})
+  target_link_libraries(cxxabi_shared PRIVATE ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
   set_target_properties(cxxabi_shared
                         PROPERTIES
                           CXX_EXTENSIONS
@@ -226,7 +226,7 @@ if (LIBCXXABI_ENABLE_STATIC)
     endif()
   endif()
   add_library(cxxabi_static STATIC ${cxxabi_static_sources})
-  target_link_libraries(cxxabi_static PRIVATE ${LIBCXXABI_LIBRARIES} ${LIBCXXABI_STATIC_LIBRARIES})
+  target_link_libraries(cxxabi_static PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
   set_target_properties(cxxabi_static
                         PROPERTIES
                           CXX_EXTENSIONS

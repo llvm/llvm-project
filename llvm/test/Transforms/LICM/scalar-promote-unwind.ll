@@ -74,7 +74,7 @@ define void @test3(i1 zeroext %y) uwtable {
 entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT:  %a = alloca i32
-; CHECK-NEXT:  %a.promoted = load i32, i32* %a, align 1
+; CHECK-NEXT:  %a.promoted = load i32, i32* %a, align 4
   %a = alloca i32
   br label %for.body
 
@@ -90,20 +90,18 @@ for.body:
 
 for.cond.cleanup:
 ; CHECK-LABEL: for.cond.cleanup:
-; CHECK: store i32 %add.lcssa, i32* %a, align 1
+; CHECK: store i32 %add.lcssa, i32* %a, align 4
 ; CHECK-NEXT: ret void
   ret void
 }
 
 ;; Same as test3, but with unordered atomics
-;; FIXME: doing the transform w/o alignment here is wrong since we're
-;; creating an unaligned atomic which we may not be able to lower.
 define void @test3b(i1 zeroext %y) uwtable {
 ; CHECK-LABEL: @test3
 entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NEXT:  %a = alloca i32
-; CHECK-NEXT:  %a.promoted = load atomic i32, i32* %a unordered, align 1
+; CHECK-NEXT:  %a.promoted = load atomic i32, i32* %a unordered, align 4
   %a = alloca i32
   br label %for.body
 
@@ -119,7 +117,7 @@ for.body:
 
 for.cond.cleanup:
 ; CHECK-LABEL: for.cond.cleanup:
-; CHECK: store atomic i32 %add.lcssa, i32* %a unordered, align 1
+; CHECK: store atomic i32 %add.lcssa, i32* %a unordered, align 4
 ; CHECK-NEXT: ret void
   ret void
 }

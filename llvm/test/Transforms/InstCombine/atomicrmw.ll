@@ -214,7 +214,7 @@ define i8 @sat_max_smax_char(i8* %addr) {
 }
 
 ; CHECK-LABEL: sat_fadd_nan
-; CHECK-NEXT: %res = atomicrmw fadd double* %addr, double 0x7FF00000FFFFFFFF release
+; CHECK-NEXT: %res = atomicrmw xchg double* %addr, double 0x7FF00000FFFFFFFF release
 ; CHECK-NEXT: ret double %res
 define double @sat_fadd_nan(double* %addr) {
   %res = atomicrmw fadd double* %addr, double 0x7FF00000FFFFFFFF release
@@ -222,11 +222,19 @@ define double @sat_fadd_nan(double* %addr) {
 }
 
 ; CHECK-LABEL: sat_fsub_nan
-; CHECK-NEXT: %res = atomicrmw fsub double* %addr, double 0x7FF00000FFFFFFFF release
+; CHECK-NEXT: %res = atomicrmw xchg double* %addr, double 0x7FF00000FFFFFFFF release
 ; CHECK-NEXT: ret double %res
 define double @sat_fsub_nan(double* %addr) {
   %res = atomicrmw fsub double* %addr, double 0x7FF00000FFFFFFFF release
   ret double %res
+}
+
+; CHECK-LABEL: sat_fsub_nan_unused
+; CHECK-NEXT: store atomic double 0x7FF00000FFFFFFFF, double* %addr monotonic, align 8
+; CHECK-NEXT: ret void
+define void @sat_fsub_nan_unused(double* %addr) {
+  atomicrmw fsub double* %addr, double 0x7FF00000FFFFFFFF monotonic
+  ret void
 }
 
 ; CHECK-LABEL: xchg_unused_monotonic
@@ -267,6 +275,23 @@ define void @xchg_unused_volatile(i32* %addr) {
 define void @sat_or_allones_unused(i32* %addr) {
   atomicrmw or i32* %addr, i32 -1 monotonic
   ret void
+}
+
+
+; CHECK-LABEL: undef_operand_unused
+; CHECK-NEXT: atomicrmw or i32* %addr, i32 undef monotonic
+; CHECK-NEXT: ret void
+define void @undef_operand_unused(i32* %addr) {
+  atomicrmw or i32* %addr, i32 undef monotonic
+  ret void
+}
+
+; CHECK-LABEL: undef_operand_used
+; CHECK-NEXT: %res = atomicrmw or i32* %addr, i32 undef monotonic
+; CHECK-NEXT: ret i32 %res
+define i32 @undef_operand_used(i32* %addr) {
+  %res = atomicrmw or i32* %addr, i32 undef monotonic
+  ret i32 %res
 }
 
 

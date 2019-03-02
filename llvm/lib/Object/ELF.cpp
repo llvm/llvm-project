@@ -424,7 +424,7 @@ ELFFile<ELFT>::android_relas(const Elf_Shdr *Sec) const {
 }
 
 template <class ELFT>
-const char *ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
+std::string ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
                                                  uint64_t Type) const {
 #define DYNAMIC_STRINGIFY_ENUM(tag, value)                                     \
   case value:                                                                  \
@@ -470,12 +470,12 @@ const char *ELFFile<ELFT>::getDynamicTagAsString(unsigned Arch,
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:
-    return "unknown";
+    return "<unknown:>0x" + utohexstr(Type, true);
   }
 }
 
 template <class ELFT>
-const char *ELFFile<ELFT>::getDynamicTagAsString(uint64_t Type) const {
+std::string ELFFile<ELFT>::getDynamicTagAsString(uint64_t Type) const {
   return getDynamicTagAsString(getHeader()->e_machine, Type);
 }
 

@@ -594,6 +594,10 @@ namespace llvm {
       GenDwarfFileNumber = FileNumber;
     }
 
+    /// Specifies information about the "root file" for assembler clients
+    /// (e.g., llvm-mc). Assumes compilation dir etc. have been set up.
+    void setGenDwarfRootFile(StringRef FileName, StringRef Buffer);
+
     const SetVector<MCSection *> &getGenDwarfSectionSyms() {
       return SectionsForRanges;
     }

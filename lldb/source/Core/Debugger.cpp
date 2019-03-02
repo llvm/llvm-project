@@ -760,6 +760,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_input_file_sp(std::make_shared<StreamFile>(stdin, false)),
       m_output_file_sp(std::make_shared<StreamFile>(stdout, false)),
       m_error_file_sp(std::make_shared<StreamFile>(stderr, false)),
+      m_input_recorder(nullptr),
       m_broadcaster_manager_sp(BroadcasterManager::MakeBroadcasterManager()),
       m_terminal_state(), m_target_list(*this), m_platform_list(),
       m_listener_sp(Listener::MakeListener("lldb.Debugger")),
@@ -877,7 +878,11 @@ void Debugger::SetAsyncExecution(bool async_execution) {
   m_command_interpreter_up->SetSynchronous(!async_execution);
 }
 
-void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership) {
+repro::DataRecorder *Debugger::GetInputRecorder() { return m_input_recorder; }
+
+void Debugger::SetInputFileHandle(FILE *fh, bool tranfer_ownership,
+                                  repro::DataRecorder *recorder) {
+  m_input_recorder = recorder;
   if (m_input_file_sp)
     m_input_file_sp->GetFile().SetStream(fh, tranfer_ownership);
   else
