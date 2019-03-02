@@ -54,7 +54,10 @@ class TestSwiftBacktracePrinting(TestBase):
 
         self.assertTrue(process, PROCESS_IS_VALID)
 
-        self.expect("bt", substrs=['arg1=12', 'arg2="Hello world"'])
+        self.expect("bt", substrs=['h<T>',
+                                   'g<U, T>', 'pair', '12', "Hello world",
+                                   'arg1=12', 'arg2="Hello world"'])
+        self.expect("breakpoint set -p other", substrs=['g<U, T>'])
 
 if __name__ == '__main__':
     import atexit

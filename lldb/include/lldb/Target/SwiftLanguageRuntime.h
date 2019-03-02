@@ -198,12 +198,18 @@ public:
   virtual bool GetObjectDescription(Stream &str, Value &value,
                                     ExecutionContextScope *exe_scope) override;
 
-  static std::string DemangleSymbolAsString(const char *symbol,
-                                            bool simplified = false);
+  /// A pair of depth and index.
+  using ArchetypePath = std::pair<uint64_t, uint64_t>;
+  /// Populate a map with the names of all archetypes in a function's generic
+  /// context.
+  static void GetGenericParameterNamesForFunction(
+      const SymbolContext &sc,
+      llvm::DenseMap<ArchetypePath, llvm::StringRef> &dict);
 
-  static std::string DemangleSymbolAsString(const ConstString &symbol, 
-                                            bool simplified = false);
-  
+  static std::string
+  DemangleSymbolAsString(llvm::StringRef symbol, bool simplified = false,
+                         const SymbolContext *sc = nullptr);
+
   // Use these passthrough functions rather than calling into Swift directly,
   // since some day we may want to support more than one swift variant.
   static bool IsSwiftMangledName(const char *name);
