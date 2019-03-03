@@ -1666,7 +1666,8 @@ class Base(unittest2.TestCase):
         elif self.getPlatform() == "openbsd":
             cflags += " -stdlib=libc++"
         elif self.getPlatform() == "netbsd":
-            cflags += " -stdlib=libstdc++"
+            # NetBSD defaults to libc++
+            pass
         elif "clang" in self.getCompiler():
             cflags += " -stdlib=libstdc++"
 
