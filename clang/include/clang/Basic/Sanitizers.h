@@ -27,6 +27,10 @@ class hash_code;
 namespace clang {
 
 class SanitizerMask {
+  // NOTE: this class assumes kNumElem == 2 in most of the constexpr functions,
+  // in order to work within the C++11 constexpr function constraints. If you
+  // change kNumElem, you'll need to update those member functions as well.
+
   /// Number of array elements.
   static constexpr unsigned kNumElem = 2;
   /// Mask value initialized to 0.
@@ -36,17 +40,22 @@ class SanitizerMask {
   /// Number of bits in a mask element.
   static constexpr unsigned kNumBitElem = sizeof(decltype(maskLoToHigh[0])) * 8;
 
+  constexpr SanitizerMask(uint64_t mask1, uint64_t mask2)
+      : maskLoToHigh{mask1, mask2} {}
+
 public:
+  SanitizerMask() = default;
+
   static constexpr bool checkBitPos(const unsigned Pos) {
     return Pos < kNumBits;
   }
 
   /// Create a mask with a bit enabled at position Pos.
-  static SanitizerMask bitPosToMask(const unsigned Pos) {
-    assert(Pos < kNumBits && "Bit position too big.");
-    SanitizerMask mask;
-    mask.maskLoToHigh[Pos / kNumBitElem] = 1ULL << Pos % kNumBitElem;
-    return mask;
+  static constexpr SanitizerMask bitPosToMask(const unsigned Pos) {
+    return SanitizerMask((Pos < kNumBitElem) ? 1ULL << Pos % kNumBitElem : 0,
+                         (Pos >= kNumBitElem && Pos < kNumBitElem * 2)
+                             ? 1ULL << Pos % kNumBitElem
+                             : 0);
   }
 
   unsigned countPopulation() const {
@@ -67,19 +76,13 @@ public:
 
   llvm::hash_code hash_value() const;
 
-  explicit operator bool() const {
-    for (const auto &Val : maskLoToHigh)
-      if (Val)
-        return true;
-    return false;
-  };
+  constexpr explicit operator bool() const {
+    return maskLoToHigh[0] || maskLoToHigh[1];
+  }
 
-  bool operator==(const SanitizerMask &V) const {
-    for (unsigned k = 0; k < kNumElem; k++) {
-      if (maskLoToHigh[k] != V.maskLoToHigh[k])
-        return false;
-    }
-    return true;
+  constexpr bool operator==(const SanitizerMask &V) const {
+    return maskLoToHigh[0] == V.maskLoToHigh[0] &&
+           maskLoToHigh[1] == V.maskLoToHigh[1];
   }
 
   SanitizerMask &operator&=(const SanitizerMask &RHS) {
@@ -94,42 +97,35 @@ public:
     return *this;
   }
 
-  bool operator!() const {
-    for (const auto &Val : maskLoToHigh)
-      if (Val)
-        return false;
-    return true;
+  constexpr bool operator!() const { return !bool(*this); }
+
+  constexpr bool operator!=(const SanitizerMask &RHS) const {
+    return !((*this) == RHS);
   }
 
-  bool operator!=(const SanitizerMask &RHS) const { return !((*this) == RHS); }
+  friend constexpr inline SanitizerMask operator~(SanitizerMask v) {
+    return SanitizerMask(~v.maskLoToHigh[0], ~v.maskLoToHigh[1]);
+  }
+
+  friend constexpr inline SanitizerMask operator&(SanitizerMask a,
+                                                  const SanitizerMask &b) {
+    return SanitizerMask(a.maskLoToHigh[0] & b.maskLoToHigh[0],
+                         a.maskLoToHigh[1] & b.maskLoToHigh[1]);
+  }
+
+  friend constexpr inline SanitizerMask operator|(SanitizerMask a,
+                                                  const SanitizerMask &b) {
+    return SanitizerMask(a.maskLoToHigh[0] | b.maskLoToHigh[0],
+                         a.maskLoToHigh[1] | b.maskLoToHigh[1]);
+  }
 };
 
 // Declaring in clang namespace so that it can be found by ADL.
 llvm::hash_code hash_value(const clang::SanitizerMask &Arg);
 
-inline SanitizerMask operator~(SanitizerMask v) {
-  v.flipAllBits();
-  return v;
-}
-
-inline SanitizerMask operator&(SanitizerMask a, const SanitizerMask &b) {
-  a &= b;
-  return a;
-}
-
-inline SanitizerMask operator|(SanitizerMask a, const SanitizerMask &b) {
-  a |= b;
-  return a;
-}
-
 // Define the set of sanitizer kinds, as well as the set of sanitizers each
 // sanitizer group expands into.
-// Uses static data member of a class template as recommended in second
-// workaround from n4424 to avoid odr issues.
-// FIXME: Can be marked as constexpr once c++14 can be used in llvm.
-// FIXME: n4424 workaround can be replaced by c++17 inline variable.
-template <typename T = void> struct SanitizerMasks {
-
+struct SanitizerKind {
   // Assign ordinals to possible values of -fsanitize= flag, which we will use
   // as bit positions.
   enum SanitizerOrdinal : uint64_t {
@@ -140,32 +136,16 @@ template <typename T = void> struct SanitizerMasks {
   };
 
 #define SANITIZER(NAME, ID)                                                    \
-  static const SanitizerMask ID;                                               \
+  static constexpr SanitizerMask ID = SanitizerMask::bitPosToMask(SO_##ID);    \
   static_assert(SanitizerMask::checkBitPos(SO_##ID), "Bit position too big.");
 #define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
-  static const SanitizerMask ID;                                               \
-  static const SanitizerMask ID##Group;                                        \
+  static constexpr SanitizerMask ID = SanitizerMask(ALIAS);                    \
+  static constexpr SanitizerMask ID##Group =                                   \
+      SanitizerMask::bitPosToMask(SO_##ID##Group);                             \
   static_assert(SanitizerMask::checkBitPos(SO_##ID##Group),                    \
                 "Bit position too big.");
 #include "clang/Basic/Sanitizers.def"
-}; // SanitizerMasks
-
-#define SANITIZER(NAME, ID)                                                    \
-  template <typename T>                                                        \
-  const SanitizerMask SanitizerMasks<T>::ID =                                  \
-      SanitizerMask::bitPosToMask(SO_##ID);
-#define SANITIZER_GROUP(NAME, ID, ALIAS)                                       \
-  template <typename T>                                                        \
-  const SanitizerMask SanitizerMasks<T>::ID = SanitizerMask(ALIAS);            \
-  template <typename T>                                                        \
-  const SanitizerMask SanitizerMasks<T>::ID##Group =                           \
-      SanitizerMask::bitPosToMask(SO_##ID##Group);
-#include "clang/Basic/Sanitizers.def"
-
-// Explicit instantiation here to ensure correct initialization order.
-template struct SanitizerMasks<>;
-
-using SanitizerKind = SanitizerMasks<>;
+}; // SanitizerKind
 
 struct SanitizerSet {
   /// Check if a certain (single) sanitizer is enabled.
