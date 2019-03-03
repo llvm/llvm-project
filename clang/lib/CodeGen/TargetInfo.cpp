@@ -7819,18 +7819,6 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
          (isa<VarDecl>(D) && D->hasAttr<CUDADeviceAttr>());
 }
 
-namespace {
-inline llvm::APSInt getConstexprInt(const Expr *E, const ASTContext &Ctx) {
-  clang::Expr::EvalResult r;
-  APValue Val(llvm::APSInt(32));
-  r.Val = Val;
-  if (E)
-    E->EvaluateAsInt(r, Ctx);
-
-  return r.Val.getInt();
-}
-} // namespace
-
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
   if (requiresAMDGPUProtectedVisibility(D, GV)) {
