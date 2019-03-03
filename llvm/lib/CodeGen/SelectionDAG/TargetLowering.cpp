@@ -1712,7 +1712,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     SDValue Sub = Op.getOperand(1);
     EVT SubVT = Sub.getValueType();
     unsigned NumSubElts = SubVT.getVectorNumElements();
-    const APInt &Idx = cast<ConstantSDNode>(Op.getOperand(2))->getAPIntValue();
+    const APInt &Idx = Op.getConstantOperandAPInt(2);
     if (Idx.ugt(NumElts - NumSubElts))
       break;
     unsigned SubIdx = Idx.getZExtValue();
@@ -2379,8 +2379,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
     if (N0.getOpcode() == ISD::SRL && (C1.isNullValue() || C1.isOneValue()) &&
         N0.getOperand(0).getOpcode() == ISD::CTLZ &&
         N0.getOperand(1).getOpcode() == ISD::Constant) {
-      const APInt &ShAmt
-        = cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+      const APInt &ShAmt = N0.getConstantOperandAPInt(1);
       if ((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
           ShAmt == Log2_32(N0.getValueSizeInBits())) {
         if ((C1 == 0) == (Cond == ISD::SETEQ)) {
@@ -2531,8 +2530,7 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         // 8 bits, but have to be careful...
         if (Lod->getExtensionType() != ISD::NON_EXTLOAD)
           origWidth = Lod->getMemoryVT().getSizeInBits();
-        const APInt &Mask =
-          cast<ConstantSDNode>(N0.getOperand(1))->getAPIntValue();
+        const APInt &Mask = N0.getConstantOperandAPInt(1);
         for (unsigned width = origWidth / 2; width>=8; width /= 2) {
           APInt newMask = APInt::getLowBitsSet(maskWidth, width);
           for (unsigned offset=0; offset<origWidth/width; offset++) {

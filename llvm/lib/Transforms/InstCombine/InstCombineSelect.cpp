@@ -1566,7 +1566,7 @@ static Instruction *foldSelectCmpXchg(SelectInst &SI) {
 static Instruction *moveAddAfterMinMax(SelectPatternFlavor SPF, Value *X,
                                        Value *Y,
                                        InstCombiner::BuilderTy &Builder) {
-  assert (SelectPatternResult::isMinOrMax(SPF) && "Expected min/max pattern");
+  assert(SelectPatternResult::isMinOrMax(SPF) && "Expected min/max pattern");
   bool IsUnsigned = SPF == SelectPatternFlavor::SPF_UMIN ||
                     SPF == SelectPatternFlavor::SPF_UMAX;
   // TODO: If InstSimplify could fold all cases where C2 <= C1, we could change
@@ -1582,8 +1582,21 @@ static Instruction *moveAddAfterMinMax(SelectPatternFlavor SPF, Value *X,
     return BinaryOperator::CreateNUW(BinaryOperator::Add, NewMinMax,
                                      ConstantInt::get(X->getType(), *C1));
   }
-  // TODO: Handle SMIN/SMAX (similar to unsigned, but the signed subtraction of
-  // the constants must not overflow).
+
+  if (!IsUnsigned && match(X, m_NSWAdd(m_Value(A), m_APInt(C1))) &&
+      match(Y, m_APInt(C2)) && X->hasNUses(2)) {
+    bool Overflow;
+    APInt Diff = C2->ssub_ov(*C1, Overflow);
+    if (!Overflow) {
+      // smin (add nsw A, C1), C2 --> add nsw (smin A, C2 - C1), C1
+      // smax (add nsw A, C1), C2 --> add nsw (smax A, C2 - C1), C1
+      Value *NewMinMax = createMinMax(Builder, SPF, A,
+                                      ConstantInt::get(X->getType(), Diff));
+      return BinaryOperator::CreateNSW(BinaryOperator::Add, NewMinMax,
+                                       ConstantInt::get(X->getType(), *C1));
+    }
+  }
+
   return nullptr;
 }
 

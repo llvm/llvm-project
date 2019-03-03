@@ -90,6 +90,11 @@
 #define STATVFS_F_FLAG(vfs) (vfs).f_flags
 #endif
 
+#if defined(__NetBSD__)
+#include <sys/param.h>
+#include <sys/sysctl.h>
+#endif
+
 using namespace llvm;
 
 namespace llvm {
@@ -98,7 +103,7 @@ namespace fs {
 
 const file_t kInvalidFile = -1;
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||     \
+#if defined(__FreeBSD__) || defined(__OpenBSD__) ||     \
     defined(__minix) || defined(__FreeBSD_kernel__) || defined(__linux__) ||   \
     defined(__CYGWIN__) || defined(__DragonFly__) || defined(_AIX) || defined(__GNU__)
 static int
@@ -169,7 +174,18 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
     if (realpath(exe_path, link_path))
       return link_path;
   }
-#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||   \
+#elif defined(__NetBSD__)
+  // NB: sysctl() solution can't be used on FreeBSD since it may return
+  // a wrong path when a file is hardlinked in multiple locations.
+  // See r303285 for an earlier revert.
+
+  char exe_path[PATH_MAX];
+  int mib[4] = {CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME};
+  size_t len = sizeof(exe_path);
+
+  if (sysctl(mib, 4, exe_path, &len, nullptr, 0) == 0)
+    return exe_path;
+#elif defined(__FreeBSD__) || defined(__OpenBSD__) ||   \
     defined(__minix) || defined(__DragonFly__) ||                              \
     defined(__FreeBSD_kernel__) || defined(_AIX)
   char exe_path[PATH_MAX];
