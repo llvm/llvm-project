@@ -339,6 +339,8 @@ void DemandedBits::performAnalysis() {
         Type *T = J->getType();
         if (T->isIntOrIntVectorTy())
           AliveBits[J] = APInt::getAllOnesValue(T->getScalarSizeInBits());
+        else
+          Visited.insert(J);
         Worklist.insert(J);
       }
     }
@@ -354,15 +356,17 @@ void DemandedBits::performAnalysis() {
 
     LLVM_DEBUG(dbgs() << "DemandedBits: Visiting: " << *UserI);
     APInt AOut;
+    bool InputIsKnownDead = false;
     if (UserI->getType()->isIntOrIntVectorTy()) {
       AOut = AliveBits[UserI];
       LLVM_DEBUG(dbgs() << " Alive Out: 0x"
                         << Twine::utohexstr(AOut.getLimitedValue()));
+
+      // If all bits of the output are dead, then all bits of the input
+      // are also dead.
+      InputIsKnownDead = !AOut && !isAlwaysLive(UserI);
     }
     LLVM_DEBUG(dbgs() << "\n");
-
-    if (!UserI->getType()->isIntOrIntVectorTy())
-      Visited.insert(UserI);
 
     KnownBits Known, Known2;
     bool KnownBitsComputed = false;
@@ -380,10 +384,7 @@ void DemandedBits::performAnalysis() {
       if (T->isIntOrIntVectorTy()) {
         unsigned BitWidth = T->getScalarSizeInBits();
         APInt AB = APInt::getAllOnesValue(BitWidth);
-        if (UserI->getType()->isIntOrIntVectorTy() && !AOut &&
-            !isAlwaysLive(UserI)) {
-          // If all bits of the output are dead, then all bits of the input
-          // are also dead.
+        if (InputIsKnownDead) {
           AB = APInt(BitWidth, 0);
         } else {
           // Bits of each operand that are used to compute alive bits of the
@@ -402,18 +403,13 @@ void DemandedBits::performAnalysis() {
           // If we've added to the set of alive bits (or the operand has not
           // been previously visited), then re-queue the operand to be visited
           // again.
-          APInt ABPrev(BitWidth, 0);
-          auto ABI = AliveBits.find(I);
-          if (ABI != AliveBits.end())
-            ABPrev = ABI->second;
-
-          APInt ABNew = AB | ABPrev;
-          if (ABNew != ABPrev || ABI == AliveBits.end()) {
-            AliveBits[I] = std::move(ABNew);
+          auto Res = AliveBits.try_emplace(I);
+          if (Res.second || (AB |= Res.first->second) != Res.first->second) {
+            Res.first->second = std::move(AB);
             Worklist.insert(I);
           }
         }
-      } else if (I && !Visited.count(I)) {
+      } else if (I && Visited.insert(I).second) {
         Worklist.insert(I);
       }
     }
