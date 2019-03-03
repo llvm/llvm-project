@@ -694,14 +694,23 @@ define <4 x i32> @PR19721(<4 x i32> %i) {
 ; X64-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX-LABEL: PR19721:
-; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovq %xmm0, %rax
-; X64-AVX-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
-; X64-AVX-NEXT:    andq %rax, %rcx
-; X64-AVX-NEXT:    vmovq %rcx, %xmm1
-; X64-AVX-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
-; X64-AVX-NEXT:    retq
+; X64-AVX1-LABEL: PR19721:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
+; X64-AVX1-NEXT:    andq %rax, %rcx
+; X64-AVX1-NEXT:    vmovq %rcx, %xmm1
+; X64-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5,6,7]
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX512-LABEL: PR19721:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovq %xmm0, %rax
+; X64-AVX512-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
+; X64-AVX512-NEXT:    andq %rax, %rcx
+; X64-AVX512-NEXT:    vmovq %rcx, %xmm1
+; X64-AVX512-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; X64-AVX512-NEXT:    retq
   %bc = bitcast <4 x i32> %i to i128
   %insert = and i128 %bc, -4294967296
   %bc2 = bitcast i128 %insert to <4 x i32>
