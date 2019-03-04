@@ -38134,8 +38134,11 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
       return true;
 
     // See if this is a single use constant which can be constant folded.
-    SDValue BC = peekThroughOneUseBitcasts(Op);
-    return ISD::isBuildVectorOfConstantSDNodes(BC.getNode());
+    // NOTE: We don't peek throught bitcasts here because there is currently
+    // no support for constant folding truncate+bitcast+vector_of_constants. So
+    // we'll just send up with a truncate on both operands which will
+    // get turned back into (truncate (binop)) causing an infinite loop.
+    return ISD::isBuildVectorOfConstantSDNodes(Op.getNode());
   };
 
   auto TruncateArithmetic = [&](SDValue N0, SDValue N1) {
