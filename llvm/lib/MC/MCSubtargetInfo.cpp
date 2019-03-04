@@ -87,10 +87,7 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
 
   ArrayRef<SubtargetInfoKV> SchedModels(ProcSchedModels, ProcDesc.size());
 
-  assert(std::is_sorted(SchedModels.begin(), SchedModels.end(),
-                    [](const SubtargetInfoKV &LHS, const SubtargetInfoKV &RHS) {
-                      return strcmp(LHS.Key, RHS.Key) < 0;
-                    }) &&
+  assert(std::is_sorted(SchedModels.begin(), SchedModels.end()) &&
          "Processor machine model table is not sorted");
 
   // Find entry

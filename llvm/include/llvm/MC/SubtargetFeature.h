@@ -100,6 +100,11 @@ struct SubtargetInfoKV {
   bool operator<(StringRef S) const {
     return StringRef(Key) < S;
   }
+
+  /// Compare routine for std::is_sorted.
+  bool operator<(const SubtargetInfoKV &Other) const {
+    return StringRef(Key) < StringRef(Other.Key);
+  }
 };
 
 //===----------------------------------------------------------------------===//
