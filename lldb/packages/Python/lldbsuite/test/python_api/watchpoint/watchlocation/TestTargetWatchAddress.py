@@ -33,6 +33,7 @@ class TargetWatchAddressAPITestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureNetBSD
     def test_watch_address(self):
         """Exercise SBTarget.WatchAddress() API to set a watchpoint."""
         self.build()

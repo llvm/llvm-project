@@ -3323,7 +3323,8 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
       if (isInstructionTriviallyDead(Inst, TLI)) {
         ++NumDeadInst;
         LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
-        salvageDebugInfo(*Inst);
+        if (!salvageDebugInfo(*Inst))
+          replaceDbgUsesWithUndef(Inst);
         Inst->eraseFromParent();
         MadeIRChange = true;
         continue;

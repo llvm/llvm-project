@@ -28814,20 +28814,21 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
   X86::CondCode CC = X86::CondCode(MI.getOperand(3).getImm());
   X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
   MachineInstr *LastCMOV = &MI;
-  MachineBasicBlock::iterator NextMIIt =
-      std::next(MachineBasicBlock::iterator(MI));
+  MachineBasicBlock::iterator NextMIIt = MachineBasicBlock::iterator(MI);
 
   // Check for case 1, where there are multiple CMOVs with the same condition
   // first.  Of the two cases of multiple CMOV lowerings, case 1 reduces the
   // number of jumps the most.
 
   if (isCMOVPseudo(MI)) {
-    // See if we have a string of CMOVS with the same condition.
+    // See if we have a string of CMOVS with the same condition. Skip over
+    // intervening debug insts.
     while (NextMIIt != ThisMBB->end() && isCMOVPseudo(*NextMIIt) &&
            (NextMIIt->getOperand(3).getImm() == CC ||
             NextMIIt->getOperand(3).getImm() == OppCC)) {
       LastCMOV = &*NextMIIt;
       ++NextMIIt;
+      NextMIIt = skipDebugInstructionsForward(NextMIIt, ThisMBB->end());
     }
   }
 
@@ -28859,8 +28860,18 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
     SinkMBB->addLiveIn(X86::EFLAGS);
   }
 
+  // Transfer any debug instructions inside the CMOV sequence to the sunk block.
+  auto DbgEnd = MachineBasicBlock::iterator(LastCMOV);
+  auto DbgIt = MachineBasicBlock::iterator(MI);
+  while (DbgIt != DbgEnd) {
+    auto Next = std::next(DbgIt);
+    if (DbgIt->isDebugInstr())
+      SinkMBB->push_back(DbgIt->removeFromParent());
+    DbgIt = Next;
+  }
+
   // Transfer the remainder of ThisMBB and its successor edges to SinkMBB.
-  SinkMBB->splice(SinkMBB->begin(), ThisMBB,
+  SinkMBB->splice(SinkMBB->end(), ThisMBB,
                   std::next(MachineBasicBlock::iterator(LastCMOV)),
                   ThisMBB->end());
   SinkMBB->transferSuccessorsAndUpdatePHIs(ThisMBB);

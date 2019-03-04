@@ -175,6 +175,11 @@ static cl::opt<bool>
                    cl::desc("Print all views including hardware statistics"),
                    cl::cat(ViewOptions), cl::init(false));
 
+static cl::opt<bool> EnableBottleneckAnalysis(
+    "bottleneck-analysis",
+    cl::desc("Enable bottleneck analysis (disabled by default)"),
+    cl::cat(ViewOptions), cl::init(false));
+
 namespace {
 
 const Target *getTarget(const char *ProgName) {
@@ -387,7 +392,8 @@ int main(int argc, char **argv) {
   mca::Context MCA(*MRI, *STI);
 
   mca::PipelineOptions PO(Width, RegisterFileSize, LoadQueueSize,
-                          StoreQueueSize, AssumeNoAlias);
+                          StoreQueueSize, AssumeNoAlias,
+                          EnableBottleneckAnalysis);
 
   // Number each region in the sequence.
   unsigned RegionIdx = 0;

@@ -172,6 +172,7 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
     FunctionLocals,
     Instructions,
     EndFunction,
+    DataSection,
   } CurrentState = FileStart;
 
   // For ensuring blocks are properly nested.
@@ -552,6 +553,17 @@ public:
     return false;
   }
 
+  bool CheckDataSection() {
+    if (CurrentState != DataSection) {
+      auto WS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
+      if (WS && WS->getKind().isText())
+        return error("data directive must occur in a data segment: ",
+                     Lexer.getTok());
+    }
+    CurrentState = DataSection;
+    return false;
+  }
+
   // This function processes wasm-specific directives streamed to
   // WebAssemblyTargetStreamer, all others go to the generic parser
   // (see WasmAsmParser).
@@ -650,6 +662,25 @@ public:
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
+    if (DirectiveID.getString() == ".int8") {
+      if (CheckDataSection()) return true;
+      int64_t V;
+      if (Parser.parseAbsoluteExpression(V))
+        return error("Cannot parse int8 constant: ", Lexer.getTok());
+      // TODO: error if value doesn't fit?
+      Out.EmitIntValue(static_cast<uint64_t>(V), 1);
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".asciz") {
+      if (CheckDataSection()) return true;
+      std::string S;
+      if (Parser.parseEscapedString(S))
+        return error("Cannot parse string constant: ", Lexer.getTok());
+      Out.EmitBytes(StringRef(S.c_str(), S.length() + 1));
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
     return true; // We didn't process this directive.
   }
 
@@ -717,9 +748,10 @@ public:
   void onEndOfFunction() {
     // Automatically output a .size directive, so it becomes optional for the
     // user.
+    if (!LastFunctionLabel) return;
     auto TempSym = getContext().createLinkerPrivateTempSymbol();
     getStreamer().EmitLabel(TempSym);
-    auto Start = MCSymbolRefExpr::create(LastLabel, getContext());
+    auto Start = MCSymbolRefExpr::create(LastFunctionLabel, getContext());
     auto End = MCSymbolRefExpr::create(TempSym, getContext());
     auto Expr =
         MCBinaryExpr::create(MCBinaryExpr::Sub, End, Start, getContext());

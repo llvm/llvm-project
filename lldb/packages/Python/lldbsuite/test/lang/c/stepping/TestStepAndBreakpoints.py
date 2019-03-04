@@ -25,6 +25,7 @@ class TestCStepping(TestBase):
     @expectedFailureAll(oslist=['freebsd'], bugnumber='llvm.org/pr17932')
     @expectedFailureAll(oslist=["linux"], bugnumber="llvm.org/pr14437")
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24777")
+    @expectedFailureNetBSD
     def test_and_python_api(self):
         """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
         self.build()

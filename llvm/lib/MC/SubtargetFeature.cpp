@@ -124,12 +124,12 @@ std::string SubtargetFeatures::getString() const {
 static
 void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
                     ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  for (const SubtargetFeatureKV &FE : FeatureTable) {
-    if (Implies.test(FE.Value)) {
-      Bits.set(FE.Value);
+  // OR the Implies bits in outside the loop. This allows the Implies for CPUs
+  // which might imply features not in FeatureTable to use this.
+  Bits |= Implies;
+  for (const SubtargetFeatureKV &FE : FeatureTable)
+    if (Implies.test(FE.Value))
       SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
-    }
-  }
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
@@ -219,15 +219,8 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
 
     // If there is a match
     if (CPUEntry) {
-      // Set base feature bits
-      FeatureBitset CPUImplies = CPUEntry->Implies.getAsBitset();
-      Bits = CPUImplies;
-
-      // Set the feature implied by this CPU feature, if any.
-      for (auto &FE : FeatureTable) {
-        if (CPUImplies.test(FE.Value))
-          SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
-      }
+      // Set the features implied by this CPU feature, if any.
+      SetImpliedBits(Bits, CPUEntry->Implies.getAsBitset(), FeatureTable);
     } else {
       errs() << "'" << CPU << "' is not a recognized processor for this target"
              << " (ignoring processor)\n";
@@ -239,8 +232,8 @@ SubtargetFeatures::getFeatureBits(StringRef CPU,
     // Check for help
     if (Feature == "+help")
       Help(CPUTable, FeatureTable);
-
-    ApplyFeatureFlag(Bits, Feature, FeatureTable);
+    else
+      ApplyFeatureFlag(Bits, Feature, FeatureTable);
   }
 
   return Bits;

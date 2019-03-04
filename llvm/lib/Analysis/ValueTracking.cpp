@@ -617,9 +617,7 @@ static void computeKnownBitsFromAssume(const Value *V, KnownBits &Known,
       continue;
 
     Value *A, *B;
-    auto m_V = m_CombineOr(m_Specific(V),
-                           m_CombineOr(m_PtrToInt(m_Specific(V)),
-                           m_BitCast(m_Specific(V))));
+    auto m_V = m_CombineOr(m_Specific(V), m_PtrToInt(m_Specific(V)));
 
     CmpInst::Predicate Pred;
     uint64_t C;

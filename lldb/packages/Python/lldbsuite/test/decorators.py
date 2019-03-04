@@ -436,6 +436,12 @@ def expectedFailureAndroid(bugnumber=None, api_levels=None, archs=None):
             archs),
         bugnumber)
 
+
+def expectedFailureNetBSD(bugnumber=None):
+    return expectedFailureOS(
+        ['netbsd'],
+        bugnumber)
+
 # Flakey tests get two chances to run. If they fail the first time round, the result formatter
 # makes sure it is run one more time.
 
