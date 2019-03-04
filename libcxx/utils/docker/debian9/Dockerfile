@@ -155,12 +155,12 @@ RUN /tmp/build_llvm_version.sh --install /opt/llvm-tot --branch master
 FROM builder-base AS buildbot
 
 # Copy over the GCC and Clang installations
-COPY --from=gcc-49-builder /opt/gcc-4.9.4 /opt/gcc-4.9.4
+COPY --from=gcc-5-builder /opt/gcc-5 /opt/gcc-5
 COPY --from=gcc-tot-builder /opt/gcc-tot /opt/gcc-tot
 COPY --from=llvm-4-builder /opt/llvm-4.0 /opt/llvm-4.0
 
-RUN ln -s /opt/gcc-4.9.4/bin/gcc /usr/local/bin/gcc-4.9 && \
-    ln -s /opt/gcc-4.9.4/bin/g++ /usr/local/bin/g++-4.9
+RUN ln -s /opt/gcc-5/bin/gcc /usr/local/bin/gcc-4.9 && \
+    ln -s /opt/gcc-5/bin/g++ /usr/local/bin/g++-4.9
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

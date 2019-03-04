@@ -62,6 +62,10 @@ public:
 
   void CalculateTrapHandlerSymbolNames() override;
 
+  UserIDResolver &GetUserIDResolver() override {
+    return UserIDResolver::GetNoopResolver();
+  }
+
 protected:
   lldb::PlatformSP m_remote_platform_sp;
 

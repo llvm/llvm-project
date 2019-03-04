@@ -23,6 +23,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Timeout.h"
+#include "lldb/Utility/UserIDResolver.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-public.h"
 #include "llvm/Support/VersionTuple.h"
@@ -276,9 +277,7 @@ public:
 
   virtual bool SetRemoteWorkingDirectory(const FileSpec &working_dir);
 
-  virtual const char *GetUserName(uint32_t uid);
-
-  virtual const char *GetGroupName(uint32_t gid);
+  virtual UserIDResolver &GetUserIDResolver() = 0;
 
   //------------------------------------------------------------------
   /// Locate a file for a platform.
@@ -916,8 +915,6 @@ protected:
   // Mutex for modifying Platform data structures that should only be used for
   // non-reentrant code
   std::mutex m_mutex;
-  IDToNameMap m_uid_map;
-  IDToNameMap m_gid_map;
   size_t m_max_uid_name_len;
   size_t m_max_gid_name_len;
   bool m_supports_rsync;
@@ -945,68 +942,6 @@ protected:
   /// predefined trap handlers, this method may be a no-op.
   //------------------------------------------------------------------
   virtual void CalculateTrapHandlerSymbolNames() = 0;
-
-  const char *GetCachedUserName(uint32_t uid) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    // return the empty string if our string is NULL so we can tell when things
-    // were in the negative cached (didn't find a valid user name, don't keep
-    // trying)
-    const auto pos = m_uid_map.find(uid);
-    return ((pos != m_uid_map.end()) ? pos->second.AsCString("") : nullptr);
-  }
-
-  const char *SetCachedUserName(uint32_t uid, const char *name,
-                                size_t name_len) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    ConstString const_name(name);
-    m_uid_map[uid] = const_name;
-    if (m_max_uid_name_len < name_len)
-      m_max_uid_name_len = name_len;
-    // Const strings lives forever in our const string pool, so we can return
-    // the const char *
-    return const_name.GetCString();
-  }
-
-  void SetUserNameNotFound(uint32_t uid) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    m_uid_map[uid] = ConstString();
-  }
-
-  void ClearCachedUserNames() {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    m_uid_map.clear();
-  }
-
-  const char *GetCachedGroupName(uint32_t gid) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    // return the empty string if our string is NULL so we can tell when things
-    // were in the negative cached (didn't find a valid group name, don't keep
-    // trying)
-    const auto pos = m_gid_map.find(gid);
-    return ((pos != m_gid_map.end()) ? pos->second.AsCString("") : nullptr);
-  }
-
-  const char *SetCachedGroupName(uint32_t gid, const char *name,
-                                 size_t name_len) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    ConstString const_name(name);
-    m_gid_map[gid] = const_name;
-    if (m_max_gid_name_len < name_len)
-      m_max_gid_name_len = name_len;
-    // Const strings lives forever in our const string pool, so we can return
-    // the const char *
-    return const_name.GetCString();
-  }
-
-  void SetGroupNameNotFound(uint32_t gid) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    m_gid_map[gid] = ConstString();
-  }
-
-  void ClearCachedGroupNames() {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    m_gid_map.clear();
-  }
 
   Status GetCachedExecutable(ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
                              const FileSpecList *module_search_paths_ptr,

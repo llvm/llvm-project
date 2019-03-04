@@ -34,6 +34,7 @@ add_lldb_unittest(UtilityTests
   TimeoutTest.cpp
   TimerTest.cpp
   UriParserTest.cpp
+  UserIDResolverTest.cpp
   UUIDTest.cpp
   VASprintfTest.cpp
   VMRangeTest.cpp

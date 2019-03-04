@@ -1,5 +1,6 @@
 # XFAIL: system-windows
 # -> llvm.org/pr24452
+# XFAIL: system-netbsd
 #
 # RUN: %clang -o %t %p/inputs/break-insert-pending.c -g
 # RUN: %lldbmi %t < %s | FileCheck %s

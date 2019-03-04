@@ -340,29 +340,20 @@ const char *PlatformRemoteGDBServer::GetHostname() {
   return m_name.c_str();
 }
 
-const char *PlatformRemoteGDBServer::GetUserName(uint32_t uid) {
-  // Try and get a cache user name first
-  const char *cached_user_name = Platform::GetUserName(uid);
-  if (cached_user_name)
-    return cached_user_name;
+llvm::Optional<std::string>
+PlatformRemoteGDBServer::DoGetUserName(UserIDResolver::id_t uid) {
   std::string name;
   if (m_gdb_client.GetUserName(uid, name))
-    return SetCachedUserName(uid, name.c_str(), name.size());
-
-  SetUserNameNotFound(uid); // Negative cache so we don't keep sending packets
-  return NULL;
+    return std::move(name);
+  return llvm::None;
 }
 
-const char *PlatformRemoteGDBServer::GetGroupName(uint32_t gid) {
-  const char *cached_group_name = Platform::GetGroupName(gid);
-  if (cached_group_name)
-    return cached_group_name;
+llvm::Optional<std::string>
+PlatformRemoteGDBServer::DoGetGroupName(UserIDResolver::id_t gid) {
   std::string name;
   if (m_gdb_client.GetGroupName(gid, name))
-    return SetCachedGroupName(gid, name.c_str(), name.size());
-
-  SetGroupNameNotFound(gid); // Negative cache so we don't keep sending packets
-  return NULL;
+    return std::move(name);
+  return llvm::None;
 }
 
 uint32_t PlatformRemoteGDBServer::FindProcesses(

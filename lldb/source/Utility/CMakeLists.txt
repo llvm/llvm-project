@@ -85,6 +85,7 @@ add_lldb_library(lldbUtility
   TildeExpressionResolver.cpp
   Timer.cpp
   UserID.cpp
+  UserIDResolver.cpp
   UriParser.cpp
   UUID.cpp
   VASprintf.cpp

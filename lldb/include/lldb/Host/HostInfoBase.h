@@ -12,7 +12,6 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-enumerations.h"
-
 #include "llvm/ADT/StringRef.h"
 
 #include <stdint.h>

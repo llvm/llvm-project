@@ -278,8 +278,7 @@ bool ProcessProperties::GetStopOnExec() const {
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
-void ProcessInstanceInfo::Dump(Stream &s, Platform *platform) const {
-  const char *cstr;
+void ProcessInstanceInfo::Dump(Stream &s, UserIDResolver &resolver) const {
   if (m_pid != LLDB_INVALID_PROCESS_ID)
     s.Printf("    pid = %" PRIu64 "\n", m_pid);
 
@@ -311,26 +310,26 @@ void ProcessInstanceInfo::Dump(Stream &s, Platform *platform) const {
     s.EOL();
   }
 
-  if (m_uid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_uid);
-    s.Printf("    uid = %-5u (%s)\n", m_uid, cstr ? cstr : "");
+  if (UserIDIsValid()) {
+    s.Format("    uid = {0,-5} ({1})\n", GetUserID(),
+             resolver.GetUserName(GetUserID()).getValueOr(""));
   }
-  if (m_gid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_gid);
-    s.Printf("    gid = %-5u (%s)\n", m_gid, cstr ? cstr : "");
+  if (GroupIDIsValid()) {
+    s.Format("    gid = {0,-5} ({1})\n", GetGroupID(),
+             resolver.GetGroupName(GetGroupID()).getValueOr(""));
   }
-  if (m_euid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_euid);
-    s.Printf("   euid = %-5u (%s)\n", m_euid, cstr ? cstr : "");
+  if (EffectiveUserIDIsValid()) {
+    s.Format("   euid = {0,-5} ({1})\n", GetEffectiveUserID(),
+             resolver.GetUserName(GetEffectiveUserID()).getValueOr(""));
   }
-  if (m_egid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_egid);
-    s.Printf("   egid = %-5u (%s)\n", m_egid, cstr ? cstr : "");
+  if (EffectiveGroupIDIsValid()) {
+    s.Format("   egid = {0,-5} ({1})\n", GetEffectiveGroupID(),
+             resolver.GetGroupName(GetEffectiveGroupID()).getValueOr(""));
   }
 }
 
-void ProcessInstanceInfo::DumpTableHeader(Stream &s, Platform *platform,
-                                          bool show_args, bool verbose) {
+void ProcessInstanceInfo::DumpTableHeader(Stream &s, bool show_args,
+                                          bool verbose) {
   const char *label;
   if (show_args || verbose)
     label = "ARGUMENTS";
@@ -350,49 +349,33 @@ void ProcessInstanceInfo::DumpTableHeader(Stream &s, Platform *platform,
   }
 }
 
-void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
+void ProcessInstanceInfo::DumpAsTableRow(Stream &s, UserIDResolver &resolver,
                                          bool show_args, bool verbose) const {
   if (m_pid != LLDB_INVALID_PROCESS_ID) {
-    const char *cstr;
     s.Printf("%-6" PRIu64 " %-6" PRIu64 " ", m_pid, m_parent_pid);
 
     StreamString arch_strm;
     if (m_arch.IsValid())
       m_arch.DumpTriple(arch_strm);
 
+    auto print = [&](UserIDResolver::id_t id,
+                     llvm::Optional<llvm::StringRef> (UserIDResolver::*get)(
+                         UserIDResolver::id_t id)) {
+      if (auto name = (resolver.*get)(id))
+        s.Format("{0,-10} ", *name);
+      else
+        s.Format("{0,-10} ", id);
+    };
     if (verbose) {
-      cstr = platform->GetUserName(m_uid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_uid);
-
-      cstr = platform->GetGroupName(m_gid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_gid);
-
-      cstr = platform->GetUserName(m_euid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_euid);
-
-      cstr = platform->GetGroupName(m_egid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_egid);
+      print(m_uid, &UserIDResolver::GetUserName);
+      print(m_gid, &UserIDResolver::GetGroupName);
+      print(m_euid, &UserIDResolver::GetUserName);
+      print(m_egid, &UserIDResolver::GetGroupName);
 
       s.Printf("%-24s ", arch_strm.GetData());
     } else {
-      s.Printf("%-10s %-24s ", platform->GetUserName(m_euid),
-               arch_strm.GetData());
+      print(m_euid, &UserIDResolver::GetUserName);
+      s.Printf(" %-24s ", arch_strm.GetData());
     }
 
     if (verbose || show_args) {
@@ -3057,11 +3040,10 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
                 process_name, sizeof(process_name));
             if (num_matches > 1) {
               StreamString s;
-              ProcessInstanceInfo::DumpTableHeader(s, platform_sp.get(), true,
-                                                   false);
+              ProcessInstanceInfo::DumpTableHeader(s, true, false);
               for (size_t i = 0; i < num_matches; i++) {
                 process_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
-                    s, platform_sp.get(), true, false);
+                    s, platform_sp->GetUserIDResolver(), true, false);
               }
               error.SetErrorStringWithFormat(
                   "more than one process named %s:\n%s", process_name,
