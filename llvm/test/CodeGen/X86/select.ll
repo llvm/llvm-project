@@ -191,7 +191,7 @@ define signext i8 @test4(i8* nocapture %P, double %F) nounwind readonly {
 ; ATHLON-NEXT:    fldl {{[0-9]+}}(%esp)
 ; ATHLON-NEXT:    flds LCPI3_0
 ; ATHLON-NEXT:    xorl %ecx, %ecx
-; ATHLON-NEXT:    fucompi %st(1)
+; ATHLON-NEXT:    fucompi %st(1), %st
 ; ATHLON-NEXT:    fstp %st(0)
 ; ATHLON-NEXT:    seta %cl
 ; ATHLON-NEXT:    movsbl (%eax,%ecx,4), %eax
@@ -1294,7 +1294,7 @@ define void @test19() {
 ; ATHLON-NEXT:    .p2align 4, 0x90
 ; ATHLON-NEXT:  LBB23_4: ## %CF242
 ; ATHLON-NEXT:    ## =>This Inner Loop Header: Depth=1
-; ATHLON-NEXT:    fucomi %st(0)
+; ATHLON-NEXT:    fucomi %st(0), %st
 ; ATHLON-NEXT:    jp LBB23_4
 ; ATHLON-NEXT:  ## %bb.5: ## %CF244
 ; ATHLON-NEXT:    fstp %st(0)

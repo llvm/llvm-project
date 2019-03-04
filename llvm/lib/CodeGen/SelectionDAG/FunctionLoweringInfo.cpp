@@ -321,13 +321,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       NewMap[MBBMap[Src]] = MBBMap[Dst];
     }
     EHInfo.EHPadUnwindMap = std::move(NewMap);
-    NewMap.clear();
-    for (auto &KV : EHInfo.ThrowUnwindMap) {
-      const auto *Src = KV.first.get<const BasicBlock *>();
-      const auto *Dst = KV.second.get<const BasicBlock *>();
-      NewMap[MBBMap[Src]] = MBBMap[Dst];
-    }
-    EHInfo.ThrowUnwindMap = std::move(NewMap);
   }
 }
 

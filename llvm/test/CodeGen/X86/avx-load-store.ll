@@ -85,11 +85,6 @@ define <8 x float> @mov00(<8 x float> %v, float * %ptr) nounwind {
 ; CHECK_O0-LABEL: mov00:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK_O0-NEXT:    # implicit-def: $ymm1
-; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
-; CHECK_O0-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK_O0-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK_O0-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
 ; CHECK_O0-NEXT:    # kill: def $ymm0 killed $xmm0
 ; CHECK_O0-NEXT:    retq
   %val = load float, float* %ptr
@@ -106,11 +101,6 @@ define <4 x double> @mov01(<4 x double> %v, double * %ptr) nounwind {
 ; CHECK_O0-LABEL: mov01:
 ; CHECK_O0:       # %bb.0:
 ; CHECK_O0-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK_O0-NEXT:    # implicit-def: $ymm1
-; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
-; CHECK_O0-NEXT:    vmovaps %xmm1, %xmm0
-; CHECK_O0-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK_O0-NEXT:    vblendpd {{.*#+}} xmm0 = xmm0[0],xmm2[1]
 ; CHECK_O0-NEXT:    # kill: def $ymm0 killed $xmm0
 ; CHECK_O0-NEXT:    retq
   %val = load double, double* %ptr

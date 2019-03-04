@@ -330,7 +330,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
     } else {
       BuildMI(ElseMBB, DL, TII.get(WebAssembly::RETHROW));
       if (EHInfo->hasEHPadUnwindDest(EHPad))
-        EHInfo->setThrowUnwindDest(ElseMBB, EHInfo->getEHPadUnwindDest(EHPad));
+        ElseMBB->addSuccessor(EHInfo->getEHPadUnwindDest(EHPad));
     }
   }
 

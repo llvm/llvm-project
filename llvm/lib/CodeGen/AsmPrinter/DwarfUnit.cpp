@@ -620,6 +620,32 @@ DIE *DwarfTypeUnit::createTypeDIE(const DICompositeType *Ty) {
   return &TyDIE;
 }
 
+DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
+                              const DIType *Ty) {
+  // Create new type.
+  DIE &TyDIE = createAndAddDIE(Ty->getTag(), ContextDIE, Ty);
+
+  updateAcceleratorTables(Context, Ty, TyDIE);
+
+  if (auto *BT = dyn_cast<DIBasicType>(Ty))
+    constructTypeDIE(TyDIE, BT);
+  else if (auto *STy = dyn_cast<DISubroutineType>(Ty))
+    constructTypeDIE(TyDIE, STy);
+  else if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
+    if (DD->generateTypeUnits() && !Ty->isForwardDecl())
+      if (MDString *TypeId = CTy->getRawIdentifier()) {
+        DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);
+        // Skip updating the accelerator tables since this is not the full type.
+        return &TyDIE;
+      }
+    constructTypeDIE(TyDIE, CTy);
+  } else {
+    constructTypeDIE(TyDIE, cast<DIDerivedType>(Ty));
+  }
+
+  return &TyDIE;
+}
+
 DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
   if (!TyNode)
     return nullptr;
@@ -643,28 +669,8 @@ DIE *DwarfUnit::getOrCreateTypeDIE(const MDNode *TyNode) {
   if (DIE *TyDIE = getDIE(Ty))
     return TyDIE;
 
-  // Create new type.
-  DIE &TyDIE = createAndAddDIE(Ty->getTag(), *ContextDIE, Ty);
-
-  updateAcceleratorTables(Context, Ty, TyDIE);
-
-  if (auto *BT = dyn_cast<DIBasicType>(Ty))
-    constructTypeDIE(TyDIE, BT);
-  else if (auto *STy = dyn_cast<DISubroutineType>(Ty))
-    constructTypeDIE(TyDIE, STy);
-  else if (auto *CTy = dyn_cast<DICompositeType>(Ty)) {
-    if (DD->generateTypeUnits() && !Ty->isForwardDecl())
-      if (MDString *TypeId = CTy->getRawIdentifier()) {
-        DD->addDwarfTypeUnitType(getCU(), TypeId->getString(), TyDIE, CTy);
-        // Skip updating the accelerator tables since this is not the full type.
-        return &TyDIE;
-      }
-    constructTypeDIE(TyDIE, CTy);
-  } else {
-    constructTypeDIE(TyDIE, cast<DIDerivedType>(Ty));
-  }
-
-  return &TyDIE;
+  return static_cast<DwarfUnit *>(ContextDIE->getUnit())
+      ->createTypeDIE(Context, *ContextDIE, Ty);
 }
 
 void DwarfUnit::updateAcceleratorTables(const DIScope *Context,

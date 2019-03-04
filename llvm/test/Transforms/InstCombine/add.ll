@@ -948,13 +948,15 @@ define i32 @add_not_increment_commuted(i32 %A, i32 %B) {
 }
 
 ; E = (A + ~B) + 1 = A - B
-define i32 @add_to_sub(i32 %A, i32 %B) {
+define i32 @add_to_sub(i32 %M, i32 %B) {
 ; CHECK-LABEL: @add_to_sub(
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[M:%.*]], 42
 ; CHECK-NEXT:    [[C:%.*]] = xor i32 [[B:%.*]], -1
-; CHECK-NEXT:    [[D:%.*]] = add i32 [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = add i32 [[A]], [[C]]
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[D]], 1
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
+  %A = mul i32 %M, 42          ; thwart complexity-based ordering
   %C = xor i32 %B, -1
   %D = add i32 %A, %C
   %E = add i32 %D, 1
@@ -962,13 +964,15 @@ define i32 @add_to_sub(i32 %A, i32 %B) {
 }
 
 ; E = (~B + A) + 1 = A - B
-define i32 @add_to_sub2(i32 %A, i32 %B) {
+define i32 @add_to_sub2(i32 %A, i32 %M) {
 ; CHECK-LABEL: @add_to_sub2(
-; CHECK-NEXT:    [[C:%.*]] = xor i32 [[B:%.*]], -1
+; CHECK-NEXT:    [[B:%.*]] = mul i32 [[M:%.*]], 42
+; CHECK-NEXT:    [[C:%.*]] = xor i32 [[B]], -1
 ; CHECK-NEXT:    [[D:%.*]] = add i32 [[C]], [[A:%.*]]
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[D]], 1
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
+  %B = mul i32 %M, 42          ; thwart complexity-based ordering
   %C = xor i32 %B, -1
   %D = add i32 %C, %A
   %E = add i32 %D, 1

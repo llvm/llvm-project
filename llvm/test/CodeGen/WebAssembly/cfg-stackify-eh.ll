@@ -105,7 +105,7 @@ try.cont:                                         ; preds = %entry, %catch, %cat
 ; CHECK:             i32.call  $drop=, __cxa_begin_catch
 ; CHECK:             try
 ; CHECK:               call      foo
-; CHECK:               br        2                     # 2: down to label10
+; CHECK:               br        2                     # 2: down to label9
 ; CHECK:             catch
 ; CHECK:               call      __cxa_end_catch
 ; CHECK:               rethrow                         # down to catch3
@@ -116,7 +116,7 @@ try.cont:                                         ; preds = %entry, %catch, %cat
 ; CHECK:         catch     {{.*}}                      # catch3:
 ; CHECK:           call      __cxa_end_catch
 ; CHECK:           rethrow                             # to caller
-; CHECK:         end_try                               # label10:
+; CHECK:         end_try                               # label9:
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        2                           # 2: down to label6
 ; CHECK:       end_try
