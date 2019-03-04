@@ -1913,7 +1913,7 @@ define <2 x i64> @test_masked_4xi64_to_2xi64_perm_mem_mask1(<4 x i64>* %vp, <2 x
 ; CHECK-LABEL: test_masked_4xi64_to_2xi64_perm_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa 16(%rdi), %xmm2
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],mem[4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vmovdqa64 %xmm2, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -1928,7 +1928,7 @@ define <2 x i64> @test_masked_z_4xi64_to_2xi64_perm_mem_mask1(<4 x i64>* %vp, <2
 ; CHECK-LABEL: test_masked_z_4xi64_to_2xi64_perm_mem_mask1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa 16(%rdi), %xmm1
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],mem[4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1],mem[2,3]
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
@@ -2564,7 +2564,7 @@ define <2 x i64> @test_masked_8xi64_to_2xi64_perm_mem_mask0(<8 x i64>* %vp, <2 x
 ; CHECK-LABEL: test_masked_8xi64_to_2xi64_perm_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %xmm2
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],mem[4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0,1],mem[2,3]
 ; CHECK-NEXT:    vptestnmq %xmm1, %xmm1, %k1
 ; CHECK-NEXT:    vmovdqa64 %xmm2, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
@@ -2579,7 +2579,7 @@ define <2 x i64> @test_masked_z_8xi64_to_2xi64_perm_mem_mask0(<8 x i64>* %vp, <2
 ; CHECK-LABEL: test_masked_z_8xi64_to_2xi64_perm_mem_mask0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovdqa 32(%rdi), %xmm1
-; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],mem[4,5,6,7]
+; CHECK-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0,1],mem[2,3]
 ; CHECK-NEXT:    vptestnmq %xmm0, %xmm0, %k1
 ; CHECK-NEXT:    vmovdqa64 %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq

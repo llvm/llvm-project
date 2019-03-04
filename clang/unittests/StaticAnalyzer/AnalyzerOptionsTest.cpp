@@ -48,28 +48,28 @@ TEST(StaticAnalyzerOptions, SearchInParentPackageTests) {
     }
   };
 
-  // Checker one has Option specified as true. It should read true regardless of
-  // search mode.
+  // CheckerTwo one has Option specified as true. It should read true regardless
+  // of search mode.
   CheckerOneMock CheckerOne;
-  EXPECT_TRUE(Opts.getCheckerBooleanOption("Option", false, &CheckerOne));
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerOne, "Option", false));
   // The package option is overridden with a checker option.
-  EXPECT_TRUE(Opts.getCheckerBooleanOption("Option", false, &CheckerOne,
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerOne, "Option", false,
                                            true));
   // The Outer package option is overridden by the Inner package option. No
   // package option is specified.
-  EXPECT_TRUE(Opts.getCheckerBooleanOption("Option2", false, &CheckerOne,
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerOne, "Option2", false,
                                            true));
   // No package option is specified and search in packages is turned off. The
   // default value should be returned.
-  EXPECT_FALSE(Opts.getCheckerBooleanOption("Option2", false, &CheckerOne));
-  EXPECT_TRUE(Opts.getCheckerBooleanOption("Option2", true, &CheckerOne));
+  EXPECT_FALSE(Opts.getCheckerBooleanOption(&CheckerOne, "Option2", false));
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerOne, "Option2", true));
 
   // Checker true has no option specified. It should get the default value when
   // search in parents turned off and false when search in parents turned on.
   CheckerTwoMock CheckerTwo;
-  EXPECT_FALSE(Opts.getCheckerBooleanOption("Option", false, &CheckerTwo));
-  EXPECT_TRUE(Opts.getCheckerBooleanOption("Option", true, &CheckerTwo));
-  EXPECT_FALSE(Opts.getCheckerBooleanOption("Option", true, &CheckerTwo, true));
+  EXPECT_FALSE(Opts.getCheckerBooleanOption(&CheckerTwo, "Option", false));
+  EXPECT_TRUE(Opts.getCheckerBooleanOption(&CheckerTwo, "Option", true));
+  EXPECT_FALSE(Opts.getCheckerBooleanOption(&CheckerTwo, "Option", true, true));
 }
 
 TEST(StaticAnalyzerOptions, StringOptions) {
@@ -84,9 +84,17 @@ TEST(StaticAnalyzerOptions, StringOptions) {
 
   CheckerOneMock CheckerOne;
   EXPECT_TRUE("StringValue" ==
-            Opts.getCheckerStringOption("Option", "DefaultValue", &CheckerOne));
+            Opts.getCheckerStringOption(&CheckerOne, "Option", "DefaultValue"));
   EXPECT_TRUE("DefaultValue" ==
-           Opts.getCheckerStringOption("Option2", "DefaultValue", &CheckerOne));
+           Opts.getCheckerStringOption(&CheckerOne, "Option2", "DefaultValue"));
 }
+
+TEST(StaticAnalyzerOptions, SubCheckerOptions) {
+  AnalyzerOptions Opts;
+  Opts.Config["Outer.Inner.CheckerOne:Option"] = "StringValue";
+  EXPECT_TRUE("StringValue" == Opts.getCheckerStringOption(
+        "Outer.Inner.CheckerOne", "Option", "DefaultValue"));
+}
+
 } // end namespace ento
 } // end namespace clang

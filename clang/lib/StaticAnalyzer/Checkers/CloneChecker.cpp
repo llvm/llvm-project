@@ -63,17 +63,17 @@ void CloneChecker::checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
   // the CloneDetector. The only thing left to do is to report the found clones.
 
   int MinComplexity = Mgr.getAnalyzerOptions().getCheckerIntegerOption(
-      "MinimumCloneComplexity", 50, this);
+      this, "MinimumCloneComplexity", 50);
   assert(MinComplexity >= 0);
 
   bool ReportSuspiciousClones = Mgr.getAnalyzerOptions()
-    .getCheckerBooleanOption("ReportSuspiciousClones", true, this);
+    .getCheckerBooleanOption(this, "ReportSuspiciousClones", true);
 
   bool ReportNormalClones = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      "ReportNormalClones", true, this);
+      this, "ReportNormalClones", true);
 
   StringRef IgnoredFilesPattern = Mgr.getAnalyzerOptions()
-    .getCheckerStringOption("IgnoredFilesPattern", "", this);
+    .getCheckerStringOption(this, "IgnoredFilesPattern", "");
 
   // Let the CloneDetector create a list of clones from all the analyzed
   // statements. We don't filter for matching variable patterns at this point

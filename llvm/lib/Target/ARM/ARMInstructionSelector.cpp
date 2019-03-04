@@ -665,11 +665,12 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
 
     // FIXME: Taking advantage of MOVT for ELF is pretty involved, so we don't
     // support it yet. See PR28229.
-    unsigned Opc = UseMovt && !STI.isTargetELF()
-                       ? (UseOpcodeThatLoads ? ARM::MOV_ga_pcrel_ldr
-                                             : Opcodes.MOV_ga_pcrel)
-                       : (UseOpcodeThatLoads ? ARM::LDRLIT_ga_pcrel_ldr
-                                             : Opcodes.LDRLIT_ga_pcrel);
+    unsigned Opc =
+        UseMovt && !STI.isTargetELF()
+            ? (UseOpcodeThatLoads ? (unsigned)ARM::MOV_ga_pcrel_ldr
+                                  : Opcodes.MOV_ga_pcrel)
+            : (UseOpcodeThatLoads ? (unsigned)ARM::LDRLIT_ga_pcrel_ldr
+                                  : Opcodes.LDRLIT_ga_pcrel);
     MIB->setDesc(TII.get(Opc));
 
     int TargetFlags = ARMII::MO_NO_FLAG;

@@ -1,5 +1,13 @@
 import("//clang/resource_dir.gni")
 
+source_set("sources") {
+  configs -= [ "//llvm/utils/gn/build:llvm_code" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [
+    "cfi.cpp",
+  ]
+}
+
 copy("blacklist") {
   sources = [
     "cfi_blacklist.txt",
