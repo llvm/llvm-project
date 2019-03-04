@@ -38,6 +38,10 @@
 #  define _LIBCPP_ABI_VERSION 1
 #endif
 
+#ifndef __STDC_HOSTED__
+#  define _LIBCPP_FREESTANDING
+#endif
+
 #ifndef _LIBCPP_STD_VER
 #  if  __cplusplus <= 201103L
 #    define _LIBCPP_STD_VER 11
@@ -1220,9 +1224,18 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_HAS_GCC_ATOMIC_IMP
 #endif
 
-#if (!defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP)) \
+#if (!defined(_LIBCPP_HAS_C_ATOMIC_IMP) && \
+     !defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) && \
+     !defined(_LIBCPP_HAS_EXTERNAL_ATOMIC_IMP)) \
      || defined(_LIBCPP_HAS_NO_THREADS)
-#define _LIBCPP_HAS_NO_ATOMIC_HEADER
+#  define _LIBCPP_HAS_NO_ATOMIC_HEADER
+#else
+#  ifndef _LIBCPP_ATOMIC_FLAG_TYPE
+#    define _LIBCPP_ATOMIC_FLAG_TYPE bool
+#  endif
+#  ifdef _LIBCPP_FREESTANDING
+#    define _LIBCPP_ATOMIC_ONLY_USE_BUILTINS
+#  endif
 #endif
 
 #ifndef _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
