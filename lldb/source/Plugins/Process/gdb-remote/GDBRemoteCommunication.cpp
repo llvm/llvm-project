@@ -1283,7 +1283,7 @@ GDBRemoteCommunication::ConnectLocally(GDBRemoteCommunication &client,
 
   llvm::SmallString<32> remote_addr;
   llvm::raw_svector_ostream(remote_addr)
-      << "connect://localhost:" << listen_socket.GetLocalPortNumber();
+      << "connect://127.0.0.1:" << listen_socket.GetLocalPortNumber();
 
   std::unique_ptr<ConnectionFileDescriptor> conn_up(
       new ConnectionFileDescriptor());
