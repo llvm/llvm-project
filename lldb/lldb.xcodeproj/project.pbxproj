@@ -7618,7 +7618,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR $LLVM_BUILD_DIR/x86_64\n";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-resource-headers.py $TARGET_BUILD_DIR $LLVM_BUILD_DIR/x86_64\n";
 		};
 		4C3326CA18B2A2B800EB5DD7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
