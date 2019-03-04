@@ -23,7 +23,7 @@ from lit.ShCommands import GlobItem
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
-from lit.util import to_bytes, to_string
+from lit.util import to_bytes, to_string, to_unicode
 from lit.BooleanExpression import BooleanExpression
 
 class InternalShellError(Exception):
@@ -344,8 +344,11 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
     stderr = StringIO()
     exitCode = 0
     for dir in args:
+        cwd = cmd_shenv.cwd
+        dir = to_unicode(dir) if kIsWindows else to_bytes(dir)
+        cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(dir):
-            dir = os.path.realpath(os.path.join(cmd_shenv.cwd, dir))
+            dir = os.path.realpath(os.path.join(cwd, dir))
         if parent:
             lit.util.mkdir_p(dir)
         else:
@@ -598,8 +601,11 @@ def executeBuiltinRm(cmd, cmd_shenv):
     stderr = StringIO()
     exitCode = 0
     for path in args:
+        cwd = cmd_shenv.cwd
+        path = to_unicode(path) if kIsWindows else to_bytes(path)
+        cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
-            path = os.path.realpath(os.path.join(cmd_shenv.cwd, path))
+            path = os.path.realpath(os.path.join(cwd, path))
         if force and not os.path.exists(path):
             continue
         try:
@@ -695,6 +701,8 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
+            redir_filename = to_unicode(redir_filename) \
+                    if kIsWindows else to_bytes(redir_filename)
             fd = open(redir_filename, mode)
         # Workaround a Win32 and/or subprocess bug when appending.
         #
@@ -1096,11 +1104,14 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
         for i, ln in enumerate(commands):
             commands[i] = re.sub(kPdbgRegex, ": '\\1'; ", ln)
         if test.config.pipefail:
-            f.write('set -o pipefail;')
+            f.write(b'set -o pipefail;' if mode == 'wb' else 'set -o pipefail;')
         if litConfig.echo_all_commands:
-            f.write('set -x;')
-        f.write('{ ' + '; } &&\n{ '.join(commands) + '; }')
-    f.write('\n')
+            f.write(b'set -x;' if mode == 'wb' else 'set -x;')
+        if sys.version_info > (3,0) and mode == 'wb':
+            f.write(bytes('{ ' + '; } &&\n{ '.join(commands) + '; }', 'utf-8'))
+        else:
+            f.write('{ ' + '; } &&\n{ '.join(commands) + '; }')
+    f.write(b'\n' if mode == 'wb' else '\n')
     f.close()
 
     if isWin32CMDEXE:
