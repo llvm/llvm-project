@@ -119,8 +119,7 @@ public:
                        SDValue &Offset, SDValue &Opc);
   bool SelectAddrMode3Offset(SDNode *Op, SDValue N,
                              SDValue &Offset, SDValue &Opc);
-  bool IsAddressingMode5(SDValue N, SDValue &Base, SDValue &Offset,
-                         int Lwb, int Upb, bool FP16);
+  bool IsAddressingMode5(SDValue N, SDValue &Base, SDValue &Offset, bool FP16);
   bool SelectAddrMode5(SDValue N, SDValue &Base, SDValue &Offset);
   bool SelectAddrMode5FP16(SDValue N, SDValue &Base, SDValue &Offset);
   bool SelectAddrMode6(SDNode *Parent, SDValue N, SDValue &Addr,SDValue &Align);
@@ -902,7 +901,7 @@ bool ARMDAGToDAGISel::SelectAddrMode3Offset(SDNode *Op, SDValue N,
 }
 
 bool ARMDAGToDAGISel::IsAddressingMode5(SDValue N, SDValue &Base, SDValue &Offset,
-                                        int Lwb, int Upb, bool FP16) {
+                                        bool FP16) {
   if (!CurDAG->isBaseWithConstantOffset(N)) {
     Base = N;
     if (N.getOpcode() == ISD::FrameIndex) {
@@ -924,7 +923,7 @@ bool ARMDAGToDAGISel::IsAddressingMode5(SDValue N, SDValue &Base, SDValue &Offse
   int RHSC;
   const int Scale = FP16 ? 2 : 4;
 
-  if (isScaledConstantInRange(N.getOperand(1), Scale, Lwb, Upb, RHSC)) {
+  if (isScaledConstantInRange(N.getOperand(1), Scale, -255, 256, RHSC)) {
     Base = N.getOperand(0);
     if (Base.getOpcode() == ISD::FrameIndex) {
       int FI = cast<FrameIndexSDNode>(Base)->getIndex();
@@ -962,16 +961,12 @@ bool ARMDAGToDAGISel::IsAddressingMode5(SDValue N, SDValue &Base, SDValue &Offse
 
 bool ARMDAGToDAGISel::SelectAddrMode5(SDValue N,
                                       SDValue &Base, SDValue &Offset) {
-  int Lwb = -256 + 1;
-  int Upb = 256;
-  return IsAddressingMode5(N, Base, Offset, Lwb, Upb, /*FP16=*/ false);
+  return IsAddressingMode5(N, Base, Offset, /*FP16=*/ false);
 }
 
 bool ARMDAGToDAGISel::SelectAddrMode5FP16(SDValue N,
                                           SDValue &Base, SDValue &Offset) {
-  int Lwb = -512 + 1;
-  int Upb = 512;
-  return IsAddressingMode5(N, Base, Offset, Lwb, Upb, /*FP16=*/ true);
+  return IsAddressingMode5(N, Base, Offset, /*FP16=*/ true);
 }
 
 bool ARMDAGToDAGISel::SelectAddrMode6(SDNode *Parent, SDValue N, SDValue &Addr,

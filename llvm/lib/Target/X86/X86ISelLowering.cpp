@@ -6884,6 +6884,28 @@ static SDValue getShuffleScalarElt(SDNode *N, unsigned Index, SelectionDAG &DAG,
                                Depth+1);
   }
 
+  // Recurse into insert_subvector base/sub vector to find scalars.
+  if (Opcode == ISD::INSERT_SUBVECTOR &&
+      isa<ConstantSDNode>(N->getOperand(2))) {
+    SDValue Vec = N->getOperand(0);
+    SDValue Sub = N->getOperand(1);
+    EVT SubVT = Sub.getValueType();
+    unsigned NumSubElts = SubVT.getVectorNumElements();
+    uint64_t SubIdx = N->getConstantOperandVal(2);
+
+    if (SubIdx <= Index && Index < (SubIdx + NumSubElts))
+      return getShuffleScalarElt(Sub.getNode(), Index - SubIdx, DAG, Depth + 1);
+    return getShuffleScalarElt(Vec.getNode(), Index, DAG, Depth + 1);
+  }
+
+  // Recurse into extract_subvector src vector to find scalars.
+  if (Opcode == ISD::EXTRACT_SUBVECTOR &&
+      isa<ConstantSDNode>(N->getOperand(1))) {
+    SDValue Src = N->getOperand(0);
+    uint64_t SrcIdx = N->getConstantOperandVal(1);
+    return getShuffleScalarElt(Src.getNode(), Index + SrcIdx, DAG, Depth + 1);
+  }
+
   // Actual nodes that may contain scalar elements
   if (Opcode == ISD::BITCAST) {
     V = V.getOperand(0);
@@ -7464,6 +7486,26 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   }
 
   return SDValue();
+}
+
+// Combine a vector ops (shuffles etc.) that is equal to build_vector load1,
+// load2, load3, load4, <0, 1, 2, 3> into a vector load if the load addresses
+// are consecutive, non-overlapping, and in the right order.
+static SDValue combineToConsecutiveLoads(EVT VT, SDNode *N, const SDLoc &DL,
+                                         SelectionDAG &DAG,
+                                         const X86Subtarget &Subtarget,
+                                         bool isAfterLegalize) {
+  SmallVector<SDValue, 64> Elts;
+  for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
+    if (SDValue Elt = getShuffleScalarElt(N, i, DAG, 0)) {
+      Elts.push_back(Elt);
+      continue;
+    }
+    return SDValue();
+  }
+  assert(Elts.size() == VT.getVectorNumElements());
+  return EltsFromConsecutiveLoads(VT, Elts, DL, DAG, Subtarget,
+                                  isAfterLegalize);
 }
 
 static Constant *getConstantVector(MVT VT, const APInt &SplatValue,
@@ -28772,20 +28814,21 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
   X86::CondCode CC = X86::CondCode(MI.getOperand(3).getImm());
   X86::CondCode OppCC = X86::GetOppositeBranchCondition(CC);
   MachineInstr *LastCMOV = &MI;
-  MachineBasicBlock::iterator NextMIIt =
-      std::next(MachineBasicBlock::iterator(MI));
+  MachineBasicBlock::iterator NextMIIt = MachineBasicBlock::iterator(MI);
 
   // Check for case 1, where there are multiple CMOVs with the same condition
   // first.  Of the two cases of multiple CMOV lowerings, case 1 reduces the
   // number of jumps the most.
 
   if (isCMOVPseudo(MI)) {
-    // See if we have a string of CMOVS with the same condition.
+    // See if we have a string of CMOVS with the same condition. Skip over
+    // intervening debug insts.
     while (NextMIIt != ThisMBB->end() && isCMOVPseudo(*NextMIIt) &&
            (NextMIIt->getOperand(3).getImm() == CC ||
             NextMIIt->getOperand(3).getImm() == OppCC)) {
       LastCMOV = &*NextMIIt;
       ++NextMIIt;
+      NextMIIt = skipDebugInstructionsForward(NextMIIt, ThisMBB->end());
     }
   }
 
@@ -28817,8 +28860,18 @@ X86TargetLowering::EmitLoweredSelect(MachineInstr &MI,
     SinkMBB->addLiveIn(X86::EFLAGS);
   }
 
+  // Transfer any debug instructions inside the CMOV sequence to the sunk block.
+  auto DbgEnd = MachineBasicBlock::iterator(LastCMOV);
+  auto DbgIt = MachineBasicBlock::iterator(MI);
+  while (DbgIt != DbgEnd) {
+    auto Next = std::next(DbgIt);
+    if (DbgIt->isDebugInstr())
+      SinkMBB->push_back(DbgIt->removeFromParent());
+    DbgIt = Next;
+  }
+
   // Transfer the remainder of ThisMBB and its successor edges to SinkMBB.
-  SinkMBB->splice(SinkMBB->begin(), ThisMBB,
+  SinkMBB->splice(SinkMBB->end(), ThisMBB,
                   std::next(MachineBasicBlock::iterator(LastCMOV)),
                   ThisMBB->end());
   SinkMBB->transferSuccessorsAndUpdatePHIs(ThisMBB);
@@ -32762,23 +32815,9 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Combine a vector_shuffle that is equal to build_vector load1, load2, load3,
-  // load4, <0, 1, 2, 3> into a 128-bit load if the load addresses are
-  // consecutive, non-overlapping, and in the right order.
-  SmallVector<SDValue, 16> Elts;
-  for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i) {
-    if (SDValue Elt = getShuffleScalarElt(N, i, DAG, 0)) {
-      Elts.push_back(Elt);
-      continue;
-    }
-    Elts.clear();
-    break;
-  }
-
-  if (Elts.size() == VT.getVectorNumElements())
-    if (SDValue LD =
-            EltsFromConsecutiveLoads(VT, Elts, dl, DAG, Subtarget, true))
-      return LD;
+  // Attempt to combine into a vector load/broadcast.
+  if (SDValue LD = combineToConsecutiveLoads(VT, N, dl, DAG, Subtarget, true))
+    return LD;
 
   // For AVX2, we sometimes want to combine
   // (vector_shuffle <mask> (concat_vectors t1, undef)

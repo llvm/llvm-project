@@ -4257,7 +4257,7 @@ ASTReader::ReadASTCore(StringRef FileName,
     }
   }
 
-  return Success;
+  llvm_unreachable("unexpected break; expected return");
 }
 
 ASTReader::ASTReadResult

@@ -169,6 +169,12 @@ option specifies "``-``", then the output will also be sent to standard output.
   the theoretical uniform distribution of resource pressure for every
   instruction in sequence.
 
+.. option:: -bottleneck-analysis
+
+  Print information about bottlenecks that affect the throughput. This analysis
+  can be expensive, and it is disabled by default.  Bottlenecks are highlighted
+  in the summary view.
+
 
 EXIT STATUS
 -----------

@@ -1208,7 +1208,7 @@ bool ento::shouldRegisterNullabilityBase(const LangOptions &LO) {
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
         mgr.getAnalyzerOptions().getCheckerBooleanOption(                      \
-                      "NoDiagnoseCallsToSystemHeaders", false, checker, true); \
+                      checker, "NoDiagnoseCallsToSystemHeaders", false, true); \
   }                                                                            \
                                                                                \
   bool ento::shouldRegister##name##Checker(const LangOptions &LO) {            \
