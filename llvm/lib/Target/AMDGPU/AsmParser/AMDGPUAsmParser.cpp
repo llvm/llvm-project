@@ -415,6 +415,11 @@ public:
     return isSSrcF16();
   }
 
+  bool isSSrcOrLdsB32() const {
+    return isRegOrInlineNoMods(AMDGPU::SRegOrLds_32RegClassID, MVT::i32) ||
+           isLiteralImm(MVT::i32) || isExpr();
+  }
+
   bool isVCSrcB32() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
@@ -2477,6 +2482,73 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
+static bool IsRevOpcode(const unsigned Opcode)
+{
+  switch (Opcode) {
+  case AMDGPU::V_SUBREV_F32_e32:
+  case AMDGPU::V_SUBREV_F32_e64:
+  case AMDGPU::V_SUBREV_F32_e32_si:
+  case AMDGPU::V_SUBREV_F32_e32_vi:
+  case AMDGPU::V_SUBREV_F32_e64_si:
+  case AMDGPU::V_SUBREV_F32_e64_vi:
+  case AMDGPU::V_SUBREV_I32_e32:
+  case AMDGPU::V_SUBREV_I32_e64:
+  case AMDGPU::V_SUBREV_I32_e32_si:
+  case AMDGPU::V_SUBREV_I32_e64_si:
+  case AMDGPU::V_SUBBREV_U32_e32:
+  case AMDGPU::V_SUBBREV_U32_e64:
+  case AMDGPU::V_SUBBREV_U32_e32_si:
+  case AMDGPU::V_SUBBREV_U32_e32_vi:
+  case AMDGPU::V_SUBBREV_U32_e64_si:
+  case AMDGPU::V_SUBBREV_U32_e64_vi:
+  case AMDGPU::V_SUBREV_U32_e32:
+  case AMDGPU::V_SUBREV_U32_e64:
+  case AMDGPU::V_SUBREV_U32_e32_gfx9:
+  case AMDGPU::V_SUBREV_U32_e32_vi:
+  case AMDGPU::V_SUBREV_U32_e64_gfx9:
+  case AMDGPU::V_SUBREV_U32_e64_vi:
+  case AMDGPU::V_SUBREV_F16_e32:
+  case AMDGPU::V_SUBREV_F16_e64:
+  case AMDGPU::V_SUBREV_F16_e32_vi:
+  case AMDGPU::V_SUBREV_F16_e64_vi:
+  case AMDGPU::V_SUBREV_U16_e32:
+  case AMDGPU::V_SUBREV_U16_e64:
+  case AMDGPU::V_SUBREV_U16_e32_vi:
+  case AMDGPU::V_SUBREV_U16_e64_vi:
+  case AMDGPU::V_SUBREV_CO_U32_e32_gfx9:
+  case AMDGPU::V_SUBREV_CO_U32_e64_gfx9:
+  case AMDGPU::V_SUBBREV_CO_U32_e32_gfx9:
+  case AMDGPU::V_SUBBREV_CO_U32_e64_gfx9:
+  case AMDGPU::V_LSHLREV_B32_e32_si:
+  case AMDGPU::V_LSHLREV_B32_e64_si:
+  case AMDGPU::V_LSHLREV_B16_e32_vi:
+  case AMDGPU::V_LSHLREV_B16_e64_vi:
+  case AMDGPU::V_LSHLREV_B32_e32_vi:
+  case AMDGPU::V_LSHLREV_B32_e64_vi:
+  case AMDGPU::V_LSHLREV_B64_vi:
+  case AMDGPU::V_LSHRREV_B32_e32_si:
+  case AMDGPU::V_LSHRREV_B32_e64_si:
+  case AMDGPU::V_LSHRREV_B16_e32_vi:
+  case AMDGPU::V_LSHRREV_B16_e64_vi:
+  case AMDGPU::V_LSHRREV_B32_e32_vi:
+  case AMDGPU::V_LSHRREV_B32_e64_vi:
+  case AMDGPU::V_LSHRREV_B64_vi:
+  case AMDGPU::V_ASHRREV_I32_e64_si:
+  case AMDGPU::V_ASHRREV_I32_e32_si:
+  case AMDGPU::V_ASHRREV_I16_e32_vi:
+  case AMDGPU::V_ASHRREV_I16_e64_vi:
+  case AMDGPU::V_ASHRREV_I32_e32_vi:
+  case AMDGPU::V_ASHRREV_I32_e64_vi:
+  case AMDGPU::V_ASHRREV_I64_vi:
+  case AMDGPU::V_PK_LSHLREV_B16_vi:
+  case AMDGPU::V_PK_LSHRREV_B16_vi:
+  case AMDGPU::V_PK_ASHRREV_I16_vi:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
 
   using namespace SIInstrFlags;
@@ -2511,50 +2583,7 @@ bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
     return true;
 
   // lds_direct is specified as src0. Check additional limitations.
-
-  // FIXME: This is a workaround for bug 37943
-  // which allows 64-bit VOP3 opcodes use 32-bit operands.
-  if (AMDGPU::getRegOperandSize(getMRI(), Desc, Src0Idx) != 4)
-    return false;
-
-  // Documentation does not disable lds_direct for SDWA, but SP3 assembler does.
-  // FIXME: This inconsistence needs to be investigated further.
-  if (Desc.TSFlags & SIInstrFlags::SDWA)
-    return false;
-
-  // The following opcodes do not accept lds_direct which is explicitly stated
-  // in AMD documentation. However SP3 disables lds_direct for most other 'rev'
-  // opcodes as well (e.g. for v_subrev_u32 but not for v_subrev_f32).
-  // FIXME: This inconsistence needs to be investigated further.
-  switch (Opcode) {
-  case AMDGPU::V_LSHLREV_B32_e32_si:
-  case AMDGPU::V_LSHLREV_B32_e64_si:
-  case AMDGPU::V_LSHLREV_B16_e32_vi:
-  case AMDGPU::V_LSHLREV_B16_e64_vi:
-  case AMDGPU::V_LSHLREV_B32_e32_vi:
-  case AMDGPU::V_LSHLREV_B32_e64_vi:
-  case AMDGPU::V_LSHLREV_B64_vi:
-  case AMDGPU::V_LSHRREV_B32_e32_si:
-  case AMDGPU::V_LSHRREV_B32_e64_si:
-  case AMDGPU::V_LSHRREV_B16_e32_vi:
-  case AMDGPU::V_LSHRREV_B16_e64_vi:
-  case AMDGPU::V_LSHRREV_B32_e32_vi:
-  case AMDGPU::V_LSHRREV_B32_e64_vi:
-  case AMDGPU::V_LSHRREV_B64_vi:
-  case AMDGPU::V_ASHRREV_I32_e64_si:
-  case AMDGPU::V_ASHRREV_I32_e32_si:
-  case AMDGPU::V_ASHRREV_I16_e32_vi:
-  case AMDGPU::V_ASHRREV_I16_e64_vi:
-  case AMDGPU::V_ASHRREV_I32_e32_vi:
-  case AMDGPU::V_ASHRREV_I32_e64_vi:
-  case AMDGPU::V_ASHRREV_I64_vi:
-  case AMDGPU::V_PK_LSHLREV_B16_vi:
-  case AMDGPU::V_PK_LSHRREV_B16_vi:
-  case AMDGPU::V_PK_ASHRREV_I16_vi:
-    return false;
-  default:
-    return true;
-  }
+  return (Desc.TSFlags & SIInstrFlags::SDWA) == 0 && !IsRevOpcode(Opcode);
 }
 
 bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {

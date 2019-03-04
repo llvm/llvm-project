@@ -28,6 +28,12 @@ namespace mca {
 class ExecuteStage final : public Stage {
   Scheduler &HWS;
 
+  unsigned NumDispatchedOpcodes;
+  unsigned NumIssuedOpcodes;
+
+  // True if this stage should notify listeners of HWPressureEvents.
+  bool EnablePressureEvents;
+
   Error issueInstruction(InstRef &IR);
 
   // Called at the beginning of each cycle to issue already dispatched
@@ -41,7 +47,10 @@ class ExecuteStage final : public Stage {
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
 
 public:
-  ExecuteStage(Scheduler &S) : Stage(), HWS(S) {}
+  ExecuteStage(Scheduler &S) : ExecuteStage(S, false) {}
+  ExecuteStage(Scheduler &S, bool ShouldPerformBottleneckAnalysis)
+      : Stage(), HWS(S), NumDispatchedOpcodes(0), NumIssuedOpcodes(0),
+        EnablePressureEvents(ShouldPerformBottleneckAnalysis) {}
 
   // This stage works under the assumption that the Pipeline will eventually
   // execute a retire stage. We don't need to check if pipelines and/or
@@ -60,6 +69,7 @@ public:
   // Instructions that transitioned to the 'Executed' state are automatically
   // moved to the next stage (i.e. RetireStage).
   Error cycleStart() override;
+  Error cycleEnd() override;
   Error execute(InstRef &IR) override;
 
   void notifyInstructionIssued(

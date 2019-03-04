@@ -19,6 +19,7 @@ class MiTargetTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfLinux  # cannot attach to process on linux
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfDarwin
+    @expectedFailureNetBSD
     def test_lldbmi_target_attach_wait_for(self):
         """Test that 'lldb-mi --interpreter' works for -target-attach -n <name> --waitfor."""
 
@@ -63,6 +64,7 @@ class MiTargetTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfLinux  # cannot attach to process on linux
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfDarwin
+    @expectedFailureNetBSD
     def test_lldbmi_target_attach_name(self):
         """Test that 'lldb-mi --interpreter' works for -target-attach -n <name>."""
 
@@ -100,6 +102,7 @@ class MiTargetTestCase(lldbmi_testcase.MiTestCaseBase):
     @skipIfLinux  # cannot attach to process on linux
     @skipIfRemote   # We do not currently support remote debugging via the MI.
     @skipIfDarwin
+    @expectedFailureNetBSD
     def test_lldbmi_target_attach_pid(self):
         """Test that 'lldb-mi --interpreter' works for -target-attach <pid>."""
 

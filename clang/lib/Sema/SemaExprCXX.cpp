@@ -2795,7 +2795,8 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
     }
   }
 
-  FunctionProtoType::ExtProtoInfo EPI;
+  FunctionProtoType::ExtProtoInfo EPI(Context.getDefaultCallingConvention(
+      /*IsVariadic=*/false, /*IsCXXMethod=*/false));
 
   QualType BadAllocType;
   bool HasBadAllocExceptionSpec
