@@ -157,8 +157,8 @@ clang_generate_header(-gen-arm-neon arm_neon.td arm_neon.h)
 # Generate arm_fp16.h
 clang_generate_header(-gen-arm-fp16 arm_fp16.td arm_fp16.h)
 
-add_custom_target(clang-headers ALL DEPENDS ${out_files})
-set_target_properties(clang-headers PROPERTIES
+add_custom_target(clang-resource-headers ALL DEPENDS ${out_files})
+set_target_properties(clang-resource-headers PROPERTIES
   FOLDER "Misc"
   RUNTIME_OUTPUT_DIRECTORY "${output_dir}")
 
@@ -167,10 +167,10 @@ set(header_install_dir lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION})
 install(
   DIRECTORY ${output_dir}
   DESTINATION ${header_install_dir}
-  COMPONENT clang-headers)
+  COMPONENT clang-resource-headers)
 
 if (NOT LLVM_ENABLE_IDE)
-  add_llvm_install_targets(install-clang-headers
-                           DEPENDS clang-headers
-                           COMPONENT clang-headers)
+  add_llvm_install_targets(install-clang-resource-headers
+                           DEPENDS clang-resource-headers
+                           COMPONENT clang-resource-headers)
 endif()

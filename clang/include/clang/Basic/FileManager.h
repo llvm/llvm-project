@@ -67,7 +67,6 @@ class FileEntry {
   unsigned UID;               // A unique (small) ID for the file.
   llvm::sys::fs::UniqueID UniqueID;
   bool IsNamedPipe;
-  bool InPCH;
   bool IsValid;               // Is this \c FileEntry initialized and valid?
 
   /// The open file, if it is owned by the \p FileEntry.
@@ -75,7 +74,7 @@ class FileEntry {
 
 public:
   FileEntry()
-      : UniqueID(0, 0), IsNamedPipe(false), InPCH(false), IsValid(false)
+      : UniqueID(0, 0), IsNamedPipe(false), IsValid(false)
   {}
 
   FileEntry(const FileEntry &) = delete;
@@ -87,7 +86,6 @@ public:
   off_t getSize() const { return Size; }
   unsigned getUID() const { return UID; }
   const llvm::sys::fs::UniqueID &getUniqueID() const { return UniqueID; }
-  bool isInPCH() const { return InPCH; }
   time_t getModificationTime() const { return ModTime; }
 
   /// Return the directory the file lives in.
@@ -107,8 +105,6 @@ public:
   // relying on RealPathName being empty.
   bool isOpenForTests() const { return File != nullptr; }
 };
-
-struct FileData;
 
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.
@@ -168,7 +164,7 @@ class FileManager : public RefCountedBase<FileManager> {
   // Caching.
   std::unique_ptr<FileSystemStatCache> StatCache;
 
-  bool getStatValue(StringRef Path, FileData &Data, bool isFile,
+  bool getStatValue(StringRef Path, llvm::vfs::Status &Status, bool isFile,
                     std::unique_ptr<llvm::vfs::File> *F);
 
   /// Add all ancestors of the given path (pointing to either a file
