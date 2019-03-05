@@ -442,6 +442,11 @@ def SReg_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
   let AllocationPriority = 7;
 }
 
+def SRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+  (add SReg_32_XM0, M0_CLASS, EXEC_LO, EXEC_HI, SReg_32_XEXEC_HI, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
+}
+
 def SGPR_64 : RegisterClass<"AMDGPU", [v2i32, i64, v2f32, f64, v4i16, v4f16], 32, (add SGPR_64Regs)> {
   let CopyCost = 1;
   let AllocationPriority = 8;
@@ -509,6 +514,11 @@ def SReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32,
   // Requires 8 s_mov_b64 to copy
   let CopyCost = 8;
   let AllocationPriority = 12;
+}
+
+def VRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 32,
+                                 (add VGPR_32, LDS_DIRECT_CLASS)> {
+  let isAllocatable = 0;
 }
 
 // Register class for all vector registers (VGPRs + Interploation Registers)
@@ -630,6 +640,12 @@ multiclass RegInlineOperand <string rc, string MatchName>
 //===----------------------------------------------------------------------===//
 
 defm SSrc : RegImmOperand<"SReg", "SSrc">;
+
+def SSrcOrLds_b32 : RegisterOperand<SRegOrLds_32> {
+  let OperandNamespace = "AMDGPU";
+  let OperandType = "OPERAND_REG_IMM_INT32";
+  let ParserMatchClass = RegImmMatcher<"SSrcOrLdsB32">;
+}
 
 //===----------------------------------------------------------------------===//
 //  SCSrc_* Operands with an SGPR or a inline constant

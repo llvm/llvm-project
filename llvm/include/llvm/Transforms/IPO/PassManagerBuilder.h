@@ -160,6 +160,10 @@ public:
 
   /// Enable profile instrumentation pass.
   bool EnablePGOInstrGen;
+  /// Enable profile context sensitive instrumentation pass.
+  bool EnablePGOCSInstrGen;
+  /// Enable profile context sensitive profile use pass.
+  bool EnablePGOCSInstrUse;
   /// Profile data file name that the instrumentation will be written to.
   std::string PGOInstrGen;
   /// Path of the profile data file.
@@ -186,7 +190,7 @@ private:
   void addInitialAliasAnalysisPasses(legacy::PassManagerBase &PM) const;
   void addLTOOptimizationPasses(legacy::PassManagerBase &PM);
   void addLateLTOOptimizationPasses(legacy::PassManagerBase &PM);
-  void addPGOInstrPasses(legacy::PassManagerBase &MPM);
+  void addPGOInstrPasses(legacy::PassManagerBase &MPM, bool IsCS);
   void addFunctionSimplificationPasses(legacy::PassManagerBase &MPM);
   void addInstructionCombiningPass(legacy::PassManagerBase &MPM) const;
 

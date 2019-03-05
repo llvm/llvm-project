@@ -1348,7 +1348,7 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       LLVM_DEBUG(dbgs() << "  -> function index: " << Index << "\n");
 
     } else if (WS.isData()) {
-      if (WS.isTemporary() && !WS.getSize())
+      if (!isInSymtab(WS))
         continue;
 
       if (!WS.isDefined()) {

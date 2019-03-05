@@ -180,8 +180,8 @@ public:
   /// Check if the instruction in 'IR' can be dispatched during this cycle.
   /// Return SC_AVAILABLE if both scheduler and LS resources are available.
   ///
-  /// This method internally sets field HadTokenStall based on the Scheduler
-  /// Status value.
+  /// This method is also responsible for setting field HadTokenStall if
+  /// IR cannot be dispatched to the Scheduler due to unavailable resources.
   Status isAvailable(const InstRef &IR);
 
   /// Reserves buffer and LSUnit queue resources that are necessary to issue
@@ -225,15 +225,21 @@ public:
   /// resources are not available.
   InstRef select();
 
-  /// Returns a mask of busy resources. Each bit of the mask identifies a unique
-  /// processor resource unit. In the absence of bottlenecks caused by resource
-  /// pressure, the mask value returned by this method is always zero.
-  uint64_t getBusyResourceUnits() const { return BusyResourceUnits; }
-  bool arePipelinesFullyUsed() const {
-    return !Resources->getAvailableProcResUnits();
-  }
   bool isReadySetEmpty() const { return ReadySet.empty(); }
   bool isWaitSetEmpty() const { return WaitSet.empty(); }
+
+  /// This method is called by the ExecuteStage at the end of each cycle to
+  /// identify bottlenecks caused by data dependencies. Vector RegDeps is
+  /// populated by instructions that were not issued because of unsolved
+  /// register dependencies.  Vector MemDeps is populated by instructions that
+  /// were not issued because of unsolved memory dependencies.
+  void analyzeDataDependencies(SmallVectorImpl<InstRef> &RegDeps,
+                               SmallVectorImpl<InstRef> &MemDeps);
+
+  /// Returns a mask of busy resources, and populates vector Insts with
+  /// instructions that could not be issued to the underlying pipelines because
+  /// not all pipeline resources were available.
+  uint64_t analyzeResourcePressure(SmallVectorImpl<InstRef> &Insts);
 
   // Returns true if the dispatch logic couldn't dispatch a full group due to
   // unavailable scheduler and/or LS resources.

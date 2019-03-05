@@ -208,6 +208,9 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   // in the dominator tree from Entry to 'BB'.
   SmallPtrSet<BasicBlock *, 16> Candidates;
   for (auto BB : BBs) {
+    // Ignore unreachable basic blocks.
+    if (!DT.isReachableFromEntry(BB))
+      continue;
     Path.clear();
     // Walk up the dominator tree until Entry or another BB in BBs
     // is reached. Insert the nodes on the way to the Path.
@@ -821,7 +824,9 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
       BaseGV ? ConstGEPInfoMap[BaseGV] : ConstIntInfoVec;
   for (auto const &ConstInfo : ConstInfoVec) {
     SmallPtrSet<Instruction *, 8> IPSet = findConstantInsertionPoint(ConstInfo);
-    assert(!IPSet.empty() && "IPSet is empty");
+    // We can have an empty set if the function contains unreachable blocks.
+    if (IPSet.empty())
+      continue;
 
     unsigned UsesNum = 0;
     unsigned ReBasesNum = 0;

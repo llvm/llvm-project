@@ -47,7 +47,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "CFGMST.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -107,6 +106,7 @@
 #include "llvm/Support/JamCRC.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <algorithm>
 #include <cassert>
@@ -1475,6 +1475,13 @@ static bool InstrumentAllFunctions(
     instrumentOneFunc(F, &M, BPI, BFI, ComdatMembers, IsCS);
   }
   return true;
+}
+
+PreservedAnalyses
+PGOInstrumentationGenCreateVar::run(Module &M, ModuleAnalysisManager &AM) {
+  createProfileFileNameVar(M, CSInstrName);
+  createIRLevelProfileFlagVar(M, /* IsCS */ true);
+  return PreservedAnalyses::all();
 }
 
 bool PGOInstrumentationGenLegacyPass::runOnModule(Module &M) {

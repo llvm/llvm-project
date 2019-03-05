@@ -142,7 +142,7 @@ defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOP_I32_I32>;
 // TODO: Make profile for this, there is VOP3 encoding also
 def V_READFIRSTLANE_B32 :
   InstSI <(outs SReg_32:$vdst),
-    (ins VGPR_32:$src0),
+    (ins VRegOrLds_32:$src0),
     "v_readfirstlane_b32 $vdst, $src0",
     [(set i32:$vdst, (int_amdgcn_readfirstlane i32:$src0))]>,
   Enc32 {

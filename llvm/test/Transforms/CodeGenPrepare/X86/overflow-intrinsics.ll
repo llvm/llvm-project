@@ -430,6 +430,31 @@ end:
   ret i1 %ov
 }
 
+; Verify that crazy/non-canonical code does not crash.
+
+define void @bar() {
+; CHECK-LABEL: @bar(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 1, -1
+; CHECK-NEXT:    [[FROMBOOL:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    unreachable
+;
+  %cmp = icmp eq i64 1, -1
+  %frombool = zext i1 %cmp to i8
+  unreachable
+}
+
+define void @foo() {
+; CHECK-LABEL: @foo(
+; CHECK-NEXT:    [[SUB:%.*]] = add nsw i64 1, 1
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[SUB]] to i32
+; CHECK-NEXT:    unreachable
+;
+  %sub = add nsw i64 1, 1
+  %conv = trunc i64 %sub to i32
+  unreachable
+}
+
+
 ; Check that every instruction inserted by -codegenprepare has a debug location.
 ; DEBUG: CheckModuleDebugify: PASS
 

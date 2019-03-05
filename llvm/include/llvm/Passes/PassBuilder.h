@@ -31,25 +31,38 @@ class ModuleSummaryIndex;
 
 /// A struct capturing PGO tunables.
 struct PGOOptions {
-  PGOOptions(std::string ProfileGenFile = "", std::string ProfileUseFile = "",
-             std::string SampleProfileFile = "",
-             std::string ProfileRemappingFile = "",
-             bool RunProfileGen = false, bool SamplePGOSupport = false)
-      : ProfileGenFile(ProfileGenFile), ProfileUseFile(ProfileUseFile),
-        SampleProfileFile(SampleProfileFile),
-        ProfileRemappingFile(ProfileRemappingFile),
-        RunProfileGen(RunProfileGen),
-        SamplePGOSupport(SamplePGOSupport || !SampleProfileFile.empty()) {
-    assert((RunProfileGen ||
-            !SampleProfileFile.empty() ||
-            !ProfileUseFile.empty() ||
-            SamplePGOSupport) && "Illegal PGOOptions.");
+  enum PGOAction { NoAction, IRInstr, IRUse, SampleUse };
+  enum CSPGOAction { NoCSAction, CSIRInstr, CSIRUse };
+  PGOOptions(std::string ProfileFile = "", std::string CSProfileGenFile = "",
+             std::string ProfileRemappingFile = "", PGOAction Action = NoAction,
+             CSPGOAction CSAction = NoCSAction, bool SamplePGOSupport = false)
+      : ProfileFile(ProfileFile), CSProfileGenFile(CSProfileGenFile),
+        ProfileRemappingFile(ProfileRemappingFile), Action(Action),
+        CSAction(CSAction),
+        SamplePGOSupport(SamplePGOSupport || Action == SampleUse) {
+    // Note, we do allow ProfileFile.empty() for Action=IRUse LTO can
+    // callback with IRUse action without ProfileFile.
+
+    // If there is a CSAction, PGOAction cannot be IRInstr or SampleUse.
+    assert(this->CSAction == NoCSAction ||
+           (this->Action != IRInstr && this->Action != SampleUse));
+
+    // For CSIRInstr, CSProfileGenFile also needs to be nonempty.
+    assert(this->CSAction != CSIRInstr || !this->CSProfileGenFile.empty());
+
+    // If CSAction is CSIRUse, PGOAction needs to be IRUse as they share
+    // a profile.
+    assert(this->CSAction != CSIRUse || this->Action == IRUse);
+
+    // If neither CSAction nor CSAction, SamplePGOSupport needs to be true.
+    assert(this->Action != NoAction || this->CSAction != NoCSAction ||
+           this->SamplePGOSupport);
   }
-  std::string ProfileGenFile;
-  std::string ProfileUseFile;
-  std::string SampleProfileFile;
+  std::string ProfileFile;
+  std::string CSProfileGenFile;
   std::string ProfileRemappingFile;
-  bool RunProfileGen;
+  PGOAction Action;
+  CSPGOAction CSAction;
   bool SamplePGOSupport;
 };
 
@@ -611,9 +624,8 @@ private:
                                 bool VerifyEachPass, bool DebugLogging);
 
   void addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
-                         OptimizationLevel Level, bool RunProfileGen,
-                         std::string ProfileGenFile,
-                         std::string ProfileUseFile,
+                         OptimizationLevel Level, bool RunProfileGen, bool IsCS,
+                         std::string ProfileFile,
                          std::string ProfileRemappingFile);
 
   void invokePeepholeEPCallbacks(FunctionPassManager &, OptimizationLevel);

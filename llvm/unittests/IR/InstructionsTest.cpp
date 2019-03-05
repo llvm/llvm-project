@@ -993,5 +993,14 @@ TEST(InstructionsTest, SkipDebug) {
   EXPECT_EQ(nullptr, Term->getNextNonDebugInstruction());
 }
 
+TEST(InstructionsTest, PhiIsNotFPMathOperator) {
+  LLVMContext Context;
+  IRBuilder<> Builder(Context);
+  MDBuilder MDHelper(Context);
+  Instruction *I = Builder.CreatePHI(Builder.getDoubleTy(), 0);
+  EXPECT_FALSE(isa<FPMathOperator>(I));
+  I->deleteValue();
+}
+
 } // end anonymous namespace
 } // end namespace llvm

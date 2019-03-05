@@ -360,7 +360,7 @@ def VOP2e_I32_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1]> {
 def VOP_READLANE : VOPProfile<[i32, i32, i32]> {
   let Outs32 = (outs SReg_32:$vdst);
   let Outs64 = Outs32;
-  let Ins32 = (ins VGPR_32:$src0, SCSrc_b32:$src1);
+  let Ins32 = (ins VRegOrLds_32:$src0, SCSrc_b32:$src1);
   let Ins64 = Ins32;
   let Asm32 = " $vdst, $src0, $src1";
   let Asm64 = Asm32;
@@ -765,7 +765,7 @@ defm V_SUBBREV_U32        : VOP2be_Real_e32e64_si <0x2a>;
 
 defm V_READLANE_B32       : VOP2_Real_si <0x01>;
 
-let InOperandList = (ins SSrc_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in) in {
+let InOperandList = (ins SSrcOrLds_b32:$src0, SCSrc_b32:$src1, VSrc_b32:$vdst_in) in {
 defm V_WRITELANE_B32      : VOP2_Real_si <0x02>;
 }
 
