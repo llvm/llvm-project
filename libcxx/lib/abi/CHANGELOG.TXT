@@ -13,6 +13,32 @@ Afterwards the ABI list should be updated to include the new changes.
 New entries should be added directly below the "Version" header.
 
 -----------
+Version 9.0
+-----------
+
+* rTBD - Fix -fsanitize=vptr badness in <__debug>
+
+  This patch fixes a lifetime bug when inserting a new container into the debug database. It is
+  diagnosed by UBSAN when debug mode is enabled. This patch corrects how nodes are constructed
+  during insertion.
+
+  The fix requires unconditionally breaking the debug mode ABI. Users should not expect ABI
+  stability from debug mode.
+
+
+  x86_64-unknown-linux-gnu
+  ------------------------
+  Symbol added: _ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: _ZNSt3__111__libcpp_db10__insert_cEPv
+
+
+  x86_64-apple-apple-darwin
+  -------------------------
+  Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
+
+
+-----------
 Version 8.0
 -----------
 

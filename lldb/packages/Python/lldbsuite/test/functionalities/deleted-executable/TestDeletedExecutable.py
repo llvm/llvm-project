@@ -19,6 +19,7 @@ class TestDeletedExecutable(TestBase):
 
     @skipIfWindows # cannot delete a running executable
     @expectedFailureAll(oslist=["linux"]) # determining the architecture of the process fails
+    @expectedFailureNetBSD
     def test(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

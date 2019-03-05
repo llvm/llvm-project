@@ -89,7 +89,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 #include <cstdlib>
 #endif
 
-#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+#if defined(_LIBCPP_ABI_VCRUNTIME)
 #include <new.h>
 #endif
 
@@ -119,7 +119,7 @@ void  operator delete[](void* ptr, void*) noexcept;
 namespace std  // purposefully not using versioning namespace
 {
 
-#if !defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)
+#if !defined(_LIBCPP_ABI_VCRUNTIME)
 struct _LIBCPP_TYPE_VIS nothrow_t {};
 extern _LIBCPP_FUNC_VIS const nothrow_t nothrow;
 
@@ -145,12 +145,12 @@ typedef void (*new_handler)();
 _LIBCPP_FUNC_VIS new_handler set_new_handler(new_handler) _NOEXCEPT;
 _LIBCPP_FUNC_VIS new_handler get_new_handler() _NOEXCEPT;
 
-#endif // !_LIBCPP_ABI_MICROSOFT || _LIBCPP_NO_VCRUNTIME
+#endif // !_LIBCPP_ABI_VCRUNTIME
 
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
 
 #if !defined(_LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION) && \
-    !defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME)
+    !defined(_LIBCPP_ABI_VCRUNTIME)
 #ifndef _LIBCPP_CXX03_LANG
 enum class _LIBCPP_ENUM_VIS align_val_t : size_t { };
 #else
@@ -166,7 +166,7 @@ enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #define _THROW_BAD_ALLOC
 #endif
 
-#if !defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME)
+#if !defined(_LIBCPP_ABI_VCRUNTIME)
 
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz) _THROW_BAD_ALLOC;
 _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_OVERRIDABLE_FUNC_VIS void* operator new(std::size_t __sz, const std::nothrow_t&) _NOEXCEPT _LIBCPP_NOALIAS;
@@ -207,7 +207,7 @@ _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY void* operator ne
 inline _LIBCPP_INLINE_VISIBILITY void  operator delete  (void*, void*) _NOEXCEPT {}
 inline _LIBCPP_INLINE_VISIBILITY void  operator delete[](void*, void*) _NOEXCEPT {}
 
-#endif // !_LIBCPP_DEFER_NEW_TO_VCRUNTIME
+#endif // !_LIBCPP_ABI_VCRUNTIME
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 

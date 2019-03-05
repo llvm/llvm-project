@@ -77,7 +77,7 @@ runtime_error::what() const _NOEXCEPT
     return __imp_.c_str();
 }
 
-#if !defined(_LIBCPP_ABI_MICROSOFT) || defined(_LIBCPP_NO_VCRUNTIME)
+#if !defined(_LIBCPP_ABI_VCRUNTIME)
 
 logic_error::~logic_error() _NOEXCEPT {}
 domain_error::~domain_error() _NOEXCEPT {}

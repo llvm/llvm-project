@@ -41,8 +41,7 @@ define void @test2() {
 ; X64-LABEL: test2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq $-1, {{.*}}(%rip)
-; X64-NEXT:    movq {{.*}}(%rip), %rax
-; X64-NEXT:    movq %rax, {{.*}}(%rip)
+; X64-NEXT:    movq $-1, {{.*}}(%rip)
 ; X64-NEXT:    retq
   store <1 x i64> < i64 -1 >, <1 x i64>* @M1
   store <2 x i32> < i32 -1, i32 -1 >, <2 x i32>* @M2

@@ -120,6 +120,7 @@ class DriverBatchModeTest (TestBase):
     @skipIfRemote  # test not remote-ready llvm.org/pr24813
     @expectedFlakeyFreeBSD("llvm.org/pr25172 fails rarely on the buildbot")
     @expectedFlakeyLinux("llvm.org/pr25172")
+    @expectedFailureNetBSD
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr22274: need a pexpect replacement for windows")

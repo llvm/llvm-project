@@ -76,6 +76,8 @@ static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr, const void *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
 
+  // Our branches take a simm16, but we need two extra bits to account for the
+  // factor of 4.
   APInt SignedOffset(18, Imm * 4, true);
   int64_t Offset = (SignedOffset.sext(64) + 4 + Addr).getSExtValue();
 
@@ -97,6 +99,7 @@ static DecodeStatus StaticDecoderName(MCInst &Inst, \
 DECODE_OPERAND(Decode##RegClass##RegisterClass, decodeOperand_##RegClass)
 
 DECODE_OPERAND_REG(VGPR_32)
+DECODE_OPERAND_REG(VRegOrLds_32)
 DECODE_OPERAND_REG(VS_32)
 DECODE_OPERAND_REG(VS_64)
 DECODE_OPERAND_REG(VS_128)
@@ -108,6 +111,7 @@ DECODE_OPERAND_REG(VReg_128)
 DECODE_OPERAND_REG(SReg_32)
 DECODE_OPERAND_REG(SReg_32_XM0_XEXEC)
 DECODE_OPERAND_REG(SReg_32_XEXEC_HI)
+DECODE_OPERAND_REG(SRegOrLds_32)
 DECODE_OPERAND_REG(SReg_64)
 DECODE_OPERAND_REG(SReg_64_XEXEC)
 DECODE_OPERAND_REG(SReg_128)
@@ -469,6 +473,10 @@ MCOperand AMDGPUDisassembler::decodeOperand_VGPR_32(unsigned Val) const {
   return createRegOperand(AMDGPU::VGPR_32RegClassID, Val);
 }
 
+MCOperand AMDGPUDisassembler::decodeOperand_VRegOrLds_32(unsigned Val) const {
+  return decodeSrcOp(OPW32, Val);
+}
+
 MCOperand AMDGPUDisassembler::decodeOperand_VReg_64(unsigned Val) const {
   return createRegOperand(AMDGPU::VReg_64RegClassID, Val);
 }
@@ -498,6 +506,13 @@ MCOperand AMDGPUDisassembler::decodeOperand_SReg_32_XEXEC_HI(
   unsigned Val) const {
   // SReg_32_XM0 is SReg_32 without EXEC_HI
   return decodeOperand_SReg_32(Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_SRegOrLds_32(unsigned Val) const {
+  // table-gen generated disassembler doesn't care about operand types
+  // leaving only registry class so SSrc_32 operand turns into SReg_32
+  // and therefore we accept immediates and literals here as well
+  return decodeSrcOp(OPW32, Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_SReg_64(unsigned Val) const {

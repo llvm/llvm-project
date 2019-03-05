@@ -3,6 +3,7 @@
 # style, so we will just treat them as native host paths.
 
 # REQUIRES: lld
+# XFAIL: system-netbsd
 
 # RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj > %t.o
 # RUN: ld.lld %t.o -o %t

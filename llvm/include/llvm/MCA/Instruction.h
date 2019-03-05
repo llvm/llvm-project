@@ -448,7 +448,13 @@ class Instruction : public InstructionBase {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
+  // A bitmask of busy processor resource units.
+  // This field is set to zero only if execution is not delayed during this
+  // cycle because of unavailable pipeline resources.
   uint64_t CriticalResourceMask;
+
+  // An instruction identifier. This field is only set if execution is delayed
+  // by a memory dependency.
   unsigned CriticalMemDep;
 
 public:
@@ -499,12 +505,12 @@ public:
     Stage = IS_RETIRED;
   }
 
-  void updateCriticalResourceMask(uint64_t BusyResourceUnits) {
-    CriticalResourceMask |= BusyResourceUnits;
-  }
   uint64_t getCriticalResourceMask() const { return CriticalResourceMask; }
-  void setCriticalMemDep(unsigned IID) { CriticalMemDep = IID; }
   unsigned getCriticalMemDep() const { return CriticalMemDep; }
+  void setCriticalResourceMask(uint64_t ResourceMask) {
+    CriticalResourceMask = ResourceMask;
+  }
+  void setCriticalMemDep(unsigned IID) { CriticalMemDep = IID; }
 
   void cycleEvent();
 };

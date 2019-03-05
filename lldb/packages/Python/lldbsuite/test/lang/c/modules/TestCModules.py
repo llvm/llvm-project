@@ -26,6 +26,7 @@ class CModulesTestCase(TestBase):
         oslist=["windows"],
         bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
     @skipIf(macos_version=["<", "10.12"])
+    @expectedFailureNetBSD
     def test_expr(self):
         self.build()
         exe = self.getBuildArtifact("a.out")

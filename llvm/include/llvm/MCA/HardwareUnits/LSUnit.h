@@ -143,7 +143,6 @@ class LSUnit : public HardwareUnit {
 
   void assignLQSlot(unsigned Index);
   void assignSQSlot(unsigned Index);
-  bool isReadyNoAlias(unsigned Index) const;
 
   // An instruction that both 'mayStore' and 'HasUnmodeledSideEffects' is
   // conservatively treated as a store barrier. It forces older store to be

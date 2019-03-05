@@ -549,9 +549,8 @@ RecurrenceDescriptor::isConditionalRdxPattern(
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
                                         InstDesc &Prev, bool HasFunNoNaNAttr) {
-  bool FP = I->getType()->isFloatingPointTy();
   Instruction *UAI = Prev.getUnsafeAlgebraInst();
-  if (!UAI && FP && !I->isFast())
+  if (!UAI && isa<FPMathOperator>(I) && !I->isFast())
     UAI = I; // Found an unsafe (unvectorizable) algebra instruction.
 
   switch (I->getOpcode()) {

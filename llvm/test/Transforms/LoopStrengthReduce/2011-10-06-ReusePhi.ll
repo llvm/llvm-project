@@ -3,7 +3,7 @@
 ; Test LSR's intelligence regarding phi reuse.
 ; Verify that scaled GEPs are not reused. rdar://5064068
 
-target triple = "x86-apple-darwin"
+target triple = "x86_64-apple-darwin"
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"

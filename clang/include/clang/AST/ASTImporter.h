@@ -337,9 +337,9 @@ class TypeSourceInfo;
     ///
     /// \returns The equivalent file ID in the source manager of the "to"
     /// context, or the import error.
-    llvm::Expected<FileID> Import_New(FileID);
+    llvm::Expected<FileID> Import_New(FileID, bool IsBuiltin = false);
     // FIXME: Remove this version.
-    FileID Import(FileID);
+    FileID Import(FileID, bool IsBuiltin = false);
 
     /// Import the given C++ constructor initializer from the "from"
     /// context into the "to" context.

@@ -287,6 +287,22 @@ cl::opt<PGOKind>
 cl::opt<std::string> ProfileFile("profile-file",
                                  cl::desc("Path to the profile."), cl::Hidden);
 
+cl::opt<CSPGOKind> CSPGOKindFlag(
+    "cspgo-kind", cl::init(NoCSPGO), cl::Hidden,
+    cl::desc("The kind of context sensitive profile guided optimization"),
+    cl::values(
+        clEnumValN(NoCSPGO, "nocspgo", "Do not use CSPGO."),
+        clEnumValN(
+            CSInstrGen, "cspgo-instr-gen-pipeline",
+            "Instrument (context sensitive) the IR to generate profile."),
+        clEnumValN(
+            CSInstrUse, "cspgo-instr-use-pipeline",
+            "Use instrumented (context sensitive) profile to guide PGO.")));
+cl::opt<std::string> CSProfileGenFile(
+    "cs-profilegen-file",
+    cl::desc("Path to the instrumented context sensitive profile."),
+    cl::Hidden);
+
 class OptCustomPassManager : public legacy::PassManager {
   DebugifyStatsMap DIStatsMap;
 
@@ -391,6 +407,17 @@ static void AddOptimizationPasses(legacy::PassManagerBase &MPM,
     break;
   case SampleUse:
     Builder.PGOSampleUse = ProfileFile;
+    break;
+  default:
+    break;
+  }
+
+  switch (CSPGOKindFlag) {
+  case CSInstrGen:
+    Builder.EnablePGOCSInstrGen = true;
+    break;
+  case CSInstrUse:
+    Builder.EnablePGOCSInstrUse = true;
     break;
   default:
     break;
