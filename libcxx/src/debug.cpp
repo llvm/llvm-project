@@ -203,8 +203,8 @@ __libcpp_db::__insert_ic(void* __i, const void* __c)
     i->__c_ = c;
 }
 
-__c_node*
-__libcpp_db::__insert_c(void* __c)
+void
+__libcpp_db::__insert_c(void* __c, __libcpp_db::_InsertConstruct *__fn)
 {
 #ifndef _LIBCPP_HAS_NO_THREADS
     WLock _(mut());
@@ -234,15 +234,12 @@ __libcpp_db::__insert_c(void* __c)
     }
     size_t hc = hash<void*>()(__c) % static_cast<size_t>(__cend_ - __cbeg_);
     __c_node* p = __cbeg_[hc];
-    __c_node* r = __cbeg_[hc] =
-      static_cast<__c_node*>(malloc(sizeof(__c_node)));
-    if (__cbeg_[hc] == nullptr)
-        __throw_bad_alloc();
+    void *buf = malloc(sizeof(__c_node));
+    if (buf == nullptr)
+      __throw_bad_alloc();
+    __cbeg_[hc] = __fn(buf, __c, p);
 
-    r->__c_ = __c;
-    r->__next_ = p;
     ++__csz_;
-    return r;
 }
 
 void
