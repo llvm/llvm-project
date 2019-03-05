@@ -112,16 +112,6 @@ public:
   //------------------------------------------------------------------
   virtual void DidFinishExecuting() {}
 
-  struct SwiftGenericInfo {
-    struct Binding {
-      const char *name;
-      CompilerType type;
-    };
-    llvm::SmallVector<Binding, 3> class_bindings;
-  };
-
-  const SwiftGenericInfo &GetSwiftGenericInfo() { return m_swift_generic_info; }
-
   virtual ExpressionTypeSystemHelper *GetTypeSystemHelper() { return nullptr; }
 
 protected:
@@ -135,7 +125,6 @@ protected:
   lldb::addr_t m_jit_end_addr;   ///< The address of the JITted function within
                                  ///the JIT allocation.  LLDB_INVALID_ADDRESS if
                                  ///invalid.
-  SwiftGenericInfo m_swift_generic_info;
 };
 
 } // namespace lldb_private

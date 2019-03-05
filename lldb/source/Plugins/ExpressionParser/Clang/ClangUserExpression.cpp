@@ -405,8 +405,7 @@ void ClangUserExpression::UpdateLanguageForExpr(
     uint32_t first_body_line = 0;
 
     if (!source_code->GetText(m_transformed_text, m_expr_lang, m_language_flags,
-                              m_options, m_swift_generic_info, exe_ctx,
-                              first_body_line)) {
+                              m_options, exe_ctx, first_body_line)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
       return;
