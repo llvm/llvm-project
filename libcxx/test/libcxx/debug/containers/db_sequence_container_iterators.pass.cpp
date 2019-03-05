@@ -40,6 +40,7 @@ public:
   static void run() {
     Base::run();
     try {
+      SanityTest();
       FrontOnEmptyContainer();
 
       if constexpr (CT != CT_ForwardList) {
@@ -71,6 +72,12 @@ public:
   }
 
 private:
+  static void SanityTest() {
+    CHECKPOINT("sanity test");
+    Container C = {1, 1, 1, 1};
+    ::DoNotOptimize(&C);
+  }
+
   static void RemoveFirstElem() {
     // See llvm.org/PR35564
     CHECKPOINT("remove(<first-elem>)");

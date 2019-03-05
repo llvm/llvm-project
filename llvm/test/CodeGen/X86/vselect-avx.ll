@@ -18,9 +18,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 define void @test(<4 x i16>* %a, <4 x i16>* %b) {
 ; AVX-LABEL: test:
 ; AVX:       ## %bb.0: ## %body
-; AVX-NEXT:    movq {{.*}}(%rip), %rax
+; AVX-NEXT:    movabsq $4167800517033787389, %rax ## imm = 0x39D7007D007CFFFD
 ; AVX-NEXT:    movq %rax, (%rdi)
-; AVX-NEXT:    movq {{.*}}(%rip), %rax
+; AVX-NEXT:    movabsq $-281474976645121, %rax ## imm = 0xFFFF00000000FFFF
 ; AVX-NEXT:    movq %rax, (%rsi)
 ; AVX-NEXT:    retq
 body:

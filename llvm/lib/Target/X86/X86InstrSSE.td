@@ -7496,17 +7496,6 @@ def VBROADCASTF128 : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
                            "vbroadcastf128\t{$src, $dst|$dst, $src}", []>,
                            Sched<[SchedWriteFShuffle.XMM.Folded]>, VEX, VEX_L;
 
-let Predicates = [HasAVX2, NoVLX] in {
-def : Pat<(v4i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
-          (VBROADCASTI128 addr:$src)>;
-def : Pat<(v8i32 (X86SubVBroadcast (loadv4i32 addr:$src))),
-          (VBROADCASTI128 addr:$src)>;
-def : Pat<(v16i16 (X86SubVBroadcast (loadv8i16 addr:$src))),
-          (VBROADCASTI128 addr:$src)>;
-def : Pat<(v32i8 (X86SubVBroadcast (loadv16i8 addr:$src))),
-          (VBROADCASTI128 addr:$src)>;
-}
-
 let Predicates = [HasAVX, NoVLX] in {
 def : Pat<(v4f64 (X86SubVBroadcast (loadv2f64 addr:$src))),
           (VBROADCASTF128 addr:$src)>;
@@ -7514,7 +7503,9 @@ def : Pat<(v8f32 (X86SubVBroadcast (loadv4f32 addr:$src))),
           (VBROADCASTF128 addr:$src)>;
 }
 
-let Predicates = [HasAVX1Only] in {
+// NOTE: We're using FP instructions here, but execution domain fixing can
+// convert to integer when profitable.
+let Predicates = [HasAVX, NoVLX] in {
 def : Pat<(v4i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
           (VBROADCASTF128 addr:$src)>;
 def : Pat<(v8i32 (X86SubVBroadcast (loadv4i32 addr:$src))),
@@ -7905,39 +7896,9 @@ def : Pat<(X86Blendi (loadv2i64 addr:$src2), VR128:$src1, imm:$src3),
 
 // For insertion into the zero index (low half) of a 256-bit vector, it is
 // more efficient to generate a blend with immediate instead of an insert*128.
-let Predicates = [HasAVX2] in {
-def : Pat<(insert_subvector (v8i32 VR256:$src1), (v4i32 VR128:$src2), (iPTR 0)),
-          (VPBLENDDYrri VR256:$src1,
-                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src2, sub_xmm), 0xf)>;
-def : Pat<(insert_subvector (v4i64 VR256:$src1), (v2i64 VR128:$src2), (iPTR 0)),
-          (VPBLENDDYrri VR256:$src1,
-                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src2, sub_xmm), 0xf)>;
-def : Pat<(insert_subvector (v16i16 VR256:$src1), (v8i16 VR128:$src2), (iPTR 0)),
-          (VPBLENDDYrri VR256:$src1,
-                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src2, sub_xmm), 0xf)>;
-def : Pat<(insert_subvector (v32i8 VR256:$src1), (v16i8 VR128:$src2), (iPTR 0)),
-          (VPBLENDDYrri VR256:$src1,
-                        (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src2, sub_xmm), 0xf)>;
-
-def : Pat<(insert_subvector (loadv8i32 addr:$src2), (v4i32 VR128:$src1), (iPTR 0)),
-          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
-def : Pat<(insert_subvector (loadv4i64 addr:$src2), (v2i64 VR128:$src1), (iPTR 0)),
-          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
-def : Pat<(insert_subvector (loadv16i16 addr:$src2), (v8i16 VR128:$src1), (iPTR 0)),
-          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
-def : Pat<(insert_subvector (loadv32i8 addr:$src2), (v16i8 VR128:$src1), (iPTR 0)),
-          (VPBLENDDYrmi (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
-                                       VR128:$src1, sub_xmm), addr:$src2, 0xf0)>;
-}
-
-let Predicates = [HasAVX1Only] in {
+// NOTE: We're using FP instructions here, but exeuction domain fixing should
+// take care of using integer instructions when profitable.
+let Predicates = [HasAVX] in {
 def : Pat<(insert_subvector (v8i32 VR256:$src1), (v4i32 VR128:$src2), (iPTR 0)),
           (VBLENDPSYrri VR256:$src1,
                         (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)),
@@ -8362,21 +8323,6 @@ let Predicates = [HasAVX2] in {
 // Provide fallback in case the load node that is used in the patterns above
 // is used by additional users, which prevents the pattern selection.
 
-let Predicates = [HasAVX2, NoVLX] in {
-def : Pat<(v4i64 (X86SubVBroadcast (v2i64 VR128:$src))),
-          (VINSERTI128rr (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)), VR128:$src, sub_xmm),
-                         (v2i64 VR128:$src), 1)>;
-def : Pat<(v8i32 (X86SubVBroadcast (v4i32 VR128:$src))),
-          (VINSERTI128rr (INSERT_SUBREG (v8i32 (IMPLICIT_DEF)), VR128:$src, sub_xmm),
-                         (v4i32 VR128:$src), 1)>;
-def : Pat<(v16i16 (X86SubVBroadcast (v8i16 VR128:$src))),
-          (VINSERTI128rr (INSERT_SUBREG (v16i16 (IMPLICIT_DEF)), VR128:$src, sub_xmm),
-                         (v8i16 VR128:$src), 1)>;
-def : Pat<(v32i8 (X86SubVBroadcast (v16i8 VR128:$src))),
-          (VINSERTI128rr (INSERT_SUBREG (v32i8 (IMPLICIT_DEF)), VR128:$src, sub_xmm),
-                         (v16i8 VR128:$src), 1)>;
-}
-
 let Predicates = [HasAVX, NoVLX] in {
 def : Pat<(v4f64 (X86SubVBroadcast (v2f64 VR128:$src))),
           (VINSERTF128rr (INSERT_SUBREG (v4f64 (IMPLICIT_DEF)), VR128:$src, sub_xmm),
@@ -8386,7 +8332,9 @@ def : Pat<(v8f32 (X86SubVBroadcast (v4f32 VR128:$src))),
                          (v4f32 VR128:$src), 1)>;
 }
 
-let Predicates = [HasAVX1Only] in {
+// NOTE: We're using FP instructions here, but execution domain fixing can
+// convert to integer when profitable.
+let Predicates = [HasAVX, NoVLX] in {
 def : Pat<(v4i64 (X86SubVBroadcast (v2i64 VR128:$src))),
           (VINSERTF128rr (INSERT_SUBREG (v4i64 (IMPLICIT_DEF)), VR128:$src, sub_xmm),
                          (v2i64 VR128:$src), 1)>;

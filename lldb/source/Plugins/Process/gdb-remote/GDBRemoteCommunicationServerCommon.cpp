@@ -436,10 +436,10 @@ GDBRemoteCommunicationServerCommon::Handle_qUserName(
   packet.SetFilePos(::strlen("qUserName:"));
   uint32_t uid = packet.GetU32(UINT32_MAX);
   if (uid != UINT32_MAX) {
-    std::string name;
-    if (HostInfo::LookupUserName(uid, name)) {
+    if (llvm::Optional<llvm::StringRef> name =
+            HostInfo::GetUserIDResolver().GetUserName(uid)) {
       StreamString response;
-      response.PutStringAsRawHex8(name);
+      response.PutStringAsRawHex8(*name);
       return SendPacketNoLock(response.GetString());
     }
   }
@@ -457,10 +457,10 @@ GDBRemoteCommunicationServerCommon::Handle_qGroupName(
   packet.SetFilePos(::strlen("qGroupName:"));
   uint32_t gid = packet.GetU32(UINT32_MAX);
   if (gid != UINT32_MAX) {
-    std::string name;
-    if (HostInfo::LookupGroupName(gid, name)) {
+    if (llvm::Optional<llvm::StringRef> name =
+            HostInfo::GetUserIDResolver().GetGroupName(gid)) {
       StreamString response;
-      response.PutStringAsRawHex8(name);
+      response.PutStringAsRawHex8(*name);
       return SendPacketNoLock(response.GetString());
     }
   }

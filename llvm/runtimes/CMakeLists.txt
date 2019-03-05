@@ -273,11 +273,11 @@ else() # if this is included from LLVM's CMake
   if(compiler_rt_path)
     if(NOT LLVM_BUILTIN_TARGETS)
       builtin_default_target(${compiler_rt_path}
-        DEPENDS clang-headers)
+        DEPENDS clang-resource-headers)
     else()
       if("default" IN_LIST LLVM_BUILTIN_TARGETS)
         builtin_default_target(${compiler_rt_path}
-          DEPENDS clang-headers)
+          DEPENDS clang-resource-headers)
         list(REMOVE_ITEM LLVM_BUILTIN_TARGETS "default")
       else()
         add_custom_target(builtins)
@@ -287,7 +287,7 @@ else() # if this is included from LLVM's CMake
 
       foreach(target ${LLVM_BUILTIN_TARGETS})
         builtin_register_target(${compiler_rt_path} ${target}
-          DEPENDS clang-headers)
+          DEPENDS clang-resource-headers)
 
         add_dependencies(builtins builtins-${target})
         add_dependencies(install-builtins install-builtins-${target})

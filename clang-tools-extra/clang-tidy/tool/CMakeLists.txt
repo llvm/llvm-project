@@ -9,7 +9,7 @@ add_clang_tool(clang-tidy
   ClangTidyMain.cpp
   )
 add_dependencies(clang-tidy
-  clang-headers
+  clang-resource-headers
   )
 target_link_libraries(clang-tidy
   PRIVATE

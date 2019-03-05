@@ -14,6 +14,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
+class UserIDResolver;
 
 class HostInfoWindows : public HostInfoBase {
   friend class HostInfoBase;
@@ -28,6 +29,7 @@ public:
   static void Terminate();
 
   static size_t GetPageSize();
+  static UserIDResolver &GetUserIDResolver();
 
   static llvm::VersionTuple GetOSVersion();
   static bool GetOSBuildString(std::string &s);

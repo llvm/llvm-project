@@ -728,11 +728,9 @@ define i1 @length24_eq_const(i8* %X) nounwind optsize {
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
 ; X64-SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X64-SSE2-NEXT:    movabsq $3689065127958034230, %rax # imm = 0x3332313039383736
-; X64-SSE2-NEXT:    movq %rax, %xmm2
-; X64-SSE2-NEXT:    pcmpeqb %xmm1, %xmm2
+; X64-SSE2-NEXT:    pcmpeqb {{.*}}(%rip), %xmm1
 ; X64-SSE2-NEXT:    pcmpeqb {{.*}}(%rip), %xmm0
-; X64-SSE2-NEXT:    pand %xmm2, %xmm0
+; X64-SSE2-NEXT:    pand %xmm1, %xmm0
 ; X64-SSE2-NEXT:    pmovmskb %xmm0, %eax
 ; X64-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; X64-SSE2-NEXT:    setne %al
@@ -742,9 +740,7 @@ define i1 @length24_eq_const(i8* %X) nounwind optsize {
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vmovdqu (%rdi), %xmm0
 ; X64-AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; X64-AVX2-NEXT:    movabsq $3689065127958034230, %rax # imm = 0x3332313039383736
-; X64-AVX2-NEXT:    vmovq %rax, %xmm2
-; X64-AVX2-NEXT:    vpcmpeqb %xmm2, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpcmpeqb {{.*}}(%rip), %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vpcmpeqb {{.*}}(%rip), %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vpmovmskb %xmm0, %eax

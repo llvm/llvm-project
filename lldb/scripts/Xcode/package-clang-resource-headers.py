@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-# package-clang-headers.py
+# package-clang-resource-headers.py
 #
 # The Clang module loader depends on built-in headers for the Clang compiler.
 # We grab these from the Clang build and move them into the LLDB module.

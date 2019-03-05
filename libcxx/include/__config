@@ -204,6 +204,10 @@
 #  endif
 #endif
 
+#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
+# define _LIBCPP_ABI_VCRUNTIME
+#endif
+
 // Need to detect which libc we're using if we're on Linux.
 #if defined(__linux__)
 #  include <features.h>
@@ -989,15 +993,11 @@ template <unsigned> struct __static_assert_check {};
 #define _DECLARE_C99_LDBL_MATH 1
 #endif
 
-#if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_NO_VCRUNTIME)
-#  define _LIBCPP_DEFER_NEW_TO_VCRUNTIME
-#endif
-
 // If we are getting operator new from the MSVC CRT, then allocation overloads
 // for align_val_t were added in 19.12, aka VS 2017 version 15.3.
 #if defined(_LIBCPP_MSVCRT) && defined(_MSC_VER) && _MSC_VER < 1912
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION
-#elif defined(_LIBCPP_DEFER_NEW_TO_VCRUNTIME) && !defined(__cpp_aligned_new)
+#elif defined(_LIBCPP_ABI_VCRUNTIME) && !defined(__cpp_aligned_new)
    // We're defering to Microsoft's STL to provide aligned new et al. We don't
    // have it unless the language feature test macro is defined.
 #  define _LIBCPP_HAS_NO_LIBRARY_ALIGNED_ALLOCATION

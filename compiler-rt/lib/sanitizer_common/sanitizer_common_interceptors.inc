@@ -5529,11 +5529,20 @@ INTERCEPTOR(void *, __bzero, void *block, uptr size) {
   void *ctx;
   COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, 0, size);
 }
-
 #define INIT___BZERO COMMON_INTERCEPT_FUNCTION(__bzero);
 #else
 #define INIT___BZERO
 #endif  // SANITIZER_INTERCEPT___BZERO
+
+#if SANITIZER_INTERCEPT_BZERO
+INTERCEPTOR(void *, bzero, void *block, uptr size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, 0, size);
+}
+#define INIT_BZERO COMMON_INTERCEPT_FUNCTION(bzero);
+#else
+#define INIT_BZERO
+#endif  // SANITIZER_INTERCEPT_BZERO
 
 #if SANITIZER_INTERCEPT_FTIME
 INTERCEPTOR(int, ftime, __sanitizer_timeb *tp) {
@@ -9693,6 +9702,7 @@ static void InitializeCommonInterceptors() {
   INIT_CAPGET;
   INIT_AEABI_MEM;
   INIT___BZERO;
+  INIT_BZERO;
   INIT_FTIME;
   INIT_XDR;
   INIT_TSEARCH;

@@ -45,6 +45,7 @@ enum PGOKind {
   InstrUse,
   SampleUse
 };
+enum CSPGOKind { NoCSPGO, CSInstrGen, CSInstrUse };
 }
 
 /// Driver function to run the new pass manager over a module.

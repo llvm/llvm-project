@@ -169,7 +169,7 @@ static bool TrackingOrigins() {
 
 #define EXPECT_POISONED(x) ExpectPoisoned(x)
 
-template<typename T>
+template <typename T>
 void ExpectPoisoned(const T& t) {
   EXPECT_NE(-1, __msan_test_shadow((void*)&t, sizeof(t)));
 }
@@ -4644,3 +4644,149 @@ TEST(MemorySanitizer, MallocUsableSizeTest) {
   delete int_ptr;
 }
 #endif  // SANITIZER_TEST_HAS_MALLOC_USABLE_SIZE
+
+static bool HaveBmi() {
+#ifdef __x86_64__
+  U4 a = 0, b = 0, c = 0, d = 0;
+  asm("cpuid\n\t" : "=a"(a), "=D"(b), "=c"(c), "=d"(d) : "a"(7));
+  const U4 kBmi12Mask = (1U<<3) | (1U<<8);
+  return b | kBmi12Mask;
+#else
+  return false;
+#endif
+}
+
+__attribute__((target("bmi,bmi2")))
+static void TestBZHI() {
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bzhi_si(Poisoned<U4>(0xABCDABCD, 0xFF000000), 24));
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_si(Poisoned<U4>(0xABCDABCD, 0xFF800000), 24));
+  // Second operand saturates.
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_si(Poisoned<U4>(0xABCDABCD, 0x80000000), 240));
+  // Any poison in the second operand poisons output.
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_si(0xABCDABCD, Poisoned<U4>(1, 1)));
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_si(0xABCDABCD, Poisoned<U4>(1, 0x80000000)));
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_si(0xABCDABCD, Poisoned<U4>(1, 0xFFFFFFFF)));
+
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bzhi_di(Poisoned<U8>(0xABCDABCDABCDABCD, 0xFF00000000000000ULL), 56));
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_di(Poisoned<U8>(0xABCDABCDABCDABCD, 0xFF80000000000000ULL), 56));
+  // Second operand saturates.
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_di(Poisoned<U8>(0xABCDABCDABCDABCD, 0x8000000000000000ULL), 240));
+  // Any poison in the second operand poisons output.
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_di(0xABCDABCDABCDABCD, Poisoned<U8>(1, 1)));
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_di(0xABCDABCDABCDABCD, Poisoned<U8>(1, 0x8000000000000000ULL)));
+  EXPECT_POISONED(
+      __builtin_ia32_bzhi_di(0xABCDABCDABCDABCD, Poisoned<U8>(1, 0xFFFFFFFF00000000ULL)));
+}
+
+inline U4 bextr_imm(U4 start, U4 len) {
+  start &= 0xFF;
+  len &= 0xFF;
+  return (len << 8) | start;
+}
+
+__attribute__((target("bmi,bmi2")))
+static void TestBEXTR() {
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u32(Poisoned<U4>(0xABCDABCD, 0xFF), bextr_imm(0, 8)));
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u32(Poisoned<U4>(0xABCDABCD, 0xFF), bextr_imm(7, 8)));
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bextr_u32(Poisoned<U4>(0xABCDABCD, 0xFF), bextr_imm(8, 8)));
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bextr_u32(Poisoned<U4>(0xABCDABCD, 0xFF), bextr_imm(8, 800)));
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u32(Poisoned<U4>(0xABCDABCD, 0xFF), bextr_imm(7, 800)));
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bextr_u32(Poisoned<U4>(0xABCDABCD, 0xFF), bextr_imm(5, 0)));
+
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u32(0xABCDABCD, Poisoned<U4>(bextr_imm(7, 800), 1)));
+  EXPECT_POISONED(__builtin_ia32_bextr_u32(
+      0xABCDABCD, Poisoned<U4>(bextr_imm(7, 800), 0x80000000)));
+
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u64(Poisoned<U8>(0xABCDABCD, 0xFF), bextr_imm(0, 8)));
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u64(Poisoned<U8>(0xABCDABCD, 0xFF), bextr_imm(7, 8)));
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bextr_u64(Poisoned<U8>(0xABCDABCD, 0xFF), bextr_imm(8, 8)));
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bextr_u64(Poisoned<U8>(0xABCDABCD, 0xFF), bextr_imm(8, 800)));
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u64(Poisoned<U8>(0xABCDABCD, 0xFF), bextr_imm(7, 800)));
+  EXPECT_NOT_POISONED(
+      __builtin_ia32_bextr_u64(Poisoned<U8>(0xABCDABCD, 0xFF), bextr_imm(5, 0)));
+
+  // Poison in the top half.
+  EXPECT_NOT_POISONED(__builtin_ia32_bextr_u64(
+      Poisoned<U8>(0xABCDABCD, 0xFF0000000000), bextr_imm(32, 8)));
+  EXPECT_POISONED(__builtin_ia32_bextr_u64(
+      Poisoned<U8>(0xABCDABCD, 0xFF0000000000), bextr_imm(32, 9)));
+
+  EXPECT_POISONED(
+      __builtin_ia32_bextr_u64(0xABCDABCD, Poisoned<U8>(bextr_imm(7, 800), 1)));
+  EXPECT_POISONED(__builtin_ia32_bextr_u64(
+      0xABCDABCD, Poisoned<U8>(bextr_imm(7, 800), 0x80000000)));
+}
+
+__attribute__((target("bmi,bmi2")))
+static void TestPDEP() {
+  U4 x = Poisoned<U4>(0, 0xFF00);
+  EXPECT_NOT_POISONED(__builtin_ia32_pdep_si(x, 0xFF));
+  EXPECT_POISONED(__builtin_ia32_pdep_si(x, 0x1FF));
+  EXPECT_NOT_POISONED(__builtin_ia32_pdep_si(x, 0xFF00));
+  EXPECT_POISONED(__builtin_ia32_pdep_si(x, 0x1FF00));
+
+  EXPECT_NOT_POISONED(__builtin_ia32_pdep_si(x, 0x1FF00) & 0xFF);
+  EXPECT_POISONED(__builtin_ia32_pdep_si(0, Poisoned<U4>(0xF, 1)));
+
+  U8 y = Poisoned<U8>(0, 0xFF00);
+  EXPECT_NOT_POISONED(__builtin_ia32_pdep_di(y, 0xFF));
+  EXPECT_POISONED(__builtin_ia32_pdep_di(y, 0x1FF));
+  EXPECT_NOT_POISONED(__builtin_ia32_pdep_di(y, 0xFF0000000000));
+  EXPECT_POISONED(__builtin_ia32_pdep_di(y, 0x1FF000000000000));
+
+  EXPECT_NOT_POISONED(__builtin_ia32_pdep_di(y, 0x1FF00) & 0xFF);
+  EXPECT_POISONED(__builtin_ia32_pdep_di(0, Poisoned<U4>(0xF, 1)));
+}
+
+__attribute__((target("bmi,bmi2")))
+static void TestPEXT() {
+  U4 x = Poisoned<U4>(0, 0xFF00);
+  EXPECT_NOT_POISONED(__builtin_ia32_pext_si(x, 0xFF));
+  EXPECT_POISONED(__builtin_ia32_pext_si(x, 0x1FF));
+  EXPECT_POISONED(__builtin_ia32_pext_si(x, 0x100));
+  EXPECT_POISONED(__builtin_ia32_pext_si(x, 0x1000));
+  EXPECT_NOT_POISONED(__builtin_ia32_pext_si(x, 0x10000));
+
+  EXPECT_POISONED(__builtin_ia32_pext_si(0xFF00, Poisoned<U4>(0xFF, 1)));
+
+  U8 y = Poisoned<U8>(0, 0xFF0000000000);
+  EXPECT_NOT_POISONED(__builtin_ia32_pext_di(y, 0xFF00000000));
+  EXPECT_POISONED(__builtin_ia32_pext_di(y, 0x1FF00000000));
+  EXPECT_POISONED(__builtin_ia32_pext_di(y, 0x10000000000));
+  EXPECT_POISONED(__builtin_ia32_pext_di(y, 0x100000000000));
+  EXPECT_NOT_POISONED(__builtin_ia32_pext_di(y, 0x1000000000000));
+
+  EXPECT_POISONED(__builtin_ia32_pext_di(0xFF00, Poisoned<U8>(0xFF, 1)));
+}
+
+TEST(MemorySanitizer, Bmi) {
+  if (HaveBmi()) {
+    TestBZHI();
+    TestBEXTR();
+    TestPDEP();
+    TestPEXT();
+  }
+}

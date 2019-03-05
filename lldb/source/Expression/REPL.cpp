@@ -307,7 +307,6 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
       lldb::ExpressionResults execution_results =
           UserExpression::Evaluate(exe_ctx, expr_options, code.c_str(),
                                    expr_prefix, result_valobj_sp, error,
-                                   0,       // Line offset
                                    nullptr, // Fixed Expression
                                    &jit_module_sp);
 
