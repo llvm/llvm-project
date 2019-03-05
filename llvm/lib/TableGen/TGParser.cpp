@@ -2119,16 +2119,31 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
 
     case tgtok::paste:
       SMLoc PasteLoc = Lex.getLoc();
-
-      // Create a !strconcat() operation, first casting each operand to
-      // a string if necessary.
-
       TypedInit *LHS = dyn_cast<TypedInit>(Result);
       if (!LHS) {
         Error(PasteLoc, "LHS of paste is not typed!");
         return nullptr;
       }
 
+      // Check if it's a 'listA # listB'
+      if (isa<ListRecTy>(LHS->getType())) {
+        Lex.Lex();  // Eat the '#'.
+
+        switch (Lex.getCode()) {
+        case tgtok::colon:
+        case tgtok::semi:
+        case tgtok::l_brace:
+          Result = LHS; // trailing paste, ignore.
+          break;
+        default:
+          Init *RHSResult = ParseValue(CurRec, ItemType, ParseNameMode);
+          Result = BinOpInit::getListConcat(LHS, RHSResult);
+        }
+        break;
+      }
+
+      // Create a !strconcat() operation, first casting each operand to
+      // a string if necessary.
       if (LHS->getType() != StringRecTy::get()) {
         LHS = dyn_cast<TypedInit>(
             UnOpInit::get(UnOpInit::CAST, LHS, StringRecTy::get())

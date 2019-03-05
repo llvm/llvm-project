@@ -40,6 +40,7 @@ set(SCUDO_SOURCES
 
 set(SCUDO_HEADERS
   atomic_helpers.h
+  bytemap.h
   internal_defs.h
   linux.h
   list.h

@@ -31,11 +31,22 @@ namespace {
 // ScopedUnwinding is a scope for stacktracing member of a context
 class ScopedUnwinding {
  public:
-  explicit ScopedUnwinding(AsanThread *t) : thread(t) { t->setUnwinding(true); }
-  ~ScopedUnwinding() { thread->setUnwinding(false); }
+  explicit ScopedUnwinding(AsanThread *t) : thread(t) {
+    if (thread) {
+      can_unwind = !thread->isUnwinding();
+      thread->setUnwinding(true);
+    }
+  }
+  ~ScopedUnwinding() {
+    if (thread)
+      thread->setUnwinding(false);
+  }
+
+  bool CanUnwind() const { return can_unwind; }
 
  private:
-  AsanThread *thread;
+  AsanThread *thread = nullptr;
+  bool can_unwind = true;
 };
 
 }  // namespace
@@ -48,29 +59,22 @@ void __sanitizer::BufferedStackTrace::UnwindImpl(
   size = 0;
   if (UNLIKELY(!asan_inited))
     return;
-#if SANITIZER_WINDOWS
-  Unwind(max_depth, pc, bp, context, 0, 0, false);
-#else
+  request_fast = StackTrace::WillUseFastUnwind(request_fast);
   AsanThread *t = GetCurrentThread();
-  if (!t) {
-    if (!request_fast) {
-      /* If GetCurrentThread() has failed, try to do slow unwind anyways. */
-      Unwind(max_depth, pc, bp, context, 0, 0, false);
+  ScopedUnwinding unwind_scope(t);
+  if (!unwind_scope.CanUnwind())
+    return;
+  if (request_fast) {
+    if (t) {
+      Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(),
+             true);
     }
     return;
   }
-  if (t->isUnwinding())
+  if (SANITIZER_MIPS && t &&
+      !IsValidFrame(bp, t->stack_top(), t->stack_bottom()))
     return;
-  uptr stack_top = t->stack_top();
-  uptr stack_bottom = t->stack_bottom();
-  ScopedUnwinding unwind_scope(t);
-  if (SANITIZER_MIPS && !IsValidFrame(bp, stack_top, stack_bottom))
-    return;
-  if (StackTrace::WillUseFastUnwind(request_fast))
-    Unwind(max_depth, pc, bp, nullptr, stack_top, stack_bottom, true);
-  else
-    Unwind(max_depth, pc, bp, context, 0, 0, false);
-#endif // SANITIZER_WINDOWS
+  Unwind(max_depth, pc, bp, context, 0, 0, false);
 }
 
 // ------------------ Interface -------------- {{{1
