@@ -489,8 +489,7 @@ public:
 static void
 AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
                    SwiftASTContext &swift_ast_context,
-                   SwiftASTManipulator &manipulator,
-                   const Expression::SwiftGenericInfo &generic_info) {
+                   SwiftASTManipulator &manipulator) {
   // First emit the typealias for "$__lldb_context".
   if (!block)
     return;
@@ -1366,7 +1365,7 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
 
     if (local_context_is_swift) {
       AddRequiredAliases(sc.block, stack_frame_sp, *swift_ast_context,
-                         *code_manipulator, expr.GetSwiftGenericInfo());
+                         *code_manipulator);
 
       // Register all local variables so that lookups to them resolve.
       CountLocals(sc, stack_frame_sp, *swift_ast_context, local_variables);
