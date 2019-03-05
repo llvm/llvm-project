@@ -30,6 +30,68 @@ namespace llvm {
 // Numeric substitution handling code.
 //===----------------------------------------------------------------------===//
 
+/// Type representing the format an expression value should be textualized into
+/// for matching. Used to represent both explicit format specifiers as well as
+/// implicit format from using numeric variables.
+struct ExpressionFormat {
+  enum class Kind {
+    /// Denote absence of format. Used for implicit format of literals and
+    /// empty expressions.
+    NoFormat,
+    /// Used when there are several conflicting implicit formats in an
+    /// expression.
+    Conflict,
+    /// Value is an unsigned integer and should be printed as a decimal number.
+    Unsigned,
+    /// Value should be printed as an uppercase hex number.
+    HexUpper,
+    /// Value should be printed as a lowercase hex number.
+    HexLower
+  };
+
+private:
+  Kind Value;
+
+public:
+  /// Evaluates a format to true if it can be used in a match.
+  explicit operator bool() const {
+    return Value != Kind::NoFormat && Value != Kind::Conflict;
+  }
+
+  /// Define format equality: formats are equal if neither is NoFormat and
+  /// their kinds are the same.
+  bool operator==(const ExpressionFormat &Other) const {
+    return Value != Kind::NoFormat && Value == Other.Value;
+  }
+
+  bool operator!=(const ExpressionFormat &other) const {
+    return !(*this == other);
+  }
+
+  bool operator==(Kind OtherValue) const { return Value == OtherValue; }
+
+  bool operator!=(Kind OtherValue) const { return !(*this == OtherValue); }
+
+  ExpressionFormat() : Value(Kind::NoFormat){};
+  explicit ExpressionFormat(Kind Value) : Value(Value){};
+
+  /// \returns a wildcard regular expression StringRef that matches any value
+  /// in the format represented by this instance, or an error if the format is
+  /// NoFormat or Conflict.
+  Expected<StringRef> getWildcardRegex() const;
+
+  /// \returns the string representation of \p Value in the format represented
+  /// by this instance, or an error if the format is NoFormat or Conflict.
+  Expected<std::string> getMatchingString(uint64_t Value) const;
+
+  /// \returns the value corresponding to string representation \p StrVal
+  /// according to the matching format represented by this instance or an error
+  /// with diagnostic against \p SM if \p StrVal does not correspond to a valid
+  /// and representable value.
+  Expected<uint64_t> valueFromStringRepr(StringRef StrVal,
+                                         const SourceMgr &SM) const;
+};
+
 /// Base class representing the AST of a given expression.
 class ExpressionAST {
 public:
@@ -38,6 +100,13 @@ public:
   /// Evaluates and \returns the value of the expression represented by this
   /// AST or an error if evaluation fails.
   virtual Expected<uint64_t> eval() const = 0;
+
+  /// \returns either the implicit format of this AST, FormatConflict if
+  /// implicit formats of the AST's components conflict, or NoFormat if the AST
+  /// has no implicit format (e.g. AST is made up of a single literal).
+  virtual ExpressionFormat getImplicitFormat() const {
+    return ExpressionFormat();
+  }
 };
 
 /// Class representing an unsigned literal in the AST of an expression.
@@ -78,11 +147,37 @@ public:
   }
 };
 
+/// Class representing an expression and its matching format.
+class Expression {
+private:
+  /// Pointer to AST of the expression.
+  std::unique_ptr<ExpressionAST> AST;
+
+  /// Format to use (e.g. hex upper case letters) when matching the value.
+  ExpressionFormat Format;
+
+public:
+  /// Generic constructor for an expression represented by the given \p AST and
+  /// whose matching format is \p Format.
+  Expression(std::unique_ptr<ExpressionAST> AST, ExpressionFormat Format)
+      : AST(std::move(AST)), Format(Format) {}
+
+  /// \returns pointer to AST of the expression. Pointer is guaranteed to be
+  /// valid as long as this object is.
+  ExpressionAST *getAST() const { return AST.get(); }
+
+  ExpressionFormat getFormat() const { return Format; }
+};
+
 /// Class representing a numeric variable and its associated current value.
 class NumericVariable {
 private:
   /// Name of the numeric variable.
   StringRef Name;
+
+  /// Format to use for expressions using this variable without an explicit
+  /// format.
+  ExpressionFormat ImplicitFormat;
 
   /// Value of numeric variable, if defined, or None otherwise.
   Optional<uint64_t> Value;
@@ -93,14 +188,19 @@ private:
   Optional<size_t> DefLineNumber;
 
 public:
-  /// Constructor for a variable \p Name defined at line \p DefLineNumber or
-  /// defined before input is parsed if \p DefLineNumber is None.
-  explicit NumericVariable(StringRef Name,
+  /// Constructor for a variable \p Name with implicit format \p ImplicitFormat
+  /// defined at line \p DefLineNumber or defined before input is parsed if
+  /// \p DefLineNumber is None.
+  explicit NumericVariable(StringRef Name, ExpressionFormat ImplicitFormat,
                            Optional<size_t> DefLineNumber = None)
-      : Name(Name), DefLineNumber(DefLineNumber) {}
+      : Name(Name), ImplicitFormat(ImplicitFormat),
+        DefLineNumber(DefLineNumber) {}
 
   /// \returns name of this numeric variable.
   StringRef getName() const { return Name; }
+
+  /// \returns implicit format of this numeric variable.
+  ExpressionFormat getImplicitFormat() const { return ImplicitFormat; }
 
   /// \returns this variable's value.
   Optional<uint64_t> getValue() const { return Value; }
@@ -133,6 +233,11 @@ public:
 
   /// \returns the value of the variable referenced by this instance.
   Expected<uint64_t> eval() const override;
+
+  /// \returns implicit format of this numeric variable.
+  ExpressionFormat getImplicitFormat() const override {
+    return Variable->getImplicitFormat();
+  }
 };
 
 /// Type of functions evaluating a given binary operation.
@@ -163,6 +268,11 @@ public:
   /// \returns the expression value or an error if an undefined numeric
   /// variable is used in one of the operands.
   Expected<uint64_t> eval() const override;
+
+  /// \returns the implicit format of this AST, if any, a format conflict if
+  /// the implicit formats of the AST's components conflict, or no format if
+  /// the AST has no implicit format (e.g. AST is made of a single literal).
+  ExpressionFormat getImplicitFormat() const override;
 };
 
 class FileCheckPatternContext;
@@ -218,14 +328,14 @@ class NumericSubstitution : public Substitution {
 private:
   /// Pointer to the class representing the expression whose value is to be
   /// substituted.
-  std::unique_ptr<ExpressionAST> ExpressionASTPointer;
+  std::unique_ptr<Expression> ExpressionPointer;
 
 public:
-  NumericSubstitution(FileCheckPatternContext *Context, StringRef Expr,
-                      std::unique_ptr<ExpressionAST> ExprAST, size_t InsertIdx)
-      : Substitution(Context, Expr, InsertIdx) {
-    ExpressionASTPointer = std::move(ExprAST);
-  }
+  NumericSubstitution(FileCheckPatternContext *Context, StringRef ExpressionStr,
+                      std::unique_ptr<Expression> ExpressionPointer,
+                      size_t InsertIdx)
+      : Substitution(Context, ExpressionStr, InsertIdx),
+        ExpressionPointer(std::move(ExpressionPointer)) {}
 
   /// \returns a string containing the result of evaluating the expression in
   /// this substitution, or an error if evaluation failed.
@@ -270,6 +380,10 @@ private:
   /// automatically free them once they are guaranteed to no longer be used.
   std::vector<std::unique_ptr<NumericVariable>> NumericVariables;
 
+  /// Vector holding pointers to all parsed expressions. Used to automatically
+  /// free the expressions once they are guaranteed to no longer be used.
+  std::vector<std::unique_ptr<Expression>> Expressions;
+
   /// Vector holding pointers to all substitutions. Used to automatically free
   /// them once they are guaranteed to no longer be used.
   std::vector<std::unique_ptr<Substitution>> Substitutions;
@@ -307,10 +421,9 @@ private:
 
   /// Makes a new numeric substitution and registers it for destruction when
   /// the context is destroyed.
-  Substitution *
-  makeNumericSubstitution(StringRef ExpressionStr,
-                          std::unique_ptr<ExpressionAST> ExpressionAST,
-                          size_t InsertIdx);
+  Substitution *makeNumericSubstitution(StringRef ExpressionStr,
+                                        std::unique_ptr<Expression> Expression,
+                                        size_t InsertIdx);
 };
 
 /// Class to represent an error holding a diagnostic with location information
@@ -388,12 +501,12 @@ class Pattern {
   std::map<StringRef, unsigned> VariableDefs;
 
   /// Structure representing the definition of a numeric variable in a pattern.
-  /// It holds the pointer to the class representing the numeric variable whose
-  /// value is being defined and the number of the parenthesis group in
-  /// RegExStr to capture that value.
+  /// It holds the pointer to the class instance holding the value and matching
+  /// format of the numeric variable whose value is being defined and the
+  /// number of the parenthesis group in RegExStr to capture that value.
   struct NumericVariableMatch {
-    /// Pointer to class representing the numeric variable whose value is being
-    /// defined.
+    /// Pointer to class instance holding the value and matching format of the
+    /// numeric variable being defined.
     NumericVariable *DefinedNumericVariable;
 
     /// Number of the parenthesis group in RegExStr that captures the value of
@@ -457,12 +570,12 @@ public:
   /// \p IsLegacyLineExpr indicates whether \p Expr should be a legacy @LINE
   /// expression and \p Context points to the class instance holding the live
   /// string and numeric variables. \returns a pointer to the class instance
-  /// representing the AST of the expression whose value must be substitued, or
-  /// an error holding a diagnostic against \p SM if parsing fails. If
-  /// substitution was successful, sets \p DefinedNumericVariable to point to
-  /// the class representing the numeric variable defined in this numeric
-  /// substitution block, or None if this block does not define any variable.
-  static Expected<std::unique_ptr<ExpressionAST>> parseNumericSubstitutionBlock(
+  /// representing the expression whose value must be substitued, or an error
+  /// holding a diagnostic against \p SM if parsing fails. If substitution was
+  /// successful, sets \p DefinedNumericVariable to point to the class
+  /// representing the numeric variable defined in this numeric substitution
+  /// block, or None if this block does not define any variable.
+  static Expected<std::unique_ptr<Expression>> parseNumericSubstitutionBlock(
       StringRef Expr, Optional<NumericVariable *> &DefinedNumericVariable,
       bool IsLegacyLineExpr, Optional<size_t> LineNumber,
       FileCheckPatternContext *Context, const SourceMgr &SM);
@@ -526,7 +639,8 @@ private:
   /// should defining such a variable be invalid.
   static Expected<NumericVariable *> parseNumericVariableDefinition(
       StringRef &Expr, FileCheckPatternContext *Context,
-      Optional<size_t> LineNumber, const SourceMgr &SM);
+      Optional<size_t> LineNumber, ExpressionFormat ImplicitFormat,
+      const SourceMgr &SM);
   /// Parses \p Name as a (pseudo if \p IsPseudo is true) numeric variable use
   /// at line \p LineNumber, or before input is parsed if \p LineNumber is
   /// None. Parameter \p Context points to the class instance holding the live
@@ -536,7 +650,7 @@ private:
   static Expected<std::unique_ptr<NumericVariableUse>> parseNumericVariableUse(
       StringRef Name, bool IsPseudo, Optional<size_t> LineNumber,
       FileCheckPatternContext *Context, const SourceMgr &SM);
-  enum class AllowedOperand { LineVar, Literal, Any };
+  enum class AllowedOperand { LineVar, LegacyLiteral, Any };
   /// Parses \p Expr for use of a numeric operand at line \p LineNumber, or
   /// before input is parsed if \p LineNumber is None. Accepts both literal
   /// values and numeric variables, depending on the value of \p AO. Parameter
