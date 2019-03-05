@@ -158,7 +158,7 @@ else()
 endif()
 
 if (NOT LLDB_BUILT_STANDALONE)
-  add_dependencies(liblldb clang-headers)
+  add_dependencies(liblldb clang-resource-headers)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)
@@ -169,7 +169,7 @@ set(lib_dir "${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX}")
 set(CLANG_RESOURCE_PATH "${LLDB_PATH_TO_SWIFT_BUILD}/lib${LLVM_LIBDIR_SUFFIX}/swift/clang")
 set(clang_headers_target ${CLANG_RESOURCE_PATH}/include)
 if(NOT LLDB_BUILT_STANDALONE)
-  set(clang_headers_target clang-headers symlink_clang_headers)
+  set(clang_headers_target clang-resource-headers symlink_clang_headers)
 endif()
 
 # Copy the clang resource directory.
