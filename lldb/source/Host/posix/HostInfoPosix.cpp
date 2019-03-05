@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/posix/HostInfoPosix.h"
+#include "lldb/Utility/UserIDResolver.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -105,7 +106,7 @@ llvm::Optional<std::string> PosixUserIDResolver::DoGetGroupName(id_t gid) {
 
 static llvm::ManagedStatic<PosixUserIDResolver> g_user_id_resolver;
 
-UserIDResolver &HostInfoPosix::GetUserIDResolver() {
+UserIDResolver &HostInfoBase::GetUserIDResolver() {
   return *g_user_id_resolver;
 }
 

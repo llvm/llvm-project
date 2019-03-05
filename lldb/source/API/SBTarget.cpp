@@ -61,6 +61,7 @@
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
 
 #include "Commands/CommandObjectBreakpoint.h"

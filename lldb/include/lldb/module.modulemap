@@ -39,7 +39,6 @@ module lldb_Host {
   module PipeBase { header "Host/PipeBase.h" export * }
   module Pipe { header "Host/Pipe.h" export * }
   module PosixApi { header "Host/PosixApi.h" export * }
-  module ProcessInfo { header "Host/ProcessInfo.h" export * }
   module ProcessLauncher { header "Host/ProcessLauncher.h" export * }
   module ProcessLaunchInfo { header "Host/ProcessLaunchInfo.h" export * }
   module ProcessRunLock { header "Host/ProcessRunLock.h" export * }

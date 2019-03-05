@@ -649,7 +649,7 @@
 		26BC17AB18C7F4CB00D2196D /* ProcessElfCore.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC17A218C7F4CB00D2196D /* ProcessElfCore.cpp */; };
 		2689009F13353E4200698AC0 /* ProcessGDBRemote.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2618EE5F1315B29C001D6D71 /* ProcessGDBRemote.cpp */; };
 		268900A013353E4200698AC0 /* ProcessGDBRemoteLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2618EE611315B29C001D6D71 /* ProcessGDBRemoteLog.cpp */; };
-		233B007D1960C9F90090E598 /* ProcessInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B007B1960C9E60090E598 /* ProcessInfo.cpp */; };
+		4CC57FA1222DFEA40067B7EA /* ProcessInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC57F9F222DFEA40067B7EA /* ProcessInfo.cpp */; };
 		2642FBB013D003B400ED6808 /* ProcessKDP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBAA13D003B400ED6808 /* ProcessKDP.cpp */; };
 		2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBAC13D003B400ED6808 /* ProcessKDPLog.cpp */; };
 		233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */; };
@@ -1044,6 +1044,7 @@
 		23CB15351D66DA9300EDDDE1 /* UriParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9461BDD346100BA9A93 /* UriParserTest.cpp */; };
 		4C88BC2D1BA391B000AA0964 /* UserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C0083331B9A5DE200D5CF24 /* UserExpression.cpp */; };
 		AFC2DCEB1E6E2F7D00283714 /* UserID.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFC2DCEA1E6E2F7D00283714 /* UserID.cpp */; };
+		4CC57FA2222DFEA40067B7EA /* UserIDResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC57FA0222DFEA40067B7EA /* UserIDResolver.cpp */; };
 		2689005413353E0400698AC0 /* UserSettingsController.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A4633DC11F65D9A00955CE1 /* UserSettingsController.cpp */; };
 		4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */; };
 		2654A6901E552ED500DA1013 /* VASprintf.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2654A68F1E552ED500DA1013 /* VASprintf.cpp */; };
@@ -2532,7 +2533,7 @@
 		2618EE601315B29C001D6D71 /* ProcessGDBRemote.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProcessGDBRemote.h; sourceTree = "<group>"; };
 		2618EE611315B29C001D6D71 /* ProcessGDBRemoteLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessGDBRemoteLog.cpp; sourceTree = "<group>"; };
 		2618EE621315B29C001D6D71 /* ProcessGDBRemoteLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProcessGDBRemoteLog.h; sourceTree = "<group>"; };
-		233B007B1960C9E60090E598 /* ProcessInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessInfo.cpp; sourceTree = "<group>"; };
+		4CC57F9F222DFEA40067B7EA /* ProcessInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ProcessInfo.cpp; path = source/Utility/ProcessInfo.cpp; sourceTree = "<group>"; };
 		2642FBAA13D003B400ED6808 /* ProcessKDP.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessKDP.cpp; sourceTree = "<group>"; };
 		2642FBAB13D003B400ED6808 /* ProcessKDP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ProcessKDP.h; sourceTree = "<group>"; };
 		2642FBAC13D003B400ED6808 /* ProcessKDPLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessKDPLog.cpp; sourceTree = "<group>"; };
@@ -3231,6 +3232,8 @@
 		4C00832E1B9A58A700D5CF24 /* UserExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UserExpression.h; path = include/lldb/Expression/UserExpression.h; sourceTree = "<group>"; };
 		AFC2DCEA1E6E2F7D00283714 /* UserID.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UserID.cpp; path = source/Utility/UserID.cpp; sourceTree = "<group>"; };
 		AFC2DCEC1E6E2F8C00283714 /* UserID.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = UserID.h; path = include/lldb/Utility/UserID.h; sourceTree = "<group>"; };
+		4CC57FA0222DFEA40067B7EA /* UserIDResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UserIDResolver.cpp; path = source/Utility/UserIDResolver.cpp; sourceTree = "<group>"; };
+		4CC57FA3222DFEFE0067B7EA /* UserIDResolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UserIDResolver.h; path = include/lldb/Utility/UserIDResolver.h; sourceTree = "<group>"; };
 		9A4633DC11F65D9A00955CE1 /* UserSettingsController.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UserSettingsController.cpp; path = source/Core/UserSettingsController.cpp; sourceTree = "<group>"; };
 		9A4633DA11F65D8600955CE1 /* UserSettingsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UserSettingsController.h; path = include/lldb/Core/UserSettingsController.h; sourceTree = "<group>"; };
 		4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UtilityFunction.cpp; path = source/Expression/UtilityFunction.cpp; sourceTree = "<group>"; };
@@ -4704,6 +4707,7 @@
 				943BDEFD1AA7B2F800789CE8 /* LLDBAssert.cpp */,
 				3F81691C1ABA242B001DA9DF /* NameMatches.h */,
 				3F8169181ABA2419001DA9DF /* NameMatches.cpp */,
+				4CC57F9F222DFEA40067B7EA /* ProcessInfo.cpp */,
 				26C6886D137880B900407EDF /* RegisterValue.h */,
 				26C6886E137880C400407EDF /* RegisterValue.cpp */,
 				26764C9C1E48F516008D3573 /* RegularExpression.h */,
@@ -4746,8 +4750,10 @@
 				26BC7E9610F1B85900F91463 /* Timer.cpp */,
 				2654A6911E552F3C00DA1013 /* UriParser.h */,
 				33064C991A5C7A330033D415 /* UriParser.cpp */,
-				AFC2DCEA1E6E2F7D00283714 /* UserID.cpp */,
 				AFC2DCEC1E6E2F8C00283714 /* UserID.h */,
+				AFC2DCEA1E6E2F7D00283714 /* UserID.cpp */,
+				4CC57FA3222DFEFE0067B7EA /* UserIDResolver.h */,
+				4CC57FA0222DFEA40067B7EA /* UserIDResolver.cpp */,
 				49CA96F51E6AAC8E00C03FEE /* UUID.h */,
 				49CA96EA1E6AAC6600C03FEE /* UUID.cpp */,
 				AFC2DCEF1E6E2FD200283714 /* VMRange.cpp */,
@@ -6418,7 +6424,6 @@
 				268DA873130095ED00C9483A /* Terminal.cpp */,
 				3FDFED2619BA6D96009756A7 /* ThreadLauncher.cpp */,
 				3FDFDDBC199C3A06009756A7 /* FileAction.cpp */,
-				233B007B1960C9E60090E598 /* ProcessInfo.cpp */,
 				233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */,
 			);
 			name = common;
@@ -8048,6 +8053,7 @@
 				2689002813353DDE00698AC0 /* CommandObjectThread.cpp in Sources */,
 				2689002913353DDE00698AC0 /* CommandObjectVersion.cpp in Sources */,
 				AFC2DCF01E6E2FD200283714 /* VMRange.cpp in Sources */,
+				4CC57FA1222DFEA40067B7EA /* ProcessInfo.cpp in Sources */,
 				2689002A13353E0400698AC0 /* Address.cpp in Sources */,
 				8CF02AE919DCC01900B14BE0 /* InstrumentationRuntime.cpp in Sources */,
 				2689002B13353E0400698AC0 /* AddressRange.cpp in Sources */,
@@ -8615,7 +8621,7 @@
 				5A6424962204D05000C3D9DB /* CodeViewRegisterMapping.cpp in Sources */,
 				5A6424972204D05000C3D9DB /* PdbFPOProgramToDWARFExpression.cpp in Sources */,
 				3FDFDDBD199C3A06009756A7 /* FileAction.cpp in Sources */,
-				233B007D1960C9F90090E598 /* ProcessInfo.cpp in Sources */,
+				4CC57FA2222DFEA40067B7EA /* UserIDResolver.cpp in Sources */,
 				233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

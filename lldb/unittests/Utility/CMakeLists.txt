@@ -18,6 +18,7 @@ add_lldb_unittest(UtilityTests
   LogTest.cpp
   NameMatchesTest.cpp
   PredicateTest.cpp
+  ProcessInfoTest.cpp
   RegisterValueTest.cpp
   ReproducerTest.cpp
   ReproducerInstrumentationTest.cpp

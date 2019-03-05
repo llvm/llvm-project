@@ -30,6 +30,10 @@
 
 namespace lldb_private {
 
+class ProcessInstanceInfo;
+class ProcessInstanceInfoList;
+class ProcessInstanceInfoMatch;
+
 class ModuleCache;
 enum MmapFlags { eMmapFlagsPrivate = 1, eMmapFlagsAnon = 2 };
 

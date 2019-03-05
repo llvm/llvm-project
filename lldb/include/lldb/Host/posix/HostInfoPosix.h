@@ -22,7 +22,6 @@ class HostInfoPosix : public HostInfoBase {
 public:
   static size_t GetPageSize();
   static bool GetHostname(std::string &s);
-  static UserIDResolver &GetUserIDResolver();
 
   static uint32_t GetUserID();
   static uint32_t GetGroupID();
