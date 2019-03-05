@@ -20,6 +20,7 @@
 #include "llvm/Support/ScopedPrinter.h"
 
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Host/FileSystem.h"
