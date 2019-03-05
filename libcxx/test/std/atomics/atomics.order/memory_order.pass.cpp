@@ -21,15 +21,14 @@
 
 int main(int, char**)
 {
-    assert(static_cast<int>(std::memory_order_relaxed) == 0);
-    assert(static_cast<int>(std::memory_order_consume) == 1);
-    assert(static_cast<int>(std::memory_order_acquire) == 2);
-    assert(static_cast<int>(std::memory_order_release) == 3);
-    assert(static_cast<int>(std::memory_order_acq_rel) == 4);
-    assert(static_cast<int>(std::memory_order_seq_cst) == 5);
-
+    assert(std::memory_order_relaxed == 0);
+    assert(std::memory_order_consume == 1);
+    assert(std::memory_order_acquire == 2);
+    assert(std::memory_order_release == 3);
+    assert(std::memory_order_acq_rel == 4);
+    assert(std::memory_order_seq_cst == 5);
     std::memory_order o = std::memory_order_seq_cst;
-    assert(static_cast<int>(o) == 5);
+    assert(o == 5);
 
-    return 0;
+  return 0;
 }

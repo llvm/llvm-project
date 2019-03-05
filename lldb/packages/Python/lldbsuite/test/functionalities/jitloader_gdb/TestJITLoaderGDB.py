@@ -58,6 +58,7 @@ class JITLoaderGDBTestCase(TestBase):
         self.expect("settings show plugin.jit-loader.gdb.enable",
                     substrs=["plugin.jit-loader.gdb.enable (enum) = default"])
 
+    @skipIfWindows # This test fails on Windows during C code build
     def test_jit_int_on(self):
         """Tests interface with 'enable' settings 'on'"""
         self.build()
@@ -87,6 +88,7 @@ class JITLoaderGDBTestCase(TestBase):
         self.assertIn(
             "SetJITBreakpoint setting JIT breakpoint", logcontent)
 
+    @skipIfWindows # This test fails on Windows during C code build
     def test_jit_int_off(self):
         """Tests interface with 'enable' settings 'off'"""
         self.build()
