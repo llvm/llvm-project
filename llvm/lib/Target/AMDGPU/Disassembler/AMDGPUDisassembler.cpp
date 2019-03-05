@@ -76,6 +76,8 @@ static DecodeStatus decodeSoppBrTarget(MCInst &Inst, unsigned Imm,
                                        uint64_t Addr, const void *Decoder) {
   auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
 
+  // Our branches take a simm16, but we need two extra bits to account for the
+  // factor of 4.
   APInt SignedOffset(18, Imm * 4, true);
   int64_t Offset = (SignedOffset.sext(64) + 4 + Addr).getSExtValue();
 

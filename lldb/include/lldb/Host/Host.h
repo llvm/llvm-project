@@ -26,6 +26,9 @@ namespace lldb_private {
 
 class FileAction;
 class ProcessLaunchInfo;
+class ProcessInstanceInfo;
+class ProcessInstanceInfoList;
+class ProcessInstanceInfoMatch;
 
 //----------------------------------------------------------------------
 // Exit Type for inferior processes

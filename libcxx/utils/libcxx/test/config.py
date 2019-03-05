@@ -939,7 +939,7 @@ class Configuration(object):
 
             def add_ubsan():
                 self.cxx.flags += ['-fsanitize=undefined',
-                                   '-fno-sanitize=vptr,function,float-divide-by-zero',
+                                   '-fno-sanitize=float-divide-by-zero',
                                    '-fno-sanitize-recover=all']
                 self.exec_env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
                 self.config.available_features.add('ubsan')

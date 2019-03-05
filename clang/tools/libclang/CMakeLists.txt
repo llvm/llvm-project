@@ -92,7 +92,7 @@ endif()
 add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC}
   OUTPUT_NAME ${output_name}
   ${SOURCES}
-  DEPENDS clang-headers
+  DEPENDS clang-resource-headers
 
   LINK_LIBS
   ${LIBS}

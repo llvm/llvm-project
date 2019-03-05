@@ -152,7 +152,7 @@ else()
 endif()
 
 if (NOT LLDB_BUILT_STANDALONE)
-  add_dependencies(liblldb clang-headers)
+  add_dependencies(liblldb clang-resource-headers)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)

@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/ProfileData/InstrProf.h"
 #include <cstdint>
 #include <string>
 
@@ -38,11 +37,7 @@ class PGOInstrumentationGenCreateVar
 public:
   PGOInstrumentationGenCreateVar(std::string CSInstrName = "")
       : CSInstrName(CSInstrName) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
-    createProfileFileNameVar(M, CSInstrName);
-    createIRLevelProfileFlagVar(M, /* IsCS */ true);
-    return PreservedAnalyses::all();
-  }
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 
 private:
   std::string CSInstrName;
