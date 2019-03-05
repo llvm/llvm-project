@@ -149,8 +149,7 @@ public:
   //------------------------------------------------------------------
   bool Parse(DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx,
              lldb_private::ExecutionPolicy execution_policy,
-             bool keep_result_in_memory, bool generate_debug_info,
-             uint32_t line_offset = 0) override;
+             bool keep_result_in_memory, bool generate_debug_info) override;
 
   bool Complete(ExecutionContext &exe_ctx, CompletionRequest &request,
                 unsigned complete_pos) override;

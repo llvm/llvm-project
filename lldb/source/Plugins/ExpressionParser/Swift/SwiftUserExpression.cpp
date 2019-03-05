@@ -342,8 +342,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
                                 ExecutionContext &exe_ctx,
                                 lldb_private::ExecutionPolicy execution_policy,
                                 bool keep_result_in_memory,
-                                bool generate_debug_info,
-                                uint32_t line_offset) {
+                                bool generate_debug_info) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   Status err;
@@ -441,7 +440,7 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   unsigned error_code = m_parser->Parse(
       diagnostic_manager, first_body_line,
-      first_body_line + source_code->GetNumBodyLines(), line_offset);
+      first_body_line + source_code->GetNumBodyLines());
 
   if (error_code == 2) {
     m_fixed_text = m_expr_text;

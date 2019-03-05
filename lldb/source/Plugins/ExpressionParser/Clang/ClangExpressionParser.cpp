@@ -867,8 +867,7 @@ bool ClangExpressionParser::Complete(CompletionRequest &request, unsigned line,
 // to avoid clashes when merging from upstream.
 // End Swift only
 unsigned ClangExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
-                                      uint32_t first_line, uint32_t last_line,
-                                      uint32_t line_offset) {
+                                      uint32_t first_line, uint32_t last_line) {
   return ParseInternal(diagnostic_manager);
 }
 

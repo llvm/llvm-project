@@ -242,9 +242,9 @@ lldb::ExpressionResults UserExpression::Evaluate(
 
   DiagnosticManager diagnostic_manager;
 
-  bool parse_success = user_expression_sp->Parse(
-      diagnostic_manager, exe_ctx, execution_policy, keep_expression_in_memory,
-      generate_debug_info, 0);
+  bool parse_success =
+      user_expression_sp->Parse(diagnostic_manager, exe_ctx, execution_policy,
+                                keep_expression_in_memory, generate_debug_info);
 
   // Calculate the fixed expression always, since we need it for errors.
   std::string tmp_fixed_expression;
@@ -273,7 +273,7 @@ lldb::ExpressionResults UserExpression::Evaluate(
       DiagnosticManager fixed_diagnostic_manager;
       parse_success = fixed_expression_sp->Parse(
           fixed_diagnostic_manager, exe_ctx, execution_policy,
-          keep_expression_in_memory, generate_debug_info, 0);
+          keep_expression_in_memory, generate_debug_info);
       if (parse_success) {
         diagnostic_manager.Clear();
         user_expression_sp = fixed_expression_sp;
