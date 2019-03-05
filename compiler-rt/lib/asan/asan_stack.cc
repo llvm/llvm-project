@@ -26,28 +26,55 @@ u32 GetMallocContextSize() {
   return atomic_load(&malloc_context_size, memory_order_acquire);
 }
 
+namespace {
+
+// ScopedUnwinding is a scope for stacktracing member of a context
+class ScopedUnwinding {
+ public:
+  explicit ScopedUnwinding(AsanThread *t) : thread(t) {
+    if (thread) {
+      can_unwind = !thread->isUnwinding();
+      thread->setUnwinding(true);
+    }
+  }
+  ~ScopedUnwinding() {
+    if (thread)
+      thread->setUnwinding(false);
+  }
+
+  bool CanUnwind() const { return can_unwind; }
+
+ private:
+  AsanThread *thread = nullptr;
+  bool can_unwind = true;
+};
+
+}  // namespace
+
 }  // namespace __asan
 
 void __sanitizer::BufferedStackTrace::UnwindImpl(
     uptr pc, uptr bp, void *context, bool request_fast, u32 max_depth) {
   using namespace __asan;
   size = 0;
-  if (UNLIKELY(!asan_inited)) return;
-
+  if (UNLIKELY(!asan_inited))
+    return;
+  request_fast = StackTrace::WillUseFastUnwind(request_fast);
   AsanThread *t = GetCurrentThread();
-  if (t && !t->isUnwinding() && WillUseFastUnwind(request_fast)) {
-    uptr top = t->stack_top();
-    uptr bottom = t->stack_bottom();
-    ScopedUnwinding unwind_scope(t);
-    if (!SANITIZER_MIPS || IsValidFrame(bp, top, bottom)) {
-      UnwindFast(pc, bp, top, bottom, max_depth);
-      return;
+  ScopedUnwinding unwind_scope(t);
+  if (!unwind_scope.CanUnwind())
+    return;
+  if (request_fast) {
+    if (t) {
+      Unwind(max_depth, pc, bp, nullptr, t->stack_top(), t->stack_bottom(),
+             true);
     }
+    return;
   }
-
-#if SANITIZER_CAN_SLOW_UNWIND
-    UnwindSlowWithOptionalContext(pc, context, max_depth);
-#endif
+  if (SANITIZER_MIPS && t &&
+      !IsValidFrame(bp, t->stack_top(), t->stack_bottom()))
+    return;
+  Unwind(max_depth, pc, bp, context, 0, 0, false);
 }
 
 // ------------------ Interface -------------- {{{1

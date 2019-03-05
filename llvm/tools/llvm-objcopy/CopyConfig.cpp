@@ -476,11 +476,11 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
             InputArgs.getLastArgValue(OBJCOPY_compress_debug_sections_eq)
                 .str()
                 .c_str());
-      if (!zlib::isAvailable())
-        return createStringError(
-            errc::invalid_argument,
-            "LLVM was not compiled with LLVM_ENABLE_ZLIB: can not compress");
     }
+    if (!zlib::isAvailable())
+      return createStringError(
+          errc::invalid_argument,
+          "LLVM was not compiled with LLVM_ENABLE_ZLIB: can not compress");
   }
 
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);

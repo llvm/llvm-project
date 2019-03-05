@@ -21,6 +21,7 @@ from __future__ import print_function
 
 import argparse
 import collections
+import glob
 import os
 import re
 import subprocess
@@ -426,7 +427,8 @@ def main():
     parser.add_argument('tests', nargs='+')
     args = parser.parse_args()
 
-    for test in args.tests:
+    test_paths = [test for pattern in args.tests for test in glob.glob(pattern)]
+    for test in test_paths:
         try:
             update_test_file(args.llc, test, args.remove_common_prefixes,
                              verbose=args.verbose)

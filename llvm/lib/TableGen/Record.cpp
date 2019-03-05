@@ -856,6 +856,24 @@ Init *BinOpInit::getStrConcat(Init *I0, Init *I1) {
   return BinOpInit::get(BinOpInit::STRCONCAT, I0, I1, StringRecTy::get());
 }
 
+static ListInit *ConcatListInits(const ListInit *LHS,
+                                 const ListInit *RHS) {
+  SmallVector<Init *, 8> Args;
+  Args.insert(Args.end(), LHS->begin(), LHS->end());
+  Args.insert(Args.end(), RHS->begin(), RHS->end());
+  return ListInit::get(Args, LHS->getElementType());
+}
+
+Init *BinOpInit::getListConcat(TypedInit *LHS, Init *RHS) {
+  assert(isa<ListRecTy>(LHS->getType()) && "First arg must be a list");
+
+  // Shortcut for the common case of concatenating two lists.
+   if (const ListInit *LHSList = dyn_cast<ListInit>(LHS))
+     if (const ListInit *RHSList = dyn_cast<ListInit>(RHS))
+       return ConcatListInits(LHSList, RHSList);
+   return BinOpInit::get(BinOpInit::LISTCONCAT, LHS, RHS, LHS->getType());
+}
+
 Init *BinOpInit::Fold(Record *CurRec) const {
   switch (getOpcode()) {
   case CONCAT: {

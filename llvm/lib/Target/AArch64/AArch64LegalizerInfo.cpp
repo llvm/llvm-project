@@ -441,8 +441,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .minScalar(2, s64)
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &VecTy = Query.Types[1];
-        return VecTy == v2s16 || VecTy == v4s16 || VecTy == v4s32 ||
-               VecTy == v2s64 || VecTy == v2s32;
+        return VecTy == v4s32 || VecTy == v2s64;
       });
 
   getActionDefinitionsBuilder(G_BUILD_VECTOR)

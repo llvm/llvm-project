@@ -725,6 +725,9 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
                                                 OMPPrivateScope &PrivateScope) {
   if (!HaveInsertPoint())
     return false;
+  bool DeviceConstTarget =
+      getLangOpts().OpenMPIsDevice &&
+      isOpenMPTargetExecutionDirective(D.getDirectiveKind());
   bool FirstprivateIsLastprivate = false;
   llvm::DenseSet<const VarDecl *> Lastprivates;
   for (const auto *C : D.getClausesOfKind<OMPLastprivateClause>()) {
@@ -750,6 +753,16 @@ bool CodeGenFunction::EmitOMPFirstprivateClause(const OMPExecutableDirective &D,
       if (!MustEmitFirstprivateCopy && !ThisFirstprivateIsLastprivate && FD &&
           !FD->getType()->isReferenceType()) {
         EmittedAsFirstprivate.insert(OrigVD->getCanonicalDecl());
+        ++IRef;
+        ++InitsRef;
+        continue;
+      }
+      // Do not emit copy for firstprivate constant variables in target regions,
+      // captured by reference.
+      if (DeviceConstTarget && OrigVD->getType().isConstant(getContext()) &&
+          FD && FD->getType()->isReferenceType()) {
+        (void)CGM.getOpenMPRuntime().registerTargetFirstprivateCopy(*this,
+                                                                    OrigVD);
         ++IRef;
         ++InitsRef;
         continue;

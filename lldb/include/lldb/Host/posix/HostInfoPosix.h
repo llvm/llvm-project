@@ -35,6 +35,8 @@ public:
   static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
                                            llvm::StringRef dir);
 
+  static UserIDResolver &GetUserIDResolver();
+
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);

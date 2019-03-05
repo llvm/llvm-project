@@ -170,18 +170,6 @@ class AsanThread {
   uptr extra_spill_area_;
 };
 
-// ScopedUnwinding is a scope for stacktracing member of a context
-class ScopedUnwinding {
- public:
-  explicit ScopedUnwinding(AsanThread *t) : thread(t) {
-    t->setUnwinding(true);
-  }
-  ~ScopedUnwinding() { thread->setUnwinding(false); }
-
- private:
-  AsanThread *thread;
-};
-
 // Returns a single instance of registry.
 ThreadRegistry &asanThreadRegistry();
 

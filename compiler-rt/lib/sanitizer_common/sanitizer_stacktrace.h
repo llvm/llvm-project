@@ -134,11 +134,6 @@ struct BufferedStackTrace : public StackTrace {
   void UnwindSlow(uptr pc, u32 max_depth);
   void UnwindSlow(uptr pc, void *context, u32 max_depth);
 
-  void UnwindSlowWithOptionalContext(uptr pc, void *context, u32 max_depth) {
-    if (context) UnwindSlow(pc, context, max_depth);
-    else         UnwindSlow(pc, max_depth);
-  }
-
   void PopStackFrames(uptr count);
   uptr LocatePcInTrace(uptr pc);
 

@@ -241,9 +241,8 @@ void GCNHazardRecognizer::AdvanceCycle() {
   // Do not track non-instructions which do not affect the wait states.
   // If included, these instructions can lead to buffer overflow such that
   // detectable hazards are missed.
-  if (CurrCycleInstr->isImplicitDef())
-    return;
-  else if (CurrCycleInstr->isDebugInstr())
+  if (CurrCycleInstr->isImplicitDef() || CurrCycleInstr->isDebugInstr() ||
+      CurrCycleInstr->isKill())
     return;
 
   unsigned NumWaitStates = TII.getNumWaitStates(*CurrCycleInstr);
