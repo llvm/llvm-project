@@ -131,7 +131,7 @@ ABI Changes in Clang
 - ...
 
 OpenMP Support in Clang
-----------------------------------
+-----------------------
 
 - Added emission of the debug information for NVPTX target devices.
 
@@ -146,6 +146,17 @@ Internal API Changes
 These are major API changes that have happened since the 8.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
+
+Build System Changes
+--------------------
+
+These are major changes to the build system that have happened since the 8.0.0
+release of Clang. Users of the build system should adjust accordingly.
+
+- In 8.0.0 and below, the install-clang-headers target would install clang's
+  resource directory headers. This installation is now performed by the
+  install-clang-resource-headers target. Users of the old install-clang-headers
+  target should switch to the new install-clang-resource-headers target.
 
 -  ...
 

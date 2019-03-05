@@ -925,19 +925,28 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: c++
 
-      try {
+      try
+      {
         foo();
       }
-      catch () {
+      catch ()
+      {
       }
       void foo() { bar(); }
-      class foo {
+      class foo
+      {
       };
-      if (foo()) {
+      if (foo())
+      {
       }
-      else {
+      else
+      {
       }
-      enum X : int { A, B };
+      enum X : int
+      {
+        A,
+        B
+      };
 
   * ``BS_GNU`` (in configuration: ``GNU``)
     Always break before braces and add an extra level of indentation to

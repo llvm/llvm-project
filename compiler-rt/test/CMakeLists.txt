@@ -20,7 +20,7 @@ if(NOT ANDROID)
   if(NOT COMPILER_RT_STANDALONE_BUILD AND NOT RUNTIMES_BUILD)
     # Use LLVM utils and Clang from the same build tree.
     list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS
-      clang clang-headers FileCheck count not llvm-config llvm-nm llvm-objdump
+      clang clang-resource-headers FileCheck count not llvm-config llvm-nm llvm-objdump
       llvm-readobj llvm-symbolizer compiler-rt-headers sancov)
     if (WIN32)
       list(APPEND SANITIZER_COMMON_LIT_TEST_DEPS KillTheDoctor)

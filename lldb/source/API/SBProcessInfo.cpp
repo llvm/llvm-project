@@ -9,7 +9,7 @@
 #include "lldb/API/SBProcessInfo.h"
 
 #include "lldb/API/SBFileSpec.h"
-#include "lldb/Target/Process.h"
+#include "lldb/Utility/ProcessInfo.h"
 
 using namespace lldb;
 using namespace lldb_private;

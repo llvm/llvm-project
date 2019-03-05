@@ -46,6 +46,7 @@ class FunctionTypesTestCase(TestBase):
                              'stop reason = breakpoint'])
 
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr21765")
+    @expectedFailureNetBSD
     def test_pointers(self):
         """Test that a function pointer to 'printf' works and can be called."""
         self.build()

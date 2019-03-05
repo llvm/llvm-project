@@ -182,13 +182,13 @@ static void printFeatureMask(raw_ostream &OS, RecVec &FeatureList,
     Mask[Bit / 64] |= 1ULL << (Bit % 64);
   }
 
-  OS << "{ { ";
+  OS << "{ { { ";
   for (unsigned i = 0; i != Mask.size(); ++i) {
     OS << "0x";
     OS.write_hex(Mask[i]);
     OS << "ULL, ";
   }
-  OS << "} }";
+  OS << "} } }";
 }
 
 //

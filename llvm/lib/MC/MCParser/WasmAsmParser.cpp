@@ -130,11 +130,27 @@ public:
     if (expect(AsmToken::Comma, ",") || expect(AsmToken::At, "@") ||
         expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    // This is done automatically by the assembler for text sections currently,
-    // so we don't need to emit that here. This is what it would do (and may
-    // be needed later for other section types):
-    // auto WS = getContext().getWasmSection(Name, SectionKind::getText());
-    // getStreamer().SwitchSection(WS);
+    struct SectionType {
+      const char *Name;
+      SectionKind Kind;
+    };
+    static SectionType SectionTypes[] = {
+        { ".text", SectionKind::getText() },
+        { ".rodata", SectionKind::getReadOnly() },
+        { ".data", SectionKind::getData() },
+        // TODO: add more types.
+    };
+    for (size_t I = 0; I < sizeof(SectionTypes) / sizeof(SectionType); I++) {
+      if (Name.startswith(SectionTypes[I].Name)) {
+        auto WS = getContext().getWasmSection(Name, SectionTypes[I].Kind);
+        getStreamer().SwitchSection(WS);
+        return false;
+      }
+    }
+    // Not found, just ignore this section.
+    // For code in a text section WebAssemblyAsmParser automatically adds
+    // one section per function, so they're optional to be specified with
+    // this directive.
     return false;
   }
 
@@ -153,9 +169,8 @@ public:
     if (expect(AsmToken::EndOfStatement, "eol"))
       return true;
     // This is done automatically by the assembler for functions currently,
-    // so we don't need to emit that here. This is what it would do:
-    (void)Sym;
-    // getStreamer().emitELFSize(Sym, Expr);
+    // so this is only currently needed for data sections:
+    getStreamer().emitELFSize(Sym, Expr);
     return false;
   }
 

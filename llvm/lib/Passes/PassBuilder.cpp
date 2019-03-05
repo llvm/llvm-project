@@ -406,7 +406,7 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // For PGO use pipeline, try to optimize memory intrinsics such as memcpy
   // using the size value profile. Don't perform this when optimizing for size.
-  if (PGOOpt && !PGOOpt->ProfileUseFile.empty() &&
+  if (PGOOpt && PGOOpt->Action == PGOOptions::IRUse &&
       !isOptimizingForSize(Level))
     FPM.addPass(PGOMemOPSizeOpt());
 
@@ -449,8 +449,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   // Do not enable unrolling in PreLinkThinLTO phase during sample PGO
   // because it changes IR to makes profile annotation in back compile
   // inaccurate.
-  if (Phase != ThinLTOPhase::PreLink ||
-      !PGOOpt || PGOOpt->SampleProfileFile.empty())
+  if (Phase != ThinLTOPhase::PreLink || !PGOOpt ||
+      PGOOpt->Action != PGOOptions::SampleUse)
     LPM2.addPass(LoopFullUnrollPass(Level));
 
   for (auto &C : LoopOptimizerEndEPCallbacks)
@@ -510,7 +510,8 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   invokePeepholeEPCallbacks(FPM, Level);
 
   if (EnableCHR && Level == O3 && PGOOpt &&
-      (!PGOOpt->ProfileUseFile.empty() || !PGOOpt->SampleProfileFile.empty()))
+      (PGOOpt->Action == PGOOptions::IRUse ||
+       PGOOpt->Action == PGOOptions::SampleUse))
     FPM.addPass(ControlHeightReductionPass());
 
   return FPM;
@@ -518,15 +519,15 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
 void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
                                     PassBuilder::OptimizationLevel Level,
-                                    bool RunProfileGen,
-                                    std::string ProfileGenFile,
-                                    std::string ProfileUseFile,
+                                    bool RunProfileGen, bool IsCS,
+                                    std::string ProfileFile,
                                     std::string ProfileRemappingFile) {
   // Generally running simplification passes and the inliner with an high
   // threshold results in smaller executables, but there may be cases where
   // the size grows, so let's be conservative here and skip this simplification
-  // at -Os/Oz.
-  if (!isOptimizingForSize(Level)) {
+  // at -Os/Oz. We will not do this  inline for context sensistive PGO (when
+  // IsCS is true).
+  if (!isOptimizingForSize(Level) && !IsCS) {
     InlineParams IP;
 
     // In the old pass manager, this is a cl::opt. Should still this be one?
@@ -559,7 +560,7 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
   MPM.addPass(GlobalDCEPass());
 
   if (RunProfileGen) {
-    MPM.addPass(PGOInstrumentationGen());
+    MPM.addPass(PGOInstrumentationGen(IsCS));
 
     FunctionPassManager FPM;
     FPM.addPass(
@@ -568,15 +569,13 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM, bool DebugLogging,
 
     // Add the profile lowering pass.
     InstrProfOptions Options;
-    if (!ProfileGenFile.empty())
-      Options.InstrProfileOutput = ProfileGenFile;
+    if (!ProfileFile.empty())
+      Options.InstrProfileOutput = ProfileFile;
     Options.DoCounterPromotion = true;
-    Options.UseBFIInPromotion = false;
-    MPM.addPass(InstrProfiling(Options, false));
-  }
-
-  if (!ProfileUseFile.empty())
-    MPM.addPass(PGOInstrumentationUse(ProfileUseFile, ProfileRemappingFile));
+    Options.UseBFIInPromotion = IsCS;
+    MPM.addPass(InstrProfiling(Options, IsCS));
+  } else if (!ProfileFile.empty())
+    MPM.addPass(PGOInstrumentationUse(ProfileFile, ProfileRemappingFile, IsCS));
 }
 
 static InlineParams
@@ -593,7 +592,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                                bool DebugLogging) {
   ModulePassManager MPM(DebugLogging);
 
-  bool HasSampleProfile = PGOOpt && !PGOOpt->SampleProfileFile.empty();
+  bool HasSampleProfile = PGOOpt && (PGOOpt->Action == PGOOptions::SampleUse);
 
   // In ThinLTO mode, when flattened profile is used, all the available
   // profile information will be annotated in PreLink phase so there is
@@ -646,7 +645,7 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   if (LoadSampleProfile) {
     // Annotate sample profile right after early FPM to ensure freshness of
     // the debug info.
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile,
+    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
                                         Phase == ThinLTOPhase::PreLink));
     // Do not invoke ICP in the ThinLTOPrelink phase as it makes it hard
@@ -695,12 +694,17 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 
   // Add all the requested passes for instrumentation PGO, if requested.
   if (PGOOpt && Phase != ThinLTOPhase::PostLink &&
-      (!PGOOpt->ProfileGenFile.empty() || !PGOOpt->ProfileUseFile.empty())) {
-    addPGOInstrPasses(MPM, DebugLogging, Level, PGOOpt->RunProfileGen,
-                      PGOOpt->ProfileGenFile, PGOOpt->ProfileUseFile,
+      (PGOOpt->Action == PGOOptions::IRInstr ||
+       PGOOpt->Action == PGOOptions::IRUse)) {
+    addPGOInstrPasses(MPM, DebugLogging, Level,
+                      /* RunProfileGen */ PGOOpt->Action == PGOOptions::IRInstr,
+                      /* IsCS */ false, PGOOpt->ProfileFile,
                       PGOOpt->ProfileRemappingFile);
     MPM.addPass(PGOIndirectCallPromotion(false, false));
   }
+  if (PGOOpt && Phase != ThinLTOPhase::PostLink &&
+      PGOOpt->CSAction == PGOOptions::CSIRInstr)
+    MPM.addPass(PGOInstrumentationGenCreateVar(PGOOpt->CSProfileGenFile));
 
   // Synthesize function entry counts for non-PGO compilation.
   if (EnableSyntheticCounts && !PGOOpt)
@@ -731,8 +735,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // For PreLinkThinLTO pass, we disable hot-caller heuristic for sample PGO
   // because it makes profile annotation in the backend inaccurate.
   InlineParams IP = getInlineParamsFromOptLevel(Level);
-  if (Phase == ThinLTOPhase::PreLink &&
-      PGOOpt && !PGOOpt->SampleProfileFile.empty())
+  if (Phase == ThinLTOPhase::PreLink && PGOOpt &&
+      PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
   MainCGPipeline.addPass(InlinerPass(IP));
 
@@ -794,6 +798,21 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // attributes where applicable.
   // FIXME: Is this really an optimization rather than a canonicalization?
   MPM.addPass(ReversePostOrderFunctionAttrsPass());
+
+  // Do a post inline PGO instrumentation and use pass. This is a context
+  // sensitive PGO pass. We don't want to do this in LTOPreLink phrase as
+  // cross-module inline has not been done yet. The context sensitive
+  // instrumentation is after all the inlines are done.
+  if (!LTOPreLink && PGOOpt) {
+    if (PGOOpt->CSAction == PGOOptions::CSIRInstr)
+      addPGOInstrPasses(MPM, DebugLogging, Level, /* RunProfileGen */ true,
+                        /* IsCS */ true, PGOOpt->CSProfileGenFile,
+                        PGOOpt->ProfileRemappingFile);
+    else if (PGOOpt->CSAction == PGOOptions::CSIRUse)
+      addPGOInstrPasses(MPM, DebugLogging, Level, /* RunProfileGen */ false,
+                        /* IsCS */ true, PGOOpt->ProfileFile,
+                        PGOOpt->ProfileRemappingFile);
+  }
 
   // Re-require GloblasAA here prior to function passes. This is particularly
   // useful as the above will have inlined, DCE'ed, and function-attr
@@ -1031,7 +1050,7 @@ PassBuilder::buildLTOPreLinkDefaultPipeline(OptimizationLevel Level,
   assert(Level != O0 && "Must request optimizations for the default pipeline!");
   // FIXME: We should use a customized pre-link pipeline!
   return buildPerModuleDefaultPipeline(Level, DebugLogging,
-                                       /*LTOPreLink=*/true);
+                                       /* LTOPreLink */true);
 }
 
 ModulePassManager
@@ -1040,9 +1059,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   assert(Level != O0 && "Must request optimizations for the default pipeline!");
   ModulePassManager MPM(DebugLogging);
 
-  if (PGOOpt && !PGOOpt->SampleProfileFile.empty()) {
+  if (PGOOpt && PGOOpt->Action == PGOOptions::SampleUse) {
     // Load sample profile before running the LTO optimization pipeline.
-    MPM.addPass(SampleProfileLoaderPass(PGOOpt->SampleProfileFile,
+    MPM.addPass(SampleProfileLoaderPass(PGOOpt->ProfileFile,
                                         PGOOpt->ProfileRemappingFile,
                                         false /* ThinLTOPhase::PreLink */));
   }
@@ -1068,7 +1087,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
     // This two-step promotion is to save the compile time. For LTO, it should
     // produce the same result as if we only do promotion here.
     MPM.addPass(PGOIndirectCallPromotion(
-        true /* InLTO */, PGOOpt && !PGOOpt->SampleProfileFile.empty()));
+        true /* InLTO */, PGOOpt && PGOOpt->Action == PGOOptions::SampleUse));
     // Propagate constants at call sites into the functions they call.  This
     // opens opportunities for globalopt (and inlining) by substituting function
     // pointers passed as arguments to direct uses of functions.
@@ -1149,6 +1168,19 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
   invokePeepholeEPCallbacks(FPM, Level);
 
   FPM.addPass(JumpThreadingPass());
+
+  // Do a post inline PGO instrumentation and use pass. This is a context
+  // sensitive PGO pass.
+  if (PGOOpt) {
+    if (PGOOpt->CSAction == PGOOptions::CSIRInstr)
+      addPGOInstrPasses(MPM, DebugLogging, Level, /* RunProfileGen */ true,
+                        /* IsCS */ true, PGOOpt->CSProfileGenFile,
+                        PGOOpt->ProfileRemappingFile);
+    else if (PGOOpt->CSAction == PGOOptions::CSIRUse)
+      addPGOInstrPasses(MPM, DebugLogging, Level, /* RunProfileGen */ false,
+                        /* IsCS */ true, PGOOpt->ProfileFile,
+                        PGOOpt->ProfileRemappingFile);
+  }
 
   // Break up allocas
   FPM.addPass(SROA());

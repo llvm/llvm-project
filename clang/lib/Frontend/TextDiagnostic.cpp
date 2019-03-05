@@ -792,8 +792,6 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
       const FileEntry *FE = Loc.getFileEntry();
       if (FE && FE->isValid()) {
         emitFilename(FE->getName(), Loc.getManager());
-        if (FE->isInPCH())
-          OS << " (in PCH)";
         OS << ": ";
       }
     }

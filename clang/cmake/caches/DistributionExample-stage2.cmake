@@ -23,7 +23,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clang
   LTO
   clang-format
-  clang-headers
+  clang-resource-headers
   builtins
   runtimes
   ${LLVM_TOOLCHAIN_TOOLS}

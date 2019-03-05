@@ -67,7 +67,7 @@ private:
 
   // Helper to generate an equivalent of scalar_to_vector into a new register,
   // returned via 'Dst'.
-  MachineInstr *emitScalarToVector(const LLT DstTy,
+  MachineInstr *emitScalarToVector(unsigned EltSize,
                                    const TargetRegisterClass *DstRC,
                                    unsigned Scalar,
                                    MachineIRBuilder &MIRBuilder) const;
@@ -78,10 +78,13 @@ private:
   void collectShuffleMaskIndices(MachineInstr &I, MachineRegisterInfo &MRI,
                                  SmallVectorImpl<int> &Idxs) const;
   bool selectShuffleVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectExtractElt(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
   MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
                                          MachineIRBuilder &MIRBuilder) const;
+  MachineInstr *emitVectorConcat(unsigned Op1, unsigned Op2,
+                                 MachineIRBuilder &MIRBuilder) const;
 
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
 
@@ -1707,13 +1710,15 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return selectUnmergeValues(I, MRI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return selectShuffleVector(I, MRI);
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    return selectExtractElt(I, MRI);
   }
 
   return false;
 }
 
 MachineInstr *AArch64InstructionSelector::emitScalarToVector(
-    const LLT DstTy, const TargetRegisterClass *DstRC, unsigned Scalar,
+    unsigned EltSize, const TargetRegisterClass *DstRC, unsigned Scalar,
     MachineIRBuilder &MIRBuilder) const {
   auto Undef = MIRBuilder.buildInstr(TargetOpcode::IMPLICIT_DEF, {DstRC}, {});
 
@@ -1727,7 +1732,7 @@ MachineInstr *AArch64InstructionSelector::emitScalarToVector(
     return &*Ins;
   };
 
-  switch (DstTy.getElementType().getSizeInBits()) {
+  switch (EltSize) {
   case 16:
     return BuildFn(AArch64::hsub);
   case 32:
@@ -1785,6 +1790,127 @@ bool AArch64InstructionSelector::selectMergeValues(
   return true;
 }
 
+static bool getLaneCopyOpcode(unsigned &CopyOpc, unsigned &ExtractSubReg,
+                              const unsigned EltSize) {
+  // Choose a lane copy opcode and subregister based off of the size of the
+  // vector's elements.
+  switch (EltSize) {
+  case 16:
+    CopyOpc = AArch64::CPYi16;
+    ExtractSubReg = AArch64::hsub;
+    break;
+  case 32:
+    CopyOpc = AArch64::CPYi32;
+    ExtractSubReg = AArch64::ssub;
+    break;
+  case 64:
+    CopyOpc = AArch64::CPYi64;
+    ExtractSubReg = AArch64::dsub;
+    break;
+  default:
+    // Unknown size, bail out.
+    LLVM_DEBUG(dbgs() << "Elt size '" << EltSize << "' unsupported.\n");
+    return false;
+  }
+  return true;
+}
+
+bool AArch64InstructionSelector::selectExtractElt(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT &&
+         "unexpected opcode!");
+  unsigned DstReg = I.getOperand(0).getReg();
+  const LLT NarrowTy = MRI.getType(DstReg);
+  const unsigned SrcReg = I.getOperand(1).getReg();
+  const LLT WideTy = MRI.getType(SrcReg);
+
+  assert(WideTy.getSizeInBits() >= NarrowTy.getSizeInBits() &&
+         "source register size too small!");
+  assert(NarrowTy.isScalar() && "cannot extract vector into vector!");
+
+  // Need the lane index to determine the correct copy opcode.
+  MachineOperand &LaneIdxOp = I.getOperand(2);
+  assert(LaneIdxOp.isReg() && "Lane index operand was not a register?");
+
+  if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
+    LLVM_DEBUG(dbgs() << "Cannot extract into GPR.\n");
+    return false;
+  }
+
+  // Find the instruction that defines the constant to extract from. There could
+  // be any number of copies between the instruction and the definition of the
+  // index. Skip them.
+  MachineInstr *LaneDefInst = nullptr;
+  for (LaneDefInst = MRI.getVRegDef(LaneIdxOp.getReg());
+       LaneDefInst && LaneDefInst->isCopy();
+       LaneDefInst = MRI.getVRegDef(LaneDefInst->getOperand(1).getReg())) {
+  }
+
+  // Did we find a def in the first place? If not, bail.
+  if (!LaneDefInst) {
+    LLVM_DEBUG(dbgs() << "Did not find VReg definition for " << LaneIdxOp
+                      << "\n");
+    return false;
+  }
+
+  // TODO: Handle extracts that don't use G_CONSTANT.
+  if (LaneDefInst->getOpcode() != TargetOpcode::G_CONSTANT) {
+    LLVM_DEBUG(dbgs() << "VRegs defined by anything other than G_CONSTANT "
+                         "currently unsupported.\n");
+    return false;
+  }
+
+  unsigned LaneIdx = LaneDefInst->getOperand(1).getCImm()->getLimitedValue();
+  unsigned CopyOpc = 0;
+  unsigned ExtractSubReg = 0;
+  if (!getLaneCopyOpcode(CopyOpc, ExtractSubReg, NarrowTy.getSizeInBits())) {
+    LLVM_DEBUG(
+        dbgs() << "Couldn't determine lane copy opcode for instruction.\n");
+    return false;
+  }
+
+  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+  const TargetRegisterClass *DstRC =
+      getRegClassForTypeOnBank(NarrowTy, DstRB, RBI, true);
+  if (!DstRC) {
+    LLVM_DEBUG(dbgs() << "Could not determine destination register class.\n");
+    return false;
+  }
+
+  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+  const TargetRegisterClass *SrcRC =
+      getRegClassForTypeOnBank(WideTy, SrcRB, RBI, true);
+  if (!SrcRC) {
+    LLVM_DEBUG(dbgs() << "Could not determine source register class.\n");
+    return false;
+  }
+
+  // The register that we're going to copy into.
+  unsigned InsertReg = SrcReg;
+  MachineIRBuilder MIRBuilder(I);
+
+  // Lane copies require 128-bit wide registers. If we're dealing with an
+  // unpacked vector, then we need to move up to that width. Insert an implicit
+  // def and a subregister insert to get us there.
+  if (WideTy.getSizeInBits() != 128) {
+    MachineInstr *ScalarToVector = emitScalarToVector(
+        WideTy.getSizeInBits(), &AArch64::FPR128RegClass, SrcReg, MIRBuilder);
+    if (!ScalarToVector)
+      return false;
+    InsertReg = ScalarToVector->getOperand(0).getReg();
+  }
+
+  MachineInstr *LaneCopyMI =
+      MIRBuilder.buildInstr(CopyOpc, {DstReg}, {InsertReg}).addImm(LaneIdx);
+  constrainSelectedInstRegOperands(*LaneCopyMI, TII, TRI, RBI);
+
+  // Make sure that we actually constrain the initial copy.
+  RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
+
+  I.eraseFromParent();
+  return true;
+}
+
 bool AArch64InstructionSelector::selectUnmergeValues(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
@@ -1821,24 +1947,8 @@ bool AArch64InstructionSelector::selectUnmergeValues(
   // vector's elements.
   unsigned CopyOpc = 0;
   unsigned ExtractSubReg = 0;
-  switch (NarrowTy.getSizeInBits()) {
-  case 16:
-    CopyOpc = AArch64::CPYi16;
-    ExtractSubReg = AArch64::hsub;
-    break;
-  case 32:
-    CopyOpc = AArch64::CPYi32;
-    ExtractSubReg = AArch64::ssub;
-    break;
-  case 64:
-    CopyOpc = AArch64::CPYi64;
-    ExtractSubReg = AArch64::dsub;
-    break;
-  default:
-    // Unknown size, bail out.
-    LLVM_DEBUG(dbgs() << "NarrowTy had unsupported size.\n");
+  if (!getLaneCopyOpcode(CopyOpc, ExtractSubReg, NarrowTy.getSizeInBits()))
     return false;
-  }
 
   // Set up for the lane copies.
   MachineBasicBlock &MBB = *I.getParent();
@@ -1957,13 +2067,123 @@ MachineInstr *AArch64InstructionSelector::emitLoadFromConstantPool(
   auto Adrp =
       MIRBuilder.buildInstr(AArch64::ADRP, {&AArch64::GPR64RegClass}, {})
           .addConstantPoolIndex(CPIdx, 0, AArch64II::MO_PAGE);
-  auto Load =
-      MIRBuilder.buildInstr(AArch64::LDRQui, {&AArch64::FPR128RegClass}, {Adrp})
-          .addConstantPoolIndex(CPIdx, 0,
-                                AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+
+  MachineInstr *LoadMI = nullptr;
+  switch (MIRBuilder.getDataLayout().getTypeStoreSize(CPVal->getType())) {
+  case 16:
+    LoadMI =
+        &*MIRBuilder
+              .buildInstr(AArch64::LDRQui, {&AArch64::FPR128RegClass}, {Adrp})
+              .addConstantPoolIndex(CPIdx, 0,
+                                    AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+    break;
+  case 8:
+    LoadMI = &*MIRBuilder
+                 .buildInstr(AArch64::LDRDui, {&AArch64::FPR64RegClass}, {Adrp})
+                 .addConstantPoolIndex(
+                     CPIdx, 0, AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
+    break;
+  default:
+    LLVM_DEBUG(dbgs() << "Could not load from constant pool of type "
+                      << *CPVal->getType());
+    return nullptr;
+  }
   constrainSelectedInstRegOperands(*Adrp, TII, TRI, RBI);
-  constrainSelectedInstRegOperands(*Load, TII, TRI, RBI);
-  return &*Load;
+  constrainSelectedInstRegOperands(*LoadMI, TII, TRI, RBI);
+  return LoadMI;
+}
+
+/// Return an <Opcode, SubregIndex> pair to do an vector elt insert of a given
+/// size and RB.
+static std::pair<unsigned, unsigned>
+getInsertVecEltOpInfo(const RegisterBank &RB, unsigned EltSize) {
+  unsigned Opc, SubregIdx;
+  if (RB.getID() == AArch64::GPRRegBankID) {
+    if (EltSize == 32) {
+      Opc = AArch64::INSvi32gpr;
+      SubregIdx = AArch64::ssub;
+    } else if (EltSize == 64) {
+      Opc = AArch64::INSvi64gpr;
+      SubregIdx = AArch64::dsub;
+    } else {
+      llvm_unreachable("invalid elt size!");
+    }
+  } else {
+    if (EltSize == 8) {
+      Opc = AArch64::INSvi8lane;
+      SubregIdx = AArch64::bsub;
+    } else if (EltSize == 16) {
+      Opc = AArch64::INSvi16lane;
+      SubregIdx = AArch64::hsub;
+    } else if (EltSize == 32) {
+      Opc = AArch64::INSvi32lane;
+      SubregIdx = AArch64::ssub;
+    } else if (EltSize == 64) {
+      Opc = AArch64::INSvi64lane;
+      SubregIdx = AArch64::dsub;
+    } else {
+      llvm_unreachable("invalid elt size!");
+    }
+  }
+  return std::make_pair(Opc, SubregIdx);
+}
+
+MachineInstr *AArch64InstructionSelector::emitVectorConcat(
+    unsigned Op1, unsigned Op2, MachineIRBuilder &MIRBuilder) const {
+  // We implement a vector concat by:
+  // 1. Use scalar_to_vector to insert the lower vector into the larger dest
+  // 2. Insert the upper vector into the destination's upper element
+  // TODO: some of this code is common with G_BUILD_VECTOR handling.
+  MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
+
+  const LLT Op1Ty = MRI.getType(Op1);
+  const LLT Op2Ty = MRI.getType(Op2);
+
+  if (Op1Ty != Op2Ty) {
+    LLVM_DEBUG(dbgs() << "Could not do vector concat of differing vector tys");
+    return nullptr;
+  }
+  assert(Op1Ty.isVector() && "Expected a vector for vector concat");
+
+  if (Op1Ty.getSizeInBits() >= 128) {
+    LLVM_DEBUG(dbgs() << "Vector concat not supported for full size vectors");
+    return nullptr;
+  }
+
+  // At the moment we just support 64 bit vector concats.
+  if (Op1Ty.getSizeInBits() != 64) {
+    LLVM_DEBUG(dbgs() << "Vector concat supported for 64b vectors");
+    return nullptr;
+  }
+
+  const LLT ScalarTy = LLT::scalar(Op1Ty.getSizeInBits());
+  const RegisterBank &FPRBank = *RBI.getRegBank(Op1, MRI, TRI);
+  const TargetRegisterClass *DstRC =
+      getMinClassForRegBank(FPRBank, Op1Ty.getSizeInBits() * 2);
+
+  MachineInstr *WidenedOp1 =
+      emitScalarToVector(ScalarTy.getSizeInBits(), DstRC, Op1, MIRBuilder);
+  MachineInstr *WidenedOp2 =
+      emitScalarToVector(ScalarTy.getSizeInBits(), DstRC, Op2, MIRBuilder);
+  if (!WidenedOp1 || !WidenedOp2) {
+    LLVM_DEBUG(dbgs() << "Could not emit a vector from scalar value");
+    return nullptr;
+  }
+
+  // Now do the insert of the upper element.
+  unsigned InsertOpc, InsSubRegIdx;
+  std::tie(InsertOpc, InsSubRegIdx) =
+      getInsertVecEltOpInfo(FPRBank, ScalarTy.getSizeInBits());
+
+  auto InsElt =
+      MIRBuilder
+          .buildInstr(InsertOpc, {DstRC}, {WidenedOp1->getOperand(0).getReg()})
+          .addImm(1) /* Lane index */
+          .addUse(WidenedOp2->getOperand(0).getReg())
+          .addImm(0);
+
+  constrainSelectedInstRegOperands(*InsElt, TII, TRI, RBI);
+  return &*InsElt;
 }
 
 bool AArch64InstructionSelector::selectShuffleVector(
@@ -2003,19 +2223,41 @@ bool AArch64InstructionSelector::selectShuffleVector(
     }
   }
 
-  if (DstTy.getSizeInBits() != 128) {
-    assert(DstTy.getSizeInBits() == 64 && "Unexpected shuffle result ty");
-    // This case can be done with TBL1.
-    return false;
-  }
+  MachineIRBuilder MIRBuilder(I);
 
   // Use a constant pool to load the index vector for TBL.
   Constant *CPVal = ConstantVector::get(CstIdxs);
-  MachineIRBuilder MIRBuilder(I);
   MachineInstr *IndexLoad = emitLoadFromConstantPool(CPVal, MIRBuilder);
   if (!IndexLoad) {
     LLVM_DEBUG(dbgs() << "Could not load from a constant pool");
     return false;
+  }
+
+  if (DstTy.getSizeInBits() != 128) {
+    assert(DstTy.getSizeInBits() == 64 && "Unexpected shuffle result ty");
+    // This case can be done with TBL1.
+    MachineInstr *Concat = emitVectorConcat(Src1Reg, Src2Reg, MIRBuilder);
+    if (!Concat) {
+      LLVM_DEBUG(dbgs() << "Could not do vector concat for tbl1");
+      return false;
+    }
+
+    // The constant pool load will be 64 bits, so need to convert to FPR128 reg.
+    IndexLoad =
+        emitScalarToVector(64, &AArch64::FPR128RegClass,
+                           IndexLoad->getOperand(0).getReg(), MIRBuilder);
+
+    auto TBL1 = MIRBuilder.buildInstr(
+        AArch64::TBLv16i8One, {&AArch64::FPR128RegClass},
+        {Concat->getOperand(0).getReg(), IndexLoad->getOperand(0).getReg()});
+    constrainSelectedInstRegOperands(*TBL1, TII, TRI, RBI);
+
+    auto Copy = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                        TII.get(TargetOpcode::COPY), I.getOperand(0).getReg())
+                    .addUse(TBL1->getOperand(0).getReg(), 0, AArch64::dsub);
+    RBI.constrainGenericRegister(Copy.getReg(0), AArch64::FPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
   }
 
   // For TBL2 we need to emit a REG_SEQUENCE to tie together two consecutive
@@ -2049,32 +2291,15 @@ bool AArch64InstructionSelector::selectBuildVector(
   const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
   unsigned Opc;
   unsigned SubregIdx;
-  if (RB.getID() == AArch64::GPRRegBankID) {
-    if (EltSize == 32) {
-      Opc = AArch64::INSvi32gpr;
-      SubregIdx = AArch64::ssub;
-    } else {
-      Opc = AArch64::INSvi64gpr;
-      SubregIdx = AArch64::dsub;
-    }
-  } else {
-    if (EltSize == 16) {
-      Opc = AArch64::INSvi16lane;
-      SubregIdx = AArch64::hsub;
-    } else if (EltSize == 32) {
-      Opc = AArch64::INSvi32lane;
-      SubregIdx = AArch64::ssub;
-    } else {
-      Opc = AArch64::INSvi64lane;
-      SubregIdx = AArch64::dsub;
-    }
-  }
+
+  std::tie(Opc, SubregIdx) = getInsertVecEltOpInfo(RB, EltSize);
 
   MachineIRBuilder MIRBuilder(I);
 
   const TargetRegisterClass *DstRC = &AArch64::FPR128RegClass;
   MachineInstr *ScalarToVec =
-      emitScalarToVector(DstTy, DstRC, I.getOperand(1).getReg(), MIRBuilder);
+      emitScalarToVector(DstTy.getElementType().getSizeInBits(), DstRC,
+                         I.getOperand(1).getReg(), MIRBuilder);
   if (!ScalarToVec)
     return false;
 

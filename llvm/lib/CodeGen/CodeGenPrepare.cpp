@@ -1203,6 +1203,11 @@ static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
   // Add = add A, 1; Cmp = icmp eq A,-1 (overflow if A is max val)
   // Add = add A,-1; Cmp = icmp ne A, 0 (overflow if A is non-zero)
   Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+
+  // We are not expecting non-canonical/degenerate code. Just bail out.
+  if (isa<Constant>(A))
+    return false;
+
   ICmpInst::Predicate Pred = Cmp->getPredicate();
   if (Pred == ICmpInst::ICMP_EQ && match(B, m_AllOnes()))
     B = ConstantInt::get(B->getType(), 1);

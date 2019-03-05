@@ -689,6 +689,14 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    // Destination and source need to be FPRs.
+    OpRegBankIdx[0] = PMI_FirstFPR;
+    OpRegBankIdx[1] = PMI_FirstFPR;
+
+    // Index needs to be a GPR.
+    OpRegBankIdx[2] = PMI_FirstGPR;
+    break;
 
   case TargetOpcode::G_BUILD_VECTOR:
     // If the first source operand belongs to a FPR register bank, then make

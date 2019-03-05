@@ -21,6 +21,7 @@ class TestCPPExceptionBreakpoint (TestBase):
 
     @add_test_categories(['pyapi'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24538")
+    @expectedFailureNetBSD
     def test_cpp_exception_breakpoint(self):
         """Test setting and hitting the C++ exception breakpoint."""
         self.build()

@@ -154,8 +154,15 @@ static void runNewPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
                            const ModuleSummaryIndex *ImportSummary) {
   Optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
-    PGOOpt = PGOOptions("", "", Conf.SampleProfile, Conf.ProfileRemapping,
-                        false, true);
+    PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
+                        PGOOptions::SampleUse, PGOOptions::NoCSAction, true);
+  else if (Conf.RunCSIRInstr) {
+    PGOOpt = PGOOptions("", Conf.CSIRProfile, Conf.ProfileRemapping,
+                        PGOOptions::IRUse, PGOOptions::CSIRInstr);
+  } else if (!Conf.CSIRProfile.empty()) {
+    PGOOpt = PGOOptions(Conf.CSIRProfile, "", Conf.ProfileRemapping,
+                        PGOOptions::IRUse, PGOOptions::CSIRUse);
+  }
 
   PassBuilder PB(TM, PGOOpt);
   AAManager AA;
@@ -273,6 +280,11 @@ static void runOldPMPasses(Config &Conf, Module &Mod, TargetMachine *TM,
   PMB.SLPVectorize = true;
   PMB.OptLevel = Conf.OptLevel;
   PMB.PGOSampleUse = Conf.SampleProfile;
+  PMB.EnablePGOCSInstrGen = Conf.RunCSIRInstr;
+  if (!Conf.RunCSIRInstr && !Conf.CSIRProfile.empty()) {
+    PMB.EnablePGOCSInstrUse = true;
+    PMB.PGOInstrUse = Conf.CSIRProfile;
+  }
   if (IsThinLTO)
     PMB.populateThinLTOPassManager(passes);
   else

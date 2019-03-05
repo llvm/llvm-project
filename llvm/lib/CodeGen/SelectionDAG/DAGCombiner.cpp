@@ -10206,14 +10206,17 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
     return DAG.getUNDEF(VT);
 
   // If the input is a BUILD_VECTOR with all constant elements, fold this now.
-  // Only do this before legalize types, since we might create an illegal
-  // scalar type. Even if we knew we wouldn't create an illegal scalar type
-  // we can only do this before legalize ops, since the target maybe
-  // depending on the bitcast.
+  // Only do this before legalize types, unless both types are integer and the
+  // scalar type is legal. Only do this before legalize ops, since the target
+  // maybe depending on the bitcast.
   // First check to see if this is all constant.
-  if (!LegalTypes &&
+  // TODO: Support FP bitcasts after legalize types.
+  if (VT.isVector() &&
+      (!LegalTypes ||
+       (!LegalOperations && VT.isInteger() && N0.getValueType().isInteger() &&
+        TLI.isTypeLegal(VT.getVectorElementType()))) &&
       N0.getOpcode() == ISD::BUILD_VECTOR && N0.getNode()->hasOneUse() &&
-      VT.isVector() && cast<BuildVectorSDNode>(N0)->isConstant())
+      cast<BuildVectorSDNode>(N0)->isConstant())
     return ConstantFoldBITCASTofBUILD_VECTOR(N0.getNode(),
                                              VT.getVectorElementType());
 

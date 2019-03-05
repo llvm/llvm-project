@@ -8229,9 +8229,10 @@ SourceLocation ASTImporter::Import(SourceLocation FromLoc) {
     return {};
 
   SourceManager &FromSM = FromContext.getSourceManager();
+  bool IsBuiltin = FromSM.isWrittenInBuiltinFile(FromLoc);
 
   std::pair<FileID, unsigned> Decomposed = FromSM.getDecomposedLoc(FromLoc);
-  FileID ToFileID = Import(Decomposed.first);
+  FileID ToFileID = Import(Decomposed.first, IsBuiltin);
   if (ToFileID.isInvalid())
     return {};
   SourceManager &ToSM = ToContext.getSourceManager();
@@ -8246,13 +8247,13 @@ SourceRange ASTImporter::Import(SourceRange FromRange) {
   return SourceRange(Import(FromRange.getBegin()), Import(FromRange.getEnd()));
 }
 
-Expected<FileID> ASTImporter::Import_New(FileID FromID) {
-  FileID ToID = Import(FromID);
+Expected<FileID> ASTImporter::Import_New(FileID FromID, bool IsBuiltin) {
+  FileID ToID = Import(FromID, IsBuiltin);
   if (ToID.isInvalid() && FromID.isValid())
     return llvm::make_error<ImportError>();
   return ToID;
 }
-FileID ASTImporter::Import(FileID FromID) {
+FileID ASTImporter::Import(FileID FromID, bool IsBuiltin) {
   llvm::DenseMap<FileID, FileID>::iterator Pos = ImportedFileIDs.find(FromID);
   if (Pos != ImportedFileIDs.end())
     return Pos->second;
@@ -8278,25 +8279,29 @@ FileID ASTImporter::Import(FileID FromID) {
     }
     ToID = ToSM.getFileID(MLoc);
   } else {
-    // Include location of this file.
-    SourceLocation ToIncludeLoc = Import(FromSLoc.getFile().getIncludeLoc());
-
     const SrcMgr::ContentCache *Cache = FromSLoc.getFile().getContentCache();
-    if (Cache->OrigEntry && Cache->OrigEntry->getDir()) {
-      // FIXME: We probably want to use getVirtualFile(), so we don't hit the
-      // disk again
-      // FIXME: We definitely want to re-use the existing MemoryBuffer, rather
-      // than mmap the files several times.
-      const FileEntry *Entry =
-          ToFileManager.getFile(Cache->OrigEntry->getName());
-      // FIXME: The filename may be a virtual name that does probably not
-      // point to a valid file and we get no Entry here. In this case try with
-      // the memory buffer below.
-      if (Entry)
-        ToID = ToSM.createFileID(Entry, ToIncludeLoc,
-                                 FromSLoc.getFile().getFileCharacteristic());
+
+    if (!IsBuiltin) {
+      // Include location of this file.
+      SourceLocation ToIncludeLoc = Import(FromSLoc.getFile().getIncludeLoc());
+
+      if (Cache->OrigEntry && Cache->OrigEntry->getDir()) {
+        // FIXME: We probably want to use getVirtualFile(), so we don't hit the
+        // disk again
+        // FIXME: We definitely want to re-use the existing MemoryBuffer, rather
+        // than mmap the files several times.
+        const FileEntry *Entry =
+            ToFileManager.getFile(Cache->OrigEntry->getName());
+        // FIXME: The filename may be a virtual name that does probably not
+        // point to a valid file and we get no Entry here. In this case try with
+        // the memory buffer below.
+        if (Entry)
+          ToID = ToSM.createFileID(Entry, ToIncludeLoc,
+                                   FromSLoc.getFile().getFileCharacteristic());
+      }
     }
-    if (ToID.isInvalid()) {
+
+    if (ToID.isInvalid() || IsBuiltin) {
       // FIXME: We want to re-use the existing MemoryBuffer!
       bool Invalid = true;
       const llvm::MemoryBuffer *FromBuf = Cache->getBuffer(

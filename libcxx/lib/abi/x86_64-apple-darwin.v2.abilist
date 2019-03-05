@@ -602,7 +602,7 @@
 {'is_defined': True, 'name': '__ZNSt3__210to_wstringEx', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__210to_wstringEy', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__211__call_onceERVmPvPFvS2_E', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__211__libcpp_db10__insert_cEPv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__211__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__211__libcpp_db10__insert_iEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__211__libcpp_db11__insert_icEPvPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__211__libcpp_db15__iterator_copyEPvPKv', 'type': 'FUNC'}
