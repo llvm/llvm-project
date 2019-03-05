@@ -702,21 +702,10 @@ void SwiftLanguageRuntime::GetGenericParameterNamesForFunction(
   SymbolContext &sc = const_cast<SymbolContext &>(const_sc);
 
   // While building the Symtab itself the symbol context is incomplete.
-  if (!sc.function && sc.module_sp && sc.symbol) {
-    SymbolContextList sc_list;
-    bool symbols_okay = false;
-    bool inlines_okay = false;
-    bool append = false;
-    size_t num_matches = sc.module_sp->FindFunctions(
-        sc.symbol->GetMangled().GetMangledName(), nullptr,
-        lldb::eFunctionNameTypeBase, inlines_okay, symbols_okay, append,
-        sc_list);
-    for (size_t idx = 0; idx < num_matches; idx++) {
-      sc_list.GetContextAtIndex(idx, sc);
-      if (sc.function)
-        break;
-    }
-  }
+  // Note that calling sc.module_sp->FindFunctions() here is too early and
+  // would mess up the loading process.
+  if (!sc.function && sc.module_sp && sc.symbol)
+    return;
 
   Block *block = sc.GetFunctionBlock();
   if (!block)

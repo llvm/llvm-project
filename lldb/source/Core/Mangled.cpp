@@ -443,6 +443,9 @@ Mangled::GetDemangledName(lldb::LanguageType language,
         log->Printf("demangle swift: %s", mangled_name);
       std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
           mangled_name, false, sc));
+      // Don't cache the demangled name the function isn't available yet.
+      if (!sc || !sc->function)
+        return ConstString(demangled);
       if (!demangled.empty()) {
         m_demangled.SetStringWithMangledCounterpart(demangled,
 						    m_mangled);
