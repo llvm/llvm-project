@@ -1,4 +1,6 @@
-# REQUIRES: darwin
+# REQUIRES: system-darwin
+# REQUIRES: rdar48587659
+
 # This tests debugging without the presence of a .swiftmodule.
 
 # RUN: rm -rf %t && mkdir %t && cd %t

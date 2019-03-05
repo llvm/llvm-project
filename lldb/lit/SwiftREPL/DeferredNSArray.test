@@ -1,5 +1,5 @@
 // Test that NSDeferredArray data formatter works.
-// REQUIRES: darwin
+// REQUIRES: system-darwin
 
 // RUN: %lldb --repl < %s | FileCheck %s
 
