@@ -19,8 +19,9 @@ REDEF NO SPC  // CHECK-LABEL: REDEF
 
 ; Numeric variable definition with explicit matching format.
 DEF FMT  // CHECK-LABEL: DEF FMT
-c  // CHECK-NEXT: {{^}}[[#%x,LHEX:]]
-D  // CHECK-NEXT: {{^}}[[#%X,UHEX:]]
+c    // CHECK-NEXT: {{^}}[[#%x,LHEX:]]
+D    // CHECK-NEXT: {{^}}[[#%X,UHEX:]]
+-30  // CHECK-NEXT: {{^}}[[#%d,SIGN:]]
 
 ; Numeric variable definition with explicit matching format with different
 ; spacing.
@@ -64,6 +65,10 @@ E   // CHECK-NEXT: {{^}}[[#%X,UHEX+1]]
 C   // CHECK-NEXT: {{^}}[[#%X,UHEX-1]]
 1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xe]]
 1B  // CHECK-NEXT: {{^}}[[#%X,UHEX+0xE]]
+-30 // CHECK-NEXT: {{^}}[[#%d,SIGN]]
+-29 // CHECK-NEXT: {{^}}[[#%d,SIGN+1]]
+-31 // CHECK-NEXT: {{^}}[[#%d,SIGN-1]]
+42  // CHECK-NEXT: {{^}}[[#%d,SIGN+72]]
 11  // CHECK-NEXT: {{^}}[[#%u,UNSIa]]
 11  // CHECK-NEXT: {{^}}[[#%u,UNSIb]]
 11  // CHECK-NEXT: {{^}}[[#%u,UNSIc]]
@@ -104,6 +109,9 @@ E   // CHECK-NEXT: {{^}}[[#UHEX+1]]
 C   // CHECK-NEXT: {{^}}[[#UHEX-1]]
 1B  // CHECK-NEXT: {{^}}[[#UHEX+0xe]]
 1B  // CHECK-NEXT: {{^}}[[#UHEX+0xE]]
+-30 // CHECK-NEXT: {{^}}[[#SIGN]]
+-29 // CHECK-NEXT: {{^}}[[#SIGN+1]]
+-31 // CHECK-NEXT: {{^}}[[#SIGN-1]]
 
 ; Numeric expressions using variables defined on other lines and an immediate
 ; interpreted as an unsigned value.
@@ -118,10 +126,16 @@ CHECK-NEXT: [[#UNSI+0x8000000000000000]]
 USE CONV FMT IMPL MATCH  // CHECK-LABEL: USE CONV FMT IMPL MATCH
 b   // CHECK-NEXT: {{^}}[[# %x, UNSI]]
 B   // CHECK-NEXT: {{^}}[[# %X, UNSI]]
+-1  // CHECK-NEXT: {{^}}[[# %d, UNSI-12]]
 12  // CHECK-NEXT: {{^}}[[# %u, LHEX]]
 C   // CHECK-NEXT: {{^}}[[# %X, LHEX]]
+-2  // CHECK-NEXT: {{^}}[[# %d, LHEX-14]]
 13  // CHECK-NEXT: {{^}}[[# %u, UHEX]]
 d   // CHECK-NEXT: {{^}}[[# %x, UHEX]]
+-5  // CHECK-NEXT: {{^}}[[# %d, UHEX-18]]
+15  // CHECK-NEXT: {{^}}[[# %u, SIGN+45]]
+f   // CHECK-NEXT: {{^}}[[# %x, SIGN+45]]
+F   // CHECK-NEXT: {{^}}[[# %X, SIGN+45]]
 
 ; Conflicting implicit format.
 RUN: %ProtectFileCheckOutput \
@@ -329,3 +343,27 @@ REDEF-NEW-FMT-NEXT: [[#%X,UNSI:]]
 REDEF-NEW-FMT-MSG: numeric-expression.txt:[[#@LINE-1]]:31: error: format different from previous variable definition
 REDEF-NEW-FMT-MSG-NEXT: {{R}}EDEF-NEW-FMT-NEXT: {{\[\[#%X,UNSI:\]\]}}
 REDEF-NEW-FMT-MSG-NEXT:    {{^}}                              ^{{$}}
+
+; Numeric expression with overflow.
+RUN: not FileCheck --check-prefix OVERFLOW --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix OVERFLOW-MSG --strict-whitespace %s
+
+OVERFLOW
+BIGVAR=10000000000000000
+OVERFLOW-LABEL: OVERFLOW
+OVERFLOW-NEXT: BIGVAR: [[#BIGVAR:0x8000000000000000+0x8000000000000000]]
+OVERFLOW-MSG: numeric-expression.txt:[[#@LINE-1]]:27: error: unable to substitute variable or numeric expression
+OVERFLOW-MSG-NEXT: {{O}}VERFLOW-NEXT: BIGVAR: {{\[\[#BIGVAR:0x8000000000000000\+0x8000000000000000\]\]}}
+OVERFLOW-MSG-NEXT:    {{^}}                          ^{{$}}
+
+; Numeric expression with underflow.
+RUN: not FileCheck --check-prefix UNDERFLOW --input-file %s %s 2>&1 \
+RUN:   | FileCheck --check-prefix UNDERFLOW-MSG --strict-whitespace %s
+
+UNDERFLOW
+TINYVAR=-10000000000000000
+UNDERFLOW-LABEL: UNDERFLOW
+UNDERFLOW-NEXT: TINYVAR: [[#%d,TINYVAR:-0x8000000000000000-0x8000000000000000]]
+UNDERFLOW-MSG: numeric-expression.txt:[[#@LINE-1]]:29: error: unable to substitute variable or numeric expression
+UNDERFLOW-MSG-NEXT: {{U}}NDERFLOW-NEXT: TINYVAR: {{\[\[#%d,TINYVAR:-0x8000000000000000-0x8000000000000000\]\]}}
+UNDERFLOW-MSG-NEXT:    {{^}}                            ^{{$}}

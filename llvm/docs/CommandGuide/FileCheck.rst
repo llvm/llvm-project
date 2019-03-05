@@ -660,8 +660,8 @@ The syntax to define a numeric variable is ``[[#%<fmtspec>,<NUMVAR>:]]`` where:
 
 * ``%<fmtspec>`` is an optional scanf-style matching format specifier to
   indicate what number format to match (e.g. hex number).  Currently accepted
-  format specifiers are ``%u``, ``%x`` and ``%X``.  If absent, the format
-  specifier defaults to ``%u``.
+  format specifiers are ``%u``, ``%d``, ``%x`` and ``%X``.  If absent, the
+  format specifier defaults to ``%u``.
 
 * ``<NUMVAR>`` is the name of the numeric variable to define to the matching
   value.
@@ -692,10 +692,11 @@ The syntax of a numeric substitution is ``[[#%<fmtspec>,<expr>]]`` where:
   * an expression followed by an operator and a numeric operand.
 
   A numeric operand is a previously defined numeric variable, or an integer
-  literal. The supported operators are ``+`` and ``-``. Spaces are accepted
-  before, after and between any of these elements.
-  There is currently no support for operator precendence, but parentheses can
-  be used to change the evaluation order.
+  literal and have a 64-bit precision. The supported operators are ``+`` and
+  ``-``. Spaces are accepted before, after and between any of these elements.
+  Overflow and underflow are rejected. There is currently no support for
+  operator precendence, but parentheses can be used to change the evaluation
+  order.
 
 For example:
 
