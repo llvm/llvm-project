@@ -1,4 +1,4 @@
-//===-liboptremarks.cpp - LLVM Opt-Remarks Shared Library -----------------===//
+//===-libremarks.cpp - LLVM Remarks Shared Library ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Provide a library to work with optimization remarks.
+// Provide a library to work with remark diagnostics.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm-c/OptRemarks.h"
+#include "llvm-c/Remarks.h"
 
-extern uint32_t LLVMOptRemarkVersion(void) {
-  return OPT_REMARKS_API_VERSION;
+extern uint32_t LLVMRemarkVersion(void) {
+  return REMARKS_API_VERSION;
 }

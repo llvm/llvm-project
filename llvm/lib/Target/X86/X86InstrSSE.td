@@ -8290,7 +8290,7 @@ multiclass maskmov_lowering<string InstrStr, RegisterClass RC, ValueType VT,
     def: Pat<(VT (X86mload addr:$ptr, (MaskVT RC:$mask), undef)),
              (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)>;
     def: Pat<(VT (X86mload addr:$ptr, (MaskVT RC:$mask),
-                              (VT immAllZerosV))),
+                              (VT (bitconvert (ZeroVT immAllZerosV))))),
              (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)>;
     def: Pat<(VT (X86mload addr:$ptr, (MaskVT RC:$mask), (VT RC:$src0))),
              (!cast<Instruction>(BlendStr#"rr")

@@ -1,4 +1,4 @@
-/*===-- llvm-c/OptRemarks.h - OptRemarks Public C Interface -------*- C -*-===*\
+/*===-- llvm-c/Remarks.h - Remarks Public C Interface -------------*- C -*-===*\
 |*                                                                            *|
 |* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
 |* Exceptions.                                                                *|
@@ -7,13 +7,13 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This header provides a public interface to an opt-remark library.          *|
+|* This header provides a public interface to a remark diagnostics library.   *|
 |* LLVM provides an implementation of this interface.                         *|
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#ifndef LLVM_C_OPT_REMARKS_H
-#define LLVM_C_OPT_REMARKS_H
+#ifndef LLVM_C_REMARKS_H
+#define LLVM_C_REMARKS_H
 
 #include "llvm-c/Core.h"
 #include "llvm-c/Types.h"
@@ -25,81 +25,81 @@ extern "C" {
 #endif /* !defined(__cplusplus) */
 
 /**
- * @defgroup LLVMCOPTREMARKS OptRemarks
+ * @defgroup LLVMCREMARKS Remarks
  * @ingroup LLVMC
  *
  * @{
  */
 
-#define OPT_REMARKS_API_VERSION 0
+#define REMARKS_API_VERSION 0
 
 /**
  * String containing a buffer and a length. The buffer is not guaranteed to be
  * zero-terminated.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
 typedef struct {
   const char *Str;
   uint32_t Len;
-} LLVMOptRemarkStringRef;
+} LLVMRemarkStringRef;
 
 /**
  * DebugLoc containing File, Line and Column.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
 typedef struct {
   // File:
-  LLVMOptRemarkStringRef SourceFile;
+  LLVMRemarkStringRef SourceFile;
   // Line:
   uint32_t SourceLineNumber;
   // Column:
   uint32_t SourceColumnNumber;
-} LLVMOptRemarkDebugLoc;
+} LLVMRemarkDebugLoc;
 
 /**
  * Element of the "Args" list. The key might give more information about what
  * are the semantics of the value, e.g. "Callee" will tell you that the value
  * is a symbol that names a function.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
 typedef struct {
   // e.g. "Callee"
-  LLVMOptRemarkStringRef Key;
+  LLVMRemarkStringRef Key;
   // e.g. "malloc"
-  LLVMOptRemarkStringRef Value;
+  LLVMRemarkStringRef Value;
 
   // "DebugLoc": Optional
-  LLVMOptRemarkDebugLoc DebugLoc;
-} LLVMOptRemarkArg;
+  LLVMRemarkDebugLoc DebugLoc;
+} LLVMRemarkArg;
 
 /**
  * One remark entry.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
 typedef struct {
   // e.g. !Missed, !Passed
-  LLVMOptRemarkStringRef RemarkType;
+  LLVMRemarkStringRef RemarkType;
   // "Pass": Required
-  LLVMOptRemarkStringRef PassName;
+  LLVMRemarkStringRef PassName;
   // "Name": Required
-  LLVMOptRemarkStringRef RemarkName;
+  LLVMRemarkStringRef RemarkName;
   // "Function": Required
-  LLVMOptRemarkStringRef FunctionName;
+  LLVMRemarkStringRef FunctionName;
 
   // "DebugLoc": Optional
-  LLVMOptRemarkDebugLoc DebugLoc;
+  LLVMRemarkDebugLoc DebugLoc;
   // "Hotness": Optional
   uint32_t Hotness;
   // "Args": Optional. It is an array of `num_args` elements.
   uint32_t NumArgs;
-  LLVMOptRemarkArg *Args;
-} LLVMOptRemarkEntry;
+  LLVMRemarkArg *Args;
+} LLVMRemarkEntry;
 
-typedef struct LLVMOptRemarkOpaqueParser *LLVMOptRemarkParserRef;
+typedef struct LLVMRemarkOpaqueParser *LLVMRemarkParserRef;
 
 /**
  * Creates a remark parser that can be used to read and parse the buffer located
@@ -107,27 +107,27 @@ typedef struct LLVMOptRemarkOpaqueParser *LLVMOptRemarkParserRef;
  *
  * \p Buf cannot be NULL.
  *
- * This function should be paired with LLVMOptRemarkParserDispose() to avoid
+ * This function should be paired with LLVMRemarkParserDispose() to avoid
  * leaking resources.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
-extern LLVMOptRemarkParserRef LLVMOptRemarkParserCreate(const void *Buf,
-                                                        uint64_t Size);
+extern LLVMRemarkParserRef LLVMRemarkParserCreate(const void *Buf,
+                                                  uint64_t Size);
 
 /**
  * Returns the next remark in the file.
  *
  * The value pointed to by the return value is invalidated by the next call to
- * LLVMOptRemarkParserGetNext().
+ * LLVMRemarkParserGetNext().
  *
  * If the parser reaches the end of the buffer, the return value will be NULL.
  *
  * In the case of an error, the return value will be NULL, and:
  *
- * 1) LLVMOptRemarkParserHasError() will return `1`.
+ * 1) LLVMRemarkParserHasError() will return `1`.
  *
- * 2) LLVMOptRemarkParserGetErrorMessage() will return a descriptive error
+ * 2) LLVMRemarkParserGetErrorMessage() will return a descriptive error
  *    message.
  *
  * An error may occur if:
@@ -144,26 +144,25 @@ extern LLVMOptRemarkParserRef LLVMOptRemarkParserCreate(const void *Buf,
  * Here is a quick example of the usage:
  *
  * ```
- *  LLVMOptRemarkParserRef Parser = LLVMOptRemarkParserCreate(Buf, Size);
- *  LLVMOptRemarkEntry *Remark = NULL;
- *  while ((Remark == LLVMOptRemarkParserGetNext(Parser))) {
+ * LLVMRemarkParserRef Parser = LLVMRemarkParserCreate(Buf, Size);
+ * LLVMRemarkEntry *Remark = NULL;
+ * while ((Remark == LLVMRemarkParserGetNext(Parser))) {
  *    // use Remark
- *  }
- *  bool HasError = LLVMOptRemarkParserHasError(Parser);
- *  LLVMOptRemarkParserDispose(Parser);
+ * }
+ * bool HasError = LLVMRemarkParserHasError(Parser);
+ * LLVMRemarkParserDispose(Parser);
  * ```
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
-extern LLVMOptRemarkEntry *
-LLVMOptRemarkParserGetNext(LLVMOptRemarkParserRef Parser);
+extern LLVMRemarkEntry *LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser);
 
 /**
  * Returns `1` if the parser encountered an error while parsing the buffer.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
-extern LLVMBool LLVMOptRemarkParserHasError(LLVMOptRemarkParserRef Parser);
+extern LLVMBool LLVMRemarkParserHasError(LLVMRemarkParserRef Parser);
 
 /**
  * Returns a null-terminated string containing an error message.
@@ -171,34 +170,33 @@ extern LLVMBool LLVMOptRemarkParserHasError(LLVMOptRemarkParserRef Parser);
  * In case of no error, the result is `NULL`.
  *
  * The memory of the string is bound to the lifetime of \p Parser. If
- * LLVMOptRemarkParserDispose() is called, the memory of the string will be
+ * LLVMRemarkParserDispose() is called, the memory of the string will be
  * released.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
-extern const char *
-LLVMOptRemarkParserGetErrorMessage(LLVMOptRemarkParserRef Parser);
+extern const char *LLVMRemarkParserGetErrorMessage(LLVMRemarkParserRef Parser);
 
 /**
  * Releases all the resources used by \p Parser.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
-extern void LLVMOptRemarkParserDispose(LLVMOptRemarkParserRef Parser);
+extern void LLVMRemarkParserDispose(LLVMRemarkParserRef Parser);
 
 /**
- * Returns the version of the opt-remarks dylib.
+ * Returns the version of the remarks dylib.
  *
- * \since OPT_REMARKS_API_VERSION=0
+ * \since REMARKS_API_VERSION=0
  */
-extern uint32_t LLVMOptRemarkVersion(void);
+extern uint32_t LLVMRemarkVersion(void);
 
 /**
- * @} // endgoup LLVMCOPTREMARKS
+ * @} // endgoup LLVMCREMARKS
  */
 
 #ifdef __cplusplus
 }
 #endif /* !defined(__cplusplus) */
 
-#endif /* LLVM_C_OPT_REMARKS_H */
+#endif /* LLVM_C_REMARKS_H */

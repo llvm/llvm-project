@@ -1,0 +1,41 @@
+# REQUIRES: zlib
+
+# RUN: yaml2obj %s -o %t1.o
+# RUN: llvm-objcopy --compress-debug-sections %t1.o %t2.o
+# RUN: llvm-readobj -s %t2.o | FileCheck %s
+
+# Non-.zdebug* sections whose data does start with "ZLIB" should
+# not be considered as zlib-gnu compressed sections.
+
+# In this test we have 2 normal sections, one of them starts with "ZLIB",
+# another starts with "ZZZZ". Check we compress both as expected.
+
+# CHECK:        Name: .debug_foo
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_COMPRESSED
+# CHECK-NEXT:   ]
+
+# CHECK:        Name: .debug_bar
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_COMPRESSED
+# CHECK-NEXT:   ]
+
+--- !ELF
+FileHeader:      
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+Sections:        
+  - Name:            .debug_foo
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    # "ZLIB"
+    Content:         5A4C49420000000000000000
+  - Name:            .debug_bar
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x0000000000000001
+    # "ZZZZ"
+    Content:         5A5A5A5A0000000000000000

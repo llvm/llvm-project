@@ -223,18 +223,9 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
   return createStringError(object_error::parse_failed, "Section not found");
 }
 
-static bool isCompressed(const SectionBase &Section) {
-  const char *Magic = "ZLIB";
-  return StringRef(Section.Name).startswith(".zdebug") ||
-         (Section.OriginalData.size() > strlen(Magic) &&
-          !strncmp(reinterpret_cast<const char *>(Section.OriginalData.data()),
-                   Magic, strlen(Magic))) ||
-         (Section.Flags & ELF::SHF_COMPRESSED);
-}
-
 static bool isCompressable(const SectionBase &Section) {
-  return !isCompressed(Section) && isDebugSection(Section) &&
-         Section.Name != ".gdb_index";
+  return !(Section.Flags & ELF::SHF_COMPRESSED) &&
+         StringRef(Section.Name).startswith(".debug");
 }
 
 static void replaceDebugSections(

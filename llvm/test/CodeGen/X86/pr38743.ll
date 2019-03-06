@@ -18,41 +18,43 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 
 define void @pr38743() #1 align 2 {
 ; CHECK-LABEL: pr38743:
-; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    cmpl $3, %eax
-; CHECK-NEXT:    je .LBB0_4
-; CHECK-NEXT:  # %bb.1: # %bb
-; CHECK-NEXT:    cmpl $1, %eax
-; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:  # %bb.3: # %bb5
-; CHECK-NEXT:    movzwl .str.17+{{.*}}(%rip), %eax
-; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
-; CHECK-NEXT:    jmp .LBB0_5
-; CHECK-NEXT:  .LBB0_4: # %bb8
-; CHECK-NEXT:    movq .str.18+{{.*}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
-; CHECK-NEXT:    jmp .LBB0_5
-; CHECK-NEXT:  .LBB0_2: # %bb2
-; CHECK-NEXT:    movq .str.16+{{.*}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq {{.*}}(%rip), %rax
-; CHECK-NEXT:  .LBB0_5: # %bb12
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rax, (%rax)
-; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %al
-; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movzwl -{{[0-9]+}}(%rsp), %edx
-; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    movb -{{[0-9]+}}(%rsp), %dil
-; CHECK-NEXT:    movb %al, (%rax)
-; CHECK-NEXT:    movq %rcx, 1(%rax)
-; CHECK-NEXT:    movw %dx, 9(%rax)
-; CHECK-NEXT:    movl %esi, 11(%rax)
-; CHECK-NEXT:    movb %dil, 15(%rax)
-; CHECK-NEXT:    retq
+; CHECK:       # %bb.0:                                # %bb
+; CHECK-NEXT:  	xorl	%eax, %eax
+; CHECK-NEXT:  	jmpq	*.LJTI0_0(,%rax,8)
+; CHECK-NEXT: .[[LABEL1:[A-Z_0-9]+]]:                                # %bb5
+; CHECK-NEXT: 	movzwl	.str.17+{{.*}}(%rip), %eax
+; CHECK-NEXT: 	movw	%ax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT: 	movq	.str.17(%rip), %rax
+; CHECK-NEXT: 	jmp	.[[LABEL4:[A-Z_0-9]+]]
+; CHECK-NEXT: .[[LABEL2:[A-Z_0-9]+]]:                                # %bb2
+; CHECK-NEXT: 	movq	.str.16+{{.*}}(%rip), %rax
+; CHECK-NEXT: 	movq	%rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT: 	movq	.str.16(%rip), %rax
+; CHECK-NEXT: 	jmp	.[[LABEL4]]
+; CHECK-NEXT: .[[LABEL3:[A-Z_0-9]+]]:                                # %bb8
+; CHECK-NEXT: 	movq	.str.18+{{.*}}(%rip), %rax
+; CHECK-NEXT: 	movq	%rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT: 	movq	.str.18(%rip), %rax
+; CHECK-NEXT: .[[LABEL4]]:                                # %bb12
+; CHECK-NEXT: 	movq	%rax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT: 	movq	-{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT: 	movq	%rax, (%rax)
+; CHECK-NEXT: 	movb	-{{[0-9]+}}(%rsp), %al
+; CHECK-NEXT: 	movq	-{{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT: 	movzwl	-{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT: 	movl	-{{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT: 	movb	-{{[0-9]+}}(%rsp), %dil
+; CHECK-NEXT: 	movb	%al, (%rax)
+; CHECK-NEXT: 	movq	%rcx, {{[0-9]+}}(%rax)
+; CHECK-NEXT: 	movw	%dx, {{[0-9]+}}(%rax)
+; CHECK-NEXT: 	movl	%esi, {{[0-9]+}}(%rax)
+; CHECK-NEXT: 	movb	%dil, {{[0-9]+}}(%rax)
+; CHECK-NEXT: 	retq
+; CHECK-LABEL: .LJTI0_0:
+; CHECK:      	.quad	.[[LABEL2]]
+; CHECK-NEXT: 	.quad	.[[LABEL1]]
+; CHECK-NEXT: 	.quad	.[[LABEL3]]
+; CHECK-NEXT: 	.quad	.[[LABEL1]]
 bb:
   %tmp = alloca %0, align 16
   %tmp1 = bitcast %0* %tmp to i8*

@@ -132,7 +132,7 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
       // another BB that should eventually lead to an unreachable. Delete it
       // because throw itself is a terminator, and also delete successors if
       // any.
-      MBB.erase(std::next(MachineBasicBlock::iterator(MI)), MBB.end());
+      MBB.erase(std::next(MI.getIterator()), MBB.end());
       SmallVector<MachineBasicBlock *, 8> Succs(MBB.succ_begin(),
                                                 MBB.succ_end());
       for (auto *Succ : Succs)
@@ -275,7 +275,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
     // thenbb:
     //   %exn:i32 = extract_exception
     //   ... use exn ...
-    unsigned ExnRefReg = Catch->getOperand(0).getReg();
+    unsigned ExnReg = Catch->getOperand(0).getReg();
     auto *ThenMBB = MF.CreateMachineBasicBlock();
     auto *ElseMBB = MF.CreateMachineBasicBlock();
     MF.insert(std::next(MachineFunction::iterator(EHPad)), ElseMBB);
@@ -290,7 +290,7 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
     BuildMI(EHPad, DL, TII.get(WebAssembly::BR_ON_EXN))
         .addMBB(ThenMBB)
         .addExternalSymbol(CPPExnSymbol, WebAssemblyII::MO_SYMBOL_EVENT)
-        .addReg(ExnRefReg);
+        .addReg(ExnReg);
     BuildMI(EHPad, DL, TII.get(WebAssembly::BR)).addMBB(ElseMBB);
 
     // When this is a terminate pad with __clang_call_terminate() call, we don't

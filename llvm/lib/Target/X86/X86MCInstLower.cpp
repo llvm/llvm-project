@@ -586,9 +586,11 @@ ReSimplify:
   // These are pseudo-ops for OR to help with the OR->ADD transformation.  We do
   // this with an ugly goto in case the resultant OR uses EAX and needs the
   // short form.
+  case X86::ADD8rr_DB:    OutMI.setOpcode(X86::OR8rr);    goto ReSimplify;
   case X86::ADD16rr_DB:   OutMI.setOpcode(X86::OR16rr);   goto ReSimplify;
   case X86::ADD32rr_DB:   OutMI.setOpcode(X86::OR32rr);   goto ReSimplify;
   case X86::ADD64rr_DB:   OutMI.setOpcode(X86::OR64rr);   goto ReSimplify;
+  case X86::ADD8ri_DB:    OutMI.setOpcode(X86::OR8ri);    goto ReSimplify;
   case X86::ADD16ri_DB:   OutMI.setOpcode(X86::OR16ri);   goto ReSimplify;
   case X86::ADD32ri_DB:   OutMI.setOpcode(X86::OR32ri);   goto ReSimplify;
   case X86::ADD64ri32_DB: OutMI.setOpcode(X86::OR64ri32); goto ReSimplify;
