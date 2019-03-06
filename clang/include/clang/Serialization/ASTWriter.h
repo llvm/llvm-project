@@ -999,7 +999,6 @@ class OMPClauseWriter : public OMPClauseVisitor<OMPClauseWriter> {
 public:
   OMPClauseWriter(ASTRecordWriter &Record) : Record(Record) {}
 #define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   void writeClause(OMPClause *C);
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);

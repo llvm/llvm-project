@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_RangeMap_h_
-#define liblldb_RangeMap_h_
+#ifndef LLDB_UTILITY_RANGEMAP_H
+#define LLDB_UTILITY_RANGEMAP_H
 
 #include <algorithm>
 #include <vector>
@@ -53,10 +53,8 @@ template <typename B, typename S> struct Range {
 
   void Slide(BaseType slide) { base += slide; }
 
-  bool Union(const Range &rhs)
-  {
-    if (DoesAdjoinOrIntersect(rhs))
-    {
+  bool Union(const Range &rhs) {
+    if (DoesAdjoinOrIntersect(rhs)) {
       auto new_end = std::max<BaseType>(GetRangeEnd(), rhs.GetRangeEnd());
       base = std::min<BaseType>(base, rhs.base);
       size = new_end - base;
@@ -569,7 +567,6 @@ public:
   }
 
 protected:
-  
   void CombinePrevAndNext(typename Collection::iterator pos) {
     // Check if the prev or next entries in case they need to be unioned with
     // the entry pointed to by "pos".
@@ -579,7 +576,7 @@ protected:
         m_entries.erase(pos);
       pos = prev;
     }
-    
+
     auto end = m_entries.end();
     if (pos != end) {
       auto next = pos + 1;
@@ -947,4 +944,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // liblldb_RangeMap_h_
+#endif // LLDB_UTILITY_RANGEMAP_H

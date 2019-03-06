@@ -2004,6 +2004,14 @@ as follows:
     targets.
 ``a:<abi>:<pref>``
     This specifies the alignment for an object of aggregate type.
+``F<type><abi>``
+    This specifies the alignment for function pointers.
+    The options for ``<type>`` are:
+
+    * ``i``: The alignment of function pointers is independent of the alignment
+      of functions, and is a multiple of ``<abi>``.
+    * ``n``: The alignment of function pointers is a multiple of the explicit
+      alignment specified on the function, and is a multiple of ``<abi>``.
 ``m:<mangling>``
     If present, specifies that llvm names are mangled in the output. Symbols
     prefixed with the mangling escape character ``\01`` are passed through

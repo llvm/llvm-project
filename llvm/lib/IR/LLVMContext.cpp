@@ -21,6 +21,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -160,12 +161,15 @@ uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
   return pImpl->DiagnosticsHotnessThreshold;
 }
 
-yaml::Output *LLVMContext::getDiagnosticsOutputFile() {
-  return pImpl->DiagnosticsOutputFile.get();
+RemarkStreamer *LLVMContext::getRemarkStreamer() {
+  return pImpl->RemarkDiagStreamer.get();
 }
-
-void LLVMContext::setDiagnosticsOutputFile(std::unique_ptr<yaml::Output> F) {
-  pImpl->DiagnosticsOutputFile = std::move(F);
+const RemarkStreamer *LLVMContext::getRemarkStreamer() const {
+  return const_cast<LLVMContext *>(this)->getRemarkStreamer();
+}
+void LLVMContext::setRemarkStreamer(
+    std::unique_ptr<RemarkStreamer> RemarkStreamer) {
+  pImpl->RemarkDiagStreamer = std::move(RemarkStreamer);
 }
 
 DiagnosticHandler::DiagnosticHandlerTy
@@ -228,14 +232,10 @@ LLVMContext::getDiagnosticMessagePrefix(DiagnosticSeverity Severity) {
 }
 
 void LLVMContext::diagnose(const DiagnosticInfo &DI) {
-  if (auto *OptDiagBase = dyn_cast<DiagnosticInfoOptimizationBase>(&DI)) {
-    yaml::Output *Out = getDiagnosticsOutputFile();
-    if (Out) {
-      // For remarks the << operator takes a reference to a pointer.
-      auto *P = const_cast<DiagnosticInfoOptimizationBase *>(OptDiagBase);
-      *Out << P;
-    }
-  }
+  if (auto *OptDiagBase = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
+    if (RemarkStreamer *RS = getRemarkStreamer())
+      RS->emit(*OptDiagBase);
+
   // If there is a report handler, use it.
   if (pImpl->DiagHandler &&
       (!pImpl->RespectDiagnosticFilters || isDiagnosticEnabled(DI)) &&

@@ -285,10 +285,10 @@
 # define MSC_PREREQ(version) 0
 #endif
 
-#if defined(__arm64__) && SANITIZER_IOS
-# define SANITIZER_NON_UNIQUE_TYPEINFO 1
-#else
+#if SANITIZER_MAC && !(defined(__arm64__) && SANITIZER_IOS)
 # define SANITIZER_NON_UNIQUE_TYPEINFO 0
+#else
+# define SANITIZER_NON_UNIQUE_TYPEINFO 1
 #endif
 
 // On linux, some architectures had an ABI transition from 64-bit long double

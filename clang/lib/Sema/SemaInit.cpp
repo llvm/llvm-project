@@ -4760,7 +4760,15 @@ static void TryReferenceInitializationCore(Sema &S,
   //        copy-initialization (8.5). The reference is then bound to the
   //        temporary. [...]
 
-  InitializedEntity TempEntity = InitializedEntity::InitializeTemporary(cv1T1);
+  // Ignore address space of reference type at this point and perform address
+  // space conversion after the reference binding step.
+  QualType cv1T1IgnoreAS =
+      T1Quals.hasAddressSpace()
+          ? S.Context.getQualifiedType(T1, T1Quals.withoutAddressSpace())
+          : cv1T1;
+
+  InitializedEntity TempEntity =
+      InitializedEntity::InitializeTemporary(cv1T1IgnoreAS);
 
   // FIXME: Why do we use an implicit conversion here rather than trying
   // copy-initialization?
@@ -4795,8 +4803,9 @@ static void TryReferenceInitializationCore(Sema &S,
   //        than, cv2; otherwise, the program is ill-formed.
   unsigned T1CVRQuals = T1Quals.getCVRQualifiers();
   unsigned T2CVRQuals = T2Quals.getCVRQualifiers();
-  if (RefRelationship == Sema::Ref_Related &&
-      (T1CVRQuals | T2CVRQuals) != T1CVRQuals) {
+  if ((RefRelationship == Sema::Ref_Related &&
+       (T1CVRQuals | T2CVRQuals) != T1CVRQuals) ||
+      !T1Quals.isAddressSpaceSupersetOf(T2Quals)) {
     Sequence.SetFailed(InitializationSequence::FK_ReferenceInitDropsQualifiers);
     return;
   }
@@ -4810,7 +4819,11 @@ static void TryReferenceInitializationCore(Sema &S,
     return;
   }
 
-  Sequence.AddReferenceBindingStep(cv1T1, /*bindingTemporary=*/true);
+  Sequence.AddReferenceBindingStep(cv1T1IgnoreAS, /*bindingTemporary=*/true);
+
+  if (T1Quals.hasAddressSpace())
+    Sequence.AddQualificationConversionStep(cv1T1, isLValueRef ? VK_LValue
+                                                               : VK_XValue);
 }
 
 /// Attempt character array initialization from a string literal

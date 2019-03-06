@@ -30,7 +30,6 @@ OMPClause::child_range OMPClause::children() {
 #define OPENMP_CLAUSE(Name, Class)                                             \
   case OMPC_##Name:                                                            \
     return static_cast<Class *>(this)->children();
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   }
   llvm_unreachable("unknown OMPClause");

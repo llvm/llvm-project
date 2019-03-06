@@ -255,6 +255,7 @@ ELFLinuxPrStatus::ELFLinuxPrStatus() {
 size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
   constexpr size_t mips_linux_pr_status_size_o32 = 96;
   constexpr size_t mips_linux_pr_status_size_n32 = 72;
+  constexpr size_t num_ptr_size_members = 10;
   if (arch.IsMIPS()) {
     std::string abi = arch.GetTargetABI();
     assert(!abi.empty() && "ABI is not set");
@@ -266,15 +267,14 @@ size_t ELFLinuxPrStatus::GetSize(const lldb_private::ArchSpec &arch) {
     return mips_linux_pr_status_size_n32;
   }
   switch (arch.GetCore()) {
-  case lldb_private::ArchSpec::eCore_s390x_generic:
-  case lldb_private::ArchSpec::eCore_x86_64_x86_64:
-  case lldb_private::ArchSpec::eCore_ppc64le_generic:
-    return sizeof(ELFLinuxPrStatus);
   case lldb_private::ArchSpec::eCore_x86_32_i386:
   case lldb_private::ArchSpec::eCore_x86_32_i486:
     return 72;
   default:
-    return 0;
+    if (arch.GetAddressByteSize() == 8)
+      return sizeof(ELFLinuxPrStatus);
+    else
+      return sizeof(ELFLinuxPrStatus) - num_ptr_size_members * 4;
   }
 }
 

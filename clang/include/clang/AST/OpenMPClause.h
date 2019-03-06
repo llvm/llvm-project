@@ -5421,7 +5421,6 @@ public:
 
 #define OPENMP_CLAUSE(Name, Class)                              \
   RetTy Visit ## Class (PTR(Class) S) { DISPATCH(Class); }
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
 
   RetTy Visit(PTR(OMPClause) S) {
@@ -5430,7 +5429,6 @@ public:
     default: llvm_unreachable("Unknown clause kind!");
 #define OPENMP_CLAUSE(Name, Class)                              \
     case OMPC_ ## Name : return Visit ## Class(static_cast<PTR(Class)>(S));
-    OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
     }
   }
@@ -5462,7 +5460,6 @@ public:
       : OS(OS), Policy(Policy) {}
 
 #define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *S);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
 };
 

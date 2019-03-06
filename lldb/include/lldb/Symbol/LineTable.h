@@ -9,13 +9,12 @@
 #ifndef liblldb_LineTable_h_
 #define liblldb_LineTable_h_
 
-#include <vector>
-
 #include "lldb/Core/ModuleChild.h"
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/LineEntry.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <vector>
 
 namespace lldb_private {
 

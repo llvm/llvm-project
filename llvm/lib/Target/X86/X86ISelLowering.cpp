@@ -34684,6 +34684,12 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
   }
 
+  // Commute LHS/RHS if the Cond has been XOR'd.
+  // TODO: Move this to DAGCombine.
+  if (CondVT.getScalarSizeInBits() == VT.getScalarSizeInBits() &&
+      isBitwiseNot(Cond))
+    return DAG.getNode(N->getOpcode(), DL, VT, Cond.getOperand(0), RHS, LHS);
+
   // If we have SSE[12] support, try to form min/max nodes. SSE min/max
   // instructions match the semantics of the common C idiom x<y?x:y but not
   // x<=y?x:y, because of how they handle negative zero (which can be

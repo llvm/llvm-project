@@ -31,6 +31,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RemarkStreamer.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/SubtargetFeature.h"
@@ -333,8 +334,8 @@ int main(int argc, char **argv) {
       WithColor::error(errs(), argv[0]) << EC.message() << '\n';
       return 1;
     }
-    Context.setDiagnosticsOutputFile(
-        llvm::make_unique<yaml::Output>(YamlFile->os()));
+    Context.setRemarkStreamer(
+        llvm::make_unique<RemarkStreamer>(RemarksFilename, YamlFile->os()));
   }
 
   if (InputLanguage != "" && InputLanguage != "ir" &&
