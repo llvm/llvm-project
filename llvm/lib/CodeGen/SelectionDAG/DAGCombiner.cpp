@@ -3803,7 +3803,7 @@ SDValue DAGCombiner::visitUMUL_LOHI(SDNode *N) {
 
 SDValue DAGCombiner::visitSMULO(SDNode *N) {
   // (smulo x, 2) -> (saddo x, x)
-  if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+  if (ConstantSDNode *C2 = isConstOrConstSplat(N->getOperand(1)))
     if (C2->getAPIntValue() == 2)
       return DAG.getNode(ISD::SADDO, SDLoc(N), N->getVTList(),
                          N->getOperand(0), N->getOperand(0));
@@ -3813,7 +3813,7 @@ SDValue DAGCombiner::visitSMULO(SDNode *N) {
 
 SDValue DAGCombiner::visitUMULO(SDNode *N) {
   // (umulo x, 2) -> (uaddo x, x)
-  if (ConstantSDNode *C2 = dyn_cast<ConstantSDNode>(N->getOperand(1)))
+  if (ConstantSDNode *C2 = isConstOrConstSplat(N->getOperand(1)))
     if (C2->getAPIntValue() == 2)
       return DAG.getNode(ISD::UADDO, SDLoc(N), N->getVTList(),
                          N->getOperand(0), N->getOperand(0));

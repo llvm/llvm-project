@@ -293,10 +293,9 @@ define zeroext i1 @saddoi64imm4(i64 %v1, i64* %res) {
 define zeroext i1 @saddoi64imm5(i64 %v1, i64* %res) {
 ; SDAG-LABEL: saddoi64imm5:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movl $2147483648, %ecx ## imm = 0x80000000
-; SDAG-NEXT:    addq %rdi, %rcx
+; SDAG-NEXT:    subq $-2147483648, %rdi ## imm = 0x80000000
 ; SDAG-NEXT:    seto %al
-; SDAG-NEXT:    movq %rcx, (%rsi)
+; SDAG-NEXT:    movq %rdi, (%rsi)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: saddoi64imm5:

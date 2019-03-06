@@ -377,6 +377,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     flushLastDiag();
 
     LastDiag = Diag();
+    LastDiag->ID = Info.getID();
     FillDiagBase(*LastDiag);
 
     if (!Info.getFixItHints().empty())
