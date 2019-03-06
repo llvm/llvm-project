@@ -264,7 +264,7 @@ uint32_t SymbolVendor::ResolveSymbolContext(const FileSpec &file_spec,
 }
 
 size_t
-SymbolVendor::FindGlobalVariables(const ConstString &name,
+SymbolVendor::FindGlobalVariables(ConstString name,
                                   const CompilerDeclContext *parent_decl_ctx,
                                   size_t max_matches, VariableList &variables) {
   ModuleSP module_sp(GetModule());
@@ -289,7 +289,7 @@ size_t SymbolVendor::FindGlobalVariables(const RegularExpression &regex,
   return 0;
 }
 
-size_t SymbolVendor::FindFunctions(const ConstString &name,
+size_t SymbolVendor::FindFunctions(ConstString name,
                                    const CompilerDeclContext *parent_decl_ctx,
                                    FunctionNameType name_type_mask,
                                    bool include_inlines, bool append,
@@ -318,7 +318,7 @@ size_t SymbolVendor::FindFunctions(const RegularExpression &regex,
 }
 
 size_t SymbolVendor::FindTypes(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     bool append, size_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
@@ -360,7 +360,7 @@ size_t SymbolVendor::GetTypes(SymbolContextScope *sc_scope, TypeClass type_mask,
 }
 
 CompilerDeclContext
-SymbolVendor::FindNamespace(const ConstString &name,
+SymbolVendor::FindNamespace(ConstString name,
                             const CompilerDeclContext *parent_decl_ctx) {
   CompilerDeclContext namespace_decl_ctx;
   ModuleSP module_sp(GetModule());

@@ -637,7 +637,7 @@ public:
 
   virtual bool MightHaveChildren();
 
-  virtual size_t GetIndexOfChildWithName(const ConstString &name);
+  virtual size_t GetIndexOfChildWithName(ConstString name);
 
   virtual ~EnumSyntheticFrontEnd() = default;
 
@@ -689,7 +689,7 @@ bool lldb_private::formatters::swift::EnumSyntheticFrontEnd::
 
 size_t
 lldb_private::formatters::swift::EnumSyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   if (name == m_element_name)
     return 0;
   return UINT32_MAX;

@@ -2169,7 +2169,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_type == eSymbolTypeInvalid && symbol.getType() != STT_SECTION) {
       if (symbol_section_sp) {
-        const ConstString &sect_name = symbol_section_sp->GetName();
+        ConstString sect_name = symbol_section_sp->GetName();
         if (sect_name == text_section_name || sect_name == init_section_name ||
             sect_name == fini_section_name || sect_name == ctors_section_name ||
             sect_name == dtors_section_name) {
@@ -2313,7 +2313,7 @@ unsigned ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
 
     if (symbol_section_sp && module_section_list &&
         module_section_list != section_list) {
-      const ConstString &sect_name = symbol_section_sp->GetName();
+      ConstString sect_name = symbol_section_sp->GetName();
       auto section_it = section_name_to_section.find(sect_name.GetCString());
       if (section_it == section_name_to_section.end())
         section_it =

@@ -34,7 +34,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   std::vector<ValueObjectSP> m_members;
@@ -95,7 +95,7 @@ size_t LibStdcppTupleSyntheticFrontEnd::CalculateNumChildren() {
 }
 
 size_t LibStdcppTupleSyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   return ExtractIndexFromString(name.GetCString());
 }
 

@@ -359,7 +359,7 @@ ModuleSP ModuleList::GetModuleAtIndexUnlocked(size_t idx) const {
   return module_sp;
 }
 
-size_t ModuleList::FindFunctions(const ConstString &name,
+size_t ModuleList::FindFunctions(ConstString name,
                                  FunctionNameType name_type_mask,
                                  bool include_symbols, bool include_inlines,
                                  bool append,
@@ -395,7 +395,7 @@ size_t ModuleList::FindFunctions(const ConstString &name,
   return sc_list.GetSize() - old_size;
 }
 
-size_t ModuleList::FindFunctionSymbols(const ConstString &name,
+size_t ModuleList::FindFunctionSymbols(ConstString name,
                                        lldb::FunctionNameType name_type_mask,
                                        SymbolContextList &sc_list) {
   const size_t old_size = sc_list.GetSize();
@@ -465,7 +465,7 @@ size_t ModuleList::FindCompileUnits(const FileSpec &path, bool append,
   return sc_list.GetSize();
 }
 
-size_t ModuleList::FindGlobalVariables(const ConstString &name,
+size_t ModuleList::FindGlobalVariables(ConstString name,
                                        size_t max_matches,
                                        VariableList &variable_list) const {
   size_t initial_size = variable_list.GetSize();
@@ -519,7 +519,7 @@ static bool KeepLookingInDylinker(SymbolContextList &sc_list,
   return keep_looking;
 }
 
-size_t ModuleList::FindSymbolsWithNameAndType(const ConstString &name,
+size_t ModuleList::FindSymbolsWithNameAndType(ConstString name,
                                               SymbolType symbol_type,
                                               SymbolContextList &sc_list,
                                               bool append) const {
@@ -627,7 +627,7 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
 }
 
 size_t
-ModuleList::FindTypes(Module *search_first, const ConstString &name,
+ModuleList::FindTypes(Module *search_first, ConstString name,
                       bool name_is_fully_qualified, size_t max_matches,
                       llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                       TypeList &types) const {

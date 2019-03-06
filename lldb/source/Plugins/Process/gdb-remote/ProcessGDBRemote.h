@@ -234,7 +234,7 @@ public:
                                  lldb::addr_t image_count) override;
 
   Status
-  ConfigureStructuredData(const ConstString &type_name,
+  ConfigureStructuredData(ConstString type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
   StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;

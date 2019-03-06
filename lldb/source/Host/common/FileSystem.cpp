@@ -305,12 +305,12 @@ FileSystem::CreateDataBuffer(const FileSpec &file_spec, uint64_t size,
 
 bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
   // If the directory is set there's nothing to do.
-  const ConstString &directory = file_spec.GetDirectory();
+  ConstString directory = file_spec.GetDirectory();
   if (directory)
     return false;
 
   // We cannot look for a file if there's no file name.
-  const ConstString &filename = file_spec.GetFilename();
+  ConstString filename = file_spec.GetFilename();
   if (!filename)
     return false;
 

@@ -105,7 +105,7 @@ public:
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
   static lldb::DebuggerSP
-  FindDebuggerWithInstanceName(const ConstString &instance_name);
+  FindDebuggerWithInstanceName(ConstString instance_name);
 
   static size_t GetNumDebuggers();
 
@@ -305,7 +305,7 @@ public:
 
   bool GetNotifyVoid() const;
 
-  const ConstString &GetInstanceName() { return m_instance_name; }
+  ConstString GetInstanceName() { return m_instance_name; }
 
   bool LoadPlugin(const FileSpec &spec, Status &error);
 

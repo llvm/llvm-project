@@ -279,7 +279,7 @@ public:
   /// @return
   ///     A const reference to the directory string object.
   //------------------------------------------------------------------
-  const ConstString &GetDirectory() const;
+  ConstString GetDirectory() const;
 
   //------------------------------------------------------------------
   /// Filename string get accessor.
@@ -295,7 +295,7 @@ public:
   /// @return
   ///     A const reference to the filename string object.
   //------------------------------------------------------------------
-  const ConstString &GetFilename() const;
+  ConstString GetFilename() const;
 
   //------------------------------------------------------------------
   /// Returns true if the filespec represents an implementation source file

@@ -308,7 +308,7 @@ TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
 }
 
 bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
-                                                   const ConstString &name,
+                                                   ConstString name,
                                                    TypeFromParser parser_type,
                                                    bool is_result,
                                                    bool is_lvalue) {
@@ -423,7 +423,7 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
 }
 
 bool ClangExpressionDeclMap::AddValueToStruct(const NamedDecl *decl,
-                                              const ConstString &name,
+                                              ConstString name,
                                               llvm::Value *value, size_t size,
                                               lldb::offset_t alignment) {
   assert(m_struct_vars.get());
@@ -603,7 +603,7 @@ bool ClangExpressionDeclMap::GetFunctionInfo(const NamedDecl *decl,
 
 addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
                                                 Process *process,
-                                                const ConstString &name,
+                                                ConstString name,
                                                 lldb::SymbolType symbol_type,
                                                 lldb_private::Module *module) {
   SymbolContextList sc_list;
@@ -705,7 +705,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
   return symbol_load_addr;
 }
 
-addr_t ClangExpressionDeclMap::GetSymbolAddress(const ConstString &name,
+addr_t ClangExpressionDeclMap::GetSymbolAddress(ConstString name,
                                                 lldb::SymbolType symbol_type) {
   assert(m_parser_vars.get());
 
@@ -718,7 +718,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(const ConstString &name,
 }
 
 lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
-    Target &target, ModuleSP &module, const ConstString &name,
+    Target &target, ModuleSP &module, ConstString name,
     CompilerDeclContext *namespace_decl, TypeFromUser *type) {
   VariableList vars;
 

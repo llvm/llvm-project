@@ -194,14 +194,14 @@ protected:
   bool SectionIsLoadable(const lldb_private::Section *section);
 
   llvm::MachO::mach_header m_header;
-  static const lldb_private::ConstString &GetSegmentNameTEXT();
-  static const lldb_private::ConstString &GetSegmentNameDATA();
-  static const lldb_private::ConstString &GetSegmentNameDATA_DIRTY();
-  static const lldb_private::ConstString &GetSegmentNameDATA_CONST();
-  static const lldb_private::ConstString &GetSegmentNameOBJC();
-  static const lldb_private::ConstString &GetSegmentNameLINKEDIT();
-  static const lldb_private::ConstString &GetSegmentNameDWARF();
-  static const lldb_private::ConstString &GetSectionNameEHFrame();
+  static lldb_private::ConstString GetSegmentNameTEXT();
+  static lldb_private::ConstString GetSegmentNameDATA();
+  static lldb_private::ConstString GetSegmentNameDATA_DIRTY();
+  static lldb_private::ConstString GetSegmentNameDATA_CONST();
+  static lldb_private::ConstString GetSegmentNameOBJC();
+  static lldb_private::ConstString GetSegmentNameLINKEDIT();
+  static lldb_private::ConstString GetSegmentNameDWARF();
+  static lldb_private::ConstString GetSectionNameEHFrame();
 
   llvm::MachO::dysymtab_command m_dysymtab;
   std::vector<llvm::MachO::segment_command_64> m_mach_segments;

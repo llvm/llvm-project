@@ -250,7 +250,7 @@ bool lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::
 }
 
 size_t lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   static ConstString g_Some("some");
 
   if (IsEmpty())

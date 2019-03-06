@@ -640,7 +640,7 @@ public:
 
   bool MightHaveChildren() override { return true; }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
 #define COMPONENT(Name, PrettyName, ID)                                        \
   if (name == GetNameFor##Name())                                              \
     return ID;

@@ -30,7 +30,7 @@ namespace {
   // with the raw path pair, which doesn't work anymore because the paths have
   // been normalized when the debug info was loaded. So we need to store
   // nomalized path pairs to ensure things match up.
-  ConstString NormalizePath(const ConstString &path) {
+  ConstString NormalizePath(ConstString path) {
     // If we use "path" to construct a FileSpec, it will normalize the path for
     // us. We then grab the string and turn it back into a ConstString.
     return ConstString(FileSpec(path.GetStringRef()).GetPath());
@@ -62,8 +62,8 @@ const PathMappingList &PathMappingList::operator=(const PathMappingList &rhs) {
 
 PathMappingList::~PathMappingList() = default;
 
-void PathMappingList::Append(const ConstString &path,
-                             const ConstString &replacement, bool notify) {
+void PathMappingList::Append(ConstString path,
+                             ConstString replacement, bool notify) {
   ++m_mod_id;
   m_pairs.emplace_back(pair(NormalizePath(path), NormalizePath(replacement)));
   if (notify && m_callback)
@@ -81,8 +81,8 @@ void PathMappingList::Append(const PathMappingList &rhs, bool notify) {
   }
 }
 
-void PathMappingList::Insert(const ConstString &path,
-                             const ConstString &replacement, uint32_t index,
+void PathMappingList::Insert(ConstString path,
+                             ConstString replacement, uint32_t index,
                              bool notify) {
   ++m_mod_id;
   iterator insert_iter;
@@ -96,8 +96,8 @@ void PathMappingList::Insert(const ConstString &path,
     m_callback(*this, m_callback_baton);
 }
 
-bool PathMappingList::Replace(const ConstString &path,
-                              const ConstString &replacement, uint32_t index,
+bool PathMappingList::Replace(ConstString path,
+                              ConstString replacement, uint32_t index,
                               bool notify) {
   if (index >= m_pairs.size())
     return false;
@@ -146,7 +146,7 @@ void PathMappingList::Clear(bool notify) {
     m_callback(*this, m_callback_baton);
 }
 
-bool PathMappingList::RemapPath(const ConstString &path,
+bool PathMappingList::RemapPath(ConstString path,
                                 ConstString &new_path) const {
   std::string remapped;
   if (RemapPath(path.GetStringRef(), remapped)) {
@@ -245,8 +245,8 @@ bool PathMappingList::FindFile(const FileSpec &orig_spec,
   return false;
 }
 
-bool PathMappingList::Replace(const ConstString &path,
-                              const ConstString &new_path, bool notify) {
+bool PathMappingList::Replace(ConstString path,
+                              ConstString new_path, bool notify) {
   uint32_t idx = FindIndexForPath(path);
   if (idx < m_pairs.size()) {
     ++m_mod_id;
@@ -258,7 +258,7 @@ bool PathMappingList::Replace(const ConstString &path,
   return false;
 }
 
-bool PathMappingList::Remove(const ConstString &path, bool notify) {
+bool PathMappingList::Remove(ConstString path, bool notify) {
   iterator pos = FindIteratorForPath(path);
   if (pos != m_pairs.end()) {
     ++m_mod_id;
@@ -271,7 +271,7 @@ bool PathMappingList::Remove(const ConstString &path, bool notify) {
 }
 
 PathMappingList::const_iterator
-PathMappingList::FindIteratorForPath(const ConstString &path) const {
+PathMappingList::FindIteratorForPath(ConstString path) const {
   const_iterator pos;
   const_iterator begin = m_pairs.begin();
   const_iterator end = m_pairs.end();
@@ -284,7 +284,7 @@ PathMappingList::FindIteratorForPath(const ConstString &path) const {
 }
 
 PathMappingList::iterator
-PathMappingList::FindIteratorForPath(const ConstString &path) {
+PathMappingList::FindIteratorForPath(ConstString path) {
   iterator pos;
   iterator begin = m_pairs.begin();
   iterator end = m_pairs.end();
@@ -306,7 +306,7 @@ bool PathMappingList::GetPathsAtIndex(uint32_t idx, ConstString &path,
   return false;
 }
 
-uint32_t PathMappingList::FindIndexForPath(const ConstString &orig_path) const {
+uint32_t PathMappingList::FindIndexForPath(ConstString orig_path) const {
   const ConstString path = NormalizePath(orig_path);
   const_iterator pos;
   const_iterator begin = m_pairs.begin();

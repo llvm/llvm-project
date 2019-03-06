@@ -40,7 +40,7 @@ SwiftExpressionVariable::SwiftExpressionVariable(
 }
 
 SwiftExpressionVariable::SwiftExpressionVariable(
-    ExecutionContextScope *exe_scope, const ConstString &name,
+    ExecutionContextScope *exe_scope, ConstString name,
     const TypeFromUser &type, lldb::ByteOrder byte_order,
     uint32_t addr_byte_size)
     : ExpressionVariable(LLVMCastKind::eKindSwift) {
