@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/RangeMap.h"
+#include "lldb/Utility/RangeMap.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

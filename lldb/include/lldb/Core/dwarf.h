@@ -9,12 +9,11 @@
 #ifndef DebugBase_dwarf_h_
 #define DebugBase_dwarf_h_
 
+#include "lldb/Utility/RangeMap.h"
 #include <stdint.h>
 
 // Get the DWARF constant definitions from llvm
 #include "llvm/BinaryFormat/Dwarf.h"
-
-#include "lldb/Core/RangeMap.h"
 
 // and stuff them in our default namespace
 using namespace llvm::dwarf;

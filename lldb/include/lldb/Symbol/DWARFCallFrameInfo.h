@@ -13,12 +13,11 @@
 #include <mutex>
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/Utility/Flags.h"
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/Flags.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/VMRange.h"
 #include "lldb/lldb-private.h"
 

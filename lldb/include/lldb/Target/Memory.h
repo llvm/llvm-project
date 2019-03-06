@@ -9,13 +9,11 @@
 #ifndef liblldb_Memory_h_
 #define liblldb_Memory_h_
 
+#include "lldb/Utility/RangeMap.h"
+#include "lldb/lldb-private.h"
 #include <map>
 #include <mutex>
 #include <vector>
-
-
-#include "lldb/Core/RangeMap.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 //----------------------------------------------------------------------
