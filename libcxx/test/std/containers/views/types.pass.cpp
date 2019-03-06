@@ -10,7 +10,7 @@
 
 // <span>
 
-// template<class ElementType, ptrdiff_t Extent = dynamic_extent>
+// template<class ElementType, size_t Extent = dynamic_extent>
 // class span {
 // public:
 //  // constants and types

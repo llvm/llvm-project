@@ -529,7 +529,6 @@ private:
   bool TraverseOMPLoopDirective(OMPLoopDirective *S);
   bool TraverseOMPClause(OMPClause *C);
 #define OPENMP_CLAUSE(Name, Class) bool Visit##Class(Class *C);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   /// Process clauses with list of variables.
   template <typename T> bool VisitOMPClauseList(T *Node);
@@ -2796,7 +2795,6 @@ bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {
   case OMPC_##Name:                                                            \
     TRY_TO(Visit##Class(static_cast<Class *>(C)));                             \
     break;
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   case OMPC_threadprivate:
   case OMPC_uniform:

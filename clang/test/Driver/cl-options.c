@@ -390,6 +390,8 @@
 // Unsupported but parsed options. Check that we don't error on them.
 // (/Zs is for syntax-only)
 // RUN: %clang_cl /Zs \
+// RUN:     /await \
+// RUN:     /constexpr:depth1000 /constexpr:backtrace1000 /constexpr:steps1000 \
 // RUN:     /AIfoo \
 // RUN:     /AI foo_does_not_exist \
 // RUN:     /Bt \
@@ -443,6 +445,9 @@
 // RUN:     /QIfist \
 // RUN:     /Qimprecise_fwaits \
 // RUN:     /Qpar \
+// RUN:     /Qpar-report:1 \
+// RUN:     /Qsafe_fp_loads \
+// RUN:     /Qspectre \
 // RUN:     /Qvec-report:2 \
 // RUN:     /u \
 // RUN:     /V \

@@ -485,8 +485,8 @@ define i1 @add_ultcmp_bad_i16_i8_add(i16 %x, i16 %y) nounwind {
 define i1 @add_ultcmp_bad_i16_i8_cmp(i16 %x, i16 %y) nounwind {
 ; X86-LABEL: add_ultcmp_bad_i16_i8_cmp:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $128, %eax
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl $-128, %eax
 ; X86-NEXT:    cmpw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
@@ -548,8 +548,8 @@ define i1 @add_ultcmp_bad_i16_i8_c0notpoweroftwo(i16 %x) nounwind {
 define i1 @add_ultcmp_bad_i16_i8_c1notpoweroftwo(i16 %x) nounwind {
 ; X86-LABEL: add_ultcmp_bad_i16_i8_c1notpoweroftwo:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $128, %eax
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl $-128, %eax
 ; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    cmpl $768, %eax # imm = 0x300
 ; X86-NEXT:    setb %al
@@ -615,8 +615,8 @@ define i1 @add_ultcmp_bad_i16_i4(i16 %x) nounwind {
 define i1 @add_ultcmp_bad_i24_i8(i24 %x) nounwind {
 ; X86-LABEL: add_ultcmp_bad_i24_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $128, %eax
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl $-128, %eax
 ; X86-NEXT:    andl $16777215, %eax # imm = 0xFFFFFF
 ; X86-NEXT:    cmpl $256, %eax # imm = 0x100
 ; X86-NEXT:    setb %al

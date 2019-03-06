@@ -614,6 +614,26 @@ std::string APValue::getAsString(ASTContext &Ctx, QualType Ty) const {
   return Result;
 }
 
+bool APValue::toIntegralConstant(APSInt &Result, QualType SrcTy,
+                                 const ASTContext &Ctx) const {
+  if (isInt()) {
+    Result = getInt();
+    return true;
+  }
+
+  if (isLValue() && isNullPointer()) {
+    Result = Ctx.MakeIntValue(Ctx.getTargetNullPointerValue(SrcTy), SrcTy);
+    return true;
+  }
+
+  if (isLValue() && !getLValueBase()) {
+    Result = Ctx.MakeIntValue(getLValueOffset().getQuantity(), SrcTy);
+    return true;
+  }
+
+  return false;
+}
+
 const APValue::LValueBase APValue::getLValueBase() const {
   assert(isLValue() && "Invalid accessor");
   return ((const LV*)(const void*)Data.buffer)->Base;

@@ -9,13 +9,12 @@
 #ifndef liblldb_Symtab_h_
 #define liblldb_Symtab_h_
 
-#include <mutex>
-#include <vector>
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <mutex>
+#include <vector>
 
 namespace lldb_private {
 
