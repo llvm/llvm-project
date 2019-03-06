@@ -250,8 +250,11 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
   if (Status.getName() != Filename) {
     auto &NamedFileEnt =
       *SeenFileEntries.insert({Status.getName(), &UFE}).first;
-    assert(NamedFileEnt.second == &UFE &&
-           "filename from getStatValue() refers to wrong file");
+    if (!NamedFileEnt.second)
+	      NamedFileEnt.second = &UFE;
+    else
+      assert(NamedFileEnt.second == &UFE &&
+             "filename from getStatValue() refers to wrong file");
     InterndFileName = NamedFileEnt.first().data();
   }
 
