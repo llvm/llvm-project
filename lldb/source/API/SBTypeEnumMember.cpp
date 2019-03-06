@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeEnumMember.h"
+#include "SBReproducerPrivate.h"
 #include "Utils.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStream.h"
@@ -20,7 +21,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeEnumMember::SBTypeEnumMember() : m_opaque_sp() {}
+SBTypeEnumMember::SBTypeEnumMember() : m_opaque_sp() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeEnumMember);
+}
 
 SBTypeEnumMember::~SBTypeEnumMember() {}
 
@@ -30,41 +33,59 @@ SBTypeEnumMember::SBTypeEnumMember(
 
 SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs)
     : m_opaque_sp() {
+  LLDB_RECORD_CONSTRUCTOR(SBTypeEnumMember, (const lldb::SBTypeEnumMember &),
+                          rhs);
+
   m_opaque_sp = clone(rhs.m_opaque_sp);
 }
 
 SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
+  LLDB_RECORD_CONSTRUCTOR(SBTypeEnumMember, (const lldb::SBTypeEnumMember &),
+                          rhs);
+
   if (this != &rhs)
     m_opaque_sp = clone(rhs.m_opaque_sp);
   return *this;
 }
 
-bool SBTypeEnumMember::IsValid() const { return m_opaque_sp.get(); }
+bool SBTypeEnumMember::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeEnumMember, IsValid);
+
+  return m_opaque_sp.get();
+}
 
 const char *SBTypeEnumMember::GetName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeEnumMember, GetName);
+
   if (m_opaque_sp.get())
     return m_opaque_sp->GetName().GetCString();
   return NULL;
 }
 
 int64_t SBTypeEnumMember::GetValueAsSigned() {
+  LLDB_RECORD_METHOD_NO_ARGS(int64_t, SBTypeEnumMember, GetValueAsSigned);
+
   if (m_opaque_sp.get())
     return m_opaque_sp->GetValueAsSigned();
   return 0;
 }
 
 uint64_t SBTypeEnumMember::GetValueAsUnsigned() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBTypeEnumMember, GetValueAsUnsigned);
+
   if (m_opaque_sp.get())
     return m_opaque_sp->GetValueAsUnsigned();
   return 0;
 }
 
 SBType SBTypeEnumMember::GetType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBTypeEnumMember, GetType);
+
   SBType sb_type;
   if (m_opaque_sp.get()) {
     sb_type.SetSP(m_opaque_sp->GetIntegerType());
   }
-  return sb_type;
+  return LLDB_RECORD_RESULT(sb_type);
 }
 
 void SBTypeEnumMember::reset(TypeEnumMemberImpl *type_member_impl) {
@@ -82,20 +103,34 @@ const TypeEnumMemberImpl &SBTypeEnumMember::ref() const {
 }
 
 SBTypeEnumMemberList::SBTypeEnumMemberList()
-    : m_opaque_up(new TypeEnumMemberListImpl()) {}
+    : m_opaque_up(new TypeEnumMemberListImpl()) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeEnumMemberList);
+}
 
 SBTypeEnumMemberList::SBTypeEnumMemberList(const SBTypeEnumMemberList &rhs)
     : m_opaque_up(new TypeEnumMemberListImpl()) {
+  LLDB_RECORD_CONSTRUCTOR(SBTypeEnumMemberList,
+                          (const lldb::SBTypeEnumMemberList &), rhs);
+
   for (uint32_t i = 0,
                 rhs_size = const_cast<SBTypeEnumMemberList &>(rhs).GetSize();
        i < rhs_size; i++)
     Append(const_cast<SBTypeEnumMemberList &>(rhs).GetTypeEnumMemberAtIndex(i));
 }
 
-bool SBTypeEnumMemberList::IsValid() { return (m_opaque_up != NULL); }
+bool SBTypeEnumMemberList::IsValid() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeEnumMemberList, IsValid);
+
+  return (m_opaque_up != NULL);
+}
 
 SBTypeEnumMemberList &SBTypeEnumMemberList::
 operator=(const SBTypeEnumMemberList &rhs) {
+  LLDB_RECORD_METHOD(
+      lldb::SBTypeEnumMemberList &,
+      SBTypeEnumMemberList, operator=,(const lldb::SBTypeEnumMemberList &),
+      rhs);
+
   if (this != &rhs) {
     m_opaque_up.reset(new TypeEnumMemberListImpl());
     for (uint32_t i = 0,
@@ -108,23 +143,38 @@ operator=(const SBTypeEnumMemberList &rhs) {
 }
 
 void SBTypeEnumMemberList::Append(SBTypeEnumMember enum_member) {
+  LLDB_RECORD_METHOD(void, SBTypeEnumMemberList, Append,
+                     (lldb::SBTypeEnumMember), enum_member);
+
   if (enum_member.IsValid())
     m_opaque_up->Append(enum_member.m_opaque_sp);
 }
 
 SBTypeEnumMember
 SBTypeEnumMemberList::GetTypeEnumMemberAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBTypeEnumMember, SBTypeEnumMemberList,
+                     GetTypeEnumMemberAtIndex, (uint32_t), index);
+
   if (m_opaque_up)
-    return SBTypeEnumMember(m_opaque_up->GetTypeEnumMemberAtIndex(index));
-  return SBTypeEnumMember();
+    return LLDB_RECORD_RESULT(
+        SBTypeEnumMember(m_opaque_up->GetTypeEnumMemberAtIndex(index)));
+  return LLDB_RECORD_RESULT(SBTypeEnumMember());
 }
 
-uint32_t SBTypeEnumMemberList::GetSize() { return m_opaque_up->GetSize(); }
+uint32_t SBTypeEnumMemberList::GetSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeEnumMemberList, GetSize);
+
+  return m_opaque_up->GetSize();
+}
 
 SBTypeEnumMemberList::~SBTypeEnumMemberList() {}
 
 bool SBTypeEnumMember::GetDescription(
     lldb::SBStream &description, lldb::DescriptionLevel description_level) {
+  LLDB_RECORD_METHOD(bool, SBTypeEnumMember, GetDescription,
+                     (lldb::SBStream &, lldb::DescriptionLevel), description,
+                     description_level);
+
   Stream &strm = description.ref();
 
   if (m_opaque_sp.get()) {
