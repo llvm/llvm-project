@@ -122,6 +122,8 @@
 # CHECK-NEXT:        Value:           0x0000000000000035
 # CHECK-NEXT:      - Tag:             DT_VERNEEDNUM
 # CHECK-NEXT:        Value:           0x0000000000000036
+# CHECK-NEXT:      - Tag:             DT_USED
+# CHECK-NEXT:        Value:           0x0000000000000001
 
 !ELF
 FileHeader:
@@ -246,3 +248,5 @@ Sections:
         Value:           0x0000000000000035
       - Tag:             DT_VERNEEDNUM
         Value:           0x0000000000000036
+      - Tag:             DT_USED
+        Value:           0x0000000000000001

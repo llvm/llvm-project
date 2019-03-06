@@ -220,13 +220,17 @@ bool DWARFFormValue::isFormClass(DWARFFormValue::FormClass FC) const {
   default:
     break;
   }
-  // In DWARF3 DW_FORM_data4 and DW_FORM_data8 served also as a section offset.
-  // Don't check for DWARF version here, as some producers may still do this
-  // by mistake. Also accept DW_FORM_[line_]strp since these are
-  // .debug_[line_]str section offsets.
-  return (Form == DW_FORM_data4 || Form == DW_FORM_data8 ||
-          Form == DW_FORM_strp || Form == DW_FORM_line_strp) &&
-         FC == FC_SectionOffset;
+
+  if (FC == FC_SectionOffset) {
+    if (Form == DW_FORM_strp || Form == DW_FORM_line_strp)
+      return true;
+    // In DWARF3 DW_FORM_data4 and DW_FORM_data8 served also as a section
+    // offset. If we don't have a DWARFUnit, default to the old behavior.
+    if (Form == DW_FORM_data4 || Form == DW_FORM_data8)
+      return !U || U->getVersion() <= 3;
+  }
+
+  return false;
 }
 
 bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,

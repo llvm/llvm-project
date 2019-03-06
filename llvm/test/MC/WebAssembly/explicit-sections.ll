@@ -11,7 +11,7 @@ target triple = "wasm32-unknown-unknown"
 
 
 ; CHECK:        - Type:            DATA
-; CHECK-NEXT:     Segments:        
+; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
@@ -57,7 +57,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Flags:           [  ]
 ; CHECK-NEXT:         Segment:         2
 ; CHECK-NEXT:         Size:            4
-; CHECK-NEXT:     SegmentInfo:    
+; CHECK-NEXT:     SegmentInfo:
 ; CHECK-NEXT:       - Index:           0
 ; CHECK-NEXT:         Name:            .data.global0
 ; CHECK-NEXT:         Alignment:       3

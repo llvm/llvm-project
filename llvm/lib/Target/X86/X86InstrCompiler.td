@@ -1381,6 +1381,9 @@ let SchedRW = [WriteALU] in {
 let isConvertibleToThreeAddress = 1,
     Constraints = "$src1 = $dst", Defs = [EFLAGS] in {
 let isCommutable = 1 in {
+def ADD8rr_DB   : I<0, Pseudo, (outs GR8:$dst), (ins GR8:$src1, GR8:$src2),
+                    "", // orb/addb REG, REG
+                    [(set GR8:$dst, (or_is_add GR8:$src1, GR8:$src2))]>;
 def ADD16rr_DB  : I<0, Pseudo, (outs GR16:$dst), (ins GR16:$src1, GR16:$src2),
                     "", // orw/addw REG, REG
                     [(set GR16:$dst, (or_is_add GR16:$src1, GR16:$src2))]>;
@@ -1395,6 +1398,10 @@ def ADD64rr_DB  : I<0, Pseudo, (outs GR64:$dst), (ins GR64:$src1, GR64:$src2),
 // NOTE: These are order specific, we want the ri8 forms to be listed
 // first so that they are slightly preferred to the ri forms.
 
+def ADD8ri_DB :   I<0, Pseudo,
+                    (outs GR8:$dst), (ins GR8:$src1, i8imm:$src2),
+                    "", // orb/addb REG, imm8
+                    [(set GR8:$dst, (or_is_add GR8:$src1, imm:$src2))]>;
 def ADD16ri8_DB : I<0, Pseudo,
                     (outs GR16:$dst), (ins GR16:$src1, i16i8imm:$src2),
                     "", // orw/addw REG, imm8

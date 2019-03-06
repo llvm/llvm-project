@@ -415,7 +415,9 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_IntToOCLSampler:
       case CK_LValueBitCast:
       case CK_FixedPointCast:
-      case CK_FixedPointToBoolean: {
+      case CK_FixedPointToBoolean:
+      case CK_FixedPointToIntegral:
+      case CK_IntegralToFixedPoint: {
         state =
             handleLValueBitCast(state, Ex, LCtx, T, ExTy, CastE, Bldr, Pred);
         continue;

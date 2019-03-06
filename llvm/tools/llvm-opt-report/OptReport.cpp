@@ -13,7 +13,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm-c/OptRemarks.h"
+#include "llvm-c/Remarks.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -152,11 +152,11 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
   }
 
   StringRef Buffer = (*Buf)->getBuffer();
-  LLVMOptRemarkParserRef Parser =
-      LLVMOptRemarkParserCreate(Buffer.data(), Buffer.size());
+  LLVMRemarkParserRef Parser =
+      LLVMRemarkParserCreate(Buffer.data(), Buffer.size());
 
-  LLVMOptRemarkEntry *Remark = nullptr;
-  while ((Remark = LLVMOptRemarkParserGetNext(Parser))) {
+  LLVMRemarkEntry *Remark = nullptr;
+  while ((Remark = LLVMRemarkParserGetNext(Parser))) {
     bool Transformed =
         StringRef(Remark->RemarkType.Str, Remark->RemarkType.Len) == "!Passed";
     StringRef Pass(Remark->PassName.Str, Remark->PassName.Len);
@@ -165,13 +165,13 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     StringRef Function(Remark->FunctionName.Str, Remark->FunctionName.Len);
     uint32_t Line = Remark->DebugLoc.SourceLineNumber;
     uint32_t Column = Remark->DebugLoc.SourceColumnNumber;
-    ArrayRef<LLVMOptRemarkArg> Args(Remark->Args, Remark->NumArgs);
+    ArrayRef<LLVMRemarkArg> Args(Remark->Args, Remark->NumArgs);
 
     int VectorizationFactor = 1;
     int InterleaveCount = 1;
     int UnrollCount = 1;
 
-    for (const LLVMOptRemarkArg &Arg : Args) {
+    for (const LLVMRemarkArg &Arg : Args) {
       StringRef ArgKeyName(Arg.Key.Str, Arg.Key.Len);
       StringRef ArgValue(Arg.Value.Str, Arg.Value.Len);
       if (ArgKeyName == "VectorizationFactor")
@@ -209,11 +209,11 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     }
   }
 
-  bool HasError = LLVMOptRemarkParserHasError(Parser);
+  bool HasError = LLVMRemarkParserHasError(Parser);
   if (HasError)
-    WithColor::error() << LLVMOptRemarkParserGetErrorMessage(Parser) << "\n";
+    WithColor::error() << LLVMRemarkParserGetErrorMessage(Parser) << "\n";
 
-  LLVMOptRemarkParserDispose(Parser);
+  LLVMRemarkParserDispose(Parser);
   return !HasError;
 }
 

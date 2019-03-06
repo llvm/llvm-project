@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBValueList.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Core/ValueObjectList.h"
@@ -67,9 +68,13 @@ private:
   std::vector<lldb::SBValue> m_values;
 };
 
-SBValueList::SBValueList() : m_opaque_up() {}
+SBValueList::SBValueList() : m_opaque_up() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBValueList);
+}
 
 SBValueList::SBValueList(const SBValueList &rhs) : m_opaque_up() {
+  LLDB_RECORD_CONSTRUCTOR(SBValueList, (const lldb::SBValueList &), rhs);
+
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (rhs.IsValid())
@@ -98,11 +103,22 @@ SBValueList::SBValueList(const ValueListImpl *lldb_object_ptr) : m_opaque_up() {
 
 SBValueList::~SBValueList() {}
 
-bool SBValueList::IsValid() const { return (m_opaque_up != NULL); }
+bool SBValueList::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBValueList, IsValid);
 
-void SBValueList::Clear() { m_opaque_up.reset(); }
+  return (m_opaque_up != NULL);
+}
+
+void SBValueList::Clear() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBValueList, Clear);
+
+  m_opaque_up.reset();
+}
 
 const SBValueList &SBValueList::operator=(const SBValueList &rhs) {
+  LLDB_RECORD_METHOD(const lldb::SBValueList &,
+                     SBValueList, operator=,(const lldb::SBValueList &), rhs);
+
   if (this != &rhs) {
     if (rhs.IsValid())
       m_opaque_up.reset(new ValueListImpl(*rhs));
@@ -123,6 +139,9 @@ const ValueListImpl *SBValueList::operator->() const {
 const ValueListImpl &SBValueList::operator*() const { return *m_opaque_up; }
 
 void SBValueList::Append(const SBValue &val_obj) {
+  LLDB_RECORD_METHOD(void, SBValueList, Append, (const lldb::SBValue &),
+                     val_obj);
+
   CreateIfNeeded();
   m_opaque_up->Append(val_obj);
 }
@@ -135,6 +154,9 @@ void SBValueList::Append(lldb::ValueObjectSP &val_obj_sp) {
 }
 
 void SBValueList::Append(const lldb::SBValueList &value_list) {
+  LLDB_RECORD_METHOD(void, SBValueList, Append, (const lldb::SBValueList &),
+                     value_list);
+
   if (value_list.IsValid()) {
     CreateIfNeeded();
     m_opaque_up->Append(*value_list);
@@ -142,6 +164,9 @@ void SBValueList::Append(const lldb::SBValueList &value_list) {
 }
 
 SBValue SBValueList::GetValueAtIndex(uint32_t idx) const {
+  LLDB_RECORD_METHOD_CONST(lldb::SBValue, SBValueList, GetValueAtIndex,
+                           (uint32_t), idx);
+
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   // if (log)
@@ -161,10 +186,12 @@ SBValue SBValueList::GetValueAtIndex(uint32_t idx) const {
                 static_cast<void *>(sb_value.GetSP().get()), sstr.GetData());
   }
 
-  return sb_value;
+  return LLDB_RECORD_RESULT(sb_value);
 }
 
 uint32_t SBValueList::GetSize() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBValueList, GetSize);
+
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   // if (log)
@@ -187,17 +214,23 @@ void SBValueList::CreateIfNeeded() {
 }
 
 SBValue SBValueList::FindValueObjectByUID(lldb::user_id_t uid) {
+  LLDB_RECORD_METHOD(lldb::SBValue, SBValueList, FindValueObjectByUID,
+                     (lldb::user_id_t), uid);
+
   SBValue sb_value;
   if (m_opaque_up)
     sb_value = m_opaque_up->FindValueByUID(uid);
-  return sb_value;
+  return LLDB_RECORD_RESULT(sb_value);
 }
 
 SBValue SBValueList::GetFirstValueByName(const char *name) const {
+  LLDB_RECORD_METHOD_CONST(lldb::SBValue, SBValueList, GetFirstValueByName,
+                           (const char *), name);
+
   SBValue sb_value;
   if (m_opaque_up)
     sb_value = m_opaque_up->GetFirstValueByName(name);
-  return sb_value;
+  return LLDB_RECORD_RESULT(sb_value);
 }
 
 void *SBValueList::opaque_ptr() { return m_opaque_up.get(); }

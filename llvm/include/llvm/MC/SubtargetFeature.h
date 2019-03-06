@@ -26,7 +26,6 @@
 
 namespace llvm {
 
-template <typename T> class ArrayRef;
 class raw_ostream;
 class Triple;
 
@@ -71,44 +70,6 @@ public:
 
 //===----------------------------------------------------------------------===//
 
-/// Used to provide key value pairs for feature and CPU bit flags.
-struct SubtargetFeatureKV {
-  const char *Key;                      ///< K-V key string
-  const char *Desc;                     ///< Help descriptor
-  unsigned Value;                       ///< K-V integer value
-  FeatureBitArray Implies;              ///< K-V bit mask
-
-  /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
-
-  /// Compare routine for std::is_sorted.
-  bool operator<(const SubtargetFeatureKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
-  }
-};
-
-//===----------------------------------------------------------------------===//
-
-/// Used to provide key value pairs for CPU and arbitrary pointers.
-struct SubtargetInfoKV {
-  const char *Key;                      ///< K-V key string
-  const void *Value;                    ///< K-V pointer value
-
-  /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
-
-  /// Compare routine for std::is_sorted.
-  bool operator<(const SubtargetInfoKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
-  }
-};
-
-//===----------------------------------------------------------------------===//
-
 /// Manages the enabling and disabling of subtarget specific features.
 ///
 /// Features are encoded as a string of the form
@@ -129,19 +90,6 @@ public:
   /// Adds Features.
   void AddFeature(StringRef String, bool Enable = true);
 
-  /// Toggles a feature and update the feature bits.
-  static void ToggleFeature(FeatureBitset &Bits, StringRef String,
-                            ArrayRef<SubtargetFeatureKV> FeatureTable);
-
-  /// Applies the feature flag and update the feature bits.
-  static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
-                               ArrayRef<SubtargetFeatureKV> FeatureTable);
-
-  /// Returns feature bits of a CPU.
-  FeatureBitset getFeatureBits(StringRef CPU,
-                               ArrayRef<SubtargetFeatureKV> CPUTable,
-                               ArrayRef<SubtargetFeatureKV> FeatureTable);
-
   /// Returns the vector of individual subtarget features.
   const std::vector<std::string> &getFeatures() const { return Features; }
 
@@ -153,6 +101,32 @@ public:
 
   /// Adds the default features for the specified target triple.
   void getDefaultSubtargetFeatures(const Triple& Triple);
+
+  /// Determine if a feature has a flag; '+' or '-'
+  static bool hasFlag(StringRef Feature) {
+    assert(!Feature.empty() && "Empty string");
+    // Get first character
+    char Ch = Feature[0];
+    // Check if first character is '+' or '-' flag
+    return Ch == '+' || Ch =='-';
+  }
+
+  /// Return string stripped of flag.
+  static std::string StripFlag(StringRef Feature) {
+    return hasFlag(Feature) ? Feature.substr(1) : Feature;
+  }
+
+  /// Return true if enable flag; '+'.
+  static inline bool isEnabled(StringRef Feature) {
+    assert(!Feature.empty() && "Empty string");
+    // Get first character
+    char Ch = Feature[0];
+    // Check if first character is '+' for enabled
+    return Ch == '+';
+  }
+
+  /// Splits a string of comma separated items in to a vector of strings.
+  static void Split(std::vector<std::string> &V, StringRef S);
 };
 
 } // end namespace llvm

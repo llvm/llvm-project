@@ -20,18 +20,18 @@ declare void @func3()
 ]
 
 ; CHECK:        - Type:            IMPORT
-; CHECK-NEXT:     Imports:         
+; CHECK-NEXT:     Imports:
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __linear_memory
 ; CHECK-NEXT:         Kind:            MEMORY
-; CHECK-NEXT:         Memory:          
+; CHECK-NEXT:         Memory:
 ; CHECK-NEXT:           Initial:         0x00000001
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __indirect_function_table
 ; CHECK-NEXT:         Kind:            TABLE
-; CHECK-NEXT:         Table:           
+; CHECK-NEXT:         Table:
 ; CHECK-NEXT:           ElemType:        FUNCREF
-; CHECK-NEXT:           Limits:          
+; CHECK-NEXT:           Limits:
 ; CHECK-NEXT:             Initial:         0x00000002
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           func3
@@ -56,13 +56,13 @@ declare void @func3()
 ; CHECK-NEXT:   - Type:            FUNCTION
 ; CHECK-NEXT:     FunctionTypes:   [ 0, 1, 0, 1 ]
 ; CHECK-NEXT:   - Type:            ELEM
-; CHECK-NEXT:     Segments:        
-; CHECK-NEXT:       - Offset:          
+; CHECK-NEXT:     Segments:
+; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           1
 ; CHECK-NEXT:         Functions:       [ 5, 7 ]
 ; CHECK-NEXT:   - Type:            CODE
-; CHECK-NEXT:     Relocations:     
+; CHECK-NEXT:     Relocations:
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           1
 ; CHECK-NEXT:         Offset:          0x00000004
@@ -87,21 +87,21 @@ declare void @func3()
 ; CHECK-NEXT:       - Type:            R_WASM_FUNCTION_INDEX_LEB
 ; CHECK-NEXT:         Index:           4
 ; CHECK-NEXT:         Offset:          0x00000045
-; CHECK-NEXT:     Functions:       
+; CHECK-NEXT:     Functions:
 ; CHECK-NEXT:       - Index:           5
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1080808080000B
 ; CHECK-NEXT:       - Index:           6
-; CHECK-NEXT:         Locals:          
-; CHECK-NEXT:         Body:            024041818080800041004180808080001081808080000D000F0B00000B
+; CHECK-NEXT:         Locals:
+; CHECK-NEXT:         Body:            02404181808080004100418080808000108180808000450D0000000B0B
 ; CHECK-NEXT:       - Index:           7
-; CHECK-NEXT:         Locals:          
+; CHECK-NEXT:         Locals:
 ; CHECK-NEXT:         Body:            1082808080000B
 ; CHECK-NEXT:       - Index:           8
-; CHECK-NEXT:         Locals:          
-; CHECK-NEXT:         Body:            024041828080800041004180808080001081808080000D000F0B00000B
+; CHECK-NEXT:         Locals:
+; CHECK-NEXT:         Body:            02404182808080004100418080808000108180808000450D0000000B0B
 ; CHECK-NEXT:   - Type:            DATA
-; CHECK-NEXT:     Segments:        
+; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   6
 ; CHECK-NEXT:         InitFlags:       0
 ; CHECK-NEXT:         Offset:
@@ -172,7 +172,7 @@ declare void @func3()
 ; CHECK-NEXT:         Name:            .data.global1
 ; CHECK-NEXT:         Alignment:       3
 ; CHECK-NEXT:         Flags:           [ ]
-; CHECK-NEXT:     InitFunctions:     
+; CHECK-NEXT:     InitFunctions:
 ; CHECK-NEXT:       - Priority: 42
 ; CHECK-NEXT:         Symbol: 9
 ; CHECK-NEXT:       - Priority: 42

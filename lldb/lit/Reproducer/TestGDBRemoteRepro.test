@@ -7,8 +7,8 @@
 # that the string "testing" is not printed.
 
 # RUN: %clang %S/Inputs/simple.c -g -o %t.out
-# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture %t.repro -- %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
-# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteReplay.in --replay %t.repro -- %t.out | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+# RUN: %lldb -x -b -s %S/Inputs/GDBRemoteCapture.in --capture %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
 
 # CHECK: Breakpoint 1
 # CHECK: Process {{.*}} stopped

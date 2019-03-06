@@ -274,7 +274,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (!MFI.isVRegStackified(OldReg)) {
           const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
           unsigned NewReg = MRI.createVirtualRegister(RC);
-          auto InsertPt = std::next(MachineBasicBlock::iterator(&MI));
+          auto InsertPt = std::next(MI.getIterator());
           if (MI.getOpcode() == WebAssembly::IMPLICIT_DEF) {
             MI.eraseFromParent();
             Changed = true;
