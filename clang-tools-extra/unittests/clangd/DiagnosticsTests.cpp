@@ -58,6 +58,8 @@ MATCHER_P(EqualToLSPDiag, LSPDiag,
          std::tie(LSPDiag.range, LSPDiag.severity, LSPDiag.message);
 }
 
+MATCHER_P(DiagSource, Source, "") { return arg.S == Source; }
+
 MATCHER_P(EqualToFix, Fix, "LSP fix " + llvm::to_string(Fix)) {
   if (arg.Message != Fix.Message)
     return false;
@@ -102,6 +104,7 @@ o]]();
           // This range spans lines.
           AllOf(Diag(Test.range("typo"),
                      "use of undeclared identifier 'goo'; did you mean 'foo'?"),
+                DiagSource(Diag::Clang),
                 WithFix(
                     Fix(Test.range("typo"), "foo", "change 'go\\ o' to 'foo'")),
                 // This is a pretty normal range.
@@ -137,6 +140,18 @@ TEST(DiagnosticsTest, FlagsMatter) {
           WithFix(Fix(Test.range(), "int", "change return type to 'int'")))));
 }
 
+TEST(DiagnosticsTest, DiagnosticPreamble) {
+  Annotations Test(R"cpp(
+    #include $[["not-found.h"]]
+  )cpp");
+
+  auto TU = TestTU::withCode(Test.code());
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(testing::AllOf(
+                  Diag(Test.range(), "'not-found.h' file not found"),
+                  DiagSource(Diag::Clang))));
+}
+
 TEST(DiagnosticsTest, ClangTidy) {
   Annotations Test(R"cpp(
     #include $deprecated[["assert.h"]]
@@ -159,6 +174,7 @@ TEST(DiagnosticsTest, ClangTidy) {
           AllOf(Diag(Test.range("deprecated"),
                      "inclusion of deprecated C++ header 'assert.h'; consider "
                      "using 'cassert' instead [modernize-deprecated-headers]"),
+                DiagSource(Diag::ClangTidy),
                 WithFix(Fix(Test.range("deprecated"), "<cassert>",
                             "change '\"assert.h\"' to '<cassert>'"))),
           Diag(Test.range("doubled"),
@@ -168,6 +184,7 @@ TEST(DiagnosticsTest, ClangTidy) {
               Diag(Test.range("macroarg"),
                    "side effects in the 1st macro argument 'X' are repeated in "
                    "macro expansion [bugprone-macro-repeated-side-effects]"),
+              DiagSource(Diag::ClangTidy),
               WithNote(Diag(Test.range("macrodef"),
                             "macro 'SQUARE' defined here "
                             "[bugprone-macro-repeated-side-effects]"))),
