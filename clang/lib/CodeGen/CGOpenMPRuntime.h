@@ -708,7 +708,8 @@ private:
   /// must be the same.
   /// \param Name Name of the variable.
   llvm::Constant *getOrCreateInternalVariable(llvm::Type *Ty,
-                                              const llvm::Twine &Name);
+                                              const llvm::Twine &Name,
+                                              unsigned AddressSpace = 0);
 
   /// Set of threadprivate variables with the generated initializer.
   llvm::StringSet<> ThreadPrivateWithDefinition;
@@ -760,6 +761,10 @@ private:
                             const OMPExecutableDirective &D,
                             llvm::Function *TaskFunction, QualType SharedsTy,
                             Address Shareds, const OMPTaskDataTy &Data);
+
+  /// Returns default address space for the constant firstprivates, 0 by
+  /// default.
+  virtual unsigned getDefaultFirstprivateAddressSpace() const { return 0; }
 
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM)
@@ -1413,6 +1418,11 @@ public:
   /// registers it when emitting code for the host.
   virtual void registerTargetGlobalVariable(const VarDecl *VD,
                                             llvm::Constant *Addr);
+
+  /// Registers provided target firstprivate variable as global on the
+  /// target.
+  llvm::Constant *registerTargetFirstprivateCopy(CodeGenFunction &CGF,
+                                                 const VarDecl *VD);
 
   /// Emit the global \a GD if it is meaningful for the target. Returns
   /// if it was emitted successfully.

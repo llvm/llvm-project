@@ -2553,26 +2553,6 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
             Decl::FOK_None;
   }
 
-  // If this record has a definition in the translation unit we're coming from,
-  // but this particular declaration is not that definition, import the
-  // definition and map to that.
-  TagDecl *Definition = D->getDefinition();
-  if (Definition && Definition != D &&
-      // Friend template declaration must be imported on its own.
-      !IsFriendTemplate &&
-      // In contrast to a normal CXXRecordDecl, the implicit
-      // CXXRecordDecl of ClassTemplateSpecializationDecl is its redeclaration.
-      // The definition of the implicit CXXRecordDecl in this case is the
-      // ClassTemplateSpecializationDecl itself. Thus, we start with an extra
-      // condition in order to be able to import the implict Decl.
-      !D->isImplicit()) {
-    ExpectedDecl ImportedDefOrErr = import(Definition);
-    if (!ImportedDefOrErr)
-      return ImportedDefOrErr.takeError();
-
-    return Importer.MapImported(D, *ImportedDefOrErr);
-  }
-
   // Import the major distinguishing characteristics of this record.
   DeclContext *DC, *LexicalDC;
   DeclarationName Name;
@@ -2601,7 +2581,8 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
     auto FoundDecls =
         Importer.findDeclsInToCtx(DC, SearchName);
     if (!FoundDecls.empty()) {
-      // We're going to have to compare D against potentially conflicting Decls, so complete it.
+      // We're going to have to compare D against potentially conflicting Decls,
+      // so complete it.
       if (D->hasExternalLexicalStorage() && !D->isCompleteDefinition())
         D->getASTContext().getExternalSource()->CompleteType(D);
     }
@@ -4975,17 +4956,6 @@ static ClassTemplateDecl *getDefinition(ClassTemplateDecl *D) {
 
 ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   bool IsFriend = D->getFriendObjectKind() != Decl::FOK_None;
-
-  // If this template has a definition in the translation unit we're coming
-  // from, but this particular declaration is not that definition, import the
-  // definition and map to that.
-  ClassTemplateDecl *Definition = getDefinition(D);
-  if (Definition && Definition != D && !IsFriend) {
-    if (ExpectedDecl ImportedDefOrErr = import(Definition))
-      return Importer.MapImported(D, *ImportedDefOrErr);
-    else
-      return ImportedDefOrErr.takeError();
-  }
 
   // Import the major distinguishing characteristics of this class template.
   DeclContext *DC, *LexicalDC;

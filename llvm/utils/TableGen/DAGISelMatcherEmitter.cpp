@@ -601,14 +601,6 @@ EmitMatcher(const Matcher *N, unsigned Indent, unsigned CurrentIdx,
     OS << "OPC_CheckFoldableChainNode,\n";
     return 1;
 
-  case Matcher::CheckImmAllOnesV:
-    OS << "OPC_CheckImmAllOnesV,\n";
-    return 1;
-
-  case Matcher::CheckImmAllZerosV:
-    OS << "OPC_CheckImmAllZerosV,\n";
-    return 1;
-
   case Matcher::EmitInteger: {
     int64_t Val = cast<EmitIntegerMatcher>(N)->getValue();
     OS << "OPC_EmitInteger, "
@@ -1015,8 +1007,6 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
   case Matcher::CheckOrImm: return "OPC_CheckOrImm"; break;
   case Matcher::CheckFoldableChainNode:
     return "OPC_CheckFoldableChainNode"; break;
-  case Matcher::CheckImmAllOnesV: return "OPC_CheckImmAllOnesV"; break;
-  case Matcher::CheckImmAllZerosV: return "OPC_CheckImmAllZerosV"; break;
   case Matcher::EmitInteger: return "OPC_EmitInteger"; break;
   case Matcher::EmitStringInteger: return "OPC_EmitStringInteger"; break;
   case Matcher::EmitRegister: return "OPC_EmitRegister"; break;

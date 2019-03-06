@@ -639,6 +639,11 @@ int main(int argc, char **argv) {
     CPUStr = getCPUStr();
     FeaturesStr = getFeaturesStr();
     Machine = GetTargetMachine(ModuleTriple, CPUStr, FeaturesStr, Options);
+  } else if (ModuleTriple.getArchName() != "unknown" &&
+             ModuleTriple.getArchName() != "") {
+    errs() << argv[0] << ": unrecognized architecture '"
+           << ModuleTriple.getArchName() << "' provided.\n";
+    return 1;
   }
 
   std::unique_ptr<TargetMachine> TM(Machine);

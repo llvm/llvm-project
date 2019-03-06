@@ -49,10 +49,10 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
 ; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
+;      CHECK: end_block
 
 ; CHECK-LABEL: .Lcall_dtors.1:
 ; CHECK-NEXT: .functype .Lcall_dtors.1 (i32) -> (){{$}}
@@ -65,10 +65,10 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
 ; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
+;      CHECK: end_block
 
 ; CHECK-LABEL: .Lcall_dtors.1.associated1c0:
 ; CHECK-NEXT: .functype .Lcall_dtors.1.associated1c0 (i32) -> (){{$}}
@@ -80,9 +80,8 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
 ; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors.1.associated1c1:
@@ -96,9 +95,8 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
 ; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .Lcall_dtors:
@@ -111,9 +109,8 @@ declare void @after_the_null()
 ; CHECK-NEXT: i32.const       $push1=, 0
 ; CHECK-NEXT: i32.const       $push0=, __dso_handle
 ; CHECK-NEXT: i32.call        $push3=, __cxa_atexit, $pop2, $pop1, $pop0{{$}}
-; CHECK-NEXT: br_if           0, $pop3
-; CHECK-NEXT: return
-;      CHECK: end_block
+; CHECK-NEXT: i32.eqz         $push4=, $pop3
+; CHECK-NEXT: br_if           0, $pop4
 ; CHECK-NEXT: unreachable
 
 ; CHECK-LABEL: .section .init_array.0,"",@

@@ -358,8 +358,7 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
   F->insert(It, DoneMBB);
 
   // Transfer the remainder of BB and its successor edges to DoneMBB.
-  DoneMBB->splice(DoneMBB->begin(), BB,
-                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  DoneMBB->splice(DoneMBB->begin(), BB, std::next(MI.getIterator()), BB->end());
   DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   BB->addSuccessor(TrueMBB);

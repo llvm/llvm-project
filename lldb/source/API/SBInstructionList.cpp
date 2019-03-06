@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBInstructionList.h"
-#include "lldb/API/SBInstruction.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBAddress.h"
+#include "lldb/API/SBInstruction.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/Module.h"
@@ -18,13 +19,22 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBInstructionList::SBInstructionList() : m_opaque_sp() {}
+SBInstructionList::SBInstructionList() : m_opaque_sp() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBInstructionList);
+}
 
 SBInstructionList::SBInstructionList(const SBInstructionList &rhs)
-    : m_opaque_sp(rhs.m_opaque_sp) {}
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBInstructionList, (const lldb::SBInstructionList &),
+                          rhs);
+}
 
 const SBInstructionList &SBInstructionList::
 operator=(const SBInstructionList &rhs) {
+  LLDB_RECORD_METHOD(
+      const lldb::SBInstructionList &,
+      SBInstructionList, operator=,(const lldb::SBInstructionList &), rhs);
+
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
   return *this;
@@ -32,26 +42,39 @@ operator=(const SBInstructionList &rhs) {
 
 SBInstructionList::~SBInstructionList() {}
 
-bool SBInstructionList::IsValid() const { return m_opaque_sp.get() != NULL; }
+bool SBInstructionList::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBInstructionList, IsValid);
+
+  return m_opaque_sp.get() != NULL;
+}
 
 size_t SBInstructionList::GetSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBInstructionList, GetSize);
+
   if (m_opaque_sp)
     return m_opaque_sp->GetInstructionList().GetSize();
   return 0;
 }
 
 SBInstruction SBInstructionList::GetInstructionAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBInstruction, SBInstructionList,
+                     GetInstructionAtIndex, (uint32_t), idx);
+
   SBInstruction inst;
   if (m_opaque_sp && idx < m_opaque_sp->GetInstructionList().GetSize())
     inst.SetOpaque(
         m_opaque_sp,
         m_opaque_sp->GetInstructionList().GetInstructionAtIndex(idx));
-  return inst;
+  return LLDB_RECORD_RESULT(inst);
 }
 
 size_t SBInstructionList::GetInstructionsCount(const SBAddress &start,
-                                              const SBAddress &end, 
-                                              bool canSetBreakpoint) {
+                                               const SBAddress &end,
+                                               bool canSetBreakpoint) {
+  LLDB_RECORD_METHOD(size_t, SBInstructionList, GetInstructionsCount,
+                     (const lldb::SBAddress &, const lldb::SBAddress &, bool),
+                     start, end, canSetBreakpoint);
+
   size_t num_instructions = GetSize();
   size_t i = 0;
   SBAddress addr;
@@ -74,20 +97,32 @@ size_t SBInstructionList::GetInstructionsCount(const SBAddress &start,
   return upper_index - lower_index - instructions_to_skip;
 }
 
-void SBInstructionList::Clear() { m_opaque_sp.reset(); }
+void SBInstructionList::Clear() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBInstructionList, Clear);
 
-void SBInstructionList::AppendInstruction(SBInstruction insn) {}
+  m_opaque_sp.reset();
+}
+
+void SBInstructionList::AppendInstruction(SBInstruction insn) {
+  LLDB_RECORD_METHOD(void, SBInstructionList, AppendInstruction,
+                     (lldb::SBInstruction), insn);
+}
 
 void SBInstructionList::SetDisassembler(const lldb::DisassemblerSP &opaque_sp) {
   m_opaque_sp = opaque_sp;
 }
 
 void SBInstructionList::Print(FILE *out) {
+  LLDB_RECORD_METHOD(void, SBInstructionList, Print, (FILE *), out);
+
   if (out == NULL)
     return;
 }
 
 bool SBInstructionList::GetDescription(lldb::SBStream &description) {
+  LLDB_RECORD_METHOD(bool, SBInstructionList, GetDescription,
+                     (lldb::SBStream &), description);
+
   if (m_opaque_sp) {
     size_t num_instructions = GetSize();
     if (num_instructions) {
@@ -125,6 +160,9 @@ bool SBInstructionList::GetDescription(lldb::SBStream &description) {
 }
 
 bool SBInstructionList::DumpEmulationForAllInstructions(const char *triple) {
+  LLDB_RECORD_METHOD(bool, SBInstructionList, DumpEmulationForAllInstructions,
+                     (const char *), triple);
+
   if (m_opaque_sp) {
     size_t len = GetSize();
     for (size_t i = 0; i < len; ++i) {

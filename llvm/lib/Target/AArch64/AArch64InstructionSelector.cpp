@@ -78,7 +78,6 @@ private:
   void collectShuffleMaskIndices(MachineInstr &I, MachineRegisterInfo &MRI,
                                  SmallVectorImpl<int> &Idxs) const;
   bool selectShuffleVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
-  bool selectExtractElt(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
   unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
   MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
@@ -1710,8 +1709,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return selectUnmergeValues(I, MRI);
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return selectShuffleVector(I, MRI);
-  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
-    return selectExtractElt(I, MRI);
   }
 
   return false;
@@ -1790,127 +1787,6 @@ bool AArch64InstructionSelector::selectMergeValues(
   return true;
 }
 
-static bool getLaneCopyOpcode(unsigned &CopyOpc, unsigned &ExtractSubReg,
-                              const unsigned EltSize) {
-  // Choose a lane copy opcode and subregister based off of the size of the
-  // vector's elements.
-  switch (EltSize) {
-  case 16:
-    CopyOpc = AArch64::CPYi16;
-    ExtractSubReg = AArch64::hsub;
-    break;
-  case 32:
-    CopyOpc = AArch64::CPYi32;
-    ExtractSubReg = AArch64::ssub;
-    break;
-  case 64:
-    CopyOpc = AArch64::CPYi64;
-    ExtractSubReg = AArch64::dsub;
-    break;
-  default:
-    // Unknown size, bail out.
-    LLVM_DEBUG(dbgs() << "Elt size '" << EltSize << "' unsupported.\n");
-    return false;
-  }
-  return true;
-}
-
-bool AArch64InstructionSelector::selectExtractElt(
-    MachineInstr &I, MachineRegisterInfo &MRI) const {
-  assert(I.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT &&
-         "unexpected opcode!");
-  unsigned DstReg = I.getOperand(0).getReg();
-  const LLT NarrowTy = MRI.getType(DstReg);
-  const unsigned SrcReg = I.getOperand(1).getReg();
-  const LLT WideTy = MRI.getType(SrcReg);
-
-  assert(WideTy.getSizeInBits() >= NarrowTy.getSizeInBits() &&
-         "source register size too small!");
-  assert(NarrowTy.isScalar() && "cannot extract vector into vector!");
-
-  // Need the lane index to determine the correct copy opcode.
-  MachineOperand &LaneIdxOp = I.getOperand(2);
-  assert(LaneIdxOp.isReg() && "Lane index operand was not a register?");
-
-  if (RBI.getRegBank(DstReg, MRI, TRI)->getID() != AArch64::FPRRegBankID) {
-    LLVM_DEBUG(dbgs() << "Cannot extract into GPR.\n");
-    return false;
-  }
-
-  // Find the instruction that defines the constant to extract from. There could
-  // be any number of copies between the instruction and the definition of the
-  // index. Skip them.
-  MachineInstr *LaneDefInst = nullptr;
-  for (LaneDefInst = MRI.getVRegDef(LaneIdxOp.getReg());
-       LaneDefInst && LaneDefInst->isCopy();
-       LaneDefInst = MRI.getVRegDef(LaneDefInst->getOperand(1).getReg())) {
-  }
-
-  // Did we find a def in the first place? If not, bail.
-  if (!LaneDefInst) {
-    LLVM_DEBUG(dbgs() << "Did not find VReg definition for " << LaneIdxOp
-                      << "\n");
-    return false;
-  }
-
-  // TODO: Handle extracts that don't use G_CONSTANT.
-  if (LaneDefInst->getOpcode() != TargetOpcode::G_CONSTANT) {
-    LLVM_DEBUG(dbgs() << "VRegs defined by anything other than G_CONSTANT "
-                         "currently unsupported.\n");
-    return false;
-  }
-
-  unsigned LaneIdx = LaneDefInst->getOperand(1).getCImm()->getLimitedValue();
-  unsigned CopyOpc = 0;
-  unsigned ExtractSubReg = 0;
-  if (!getLaneCopyOpcode(CopyOpc, ExtractSubReg, NarrowTy.getSizeInBits())) {
-    LLVM_DEBUG(
-        dbgs() << "Couldn't determine lane copy opcode for instruction.\n");
-    return false;
-  }
-
-  const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
-  const TargetRegisterClass *DstRC =
-      getRegClassForTypeOnBank(NarrowTy, DstRB, RBI, true);
-  if (!DstRC) {
-    LLVM_DEBUG(dbgs() << "Could not determine destination register class.\n");
-    return false;
-  }
-
-  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
-  const TargetRegisterClass *SrcRC =
-      getRegClassForTypeOnBank(WideTy, SrcRB, RBI, true);
-  if (!SrcRC) {
-    LLVM_DEBUG(dbgs() << "Could not determine source register class.\n");
-    return false;
-  }
-
-  // The register that we're going to copy into.
-  unsigned InsertReg = SrcReg;
-  MachineIRBuilder MIRBuilder(I);
-
-  // Lane copies require 128-bit wide registers. If we're dealing with an
-  // unpacked vector, then we need to move up to that width. Insert an implicit
-  // def and a subregister insert to get us there.
-  if (WideTy.getSizeInBits() != 128) {
-    MachineInstr *ScalarToVector = emitScalarToVector(
-        WideTy.getSizeInBits(), &AArch64::FPR128RegClass, SrcReg, MIRBuilder);
-    if (!ScalarToVector)
-      return false;
-    InsertReg = ScalarToVector->getOperand(0).getReg();
-  }
-
-  MachineInstr *LaneCopyMI =
-      MIRBuilder.buildInstr(CopyOpc, {DstReg}, {InsertReg}).addImm(LaneIdx);
-  constrainSelectedInstRegOperands(*LaneCopyMI, TII, TRI, RBI);
-
-  // Make sure that we actually constrain the initial copy.
-  RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
-
-  I.eraseFromParent();
-  return true;
-}
-
 bool AArch64InstructionSelector::selectUnmergeValues(
     MachineInstr &I, MachineRegisterInfo &MRI) const {
   assert(I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
@@ -1947,8 +1823,24 @@ bool AArch64InstructionSelector::selectUnmergeValues(
   // vector's elements.
   unsigned CopyOpc = 0;
   unsigned ExtractSubReg = 0;
-  if (!getLaneCopyOpcode(CopyOpc, ExtractSubReg, NarrowTy.getSizeInBits()))
+  switch (NarrowTy.getSizeInBits()) {
+  case 16:
+    CopyOpc = AArch64::CPYi16;
+    ExtractSubReg = AArch64::hsub;
+    break;
+  case 32:
+    CopyOpc = AArch64::CPYi32;
+    ExtractSubReg = AArch64::ssub;
+    break;
+  case 64:
+    CopyOpc = AArch64::CPYi64;
+    ExtractSubReg = AArch64::dsub;
+    break;
+  default:
+    // Unknown size, bail out.
+    LLVM_DEBUG(dbgs() << "NarrowTy had unsupported size.\n");
     return false;
+  }
 
   // Set up for the lane copies.
   MachineBasicBlock &MBB = *I.getParent();

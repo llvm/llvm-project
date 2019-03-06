@@ -290,6 +290,10 @@ void WebAssemblyPassConfig::addPostRegAlloc() {
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
 
+  // This pass hurts code size for wasm because it can generate irreducible
+  // control flow.
+  disablePass(&MachineBlockPlacementID);
+
   TargetPassConfig::addPostRegAlloc();
 }
 

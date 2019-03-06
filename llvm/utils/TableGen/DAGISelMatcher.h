@@ -71,8 +71,6 @@ public:
     CheckComplexPat,
     CheckAndImm,
     CheckOrImm,
-    CheckImmAllOnesV,
-    CheckImmAllZerosV,
     CheckFoldableChainNode,
 
     // Node creation/emisssion.
@@ -128,8 +126,6 @@ public:
     case CheckValueType:
     case CheckAndImm:
     case CheckOrImm:
-    case CheckImmAllOnesV:
-    case CheckImmAllZerosV:
     case CheckFoldableChainNode:
       return true;
     }
@@ -755,36 +751,6 @@ private:
   bool isEqualImpl(const Matcher *M) const override {
     return cast<CheckOrImmMatcher>(M)->Value == Value;
   }
-};
-
-/// CheckImmAllOnesVMatcher - This check if the current node is an build vector
-/// of all ones.
-class CheckImmAllOnesVMatcher : public Matcher {
-public:
-  CheckImmAllOnesVMatcher() : Matcher(CheckImmAllOnesV) {}
-
-  static bool classof(const Matcher *N) {
-    return N->getKind() == CheckImmAllOnesV;
-  }
-
-private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
-  bool isEqualImpl(const Matcher *M) const override { return true; }
-};
-
-/// CheckImmAllZerosVMatcher - This check if the current node is an build vector
-/// of all zeros.
-class CheckImmAllZerosVMatcher : public Matcher {
-public:
-  CheckImmAllZerosVMatcher() : Matcher(CheckImmAllZerosV) {}
-
-  static bool classof(const Matcher *N) {
-    return N->getKind() == CheckImmAllZerosV;
-  }
-
-private:
-  void printImpl(raw_ostream &OS, unsigned indent) const override;
-  bool isEqualImpl(const Matcher *M) const override { return true; }
 };
 
 /// CheckFoldableChainNodeMatcher - This checks to see if the current node

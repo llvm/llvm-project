@@ -311,7 +311,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     }
 
     LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
-    NewV = B.CreateBinOp(Op, NewV, SetInactive);
+    NewV = B.CreateBinOp(Op, SetInactive, NewV);
 
     // Read the value from the last lane, which has accumlated the values of
     // each active lane in the wavefront. This will be our new value with which

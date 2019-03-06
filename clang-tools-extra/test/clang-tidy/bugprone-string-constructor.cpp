@@ -65,3 +65,11 @@ void Valid() {
   std::string s2("test", 3);
   std::string s3("test");
 }
+
+namespace instantiation_dependent_exprs {
+template<typename T>
+struct S {
+  bool x;
+  std::string f() { return x ? "a" : "b"; }
+};
+}

@@ -36,8 +36,8 @@ define i8 @test_mul_by_3(i8 %x) {
 define i8 @test_mul_by_4(i8 %x) {
 ; X64-LABEL: test_mul_by_4:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shlb $2, %al
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (,%rdi,4), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %m = mul i8 %x, 4
@@ -82,8 +82,8 @@ define i8 @test_mul_by_7(i8 %x) {
 define i8 @test_mul_by_8(i8 %x) {
 ; X64-LABEL: test_mul_by_8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shlb $3, %al
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (,%rdi,8), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %m = mul i8 %x, 8
@@ -449,8 +449,8 @@ define i8 @test_mul_by_73(i8 %x) {
 define i8 @test_mul_by_520(i8 %x) {
 ; X64-LABEL: test_mul_by_520:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shlb $3, %al
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (,%rdi,8), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %m = mul i8 %x, 520

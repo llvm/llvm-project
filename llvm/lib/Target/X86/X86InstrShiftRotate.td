@@ -30,11 +30,11 @@ def SHL64rCL : RI<0xD3, MRM4r, (outs GR64:$dst), (ins GR64:$src1),
                   [(set GR64:$dst, (shl GR64:$src1, CL))]>;
 } // Uses = [CL], SchedRW
 
+let isConvertibleToThreeAddress = 1 in {   // Can transform into LEA.
 def SHL8ri   : Ii8<0xC0, MRM4r, (outs GR8 :$dst), (ins GR8 :$src1, u8imm:$src2),
                    "shl{b}\t{$src2, $dst|$dst, $src2}",
                    [(set GR8:$dst, (shl GR8:$src1, (i8 imm:$src2)))]>;
 
-let isConvertibleToThreeAddress = 1 in {   // Can transform into LEA.
 def SHL16ri  : Ii8<0xC1, MRM4r, (outs GR16:$dst), (ins GR16:$src1, u8imm:$src2),
                    "shl{w}\t{$src2, $dst|$dst, $src2}",
                    [(set GR16:$dst, (shl GR16:$src1, (i8 imm:$src2)))]>,

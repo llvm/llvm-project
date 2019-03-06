@@ -905,7 +905,7 @@ main(int argc, char const *argv[])
       WithColor::error() << "reproducer replay failed: " << error << '\n';
       return 1;
     }
-    // FIXME: Return once SBReproducer::Replay actually performs the replay.
+    return 0;
   }
 
   SBError error = SBDebugger::InitializeWithErrorHandling();

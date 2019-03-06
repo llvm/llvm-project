@@ -277,11 +277,6 @@ void MatcherGen::EmitLeafMatchCode(const TreePatternNode *N) {
     return;
   }
 
-  if (LeafRec->getName() == "immAllOnesV")
-    return AddMatcher(new CheckImmAllOnesVMatcher());
-  if (LeafRec->getName() == "immAllZerosV")
-    return AddMatcher(new CheckImmAllZerosVMatcher());
-
   errs() << "Unknown leaf kind: " << *N << "\n";
   abort();
 }

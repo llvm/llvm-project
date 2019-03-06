@@ -99,8 +99,6 @@ public:
   //---------------------------------------------------------------------------
   static ArchSpec GetAugmentedArchSpec(llvm::StringRef triple);
 
-  static UserIDResolver &GetUserIDResolver();
-
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
