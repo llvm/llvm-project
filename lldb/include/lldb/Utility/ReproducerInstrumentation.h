@@ -261,6 +261,7 @@ public:
   void HandleReplayResultVoid() {
     unsigned result = Deserialize<unsigned>();
     assert(result == 0);
+    (void)result;
   }
 
 private:
