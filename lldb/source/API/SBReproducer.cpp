@@ -37,7 +37,7 @@ static bool GetDefaultArchitectureRedirect(char *arch_name,
                                            size_t arch_name_len) {
   // The function is writing to its argument. Without the redirect it would
   // write into the replay buffer.
-  char buffer[arch_name_len];
+  char buffer[1024];
   return SBDebugger::GetDefaultArchitecture(buffer, arch_name_len);
 }
 
@@ -1114,6 +1114,9 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS,
                                 GetUserHomeDirectory, ());
     LLDB_REGISTER_STATIC_METHOD(void, SBHostOS, ThreadCreated, (const char *));
+#ifndef _WIN32
+    // FIXME: On Windows, lldb::thread_t is just a void*, so the we will try to
+    //        allocate an object of type void when deserializing.
     LLDB_REGISTER_STATIC_METHOD(bool, SBHostOS, ThreadCancel,
                                 (lldb::thread_t, lldb::SBError *));
     LLDB_REGISTER_STATIC_METHOD(bool, SBHostOS, ThreadDetach,
@@ -1121,6 +1124,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_STATIC_METHOD(
         bool, SBHostOS, ThreadJoin,
         (lldb::thread_t, lldb::thread_result_t *, lldb::SBError *));
+#endif
   }
   {
     LLDB_REGISTER_CONSTRUCTOR(SBInstruction, ());

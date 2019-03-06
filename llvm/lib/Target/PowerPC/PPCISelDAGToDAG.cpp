@@ -4353,7 +4353,20 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (trySETCC(N))
       return;
     break;
-
+  // These nodes will be transformed into GETtlsADDR32 node, which
+  // later becomes BL_TLS __tls_get_addr(sym at tlsgd)@PLT
+  case PPCISD::ADDI_TLSLD_L_ADDR:
+  case PPCISD::ADDI_TLSGD_L_ADDR: {
+    const Module *Mod = MF->getFunction().getParent();
+    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
+        !PPCSubTarget->isSecurePlt() || !PPCSubTarget->isTargetELF() ||
+        Mod->getPICLevel() == PICLevel::SmallPIC)
+      break;
+      // Attach global base pointer on GETtlsADDR32 node in order to
+      // generate secure plt code for TLS symbols.
+      getGlobalBaseReg();
+  }
+    break;
   case PPCISD::CALL: {
     const Module *M = MF->getFunction().getParent();
 

@@ -67,8 +67,6 @@ const char *clang::getOpenMPClauseName(OpenMPClauseKind Kind) {
   case OMPC_##Name:                                                            \
     return #Name;
 #include "clang/Basic/OpenMPKinds.def"
-  case OMPC_flush:
-    return "flush";
   case OMPC_uniform:
     return "uniform";
   case OMPC_threadprivate:
