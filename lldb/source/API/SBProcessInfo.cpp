@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBProcessInfo.h"
-
+#include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/Target/Process.h"
 
@@ -17,20 +17,14 @@ using namespace lldb_private;
 SBProcessInfo::SBProcessInfo() : m_opaque_up() {}
 
 SBProcessInfo::SBProcessInfo(const SBProcessInfo &rhs) : m_opaque_up() {
-  if (rhs.IsValid()) {
-    ref() = *rhs.m_opaque_up;
-  }
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBProcessInfo::~SBProcessInfo() {}
 
 SBProcessInfo &SBProcessInfo::operator=(const SBProcessInfo &rhs) {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      ref() = *rhs.m_opaque_up;
-    else
-      m_opaque_up.reset();
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

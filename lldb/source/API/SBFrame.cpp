@@ -15,6 +15,7 @@
 #include "lldb/lldb-types.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
+#include "Utils.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectRegister.h"
@@ -69,14 +70,15 @@ SBFrame::SBFrame(const StackFrameSP &lldb_object_sp)
   }
 }
 
-SBFrame::SBFrame(const SBFrame &rhs)
-    : m_opaque_sp(new ExecutionContextRef(*rhs.m_opaque_sp)) {}
+SBFrame::SBFrame(const SBFrame &rhs) : m_opaque_sp() {
+  m_opaque_sp = clone(rhs.m_opaque_sp);
+}
 
 SBFrame::~SBFrame() = default;
 
 const SBFrame &SBFrame::operator=(const SBFrame &rhs) {
   if (this != &rhs)
-    *m_opaque_sp = *rhs.m_opaque_sp;
+    m_opaque_sp = clone(rhs.m_opaque_sp);
   return *this;
 }
 

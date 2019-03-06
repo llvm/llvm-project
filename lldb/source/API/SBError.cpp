@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBError.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
@@ -19,21 +20,14 @@ using namespace lldb_private;
 SBError::SBError() : m_opaque_up() {}
 
 SBError::SBError(const SBError &rhs) : m_opaque_up() {
-  if (rhs.IsValid())
-    m_opaque_up.reset(new Status(*rhs));
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBError::~SBError() {}
 
 const SBError &SBError::operator=(const SBError &rhs) {
-  if (rhs.IsValid()) {
-    if (m_opaque_up)
-      *m_opaque_up = *rhs;
-    else
-      m_opaque_up.reset(new Status(*rhs));
-  } else
-    m_opaque_up.reset();
-
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

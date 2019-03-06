@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBAddress.h"
+#include "Utils.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSection.h"
 #include "lldb/API/SBStream.h"
@@ -25,12 +26,11 @@ SBAddress::SBAddress() : m_opaque_up(new Address()) {}
 SBAddress::SBAddress(const Address *lldb_object_ptr)
     : m_opaque_up(new Address()) {
   if (lldb_object_ptr)
-    ref() = *lldb_object_ptr;
+    m_opaque_up = llvm::make_unique<Address>(*lldb_object_ptr);
 }
 
 SBAddress::SBAddress(const SBAddress &rhs) : m_opaque_up(new Address()) {
-  if (rhs.IsValid())
-    ref() = rhs.ref();
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBAddress::SBAddress(lldb::SBSection section, lldb::addr_t offset)
@@ -45,12 +45,8 @@ SBAddress::SBAddress(lldb::addr_t load_addr, lldb::SBTarget &target)
 SBAddress::~SBAddress() {}
 
 const SBAddress &SBAddress::operator=(const SBAddress &rhs) {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      ref() = rhs.ref();
-    else
-      m_opaque_up.reset(new Address());
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

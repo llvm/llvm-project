@@ -7,10 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBThread.h"
-
+#include "Utils.h"
+#include "lldb/API/SBAddress.h"
+#include "lldb/API/SBDebugger.h"
+#include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBFrame.h"
+#include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBSymbolContext.h"
+#include "lldb/API/SBThreadCollection.h"
+#include "lldb/API/SBThreadPlan.h"
+#include "lldb/API/SBValue.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
@@ -33,15 +41,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
-
-#include "lldb/API/SBAddress.h"
-#include "lldb/API/SBDebugger.h"
-#include "lldb/API/SBEvent.h"
-#include "lldb/API/SBFrame.h"
-#include "lldb/API/SBProcess.h"
-#include "lldb/API/SBThreadCollection.h"
-#include "lldb/API/SBThreadPlan.h"
-#include "lldb/API/SBValue.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>
@@ -61,8 +60,9 @@ SBThread::SBThread() : m_opaque_sp(new ExecutionContextRef()) {}
 SBThread::SBThread(const ThreadSP &lldb_object_sp)
     : m_opaque_sp(new ExecutionContextRef(lldb_object_sp)) {}
 
-SBThread::SBThread(const SBThread &rhs)
-    : m_opaque_sp(new ExecutionContextRef(*rhs.m_opaque_sp)) {}
+SBThread::SBThread(const SBThread &rhs) : m_opaque_sp() {
+  m_opaque_sp = clone(rhs.m_opaque_sp);
+}
 
 //----------------------------------------------------------------------
 // Assignment operator
@@ -70,7 +70,7 @@ SBThread::SBThread(const SBThread &rhs)
 
 const lldb::SBThread &SBThread::operator=(const SBThread &rhs) {
   if (this != &rhs)
-    *m_opaque_sp = *rhs.m_opaque_sp;
+    m_opaque_sp = clone(rhs.m_opaque_sp);
   return *this;
 }
 

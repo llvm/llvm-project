@@ -8,6 +8,7 @@
 
 #include <limits.h>
 
+#include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBStream.h"
@@ -25,8 +26,7 @@ SBFileSpecList::SBFileSpecList() : m_opaque_up(new FileSpecList()) {}
 SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_up() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
-  if (rhs.m_opaque_up)
-    m_opaque_up.reset(new FileSpecList(*(rhs.get())));
+  m_opaque_up = clone(rhs.m_opaque_up);
 
   if (log) {
     log->Printf("SBFileSpecList::SBFileSpecList (const SBFileSpecList "
@@ -39,9 +39,8 @@ SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_up() {
 SBFileSpecList::~SBFileSpecList() {}
 
 const SBFileSpecList &SBFileSpecList::operator=(const SBFileSpecList &rhs) {
-  if (this != &rhs) {
-    m_opaque_up.reset(new lldb_private::FileSpecList(*(rhs.get())));
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBExpressionOptions.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
-
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -18,16 +18,15 @@ using namespace lldb_private;
 SBExpressionOptions::SBExpressionOptions()
     : m_opaque_up(new EvaluateExpressionOptions()) {}
 
-SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs) {
-  m_opaque_up.reset(new EvaluateExpressionOptions());
-  *(m_opaque_up.get()) = rhs.ref();
+SBExpressionOptions::SBExpressionOptions(const SBExpressionOptions &rhs)
+    : m_opaque_up() {
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 const SBExpressionOptions &SBExpressionOptions::
 operator=(const SBExpressionOptions &rhs) {
-  if (this != &rhs) {
-    this->ref() = rhs.ref();
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

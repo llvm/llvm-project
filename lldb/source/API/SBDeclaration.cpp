@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBDeclaration.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/Declaration.h"
@@ -21,23 +22,18 @@ using namespace lldb_private;
 SBDeclaration::SBDeclaration() : m_opaque_up() {}
 
 SBDeclaration::SBDeclaration(const SBDeclaration &rhs) : m_opaque_up() {
-  if (rhs.IsValid())
-    ref() = rhs.ref();
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBDeclaration::SBDeclaration(const lldb_private::Declaration *lldb_object_ptr)
     : m_opaque_up() {
   if (lldb_object_ptr)
-    ref() = *lldb_object_ptr;
+    m_opaque_up = llvm::make_unique<Declaration>(*lldb_object_ptr);
 }
 
 const SBDeclaration &SBDeclaration::operator=(const SBDeclaration &rhs) {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      ref() = rhs.ref();
-    else
-      m_opaque_up.reset();
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

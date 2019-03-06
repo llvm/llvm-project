@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommandReturnObject.h"
+#include "Utils.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
-
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
@@ -23,8 +23,7 @@ SBCommandReturnObject::SBCommandReturnObject()
 
 SBCommandReturnObject::SBCommandReturnObject(const SBCommandReturnObject &rhs)
     : m_opaque_up() {
-  if (rhs.m_opaque_up)
-    m_opaque_up.reset(new CommandReturnObject(*rhs.m_opaque_up));
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBCommandReturnObject::SBCommandReturnObject(CommandReturnObject *ptr)
@@ -38,12 +37,8 @@ CommandReturnObject *SBCommandReturnObject::Release() {
 
 const SBCommandReturnObject &SBCommandReturnObject::
 operator=(const SBCommandReturnObject &rhs) {
-  if (this != &rhs) {
-    if (rhs.m_opaque_up)
-      m_opaque_up.reset(new CommandReturnObject(*rhs.m_opaque_up));
-    else
-      m_opaque_up.reset();
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

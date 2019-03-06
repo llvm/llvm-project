@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <limits.h>
 
+#include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/FileSystem.h"
@@ -24,8 +25,9 @@ using namespace lldb_private;
 
 SBFileSpec::SBFileSpec() : m_opaque_up(new lldb_private::FileSpec()) {}
 
-SBFileSpec::SBFileSpec(const SBFileSpec &rhs)
-    : m_opaque_up(new lldb_private::FileSpec(*rhs.m_opaque_up)) {}
+SBFileSpec::SBFileSpec(const SBFileSpec &rhs) : m_opaque_up() {
+  m_opaque_up = clone(rhs.m_opaque_up);
+}
 
 SBFileSpec::SBFileSpec(const lldb_private::FileSpec &fspec)
     : m_opaque_up(new lldb_private::FileSpec(fspec)) {}
@@ -45,7 +47,7 @@ SBFileSpec::~SBFileSpec() {}
 
 const SBFileSpec &SBFileSpec::operator=(const SBFileSpec &rhs) {
   if (this != &rhs)
-    *m_opaque_up = *rhs.m_opaque_up;
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

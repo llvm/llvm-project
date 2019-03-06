@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSymbolContextList.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Symbol/SymbolContext.h"
 
@@ -17,15 +18,17 @@ SBSymbolContextList::SBSymbolContextList()
     : m_opaque_up(new SymbolContextList()) {}
 
 SBSymbolContextList::SBSymbolContextList(const SBSymbolContextList &rhs)
-    : m_opaque_up(new SymbolContextList(*rhs.m_opaque_up)) {}
+    : m_opaque_up() {
+
+  m_opaque_up = clone(rhs.m_opaque_up);
+}
 
 SBSymbolContextList::~SBSymbolContextList() {}
 
 const SBSymbolContextList &SBSymbolContextList::
 operator=(const SBSymbolContextList &rhs) {
-  if (this != &rhs) {
-    *m_opaque_up = *rhs.m_opaque_up;
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

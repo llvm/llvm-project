@@ -3379,6 +3379,7 @@
 		9A4633DA11F65D8600955CE1 /* UserSettingsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UserSettingsController.h; path = include/lldb/Core/UserSettingsController.h; sourceTree = "<group>"; };
 		4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UtilityFunction.cpp; path = source/Expression/UtilityFunction.cpp; sourceTree = "<group>"; };
 		4C00833D1B9F9B8400D5CF24 /* UtilityFunction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UtilityFunction.h; path = include/lldb/Expression/UtilityFunction.h; sourceTree = "<group>"; };
+		DD54302F222F190D00C1F021 /* Utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Utils.h; path = source/API/Utils.h; sourceTree = "<group>"; };
 		2654A6921E552F4600DA1013 /* VASPrintf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = VASPrintf.h; path = include/lldb/Utility/VASPrintf.h; sourceTree = "<group>"; };
 		2654A68F1E552ED500DA1013 /* VASprintf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = VASprintf.cpp; path = source/Utility/VASprintf.cpp; sourceTree = "<group>"; };
 		9A3D43C41F3150D200EB767C /* VASprintfTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VASprintfTest.cpp; sourceTree = "<group>"; };
@@ -4554,6 +4555,7 @@
 				23059A0F1958B319007B8189 /* SBUnixSignals.cpp */,
 				9A19A6A51163BB7E00E0D453 /* SBValue.h */,
 				9A19A6AD1163BB9800E0D453 /* SBValue.cpp */,
+				DD54302F222F190D00C1F021 /* Utils.h */,
 				9A357582116CFDEE00E8ED2F /* SBValueList.h */,
 				9A35758D116CFE0F00E8ED2F /* SBValueList.cpp */,
 				94235B9A1A8D5FD800EB2EED /* SBVariablesOptions.h */,

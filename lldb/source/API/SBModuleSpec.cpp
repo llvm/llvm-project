@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBModuleSpec.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -19,12 +20,13 @@ using namespace lldb_private;
 
 SBModuleSpec::SBModuleSpec() : m_opaque_up(new lldb_private::ModuleSpec()) {}
 
-SBModuleSpec::SBModuleSpec(const SBModuleSpec &rhs)
-    : m_opaque_up(new lldb_private::ModuleSpec(*rhs.m_opaque_up)) {}
+SBModuleSpec::SBModuleSpec(const SBModuleSpec &rhs) : m_opaque_up() {
+  m_opaque_up = clone(rhs.m_opaque_up);
+}
 
 const SBModuleSpec &SBModuleSpec::operator=(const SBModuleSpec &rhs) {
   if (this != &rhs)
-    *m_opaque_up = *(rhs.m_opaque_up);
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

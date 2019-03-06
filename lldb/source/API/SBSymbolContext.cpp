@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBSymbolContext.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
@@ -21,38 +22,26 @@ SBSymbolContext::SBSymbolContext() : m_opaque_up() {}
 
 SBSymbolContext::SBSymbolContext(const SymbolContext *sc_ptr) : m_opaque_up() {
   if (sc_ptr)
-    m_opaque_up.reset(new SymbolContext(*sc_ptr));
+    m_opaque_up = llvm::make_unique<SymbolContext>(*sc_ptr);
 }
 
 SBSymbolContext::SBSymbolContext(const SBSymbolContext &rhs) : m_opaque_up() {
-  if (rhs.IsValid()) {
-    if (m_opaque_up)
-      *m_opaque_up = *rhs.m_opaque_up;
-    else
-      ref() = *rhs.m_opaque_up;
-  }
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBSymbolContext::~SBSymbolContext() {}
 
 const SBSymbolContext &SBSymbolContext::operator=(const SBSymbolContext &rhs) {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      m_opaque_up.reset(new lldb_private::SymbolContext(*rhs.m_opaque_up));
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 
 void SBSymbolContext::SetSymbolContext(const SymbolContext *sc_ptr) {
-  if (sc_ptr) {
-    if (m_opaque_up)
-      *m_opaque_up = *sc_ptr;
-    else
-      m_opaque_up.reset(new SymbolContext(*sc_ptr));
-  } else {
-    if (m_opaque_up)
-      m_opaque_up->Clear(true);
-  }
+  if (sc_ptr)
+    m_opaque_up = llvm::make_unique<SymbolContext>(*sc_ptr);
+  else
+    m_opaque_up->Clear(true);
 }
 
 bool SBSymbolContext::IsValid() const { return m_opaque_up != NULL; }

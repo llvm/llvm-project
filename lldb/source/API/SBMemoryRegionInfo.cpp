@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBMemoryRegionInfo.h"
+#include "Utils.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
@@ -26,15 +27,14 @@ SBMemoryRegionInfo::SBMemoryRegionInfo(const MemoryRegionInfo *lldb_object_ptr)
 }
 
 SBMemoryRegionInfo::SBMemoryRegionInfo(const SBMemoryRegionInfo &rhs)
-    : m_opaque_up(new MemoryRegionInfo()) {
-  ref() = rhs.ref();
+    : m_opaque_up() {
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 const SBMemoryRegionInfo &SBMemoryRegionInfo::
 operator=(const SBMemoryRegionInfo &rhs) {
-  if (this != &rhs) {
-    ref() = rhs.ref();
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 

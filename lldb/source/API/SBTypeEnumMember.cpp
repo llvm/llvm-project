@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeEnumMember.h"
+#include "Utils.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBType.h"
@@ -22,23 +23,19 @@ using namespace lldb_private;
 SBTypeEnumMember::SBTypeEnumMember() : m_opaque_sp() {}
 
 SBTypeEnumMember::~SBTypeEnumMember() {}
+
 SBTypeEnumMember::SBTypeEnumMember(
     const lldb::TypeEnumMemberImplSP &enum_member_sp)
     : m_opaque_sp(enum_member_sp) {}
 
 SBTypeEnumMember::SBTypeEnumMember(const SBTypeEnumMember &rhs)
     : m_opaque_sp() {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      m_opaque_sp = std::make_shared<TypeEnumMemberImpl>(rhs.ref());
-  }
+  m_opaque_sp = clone(rhs.m_opaque_sp);
 }
 
 SBTypeEnumMember &SBTypeEnumMember::operator=(const SBTypeEnumMember &rhs) {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      m_opaque_sp = std::make_shared<TypeEnumMemberImpl>(rhs.ref());
-  }
+  if (this != &rhs)
+    m_opaque_sp = clone(rhs.m_opaque_sp);
   return *this;
 }
 

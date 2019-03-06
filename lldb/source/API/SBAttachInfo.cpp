@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBAttachInfo.h"
-
+#include "Utils.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/Target/Process.h"
@@ -39,7 +39,7 @@ SBAttachInfo::SBAttachInfo(const char *path, bool wait_for, bool async)
 
 SBAttachInfo::SBAttachInfo(const SBAttachInfo &rhs)
     : m_opaque_sp(new ProcessAttachInfo()) {
-  *m_opaque_sp = *rhs.m_opaque_sp;
+  m_opaque_sp = clone(rhs.m_opaque_sp);
 }
 
 SBAttachInfo::~SBAttachInfo() {}
@@ -48,7 +48,7 @@ lldb_private::ProcessAttachInfo &SBAttachInfo::ref() { return *m_opaque_sp; }
 
 SBAttachInfo &SBAttachInfo::operator=(const SBAttachInfo &rhs) {
   if (this != &rhs)
-    *m_opaque_sp = *rhs.m_opaque_sp;
+    m_opaque_sp = clone(rhs.m_opaque_sp);
   return *this;
 }
 

@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <limits.h>
-
 #include "lldb/API/SBLineEntry.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Symbol/LineEntry.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+
+#include <limits.h>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -21,28 +22,23 @@ using namespace lldb_private;
 SBLineEntry::SBLineEntry() : m_opaque_up() {}
 
 SBLineEntry::SBLineEntry(const SBLineEntry &rhs) : m_opaque_up() {
-  if (rhs.IsValid())
-    ref() = rhs.ref();
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBLineEntry::SBLineEntry(const lldb_private::LineEntry *lldb_object_ptr)
     : m_opaque_up() {
   if (lldb_object_ptr)
-    ref() = *lldb_object_ptr;
+    m_opaque_up = llvm::make_unique<LineEntry>(*lldb_object_ptr);
 }
 
 const SBLineEntry &SBLineEntry::operator=(const SBLineEntry &rhs) {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      ref() = rhs.ref();
-    else
-      m_opaque_up.reset();
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 
 void SBLineEntry::SetLineEntry(const lldb_private::LineEntry &lldb_object_ref) {
-  ref() = lldb_object_ref;
+  m_opaque_up = llvm::make_unique<LineEntry>(lldb_object_ref);
 }
 
 SBLineEntry::~SBLineEntry() {}

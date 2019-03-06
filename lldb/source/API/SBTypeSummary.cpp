@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTypeSummary.h"
+#include "Utils.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -17,16 +18,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBTypeSummaryOptions::SBTypeSummaryOptions() {
-  m_opaque_up.reset(new TypeSummaryOptions());
-}
+SBTypeSummaryOptions::SBTypeSummaryOptions()
+    : m_opaque_up(new TypeSummaryOptions()) {}
 
 SBTypeSummaryOptions::SBTypeSummaryOptions(
     const lldb::SBTypeSummaryOptions &rhs) {
-  if (rhs.m_opaque_up)
-    m_opaque_up.reset(new TypeSummaryOptions(*rhs.m_opaque_up));
-  else
-    m_opaque_up.reset(new TypeSummaryOptions());
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 SBTypeSummaryOptions::~SBTypeSummaryOptions() {}

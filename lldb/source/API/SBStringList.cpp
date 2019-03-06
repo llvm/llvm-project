@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBStringList.h"
-
+#include "Utils.h"
 #include "lldb/Utility/StringList.h"
 
 using namespace lldb;
@@ -18,21 +18,16 @@ SBStringList::SBStringList() : m_opaque_up() {}
 SBStringList::SBStringList(const lldb_private::StringList *lldb_strings_ptr)
     : m_opaque_up() {
   if (lldb_strings_ptr)
-    m_opaque_up.reset(new lldb_private::StringList(*lldb_strings_ptr));
+    m_opaque_up = llvm::make_unique<StringList>(*lldb_strings_ptr);
 }
 
 SBStringList::SBStringList(const SBStringList &rhs) : m_opaque_up() {
-  if (rhs.IsValid())
-    m_opaque_up.reset(new lldb_private::StringList(*rhs));
+  m_opaque_up = clone(rhs.m_opaque_up);
 }
 
 const SBStringList &SBStringList::operator=(const SBStringList &rhs) {
-  if (this != &rhs) {
-    if (rhs.IsValid())
-      m_opaque_up.reset(new lldb_private::StringList(*rhs));
-    else
-      m_opaque_up.reset();
-  }
+  if (this != &rhs)
+    m_opaque_up = clone(rhs.m_opaque_up);
   return *this;
 }
 
