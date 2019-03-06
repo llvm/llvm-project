@@ -63,7 +63,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   ConstString mangled_name;
   ConstString name;
   bool is_clang_type = false;
-  uint64_t dwarf_byte_size = 0;
+  llvm::Optional<uint64_t> dwarf_byte_size;
 
   DWARFAttributes attributes;
   const size_t num_attributes = die.GetAttributes(attributes);
@@ -199,7 +199,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
         die.GetID(), die.GetDWARF(),
         preferred_name ? preferred_name : compiler_type.GetTypeName(),
         is_clang_type ? dwarf_byte_size
-                      : compiler_type.GetByteSize(nullptr).getValueOr(0),
+                      : compiler_type.GetByteSize(nullptr),
         NULL, LLDB_INVALID_UID, Type::eEncodingIsUID, &decl, compiler_type,
         is_clang_type ? Type::eResolveStateForward : Type::eResolveStateFull));
     // FIXME: This ought to work lazily, too.
