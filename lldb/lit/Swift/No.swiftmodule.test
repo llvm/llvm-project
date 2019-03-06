@@ -4,9 +4,9 @@
 # RUN: %target-swift-frontend -c -g -serialize-debugging-options \
 # RUN:          -module-cache-path %t/cache \
 # RUN:          -primary-file %S/Inputs/No.swiftmodule.swift \
-# RUN:          -module-name main -o main.o
-# RUN: %target-swiftc -o a.out main.o
-# RUN: %lldb a.out -s %s | FileCheck %S/Inputs/No.swiftmodule.swift
+# RUN:          -module-name main -o %t/main.o
+# RUN: %target-swiftc -o %t/a.out %t/main.o
+# RUN: %lldb %t/a.out -s %s | FileCheck %S/Inputs/No.swiftmodule.swift
 
 breakpoint set -p "break here"
 run
