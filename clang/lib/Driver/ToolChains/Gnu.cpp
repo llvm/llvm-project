@@ -527,6 +527,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   getToolChain().addProfileRTLibs(Args, CmdArgs);
 
   addCSIRuntime(ToolChain, Args, CmdArgs);
+  addCilktoolRuntime(ToolChain, Args, CmdArgs);
 
   ToolChain.AddTapirRuntimeLibArgs(Args, CmdArgs);
 

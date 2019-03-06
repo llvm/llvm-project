@@ -579,6 +579,23 @@ static void parseSanitizerKinds(StringRef FlagName,
   }
 }
 
+static LangOptions::CilktoolKind parseCilktoolKind(StringRef FlagName,
+                                                   ArgList &Args,
+                                                   DiagnosticsEngine &Diags) {
+  if (Arg *A = Args.getLastArg(OPT_fcilktool_EQ)) {
+    StringRef Val = A->getValue();
+    LangOptions::CilktoolKind ParsedCilktool =
+      llvm::StringSwitch<LangOptions::CilktoolKind>(Val)
+      .Case("cilkscale", LangOptions::Cilktool_Cilkscale)
+      .Default(LangOptions::Cilktool_None);
+    if (ParsedCilktool == LangOptions::Cilktool_None)
+      Diags.Report(diag::err_drv_invalid_value) << FlagName << Val;
+    else
+      return ParsedCilktool;
+  }
+  return LangOptions::Cilktool_None;
+}
+
 static LangOptions::CSIExtensionPoint
 parseCSIExtensionPoint(StringRef FlagName, ArgList &Args,
                        DiagnosticsEngine &Diags) {
@@ -3107,6 +3124,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     Opts.setComprehensiveStaticInstrumentation(
         parseCSIExtensionPoint("-fcsi=", Args, Diags));
 
+  // -fcilktool=
+  if (Args.hasArg(OPT_fcilktool_EQ))
+    Opts.setCilktool(parseCilktoolKind("-fcilktool=", Args, Diags));
+
   // -fxray-instrument
   Opts.XRayInstrument =
       Args.hasFlag(OPT_fxray_instrument, OPT_fnoxray_instrument, false);
@@ -3434,6 +3455,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     if (Args.hasArg(OPT_fcsi_EQ) || Args.hasArg(OPT_fcsi))
       LangOpts.setComprehensiveStaticInstrumentation(
           parseCSIExtensionPoint("-fcsi=", Args, Diags));
+    if (Args.hasArg(OPT_fcilktool_EQ))
+      LangOpts.setCilktool(parseCilktoolKind("-fcilktool=", Args, Diags));
   } else {
     // Other LangOpts are only initialized when the input is not AST or LLVM IR.
     // FIXME: Should we really be calling this for an InputKind::Asm input?

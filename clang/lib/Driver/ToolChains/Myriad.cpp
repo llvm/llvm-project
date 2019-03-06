@@ -170,6 +170,7 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   addCSIRuntime(TC, Args, CmdArgs);
+  addCilktoolRuntime(TC, Args, CmdArgs);
 
   TC.AddTapirRuntimeLibArgs(Args, CmdArgs);
 

@@ -809,6 +809,16 @@ bool tools::addCSIRuntime(const ToolChain &TC, const ArgList &Args,
   return true;
 }
 
+bool tools::addCilktoolRuntime(const ToolChain &TC, const ArgList &Args,
+                               ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_fcilktool_EQ)) {
+    StringRef Val = A->getValue();
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, Val, false));
+    return true;
+  }
+  return false;
+}
+
 bool tools::areOptimizationsEnabled(const ArgList &Args) {
   // Find the last -O arg and see if it is non-zero.
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))

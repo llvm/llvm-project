@@ -50,6 +50,9 @@ void linkXRayRuntimeDeps(const ToolChain &TC,
 bool addCSIRuntime(const ToolChain &TC, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs);
 
+bool addCilktoolRuntime(const ToolChain &TC, const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs);
+
 void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);

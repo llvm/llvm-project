@@ -299,6 +299,9 @@ LANGOPT(ApplePragmaPack, 1, 0, "Apple gcc-compatible #pragma pack handling")
 
 LANGOPT(Cilk, 1, 0, "Enable Cilk language extensions")
 
+BENIGN_ENUM_LANGOPT(Cilktool, CilktoolKind, 3,
+                    Cilktool_None, "turn on the specified Cilk tool")
+
 LANGOPT(RetainCommentsFromSystemHeaders, 1, 0, "retain documentation comments from system headers in the AST")
 
 LANGOPT(SanitizeAddressFieldPadding, 2, 0, "controls how aggressive is ASan "

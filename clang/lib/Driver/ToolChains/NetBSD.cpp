@@ -265,6 +265,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   addCSIRuntime(getToolChain(), Args, CmdArgs);
+  addCilktoolRuntime(getToolChain(), Args, CmdArgs);
 
   unsigned Major, Minor, Micro;
   ToolChain.getTriple().getOSVersion(Major, Minor, Micro);

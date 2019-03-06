@@ -346,8 +346,40 @@ static void addCilkSanitizerPass(const PassManagerBuilder &Builder,
 
 static void
 addComprehensiveStaticInstrumentationPass(const PassManagerBuilder &Builder,
-                                          PassManagerBase &PM) {
+                                          legacy::PassManagerBase &PM) {
   PM.add(createComprehensiveStaticInstrumentationLegacyPass());
+
+  // CSI inserts complex instrumentation that mostly follows the logic of the
+  // original code, but operates on "shadow" values.  It can benefit from
+  // re-running some general purpose optimization passes.
+  if (Builder.OptLevel > 0) {
+    PM.add(createEarlyCSEPass());
+    PM.add(createReassociatePass());
+    PM.add(createLICMPass());
+    PM.add(createGVNPass());
+    PM.add(createInstructionCombiningPass());
+    PM.add(createDeadStoreEliminationPass());
+  }
+}
+
+static CSIOptions getCSIOptionsForCilkscale() {
+  CSIOptions Options;
+  // Disable CSI hooks that Cilkscale doesn't need.
+  Options.InstrumentBasicBlocks = false;
+  Options.InstrumentMemoryAccesses = false;
+  Options.InstrumentCalls = false;
+  Options.InstrumentAtomics = false;
+  Options.InstrumentMemIntrinsics = false;
+  Options.InstrumentAllocas = false;
+  Options.InstrumentAllocFns = false;
+  return Options;
+}
+
+static void
+addCilkscaleInstrumentation(const PassManagerBuilder &Builder,
+                            legacy::PassManagerBase &PM) {
+  PM.add(createComprehensiveStaticInstrumentationLegacyPass(
+             getCSIOptionsForCilkscale()));
 
   // CSI inserts complex instrumentation that mostly follows the logic of the
   // original code, but operates on "shadow" values.  It can benefit from
@@ -716,11 +748,18 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
                            addDataFlowSanitizerPass);
   }
 
-  if (LangOpts.Sanitize.has(SanitizerKind::Cilk)) {
+  if (LangOpts.Sanitize.has(SanitizerKind::Cilk))
     PMBuilder.addExtension(PassManagerBuilder::EP_TapirLate,
                            addCilkSanitizerPass);
-    // PMBuilder.addExtension(PassManagerBuilder::EP_EnabledOnOptLevel0,
-    //                        addCilkSanitizerPass);
+
+  if (LangOpts.getCilktool() != LangOptions::CilktoolKind::Cilktool_None) {
+    switch (LangOpts.getCilktool()) {
+    default: break;
+    case LangOptions::CilktoolKind::Cilktool_Cilkscale:
+      PMBuilder.addExtension(PassManagerBuilder::EP_TapirLate,
+                             addCilkscaleInstrumentation);
+      break;
+    }
   }
 
   if (LangOpts.getComprehensiveStaticInstrumentation()) {
@@ -1190,6 +1229,15 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
       // need to run before Tapir lowering.
       if (LangOpts.Sanitize.has(SanitizerKind::Cilk))
         MPM.addPass(CilkSanitizerPass());
+      if (LangOpts.getCilktool() != LangOptions::CilktoolKind::Cilktool_None) {
+        switch (LangOpts.getCilktool()) {
+        default: break;
+        case LangOptions::CilktoolKind::Cilktool_Cilkscale:
+          MPM.addPass(ComprehensiveStaticInstrumentationPass(
+                          getCSIOptionsForCilkscale()));
+          break;
+        }
+      }
       if (LangOpts.getComprehensiveStaticInstrumentation())
         MPM.addPass(ComprehensiveStaticInstrumentationPass());
 
@@ -1282,6 +1330,23 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
               MPM.addPass(InvalidateAllAnalysesPass());
               MPM.addPass(CilkSanitizerPass());
             });
+      // Register CSI instrumentation for Cilkscale
+      if (LangOpts.getCilktool() != LangOptions::CilktoolKind::Cilktool_None) {
+        switch (LangOpts.getCilktool()) {
+        default: break;
+        case LangOptions::CilktoolKind::Cilktool_Cilkscale:
+          PB.registerTapirLateEPCallback(
+            [](ModulePassManager &MPM, PassBuilder::OptimizationLevel Level) {
+              // CilkSanitizer performs significant changes to the CFG before
+              // attempting to analyze and insert instrumentation.  Hence we
+              // invalidate all analysis passes before running CilkSanitizer.
+              MPM.addPass(InvalidateAllAnalysesPass());
+              MPM.addPass(ComprehensiveStaticInstrumentationPass(
+                              getCSIOptionsForCilkscale()));
+            });
+          break;
+        }
+      }
       // Register the CSI pass.
       if (LangOpts.getComprehensiveStaticInstrumentation()) {
         switch (LangOpts.getComprehensiveStaticInstrumentation()) {

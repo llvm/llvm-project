@@ -1095,6 +1095,9 @@ def fcsi_EQ : Joined<["-"], "fcsi=">, Group<f_clang_Group>,
               HelpText<"Turn on Comprehensive Static Instrumentation at the "
                        "specified point in the optimizer: first, early, "
                        "tapirlate, aftertapirloops, last">;
+def fcilktool_EQ : Joined<["-"], "fcilktool=">, Group<f_clang_Group>,
+                   MetaVarName<"<check>">,
+                   HelpText<"Turn on the designated Cilk tool">;
 
 } // end -f[no-]sanitize* flags
 
