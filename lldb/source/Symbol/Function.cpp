@@ -31,7 +31,7 @@ using namespace lldb_private;
 FunctionInfo::FunctionInfo(const char *name, const Declaration *decl_ptr)
     : m_name(name), m_declaration(decl_ptr) {}
 
-FunctionInfo::FunctionInfo(const ConstString &name, const Declaration *decl_ptr)
+FunctionInfo::FunctionInfo(ConstString name, const Declaration *decl_ptr)
     : m_name(name), m_declaration(decl_ptr) {}
 
 FunctionInfo::~FunctionInfo() {}
@@ -68,7 +68,7 @@ InlineFunctionInfo::InlineFunctionInfo(const char *name, const char *mangled,
     : FunctionInfo(name, decl_ptr), m_mangled(ConstString(mangled), true),
       m_call_decl(call_decl_ptr) {}
 
-InlineFunctionInfo::InlineFunctionInfo(const ConstString &name,
+InlineFunctionInfo::InlineFunctionInfo(ConstString name,
                                        const Mangled &mangled,
                                        const Declaration *decl_ptr,
                                        const Declaration *call_decl_ptr)

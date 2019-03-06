@@ -593,9 +593,9 @@ public:
 
     ~ProcessEventData() override;
 
-    static const ConstString &GetFlavorString();
+    static ConstString GetFlavorString();
 
-    const ConstString &GetFlavor() const override;
+    ConstString GetFlavor() const override;
 
     lldb::ProcessSP GetProcessSP() const { return m_process_wp.lock(); }
 
@@ -2764,7 +2764,7 @@ public:
   ///     Returns the result of attempting to configure the feature.
   //------------------------------------------------------------------
   virtual Status
-  ConfigureStructuredData(const ConstString &type_name,
+  ConfigureStructuredData(ConstString type_name,
                           const StructuredData::ObjectSP &config_sp);
 
   //------------------------------------------------------------------
@@ -2798,7 +2798,7 @@ public:
   ///     otherwise, returns an empty shared pointer.
   //------------------------------------------------------------------
   lldb::StructuredDataPluginSP
-  GetStructuredDataPlugin(const ConstString &type_name) const;
+  GetStructuredDataPlugin(ConstString type_name) const;
 
   //------------------------------------------------------------------
   /// Starts tracing with the configuration provided in options. To enable
@@ -3013,7 +3013,7 @@ protected:
   ///
   ///     virtual void
   ///     HandleArrivalOfStructuredData(Process &process,
-  ///                                   const ConstString &type_name,
+  ///                                   ConstString type_name,
   ///                                   const StructuredData::ObjectSP
   ///                                   &object_sp)
   ///

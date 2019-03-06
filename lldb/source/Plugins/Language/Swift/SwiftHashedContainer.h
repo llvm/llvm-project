@@ -142,7 +142,7 @@ public:
 
   virtual bool MightHaveChildren();
 
-  virtual size_t GetIndexOfChildWithName(const ConstString &name);
+  virtual size_t GetIndexOfChildWithName(ConstString name);
 
   virtual ~HashedSyntheticChildrenFrontEnd() = default;
 

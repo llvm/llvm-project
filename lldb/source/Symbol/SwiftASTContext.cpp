@@ -8078,7 +8078,7 @@ void SwiftASTContext::DumpTypeDescription(void *type, Stream *s,
   }
 }
 
-TypeSP SwiftASTContext::GetCachedType(const ConstString &mangled) {
+TypeSP SwiftASTContext::GetCachedType(ConstString mangled) {
   TypeSP type_sp;
   if (m_swift_type_map.Lookup(mangled.GetCString(), type_sp))
     return type_sp;
@@ -8086,7 +8086,7 @@ TypeSP SwiftASTContext::GetCachedType(const ConstString &mangled) {
     return TypeSP();
 }
 
-void SwiftASTContext::SetCachedType(const ConstString &mangled,
+void SwiftASTContext::SetCachedType(ConstString mangled,
                                     const TypeSP &type_sp) {
   m_swift_type_map.Insert(mangled.GetCString(), type_sp);
 }

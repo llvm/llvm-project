@@ -496,7 +496,7 @@ public:
   /// @see \b Process::ConfigureStructuredData(...) for details.
   //------------------------------------------------------------------
   Status
-  ConfigureRemoteStructuredData(const ConstString &type_name,
+  ConfigureRemoteStructuredData(ConstString type_name,
                                 const StructuredData::ObjectSP &config_sp);
 
   lldb::user_id_t SendStartTracePacket(const TraceOptions &options,

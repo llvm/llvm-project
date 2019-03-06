@@ -501,9 +501,9 @@ public:
 
     ~TargetEventData() override;
 
-    static const ConstString &GetFlavorString();
+    static ConstString GetFlavorString();
 
-    const ConstString &GetFlavor() const override {
+    ConstString GetFlavor() const override {
       return TargetEventData::GetFlavorString();
     }
 
@@ -719,12 +719,12 @@ public:
                            Status &error);
   
   void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, 
-                                const ConstString &name);
+                                ConstString name);
   
-  BreakpointName *FindBreakpointName(const ConstString &name, bool can_create, 
+  BreakpointName *FindBreakpointName(ConstString name, bool can_create, 
                                      Status &error);
                                      
-  void DeleteBreakpointName(const ConstString &name);
+  void DeleteBreakpointName(ConstString name);
   
   void ConfigureBreakpointName(BreakpointName &bp_name,
                                const BreakpointOptions &options,
@@ -1224,14 +1224,14 @@ public:
   lldb::addr_t FindLoadAddrForNameInSymbolsAndPersistentVariables(
       ConstString name_const_str, lldb::SymbolType symbol_type);
 
-  lldb::ExpressionVariableSP GetPersistentVariable(const ConstString &name);
+  lldb::ExpressionVariableSP GetPersistentVariable(ConstString name);
 
   /// Return the next available number for numbered persistent variables.
   unsigned GetNextPersistentVariableIndex() {
     return m_next_persistent_variable_index++;
   }
 
-  lldb::addr_t GetPersistentSymbol(const ConstString &name);
+  lldb::addr_t GetPersistentSymbol(ConstString name);
 
   //------------------------------------------------------------------
   // Target Stop Hooks

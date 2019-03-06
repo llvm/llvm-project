@@ -351,7 +351,7 @@ public:
   /// @return A ConstString ref containing the distribution id,
   ///         potentially empty.
   //------------------------------------------------------------------
-  const ConstString &GetDistributionId() const;
+  ConstString GetDistributionId() const;
 
   //------------------------------------------------------------------
   /// Set the distribution id of the architecture.

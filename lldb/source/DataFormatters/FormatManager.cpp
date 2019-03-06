@@ -433,7 +433,7 @@ void FormatManager::ForEachCategory(TypeCategoryMap::ForEachCallback callback) {
 }
 
 lldb::TypeCategoryImplSP
-FormatManager::GetCategory(const ConstString &category_name, bool can_create) {
+FormatManager::GetCategory(ConstString category_name, bool can_create) {
   if (!category_name)
     return GetCategory(m_default_category_name);
   lldb::TypeCategoryImplSP category;
@@ -575,7 +575,7 @@ bool FormatManager::ShouldPrintAsOneLiner(ValueObject &valobj) {
   return true;
 }
 
-ConstString FormatManager::GetValidTypeName(const ConstString &type) {
+ConstString FormatManager::GetValidTypeName(ConstString type) {
   return ::GetValidTypeName_Impl(type);
 }
 

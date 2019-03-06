@@ -928,42 +928,42 @@ size_t ObjectFileMachO::GetModuleSpecifications(
   return specs.GetSize() - initial_count;
 }
 
-const ConstString &ObjectFileMachO::GetSegmentNameTEXT() {
+ConstString ObjectFileMachO::GetSegmentNameTEXT() {
   static ConstString g_segment_name_TEXT("__TEXT");
   return g_segment_name_TEXT;
 }
 
-const ConstString &ObjectFileMachO::GetSegmentNameDATA() {
+ConstString ObjectFileMachO::GetSegmentNameDATA() {
   static ConstString g_segment_name_DATA("__DATA");
   return g_segment_name_DATA;
 }
 
-const ConstString &ObjectFileMachO::GetSegmentNameDATA_DIRTY() {
+ConstString ObjectFileMachO::GetSegmentNameDATA_DIRTY() {
   static ConstString g_segment_name("__DATA_DIRTY");
   return g_segment_name;
 }
 
-const ConstString &ObjectFileMachO::GetSegmentNameDATA_CONST() {
+ConstString ObjectFileMachO::GetSegmentNameDATA_CONST() {
   static ConstString g_segment_name("__DATA_CONST");
   return g_segment_name;
 }
 
-const ConstString &ObjectFileMachO::GetSegmentNameOBJC() {
+ConstString ObjectFileMachO::GetSegmentNameOBJC() {
   static ConstString g_segment_name_OBJC("__OBJC");
   return g_segment_name_OBJC;
 }
 
-const ConstString &ObjectFileMachO::GetSegmentNameLINKEDIT() {
+ConstString ObjectFileMachO::GetSegmentNameLINKEDIT() {
   static ConstString g_section_name_LINKEDIT("__LINKEDIT");
   return g_section_name_LINKEDIT;
 }
 
-const ConstString &ObjectFileMachO::GetSegmentNameDWARF() {
+ConstString ObjectFileMachO::GetSegmentNameDWARF() {
   static ConstString g_section_name("__DWARF");
   return g_section_name;
 }
 
-const ConstString &ObjectFileMachO::GetSectionNameEHFrame() {
+ConstString ObjectFileMachO::GetSectionNameEHFrame() {
   static ConstString g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
 }
@@ -2555,12 +2555,12 @@ size_t ObjectFileMachO::ParseSymtab() {
       }
     }
 
-    const ConstString &g_segment_name_TEXT = GetSegmentNameTEXT();
-    const ConstString &g_segment_name_DATA = GetSegmentNameDATA();
-    const ConstString &g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
-    const ConstString &g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
-    const ConstString &g_segment_name_OBJC = GetSegmentNameOBJC();
-    const ConstString &g_section_name_eh_frame = GetSectionNameEHFrame();
+    ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
+    ConstString g_segment_name_DATA = GetSegmentNameDATA();
+    ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
+    ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
+    ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
+    ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
     SectionSP text_section_sp(
         section_list->FindSectionByName(g_segment_name_TEXT));
     SectionSP data_section_sp(

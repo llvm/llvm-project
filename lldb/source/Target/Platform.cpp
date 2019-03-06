@@ -180,7 +180,7 @@ Platform::LocateExecutableScriptingResources(Target *target, Module &module,
 }
 
 // PlatformSP
-// Platform::FindPlugin (Process *process, const ConstString &plugin_name)
+// Platform::FindPlugin (Process *process, ConstString plugin_name)
 //{
 //    PlatformCreateInstance create_callback = nullptr;
 //    if (plugin_name)
@@ -267,7 +267,7 @@ bool Platform::GetModuleSpec(const FileSpec &module_file_spec,
                                              module_spec);
 }
 
-PlatformSP Platform::Find(const ConstString &name) {
+PlatformSP Platform::Find(ConstString name) {
   if (name) {
     static ConstString g_host_platform_name("host");
     if (name == g_host_platform_name)
@@ -282,7 +282,7 @@ PlatformSP Platform::Find(const ConstString &name) {
   return PlatformSP();
 }
 
-PlatformSP Platform::Create(const ConstString &name, Status &error) {
+PlatformSP Platform::Create(ConstString name, Status &error) {
   PlatformCreateInstance create_callback = nullptr;
   lldb::PlatformSP platform_sp;
   if (name) {

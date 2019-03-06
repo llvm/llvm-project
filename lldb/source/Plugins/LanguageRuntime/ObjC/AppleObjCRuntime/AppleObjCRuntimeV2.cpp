@@ -1960,7 +1960,7 @@ DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   return m_decl_vendor_up.get();
 }
 
-lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(const ConstString &name) {
+lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
   lldb::addr_t ret = LLDB_INVALID_ADDRESS;
 
   const char *name_cstr = name.AsCString();

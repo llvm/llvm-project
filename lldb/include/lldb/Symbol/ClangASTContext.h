@@ -171,9 +171,9 @@ public:
                                    lldb::BasicType type);
 
   static CompilerType GetBasicType(clang::ASTContext *ast,
-                                   const ConstString &name);
+                                   ConstString name);
 
-  static lldb::BasicType GetBasicTypeEnumeration(const ConstString &name);
+  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
   CompilerType GetBuiltinTypeForDWARFEncodingAndBitSize(const char *type_name,
                                                         uint32_t dw_ate,
@@ -219,7 +219,7 @@ public:
 
   template <typename RecordDeclType>
   CompilerType
-  GetTypeForIdentifier(const ConstString &type_name,
+  GetTypeForIdentifier(ConstString type_name,
                        clang::DeclContext *decl_context = nullptr) {
     CompilerType compiler_type;
 
@@ -251,13 +251,13 @@ public:
   }
 
   CompilerType CreateStructForIdentifier(
-      const ConstString &type_name,
+      ConstString type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);
 
   CompilerType GetOrCreateStructForIdentifier(
-      const ConstString &type_name,
+      ConstString type_name,
       const std::initializer_list<std::pair<const char *, CompilerType>>
           &type_fields,
       bool packed = false);
@@ -773,19 +773,19 @@ public:
                           bool omit_empty_base_classes,
                           const ExecutionContext *exe_ctx) override;
 
-  CompilerType GetBuiltinTypeByName(const ConstString &name) override;
+  CompilerType GetBuiltinTypeByName(ConstString name) override;
 
   lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) override;
 
   static lldb::BasicType
   GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type,
-                          const ConstString &name);
+                          ConstString name);
 
   void ForEachEnumerator(
       lldb::opaque_compiler_type_t type,
       std::function<bool(const CompilerType &integer_type,
-                         const ConstString &name,
+                         ConstString name,
                          const llvm::APSInt &value)> const &callback) override;
 
   uint32_t GetNumFields(lldb::opaque_compiler_type_t type) override;

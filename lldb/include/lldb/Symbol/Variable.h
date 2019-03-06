@@ -58,7 +58,7 @@ public:
   // namespace)::i", this function will allow a generic match function that can
   // be called by commands and expression parsers to make sure we match
   // anything we come across.
-  bool NameMatches(const ConstString &name) const;
+  bool NameMatches(ConstString name) const;
 
   bool NameMatches(const RegularExpression &regex) const;
 

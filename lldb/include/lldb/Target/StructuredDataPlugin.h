@@ -70,7 +70,7 @@ public:
   /// @return
   ///     true if the plugin supports the feature; otherwise, false.
   // -------------------------------------------------------------------------
-  virtual bool SupportsStructuredDataType(const ConstString &type_name) = 0;
+  virtual bool SupportsStructuredDataType(ConstString type_name) = 0;
 
   // -------------------------------------------------------------------------
   /// Handle the arrival of asynchronous structured data from the process.
@@ -100,7 +100,7 @@ public:
   ///     structured data type name.
   // -------------------------------------------------------------------------
   virtual void
-  HandleArrivalOfStructuredData(Process &process, const ConstString &type_name,
+  HandleArrivalOfStructuredData(Process &process, ConstString type_name,
                                 const StructuredData::ObjectSP &object_sp) = 0;
 
   // -------------------------------------------------------------------------
@@ -136,7 +136,7 @@ public:
   ///     The name of the feature tag for the asynchronous structured data.
   ///     This is needed for plugins that support more than one feature.
   // -------------------------------------------------------------------------
-  virtual bool GetEnabled(const ConstString &type_name) const;
+  virtual bool GetEnabled(ConstString type_name) const;
 
   // -------------------------------------------------------------------------
   /// Allow the plugin to do work related to modules that loaded in the

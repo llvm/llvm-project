@@ -47,14 +47,14 @@ namespace lldb_private {
 //----------------------------------------------------------------------
 class BroadcastEventSpec {
 public:
-  BroadcastEventSpec(const ConstString &broadcaster_class, uint32_t event_bits)
+  BroadcastEventSpec(ConstString broadcaster_class, uint32_t event_bits)
       : m_broadcaster_class(broadcaster_class), m_event_bits(event_bits) {}
 
   BroadcastEventSpec(const BroadcastEventSpec &rhs);
 
   ~BroadcastEventSpec() = default;
 
-  const ConstString &GetBroadcasterClass() const { return m_broadcaster_class; }
+  ConstString GetBroadcasterClass() const { return m_broadcaster_class; }
 
   uint32_t GetEventBits() const { return m_event_bits; }
 
@@ -128,7 +128,7 @@ private:
 
   class BroadcasterClassMatches {
   public:
-    BroadcasterClassMatches(const ConstString &broadcaster_class)
+    BroadcasterClassMatches(ConstString broadcaster_class)
         : m_broadcaster_class(broadcaster_class) {}
 
     ~BroadcasterClassMatches() = default;
@@ -351,7 +351,7 @@ public:
   /// @return
   ///     The NULL terminated C string name of this Broadcaster.
   //------------------------------------------------------------------
-  const ConstString &GetBroadcasterName() { return m_broadcaster_name; }
+  ConstString GetBroadcasterName() { return m_broadcaster_name; }
 
   //------------------------------------------------------------------
   /// Get the event name(s) for one or more event bits.

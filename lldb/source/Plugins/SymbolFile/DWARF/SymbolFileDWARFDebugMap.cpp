@@ -61,13 +61,11 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
     return file_range_map;
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
-  if (log) {
-    ConstString object_name(oso_module->GetObjectName());
+  if (log)
     log->Printf(
         "%p: SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap ('%s')",
         static_cast<void *>(this),
         oso_module->GetSpecificationDescription().c_str());
-  }
 
   std::vector<SymbolFileDWARFDebugMap::CompileUnitInfo *> cu_infos;
   if (exe_symfile->GetCompUnitInfosForModule(oso_module, cu_infos)) {
@@ -811,7 +809,7 @@ uint32_t SymbolFileDWARFDebugMap::ResolveSymbolContext(
 }
 
 uint32_t SymbolFileDWARFDebugMap::PrivateFindGlobalVariables(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     const std::vector<uint32_t>
         &indexes, // Indexes into the symbol table that match "name"
     uint32_t max_matches, VariableList &variables) {
@@ -835,7 +833,7 @@ uint32_t SymbolFileDWARFDebugMap::PrivateFindGlobalVariables(
 }
 
 uint32_t SymbolFileDWARFDebugMap::FindGlobalVariables(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
 
   // Remember how many variables are in the list before we search.
@@ -997,7 +995,7 @@ static void RemoveFunctionsWithModuleNotEqualTo(const ModuleSP &module_sp,
 }
 
 uint32_t SymbolFileDWARFDebugMap::FindFunctions(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines, bool append,
     SymbolContextList &sc_list) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
@@ -1117,7 +1115,7 @@ bool SymbolFileDWARFDebugMap::Supports_DW_AT_APPLE_objc_complete_type(
 }
 
 TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
-    const DWARFDIE &die, const ConstString &type_name,
+    const DWARFDIE &die, ConstString type_name,
     bool must_be_implementation) {
   // If we have a debug map, we will have an Objective-C symbol whose name is
   // the type name and whose type is eSymbolTypeObjCClass. If we can find that
@@ -1181,7 +1179,7 @@ TypeSP SymbolFileDWARFDebugMap::FindCompleteObjCDefinitionTypeForDIE(
 }
 
 uint32_t SymbolFileDWARFDebugMap::FindTypes(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     bool append, uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
@@ -1213,7 +1211,7 @@ uint32_t SymbolFileDWARFDebugMap::FindTypes(
 //}
 
 CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
-    const lldb_private::ConstString &name,
+    lldb_private::ConstString name,
     const CompilerDeclContext *parent_decl_ctx) {
   CompilerDeclContext matching_namespace;
 

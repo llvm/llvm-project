@@ -1077,7 +1077,7 @@ CompilerType ClangASTContext::GetBuiltinTypeForEncodingAndBitSize(
 }
 
 lldb::BasicType
-ClangASTContext::GetBasicTypeEnumeration(const ConstString &name) {
+ClangASTContext::GetBasicTypeEnumeration(ConstString name) {
   if (name) {
     typedef UniqueCStringMap<lldb::BasicType> TypeNameToBasicTypeMap;
     static TypeNameToBasicTypeMap g_type_map;
@@ -1143,7 +1143,7 @@ ClangASTContext::GetBasicTypeEnumeration(const ConstString &name) {
 }
 
 CompilerType ClangASTContext::GetBasicType(ASTContext *ast,
-                                           const ConstString &name) {
+                                           ConstString name) {
   if (ast) {
     lldb::BasicType basic_type = ClangASTContext::GetBasicTypeEnumeration(name);
     return ClangASTContext::GetBasicType(ast, basic_type);
@@ -2308,7 +2308,7 @@ CompilerType ClangASTContext::CreateArrayType(const CompilerType &element_type,
 }
 
 CompilerType ClangASTContext::CreateStructForIdentifier(
-    const ConstString &type_name,
+    ConstString type_name,
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {
@@ -2333,7 +2333,7 @@ CompilerType ClangASTContext::CreateStructForIdentifier(
 }
 
 CompilerType ClangASTContext::GetOrCreateStructForIdentifier(
-    const ConstString &type_name,
+    ConstString type_name,
     const std::initializer_list<std::pair<const char *, CompilerType>>
         &type_fields,
     bool packed) {
@@ -5821,7 +5821,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
   return num_children;
 }
 
-CompilerType ClangASTContext::GetBuiltinTypeByName(const ConstString &name) {
+CompilerType ClangASTContext::GetBuiltinTypeByName(ConstString name) {
   return GetBasicType(GetBasicTypeEnumeration(name));
 }
 
@@ -5901,7 +5901,7 @@ ClangASTContext::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
 void ClangASTContext::ForEachEnumerator(
     lldb::opaque_compiler_type_t type,
     std::function<bool(const CompilerType &integer_type,
-                       const ConstString &name,
+                       ConstString name,
                        const llvm::APSInt &value)> const &callback) {
   const clang::EnumType *enum_type =
       llvm::dyn_cast<clang::EnumType>(GetCanonicalQualType(type));

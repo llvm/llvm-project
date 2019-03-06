@@ -100,7 +100,7 @@ public:
 
   size_t ParseBlocksRecursive(Function &func) override;
 
-  uint32_t FindGlobalVariables(const ConstString &name,
+  uint32_t FindGlobalVariables(ConstString name,
                                const CompilerDeclContext *parent_decl_ctx,
                                uint32_t max_matches,
                                VariableList &variables) override;
@@ -129,7 +129,7 @@ public:
   size_t GetTypes(SymbolContextScope *sc_scope, lldb::TypeClass type_mask,
                   TypeList &type_list) override;
 
-  uint32_t FindFunctions(const ConstString &name,
+  uint32_t FindFunctions(ConstString name,
                          const CompilerDeclContext *parent_decl_ctx,
                          lldb::FunctionNameType name_type_mask,
                          bool include_inlines, bool append,
@@ -138,7 +138,7 @@ public:
   uint32_t FindFunctions(const RegularExpression &regex, bool include_inlines,
                          bool append, SymbolContextList &sc_list) override;
 
-  uint32_t FindTypes(const ConstString &name,
+  uint32_t FindTypes(ConstString name,
                      const CompilerDeclContext *parent_decl_ctx, bool append,
                      uint32_t max_matches,
                      llvm::DenseSet<SymbolFile *> &searched_symbol_files,
@@ -150,7 +150,7 @@ public:
   TypeSystem *GetTypeSystemForLanguage(lldb::LanguageType language) override;
 
   CompilerDeclContext
-  FindNamespace(const ConstString &name,
+  FindNamespace(ConstString name,
                 const CompilerDeclContext *parent_decl_ctx) override;
 
   ConstString GetPluginName() override;

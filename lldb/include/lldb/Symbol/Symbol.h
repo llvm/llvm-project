@@ -42,7 +42,7 @@ public:
 
   void Clear();
 
-  bool Compare(const ConstString &name, lldb::SymbolType type) const;
+  bool Compare(ConstString name, lldb::SymbolType type) const;
 
   void Dump(Stream *s, Target *target, uint32_t index,
             Mangled::NamePreference name_preference =
@@ -135,7 +135,7 @@ public:
 
   FileSpec GetReExportedSymbolSharedLibrary() const;
 
-  void SetReExportedSymbolName(const ConstString &name);
+  void SetReExportedSymbolName(ConstString name);
 
   bool SetReExportedSymbolSharedLibrary(const FileSpec &fspec);
 

@@ -77,7 +77,7 @@ protected:
   typedef std::map<uint32_t, dwarf_opcode> dynamic_reg_size_map;
 
   const lldb_private::RegisterInfo *
-  GetRegisterInfo(const lldb_private::ConstString &reg_name) const;
+  GetRegisterInfo(lldb_private::ConstString reg_name) const;
 
   void MoveFrom(DynamicRegisterInfo &&info);
 

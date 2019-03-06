@@ -1839,7 +1839,7 @@ bool ClangASTSource::layoutRecordType(const RecordDecl *record, uint64_t &size,
 }
 
 void ClangASTSource::CompleteNamespaceMap(
-    ClangASTImporter::NamespaceMapSP &namespace_map, const ConstString &name,
+    ClangASTImporter::NamespaceMapSP &namespace_map, ConstString name,
     ClangASTImporter::NamespaceMapSP &parent_map) const {
   static unsigned int invocation_id = 0;
   unsigned int current_id = invocation_id++;
