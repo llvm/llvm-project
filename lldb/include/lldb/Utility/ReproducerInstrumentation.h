@@ -21,7 +21,7 @@
 // Define LLDB_REPRO_INSTR_TRACE to trace to stderr instead of LLDB's log
 // infrastructure. This is useful when you need to see traces before the logger
 // is initialized or enabled.
-#define LLDB_REPRO_INSTR_TRACE
+// #define LLDB_REPRO_INSTR_TRACE
 
 #define LLDB_REGISTER_CONSTRUCTOR(Class, Signature)                            \
   Register<Class * Signature>(&construct<Class Signature>::doit, "", #Class,   \
