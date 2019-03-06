@@ -264,7 +264,13 @@ static bool isDecorated(StringRef Sym) {
 
 // Parses .drectve section contents and returns a list of files
 // specified by /defaultlib.
-void LinkerDriver::parseDirectives(StringRef S) {
+void LinkerDriver::parseDirectives(InputFile *File) {
+  StringRef S = File->getDirectives();
+  if (S.empty())
+    return;
+
+  log("Directives: " + toString(File) + ": " + S);
+
   ArgParser Parser;
   // .drectve is always tokenized using Windows shell rules.
   // /EXPORT: option can appear too many times, processing in fastpath.
@@ -307,7 +313,7 @@ void LinkerDriver::parseDirectives(StringRef S) {
       Config->Entry = addUndefined(mangle(Arg->getValue()));
       break;
     case OPT_failifmismatch:
-      checkFailIfMismatch(Arg->getValue());
+      checkFailIfMismatch(Arg->getValue(), toString(File));
       break;
     case OPT_incl:
       addUndefined(Arg->getValue());
@@ -1271,7 +1277,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   // Handle /failifmismatch
   for (auto *Arg : Args.filtered(OPT_failifmismatch))
-    checkFailIfMismatch(Arg->getValue());
+    checkFailIfMismatch(Arg->getValue(), "cmd-line");
 
   // Handle /merge
   for (auto *Arg : Args.filtered(OPT_merge))
