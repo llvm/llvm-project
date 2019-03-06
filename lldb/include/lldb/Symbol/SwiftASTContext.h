@@ -760,9 +760,9 @@ public:
 
   CompilerType GetReferentType(const CompilerType &compiler_type);
 
-  lldb::TypeSP GetCachedType(const ConstString &mangled);
+  lldb::TypeSP GetCachedType(ConstString mangled);
 
-  void SetCachedType(const ConstString &mangled, const lldb::TypeSP &type_sp);
+  void SetCachedType(ConstString mangled, const lldb::TypeSP &type_sp);
 
   static bool PerformUserImport(SwiftASTContext &swift_ast_context,
                                 SymbolContext &sc,

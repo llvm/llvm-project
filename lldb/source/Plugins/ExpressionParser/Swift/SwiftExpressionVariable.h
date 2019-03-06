@@ -47,8 +47,7 @@ public:
 
   SwiftExpressionVariable(const lldb::ValueObjectSP &valobj_sp);
 
-  SwiftExpressionVariable(ExecutionContextScope *exe_scope,
-                          const ConstString &name,
+  SwiftExpressionVariable(ExecutionContextScope *exe_scope, ConstString name,
                           const TypeFromUser &user_type,
                           lldb::ByteOrder byte_order, uint32_t addr_byte_size);
 
@@ -59,8 +58,8 @@ public:
 
   static SwiftExpressionVariable *
   CreateVariableInList(ExpressionVariableList &list,
-                       ExecutionContextScope *exe_scope,
-                       const ConstString &name, const TypeFromUser &user_type,
+                       ExecutionContextScope *exe_scope, ConstString name,
+                       const TypeFromUser &user_type,
                        lldb::ByteOrder byte_order, uint32_t addr_byte_size) {
     SwiftExpressionVariable *swift_var =
         new SwiftExpressionVariable(exe_scope, byte_order, addr_byte_size);

@@ -793,7 +793,7 @@ bool SymbolContext::GetAddressRangeFromHereToEndLine(uint32_t end_line,
 }
 
 const Symbol *
-SymbolContext::FindBestGlobalDataSymbol(const ConstString &name, Status &error) {
+SymbolContext::FindBestGlobalDataSymbol(ConstString name, Status &error) {
   error.Clear();
 
   if (!target_sp) {

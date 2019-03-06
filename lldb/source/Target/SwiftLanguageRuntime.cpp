@@ -179,7 +179,7 @@ SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
 }
 
 static llvm::Optional<lldb::addr_t>
-FindSymbolForSwiftObject(Target &target, const ConstString &object,
+FindSymbolForSwiftObject(Target &target, ConstString object,
                          const SymbolType sym_type) {
   llvm::Optional<lldb::addr_t> retval;
 
@@ -627,7 +627,7 @@ static bool GetObjectDescription_ObjectCopy(SwiftLanguageRuntime *runtime,
   return true;
 }
 
-static bool IsSwiftResultVariable(const ConstString &name) {
+static bool IsSwiftResultVariable(ConstString name) {
   if (name) {
     llvm::StringRef name_sr(name.GetStringRef());
     if (name_sr.size() > 2 &&
@@ -977,7 +977,7 @@ static bool ParseGlobal(const swift::Demangle::NodePointer &node,
 }
 
 bool SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
-    const ConstString &mangled, ConstString &basename, bool &is_method) {
+    ConstString mangled, ConstString &basename, bool &is_method) {
   bool success = false;
   swift::Demangle::Node::Kind kind = swift::Demangle::Node::Kind::Global;
   swift::Demangle::Node::Kind parent_kind = swift::Demangle::Node::Kind::Global;
@@ -3864,7 +3864,7 @@ protected:
       return nullptr;
     }
 
-    size_t GetIndexOfChildWithName(const ConstString &name) override {
+    size_t GetIndexOfChildWithName(ConstString name) override {
       for (size_t idx = 0; idx < m_projection->field_projections.size();
            idx++) {
         if (m_projection->field_projections.at(idx).name == name)

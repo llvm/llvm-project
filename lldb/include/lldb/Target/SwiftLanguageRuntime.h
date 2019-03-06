@@ -101,7 +101,7 @@ public:
         : m_full(), m_basename(), m_context(), m_arguments(), m_qualifiers(),
           m_type(eTypeInvalid), m_parsed(false), m_parse_error(false) {}
 
-    MethodName(const ConstString &s, bool do_parse = false)
+    MethodName(ConstString s, bool do_parse = false)
         : m_full(s), m_basename(), m_context(), m_arguments(), m_qualifiers(),
           m_type(eTypeInvalid), m_parsed(false), m_parse_error(false) {
       if (do_parse)
@@ -120,11 +120,11 @@ public:
 
     Type GetType() const { return m_type; }
 
-    const ConstString &GetFullName() const { return m_full; }
+    ConstString GetFullName() const { return m_full; }
 
     llvm::StringRef GetBasename();
 
-    static bool ExtractFunctionBasenameFromMangled(const ConstString &mangled,
+    static bool ExtractFunctionBasenameFromMangled(ConstString mangled,
                                                    ConstString &basename,
                                                    bool &is_method);
 

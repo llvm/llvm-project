@@ -300,7 +300,7 @@ public:
   //------------------------------------------------------------------
   /// @see Module::FindFunctions ()
   //------------------------------------------------------------------
-  size_t FindFunctions(const ConstString &name,
+  size_t FindFunctions(ConstString name,
                        lldb::FunctionNameType name_type_mask,
                        bool include_symbols, bool include_inlines, bool append,
                        SymbolContextList &sc_list) const;
@@ -308,7 +308,7 @@ public:
   //------------------------------------------------------------------
   /// @see Module::FindFunctionSymbols ()
   //------------------------------------------------------------------
-  size_t FindFunctionSymbols(const ConstString &name,
+  size_t FindFunctionSymbols(ConstString name,
                              lldb::FunctionNameType name_type_mask,
                              SymbolContextList &sc_list);
 
@@ -336,7 +336,7 @@ public:
   /// @return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
-  size_t FindGlobalVariables(const ConstString &name, size_t max_matches,
+  size_t FindGlobalVariables(ConstString name, size_t max_matches,
                              VariableList &variable_list) const;
 
   //------------------------------------------------------------------
@@ -404,7 +404,7 @@ public:
 
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
-  size_t FindSymbolsWithNameAndType(const ConstString &name,
+  size_t FindSymbolsWithNameAndType(ConstString name,
                                     lldb::SymbolType symbol_type,
                                     SymbolContextList &sc_list,
                                     bool append = false) const;
@@ -447,7 +447,7 @@ public:
   /// @return
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
-  size_t FindTypes(Module *search_first, const ConstString &name,
+  size_t FindTypes(Module *search_first, ConstString name,
                    bool name_is_fully_qualified, size_t max_matches,
                    llvm::DenseSet<SymbolFile *> &searched_symbol_files,
                    TypeList &types) const;

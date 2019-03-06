@@ -50,15 +50,15 @@ public:
       m_platform_name.clear();
   }
 
-  const ConstString &GetSDKRootDirectory() const { return m_sdk_sysroot; }
+  ConstString GetSDKRootDirectory() const { return m_sdk_sysroot; }
 
-  void SetSDKRootDirectory(const ConstString &sdk_root_directory) {
+  void SetSDKRootDirectory(ConstString sdk_root_directory) {
     m_sdk_sysroot = sdk_root_directory;
   }
 
-  const ConstString &GetSDKBuild() const { return m_sdk_build; }
+  ConstString GetSDKBuild() const { return m_sdk_build; }
 
-  void SetSDKBuild(const ConstString &sdk_build) { m_sdk_build = sdk_build; }
+  void SetSDKBuild(ConstString sdk_build) { m_sdk_build = sdk_build; }
 
   bool PlatformMatches(const lldb::PlatformSP &platform_sp) const;
 

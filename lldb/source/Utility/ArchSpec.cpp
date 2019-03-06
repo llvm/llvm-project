@@ -763,7 +763,7 @@ llvm::Triple::ArchType ArchSpec::GetMachine() const {
   return llvm::Triple::UnknownArch;
 }
 
-const ConstString &ArchSpec::GetDistributionId() const {
+ConstString ArchSpec::GetDistributionId() const {
   return m_distribution_id;
 }
 

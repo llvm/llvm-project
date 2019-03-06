@@ -80,7 +80,7 @@ public:
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContextList &sc_list);
 
-  virtual size_t FindGlobalVariables(const ConstString &name,
+  virtual size_t FindGlobalVariables(ConstString name,
                                      const CompilerDeclContext *parent_decl_ctx,
                                      size_t max_matches,
                                      VariableList &variables);
@@ -89,7 +89,7 @@ public:
                                      size_t max_matches,
                                      VariableList &variables);
 
-  virtual size_t FindFunctions(const ConstString &name,
+  virtual size_t FindFunctions(ConstString name,
                                const CompilerDeclContext *parent_decl_ctx,
                                lldb::FunctionNameType name_type_mask,
                                bool include_inlines, bool append,
@@ -100,7 +100,7 @@ public:
                                SymbolContextList &sc_list);
 
   virtual size_t
-  FindTypes(const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+  FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
             bool append, size_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
@@ -109,7 +109,7 @@ public:
                            bool append, TypeMap &types);
 
   virtual CompilerDeclContext
-  FindNamespace(const ConstString &name,
+  FindNamespace(ConstString name,
                 const CompilerDeclContext *parent_decl_ctx);
 
   virtual size_t GetNumCompileUnits();

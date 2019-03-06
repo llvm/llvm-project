@@ -49,7 +49,7 @@ public:
   ///     The number of Decls added to decls; will not exceed
   ///     max_matches.
   //------------------------------------------------------------------
-  virtual uint32_t FindDecls(const ConstString &name, bool append,
+  virtual uint32_t FindDecls(ConstString name, bool append,
                              uint32_t max_matches,
                              std::vector<clang::NamedDecl *> &decls) = 0;
 

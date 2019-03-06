@@ -67,7 +67,7 @@ public:
 
   void Dump(Stream *s, Target *target, bool show_header, uint32_t depth) const;
 
-  lldb::SectionSP FindSectionByName(const ConstString &section_dstr) const;
+  lldb::SectionSP FindSectionByName(ConstString section_dstr) const;
 
   lldb::SectionSP FindSectionByID(lldb::user_id_t sect_id) const;
 
@@ -109,7 +109,7 @@ class Section : public std::enable_shared_from_this<Section>,
 public:
   // Create a root section (one that has no parent)
   Section(const lldb::ModuleSP &module_sp, ObjectFile *obj_file,
-          lldb::user_id_t sect_id, const ConstString &name,
+          lldb::user_id_t sect_id, ConstString name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
           lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
@@ -120,7 +120,7 @@ public:
                                                     // sections, non-NULL for
                                                     // child sections
           const lldb::ModuleSP &module_sp, ObjectFile *obj_file,
-          lldb::user_id_t sect_id, const ConstString &name,
+          lldb::user_id_t sect_id, ConstString name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
           lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
@@ -175,7 +175,7 @@ public:
 
   bool IsDescendant(const Section *section);
 
-  const ConstString &GetName() const { return m_name; }
+  ConstString GetName() const { return m_name; }
 
   bool Slide(lldb::addr_t slide_amount, bool slide_children);
 

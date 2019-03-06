@@ -42,14 +42,13 @@ class SwiftPersistentExpressionState : public PersistentExpressionState {
 public:
   class SwiftDeclMap {
   public:
-    void AddDecl(swift::ValueDecl *decl, bool check_existing,
-                 const ConstString &name);
+    void AddDecl(swift::ValueDecl *decl, bool check_existing, ConstString name);
 
     /// Find decls matching `name`, excluding decls that are equivalent to
     /// decls in `excluding_equivalents`, and put the results in `matches`.
     /// Return true if there are any results.
     bool FindMatchingDecls(
-        const ConstString &name,
+        ConstString name,
         const std::vector<swift::ValueDecl *> &excluding_equivalents,
         std::vector<swift::ValueDecl *> &matches);
 
@@ -80,13 +79,13 @@ public:
   lldb::ExpressionVariableSP
   CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
 
-  lldb::ExpressionVariableSP CreatePersistentVariable(
-      ExecutionContextScope *exe_scope, const ConstString &name,
-      const CompilerType &compiler_type, lldb::ByteOrder byte_order,
-      uint32_t addr_byte_size) override;
+  lldb::ExpressionVariableSP
+  CreatePersistentVariable(ExecutionContextScope *exe_scope, ConstString name,
+                           const CompilerType &compiler_type,
+                           lldb::ByteOrder byte_order,
+                           uint32_t addr_byte_size) override;
 
-  llvm::StringRef
-  GetPersistentVariablePrefix(bool is_error) const override {
+  llvm::StringRef GetPersistentVariablePrefix(bool is_error) const override {
     return is_error ? "$E" : "$R";
   }
 
@@ -95,7 +94,7 @@ public:
   void RegisterSwiftPersistentDecl(swift::ValueDecl *value_decl);
 
   void RegisterSwiftPersistentDeclAlias(swift::ValueDecl *value_decl,
-                                        const ConstString &name);
+                                        ConstString name);
 
   void CopyInSwiftPersistentDecls(SwiftDeclMap &source_map);
 
@@ -103,13 +102,13 @@ public:
   /// in `excluding_equivalents`, and put the results in `matches`.  Return true
   /// if there are any results.
   bool GetSwiftPersistentDecls(
-      const ConstString &name,
+      ConstString name,
       const std::vector<swift::ValueDecl *> &excluding_equivalents,
       std::vector<swift::ValueDecl *> &matches);
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.
-  void AddHandLoadedModule(const ConstString &module_name) {
+  void AddHandLoadedModule(ConstString module_name) {
     m_hand_loaded_modules.insert(module_name);
   }
 
@@ -118,18 +117,18 @@ public:
 
 private:
   uint32_t m_next_persistent_variable_id; ///< The counter used by
-                                          ///GetNextResultName().
+                                          /// GetNextResultName().
   uint32_t m_next_persistent_error_id;    ///< The counter used by
-                                       ///GetNextResultName() when is_error is
-                                       ///true.
+                                       /// GetNextResultName() when is_error is
+                                       /// true.
 
   SwiftDeclMap m_swift_persistent_decls; ///< The persistent functions declared
-                                         ///by the user.
+                                         /// by the user.
 
   HandLoadedModuleSet m_hand_loaded_modules; ///< These are the names of modules
-                                             ///that we have loaded by
+                                             /// that we have loaded by
   ///< hand into the Contexts we make for parsing.
 };
-}
+} // namespace lldb_private
 
 #endif

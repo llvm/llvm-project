@@ -85,7 +85,7 @@ public:
 
   DeclVendor *GetDeclVendor() override;
 
-  lldb::addr_t LookupRuntimeSymbol(const ConstString &name) override;
+  lldb::addr_t LookupRuntimeSymbol(ConstString name) override;
 
   EncodingToTypeSP GetEncodingToType() override;
 

@@ -33,7 +33,7 @@ public:
   //    lldb::TypeSP
   //    FindType(lldb::user_id_t uid);
 
-  TypeList FindTypes(const ConstString &name);
+  TypeList FindTypes(ConstString name);
 
   void Insert(const lldb::TypeSP &type);
 

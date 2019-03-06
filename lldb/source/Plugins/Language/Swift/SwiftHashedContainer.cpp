@@ -739,9 +739,7 @@ HashedSyntheticChildrenFrontEnd::MightHaveChildren() {
 }
 
 size_t
-HashedSyntheticChildrenFrontEnd::GetIndexOfChildWithName(
-  const ConstString &name
-) {
+HashedSyntheticChildrenFrontEnd::GetIndexOfChildWithName(ConstString name) {
   if (!m_buffer)
     return UINT32_MAX;
   const char *item_name = name.GetCString();

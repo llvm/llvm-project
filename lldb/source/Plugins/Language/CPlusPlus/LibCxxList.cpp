@@ -111,7 +111,7 @@ private:
 
 class AbstractListFrontEnd : public SyntheticChildrenFrontEnd {
 public:
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
     return ExtractIndexFromString(name.GetCString());
   }
   bool MightHaveChildren() override { return true; }

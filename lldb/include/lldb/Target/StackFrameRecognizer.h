@@ -99,8 +99,8 @@ private:
 class StackFrameRecognizerManager {
 public:
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
-                            const ConstString &module,
-                            const ConstString &symbol,
+                            ConstString module,
+                            ConstString symbol,
                             bool first_instruction_only = true);
 
   static void AddRecognizer(lldb::StackFrameRecognizerSP recognizer,
