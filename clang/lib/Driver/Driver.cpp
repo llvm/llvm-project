@@ -2295,6 +2295,9 @@ class OffloadingActionBuilder final {
 
     /// Flag that is set to true if this builder acted on the current input.
     bool IsActive = false;
+
+    /// Flag for -fgpu-rdc.
+    bool Relocatable = false;
   public:
     CudaActionBuilderBase(Compilation &C, DerivedArgList &Args,
                           const Driver::InputList &Inputs,
@@ -2340,6 +2343,12 @@ class OffloadingActionBuilder final {
 
       // If this is an unbundling action use it as is for each CUDA toolchain.
       if (auto *UA = dyn_cast<OffloadUnbundlingJobAction>(HostAction)) {
+
+        // If -fgpu-rdc is disabled, should not unbundle since there is no
+        // device code to link.
+        if (!Relocatable)
+          return ABRT_Inactive;
+
         CudaDeviceActions.clear();
         auto *IA = cast<InputAction>(UA->getInputs().back());
         std::string FileName = IA->getInputArg().getAsString(Args);
@@ -2410,6 +2419,9 @@ class OffloadingActionBuilder final {
       if (AssociatedOffloadKind == Action::OFK_HIP &&
           !C.hasOffloadToolChain<Action::OFK_HIP>())
         return false;
+
+      Relocatable = Args.hasFlag(options::OPT_fgpu_rdc,
+          options::OPT_fno_gpu_rdc, /*Default=*/false);
 
       const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
       assert(HostTC && "No toolchain for host compilation.");
@@ -2596,13 +2608,11 @@ class OffloadingActionBuilder final {
   class HIPActionBuilder final : public CudaActionBuilderBase {
     /// The linker inputs obtained for each device arch.
     SmallVector<ActionList, 8> DeviceLinkerInputs;
-    bool Relocatable;
 
   public:
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
                      const Driver::InputList &Inputs)
-        : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP),
-          Relocatable(false) {}
+        : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {}
 
     bool canUseBundlerUnbundler() const override { return true; }
 
@@ -2706,13 +2716,6 @@ class OffloadingActionBuilder final {
                CudaArchToString(GpuArchList[I]), AssociatedOffloadKind);
         ++I;
       }
-    }
-
-    bool initialize() override {
-      Relocatable = Args.hasFlag(options::OPT_fgpu_rdc,
-          options::OPT_fno_gpu_rdc, /*Default=*/false);
-
-      return CudaActionBuilderBase::initialize();
     }
   };
 

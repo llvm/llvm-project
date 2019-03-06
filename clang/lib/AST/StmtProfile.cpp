@@ -412,7 +412,6 @@ public:
   OMPClauseProfiler(StmtProfiler *P) : Profiler(P) { }
 #define OPENMP_CLAUSE(Name, Class)                                             \
   void Visit##Class(const Class *C);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   void VistOMPClauseWithPreInit(const OMPClauseWithPreInit *C);
   void VistOMPClauseWithPostUpdate(const OMPClauseWithPostUpdate *C);

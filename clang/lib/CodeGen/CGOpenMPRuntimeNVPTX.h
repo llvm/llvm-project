@@ -386,6 +386,10 @@ public:
   void checkArchForUnifiedAddressing(CodeGenModule &CGM,
                                      const OMPRequiresDecl *D) const override;
 
+  /// Returns default address space for the constant firstprivates, __constant__
+  /// address space by default.
+  unsigned getDefaultFirstprivateAddressSpace() const override;
+
 private:
   /// Track the execution mode when codegening directives within a target
   /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the

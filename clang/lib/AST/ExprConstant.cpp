@@ -9776,6 +9776,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_AddressSpaceConversion:
   case CK_IntToOCLSampler:
   case CK_FixedPointCast:
+  case CK_IntegralToFixedPoint:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -9808,6 +9809,19 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (BoolResult && E->getCastKind() == CK_BooleanToSignedIntegral)
       IntResult = (uint64_t)-1;
     return Success(IntResult, E);
+  }
+
+  case CK_FixedPointToIntegral: {
+    APFixedPoint Src(Info.Ctx.getFixedPointSemantics(SrcType));
+    if (!EvaluateFixedPoint(SubExpr, Src, Info))
+      return false;
+    bool Overflowed;
+    llvm::APSInt Result = Src.convertToInt(
+        Info.Ctx.getIntWidth(DestType),
+        DestType->isSignedIntegerOrEnumerationType(), &Overflowed);
+    if (Overflowed && !HandleOverflow(Info, E, Result, DestType))
+      return false;
+    return Success(Result, E);
   }
 
   case CK_FixedPointToBoolean: {
@@ -9858,13 +9872,12 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return true;
     }
 
-    uint64_t V;
-    if (LV.isNullPointer())
-      V = Info.Ctx.getTargetNullPointerValue(SrcType);
-    else
-      V = LV.getLValueOffset().getQuantity();
+    APSInt AsInt;
+    APValue V;
+    LV.moveInto(V);
+    if (!V.toIntegralConstant(AsInt, SrcType, Info.Ctx))
+      llvm_unreachable("Can't cast this!");
 
-    APSInt AsInt = Info.Ctx.MakeIntValue(V, SrcType);
     return Success(HandleIntToIntCast(Info, E, DestType, SrcType, AsInt), E);
   }
 
@@ -9969,6 +9982,20 @@ bool FixedPointExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (Overflowed && !HandleOverflow(Info, E, Result, DestType))
       return false;
     return Success(Result, E);
+  }
+  case CK_IntegralToFixedPoint: {
+    APSInt Src;
+    if (!EvaluateInteger(SubExpr, Src, Info))
+      return false;
+
+    bool Overflowed;
+    APFixedPoint IntResult = APFixedPoint::getFromIntValue(
+        Src, Info.Ctx.getFixedPointSemantics(DestType), &Overflowed);
+
+    if (Overflowed && !HandleOverflow(Info, E, IntResult, DestType))
+      return false;
+
+    return Success(IntResult, E);
   }
   case CK_NoOp:
   case CK_LValueToRValue:
@@ -10371,6 +10398,8 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntToOCLSampler:
   case CK_FixedPointCast:
   case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:

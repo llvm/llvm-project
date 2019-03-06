@@ -2676,7 +2676,6 @@ public:
       : Record(Record), Context(Record.getContext()) {}
 
 #define OPENMP_CLAUSE(Name, Class) void Visit##Class(Class *C);
-  OPENMP_CLAUSE(flush, OMPFlushClause)
 #include "clang/Basic/OpenMPKinds.def"
   OMPClause *readClause();
   void VisitOMPClauseWithPreInit(OMPClauseWithPreInit *C);
