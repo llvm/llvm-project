@@ -26,6 +26,7 @@
 #   PYTHONPATH=/path/to/LLDB.framework/Resources/Python ./crashlog.py ~/Library/Logs/DiagnosticReports/a.crash
 #----------------------------------------------------------------------
 
+from __future__ import print_function
 import cmd
 import datetime
 import glob
