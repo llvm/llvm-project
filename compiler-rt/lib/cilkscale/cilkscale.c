@@ -138,17 +138,6 @@ CILKTOOL_API void __csi_unit_init(const char *const file_name,
  */
 
 CILKTOOL_API
-void __csi_func_entry(const csi_id_t func_id, const func_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_func_exit(const csi_id_t func_exit_id, const csi_id_t func_id,
-                      const func_exit_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
 void __csi_bb_entry(const csi_id_t bb_id, const bb_prop_t prop) {
   context_stack_t *stack;
 
@@ -164,80 +153,6 @@ void __csi_bb_entry(const csi_id_t bb_id, const bb_prop_t prop) {
 
 CILKTOOL_API
 void __csi_bb_exit(const csi_id_t bb_id, const bb_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_before_call(const csi_id_t call_id, const csi_id_t func_id,
-                       const call_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_after_call(const csi_id_t call_id, const csi_id_t func_id,
-                      const call_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_before_load(const csi_id_t load_id, const void *addr, int32_t size,
-                       load_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_after_load(const csi_id_t load_id, const void *addr, int32_t size,
-                       load_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_before_store(const csi_id_t store_id, const void *addr, int32_t size,
-                        store_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_after_store(const csi_id_t store_id, const void *addr, int32_t size,
-                       store_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_before_alloca(const csi_id_t alloca_id, uint64_t num_bytes,
-                         const alloca_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
-                        uint64_t num_bytes, const alloca_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_before_allocfn(const csi_id_t allocfn_id,
-                          uint64_t size, uint64_t num, uint64_t alignment,
-                          const void *oldaddr, const allocfn_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_after_allocfn(const csi_id_t allocfn_id, const void *addr,
-                         uint64_t size, uint64_t num, uint64_t alignment,
-                         const void *oldaddr, const allocfn_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_before_free(const csi_id_t free_id, const void *ptr,
-                       const free_prop_t prop) {
-  return;
-}
-
-CILKTOOL_API
-void __csi_after_free(const csi_id_t free_id, const void *ptr,
-                      const free_prop_t prop) {
   return;
 }
 

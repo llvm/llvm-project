@@ -3,6 +3,11 @@
 
 #define RDTSC 1
 #define CLOCK 2
+// TODO: To use the INST timer with the -fcilktool=cilkscale flag, update the
+// getCSIOptionsForCilkscale() function in
+// tools/clang/lib/CodeGen/BackendUtil.cpp to re-enable CSI instrumentation of
+// basic blocks.  This instrumentation is disabled by default, because it has a
+// significant impact on the performance of Cilkscale.
 #define INST 3
 
 #ifndef CSCALETIMER
