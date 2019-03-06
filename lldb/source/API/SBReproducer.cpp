@@ -46,9 +46,6 @@ SBRegistry::SBRegistry() {
 
   // Custom implementation.
   Register(&invoke<void (SBDebugger::*)(
-               FILE *, bool)>::method<&SBDebugger::SetInputFileHandle>::doit,
-           &SetFileHandleRedirect);
-  Register(&invoke<void (SBDebugger::*)(
                FILE *, bool)>::method<&SBDebugger::SetErrorFileHandle>::doit,
            &SetFileHandleRedirect);
   Register(&invoke<void (SBDebugger::*)(
@@ -707,6 +704,7 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_METHOD(bool, SBDebugger, GetAsync, ());
     LLDB_REGISTER_METHOD(void, SBDebugger, SkipLLDBInitFiles, (bool));
     LLDB_REGISTER_METHOD(void, SBDebugger, SkipAppInitFiles, (bool));
+    LLDB_REGISTER_METHOD(void, SBDebugger, SetInputFileHandle, (FILE *, bool));
     LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetInputFileHandle, ());
     LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetOutputFileHandle, ());
     LLDB_REGISTER_METHOD(FILE *, SBDebugger, GetErrorFileHandle, ());
