@@ -8,6 +8,7 @@
 
 #include "lldb/lldb-types.h"
 
+#include "SBReproducerPrivate.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -31,64 +32,108 @@ using namespace lldb;
 using namespace lldb_private;
 
 SBCommandInterpreterRunOptions::SBCommandInterpreterRunOptions() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommandInterpreterRunOptions);
+
   m_opaque_up.reset(new CommandInterpreterRunOptions());
 }
 
 SBCommandInterpreterRunOptions::~SBCommandInterpreterRunOptions() = default;
 
 bool SBCommandInterpreterRunOptions::GetStopOnContinue() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetStopOnContinue);
+
   return m_opaque_up->GetStopOnContinue();
 }
 
 void SBCommandInterpreterRunOptions::SetStopOnContinue(bool stop_on_continue) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetStopOnContinue,
+                     (bool), stop_on_continue);
+
   m_opaque_up->SetStopOnContinue(stop_on_continue);
 }
 
 bool SBCommandInterpreterRunOptions::GetStopOnError() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetStopOnError);
+
   return m_opaque_up->GetStopOnError();
 }
 
 void SBCommandInterpreterRunOptions::SetStopOnError(bool stop_on_error) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetStopOnError,
+                     (bool), stop_on_error);
+
   m_opaque_up->SetStopOnError(stop_on_error);
 }
 
 bool SBCommandInterpreterRunOptions::GetStopOnCrash() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetStopOnCrash);
+
   return m_opaque_up->GetStopOnCrash();
 }
 
 void SBCommandInterpreterRunOptions::SetStopOnCrash(bool stop_on_crash) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetStopOnCrash,
+                     (bool), stop_on_crash);
+
   m_opaque_up->SetStopOnCrash(stop_on_crash);
 }
 
 bool SBCommandInterpreterRunOptions::GetEchoCommands() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetEchoCommands);
+
   return m_opaque_up->GetEchoCommands();
 }
 
 void SBCommandInterpreterRunOptions::SetEchoCommands(bool echo_commands) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetEchoCommands,
+                     (bool), echo_commands);
+
   m_opaque_up->SetEchoCommands(echo_commands);
 }
 
 bool SBCommandInterpreterRunOptions::GetEchoCommentCommands() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetEchoCommentCommands);
+
   return m_opaque_up->GetEchoCommentCommands();
 }
 
 void SBCommandInterpreterRunOptions::SetEchoCommentCommands(bool echo) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions,
+                     SetEchoCommentCommands, (bool), echo);
+
   m_opaque_up->SetEchoCommentCommands(echo);
 }
 
 bool SBCommandInterpreterRunOptions::GetPrintResults() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetPrintResults);
+
   return m_opaque_up->GetPrintResults();
 }
 
 void SBCommandInterpreterRunOptions::SetPrintResults(bool print_results) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetPrintResults,
+                     (bool), print_results);
+
   m_opaque_up->SetPrintResults(print_results);
 }
 
 bool SBCommandInterpreterRunOptions::GetAddToHistory() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreterRunOptions,
+                                   GetAddToHistory);
+
   return m_opaque_up->GetAddToHistory();
 }
 
 void SBCommandInterpreterRunOptions::SetAddToHistory(bool add_to_history) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreterRunOptions, SetAddToHistory,
+                     (bool), add_to_history);
+
   m_opaque_up->SetAddToHistory(add_to_history);
 }
 
@@ -130,6 +175,9 @@ protected:
 
 SBCommandInterpreter::SBCommandInterpreter(CommandInterpreter *interpreter)
     : m_opaque_ptr(interpreter) {
+  LLDB_RECORD_CONSTRUCTOR(SBCommandInterpreter,
+                          (lldb_private::CommandInterpreter *), interpreter);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log)
@@ -140,37 +188,62 @@ SBCommandInterpreter::SBCommandInterpreter(CommandInterpreter *interpreter)
 }
 
 SBCommandInterpreter::SBCommandInterpreter(const SBCommandInterpreter &rhs)
-    : m_opaque_ptr(rhs.m_opaque_ptr) {}
+    : m_opaque_ptr(rhs.m_opaque_ptr) {
+  LLDB_RECORD_CONSTRUCTOR(SBCommandInterpreter,
+                          (const lldb::SBCommandInterpreter &), rhs);
+}
 
 SBCommandInterpreter::~SBCommandInterpreter() = default;
 
 const SBCommandInterpreter &SBCommandInterpreter::
 operator=(const SBCommandInterpreter &rhs) {
+  LLDB_RECORD_METHOD(
+      const lldb::SBCommandInterpreter &,
+      SBCommandInterpreter, operator=,(const lldb::SBCommandInterpreter &),
+      rhs);
+
   m_opaque_ptr = rhs.m_opaque_ptr;
   return *this;
 }
 
-bool SBCommandInterpreter::IsValid() const { return m_opaque_ptr != nullptr; }
+bool SBCommandInterpreter::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreter, IsValid);
+
+  return m_opaque_ptr != nullptr;
+}
 
 bool SBCommandInterpreter::CommandExists(const char *cmd) {
+  LLDB_RECORD_METHOD(bool, SBCommandInterpreter, CommandExists, (const char *),
+                     cmd);
+
   return (((cmd != nullptr) && IsValid()) ? m_opaque_ptr->CommandExists(cmd)
                                           : false);
 }
 
 bool SBCommandInterpreter::AliasExists(const char *cmd) {
+  LLDB_RECORD_METHOD(bool, SBCommandInterpreter, AliasExists, (const char *),
+                     cmd);
+
   return (((cmd != nullptr) && IsValid()) ? m_opaque_ptr->AliasExists(cmd)
                                           : false);
 }
 
 bool SBCommandInterpreter::IsActive() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandInterpreter, IsActive);
+
   return (IsValid() ? m_opaque_ptr->IsActive() : false);
 }
 
 bool SBCommandInterpreter::WasInterrupted() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommandInterpreter, WasInterrupted);
+
   return (IsValid() ? m_opaque_ptr->WasInterrupted() : false);
 }
 
 const char *SBCommandInterpreter::GetIOHandlerControlSequence(char ch) {
+  LLDB_RECORD_METHOD(const char *, SBCommandInterpreter,
+                     GetIOHandlerControlSequence, (char), ch);
+
   return (IsValid()
               ? m_opaque_ptr->GetDebugger()
                     .GetTopIOHandlerControlSequence(ch)
@@ -182,6 +255,10 @@ lldb::ReturnStatus
 SBCommandInterpreter::HandleCommand(const char *command_line,
                                     SBCommandReturnObject &result,
                                     bool add_to_history) {
+  LLDB_RECORD_METHOD(lldb::ReturnStatus, SBCommandInterpreter, HandleCommand,
+                     (const char *, lldb::SBCommandReturnObject &, bool),
+                     command_line, result, add_to_history);
+
   SBExecutionContext sb_exe_ctx;
   return HandleCommand(command_line, sb_exe_ctx, result, add_to_history);
 }
@@ -189,6 +266,11 @@ SBCommandInterpreter::HandleCommand(const char *command_line,
 lldb::ReturnStatus SBCommandInterpreter::HandleCommand(
     const char *command_line, SBExecutionContext &override_context,
     SBCommandReturnObject &result, bool add_to_history) {
+  LLDB_RECORD_METHOD(lldb::ReturnStatus, SBCommandInterpreter, HandleCommand,
+                     (const char *, lldb::SBExecutionContext &,
+                      lldb::SBCommandReturnObject &, bool),
+                     command_line, override_context, result, add_to_history);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log)
@@ -235,6 +317,12 @@ void SBCommandInterpreter::HandleCommandsFromFile(
     lldb::SBFileSpec &file, lldb::SBExecutionContext &override_context,
     lldb::SBCommandInterpreterRunOptions &options,
     lldb::SBCommandReturnObject result) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreter, HandleCommandsFromFile,
+                     (lldb::SBFileSpec &, lldb::SBExecutionContext &,
+                      lldb::SBCommandInterpreterRunOptions &,
+                      lldb::SBCommandReturnObject),
+                     file, override_context, options, result);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log) {
@@ -274,6 +362,12 @@ void SBCommandInterpreter::HandleCommandsFromFile(
 int SBCommandInterpreter::HandleCompletion(
     const char *current_line, const char *cursor, const char *last_char,
     int match_start_point, int max_return_elements, SBStringList &matches) {
+  LLDB_RECORD_METHOD(int, SBCommandInterpreter, HandleCompletion,
+                     (const char *, const char *, const char *, int, int,
+                      lldb::SBStringList &),
+                     current_line, cursor, last_char, match_start_point,
+                     max_return_elements, matches);
+
   SBStringList dummy_descriptions;
   return HandleCompletionWithDescriptions(
       current_line, cursor, last_char, match_start_point, max_return_elements,
@@ -284,6 +378,13 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
     const char *current_line, const char *cursor, const char *last_char,
     int match_start_point, int max_return_elements, SBStringList &matches,
     SBStringList &descriptions) {
+  LLDB_RECORD_METHOD(int, SBCommandInterpreter,
+                     HandleCompletionWithDescriptions,
+                     (const char *, const char *, const char *, int, int,
+                      lldb::SBStringList &, lldb::SBStringList &),
+                     current_line, cursor, last_char, match_start_point,
+                     max_return_elements, matches, descriptions);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int num_completions = 0;
 
@@ -333,6 +434,13 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
     const char *current_line, uint32_t cursor_pos, int match_start_point,
     int max_return_elements, SBStringList &matches,
     SBStringList &descriptions) {
+  LLDB_RECORD_METHOD(int, SBCommandInterpreter,
+                     HandleCompletionWithDescriptions,
+                     (const char *, uint32_t, int, int, lldb::SBStringList &,
+                      lldb::SBStringList &),
+                     current_line, cursor_pos, match_start_point,
+                     max_return_elements, matches, descriptions);
+
   const char *cursor = current_line + cursor_pos;
   const char *last_char = current_line + strlen(current_line);
   return HandleCompletionWithDescriptions(
@@ -345,6 +453,11 @@ int SBCommandInterpreter::HandleCompletion(const char *current_line,
                                            int match_start_point,
                                            int max_return_elements,
                                            lldb::SBStringList &matches) {
+  LLDB_RECORD_METHOD(int, SBCommandInterpreter, HandleCompletion,
+                     (const char *, uint32_t, int, int, lldb::SBStringList &),
+                     current_line, cursor_pos, match_start_point,
+                     max_return_elements, matches);
+
   const char *cursor = current_line + cursor_pos;
   const char *last_char = current_line + strlen(current_line);
   return HandleCompletion(current_line, cursor, last_char, match_start_point,
@@ -352,18 +465,26 @@ int SBCommandInterpreter::HandleCompletion(const char *current_line,
 }
 
 bool SBCommandInterpreter::HasCommands() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandInterpreter, HasCommands);
+
   return (IsValid() ? m_opaque_ptr->HasCommands() : false);
 }
 
 bool SBCommandInterpreter::HasAliases() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandInterpreter, HasAliases);
+
   return (IsValid() ? m_opaque_ptr->HasAliases() : false);
 }
 
 bool SBCommandInterpreter::HasAliasOptions() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandInterpreter, HasAliasOptions);
+
   return (IsValid() ? m_opaque_ptr->HasAliasOptions() : false);
 }
 
 SBProcess SBCommandInterpreter::GetProcess() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBProcess, SBCommandInterpreter, GetProcess);
+
   SBProcess sb_process;
   ProcessSP process_sp;
   if (IsValid()) {
@@ -381,10 +502,13 @@ SBProcess SBCommandInterpreter::GetProcess() {
                 static_cast<void *>(m_opaque_ptr),
                 static_cast<void *>(process_sp.get()));
 
-  return sb_process;
+  return LLDB_RECORD_RESULT(sb_process);
 }
 
 SBDebugger SBCommandInterpreter::GetDebugger() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBDebugger, SBCommandInterpreter,
+                             GetDebugger);
+
   SBDebugger sb_debugger;
   if (IsValid())
     sb_debugger.reset(m_opaque_ptr->GetDebugger().shared_from_this());
@@ -395,24 +519,33 @@ SBDebugger SBCommandInterpreter::GetDebugger() {
                 static_cast<void *>(m_opaque_ptr),
                 static_cast<void *>(sb_debugger.get()));
 
-  return sb_debugger;
+  return LLDB_RECORD_RESULT(sb_debugger);
 }
 
 bool SBCommandInterpreter::GetPromptOnQuit() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandInterpreter, GetPromptOnQuit);
+
   return (IsValid() ? m_opaque_ptr->GetPromptOnQuit() : false);
 }
 
 void SBCommandInterpreter::SetPromptOnQuit(bool b) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreter, SetPromptOnQuit, (bool), b);
+
   if (IsValid())
     m_opaque_ptr->SetPromptOnQuit(b);
 }
 
 void SBCommandInterpreter::AllowExitCodeOnQuit(bool allow) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreter, AllowExitCodeOnQuit, (bool),
+                     allow);
+
   if (m_opaque_ptr)
     m_opaque_ptr->AllowExitCodeOnQuit(allow);
 }
 
 bool SBCommandInterpreter::HasCustomQuitExitCode() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommandInterpreter, HasCustomQuitExitCode);
+
   bool exited = false;
   if (m_opaque_ptr)
     m_opaque_ptr->GetQuitExitCode(exited);
@@ -420,12 +553,18 @@ bool SBCommandInterpreter::HasCustomQuitExitCode() {
 }
 
 int SBCommandInterpreter::GetQuitStatus() {
+  LLDB_RECORD_METHOD_NO_ARGS(int, SBCommandInterpreter, GetQuitStatus);
+
   bool exited = false;
   return (m_opaque_ptr ? m_opaque_ptr->GetQuitExitCode(exited) : 0);
 }
 
 void SBCommandInterpreter::ResolveCommand(const char *command_line,
                                           SBCommandReturnObject &result) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreter, ResolveCommand,
+                     (const char *, lldb::SBCommandReturnObject &),
+                     command_line, result);
+
   result.Clear();
   if (command_line && IsValid()) {
     m_opaque_ptr->ResolveCommand(command_line, result.ref());
@@ -450,6 +589,9 @@ void SBCommandInterpreter::reset(
 
 void SBCommandInterpreter::SourceInitFileInHomeDirectory(
     SBCommandReturnObject &result) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreter, SourceInitFileInHomeDirectory,
+                     (lldb::SBCommandReturnObject &), result);
+
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
@@ -472,6 +614,10 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
 
 void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
     SBCommandReturnObject &result) {
+  LLDB_RECORD_METHOD(void, SBCommandInterpreter,
+                     SourceInitFileInCurrentWorkingDirectory,
+                     (lldb::SBCommandReturnObject &), result);
+
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetDebugger().GetSelectedTarget());
@@ -493,6 +639,9 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
 }
 
 SBBroadcaster SBCommandInterpreter::GetBroadcaster() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBroadcaster, SBCommandInterpreter,
+                             GetBroadcaster);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBroadcaster broadcaster(m_opaque_ptr, false);
@@ -503,25 +652,40 @@ SBBroadcaster SBCommandInterpreter::GetBroadcaster() {
         static_cast<void *>(m_opaque_ptr),
         static_cast<void *>(broadcaster.get()));
 
-  return broadcaster;
+  return LLDB_RECORD_RESULT(broadcaster);
 }
 
 const char *SBCommandInterpreter::GetBroadcasterClass() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBCommandInterpreter,
+                                    GetBroadcasterClass);
+
   return CommandInterpreter::GetStaticBroadcasterClass().AsCString();
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
     const lldb::CommandArgumentType arg_type) {
+  LLDB_RECORD_STATIC_METHOD(const char *, SBCommandInterpreter,
+                            GetArgumentTypeAsCString,
+                            (const lldb::CommandArgumentType), arg_type);
+
   return CommandObject::GetArgumentTypeAsCString(arg_type);
 }
 
 const char *SBCommandInterpreter::GetArgumentDescriptionAsCString(
     const lldb::CommandArgumentType arg_type) {
+  LLDB_RECORD_STATIC_METHOD(const char *, SBCommandInterpreter,
+                            GetArgumentDescriptionAsCString,
+                            (const lldb::CommandArgumentType), arg_type);
+
   return CommandObject::GetArgumentDescriptionAsCString(arg_type);
 }
 
 bool SBCommandInterpreter::EventIsCommandInterpreterEvent(
     const lldb::SBEvent &event) {
+  LLDB_RECORD_STATIC_METHOD(bool, SBCommandInterpreter,
+                            EventIsCommandInterpreterEvent,
+                            (const lldb::SBEvent &), event);
+
   return event.GetBroadcasterClass() ==
          SBCommandInterpreter::GetBroadcasterClass();
 }
@@ -544,122 +708,166 @@ bool SBCommandInterpreter::SetCommandOverrideCallback(
 
 lldb::SBCommand SBCommandInterpreter::AddMultiwordCommand(const char *name,
                                                           const char *help) {
+  LLDB_RECORD_METHOD(lldb::SBCommand, SBCommandInterpreter, AddMultiwordCommand,
+                     (const char *, const char *), name, help);
+
   CommandObjectMultiword *new_command =
       new CommandObjectMultiword(*m_opaque_ptr, name, help);
   new_command->SetRemovable(true);
   lldb::CommandObjectSP new_command_sp(new_command);
   if (new_command_sp &&
       m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
-    return lldb::SBCommand(new_command_sp);
-  return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
+  return LLDB_RECORD_RESULT(lldb::SBCommand());
 }
 
 lldb::SBCommand SBCommandInterpreter::AddCommand(
     const char *name, lldb::SBCommandPluginInterface *impl, const char *help) {
+  LLDB_RECORD_METHOD(
+      lldb::SBCommand, SBCommandInterpreter, AddCommand,
+      (const char *, lldb::SBCommandPluginInterface *, const char *), name,
+      impl, help);
+
   lldb::CommandObjectSP new_command_sp;
   new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
       *m_opaque_ptr, name, impl, help);
 
   if (new_command_sp &&
       m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
-    return lldb::SBCommand(new_command_sp);
-  return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
+  return LLDB_RECORD_RESULT(lldb::SBCommand());
 }
 
 lldb::SBCommand
 SBCommandInterpreter::AddCommand(const char *name,
                                  lldb::SBCommandPluginInterface *impl,
                                  const char *help, const char *syntax) {
+  LLDB_RECORD_METHOD(lldb::SBCommand, SBCommandInterpreter, AddCommand,
+                     (const char *, lldb::SBCommandPluginInterface *,
+                      const char *, const char *),
+                     name, impl, help, syntax);
+
   lldb::CommandObjectSP new_command_sp;
   new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
       *m_opaque_ptr, name, impl, help, syntax);
 
   if (new_command_sp &&
       m_opaque_ptr->AddUserCommand(name, new_command_sp, true))
-    return lldb::SBCommand(new_command_sp);
-  return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
+  return LLDB_RECORD_RESULT(lldb::SBCommand());
 }
 
-SBCommand::SBCommand() = default;
+SBCommand::SBCommand() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommand); }
 
 SBCommand::SBCommand(lldb::CommandObjectSP cmd_sp) : m_opaque_sp(cmd_sp) {}
 
-bool SBCommand::IsValid() { return m_opaque_sp.get() != nullptr; }
+bool SBCommand::IsValid() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommand, IsValid);
+
+  return m_opaque_sp.get() != nullptr;
+}
 
 const char *SBCommand::GetName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommand, GetName);
+
   return (IsValid() ? ConstString(m_opaque_sp->GetCommandName()).AsCString() : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommand, GetHelp);
+
   return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString()
                     : nullptr);
 }
 
 const char *SBCommand::GetHelpLong() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBCommand, GetHelpLong);
+
   return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString()
                     : nullptr);
 }
 
 void SBCommand::SetHelp(const char *help) {
+  LLDB_RECORD_METHOD(void, SBCommand, SetHelp, (const char *), help);
+
   if (IsValid())
     m_opaque_sp->SetHelp(help);
 }
 
 void SBCommand::SetHelpLong(const char *help) {
+  LLDB_RECORD_METHOD(void, SBCommand, SetHelpLong, (const char *), help);
+
   if (IsValid())
     m_opaque_sp->SetHelpLong(help);
 }
 
 lldb::SBCommand SBCommand::AddMultiwordCommand(const char *name,
                                                const char *help) {
+  LLDB_RECORD_METHOD(lldb::SBCommand, SBCommand, AddMultiwordCommand,
+                     (const char *, const char *), name, help);
+
   if (!IsValid())
-    return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand());
   if (!m_opaque_sp->IsMultiwordObject())
-    return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand());
   CommandObjectMultiword *new_command = new CommandObjectMultiword(
       m_opaque_sp->GetCommandInterpreter(), name, help);
   new_command->SetRemovable(true);
   lldb::CommandObjectSP new_command_sp(new_command);
   if (new_command_sp && m_opaque_sp->LoadSubCommand(name, new_command_sp))
-    return lldb::SBCommand(new_command_sp);
-  return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
+  return LLDB_RECORD_RESULT(lldb::SBCommand());
 }
 
 lldb::SBCommand SBCommand::AddCommand(const char *name,
                                       lldb::SBCommandPluginInterface *impl,
                                       const char *help) {
+  LLDB_RECORD_METHOD(
+      lldb::SBCommand, SBCommand, AddCommand,
+      (const char *, lldb::SBCommandPluginInterface *, const char *), name,
+      impl, help);
+
   if (!IsValid())
-    return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand());
   if (!m_opaque_sp->IsMultiwordObject())
-    return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand());
   lldb::CommandObjectSP new_command_sp;
   new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
       m_opaque_sp->GetCommandInterpreter(), name, impl, help);
   if (new_command_sp && m_opaque_sp->LoadSubCommand(name, new_command_sp))
-    return lldb::SBCommand(new_command_sp);
-  return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
+  return LLDB_RECORD_RESULT(lldb::SBCommand());
 }
 
 lldb::SBCommand SBCommand::AddCommand(const char *name,
                                       lldb::SBCommandPluginInterface *impl,
                                       const char *help, const char *syntax) {
+  LLDB_RECORD_METHOD(lldb::SBCommand, SBCommand, AddCommand,
+                     (const char *, lldb::SBCommandPluginInterface *,
+                      const char *, const char *),
+                     name, impl, help, syntax);
+
   if (!IsValid())
-    return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand());
   if (!m_opaque_sp->IsMultiwordObject())
-    return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand());
   lldb::CommandObjectSP new_command_sp;
   new_command_sp = std::make_shared<CommandPluginInterfaceImplementation>(
       m_opaque_sp->GetCommandInterpreter(), name, impl, help, syntax);
   if (new_command_sp && m_opaque_sp->LoadSubCommand(name, new_command_sp))
-    return lldb::SBCommand(new_command_sp);
-  return lldb::SBCommand();
+    return LLDB_RECORD_RESULT(lldb::SBCommand(new_command_sp));
+  return LLDB_RECORD_RESULT(lldb::SBCommand());
 }
 
 uint32_t SBCommand::GetFlags() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBCommand, GetFlags);
+
   return (IsValid() ? m_opaque_sp->GetFlags().Get() : 0);
 }
 
 void SBCommand::SetFlags(uint32_t flags) {
+  LLDB_RECORD_METHOD(void, SBCommand, SetFlags, (uint32_t), flags);
+
   if (IsValid())
     m_opaque_sp->GetFlags().Set(flags);
 }

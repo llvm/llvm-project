@@ -12,3 +12,7 @@ if (current_os == "android") {
   ]
   target_ldflags += [ "-static-libstdc++" ]
 }
+
+if (current_cpu == "x86") {
+  target_flags = [ "-m32" ]
+}

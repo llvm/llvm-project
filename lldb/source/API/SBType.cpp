@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBType.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBTypeEnumMember.h"
@@ -25,7 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBType::SBType() : m_opaque_sp() {}
+SBType::SBType() : m_opaque_sp() { LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBType); }
 
 SBType::SBType(const CompilerType &type)
     : m_opaque_sp(new TypeImpl(
@@ -38,6 +39,8 @@ SBType::SBType(const lldb::TypeImplSP &type_impl_sp)
     : m_opaque_sp(type_impl_sp) {}
 
 SBType::SBType(const SBType &rhs) : m_opaque_sp() {
+  LLDB_RECORD_CONSTRUCTOR(SBType, (const lldb::SBType &), rhs);
+
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
@@ -48,6 +51,8 @@ SBType::SBType(const SBType &rhs) : m_opaque_sp() {
 //{}
 //
 bool SBType::operator==(SBType &rhs) {
+  LLDB_RECORD_METHOD(bool, SBType, operator==,(lldb::SBType &), rhs);
+
   if (!IsValid())
     return !rhs.IsValid();
 
@@ -58,6 +63,8 @@ bool SBType::operator==(SBType &rhs) {
 }
 
 bool SBType::operator!=(SBType &rhs) {
+  LLDB_RECORD_METHOD(bool, SBType, operator!=,(lldb::SBType &), rhs);
+
   if (!IsValid())
     return rhs.IsValid();
 
@@ -74,6 +81,9 @@ void SBType::SetSP(const lldb::TypeImplSP &type_impl_sp) {
 }
 
 SBType &SBType::operator=(const SBType &rhs) {
+  LLDB_RECORD_METHOD(lldb::SBType &, SBType, operator=,(const lldb::SBType &),
+                     rhs);
+
   if (this != &rhs) {
     m_opaque_sp = rhs.m_opaque_sp;
   }
@@ -97,6 +107,8 @@ const TypeImpl &SBType::ref() const {
 }
 
 bool SBType::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBType, IsValid);
+
   if (m_opaque_sp.get() == NULL)
     return false;
 
@@ -104,6 +116,8 @@ bool SBType::IsValid() const {
 }
 
 uint64_t SBType::GetByteSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBType, GetByteSize);
+
   if (IsValid())
     if (llvm::Optional<uint64_t> size =
             m_opaque_sp->GetCompilerType(false).GetByteSize(nullptr))
@@ -112,12 +126,16 @@ uint64_t SBType::GetByteSize() {
 }
 
 bool SBType::IsPointerType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsPointerType);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsPointerType();
 }
 
 bool SBType::IsArrayType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsArrayType);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsArrayType(nullptr, nullptr,
@@ -125,63 +143,88 @@ bool SBType::IsArrayType() {
 }
 
 bool SBType::IsVectorType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsVectorType);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsVectorType(nullptr, nullptr);
 }
 
 bool SBType::IsReferenceType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsReferenceType);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsReferenceType();
 }
 
 SBType SBType::GetPointerType() {
-  if (!IsValid())
-    return SBType();
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetPointerType);
 
-  return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetPointerType())));
+  if (!IsValid())
+    return LLDB_RECORD_RESULT(SBType());
+
+  return LLDB_RECORD_RESULT(
+      SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetPointerType()))));
 }
 
 SBType SBType::GetPointeeType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetPointeeType);
+
   if (!IsValid())
-    return SBType();
-  return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetPointeeType())));
+    return LLDB_RECORD_RESULT(SBType());
+  return LLDB_RECORD_RESULT(
+      SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetPointeeType()))));
 }
 
 SBType SBType::GetReferenceType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetReferenceType);
+
   if (!IsValid())
-    return SBType();
-  return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetReferenceType())));
+    return LLDB_RECORD_RESULT(SBType());
+  return LLDB_RECORD_RESULT(
+      SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetReferenceType()))));
 }
 
 SBType SBType::GetTypedefedType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetTypedefedType);
+
   if (!IsValid())
-    return SBType();
-  return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetTypedefedType())));
+    return LLDB_RECORD_RESULT(SBType());
+  return LLDB_RECORD_RESULT(
+      SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetTypedefedType()))));
 }
 
 SBType SBType::GetDereferencedType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetDereferencedType);
+
   if (!IsValid())
-    return SBType();
-  return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetDereferencedType())));
+    return LLDB_RECORD_RESULT(SBType());
+  return LLDB_RECORD_RESULT(
+      SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetDereferencedType()))));
 }
 
 SBType SBType::GetArrayElementType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetArrayElementType);
+
   if (!IsValid())
-    return SBType();
-  return SBType(TypeImplSP(
-      new TypeImpl(m_opaque_sp->GetCompilerType(true).GetArrayElementType())));
+    return LLDB_RECORD_RESULT(SBType());
+  return LLDB_RECORD_RESULT(SBType(TypeImplSP(
+      new TypeImpl(m_opaque_sp->GetCompilerType(true).GetArrayElementType()))));
 }
 
 SBType SBType::GetArrayType(uint64_t size) {
+  LLDB_RECORD_METHOD(lldb::SBType, SBType, GetArrayType, (uint64_t), size);
+
   if (!IsValid())
-    return SBType();
-  return SBType(TypeImplSP(
-      new TypeImpl(m_opaque_sp->GetCompilerType(true).GetArrayType(size))));
+    return LLDB_RECORD_RESULT(SBType());
+  return LLDB_RECORD_RESULT(SBType(TypeImplSP(
+      new TypeImpl(m_opaque_sp->GetCompilerType(true).GetArrayType(size)))));
 }
 
 SBType SBType::GetVectorElementType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetVectorElementType);
+
   SBType type_sb;
   if (IsValid()) {
     CompilerType vector_element_type;
@@ -189,44 +232,57 @@ SBType SBType::GetVectorElementType() {
                                                         nullptr))
       type_sb.SetSP(TypeImplSP(new TypeImpl(vector_element_type)));
   }
-  return type_sb;
+  return LLDB_RECORD_RESULT(type_sb);
 }
 
 bool SBType::IsFunctionType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsFunctionType);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsFunctionType();
 }
 
 bool SBType::IsPolymorphicClass() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsPolymorphicClass);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsPolymorphicClass();
 }
 
 bool SBType::IsTypedefType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsTypedefType);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsTypedefType();
 }
 
 bool SBType::IsAnonymousType() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsAnonymousType);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(true).IsAnonymousType();
 }
 
 lldb::SBType SBType::GetFunctionReturnType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetFunctionReturnType);
+
   if (IsValid()) {
     CompilerType return_type(
         m_opaque_sp->GetCompilerType(true).GetFunctionReturnType());
     if (return_type.IsValid())
-      return SBType(return_type);
+      return LLDB_RECORD_RESULT(SBType(return_type));
   }
-  return lldb::SBType();
+  return LLDB_RECORD_RESULT(lldb::SBType());
 }
 
 lldb::SBTypeList SBType::GetFunctionArgumentTypes() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBTypeList, SBType,
+                             GetFunctionArgumentTypes);
+
   SBTypeList sb_type_list;
   if (IsValid()) {
     CompilerType func_type(m_opaque_sp->GetCompilerType(true));
@@ -235,10 +291,12 @@ lldb::SBTypeList SBType::GetFunctionArgumentTypes() {
       sb_type_list.Append(SBType(func_type.GetFunctionArgumentAtIndex(i)));
     }
   }
-  return sb_type_list;
+  return LLDB_RECORD_RESULT(sb_type_list);
 }
 
 uint32_t SBType::GetNumberOfMemberFunctions() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBType, GetNumberOfMemberFunctions);
+
   if (IsValid()) {
     return m_opaque_sp->GetCompilerType(true).GetNumMemberFunctions();
   }
@@ -246,51 +304,71 @@ uint32_t SBType::GetNumberOfMemberFunctions() {
 }
 
 lldb::SBTypeMemberFunction SBType::GetMemberFunctionAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBTypeMemberFunction, SBType,
+                     GetMemberFunctionAtIndex, (uint32_t), idx);
+
   SBTypeMemberFunction sb_func_type;
   if (IsValid())
     sb_func_type.reset(new TypeMemberFunctionImpl(
         m_opaque_sp->GetCompilerType(true).GetMemberFunctionAtIndex(idx)));
-  return sb_func_type;
+  return LLDB_RECORD_RESULT(sb_func_type);
 }
 
 lldb::SBType SBType::GetUnqualifiedType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetUnqualifiedType);
+
   if (!IsValid())
-    return SBType();
-  return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetUnqualifiedType())));
+    return LLDB_RECORD_RESULT(SBType());
+  return LLDB_RECORD_RESULT(
+      SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetUnqualifiedType()))));
 }
 
 lldb::SBType SBType::GetCanonicalType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBType, GetCanonicalType);
+
   if (IsValid())
-    return SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetCanonicalType())));
-  return SBType();
+    return LLDB_RECORD_RESULT(
+        SBType(TypeImplSP(new TypeImpl(m_opaque_sp->GetCanonicalType()))));
+  return LLDB_RECORD_RESULT(SBType());
 }
 
 lldb::BasicType SBType::GetBasicType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::BasicType, SBType, GetBasicType);
+
   if (IsValid())
     return m_opaque_sp->GetCompilerType(false).GetBasicTypeEnumeration();
   return eBasicTypeInvalid;
 }
 
 SBType SBType::GetBasicType(lldb::BasicType basic_type) {
+  LLDB_RECORD_METHOD(lldb::SBType, SBType, GetBasicType, (lldb::BasicType),
+                     basic_type);
+
   if (IsValid() && m_opaque_sp->IsValid())
-    return SBType(
-        m_opaque_sp->GetTypeSystem(false)->GetBasicTypeFromAST(basic_type));
-  return SBType();
+    return LLDB_RECORD_RESULT(SBType(
+        m_opaque_sp->GetTypeSystem(false)->GetBasicTypeFromAST(basic_type)));
+  return LLDB_RECORD_RESULT(SBType());
 }
 
 uint32_t SBType::GetNumberOfDirectBaseClasses() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBType, GetNumberOfDirectBaseClasses);
+
   if (IsValid())
     return m_opaque_sp->GetCompilerType(true).GetNumDirectBaseClasses();
   return 0;
 }
 
 uint32_t SBType::GetNumberOfVirtualBaseClasses() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBType, GetNumberOfVirtualBaseClasses);
+
   if (IsValid())
     return m_opaque_sp->GetCompilerType(true).GetNumVirtualBaseClasses();
   return 0;
 }
 
 uint32_t SBType::GetNumberOfFields() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBType, GetNumberOfFields);
+
   if (IsValid())
     return m_opaque_sp->GetCompilerType(true).GetNumFields();
   return 0;
@@ -298,6 +376,10 @@ uint32_t SBType::GetNumberOfFields() {
 
 bool SBType::GetDescription(SBStream &description,
                             lldb::DescriptionLevel description_level) {
+  LLDB_RECORD_METHOD(bool, SBType, GetDescription,
+                     (lldb::SBStream &, lldb::DescriptionLevel), description,
+                     description_level);
+
   Stream &strm = description.ref();
 
   if (m_opaque_sp) {
@@ -309,6 +391,9 @@ bool SBType::GetDescription(SBStream &description,
 }
 
 SBTypeMember SBType::GetDirectBaseClassAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBTypeMember, SBType, GetDirectBaseClassAtIndex,
+                     (uint32_t), idx);
+
   SBTypeMember sb_type_member;
   if (IsValid()) {
     uint32_t bit_offset = 0;
@@ -319,10 +404,13 @@ SBTypeMember SBType::GetDirectBaseClassAtIndex(uint32_t idx) {
       sb_type_member.reset(new TypeMemberImpl(
           TypeImplSP(new TypeImpl(base_class_type)), bit_offset));
   }
-  return sb_type_member;
+  return LLDB_RECORD_RESULT(sb_type_member);
 }
 
 SBTypeMember SBType::GetVirtualBaseClassAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBTypeMember, SBType, GetVirtualBaseClassAtIndex,
+                     (uint32_t), idx);
+
   SBTypeMember sb_type_member;
   if (IsValid()) {
     uint32_t bit_offset = 0;
@@ -333,10 +421,13 @@ SBTypeMember SBType::GetVirtualBaseClassAtIndex(uint32_t idx) {
       sb_type_member.reset(new TypeMemberImpl(
           TypeImplSP(new TypeImpl(base_class_type)), bit_offset));
   }
-  return sb_type_member;
+  return LLDB_RECORD_RESULT(sb_type_member);
 }
 
 SBTypeEnumMemberList SBType::GetEnumMembers() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBTypeEnumMemberList, SBType,
+                             GetEnumMembers);
+
   SBTypeEnumMemberList sb_enum_member_list;
   if (IsValid()) {
     CompilerType this_type(m_opaque_sp->GetCompilerType(true));
@@ -353,10 +444,13 @@ SBTypeEnumMemberList SBType::GetEnumMembers() {
       });
     }
   }
-  return sb_enum_member_list;
+  return LLDB_RECORD_RESULT(sb_enum_member_list);
 }
 
 SBTypeMember SBType::GetFieldAtIndex(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBTypeMember, SBType, GetFieldAtIndex, (uint32_t),
+                     idx);
+
   SBTypeMember sb_type_member;
   if (IsValid()) {
     CompilerType this_type(m_opaque_sp->GetCompilerType(false));
@@ -377,48 +471,63 @@ SBTypeMember SBType::GetFieldAtIndex(uint32_t idx) {
       }
     }
   }
-  return sb_type_member;
+  return LLDB_RECORD_RESULT(sb_type_member);
 }
 
 bool SBType::IsTypeComplete() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBType, IsTypeComplete);
+
   if (!IsValid())
     return false;
   return m_opaque_sp->GetCompilerType(false).IsCompleteType();
 }
 
 uint32_t SBType::GetTypeFlags() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBType, GetTypeFlags);
+
   if (!IsValid())
     return 0;
   return m_opaque_sp->GetCompilerType(true).GetTypeInfo();
 }
 
 const char *SBType::GetName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBType, GetName);
+
   if (!IsValid())
     return "";
   return m_opaque_sp->GetName().GetCString();
 }
 
 const char *SBType::GetDisplayTypeName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBType, GetDisplayTypeName);
+
   if (!IsValid())
     return "";
   return m_opaque_sp->GetDisplayTypeName().GetCString();
 }
 
 lldb::TypeClass SBType::GetTypeClass() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::TypeClass, SBType, GetTypeClass);
+
   if (IsValid())
     return m_opaque_sp->GetCompilerType(true).GetTypeClass();
   return lldb::eTypeClassInvalid;
 }
 
 uint32_t SBType::GetNumberOfTemplateArguments() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBType, GetNumberOfTemplateArguments);
+
   if (IsValid())
     return m_opaque_sp->GetCompilerType(false).GetNumTemplateArguments();
   return 0;
 }
 
 lldb::SBType SBType::GetTemplateArgumentType(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::SBType, SBType, GetTemplateArgumentType, (uint32_t),
+                     idx);
+
   if (!IsValid())
-    return SBType();
+    return LLDB_RECORD_RESULT(SBType());
 
   CompilerType type;
   switch(GetTemplateArgumentKind(idx)) {
@@ -434,28 +543,42 @@ lldb::SBType SBType::GetTemplateArgumentType(uint32_t idx) {
       break;
   }
   if (type.IsValid())
-    return SBType(type);
-  return SBType();
+    return LLDB_RECORD_RESULT(SBType(type));
+  return LLDB_RECORD_RESULT(SBType());
 }
 
 lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
+  LLDB_RECORD_METHOD(lldb::TemplateArgumentKind, SBType,
+                     GetTemplateArgumentKind, (uint32_t), idx);
+
   if (IsValid())
     return m_opaque_sp->GetCompilerType(false).GetTemplateArgumentKind(idx);
   return eTemplateArgumentKindNull;
 }
 
-SBTypeList::SBTypeList() : m_opaque_up(new TypeListImpl()) {}
+SBTypeList::SBTypeList() : m_opaque_up(new TypeListImpl()) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeList);
+}
 
 SBTypeList::SBTypeList(const SBTypeList &rhs)
     : m_opaque_up(new TypeListImpl()) {
+  LLDB_RECORD_CONSTRUCTOR(SBTypeList, (const lldb::SBTypeList &), rhs);
+
   for (uint32_t i = 0, rhs_size = const_cast<SBTypeList &>(rhs).GetSize();
        i < rhs_size; i++)
     Append(const_cast<SBTypeList &>(rhs).GetTypeAtIndex(i));
 }
 
-bool SBTypeList::IsValid() { return (m_opaque_up != NULL); }
+bool SBTypeList::IsValid() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeList, IsValid);
+
+  return (m_opaque_up != NULL);
+}
 
 SBTypeList &SBTypeList::operator=(const SBTypeList &rhs) {
+  LLDB_RECORD_METHOD(lldb::SBTypeList &,
+                     SBTypeList, operator=,(const lldb::SBTypeList &), rhs);
+
   if (this != &rhs) {
     m_opaque_up.reset(new TypeListImpl());
     for (uint32_t i = 0, rhs_size = const_cast<SBTypeList &>(rhs).GetSize();
@@ -466,25 +589,38 @@ SBTypeList &SBTypeList::operator=(const SBTypeList &rhs) {
 }
 
 void SBTypeList::Append(SBType type) {
+  LLDB_RECORD_METHOD(void, SBTypeList, Append, (lldb::SBType), type);
+
   if (type.IsValid())
     m_opaque_up->Append(type.m_opaque_sp);
 }
 
 SBType SBTypeList::GetTypeAtIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(lldb::SBType, SBTypeList, GetTypeAtIndex, (uint32_t),
+                     index);
+
   if (m_opaque_up)
-    return SBType(m_opaque_up->GetTypeAtIndex(index));
-  return SBType();
+    return LLDB_RECORD_RESULT(SBType(m_opaque_up->GetTypeAtIndex(index)));
+  return LLDB_RECORD_RESULT(SBType());
 }
 
-uint32_t SBTypeList::GetSize() { return m_opaque_up->GetSize(); }
+uint32_t SBTypeList::GetSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeList, GetSize);
+
+  return m_opaque_up->GetSize();
+}
 
 SBTypeList::~SBTypeList() {}
 
-SBTypeMember::SBTypeMember() : m_opaque_up() {}
+SBTypeMember::SBTypeMember() : m_opaque_up() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeMember);
+}
 
 SBTypeMember::~SBTypeMember() {}
 
 SBTypeMember::SBTypeMember(const SBTypeMember &rhs) : m_opaque_up() {
+  LLDB_RECORD_CONSTRUCTOR(SBTypeMember, (const lldb::SBTypeMember &), rhs);
+
   if (this != &rhs) {
     if (rhs.IsValid())
       m_opaque_up.reset(new TypeMemberImpl(rhs.ref()));
@@ -492,6 +628,9 @@ SBTypeMember::SBTypeMember(const SBTypeMember &rhs) : m_opaque_up() {
 }
 
 lldb::SBTypeMember &SBTypeMember::operator=(const lldb::SBTypeMember &rhs) {
+  LLDB_RECORD_METHOD(lldb::SBTypeMember &,
+                     SBTypeMember, operator=,(const lldb::SBTypeMember &), rhs);
+
   if (this != &rhs) {
     if (rhs.IsValid())
       m_opaque_up.reset(new TypeMemberImpl(rhs.ref()));
@@ -499,41 +638,57 @@ lldb::SBTypeMember &SBTypeMember::operator=(const lldb::SBTypeMember &rhs) {
   return *this;
 }
 
-bool SBTypeMember::IsValid() const { return m_opaque_up.get(); }
+bool SBTypeMember::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeMember, IsValid);
+
+  return m_opaque_up.get();
+}
 
 const char *SBTypeMember::GetName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeMember, GetName);
+
   if (m_opaque_up)
     return m_opaque_up->GetName().GetCString();
   return NULL;
 }
 
 SBType SBTypeMember::GetType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBTypeMember, GetType);
+
   SBType sb_type;
   if (m_opaque_up) {
     sb_type.SetSP(m_opaque_up->GetTypeImpl());
   }
-  return sb_type;
+  return LLDB_RECORD_RESULT(sb_type);
 }
 
 uint64_t SBTypeMember::GetOffsetInBytes() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBTypeMember, GetOffsetInBytes);
+
   if (m_opaque_up)
     return m_opaque_up->GetBitOffset() / 8u;
   return 0;
 }
 
 uint64_t SBTypeMember::GetOffsetInBits() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint64_t, SBTypeMember, GetOffsetInBits);
+
   if (m_opaque_up)
     return m_opaque_up->GetBitOffset();
   return 0;
 }
 
 bool SBTypeMember::IsBitfield() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTypeMember, IsBitfield);
+
   if (m_opaque_up)
     return m_opaque_up->GetIsBitfield();
   return false;
 }
 
 uint32_t SBTypeMember::GetBitfieldSizeInBits() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeMember, GetBitfieldSizeInBits);
+
   if (m_opaque_up)
     return m_opaque_up->GetBitfieldBitSize();
   return 0;
@@ -541,6 +696,10 @@ uint32_t SBTypeMember::GetBitfieldSizeInBits() {
 
 bool SBTypeMember::GetDescription(lldb::SBStream &description,
                                   lldb::DescriptionLevel description_level) {
+  LLDB_RECORD_METHOD(bool, SBTypeMember, GetDescription,
+                     (lldb::SBStream &, lldb::DescriptionLevel), description,
+                     description_level);
+
   Stream &strm = description.ref();
 
   if (m_opaque_up) {
@@ -580,29 +739,48 @@ TypeMemberImpl &SBTypeMember::ref() {
 
 const TypeMemberImpl &SBTypeMember::ref() const { return *m_opaque_up; }
 
-SBTypeMemberFunction::SBTypeMemberFunction() : m_opaque_sp() {}
+SBTypeMemberFunction::SBTypeMemberFunction() : m_opaque_sp() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTypeMemberFunction);
+}
 
 SBTypeMemberFunction::~SBTypeMemberFunction() {}
 
 SBTypeMemberFunction::SBTypeMemberFunction(const SBTypeMemberFunction &rhs)
-    : m_opaque_sp(rhs.m_opaque_sp) {}
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBTypeMemberFunction,
+                          (const lldb::SBTypeMemberFunction &), rhs);
+}
 
 lldb::SBTypeMemberFunction &SBTypeMemberFunction::
 operator=(const lldb::SBTypeMemberFunction &rhs) {
+  LLDB_RECORD_METHOD(
+      lldb::SBTypeMemberFunction &,
+      SBTypeMemberFunction, operator=,(const lldb::SBTypeMemberFunction &),
+      rhs);
+
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
   return *this;
 }
 
-bool SBTypeMemberFunction::IsValid() const { return m_opaque_sp.get(); }
+bool SBTypeMemberFunction::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBTypeMemberFunction, IsValid);
+
+  return m_opaque_sp.get();
+}
 
 const char *SBTypeMemberFunction::GetName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeMemberFunction, GetName);
+
   if (m_opaque_sp)
     return m_opaque_sp->GetName().GetCString();
   return NULL;
 }
 
 const char *SBTypeMemberFunction::GetDemangledName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeMemberFunction,
+                             GetDemangledName);
+
   if (m_opaque_sp) {
     ConstString mangled_str = m_opaque_sp->GetMangledName();
     if (mangled_str) {
@@ -614,43 +792,59 @@ const char *SBTypeMemberFunction::GetDemangledName() {
 }
 
 const char *SBTypeMemberFunction::GetMangledName() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBTypeMemberFunction,
+                             GetMangledName);
+
   if (m_opaque_sp)
     return m_opaque_sp->GetMangledName().GetCString();
   return NULL;
 }
 
 SBType SBTypeMemberFunction::GetType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBTypeMemberFunction, GetType);
+
   SBType sb_type;
   if (m_opaque_sp) {
     sb_type.SetSP(lldb::TypeImplSP(new TypeImpl(m_opaque_sp->GetType())));
   }
-  return sb_type;
+  return LLDB_RECORD_RESULT(sb_type);
 }
 
 lldb::SBType SBTypeMemberFunction::GetReturnType() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBType, SBTypeMemberFunction, GetReturnType);
+
   SBType sb_type;
   if (m_opaque_sp) {
     sb_type.SetSP(lldb::TypeImplSP(new TypeImpl(m_opaque_sp->GetReturnType())));
   }
-  return sb_type;
+  return LLDB_RECORD_RESULT(sb_type);
 }
 
 uint32_t SBTypeMemberFunction::GetNumberOfArguments() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBTypeMemberFunction,
+                             GetNumberOfArguments);
+
   if (m_opaque_sp)
     return m_opaque_sp->GetNumArguments();
   return 0;
 }
 
 lldb::SBType SBTypeMemberFunction::GetArgumentTypeAtIndex(uint32_t i) {
+  LLDB_RECORD_METHOD(lldb::SBType, SBTypeMemberFunction, GetArgumentTypeAtIndex,
+                     (uint32_t), i);
+
   SBType sb_type;
   if (m_opaque_sp) {
     sb_type.SetSP(
         lldb::TypeImplSP(new TypeImpl(m_opaque_sp->GetArgumentAtIndex(i))));
   }
-  return sb_type;
+  return LLDB_RECORD_RESULT(sb_type);
 }
 
 lldb::MemberFunctionKind SBTypeMemberFunction::GetKind() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::MemberFunctionKind, SBTypeMemberFunction,
+                             GetKind);
+
   if (m_opaque_sp)
     return m_opaque_sp->GetKind();
   return lldb::eMemberFunctionKindUnknown;
@@ -658,6 +852,10 @@ lldb::MemberFunctionKind SBTypeMemberFunction::GetKind() {
 
 bool SBTypeMemberFunction::GetDescription(
     lldb::SBStream &description, lldb::DescriptionLevel description_level) {
+  LLDB_RECORD_METHOD(bool, SBTypeMemberFunction, GetDescription,
+                     (lldb::SBStream &, lldb::DescriptionLevel), description,
+                     description_level);
+
   Stream &strm = description.ref();
 
   if (m_opaque_sp)

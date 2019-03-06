@@ -7,9 +7,9 @@
 # that the string "testing" is not printed.
 
 # RUN: %clang %S/Inputs/simple.c -g -o %t.out
-# RUN: %lldb -x -b -s %S/Inputs/FileCapture.in --capture %t.repro -- %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb -x -b -s %S/Inputs/FileCapture.in --capture %t.repro %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
 # RUN: rm %t.out
-# RUN: %lldb -x -b -s %S/Inputs/FileReplay.in --replay %t.repro -- %t.out | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
 
 # CAPTURE: testing
 # REPLAY-NOT: testing

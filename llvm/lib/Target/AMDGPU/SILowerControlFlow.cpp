@@ -199,8 +199,8 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   MachineInstr *And =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::S_AND_B64), Tmp)
     .addReg(CopyReg)
-    //.addReg(AMDGPU::EXEC)
-    .addReg(Cond.getReg());
+    .add(Cond);
+
   setImpSCCDefDead(*And, true);
 
   MachineInstr *Xor = nullptr;

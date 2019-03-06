@@ -229,7 +229,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
     return;
 
   assert(&MBB != &MF.front() && "Header blocks shouldn't have predecessors");
-  MachineBasicBlock *LayoutPred = &*std::prev(MachineFunction::iterator(&MBB));
+  MachineBasicBlock *LayoutPred = MBB.getPrevNode();
 
   // If the nearest common dominator is inside a more deeply nested context,
   // walk out to the nearest scope which isn't more deeply nested.
@@ -237,7 +237,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
     if (MachineBasicBlock *ScopeTop = ScopeTops[I->getNumber()]) {
       if (ScopeTop->getNumber() > Header->getNumber()) {
         // Skip over an intervening scope.
-        I = std::next(MachineFunction::iterator(ScopeTop));
+        I = std::next(ScopeTop->getIterator());
       } else {
         // We found a scope level at an appropriate depth.
         Header = ScopeTop;
@@ -259,8 +259,7 @@ void WebAssemblyCFGStackify::placeBlockMarker(MachineBasicBlock &MBB) {
     // the BLOCK.
     if (MI.getOpcode() == WebAssembly::LOOP ||
         MI.getOpcode() == WebAssembly::TRY) {
-      auto *BottomBB =
-          &*std::prev(MachineFunction::iterator(BeginToEnd[&MI]->getParent()));
+      auto *BottomBB = BeginToEnd[&MI]->getParent()->getPrevNode();
       if (MBB.getNumber() > BottomBB->getNumber())
         AfterSet.insert(&MI);
 #ifndef NDEBUG
@@ -373,13 +372,13 @@ void WebAssemblyCFGStackify::placeLoopMarker(MachineBasicBlock &MBB) {
   // The operand of a LOOP is the first block after the loop. If the loop is the
   // bottom of the function, insert a dummy block at the end.
   MachineBasicBlock *Bottom = WebAssembly::getBottom(Loop);
-  auto Iter = std::next(MachineFunction::iterator(Bottom));
+  auto Iter = std::next(Bottom->getIterator());
   if (Iter == MF.end()) {
     MachineBasicBlock *Label = MF.CreateMachineBasicBlock();
     // Give it a fake predecessor so that AsmPrinter prints its label.
     Label->addSuccessor(Label);
     MF.push_back(Label);
-    Iter = std::next(MachineFunction::iterator(Bottom));
+    Iter = std::next(Bottom->getIterator());
   }
   MachineBasicBlock *AfterLoop = &*Iter;
 
@@ -457,19 +456,18 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
   assert(WE);
   MachineBasicBlock *Bottom = WebAssembly::getBottom(WE);
 
-  auto Iter = std::next(MachineFunction::iterator(Bottom));
+  auto Iter = std::next(Bottom->getIterator());
   if (Iter == MF.end()) {
     MachineBasicBlock *Label = MF.CreateMachineBasicBlock();
     // Give it a fake predecessor so that AsmPrinter prints its label.
     Label->addSuccessor(Label);
     MF.push_back(Label);
-    Iter = std::next(MachineFunction::iterator(Bottom));
+    Iter = std::next(Bottom->getIterator());
   }
   MachineBasicBlock *Cont = &*Iter;
 
   assert(Cont != &MF.front());
-  MachineBasicBlock *LayoutPred =
-      &*std::prev(MachineFunction::iterator(Cont));
+  MachineBasicBlock *LayoutPred = Cont->getPrevNode();
 
   // If the nearest common dominator is inside a more deeply nested context,
   // walk out to the nearest scope which isn't more deeply nested.
@@ -477,7 +475,7 @@ void WebAssemblyCFGStackify::placeTryMarker(MachineBasicBlock &MBB) {
     if (MachineBasicBlock *ScopeTop = ScopeTops[I->getNumber()]) {
       if (ScopeTop->getNumber() > Header->getNumber()) {
         // Skip over an intervening scope.
-        I = std::next(MachineFunction::iterator(ScopeTop));
+        I = std::next(ScopeTop->getIterator());
       } else {
         // We found a scope level at an appropriate depth.
         Header = ScopeTop;
@@ -633,8 +631,7 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
 
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
     SmallVector<MachineOperand, 4> Cond;
-    MachineBasicBlock *EHPadLayoutPred =
-        &*std::prev(MachineFunction::iterator(&MBB));
+    MachineBasicBlock *EHPadLayoutPred = MBB.getPrevNode();
     MachineBasicBlock *Cont = BeginToEnd[EHPadToTry[&MBB]]->getParent();
     bool Analyzable = !TII.analyzeBranch(*EHPadLayoutPred, TBB, FBB, Cond);
     if (Analyzable && ((Cond.empty() && TBB && TBB == Cont) ||
@@ -663,8 +660,7 @@ void WebAssemblyCFGStackify::removeUnnecessaryInstrs(MachineFunction &MF) {
       MachineBasicBlock *TryBB = Try->getParent();
       MachineBasicBlock *Cont = EndTry->getParent();
       int64_t RetType = Try->getOperand(0).getImm();
-      for (auto B = MachineBasicBlock::iterator(Try),
-                E = std::next(MachineBasicBlock::iterator(EndTry));
+      for (auto B = Try->getIterator(), E = std::next(EndTry->getIterator());
            B != TryBB->begin() && E != Cont->end() &&
            std::prev(B)->getOpcode() == WebAssembly::BLOCK &&
            E->getOpcode() == WebAssembly::END_BLOCK &&

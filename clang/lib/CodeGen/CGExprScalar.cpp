@@ -363,11 +363,14 @@ public:
                        SourceLocation Loc,
                        ScalarConversionOpts Opts = ScalarConversionOpts());
 
+  /// Convert between either a fixed point and other fixed point or fixed point
+  /// and an integer.
   Value *EmitFixedPointConversion(Value *Src, QualType SrcTy, QualType DstTy,
                                   SourceLocation Loc);
   Value *EmitFixedPointConversion(Value *Src, FixedPointSemantics &SrcFixedSema,
                                   FixedPointSemantics &DstFixedSema,
-                                  SourceLocation Loc);
+                                  SourceLocation Loc,
+                                  bool DstIsInteger = false);
 
   /// Emit a conversion from the specified complex type to the specified
   /// destination type, where the destination type is an LLVM scalar type.
@@ -1225,17 +1228,25 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   // TODO(leonardchan): When necessary, add another if statement checking for
   // conversions to fixed point types from other types.
   if (SrcType->isFixedPointType()) {
-    if (DstType->isFixedPointType()) {
-      return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
-    } else if (DstType->isBooleanType()) {
+    if (DstType->isBooleanType())
+      // It is important that we check this before checking if the dest type is
+      // an integer because booleans are technically integer types.
       // We do not need to check the padding bit on unsigned types if unsigned
       // padding is enabled because overflow into this bit is undefined
       // behavior.
       return Builder.CreateIsNotNull(Src, "tobool");
-    }
+    if (DstType->isFixedPointType() || DstType->isIntegerType())
+      return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
 
     llvm_unreachable(
-        "Unhandled scalar conversion involving a fixed point type.");
+        "Unhandled scalar conversion from a fixed point type to another type.");
+  } else if (DstType->isFixedPointType()) {
+    if (SrcType->isIntegerType())
+      // This also includes converting booleans and enums to fixed point types.
+      return EmitFixedPointConversion(Src, SrcType, DstType, Loc);
+
+    llvm_unreachable(
+        "Unhandled scalar conversion to a fixed point type from another type.");
   }
 
   QualType NoncanonicalSrcType = SrcType;
@@ -1443,19 +1454,17 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 Value *ScalarExprEmitter::EmitFixedPointConversion(Value *Src, QualType SrcTy,
                                                    QualType DstTy,
                                                    SourceLocation Loc) {
-  assert(SrcTy->isFixedPointType());
-  assert(DstTy->isFixedPointType());
-
   FixedPointSemantics SrcFPSema =
       CGF.getContext().getFixedPointSemantics(SrcTy);
   FixedPointSemantics DstFPSema =
       CGF.getContext().getFixedPointSemantics(DstTy);
-  return EmitFixedPointConversion(Src, SrcFPSema, DstFPSema, Loc);
+  return EmitFixedPointConversion(Src, SrcFPSema, DstFPSema, Loc,
+                                  DstTy->isIntegerType());
 }
 
 Value *ScalarExprEmitter::EmitFixedPointConversion(
     Value *Src, FixedPointSemantics &SrcFPSema, FixedPointSemantics &DstFPSema,
-    SourceLocation Loc) {
+    SourceLocation Loc, bool DstIsInteger) {
   using llvm::APInt;
   using llvm::ConstantInt;
   using llvm::Value;
@@ -1472,13 +1481,26 @@ Value *ScalarExprEmitter::EmitFixedPointConversion(
   Value *Result = Src;
   unsigned ResultWidth = SrcWidth;
 
-  if (!DstFPSema.isSaturated()) {
-    // Downscale.
-    if (DstScale < SrcScale)
-      Result = SrcIsSigned ?
-          Builder.CreateAShr(Result, SrcScale - DstScale, "downscale") :
-          Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
+  // Downscale.
+  if (DstScale < SrcScale) {
+    // When converting to integers, we round towards zero. For negative numbers,
+    // right shifting rounds towards negative infinity. In this case, we can
+    // just round up before shifting.
+    if (DstIsInteger && SrcIsSigned) {
+      Value *Zero = llvm::Constant::getNullValue(Result->getType());
+      Value *IsNegative = Builder.CreateICmpSLT(Result, Zero);
+      Value *LowBits = ConstantInt::get(
+          CGF.getLLVMContext(), APInt::getLowBitsSet(ResultWidth, SrcScale));
+      Value *Rounded = Builder.CreateAdd(Result, LowBits);
+      Result = Builder.CreateSelect(IsNegative, Rounded, Result);
+    }
 
+    Result = SrcIsSigned
+                 ? Builder.CreateAShr(Result, SrcScale - DstScale, "downscale")
+                 : Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
+  }
+
+  if (!DstFPSema.isSaturated()) {
     // Resize.
     Result = Builder.CreateIntCast(Result, DstIntTy, SrcIsSigned, "resize");
 
@@ -1493,10 +1515,6 @@ Value *ScalarExprEmitter::EmitFixedPointConversion(
       llvm::Type *UpscaledTy = Builder.getIntNTy(ResultWidth);
       Result = Builder.CreateIntCast(Result, UpscaledTy, SrcIsSigned, "resize");
       Result = Builder.CreateShl(Result, DstScale - SrcScale, "upscale");
-    } else if (DstScale < SrcScale) {
-      Result = SrcIsSigned ?
-          Builder.CreateAShr(Result, SrcScale - DstScale, "downscale") :
-          Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
     }
 
     // Handle saturation.
@@ -2225,6 +2243,21 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     assert(E->getType()->isFixedPointType() &&
            "Expected src type to be fixed point type");
     assert(DestTy->isBooleanType() && "Expected dest type to be boolean type");
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+
+  case CK_FixedPointToIntegral:
+    assert(E->getType()->isFixedPointType() &&
+           "Expected src type to be fixed point type");
+    assert(DestTy->isIntegerType() && "Expected dest type to be an integer");
+    return EmitScalarConversion(Visit(E), E->getType(), DestTy,
+                                CE->getExprLoc());
+
+  case CK_IntegralToFixedPoint:
+    assert(E->getType()->isIntegerType() &&
+           "Expected src type to be an integer");
+    assert(DestTy->isFixedPointType() &&
+           "Expected dest type to be fixed point type");
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
 

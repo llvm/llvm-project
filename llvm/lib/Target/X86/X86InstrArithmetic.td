@@ -435,11 +435,10 @@ def X86sub_flag_nocf : PatFrag<(ops node:$lhs, node:$rhs),
 // TODO: inc/dec is slow for P4, but fast for Pentium-M.
 let Defs = [EFLAGS] in {
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
-let CodeSize = 2 in
+let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def INC8r  : I<0xFE, MRM0r, (outs GR8 :$dst), (ins GR8 :$src1),
                "inc{b}\t$dst",
                [(set GR8:$dst, EFLAGS, (X86add_flag_nocf GR8:$src1, 1))]>;
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def INC16r : I<0xFF, MRM0r, (outs GR16:$dst), (ins GR16:$src1),
                "inc{w}\t$dst",
                [(set GR16:$dst, EFLAGS, (X86add_flag_nocf GR16:$src1, 1))]>,
@@ -483,11 +482,10 @@ let Predicates = [UseIncDec, In64BitMode] in {
 } // CodeSize = 2, SchedRW
 
 let Constraints = "$src1 = $dst", SchedRW = [WriteALU] in {
-let CodeSize = 2 in
+let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def DEC8r  : I<0xFE, MRM1r, (outs GR8 :$dst), (ins GR8 :$src1),
                "dec{b}\t$dst",
                [(set GR8:$dst, EFLAGS, (X86sub_flag_nocf GR8:$src1, 1))]>;
-let isConvertibleToThreeAddress = 1, CodeSize = 2 in { // Can xform into LEA.
 def DEC16r : I<0xFF, MRM1r, (outs GR16:$dst), (ins GR16:$src1),
                "dec{w}\t$dst",
                [(set GR16:$dst, EFLAGS, (X86sub_flag_nocf GR16:$src1, 1))]>,

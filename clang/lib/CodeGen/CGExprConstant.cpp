@@ -876,6 +876,8 @@ public:
     case CK_FloatingCast:
     case CK_FixedPointCast:
     case CK_FixedPointToBoolean:
+    case CK_FixedPointToIntegral:
+    case CK_IntegralToFixedPoint:
     case CK_ZeroToOCLOpaqueType:
       return nullptr;
     }
