@@ -10,11 +10,11 @@
 
 // <span>
 
-// template <class ElementType, ptrdiff_t Extent>
+// template <class ElementType, size_t Extent>
 //     span<byte,
 //          Extent == dynamic_extent
 //              ? dynamic_extent
-//              : static_cast<ptrdiff_t>(sizeof(ElementType)) * Extent>
+//              : sizeof(ElementType) * Extent>
 //     as_writeable_bytes(span<ElementType, Extent> s) noexcept;
 
 

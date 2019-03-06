@@ -10,11 +10,11 @@
 
 // <span>
 
-// template <class ElementType, ptrdiff_t Extent>
+// template <class ElementType, size_t Extent>
 //     span<byte,
 //          Extent == dynamic_extent
 //              ? dynamic_extent
-//              : static_cast<ptrdiff_t>(sizeof(ElementType)) * Extent>
+//              : sizeof(ElementType) * Extent>
 //     as_writeable_bytes(span<ElementType, Extent> s) noexcept;
 
 
@@ -36,7 +36,7 @@ void testRuntimeSpan(Span sp)
     if (sp.extent == std::dynamic_extent)
         assert(spBytes.extent == std::dynamic_extent);
     else
-        assert(spBytes.extent == static_cast<std::ptrdiff_t>(sizeof(typename Span::element_type)) * sp.extent);
+        assert(spBytes.extent == sizeof(typename Span::element_type) * sp.extent);
 
     assert(static_cast<void*>(spBytes.data()) == static_cast<void*>(sp.data()));
     assert(spBytes.size() == sp.size_bytes());

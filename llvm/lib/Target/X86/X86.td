@@ -273,7 +273,7 @@ def FeatureSlowIncDec : SubtargetFeature<"slow-incdec", "SlowIncDec", "true",
                                    "INC and DEC instructions are slower than ADD and SUB">;
 def FeatureSoftFloat
     : SubtargetFeature<"soft-float", "UseSoftFloat", "true",
-                       "Use software floating point features.">;
+                       "Use software floating point features">;
 def FeaturePOPCNTFalseDeps : SubtargetFeature<"false-deps-popcnt",
                                      "HasPOPCNTFalseDeps", "true",
                                      "POPCNT has a false dependency on dest register">;
@@ -354,7 +354,7 @@ def FeatureMacroFusion
 // similar to Skylake Server (AVX-512).
 def FeatureHasFastGather
     : SubtargetFeature<"fast-gather", "HasFastGather", "true",
-                       "Indicates if gather is reasonably fast.">;
+                       "Indicates if gather is reasonably fast">;
 
 def FeaturePrefer256Bit
     : SubtargetFeature<"prefer-256-bit", "Prefer256Bit", "true",
@@ -365,7 +365,7 @@ def FeaturePrefer256Bit
 def FeatureRetpolineIndirectCalls
     : SubtargetFeature<
           "retpoline-indirect-calls", "UseRetpolineIndirectCalls", "true",
-          "Remove speculation of indirect calls from the generated code.">;
+          "Remove speculation of indirect calls from the generated code">;
 
 // Lower indirect branches and switches either using conditional branch trees
 // or using a special construct called a `retpoline` to mitigate potential
@@ -373,7 +373,7 @@ def FeatureRetpolineIndirectCalls
 def FeatureRetpolineIndirectBranches
     : SubtargetFeature<
           "retpoline-indirect-branches", "UseRetpolineIndirectBranches", "true",
-          "Remove speculation of indirect branches from the generated code.">;
+          "Remove speculation of indirect branches from the generated code">;
 
 // Deprecated umbrella feature for enabling both `retpoline-indirect-calls` and
 // `retpoline-indirect-branches` above.
@@ -381,7 +381,7 @@ def FeatureRetpoline
     : SubtargetFeature<"retpoline", "DeprecatedUseRetpoline", "true",
                        "Remove speculation of indirect branches from the "
                        "generated code, either by avoiding them entirely or "
-                       "lowering them with a speculation blocking construct.",
+                       "lowering them with a speculation blocking construct",
                        [FeatureRetpolineIndirectCalls,
                         FeatureRetpolineIndirectBranches]>;
 
@@ -394,7 +394,7 @@ def FeatureRetpolineExternalThunk
           "When lowering an indirect call or branch using a `retpoline`, rely "
           "on the specified user provided thunk rather than emitting one "
           "ourselves. Only has effect when combined with some other retpoline "
-          "feature.", [FeatureRetpolineIndirectCalls]>;
+          "feature", [FeatureRetpolineIndirectCalls]>;
 
 // Direct Move instructions.
 def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
@@ -404,7 +404,7 @@ def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
 
 def FeatureFastBEXTR : SubtargetFeature<"fast-bextr", "HasFastBEXTR", "true",
           "Indicates that the BEXTR instruction is implemented as a single uop "
-          "with good throughput.">;
+          "with good throughput">;
 
 // Combine vector math operations with shuffles into horizontal math
 // instructions if a CPU implements horizontal operations (introduced with

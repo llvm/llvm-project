@@ -62,6 +62,7 @@ set(LLVM_DISTRIBUTION_COMPONENTS
   clang-format
   clang-resource-headers
   cxx-headers
+  Remarks
   ${LLVM_TOOLCHAIN_TOOLS}
   CACHE STRING "")
 

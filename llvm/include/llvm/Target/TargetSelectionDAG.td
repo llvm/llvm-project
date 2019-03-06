@@ -782,8 +782,14 @@ class FPImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm>
 def vtInt      : PatLeaf<(vt),  [{ return N->getVT().isInteger(); }]>;
 def vtFP       : PatLeaf<(vt),  [{ return N->getVT().isFloatingPoint(); }]>;
 
-def immAllOnesV; // ISD::isBuildVectorAllOnes
-def immAllZerosV; // ISD::isBuildVectorAllZeros
+def immAllOnesV: PatLeaf<(build_vector), [{
+  return ISD::isBuildVectorAllOnes(N);
+}]>;
+def immAllZerosV: PatLeaf<(build_vector), [{
+  return ISD::isBuildVectorAllZeros(N);
+}]>;
+
+
 
 // Other helper fragments.
 def not  : PatFrag<(ops node:$in), (xor node:$in, -1)>;

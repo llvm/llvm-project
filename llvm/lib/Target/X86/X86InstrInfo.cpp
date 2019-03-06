@@ -710,11 +710,10 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 
 MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
     unsigned MIOpc, MachineFunction::iterator &MFI, MachineInstr &MI,
-    LiveVariables *LV) const {
+    LiveVariables *LV, bool Is8BitOp) const {
   // We handle 8-bit adds and various 16-bit opcodes in the switch below.
-  bool Is16BitOp = !(MIOpc == X86::ADD8rr || MIOpc == X86::ADD8ri);
   MachineRegisterInfo &RegInfo = MFI->getParent()->getRegInfo();
-  assert((!Is16BitOp || RegInfo.getTargetRegisterInfo()->getRegSizeInBits(
+  assert((Is8BitOp || RegInfo.getTargetRegisterInfo()->getRegSizeInBits(
               *RegInfo.getRegClass(MI.getOperand(0).getReg())) == 16) &&
          "Unexpected type for LEA transform");
 
@@ -744,7 +743,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   unsigned Src = MI.getOperand(1).getReg();
   bool IsDead = MI.getOperand(0).isDead();
   bool IsKill = MI.getOperand(1).isKill();
-  unsigned SubReg = Is16BitOp ? X86::sub_16bit : X86::sub_8bit;
+  unsigned SubReg = Is8BitOp ? X86::sub_8bit : X86::sub_16bit;
   assert(!MI.getOperand(1).isUndef() && "Undef op doesn't need optimization");
   BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(X86::IMPLICIT_DEF), InRegLEA);
   MachineInstr *InsMI =
@@ -756,19 +755,23 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
       BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(Opcode), OutRegLEA);
   switch (MIOpc) {
   default: llvm_unreachable("Unreachable!");
+  case X86::SHL8ri:
   case X86::SHL16ri: {
     unsigned ShAmt = MI.getOperand(2).getImm();
     MIB.addReg(0).addImm(1ULL << ShAmt)
        .addReg(InRegLEA, RegState::Kill).addImm(0).addReg(0);
     break;
   }
+  case X86::INC8r:
   case X86::INC16r:
     addRegOffset(MIB, InRegLEA, true, 1);
     break;
+  case X86::DEC8r:
   case X86::DEC16r:
     addRegOffset(MIB, InRegLEA, true, -1);
     break;
   case X86::ADD8ri:
+  case X86::ADD8ri_DB:
   case X86::ADD16ri:
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:
@@ -776,6 +779,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
     addRegOffset(MIB, InRegLEA, true, MI.getOperand(2).getImm());
     break;
   case X86::ADD8rr:
+  case X86::ADD8rr_DB:
   case X86::ADD16rr:
   case X86::ADD16rr_DB: {
     unsigned Src2 = MI.getOperand(2).getReg();
@@ -862,6 +866,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   MachineInstr *NewMI = nullptr;
   bool Is64Bit = Subtarget.is64Bit();
 
+  bool Is8BitOp = false;
   unsigned MIOpc = MI.getOpcode();
   switch (MIOpc) {
   default: return nullptr;
@@ -914,12 +919,15 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
     break;
   }
+  case X86::SHL8ri:
+    Is8BitOp = true;
+    LLVM_FALLTHROUGH;
   case X86::SHL16ri: {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
       return nullptr;
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV, Is8BitOp);
   }
   case X86::INC64r:
   case X86::INC32r: {
@@ -943,8 +951,6 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     NewMI = addOffset(MIB, 1);
     break;
   }
-  case X86::INC16r:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
   case X86::DEC64r:
   case X86::DEC32r: {
     assert(MI.getNumOperands() >= 2 && "Unknown dec instruction!");
@@ -968,8 +974,13 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
     break;
   }
+  case X86::DEC8r:
+  case X86::INC8r:
+    Is8BitOp = true;
+    LLVM_FALLTHROUGH;
   case X86::DEC16r:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+  case X86::INC16r:
+    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV, Is8BitOp);
   case X86::ADD64rr:
   case X86::ADD64rr_DB:
   case X86::ADD32rr:
@@ -1008,9 +1019,12 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     break;
   }
   case X86::ADD8rr:
+  case X86::ADD8rr_DB:
+    Is8BitOp = true;
+    LLVM_FALLTHROUGH;
   case X86::ADD16rr:
   case X86::ADD16rr_DB:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV, Is8BitOp);
   case X86::ADD64ri32:
   case X86::ADD64ri8:
   case X86::ADD64ri32_DB:
@@ -1044,11 +1058,14 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     break;
   }
   case X86::ADD8ri:
+  case X86::ADD8ri_DB:
+    Is8BitOp = true;
+    LLVM_FALLTHROUGH;
   case X86::ADD16ri:
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:
   case X86::ADD16ri8_DB:
-    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
+    return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV, Is8BitOp);
   case X86::VMOVDQU8Z128rmk:
   case X86::VMOVDQU8Z256rmk:
   case X86::VMOVDQU8Zrmk:

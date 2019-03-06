@@ -147,8 +147,6 @@ public:
     OPC_CheckValueType,
     OPC_CheckComplexPat,
     OPC_CheckAndImm, OPC_CheckOrImm,
-    OPC_CheckImmAllOnesV,
-    OPC_CheckImmAllZerosV,
     OPC_CheckFoldableChainNode,
 
     OPC_EmitInteger,

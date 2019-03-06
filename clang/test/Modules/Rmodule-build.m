@@ -19,10 +19,6 @@
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fsyntax-only %s -I %t \
 // RUN:            -Rmodule-build 2>&1 | FileCheck %s
 
-// RUN: echo ' ' >> %t/C.h
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fsyntax-only %s -I %t \
-// RUN:            -Reverything 2>&1 | FileCheck %s
-
 // RUN: echo ' ' >> %t/B.h
 // RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fsyntax-only %s -I %t \
 // RUN:            2>&1 | FileCheck -allow-empty -check-prefix=NO-REMARKS %s

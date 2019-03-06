@@ -132,7 +132,7 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
       // another BB that should eventually lead to an unreachable. Delete it
       // because throw itself is a terminator, and also delete successors if
       // any.
-      MBB.erase(std::next(MachineBasicBlock::iterator(MI)), MBB.end());
+      MBB.erase(std::next(MI.getIterator()), MBB.end());
       SmallVector<MachineBasicBlock *, 8> Succs(MBB.succ_begin(),
                                                 MBB.succ_end());
       for (auto *Succ : Succs)

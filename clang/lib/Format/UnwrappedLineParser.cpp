@@ -1423,6 +1423,27 @@ bool UnwrappedLineParser::tryToParseLambda() {
     case tok::coloncolon:
     case tok::kw_mutable:
     case tok::kw_noexcept:
+    // Specialization of a template with an integer parameter can contain
+    // arithmetic, logical, comparison and ternary operators.
+    case tok::plus:
+    case tok::minus:
+    case tok::exclaim:
+    case tok::tilde:
+    case tok::slash:
+    case tok::percent:
+    case tok::lessless:
+    case tok::pipe:
+    case tok::pipepipe:
+    case tok::ampamp:
+    case tok::caret:
+    case tok::equalequal:
+    case tok::exclaimequal:
+    case tok::greaterequal:
+    case tok::lessequal:
+    case tok::question:
+    case tok::colon:
+    case tok::kw_true:
+    case tok::kw_false:
       nextToken();
       break;
     case tok::arrow:
