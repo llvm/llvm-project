@@ -13,9 +13,9 @@ namespace lldb_private {
 
 class FileSpec;
 
-#if defined(__APPLE__)
-bool ComputeClangDirectory(FileSpec &lldb_shlib_spec, FileSpec &file_spec,
-                           bool verify);
+#if !defined(_WIN32)
+bool ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
+                                   FileSpec &file_spec, bool verify);
 #endif
 
 FileSpec GetClangResourceDir();

@@ -190,7 +190,7 @@ public:
 
   // Join separate GOTs built for each input file to generate
   // primary and optional multiple secondary GOTs.
-  template <class ELFT> void build();
+  void build();
 
   void addEntry(InputFile &File, Symbol &Sym, int64_t Addend, RelExpr Expr);
   void addDynTlsEntry(InputFile &File, Symbol &Sym);
@@ -777,7 +777,6 @@ private:
 // identifier defined in the either .gnu.version_r or .gnu.version_d section.
 // The values 0 and 1 are reserved. All other values are used for versions in
 // the own object or in any of the dependencies.
-template <class ELFT>
 class VersionTableSection final : public SyntheticSection {
 public:
   VersionTableSection();
@@ -787,12 +786,24 @@ public:
   bool empty() const override;
 };
 
+class VersionNeedBaseSection : public SyntheticSection {
+protected:
+  // The next available version identifier.
+  unsigned NextIndex;
+
+public:
+  VersionNeedBaseSection();
+  virtual void addSymbol(Symbol *Sym) = 0;
+  virtual size_t getNeedNum() const = 0;
+};
+
 // The .gnu.version_r section defines the version identifiers used by
 // .gnu.version. It contains a linked list of Elf_Verneed data structures. Each
 // Elf_Verneed specifies the version requirements for a single DSO, and contains
 // a reference to a linked list of Elf_Vernaux data structures which define the
 // mapping from version identifiers to version names.
-template <class ELFT> class VersionNeedSection final : public SyntheticSection {
+template <class ELFT>
+class VersionNeedSection final : public VersionNeedBaseSection {
   typedef typename ELFT::Verneed Elf_Verneed;
   typedef typename ELFT::Vernaux Elf_Vernaux;
 
@@ -800,16 +811,12 @@ template <class ELFT> class VersionNeedSection final : public SyntheticSection {
   // string table offsets of their sonames.
   std::vector<std::pair<SharedFile<ELFT> *, size_t>> Needed;
 
-  // The next available version identifier.
-  unsigned NextIndex;
-
 public:
-  VersionNeedSection();
-  void addSymbol(Symbol *Sym);
+  void addSymbol(Symbol *Sym) override;
   void finalizeContents() override;
   void writeTo(uint8_t *Buf) override;
   size_t getSize() const override;
-  size_t getNeedNum() const { return Needed.size(); }
+  size_t getNeedNum() const override { return Needed.size(); }
   bool empty() const override;
 };
 
@@ -1025,17 +1032,12 @@ struct InStruct {
   SymbolTableBaseSection *SymTab;
   SymtabShndxSection *SymTabShndx;
   VersionDefinitionSection *VerDef;
+  VersionNeedBaseSection *VerNeed;
+  VersionTableSection *VerSym;
 };
 
 extern InStruct In;
 
-template <class ELFT> struct InX {
-  static VersionTableSection<ELFT> *VerSym;
-  static VersionNeedSection<ELFT> *VerNeed;
-};
-
-template <class ELFT> VersionTableSection<ELFT> *InX<ELFT>::VerSym;
-template <class ELFT> VersionNeedSection<ELFT> *InX<ELFT>::VerNeed;
 } // namespace elf
 } // namespace lld
 

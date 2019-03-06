@@ -101,7 +101,7 @@ public:
   bool ExpressionsUseSymbols = false;
   bool InOverlay = false;
 
-  template <class ELFT> void finalize();
+  void finalize();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void maybeCompress();
 
