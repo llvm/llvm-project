@@ -29,7 +29,10 @@
 using namespace lldb_private;
 
 #if defined(_WIN32)
-static bool ComputeClangResourceDirectory(FileSpec &file_spec) { return false; }
+static bool ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
+                                          FileSpec &file_spec, bool verify) {
+  return false;
+}
 #else
 static bool VerifyClangPath(const llvm::Twine &clang_path) {
   if (FileSystem::Instance().IsDirectory(clang_path))
