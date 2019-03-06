@@ -692,7 +692,7 @@ public:
 
   virtual const lldb::UnixSignalsSP &GetRemoteUnixSignals();
 
-  const lldb::UnixSignalsSP &GetUnixSignals();
+  lldb::UnixSignalsSP GetUnixSignals();
 
   //------------------------------------------------------------------
   /// Locate a queue name given a thread's qaddr

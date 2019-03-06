@@ -181,6 +181,12 @@ option(COMPILER_RT_EXTERNALIZE_DEBUGINFO
 # COMPILER_RT_DEBUG_PYBOOL is used by lit.common.configured.in.
 pythonize_bool(COMPILER_RT_DEBUG)
 
+option(COMPILER_RT_INTERCEPT_LIBDISPATCH
+  "Support interception of libdispatch (GCD). Requires '-fblocks'." OFF)
+if (APPLE) # Always enable on Apple platforms.
+  set(COMPILER_RT_INTERCEPT_LIBDISPATCH ON)
+endif()
+
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
   # libc++/libc++abi.
