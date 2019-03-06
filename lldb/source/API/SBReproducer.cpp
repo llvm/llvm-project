@@ -38,7 +38,7 @@ static bool GetDefaultArchitectureRedirect(char *arch_name,
                                            size_t arch_name_len) {
   // The function is writing to its argument. Without the redirect it would
   // write into the replay buffer.
-  char buffer[arch_name_len];
+  char buffer[1024];
   return SBDebugger::GetDefaultArchitecture(buffer, arch_name_len);
 }
 
