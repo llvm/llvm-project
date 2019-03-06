@@ -57,7 +57,7 @@ public:
 
     virtual bool MightHaveChildren() { return true; }
 
-    virtual size_t GetIndexOfChildWithName(const ConstString &name);
+    virtual size_t GetIndexOfChildWithName(ConstString name);
 
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 

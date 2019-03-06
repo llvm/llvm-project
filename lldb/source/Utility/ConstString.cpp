@@ -206,7 +206,7 @@ ConstString::ConstString(const char *cstr, size_t cstr_len)
 ConstString::ConstString(const llvm::StringRef &s)
     : m_string(StringPool().GetConstCStringWithLength(s.data(), s.size())) {}
 
-bool ConstString::operator<(const ConstString &rhs) const {
+bool ConstString::operator<(ConstString rhs) const {
   if (m_string == rhs.m_string)
     return false;
 
@@ -221,7 +221,7 @@ bool ConstString::operator<(const ConstString &rhs) const {
   return lhs_string_ref.data() == nullptr;
 }
 
-Stream &lldb_private::operator<<(Stream &s, const ConstString &str) {
+Stream &lldb_private::operator<<(Stream &s, ConstString str) {
   const char *cstr = str.GetCString();
   if (cstr != nullptr)
     s << cstr;
@@ -233,7 +233,7 @@ size_t ConstString::GetLength() const {
   return Pool::GetConstCStringLength(m_string);
 }
 
-bool ConstString::Equals(const ConstString &lhs, const ConstString &rhs,
+bool ConstString::Equals(ConstString lhs, ConstString rhs,
                          const bool case_sensitive) {
   if (lhs.m_string == rhs.m_string)
     return true;
@@ -250,7 +250,7 @@ bool ConstString::Equals(const ConstString &lhs, const ConstString &rhs,
   return lhs_string_ref.equals_lower(rhs_string_ref);
 }
 
-int ConstString::Compare(const ConstString &lhs, const ConstString &rhs,
+int ConstString::Compare(ConstString lhs, ConstString rhs,
                          const bool case_sensitive) {
   // If the iterators are the same, this is the same string
   const char *lhs_cstr = lhs.m_string;
@@ -302,7 +302,7 @@ void ConstString::SetString(const llvm::StringRef &s) {
 }
 
 void ConstString::SetStringWithMangledCounterpart(llvm::StringRef demangled,
-                                                   const ConstString &mangled) {
+                                                   ConstString mangled) {
   m_string = StringPool().GetConstCStringAndSetMangledCounterPart(
       demangled, mangled.m_string);
 }

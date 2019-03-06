@@ -80,12 +80,12 @@ public:
 
   ~UniqueDWARFASTTypeMap() {}
 
-  void Insert(const lldb_private::ConstString &name,
+  void Insert(lldb_private::ConstString name,
               const UniqueDWARFASTType &entry) {
     m_collection[name.GetCString()].Append(entry);
   }
 
-  bool Find(const lldb_private::ConstString &name, const DWARFDIE &die,
+  bool Find(lldb_private::ConstString name, const DWARFDIE &die,
             const lldb_private::Declaration &decl, const int32_t byte_size,
             UniqueDWARFASTType &entry) const {
     const char *unique_name_cstr = name.GetCString();

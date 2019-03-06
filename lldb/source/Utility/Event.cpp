@@ -120,12 +120,12 @@ EventDataBytes::EventDataBytes(const void *src, size_t src_len) : m_bytes() {
 
 EventDataBytes::~EventDataBytes() = default;
 
-const ConstString &EventDataBytes::GetFlavorString() {
+ConstString EventDataBytes::GetFlavorString() {
   static ConstString g_flavor("EventDataBytes");
   return g_flavor;
 }
 
-const ConstString &EventDataBytes::GetFlavor() const {
+ConstString EventDataBytes::GetFlavor() const {
   return EventDataBytes::GetFlavorString();
 }
 
@@ -212,7 +212,7 @@ EventDataStructuredData::~EventDataStructuredData() {}
 // EventDataStructuredData member functions
 //------------------------------------------------------------------
 
-const ConstString &EventDataStructuredData::GetFlavor() const {
+ConstString EventDataStructuredData::GetFlavor() const {
   return EventDataStructuredData::GetFlavorString();
 }
 
@@ -294,7 +294,7 @@ EventDataStructuredData::GetPluginFromEvent(const Event *event_ptr) {
     return StructuredDataPluginSP();
 }
 
-const ConstString &EventDataStructuredData::GetFlavorString() {
+ConstString EventDataStructuredData::GetFlavorString() {
   static ConstString s_flavor("EventDataStructuredData");
   return s_flavor;
 }

@@ -721,7 +721,7 @@ void Target::AddBreakpointName(BreakpointName *bp_name) {
   m_breakpoint_names.insert(std::make_pair(bp_name->GetName(), bp_name));
 }
 
-BreakpointName *Target::FindBreakpointName(const ConstString &name, 
+BreakpointName *Target::FindBreakpointName(ConstString name, 
                                            bool can_create, 
                                            Status &error)
 {
@@ -746,7 +746,7 @@ BreakpointName *Target::FindBreakpointName(const ConstString &name,
 }
 
 void
-Target::DeleteBreakpointName(const ConstString &name)
+Target::DeleteBreakpointName(ConstString name)
 {
   BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
   
@@ -759,7 +759,7 @@ Target::DeleteBreakpointName(const ConstString &name)
 }
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
-                                const ConstString &name)
+                                ConstString name)
 {
   bp_sp->RemoveName(name.AsCString());
 }
@@ -2682,7 +2682,7 @@ ExpressionResults Target::EvaluateExpression(
 }
 
 lldb::ExpressionVariableSP
-Target::GetPersistentVariable(const ConstString &name) {
+Target::GetPersistentVariable(ConstString name) {
   lldb::ExpressionVariableSP variable_sp;
   m_scratch_type_system_map.ForEach(
       [name, &variable_sp](TypeSystem *type_system) -> bool {
@@ -2698,7 +2698,7 @@ Target::GetPersistentVariable(const ConstString &name) {
   return variable_sp;
 }
 
-lldb::addr_t Target::GetPersistentSymbol(const ConstString &name) {
+lldb::addr_t Target::GetPersistentSymbol(ConstString name) {
   lldb::addr_t address = LLDB_INVALID_ADDRESS;
 
   m_scratch_type_system_map.ForEach(
@@ -3821,7 +3821,7 @@ enum {
 
 class TargetOptionValueProperties : public OptionValueProperties {
 public:
-  TargetOptionValueProperties(const ConstString &name)
+  TargetOptionValueProperties(ConstString name)
       : OptionValueProperties(name), m_target(nullptr), m_got_host_env(false) {}
 
   // This constructor is used when creating TargetOptionValueProperties when it
@@ -4585,7 +4585,7 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
 
 Target::TargetEventData::~TargetEventData() = default;
 
-const ConstString &Target::TargetEventData::GetFlavorString() {
+ConstString Target::TargetEventData::GetFlavorString() {
   static ConstString g_flavor("Target::TargetEventData");
   return g_flavor;
 }

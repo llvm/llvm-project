@@ -54,7 +54,7 @@ public:
   CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
 
   lldb::ExpressionVariableSP CreatePersistentVariable(
-      ExecutionContextScope *exe_scope, const ConstString &name,
+      ExecutionContextScope *exe_scope, ConstString name,
       const CompilerType &compiler_type, lldb::ByteOrder byte_order,
       uint32_t addr_byte_size) override;
 
@@ -66,7 +66,7 @@ public:
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.
-  void AddHandLoadedModule(const ConstString &module_name) {
+  void AddHandLoadedModule(ConstString module_name) {
     m_hand_loaded_modules.insert(module_name);
   }
 
@@ -80,9 +80,9 @@ public:
     return true;
   }
 
-  void RegisterPersistentDecl(const ConstString &name, clang::NamedDecl *decl);
+  void RegisterPersistentDecl(ConstString name, clang::NamedDecl *decl);
 
-  clang::NamedDecl *GetPersistentDecl(const ConstString &name);
+  clang::NamedDecl *GetPersistentDecl(ConstString name);
 
   void AddHandLoadedClangModule(ClangModulesDeclVendor::ModuleID module) {
     m_hand_loaded_clang_modules.push_back(module);

@@ -147,7 +147,7 @@ const char *Section::GetTypeAsCString() const {
 }
 
 Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
-                 user_id_t sect_id, const ConstString &name,
+                 user_id_t sect_id, ConstString name,
                  SectionType sect_type, addr_t file_addr, addr_t byte_size,
                  lldb::offset_t file_offset, lldb::offset_t file_size,
                  uint32_t log2align, uint32_t flags,
@@ -169,7 +169,7 @@ Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
 
 Section::Section(const lldb::SectionSP &parent_section_sp,
                  const ModuleSP &module_sp, ObjectFile *obj_file,
-                 user_id_t sect_id, const ConstString &name,
+                 user_id_t sect_id, ConstString name,
                  SectionType sect_type, addr_t file_addr, addr_t byte_size,
                  lldb::offset_t file_offset, lldb::offset_t file_size,
                  uint32_t log2align, uint32_t flags,
@@ -510,7 +510,7 @@ SectionSP SectionList::GetSectionAtIndex(size_t idx) const {
 }
 
 SectionSP
-SectionList::FindSectionByName(const ConstString &section_dstr) const {
+SectionList::FindSectionByName(ConstString section_dstr) const {
   SectionSP sect_sp;
   // Check if we have a valid section string
   if (section_dstr && !m_sections.empty()) {

@@ -78,7 +78,7 @@ public:
   bool AddModulesForCompileUnit(CompileUnit &cu, ModuleVector &exported_modules,
                                 Stream &error_stream) override;
 
-  uint32_t FindDecls(const ConstString &name, bool append, uint32_t max_matches,
+  uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
                      std::vector<clang::NamedDecl *> &decls) override;
 
   void ForEachMacro(const ModuleVector &modules,
@@ -340,7 +340,7 @@ bool ClangModulesDeclVendorImpl::AddModulesForCompileUnit(
 // ClangImporter::lookupValue
 
 uint32_t
-ClangModulesDeclVendorImpl::FindDecls(const ConstString &name, bool append,
+ClangModulesDeclVendorImpl::FindDecls(ConstString name, bool append,
                                       uint32_t max_matches,
                                       std::vector<clang::NamedDecl *> &decls) {
   if (!m_enabled) {

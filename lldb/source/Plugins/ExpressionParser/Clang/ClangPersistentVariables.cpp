@@ -37,7 +37,7 @@ ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
 }
 
 ExpressionVariableSP ClangPersistentVariables::CreatePersistentVariable(
-    ExecutionContextScope *exe_scope, const ConstString &name,
+    ExecutionContextScope *exe_scope, ConstString name,
     const CompilerType &compiler_type, lldb::ByteOrder byte_order,
     uint32_t addr_byte_size) {
   return AddNewlyConstructedVariable(new ClangExpressionVariable(
@@ -82,7 +82,7 @@ void ClangPersistentVariables::RemovePersistentVariable(
   }
 }
 
-void ClangPersistentVariables::RegisterPersistentDecl(const ConstString &name,
+void ClangPersistentVariables::RegisterPersistentDecl(ConstString name,
                                                       clang::NamedDecl *decl) {
   m_persistent_decls.insert(
       std::pair<const char *, clang::NamedDecl *>(name.GetCString(), decl));
@@ -97,7 +97,7 @@ void ClangPersistentVariables::RegisterPersistentDecl(const ConstString &name,
 }
 
 clang::NamedDecl *
-ClangPersistentVariables::GetPersistentDecl(const ConstString &name) {
+ClangPersistentVariables::GetPersistentDecl(ConstString name) {
   PersistentDeclMap::const_iterator i =
       m_persistent_decls.find(name.GetCString());
 

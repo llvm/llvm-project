@@ -317,7 +317,7 @@ public:
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 
-  static lldb::BasicType GetBasicTypeEnumeration(const ConstString &name);
+  static lldb::BasicType GetBasicTypeEnumeration(ConstString name);
 
   //----------------------------------------------------------------------
   // If this type is an enumeration, iterate through all of its enumerators
@@ -326,7 +326,7 @@ public:
   //----------------------------------------------------------------------
   void ForEachEnumerator(
       std::function<bool(const CompilerType &integer_type,
-                         const ConstString &name,
+                         ConstString name,
                          const llvm::APSInt &value)> const &callback) const;
 
   uint32_t GetNumFields() const;

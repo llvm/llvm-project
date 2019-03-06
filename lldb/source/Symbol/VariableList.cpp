@@ -73,7 +73,7 @@ uint32_t VariableList::FindVariableIndex(const VariableSP &var_sp) {
   return UINT32_MAX;
 }
 
-VariableSP VariableList::FindVariable(const ConstString &name,
+VariableSP VariableList::FindVariable(ConstString name,
                                       bool include_static_members) {
   VariableSP var_sp;
   iterator pos, end = m_variables.end();
@@ -88,7 +88,7 @@ VariableSP VariableList::FindVariable(const ConstString &name,
   return var_sp;
 }
 
-VariableSP VariableList::FindVariable(const ConstString &name,
+VariableSP VariableList::FindVariable(ConstString name,
                                       lldb::ValueType value_type,
                                       bool include_static_members) {
   VariableSP var_sp;

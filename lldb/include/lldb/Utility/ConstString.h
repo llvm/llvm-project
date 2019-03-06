@@ -151,7 +151,7 @@ public:
   /// @return
   ///     A const reference to this object.
   //------------------------------------------------------------------
-  const ConstString &operator=(const ConstString &rhs) {
+  ConstString operator=(ConstString rhs) {
     m_string = rhs.m_string;
     return *this;
   }
@@ -170,7 +170,7 @@ public:
   ///     @li \b true if this object is equal to \a rhs.
   ///     @li \b false if this object is not equal to \a rhs.
   //------------------------------------------------------------------
-  bool operator==(const ConstString &rhs) const {
+  bool operator==(ConstString rhs) const {
     // We can do a pointer compare to compare these strings since they must
     // come from the same pool in order to be equal.
     return m_string == rhs.m_string;
@@ -190,11 +190,11 @@ public:
   ///     @li \b true if this object is not equal to \a rhs.
   ///     @li \b false if this object is equal to \a rhs.
   //------------------------------------------------------------------
-  bool operator!=(const ConstString &rhs) const {
+  bool operator!=(ConstString rhs) const {
     return m_string != rhs.m_string;
   }
 
-  bool operator<(const ConstString &rhs) const;
+  bool operator<(ConstString rhs) const;
 
   //------------------------------------------------------------------
   /// Get the string value as a C string.
@@ -279,7 +279,7 @@ public:
   ///     @li \b true if this object is equal to \a rhs.
   ///     @li \b false if this object is not equal to \a rhs.
   //------------------------------------------------------------------
-  static bool Equals(const ConstString &lhs, const ConstString &rhs,
+  static bool Equals(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
 
   //------------------------------------------------------------------
@@ -308,7 +308,7 @@ public:
   ///     @li 0 if lhs == rhs
   ///     @li 1 if lhs > rhs
   //------------------------------------------------------------------
-  static int Compare(const ConstString &lhs, const ConstString &rhs,
+  static int Compare(ConstString lhs, ConstString rhs,
                      const bool case_sensitive = true);
 
   //------------------------------------------------------------------
@@ -388,7 +388,7 @@ public:
   ///     soon to be uniqued version of \a demangled.
   //------------------------------------------------------------------
   void SetStringWithMangledCounterpart(llvm::StringRef demangled,
-                                       const ConstString &mangled);
+                                       ConstString mangled);
 
   //------------------------------------------------------------------
   /// Retrieve the mangled or demangled counterpart for a mangled or demangled
@@ -475,7 +475,7 @@ protected:
 //------------------------------------------------------------------
 /// Stream the string value \a str to the stream \a s
 //------------------------------------------------------------------
-Stream &operator<<(Stream &s, const ConstString &str);
+Stream &operator<<(Stream &s, ConstString str);
 
 } // namespace lldb_private
 

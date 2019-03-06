@@ -62,12 +62,12 @@ public:
                           lldb::ByteOrder byte_order, uint32_t addr_byte_size);
 
   ClangExpressionVariable(ExecutionContextScope *exe_scope, Value &value,
-                          const ConstString &name, uint16_t flags = EVNone);
+                          ConstString name, uint16_t flags = EVNone);
 
   ClangExpressionVariable(const lldb::ValueObjectSP &valobj_sp);
 
   ClangExpressionVariable(ExecutionContextScope *exe_scope,
-                          const ConstString &name,
+                          ConstString name,
                           const TypeFromUser &user_type,
                           lldb::ByteOrder byte_order, uint32_t addr_byte_size);
 
