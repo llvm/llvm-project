@@ -127,7 +127,7 @@ public:
 
   bool MightHaveChildren() override { return m_impl.m_mode != Mode::Invalid; }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
     const char *item_name = name.GetCString();
     uint32_t idx = ExtractIndexFromString(item_name);
     if (idx < UINT32_MAX && idx >= CalculateNumChildren())

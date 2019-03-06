@@ -249,7 +249,7 @@ public:
   /// @return
   ///     The symbol that was found, or \b nullptr if none was found.
   //------------------------------------------------------------------
-  const Symbol *FindBestGlobalDataSymbol(const ConstString &name, Status &error);
+  const Symbol *FindBestGlobalDataSymbol(ConstString name, Status &error);
 
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
                       Target *target) const;

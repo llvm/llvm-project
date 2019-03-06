@@ -122,7 +122,7 @@ public:
   //------------------------------------------------------------------
   static std::recursive_mutex &GetLLVMGlobalContextMutex();
 
-  lldb::addr_t FindSymbol(const ConstString &name);
+  lldb::addr_t FindSymbol(ConstString name);
 
   void GetStaticInitializers(std::vector<lldb::addr_t> &static_initializers);
 
@@ -251,7 +251,7 @@ private:
   struct SearchSpec;
 
   void CollectCandidateCNames(std::vector<SearchSpec> &C_specs,
-                              const ConstString &name);
+                              ConstString name);
 
   void CollectCandidateCPlusPlusNames(std::vector<SearchSpec> &CPP_specs,
                                       const std::vector<SearchSpec> &C_specs,
@@ -269,7 +269,7 @@ private:
   lldb::addr_t FindInUserDefinedSymbols(const std::vector<SearchSpec> &specs,
                                         const lldb_private::SymbolContext &sc);
 
-  void ReportSymbolLookupError(const ConstString &name);
+  void ReportSymbolLookupError(ConstString name);
 
   class MemoryManager : public llvm::SectionMemoryManager {
   public:

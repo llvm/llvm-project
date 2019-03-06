@@ -55,7 +55,7 @@ public:
   ///     Optional declaration information that describes where the
   ///     function was declared. This can be NULL.
   //------------------------------------------------------------------
-  FunctionInfo(const ConstString &name, const Declaration *decl_ptr);
+  FunctionInfo(ConstString name, const Declaration *decl_ptr);
 
   //------------------------------------------------------------------
   /// Destructor.
@@ -190,7 +190,7 @@ public:
   ///     Optional calling location declaration information that
   ///     describes from where this inlined function was called.
   //------------------------------------------------------------------
-  InlineFunctionInfo(const ConstString &name, const Mangled &mangled,
+  InlineFunctionInfo(ConstString name, const Mangled &mangled,
                      const Declaration *decl_ptr,
                      const Declaration *call_decl_ptr);
 

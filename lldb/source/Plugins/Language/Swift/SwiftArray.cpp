@@ -494,7 +494,7 @@ bool lldb_private::formatters::swift::ArraySyntheticFrontEnd::
 }
 
 size_t lldb_private::formatters::swift::ArraySyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   if (!m_array_buffer)
     return UINT32_MAX;
   const char *item_name = name.GetCString();

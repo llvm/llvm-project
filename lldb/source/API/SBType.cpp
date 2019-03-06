@@ -355,7 +355,7 @@ SBTypeEnumMemberList SBType::GetEnumMembers() {
     if (this_type.IsValid()) {
       this_type.ForEachEnumerator([&sb_enum_member_list](
                                       const CompilerType &integer_type,
-                                      const ConstString &name,
+                                      ConstString name,
                                       const llvm::APSInt &value) -> bool {
         SBTypeEnumMember enum_member(
             lldb::TypeEnumMemberImplSP(new TypeEnumMemberImpl(

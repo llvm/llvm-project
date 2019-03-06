@@ -107,7 +107,7 @@ lldb::TypeSP SymbolFileDWARFDwo::FindDefinitionTypeForDWARFDeclContext(
 }
 
 lldb::TypeSP SymbolFileDWARFDwo::FindCompleteObjCDefinitionTypeForDIE(
-    const DWARFDIE &die, const lldb_private::ConstString &type_name,
+    const DWARFDIE &die, lldb_private::ConstString type_name,
     bool must_be_implementation) {
   return GetBaseSymbolFile()->FindCompleteObjCDefinitionTypeForDIE(
       die, type_name, must_be_implementation);

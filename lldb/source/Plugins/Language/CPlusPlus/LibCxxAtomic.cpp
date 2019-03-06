@@ -44,7 +44,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
   lldb::ValueObjectSP GetSyntheticValue() override;
 
@@ -83,7 +83,7 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
 }
 
 size_t lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   return m_real_child ? m_real_child->GetIndexOfChildWithName(name)
                       : UINT32_MAX;
 }

@@ -293,10 +293,10 @@ public:
   ///     nullptr otherwise.
   //------------------------------------------------------------------
   const Symbol *FindFirstSymbolWithNameAndType(
-      const ConstString &name,
+      ConstString name,
       lldb::SymbolType symbol_type = lldb::eSymbolTypeAny);
 
-  size_t FindSymbolsWithNameAndType(const ConstString &name,
+  size_t FindSymbolsWithNameAndType(ConstString name,
                                     lldb::SymbolType symbol_type,
                                     SymbolContextList &sc_list);
 
@@ -321,7 +321,7 @@ public:
   /// @return
   ///     The number of symbol contexts that were added to \a sc_list
   //------------------------------------------------------------------
-  size_t FindFunctionSymbols(const ConstString &name, uint32_t name_type_mask,
+  size_t FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
                              SymbolContextList &sc_list);
 
   //------------------------------------------------------------------
@@ -378,7 +378,7 @@ public:
   /// @return
   ///     The number of matches added to \a sc_list.
   //------------------------------------------------------------------
-  size_t FindFunctions(const ConstString &name,
+  size_t FindFunctions(ConstString name,
                        const CompilerDeclContext *parent_decl_ctx,
                        lldb::FunctionNameType name_type_mask, bool symbols_ok,
                        bool inlines_ok, bool append,
@@ -457,7 +457,7 @@ public:
   /// @return
   ///     The number of matches added to \a variable_list.
   //------------------------------------------------------------------
-  size_t FindGlobalVariables(const ConstString &name,
+  size_t FindGlobalVariables(ConstString name,
                              const CompilerDeclContext *parent_decl_ctx,
                              size_t max_matches, VariableList &variable_list);
 
@@ -516,12 +516,12 @@ public:
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
   size_t
-  FindTypes(const ConstString &type_name, bool exact_match, size_t max_matches,
+  FindTypes(ConstString type_name, bool exact_match, size_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeList &types);
 
   lldb::TypeSP FindFirstType(const SymbolContext &sc,
-                             const ConstString &type_name, bool exact_match);
+                             ConstString type_name, bool exact_match);
 
   //------------------------------------------------------------------
   /// Find types by name that are in a namespace. This function is used by the
@@ -541,7 +541,7 @@ public:
   /// @return
   ///     The number of matches added to \a type_list.
   //------------------------------------------------------------------
-  size_t FindTypesInNamespace(const ConstString &type_name,
+  size_t FindTypesInNamespace(ConstString type_name,
                               const CompilerDeclContext *parent_decl_ctx,
                               size_t max_matches, TypeList &type_list);
 
@@ -649,7 +649,7 @@ public:
 
   lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
-  const ConstString &GetObjectName() const;
+  ConstString GetObjectName() const;
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
@@ -902,7 +902,7 @@ public:
       lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
   void SetFileSpecAndObjectName(const FileSpec &file,
-                                const ConstString &object_name);
+                                ConstString object_name);
 
   bool GetIsDynamicLinkEditor();
 
@@ -1044,16 +1044,16 @@ public:
           m_name_type_mask(lldb::eFunctionNameTypeNone),
           m_match_name_after_lookup(false) {}
 
-    LookupInfo(const ConstString &name, lldb::FunctionNameType name_type_mask,
+    LookupInfo(ConstString name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);
 
-    const ConstString &GetName() const { return m_name; }
+    ConstString GetName() const { return m_name; }
 
-    void SetName(const ConstString &name) { m_name = name; }
+    void SetName(ConstString name) { m_name = name; }
 
-    const ConstString &GetLookupName() const { return m_lookup_name; }
+    ConstString GetLookupName() const { return m_lookup_name; }
 
-    void SetLookupName(const ConstString &name) { m_lookup_name = name; }
+    void SetLookupName(ConstString name) { m_lookup_name = name; }
 
     lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
 
@@ -1194,7 +1194,7 @@ private:
   Module(); // Only used internally by CreateJITModule ()
 
   size_t FindTypes_Impl(
-      const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+      ConstString name, const CompilerDeclContext *parent_decl_ctx,
       bool append, size_t max_matches,
       llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
       TypeMap &types);

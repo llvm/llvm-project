@@ -113,7 +113,7 @@ ObjCRuntimeSyntheticProvider::FrontEnd::GetChildAtIndex(size_t idx) {
 }
 
 size_t ObjCRuntimeSyntheticProvider::FrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   for (size_t idx = 0; idx < CalculateNumChildren(); idx++) {
     const auto &ivar_info(m_provider->GetIVarAtIndex(idx));
     if (name == ivar_info.m_name)

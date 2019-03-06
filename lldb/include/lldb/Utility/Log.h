@@ -115,7 +115,8 @@ public:
                                 llvm::ArrayRef<const char *> categories,
                                 llvm::raw_ostream &error_stream);
 
-  static bool ListChannelCategories(llvm::StringRef channel, llvm::raw_ostream &stream);
+  static bool ListChannelCategories(llvm::StringRef channel,
+                                    llvm::raw_ostream &stream);
 
   static void DisableAllLogChannels();
 

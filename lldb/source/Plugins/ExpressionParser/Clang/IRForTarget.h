@@ -240,7 +240,7 @@ private:
   ///     The Clang type of the result variable.
   //------------------------------------------------------------------
   void MaybeSetConstantResult(llvm::Constant *initializer,
-                              const lldb_private::ConstString &name,
+                              lldb_private::ConstString name,
                               lldb_private::TypeFromParser type);
 
   //------------------------------------------------------------------
