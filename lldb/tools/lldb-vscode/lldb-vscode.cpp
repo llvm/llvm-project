@@ -23,6 +23,7 @@
 #define NOMINMAX
 #include <windows.h>
 #undef GetObject
+#include <io.h>
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -53,7 +54,6 @@ typedef int socklen_t;
 constexpr const char *dev_null_path = "nul";
 
 #else
-typedef int SOCKET;
 constexpr const char *dev_null_path = "/dev/null";
 
 #endif
@@ -68,9 +68,9 @@ enum LaunchMethod { Launch, Attach, AttachForSuspendedLaunch };
 
 enum VSCodeBroadcasterBits { eBroadcastBitStopEventThread = 1u << 0 };
 
-int AcceptConnection(int portno) {
+SOCKET AcceptConnection(int portno) {
   // Accept a socket connection from any host on "portno".
-  int newsockfd = -1;
+  SOCKET newsockfd = -1;
   struct sockaddr_in serv_addr, cli_addr;
   SOCKET sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
@@ -2635,23 +2635,19 @@ int main(int argc, char *argv[]) {
 #endif
       int portno = atoi(arg);
       printf("Listening on port %i...\n", portno);
-      int socket_fd = AcceptConnection(portno);
+      SOCKET socket_fd = AcceptConnection(portno);
       if (socket_fd >= 0) {
-        // We must open two FILE objects, one for reading and one for writing
-        // the FILE objects have a mutex in them that won't allow reading and
-        // writing to the socket stream.
-        g_vsc.in = fdopen(socket_fd, "r");
-        g_vsc.out = fdopen(socket_fd, "w");
-        if (g_vsc.in == nullptr || g_vsc.out == nullptr) {
-          if (g_vsc.log)
-            *g_vsc.log << "fdopen failed (" << strerror(errno) << ")"
-                       << std::endl;
-          exit(1);
-        }
+        g_vsc.input.descriptor = StreamDescriptor::from_socket(socket_fd, true);
+        g_vsc.output.descriptor =
+            StreamDescriptor::from_socket(socket_fd, false);
       } else {
         exit(1);
       }
     }
+  } else {
+    g_vsc.input.descriptor = StreamDescriptor::from_file(fileno(stdin), false);
+    g_vsc.output.descriptor =
+        StreamDescriptor::from_file(fileno(stdout), false);
   }
   auto request_handlers = GetRequestHandlers();
   uint32_t packet_idx = 0;

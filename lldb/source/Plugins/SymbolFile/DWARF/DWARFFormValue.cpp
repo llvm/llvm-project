@@ -681,6 +681,7 @@ int DWARFFormValue::Compare(const DWARFFormValue &a_value,
     return 1;
   switch (a_form) {
   case DW_FORM_addr:
+  case DW_FORM_addrx:
   case DW_FORM_flag:
   case DW_FORM_data1:
   case DW_FORM_data2:

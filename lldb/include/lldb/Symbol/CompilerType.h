@@ -388,6 +388,13 @@ public:
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------
+
+#ifndef NDEBUG
+  /// Convenience LLVM-style dump method for use in the debugger only.
+  /// Don't call this function from actual code.
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+
   void DumpValue(ExecutionContext *exe_ctx, Stream *s, lldb::Format format,
                  const DataExtractor &data, lldb::offset_t data_offset,
                  size_t data_byte_size, uint32_t bitfield_bit_size,

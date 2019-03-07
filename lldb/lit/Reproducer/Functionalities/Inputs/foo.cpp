@@ -8,6 +8,6 @@ private:
 };
 
 int main(int argc, char **argv) {
-  Foo foo(1, 2.22);
+  static Foo foo(1, 2.22);
   return 0;
 }

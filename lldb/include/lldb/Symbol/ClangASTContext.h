@@ -929,6 +929,13 @@ public:
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------
+#ifndef NDEBUG
+  /// Convenience LLVM-style dump method for use in the debugger only.
+  /// In contrast to the other \p Dump() methods this directly invokes
+  /// \p clang::QualType::dump().
+  LLVM_DUMP_METHOD void dump(lldb::opaque_compiler_type_t type) const override;
+#endif
+
   void Dump(Stream &s);
 
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,

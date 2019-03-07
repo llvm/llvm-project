@@ -1,7 +1,7 @@
 breakpoint set -f foo.cpp -l 11
 run
-frame var
+frame var foo
 next
-frame var
+frame var foo
 cont
 reproducer generate
