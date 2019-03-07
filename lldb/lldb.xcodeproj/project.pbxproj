@@ -8035,7 +8035,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_LLVM_BUILD:-$LLVM_BUILD_DIR/llvm-macosx-x86_64}";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-resource-headers.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_LLVM_BUILD:-$LLVM_BUILD_DIR/llvm-macosx-x86_64}";
 		};
 		94C8C91C1D6F9249000EA446 /* Check AST Context */ = {
 			isa = PBXShellScriptBuildPhase;
