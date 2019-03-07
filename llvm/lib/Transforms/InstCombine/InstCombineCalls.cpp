@@ -1814,6 +1814,19 @@ static Instruction *canonicalizeConstantArg0ToArg1(CallInst &Call) {
   return nullptr;
 }
 
+Instruction *InstCombiner::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
+  OverflowCheckFlavor OCF =
+      IntrinsicIDToOverflowCheckFlavor(II->getIntrinsicID());
+  assert(OCF != OCF_INVALID && "unexpected!");
+
+  Value *OperationResult = nullptr;
+  Constant *OverflowResult = nullptr;
+  if (OptimizeOverflowCheck(OCF, II->getArgOperand(0), II->getArgOperand(1),
+                            *II, OperationResult, OverflowResult))
+    return CreateOverflowTuple(II, OperationResult, OverflowResult);
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -2016,8 +2029,32 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+  case Intrinsic::sadd_with_overflow: {
+    if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
+      return I;
+    if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
+      return I;
+
+    // Given 2 constant operands whose sum does not overflow:
+    // saddo (X +nsw C0), C1 -> saddo X, C0 + C1
+    Value *X;
+    const APInt *C0, *C1;
+    Value *Arg0 = II->getArgOperand(0);
+    Value *Arg1 = II->getArgOperand(1);
+    if (match(Arg0, m_NSWAdd(m_Value(X), m_APInt(C0))) &&
+        match(Arg1, m_APInt(C1))) {
+      bool Overflow;
+      APInt NewC = C1->sadd_ov(*C0, Overflow);
+      if (!Overflow)
+        return replaceInstUsesWith(
+            *II, Builder.CreateBinaryIntrinsic(
+                     Intrinsic::sadd_with_overflow, X,
+                     ConstantInt::get(Arg1->getType(), NewC)));
+    }
+
+    break;
+  }
   case Intrinsic::uadd_with_overflow:
-  case Intrinsic::sadd_with_overflow:
   case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
     if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
@@ -2026,15 +2063,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow: {
-    OverflowCheckFlavor OCF =
-        IntrinsicIDToOverflowCheckFlavor(II->getIntrinsicID());
-    assert(OCF != OCF_INVALID && "unexpected!");
-
-    Value *OperationResult = nullptr;
-    Constant *OverflowResult = nullptr;
-    if (OptimizeOverflowCheck(OCF, II->getArgOperand(0), II->getArgOperand(1),
-                              *II, OperationResult, OverflowResult))
-      return CreateOverflowTuple(II, OperationResult, OverflowResult);
+    if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
+      return I;
 
     break;
   }

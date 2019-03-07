@@ -34,15 +34,14 @@ define <4 x i32> @combine_vec_smul_two(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_vec_smul_two:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [2,2,2,2]
-; SSE-NEXT:    pmuldq %xmm3, %xmm0
-; SSE-NEXT:    pmuldq %xmm2, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm0[2,3],xmm3[4,5],xmm0[6,7]
+; SSE-NEXT:    pxor %xmm0, %xmm0
+; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm3
+; SSE-NEXT:    pcmpeqd %xmm4, %xmm4
+; SSE-NEXT:    pxor %xmm4, %xmm3
 ; SSE-NEXT:    paddd %xmm2, %xmm2
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    psrad $31, %xmm0
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE-NEXT:    pxor %xmm4, %xmm0
 ; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
 ; SSE-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
@@ -50,15 +49,14 @@ define <4 x i32> @combine_vec_smul_two(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX-LABEL: combine_vec_smul_two:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2,2,2,2]
-; AVX-NEXT:    vpmuldq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuldq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendd {{.*#+}} xmm2 = xmm3[0],xmm2[1],xmm3[2],xmm2[3]
+; AVX-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm3
+; AVX-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
+; AVX-NEXT:    vpxor %xmm4, %xmm3, %xmm3
 ; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsrad $31, %xmm0, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpgtd %xmm0, %xmm2, %xmm2
+; AVX-NEXT:    vpxor %xmm4, %xmm2, %xmm2
+; AVX-NEXT:    vpcmpeqd %xmm2, %xmm3, %xmm2
 ; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = call {<4 x i32>, <4 x i1>} @llvm.smul.with.overflow.v4i32(<4 x i32> %a0, <4 x i32> <i32 2, i32 2, i32 2, i32 2>)
@@ -94,31 +92,19 @@ define <4 x i32> @combine_vec_umul_two(<4 x i32> %a0, <4 x i32> %a1) {
 ; SSE-LABEL: combine_vec_umul_two:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [2,2,2,2]
-; SSE-NEXT:    pmuludq %xmm3, %xmm0
-; SSE-NEXT:    pmuludq %xmm2, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE-NEXT:    pblendw {{.*#+}} xmm3 = xmm3[0,1],xmm0[2,3],xmm3[4,5],xmm0[6,7]
-; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE-NEXT:    paddd %xmm2, %xmm2
+; SSE-NEXT:    paddd %xmm0, %xmm2
+; SSE-NEXT:    pmaxud %xmm2, %xmm0
+; SSE-NEXT:    pcmpeqd %xmm2, %xmm0
 ; SSE-NEXT:    blendvps %xmm0, %xmm2, %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_umul_two:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; AVX-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2,2,2,2]
-; AVX-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; AVX-NEXT:    vpblendd {{.*#+}} xmm2 = xmm3[0],xmm2[1],xmm3[2],xmm2[3]
-; AVX-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
+; AVX-NEXT:    vpmaxud %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %1 = call {<4 x i32>, <4 x i1>} @llvm.umul.with.overflow.v4i32(<4 x i32> %a0, <4 x i32> <i32 2, i32 2, i32 2, i32 2>)
   %2 = extractvalue {<4 x i32>, <4 x i1>} %1, 0

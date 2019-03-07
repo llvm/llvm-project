@@ -1047,8 +1047,8 @@ def int_amdgcn_struct_tbuffer_store : Intrinsic <
   AMDGPURsrcIntrinsic<1>;
 
 class AMDGPUBufferAtomic : Intrinsic <
-  [llvm_i32_ty],
-  [llvm_i32_ty,       // vdata(VGPR)
+  [llvm_anyint_ty],
+  [LLVMMatchType<0>,       // vdata(VGPR)
    llvm_v4i32_ty,     // rsrc(SGPR)
    llvm_i32_ty,       // vindex(VGPR)
    llvm_i32_ty,       // offset(SGPR/VGPR/imm)

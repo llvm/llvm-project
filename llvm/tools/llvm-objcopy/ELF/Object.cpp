@@ -182,13 +182,6 @@ getDecompressedSizeAndAlignment(ArrayRef<uint8_t> Data) {
 
 template <class ELFT>
 void ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
-  uint8_t *Buf = Out.getBufferStart() + Sec.Offset;
-
-  if (!zlib::isAvailable()) {
-    std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
-    return;
-  }
-
   const size_t DataOffset = isDataGnuCompressed(Sec.OriginalData)
                                 ? (ZlibGnuMagic.size() + sizeof(Sec.Size))
                                 : sizeof(Elf_Chdr_Impl<ELFT>);
@@ -202,6 +195,7 @@ void ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
                                  static_cast<size_t>(Sec.Size)))
     reportError(Sec.Name, std::move(E));
 
+  uint8_t *Buf = Out.getBufferStart() + Sec.Offset;
   std::copy(DecompressedContent.begin(), DecompressedContent.end(), Buf);
 }
 
@@ -263,12 +257,6 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
                                      DebugCompressionType CompressionType)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-
-  if (!zlib::isAvailable()) {
-    CompressionType = DebugCompressionType::None;
-    return;
-  }
-
   if (Error E = zlib::compress(
           StringRef(reinterpret_cast<const char *>(OriginalData.data()),
                     OriginalData.size()),
@@ -1111,7 +1099,8 @@ SectionBase &ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   default: {
     Data = unwrapOrError(ElfFile.getSectionContents(&Shdr));
 
-    if (isDataGnuCompressed(Data) || (Shdr.sh_flags & ELF::SHF_COMPRESSED)) {
+    StringRef Name = unwrapOrError(ElfFile.getSectionName(&Shdr));
+    if (Name.startswith(".zdebug") || (Shdr.sh_flags & ELF::SHF_COMPRESSED)) {
       uint64_t DecompressedSize, DecompressedAlign;
       std::tie(DecompressedSize, DecompressedAlign) =
           getDecompressedSizeAndAlignment<ELFT>(Data);

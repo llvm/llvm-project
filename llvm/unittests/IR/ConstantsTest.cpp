@@ -475,5 +475,105 @@ TEST(ConstantsTest, BitcastToGEP) {
   ASSERT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
 }
 
+bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
+                               uint64_t AndValue, unsigned FunctionAlign = 0) {
+  Type *VoidType(Type::getVoidTy(Context));
+  FunctionType *FuncType(FunctionType::get(VoidType, false));
+  Function *Func(Function::Create(
+      FuncType, GlobalValue::ExternalLinkage, "", TheModule));
+
+  if (FunctionAlign) Func->setAlignment(FunctionAlign);
+
+  IntegerType *ConstantIntType(Type::getInt32Ty(Context));
+  ConstantInt *TheConstant(ConstantInt::get(ConstantIntType, AndValue));
+
+  Constant *TheConstantExpr(
+      ConstantExpr::getPtrToInt(Func, ConstantIntType));
+
+  return ConstantExpr::get(Instruction::And, TheConstantExpr,
+                           TheConstant)->isNullValue();
+}
+
+TEST(ConstantsTest, FoldFunctionPtrAlignUnknownAnd2) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  // When the DataLayout doesn't specify a function pointer alignment we
+  // assume in this case that it is 4 byte aligned. This is a bug but we can't
+  // fix it directly because it causes a code size regression on X86.
+  // FIXME: This test should be changed once existing targets have
+  // appropriate defaults. See associated FIXME in ConstantFoldBinaryInstruction
+  ASSERT_TRUE(foldFuncPtrAndConstToNull(Context, &TheModule, 2));
+}
+
+TEST(ConstantsTest, DontFoldFunctionPtrAlignUnknownAnd4) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, &TheModule, 4));
+}
+
+TEST(ConstantsTest, FoldFunctionPtrAlign4) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  const char* AlignmentStrings[] = { "Fi32", "Fn32" };
+
+  for (unsigned AndValue = 1; AndValue <= 2; ++AndValue) {
+    for (const char *AlignmentString : AlignmentStrings) {
+      TheModule.setDataLayout(AlignmentString);
+      ASSERT_TRUE(foldFuncPtrAndConstToNull(Context, &TheModule, AndValue));
+    }
+  }
+}
+
+TEST(ConstantsTest, DontFoldFunctionPtrAlign1) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  const char* AlignmentStrings[] = { "Fi8", "Fn8" };
+
+  for (const char* AlignmentString : AlignmentStrings) {
+    TheModule.setDataLayout(AlignmentString);
+    ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, &TheModule, 2));
+  }
+}
+
+TEST(ConstantsTest, FoldFunctionAlign4PtrAlignMultiple) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  TheModule.setDataLayout("Fn8");
+  ASSERT_TRUE(foldFuncPtrAndConstToNull(Context, &TheModule, 2, 4));
+}
+
+TEST(ConstantsTest, DontFoldFunctionAlign4PtrAlignIndependent) {
+  LLVMContext Context;
+  Module TheModule("TestModule", Context);
+  TheModule.setDataLayout("Fi8");
+  ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, &TheModule, 2, 4));
+}
+
+TEST(ConstantsTest, DontFoldFunctionPtrIfNoModule) {
+  LLVMContext Context;
+  // Even though the function is explicitly 4 byte aligned, in the absence of a
+  // DataLayout we can't assume that the function pointer is aligned.
+  ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, nullptr, 2, 4));
+}
+
+TEST(ConstantsTest, DISABLED_FoldGlobalVariablePtr) {
+  LLVMContext Context;
+
+
+  IntegerType *IntType(Type::getInt32Ty(Context));
+
+  GlobalVariable Global(IntType, true, GlobalValue::ExternalLinkage);
+
+  Global.setAlignment(4);
+
+  ConstantInt *TheConstant(ConstantInt::get(IntType, 2));
+
+  Constant *TheConstantExpr(
+      ConstantExpr::getPtrToInt(&Global, IntType));
+
+  ASSERT_TRUE(ConstantExpr::get( \
+      Instruction::And, TheConstantExpr, TheConstant)->isNullValue());
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

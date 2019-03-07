@@ -193,14 +193,12 @@ define zeroext i1 @saddoinci64(i64 %v1, i64* %res) {
 }
 
 ; SADDO reg, imm | imm, reg
-; FIXME: DAG doesn't optimize immediates on the LHS.
 define zeroext i1 @saddoi64imm1(i64 %v1, i64* %res) {
 ; SDAG-LABEL: saddoi64imm1:
 ; SDAG:       ## %bb.0:
-; SDAG-NEXT:    movl $2, %ecx
-; SDAG-NEXT:    addq %rdi, %rcx
+; SDAG-NEXT:    addq $2, %rdi
 ; SDAG-NEXT:    seto %al
-; SDAG-NEXT:    movq %rcx, (%rsi)
+; SDAG-NEXT:    movq %rdi, (%rsi)
 ; SDAG-NEXT:    retq
 ;
 ; FAST-LABEL: saddoi64imm1:

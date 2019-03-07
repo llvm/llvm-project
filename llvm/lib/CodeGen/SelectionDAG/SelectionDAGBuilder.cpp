@@ -2388,31 +2388,24 @@ void SelectionDAGBuilder::visitJumpTableHeader(JumpTable &JT,
                                     JumpTableReg, SwitchOp);
   JT.Reg = JumpTableReg;
 
-  if (!JTH.OmitRangeCheck) {
-    // Emit the range check for the jump table, and branch to the default block
-    // for the switch statement if the value being switched on exceeds the
-    // largest case in the switch.
-    SDValue CMP = DAG.getSetCC(
-        dl, TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                   Sub.getValueType()),
-        Sub, DAG.getConstant(JTH.Last - JTH.First, dl, VT), ISD::SETUGT);
+  // Emit the range check for the jump table, and branch to the default block
+  // for the switch statement if the value being switched on exceeds the largest
+  // case in the switch.
+  SDValue CMP = DAG.getSetCC(
+      dl, TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                 Sub.getValueType()),
+      Sub, DAG.getConstant(JTH.Last - JTH.First, dl, VT), ISD::SETUGT);
 
-    SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
-                                 MVT::Other, CopyTo, CMP,
-                                 DAG.getBasicBlock(JT.Default));
+  SDValue BrCond = DAG.getNode(ISD::BRCOND, dl,
+                               MVT::Other, CopyTo, CMP,
+                               DAG.getBasicBlock(JT.Default));
 
-    // Avoid emitting unnecessary branches to the next block.
-    if (JT.MBB != NextBlock(SwitchBB))
-      BrCond = DAG.getNode(ISD::BR, dl, MVT::Other, BrCond,
-                           DAG.getBasicBlock(JT.MBB));
- 
-    DAG.setRoot(BrCond);
-  } else {
-    SDValue BrCond = DAG.getNode(ISD::BR, dl, MVT::Other, CopyTo,
-                                 DAG.getBasicBlock(JT.MBB));
-    DAG.setRoot(BrCond);
-    SwitchBB->removeSuccessor(JT.Default, true);
-  }
+  // Avoid emitting unnecessary branches to the next block.
+  if (JT.MBB != NextBlock(SwitchBB))
+    BrCond = DAG.getNode(ISD::BR, dl, MVT::Other, BrCond,
+                         DAG.getBasicBlock(JT.MBB));
+
+  DAG.setRoot(BrCond);
 }
 
 /// Create a LOAD_STACK_GUARD node, and let it carry the target specific global
@@ -2544,6 +2537,12 @@ SelectionDAGBuilder::visitSPDescriptorFailure(StackProtectorDescriptor &SPD) {
   SDValue Chain =
       TLI.makeLibCall(DAG, RTLIB::STACKPROTECTOR_CHECK_FAIL, MVT::isVoid,
                       None, false, getCurSDLoc(), false, false).second;
+  // On PS4, the "return address" must still be within the calling function,
+  // even if it's at the very end, so emit an explicit TRAP here.
+  // Passing 'true' for doesNotReturn above won't generate the trap for us.
+  if (TM.getTargetTriple().isPS4CPU())
+    Chain = DAG.getNode(ISD::TRAP, getCurSDLoc(), MVT::Other, Chain);
+
   DAG.setRoot(Chain);
 }
 
@@ -9797,13 +9796,10 @@ bool SelectionDAGBuilder::buildJumpTable(const CaseClusterVector &Clusters,
                      ->createJumpTableIndex(Table);
 
   // Set up the jump table info.
-  bool UnreachableDefault =
-      isa<UnreachableInst>(SI->getDefaultDest()->getFirstNonPHIOrDbg());
-  bool OmitRangeCheck = UnreachableDefault;
   JumpTable JT(-1U, JTI, JumpTableMBB, nullptr);
   JumpTableHeader JTH(Clusters[First].Low->getValue(),
                       Clusters[Last].High->getValue(), SI->getCondition(),
-                      nullptr, false, OmitRangeCheck);
+                      nullptr, false);
   JTCases.emplace_back(std::move(JTH), std::move(JT));
 
   JTCluster = CaseCluster::jumpTable(Clusters[First].Low, Clusters[Last].High,
@@ -10608,6 +10604,38 @@ void SelectionDAGBuilder::visitSwitch(const SwitchInst &SI) {
   // optimization levels because it's cheap to do and will make codegen faster
   // if there are many clusters.
   sortAndRangeify(Clusters);
+
+  if (TM.getOptLevel() != CodeGenOpt::None) {
+    // Replace an unreachable default with the most popular destination.
+    // FIXME: Exploit unreachable default more aggressively.
+    bool UnreachableDefault =
+        isa<UnreachableInst>(SI.getDefaultDest()->getFirstNonPHIOrDbg());
+    if (UnreachableDefault && !Clusters.empty()) {
+      DenseMap<const BasicBlock *, unsigned> Popularity;
+      unsigned MaxPop = 0;
+      const BasicBlock *MaxBB = nullptr;
+      for (auto I : SI.cases()) {
+        const BasicBlock *BB = I.getCaseSuccessor();
+        if (++Popularity[BB] > MaxPop) {
+          MaxPop = Popularity[BB];
+          MaxBB = BB;
+        }
+      }
+      // Set new default.
+      assert(MaxPop > 0 && MaxBB);
+      DefaultMBB = FuncInfo.MBBMap[MaxBB];
+
+      // Remove cases that were pointing to the destination that is now the
+      // default.
+      CaseClusterVector New;
+      New.reserve(Clusters.size());
+      for (CaseCluster &CC : Clusters) {
+        if (CC.MBB != DefaultMBB)
+          New.push_back(CC);
+      }
+      Clusters = std::move(New);
+    }
+  }
 
   // The branch probablity of the peeled case.
   BranchProbability PeeledCaseProb = BranchProbability::getZero();

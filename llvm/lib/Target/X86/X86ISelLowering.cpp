@@ -34684,12 +34684,6 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
   }
 
-  // Commute LHS/RHS if the Cond has been XOR'd.
-  // TODO: Move this to DAGCombine.
-  if (CondVT.getScalarSizeInBits() == VT.getScalarSizeInBits() &&
-      isBitwiseNot(Cond))
-    return DAG.getNode(N->getOpcode(), DL, VT, Cond.getOperand(0), RHS, LHS);
-
   // If we have SSE[12] support, try to form min/max nodes. SSE min/max
   // instructions match the semantics of the common C idiom x<y?x:y but not
   // x<=y?x:y, because of how they handle negative zero (which can be
@@ -39629,13 +39623,15 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   if (Subtarget.useSoftFloat())
     return SDValue();
 
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
   // TODO: If an operand is already known to be a NaN or not a NaN, this
   //       should be an optional swap and FMAX/FMIN.
 
   EVT VT = N->getValueType(0);
-  if (!((Subtarget.hasSSE1() && (VT == MVT::f32 || VT == MVT::v4f32)) ||
-        (Subtarget.hasSSE2() && (VT == MVT::f64 || VT == MVT::v2f64)) ||
-        (Subtarget.hasAVX() && (VT == MVT::v8f32 || VT == MVT::v4f64))))
+  if (!((Subtarget.hasSSE1() && VT == MVT::f32) ||
+        (Subtarget.hasSSE2() && VT == MVT::f64) ||
+        (VT.isVector() && TLI.isTypeLegal(VT))))
     return SDValue();
 
   SDValue Op0 = N->getOperand(0);
@@ -39653,8 +39649,8 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
   if (!VT.isVector() && DAG.getMachineFunction().getFunction().optForMinSize())
     return SDValue();
 
-  EVT SetCCType = DAG.getTargetLoweringInfo().getSetCCResultType(
-      DAG.getDataLayout(), *DAG.getContext(), VT);
+  EVT SetCCType = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
+                                         VT);
 
   // There are 4 possibilities involving NaN inputs, and these are the required
   // outputs:

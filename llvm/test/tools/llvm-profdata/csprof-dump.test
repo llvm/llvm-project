@@ -1,0 +1,31 @@
+Basic test for option -showcs:
+RUN: llvm-profdata show %p/Inputs/cs.proftext | FileCheck  %s -check-prefix=ZEROSUMMARY
+RUN: llvm-profdata show %p/Inputs/noncs.proftext | FileCheck  %s -check-prefix=SUMMARY
+RUN: llvm-profdata show -showcs %p/Inputs/cs.proftext | FileCheck  %s -check-prefix=SUMMARY
+RUN: llvm-profdata show -showcs %p/Inputs/noncs.proftext | FileCheck  %s -check-prefix=ZEROSUMMARY
+ZEROSUMMARY: Instrumentation level: IR
+ZEROSUMMARY: Total functions: 0
+ZEROSUMMARY: Maximum function count: 0
+ZEROSUMMARY: Maximum internal block count: 0
+SUMMARY: Instrumentation level: IR
+SUMMARY: Total functions: 1
+SUMMARY: Maximum function count: 99938
+SUMMARY: Maximum internal block count: 62
+
+Basic tests for context sensitive profile dump functions:
+RUN: llvm-profdata merge -o %t-combined.profdata %p/Inputs/cs.proftext %p/Inputs/noncs.proftext
+
+RUN: llvm-profdata show --all-functions -counts -showcs %p/Inputs/cs.proftext > %t-text.csdump
+RUN: llvm-profdata show --all-functions -counts -showcs %t-combined.profdata > %t-index.csdump
+RUN: diff %t-text.csdump %t-index.csdump
+
+RUN: llvm-profdata show --all-functions -counts %p/Inputs/noncs.proftext > %t-text.noncsdump
+RUN: llvm-profdata show --all-functions -counts %t-combined.profdata > %t-index.noncsdump
+RUN: diff %t-text.noncsdump %t-index.noncsdump
+
+Roundtrip test:
+
+RUN: llvm-profdata merge -o %t.0.profdata %S/Inputs/CSIR_profile.proftext
+RUN: llvm-profdata merge -text -o %t.0.proftext %t.0.profdata
+RUN: diff %t.0.proftext %S/Inputs/CSIR_profile.proftext
+
