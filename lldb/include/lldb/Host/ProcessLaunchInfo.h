@@ -17,9 +17,9 @@
 
 #include "lldb/Host/FileAction.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/ProcessInfo.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/ProcessInfo.h"
 
 namespace lldb_private {
 

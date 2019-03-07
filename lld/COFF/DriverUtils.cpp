@@ -698,16 +698,18 @@ void assignExportOrdinals() {
 
 // Parses a string in the form of "key=value" and check
 // if value matches previous values for the same key.
-void checkFailIfMismatch(StringRef Arg) {
+void checkFailIfMismatch(StringRef Arg, StringRef Source) {
   StringRef K, V;
   std::tie(K, V) = Arg.split('=');
   if (K.empty() || V.empty())
     fatal("/failifmismatch: invalid argument: " + Arg);
-  StringRef Existing = Config->MustMatch[K];
-  if (!Existing.empty() && V != Existing)
-    fatal("/failifmismatch: mismatch detected: " + Existing + " and " + V +
-          " for key " + K);
-  Config->MustMatch[K] = V;
+  std::pair<StringRef, StringRef> Existing = Config->MustMatch[K];
+  if (!Existing.first.empty() && V != Existing.first) {
+    fatal("/failifmismatch: mismatch detected for '" + K + "':\n>>> " +
+          Existing.second + " has value " + Existing.first + "\n>>> " +
+          Source + " has value " + V);
+  }
+  Config->MustMatch[K] = {V, Source};
 }
 
 // Convert Windows resource files (.res files) to a .obj file.

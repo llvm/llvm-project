@@ -1870,8 +1870,7 @@ class TestBase(Base):
         Base.setUp(self)
 
         # Set the clang modules cache path used by LLDB.
-        mod_cache = os.path.join(os.path.join(os.environ["LLDB_BUILD"],
-                                              "module-cache-lldb"))
+        mod_cache = os.path.join(os.environ["LLDB_BUILD"], "module-cache-lldb")
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'
                     % mod_cache)
 

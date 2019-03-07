@@ -14,14 +14,14 @@
 
 namespace lldb_private {
 
+class UserIDResolver;
+
 class HostInfoPosix : public HostInfoBase {
   friend class HostInfoBase;
 
 public:
   static size_t GetPageSize();
   static bool GetHostname(std::string &s);
-  static const char *LookupUserName(uint32_t uid, std::string &user_name);
-  static const char *LookupGroupName(uint32_t gid, std::string &group_name);
 
   static uint32_t GetUserID();
   static uint32_t GetGroupID();
@@ -34,6 +34,8 @@ public:
 
   static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
                                            llvm::StringRef dir);
+
+  static UserIDResolver &GetUserIDResolver();
 
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);

@@ -31,6 +31,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIfiOSSimulator
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
+    @expectedFailureNetBSD
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
         self.build()
@@ -62,6 +63,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'arm', 'i386', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
+    @expectedFailureNetBSD
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
         self.build()
@@ -75,6 +77,7 @@ class RegisterCommandsTestCase(TestBase):
     @expectedFailureDarwin(bugnumber="<rdar://problem/34092153>")  # CI bots need to use updated debugserver to match ftag size change in r311579.
     @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
+    @expectedFailureNetBSD
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
         self.build()
@@ -123,6 +126,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
+    @expectedFailureNetBSD
     def test_convenience_registers_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()
@@ -132,6 +136,7 @@ class RegisterCommandsTestCase(TestBase):
     @skipIf(archs=no_match(['amd64', 'x86_64']))
     @skipIfOutOfTreeDebugserver # rdar://38480016
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
+    @expectedFailureNetBSD
     def test_convenience_registers_16bit_with_process_attach(self):
         """Test convenience registers after a 'process attach'."""
         self.build()

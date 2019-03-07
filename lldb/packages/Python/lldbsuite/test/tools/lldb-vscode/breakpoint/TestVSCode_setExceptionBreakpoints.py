@@ -21,6 +21,7 @@ class TestVSCode_setExceptionBreakpoints(
 
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test_functionality(self):
         '''Tests setting and clearing exception breakpoints.

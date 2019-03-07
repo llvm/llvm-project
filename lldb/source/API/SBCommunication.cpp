@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBCommunication.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
@@ -16,10 +17,14 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBCommunication::SBCommunication() : m_opaque(NULL), m_opaque_owned(false) {}
+SBCommunication::SBCommunication() : m_opaque(NULL), m_opaque_owned(false) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBCommunication);
+}
 
 SBCommunication::SBCommunication(const char *broadcaster_name)
     : m_opaque(new Communication(broadcaster_name)), m_opaque_owned(true) {
+  LLDB_RECORD_CONSTRUCTOR(SBCommunication, (const char *), broadcaster_name);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log)
@@ -35,20 +40,31 @@ SBCommunication::~SBCommunication() {
   m_opaque_owned = false;
 }
 
-bool SBCommunication::IsValid() const { return m_opaque != NULL; }
+bool SBCommunication::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommunication, IsValid);
+
+  return m_opaque != NULL;
+}
 
 bool SBCommunication::GetCloseOnEOF() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommunication, GetCloseOnEOF);
+
   if (m_opaque)
     return m_opaque->GetCloseOnEOF();
   return false;
 }
 
 void SBCommunication::SetCloseOnEOF(bool b) {
+  LLDB_RECORD_METHOD(void, SBCommunication, SetCloseOnEOF, (bool), b);
+
   if (m_opaque)
     m_opaque->SetCloseOnEOF(b);
 }
 
 ConnectionStatus SBCommunication::Connect(const char *url) {
+  LLDB_RECORD_METHOD(lldb::ConnectionStatus, SBCommunication, Connect,
+                     (const char *), url);
+
   if (m_opaque) {
     if (!m_opaque->HasConnection())
       m_opaque->SetConnection(Host::CreateDefaultConnection(url).release());
@@ -58,6 +74,9 @@ ConnectionStatus SBCommunication::Connect(const char *url) {
 }
 
 ConnectionStatus SBCommunication::AdoptFileDesriptor(int fd, bool owns_fd) {
+  LLDB_RECORD_METHOD(lldb::ConnectionStatus, SBCommunication,
+                     AdoptFileDesriptor, (int, bool), fd, owns_fd);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   ConnectionStatus status = eConnectionStatusNoConnection;
@@ -83,6 +102,9 @@ ConnectionStatus SBCommunication::AdoptFileDesriptor(int fd, bool owns_fd) {
 }
 
 ConnectionStatus SBCommunication::Disconnect() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::ConnectionStatus, SBCommunication,
+                             Disconnect);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   ConnectionStatus status = eConnectionStatusNoConnection;
@@ -98,6 +120,8 @@ ConnectionStatus SBCommunication::Disconnect() {
 }
 
 bool SBCommunication::IsConnected() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBCommunication, IsConnected);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   bool result = false;
   if (m_opaque)
@@ -158,6 +182,8 @@ size_t SBCommunication::Write(const void *src, size_t src_len,
 }
 
 bool SBCommunication::ReadThreadStart() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommunication, ReadThreadStart);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   bool success = false;
@@ -172,6 +198,8 @@ bool SBCommunication::ReadThreadStart() {
 }
 
 bool SBCommunication::ReadThreadStop() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommunication, ReadThreadStop);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (log)
     log->Printf("SBCommunication(%p)::ReadThreadStop ()...",
@@ -189,6 +217,8 @@ bool SBCommunication::ReadThreadStop() {
 }
 
 bool SBCommunication::ReadThreadIsRunning() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBCommunication, ReadThreadIsRunning);
+
   bool result = false;
   if (m_opaque)
     result = m_opaque->ReadThreadIsRunning();
@@ -220,6 +250,9 @@ bool SBCommunication::SetReadThreadBytesReceivedCallback(
 }
 
 SBBroadcaster SBCommunication::GetBroadcaster() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBroadcaster, SBCommunication,
+                             GetBroadcaster);
+
   SBBroadcaster broadcaster(m_opaque, false);
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
@@ -229,10 +262,13 @@ SBBroadcaster SBCommunication::GetBroadcaster() {
                 static_cast<void *>(m_opaque),
                 static_cast<void *>(broadcaster.get()));
 
-  return broadcaster;
+  return LLDB_RECORD_RESULT(broadcaster);
 }
 
 const char *SBCommunication::GetBroadcasterClass() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(const char *, SBCommunication,
+                                    GetBroadcasterClass);
+
   return Communication::GetStaticBroadcasterClass().AsCString();
 }
 

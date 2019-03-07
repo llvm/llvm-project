@@ -1694,9 +1694,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
       if (log)
         log->Printf("Discovered %u ObjC classes in shared cache\n",
                     num_class_infos);
-#ifdef LLDB_CONFIGURATION_DEBUG
       assert(num_class_infos <= num_classes);
-#endif
       if (num_class_infos > 0) {
         if (num_class_infos > num_classes) {
           num_class_infos = num_classes;

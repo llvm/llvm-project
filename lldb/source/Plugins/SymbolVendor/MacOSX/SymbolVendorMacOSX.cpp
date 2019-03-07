@@ -18,6 +18,7 @@
 #include "lldb/Host/XML.h"
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
@@ -142,7 +143,9 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
 
       ModuleSpec module_spec(file_spec, module_sp->GetArchitecture());
       module_spec.GetUUID() = module_sp->GetUUID();
-      dsym_fspec = Symbols::LocateExecutableSymbolFile(module_spec);
+      FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+      dsym_fspec =
+          Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
       if (module_spec.GetSourceMappingList().GetSize())
         module_sp->GetSourceMappingList().Append(
             module_spec.GetSourceMappingList(), true);

@@ -57,7 +57,11 @@ bool SwiftASTManipulator::VariableInfo::GetIsCaptureList() const {
 
 void SwiftASTManipulator::WrapExpression(
     lldb_private::Stream &wrapped_stream, const char *orig_text,
-    uint32_t language_flags, const EvaluateExpressionOptions &options,
+    bool needs_object_ptr,
+    bool static_method,
+    bool is_class,
+    bool weak_self,
+    const EvaluateExpressionOptions &options,
     const Expression::SwiftGenericInfo &generic_info,
     llvm::StringRef os_version,
     uint32_t &first_body_line) {
@@ -160,25 +164,22 @@ __builtin_logger_initialize()
                            GetUserCodeStartMarker(), text,
                            GetUserCodeEndMarker(), GetErrorName());
 
-  if (Flags(language_flags)
-          .AnySet(SwiftUserExpression::eLanguageFlagNeedsObjectPointer |
-                  SwiftUserExpression::eLanguageFlagInStaticMethod)) {
+  if (needs_object_ptr | static_method) {
     const char *func_decorator = "";
-    if (language_flags & SwiftUserExpression::eLanguageFlagInStaticMethod) {
-      if (language_flags & SwiftUserExpression::eLanguageFlagIsClass)
+    if (static_method) {
+      if (is_class)
         func_decorator = "final class";
       else
         func_decorator = "static";
-    } else if (language_flags & SwiftUserExpression::eLanguageFlagIsClass &&
-               !(language_flags &
-                 SwiftUserExpression::eLanguageFlagIsWeakSelf)) {
+    } else if (is_class &&
+               !(weak_self)) {
       func_decorator = "final";
     } else {
       func_decorator = "mutating";
     }
 
     const char *optional_extension =
-        (language_flags & SwiftUserExpression::eLanguageFlagIsWeakSelf)
+        (weak_self)
             ? "Swift.Optional where Wrapped == "
             : "";
 

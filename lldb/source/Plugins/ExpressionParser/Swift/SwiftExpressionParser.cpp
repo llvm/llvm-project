@@ -13,6 +13,7 @@
 #include "SwiftExpressionParser.h"
 
 #include "SwiftASTManipulator.h"
+#include "SwiftExpressionSourceCode.h"
 #include "SwiftREPLMaterializer.h"
 #include "SwiftSILManipulator.h"
 #include "SwiftUserExpression.h"
@@ -25,7 +26,6 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Expression.h"
-#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolFile.h"

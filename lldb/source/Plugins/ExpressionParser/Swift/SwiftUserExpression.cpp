@@ -17,6 +17,7 @@
 
 #include "SwiftExpressionParser.h"
 #include "SwiftREPLMaterializer.h"
+#include "SwiftExpressionSourceCode.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -135,8 +136,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   }
 
   if (frame_is_swift) {
-    m_language_flags &= ~eLanguageFlagIsClass;
-    m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+    m_is_class = false;
+    m_needs_object_ptr = false;
 
     // Make sure the target's SwiftASTContext has been setup before
     // doing any Swift name lookups.
@@ -219,7 +220,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           // Check to see if we are in a class func of a class (or
           // static func of a struct) and adjust our self_type to
           // point to the instance type.
-          m_language_flags |= eLanguageFlagNeedsObjectPointer;
+          m_needs_object_ptr = true;
 
           Flags self_type_flags(self_type.GetTypeInfo());
 
@@ -228,14 +229,14 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             self_type = self_type.GetInstanceType();
             self_type_flags = self_type.GetTypeInfo();
             if (self_type_flags.Test(lldb::eTypeIsClass))
-              m_language_flags |= eLanguageFlagIsClass;
-            m_language_flags |= eLanguageFlagInStaticMethod;
+              m_is_class = true;
+            m_in_static_method = true;
           }
 
           if (self_type_flags.AllSet(lldb::eTypeIsSwift |
                                      lldb::eTypeInstanceIsPointer)) {
             if (self_type_flags.Test(lldb::eTypeIsClass))
-              m_language_flags |= eLanguageFlagIsClass;
+              m_is_class = true;
           }
 
           swift::Type object_type =
@@ -250,8 +251,8 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           if (auto *ref_type = llvm::dyn_cast<swift::ReferenceStorageType>(
                   GetSwiftType(self_type).getPointer())) {
             if (ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
-              m_language_flags |= eLanguageFlagIsClass;
-              m_language_flags |= eLanguageFlagIsWeakSelf;
+              m_is_class = true;
+              m_is_weak_self = true;
             }
           }
 
@@ -263,7 +264,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                      lldb::eTypeHasValue)) {
             // We can't extend generic structs when "self" is mutating at the
             // moment.
-            m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+            m_needs_object_ptr = false;
             self_var_sp.reset();
             break;
           }
@@ -380,16 +381,23 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   std::string prefix = m_expr_prefix;
 
-  std::unique_ptr<ExpressionSourceCode> source_code(
-      ExpressionSourceCode::CreateWrapped(prefix.c_str(), m_expr_text.c_str()));
+  std::unique_ptr<SwiftExpressionSourceCode> source_code(
+      SwiftExpressionSourceCode::CreateWrapped(prefix.c_str(), 
+                                               m_expr_text.c_str()));
 
   const lldb::LanguageType lang_type = lldb::eLanguageTypeSwift;
 
   m_options.SetLanguage(lang_type);
   uint32_t first_body_line = 0;
 
-  if (!source_code->GetText(m_transformed_text, lang_type, m_language_flags,
-                            m_options, m_swift_generic_info, exe_ctx,
+  // I have to pass some value for add_locals.  I'm passing "false" because
+  // even though we do add the locals, we don't do it in GetText.
+  if (!source_code->GetText(m_transformed_text, lang_type,
+                            m_needs_object_ptr,
+                            m_in_static_method,
+                            m_is_class,
+                            m_is_weak_self,  m_options, exe_ctx,
+                            m_swift_generic_info,
                             first_body_line)) {
     diagnostic_manager.PutString(eDiagnosticSeverityError,
                                   "couldn't construct expression body");
@@ -454,8 +462,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         size_t fixed_end;
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
-        if (ExpressionSourceCode::GetOriginalBodyBounds(
-                fixed_expression, lang_type, fixed_start, fixed_end))
+        if (SwiftExpressionSourceCode::GetOriginalBodyBounds(
+                fixed_expression, fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }
@@ -539,7 +547,7 @@ bool SwiftUserExpression::AddArguments(ExecutionContext &exe_ctx,
                                        DiagnosticManager &diagnostic_manager) {
   lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
 
-  if (m_language_flags & eLanguageFlagNeedsObjectPointer) {
+  if (m_needs_object_ptr) {
     lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP();
     if (!frame_sp)
       return true;

@@ -10,9 +10,8 @@
 #define SymbolFileDWARF_DWARFDebugAranges_h_
 
 #include "DWARFDebugArangeSet.h"
+#include "lldb/Utility/RangeMap.h"
 #include <list>
-
-#include "lldb/Core/RangeMap.h"
 
 class SymbolFileDWARF;
 

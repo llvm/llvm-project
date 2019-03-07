@@ -56,7 +56,6 @@
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
-#include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
@@ -612,12 +611,6 @@ bool Host::OpenFileInExternalEditor(const FileSpec &file_spec,
 }
 
 #endif
-
-const UnixSignalsSP &Host::GetUnixSignals() {
-  static const auto s_unix_signals_sp =
-      UnixSignals::Create(HostInfo::GetArchitecture());
-  return s_unix_signals_sp;
-}
 
 std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
 #if defined(_WIN32)

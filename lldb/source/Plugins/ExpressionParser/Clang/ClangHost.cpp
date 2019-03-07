@@ -29,19 +29,11 @@
 using namespace lldb_private;
 
 #if defined(_WIN32)
-static bool ComputeClangDirectory(FileSpec &file_spec) { return false; }
-#else
-static bool DefaultComputeClangDirectory(FileSpec &file_spec) {
-  return HostInfoPosix::ComputePathRelativeToLibrary(
-      file_spec, "/lib/lldb/clang/");
-  return HostInfoPosix::ComputePathRelativeToLibrary(
-      file_spec, (llvm::Twine("/lib") + CLANG_LIBDIR_SUFFIX + "/clang/" +
-                  CLANG_VERSION_STRING)
-                     .str());
+static bool ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
+                                          FileSpec &file_spec, bool verify) {
+  return false;
 }
-
-#if defined(__APPLE__)
-
+#else
 static bool VerifyClangPath(const llvm::Twine &clang_path) {
   if (FileSystem::Instance().IsDirectory(clang_path))
     return true;
@@ -53,8 +45,37 @@ static bool VerifyClangPath(const llvm::Twine &clang_path) {
   return false;
 }
 
-bool lldb_private::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
+///
+/// This will compute the clang resource directory assuming that clang was
+/// installed with the same prefix as lldb.
+///
+static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
                                          FileSpec &file_spec, bool verify) {
+  std::string raw_path = lldb_shlib_spec.GetPath();
+  llvm::StringRef parent_dir = llvm::sys::path::parent_path(raw_path);
+
+  llvm::SmallString<256> clang_dir(parent_dir);
+  llvm::SmallString<32> relative_path;
+  llvm::sys::path::append(relative_path,
+                          llvm::Twine("lib") + CLANG_LIBDIR_SUFFIX, "clang",
+                          CLANG_VERSION_STRING);
+
+  llvm::sys::path::append(clang_dir, relative_path);
+  if (!verify || VerifyClangPath(clang_dir)) {
+    file_spec.GetDirectory().SetString(clang_dir);
+    FileSystem::Instance().Resolve(file_spec);
+    return true;
+  }
+
+  return HostInfoPosix::ComputePathRelativeToLibrary(file_spec, relative_path);
+}
+
+bool lldb_private::ComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
+                                         FileSpec &file_spec, bool verify) {
+#if !defined(__APPLE__)
+  return DefaultComputeClangResourceDirectory(lldb_shlib_spec, file_spec,
+                                              verify);
+#else
   std::string raw_path = lldb_shlib_spec.GetPath();
 
   auto rev_it = llvm::sys::path::rbegin(raw_path);
@@ -67,8 +88,10 @@ bool lldb_private::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
     ++rev_it;
   }
 
+  // Posix-style of LLDB detected.
   if (rev_it == r_end)
-    return DefaultComputeClangDirectory(file_spec);
+    return DefaultComputeClangResourceDirectory(lldb_shlib_spec, file_spec,
+                                                verify);
 
   // Inside Xcode and in Xcode toolchains LLDB is always in lockstep
   // with the Swift compiler, so it can reuse its Clang resource
@@ -116,27 +139,17 @@ bool lldb_private::ComputeClangDirectory(FileSpec &lldb_shlib_spec,
   file_spec.SetFile(raw_path.c_str(), FileSpec::Style::native);
   FileSystem::Instance().Resolve(file_spec);
   return true;
-}
-
-static bool ComputeClangDirectory(FileSpec &file_spec) {
-  if (FileSpec lldb_file_spec = HostInfo::GetShlibDir())
-    return ComputeClangDirectory(lldb_file_spec, file_spec, true);
-  return false;
-}
-#else  // __APPLE__
-
-// All non-Apple posix systems.
-static bool ComputeClangDirectory(FileSpec &file_spec) {
-  return DefaultComputeClangDirectory(file_spec);
-}
 #endif // __APPLE__
+}
 #endif // _WIN32
 
 FileSpec lldb_private::GetClangResourceDir() {
   static FileSpec g_cached_resource_dir;
   static llvm::once_flag g_once_flag;
   llvm::call_once(g_once_flag, []() {
-    ::ComputeClangDirectory(g_cached_resource_dir);
+    if (FileSpec lldb_file_spec = HostInfo::GetShlibDir())
+      ComputeClangResourceDirectory(lldb_file_spec, g_cached_resource_dir,
+                                    true);
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
     if (log)
       log->Printf("GetClangResourceDir() => '%s'",

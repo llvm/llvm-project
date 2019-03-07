@@ -20,7 +20,6 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
-#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Expression/Materializer.h"
@@ -139,7 +138,7 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
 lldb::ExpressionResults UserExpression::Evaluate(
     ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
     llvm::StringRef expr, llvm::StringRef prefix,
-    lldb::ValueObjectSP &result_valobj_sp, Status &error, uint32_t line_offset,
+    lldb::ValueObjectSP &result_valobj_sp, Status &error,
     std::string *fixed_expression, lldb::ModuleSP *jit_module_sp_ptr,
     ValueObject *ctx_obj) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS |

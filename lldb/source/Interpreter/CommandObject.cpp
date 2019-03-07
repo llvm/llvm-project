@@ -136,17 +136,15 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
 }
 
 bool CommandObject::CheckRequirements(CommandReturnObject &result) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   // Nothing should be stored in m_exe_ctx between running commands as
   // m_exe_ctx has shared pointers to the target, process, thread and frame and
   // we don't want any CommandObject instances to keep any of these objects
   // around longer than for a single command. Every command should call
-  // CommandObject::Cleanup() after it has completed
-  assert(m_exe_ctx.GetTargetPtr() == NULL);
-  assert(m_exe_ctx.GetProcessPtr() == NULL);
-  assert(m_exe_ctx.GetThreadPtr() == NULL);
-  assert(m_exe_ctx.GetFramePtr() == NULL);
-#endif
+  // CommandObject::Cleanup() after it has completed.
+  assert(!m_exe_ctx.GetTargetPtr());
+  assert(!m_exe_ctx.GetProcessPtr());
+  assert(!m_exe_ctx.GetThreadPtr());
+  assert(!m_exe_ctx.GetFramePtr());
 
   // Lock down the interpreter's execution context prior to running the command
   // so we guarantee the selected target, process, thread and frame can't go

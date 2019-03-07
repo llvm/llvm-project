@@ -32,6 +32,7 @@ class TargetDependentsTestCase(TestBase):
             "image list", msg, matching=should_match, substrs=['[  1]'])
 
     @expectedFailureAll(oslist=["linux"]) #linux does not support loading dependent files
+    @expectedFailureNetBSD
     def test_dependents_implicit_default_exe(self):
         """Test default behavior"""
         exe = self.getBuildArtifact("a.out")
@@ -39,6 +40,7 @@ class TargetDependentsTestCase(TestBase):
         self.has_exactly_one_image(False)
 
     @expectedFailureAll(oslist=["linux"]) #linux does not support loading dependent files
+    @expectedFailureNetBSD
     def test_dependents_explicit_default_exe(self):
         """Test default behavior"""
         exe = self.getBuildArtifact("a.out")
@@ -53,6 +55,7 @@ class TargetDependentsTestCase(TestBase):
         self.has_exactly_one_image(True)
 
     @expectedFailureAll(oslist=["linux"]) #linux does not support loading dependent files
+    @expectedFailureNetBSD
     def test_dependents_explicit_false_exe(self):
         """Test default behavior"""
         exe = self.getBuildArtifact("a.out")
@@ -91,6 +94,7 @@ class TargetDependentsTestCase(TestBase):
         self.has_exactly_one_image(True)
 
     @expectedFailureAll(oslist=["linux"]) #linux does not support loading dependent files
+    @expectedFailureNetBSD
     def test_dependents_explicit_false_lib(self):
         ctx = self.platformContext
         dylibName = ctx.shlib_prefix + 'load_a.' + ctx.shlib_extension

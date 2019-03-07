@@ -10,6 +10,7 @@
 #include "lldb/Host/FileCache.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 
 using namespace lldb_private;
 
@@ -204,25 +205,12 @@ const char *RemoteAwarePlatform::GetHostname() {
   return nullptr;
 }
 
-const char *RemoteAwarePlatform::GetUserName(uint32_t uid) {
-  // Check the cache in Platform in case we have already looked this uid up
-  const char *user_name = Platform::GetUserName(uid);
-  if (user_name)
-    return user_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetUserName(uid);
-  return nullptr;
-}
-
-const char *RemoteAwarePlatform::GetGroupName(uint32_t gid) {
-  const char *group_name = Platform::GetGroupName(gid);
-  if (group_name)
-    return group_name;
-
-  if (IsRemote() && m_remote_platform_sp)
-    return m_remote_platform_sp->GetGroupName(gid);
-  return nullptr;
+UserIDResolver &RemoteAwarePlatform::GetUserIDResolver() {
+  if (IsHost())
+    return HostInfo::GetUserIDResolver();
+  if (m_remote_platform_sp)
+    return m_remote_platform_sp->GetUserIDResolver();
+  return UserIDResolver::GetNoopResolver();
 }
 
 Environment RemoteAwarePlatform::GetEnvironment() {

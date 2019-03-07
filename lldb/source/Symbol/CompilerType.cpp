@@ -39,10 +39,8 @@ CompilerType::CompilerType(TypeSystem *type_system,
 CompilerType::CompilerType(clang::ASTContext *ast, clang::QualType qual_type)
     : m_type(qual_type.getAsOpaquePtr()),
       m_type_system(ClangASTContext::GetASTContext(ast)) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   if (m_type)
     assert(m_type_system != nullptr);
-#endif
 }
 
 CompilerType::CompilerType(swift::Type qual_type)

@@ -10,5 +10,5 @@ CHECK: compiling foobar.c -> foo.exe-foobar.o
 CHECK-32: {{.*}}clang++{{(.exe)?}} -m32 -g -O0 -c -o {{.*}}foo.exe-foobar.o {{.*}}foobar.c
 CHECK-64: {{.*}}clang++{{(.exe)?}} -m64 -g -O0 -c -o {{.*}}foo.exe-foobar.o {{.*}}foobar.c
 CHECK: linking foo.exe-foobar.o -> foo.exe
-CHECK-32: {{.*}}clang++{{(.exe)?}} -m32 -o {{.*}}foo.exe {{.*}}foo.exe-foobar.o
-CHECK-64: {{.*}}clang++{{(.exe)?}} -m64 -o {{.*}}foo.exe {{.*}}foo.exe-foobar.o
+CHECK-32: {{.*}}clang++{{(.exe)?}} -m32 {{(-L.* )?(-Wl,-rpath,.* )?}}-o {{.*}}foo.exe {{.*}}foo.exe-foobar.o
+CHECK-64: {{.*}}clang++{{(.exe)?}} -m64 {{(-L.* )?(-Wl,-rpath,.* )?}}-o {{.*}}foo.exe {{.*}}foo.exe-foobar.o

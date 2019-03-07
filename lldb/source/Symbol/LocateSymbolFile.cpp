@@ -8,10 +8,10 @@
 
 #include "lldb/Symbol/LocateSymbolFile.h"
 
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -252,7 +252,9 @@ ModuleSpec Symbols::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
 
 // Keep "symbols.enable-external-lookup" description in sync with this function.
 
-FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
+FileSpec
+Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec,
+                                    const FileSpecList &default_search_paths) {
   FileSpec symbol_file_spec = module_spec.GetSymbolFileSpec();
   if (symbol_file_spec.IsAbsolute() &&
       FileSystem::Instance().Exists(symbol_file_spec))
@@ -260,8 +262,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
 
   const char *symbol_filename = symbol_file_spec.GetFilename().AsCString();
   if (symbol_filename && symbol_filename[0]) {
-    FileSpecList debug_file_search_paths(
-        Target::GetDefaultDebugFileSearchPaths());
+    FileSpecList debug_file_search_paths = default_search_paths;
 
     // Add module directory.
     FileSpec module_file_spec = module_spec.GetFileSpec();

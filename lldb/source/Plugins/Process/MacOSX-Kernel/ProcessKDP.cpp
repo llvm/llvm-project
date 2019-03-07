@@ -291,8 +291,11 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
               module_spec.GetArchitecture() = target.GetArchitecture();
 
               // Lookup UUID locally, before attempting dsymForUUID like action
+              FileSpecList search_paths =
+                  Target::GetDefaultDebugFileSearchPaths();
               module_spec.GetSymbolFileSpec() =
-                  Symbols::LocateExecutableSymbolFile(module_spec);
+                  Symbols::LocateExecutableSymbolFile(module_spec,
+                                                      search_paths);
               if (module_spec.GetSymbolFileSpec()) {
                 ModuleSpec executable_module_spec =
                     Symbols::LocateExecutableObjectFile(module_spec);

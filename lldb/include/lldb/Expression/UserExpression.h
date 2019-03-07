@@ -264,10 +264,6 @@ public:
   ///     Filled in with an error in case the expression evaluation
   ///     fails to parse, run, or evaluated.
   ///
-  /// @param[in] line_offset
-  ///     The offset of the first line of the expression from the "beginning" of
-  ///     a virtual source file used for error reporting and debug info.
-  ///
   /// @param[out] fixed_expression
   ///     If non-nullptr, the fixed expression is copied into the provided
   ///     string.
@@ -293,7 +289,7 @@ public:
   Evaluate(ExecutionContext &exe_ctx, const EvaluateExpressionOptions &options,
            llvm::StringRef expr_cstr, llvm::StringRef expr_prefix,
            lldb::ValueObjectSP &result_valobj_sp, Status &error,
-           uint32_t line_offset = 0, std::string *fixed_expression = nullptr,
+           std::string *fixed_expression = nullptr,
            lldb::ModuleSP *jit_module_sp_ptr = nullptr,
            ValueObject *ctx_obj = nullptr);
 

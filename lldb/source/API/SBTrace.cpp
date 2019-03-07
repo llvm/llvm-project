@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SBReproducerPrivate.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 
@@ -60,6 +61,9 @@ size_t SBTrace::GetMetaData(SBError &error, void *buf, size_t size,
 }
 
 void SBTrace::StopTrace(SBError &error, lldb::tid_t thread_id) {
+  LLDB_RECORD_METHOD(void, SBTrace, StopTrace, (lldb::SBError &, lldb::tid_t),
+                     error, thread_id);
+
   ProcessSP process_sp(GetSP());
   error.Clear();
 
@@ -71,6 +75,9 @@ void SBTrace::StopTrace(SBError &error, lldb::tid_t thread_id) {
 }
 
 void SBTrace::GetTraceConfig(SBTraceOptions &options, SBError &error) {
+  LLDB_RECORD_METHOD(void, SBTrace, GetTraceConfig,
+                     (lldb::SBTraceOptions &, lldb::SBError &), options, error);
+
   ProcessSP process_sp(GetSP());
   error.Clear();
 
@@ -83,6 +90,8 @@ void SBTrace::GetTraceConfig(SBTraceOptions &options, SBError &error) {
 }
 
 lldb::user_id_t SBTrace::GetTraceUID() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::user_id_t, SBTrace, GetTraceUID);
+
   if (m_trace_impl_sp)
     return m_trace_impl_sp->uid;
   return LLDB_INVALID_UID;
@@ -94,6 +103,8 @@ void SBTrace::SetTraceUID(lldb::user_id_t uid) {
 }
 
 SBTrace::SBTrace() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBTrace);
+
   m_trace_impl_sp = std::make_shared<TraceImpl>();
   if (m_trace_impl_sp)
     m_trace_impl_sp->uid = LLDB_INVALID_UID;
@@ -102,6 +113,8 @@ SBTrace::SBTrace() {
 void SBTrace::SetSP(const ProcessSP &process_sp) { m_opaque_wp = process_sp; }
 
 bool SBTrace::IsValid() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBTrace, IsValid);
+
   if (!m_trace_impl_sp)
     return false;
   if (!GetSP())

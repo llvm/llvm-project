@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBData.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 
@@ -22,13 +23,20 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBData::SBData() : m_opaque_sp(new DataExtractor()) {}
+SBData::SBData() : m_opaque_sp(new DataExtractor()) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBData);
+}
 
 SBData::SBData(const lldb::DataExtractorSP &data_sp) : m_opaque_sp(data_sp) {}
 
-SBData::SBData(const SBData &rhs) : m_opaque_sp(rhs.m_opaque_sp) {}
+SBData::SBData(const SBData &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBData, (const lldb::SBData &), rhs);
+}
 
 const SBData &SBData::operator=(const SBData &rhs) {
+  LLDB_RECORD_METHOD(const lldb::SBData &,
+                     SBData, operator=,(const lldb::SBData &), rhs);
+
   if (this != &rhs)
     m_opaque_sp = rhs.m_opaque_sp;
   return *this;
@@ -50,9 +58,15 @@ lldb::DataExtractorSP &SBData::operator*() { return m_opaque_sp; }
 
 const lldb::DataExtractorSP &SBData::operator*() const { return m_opaque_sp; }
 
-bool SBData::IsValid() { return m_opaque_sp.get() != NULL; }
+bool SBData::IsValid() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBData, IsValid);
+
+  return m_opaque_sp.get() != NULL;
+}
 
 uint8_t SBData::GetAddressByteSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint8_t, SBData, GetAddressByteSize);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   uint8_t value = 0;
   if (m_opaque_sp.get())
@@ -65,6 +79,9 @@ uint8_t SBData::GetAddressByteSize() {
 }
 
 void SBData::SetAddressByteSize(uint8_t addr_byte_size) {
+  LLDB_RECORD_METHOD(void, SBData, SetAddressByteSize, (uint8_t),
+                     addr_byte_size);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (m_opaque_sp.get())
     m_opaque_sp->SetAddressByteSize(addr_byte_size);
@@ -73,11 +90,15 @@ void SBData::SetAddressByteSize(uint8_t addr_byte_size) {
 }
 
 void SBData::Clear() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBData, Clear);
+
   if (m_opaque_sp.get())
     m_opaque_sp->Clear();
 }
 
 size_t SBData::GetByteSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBData, GetByteSize);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   size_t value = 0;
   if (m_opaque_sp.get())
@@ -90,6 +111,8 @@ size_t SBData::GetByteSize() {
 }
 
 lldb::ByteOrder SBData::GetByteOrder() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::ByteOrder, SBData, GetByteOrder);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   lldb::ByteOrder value = eByteOrderInvalid;
   if (m_opaque_sp.get())
@@ -102,6 +125,8 @@ lldb::ByteOrder SBData::GetByteOrder() {
 }
 
 void SBData::SetByteOrder(lldb::ByteOrder endian) {
+  LLDB_RECORD_METHOD(void, SBData, SetByteOrder, (lldb::ByteOrder), endian);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (m_opaque_sp.get())
     m_opaque_sp->SetByteOrder(endian);
@@ -110,6 +135,9 @@ void SBData::SetByteOrder(lldb::ByteOrder endian) {
 }
 
 float SBData::GetFloat(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(float, SBData, GetFloat, (lldb::SBError &, lldb::offset_t),
+                     error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   float value = 0;
   if (!m_opaque_sp.get()) {
@@ -127,6 +155,9 @@ float SBData::GetFloat(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 double SBData::GetDouble(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(double, SBData, GetDouble,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   double value = 0;
   if (!m_opaque_sp.get()) {
@@ -145,6 +176,9 @@ double SBData::GetDouble(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 long double SBData::GetLongDouble(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(long double, SBData, GetLongDouble,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   long double value = 0;
   if (!m_opaque_sp.get()) {
@@ -163,6 +197,9 @@ long double SBData::GetLongDouble(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 lldb::addr_t SBData::GetAddress(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(lldb::addr_t, SBData, GetAddress,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   lldb::addr_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -182,6 +219,9 @@ lldb::addr_t SBData::GetAddress(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 uint8_t SBData::GetUnsignedInt8(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(uint8_t, SBData, GetUnsignedInt8,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   uint8_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -200,6 +240,9 @@ uint8_t SBData::GetUnsignedInt8(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 uint16_t SBData::GetUnsignedInt16(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(uint16_t, SBData, GetUnsignedInt16,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   uint16_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -218,6 +261,9 @@ uint16_t SBData::GetUnsignedInt16(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 uint32_t SBData::GetUnsignedInt32(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(uint32_t, SBData, GetUnsignedInt32,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   uint32_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -236,6 +282,9 @@ uint32_t SBData::GetUnsignedInt32(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 uint64_t SBData::GetUnsignedInt64(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(uint64_t, SBData, GetUnsignedInt64,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   uint64_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -254,6 +303,9 @@ uint64_t SBData::GetUnsignedInt64(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 int8_t SBData::GetSignedInt8(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(int8_t, SBData, GetSignedInt8,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int8_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -272,6 +324,9 @@ int8_t SBData::GetSignedInt8(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 int16_t SBData::GetSignedInt16(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(int16_t, SBData, GetSignedInt16,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int16_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -290,6 +345,9 @@ int16_t SBData::GetSignedInt16(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 int32_t SBData::GetSignedInt32(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(int32_t, SBData, GetSignedInt32,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int32_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -308,6 +366,9 @@ int32_t SBData::GetSignedInt32(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 int64_t SBData::GetSignedInt64(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(int64_t, SBData, GetSignedInt64,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int64_t value = 0;
   if (!m_opaque_sp.get()) {
@@ -326,6 +387,9 @@ int64_t SBData::GetSignedInt64(lldb::SBError &error, lldb::offset_t offset) {
 }
 
 const char *SBData::GetString(lldb::SBError &error, lldb::offset_t offset) {
+  LLDB_RECORD_METHOD(const char *, SBData, GetString,
+                     (lldb::SBError &, lldb::offset_t), error, offset);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   const char *value = 0;
   if (!m_opaque_sp.get()) {
@@ -345,6 +409,9 @@ const char *SBData::GetString(lldb::SBError &error, lldb::offset_t offset) {
 
 bool SBData::GetDescription(lldb::SBStream &description,
                             lldb::addr_t base_addr) {
+  LLDB_RECORD_METHOD(bool, SBData, GetDescription,
+                     (lldb::SBStream &, lldb::addr_t), description, base_addr);
+
   Stream &strm = description.ref();
 
   if (m_opaque_sp) {
@@ -399,6 +466,8 @@ void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
 }
 
 bool SBData::Append(const SBData &rhs) {
+  LLDB_RECORD_METHOD(bool, SBData, Append, (const lldb::SBData &), rhs);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   bool value = false;
   if (m_opaque_sp.get() && rhs.m_opaque_sp.get())
@@ -412,8 +481,12 @@ bool SBData::Append(const SBData &rhs) {
 lldb::SBData SBData::CreateDataFromCString(lldb::ByteOrder endian,
                                            uint32_t addr_byte_size,
                                            const char *data) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromCString,
+                            (lldb::ByteOrder, uint32_t, const char *), endian,
+                            addr_byte_size, data);
+
   if (!data || !data[0])
-    return SBData();
+    return LLDB_RECORD_RESULT(SBData());
 
   uint32_t data_len = strlen(data);
 
@@ -423,15 +496,19 @@ lldb::SBData SBData::CreateDataFromCString(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return ret;
+  return LLDB_RECORD_RESULT(ret);
 }
 
 lldb::SBData SBData::CreateDataFromUInt64Array(lldb::ByteOrder endian,
                                                uint32_t addr_byte_size,
                                                uint64_t *array,
                                                size_t array_len) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromUInt64Array,
+                            (lldb::ByteOrder, uint32_t, uint64_t *, size_t),
+                            endian, addr_byte_size, array, array_len);
+
   if (!array || array_len == 0)
-    return SBData();
+    return LLDB_RECORD_RESULT(SBData());
 
   size_t data_len = array_len * sizeof(uint64_t);
 
@@ -441,15 +518,19 @@ lldb::SBData SBData::CreateDataFromUInt64Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return ret;
+  return LLDB_RECORD_RESULT(ret);
 }
 
 lldb::SBData SBData::CreateDataFromUInt32Array(lldb::ByteOrder endian,
                                                uint32_t addr_byte_size,
                                                uint32_t *array,
                                                size_t array_len) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromUInt32Array,
+                            (lldb::ByteOrder, uint32_t, uint32_t *, size_t),
+                            endian, addr_byte_size, array, array_len);
+
   if (!array || array_len == 0)
-    return SBData();
+    return LLDB_RECORD_RESULT(SBData());
 
   size_t data_len = array_len * sizeof(uint32_t);
 
@@ -459,15 +540,19 @@ lldb::SBData SBData::CreateDataFromUInt32Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return ret;
+  return LLDB_RECORD_RESULT(ret);
 }
 
 lldb::SBData SBData::CreateDataFromSInt64Array(lldb::ByteOrder endian,
                                                uint32_t addr_byte_size,
                                                int64_t *array,
                                                size_t array_len) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromSInt64Array,
+                            (lldb::ByteOrder, uint32_t, int64_t *, size_t),
+                            endian, addr_byte_size, array, array_len);
+
   if (!array || array_len == 0)
-    return SBData();
+    return LLDB_RECORD_RESULT(SBData());
 
   size_t data_len = array_len * sizeof(int64_t);
 
@@ -477,15 +562,19 @@ lldb::SBData SBData::CreateDataFromSInt64Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return ret;
+  return LLDB_RECORD_RESULT(ret);
 }
 
 lldb::SBData SBData::CreateDataFromSInt32Array(lldb::ByteOrder endian,
                                                uint32_t addr_byte_size,
                                                int32_t *array,
                                                size_t array_len) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromSInt32Array,
+                            (lldb::ByteOrder, uint32_t, int32_t *, size_t),
+                            endian, addr_byte_size, array, array_len);
+
   if (!array || array_len == 0)
-    return SBData();
+    return LLDB_RECORD_RESULT(SBData());
 
   size_t data_len = array_len * sizeof(int32_t);
 
@@ -495,15 +584,19 @@ lldb::SBData SBData::CreateDataFromSInt32Array(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return ret;
+  return LLDB_RECORD_RESULT(ret);
 }
 
 lldb::SBData SBData::CreateDataFromDoubleArray(lldb::ByteOrder endian,
                                                uint32_t addr_byte_size,
                                                double *array,
                                                size_t array_len) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBData, SBData, CreateDataFromDoubleArray,
+                            (lldb::ByteOrder, uint32_t, double *, size_t),
+                            endian, addr_byte_size, array, array_len);
+
   if (!array || array_len == 0)
-    return SBData();
+    return LLDB_RECORD_RESULT(SBData());
 
   size_t data_len = array_len * sizeof(double);
 
@@ -513,10 +606,12 @@ lldb::SBData SBData::CreateDataFromDoubleArray(lldb::ByteOrder endian,
 
   SBData ret(data_sp);
 
-  return ret;
+  return LLDB_RECORD_RESULT(ret);
 }
 
 bool SBData::SetDataFromCString(const char *data) {
+  LLDB_RECORD_METHOD(bool, SBData, SetDataFromCString, (const char *), data);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (!data) {
@@ -544,6 +639,9 @@ bool SBData::SetDataFromCString(const char *data) {
 }
 
 bool SBData::SetDataFromUInt64Array(uint64_t *array, size_t array_len) {
+  LLDB_RECORD_METHOD(bool, SBData, SetDataFromUInt64Array, (uint64_t *, size_t),
+                     array, array_len);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (!array || array_len == 0) {
@@ -576,6 +674,9 @@ bool SBData::SetDataFromUInt64Array(uint64_t *array, size_t array_len) {
 }
 
 bool SBData::SetDataFromUInt32Array(uint32_t *array, size_t array_len) {
+  LLDB_RECORD_METHOD(bool, SBData, SetDataFromUInt32Array, (uint32_t *, size_t),
+                     array, array_len);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (!array || array_len == 0) {
@@ -608,6 +709,9 @@ bool SBData::SetDataFromUInt32Array(uint32_t *array, size_t array_len) {
 }
 
 bool SBData::SetDataFromSInt64Array(int64_t *array, size_t array_len) {
+  LLDB_RECORD_METHOD(bool, SBData, SetDataFromSInt64Array, (int64_t *, size_t),
+                     array, array_len);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (!array || array_len == 0) {
@@ -640,6 +744,9 @@ bool SBData::SetDataFromSInt64Array(int64_t *array, size_t array_len) {
 }
 
 bool SBData::SetDataFromSInt32Array(int32_t *array, size_t array_len) {
+  LLDB_RECORD_METHOD(bool, SBData, SetDataFromSInt32Array, (int32_t *, size_t),
+                     array, array_len);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (!array || array_len == 0) {
@@ -672,6 +779,9 @@ bool SBData::SetDataFromSInt32Array(int32_t *array, size_t array_len) {
 }
 
 bool SBData::SetDataFromDoubleArray(double *array, size_t array_len) {
+  LLDB_RECORD_METHOD(bool, SBData, SetDataFromDoubleArray, (double *, size_t),
+                     array, array_len);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (!array || array_len == 0) {

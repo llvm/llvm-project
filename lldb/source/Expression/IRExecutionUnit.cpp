@@ -506,12 +506,6 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   return;
 }
 
-IRExecutionUnit::~IRExecutionUnit() {
-  m_module_up.reset();
-  m_execution_engine_up.reset();
-  m_context_up.reset();
-}
-
 IRExecutionUnit::MemoryManager::MemoryManager(IRExecutionUnit &parent)
     : m_default_mm_up(new llvm::SectionMemoryManager()), m_parent(parent) {}
 

@@ -168,6 +168,7 @@ class TestVSCode_launch(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfDarwin # Skip this test for now until we can figure out why tings aren't working on build bots
     @skipIfLinux # This test is timing out and/or failing on Linux as well as Darwin
+    @expectedFailureNetBSD
     @no_debug_info_test
     def test_shellExpandArguments_enabled(self):
         '''

@@ -65,6 +65,7 @@
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/State.h"
 
@@ -279,140 +280,6 @@ bool ProcessProperties::GetStopOnExec() const {
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
-void ProcessInstanceInfo::Dump(Stream &s, Platform *platform) const {
-  const char *cstr;
-  if (m_pid != LLDB_INVALID_PROCESS_ID)
-    s.Printf("    pid = %" PRIu64 "\n", m_pid);
-
-  if (m_parent_pid != LLDB_INVALID_PROCESS_ID)
-    s.Printf(" parent = %" PRIu64 "\n", m_parent_pid);
-
-  if (m_executable) {
-    s.Printf("   name = %s\n", m_executable.GetFilename().GetCString());
-    s.PutCString("   file = ");
-    m_executable.Dump(&s);
-    s.EOL();
-  }
-  const uint32_t argc = m_arguments.GetArgumentCount();
-  if (argc > 0) {
-    for (uint32_t i = 0; i < argc; i++) {
-      const char *arg = m_arguments.GetArgumentAtIndex(i);
-      if (i < 10)
-        s.Printf(" arg[%u] = %s\n", i, arg);
-      else
-        s.Printf("arg[%u] = %s\n", i, arg);
-    }
-  }
-
-  s.Format("{0}", m_environment);
-
-  if (m_arch.IsValid()) {
-    s.Printf("   arch = ");
-    m_arch.DumpTriple(s);
-    s.EOL();
-  }
-
-  if (m_uid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_uid);
-    s.Printf("    uid = %-5u (%s)\n", m_uid, cstr ? cstr : "");
-  }
-  if (m_gid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_gid);
-    s.Printf("    gid = %-5u (%s)\n", m_gid, cstr ? cstr : "");
-  }
-  if (m_euid != UINT32_MAX) {
-    cstr = platform->GetUserName(m_euid);
-    s.Printf("   euid = %-5u (%s)\n", m_euid, cstr ? cstr : "");
-  }
-  if (m_egid != UINT32_MAX) {
-    cstr = platform->GetGroupName(m_egid);
-    s.Printf("   egid = %-5u (%s)\n", m_egid, cstr ? cstr : "");
-  }
-}
-
-void ProcessInstanceInfo::DumpTableHeader(Stream &s, Platform *platform,
-                                          bool show_args, bool verbose) {
-  const char *label;
-  if (show_args || verbose)
-    label = "ARGUMENTS";
-  else
-    label = "NAME";
-
-  if (verbose) {
-    s.Printf("PID    PARENT USER       GROUP      EFF USER   EFF GROUP  TRIPLE "
-             "                  %s\n",
-             label);
-    s.PutCString("====== ====== ========== ========== ========== ========== "
-                 "======================== ============================\n");
-  } else {
-    s.Printf("PID    PARENT USER       TRIPLE                   %s\n", label);
-    s.PutCString("====== ====== ========== ======================== "
-                 "============================\n");
-  }
-}
-
-void ProcessInstanceInfo::DumpAsTableRow(Stream &s, Platform *platform,
-                                         bool show_args, bool verbose) const {
-  if (m_pid != LLDB_INVALID_PROCESS_ID) {
-    const char *cstr;
-    s.Printf("%-6" PRIu64 " %-6" PRIu64 " ", m_pid, m_parent_pid);
-
-    StreamString arch_strm;
-    if (m_arch.IsValid())
-      m_arch.DumpTriple(arch_strm);
-
-    if (verbose) {
-      cstr = platform->GetUserName(m_uid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_uid);
-
-      cstr = platform->GetGroupName(m_gid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_gid);
-
-      cstr = platform->GetUserName(m_euid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_euid);
-
-      cstr = platform->GetGroupName(m_egid);
-      if (cstr &&
-          cstr[0]) // Watch for empty string that indicates lookup failed
-        s.Printf("%-10s ", cstr);
-      else
-        s.Printf("%-10u ", m_egid);
-
-      s.Printf("%-24s ", arch_strm.GetData());
-    } else {
-      s.Printf("%-10s %-24s ", platform->GetUserName(m_euid),
-               arch_strm.GetData());
-    }
-
-    if (verbose || show_args) {
-      const uint32_t argc = m_arguments.GetArgumentCount();
-      if (argc > 0) {
-        for (uint32_t i = 0; i < argc; i++) {
-          if (i > 0)
-            s.PutChar(' ');
-          s.PutCString(m_arguments.GetArgumentAtIndex(i));
-        }
-      }
-    } else {
-      s.PutCString(GetName());
-    }
-
-    s.EOL();
-  }
-}
-
 Status ProcessLaunchCommandOptions::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
@@ -580,89 +447,6 @@ static constexpr OptionDefinition g_process_launch_options[] = {
 
 llvm::ArrayRef<OptionDefinition> ProcessLaunchCommandOptions::GetDefinitions() {
   return llvm::makeArrayRef(g_process_launch_options);
-}
-
-bool ProcessInstanceInfoMatch::NameMatches(const char *process_name) const {
-  if (m_name_match_type == NameMatch::Ignore || process_name == nullptr)
-    return true;
-  const char *match_name = m_match_info.GetName();
-  if (!match_name)
-    return true;
-
-  return lldb_private::NameMatches(process_name, m_name_match_type, match_name);
-}
-
-bool ProcessInstanceInfoMatch::Matches(
-    const ProcessInstanceInfo &proc_info) const {
-  if (!NameMatches(proc_info.GetName()))
-    return false;
-
-  if (m_match_info.ProcessIDIsValid() &&
-      m_match_info.GetProcessID() != proc_info.GetProcessID())
-    return false;
-
-  if (m_match_info.ParentProcessIDIsValid() &&
-      m_match_info.GetParentProcessID() != proc_info.GetParentProcessID())
-    return false;
-
-  if (m_match_info.UserIDIsValid() &&
-      m_match_info.GetUserID() != proc_info.GetUserID())
-    return false;
-
-  if (m_match_info.GroupIDIsValid() &&
-      m_match_info.GetGroupID() != proc_info.GetGroupID())
-    return false;
-
-  if (m_match_info.EffectiveUserIDIsValid() &&
-      m_match_info.GetEffectiveUserID() != proc_info.GetEffectiveUserID())
-    return false;
-
-  if (m_match_info.EffectiveGroupIDIsValid() &&
-      m_match_info.GetEffectiveGroupID() != proc_info.GetEffectiveGroupID())
-    return false;
-
-  if (m_match_info.GetArchitecture().IsValid() &&
-      !m_match_info.GetArchitecture().IsCompatibleMatch(
-          proc_info.GetArchitecture()))
-    return false;
-  return true;
-}
-
-bool ProcessInstanceInfoMatch::MatchAllProcesses() const {
-  if (m_name_match_type != NameMatch::Ignore)
-    return false;
-
-  if (m_match_info.ProcessIDIsValid())
-    return false;
-
-  if (m_match_info.ParentProcessIDIsValid())
-    return false;
-
-  if (m_match_info.UserIDIsValid())
-    return false;
-
-  if (m_match_info.GroupIDIsValid())
-    return false;
-
-  if (m_match_info.EffectiveUserIDIsValid())
-    return false;
-
-  if (m_match_info.EffectiveGroupIDIsValid())
-    return false;
-
-  if (m_match_info.GetArchitecture().IsValid())
-    return false;
-
-  if (m_match_all_users)
-    return false;
-
-  return true;
-}
-
-void ProcessInstanceInfoMatch::Clear() {
-  m_match_info.Clear();
-  m_name_match_type = NameMatch::Ignore;
-  m_match_all_users = false;
 }
 
 ProcessSP Process::FindPlugin(lldb::TargetSP target_sp,
@@ -3185,11 +2969,10 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
                 process_name, sizeof(process_name));
             if (num_matches > 1) {
               StreamString s;
-              ProcessInstanceInfo::DumpTableHeader(s, platform_sp.get(), true,
-                                                   false);
+              ProcessInstanceInfo::DumpTableHeader(s, true, false);
               for (size_t i = 0; i < num_matches; i++) {
                 process_infos.GetProcessInfoAtIndex(i).DumpAsTableRow(
-                    s, platform_sp.get(), true, false);
+                    s, platform_sp->GetUserIDResolver(), true, false);
               }
               error.SetErrorStringWithFormat(
                   "more than one process named %s:\n%s", process_name,
@@ -4415,10 +4198,10 @@ void Process::ProcessEventData::DoOnRemoval(Event *event_ptr) {
           process_sp->GetTarget().RunStopHooks();
           if (process_sp->GetPrivateState() == eStateRunning)
             SetRestarted(true);
-        }
       }
     }
   }
+}
 }
 
 void Process::ProcessEventData::Dump(Stream *s) const {

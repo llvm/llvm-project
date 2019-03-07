@@ -21,6 +21,7 @@
 #include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
+#include "ClangExpressionSourceCode.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
 
@@ -66,7 +67,7 @@ ClangUserExpression::ClangUserExpression(
       m_type_system_helper(*m_target_wp.lock(), options.GetExecutionPolicy() ==
                                                     eExecutionPolicyTopLevel),
       m_result_delegate(exe_scope.CalculateTarget()), m_ctx_obj(ctx_obj) {
-  m_language_flags |= eLanguageFlagEnforceValidObject;
+  m_enforce_valid_object = true;
   switch (m_language) {
   case lldb::eLanguageTypeC_plus_plus:
     m_allow_cxx = true;
@@ -160,7 +161,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   } else if (clang::CXXMethodDecl *method_decl =
           ClangASTContext::DeclContextGetAsCXXMethodDecl(decl_context)) {
     if (m_allow_cxx && method_decl->isInstance()) {
-      if (m_language_flags & eLanguageFlagEnforceValidObject) {
+      if (m_enforce_valid_object) {
         lldb::VariableListSP variable_list_sp(
             function_block->GetBlockVariableList(true));
 
@@ -183,14 +184,14 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
         }
       }
 
-      m_language_flags |= eLanguageFlagInCPlusPlusMethod;
-      m_language_flags |= eLanguageFlagNeedsObjectPointer;
+      m_in_cplusplus_method = true;
+      m_needs_object_ptr = true;
     }
   } else if (clang::ObjCMethodDecl *method_decl =
                  ClangASTContext::DeclContextGetAsObjCMethodDecl(
                      decl_context)) {
     if (m_allow_objc) {
-      if (m_language_flags & eLanguageFlagEnforceValidObject) {
+      if (m_enforce_valid_object) {
         lldb::VariableListSP variable_list_sp(
             function_block->GetBlockVariableList(true));
 
@@ -213,11 +214,11 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
         }
       }
 
-      m_language_flags |= eLanguageFlagInObjectiveCMethod;
-      m_language_flags |= eLanguageFlagNeedsObjectPointer;
+      m_in_objectivec_method = true;
+      m_needs_object_ptr = true;
 
       if (!method_decl->isInstanceMethod())
-        m_language_flags |= eLanguageFlagInStaticMethod;
+        m_in_static_method = true;
     }
   } else if (clang::FunctionDecl *function_decl =
                  ClangASTContext::DeclContextGetAsFunctionDecl(decl_context)) {
@@ -232,7 +233,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
     if (metadata && metadata->HasObjectPtr()) {
       lldb::LanguageType language = metadata->GetObjectPtrLanguage();
       if (language == lldb::eLanguageTypeC_plus_plus) {
-        if (m_language_flags & eLanguageFlagEnforceValidObject) {
+        if (m_enforce_valid_object) {
           lldb::VariableListSP variable_list_sp(
               function_block->GetBlockVariableList(true));
 
@@ -256,10 +257,10 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           }
         }
 
-        m_language_flags |= eLanguageFlagInCPlusPlusMethod;
-        m_language_flags |= eLanguageFlagNeedsObjectPointer;
+        m_in_cplusplus_method = true;
+        m_needs_object_ptr = true;
       } else if (language == lldb::eLanguageTypeObjC) {
-        if (m_language_flags & eLanguageFlagEnforceValidObject) {
+        if (m_enforce_valid_object) {
           lldb::VariableListSP variable_list_sp(
               function_block->GetBlockVariableList(true));
 
@@ -300,15 +301,15 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             return;
           } else if (ClangASTContext::IsObjCObjectPointerType(
                          self_clang_type)) {
-            m_language_flags |= eLanguageFlagInObjectiveCMethod;
-            m_language_flags |= eLanguageFlagNeedsObjectPointer;
+            m_in_objectivec_method = true;
+            m_needs_object_ptr = true;
           } else {
             err.SetErrorString(selfErrorString);
             return;
           }
         } else {
-          m_language_flags |= eLanguageFlagInObjectiveCMethod;
-          m_language_flags |= eLanguageFlagNeedsObjectPointer;
+          m_in_objectivec_method = true;
+          m_needs_object_ptr = true;
         }
       }
     }
@@ -411,23 +412,23 @@ void ClangUserExpression::UpdateLanguageForExpr(
   if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
     m_transformed_text = m_expr_text;
   } else {
-    std::unique_ptr<ExpressionSourceCode> source_code(
-        ExpressionSourceCode::CreateWrapped(prefix.c_str(),
+    std::unique_ptr<ClangExpressionSourceCode> source_code(
+        ClangExpressionSourceCode::CreateWrapped(prefix.c_str(),
                                             m_expr_text.c_str()));
 
-    if (m_language_flags & eLanguageFlagInCPlusPlusMethod)
+    if (m_in_cplusplus_method)
       m_expr_lang = lldb::eLanguageTypeC_plus_plus;
-    else if (m_language_flags & eLanguageFlagInObjectiveCMethod)
+    else if (m_in_objectivec_method)
       m_expr_lang = lldb::eLanguageTypeObjC;
     else
       m_expr_lang = lldb::eLanguageTypeC;
 
     m_options.SetLanguage(m_expr_lang);
-    uint32_t first_body_line = 0;
 
-    if (!source_code->GetText(m_transformed_text, m_expr_lang, m_language_flags,
-                              m_options, m_swift_generic_info, exe_ctx,
-                              !m_ctx_obj, first_body_line)) {
+    if (!source_code->GetText(m_transformed_text, m_expr_lang, 
+                              m_in_static_method,
+                              m_options, exe_ctx,
+                              !m_ctx_obj)) {
       diagnostic_manager.PutString(eDiagnosticSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -438,7 +439,7 @@ void ClangUserExpression::UpdateLanguageForExpr(
     std::size_t original_start;
     std::size_t original_end;
     bool found_bounds = source_code->GetOriginalBodyBounds(
-        m_transformed_text, m_expr_lang, original_start, original_end);
+        m_transformed_text, original_start, original_end);
     if (found_bounds) {
       m_user_expression_start_pos = original_start;
     }
@@ -540,8 +541,8 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         size_t fixed_end;
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
-        if (ExpressionSourceCode::GetOriginalBodyBounds(
-                fixed_expression, m_expr_lang, fixed_start, fixed_end))
+        if (ClangExpressionSourceCode::GetOriginalBodyBounds(
+                fixed_expression, fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);
       }
@@ -751,16 +752,16 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
   lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
   lldb::addr_t cmd_ptr = LLDB_INVALID_ADDRESS;
 
-  if (m_language_flags & eLanguageFlagNeedsObjectPointer) {
+  if (m_needs_object_ptr) {
     lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP();
     if (!frame_sp)
       return true;
 
     ConstString object_name;
 
-    if (m_language_flags & eLanguageFlagInCPlusPlusMethod) {
+    if (m_in_cplusplus_method) {
       object_name.SetCString("this");
-    } else if (m_language_flags & eLanguageFlagInObjectiveCMethod) {
+    } else if (m_in_objectivec_method) {
       object_name.SetCString("self");
     } else {
       diagnostic_manager.PutString(
@@ -788,7 +789,7 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
       object_ptr = 0;
     }
 
-    if (m_language_flags & eLanguageFlagInObjectiveCMethod) {
+    if (m_in_objectivec_method) {
       ConstString cmd_name("_cmd");
 
       cmd_ptr = GetObjectPointer(frame_sp, cmd_name, object_ptr_error);
@@ -804,7 +805,7 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     args.push_back(object_ptr);
 
-    if (m_language_flags & eLanguageFlagInObjectiveCMethod)
+    if (m_in_objectivec_method)
       args.push_back(cmd_ptr);
 
     args.push_back(struct_address);

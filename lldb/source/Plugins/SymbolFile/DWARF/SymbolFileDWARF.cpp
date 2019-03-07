@@ -49,6 +49,7 @@
 #include "lldb/Symbol/VariableList.h"
 
 #include "lldb/Target/Language.h"
+#include "lldb/Target/Target.h"
 
 #include "AppleDWARFIndex.h"
 #include "DWARFASTParser.h"
@@ -2853,7 +2854,7 @@ bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
     if (decl_ctx_die1.Tag() != decl_ctx_die2.Tag())
       return false;
   }
-#if defined LLDB_CONFIGURATION_DEBUG
+#ifndef NDEBUG
 
   // Make sure the top item in the decl context die array is always
   // DW_TAG_compile_unit or DW_TAG_partial_unit. If it isn't then
@@ -3981,7 +3982,10 @@ SymbolFileDWARFDwp *SymbolFileDWARF::GetDwpSymbolFile() {
     module_spec.GetFileSpec() = m_obj_file->GetFileSpec();
     module_spec.GetSymbolFileSpec() =
         FileSpec(m_obj_file->GetFileSpec().GetPath() + ".dwp");
-    FileSpec dwp_filespec = Symbols::LocateExecutableSymbolFile(module_spec);
+
+    FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
+    FileSpec dwp_filespec =
+        Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       m_dwp_symfile = SymbolFileDWARFDwp::Create(GetObjectFile()->GetModule(),
                                                  dwp_filespec);

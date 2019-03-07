@@ -136,9 +136,7 @@ DataExtractor::DataExtractor(const void *data, offset_t length,
             length),
       m_byte_order(endian), m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(addr_size == 4 || addr_size == 8);
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -153,9 +151,7 @@ DataExtractor::DataExtractor(const DataBufferSP &data_sp, ByteOrder endian,
     : m_start(nullptr), m_end(nullptr), m_byte_order(endian),
       m_addr_size(addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(addr_size == 4 || addr_size == 8);
-#endif
   SetData(data_sp);
 }
 
@@ -171,9 +167,7 @@ DataExtractor::DataExtractor(const DataExtractor &data, offset_t offset,
     : m_start(nullptr), m_end(nullptr), m_byte_order(data.m_byte_order),
       m_addr_size(data.m_addr_size), m_data_sp(),
       m_target_byte_size(target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   if (data.ValidOffset(offset)) {
     offset_t bytes_available = data.GetByteSize() - offset;
     if (length > bytes_available)
@@ -186,9 +180,7 @@ DataExtractor::DataExtractor(const DataExtractor &rhs)
     : m_start(rhs.m_start), m_end(rhs.m_end), m_byte_order(rhs.m_byte_order),
       m_addr_size(rhs.m_addr_size), m_data_sp(rhs.m_data_sp),
       m_target_byte_size(rhs.m_target_byte_size) {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -276,9 +268,7 @@ lldb::offset_t DataExtractor::SetData(const DataExtractor &data,
                                       offset_t data_offset,
                                       offset_t data_length) {
   m_addr_size = data.m_addr_size;
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   // If "data" contains shared pointer to data, then we can use that
   if (data.m_data_sp) {
     m_byte_order = data.m_byte_order;
@@ -706,16 +696,12 @@ long double DataExtractor::GetLongDouble(offset_t *offset_ptr) const {
 // RETURNS the address that was extracted, or zero on failure.
 //------------------------------------------------------------------
 uint64_t DataExtractor::GetAddress(offset_t *offset_ptr) const {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   return GetMaxU64(offset_ptr, m_addr_size);
 }
 
 uint64_t DataExtractor::GetAddress_unchecked(offset_t *offset_ptr) const {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   return GetMaxU64_unchecked(offset_ptr, m_addr_size);
 }
 
@@ -728,9 +714,7 @@ uint64_t DataExtractor::GetAddress_unchecked(offset_t *offset_ptr) const {
 // RETURNS the pointer that was extracted, or zero on failure.
 //------------------------------------------------------------------
 uint64_t DataExtractor::GetPointer(offset_t *offset_ptr) const {
-#ifdef LLDB_CONFIGURATION_DEBUG
   assert(m_addr_size == 4 || m_addr_size == 8);
-#endif
   return GetMaxU64(offset_ptr, m_addr_size);
 }
 

@@ -5,6 +5,7 @@ endif()
 add_lldb_library(lldbPluginExpressionParserSwift PLUGIN
   SwiftASTManipulator.cpp
   SwiftExpressionParser.cpp
+  SwiftExpressionSourceCode.cpp
   SwiftExpressionVariable.cpp
   SwiftPersistentExpressionState.cpp
   SwiftREPL.cpp

@@ -2672,12 +2672,11 @@ ExpressionResults Target::EvaluateExpression(
   } else {
     llvm::StringRef prefix = GetExpressionPrefixContents();
     Status error;
-    execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
-                                                 result_valobj_sp, error,
-                                                 0, // Line Number
-                                                 fixed_expression,
-                                                 nullptr, // Module
-                                                 ctx_obj);
+    execution_results =
+        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+                                 result_valobj_sp, error, fixed_expression,
+                                 nullptr, // Module
+                                 ctx_obj);
   }
 
   m_suppress_stop_hooks = old_suppress_value;

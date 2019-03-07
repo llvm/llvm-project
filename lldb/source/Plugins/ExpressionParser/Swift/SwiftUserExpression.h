@@ -42,13 +42,6 @@ class SwiftUserExpression : public LLVMUserExpression {
 public:
   enum { kDefaultTimeout = 500000u };
 
-  enum {
-    eLanguageFlagNeedsObjectPointer = 1 << 0,
-    eLanguageFlagInStaticMethod = 1 << 1,
-    eLanguageFlagIsClass = 1 << 2,
-    eLanguageFlagIsWeakSelf = 1 << 3
-  };
-
   class SwiftUserExpressionHelper : public ExpressionTypeSystemHelper {
   public:
     SwiftUserExpressionHelper(Target &)
@@ -182,6 +175,10 @@ private:
   PersistentVariableDelegate m_persistent_variable_delegate;
   std::unique_ptr<SwiftExpressionParser> m_parser;
   bool m_runs_in_playground_or_repl;
+  bool m_needs_object_ptr = false;
+  bool m_in_static_method = false;
+  bool m_is_class = false;
+  bool m_is_weak_self = false;
 };
 
 } // namespace lldb_private

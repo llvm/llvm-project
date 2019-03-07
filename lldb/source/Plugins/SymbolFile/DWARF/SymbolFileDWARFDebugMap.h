@@ -9,13 +9,12 @@
 #ifndef SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
 #define SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
 
+#include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Utility/RangeMap.h"
+#include "llvm/Support/Chrono.h"
 #include <bitset>
 #include <map>
 #include <vector>
-
-#include "lldb/Core/RangeMap.h"
-#include "lldb/Symbol/SymbolFile.h"
-#include "llvm/Support/Chrono.h"
 
 #include "UniqueDWARFASTType.h"
 

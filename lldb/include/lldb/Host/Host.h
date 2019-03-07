@@ -26,6 +26,9 @@ namespace lldb_private {
 
 class FileAction;
 class ProcessLaunchInfo;
+class ProcessInstanceInfo;
+class ProcessInstanceInfoList;
+class ProcessInstanceInfoMatch;
 
 //----------------------------------------------------------------------
 // Exit Type for inferior processes
@@ -195,8 +198,6 @@ public:
   static bool FindProcessThreads(const lldb::pid_t pid, TidMap &tids_to_attach);
 
   static bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
-
-  static const lldb::UnixSignalsSP &GetUnixSignals();
 
   /// Launch the process specified in launch_info. The monitoring callback in
   /// launch_info must be set, and it will be called when the process

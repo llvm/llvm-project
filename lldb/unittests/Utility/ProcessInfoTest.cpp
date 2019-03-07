@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/ProcessInfo.h"
+#include "lldb/Utility/ProcessInfo.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;

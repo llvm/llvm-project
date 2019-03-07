@@ -19,9 +19,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Threading.h"
 
-#include "lldb/Utility/Flags.h"
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/dwarf.h"
 #include "lldb/Expression/DWARFExpression.h"
@@ -29,6 +26,8 @@
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Flags.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
 
 #include "DWARFDataExtractor.h"

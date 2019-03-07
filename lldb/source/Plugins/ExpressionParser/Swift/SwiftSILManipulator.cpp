@@ -106,7 +106,7 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(
   swift::PointerToAddressInst *address_of_variable =
       m_builder.createPointerToAddress(
           null_loc, pointer_to_variable,
-          converter.getLoweredType(type).getAddressType(),
+          converter.getLoweredType(type, swift::ResilienceExpansion::Minimal).getAddressType(),
           /*isStrict*/ true);
 
   if (info.needs_init) {

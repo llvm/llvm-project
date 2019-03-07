@@ -139,7 +139,10 @@ public:
   SwiftASTManipulator(swift::SourceFile &source_file, bool repl);
 
   static void WrapExpression(Stream &wrapped_stream, const char *text,
-                             uint32_t language_flags,
+                             bool needs_object_ptr,
+                             bool static_method,
+                             bool is_class,
+                             bool weak_self,
                              const EvaluateExpressionOptions &options,
                              const Expression::SwiftGenericInfo &generic_info,
                              llvm::StringRef os_version,

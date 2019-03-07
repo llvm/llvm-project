@@ -294,9 +294,11 @@ DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
     return LLDB_INVALID_ADDRESS;
   addr_t pc = thread->GetRegisterContext()->GetPC(LLDB_INVALID_ADDRESS);
 
+  int ptrsize = process->GetTarget().GetArchitecture().GetAddressByteSize();
+
   // The kernel is always loaded in high memory, if the top bit is zero,
   // this isn't a kernel.
-  if (process->GetTarget().GetArchitecture().GetAddressByteSize() == 8) {
+  if (ptrsize == 8) {
     if ((pc & (1ULL << 63)) == 0) {
       return LLDB_INVALID_ADDRESS;
     }
@@ -309,26 +311,26 @@ DynamicLoaderDarwinKernel::SearchForKernelNearPC(Process *process) {
   if (pc == LLDB_INVALID_ADDRESS)
     return LLDB_INVALID_ADDRESS;
 
-  // The kernel will load at at one megabyte boundary (0x100000), or at that
-  // boundary plus an offset of one page (0x1000) or two, or four (0x4000),
-  // depending on the device.
+  int pagesize = 0x4000;  // 16k pages on 64-bit targets
+  if (ptrsize == 4)
+    pagesize = 0x1000;    // 4k pages on 32-bit targets
 
-  // Round the current pc down to the nearest one megabyte boundary - the place
-  // where we will start searching.
-  addr_t addr = pc & ~0xfffff;
+  // The kernel will be loaded on a page boundary.
+  // Round the current pc down to the nearest page boundary.
+  addr_t addr = pc & ~(pagesize - 1ULL);
 
-  // Search backwards 32 megabytes, looking for the start of the kernel at each
-  // one-megabyte boundary.
-  for (int i = 0; i < 32; i++, addr -= 0x100000) {
-    // x86_64 kernels are at offset 0
-    if (CheckForKernelImageAtAddress(addr, process).IsValid())
+  // Search backwards for 32 megabytes, or first memory read error.
+  while (pc - addr < 32 * 0x100000) {
+    bool read_error;
+    if (CheckForKernelImageAtAddress(addr, process, &read_error).IsValid())
       return addr;
-    // 32-bit arm kernels are at offset 0x1000 (one 4k page)
-    if (CheckForKernelImageAtAddress(addr + 0x1000, process).IsValid())
-      return addr + 0x1000;
-    // 64-bit arm kernels are at offset 0x4000 (one 16k page)
-    if (CheckForKernelImageAtAddress(addr + 0x4000, process).IsValid())
-      return addr + 0x4000;
+
+    // Stop scanning on the first read error we encounter; we've walked
+    // past this executable block of memory.
+    if (read_error == true)
+      break;
+
+    addr -= pagesize;
   }
 
   return LLDB_INVALID_ADDRESS;
@@ -387,13 +389,19 @@ lldb::addr_t DynamicLoaderDarwinKernel::SearchForKernelViaExhaustiveSearch(
 //----------------------------------------------------------------------
 
 bool
-DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::MachO::mach_header &header) {
-  Status read_error;
+DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::MachO::mach_header &header,
+                                          bool *read_error) {
+  Status error;
+  if (read_error)
+    *read_error = false;
 
   // Read the mach header and see whether it looks like a kernel
-  if (process->DoReadMemory (addr, &header, sizeof(header), read_error) !=
-      sizeof(header))
+  if (process->DoReadMemory (addr, &header, sizeof(header), error) !=
+      sizeof(header)) {
+    if (read_error)
+      *read_error = true;
     return false;
+  }
 
   const uint32_t magicks[] = { llvm::MachO::MH_MAGIC_64, llvm::MachO::MH_MAGIC, llvm::MachO::MH_CIGAM, llvm::MachO::MH_CIGAM_64};
 
@@ -427,10 +435,14 @@ DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::M
 //----------------------------------------------------------------------
 lldb_private::UUID
 DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
-                                                        Process *process) {
+                                                        Process *process,
+                                                        bool *read_error) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-  if (addr == LLDB_INVALID_ADDRESS)
+  if (addr == LLDB_INVALID_ADDRESS) {
+    if (read_error)
+      *read_error = true;
     return UUID();
+  }
 
   if (log)
     log->Printf("DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: "
@@ -439,7 +451,7 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
 
   llvm::MachO::mach_header header;
 
-  if (!ReadMachHeader(addr, process, header))
+  if (!ReadMachHeader(addr, process, header, read_error))
     return UUID();
 
   // First try a quick test -- read the first 4 bytes and see if there is a
@@ -861,14 +873,6 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     }
   }
 
-  if (!m_module_sp && !IsKernel() && m_uuid.IsValid() && !m_name.empty()) {
-    Stream *s = target.GetDebugger().GetOutputFile().get();
-    if (s) {
-      s->Printf("warning: Can't find binary/dSYM for %s (%s)\n", m_name.c_str(),
-                m_uuid.GetAsString().c_str());
-    }
-  }
-
   static ConstString g_section_name_LINKEDIT("__LINKEDIT");
 
   if (m_memory_module_sp && m_module_sp) {
@@ -1284,6 +1288,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     }
   }
 
+  int failed_to_load_kexts = 0;
   if (number_of_new_kexts_being_added > 0) {
     ModuleList loaded_module_list;
 
@@ -1293,6 +1298,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
         KextImageInfo &image_info = kext_summaries[new_kext];
         if (load_kexts) {
           if (!image_info.LoadImageUsingMemoryModule(m_process)) {
+            failed_to_load_kexts++;
             image_info.LoadImageAtFileAddress(m_process);
           }
         }
@@ -1338,7 +1344,11 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   }
 
   if (s && load_kexts) {
-    s->Printf(" done.\n");
+    s->Printf(" done.");
+    if (failed_to_load_kexts > 0 && number_of_new_kexts_being_added > 0)
+      s->Printf("  Failed to load %d of %d kexts.", failed_to_load_kexts,
+                number_of_new_kexts_being_added);
+    s->Printf("\n");
     s->Flush();
   }
 

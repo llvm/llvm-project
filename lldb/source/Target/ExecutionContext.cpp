@@ -224,30 +224,22 @@ ExecutionContextScope *ExecutionContext::GetBestExecutionContextScope() const {
 }
 
 Target &ExecutionContext::GetTargetRef() const {
-#if defined(LLDB_CONFIGURATION_DEBUG) || defined(LLDB_CONFIGURATION_RELEASE)
   assert(m_target_sp);
-#endif
   return *m_target_sp;
 }
 
 Process &ExecutionContext::GetProcessRef() const {
-#if defined(LLDB_CONFIGURATION_DEBUG) || defined(LLDB_CONFIGURATION_RELEASE)
   assert(m_process_sp);
-#endif
   return *m_process_sp;
 }
 
 Thread &ExecutionContext::GetThreadRef() const {
-#if defined(LLDB_CONFIGURATION_DEBUG) || defined(LLDB_CONFIGURATION_RELEASE)
   assert(m_thread_sp);
-#endif
   return *m_thread_sp;
 }
 
 StackFrame &ExecutionContext::GetFrameRef() const {
-#if defined(LLDB_CONFIGURATION_DEBUG) || defined(LLDB_CONFIGURATION_RELEASE)
   assert(m_frame_sp);
-#endif
   return *m_frame_sp;
 }
 
