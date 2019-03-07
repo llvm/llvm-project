@@ -32,9 +32,6 @@ public:
 
   static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
-  static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
-                                           llvm::StringRef dir);
-
 protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeSupportFileDirectory(FileSpec &file_spec);

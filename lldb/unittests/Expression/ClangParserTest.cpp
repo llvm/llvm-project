@@ -31,7 +31,6 @@ struct ClangHostTest : public testing::Test {
 };
 } // namespace
 
-#if !defined(_WIN32)
 static std::string ComputeClangResourceDir(std::string lldb_shlib_path,
                                            bool verify = false) {
   FileSpec clang_dir;
@@ -41,8 +40,13 @@ static std::string ComputeClangResourceDir(std::string lldb_shlib_path,
 }
 
 TEST_F(ClangHostTest, ComputeClangResourceDirectory) {
+#if !defined(_WIN32)
   std::string path_to_liblldb = "/foo/bar/lib/";
   std::string path_to_clang_dir = "/foo/bar/lib/clang/" CLANG_VERSION_STRING;
+#else
+  std::string path_to_liblldb = "C:\\foo\\bar\\lib";
+  std::string path_to_clang_dir = "C:\\foo\\bar\\lib\\clang\\" CLANG_VERSION_STRING;
+#endif
   EXPECT_EQ(ComputeClangResourceDir(path_to_liblldb), path_to_clang_dir);
 
   // The path doesn't really exist, so setting verify to true should make
@@ -91,4 +95,3 @@ TEST_F(ClangHostTest, MacOSX) {
             ComputeClangResourceDir(GetInputFilePath(xcode)));
 }
 #endif // __APPLE__
-#endif // !_WIN32
