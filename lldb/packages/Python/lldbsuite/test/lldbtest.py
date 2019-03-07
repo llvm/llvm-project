@@ -1708,7 +1708,7 @@ class Base(unittest2.TestCase):
         if self.getPlatform() in ('freebsd', 'linux', 'netbsd', 'openbsd'):
             return ['libc++.so.1']
         else:
-            return ['libc++.1.dylib', 'libc++abi.dylib']
+            return ['libc++.1.dylib', 'libc++abi.']
 
 # Metaclass for TestBase to change the list of test metods when a new TestCase is loaded.
 # We change the test methods to create a new test method for each test for each debug info we are

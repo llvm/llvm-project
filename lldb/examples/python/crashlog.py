@@ -223,7 +223,11 @@ class CrashLog(symbolication.Symbolicator):
         """Class that represents a binary images in a darwin crash log"""
         dsymForUUIDBinary = os.path.expanduser('~rc/bin/dsymForUUID')
         if not os.path.exists(dsymForUUIDBinary):
-            dsymForUUIDBinary = subprocess.check_output('which dsymForUUID', shell=True)
+            try:
+                dsymForUUIDBinary = subprocess.check_output('which dsymForUUID',
+                                                            shell=True)
+            except:
+                dsymForUUIDBinary = ""
 
         dwarfdump_uuid_regex = re.compile(
             'UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*')
