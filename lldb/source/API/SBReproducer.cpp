@@ -1107,17 +1107,6 @@ SBRegistry::SBRegistry() {
     LLDB_REGISTER_STATIC_METHOD(lldb::SBFileSpec, SBHostOS,
                                 GetUserHomeDirectory, ());
     LLDB_REGISTER_STATIC_METHOD(void, SBHostOS, ThreadCreated, (const char *));
-#ifndef _WIN32
-    // FIXME: On Windows, lldb::thread_t is just a void*, so the we will try to
-    //        allocate an object of type void when deserializing.
-    LLDB_REGISTER_STATIC_METHOD(bool, SBHostOS, ThreadCancel,
-                                (lldb::thread_t, lldb::SBError *));
-    LLDB_REGISTER_STATIC_METHOD(bool, SBHostOS, ThreadDetach,
-                                (lldb::thread_t, lldb::SBError *));
-    LLDB_REGISTER_STATIC_METHOD(
-        bool, SBHostOS, ThreadJoin,
-        (lldb::thread_t, lldb::thread_result_t *, lldb::SBError *));
-#endif
   }
   {
     LLDB_REGISTER_CONSTRUCTOR(SBInstruction, ());
