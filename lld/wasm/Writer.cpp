@@ -950,7 +950,7 @@ void Writer::assignSymtab() {
   };
 
   for (Symbol *Sym : Symtab->getSymbols())
-    if (Sym->IsUsedInRegularObj)
+    if (!Sym->isLazy() && Sym->IsUsedInRegularObj)
       AddSymbol(Sym);
 
   for (ObjFile *File : Symtab->ObjectFiles) {
