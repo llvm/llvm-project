@@ -169,6 +169,7 @@ void DWARFMappedHash::Prologue::AppendAtom(AtomType type, dw_form_t form) {
   case DW_FORM_ref_sig8:
     llvm_unreachable("Unhandled atom form");
 
+  case DW_FORM_addrx:
   case DW_FORM_string:
   case DW_FORM_block:
   case DW_FORM_block1:
