@@ -3408,7 +3408,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
     Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
 
   if (options & CXTranslationUnit_KeepGoing)
-    Diags->setSuppressAfterFatalError(false);
+    Diags->setFatalsAsError(true);
 
   // Recover resources if we crash before exiting this function.
   llvm::CrashRecoveryContextCleanupRegistrar<DiagnosticsEngine,
@@ -6233,6 +6233,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::CXXDeductionGuide:
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPAllocate:
   case Decl::OMPDeclareReduction:
   case Decl::OMPDeclareMapper:
   case Decl::OMPRequires:

@@ -103,6 +103,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::Label:        // __label__ x;
   case Decl::Import:
   case Decl::OMPThreadPrivate:
+  case Decl::OMPAllocate:
   case Decl::OMPCapturedExpr:
   case Decl::OMPRequires:
   case Decl::Empty:

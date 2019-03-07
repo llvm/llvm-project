@@ -6271,6 +6271,10 @@ def err_bad_cxx_cast_bitfield : Error<
 def err_bad_cxx_cast_qualifiers_away : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
   "functional-style cast}0 from %1 to %2 casts away qualifiers">;
+def err_bad_cxx_cast_addr_space_mismatch : Error<
+  "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
+  "functional-style cast}0 from %1 to %2 converts between mismatching address"
+  " spaces">;
 def ext_bad_cxx_cast_qualifiers_away_incoherent : ExtWarn<
   "ISO C++ does not allow "
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"

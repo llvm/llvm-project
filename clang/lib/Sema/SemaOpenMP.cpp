@@ -1908,7 +1908,8 @@ public:
   explicit VarOrFuncDeclFilterCCC(Sema &S) : SemaRef(S) {}
   bool ValidateCandidate(const TypoCorrection &Candidate) override {
     NamedDecl *ND = Candidate.getCorrectionDecl();
-    if (ND && (isa<VarDecl>(ND) || isa<FunctionDecl>(ND))) {
+    if (ND && ((isa<VarDecl>(ND) && ND->getKind() == Decl::Var) ||
+               isa<FunctionDecl>(ND))) {
       return SemaRef.isDeclInScope(ND, SemaRef.getCurLexicalContext(),
                                    SemaRef.getCurScope());
     }
@@ -1920,7 +1921,8 @@ public:
 
 ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
                                          CXXScopeSpec &ScopeSpec,
-                                         const DeclarationNameInfo &Id) {
+                                         const DeclarationNameInfo &Id,
+                                         OpenMPDirectiveKind Kind) {
   LookupResult Lookup(*this, Id, LookupOrdinaryName);
   LookupParsedName(Lookup, CurScope, &ScopeSpec, true);
 
@@ -1953,9 +1955,9 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
 
   // OpenMP [2.9.2, Syntax, C/C++]
   //   Variables must be file-scope, namespace-scope, or static block-scope.
-  if (!VD->hasGlobalStorage()) {
+  if (Kind == OMPD_threadprivate && !VD->hasGlobalStorage()) {
     Diag(Id.getLoc(), diag::err_omp_global_var_arg)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << !VD->isStaticLocal();
+        << getOpenMPDirectiveName(Kind) << !VD->isStaticLocal();
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -1972,7 +1974,7 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   if (CanonicalVD->getDeclContext()->isTranslationUnit() &&
       !getCurLexicalContext()->isTranslationUnit()) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -1987,7 +1989,7 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   if (CanonicalVD->isStaticDataMember() &&
       !CanonicalVD->getDeclContext()->Equals(getCurLexicalContext())) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -2003,7 +2005,7 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
       (!getCurLexicalContext()->isFileContext() ||
        !getCurLexicalContext()->Encloses(CanonicalVD->getDeclContext()))) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -2014,10 +2016,10 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   // OpenMP [2.9.2, Restrictions, C/C++, p.6]
   //   A threadprivate directive for static block-scope variables must appear
   //   in the scope of the variable and not in a nested scope.
-  if (CanonicalVD->isStaticLocal() && CurScope &&
+  if (CanonicalVD->isLocalVarDecl() && CurScope &&
       !isDeclInScope(ND, getCurLexicalContext(), CurScope)) {
     Diag(Id.getLoc(), diag::err_omp_var_scope)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     bool IsDecl =
         VD->isThisDeclarationADefinition(Context) == VarDecl::DeclarationOnly;
     Diag(VD->getLocation(),
@@ -2029,9 +2031,10 @@ ExprResult Sema::ActOnOpenMPIdExpression(Scope *CurScope,
   // OpenMP [2.9.2, Restrictions, C/C++, p.2-6]
   //   A threadprivate directive must lexically precede all references to any
   //   of the variables in its list.
-  if (VD->isUsed() && !DSAStack->isThreadPrivate(VD)) {
+  if (Kind == OMPD_threadprivate && VD->isUsed() &&
+      !DSAStack->isThreadPrivate(VD)) {
     Diag(Id.getLoc(), diag::err_omp_var_used)
-        << getOpenMPDirectiveName(OMPD_threadprivate) << VD;
+        << getOpenMPDirectiveName(Kind) << VD;
     return ExprError();
   }
 
@@ -2161,6 +2164,41 @@ Sema::CheckOMPThreadPrivateDecl(SourceLocation Loc, ArrayRef<Expr *> VarList) {
     D->setAccess(AS_public);
   }
   return D;
+}
+
+Sema::DeclGroupPtrTy
+Sema::ActOnOpenMPAllocateDirective(SourceLocation Loc, ArrayRef<Expr *> VarList,
+                                   DeclContext *Owner) {
+  SmallVector<Expr *, 8> Vars;
+  for (Expr *RefExpr : VarList) {
+    auto *DE = cast<DeclRefExpr>(RefExpr);
+    auto *VD = cast<VarDecl>(DE->getDecl());
+
+    // Check if this is a TLS variable or global register.
+    if (VD->getTLSKind() != VarDecl::TLS_None ||
+        VD->hasAttr<OMPThreadPrivateDeclAttr>() ||
+        (VD->getStorageClass() == SC_Register && VD->hasAttr<AsmLabelAttr>() &&
+         !VD->isLocalVarDecl()))
+      continue;
+    // Do not apply for parameters.
+    if (isa<ParmVarDecl>(VD))
+      continue;
+
+    Vars.push_back(RefExpr);
+    VD->addAttr(
+        OMPAllocateDeclAttr::CreateImplicit(Context, DE->getSourceRange()));
+    if (ASTMutationListener *ML = Context.getASTMutationListener())
+      ML->DeclarationMarkedOpenMPAllocate(VD,
+                                          VD->getAttr<OMPAllocateDeclAttr>());
+  }
+  if (Vars.empty())
+    return nullptr;
+  if (!Owner)
+    Owner = getCurLexicalContext();
+  OMPAllocateDecl *D = OMPAllocateDecl::Create(Context, Owner, Loc, Vars);
+  D->setAccess(AS_public);
+  Owner->addDecl(D);
+  return DeclGroupPtrTy::make(DeclGroupRef(D));
 }
 
 Sema::DeclGroupPtrTy
@@ -2863,6 +2901,7 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     break;
   }
   case OMPD_threadprivate:
+  case OMPD_allocate:
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:
@@ -3719,6 +3758,7 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_declare_target:
   case OMPD_end_declare_target:
   case OMPD_threadprivate:
+  case OMPD_allocate:
   case OMPD_declare_reduction:
   case OMPD_declare_mapper:
   case OMPD_declare_simd:
@@ -8398,6 +8438,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -8482,6 +8523,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
       // Do not capture if-clause expressions.
       break;
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8549,6 +8591,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_taskloop:
     case OMPD_taskloop_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8617,6 +8660,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8682,6 +8726,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_target_parallel_for:
     case OMPD_target_parallel_for_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8748,6 +8793,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8813,6 +8859,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel:
     case OMPD_parallel_sections:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8877,6 +8924,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
     case OMPD_parallel_for:
     case OMPD_parallel_for_simd:
     case OMPD_threadprivate:
+    case OMPD_allocate:
     case OMPD_taskyield:
     case OMPD_barrier:
     case OMPD_taskwait:
@@ -8928,6 +8976,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -9251,6 +9300,7 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -9428,6 +9478,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_read:
   case OMPC_write:
@@ -9645,6 +9696,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_flush:
   case OMPC_depend:
   case OMPC_device:
@@ -9841,6 +9893,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_untied:
   case OMPC_mergeable:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_read:
   case OMPC_write:
   case OMPC_update:

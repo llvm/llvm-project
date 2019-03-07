@@ -1876,6 +1876,9 @@ void ELFDumper<ELFT>::printValue(uint64_t Type, uint64_t Value) {
   case DT_AUXILIARY:
     printLibrary(OS, "Auxiliary library", getDynamicString(Value));
     break;
+  case DT_USED:
+    printLibrary(OS, "Not needed object", getDynamicString(Value));
+    break;
   case DT_FILTER:
     printLibrary(OS, "Filter library", getDynamicString(Value));
     break;

@@ -115,6 +115,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <limits>
+#include <numeric>
 #include <map>
 #include <utility>
 
@@ -162,6 +163,10 @@ static cl::opt<unsigned> ComplexityLimit(
   "lsr-complexity-limit", cl::Hidden,
   cl::init(std::numeric_limits<uint16_t>::max()),
   cl::desc("LSR search space complexity limit"));
+
+static cl::opt<bool> EnableRecursiveSetupCost(
+  "lsr-recursive-setupcost", cl::Hidden, cl::init(true),
+  cl::desc("Enable more thorough lsr setup cost calculation"));
 
 #ifndef NDEBUG
 // Stress test IV chain generation.
@@ -1211,6 +1216,25 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  bool HasBaseReg, int64_t Scale,
                                  Instruction *Fixup = nullptr);
 
+static unsigned getSetupCost(const SCEV *Reg) {
+  if (isa<SCEVUnknown>(Reg) || isa<SCEVConstant>(Reg))
+    return 1;
+  if (!EnableRecursiveSetupCost)
+    return 0;
+  if (const auto *S = dyn_cast<SCEVAddRecExpr>(Reg))
+    return getSetupCost(S->getStart());
+  if (auto S = dyn_cast<SCEVCastExpr>(Reg))
+    return getSetupCost(S->getOperand());
+  if (auto S = dyn_cast<SCEVNAryExpr>(Reg))
+    return std::accumulate(S->op_begin(), S->op_end(), 0,
+                           [](unsigned i, const SCEV *Reg) {
+                             return i + getSetupCost(Reg);
+                           });
+  if (auto S = dyn_cast<SCEVUDivExpr>(Reg))
+    return getSetupCost(S->getLHS()) + getSetupCost(S->getRHS());
+  return 0;
+}
+
 /// Tally up interesting quantities from the given register.
 void Cost::RateRegister(const Formula &F, const SCEV *Reg,
                         SmallPtrSetImpl<const SCEV *> &Regs,
@@ -1276,12 +1300,7 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
 
   // Rough heuristic; favor registers which don't require extra setup
   // instructions in the preheader.
-  if (!isa<SCEVUnknown>(Reg) &&
-      !isa<SCEVConstant>(Reg) &&
-      !(isa<SCEVAddRecExpr>(Reg) &&
-        (isa<SCEVUnknown>(cast<SCEVAddRecExpr>(Reg)->getStart()) ||
-         isa<SCEVConstant>(cast<SCEVAddRecExpr>(Reg)->getStart()))))
-    ++C.SetupCost;
+  C.SetupCost += getSetupCost(Reg);
 
   C.NumIVMuls += isa<SCEVMulExpr>(Reg) &&
                SE.hasComputableLoopEvolution(Reg, L);

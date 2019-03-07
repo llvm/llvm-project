@@ -1,3 +1,5 @@
+REQUIRES: x86
+
 RUN: lld-link /entry:main /subsystem:console /out:%t.exe \
 RUN:   %p/Inputs/ret42.obj
 
@@ -10,8 +12,8 @@ RUN:   %p/Inputs/ret42.obj /failifmismatch:k1=v1 /failifmismatch:k1=v1
 RUN: not lld-link /entry:main /subsystem:console /out:%t.exe \
 RUN:   %p/Inputs/ret42.obj /failifmismatch:k1=v1 /failifmismatch:k1=v2 2>&1 | FileCheck %s 
 
-RUN: llc < %p/Inputs/failmismatch1.ll -filetype obj -o %t1.obj
-RUN: llc < %p/Inputs/failmismatch2.ll -filetype obj -o %t2.obj
+RUN: llc < %p/Inputs/failmismatch1.ll -mtriple x86_64-windows-msvc -filetype obj -o %t1.obj
+RUN: llc < %p/Inputs/failmismatch2.ll -mtriple x86_64-windows-msvc -filetype obj -o %t2.obj
 RUN: not lld-link %t1.obj %t2.obj 2>&1 | FileCheck %s -check-prefix OBJ
 
 RUN: llvm-lib %t1.obj /out:%t.lib
