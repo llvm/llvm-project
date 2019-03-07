@@ -21,7 +21,6 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include "SBBreakpointOptionCommon.h"
@@ -37,10 +36,10 @@ public:
     if (!name || name[0] == '\0')
       return;
     m_name.assign(name);
-    
+
     if (!target_sp)
       return;
-    
+
     m_target_wp = target_sp;
   }
 
@@ -50,15 +49,15 @@ public:
 
   // For now we take a simple approach and only keep the name, and relook up
   // the location when we need it.
-  
+
   TargetSP GetTarget() const {
     return m_target_wp.lock();
   }
-  
+
   const char *GetName() const {
     return m_name.c_str();
   }
-  
+
   bool IsValid() const {
     return !m_name.empty() && m_target_wp.lock();
   }
@@ -133,14 +132,14 @@ SBBreakpointName::SBBreakpointName(SBBreakpoint &sb_bkpt, const char *name) {
   Target &target = bkpt_sp->GetTarget();
 
   m_impl_up.reset(new SBBreakpointNameImpl(target.shared_from_this(), name));
-  
+
   // Call FindBreakpointName here to make sure the name is valid, reset if not:
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name) {
     m_impl_up.reset();
     return;
   }
-  
+
   // Now copy over the breakpoint's options:
   target.ConfigureBreakpointName(*bp_name, *bkpt_sp->GetOptions(),
                                  BreakpointName::Permissions());
@@ -169,7 +168,7 @@ operator=(const SBBreakpointName &rhs) {
     m_impl_up.reset();
     return *this;
   }
-  
+
   m_impl_up.reset(new SBBreakpointNameImpl(rhs.m_impl_up->GetTarget(),
                                            rhs.m_impl_up->GetName()));
   return *this;
@@ -208,13 +207,10 @@ const char *SBBreakpointName::GetName() const {
 void SBBreakpointName::SetEnabled(bool enable) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetEnabled, (bool), enable);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} enabled: {1}\n", bp_name->GetName(), enable);
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -235,13 +231,10 @@ void SBBreakpointName::UpdateName(BreakpointName &bp_name) {
 bool SBBreakpointName::IsEnabled() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointName, IsEnabled);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -251,13 +244,10 @@ bool SBBreakpointName::IsEnabled() {
 void SBBreakpointName::SetOneShot(bool one_shot) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetOneShot, (bool), one_shot);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} one_shot: {1}\n", bp_name->GetName(), one_shot);
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -268,13 +258,10 @@ void SBBreakpointName::SetOneShot(bool one_shot) {
 bool SBBreakpointName::IsOneShot() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointName, IsOneShot);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   const BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -284,13 +271,10 @@ bool SBBreakpointName::IsOneShot() const {
 void SBBreakpointName::SetIgnoreCount(uint32_t count) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetIgnoreCount, (uint32_t), count);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} one_shot: {1}\n", bp_name->GetName(), count);
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -301,13 +285,10 @@ void SBBreakpointName::SetIgnoreCount(uint32_t count) {
 uint32_t SBBreakpointName::GetIgnoreCount() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBBreakpointName, GetIgnoreCount);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -318,15 +299,10 @@ void SBBreakpointName::SetCondition(const char *condition) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetCondition, (const char *),
                      condition);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} one_shot: {1}\n", bp_name->GetName(),
-          condition ? condition : "<NULL>");
-  
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -337,13 +313,10 @@ void SBBreakpointName::SetCondition(const char *condition) {
 const char *SBBreakpointName::GetCondition() {
   LLDB_RECORD_METHOD_NO_ARGS(const char *, SBBreakpointName, GetCondition);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return nullptr;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -354,14 +327,10 @@ void SBBreakpointName::SetAutoContinue(bool auto_continue) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetAutoContinue, (bool),
                      auto_continue);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} auto-continue: {1}\n", bp_name->GetName(), auto_continue);
-  
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -372,13 +341,10 @@ void SBBreakpointName::SetAutoContinue(bool auto_continue) {
 bool SBBreakpointName::GetAutoContinue() {
   LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointName, GetAutoContinue);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -388,14 +354,10 @@ bool SBBreakpointName::GetAutoContinue() {
 void SBBreakpointName::SetThreadID(tid_t tid) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetThreadID, (lldb::tid_t), tid);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} tid: {1:x}\n", bp_name->GetName(), tid);
-  
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -406,13 +368,10 @@ void SBBreakpointName::SetThreadID(tid_t tid) {
 tid_t SBBreakpointName::GetThreadID() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::tid_t, SBBreakpointName, GetThreadID);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return LLDB_INVALID_THREAD_ID;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -422,14 +381,10 @@ tid_t SBBreakpointName::GetThreadID() {
 void SBBreakpointName::SetThreadIndex(uint32_t index) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetThreadIndex, (uint32_t), index);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} thread index: {1}\n", bp_name->GetName(), index);
-  
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -440,13 +395,10 @@ void SBBreakpointName::SetThreadIndex(uint32_t index) {
 uint32_t SBBreakpointName::GetThreadIndex() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBBreakpointName, GetThreadIndex);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return LLDB_INVALID_THREAD_ID;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -457,14 +409,10 @@ void SBBreakpointName::SetThreadName(const char *thread_name) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetThreadName, (const char *),
                      thread_name);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} thread name: {1}\n", bp_name->GetName(), thread_name);
-  
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -476,13 +424,10 @@ const char *SBBreakpointName::GetThreadName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointName,
                                    GetThreadName);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return nullptr;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -493,14 +438,10 @@ void SBBreakpointName::SetQueueName(const char *queue_name) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetQueueName, (const char *),
                      queue_name);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} queue name: {1}\n", bp_name->GetName(), queue_name);
-  
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -512,13 +453,10 @@ const char *SBBreakpointName::GetQueueName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointName,
                                    GetQueueName);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return nullptr;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -529,14 +467,12 @@ void SBBreakpointName::SetCommandLineCommands(SBStringList &commands) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetCommandLineCommands,
                      (lldb::SBStringList &), commands);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
   if (commands.GetSize() == 0)
     return;
 
-  LLDB_LOG(log, "Name: {0} commands\n", bp_name->GetName());
 
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
@@ -551,13 +487,10 @@ bool SBBreakpointName::GetCommandLineCommands(SBStringList &commands) {
   LLDB_RECORD_METHOD(bool, SBBreakpointName, GetCommandLineCommands,
                      (lldb::SBStringList &), commands);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return false;
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   StringList command_list;
   bool has_commands =
       bp_name->GetOptions().GetCommandLineCallbacks(command_list);
@@ -570,13 +503,10 @@ const char *SBBreakpointName::GetHelpString() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointName,
                                    GetHelpString);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return "";
- 
-  LLDB_LOG(log, "Help: {0}\n", bp_name->GetHelp());
+
   return bp_name->GetHelp();
 }
 
@@ -584,12 +514,10 @@ void SBBreakpointName::SetHelpString(const char *help_string) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetHelpString, (const char *),
                      help_string);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
 
-  LLDB_LOG(log, "Name: {0} help: {1}\n", bp_name->GetName(), help_string);
 
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
@@ -600,16 +528,13 @@ bool SBBreakpointName::GetDescription(SBStream &s) {
   LLDB_RECORD_METHOD(bool, SBBreakpointName, GetDescription, (lldb::SBStream &),
                      s);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
   {
     s.Printf("No value");
     return false;
   }
- 
-  LLDB_LOG(log, "Name: {0}\n", bp_name->GetName());
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
   bp_name->GetDescription(s.get(), eDescriptionLevelFull);
@@ -618,11 +543,9 @@ bool SBBreakpointName::GetDescription(SBStream &s) {
 
 void SBBreakpointName::SetCallback(SBBreakpointHitCallback callback,
                                    void *baton) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
-  LLDB_LOG(log, "callback = {1}, baton = {2}", callback, baton);
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -639,15 +562,10 @@ void SBBreakpointName::SetScriptCallbackFunction(
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetScriptCallbackFunction,
                      (const char *), callback_function_name);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
- 
-  LLDB_LOG(log, "Name: {0} callback: {1}\n", bp_name->GetName(),
-           callback_function_name);
-  
+
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -666,15 +584,11 @@ SBBreakpointName::SetScriptCallbackBody(const char *callback_body_text) {
   LLDB_RECORD_METHOD(lldb::SBError, SBBreakpointName, SetScriptCallbackBody,
                      (const char *), callback_body_text);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   SBError sb_error;
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return LLDB_RECORD_RESULT(sb_error);
 
-  LLDB_LOG(log, "Name: {0} callback: {1}\n", bp_name->GetName(),
-           callback_body_text);
-  
   std::lock_guard<std::recursive_mutex> guard(
         m_impl_up->GetTarget()->GetAPIMutex());
 
@@ -704,14 +618,10 @@ bool SBBreakpointName::GetAllowList() const {
 void SBBreakpointName::SetAllowList(bool value) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetAllowList, (bool), value);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
-  if (log)
-    log->Printf("Setting allow list to %u for %s.", value, 
-                bp_name->GetName().AsCString());
   bp_name->GetPermissions().SetAllowList(value);
 }
 
@@ -727,14 +637,10 @@ bool SBBreakpointName::GetAllowDelete() {
 void SBBreakpointName::SetAllowDelete(bool value) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetAllowDelete, (bool), value);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
-  if (log)
-    log->Printf("Setting allow delete to %u for %s.", value, 
-                bp_name->GetName().AsCString());
   bp_name->GetPermissions().SetAllowDelete(value);
 }
 
@@ -750,14 +656,9 @@ bool SBBreakpointName::GetAllowDisable() {
 void SBBreakpointName::SetAllowDisable(bool value) {
   LLDB_RECORD_METHOD(void, SBBreakpointName, SetAllowDisable, (bool), value);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;
-  if (log)
-    log->Printf("Setting allow disable to %u for %s.", value, 
-                bp_name->GetName().AsCString());
   bp_name->GetPermissions().SetAllowDisable(value);
 }
 

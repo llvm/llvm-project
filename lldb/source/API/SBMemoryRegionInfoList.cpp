@@ -11,7 +11,6 @@
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Utility/Log.h"
 
 #include <vector>
 
@@ -109,21 +108,7 @@ bool SBMemoryRegionInfoList::GetMemoryRegionAtIndex(
   LLDB_RECORD_METHOD(bool, SBMemoryRegionInfoList, GetMemoryRegionAtIndex,
                      (uint32_t, lldb::SBMemoryRegionInfo &), idx, region_info);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  bool result = m_opaque_up->GetMemoryRegionInfoAtIndex(idx, region_info.ref());
-
-  if (log) {
-    SBStream sstr;
-    region_info.GetDescription(sstr);
-    log->Printf("SBMemoryRegionInfoList::GetMemoryRegionAtIndex (this.ap=%p, "
-                "idx=%d) => SBMemoryRegionInfo (this.ap=%p, '%s')",
-                static_cast<void *>(m_opaque_up.get()), idx,
-                static_cast<void *>(region_info.m_opaque_up.get()),
-                sstr.GetData());
-  }
-
-  return result;
+  return m_opaque_up->GetMemoryRegionInfoAtIndex(idx, region_info.ref());
 }
 
 void SBMemoryRegionInfoList::Clear() {
