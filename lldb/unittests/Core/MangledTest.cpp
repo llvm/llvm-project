@@ -31,7 +31,7 @@ TEST(MangledTest, ResultForValidName) {
   bool IsMangled = true;
 
   Mangled TheMangled(MangledName, IsMangled);
-  const ConstString &TheDemangled =
+  ConstString TheDemangled =
       TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
 
   ConstString ExpectedResult("void a::b::c<int, int, int>(unsigned long)");
@@ -43,7 +43,7 @@ TEST(MangledTest, EmptyForInvalidName) {
   bool IsMangled = true;
 
   Mangled TheMangled(MangledName, IsMangled);
-  const ConstString &TheDemangled =
+  ConstString TheDemangled =
       TheMangled.GetDemangledName(eLanguageTypeC_plus_plus);
 
   EXPECT_STREQ("", TheDemangled.GetCString());

@@ -125,7 +125,7 @@ void LineTable::InsertSequence(LineSequence *sequence) {
       pos++;
   }
 
-#ifdef LLDB_CONFIGURATION_DEBUG
+#ifndef NDEBUG
   // If we aren't inserting at the beginning, the previous entry should
   // terminate a sequence.
   if (pos != begin_pos) {

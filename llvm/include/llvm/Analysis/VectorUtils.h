@@ -250,10 +250,10 @@ Value *concatenateVectors(IRBuilder<> &Builder, ArrayRef<Value *> Vecs);
 /// the interleaved store group doesn't allow gaps.
 template <typename InstTy> class InterleaveGroup {
 public:
-  InterleaveGroup(unsigned Factor, bool Reverse, unsigned Align)
+  InterleaveGroup(uint32_t Factor, bool Reverse, uint32_t Align)
       : Factor(Factor), Reverse(Reverse), Align(Align), InsertPos(nullptr) {}
 
-  InterleaveGroup(InstTy *Instr, int Stride, unsigned Align)
+  InterleaveGroup(InstTy *Instr, int32_t Stride, uint32_t Align)
       : Align(Align), InsertPos(Instr) {
     assert(Align && "The alignment should be non-zero");
 
@@ -265,19 +265,19 @@ public:
   }
 
   bool isReverse() const { return Reverse; }
-  unsigned getFactor() const { return Factor; }
-  unsigned getAlignment() const { return Align; }
-  unsigned getNumMembers() const { return Members.size(); }
+  uint32_t getFactor() const { return Factor; }
+  uint32_t getAlignment() const { return Align; }
+  uint32_t getNumMembers() const { return Members.size(); }
 
   /// Try to insert a new member \p Instr with index \p Index and
   /// alignment \p NewAlign. The index is related to the leader and it could be
   /// negative if it is the new leader.
   ///
   /// \returns false if the instruction doesn't belong to the group.
-  bool insertMember(InstTy *Instr, int Index, unsigned NewAlign) {
+  bool insertMember(InstTy *Instr, int32_t Index, uint32_t NewAlign) {
     assert(NewAlign && "The new member's alignment should be non-zero");
 
-    int Key = Index + SmallestKey;
+    int32_t Key = Index + SmallestKey;
 
     // Skip if there is already a member with the same index.
     if (Members.find(Key) != Members.end())
@@ -306,8 +306,8 @@ public:
   /// Get the member with the given index \p Index
   ///
   /// \returns nullptr if contains no such member.
-  InstTy *getMember(unsigned Index) const {
-    int Key = SmallestKey + Index;
+  InstTy *getMember(uint32_t Index) const {
+    int32_t Key = SmallestKey + Index;
     auto Member = Members.find(Key);
     if (Member == Members.end())
       return nullptr;
@@ -317,7 +317,7 @@ public:
 
   /// Get the index for the given member. Unlike the key in the member
   /// map, the index starts from 0.
-  unsigned getIndex(const InstTy *Instr) const {
+  uint32_t getIndex(const InstTy *Instr) const {
     for (auto I : Members) {
       if (I.second == Instr)
         return I.first - SmallestKey;
@@ -355,12 +355,12 @@ public:
   }
 
 private:
-  unsigned Factor; // Interleave Factor.
+  uint32_t Factor; // Interleave Factor.
   bool Reverse;
-  unsigned Align;
-  DenseMap<int, InstTy *> Members;
-  int SmallestKey = 0;
-  int LargestKey = 0;
+  uint32_t Align;
+  DenseMap<int32_t, InstTy *> Members;
+  int32_t SmallestKey = 0;
+  int32_t LargestKey = 0;
 
   // To avoid breaking dependences, vectorized instructions of an interleave
   // group should be inserted at either the first load or the last store in

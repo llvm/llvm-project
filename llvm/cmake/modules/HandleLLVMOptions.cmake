@@ -809,6 +809,12 @@ if (LLVM_BUILD_INSTRUMENTED)
       CMAKE_C_FLAGS
       CMAKE_EXE_LINKER_FLAGS
       CMAKE_SHARED_LINKER_FLAGS)
+  elseif(uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "CSIR")
+    append("-fcs-profile-generate='${LLVM_CSPROFILE_DATA_DIR}'"
+      CMAKE_CXX_FLAGS
+      CMAKE_C_FLAGS
+      CMAKE_EXE_LINKER_FLAGS
+      CMAKE_SHARED_LINKER_FLAGS)
   else()
     append("-fprofile-instr-generate='${LLVM_PROFILE_FILE_PATTERN}'"
       CMAKE_CXX_FLAGS
@@ -816,6 +822,14 @@ if (LLVM_BUILD_INSTRUMENTED)
       CMAKE_EXE_LINKER_FLAGS
       CMAKE_SHARED_LINKER_FLAGS)
   endif()
+endif()
+
+# Need to pass -fprofile-instr-use to linker for context-sensitive PGO
+# compilation.
+if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
+    append("-fprofile-instr-use='${LLVM_PROFDATA_FILE}'"
+      CMAKE_EXE_LINKER_FLAGS
+      CMAKE_SHARED_LINKER_FLAGS)
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)

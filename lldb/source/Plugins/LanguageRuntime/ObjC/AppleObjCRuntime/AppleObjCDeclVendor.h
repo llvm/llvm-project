@@ -22,7 +22,7 @@ class AppleObjCDeclVendor : public DeclVendor {
 public:
   AppleObjCDeclVendor(ObjCLanguageRuntime &runtime);
 
-  uint32_t FindDecls(const ConstString &name, bool append, uint32_t max_matches,
+  uint32_t FindDecls(ConstString name, bool append, uint32_t max_matches,
                      std::vector<clang::NamedDecl *> &decls) override;
 
   clang::ExternalASTMerger::ImporterSource GetImporterSource() override;

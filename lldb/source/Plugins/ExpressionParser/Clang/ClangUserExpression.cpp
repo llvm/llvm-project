@@ -21,6 +21,7 @@
 #include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
+#include "ClangExpressionSourceCode.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
 
@@ -404,8 +405,8 @@ void ClangUserExpression::UpdateLanguageForExpr(
   if (m_options.GetExecutionPolicy() == eExecutionPolicyTopLevel) {
     m_transformed_text = m_expr_text;
   } else {
-    std::unique_ptr<ExpressionSourceCode> source_code(
-        ExpressionSourceCode::CreateWrapped(prefix.c_str(),
+    std::unique_ptr<ClangExpressionSourceCode> source_code(
+        ClangExpressionSourceCode::CreateWrapped(prefix.c_str(),
                                             m_expr_text.c_str()));
 
     if (m_in_cplusplus_method)
@@ -529,7 +530,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
         size_t fixed_end;
         const std::string &fixed_expression =
             diagnostic_manager.GetFixedExpression();
-        if (ExpressionSourceCode::GetOriginalBodyBounds(
+        if (ClangExpressionSourceCode::GetOriginalBodyBounds(
                 fixed_expression, m_expr_lang, fixed_start, fixed_end))
           m_fixed_text =
               fixed_expression.substr(fixed_start, fixed_end - fixed_start);

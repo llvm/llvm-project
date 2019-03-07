@@ -7959,7 +7959,7 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(SyncScope S,
     Name = "";
     break;
   case SyncScope::OpenCLSubGroup:
-    Name = "subgroup";
+    Name = "wavefront";
   }
   return C.getOrInsertSyncScopeID(Name);
 }

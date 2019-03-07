@@ -212,7 +212,7 @@ static void ReportInlineAsmError(const llvm::SMDiagnostic &diagnostic,
   }
 }
 
-void IRExecutionUnit::ReportSymbolLookupError(const ConstString &name) {
+void IRExecutionUnit::ReportSymbolLookupError(ConstString name) {
   m_failed_lookups.push_back(name);
 }
 
@@ -406,7 +406,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
     bool emitNewLine = false;
 
-    for (const ConstString &failed_lookup : m_failed_lookups) {
+    for (ConstString failed_lookup : m_failed_lookups) {
       if (emitNewLine)
         ss.PutCString("\n");
       emitNewLine = true;
@@ -655,7 +655,7 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
 }
 
 static ConstString
-FindBestAlternateMangledName(const ConstString &demangled,
+FindBestAlternateMangledName(ConstString demangled,
                              const lldb::LanguageType &lang_type,
                              const SymbolContext &sym_ctx) {
   CPlusPlusLanguage::MethodName cpp_name(demangled);
@@ -717,7 +717,7 @@ struct IRExecutionUnit::SearchSpec {
 
 void IRExecutionUnit::CollectCandidateCNames(
     std::vector<IRExecutionUnit::SearchSpec> &C_specs,
-    const ConstString &name) {
+    ConstString name) {
   if (m_strip_underscore && name.AsCString()[0] == '_')
     C_specs.insert(C_specs.begin(), ConstString(&name.AsCString()[1]));
   C_specs.push_back(SearchSpec(name));
@@ -727,7 +727,7 @@ void IRExecutionUnit::CollectCandidateCPlusPlusNames(
     std::vector<IRExecutionUnit::SearchSpec> &CPP_specs,
     const std::vector<SearchSpec> &C_specs, const SymbolContext &sc) {
   for (const SearchSpec &C_spec : C_specs) {
-    const ConstString &name = C_spec.name;
+    ConstString name = C_spec.name;
 
     if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
       Mangled mangled(name, true);
@@ -759,7 +759,7 @@ void IRExecutionUnit::CollectFallbackNames(
   // but the DWARF doesn't always encode "extern C" correctly.
 
   for (const SearchSpec &C_spec : C_specs) {
-    const ConstString &name = C_spec.name;
+    ConstString name = C_spec.name;
 
     if (CPlusPlusLanguage::IsCPPMangledName(name.GetCString())) {
       Mangled mangled_name(name);
@@ -938,7 +938,7 @@ lldb::addr_t IRExecutionUnit::FindInUserDefinedSymbols(
 }
 
 lldb::addr_t
-IRExecutionUnit::FindSymbol(const lldb_private::ConstString &name) {
+IRExecutionUnit::FindSymbol(lldb_private::ConstString name) {
   std::vector<SearchSpec> candidate_C_names;
   std::vector<SearchSpec> candidate_CPlusPlus_names;
 

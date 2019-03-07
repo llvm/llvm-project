@@ -459,7 +459,7 @@ bool JITLoaderGDB::DidSetJITBreakpoint() const {
 }
 
 addr_t JITLoaderGDB::GetSymbolAddress(ModuleList &module_list,
-                                      const ConstString &name,
+                                      ConstString name,
                                       SymbolType symbol_type) const {
   SymbolContextList target_symbols;
   Target &target = m_process->GetTarget();

@@ -711,7 +711,7 @@ void Debugger::Destroy(DebuggerSP &debugger_sp) {
 }
 
 DebuggerSP
-Debugger::FindDebuggerWithInstanceName(const ConstString &instance_name) {
+Debugger::FindDebuggerWithInstanceName(ConstString instance_name) {
   DebuggerSP debugger_sp;
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);

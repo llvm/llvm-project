@@ -2399,9 +2399,12 @@ static SDValue flipBoolean(SDValue V, const SDLoc &DL, EVT VT,
 }
 
 static bool isBooleanFlip(SDValue V, EVT VT, const TargetLowering &TLI) {
-  if (V.getOpcode() != ISD::XOR) return false;
-  ConstantSDNode *Const = dyn_cast<ConstantSDNode>(V.getOperand(1));
-  if (!Const) return false;
+  if (V.getOpcode() != ISD::XOR)
+    return false;
+
+  ConstantSDNode *Const = isConstOrConstSplat(V.getOperand(1), false);
+  if (!Const)
+    return false;
 
   switch(TLI.getBooleanContents(VT)) {
     case TargetLowering::ZeroOrOneBooleanContent:
@@ -7640,11 +7643,9 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     }
   }
 
-  if (VT0 == MVT::i1) {
-    // select (not Cond), N1, N2 -> select Cond, N2, N1
-    if (isBitwiseNot(N0))
-      return DAG.getNode(ISD::SELECT, DL, VT, N0->getOperand(0), N2, N1);
-  }
+  // select (not Cond), N1, N2 -> select Cond, N2, N1
+  if (isBooleanFlip(N0, VT0, TLI))
+    return DAG.getSelect(DL, VT, N0.getOperand(0), N2, N1);
 
   // Fold selects based on a setcc into other things, such as min/max/abs.
   if (N0.getOpcode() == ISD::SETCC) {
@@ -8117,10 +8118,16 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  EVT VT0 = N0.getValueType();
   SDLoc DL(N);
 
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
     return V;
+
+  // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
+  if (isBooleanFlip(N0, VT0, TLI))
+    return DAG.getSelect(DL, VT, N0.getOperand(0), N2, N1);
 
   // Canonicalize integer abs.
   // vselect (setg[te] X,  0),  X, -X ->
@@ -8161,7 +8168,6 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     // This is OK if we don't care about what happens if either operand is a
     // NaN.
     //
-    EVT VT = N->getValueType(0);
     if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(
                               DAG, N0.getOperand(0), N0.getOperand(1), TLI)) {
       ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();

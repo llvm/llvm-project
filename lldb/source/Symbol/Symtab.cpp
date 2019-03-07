@@ -625,7 +625,7 @@ void Symtab::SortSymbolIndexesByValue(std::vector<uint32_t> &indexes,
   }
 }
 
-uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
+uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
                                              std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
@@ -640,7 +640,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
   return 0;
 }
 
-uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
+uint32_t Symtab::AppendSymbolIndexesWithName(ConstString symbol_name,
                                              Debug symbol_debug_type,
                                              Visibility symbol_visibility,
                                              std::vector<uint32_t> &indexes) {
@@ -667,7 +667,7 @@ uint32_t Symtab::AppendSymbolIndexesWithName(const ConstString &symbol_name,
 }
 
 uint32_t
-Symtab::AppendSymbolIndexesWithNameAndType(const ConstString &symbol_name,
+Symtab::AppendSymbolIndexesWithNameAndType(ConstString symbol_name,
                                            SymbolType symbol_type,
                                            std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -686,7 +686,7 @@ Symtab::AppendSymbolIndexesWithNameAndType(const ConstString &symbol_name,
 }
 
 uint32_t Symtab::AppendSymbolIndexesWithNameAndType(
-    const ConstString &symbol_name, SymbolType symbol_type,
+    ConstString symbol_name, SymbolType symbol_type,
     Debug symbol_debug_type, Visibility symbol_visibility,
     std::vector<uint32_t> &indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -771,7 +771,7 @@ Symbol *Symtab::FindSymbolWithType(SymbolType symbol_type,
 }
 
 size_t
-Symtab::FindAllSymbolsWithNameAndType(const ConstString &name,
+Symtab::FindAllSymbolsWithNameAndType(ConstString name,
                                       SymbolType symbol_type,
                                       std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
@@ -792,7 +792,7 @@ Symtab::FindAllSymbolsWithNameAndType(const ConstString &name,
 }
 
 size_t Symtab::FindAllSymbolsWithNameAndType(
-    const ConstString &name, SymbolType symbol_type, Debug symbol_debug_type,
+    ConstString name, SymbolType symbol_type, Debug symbol_debug_type,
     Visibility symbol_visibility, std::vector<uint32_t> &symbol_indexes) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
@@ -823,7 +823,7 @@ size_t Symtab::FindAllSymbolsMatchingRexExAndType(
   return symbol_indexes.size();
 }
 
-Symbol *Symtab::FindFirstSymbolWithNameAndType(const ConstString &name,
+Symbol *Symtab::FindFirstSymbolWithNameAndType(ConstString name,
                                                SymbolType symbol_type,
                                                Debug symbol_debug_type,
                                                Visibility symbol_visibility) {
@@ -1050,7 +1050,7 @@ void Symtab::SymbolIndicesToSymbolContextList(
   }
 }
 
-size_t Symtab::FindFunctionSymbols(const ConstString &name,
+size_t Symtab::FindFunctionSymbols(ConstString name,
                                    uint32_t name_type_mask,
                                    SymbolContextList &sc_list) {
   size_t count = 0;

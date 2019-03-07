@@ -813,7 +813,7 @@ Error IndexedInstrProfReader::readHeader() {
 
   Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
                     /* UseCS */ false);
-  if (Header->Version & VARIANT_MASK_CSIR_PROF)
+  if (FormatVersion & VARIANT_MASK_CSIR_PROF)
     Cur = readSummary((IndexedInstrProf::ProfVersion)FormatVersion, Cur,
                       /* UseCS */ true);
 
