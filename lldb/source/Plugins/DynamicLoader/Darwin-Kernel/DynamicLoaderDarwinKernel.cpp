@@ -873,14 +873,6 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     }
   }
 
-  if (!m_module_sp && !IsKernel() && m_uuid.IsValid() && !m_name.empty()) {
-    Stream *s = target.GetDebugger().GetOutputFile().get();
-    if (s) {
-      s->Printf("warning: Can't find binary/dSYM for %s (%s)\n", m_name.c_str(),
-                m_uuid.GetAsString().c_str());
-    }
-  }
-
   static ConstString g_section_name_LINKEDIT("__LINKEDIT");
 
   if (m_memory_module_sp && m_module_sp) {
@@ -1296,6 +1288,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
     }
   }
 
+  int failed_to_load_kexts = 0;
   if (number_of_new_kexts_being_added > 0) {
     ModuleList loaded_module_list;
 
@@ -1305,6 +1298,7 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
         KextImageInfo &image_info = kext_summaries[new_kext];
         if (load_kexts) {
           if (!image_info.LoadImageUsingMemoryModule(m_process)) {
+            failed_to_load_kexts++;
             image_info.LoadImageAtFileAddress(m_process);
           }
         }
@@ -1350,7 +1344,11 @@ bool DynamicLoaderDarwinKernel::ParseKextSummaries(
   }
 
   if (s && load_kexts) {
-    s->Printf(" done.\n");
+    s->Printf(" done.");
+    if (failed_to_load_kexts > 0 && number_of_new_kexts_being_added > 0)
+      s->Printf("  Failed to load %d of %d kexts.", failed_to_load_kexts,
+                number_of_new_kexts_being_added);
+    s->Printf("\n");
     s->Flush();
   }
 
