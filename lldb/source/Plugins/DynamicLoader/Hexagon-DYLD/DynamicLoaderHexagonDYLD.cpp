@@ -59,7 +59,7 @@ static lldb::addr_t findSymbolAddress(Process *proc, ConstString findName) {
   for (size_t i = 0; i < symtab->GetNumSymbols(); i++) {
     const Symbol *sym = symtab->SymbolAtIndex(i);
     assert(sym != nullptr);
-    const ConstString &symName = sym->GetName();
+    ConstString symName = sym->GetName();
 
     if (ConstString::Compare(findName, symName) == 0) {
       Address addr = sym->GetAddress();

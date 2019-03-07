@@ -15,7 +15,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
-#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/UtilityFunction.h"
@@ -42,11 +41,8 @@ using namespace lldb;
 UtilityFunction::UtilityFunction(ExecutionContextScope &exe_scope,
                                  const char *text, const char *name)
     : Expression(exe_scope), m_execution_unit_sp(), m_jit_module_wp(),
-      m_function_text(ExpressionSourceCode::g_expression_prefix),
-      m_function_name(name) {
-  if (text && text[0])
-    m_function_text.append(text);
-}
+      m_function_text(),
+      m_function_name(name) {}
 
 UtilityFunction::~UtilityFunction() {
   lldb::ProcessSP process_sp(m_jit_process_wp.lock());

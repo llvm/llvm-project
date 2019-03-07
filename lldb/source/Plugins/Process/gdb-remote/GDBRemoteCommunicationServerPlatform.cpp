@@ -398,7 +398,7 @@ GDBRemoteCommunicationServerPlatform::Handle_jSignalsInfo(
     StringExtractorGDBRemote &packet) {
   StructuredData::Array signal_array;
 
-  const auto &signals = Host::GetUnixSignals();
+  lldb::UnixSignalsSP signals = UnixSignals::CreateForHost();
   for (auto signo = signals->GetFirstSignalNumber();
        signo != LLDB_INVALID_SIGNAL_NUMBER;
        signo = signals->GetNextSignalNumber(signo)) {

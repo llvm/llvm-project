@@ -69,7 +69,7 @@ protected:
       const DWARFDeclContext &die_decl_ctx) override;
 
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, const lldb_private::ConstString &type_name,
+      const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation) override;
 
   SymbolFileDWARF *GetBaseSymbolFile();

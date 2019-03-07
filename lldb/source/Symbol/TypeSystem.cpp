@@ -92,7 +92,7 @@ CompilerType TypeSystem::CreateTypedef(lldb::opaque_compiler_type_t type,
   return CompilerType();
 }
 
-CompilerType TypeSystem::GetBuiltinTypeByName(const ConstString &name) {
+CompilerType TypeSystem::GetBuiltinTypeByName(ConstString name) {
   return CompilerType();
 }
 

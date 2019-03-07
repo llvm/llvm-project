@@ -299,7 +299,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
 }
 
 size_t lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   if (name == ConstString("first"))
     return 0;
   if (name == ConstString("second"))
@@ -429,7 +429,7 @@ bool lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
 }
 
 size_t lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   if (name == ConstString("__ptr_"))
     return 0;
   if (name == ConstString("count"))

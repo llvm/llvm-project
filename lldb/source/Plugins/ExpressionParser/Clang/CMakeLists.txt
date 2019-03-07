@@ -9,6 +9,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   ClangASTSource.cpp
   ClangExpressionDeclMap.cpp
   ClangExpressionParser.cpp
+  ClangExpressionSourceCode.cpp
   ClangExpressionVariable.cpp
   ClangFunctionCaller.cpp
   ClangHost.cpp

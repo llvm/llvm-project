@@ -107,7 +107,7 @@ Type *SymbolFileType::GetType() {
 }
 
 Type::Type(lldb::user_id_t uid, SymbolFile *symbol_file,
-           const ConstString &name, llvm::Optional<uint64_t> byte_size,
+           ConstString name, llvm::Optional<uint64_t> byte_size,
            SymbolContextScope *context, user_id_t encoding_uid,
            EncodingDataType encoding_uid_type, const Declaration &decl,
            const CompilerType &compiler_type,
@@ -153,7 +153,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
 
   // Call the name accessor to make sure we resolve the type name
   if (show_name) {
-    const ConstString &type_name = GetName();
+    ConstString type_name = GetName();
     if (type_name) {
       *s << ", name = \"" << type_name << '"';
       ConstString qualified_type_name(GetQualifiedName());
@@ -272,7 +272,7 @@ void Type::Dump(Stream *s, bool show_context) {
   s->EOL();
 }
 
-const ConstString &Type::GetName() {
+ConstString Type::GetName() {
   if (!m_name)
     m_name = GetForwardCompilerType().GetConstTypeName();
   return m_name;
@@ -734,7 +734,7 @@ ConstString TypeAndOrName::GetName() const {
   return ConstString("<invalid>");
 }
 
-void TypeAndOrName::SetName(const ConstString &type_name) {
+void TypeAndOrName::SetName(ConstString type_name) {
   m_type_name = type_name;
 }
 
@@ -1104,7 +1104,7 @@ CompilerType TypeMemberFunctionImpl::GetArgumentAtIndex(size_t idx) const {
 }
 
 TypeEnumMemberImpl::TypeEnumMemberImpl(const lldb::TypeImplSP &integer_type_sp,
-                                       const ConstString &name,
+                                       ConstString name,
                                        const llvm::APSInt &value)
     : m_integer_type_sp(integer_type_sp), m_name(name), m_value(value),
       m_valid((bool)name && (bool)integer_type_sp)

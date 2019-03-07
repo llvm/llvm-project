@@ -178,13 +178,13 @@ public:
 
   virtual void DumpClangAST(Stream &s) {}
   virtual uint32_t
-  FindGlobalVariables(const ConstString &name,
+  FindGlobalVariables(ConstString name,
                       const CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches, VariableList &variables);
   virtual uint32_t FindGlobalVariables(const RegularExpression &regex,
                                        uint32_t max_matches,
                                        VariableList &variables);
-  virtual uint32_t FindFunctions(const ConstString &name,
+  virtual uint32_t FindFunctions(ConstString name,
                                  const CompilerDeclContext *parent_decl_ctx,
                                  lldb::FunctionNameType name_type_mask,
                                  bool include_inlines, bool append,
@@ -193,7 +193,7 @@ public:
                                  bool include_inlines, bool append,
                                  SymbolContextList &sc_list);
   virtual uint32_t
-  FindTypes(const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+  FindTypes(ConstString name, const CompilerDeclContext *parent_decl_ctx,
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             TypeMap &types);
@@ -217,7 +217,7 @@ public:
   GetTypeSystemForLanguage(lldb::LanguageType language);
 
   virtual CompilerDeclContext
-  FindNamespace(const ConstString &name,
+  FindNamespace(ConstString name,
                 const CompilerDeclContext *parent_decl_ctx) {
     return CompilerDeclContext();
   }

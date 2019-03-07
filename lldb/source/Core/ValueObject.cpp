@@ -350,7 +350,7 @@ const Status &ValueObject::GetError() {
   return m_error;
 }
 
-const ConstString &ValueObject::GetName() const { return m_name; }
+ConstString ValueObject::GetName() const { return m_name; }
 
 const char *ValueObject::GetLocationAsCString() {
   return GetLocationAsCStringImpl(m_value, m_data);
@@ -543,13 +543,13 @@ lldb::ValueObjectSP ValueObject::GetChildAtNamePath(
   return root;
 }
 
-size_t ValueObject::GetIndexOfChildWithName(const ConstString &name) {
+size_t ValueObject::GetIndexOfChildWithName(ConstString name) {
   bool omit_empty_base_classes = true;
   return GetCompilerType().GetIndexOfChildWithName(name.GetCString(),
                                                    omit_empty_base_classes);
 }
 
-ValueObjectSP ValueObject::GetChildMemberWithName(const ConstString &name,
+ValueObjectSP ValueObject::GetChildMemberWithName(ConstString name,
                                                   bool can_create) {
   // when getting a child by name, it could be buried inside some base classes
   // (which really aren't part of the expression path), so we need a vector of
@@ -617,7 +617,7 @@ void ValueObject::SetNumChildren(size_t num_children) {
   m_children.SetChildrenCount(num_children);
 }
 
-void ValueObject::SetName(const ConstString &name) { m_name = name; }
+void ValueObject::SetName(ConstString name) { m_name = name; }
 
 ValueObject *ValueObject::CreateChildAtIndex(size_t idx,
                                              bool synthetic_array_member,
@@ -1657,12 +1657,12 @@ LanguageType ValueObject::GetObjectRuntimeLanguage() {
   return GetCompilerType().GetMinimumLanguage();
 }
 
-void ValueObject::AddSyntheticChild(const ConstString &key,
+void ValueObject::AddSyntheticChild(ConstString key,
                                     ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
 }
 
-ValueObjectSP ValueObject::GetSyntheticChild(const ConstString &key) const {
+ValueObjectSP ValueObject::GetSyntheticChild(ConstString key) const {
   ValueObjectSP synthetic_child_sp;
   std::map<ConstString, ValueObject *>::const_iterator pos =
       m_synthetic_children.find(key);
@@ -2740,7 +2740,7 @@ void ValueObject::Dump(Stream &s, const DumpValueObjectOptions &options) {
   printer.PrintValueObject();
 }
 
-ValueObjectSP ValueObject::CreateConstantValue(const ConstString &name) {
+ValueObjectSP ValueObject::CreateConstantValue(ConstString name) {
   ValueObjectSP valobj_sp;
 
   if (UpdateValueIfNeeded(false) && m_error.Success()) {
@@ -2916,7 +2916,7 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
   return ValueObjectCast::Create(*this, GetName(), compiler_type);
 }
 
-lldb::ValueObjectSP ValueObject::Clone(const ConstString &new_name) {
+lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {
   return ValueObjectCast::Create(*this, new_name, GetCompilerType());
 }
 

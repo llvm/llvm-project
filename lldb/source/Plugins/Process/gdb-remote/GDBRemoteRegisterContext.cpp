@@ -257,10 +257,8 @@ bool GDBRemoteRegisterContext::ReadRegisterBytes(const RegisterInfo *reg_info,
   }
 
   if (&data != &m_reg_data) {
-#if defined(LLDB_CONFIGURATION_DEBUG)
     assert(m_reg_data.GetByteSize() >=
            reg_info->byte_offset + reg_info->byte_size);
-#endif
     // If our register context and our register info disagree, which should
     // never happen, don't read past the end of the buffer.
     if (m_reg_data.GetByteSize() < reg_info->byte_offset + reg_info->byte_size)
@@ -313,10 +311,8 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
   GDBRemoteCommunicationClient &gdb_comm(
       ((ProcessGDBRemote *)process)->GetGDBRemote());
 
-#if defined(LLDB_CONFIGURATION_DEBUG)
   assert(m_reg_data.GetByteSize() >=
          reg_info->byte_offset + reg_info->byte_size);
-#endif
 
   // If our register context and our register info disagree, which should never
   // happen, don't overwrite past the end of the buffer.

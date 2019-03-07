@@ -32,7 +32,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ValueObject *m_start;
@@ -53,7 +53,7 @@ public:
 
   bool MightHaveChildren() override { return true; }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   CompilerType m_bool_type;
@@ -164,7 +164,7 @@ bool lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
 }
 
 size_t lldb_private::formatters::LibcxxStdVectorSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   if (!m_start || !m_finish)
     return UINT32_MAX;
   return ExtractIndexFromString(name.GetCString());
@@ -271,7 +271,7 @@ bool lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::Update() {
 }
 
 size_t lldb_private::formatters::LibcxxVectorBoolSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   if (!m_count || !m_base_data_address)
     return UINT32_MAX;
   const char *item_name = name.GetCString();

@@ -57,7 +57,7 @@ public:
 
   size_t GetNumValues() const { return m_values.size(); }
 
-  lldb::OptionValueSP GetValueForKey(const ConstString &key) const;
+  lldb::OptionValueSP GetValueForKey(ConstString key) const;
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
                                   llvm::StringRef name, bool will_modify,
@@ -66,11 +66,11 @@ public:
   Status SetSubValue(const ExecutionContext *exe_ctx, VarSetOperationType op,
                      llvm::StringRef name, llvm::StringRef value) override;
 
-  bool SetValueForKey(const ConstString &key,
+  bool SetValueForKey(ConstString key,
                       const lldb::OptionValueSP &value_sp,
                       bool can_replace = true);
 
-  bool DeleteValueForKey(const ConstString &key);
+  bool DeleteValueForKey(ConstString key);
 
   size_t GetArgs(Args &args) const;
 

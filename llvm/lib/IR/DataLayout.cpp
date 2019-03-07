@@ -184,8 +184,6 @@ void DataLayout::reset(StringRef Desc) {
   AllocaAddrSpace = 0;
   StackNaturalAlign = 0;
   ProgramAddrSpace = 0;
-  FunctionPtrAlign = 0;
-  TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
   ManglingMode = MM_None;
   NonIntegralAddressSpaces.clear();
 
@@ -381,22 +379,6 @@ void DataLayout::parseSpecifier(StringRef Desc) {
       StackNaturalAlign = inBytes(getInt(Tok));
       break;
     }
-    case 'F': {
-      switch (Tok.front()) {
-      case 'i':
-        TheFunctionPtrAlignType = FunctionPtrAlignType::Independent;
-        break;
-      case 'n':
-        TheFunctionPtrAlignType = FunctionPtrAlignType::MultipleOfFunctionAlign;
-        break;
-      default:
-        report_fatal_error("Unknown function pointer alignment type in "
-                           "datalayout string");
-      }
-      Tok = Tok.substr(1);
-      FunctionPtrAlign = inBytes(getInt(Tok));
-      break;
-    }
     case 'P': { // Function address space.
       ProgramAddrSpace = getAddrSpace(Tok);
       break;
@@ -450,8 +432,6 @@ bool DataLayout::operator==(const DataLayout &Other) const {
              AllocaAddrSpace == Other.AllocaAddrSpace &&
              StackNaturalAlign == Other.StackNaturalAlign &&
              ProgramAddrSpace == Other.ProgramAddrSpace &&
-             FunctionPtrAlign == Other.FunctionPtrAlign &&
-             TheFunctionPtrAlignType == Other.TheFunctionPtrAlignType &&
              ManglingMode == Other.ManglingMode &&
              LegalIntWidths == Other.LegalIntWidths &&
              Alignments == Other.Alignments && Pointers == Other.Pointers;

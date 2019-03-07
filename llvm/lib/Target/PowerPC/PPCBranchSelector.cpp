@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include <algorithm>
 using namespace llvm;
 
 #define DEBUG_TYPE "ppc-branch-select"
@@ -75,9 +76,11 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
   // Give the blocks of the function a dense, in-order, numbering.
   Fn.RenumberBlocks();
   BlockSizes.resize(Fn.getNumBlockIDs());
+  // The first block number which has imprecise instruction address.
+  int FirstImpreciseBlock = -1;
 
-  auto GetAlignmentAdjustment =
-    [](MachineBasicBlock &MBB, unsigned Offset) -> unsigned {
+  auto GetAlignmentAdjustment = [&FirstImpreciseBlock]
+      (MachineBasicBlock &MBB, unsigned Offset) -> unsigned {
     unsigned Align = MBB.getAlignment();
     if (!Align)
       return 0;
@@ -90,6 +93,8 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
 
     // The alignment of this MBB is larger than the function's alignment, so we
     // can't tell whether or not it will insert nops. Assume that it will.
+    if (FirstImpreciseBlock < 0)
+      FirstImpreciseBlock = MBB.getNumber();
     return AlignAmt + OffsetToAlignment(Offset, AlignAmt);
   };
 
@@ -123,8 +128,11 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
     }
 
     unsigned BlockSize = 0;
-    for (MachineInstr &MI : *MBB)
+    for (MachineInstr &MI : *MBB) {
       BlockSize += TII->getInstSizeInBytes(MI);
+      if (MI.isInlineAsm() && (FirstImpreciseBlock < 0))
+        FirstImpreciseBlock = MBB->getNumber();
+    }
 
     BlockSizes[MBB->getNumber()].first = BlockSize;
     FuncSize += BlockSize;
@@ -178,22 +186,86 @@ bool PPCBSel::runOnMachineFunction(MachineFunction &Fn) {
         // Determine the offset from the current branch to the destination
         // block.
         int BranchSize;
+        unsigned MaxAlign = 2;
+        bool NeedExtraAdjustment = false;
         if (Dest->getNumber() <= MBB.getNumber()) {
           // If this is a backwards branch, the delta is the offset from the
           // start of this block to this branch, plus the sizes of all blocks
           // from this block to the dest.
           BranchSize = MBBStartOffset;
+          MaxAlign = std::max(MaxAlign, MBB.getAlignment());
 
-          for (unsigned i = Dest->getNumber(), e = MBB.getNumber(); i != e; ++i)
+          int DestBlock = Dest->getNumber();
+          BranchSize += BlockSizes[DestBlock].first;
+          for (unsigned i = DestBlock+1, e = MBB.getNumber(); i < e; ++i) {
             BranchSize += BlockSizes[i].first;
+            MaxAlign = std::max(MaxAlign,
+                                Fn.getBlockNumbered(i)->getAlignment());
+          }
+
+          NeedExtraAdjustment = (FirstImpreciseBlock >= 0) &&
+                                (DestBlock >= FirstImpreciseBlock);
         } else {
           // Otherwise, add the size of the blocks between this block and the
           // dest to the number of bytes left in this block.
-          BranchSize = -MBBStartOffset;
+          unsigned StartBlock = MBB.getNumber();
+          BranchSize = BlockSizes[StartBlock].first - MBBStartOffset;
 
-          for (unsigned i = MBB.getNumber(), e = Dest->getNumber(); i != e; ++i)
+          MaxAlign = std::max(MaxAlign, Dest->getAlignment());
+          for (unsigned i = StartBlock+1, e = Dest->getNumber(); i != e; ++i) {
             BranchSize += BlockSizes[i].first;
+            MaxAlign = std::max(MaxAlign,
+                                Fn.getBlockNumbered(i)->getAlignment());
+          }
+
+          NeedExtraAdjustment = (FirstImpreciseBlock >= 0) &&
+                                (MBB.getNumber() >= FirstImpreciseBlock);
         }
+
+        // We tend to over estimate code size due to large alignment and
+        // inline assembly. Usually it causes larger computed branch offset.
+        // But sometimes it may also causes smaller computed branch offset
+        // than actual branch offset. If the offset is close to the limit of
+        // encoding, it may cause problem at run time.
+        // Following is a simplified example.
+        //
+        //              actual        estimated
+        //              address        address
+        //    ...
+        //   bne Far      100            10c
+        //   .p2align 4
+        //   Near:        110            110
+        //    ...
+        //   Far:        8108           8108
+        //
+        //   Actual offset:    0x8108 - 0x100 = 0x8008
+        //   Computed offset:  0x8108 - 0x10c = 0x7ffc
+        //
+        // This example also shows when we can get the largest gap between
+        // estimated offset and actual offset. If there is an aligned block
+        // ABB between branch and target, assume its alignment is <align>
+        // bits. Now consider the accumulated function size FSIZE till the end
+        // of previous block PBB. If the estimated FSIZE is multiple of
+        // 2^<align>, we don't need any padding for the estimated address of
+        // ABB. If actual FSIZE at the end of PBB is 4 bytes more than
+        // multiple of 2^<align>, then we need (2^<align> - 4) bytes of
+        // padding. It also means the actual branch offset is (2^<align> - 4)
+        // larger than computed offset. Other actual FSIZE needs less padding
+        // bytes, so causes smaller gap between actual and computed offset.
+        //
+        // On the other hand, if the inline asm or large alignment occurs
+        // between the branch block and destination block, the estimated address
+        // can be <delta> larger than actual address. If padding bytes are
+        // needed for a later aligned block, the actual number of padding bytes
+        // is at most <delta> more than estimated padding bytes. So the actual
+        // aligned block address is less than or equal to the estimated aligned
+        // block address. So the actual branch offset is less than or equal to
+        // computed branch offset.
+        //
+        // The computed offset is at most ((1 << alignment) - 4) bytes smaller
+        // than actual offset. So we add this number to the offset for safety.
+        if (NeedExtraAdjustment)
+          BranchSize += (1 << MaxAlign) - 4;
 
         // If this branch is in range, ignore it.
         if (isInt<16>(BranchSize)) {

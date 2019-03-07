@@ -217,7 +217,7 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
   return WrapOptionsDict(options_dict_sp);
 }
 
-void BreakpointResolverName::AddNameLookup(const ConstString &name,
+void BreakpointResolverName::AddNameLookup(ConstString name,
                                            FunctionNameType name_type_mask) {
   ObjCLanguage::MethodName objc_method(name.GetCString(), false);
   if (objc_method.IsValid(false)) {

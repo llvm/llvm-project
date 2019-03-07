@@ -138,7 +138,7 @@ public:
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
   bool AddPersistentVariable(const clang::NamedDecl *decl,
-                             const ConstString &name, TypeFromParser type,
+                             ConstString name, TypeFromParser type,
                              bool is_result, bool is_lvalue);
 
   //------------------------------------------------------------------
@@ -163,7 +163,7 @@ public:
   /// @return
   ///     True on success; false otherwise.
   //------------------------------------------------------------------
-  bool AddValueToStruct(const clang::NamedDecl *decl, const ConstString &name,
+  bool AddValueToStruct(const clang::NamedDecl *decl, ConstString name,
                         llvm::Value *value, size_t size,
                         lldb::offset_t alignment);
 
@@ -268,11 +268,11 @@ public:
   ///     Valid load address for the symbol
   //------------------------------------------------------------------
   lldb::addr_t GetSymbolAddress(Target &target, Process *process,
-                                const ConstString &name,
+                                ConstString name,
                                 lldb::SymbolType symbol_type,
                                 Module *module = NULL);
 
-  lldb::addr_t GetSymbolAddress(const ConstString &name,
+  lldb::addr_t GetSymbolAddress(ConstString name,
                                 lldb::SymbolType symbol_type);
 
   //------------------------------------------------------------------
@@ -467,7 +467,7 @@ private:
   ///     The LLDB Variable found, or NULL if none was found.
   //------------------------------------------------------------------
   lldb::VariableSP FindGlobalVariable(Target &target, lldb::ModuleSP &module,
-                                      const ConstString &name,
+                                      ConstString name,
                                       CompilerDeclContext *namespace_decl,
                                       TypeFromUser *type = NULL);
 

@@ -124,7 +124,7 @@ public:
 
   ConstString &GetObjectName() { return m_object_name; }
 
-  const ConstString &GetObjectName() const { return m_object_name; }
+  ConstString GetObjectName() const { return m_object_name; }
 
   uint64_t GetObjectOffset() const { return m_object_offset; }
 
