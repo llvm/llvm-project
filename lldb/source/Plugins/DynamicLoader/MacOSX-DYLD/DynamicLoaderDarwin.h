@@ -157,7 +157,7 @@ protected:
                                     header.cputype, header.cpusubtype);
     }
 
-    const Segment *FindSegment(const lldb_private::ConstString &name) const;
+    const Segment *FindSegment(lldb_private::ConstString name) const;
 
     void PutToLog(lldb_private::Log *log) const;
 

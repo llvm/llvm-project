@@ -367,7 +367,7 @@ SymbolFileDWARF::SymbolFileDWARF(ObjectFile *objfile)
 
 SymbolFileDWARF::~SymbolFileDWARF() {}
 
-static const ConstString &GetDWARFMachOSegmentName() {
+static ConstString GetDWARFMachOSegmentName() {
   static ConstString g_dwarf_section_name("__DWARF");
   return g_dwarf_section_name;
 }
@@ -2020,7 +2020,7 @@ bool SymbolFileDWARF::DeclContextMatchesThisSymbolFile(
 }
 
 uint32_t SymbolFileDWARF::FindGlobalVariables(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
@@ -2246,7 +2246,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext *decl_ctx,
 }
 
 uint32_t SymbolFileDWARF::FindFunctions(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines, bool append,
     SymbolContextList &sc_list) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
@@ -2391,7 +2391,7 @@ void SymbolFileDWARF::GetMangledNamesForFunction(
 }
 
 uint32_t SymbolFileDWARF::FindTypes(
-    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    ConstString name, const CompilerDeclContext *parent_decl_ctx,
     bool append, uint32_t max_matches,
     llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
     TypeMap &types) {
@@ -2540,7 +2540,7 @@ size_t SymbolFileDWARF::FindTypes(const std::vector<CompilerContext> &context,
 }
 
 CompilerDeclContext
-SymbolFileDWARF::FindNamespace(const ConstString &name,
+SymbolFileDWARF::FindNamespace(ConstString name,
                                const CompilerDeclContext *parent_decl_ctx) {
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_LOOKUPS));
 
@@ -2677,7 +2677,7 @@ SymbolFileDWARF::GetDeclContextDIEContainingDIE(const DWARFDIE &orig_die) {
 }
 
 Symbol *
-SymbolFileDWARF::GetObjCClassSymbol(const ConstString &objc_class_name) {
+SymbolFileDWARF::GetObjCClassSymbol(ConstString objc_class_name) {
   Symbol *objc_class_symbol = NULL;
   if (m_obj_file) {
     Symtab *symtab = m_obj_file->GetSymtab();
@@ -2725,7 +2725,7 @@ bool SymbolFileDWARF::Supports_DW_AT_APPLE_objc_complete_type(
 // This function can be used when a DIE is found that is a forward declaration
 // DIE and we want to try and find a type that has the complete definition.
 TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
-    const DWARFDIE &die, const ConstString &type_name,
+    const DWARFDIE &die, ConstString type_name,
     bool must_be_implementation) {
 
   TypeSP type_sp;
@@ -2843,7 +2843,7 @@ bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
     if (decl_ctx_die1.Tag() != decl_ctx_die2.Tag())
       return false;
   }
-#if defined LLDB_CONFIGURATION_DEBUG
+#ifndef NDEBUG
 
   // Make sure the top item in the decl context die array is always
   // DW_TAG_compile_unit or DW_TAG_partial_unit. If it isn't then

@@ -483,7 +483,7 @@ public:
   //------------------------------------------------------------------
   const Status &GetError();
 
-  const ConstString &GetName() const;
+  ConstString GetName() const;
 
   virtual lldb::ValueObjectSP GetChildAtIndex(size_t idx, bool can_create);
 
@@ -503,10 +503,10 @@ public:
   GetChildAtNamePath(llvm::ArrayRef<std::pair<ConstString, bool>> names,
                      ConstString *name_of_error = nullptr);
 
-  virtual lldb::ValueObjectSP GetChildMemberWithName(const ConstString &name,
+  virtual lldb::ValueObjectSP GetChildMemberWithName(ConstString name,
                                                      bool can_create);
 
-  virtual size_t GetIndexOfChildWithName(const ConstString &name);
+  virtual size_t GetIndexOfChildWithName(ConstString name);
 
   size_t GetNumChildren(uint32_t max = UINT32_MAX);
 
@@ -573,14 +573,14 @@ public:
   // Change the name of the current ValueObject. Should *not* be used from a
   // synthetic child provider as it would change the name of the non synthetic
   // child as well.
-  void SetName(const ConstString &name);
+  void SetName(ConstString name);
 
   virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
                                     AddressType *address_type = nullptr);
 
   lldb::addr_t GetPointerValue(AddressType *address_type = nullptr);
 
-  lldb::ValueObjectSP GetSyntheticChild(const ConstString &key) const;
+  lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
 
   lldb::ValueObjectSP GetSyntheticArrayMember(size_t index, bool can_create);
 
@@ -617,7 +617,7 @@ public:
   GetQualifiedRepresentationIfAvailable(lldb::DynamicValueType dynValue,
                                         bool synthValue);
 
-  virtual lldb::ValueObjectSP CreateConstantValue(const ConstString &name);
+  virtual lldb::ValueObjectSP CreateConstantValue(ConstString name);
 
   virtual lldb::ValueObjectSP Dereference(Status &error);
 
@@ -625,7 +625,7 @@ public:
   // ValueObject as its parent. It should be used when we want to change the
   // name of a ValueObject without modifying the actual ValueObject itself
   // (e.g. sythetic child provider).
-  virtual lldb::ValueObjectSP Clone(const ConstString &new_name);
+  virtual lldb::ValueObjectSP Clone(ConstString new_name);
 
   virtual lldb::ValueObjectSP AddressOf(Status &error);
 
@@ -999,7 +999,7 @@ protected:
   void ClearUserVisibleData(
       uint32_t items = ValueObject::eClearUserVisibleDataItemsAllStrings);
 
-  void AddSyntheticChild(const ConstString &key, ValueObject *valobj);
+  void AddSyntheticChild(ConstString key, ValueObject *valobj);
 
   DataExtractor &GetDataExtractor();
 

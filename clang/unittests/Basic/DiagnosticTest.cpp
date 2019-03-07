@@ -46,13 +46,13 @@ TEST(DiagnosticTest, suppressAndTrap) {
   EXPECT_FALSE(Diags.hasUnrecoverableErrorOccurred());
 }
 
-// Check that SuppressAfterFatalError works as intended
-TEST(DiagnosticTest, suppressAfterFatalError) {
-  for (unsigned Suppress = 0; Suppress != 2; ++Suppress) {
+// Check that FatalsAsError works as intended
+TEST(DiagnosticTest, fatalsAsError) {
+  for (unsigned FatalsAsError = 0; FatalsAsError != 2; ++FatalsAsError) {
     DiagnosticsEngine Diags(new DiagnosticIDs(),
                             new DiagnosticOptions,
                             new IgnoringDiagConsumer());
-    Diags.setSuppressAfterFatalError(Suppress);
+    Diags.setFatalsAsError(FatalsAsError);
 
     // Diag that would set UnrecoverableErrorOccurred and ErrorOccurred.
     Diags.Report(diag::err_cannot_open_file) << "file" << "error";
@@ -62,16 +62,15 @@ TEST(DiagnosticTest, suppressAfterFatalError) {
     Diags.Report(diag::warn_mt_message) << "warning";
 
     EXPECT_TRUE(Diags.hasErrorOccurred());
-    EXPECT_TRUE(Diags.hasFatalErrorOccurred());
+    EXPECT_EQ(Diags.hasFatalErrorOccurred(), FatalsAsError ? 0u : 1u);
     EXPECT_TRUE(Diags.hasUncompilableErrorOccurred());
     EXPECT_TRUE(Diags.hasUnrecoverableErrorOccurred());
 
     // The warning should be emitted and counted only if we're not suppressing
     // after fatal errors.
-    EXPECT_EQ(Diags.getNumWarnings(), Suppress ? 0u : 1u);
+    EXPECT_EQ(Diags.getNumWarnings(), FatalsAsError);
   }
 }
-
 TEST(DiagnosticTest, diagnosticError) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());

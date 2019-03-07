@@ -49,7 +49,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
@@ -70,7 +70,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 };
 
 } // end of anonymous namespace
@@ -141,7 +141,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
 bool LibstdcppMapIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   if (name == ConstString("first"))
     return 0;
   if (name == ConstString("second"))
@@ -223,7 +223,7 @@ VectorIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
 bool VectorIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   if (name == ConstString("item"))
     return 0;
   return UINT32_MAX;
@@ -373,7 +373,7 @@ bool LibStdcppSharedPtrSyntheticFrontEnd::Update() { return false; }
 bool LibStdcppSharedPtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   if (name == ConstString("_M_ptr"))
     return 0;
   return UINT32_MAX;

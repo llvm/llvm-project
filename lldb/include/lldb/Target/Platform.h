@@ -108,9 +108,9 @@ public:
   static void SetHostPlatform(const lldb::PlatformSP &platform_sp);
 
   // Find an existing platform plug-in by name
-  static lldb::PlatformSP Find(const ConstString &name);
+  static lldb::PlatformSP Find(ConstString name);
 
-  static lldb::PlatformSP Create(const ConstString &name, Status &error);
+  static lldb::PlatformSP Create(ConstString name, Status &error);
 
   static lldb::PlatformSP Create(const ArchSpec &arch,
                                  ArchSpec *platform_arch_ptr, Status &error);
@@ -137,7 +137,7 @@ public:
   ///     should be used. If nullptr, pick the best plug-in.
   //------------------------------------------------------------------
   //        static lldb::PlatformSP
-  //        FindPlugin (Process *process, const ConstString &plugin_name);
+  //        FindPlugin (Process *process, ConstString plugin_name);
 
   //------------------------------------------------------------------
   /// Set the target's executable based off of the existing architecture
@@ -518,13 +518,13 @@ public:
   // Used for column widths
   size_t GetMaxGroupIDNameLength() const { return m_max_gid_name_len; }
 
-  const ConstString &GetSDKRootDirectory() const { return m_sdk_sysroot; }
+  ConstString GetSDKRootDirectory() const { return m_sdk_sysroot; }
 
-  void SetSDKRootDirectory(const ConstString &dir) { m_sdk_sysroot = dir; }
+  void SetSDKRootDirectory(ConstString dir) { m_sdk_sysroot = dir; }
 
-  const ConstString &GetSDKBuild() const { return m_sdk_build; }
+  ConstString GetSDKBuild() const { return m_sdk_build; }
 
-  void SetSDKBuild(const ConstString &sdk_build) { m_sdk_build = sdk_build; }
+  void SetSDKBuild(ConstString sdk_build) { m_sdk_build = sdk_build; }
 
   // Override this to return true if your platform supports Clang modules. You
   // may also need to override AddClangModuleCompilationOptions to pass the

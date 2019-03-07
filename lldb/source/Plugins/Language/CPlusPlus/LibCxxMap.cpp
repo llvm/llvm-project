@@ -184,7 +184,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   bool GetDataType();
@@ -452,7 +452,7 @@ bool lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
 }
 
 size_t lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::
-    GetIndexOfChildWithName(const ConstString &name) {
+    GetIndexOfChildWithName(ConstString name) {
   return ExtractIndexFromString(name.GetCString());
 }
 

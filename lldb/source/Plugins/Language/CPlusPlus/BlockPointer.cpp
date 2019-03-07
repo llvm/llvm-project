@@ -149,7 +149,7 @@ public:
   // maybe return false if the block pointer is, say, null
   bool MightHaveChildren() override { return true; }
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override {
+  size_t GetIndexOfChildWithName(ConstString name) override {
     if (!m_block_struct_type.IsValid())
       return UINT32_MAX;
 

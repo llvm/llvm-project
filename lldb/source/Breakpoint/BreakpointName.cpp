@@ -28,7 +28,7 @@ const Flags::ValueType BreakpointName::Permissions::permissions_mask
       (0x5u)
 };
 
-BreakpointName::BreakpointName(const ConstString &name, const Breakpoint &bkpt,
+BreakpointName::BreakpointName(ConstString name, const Breakpoint &bkpt,
                  const char *help) :
       m_name(name), m_options(bkpt.GetOptions())
 {

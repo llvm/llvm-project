@@ -91,9 +91,9 @@ public:
 
     ~ThreadEventData() override;
 
-    static const ConstString &GetFlavorString();
+    static ConstString GetFlavorString();
 
-    const ConstString &GetFlavor() const override {
+    ConstString GetFlavor() const override {
       return ThreadEventData::GetFlavorString();
     }
 

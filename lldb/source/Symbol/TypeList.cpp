@@ -49,7 +49,7 @@ void TypeList::Insert(const TypeSP &type_sp) {
 // Find a type by name.
 //----------------------------------------------------------------------
 // TypeList
-// TypeList::FindTypes (const ConstString &name)
+// TypeList::FindTypes (ConstString name)
 //{
 //    // Do we ever need to make a lookup by name map? Here we are doing
 //    // a linear search which isn't going to be fast.

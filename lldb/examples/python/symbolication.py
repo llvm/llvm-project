@@ -26,8 +26,8 @@
 #   PYTHONPATH=/path/to/LLDB.framework/Resources/Python ./crashlog.py ~/Library/Logs/DiagnosticReports/a.crash
 #----------------------------------------------------------------------
 
+from __future__ import print_function
 import lldb
-import commands
 import optparse
 import os
 import plistlib
@@ -203,13 +203,13 @@ class Section:
                 if op == '+':
                     self.end_addr += self.start_addr
                 return True
-        print 'error: invalid section info string "%s"' % s
-        print 'Valid section info formats are:'
-        print 'Format                Example                    Description'
-        print '--------------------- -----------------------------------------------'
-        print '<name>=<base>        __TEXT=0x123000             Section from base address only'
-        print '<name>=<base>-<end>  __TEXT=0x123000-0x124000    Section from base address and end address'
-        print '<name>=<base>+<size> __TEXT=0x123000+0x1000      Section from base address and size'
+        print('error: invalid section info string "%s"' % s)
+        print('Valid section info formats are:')
+        print('Format                Example                    Description')
+        print('--------------------- -----------------------------------------------')
+        print('<name>=<base>        __TEXT=0x123000             Section from base address only')
+        print('<name>=<base>-<end>  __TEXT=0x123000-0x124000    Section from base address and end address')
+        print('<name>=<base>+<size> __TEXT=0x123000+0x1000      Section from base address and size')
         return False
 
     def __str__(self):
@@ -261,21 +261,21 @@ class Image:
         return obj
 
     def dump(self, prefix):
-        print "%s%s" % (prefix, self)
+        print("%s%s" % (prefix, self))
 
     def debug_dump(self):
-        print 'path = "%s"' % (self.path)
-        print 'resolved_path = "%s"' % (self.resolved_path)
-        print 'resolved = %i' % (self.resolved)
-        print 'unavailable = %i' % (self.unavailable)
-        print 'uuid = %s' % (self.uuid)
-        print 'section_infos = %s' % (self.section_infos)
-        print 'identifier = "%s"' % (self.identifier)
-        print 'version = %s' % (self.version)
-        print 'arch = %s' % (self.arch)
-        print 'module = %s' % (self.module)
-        print 'symfile = "%s"' % (self.symfile)
-        print 'slide = %i (0x%x)' % (self.slide, self.slide)
+        print('path = "%s"' % (self.path))
+        print('resolved_path = "%s"' % (self.resolved_path))
+        print('resolved = %i' % (self.resolved))
+        print('unavailable = %i' % (self.unavailable))
+        print('uuid = %s' % (self.uuid))
+        print('section_infos = %s' % (self.section_infos))
+        print('identifier = "%s"' % (self.identifier))
+        print('version = %s' % (self.version))
+        print('arch = %s' % (self.arch))
+        print('module = %s' % (self.module))
+        print('symfile = "%s"' % (self.symfile))
+        print('slide = %i (0x%x)' % (self.slide, self.slide))
 
     def __str__(self):
         s = ''
@@ -428,12 +428,12 @@ class Image:
                 if self.has_section_load_info():
                     err = self.load_module(target)
                     if err:
-                        print 'ERROR: ', err
+                        print('ERROR: ', err)
                 return target
             else:
-                print 'error: unable to create a valid target for (%s) "%s"' % (self.arch, self.path)
+                print('error: unable to create a valid target for (%s) "%s"' % (self.arch, self.path))
         else:
-            print 'error: unable to locate main executable (%s) "%s"' % (self.arch, self.path)
+            print('error: unable to locate main executable (%s) "%s"' % (self.arch, self.path))
         return None
 
 
@@ -554,7 +554,7 @@ class Symbolicator:
                     if symbolicated_addresses:
                         return symbolicated_addresses
         else:
-            print 'error: no target in Symbolicator'
+            print('error: no target in Symbolicator')
         return None
 
 
@@ -602,22 +602,22 @@ def disassemble_instructions(
             end_idx = inst_idx
         for i in range(start_idx, end_idx + 1):
             if i == pc_index:
-                print ' -> ', lines[i]
+                print(' -> ', lines[i])
             else:
-                print '    ', lines[i]
+                print('    ', lines[i])
 
 
 def print_module_section_data(section):
-    print section
+    print(section)
     section_data = section.GetSectionData()
     if section_data:
         ostream = lldb.SBStream()
         section_data.GetDescription(ostream, section.GetFileAddress())
-        print ostream.GetData()
+        print(ostream.GetData())
 
 
 def print_module_section(section, depth):
-    print section
+    print(section)
     if depth > 0:
         num_sub_sections = section.GetNumSubSections()
         for sect_idx in range(num_sub_sections):
@@ -632,7 +632,7 @@ def print_module_sections(module, depth):
 
 def print_module_symbols(module):
     for sym in module:
-        print sym
+        print(sym)
 
 
 def Symbolicate(command_args):
@@ -709,17 +709,17 @@ def Symbolicate(command_args):
 
     target = symbolicator.create_target()
     if options.verbose:
-        print symbolicator
+        print(symbolicator)
     if target:
         for addr_str in args:
             addr = int(addr_str, 0)
             symbolicated_addrs = symbolicator.symbolicate(
                 addr, options.verbose)
             for symbolicated_addr in symbolicated_addrs:
-                print symbolicated_addr
-            print
+                print(symbolicated_addr)
+            print()
     else:
-        print 'error: no target for %s' % (symbolicator)
+        print('error: no target for %s' % (symbolicator))
 
 if __name__ == '__main__':
     # Create a new debugger instance

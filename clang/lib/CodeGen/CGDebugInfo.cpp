@@ -1725,31 +1725,37 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       QualType T = TA.getParamTypeForDecl().getDesugaredType(CGM.getContext());
       llvm::DIType *TTy = getOrCreateType(T, Unit);
       llvm::Constant *V = nullptr;
-      const CXXMethodDecl *MD;
-      // Variable pointer template parameters have a value that is the address
-      // of the variable.
-      if (const auto *VD = dyn_cast<VarDecl>(D))
-        V = CGM.GetAddrOfGlobalVar(VD);
-      // Member function pointers have special support for building them, though
-      // this is currently unsupported in LLVM CodeGen.
-      else if ((MD = dyn_cast<CXXMethodDecl>(D)) && MD->isInstance())
-        V = CGM.getCXXABI().EmitMemberFunctionPointer(MD);
-      else if (const auto *FD = dyn_cast<FunctionDecl>(D))
-        V = CGM.GetAddrOfFunction(FD);
-      // Member data pointers have special handling too to compute the fixed
-      // offset within the object.
-      else if (const auto *MPT = dyn_cast<MemberPointerType>(T.getTypePtr())) {
-        // These five lines (& possibly the above member function pointer
-        // handling) might be able to be refactored to use similar code in
-        // CodeGenModule::getMemberPointerConstant
-        uint64_t fieldOffset = CGM.getContext().getFieldOffset(D);
-        CharUnits chars =
-            CGM.getContext().toCharUnitsFromBits((int64_t)fieldOffset);
-        V = CGM.getCXXABI().EmitMemberDataPointer(MPT, chars);
+      // Skip retrieve the value if that template parameter has cuda device
+      // attribute, i.e. that value is not available at the host side.
+      if (!CGM.getLangOpts().CUDA || CGM.getLangOpts().CUDAIsDevice ||
+          !D->hasAttr<CUDADeviceAttr>()) {
+        const CXXMethodDecl *MD;
+        // Variable pointer template parameters have a value that is the address
+        // of the variable.
+        if (const auto *VD = dyn_cast<VarDecl>(D))
+          V = CGM.GetAddrOfGlobalVar(VD);
+        // Member function pointers have special support for building them,
+        // though this is currently unsupported in LLVM CodeGen.
+        else if ((MD = dyn_cast<CXXMethodDecl>(D)) && MD->isInstance())
+          V = CGM.getCXXABI().EmitMemberFunctionPointer(MD);
+        else if (const auto *FD = dyn_cast<FunctionDecl>(D))
+          V = CGM.GetAddrOfFunction(FD);
+        // Member data pointers have special handling too to compute the fixed
+        // offset within the object.
+        else if (const auto *MPT =
+                     dyn_cast<MemberPointerType>(T.getTypePtr())) {
+          // These five lines (& possibly the above member function pointer
+          // handling) might be able to be refactored to use similar code in
+          // CodeGenModule::getMemberPointerConstant
+          uint64_t fieldOffset = CGM.getContext().getFieldOffset(D);
+          CharUnits chars =
+              CGM.getContext().toCharUnitsFromBits((int64_t)fieldOffset);
+          V = CGM.getCXXABI().EmitMemberDataPointer(MPT, chars);
+        }
+        V = V->stripPointerCasts();
       }
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy,
-          cast_or_null<llvm::Constant>(V->stripPointerCasts())));
+          TheCU, Name, TTy, cast_or_null<llvm::Constant>(V)));
     } break;
     case TemplateArgument::NullPtr: {
       QualType T = TA.getNullPtrType();

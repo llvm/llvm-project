@@ -9,6 +9,7 @@
 #include "ClangUtilityFunction.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionParser.h"
+#include "ClangExpressionSourceCode.h"
 
 #include <stdio.h>
 #if HAVE_SYS_TYPES_H
@@ -18,7 +19,6 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -40,7 +40,11 @@ using namespace lldb_private;
 //------------------------------------------------------------------
 ClangUtilityFunction::ClangUtilityFunction(ExecutionContextScope &exe_scope,
                                            const char *text, const char *name)
-    : UtilityFunction(exe_scope, text, name) {}
+    : UtilityFunction(exe_scope, text, name) {
+  m_function_text.assign(ClangExpressionSourceCode::g_expression_prefix);
+  if (text && text[0])
+    m_function_text.append(text);
+}
 
 ClangUtilityFunction::~ClangUtilityFunction() {}
 

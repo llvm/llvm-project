@@ -270,7 +270,7 @@ Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec,
     FileSystem::Instance().ResolveSymbolicLink(module_file_spec,
                                                module_file_spec);
 
-    const ConstString &file_dir = module_file_spec.GetDirectory();
+    ConstString file_dir = module_file_spec.GetDirectory();
     {
       FileSpec file_spec(file_dir.AsCString("."));
       FileSystem::Instance().Resolve(file_spec);
