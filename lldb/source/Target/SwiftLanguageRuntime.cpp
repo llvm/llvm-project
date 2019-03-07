@@ -87,6 +87,8 @@ using namespace lldb_private;
 static constexpr std::chrono::seconds g_po_function_timeout(15);
 static const char *g_dollar_tau_underscore = u8"$\u03C4_";
 
+extern "C" unsigned long long _swift_classIsSwiftMask = 0;
+
 namespace lldb_private {
 swift::Type GetSwiftType(void *opaque_ptr) {
   return reinterpret_cast<swift::TypeBase *>(opaque_ptr);
@@ -177,6 +179,7 @@ SwiftLanguageRuntime::SwiftLanguageRuntime(Process *process)
   SetupSwiftError();
   SetupExclusivity();
   SetupReflection();
+  SetupABIBit();
 }
 
 static llvm::Optional<lldb::addr_t>
@@ -237,6 +240,16 @@ void SwiftLanguageRuntime::SetupExclusivity() {
     log->Printf("SwiftLanguageRuntime: _swift_disableExclusivityChecking = %lu",
                 m_dynamic_exclusivity_flag_addr ?
                 *m_dynamic_exclusivity_flag_addr : 0);
+}
+
+void SwiftLanguageRuntime::SetupABIBit() {
+  Target &target(m_process->GetTarget());
+  ConstString g_objc_debug_swift_stable_abi_bit("objc_debug_swift_stable_abi_bit");
+
+  if (FindSymbolForSwiftObject(target, g_objc_debug_swift_stable_abi_bit, eSymbolTypeAny))
+    _swift_classIsSwiftMask = 2;
+  else
+    _swift_classIsSwiftMask = 1;
 }
 
 void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
