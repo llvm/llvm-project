@@ -1021,6 +1021,7 @@
 		6DEC6F391BD66D750091ABA6 /* TaskPool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */; };
 		23CB15421D66DA9300EDDDE1 /* TaskPoolTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */; };
 		2689007413353E1A00698AC0 /* Terminal.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 268DA873130095ED00C9483A /* Terminal.cpp */; };
+		AFEABBF72230BF840097046F /* TestArm64Disassembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFEABBF62230BF840097046F /* TestArm64Disassembly.cpp */; };
 		4CEC86A4204738C5009B37B1 /* TestArm64InstEmulation.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CEC86A3204738C5009B37B1 /* TestArm64InstEmulation.cpp */; };
 		AF7F97682141FA4500795BC0 /* TestArmv7Disassembly.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF7F97662141FA3800795BC0 /* TestArmv7Disassembly.cpp */; };
 		23CB15401D66DA9300EDDDE1 /* TestClangASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB150C1D66CF5600EDDDE1 /* TestClangASTContext.cpp */; };
@@ -3238,6 +3239,7 @@
 		2321F9451BDD346100BA9A93 /* TaskPoolTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TaskPoolTest.cpp; sourceTree = "<group>"; };
 		268DA873130095ED00C9483A /* Terminal.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Terminal.cpp; sourceTree = "<group>"; };
 		268DA871130095D000C9483A /* Terminal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Terminal.h; path = include/lldb/Host/Terminal.h; sourceTree = "<group>"; };
+		AFEABBF62230BF840097046F /* TestArm64Disassembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TestArm64Disassembly.cpp; path = unittests/Disassembler/TestArm64Disassembly.cpp; sourceTree = SOURCE_ROOT; };
 		4CEC86A3204738C5009B37B1 /* TestArm64InstEmulation.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TestArm64InstEmulation.cpp; path = UnwindAssembly/ARM64/TestArm64InstEmulation.cpp; sourceTree = "<group>"; };
 		AF7F97662141FA3800795BC0 /* TestArmv7Disassembly.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TestArmv7Disassembly.cpp; path = unittests/Disassembler/TestArmv7Disassembly.cpp; sourceTree = SOURCE_ROOT; };
 		23CB150C1D66CF5600EDDDE1 /* TestClangASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestClangASTContext.cpp; sourceTree = "<group>"; };
@@ -7107,6 +7109,7 @@
 		AF7F97652141FA2100795BC0 /* Disassembler */ = {
 			isa = PBXGroup;
 			children = (
+				AFEABBF62230BF840097046F /* TestArm64Disassembly.cpp */,
 				AF7F97662141FA3800795BC0 /* TestArmv7Disassembly.cpp */,
 			);
 			name = Disassembler;
@@ -8170,6 +8173,7 @@
 				9A3D43D91F3151C400EB767C /* StatusTest.cpp in Sources */,
 				23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
 				9A2057381F3B8E7E00F6C293 /* FileSystemTest.cpp in Sources */,
+				AFEABBF72230BF840097046F /* TestArm64Disassembly.cpp in Sources */,
 				9A2057201F3B8D2500F6C293 /* UnixSignalsTest.cpp in Sources */,
 				2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */,
 				AFAFD80A1E57E1B90017A14F /* ModuleCacheTest.cpp in Sources */,
