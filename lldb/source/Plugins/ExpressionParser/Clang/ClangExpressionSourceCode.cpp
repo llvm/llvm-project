@@ -1,4 +1,4 @@
-//===-- ExpressionSourceCode.cpp --------------------------------*- C++ -*-===//
+//===-- ClangExpressionSourceCode.cpp ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Expression/ExpressionSourceCode.h"
+#include "ClangExpressionSourceCode.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
@@ -24,7 +24,7 @@
 
 using namespace lldb_private;
 
-const char *ExpressionSourceCode::g_expression_prefix = R"(
+const char *ClangExpressionSourceCode::g_expression_prefix = R"(
 #ifndef NULL
 #define NULL (__null)
 #endif
@@ -175,7 +175,7 @@ static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
   }
 }
 
-bool ExpressionSourceCode::GetText(std::string &text,
+bool ClangExpressionSourceCode::GetText(std::string &text,
                                    lldb::LanguageType wrapping_language,
                                    bool static_method,
                                    ExecutionContext &exe_ctx,
@@ -354,7 +354,7 @@ bool ExpressionSourceCode::GetText(std::string &text,
   return true;
 }
 
-bool ExpressionSourceCode::GetOriginalBodyBounds(
+bool ClangExpressionSourceCode::GetOriginalBodyBounds(
     std::string transformed_text, lldb::LanguageType wrapping_language,
     size_t &start_loc, size_t &end_loc) {
   const char *start_marker;

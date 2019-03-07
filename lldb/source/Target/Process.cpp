@@ -84,7 +84,7 @@ using namespace std::chrono;
 
 class ProcessOptionValueProperties : public OptionValueProperties {
 public:
-  ProcessOptionValueProperties(const ConstString &name)
+  ProcessOptionValueProperties(ConstString name)
       : OptionValueProperties(name) {}
 
   // This constructor is used when creating ProcessOptionValueProperties when
@@ -3915,12 +3915,12 @@ Process::ProcessEventData::ProcessEventData(const ProcessSP &process_sp,
 
 Process::ProcessEventData::~ProcessEventData() = default;
 
-const ConstString &Process::ProcessEventData::GetFlavorString() {
+ConstString Process::ProcessEventData::GetFlavorString() {
   static ConstString g_flavor("Process::ProcessEventData");
   return g_flavor;
 }
 
-const ConstString &Process::ProcessEventData::GetFlavor() const {
+ConstString Process::ProcessEventData::GetFlavor() const {
   return ProcessEventData::GetFlavorString();
 }
 
@@ -4243,7 +4243,7 @@ void Process::BroadcastStructuredData(const StructuredData::ObjectSP &object_sp,
 }
 
 StructuredDataPluginSP
-Process::GetStructuredDataPlugin(const ConstString &type_name) const {
+Process::GetStructuredDataPlugin(ConstString type_name) const {
   auto find_it = m_structured_data_plugin_map.find(type_name);
   if (find_it != m_structured_data_plugin_map.end())
     return find_it->second;
@@ -5867,7 +5867,7 @@ Process::GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) {
 }
 
 Status
-Process::ConfigureStructuredData(const ConstString &type_name,
+Process::ConfigureStructuredData(ConstString type_name,
                                  const StructuredData::ObjectSP &config_sp) {
   // If you get this, the Process-derived class needs to implement a method to
   // enable an already-reported asynchronous structured data feature. See

@@ -1,0 +1,2 @@
+# RUN: %platformserver p --server --listen :1234 --min-gdbserver-port 1234 --max-gdbserver-port 1234 2>&1 | FileCheck %s
+# CHECK: error: --min-gdbserver-port (1234) is not lower than --max-gdbserver-port (1234)

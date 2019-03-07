@@ -44,7 +44,7 @@ public:
 
   OptionalBool GetMapped() const { return m_mapped; }
 
-  const ConstString &GetName() const { return m_name; }
+  ConstString GetName() const { return m_name; }
 
   void SetReadable(OptionalBool val) { m_read = val; }
 

@@ -537,7 +537,7 @@ void request_attach(const llvm::json::Object &request) {
     const char *symfile = nullptr;
     g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
     if (error.Fail()) {
-      response.try_emplace("success", false);
+      response["success"] = llvm::json::Value(false);
       EmplaceSafeString(response, "message", std::string(error.GetCString()));
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
       return;
@@ -589,7 +589,7 @@ void request_attach(const llvm::json::Object &request) {
   }
 
   if (error.Fail()) {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -832,7 +832,7 @@ void request_exceptionInfo(const llvm::json::Object &request) {
     //   uint64_t exc_data = thread.GetStopReasonDataAtIndex(i);
     // }
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -964,7 +964,7 @@ void request_evaluate(const llvm::json::Object &request) {
     if (value.GetError().Fail())
       value = frame.EvaluateExpression(expression.data());
     if (value.GetError().Fail()) {
-      response.try_emplace("success", false);
+      response["success"] = llvm::json::Value(false);
       const char *error_cstr = value.GetError().GetCString();
       if (error_cstr && error_cstr[0])
         EmplaceSafeString(response, "message", std::string(error_cstr));
@@ -1239,7 +1239,7 @@ void request_launch(const llvm::json::Object &request) {
     const char *symfile = nullptr;
     g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
     if (error.Fail()) {
-      response.try_emplace("success", false);
+      response["success"] = llvm::json::Value(false);
       EmplaceSafeString(response, "message", std::string(error.GetCString()));
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
     }
@@ -1277,7 +1277,7 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.debugger.SetAsync(false);
   g_vsc.target.Launch(g_vsc.launch_info, error);
   if (error.Fail()) {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", std::string(error.GetCString()));
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -1339,7 +1339,7 @@ void request_next(const llvm::json::Object &request) {
     g_vsc.focus_tid = thread.GetThreadID();
     thread.StepOver();
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -1946,7 +1946,7 @@ void request_source(const llvm::json::Object &request) {
   if (pos != g_vsc.source_map.end()) {
     EmplaceSafeString(body, "content", pos->second.content);
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -2107,7 +2107,7 @@ void request_stepIn(const llvm::json::Object &request) {
     g_vsc.focus_tid = thread.GetThreadID();
     thread.StepInto();
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -2161,7 +2161,7 @@ void request_stepOut(const llvm::json::Object &request) {
     g_vsc.focus_tid = thread.GetThreadID();
     thread.StepOut();
   } else {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -2216,7 +2216,7 @@ void request_threads(const llvm::json::Object &request) {
     threads.emplace_back(CreateThread(thread));
   }
   if (threads.size() == 0) {
-    response.try_emplace("success", false);
+    response["success"] = llvm::json::Value(false);
   }
   llvm::json::Object body;
   body.try_emplace("threads", std::move(threads));
@@ -2410,7 +2410,7 @@ void request_setVariable(const llvm::json::Object &request) {
     } else {
       EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
-    response.try_emplace("success", success);
+    response["success"] = llvm::json::Value(success);
   }
 
   response.try_emplace("body", std::move(body));

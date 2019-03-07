@@ -401,7 +401,7 @@ ConstString &FileSpec::GetDirectory() { return m_directory; }
 //------------------------------------------------------------------
 // Directory string const get accessor.
 //------------------------------------------------------------------
-const ConstString &FileSpec::GetDirectory() const { return m_directory; }
+ConstString FileSpec::GetDirectory() const { return m_directory; }
 
 //------------------------------------------------------------------
 // Filename string get accessor.
@@ -411,7 +411,7 @@ ConstString &FileSpec::GetFilename() { return m_filename; }
 //------------------------------------------------------------------
 // Filename string const get accessor.
 //------------------------------------------------------------------
-const ConstString &FileSpec::GetFilename() const { return m_filename; }
+ConstString FileSpec::GetFilename() const { return m_filename; }
 
 //------------------------------------------------------------------
 // Extract the directory and path into a fixed buffer. This is needed as the

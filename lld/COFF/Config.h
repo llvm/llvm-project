@@ -164,7 +164,7 @@ struct Configuration {
   std::map<std::string, int> AlignComm;
 
   // Used for /failifmismatch.
-  std::map<StringRef, StringRef> MustMatch;
+  std::map<StringRef, std::pair<StringRef, std::string>> MustMatch;
 
   // Used for /alternatename.
   std::map<StringRef, StringRef> AlternateNames;

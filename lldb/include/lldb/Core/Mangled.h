@@ -68,7 +68,7 @@ public:
   ///     If \b true then \a name is a mangled name, if \b false then
   ///     \a name is demangled.
   //----------------------------------------------------------------------
-  Mangled(const ConstString &name, bool is_mangled);
+  Mangled(ConstString name, bool is_mangled);
   Mangled(llvm::StringRef name, bool is_mangled);
 
   //----------------------------------------------------------------------
@@ -80,7 +80,7 @@ public:
   /// @param[in] name
   ///     The already const name to copy into this object.
   //----------------------------------------------------------------------
-  explicit Mangled(const ConstString &name);
+  explicit Mangled(ConstString name);
 
   explicit Mangled(llvm::StringRef name);
 
@@ -176,7 +176,7 @@ public:
   /// @return
   ///     A const reference to the demangled name string object.
   //----------------------------------------------------------------------
-  const ConstString &GetDemangledName(lldb::LanguageType language) const;
+  ConstString GetDemangledName(lldb::LanguageType language) const;
 
   //----------------------------------------------------------------------
   /// Display demangled name get accessor.
@@ -186,9 +186,9 @@ public:
   //----------------------------------------------------------------------
   ConstString GetDisplayDemangledName(lldb::LanguageType language) const;
 
-  void SetDemangledName(const ConstString &name) { m_demangled = name; }
+  void SetDemangledName(ConstString name) { m_demangled = name; }
 
-  void SetMangledName(const ConstString &name) { m_mangled = name; }
+  void SetMangledName(ConstString name) { m_mangled = name; }
 
   //----------------------------------------------------------------------
   /// Mangled name get accessor.
@@ -204,7 +204,7 @@ public:
   /// @return
   ///     A const reference to the mangled name string object.
   //----------------------------------------------------------------------
-  const ConstString &GetMangledName() const { return m_mangled; }
+  ConstString GetMangledName() const { return m_mangled; }
 
   //----------------------------------------------------------------------
   /// Best name get accessor.
@@ -229,7 +229,7 @@ public:
   /// @return
   ///     \b True if \a name matches either name, \b false otherwise.
   //----------------------------------------------------------------------
-  bool NameMatches(const ConstString &name, lldb::LanguageType language) const {
+  bool NameMatches(ConstString name, lldb::LanguageType language) const {
     if (m_mangled == name)
       return true;
     return GetDemangledName(language) == name;
@@ -264,7 +264,7 @@ public:
   ///     If \b true then \a name is a mangled name, if \b false then
   ///     \a name is demangled.
   //----------------------------------------------------------------------
-  void SetValue(const ConstString &name, bool is_mangled);
+  void SetValue(ConstString name, bool is_mangled);
 
   //----------------------------------------------------------------------
   /// Set the string value in this object.
@@ -275,7 +275,7 @@ public:
   /// @param[in] name
   ///     The already const version of the name for this object.
   //----------------------------------------------------------------------
-  void SetValue(const ConstString &name);
+  void SetValue(ConstString name);
 
   //----------------------------------------------------------------------
   /// Try to guess the language from the mangling.

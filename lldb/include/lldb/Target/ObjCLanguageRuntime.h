@@ -200,7 +200,7 @@ public:
   ClassDescriptorSP GetNonKVOClassDescriptor(ValueObject &in_value);
 
   virtual ClassDescriptorSP
-  GetClassDescriptorFromClassName(const ConstString &class_name);
+  GetClassDescriptorFromClassName(ConstString class_name);
 
   virtual ClassDescriptorSP GetClassDescriptorFromISA(ObjCISA isa);
 
@@ -253,7 +253,7 @@ public:
     }
   }
 
-  virtual ObjCISA GetISA(const ConstString &name);
+  virtual ObjCISA GetISA(ConstString name);
 
   virtual ConstString GetActualTypeName(ObjCISA isa);
 
@@ -270,7 +270,7 @@ public:
   // Given the name of an Objective-C runtime symbol (e.g., ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
   // would be. Useful when the underlying binary is stripped.
-  virtual lldb::addr_t LookupRuntimeSymbol(const ConstString &name) {
+  virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -386,12 +386,12 @@ protected:
   CompleteClassMap m_complete_class_cache;
 
   struct ConstStringSetHelpers {
-    size_t operator()(const ConstString &arg) const // for hashing
+    size_t operator()(ConstString arg) const // for hashing
     {
       return (size_t)arg.GetCString();
     }
-    bool operator()(const ConstString &arg1,
-                    const ConstString &arg2) const // for equality
+    bool operator()(ConstString arg1,
+                    ConstString arg2) const // for equality
     {
       return arg1.operator==(arg2);
     }
@@ -401,7 +401,7 @@ protected:
       CompleteClassSet;
   CompleteClassSet m_negative_complete_class_cache;
 
-  ISAToDescriptorIterator GetDescriptorIterator(const ConstString &name);
+  ISAToDescriptorIterator GetDescriptorIterator(ConstString name);
 
   friend class ::CommandObjectObjC_ClassTable_Dump;
 

@@ -553,7 +553,7 @@ lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {
 
 void CompilerType::ForEachEnumerator(
     std::function<bool(const CompilerType &integer_type,
-                       const ConstString &name,
+                       ConstString name,
                        const llvm::APSInt &value)> const &callback) const {
   if (IsValid())
     return m_type_system->ForEachEnumerator(m_type, callback);

@@ -77,7 +77,7 @@ bool TypeMap::InsertUnique(const TypeSP &type_sp) {
 // Find a type by name.
 //----------------------------------------------------------------------
 // TypeMap
-// TypeMap::FindTypes (const ConstString &name)
+// TypeMap::FindTypes (ConstString name)
 //{
 //    // Do we ever need to make a lookup by name map? Here we are doing
 //    // a linear search which isn't going to be fast.
