@@ -137,8 +137,8 @@ struct ComprehensiveStaticInstrumentationLegacyPass : public ModulePass {
   static char ID; // Pass identification, replacement for typeid.
 
   ComprehensiveStaticInstrumentationLegacyPass(
-      const CSIOptions &Options = CSIOptions())
-      : ModulePass(ID), Options(OverrideFromCL(Options)) {
+      const CSIOptions &Options = OverrideFromCL(CSIOptions()))
+      : ModulePass(ID), Options(Options) {
     initializeComprehensiveStaticInstrumentationLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
@@ -164,6 +164,9 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(ComprehensiveStaticInstrumentationLegacyPass, "csi",
                     "ComprehensiveStaticInstrumentation pass", false, false)
 
+ModulePass *llvm::createComprehensiveStaticInstrumentationLegacyPass() {
+  return new ComprehensiveStaticInstrumentationLegacyPass();
+}
 ModulePass *llvm::createComprehensiveStaticInstrumentationLegacyPass(
     const CSIOptions &Options) {
   return new ComprehensiveStaticInstrumentationLegacyPass(Options);
