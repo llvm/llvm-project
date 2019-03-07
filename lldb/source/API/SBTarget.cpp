@@ -1262,6 +1262,10 @@ lldb::SBBreakpoint
 SBTarget::BreakpointCreateForException(lldb::LanguageType language,
                                        bool catch_bp, bool throw_bp,
                                        SBStringList &extra_args) {
+  LLDB_RECORD_METHOD(lldb::SBBreakpoint, SBTarget, BreakpointCreateForException,
+                     (lldb::LanguageType, bool, bool, SBStringList &), language,
+                     catch_bp, throw_bp, extra_args);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBreakpoint sb_bp;

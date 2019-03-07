@@ -481,6 +481,7 @@ SBValue SBThread::GetStopErrorValue() {
 }
 
 SBValue SBThread::GetStopReturnOrErrorValue(bool &is_swift_error_value) {
+  LLDB_RECORD_METHOD(lldb::SBValue, SBThread, GetStopReturnOrErrorValue, (bool&), is_swift_error_value);
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
