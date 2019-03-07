@@ -52,7 +52,7 @@ public:
   std::string m_category;
 
   ScriptAddOptions(const TypeSummaryImpl::Flags &flags, bool regx,
-                   const ConstString &name, std::string catg)
+                   ConstString name, std::string catg)
       : m_flags(flags), m_regex(regx), m_name(name), m_category(catg) {}
 
   typedef std::shared_ptr<ScriptAddOptions> SharedPointer;

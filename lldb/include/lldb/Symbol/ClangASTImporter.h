@@ -187,7 +187,7 @@ public:
     virtual ~MapCompleter();
 
     virtual void CompleteNamespaceMap(NamespaceMapSP &namespace_map,
-                                      const ConstString &name,
+                                      ConstString name,
                                       NamespaceMapSP &parent_map) const = 0;
   };
 

@@ -586,7 +586,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-enum class memory_order: unsigned {
+enum class memory_order {
   relaxed, consume, acquire, release, acq_rel, seq_cst
 };
 
@@ -597,9 +597,6 @@ inline constexpr auto memory_order_release = memory_order::release;
 inline constexpr auto memory_order_acq_rel = memory_order::acq_rel;
 inline constexpr auto memory_order_seq_cst = memory_order::seq_cst;
 
-static_assert((is_same<underlying_type<memory_order>::type,
-			   unsigned>::value), "Underlying type differs from unsigned unexpectedly");
-
 #else
 
 typedef enum memory_order {
@@ -607,12 +604,9 @@ typedef enum memory_order {
   memory_order_release, memory_order_acq_rel, memory_order_seq_cst
 } memory_order;
 
-static_assert((is_same<underlying_type<memory_order>::type,
-			   unsigned>::value), "Underlying type differs from unsigned unexpectedly");
-
 #endif // _LIBCPP_STD_VER > 17
 
-typedef underlying_type<memory_order>::type __memory_order_underlying_t; // unsigned
+typedef underlying_type<memory_order>::type __memory_order_underlying_t;
 
 
 #if defined(_LIBCPP_HAS_GCC_ATOMIC_IMP) || \

@@ -243,7 +243,7 @@ bool MachThread::IsUserReady() {
   case TH_STATE_HALTED:
     return true;
   }
-  return false;
+  return GetPC(0) != 0;
 }
 
 struct thread_basic_info *MachThread::GetBasicInfo() {

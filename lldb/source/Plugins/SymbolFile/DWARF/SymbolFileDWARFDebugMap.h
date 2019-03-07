@@ -9,13 +9,12 @@
 #ifndef SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
 #define SymbolFileDWARF_SymbolFileDWARFDebugMap_h_
 
+#include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Utility/RangeMap.h"
+#include "llvm/Support/Chrono.h"
 #include <bitset>
 #include <map>
 #include <vector>
-
-#include "lldb/Core/RangeMap.h"
-#include "lldb/Symbol/SymbolFile.h"
-#include "llvm/Support/Chrono.h"
 
 #include "UniqueDWARFASTType.h"
 
@@ -99,7 +98,7 @@ public:
                        lldb::SymbolContextItem resolve_scope,
                        lldb_private::SymbolContextList &sc_list) override;
   uint32_t
-  FindGlobalVariables(const lldb_private::ConstString &name,
+  FindGlobalVariables(lldb_private::ConstString name,
                       const lldb_private::CompilerDeclContext *parent_decl_ctx,
                       uint32_t max_matches,
                       lldb_private::VariableList &variables) override;
@@ -107,7 +106,7 @@ public:
                                uint32_t max_matches,
                                lldb_private::VariableList &variables) override;
   uint32_t
-  FindFunctions(const lldb_private::ConstString &name,
+  FindFunctions(lldb_private::ConstString name,
                 const lldb_private::CompilerDeclContext *parent_decl_ctx,
                 lldb::FunctionNameType name_type_mask, bool include_inlines,
                 bool append, lldb_private::SymbolContextList &sc_list) override;
@@ -115,13 +114,13 @@ public:
                          bool include_inlines, bool append,
                          lldb_private::SymbolContextList &sc_list) override;
   uint32_t
-  FindTypes(const lldb_private::ConstString &name,
+  FindTypes(lldb_private::ConstString name,
             const lldb_private::CompilerDeclContext *parent_decl_ctx,
             bool append, uint32_t max_matches,
             llvm::DenseSet<lldb_private::SymbolFile *> &searched_symbol_files,
             lldb_private::TypeMap &types) override;
   lldb_private::CompilerDeclContext FindNamespace(
-      const lldb_private::ConstString &name,
+      lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx) override;
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
                   lldb::TypeClass type_mask,
@@ -247,7 +246,7 @@ protected:
                                         const CompileUnitInfo *comp_unit_info);
 
   uint32_t PrivateFindGlobalVariables(
-      const lldb_private::ConstString &name,
+      lldb_private::ConstString name,
       const lldb_private::CompilerDeclContext *parent_decl_ctx,
       const std::vector<uint32_t> &name_symbol_indexes, uint32_t max_matches,
       lldb_private::VariableList &variables);
@@ -265,7 +264,7 @@ protected:
   bool Supports_DW_AT_APPLE_objc_complete_type(SymbolFileDWARF *skip_dwarf_oso);
 
   lldb::TypeSP FindCompleteObjCDefinitionTypeForDIE(
-      const DWARFDIE &die, const lldb_private::ConstString &type_name,
+      const DWARFDIE &die, lldb_private::ConstString type_name,
       bool must_be_implementation);
 
   UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap() {

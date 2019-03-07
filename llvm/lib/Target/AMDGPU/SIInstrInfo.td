@@ -147,9 +147,7 @@ def SIbuffer_store_format_d16 : SDNode <"AMDGPUISD::BUFFER_STORE_FORMAT_D16",
 
 class SDBufferAtomic<string opcode> : SDNode <opcode,
   SDTypeProfile<1, 8,
-      [SDTCisVT<0, i32>,   // dst
-       SDTCisVT<1, i32>,   // vdata
-       SDTCisVT<2, v4i32>, // rsrc
+       [SDTCisVT<2, v4i32>, // rsrc
        SDTCisVT<3, i32>,   // vindex(VGPR)
        SDTCisVT<4, i32>,   // voffset(VGPR)
        SDTCisVT<5, i32>,   // soffset(SGPR)

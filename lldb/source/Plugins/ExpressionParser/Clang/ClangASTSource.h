@@ -198,7 +198,7 @@ public:
   ///     one.
   //------------------------------------------------------------------
   void CompleteNamespaceMap(
-      ClangASTImporter::NamespaceMapSP &namespace_map, const ConstString &name,
+      ClangASTImporter::NamespaceMapSP &namespace_map, ConstString name,
       ClangASTImporter::NamespaceMapSP &parent_map) const override;
 
   //

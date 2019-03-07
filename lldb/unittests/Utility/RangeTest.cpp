@@ -6,8 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/RangeMap.h"
-
+#include "lldb/Utility/RangeMap.h"
 #include <cstdint>
 #include <type_traits>
 

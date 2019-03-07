@@ -136,7 +136,7 @@ protected:
 
     size_t ParseObjects();
 
-    Object *FindObject(const lldb_private::ConstString &object_name,
+    Object *FindObject(lldb_private::ConstString object_name,
                        const llvm::sys::TimePoint<> &object_mod_time);
 
     lldb::offset_t GetFileOffset() const { return m_file_offset; }

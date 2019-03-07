@@ -72,7 +72,7 @@ static inline bool cstring_is_mangled(const char *s) {
   return cstring_mangling_scheme(s) != Mangled::eManglingSchemeNone;
 }
 
-static const ConstString &
+static ConstString 
 get_demangled_name_without_arguments(ConstString mangled,
                                      ConstString demangled) {
   // This pair is <mangled name, demangled name without function arguments>
@@ -133,7 +133,7 @@ Mangled::Mangled() : m_mangled(), m_demangled() {}
 // Constructor with an optional string and a boolean indicating if it is the
 // mangled version.
 //----------------------------------------------------------------------
-Mangled::Mangled(const ConstString &s, bool mangled)
+Mangled::Mangled(ConstString s, bool mangled)
     : m_mangled(), m_demangled() {
   if (s)
     SetValue(s, mangled);
@@ -144,7 +144,7 @@ Mangled::Mangled(llvm::StringRef name, bool is_mangled) {
     SetValue(ConstString(name), is_mangled);
 }
 
-Mangled::Mangled(const ConstString &s) : m_mangled(), m_demangled() {
+Mangled::Mangled(ConstString s) : m_mangled(), m_demangled() {
   if (s)
     SetValue(s);
 }
@@ -202,7 +202,7 @@ int Mangled::Compare(const Mangled &a, const Mangled &b) {
 // Set the string value in this objects. If "mangled" is true, then the mangled
 // named is set with the new value in "s", else the demangled name is set.
 //----------------------------------------------------------------------
-void Mangled::SetValue(const ConstString &s, bool mangled) {
+void Mangled::SetValue(ConstString s, bool mangled) {
   if (s) {
     if (mangled) {
       m_demangled.Clear();
@@ -217,7 +217,7 @@ void Mangled::SetValue(const ConstString &s, bool mangled) {
   }
 }
 
-void Mangled::SetValue(const ConstString &name) {
+void Mangled::SetValue(ConstString name) {
   if (name) {
     if (cstring_is_mangled(name.GetCString())) {
       m_demangled.Clear();
@@ -362,7 +362,7 @@ bool Mangled::DemangleWithRichManglingInfo(
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
 //----------------------------------------------------------------------
-const ConstString &
+ConstString 
 Mangled::GetDemangledName(lldb::LanguageType language) const {
   // Check to make sure we have a valid mangled name and that we haven't
   // already decoded our mangled name.
@@ -514,7 +514,7 @@ Stream &operator<<(Stream &s, const Mangled &obj) {
   if (obj.GetMangledName())
     s << "mangled = '" << obj.GetMangledName() << "'";
 
-  const ConstString &demangled =
+  ConstString demangled =
       obj.GetDemangledName(lldb::eLanguageTypeUnknown);
   if (demangled)
     s << ", demangled = '" << demangled << '\'';

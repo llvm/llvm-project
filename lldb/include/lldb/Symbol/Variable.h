@@ -9,17 +9,16 @@
 #ifndef liblldb_Variable_h_
 #define liblldb_Variable_h_
 
-#include <memory>
-#include <vector>
-
 #include "lldb/Core/Mangled.h"
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/Declaration.h"
 #include "lldb/Utility/CompletionRequest.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
+#include <memory>
+#include <vector>
 
 namespace lldb_private {
 
@@ -58,7 +57,7 @@ public:
   // namespace)::i", this function will allow a generic match function that can
   // be called by commands and expression parsers to make sure we match
   // anything we come across.
-  bool NameMatches(const ConstString &name) const;
+  bool NameMatches(ConstString name) const;
 
   bool NameMatches(const RegularExpression &regex) const;
 

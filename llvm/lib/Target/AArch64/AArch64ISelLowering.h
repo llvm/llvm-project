@@ -656,6 +656,7 @@ private:
   SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVectorFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorAND(SDValue Op, SelectionDAG &DAG) const;

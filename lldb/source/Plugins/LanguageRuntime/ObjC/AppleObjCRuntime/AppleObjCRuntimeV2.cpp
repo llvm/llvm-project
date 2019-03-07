@@ -1685,9 +1685,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache() {
       if (log)
         log->Printf("Discovered %u ObjC classes in shared cache\n",
                     num_class_infos);
-#ifdef LLDB_CONFIGURATION_DEBUG
       assert(num_class_infos <= num_classes);
-#endif
       if (num_class_infos > 0) {
         if (num_class_infos > num_classes) {
           num_class_infos = num_classes;
@@ -1951,7 +1949,7 @@ DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   return m_decl_vendor_up.get();
 }
 
-lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(const ConstString &name) {
+lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
   lldb::addr_t ret = LLDB_INVALID_ADDRESS;
 
   const char *name_cstr = name.AsCString();

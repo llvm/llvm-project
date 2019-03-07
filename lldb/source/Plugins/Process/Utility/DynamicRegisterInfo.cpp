@@ -746,7 +746,7 @@ void DynamicRegisterInfo::Dump() const {
 }
 
 const lldb_private::RegisterInfo *DynamicRegisterInfo::GetRegisterInfo(
-    const lldb_private::ConstString &reg_name) const {
+    lldb_private::ConstString reg_name) const {
   for (auto &reg_info : m_regs) {
     // We can use pointer comparison since we used a ConstString to set the
     // "name" member in AddRegister()

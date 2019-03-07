@@ -54,7 +54,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
   struct DataDescriptor_32 {
@@ -95,7 +95,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
 
@@ -211,7 +211,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(const ConstString &name) override;
+  size_t GetIndexOfChildWithName(ConstString name) override;
 };
 } // namespace formatters
 } // namespace lldb_private
@@ -374,7 +374,7 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::~NSSetISyntheticFrontEnd() {
 
 size_t
 lldb_private::formatters::NSSetISyntheticFrontEnd::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx < UINT32_MAX && idx >= CalculateNumChildren())
@@ -529,7 +529,7 @@ template <typename D32, typename D64>
 size_t
 lldb_private::formatters::
   GenericNSSetMSyntheticFrontEnd<D32, D64>::GetIndexOfChildWithName(
-    const ConstString &name) {
+    ConstString name) {
   const char *item_name = name.GetCString();
   uint32_t idx = ExtractIndexFromString(item_name);
   if (idx < UINT32_MAX && idx >= CalculateNumChildren())

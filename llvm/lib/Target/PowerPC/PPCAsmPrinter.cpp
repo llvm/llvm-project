@@ -472,8 +472,14 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
   if (!Subtarget->isPPC64() && !Subtarget->isDarwin() &&
       isPositionIndependent())
     Kind = MCSymbolRefExpr::VK_PLT;
-  const MCSymbolRefExpr *TlsRef =
+  const MCExpr *TlsRef =
     MCSymbolRefExpr::create(TlsGetAddr, Kind, OutContext);
+
+  // Add 32768 offset to the symbol so we follow up the latest GOT/PLT ABI.
+  if (Kind == MCSymbolRefExpr::VK_PLT && Subtarget->isSecurePlt())
+    TlsRef = MCBinaryExpr::createAdd(TlsRef,
+                                     MCConstantExpr::create(32768, OutContext),
+                                     OutContext);
   const MachineOperand &MO = MI->getOperand(2);
   const GlobalValue *GValue = MO.getGlobal();
   MCSymbol *MOSymbol = getSymbol(GValue);

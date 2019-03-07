@@ -65,6 +65,7 @@ public:
       }
       if constexpr (CT == CT_List) {
         SpliceFirstElem();
+        SpliceSameContainer();
       }
     } catch (...) {
       assert(false && "uncaught debug exception");
@@ -110,6 +111,11 @@ private:
     }
   }
 
+  static void SpliceSameContainer() {
+    CHECKPOINT("splice(<same-container>)");
+    Container C = {1, 1};
+    C.splice(C.end(), C, C.begin());
+  }
 
   static void SpliceFirstElemAfter() {
     // See llvm.org/PR35564

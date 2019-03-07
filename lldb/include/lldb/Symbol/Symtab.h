@@ -9,13 +9,12 @@
 #ifndef liblldb_Symtab_h_
 #define liblldb_Symtab_h_
 
-#include <mutex>
-#include <vector>
-
-#include "lldb/Core/RangeMap.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/lldb-private.h"
+#include <mutex>
+#include <vector>
 
 namespace lldb_private {
 
@@ -77,16 +76,16 @@ public:
                                        std::vector<uint32_t> &matches,
                                        uint32_t start_idx = 0,
                                        uint32_t end_index = UINT32_MAX) const;
-  uint32_t AppendSymbolIndexesWithName(const ConstString &symbol_name,
+  uint32_t AppendSymbolIndexesWithName(ConstString symbol_name,
                                        std::vector<uint32_t> &matches);
-  uint32_t AppendSymbolIndexesWithName(const ConstString &symbol_name,
+  uint32_t AppendSymbolIndexesWithName(ConstString symbol_name,
                                        Debug symbol_debug_type,
                                        Visibility symbol_visibility,
                                        std::vector<uint32_t> &matches);
-  uint32_t AppendSymbolIndexesWithNameAndType(const ConstString &symbol_name,
+  uint32_t AppendSymbolIndexesWithNameAndType(ConstString symbol_name,
                                               lldb::SymbolType symbol_type,
                                               std::vector<uint32_t> &matches);
-  uint32_t AppendSymbolIndexesWithNameAndType(const ConstString &symbol_name,
+  uint32_t AppendSymbolIndexesWithNameAndType(ConstString symbol_name,
                                               lldb::SymbolType symbol_type,
                                               Debug symbol_debug_type,
                                               Visibility symbol_visibility,
@@ -99,10 +98,10 @@ public:
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       Debug symbol_debug_type, Visibility symbol_visibility,
       std::vector<uint32_t> &indexes);
-  size_t FindAllSymbolsWithNameAndType(const ConstString &name,
+  size_t FindAllSymbolsWithNameAndType(ConstString name,
                                        lldb::SymbolType symbol_type,
                                        std::vector<uint32_t> &symbol_indexes);
-  size_t FindAllSymbolsWithNameAndType(const ConstString &name,
+  size_t FindAllSymbolsWithNameAndType(ConstString name,
                                        lldb::SymbolType symbol_type,
                                        Debug symbol_debug_type,
                                        Visibility symbol_visibility,
@@ -111,7 +110,7 @@ public:
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       Debug symbol_debug_type, Visibility symbol_visibility,
       std::vector<uint32_t> &symbol_indexes);
-  Symbol *FindFirstSymbolWithNameAndType(const ConstString &name,
+  Symbol *FindFirstSymbolWithNameAndType(ConstString name,
                                          lldb::SymbolType symbol_type,
                                          Debug symbol_debug_type,
                                          Visibility symbol_visibility);
@@ -119,7 +118,7 @@ public:
   Symbol *FindSymbolContainingFileAddress(lldb::addr_t file_addr);
   void ForEachSymbolContainingFileAddress(
       lldb::addr_t file_addr, std::function<bool(Symbol *)> const &callback);
-  size_t FindFunctionSymbols(const ConstString &name, uint32_t name_type_mask,
+  size_t FindFunctionSymbols(ConstString name, uint32_t name_type_mask,
                              SymbolContextList &sc_list);
   void CalculateSymbolSizes();
 

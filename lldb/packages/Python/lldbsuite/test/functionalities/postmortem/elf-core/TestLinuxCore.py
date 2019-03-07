@@ -217,6 +217,35 @@ class LinuxCoreTestCase(TestBase):
 
         self.dbg.DeleteTarget(target)
 
+    @skipIf(triple='^mips')
+    @skipIfLLVMTargetMissing("ARM")
+    def test_arm_core(self):
+        # check 32 bit ARM core file
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-arm.core")
+
+        values = {}
+        values["r0"] = "0x00000000"
+        values["r1"] = "0x00000001"
+        values["r2"] = "0x00000002"
+        values["r3"] = "0x00000003"
+        values["r4"] = "0x00000004"
+        values["r5"] = "0x00000005"
+        values["r6"] = "0x00000006"
+        values["r7"] = "0x00000007"
+        values["r8"] = "0x00000008"
+        values["r9"] = "0x00000009"
+        values["r10"] = "0x0000000a"
+        values["r11"] = "0x0000000b"
+        values["r12"] = "0x0000000c"
+        values["sp"] = "0x0000000d"
+        values["lr"] = "0x0000000e"
+        values["pc"] = "0x0000000f"
+        values["cpsr"] = "0x00000010"
+        for regname, value in values.items():
+            self.expect("register read {}".format(regname), substrs=["{} = {}".format(regname, value)])
+
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()
         self.assertEqual(region_list.GetSize(), region_count)

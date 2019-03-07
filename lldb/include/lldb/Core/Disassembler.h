@@ -413,7 +413,7 @@ public:
   static bool
   Disassemble(Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
               const char *flavor, const ExecutionContext &exe_ctx,
-              const ConstString &name, Module *module,
+              ConstString name, Module *module,
               uint32_t num_instructions, bool mixed_source_and_assembly,
               uint32_t num_mixed_context_lines, uint32_t options, Stream &strm);
 

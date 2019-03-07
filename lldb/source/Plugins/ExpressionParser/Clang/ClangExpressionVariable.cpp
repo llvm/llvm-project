@@ -31,7 +31,7 @@ ClangExpressionVariable::ClangExpressionVariable(
 }
 
 ClangExpressionVariable::ClangExpressionVariable(
-    ExecutionContextScope *exe_scope, Value &value, const ConstString &name,
+    ExecutionContextScope *exe_scope, Value &value, ConstString name,
     uint16_t flags)
     : ExpressionVariable(LLVMCastKind::eKindClang), m_parser_vars(),
       m_jit_vars() {
@@ -48,7 +48,7 @@ ClangExpressionVariable::ClangExpressionVariable(
 }
 
 ClangExpressionVariable::ClangExpressionVariable(
-    ExecutionContextScope *exe_scope, const ConstString &name,
+    ExecutionContextScope *exe_scope, ConstString name,
     const TypeFromUser &user_type, lldb::ByteOrder byte_order,
     uint32_t addr_byte_size)
     : ExpressionVariable(LLVMCastKind::eKindClang), m_parser_vars(),
