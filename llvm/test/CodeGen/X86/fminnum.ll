@@ -298,99 +298,10 @@ define <16 x float> @test_intrinsic_fmin_v16f32(<16 x float> %x, <16 x float> %y
 ;
 ; AVX512-LABEL: test_intrinsic_fmin_v16f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
-; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm3
-; AVX512-NEXT:    vminss %xmm2, %xmm3, %xmm4
-; AVX512-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512-NEXT:    vmovss %xmm3, %xmm0, %xmm4 {%k1}
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm2[1,1,3,3]
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; AVX512-NEXT:    vminss %xmm5, %xmm6, %xmm7
-; AVX512-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
-; AVX512-NEXT:    vmovss %xmm6, %xmm0, %xmm7 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0],xmm7[0],xmm4[2,3]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm2[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm3[1,0]
-; AVX512-NEXT:    vminss %xmm5, %xmm6, %xmm7
-; AVX512-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
-; AVX512-NEXT:    vmovss %xmm6, %xmm0, %xmm7 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm7[0],xmm4[3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[3,1,2,3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; AVX512-NEXT:    vminss %xmm2, %xmm3, %xmm5
-; AVX512-NEXT:    vcmpunordss %xmm2, %xmm2, %k1
-; AVX512-NEXT:    vmovss %xmm3, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm8 = xmm4[0,1,2],xmm5[0]
-; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm3
-; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm4
-; AVX512-NEXT:    vminss %xmm3, %xmm4, %xmm5
-; AVX512-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovss %xmm4, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm4[1,1,3,3]
-; AVX512-NEXT:    vminss %xmm6, %xmm7, %xmm2
-; AVX512-NEXT:    vcmpunordss %xmm6, %xmm6, %k1
-; AVX512-NEXT:    vmovss %xmm7, %xmm0, %xmm2 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm5[0],xmm2[0],xmm5[2,3]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm3[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm4[1,0]
-; AVX512-NEXT:    vminss %xmm5, %xmm6, %xmm7
-; AVX512-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
-; AVX512-NEXT:    vmovss %xmm6, %xmm0, %xmm7 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm7[0],xmm2[3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,1,2,3]
-; AVX512-NEXT:    vminss %xmm3, %xmm4, %xmm5
-; AVX512-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovss %xmm4, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1,2],xmm5[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm8, %ymm2, %ymm8
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX512-NEXT:    vminss %xmm3, %xmm4, %xmm5
-; AVX512-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovss %xmm4, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm6 = xmm3[1,1,3,3]
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm4[1,1,3,3]
-; AVX512-NEXT:    vminss %xmm6, %xmm7, %xmm2
-; AVX512-NEXT:    vcmpunordss %xmm6, %xmm6, %k1
-; AVX512-NEXT:    vmovss %xmm7, %xmm0, %xmm2 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm5[0],xmm2[0],xmm5[2,3]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm3[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm6 = xmm4[1,0]
-; AVX512-NEXT:    vminss %xmm5, %xmm6, %xmm7
-; AVX512-NEXT:    vcmpunordss %xmm5, %xmm5, %k1
-; AVX512-NEXT:    vmovss %xmm6, %xmm0, %xmm7 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm7[0],xmm2[3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm3 = xmm3[3,1,2,3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[3,1,2,3]
-; AVX512-NEXT:    vminss %xmm3, %xmm4, %xmm5
-; AVX512-NEXT:    vcmpunordss %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovss %xmm4, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm3 = xmm2[0,1,2],xmm5[0]
-; AVX512-NEXT:    vminss %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm2 {%k1}
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm0[1,1,3,3]
-; AVX512-NEXT:    vmovshdup {{.*#+}} xmm5 = xmm1[1,1,3,3]
-; AVX512-NEXT:    vminss %xmm4, %xmm5, %xmm6
-; AVX512-NEXT:    vcmpunordss %xmm4, %xmm4, %k1
-; AVX512-NEXT:    vmovss %xmm5, %xmm0, %xmm6 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0],xmm6[0],xmm2[2,3]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm0[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
-; AVX512-NEXT:    vminss %xmm4, %xmm5, %xmm6
-; AVX512-NEXT:    vcmpunordss %xmm4, %xmm4, %k1
-; AVX512-NEXT:    vmovss %xmm5, %xmm0, %xmm6 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],xmm6[0],xmm2[3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
-; AVX512-NEXT:    vminss %xmm0, %xmm1, %xmm4
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm1, %xmm0, %xmm4 {%k1}
-; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0,1,2],xmm4[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm8, %zmm0, %zmm0
+; AVX512-NEXT:    vminps %zmm0, %zmm1, %zmm2
+; AVX512-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vmovaps %zmm1, %zmm2 {%k1}
+; AVX512-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %z = call <16 x float> @llvm.minnum.v16f32(<16 x float> %x, <16 x float> %y) readnone
   ret <16 x float> %z
@@ -485,51 +396,10 @@ define <8 x double> @test_intrinsic_fmin_v8f64(<8 x double> %x, <8 x double> %y)
 ;
 ; AVX512-LABEL: test_intrinsic_fmin_v8f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm2
-; AVX512-NEXT:    vextractf32x4 $3, %zmm1, %xmm3
-; AVX512-NEXT:    vminsd %xmm2, %xmm3, %xmm4
-; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
-; AVX512-NEXT:    vmovsd %xmm3, %xmm0, %xmm4 {%k1}
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm2[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; AVX512-NEXT:    vminsd %xmm2, %xmm3, %xmm5
-; AVX512-NEXT:    vcmpunordsd %xmm2, %xmm2, %k1
-; AVX512-NEXT:    vmovsd %xmm3, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm2 = xmm4[0],xmm5[0]
-; AVX512-NEXT:    vextractf32x4 $2, %zmm0, %xmm3
-; AVX512-NEXT:    vextractf32x4 $2, %zmm1, %xmm4
-; AVX512-NEXT:    vminsd %xmm3, %xmm4, %xmm5
-; AVX512-NEXT:    vcmpunordsd %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovsd %xmm4, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm4[1,0]
-; AVX512-NEXT:    vminsd %xmm3, %xmm4, %xmm6
-; AVX512-NEXT:    vcmpunordsd %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovsd %xmm4, %xmm0, %xmm6 {%k1}
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm5[0],xmm6[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
-; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX512-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX512-NEXT:    vminsd %xmm3, %xmm4, %xmm5
-; AVX512-NEXT:    vcmpunordsd %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovsd %xmm4, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm3[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm4 = xmm4[1,0]
-; AVX512-NEXT:    vminsd %xmm3, %xmm4, %xmm6
-; AVX512-NEXT:    vcmpunordsd %xmm3, %xmm3, %k1
-; AVX512-NEXT:    vmovsd %xmm4, %xmm0, %xmm6 {%k1}
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm3 = xmm5[0],xmm6[0]
-; AVX512-NEXT:    vminsd %xmm0, %xmm1, %xmm4
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm1, %xmm0, %xmm4 {%k1}
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX512-NEXT:    vminsd %xmm0, %xmm1, %xmm5
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm1, %xmm0, %xmm5 {%k1}
-; AVX512-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm4[0],xmm5[0]
-; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX512-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vminpd %zmm0, %zmm1, %zmm2
+; AVX512-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vmovapd %zmm1, %zmm2 {%k1}
+; AVX512-NEXT:    vmovapd %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %z = call <8 x double> @llvm.minnum.v8f64(<8 x double> %x, <8 x double> %y) readnone
   ret <8 x double> %z

@@ -393,6 +393,11 @@ public:
     Visit(D->getInit());
   }
 
+  void VisitOMPAllocateDecl(const OMPAllocateDecl *D) {
+    for (const auto *E : D->varlists())
+      Visit(E);
+  }
+
   template <typename SpecializationDecl>
   void dumpTemplateDeclSpecialization(const SpecializationDecl *D) {
     for (const auto *RedeclWithBadType : D->redecls()) {

@@ -131,24 +131,24 @@ void test_dynamic_cast(A_ptr ap, A_ptr_1 ap1, A_ptr_2 ap2,
 void test_reinterpret_cast(void_ptr vp, void_ptr_1 vp1, void_ptr_2 vp2,
                            A_ptr ap, A_ptr_1 ap1, A_ptr_2 ap2,
                            B_ptr bp, B_ptr_1 bp1, B_ptr_2 bp2,
-                           const void __attribute__((address_space(1))) *cvp1) {
-  // reinterpret_cast can be used to cast to a different address space.
-  (void)reinterpret_cast<A_ptr>(ap1);
-  (void)reinterpret_cast<A_ptr>(ap2);
+                           const void __attribute__((address_space(1))) * cvp1) {
+  // reinterpret_cast can't be used to cast to a different address space unless they are matching (i.e. overlapping).
+  (void)reinterpret_cast<A_ptr>(ap1); // expected-error{{reinterpret_cast from 'A_ptr_1' (aka '__attribute__((address_space(1))) A *') to 'A_ptr' (aka 'A *') is not allowed}}
+  (void)reinterpret_cast<A_ptr>(ap2); // expected-error{{reinterpret_cast from 'A_ptr_2' (aka '__attribute__((address_space(2))) A *') to 'A_ptr' (aka 'A *') is not allowed}}
   (void)reinterpret_cast<A_ptr>(bp);
-  (void)reinterpret_cast<A_ptr>(bp1);
-  (void)reinterpret_cast<A_ptr>(bp2);
+  (void)reinterpret_cast<A_ptr>(bp1); // expected-error{{reinterpret_cast from 'B_ptr_1' (aka '__attribute__((address_space(1))) B *') to 'A_ptr' (aka 'A *') is not allowed}}
+  (void)reinterpret_cast<A_ptr>(bp2); // expected-error{{reinterpret_cast from 'B_ptr_2' (aka '__attribute__((address_space(2))) B *') to 'A_ptr' (aka 'A *') is not allowed}}
   (void)reinterpret_cast<A_ptr>(vp);
-  (void)reinterpret_cast<A_ptr>(vp1);
-  (void)reinterpret_cast<A_ptr>(vp2);
-  (void)reinterpret_cast<A_ptr_1>(ap);
-  (void)reinterpret_cast<A_ptr_1>(ap2);
-  (void)reinterpret_cast<A_ptr_1>(bp);
+  (void)reinterpret_cast<A_ptr>(vp1);   // expected-error{{reinterpret_cast from 'void_ptr_1' (aka '__attribute__((address_space(1))) void *') to 'A_ptr' (aka 'A *') is not allowed}}
+  (void)reinterpret_cast<A_ptr>(vp2);   // expected-error{{reinterpret_cast from 'void_ptr_2' (aka '__attribute__((address_space(2))) void *') to 'A_ptr' (aka 'A *') is not allowed}}
+  (void)reinterpret_cast<A_ptr_1>(ap);  // expected-error{{reinterpret_cast from 'A_ptr' (aka 'A *') to 'A_ptr_1' (aka '__attribute__((address_space(1))) A *') is not allowed}}
+  (void)reinterpret_cast<A_ptr_1>(ap2); // expected-error{{reinterpret_cast from 'A_ptr_2' (aka '__attribute__((address_space(2))) A *') to 'A_ptr_1' (aka '__attribute__((address_space(1))) A *') is not allowed}}
+  (void)reinterpret_cast<A_ptr_1>(bp);  // expected-error{{reinterpret_cast from 'B_ptr' (aka 'B *') to 'A_ptr_1' (aka '__attribute__((address_space(1))) A *') is not allowed}}
   (void)reinterpret_cast<A_ptr_1>(bp1);
-  (void)reinterpret_cast<A_ptr_1>(bp2);
-  (void)reinterpret_cast<A_ptr_1>(vp);
+  (void)reinterpret_cast<A_ptr_1>(bp2); // expected-error{{reinterpret_cast from 'B_ptr_2' (aka '__attribute__((address_space(2))) B *') to 'A_ptr_1' (aka '__attribute__((address_space(1))) A *') is not allowed}}
+  (void)reinterpret_cast<A_ptr_1>(vp);  // expected-error{{reinterpret_cast from 'void_ptr' (aka 'void *') to 'A_ptr_1' (aka '__attribute__((address_space(1))) A *') is not allowed}}
   (void)reinterpret_cast<A_ptr_1>(vp1);
-  (void)reinterpret_cast<A_ptr_1>(vp2);
+  (void)reinterpret_cast<A_ptr_1>(vp2); // expected-error{{reinterpret_cast from 'void_ptr_2' (aka '__attribute__((address_space(2))) void *') to 'A_ptr_1' (aka '__attribute__((address_space(1))) A *') is not allowed}}
 
   // ... but don't try to cast away constness!
   (void)reinterpret_cast<A_ptr_2>(cvp1); // expected-error{{casts away qualifiers}}
