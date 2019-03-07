@@ -131,9 +131,22 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     return true;
   }
 
-  if (selectImpl(I, CoverageInfo)) {
+  if (I.getOpcode() == Mips::G_MUL) {
+    MachineInstr *Mul = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::MUL))
+                            .add(I.getOperand(0))
+                            .add(I.getOperand(1))
+                            .add(I.getOperand(2));
+    if (!constrainSelectedInstRegOperands(*Mul, TII, TRI, RBI))
+      return false;
+    Mul->getOperand(3).setIsDead(true);
+    Mul->getOperand(4).setIsDead(true);
+
+    I.eraseFromParent();
     return true;
   }
+
+  if (selectImpl(I, CoverageInfo))
+    return true;
 
   MachineInstr *MI = nullptr;
   using namespace TargetOpcode;

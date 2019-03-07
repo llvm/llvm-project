@@ -16,6 +16,7 @@
 #include "index/Serialization.h"
 #include "index/Symbol.h"
 #include "index/SymbolCollector.h"
+#include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
 #include "clang/Tooling/Tooling.h"
@@ -110,7 +111,8 @@ int main(int argc, const char **argv) {
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;
   auto Err = Executor->get()->execute(
-      llvm::make_unique<clang::clangd::IndexActionFactory>(Data));
+      llvm::make_unique<clang::clangd::IndexActionFactory>(Data),
+      clang::tooling::getStripPluginsAdjuster());
   if (Err) {
     llvm::errs() << llvm::toString(std::move(Err)) << "\n";
   }

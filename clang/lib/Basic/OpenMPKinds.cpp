@@ -71,6 +71,8 @@ const char *clang::getOpenMPClauseName(OpenMPClauseKind Kind) {
     return "uniform";
   case OMPC_threadprivate:
     return "threadprivate or thread local";
+  case OMPC_allocate:
+    return "allocate";
   }
   llvm_unreachable("Invalid OpenMP clause kind");
 }
@@ -147,6 +149,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
         .Default(OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -328,6 +331,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
     llvm_unreachable("Invalid OpenMP 'atomic_default_mem_order' clause type");
   case OMPC_unknown:
   case OMPC_threadprivate:
+  case OMPC_allocate:
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -810,6 +814,7 @@ bool clang::isAllowedClauseForDirective(OpenMPDirectiveKind DKind,
   case OMPD_end_declare_target:
   case OMPD_unknown:
   case OMPD_threadprivate:
+  case OMPD_allocate:
   case OMPD_section:
   case OMPD_master:
   case OMPD_taskyield:
@@ -1033,6 +1038,7 @@ void clang::getOpenMPCaptureRegions(
     CaptureRegions.push_back(OMPD_unknown);
     break;
   case OMPD_threadprivate:
+  case OMPD_allocate:
   case OMPD_taskyield:
   case OMPD_barrier:
   case OMPD_taskwait:

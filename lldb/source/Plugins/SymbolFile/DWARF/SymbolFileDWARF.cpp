@@ -2843,7 +2843,7 @@ bool SymbolFileDWARF::DIEDeclContextsMatch(const DWARFDIE &die1,
     if (decl_ctx_die1.Tag() != decl_ctx_die2.Tag())
       return false;
   }
-#if defined LLDB_CONFIGURATION_DEBUG
+#ifndef NDEBUG
 
   // Make sure the top item in the decl context die array is always
   // DW_TAG_compile_unit or DW_TAG_partial_unit. If it isn't then

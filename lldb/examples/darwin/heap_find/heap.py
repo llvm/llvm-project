@@ -8,6 +8,7 @@
 #   (lldb) script import lldb.macosx.heap
 #----------------------------------------------------------------------
 
+from __future__ import print_function
 import lldb
 import optparse
 import os
