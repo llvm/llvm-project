@@ -238,6 +238,22 @@ x86/x86_64 systems like Linux, OS X, FreeBSD and Windows and also Linux on ARM
 and PowerPC (32/64 bit). Ports to other architectures like AArch64 and MIPS64
 are underway.
 
+Open Dylan Compiler
+-------------------
+
+`Dylan <https://opendylan.org/>`_ is a multi-paradigm functional
+and object-oriented programming language.  It is dynamic while
+providing a programming model designed to support efficient machine
+code generation, including fine-grained control over dynamic and
+static behavior. Dylan also features a powerful macro facility for
+expressive metaprogramming.
+
+The Open Dylan compiler can use LLVM as one of its code-generating
+back-ends, including full support for debug info generation. (Open
+Dylan generates LLVM bitcode directly using a native Dylan IR and
+bitcode library.) Development of a Dylan debugger and interactive REPL
+making use of the LLDB libraries is in progress.
+
 Zig Programming Language
 ------------------------
 
