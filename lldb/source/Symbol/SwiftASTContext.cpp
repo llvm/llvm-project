@@ -7566,6 +7566,16 @@ bool SwiftASTContext::IsMeaninglessWithoutDynamicResolution(void *type) {
 //----------------------------------------------------------------------
 #define DEPTH_INCREMENT 2
 
+#ifndef NDEBUG
+LLVM_DUMP_METHOD void
+SwiftASTContext::dump(lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return;
+  swift::Type swift_type = GetSwiftType(type);
+  swift_type.dump();
+}
+#endif
+
 void SwiftASTContext::DumpValue(
     void *type, ExecutionContext *exe_ctx, Stream *s, lldb::Format format,
     const lldb_private::DataExtractor &data, lldb::offset_t data_byte_offset,
