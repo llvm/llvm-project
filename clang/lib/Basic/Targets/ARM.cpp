@@ -40,13 +40,14 @@ void ARMTargetInfo::setABIAAPCS() {
   // so set preferred for small types to 32.
   if (T.isOSBinFormatMachO()) {
     resetDataLayout(BigEndian
-                        ? "E-m:o-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:o-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64");
+                        ? "E-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+                        : "e-m:o-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
   } else if (T.isOSWindows()) {
     assert(!BigEndian && "Windows on ARM does not support big endian");
     resetDataLayout("e"
                     "-m:w"
                     "-p:32:32"
+                    "-Fi8"
                     "-i64:64"
                     "-v128:64:128"
                     "-a:0:32"
@@ -54,11 +55,11 @@ void ARMTargetInfo::setABIAAPCS() {
                     "-S64");
   } else if (T.isOSNaCl()) {
     assert(!BigEndian && "NaCl on ARM does not support big endian");
-    resetDataLayout("e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S128");
+    resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S128");
   } else {
     resetDataLayout(BigEndian
-                        ? "E-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
-                        : "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64");
+                        ? "E-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+                        : "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
   }
 
   // FIXME: Enumerated types are variable width in straight AAPCS.
@@ -87,17 +88,17 @@ void ARMTargetInfo::setABIAPCS(bool IsAAPCS16) {
 
   if (T.isOSBinFormatMachO() && IsAAPCS16) {
     assert(!BigEndian && "AAPCS16 does not support big-endian");
-    resetDataLayout("e-m:o-p:32:32-i64:64-a:0:32-n32-S128");
+    resetDataLayout("e-m:o-p:32:32-Fi8-i64:64-a:0:32-n32-S128");
   } else if (T.isOSBinFormatMachO())
     resetDataLayout(
         BigEndian
-            ? "E-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+            ? "E-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
+            : "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
   else
     resetDataLayout(
         BigEndian
-            ? "E-m:e-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
-            : "e-m:e-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
+            ? "E-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
+            : "e-m:e-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32");
 
   // FIXME: Override "preferred align" for double and long long.
 }
@@ -1055,7 +1056,7 @@ CygwinARMTargetInfo::CygwinARMTargetInfo(const llvm::Triple &Triple,
   this->WCharType = TargetInfo::UnsignedShort;
   TLSSupported = false;
   DoubleAlign = LongLongAlign = 64;
-  resetDataLayout("e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64");
+  resetDataLayout("e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64");
 }
 
 void CygwinARMTargetInfo::getTargetDefines(const LangOptions &Opts,

@@ -209,8 +209,8 @@ private:
   // Used by __extension__
   unsigned char AllExtensionsSilenced = 0;
 
-  // Suppress diagnostics after a fatal error?
-  bool SuppressAfterFatalError = true;
+  // Treat fatal errors like errors.
+  bool FatalsAsError = false;
 
   // Suppress all diagnostics.
   bool SuppressAllDiagnostics = false;
@@ -614,9 +614,11 @@ public:
   void setErrorsAsFatal(bool Val) { GetCurDiagState()->ErrorsAsFatal = Val; }
   bool getErrorsAsFatal() const { return GetCurDiagState()->ErrorsAsFatal; }
 
-  /// When set to true (the default), suppress further diagnostics after
-  /// a fatal error.
-  void setSuppressAfterFatalError(bool Val) { SuppressAfterFatalError = Val; }
+  /// \brief When set to true, any fatal error reported is made an error.
+  ///
+  /// This setting takes precedence over the setErrorsAsFatal setting above.
+  void setFatalsAsError(bool Val) { FatalsAsError = Val; }
+  bool getFatalsAsError() const { return FatalsAsError; }
 
   /// When set to true mask warnings that come from system headers.
   void setSuppressSystemWarnings(bool Val) {
