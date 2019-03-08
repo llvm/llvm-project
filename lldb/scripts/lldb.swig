@@ -187,7 +187,6 @@ import six
 %include "./interface/SBFrame.i"
 %include "./interface/SBFunction.i"
 %include "./interface/SBHostOS.i"
-%include "./interface/SBInitializerOptions.i"
 %include "./interface/SBInstruction.i"
 %include "./interface/SBInstructionList.i"
 %include "./interface/SBLanguageRuntime.i"
