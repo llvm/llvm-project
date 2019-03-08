@@ -37,7 +37,8 @@ void log_append(llvm::raw_string_ostream &ss, const T *t) {
   ss << t;
 }
 
-template <> void log_append<char>(llvm::raw_string_ostream &ss, const char *t) {
+inline template <>
+void log_append<char>(llvm::raw_string_ostream &ss, const char *t) {
   ss << t;
 }
 
