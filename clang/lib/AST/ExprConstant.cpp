@@ -9821,13 +9821,12 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return true;
     }
 
-    uint64_t V;
-    if (LV.isNullPointer())
-      V = Info.Ctx.getTargetNullPointerValue(SrcType);
-    else
-      V = LV.getLValueOffset().getQuantity();
+    APSInt AsInt;
+    APValue V;
+    LV.moveInto(V);
+    if (!V.toIntegralConstant(AsInt, SrcType, Info.Ctx))
+      llvm_unreachable("Can't cast this!");
 
-    APSInt AsInt = Info.Ctx.MakeIntValue(V, SrcType);
     return Success(HandleIntToIntCast(Info, E, DestType, SrcType, AsInt), E);
   }
 

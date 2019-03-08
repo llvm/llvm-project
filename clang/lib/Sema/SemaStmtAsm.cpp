@@ -383,11 +383,20 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
           return StmtError(
               Diag(InputExpr->getBeginLoc(), diag::err_asm_immediate_expected)
               << Info.getConstraintStr() << InputExpr->getSourceRange());
-        llvm::APSInt Result = EVResult.Val.getInt();
-        if (!Info.isValidAsmImmediate(Result))
+
+        // For compatibility with GCC, we also allow pointers that would be
+        // integral constant expressions if they were cast to int.
+        llvm::APSInt IntResult;
+        if (!EVResult.Val.toIntegralConstant(IntResult, InputExpr->getType(),
+                                             Context))
+          return StmtError(
+              Diag(InputExpr->getBeginLoc(), diag::err_asm_immediate_expected)
+              << Info.getConstraintStr() << InputExpr->getSourceRange());
+
+        if (!Info.isValidAsmImmediate(IntResult))
           return StmtError(Diag(InputExpr->getBeginLoc(),
                                 diag::err_invalid_asm_value_for_constraint)
-                           << Result.toString(10) << Info.getConstraintStr()
+                           << IntResult.toString(10) << Info.getConstraintStr()
                            << InputExpr->getSourceRange());
       }
 
