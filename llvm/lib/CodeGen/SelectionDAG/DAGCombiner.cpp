@@ -295,12 +295,10 @@ namespace {
     SDValue visitADDSAT(SDNode *N);
     SDValue visitSUBSAT(SDNode *N);
     SDValue visitADDC(SDNode *N);
-    SDValue visitSADDO(SDNode *N);
-    SDValue visitUADDO(SDNode *N);
+    SDValue visitADDO(SDNode *N);
     SDValue visitUADDOLike(SDValue N0, SDValue N1, SDNode *N);
     SDValue visitSUBC(SDNode *N);
-    SDValue visitSSUBO(SDNode *N);
-    SDValue visitUSUBO(SDNode *N);
+    SDValue visitSUBO(SDNode *N);
     SDValue visitADDE(SDNode *N);
     SDValue visitADDCARRY(SDNode *N);
     SDValue visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn, SDNode *N);
@@ -317,8 +315,7 @@ namespace {
     SDValue visitMULHS(SDNode *N);
     SDValue visitSMUL_LOHI(SDNode *N);
     SDValue visitUMUL_LOHI(SDNode *N);
-    SDValue visitSMULO(SDNode *N);
-    SDValue visitUMULO(SDNode *N);
+    SDValue visitMULO(SDNode *N);
     SDValue visitIMINMAX(SDNode *N);
     SDValue visitAND(SDNode *N);
     SDValue visitANDLike(SDValue N0, SDValue N1, SDNode *N);
@@ -1494,11 +1491,11 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::SSUBSAT:
   case ISD::USUBSAT:            return visitSUBSAT(N);
   case ISD::ADDC:               return visitADDC(N);
-  case ISD::SADDO:              return visitSADDO(N);
-  case ISD::UADDO:              return visitUADDO(N);
+  case ISD::SADDO:
+  case ISD::UADDO:              return visitADDO(N);
   case ISD::SUBC:               return visitSUBC(N);
-  case ISD::SSUBO:              return visitSSUBO(N);
-  case ISD::USUBO:              return visitUSUBO(N);
+  case ISD::SSUBO:
+  case ISD::USUBO:              return visitSUBO(N);
   case ISD::ADDE:               return visitADDE(N);
   case ISD::ADDCARRY:           return visitADDCARRY(N);
   case ISD::SUBE:               return visitSUBE(N);
@@ -1512,8 +1509,8 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::MULHS:              return visitMULHS(N);
   case ISD::SMUL_LOHI:          return visitSMUL_LOHI(N);
   case ISD::UMUL_LOHI:          return visitUMUL_LOHI(N);
-  case ISD::SMULO:              return visitSMULO(N);
-  case ISD::UMULO:              return visitUMULO(N);
+  case ISD::SMULO:
+  case ISD::UMULO:              return visitMULO(N);
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -2417,35 +2414,11 @@ static bool isBooleanFlip(SDValue V, EVT VT, const TargetLowering &TLI) {
   llvm_unreachable("Unsupported boolean content");
 }
 
-// TODO: merge this with DAGCombiner::visitUADDO
-SDValue DAGCombiner::visitSADDO(SDNode *N) {
+SDValue DAGCombiner::visitADDO(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
-  EVT CarryVT = N->getValueType(1);
-  SDLoc DL(N);
-
-  // If the flag result is dead, turn this into an ADD.
-  if (!N->hasAnyUseOfValue(1))
-    return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
-                     DAG.getUNDEF(CarryVT));
-
-  // canonicalize constant to RHS.
-  if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
-      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
-    return DAG.getNode(ISD::SADDO, DL, N->getVTList(), N1, N0);
-
-  // fold (saddo x, 0) -> x + no carry out
-  if (isNullOrNullSplat(N1))
-    return CombineTo(N, N0, DAG.getConstant(0, DL, CarryVT));
-
-  return SDValue();
-}
-
-SDValue DAGCombiner::visitUADDO(SDNode *N) {
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  EVT VT = N0.getValueType();
+  bool IsSigned = (ISD::SADDO == N->getOpcode());
 
   EVT CarryVT = N->getValueType(1);
   SDLoc DL(N);
@@ -2458,31 +2431,32 @@ SDValue DAGCombiner::visitUADDO(SDNode *N) {
   // canonicalize constant to RHS.
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
       !DAG.isConstantIntBuildVectorOrConstantInt(N1))
-    return DAG.getNode(ISD::UADDO, DL, N->getVTList(), N1, N0);
+    return DAG.getNode(N->getOpcode(), DL, N->getVTList(), N1, N0);
 
-  // fold (uaddo x, 0) -> x + no carry out
+  // fold (addo x, 0) -> x + no carry out
   if (isNullOrNullSplat(N1))
     return CombineTo(N, N0, DAG.getConstant(0, DL, CarryVT));
 
-  // If it cannot overflow, transform into an add.
-  if (DAG.computeOverflowKind(N0, N1) == SelectionDAG::OFK_Never)
-    return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
-                     DAG.getConstant(0, DL, CarryVT));
+  if (!IsSigned) {
+    // If it cannot overflow, transform into an add.
+    if (DAG.computeOverflowKind(N0, N1) == SelectionDAG::OFK_Never)
+      return CombineTo(N, DAG.getNode(ISD::ADD, DL, VT, N0, N1),
+                       DAG.getConstant(0, DL, CarryVT));
 
-  // fold (uaddo (xor a, -1), 1) -> (usub 0, a) and flip carry.
-  if (isBitwiseNot(N0) && isOneOrOneSplat(N1)) {
-    SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
-                              DAG.getConstant(0, DL, VT),
-                              N0.getOperand(0));
-    return CombineTo(N, Sub,
-                     flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
+    // fold (uaddo (xor a, -1), 1) -> (usub 0, a) and flip carry.
+    if (isBitwiseNot(N0) && isOneOrOneSplat(N1)) {
+      SDValue Sub = DAG.getNode(ISD::USUBO, DL, N->getVTList(),
+                                DAG.getConstant(0, DL, VT), N0.getOperand(0));
+      return CombineTo(N, Sub,
+                       flipBoolean(Sub.getValue(1), DL, CarryVT, DAG, TLI));
+    }
+
+    if (SDValue Combined = visitUADDOLike(N0, N1, N))
+      return Combined;
+
+    if (SDValue Combined = visitUADDOLike(N1, N0, N))
+      return Combined;
   }
-
-  if (SDValue Combined = visitUADDOLike(N0, N1, N))
-    return Combined;
-
-  if (SDValue Combined = visitUADDOLike(N1, N0, N))
-    return Combined;
 
   return SDValue();
 }
@@ -2925,35 +2899,11 @@ SDValue DAGCombiner::visitSUBC(SDNode *N) {
   return SDValue();
 }
 
-// TODO: merge this with DAGCombiner::visitUSUBO
-SDValue DAGCombiner::visitSSUBO(SDNode *N) {
+SDValue DAGCombiner::visitSUBO(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   EVT VT = N0.getValueType();
-  EVT CarryVT = N->getValueType(1);
-  SDLoc DL(N);
-
-  // If the flag result is dead, turn this into an SUB.
-  if (!N->hasAnyUseOfValue(1))
-    return CombineTo(N, DAG.getNode(ISD::SUB, DL, VT, N0, N1),
-                     DAG.getUNDEF(CarryVT));
-
-  // fold (ssubo x, x) -> 0 + no borrow
-  if (N0 == N1)
-    return CombineTo(N, DAG.getConstant(0, DL, VT),
-                     DAG.getConstant(0, DL, CarryVT));
-
-  // fold (ssubo x, 0) -> x + no borrow
-  if (isNullOrNullSplat(N1))
-    return CombineTo(N, N0, DAG.getConstant(0, DL, CarryVT));
-
-  return SDValue();
-}
-
-SDValue DAGCombiner::visitUSUBO(SDNode *N) {
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-  EVT VT = N0.getValueType();
+  bool IsSigned = (ISD::SSUBO == N->getOpcode());
 
   EVT CarryVT = N->getValueType(1);
   SDLoc DL(N);
@@ -2963,17 +2913,17 @@ SDValue DAGCombiner::visitUSUBO(SDNode *N) {
     return CombineTo(N, DAG.getNode(ISD::SUB, DL, VT, N0, N1),
                      DAG.getUNDEF(CarryVT));
 
-  // fold (usubo x, x) -> 0 + no borrow
+  // fold (subo x, x) -> 0 + no borrow
   if (N0 == N1)
     return CombineTo(N, DAG.getConstant(0, DL, VT),
                      DAG.getConstant(0, DL, CarryVT));
 
-  // fold (usubo x, 0) -> x + no borrow
+  // fold (subo x, 0) -> x + no borrow
   if (isNullOrNullSplat(N1))
     return CombineTo(N, N0, DAG.getConstant(0, DL, CarryVT));
 
   // Canonicalize (usubo -1, x) -> ~x, i.e. (xor x, -1) + no borrow
-  if (isAllOnesOrAllOnesSplat(N0))
+  if (!IsSigned && isAllOnesOrAllOnesSplat(N0))
     return CombineTo(N, DAG.getNode(ISD::XOR, DL, VT, N1, N0),
                      DAG.getConstant(0, DL, CarryVT));
 
@@ -3855,22 +3805,14 @@ SDValue DAGCombiner::visitUMUL_LOHI(SDNode *N) {
   return SDValue();
 }
 
-SDValue DAGCombiner::visitSMULO(SDNode *N) {
-  // (smulo x, 2) -> (saddo x, x)
+SDValue DAGCombiner::visitMULO(SDNode *N) {
+  bool IsSigned = (ISD::SMULO == N->getOpcode());
+
+  // (mulo x, 2) -> (addo x, x)
   if (ConstantSDNode *C2 = isConstOrConstSplat(N->getOperand(1)))
     if (C2->getAPIntValue() == 2)
-      return DAG.getNode(ISD::SADDO, SDLoc(N), N->getVTList(),
-                         N->getOperand(0), N->getOperand(0));
-
-  return SDValue();
-}
-
-SDValue DAGCombiner::visitUMULO(SDNode *N) {
-  // (umulo x, 2) -> (uaddo x, x)
-  if (ConstantSDNode *C2 = isConstOrConstSplat(N->getOperand(1)))
-    if (C2->getAPIntValue() == 2)
-      return DAG.getNode(ISD::UADDO, SDLoc(N), N->getVTList(),
-                         N->getOperand(0), N->getOperand(0));
+      return DAG.getNode(IsSigned ? ISD::SADDO : ISD::UADDO, SDLoc(N),
+                         N->getVTList(), N->getOperand(0), N->getOperand(0));
 
   return SDValue();
 }

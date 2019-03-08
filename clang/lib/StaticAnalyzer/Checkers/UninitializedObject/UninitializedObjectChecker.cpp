@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "UninitializedObject.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
@@ -618,10 +619,16 @@ void ento::registerUninitializedObjectChecker(CheckerManager &Mgr) {
       Chk, "CheckPointeeInitialization", /*DefaultVal*/ false);
   ChOpts.IgnoredRecordsWithFieldPattern =
       AnOpts.getCheckerStringOption(Chk, "IgnoreRecordsWithField",
-                                    /*DefaultVal*/ "");
+                                    /*DefaultVal*/ "\"\"");
   ChOpts.IgnoreGuardedFields =
       AnOpts.getCheckerBooleanOption(Chk, "IgnoreGuardedFields",
                                      /*DefaultVal*/ false);
+
+  std::string ErrorMsg;
+  if (!llvm::Regex(ChOpts.IgnoredRecordsWithFieldPattern).isValid(ErrorMsg))
+    Mgr.reportInvalidCheckerOptionValue(Chk, "IgnoreRecordsWithField",
+        "a valid regex, building failed with error message "
+        "\"" + ErrorMsg + "\"");
 }
 
 bool ento::shouldRegisterUninitializedObjectChecker(const LangOptions &LO) {

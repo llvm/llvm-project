@@ -56,7 +56,7 @@ public:
                [&](RefSlab S) {
                  std::lock_guard<std::mutex> Lock(SymbolsMu);
                  for (const auto &Sym : S) {
-                   // No need to merge as currently all Refs are from main file.
+                   // Deduplication happens during insertion.
                    for (const auto &Ref : Sym.second)
                      Refs.insert(Sym.first, Ref);
                  }

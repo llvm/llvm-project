@@ -37,7 +37,7 @@ void DurationConversionCastCheck::check(
   const auto *MatchedCast =
       Result.Nodes.getNodeAs<ExplicitCastExpr>("cast_expr");
 
-  if (!isNotInMacro(Result, MatchedCast))
+  if (isInMacro(Result, MatchedCast))
     return;
 
   const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>("func_decl");

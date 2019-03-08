@@ -26,6 +26,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1076,10 +1077,29 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
-          // Functions are at least 4-byte aligned.
-          unsigned GVAlign = GV->getAlignment();
-          if (isa<Function>(GV))
-            GVAlign = std::max(GVAlign, 4U);
+          unsigned GVAlign;
+
+          if (Module *TheModule = GV->getParent()) {
+            GVAlign = GV->getPointerAlignment(TheModule->getDataLayout());
+
+            // If the function alignment is not specified then assume that it
+            // is 4.
+            // This is dangerous; on x86, the alignment of the pointer
+            // corresponds to the alignment of the function, but might be less
+            // than 4 if it isn't explicitly specified.
+            // However, a fix for this behaviour was reverted because it
+            // increased code size (see https://reviews.llvm.org/D55115)
+            // FIXME: This code should be deleted once existing targets have
+            // appropriate defaults
+            if (GVAlign == 0U && isa<Function>(GV))
+              GVAlign = 4U;
+          } else if (isa<Function>(GV)) {
+            // Without a datalayout we have to assume the worst case: that the
+            // function pointer isn't aligned at all.
+            GVAlign = 0U;
+          } else {
+            GVAlign = GV->getAlignment();
+          }
 
           if (GVAlign > 1) {
             unsigned DstWidth = CI2->getType()->getBitWidth();

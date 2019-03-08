@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ExprCXX.h"
+#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -186,13 +187,17 @@ private:
   AggressivenessKind Aggressiveness;
 
 public:
-  void setAggressiveness(StringRef Str) {
+  void setAggressiveness(StringRef Str, CheckerManager &Mgr) {
     Aggressiveness =
         llvm::StringSwitch<AggressivenessKind>(Str)
             .Case("KnownsOnly", AK_KnownsOnly)
             .Case("KnownsAndLocals", AK_KnownsAndLocals)
             .Case("All", AK_All)
-            .Default(AK_KnownsAndLocals); // A sane default.
+            .Default(AK_Invalid);
+
+    if (Aggressiveness == AK_Invalid)
+      Mgr.reportInvalidCheckerOptionValue(this, "WarnOn",
+          "either \"KnownsOnly\", \"KnownsAndLocals\" or \"All\" string value");
   };
 
 private:
@@ -735,7 +740,8 @@ void MoveChecker::printState(raw_ostream &Out, ProgramStateRef State,
 void ento::registerMoveChecker(CheckerManager &mgr) {
   MoveChecker *chk = mgr.registerChecker<MoveChecker>();
   chk->setAggressiveness(
-      mgr.getAnalyzerOptions().getCheckerStringOption(chk, "WarnOn", ""));
+      mgr.getAnalyzerOptions().getCheckerStringOption(chk, "WarnOn",
+                                                      "KnownsAndLocals"), mgr);
 }
 
 bool ento::shouldRegisterMoveChecker(const LangOptions &LO) {

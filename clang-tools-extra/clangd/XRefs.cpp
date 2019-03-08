@@ -15,6 +15,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Index/IndexDataConsumer.h"
+#include "clang/Index/IndexSymbol.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/Support/Path.h"
@@ -154,6 +155,10 @@ public:
                       llvm::ArrayRef<index::SymbolRelation> Relations,
                       SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
+    // Skip non-semantic references.
+    if (Roles & static_cast<unsigned>(index::SymbolRole::NameReference))
+      return true;
+
     if (Loc == SearchedLocation) {
       auto IsImplicitExpr = [](const Expr *E) {
         if (!E)

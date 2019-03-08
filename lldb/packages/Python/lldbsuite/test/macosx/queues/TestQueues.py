@@ -65,8 +65,8 @@ class TestQueues(TestBase):
             location = "\t".join([lldbutil.get_description(
                 x.GetFrameAtIndex(i)) for i in range(x.GetNumFrames())])
             desc.append(
-                "thread %d: %s at\n\t%s" %
-                (id, reason_str, location))
+                "thread %d: %s (queue id: %s) at\n\t%s" %
+                (id, reason_str, x.GetQueueID(), location))
         print('\n'.join(desc))
 
     def check_number_of_threads_owned_by_queue(self, queue, number_threads):
@@ -327,6 +327,8 @@ class TestQueues(TestBase):
         queue_performer_3 = lldb.SBQueue()
         for idx in range(0, process.GetNumQueues()):
             q = process.GetQueueAtIndex(idx)
+            if "LLDB_COMMAND_TRACE" in os.environ:
+                print("Queue  with id %s has name %s" % (q.GetQueueID(), q.GetName()))
             if q.GetName() == "com.apple.work_submittor_1":
                 queue_submittor_1 = q
             if q.GetName() == "com.apple.work_performer_1":

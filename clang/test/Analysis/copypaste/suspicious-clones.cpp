@@ -1,4 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.clone.CloneChecker -analyzer-config alpha.clone.CloneChecker:ReportSuspiciousClones=true  -analyzer-config alpha.clone.CloneChecker:ReportNormalClones=false -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10 -verify %s
+// RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=alpha.clone.CloneChecker \
+// RUN:   -analyzer-config alpha.clone.CloneChecker:ReportNormalClones=false \
+// RUN:   -analyzer-config alpha.clone.CloneChecker:MinimumCloneComplexity=10
 
 // Tests finding a suspicious clone that references local variables.
 
