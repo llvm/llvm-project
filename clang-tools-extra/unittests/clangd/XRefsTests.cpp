@@ -1337,6 +1337,15 @@ TEST(FindReferences, WithinAST) {
         }
       )cpp",
 
+      R"cpp(// Constructor
+        struct Foo {
+          [[F^oo]](int);
+        };
+        void foo() {
+          Foo f = [[Foo]](42);
+        }
+      )cpp",
+
       R"cpp(// Typedef
         typedef int [[Foo]];
         int main() {

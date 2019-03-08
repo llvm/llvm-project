@@ -21,11 +21,17 @@ namespace {
 
 void adjustArguments(tooling::CompileCommand &Cmd,
                      llvm::StringRef ResourceDir) {
-  // Strip plugin related command line arguments. Clangd does
-  // not support plugins currently. Therefore it breaks if
-  // compiler tries to load plugins.
-  Cmd.CommandLine =
-      tooling::getStripPluginsAdjuster()(Cmd.CommandLine, Cmd.Filename);
+  tooling::ArgumentsAdjuster ArgsAdjuster = tooling::combineAdjusters(
+      // clangd should not write files to disk, including dependency files
+      // requested on the command line.
+      tooling::getClangStripDependencyFileAdjuster(),
+      // Strip plugin related command line arguments. Clangd does
+      // not support plugins currently. Therefore it breaks if
+      // compiler tries to load plugins.
+      tooling::combineAdjusters(tooling::getStripPluginsAdjuster(),
+                                tooling::getClangSyntaxOnlyAdjuster()));
+
+  Cmd.CommandLine = ArgsAdjuster(Cmd.CommandLine, Cmd.Filename);
   // Inject the resource dir.
   // FIXME: Don't overwrite it if it's already there.
   if (!ResourceDir.empty())

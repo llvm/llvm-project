@@ -33,9 +33,12 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Ref &R) {
 
 void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
   auto &M = Refs[ID];
-  M.push_back(S);
-  M.back().Location.FileURI =
-      UniqueStrings.save(M.back().Location.FileURI).data();
+  if (M.count(S))
+    return;
+  Ref R = S;
+  R.Location.FileURI =
+      UniqueStrings.save(R.Location.FileURI).data();
+  M.insert(std::move(R));
 }
 
 RefSlab RefSlab::Builder::build() && {
@@ -45,11 +48,7 @@ RefSlab RefSlab::Builder::build() && {
   Result.reserve(Refs.size());
   size_t NumRefs = 0;
   for (auto &Sym : Refs) {
-    auto &SymRefs = Sym.second;
-    llvm::sort(SymRefs);
-    // FIXME: do we really need to dedup?
-    SymRefs.erase(std::unique(SymRefs.begin(), SymRefs.end()), SymRefs.end());
-
+    std::vector<Ref> SymRefs(Sym.second.begin(), Sym.second.end());
     NumRefs += SymRefs.size();
     Result.emplace_back(Sym.first, llvm::ArrayRef<Ref>(SymRefs).copy(Arena));
   }
