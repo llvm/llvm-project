@@ -16,7 +16,6 @@
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -57,14 +56,9 @@ SBFileSpec SBCompileUnit::GetFileSpec() const {
 uint32_t SBCompileUnit::GetNumLineEntries() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBCompileUnit, GetNumLineEntries);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (m_opaque_ptr) {
     LineTable *line_table = m_opaque_ptr->GetLineTable();
     if (line_table) {
-      if (log)
-        log->Printf("SBCompileUnit(%p)::GetNumLineEntries() => %d",
-                    static_cast<void *>(m_opaque_ptr),
-                    (int)line_table->GetSize());
       return line_table->GetSize();
     }
   }
@@ -75,8 +69,6 @@ SBLineEntry SBCompileUnit::GetLineEntryAtIndex(uint32_t idx) const {
   LLDB_RECORD_METHOD_CONST(lldb::SBLineEntry, SBCompileUnit,
                            GetLineEntryAtIndex, (uint32_t), idx);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBLineEntry sb_line_entry;
   if (m_opaque_ptr) {
     LineTable *line_table = m_opaque_ptr->GetLineTable();
@@ -85,15 +77,6 @@ SBLineEntry SBCompileUnit::GetLineEntryAtIndex(uint32_t idx) const {
       if (line_table->GetLineEntryAtIndex(idx, line_entry))
         sb_line_entry.SetLineEntry(line_entry);
     }
-  }
-
-  if (log) {
-    SBStream sstr;
-    sb_line_entry.GetDescription(sstr);
-    log->Printf("SBCompileUnit(%p)::GetLineEntryAtIndex (idx=%u) => "
-                "SBLineEntry(%p): '%s'",
-                static_cast<void *>(m_opaque_ptr), idx,
-                static_cast<void *>(sb_line_entry.get()), sstr.GetData());
   }
 
   return LLDB_RECORD_RESULT(sb_line_entry);
@@ -116,8 +99,6 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
                            (uint32_t, uint32_t, lldb::SBFileSpec *, bool),
                            start_idx, line, inline_file_spec, exact);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   uint32_t index = UINT32_MAX;
   if (m_opaque_ptr) {
     FileSpec file_spec;
@@ -129,26 +110,6 @@ uint32_t SBCompileUnit::FindLineEntryIndex(uint32_t start_idx, uint32_t line,
     index = m_opaque_ptr->FindLineEntry(
         start_idx, line, inline_file_spec ? inline_file_spec->get() : NULL,
         exact, NULL);
-  }
-
-  if (log) {
-    SBStream sstr;
-    if (index == UINT32_MAX) {
-      log->Printf("SBCompileUnit(%p)::FindLineEntryIndex (start_idx=%u, "
-                  "line=%u, SBFileSpec(%p)) => NOT FOUND",
-                  static_cast<void *>(m_opaque_ptr), start_idx, line,
-                  inline_file_spec
-                      ? static_cast<const void *>(inline_file_spec->get())
-                      : NULL);
-    } else {
-      log->Printf("SBCompileUnit(%p)::FindLineEntryIndex (start_idx=%u, "
-                  "line=%u, SBFileSpec(%p)) => %u",
-                  static_cast<void *>(m_opaque_ptr), start_idx, line,
-                  inline_file_spec
-                      ? static_cast<const void *>(inline_file_spec->get())
-                      : NULL,
-                  index);
-    }
   }
 
   return index;
@@ -192,8 +153,6 @@ SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
   LLDB_RECORD_METHOD_CONST(lldb::SBFileSpec, SBCompileUnit,
                            GetSupportFileAtIndex, (uint32_t), idx);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBFileSpec sb_file_spec;
   if (m_opaque_ptr) {
     FileSpecList &support_files = m_opaque_ptr->GetSupportFiles();
@@ -201,14 +160,6 @@ SBFileSpec SBCompileUnit::GetSupportFileAtIndex(uint32_t idx) const {
     sb_file_spec.SetFileSpec(file_spec);
   }
 
-  if (log) {
-    SBStream sstr;
-    sb_file_spec.GetDescription(sstr);
-    log->Printf("SBCompileUnit(%p)::GetGetFileSpecAtIndex (idx=%u) => "
-                "SBFileSpec(%p): '%s'",
-                static_cast<void *>(m_opaque_ptr), idx,
-                static_cast<const void *>(sb_file_spec.get()), sstr.GetData());
-  }
 
   return LLDB_RECORD_RESULT(sb_file_spec);
 }

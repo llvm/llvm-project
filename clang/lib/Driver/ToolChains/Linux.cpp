@@ -880,7 +880,6 @@ void Linux::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const {
   const std::string& SysRoot = computeSysRoot();
   const std::string LibCXXIncludePathCandidates[] = {
-      DetectLibcxxIncludePath(getDriver().ResourceDir + "/include/c++"),
       DetectLibcxxIncludePath(getDriver().Dir + "/../include/c++"),
       // If this is a development, non-installed, clang, libcxx will
       // not be found at ../include/c++ but it likely to be found at

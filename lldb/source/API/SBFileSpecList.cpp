@@ -14,7 +14,6 @@
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
 #include <limits.h>
@@ -29,16 +28,8 @@ SBFileSpecList::SBFileSpecList() : m_opaque_up(new FileSpecList()) {
 SBFileSpecList::SBFileSpecList(const SBFileSpecList &rhs) : m_opaque_up() {
   LLDB_RECORD_CONSTRUCTOR(SBFileSpecList, (const lldb::SBFileSpecList &), rhs);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   m_opaque_up = clone(rhs.m_opaque_up);
-
-  if (log) {
-    log->Printf("SBFileSpecList::SBFileSpecList (const SBFileSpecList "
-                "rhs.ap=%p) => SBFileSpecList(%p)",
-                static_cast<void *>(rhs.m_opaque_up.get()),
-                static_cast<void *>(m_opaque_up.get()));
-  }
 }
 
 SBFileSpecList::~SBFileSpecList() {}

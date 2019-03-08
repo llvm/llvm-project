@@ -554,16 +554,25 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 
+  MCSymbolELF *KernelCodeSymbol = cast<MCSymbolELF>(
+      Context.getOrCreateSymbol(Twine(KernelName)));
   MCSymbolELF *KernelDescriptorSymbol = cast<MCSymbolELF>(
       Context.getOrCreateSymbol(Twine(KernelName) + Twine(".kd")));
-  KernelDescriptorSymbol->setBinding(ELF::STB_GLOBAL);
+
+  // Copy kernel descriptor symbol's binding, other and visibility from the
+  // kernel code symbol.
+  KernelDescriptorSymbol->setBinding(KernelCodeSymbol->getBinding());
+  KernelDescriptorSymbol->setOther(KernelCodeSymbol->getOther());
+  KernelDescriptorSymbol->setVisibility(KernelCodeSymbol->getVisibility());
+  // Kernel descriptor symbol's type and size are fixed.
   KernelDescriptorSymbol->setType(ELF::STT_OBJECT);
   KernelDescriptorSymbol->setSize(
       MCConstantExpr::create(sizeof(KernelDescriptor), Context));
 
-  MCSymbolELF *KernelCodeSymbol = cast<MCSymbolELF>(
-      Context.getOrCreateSymbol(Twine(KernelName)));
-  KernelCodeSymbol->setBinding(ELF::STB_LOCAL);
+  // The visibility of the kernel code symbol must be protected or less to allow
+  // static relocations from the kernel descriptor to be used.
+  if (KernelCodeSymbol->getVisibility() == ELF::STV_DEFAULT)
+    KernelCodeSymbol->setVisibility(ELF::STV_PROTECTED);
 
   Streamer.EmitLabel(KernelDescriptorSymbol);
   Streamer.EmitBytes(StringRef(

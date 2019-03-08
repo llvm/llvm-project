@@ -9086,6 +9086,16 @@ ClangASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
 //----------------------------------------------------------------------
 #define DEPTH_INCREMENT 2
 
+#ifndef NDEBUG
+LLVM_DUMP_METHOD void
+ClangASTContext::dump(lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return;
+  clang::QualType qual_type(GetQualType(type));
+  qual_type.dump();
+}
+#endif
+
 void ClangASTContext::Dump(Stream &s) {
   Decl *tu = Decl::castFromDeclContext(GetTranslationUnitDecl());
   tu->dump(s.AsRawOstream());
