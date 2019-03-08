@@ -543,6 +543,9 @@ bool SBBreakpointName::GetDescription(SBStream &s) {
 
 void SBBreakpointName::SetCallback(SBBreakpointHitCallback callback,
                                    void *baton) {
+  LLDB_RECORD_DUMMY(void, SBBreakpointName, SetCallback,
+                    (lldb::SBBreakpointHitCallback, void *), callback, baton);
+
   BreakpointName *bp_name = GetBreakpointName();
   if (!bp_name)
     return;

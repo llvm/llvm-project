@@ -102,6 +102,10 @@ bool SBCommunication::IsConnected() const {
 
 size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
                              ConnectionStatus &status) {
+  LLDB_RECORD_DUMMY(size_t, SBCommunication, Read,
+                    (void *, size_t, uint32_t, lldb::ConnectionStatus &), dst,
+                    dst_len, timeout_usec, status);
+
   size_t bytes_read = 0;
   Timeout<std::micro> timeout = timeout_usec == UINT32_MAX
                                     ? Timeout<std::micro>(llvm::None)
@@ -116,6 +120,10 @@ size_t SBCommunication::Read(void *dst, size_t dst_len, uint32_t timeout_usec,
 
 size_t SBCommunication::Write(const void *src, size_t src_len,
                               ConnectionStatus &status) {
+  LLDB_RECORD_DUMMY(size_t, SBCommunication, Write,
+                    (const void *, size_t, lldb::ConnectionStatus &), src,
+                    src_len, status);
+
   size_t bytes_written = 0;
   if (m_opaque)
     bytes_written = m_opaque->Write(src, src_len, status, NULL);
@@ -145,6 +153,10 @@ bool SBCommunication::ReadThreadIsRunning() {
 
 bool SBCommunication::SetReadThreadBytesReceivedCallback(
     ReadThreadBytesReceived callback, void *callback_baton) {
+  LLDB_RECORD_DUMMY(bool, SBCommunication, SetReadThreadBytesReceivedCallback,
+                    (lldb::SBCommunication::ReadThreadBytesReceived, void *),
+                    callback, callback_baton);
+
   bool result = false;
   if (m_opaque) {
     m_opaque->SetReadThreadBytesReceivedCallback(callback, callback_baton);
