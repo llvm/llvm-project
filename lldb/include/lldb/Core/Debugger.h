@@ -63,6 +63,11 @@ class SymbolContext;
 namespace lldb_private {
 class Target;
 }
+namespace lldb_private {
+namespace repro {
+class DataRecorder;
+}
+} // namespace lldb_private
 namespace llvm {
 class raw_ostream;
 }
@@ -129,7 +134,10 @@ public:
 
   lldb::StreamFileSP GetErrorFile() { return m_error_file_sp; }
 
-  void SetInputFileHandle(FILE *fh, bool tranfer_ownership);
+  repro::DataRecorder *GetInputRecorder();
+
+  void SetInputFileHandle(FILE *fh, bool tranfer_ownership,
+                          repro::DataRecorder *recorder = nullptr);
 
   void SetOutputFileHandle(FILE *fh, bool tranfer_ownership);
 
@@ -377,6 +385,9 @@ protected:
   lldb::StreamFileSP m_input_file_sp;
   lldb::StreamFileSP m_output_file_sp;
   lldb::StreamFileSP m_error_file_sp;
+
+  /// Used for shadowing the input file when capturing a reproducer.
+  repro::DataRecorder *m_input_recorder;
 
   lldb::BroadcasterManagerSP m_broadcaster_manager_sp; // The debugger acts as a
                                                        // broadcaster manager of

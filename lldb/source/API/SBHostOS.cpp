@@ -10,6 +10,7 @@
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #endif
 
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/Host/FileSystem.h"
@@ -33,16 +34,25 @@ using namespace lldb;
 using namespace lldb_private;
 
 SBFileSpec SBHostOS::GetProgramFileSpec() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBFileSpec, SBHostOS,
+                                    GetProgramFileSpec);
+
   SBFileSpec sb_filespec;
   sb_filespec.SetFileSpec(HostInfo::GetProgramFileSpec());
-  return sb_filespec;
+  return LLDB_RECORD_RESULT(sb_filespec);
 }
 
 SBFileSpec SBHostOS::GetLLDBPythonPath() {
-  return GetLLDBPath(ePathTypePythonDir);
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBFileSpec, SBHostOS,
+                                    GetLLDBPythonPath);
+
+  return LLDB_RECORD_RESULT(GetLLDBPath(ePathTypePythonDir));
 }
 
 SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
+  LLDB_RECORD_STATIC_METHOD(lldb::SBFileSpec, SBHostOS, GetLLDBPath,
+                            (lldb::PathType), path_type);
+
   FileSpec fspec;
   switch (path_type) {
   case ePathTypeLLDBShlibDir:
@@ -82,10 +92,13 @@ SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
 
   SBFileSpec sb_fspec;
   sb_fspec.SetFileSpec(fspec);
-  return sb_fspec;
+  return LLDB_RECORD_RESULT(sb_fspec);
 }
 
 SBFileSpec SBHostOS::GetUserHomeDirectory() {
+  LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBFileSpec, SBHostOS,
+                                    GetUserHomeDirectory);
+
   SBFileSpec sb_fspec;
 
   llvm::SmallString<64> home_dir_path;
@@ -94,7 +107,7 @@ SBFileSpec SBHostOS::GetUserHomeDirectory() {
   FileSystem::Instance().Resolve(homedir);
 
   sb_fspec.SetFileSpec(homedir);
-  return sb_fspec;
+  return LLDB_RECORD_RESULT(sb_fspec);
 }
 
 lldb::thread_t SBHostOS::ThreadCreate(const char *name,
@@ -117,9 +130,16 @@ lldb::thread_t SBHostOS::ThreadCreate(const char *name,
   return thread.Release();
 }
 
-void SBHostOS::ThreadCreated(const char *name) {}
+void SBHostOS::ThreadCreated(const char *name) {
+  LLDB_RECORD_STATIC_METHOD(void, SBHostOS, ThreadCreated, (const char *),
+                            name);
+}
 
 bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
+  LLDB_RECORD_STATIC_METHOD(bool, SBHostOS, ThreadCancel,
+                            (lldb::thread_t, lldb::SBError *), thread,
+                            error_ptr);
+
   Status error;
   HostThread host_thread(thread);
   error = host_thread.Cancel();
@@ -130,6 +150,10 @@ bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
 }
 
 bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
+  LLDB_RECORD_STATIC_METHOD(bool, SBHostOS, ThreadDetach,
+                            (lldb::thread_t, lldb::SBError *), thread,
+                            error_ptr);
+
   Status error;
 #if defined(_WIN32)
   if (error_ptr)
@@ -146,6 +170,11 @@ bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
 
 bool SBHostOS::ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
                           SBError *error_ptr) {
+  LLDB_RECORD_STATIC_METHOD(
+      bool, SBHostOS, ThreadJoin,
+      (lldb::thread_t, lldb::thread_result_t *, lldb::SBError *), thread,
+      result, error_ptr);
+
   Status error;
   HostThread host_thread(thread);
   error = host_thread.Join(result);

@@ -25,7 +25,7 @@ public:
   SystemInitializerFull();
   ~SystemInitializerFull() override;
 
-  llvm::Error Initialize(const InitializerOptions &options) override;
+  llvm::Error Initialize() override;
   void Terminate() override;
 
 private:

@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBStream.h"
 
+#include "SBReproducerPrivate.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Status.h"
@@ -17,18 +18,26 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBStream::SBStream() : m_opaque_up(new StreamString()), m_is_file(false) {}
+SBStream::SBStream() : m_opaque_up(new StreamString()), m_is_file(false) {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBStream);
+}
 
 SBStream::SBStream(SBStream &&rhs)
     : m_opaque_up(std::move(rhs.m_opaque_up)), m_is_file(rhs.m_is_file) {}
 
 SBStream::~SBStream() {}
 
-bool SBStream::IsValid() const { return (m_opaque_up != NULL); }
+bool SBStream::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBStream, IsValid);
+
+  return (m_opaque_up != NULL);
+}
 
 // If this stream is not redirected to a file, it will maintain a local cache
 // for the stream data which can be accessed using this accessor.
 const char *SBStream::GetData() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBStream, GetData);
+
   if (m_is_file || m_opaque_up == NULL)
     return NULL;
 
@@ -38,6 +47,8 @@ const char *SBStream::GetData() {
 // If this stream is not redirected to a file, it will maintain a local cache
 // for the stream output whose length can be accessed using this accessor.
 size_t SBStream::GetSize() {
+  LLDB_RECORD_METHOD_NO_ARGS(size_t, SBStream, GetSize);
+
   if (m_is_file || m_opaque_up == NULL)
     return 0;
 
@@ -54,6 +65,9 @@ void SBStream::Printf(const char *format, ...) {
 }
 
 void SBStream::RedirectToFile(const char *path, bool append) {
+  LLDB_RECORD_METHOD(void, SBStream, RedirectToFile, (const char *, bool), path,
+                     append);
+
   if (path == nullptr)
     return;
 
@@ -87,6 +101,9 @@ void SBStream::RedirectToFile(const char *path, bool append) {
 }
 
 void SBStream::RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership) {
+  LLDB_RECORD_METHOD(void, SBStream, RedirectToFileHandle, (FILE *, bool), fh,
+                     transfer_fh_ownership);
+
   if (fh == nullptr)
     return;
 
@@ -111,6 +128,9 @@ void SBStream::RedirectToFileHandle(FILE *fh, bool transfer_fh_ownership) {
 }
 
 void SBStream::RedirectToFileDescriptor(int fd, bool transfer_fh_ownership) {
+  LLDB_RECORD_METHOD(void, SBStream, RedirectToFileDescriptor, (int, bool), fd,
+                     transfer_fh_ownership);
+
   std::string local_data;
   if (m_opaque_up) {
     // See if we have any locally backed data. If so, copy it so we can then
@@ -142,6 +162,8 @@ lldb_private::Stream &SBStream::ref() {
 }
 
 void SBStream::Clear() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBStream, Clear);
+
   if (m_opaque_up) {
     // See if we have any locally backed data. If so, copy it so we can then
     // redirect it to the file so we don't lose the data

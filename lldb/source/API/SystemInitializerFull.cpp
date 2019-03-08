@@ -177,7 +177,7 @@ extern "C" void *LLDBSwigPythonCreateScriptedThreadPlan(
 extern "C" bool LLDBSWIGPythonCallThreadPlan(void *implementor,
                                              const char *method_name,
                                              Event *event_sp, bool &got_error);
-                                             
+
 extern "C" void *LLDBSwigPythonCreateScriptedBreakpointResolver(
     const char *python_class_name,
     const char *session_dictionary_name,
@@ -298,9 +298,8 @@ static void SwiftTerminate() {
 #endif
 }
 
-llvm::Error
-SystemInitializerFull::Initialize(const InitializerOptions &options) {
-  if (auto e = SystemInitializerCommon::Initialize(options))
+llvm::Error SystemInitializerFull::Initialize() {
+  if (auto e = SystemInitializerCommon::Initialize())
     return e;
 
   breakpad::ObjectFileBreakpad::Initialize();

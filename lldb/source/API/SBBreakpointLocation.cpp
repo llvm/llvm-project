@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpointLocation.h"
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
@@ -29,11 +30,16 @@
 using namespace lldb;
 using namespace lldb_private;
 
-SBBreakpointLocation::SBBreakpointLocation() {}
+SBBreakpointLocation::SBBreakpointLocation() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBBreakpointLocation);
+}
 
 SBBreakpointLocation::SBBreakpointLocation(
     const lldb::BreakpointLocationSP &break_loc_sp)
     : m_opaque_wp(break_loc_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBBreakpointLocation,
+                          (const lldb::BreakpointLocationSP &), break_loc_sp);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   if (log) {
@@ -44,10 +50,18 @@ SBBreakpointLocation::SBBreakpointLocation(
 }
 
 SBBreakpointLocation::SBBreakpointLocation(const SBBreakpointLocation &rhs)
-    : m_opaque_wp(rhs.m_opaque_wp) {}
+    : m_opaque_wp(rhs.m_opaque_wp) {
+  LLDB_RECORD_CONSTRUCTOR(SBBreakpointLocation,
+                          (const lldb::SBBreakpointLocation &), rhs);
+}
 
 const SBBreakpointLocation &SBBreakpointLocation::
 operator=(const SBBreakpointLocation &rhs) {
+  LLDB_RECORD_METHOD(
+      const lldb::SBBreakpointLocation &,
+      SBBreakpointLocation, operator=,(const lldb::SBBreakpointLocation &),
+      rhs);
+
   m_opaque_wp = rhs.m_opaque_wp;
   return *this;
 }
@@ -58,17 +72,27 @@ BreakpointLocationSP SBBreakpointLocation::GetSP() const {
   return m_opaque_wp.lock();
 }
 
-bool SBBreakpointLocation::IsValid() const { return bool(GetSP()); }
+bool SBBreakpointLocation::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBBreakpointLocation, IsValid);
+
+  return bool(GetSP());
+}
 
 SBAddress SBBreakpointLocation::GetAddress() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBAddress, SBBreakpointLocation, GetAddress);
+
   BreakpointLocationSP loc_sp = GetSP();
-  if (loc_sp)
-    return SBAddress(&loc_sp->GetAddress());
-  else
-    return SBAddress();
+  if (loc_sp) {
+    return LLDB_RECORD_RESULT(SBAddress(&loc_sp->GetAddress()));
+  }
+
+  return LLDB_RECORD_RESULT(SBAddress());
 }
 
 addr_t SBBreakpointLocation::GetLoadAddress() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::addr_t, SBBreakpointLocation,
+                             GetLoadAddress);
+
   addr_t ret_addr = LLDB_INVALID_ADDRESS;
   BreakpointLocationSP loc_sp = GetSP();
 
@@ -82,6 +106,8 @@ addr_t SBBreakpointLocation::GetLoadAddress() {
 }
 
 void SBBreakpointLocation::SetEnabled(bool enabled) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetEnabled, (bool), enabled);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -91,6 +117,8 @@ void SBBreakpointLocation::SetEnabled(bool enabled) {
 }
 
 bool SBBreakpointLocation::IsEnabled() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointLocation, IsEnabled);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -101,6 +129,8 @@ bool SBBreakpointLocation::IsEnabled() {
 }
 
 uint32_t SBBreakpointLocation::GetHitCount() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBBreakpointLocation, GetHitCount);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -111,6 +141,8 @@ uint32_t SBBreakpointLocation::GetHitCount() {
 }
 
 uint32_t SBBreakpointLocation::GetIgnoreCount() {
+  LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBBreakpointLocation, GetIgnoreCount);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -121,6 +153,8 @@ uint32_t SBBreakpointLocation::GetIgnoreCount() {
 }
 
 void SBBreakpointLocation::SetIgnoreCount(uint32_t n) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetIgnoreCount, (uint32_t), n);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -130,6 +164,9 @@ void SBBreakpointLocation::SetIgnoreCount(uint32_t n) {
 }
 
 void SBBreakpointLocation::SetCondition(const char *condition) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetCondition, (const char *),
+                     condition);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -139,6 +176,8 @@ void SBBreakpointLocation::SetCondition(const char *condition) {
 }
 
 const char *SBBreakpointLocation::GetCondition() {
+  LLDB_RECORD_METHOD_NO_ARGS(const char *, SBBreakpointLocation, GetCondition);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -149,6 +188,9 @@ const char *SBBreakpointLocation::GetCondition() {
 }
 
 void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetAutoContinue, (bool),
+                     auto_continue);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -158,6 +200,8 @@ void SBBreakpointLocation::SetAutoContinue(bool auto_continue) {
 }
 
 bool SBBreakpointLocation::GetAutoContinue() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointLocation, GetAutoContinue);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -169,6 +213,9 @@ bool SBBreakpointLocation::GetAutoContinue() {
 
 void SBBreakpointLocation::SetScriptCallbackFunction(
     const char *callback_function_name) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetScriptCallbackFunction,
+                     (const char *), callback_function_name);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointLocationSP loc_sp = GetSP();
   LLDB_LOG(log, "location = {0}, callback = {1}", loc_sp.get(),
@@ -190,6 +237,9 @@ void SBBreakpointLocation::SetScriptCallbackFunction(
 
 SBError
 SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
+  LLDB_RECORD_METHOD(lldb::SBError, SBBreakpointLocation, SetScriptCallbackBody,
+                     (const char *), callback_body_text);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointLocationSP loc_sp = GetSP();
   LLDB_LOG(log, "location = {0}: callback body:\n{1}", loc_sp.get(),
@@ -211,10 +261,13 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
   } else
     sb_error.SetErrorString("invalid breakpoint");
 
-  return sb_error;
+  return LLDB_RECORD_RESULT(sb_error);
 }
 
 void SBBreakpointLocation::SetCommandLineCommands(SBStringList &commands) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetCommandLineCommands,
+                     (lldb::SBStringList &), commands);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (!loc_sp)
     return;
@@ -230,6 +283,9 @@ void SBBreakpointLocation::SetCommandLineCommands(SBStringList &commands) {
 }
 
 bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
+  LLDB_RECORD_METHOD(bool, SBBreakpointLocation, GetCommandLineCommands,
+                     (lldb::SBStringList &), commands);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (!loc_sp)
     return false;
@@ -242,6 +298,9 @@ bool SBBreakpointLocation::GetCommandLineCommands(SBStringList &commands) {
 }
 
 void SBBreakpointLocation::SetThreadID(tid_t thread_id) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetThreadID, (lldb::tid_t),
+                     thread_id);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -251,6 +310,8 @@ void SBBreakpointLocation::SetThreadID(tid_t thread_id) {
 }
 
 tid_t SBBreakpointLocation::GetThreadID() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::tid_t, SBBreakpointLocation, GetThreadID);
+
   tid_t tid = LLDB_INVALID_THREAD_ID;
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
@@ -262,6 +323,9 @@ tid_t SBBreakpointLocation::GetThreadID() {
 }
 
 void SBBreakpointLocation::SetThreadIndex(uint32_t index) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetThreadIndex, (uint32_t),
+                     index);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -271,6 +335,9 @@ void SBBreakpointLocation::SetThreadIndex(uint32_t index) {
 }
 
 uint32_t SBBreakpointLocation::GetThreadIndex() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBBreakpointLocation,
+                                   GetThreadIndex);
+
   uint32_t thread_idx = UINT32_MAX;
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
@@ -282,6 +349,9 @@ uint32_t SBBreakpointLocation::GetThreadIndex() const {
 }
 
 void SBBreakpointLocation::SetThreadName(const char *thread_name) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetThreadName, (const char *),
+                     thread_name);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -291,6 +361,9 @@ void SBBreakpointLocation::SetThreadName(const char *thread_name) {
 }
 
 const char *SBBreakpointLocation::GetThreadName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointLocation,
+                                   GetThreadName);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -301,6 +374,9 @@ const char *SBBreakpointLocation::GetThreadName() const {
 }
 
 void SBBreakpointLocation::SetQueueName(const char *queue_name) {
+  LLDB_RECORD_METHOD(void, SBBreakpointLocation, SetQueueName, (const char *),
+                     queue_name);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -310,6 +386,9 @@ void SBBreakpointLocation::SetQueueName(const char *queue_name) {
 }
 
 const char *SBBreakpointLocation::GetQueueName() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBBreakpointLocation,
+                                   GetQueueName);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -320,6 +399,8 @@ const char *SBBreakpointLocation::GetQueueName() const {
 }
 
 bool SBBreakpointLocation::IsResolved() {
+  LLDB_RECORD_METHOD_NO_ARGS(bool, SBBreakpointLocation, IsResolved);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -337,6 +418,10 @@ void SBBreakpointLocation::SetLocation(
 
 bool SBBreakpointLocation::GetDescription(SBStream &description,
                                           DescriptionLevel level) {
+  LLDB_RECORD_METHOD(bool, SBBreakpointLocation, GetDescription,
+                     (lldb::SBStream &, lldb::DescriptionLevel), description,
+                     level);
+
   Stream &strm = description.ref();
   BreakpointLocationSP loc_sp = GetSP();
 
@@ -352,6 +437,8 @@ bool SBBreakpointLocation::GetDescription(SBStream &description,
 }
 
 break_id_t SBBreakpointLocation::GetID() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::break_id_t, SBBreakpointLocation, GetID);
+
   BreakpointLocationSP loc_sp = GetSP();
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
@@ -362,6 +449,9 @@ break_id_t SBBreakpointLocation::GetID() {
 }
 
 SBBreakpoint SBBreakpointLocation::GetBreakpoint() {
+  LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBreakpoint, SBBreakpointLocation,
+                             GetBreakpoint);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   BreakpointLocationSP loc_sp = GetSP();
 
@@ -378,5 +468,5 @@ SBBreakpoint SBBreakpointLocation::GetBreakpoint() {
     LLDB_LOG(log, "location = {0}, breakpoint = {1} ({2})", loc_sp.get(),
              sb_bp.GetSP().get(), sstr.GetData());
   }
-  return sb_bp;
+  return LLDB_RECORD_RESULT(sb_bp);
 }

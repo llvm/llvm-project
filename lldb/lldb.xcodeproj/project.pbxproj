@@ -840,8 +840,6 @@
 		26DE205311618FAC00A093E2 /* SBFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 26DE205211618FAC00A093E2 /* SBFunction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9A3576AA116E9AC700E8ED2F /* SBHostOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */; };
 		9A3576A8116E9AB700E8ED2F /* SBHostOS.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A3576A7116E9AB700E8ED2F /* SBHostOS.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		AFB2F2F621B71AF30078DEF1 /* SBInitializerOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */; };
-		4C38996D21BA11CA002BAEF4 /* SBInitializerOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C38996C21BA11CA002BAEF4 /* SBInitializerOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AC703AF117675410086C050 /* SBInstruction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703AE117675410086C050 /* SBInstruction.cpp */; };
 		9AC7038E117674FB0086C050 /* SBInstruction.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AC7038D117674EB0086C050 /* SBInstruction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AC703B1117675490086C050 /* SBInstructionList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703B0117675490086C050 /* SBInstructionList.cpp */; };
@@ -2944,8 +2942,6 @@
 		9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBHostOS.cpp; path = source/API/SBHostOS.cpp; sourceTree = "<group>"; };
 		9A3576A7116E9AB700E8ED2F /* SBHostOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBHostOS.h; path = include/lldb/API/SBHostOS.h; sourceTree = "<group>"; };
 		2611FF00142D83060017FEA3 /* SBHostOS.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBHostOS.i; sourceTree = "<group>"; };
-		AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInitializerOptions.cpp; path = source/API/SBInitializerOptions.cpp; sourceTree = "<group>"; };
-		4C38996C21BA11CA002BAEF4 /* SBInitializerOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBInitializerOptions.h; path = include/lldb/API/SBInitializerOptions.h; sourceTree = "<group>"; };
 		9AC703AE117675410086C050 /* SBInstruction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInstruction.cpp; path = source/API/SBInstruction.cpp; sourceTree = "<group>"; };
 		9AC7038D117674EB0086C050 /* SBInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBInstruction.h; path = include/lldb/API/SBInstruction.h; sourceTree = "<group>"; };
 		2611FF02142D83060017FEA3 /* SBInstruction.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBInstruction.i; sourceTree = "<group>"; };
@@ -3383,6 +3379,7 @@
 		9A4633DA11F65D8600955CE1 /* UserSettingsController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UserSettingsController.h; path = include/lldb/Core/UserSettingsController.h; sourceTree = "<group>"; };
 		4C00833F1B9F9BA900D5CF24 /* UtilityFunction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = UtilityFunction.cpp; path = source/Expression/UtilityFunction.cpp; sourceTree = "<group>"; };
 		4C00833D1B9F9B8400D5CF24 /* UtilityFunction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = UtilityFunction.h; path = include/lldb/Expression/UtilityFunction.h; sourceTree = "<group>"; };
+		DD54302F222F190D00C1F021 /* Utils.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Utils.h; path = source/API/Utils.h; sourceTree = "<group>"; };
 		2654A6921E552F4600DA1013 /* VASPrintf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = VASPrintf.h; path = include/lldb/Utility/VASPrintf.h; sourceTree = "<group>"; };
 		2654A68F1E552ED500DA1013 /* VASprintf.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = VASprintf.cpp; path = source/Utility/VASprintf.cpp; sourceTree = "<group>"; };
 		9A3D43C41F3150D200EB767C /* VASprintfTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = VASprintfTest.cpp; sourceTree = "<group>"; };
@@ -4478,8 +4475,6 @@
 				26DE205C1161901400A093E2 /* SBFunction.cpp */,
 				9A3576A7116E9AB700E8ED2F /* SBHostOS.h */,
 				9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */,
-				AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */,
-				4C38996C21BA11CA002BAEF4 /* SBInitializerOptions.h */,
 				9AC7038D117674EB0086C050 /* SBInstruction.h */,
 				9AC703AE117675410086C050 /* SBInstruction.cpp */,
 				9AC7038F117675270086C050 /* SBInstructionList.h */,
@@ -4560,6 +4555,7 @@
 				23059A0F1958B319007B8189 /* SBUnixSignals.cpp */,
 				9A19A6A51163BB7E00E0D453 /* SBValue.h */,
 				9A19A6AD1163BB9800E0D453 /* SBValue.cpp */,
+				DD54302F222F190D00C1F021 /* Utils.h */,
 				9A357582116CFDEE00E8ED2F /* SBValueList.h */,
 				9A35758D116CFE0F00E8ED2F /* SBValueList.cpp */,
 				94235B9A1A8D5FD800EB2EED /* SBVariablesOptions.h */,
@@ -7299,7 +7295,6 @@
 				4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */,
 				263C493A178B50CF0070F12D /* SBModuleSpec.h in Headers */,
 				2617447A11685869005ADD65 /* SBType.h in Headers */,
-				4C38996D21BA11CA002BAEF4 /* SBInitializerOptions.h in Headers */,
 				9475C18914E5EA08001BFC6D /* SBTypeCategory.h in Headers */,
 				941BCC7F14E48C4000BB969C /* SBTypeFilter.h in Headers */,
 				941BCC8014E48C4000BB969C /* SBTypeFormat.h in Headers */,
@@ -8290,7 +8285,6 @@
 				26680336116005EF008E1FE4 /* SBBreakpointLocation.cpp in Sources */,
 				26680337116005F1008E1FE4 /* SBBreakpoint.cpp in Sources */,
 				26DE204511618ADA00A093E2 /* SBAddress.cpp in Sources */,
-				AFB2F2F621B71AF30078DEF1 /* SBInitializerOptions.cpp in Sources */,
 				26DE204711618AED00A093E2 /* SBSymbolContext.cpp in Sources */,
 				26DE204D11618E7A00A093E2 /* SBModule.cpp in Sources */,
 				26DE205D1161901400A093E2 /* SBFunction.cpp in Sources */,
