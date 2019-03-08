@@ -8,6 +8,7 @@
 
 #include "lldb/lldb-forward.h"
 
+#include "SBReproducerPrivate.h"
 #include "lldb/API/SBAddress.h"
 #include "lldb/API/SBQueueItem.h"
 #include "lldb/API/SBThread.h"
@@ -23,10 +24,15 @@ using namespace lldb_private;
 //----------------------------------------------------------------------
 // Constructors
 //----------------------------------------------------------------------
-SBQueueItem::SBQueueItem() : m_queue_item_sp() {}
+SBQueueItem::SBQueueItem() : m_queue_item_sp() {
+  LLDB_RECORD_CONSTRUCTOR_NO_ARGS(SBQueueItem);
+}
 
 SBQueueItem::SBQueueItem(const QueueItemSP &queue_item_sp)
-    : m_queue_item_sp(queue_item_sp) {}
+    : m_queue_item_sp(queue_item_sp) {
+  LLDB_RECORD_CONSTRUCTOR(SBQueueItem, (const lldb::QueueItemSP &),
+                          queue_item_sp);
+}
 
 //----------------------------------------------------------------------
 // Destructor
@@ -34,6 +40,8 @@ SBQueueItem::SBQueueItem(const QueueItemSP &queue_item_sp)
 SBQueueItem::~SBQueueItem() { m_queue_item_sp.reset(); }
 
 bool SBQueueItem::IsValid() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBQueueItem, IsValid);
+
   bool is_valid = m_queue_item_sp.get() != NULL;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (log)
@@ -44,6 +52,8 @@ bool SBQueueItem::IsValid() const {
 }
 
 void SBQueueItem::Clear() {
+  LLDB_RECORD_METHOD_NO_ARGS(void, SBQueueItem, Clear);
+
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (log)
     log->Printf("SBQueueItem(%p)::Clear()",
@@ -52,10 +62,15 @@ void SBQueueItem::Clear() {
 }
 
 void SBQueueItem::SetQueueItem(const QueueItemSP &queue_item_sp) {
+  LLDB_RECORD_METHOD(void, SBQueueItem, SetQueueItem,
+                     (const lldb::QueueItemSP &), queue_item_sp);
+
   m_queue_item_sp = queue_item_sp;
 }
 
 lldb::QueueItemKind SBQueueItem::GetKind() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::QueueItemKind, SBQueueItem, GetKind);
+
   QueueItemKind result = eQueueItemKindUnknown;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (m_queue_item_sp) {
@@ -69,12 +84,16 @@ lldb::QueueItemKind SBQueueItem::GetKind() const {
 }
 
 void SBQueueItem::SetKind(lldb::QueueItemKind kind) {
+  LLDB_RECORD_METHOD(void, SBQueueItem, SetKind, (lldb::QueueItemKind), kind);
+
   if (m_queue_item_sp) {
     m_queue_item_sp->SetKind(kind);
   }
 }
 
 SBAddress SBQueueItem::GetAddress() const {
+  LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::SBAddress, SBQueueItem, GetAddress);
+
   SBAddress result;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (m_queue_item_sp) {
@@ -90,16 +109,21 @@ SBAddress SBQueueItem::GetAddress() const {
                 static_cast<void *>(m_queue_item_sp.get()),
                 static_cast<void *>(result.get()), sstr.GetData());
   }
-  return result;
+  return LLDB_RECORD_RESULT(result);
 }
 
 void SBQueueItem::SetAddress(SBAddress addr) {
+  LLDB_RECORD_METHOD(void, SBQueueItem, SetAddress, (lldb::SBAddress), addr);
+
   if (m_queue_item_sp) {
     m_queue_item_sp->SetAddress(addr.ref());
   }
 }
 
 SBThread SBQueueItem::GetExtendedBacktraceThread(const char *type) {
+  LLDB_RECORD_METHOD(lldb::SBThread, SBQueueItem, GetExtendedBacktraceThread,
+                     (const char *), type);
+
   SBThread result;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (m_queue_item_sp) {
@@ -128,5 +152,5 @@ SBThread SBQueueItem::GetExtendedBacktraceThread(const char *type) {
       }
     }
   }
-  return result;
+  return LLDB_RECORD_RESULT(result);
 }
