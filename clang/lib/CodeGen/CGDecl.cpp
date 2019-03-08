@@ -969,12 +969,12 @@ static llvm::Value *shouldUseMemSetToInitialize(llvm::Constant *Init,
   return llvm::isBytewiseValue(Init);
 }
 
-/// Decide whether we want to split a constant structure store into a sequence
-/// of its fields' stores. This may cost us code size and compilation speed,
-/// but plays better with store optimizations.
-static bool shouldSplitStructStore(CodeGenModule &CGM,
-                                   uint64_t GlobalByteSize) {
-  // Don't break structures that occupy more than one cacheline.
+/// Decide whether we want to split a constant structure or array store into a
+/// sequence of its fields' stores. This may cost us code size and compilation
+/// speed, but plays better with store optimizations.
+static bool shouldSplitConstantStore(CodeGenModule &CGM,
+                                     uint64_t GlobalByteSize) {
+  // Don't break things that occupy more than one cacheline.
   uint64_t ByteSizeLimit = 64;
   if (CGM.getCodeGenOpts().OptimizationLevel == 0)
     return false;
@@ -1202,9 +1202,9 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
                                   CGBuilderTy &Builder,
                                   llvm::Constant *constant) {
   auto *Ty = constant->getType();
-  bool isScalar = Ty->isIntOrIntVectorTy() || Ty->isPtrOrPtrVectorTy() ||
-                  Ty->isFPOrFPVectorTy();
-  if (isScalar) {
+  bool canDoSingleStore = Ty->isIntOrIntVectorTy() ||
+                          Ty->isPtrOrPtrVectorTy() || Ty->isFPOrFPVectorTy();
+  if (canDoSingleStore) {
     Builder.CreateStore(constant, Loc, isVolatile);
     return;
   }
@@ -1212,12 +1212,13 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
   auto *Int8Ty = llvm::IntegerType::getInt8Ty(CGM.getLLVMContext());
   auto *IntPtrTy = CGM.getDataLayout().getIntPtrType(CGM.getLLVMContext());
 
-  // If the initializer is all or mostly the same, codegen with bzero / memset
-  // then do a few stores afterward.
   uint64_t ConstantSize = CGM.getDataLayout().getTypeAllocSize(Ty);
   if (!ConstantSize)
     return;
   auto *SizeVal = llvm::ConstantInt::get(IntPtrTy, ConstantSize);
+
+  // If the initializer is all or mostly the same, codegen with bzero / memset
+  // then do a few stores afterward.
   if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
     Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, 0), SizeVal,
                          isVolatile);
@@ -1231,6 +1232,7 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     return;
   }
 
+  // If the initializer is a repeated byte pattern, use memset.
   llvm::Value *Pattern = shouldUseMemSetToInitialize(constant, ConstantSize);
   if (Pattern) {
     uint64_t Value = 0x00;
@@ -1244,21 +1246,34 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     return;
   }
 
-  llvm::StructType *STy = dyn_cast<llvm::StructType>(Ty);
-  // FIXME: handle the case when STy != Loc.getElementType().
-  // FIXME: handle non-struct aggregate types.
-  if (STy && (STy == Loc.getElementType()) &&
-      shouldSplitStructStore(CGM, ConstantSize)) {
-    for (unsigned i = 0; i != constant->getNumOperands(); i++) {
-      Address EltPtr = Builder.CreateStructGEP(
-          Loc, i, CGM.getDataLayout().getStructLayout(STy));
-      emitStoresForConstant(
-          CGM, D, EltPtr, isVolatile, Builder,
-          cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
+  // If the initializer is small, use a handful of stores.
+  if (shouldSplitConstantStore(CGM, ConstantSize)) {
+    if (auto *STy = dyn_cast<llvm::StructType>(Ty)) {
+      // FIXME: handle the case when STy != Loc.getElementType().
+      if (STy == Loc.getElementType()) {
+        for (unsigned i = 0; i != constant->getNumOperands(); i++) {
+          Address EltPtr = Builder.CreateStructGEP(Loc, i);
+          emitStoresForConstant(
+              CGM, D, EltPtr, isVolatile, Builder,
+              cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
+        }
+        return;
+      }
+    } else if (auto *ATy = dyn_cast<llvm::ArrayType>(Ty)) {
+      // FIXME: handle the case when ATy != Loc.getElementType().
+      if (ATy == Loc.getElementType()) {
+        for (unsigned i = 0; i != ATy->getNumElements(); i++) {
+          Address EltPtr = Builder.CreateConstArrayGEP(Loc, i);
+          emitStoresForConstant(
+              CGM, D, EltPtr, isVolatile, Builder,
+              cast<llvm::Constant>(Builder.CreateExtractValue(constant, i)));
+        }
+        return;
+      }
     }
-    return;
   }
 
+  // Copy from a global.
   Builder.CreateMemCpy(
       Loc,
       createUnnamedGlobalFrom(CGM, D, Builder, constant, Loc.getAlignment()),
