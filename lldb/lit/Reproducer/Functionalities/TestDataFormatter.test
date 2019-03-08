@@ -3,7 +3,7 @@
 # This tests that data formatters continue to work when replaying a reproducer.
 
 # RUN: rm -rf %t.repro
-# RUN: %clang %S/Inputs/foo.cpp -g -o %t.out
+# RUN: %clangxx %S/Inputs/foo.cpp -g -o %t.out
 
 # RUN: %lldb -x -b -s %S/Inputs/DataFormatter.in --capture %t.repro %t.out | FileCheck %s
 # RUN: %lldb --replay %t.repro | FileCheck %s

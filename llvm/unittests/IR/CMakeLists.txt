@@ -13,7 +13,6 @@ add_llvm_unittest(IRTests
   CFGBuilder.cpp
   ConstantRangeTest.cpp
   ConstantsTest.cpp
-  DataLayoutTest.cpp
   DebugInfoTest.cpp
   DebugTypeODRUniquingTest.cpp
   DominatorTreeTest.cpp

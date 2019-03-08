@@ -1521,7 +1521,10 @@ namespace serialization {
 
       /// An OMPRequiresDecl record.
       DECL_OMP_REQUIRES,
-	 
+
+      /// An OMPAllocateDcl record.
+      DECL_OMP_ALLOCATE,
+
       /// An EmptyDecl record.
       DECL_EMPTY,
 

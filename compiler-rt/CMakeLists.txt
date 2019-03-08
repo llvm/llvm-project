@@ -186,6 +186,7 @@ option(COMPILER_RT_INTERCEPT_LIBDISPATCH
 if (APPLE) # Always enable on Apple platforms.
   set(COMPILER_RT_INTERCEPT_LIBDISPATCH ON)
 endif()
+pythonize_bool(COMPILER_RT_INTERCEPT_LIBDISPATCH)
 
 if(APPLE AND SANITIZER_MIN_OSX_VERSION AND SANITIZER_MIN_OSX_VERSION VERSION_LESS "10.9")
   # Mac OS X prior to 10.9 had problems with exporting symbols from
