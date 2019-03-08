@@ -469,7 +469,8 @@ int main(int argc, char **argv) {
     mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)
-      Printer.addView(llvm::make_unique<mca::SummaryView>(SM, Insts, Width));
+      Printer.addView(llvm::make_unique<mca::SummaryView>(
+          SM, Insts, Width, EnableBottleneckAnalysis));
 
     if (PrintInstructionInfoView)
       Printer.addView(

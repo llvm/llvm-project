@@ -1340,3 +1340,70 @@ define i32 @huge_length(i8* %X, i8* %Y) nounwind {
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 9223372036854775807) nounwind
   ret i32 %m
 }
+
+define i1 @huge_length_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: huge_length_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $2147483647 # imm = 0x7FFFFFFF
+; X86-NEXT:    pushl $-1
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: huge_length_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    callq memcmp
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 9223372036854775807) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
+}
+
+; This checks non-constant sizes.
+define i32 @nonconst_length(i8* %X, i8* %Y, i64 %size) nounwind {
+; X86-LABEL: nonconst_length:
+; X86:       # %bb.0:
+; X86-NEXT:    jmp memcmp # TAILCALL
+;
+; X64-LABEL: nonconst_length:
+; X64:       # %bb.0:
+; X64-NEXT:    jmp memcmp # TAILCALL
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 %size) nounwind
+  ret i32 %m
+}
+
+define i1 @nonconst_length_eq(i8* %X, i8* %Y, i64 %size) nounwind {
+; X86-LABEL: nonconst_length_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: nonconst_length_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    callq memcmp
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 %size) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
+}

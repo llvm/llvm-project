@@ -64,11 +64,6 @@ void IDFCalculator<NodeTy, IsPostDom>::calculate(
       auto DoWork = [&](BasicBlock *Succ) {
         DomTreeNode *SuccNode = DT.getNode(Succ);
 
-        // Quickly skip all CFG edges that are also dominator tree edges instead
-        // of catching them below.
-        if (SuccNode->getIDom() == Node)
-          return;
-
         const unsigned SuccLevel = SuccNode->getLevel();
         if (SuccLevel > RootLevel)
           return;

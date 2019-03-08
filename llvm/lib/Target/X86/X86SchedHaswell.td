@@ -152,7 +152,7 @@ defm : X86WriteRes<WriteXCHG, [HWPort0156], 2, [3], 3>;
 // Integer shifts and rotates.
 defm : HWWriteResPair<WriteShift,    [HWPort06],  1>;
 defm : HWWriteResPair<WriteShiftCL,  [HWPort06, HWPort0156],  3, [2,1], 3>;
-defm : HWWriteResPair<WriteRotate,   [HWPort06],  2, [2], 2>;
+defm : HWWriteResPair<WriteRotate,   [HWPort06],  1, [1], 1>;
 defm : HWWriteResPair<WriteRotateCL, [HWPort06, HWPort0156],  3, [2,1], 3>;
 
 // SHLD/SHRD.
@@ -1183,6 +1183,14 @@ def HWWriteResGroup46 : SchedWriteRes<[HWPort4,HWPort23,HWPort237,HWPort06]> {
 def: InstRW<[HWWriteResGroup46], (instregex "ROL(8|16|32|64)m(1|i)",
                                             "ROR(8|16|32|64)m(1|i)")>;
 
+def HWWriteResGroup46_1 : SchedWriteRes<[HWPort06]> {
+  let Latency = 2;
+  let NumMicroOps = 2;
+  let ResourceCycles = [2];
+}
+def: InstRW<[HWWriteResGroup46_1], (instrs ROL8r1, ROL16r1, ROL32r1, ROL64r1,
+                                           ROR8r1, ROR16r1, ROR32r1, ROR64r1)>;
+
 def HWWriteResGroup47 : SchedWriteRes<[HWPort4,HWPort23,HWPort237,HWPort0156]> {
   let Latency = 8;
   let NumMicroOps = 5;
@@ -1847,5 +1855,35 @@ def: InstRW<[HWWriteResGroup192], (instrs VGATHERQPSrm,
                                           VGATHERDPSrm)>;
 
 def: InstRW<[WriteZero], (instrs CLC)>;
+
+// The 0x83 ADC/SBB opcodes have special support for immediate 0 to only require
+// a single uop. It does not apply to the GR8 encoding. And only applies to the
+// 8-bit immediate since using larger immediate for 0 would be silly.
+// Unfortunately, this optimization does not apply to the AX/EAX/RAX short
+// encodings we convert to in MCInstLowering so we exclude AX/EAX/RAX here since
+// we schedule before that point.
+// TODO: Should we disable using the short encodings on these CPUs?
+def HWFastADC0 : MCSchedPredicate<
+  CheckAll<[
+    CheckImmOperand<2, 0>,              // Second MCOperand is Imm and has value 0.
+    CheckNot<CheckRegOperand<1, AX>>,   // First MCOperand is not register AX
+    CheckNot<CheckRegOperand<1, EAX>>,  // First MCOperand is not register EAX
+    CheckNot<CheckRegOperand<1, RAX>>   // First MCOperand is not register RAX
+  ]>
+>;
+
+def HWWriteADC0 : SchedWriteRes<[HWPort06]> {
+  let Latency = 1;
+  let NumMicroOps = 1;
+  let ResourceCycles = [1];
+}
+
+def HWWriteADC : SchedWriteVariant<[
+  SchedVar<HWFastADC0, [HWWriteADC0]>,
+  SchedVar<NoSchedPred, [WriteADC]>
+]>;
+
+def : InstRW<[HWWriteADC], (instrs ADC16ri8, ADC32ri8, ADC64ri8,
+                                      SBB16ri8, SBB32ri8, SBB64ri8)>;
 
 } // SchedModel

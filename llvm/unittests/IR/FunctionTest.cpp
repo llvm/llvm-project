@@ -133,8 +133,8 @@ TEST(FunctionTest, GetPointerAlignment) {
   LLVMContext Context;
   Type *VoidType(Type::getVoidTy(Context));
   FunctionType *FuncType(FunctionType::get(VoidType, false));
-  Function *Func = Function::Create(
-      FuncType, GlobalValue::ExternalLinkage);
+  std::unique_ptr<Function> Func(Function::Create(
+      FuncType, GlobalValue::ExternalLinkage));
   EXPECT_EQ(0U, Func->getPointerAlignment(DataLayout("")));
   EXPECT_EQ(1U, Func->getPointerAlignment(DataLayout("Fi8")));
   EXPECT_EQ(1U, Func->getPointerAlignment(DataLayout("Fn8")));

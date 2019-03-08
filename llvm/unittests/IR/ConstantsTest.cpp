@@ -490,8 +490,16 @@ bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,
   Constant *TheConstantExpr(
       ConstantExpr::getPtrToInt(Func, ConstantIntType));
 
-  return ConstantExpr::get(Instruction::And, TheConstantExpr,
+
+  bool result = ConstantExpr::get(Instruction::And, TheConstantExpr,
                            TheConstant)->isNullValue();
+
+  if (!TheModule) {
+    // If the Module exists then it will delete the Function.
+    delete Func;
+  }
+
+  return result;
 }
 
 TEST(ConstantsTest, FoldFunctionPtrAlignUnknownAnd2) {
@@ -556,20 +564,20 @@ TEST(ConstantsTest, DontFoldFunctionPtrIfNoModule) {
   ASSERT_FALSE(foldFuncPtrAndConstToNull(Context, nullptr, 2, 4));
 }
 
-TEST(ConstantsTest, DISABLED_FoldGlobalVariablePtr) {
+TEST(ConstantsTest, FoldGlobalVariablePtr) {
   LLVMContext Context;
-
 
   IntegerType *IntType(Type::getInt32Ty(Context));
 
-  GlobalVariable Global(IntType, true, GlobalValue::ExternalLinkage);
+  std::unique_ptr<GlobalVariable> Global(
+      new GlobalVariable(IntType, true, GlobalValue::ExternalLinkage));
 
-  Global.setAlignment(4);
+  Global->setAlignment(4);
 
   ConstantInt *TheConstant(ConstantInt::get(IntType, 2));
 
   Constant *TheConstantExpr(
-      ConstantExpr::getPtrToInt(&Global, IntType));
+      ConstantExpr::getPtrToInt(Global.get(), IntType));
 
   ASSERT_TRUE(ConstantExpr::get( \
       Instruction::And, TheConstantExpr, TheConstant)->isNullValue());

@@ -1,5 +1,5 @@
-; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck %s
-; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck %s
+; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck -check-prefix=CHECK-UNKNOWN %s
+; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck -check-prefix=CHECK-UNKNOWN %s
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-DARWIN %s
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck -check-prefix=CHECK-NVPTX %s
@@ -241,7 +241,10 @@ declare i64 @atol(i8*)
 ; CHECK: declare i64 @atoll(i8* nocapture) [[G1]]
 declare i64 @atoll(i8*)
 
-; CHECK: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
+; CHECK-DARWIN: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
+; CHECK-LINUX: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
+; CHECK-UNKNOWN-NOT: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
+; CHECK-NVPTX-NOT: declare i32 @bcmp(i8* nocapture, i8* nocapture, i64) [[G1]]
 declare i32 @bcmp(i8*, i8*, i64)
 
 ; CHECK: declare void @bcopy(i8* nocapture readonly, i8* nocapture, i64) [[G0]]

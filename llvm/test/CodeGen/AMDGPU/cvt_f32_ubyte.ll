@@ -116,8 +116,8 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_unaligned(<4 x float> addrspace(1)
 ; VI-DAG: v_add_u16_e32
 ; VI-DAG: v_add_u16_e32
 
-; GCN: {{buffer|flat}}_store_dwordx4
-; GCN: {{buffer|flat}}_store_dword
+; GCN-DAG: {{buffer|flat}}_store_dwordx4
+; GCN-DAG: {{buffer|flat}}_store_dword
 
 ; GCN: s_endpgm
 define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(<4 x float> addrspace(1)* noalias %out, <4 x i8> addrspace(1)* noalias %out2, <4 x i8> addrspace(1)* noalias %in) nounwind {

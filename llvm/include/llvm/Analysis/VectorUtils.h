@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Support/CheckedArithmetic.h"
 
 namespace llvm {
 
@@ -277,7 +278,11 @@ public:
   bool insertMember(InstTy *Instr, int32_t Index, uint32_t NewAlign) {
     assert(NewAlign && "The new member's alignment should be non-zero");
 
-    int32_t Key = Index + SmallestKey;
+    // Make sure the key fits in an int32_t.
+    Optional<int32_t> MaybeKey = checkedAdd(Index, SmallestKey);
+    if (!MaybeKey)
+      return false;
+    int32_t Key = *MaybeKey;
 
     // Skip if there is already a member with the same index.
     if (Members.find(Key) != Members.end())
@@ -285,13 +290,19 @@ public:
 
     if (Key > LargestKey) {
       // The largest index is always less than the interleave factor.
-      if (Index >= static_cast<int>(Factor))
+      if (Index >= static_cast<int32_t>(Factor))
         return false;
 
       LargestKey = Key;
     } else if (Key < SmallestKey) {
+
+      // Make sure the largest index fits in an int32_t.
+      Optional<int32_t> MaybeLargestIndex = checkedSub(LargestKey, Key);
+      if (!MaybeLargestIndex)
+        return false;
+
       // The largest index is always less than the interleave factor.
-      if (LargestKey - Key >= static_cast<int>(Factor))
+      if (*MaybeLargestIndex >= static_cast<int64_t>(Factor))
         return false;
 
       SmallestKey = Key;

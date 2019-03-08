@@ -88,9 +88,10 @@ entry:
 }
 
 declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
-define void @umul_with_overflow(i32 %lhs, i32 %rhs, i1* %pcarry_flag) {
+define void @umul_with_overflow(i32 %lhs, i32 %rhs, i32* %pmul, i1* %pcarry_flag) {
 ; MIPS32-LABEL: umul_with_overflow:
 ; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    mul $1, $4, $5
 ; MIPS32-NEXT:    multu $4, $5
 ; MIPS32-NEXT:    mfhi $4
 ; MIPS32-NEXT:    lui $5, 0
@@ -100,11 +101,14 @@ define void @umul_with_overflow(i32 %lhs, i32 %rhs, i1* %pcarry_flag) {
 ; MIPS32-NEXT:    lui $5, 0
 ; MIPS32-NEXT:    ori $5, $5, 1
 ; MIPS32-NEXT:    and $4, $4, $5
-; MIPS32-NEXT:    sb $4, 0($6)
+; MIPS32-NEXT:    sb $4, 0($7)
+; MIPS32-NEXT:    sw $1, 0($6)
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
   %res = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 %lhs, i32 %rhs)
   %carry_flag = extractvalue { i32, i1 } %res, 1
+  %mul = extractvalue { i32, i1 } %res, 0
   store i1 %carry_flag, i1* %pcarry_flag
+  store i32 %mul, i32* %pmul
   ret void
 }

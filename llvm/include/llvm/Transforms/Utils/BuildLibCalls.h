@@ -92,6 +92,10 @@ namespace llvm {
   Value *emitMemCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
                     const DataLayout &DL, const TargetLibraryInfo *TLI);
 
+  /// Emit a call to the bcmp function.
+  Value *emitBCmp(Value *Ptr1, Value *Ptr2, Value *Len, IRBuilder<> &B,
+                  const DataLayout &DL, const TargetLibraryInfo *TLI);
+
   /// Emit a call to the unary function named 'Name' (e.g.  'floor'). This
   /// function is known to take a single of type matching 'Op' and returns one
   /// value with the same type. If 'Op' is a long double, 'l' is added as the

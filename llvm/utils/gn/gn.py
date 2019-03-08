@@ -38,7 +38,8 @@ def main():
     # Find real gn executable.
     gn = 'gn'
     if subprocess.call([gn, '--version'], stdout=open(os.devnull, 'w'),
-                                          stderr=subprocess.STDOUT) != 0:
+                                          stderr=subprocess.STDOUT,
+                                          shell=True) != 0:
         # Not on path. See if get.py downloaded a prebuilt binary and run that
         # if it's there, or suggest to run get.py if it isn't.
         platform = get_platform()
