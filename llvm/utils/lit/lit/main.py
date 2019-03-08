@@ -89,12 +89,14 @@ def main(builtin_params={}):
     run_tests(filtered_tests, lit_config, opts, len(discovered_tests))
     elapsed = time.time() - start
 
-    executed_tests = [t for t in filtered_tests if t.result]
+    # TODO(yln): eventually, all functions below should act on discovered_tests
+    executed_tests = [
+        t for t in filtered_tests if t.result.code != lit.Test.SKIPPED]
 
     if opts.time_tests:
         print_histogram(executed_tests)
 
-    print_results(executed_tests, elapsed, opts)
+    print_results(filtered_tests, elapsed, opts)
 
     if opts.output_path:
         #TODO(yln): pass in discovered_tests
@@ -256,6 +258,7 @@ failure_codes = [
 ]
 
 all_codes = [
+    (lit.Test.SKIPPED,     'Skipped Tests',     'Skipped'),
     (lit.Test.UNSUPPORTED, 'Unsupported Tests', 'Unsupported'),
     (lit.Test.PASS,        'Expected Passes',   ''),
     (lit.Test.FLAKYPASS,   'Passes With Retry', ''),
@@ -277,11 +280,11 @@ def print_results(tests, elapsed, opts):
 def print_group(code, label, tests, opts):
     if not tests:
         return
-    if code == lit.Test.PASS:
+    # TODO(yln): FLAKYPASS? Make this more consistent!
+    if code in {lit.Test.SKIPPED, lit.Test.PASS}:
         return
     if (lit.Test.XFAIL == code and not opts.show_xfail) or \
-       (lit.Test.UNSUPPORTED == code and not opts.show_unsupported) or \
-       (lit.Test.UNRESOLVED == code and (opts.max_failures is not None)):
+       (lit.Test.UNSUPPORTED == code and not opts.show_unsupported):
         return
     print('*' * 20)
     print('%s Tests (%d):' % (label, len(tests)))
