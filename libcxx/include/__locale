@@ -254,7 +254,10 @@ public:
         return do_compare(__lo1, __hi1, __lo2, __hi2);
     }
 
+    // FIXME(EricWF): The _LIBCPP_ALWAYS_INLINE is needed on Windows to work
+    // around a dllimport bug that expects an external instantiation.
     _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_ALWAYS_INLINE
     string_type transform(const char_type* __lo, const char_type* __hi) const
     {
         return do_transform(__lo, __hi);
