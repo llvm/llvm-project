@@ -112,6 +112,9 @@ SBFileSpec SBHostOS::GetUserHomeDirectory() {
 lldb::thread_t SBHostOS::ThreadCreate(const char *name,
                                       lldb::thread_func_t thread_function,
                                       void *thread_arg, SBError *error_ptr) {
+  LLDB_RECORD_DUMMY(lldb::thread_t, SBHostOS, ThreadCreate,
+                    (lldb::thread_func_t, void *, SBError *), name,
+                    thread_function, thread_arg, error_ptr);
   HostThread thread(ThreadLauncher::LaunchThread(
       name, thread_function, thread_arg, error_ptr ? error_ptr->get() : NULL));
   return thread.Release();
@@ -123,7 +126,7 @@ void SBHostOS::ThreadCreated(const char *name) {
 }
 
 bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
-  LLDB_RECORD_STATIC_METHOD(bool, SBHostOS, ThreadCancel,
+  LLDB_RECORD_DUMMY(bool, SBHostOS, ThreadCancel,
                             (lldb::thread_t, lldb::SBError *), thread,
                             error_ptr);
 
@@ -137,7 +140,7 @@ bool SBHostOS::ThreadCancel(lldb::thread_t thread, SBError *error_ptr) {
 }
 
 bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
-  LLDB_RECORD_STATIC_METHOD(bool, SBHostOS, ThreadDetach,
+  LLDB_RECORD_DUMMY(bool, SBHostOS, ThreadDetach,
                             (lldb::thread_t, lldb::SBError *), thread,
                             error_ptr);
 
@@ -157,7 +160,7 @@ bool SBHostOS::ThreadDetach(lldb::thread_t thread, SBError *error_ptr) {
 
 bool SBHostOS::ThreadJoin(lldb::thread_t thread, lldb::thread_result_t *result,
                           SBError *error_ptr) {
-  LLDB_RECORD_STATIC_METHOD(
+  LLDB_RECORD_DUMMY(
       bool, SBHostOS, ThreadJoin,
       (lldb::thread_t, lldb::thread_result_t *, lldb::SBError *), thread,
       result, error_ptr);
