@@ -21,6 +21,7 @@ static const char *NamesFirst = NULL;
 static const char *NamesLast = NULL;
 static uint64_t *CountersFirst = NULL;
 static uint64_t *CountersLast = NULL;
+static uint32_t *OrderFileFirst = NULL;
 
 static const void *getMinAddr(const void *A1, const void *A2) {
   return A1 < A2 ? A1 : A2;
@@ -82,6 +83,9 @@ COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_begin_counters(void) { return CountersFirst; }
 COMPILER_RT_VISIBILITY
 uint64_t *__llvm_profile_end_counters(void) { return CountersLast; }
+/* TODO: correctly set up OrderFileFirst. */
+COMPILER_RT_VISIBILITY
+uint32_t *__llvm_profile_begin_orderfile(void) { return OrderFileFirst; }
 
 COMPILER_RT_VISIBILITY
 ValueProfNode *__llvm_profile_begin_vnodes(void) {
