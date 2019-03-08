@@ -1,4 +1,16 @@
 cmake_minimum_required(VERSION 3.2.0)
+
+# Build ROCM-Compiler-Support with ccache if the package is present.
+set(ROCM_COMPILER_SUPPORT_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
+if(ROCM_COMPILER_SUPPORT_CCACHE_BUILD)
+  find_program(CCACHE_PROGRAM ccache)
+  if(CCACHE_PROGRAM)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ${CCACHE_PROGRAM})
+  else()
+    message(FATAL_ERROR "Unable to find the program ccache. Set ROCM_COMPILER_SUPPORT_CCACHE_BUILD to OFF")
+  endif()
+endif()
+
 project(code_object_manager)
 
 find_package(Clang REQUIRED CONFIG)
