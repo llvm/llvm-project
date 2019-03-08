@@ -185,6 +185,14 @@ template <typename... Ts> inline std::string log_args(const Ts &... ts) {
 #define LLDB_RECORD_RESULT(Result)                                             \
   sb_recorder ? sb_recorder->RecordResult(Result) : Result;
 
+/// The LLDB_RECORD_DUMMY macro is special because it doesn't actually record
+/// anything. It's used to track API boundaries when we cannot record for
+/// technical reasons.
+#define LLDB_RECORD_DUMMY(Result, Class, Method, Signature, ...)               \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0} ({1})",             \
+           LLVM_PRETTY_FUNCTION, log_args(__VA_ARGS__));                       \
+  llvm::Optional<lldb_private::repro::Recorder> sb_recorder;
+
 namespace lldb_private {
 namespace repro {
 
