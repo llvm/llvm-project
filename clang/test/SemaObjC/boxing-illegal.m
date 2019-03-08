@@ -66,7 +66,7 @@ void testStringLiteral() {
   s = @(u8"abc");
   s = @(u"abc"); // expected-error {{illegal type 'unsigned short *' used in a boxed expression}}
   s = @(U"abc"); // expected-error {{illegal type 'unsigned int *' used in a boxed expression}}
-  s = @(L"abc"); // expected-error {{illegal type 'int *' used in a boxed expression}}
+  s = @(L"abc"); // expected-error-re {{illegal type {{'int \*'|'unsigned short \*'}} used in a boxed expression}}
   s = @("\pabc"); // expected-error {{illegal type 'unsigned char *' used in a boxed expression}}
 }
 
