@@ -2232,6 +2232,20 @@ TemplateDeclInstantiator::VisitCXXMethodDecl(CXXMethodDecl *D,
     Owner->addDecl(Method);
   }
 
+  // PR17480: Honor the used attribute to instantiate member function
+  // definitions
+  if (Method->hasAttr<UsedAttr>()) {
+    if (const auto *A = dyn_cast<CXXRecordDecl>(Owner)) {
+      SourceLocation Loc;
+      if (const MemberSpecializationInfo *MSInfo =
+              A->getMemberSpecializationInfo())
+        Loc = MSInfo->getPointOfInstantiation();
+      else if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(A))
+        Loc = Spec->getPointOfInstantiation();
+      SemaRef.MarkFunctionReferenced(Loc, Method);
+    }
+  }
+
   return Method;
 }
 
@@ -2874,6 +2888,21 @@ Decl *TemplateDeclInstantiator::VisitOMPThreadPrivateDecl(
   Owner->addDecl(TD);
 
   return TD;
+}
+
+Decl *TemplateDeclInstantiator::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
+  SmallVector<Expr *, 5> Vars;
+  for (auto *I : D->varlists()) {
+    Expr *Var = SemaRef.SubstExpr(I, TemplateArgs).get();
+    assert(isa<DeclRefExpr>(Var) && "allocate arg is not a DeclRefExpr");
+    Vars.push_back(Var);
+  }
+
+  Sema::DeclGroupPtrTy Res =
+      SemaRef.ActOnOpenMPAllocateDirective(D->getLocation(), Vars, Owner);
+  if (Res.get().isNull())
+    return nullptr;
+  return Res.get().getSingleDecl();
 }
 
 Decl *TemplateDeclInstantiator::VisitOMPRequiresDecl(OMPRequiresDecl *D) {

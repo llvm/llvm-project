@@ -99,6 +99,7 @@ namespace {
     void VisitUsingDecl(UsingDecl *D);
     void VisitUsingShadowDecl(UsingShadowDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPAllocateDecl(OMPAllocateDecl *D);
     void VisitOMPRequiresDecl(OMPRequiresDecl *D);
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
@@ -432,7 +433,8 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     // FIXME: Need to be able to tell the DeclPrinter when
     const char *Terminator = nullptr;
     if (isa<OMPThreadPrivateDecl>(*D) || isa<OMPDeclareReductionDecl>(*D) ||
-        isa<OMPDeclareMapperDecl>(*D) || isa<OMPRequiresDecl>(*D))
+        isa<OMPDeclareMapperDecl>(*D) || isa<OMPRequiresDecl>(*D) ||
+        isa<OMPAllocateDecl>(*D))
       Terminator = nullptr;
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
@@ -1551,6 +1553,20 @@ void DeclPrinter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
     for (OMPThreadPrivateDecl::varlist_iterator I = D->varlist_begin(),
                                                 E = D->varlist_end();
                                                 I != E; ++I) {
+      Out << (I == D->varlist_begin() ? '(' : ',');
+      NamedDecl *ND = cast<DeclRefExpr>(*I)->getDecl();
+      ND->printQualifiedName(Out);
+    }
+    Out << ")";
+  }
+}
+
+void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
+  Out << "#pragma omp allocate";
+  if (!D->varlist_empty()) {
+    for (OMPAllocateDecl::varlist_iterator I = D->varlist_begin(),
+                                           E = D->varlist_end();
+         I != E; ++I) {
       Out << (I == D->varlist_begin() ? '(' : ',');
       NamedDecl *ND = cast<DeclRefExpr>(*I)->getDecl();
       ND->printQualifiedName(Out);

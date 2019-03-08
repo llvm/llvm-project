@@ -1297,6 +1297,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(DECL_PRAGMA_COMMENT);
   RECORD(DECL_PRAGMA_DETECT_MISMATCH);
   RECORD(DECL_OMP_DECLARE_REDUCTION);
+  RECORD(DECL_OMP_ALLOCATE);
 
   // Statements and Exprs can occur in the Decls and Types block.
   AddStmtsExprs(Stream, Record);
@@ -5273,6 +5274,10 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
             D->getAttr<OMPThreadPrivateDeclAttr>()->getRange());
         break;
 
+      case UPD_DECL_MARKED_OPENMP_ALLOCATE:
+        Record.AddSourceRange(D->getAttr<OMPAllocateDeclAttr>()->getRange());
+        break;
+
       case UPD_DECL_MARKED_OPENMP_DECLARETARGET:
         Record.push_back(D->getAttr<OMPDeclareTargetDeclAttr>()->getMapType());
         Record.AddSourceRange(
@@ -6388,6 +6393,15 @@ void ASTWriter::DeclarationMarkedOpenMPThreadPrivate(const Decl *D) {
     return;
 
   DeclUpdates[D].push_back(DeclUpdate(UPD_DECL_MARKED_OPENMP_THREADPRIVATE));
+}
+
+void ASTWriter::DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {
+  if (Chain && Chain->isProcessingUpdateRecords()) return;
+  assert(!WritingAST && "Already writing the AST!");
+  if (!D->isFromASTFile())
+    return;
+
+  DeclUpdates[D].push_back(DeclUpdate(UPD_DECL_MARKED_OPENMP_ALLOCATE, A));
 }
 
 void ASTWriter::DeclarationMarkedOpenMPDeclareTarget(const Decl *D,

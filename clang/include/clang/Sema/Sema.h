@@ -8945,9 +8945,9 @@ public:
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp
   /// threadprivate'.
-  ExprResult ActOnOpenMPIdExpression(Scope *CurScope,
-                                     CXXScopeSpec &ScopeSpec,
-                                     const DeclarationNameInfo &Id);
+  ExprResult ActOnOpenMPIdExpression(Scope *CurScope, CXXScopeSpec &ScopeSpec,
+                                     const DeclarationNameInfo &Id,
+                                     OpenMPDirectiveKind Kind);
   /// Called on well-formed '#pragma omp threadprivate'.
   DeclGroupPtrTy ActOnOpenMPThreadprivateDirective(
                                      SourceLocation Loc,
@@ -8955,6 +8955,10 @@ public:
   /// Builds a new OpenMPThreadPrivateDecl and checks its correctness.
   OMPThreadPrivateDecl *CheckOMPThreadPrivateDecl(SourceLocation Loc,
                                                   ArrayRef<Expr *> VarList);
+  /// Called on well-formed '#pragma omp allocate'.
+  DeclGroupPtrTy ActOnOpenMPAllocateDirective(SourceLocation Loc,
+                                              ArrayRef<Expr *> VarList,
+                                              DeclContext *Owner = nullptr);
   /// Called on well-formed '#pragma omp requires'.
   DeclGroupPtrTy ActOnOpenMPRequiresDirective(SourceLocation Loc,
                                               ArrayRef<OMPClause *> ClauseList);

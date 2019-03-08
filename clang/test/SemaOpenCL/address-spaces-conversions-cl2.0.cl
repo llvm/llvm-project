@@ -129,27 +129,47 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 
   AS int *var_cast1 = (AS int *)arg_glob;
 #ifdef CONSTANT
-// expected-error@-2{{casting '__global int *' to type '__constant int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error@-3{{casting '__global int *' to type '__constant int *' changes address space of pointer}}
+#else
+// expected-error@-5{{C-style cast from '__global int *' to '__constant int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   AS int *var_cast2 = (AS int *)arg_loc;
 #ifndef GENERIC
-// expected-error-re@-2{{casting '__local int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error-re@-3{{casting '__local int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#else
+// expected-error-re@-5{{C-style cast from '__local int *' to '__{{global|constant}} int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   AS int *var_cast3 = (AS int *)arg_const;
 #ifndef CONSTANT
-// expected-error-re@-2{{casting '__constant int *' to type '__{{global|generic}} int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error-re@-3{{casting '__constant int *' to type '__{{global|generic}} int *' changes address space of pointer}}
+#else
+// expected-error-re@-5{{C-style cast from '__constant int *' to '__{{global|generic}} int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   AS int *var_cast4 = (AS int *)arg_priv;
 #ifndef GENERIC
-// expected-error-re@-2{{casting 'int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error-re@-3{{casting 'int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#else
+// expected-error-re@-5{{C-style cast from 'int *' to '__{{global|constant}} int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   AS int *var_cast5 = (AS int *)arg_gen;
 #ifdef CONSTANT
-// expected-error@-2{{casting '__generic int *' to type '__constant int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error@-3{{casting '__generic int *' to type '__constant int *' changes address space of pointer}}
+#else
+// expected-error@-5{{C-style cast from '__generic int *' to '__constant int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   AS int *var_impl;
@@ -200,27 +220,47 @@ void test_conversion(__global int *arg_glob, __local int *arg_loc,
 
   var_cast1 = (AS int *)arg_glob;
 #ifdef CONSTANT
-// expected-error@-2{{casting '__global int *' to type '__constant int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error@-3{{casting '__global int *' to type '__constant int *' changes address space of pointer}}
+#else
+// expected-error@-5{{C-style cast from '__global int *' to '__constant int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   var_cast2 = (AS int *)arg_loc;
 #ifndef GENERIC
-// expected-error-re@-2{{casting '__local int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error-re@-3{{casting '__local int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#else
+// expected-error-re@-5{{C-style cast from '__local int *' to '__{{global|constant}} int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   var_cast3 = (AS int *)arg_const;
 #ifndef CONSTANT
-// expected-error-re@-2{{casting '__constant int *' to type '__{{global|generic}} int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error-re@-3{{casting '__constant int *' to type '__{{global|generic}} int *' changes address space of pointer}}
+#else
+// expected-error-re@-5{{C-style cast from '__constant int *' to '__{{global|generic}} int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   var_cast4 = (AS int *)arg_priv;
 #ifndef GENERIC
-// expected-error-re@-2{{casting 'int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error-re@-3{{casting 'int *' to type '__{{global|constant}} int *' changes address space of pointer}}
+#else
+// expected-error-re@-5{{C-style cast from 'int *' to '__{{global|constant}} int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   var_cast5 = (AS int *)arg_gen;
 #ifdef CONSTANT
-// expected-error@-2{{casting '__generic int *' to type '__constant int *' changes address space of pointer}}
+#if !__OPENCL_CPP_VERSION__
+// expected-error@-3{{casting '__generic int *' to type '__constant int *' changes address space of pointer}}
+#else
+// expected-error@-5{{C-style cast from '__generic int *' to '__constant int *' converts between mismatching address spaces}}
+#endif
 #endif
 
   AS int *var_cmp;

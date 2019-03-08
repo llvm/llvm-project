@@ -1771,7 +1771,8 @@ Parser::DeclGroupPtrTy Parser::ParseDeclaration(DeclaratorContext Context,
 /// [C++11] attribute-specifier-seq decl-specifier-seq[opt]
 ///             init-declarator-list ';'
 ///[C90/C++]init-declarator-list ';'                             [TODO]
-/// [OMP]   threadprivate-directive                              [TODO]
+/// [OMP]   threadprivate-directive
+/// [OMP]   allocate-directive                                   [TODO]
 ///
 ///       for-range-declaration: [C++11 6.5p1: stmt.ranged]
 ///         attribute-specifier-seq[opt] type-specifier-seq declarator

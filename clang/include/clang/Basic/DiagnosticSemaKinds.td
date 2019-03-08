@@ -918,6 +918,9 @@ def err_inconsistent_ivar_count : Error<
   "inconsistent number of instance variables specified">;
 def warn_undef_method_impl : Warning<"method definition for %0 not found">,
   InGroup<DiagGroup<"incomplete-implementation">>;
+def warn_objc_boxing_invalid_utf8_string : Warning<
+  "string is ill-formed as UTF-8 and will become a null %0 when boxed">,
+  InGroup<ObjCBoxing>;
 
 def warn_conflicting_overriding_ret_types : Warning<
   "conflicting return type in "
@@ -6341,6 +6344,10 @@ def err_bad_cxx_cast_bitfield : Error<
 def err_bad_cxx_cast_qualifiers_away : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
   "functional-style cast}0 from %1 to %2 casts away qualifiers">;
+def err_bad_cxx_cast_addr_space_mismatch : Error<
+  "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
+  "functional-style cast}0 from %1 to %2 converts between mismatching address"
+  " spaces">;
 def ext_bad_cxx_cast_qualifiers_away_incoherent : ExtWarn<
   "ISO C++ does not allow "
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"

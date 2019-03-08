@@ -88,10 +88,15 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
   expected_files.push_back(PathStorage.str());
   llvm::sys::path::native("//net/dir/file2", PathStorage);
   expected_files.push_back(PathStorage.str());
+  llvm::sys::path::native("//net/file1", PathStorage);
+  expected_files.push_back(PathStorage.str());
   EXPECT_EQ(expected_files,
             getAllFiles("[{\"directory\":\"//net/dir\","
                         "\"command\":\"command\","
                         "\"file\":\"file1\"},"
+                        " {\"directory\":\"//net/dir\","
+                        "\"command\":\"command\","
+                        "\"file\":\"../file1\"},"
                         " {\"directory\":\"//net/dir\","
                         "\"command\":\"command\","
                         "\"file\":\"file2\"}]",

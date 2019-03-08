@@ -144,6 +144,7 @@ namespace clang {
     void VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     void VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPAllocateDecl(OMPAllocateDecl *D);
     void VisitOMPRequiresDecl(OMPRequiresDecl *D);
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
@@ -1746,10 +1747,18 @@ void ASTDeclWriter::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   Code = serialization::DECL_OMP_THREADPRIVATE;
 }
 
+void ASTDeclWriter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
+  Record.push_back(D->varlist_size());
+  VisitDecl(D);
+  for (auto *I : D->varlists())
+    Record.AddStmt(I);
+  Code = serialization::DECL_OMP_ALLOCATE;
+}
+
 void ASTDeclWriter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
   Record.push_back(D->clauselist_size());
   VisitDecl(D);
-  OMPClauseWriter ClauseWriter(Record); 
+  OMPClauseWriter ClauseWriter(Record);
   for (OMPClause *C : D->clauselists())
     ClauseWriter.writeClause(C);
   Code = serialization::DECL_OMP_REQUIRES;

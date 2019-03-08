@@ -377,6 +377,7 @@ static bool shouldReportOccurrenceForSystemDeclOnlyMode(
       case SymbolRole::RelationCalledBy:
       case SymbolRole::RelationContainedBy:
       case SymbolRole::RelationSpecializationOf:
+      case SymbolRole::NameReference:
         return true;
       }
       llvm_unreachable("Unsupported SymbolRole value!");

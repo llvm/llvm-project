@@ -14,6 +14,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
@@ -60,7 +61,12 @@ CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
   // Get the method.
   const ObjCMethodDecl *BoxingMethod = E->getBoxingMethod();
   const Expr *SubExpr = E->getSubExpr();
-  assert(BoxingMethod && "BoxingMethod is null");
+
+  if (E->isExpressibleAsConstantInitializer()) {
+    ConstantEmitter ConstEmitter(CGM);
+    return ConstEmitter.tryEmitAbstract(E, E->getType());
+  }
+
   assert(BoxingMethod->isClassMethod() && "BoxingMethod must be a class method");
   Selector Sel = BoxingMethod->getSelector();
 

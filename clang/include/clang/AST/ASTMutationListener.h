@@ -127,6 +127,11 @@ public:
   virtual void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                                     const Attr *Attr) {}
 
+  /// A declaration is marked as a variable with OpenMP allocator.
+  ///
+  /// \param D the declaration marked as a variable with OpenMP allocator.
+  virtual void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) {}
+
   /// A definition has been made visible by being redefined locally.
   ///
   /// \param D The definition that was previously not visible.

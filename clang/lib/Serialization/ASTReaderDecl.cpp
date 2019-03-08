@@ -444,6 +444,7 @@ namespace clang {
     void VisitObjCPropertyDecl(ObjCPropertyDecl *D);
     void VisitObjCPropertyImplDecl(ObjCPropertyImplDecl *D);
     void VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D);
+    void VisitOMPAllocateDecl(OMPAllocateDecl *D);
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
     void VisitOMPRequiresDecl(OMPRequiresDecl *D);
@@ -2635,6 +2636,17 @@ void ASTDeclReader::VisitOMPThreadPrivateDecl(OMPThreadPrivateDecl *D) {
   D->setVars(Vars);
 }
 
+void ASTDeclReader::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
+  VisitDecl(D);
+  unsigned NumVars = D->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i) {
+    Vars.push_back(Record.readExpr());
+  }
+  D->setVars(Vars);
+}
+
 void ASTDeclReader::VisitOMPRequiresDecl(OMPRequiresDecl * D) {
   VisitDecl(D);
   unsigned NumClauses = D->clauselist_size();
@@ -2799,7 +2811,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
       isa<PragmaDetectMismatchDecl>(D))
     return true;
   if (isa<OMPThreadPrivateDecl>(D) || isa<OMPDeclareReductionDecl>(D) ||
-      isa<OMPDeclareMapperDecl>(D))
+      isa<OMPDeclareMapperDecl>(D) || isa<OMPAllocateDecl>(D))
     return !D->getDeclContext()->isFunctionOrMethod();
   if (const auto *Var = dyn_cast<VarDecl>(D))
     return Var->isFileVarDecl() &&
@@ -3870,6 +3882,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   case DECL_OMP_THREADPRIVATE:
     D = OMPThreadPrivateDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
+  case DECL_OMP_ALLOCATE:
+    D = OMPAllocateDecl::CreateDeserialized(Context, ID, Record.readInt());
+    break;
   case DECL_OMP_REQUIRES:
     D = OMPRequiresDecl::CreateDeserialized(Context, ID, Record.readInt());
     break;
@@ -4467,6 +4482,11 @@ void ASTDeclReader::UpdateDecl(Decl *D,
     case UPD_DECL_MARKED_OPENMP_THREADPRIVATE:
       D->addAttr(OMPThreadPrivateDeclAttr::CreateImplicit(Reader.getContext(),
                                                           ReadSourceRange()));
+      break;
+
+    case UPD_DECL_MARKED_OPENMP_ALLOCATE:
+      D->addAttr(OMPAllocateDeclAttr::CreateImplicit(Reader.getContext(),
+                                                     ReadSourceRange()));
       break;
 
     case UPD_DECL_EXPORTED: {

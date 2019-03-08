@@ -2660,10 +2660,15 @@ Sema::PerformObjectMemberConversion(Expr *From,
   bool PointerConversions = false;
   if (isa<FieldDecl>(Member)) {
     DestRecordType = Context.getCanonicalType(Context.getTypeDeclType(RD));
+    auto FromPtrType = FromType->getAs<PointerType>();
+    DestRecordType = Context.getAddrSpaceQualType(
+        DestRecordType, FromPtrType
+                            ? FromType->getPointeeType().getAddressSpace()
+                            : FromType.getAddressSpace());
 
-    if (FromType->getAs<PointerType>()) {
+    if (FromPtrType) {
       DestType = Context.getPointerType(DestRecordType);
-      FromRecordType = FromType->getPointeeType();
+      FromRecordType = FromPtrType->getPointeeType();
       PointerConversions = true;
     } else {
       DestType = DestRecordType;

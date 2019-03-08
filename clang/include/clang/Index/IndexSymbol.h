@@ -142,8 +142,12 @@ enum class SymbolRole : uint32_t {
   RelationContainedBy = 1 << 17,
   RelationIBTypeOf = 1 << 18,
   RelationSpecializationOf = 1 << 19,
+
+  // Symbol only references the name of the object as written. For example, a
+  // constructor references the class declaration using that role.
+  NameReference = 1 << 20,
 };
-static const unsigned SymbolRoleBitNum = 20;
+static const unsigned SymbolRoleBitNum = 21;
 typedef unsigned SymbolRoleSet;
 
 /// Represents a relation to another symbol for a symbol occurrence.

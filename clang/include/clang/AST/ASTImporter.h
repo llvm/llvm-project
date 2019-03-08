@@ -177,15 +177,10 @@ class TypeSourceInfo;
     /// \return Error information (success or error).
     template <typename ImportT>
     LLVM_NODISCARD llvm::Error importInto(ImportT &To, const ImportT &From) {
-      To = Import(From);
-      if (From && !To)
-          return llvm::make_error<ImportError>();
-      return llvm::Error::success();
-      // FIXME: this should be the final code
-      //auto ToOrErr = Import(From);
-      //if (ToOrErr)
-      //  To = *ToOrErr;
-      //return ToOrErr.takeError();
+      auto ToOrErr = Import_New(From);
+      if (ToOrErr)
+        To = *ToOrErr;
+      return ToOrErr.takeError();
     }
 
     /// Import the given type from the "from" context into the "to"

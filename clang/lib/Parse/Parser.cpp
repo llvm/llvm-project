@@ -921,7 +921,8 @@ bool Parser::isStartOfFunctionDefinition(const ParsingDeclarator &Declarator) {
 ///       declaration: [C99 6.7]
 ///         declaration-specifiers init-declarator-list[opt] ';'
 /// [!C99]  init-declarator-list ';'                   [TODO: warn in c99 mode]
-/// [OMP]   threadprivate-directive                              [TODO]
+/// [OMP]   threadprivate-directive
+/// [OMP]   allocate-directive                         [TODO]
 ///
 Parser::DeclGroupPtrTy
 Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,

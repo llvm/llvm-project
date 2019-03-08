@@ -9794,11 +9794,11 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       return false;
   } else if (isa<PragmaCommentDecl>(D))
     return true;
-  else if (isa<OMPThreadPrivateDecl>(D))
-    return true;
   else if (isa<PragmaDetectMismatchDecl>(D))
     return true;
   else if (isa<OMPThreadPrivateDecl>(D))
+    return !D->getDeclContext()->isDependentContext();
+  else if (isa<OMPAllocateDecl>(D))
     return !D->getDeclContext()->isDependentContext();
   else if (isa<OMPDeclareReductionDecl>(D))
     return !D->getDeclContext()->isDependentContext();

@@ -370,6 +370,7 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
       SmallString<128> AbsolutePath(
           Directory->getValue(DirectoryStorage));
       llvm::sys::path::append(AbsolutePath, FileName);
+      llvm::sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/ true);
       llvm::sys::path::native(AbsolutePath, NativeFilePath);
     } else {
       llvm::sys::path::native(FileName, NativeFilePath);

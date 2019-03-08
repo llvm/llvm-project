@@ -244,6 +244,7 @@ OPENMP_DIRECTIVE_EXT(target_teams_distribute, "target teams distribute")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for, "target teams distribute parallel for")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for_simd, "target teams distribute parallel for simd")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_simd, "target teams distribute simd")
+OPENMP_DIRECTIVE(allocate)
 
 // OpenMP clauses.
 OPENMP_CLAUSE(if, OMPIfClause)
