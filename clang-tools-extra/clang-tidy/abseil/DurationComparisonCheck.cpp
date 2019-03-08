@@ -43,8 +43,7 @@ void DurationComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   // want to handle the case of rewriting both sides. This is much simpler if
   // we unconditionally try and rewrite both, and let the rewriter determine
   // if nothing needs to be done.
-  if (!isNotInMacro(Result, Binop->getLHS()) ||
-      !isNotInMacro(Result, Binop->getRHS()))
+  if (isInMacro(Result, Binop->getLHS()) || isInMacro(Result, Binop->getRHS()))
     return;
   std::string LhsReplacement =
       rewriteExprFromNumberToDuration(Result, *Scale, Binop->getLHS());
