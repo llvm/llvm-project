@@ -9,7 +9,7 @@ Introduction
 ============
 
 ShadowCallStack is an instrumentation pass, currently only implemented for
-aarch64 and x86_64, that protects programs against return address overwrites
+aarch64, that protects programs against return address overwrites
 (e.g. stack buffer overflows.) It works by saving a function's return address
 to a separately allocated 'shadow call stack' in the function prolog in
 non-leaf functions and loading the return address from the shadow call stack
@@ -18,11 +18,10 @@ for compatibility with unwinders, but is otherwise unused.
 
 The aarch64 implementation is considered production ready, and
 an `implementation of the runtime`_ has been added to Android's libc
-(bionic). The x86_64 implementation was evaluated using Chromium and was
-found to have critical performance and security deficiencies, and may be
-removed in a future release of the compiler. This document only describes
-the aarch64 implementation; details on the x86_64 implementation are found
-in the `Clang 7.0.1 documentation`_.
+(bionic). An x86_64 implementation was evaluated using Chromium and was found
+to have critical performance and security deficiencies--it was removed in
+LLVM 9.0. Details on the x86_64 implementation can be found in the
+`Clang 7.0.1 documentation`_.
 
 .. _`implementation of the runtime`: https://android.googlesource.com/platform/bionic/+/808d176e7e0dd727c7f929622ec017f6e065c582/libc/bionic/pthread_create.cpp#128
 .. _`Clang 7.0.1 documentation`: https://releases.llvm.org/7.0.1/tools/clang/docs/ShadowCallStack.html
@@ -37,10 +36,9 @@ consuming more memory for shorter function prologs and epilogs with fewer
 memory accesses.
 
 `Return Flow Guard`_ is a pure software implementation of shadow call stacks
-on x86_64. It is similar to the ShadowCallStack x86_64 implementation but
-trades off higher memory usage for a shorter prologue and epilogue. Like
-x86_64 ShadowCallStack, it is inherently racy due to the architecture's use
-of the stack for calls and returns.
+on x86_64. Like the previous implementation of ShadowCallStack on x86_64, it is
+inherently racy due to the architecture's use of the stack for calls and
+returns.
 
 Intel `Control-flow Enforcement Technology`_ (CET) is a proposed hardware
 extension that would add native support to use a shadow stack to store/check

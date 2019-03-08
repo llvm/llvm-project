@@ -379,7 +379,7 @@ define <4 x i32> @combine_vec_add_add_not(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:    paddd %xmm1, %xmm0
-; SSE-NEXT:    paddd {{.*}}(%rip), %xmm0
+; SSE-NEXT:    psubd %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_add_add_not:
@@ -387,10 +387,10 @@ define <4 x i32> @combine_vec_add_add_not(<4 x i32> %a, <4 x i32> %b) {
 ; AVX-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpaddd {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %nota = xor <4 x i32> %a, <i32 -1, i32 -1, i32 -1, i32 -1>
   %add = add <4 x i32> %nota, %b
-  %r = add <4 x i32> %add, <i32 1, i32 1, i32 1, i32 -1>
+  %r = add <4 x i32> %add, <i32 1, i32 1, i32 1, i32 1>
   ret <4 x i32> %r
 }

@@ -15,6 +15,7 @@ add_lldb_tool(lldb-vscode
   BreakpointBase.cpp
   ExceptionBreakpoint.cpp
   FunctionBreakpoint.cpp
+  IOStream.cpp
   JSONUtils.cpp
   LLDBUtils.cpp
   SourceBreakpoint.cpp

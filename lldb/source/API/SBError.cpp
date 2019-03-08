@@ -10,7 +10,6 @@
 #include "SBReproducerPrivate.h"
 #include "Utils.h"
 #include "lldb/API/SBStream.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
 #include <stdarg.h>
@@ -55,15 +54,10 @@ void SBError::Clear() {
 bool SBError::Fail() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, Fail);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   bool ret_value = false;
   if (m_opaque_up)
     ret_value = m_opaque_up->Fail();
 
-  if (log)
-    log->Printf("SBError(%p)::Fail () => %i",
-                static_cast<void *>(m_opaque_up.get()), ret_value);
 
   return ret_value;
 }
@@ -71,14 +65,9 @@ bool SBError::Fail() const {
 bool SBError::Success() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(bool, SBError, Success);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   bool ret_value = true;
   if (m_opaque_up)
     ret_value = m_opaque_up->Success();
-
-  if (log)
-    log->Printf("SBError(%p)::Success () => %i",
-                static_cast<void *>(m_opaque_up.get()), ret_value);
 
   return ret_value;
 }
@@ -86,15 +75,11 @@ bool SBError::Success() const {
 uint32_t SBError::GetError() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBError, GetError);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t err = 0;
   if (m_opaque_up)
     err = m_opaque_up->GetError();
 
-  if (log)
-    log->Printf("SBError(%p)::GetError () => 0x%8.8x",
-                static_cast<void *>(m_opaque_up.get()), err);
 
   return err;
 }
@@ -102,14 +87,9 @@ uint32_t SBError::GetError() const {
 ErrorType SBError::GetType() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(lldb::ErrorType, SBError, GetType);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ErrorType err_type = eErrorTypeInvalid;
   if (m_opaque_up)
     err_type = m_opaque_up->GetType();
-
-  if (log)
-    log->Printf("SBError(%p)::GetType () => %i",
-                static_cast<void *>(m_opaque_up.get()), err_type);
 
   return err_type;
 }

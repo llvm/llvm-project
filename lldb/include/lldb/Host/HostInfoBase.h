@@ -99,6 +99,9 @@ public:
   //---------------------------------------------------------------------------
   static ArchSpec GetAugmentedArchSpec(llvm::StringRef triple);
 
+  static bool ComputePathRelativeToLibrary(FileSpec &file_spec,
+                                           llvm::StringRef dir);
+
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);

@@ -21,7 +21,6 @@
 
 #include <Block.h>
 #include <dispatch/dispatch.h>
-#include <pthread.h>
 
 // DISPATCH_NOESCAPE is only defined on Apple platforms with at least Xcode 8.
 #ifndef DISPATCH_NOESCAPE
@@ -162,7 +161,7 @@ static void invoke_and_release_block(void *param) {
   Block_release(block);
 }
 
-#define DISPATCH_INTERCEPT_B(name, barrier)                                  \
+#define DISPATCH_INTERCEPT_ASYNC_B(name, barrier)                            \
   TSAN_INTERCEPTOR(void, name, dispatch_queue_t q, dispatch_block_t block) { \
     SCOPED_TSAN_INTERCEPTOR(name, q, block);                                 \
     SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();                           \
@@ -190,7 +189,7 @@ static void invoke_and_release_block(void *param) {
     Acquire(thr, pc, (uptr)&new_context);                                    \
   }
 
-#define DISPATCH_INTERCEPT_F(name, barrier)                       \
+#define DISPATCH_INTERCEPT_ASYNC_F(name, barrier)                 \
   TSAN_INTERCEPTOR(void, name, dispatch_queue_t q, void *context, \
                    dispatch_function_t work) {                    \
     SCOPED_TSAN_INTERCEPTOR(name, q, context, work);              \
@@ -216,18 +215,21 @@ static void invoke_and_release_block(void *param) {
     Acquire(thr, pc, (uptr)&new_context);                                     \
   }
 
+#define DISPATCH_INTERCEPT(name, barrier)             \
+  DISPATCH_INTERCEPT_ASYNC_F(name##_async_f, barrier) \
+  DISPATCH_INTERCEPT_ASYNC_B(name##_async, barrier)   \
+  DISPATCH_INTERCEPT_SYNC_F(name##_sync_f, barrier)   \
+  DISPATCH_INTERCEPT_SYNC_B(name##_sync, barrier)
+
 // We wrap dispatch_async, dispatch_sync and friends where we allocate a new
 // context, which is used to synchronize (we release the context before
 // submitting, and the callback acquires it before executing the original
 // callback).
-DISPATCH_INTERCEPT_B(dispatch_async, false)
-DISPATCH_INTERCEPT_B(dispatch_barrier_async, true)
-DISPATCH_INTERCEPT_F(dispatch_async_f, false)
-DISPATCH_INTERCEPT_F(dispatch_barrier_async_f, true)
-DISPATCH_INTERCEPT_SYNC_B(dispatch_sync, false)
-DISPATCH_INTERCEPT_SYNC_B(dispatch_barrier_sync, true)
-DISPATCH_INTERCEPT_SYNC_F(dispatch_sync_f, false)
-DISPATCH_INTERCEPT_SYNC_F(dispatch_barrier_sync_f, true)
+DISPATCH_INTERCEPT(dispatch, false)
+DISPATCH_INTERCEPT(dispatch_barrier, true)
+
+DECLARE_REAL(void, dispatch_after_f, dispatch_time_t when,
+             dispatch_queue_t queue, void *context, dispatch_function_t work)
 
 TSAN_INTERCEPTOR(void, dispatch_after, dispatch_time_t when,
                  dispatch_queue_t queue, dispatch_block_t block) {
@@ -353,6 +355,9 @@ TSAN_INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
     dispatch_release(group);
   });
 }
+
+DECLARE_REAL(void, dispatch_group_notify_f, dispatch_group_t group,
+             dispatch_queue_t q, void *context, dispatch_function_t work)
 
 TSAN_INTERCEPTOR(void, dispatch_group_notify, dispatch_group_t group,
                  dispatch_queue_t q, dispatch_block_t block) {

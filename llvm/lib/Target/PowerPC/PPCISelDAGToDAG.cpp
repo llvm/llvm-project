@@ -4362,11 +4362,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         !PPCSubTarget->isSecurePlt() || !PPCSubTarget->isTargetELF() ||
         Mod->getPICLevel() == PICLevel::SmallPIC)
       break;
-      // Attach global base pointer on GETtlsADDR32 node in order to
-      // generate secure plt code for TLS symbols.
-      getGlobalBaseReg();
-  }
-    break;
+    // Attach global base pointer on GETtlsADDR32 node in order to
+    // generate secure plt code for TLS symbols.
+    getGlobalBaseReg();
+  } break;
   case PPCISD::CALL: {
     const Module *M = MF->getFunction().getParent();
 

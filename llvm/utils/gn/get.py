@@ -33,7 +33,8 @@ def set_executable_bit(path):
 
 
 def get_platform():
-    if os.uname()[4] != 'x86_64':
+    import platform
+    if platform.machine() not in ('AMD64', 'x86_64'):
         return None
     if sys.platform.startswith('linux'):
         return 'linux-amd64'

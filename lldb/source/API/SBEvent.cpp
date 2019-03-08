@@ -75,23 +75,12 @@ const char *SBEvent::GetDataFlavor() {
 uint32_t SBEvent::GetType() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(uint32_t, SBEvent, GetType);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   const Event *lldb_event = get();
   uint32_t event_type = 0;
   if (lldb_event)
     event_type = lldb_event->GetType();
 
-  if (log) {
-    StreamString sstr;
-    if (lldb_event && lldb_event->GetBroadcaster() &&
-        lldb_event->GetBroadcaster()->GetEventNames(sstr, event_type, true))
-      log->Printf("SBEvent(%p)::GetType () => 0x%8.8x (%s)",
-                  static_cast<void *>(get()), event_type, sstr.GetData());
-    else
-      log->Printf("SBEvent(%p)::GetType () => 0x%8.8x",
-                  static_cast<void *>(get()), event_type);
-  }
 
   return event_type;
 }
@@ -135,11 +124,6 @@ bool SBEvent::BroadcasterMatchesRef(const SBBroadcaster &broadcaster) {
   if (lldb_event)
     success = lldb_event->BroadcasterIs(broadcaster.get());
 
-  // For logging, this gets a little chatty so only enable this when verbose
-  // logging is on
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  LLDB_LOGV(log, "({0}) (SBBroadcaster({1}): {2}) => {3}", get(),
-            broadcaster.get(), broadcaster.GetName(), success);
 
   return success;
 }
@@ -186,14 +170,6 @@ bool SBEvent::IsValid() const {
 const char *SBEvent::GetCStringFromEvent(const SBEvent &event) {
   LLDB_RECORD_STATIC_METHOD(const char *, SBEvent, GetCStringFromEvent,
                             (const lldb::SBEvent &), event);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBEvent(%p)::GetCStringFromEvent () => \"%s\"",
-                static_cast<void *>(event.get()),
-                reinterpret_cast<const char *>(
-                    EventDataBytes::GetBytesFromEvent(event.get())));
 
   return reinterpret_cast<const char *>(
       EventDataBytes::GetBytesFromEvent(event.get()));

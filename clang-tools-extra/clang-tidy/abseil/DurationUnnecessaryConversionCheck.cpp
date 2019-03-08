@@ -44,7 +44,7 @@ void DurationUnnecessaryConversionCheck::check(
   const auto *OuterCall = Result.Nodes.getNodeAs<Expr>("call");
   const auto *Arg = Result.Nodes.getNodeAs<Expr>("arg");
 
-  if (!isNotInMacro(Result, OuterCall))
+  if (isInMacro(Result, OuterCall))
     return;
 
   diag(OuterCall->getBeginLoc(), "remove unnecessary absl::Duration conversions")

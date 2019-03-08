@@ -14,7 +14,6 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Utility/Log.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,21 +65,11 @@ bool SBSymbolContext::IsValid() const {
 SBModule SBSymbolContext::GetModule() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBModule, SBSymbolContext, GetModule);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBModule sb_module;
   ModuleSP module_sp;
   if (m_opaque_up) {
     module_sp = m_opaque_up->module_sp;
     sb_module.SetSP(module_sp);
-  }
-
-  if (log) {
-    SBStream sstr;
-    sb_module.GetDescription(sstr);
-    log->Printf("SBSymbolContext(%p)::GetModule () => SBModule(%p): %s",
-                static_cast<void *>(m_opaque_up.get()),
-                static_cast<void *>(module_sp.get()), sstr.GetData());
   }
 
   return LLDB_RECORD_RESULT(sb_module);
@@ -97,19 +86,12 @@ SBCompileUnit SBSymbolContext::GetCompileUnit() {
 SBFunction SBSymbolContext::GetFunction() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFunction, SBSymbolContext, GetFunction);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   Function *function = NULL;
 
   if (m_opaque_up)
     function = m_opaque_up->function;
 
   SBFunction sb_function(function);
-
-  if (log)
-    log->Printf("SBSymbolContext(%p)::GetFunction () => SBFunction(%p)",
-                static_cast<void *>(m_opaque_up.get()),
-                static_cast<void *>(function));
 
   return LLDB_RECORD_RESULT(sb_function);
 }
@@ -123,17 +105,9 @@ SBBlock SBSymbolContext::GetBlock() {
 SBLineEntry SBSymbolContext::GetLineEntry() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBLineEntry, SBSymbolContext, GetLineEntry);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   SBLineEntry sb_line_entry;
   if (m_opaque_up)
     sb_line_entry.SetLineEntry(m_opaque_up->line_entry);
-
-  if (log) {
-    log->Printf("SBSymbolContext(%p)::GetLineEntry () => SBLineEntry(%p)",
-                static_cast<void *>(m_opaque_up.get()),
-                static_cast<void *>(sb_line_entry.get()));
-  }
 
   return LLDB_RECORD_RESULT(sb_line_entry);
 }
@@ -141,19 +115,12 @@ SBLineEntry SBSymbolContext::GetLineEntry() {
 SBSymbol SBSymbolContext::GetSymbol() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBSymbol, SBSymbolContext, GetSymbol);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   Symbol *symbol = NULL;
 
   if (m_opaque_up)
     symbol = m_opaque_up->symbol;
 
   SBSymbol sb_symbol(symbol);
-
-  if (log)
-    log->Printf("SBSymbolContext(%p)::GetSymbol () => SBSymbol(%p)",
-                static_cast<void *>(m_opaque_up.get()),
-                static_cast<void *>(symbol));
 
   return LLDB_RECORD_RESULT(sb_symbol);
 }

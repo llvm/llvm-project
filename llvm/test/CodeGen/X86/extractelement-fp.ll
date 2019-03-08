@@ -288,6 +288,54 @@ define double @fminnum_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
 ;  ret double %r
 ;}
 
+define float @maxps_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
+; CHECK-LABEL: maxps_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmaxps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp ogt <4 x float> %x, %y
+  %v = select <4 x i1> %cmp, <4 x float> %x, <4 x float> %y
+  %r = extractelement <4 x float> %v, i32 0
+  ret float %r
+}
+
+define double @maxpd_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
+; CHECK-LABEL: maxpd_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmaxpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %cmp = fcmp ogt <4 x double> %x, %y
+  %v = select <4 x i1> %cmp, <4 x double> %x, <4 x double> %y
+  %r = extractelement <4 x double> %v, i32 0
+  ret double %r
+}
+
+define float @minps_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
+; CHECK-LABEL: minps_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vminps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt <4 x float> %x, %y
+  %v = select <4 x i1> %cmp, <4 x float> %x, <4 x float> %y
+  %r = extractelement <4 x float> %v, i32 0
+  ret float %r
+}
+
+define double @minpd_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
+; CHECK-LABEL: minpd_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vminpd %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %cmp = fcmp olt <4 x double> %x, %y
+  %v = select <4 x i1> %cmp, <4 x double> %x, <4 x double> %y
+  %r = extractelement <4 x double> %v, i32 0
+  ret double %r
+}
+
 define float @copysign_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; CHECK-LABEL: copysign_v4f32:
 ; CHECK:       # %bb.0:
@@ -440,6 +488,51 @@ define double @round_v4f64(<4 x double> %x) nounwind {
   ret double %r
 }
 
+define float @rcp_v4f32(<4 x float> %x) nounwind {
+; CHECK-LABEL: rcp_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrcpps %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %v = call <4 x float> @llvm.x86.sse.rcp.ps(<4 x float> %x)
+  %r = extractelement <4 x float> %v, i32 0
+  ret float %r
+}
+
+define float @rcp_v8f32(<8 x float> %x) nounwind {
+; CHECK-LABEL: rcp_v8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrcpps %ymm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %v = call <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float> %x)
+  %r = extractelement <8 x float> %v, i32 0
+  ret float %r
+}
+
+define float @rsqrt_v4f32(<4 x float> %x) nounwind {
+; CHECK-LABEL: rsqrt_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtps %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %v = call <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float> %x)
+  %r = extractelement <4 x float> %v, i32 0
+  ret float %r
+}
+
+define float @rsqrt_v8f32(<8 x float> %x) nounwind {
+; CHECK-LABEL: rsqrt_v8f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vrsqrtps %ymm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %v = call <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float> %x)
+  %r = extractelement <8 x float> %v, i32 0
+  ret float %r
+}
+
+
 declare <4 x float> @llvm.sqrt.v4f32(<4 x float>)
 declare <4 x double> @llvm.sqrt.v4f64(<4 x double>)
 declare <4 x float> @llvm.sin.v4f32(<4 x float>)
@@ -470,3 +563,8 @@ declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>)
 declare <4 x double> @llvm.nearbyint.v4f64(<4 x double>)
 declare <4 x float> @llvm.round.v4f32(<4 x float>)
 declare <4 x double> @llvm.round.v4f64(<4 x double>)
+
+declare <4 x float> @llvm.x86.sse.rcp.ps(<4 x float>)
+declare <8 x float> @llvm.x86.avx.rcp.ps.256(<8 x float>)
+declare <4 x float> @llvm.x86.sse.rsqrt.ps(<4 x float>)
+declare <8 x float> @llvm.x86.avx.rsqrt.ps.256(<8 x float>)
