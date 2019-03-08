@@ -53,9 +53,7 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
 
   llvm::SmallString<256> clang_dir(parent_dir);
   llvm::SmallString<32> relative_path;
-  llvm::sys::path::append(relative_path,
-                          llvm::Twine("lib") + CLANG_LIBDIR_SUFFIX, "clang",
-                          CLANG_VERSION_STRING);
+  llvm::sys::path::append(relative_path, "lib", "lldb", "clang");
 
   llvm::sys::path::append(clang_dir, relative_path);
   if (!verify || VerifyClangPath(clang_dir)) {
