@@ -391,6 +391,7 @@
 // (/Zs is for syntax-only)
 // RUN: %clang_cl /Zs \
 // RUN:     /AIfoo \
+// RUN:     /AI foo_does_not_exist \
 // RUN:     /Bt \
 // RUN:     /Bt+ \
 // RUN:     /clr:pure \
