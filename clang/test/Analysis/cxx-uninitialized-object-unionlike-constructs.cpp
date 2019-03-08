@@ -3,6 +3,20 @@
 // RUN:   -analyzer-config alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="[Tt]ag|[Kk]ind" \
 // RUN:   -std=c++11 -verify  %s
 
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-checker=alpha.cplusplus.UninitializedObject \
+// RUN:   -analyzer-config \
+// RUN:     alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField="([)]" \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-UNINIT-INVALID-REGEX
+
+// CHECK-UNINIT-INVALID-REGEX: (frontend): invalid input for checker option
+// CHECK-UNINIT-INVALID-REGEX-SAME: 'alpha.cplusplus.UninitializedObject:IgnoreRecordsWithField',
+// CHECK-UNINIT-INVALID-REGEX-SAME: that expects a valid regex, building failed
+// CHECK-UNINIT-INVALID-REGEX-SAME: with error message "parentheses not
+// CHECK-UNINIT-INVALID-REGEX-SAME: balanced"
+
+
 // expected-no-diagnostics
 
 // Both type and name contains "kind".

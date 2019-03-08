@@ -184,10 +184,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_RECORD_STATIC_METHOD_NO_ARGS(lldb::SBError, SBDebugger,
                                     InitializeWithErrorHandling);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
-  if (log)
-    log->Printf("SBDebugger::Initialize ()");
 
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
@@ -206,11 +203,6 @@ void SBDebugger::Terminate() {
 void SBDebugger::Clear() {
   LLDB_RECORD_METHOD_NO_ARGS(void, SBDebugger, Clear);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBDebugger(%p)::Clear ()",
-                static_cast<void *>(m_opaque_sp.get()));
 
   if (m_opaque_sp)
     m_opaque_sp->ClearIOHandlers();
@@ -236,7 +228,6 @@ SBDebugger SBDebugger::Create(bool source_init_files,
                               lldb::LogOutputCallback callback, void *baton)
 
 {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBDebugger debugger;
 
@@ -250,13 +241,6 @@ SBDebugger SBDebugger::Create(bool source_init_files,
 
   debugger.reset(Debugger::CreateInstance(callback, baton));
 
-  if (log) {
-    SBStream sstr;
-    debugger.GetDescription(sstr);
-    log->Printf("SBDebugger::Create () => SBDebugger(%p): %s",
-                static_cast<void *>(debugger.m_opaque_sp.get()),
-                sstr.GetData());
-  }
 
   SBCommandInterpreter interp = debugger.GetCommandInterpreter();
   if (source_init_files) {
@@ -275,15 +259,6 @@ void SBDebugger::Destroy(SBDebugger &debugger) {
   LLDB_RECORD_STATIC_METHOD(void, SBDebugger, Destroy, (lldb::SBDebugger &),
                             debugger);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log) {
-    SBStream sstr;
-    debugger.GetDescription(sstr);
-    log->Printf("SBDebugger::Destroy () => SBDebugger(%p): %s",
-                static_cast<void *>(debugger.m_opaque_sp.get()),
-                sstr.GetData());
-  }
 
   Debugger::Destroy(debugger.m_opaque_sp);
 
@@ -298,13 +273,8 @@ void SBDebugger::MemoryPressureDetected() {
   // mandatory. We have seen deadlocks with this function when called so we
   // need to safeguard against this until we can determine what is causing the
   // deadlocks.
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   const bool mandatory = false;
-  if (log) {
-    log->Printf("SBDebugger::MemoryPressureDetected (), mandatory = %d",
-                mandatory);
-  }
 
   ModuleList::RemoveOrphanSharedModules(mandatory);
 }
@@ -349,14 +319,6 @@ void SBDebugger::SetInputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetInputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf(
-        "SBDebugger(%p)::SetInputFileHandle (fh=%p, transfer_ownership=%i)",
-        static_cast<void *>(m_opaque_sp.get()), static_cast<void *>(fh),
-        transfer_ownership);
-
   if (!m_opaque_sp)
     return;
 
@@ -375,14 +337,6 @@ void SBDebugger::SetOutputFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetOutputFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf(
-        "SBDebugger(%p)::SetOutputFileHandle (fh=%p, transfer_ownership=%i)",
-        static_cast<void *>(m_opaque_sp.get()), static_cast<void *>(fh),
-        transfer_ownership);
-
   if (m_opaque_sp)
     m_opaque_sp->SetOutputFileHandle(fh, transfer_ownership);
 }
@@ -391,13 +345,6 @@ void SBDebugger::SetErrorFileHandle(FILE *fh, bool transfer_ownership) {
   LLDB_RECORD_METHOD(void, SBDebugger, SetErrorFileHandle, (FILE *, bool), fh,
                      transfer_ownership);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf(
-        "SBDebugger(%p)::SetErrorFileHandle (fh=%p, transfer_ownership=%i)",
-        static_cast<void *>(m_opaque_sp.get()), static_cast<void *>(fh),
-        transfer_ownership);
 
   if (m_opaque_sp)
     m_opaque_sp->SetErrorFileHandle(fh, transfer_ownership);
@@ -453,17 +400,11 @@ SBCommandInterpreter SBDebugger::GetCommandInterpreter() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBCommandInterpreter, SBDebugger,
                              GetCommandInterpreter);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBCommandInterpreter sb_interpreter;
   if (m_opaque_sp)
     sb_interpreter.reset(&m_opaque_sp->GetCommandInterpreter());
 
-  if (log)
-    log->Printf(
-        "SBDebugger(%p)::GetCommandInterpreter () => SBCommandInterpreter(%p)",
-        static_cast<void *>(m_opaque_sp.get()),
-        static_cast<void *>(sb_interpreter.get()));
 
   return LLDB_RECORD_RESULT(sb_interpreter);
 }
@@ -507,16 +448,11 @@ void SBDebugger::HandleCommand(const char *command) {
 SBListener SBDebugger::GetListener() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBListener, SBDebugger, GetListener);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBListener sb_listener;
   if (m_opaque_sp)
     sb_listener.reset(m_opaque_sp->GetListener());
 
-  if (log)
-    log->Printf("SBDebugger(%p)::GetListener () => SBListener(%p)",
-                static_cast<void *>(m_opaque_sp.get()),
-                static_cast<void *>(sb_listener.get()));
 
   return LLDB_RECORD_RESULT(sb_listener);
 }
@@ -676,12 +612,8 @@ bool SBDebugger::StateIsRunningState(StateType state) {
   LLDB_RECORD_STATIC_METHOD(bool, SBDebugger, StateIsRunningState,
                             (lldb::StateType), state);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   const bool result = lldb_private::StateIsRunningState(state);
-  if (log)
-    log->Printf("SBDebugger::StateIsRunningState (state=%s) => %i",
-                StateAsCString(state), result);
 
   return result;
 }
@@ -690,12 +622,8 @@ bool SBDebugger::StateIsStoppedState(StateType state) {
   LLDB_RECORD_STATIC_METHOD(bool, SBDebugger, StateIsStoppedState,
                             (lldb::StateType), state);
 
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   const bool result = lldb_private::StateIsStoppedState(state, false);
-  if (log)
-    log->Printf("SBDebugger::StateIsStoppedState (state=%s) => %i",
-                StateAsCString(state), result);
 
   return result;
 }

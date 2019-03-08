@@ -49,6 +49,16 @@ static bool hasSinCosPiStret(const Triple &T) {
   return true;
 }
 
+static bool hasBcmp(const Triple &TT) {
+  // Posix removed support from bcmp() in 2001, but the glibc and several
+  // implementations of the libc still have it.
+  if (TT.isOSLinux())
+    return TT.isGNUEnvironment() || TT.isMusl();
+  // Both NetBSD and OpenBSD are planning to remove the function. Windows does
+  // not have it.
+  return TT.isOSFreeBSD() || TT.isOSSolaris() || TT.isOSDarwin();
+}
+
 /// Initialize the set of available library functions based on the specified
 /// target triple. This should be carefully written so that a missing target
 /// triple gets a sane set of defaults.
@@ -140,6 +150,9 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sincospi_stret);
     TLI.setUnavailable(LibFunc_sincospif_stret);
   }
+
+  if (!hasBcmp(T))
+    TLI.setUnavailable(LibFunc_bcmp);
 
   if (T.isMacOSX() && T.getArch() == Triple::x86 &&
       !T.isMacOSXVersionLT(10, 7)) {

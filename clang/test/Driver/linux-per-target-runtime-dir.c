@@ -6,12 +6,14 @@
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-PER-TARGET-RUNTIME %s
+// CHECK-PER-TARGET-RUNTIME: InstalledDir: [[INSTDIR:.*]]
 // CHECK-PER-TARGET-RUNTIME: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CHECK-PER-TARGET-RUNTIME: "-resource-dir" "[[RESDIR:[^"]*]]"
 // CHECK-PER-TARGET-RUNTIME: "-isysroot" "[[SYSROOT:[^"]+]]"
-// CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "[[RESDIR]]/include/c++/v1"
+// CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "[[INSTDIR]]/../include/c++/v1"
 // CHECK-PER-TARGET-RUNTIME: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-PER-TARGET-RUNTIME: "--sysroot=[[SYSROOT]]"
+// CHECK-PER-TARGET-RUNTIME: "-L[[INSTDIR]]{{/|\\\\}}..{{/|\\\\}}lib{{/|\\\\}}x86_64-linux-gnu"
 // CHECK-PER-TARGET-RUNTIME: "-L[[RESDIR]]{{/|\\\\}}x86_64-linux-gnu{{/|\\\\}}lib"
 
 // RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \

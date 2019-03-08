@@ -178,13 +178,6 @@ SBCommandInterpreter::SBCommandInterpreter(CommandInterpreter *interpreter)
   LLDB_RECORD_CONSTRUCTOR(SBCommandInterpreter,
                           (lldb_private::CommandInterpreter *), interpreter);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBCommandInterpreter::SBCommandInterpreter (interpreter=%p)"
-                " => SBCommandInterpreter(%p)",
-                static_cast<void *>(interpreter),
-                static_cast<void *>(m_opaque_ptr));
 }
 
 SBCommandInterpreter::SBCommandInterpreter(const SBCommandInterpreter &rhs)
@@ -271,13 +264,6 @@ lldb::ReturnStatus SBCommandInterpreter::HandleCommand(
                       lldb::SBCommandReturnObject &, bool),
                      command_line, override_context, result, add_to_history);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBCommandInterpreter(%p)::HandleCommand (command=\"%s\", "
-                "SBCommandReturnObject(%p), add_to_history=%i)",
-                static_cast<void *>(m_opaque_ptr), command_line,
-                static_cast<void *>(result.get()), add_to_history);
 
   ExecutionContext ctx, *ctx_ptr;
   if (override_context.get()) {
@@ -298,17 +284,6 @@ lldb::ReturnStatus SBCommandInterpreter::HandleCommand(
     result->SetStatus(eReturnStatusFailed);
   }
 
-  // We need to get the value again, in case the command disabled the log!
-  log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API);
-  if (log) {
-    SBStream sstr;
-    result.GetDescription(sstr);
-    log->Printf("SBCommandInterpreter(%p)::HandleCommand (command=\"%s\", "
-                "SBCommandReturnObject(%p): %s, add_to_history=%i) => %i",
-                static_cast<void *>(m_opaque_ptr), command_line,
-                static_cast<void *>(result.get()), sstr.GetData(),
-                add_to_history, result.GetStatus());
-  }
 
   return result.GetStatus();
 }
@@ -322,17 +297,6 @@ void SBCommandInterpreter::HandleCommandsFromFile(
                       lldb::SBCommandInterpreterRunOptions &,
                       lldb::SBCommandReturnObject),
                      file, override_context, options, result);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log) {
-    SBStream s;
-    file.GetDescription(s);
-    log->Printf("SBCommandInterpreter(%p)::HandleCommandsFromFile "
-                "(file=\"%s\", SBCommandReturnObject(%p))",
-                static_cast<void *>(m_opaque_ptr), s.GetData(),
-                static_cast<void *>(result.get()));
-  }
 
   if (!IsValid()) {
     result->AppendError("SBCommandInterpreter is not valid.");
@@ -385,7 +349,6 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
                      current_line, cursor, last_char, match_start_point,
                      max_return_elements, matches, descriptions);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   int num_completions = 0;
 
   // Sanity check the arguments that are passed in: cursor & last_char have to
@@ -401,15 +364,6 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
       last_char - current_line > static_cast<ptrdiff_t>(current_line_size))
     return 0;
 
-  if (log)
-    log->Printf("SBCommandInterpreter(%p)::HandleCompletion "
-                "(current_line=\"%s\", cursor at: %" PRId64
-                ", last char at: %" PRId64
-                ", match_start_point: %d, max_return_elements: %d)",
-                static_cast<void *>(m_opaque_ptr), current_line,
-                static_cast<uint64_t>(cursor - current_line),
-                static_cast<uint64_t>(last_char - current_line),
-                match_start_point, max_return_elements);
 
   if (IsValid()) {
     lldb_private::StringList lldb_matches, lldb_descriptions;
@@ -422,10 +376,6 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
     SBStringList temp_descriptions_list(&lldb_descriptions);
     descriptions.AppendList(temp_descriptions_list);
   }
-  if (log)
-    log->Printf(
-        "SBCommandInterpreter(%p)::HandleCompletion - Found %d completions.",
-        static_cast<void *>(m_opaque_ptr), num_completions);
 
   return num_completions;
 }
@@ -495,12 +445,6 @@ SBProcess SBCommandInterpreter::GetProcess() {
       sb_process.SetSP(process_sp);
     }
   }
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBCommandInterpreter(%p)::GetProcess () => SBProcess(%p)",
-                static_cast<void *>(m_opaque_ptr),
-                static_cast<void *>(process_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_process);
 }
@@ -512,12 +456,6 @@ SBDebugger SBCommandInterpreter::GetDebugger() {
   SBDebugger sb_debugger;
   if (IsValid())
     sb_debugger.reset(m_opaque_ptr->GetDebugger().shared_from_this());
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBCommandInterpreter(%p)::GetDebugger () => SBDebugger(%p)",
-                static_cast<void *>(m_opaque_ptr),
-                static_cast<void *>(sb_debugger.get()));
 
   return LLDB_RECORD_RESULT(sb_debugger);
 }
@@ -603,13 +541,6 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
     result->AppendError("SBCommandInterpreter is not valid");
     result->SetStatus(eReturnStatusFailed);
   }
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf("SBCommandInterpreter(%p)::SourceInitFileInHomeDirectory "
-                "(&SBCommandReturnObject(%p))",
-                static_cast<void *>(m_opaque_ptr),
-                static_cast<void *>(result.get()));
 }
 
 void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
@@ -629,28 +560,15 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
     result->AppendError("SBCommandInterpreter is not valid");
     result->SetStatus(eReturnStatusFailed);
   }
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
-  if (log)
-    log->Printf(
-        "SBCommandInterpreter(%p)::SourceInitFileInCurrentWorkingDirectory "
-        "(&SBCommandReturnObject(%p))",
-        static_cast<void *>(m_opaque_ptr), static_cast<void *>(result.get()));
 }
 
 SBBroadcaster SBCommandInterpreter::GetBroadcaster() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBBroadcaster, SBCommandInterpreter,
                              GetBroadcaster);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBBroadcaster broadcaster(m_opaque_ptr, false);
 
-  if (log)
-    log->Printf(
-        "SBCommandInterpreter(%p)::GetBroadcaster() => SBBroadcaster(%p)",
-        static_cast<void *>(m_opaque_ptr),
-        static_cast<void *>(broadcaster.get()));
 
   return LLDB_RECORD_RESULT(broadcaster);
 }

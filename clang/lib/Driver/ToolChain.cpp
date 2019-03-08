@@ -75,6 +75,11 @@ ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
       CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
   SmallString<128> P;
 
+  P.assign(D.Dir);
+  llvm::sys::path::append(P, "..", "lib", D.getTargetTriple());
+  if (getVFS().exists(P))
+    getLibraryPaths().push_back(P.str());
+
   P.assign(D.ResourceDir);
   llvm::sys::path::append(P, D.getTargetTriple(), "lib");
   if (getVFS().exists(P))

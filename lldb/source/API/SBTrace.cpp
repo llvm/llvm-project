@@ -8,7 +8,6 @@
 
 #include "SBReproducerPrivate.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/Log.h"
 
 #include "lldb/API/SBTrace.h"
 #include "lldb/API/SBTraceOptions.h"
@@ -28,7 +27,6 @@ lldb::ProcessSP SBTrace::GetSP() const { return m_opaque_wp.lock(); }
 size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
                              size_t offset, lldb::tid_t thread_id) {
   ProcessSP process_sp(GetSP());
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();
 
@@ -37,7 +35,6 @@ size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
   } else {
     error.SetError(
         process_sp->GetData(GetTraceUID(), thread_id, buffer, offset));
-    LLDB_LOG(log, "SBTrace::bytes_read - {0}", buffer.size());
   }
   return buffer.size();
 }
@@ -45,17 +42,14 @@ size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
 size_t SBTrace::GetMetaData(SBError &error, void *buf, size_t size,
                             size_t offset, lldb::tid_t thread_id) {
   ProcessSP process_sp(GetSP());
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();
 
   if (!process_sp) {
     error.SetErrorString("invalid process");
   } else {
-
     error.SetError(
         process_sp->GetMetaData(GetTraceUID(), thread_id, buffer, offset));
-    LLDB_LOG(log, "SBTrace::bytes_read - {0}", buffer.size());
   }
   return buffer.size();
 }

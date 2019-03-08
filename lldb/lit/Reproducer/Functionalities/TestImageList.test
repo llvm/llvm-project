@@ -9,6 +9,7 @@
 
 # RUN: echo "CAPTURE" >> %t.txt
 # RUN: %lldb -x -b  --capture %t.repro \
+# RUN:    -o 'run' \
 # RUN:    -o 'image list' \
 # RUN:    -o 'reproducer generate' \
 # RUN:    %t.out >> %t.txt 2>&1

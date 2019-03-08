@@ -831,18 +831,9 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilder<> &B) {
   return B.CreateGEP(B.getInt8Ty(), SrcStr, B.getInt64(I), "memchr");
 }
 
-Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
-  Value *LHS = CI->getArgOperand(0), *RHS = CI->getArgOperand(1);
-
-  if (LHS == RHS) // memcmp(s,s,x) -> 0
-    return Constant::getNullValue(CI->getType());
-
-  // Make sure we have a constant length.
-  ConstantInt *LenC = dyn_cast<ConstantInt>(CI->getArgOperand(2));
-  if (!LenC)
-    return nullptr;
-
-  uint64_t Len = LenC->getZExtValue();
+static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
+                                         uint64_t Len, IRBuilder<> &B,
+                                         const DataLayout &DL) {
   if (Len == 0) // memcmp(s1,s2,0) -> 0
     return Constant::getNullValue(CI->getType());
 
@@ -911,6 +902,28 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
     else if (Cmp > 0)
       Ret = 1;
     return ConstantInt::get(CI->getType(), Ret);
+  }
+  return nullptr;
+}
+
+Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
+  Value *LHS = CI->getArgOperand(0), *RHS = CI->getArgOperand(1);
+  Value *Size = CI->getArgOperand(2);
+
+  if (LHS == RHS) // memcmp(s,s,x) -> 0
+    return Constant::getNullValue(CI->getType());
+
+  // Handle constant lengths.
+  if (ConstantInt *LenC = dyn_cast<ConstantInt>(Size))
+    if (Value *Res = optimizeMemCmpConstantSize(CI, LHS, RHS,
+                                                LenC->getZExtValue(), B, DL))
+      return Res;
+
+  // memcmp(x, y, Len) == 0 -> bcmp(x, y, Len) == 0
+  // `bcmp` can be more efficient than memcmp because it only has to know that
+  // there is a difference, not where is is.
+  if (isOnlyUsedInZeroEqualityComparison(CI) && TLI->has(LibFunc_bcmp)) {
+    return emitBCmp(LHS, RHS, Size, B, DL, TLI);
   }
 
   return nullptr;
@@ -1137,10 +1150,10 @@ static Value *optimizeTrigReflections(CallInst *Call, LibFunc Func,
                                       IRBuilder<> &B) {
   if (!isa<FPMathOperator>(Call))
     return nullptr;
-  
+
   IRBuilder<>::FastMathFlagGuard Guard(B);
   B.setFastMathFlags(Call->getFastMathFlags());
-  
+
   // TODO: Can this be shared to also handle LLVM intrinsics?
   Value *X;
   switch (Func) {

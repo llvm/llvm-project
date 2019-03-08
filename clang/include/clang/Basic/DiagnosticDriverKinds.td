@@ -303,6 +303,8 @@ def err_analyzer_config_multiple_values : Error<
 def err_analyzer_config_invalid_input : Error<
   "invalid input for analyzer-config option '%0', that expects %1 value">;
 def err_analyzer_config_unknown : Error<"unknown analyzer-config '%0'">;
+def err_analyzer_checker_option_invalid_input : Error<
+  "invalid input for checker option '%0', that expects %1">;
 
 def err_drv_invalid_hvx_length : Error<
   "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;

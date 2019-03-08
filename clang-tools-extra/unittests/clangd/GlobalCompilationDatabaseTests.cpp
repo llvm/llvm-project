@@ -16,15 +16,18 @@
 namespace clang {
 namespace clangd {
 namespace {
+using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::EndsWith;
+using ::testing::Not;
 
 TEST(GlobalCompilationDatabaseTest, FallbackCommand) {
   DirectoryBasedGlobalCompilationDatabase DB(None);
   auto Cmd = DB.getFallbackCommand(testPath("foo/bar.cc"));
   EXPECT_EQ(Cmd.Directory, testPath("foo"));
-  EXPECT_THAT(Cmd.CommandLine, ElementsAre(
-    EndsWith("clang"), testPath("foo/bar.cc")));
+  EXPECT_THAT(Cmd.CommandLine,
+              ElementsAre(EndsWith("clang"), testPath("foo/bar.cc")));
   EXPECT_EQ(Cmd.Output, "");
 
   // .h files have unknown language, so they are parsed liberally as obj-c++.
@@ -65,16 +68,18 @@ protected:
 
 TEST_F(OverlayCDBTest, GetCompileCommand) {
   OverlayCDB CDB(Base.get(), {}, std::string(""));
-  EXPECT_EQ(CDB.getCompileCommand(testPath("foo.cc")),
-            Base->getCompileCommand(testPath("foo.cc")));
+  EXPECT_THAT(CDB.getCompileCommand(testPath("foo.cc"))->CommandLine,
+              AllOf(Contains(testPath("foo.cc")), Contains("-DA=1")));
   EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), llvm::None);
 
   auto Override = cmd(testPath("foo.cc"), "-DA=3");
   CDB.setCompileCommand(testPath("foo.cc"), Override);
-  EXPECT_EQ(CDB.getCompileCommand(testPath("foo.cc")), Override);
+  EXPECT_THAT(CDB.getCompileCommand(testPath("foo.cc"))->CommandLine,
+              Contains("-DA=3"));
   EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), llvm::None);
   CDB.setCompileCommand(testPath("missing.cc"), Override);
-  EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), Override);
+  EXPECT_THAT(CDB.getCompileCommand(testPath("missing.cc"))->CommandLine,
+              Contains("-DA=3"));
 }
 
 TEST_F(OverlayCDBTest, GetFallbackCommand) {
@@ -88,7 +93,8 @@ TEST_F(OverlayCDBTest, NoBase) {
   EXPECT_EQ(CDB.getCompileCommand(testPath("bar.cc")), None);
   auto Override = cmd(testPath("bar.cc"), "-DA=5");
   CDB.setCompileCommand(testPath("bar.cc"), Override);
-  EXPECT_EQ(CDB.getCompileCommand(testPath("bar.cc")), Override);
+  EXPECT_THAT(CDB.getCompileCommand(testPath("bar.cc"))->CommandLine,
+              Contains("-DA=5"));
 
   EXPECT_THAT(CDB.getFallbackCommand(testPath("foo.cc")).CommandLine,
               ElementsAre(EndsWith("clang"), testPath("foo.cc"), "-DA=6"));
@@ -109,6 +115,35 @@ TEST_F(OverlayCDBTest, Watch) {
   Outer.setCompileCommand("C.cpp", llvm::None);
   EXPECT_THAT(Changes, ElementsAre(ElementsAre("A.cpp"), ElementsAre("B.cpp"),
                                    ElementsAre("A.cpp"), ElementsAre("C.cpp")));
+}
+
+TEST_F(OverlayCDBTest, Adjustments) {
+  OverlayCDB CDB(Base.get(), {}, std::string(""));
+  auto Cmd = CDB.getCompileCommand(testPath("foo.cc")).getValue();
+  // Delete the file name.
+  Cmd.CommandLine.pop_back();
+
+  // Check dependency file commands are dropped.
+  Cmd.CommandLine.push_back("-MF");
+  Cmd.CommandLine.push_back("random-dependency");
+
+  // Check plugin-related commands are dropped.
+  Cmd.CommandLine.push_back("-Xclang");
+  Cmd.CommandLine.push_back("-load");
+  Cmd.CommandLine.push_back("-Xclang");
+  Cmd.CommandLine.push_back("random-plugin");
+
+  Cmd.CommandLine.push_back("-DA=5");
+  Cmd.CommandLine.push_back(Cmd.Filename);
+
+  CDB.setCompileCommand(testPath("foo.cc"), Cmd);
+
+  EXPECT_THAT(CDB.getCompileCommand(testPath("foo.cc"))->CommandLine,
+              AllOf(Contains("-fsyntax-only"), Contains("-DA=5"),
+                    Contains(testPath("foo.cc")), Not(Contains("-MF")),
+                    Not(Contains("random-dependency")),
+                    Not(Contains("-Xclang")), Not(Contains("-load")),
+                    Not(Contains("random-plugin"))));
 }
 
 } // namespace

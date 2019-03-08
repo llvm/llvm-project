@@ -84,6 +84,9 @@ class SummaryView : public View {
   // True if throughput was affected by dispatch stalls.
   bool SeenStallCycles;
 
+  // True if the bottleneck analysis should be displayed.
+  bool ShouldEmitBottleneckAnalysis;
+
   // Compute the reciprocal throughput for the analyzed code block.
   // The reciprocal block throughput is computed as the MAX between:
   //   - NumMicroOps / DispatchWidth
@@ -95,7 +98,7 @@ class SummaryView : public View {
 
 public:
   SummaryView(const llvm::MCSchedModel &Model, llvm::ArrayRef<llvm::MCInst> S,
-              unsigned Width);
+              unsigned Width, bool EmitBottleneckAnalysis);
 
   void onCycleEnd() override {
     ++TotalCycles;

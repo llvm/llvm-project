@@ -187,7 +187,7 @@ defm : BWWriteResPair<WritePOPCNT,         [BWPort1], 3>;
 // Integer shifts and rotates.
 defm : BWWriteResPair<WriteShift,    [BWPort06],  1>;
 defm : BWWriteResPair<WriteShiftCL,  [BWPort06,BWPort0156],  3, [2,1], 3>;
-defm : BWWriteResPair<WriteRotate,   [BWPort06],  2, [2], 2>;
+defm : BWWriteResPair<WriteRotate,   [BWPort06],  1, [1], 1>;
 defm : BWWriteResPair<WriteRotateCL, [BWPort06,BWPort0156],  3, [2,1], 3>;
 
 // SHLD/SHRD.
@@ -1104,6 +1104,14 @@ def BWWriteResGroup87 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort06]> {
 }
 def: InstRW<[BWWriteResGroup87], (instregex "ROL(8|16|32|64)m(1|i)",
                                             "ROR(8|16|32|64)m(1|i)")>;
+
+def BWWriteResGroup87_1 : SchedWriteRes<[BWPort06]> {
+  let Latency = 2;
+  let NumMicroOps = 2;
+  let ResourceCycles = [2];
+}
+def: InstRW<[BWWriteResGroup87_1], (instrs ROL8r1, ROL16r1, ROL32r1, ROL64r1,
+                                           ROR8r1, ROR16r1, ROR32r1, ROR64r1)>;
 
 def BWWriteResGroup88 : SchedWriteRes<[BWPort4,BWPort23,BWPort237,BWPort0156]> {
   let Latency = 7;

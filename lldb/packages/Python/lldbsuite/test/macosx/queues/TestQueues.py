@@ -56,7 +56,23 @@ class TestQueues(TestBase):
              expected_running,
              (queue.GetNumRunningItems())))
 
+    def describe_threads(self):
+        desc = []
+        for x in self.inferior_process:
+            id = x.GetIndexID()
+            reason_str = lldbutil.stop_reason_to_str(x.GetStopReason())
+
+            location = "\t".join([lldbutil.get_description(
+                x.GetFrameAtIndex(i)) for i in range(x.GetNumFrames())])
+            desc.append(
+                "thread %d: %s at\n\t%s" %
+                (id, reason_str, location))
+        print('\n'.join(desc))
+
     def check_number_of_threads_owned_by_queue(self, queue, number_threads):
+        if (queue.GetNumThreads() != number_threads):
+            self.describe_threads()
+
         self.assertTrue(
             queue.GetNumThreads() == number_threads,
             "queue %s should have %d thread executing, but has %d" %
@@ -124,6 +140,8 @@ class TestQueues(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
         if len(threads) != 1:
             self.fail("Failed to stop at breakpoint 1.")
+
+        self.inferior_process = process
 
         queue_submittor_1 = lldb.SBQueue()
         queue_performer_1 = lldb.SBQueue()
@@ -290,6 +308,8 @@ class TestQueues(TestBase):
         threads = lldbutil.get_threads_stopped_at_breakpoint(process, break1)
         if len(threads) != 1:
             self.fail("Failed to stop at breakpoint 1.")
+
+        self.inferior_process = process
 
         libbtr_module_filespec = lldb.SBFileSpec("libBacktraceRecording.dylib")
         libbtr_module = target.FindModule(libbtr_module_filespec)

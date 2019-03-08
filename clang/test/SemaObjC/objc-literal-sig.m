@@ -39,6 +39,8 @@ typedef _Bool BOOL;
 
 // All tests are doubled to make sure that a bad method is not saved
 // and then used un-checked.
+const char *getStr(void);
+
 void test_sig() {
   (void)@__objc_yes; // expected-error{{literal construction method 'numberWithBool:' has incompatible signature}}
   (void)@__objc_yes; // expected-error{{literal construction method 'numberWithBool:' has incompatible signature}}
@@ -46,6 +48,6 @@ void test_sig() {
   id array2 = @[ @17 ]; // expected-error{{literal construction method 'arrayWithObjects:count:' has incompatible signature}}
   id dict = @{ @"hello" : @17 }; // expected-error{{literal construction method 'dictionaryWithObjects:forKeys:count:' has incompatible signature}}
   id dict2 = @{ @"hello" : @17 }; // expected-error{{literal construction method 'dictionaryWithObjects:forKeys:count:' has incompatible signature}}
-  id str = @("hello"); // expected-error{{literal construction method 'stringWithUTF8String:' has incompatible signature}}
-  id str2 = @("hello"); // expected-error{{literal construction method 'stringWithUTF8String:' has incompatible signature}}
+  id str = @(getStr()); // expected-error{{literal construction method 'stringWithUTF8String:' has incompatible signature}}
+  id str2 = @(getStr()); // expected-error{{literal construction method 'stringWithUTF8String:' has incompatible signature}}
 }

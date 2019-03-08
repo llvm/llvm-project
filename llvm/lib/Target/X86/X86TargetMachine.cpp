@@ -69,7 +69,6 @@ extern "C" void LLVMInitializeX86Target() {
   initializeFixupBWInstPassPass(PR);
   initializeEvexToVexInstPassPass(PR);
   initializeFixupLEAPassPass(PR);
-  initializeShadowCallStackPass(PR);
   initializeX86CallFrameOptimizationPass(PR);
   initializeX86CmovConverterPassPass(PR);
   initializeX86ExecutionDomainFixPass(PR);
@@ -489,7 +488,6 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createBreakFalseDeps());
   }
 
-  addPass(createShadowCallStackPass());
   addPass(createX86IndirectBranchTrackingPass());
 
   if (UseVZeroUpper)

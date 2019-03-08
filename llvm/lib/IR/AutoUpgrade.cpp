@@ -493,6 +493,12 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
 static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
   assert(F && "Illegal to upgrade a non-existent Function.");
 
+  // Upgrade intrinsics "clang.arc.use" which doesn't start with "llvm.".
+  if (F->getName() == "clang.arc.use") {
+    NewFn = nullptr;
+    return true;
+  }
+
   // Quickly eliminate it, if it's not a candidate.
   StringRef Name = F->getName();
   if (Name.size() <= 8 || !Name.startswith("llvm."))
@@ -1570,6 +1576,14 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   if (!NewFn) {
     // Get the Function's name.
     StringRef Name = F->getName();
+
+    // clang.arc.use is an old name for llvm.arc.clang.arc.use. It is dropped
+    // from upgrader because the optimizer now only recognizes intrinsics for
+    // ARC runtime calls.
+    if (Name == "clang.arc.use") {
+      CI->eraseFromParent();
+      return;
+    }
 
     assert(Name.startswith("llvm.") && "Intrinsic doesn't start with 'llvm.'");
     Name = Name.substr(5);

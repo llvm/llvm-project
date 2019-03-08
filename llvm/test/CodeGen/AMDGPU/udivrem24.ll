@@ -4,8 +4,8 @@
 
 ; FUNC-LABEL: {{^}}udiv24_i8:
 ; SI: v_cvt_f32_ubyte
-; SI: v_cvt_f32_ubyte
-; SI: v_rcp_iflag_f32
+; SI-DAG: v_cvt_f32_ubyte
+; SI-DAG: v_rcp_iflag_f32
 ; SI: v_cvt_u32_f32
 
 ; EG: UINT_TO_FLT
@@ -176,8 +176,8 @@ define amdgpu_kernel void @test_no_udiv24_i32_2(i32 addrspace(1)* %out, i32 addr
 
 ; FUNC-LABEL: {{^}}urem24_i8:
 ; SI: v_cvt_f32_ubyte
-; SI: v_cvt_f32_ubyte
-; SI: v_rcp_iflag_f32
+; SI-DAG: v_cvt_f32_ubyte
+; SI-DAG: v_rcp_iflag_f32
 ; SI: v_cvt_u32_f32
 
 ; EG: UINT_TO_FLT

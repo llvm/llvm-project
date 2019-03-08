@@ -933,14 +933,14 @@ TEST(ExprMutationAnalyzerTest, CommaExprWithCallUnresolved) {
   auto AST = buildASTFromCodeWithArgs(
       "template <class T> struct S;"
       "template <class T> void f() { S<T> s; int x, y; s.mf((y, x)); }",
-      {"-fno-delayed-template-parsing -Wno-unused-value"});
+      {"-fno-delayed-template-parsing", "-Wno-unused-value"});
   auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
 
   AST = buildASTFromCodeWithArgs(
       "template <class T> void f(T t) { int x, y; g(t, (y, x)); }",
-      {"-fno-delayed-template-parsing -Wno-unused-value"});
+      {"-fno-delayed-template-parsing", "-Wno-unused-value"});
   Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));
 }
@@ -1006,7 +1006,7 @@ TEST(ExprMutationAnalyzerTest, CommaExprAsUniquePtr) {
       UniquePtrDef + "template <class T> void f() "
                      "{ UniquePtr<T> x; UniquePtr<T> y;"
                      " (y, x)->mf(); }",
-      {"-fno-delayed-template-parsing -Wno-unused-value"});
+      {"-fno-delayed-template-parsing", "-Wno-unused-value"});
   const auto Results =
       match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
   EXPECT_TRUE(isMutated(Results, AST.get()));

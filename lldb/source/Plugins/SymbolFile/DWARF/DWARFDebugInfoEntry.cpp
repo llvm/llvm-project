@@ -326,6 +326,7 @@ bool DWARFDebugInfoEntry::Extract(SymbolFileDWARF *dwarf2Data,
                 break;
 
               // signed or unsigned LEB 128 values
+              case DW_FORM_addrx:
               case DW_FORM_sdata:
               case DW_FORM_udata:
               case DW_FORM_ref_udata:
@@ -456,6 +457,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 
         case DW_AT_high_pc:
           if (form_value.Form() == DW_FORM_addr ||
+              form_value.Form() == DW_FORM_addrx ||
               form_value.Form() == DW_FORM_GNU_addr_index) {
             hi_pc = form_value.Address();
           } else {
@@ -1031,7 +1033,8 @@ dw_addr_t DWARFDebugInfoEntry::GetAttributeHighPC(
   if (GetAttributeValue(dwarf2Data, cu, DW_AT_high_pc, form_value, nullptr,
                         check_specification_or_abstract_origin)) {
     dw_form_t form = form_value.Form();
-    if (form == DW_FORM_addr || form == DW_FORM_GNU_addr_index)
+    if (form == DW_FORM_addr || form == DW_FORM_addrx ||
+        form == DW_FORM_GNU_addr_index)
       return form_value.Address();
 
     // DWARF4 can specify the hi_pc as an <offset-from-lowpc>
