@@ -23,12 +23,6 @@
 
 using namespace lldb_vscode;
 
-namespace {
-  inline bool IsEmptyLine(llvm::StringRef S) {
-    return S.ltrim().empty();
-  }
-} // namespace
-
 namespace lldb_vscode {
 
 VSCode g_vsc;

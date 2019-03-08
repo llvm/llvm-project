@@ -54,7 +54,6 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
   llvm::sys::path::append(clang_dir, relative_path);
   if (!verify || VerifyClangPath(clang_dir)) {
     file_spec.GetDirectory().SetString(clang_dir);
-    FileSystem::Instance().Resolve(file_spec);
     return true;
   }
 

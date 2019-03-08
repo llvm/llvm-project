@@ -1227,20 +1227,23 @@ void request_launch(const llvm::json::Object &request) {
 
   // Grab the name of the program we need to debug and set it as the first
   // argument that will be passed to the program we will debug.
-  const auto program = GetString(arguments, "program");
+  llvm::StringRef program = GetString(arguments, "program");
   if (!program.empty()) {
     lldb::SBFileSpec program_fspec(program.data(), true /*resolve_path*/);
-
     g_vsc.launch_info.SetExecutableFile(program_fspec,
                                         true /*add_as_first_arg*/);
     const char *target_triple = nullptr;
     const char *uuid_cstr = nullptr;
     // Stand alone debug info file if different from executable
     const char *symfile = nullptr;
-    g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
-    if (error.Fail()) {
+    lldb::SBModule module = g_vsc.target.AddModule(
+        program.data(), target_triple, uuid_cstr, symfile);
+    if (!module.IsValid()) {
       response["success"] = llvm::json::Value(false);
-      EmplaceSafeString(response, "message", std::string(error.GetCString()));
+
+      EmplaceSafeString(
+          response, "message",
+          llvm::formatv("Could not load program '{0}'.", program).str());
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
     }
   }

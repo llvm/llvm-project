@@ -16,7 +16,51 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include <iostream>
 #include <map>
+#include <type_traits>
+
+template <typename T,
+          typename std::enable_if<std::is_fundamental<T>::value, int>::type = 0>
+void log_append(llvm::raw_string_ostream &ss, const T &t) {
+  ss << t;
+}
+
+template <typename T, typename std::enable_if<!std::is_fundamental<T>::value,
+                                              int>::type = 0>
+void log_append(llvm::raw_string_ostream &ss, const T &t) {
+  ss << &t;
+}
+
+template <typename T>
+void log_append(llvm::raw_string_ostream &ss, const T *t) {
+  ss << t;
+}
+
+inline template <>
+void log_append<char>(llvm::raw_string_ostream &ss, const char *t) {
+  ss << t;
+}
+
+template <typename Head>
+void log_helper(llvm::raw_string_ostream &ss, const Head &head) {
+  log_append(ss, head);
+}
+
+template <typename Head, typename... Tail>
+void log_helper(llvm::raw_string_ostream &ss, const Head &head,
+                const Tail &... tail) {
+  log_append(ss, head);
+  ss << ", ";
+  log_helper(ss, tail...);
+}
+
+template <typename... Ts> std::string log_args(const Ts &... ts) {
+  std::string buffer;
+  llvm::raw_string_ostream ss(buffer);
+  log_helper(ss, ts...);
+  return ss.str();
+}
 
 // Define LLDB_REPRO_INSTR_TRACE to trace to stderr instead of LLDB's log
 // infrastructure. This is useful when you need to see traces before the logger
@@ -38,8 +82,8 @@
                              #Result, #Class, #Method, #Signature)
 
 #define LLDB_RECORD_CONSTRUCTOR(Class, Signature, ...)                         \
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
-           LLVM_PRETTY_FUNCTION);                                              \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0} ({1})",             \
+           LLVM_PRETTY_FUNCTION, log_args(__VA_ARGS__));                       \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
     lldb_private::repro::Recorder sb_recorder(                                 \
@@ -61,8 +105,8 @@
   }
 
 #define LLDB_RECORD_METHOD(Result, Class, Method, Signature, ...)              \
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
-           LLVM_PRETTY_FUNCTION);                                              \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0} ({1})",             \
+           LLVM_PRETTY_FUNCTION, log_args(__VA_ARGS__));                       \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -75,8 +119,8 @@
   }
 
 #define LLDB_RECORD_METHOD_CONST(Result, Class, Method, Signature, ...)        \
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
-           LLVM_PRETTY_FUNCTION);                                              \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0} ({1})",             \
+           LLVM_PRETTY_FUNCTION, log_args(__VA_ARGS__));                       \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \
@@ -116,8 +160,8 @@
   }
 
 #define LLDB_RECORD_STATIC_METHOD(Result, Class, Method, Signature, ...)       \
-  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0}",                   \
-           LLVM_PRETTY_FUNCTION);                                              \
+  LLDB_LOG(GetLogIfAllCategoriesSet(LIBLLDB_LOG_API), "{0} ({1})",             \
+           LLVM_PRETTY_FUNCTION, log_args(__VA_ARGS__));                       \
   llvm::Optional<lldb_private::repro::Recorder> sb_recorder;                   \
   if (lldb_private::repro::InstrumentationData data =                          \
           LLDB_GET_INSTRUMENTATION_DATA()) {                                   \

@@ -100,7 +100,6 @@ lldb::SBQueue SBThread::GetQueue() const {
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (exe_ctx.HasThreadScope()) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
@@ -108,17 +107,8 @@ lldb::SBQueue SBThread::GetQueue() const {
       if (queue_sp) {
         sb_queue.SetQueue(queue_sp);
       }
-    } else {
-      if (log)
-        log->Printf("SBThread(%p)::GetQueue() => error: process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetQueue () => SBQueue(%p)",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                static_cast<void *>(queue_sp.get()));
 
   return LLDB_RECORD_RESULT(sb_queue);
 }
@@ -149,8 +139,6 @@ void SBThread::Clear() {
 StopReason SBThread::GetStopReason() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::StopReason, SBThread, GetStopReason);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   StopReason reason = eStopReasonInvalid;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -159,18 +147,8 @@ StopReason SBThread::GetStopReason() {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       return exe_ctx.GetThreadPtr()->GetStopReason();
-    } else {
-      if (log)
-        log->Printf(
-            "SBThread(%p)::GetStopReason() => error: process is running",
-            static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetStopReason () => %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                Thread::StopReasonAsCString(reason));
 
   return reason;
 }
@@ -219,12 +197,6 @@ size_t SBThread::GetStopReasonDataCount() {
           return 1;
         }
       }
-    } else {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-      if (log)
-        log->Printf("SBThread(%p)::GetStopReasonDataCount() => error: process "
-                    "is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
   return 0;
@@ -287,12 +259,6 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
           return stop_info_sp->GetValue();
         }
       }
-    } else {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-      if (log)
-        log->Printf("SBThread(%p)::GetStopReasonDataAtIndex() => error: "
-                    "process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
   return 0;
@@ -350,8 +316,6 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
   LLDB_RECORD_METHOD(size_t, SBThread, GetStopDescription, (char *, size_t),
                      dst, dst_len);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
@@ -363,10 +327,6 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
       if (stop_info_sp) {
         const char *stop_desc = stop_info_sp->GetDescription();
         if (stop_desc) {
-          if (log)
-            log->Printf(
-                "SBThread(%p)::GetStopDescription (dst, dst_len) => \"%s\"",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), stop_desc);
           if (dst)
             return ::snprintf(dst, dst_len, "%s", stop_desc);
           else {
@@ -431,11 +391,6 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
           }
 
           if (stop_desc && stop_desc[0]) {
-            if (log)
-              log->Printf(
-                  "SBThread(%p)::GetStopDescription (dst, dst_len) => '%s'",
-                  static_cast<void *>(exe_ctx.GetThreadPtr()), stop_desc);
-
             if (dst)
               return ::snprintf(dst, dst_len, "%s", stop_desc) +
                      1; // Include the NULL byte
@@ -447,12 +402,6 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
           }
         }
       }
-    } else {
-      Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-      if (log)
-        log->Printf(
-            "SBThread(%p)::GetStopDescription() => error: process is running",
-            static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
   if (dst)
@@ -463,7 +412,6 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
 SBValue SBThread::GetStopReturnValue() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBValue, SBThread, GetStopReturnValue);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -475,19 +423,8 @@ SBValue SBThread::GetStopReturnValue() {
       if (stop_info_sp) {
         return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
       }
-    } else {
-      if (log)
-        log->Printf(
-            "SBThread(%p)::GetStopReturnValue() => error: process is running",
-            static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetStopReturnValue () => %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                return_valobj_sp.get() ? return_valobj_sp->GetValueAsCString()
-                                       : "<no return value>");
 
   return LLDB_RECORD_RESULT(SBValue(return_valobj_sp));
 }
@@ -517,7 +454,6 @@ uint32_t SBThread::GetIndexID() const {
 const char *SBThread::GetName() const {
   LLDB_RECORD_METHOD_CONST_NO_ARGS(const char *, SBThread, GetName);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   const char *name = NULL;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -526,17 +462,8 @@ const char *SBThread::GetName() const {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       name = exe_ctx.GetThreadPtr()->GetName();
-    } else {
-      if (log)
-        log->Printf("SBThread(%p)::GetName() => error: process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetName () => %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                name ? name : "NULL");
 
   return name;
 }
@@ -548,22 +475,12 @@ const char *SBThread::GetQueueName() const {
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (exe_ctx.HasThreadScope()) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       name = exe_ctx.GetThreadPtr()->GetQueueName();
-    } else {
-      if (log)
-        log->Printf("SBThread(%p)::GetQueueName() => error: process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetQueueName () => %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                name ? name : "NULL");
 
   return name;
 }
@@ -575,21 +492,12 @@ lldb::queue_id_t SBThread::GetQueueID() const {
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   if (exe_ctx.HasThreadScope()) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       id = exe_ctx.GetThreadPtr()->GetQueueID();
-    } else {
-      if (log)
-        log->Printf("SBThread(%p)::GetQueueID() => error: process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetQueueID () => 0x%" PRIx64,
-                static_cast<void *>(exe_ctx.GetThreadPtr()), id);
 
   return id;
 }
@@ -598,7 +506,6 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   LLDB_RECORD_METHOD(bool, SBThread, GetInfoItemByPathAsString,
                      (const char *, lldb::SBStream &), path, strm);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   bool success = false;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -637,17 +544,8 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
           }
         }
       }
-    } else {
-      if (log)
-        log->Printf("SBThread(%p)::GetInfoItemByPathAsString() => error: "
-                    "process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetInfoItemByPathAsString (\"%s\") => \"%s\"",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), path, strm.GetData());
 
   return success;
 }
@@ -698,15 +596,8 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   LLDB_RECORD_METHOD(void, SBThread, StepOver, (lldb::RunMode, lldb::SBError &),
                      stop_other_threads, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf("SBThread(%p)::StepOver (stop_other_threads='%s')",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                Thread::RunModeAsCString(stop_other_threads));
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
@@ -756,17 +647,9 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
                      (const char *, uint32_t, lldb::SBError &, lldb::RunMode),
                      target_name, end_line, error, stop_other_threads);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf(
-        "SBThread(%p)::StepInto (target_name='%s', stop_other_threads='%s')",
-        static_cast<void *>(exe_ctx.GetThreadPtr()),
-        target_name ? target_name : "<NULL>",
-        Thread::RunModeAsCString(stop_other_threads));
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
@@ -819,14 +702,8 @@ void SBThread::StepOut() {
 void SBThread::StepOut(SBError &error) {
   LLDB_RECORD_METHOD(void, SBThread, StepOut, (lldb::SBError &), error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf("SBThread(%p)::StepOut ()",
-                static_cast<void *>(exe_ctx.GetThreadPtr()));
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
@@ -862,28 +739,16 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
   LLDB_RECORD_METHOD(void, SBThread, StepOutOfFrame,
                      (lldb::SBFrame &, lldb::SBError &), sb_frame, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   if (!sb_frame.IsValid()) {
-    if (log)
-      log->Printf(
-          "SBThread(%p)::StepOutOfFrame passed an invalid frame, returning.",
-          static_cast<void *>(exe_ctx.GetThreadPtr()));
     error.SetErrorString("passed invalid SBFrame object");
     return;
   }
 
   StackFrameSP frame_sp(sb_frame.GetFrameSP());
-  if (log) {
-    SBStream frame_desc_strm;
-    sb_frame.GetDescription(frame_desc_strm);
-    log->Printf("SBThread(%p)::StepOutOfFrame (frame = SBFrame(%p): %s)",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                static_cast<void *>(frame_sp.get()), frame_desc_strm.GetData());
-  }
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
@@ -894,10 +759,6 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
   bool stop_other_threads = false;
   Thread *thread = exe_ctx.GetThreadPtr();
   if (sb_frame.GetThread().GetThreadID() != thread->GetID()) {
-    log->Printf("SBThread(%p)::StepOutOfFrame passed a frame from another "
-                "thread (0x%" PRIx64 " vrs. 0x%" PRIx64 ", returning.",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                sb_frame.GetThread().GetThreadID(), thread->GetID());
     error.SetErrorString("passed a frame from another thread");
     return;
   }
@@ -924,14 +785,8 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   LLDB_RECORD_METHOD(void, SBThread, StepInstruction, (bool, lldb::SBError &),
                      step_over, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf("SBThread(%p)::StepInstruction (step_over=%i)",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), step_over);
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
@@ -960,14 +815,8 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
   LLDB_RECORD_METHOD(void, SBThread, RunToAddress,
                      (lldb::addr_t, lldb::SBError &), addr, error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf("SBThread(%p)::RunToAddress (addr=0x%" PRIx64 ")",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), addr);
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
@@ -998,24 +847,12 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
                      sb_file_spec, line);
 
   SBError sb_error;
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   char path[PATH_MAX];
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
   StackFrameSP frame_sp(sb_frame.GetFrameSP());
-
-  if (log) {
-    SBStream frame_desc_strm;
-    sb_frame.GetDescription(frame_desc_strm);
-    sb_file_spec->GetPath(path, sizeof(path));
-    log->Printf("SBThread(%p)::StepOverUntil (frame = SBFrame(%p): %s, "
-                "file+line = %s:%u)",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                static_cast<void *>(frame_sp.get()), frame_desc_strm.GetData(),
-                path, line);
-  }
 
   if (exe_ctx.HasThreadScope()) {
     Target *target = exe_ctx.GetTargetPtr();
@@ -1135,16 +972,10 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
                      (const char *, bool), script_class_name,
                      resume_immediately);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   SBError error;
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log) {
-    log->Printf("SBThread(%p)::StepUsingScriptedThreadPlan: class name: %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), script_class_name);
-  }
 
   if (!exe_ctx.HasThreadScope()) {
     error.SetErrorString("this SBThread object is invalid");
@@ -1176,16 +1007,10 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
   LLDB_RECORD_METHOD(lldb::SBError, SBThread, JumpToLine,
                      (lldb::SBFileSpec &, uint32_t), file_spec, line);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   SBError sb_error;
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf("SBThread(%p)::JumpToLine (file+line = %s:%u)",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                file_spec->GetPath().c_str(), line);
 
   if (!exe_ctx.HasThreadScope()) {
     sb_error.SetErrorString("this SBThread object is invalid");
@@ -1205,15 +1030,8 @@ SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
 
   SBError sb_error;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf("SBThread(%p)::ReturnFromFrame (frame=%d)",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                frame.GetFrameID());
 
   if (exe_ctx.HasThreadScope()) {
     Thread *thread = exe_ctx.GetThreadPtr();
@@ -1230,14 +1048,8 @@ SBError SBThread::UnwindInnermostExpression() {
 
   SBError sb_error;
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (log)
-    log->Printf("SBThread(%p)::UnwindExpressionEvaluation",
-                static_cast<void *>(exe_ctx.GetThreadPtr()));
 
   if (exe_ctx.HasThreadScope()) {
     Thread *thread = exe_ctx.GetThreadPtr();
@@ -1259,7 +1071,6 @@ bool SBThread::Suspend() {
 bool SBThread::Suspend(SBError &error) {
   LLDB_RECORD_METHOD(bool, SBThread, Suspend, (lldb::SBError &), error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
@@ -1271,15 +1082,9 @@ bool SBThread::Suspend(SBError &error) {
       result = true;
     } else {
       error.SetErrorString("process is running");
-      if (log)
-        log->Printf("SBThread(%p)::Suspend() => error: process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   } else
     error.SetErrorString("this SBThread object is invalid");
-  if (log)
-    log->Printf("SBThread(%p)::Suspend() => %i",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), result);
   return result;
 }
 
@@ -1293,7 +1098,6 @@ bool SBThread::Resume() {
 bool SBThread::Resume(SBError &error) {
   LLDB_RECORD_METHOD(bool, SBThread, Resume, (lldb::SBError &), error);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
 
@@ -1306,15 +1110,9 @@ bool SBThread::Resume(SBError &error) {
       result = true;
     } else {
       error.SetErrorString("process is running");
-      if (log)
-        log->Printf("SBThread(%p)::Resume() => error: process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   } else
     error.SetErrorString("this SBThread object is invalid");
-  if (log)
-    log->Printf("SBThread(%p)::Resume() => %i",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), result);
   return result;
 }
 
@@ -1353,23 +1151,11 @@ SBProcess SBThread::GetProcess() {
     sb_process.SetSP(exe_ctx.GetProcessSP());
   }
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  if (log) {
-    SBStream frame_desc_strm;
-    sb_process.GetDescription(frame_desc_strm);
-    log->Printf("SBThread(%p)::GetProcess () => SBProcess(%p): %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                static_cast<void *>(sb_process.GetSP().get()),
-                frame_desc_strm.GetData());
-  }
-
   return LLDB_RECORD_RESULT(sb_process);
 }
 
 uint32_t SBThread::GetNumFrames() {
   LLDB_RECORD_METHOD_NO_ARGS(uint32_t, SBThread, GetNumFrames);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   uint32_t num_frames = 0;
   std::unique_lock<std::recursive_mutex> lock;
@@ -1379,24 +1165,14 @@ uint32_t SBThread::GetNumFrames() {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       num_frames = exe_ctx.GetThreadPtr()->GetStackFrameCount();
-    } else {
-      if (log)
-        log->Printf("SBThread(%p)::GetNumFrames() => error: process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
-
-  if (log)
-    log->Printf("SBThread(%p)::GetNumFrames () => %u",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), num_frames);
 
   return num_frames;
 }
 
 SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
   LLDB_RECORD_METHOD(lldb::SBFrame, SBThread, GetFrameAtIndex, (uint32_t), idx);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBFrame sb_frame;
   StackFrameSP frame_sp;
@@ -1408,20 +1184,7 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       frame_sp = exe_ctx.GetThreadPtr()->GetStackFrameAtIndex(idx);
       sb_frame.SetFrameSP(frame_sp);
-    } else {
-      if (log)
-        log->Printf(
-            "SBThread(%p)::GetFrameAtIndex() => error: process is running",
-            static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
-  }
-
-  if (log) {
-    SBStream frame_desc_strm;
-    sb_frame.GetDescription(frame_desc_strm);
-    log->Printf("SBThread(%p)::GetFrameAtIndex (idx=%d) => SBFrame(%p): %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), idx,
-                static_cast<void *>(frame_sp.get()), frame_desc_strm.GetData());
   }
 
   return LLDB_RECORD_RESULT(sb_frame);
@@ -1429,8 +1192,6 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
 
 lldb::SBFrame SBThread::GetSelectedFrame() {
   LLDB_RECORD_METHOD_NO_ARGS(lldb::SBFrame, SBThread, GetSelectedFrame);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBFrame sb_frame;
   StackFrameSP frame_sp;
@@ -1442,20 +1203,7 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
       frame_sp = exe_ctx.GetThreadPtr()->GetSelectedFrame();
       sb_frame.SetFrameSP(frame_sp);
-    } else {
-      if (log)
-        log->Printf(
-            "SBThread(%p)::GetSelectedFrame() => error: process is running",
-            static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
-  }
-
-  if (log) {
-    SBStream frame_desc_strm;
-    sb_frame.GetDescription(frame_desc_strm);
-    log->Printf("SBThread(%p)::GetSelectedFrame () => SBFrame(%p): %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()),
-                static_cast<void *>(frame_sp.get()), frame_desc_strm.GetData());
   }
 
   return LLDB_RECORD_RESULT(sb_frame);
@@ -1464,8 +1212,6 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
 lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
   LLDB_RECORD_METHOD(lldb::SBFrame, SBThread, SetSelectedFrame, (uint32_t),
                      idx);
-
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
   SBFrame sb_frame;
   StackFrameSP frame_sp;
@@ -1481,21 +1227,9 @@ lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
         thread->SetSelectedFrame(frame_sp.get());
         sb_frame.SetFrameSP(frame_sp);
       }
-    } else {
-      if (log)
-        log->Printf(
-            "SBThread(%p)::SetSelectedFrame() => error: process is running",
-            static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
 
-  if (log) {
-    SBStream frame_desc_strm;
-    sb_frame.GetDescription(frame_desc_strm);
-    log->Printf("SBThread(%p)::SetSelectedFrame (idx=%u) => SBFrame(%p): %s",
-                static_cast<void *>(exe_ctx.GetThreadPtr()), idx,
-                static_cast<void *>(frame_sp.get()), frame_desc_strm.GetData());
-  }
   return LLDB_RECORD_RESULT(sb_frame);
 }
 
@@ -1587,7 +1321,6 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
   LLDB_RECORD_METHOD(lldb::SBThread, SBThread, GetExtendedBacktraceThread,
                      (const char *), type);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
   SBThread sb_origin_thread;
@@ -1609,34 +1342,13 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
               // pointer retains the object.
               process->GetExtendedThreadList().AddThread(new_thread_sp);
               sb_origin_thread.SetThread(new_thread_sp);
-              if (log) {
-                const char *queue_name = new_thread_sp->GetQueueName();
-                if (queue_name == NULL)
-                  queue_name = "";
-                log->Printf("SBThread(%p)::GetExtendedBacktraceThread() => new "
-                            "extended Thread "
-                            "created (%p) with queue_id 0x%" PRIx64
-                            " queue name '%s'",
-                            static_cast<void *>(exe_ctx.GetThreadPtr()),
-                            static_cast<void *>(new_thread_sp.get()),
-                            new_thread_sp->GetQueueID(), queue_name);
-              }
             }
           }
         }
       }
-    } else {
-      if (log)
-        log->Printf("SBThread(%p)::GetExtendedBacktraceThread() => error: "
-                    "process is running",
-                    static_cast<void *>(exe_ctx.GetThreadPtr()));
     }
   }
 
-  if (log && !sb_origin_thread.IsValid())
-    log->Printf("SBThread(%p)::GetExtendedBacktraceThread() is not returning a "
-                "Valid thread",
-                static_cast<void *>(exe_ctx.GetThreadPtr()));
   return LLDB_RECORD_RESULT(sb_origin_thread);
 }
 
