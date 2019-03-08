@@ -129,6 +129,7 @@ struct arraytail { int i; int arr[]; };
 // PATTERN-O1-NOT: @__const.test_bool4_custom.custom
 // ZERO-O1-NOT: @__const.test_bool4_custom.custom
 
+// PATTERN: @__const.test_intptr4_uninit.uninit = private unnamed_addr constant [4 x i32*] [i32* inttoptr (i64 -6148914691236517206 to i32*), i32* inttoptr (i64 -6148914691236517206 to i32*), i32* inttoptr (i64 -6148914691236517206 to i32*), i32* inttoptr (i64 -6148914691236517206 to i32*)], align 16
 // PATTERN: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x i32*] [i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*)], align 16
 // ZERO: @__const.test_intptr4_custom.custom = private unnamed_addr constant [4 x i32*] [i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*), i32* inttoptr (i64 572662306 to i32*)], align 16
 // PATTERN-O0: @__const.test_tailpad4_uninit.uninit = private unnamed_addr constant [4 x { i16, i8, [1 x i8] }] [{ i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }, { i16, i8, [1 x i8] } { i16 -21846, i8 -86, [1 x i8] c"\AA" }], align 16
@@ -1018,20 +1019,13 @@ TEST_CUSTOM(bool4, bool[4], { true, true, true, true });
 // CHECK-NEXT:  call void @{{.*}}used{{.*}}%custom)
 
 TEST_UNINIT(intptr4, int*[4]);
-// CHECK-LABEL:      @test_intptr4_uninit()
-// CHECK:            %uninit = alloca [4 x i32*], align
-// CHECK-NEXT:       call void @{{.*}}used{{.*}}%uninit)
-// PATTERN-O1-LABEL: @test_intptr4_uninit()
-// PATTERN-O1:       %1 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 0
-// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %1, align 16
-// PATTERN-O1-NEXT:  %2 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 1
-// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %2, align 8
-// PATTERN-O1-NEXT:  %3 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 2
-// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %3, align 16
-// PATTERN-O1-NEXT:  %4 = getelementptr inbounds [4 x i32*], [4 x i32*]* %uninit, i64 0, i64 3
-// PATTERN-O1-NEXT:  store i32* inttoptr (i64 -6148914691236517206 to i32*), i32** %4, align 8
-// ZERO-LABEL:       @test_intptr4_uninit()
-// ZERO:             call void @llvm.memset{{.*}}, i8 0,
+// CHECK-LABEL: @test_intptr4_uninit()
+// CHECK:       %uninit = alloca [4 x i32*], align
+// CHECK-NEXT:  call void @{{.*}}used{{.*}}%uninit)
+// PATTERN-LABEL: @test_intptr4_uninit()
+// PATTERN: call void @llvm.memcpy{{.*}} @__const.test_intptr4_uninit.uninit
+// ZERO-LABEL: @test_intptr4_uninit()
+// ZERO: call void @llvm.memset{{.*}}, i8 0,
 
 TEST_BRACES(intptr4, int*[4]);
 // CHECK-LABEL: @test_intptr4_braces()
@@ -1130,7 +1124,7 @@ TEST_UNINIT(atomicnotlockfree, _Atomic(notlockfree));
 // PATTERN-LABEL: @test_atomicnotlockfree_uninit()
 // PATTERN-O0: call void @llvm.memcpy{{.*}} @__const.test_atomicnotlockfree_uninit.uninit
 // PATTERN-O1: bitcast
-// PATTERN-O1: call void @llvm.memset{{.*}}({{.*}}, i8 -86, i64 32
+// PATTERN-O1: call void @llvm.memset{{.*}}({{.*}}0, i8 -86, i64 32
 // ZERO-LABEL: @test_atomicnotlockfree_uninit()
 // ZERO: call void @llvm.memset{{.*}}, i8 0,
 
