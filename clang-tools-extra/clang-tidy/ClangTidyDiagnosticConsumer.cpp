@@ -449,8 +449,13 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
   FullSourceLoc Loc;
   if (Info.getLocation().isValid() && Info.hasSourceManager())
     Loc = FullSourceLoc(Info.getLocation(), Info.getSourceManager());
-  Converter.emitDiagnostic(Loc, DiagLevel, Message, Info.getRanges(),
+
+  StringRef FileName(Loc.printToString(Loc.getManager()));
+  if(getHeaderFilter()->match(FileName)) // only emit if FileName is matching
+  {
+    Converter.emitDiagnostic(Loc, DiagLevel, Message, Info.getRanges(),
                            Info.getFixItHints());
+  }
 
   if (Info.hasSourceManager())
     checkFilters(Info.getLocation(), Info.getSourceManager());
