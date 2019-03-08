@@ -22,40 +22,40 @@
 
 template <typename T,
           typename std::enable_if<std::is_fundamental<T>::value, int>::type = 0>
-void log_append(llvm::raw_string_ostream &ss, const T &t) {
+inline void log_append(llvm::raw_string_ostream &ss, const T &t) {
   ss << t;
 }
 
 template <typename T, typename std::enable_if<!std::is_fundamental<T>::value,
                                               int>::type = 0>
-void log_append(llvm::raw_string_ostream &ss, const T &t) {
+inline void log_append(llvm::raw_string_ostream &ss, const T &t) {
   ss << &t;
 }
 
 template <typename T>
-void log_append(llvm::raw_string_ostream &ss, const T *t) {
+inline void log_append(llvm::raw_string_ostream &ss, const T *t) {
   ss << t;
 }
 
-inline template <>
-void log_append<char>(llvm::raw_string_ostream &ss, const char *t) {
+template <>
+inline void log_append<char>(llvm::raw_string_ostream &ss, const char *t) {
   ss << t;
 }
 
 template <typename Head>
-void log_helper(llvm::raw_string_ostream &ss, const Head &head) {
+inline void log_helper(llvm::raw_string_ostream &ss, const Head &head) {
   log_append(ss, head);
 }
 
 template <typename Head, typename... Tail>
-void log_helper(llvm::raw_string_ostream &ss, const Head &head,
-                const Tail &... tail) {
+inline void log_helper(llvm::raw_string_ostream &ss, const Head &head,
+                       const Tail &... tail) {
   log_append(ss, head);
   ss << ", ";
   log_helper(ss, tail...);
 }
 
-template <typename... Ts> std::string log_args(const Ts &... ts) {
+template <typename... Ts> inline std::string log_args(const Ts &... ts) {
   std::string buffer;
   llvm::raw_string_ostream ss(buffer);
   log_helper(ss, ts...);
