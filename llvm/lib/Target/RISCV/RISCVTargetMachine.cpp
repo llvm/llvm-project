@@ -56,7 +56,7 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
                         getEffectiveRelocModel(TT, RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(make_unique<RISCVELFTargetObjectFile>()),
-      Subtarget(TT, CPU, FS, *this) {
+      Subtarget(TT, CPU, FS, Options.MCOptions.getABIName(), *this) {
   initAsmInfo();
 }
 
