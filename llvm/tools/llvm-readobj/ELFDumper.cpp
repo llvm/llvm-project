@@ -1114,16 +1114,6 @@ static const EnumEntry<unsigned> ElfSymbolVisibilities[] = {
     {"HIDDEN",    "HIDDEN",    ELF::STV_HIDDEN},
     {"PROTECTED", "PROTECTED", ELF::STV_PROTECTED}};
 
-static const EnumEntry<unsigned> ElfSymbolTypes[] = {
-    {"None",      "NOTYPE",  ELF::STT_NOTYPE},
-    {"Object",    "OBJECT",  ELF::STT_OBJECT},
-    {"Function",  "FUNC",    ELF::STT_FUNC},
-    {"Section",   "SECTION", ELF::STT_SECTION},
-    {"File",      "FILE",    ELF::STT_FILE},
-    {"Common",    "COMMON",  ELF::STT_COMMON},
-    {"TLS",       "TLS",     ELF::STT_TLS},
-    {"GNU_IFunc", "IFUNC",   ELF::STT_GNU_IFUNC}};
-
 static const EnumEntry<unsigned> AMDGPUSymbolTypes[] = {
   { "AMDGPU_HSA_KERNEL",            ELF::STT_AMDGPU_HSA_KERNEL }
 };
@@ -2730,15 +2720,18 @@ void GNUStyle<ELFT>::printRelocation(const ELFO *Obj, const Elf_Shdr *SymTab,
     printField(F);
 
   std::string Addend;
-  if (Sym && IsRela) {
-    if (R.r_addend < 0)
-      Addend = " - ";
-    else
-      Addend = " + ";
-  }
+  if (IsRela) {
+    int64_t RelAddend = R.r_addend;
+    if (Sym) {
+      if (R.r_addend < 0) {
+        Addend = " - ";
+        RelAddend = std::abs(RelAddend);
+      } else
+        Addend = " + ";
+    }
 
-  if (IsRela)
-    Addend += to_hexString(std::abs(R.r_addend), false);
+    Addend += to_hexString(RelAddend, false);
+  }
   OS << Addend << "\n";
 }
 
@@ -3388,17 +3381,18 @@ void GNUStyle<ELFT>::printDynamicRelocation(const ELFO *Obj, Elf_Rela R,
   for (auto &Field : Fields)
     printField(Field);
 
-  int64_t RelAddend = R.r_addend;
   std::string Addend;
-  if (!SymbolName.empty() && IsRela) {
-    if (R.r_addend < 0)
-      Addend = " - ";
-    else
-      Addend = " + ";
+  if (IsRela) {
+    int64_t RelAddend = R.r_addend;
+    if (!SymbolName.empty()) {
+      if (R.r_addend < 0) {
+        Addend = " - ";
+        RelAddend = std::abs(RelAddend);
+      } else
+        Addend = " + ";
+    }
+    Addend += to_string(format_hex_no_prefix(RelAddend, 1));
   }
-
-  if (IsRela)
-    Addend += to_string(format_hex_no_prefix(std::abs(RelAddend), 1));
   OS << Addend << "\n";
 }
 

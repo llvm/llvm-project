@@ -54,6 +54,7 @@ source_set("sources") {
     "hwasan_poisoning.h",
     "hwasan_report.cpp",
     "hwasan_report.h",
+    "hwasan_tag_mismatch_aarch64.S",
     "hwasan_thread.cpp",
     "hwasan_thread.h",
     "hwasan_thread_list.cpp",

@@ -21,7 +21,16 @@
 #define GET_INSTRINFO_HEADER
 #include "WebAssemblyGenInstrInfo.inc"
 
+#define GET_INSTRINFO_OPERAND_ENUM
+#include "WebAssemblyGenInstrInfo.inc"
+
 namespace llvm {
+
+namespace WebAssembly {
+
+int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
+
+}
 
 class WebAssemblySubtarget;
 

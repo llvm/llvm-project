@@ -131,14 +131,23 @@
 ; CHECK-NEXT: .b32 .debug_abbrev                   // Offset Into Abbrev. Section
 ; CHECK-NEXT: .b8 8                                // Address Size (in bytes)
 ; CHECK-NEXT: .b8 1                                // Abbrev [1] 0xb:0x81 DW_TAG_compile_unit
-; CHECK-NEXT: .b8 99,108,97,110,103                // DW_AT_producer
+; CHECK-NEXT: .b8 99                               // DW_AT_producer
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 103
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 12                               // DW_AT_language
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b8 116,46,99                        // DW_AT_name
+; CHECK-NEXT: .b8 116                              // DW_AT_name
+; CHECK-NEXT: .b8 46
+; CHECK-NEXT: .b8 99
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b32 .debug_line                     // DW_AT_stmt_list
-; CHECK-NEXT: .b8 116,101,115,116                  // DW_AT_comp_dir
+; CHECK-NEXT: .b8 116                              // DW_AT_comp_dir
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b64 Lfunc_begin0                    // DW_AT_low_pc
 ; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
@@ -147,7 +156,21 @@
 ; CHECK-NEXT: .b64 Lfunc_end0                      // DW_AT_high_pc
 ; CHECK-NEXT: .b8 1                                // DW_AT_frame_base
 ; CHECK-NEXT: .b8 156
-; CHECK-NEXT: .b8 117,115,101,95,100,98,103,95,100,101,99,108,97,114,101 // DW_AT_name
+; CHECK-NEXT: .b8 117                              // DW_AT_name
+; CHECK-NEXT: .b8 115
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 95
+; CHECK-NEXT: .b8 100
+; CHECK-NEXT: .b8 98
+; CHECK-NEXT: .b8 103
+; CHECK-NEXT: .b8 95
+; CHECK-NEXT: .b8 100
+; CHECK-NEXT: .b8 101
+; CHECK-NEXT: .b8 99
+; CHECK-NEXT: .b8 108
+; CHECK-NEXT: .b8 97
+; CHECK-NEXT: .b8 114
+; CHECK-NEXT: .b8 101
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 1                                // DW_AT_decl_file
 ; CHECK-NEXT: .b8 3                                // DW_AT_decl_line
@@ -167,7 +190,9 @@
 ; CHECK-NEXT: .b32 111                             // DW_AT_type
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: .b8 4                                // Abbrev [4] 0x6f:0x15 DW_TAG_structure_type
-; CHECK-NEXT: .b8 70,111,111                       // DW_AT_name
+; CHECK-NEXT: .b8 70                               // DW_AT_name
+; CHECK-NEXT: .b8 111
+; CHECK-NEXT: .b8 111
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 4                                // DW_AT_byte_size
 ; CHECK-NEXT: .b8 1                                // DW_AT_decl_file
@@ -183,7 +208,9 @@
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 0                                // End Of Children Mark
 ; CHECK-NEXT: .b8 6                                // Abbrev [6] 0x84:0x7 DW_TAG_base_type
-; CHECK-NEXT: .b8 105,110,116                      // DW_AT_name
+; CHECK-NEXT: .b8 105                              // DW_AT_name
+; CHECK-NEXT: .b8 110
+; CHECK-NEXT: .b8 116
 ; CHECK-NEXT: .b8 0
 ; CHECK-NEXT: .b8 5                                // DW_AT_encoding
 ; CHECK-NEXT: .b8 4                                // DW_AT_byte_size

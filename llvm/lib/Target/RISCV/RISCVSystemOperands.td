@@ -71,11 +71,9 @@ def : SysReg<"uip", 0x044>;
 // User Floating-Point CSRs
 //===--------------------------
 
-let FeaturesRequired = [{ {RISCV::FeatureStdExtF} }] in {
 def : SysReg<"fflags", 0x001>;
 def : SysReg<"frm", 0x002>;
 def : SysReg<"fcsr", 0x003>;
-}
 
 //===--------------------------
 // User Counter/Timers
