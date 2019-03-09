@@ -46,7 +46,6 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/OperatorKinds.h"
@@ -76,6 +75,7 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/Module.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/ModuleManager.h"
@@ -92,6 +92,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2359,6 +2360,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   RecordData Record;
   unsigned NumInputs = 0;
   unsigned NumUserInputs = 0;
+  StringRef BaseDirectoryAsWritten;
   while (true) {
     llvm::BitstreamEntry Entry = Stream.advance();
 
@@ -2559,7 +2561,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             ImportedName, /*FileMapOnly*/ true);
 
         if (ImportedFile.empty())
-          ImportedFile = ReadPath(F, Record, Idx);
+          // Use BaseDirectoryAsWritten to ensure we use the same path in the
+          // ModuleCache as when writing.
+          ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
         else
           SkipPath(Record, Idx);
 
@@ -2624,6 +2628,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       break;
 
     case MODULE_DIRECTORY: {
+      // Save the BaseDirectory as written in the PCM for computing the module
+      // filename for the ModuleCache.
+      BaseDirectoryAsWritten = Blob;
       assert(!F.ModuleName.empty() &&
              "MODULE_DIRECTORY found before MODULE_NAME");
       // If we've already loaded a module map file covering this module, we may
@@ -4162,6 +4169,14 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   assert(M && "Missing module file");
 
+  bool ShouldFinalizePCM = false;
+  auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
+    auto &MC = getModuleManager().getModuleCache();
+    if (ShouldFinalizePCM)
+      MC.finalizePCM(FileName);
+    else
+      MC.tryToDropPCM(FileName);
+  });
   ModuleFile &F = *M;
   BitstreamCursor &Stream = F.Stream;
   Stream = BitstreamCursor(PCHContainerRdr.ExtractPCH(*F.Buffer));
@@ -4228,6 +4243,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
       // Record that we've loaded this module.
       Loaded.push_back(ImportedModule(M, ImportedBy, ImportLoc));
+      ShouldFinalizePCM = true;
       return Success;
 
     case UNHASHED_CONTROL_BLOCK_ID:
@@ -4278,7 +4294,7 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     return Success;
 
   if (Result == OutOfDate && F.Kind == MK_ImplicitModule) {
-    // If this module has already been finalized in the PCMCache, we're stuck
+    // If this module has already been finalized in the ModuleCache, we're stuck
     // with it; we can only load a single version of each module.
     //
     // This can happen when a module is imported in two contexts: in one, as a
@@ -4296,7 +4312,7 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     // validation will fail during the as-system import since the PCM on disk
     // doesn't guarantee that -Werror was respected.  However, the -Werror
     // flags were checked during the initial as-user import.
-    if (PCMCache.isBufferFinal(F.FileName)) {
+    if (getModuleManager().getModuleCache().isPCMFinal(F.FileName)) {
       Diag(diag::warn_module_system_bit_conflict) << F.FileName;
       return Success;
     }
@@ -9085,6 +9101,14 @@ std::string ASTReader::ReadPath(ModuleFile &F, const RecordData &Record,
   return Filename;
 }
 
+std::string ASTReader::ReadPath(StringRef BaseDirectory,
+                                const RecordData &Record, unsigned &Idx) {
+  std::string Filename = ReadString(Record, Idx);
+  if (!BaseDirectory.empty())
+    ResolveImportedPath(Filename, BaseDirectory);
+  return Filename;
+}
+
 VersionTuple ASTReader::ReadVersionTuple(const RecordData &Record,
                                          unsigned &Idx) {
   unsigned Major = Record[Idx++];
@@ -11592,7 +11616,8 @@ void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
   }
 }
 
-ASTReader::ASTReader(Preprocessor &PP, ASTContext *Context,
+ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+                     ASTContext *Context,
                      const PCHContainerReader &PCHContainerRdr,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                      StringRef isysroot, bool DisableValidation,
@@ -11605,11 +11630,9 @@ ASTReader::ASTReader(Preprocessor &PP, ASTContext *Context,
                    : cast<ASTReaderListener>(new PCHValidator(PP, *this))),
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
       PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()), PP(PP),
-      ContextObj(Context),
-      ModuleMgr(PP.getFileManager(), PP.getPCMCache(), PCHContainerRdr,
-                PP.getHeaderSearchInfo()),
-      PCMCache(PP.getPCMCache()), DummyIdResolver(PP),
-      ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
+      ContextObj(Context), ModuleMgr(PP.getFileManager(), ModuleCache,
+                                     PCHContainerRdr, PP.getHeaderSearchInfo()),
+      DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
       DisableValidation(DisableValidation),
       AllowASTWithCompilerErrors(AllowASTWithCompilerErrors),
       AllowConfigurationMismatch(AllowConfigurationMismatch),

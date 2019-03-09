@@ -97,7 +97,7 @@ class HeaderSearchOptions;
 class LangOptions;
 class LazyASTUnresolvedSet;
 class MacroInfo;
-class MemoryBufferCache;
+class InMemoryModuleCache;
 class NamedDecl;
 class NamespaceDecl;
 class ObjCCategoryDecl;
@@ -439,9 +439,6 @@ private:
 
   /// The module manager which manages modules and their dependencies
   ModuleManager ModuleMgr;
-
-  /// The cache that manages memory buffers for PCM files.
-  MemoryBufferCache &PCMCache;
 
   /// A dummy identifier resolver used to merge TU-scope declarations in
   /// C, for the cases where we don't have a Sema object to provide a real
@@ -1474,8 +1471,8 @@ public:
   ///
   /// \param ReadTimer If non-null, a timer used to track the time spent
   /// deserializing.
-  ASTReader(Preprocessor &PP, ASTContext *Context,
-            const PCHContainerReader &PCHContainerRdr,
+  ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+            ASTContext *Context, const PCHContainerReader &PCHContainerRdr,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             StringRef isysroot = "", bool DisableValidation = false,
             bool AllowASTWithCompilerErrors = false,
@@ -2223,6 +2220,10 @@ public:
 
   // Read a path
   std::string ReadPath(ModuleFile &F, const RecordData &Record, unsigned &Idx);
+
+  // Read a path
+  std::string ReadPath(StringRef BaseDirectory, const RecordData &Record,
+                       unsigned &Idx);
 
   // Skip a path
   static void SkipPath(const RecordData &Record, unsigned &Idx) {

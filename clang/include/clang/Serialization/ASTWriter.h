@@ -74,8 +74,8 @@ class IdentifierResolver;
 class LangOptions;
 class MacroDefinitionRecord;
 class MacroInfo;
-class MemoryBufferCache;
 class Module;
+class InMemoryModuleCache;
 class ModuleFileExtension;
 class ModuleFileExtensionWriter;
 class NamedDecl;
@@ -132,7 +132,7 @@ private:
   const SmallVectorImpl<char> &Buffer;
 
   /// The PCM manager which manages memory buffers for pcm files.
-  MemoryBufferCache &PCMCache;
+  InMemoryModuleCache &ModuleCache;
 
   /// The ASTContext we're writing.
   ASTContext *Context = nullptr;
@@ -542,7 +542,7 @@ public:
   /// Create a new precompiled header writer that outputs to
   /// the given bitstream.
   ASTWriter(llvm::BitstreamWriter &Stream, SmallVectorImpl<char> &Buffer,
-            MemoryBufferCache &PCMCache,
+            InMemoryModuleCache &ModuleCache,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             bool IncludeTimestamps = true);
   ~ASTWriter() override;
@@ -981,7 +981,8 @@ protected:
   SmallVectorImpl<char> &getPCH() const { return Buffer->Data; }
 
 public:
-  PCHGenerator(const Preprocessor &PP, StringRef OutputFile, StringRef isysroot,
+  PCHGenerator(const Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+               StringRef OutputFile, StringRef isysroot,
                std::shared_ptr<PCHBuffer> Buffer,
                ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
                bool AllowASTWithErrors = false, bool IncludeTimestamps = true);
