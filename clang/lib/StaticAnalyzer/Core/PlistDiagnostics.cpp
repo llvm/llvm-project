@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
@@ -776,10 +777,20 @@ public:
 /// As we expand the last line, we'll immediately replace PRINT(str) with
 /// print(x). The information that both 'str' and 'x' refers to the same string
 /// is an information we have to forward, hence the argument \p PrevArgs.
-static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
-                                                 SourceLocation MacroLoc,
-                                                 const Preprocessor &PP,
-                                                 const MacroArgMap &PrevArgs);
+///
+/// To avoid infinite recursion we maintain the already processed tokens in
+/// a set. This is carried as a parameter through the recursive calls. The set
+/// is extended with the currently processed token and after processing it, the
+/// token is removed. If the token is already in the set, then recursion stops:
+///
+/// #define f(y) x
+/// #define x f(x)
+static std::string getMacroNameAndPrintExpansion(
+    TokenPrinter &Printer,
+    SourceLocation MacroLoc,
+    const Preprocessor &PP,
+    const MacroArgMap &PrevArgs,
+    llvm::SmallPtrSet<IdentifierInfo *, 8> &AlreadyProcessedTokens);
 
 /// Retrieves the name of the macro and what it's arguments expand into
 /// at \p ExpanLoc.
@@ -828,19 +839,35 @@ static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
   llvm::SmallString<200> ExpansionBuf;
   llvm::raw_svector_ostream OS(ExpansionBuf);
   TokenPrinter Printer(OS, PP);
+  llvm::SmallPtrSet<IdentifierInfo*, 8> AlreadyProcessedTokens;
+
   std::string MacroName =
-            getMacroNameAndPrintExpansion(Printer, MacroLoc, PP, MacroArgMap{});
+            getMacroNameAndPrintExpansion(Printer, MacroLoc, PP, MacroArgMap{},
+                                         AlreadyProcessedTokens);
   return { MacroName, OS.str() };
 }
 
-static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
-                                                 SourceLocation MacroLoc,
-                                                 const Preprocessor &PP,
-                                                 const MacroArgMap &PrevArgs) {
+static std::string getMacroNameAndPrintExpansion(
+    TokenPrinter &Printer,
+    SourceLocation MacroLoc,
+    const Preprocessor &PP,
+    const MacroArgMap &PrevArgs,
+    llvm::SmallPtrSet<IdentifierInfo *, 8> &AlreadyProcessedTokens) {
 
   const SourceManager &SM = PP.getSourceManager();
 
   MacroNameAndArgs Info = getMacroNameAndArgs(SM.getExpansionLoc(MacroLoc), PP);
+  IdentifierInfo* IDInfo = PP.getIdentifierInfo(Info.Name);
+
+  // TODO: If the macro definition contains another symbol then this function is
+  // called recursively. In case this symbol is the one being defined, it will
+  // be an infinite recursion which is stopped by this "if" statement. However,
+  // in this case we don't get the full expansion text in the Plist file. See
+  // the test file where "value" is expanded to "garbage_" instead of
+  // "garbage_value".
+  if (AlreadyProcessedTokens.find(IDInfo) != AlreadyProcessedTokens.end())
+    return Info.Name;
+  AlreadyProcessedTokens.insert(IDInfo);
 
   if (!Info.MI)
     return Info.Name;
@@ -867,7 +894,8 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
     // macro.
     if (const MacroInfo *MI =
                          getMacroInfoForLocation(PP, SM, II, T.getLocation())) {
-      getMacroNameAndPrintExpansion(Printer, T.getLocation(), PP, Info.Args);
+      getMacroNameAndPrintExpansion(Printer, T.getLocation(), PP, Info.Args,
+                                    AlreadyProcessedTokens);
 
       // If this is a function-like macro, skip its arguments, as
       // getExpandedMacro() already printed them. If this is the case, let's
@@ -899,7 +927,7 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
         }
 
         getMacroNameAndPrintExpansion(Printer, ArgIt->getLocation(), PP,
-                                      Info.Args);
+                                      Info.Args, AlreadyProcessedTokens);
         if (MI->getNumParams() != 0)
           ArgIt = getMatchingRParen(++ArgIt, ArgEnd);
       }
@@ -910,6 +938,8 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
     // unexpanded macro argument that we need to handle, print it.
     Printer.printToken(T);
   }
+
+  AlreadyProcessedTokens.erase(IDInfo);
 
   return Info.Name;
 }

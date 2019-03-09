@@ -27,6 +27,13 @@ using namespace ento;
 namespace {
 class CloneChecker
     : public Checker<check::ASTCodeBody, check::EndOfTranslationUnit> {
+public:
+  // Checker options.
+  int MinComplexity;
+  bool ReportNormalClones;
+  StringRef IgnoredFilesPattern;
+
+private:
   mutable CloneDetector Detector;
   mutable std::unique_ptr<BugType> BT_Exact, BT_Suspicious;
 
@@ -62,19 +69,6 @@ void CloneChecker::checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
   // At this point, every statement in the translation unit has been analyzed by
   // the CloneDetector. The only thing left to do is to report the found clones.
 
-  int MinComplexity = Mgr.getAnalyzerOptions().getCheckerIntegerOption(
-      this, "MinimumCloneComplexity", 50);
-  assert(MinComplexity >= 0);
-
-  bool ReportSuspiciousClones = Mgr.getAnalyzerOptions()
-    .getCheckerBooleanOption(this, "ReportSuspiciousClones", true);
-
-  bool ReportNormalClones = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
-      this, "ReportNormalClones", true);
-
-  StringRef IgnoredFilesPattern = Mgr.getAnalyzerOptions()
-    .getCheckerStringOption(this, "IgnoredFilesPattern", "");
-
   // Let the CloneDetector create a list of clones from all the analyzed
   // statements. We don't filter for matching variable patterns at this point
   // because reportSuspiciousClones() wants to search them for errors.
@@ -86,8 +80,7 @@ void CloneChecker::checkEndOfTranslationUnit(const TranslationUnitDecl *TU,
       MinComplexityConstraint(MinComplexity),
       RecursiveCloneTypeIIVerifyConstraint(), OnlyLargestCloneConstraint());
 
-  if (ReportSuspiciousClones)
-    reportSuspiciousClones(BR, Mgr, AllCloneGroups);
+  reportSuspiciousClones(BR, Mgr, AllCloneGroups);
 
   // We are done for this translation unit unless we also need to report normal
   // clones.
@@ -199,7 +192,20 @@ void CloneChecker::reportSuspiciousClones(
 //===----------------------------------------------------------------------===//
 
 void ento::registerCloneChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<CloneChecker>();
+  auto *Checker = Mgr.registerChecker<CloneChecker>();
+
+  Checker->MinComplexity = Mgr.getAnalyzerOptions().getCheckerIntegerOption(
+      Checker, "MinimumCloneComplexity", 50);
+
+  if (Checker->MinComplexity < 0)
+    Mgr.reportInvalidCheckerOptionValue(
+        Checker, "MinimumCloneComplexity", "a non-negative value");
+
+  Checker->ReportNormalClones = Mgr.getAnalyzerOptions().getCheckerBooleanOption(
+      Checker, "ReportNormalClones", true);
+
+  Checker->IgnoredFilesPattern = Mgr.getAnalyzerOptions()
+    .getCheckerStringOption(Checker, "IgnoredFilesPattern", "");
 }
 
 bool ento::shouldRegisterCloneChecker(const LangOptions &LO) {

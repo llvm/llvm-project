@@ -357,6 +357,11 @@ class TestQueues(TestBase):
             queue_performer_2, 1, 9999)
         self.check_running_and_pending_items_on_queue(queue_performer_3, 4, 0)
 
+        for th in process.threads:
+            if th.GetThreadID() == lldb.LLDB_INVALID_QUEUE_ID:
+                print("Cannot get thread <=> queue associations")
+                return
+
         self.check_number_of_threads_owned_by_queue(queue_submittor_1, 1)
         self.check_number_of_threads_owned_by_queue(queue_performer_1, 1)
         self.check_number_of_threads_owned_by_queue(queue_performer_2, 1)

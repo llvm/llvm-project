@@ -1135,3 +1135,27 @@ constexpr bool indirect_builtin_constant_p(const char *__s) {
   return __builtin_constant_p(*__s);
 }
 constexpr bool n = indirect_builtin_constant_p("a");
+
+__attribute__((enable_if(indirect_builtin_constant_p("a") == n, "OK")))
+int test_in_enable_if() { return 0; }
+int n2 = test_in_enable_if();
+
+template <bool n = indirect_builtin_constant_p("a")>
+int test_in_template_param() { return 0; }
+int n3 = test_in_template_param();
+
+void test_in_case(int n) {
+  switch (n) {
+    case indirect_builtin_constant_p("abc"):
+    break;
+  }
+}
+enum InEnum1 {
+  ONE = indirect_builtin_constant_p("abc")
+};
+enum InEnum2 : int {
+  TWO = indirect_builtin_constant_p("abc")
+};
+enum class InEnum3 {
+  THREE = indirect_builtin_constant_p("abc")
+};
