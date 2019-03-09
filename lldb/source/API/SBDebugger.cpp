@@ -136,9 +136,19 @@ static llvm::ManagedStatic<SystemLifetimeManager> g_debugger_lifetime;
 
 SBError SBInputReader::Initialize(
     lldb::SBDebugger &sb_debugger,
-    unsigned long (*)(void *, lldb::SBInputReader *, lldb::InputReaderAction,
-                      char const *, unsigned long),
-    void *, lldb::InputReaderGranularity, char const *, char const *, bool) {
+    unsigned long (*callback)(void *, lldb::SBInputReader *,
+                              lldb::InputReaderAction, char const *,
+                              unsigned long),
+    void *a, lldb::InputReaderGranularity b, char const *c, char const *d,
+    bool e) {
+  LLDB_RECORD_DUMMY(
+      lldb::SBError, SBInputReader, Initialize,
+      (lldb::SBDebugger &,
+       unsigned long (*)(void *, lldb::SBInputReader *, lldb::InputReaderAction,
+                         const char *, unsigned long),
+       void *, lldb::InputReaderGranularity, const char *, const char *, bool),
+      sb_debugger, callback, a, b, c, d, e);
+
   return SBError();
 }
 
@@ -228,6 +238,9 @@ SBDebugger SBDebugger::Create(bool source_init_files,
                               lldb::LogOutputCallback callback, void *baton)
 
 {
+  LLDB_RECORD_DUMMY(lldb::SBDebugger, SBDebugger, Create,
+                    (bool, lldb::LogOutputCallback, void *), source_init_files,
+                    callback, baton);
 
   SBDebugger debugger;
 
@@ -1026,10 +1039,16 @@ SBStructuredData SBDebugger::GetAvailablePlatformInfoAtIndex(uint32_t idx) {
 }
 
 void SBDebugger::DispatchInput(void *baton, const void *data, size_t data_len) {
+  LLDB_RECORD_DUMMY(void, SBDebugger, DispatchInput,
+                    (void *, const void *, size_t), baton, data, data_len);
+
   DispatchInput(data, data_len);
 }
 
 void SBDebugger::DispatchInput(const void *data, size_t data_len) {
+  LLDB_RECORD_DUMMY(void, SBDebugger, DispatchInput, (const void *, size_t),
+                    data, data_len);
+
   //    Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
   //
   //    if (log)
@@ -1513,6 +1532,9 @@ bool SBDebugger::EnableLog(const char *channel, const char **categories) {
 
 void SBDebugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
                                     void *baton) {
+  LLDB_RECORD_DUMMY(void, SBDebugger, SetLoggingCallback,
+                    (lldb::LogOutputCallback, void *), log_callback, baton);
+
   if (m_opaque_sp) {
     return m_opaque_sp->SetLoggingCallback(log_callback, baton);
   }

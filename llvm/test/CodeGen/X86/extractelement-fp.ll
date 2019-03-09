@@ -129,6 +129,29 @@ define double @frem_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
   ret double %r
 }
 
+define i1 @fcmp_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
+; CHECK-LABEL: fcmp_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vucomiss %xmm1, %xmm0
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    retq
+  %v = fcmp ogt <4 x float> %x, %y
+  %r = extractelement <4 x i1> %v, i32 0
+  ret i1 %r
+}
+
+define i1 @fcmp_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
+; CHECK-LABEL: fcmp_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vucomisd %xmm0, %xmm1
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %v = fcmp ugt <4 x double> %x, %y
+  %r = extractelement <4 x i1> %v, i32 0
+  ret i1 %r
+}
+
 define float @fsqrt_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: fsqrt_v4f32:
 ; CHECK:       # %bb.0:

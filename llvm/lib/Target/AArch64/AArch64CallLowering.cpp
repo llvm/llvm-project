@@ -363,6 +363,9 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                       [&](unsigned Reg, uint64_t Offset) {
                         MIRBuilder.buildExtract(Reg, OrigArg.Reg, Offset);
                       });
+    // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
+    if (OrigArg.Ty->isIntegerTy(1))
+      SplitArgs.back().Flags.setZExt();
   }
 
   // Find out which ABI gets to decide where things go.

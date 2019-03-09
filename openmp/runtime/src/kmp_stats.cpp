@@ -669,9 +669,11 @@ void kmp_stats_output_module::printEvents(FILE *eventsOut,
   for (int i = 0; i < theEvents->size(); i++) {
     kmp_stats_event ev = theEvents->at(i);
     rgb_color color = getEventColor(ev.getTimerName());
-    fprintf(eventsOut, "%d %lu %lu %1.1f rgb(%1.1f,%1.1f,%1.1f) %s\n", gtid,
-            ev.getStart(), ev.getStop(), 1.2 - (ev.getNestLevel() * 0.2),
-            color.r, color.g, color.b, timeStat::name(ev.getTimerName()));
+    fprintf(eventsOut, "%d %llu %llu %1.1f rgb(%1.1f,%1.1f,%1.1f) %s\n", gtid,
+            static_cast<unsigned long long>(ev.getStart()),
+            static_cast<unsigned long long>(ev.getStop()),
+            1.2 - (ev.getNestLevel() * 0.2), color.r, color.g, color.b,
+            timeStat::name(ev.getTimerName()));
   }
   return;
 }

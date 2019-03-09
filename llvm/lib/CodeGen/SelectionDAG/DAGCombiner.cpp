@@ -2186,10 +2186,30 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
       DAG.haveNoCommonBitsSet(N0, N1))
     return DAG.getNode(ISD::OR, DL, VT, N0, N1);
 
-  // fold (add (xor a, -1), 1) -> (sub 0, a)
-  if (isBitwiseNot(N0) && isOneOrOneSplat(N1))
-    return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                       N0.getOperand(0));
+  if (isOneOrOneSplat(N1)) {
+    // fold (add (xor a, -1), 1) -> (sub 0, a)
+    if (isBitwiseNot(N0))
+      return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
+                         N0.getOperand(0));
+
+    // fold (add (add (xor a, -1), b), 1) -> (sub b, a)
+    if (N0.getOpcode() == ISD::ADD ||
+        N0.getOpcode() == ISD::UADDO ||
+        N0.getOpcode() == ISD::SADDO) {
+      SDValue A, Xor;
+
+      if (isBitwiseNot(N0.getOperand(0))) {
+        A = N0.getOperand(1);
+        Xor = N0.getOperand(0);
+      } else if (isBitwiseNot(N0.getOperand(1))) {
+        A = N0.getOperand(0);
+        Xor = N0.getOperand(1);
+      }
+
+      if (Xor)
+        return DAG.getNode(ISD::SUB, DL, VT, A, Xor.getOperand(0));
+    }
+  }
 
   if (SDValue Combined = visitADDLike(N0, N1, N))
     return Combined;

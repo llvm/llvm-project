@@ -165,6 +165,8 @@ static DecodeStatus DecodeDPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPR_8RegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeSPR_8RegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPR_VFP2RegisterClass(MCInst &Inst,
                                                 unsigned RegNo,
                                                 uint64_t Address,
@@ -1043,6 +1045,13 @@ static DecodeStatus DecodeDPR_8RegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > 7)
     return MCDisassembler::Fail;
   return DecodeDPRRegisterClass(Inst, RegNo, Address, Decoder);
+}
+
+static DecodeStatus DecodeSPR_8RegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder) {
+  if (RegNo > 15)
+    return MCDisassembler::Fail;
+  return DecodeSPRRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus

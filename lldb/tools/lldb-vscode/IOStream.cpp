@@ -95,7 +95,7 @@ bool InputStream::read_full(std::ofstream *log, size_t length,
 
   char *ptr = &data[0];
   while (length != 0) {
-    size_t bytes_read = 0;
+    int bytes_read = 0;
     if (descriptor.m_is_socket)
       bytes_read = ::recv(descriptor.m_socket, ptr, length, 0);
     else
@@ -119,7 +119,7 @@ bool InputStream::read_full(std::ofstream *log, size_t length,
       return false;
     }
 
-    assert(bytes_read <= length);
+    assert(bytes_read >= 0 && (size_t)bytes_read <= length);
     ptr += bytes_read;
     length -= bytes_read;
   }

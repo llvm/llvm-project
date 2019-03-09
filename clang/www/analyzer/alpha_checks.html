@@ -33,6 +33,7 @@ Patches welcome!
 <li><a href="#osx_alpha_checkers">OS X Alpha Checkers</a></li>
 <li><a href="#security_alpha_checkers">Security Alpha Checkers</a></li>
 <li><a href="#unix_alpha_checkers">Unix Alpha Checkers</a></li>
+<li><a href="#nondeterminism_alpha_checkers">Non-determinism Alpha Checkers</a></li>
 </ul>
 
 <!-- ============================= clone alpha ============================= -->
@@ -1172,6 +1173,28 @@ void test(char *y) {
 }
 </pre></div></div></td></tr>
 
+</tbody></table>
+
+<!-- =========================== nondeterminism alpha =========================== -->
+<h3 id="nondeterminism_alpha_checkers">Non-determinism Alpha Checkers</h3>
+<table class="checkers">
+<colgroup><col class="namedescr"><col class="example"></colgroup>
+<thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
+
+<tbody>
+<tr><td><a id="alpha.nondeterminism.PointerSorting"><div class="namedescr expandable"><span class="name">
+alpha.nondeterminism.PointerSorting</span><span class="lang">
+(C++)</span><div class="descr">
+Check for non-determinism caused by sorting of pointers.</div></div></a></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+// C++
+void test() {
+ int a = 1, b = 2;
+ std::vector<int *> V = {&a, &b};
+ std::sort(V.begin(), V.end()); // warn
+}
+</pre></div></div></td></tr>
 </tbody></table>
 
 </div> <!-- page -->

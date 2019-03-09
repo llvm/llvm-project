@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import os
+import sys
+import subprocess
+
+
+ELF_MAGIC = '\x7fELF'
+
+with open(sys.argv[1], "rb") as f:
+    buf = f.read(len(ELF_MAGIC))
+    if buf != ELF_MAGIC:
+        sys.exit(0)
+
+llvm_objcopy = os.path.join('@LLVM_RUNTIME_OUTPUT_INTDIR@', 'llvm-objcopy')
+install_dir = os.path.join(os.getenv('DESTDIR', ''), '@CMAKE_INSTALL_PREFIX@')
+link_dir = os.path.join(install_dir, 'lib', 'debug', '.build-id')
+
+sys.exit(subprocess.call([
+    llvm_objcopy,
+    '--strip-sections',
+    '--build-id-link-dir=' + link_dir,
+    '--build-id-link-input=.debug',
+    '--build-id-link-output=',
+    sys.argv[1],
+]))

@@ -611,6 +611,10 @@ bool SBCommandInterpreter::EventIsCommandInterpreterEvent(
 bool SBCommandInterpreter::SetCommandOverrideCallback(
     const char *command_name, lldb::CommandOverrideCallback callback,
     void *baton) {
+  LLDB_RECORD_DUMMY(bool, SBCommandInterpreter, SetCommandOverrideCallback,
+                    (const char *, lldb::CommandOverrideCallback, void *),
+                    command_name, callback, baton);
+
   if (command_name && command_name[0] && IsValid()) {
     llvm::StringRef command_name_str = command_name;
     CommandObject *cmd_obj =

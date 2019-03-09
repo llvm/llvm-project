@@ -123,7 +123,7 @@ static bool isConstantIntVector(Value *Mask) {
 //  %10 = extractelement <16 x i1> %mask, i32 2
 //  br i1 %10, label %cond.load4, label %else5
 //
-static void scalarizeMaskedLoad(CallInst *CI) {
+static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
   Value *Ptr = CI->getArgOperand(0);
   Value *Alignment = CI->getArgOperand(1);
   Value *Mask = CI->getArgOperand(2);
@@ -221,6 +221,8 @@ static void scalarizeMaskedLoad(CallInst *CI) {
 
   CI->replaceAllUsesWith(VResult);
   CI->eraseFromParent();
+
+  ModifiedDT = true;
 }
 
 // Translate a masked store intrinsic, like
@@ -249,7 +251,7 @@ static void scalarizeMaskedLoad(CallInst *CI) {
 //   store i32 %6, i32* %7
 //   br label %else2
 //   . . .
-static void scalarizeMaskedStore(CallInst *CI) {
+static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
   Value *Src = CI->getArgOperand(0);
   Value *Ptr = CI->getArgOperand(1);
   Value *Alignment = CI->getArgOperand(2);
@@ -328,6 +330,8 @@ static void scalarizeMaskedStore(CallInst *CI) {
     IfBlock = NewIfBlock;
   }
   CI->eraseFromParent();
+
+  ModifiedDT = true;
 }
 
 // Translate a masked gather intrinsic like
@@ -359,7 +363,7 @@ static void scalarizeMaskedStore(CallInst *CI) {
 // . . .
 // %Result = select <16 x i1> %Mask, <16 x i32> %res.phi.select, <16 x i32> %Src
 // ret <16 x i32> %Result
-static void scalarizeMaskedGather(CallInst *CI) {
+static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
   Value *Ptrs = CI->getArgOperand(0);
   Value *Alignment = CI->getArgOperand(1);
   Value *Mask = CI->getArgOperand(2);
@@ -441,6 +445,8 @@ static void scalarizeMaskedGather(CallInst *CI) {
 
   CI->replaceAllUsesWith(VResult);
   CI->eraseFromParent();
+
+  ModifiedDT = true;
 }
 
 // Translate a masked scatter intrinsic, like
@@ -469,7 +475,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
 // store i32 %Elt1, i32* %Ptr1, align 4
 // br label %else2
 //   . . .
-static void scalarizeMaskedScatter(CallInst *CI) {
+static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
   Value *Src = CI->getArgOperand(0);
   Value *Ptrs = CI->getArgOperand(1);
   Value *Alignment = CI->getArgOperand(2);
@@ -538,6 +544,8 @@ static void scalarizeMaskedScatter(CallInst *CI) {
     IfBlock = NewIfBlock;
   }
   CI->eraseFromParent();
+
+  ModifiedDT = true;
 }
 
 bool ScalarizeMaskedMemIntrin::runOnFunction(Function &F) {
@@ -588,29 +596,25 @@ bool ScalarizeMaskedMemIntrin::optimizeCallInst(CallInst *CI,
     case Intrinsic::masked_load:
       // Scalarize unsupported vector masked load
       if (!TTI->isLegalMaskedLoad(CI->getType())) {
-        scalarizeMaskedLoad(CI);
-        ModifiedDT = true;
+        scalarizeMaskedLoad(CI, ModifiedDT);
         return true;
       }
       return false;
     case Intrinsic::masked_store:
       if (!TTI->isLegalMaskedStore(CI->getArgOperand(0)->getType())) {
-        scalarizeMaskedStore(CI);
-        ModifiedDT = true;
+        scalarizeMaskedStore(CI, ModifiedDT);
         return true;
       }
       return false;
     case Intrinsic::masked_gather:
       if (!TTI->isLegalMaskedGather(CI->getType())) {
-        scalarizeMaskedGather(CI);
-        ModifiedDT = true;
+        scalarizeMaskedGather(CI, ModifiedDT);
         return true;
       }
       return false;
     case Intrinsic::masked_scatter:
       if (!TTI->isLegalMaskedScatter(CI->getArgOperand(0)->getType())) {
-        scalarizeMaskedScatter(CI);
-        ModifiedDT = true;
+        scalarizeMaskedScatter(CI, ModifiedDT);
         return true;
       }
       return false;
