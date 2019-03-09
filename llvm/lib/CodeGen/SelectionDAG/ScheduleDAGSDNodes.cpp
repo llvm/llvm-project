@@ -205,6 +205,19 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
   if (!Chain)
     return;
 
+  // Skip any load instruction that has a tied input. There may be an additional
+  // dependency requiring a different order than by increasing offsets, and the
+  // added glue may introduce a cycle.
+  auto hasTiedInput = [this](const SDNode *N) {
+    const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
+    for (unsigned I = 0; I != MCID.getNumOperands(); ++I) {
+      if (MCID.getOperandConstraint(I, MCOI::TIED_TO) != -1)
+        return true;
+    }
+
+    return false;
+  };
+
   // Look for other loads of the same chain. Find loads that are loading from
   // the same base pointer and different offsets.
   SmallPtrSet<SDNode*, 16> Visited;
@@ -212,6 +225,10 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
   DenseMap<long long, SDNode*> O2SMap;  // Map from offset to SDNode.
   bool Cluster = false;
   SDNode *Base = Node;
+
+  if (hasTiedInput(Base))
+    return;
+
   // This algorithm requires a reasonably low use count before finding a match
   // to avoid uselessly blowing up compile time in large blocks.
   unsigned UseCount = 0;
@@ -222,10 +239,12 @@ void ScheduleDAGSDNodes::ClusterNeighboringLoads(SDNode *Node) {
       continue;
     int64_t Offset1, Offset2;
     if (!TII->areLoadsFromSameBasePtr(Base, User, Offset1, Offset2) ||
-        Offset1 == Offset2)
+        Offset1 == Offset2 ||
+        hasTiedInput(User)) {
       // FIXME: Should be ok if they addresses are identical. But earlier
       // optimizations really should have eliminated one of the loads.
       continue;
+    }
     if (O2SMap.insert(std::make_pair(Offset1, Base)).second)
       Offsets.push_back(Offset1);
     O2SMap.insert(std::make_pair(Offset2, User));

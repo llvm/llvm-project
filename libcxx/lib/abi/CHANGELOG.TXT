@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 9.0
 -----------
 
-* rTBD - Fix -fsanitize=vptr badness in <__debug>
+* r355367 - Fix -fsanitize=vptr badness in <__debug>
 
   This patch fixes a lifetime bug when inserting a new container into the debug database. It is
   diagnosed by UBSAN when debug mode is enabled. This patch corrects how nodes are constructed

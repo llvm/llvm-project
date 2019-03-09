@@ -9850,11 +9850,16 @@ static bool is128BitUnpackShuffleMask(ArrayRef<int> Mask) {
   MVT EltVT = MVT::getIntegerVT(128 / Mask.size());
   MVT VT = MVT::getVectorVT(EltVT, Mask.size());
 
+  // We can't assume a canonical shuffle mask, so try the commuted version too.
+  SmallVector<int, 4> CommutedMask(Mask.begin(), Mask.end());
+  ShuffleVectorSDNode::commuteMask(CommutedMask);
+
   // Match any of unary/binary or low/high.
   for (unsigned i = 0; i != 4; ++i) {
     SmallVector<int, 16> UnpackMask;
     createUnpackShuffleMask(VT, UnpackMask, (i >> 1) % 2, i % 2);
-    if (isTargetShuffleEquivalent(Mask, UnpackMask))
+    if (isTargetShuffleEquivalent(Mask, UnpackMask) ||
+        isTargetShuffleEquivalent(CommutedMask, UnpackMask))
       return true;
   }
   return false;
@@ -34292,6 +34297,22 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG) {
   // non-zero element because the shuffle+scalar op will be cheaper?
   if (!Vec.hasOneUse() || !isNullConstant(Index) || VecVT.getScalarType() != VT)
     return SDValue();
+
+  // Vector FP compares don't fit the pattern of FP math ops (propagate, not
+  // extract, the condition code), so deal with those as a special-case.
+  if (Vec.getOpcode() == ISD::SETCC) {
+    EVT OpVT = Vec.getOperand(0).getValueType().getScalarType();
+    if (OpVT != MVT::f32 && OpVT != MVT::f64)
+      return SDValue();
+
+    // extract (setcc X, Y, CC), 0 --> setcc (extract X, 0), (extract Y, 0), CC
+    SDLoc DL(ExtElt);
+    SDValue Ext0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT,
+                               Vec.getOperand(0), Index);
+    SDValue Ext1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, OpVT,
+                               Vec.getOperand(1), Index);
+    return DAG.getNode(Vec.getOpcode(), DL, VT, Ext0, Ext1, Vec.getOperand(2));
+  }
 
   if (VT != MVT::f32 && VT != MVT::f64)
     return SDValue();

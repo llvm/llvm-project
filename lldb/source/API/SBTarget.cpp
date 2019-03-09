@@ -679,6 +679,10 @@ SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
 
 size_t SBTarget::ReadMemory(const SBAddress addr, void *buf, size_t size,
                             lldb::SBError &error) {
+  LLDB_RECORD_DUMMY(size_t, SBTarget, ReadMemory,
+                    (const lldb::SBAddress, void *, size_t, lldb::SBError &),
+                    addr, buf, size, error);
+
   SBError sb_error;
   size_t bytes_read = 0;
   TargetSP target_sp(GetSP());
@@ -2086,6 +2090,10 @@ lldb::SBInstructionList SBTarget::ReadInstructions(lldb::SBAddress base_addr,
 lldb::SBInstructionList SBTarget::GetInstructions(lldb::SBAddress base_addr,
                                                   const void *buf,
                                                   size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget, GetInstructions,
+                    (lldb::SBAddress, const void *, size_t), base_addr, buf,
+                    size);
+
   return GetInstructionsWithFlavor(base_addr, NULL, buf, size);
 }
 
@@ -2093,6 +2101,11 @@ lldb::SBInstructionList
 SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
                                     const char *flavor_string, const void *buf,
                                     size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget,
+                    GetInstructionsWithFlavor,
+                    (lldb::SBAddress, const char *, const void *, size_t),
+                    base_addr, flavor_string, buf, size);
+
   SBInstructionList sb_instructions;
 
   TargetSP target_sp(GetSP());
@@ -2115,6 +2128,9 @@ SBTarget::GetInstructionsWithFlavor(lldb::SBAddress base_addr,
 lldb::SBInstructionList SBTarget::GetInstructions(lldb::addr_t base_addr,
                                                   const void *buf,
                                                   size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget, GetInstructions,
+                    (lldb::addr_t, const void *, size_t), base_addr, buf, size);
+
   return GetInstructionsWithFlavor(ResolveLoadAddress(base_addr), NULL, buf,
                                    size);
 }
@@ -2123,6 +2139,11 @@ lldb::SBInstructionList
 SBTarget::GetInstructionsWithFlavor(lldb::addr_t base_addr,
                                     const char *flavor_string, const void *buf,
                                     size_t size) {
+  LLDB_RECORD_DUMMY(lldb::SBInstructionList, SBTarget,
+                    GetInstructionsWithFlavor,
+                    (lldb::addr_t, const char *, const void *, size_t),
+                    base_addr, flavor_string, buf, size);
+
   return GetInstructionsWithFlavor(ResolveLoadAddress(base_addr), flavor_string,
                                    buf, size);
 }

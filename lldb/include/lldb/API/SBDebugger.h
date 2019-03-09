@@ -21,12 +21,12 @@ public:
   SBInputReader() = default;
   ~SBInputReader() = default;
 
-  SBError Initialize(lldb::SBDebugger &,
-                     unsigned long (*)(void *, lldb::SBInputReader *,
-                                       lldb::InputReaderAction, char const *,
-                                       unsigned long),
-                     void *, lldb::InputReaderGranularity, char const *,
-                     char const *, bool);
+  SBError Initialize(lldb::SBDebugger &sb_debugger,
+                     unsigned long (*callback)(void *, lldb::SBInputReader *,
+                                               lldb::InputReaderAction,
+                                               char const *, unsigned long),
+                     void *a, lldb::InputReaderGranularity b, char const *c,
+                     char const *d, bool e);
   void SetIsDone(bool);
   bool IsActive() const;
 };

@@ -482,25 +482,19 @@ define i32 @add_to_sub(i32 %a, i32 %b) {
 ; X32-LABEL: add_to_sub:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    notl %ecx
-; X32-NEXT:    leal 1(%ecx,%eax), %eax
+; X32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LINUX-LABEL: add_to_sub:
 ; X64-LINUX:       # %bb.0:
-; X64-LINUX-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-LINUX-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-LINUX-NEXT:    notl %edi
-; X64-LINUX-NEXT:    leal 1(%rdi,%rsi), %eax
+; X64-LINUX-NEXT:    movl %esi, %eax
+; X64-LINUX-NEXT:    subl %edi, %eax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: add_to_sub:
 ; X64-WIN32:       # %bb.0:
-; X64-WIN32-NEXT:    # kill: def $edx killed $edx def $rdx
-; X64-WIN32-NEXT:    # kill: def $ecx killed $ecx def $rcx
-; X64-WIN32-NEXT:    notl %ecx
-; X64-WIN32-NEXT:    leal 1(%rcx,%rdx), %eax
+; X64-WIN32-NEXT:    movl %edx, %eax
+; X64-WIN32-NEXT:    subl %ecx, %eax
 ; X64-WIN32-NEXT:    retq
   %nota = xor i32 %a, -1
   %add = add i32 %nota, %b

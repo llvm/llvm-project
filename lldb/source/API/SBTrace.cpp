@@ -26,6 +26,10 @@ lldb::ProcessSP SBTrace::GetSP() const { return m_opaque_wp.lock(); }
 
 size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
                              size_t offset, lldb::tid_t thread_id) {
+  LLDB_RECORD_DUMMY(size_t, SBTrace, GetTraceData,
+                    (lldb::SBError &, void *, size_t, size_t, lldb::tid_t),
+                    error, buf, size, offset, thread_id);
+
   ProcessSP process_sp(GetSP());
   llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();
@@ -41,6 +45,10 @@ size_t SBTrace::GetTraceData(SBError &error, void *buf, size_t size,
 
 size_t SBTrace::GetMetaData(SBError &error, void *buf, size_t size,
                             size_t offset, lldb::tid_t thread_id) {
+  LLDB_RECORD_DUMMY(size_t, SBTrace, GetMetaData,
+                    (lldb::SBError &, void *, size_t, size_t, lldb::tid_t),
+                    error, buf, size, offset, thread_id);
+
   ProcessSP process_sp(GetSP());
   llvm::MutableArrayRef<uint8_t> buffer(static_cast<uint8_t *>(buf), size);
   error.Clear();

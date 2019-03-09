@@ -612,7 +612,7 @@ static void initializeWorkList(std::vector<WorkListItem> &WorkList,
     for (unsigned I = 0, E = ValueInfo.getNumLevels(); I < E; ++I) {
       auto Src = InstantiatedValue{Val, I};
       // If there's an assignment edge from X to Y, it means Y is reachable from
-      // X at S2 and X is reachable from Y at S1
+      // X at S3 and X is reachable from Y at S1
       for (auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges) {
         propagate(Edge.Other, Src, MatchState::FlowFromReadOnly, ReachSet,
                   WorkList);

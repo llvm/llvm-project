@@ -129,6 +129,55 @@ define double @frem_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
   ret double %r
 }
 
+define i1 @fcmp_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
+; CHECK-LABEL: fcmp_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vucomiss %xmm1, %xmm0
+; CHECK-NEXT:    seta %al
+; CHECK-NEXT:    retq
+  %v = fcmp ogt <4 x float> %x, %y
+  %r = extractelement <4 x i1> %v, i32 0
+  ret i1 %r
+}
+
+define i1 @fcmp_v4f64(<4 x double> %x, <4 x double> %y) nounwind {
+; CHECK-LABEL: fcmp_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vucomisd %xmm0, %xmm1
+; CHECK-NEXT:    setb %al
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %v = fcmp ugt <4 x double> %x, %y
+  %r = extractelement <4 x i1> %v, i32 0
+  ret i1 %r
+}
+
+define float @select_fcmp_v4f32(<4 x float> %x, <4 x float> %y, <4 x float> %z, <4 x float> %w) nounwind {
+; CHECK-LABEL: select_fcmp_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpneq_oqps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm0
+; CHECK-NEXT:    retq
+  %c = fcmp one <4 x float> %x, %y
+  %s = select <4 x i1> %c, <4 x float> %z, <4 x float> %w
+  %r = extractelement <4 x float> %s, i32 0
+  ret float %r
+}
+
+define double @select_fcmp_v4f64(<4 x double> %x, <4 x double> %y, <4 x double> %z, <4 x double> %w) nounwind {
+; CHECK-LABEL: select_fcmp_v4f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpnltpd %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vblendvpd %ymm0, %ymm2, %ymm3, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %c = fcmp ule <4 x double> %x, %y
+  %s = select <4 x i1> %c, <4 x double> %z, <4 x double> %w
+  %r = extractelement <4 x double> %s, i32 0
+  ret double %r
+}
+
 define float @fsqrt_v4f32(<4 x float> %x) nounwind {
 ; CHECK-LABEL: fsqrt_v4f32:
 ; CHECK:       # %bb.0:

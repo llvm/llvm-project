@@ -1,6 +1,7 @@
+RUN: llvm-nm -f sysv %p/Inputs/hello.obj.elf-i386 
 RUN: llvm-nm -f sysv %p/Inputs/hello.obj.elf-i386 | FileCheck %s --strict-whitespace
 
 CHECK: Name                  Value   Class        Type         Size     Line  Section
-CHECK: .L.str              |00000000|   r  |                  |0000000f|     |
-CHECK: main                |00000000|   T  |                  |00000015|     |
-CHECK: puts                |        |   U  |                  |        |     |
+CHECK: .L.str              |00000000|   r  |            OBJECT|0000000f|     |.rodata.str1.1
+CHECK: main                |00000000|   T  |              FUNC|00000015|     |.text
+CHECK: puts                |        |   U  |            NOTYPE|        |     |*UND*

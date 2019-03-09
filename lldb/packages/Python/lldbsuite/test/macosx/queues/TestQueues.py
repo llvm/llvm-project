@@ -337,6 +337,10 @@ class TestQueues(TestBase):
                 queue_performer_2 = q
             if q.GetName() == "com.apple.work_performer_3":
                 queue_performer_3 = q
+            if q.GetName() == "com.apple.main-thread":
+                if q.GetNumThreads() == 0:
+                    print("Cannot get thread <=> queue associations")
+                    return
 
         self.assertTrue(
             queue_submittor_1.IsValid() and queue_performer_1.IsValid() and queue_performer_2.IsValid() and queue_performer_3.IsValid(),
