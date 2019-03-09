@@ -157,9 +157,12 @@ private:
 class PrecompilePreambleConsumer : public PCHGenerator {
 public:
   PrecompilePreambleConsumer(PrecompilePreambleAction &Action,
-                             const Preprocessor &PP, StringRef isysroot,
+                             const Preprocessor &PP,
+                             InMemoryModuleCache &ModuleCache,
+                             StringRef isysroot,
                              std::unique_ptr<raw_ostream> Out)
-      : PCHGenerator(PP, "", isysroot, std::make_shared<PCHBuffer>(),
+      : PCHGenerator(PP, ModuleCache, "", isysroot,
+                     std::make_shared<PCHBuffer>(),
                      ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
         Action(Action), Out(std::move(Out)) {}
@@ -211,7 +214,7 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
     Sysroot.clear();
 
   return llvm::make_unique<PrecompilePreambleConsumer>(
-      *this, CI.getPreprocessor(), Sysroot, std::move(OS));
+      *this, CI.getPreprocessor(), CI.getModuleCache(), Sysroot, std::move(OS));
 }
 
 template <class T> bool moveOnNoError(llvm::ErrorOr<T> Val, T &Output) {

@@ -1,4 +1,4 @@
-//===- MemoryBufferCache.h - Cache for loaded memory buffers ----*- C++ -*-===//
+//===- InMemoryModuleCache.h - In-memory cache for modules ------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_BASIC_MEMORYBUFFERCACHE_H
-#define LLVM_CLANG_BASIC_MEMORYBUFFERCACHE_H
+#ifndef LLVM_CLANG_SERIALIZATION_INMEMORYMODULECACHE_H
+#define LLVM_CLANG_SERIALIZATION_INMEMORYMODULECACHE_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 
@@ -20,17 +21,22 @@ class MemoryBuffer;
 
 namespace clang {
 
-/// Manage memory buffers across multiple users.
+/// In-memory cache for modules.
 ///
-/// Ensures that multiple users have a consistent view of each buffer.  This is
-/// used by \a CompilerInstance when building PCMs to ensure that each \a
-/// ModuleManager sees the same files.
+/// This is a cache for modules for use across a compilation, sharing state
+/// between the CompilerInstances in an implicit modules build.  It must be
+/// shared by each CompilerInstance, ASTReader, ASTWriter, and ModuleManager
+/// that are coordinating.
+///
+/// Critically, it ensures that a single process has a consistent view of each
+/// PCM.  This is used by \a CompilerInstance when building PCMs to ensure that
+/// each \a ModuleManager sees the same files.
 ///
 /// \a finalizeCurrentBuffers() should be called before creating a new user.
-/// This locks in the current buffers, ensuring that no buffer that has already
-/// been accessed can be purged, preventing use-after-frees.
-class MemoryBufferCache : public llvm::RefCountedBase<MemoryBufferCache> {
-  struct BufferEntry {
+/// This locks in the current PCMs, ensuring that no PCM that has already been
+/// accessed can be purged, preventing use-after-frees.
+class InMemoryModuleCache : public llvm::RefCountedBase<InMemoryModuleCache> {
+  struct PCM {
     std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
     /// Track the timeline of when this was added to the cache.
@@ -38,7 +44,7 @@ class MemoryBufferCache : public llvm::RefCountedBase<MemoryBufferCache> {
   };
 
   /// Cache of buffers.
-  llvm::StringMap<BufferEntry> Buffers;
+  llvm::StringMap<PCM> PCMs;
 
   /// Monotonically increasing index.
   unsigned NextIndex = 0;
@@ -77,4 +83,4 @@ public:
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_BASIC_MEMORYBUFFERCACHE_H
+#endif // LLVM_CLANG_SERIALIZATION_INMEMORYMODULECACHE_H

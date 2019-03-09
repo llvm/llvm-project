@@ -15,10 +15,10 @@
 #include "clang/Serialization/ModuleManager.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/Module.h"
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "llvm/ADT/STLExtras.h"
@@ -160,12 +160,13 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Load the contents of the module
   if (std::unique_ptr<llvm::MemoryBuffer> Buffer = lookupBuffer(FileName)) {
     // The buffer was already provided for us.
-    NewModule->Buffer = &PCMCache->addBuffer(FileName, std::move(Buffer));
+    NewModule->Buffer = &ModuleCache->addBuffer(FileName, std::move(Buffer));
     // Since the cached buffer is reused, it is safe to close the file
     // descriptor that was opened while stat()ing the PCM in
     // lookupModuleFile() above, it won't be needed any longer.
     Entry->closeFile();
-  } else if (llvm::MemoryBuffer *Buffer = PCMCache->lookupBuffer(FileName)) {
+  } else if (llvm::MemoryBuffer *Buffer =
+                 getModuleCache().lookupBuffer(FileName)) {
     NewModule->Buffer = Buffer;
     // As above, the file descriptor is no longer needed.
     Entry->closeFile();
@@ -190,7 +191,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
       return Missing;
     }
 
-    NewModule->Buffer = &PCMCache->addBuffer(FileName, std::move(*Buf));
+    NewModule->Buffer = &getModuleCache().addBuffer(FileName, std::move(*Buf));
   }
 
   // Initialize the stream.
@@ -202,7 +203,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
                                           ExpectedSignature, ErrorStr)) {
     // Try to remove the buffer.  If it can't be removed, then it was already
     // validated by this process.
-    if (!PCMCache->tryToRemoveBuffer(NewModule->FileName))
+    if (!getModuleCache().tryToRemoveBuffer(NewModule->FileName))
       FileMgr.invalidateCache(NewModule->File);
     return OutOfDate;
   }
@@ -272,11 +273,11 @@ void ModuleManager::removeModules(
     // rebuilt (or there was an error). Invalidate them so that we can load the
     // new files that will be renamed over the old ones.
     //
-    // The PCMCache tracks whether the module was successfully loaded in another
-    // thread/context; in that case, it won't need to be rebuilt (and we can't
-    // safely invalidate it anyway).
+    // The ModuleCache tracks whether the module was successfully loaded in
+    // another thread/context; in that case, it won't need to be rebuilt (and
+    // we can't safely invalidate it anyway).
     if (LoadedSuccessfully.count(&*victim) == 0 &&
-        !PCMCache->tryToRemoveBuffer(victim->FileName))
+        !getModuleCache().tryToRemoveBuffer(victim->FileName))
       FileMgr.invalidateCache(victim->File);
   }
 
@@ -332,11 +333,12 @@ void ModuleManager::moduleFileAccepted(ModuleFile *MF) {
   ModulesInCommonWithGlobalIndex.push_back(MF);
 }
 
-ModuleManager::ModuleManager(FileManager &FileMgr, MemoryBufferCache &PCMCache,
+ModuleManager::ModuleManager(FileManager &FileMgr,
+                             InMemoryModuleCache &ModuleCache,
                              const PCHContainerReader &PCHContainerRdr,
-                             const HeaderSearch& HeaderSearchInfo)
-    : FileMgr(FileMgr), PCMCache(&PCMCache), PCHContainerRdr(PCHContainerRdr),
-      HeaderSearchInfo(HeaderSearchInfo) {}
+                             const HeaderSearch &HeaderSearchInfo)
+    : FileMgr(FileMgr), ModuleCache(&ModuleCache),
+      PCHContainerRdr(PCHContainerRdr), HeaderSearchInfo(HeaderSearchInfo) {}
 
 ModuleManager::~ModuleManager() { delete FirstVisitState; }
 
