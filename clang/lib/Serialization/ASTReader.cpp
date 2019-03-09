@@ -93,6 +93,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2360,6 +2361,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   RecordData Record;
   unsigned NumInputs = 0;
   unsigned NumUserInputs = 0;
+  StringRef BaseDirectoryAsWritten;
   while (true) {
     llvm::BitstreamEntry Entry = Stream.advance();
 
@@ -2560,7 +2562,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
             ImportedName, /*FileMapOnly*/ true);
 
         if (ImportedFile.empty())
-          ImportedFile = ReadPath(F, Record, Idx);
+          // Use BaseDirectoryAsWritten to ensure we use the same path in the
+          // ModuleCache as when writing.
+          ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
         else
           SkipPath(Record, Idx);
 
@@ -2625,6 +2629,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       break;
 
     case MODULE_DIRECTORY: {
+      // Save the BaseDirectory as written in the PCM for computing the module
+      // filename for the ModuleCache.
+      BaseDirectoryAsWritten = Blob;
       assert(!F.ModuleName.empty() &&
              "MODULE_DIRECTORY found before MODULE_NAME");
       // If we've already loaded a module map file covering this module, we may
@@ -4163,6 +4170,14 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   assert(M && "Missing module file");
 
+  bool ShouldFinalizePCM = false;
+  auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
+    auto &MC = getModuleManager().getModuleCache();
+    if (ShouldFinalizePCM)
+      MC.finalizePCM(FileName);
+    else
+      MC.tryToDropPCM(FileName);
+  });
   ModuleFile &F = *M;
   BitstreamCursor &Stream = F.Stream;
   Stream = BitstreamCursor(PCHContainerRdr.ExtractPCH(*F.Buffer));
@@ -4229,6 +4244,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
       // Record that we've loaded this module.
       Loaded.push_back(ImportedModule(M, ImportedBy, ImportLoc));
+      ShouldFinalizePCM = true;
       return Success;
 
     case UNHASHED_CONTROL_BLOCK_ID:
@@ -4297,7 +4313,7 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     // validation will fail during the as-system import since the PCM on disk
     // doesn't guarantee that -Werror was respected.  However, the -Werror
     // flags were checked during the initial as-user import.
-    if (getModuleManager().getModuleCache().isBufferFinal(F.FileName)) {
+    if (getModuleManager().getModuleCache().isPCMFinal(F.FileName)) {
       Diag(diag::warn_module_system_bit_conflict) << F.FileName;
       return Success;
     }
@@ -9099,6 +9115,14 @@ std::string ASTReader::ReadPath(ModuleFile &F, const RecordData &Record,
                                 unsigned &Idx) {
   std::string Filename = ReadString(Record, Idx);
   ResolveImportedPath(F, Filename);
+  return Filename;
+}
+
+std::string ASTReader::ReadPath(StringRef BaseDirectory,
+                                const RecordData &Record, unsigned &Idx) {
+  std::string Filename = ReadString(Record, Idx);
+  if (!BaseDirectory.empty())
+    ResolveImportedPath(Filename, BaseDirectory);
   return Filename;
 }
 

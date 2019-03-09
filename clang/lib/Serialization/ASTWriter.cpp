@@ -4615,9 +4615,9 @@ ASTFileSignature ASTWriter::WriteAST(Sema &SemaRef,
   WritingAST = false;
   if (SemaRef.Context.getLangOpts().ImplicitModules && WritingModule) {
     // Construct MemoryBuffer and update buffer manager.
-    ModuleCache.addBuffer(OutputFile,
-                          llvm::MemoryBuffer::getMemBufferCopy(
-                              StringRef(Buffer.begin(), Buffer.size())));
+    ModuleCache.addBuiltPCM(OutputFile,
+                            llvm::MemoryBuffer::getMemBufferCopy(
+                                StringRef(Buffer.begin(), Buffer.size())));
   }
   return Signature;
 }
