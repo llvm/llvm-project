@@ -723,4 +723,46 @@ TSAN_INTERCEPTOR(void, dispatch_resume, dispatch_object_t o) {
   return REAL(dispatch_resume)(o);
 }
 
+void InitializeLibdispatchInterceptors() {
+  INTERCEPT_FUNCTION(dispatch_async);
+  INTERCEPT_FUNCTION(dispatch_async_f);
+  INTERCEPT_FUNCTION(dispatch_sync);
+  INTERCEPT_FUNCTION(dispatch_sync_f);
+  INTERCEPT_FUNCTION(dispatch_barrier_async);
+  INTERCEPT_FUNCTION(dispatch_barrier_async_f);
+  INTERCEPT_FUNCTION(dispatch_barrier_sync);
+  INTERCEPT_FUNCTION(dispatch_barrier_sync_f);
+  INTERCEPT_FUNCTION(dispatch_after);
+  INTERCEPT_FUNCTION(dispatch_after_f);
+  INTERCEPT_FUNCTION(dispatch_once);
+  INTERCEPT_FUNCTION(dispatch_once_f);
+  INTERCEPT_FUNCTION(dispatch_semaphore_signal);
+  INTERCEPT_FUNCTION(dispatch_semaphore_wait);
+  INTERCEPT_FUNCTION(dispatch_group_wait);
+  INTERCEPT_FUNCTION(dispatch_group_leave);
+  INTERCEPT_FUNCTION(dispatch_group_async);
+  INTERCEPT_FUNCTION(dispatch_group_async_f);
+  INTERCEPT_FUNCTION(dispatch_group_notify);
+  INTERCEPT_FUNCTION(dispatch_group_notify_f);
+  INTERCEPT_FUNCTION(dispatch_source_set_event_handler);
+  INTERCEPT_FUNCTION(dispatch_source_set_event_handler_f);
+  INTERCEPT_FUNCTION(dispatch_source_set_cancel_handler);
+  INTERCEPT_FUNCTION(dispatch_source_set_cancel_handler_f);
+  INTERCEPT_FUNCTION(dispatch_source_set_registration_handler);
+  INTERCEPT_FUNCTION(dispatch_source_set_registration_handler_f);
+  INTERCEPT_FUNCTION(dispatch_apply);
+  INTERCEPT_FUNCTION(dispatch_apply_f);
+  INTERCEPT_FUNCTION(dispatch_data_create);
+  INTERCEPT_FUNCTION(dispatch_read);
+  INTERCEPT_FUNCTION(dispatch_write);
+  INTERCEPT_FUNCTION(dispatch_io_read);
+  INTERCEPT_FUNCTION(dispatch_io_write);
+  INTERCEPT_FUNCTION(dispatch_io_barrier);
+  INTERCEPT_FUNCTION(dispatch_io_create);
+  INTERCEPT_FUNCTION(dispatch_io_create_with_path);
+  INTERCEPT_FUNCTION(dispatch_io_create_with_io);
+  INTERCEPT_FUNCTION(dispatch_io_close);
+  INTERCEPT_FUNCTION(dispatch_resume);
+}
+
 }  // namespace __tsan

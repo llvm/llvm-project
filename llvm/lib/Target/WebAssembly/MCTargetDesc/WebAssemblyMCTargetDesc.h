@@ -331,14 +331,6 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   }
 }
 
-/// The operand number of the load or store address in load/store instructions.
-static const unsigned LoadAddressOperandNo = 3;
-static const unsigned StoreAddressOperandNo = 2;
-
-/// The operand number of the load or store p2align in load/store instructions.
-static const unsigned LoadP2AlignOperandNo = 1;
-static const unsigned StoreP2AlignOperandNo = 0;
-
 /// This is used to indicate block signatures.
 enum class ExprType : unsigned {
   Void = 0x40,

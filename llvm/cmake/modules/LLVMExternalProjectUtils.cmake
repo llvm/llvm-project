@@ -35,12 +35,14 @@ endfunction()
 #     Extra targets in the subproject to generate targets for
 #   PASSTHROUGH_PREFIXES prefix...
 #     Extra variable prefixes (name is always included) to pass down
+#   STRIP_TOOL path
+#     Use provided strip tool instead of the default one.
 #   )
 function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
     "USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
     "SOURCE_DIR"
-    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES"
+    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL"
     ${ARGN})
   canonicalize_tool_name(${name} nameCanon)
   if(NOT ARG_TOOLCHAIN_TOOLS)
@@ -125,10 +127,14 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-objcopy IN_LIST TOOLCHAIN_TOOLS)
       list(APPEND compiler_args -DCMAKE_OBJCOPY=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-objcopy)
     endif()
-    if(llvm-strip IN_LIST TOOLCHAIN_TOOLS)
+    if(llvm-strip IN_LIST TOOLCHAIN_TOOLS AND NOT ARG_STRIP_TOOL)
       list(APPEND compiler_args -DCMAKE_STRIP=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-strip)
     endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
+  endif()
+
+  if(ARG_STRIP_TOOL)
+    list(APPEND compiler_args -DCMAKE_STRIP=${ARG_STRIP_TOOL})
   endif()
 
   add_custom_command(

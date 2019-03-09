@@ -69,6 +69,13 @@ def SIatomic_fmax : SDNode<"AMDGPUISD::ATOMIC_LOAD_FMAX", SDTAtomic2_f32,
   [SDNPMayLoad, SDNPMayStore, SDNPMemOperand, SDNPHasChain]
 >;
 
+// load_d16_{lo|hi} ptr, tied_input
+def SIload_d16 : SDTypeProfile<1, 2, [
+  SDTCisPtrTy<1>,
+  SDTCisSameAs<0, 2>
+]>;
+
+
 def SDTtbuffer_load : SDTypeProfile<1, 8,
   [                     // vdata
    SDTCisVT<1, v4i32>,  // rsrc
@@ -185,6 +192,36 @@ def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
+>;
+
+def SIload_d16_lo : SDNode<"AMDGPUISD::LOAD_D16_LO",
+  SIload_d16,
+  [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIload_d16_lo_u8 : SDNode<"AMDGPUISD::LOAD_D16_LO_U8",
+  SIload_d16,
+  [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIload_d16_lo_i8 : SDNode<"AMDGPUISD::LOAD_D16_LO_I8",
+  SIload_d16,
+  [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIload_d16_hi : SDNode<"AMDGPUISD::LOAD_D16_HI",
+  SIload_d16,
+  [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIload_d16_hi_u8 : SDNode<"AMDGPUISD::LOAD_D16_HI_U8",
+  SIload_d16,
+  [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
+>;
+
+def SIload_d16_hi_i8 : SDNode<"AMDGPUISD::LOAD_D16_HI_I8",
+  SIload_d16,
+  [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
 >;
 
 //===----------------------------------------------------------------------===//
@@ -383,6 +420,51 @@ def si_setcc_uniform : PatFrag <
   }
   return true;
 }]>;
+
+//===----------------------------------------------------------------------===//
+// SDNodes PatFrags for d16 loads
+//===----------------------------------------------------------------------===//
+
+class LoadD16Frag <SDPatternOperator op> : PatFrag<(ops node:$ptr, node:$tied_in), (op node:$ptr, node:$tied_in)>;
+class LocalLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, LocalAddress;
+class GlobalLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, GlobalLoadAddress;
+class PrivateLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, PrivateAddress;
+class FlatLoadD16 <SDPatternOperator op> : LoadD16Frag <op>, FlatLoadAddress;
+
+def load_d16_hi_local : LocalLoadD16 <SIload_d16_hi>;
+def az_extloadi8_d16_hi_local : LocalLoadD16 <SIload_d16_hi_u8>;
+def sextloadi8_d16_hi_local : LocalLoadD16 <SIload_d16_hi_i8>;
+
+def load_d16_hi_global : GlobalLoadD16 <SIload_d16_hi>;
+def az_extloadi8_d16_hi_global : GlobalLoadD16 <SIload_d16_hi_u8>;
+def sextloadi8_d16_hi_global : GlobalLoadD16 <SIload_d16_hi_i8>;
+
+def load_d16_hi_private : PrivateLoadD16 <SIload_d16_hi>;
+def az_extloadi8_d16_hi_private : PrivateLoadD16 <SIload_d16_hi_u8>;
+def sextloadi8_d16_hi_private : PrivateLoadD16 <SIload_d16_hi_i8>;
+
+def load_d16_hi_flat : FlatLoadD16 <SIload_d16_hi>;
+def az_extloadi8_d16_hi_flat : FlatLoadD16 <SIload_d16_hi_u8>;
+def sextloadi8_d16_hi_flat : FlatLoadD16 <SIload_d16_hi_i8>;
+
+
+def load_d16_lo_local : LocalLoadD16 <SIload_d16_lo>;
+def az_extloadi8_d16_lo_local : LocalLoadD16 <SIload_d16_lo_u8>;
+def sextloadi8_d16_lo_local : LocalLoadD16 <SIload_d16_lo_i8>;
+
+def load_d16_lo_global : GlobalLoadD16 <SIload_d16_lo>;
+def az_extloadi8_d16_lo_global : GlobalLoadD16 <SIload_d16_lo_u8>;
+def sextloadi8_d16_lo_global : GlobalLoadD16 <SIload_d16_lo_i8>;
+
+def load_d16_lo_private : PrivateLoadD16 <SIload_d16_lo>;
+def az_extloadi8_d16_lo_private : PrivateLoadD16 <SIload_d16_lo_u8>;
+def sextloadi8_d16_lo_private : PrivateLoadD16 <SIload_d16_lo_i8>;
+
+def load_d16_lo_flat : FlatLoadD16 <SIload_d16_lo>;
+def az_extloadi8_d16_lo_flat : FlatLoadD16 <SIload_d16_lo_u8>;
+def sextloadi8_d16_lo_flat : FlatLoadD16 <SIload_d16_lo_i8>;
+
+
 
 def lshr_rev : PatFrag <
   (ops node:$src1, node:$src0),

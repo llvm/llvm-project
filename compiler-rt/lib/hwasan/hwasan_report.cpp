@@ -14,6 +14,7 @@
 #include "hwasan.h"
 #include "hwasan_allocator.h"
 #include "hwasan_mapping.h"
+#include "hwasan_report.h"
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
 #include "sanitizer_common/sanitizer_allocator_internal.h"
@@ -389,7 +390,7 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
 }
 
 void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
-                       bool is_store, bool fatal) {
+                       bool is_store, bool fatal, uptr *registers_frame) {
   ScopedReport R(fatal);
   SavedStackAllocations current_stack_allocations(
       GetCurrentThread()->stack_allocations());
@@ -430,7 +431,31 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
   PrintTagsAroundAddr(tag_ptr);
 
+  if (registers_frame)
+    ReportRegisters(registers_frame, pc);
+
   ReportErrorSummary(bug_type, stack);
+}
+
+// See the frame breakdown defined in __hwasan_tag_mismatch (from
+// hwasan_tag_mismatch_aarch64.S).
+static const char *kDoubleSpace = "  ";
+static const char *kSingleSpace = " ";
+void ReportRegisters(uptr *frame, uptr pc) {
+  Printf("Registers where the failure occurred (pc %p):", pc);
+
+  for (unsigned i = 0; i <= 30; i++) {
+    if (i % 4 == 0)
+      Printf("\n  ");
+
+    // Note - manually inserting a double or single space here based on the
+    // number of digits in the register name, as our sanitizer Printf does not
+    // support padding where the content is left aligned (i.e. the format
+    // specifier "%-2d" will CHECK fail).
+    Printf("  x%d%s%016llx", i, (i < 10) ? kDoubleSpace : kSingleSpace,
+           frame[i]);
+  }
+  Printf("\n");
 }
 
 }  // namespace __hwasan

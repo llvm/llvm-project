@@ -74,6 +74,9 @@ foreach(target aarch64-linux-gnu;armv7-linux-gnueabihf;i386-linux-gnu;x86_64-lin
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
     set(RUNTIMES_${target}_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
     set(RUNTIMES_${target}_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
+
+    # Use .build-id link.
+    list(APPEND RUNTIME_BUILD_ID_LINK "${target}")
   endif()
 endforeach()
 
@@ -126,6 +129,9 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}-fuchsia_LIBCXX_HERMETIC_STATIC_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}-fuchsia_LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY OFF CACHE BOOL "")
     set(RUNTIMES_${target}-fuchsia_LIBCXX_ABI_VERSION 2 CACHE STRING "")
+
+    # Use .build-id link.
+    list(APPEND RUNTIME_BUILD_ID_LINK "${target}-fuchsia")
   endforeach()
 
   set(LLVM_RUNTIME_SANITIZERS "Address" CACHE STRING "")
@@ -134,6 +140,7 @@ endif()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")
 set(LLVM_RUNTIME_TARGETS "${RUNTIME_TARGETS}" CACHE STRING "")
+set(LLVM_RUNTIME_BUILD_ID_LINK_TARGETS "${RUNTIME_BUILD_ID_LINK}" CACHE STRING "")
 
 # Setup toolchain.
 set(LLVM_INSTALL_TOOLCHAIN_ONLY ON CACHE BOOL "")

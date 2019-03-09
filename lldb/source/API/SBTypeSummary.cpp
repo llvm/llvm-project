@@ -159,6 +159,11 @@ SBTypeSummary SBTypeSummary::CreateWithScriptCode(const char *data,
 SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
                                                 uint32_t options,
                                                 const char *description) {
+  LLDB_RECORD_DUMMY(
+      lldb::SBTypeSummary, SBTypeSummary, CreateWithCallback,
+      (lldb::SBTypeSummary::FormatCallback, uint32_t, const char *), cb,
+      options, description);
+
   SBTypeSummary retval;
   if (cb) {
     retval.SetSP(TypeSummaryImplSP(new CXXFunctionSummaryFormat(

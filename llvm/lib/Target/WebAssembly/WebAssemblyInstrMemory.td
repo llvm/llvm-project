@@ -52,7 +52,7 @@ def regPlusGA : PatFrag<(ops node:$addr, node:$off),
 
 // Defines atomic and non-atomic loads, regular and extending.
 multiclass WebAssemblyLoad<WebAssemblyRegClass rc, string Name, int Opcode> {
-  let mayLoad = 1 in
+  let mayLoad = 1, UseNamedOperandTable = 1 in
   defm "": I<(outs rc:$dst),
              (ins P2Align:$p2align, offset32_op:$off, I32:$addr),
              (outs), (ins P2Align:$p2align, offset32_op:$off),
@@ -294,7 +294,7 @@ def : LoadPatExternSymOffOnly<i64, extloadi32, LOAD32_U_I64>;
 
 // Defines atomic and non-atomic stores, regular and truncating
 multiclass WebAssemblyStore<WebAssemblyRegClass rc, string Name, int Opcode> {
-  let mayStore = 1 in
+  let mayStore = 1, UseNamedOperandTable = 1 in
   defm "" : I<(outs),
               (ins P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$val),
               (outs),

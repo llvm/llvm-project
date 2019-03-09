@@ -2621,6 +2621,9 @@ static void unreachable() {
 }
 #endif
 
+// Define default implementation since interception of libdispatch  is optional.
+SANITIZER_WEAK_ATTRIBUTE void InitializeLibdispatchInterceptors() {}
+
 void InitializeInterceptors() {
 #if !SANITIZER_MAC
   // We need to setup it early, because functions like dlsym() can call it.
@@ -2638,6 +2641,7 @@ void InitializeInterceptors() {
 
   InitializeCommonInterceptors();
   InitializeSignalInterceptors();
+  InitializeLibdispatchInterceptors();
 
 #if !SANITIZER_MAC
   // We can not use TSAN_INTERCEPT to get setjmp addr,

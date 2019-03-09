@@ -11,9 +11,10 @@
 
 #include <string>
 
-#include "lldb/../../source/Commands/CommandObjectExpression.h"
+#include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
 #include "lldb/Interpreter/OptionGroupValueObjectDisplay.h"
+#include "lldb/Target/Target.h"
 
 namespace lldb_private {
 
@@ -68,9 +69,8 @@ public:
     m_varobj_options = options;
   }
 
-  void
-  SetCommandOptions(const CommandObjectExpression::CommandOptions &options) {
-    m_command_options = options;
+  void SetEvaluateOptions(const EvaluateExpressionOptions &options) {
+    m_expr_options = options;
   }
 
   void SetCompilerOptions(const char *options) {
@@ -145,7 +145,7 @@ protected:
 
   OptionGroupFormat m_format_options = OptionGroupFormat(lldb::eFormatDefault);
   OptionGroupValueObjectDisplay m_varobj_options;
-  CommandObjectExpression::CommandOptions m_command_options;
+  EvaluateExpressionOptions m_expr_options;
   std::string m_compiler_options;
 
   bool m_enable_auto_indent = true;

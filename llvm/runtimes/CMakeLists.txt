@@ -124,8 +124,8 @@ if(${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR})
     string(REPLACE "-" "_" canon_name ${projName})
     string(TOUPPER ${canon_name} canon_name)
 
-    if(LLVM_RUNTIMES_LIBDIR_SUBDIR)
-      set(${canon_name}_LIBDIR_SUBDIR "${LLVM_RUNTIMES_LIBDIR_SUBDIR}" CACHE STRING "" FORCE)
+    if(LLVM_RUNTIMES_LIBDIR_SUFFIX)
+      set(${canon_name}_LIBDIR_SUFFIX "${LLVM_RUNTIMES_LIBDIR_SUFFIX}" CACHE STRING "" FORCE)
     endif()
 
     # Setting a variable to let sub-projects detect which other projects
@@ -318,6 +318,14 @@ else() # if this is included from LLVM's CMake
     list(APPEND runtime_names ${projName})
   endforeach()
 
+  if(LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/llvm-strip-link.in
+      ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link
+      @ONLY
+    )
+  endif()
+
   function(runtime_default_target)
     cmake_parse_arguments(ARG "" "" "DEPENDS;PREFIXES" ${ARGN})
 
@@ -349,7 +357,6 @@ else() # if this is included from LLVM's CMake
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
                                         -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${TARGET_TRIPLE}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
@@ -427,13 +434,16 @@ else() # if this is included from LLVM's CMake
       endif()
     endforeach()
 
+    if(target IN_LIST LLVM_RUNTIME_BUILD_ID_LINK_TARGETS)
+      list(APPEND EXTRA_ARGS STRIP_TOOL ${CMAKE_CURRENT_BINARY_DIR}/llvm-strip-link)
+    endif()
+
     llvm_ExternalProject_Add(runtimes-${name}
                              ${CMAKE_CURRENT_SOURCE_DIR}
                              DEPENDS ${${name}_deps}
                              # Builtins were built separately above
                              CMAKE_ARGS -DCOMPILER_RT_BUILD_BUILTINS=Off
                                         -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
-                                        -DLLVM_BINARY_DIR=${LLVM_BINARY_DIR}
                                         -DLLVM_LIBRARY_DIR=${LLVM_LIBRARY_DIR}
                                         -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
                                         -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
@@ -516,7 +526,8 @@ else() # if this is included from LLVM's CMake
           runtime_register_target(${name}-${sanitizer_name} ${name}
             DEPENDS runtimes-${name}
             CMAKE_ARGS -DLLVM_USE_SANITIZER=${sanitizer}
-                       -DLLVM_RUNTIMES_LIBDIR_SUBDIR=${sanitizer_name})
+                       -DLLVM_RUNTIMES_PREFIX=${name}/
+                       -DLLVM_RUNTIMES_LIBDIR_SUFFIX=/${sanitizer_name})
           add_dependencies(runtimes runtimes-${name}-${sanitizer_name})
           add_dependencies(runtimes-configure runtimes-${name}-${sanitizer_name}-configure)
           add_dependencies(install-runtimes install-runtimes-${name}-${sanitizer_name})

@@ -84,6 +84,7 @@ static_library("Checkers") {
     "ObjCUnusedIVarsChecker.cpp",
     "PaddingChecker.cpp",
     "PointerArithChecker.cpp",
+    "PointerSortingChecker.cpp",
     "PointerSubChecker.cpp",
     "PthreadLockChecker.cpp",
     "RetainCountChecker/RetainCountChecker.cpp",

@@ -954,9 +954,12 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
 
   delete[] gv_array;
   // Close the last emitted section
-  if (HasDebugInfo)
+  if (HasDebugInfo) {
     static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
         ->closeLastSection();
+    // Emit empty .debug_loc section for better support of the empty files.
+    OutStreamer->EmitRawText("\t.section\t.debug_loc\t{\t}");
+  }
 
   // Output last DWARF .file directives, if any.
   static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())

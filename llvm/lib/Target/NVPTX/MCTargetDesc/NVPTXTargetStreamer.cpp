@@ -102,6 +102,11 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
 }
 
 void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
+  MCTargetStreamer::emitRawBytes(Data);
+  // TODO: enable this once the bug in the ptxas with the packed bytes is
+  // resolved. Currently, (it is confirmed by NVidia) it causes a crash in
+  // ptxas.
+#if 0
   const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
   const char *Directive = MAI->getData8bitsDirective();
   unsigned NumElements = Data.size();
@@ -125,5 +130,6 @@ void NVPTXTargetStreamer::emitRawBytes(StringRef Data) {
     }
     Streamer.EmitRawText(OS.str());
   }
+#endif
 }
 

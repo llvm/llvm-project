@@ -569,9 +569,10 @@ SBError SBBreakpoint::AddLocation(SBAddress &address) {
   return LLDB_RECORD_RESULT(error);
 }
 
-void SBBreakpoint
-  ::SetCallback(SBBreakpointHitCallback callback,
-  void *baton) {
+void SBBreakpoint ::SetCallback(SBBreakpointHitCallback callback, void *baton) {
+  LLDB_RECORD_DUMMY(void, SBBreakpoint, SetCallback,
+                    (lldb::SBBreakpointHitCallback, void *), callback, baton);
+
   BreakpointSP bkpt_sp = GetSP();
 
   if (bkpt_sp) {

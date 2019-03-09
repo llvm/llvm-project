@@ -338,6 +338,10 @@ bool SBData::GetDescription(lldb::SBStream &description,
 
 size_t SBData::ReadRawData(lldb::SBError &error, lldb::offset_t offset,
                            void *buf, size_t size) {
+  LLDB_RECORD_DUMMY(size_t, SBData, ReadRawData,
+                    (lldb::SBError &, lldb::offset_t, void *, size_t), error,
+                    offset, buf, size);
+
   void *ok = NULL;
   if (!m_opaque_sp.get()) {
     error.SetErrorString("no value to read from");
@@ -352,6 +356,11 @@ size_t SBData::ReadRawData(lldb::SBError &error, lldb::offset_t offset,
 
 void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
                      lldb::ByteOrder endian, uint8_t addr_size) {
+  LLDB_RECORD_DUMMY(
+      void, SBData, SetData,
+      (lldb::SBError &, const void *, size_t, lldb::ByteOrder, uint8_t), error,
+      buf, size, endian, addr_size);
+
   if (!m_opaque_sp.get())
     m_opaque_sp = std::make_shared<DataExtractor>(buf, size, endian, addr_size);
   else
@@ -359,7 +368,6 @@ void SBData::SetData(lldb::SBError &error, const void *buf, size_t size,
     m_opaque_sp->SetData(buf, size, endian);
     m_opaque_sp->SetAddressByteSize(addr_size);
   }
-
 }
 
 bool SBData::Append(const SBData &rhs) {
