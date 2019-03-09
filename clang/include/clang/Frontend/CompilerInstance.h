@@ -44,7 +44,7 @@ class ExternalASTSource;
 class FileEntry;
 class FileManager;
 class FrontendAction;
-class MemoryBufferCache;
+class InMemoryModuleCache;
 class Module;
 class Preprocessor;
 class Sema;
@@ -92,7 +92,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<MemoryBufferCache> PCMCache;
+  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -192,7 +192,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      MemoryBufferCache *SharedPCMCache = nullptr);
+      InMemoryModuleCache *SharedModuleCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -671,7 +671,8 @@ public:
   /// \return - The new object on success, or null on failure.
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot, bool DisablePCHValidation,
-      bool AllowPCHWithCompilerErrors, Preprocessor &PP, ASTContext &Context,
+      bool AllowPCHWithCompilerErrors, Preprocessor &PP,
+      InMemoryModuleCache &ModuleCache, ASTContext &Context,
       const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       DependencyFileGenerator *DependencyFile,
@@ -813,7 +814,7 @@ public:
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
-  MemoryBufferCache &getPCMCache() const { return *PCMCache; }
+  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
 };
 
 } // end namespace clang

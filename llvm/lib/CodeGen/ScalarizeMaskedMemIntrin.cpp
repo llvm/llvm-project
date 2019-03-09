@@ -151,9 +151,9 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
 
   // Adjust alignment for the scalar instruction.
   AlignVal = MinAlign(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
-  // Bitcast %addr fron i8* to EltTy*
+  // Bitcast %addr from i8* to EltTy*
   Type *NewPtrType =
-      EltTy->getPointerTo(cast<PointerType>(Ptr->getType())->getAddressSpace());
+      EltTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
   Value *FirstEltPtr = Builder.CreateBitCast(Ptr, NewPtrType);
   unsigned VectorWidth = VecType->getNumElements();
 
@@ -164,11 +164,9 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
-      Value *Gep =
-          Builder.CreateInBoundsGEP(EltTy, FirstEltPtr, Builder.getInt32(Idx));
+      Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
       LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
-      VResult =
-          Builder.CreateInsertElement(VResult, Load, Builder.getInt32(Idx));
+      VResult = Builder.CreateInsertElement(VResult, Load, Idx);
     }
     CI->replaceAllUsesWith(VResult);
     CI->eraseFromParent();
@@ -183,8 +181,7 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
     //  br i1 %mask_1, label %cond.load, label %else
     //
 
-    Value *Predicate =
-        Builder.CreateExtractElement(Mask, Builder.getInt32(Idx));
+    Value *Predicate = Builder.CreateExtractElement(Mask, Idx);
 
     // Create "cond" block
     //
@@ -196,11 +193,9 @@ static void scalarizeMaskedLoad(CallInst *CI, bool &ModifiedDT) {
                                                      "cond.load");
     Builder.SetInsertPoint(InsertPt);
 
-    Value *Gep =
-        Builder.CreateInBoundsGEP(EltTy, FirstEltPtr, Builder.getInt32(Idx));
+    Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
     LoadInst *Load = Builder.CreateAlignedLoad(EltTy, Gep, AlignVal);
-    Value *NewVResult = Builder.CreateInsertElement(VResult, Load,
-                                                    Builder.getInt32(Idx));
+    Value *NewVResult = Builder.CreateInsertElement(VResult, Load, Idx);
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock =
@@ -277,9 +272,9 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
 
   // Adjust alignment for the scalar instruction.
   AlignVal = MinAlign(AlignVal, EltTy->getPrimitiveSizeInBits() / 8);
-  // Bitcast %addr fron i8* to EltTy*
+  // Bitcast %addr from i8* to EltTy*
   Type *NewPtrType =
-      EltTy->getPointerTo(cast<PointerType>(Ptr->getType())->getAddressSpace());
+      EltTy->getPointerTo(Ptr->getType()->getPointerAddressSpace());
   Value *FirstEltPtr = Builder.CreateBitCast(Ptr, NewPtrType);
   unsigned VectorWidth = VecType->getNumElements();
 
@@ -287,9 +282,8 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
-      Value *OneElt = Builder.CreateExtractElement(Src, Builder.getInt32(Idx));
-      Value *Gep =
-          Builder.CreateInBoundsGEP(EltTy, FirstEltPtr, Builder.getInt32(Idx));
+      Value *OneElt = Builder.CreateExtractElement(Src, Idx);
+      Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
       Builder.CreateAlignedStore(OneElt, Gep, AlignVal);
     }
     CI->eraseFromParent();
@@ -302,8 +296,7 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
     //  %mask_1 = extractelement <16 x i1> %mask, i32 Idx
     //  br i1 %mask_1, label %cond.store, label %else
     //
-    Value *Predicate =
-        Builder.CreateExtractElement(Mask, Builder.getInt32(Idx));
+    Value *Predicate = Builder.CreateExtractElement(Mask, Idx);
 
     // Create "cond" block
     //
@@ -315,9 +308,8 @@ static void scalarizeMaskedStore(CallInst *CI, bool &ModifiedDT) {
         IfBlock->splitBasicBlock(InsertPt->getIterator(), "cond.store");
     Builder.SetInsertPoint(InsertPt);
 
-    Value *OneElt = Builder.CreateExtractElement(Src, Builder.getInt32(Idx));
-    Value *Gep =
-        Builder.CreateInBoundsGEP(EltTy, FirstEltPtr, Builder.getInt32(Idx));
+    Value *OneElt = Builder.CreateExtractElement(Src, Idx);
+    Value *Gep = Builder.CreateConstInBoundsGEP1_32(EltTy, FirstEltPtr, Idx);
     Builder.CreateAlignedStore(OneElt, Gep, AlignVal);
 
     // Create "else" block, fill it in the next iteration
@@ -389,12 +381,11 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       if (cast<Constant>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
-      Value *Ptr = Builder.CreateExtractElement(Ptrs, Builder.getInt32(Idx),
-                                                "Ptr" + Twine(Idx));
+      Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       LoadInst *Load =
           Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
-      VResult = Builder.CreateInsertElement(
-          VResult, Load, Builder.getInt32(Idx), "Res" + Twine(Idx));
+      VResult =
+          Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
     }
     CI->replaceAllUsesWith(VResult);
     CI->eraseFromParent();
@@ -408,8 +399,8 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
     //  br i1 %Mask1, label %cond.load, label %else
     //
 
-    Value *Predicate = Builder.CreateExtractElement(Mask, Builder.getInt32(Idx),
-                                                    "Mask" + Twine(Idx));
+    Value *Predicate =
+        Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
 
     // Create "cond" block
     //
@@ -420,13 +411,11 @@ static void scalarizeMaskedGather(CallInst *CI, bool &ModifiedDT) {
     BasicBlock *CondBlock = IfBlock->splitBasicBlock(InsertPt, "cond.load");
     Builder.SetInsertPoint(InsertPt);
 
-    Value *Ptr = Builder.CreateExtractElement(Ptrs, Builder.getInt32(Idx),
-                                              "Ptr" + Twine(Idx));
+    Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     LoadInst *Load =
         Builder.CreateAlignedLoad(EltTy, Ptr, AlignVal, "Load" + Twine(Idx));
-    Value *NewVResult = Builder.CreateInsertElement(VResult, Load,
-                                                    Builder.getInt32(Idx),
-                                                    "Res" + Twine(Idx));
+    Value *NewVResult =
+        Builder.CreateInsertElement(VResult, Load, Idx, "Res" + Twine(Idx));
 
     // Create "else" block, fill it in the next iteration
     BasicBlock *NewIfBlock = CondBlock->splitBasicBlock(InsertPt, "else");
@@ -501,10 +490,9 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
     for (unsigned Idx = 0; Idx < VectorWidth; ++Idx) {
       if (cast<ConstantVector>(Mask)->getAggregateElement(Idx)->isNullValue())
         continue;
-      Value *OneElt = Builder.CreateExtractElement(Src, Builder.getInt32(Idx),
-                                                   "Elt" + Twine(Idx));
-      Value *Ptr = Builder.CreateExtractElement(Ptrs, Builder.getInt32(Idx),
-                                                "Ptr" + Twine(Idx));
+      Value *OneElt =
+          Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
+      Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
       Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
     }
     CI->eraseFromParent();
@@ -517,8 +505,8 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
     //  %Mask1 = extractelement <16 x i1> %Mask, i32 Idx
     //  br i1 %Mask1, label %cond.store, label %else
     //
-    Value *Predicate = Builder.CreateExtractElement(Mask, Builder.getInt32(Idx),
-                                                    "Mask" + Twine(Idx));
+    Value *Predicate =
+        Builder.CreateExtractElement(Mask, Idx, "Mask" + Twine(Idx));
 
     // Create "cond" block
     //
@@ -529,10 +517,8 @@ static void scalarizeMaskedScatter(CallInst *CI, bool &ModifiedDT) {
     BasicBlock *CondBlock = IfBlock->splitBasicBlock(InsertPt, "cond.store");
     Builder.SetInsertPoint(InsertPt);
 
-    Value *OneElt = Builder.CreateExtractElement(Src, Builder.getInt32(Idx),
-                                                 "Elt" + Twine(Idx));
-    Value *Ptr = Builder.CreateExtractElement(Ptrs, Builder.getInt32(Idx),
-                                              "Ptr" + Twine(Idx));
+    Value *OneElt = Builder.CreateExtractElement(Src, Idx, "Elt" + Twine(Idx));
+    Value *Ptr = Builder.CreateExtractElement(Ptrs, Idx, "Ptr" + Twine(Idx));
     Builder.CreateAlignedStore(OneElt, Ptr, AlignVal);
 
     // Create "else" block, fill it in the next iteration

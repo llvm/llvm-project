@@ -27,6 +27,10 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "WebAssemblyGenInstrInfo.inc"
 
+// defines WebAssembly::getNamedOperandIdx
+#define GET_INSTRINFO_NAMED_OPS
+#include "WebAssemblyGenInstrInfo.inc"
+
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
     : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
                               WebAssembly::ADJCALLSTACKUP,

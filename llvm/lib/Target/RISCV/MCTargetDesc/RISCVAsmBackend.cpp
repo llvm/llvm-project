@@ -356,5 +356,5 @@ MCAsmBackend *llvm::createRISCVAsmBackend(const Target &T,
                                           const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit());
+  return new RISCVAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
 }
